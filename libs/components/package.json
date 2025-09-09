@@ -32,7 +32,6 @@
     "usehooks-ts": "^3.1.0"
   },
   "devDependencies": {
-    "@frozik/components": "link:",
     "@types/sanitize-html": "^2.13.0"
   }
 }
