@@ -1,6 +1,6 @@
 export const VERTICES_PER_INSTANCE = 18;
-// Keep in sync with DIAMOND_SEGMENT_COUNT in shaders/chart.wgsl
-export const DIAMOND_SEGMENT_COUNT = 4;
+// Keep in sync with BORDER_SEGMENT_COUNT in shaders/chart.wgsl
+export const BORDER_SEGMENT_COUNT = 4;
 
 export const BACKGROUND_R = 0.149;
 export const BACKGROUND_G = 0.149;
@@ -9,7 +9,7 @@ export const BACKGROUND_B = 0.149;
 export const SIN_PEN_MIN = 2.0;
 export const SIN_PEN_MAX = 20.0;
 
-export const DIAMOND_MARGIN = 20;
+export const BORDER_MARGIN = 20;
 
 export const SIN_SEGMENTS_DIVISOR = 4;
 export const HALF = 0.5;
@@ -18,8 +18,10 @@ export const MSAA_SAMPLE_COUNT = 4;
 export const SIN_Y_LAYER_OPACITY = 0.7;
 
 // --- Animated shapes constants ---
-// Keep in sync with MAX_SHAPES in shaders/shapes.wgsl
-export const MAX_SHAPES = 1_000;
+// Shapes per pixel of canvas area. At 1920x1080, yields ~518 shapes.
+export const SHAPE_DENSITY = 2e-5;
+// Upper bound for GPU buffer pre-allocation. Sufficient for ~8K display at 2x DPR.
+export const MAX_SHAPE_BUFFER_COUNT = 16_384;
 // Keep in sync with FADE_DURATION in shaders/shapes.wgsl
 export const SHAPE_FADE_DURATION = 0.5;
 export const SHAPE_HOLD_DURATION_MIN = 2.0;
@@ -43,8 +45,8 @@ export const SHAPE_OPACITY_MAX = 1.0;
 // u32         sinCount       (4 bytes, offset 76)
 // f32         sinPenMin      (4 bytes, offset 80)
 // f32         sinPenMax      (4 bytes, offset 84)
-// f32         diamondMargin  (4 bytes, offset 88)
-// u32         diamondOffset  (4 bytes, offset 92)
+// f32         borderMargin   (4 bytes, offset 88)
+// u32         borderOffset   (4 bytes, offset 92)
 // u32         sinYCount      (4 bytes, offset 96)
 // padding                    (12 bytes, offset 100 -- pad to 112 for 16-byte alignment)
 // total = 112 bytes

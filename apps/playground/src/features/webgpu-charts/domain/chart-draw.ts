@@ -6,12 +6,12 @@ import {
   BACKGROUND_B,
   BACKGROUND_G,
   BACKGROUND_R,
+  BORDER_MARGIN,
+  BORDER_SEGMENT_COUNT,
   COMPOSITE_UNIFORM_SIZE,
-  DIAMOND_MARGIN,
-  DIAMOND_SEGMENT_COUNT,
   FULLSCREEN_TRIANGLE_VERTEX_COUNT,
   HALF,
-  MAX_SHAPES,
+  MAX_SHAPE_BUFFER_COUNT,
   MS_PER_SECOND,
   MSAA_SAMPLE_COUNT,
   OFFSCREEN_FORMAT,
@@ -26,10 +26,12 @@ import {
 } from './chart-constants';
 import { createChartPipelines } from './chart-pipelines';
 import {
+  computeShapeCount,
   createShapeDataBuffer,
   getShapeLifetime,
   initializeShapes,
   randomInRange,
+  resizeShapes,
   spawnShape,
   writeShapeToBuffer,
 } from './chart-shapes';
@@ -84,7 +86,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
   }
 
   const shapesStorageBuf = device.createBuffer({
-    size: MAX_SHAPES * SHAPE_INSTANCE_BYTES,
+    size: MAX_SHAPE_BUFFER_COUNT * SHAPE_INSTANCE_BYTES,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
@@ -96,8 +98,9 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     ],
   });
 
-  const shapes = initializeShapes();
-  const shapeDataBuffer = createShapeDataBuffer();
+  const initialShapeCount = computeShapeCount(canvas.clientWidth, canvas.clientHeight);
+  const shapes = initializeShapes(initialShapeCount);
+  const shapeDataBuffer = createShapeDataBuffer(MAX_SHAPE_BUFFER_COUNT);
 
   const bindGroup = device.createBindGroup({
     layout: pipelines.bindGroupLayout,
@@ -178,13 +181,13 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     const SIN_PEN_MAX_OFFSET = 21;
     f32[SIN_PEN_MAX_OFFSET] = SIN_PEN_MAX;
 
-    // diamondMargin at offset 22
-    const DIAMOND_MARGIN_OFFSET = 22;
-    f32[DIAMOND_MARGIN_OFFSET] = DIAMOND_MARGIN;
+    // borderMargin at offset 22
+    const BORDER_MARGIN_OFFSET = 22;
+    f32[BORDER_MARGIN_OFFSET] = BORDER_MARGIN;
 
-    // diamondOffset at offset 23 (u32) - where diamond instances start
-    const DIAMOND_OFFSET_OFFSET = 23;
-    u32[DIAMOND_OFFSET_OFFSET] = sinCount;
+    // borderOffset at offset 23 (u32) - where border instances start
+    const BORDER_OFFSET_OFFSET = 23;
+    u32[BORDER_OFFSET_OFFSET] = sinCount;
 
     // sinYCount at offset 24 (u32)
     const SIN_Y_COUNT_OFFSET = 24;
@@ -217,7 +220,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
 
     writeUniforms(time);
 
-    const mainInstances = sinXCount + DIAMOND_SEGMENT_COUNT;
+    const mainInstances = sinXCount + BORDER_SEGMENT_COUNT;
 
     const msaaView = textureManager.ensureMsaaTexture(canvasWidth, canvasHeight);
     const offscreen = textureManager.ensureOffscreenTextures(
@@ -236,7 +239,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     const canvasTexView = ctx.getCurrentTexture().createView();
     const encoder = device.createCommandEncoder();
 
-    // Pass 1: Main MSAA pass -- diamond + sin-X
+    // Pass 1: Main MSAA pass -- border + sin-X
     {
       const pass = encoder.beginRenderPass({
         colorAttachments: [
@@ -314,7 +317,12 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
       const halfH = canvasHeight * HALF;
       const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
 
-      for (let i = 0; i < MAX_SHAPES; i++) {
+      const currentShapeCount = computeShapeCount(canvasWidth, canvasHeight);
+      if (currentShapeCount !== shapes.length) {
+        resizeShapes(shapes, currentShapeCount, time, halfW, halfH);
+      }
+
+      for (let i = 0; i < shapes.length; i++) {
         const shape = shapes[i];
         const elapsed = time - shape.spawnTime;
         const lifetime = getShapeLifetime(shape);
@@ -329,7 +337,13 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
         writeShapeToBuffer(shapes[i], shapeDataBuffer, i * FLOATS_PER_SHAPE);
       }
 
-      device.queue.writeBuffer(shapesStorageBuf, 0, shapeDataBuffer);
+      device.queue.writeBuffer(
+        shapesStorageBuf,
+        0,
+        shapeDataBuffer.buffer,
+        0,
+        shapes.length * SHAPE_INSTANCE_BYTES
+      );
 
       const pass = encoder.beginRenderPass({
         colorAttachments: [
@@ -343,7 +357,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
 
       pass.setPipeline(pipelines.shapesPipeline);
       pass.setBindGroup(0, shapesBindGroup);
-      pass.draw(SHAPE_VERTICES_PER_INSTANCE, MAX_SHAPES, 0, 0);
+      pass.draw(SHAPE_VERTICES_PER_INSTANCE, shapes.length, 0, 0);
       pass.end();
     }
 

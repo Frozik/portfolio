@@ -2,8 +2,6 @@ const HALF: f32 = 0.5;
 // Keep in sync with SHAPE_FADE_DURATION in chart-draw.ts
 const FADE_DURATION: f32 = 0.5;
 const BORDER_THICKNESS: f32 = 0.08;
-// Keep in sync with MAX_SHAPES in chart-draw.ts
-const MAX_SHAPES: u32 = 1000u;
 const SHAPE_TYPE_COUNT: u32 = 10u;
 
 // Shape type constants
@@ -94,8 +92,8 @@ struct Uniforms {
     sinCount: u32,
     sinPenMin: f32,
     sinPenMax: f32,
-    diamondMargin: f32,
-    diamondOffset: u32,
+    borderMargin: f32,
+    borderOffset: u32,
     sinYCount: u32,
 };
 
@@ -106,7 +104,7 @@ struct ShapeData {
 };
 
 @group(0) @binding(0) var<uniform> U: Uniforms;
-@group(0) @binding(1) var<storage, read> shapes: array<ShapeData, 1000>;
+@group(0) @binding(1) var<storage, read> shapes: array<ShapeData>;
 
 struct ShapesVSOut {
     @builtin(position) position: vec4<f32>,

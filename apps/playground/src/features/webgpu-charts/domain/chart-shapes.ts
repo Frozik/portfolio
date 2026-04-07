@@ -1,6 +1,7 @@
 import {
   HALF,
-  MAX_SHAPES,
+  MAX_SHAPE_BUFFER_COUNT,
+  SHAPE_DENSITY,
   SHAPE_FADE_DURATION,
   SHAPE_HOLD_DURATION_MAX,
   SHAPE_HOLD_DURATION_MIN,
@@ -87,21 +88,53 @@ export function writeShapeToBuffer(
   buffer[offset + VEC4_2_OFFSET + 3] = 0;
 }
 
-export function initializeShapes(): ShapeInstance[] {
+export function computeShapeCount(canvasWidth: number, canvasHeight: number): number {
+  return Math.min(
+    Math.max(1, Math.round(canvasWidth * canvasHeight * SHAPE_DENSITY)),
+    MAX_SHAPE_BUFFER_COUNT
+  );
+}
+
+export function initializeShapes(count: number): ShapeInstance[] {
   const shapes: ShapeInstance[] = [];
   const averageLifetime =
     2 * SHAPE_FADE_DURATION + (SHAPE_HOLD_DURATION_MIN + SHAPE_HOLD_DURATION_MAX) / 2;
 
-  for (let i = 0; i < MAX_SHAPES; i++) {
+  for (let i = 0; i < count; i++) {
     const shape = spawnShape(0);
     // Stagger spawn times so shapes don't all appear at once
-    shape.spawnTime = -(averageLifetime / MAX_SHAPES) * i;
+    shape.spawnTime = -(averageLifetime / count) * i;
     shapes.push(shape);
   }
 
   return shapes;
 }
 
-export function createShapeDataBuffer(): Float32Array {
-  return new Float32Array((MAX_SHAPES * SHAPE_INSTANCE_BYTES) / Float32Array.BYTES_PER_ELEMENT);
+export function resizeShapes(
+  shapes: ShapeInstance[],
+  newCount: number,
+  time: number,
+  halfW: number,
+  halfH: number
+): void {
+  if (newCount > shapes.length) {
+    const averageLifetime =
+      2 * SHAPE_FADE_DURATION + (SHAPE_HOLD_DURATION_MIN + SHAPE_HOLD_DURATION_MAX) / 2;
+    const addCount = newCount - shapes.length;
+
+    for (let i = 0; i < addCount; i++) {
+      const shape = spawnShape(time);
+      // Stagger spawn times so new shapes fade in gradually
+      shape.spawnTime = time - (averageLifetime / addCount) * i;
+      shape.x = randomInRange(-halfW + shape.halfSize, halfW - shape.halfSize);
+      shape.y = randomInRange(-halfH + shape.halfSize, halfH - shape.halfSize);
+      shapes.push(shape);
+    }
+  } else if (newCount < shapes.length) {
+    shapes.splice(newCount);
+  }
+}
+
+export function createShapeDataBuffer(count: number): Float32Array {
+  return new Float32Array((count * SHAPE_INSTANCE_BYTES) / Float32Array.BYTES_PER_ELEMENT);
 }

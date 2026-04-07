@@ -1,8 +1,8 @@
 const PI: f32 = 3.14159265358979323846;
 const HALF: f32 = 0.5;
-const DIAMOND_POINT_COUNT: u32 = 5u;
-// Keep in sync with DIAMOND_SEGMENT_COUNT in chart-draw.ts
-const DIAMOND_SEGMENT_COUNT: u32 = 4u;
+const BORDER_POINT_COUNT: u32 = 5u;
+// Keep in sync with BORDER_SEGMENT_COUNT in chart-draw.ts
+const BORDER_SEGMENT_COUNT: u32 = 4u;
 
 struct Uniforms {
     mvp: mat4x4<f32>,
@@ -11,8 +11,8 @@ struct Uniforms {
     sinCount: u32,
     sinPenMin: f32,
     sinPenMax: f32,
-    diamondMargin: f32,
-    diamondOffset: u32,
+    borderMargin: f32,
+    borderOffset: u32,
     sinYCount: u32,
 };
 
@@ -45,8 +45,8 @@ const RECT_BASIS: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
     vec2<f32>(0.0, 0.5),
 );
 
-// Diamond data
-const DIAMOND_POSITIONS: array<vec2<f32>, 5> = array<vec2<f32>, 5>(
+// Border data
+const BORDER_POSITIONS: array<vec2<f32>, 5> = array<vec2<f32>, 5>(
     vec2<f32>(-1.0, -1.0),
     vec2<f32>(1.0, -1.0),
     vec2<f32>(1.0, 1.0),
@@ -54,9 +54,9 @@ const DIAMOND_POSITIONS: array<vec2<f32>, 5> = array<vec2<f32>, 5>(
     vec2<f32>(-1.0, -1.0),
 );
 
-const DIAMOND_WIDTHS: array<f32, 5> = array<f32, 5>(4.0, 16.0, 4.0, 16.0, 4.0);
+const BORDER_WIDTHS: array<f32, 5> = array<f32, 5>(4.0, 16.0, 4.0, 16.0, 4.0);
 
-const DIAMOND_COLORS: array<vec4<f32>, 5> = array<vec4<f32>, 5>(
+const BORDER_COLORS: array<vec4<f32>, 5> = array<vec4<f32>, 5>(
     vec4<f32>(0.0, 0.5, 1.0, 1.0),
     vec4<f32>(0.5, 1.0, 0.0, 1.0),
     vec4<f32>(1.0, 0.5, 0.0, 1.0),
@@ -124,21 +124,21 @@ fn getSegmentData(instanceId: u32) -> SegmentData {
         seg.colorA = getSinColor(uvA);
         seg.colorB = getSinColor(uvB);
     } else {
-        // Diamond segment
-        let diamondIdx = instanceId - U.diamondOffset;
+        // Border segment
+        let borderIdx = instanceId - U.borderOffset;
 
-        let posA = DIAMOND_POSITIONS[diamondIdx];
-        let posB = DIAMOND_POSITIONS[diamondIdx + 1u];
+        let posA = BORDER_POSITIONS[borderIdx];
+        let posB = BORDER_POSITIONS[borderIdx + 1u];
 
-        let sizeX = U.viewport.x - U.diamondMargin;
-        let sizeY = U.viewport.y - U.diamondMargin;
+        let sizeX = U.viewport.x - U.borderMargin;
+        let sizeY = U.viewport.y - U.borderMargin;
 
         seg.pointA = posA * vec2<f32>(sizeX * HALF, sizeY * HALF);
         seg.pointB = posB * vec2<f32>(sizeX * HALF, sizeY * HALF);
-        seg.widthA = DIAMOND_WIDTHS[diamondIdx];
-        seg.widthB = DIAMOND_WIDTHS[diamondIdx + 1u];
-        seg.colorA = DIAMOND_COLORS[diamondIdx];
-        seg.colorB = DIAMOND_COLORS[diamondIdx + 1u];
+        seg.widthA = BORDER_WIDTHS[borderIdx];
+        seg.widthB = BORDER_WIDTHS[borderIdx + 1u];
+        seg.colorA = BORDER_COLORS[borderIdx];
+        seg.colorB = BORDER_COLORS[borderIdx + 1u];
     }
 
     return seg;
