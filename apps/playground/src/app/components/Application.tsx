@@ -44,9 +44,9 @@ const rootRouter = createBrowserRouter(
           },
         },
         {
-          path: 'charts',
+          path: 'graphics',
           lazy: async () => {
-            const { Charts } = await import('../../features/webgpu-charts/presentation/Charts');
+            const { Charts } = await import('../../features/webgpu-graphics/presentation/Charts');
             return { Component: Charts };
           },
         },

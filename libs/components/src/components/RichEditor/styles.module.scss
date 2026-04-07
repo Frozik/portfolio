@@ -51,11 +51,12 @@
 }
 
 .calendar {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
-  background-color: colors.$grey-11;
+  background-color: colors.$grey-13;
   padding: 4px;
+  justify-items: center;
 }
 
 .calendar-day-cell {
@@ -108,4 +109,128 @@
   &--header {
     pointer-events: none;
   }
+
+  &--holiday {
+    background-color: rgba(colors.$red-10, 0.5);
+
+    &.calendar-day-cell--selected {
+      background-color: rgba(colors.$red-6, 0.5);
+    }
+  }
+}
+
+.editor-error {
+  border-color: colors.$red-6;
+
+  &:hover {
+    border-color: colors.$red-5;
+  }
+
+  &:focus, &:focus-within {
+    border-color: colors.$red-6;
+    box-shadow: 0 0 0 2px rgb(245 34 45 / 10%);
+  }
+}
+
+.popover-content {
+  background-color: colors.$grey-13;
+  border: 1px solid colors.$grey-10;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 48%);
+  outline: none;
+}
+
+.month-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 8px;
+  color: colors.$gray-1;
+  font-size: 14px;
+  user-select: none;
+}
+
+.month-navigator-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: colors.$grey-6;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1;
+
+  &:hover {
+    background-color: colors.$grey-9;
+    border-color: colors.$grey-7;
+  }
+}
+
+.month-navigator-label {
+  font-weight: 500;
+}
+
+.error-tooltip {
+  color: colors.$red-5;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.time-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px 4px;
+  border-top: 1px solid colors.$grey-10;
+  margin-top: 4px;
+}
+
+.time-picker-separator {
+  color: colors.$grey-6;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 1px;
+}
+
+.time-picker-unit, .time-picker-unit-wide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.time-picker-unit {
+  width: 28px;
+}
+
+.time-picker-unit-wide {
+  width: 36px;
+}
+
+.time-picker-btn {
+  background: none;
+  border: none;
+  color: colors.$grey-7;
+  cursor: pointer;
+  font-size: 8px;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 3px;
+
+  &:hover {
+    color: colors.$grey-1;
+    background-color: colors.$grey-9;
+  }
+}
+
+.time-picker-value {
+  color: colors.$grey-1;
+  font-size: 14px;
+  font-family: monospace;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
 }

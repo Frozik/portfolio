@@ -86,9 +86,9 @@ export const SidebarNavigation = memo(() => {
             <span>Sun</span>
           </NavLink>
 
-          <NavLink className={navLinkClass} to="/charts" onClick={handleClose} end={false}>
+          <NavLink className={navLinkClass} to="/graphics" onClick={handleClose} end={false}>
             <ChartLine size={NAV_ICON_SIZE} />
-            <span className="flex-1">Charts</span>
+            <span className="flex-1">Graphics</span>
             <Tooltip
               title="GPU-accelerated rendering of shapes, lines with rounded joins, and transparency — near-zero CPU usage and minimal GPU overhead"
               placement="right"

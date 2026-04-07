@@ -16,6 +16,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: `${BASE}/index.html`,
         navigateFallbackAllowlist: [new RegExp(`^${BASE}`)],
+        navigateFallbackDenylist: [/\.pdf$/],
       },
       manifest: {
         name: 'Home Projects',

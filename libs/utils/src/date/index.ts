@@ -1,6 +1,21 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { EDayOfWeek } from '../types';
 
+export {
+  applyOffset,
+  createDateTimeParser,
+  parseDirectDate,
+  parseStandaloneTime,
+  resolveKeyword,
+  resolveMonthName,
+  resolveMonthYear,
+  resolveNextWeekday,
+  resolvePreviousWeekday,
+  resolveQuarter,
+} from './parseDateTimeInput';
+export { stepDateTime } from './stepDateTime';
+export * from './types';
+
 export const DAYS_IN_WEEK = 7;
 
 export function getStartOfMonth(yearMonth: Temporal.PlainYearMonth): Temporal.PlainDate {

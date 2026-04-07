@@ -1,4 +1,5 @@
 import { isEmpty, isNil } from 'lodash-es';
+import type { KeyboardEvent } from 'react';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { IOptions } from 'sanitize-html';
 import sanitizeHtml from 'sanitize-html';
@@ -29,6 +30,7 @@ export const RichEditor = memo(
     onGetElementSelectionWithValue = inputElementSelectionWithValue,
     onTextToHtml = inputTextToHtml,
     onFocusChanges,
+    onKeyDown,
   }: {
     className?: string;
     disabled?: boolean;
@@ -43,6 +45,7 @@ export const RichEditor = memo(
     }) => { value: string; selection: ISelection } | false;
     onTextToHtml?: (text: string, editing: boolean) => string;
     onFocusChanges?: (focused: boolean) => void;
+    onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   }) => {
     const contentEditableRef = useRef<HTMLDivElement>(null);
     const selectionRangeRef = useRef<ISelection>(
@@ -104,7 +107,13 @@ export const RichEditor = memo(
       onFocusChanges?.(false);
     });
 
-    const handleKeyDown = useFunction(event => {
+    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+      onKeyDown?.(event);
+
+      if (event.defaultPrevented) {
+        return;
+      }
+
       if (event.key === 'Enter') {
         event.preventDefault();
         const element = findNextTabStop(event.currentTarget);

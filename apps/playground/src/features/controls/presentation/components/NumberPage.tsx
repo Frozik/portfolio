@@ -46,12 +46,12 @@ export const NumberPage = memo(() => {
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <span className="text-sm font-medium text-text">PIP start + size</span>
+          <span className="mb-4 block text-sm font-medium text-text">PIP start + size</span>
           <RangeSlider min={-2} max={6} step={1} value={value} onChange={setValue} showTooltip />
         </div>
 
         <div className="space-y-3">
-          <span className="text-sm font-medium text-text">Decimals</span>
+          <span className="mb-4 block text-sm font-medium text-text">Decimals</span>
           <Slider min={0} max={10} step={1} value={decimals} onChange={setDecimals} showTooltip />
         </div>
       </div>

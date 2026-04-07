@@ -98,8 +98,6 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     ],
   });
 
-  const initialShapeCount = computeShapeCount(canvas.clientWidth, canvas.clientHeight);
-  const shapes = initializeShapes(initialShapeCount);
   const shapeDataBuffer = createShapeDataBuffer(MAX_SHAPE_BUFFER_COUNT);
 
   const bindGroup = device.createBindGroup({
@@ -121,11 +119,12 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
 
   let canvasWidth = 0;
   let canvasHeight = 0;
+  let currentDpr = Math.max(1, window.devicePixelRatio);
 
   function updateCanvasSize(): void {
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const w = Math.floor(canvas.clientWidth * dpr);
-    const h = Math.floor(canvas.clientHeight * dpr);
+    currentDpr = Math.max(1, window.devicePixelRatio);
+    const w = Math.floor(canvas.clientWidth * currentDpr);
+    const h = Math.floor(canvas.clientHeight * currentDpr);
 
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
@@ -135,6 +134,10 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     canvasWidth = w;
     canvasHeight = h;
   }
+
+  updateCanvasSize();
+  const initialShapeCount = computeShapeCount(canvasWidth, canvasHeight, currentDpr);
+  const shapes = initializeShapes(initialShapeCount);
 
   function computeSinXSegmentCount(): number {
     return Math.trunc(canvasWidth / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
@@ -317,7 +320,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
       const halfH = canvasHeight * HALF;
       const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
 
-      const currentShapeCount = computeShapeCount(canvasWidth, canvasHeight);
+      const currentShapeCount = computeShapeCount(canvasWidth, canvasHeight, currentDpr);
       if (currentShapeCount !== shapes.length) {
         resizeShapes(shapes, currentShapeCount, time, halfW, halfH);
       }

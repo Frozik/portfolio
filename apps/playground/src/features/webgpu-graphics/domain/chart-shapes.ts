@@ -88,11 +88,19 @@ export function writeShapeToBuffer(
   buffer[offset + VEC4_2_OFFSET + 3] = 0;
 }
 
-export function computeShapeCount(canvasWidth: number, canvasHeight: number): number {
-  return Math.min(
-    Math.max(1, Math.round(canvasWidth * canvasHeight * SHAPE_DENSITY)),
-    MAX_SHAPE_BUFFER_COUNT
-  );
+/**
+ * Compute shape count based on CSS (logical) pixel area.
+ * Physical pixel dimensions are divided by DPR so Retina displays
+ * don't get an excessive number of shapes.
+ */
+export function computeShapeCount(
+  canvasWidth: number,
+  canvasHeight: number,
+  devicePixelRatio: number
+): number {
+  const cssArea = (canvasWidth / devicePixelRatio) * (canvasHeight / devicePixelRatio);
+
+  return Math.min(Math.max(1, Math.round(cssArea * SHAPE_DENSITY)), MAX_SHAPE_BUFFER_COUNT);
 }
 
 export function initializeShapes(count: number): ShapeInstance[] {
