@@ -1,4 +1,10 @@
-# Home Projects
+<p align="center">
+  <a href="https://github.com/Frozik/home-projects/actions/workflows/ci.yml">
+    <img src="https://github.com/Frozik/home-projects/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI">
+  </a>
+</p>
+
+# [Home Projects](https://frozik.github.io/home-projects)
 
 Portfolio/playground monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
@@ -65,14 +71,4 @@ GPU-accelerated rendering of shapes, lines with rounded joins, and transparency
 
 ### Controls
 
-Showcase of shared UI controls (date picker, numeric input with slider).
-
-## Architecture
-
-The project follows Domain-Driven Design (DDD) with layered architecture
-per feature:
-
-- **domain/** — Pure business logic (no framework imports)
-- **application/** — MobX stores
-- **infrastructure/** — IndexedDB, cross-tab sync
-- **presentation/** — React components and hooks
+Showcase of shared UI controls (numeric input).
