@@ -1,0 +1,8 @@
+.container {
+  padding: 20px;
+  overflow: auto;
+
+  @media (width <= 600px) {
+    margin: 0;
+  }
+}

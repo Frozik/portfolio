@@ -1,36 +1,71 @@
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
-// https://vitejs.dev/config/
-// eslint-disable-next-line import/no-default-export
+const BASE = '/home-projects';
+
 export default defineConfig({
-    base: '/home-projects',
-    plugins: [react()],
-    test: {
-        environment: 'jsdom',
-        globals: true,
-        setupFiles: ['./vitest.setup.ts'],
+  base: BASE,
+  plugins: [
+    tailwindcss(),
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        navigateFallback: `${BASE}/index.html`,
+        navigateFallbackAllowlist: [new RegExp(`^${BASE}`)],
+      },
+      manifest: {
+        name: 'Home Projects',
+        short_name: 'Playground',
+        description: 'Interactive demos: neural networks, WebGPU, physics simulations',
+        theme_color: '#1a1a2e',
+        background_color: '#1a1a2e',
+        display: 'standalone',
+        start_url: `${BASE}/`,
+        scope: `${BASE}/`,
+        icons: [
+          {
+            src: `${BASE}/pwa-192x192.png`,
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: `${BASE}/pwa-512x512.png`,
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: `${BASE}/pwa-512x512.png`,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+    }),
+  ],
+  test: {
+    environment: 'happy-dom',
+    globals: true,
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/e-[hash].js`,
+        chunkFileNames: `assets/c-[hash].js`,
+        assetFileNames: `assets/a-[hash].[ext]`,
+      },
     },
-    build: {
-        rollupOptions: {
-            output: {
-                entryFileNames: `assets/e-[hash].js`,
-                chunkFileNames: `assets/c-[hash].js`,
-                assetFileNames: `assets/a-[hash].[ext]`,
-            },
-        },
+  },
+  css: {
+    modules: {
+      localsConvention: 'camelCaseOnly',
     },
-    css: {
-        preprocessorOptions: {
-            scss: {
-                api: 'modern-compiler',
-            },
-        },
-        modules: {
-            localsConvention: 'camelCaseOnly',
-        },
-    },
-    server: {
-        host: '0.0.0.0'
-    }
+  },
+  server: {
+    host: '0.0.0.0',
+  },
 });

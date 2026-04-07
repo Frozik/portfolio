@@ -1,45 +1,37 @@
+import 'dockview/dist/styles/dockview.css';
+import './styles/tailwind.css';
 import './main.scss';
 
-import { DIProvider } from '@frozik/components';
-import { toContextRef } from '@frozik/utils';
-import { ConfigProvider, theme } from 'antd';
 import { isNil } from 'lodash-es';
+import { configure } from 'mobx';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Provider } from 'react-redux';
 
 import { Application } from './app/components/Application';
-import { DynamicStoreManagerProvider } from './app/components/DynamicStoreManager';
-import { createStore } from './app/store';
+import { RootStore, StoreProvider } from './app/stores';
+
+configure({ enforceActions: 'always' });
 
 function bootstrap() {
-    const container = document.getElementById('root');
+  const container = document.getElementById('root');
 
-    if (isNil(container)) {
-        throw new Error(
-            "Root element with ID 'root' was not found in the document. Ensure there is a corresponding HTML element with the ID 'root' in your HTML file.",
-        );
-    }
-
-    const { store, addSlice, removeSlice, addSaga, removeSaga } = createStore();
-
-    const root = createRoot(container);
-
-    root.render(
-        <StrictMode>
-            <Provider store={store}>
-                <DIProvider context={toContextRef(store)}>
-                    <DynamicStoreManagerProvider
-                        value={{ addSlice, removeSlice, addSaga, removeSaga }}
-                    >
-                        <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
-                            <Application />
-                        </ConfigProvider>
-                    </DynamicStoreManagerProvider>
-                </DIProvider>
-            </Provider>
-        </StrictMode>,
+  if (isNil(container)) {
+    throw new Error(
+      "Root element with ID 'root' was not found in the document. Ensure there is a corresponding HTML element with the ID 'root' in your HTML file."
     );
+  }
+
+  const rootStore = new RootStore();
+
+  const root = createRoot(container);
+
+  root.render(
+    <StrictMode>
+      <StoreProvider value={rootStore}>
+        <Application />
+      </StoreProvider>
+    </StrictMode>
+  );
 }
 
 bootstrap();

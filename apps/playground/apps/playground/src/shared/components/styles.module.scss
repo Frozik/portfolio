@@ -1,0 +1,13 @@
+.container {
+  display: flex;
+  width: 100svw;
+  height: 100svh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}

@@ -1,0 +1,13 @@
+@use 'dockview/dist/styles/dockview.css';
+
+body{
+  background: #000;
+}
+
+// https://stackoverflow.com/questions/7768269/disable-scrolling-and-bounce-effect-on-mobile-safari
+
+@supports (-webkit-touch-callout: none) {
+  html {
+    overscroll-behavior-y: none;
+  }
+}

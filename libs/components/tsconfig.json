@@ -1,10 +1,10 @@
 {
-  "include": ["types"],
+  "include": ["src", "types"],
   "compilerOptions": {
     "module": "esnext",
-    "lib": ["dom", "esnext"],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "target": "esnext",
-    "importHelpers": true,
+
     "declaration": true,
     "sourceMap": true,
     "rootDir": "./src",
@@ -13,7 +13,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -28,17 +28,5 @@
         }
       }
     ]
-  },
-  "exclude": [
-    "**/*.stories.ts",
-    "**/*.stories.js",
-    "**/*.stories.jsx",
-    "**/*.stories.tsx",
-    "src/stories/**/*.*"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.storybook.json"
-    }
-  ]
+  }
 }

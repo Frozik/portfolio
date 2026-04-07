@@ -2,30 +2,17 @@
   "name": "@frozik/utils",
   "version": "0.1.0",
   "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "main": "src/index.ts",
   "typings": "src/index.ts",
   "files": [
     "dist",
     "src"
   ],
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
-    "test": "jest --passWithNoTests",
-    "coverage": "jest --coverage --passWithNoTests",
-    "lint": "TIMING=1 eslint . --report-unused-disable-directives --max-warnings 0",
     "types": "tsc --noEmit"
   },
-  "dependencies": {
-    "@frozik/types": "workspace:*",
-    "@js-temporal/polyfill": "^0.4.4",
-    "broadcast-channel": "^7.0.0",
-    "hash-sum": "^2.0.0",
-    "idb": "^8.0.1",
-    "redux-saga": "^1.3.0"
-  },
-  "devDependencies": {
-    "@types/hash-sum": "^1.0.2"
-  }
+  "dependencies": {}
 }

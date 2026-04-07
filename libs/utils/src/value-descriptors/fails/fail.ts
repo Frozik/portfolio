@@ -1,25 +1,25 @@
-import type { TStructurallyCloneable } from '@frozik/types';
+import type { TStructurallyCloneable } from '../../types';
 
-import type { TFailConstructor } from './defs';
-import { FAIL_TAG } from './defs';
+import type { FailConstructor } from './types';
+import { FAIL_TAG } from './types';
 
 const prefixSet = new Set<string>();
 
-export const Fail: TFailConstructor = ((code: string, meta?: TStructurallyCloneable) => {
-    return {
-        tag: FAIL_TAG,
-        code,
-        meta,
-    };
-}) as unknown as TFailConstructor;
+export const Fail: FailConstructor = ((code: string, meta?: TStructurallyCloneable) => {
+  return {
+    tag: FAIL_TAG,
+    code,
+    meta,
+  };
+}) as unknown as FailConstructor;
 
-export function FailFactory<P extends string>(prefix: P): TFailConstructor<P> {
-    if (prefixSet.has(prefix)) {
-        throw new Error(`Prefix ${prefix} already used`);
-    }
+export function FailFactory<P extends string>(prefix: P): FailConstructor<P> {
+  if (prefixSet.has(prefix)) {
+    throw new Error(`Prefix ${prefix} already used`);
+  }
 
-    prefixSet.add(prefix);
+  prefixSet.add(prefix);
 
-    return ((code: unknown, meta: TStructurallyCloneable) =>
-        Fail(`[${prefix}]: ${code}`, meta)) as TFailConstructor<P>;
+  return ((code: unknown, meta: TStructurallyCloneable) =>
+    Fail(`[${prefix}]: ${code}`, meta)) as FailConstructor<P>;
 }

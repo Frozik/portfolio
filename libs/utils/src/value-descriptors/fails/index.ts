@@ -1,3 +1,3 @@
-export type { TFail, TFailConstructor, TAnyFail } from './defs';
-export * from './utils';
 export * from './fail';
+export type { AnyFail, FailConstructor, FailStruct } from './types';
+export * from './utils';

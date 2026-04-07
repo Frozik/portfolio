@@ -1,0 +1,11 @@
+javascript:
+  packageManager: 'pnpm'
+  syncPackageManagerField: true
+  dedupeOnLockfileChange: false
+
+node:
+  version: '22'
+
+pnpm:
+  version: '10.14.0'
+  installArgs: ['--frozen-lockfile']

@@ -2,36 +2,20 @@
   "name": "@frozik/components",
   "version": "0.1.0",
   "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/": "./src/styles/"
+  },
   "main": "src/index.ts",
   "typings": "src/index.ts",
   "files": [
     "dist",
     "src"
   ],
-  "exports": {
-    ".": "./src/index.ts",
-    "./styles/": "./src/styles/"
-  },
   "scripts": {
-    "test": "jest --passWithNoTests",
-    "coverage": "jest --coverage --passWithNoTests",
-    "lint": "TIMING=1 eslint . --report-unused-disable-directives --max-warnings 0",
-    "types": "tsc --noEmit",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@frozik/types": "workspace:*",
-    "@frozik/utils": "workspace:*",
-    "@js-temporal/polyfill": "^0.4.4",
-    "antd": "^5.23.0",
-    "classnames": "^2.5.1",
-    "react": "^18.3.1",
-    "react-router-dom": "^7.1.1",
-    "sanitize-html": "^2.14.0",
-    "usehooks-ts": "^3.1.0"
-  },
-  "devDependencies": {
-    "@types/sanitize-html": "^2.13.0"
+    "@frozik/utils": "workspace:*"
   }
 }

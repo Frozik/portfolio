@@ -1,0 +1,17 @@
+language: typescript
+layer: library
+
+tags:
+  - library
+
+tasks:
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - 'src/**/*'
+      - 'tsconfig.json'
+    options:
+      runInCI: true
+
+  madge:
+    command: 'madge src --circular --extensions ts,tsx --ts-config tsconfig.json ./src'

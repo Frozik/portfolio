@@ -1,11 +1,5 @@
-export { completeWith } from './completeWith';
-export { conditionalBufferTime } from './conditionalBufferTime';
 export * from './database';
-export { dedobs } from './dedobs';
-export { finalizeOnlyWithError } from './finalizeOnlyWithError';
-export { finalizeOnlyWithoutError } from './finalizeOnlyWithoutError';
-export { finalizeWithLastValue } from './finalizeWithLastValue';
-export { scanPrevNext } from './scanPrevNext';
+export { debounceBy } from './debounceBy';
 export { shareReplayWithDelayedReset } from './shareReplayWithDelayedReset';
 export { shareReplayWithImmediateReset } from './shareReplayWithImmediateReset';
 export * from './syncBetweenTabs';

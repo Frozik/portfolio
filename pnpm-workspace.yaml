@@ -1,3 +1,7 @@
 packages:
   - apps/**/*
   - libs/**/*
+
+peerDependencyRules:
+  allowedVersions:
+    "vite-plugin-pwa>vite": "8"

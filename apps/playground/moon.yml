@@ -1,0 +1,40 @@
+language: typescript
+layer: application
+stack: frontend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+
+tasks:
+  build:
+    command: 'pnpm run build'
+    inputs:
+      - 'src/**/*'
+      - 'tsconfig.json'
+      - 'tsconfig.app.json'
+      - 'vite.config.ts'
+    outputs:
+      - 'dist'
+    options:
+      runInCI: true
+
+  dev:
+    command: 'pnpm run serve'
+    options:
+      persistent: true
+
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - 'src/**/*'
+      - 'tsconfig.json'
+      - 'tsconfig.app.json'
+    options:
+      runInCI: true
+
+  madge:
+    command: 'madge src --circular --extensions ts,tsx --ts-config tsconfig.json ./src'

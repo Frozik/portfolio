@@ -1,9 +1,9 @@
-import { Button } from 'antd';
 import type {
-    ComponentProps,
-    HTMLAttributeAnchorTarget,
-    MouseEvent,
-    MouseEventHandler,
+  HTMLAttributeAnchorTarget,
+  HTMLAttributes,
+  MouseEvent,
+  MouseEventHandler,
+  ReactNode,
 } from 'react';
 import { memo } from 'react';
 import type { NavigateOptions, To } from 'react-router-dom';
@@ -13,53 +13,51 @@ import { useFunction } from '../../hooks';
 import { shouldProcessLinkClick } from './utils';
 
 export const RouteLink = memo(
-    ({
-        children,
-        relative,
-        replace: replaceProp,
-        state,
-        target,
-        to,
-        preventScrollReset,
-        onClick,
-        ...restProps
-    }: {
-        reloadDocument?: boolean;
-        to: To;
-        target?: HTMLAttributeAnchorTarget;
-        onClick?: MouseEventHandler;
-    } & Pick<NavigateOptions, 'state' | 'replace' | 'preventScrollReset' | 'relative'> &
-        ComponentProps<typeof Button>) => {
-        const navigate = useNavigate();
-        const location = useLocation();
-        const path = useResolvedPath(to, { relative });
+  ({
+    children,
+    relative,
+    replace: replaceProp,
+    state,
+    target,
+    to,
+    preventScrollReset,
+    onClick,
+    className,
+    ...restProps
+  }: {
+    to: To;
+    target?: HTMLAttributeAnchorTarget;
+    onClick?: MouseEventHandler;
+    children?: ReactNode;
+    className?: string;
+  } & Pick<NavigateOptions, 'state' | 'replace' | 'preventScrollReset' | 'relative'> &
+    Omit<HTMLAttributes<HTMLButtonElement>, 'onClick'>) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const path = useResolvedPath(to, { relative });
 
-        const internalOnClick = useFunction((event: MouseEvent) => {
-            if (!event.defaultPrevented && shouldProcessLinkClick(event, target)) {
-                event.preventDefault();
+    const internalOnClick = useFunction((event: MouseEvent) => {
+      if (!event.defaultPrevented && shouldProcessLinkClick(event, target)) {
+        event.preventDefault();
 
-                // If the URL hasn't changed, a regular <a> will do a replace instead of
-                // a push, so do the same here unless the replace prop is explicitly set
-                const replace =
-                    replaceProp !== undefined
-                        ? replaceProp
-                        : createPath(location) === createPath(path);
+        const replace =
+          replaceProp !== undefined ? replaceProp : createPath(location) === createPath(path);
 
-                navigate(to, {
-                    replace,
-                    state,
-                    preventScrollReset,
-                    relative,
-                });
-
-                onClick?.(event);
-            }
+        navigate(to, {
+          replace,
+          state,
+          preventScrollReset,
+          relative,
         });
 
-        return (
-            <Button type="link" onClick={internalOnClick} {...restProps}>
-                {children}
-            </Button>
-        );
-    },
+        onClick?.(event);
+      }
+    });
+
+    return (
+      <button type="button" className={className} onClick={internalOnClick} {...restProps}>
+        {children}
+      </button>
+    );
+  }
 );

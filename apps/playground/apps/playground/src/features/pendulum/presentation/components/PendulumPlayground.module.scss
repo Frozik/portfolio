@@ -1,0 +1,49 @@
+.container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border: 1px solid transparent;
+
+    &__parent-fill {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    &__paused {
+        font-size: 60px;
+        color: #e6f7ff;
+        background: #1677ff;
+        border-radius: 50%;
+        border: 4px solid var(--text-color);
+        padding: 2px;
+        cursor: pointer;
+
+        &:hover {
+            padding: 8px;
+        }
+    }
+
+    &:focus-within {
+        border-color: #1d39c4;
+    }
+}
+
+.world-pause-action {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1;
+}
+
+.world-gravity {
+    position: absolute;
+    bottom: 74px;
+    right: 16px;
+    z-index: 1;
+    top: 100px;
+    height: auto;
+}

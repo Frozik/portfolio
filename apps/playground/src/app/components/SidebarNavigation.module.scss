@@ -12,27 +12,3 @@
     left: 16px;
     z-index: 1;
 }
-
-.route-link {
-    display: block;
-}
-
-.route-link--active {
-    pointer-events: none;
-    cursor: default;
-    color: var(--text-color);
-
-    &::before {
-        content: '> ';
-    }
-}
-
-.link-description {
-    margin-left: 20px;
-    padding-left: 8px;
-    border-left: 2px solid rgb(255 255 255 / 45%);
-}
-
-.not-for-mobile-marker {
-    margin-left: 8px;
-}

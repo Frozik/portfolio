@@ -1,0 +1,39 @@
+language: typescript
+
+tasks:
+  lint:
+    command: 'biome check .'
+    options:
+      runInCI: true
+
+  lint-fix:
+    command: 'biome check --write .'
+
+  format:
+    command: 'biome format --write .'
+
+  format-check:
+    command: 'biome format .'
+    options:
+      runInCI: true
+
+  test:
+    command: 'vitest run'
+    options:
+      runInCI: true
+
+  test-watch:
+    command: 'vitest'
+    options:
+      persistent: true
+
+  test-coverage:
+    command: 'vitest run --coverage'
+
+  build:
+    command: 'moon run playground:build'
+    options:
+      runInCI: true
+
+  deploy:
+    command: 'gh-pages -d apps/playground/dist'
