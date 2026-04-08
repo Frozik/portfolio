@@ -56,7 +56,7 @@ Sudoku game with pen/notes tool modes, undo history, and field validation.
 
 WebGPU particle visualization — 100,000 billboard instances on a sphere with
 time-based animation, neon gradient coloring, and 4x MSAA anti-aliasing.
-Interactive orbit camera via mouse drag and touch.
+Interactive orbit camera via mouse drag and touch with rotation inertia.
 
 ### Graphics
 
@@ -70,8 +70,21 @@ CPU usage and minimal GPU overhead. Features:
 
 ### Timeseries
 
-Interactive time-series chart visualization built with WebGPU. Features:
-- Zoom and pan controls for navigating large datasets
+Interactive time-series charts rendered through a **single shared WebGPU
+context** — a technique for bypassing the browser limit of ~6-8 concurrent
+WebGPU canvas contexts.
+
+**Shared Renderer pattern:**
+- One `GPUDevice` + `OffscreenCanvas` shared across all chart instances
+- Each chart rendered sequentially to the offscreen canvas, then blitted to
+  a visible 2D canvas via `transferToImageBitmap()` + `drawImage()`
+- Renderer lifecycle managed by a React context provider owned by the page
+- Per-chart isolation: independent viewport, data texture (growable),
+  spatial index, and input handling
+
+**Chart features:**
+- Animated zoom with lerp-based easing
+- Pan and pinch-to-zoom touch support
 - Adaptive axis labels that scale from minutes to years
 - Delta-encoded data packing for efficient GPU rendering
 - SVG-based axes and grid overlay

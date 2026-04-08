@@ -1,23 +1,22 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo } from 'react';
 
 import commonStyles from '../../styles.module.scss';
-import { runTimeseries } from '../domain/timeseries-draw';
+import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
+import { SharedRendererProvider } from './SharedRendererContext';
+import { TimeseriesChart } from './TimeseriesChart';
 
 export const Timeseries = memo(() => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    if (canvasRef.current && svgRef.current) {
-      return runTimeseries(canvasRef.current, svgRef.current);
-    }
-  }, []);
-
   return (
-    <div className={`${commonStyles.fixedContainer} relative`}>
-      <div className="absolute inset-0 bg-[#262626]" />
-      <svg ref={svgRef} className="absolute inset-0 h-full w-full pointer-events-none" />
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-    </div>
+    <SharedRendererProvider>
+      <div className={`${commonStyles.fixedContainer} grid grid-cols-2 grid-rows-2`}>
+        {CHART_ZOOM_LEVELS.map(level => (
+          <TimeseriesChart
+            key={`${level[0]}-${level[1]}`}
+            initialTimeStart={GLOBAL_EPOCH_OFFSET + level[0]}
+            initialTimeEnd={GLOBAL_EPOCH_OFFSET + level[1]}
+          />
+        ))}
+      </div>
+    </SharedRendererProvider>
   );
 });

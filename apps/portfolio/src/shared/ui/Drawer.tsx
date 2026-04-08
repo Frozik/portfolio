@@ -32,7 +32,10 @@ export const Drawer = memo(
     return (
       <>
         {open && (
-          <div className="fixed inset-0 z-40 bg-black/50 transition-opacity" onClick={onClose} />
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
         )}
         <div
           className={cn(

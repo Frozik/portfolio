@@ -43,6 +43,9 @@ export const VERTICES_PER_SEGMENT = 18;
 /** Rhombus: 6 vertices (quad), shape cut in fragment shader via discard. */
 export const VERTICES_PER_RHOMBUS = 6;
 
+/** Candlestick: 6 vertices (quad), shape cut in fragment shader. */
+export const VERTICES_PER_CANDLESTICK = 6;
+
 /** Value offset for second series (additive to base random walk). */
 export const SERIES_2_VALUE_OFFSET = 2.0;
 
@@ -143,3 +146,33 @@ export const AXIS_FONT_SIZE = 11;
 
 /** Axis font family. */
 export const AXIS_FONT_FAMILY = 'monospace';
+
+/** Initial offscreen canvas width in pixels. */
+export const INITIAL_OFFSCREEN_WIDTH = 1024;
+
+/** Initial offscreen canvas height in pixels. */
+export const INITIAL_OFFSCREEN_HEIGHT = 768;
+
+/** Seconds in approximately 3 months (90 days). */
+const THREE_MONTHS_SECONDS = 90 * 24 * 3600;
+
+/** Seconds in approximately 1 month (30 days). */
+const ONE_MONTH_SECONDS = 30 * 24 * 3600;
+
+/** Seconds in 1 week (7 days). */
+const ONE_WEEK_SECONDS = 7 * 24 * 3600;
+
+/** Initial zoom levels for the 4 demo charts: [timeStart, timeEnd] pairs as offsets from GLOBAL_EPOCH_OFFSET. */
+export const CHART_ZOOM_LEVELS: ReadonlyArray<readonly [number, number]> = [
+  // Full year view
+  [0, FULL_YEAR_SECONDS],
+  // ~3 months centered
+  [
+    FULL_YEAR_SECONDS / 2 - THREE_MONTHS_SECONDS / 2,
+    FULL_YEAR_SECONDS / 2 + THREE_MONTHS_SECONDS / 2,
+  ],
+  // ~1 month centered
+  [FULL_YEAR_SECONDS / 2 - ONE_MONTH_SECONDS / 2, FULL_YEAR_SECONDS / 2 + ONE_MONTH_SECONDS / 2],
+  // ~1 week centered
+  [FULL_YEAR_SECONDS / 2 - ONE_WEEK_SECONDS / 2, FULL_YEAR_SECONDS / 2 + ONE_WEEK_SECONDS / 2],
+];

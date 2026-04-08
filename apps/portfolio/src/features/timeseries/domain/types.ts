@@ -41,3 +41,41 @@ export interface IDataPoint {
   size: number;
   color: number;
 }
+
+export interface IChartViewport {
+  viewTimeStart: number;
+  viewTimeEnd: number;
+  targetTimeStart: number;
+  targetTimeEnd: number;
+  viewValueMin: number;
+  viewValueMax: number;
+}
+
+export interface IDrawCommands {
+  lineBindGroup: GPUBindGroup;
+  lineInstanceCount: number;
+  candlestickBindGroup: GPUBindGroup;
+  candlestickInstanceCount: number;
+}
+
+export interface ITimeseriesChart {
+  readonly targetCanvas: HTMLCanvasElement;
+  readonly target2dContext: CanvasRenderingContext2D;
+  readonly svgContainer: SVGSVGElement;
+  readonly width: number;
+  readonly height: number;
+  update(): void;
+  prepareDrawCommands(): IDrawCommands | null;
+  renderOverlay(): void;
+  dispose(): void;
+}
+
+export interface ISharedTimeseriesRenderer {
+  readonly device: GPUDevice;
+  readonly format: GPUTextureFormat;
+  readonly bindGroupLayout: GPUBindGroupLayout;
+  readonly linePipeline: GPURenderPipeline;
+  readonly candlestickPipeline: GPURenderPipeline;
+  registerChart(chart: ITimeseriesChart): VoidFunction;
+  destroy(): void;
+}
