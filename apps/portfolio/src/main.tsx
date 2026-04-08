@@ -12,6 +12,19 @@ import { RootStore, StoreProvider } from './app/stores';
 
 configure({ enforceActions: 'always' });
 
+// Auto-reload when a new service worker takes control (e.g. after deploy).
+// Without this, stale cached JS tries to load chunks with new hashes → black screen.
+if ('serviceWorker' in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) {
+      return;
+    }
+    reloading = true;
+    window.location.reload();
+  });
+}
+
 function bootstrap() {
   const container = document.getElementById('root');
 
