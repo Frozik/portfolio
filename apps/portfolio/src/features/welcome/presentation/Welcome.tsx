@@ -8,6 +8,7 @@ import { Contacts } from './components/Contacts';
 import { Education } from './components/Education';
 import { Position } from './components/Position';
 import { Skills } from './components/Skills';
+import { Summary } from './components/Summary';
 import { WorkExperience } from './components/WorkExperience';
 import styles from './styles.module.scss';
 
@@ -30,13 +31,15 @@ export const Welcome = memo(() => {
           <Contacts />
         </div>
 
+        <Summary />
+
         <Position />
+
+        <Skills />
 
         <WorkExperience />
 
         <Education />
-
-        <Skills />
       </section>
     </div>
   );

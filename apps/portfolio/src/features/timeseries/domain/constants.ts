@@ -94,10 +94,10 @@ export const UNIFORM_BUFFER_SIZE = 48;
 export const UNIFORM_FLOAT_COUNT = UNIFORM_BUFFER_SIZE / Float32Array.BYTES_PER_ELEMENT;
 
 /** Minimum zoom factor per mouse wheel step. */
-export const ZOOM_FACTOR_MIN = 0.9;
+export const ZOOM_FACTOR_MIN = 0.7;
 
 /** Maximum zoom factor per mouse wheel step. */
-export const ZOOM_FACTOR_MAX = 1.1;
+export const ZOOM_FACTOR_MAX = 1.3;
 
 /** Minimum allowed time range in seconds (1 minute). */
 export const MIN_TIME_RANGE_SECONDS = 60;
@@ -105,8 +105,8 @@ export const MIN_TIME_RANGE_SECONDS = 60;
 /** Interpolation speed for animated zoom (0–1, higher = faster). */
 export const ZOOM_LERP_SPEED = 0.18;
 
-/** Threshold below which the viewport snaps to target (in seconds). */
-export const ZOOM_SNAP_THRESHOLD = 0.001;
+/** Relative threshold: snap to target when remaining delta is less than this fraction of visible range. */
+export const ZOOM_SNAP_THRESHOLD = 0.005;
 
 /** One full year duration in seconds. */
 export const FULL_YEAR_SECONDS = 365 * 24 * 3600;
@@ -121,8 +121,8 @@ export const LINE_COLOR_A = 1.0;
 export const DEFAULT_POINT_SIZE = 1.0;
 
 /** SVG axis margins in pixels. */
-export const AXIS_MARGIN_LEFT = 60;
-export const AXIS_MARGIN_BOTTOM = 30;
+export const AXIS_MARGIN_LEFT = 10;
+export const AXIS_MARGIN_BOTTOM = 10;
 export const AXIS_MARGIN_TOP = 10;
 export const AXIS_MARGIN_RIGHT = 10;
 
@@ -135,6 +135,19 @@ export const TICK_LENGTH = 5;
 /** Axis label color. */
 export const AXIS_LABEL_COLOR = '#999';
 
+/** Axis label background color (semi-transparent). */
+export const AXIS_LABEL_BG_COLOR = 'rgba(38, 38, 38, 0.75)';
+
+/** Padding around axis label background in pixels. */
+export const AXIS_LABEL_BG_PADDING_X = 3;
+export const AXIS_LABEL_BG_PADDING_Y = 2;
+
+/** Minimum clearance in pixels between Y-axis labels and the X-axis label zone. */
+export const Y_LABEL_X_AXIS_CLEARANCE = 18;
+
+/** Minimum clearance in pixels between X-axis labels and the Y-axis line. */
+export const X_LABEL_Y_AXIS_CLEARANCE = 18;
+
 /** Axis line color. */
 export const AXIS_LINE_COLOR = '#555';
 
@@ -146,6 +159,9 @@ export const AXIS_FONT_SIZE = 11;
 
 /** Axis font family. */
 export const AXIS_FONT_FAMILY = 'monospace';
+
+/** Minimum interval between frames when idle (no interaction), in milliseconds. */
+export const IDLE_FRAME_INTERVAL_MS = 1000;
 
 /** Initial offscreen canvas width in pixels. */
 export const INITIAL_OFFSCREEN_WIDTH = 1024;

@@ -1,9 +1,13 @@
 import { assert } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
-import { renderAxes } from './chart-axes';
+import { renderAxes, renderGrid } from './chart-axes';
 import { ChartInputController } from './chart-input';
 import {
+  AXIS_MARGIN_BOTTOM,
+  AXIS_MARGIN_LEFT,
+  AXIS_MARGIN_RIGHT,
+  AXIS_MARGIN_TOP,
   FLOATS_PER_POINT,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
@@ -28,7 +32,8 @@ const MIN_POINTS_FOR_LINES = 2;
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly svgContainer: SVGSVGElement;
+  readonly gridSvg: SVGSVGElement;
+  readonly axesSvg: SVGSVGElement;
 
   private readonly viewport: IChartViewport;
   private readonly dataMinTime: number;
@@ -51,16 +56,26 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private canvasWidth = 0;
   private canvasHeight = 0;
 
+  // Memoization: skip SVG re-render when viewport + size unchanged
+  private lastOverlayTimeStart = Number.NaN;
+  private lastOverlayTimeEnd = Number.NaN;
+  private lastOverlayValueMin = Number.NaN;
+  private lastOverlayValueMax = Number.NaN;
+  private lastOverlayWidth = 0;
+  private lastOverlayHeight = 0;
+
   constructor(
     private readonly device: GPUDevice,
     private readonly bindGroupLayout: GPUBindGroupLayout,
     targetCanvas: HTMLCanvasElement,
-    svgContainer: SVGSVGElement,
+    gridSvg: SVGSVGElement,
+    axesSvg: SVGSVGElement,
     initialTimeStart: number,
     initialTimeEnd: number
   ) {
     this.targetCanvas = targetCanvas;
-    this.svgContainer = svgContainer;
+    this.gridSvg = gridSvg;
+    this.axesSvg = axesSvg;
 
     const ctx = targetCanvas.getContext('2d');
     assert(!isNil(ctx), 'Failed to get 2D canvas context');
@@ -122,14 +137,29 @@ export class TimeseriesChartState implements ITimeseriesChart {
     return this.canvasHeight;
   }
 
+  get isActive(): boolean {
+    if (this.inputController.isInteracting) {
+      return true;
+    }
+
+    const currentRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
+    const threshold = currentRange * ZOOM_SNAP_THRESHOLD;
+    const dStart = Math.abs(this.viewport.targetTimeStart - this.viewport.viewTimeStart);
+    const dEnd = Math.abs(this.viewport.targetTimeEnd - this.viewport.viewTimeEnd);
+
+    return dStart > threshold || dEnd > threshold;
+  }
+
   update(): void {
     this.updateCanvasSize();
 
     // Animate zoom: lerp current viewport toward target
     const dStart = this.viewport.targetTimeStart - this.viewport.viewTimeStart;
     const dEnd = this.viewport.targetTimeEnd - this.viewport.viewTimeEnd;
+    const currentRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
+    const threshold = currentRange * ZOOM_SNAP_THRESHOLD;
 
-    if (Math.abs(dStart) > ZOOM_SNAP_THRESHOLD || Math.abs(dEnd) > ZOOM_SNAP_THRESHOLD) {
+    if (Math.abs(dStart) > threshold || Math.abs(dEnd) > threshold) {
       this.viewport.viewTimeStart += dStart * ZOOM_LERP_SPEED;
       this.viewport.viewTimeEnd += dEnd * ZOOM_LERP_SPEED;
     } else {
@@ -152,21 +182,52 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.writeUniforms(parts.line, this.uniformBuf1);
     this.writeUniforms(parts.rhombus, this.uniformBuf2);
 
+    const dpr = Math.max(1, window.devicePixelRatio);
+    const plotX = Math.floor(AXIS_MARGIN_LEFT * dpr);
+    const plotY = Math.floor(AXIS_MARGIN_TOP * dpr);
+    const plotWidth = Math.max(
+      0,
+      this.canvasWidth - Math.floor((AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr)
+    );
+    const plotHeight = Math.max(
+      0,
+      this.canvasHeight - Math.floor((AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr)
+    );
+
     return {
       lineBindGroup: this.bindGroup1,
       lineInstanceCount: parts.line.pointCount - 1,
       candlestickBindGroup: this.bindGroup2,
       candlestickInstanceCount: parts.rhombus.pointCount - 1,
+      plotArea: { x: plotX, y: plotY, width: plotWidth, height: plotHeight },
     };
   }
 
   renderOverlay(): void {
-    renderAxes(
-      this.svgContainer,
-      this.viewport,
-      this.targetCanvas.clientWidth,
-      this.targetCanvas.clientHeight
-    );
+    const w = this.targetCanvas.clientWidth;
+    const h = this.targetCanvas.clientHeight;
+    const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
+
+    if (
+      viewTimeStart === this.lastOverlayTimeStart &&
+      viewTimeEnd === this.lastOverlayTimeEnd &&
+      viewValueMin === this.lastOverlayValueMin &&
+      viewValueMax === this.lastOverlayValueMax &&
+      w === this.lastOverlayWidth &&
+      h === this.lastOverlayHeight
+    ) {
+      return;
+    }
+
+    this.lastOverlayTimeStart = viewTimeStart;
+    this.lastOverlayTimeEnd = viewTimeEnd;
+    this.lastOverlayValueMin = viewValueMin;
+    this.lastOverlayValueMax = viewValueMax;
+    this.lastOverlayWidth = w;
+    this.lastOverlayHeight = h;
+
+    renderGrid(this.gridSvg, this.viewport, w, h);
+    renderAxes(this.axesSvg, this.viewport, w, h);
   }
 
   dispose(): void {

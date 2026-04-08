@@ -10,8 +10,9 @@ export const Education = memo(() => (
       <div className={styles.flexStretch}>
         <h3>Novgorod Yaroslav the Wise State University, Veliky Novgorod</h3>
         <h4>
-          Faculty of Electronics and Information Technology, Computers and Automated Systems
-          Software
+          Specialist in Computers and Automated Systems Software
+          <br />
+          Faculty of Electronics and Information Technology
         </h4>
       </div>
       <div className={styles.flexFixed}>

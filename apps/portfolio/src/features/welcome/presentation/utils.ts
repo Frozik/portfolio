@@ -1,6 +1,11 @@
 import { Temporal, Intl as TemporalIntl } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
 
+export function getYearsOfExperience(careerStart: Temporal.PlainDate): number {
+  const today = Temporal.Now.plainDateISO();
+  return today.since(careerStart, { smallestUnit: 'years', largestUnit: 'years' }).years;
+}
+
 export function getAge(): number {
   const birth = new Temporal.PlainDate(1982, 11, 10);
   const today = Temporal.Now.plainDateISO();

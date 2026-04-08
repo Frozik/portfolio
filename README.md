@@ -85,9 +85,17 @@ WebGPU canvas contexts.
 **Chart features:**
 - Animated zoom with lerp-based easing
 - Pan and pinch-to-zoom touch support
+- Line and candlestick series (candlestick shape rendered entirely in fragment shader)
 - Adaptive axis labels that scale from minutes to years
 - Delta-encoded data packing for efficient GPU rendering
-- SVG-based axes and grid overlay
+- 3-layer rendering: SVG grid → WebGPU canvas → SVG axes (labels with semi-transparent backdrop)
+
+**Performance optimizations:**
+- Adaptive frame rate: max FPS during interaction, drops to 1 FPS when idle
+- SVG overlay memoization: grid and axes only re-render when viewport changes
+- Relative snap threshold for zoom animation: prevents sub-pixel updates
+- Growable data textures: start at 4 rows, double on demand up to 512
+- Scissor rect clips GPU rendering to the plot area
 
 ### Controls
 

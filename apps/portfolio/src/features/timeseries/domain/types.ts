@@ -51,19 +51,29 @@ export interface IChartViewport {
   viewValueMax: number;
 }
 
+export interface IPlotArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface IDrawCommands {
   lineBindGroup: GPUBindGroup;
   lineInstanceCount: number;
   candlestickBindGroup: GPUBindGroup;
   candlestickInstanceCount: number;
+  plotArea: IPlotArea;
 }
 
 export interface ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly svgContainer: SVGSVGElement;
+  readonly gridSvg: SVGSVGElement;
+  readonly axesSvg: SVGSVGElement;
   readonly width: number;
   readonly height: number;
+  readonly isActive: boolean;
   update(): void;
   prepareDrawCommands(): IDrawCommands | null;
   renderOverlay(): void;

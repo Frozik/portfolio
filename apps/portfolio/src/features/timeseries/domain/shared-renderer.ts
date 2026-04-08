@@ -2,6 +2,7 @@ import { assert } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
 import {
+  IDLE_FRAME_INTERVAL_MS,
   INITIAL_OFFSCREEN_HEIGHT,
   INITIAL_OFFSCREEN_WIDTH,
   MSAA_SAMPLE_COUNT,
@@ -109,6 +110,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private msaaHeight = 0;
 
   private animationFrameId = 0;
+  private lastFrameTime = 0;
   private disposed = false;
 
   constructor(
@@ -166,16 +168,33 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.device.destroy();
   }
 
+  private hasActiveCharts(): boolean {
+    for (const chart of this.charts) {
+      if (chart.isActive) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private startAnimationLoop(): void {
     if (this.disposed) {
       return;
     }
 
-    const frame = (): void => {
+    const frame = (now: number): void => {
       if (this.disposed) {
         return;
       }
 
+      const isActive = this.hasActiveCharts();
+
+      if (!isActive && now - this.lastFrameTime < IDLE_FRAME_INTERVAL_MS) {
+        this.animationFrameId = requestAnimationFrame(frame);
+        return;
+      }
+
+      this.lastFrameTime = now;
       this.renderAllCharts();
       this.animationFrameId = requestAnimationFrame(frame);
     };
@@ -272,6 +291,10 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
           },
         ],
       });
+
+      // Clip rendering to the plot area (inside axis margins)
+      const { plotArea } = drawCommands;
+      pass.setScissorRect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
 
       // Draw series 1: lines
       pass.setPipeline(this.linePipeline);

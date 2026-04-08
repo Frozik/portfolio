@@ -3,3 +3,11 @@
   height: 100svh;
   overflow: hidden;
 }
+
+@media print {
+  .fixed-container {
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+}

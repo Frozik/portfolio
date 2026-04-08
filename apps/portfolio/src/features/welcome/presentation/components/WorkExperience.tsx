@@ -254,10 +254,13 @@ const EMPLOYMENT_HISTORY: IWork[] = [
 
         <h4>Achievements:</h4>
         <ul>
-          <li>Successfully developed and implemented several critical system modules.</li>
           <li>
-            Created and deployed user-centric UI controls which were subsequently incorporated into
-            the core set of application UI controls.
+            Developed domain-specific modules: animal health monitoring, veterinary visit tracking,
+            milk quality control, and production output tracking.
+          </li>
+          <li>
+            Built a shared UI control library (dozens of components) adopted across the platform —
+            buttons, input fields, forms, collapsible accordion cards, and more.
           </li>
         </ul>
       </>
@@ -307,10 +310,9 @@ const EMPLOYMENT_HISTORY: IWork[] = [
 
         <h4>Achievements:</h4>
         <ul>
-          <li>Successfully developed and implemented several critical system modules.</li>
           <li>
-            Created and deployed user-centric UI controls which were subsequently incorporated into
-            the core set of application UI controls.
+            Developed cartographic tools for geospatial data analysis, processing, and rendering on
+            Yandex.Maps using satellite imagery and panoramic pictures.
           </li>
         </ul>
       </>
@@ -433,9 +435,15 @@ const EMPLOYMENT_HISTORY: IWork[] = [
 
         <h4>Achievements:</h4>
         <ul>
-          <li>Successfully developed various components of the CRM application.</li>
           <li>
-            Improved internal workflows and task management by implementing the new CRM system.
+            Built core CRM modules: visual workflow editor for customizable task pipelines, email
+            template management system, contact and deal management views, activity timeline, and
+            role-based access controls
+          </li>
+          <li>
+            Integrated the CRM with customer&apos;s existing infrastructure — email delivery
+            services, internal directories, and notification systems — delivering a seamless
+            migration from legacy tools
           </li>
         </ul>
       </>
@@ -472,23 +480,34 @@ const EMPLOYMENT_HISTORY: IWork[] = [
         <h4>Achievements:</h4>
         <ul>
           <li>
-            Successfully created multiple new applications for{' '}
+            Built 5+ order entry forms for different trade types on the{' '}
             <a href="https://autobahn.db.com/autobahn/index.html" target="_blank" rel="noreferrer">
               Autobahn platform
             </a>
+            ; maintained flagship trading and active order monitoring products
           </li>
           <li>Revamped and modernized several legacy applications</li>
           <li>
-            Developed a shared controls core UI library to streamline applications design and
-            functionality
+            Developed a shared UI controls library used across all Autobahn applications — trading
+            calendar with business day rules, sliding tenor support (TOM, TOD, SPOT), natural
+            language date input (e.g. &quot;tom 10am&quot;), financial data input fields, layout
+            components, and a wide range of other controls. The library was built following BEM
+            principles, ensuring maintainable, scalable, and reusable code. Controls were designed
+            to be composable, allowing complex UI components to be assembled through combinations of
+            simpler base controls, enabling rapid and consistent development across the entire
+            application suite.
           </li>
           <li>
-            Implemented innovative features for existing applications to enhance user experience
+            Designed and proposed a page-description-based testing framework concept with server
+            response replay, along with a basic Proof-of-Concept implementation, enabling 100%
+            business functionality coverage.
           </li>
           <li>
-            Collaborated with the testing team in developing an effective testing framework to
-            ensure application reliability and performance
+            Implemented interaction patterns and performance optimizations, achieving sub-second
+            application startup times across all applications — ensuring instant loading and smooth
+            operation regardless of the trader's network channel, even on the weakest VDI setups.
           </li>
+          <li>Investigated and resolved production incidents</li>
         </ul>
       </>
     ),
@@ -500,22 +519,52 @@ const EMPLOYMENT_HISTORY: IWork[] = [
     description: (
       <>
         <h4>For High-Frequency Trading company:</h4>
+        <p>
+          Building a suite of 15+ web applications for a high-frequency trading platform — from
+          real-time data visualization to system configuration and risk management.
+        </p>
+
+        <h4>Data Visualization:</h4>
         <ul>
           <li>
-            Developing a versatile data visualization web application (Creating high-performance
-            WebGL-based charts, scalable from years down to nanoseconds, to monitor the HFT system;
-            Designing large-scale tables and grids with customizable visualization logic)
+            High-performance WebGL charting engine rendering tens of millions of data points at
+            60fps with GPU-accelerated pan/zoom, scalable from years down to nanoseconds
           </li>
-          <li>Developing web applications for configuring the internals of the HFT system</li>
-          <li>Developing a web application that generates comprehensive trading reports</li>
-          <li>Developing Middle Office web application for Risk Management and PnL</li>
+          <li>
+            Interactive dashboards with large-scale tables (millions of rows), customizable layouts,
+            and real-time data streaming via WebSocket
+          </li>
+          <li>
+            Backtesting environment for analyzing trading robot performance on historical data
+          </li>
+        </ul>
+
+        <h4>Trading Operations:</h4>
+        <ul>
+          <li>
+            Trading server management — configuration of accounts, instruments, robots, and risk
+            limits across multiple exchanges
+          </li>
+          <li>
+            Balance and position monitoring across all exchanges with risk configuration and
+            rebalancing rules
+          </li>
+          <li>
+            Middle Office application for Risk Management, PnL tracking, and trade corrections
+          </li>
+          <li>Trading statistics analysis and comprehensive report generation</li>
+        </ul>
+
+        <h4>Platform Infrastructure:</h4>
+        <ul>
+          <li>Shared component library, BFF (Backend For Frontend) layer</li>
         </ul>
       </>
     ),
   },
 ].reverse();
 
-const SMALLEST_START_DATE = EMPLOYMENT_HISTORY.reduce(
+export const SMALLEST_START_DATE = EMPLOYMENT_HISTORY.reduce(
   (acc, { start }) => (Temporal.PlainDate.compare(acc, start) < 0 ? acc : start),
   EMPLOYMENT_HISTORY[0].start
 );

@@ -9,16 +9,17 @@ import {
   Info,
   Menu,
   Network,
+  QrCode,
   SlidersHorizontal,
   Sun,
   TrendingUp,
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useToggle } from 'usehooks-ts';
 import { cn } from '../../shared/lib/cn';
-import { Drawer, FloatingButton, FloatingButtonGroup, Tag, Tooltip } from '../../shared/ui';
+import { Drawer, FloatingButton, FloatingButtonGroup, QRCode, Tag, Tooltip } from '../../shared/ui';
 import { useRootStore } from '../stores';
 import type { IMenuAction } from '../stores/CommonStore';
 import styles from './SidebarNavigation.module.scss';
@@ -38,87 +39,114 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 // No observer here — observer blocks React Router context propagation to Outlet.
 // MobX reactivity is scoped to MenuButton which is a separate observer component.
 export const SidebarNavigation = memo(() => {
-  const [visible, , setVisible] = useToggle(false);
-  const handleOpen = useFunction(() => setVisible(true));
-  const handleClose = useFunction(() => setVisible(false));
+  const [visible, toggleVisible, setVisible] = useToggle(false);
+  const [showQR, toggleQR, setShowQR] = useToggle(false);
+  const location = useLocation();
+  const handleToggle = useFunction(() => toggleVisible());
+  const handleClose = useFunction(() => {
+    setVisible(false);
+    setShowQR(false);
+  });
+  const handleToggleQR = useFunction(() => toggleQR());
+
+  const drawerTitle = (
+    <span className="flex items-center gap-2">
+      Navigation
+      <button
+        className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text md:hidden"
+        onClick={handleToggleQR}
+      >
+        <QrCode size={18} />
+      </button>
+    </span>
+  );
+
+  const currentUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}${location.pathname}`;
 
   return (
     <>
       <Drawer
-        title="Navigation"
+        title={drawerTitle}
         className={styles.sidebar}
         placement="left"
         open={visible}
         onClose={handleClose}
       >
-        <nav className="flex flex-col gap-1">
-          <NavLink className={navLinkClass} to="/" onClick={handleClose} end>
-            <Gamepad2 size={NAV_ICON_SIZE} />
-            <span>Curriculum Vitae</span>
-          </NavLink>
+        {showQR ? (
+          <div className="flex flex-col items-center gap-3 pt-4">
+            <QRCode value={currentUrl} size={200} />
+            <p className="text-center text-sm text-text-secondary">Scan to open this page</p>
+          </div>
+        ) : (
+          <nav className="flex flex-col gap-1">
+            <NavLink className={navLinkClass} to="/" onClick={handleClose} end>
+              <Gamepad2 size={NAV_ICON_SIZE} />
+              <span>Curriculum Vitae</span>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/pendulum" onClick={handleClose} end={false}>
-            <Brain size={NAV_ICON_SIZE} />
-            <span className="flex-1">Pendulum</span>
-            <Tooltip
-              title={
-                <>
-                  Genetic algorithm evolves neural networks to balance an inverted pendulum.
-                  <br />
-                  <Tag color="red" className="mt-1">
-                    Not optimized for mobile devices
-                  </Tag>
-                </>
-              }
-              placement="right"
-              className="max-w-64"
-            >
-              <Info size={14} className="text-text-muted pointer-events-auto" />
-            </Tooltip>
-          </NavLink>
+            <NavLink className={navLinkClass} to="/pendulum" onClick={handleClose} end={false}>
+              <Brain size={NAV_ICON_SIZE} />
+              <span className="flex-1">Pendulum</span>
+              <Tooltip
+                title={
+                  <>
+                    Genetic algorithm evolves neural networks to balance an inverted pendulum.
+                    <br />
+                    <Tag color="red" className="mt-1">
+                      Not optimized for mobile devices
+                    </Tag>
+                  </>
+                }
+                placement="right"
+                className="max-w-64"
+              >
+                <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+              </Tooltip>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/sudoku" onClick={handleClose} end={false}>
-            <Grid3X3 size={NAV_ICON_SIZE} />
-            <span>Sudoku</span>
-          </NavLink>
+            <NavLink className={navLinkClass} to="/sudoku" onClick={handleClose} end={false}>
+              <Grid3X3 size={NAV_ICON_SIZE} />
+              <span>Sudoku</span>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/sun" onClick={handleClose} end={false}>
-            <Sun size={NAV_ICON_SIZE} />
-            <span>Sun</span>
-          </NavLink>
+            <NavLink className={navLinkClass} to="/sun" onClick={handleClose} end={false}>
+              <Sun size={NAV_ICON_SIZE} />
+              <span>Sun</span>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/graphics" onClick={handleClose} end={false}>
-            <ChartLine size={NAV_ICON_SIZE} />
-            <span className="flex-1">Graphics</span>
-            <Tooltip
-              title="GPU-accelerated rendering of shapes, lines with rounded joins, and transparency — near-zero CPU usage and minimal GPU overhead"
-              placement="right"
-              className="max-w-64"
-            >
-              <Info size={14} className="text-text-muted pointer-events-auto" />
-            </Tooltip>
-          </NavLink>
+            <NavLink className={navLinkClass} to="/graphics" onClick={handleClose} end={false}>
+              <ChartLine size={NAV_ICON_SIZE} />
+              <span className="flex-1">Graphics</span>
+              <Tooltip
+                title="GPU-accelerated rendering of shapes, lines with rounded joins, and transparency — near-zero CPU usage and minimal GPU overhead"
+                placement="right"
+                className="max-w-64"
+              >
+                <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+              </Tooltip>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/timeseries" onClick={handleClose} end={false}>
-            <TrendingUp size={NAV_ICON_SIZE} />
-            <span className="flex-1">Timeseries</span>
-            <Tooltip
-              title="WebGPU timeseries chart capable of rendering gigabytes of data stored in GPU textures. R-tree spatial index selects visible segments, delta encoding preserves float32 precision for large timestamps. Multi-scale zoom with lazy data loading, pan, and auto-scaling Y-axis"
-              placement="right"
-              className="max-w-64"
-            >
-              <Info size={14} className="text-text-muted pointer-events-auto" />
-            </Tooltip>
-          </NavLink>
+            <NavLink className={navLinkClass} to="/timeseries" onClick={handleClose} end={false}>
+              <TrendingUp size={NAV_ICON_SIZE} />
+              <span className="flex-1">Timeseries</span>
+              <Tooltip
+                title="WebGPU timeseries chart capable of rendering gigabytes of data stored in GPU textures. R-tree spatial index selects visible segments, delta encoding preserves float32 precision for large timestamps. Multi-scale zoom with lazy data loading, pan, and auto-scaling Y-axis"
+                placement="right"
+                className="max-w-64"
+              >
+                <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+              </Tooltip>
+            </NavLink>
 
-          <NavLink className={navLinkClass} to="/controls" onClick={handleClose} end>
-            <SlidersHorizontal size={NAV_ICON_SIZE} />
-            <span>Controls</span>
-          </NavLink>
-        </nav>
+            <NavLink className={navLinkClass} to="/controls" onClick={handleClose} end>
+              <SlidersHorizontal size={NAV_ICON_SIZE} />
+              <span>Controls</span>
+            </NavLink>
+          </nav>
+        )}
       </Drawer>
 
-      <MenuButton onOpen={handleOpen} />
+      <MenuButton onOpen={handleToggle} />
     </>
   );
 });

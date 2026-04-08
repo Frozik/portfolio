@@ -1,5 +1,7 @@
 .sidebar {
-    width: 200px;
+    @media (min-width: 768px) {
+        width: 320px;
+    }
 }
 
 .sidebar-menu {
@@ -11,4 +13,8 @@
     bottom: 16px;
     left: 16px;
     z-index: 100;
+
+    @media print {
+        display: none;
+    }
 }

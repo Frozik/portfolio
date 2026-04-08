@@ -147,6 +147,10 @@ export class ChartInputController {
     };
   }
 
+  get isInteracting(): boolean {
+    return this.isDragging || this.isTouching;
+  }
+
   attach(): void {
     this.canvas.addEventListener('mousedown', this.handleMouseDown);
     this.canvas.addEventListener('mousemove', this.handleMouseMove);

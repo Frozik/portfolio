@@ -39,15 +39,23 @@ export const Drawer = memo(
         )}
         <div
           className={cn(
-            'fixed top-0 z-50 flex h-full w-80 flex-col bg-surface-elevated shadow-xl transition-transform duration-200',
-            placement === 'left' ? 'left-0' : 'right-0',
+            // Shared base
+            'fixed z-50 flex flex-col bg-surface-elevated shadow-xl transition-transform duration-200',
+            // Mobile: bottom sheet, 50% height
+            'inset-x-0 bottom-0 h-1/2 rounded-t-2xl',
+            open ? 'translate-y-0' : 'translate-y-full',
+            // Desktop: side drawer
+            'md:inset-x-auto md:top-0 md:h-full md:w-80 md:rounded-t-none',
+            placement === 'left' ? 'md:left-0' : 'md:right-0',
             placement === 'left'
               ? open
-                ? 'translate-x-0'
-                : '-translate-x-full'
+                ? 'md:translate-x-0'
+                : 'md:-translate-x-full'
               : open
-                ? 'translate-x-0'
-                : 'translate-x-full',
+                ? 'md:translate-x-0'
+                : 'md:translate-x-full',
+            // Reset mobile translate-y on desktop
+            open ? '' : 'md:translate-y-0',
             className
           )}
         >

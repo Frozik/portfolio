@@ -11,12 +11,18 @@ interface ITimeseriesChartProps {
 
 export const TimeseriesChart = memo(
   ({ initialTimeStart, initialTimeEnd }: ITimeseriesChartProps) => {
+    const gridSvgRef = useRef<SVGSVGElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const svgRef = useRef<SVGSVGElement>(null);
+    const axesSvgRef = useRef<SVGSVGElement>(null);
     const renderer = useSharedRenderer();
 
     useEffect(() => {
-      if (isNil(renderer) || isNil(canvasRef.current) || isNil(svgRef.current)) {
+      if (
+        isNil(renderer) ||
+        isNil(gridSvgRef.current) ||
+        isNil(canvasRef.current) ||
+        isNil(axesSvgRef.current)
+      ) {
         return;
       }
 
@@ -24,7 +30,8 @@ export const TimeseriesChart = memo(
         renderer.device,
         renderer.bindGroupLayout,
         canvasRef.current,
-        svgRef.current,
+        gridSvgRef.current,
+        axesSvgRef.current,
         initialTimeStart,
         initialTimeEnd
       );
@@ -34,9 +41,12 @@ export const TimeseriesChart = memo(
 
     return (
       <div className="relative h-full w-full">
-        <div className="absolute inset-0 bg-[#262626]" />
-        <svg ref={svgRef} className="absolute inset-0 h-full w-full pointer-events-none" />
+        <svg
+          ref={gridSvgRef}
+          className="absolute inset-0 h-full w-full bg-[#262626] pointer-events-none"
+        />
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+        <svg ref={axesSvgRef} className="absolute inset-0 h-full w-full pointer-events-none" />
       </div>
     );
   }
