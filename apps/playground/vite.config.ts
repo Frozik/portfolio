@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
-const BASE = '/home-projects';
+const BASE = '/portfolio';
 
 export default defineConfig({
   base: BASE,

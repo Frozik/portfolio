@@ -1,12 +1,11 @@
 <p align="center">
-  <a href="https://github.com/Frozik/home-projects/actions/workflows/ci.yml">
-    <img src="https://github.com/Frozik/home-projects/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI">
+  <a href="https://github.com/Frozik/portfolio/actions/workflows/ci.yml">
+    <img src="https://github.com/Frozik/portfolio/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI">
   </a>
 </p>
 
-# [Home Projects](https://frozik.github.io/home-projects)
-
-Portfolio/playground monorepo — interactive demos showcasing React, WebGPU,
+# [Portfolio](https://frozik.github.io/portfolio)
+Portfolio monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
 
 **Tech stack**: React 19, TypeScript 6, MobX, Tailwind CSS v4, Radix UI, Vite 8,
@@ -59,16 +58,24 @@ WebGPU particle visualization — 100,000 billboard instances on a sphere with
 time-based animation, neon gradient coloring, and 4x MSAA anti-aliasing.
 Interactive orbit camera via mouse drag and touch.
 
-### Charts
+### Graphics
 
-GPU-accelerated rendering of shapes, lines with rounded joins, and transparency
-— near-zero CPU usage and minimal GPU overhead. Features:
+GPU-accelerated 2D rendering of graphic primitives with WebGPU — near-zero
+CPU usage and minimal GPU overhead. Features:
 - Variable line thickness with rounded joins between segments
 - Gradient coloring per segment
 - Transparent sin-Y wave layer composited over the main scene
 - Animated shapes (circles, polygons, stars) with fade-in/fade-out lifecycle
-- 4x MSAA anti-aliasing
+- Multi-pass rendering pipeline with 4x MSAA anti-aliasing
+
+### Timeseries
+
+Interactive time-series chart visualization built with WebGPU. Features:
+- Zoom and pan controls for navigating large datasets
+- Adaptive axis labels that scale from minutes to years
+- Delta-encoded data packing for efficient GPU rendering
+- SVG-based axes and grid overlay
 
 ### Controls
 
-Showcase of shared UI controls (numeric input).
+Showcase of shared UI controls (numeric input, date editor).
