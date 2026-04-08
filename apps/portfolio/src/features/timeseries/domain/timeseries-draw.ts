@@ -18,6 +18,7 @@ import {
   MSAA_SAMPLE_COUNT,
   SERIES_2_VALUE_OFFSET,
   SVG_NS,
+  TEXTURE_INITIAL_ROWS,
   TEXTURE_MAX_ROWS,
   TEXTURE_WIDTH,
   TICK_LENGTH,
@@ -26,6 +27,8 @@ import {
   VERTICES_PER_SEGMENT,
   ZOOM_FACTOR_MAX,
   ZOOM_FACTOR_MIN,
+  ZOOM_LERP_SPEED,
+  ZOOM_SNAP_THRESHOLD,
 } from './constants';
 import { generateTimeseriesData } from './data-generator';
 import { encodePoints } from './delta-encoding';
@@ -148,30 +151,76 @@ async function initTimeseries(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // Data texture (rgba32float)
-  const dataTexture = device.createTexture({
-    size: [TEXTURE_WIDTH, TEXTURE_MAX_ROWS],
+  // Growable data texture (rgba32float) — starts small, doubles until TEXTURE_MAX_ROWS
+  let textureRows = TEXTURE_INITIAL_ROWS;
+  let dataTexture = device.createTexture({
+    size: [TEXTURE_WIDTH, textureRows],
     format: 'rgba32float',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
   });
 
-  const dataTextureView = dataTexture.createView();
+  function rebuildBindGroups(): void {
+    const view = dataTexture.createView();
+    bindGroup1 = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuf1 } },
+        { binding: 1, resource: view },
+      ],
+    });
+    bindGroup2 = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuf2 } },
+        { binding: 1, resource: view },
+      ],
+    });
+  }
 
-  // Bind groups — one per series
-  const bindGroup1 = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuf1 } },
-      { binding: 1, resource: dataTextureView },
-    ],
-  });
-  const bindGroup2 = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuf2 } },
-      { binding: 1, resource: dataTextureView },
-    ],
-  });
+  // Bind groups — one per series (recreated on texture grow)
+  let bindGroup1: GPUBindGroup;
+  let bindGroup2: GPUBindGroup;
+  rebuildBindGroups();
+
+  /** Grow the data texture to fit at least `requiredRows` rows. Copies existing data. */
+  function growTextureIfNeeded(requiredRows: number): boolean {
+    if (requiredRows <= textureRows) {
+      return true;
+    }
+
+    let newRows = textureRows;
+    while (newRows < requiredRows) {
+      newRows *= 2;
+    }
+    newRows = Math.min(newRows, TEXTURE_MAX_ROWS);
+
+    if (requiredRows > newRows) {
+      return false;
+    }
+
+    const newTexture = device.createTexture({
+      size: [TEXTURE_WIDTH, newRows],
+      format: 'rgba32float',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
+    });
+
+    // Copy existing rows from old texture to new
+    const encoder = device.createCommandEncoder();
+    encoder.copyTextureToTexture(
+      { texture: dataTexture, origin: [0, 0, 0] },
+      { texture: newTexture, origin: [0, 0, 0] },
+      [TEXTURE_WIDTH, nextTextureRow, 1]
+    );
+    device.queue.submit([encoder.finish()]);
+
+    dataTexture.destroy();
+    dataTexture = newTexture;
+    textureRows = newRows;
+
+    rebuildBindGroups();
+
+    return true;
+  }
 
   // MSAA texture
   let msaaTexture: GPUTexture | null = null;
@@ -189,6 +238,10 @@ async function initTimeseries(
   let viewTimeEnd = dataMaxTime;
   let viewValueMin = 0;
   let viewValueMax = 200;
+
+  // Animated zoom targets
+  let targetTimeStart = viewTimeStart;
+  let targetTimeEnd = viewTimeEnd;
 
   let canvasWidth = 0;
   let canvasHeight = 0;
@@ -232,7 +285,7 @@ async function initTimeseries(
     const rowStart = nextTextureRow;
     const rowsNeeded = Math.ceil(points.length / TEXTURE_WIDTH);
 
-    if (rowStart + rowsNeeded > TEXTURE_MAX_ROWS) {
+    if (!growTextureIfNeeded(rowStart + rowsNeeded)) {
       return null;
     }
 
@@ -562,6 +615,8 @@ async function initTimeseries(
     );
     viewTimeStart = newStart;
     viewTimeEnd = newEnd;
+    targetTimeStart = newStart;
+    targetTimeEnd = newEnd;
   }
 
   function handleMouseUp(): void {
@@ -577,12 +632,12 @@ async function initTimeseries(
     const factor = e.deltaY > 0 ? ZOOM_FACTOR_MAX : ZOOM_FACTOR_MIN;
 
     const [newStart, newEnd] = clampViewport(
-      ...zoomViewport(viewTimeStart, viewTimeEnd, factor, centerNormalized),
+      ...zoomViewport(targetTimeStart, targetTimeEnd, factor, centerNormalized),
       dataMinTime,
       dataMaxTime
     );
-    viewTimeStart = newStart;
-    viewTimeEnd = newEnd;
+    targetTimeStart = newStart;
+    targetTimeEnd = newEnd;
   }
 
   canvas.addEventListener('mousedown', handleMouseDown);
@@ -628,12 +683,12 @@ async function initTimeseries(
       const centerNormalized = getTouchCenter(e);
 
       const [newStart, newEnd] = clampViewport(
-        ...zoomViewport(viewTimeStart, viewTimeEnd, scale, centerNormalized),
+        ...zoomViewport(targetTimeStart, targetTimeEnd, scale, centerNormalized),
         dataMinTime,
         dataMaxTime
       );
-      viewTimeStart = newStart;
-      viewTimeEnd = newEnd;
+      targetTimeStart = newStart;
+      targetTimeEnd = newEnd;
       lastPinchDistance = currentDistance;
       return;
     }
@@ -652,6 +707,8 @@ async function initTimeseries(
     );
     viewTimeStart = newStart;
     viewTimeEnd = newEnd;
+    targetTimeStart = newStart;
+    targetTimeEnd = newEnd;
   }
 
   function handleTouchEnd(e: TouchEvent): void {
@@ -683,6 +740,18 @@ async function initTimeseries(
     }
 
     updateCanvasSize();
+
+    // Animate zoom: lerp current viewport toward target
+    const dStart = targetTimeStart - viewTimeStart;
+    const dEnd = targetTimeEnd - viewTimeEnd;
+
+    if (Math.abs(dStart) > ZOOM_SNAP_THRESHOLD || Math.abs(dEnd) > ZOOM_SNAP_THRESHOLD) {
+      viewTimeStart += dStart * ZOOM_LERP_SPEED;
+      viewTimeEnd += dEnd * ZOOM_LERP_SPEED;
+    } else {
+      viewTimeStart = targetTimeStart;
+      viewTimeEnd = targetTimeEnd;
+    }
 
     const parts = ensureDataForViewport();
 

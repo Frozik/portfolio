@@ -89,6 +89,8 @@ export function runSun(canvas: HTMLCanvasElement): () => void {
 
       resizeCanvasToDisplaySize();
 
+      camera.tick();
+
       const time = (performance.now() - startTime) / MS_PER_SECOND;
 
       const view = camera.getViewMatrix();

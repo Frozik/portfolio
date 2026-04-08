@@ -12,6 +12,9 @@ export const INITIAL_ELEVATION = Math.PI / 2;
 export const ELEVATION_MIN = 0.01;
 export const ELEVATION_MAX = Math.PI - 0.01;
 
+export const INERTIA_DAMPING = 0.95;
+export const INERTIA_MIN_VELOCITY = 0.1;
+
 export const FIELD_OF_VIEW_RADIANS = Math.PI / 4;
 export const NEAR_PLANE = 0.1;
 export const FAR_PLANE = 100;

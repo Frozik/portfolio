@@ -1,6 +1,8 @@
 import { mat4, vec3 } from 'wgpu-matrix';
 
 import {
+  INERTIA_DAMPING,
+  INERTIA_MIN_VELOCITY,
   INITIAL_CAMERA_DISTANCE,
   INITIAL_ELEVATION,
   MAX_CAMERA_DISTANCE,
@@ -10,6 +12,7 @@ import {
 } from './sun-constants';
 
 export interface OrbitalCameraController {
+  tick(): void;
   getViewMatrix(): Float32Array;
   destroy(): void;
 }
@@ -63,6 +66,11 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     camPos = vec3.normalize(camPos);
   }
 
+  // ── Inertia ──────────────────────────────────────────────────────────
+
+  let velocityX = 0;
+  let velocityY = 0;
+
   // ── Mouse ───────────────────────────────────────────────────────────
 
   let isDragging = false;
@@ -84,6 +92,9 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     const dy = e.clientY - lastMouseY;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
+
+    velocityX = dx;
+    velocityY = dy;
 
     applyRotation(dx, dy);
   }
@@ -151,6 +162,9 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     lastTouchX = e.touches[0].clientX;
     lastTouchY = e.touches[0].clientY;
 
+    velocityX = dx;
+    velocityY = dy;
+
     applyRotation(dx, dy);
   }
 
@@ -169,6 +183,26 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
   canvas.addEventListener('touchend', onTouchEnd);
 
   return {
+    tick(): void {
+      if (isDragging || isTouching) {
+        return;
+      }
+
+      if (
+        Math.abs(velocityX) < INERTIA_MIN_VELOCITY &&
+        Math.abs(velocityY) < INERTIA_MIN_VELOCITY
+      ) {
+        velocityX = 0;
+        velocityY = 0;
+        return;
+      }
+
+      applyRotation(velocityX, velocityY);
+
+      velocityX *= INERTIA_DAMPING;
+      velocityY *= INERTIA_DAMPING;
+    },
+
     getViewMatrix(): Float32Array {
       const eye = vec3.scale(camPos, distance);
       const target = vec3.fromValues(0, 0, 0);

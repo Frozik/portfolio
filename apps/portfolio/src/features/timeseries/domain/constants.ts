@@ -4,6 +4,9 @@ export const TEXTURE_WIDTH = 2048;
 /** Maximum number of rows available in the data texture. */
 export const TEXTURE_MAX_ROWS = 512;
 
+/** Initial number of rows allocated for the data texture (grows by 2x as needed). */
+export const TEXTURE_INITIAL_ROWS = 4;
+
 /** Number of float32 values stored per data point: x-delta, y-delta, size, packed-color. */
 export const FLOATS_PER_POINT = 4;
 
@@ -95,6 +98,12 @@ export const ZOOM_FACTOR_MAX = 1.1;
 
 /** Minimum allowed time range in seconds (1 minute). */
 export const MIN_TIME_RANGE_SECONDS = 60;
+
+/** Interpolation speed for animated zoom (0–1, higher = faster). */
+export const ZOOM_LERP_SPEED = 0.18;
+
+/** Threshold below which the viewport snaps to target (in seconds). */
+export const ZOOM_SNAP_THRESHOLD = 0.001;
 
 /** One full year duration in seconds. */
 export const FULL_YEAR_SECONDS = 365 * 24 * 3600;
