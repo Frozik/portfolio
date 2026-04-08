@@ -137,6 +137,8 @@ export class PendulumStore {
 
     this.loadCompetitionSub?.();
 
+    this.currentCompetition = REQUESTING_VD;
+
     const obs$ = this.dbModule.getGenerations$(start);
 
     const sub = obs$.subscribe({

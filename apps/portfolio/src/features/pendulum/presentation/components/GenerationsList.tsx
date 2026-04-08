@@ -16,9 +16,11 @@ import type React from 'react';
 import { memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useResizeObserver } from 'usehooks-ts';
+import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { Badge, Button, DataTable, List, Tag } from '../../../../shared/ui';
 import { usePendulumStore } from '../../application/usePendulumStore';
+import commonStyles from './common.module.scss';
 import styles from './GenerationsList.module.scss';
 
 type TGenerationRow = Record<string, unknown> & {
@@ -111,6 +113,14 @@ export const GenerationsList = observer(() => {
       store.loadCompetition(competitionStart);
     }
   });
+
+  if (isWaitingArgumentsValueDescriptor(competitionsList)) {
+    return (
+      <div className={commonStyles.alertContainer}>
+        <OverlayLoader />
+      </div>
+    );
+  }
 
   const competitionsDataSource: ('new' | ISO)[] = matchValueDescriptor(competitionsList, {
     synced: ({ value }) => ['new' as const, ...value],

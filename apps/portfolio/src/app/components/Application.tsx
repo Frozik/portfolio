@@ -17,6 +17,7 @@ const rootRouter = createBrowserRouter(
       children: [
         {
           index: true,
+          handle: { title: 'CV' },
           lazy: async () => {
             const { Welcome } = await import('../../features/welcome/presentation/Welcome');
             return { Component: Welcome };
@@ -24,6 +25,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'pendulum/:robotId?',
+          handle: { title: 'Pendulum' },
           lazy: async () => {
             const { Pendulum } = await import('../../features/pendulum/presentation/Pendulum');
             return { Component: Pendulum };
@@ -31,6 +33,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'sudoku/:puzzle?',
+          handle: { title: 'Sudoku' },
           lazy: async () => {
             const { Sudoku } = await import('../../features/sudoku/presentation/Sudoku');
             return { Component: Sudoku };
@@ -38,6 +41,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'sun',
+          handle: { title: 'Sun' },
           lazy: async () => {
             const { Sun } = await import('../../features/sun/presentation/Sun');
             return { Component: Sun };
@@ -45,6 +49,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'graphics',
+          handle: { title: 'Graphics' },
           lazy: async () => {
             const { Charts } = await import('../../features/graphics/presentation/Charts');
             return { Component: Charts };
@@ -52,6 +57,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'timeseries',
+          handle: { title: 'Timeseries' },
           lazy: async () => {
             const { Timeseries } = await import(
               '../../features/timeseries/presentation/Timeseries'
@@ -61,6 +67,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'controls',
+          handle: { title: 'Controls' },
           lazy: async () => {
             const { Controls } = await import('../../features/controls/presentation/Controls');
             return { Component: Controls };

@@ -19,8 +19,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.pdf$/],
       },
       manifest: {
-        name: 'Home Projects',
-        short_name: 'Playground',
+        name: 'Portfolio',
+        short_name: 'Portfolio',
         description: 'Interactive demos: neural networks, WebGPU, physics simulations',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
