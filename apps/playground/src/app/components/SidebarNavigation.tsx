@@ -11,6 +11,7 @@ import {
   Network,
   SlidersHorizontal,
   Sun,
+  TrendingUp,
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
@@ -91,6 +92,18 @@ export const SidebarNavigation = memo(() => {
             <span className="flex-1">Graphics</span>
             <Tooltip
               title="GPU-accelerated rendering of shapes, lines with rounded joins, and transparency — near-zero CPU usage and minimal GPU overhead"
+              placement="right"
+              className="max-w-64"
+            >
+              <Info size={14} className="text-text-muted pointer-events-auto" />
+            </Tooltip>
+          </NavLink>
+
+          <NavLink className={navLinkClass} to="/timeseries" onClick={handleClose} end={false}>
+            <TrendingUp size={NAV_ICON_SIZE} />
+            <span className="flex-1">Timeseries</span>
+            <Tooltip
+              title="WebGPU timeseries chart capable of rendering gigabytes of data stored in GPU textures. R-tree spatial index selects visible segments, delta encoding preserves float32 precision for large timestamps. Multi-scale zoom with lazy data loading, pan, and auto-scaling Y-axis"
               placement="right"
               className="max-w-64"
             >

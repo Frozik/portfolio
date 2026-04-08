@@ -46,8 +46,17 @@ const rootRouter = createBrowserRouter(
         {
           path: 'graphics',
           lazy: async () => {
-            const { Charts } = await import('../../features/webgpu-graphics/presentation/Charts');
+            const { Charts } = await import('../../features/graphics/presentation/Charts');
             return { Component: Charts };
+          },
+        },
+        {
+          path: 'timeseries',
+          lazy: async () => {
+            const { Timeseries } = await import(
+              '../../features/timeseries/presentation/Timeseries'
+            );
+            return { Component: Timeseries };
           },
         },
         {

@@ -29,7 +29,7 @@ export const FloatingButton = memo(
         type === 'primary'
           ? 'bg-brand-500 text-white hover:bg-brand-600'
           : 'bg-surface-elevated text-text hover:bg-surface-overlay',
-        !inline && 'fixed bottom-6 left-6 z-50',
+        !inline && 'fixed bottom-6 left-6 z-[100]',
         className
       )}
       style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
@@ -72,10 +72,7 @@ export const FloatingButtonGroup = memo(
 
     return (
       <div
-        className={cn(
-          'fixed bottom-6 right-6 z-50 flex flex-col-reverse items-center gap-3',
-          className
-        )}
+        className={cn('fixed bottom-6 right-6 flex flex-col-reverse items-center gap-3', className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
