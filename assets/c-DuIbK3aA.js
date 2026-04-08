@@ -1,4 +1,4 @@
-import{M as e,N as t,P as n,j as r,st as i}from"./c-D2N51Ix1.js";import{t as a}from"./c-CLIWQxFX.js";import{t as o}from"./c-9Q3yUddn.js";var s=i(t(),1),c=.149,l=.149,u=.149,d=.5,f=.7,p=1e-5,m=16384,h=.5,g=.4,_=.6,v=`rgba8unorm`,y=1e3,b=`const PI: f32 = 3.14159265358979323846;
+import{M as e,N as t,P as n,j as r,st as i}from"./c-D2N51Ix1.js";import{t as a}from"./c-ByL8Qlu7.js";import{t as o}from"./c-9Q3yUddn.js";var s=i(t(),1),c=.149,l=.149,u=.149,d=.5,f=.7,p=1e-5,m=16384,h=.5,g=.4,_=.6,v=`rgba8unorm`,y=1e3,b=`const PI: f32 = 3.14159265358979323846;
 const HALF: f32 = 0.5;
 const BORDER_POINT_COUNT: u32 = 5u;
 // Keep in sync with BORDER_SEGMENT_COUNT in chart-draw.ts
