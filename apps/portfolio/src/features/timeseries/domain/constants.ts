@@ -133,10 +133,10 @@ export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const TICK_LENGTH = 5;
 
 /** Axis label color. */
-export const AXIS_LABEL_COLOR = '#999';
+export const AXIS_LABEL_COLOR = '#ccc';
 
 /** Axis label background color (semi-transparent). */
-export const AXIS_LABEL_BG_COLOR = 'rgba(38, 38, 38, 0.75)';
+export const AXIS_LABEL_BG_COLOR = 'rgba(50, 50, 50, 0.75)';
 
 /** Padding around axis label background in pixels. */
 export const AXIS_LABEL_BG_PADDING_X = 3;
@@ -149,10 +149,10 @@ export const Y_LABEL_X_AXIS_CLEARANCE = 18;
 export const X_LABEL_Y_AXIS_CLEARANCE = 18;
 
 /** Axis line color. */
-export const AXIS_LINE_COLOR = '#555';
+export const AXIS_LINE_COLOR = '#aaa';
 
 /** Grid line color. */
-export const GRID_LINE_COLOR = '#333';
+export const GRID_LINE_COLOR = '#444';
 
 /** Axis font size in pixels. */
 export const AXIS_FONT_SIZE = 11;

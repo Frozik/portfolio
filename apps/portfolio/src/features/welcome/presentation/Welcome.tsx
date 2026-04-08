@@ -4,6 +4,7 @@ import avatarUrl from '../../../assets/avatar.png';
 import { cn } from '../../../shared/lib/cn';
 import { Avatar } from '../../../shared/ui';
 import commonStyles from '../../styles.module.scss';
+import { CartoonEyes } from './components/CartoonEyes';
 import { Contacts } from './components/Contacts';
 import { Education } from './components/Education';
 import { Position } from './components/Position';
@@ -27,7 +28,10 @@ export const Welcome = memo(() => {
         })}
       >
         <div className={cn(styles.card, styles.cardWithAvatar)}>
-          <Avatar className={cn(styles.avatar, 'h-[200px] w-[200px]')} src={avatarUrl} />
+          <div className="relative h-50 w-50 shrink-0">
+            <Avatar className={cn(styles.avatar, 'h-50 w-50')} src={avatarUrl} />
+            <CartoonEyes />
+          </div>
           <Contacts />
         </div>
 

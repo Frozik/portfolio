@@ -270,8 +270,7 @@ const BORDER_PX: f32 = 2.0;
 const WICK_HALF_WIDTH_PX: f32 = 1.5;
 const CAP_HALF_WIDTH_PX: f32 = 6.0;
 const CAP_HALF_HEIGHT_PX: f32 = 1.5;
-const CANDLESTICK_BLACK: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-const CANDLESTICK_GRAY: vec4<f32> = vec4<f32>(0.6, 0.6, 0.6, 1.0);
+const CANDLESTICK_STROKE: vec4<f32> = vec4<f32>(0.55, 0.55, 0.55, 1.0);
 
 @fragment
 fn fsCandlestick(in: CandlestickVSOut) -> @location(0) vec4<f32> {
@@ -289,27 +288,27 @@ fn fsCandlestick(in: CandlestickVSOut) -> @location(0) vec4<f32> {
     let wickTop = in.quadPixelSize.y * 0.5;
     let wickBot = -in.quadPixelSize.y * 0.5;
 
-    // Body region (with black border)
+    // Body region (with light border)
     if (pixelY >= bodyPixelBot && pixelY <= bodyPixelTop && absPixelX <= bodyHalfWidthPx) {
         // Border: fixed pixel width
         if (absPixelX > bodyHalfWidthPx - BORDER_PX ||
             pixelY < bodyPixelBot + BORDER_PX ||
             pixelY > bodyPixelTop - BORDER_PX) {
-            return CANDLESTICK_BLACK;
+            return CANDLESTICK_STROKE;
         }
         return in.color;
     }
 
-    // Wick (thin black vertical line)
+    // Wick (thin light vertical line)
     if (absPixelX <= WICK_HALF_WIDTH_PX) {
-        return CANDLESTICK_BLACK;
+        return CANDLESTICK_STROKE;
     }
 
     // Caps at top and bottom of wick
     if ((abs(pixelY - wickTop) < CAP_HALF_HEIGHT_PX ||
          abs(pixelY - wickBot) < CAP_HALF_HEIGHT_PX) &&
         absPixelX <= CAP_HALF_WIDTH_PX) {
-        return CANDLESTICK_BLACK;
+        return CANDLESTICK_STROKE;
     }
 
     discard;

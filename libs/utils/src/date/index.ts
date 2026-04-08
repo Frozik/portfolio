@@ -3,7 +3,6 @@ import { EDayOfWeek } from '../types';
 
 export {
   applyOffset,
-  createDateTimeParser,
   parseDirectDate,
   parseStandaloneTime,
   resolveKeyword,
@@ -12,8 +11,10 @@ export {
   resolveNextWeekday,
   resolvePreviousWeekday,
   resolveQuarter,
-} from './parseDateTimeInput';
+} from './date-utils';
+export { parseFuzzyDate } from './parseFuzzyDate';
 export { stepDateTime } from './stepDateTime';
+export type { ISlotMap } from './token-types';
 export * from './types';
 
 export const DAYS_IN_WEEK = 7;

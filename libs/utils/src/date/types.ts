@@ -30,6 +30,21 @@ export interface DayInfo {
   readonly tenor?: Tenor;
 }
 
+/** Temporal classification of a parsed date expression */
+export enum EParseTemporality {
+  PastDirected = 'PastDirected',
+  ExplicitDate = 'ExplicitDate',
+  FutureDirected = 'FutureDirected',
+  TimeOnly = 'TimeOnly',
+  Weekday = 'Weekday',
+  DayOfMonth = 'DayOfMonth',
+  MonthDay = 'MonthDay',
+  MonthOnly = 'MonthOnly',
+  Quarter = 'Quarter',
+  Boundary = 'Boundary',
+  KeywordTime = 'KeywordTime',
+}
+
 /** Result of parsing user input text */
 export type DateTimeParseResult =
   | { readonly success: true; readonly value: Temporal.ZonedDateTime }

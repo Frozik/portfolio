@@ -19,7 +19,7 @@ export const SIN_Y_LAYER_OPACITY = 0.7;
 
 // --- Animated shapes constants ---
 // Shapes per pixel of canvas area. At 1920x1080, yields ~518 shapes.
-export const SHAPE_DENSITY = 1e-5;
+export const SHAPE_DENSITY = 1e-4;
 // Upper bound for GPU buffer pre-allocation. Sufficient for ~8K display at 2x DPR.
 export const MAX_SHAPE_BUFFER_COUNT = 16_384;
 // Keep in sync with FADE_DURATION in shaders/shapes.wgsl

@@ -43,7 +43,7 @@ export const TimeseriesChart = memo(
       <div className="relative h-full w-full">
         <svg
           ref={gridSvgRef}
-          className="absolute inset-0 h-full w-full bg-[#262626] pointer-events-none"
+          className="absolute inset-0 h-full w-full bg-[#1a1a1a] pointer-events-none"
         />
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
         <svg ref={axesSvgRef} className="absolute inset-0 h-full w-full pointer-events-none" />
