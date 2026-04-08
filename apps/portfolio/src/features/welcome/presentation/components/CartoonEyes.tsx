@@ -26,6 +26,7 @@ function Eye({
   blinkProgress,
   browPath,
   eyeId,
+  scale = 1,
 }: {
   cx: number;
   cy: number;
@@ -34,11 +35,12 @@ function Eye({
   blinkProgress: number;
   browPath: string;
   eyeId: string;
+  scale?: number;
 }) {
   const lidY = -EYE_RY + blinkProgress * (EYE_RY * 2);
 
   return (
-    <g transform={`translate(${cx}, ${cy})`}>
+    <g transform={`translate(${cx}, ${cy}) scale(${scale})`}>
       <defs>
         <clipPath id={eyeId}>
           <ellipse cx="0" cy="0" rx={EYE_RX} ry={EYE_RY} />
@@ -143,9 +145,13 @@ export const CartoonEyes = memo(({ className }: { className?: string }) => {
       )}
       style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}
     >
-      <svg viewBox="0 0 120 60" className="mt-[28%] ml-[10%] h-[30%] w-[30%]" aria-hidden="true">
+      <svg
+        viewBox="0 0 120 60"
+        className="mt-[28%] ml-[10%] h-[30%] w-[30%] rotate-[10deg]"
+        aria-hidden="true"
+      >
         <Eye
-          cx={30}
+          cx={35}
           cy={30}
           pupilOffsetX={pupilOffset.x - 2}
           pupilOffsetY={pupilOffset.y}
@@ -154,8 +160,9 @@ export const CartoonEyes = memo(({ className }: { className?: string }) => {
           eyeId="lid-left"
         />
         <Eye
-          cx={90}
+          cx={95}
           cy={30}
+          scale={0.9}
           pupilOffsetX={pupilOffset.x + 2}
           pupilOffsetY={pupilOffset.y}
           blinkProgress={blinkProgress}
