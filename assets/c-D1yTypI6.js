@@ -1,4 +1,4 @@
-import{D as e,M as t,N as n,P as r,j as i,st as a}from"./c-03-ZDant.js";import{t as o}from"./c-ByL8Qlu7.js";var s=a(n(),1),c=2048,l=.1,u=1767225600;48/Float32Array.BYTES_PER_ELEMENT;var d=.7,f=1.3,p=.18,m=.005,h=365*24*3600,g=`http://www.w3.org/2000/svg`,_=`#ccc`,v=`rgba(50, 50, 50, 0.75)`,y=`#aaa`,b=`#444`,ee=`monospace`,te=1024,x=2160*3600,S=720*3600,C=168*3600,ne=[[0,h],[h/2-x/2,h/2+x/2],[h/2-S/2,h/2+S/2],[h/2-C/2,h/2+C/2]],re=`struct Uniforms {
+import{D as e,M as t,N as n,P as r,j as i,st as a}from"./c-CRgvI9kF.js";import{t as o}from"./c-ByL8Qlu7.js";var s=a(n(),1),c=2048,l=.1,u=1767225600;48/Float32Array.BYTES_PER_ELEMENT;var d=.7,f=1.3,p=.18,m=.005,h=365*24*3600,g=`http://www.w3.org/2000/svg`,_=`#ccc`,v=`rgba(50, 50, 50, 0.75)`,y=`#aaa`,b=`#444`,ee=`monospace`,te=1024,x=2160*3600,S=720*3600,C=168*3600,ne=[[0,h],[h/2-x/2,h/2+x/2],[h/2-S/2,h/2+S/2],[h/2-C/2,h/2+C/2]],re=`struct Uniforms {
     viewport: vec2<f32>,      // canvas size in pixels
     timeRangeMin: f32,        // visible time range start (delta from base)
     timeRangeMax: f32,        // visible time range end (delta from base)
