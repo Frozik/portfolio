@@ -48,6 +48,7 @@ export const Skills = memo(() => (
           <Tag color="purple">Message Queues</Tag>
 
           <Tag color="orange">Node.js</Tag>
+          <Tag color="orange">Fastify</Tag>
           <Tag color="orange">PostgreSQL</Tag>
           <Tag color="orange">Redis</Tag>
           <Tag color="orange">GraphQL</Tag>
