@@ -7,6 +7,7 @@ import { SvgTelegram } from '../../../../icons/SvgTelegram';
 import { Button, QRCodePopover } from '../../../../shared/ui';
 import styles from '../styles.module.scss';
 import { getAge } from '../utils';
+import { AvailabilityStatus } from './AvailabilityStatus';
 
 export const Contacts = memo(() => {
   const handlePrint = useFunction(() => window.print());
@@ -83,11 +84,7 @@ export const Contacts = memo(() => {
         </ul>
       </address>
 
-      <aside className={styles.infoBlock}>
-        <p>Reside in: Saint Petersburg, metro station Komendantskiy Prospekt</p>
-        <p>Citizenship: Russia, work permit at: Russia</p>
-        <p>I am not ready to relocate, but I am open to occasional business trips.</p>
-      </aside>
+      <AvailabilityStatus className="mt-2 flex items-center gap-2 text-sm" />
     </div>
   );
 });

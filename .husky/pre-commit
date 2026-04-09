@@ -1,1 +1,2 @@
 pnpm run check-all
+pnpm run build

@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { EDayOfWeek } from '../types';
+import { EDayOfWeek } from './types';
 
 export {
   applyOffset,

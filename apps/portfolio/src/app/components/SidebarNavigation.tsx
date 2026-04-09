@@ -43,12 +43,10 @@ export const SidebarNavigation = memo(() => {
   const [visible, toggleVisible, setVisible] = useToggle(false);
   const [showQR, toggleQR, setShowQR] = useToggle(false);
   const location = useLocation();
-  const handleToggle = useFunction(() => toggleVisible());
   const handleClose = useFunction(() => {
     setVisible(false);
     setShowQR(false);
   });
-  const handleToggleQR = useFunction(() => toggleQR());
 
   const drawerTitle = (
     <span className="flex items-center gap-2">
@@ -63,7 +61,7 @@ export const SidebarNavigation = memo(() => {
       </a>
       <button
         className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"
-        onClick={handleToggleQR}
+        onClick={toggleQR}
       >
         <QrCode size={18} />
       </button>
@@ -155,7 +153,7 @@ export const SidebarNavigation = memo(() => {
         )}
       </Drawer>
 
-      <MenuButton onOpen={handleToggle} />
+      <MenuButton onOpen={toggleVisible} />
     </>
   );
 });
