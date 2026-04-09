@@ -20,7 +20,7 @@ const TAG_COLOR_MAP: Record<string, string> = {
 const DEFAULT_TAG_STYLE = 'border-border bg-surface-elevated text-text';
 
 const tagVariants = cva(
-  'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium'
+  'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium print:border-gray-400 print:bg-transparent print:text-black'
 );
 
 type TagProps = VariantProps<typeof tagVariants> & {

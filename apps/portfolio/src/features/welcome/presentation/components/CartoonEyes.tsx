@@ -139,7 +139,7 @@ export const CartoonEyes = memo(({ className }: { className?: string }) => {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute inset-0 flex items-start justify-center transition-opacity',
+        'pointer-events-none absolute inset-0 flex items-start justify-center print:hidden transition-opacity',
         visible ? 'opacity-100' : 'opacity-0',
         className
       )}
@@ -147,7 +147,7 @@ export const CartoonEyes = memo(({ className }: { className?: string }) => {
     >
       <svg
         viewBox="0 0 120 60"
-        className="mt-[28%] ml-[10%] h-[30%] w-[30%] rotate-[10deg]"
+        className="mt-[28%] ml-[10%] h-[30%] w-[30%] rotate-10"
         aria-hidden="true"
       >
         <Eye

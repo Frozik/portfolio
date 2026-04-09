@@ -18,6 +18,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useToggle } from 'usehooks-ts';
+import { SvgGitHub } from '../../icons/SvgGitHub';
 import { cn } from '../../shared/lib/cn';
 import { Drawer, FloatingButton, FloatingButtonGroup, QRCode, Tag, Tooltip } from '../../shared/ui';
 import { useRootStore } from '../stores';
@@ -51,9 +52,17 @@ export const SidebarNavigation = memo(() => {
 
   const drawerTitle = (
     <span className="flex items-center gap-2">
-      Navigation
+      <a
+        href="https://github.com/frozik"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1.5 text-text hover:text-text-secondary"
+      >
+        <SvgGitHub width={16} height={16} />
+        <span className="font-mono text-sm">frozik</span>
+      </a>
       <button
-        className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text md:hidden"
+        className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"
         onClick={handleToggleQR}
       >
         <QrCode size={18} />
