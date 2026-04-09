@@ -267,7 +267,16 @@ export function setElementSelection(element: HTMLElement, selectionRange: ISelec
 
   const selection = document.getSelection();
 
-  if (isNil(startRange) || isNil(endRange) || isNil(selection)) {
+  if (isNil(selection)) {
+    return;
+  }
+
+  if (isNil(startRange) || isNil(endRange)) {
+    selection.removeAllRanges();
+    const range = document.createRange();
+    range.setStart(element, 0);
+    range.collapse(true);
+    selection.addRange(range);
     return;
   }
 
