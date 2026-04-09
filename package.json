@@ -20,7 +20,6 @@
     "sort-package-json": "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json'",
     "sort-package-json-check": "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json' --check",
     "test": "vitest run",
-    "test-watch": "vitest",
     "types": "moon run :type-check"
   },
   "dependencies": {

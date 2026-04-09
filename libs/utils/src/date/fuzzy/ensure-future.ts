@@ -1,10 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import { assertNever } from '../assert';
+import { assertNever } from '../../assert';
+import { DAYS_IN_WEEK, MAX_ADVANCES } from './constants';
 import { EParseTemporality } from './types';
-
-const DAYS_IN_WEEK = 7;
-const MAX_ADVANCES = 2;
 
 export function ensureFuture(
   value: Temporal.ZonedDateTime,
@@ -21,7 +19,7 @@ export function ensureFuture(
   }
 
   let result = value;
-  for (let i = 0; i < MAX_ADVANCES; i++) {
+  for (let attempt = 0; attempt < MAX_ADVANCES; attempt++) {
     result = result.add(advance);
     if (Temporal.ZonedDateTime.compare(result, now) >= 0) {
       return result;

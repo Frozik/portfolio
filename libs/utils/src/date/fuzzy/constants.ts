@@ -10,17 +10,6 @@ export const NOON_HOUR = 12;
 export const MAX_TOKEN_COUNT = 7;
 export const QUARTER_DIVISOR = 3;
 export const MAX_AMBIGUOUS_HOUR = 23;
-export const MIN_UNIVERSAL_PARTS = 3;
-export const MAX_UNIVERSAL_PARTS = 7;
-export const UNIVERSAL_DAY_INDEX = 0;
-export const UNIVERSAL_MONTH_INDEX = 1;
-export const UNIVERSAL_YEAR_INDEX = 2;
-export const UNIVERSAL_HOUR_INDEX = 3;
-export const UNIVERSAL_MINUTE_INDEX = 4;
-export const UNIVERSAL_SECOND_INDEX = 5;
-export const UNIVERSAL_MS_INDEX = 6;
-export const LAST_MONTH_OF_YEAR = 12;
-export const LAST_DAY_OF_DECEMBER = 31;
 
 export const SCORE_CERTAIN = 1.0;
 export const SCORE_VERY_HIGH = 0.9;
@@ -38,5 +27,6 @@ export const AMPM_BOOST = 0.2;
 export const CERTAIN_THRESHOLD = 0.95;
 export const CERTAIN_OTHER_MAX = 0.1;
 
+export const MAX_ADVANCES = 2;
 export const COLON_TIME_PARTS_MIN = 2;
 export const COLON_TIME_PARTS_WITH_MS = 3;

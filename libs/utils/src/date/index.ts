@@ -1,23 +1,12 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { DAYS_IN_WEEK } from './fuzzy/constants';
 import { EDayOfWeek } from './types';
 
-export {
-  applyOffset,
-  parseDirectDate,
-  parseStandaloneTime,
-  resolveKeyword,
-  resolveMonthName,
-  resolveMonthYear,
-  resolveNextWeekday,
-  resolvePreviousWeekday,
-  resolveQuarter,
-} from './date-utils';
-export { parseFuzzyDate } from './parseFuzzyDate';
+export { parseFuzzyDate } from './fuzzy';
+export type { DateTimeParseResult } from './fuzzy/types';
 export { stepDateTime } from './stepDateTime';
-export type { ISlotMap } from './token-types';
 export * from './types';
-
-export const DAYS_IN_WEEK = 7;
+export { DAYS_IN_WEEK };
 
 export function getStartOfMonth(yearMonth: Temporal.PlainYearMonth): Temporal.PlainDate {
   return Temporal.PlainDate.from({

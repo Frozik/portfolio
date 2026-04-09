@@ -2,7 +2,7 @@ import type { Temporal } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
 
 import { ensureFuture } from './ensure-future';
-import { parseFullPipeline } from './tokenParser';
+import { parseFullPipeline } from './pipeline';
 import type { DateTimeParseResult } from './types';
 
 /**

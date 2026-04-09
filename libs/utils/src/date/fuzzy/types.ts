@@ -1,3 +1,23 @@
+import type { Temporal } from '@js-temporal/polyfill';
+
+export enum EParseTemporality {
+  PastDirected = 'PastDirected',
+  ExplicitDate = 'ExplicitDate',
+  FutureDirected = 'FutureDirected',
+  TimeOnly = 'TimeOnly',
+  Weekday = 'Weekday',
+  DayOfMonth = 'DayOfMonth',
+  MonthDay = 'MonthDay',
+  MonthOnly = 'MonthOnly',
+  Quarter = 'Quarter',
+  Boundary = 'Boundary',
+  KeywordTime = 'KeywordTime',
+}
+
+export type DateTimeParseResult =
+  | { readonly success: true; readonly value: Temporal.ZonedDateTime }
+  | { readonly success: false; readonly reason: string };
+
 export enum ETokenKind {
   Number = 'Number',
   Keyword = 'Keyword',
@@ -13,7 +33,15 @@ export enum ETokenKind {
   Offset = 'Offset',
   Duration = 'Duration',
   Ordinal = 'Ordinal',
+  Separator = 'Separator',
   Unknown = 'Unknown',
+}
+
+export enum ESeparatorKind {
+  Colon = ':',
+  Dash = '-',
+  Slash = '/',
+  Dot = '.',
 }
 
 export interface IToken {
@@ -59,4 +87,10 @@ export interface ISlotContext {
   readonly hasColonTime: boolean;
   readonly hasOrdinal: boolean;
   readonly hasAmPm: boolean;
+  readonly hasOffset: boolean;
+  readonly hasWeekday: boolean;
+  readonly hasQuarter: boolean;
+  readonly colonCount: number;
+  readonly datePartCount: number;
+  readonly hasDotAfterColon: boolean;
 }

@@ -54,21 +54,3 @@ export interface DayInfo {
   readonly type: EDayType;
   readonly tenor?: Tenor;
 }
-
-export enum EParseTemporality {
-  PastDirected = 'PastDirected',
-  ExplicitDate = 'ExplicitDate',
-  FutureDirected = 'FutureDirected',
-  TimeOnly = 'TimeOnly',
-  Weekday = 'Weekday',
-  DayOfMonth = 'DayOfMonth',
-  MonthDay = 'MonthDay',
-  MonthOnly = 'MonthOnly',
-  Quarter = 'Quarter',
-  Boundary = 'Boundary',
-  KeywordTime = 'KeywordTime',
-}
-
-export type DateTimeParseResult =
-  | { readonly success: true; readonly value: Temporal.ZonedDateTime }
-  | { readonly success: false; readonly reason: string };
