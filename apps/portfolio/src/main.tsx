@@ -41,6 +41,8 @@ function showUpdateBanner(): void {
   });
 }
 
+const SW_UPDATE_CHECK_INTERVAL_MS = 300_000;
+
 if ('serviceWorker' in navigator) {
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -50,6 +52,10 @@ if ('serviceWorker' in navigator) {
     reloading = true;
     showUpdateBanner();
     setTimeout(() => window.location.reload(), UPDATE_BANNER_DISPLAY_MS);
+  });
+
+  navigator.serviceWorker.ready.then(registration => {
+    setInterval(() => registration.update(), SW_UPDATE_CHECK_INTERVAL_MS);
   });
 }
 
