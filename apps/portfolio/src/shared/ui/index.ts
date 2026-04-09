@@ -18,6 +18,7 @@ export type { ListProps } from './List';
 export { List } from './List';
 export type { QRCodeProps } from './QRCode';
 export { QRCode } from './QRCode';
+export { QRCodePopover } from './QRCodePopover';
 export type { RadioGroupProps, RadioOption } from './RadioGroup';
 export { RadioGroup } from './RadioGroup';
 export type { RangeSliderProps, SliderProps } from './Slider';

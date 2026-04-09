@@ -53,7 +53,7 @@ export const SidebarNavigation = memo(() => {
   const drawerTitle = (
     <span className="flex items-center gap-2">
       <a
-        href="https://github.com/frozik"
+        href="https://github.com/Frozik/portfolio"
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 text-text hover:text-text-secondary"

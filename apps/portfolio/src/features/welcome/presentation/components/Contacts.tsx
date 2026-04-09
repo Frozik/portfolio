@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { SvgGitHub } from '../../../../icons/SvgGitHub';
 import { SvgLinkedIn } from '../../../../icons/SvgLinkedIn';
 import { SvgTelegram } from '../../../../icons/SvgTelegram';
-import { Button, QRCode, Tooltip } from '../../../../shared/ui';
+import { Button, QRCodePopover } from '../../../../shared/ui';
 import styles from '../styles.module.scss';
 import { getAge } from '../utils';
 
@@ -26,13 +26,7 @@ export const Contacts = memo(() => {
       <address className={styles.infoBlock}>
         <ul>
           <li>
-            <Tooltip
-              title={
-                <div className="hidden md:block">
-                  <QRCode size={256} value="https://t.me/Frozik" />
-                </div>
-              }
-            >
+            <QRCodePopover value="https://t.me/Frozik">
               <a
                 href="https://t.me/Frozik"
                 target="_blank"
@@ -42,17 +36,11 @@ export const Contacts = memo(() => {
                 <SvgTelegram className="fill-white print:fill-black" />
                 <span className="font-mono">@Frozik</span>
               </a>
-            </Tooltip>
+            </QRCodePopover>
             — preferred means of communication
           </li>
           <li>
-            <Tooltip
-              title={
-                <div className="hidden md:block">
-                  <QRCode size={256} value="https://wa.me/qr/TCOFX34ZSPXDN1" />
-                </div>
-              }
-            >
+            <QRCodePopover value="https://wa.me/qr/TCOFX34ZSPXDN1">
               <a
                 href="https://wa.me/79817151041"
                 target="_blank"
@@ -62,7 +50,7 @@ export const Contacts = memo(() => {
                 <MessageCircle size={14} />
                 <span className="font-mono">Dmitry Sharov</span>
               </a>
-            </Tooltip>
+            </QRCodePopover>
           </li>
           <li>
             <a href="mailto:frozik@gmail.com" className="inline-flex items-center gap-1.5">
