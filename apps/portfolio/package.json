@@ -12,5 +12,8 @@
   "dependencies": {
     "@frozik/components": "workspace:*",
     "@frozik/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
   }
 }

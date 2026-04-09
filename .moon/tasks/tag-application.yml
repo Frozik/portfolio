@@ -1,0 +1,4 @@
+tasks:
+  build:
+    inputs:
+      - '/libs/*/src/**/*'

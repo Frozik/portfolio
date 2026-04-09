@@ -10,6 +10,8 @@ export const Charts = memo(() => {
     if (canvasRef.current) {
       return runCharter(canvasRef.current);
     }
+
+    return undefined;
   }, []);
 
   return (

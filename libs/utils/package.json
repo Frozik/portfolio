@@ -14,5 +14,8 @@
   "scripts": {
     "types": "tsc --noEmit"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  }
 }

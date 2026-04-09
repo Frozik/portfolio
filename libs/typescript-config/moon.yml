@@ -1,0 +1,15 @@
+language: typescript
+layer: library
+
+tags:
+  - library
+
+workspace:
+  inheritedTasks:
+    exclude:
+      - madge
+      - type-check
+      - dev
+      - build
+      - start
+      - clean

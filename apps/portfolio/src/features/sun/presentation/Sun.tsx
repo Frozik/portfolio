@@ -9,6 +9,8 @@ export const Sun = memo(() => {
     if (canvasRef.current) {
       return runSun(canvasRef.current);
     }
+
+    return undefined;
   }, []);
 
   return (

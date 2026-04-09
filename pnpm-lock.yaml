@@ -222,14 +222,28 @@ importers:
       '@frozik/utils':
         specifier: workspace:*
         version: link:../../libs/utils
+    devDependencies:
+      '@frozik/typescript-config':
+        specifier: workspace:*
+        version: link:../../libs/typescript-config
 
   libs/components:
     dependencies:
       '@frozik/utils':
         specifier: workspace:*
         version: link:../utils
+    devDependencies:
+      '@frozik/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
 
-  libs/utils: {}
+  libs/typescript-config: {}
+
+  libs/utils:
+    devDependencies:
+      '@frozik/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
 
 packages:
 

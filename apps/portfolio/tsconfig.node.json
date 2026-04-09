@@ -1,14 +1,7 @@
 {
+  "extends": "@frozik/typescript-config/node",
   "compilerOptions": {
-    "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "noEmit": true
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
   "include": ["vite.config.ts"]
 }

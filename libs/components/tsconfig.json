@@ -1,25 +1,7 @@
 {
+  "extends": "@frozik/typescript-config/lib",
   "include": ["src", "types"],
   "compilerOptions": {
-    "module": "esnext",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "target": "esnext",
-
-    "declaration": true,
-    "sourceMap": true,
-    "rootDir": "./src",
-    "strict": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": false,
     "plugins": [
       {
         "name": "typescript-plugin-css-modules",
