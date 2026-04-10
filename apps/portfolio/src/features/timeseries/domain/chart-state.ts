@@ -135,6 +135,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasSize();
       this.fpsController.raise(EFpsLevel.Resize);
+      this.renderOverlay();
     });
     this.resizeObserver.observe(targetCanvas);
   }
@@ -435,7 +436,24 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
   private updateCanvasSize(): void {
     const dpr = Math.max(1, window.devicePixelRatio);
-    this.canvasWidth = Math.floor(this.targetCanvas.clientWidth * dpr);
-    this.canvasHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
+    const newWidth = Math.floor(this.targetCanvas.clientWidth * dpr);
+    const newHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
+
+    const oldWidth = this.canvasWidth;
+
+    this.canvasWidth = newWidth;
+    this.canvasHeight = newHeight;
+
+    // Spring effect on time axis: adjust current viewport so data appears at the
+    // same pixel positions as before the resize. The existing zoom lerp will
+    // animate from this "stretched" viewport to the correct target.
+    if (oldWidth > 0 && newWidth !== oldWidth) {
+      const timeRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
+      const springTimeRange = timeRange * (newWidth / oldWidth);
+      const timeCenter = (this.viewport.viewTimeStart + this.viewport.viewTimeEnd) / 2;
+
+      this.viewport.viewTimeStart = timeCenter - springTimeRange / 2;
+      this.viewport.viewTimeEnd = timeCenter + springTimeRange / 2;
+    }
   }
 }

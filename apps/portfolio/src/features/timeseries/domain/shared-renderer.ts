@@ -276,6 +276,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       chart.syncCanvasSize();
 
       const bitmap = this.offscreen.transferToImageBitmap();
+      chart.target2dContext.clearRect(0, 0, chart.width, chart.height);
       chart.target2dContext.drawImage(bitmap, 0, 0);
       bitmap.close();
 
