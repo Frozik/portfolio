@@ -62,12 +62,8 @@ function createFbm(seed: string): (time: number) => number {
   };
 }
 
-function computePointColor(normalizedPosition: number): number {
-  const red = normalizedPosition;
-  const green = 0.8 - normalizedPosition * 0.6;
-  const blue = 1.0 - normalizedPosition * 0.2;
-  return packColor(red, green, blue, 1.0);
-}
+const BULLISH_COLOR = packColor(0.2, 0.8, 0.3, 1.0);
+const BEARISH_COLOR = packColor(0.9, 0.2, 0.2, 1.0);
 
 function computePointSize(noise2D: ReturnType<typeof createNoise2D>, time: number): number {
   const normalizedTime = normalizeTime(time);
@@ -99,22 +95,25 @@ export function generateTimeseriesData(
   const fbm = createFbm(seed);
   const sizeNoise2D = createNoise2D(alea(`${seed}-size`));
 
+  const times: number[] = new Array(pointCount);
+  const values: number[] = new Array(pointCount);
+
+  for (let index = 0; index < pointCount; index++) {
+    times[index] = timeStart + index * step;
+    values[index] = fbm(times[index]);
+  }
+
   const points: IDataPoint[] = new Array(pointCount);
 
   for (let index = 0; index < pointCount; index++) {
-    const time = timeStart + index * step;
-    const value = fbm(time);
-
-    const normalizedPosition = Math.max(
-      0,
-      Math.min(1, (time - GLOBAL_EPOCH_OFFSET) / FULL_YEAR_SECONDS)
-    );
+    const nextIndex = Math.min(index + 1, pointCount - 1);
+    const isBullish = values[nextIndex] >= values[index];
 
     points[index] = {
-      time,
-      value,
-      size: computePointSize(sizeNoise2D, time),
-      color: computePointColor(normalizedPosition),
+      time: times[index],
+      value: values[index],
+      size: computePointSize(sizeNoise2D, times[index]),
+      color: isBullish ? BULLISH_COLOR : BEARISH_COLOR,
     };
   }
 
