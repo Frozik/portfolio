@@ -29,6 +29,8 @@ export const TimeseriesChart = memo(
       const chartState = new TimeseriesChartState(
         renderer.device,
         renderer.bindGroupLayout,
+        renderer.linePipeline,
+        renderer.candlestickPipeline,
         canvasRef.current,
         gridSvgRef.current,
         axesSvgRef.current,

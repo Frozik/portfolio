@@ -21,9 +21,6 @@ export const FAR_PLANE = 100;
 
 export const MSAA_SAMPLE_COUNT = 4;
 
-// Uniform buffer: time (f32) + pad (f32x3) + mvp (mat4x4) = 4 + 12 + 64 = 80 bytes
-export const UNIFORM_SIZE = 80;
-
 export const VERTICES_PER_TRIANGLE = 3;
 
 export const MS_PER_SECOND = 1000;

@@ -15,14 +15,17 @@ import {
   TEXTURE_INITIAL_ROWS,
   TEXTURE_MAX_ROWS,
   TEXTURE_WIDTH,
-  UNIFORM_BUFFER_SIZE,
+  VERTICES_PER_CANDLESTICK,
+  VERTICES_PER_SEGMENT,
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
 import { generateTimeseriesData } from './data-generator';
 import { encodePoints } from './delta-encoding';
+import { SeriesLayer } from './layers/series-layer';
+import { SeriesLayerManager } from './layers/series-layer-manager';
 import { createSpatialIndex, insertPart, queryVisibleParts } from './spatial-index';
-import type { IChartViewport, IDataPart, IDrawCommands, ITimeseriesChart } from './types';
+import type { IChartViewport, IDataPart, IPlotArea, ITimeseriesChart } from './types';
 import { autoScaleY, scaleFromTimeRange, visibleYRange } from './viewport';
 
 const INITIAL_VALUE_MIN = 0;
@@ -34,6 +37,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
   readonly target2dContext: CanvasRenderingContext2D;
   readonly gridSvg: SVGSVGElement;
   readonly axesSvg: SVGSVGElement;
+  readonly seriesManager: SeriesLayerManager;
 
   private readonly viewport: IChartViewport;
   private readonly dataMinTime: number;
@@ -43,15 +47,12 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private readonly spatialIndex2 = createSpatialIndex();
   private nextTextureRow = 0;
 
-  private readonly uniformBuf1: GPUBuffer;
-  private readonly uniformBuf2: GPUBuffer;
   private textureRows: number;
   private dataTexture: GPUTexture;
-  private bindGroup1: GPUBindGroup;
-  private bindGroup2: GPUBindGroup;
 
   private readonly inputController: ChartInputController;
   private readonly resizeObserver: ResizeObserver;
+  private readonly device: GPUDevice;
 
   private canvasWidth = 0;
   private canvasHeight = 0;
@@ -65,14 +66,17 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private lastOverlayHeight = 0;
 
   constructor(
-    private readonly device: GPUDevice,
-    private readonly bindGroupLayout: GPUBindGroupLayout,
+    device: GPUDevice,
+    bindGroupLayout: GPUBindGroupLayout,
+    linePipeline: GPURenderPipeline,
+    candlestickPipeline: GPURenderPipeline,
     targetCanvas: HTMLCanvasElement,
     gridSvg: SVGSVGElement,
     axesSvg: SVGSVGElement,
     initialTimeStart: number,
     initialTimeEnd: number
   ) {
+    this.device = device;
     this.targetCanvas = targetCanvas;
     this.gridSvg = gridSvg;
     this.axesSvg = axesSvg;
@@ -93,16 +97,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
       viewValueMax: INITIAL_VALUE_MAX,
     };
 
-    // Create per-chart GPU resources
-    this.uniformBuf1 = device.createBuffer({
-      size: UNIFORM_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    this.uniformBuf2 = device.createBuffer({
-      size: UNIFORM_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
+    // Create per-chart data texture
     this.textureRows = TEXTURE_INITIAL_ROWS;
     this.dataTexture = device.createTexture({
       size: [TEXTURE_WIDTH, this.textureRows],
@@ -110,8 +105,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });
 
-    this.bindGroup1 = this.createBindGroup(this.uniformBuf1);
-    this.bindGroup2 = this.createBindGroup(this.uniformBuf2);
+    // Initialize per-chart series layers
+    const lineLayer = new SeriesLayer(VERTICES_PER_SEGMENT);
+    const candlestickLayer = new SeriesLayer(VERTICES_PER_CANDLESTICK);
+
+    this.seriesManager = new SeriesLayerManager();
+    this.seriesManager.addSeries(lineLayer, linePipeline, 'line');
+    this.seriesManager.addSeries(candlestickLayer, candlestickPipeline, 'rhombus');
+    this.seriesManager.initAll(device, bindGroupLayout);
+    this.seriesManager.updateBindGroups(this.dataTexture.createView());
 
     this.inputController = new ChartInputController(
       this.viewport,
@@ -168,7 +170,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     }
   }
 
-  prepareDrawCommands(): IDrawCommands | null {
+  prepareDrawCommands(): IPlotArea | null {
     const parts = this.ensureDataForViewport();
 
     if (
@@ -179,8 +181,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
       return null;
     }
 
-    this.writeUniforms(parts.line, this.uniformBuf1);
-    this.writeUniforms(parts.rhombus, this.uniformBuf2);
+    this.seriesManager.writeAllUniforms(
+      parts,
+      this.canvasWidth,
+      this.canvasHeight,
+      this.viewport.viewTimeStart,
+      this.viewport.viewTimeEnd,
+      this.viewport.viewValueMin,
+      this.viewport.viewValueMax
+    );
 
     const dpr = Math.max(1, window.devicePixelRatio);
     const plotX = Math.floor(AXIS_MARGIN_LEFT * dpr);
@@ -194,13 +203,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
       this.canvasHeight - Math.floor((AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr)
     );
 
-    return {
-      lineBindGroup: this.bindGroup1,
-      lineInstanceCount: parts.line.pointCount - 1,
-      candlestickBindGroup: this.bindGroup2,
-      candlestickInstanceCount: parts.rhombus.pointCount - 1,
-      plotArea: { x: plotX, y: plotY, width: plotWidth, height: plotHeight },
-    };
+    return { x: plotX, y: plotY, width: plotWidth, height: plotHeight };
   }
 
   renderOverlay(): void {
@@ -233,25 +236,12 @@ export class TimeseriesChartState implements ITimeseriesChart {
   dispose(): void {
     this.resizeObserver.disconnect();
     this.inputController.detach();
+    this.seriesManager.dispose();
     this.dataTexture.destroy();
-    this.uniformBuf1.destroy();
-    this.uniformBuf2.destroy();
   }
 
-  private createBindGroup(uniformBuffer: GPUBuffer): GPUBindGroup {
-    const view = this.dataTexture.createView();
-    return this.device.createBindGroup({
-      layout: this.bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: view },
-      ],
-    });
-  }
-
-  private rebuildBindGroups(): void {
-    this.bindGroup1 = this.createBindGroup(this.uniformBuf1);
-    this.bindGroup2 = this.createBindGroup(this.uniformBuf2);
+  private rebuildLayerBindGroups(): void {
+    this.seriesManager.updateBindGroups(this.dataTexture.createView());
   }
 
   private growTextureIfNeeded(requiredRows: number): boolean {
@@ -287,7 +277,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.dataTexture = newTexture;
     this.textureRows = newRows;
 
-    this.rebuildBindGroups();
+    this.rebuildLayerBindGroups();
 
     return true;
   }
@@ -432,40 +422,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
     }
 
     return { line: linePart, rhombus: rhombusPart };
-  }
-
-  private writeUniforms(part: IDataPart, buf: GPUBuffer): void {
-    const data = new ArrayBuffer(UNIFORM_BUFFER_SIZE);
-    const f32 = new Float32Array(data);
-    const u32 = new Uint32Array(data);
-
-    // viewport
-    f32[0] = this.canvasWidth;
-    f32[1] = this.canvasHeight;
-
-    // time/value ranges (as deltas from base)
-    f32[2] = this.viewport.viewTimeStart - part.baseTime;
-    f32[3] = this.viewport.viewTimeEnd - part.baseTime;
-    f32[4] = this.viewport.viewValueMin - part.baseValue;
-    f32[5] = this.viewport.viewValueMax - part.baseValue;
-
-    // pointCount
-    u32[6] = part.pointCount;
-
-    // textureWidth
-    u32[7] = TEXTURE_WIDTH;
-
-    // lineWidth carries DPR scale factor
-    f32[8] = Math.max(1, window.devicePixelRatio);
-
-    // textureRow
-    u32[9] = part.textureRowStart;
-
-    // baseTime, baseValue
-    f32[10] = part.baseTime;
-    f32[11] = part.baseValue;
-
-    this.device.queue.writeBuffer(buf, 0, data);
   }
 
   private updateCanvasSize(): void {

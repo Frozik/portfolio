@@ -73,26 +73,6 @@ export const CLIP_RANGE = 2.0;
 /** Milliseconds per second. */
 export const MS_PER_SECOND = 1000;
 
-/** Uniform buffer size in bytes (padded to 16-byte alignment).
- * Layout:
- *   vec2<f32> viewport      (8 bytes, offset 0)
- *   f32       timeRangeMin  (4 bytes, offset 8)
- *   f32       timeRangeMax  (4 bytes, offset 12)
- *   f32       valueRangeMin (4 bytes, offset 16)
- *   f32       valueRangeMax (4 bytes, offset 20)
- *   u32       pointCount    (4 bytes, offset 24)
- *   u32       textureWidth  (4 bytes, offset 28)
- *   f32       lineWidth     (4 bytes, offset 32)
- *   u32       textureRow    (4 bytes, offset 36)
- *   f32       baseTime      (4 bytes, offset 40)
- *   f32       baseValue     (4 bytes, offset 44)
- *   total = 48 bytes (aligned)
- */
-export const UNIFORM_BUFFER_SIZE = 48;
-
-/** Number of float32 values in the uniform buffer. */
-export const UNIFORM_FLOAT_COUNT = UNIFORM_BUFFER_SIZE / Float32Array.BYTES_PER_ELEMENT;
-
 /** Minimum zoom factor per mouse wheel step. */
 export const ZOOM_FACTOR_MIN = 0.7;
 

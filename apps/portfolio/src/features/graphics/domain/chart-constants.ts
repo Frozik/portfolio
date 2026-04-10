@@ -38,25 +38,27 @@ export const SHAPE_INSTANCE_BYTES = 48;
 export const SHAPE_OPACITY_MIN = 0.6;
 export const SHAPE_OPACITY_MAX = 1.0;
 
-// Uniform buffer layout:
-// mat4x4<f32> mvp            (64 bytes, offset 0)
-// vec2<f32>   viewport       (8 bytes, offset 64)
-// f32         time           (4 bytes, offset 72)
-// u32         sinCount       (4 bytes, offset 76)
-// f32         sinPenMin      (4 bytes, offset 80)
-// f32         sinPenMax      (4 bytes, offset 84)
-// f32         borderMargin   (4 bytes, offset 88)
-// u32         borderOffset   (4 bytes, offset 92)
-// u32         sinYCount      (4 bytes, offset 96)
-// padding                    (12 bytes, offset 100 -- pad to 112 for 16-byte alignment)
-// total = 112 bytes
-export const UNIFORM_BUFFER_SIZE = 112;
-
-// Compositing uniform: just the opacity float (padded to 16 for alignment)
-export const COMPOSITE_UNIFORM_SIZE = 16;
-
-export const FULLSCREEN_TRIANGLE_VERTEX_COUNT = 3;
-
 export const OFFSCREEN_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
 export const MS_PER_SECOND = 1000;
+
+export function computeSinXSegmentCount(canvasWidth: number): number {
+  return Math.trunc(canvasWidth / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
+}
+
+export function computeSinYSegmentCount(canvasHeight: number): number {
+  return Math.trunc(canvasHeight / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
+}
+
+export const ALPHA_BLEND_STATE: GPUBlendState = {
+  color: {
+    srcFactor: 'src-alpha',
+    dstFactor: 'one-minus-src-alpha',
+    operation: 'add',
+  },
+  alpha: {
+    srcFactor: 'one',
+    dstFactor: 'one-minus-src-alpha',
+    operation: 'add',
+  },
+};

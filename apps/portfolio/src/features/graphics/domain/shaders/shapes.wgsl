@@ -85,25 +85,12 @@ const HEXAGON_COUNT: u32 = 6u;
 const STAR_COUNT: u32 = 10u;
 const TRIANGLE_COUNT: u32 = 3u;
 
-struct Uniforms {
-    mvp: mat4x4<f32>,
-    viewport: vec2<f32>,
-    time: f32,
-    sinCount: u32,
-    sinPenMin: f32,
-    sinPenMax: f32,
-    borderMargin: f32,
-    borderOffset: u32,
-    sinYCount: u32,
-};
-
 struct ShapeData {
     posAndSize: vec4<f32>,  // x, y, halfSize, spawnTime
     colorAndHold: vec4<f32>,  // r, g, b, holdDuration
     typeAndFill: vec4<f32>,  // shapeType, fillMode, maxOpacity, 0
 };
 
-@group(0) @binding(0) var<uniform> U: Uniforms;
 @group(0) @binding(1) var<storage, read> shapes: array<ShapeData>;
 
 struct ShapesVSOut {

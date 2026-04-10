@@ -58,12 +58,23 @@ export interface IPlotArea {
   height: number;
 }
 
-export interface IDrawCommands {
-  lineBindGroup: GPUBindGroup;
-  lineInstanceCount: number;
-  candlestickBindGroup: GPUBindGroup;
-  candlestickInstanceCount: number;
-  plotArea: IPlotArea;
+/** Interface for a per-chart render layer that can draw into a shared render pass. */
+export interface ISeriesLayer {
+  init(device: GPUDevice, bindGroupLayout: GPUBindGroupLayout): void;
+  updateBindGroup(dataTextureView: GPUTextureView): void;
+  writeUniforms(
+    part: IDataPart,
+    canvasWidth: number,
+    canvasHeight: number,
+    viewTimeStart: number,
+    viewTimeEnd: number,
+    viewValueMin: number,
+    viewValueMax: number
+  ): void;
+  render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void;
+  readonly instanceCount: number;
+  readonly bindGroup: GPUBindGroup | null;
+  dispose(): void;
 }
 
 export interface ITimeseriesChart {
@@ -74,9 +85,15 @@ export interface ITimeseriesChart {
   readonly width: number;
   readonly height: number;
   readonly isActive: boolean;
+  readonly seriesManager: ISeriesLayerManager;
   update(): void;
-  prepareDrawCommands(): IDrawCommands | null;
+  prepareDrawCommands(): IPlotArea | null;
   renderOverlay(): void;
+  dispose(): void;
+}
+
+export interface ISeriesLayerManager {
+  renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void;
   dispose(): void;
 }
 

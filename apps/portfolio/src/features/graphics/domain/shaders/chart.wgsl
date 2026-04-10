@@ -4,20 +4,6 @@ const BORDER_POINT_COUNT: u32 = 5u;
 // Keep in sync with BORDER_SEGMENT_COUNT in chart-draw.ts
 const BORDER_SEGMENT_COUNT: u32 = 4u;
 
-struct Uniforms {
-    mvp: mat4x4<f32>,
-    viewport: vec2<f32>,
-    time: f32,
-    sinCount: u32,
-    sinPenMin: f32,
-    sinPenMax: f32,
-    borderMargin: f32,
-    borderOffset: u32,
-    sinYCount: u32,
-};
-
-@group(0) @binding(0) var<uniform> U: Uniforms;
-
 struct VSOut {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec4<f32>,

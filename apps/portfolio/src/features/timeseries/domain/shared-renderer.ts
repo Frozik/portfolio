@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert, createMsaaTextureManager } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
 import {
@@ -6,10 +6,14 @@ import {
   INITIAL_OFFSCREEN_HEIGHT,
   INITIAL_OFFSCREEN_WIDTH,
   MSAA_SAMPLE_COUNT,
-  VERTICES_PER_CANDLESTICK,
-  VERTICES_PER_SEGMENT,
 } from './constants';
-import timeseriesShaderSource from './shaders/timeseries.wgsl?raw';
+import candlestickSpecificSource from './shaders/candlestick.wgsl?raw';
+import commonShaderSource from './shaders/common.wgsl?raw';
+import lineSpecificSource from './shaders/line.wgsl?raw';
+
+const lineShaderSource = commonShaderSource + lineSpecificSource;
+const candlestickShaderSource = commonShaderSource + candlestickSpecificSource;
+
 import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
 export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer> {
@@ -26,7 +30,8 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({ device, format, alphaMode: 'premultiplied' });
 
-  const shaderModule = device.createShaderModule({ code: timeseriesShaderSource });
+  const lineShaderModule = device.createShaderModule({ code: lineShaderSource });
+  const candlestickShaderModule = device.createShaderModule({ code: candlestickShaderSource });
 
   const bindGroupLayout = device.createBindGroupLayout({
     entries: [
@@ -60,9 +65,9 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
 
   const linePipeline = device.createRenderPipeline({
     layout: pipelineLayout,
-    vertex: { module: shaderModule, entryPoint: 'vs' },
+    vertex: { module: lineShaderModule, entryPoint: 'vs' },
     fragment: {
-      module: shaderModule,
+      module: lineShaderModule,
       entryPoint: 'fs',
       targets: [{ format, blend: alphaBlend }],
     },
@@ -72,9 +77,9 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
 
   const candlestickPipeline = device.createRenderPipeline({
     layout: pipelineLayout,
-    vertex: { module: shaderModule, entryPoint: 'vsCandlestick' },
+    vertex: { module: candlestickShaderModule, entryPoint: 'vsCandlestick' },
     fragment: {
-      module: shaderModule,
+      module: candlestickShaderModule,
       entryPoint: 'fsCandlestick',
       targets: [{ format, blend: alphaBlend }],
     },
@@ -103,11 +108,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private readonly offscreen: OffscreenCanvas;
   private readonly ctx: GPUCanvasContext;
   private readonly charts = new Set<ITimeseriesChart>();
-
-  private msaaTexture: GPUTexture | null = null;
-  private msaaView: GPUTextureView | null = null;
-  private msaaWidth = 0;
-  private msaaHeight = 0;
+  private readonly msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
 
   private animationFrameId = 0;
   private lastFrameTime = 0;
@@ -161,10 +162,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     }
     this.charts.clear();
 
-    this.msaaTexture?.destroy();
-    this.msaaTexture = null;
-    this.msaaView = null;
-
+    this.msaaManager.dispose();
     this.device.destroy();
   }
 
@@ -207,7 +205,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.animationFrameId = 0;
   }
 
-  private ensureMsaaTexture(): GPUTextureView | null {
+  private ensureMsaaView(): GPUTextureView | null {
     let maxW = 0;
     let maxH = 0;
 
@@ -216,31 +214,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       maxH = Math.max(maxH, chart.height);
     }
 
-    if (maxW === this.msaaWidth && maxH === this.msaaHeight && !isNil(this.msaaView)) {
-      return this.msaaView;
-    }
-
-    this.msaaTexture?.destroy();
-
-    if (maxW === 0 || maxH === 0) {
-      this.msaaTexture = null;
-      this.msaaView = null;
-      this.msaaWidth = 0;
-      this.msaaHeight = 0;
-      return null;
-    }
-
-    this.msaaTexture = this.device.createTexture({
-      size: [maxW, maxH],
-      format: this.format,
-      sampleCount: MSAA_SAMPLE_COUNT,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    this.msaaView = this.msaaTexture.createView();
-    this.msaaWidth = maxW;
-    this.msaaHeight = maxH;
-
-    return this.msaaView;
+    return this.msaaManager.ensureView(this.device, this.format, maxW, maxH);
   }
 
   private renderAllCharts(): void {
@@ -253,9 +227,9 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         continue;
       }
 
-      const drawCommands = chart.prepareDrawCommands();
+      const plotArea = chart.prepareDrawCommands();
 
-      if (isNil(drawCommands)) {
+      if (isNil(plotArea)) {
         continue;
       }
 
@@ -271,7 +245,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         });
       }
 
-      const currentMsaaView = this.ensureMsaaTexture();
+      const currentMsaaView = this.ensureMsaaView();
 
       if (isNil(currentMsaaView)) {
         continue;
@@ -292,19 +266,8 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         ],
       });
 
-      // Clip rendering to the plot area (inside axis margins)
-      const { plotArea } = drawCommands;
-      pass.setScissorRect(plotArea.x, plotArea.y, plotArea.width, plotArea.height);
-
-      // Draw series 1: lines
-      pass.setPipeline(this.linePipeline);
-      pass.setBindGroup(0, drawCommands.lineBindGroup);
-      pass.draw(VERTICES_PER_SEGMENT, drawCommands.lineInstanceCount, 0, 0);
-
-      // Draw series 2: candlesticks
-      pass.setPipeline(this.candlestickPipeline);
-      pass.setBindGroup(0, drawCommands.candlestickBindGroup);
-      pass.draw(VERTICES_PER_CANDLESTICK, drawCommands.candlestickInstanceCount, 0, 0);
+      // Delegate rendering to the chart's series manager
+      chart.seriesManager.renderAll(pass, plotArea);
 
       pass.end();
       this.device.queue.submit([encoder.finish()]);

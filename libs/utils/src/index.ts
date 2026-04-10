@@ -7,3 +7,4 @@ export { parseJson } from './parseJson';
 export * from './rx';
 export * from './types';
 export * from './value-descriptors';
+export * from './webgpu';

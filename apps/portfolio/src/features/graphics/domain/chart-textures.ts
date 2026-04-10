@@ -1,7 +1,6 @@
 import { isNil } from 'lodash-es';
 
-export interface ChartTextureManager {
-  ensureMsaaTexture(width: number, height: number): GPUTextureView | null;
+export interface OffscreenTextureManager {
   ensureOffscreenTextures(
     width: number,
     height: number,
@@ -16,15 +15,11 @@ export interface ChartTextureManager {
   destroy(): void;
 }
 
-export function createChartTextureManager(
+export function createOffscreenTextureManager(
   device: GPUDevice,
-  format: GPUTextureFormat,
   offscreenFormat: GPUTextureFormat,
   msaaSampleCount: number
-): ChartTextureManager {
-  let msaaTexture: GPUTexture | null = null;
-  let msaaView: GPUTextureView | null = null;
-
+): OffscreenTextureManager {
   let offscreenMsaaTexture: GPUTexture | null = null;
   let offscreenMsaaView: GPUTextureView | null = null;
   let offscreenResolveTexture: GPUTexture | null = null;
@@ -32,29 +27,6 @@ export function createChartTextureManager(
   let compositeBindGroup: GPUBindGroup | null = null;
 
   return {
-    ensureMsaaTexture(width: number, height: number): GPUTextureView | null {
-      if (!isNil(msaaTexture) && msaaTexture.width === width && msaaTexture.height === height) {
-        return msaaView;
-      }
-
-      msaaTexture?.destroy();
-
-      if (width === 0 || height === 0) {
-        msaaTexture = null;
-        msaaView = null;
-        return null;
-      }
-
-      msaaTexture = device.createTexture({
-        size: [width, height],
-        format,
-        sampleCount: msaaSampleCount,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
-      });
-      msaaView = msaaTexture.createView();
-      return msaaView;
-    },
-
     ensureOffscreenTextures(
       width: number,
       height: number,
@@ -114,7 +86,6 @@ export function createChartTextureManager(
     },
 
     destroy(): void {
-      msaaTexture?.destroy();
       offscreenMsaaTexture?.destroy();
       offscreenResolveTexture?.destroy();
     },
