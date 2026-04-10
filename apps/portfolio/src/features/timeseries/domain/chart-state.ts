@@ -21,6 +21,7 @@ import {
 } from './constants';
 import { generateTimeseriesData } from './data-generator';
 import { encodePoints } from './delta-encoding';
+import { EFpsLevel, FpsController } from './fps-controller';
 import { SeriesLayer } from './layers/series-layer';
 import { SeriesLayerManager } from './layers/series-layer-manager';
 import { createSpatialIndex, insertPart, queryVisibleParts } from './spatial-index';
@@ -37,6 +38,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
   readonly gridSvg: SVGSVGElement;
   readonly axesSvg: SVGSVGElement;
   readonly seriesManager: SeriesLayerManager;
+  readonly fpsController: FpsController;
 
   private readonly viewport: IChartViewport;
   private readonly dataMinTime: number;
@@ -117,11 +119,14 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.seriesManager.initAll(device, bindGroupLayout);
     this.seriesManager.updateBindGroups(this.dataTexture.createView());
 
+    this.fpsController = new FpsController();
+
     this.inputController = new ChartInputController(
       this.viewport,
       targetCanvas,
       this.dataMinTime,
-      this.dataMaxTime
+      this.dataMaxTime,
+      this.fpsController
     );
     this.inputController.attach();
 
@@ -129,6 +134,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasSize();
+      this.fpsController.raise(EFpsLevel.Resize);
     });
     this.resizeObserver.observe(targetCanvas);
   }
@@ -139,19 +145,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
   get height(): number {
     return this.canvasHeight;
-  }
-
-  get isActive(): boolean {
-    if (this.inputController.isInteracting) {
-      return true;
-    }
-
-    const currentRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
-    const threshold = currentRange * ZOOM_SNAP_THRESHOLD;
-    const dStart = Math.abs(this.viewport.targetTimeStart - this.viewport.viewTimeStart);
-    const dEnd = Math.abs(this.viewport.targetTimeEnd - this.viewport.viewTimeEnd);
-
-    return dStart > threshold || dEnd > threshold;
   }
 
   update(): void {
@@ -166,6 +159,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     if (Math.abs(dStart) > threshold || Math.abs(dEnd) > threshold) {
       this.viewport.viewTimeStart += dStart * ZOOM_LERP_SPEED;
       this.viewport.viewTimeEnd += dEnd * ZOOM_LERP_SPEED;
+      this.fpsController.raise(EFpsLevel.ZoomAnimation);
     } else {
       this.viewport.viewTimeStart = this.viewport.targetTimeStart;
       this.viewport.viewTimeEnd = this.viewport.targetTimeEnd;
@@ -238,6 +232,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
   dispose(): void {
     this.resizeObserver.disconnect();
     this.inputController.detach();
+    this.fpsController.dispose();
     this.seriesManager.dispose();
     this.dataTexture.destroy();
   }
@@ -420,17 +415,27 @@ export class TimeseriesChartState implements ITimeseriesChart {
     return { line: linePart, rhombus: rhombusPart };
   }
 
-  private updateCanvasSize(): void {
+  /** Sync canvas pixel dimensions to CSS size. Returns true if canvas was resized. */
+  syncCanvasSize(): boolean {
     const dpr = Math.max(1, window.devicePixelRatio);
-    const w = Math.floor(this.targetCanvas.clientWidth * dpr);
-    const h = Math.floor(this.targetCanvas.clientHeight * dpr);
+    const width = Math.floor(this.targetCanvas.clientWidth * dpr);
+    const height = Math.floor(this.targetCanvas.clientHeight * dpr);
 
-    if (this.targetCanvas.width !== w || this.targetCanvas.height !== h) {
-      this.targetCanvas.width = w;
-      this.targetCanvas.height = h;
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+
+    if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
+      this.targetCanvas.width = width;
+      this.targetCanvas.height = height;
+      return true;
     }
 
-    this.canvasWidth = w;
-    this.canvasHeight = h;
+    return false;
+  }
+
+  private updateCanvasSize(): void {
+    const dpr = Math.max(1, window.devicePixelRatio);
+    this.canvasWidth = Math.floor(this.targetCanvas.clientWidth * dpr);
+    this.canvasHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
   }
 }

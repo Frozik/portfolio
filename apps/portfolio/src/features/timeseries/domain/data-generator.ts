@@ -17,12 +17,12 @@ import type { IDataPoint } from './types';
 import { ETimeScale } from './types';
 
 const POINTS_PER_SCALE: Record<ETimeScale, number> = {
-  [ETimeScale.Year]: 365,
-  [ETimeScale.Month]: 300,
-  [ETimeScale.Week]: 168,
-  [ETimeScale.Day]: 480,
-  [ETimeScale.Hour]: 360,
-  [ETimeScale.Minute]: 60,
+  [ETimeScale.Year]: 180,
+  [ETimeScale.Month]: 180,
+  [ETimeScale.Week]: 180,
+  [ETimeScale.Day]: 180,
+  [ETimeScale.Hour]: 180,
+  [ETimeScale.Minute]: 180,
 };
 
 const LINE_SIZE_MIN = 1;

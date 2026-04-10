@@ -9,13 +9,15 @@ describe('generateTimeseriesData', () => {
   const yearEnd = GLOBAL_EPOCH_OFFSET + FULL_YEAR_SECONDS;
 
   describe('point counts per scale', () => {
+    const UNIFORM_POINT_COUNT = 180;
+
     const expectedCounts: Record<string, { scale: ETimeScale; count: number }> = {
-      Year: { scale: ETimeScale.Year, count: 365 },
-      Month: { scale: ETimeScale.Month, count: 300 },
-      Week: { scale: ETimeScale.Week, count: 168 },
-      Day: { scale: ETimeScale.Day, count: 480 },
-      Hour: { scale: ETimeScale.Hour, count: 360 },
-      Minute: { scale: ETimeScale.Minute, count: 60 },
+      Year: { scale: ETimeScale.Year, count: UNIFORM_POINT_COUNT },
+      Month: { scale: ETimeScale.Month, count: UNIFORM_POINT_COUNT },
+      Week: { scale: ETimeScale.Week, count: UNIFORM_POINT_COUNT },
+      Day: { scale: ETimeScale.Day, count: UNIFORM_POINT_COUNT },
+      Hour: { scale: ETimeScale.Hour, count: UNIFORM_POINT_COUNT },
+      Minute: { scale: ETimeScale.Minute, count: UNIFORM_POINT_COUNT },
     };
 
     for (const [name, { scale, count }] of Object.entries(expectedCounts)) {

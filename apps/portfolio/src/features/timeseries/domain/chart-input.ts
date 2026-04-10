@@ -1,4 +1,6 @@
 import { ZOOM_FACTOR_MAX, ZOOM_FACTOR_MIN } from './constants';
+import type { FpsController } from './fps-controller';
+import { EFpsLevel } from './fps-controller';
 import type { IChartViewport } from './types';
 import { clampViewport, panViewport, zoomViewport } from './viewport';
 
@@ -22,12 +24,14 @@ export class ChartInputController {
     private readonly viewport: IChartViewport,
     private readonly canvas: HTMLCanvasElement,
     private readonly dataMinTime: number,
-    private readonly dataMaxTime: number
+    private readonly dataMaxTime: number,
+    private readonly fpsController: FpsController
   ) {
     this.handleMouseDown = (e: MouseEvent): void => {
       this.isDragging = true;
       this.lastMouseX = e.clientX;
       this.canvas.style.cursor = 'grabbing';
+      this.fpsController.raise(EFpsLevel.Interaction);
     };
 
     this.handleMouseMove = (e: MouseEvent): void => {
@@ -52,6 +56,7 @@ export class ChartInputController {
       this.viewport.viewTimeEnd = newEnd;
       this.viewport.targetTimeStart = newStart;
       this.viewport.targetTimeEnd = newEnd;
+      this.fpsController.raise(EFpsLevel.Interaction);
     };
 
     this.handleMouseUp = (): void => {
@@ -78,9 +83,12 @@ export class ChartInputController {
       );
       this.viewport.targetTimeStart = newStart;
       this.viewport.targetTimeEnd = newEnd;
+      this.fpsController.raise(EFpsLevel.Interaction);
     };
 
     this.handleTouchStart = (e: TouchEvent): void => {
+      this.fpsController.raise(EFpsLevel.Interaction);
+
       if (e.touches.length === 1) {
         this.isTouching = true;
         this.lastTouchX = e.touches[0].clientX;
@@ -92,6 +100,7 @@ export class ChartInputController {
 
     this.handleTouchMove = (e: TouchEvent): void => {
       e.preventDefault();
+      this.fpsController.raise(EFpsLevel.Interaction);
 
       if (e.touches.length === 2) {
         const currentDistance = this.getTouchDistance(e);

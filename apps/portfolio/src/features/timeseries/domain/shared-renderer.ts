@@ -2,11 +2,12 @@ import { assert, createMsaaTextureManager } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
 import {
-  IDLE_FRAME_INTERVAL_MS,
   INITIAL_OFFSCREEN_HEIGHT,
   INITIAL_OFFSCREEN_WIDTH,
+  MS_PER_SECOND,
   MSAA_SAMPLE_COUNT,
 } from './constants';
+import { EFpsLevel } from './fps-controller';
 import candlestickSpecificSource from './shaders/candlestick.wgsl?raw';
 import commonShaderSource from './shaders/common.wgsl?raw';
 import lineSpecificSource from './shaders/line.wgsl?raw';
@@ -166,13 +167,17 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.device.destroy();
   }
 
-  private hasActiveCharts(): boolean {
+  private getMinFrameIntervalMs(): number {
+    let minInterval: number | undefined;
+
     for (const chart of this.charts) {
-      if (chart.isActive) {
-        return true;
+      const interval = chart.fpsController.getFrameIntervalMs();
+      if (isNil(minInterval) || interval < minInterval) {
+        minInterval = interval;
       }
     }
-    return false;
+
+    return minInterval ?? MS_PER_SECOND / EFpsLevel.Idle;
   }
 
   private startAnimationLoop(): void {
@@ -185,9 +190,9 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         return;
       }
 
-      const isActive = this.hasActiveCharts();
+      const minInterval = this.getMinFrameIntervalMs();
 
-      if (!isActive && now - this.lastFrameTime < IDLE_FRAME_INTERVAL_MS) {
+      if (now - this.lastFrameTime < minInterval) {
         this.animationFrameId = requestAnimationFrame(frame);
         return;
       }
@@ -205,16 +210,8 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.animationFrameId = 0;
   }
 
-  private ensureMsaaView(): GPUTextureView | null {
-    let maxW = 0;
-    let maxH = 0;
-
-    for (const chart of this.charts) {
-      maxW = Math.max(maxW, chart.width);
-      maxH = Math.max(maxH, chart.height);
-    }
-
-    return this.msaaManager.ensureView(this.device, this.format, maxW, maxH);
+  private ensureMsaaView(width: number, height: number): GPUTextureView | null {
+    return this.msaaManager.ensureView(this.device, this.format, width, height);
   }
 
   private renderAllCharts(): void {
@@ -245,13 +242,15 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         });
       }
 
-      const currentMsaaView = this.ensureMsaaView();
+      // Get the actual texture first — its size may differ from what we requested
+      const canvasTexture = this.ctx.getCurrentTexture();
+      const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
 
       if (isNil(currentMsaaView)) {
         continue;
       }
 
-      const canvasTexView = this.ctx.getCurrentTexture().createView();
+      const canvasTexView = canvasTexture.createView();
       const encoder = this.device.createCommandEncoder();
 
       const pass = encoder.beginRenderPass({
@@ -272,9 +271,11 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       pass.end();
       this.device.queue.submit([encoder.finish()]);
 
-      // Blit to visible canvas — clear first to avoid drawing over stale frames
+      // Sync visible canvas size right before blit to avoid blank-frame flicker.
+      // Setting canvas.width/height clears it, so we do it immediately before drawImage.
+      chart.syncCanvasSize();
+
       const bitmap = this.offscreen.transferToImageBitmap();
-      chart.target2dContext.clearRect(0, 0, width, height);
       chart.target2dContext.drawImage(bitmap, 0, 0);
       bitmap.close();
 

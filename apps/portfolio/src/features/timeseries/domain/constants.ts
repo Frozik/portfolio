@@ -158,9 +158,6 @@ export const AXIS_FONT_SIZE = 11;
 /** Axis font family. */
 export const AXIS_FONT_FAMILY = 'monospace';
 
-/** Minimum interval between frames when idle (no interaction), in milliseconds. */
-export const IDLE_FRAME_INTERVAL_MS = 1000;
-
 /** Initial offscreen canvas width in pixels. */
 export const INITIAL_OFFSCREEN_WIDTH = 1024;
 

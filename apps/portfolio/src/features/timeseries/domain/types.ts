@@ -77,6 +77,11 @@ export interface ISeriesLayer {
   dispose(): void;
 }
 
+export interface IFpsController {
+  getFrameIntervalMs(): number;
+  getCurrentFps(): number;
+}
+
 export interface ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
@@ -84,8 +89,9 @@ export interface ITimeseriesChart {
   readonly axesSvg: SVGSVGElement;
   readonly width: number;
   readonly height: number;
-  readonly isActive: boolean;
+  readonly fpsController: IFpsController;
   readonly seriesManager: ISeriesLayerManager;
+  syncCanvasSize(): boolean;
   update(): void;
   prepareDrawCommands(): IPlotArea | null;
   renderOverlay(): void;
