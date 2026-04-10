@@ -58,11 +58,13 @@ export const AvailabilityStatus = memo(({ className }: { className?: string }) =
 
   return (
     <aside className={className}>
-      <span>Available for remote work</span>{' '}
+      <span>Available for remote work</span>
+      <span className="text-text-muted print:hidden"> · </span>
       <span
         className="inline-flex items-center gap-1.5 font-mono text-text-secondary print:hidden"
         title={availability.title}
       >
+        <span className="text-text-muted">My time</span>
         <span className="tabular-nums">{availability.localTime}</span>
         <StatusIcon status={availability.status} />
         <span className="text-text-muted">UTC+3</span>
