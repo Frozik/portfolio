@@ -52,6 +52,9 @@
   --animate-slide-out-left: slide-out-left 150ms ease-in;
   --animate-slide-in-right: slide-in-right 200ms ease-out;
   --animate-slide-out-right: slide-out-right 150ms ease-in;
+  --animate-zzz-1: zzz-float 2.5s ease-in-out infinite;
+  --animate-zzz-2: zzz-float 2.5s ease-in-out 0.4s infinite;
+  --animate-zzz-3: zzz-float 2.5s ease-in-out 0.8s infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -76,6 +79,10 @@
   @keyframes slide-out-right {
     from { transform: translateX(0); }
     to { transform: translateX(100%); }
+  }
+  @keyframes zzz-float {
+    0%, 100% { opacity: 0.3; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-6px); }
   }
 }
 

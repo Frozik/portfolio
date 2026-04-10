@@ -67,7 +67,7 @@ export const Contacts = memo(() => {
               className="inline-flex items-center gap-1.5"
             >
               <SvgGitHub width={14} height={14} />
-              <span className="font-mono">frozik</span>
+              <span className="font-mono">Frozik</span>
             </a>
           </li>
           <li>
@@ -78,7 +78,7 @@ export const Contacts = memo(() => {
               className="inline-flex items-center gap-1.5"
             >
               <SvgLinkedIn width={14} height={14} />
-              <span className="font-mono">frozik</span>
+              <span className="font-mono">Frozik</span>
             </a>
           </li>
         </ul>

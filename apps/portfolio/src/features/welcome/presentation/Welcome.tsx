@@ -9,11 +9,14 @@ import { Contacts } from './components/Contacts';
 import { Education } from './components/Education';
 import { Position } from './components/Position';
 import { Skills } from './components/Skills';
+import { SleepingZzz } from './components/SleepingZzz';
 import { Summary } from './components/Summary';
 import { WorkExperience } from './components/WorkExperience';
+import { useIsAwake } from './hooks/useIsAwake';
 import styles from './styles.module.scss';
 
 export const Welcome = memo(() => {
+  const isAwake = useIsAwake();
   const cvRef = useRef<HTMLDivElement>(null);
 
   const { canScrollTop, canScrollBottom } = useHasOverflow(cvRef);
@@ -30,7 +33,7 @@ export const Welcome = memo(() => {
         <div className={cn(styles.card, styles.cardWithAvatar)}>
           <div className="relative h-50 w-50 shrink-0">
             <Avatar className={cn(styles.avatar, 'h-50 w-50')} src={avatarUrl} />
-            <CartoonEyes />
+            {isAwake ? <CartoonEyes /> : <SleepingZzz />}
           </div>
           <Contacts />
         </div>

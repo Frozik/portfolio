@@ -51,13 +51,13 @@ export const SidebarNavigation = memo(() => {
   const drawerTitle = (
     <span className="flex items-center gap-2">
       <a
-        href="https://github.com/Frozik/portfolio"
+        href="https://github.com/frozik/portfolio"
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 text-text hover:text-text-secondary"
       >
         <SvgGitHub width={16} height={16} />
-        <span className="font-mono text-sm">frozik</span>
+        <span className="font-mono text-sm">Frozik/portfolio</span>
       </a>
       <button
         className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"

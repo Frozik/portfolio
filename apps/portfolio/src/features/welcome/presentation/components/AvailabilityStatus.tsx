@@ -3,11 +3,14 @@ import { Temporal } from '@js-temporal/polyfill';
 import { Laptop, Moon, Palmtree } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 
-const MY_TIMEZONE = 'Europe/Moscow';
-const AWAKE_START_HOUR = 10;
-const AWAKE_END_HOUR = 22;
+import {
+  AWAKE_END_HOUR,
+  AWAKE_START_HOUR,
+  MY_TIMEZONE,
+  STATUS_CHECK_INTERVAL_MS,
+} from '../../constants';
+
 const WEEKEND: readonly EDayOfWeek[] = [EDayOfWeek.Saturday, EDayOfWeek.Sunday];
-const STATUS_UPDATE_INTERVAL_MS = 60_000;
 const STATUS_ICON_SIZE = 14;
 
 type EAvailability = 'working' | 'sleeping' | 'weekend';
@@ -49,7 +52,7 @@ export const AvailabilityStatus = memo(({ className }: { className?: string }) =
   const [availability, setAvailability] = useState(getAvailability);
 
   useEffect(() => {
-    const id = setInterval(() => setAvailability(getAvailability()), STATUS_UPDATE_INTERVAL_MS);
+    const id = setInterval(() => setAvailability(getAvailability()), STATUS_CHECK_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 

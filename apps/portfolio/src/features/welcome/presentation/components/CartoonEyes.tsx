@@ -1,8 +1,8 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { cn } from '../../../../shared/lib/cn';
 
-const MIN_SHOW_DELAY_MS = 3_000;
-const MAX_SHOW_DELAY_MS = 5_000;
+const MIN_SHOW_DELAY_MS = 1_000;
+const MAX_SHOW_DELAY_MS = 3_000;
 const VISIBLE_DURATION_MS = 4_000;
 const FADE_DURATION_MS = 400;
 const BLINK_INTERVAL_MS = 2_500;
