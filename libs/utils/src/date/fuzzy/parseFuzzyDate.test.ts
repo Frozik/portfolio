@@ -202,6 +202,12 @@ describe('parseFuzzyDate', () => {
       // keyword + hour + minute
       ['today 10 30', '2024-06-15', 10, 30],
       ['tomorrow 22 45', '2024-06-16', 22, 45],
+      // keyword + glued hour (no space)
+      ['yesterday10', '2024-06-14', 10, 0],
+      ['tom9', '2024-06-16', 9, 0],
+      ['today14', '2024-06-15', 14, 0],
+      ['mon14', '2024-06-17', 14, 0],
+      ['friday18', '2024-06-21', 18, 0],
       // boundary + bare hour
       ['eom 14', '2024-06-30', 14, 0],
       ['bom 9', '2024-07-01', 9, 0],
@@ -546,6 +552,54 @@ describe('tokenize', () => {
     expect(tokens).toHaveLength(1);
     expect(tokens[0].kind).toBe(ETokenKind.Unit);
     expect(tokens[0].extra).toBe('d');
+  });
+
+  it('splits "yesterday10" into keyword + hour', () => {
+    const tokens = tokenize('yesterday10');
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0].kind).toBe(ETokenKind.Keyword);
+    expect(tokens[0].raw).toBe('yesterday');
+    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
+    expect(tokens[1].extra).toBe('10:0:0.0');
+  });
+
+  it('splits "tom9" into keyword + hour', () => {
+    const tokens = tokenize('tom9');
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0].kind).toBe(ETokenKind.Keyword);
+    expect(tokens[0].raw).toBe('tom');
+    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
+    expect(tokens[1].extra).toBe('9:0:0.0');
+  });
+
+  it('splits "mon14" into weekday + hour', () => {
+    const tokens = tokenize('mon14');
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0].kind).toBe(ETokenKind.WeekdayName);
+    expect(tokens[0].raw).toBe('mon');
+    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
+    expect(tokens[1].extra).toBe('14:0:0.0');
+  });
+
+  it('splits "friday18" into weekday + hour', () => {
+    const tokens = tokenize('friday18');
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0].kind).toBe(ETokenKind.WeekdayName);
+    expect(tokens[0].value).toBe(5);
+    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
+    expect(tokens[1].extra).toBe('18:0:0.0');
+  });
+
+  it('does not split non-keyword mixed tokens like "hello10"', () => {
+    const tokens = tokenize('hello10');
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0].kind).toBe(ETokenKind.Unknown);
+  });
+
+  it('rejects keyword + hour > 23', () => {
+    const tokens = tokenize('tom25');
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0].kind).toBe(ETokenKind.Unknown);
   });
 });
 

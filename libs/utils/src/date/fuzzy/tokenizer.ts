@@ -756,6 +756,12 @@ export function classifySingleToken(raw: string): IToken[] {
     return [{ kind: ETokenKind.Number, raw, value: Number(raw) }];
   }
 
+  // Letters-only keyword + trailing digits as hour: "yesterday10", "mon14", "tom9"
+  const keywordHourResult = tryParseKeywordWithHour(raw);
+  if (!isNil(keywordHourResult)) {
+    return keywordHourResult;
+  }
+
   // Try to detect mixed tokens: number+monthname, monthname+number
   const numMonthResult = tryClassifyMixedNumMonth(raw);
   if (!isNil(numMonthResult)) {
@@ -805,6 +811,74 @@ function tryClassifyMixedNumMonth(raw: string): IToken[] | undefined {
         { kind: ETokenKind.Number, raw: suffix, value: Number(suffix) },
       ];
     }
+  }
+
+  return undefined;
+}
+
+const MAX_KEYWORD_HOUR = 23;
+
+/**
+ * Parse a letters-only date keyword or weekday name followed by trailing digits
+ * as hour. E.g., "yesterday10" → [Keyword("yesterday"), ColonTime(10:00)],
+ * "mon14" → [WeekdayName("mon"), ColonTime(14:00)].
+ *
+ * Only applies to tokens that are purely alphabetic (no spaces, digits, or
+ * special characters in the keyword part) and that fully determine a day
+ * (date keywords like "today"/"tomorrow"/"yesterday" and weekday names).
+ */
+function tryParseKeywordWithHour(raw: string): IToken[] | undefined {
+  const lower = raw.toLowerCase();
+
+  // Find where digits start
+  let splitIndex = -1;
+  for (let index = 0; index < lower.length; index++) {
+    if (isDigit(lower[index])) {
+      splitIndex = index;
+      break;
+    }
+  }
+
+  if (splitIndex <= 0) {
+    return undefined;
+  }
+
+  const wordPart = lower.slice(0, splitIndex);
+  const digitPart = lower.slice(splitIndex);
+
+  // Word part must be all letters
+  for (let index = 0; index < wordPart.length; index++) {
+    if (!isLetter(wordPart[index])) {
+      return undefined;
+    }
+  }
+
+  // Digit part must be all digits
+  if (!isAllDigits(digitPart)) {
+    return undefined;
+  }
+
+  const hour = Number(digitPart);
+  if (hour > MAX_KEYWORD_HOUR) {
+    return undefined;
+  }
+
+  const hourToken: IToken = {
+    kind: ETokenKind.ColonTime,
+    raw: digitPart,
+    value: hour * COLON_TIME_VALUE_HOUR_MULTIPLIER,
+    extra: `${hour}:0:0.0`,
+  };
+
+  // Check date keywords: today, tomorrow, tom, yesterday, now
+  if (DATE_KEYWORD_SET.has(wordPart)) {
+    return [{ kind: ETokenKind.Keyword, raw: wordPart, value: 0 }, hourToken];
+  }
+
+  // Check weekday names: mon, tue, wednesday, etc.
+  const weekdayNum = WEEKDAY_MAP.get(wordPart);
+  if (!isNil(weekdayNum)) {
+    return [{ kind: ETokenKind.WeekdayName, raw: wordPart, value: weekdayNum }, hourToken];
   }
 
   return undefined;
