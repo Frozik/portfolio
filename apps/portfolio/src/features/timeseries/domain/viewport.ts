@@ -64,7 +64,7 @@ export function clampViewport(
  */
 export function autoScaleY(minValue: number, maxValue: number): [number, number] {
   const range = maxValue - minValue;
-  const padding = range > 0 ? range * Y_PADDING_RATIO : 1;
+  const padding = (range > 0 ? range : Math.abs(minValue)) * Y_PADDING_RATIO || 1;
 
   return [minValue - padding, maxValue + padding];
 }

@@ -124,11 +124,12 @@ describe('autoScaleY', () => {
     expect(yMax).toBe(20 + padding);
   });
 
-  it('uses fallback padding of 1 when range is zero', () => {
+  it('uses value-based padding when range is zero', () => {
     const [yMin, yMax] = autoScaleY(5, 5);
+    const padding = Math.abs(5) * Y_PADDING_RATIO;
 
-    expect(yMin).toBe(4);
-    expect(yMax).toBe(6);
+    expect(yMin).toBe(5 - padding);
+    expect(yMax).toBe(5 + padding);
   });
 
   it('handles negative values', () => {
