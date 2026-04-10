@@ -9,11 +9,12 @@ export const Timeseries = memo(() => {
   return (
     <SharedRendererProvider>
       <div className={`${commonStyles.fixedContainer} grid grid-cols-2 grid-rows-2`}>
-        {CHART_ZOOM_LEVELS.map(level => (
+        {CHART_ZOOM_LEVELS.map((level, index) => (
           <TimeseriesChart
             key={`${level[0]}-${level[1]}`}
             initialTimeStart={GLOBAL_EPOCH_OFFSET + level[0]}
             initialTimeEnd={GLOBAL_EPOCH_OFFSET + level[1]}
+            chartSeed={`chart-${index}`}
           />
         ))}
       </div>

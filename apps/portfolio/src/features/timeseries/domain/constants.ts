@@ -46,8 +46,26 @@ export const VERTICES_PER_RHOMBUS = 6;
 /** Candlestick: 6 vertices (quad), shape cut in fragment shader. */
 export const VERTICES_PER_CANDLESTICK = 6;
 
-/** Value offset for second series (additive to base random walk). */
-export const SERIES_2_VALUE_OFFSET = 2.0;
+/** Number of fBm octaves summed for the noise signal. */
+export const FBM_OCTAVES = 6;
+
+/** Frequency multiplier between successive fBm octaves. */
+export const FBM_LACUNARITY = 2.0;
+
+/** Amplitude multiplier (persistence) between successive fBm octaves. */
+export const FBM_GAIN = 0.5;
+
+/** Base frequency of the lowest fBm octave. */
+export const FBM_BASE_FREQUENCY = 4.0;
+
+/** Base amplitude of the lowest fBm octave. */
+export const FBM_BASE_AMPLITUDE = 15.0;
+
+/** Center value around which fBm oscillates. */
+export const FBM_VALUE_CENTER = 100;
+
+/** Y-axis offset between octave planes in 2D noise to decorrelate octaves. */
+export const OCTAVE_OFFSET = 1000;
 
 /** Duration threshold: ranges wider than this (in seconds) use Year scale. */
 export const YEAR_DURATION_THRESHOLD = 180 * 24 * 3600;

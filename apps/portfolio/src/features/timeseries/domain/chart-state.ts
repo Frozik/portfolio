@@ -11,7 +11,6 @@ import {
   FLOATS_PER_POINT,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
-  SERIES_2_VALUE_OFFSET,
   TEXTURE_INITIAL_ROWS,
   TEXTURE_MAX_ROWS,
   TEXTURE_WIDTH,
@@ -53,6 +52,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private readonly inputController: ChartInputController;
   private readonly resizeObserver: ResizeObserver;
   private readonly device: GPUDevice;
+  private readonly seed: string;
 
   private canvasWidth = 0;
   private canvasHeight = 0;
@@ -74,9 +74,11 @@ export class TimeseriesChartState implements ITimeseriesChart {
     gridSvg: SVGSVGElement,
     axesSvg: SVGSVGElement,
     initialTimeStart: number,
-    initialTimeEnd: number
+    initialTimeEnd: number,
+    seed: string
   ) {
     this.device = device;
+    this.seed = seed;
     this.targetCanvas = targetCanvas;
     this.gridSvg = gridSvg;
     this.axesSvg = axesSvg;
@@ -284,7 +286,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
   private ensureSeriesData(
     index: ReturnType<typeof createSpatialIndex>,
-    valueOffset: number
+    seriesSeed: string
   ): IDataPart | null {
     const scale = scaleFromTimeRange(this.viewport.viewTimeStart, this.viewport.viewTimeEnd);
     const existing = queryVisibleParts(
@@ -307,16 +309,10 @@ export class TimeseriesChartState implements ITimeseriesChart {
     const viewDuration = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
     const genStart = Math.max(this.dataMinTime, this.viewport.viewTimeStart - viewDuration);
     const genEnd = Math.min(this.dataMaxTime, this.viewport.viewTimeEnd + viewDuration);
-    const points = generateTimeseriesData(genStart, genEnd, scale);
+    const points = generateTimeseriesData(genStart, genEnd, scale, seriesSeed);
 
     if (points.length === 0) {
       return null;
-    }
-
-    if (valueOffset !== 0) {
-      for (const p of points) {
-        p.value += valueOffset;
-      }
     }
 
     const baseTime = points[0].time;
@@ -383,8 +379,8 @@ export class TimeseriesChartState implements ITimeseriesChart {
   }
 
   private ensureDataForViewport(): { line: IDataPart; rhombus: IDataPart } | null {
-    const linePart = this.ensureSeriesData(this.spatialIndex1, 0);
-    const rhombusPart = this.ensureSeriesData(this.spatialIndex2, SERIES_2_VALUE_OFFSET);
+    const linePart = this.ensureSeriesData(this.spatialIndex1, this.seed);
+    const rhombusPart = this.ensureSeriesData(this.spatialIndex2, `${this.seed}-series-2`);
 
     if (isNil(linePart) || isNil(rhombusPart)) {
       return null;

@@ -7,10 +7,11 @@ import { useSharedRenderer } from './SharedRendererContext';
 interface ITimeseriesChartProps {
   initialTimeStart: number;
   initialTimeEnd: number;
+  chartSeed: string;
 }
 
 export const TimeseriesChart = memo(
-  ({ initialTimeStart, initialTimeEnd }: ITimeseriesChartProps) => {
+  ({ initialTimeStart, initialTimeEnd, chartSeed }: ITimeseriesChartProps) => {
     const gridSvgRef = useRef<SVGSVGElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const axesSvgRef = useRef<SVGSVGElement>(null);
@@ -35,11 +36,12 @@ export const TimeseriesChart = memo(
         gridSvgRef.current,
         axesSvgRef.current,
         initialTimeStart,
-        initialTimeEnd
+        initialTimeEnd,
+        chartSeed
       );
 
       return renderer.registerChart(chartState);
-    }, [renderer, initialTimeStart, initialTimeEnd]);
+    }, [renderer, initialTimeStart, initialTimeEnd, chartSeed]);
 
     return (
       <div className="relative h-full w-full">
