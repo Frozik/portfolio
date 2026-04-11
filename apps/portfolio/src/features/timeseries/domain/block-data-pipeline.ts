@@ -71,6 +71,7 @@ export class BlockDataPipeline {
         const requestNumber = this.requestCounter;
 
         if (this.isDebug?.()) {
+          // biome-ignore lint/suspicious/noConsole: debug logging controlled by debug mode toggle
           console.log(
             `>>> [#${requestNumber}] REQUEST ${EChartType[this.chartType]}` +
               ` [${period.start} → ${period.end}]` +
@@ -96,6 +97,7 @@ export class BlockDataPipeline {
 
         if (this.isDebug?.()) {
           const totalPoints = newEntries.reduce((sum, entry) => sum + entry.pointCount, 0);
+          // biome-ignore lint/suspicious/noConsole: debug logging controlled by debug mode toggle
           console.log(
             `>>> [#${this.requestCounter}] RESPONSE ${EChartType[this.chartType]}` +
               ` [${period.start} → ${period.end}]` +
