@@ -128,8 +128,8 @@ WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
 - Line, candlestick, and rhombus series (candlestick shape rendered entirely
   in fragment shader)
 - Adaptive axis labels that scale from hours to months
-- 2-layer rendering: 2D canvas (background + grid + WebGPU blit + loading
-  bars) → SVG axes (labels with semi-transparent backdrop)
+- Unified canvas rendering: 2D canvas (background + grid + axis labels with
+  backdrop + WebGPU blit + loading bars)
 - Debug overlay: real-time render FPS counter + block boundary visualization
   toggle
 - Fullscreen + landscape lock on mobile devices
@@ -137,7 +137,7 @@ WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
 **Performance optimizations:**
 - Event-driven FPS controller with debounced degradation
   (interaction=60fps → idle=5fps)
-- SVG axes memoization: only re-renders when viewport or canvas size changes
+- Axis label memoization: only re-renders when viewport or canvas size changes
 - 4x MSAA anti-aliasing with shared texture (resized per chart, not
   reallocated)
 - Relative snap threshold for zoom animation: prevents sub-pixel updates
