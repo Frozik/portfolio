@@ -1,4 +1,4 @@
-import{r as e}from"./c-BlVx34DW.js";import{M as t,N as n,P as r}from"./c-C3oVsTwX.js";import{i,n as a,r as o,t as s}from"./c-l-_mGmHA.js";import{i as c,n as l,r as u,t as d}from"./c-ttTmNqN_.js";import{t as f}from"./c-D79JBXOk.js";var p=e(n(),1),m=`const PI: f32 = 3.1415926535;
+import{r as e}from"./c-BlVx34DW.js";import{M as t,N as n,P as r}from"./c-C3oVsTwX.js";import{i,n as a,r as o,t as s}from"./c-l-_mGmHA.js";import{i as c,n as l,r as u,t as d}from"./c-ttTmNqN_.js";import{t as f}from"./c-BdIG0Mup.js";var p=e(n(),1),m=`const PI: f32 = 3.1415926535;
 const TWO_PI: f32 = PI * 2.0;
 // Keep in sync with INSTANCE_COUNT in sun-constants.ts
 const INSTANCE_COUNT: f32 = 100000.0;
