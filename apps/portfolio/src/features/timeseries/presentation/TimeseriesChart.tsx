@@ -2,16 +2,18 @@ import { isNil } from 'lodash-es';
 import { memo, useEffect, useRef } from 'react';
 
 import { TimeseriesChartState } from '../domain/chart-state';
+import type { ISeriesConfig } from '../domain/types';
 import { useSharedRenderer } from './SharedRendererContext';
 
 interface ITimeseriesChartProps {
   initialTimeStart: number;
   initialTimeEnd: number;
   chartSeed: string;
+  seriesConfigs: readonly ISeriesConfig[];
 }
 
 export const TimeseriesChart = memo(
-  ({ initialTimeStart, initialTimeEnd, chartSeed }: ITimeseriesChartProps) => {
+  ({ initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs }: ITimeseriesChartProps) => {
     const gridSvgRef = useRef<SVGSVGElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const axesSvgRef = useRef<SVGSVGElement>(null);
@@ -30,8 +32,8 @@ export const TimeseriesChart = memo(
       const chartState = new TimeseriesChartState(
         renderer.device,
         renderer.bindGroupLayout,
-        renderer.linePipeline,
-        renderer.candlestickPipeline,
+        renderer,
+        seriesConfigs,
         canvasRef.current,
         gridSvgRef.current,
         axesSvgRef.current,
@@ -41,7 +43,7 @@ export const TimeseriesChart = memo(
       );
 
       return renderer.registerChart(chartState);
-    }, [renderer, initialTimeStart, initialTimeEnd, chartSeed]);
+    }, [renderer, initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs]);
 
     return (
       <div className="relative h-full w-full">

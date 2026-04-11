@@ -67,20 +67,11 @@ export const FBM_VALUE_CENTER = 100;
 /** Y-axis offset between octave planes in 2D noise to decorrelate octaves. */
 export const OCTAVE_OFFSET = 1000;
 
-/** Duration threshold: ranges wider than this (in seconds) use Year scale. */
-export const YEAR_DURATION_THRESHOLD = 180 * 24 * 3600;
+/** Number of data points stored per fixed-size texture slot. */
+export const POINTS_PER_SLOT = 256;
 
-/** Duration threshold: ranges wider than this use Month scale. */
-export const MONTH_DURATION_THRESHOLD = 20 * 24 * 3600;
-
-/** Duration threshold: ranges wider than this use Week scale. */
-export const WEEK_DURATION_THRESHOLD = 3 * 24 * 3600;
-
-/** Duration threshold: ranges wider than this use Day scale. */
-export const DAY_DURATION_THRESHOLD = 6 * 3600;
-
-/** Duration threshold: ranges wider than this use Hour scale. */
-export const HOUR_DURATION_THRESHOLD = 10 * 60;
+/** Number of 256-point slots that fit in one texture row (2048 / 256). */
+export const SLOTS_PER_ROW = 8;
 
 /** Half constant for readability in float calculations. */
 export const HALF = 0.5;

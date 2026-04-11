@@ -79,23 +79,37 @@ WebGPU canvas contexts.
 - Each chart rendered sequentially to the offscreen canvas, then blitted to
   a visible 2D canvas via `transferToImageBitmap()` + `drawImage()`
 - Renderer lifecycle managed by a React context provider owned by the page
-- Per-chart isolation: independent viewport, data texture (growable),
-  spatial index, and input handling
+- Per-chart isolation: independent viewport, block registry, and input handling
+
+**Block-based data pipeline:**
+- Data loaded in fixed-size 256-point blocks, cached in RTree, stored in GPU texture
+- Period-aligned block boundaries (1h, 12h, 1d, 4d, 16d, 64d, 256d scales)
+- Slot allocator with LRU eviction: texture grows from 4 to 512 rows, then recycles oldest blocks
+- Multi-block rendering via GPU storage buffer — shader reads `BlockDescriptor[]` array
+- Cross-block line stitching handled automatically by `readGlobalPoint()` in the shader
+- Per-block delta encoding preserves float32 precision across all zoom levels
+- Architecture emulates server-side data loading (blocks can be replaced with `fetch()` calls)
+
+**Noise-based data generation:**
+- Simplex noise + fractal Brownian motion (fBm) with 6 octaves
+- Deterministic and multi-scale: zoom in reveals detail, macro shape stays stable
+- Each chart uses a unique seed for independent data
+- Bullish/bearish coloring (green/red) based on price direction
 
 **Chart features:**
-- Animated zoom with lerp-based easing
+- Animated zoom with lerp-based easing and viewport spring on resize
 - Pan and pinch-to-zoom touch support
 - Line and candlestick series (candlestick shape rendered entirely in fragment shader)
-- Adaptive axis labels that scale from minutes to years
-- Delta-encoded data packing for efficient GPU rendering
+- Adaptive axis labels that scale from hours to months
 - 3-layer rendering: SVG grid → WebGPU canvas → SVG axes (labels with semi-transparent backdrop)
+- Debug overlay: FPS counter + block boundary visualization
 
 **Performance optimizations:**
-- Adaptive frame rate: max FPS during interaction, drops to 1 FPS when idle
+- Event-driven FPS controller with debounced degradation (interaction=60fps → idle=5fps)
 - SVG overlay memoization: grid and axes only re-render when viewport changes
 - Relative snap threshold for zoom animation: prevents sub-pixel updates
-- Growable data textures: start at 4 rows, double on demand up to 512
 - Scissor rect clips GPU rendering to the plot area
+- Immediate SVG overlay re-render on resize (ResizeObserver callback)
 
 ### Controls
 

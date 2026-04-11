@@ -36,18 +36,18 @@ fn vs(
 ) -> VSOut {
     var out: VSOut;
 
-    let pointA = readPoint(iid);
-    let pointB = readPoint(iid + 1u);
+    let pointA = readGlobalPoint(iid);
+    let pointB = readGlobalPoint(iid + 1u);
 
-    let pixelA = dataToPixel(pointA.x, pointA.y);
-    let pixelB = dataToPixel(pointB.x, pointB.y);
+    let pixelA = dataToPixel(pointA.timeDelta, pointA.valueDelta);
+    let pixelB = dataToPixel(pointB.timeDelta, pointB.valueDelta);
 
     let dpr = max(1.0, U.lineWidth);
-    let widthA = pointA.z * dpr;
-    let widthB = pointB.z * dpr;
+    let widthA = pointA.size * dpr;
+    let widthB = pointB.size * dpr;
 
-    let colorA = unpackColorWgsl(pointA.w);
-    let colorB = unpackColorWgsl(pointB.w);
+    let colorA = unpackColorWgsl(pointA.packedColor);
+    let colorB = unpackColorWgsl(pointB.packedColor);
 
     if (vid < JOIN_A_END) {
         // Join circle at point A

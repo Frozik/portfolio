@@ -1,33 +1,59 @@
 export enum ETimeScale {
-  Year = 0,
-  Month = 1,
-  Week = 2,
-  Day = 3,
-  Hour = 4,
-  Minute = 5,
+  Hour1 = 3600,
+  Hour12 = 43200,
+  Day1 = 86400,
+  Day4 = 345600,
+  Day16 = 1382400,
+  Day64 = 5529600,
+  Day256 = 22118400,
 }
 
-export interface IDataPart {
-  scale: ETimeScale;
-  timeStart: number;
-  timeEnd: number;
-  baseTime: number;
-  baseValue: number;
-  textureRowStart: number;
-  pointCount: number;
-  valueMin: number;
-  valueMax: number;
-  /** CPU-side copy of point times and values for visible-range Y auto-scaling. */
-  pointTimes: Float64Array;
-  pointValues: Float64Array;
+export enum EChartType {
+  Line = 0,
+  Candlestick = 1,
+  Rhombus = 2,
 }
 
-export interface ISpatialItem {
+export type PointTransformFunction = (
+  value: number,
+  index: number,
+  points: readonly IDataPoint[]
+) => number;
+
+export interface ISeriesConfig {
+  readonly chartType: EChartType;
+  readonly seedSuffix: string;
+  readonly colorFn?: PointTransformFunction;
+  readonly sizeFn?: PointTransformFunction;
+}
+
+export interface ILoadingRegion {
+  readonly timeStart: number;
+  readonly timeEnd: number;
+  readonly progress: number;
+}
+
+export interface ITextureSlot {
+  readonly row: number;
+  readonly slotIndex: number;
+}
+
+export interface IBlockEntry {
   minX: number;
-  minY: number;
   maxX: number;
+  minY: number;
   maxY: number;
-  part: IDataPart;
+
+  readonly timeStart: number;
+  readonly timeEnd: number;
+  readonly scale: ETimeScale;
+  readonly chartType: EChartType;
+  readonly slot: ITextureSlot;
+  readonly pointCount: number;
+  readonly baseTime: number;
+  readonly baseValue: number;
+  readonly pointTimes: Float64Array;
+  readonly pointValues: Float64Array;
 }
 
 export interface IAxisTick {
@@ -58,25 +84,6 @@ export interface IPlotArea {
   height: number;
 }
 
-/** Interface for a per-chart render layer that can draw into a shared render pass. */
-export interface ISeriesLayer {
-  init(device: GPUDevice, bindGroupLayout: GPUBindGroupLayout): void;
-  updateBindGroup(dataTextureView: GPUTextureView): void;
-  writeUniforms(
-    part: IDataPart,
-    canvasWidth: number,
-    canvasHeight: number,
-    viewTimeStart: number,
-    viewTimeEnd: number,
-    viewValueMin: number,
-    viewValueMax: number
-  ): void;
-  render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void;
-  readonly instanceCount: number;
-  readonly bindGroup: GPUBindGroup | null;
-  dispose(): void;
-}
-
 export interface IFpsController {
   getFrameIntervalMs(): number;
   getCurrentFps(): number;
@@ -94,12 +101,42 @@ export interface ITimeseriesChart {
   syncCanvasSize(): boolean;
   update(): void;
   prepareDrawCommands(): IPlotArea | null;
+  getLoadingRegions(): ILoadingRegion[];
+  getViewport(): { timeStart: number; timeEnd: number };
   renderOverlay(): void;
+  dispose(): void;
+}
+
+export interface ISeriesLayer {
+  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: unknown): void;
+  updateBindGroup(dataTextureView: GPUTextureView): void;
+  writeUniforms(
+    blocks: ReadonlyArray<IBlockEntry>,
+    canvasWidth: number,
+    canvasHeight: number,
+    viewTimeStart: number,
+    viewTimeEnd: number,
+    viewValueMin: number,
+    viewValueMax: number
+  ): void;
+  render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void;
+  renderDebug(
+    pass: GPURenderPassEncoder,
+    debugPipeline: GPURenderPipeline,
+    plotArea: IPlotArea
+  ): void;
+  readonly instanceCount: number;
+  readonly bindGroup: GPUBindGroup | null;
   dispose(): void;
 }
 
 export interface ISeriesLayerManager {
   renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void;
+  renderDebug(
+    pass: GPURenderPassEncoder,
+    debugPipeline: GPURenderPipeline,
+    plotArea: IPlotArea
+  ): void;
   dispose(): void;
 }
 
@@ -109,6 +146,10 @@ export interface ISharedTimeseriesRenderer {
   readonly bindGroupLayout: GPUBindGroupLayout;
   readonly linePipeline: GPURenderPipeline;
   readonly candlestickPipeline: GPURenderPipeline;
+  readonly rhombusPipeline: GPURenderPipeline;
+  readonly debugPipeline: GPURenderPipeline;
+  debugMode: boolean;
+  readonly renderFps: number;
   registerChart(chart: ITimeseriesChart): VoidFunction;
   destroy(): void;
 }

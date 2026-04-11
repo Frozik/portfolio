@@ -1,6 +1,8 @@
 import { assert } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
+import { BlockDataPipeline } from './block-data-pipeline';
+import { BlockRegistry } from './block-registry';
 import { renderAxes, renderGrid } from './chart-axes';
 import { ChartInputController } from './chart-input';
 import {
@@ -8,29 +10,67 @@ import {
   AXIS_MARGIN_LEFT,
   AXIS_MARGIN_RIGHT,
   AXIS_MARGIN_TOP,
-  FLOATS_PER_POINT,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
-  TEXTURE_INITIAL_ROWS,
-  TEXTURE_MAX_ROWS,
-  TEXTURE_WIDTH,
   VERTICES_PER_CANDLESTICK,
+  VERTICES_PER_RHOMBUS,
   VERTICES_PER_SEGMENT,
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
-import { generateTimeseriesData } from './data-generator';
-import { encodePoints } from './delta-encoding';
 import { EFpsLevel, FpsController } from './fps-controller';
 import { SeriesLayer } from './layers/series-layer';
 import { SeriesLayerManager } from './layers/series-layer-manager';
-import { createSpatialIndex, insertPart, queryVisibleParts } from './spatial-index';
-import type { IChartViewport, IDataPart, IPlotArea, ITimeseriesChart } from './types';
+import { SlotAllocator } from './slot-allocator';
+import type {
+  IChartViewport,
+  ILoadingRegion,
+  IPlotArea,
+  ISeriesConfig,
+  ISharedTimeseriesRenderer,
+  ITimeseriesChart,
+} from './types';
+import { EChartType } from './types';
 import { autoScaleY, scaleFromTimeRange, visibleYRange } from './viewport';
 
 const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
-const MIN_POINTS_FOR_LINES = 2;
+const MIN_POINTS_FOR_RENDERING = 2;
+
+function getVerticesPerInstance(chartType: EChartType): number {
+  switch (chartType) {
+    case EChartType.Line:
+      return VERTICES_PER_SEGMENT;
+    case EChartType.Candlestick:
+      return VERTICES_PER_CANDLESTICK;
+    case EChartType.Rhombus:
+      return VERTICES_PER_RHOMBUS;
+  }
+}
+
+function getNeedsStitching(chartType: EChartType): boolean {
+  switch (chartType) {
+    case EChartType.Line:
+    case EChartType.Candlestick:
+      return true;
+    case EChartType.Rhombus:
+      return false;
+  }
+}
+
+function getGpuPipeline(
+  chartType: EChartType,
+  renderer: ISharedTimeseriesRenderer
+): GPURenderPipeline {
+  switch (chartType) {
+    case EChartType.Line:
+      return renderer.linePipeline;
+    case EChartType.Candlestick:
+      return renderer.candlestickPipeline;
+    case EChartType.Rhombus:
+      return renderer.rhombusPipeline;
+  }
+}
 
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
@@ -44,20 +84,16 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private readonly dataMinTime: number;
   private readonly dataMaxTime: number;
 
-  private readonly spatialIndex1 = createSpatialIndex();
-  private readonly spatialIndex2 = createSpatialIndex();
-  private nextTextureRow = 0;
-
-  private textureRows: number;
-  private dataTexture: GPUTexture;
+  private readonly allocator: SlotAllocator;
+  private readonly registry: BlockRegistry;
+  private readonly dataPipelines: BlockDataPipeline[];
 
   private readonly inputController: ChartInputController;
   private readonly resizeObserver: ResizeObserver;
-  private readonly device: GPUDevice;
-  private readonly seed: string;
 
   private canvasWidth = 0;
   private canvasHeight = 0;
+  private lastTextureCapacity = 0;
 
   // Memoization: skip SVG re-render when viewport + size unchanged
   private lastOverlayTimeStart = Number.NaN;
@@ -70,8 +106,8 @@ export class TimeseriesChartState implements ITimeseriesChart {
   constructor(
     device: GPUDevice,
     bindGroupLayout: GPUBindGroupLayout,
-    linePipeline: GPURenderPipeline,
-    candlestickPipeline: GPURenderPipeline,
+    renderer: ISharedTimeseriesRenderer,
+    seriesConfigs: readonly ISeriesConfig[],
     targetCanvas: HTMLCanvasElement,
     gridSvg: SVGSVGElement,
     axesSvg: SVGSVGElement,
@@ -79,8 +115,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
     initialTimeEnd: number,
     seed: string
   ) {
-    this.device = device;
-    this.seed = seed;
     this.targetCanvas = targetCanvas;
     this.gridSvg = gridSvg;
     this.axesSvg = axesSvg;
@@ -101,23 +135,40 @@ export class TimeseriesChartState implements ITimeseriesChart {
       viewValueMax: INITIAL_VALUE_MAX,
     };
 
-    // Create per-chart data texture
-    this.textureRows = TEXTURE_INITIAL_ROWS;
-    this.dataTexture = device.createTexture({
-      size: [TEXTURE_WIDTH, this.textureRows],
-      format: 'rgba32float',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
+    // Shared slot allocator (one texture) and block registry (one RTree)
+    this.registry = new BlockRegistry();
+    this.allocator = new SlotAllocator(device, undefined, undefined, undefined, slot => {
+      this.registry.removeBySlot(slot);
     });
 
-    // Initialize per-chart series layers
-    const lineLayer = new SeriesLayer(VERTICES_PER_SEGMENT);
-    const candlestickLayer = new SeriesLayer(VERTICES_PER_CANDLESTICK);
+    this.lastTextureCapacity = this.allocator.getCapacity();
 
+    // Create pipelines and layers from series configs
+    this.dataPipelines = [];
     this.seriesManager = new SeriesLayerManager();
-    this.seriesManager.addSeries(lineLayer, linePipeline, 'line');
-    this.seriesManager.addSeries(candlestickLayer, candlestickPipeline, 'rhombus');
-    this.seriesManager.initAll(device, bindGroupLayout);
-    this.seriesManager.updateBindGroups(this.dataTexture.createView());
+
+    for (const config of seriesConfigs) {
+      const dataPipeline = new BlockDataPipeline(
+        this.allocator,
+        this.registry,
+        `${seed}${config.seedSuffix}`,
+        config.chartType,
+        config.colorFn,
+        config.sizeFn,
+        () => renderer.debugMode
+      );
+      this.dataPipelines.push(dataPipeline);
+
+      const layer = new SeriesLayer(
+        getVerticesPerInstance(config.chartType),
+        getNeedsStitching(config.chartType)
+      );
+      const gpuPipeline = getGpuPipeline(config.chartType, renderer);
+      this.seriesManager.addSeries(layer, gpuPipeline);
+    }
+
+    this.seriesManager.initAll(device, bindGroupLayout, this.allocator);
+    this.seriesManager.updateBindGroups(this.allocator.createView());
 
     this.fpsController = new FpsController();
 
@@ -148,6 +199,24 @@ export class TimeseriesChartState implements ITimeseriesChart {
     return this.canvasHeight;
   }
 
+  /** Sync canvas pixel dimensions to CSS size. Returns true if canvas was resized. */
+  syncCanvasSize(): boolean {
+    const dpr = Math.max(1, window.devicePixelRatio);
+    const width = Math.floor(this.targetCanvas.clientWidth * dpr);
+    const height = Math.floor(this.targetCanvas.clientHeight * dpr);
+
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+
+    if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
+      this.targetCanvas.width = width;
+      this.targetCanvas.height = height;
+      return true;
+    }
+
+    return false;
+  }
+
   update(): void {
     this.updateCanvasSize();
 
@@ -168,18 +237,77 @@ export class TimeseriesChartState implements ITimeseriesChart {
   }
 
   prepareDrawCommands(): IPlotArea | null {
-    const parts = this.ensureDataForViewport();
+    const scale = scaleFromTimeRange(this.viewport.viewTimeStart, this.viewport.viewTimeEnd);
 
-    if (
-      isNil(parts) ||
-      parts.line.pointCount < MIN_POINTS_FOR_LINES ||
-      parts.rhombus.pointCount < MIN_POINTS_FOR_LINES
-    ) {
-      return null;
+    // Ensure blocks for each series pipeline
+    const allBlockSets = this.dataPipelines.map(pipeline =>
+      pipeline.ensureBlocksForViewport(
+        this.viewport.viewTimeStart,
+        this.viewport.viewTimeEnd,
+        scale
+      )
+    );
+
+    // Keep FPS high while blocks are loading (for shimmer animation)
+    if (this.getLoadingRegions().length > 0) {
+      this.fpsController.raise(EFpsLevel.ZoomAnimation);
     }
 
+    // Check if any series has enough points to render
+    const hasAnyData = allBlockSets.some(blocks => {
+      const totalPoints = blocks.reduce((sum, block) => sum + block.pointCount, 0);
+      return totalPoints >= MIN_POINTS_FOR_RENDERING;
+    });
+
+    if (!hasAnyData) {
+      // Still return plot area if there are loading regions (for loading bars)
+      if (this.getLoadingRegions().length === 0) {
+        return null;
+      }
+    }
+
+    // Touch all visible blocks for LRU tracking
+    for (const blocks of allBlockSets) {
+      for (const block of blocks) {
+        this.allocator.touch(block.slot);
+      }
+    }
+
+    // Y auto-scale from all visible blocks
+    let globalMin = Number.POSITIVE_INFINITY;
+    let globalMax = Number.NEGATIVE_INFINITY;
+
+    for (const blocks of allBlockSets) {
+      for (const block of blocks) {
+        const range = visibleYRange(
+          block.pointTimes,
+          block.pointValues,
+          this.viewport.viewTimeStart,
+          this.viewport.viewTimeEnd
+        );
+        if (range !== undefined) {
+          globalMin = Math.min(globalMin, range[0]);
+          globalMax = Math.max(globalMax, range[1]);
+        }
+      }
+    }
+
+    if (globalMin < globalMax) {
+      const [yMin, yMax] = autoScaleY(globalMin, globalMax);
+      this.viewport.viewValueMin = yMin;
+      this.viewport.viewValueMax = yMax;
+    }
+
+    // Rebuild bind groups if texture grew
+    const currentCapacity = this.allocator.getCapacity();
+    if (currentCapacity !== this.lastTextureCapacity) {
+      this.lastTextureCapacity = currentCapacity;
+      this.rebuildLayerBindGroups();
+    }
+
+    // Write uniforms for all series
     this.seriesManager.writeAllUniforms(
-      parts,
+      allBlockSets,
       this.canvasWidth,
       this.canvasHeight,
       this.viewport.viewTimeStart,
@@ -204,8 +332,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
   }
 
   renderOverlay(): void {
-    const w = this.targetCanvas.clientWidth;
-    const h = this.targetCanvas.clientHeight;
     const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
 
     if (
@@ -213,8 +339,8 @@ export class TimeseriesChartState implements ITimeseriesChart {
       viewTimeEnd === this.lastOverlayTimeEnd &&
       viewValueMin === this.lastOverlayValueMin &&
       viewValueMax === this.lastOverlayValueMax &&
-      w === this.lastOverlayWidth &&
-      h === this.lastOverlayHeight
+      this.canvasWidth === this.lastOverlayWidth &&
+      this.canvasHeight === this.lastOverlayHeight
     ) {
       return;
     }
@@ -223,230 +349,54 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.lastOverlayTimeEnd = viewTimeEnd;
     this.lastOverlayValueMin = viewValueMin;
     this.lastOverlayValueMax = viewValueMax;
-    this.lastOverlayWidth = w;
-    this.lastOverlayHeight = h;
+    this.lastOverlayWidth = this.canvasWidth;
+    this.lastOverlayHeight = this.canvasHeight;
 
-    renderGrid(this.gridSvg, this.viewport, w, h);
-    renderAxes(this.axesSvg, this.viewport, w, h);
+    const dpr = Math.max(1, window.devicePixelRatio);
+    const clientWidth = this.canvasWidth / dpr;
+    const clientHeight = this.canvasHeight / dpr;
+
+    renderGrid(this.gridSvg, this.viewport, clientWidth, clientHeight);
+    renderAxes(this.axesSvg, this.viewport, clientWidth, clientHeight);
+  }
+
+  getLoadingRegions(): ILoadingRegion[] {
+    const regions: ILoadingRegion[] = [];
+    for (const pipeline of this.dataPipelines) {
+      regions.push(...pipeline.getLoadingRegions());
+    }
+    return regions;
+  }
+
+  getViewport(): { timeStart: number; timeEnd: number } {
+    return {
+      timeStart: this.viewport.viewTimeStart,
+      timeEnd: this.viewport.viewTimeEnd,
+    };
   }
 
   dispose(): void {
     this.resizeObserver.disconnect();
     this.inputController.detach();
-    this.fpsController.dispose();
     this.seriesManager.dispose();
-    this.dataTexture.destroy();
+    this.allocator.dispose();
+    this.fpsController.dispose();
   }
 
   private rebuildLayerBindGroups(): void {
-    this.seriesManager.updateBindGroups(this.dataTexture.createView());
-  }
-
-  private growTextureIfNeeded(requiredRows: number): boolean {
-    if (requiredRows <= this.textureRows) {
-      return true;
-    }
-
-    let newRows = this.textureRows;
-    while (newRows < requiredRows) {
-      newRows *= 2;
-    }
-    newRows = Math.min(newRows, TEXTURE_MAX_ROWS);
-
-    if (requiredRows > newRows) {
-      return false;
-    }
-
-    const newTexture = this.device.createTexture({
-      size: [TEXTURE_WIDTH, newRows],
-      format: 'rgba32float',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
-    });
-
-    const encoder = this.device.createCommandEncoder();
-    encoder.copyTextureToTexture(
-      { texture: this.dataTexture, origin: [0, 0, 0] },
-      { texture: newTexture, origin: [0, 0, 0] },
-      [TEXTURE_WIDTH, this.nextTextureRow, 1]
-    );
-    this.device.queue.submit([encoder.finish()]);
-
-    this.dataTexture.destroy();
-    this.dataTexture = newTexture;
-    this.textureRows = newRows;
-
-    this.rebuildLayerBindGroups();
-
-    return true;
-  }
-
-  private ensureSeriesData(
-    index: ReturnType<typeof createSpatialIndex>,
-    seriesSeed: string
-  ): IDataPart | null {
-    const scale = scaleFromTimeRange(this.viewport.viewTimeStart, this.viewport.viewTimeEnd);
-    const existing = queryVisibleParts(
-      index,
-      scale,
-      this.viewport.viewTimeStart,
-      this.viewport.viewTimeEnd
-    );
-
-    const covering = existing.find(
-      item =>
-        item.part.timeStart <= this.viewport.viewTimeStart &&
-        item.part.timeEnd >= this.viewport.viewTimeEnd
-    );
-
-    if (covering !== undefined) {
-      return covering.part;
-    }
-
-    const viewDuration = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
-    const genStart = Math.max(this.dataMinTime, this.viewport.viewTimeStart - viewDuration);
-    const genEnd = Math.min(this.dataMaxTime, this.viewport.viewTimeEnd + viewDuration);
-    const points = generateTimeseriesData(genStart, genEnd, scale, seriesSeed);
-
-    if (points.length === 0) {
-      return null;
-    }
-
-    const baseTime = points[0].time;
-    const baseValue = points[0].value;
-    const encoded = encodePoints(points, baseTime, baseValue);
-
-    const rowStart = this.nextTextureRow;
-    const rowsNeeded = Math.ceil(points.length / TEXTURE_WIDTH);
-
-    if (!this.growTextureIfNeeded(rowStart + rowsNeeded)) {
-      return null;
-    }
-
-    for (let row = 0; row < rowsNeeded; row++) {
-      const pointsInRow = Math.min(TEXTURE_WIDTH, points.length - row * TEXTURE_WIDTH);
-      const srcOffset = row * TEXTURE_WIDTH * FLOATS_PER_POINT;
-      const rowData = encoded.subarray(srcOffset, srcOffset + pointsInRow * FLOATS_PER_POINT);
-
-      this.device.queue.writeTexture(
-        { texture: this.dataTexture, origin: [0, rowStart + row, 0] },
-        rowData,
-        {
-          bytesPerRow: TEXTURE_WIDTH * FLOATS_PER_POINT * Float32Array.BYTES_PER_ELEMENT,
-          rowsPerImage: 1,
-        },
-        [pointsInRow, 1, 1]
-      );
-    }
-
-    const pointTimes = new Float64Array(points.length);
-    const pointValues = new Float64Array(points.length);
-    let minVal = Number.POSITIVE_INFINITY;
-    let maxVal = Number.NEGATIVE_INFINITY;
-
-    for (let i = 0; i < points.length; i++) {
-      pointTimes[i] = points[i].time;
-      pointValues[i] = points[i].value;
-      if (points[i].value < minVal) {
-        minVal = points[i].value;
-      }
-      if (points[i].value > maxVal) {
-        maxVal = points[i].value;
-      }
-    }
-
-    const part: IDataPart = {
-      scale,
-      timeStart: genStart,
-      timeEnd: genEnd,
-      baseTime,
-      baseValue,
-      textureRowStart: rowStart,
-      pointCount: points.length,
-      valueMin: minVal,
-      valueMax: maxVal,
-      pointTimes,
-      pointValues,
-    };
-
-    insertPart(index, part);
-    this.nextTextureRow += rowsNeeded;
-
-    return part;
-  }
-
-  private ensureDataForViewport(): { line: IDataPart; rhombus: IDataPart } | null {
-    const linePart = this.ensureSeriesData(this.spatialIndex1, this.seed);
-    const rhombusPart = this.ensureSeriesData(this.spatialIndex2, `${this.seed}-series-2`);
-
-    if (isNil(linePart) || isNil(rhombusPart)) {
-      return null;
-    }
-
-    const range1 = visibleYRange(
-      linePart.pointTimes,
-      linePart.pointValues,
-      this.viewport.viewTimeStart,
-      this.viewport.viewTimeEnd
-    );
-    const range2 = visibleYRange(
-      rhombusPart.pointTimes,
-      rhombusPart.pointValues,
-      this.viewport.viewTimeStart,
-      this.viewport.viewTimeEnd
-    );
-
-    let globalMin = Number.POSITIVE_INFINITY;
-    let globalMax = Number.NEGATIVE_INFINITY;
-
-    if (range1 !== undefined) {
-      globalMin = Math.min(globalMin, range1[0]);
-      globalMax = Math.max(globalMax, range1[1]);
-    }
-    if (range2 !== undefined) {
-      globalMin = Math.min(globalMin, range2[0]);
-      globalMax = Math.max(globalMax, range2[1]);
-    }
-
-    if (globalMin < globalMax) {
-      const [yMin, yMax] = autoScaleY(globalMin, globalMax);
-      this.viewport.viewValueMin = yMin;
-      this.viewport.viewValueMax = yMax;
-    }
-
-    return { line: linePart, rhombus: rhombusPart };
-  }
-
-  /** Sync canvas pixel dimensions to CSS size. Returns true if canvas was resized. */
-  syncCanvasSize(): boolean {
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const width = Math.floor(this.targetCanvas.clientWidth * dpr);
-    const height = Math.floor(this.targetCanvas.clientHeight * dpr);
-
-    this.canvasWidth = width;
-    this.canvasHeight = height;
-
-    if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
-      this.targetCanvas.width = width;
-      this.targetCanvas.height = height;
-      return true;
-    }
-
-    return false;
+    this.seriesManager.updateBindGroups(this.allocator.createView());
   }
 
   private updateCanvasSize(): void {
     const dpr = Math.max(1, window.devicePixelRatio);
     const newWidth = Math.floor(this.targetCanvas.clientWidth * dpr);
-    const newHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
 
     const oldWidth = this.canvasWidth;
 
     this.canvasWidth = newWidth;
-    this.canvasHeight = newHeight;
+    this.canvasHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
 
-    // Spring effect on time axis: adjust current viewport so data appears at the
-    // same pixel positions as before the resize. The existing zoom lerp will
-    // animate from this "stretched" viewport to the correct target.
+    // Spring effect on time axis
     if (oldWidth > 0 && newWidth !== oldWidth) {
       const timeRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
       const springTimeRange = timeRange * (newWidth / oldWidth);

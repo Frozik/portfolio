@@ -1,19 +1,60 @@
 struct Uniforms {
-    viewport: vec2<f32>,      // canvas size in pixels
-    timeRangeMin: f32,        // visible time range start (delta from base)
-    timeRangeMax: f32,        // visible time range end (delta from base)
-    valueRangeMin: f32,       // visible value range start (delta from base)
-    valueRangeMax: f32,       // visible value range end (delta from base)
-    pointCount: u32,          // number of points in this draw call
-    textureWidth: u32,        // TEXTURE_WIDTH constant
-    lineWidth: f32,           // DPR scale factor for per-point sizes
-    textureRow: u32,          // starting row in the data texture
-    baseTime: f32,            // base time for delta decoding
-    baseValue: f32,           // base value for delta decoding
+    viewport: vec2<f32>,
+    timeRangeMin: f32,        // viewTimeStart - globalBaseTime
+    timeRangeMax: f32,        // viewTimeEnd - globalBaseTime
+    valueRangeMin: f32,       // viewValueMin - globalBaseValue
+    valueRangeMax: f32,       // viewValueMax - globalBaseValue
+    textureWidth: u32,
+    lineWidth: f32,
+    blockCount: u32,
+    _pad: u32,
+};
+
+struct BlockDescriptor {
+    textureOffset: u32,
+    pointCount: u32,
+    baseTimeDelta: f32,
+    baseValueDelta: f32,
 };
 
 @group(0) @binding(0) var<uniform> U: Uniforms;
 @group(0) @binding(1) var dataTexture: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read> blocks: array<BlockDescriptor>;
+
+struct DecodedPoint {
+    timeDelta: f32,
+    valueDelta: f32,
+    size: f32,
+    packedColor: f32,
+};
+
+fn readGlobalPoint(globalIndex: u32) -> DecodedPoint {
+    var accumulated: u32 = 0u;
+    for (var b: u32 = 0u; b < U.blockCount; b = b + 1u) {
+        let count = blocks[b].pointCount;
+        if (globalIndex < accumulated + count) {
+            let localIndex = globalIndex - accumulated;
+            let texOffset = blocks[b].textureOffset + localIndex;
+            let row = texOffset / U.textureWidth;
+            let col = texOffset % U.textureWidth;
+            let texel = textureLoad(dataTexture, vec2<u32>(col, row), 0);
+            var result: DecodedPoint;
+            result.timeDelta = blocks[b].baseTimeDelta + texel.x;
+            result.valueDelta = blocks[b].baseValueDelta + texel.y;
+            result.size = texel.z;
+            result.packedColor = texel.w;
+            return result;
+        }
+        accumulated = accumulated + count;
+    }
+    // Fallback - should never reach
+    var fallback: DecodedPoint;
+    fallback.timeDelta = 0.0;
+    fallback.valueDelta = 0.0;
+    fallback.size = 1.0;
+    fallback.packedColor = 0.0;
+    return fallback;
+}
 
 const BYTE_MASK: u32 = 0xFFu;
 const SHIFT_R: u32 = 8u;
@@ -29,12 +70,6 @@ fn unpackColorWgsl(packed: f32) -> vec4<f32> {
     let g = f32((bits >> SHIFT_G) & BYTE_MASK) / COLOR_SCALE;
     let b = f32((bits >> SHIFT_B) & BYTE_MASK) / COLOR_SCALE;
     return vec4<f32>(r, g, b, a);
-}
-
-fn readPoint(index: u32) -> vec4<f32> {
-    let row = U.textureRow + index / U.textureWidth;
-    let col = index % U.textureWidth;
-    return textureLoad(dataTexture, vec2<u32>(col, row), 0);
 }
 
 fn safeNormalize(v: vec2<f32>) -> vec2<f32> {

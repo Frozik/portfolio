@@ -1,36 +1,36 @@
-import {
-  DAY_DURATION_THRESHOLD,
-  HOUR_DURATION_THRESHOLD,
-  MIN_TIME_RANGE_SECONDS,
-  MONTH_DURATION_THRESHOLD,
-  WEEK_DURATION_THRESHOLD,
-  Y_PADDING_RATIO,
-  YEAR_DURATION_THRESHOLD,
-} from './constants';
+import { MIN_TIME_RANGE_SECONDS, Y_PADDING_RATIO } from './constants';
 import { ETimeScale } from './types';
 
 /**
+ * All time scales sorted from finest (shortest duration) to coarsest (longest duration).
+ * Used for scale selection based on viewport duration.
+ */
+const SORTED_SCALES: readonly ETimeScale[] = [
+  ETimeScale.Hour1,
+  ETimeScale.Hour12,
+  ETimeScale.Day1,
+  ETimeScale.Day4,
+  ETimeScale.Day16,
+  ETimeScale.Day64,
+  ETimeScale.Day256,
+];
+
+/**
  * Determine the appropriate time scale based on the visible time range duration.
+ *
+ * Selects the finest scale whose duration is at least as large as the viewport
+ * duration. If the viewport exceeds all scale durations, returns the coarsest scale.
  */
 export function scaleFromTimeRange(timeStart: number, timeEnd: number): ETimeScale {
   const duration = timeEnd - timeStart;
 
-  if (duration >= YEAR_DURATION_THRESHOLD) {
-    return ETimeScale.Year;
+  for (const scale of SORTED_SCALES) {
+    if (duration <= scale) {
+      return scale;
+    }
   }
-  if (duration >= MONTH_DURATION_THRESHOLD) {
-    return ETimeScale.Month;
-  }
-  if (duration >= WEEK_DURATION_THRESHOLD) {
-    return ETimeScale.Week;
-  }
-  if (duration >= DAY_DURATION_THRESHOLD) {
-    return ETimeScale.Day;
-  }
-  if (duration >= HOUR_DURATION_THRESHOLD) {
-    return ETimeScale.Hour;
-  }
-  return ETimeScale.Minute;
+
+  return ETimeScale.Day256;
 }
 
 /**

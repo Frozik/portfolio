@@ -1,21 +1,25 @@
-import type { IDataPart, IPlotArea, ISeriesLayer } from '../types';
+import type { SlotAllocator } from '../slot-allocator';
+import type { IBlockEntry, IPlotArea, ISeriesLayer, ISeriesLayerManager } from '../types';
 
-interface SeriesLayerEntry {
+interface ISeriesLayerEntry {
   readonly layer: ISeriesLayer;
   readonly pipeline: GPURenderPipeline;
-  readonly partKey: string;
 }
 
-export class SeriesLayerManager {
-  private readonly entries: SeriesLayerEntry[] = [];
+export class SeriesLayerManager implements ISeriesLayerManager {
+  private readonly entries: ISeriesLayerEntry[] = [];
 
-  addSeries(layer: ISeriesLayer, pipeline: GPURenderPipeline, partKey: string): void {
-    this.entries.push({ layer, pipeline, partKey });
+  addSeries(layer: ISeriesLayer, pipeline: GPURenderPipeline): void {
+    this.entries.push({ layer, pipeline });
   }
 
-  initAll(device: GPUDevice, bindGroupLayout: GPUBindGroupLayout): void {
+  initAll(
+    device: GPUDevice,
+    bindGroupLayout: GPUBindGroupLayout,
+    slotAllocator: SlotAllocator
+  ): void {
     for (const entry of this.entries) {
-      entry.layer.init(device, bindGroupLayout);
+      entry.layer.init(device, bindGroupLayout, slotAllocator);
     }
   }
 
@@ -26,7 +30,7 @@ export class SeriesLayerManager {
   }
 
   writeAllUniforms(
-    parts: Readonly<Record<string, IDataPart>>,
+    blockSets: ReadonlyArray<ReadonlyArray<IBlockEntry>>,
     canvasWidth: number,
     canvasHeight: number,
     viewTimeStart: number,
@@ -34,10 +38,12 @@ export class SeriesLayerManager {
     viewValueMin: number,
     viewValueMax: number
   ): void {
-    for (const entry of this.entries) {
-      const part = parts[entry.partKey];
+    for (let index = 0; index < this.entries.length; index++) {
+      const entry = this.entries[index];
+      const blocks = blockSets[index] ?? [];
+
       entry.layer.writeUniforms(
-        part,
+        blocks,
         canvasWidth,
         canvasHeight,
         viewTimeStart,
@@ -51,6 +57,17 @@ export class SeriesLayerManager {
   renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void {
     for (const entry of this.entries) {
       entry.layer.render(pass, entry.pipeline, plotArea);
+    }
+  }
+
+  renderDebug(
+    pass: GPURenderPassEncoder,
+    debugPipeline: GPURenderPipeline,
+    plotArea: IPlotArea
+  ): void {
+    // Draw debug lines using each layer's bind group (which has the block descriptors)
+    for (const entry of this.entries) {
+      entry.layer.renderDebug(pass, debugPipeline, plotArea);
     }
   }
 

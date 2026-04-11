@@ -84,130 +84,117 @@ export function computeXTicks(
   return thinTicks(rawTicks, timeStart, timeEnd, plotWidthPx, X_LABEL_WIDTH_PX);
 }
 
-function computeRawXTicks(timeStart: number, timeEnd: number, scale: ETimeScale): IAxisTick[] {
+/**
+ * Generate month-boundary ticks (used for coarsest scales: Day64, Day256).
+ */
+function generateMonthTicks(timeStart: number, timeEnd: number): IAxisTick[] {
   const ticks: IAxisTick[] = [];
+  const startDt = epochToInstant(timeStart).toZonedDateTimeISO('UTC');
+  const endDt = epochToInstant(timeEnd).toZonedDateTimeISO('UTC');
 
-  switch (scale) {
-    case ETimeScale.Year: {
-      const startDt = epochToInstant(timeStart).toZonedDateTimeISO('UTC');
-      const endDt = epochToInstant(timeEnd).toZonedDateTimeISO('UTC');
+  let current = startDt.with({ day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0 });
+  if (Temporal.ZonedDateTime.compare(current, startDt) < 0) {
+    current = current.add({ months: 1 });
+  }
 
-      let current = startDt.with({ day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0 });
-      if (Temporal.ZonedDateTime.compare(current, startDt) < 0) {
-        current = current.add({ months: 1 });
-      }
-
-      while (Temporal.ZonedDateTime.compare(current, endDt) <= 0) {
-        ticks.push({
-          position: Number(current.epochNanoseconds / 1_000_000_000n),
-          label: current.toPlainDate().toLocaleString('en-US', { month: 'short' }),
-        });
-        current = current.add({ months: 1 });
-      }
-      break;
-    }
-
-    case ETimeScale.Month: {
-      const startDt = epochToInstant(timeStart).toZonedDateTimeISO('UTC');
-      const endDt = epochToInstant(timeEnd).toZonedDateTimeISO('UTC');
-
-      let current = startDt.with({ hour: 0, minute: 0, second: 0, nanosecond: 0 });
-      if (Temporal.ZonedDateTime.compare(current, startDt) < 0) {
-        current = current.add({ days: 1 });
-      }
-
-      while (Temporal.ZonedDateTime.compare(current, endDt) <= 0) {
-        ticks.push({
-          position: Number(current.epochNanoseconds / 1_000_000_000n),
-          label: String(current.day),
-        });
-        current = current.add({ days: 1 });
-      }
-      break;
-    }
-
-    case ETimeScale.Week: {
-      const startDt = epochToInstant(timeStart).toZonedDateTimeISO('UTC');
-      const endDt = epochToInstant(timeEnd).toZonedDateTimeISO('UTC');
-      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-      let current = startDt.with({ hour: 0, minute: 0, second: 0, nanosecond: 0 });
-      if (Temporal.ZonedDateTime.compare(current, startDt) < 0) {
-        current = current.add({ days: 1 });
-      }
-
-      while (Temporal.ZonedDateTime.compare(current, endDt) <= 0) {
-        const dayOfWeek = current.dayOfWeek;
-        ticks.push({
-          position: Number(current.epochNanoseconds / 1_000_000_000n),
-          label: dayNames[dayOfWeek - 1],
-        });
-        current = current.add({ days: 1 });
-      }
-      break;
-    }
-
-    case ETimeScale.Day: {
-      const startHour = Math.ceil(timeStart / SECONDS_PER_HOUR);
-      const endHour = Math.floor(timeEnd / SECONDS_PER_HOUR);
-
-      for (let h = startHour; h <= endHour; h++) {
-        const epochSec = h * SECONDS_PER_HOUR;
-        const hourOfDay = ((h % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
-        ticks.push({
-          position: epochSec,
-          label: formatHourMinute(hourOfDay, 0),
-        });
-      }
-      break;
-    }
-
-    case ETimeScale.Hour: {
-      // Generate per-minute ticks (thinning will skip the ones that don't fit)
-      const startSlot = Math.ceil(timeStart / SECONDS_PER_MINUTE);
-      const endSlot = Math.floor(timeEnd / SECONDS_PER_MINUTE);
-
-      for (let s = startSlot; s <= endSlot; s++) {
-        const epochSec = s * SECONDS_PER_MINUTE;
-        const minuteOfDay = Math.floor((epochSec % SECONDS_PER_DAY) / SECONDS_PER_MINUTE);
-        const hour = Math.floor(minuteOfDay / MINUTES_PER_HOUR);
-        const minute = minuteOfDay % MINUTES_PER_HOUR;
-        ticks.push({
-          position: epochSec,
-          label: formatHourMinute(((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY, minute),
-        });
-      }
-      break;
-    }
-
-    case ETimeScale.Minute: {
-      // Generate per-second ticks
-      const startSlot = Math.ceil(timeStart);
-      const endSlot = Math.floor(timeEnd);
-
-      for (let s = startSlot; s <= endSlot; s++) {
-        const secOfDay = s % SECONDS_PER_DAY;
-        const hour = Math.floor(secOfDay / SECONDS_PER_HOUR);
-        const minute = Math.floor((secOfDay % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
-        const second = secOfDay % SECONDS_PER_MINUTE;
-        ticks.push({
-          position: s,
-          label: formatHourMinuteSecond(
-            ((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY,
-            minute,
-            second
-          ),
-        });
-      }
-      break;
-    }
+  while (Temporal.ZonedDateTime.compare(current, endDt) <= 0) {
+    ticks.push({
+      position: Number(current.epochNanoseconds / 1_000_000_000n),
+      label: current.toPlainDate().toLocaleString('en-US', { month: 'short' }),
+    });
+    current = current.add({ months: 1 });
   }
 
   return ticks;
 }
 
 /**
- * Find a "nice" step size close to the rough step, using 1/2/5 × 10^n pattern.
+ * Generate day-boundary ticks (used for Day4, Day16).
+ */
+function generateDayTicks(timeStart: number, timeEnd: number): IAxisTick[] {
+  const ticks: IAxisTick[] = [];
+  const startDt = epochToInstant(timeStart).toZonedDateTimeISO('UTC');
+  const endDt = epochToInstant(timeEnd).toZonedDateTimeISO('UTC');
+
+  let current = startDt.with({ hour: 0, minute: 0, second: 0, nanosecond: 0 });
+  if (Temporal.ZonedDateTime.compare(current, startDt) < 0) {
+    current = current.add({ days: 1 });
+  }
+
+  while (Temporal.ZonedDateTime.compare(current, endDt) <= 0) {
+    ticks.push({
+      position: Number(current.epochNanoseconds / 1_000_000_000n),
+      label: String(current.day),
+    });
+    current = current.add({ days: 1 });
+  }
+
+  return ticks;
+}
+
+/**
+ * Generate hourly ticks (used for Day1).
+ */
+function generateHourlyTicks(timeStart: number, timeEnd: number): IAxisTick[] {
+  const ticks: IAxisTick[] = [];
+  const startHour = Math.ceil(timeStart / SECONDS_PER_HOUR);
+  const endHour = Math.floor(timeEnd / SECONDS_PER_HOUR);
+
+  for (let h = startHour; h <= endHour; h++) {
+    const epochSec = h * SECONDS_PER_HOUR;
+    const hourOfDay = ((h % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
+    ticks.push({
+      position: epochSec,
+      label: formatHourMinute(hourOfDay, 0),
+    });
+  }
+
+  return ticks;
+}
+
+/**
+ * Generate per-minute ticks (used for Hour1, Hour12).
+ */
+function generateMinuteTicks(timeStart: number, timeEnd: number): IAxisTick[] {
+  const ticks: IAxisTick[] = [];
+  const startSlot = Math.ceil(timeStart / SECONDS_PER_MINUTE);
+  const endSlot = Math.floor(timeEnd / SECONDS_PER_MINUTE);
+
+  for (let s = startSlot; s <= endSlot; s++) {
+    const epochSec = s * SECONDS_PER_MINUTE;
+    const minuteOfDay = Math.floor((epochSec % SECONDS_PER_DAY) / SECONDS_PER_MINUTE);
+    const hour = Math.floor(minuteOfDay / MINUTES_PER_HOUR);
+    const minute = minuteOfDay % MINUTES_PER_HOUR;
+    ticks.push({
+      position: epochSec,
+      label: formatHourMinute(((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY, minute),
+    });
+  }
+
+  return ticks;
+}
+
+function computeRawXTicks(timeStart: number, timeEnd: number, scale: ETimeScale): IAxisTick[] {
+  switch (scale) {
+    case ETimeScale.Day256:
+    case ETimeScale.Day64:
+      return generateMonthTicks(timeStart, timeEnd);
+
+    case ETimeScale.Day16:
+    case ETimeScale.Day4:
+      return generateDayTicks(timeStart, timeEnd);
+
+    case ETimeScale.Day1:
+      return generateHourlyTicks(timeStart, timeEnd);
+
+    case ETimeScale.Hour12:
+    case ETimeScale.Hour1:
+      return generateMinuteTicks(timeStart, timeEnd);
+  }
+}
+
+/**
+ * Find a "nice" step size close to the rough step, using 1/2/5 x 10^n pattern.
  * Works for any magnitude — tiny (0.001) or huge (10000).
  */
 function niceStep(roughStep: number): number {
@@ -226,7 +213,7 @@ function niceStep(roughStep: number): number {
     }
   }
 
-  // Next magnitude: 10 × magnitude
+  // Next magnitude: 10 x magnitude
   return NICE_BASES[0] * magnitude * 10;
 }
 
@@ -273,4 +260,28 @@ export function computeYTicks(
 
 function formatYLabel(value: number, decimals: number): string {
   return value.toFixed(decimals);
+}
+
+/** Exported for legacy compatibility — returns per-second ticks. */
+export function computeSecondTicks(timeStart: number, timeEnd: number): IAxisTick[] {
+  const ticks: IAxisTick[] = [];
+  const startSlot = Math.ceil(timeStart);
+  const endSlot = Math.floor(timeEnd);
+
+  for (let s = startSlot; s <= endSlot; s++) {
+    const secOfDay = s % SECONDS_PER_DAY;
+    const hour = Math.floor(secOfDay / SECONDS_PER_HOUR);
+    const minute = Math.floor((secOfDay % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+    const second = secOfDay % SECONDS_PER_MINUTE;
+    ticks.push({
+      position: s,
+      label: formatHourMinuteSecond(
+        ((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY,
+        minute,
+        second
+      ),
+    });
+  }
+
+  return ticks;
 }

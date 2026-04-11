@@ -10,12 +10,21 @@ import {
 import { EFpsLevel } from './fps-controller';
 import candlestickSpecificSource from './shaders/candlestick.wgsl?raw';
 import commonShaderSource from './shaders/common.wgsl?raw';
+import debugLinesSource from './shaders/debug-lines.wgsl?raw';
 import lineSpecificSource from './shaders/line.wgsl?raw';
+import rhombusSpecificSource from './shaders/rhombus.wgsl?raw';
 
 const lineShaderSource = commonShaderSource + lineSpecificSource;
 const candlestickShaderSource = commonShaderSource + candlestickSpecificSource;
+const rhombusShaderSource = commonShaderSource + rhombusSpecificSource;
+const debugShaderSource = commonShaderSource + debugLinesSource;
 
 import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
+
+const LOADING_BAR_HEIGHT_PX = 5;
+const SHIMMER_COLOR_LIGHT = 'rgba(100, 160, 255, 0.6)';
+const SHIMMER_COLOR_DARK = 'rgba(30, 80, 180, 0.8)';
+const SHIMMER_SPEED_DIVISOR = 800;
 
 export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer> {
   assert(!isNil(navigator.gpu), 'WebGPU is not supported');
@@ -45,6 +54,11 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
         binding: 1,
         visibility: GPUShaderStage.VERTEX,
         texture: { sampleType: 'unfilterable-float', viewDimension: '2d' },
+      },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: 'read-only-storage' },
       },
     ],
   });
@@ -88,12 +102,42 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
     multisample: { count: MSAA_SAMPLE_COUNT },
   });
 
+  const rhombusShaderModule = device.createShaderModule({ code: rhombusShaderSource });
+
+  const rhombusPipeline = device.createRenderPipeline({
+    layout: pipelineLayout,
+    vertex: { module: rhombusShaderModule, entryPoint: 'vsRhombus' },
+    fragment: {
+      module: rhombusShaderModule,
+      entryPoint: 'fsRhombus',
+      targets: [{ format, blend: alphaBlend }],
+    },
+    primitive: { topology: 'triangle-list' },
+    multisample: { count: MSAA_SAMPLE_COUNT },
+  });
+
+  const debugShaderModule = device.createShaderModule({ code: debugShaderSource });
+
+  const debugPipeline = device.createRenderPipeline({
+    layout: pipelineLayout,
+    vertex: { module: debugShaderModule, entryPoint: 'vsDebugLines' },
+    fragment: {
+      module: debugShaderModule,
+      entryPoint: 'fsDebugLines',
+      targets: [{ format, blend: alphaBlend }],
+    },
+    primitive: { topology: 'triangle-list' },
+    multisample: { count: MSAA_SAMPLE_COUNT },
+  });
+
   return new SharedTimeseriesRenderer(
     device,
     format,
     bindGroupLayout,
     linePipeline,
     candlestickPipeline,
+    rhombusPipeline,
+    debugPipeline,
     offscreen,
     ctx
   );
@@ -105,6 +149,10 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   readonly bindGroupLayout: GPUBindGroupLayout;
   readonly linePipeline: GPURenderPipeline;
   readonly candlestickPipeline: GPURenderPipeline;
+  readonly rhombusPipeline: GPURenderPipeline;
+  readonly debugPipeline: GPURenderPipeline;
+  debugMode = false;
+  renderFps = 0;
 
   private readonly offscreen: OffscreenCanvas;
   private readonly ctx: GPUCanvasContext;
@@ -114,6 +162,8 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private animationFrameId = 0;
   private lastFrameTime = 0;
   private disposed = false;
+  private readonly renderFrameTimes: number[] = [];
+  private lastFpsUpdate = 0;
 
   constructor(
     device: GPUDevice,
@@ -121,6 +171,8 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     bindGroupLayout: GPUBindGroupLayout,
     linePipeline: GPURenderPipeline,
     candlestickPipeline: GPURenderPipeline,
+    rhombusPipeline: GPURenderPipeline,
+    debugPipeline: GPURenderPipeline,
     offscreen: OffscreenCanvas,
     ctx: GPUCanvasContext
   ) {
@@ -129,6 +181,8 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.bindGroupLayout = bindGroupLayout;
     this.linePipeline = linePipeline;
     this.candlestickPipeline = candlestickPipeline;
+    this.rhombusPipeline = rhombusPipeline;
+    this.debugPipeline = debugPipeline;
     this.offscreen = offscreen;
     this.ctx = ctx;
   }
@@ -198,6 +252,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       }
 
       this.lastFrameTime = now;
+      this.trackRenderFps(now);
       this.renderAllCharts();
       this.animationFrameId = requestAnimationFrame(frame);
     };
@@ -205,9 +260,83 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.animationFrameId = requestAnimationFrame(frame);
   }
 
+  private trackRenderFps(now: number): void {
+    const FPS_WINDOW_MS = 1000;
+    const FPS_UPDATE_INTERVAL_MS = 250;
+
+    this.renderFrameTimes.push(now);
+
+    // Trim old entries beyond the window
+    const cutoff = now - FPS_WINDOW_MS;
+    while (this.renderFrameTimes.length > 0 && this.renderFrameTimes[0] < cutoff) {
+      this.renderFrameTimes.shift();
+    }
+
+    // Update FPS periodically
+    if (now - this.lastFpsUpdate >= FPS_UPDATE_INTERVAL_MS) {
+      this.lastFpsUpdate = now;
+      const elapsed =
+        this.renderFrameTimes.length > 1
+          ? this.renderFrameTimes[this.renderFrameTimes.length - 1] - this.renderFrameTimes[0]
+          : 0;
+      this.renderFps =
+        elapsed > 0
+          ? Math.round(((this.renderFrameTimes.length - 1) / elapsed) * MS_PER_SECOND)
+          : 0;
+    }
+  }
+
   private stopAnimationLoop(): void {
     cancelAnimationFrame(this.animationFrameId);
     this.animationFrameId = 0;
+  }
+
+  private drawLoadingBars(chart: ITimeseriesChart): void {
+    const regions = chart.getLoadingRegions();
+    if (regions.length === 0) {
+      return;
+    }
+
+    const viewport = chart.getViewport();
+    const timeRange = viewport.timeEnd - viewport.timeStart;
+    if (timeRange <= 0) {
+      return;
+    }
+
+    const ctx = chart.target2dContext;
+    const canvasWidth = chart.width;
+    const canvasHeight = chart.height;
+    const barHeight = LOADING_BAR_HEIGHT_PX * Math.max(1, window.devicePixelRatio);
+    const barY = canvasHeight - barHeight;
+    const now = performance.now() / SHIMMER_SPEED_DIVISOR;
+
+    for (const region of regions) {
+      const startNorm = (region.timeStart - viewport.timeStart) / timeRange;
+      const endNorm = (region.timeEnd - viewport.timeStart) / timeRange;
+
+      const pixelStart = Math.max(0, Math.floor(startNorm * canvasWidth));
+      const pixelEnd = Math.min(canvasWidth, Math.ceil(endNorm * canvasWidth));
+      const pixelWidth = pixelEnd - pixelStart;
+
+      if (pixelWidth <= 0) {
+        continue;
+      }
+
+      // Shimmer gradient: animate offset over time
+      const shimmerOffset = (now % 1) * pixelWidth;
+      const gradient = ctx.createLinearGradient(
+        pixelStart + shimmerOffset - pixelWidth,
+        0,
+        pixelStart + shimmerOffset,
+        0
+      );
+      gradient.addColorStop(0, SHIMMER_COLOR_LIGHT);
+      gradient.addColorStop(0.5, SHIMMER_COLOR_DARK);
+      gradient.addColorStop(1, SHIMMER_COLOR_LIGHT);
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(pixelStart, barY, pixelWidth, barHeight);
+    }
   }
 
   private ensureMsaaView(width: number, height: number): GPUTextureView | null {
@@ -268,6 +397,11 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       // Delegate rendering to the chart's series manager
       chart.seriesManager.renderAll(pass, plotArea);
 
+      // Debug: draw vertical lines at block boundaries
+      if (this.debugMode) {
+        chart.seriesManager.renderDebug(pass, this.debugPipeline, plotArea);
+      }
+
       pass.end();
       this.device.queue.submit([encoder.finish()]);
 
@@ -279,6 +413,9 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       chart.target2dContext.clearRect(0, 0, chart.width, chart.height);
       chart.target2dContext.drawImage(bitmap, 0, 0);
       bitmap.close();
+
+      // Draw loading bars for blocks being "fetched"
+      this.drawLoadingBars(chart);
 
       chart.renderOverlay();
     }

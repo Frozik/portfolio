@@ -14,7 +14,7 @@ struct RhombusVSOut {
     @location(1) uv: vec2<f32>,
 };
 
-// One instance per point — renders a quad, rhombus shape cut in fragment shader
+// One instance per point - renders a quad, rhombus shape cut in fragment shader
 @vertex
 fn vsRhombus(
     @builtin(vertex_index) vid: u32,
@@ -22,10 +22,10 @@ fn vsRhombus(
 ) -> RhombusVSOut {
     var out: RhombusVSOut;
 
-    let point = readPoint(iid);
-    let center = dataToPixel(point.x, point.y);
+    let point = readGlobalPoint(iid);
+    let center = dataToPixel(point.timeDelta, point.valueDelta);
     let dpr = max(1.0, U.lineWidth);
-    let size = point.z * dpr * 4.0;
+    let size = point.size * dpr * 4.0;
 
     let quadPos = QUAD_POSITIONS[vid];
     out.uv = quadPos; // UV in [-0.5, 0.5]
@@ -33,7 +33,7 @@ fn vsRhombus(
     let pixel = center + quadPos * size;
 
     out.position = vec4<f32>(pixelToClip(pixel), 0.0, 1.0);
-    out.color = unpackColorWgsl(point.w);
+    out.color = unpackColorWgsl(point.packedColor);
 
     return out;
 }

@@ -16,13 +16,17 @@ import {
 import type { IDataPoint } from './types';
 import { ETimeScale } from './types';
 
+/** Uniform point count for all scales. */
+const DEFAULT_POINTS_PER_PERIOD = 180;
+
 const POINTS_PER_SCALE: Record<ETimeScale, number> = {
-  [ETimeScale.Year]: 180,
-  [ETimeScale.Month]: 180,
-  [ETimeScale.Week]: 180,
-  [ETimeScale.Day]: 180,
-  [ETimeScale.Hour]: 180,
-  [ETimeScale.Minute]: 180,
+  [ETimeScale.Hour1]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Hour12]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Day1]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Day4]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Day16]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Day64]: DEFAULT_POINTS_PER_PERIOD,
+  [ETimeScale.Day256]: DEFAULT_POINTS_PER_PERIOD,
 };
 
 const LINE_SIZE_MIN = 1;

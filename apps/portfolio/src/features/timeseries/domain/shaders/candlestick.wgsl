@@ -21,7 +21,7 @@ const WICK_BODY_RATIO: f32 = 0.5;
 const MIN_CANDLE_RANGE: f32 = 0.0001;
 const QUAD_PADDING: f32 = 1.0;
 
-// One instance per pair of consecutive points — renders a candlestick quad
+// One instance per pair of consecutive points - renders a candlestick quad
 @vertex
 fn vsCandlestick(
     @builtin(vertex_index) vid: u32,
@@ -29,12 +29,12 @@ fn vsCandlestick(
 ) -> CandlestickVSOut {
     var out: CandlestickVSOut;
 
-    let pointA = readPoint(iid);
-    let pointB = readPoint(iid + 1u);
+    let pointA = readGlobalPoint(iid);
+    let pointB = readGlobalPoint(iid + 1u);
 
     let dpr = max(1.0, U.lineWidth);
-    let openVal = pointA.y;
-    let closeVal = pointB.y;
+    let openVal = pointA.valueDelta;
+    let closeVal = pointB.valueDelta;
 
     let bodyHi = max(openVal, closeVal);
     let bodyLo = min(openVal, closeVal);
@@ -44,8 +44,8 @@ fn vsCandlestick(
     let low = bodyLo - wickExt;
 
     // Pixel positions for top and bottom at the same X
-    let pixHigh = dataToPixel(pointA.x, high);
-    let pixLow = dataToPixel(pointA.x, low);
+    let pixHigh = dataToPixel(pointA.timeDelta, high);
+    let pixLow = dataToPixel(pointA.timeDelta, low);
     let centerPix = (pixHigh + pixLow) * 0.5;
     let halfHeight = abs(pixHigh.y - pixLow.y) * 0.5 + QUAD_PADDING;
     let halfWidth = CANDLE_HALF_WIDTH_PX * dpr;
@@ -59,7 +59,7 @@ fn vsCandlestick(
     let bodyYMax = (bodyHi - low) / totalRange - 0.5;
 
     out.position = vec4<f32>(pixelToClip(pixel), 0.0, 1.0);
-    out.color = unpackColorWgsl(pointA.w);
+    out.color = unpackColorWgsl(pointA.packedColor);
     out.uv = quadPos;
     out.bodyBounds = vec2<f32>(bodyYMin, bodyYMax);
     out.quadPixelSize = vec2<f32>(halfWidth * 2.0, halfHeight * 2.0);

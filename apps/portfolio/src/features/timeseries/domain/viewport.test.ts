@@ -1,12 +1,4 @@
-import {
-  DAY_DURATION_THRESHOLD,
-  HOUR_DURATION_THRESHOLD,
-  MIN_TIME_RANGE_SECONDS,
-  MONTH_DURATION_THRESHOLD,
-  WEEK_DURATION_THRESHOLD,
-  Y_PADDING_RATIO,
-  YEAR_DURATION_THRESHOLD,
-} from './constants';
+import { MIN_TIME_RANGE_SECONDS, Y_PADDING_RATIO } from './constants';
 import { ETimeScale } from './types';
 import {
   autoScaleY,
@@ -18,62 +10,54 @@ import {
 } from './viewport';
 
 describe('scaleFromTimeRange', () => {
-  it('returns Year when duration equals YEAR_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, YEAR_DURATION_THRESHOLD)).toBe(ETimeScale.Year);
+  it('returns Hour1 for duration equal to Hour1', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Hour1)).toBe(ETimeScale.Hour1);
   });
 
-  it('returns Year when duration exceeds YEAR_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, YEAR_DURATION_THRESHOLD + 1)).toBe(ETimeScale.Year);
+  it('returns Hour1 for very small durations', () => {
+    expect(scaleFromTimeRange(0, 1)).toBe(ETimeScale.Hour1);
   });
 
-  it('returns Month when duration is just below YEAR_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, YEAR_DURATION_THRESHOLD - 1)).toBe(ETimeScale.Month);
+  it('returns Hour1 for zero duration', () => {
+    expect(scaleFromTimeRange(100, 100)).toBe(ETimeScale.Hour1);
   });
 
-  it('returns Month when duration equals MONTH_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, MONTH_DURATION_THRESHOLD)).toBe(ETimeScale.Month);
+  it('returns Hour12 when duration exceeds Hour1 but fits Hour12', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Hour1 + 1)).toBe(ETimeScale.Hour12);
   });
 
-  it('returns Week when duration is just below MONTH_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, MONTH_DURATION_THRESHOLD - 1)).toBe(ETimeScale.Week);
+  it('returns Hour12 when duration equals Hour12', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Hour12)).toBe(ETimeScale.Hour12);
   });
 
-  it('returns Week when duration equals WEEK_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, WEEK_DURATION_THRESHOLD)).toBe(ETimeScale.Week);
+  it('returns Day1 when duration exceeds Hour12 but fits Day1', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Hour12 + 1)).toBe(ETimeScale.Day1);
   });
 
-  it('returns Day when duration is just below WEEK_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, WEEK_DURATION_THRESHOLD - 1)).toBe(ETimeScale.Day);
+  it('returns Day4 when duration exceeds Day1 but fits Day4', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Day1 + 1)).toBe(ETimeScale.Day4);
   });
 
-  it('returns Day when duration equals DAY_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, DAY_DURATION_THRESHOLD)).toBe(ETimeScale.Day);
+  it('returns Day16 when duration exceeds Day4 but fits Day16', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Day4 + 1)).toBe(ETimeScale.Day16);
   });
 
-  it('returns Hour when duration is just below DAY_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, DAY_DURATION_THRESHOLD - 1)).toBe(ETimeScale.Hour);
+  it('returns Day64 when duration exceeds Day16 but fits Day64', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Day16 + 1)).toBe(ETimeScale.Day64);
   });
 
-  it('returns Hour when duration equals HOUR_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, HOUR_DURATION_THRESHOLD)).toBe(ETimeScale.Hour);
+  it('returns Day256 when duration exceeds Day64 but fits Day256', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Day64 + 1)).toBe(ETimeScale.Day256);
   });
 
-  it('returns Minute when duration is just below HOUR_DURATION_THRESHOLD', () => {
-    expect(scaleFromTimeRange(0, HOUR_DURATION_THRESHOLD - 1)).toBe(ETimeScale.Minute);
-  });
-
-  it('returns Minute for very small durations', () => {
-    expect(scaleFromTimeRange(0, 1)).toBe(ETimeScale.Minute);
-  });
-
-  it('returns Minute for zero duration', () => {
-    expect(scaleFromTimeRange(100, 100)).toBe(ETimeScale.Minute);
+  it('returns Day256 when duration exceeds Day256', () => {
+    expect(scaleFromTimeRange(0, ETimeScale.Day256 + 1)).toBe(ETimeScale.Day256);
   });
 
   it('works with non-zero start time', () => {
     const start = 1000;
-    expect(scaleFromTimeRange(start, start + YEAR_DURATION_THRESHOLD)).toBe(ETimeScale.Year);
-    expect(scaleFromTimeRange(start, start + MONTH_DURATION_THRESHOLD)).toBe(ETimeScale.Month);
+    expect(scaleFromTimeRange(start, start + ETimeScale.Hour1)).toBe(ETimeScale.Hour1);
+    expect(scaleFromTimeRange(start, start + ETimeScale.Day256 + 1)).toBe(ETimeScale.Day256);
   });
 });
 
@@ -259,9 +243,6 @@ describe('visibleYRange', () => {
     const times = new Float64Array([1, 3, 5]);
     const values = new Float64Array([10, 20, 30]);
 
-    // t=2 doesn't exist, binary search finds startIdx=1 (t=3 >= 2), endIdx would be 1 (t=3 > 2)
-    // But since timeStart=timeEnd=2, endIdx search finds first t > 2 = index 1
-    // startIdx=1, endIdx=1 => startIdx >= endIdx => undefined
     expect(visibleYRange(times, values, 2, 2)).toBeUndefined();
   });
 
@@ -269,7 +250,6 @@ describe('visibleYRange', () => {
     const times = new Float64Array([1, 3, 5]);
     const values = new Float64Array([10, 20, 30]);
 
-    // t=3 exists: startIdx = 1 (first t >= 3), endIdx = 2 (first t > 3)
     expect(visibleYRange(times, values, 3, 3)).toEqual([20, 20]);
   });
 });
@@ -333,9 +313,6 @@ describe('zoomViewport', () => {
   it('zooms anchored at the left edge (centerNormalized = 0)', () => {
     const [start, end] = zoomViewport(0, 1000, 0.5, 0);
 
-    // Center = 0, new range = 500
-    // newStart = 0 - 500 * 0 = 0
-    // newEnd = 0 + 500 * 1 = 500
     expect(start).toBe(0);
     expect(end).toBe(500);
   });
@@ -343,9 +320,6 @@ describe('zoomViewport', () => {
   it('zooms anchored at the right edge (centerNormalized = 1)', () => {
     const [start, end] = zoomViewport(0, 1000, 0.5, 1);
 
-    // Center = 1000, new range = 500
-    // newStart = 1000 - 500 * 1 = 500
-    // newEnd = 1000 + 500 * 0 = 1000
     expect(start).toBe(500);
     expect(end).toBe(1000);
   });
