@@ -1,4 +1,4 @@
-import { assert, IS_IOS } from '@frozik/utils';
+import { assert } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 import { computeXTicks, computeYTicks } from './axis-ticks';
 import { BlockDataPipeline } from './block-data-pipeline';
@@ -77,8 +77,6 @@ function getGpuPipeline(
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly canvasGpuContext: GPUCanvasContext | null;
-  private readonly overlayCanvas: HTMLCanvasElement | null;
   readonly axesSvg: SVGSVGElement;
   readonly seriesManager: SeriesLayerManager;
   readonly fpsController: FpsController;
@@ -120,35 +118,9 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.targetCanvas = targetCanvas;
     this.axesSvg = axesSvg;
 
-    if (IS_IOS) {
-      // iOS: render WebGPU directly to canvas, use a separate overlay for 2D
-      const gpuCtx = targetCanvas.getContext('webgpu');
-      assert(!isNil(gpuCtx), 'Failed to get WebGPU canvas context');
-      this.canvasGpuContext = gpuCtx;
-      gpuCtx.configure({
-        device,
-        format: renderer.format,
-        alphaMode: 'premultiplied',
-      });
-
-      // Create a 2D canvas BELOW the WebGPU canvas for background + grid.
-      // WebGPU renders with transparent clear so grid shows through.
-      const overlayCanvas = document.createElement('canvas');
-      overlayCanvas.style.cssText =
-        'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
-      targetCanvas.parentElement?.insertBefore(overlayCanvas, targetCanvas);
-      const ctx2d = overlayCanvas.getContext('2d');
-      assert(!isNil(ctx2d), 'Failed to get 2D overlay context');
-      this.target2dContext = ctx2d;
-      this.overlayCanvas = overlayCanvas;
-    } else {
-      // Other platforms: use OffscreenCanvas + blit via shared renderer
-      this.canvasGpuContext = null;
-      this.overlayCanvas = null;
-      const ctx = targetCanvas.getContext('2d');
-      assert(!isNil(ctx), 'Failed to get 2D canvas context');
-      this.target2dContext = ctx;
-    }
+    const ctx = targetCanvas.getContext('2d');
+    assert(!isNil(ctx), 'Failed to get 2D canvas context');
+    this.target2dContext = ctx;
 
     this.dataMinTime = GLOBAL_EPOCH_OFFSET;
     this.dataMaxTime = GLOBAL_EPOCH_OFFSET + FULL_YEAR_SECONDS;
@@ -238,12 +210,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
     if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
       this.targetCanvas.width = width;
       this.targetCanvas.height = height;
-
-      if (this.overlayCanvas !== null) {
-        this.overlayCanvas.width = width;
-        this.overlayCanvas.height = height;
-      }
-
       return true;
     }
 
@@ -476,7 +442,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.seriesManager.dispose();
     this.allocator.dispose();
     this.fpsController.dispose();
-    this.overlayCanvas?.remove();
   }
 
   private rebuildLayerBindGroups(): void {

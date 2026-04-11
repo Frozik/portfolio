@@ -92,7 +92,6 @@ export interface IFpsController {
 export interface ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly canvasGpuContext: GPUCanvasContext | null;
   readonly axesSvg: SVGSVGElement;
   readonly width: number;
   readonly height: number;

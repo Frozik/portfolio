@@ -72,52 +72,78 @@ CPU usage and minimal GPU overhead. Features:
 
 Interactive time-series charts rendered through a **single shared WebGPU
 context** — a technique for bypassing the browser limit of ~6-8 concurrent
-WebGPU canvas contexts.
+WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
 
-**Shared Renderer pattern:**
-- One `GPUDevice` + `OffscreenCanvas` shared across all chart instances
-- Each chart rendered sequentially to the offscreen canvas, then blitted to
-  a visible 2D canvas via `transferToImageBitmap()` + `drawImage()`
+**Shared Renderer pattern (Approach D):**
+- One `GPUDevice` + one `OffscreenCanvas` shared across all chart instances
+- Each chart renders sequentially into a pooled `GPUTexture`, then
+  `copyTextureToTexture` copies it to the canvas texture **in the same
+  command encoder** — GPU guarantees execution order within a single submit
+- `transferToImageBitmap()` + `drawImage()` blits the result to the visible
+  2D canvas
+- This eliminates the iOS Safari race condition where `transferToImageBitmap()`
+  could capture stale pixels (WebKit does a CPU readback that isn't
+  synchronized with Metal command buffer completion)
+- `RenderTargetPool` reuses GPU textures between charts — typically 1
+  allocation for all charts in a 2x2 grid
 - Renderer lifecycle managed by a React context provider owned by the page
 - Per-chart isolation: independent viewport, block registry, and input handling
 
 **Block-based data pipeline:**
-- Data loaded in fixed-size 256-point blocks, cached in RTree, stored in GPU texture
+- Data loaded in fixed-size 256-point blocks, cached in RTree, stored in
+  `rgba32float` GPU texture (timeDelta, valueDelta, size, packedColor per texel)
 - Period-aligned block boundaries (1h, 12h, 1d, 4d, 16d, 64d, 256d scales)
-- Slot allocator with LRU eviction: texture grows from 4 to 512 rows, then recycles oldest blocks
-- Multi-block rendering via GPU storage buffer — shader reads `BlockDescriptor[]` array
-- Cross-block line stitching handled automatically by `readGlobalPoint()` in the shader
+- Slot allocator with LRU eviction: texture grows from 4 to 512 rows, then
+  recycles oldest blocks
+- Multi-block rendering via GPU storage buffer — shader reads
+  `BlockDescriptor[]` array to locate points across blocks
+- Cross-block line stitching handled automatically by `readGlobalPoint()` in
+  the shader
 - Per-block delta encoding preserves float32 precision across all zoom levels
-- Architecture emulates server-side data loading (blocks can be replaced with `fetch()` calls)
+- Color packed as uint32-in-float32 with alpha in low byte to prevent
+  exponent overflow and NaN canonicalization
+- Architecture emulates server-side data loading (blocks can be replaced with
+  `fetch()` calls)
 
 **Noise-based data generation:**
 - Simplex noise + fractal Brownian motion (fBm) with 6 octaves
-- Deterministic and multi-scale: zoom in reveals detail, macro shape stays stable
+- Deterministic and multi-scale: zoom in reveals detail, macro shape stays
+  stable
 - Each chart uses a unique seed for independent data
 - Bullish/bearish coloring (green/red) based on price direction
 
 **Multiple chart types with per-series configuration:**
-- 4-chart grid: line + candlestick, candlestick only, line only, rhombus markers
-- Each series configured independently via `ISeriesConfig` (chart type, seed, custom color/size functions)
-- Value-based styling: rhombus markers colored by threshold bands (blue/green/orange/red), line thickness varying by value
+- 4-chart grid: line + candlestick, candlestick only, line only, rhombus
+  markers
+- Each series configured independently via `ISeriesConfig` (chart type, seed,
+  custom color/size functions)
+- Value-based styling: rhombus markers colored by threshold bands
+  (blue/green/orange/red), line thickness varying by value
 - Separate GPU render pipelines per chart type (line, candlestick, rhombus)
 - Simulated async data loading with animated shimmer loading bar
 
 **Chart features:**
 - Animated zoom with lerp-based easing and viewport spring on resize
 - Pan and pinch-to-zoom touch support
-- Line, candlestick, and rhombus series (candlestick shape rendered entirely in fragment shader)
+- Line, candlestick, and rhombus series (candlestick shape rendered entirely
+  in fragment shader)
 - Adaptive axis labels that scale from hours to months
-- 3-layer rendering: SVG grid → WebGPU canvas → SVG axes (labels with semi-transparent backdrop)
-- Debug overlay: real-time render FPS counter + block boundary visualization toggle
+- 2-layer rendering: 2D canvas (background + grid + WebGPU blit + loading
+  bars) → SVG axes (labels with semi-transparent backdrop)
+- Debug overlay: real-time render FPS counter + block boundary visualization
+  toggle
 - Fullscreen + landscape lock on mobile devices
 
 **Performance optimizations:**
-- Event-driven FPS controller with debounced degradation (interaction=60fps → idle=5fps)
-- SVG overlay memoization: grid and axes only re-render when viewport changes
+- Event-driven FPS controller with debounced degradation
+  (interaction=60fps → idle=5fps)
+- SVG axes memoization: only re-renders when viewport or canvas size changes
+- 4x MSAA anti-aliasing with shared texture (resized per chart, not
+  reallocated)
 - Relative snap threshold for zoom animation: prevents sub-pixel updates
 - Scissor rect clips GPU rendering to the plot area
-- Immediate SVG overlay re-render on resize (ResizeObserver callback)
+- Render target pool: one GPU texture allocation reused across all same-size
+  charts per frame
 
 ### Controls
 

@@ -19,6 +19,7 @@ const candlestickShaderSource = commonShaderSource + candlestickSpecificSource;
 const rhombusShaderSource = commonShaderSource + rhombusSpecificSource;
 const debugShaderSource = commonShaderSource + debugLinesSource;
 
+import { RenderTargetPool } from './render-target-pool';
 import type { IPlotArea, ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
 const LOADING_BAR_HEIGHT_PX = 5;
@@ -38,7 +39,9 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
   assert(!isNil(ctx), 'Failed to get WebGPU context on OffscreenCanvas');
 
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device, format, alphaMode: 'premultiplied' });
+  // COPY_DST (0x02) needed: render target is copied into this canvas texture via
+  // copyTextureToTexture in the same command encoder (Approach D for iOS sync fix)
+  ctx.configure({ device, format, alphaMode: 'premultiplied', usage: 0x10 | 0x02 });
 
   const lineShaderModule = device.createShaderModule({ code: lineShaderSource });
   const candlestickShaderModule = device.createShaderModule({ code: candlestickShaderSource });
@@ -158,6 +161,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private readonly ctx: GPUCanvasContext;
   private readonly charts = new Set<ITimeseriesChart>();
   private readonly msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
+  private readonly renderTargetPool = new RenderTargetPool();
 
   private animationFrameId = 0;
   private lastFrameTime = 0;
@@ -219,6 +223,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     this.charts.clear();
 
     this.msaaManager.dispose();
+    this.renderTargetPool.dispose();
     this.device.destroy();
   }
 
@@ -362,11 +367,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         continue;
       }
 
-      if (!isNil(chart.canvasGpuContext)) {
-        this.renderChartDirect(chart, chart.canvasGpuContext, plotArea);
-      } else {
-        this.renderChartOffscreen(chart, plotArea);
-      }
+      this.renderChart(chart, plotArea);
 
       // Draw loading bars for blocks being "fetched"
       this.drawLoadingBars(chart);
@@ -375,54 +376,22 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     }
   }
 
-  /** iOS path: render directly to chart's own WebGPU canvas context. */
-  private renderChartDirect(
-    chart: ITimeseriesChart,
-    gpuCtx: GPUCanvasContext,
-    plotArea: IPlotArea
-  ): void {
-    chart.syncCanvasSize();
-
-    const canvasTexture = gpuCtx.getCurrentTexture();
-    const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
-
-    if (isNil(currentMsaaView)) {
-      return;
-    }
-
-    const canvasTexView = canvasTexture.createView();
-    const encoder = this.device.createCommandEncoder();
-
-    // iOS direct path: transparent clear so background+grid on underlay canvas shows through
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: currentMsaaView,
-          resolveTarget: canvasTexView,
-          loadOp: 'clear',
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
-          storeOp: 'discard',
-        },
-      ],
-    });
-
-    chart.seriesManager.renderAll(pass, plotArea);
-
-    if (this.debugMode) {
-      chart.seriesManager.renderDebug(pass, this.debugPipeline, plotArea);
-    }
-
-    pass.end();
-    this.device.queue.submit([encoder.finish()]);
-
-    // Draw grid on the transparent 2D overlay canvas
-    chart.renderCanvasGrid();
-  }
-
-  /** Non-iOS path: render to shared OffscreenCanvas then blit to 2D canvas. */
-  private renderChartOffscreen(chart: ITimeseriesChart, plotArea: IPlotArea): void {
+  /**
+   * Approach D: render to intermediate GPUTexture, then copy to canvas texture
+   * in the same command encoder.
+   *
+   * This guarantees GPU execution order (render → copy) within a single submit,
+   * eliminating the iOS Safari race condition where transferToImageBitmap()
+   * could capture stale pixels from a previous chart's render pass.
+   *
+   * Flow: MSAA → resolve to renderTarget → copyTextureToTexture to canvasTexture
+   *       → submit → transferToImageBitmap → drawImage to visible 2D canvas
+   */
+  private renderChart(chart: ITimeseriesChart, plotArea: IPlotArea): void {
     const { width, height } = chart;
 
+    // Resize shared OffscreenCanvas and reconfigure if dimensions changed or
+    // backing store was detached by previous transferToImageBitmap
     if (
       this.offscreen.width !== width ||
       this.offscreen.height !== height ||
@@ -430,29 +399,35 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     ) {
       this.offscreen.width = width;
       this.offscreen.height = height;
+      // COPY_DST (0x02): canvas texture receives data via copyTextureToTexture
+      // RENDER_ATTACHMENT (0x10): kept for spec compatibility
       this.ctx.configure({
         device: this.device,
         format: this.format,
         alphaMode: 'premultiplied',
+        usage: 0x10 | 0x02,
       });
       this.needsReconfigure = false;
     }
 
-    const canvasTexture = this.ctx.getCurrentTexture();
-    const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
+    // Acquire a reusable render target from the pool
+    const renderTarget = this.renderTargetPool.acquire(this.device, width, height, this.format);
+
+    const currentMsaaView = this.ensureMsaaView(width, height);
 
     if (isNil(currentMsaaView)) {
+      this.renderTargetPool.release(renderTarget);
       return;
     }
 
-    const canvasTexView = canvasTexture.createView();
     const encoder = this.device.createCommandEncoder();
 
+    // Render pass: MSAA texture → resolve to intermediate render target
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
           view: currentMsaaView,
-          resolveTarget: canvasTexView,
+          resolveTarget: renderTarget.createView(),
           loadOp: 'clear',
           clearValue: { r: 0, g: 0, b: 0, a: 0 },
           storeOp: 'discard',
@@ -467,13 +442,30 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     }
 
     pass.end();
+
+    // Copy render target → OffscreenCanvas texture (same command encoder).
+    // GPU executes render pass and copy in order within a single submit,
+    // so the canvas texture is guaranteed to contain correct pixels.
+    const canvasTexture = this.ctx.getCurrentTexture();
+    encoder.copyTextureToTexture({ texture: renderTarget }, { texture: canvasTexture }, [
+      width,
+      height,
+    ]);
+
+    // Single submit: render + copy are atomic from the GPU perspective
     this.device.queue.submit([encoder.finish()]);
 
+    this.renderTargetPool.release(renderTarget);
+
+    // Sync visible canvas pixel dimensions before blit to avoid blank-frame flicker
     chart.syncCanvasSize();
 
+    // transferToImageBitmap is now safe — the canvas texture was written by
+    // copyTextureToTexture in the same command buffer as the render pass
     const bitmap = this.offscreen.transferToImageBitmap();
     this.needsReconfigure = true;
 
+    // Draw background + grid on 2D canvas, then blit WebGPU result on top
     chart.renderCanvasGrid();
     chart.target2dContext.drawImage(bitmap, 0, 0);
     bitmap.close();

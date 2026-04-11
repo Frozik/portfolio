@@ -14,31 +14,26 @@ configure({ enforceActions: 'always' });
 
 const UPDATE_BANNER_DISPLAY_MS = 1500;
 
+const GEAR_SVG =
+  '<svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" ' +
+  'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08' +
+  'a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 ' +
+  '1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25' +
+  'a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25' +
+  'a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 ' +
+  '0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73' +
+  'l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>' +
+  '<circle cx="12" cy="12" r="3"/></svg>';
+
 function showUpdateBanner(): void {
   const banner = document.createElement('div');
-  Object.assign(banner.style, {
-    position: 'fixed',
-    top: '16px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    zIndex: '99999',
-    padding: '12px 24px',
-    borderRadius: '8px',
-    background: 'rgba(30, 30, 50, 0.95)',
-    border: '1px solid rgba(100, 100, 255, 0.3)',
-    color: '#e0e0e0',
-    fontSize: '14px',
-    fontFamily: 'system-ui, sans-serif',
-    backdropFilter: 'blur(8px)',
-    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
-    opacity: '0',
-    transition: 'opacity 300ms ease',
-  });
-  banner.textContent = 'New version detected, updating\u2026';
+  banner.className =
+    'fixed inset-x-0 top-0 z-[99999] flex items-center justify-center gap-2 ' +
+    'py-3 text-sm font-sans bg-surface-elevated/95 text-text ' +
+    'border-b border-brand-500/30 backdrop-blur-md shadow-lg animate-slide-in-top';
+  banner.innerHTML = `${GEAR_SVG}<span>Updating\u2026</span>`;
   document.body.appendChild(banner);
-  requestAnimationFrame(() => {
-    banner.style.opacity = '1';
-  });
 }
 
 const SW_UPDATE_CHECK_INTERVAL_MS = 300_000;
