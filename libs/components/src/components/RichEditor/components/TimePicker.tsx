@@ -2,7 +2,7 @@ import type { ETimeResolution } from '@frozik/utils';
 import { ETimeResolution as Resolution } from '@frozik/utils';
 import { Temporal } from '@js-temporal/polyfill';
 import type { MouseEvent } from 'react';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useFunction } from '../../../hooks';
 import styles from '../styles.module.scss';
@@ -11,6 +11,9 @@ const HOURS_MAX = 23;
 const MINUTES_MAX = 59;
 const SECONDS_MAX = 59;
 const MILLISECONDS_MAX = 999;
+
+const HOLD_REPEAT_INTERVAL_MS = 1000;
+const HOLD_REPEAT_STEP = 5;
 
 export const TimePicker = memo(
   ({
@@ -29,10 +32,14 @@ export const TimePicker = memo(
       event.preventDefault();
     });
 
-    const handleHourUp = useFunction(() => {
+    function wrapValue(value: number, max: number): number {
+      return ((value % (max + 1)) + (max + 1)) % (max + 1);
+    }
+
+    const handleHourChange = useFunction((diff: number) => {
       onTimeChange(
         new Temporal.PlainTime(
-          (time.hour + 1) % (HOURS_MAX + 1),
+          wrapValue(time.hour + diff, HOURS_MAX),
           time.minute,
           time.second,
           time.millisecond
@@ -40,79 +47,35 @@ export const TimePicker = memo(
       );
     });
 
-    const handleHourDown = useFunction(() => {
+    const handleMinuteChange = useFunction((diff: number) => {
       onTimeChange(
         new Temporal.PlainTime(
-          (time.hour + HOURS_MAX) % (HOURS_MAX + 1),
-          time.minute,
+          time.hour,
+          wrapValue(time.minute + diff, MINUTES_MAX),
           time.second,
           time.millisecond
         )
       );
     });
 
-    const handleMinuteUp = useFunction(() => {
+    const handleSecondChange = useFunction((diff: number) => {
       onTimeChange(
         new Temporal.PlainTime(
           time.hour,
-          (time.minute + 1) % (MINUTES_MAX + 1),
-          time.second,
+          time.minute,
+          wrapValue(time.second + diff, SECONDS_MAX),
           time.millisecond
         )
       );
     });
 
-    const handleMinuteDown = useFunction(() => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          (time.minute + MINUTES_MAX) % (MINUTES_MAX + 1),
-          time.second,
-          time.millisecond
-        )
-      );
-    });
-
-    const handleSecondUp = useFunction(() => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          time.minute,
-          (time.second + 1) % (SECONDS_MAX + 1),
-          time.millisecond
-        )
-      );
-    });
-
-    const handleSecondDown = useFunction(() => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          time.minute,
-          (time.second + SECONDS_MAX) % (SECONDS_MAX + 1),
-          time.millisecond
-        )
-      );
-    });
-
-    const handleMsUp = useFunction(() => {
+    const handleMsChange = useFunction((diff: number) => {
       onTimeChange(
         new Temporal.PlainTime(
           time.hour,
           time.minute,
           time.second,
-          (time.millisecond + 1) % (MILLISECONDS_MAX + 1)
-        )
-      );
-    });
-
-    const handleMsDown = useFunction(() => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          time.minute,
-          time.second,
-          (time.millisecond + MILLISECONDS_MAX) % (MILLISECONDS_MAX + 1)
+          wrapValue(time.millisecond + diff, MILLISECONDS_MAX)
         )
       );
     });
@@ -124,19 +87,19 @@ export const TimePicker = memo(
 
     return (
       <div className={styles.timePicker} onMouseDown={handleMouseDown}>
-        <TimeUnit value={hourStr} onUp={handleHourUp} onDown={handleHourDown} />
+        <TimeUnit value={hourStr} onChange={handleHourChange} />
         <span className={styles.timePickerSeparator}>:</span>
-        <TimeUnit value={minuteStr} onUp={handleMinuteUp} onDown={handleMinuteDown} />
+        <TimeUnit value={minuteStr} onChange={handleMinuteChange} />
         {showSeconds && (
           <>
             <span className={styles.timePickerSeparator}>:</span>
-            <TimeUnit value={secondStr} onUp={handleSecondUp} onDown={handleSecondDown} />
+            <TimeUnit value={secondStr} onChange={handleSecondChange} />
           </>
         )}
         {showMilliseconds && (
           <>
             <span className={styles.timePickerSeparator}>.</span>
-            <TimeUnit value={msStr} onUp={handleMsUp} onDown={handleMsDown} wide />
+            <TimeUnit value={msStr} onChange={handleMsChange} wide />
           </>
         )}
       </div>
@@ -144,25 +107,83 @@ export const TimePicker = memo(
   }
 );
 
+function useHoldRepeat(
+  callback: (diff: number) => void,
+  diff: number
+): {
+  onClick: () => void;
+  onMouseDown: () => void;
+  onMouseUp: () => void;
+  onMouseLeave: () => void;
+} {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const firedRef = useRef(false);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  const stop = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const start = useCallback(() => {
+    stop();
+    firedRef.current = false;
+    intervalRef.current = setInterval(() => {
+      firedRef.current = true;
+      callbackRef.current(diff * HOLD_REPEAT_STEP);
+    }, HOLD_REPEAT_INTERVAL_MS);
+  }, [stop, diff]);
+
+  const handleClick = useCallback(() => {
+    if (firedRef.current) {
+      firedRef.current = false;
+      return;
+    }
+    callbackRef.current(diff);
+  }, [diff]);
+
+  useEffect(() => stop, [stop]);
+
+  return { onClick: handleClick, onMouseDown: start, onMouseUp: stop, onMouseLeave: stop };
+}
+
 const TimeUnit = memo(
   ({
     value,
-    onUp,
-    onDown,
+    onChange,
     wide = false,
   }: {
     value: string;
-    onUp: () => void;
-    onDown: () => void;
+    onChange: (diff: number) => void;
     wide?: boolean;
   }) => {
+    const holdUp = useHoldRepeat(onChange, 1);
+    const holdDown = useHoldRepeat(onChange, -1);
+
     return (
       <div className={wide ? styles.timePickerUnitWide : styles.timePickerUnit}>
-        <button type="button" className={styles.timePickerBtn} onClick={onUp}>
+        <button
+          type="button"
+          className={styles.timePickerBtn}
+          onClick={holdUp.onClick}
+          onMouseDown={holdUp.onMouseDown}
+          onMouseUp={holdUp.onMouseUp}
+          onMouseLeave={holdUp.onMouseLeave}
+        >
           ▲
         </button>
         <span className={styles.timePickerValue}>{value}</span>
-        <button type="button" className={styles.timePickerBtn} onClick={onDown}>
+        <button
+          type="button"
+          className={styles.timePickerBtn}
+          onClick={holdDown.onClick}
+          onMouseDown={holdDown.onMouseDown}
+          onMouseUp={holdDown.onMouseUp}
+          onMouseLeave={holdDown.onMouseLeave}
+        >
           ▼
         </button>
       </div>
