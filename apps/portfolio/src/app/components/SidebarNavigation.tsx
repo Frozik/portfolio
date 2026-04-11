@@ -59,7 +59,7 @@ export const SidebarNavigation = memo(() => {
         <span className="font-mono text-sm">Frozik/portfolio</span>
       </a>
       <button
-        className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"
+        className="cursor-pointer rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"
         onClick={toggleQR}
       >
         <QrCode size={18} />

@@ -11,7 +11,7 @@ export const QRCodePopover = memo(({ value, children }: { value: string; childre
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="rounded-md p-0.5 text-text-secondary hover:bg-surface-overlay hover:text-text print:hidden"
+          className="cursor-pointer rounded-md p-0.5 text-text-secondary hover:bg-surface-overlay hover:text-text print:hidden"
         >
           <QrCode size={12} />
         </button>
