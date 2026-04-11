@@ -1,14 +1,12 @@
 import { memo } from 'react';
-import { cn } from '../../../../shared/lib/cn';
 
-import styles from '../styles.module.scss';
 import { getYearsOfExperience } from '../utils';
 import { SMALLEST_START_DATE } from './WorkExperience';
 
 export const Summary = memo(() => (
   <>
-    <h2 className={styles.cardTitle}>Professional summary</h2>
-    <section className={cn(styles.card, styles.cardWithTitle)}>
+    <h2 className="mx-5 mb-1 shrink-0 text-white print:text-black">Professional summary</h2>
+    <section className="mx-5 mb-5 flex shrink-0 flex-col gap-3 border-t border-[#434343] pt-0.5 print:border-t-[#ccc]">
       <p>
         Senior Frontend Engineer and Team Leader with {getYearsOfExperience(SMALLEST_START_DATE)}+
         years of experience building high-performance web applications. Specialized in WebGPU/WebGL

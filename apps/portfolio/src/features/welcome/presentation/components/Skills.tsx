@@ -1,15 +1,12 @@
 import { memo } from 'react';
-import { cn } from '../../../../shared/lib/cn';
 import { Tag } from '../../../../shared/ui';
-
-import styles from '../styles.module.scss';
 
 export const Skills = memo(() => (
   <>
-    <h2 className={styles.cardTitle}>Key skills</h2>
-    <section className={cn(styles.card, styles.cardWithTitle, styles.cardWithRowMode)}>
-      <div className={styles.flexStretch}>
-        <div className={cn(styles.skillsBlock, 'flex flex-wrap gap-1')}>
+    <h2 className="mx-5 mb-1 shrink-0 text-white print:text-black">Key skills</h2>
+    <section className="mx-5 mb-5 flex shrink-0 flex-row gap-3 border-t border-[#434343] pt-0.5 print:border-t-[#ccc]">
+      <div className="flex-1">
+        <div className="mt-2 flex flex-wrap gap-1">
           <Tag color="magenta">TypeScript</Tag>
           <Tag color="magenta">JavaScript</Tag>
 

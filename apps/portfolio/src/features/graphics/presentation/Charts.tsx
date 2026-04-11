@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import commonStyles from '../../styles.module.scss';
+import commonStyles from '../../../shared/styles.module.scss';
 import { runCharter } from '../domain/chart-draw';
 
 export const Charts = memo(() => {

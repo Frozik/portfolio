@@ -5,7 +5,6 @@ import { SvgGitHub } from '../../../../icons/SvgGitHub';
 import { SvgLinkedIn } from '../../../../icons/SvgLinkedIn';
 import { SvgTelegram } from '../../../../icons/SvgTelegram';
 import { Button, QRCodePopover } from '../../../../shared/ui';
-import styles from '../styles.module.scss';
 import { getAge } from '../utils';
 import { AvailabilityStatus } from './AvailabilityStatus';
 
@@ -24,7 +23,7 @@ export const Contacts = memo(() => {
 
       <p>Male, {getAge()} years, born on 10 November 1982</p>
 
-      <address className={styles.infoBlock}>
+      <address className="text-left not-italic [&_a]:text-white [&_a]:print:text-black [&_a]:print:no-underline [&_p]:mb-0">
         <ul>
           <li>
             <QRCodePopover value="https://t.me/Frozik">

@@ -56,6 +56,9 @@
   --animate-zzz-1: zzz-float 2.5s ease-in-out infinite;
   --animate-zzz-2: zzz-float 2.5s ease-in-out 0.4s infinite;
   --animate-zzz-3: zzz-float 2.5s ease-in-out 0.8s infinite;
+  --animate-bulb-swing: bulb-swing 3s ease-in-out infinite;
+  --animate-bulb-glow: bulb-glow 2s ease-in-out infinite;
+  --animate-bulb-rays: bulb-rays 2s ease-in-out infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -88,6 +91,28 @@
   @keyframes zzz-float {
     0%, 100% { opacity: 0.3; transform: translateY(0); }
     50% { opacity: 1; transform: translateY(-6px); }
+  }
+  @keyframes bulb-swing {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(12deg); }
+    40% { transform: rotate(-10deg); }
+    60% { transform: rotate(6deg); }
+    80% { transform: rotate(-4deg); }
+  }
+  @keyframes bulb-glow {
+    0%, 100% { r: 24; opacity: 0.15; }
+    50% { r: 32; opacity: 0.35; }
+  }
+  @keyframes bulb-rays {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
