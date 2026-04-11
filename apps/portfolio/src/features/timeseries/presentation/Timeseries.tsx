@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components';
 import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
@@ -109,25 +108,9 @@ const CHART_SERIES_CONFIGS: readonly (readonly ISeriesConfig[])[] = [
 const TimeseriesContent = memo(() => {
   const renderer = useSharedRenderer();
 
-  const handleDebugChange = useFunction((enabled: boolean) => {
-    if (renderer) {
-      renderer.debugMode = enabled;
-    }
-  });
-
-  const handleInstantLoadChange = useFunction((enabled: boolean) => {
-    if (renderer) {
-      renderer.instantLoad = enabled;
-    }
-  });
-
   return (
     <div className={`${commonStyles.fixedContainer} relative grid grid-cols-2 grid-rows-2`}>
-      <DebugOverlay
-        renderer={renderer}
-        onDebugChange={handleDebugChange}
-        onInstantLoadChange={handleInstantLoadChange}
-      />
+      <DebugOverlay renderer={renderer} />
       {CHART_ZOOM_LEVELS.map((level, index) => (
         <TimeseriesChart
           key={`${level[0]}-${level[1]}`}

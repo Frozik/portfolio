@@ -155,7 +155,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   readonly rhombusPipeline: GPURenderPipeline;
   readonly debugPipeline: GPURenderPipeline;
   debugMode = false;
-  instantLoad = false;
+  instantLoad = true;
   renderFps = 0;
 
   private readonly offscreen: OffscreenCanvas;
