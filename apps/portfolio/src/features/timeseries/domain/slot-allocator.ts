@@ -1,3 +1,5 @@
+import { LRUCache } from 'lru-cache';
+
 import {
   FLOATS_PER_POINT,
   POINTS_PER_SLOT,
@@ -10,10 +12,6 @@ import type { ITextureSlot } from './types';
 
 const TEXTURE_FORMAT: GPUTextureFormat = 'rgba32float';
 
-interface ISlotMetadata {
-  lastUsed: number;
-}
-
 /**
  * Manages a GPU texture divided into fixed-size 256-point slots.
  * Each texture row contains 8 slots (2048 texels / 256 points per slot).
@@ -22,7 +20,7 @@ interface ISlotMetadata {
  * 1. Free list (stack of freed slot indices)
  * 2. High-water-mark (advance if below capacity)
  * 3. Grow texture (double rows, copy data, update capacity)
- * 4. LRU eviction (find oldest slot, release, return)
+ * 4. LRU eviction (find oldest slot via lru-cache in O(1), release, return)
  */
 export class SlotAllocator {
   private readonly device: GPUDevice;
@@ -34,10 +32,9 @@ export class SlotAllocator {
   private texture: GPUTexture;
   private capacity: number;
   private highWaterMark = 0;
-  private usageCounter = 0;
 
   private readonly freeSlots: number[] = [];
-  private readonly slotMetadata = new Map<number, ISlotMetadata>();
+  private readonly lru: LRUCache<number, true>;
 
   constructor(
     device: GPUDevice,
@@ -59,6 +56,9 @@ export class SlotAllocator {
       format: TEXTURE_FORMAT,
       usage: this.textureUsage,
     });
+
+    // Set max high enough to prevent auto-eviction — we manage eviction manually
+    this.lru = new LRUCache({ max: maxRows * SLOTS_PER_ROW });
   }
 
   allocateSlot(): ITextureSlot | null {
@@ -107,19 +107,13 @@ export class SlotAllocator {
 
   touch(slot: ITextureSlot): void {
     const flatIndex = this.flattenSlot(slot);
-    const metadata = this.slotMetadata.get(flatIndex);
-
-    if (metadata === undefined) {
-      return;
-    }
-
-    this.usageCounter++;
-    metadata.lastUsed = this.usageCounter;
+    // get() updates recency in lru-cache — O(1)
+    this.lru.get(flatIndex);
   }
 
   releaseSlot(slot: ITextureSlot): void {
     const flatIndex = this.flattenSlot(slot);
-    this.slotMetadata.delete(flatIndex);
+    this.lru.delete(flatIndex);
     this.freeSlots.push(flatIndex);
   }
 
@@ -137,7 +131,7 @@ export class SlotAllocator {
 
   /** Returns total number of currently allocated (non-free) slots. */
   getAllocatedSlotCount(): number {
-    return this.slotMetadata.size;
+    return this.lru.size;
   }
 
   /** Returns the current high-water-mark (total slots ever allocated). */
@@ -147,39 +141,31 @@ export class SlotAllocator {
 
   dispose(): void {
     this.texture.destroy();
-    this.slotMetadata.clear();
+    this.lru.clear();
     this.freeSlots.length = 0;
   }
 
   private registerSlot(flatIndex: number): ITextureSlot {
-    this.usageCounter++;
-    this.slotMetadata.set(flatIndex, { lastUsed: this.usageCounter });
+    this.lru.set(flatIndex, true);
     return this.unflattenSlot(flatIndex);
   }
 
   private evictAndAllocate(): ITextureSlot | null {
-    let oldestIndex = -1;
-    let oldestUsage = Number.POSITIVE_INFINITY;
+    // rkeys() iterates from least recently used — first entry is the oldest
+    const oldestKey = this.lru.rkeys().next().value;
 
-    for (const [flatIndex, metadata] of this.slotMetadata) {
-      if (metadata.lastUsed < oldestUsage) {
-        oldestUsage = metadata.lastUsed;
-        oldestIndex = flatIndex;
-      }
-    }
-
-    if (oldestIndex === -1) {
+    if (oldestKey === undefined) {
       return null;
     }
 
-    const evictedSlot = this.unflattenSlot(oldestIndex);
-    this.slotMetadata.delete(oldestIndex);
+    const evictedSlot = this.unflattenSlot(oldestKey);
+    this.lru.delete(oldestKey);
 
     if (this.onEvict !== undefined) {
       this.onEvict(evictedSlot);
     }
 
-    return this.registerSlot(oldestIndex);
+    return this.registerSlot(oldestKey);
   }
 
   private growTexture(newCapacity: number): void {
