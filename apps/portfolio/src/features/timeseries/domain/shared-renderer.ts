@@ -162,6 +162,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private animationFrameId = 0;
   private lastFrameTime = 0;
   private disposed = false;
+  private needsReconfigure = false;
   private readonly renderFrameTimes: number[] = [];
   private lastFpsUpdate = 0;
 
@@ -361,23 +362,28 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         continue;
       }
 
-      // Resize offscreen canvas to match chart dimensions
-      if (this.offscreen.width !== width || this.offscreen.height !== height) {
+      // Resize offscreen canvas or reconfigure after previous blit.
+      // On iOS Safari (Metal backend), transferToImageBitmap() may not fully
+      // release the texture, causing stale content to bleed between charts.
+      // Setting offscreen dimensions forces a new backing store.
+      if (
+        this.offscreen.width !== width ||
+        this.offscreen.height !== height ||
+        this.needsReconfigure
+      ) {
         this.offscreen.width = width;
         this.offscreen.height = height;
+        this.ctx.configure({
+          device: this.device,
+          format: this.format,
+          alphaMode: 'premultiplied',
+        });
+        this.needsReconfigure = false;
       }
-
-      // Reconfigure context before each chart to ensure a fresh texture.
-      // On iOS Safari (Metal backend), reusing the same texture between charts
-      // can cause stale content from the previous chart to bleed through.
-      this.ctx.configure({
-        device: this.device,
-        format: this.format,
-        alphaMode: 'premultiplied',
-      });
 
       // Get the actual texture first — its size may differ from what we requested
       const canvasTexture = this.ctx.getCurrentTexture();
+
       const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
 
       if (isNil(currentMsaaView)) {
@@ -415,7 +421,10 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       chart.syncCanvasSize();
 
       const bitmap = this.offscreen.transferToImageBitmap();
-      chart.target2dContext.clearRect(0, 0, chart.width, chart.height);
+      this.needsReconfigure = true;
+      // Draw grid first, then WebGPU content on top.
+      // source-over compositing: WebGPU opaque pixels cover the grid.
+      chart.renderCanvasGrid();
       chart.target2dContext.drawImage(bitmap, 0, 0);
       bitmap.close();
 

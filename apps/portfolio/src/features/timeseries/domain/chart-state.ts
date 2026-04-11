@@ -1,9 +1,9 @@
 import { assert } from '@frozik/utils';
 import { isNil } from 'lodash-es';
-
+import { computeXTicks, computeYTicks } from './axis-ticks';
 import { BlockDataPipeline } from './block-data-pipeline';
 import { BlockRegistry } from './block-registry';
-import { renderAxes, renderGrid } from './chart-axes';
+import { renderAxes } from './chart-axes';
 import { ChartInputController } from './chart-input';
 import {
   AXIS_MARGIN_BOTTOM,
@@ -12,6 +12,7 @@ import {
   AXIS_MARGIN_TOP,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
+  GRID_LINE_COLOR,
   VERTICES_PER_CANDLESTICK,
   VERTICES_PER_RHOMBUS,
   VERTICES_PER_SEGMENT,
@@ -33,6 +34,7 @@ import type {
 import { EChartType } from './types';
 import { autoScaleY, scaleFromTimeRange, visibleYRange } from './viewport';
 
+const CHART_BACKGROUND_COLOR = '#1a1a1a';
 const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
 const MIN_POINTS_FOR_RENDERING = 2;
@@ -75,7 +77,6 @@ function getGpuPipeline(
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly gridSvg: SVGSVGElement;
   readonly axesSvg: SVGSVGElement;
   readonly seriesManager: SeriesLayerManager;
   readonly fpsController: FpsController;
@@ -109,14 +110,12 @@ export class TimeseriesChartState implements ITimeseriesChart {
     renderer: ISharedTimeseriesRenderer,
     seriesConfigs: readonly ISeriesConfig[],
     targetCanvas: HTMLCanvasElement,
-    gridSvg: SVGSVGElement,
     axesSvg: SVGSVGElement,
     initialTimeStart: number,
     initialTimeEnd: number,
     seed: string
   ) {
     this.targetCanvas = targetCanvas;
-    this.gridSvg = gridSvg;
     this.axesSvg = axesSvg;
 
     const ctx = targetCanvas.getContext('2d');
@@ -356,8 +355,70 @@ export class TimeseriesChartState implements ITimeseriesChart {
     const clientWidth = this.canvasWidth / dpr;
     const clientHeight = this.canvasHeight / dpr;
 
-    renderGrid(this.gridSvg, this.viewport, clientWidth, clientHeight);
     renderAxes(this.axesSvg, this.viewport, clientWidth, clientHeight);
+  }
+
+  renderCanvasGrid(): void {
+    const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
+    const dpr = Math.max(1, window.devicePixelRatio);
+    const ctx = this.target2dContext;
+
+    const plotLeft = AXIS_MARGIN_LEFT * dpr;
+    const plotTop = AXIS_MARGIN_TOP * dpr;
+    const plotWidth = this.canvasWidth - (AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr;
+    const plotHeight = this.canvasHeight - (AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr;
+    const plotRight = plotLeft + plotWidth;
+    const plotBottom = plotTop + plotHeight;
+
+    if (plotWidth <= 0 || plotHeight <= 0) {
+      return;
+    }
+
+    // Fill background
+    ctx.fillStyle = CHART_BACKGROUND_COLOR;
+    ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    const timeRange = viewTimeEnd - viewTimeStart;
+    const valueRange = viewValueMax - viewValueMin;
+
+    ctx.strokeStyle = GRID_LINE_COLOR;
+    ctx.lineWidth = dpr * 0.5;
+    ctx.beginPath();
+
+    // Vertical grid lines
+    const scale = scaleFromTimeRange(viewTimeStart, viewTimeEnd);
+    const clientPlotWidth = plotWidth / dpr;
+    const xTicks = computeXTicks(viewTimeStart, viewTimeEnd, scale, clientPlotWidth);
+
+    for (const tick of xTicks) {
+      const normalized = (tick.position - viewTimeStart) / timeRange;
+      const pixelX = plotLeft + normalized * plotWidth;
+
+      if (pixelX < plotLeft || pixelX > plotRight) {
+        continue;
+      }
+
+      ctx.moveTo(pixelX, plotTop);
+      ctx.lineTo(pixelX, plotBottom);
+    }
+
+    // Horizontal grid lines
+    const clientPlotHeight = plotHeight / dpr;
+    const yTicks = computeYTicks(viewValueMin, viewValueMax, clientPlotHeight);
+
+    for (const tick of yTicks) {
+      const normalized = (tick.position - viewValueMin) / valueRange;
+      const pixelY = plotBottom - normalized * plotHeight;
+
+      if (pixelY < plotTop || pixelY > plotBottom) {
+        continue;
+      }
+
+      ctx.moveTo(plotLeft, pixelY);
+      ctx.lineTo(plotRight, pixelY);
+    }
+
+    ctx.stroke();
   }
 
   getLoadingRegions(): ILoadingRegion[] {

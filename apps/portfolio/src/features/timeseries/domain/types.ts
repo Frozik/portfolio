@@ -92,7 +92,6 @@ export interface IFpsController {
 export interface ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly gridSvg: SVGSVGElement;
   readonly axesSvg: SVGSVGElement;
   readonly width: number;
   readonly height: number;
@@ -103,6 +102,7 @@ export interface ITimeseriesChart {
   prepareDrawCommands(): IPlotArea | null;
   getLoadingRegions(): ILoadingRegion[];
   getViewport(): { timeStart: number; timeEnd: number };
+  renderCanvasGrid(): void;
   renderOverlay(): void;
   dispose(): void;
 }
