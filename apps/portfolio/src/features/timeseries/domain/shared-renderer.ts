@@ -19,7 +19,7 @@ const candlestickShaderSource = commonShaderSource + candlestickSpecificSource;
 const rhombusShaderSource = commonShaderSource + rhombusSpecificSource;
 const debugShaderSource = commonShaderSource + debugLinesSource;
 
-import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
+import type { IPlotArea, ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
 const LOADING_BAR_HEIGHT_PX = 5;
 const SHIMMER_COLOR_LIGHT = 'rgba(100, 160, 255, 0.6)';
@@ -362,76 +362,120 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         continue;
       }
 
-      // Resize offscreen canvas or reconfigure after previous blit.
-      // On iOS Safari (Metal backend), transferToImageBitmap() may not fully
-      // release the texture, causing stale content to bleed between charts.
-      // Setting offscreen dimensions forces a new backing store.
-      if (
-        this.offscreen.width !== width ||
-        this.offscreen.height !== height ||
-        this.needsReconfigure
-      ) {
-        this.offscreen.width = width;
-        this.offscreen.height = height;
-        this.ctx.configure({
-          device: this.device,
-          format: this.format,
-          alphaMode: 'premultiplied',
-        });
-        this.needsReconfigure = false;
+      if (!isNil(chart.canvasGpuContext)) {
+        this.renderChartDirect(chart, chart.canvasGpuContext, plotArea);
+      } else {
+        this.renderChartOffscreen(chart, plotArea);
       }
-
-      // Get the actual texture first — its size may differ from what we requested
-      const canvasTexture = this.ctx.getCurrentTexture();
-
-      const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
-
-      if (isNil(currentMsaaView)) {
-        continue;
-      }
-
-      const canvasTexView = canvasTexture.createView();
-      const encoder = this.device.createCommandEncoder();
-
-      const pass = encoder.beginRenderPass({
-        colorAttachments: [
-          {
-            view: currentMsaaView,
-            resolveTarget: canvasTexView,
-            loadOp: 'clear',
-            clearValue: { r: 0, g: 0, b: 0, a: 0 },
-            storeOp: 'discard',
-          },
-        ],
-      });
-
-      // Delegate rendering to the chart's series manager
-      chart.seriesManager.renderAll(pass, plotArea);
-
-      // Debug: draw vertical lines at block boundaries
-      if (this.debugMode) {
-        chart.seriesManager.renderDebug(pass, this.debugPipeline, plotArea);
-      }
-
-      pass.end();
-      this.device.queue.submit([encoder.finish()]);
-
-      // Sync visible canvas size right before blit to avoid blank-frame flicker.
-      // Setting canvas.width/height clears it, so we do it immediately before drawImage.
-      chart.syncCanvasSize();
-
-      const bitmap = this.offscreen.transferToImageBitmap();
-      this.needsReconfigure = true;
-      // Draw grid first, then WebGPU content on top.
-      // source-over compositing: WebGPU opaque pixels cover the grid.
-      chart.renderCanvasGrid();
-      chart.target2dContext.drawImage(bitmap, 0, 0);
-      bitmap.close();
 
       // Draw loading bars for blocks being "fetched"
       this.drawLoadingBars(chart);
 
       chart.renderOverlay();
     }
+  }
+
+  /** iOS path: render directly to chart's own WebGPU canvas context. */
+  private renderChartDirect(
+    chart: ITimeseriesChart,
+    gpuCtx: GPUCanvasContext,
+    plotArea: IPlotArea
+  ): void {
+    chart.syncCanvasSize();
+
+    const canvasTexture = gpuCtx.getCurrentTexture();
+    const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
+
+    if (isNil(currentMsaaView)) {
+      return;
+    }
+
+    const canvasTexView = canvasTexture.createView();
+    const encoder = this.device.createCommandEncoder();
+
+    // iOS direct path: transparent clear so background+grid on underlay canvas shows through
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: currentMsaaView,
+          resolveTarget: canvasTexView,
+          loadOp: 'clear',
+          clearValue: { r: 0, g: 0, b: 0, a: 0 },
+          storeOp: 'discard',
+        },
+      ],
+    });
+
+    chart.seriesManager.renderAll(pass, plotArea);
+
+    if (this.debugMode) {
+      chart.seriesManager.renderDebug(pass, this.debugPipeline, plotArea);
+    }
+
+    pass.end();
+    this.device.queue.submit([encoder.finish()]);
+
+    // Draw grid on the transparent 2D overlay canvas
+    chart.renderCanvasGrid();
+  }
+
+  /** Non-iOS path: render to shared OffscreenCanvas then blit to 2D canvas. */
+  private renderChartOffscreen(chart: ITimeseriesChart, plotArea: IPlotArea): void {
+    const { width, height } = chart;
+
+    if (
+      this.offscreen.width !== width ||
+      this.offscreen.height !== height ||
+      this.needsReconfigure
+    ) {
+      this.offscreen.width = width;
+      this.offscreen.height = height;
+      this.ctx.configure({
+        device: this.device,
+        format: this.format,
+        alphaMode: 'premultiplied',
+      });
+      this.needsReconfigure = false;
+    }
+
+    const canvasTexture = this.ctx.getCurrentTexture();
+    const currentMsaaView = this.ensureMsaaView(canvasTexture.width, canvasTexture.height);
+
+    if (isNil(currentMsaaView)) {
+      return;
+    }
+
+    const canvasTexView = canvasTexture.createView();
+    const encoder = this.device.createCommandEncoder();
+
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: currentMsaaView,
+          resolveTarget: canvasTexView,
+          loadOp: 'clear',
+          clearValue: { r: 0, g: 0, b: 0, a: 0 },
+          storeOp: 'discard',
+        },
+      ],
+    });
+
+    chart.seriesManager.renderAll(pass, plotArea);
+
+    if (this.debugMode) {
+      chart.seriesManager.renderDebug(pass, this.debugPipeline, plotArea);
+    }
+
+    pass.end();
+    this.device.queue.submit([encoder.finish()]);
+
+    chart.syncCanvasSize();
+
+    const bitmap = this.offscreen.transferToImageBitmap();
+    this.needsReconfigure = true;
+
+    chart.renderCanvasGrid();
+    chart.target2dContext.drawImage(bitmap, 0, 0);
+    bitmap.close();
   }
 }
