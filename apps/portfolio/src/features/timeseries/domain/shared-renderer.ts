@@ -365,13 +365,16 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       if (this.offscreen.width !== width || this.offscreen.height !== height) {
         this.offscreen.width = width;
         this.offscreen.height = height;
-
-        this.ctx.configure({
-          device: this.device,
-          format: this.format,
-          alphaMode: 'premultiplied',
-        });
       }
+
+      // Reconfigure context before each chart to ensure a fresh texture.
+      // On iOS Safari (Metal backend), reusing the same texture between charts
+      // can cause stale content from the previous chart to bleed through.
+      this.ctx.configure({
+        device: this.device,
+        format: this.format,
+        alphaMode: 'premultiplied',
+      });
 
       // Get the actual texture first — its size may differ from what we requested
       const canvasTexture = this.ctx.getCurrentTexture();
