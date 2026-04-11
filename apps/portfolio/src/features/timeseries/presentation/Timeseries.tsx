@@ -1,5 +1,5 @@
 import { useFunction } from '@frozik/components';
-import { memo, useEffect } from 'react';
+import { memo } from 'react';
 
 import commonStyles from '../../styles.module.scss';
 import { packColor, unpackColor } from '../domain/color-packing';
@@ -104,34 +104,8 @@ const CHART_SERIES_CONFIGS: readonly (readonly ISeriesConfig[])[] = [
   ],
 ];
 
-function useLandscapeLock(): void {
-  useEffect(() => {
-    let fullscreenActive = false;
-
-    document.documentElement
-      .requestFullscreen()
-      .then(() => {
-        fullscreenActive = true;
-        return screen.orientation.lock('landscape');
-      })
-      .catch(() => {
-        // Fullscreen or orientation lock not supported / denied
-      });
-
-    return () => {
-      screen.orientation.unlock();
-
-      if (fullscreenActive) {
-        document.exitFullscreen().catch(() => {});
-      }
-    };
-  }, []);
-}
-
 const TimeseriesContent = memo(() => {
   const renderer = useSharedRenderer();
-
-  useLandscapeLock();
 
   const handleDebugChange = useFunction((enabled: boolean) => {
     if (renderer) {

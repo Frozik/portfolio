@@ -19,6 +19,7 @@ import { memo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useToggle } from 'usehooks-ts';
 import { SvgGitHub } from '../../icons/SvgGitHub';
+import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { cn } from '../../shared/lib/cn';
 import { Drawer, FloatingButton, FloatingButtonGroup, QRCode, Tag, Tooltip } from '../../shared/ui';
 import { useRootStore } from '../stores';
@@ -37,8 +38,6 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
   );
 }
 
-// No observer here — observer blocks React Router context propagation to Outlet.
-// MobX reactivity is scoped to MenuButton which is a separate observer component.
 export const SidebarNavigation = memo(() => {
   const [visible, toggleVisible, setVisible] = useToggle(false);
   const [showQR, toggleQR, setShowQR] = useToggle(false);
@@ -94,16 +93,11 @@ export const SidebarNavigation = memo(() => {
             <NavLink className={navLinkClass} to="/pendulum" onClick={handleClose} end={false}>
               <Brain size={NAV_ICON_SIZE} />
               <span className="flex-1">Pendulum</span>
+              <Tag color="red" className="md:hidden">
+                Not optimized for mobile
+              </Tag>
               <Tooltip
-                title={
-                  <>
-                    Genetic algorithm evolves neural networks to balance an inverted pendulum.
-                    <br />
-                    <Tag color="red" className="mt-1">
-                      Not optimized for mobile devices
-                    </Tag>
-                  </>
-                }
+                title="Genetic algorithm evolves neural networks to balance an inverted pendulum."
                 placement="right"
                 className="max-w-64"
               >
@@ -136,6 +130,7 @@ export const SidebarNavigation = memo(() => {
             <NavLink className={navLinkClass} to="/timeseries" onClick={handleClose} end={false}>
               <TrendingUp size={NAV_ICON_SIZE} />
               <span className="flex-1">Timeseries</span>
+              <SvgRotateToLandscape className="hidden h-5 w-5 animate-pulse text-info md:hidden max-md:block" />
               <Tooltip
                 title="WebGPU timeseries chart capable of rendering gigabytes of data stored in GPU textures. R-tree spatial index selects visible segments, delta encoding preserves float32 precision for large timestamps. Multi-scale zoom with lazy data loading, pan, and auto-scaling Y-axis"
                 placement="right"

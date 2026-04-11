@@ -96,13 +96,21 @@ WebGPU canvas contexts.
 - Each chart uses a unique seed for independent data
 - Bullish/bearish coloring (green/red) based on price direction
 
+**Multiple chart types with per-series configuration:**
+- 4-chart grid: line + candlestick, candlestick only, line only, rhombus markers
+- Each series configured independently via `ISeriesConfig` (chart type, seed, custom color/size functions)
+- Value-based styling: rhombus markers colored by threshold bands (blue/green/orange/red), line thickness varying by value
+- Separate GPU render pipelines per chart type (line, candlestick, rhombus)
+- Simulated async data loading with animated shimmer loading bar
+
 **Chart features:**
 - Animated zoom with lerp-based easing and viewport spring on resize
 - Pan and pinch-to-zoom touch support
-- Line and candlestick series (candlestick shape rendered entirely in fragment shader)
+- Line, candlestick, and rhombus series (candlestick shape rendered entirely in fragment shader)
 - Adaptive axis labels that scale from hours to months
 - 3-layer rendering: SVG grid → WebGPU canvas → SVG axes (labels with semi-transparent backdrop)
-- Debug overlay: FPS counter + block boundary visualization
+- Debug overlay: real-time render FPS counter + block boundary visualization toggle
+- Fullscreen + landscape lock on mobile devices
 
 **Performance optimizations:**
 - Event-driven FPS controller with debounced degradation (interaction=60fps → idle=5fps)
@@ -113,4 +121,28 @@ WebGPU canvas contexts.
 
 ### Controls
 
-Showcase of shared UI controls (numeric input, date editor).
+Interactive showcase of financial input controls from the `@frozik/components`
+shared library.
+
+**Numeric Editor (Rate / Amount / Number):**
+- Configurable decimal precision (0–10 digits) via slider
+- PIP highlighting — adjustable start position and size to emphasize significant digits
+- Suffix support: type `K`, `M`, `B` for thousands, millions, billions
+- Negative values supported
+
+**Date/Time Picker:**
+- Free-form text input with fuzzy parsing — understands natural language:
+  keywords (`today`, `tomorrow`, `now`), weekdays (`mon`–`sun`, `next fri`,
+  `last monday`), offsets (`+3d`, `-1w`, `in 3 days`, `2 weeks ago`),
+  boundaries (`eom`, `bom`, `eoy`, `Q1 2025`), ordinals (`15th`, `the 1st`),
+  dates (`2025-01-15`, `15/03/2025`, `10nov`, `jan 15 25`),
+  time (`13:00`, `9am`, `5:30pm`, `9:30:45.123`), and combined (`tom 13:00`,
+  `mon14`, `yesterday10`)
+- Calendar popup with monospace font, enlarged navigation buttons, and
+  bold weekday headers
+- Time picker with hour/minute/second/millisecond controls — hold-to-repeat
+  (5 steps/second on long press)
+- Configurable arrow key step (minute, hour, day, week) and time resolution
+  (minutes, seconds, milliseconds)
+- Parse direction toggle: future-only vs nearest match
+- Weekend highlighting in calendar grid
