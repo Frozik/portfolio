@@ -24,7 +24,7 @@ import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 const LOADING_BAR_HEIGHT_PX = 5;
 const SHIMMER_COLOR_LIGHT = 'rgba(100, 160, 255, 0.6)';
 const SHIMMER_COLOR_DARK = 'rgba(30, 80, 180, 0.8)';
-const SHIMMER_SPEED_DIVISOR = 800;
+const SHIMMER_CYCLE_MS = 1200;
 
 export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer> {
   assert(!isNil(navigator.gpu), 'WebGPU is not supported');
@@ -308,7 +308,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     const canvasHeight = chart.height;
     const barHeight = LOADING_BAR_HEIGHT_PX * Math.max(1, window.devicePixelRatio);
     const barY = canvasHeight - barHeight;
-    const now = performance.now() / SHIMMER_SPEED_DIVISOR;
+    const phase = (performance.now() % SHIMMER_CYCLE_MS) / SHIMMER_CYCLE_MS;
 
     for (const region of regions) {
       const startNorm = (region.timeStart - viewport.timeStart) / timeRange;
@@ -322,20 +322,22 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
         continue;
       }
 
-      // Shimmer gradient: animate offset over time
-      const shimmerOffset = (now % 1) * pixelWidth;
-      const gradient = ctx.createLinearGradient(
-        pixelStart + shimmerOffset - pixelWidth,
-        0,
-        pixelStart + shimmerOffset,
-        0
-      );
+      // Shimmer gradient: light→dark→light sliding vertically
+      const gradientHeight = barHeight * 2;
+      const shimmerY = barY - gradientHeight + phase * gradientHeight;
+
+      const gradient = ctx.createLinearGradient(0, shimmerY, 0, shimmerY + gradientHeight);
       gradient.addColorStop(0, SHIMMER_COLOR_LIGHT);
       gradient.addColorStop(0.5, SHIMMER_COLOR_DARK);
       gradient.addColorStop(1, SHIMMER_COLOR_LIGHT);
 
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(pixelStart, barY, pixelWidth, barHeight);
+      ctx.clip();
       ctx.fillStyle = gradient;
-      ctx.fillRect(pixelStart, barY, pixelWidth, barHeight);
+      ctx.fillRect(pixelStart, shimmerY, pixelWidth, gradientHeight);
+      ctx.restore();
     }
   }
 
