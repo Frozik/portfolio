@@ -1,6 +1,7 @@
 import { useFunction } from '@frozik/components';
 import { memo } from 'react';
 
+import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import commonStyles from '../../styles.module.scss';
 import { packColor, unpackColor } from '../domain/color-packing';
 import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
@@ -131,8 +132,10 @@ const TimeseriesContent = memo(() => {
 
 export const Timeseries = memo(() => {
   return (
-    <SharedRendererProvider>
-      <TimeseriesContent />
-    </SharedRendererProvider>
+    <WebGpuGuard className="h-full w-full">
+      <SharedRendererProvider>
+        <TimeseriesContent />
+      </SharedRendererProvider>
+    </WebGpuGuard>
   );
 });

@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
+import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import commonStyles from '../../styles.module.scss';
 import { runSun } from '../domain/sun-draw';
 
@@ -14,8 +15,10 @@ export const Sun = memo(() => {
   }, []);
 
   return (
-    <div className={commonStyles.fixedContainer}>
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
-    </div>
+    <WebGpuGuard className={commonStyles.fixedContainer}>
+      <div className={commonStyles.fixedContainer}>
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+      </div>
+    </WebGpuGuard>
   );
 });
