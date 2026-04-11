@@ -28,10 +28,6 @@ function formatHourMinute(hour: number, minute: number): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-function formatHourMinuteSecond(hour: number, minute: number, second: number): string {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
-}
-
 /**
  * Thin out ticks so that labels don't overlap.
  * Keeps only ticks that are at least `minPixelGap` apart in pixel space.
@@ -260,28 +256,4 @@ export function computeYTicks(
 
 function formatYLabel(value: number, decimals: number): string {
   return value.toFixed(decimals);
-}
-
-/** Exported for legacy compatibility — returns per-second ticks. */
-export function computeSecondTicks(timeStart: number, timeEnd: number): IAxisTick[] {
-  const ticks: IAxisTick[] = [];
-  const startSlot = Math.ceil(timeStart);
-  const endSlot = Math.floor(timeEnd);
-
-  for (let s = startSlot; s <= endSlot; s++) {
-    const secOfDay = s % SECONDS_PER_DAY;
-    const hour = Math.floor(secOfDay / SECONDS_PER_HOUR);
-    const minute = Math.floor((secOfDay % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
-    const second = secOfDay % SECONDS_PER_MINUTE;
-    ticks.push({
-      position: s,
-      label: formatHourMinuteSecond(
-        ((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY,
-        minute,
-        second
-      ),
-    });
-  }
-
-  return ticks;
 }

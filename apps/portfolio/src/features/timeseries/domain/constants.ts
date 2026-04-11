@@ -13,26 +13,8 @@ export const FLOATS_PER_POINT = 4;
 /** Vertical padding ratio applied to the value axis range. */
 export const Y_PADDING_RATIO = 0.1;
 
-/** Default line width in pixels. */
-export const LINE_WIDTH_PX = 2.0;
-
-/** Minimum simulated loading delay in milliseconds. */
-export const LOADING_DELAY_MIN_MS = 200;
-
-/** Maximum simulated loading delay in milliseconds. */
-export const LOADING_DELAY_MAX_MS = 500;
-
 /** Global epoch offset — January 1, 2026 00:00:00 UTC in seconds. */
 export const GLOBAL_EPOCH_OFFSET = 1_767_225_600;
-
-/** Background color red component (matches webgpu-graphics). */
-export const BACKGROUND_R = 0.149;
-
-/** Background color green component. */
-export const BACKGROUND_G = 0.149;
-
-/** Background color blue component. */
-export const BACKGROUND_B = 0.149;
 
 /** MSAA sample count for anti-aliased rendering. */
 export const MSAA_SAMPLE_COUNT = 4;
@@ -73,12 +55,6 @@ export const POINTS_PER_SLOT = 256;
 /** Number of 256-point slots that fit in one texture row (2048 / 256). */
 export const SLOTS_PER_ROW = 8;
 
-/** Half constant for readability in float calculations. */
-export const HALF = 0.5;
-
-/** Clip space coordinate range (from -1 to 1). */
-export const CLIP_RANGE = 2.0;
-
 /** Milliseconds per second. */
 export const MS_PER_SECOND = 1000;
 
@@ -100,23 +76,11 @@ export const ZOOM_SNAP_THRESHOLD = 0.005;
 /** One full year duration in seconds. */
 export const FULL_YEAR_SECONDS = 365 * 24 * 3600;
 
-/** Default line color: a pleasant blue tone — rgba(0.2, 0.6, 1.0, 1.0). */
-export const LINE_COLOR_R = 0.2;
-export const LINE_COLOR_G = 0.6;
-export const LINE_COLOR_B = 1.0;
-export const LINE_COLOR_A = 1.0;
-
-/** Default point size stored in the texture data. */
-export const DEFAULT_POINT_SIZE = 1.0;
-
 /** SVG axis margins in pixels. */
 export const AXIS_MARGIN_LEFT = 10;
 export const AXIS_MARGIN_BOTTOM = 10;
 export const AXIS_MARGIN_TOP = 10;
 export const AXIS_MARGIN_RIGHT = 10;
-
-/** SVG namespace. */
-export const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Axis tick length in pixels. */
 export const TICK_LENGTH = 5;

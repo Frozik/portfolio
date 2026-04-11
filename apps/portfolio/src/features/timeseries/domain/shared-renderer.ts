@@ -155,6 +155,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   readonly rhombusPipeline: GPURenderPipeline;
   readonly debugPipeline: GPURenderPipeline;
   debugMode = false;
+  instantLoad = false;
   renderFps = 0;
 
   private readonly offscreen: OffscreenCanvas;
@@ -369,10 +370,11 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
 
       this.renderChart(chart, plotArea);
 
+      // Axes drawn on 2D canvas after WebGPU blit so they appear on top
+      chart.renderCanvasAxes();
+
       // Draw loading bars for blocks being "fetched"
       this.drawLoadingBars(chart);
-
-      chart.renderOverlay();
     }
   }
 

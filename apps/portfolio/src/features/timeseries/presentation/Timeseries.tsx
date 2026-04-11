@@ -115,9 +115,19 @@ const TimeseriesContent = memo(() => {
     }
   });
 
+  const handleInstantLoadChange = useFunction((enabled: boolean) => {
+    if (renderer) {
+      renderer.instantLoad = enabled;
+    }
+  });
+
   return (
     <div className={`${commonStyles.fixedContainer} relative grid grid-cols-2 grid-rows-2`}>
-      <DebugOverlay renderer={renderer} onDebugChange={handleDebugChange} />
+      <DebugOverlay
+        renderer={renderer}
+        onDebugChange={handleDebugChange}
+        onInstantLoadChange={handleInstantLoadChange}
+      />
       {CHART_ZOOM_LEVELS.map((level, index) => (
         <TimeseriesChart
           key={`${level[0]}-${level[1]}`}

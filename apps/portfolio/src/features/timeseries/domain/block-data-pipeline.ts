@@ -35,7 +35,8 @@ export class BlockDataPipeline {
     private readonly chartType: EChartType,
     private readonly colorFn?: PointTransformFunction,
     private readonly sizeFn?: PointTransformFunction,
-    private readonly isDebug?: () => boolean
+    private readonly isDebug?: () => boolean,
+    private readonly isInstantLoad?: () => boolean
   ) {}
 
   ensureBlocksForViewport(
@@ -89,8 +90,8 @@ export class BlockDataPipeline {
         continue;
       }
 
-      // Check if loading delay has elapsed
-      if (now - pending.requestTime >= LOADING_DELAY_MS) {
+      // Check if loading delay has elapsed (or instant load is enabled)
+      if (this.isInstantLoad?.() === true || now - pending.requestTime >= LOADING_DELAY_MS) {
         this.pendingBlocks.delete(pendingKey);
         const newEntries = this.generateBlocksForPeriod(period.start, period.end, scale);
         visibleEntries.push(...newEntries);

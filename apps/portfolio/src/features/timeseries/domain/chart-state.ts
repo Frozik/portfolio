@@ -3,9 +3,15 @@ import { isNil } from 'lodash-es';
 import { computeXTicks, computeYTicks } from './axis-ticks';
 import { BlockDataPipeline } from './block-data-pipeline';
 import { BlockRegistry } from './block-registry';
-import { renderAxes } from './chart-axes';
 import { ChartInputController } from './chart-input';
 import {
+  AXIS_FONT_FAMILY,
+  AXIS_FONT_SIZE,
+  AXIS_LABEL_BG_COLOR,
+  AXIS_LABEL_BG_PADDING_X,
+  AXIS_LABEL_BG_PADDING_Y,
+  AXIS_LABEL_COLOR,
+  AXIS_LINE_COLOR,
   AXIS_MARGIN_BOTTOM,
   AXIS_MARGIN_LEFT,
   AXIS_MARGIN_RIGHT,
@@ -13,9 +19,12 @@ import {
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
   GRID_LINE_COLOR,
+  TICK_LENGTH,
   VERTICES_PER_CANDLESTICK,
   VERTICES_PER_RHOMBUS,
   VERTICES_PER_SEGMENT,
+  X_LABEL_Y_AXIS_CLEARANCE,
+  Y_LABEL_X_AXIS_CLEARANCE,
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
@@ -74,10 +83,14 @@ function getGpuPipeline(
   }
 }
 
+const LABEL_BG_RADIUS = 2;
+const CHAR_WIDTH_FACTOR = 0.6;
+const X_LABEL_GAP = 3;
+const Y_LABEL_GAP = 4;
+
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly axesSvg: SVGSVGElement;
   readonly seriesManager: SeriesLayerManager;
   readonly fpsController: FpsController;
 
@@ -96,27 +109,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
   private canvasHeight = 0;
   private lastTextureCapacity = 0;
 
-  // Memoization: skip SVG re-render when viewport + size unchanged
-  private lastOverlayTimeStart = Number.NaN;
-  private lastOverlayTimeEnd = Number.NaN;
-  private lastOverlayValueMin = Number.NaN;
-  private lastOverlayValueMax = Number.NaN;
-  private lastOverlayWidth = 0;
-  private lastOverlayHeight = 0;
-
   constructor(
-    device: GPUDevice,
-    bindGroupLayout: GPUBindGroupLayout,
     renderer: ISharedTimeseriesRenderer,
     seriesConfigs: readonly ISeriesConfig[],
     targetCanvas: HTMLCanvasElement,
-    axesSvg: SVGSVGElement,
     initialTimeStart: number,
     initialTimeEnd: number,
     seed: string
   ) {
     this.targetCanvas = targetCanvas;
-    this.axesSvg = axesSvg;
 
     const ctx = targetCanvas.getContext('2d');
     assert(!isNil(ctx), 'Failed to get 2D canvas context');
@@ -136,7 +137,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     // Shared slot allocator (one texture) and block registry (one RTree)
     this.registry = new BlockRegistry();
-    this.allocator = new SlotAllocator(device, undefined, undefined, undefined, slot => {
+    this.allocator = new SlotAllocator(renderer.device, undefined, undefined, undefined, slot => {
       this.registry.removeBySlot(slot);
     });
 
@@ -154,7 +155,8 @@ export class TimeseriesChartState implements ITimeseriesChart {
         config.chartType,
         config.colorFn,
         config.sizeFn,
-        () => renderer.debugMode
+        () => renderer.debugMode,
+        () => renderer.instantLoad
       );
       this.dataPipelines.push(dataPipeline);
 
@@ -166,7 +168,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
       this.seriesManager.addSeries(layer, gpuPipeline);
     }
 
-    this.seriesManager.initAll(device, bindGroupLayout, this.allocator);
+    this.seriesManager.initAll(renderer.device, renderer.bindGroupLayout, this.allocator);
     this.seriesManager.updateBindGroups(this.allocator.createView());
 
     this.fpsController = new FpsController();
@@ -185,7 +187,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasSize();
       this.fpsController.raise(EFpsLevel.Resize);
-      this.renderOverlay();
     });
     this.resizeObserver.observe(targetCanvas);
   }
@@ -330,32 +331,148 @@ export class TimeseriesChartState implements ITimeseriesChart {
     return { x: plotX, y: plotY, width: plotWidth, height: plotHeight };
   }
 
-  renderOverlay(): void {
+  renderCanvasAxes(): void {
     const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
+    const dpr = Math.max(1, window.devicePixelRatio);
+    const ctx = this.target2dContext;
 
-    if (
-      viewTimeStart === this.lastOverlayTimeStart &&
-      viewTimeEnd === this.lastOverlayTimeEnd &&
-      viewValueMin === this.lastOverlayValueMin &&
-      viewValueMax === this.lastOverlayValueMax &&
-      this.canvasWidth === this.lastOverlayWidth &&
-      this.canvasHeight === this.lastOverlayHeight
-    ) {
+    const plotLeft = AXIS_MARGIN_LEFT * dpr;
+    const plotTop = AXIS_MARGIN_TOP * dpr;
+    const plotWidth = this.canvasWidth - (AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr;
+    const plotHeight = this.canvasHeight - (AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr;
+    const plotRight = plotLeft + plotWidth;
+    const plotBottom = plotTop + plotHeight;
+
+    if (plotWidth <= 0 || plotHeight <= 0) {
       return;
     }
 
-    this.lastOverlayTimeStart = viewTimeStart;
-    this.lastOverlayTimeEnd = viewTimeEnd;
-    this.lastOverlayValueMin = viewValueMin;
-    this.lastOverlayValueMax = viewValueMax;
-    this.lastOverlayWidth = this.canvasWidth;
-    this.lastOverlayHeight = this.canvasHeight;
+    const fontSize = AXIS_FONT_SIZE * dpr;
+    const tickLength = TICK_LENGTH * dpr;
+    const bgPaddingX = AXIS_LABEL_BG_PADDING_X * dpr;
+    const bgPaddingY = AXIS_LABEL_BG_PADDING_Y * dpr;
+    const bgRadius = LABEL_BG_RADIUS * dpr;
+    const xLabelGap = X_LABEL_GAP * dpr;
+    const yLabelGap = Y_LABEL_GAP * dpr;
+    const xClearance = X_LABEL_Y_AXIS_CLEARANCE * dpr;
+    const yClearance = Y_LABEL_X_AXIS_CLEARANCE * dpr;
+    const charWidth = fontSize * CHAR_WIDTH_FACTOR;
 
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const clientWidth = this.canvasWidth / dpr;
-    const clientHeight = this.canvasHeight / dpr;
+    // Axis lines (L-shape: left edge top→bottom, then bottom edge left→right)
+    ctx.strokeStyle = AXIS_LINE_COLOR;
+    ctx.lineWidth = dpr;
+    ctx.beginPath();
+    ctx.moveTo(plotLeft, plotTop);
+    ctx.lineTo(plotLeft, plotBottom);
+    ctx.lineTo(plotRight, plotBottom);
+    ctx.stroke();
 
-    renderAxes(this.axesSvg, this.viewport, clientWidth, clientHeight);
+    ctx.font = `${fontSize}px ${AXIS_FONT_FAMILY}`;
+
+    const timeRange = viewTimeEnd - viewTimeStart;
+    const valueRange = viewValueMax - viewValueMin;
+
+    // X-axis ticks + labels
+    const scale = scaleFromTimeRange(viewTimeStart, viewTimeEnd);
+    const clientPlotWidth = plotWidth / dpr;
+    const xTicks = computeXTicks(viewTimeStart, viewTimeEnd, scale, clientPlotWidth);
+
+    for (const tick of xTicks) {
+      const normalized = (tick.position - viewTimeStart) / timeRange;
+      const pixelX = plotLeft + normalized * plotWidth;
+
+      if (pixelX < plotLeft || pixelX > plotRight) {
+        continue;
+      }
+
+      // Tick mark
+      ctx.strokeStyle = AXIS_LINE_COLOR;
+      ctx.lineWidth = dpr;
+      ctx.beginPath();
+      ctx.moveTo(pixelX, plotBottom);
+      ctx.lineTo(pixelX, plotBottom - tickLength);
+      ctx.stroke();
+
+      // Label positioning
+      const textWidth = tick.label.length * charWidth;
+      const labelLeft = pixelX - textWidth / 2 - bgPaddingX;
+
+      // Skip if too close to Y-axis
+      if (labelLeft < plotLeft + xClearance) {
+        continue;
+      }
+
+      const labelY = plotBottom - tickLength - xLabelGap;
+
+      // Background rect
+      ctx.fillStyle = AXIS_LABEL_BG_COLOR;
+      ctx.beginPath();
+      ctx.roundRect(
+        pixelX - textWidth / 2 - bgPaddingX,
+        labelY - fontSize + bgPaddingY,
+        textWidth + bgPaddingX * 2,
+        fontSize + bgPaddingY * 2,
+        bgRadius
+      );
+      ctx.fill();
+
+      // Label text
+      ctx.fillStyle = AXIS_LABEL_COLOR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(tick.label, pixelX, labelY);
+    }
+
+    // Y-axis ticks + labels
+    const clientPlotHeight = plotHeight / dpr;
+    const yTicks = computeYTicks(viewValueMin, viewValueMax, clientPlotHeight);
+
+    for (const tick of yTicks) {
+      const normalized = (tick.position - viewValueMin) / valueRange;
+      const pixelY = plotBottom - normalized * plotHeight;
+
+      if (pixelY < plotTop || pixelY > plotBottom) {
+        continue;
+      }
+
+      // Tick mark
+      ctx.strokeStyle = AXIS_LINE_COLOR;
+      ctx.lineWidth = dpr;
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, pixelY);
+      ctx.lineTo(plotLeft + tickLength, pixelY);
+      ctx.stroke();
+
+      // Label positioning
+      const labelX = plotLeft + tickLength + yLabelGap;
+      const labelY = pixelY + fontSize / 3;
+      const labelBottom = labelY + bgPaddingY;
+
+      // Skip if too close to X-axis
+      if (labelBottom > plotBottom - yClearance) {
+        continue;
+      }
+
+      const textWidth = tick.label.length * charWidth;
+
+      // Background rect
+      ctx.fillStyle = AXIS_LABEL_BG_COLOR;
+      ctx.beginPath();
+      ctx.roundRect(
+        labelX - bgPaddingX,
+        labelY - fontSize + bgPaddingY,
+        textWidth + bgPaddingX * 2,
+        fontSize + bgPaddingY * 2,
+        bgRadius
+      );
+      ctx.fill();
+
+      // Label text
+      ctx.fillStyle = AXIS_LABEL_COLOR;
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(tick.label, labelX, labelY);
+    }
   }
 
   renderCanvasGrid(): void {
@@ -383,6 +500,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     ctx.strokeStyle = GRID_LINE_COLOR;
     ctx.lineWidth = dpr * 0.5;
+    ctx.setLineDash([10 * dpr, 10 * dpr]);
     ctx.beginPath();
 
     // Vertical grid lines
@@ -419,6 +537,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     }
 
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   getLoadingRegions(): ILoadingRegion[] {

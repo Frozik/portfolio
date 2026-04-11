@@ -92,7 +92,6 @@ export interface IFpsController {
 export interface ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
   readonly target2dContext: CanvasRenderingContext2D;
-  readonly axesSvg: SVGSVGElement;
   readonly width: number;
   readonly height: number;
   readonly fpsController: IFpsController;
@@ -103,7 +102,7 @@ export interface ITimeseriesChart {
   getLoadingRegions(): ILoadingRegion[];
   getViewport(): { timeStart: number; timeEnd: number };
   renderCanvasGrid(): void;
-  renderOverlay(): void;
+  renderCanvasAxes(): void;
   dispose(): void;
 }
 
@@ -149,6 +148,7 @@ export interface ISharedTimeseriesRenderer {
   readonly rhombusPipeline: GPURenderPipeline;
   readonly debugPipeline: GPURenderPipeline;
   debugMode: boolean;
+  instantLoad: boolean;
   readonly renderFps: number;
   registerChart(chart: ITimeseriesChart): VoidFunction;
   destroy(): void;

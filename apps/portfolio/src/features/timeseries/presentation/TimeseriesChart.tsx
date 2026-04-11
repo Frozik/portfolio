@@ -15,21 +15,17 @@ interface ITimeseriesChartProps {
 export const TimeseriesChart = memo(
   ({ initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs }: ITimeseriesChartProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const axesSvgRef = useRef<SVGSVGElement>(null);
     const renderer = useSharedRenderer();
 
     useEffect(() => {
-      if (isNil(renderer) || isNil(canvasRef.current) || isNil(axesSvgRef.current)) {
+      if (isNil(renderer) || isNil(canvasRef.current)) {
         return;
       }
 
       const chartState = new TimeseriesChartState(
-        renderer.device,
-        renderer.bindGroupLayout,
         renderer,
         seriesConfigs,
         canvasRef.current,
-        axesSvgRef.current,
         initialTimeStart,
         initialTimeEnd,
         chartSeed
@@ -41,7 +37,6 @@ export const TimeseriesChart = memo(
     return (
       <div className="relative h-full w-full bg-[#1a1a1a]">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-        <svg ref={axesSvgRef} className="absolute inset-0 h-full w-full pointer-events-none" />
       </div>
     );
   }
