@@ -22,6 +22,9 @@ const debugShaderSource = commonShaderSource + debugLinesSource;
 import { RenderTargetPool } from './render-target-pool';
 import type { IPlotArea, ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
+const THROTTLE_TOLERANCE_MS = 2;
+const MIN_FPS_WINDOW_MS = 1000;
+const FPS_UPDATE_INTERVAL_MS = 250;
 const LOADING_BAR_HEIGHT_PX = 5;
 const SHIMMER_COLOR_LIGHT = 'rgba(100, 160, 255, 0.6)';
 const SHIMMER_COLOR_DARK = 'rgba(30, 80, 180, 0.8)';
@@ -252,8 +255,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       }
 
       const minInterval = this.getMinFrameIntervalMs();
-
-      if (now - this.lastFrameTime < minInterval) {
+      if (now - this.lastFrameTime < minInterval - THROTTLE_TOLERANCE_MS) {
         this.animationFrameId = requestAnimationFrame(frame);
         return;
       }
@@ -268,13 +270,13 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   }
 
   private trackRenderFps(now: number): void {
-    const FPS_WINDOW_MS = 1000;
-    const FPS_UPDATE_INTERVAL_MS = 250;
+    // Use a window that captures at least 3 frames at the current rate
+    const fpsWindowMs = Math.max(MIN_FPS_WINDOW_MS, this.getMinFrameIntervalMs() * 3);
 
     this.renderFrameTimes.push(now);
 
     // Trim old entries beyond the window
-    const cutoff = now - FPS_WINDOW_MS;
+    const cutoff = now - fpsWindowMs;
     while (this.renderFrameTimes.length > 0 && this.renderFrameTimes[0] < cutoff) {
       this.renderFrameTimes.shift();
     }
