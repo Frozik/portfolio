@@ -8,7 +8,7 @@ import type { ETimeScale, IBlockEntry, ILoadingRegion, PointTransformFunction } 
 import { EChartType } from './types';
 
 /** Simulated loading delay in milliseconds. */
-const LOADING_DELAY_MS = 4000;
+const LOADING_DELAY_MS = 1_000;
 
 interface IPendingBlock {
   readonly periodStart: number;

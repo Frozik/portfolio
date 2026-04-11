@@ -43,7 +43,7 @@ function createMockDevice(): GPUDevice {
   return device as unknown as GPUDevice;
 }
 
-const LOADING_DELAY_MS = 4000;
+const LOADING_DELAY_MS = 1_000;
 
 describe('BlockDataPipeline', () => {
   beforeEach(() => {
