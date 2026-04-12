@@ -32,6 +32,9 @@ export const MS_PER_SECOND = 1000;
 /** Number of vertices per line quad (2 triangles = 6 vertices) */
 export const VERTICES_PER_LINE_QUAD = 6;
 
+/** Per-edge instance data: startPosition(3) + endPosition(3) = 6 floats */
+export const FLOATS_PER_EDGE_INSTANCE = 6;
+
 // --- Visible segment (edge) dimensions ---
 /** Line width in screen pixels for visible normal segments */
 export const SEGMENT_WIDTH_PIXELS = 5.0;

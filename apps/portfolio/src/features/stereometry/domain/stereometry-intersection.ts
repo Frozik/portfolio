@@ -1,4 +1,6 @@
 import { LINE_INTERSECTION_MAX_DISTANCE } from './stereometry-constants';
+import type { Vec3 } from './stereometry-math';
+import { distanceSquared3, dot3, isNearAnyPoint, subtractVec3 } from './stereometry-math';
 import type { FigureTopology, IntersectionEntity, SceneState } from './stereometry-types';
 
 /** Minimum denominator to consider lines non-parallel */
@@ -11,8 +13,8 @@ const VERTEX_COINCIDENCE_THRESHOLD_SQUARED = 0.001;
 const DUPLICATE_THRESHOLD_SQUARED = 0.0001;
 
 interface LineDefinition {
-  readonly point: readonly [number, number, number];
-  readonly direction: readonly [number, number, number];
+  readonly point: Vec3;
+  readonly direction: Vec3;
 }
 
 /**
@@ -23,10 +25,6 @@ interface LineDefinition {
  * - Extended topology edges (scene.lines)
  * - User-drawn segments (scene.userSegments) — rendered as infinite lines
  *
- * Checks:
- * - Infinite line ↔ infinite line
- * - Infinite line ↔ topology edge segment (only segments not already extended as lines)
- *
  * Filters out intersections at existing topology vertices and duplicates.
  */
 export function computeAllIntersections(
@@ -35,7 +33,6 @@ export function computeAllIntersections(
 ): readonly IntersectionEntity[] {
   const extendedEdgeIndices = new Set(scene.lines.map(line => line.edgeIndex));
 
-  // Collect all infinite lines from both sources
   const allLines: LineDefinition[] = [];
 
   for (const line of scene.lines) {
@@ -45,27 +42,23 @@ export function computeAllIntersections(
   for (const segment of scene.userSegments) {
     allLines.push({
       point: segment.startPosition,
-      direction: [
-        segment.endPosition[0] - segment.startPosition[0],
-        segment.endPosition[1] - segment.startPosition[1],
-        segment.endPosition[2] - segment.startPosition[2],
-      ],
+      direction: subtractVec3(segment.endPosition, segment.startPosition),
     });
   }
 
   const results: IntersectionEntity[] = [];
-  const resultPositions: (readonly [number, number, number])[] = [];
+  const resultPositions: Vec3[] = [];
 
   function tryAddIntersection(position: [number, number, number] | undefined): void {
     if (position === undefined) {
       return;
     }
 
-    if (isNearExistingVertex(position, topology.vertices)) {
+    if (isNearAnyPoint(position, topology.vertices, VERTEX_COINCIDENCE_THRESHOLD_SQUARED)) {
       return;
     }
 
-    if (isDuplicatePoint(position, resultPositions)) {
+    if (isNearAnyPoint(position, resultPositions, DUPLICATE_THRESHOLD_SQUARED)) {
       return;
     }
 
@@ -73,55 +66,33 @@ export function computeAllIntersections(
     resultPositions.push(position);
   }
 
-  // Check all infinite line pairs
   for (let indexA = 0; indexA < allLines.length; indexA++) {
     for (let indexB = indexA + 1; indexB < allLines.length; indexB++) {
-      const position = computeLinePairIntersection(allLines[indexA], allLines[indexB]);
-      tryAddIntersection(position);
+      tryAddIntersection(computeLinePairIntersection(allLines[indexA], allLines[indexB]));
     }
 
-    // Check this infinite line against topology edge segments
-    // (only segments that are NOT already extended as infinite lines)
     for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
       if (extendedEdgeIndices.has(edgeIndex)) {
         continue;
       }
 
-      const segment = getEdgeLine(edgeIndex, topology);
-      const position = computeLineSegmentIntersection(allLines[indexA], segment);
-      tryAddIntersection(position);
+      tryAddIntersection(
+        computeLineSegmentIntersection(allLines[indexA], getEdgeLine(edgeIndex, topology))
+      );
     }
   }
 
   return results;
 }
 
-/**
- * Intersection of two infinite lines.
- * Returns midpoint of closest approach if distance < threshold.
- */
 function computeLinePairIntersection(
   lineA: LineDefinition,
   lineB: LineDefinition
 ): [number, number, number] | undefined {
-  const closest = closestPointBetweenLines(
-    lineA.point,
-    lineA.direction,
-    lineB.point,
-    lineB.direction
-  );
-
-  if (closest === undefined) {
-    return undefined;
-  }
-
-  return closest.midpoint;
+  return closestPointBetweenLines(lineA.point, lineA.direction, lineB.point, lineB.direction)
+    ?.midpoint;
 }
 
-/**
- * Intersection of an infinite line with a finite segment.
- * Returns midpoint only if the intersection lies within the segment's [0, 1] range.
- */
 function computeLineSegmentIntersection(
   line: LineDefinition,
   segment: LineDefinition
@@ -133,12 +104,7 @@ function computeLineSegmentIntersection(
     segment.direction
   );
 
-  if (closest === undefined) {
-    return undefined;
-  }
-
-  // The segment parameter must be in [0, 1] for the intersection to lie on the segment
-  if (closest.parameterB < 0 || closest.parameterB > 1) {
+  if (closest === undefined || closest.parameterB < 0 || closest.parameterB > 1) {
     return undefined;
   }
 
@@ -149,43 +115,34 @@ function getEdgeLine(edgeIndex: number, topology: FigureTopology): LineDefinitio
   const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
   const point = topology.vertices[vertexIndexA];
   const endPoint = topology.vertices[vertexIndexB];
-  return {
-    point,
-    direction: [endPoint[0] - point[0], endPoint[1] - point[1], endPoint[2] - point[2]],
-  };
+  return { point, direction: subtractVec3(endPoint, point) };
 }
 
 interface ClosestPointResult {
   readonly midpoint: [number, number, number];
-  readonly parameterA: number;
   readonly parameterB: number;
 }
 
 /**
  * Closest point between two lines: P + s*D and Q + t*E.
- * Returns midpoint of closest approach, plus parameters s and t.
+ * Returns midpoint of closest approach plus parameter t for the second line.
  */
 function closestPointBetweenLines(
-  pointP: readonly [number, number, number],
-  directionD: readonly [number, number, number],
-  pointQ: readonly [number, number, number],
-  directionE: readonly [number, number, number]
+  pointP: Vec3,
+  directionD: Vec3,
+  pointQ: Vec3,
+  directionE: Vec3
 ): ClosestPointResult | undefined {
   const dotDD = dot3(directionD, directionD);
   const dotDE = dot3(directionD, directionE);
   const dotEE = dot3(directionE, directionE);
-
   const denominator = dotDD * dotEE - dotDE * dotDE;
 
   if (Math.abs(denominator) < PARALLEL_EPSILON) {
     return undefined;
   }
 
-  const w: readonly [number, number, number] = [
-    pointP[0] - pointQ[0],
-    pointP[1] - pointQ[1],
-    pointP[2] - pointQ[2],
-  ];
+  const w = subtractVec3(pointP, pointQ);
   const dotDW = dot3(directionD, w);
   const dotEW = dot3(directionE, w);
 
@@ -204,12 +161,7 @@ function closestPointBetweenLines(
     pointQ[2] + parameterB * directionE[2],
   ];
 
-  const distanceSquared =
-    (closestOnA[0] - closestOnB[0]) ** 2 +
-    (closestOnA[1] - closestOnB[1]) ** 2 +
-    (closestOnA[2] - closestOnB[2]) ** 2;
-
-  if (distanceSquared > LINE_INTERSECTION_MAX_DISTANCE ** 2) {
+  if (distanceSquared3(closestOnA, closestOnB) > LINE_INTERSECTION_MAX_DISTANCE ** 2) {
     return undefined;
   }
 
@@ -219,44 +171,6 @@ function closestPointBetweenLines(
       (closestOnA[1] + closestOnB[1]) * 0.5,
       (closestOnA[2] + closestOnB[2]) * 0.5,
     ],
-    parameterA,
     parameterB,
   };
-}
-
-function isNearExistingVertex(
-  point: readonly [number, number, number],
-  vertices: readonly (readonly [number, number, number])[]
-): boolean {
-  for (const vertex of vertices) {
-    const distanceSquared =
-      (point[0] - vertex[0]) ** 2 + (point[1] - vertex[1]) ** 2 + (point[2] - vertex[2]) ** 2;
-
-    if (distanceSquared < VERTEX_COINCIDENCE_THRESHOLD_SQUARED) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function isDuplicatePoint(
-  point: readonly [number, number, number],
-  existing: readonly (readonly [number, number, number])[]
-): boolean {
-  for (const other of existing) {
-    const distanceSquared =
-      (point[0] - other[0]) ** 2 + (point[1] - other[1]) ** 2 + (point[2] - other[2]) ** 2;
-
-    if (distanceSquared < DUPLICATE_THRESHOLD_SQUARED) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function dot3(
-  vectorA: readonly [number, number, number],
-  vectorB: readonly [number, number, number]
-): number {
-  return vectorA[0] * vectorB[0] + vectorA[1] * vectorB[1] + vectorA[2] * vectorB[2];
 }

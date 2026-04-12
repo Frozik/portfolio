@@ -1,8 +1,9 @@
-import { FACE_POSITION_FLOATS, VERTICES_PER_TRIANGLE } from './stereometry-constants';
+import {
+  FACE_POSITION_FLOATS,
+  FLOATS_PER_EDGE_INSTANCE,
+  VERTICES_PER_TRIANGLE,
+} from './stereometry-constants';
 import type { FigureTopology, PuzzleDefinition } from './stereometry-types';
-
-/** Per-edge instance data: startPosition(3) + endPosition(3) = 6 floats */
-const FLOATS_PER_EDGE_INSTANCE = 6;
 
 export interface FigureWireframe {
   /** Instance buffer: 6 floats per edge (startPos + endPos) */

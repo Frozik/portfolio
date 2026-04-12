@@ -1,38 +1,23 @@
 import { isNil } from 'lodash-es';
 import { vec4 } from 'wgpu-matrix';
 
-import {
-  EDGE_HIT_RADIUS_PIXELS,
-  LINE_EXTENSION_LENGTH,
-  VERTEX_HIT_RADIUS_PIXELS,
-} from './stereometry-constants';
+import { EDGE_HIT_RADIUS_PIXELS, VERTEX_HIT_RADIUS_PIXELS } from './stereometry-constants';
+import type { Vec3 } from './stereometry-math';
+import { extendLine } from './stereometry-math';
 import type { FigureTopology, SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
 /** Homogeneous w-component for position vectors */
 const HOMOGENEOUS_W = 1.0;
 
-/**
- * A line segment defined by two 3D endpoints, for hit testing.
- */
 export interface HitTestLineSegment {
-  readonly startPosition: readonly [number, number, number];
-  readonly endPosition: readonly [number, number, number];
+  readonly startPosition: Vec3;
+  readonly endPosition: Vec3;
 }
 
 /**
  * Performs CPU hit testing against edges, extended lines, and user segments.
- * Priority: edges first, then extended lines, then user segments.
- *
- * @param screenX Click position in CSS pixels relative to canvas left edge
- * @param screenY Click position in CSS pixels relative to canvas top edge
- * @param canvasWidth Canvas CSS width in pixels
- * @param canvasHeight Canvas CSS height in pixels
- * @param devicePixelRatio Device pixel ratio for proper coordinate mapping
- * @param mvpMatrix The model-view-projection matrix used for rendering
- * @param topology Pyramid topology for geometry data
- * @param extendedEdgeIndices Edge indices that have been extended into lines
- * @param userSegments User-created line segments
+ * Priority: edges > extended lines > user segments.
  */
 export function hitTest(
   screenX: number,
@@ -59,51 +44,44 @@ export function hitTest(
   );
 
   // 1. Check topology edge segments
-  const edgeHit = findNearestLineHit(
-    pixelX,
-    pixelY,
-    thresholdSquared,
-    projectedVertices,
-    topology.edges
-  );
+  const edgeSegments = topology.edges.map(([indexA, indexB]) => ({
+    start: projectedVertices[indexA],
+    end: projectedVertices[indexB],
+  }));
+
+  const edgeHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, edgeSegments);
 
   if (!isNil(edgeHit)) {
     return { type: 'edge', edgeIndex: edgeHit };
   }
 
-  // 2. Check extended lines (projected as very long segments)
+  // 2. Check extended lines
   if (extendedEdgeIndices.length > 0) {
-    const extendedEndpoints = computeExtendedEndpoints(topology, extendedEdgeIndices);
-    const projectedExtended = projectVerticesToScreen(
+    const extendedSegments = projectExtendedSegments(
       mvpMatrix,
-      extendedEndpoints,
+      topology,
+      extendedEdgeIndices,
       gpuCanvasWidth,
       gpuCanvasHeight
     );
 
-    const lineHit = findNearestProjectedPairHit(
-      pixelX,
-      pixelY,
-      thresholdSquared,
-      projectedExtended
-    );
+    const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, extendedSegments);
 
     if (!isNil(lineHit)) {
       return { type: 'line', edgeIndex: extendedEdgeIndices[lineHit] };
     }
   }
 
-  // 3. Check user segments (also rendered as extended lines)
+  // 3. Check user segments
   if (userSegments.length > 0) {
-    const userEndpoints = computeUserSegmentEndpoints(userSegments);
-    const projectedUser = projectVerticesToScreen(
+    const userProjected = projectUserSegments(
       mvpMatrix,
-      userEndpoints,
+      userSegments,
       gpuCanvasWidth,
       gpuCanvasHeight
     );
 
-    const userHit = findNearestProjectedPairHit(pixelX, pixelY, thresholdSquared, projectedUser);
+    const userHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, userProjected);
 
     if (!isNil(userHit)) {
       return { type: 'userSegment', userSegmentIndex: userHit };
@@ -114,9 +92,8 @@ export function hitTest(
 }
 
 /**
- * Performs CPU hit testing against topology vertices only.
- * Returns the index of the nearest vertex within VERTEX_HIT_RADIUS_PIXELS,
- * or undefined if no vertex is close enough.
+ * Performs CPU hit testing against vertices only.
+ * Returns the nearest vertex index or undefined.
  */
 export function hitTestVertex(
   screenX: number,
@@ -125,7 +102,7 @@ export function hitTestVertex(
   canvasHeight: number,
   devicePixelRatio: number,
   mvpMatrix: Float32Array,
-  vertices: readonly (readonly [number, number, number])[]
+  vertices: readonly Vec3[]
 ): number | undefined {
   const gpuCanvasWidth = canvasWidth * devicePixelRatio;
   const gpuCanvasHeight = canvasHeight * devicePixelRatio;
@@ -148,9 +125,14 @@ interface ProjectedVertex {
   readonly behindCamera: boolean;
 }
 
+interface ProjectedSegment {
+  readonly start: ProjectedVertex;
+  readonly end: ProjectedVertex;
+}
+
 function projectVerticesToScreen(
   mvpMatrix: Float32Array,
-  vertices: readonly (readonly [number, number, number])[],
+  vertices: readonly Vec3[],
   gpuCanvasWidth: number,
   gpuCanvasHeight: number
 ): ProjectedVertex[] {
@@ -175,6 +157,47 @@ function projectVerticesToScreen(
   });
 }
 
+function projectExtendedSegments(
+  mvpMatrix: Float32Array,
+  topology: FigureTopology,
+  edgeIndices: readonly number[],
+  gpuCanvasWidth: number,
+  gpuCanvasHeight: number
+): ProjectedSegment[] {
+  return edgeIndices.map(edgeIndex => {
+    const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
+    const [farStart, farEnd] = extendLine(
+      topology.vertices[vertexIndexA],
+      topology.vertices[vertexIndexB]
+    );
+    const projected = projectVerticesToScreen(
+      mvpMatrix,
+      [farStart, farEnd],
+      gpuCanvasWidth,
+      gpuCanvasHeight
+    );
+    return { start: projected[0], end: projected[1] };
+  });
+}
+
+function projectUserSegments(
+  mvpMatrix: Float32Array,
+  segments: readonly HitTestLineSegment[],
+  gpuCanvasWidth: number,
+  gpuCanvasHeight: number
+): ProjectedSegment[] {
+  return segments.map(segment => {
+    const [farStart, farEnd] = extendLine(segment.startPosition, segment.endPosition);
+    const projected = projectVerticesToScreen(
+      mvpMatrix,
+      [farStart, farEnd],
+      gpuCanvasWidth,
+      gpuCanvasHeight
+    );
+    return { start: projected[0], end: projected[1] };
+  });
+}
+
 function findNearestVertexIndex(
   pixelX: number,
   pixelY: number,
@@ -182,10 +205,10 @@ function findNearestVertexIndex(
   projectedVertices: ProjectedVertex[]
 ): number | undefined {
   let nearestDistanceSquared = (VERTEX_HIT_RADIUS_PIXELS * devicePixelRatio) ** 2;
-  let nearestVertexIndex: number | undefined;
+  let nearestIndex: number | undefined;
 
-  for (let vertexIndex = 0; vertexIndex < projectedVertices.length; vertexIndex++) {
-    const projected = projectedVertices[vertexIndex];
+  for (let index = 0; index < projectedVertices.length; index++) {
+    const projected = projectedVertices[index];
     if (projected.behindCamera) {
       continue;
     }
@@ -196,49 +219,7 @@ function findNearestVertexIndex(
 
     if (distanceSquared < nearestDistanceSquared) {
       nearestDistanceSquared = distanceSquared;
-      nearestVertexIndex = vertexIndex;
-    }
-  }
-
-  return nearestVertexIndex;
-}
-
-/**
- * Finds the nearest edge within threshold of the click point.
- * Uses topology vertex indices to look up projected positions.
- * Returns the edge index or undefined.
- */
-function findNearestLineHit(
-  pixelX: number,
-  pixelY: number,
-  thresholdSquared: number,
-  projectedVertices: ProjectedVertex[],
-  edges: readonly [number, number][]
-): number | undefined {
-  let nearestDistanceSquared = thresholdSquared;
-  let nearestIndex: number | undefined;
-
-  for (let edgeIndex = 0; edgeIndex < edges.length; edgeIndex++) {
-    const [vertexIndexA, vertexIndexB] = edges[edgeIndex];
-    const projectedA = projectedVertices[vertexIndexA];
-    const projectedB = projectedVertices[vertexIndexB];
-
-    if (projectedA.behindCamera || projectedB.behindCamera) {
-      continue;
-    }
-
-    const distanceSquared = pointToSegmentDistanceSquared(
-      pixelX,
-      pixelY,
-      projectedA.screenX,
-      projectedA.screenY,
-      projectedB.screenX,
-      projectedB.screenY
-    );
-
-    if (distanceSquared < nearestDistanceSquared) {
-      nearestDistanceSquared = distanceSquared;
-      nearestIndex = edgeIndex;
+      nearestIndex = index;
     }
   }
 
@@ -246,118 +227,41 @@ function findNearestLineHit(
 }
 
 /**
- * Finds the nearest line among projected endpoint pairs.
- * Each pair of consecutive projected vertices (0-1, 2-3, 4-5, ...) forms one line.
- * Returns the pair index (0, 1, 2, ...) or undefined.
+ * Unified segment hit test — finds the nearest screen-space segment within threshold.
+ * Returns the index of the nearest segment, or undefined if none is close enough.
  */
-function findNearestProjectedPairHit(
+function findNearestSegmentHit(
   pixelX: number,
   pixelY: number,
   thresholdSquared: number,
-  projectedEndpoints: ProjectedVertex[]
+  segments: readonly ProjectedSegment[]
 ): number | undefined {
   let nearestDistanceSquared = thresholdSquared;
   let nearestIndex: number | undefined;
-  const pairCount = projectedEndpoints.length / 2;
 
-  for (let pairIndex = 0; pairIndex < pairCount; pairIndex++) {
-    const projectedA = projectedEndpoints[pairIndex * 2];
-    const projectedB = projectedEndpoints[pairIndex * 2 + 1];
+  for (let index = 0; index < segments.length; index++) {
+    const { start, end } = segments[index];
 
-    if (projectedA.behindCamera || projectedB.behindCamera) {
+    if (start.behindCamera || end.behindCamera) {
       continue;
     }
 
     const distanceSquared = pointToSegmentDistanceSquared(
       pixelX,
       pixelY,
-      projectedA.screenX,
-      projectedA.screenY,
-      projectedB.screenX,
-      projectedB.screenY
+      start.screenX,
+      start.screenY,
+      end.screenX,
+      end.screenY
     );
 
     if (distanceSquared < nearestDistanceSquared) {
       nearestDistanceSquared = distanceSquared;
-      nearestIndex = pairIndex;
+      nearestIndex = index;
     }
   }
 
   return nearestIndex;
-}
-
-/**
- * Computes extended line endpoints for hit testing.
- * Each edge produces one pair of endpoints [farStart, farEnd].
- */
-function computeExtendedEndpoints(
-  topology: FigureTopology,
-  edgeIndices: readonly number[]
-): [number, number, number][] {
-  const endpoints: [number, number, number][] = [];
-
-  for (const edgeIndex of edgeIndices) {
-    const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
-    const positionA = topology.vertices[vertexIndexA];
-    const positionB = topology.vertices[vertexIndexB];
-    const [farStart, farEnd] = extendLineEndpoints(positionA, positionB);
-    endpoints.push(farStart, farEnd);
-  }
-
-  return endpoints;
-}
-
-/**
- * Computes extended endpoints for user segments.
- * Each segment produces one pair of endpoints [farStart, farEnd].
- */
-function computeUserSegmentEndpoints(
-  segments: readonly HitTestLineSegment[]
-): [number, number, number][] {
-  const endpoints: [number, number, number][] = [];
-
-  for (const segment of segments) {
-    const [farStart, farEnd] = extendLineEndpoints(segment.startPosition, segment.endPosition);
-    endpoints.push(farStart, farEnd);
-  }
-
-  return endpoints;
-}
-
-function extendLineEndpoints(
-  positionA: readonly [number, number, number],
-  positionB: readonly [number, number, number]
-): [[number, number, number], [number, number, number]] {
-  const directionX = positionB[0] - positionA[0];
-  const directionY = positionB[1] - positionA[1];
-  const directionZ = positionB[2] - positionA[2];
-  const length = Math.sqrt(
-    directionX * directionX + directionY * directionY + directionZ * directionZ
-  );
-
-  if (length === 0) {
-    return [
-      [positionA[0], positionA[1], positionA[2]],
-      [positionB[0], positionB[1], positionB[2]],
-    ];
-  }
-
-  const normalizedX = directionX / length;
-  const normalizedY = directionY / length;
-  const normalizedZ = directionZ / length;
-
-  return [
-    [
-      positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
-      positionA[1] - normalizedY * LINE_EXTENSION_LENGTH,
-      positionA[2] - normalizedZ * LINE_EXTENSION_LENGTH,
-    ],
-    [
-      positionB[0] + normalizedX * LINE_EXTENSION_LENGTH,
-      positionB[1] + normalizedY * LINE_EXTENSION_LENGTH,
-      positionB[2] + normalizedZ * LINE_EXTENSION_LENGTH,
-    ],
-  ];
 }
 
 function pointToSegmentDistanceSquared(

@@ -21,6 +21,7 @@ import {
   FACE_DEPTH_BIAS_SLOPE_SCALE,
   FACE_POSITION_FLOATS,
   FAR_PLANE,
+  FLOATS_PER_EDGE_INSTANCE,
   HIDDEN_BRIGHTNESS,
   HIDDEN_DASH_LENGTH_PIXELS,
   HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
@@ -29,7 +30,6 @@ import {
   HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
   HIDDEN_SEGMENT_WIDTH_PIXELS,
   HIGHLIGHT_COLOR,
-  LINE_EXTENSION_LENGTH,
   MARKER_SIZE_OVERRIDE_ID,
   MARKER_USE_HIGHLIGHT_COLOR_OVERRIDE_ID,
   MSAA_SAMPLE_COUNT,
@@ -43,6 +43,7 @@ import {
 } from '../stereometry-constants';
 import type { DragPreviewState } from '../stereometry-drag-connector';
 import { createWireframeFromTopology } from '../stereometry-geometry';
+import { extendLine, extendLineHalves } from '../stereometry-math';
 import type { FigureTopology, SceneState, SelectionState } from '../stereometry-types';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
@@ -51,8 +52,6 @@ const MIN_DIMENSION = 1;
 const FLOAT32_BYTES = 4;
 const UINT32_BYTES = 4;
 
-/** Per-edge instance: startPos(3) + endPos(3) = 6 floats */
-const FLOATS_PER_EDGE_INSTANCE = 6;
 const INSTANCE_STRIDE = FLOATS_PER_EDGE_INSTANCE * FLOAT32_BYTES;
 const START_POS_OFFSET = 0;
 const END_POS_OFFSET = 3 * FLOAT32_BYTES;
@@ -654,7 +653,7 @@ export class PyramidLayer implements RenderLayer {
     let lineOffset = 0;
 
     for (const edgeIndex of this.extendedEdgeIndexList) {
-      const [beforeHalf, afterHalf] = this.computeExtendedLineHalves(edgeIndex);
+      const [beforeHalf, afterHalf] = this.computeEdgeHalves(edgeIndex);
       lineData.set(beforeHalf, lineOffset);
       lineOffset += FLOATS_PER_EDGE_INSTANCE;
       lineData.set(afterHalf, lineOffset);
@@ -677,10 +676,7 @@ export class PyramidLayer implements RenderLayer {
 
     for (let index = 0; index < this.userSegmentCount; index++) {
       const segment = scene.userSegments[index];
-      const extendedLine = this.computeExtendedLineFromPositions(
-        segment.startPosition,
-        segment.endPosition
-      );
+      const extendedLine = this.computeFullExtendedLine(segment.startPosition, segment.endPosition);
       instanceData.set(extendedLine, index * FLOATS_PER_EDGE_INSTANCE);
       highlightFlags[index] = 0;
     }
@@ -917,89 +913,24 @@ export class PyramidLayer implements RenderLayer {
     this.device.queue.writeBuffer(this.userSegmentHighlightBuffer, 0, flags);
   }
 
-  /**
-   * Computes two line halves for an extended edge that don't overlap the segment.
-   * Returns [beforeHalf, afterHalf]:
-   *   beforeHalf: far-start → positionA (extension before the segment)
-   *   afterHalf:  positionB → far-end   (extension after the segment)
-   */
-  private computeExtendedLineHalves(edgeIndex: number): [Float32Array, Float32Array] {
+  private computeEdgeHalves(edgeIndex: number): [Float32Array, Float32Array] {
     const [vertexIndexA, vertexIndexB] = this.topology.edges[edgeIndex];
-    const positionA = this.topology.vertices[vertexIndexA];
-    const positionB = this.topology.vertices[vertexIndexB];
-
-    const directionX = positionB[0] - positionA[0];
-    const directionY = positionB[1] - positionA[1];
-    const directionZ = positionB[2] - positionA[2];
-    const segmentLength = Math.sqrt(
-      directionX * directionX + directionY * directionY + directionZ * directionZ
+    const [farStart, endpointA, endpointB, farEnd] = extendLineHalves(
+      this.topology.vertices[vertexIndexA],
+      this.topology.vertices[vertexIndexB]
     );
-
-    if (segmentLength === 0) {
-      const point = new Float32Array([...positionA, ...positionA]);
-      return [point, new Float32Array(point)];
-    }
-
-    const normalizedX = directionX / segmentLength;
-    const normalizedY = directionY / segmentLength;
-    const normalizedZ = directionZ / segmentLength;
-
-    const beforeHalf = new Float32Array([
-      positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
-      positionA[1] - normalizedY * LINE_EXTENSION_LENGTH,
-      positionA[2] - normalizedZ * LINE_EXTENSION_LENGTH,
-      positionA[0],
-      positionA[1],
-      positionA[2],
-    ]);
-
-    const afterHalf = new Float32Array([
-      positionB[0],
-      positionB[1],
-      positionB[2],
-      positionB[0] + normalizedX * LINE_EXTENSION_LENGTH,
-      positionB[1] + normalizedY * LINE_EXTENSION_LENGTH,
-      positionB[2] + normalizedZ * LINE_EXTENSION_LENGTH,
-    ]);
-
-    return [beforeHalf, afterHalf];
+    return [
+      new Float32Array([...farStart, ...endpointA]),
+      new Float32Array([...endpointB, ...farEnd]),
+    ];
   }
 
-  private computeExtendedLineFromPositions(
+  private computeFullExtendedLine(
     positionA: readonly [number, number, number],
     positionB: readonly [number, number, number]
   ): Float32Array {
-    const directionX = positionB[0] - positionA[0];
-    const directionY = positionB[1] - positionA[1];
-    const directionZ = positionB[2] - positionA[2];
-    const segmentLength = Math.sqrt(
-      directionX * directionX + directionY * directionY + directionZ * directionZ
-    );
-
-    // Guard against degenerate zero-length segments to prevent NaN propagation
-    if (segmentLength === 0) {
-      return new Float32Array([
-        positionA[0],
-        positionA[1],
-        positionA[2],
-        positionB[0],
-        positionB[1],
-        positionB[2],
-      ]);
-    }
-
-    const normalizedX = directionX / segmentLength;
-    const normalizedY = directionY / segmentLength;
-    const normalizedZ = directionZ / segmentLength;
-
-    return new Float32Array([
-      positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
-      positionA[1] - normalizedY * LINE_EXTENSION_LENGTH,
-      positionA[2] - normalizedZ * LINE_EXTENSION_LENGTH,
-      positionB[0] + normalizedX * LINE_EXTENSION_LENGTH,
-      positionB[1] + normalizedY * LINE_EXTENSION_LENGTH,
-      positionB[2] + normalizedZ * LINE_EXTENSION_LENGTH,
-    ]);
+    const [farStart, farEnd] = extendLine(positionA, positionB);
+    return new Float32Array([...farStart, ...farEnd]);
   }
 
   private createAndWriteBuffer(data: Float32Array, usage: GPUFlagsConstant): GPUBuffer {
