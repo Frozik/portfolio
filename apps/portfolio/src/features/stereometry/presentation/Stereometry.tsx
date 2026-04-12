@@ -150,7 +150,7 @@ const HelpPopover = memo(() => {
               <strong className="text-neutral-100">Scroll / Pinch</strong> — zoom in and out
             </li>
             <li>
-              <strong className="text-neutral-100">Click edge</strong> — select an edge
+              <strong className="text-neutral-100">Click edge/line</strong> — select it
             </li>
             <li>
               <strong className="text-neutral-100">Double-click edge</strong> — extend edge into an
@@ -159,6 +159,10 @@ const HelpPopover = memo(() => {
             <li>
               <strong className="text-neutral-100">Drag vertex → vertex</strong> — draw a
               construction line between two points
+            </li>
+            <li>
+              <strong className="text-neutral-100">Select edge/line + tap vertex</strong> — draw a
+              parallel line through that vertex
             </li>
           </ul>
           <p className="mt-3 text-xs text-neutral-500">

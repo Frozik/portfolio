@@ -12,6 +12,7 @@ export interface DragToConnectCallbacks {
   ) => readonly [number, number, number] | undefined;
   readonly onDragStart: () => void;
   readonly onDragUpdate: (preview: DragPreviewState | undefined) => void;
+  readonly onVertexTap: (position: readonly [number, number, number]) => void;
   readonly onDragComplete: (
     startPosition: readonly [number, number, number],
     endPosition: readonly [number, number, number]
@@ -98,6 +99,8 @@ export function createDragToConnectController(
 
     if (snapPosition !== undefined && !isSamePosition(snapPosition, startPosition)) {
       callbacks.onDragComplete(startPosition, snapPosition);
+    } else {
+      callbacks.onVertexTap(startPosition);
     }
 
     isDragging = false;
