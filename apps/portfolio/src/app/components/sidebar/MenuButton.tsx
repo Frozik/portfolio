@@ -1,5 +1,6 @@
 import { Menu } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { cn } from '../../../shared/lib/cn';
 import { FloatingButton, FloatingButtonGroup } from '../../../shared/ui';
 import { useRootStore } from '../../stores';
 import { ICON_SIZE } from './constants';
@@ -17,7 +18,7 @@ export const MenuButton = observer(
     if (menuActions.length === 0) {
       return (
         <FloatingButton
-          className={styles.sidebarMenuOpener}
+          className={cn(styles.sidebarMenuOpener, 'animate-attention-glow rounded-full')}
           icon={<Menu size={ICON_SIZE} />}
           type="primary"
           onClick={onOpen}
@@ -27,7 +28,7 @@ export const MenuButton = observer(
 
     return (
       <FloatingButtonGroup
-        className={styles.sidebarMenuOpener}
+        className={cn(styles.sidebarMenuOpener, 'animate-attention-glow rounded-full')}
         icon={<Menu size={ICON_SIZE} />}
         trigger="hover"
         type="primary"
