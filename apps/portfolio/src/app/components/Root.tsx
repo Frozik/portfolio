@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useMatches } from 'react-router-dom';
 
 import styles from './Root.module.scss';
-import { SidebarNavigation } from './SidebarNavigation';
+import { SidebarNavigation } from './sidebar/SidebarNavigation';
 
 const APP_TITLE = 'Portfolio';
 
