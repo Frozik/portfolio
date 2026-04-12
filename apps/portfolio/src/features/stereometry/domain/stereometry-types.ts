@@ -1,6 +1,8 @@
 export type SelectionState =
   | { readonly type: 'none' }
-  | { readonly type: 'edge'; readonly edgeIndex: number };
+  | { readonly type: 'edge'; readonly edgeIndex: number }
+  | { readonly type: 'line'; readonly edgeIndex: number }
+  | { readonly type: 'userSegment'; readonly userSegmentIndex: number };
 
 /**
  * Static definition of a puzzle — input data for a level.

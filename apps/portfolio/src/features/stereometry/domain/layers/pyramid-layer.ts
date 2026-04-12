@@ -149,6 +149,7 @@ export class PyramidLayer implements RenderLayer {
   private extendedLineCount = 0;
   private extendedEdgeIndexList: number[] = [];
   private selectedEdgeIndex: number | null = null;
+  private selectedUserSegmentIndex: number | null = null;
   private userSegmentCount = 0;
   private topologyVertexCount = 0;
   private allVertexPositions: readonly (readonly [number, number, number])[] = [];
@@ -527,6 +528,7 @@ export class PyramidLayer implements RenderLayer {
     const highlightFlags = new Uint32Array(this.edgeCount);
 
     this.selectedEdgeIndex = null;
+    this.selectedUserSegmentIndex = null;
 
     switch (selection.type) {
       case 'none': {
@@ -537,12 +539,23 @@ export class PyramidLayer implements RenderLayer {
         highlightFlags[selection.edgeIndex] = 1;
         break;
       }
+      case 'line': {
+        this.selectedEdgeIndex = selection.edgeIndex;
+        // Also highlight the topology edge that this line extends
+        highlightFlags[selection.edgeIndex] = 1;
+        break;
+      }
+      case 'userSegment': {
+        this.selectedUserSegmentIndex = selection.userSegmentIndex;
+        break;
+      }
       default:
         assertNever(selection);
     }
 
     this.device.queue.writeBuffer(this.highlightFlagBuffer, 0, highlightFlags);
     this.updateLineHighlights();
+    this.updateUserSegmentHighlights();
   }
 
   /**
@@ -889,6 +902,19 @@ export class PyramidLayer implements RenderLayer {
     }
 
     this.device.queue.writeBuffer(this.lineHighlightBuffer, 0, flags);
+  }
+
+  private updateUserSegmentHighlights(): void {
+    if (this.userSegmentCount === 0) {
+      return;
+    }
+
+    const flags = new Uint32Array(this.userSegmentCount);
+    for (let index = 0; index < this.userSegmentCount; index++) {
+      flags[index] = index === this.selectedUserSegmentIndex ? 1 : 0;
+    }
+
+    this.device.queue.writeBuffer(this.userSegmentHighlightBuffer, 0, flags);
   }
 
   /**

@@ -37,6 +37,8 @@ export function runStereometry(canvas: HTMLCanvasElement): {
     const canvasHeight = canvas.clientHeight;
     const devicePixelRatio = Math.max(1, window.devicePixelRatio);
 
+    const extendedEdgeIndices = sceneState.lines.map(line => line.edgeIndex);
+
     return hitTest(
       screenX,
       screenY,
@@ -44,7 +46,9 @@ export function runStereometry(canvas: HTMLCanvasElement): {
       canvasHeight,
       devicePixelRatio,
       pyramidLayerRef.getLastMvpMatrix(),
-      topology
+      topology,
+      extendedEdgeIndices,
+      sceneState.userSegments
     );
   }
 
