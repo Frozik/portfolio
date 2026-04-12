@@ -1,8 +1,6 @@
 export type SelectionState =
   | { readonly type: 'none' }
-  | { readonly type: 'edge'; readonly edgeIndex: number }
-  | { readonly type: 'vertex'; readonly vertexIndex: number }
-  | { readonly type: 'intersection'; readonly intersectionIndex: number };
+  | { readonly type: 'edge'; readonly edgeIndex: number };
 
 /**
  * Static definition of a puzzle — input data for a level.
@@ -52,10 +50,16 @@ export interface IntersectionEntity {
   readonly sourceEdgeB: number;
 }
 
+export interface UserSegmentEntity {
+  readonly startPosition: readonly [number, number, number];
+  readonly endPosition: readonly [number, number, number];
+}
+
 export interface SceneState {
   readonly vertices: readonly VertexEntity[];
   readonly segments: readonly SegmentEntity[];
   readonly lines: readonly LineEntity[];
+  readonly userSegments: readonly UserSegmentEntity[];
   readonly intersections: readonly IntersectionEntity[];
 }
 

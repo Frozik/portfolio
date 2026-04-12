@@ -18,6 +18,7 @@ struct EdgeInstance {
 struct VertexOutput {
     @builtin(position) clipPosition: vec4<f32>,
     @location(0) @interpolate(flat) isHighlighted: u32,
+    @location(1) lineDistance: f32,
 };
 
 const EDGE_COLOR: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
@@ -31,6 +32,10 @@ const NEAR_CLIP_W: f32 = 0.01;
 @id(1) override highlightedLineWidth: f32 = 5.0;
 /** Pipeline-overridable: brightness multiplier (1.0 for visible, reduced for hidden) */
 @id(2) override edgeBrightness: f32 = 1.0;
+/** Pipeline-overridable: dash length in screen pixels (0 = solid line) */
+@id(3) override dashLength: f32 = 0.0;
+/** Pipeline-overridable: gap length in screen pixels (0 = solid line) */
+@id(4) override gapLength: f32 = 0.0;
 
 /**
  * Clamps a clip-space point to the near plane by interpolating towards
@@ -107,6 +112,9 @@ fn vs(
     let offsetPixels = perp * side * currentLineWidth * 0.5;
     let offsetNdc = offsetPixels / halfViewport;
 
+    // Compute screen-space distance along the line for dash pattern
+    let distance = select(0.0, screenLen, isEnd);
+
     var result: VertexOutput;
     result.clipPosition = vec4<f32>(
         clipPos.xy + offsetNdc * clipPos.w,
@@ -114,11 +122,21 @@ fn vs(
         clipPos.w
     );
     result.isHighlighted = edge.highlighted;
+    result.lineDistance = distance;
     return result;
 }
 
 @fragment
 fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
+    // Dash pattern: discard fragments in gap portions
+    let patternLength = dashLength + gapLength;
+    if (patternLength > 0.0) {
+        let posInPattern = input.lineDistance % patternLength;
+        if (posInPattern >= dashLength) {
+            discard;
+        }
+    }
+
     let baseColor = select(EDGE_COLOR, uniforms.highlightColor, input.isHighlighted != 0u);
     return vec4<f32>(baseColor * edgeBrightness, 1.0);
 }

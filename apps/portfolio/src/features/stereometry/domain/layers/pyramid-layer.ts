@@ -1,6 +1,7 @@
 import type { FrameState, GpuContext, MsaaTextureManager, RenderLayer } from '@frozik/utils';
+import { assertNever } from '@frozik/utils';
 import { isNil } from 'lodash-es';
-import { mat4 } from 'wgpu-matrix';
+import { mat4, vec4 } from 'wgpu-matrix';
 
 import depthFacesShaderSource from '../shaders/depth-faces.wgsl?raw';
 import edgeShaderSource from '../shaders/pyramid.wgsl?raw';
@@ -8,7 +9,10 @@ import vertexMarkerShaderSource from '../shaders/vertex-marker.wgsl?raw';
 import type { OrbitalCameraController } from '../stereometry-camera-controller';
 import {
   BACKGROUND_COLOR,
+  DRAG_PREVIEW_COLOR,
   EDGE_BRIGHTNESS_OVERRIDE_ID,
+  EDGE_DASH_LENGTH_OVERRIDE_ID,
+  EDGE_GAP_LENGTH_OVERRIDE_ID,
   EDGE_HIGHLIGHT_WIDTH_OVERRIDE_ID,
   EDGE_NORMAL_WIDTH_OVERRIDE_ID,
   EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
@@ -18,8 +22,10 @@ import {
   FACE_POSITION_FLOATS,
   FAR_PLANE,
   HIDDEN_BRIGHTNESS,
+  HIDDEN_DASH_LENGTH_PIXELS,
   HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
   HIDDEN_EXTENDED_LINE_WIDTH_PIXELS,
+  HIDDEN_GAP_LENGTH_PIXELS,
   HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
   HIDDEN_SEGMENT_WIDTH_PIXELS,
   HIGHLIGHT_COLOR,
@@ -35,6 +41,7 @@ import {
   VERTEX_MARKER_SMALL_SIZE_PIXELS,
   VERTICES_PER_LINE_QUAD,
 } from '../stereometry-constants';
+import type { DragPreviewState } from '../stereometry-drag-connector';
 import { createWireframeFromTopology } from '../stereometry-geometry';
 import type { FigureTopology, SceneState, SelectionState } from '../stereometry-types';
 
@@ -52,6 +59,9 @@ const END_POS_OFFSET = 3 * FLOAT32_BYTES;
 
 /** Highlight flag buffer: one u32 per edge instance */
 const HIGHLIGHT_FLAG_STRIDE = UINT32_BYTES;
+
+/** Each extended edge is split into 2 line instances (before-segment and after-segment halves) */
+const HALVES_PER_EXTENDED_EDGE = 2;
 
 /** Vertex marker instance slot 0: position vec3 = 3 floats */
 const MARKER_INSTANCE_FLOATS = 3;
@@ -85,8 +95,8 @@ const VERTEX_MARKER_SIZE_BYTE_OFFSET = 92;
 /** Number of vertices for a single marker quad (2 triangles) */
 const VERTICES_PER_MARKER_QUAD = 6;
 
-/** Number of marker instances when a vertex is selected */
-const SINGLE_MARKER_INSTANCE = 1;
+/** Homogeneous w-component for position vectors */
+const HOMOGENEOUS_W = 1.0;
 
 /**
  * Renders a pentagonal pyramid wireframe with hidden-edge dimming
@@ -110,32 +120,43 @@ export class PyramidLayer implements RenderLayer {
   private hiddenLinePipeline!: GPURenderPipeline;
   private selectionMarkerPipeline!: GPURenderPipeline;
   private persistentMarkerPipeline!: GPURenderPipeline;
+  private previewEdgePipeline!: GPURenderPipeline;
 
   private bindGroup!: GPUBindGroup;
+  private previewBindGroup!: GPUBindGroup;
   private uniformBuffer!: GPUBuffer;
+  private previewUniformBuffer!: GPUBuffer;
   private edgeInstanceBuffer!: GPUBuffer;
   private faceVertexBuffer!: GPUBuffer;
   private highlightFlagBuffer!: GPUBuffer;
-  private vertexMarkerBuffer!: GPUBuffer;
   private lineInstanceBuffer!: GPUBuffer;
   private lineHighlightBuffer!: GPUBuffer;
-  private intersectionMarkerBuffer!: GPUBuffer;
   private topologyVertexMarkerBuffer!: GPUBuffer;
   private topologyVertexBrightnessBuffer!: GPUBuffer;
-  private intersectionBrightnessBuffer!: GPUBuffer;
-  private selectionBrightnessBuffer!: GPUBuffer;
+  private userSegmentInstanceBuffer!: GPUBuffer;
+  private userSegmentHighlightBuffer!: GPUBuffer;
+  private previewLineBuffer!: GPUBuffer;
+  private previewLineHighlightBuffer!: GPUBuffer;
+  private previewStartMarkerBuffer!: GPUBuffer;
+  private previewStartBrightnessBuffer!: GPUBuffer;
+  private previewSnapMarkerBuffer!: GPUBuffer;
+  private previewSnapBrightnessBuffer!: GPUBuffer;
   private edgeCount = 0;
   private faceVertexCount = 0;
   private depthTexture: GPUTexture | null = null;
 
   private lastMvpMatrix = new Float32Array(16);
-  private hasVertexMarker = false;
   private extendedLineCount = 0;
   private extendedEdgeIndexList: number[] = [];
   private selectedEdgeIndex: number | null = null;
-  private intersectionMarkerCount = 0;
+  private userSegmentCount = 0;
   private topologyVertexCount = 0;
-  private intersectionPositions: readonly (readonly [number, number, number])[] = [];
+  private allVertexPositions: readonly (readonly [number, number, number])[] = [];
+  private hasDragPreview = false;
+  private hasSnapTarget = false;
+  private lastCanvasWidth = 0;
+  private lastCanvasHeight = 0;
+  private lastDevicePixelRatio = 1;
 
   constructor(
     private readonly camera: OrbitalCameraController,
@@ -165,53 +186,73 @@ export class PyramidLayer implements RenderLayer {
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
-    this.vertexMarkerBuffer = this.device.createBuffer({
-      size: MARKER_INSTANCE_STRIDE,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
+    // Each extended edge is split into 2 halves (before + after the segment)
     this.lineInstanceBuffer = this.device.createBuffer({
-      size: this.edgeCount * INSTANCE_STRIDE,
+      size: this.edgeCount * HALVES_PER_EXTENDED_EDGE * INSTANCE_STRIDE,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     // Max intersections: C(10,2) = 45
     const maxIntersections = (this.edgeCount * (this.edgeCount - 1)) / 2;
-    this.intersectionMarkerBuffer = this.device.createBuffer({
-      size: Math.max(MARKER_INSTANCE_STRIDE, maxIntersections * MARKER_INSTANCE_STRIDE),
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
 
-    // Topology vertex markers (6 vertices of the pyramid)
+    // Vertex markers: topology vertices + potential intersection vertices
+    const maxVertexCount = this.topology.vertices.length + maxIntersections;
     this.topologyVertexMarkerBuffer = this.device.createBuffer({
-      size: this.topology.vertices.length * MARKER_INSTANCE_STRIDE,
+      size: maxVertexCount * MARKER_INSTANCE_STRIDE,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     this.topologyVertexBrightnessBuffer = this.device.createBuffer({
-      size: this.topology.vertices.length * MARKER_BRIGHTNESS_STRIDE,
+      size: maxVertexCount * MARKER_BRIGHTNESS_STRIDE,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
-    this.intersectionBrightnessBuffer = this.device.createBuffer({
-      size: Math.max(MARKER_BRIGHTNESS_STRIDE, maxIntersections * MARKER_BRIGHTNESS_STRIDE),
+    // User-created segments (pre-allocate for reasonable count)
+    const maxUserSegments = maxIntersections;
+    this.userSegmentInstanceBuffer = this.device.createBuffer({
+      size: Math.max(INSTANCE_STRIDE, maxUserSegments * INSTANCE_STRIDE),
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-
-    // Selection marker always full brightness
-    this.selectionBrightnessBuffer = this.device.createBuffer({
-      size: MARKER_BRIGHTNESS_STRIDE,
+    this.userSegmentHighlightBuffer = this.device.createBuffer({
+      size: Math.max(UINT32_BYTES, maxUserSegments * UINT32_BYTES),
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    this.device.queue.writeBuffer(this.selectionBrightnessBuffer, 0, new Float32Array([1.0]));
 
     // All extended lines are always highlighted
     this.lineHighlightBuffer = this.device.createBuffer({
-      size: this.edgeCount * UINT32_BYTES,
+      size: this.edgeCount * HALVES_PER_EXTENDED_EDGE * UINT32_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    const allHighlighted = new Uint32Array(this.edgeCount).fill(1);
-    this.device.queue.writeBuffer(this.lineHighlightBuffer, 0, allHighlighted);
+
+    // Drag-to-connect preview buffers
+    this.previewLineBuffer = this.device.createBuffer({
+      size: INSTANCE_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.previewLineHighlightBuffer = this.device.createBuffer({
+      size: UINT32_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    // Preview line is always highlighted (uses highlight color from uniform)
+    this.device.queue.writeBuffer(this.previewLineHighlightBuffer, 0, new Uint32Array([1]));
+    this.previewStartMarkerBuffer = this.device.createBuffer({
+      size: MARKER_INSTANCE_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.previewStartBrightnessBuffer = this.device.createBuffer({
+      size: MARKER_BRIGHTNESS_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.previewStartBrightnessBuffer, 0, new Float32Array([1.0]));
+    this.previewSnapMarkerBuffer = this.device.createBuffer({
+      size: MARKER_INSTANCE_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.previewSnapBrightnessBuffer = this.device.createBuffer({
+      size: MARKER_BRIGHTNESS_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.previewSnapBrightnessBuffer, 0, new Float32Array([1.0]));
 
     this.uniformBuffer = this.device.createBuffer({
       size: UNIFORM_BUFFER_SIZE,
@@ -229,6 +270,22 @@ export class PyramidLayer implements RenderLayer {
       new Float32Array([VERTEX_MARKER_SIZE_PIXELS])
     );
 
+    // Preview uniform buffer with orange highlight color
+    this.previewUniformBuffer = this.device.createBuffer({
+      size: UNIFORM_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(
+      this.previewUniformBuffer,
+      HIGHLIGHT_COLOR_BYTE_OFFSET,
+      new Float32Array(DRAG_PREVIEW_COLOR)
+    );
+    this.device.queue.writeBuffer(
+      this.previewUniformBuffer,
+      VERTEX_MARKER_SIZE_BYTE_OFFSET,
+      new Float32Array([VERTEX_MARKER_SIZE_PIXELS])
+    );
+
     const bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
         {
@@ -242,6 +299,11 @@ export class PyramidLayer implements RenderLayer {
     this.bindGroup = this.device.createBindGroup({
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+    });
+
+    this.previewBindGroup = this.device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: this.previewUniformBuffer } }],
     });
 
     const pipelineLayout = this.device.createPipelineLayout({
@@ -263,6 +325,8 @@ export class PyramidLayer implements RenderLayer {
       normalWidth: HIDDEN_SEGMENT_WIDTH_PIXELS,
       highlightWidth: HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
       brightness: HIDDEN_BRIGHTNESS,
+      dashLength: HIDDEN_DASH_LENGTH_PIXELS,
+      gapLength: HIDDEN_GAP_LENGTH_PIXELS,
     });
 
     this.visibleLinePipeline = this.createEdgePipeline(pipelineLayout, {
@@ -278,6 +342,8 @@ export class PyramidLayer implements RenderLayer {
       normalWidth: HIDDEN_EXTENDED_LINE_WIDTH_PIXELS,
       highlightWidth: HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
       brightness: HIDDEN_BRIGHTNESS,
+      dashLength: HIDDEN_DASH_LENGTH_PIXELS,
+      gapLength: HIDDEN_GAP_LENGTH_PIXELS,
     });
 
     this.selectionMarkerPipeline = this.createVertexMarkerPipeline(pipelineLayout, {
@@ -288,6 +354,14 @@ export class PyramidLayer implements RenderLayer {
       depthCompare: 'always',
       highlighted: false,
       markerSize: VERTEX_MARKER_SMALL_SIZE_PIXELS,
+    });
+
+    // Preview edge pipeline: always visible, 3px width, uses preview bind group (orange)
+    this.previewEdgePipeline = this.createEdgePipeline(pipelineLayout, {
+      depthCompare: 'always',
+      depthWriteEnabled: false,
+      normalWidth: SEGMENT_WIDTH_PIXELS,
+      highlightWidth: SEGMENT_WIDTH_PIXELS,
     });
   }
 
@@ -310,13 +384,17 @@ export class PyramidLayer implements RenderLayer {
     const mvpMatrix = mat4.multiply(projectionMatrix, viewMatrix) as Float32Array;
 
     this.lastMvpMatrix.set(mvpMatrix);
+    this.lastCanvasWidth = state.canvasWidth;
+    this.lastCanvasHeight = state.canvasHeight;
+    this.lastDevicePixelRatio = state.devicePixelRatio;
 
     this.device.queue.writeBuffer(this.uniformBuffer, MVP_BYTE_OFFSET, mvpMatrix);
-    this.device.queue.writeBuffer(
-      this.uniformBuffer,
-      VIEWPORT_BYTE_OFFSET,
-      new Float32Array([state.canvasWidth, state.canvasHeight])
-    );
+    const viewportData = new Float32Array([state.canvasWidth, state.canvasHeight]);
+    this.device.queue.writeBuffer(this.uniformBuffer, VIEWPORT_BYTE_OFFSET, viewportData);
+
+    // Keep preview uniform buffer in sync with MVP and viewport
+    this.device.queue.writeBuffer(this.previewUniformBuffer, MVP_BYTE_OFFSET, mvpMatrix);
+    this.device.queue.writeBuffer(this.previewUniformBuffer, VIEWPORT_BYTE_OFFSET, viewportData);
 
     this.updateMarkerBrightness();
   }
@@ -365,6 +443,14 @@ export class PyramidLayer implements RenderLayer {
     pass.setVertexBuffer(1, this.highlightFlagBuffer);
     pass.draw(VERTICES_PER_LINE_QUAD, this.edgeCount);
 
+    // Pass 2a: Hidden user lines (same thin style as extended lines)
+    if (this.userSegmentCount > 0) {
+      pass.setPipeline(this.hiddenLinePipeline);
+      pass.setVertexBuffer(0, this.userSegmentInstanceBuffer);
+      pass.setVertexBuffer(1, this.userSegmentHighlightBuffer);
+      pass.draw(VERTICES_PER_LINE_QUAD, this.userSegmentCount);
+    }
+
     // Pass 2b: Hidden extended lines (thinner, persistent)
     if (this.extendedLineCount > 0) {
       pass.setPipeline(this.hiddenLinePipeline);
@@ -378,6 +464,14 @@ export class PyramidLayer implements RenderLayer {
     pass.setVertexBuffer(0, this.edgeInstanceBuffer);
     pass.setVertexBuffer(1, this.highlightFlagBuffer);
     pass.draw(VERTICES_PER_LINE_QUAD, this.edgeCount);
+
+    // Pass 3a: Visible user lines (same thin style as extended lines)
+    if (this.userSegmentCount > 0) {
+      pass.setPipeline(this.visibleLinePipeline);
+      pass.setVertexBuffer(0, this.userSegmentInstanceBuffer);
+      pass.setVertexBuffer(1, this.userSegmentHighlightBuffer);
+      pass.draw(VERTICES_PER_LINE_QUAD, this.userSegmentCount);
+    }
 
     // Pass 3b: Visible extended lines (thinner, persistent)
     if (this.extendedLineCount > 0) {
@@ -395,20 +489,31 @@ export class PyramidLayer implements RenderLayer {
       pass.draw(VERTICES_PER_MARKER_QUAD, this.topologyVertexCount);
     }
 
-    // Pass 5: Intersection markers (white, per-instance brightness)
-    if (this.intersectionMarkerCount > 0) {
-      pass.setPipeline(this.persistentMarkerPipeline);
-      pass.setVertexBuffer(0, this.intersectionMarkerBuffer);
-      pass.setVertexBuffer(1, this.intersectionBrightnessBuffer);
-      pass.draw(VERTICES_PER_MARKER_QUAD, this.intersectionMarkerCount);
+    // Pass 5: Drag-to-connect preview line (orange, always visible)
+    if (this.hasDragPreview) {
+      pass.setPipeline(this.previewEdgePipeline);
+      pass.setBindGroup(0, this.previewBindGroup);
+      pass.setVertexBuffer(0, this.previewLineBuffer);
+      pass.setVertexBuffer(1, this.previewLineHighlightBuffer);
+      pass.draw(VERTICES_PER_LINE_QUAD, 1);
+
+      // Pass 7: Start vertex marker (orange, always visible)
+      pass.setPipeline(this.selectionMarkerPipeline);
+      pass.setVertexBuffer(0, this.previewStartMarkerBuffer);
+      pass.setVertexBuffer(1, this.previewStartBrightnessBuffer);
+      pass.draw(VERTICES_PER_MARKER_QUAD, 1);
+
+      pass.setBindGroup(0, this.bindGroup);
     }
 
-    // Pass 6: Selection vertex marker (highlight color, always full brightness)
-    if (this.hasVertexMarker) {
+    // Pass 8: Snap target marker (orange, always visible)
+    if (this.hasSnapTarget) {
       pass.setPipeline(this.selectionMarkerPipeline);
-      pass.setVertexBuffer(0, this.vertexMarkerBuffer);
-      pass.setVertexBuffer(1, this.selectionBrightnessBuffer);
-      pass.draw(VERTICES_PER_MARKER_QUAD, SINGLE_MARKER_INSTANCE);
+      pass.setBindGroup(0, this.previewBindGroup);
+      pass.setVertexBuffer(0, this.previewSnapMarkerBuffer);
+      pass.setVertexBuffer(1, this.previewSnapBrightnessBuffer);
+      pass.draw(VERTICES_PER_MARKER_QUAD, 1);
+      pass.setBindGroup(0, this.bindGroup);
     }
 
     pass.end();
@@ -421,7 +526,6 @@ export class PyramidLayer implements RenderLayer {
   setSelection(selection: SelectionState): void {
     const highlightFlags = new Uint32Array(this.edgeCount);
 
-    this.hasVertexMarker = false;
     this.selectedEdgeIndex = null;
 
     switch (selection.type) {
@@ -433,25 +537,65 @@ export class PyramidLayer implements RenderLayer {
         highlightFlags[selection.edgeIndex] = 1;
         break;
       }
-      case 'vertex': {
-        this.hasVertexMarker = true;
-        const vertex = this.topology.vertices[selection.vertexIndex];
-        this.device.queue.writeBuffer(this.vertexMarkerBuffer, 0, new Float32Array(vertex));
-        break;
-      }
-      case 'intersection': {
-        this.hasVertexMarker = true;
-        this.device.queue.writeBuffer(
-          this.vertexMarkerBuffer,
-          0,
-          new Float32Array(this.intersectionPositions[selection.intersectionIndex])
-        );
-        break;
-      }
+      default:
+        assertNever(selection);
     }
 
     this.device.queue.writeBuffer(this.highlightFlagBuffer, 0, highlightFlags);
     this.updateLineHighlights();
+  }
+
+  /**
+   * Updates the drag-to-connect preview state.
+   * When preview is defined, computes the end 3D position and writes preview buffers.
+   * When undefined, clears the preview.
+   */
+  setDragPreview(preview: DragPreviewState | undefined): void {
+    if (isNil(preview)) {
+      this.hasDragPreview = false;
+      this.hasSnapTarget = false;
+      return;
+    }
+
+    const endPosition = !isNil(preview.snapTargetPosition)
+      ? preview.snapTargetPosition
+      : this.unprojectToVertexPlane(
+          preview.cursorScreenX,
+          preview.cursorScreenY,
+          preview.startPosition
+        );
+
+    this.device.queue.writeBuffer(
+      this.previewLineBuffer,
+      0,
+      new Float32Array([
+        preview.startPosition[0],
+        preview.startPosition[1],
+        preview.startPosition[2],
+        endPosition[0],
+        endPosition[1],
+        endPosition[2],
+      ])
+    );
+
+    this.hasDragPreview = true;
+
+    this.device.queue.writeBuffer(
+      this.previewStartMarkerBuffer,
+      0,
+      new Float32Array(preview.startPosition)
+    );
+
+    if (!isNil(preview.snapTargetPosition)) {
+      this.device.queue.writeBuffer(
+        this.previewSnapMarkerBuffer,
+        0,
+        new Float32Array(preview.snapTargetPosition)
+      );
+      this.hasSnapTarget = true;
+    } else {
+      this.hasSnapTarget = false;
+    }
   }
 
   /**
@@ -461,11 +605,12 @@ export class PyramidLayer implements RenderLayer {
   applySceneState(scene: SceneState): void {
     this.applyTopologyVertices(scene);
     this.applyExtendedSegments(scene);
-    this.applyIntersectionMarkers(scene);
+    this.applyUserSegments(scene);
   }
 
   private applyTopologyVertices(scene: SceneState): void {
     this.topologyVertexCount = scene.vertices.length;
+    this.allVertexPositions = scene.vertices.map(vertex => vertex.position);
 
     if (this.topologyVertexCount === 0) {
       return;
@@ -485,7 +630,8 @@ export class PyramidLayer implements RenderLayer {
 
   private applyExtendedSegments(scene: SceneState): void {
     this.extendedEdgeIndexList = scene.lines.map(line => line.edgeIndex);
-    this.extendedLineCount = this.extendedEdgeIndexList.length;
+    // Each extended edge produces 2 line instances (halves that don't overlap the segment)
+    this.extendedLineCount = this.extendedEdgeIndexList.length * HALVES_PER_EXTENDED_EDGE;
 
     if (this.extendedLineCount === 0) {
       return;
@@ -495,8 +641,10 @@ export class PyramidLayer implements RenderLayer {
     let lineOffset = 0;
 
     for (const edgeIndex of this.extendedEdgeIndexList) {
-      const extendedLine = this.computeExtendedLine(edgeIndex);
-      lineData.set(extendedLine, lineOffset);
+      const [beforeHalf, afterHalf] = this.computeExtendedLineHalves(edgeIndex);
+      lineData.set(beforeHalf, lineOffset);
+      lineOffset += FLOATS_PER_EDGE_INSTANCE;
+      lineData.set(afterHalf, lineOffset);
       lineOffset += FLOATS_PER_EDGE_INSTANCE;
     }
 
@@ -504,25 +652,28 @@ export class PyramidLayer implements RenderLayer {
     this.updateLineHighlights();
   }
 
-  private applyIntersectionMarkers(scene: SceneState): void {
-    const positions = scene.intersections.map(intersection => intersection.position);
-    this.intersectionPositions = positions;
-    this.intersectionMarkerCount = positions.length;
+  private applyUserSegments(scene: SceneState): void {
+    this.userSegmentCount = scene.userSegments.length;
 
-    if (positions.length === 0) {
+    if (this.userSegmentCount === 0) {
       return;
     }
 
-    const markerData = new Float32Array(positions.length * MARKER_INSTANCE_FLOATS);
-    for (let index = 0; index < positions.length; index++) {
-      const position = positions[index];
-      const offset = index * MARKER_INSTANCE_FLOATS;
-      markerData[offset] = position[0];
-      markerData[offset + 1] = position[1];
-      markerData[offset + 2] = position[2];
+    const instanceData = new Float32Array(this.userSegmentCount * FLOATS_PER_EDGE_INSTANCE);
+    const highlightFlags = new Uint32Array(this.userSegmentCount);
+
+    for (let index = 0; index < this.userSegmentCount; index++) {
+      const segment = scene.userSegments[index];
+      const extendedLine = this.computeExtendedLineFromPositions(
+        segment.startPosition,
+        segment.endPosition
+      );
+      instanceData.set(extendedLine, index * FLOATS_PER_EDGE_INSTANCE);
+      highlightFlags[index] = 0;
     }
 
-    this.device.queue.writeBuffer(this.intersectionMarkerBuffer, 0, markerData);
+    this.device.queue.writeBuffer(this.userSegmentInstanceBuffer, 0, instanceData);
+    this.device.queue.writeBuffer(this.userSegmentHighlightBuffer, 0, highlightFlags);
   }
 
   /**
@@ -531,29 +682,19 @@ export class PyramidLayer implements RenderLayer {
    * along the view direction to check if any face is in front of it.
    */
   private updateMarkerBrightness(): void {
+    if (this.topologyVertexCount === 0) {
+      return;
+    }
+
     const viewDirection = this.computeViewDirection();
+    const brightness = new Float32Array(this.topologyVertexCount);
 
-    if (this.topologyVertexCount > 0) {
-      const topologyBrightness = new Float32Array(this.topologyVertexCount);
-      for (let index = 0; index < this.topologyVertexCount; index++) {
-        const position = this.topology.vertices[index];
-        topologyBrightness[index] = this.isVertexOccluded(viewDirection, position)
-          ? HIDDEN_BRIGHTNESS
-          : 1.0;
-      }
-      this.device.queue.writeBuffer(this.topologyVertexBrightnessBuffer, 0, topologyBrightness);
+    for (let index = 0; index < this.topologyVertexCount; index++) {
+      const position = this.allVertexPositions[index];
+      brightness[index] = this.isVertexOccluded(viewDirection, position) ? HIDDEN_BRIGHTNESS : 1.0;
     }
 
-    if (this.intersectionMarkerCount > 0) {
-      const intersectionBrightness = new Float32Array(this.intersectionMarkerCount);
-      for (let index = 0; index < this.intersectionMarkerCount; index++) {
-        const position = this.intersectionPositions[index];
-        intersectionBrightness[index] = this.isVertexOccluded(viewDirection, position)
-          ? HIDDEN_BRIGHTNESS
-          : 1.0;
-      }
-      this.device.queue.writeBuffer(this.intersectionBrightnessBuffer, 0, intersectionBrightness);
-    }
+    this.device.queue.writeBuffer(this.topologyVertexBrightnessBuffer, 0, brightness);
   }
 
   /**
@@ -660,18 +801,69 @@ export class PyramidLayer implements RenderLayer {
 
   dispose(): void {
     this.uniformBuffer.destroy();
+    this.previewUniformBuffer.destroy();
     this.edgeInstanceBuffer.destroy();
     this.faceVertexBuffer.destroy();
     this.highlightFlagBuffer.destroy();
-    this.vertexMarkerBuffer.destroy();
     this.lineInstanceBuffer.destroy();
     this.lineHighlightBuffer.destroy();
-    this.intersectionMarkerBuffer.destroy();
     this.topologyVertexMarkerBuffer.destroy();
     this.topologyVertexBrightnessBuffer.destroy();
-    this.intersectionBrightnessBuffer.destroy();
-    this.selectionBrightnessBuffer.destroy();
+    this.userSegmentInstanceBuffer.destroy();
+    this.userSegmentHighlightBuffer.destroy();
+    this.previewLineBuffer.destroy();
+    this.previewLineHighlightBuffer.destroy();
+    this.previewStartMarkerBuffer.destroy();
+    this.previewStartBrightnessBuffer.destroy();
+    this.previewSnapMarkerBuffer.destroy();
+    this.previewSnapBrightnessBuffer.destroy();
     this.depthTexture?.destroy();
+  }
+
+  /**
+   * Unprojects a screen-space position to a 3D point on the plane through
+   * the reference position, perpendicular to the view direction.
+   * Uses the reference position's clip-space Z to determine the depth.
+   */
+  private unprojectToVertexPlane(
+    screenX: number,
+    screenY: number,
+    referencePosition: readonly [number, number, number]
+  ): readonly [number, number, number] {
+    const canvasWidth = this.lastCanvasWidth;
+    const canvasHeight = this.lastCanvasHeight;
+    const devicePixelRatio = this.lastDevicePixelRatio;
+
+    // Convert CSS screen coords to NDC
+    const pixelX = screenX * devicePixelRatio;
+    const pixelY = screenY * devicePixelRatio;
+    const ndcX = (pixelX / canvasWidth) * 2 - 1;
+    const ndcY = 1 - (pixelY / canvasHeight) * 2;
+
+    // Get reference position's clip-space Z for depth
+    const refClip = vec4.transformMat4(
+      vec4.fromValues(
+        referencePosition[0],
+        referencePosition[1],
+        referencePosition[2],
+        HOMOGENEOUS_W
+      ),
+      this.lastMvpMatrix
+    );
+    const refNdcZ = refClip[2] / refClip[3];
+
+    // Unproject using inverse MVP
+    const inverseMvp = mat4.inverse(this.lastMvpMatrix);
+    const worldPoint = vec4.transformMat4(
+      vec4.fromValues(ndcX, ndcY, refNdcZ, HOMOGENEOUS_W),
+      inverseMvp
+    );
+
+    return [
+      worldPoint[0] / worldPoint[3],
+      worldPoint[1] / worldPoint[3],
+      worldPoint[2] / worldPoint[3],
+    ];
   }
 
   /**
@@ -684,18 +876,28 @@ export class PyramidLayer implements RenderLayer {
     }
 
     const flags = new Uint32Array(this.extendedLineCount);
-    for (let index = 0; index < this.extendedLineCount; index++) {
-      flags[index] = this.extendedEdgeIndexList[index] === this.selectedEdgeIndex ? 1 : 0;
+    for (
+      let edgeListIndex = 0;
+      edgeListIndex < this.extendedEdgeIndexList.length;
+      edgeListIndex++
+    ) {
+      const highlighted =
+        this.extendedEdgeIndexList[edgeListIndex] === this.selectedEdgeIndex ? 1 : 0;
+      const instanceBase = edgeListIndex * HALVES_PER_EXTENDED_EDGE;
+      flags[instanceBase] = highlighted;
+      flags[instanceBase + 1] = highlighted;
     }
 
     this.device.queue.writeBuffer(this.lineHighlightBuffer, 0, flags);
   }
 
   /**
-   * Computes extended line endpoints through the given edge.
-   * The line extends LINE_EXTENSION_LENGTH in both directions.
+   * Computes two line halves for an extended edge that don't overlap the segment.
+   * Returns [beforeHalf, afterHalf]:
+   *   beforeHalf: far-start → positionA (extension before the segment)
+   *   afterHalf:  positionB → far-end   (extension after the segment)
    */
-  private computeExtendedLine(edgeIndex: number): Float32Array {
+  private computeExtendedLineHalves(edgeIndex: number): [Float32Array, Float32Array] {
     const [vertexIndexA, vertexIndexB] = this.topology.edges[edgeIndex];
     const positionA = this.topology.vertices[vertexIndexA];
     const positionB = this.topology.vertices[vertexIndexB];
@@ -703,13 +905,66 @@ export class PyramidLayer implements RenderLayer {
     const directionX = positionB[0] - positionA[0];
     const directionY = positionB[1] - positionA[1];
     const directionZ = positionB[2] - positionA[2];
-    const edgeLength = Math.sqrt(
+    const segmentLength = Math.sqrt(
       directionX * directionX + directionY * directionY + directionZ * directionZ
     );
 
-    const normalizedX = directionX / edgeLength;
-    const normalizedY = directionY / edgeLength;
-    const normalizedZ = directionZ / edgeLength;
+    if (segmentLength === 0) {
+      const point = new Float32Array([...positionA, ...positionA]);
+      return [point, new Float32Array(point)];
+    }
+
+    const normalizedX = directionX / segmentLength;
+    const normalizedY = directionY / segmentLength;
+    const normalizedZ = directionZ / segmentLength;
+
+    const beforeHalf = new Float32Array([
+      positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
+      positionA[1] - normalizedY * LINE_EXTENSION_LENGTH,
+      positionA[2] - normalizedZ * LINE_EXTENSION_LENGTH,
+      positionA[0],
+      positionA[1],
+      positionA[2],
+    ]);
+
+    const afterHalf = new Float32Array([
+      positionB[0],
+      positionB[1],
+      positionB[2],
+      positionB[0] + normalizedX * LINE_EXTENSION_LENGTH,
+      positionB[1] + normalizedY * LINE_EXTENSION_LENGTH,
+      positionB[2] + normalizedZ * LINE_EXTENSION_LENGTH,
+    ]);
+
+    return [beforeHalf, afterHalf];
+  }
+
+  private computeExtendedLineFromPositions(
+    positionA: readonly [number, number, number],
+    positionB: readonly [number, number, number]
+  ): Float32Array {
+    const directionX = positionB[0] - positionA[0];
+    const directionY = positionB[1] - positionA[1];
+    const directionZ = positionB[2] - positionA[2];
+    const segmentLength = Math.sqrt(
+      directionX * directionX + directionY * directionY + directionZ * directionZ
+    );
+
+    // Guard against degenerate zero-length segments to prevent NaN propagation
+    if (segmentLength === 0) {
+      return new Float32Array([
+        positionA[0],
+        positionA[1],
+        positionA[2],
+        positionB[0],
+        positionB[1],
+        positionB[2],
+      ]);
+    }
+
+    const normalizedX = directionX / segmentLength;
+    const normalizedY = directionY / segmentLength;
+    const normalizedZ = directionZ / segmentLength;
 
     return new Float32Array([
       positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
@@ -773,9 +1028,22 @@ export class PyramidLayer implements RenderLayer {
       normalWidth: number;
       highlightWidth: number;
       brightness?: number;
+      dashLength?: number;
+      gapLength?: number;
     }
   ): GPURenderPipeline {
     const shaderModule = this.device.createShaderModule({ code: edgeShaderSource });
+
+    const fragmentConstants: Record<number, number> = {
+      [EDGE_BRIGHTNESS_OVERRIDE_ID]: options.brightness ?? 1.0,
+    };
+
+    if (options.dashLength !== undefined) {
+      fragmentConstants[EDGE_DASH_LENGTH_OVERRIDE_ID] = options.dashLength;
+    }
+    if (options.gapLength !== undefined) {
+      fragmentConstants[EDGE_GAP_LENGTH_OVERRIDE_ID] = options.gapLength;
+    }
 
     return this.device.createRenderPipeline({
       layout,
@@ -806,9 +1074,7 @@ export class PyramidLayer implements RenderLayer {
         module: shaderModule,
         entryPoint: 'fs',
         targets: [{ format: this.format }],
-        constants: {
-          [EDGE_BRIGHTNESS_OVERRIDE_ID]: options.brightness ?? 1.0,
-        },
+        constants: fragmentConstants,
       },
       primitive: {
         topology: 'triangle-list',

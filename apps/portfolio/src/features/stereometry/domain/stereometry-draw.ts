@@ -7,9 +7,10 @@ import type { OrbitalCameraController } from './stereometry-camera-controller';
 import { createOrbitalCameraController } from './stereometry-camera-controller';
 import { createClickDetector } from './stereometry-click-detector';
 import { MSAA_SAMPLE_COUNT } from './stereometry-constants';
+import { createDragToConnectController } from './stereometry-drag-connector';
 import { createTopologyFromPuzzle } from './stereometry-geometry';
-import { hitTest } from './stereometry-hit-testing';
-import { createInitialScene, toggleLine } from './stereometry-scene';
+import { hitTest, hitTestVertex } from './stereometry-hit-testing';
+import { addUserSegment, createInitialScene, toggleLine } from './stereometry-scene';
 import type { SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
@@ -36,10 +37,6 @@ export function runStereometry(canvas: HTMLCanvasElement): {
     const canvasHeight = canvas.clientHeight;
     const devicePixelRatio = Math.max(1, window.devicePixelRatio);
 
-    const intersectionPositions = sceneState.intersections.map(
-      intersection => intersection.position
-    );
-
     return hitTest(
       screenX,
       screenY,
@@ -47,9 +44,39 @@ export function runStereometry(canvas: HTMLCanvasElement): {
       canvasHeight,
       devicePixelRatio,
       pyramidLayerRef.getLastMvpMatrix(),
-      topology,
-      intersectionPositions
+      topology
     );
+  }
+
+  function performPointHitTest(
+    screenX: number,
+    screenY: number
+  ): readonly [number, number, number] | undefined {
+    if (destroyed || !pyramidLayerRef) {
+      return undefined;
+    }
+
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+    const devicePixelRatio = Math.max(1, window.devicePixelRatio);
+
+    const allPositions = sceneState.vertices.map(vertex => vertex.position);
+
+    const vertexIndex = hitTestVertex(
+      screenX,
+      screenY,
+      canvasWidth,
+      canvasHeight,
+      devicePixelRatio,
+      pyramidLayerRef.getLastMvpMatrix(),
+      allPositions
+    );
+
+    if (vertexIndex !== undefined) {
+      return allPositions[vertexIndex];
+    }
+
+    return undefined;
   }
 
   function onCanvasClick(screenX: number, screenY: number): void {
@@ -68,6 +95,20 @@ export function runStereometry(canvas: HTMLCanvasElement): {
 
   const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, onCanvasDoubleClick);
 
+  const cleanupDragConnector = createDragToConnectController(canvas, {
+    performPointHitTest,
+    onDragStart: () => {
+      pyramidLayerRef?.setSelection(SELECTION_NONE);
+    },
+    onDragUpdate: preview => {
+      pyramidLayerRef?.setDragPreview(preview);
+    },
+    onDragComplete: (startPosition, endPosition) => {
+      sceneState = addUserSegment(sceneState, startPosition, endPosition, topology);
+      pyramidLayerRef?.applySceneState(sceneState);
+    },
+  });
+
   void initStereometry(canvas, camera, topology).then(({ cleanup, pyramidLayer }) => {
     if (destroyed) {
       cleanup();
@@ -83,6 +124,7 @@ export function runStereometry(canvas: HTMLCanvasElement): {
       destroyed = true;
       camera.destroy();
       cleanupClickDetector();
+      cleanupDragConnector();
       gpuCleanup?.();
     },
     camera,

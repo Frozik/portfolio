@@ -29,24 +29,14 @@ export const BACKGROUND_COLOR = { r: 0.1, g: 0.1, b: 0.12, a: 1 };
 
 export const MS_PER_SECOND = 1000;
 
-/** Pentagonal pyramid: base radius and apex height */
-export const PYRAMID_BASE_RADIUS = 1.0;
-export const PYRAMID_HEIGHT = 1.5;
-
-/** Number of sides in the pentagonal base */
-export const PENTAGON_SIDES = 5;
-
-/** Edges: 5 base edges + 5 lateral edges (base to apex) */
-export const EDGE_COUNT = 10;
-
 /** Number of vertices per line quad (2 triangles = 6 vertices) */
 export const VERTICES_PER_LINE_QUAD = 6;
 
 // --- Visible segment (edge) dimensions ---
 /** Line width in screen pixels for visible normal segments */
-export const SEGMENT_WIDTH_PIXELS = 3.0;
+export const SEGMENT_WIDTH_PIXELS = 5.0;
 /** Line width in screen pixels for visible highlighted segments */
-export const SEGMENT_HIGHLIGHT_WIDTH_PIXELS = 5.0;
+export const SEGMENT_HIGHLIGHT_WIDTH_PIXELS = 7.0;
 
 // --- Hidden segment dimensions (behind faces) ---
 /** Line width in screen pixels for hidden normal segments */
@@ -56,20 +46,27 @@ export const HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS = 7.0;
 
 // --- Extended line dimensions (thinner than segments) ---
 /** Line width in screen pixels for visible extended lines */
-export const EXTENDED_LINE_WIDTH_PIXELS = 1.5;
+export const EXTENDED_LINE_WIDTH_PIXELS = 2;
 /** Line width in screen pixels for visible highlighted extended lines */
-export const EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS = 2.5;
+export const EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS = 5;
 /** Line width in screen pixels for hidden extended lines */
 export const HIDDEN_EXTENDED_LINE_WIDTH_PIXELS = 2.5;
 /** Line width in screen pixels for hidden highlighted extended lines */
 export const HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS = 3.5;
 /** Brightness multiplier for hidden elements (edges and vertex markers behind faces) */
-export const HIDDEN_BRIGHTNESS = 0.4;
+export const HIDDEN_BRIGHTNESS = 0.3;
 
 // --- Pipeline-overridable constant IDs for edge shader ---
 export const EDGE_NORMAL_WIDTH_OVERRIDE_ID = 0;
 export const EDGE_HIGHLIGHT_WIDTH_OVERRIDE_ID = 1;
 export const EDGE_BRIGHTNESS_OVERRIDE_ID = 2;
+export const EDGE_DASH_LENGTH_OVERRIDE_ID = 3;
+export const EDGE_GAP_LENGTH_OVERRIDE_ID = 4;
+
+/** Dash pattern for hidden edges: dash length in screen pixels */
+export const HIDDEN_DASH_LENGTH_PIXELS = 10.0;
+/** Dash pattern for hidden edges: gap length in screen pixels */
+export const HIDDEN_GAP_LENGTH_PIXELS = 10.0;
 
 // --- Pipeline-overridable constant ID for vertex marker shader ---
 export const MARKER_USE_HIGHLIGHT_COLOR_OVERRIDE_ID = 0;
@@ -93,6 +90,9 @@ export const FACE_DEPTH_BIAS_SLOPE_SCALE = 1.0;
 
 /** Selection highlight color (light blue) */
 export const HIGHLIGHT_COLOR: readonly [number, number, number] = [0.4, 0.75, 1.0];
+
+/** Drag-to-connect preview line and snap target marker color (orange) */
+export const DRAG_PREVIEW_COLOR: readonly [number, number, number] = [1.0, 0.6, 0.0];
 
 /** Diameter in screen pixels for selected vertex marker */
 export const VERTEX_MARKER_SIZE_PIXELS = 20.0;

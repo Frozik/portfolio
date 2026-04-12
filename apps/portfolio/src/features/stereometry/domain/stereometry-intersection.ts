@@ -10,12 +10,22 @@ const VERTEX_COINCIDENCE_THRESHOLD_SQUARED = 0.001;
 /** Distance squared threshold to consider two intersection points as duplicates */
 const DUPLICATE_THRESHOLD_SQUARED = 0.0001;
 
+interface LineDefinition {
+  readonly point: readonly [number, number, number];
+  readonly direction: readonly [number, number, number];
+}
+
 /**
- * Computes all intersection points between lines and all edges/lines.
+ * Computes all intersection points between all infinite lines in the scene
+ * and between those lines and topology edge segments.
+ *
+ * Infinite lines come from two sources:
+ * - Extended topology edges (scene.lines)
+ * - User-drawn segments (scene.userSegments) — rendered as infinite lines
  *
  * Checks:
- * - Line ↔ line (infinite-infinite)
- * - Line ↔ segment (infinite-segment, intersection must lie on segment)
+ * - Infinite line ↔ infinite line
+ * - Infinite line ↔ topology edge segment (only segments not already extended as lines)
  *
  * Filters out intersections at existing topology vertices and duplicates.
  */
@@ -23,49 +33,63 @@ export function computeAllIntersections(
   scene: SceneState,
   topology: FigureTopology
 ): readonly IntersectionEntity[] {
-  const lineEdgeIndices = scene.lines.map(line => line.edgeIndex);
-  const lineSet = new Set(lineEdgeIndices);
+  const extendedEdgeIndices = new Set(scene.lines.map(line => line.edgeIndex));
+
+  // Collect all infinite lines from both sources
+  const allLines: LineDefinition[] = [];
+
+  for (const line of scene.lines) {
+    allLines.push(getEdgeLine(line.edgeIndex, topology));
+  }
+
+  for (const segment of scene.userSegments) {
+    allLines.push({
+      point: segment.startPosition,
+      direction: [
+        segment.endPosition[0] - segment.startPosition[0],
+        segment.endPosition[1] - segment.startPosition[1],
+        segment.endPosition[2] - segment.startPosition[2],
+      ],
+    });
+  }
+
   const results: IntersectionEntity[] = [];
+  const resultPositions: (readonly [number, number, number])[] = [];
 
-  for (const lineIndex of lineEdgeIndices) {
-    // Check against ALL edges
+  function tryAddIntersection(position: [number, number, number] | undefined): void {
+    if (position === undefined) {
+      return;
+    }
+
+    if (isNearExistingVertex(position, topology.vertices)) {
+      return;
+    }
+
+    if (isDuplicatePoint(position, resultPositions)) {
+      return;
+    }
+
+    results.push({ position, sourceEdgeA: 0, sourceEdgeB: 0 });
+    resultPositions.push(position);
+  }
+
+  // Check all infinite line pairs
+  for (let indexA = 0; indexA < allLines.length; indexA++) {
+    for (let indexB = indexA + 1; indexB < allLines.length; indexB++) {
+      const position = computeLinePairIntersection(allLines[indexA], allLines[indexB]);
+      tryAddIntersection(position);
+    }
+
+    // Check this infinite line against topology edge segments
+    // (only segments that are NOT already extended as infinite lines)
     for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
-      if (edgeIndex === lineIndex) {
+      if (extendedEdgeIndices.has(edgeIndex)) {
         continue;
       }
 
-      // Skip if both are extended and we'd compute the pair twice
-      if (lineSet.has(edgeIndex) && edgeIndex < lineIndex) {
-        continue;
-      }
-
-      const isOtherLine = lineSet.has(edgeIndex);
-      const position = isOtherLine
-        ? computeLineLineIntersection(lineIndex, edgeIndex, topology)
-        : computeLineSegmentIntersection(lineIndex, edgeIndex, topology);
-
-      if (position === undefined) {
-        continue;
-      }
-
-      if (isNearExistingVertex(position, topology.vertices)) {
-        continue;
-      }
-
-      if (
-        isDuplicatePoint(
-          position,
-          results.map(result => result.position)
-        )
-      ) {
-        continue;
-      }
-
-      results.push({
-        position,
-        sourceEdgeA: lineIndex,
-        sourceEdgeB: edgeIndex,
-      });
+      const segment = getEdgeLine(edgeIndex, topology);
+      const position = computeLineSegmentIntersection(allLines[indexA], segment);
+      tryAddIntersection(position);
     }
   }
 
@@ -73,17 +97,13 @@ export function computeAllIntersections(
 }
 
 /**
- * Intersection of two infinite lines (both extended).
+ * Intersection of two infinite lines.
  * Returns midpoint of closest approach if distance < threshold.
  */
-function computeLineLineIntersection(
-  edgeIndexA: number,
-  edgeIndexB: number,
-  topology: FigureTopology
+function computeLinePairIntersection(
+  lineA: LineDefinition,
+  lineB: LineDefinition
 ): [number, number, number] | undefined {
-  const lineA = getEdgeLine(edgeIndexA, topology);
-  const lineB = getEdgeLine(edgeIndexB, topology);
-
   const closest = closestPointBetweenLines(
     lineA.point,
     lineA.direction,
@@ -103,13 +123,9 @@ function computeLineLineIntersection(
  * Returns midpoint only if the intersection lies within the segment's [0, 1] range.
  */
 function computeLineSegmentIntersection(
-  lineEdgeIndex: number,
-  segmentEdgeIndex: number,
-  topology: FigureTopology
+  line: LineDefinition,
+  segment: LineDefinition
 ): [number, number, number] | undefined {
-  const line = getEdgeLine(lineEdgeIndex, topology);
-  const segment = getEdgeLine(segmentEdgeIndex, topology);
-
   const closest = closestPointBetweenLines(
     line.point,
     line.direction,
@@ -129,12 +145,7 @@ function computeLineSegmentIntersection(
   return closest.midpoint;
 }
 
-interface EdgeLine {
-  readonly point: readonly [number, number, number];
-  readonly direction: readonly [number, number, number];
-}
-
-function getEdgeLine(edgeIndex: number, topology: FigureTopology): EdgeLine {
+function getEdgeLine(edgeIndex: number, topology: FigureTopology): LineDefinition {
   const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
   const point = topology.vertices[vertexIndexA];
   const endPoint = topology.vertices[vertexIndexB];

@@ -1,11 +1,7 @@
 import { isNil } from 'lodash-es';
 import { vec4 } from 'wgpu-matrix';
 
-import {
-  EDGE_HIT_RADIUS_PIXELS,
-  LINE_EXTENSION_LENGTH,
-  VERTEX_HIT_RADIUS_PIXELS,
-} from './stereometry-constants';
+import { EDGE_HIT_RADIUS_PIXELS, VERTEX_HIT_RADIUS_PIXELS } from './stereometry-constants';
 import type { FigureTopology, SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
@@ -13,11 +9,8 @@ import { SELECTION_NONE } from './stereometry-types';
 const HOMOGENEOUS_W = 1.0;
 
 /**
- * Performs CPU hit testing against the pyramid geometry.
- *
- * Priority: vertex hits (within VERTEX_HIT_RADIUS_PIXELS) take precedence
- * over edge hits (within EDGE_HIT_RADIUS_PIXELS). Returns SELECTION_NONE
- * if nothing is hit.
+ * Performs CPU hit testing against the pyramid geometry for edge selection.
+ * Returns an edge selection or SELECTION_NONE.
  *
  * @param screenX Click position in CSS pixels relative to canvas left edge
  * @param screenY Click position in CSS pixels relative to canvas top edge
@@ -34,8 +27,7 @@ export function hitTest(
   canvasHeight: number,
   devicePixelRatio: number,
   mvpMatrix: Float32Array,
-  topology: FigureTopology,
-  intersectionPositions: readonly (readonly [number, number, number])[] = []
+  topology: FigureTopology
 ): SelectionState {
   const gpuCanvasWidth = canvasWidth * devicePixelRatio;
   const gpuCanvasHeight = canvasHeight * devicePixelRatio;
@@ -48,32 +40,6 @@ export function hitTest(
     gpuCanvasWidth,
     gpuCanvasHeight
   );
-
-  const vertexHit = findNearestVertex(pixelX, pixelY, devicePixelRatio, projectedVertices);
-
-  if (!isNil(vertexHit)) {
-    return vertexHit;
-  }
-
-  if (intersectionPositions.length > 0) {
-    const projectedIntersections = projectVerticesToScreen(
-      mvpMatrix,
-      intersectionPositions,
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-
-    const intersectionHit = findNearestIntersection(
-      pixelX,
-      pixelY,
-      devicePixelRatio,
-      projectedIntersections
-    );
-
-    if (!isNil(intersectionHit)) {
-      return intersectionHit;
-    }
-  }
 
   const edgeHit = findNearestEdge(
     pixelX,
@@ -88,6 +54,43 @@ export function hitTest(
   }
 
   return SELECTION_NONE;
+}
+
+/**
+ * Performs CPU hit testing against topology vertices only.
+ * Returns the index of the nearest vertex within VERTEX_HIT_RADIUS_PIXELS,
+ * or undefined if no vertex is close enough.
+ *
+ * @param screenX Position in CSS pixels relative to canvas left edge
+ * @param screenY Position in CSS pixels relative to canvas top edge
+ * @param canvasWidth Canvas CSS width in pixels
+ * @param canvasHeight Canvas CSS height in pixels
+ * @param devicePixelRatio Device pixel ratio for proper coordinate mapping
+ * @param mvpMatrix The model-view-projection matrix used for rendering
+ * @param vertices Array of 3D vertex positions to test against
+ */
+export function hitTestVertex(
+  screenX: number,
+  screenY: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  devicePixelRatio: number,
+  mvpMatrix: Float32Array,
+  vertices: readonly (readonly [number, number, number])[]
+): number | undefined {
+  const gpuCanvasWidth = canvasWidth * devicePixelRatio;
+  const gpuCanvasHeight = canvasHeight * devicePixelRatio;
+  const pixelX = screenX * devicePixelRatio;
+  const pixelY = screenY * devicePixelRatio;
+
+  const projectedVertices = projectVerticesToScreen(
+    mvpMatrix,
+    vertices,
+    gpuCanvasWidth,
+    gpuCanvasHeight
+  );
+
+  return findNearestVertexIndex(pixelX, pixelY, devicePixelRatio, projectedVertices);
 }
 
 interface ProjectedVertex {
@@ -124,14 +127,15 @@ function projectVerticesToScreen(
 }
 
 /**
- * Finds the nearest vertex within VERTEX_HIT_RADIUS_PIXELS of the click point.
+ * Finds the index of the nearest vertex within VERTEX_HIT_RADIUS_PIXELS
+ * of the given pixel position, or undefined if none is close enough.
  */
-function findNearestVertex(
+function findNearestVertexIndex(
   pixelX: number,
   pixelY: number,
   devicePixelRatio: number,
   projectedVertices: ProjectedVertex[]
-): SelectionState | undefined {
+): number | undefined {
   let nearestDistanceSquared = (VERTEX_HIT_RADIUS_PIXELS * devicePixelRatio) ** 2;
   let nearestVertexIndex: number | undefined;
 
@@ -151,51 +155,7 @@ function findNearestVertex(
     }
   }
 
-  if (!isNil(nearestVertexIndex)) {
-    return { type: 'vertex', vertexIndex: nearestVertexIndex };
-  }
-
-  return undefined;
-}
-
-/**
- * Finds the nearest intersection point within VERTEX_HIT_RADIUS_PIXELS of the click.
- * Uses the same proximity logic as vertex hit testing.
- */
-function findNearestIntersection(
-  pixelX: number,
-  pixelY: number,
-  devicePixelRatio: number,
-  projectedIntersections: ProjectedVertex[]
-): SelectionState | undefined {
-  let nearestDistanceSquared = (VERTEX_HIT_RADIUS_PIXELS * devicePixelRatio) ** 2;
-  let nearestIndex: number | undefined;
-
-  for (
-    let intersectionIndex = 0;
-    intersectionIndex < projectedIntersections.length;
-    intersectionIndex++
-  ) {
-    const projected = projectedIntersections[intersectionIndex];
-    if (projected.behindCamera) {
-      continue;
-    }
-
-    const deltaX = projected.screenX - pixelX;
-    const deltaY = projected.screenY - pixelY;
-    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
-
-    if (distanceSquared < nearestDistanceSquared) {
-      nearestDistanceSquared = distanceSquared;
-      nearestIndex = intersectionIndex;
-    }
-  }
-
-  if (!isNil(nearestIndex)) {
-    return { type: 'intersection', intersectionIndex: nearestIndex };
-  }
-
-  return undefined;
+  return nearestVertexIndex;
 }
 
 /**
@@ -286,92 +246,4 @@ function pointToSegmentDistanceSquared(
   const deltaX = pointX - nearestX;
   const deltaY = pointY - nearestY;
   return deltaX * deltaX + deltaY * deltaY;
-}
-
-/**
- * Finds all extended line edge indices that are within EDGE_HIT_RADIUS_PIXELS
- * of the click point. Used to detect which lines are near a potential intersection.
- *
- * Projects extended line endpoints to screen space and checks distance
- * from the click to each projected line segment.
- */
-export function findNearbyExtendedLines(
-  screenX: number,
-  screenY: number,
-  canvasWidth: number,
-  canvasHeight: number,
-  devicePixelRatio: number,
-  mvpMatrix: Float32Array,
-  topology: FigureTopology,
-  extendedEdgeIndices: readonly number[]
-): number[] {
-  const gpuCanvasWidth = canvasWidth * devicePixelRatio;
-  const gpuCanvasHeight = canvasHeight * devicePixelRatio;
-  const pixelX = screenX * devicePixelRatio;
-  const pixelY = screenY * devicePixelRatio;
-  const thresholdSquared = (EDGE_HIT_RADIUS_PIXELS * devicePixelRatio) ** 2;
-
-  const nearbyIndices: number[] = [];
-
-  for (const edgeIndex of extendedEdgeIndices) {
-    const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
-    const positionA = topology.vertices[vertexIndexA];
-    const positionB = topology.vertices[vertexIndexB];
-
-    // Compute extended line endpoints
-    const directionX = positionB[0] - positionA[0];
-    const directionY = positionB[1] - positionA[1];
-    const directionZ = positionB[2] - positionA[2];
-    const edgeLength = Math.sqrt(
-      directionX * directionX + directionY * directionY + directionZ * directionZ
-    );
-    const normalizedX = directionX / edgeLength;
-    const normalizedY = directionY / edgeLength;
-    const normalizedZ = directionZ / edgeLength;
-
-    const extendedStart: readonly [number, number, number] = [
-      positionA[0] - normalizedX * LINE_EXTENSION_LENGTH,
-      positionA[1] - normalizedY * LINE_EXTENSION_LENGTH,
-      positionA[2] - normalizedZ * LINE_EXTENSION_LENGTH,
-    ];
-    const extendedEnd: readonly [number, number, number] = [
-      positionB[0] + normalizedX * LINE_EXTENSION_LENGTH,
-      positionB[1] + normalizedY * LINE_EXTENSION_LENGTH,
-      positionB[2] + normalizedZ * LINE_EXTENSION_LENGTH,
-    ];
-
-    const projectedEndpoints = projectVerticesToScreen(
-      mvpMatrix,
-      [extendedStart, extendedEnd],
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-
-    const projectedA = projectedEndpoints[0];
-    const projectedB = projectedEndpoints[1];
-
-    if (projectedA.behindCamera && projectedB.behindCamera) {
-      continue;
-    }
-
-    // Skip if either endpoint is behind camera (line passes through camera)
-    if (projectedA.behindCamera || projectedB.behindCamera) {
-      continue;
-    }
-
-    const distanceSquared = pointToSegmentDistanceSquared(
-      pixelX,
-      pixelY,
-      projectedA.screenX,
-      projectedA.screenY,
-      projectedB.screenX,
-      projectedB.screenY
-    );
-
-    if (distanceSquared < thresholdSquared) {
-      nearbyIndices.push(edgeIndex);
-    }
-  }
-
-  return nearbyIndices;
 }
