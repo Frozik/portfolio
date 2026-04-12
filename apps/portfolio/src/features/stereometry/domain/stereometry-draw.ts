@@ -1,24 +1,31 @@
 import { createGpuContext, createMsaaTextureManager, RenderLayerManager } from '@frozik/utils';
 
 import { PyramidLayer } from './layers/pyramid-layer';
+import { PENTAGONAL_PYRAMID } from './puzzles/pentagonal-pyramid';
 import { startRenderLoop } from './render-loop';
+import type { OrbitalCameraController } from './stereometry-camera-controller';
 import { createOrbitalCameraController } from './stereometry-camera-controller';
 import { createClickDetector } from './stereometry-click-detector';
 import { MSAA_SAMPLE_COUNT } from './stereometry-constants';
-import { createPyramidTopology } from './stereometry-geometry';
+import { createTopologyFromPuzzle } from './stereometry-geometry';
 import { hitTest } from './stereometry-hit-testing';
+import { createInitialScene, toggleLine } from './stereometry-scene';
 import type { SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
-export function runStereometry(canvas: HTMLCanvasElement): VoidFunction {
+export function runStereometry(canvas: HTMLCanvasElement): {
+  destroy: VoidFunction;
+  camera: OrbitalCameraController;
+} {
   let destroyed = false;
   let gpuCleanup: (() => void) | undefined;
 
-  const camera = createOrbitalCameraController(canvas);
-  const topology = createPyramidTopology();
+  const topology = createTopologyFromPuzzle(PENTAGONAL_PYRAMID);
+  const geometryCenter: readonly [number, number, number] = [0, 0, 0];
+  const camera = createOrbitalCameraController(canvas, geometryCenter);
 
   let pyramidLayerRef: PyramidLayer | undefined;
-  const extendedEdges = new Set<number>();
+  let sceneState = createInitialScene(topology);
 
   function performHitTest(screenX: number, screenY: number): SelectionState {
     if (destroyed || !pyramidLayerRef) {
@@ -29,6 +36,10 @@ export function runStereometry(canvas: HTMLCanvasElement): VoidFunction {
     const canvasHeight = canvas.clientHeight;
     const devicePixelRatio = Math.max(1, window.devicePixelRatio);
 
+    const intersectionPositions = sceneState.intersections.map(
+      intersection => intersection.position
+    );
+
     return hitTest(
       screenX,
       screenY,
@@ -36,7 +47,8 @@ export function runStereometry(canvas: HTMLCanvasElement): VoidFunction {
       canvasHeight,
       devicePixelRatio,
       pyramidLayerRef.getLastMvpMatrix(),
-      topology
+      topology,
+      intersectionPositions
     );
   }
 
@@ -49,12 +61,8 @@ export function runStereometry(canvas: HTMLCanvasElement): VoidFunction {
     const hit = performHitTest(screenX, screenY);
 
     if (hit.type === 'edge') {
-      if (extendedEdges.has(hit.edgeIndex)) {
-        extendedEdges.delete(hit.edgeIndex);
-      } else {
-        extendedEdges.add(hit.edgeIndex);
-      }
-      pyramidLayerRef?.setExtendedLines(extendedEdges);
+      sceneState = toggleLine(sceneState, hit.edgeIndex, topology);
+      pyramidLayerRef?.applySceneState(sceneState);
     }
   }
 
@@ -66,21 +74,25 @@ export function runStereometry(canvas: HTMLCanvasElement): VoidFunction {
     } else {
       gpuCleanup = cleanup;
       pyramidLayerRef = pyramidLayer;
+      pyramidLayer.applySceneState(sceneState);
     }
   });
 
-  return () => {
-    destroyed = true;
-    camera.destroy();
-    cleanupClickDetector();
-    gpuCleanup?.();
+  return {
+    destroy: () => {
+      destroyed = true;
+      camera.destroy();
+      cleanupClickDetector();
+      gpuCleanup?.();
+    },
+    camera,
   };
 }
 
 async function initStereometry(
   canvas: HTMLCanvasElement,
   camera: ReturnType<typeof createOrbitalCameraController>,
-  topology: ReturnType<typeof createPyramidTopology>
+  topology: ReturnType<typeof createTopologyFromPuzzle>
 ): Promise<{ cleanup: VoidFunction; pyramidLayer: PyramidLayer }> {
   const context = await createGpuContext(canvas);
 

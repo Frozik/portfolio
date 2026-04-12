@@ -7,72 +7,119 @@ import {
   INITIAL_ELEVATION,
   MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
+  MOUSE_PAN_SENSITIVITY,
   MOUSE_ROTATE_SENSITIVITY,
   WHEEL_ZOOM_SENSITIVITY,
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
 } from './stereometry-constants';
+import type { CameraInteractionMode } from './stereometry-types';
 
 export interface OrbitalCameraController {
   tick(): void;
   getViewMatrix(): Float32Array;
+  getEyePosition(): [number, number, number];
+  getDistance(): number;
+  setInteractionMode(mode: CameraInteractionMode): void;
   destroy(): void;
 }
 
 /**
- * Trackball-style orbital camera controller for stereometry.
- * Rotations are applied in screen space so dragging always moves the object
- * in the direction of the cursor, regardless of current orientation.
- * Zoom is animated with exponential easing for a smooth feel.
+ * Turntable orbital camera controller for stereometry.
+ * Drag rotates azimuth only (horizontal), elevation is fixed.
+ * Pan mode translates the lookAt target along the camera's screen-plane axes.
+ * Shift+drag always pans regardless of current mode.
+ * Scroll/pinch always zooms.
  */
-export function createOrbitalCameraController(canvas: HTMLCanvasElement): OrbitalCameraController {
+export function createOrbitalCameraController(
+  canvas: HTMLCanvasElement,
+  rotationCenter: readonly [number, number, number] = [0, 0, 0]
+): OrbitalCameraController {
+  let azimuth = 0;
+  const elevation = INITIAL_ELEVATION;
+
   let distance = INITIAL_CAMERA_DISTANCE;
   let targetDistance = INITIAL_CAMERA_DISTANCE;
 
-  const initialAzimuth = 0;
-  const initialElevation = INITIAL_ELEVATION;
-  let cameraPosition = vec3.fromValues(
-    Math.sin(initialElevation) * Math.sin(initialAzimuth),
-    Math.cos(initialElevation),
-    Math.sin(initialElevation) * Math.cos(initialAzimuth)
-  );
-  let cameraUp = vec3.fromValues(0, 1, 0);
+  const target: [number, number, number] = [
+    rotationCenter[0],
+    rotationCenter[1],
+    rotationCenter[2],
+  ];
 
-  function applyRotation(deltaX: number, deltaY: number): void {
-    const lookDirection = vec3.negate(cameraPosition);
-    const rightAxis = vec3.normalize(vec3.cross(lookDirection, cameraUp));
+  let interactionMode: CameraInteractionMode = 'rotate';
 
-    if (Math.abs(deltaY) > 0) {
-      const verticalAngle = -deltaY * MOUSE_ROTATE_SENSITIVITY;
-      const verticalRotation = mat4.rotation(rightAxis, verticalAngle);
-      cameraPosition = vec3.transformMat4(cameraPosition, verticalRotation);
-      cameraUp = vec3.normalize(vec3.transformMat4(cameraUp, verticalRotation));
-    }
+  let azimuthVelocity = 0;
+  let panVelocityX = 0;
+  let panVelocityY = 0;
 
-    if (Math.abs(deltaX) > 0) {
-      const horizontalAngle = -deltaX * MOUSE_ROTATE_SENSITIVITY;
-      const horizontalRotation = mat4.rotation(cameraUp, horizontalAngle);
-      cameraPosition = vec3.transformMat4(cameraPosition, horizontalRotation);
-    }
+  function computeEyePosition(): [number, number, number] {
+    return [
+      target[0] + Math.sin(elevation) * Math.sin(azimuth) * distance,
+      target[1] + Math.cos(elevation) * distance,
+      target[2] + Math.sin(elevation) * Math.cos(azimuth) * distance,
+    ];
+  }
 
-    cameraPosition = vec3.normalize(cameraPosition);
+  /** Screen-plane up vector derived from azimuth and elevation */
+  function computeUpVector(): [number, number, number] {
+    return [
+      -Math.cos(elevation) * Math.sin(azimuth),
+      Math.sin(elevation),
+      -Math.cos(elevation) * Math.cos(azimuth),
+    ];
+  }
+
+  /** Screen-plane right vector (always horizontal) */
+  function computeRightVector(): [number, number, number] {
+    return [Math.cos(azimuth), 0, -Math.sin(azimuth)];
+  }
+
+  function applyRotation(deltaX: number): void {
+    const deltaAzimuth = -deltaX * MOUSE_ROTATE_SENSITIVITY;
+    azimuth += deltaAzimuth;
+
+    // Rotate the pan offset around rotationCenter so the figure stays
+    // at the same screen position during rotation
+    const offsetX = target[0] - rotationCenter[0];
+    const offsetZ = target[2] - rotationCenter[2];
+    const cosAngle = Math.cos(deltaAzimuth);
+    const sinAngle = Math.sin(deltaAzimuth);
+
+    target[0] = rotationCenter[0] + offsetX * cosAngle + offsetZ * sinAngle;
+    target[2] = rotationCenter[2] - offsetX * sinAngle + offsetZ * cosAngle;
+  }
+
+  function applyPan(deltaX: number, deltaY: number): void {
+    const panScale = MOUSE_PAN_SENSITIVITY * distance;
+    const right = computeRightVector();
+
+    // Horizontal drag moves in the XZ plane, vertical drag moves along world Y axis
+    target[0] -= right[0] * deltaX * panScale;
+    target[1] += deltaY * panScale;
+    target[2] -= right[2] * deltaX * panScale;
   }
 
   function clampDistance(value: number): number {
     return Math.max(MIN_CAMERA_DISTANCE, Math.min(MAX_CAMERA_DISTANCE, value));
   }
 
-  let velocityX = 0;
-  let velocityY = 0;
+  function resetVelocity(): void {
+    azimuthVelocity = 0;
+    panVelocityX = 0;
+    panVelocityY = 0;
+  }
 
   let isDragging = false;
   let lastMouseX = 0;
   let lastMouseY = 0;
+  let isShiftHeld = false;
 
   function onMouseDown(event: MouseEvent): void {
     isDragging = true;
     lastMouseX = event.clientX;
     lastMouseY = event.clientY;
+    isShiftHeld = event.shiftKey;
   }
 
   function onMouseMove(event: MouseEvent): void {
@@ -85,14 +132,24 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     lastMouseX = event.clientX;
     lastMouseY = event.clientY;
 
-    velocityX = deltaX;
-    velocityY = deltaY;
+    const shouldPan = isShiftHeld || interactionMode === 'pan';
 
-    applyRotation(deltaX, deltaY);
+    if (shouldPan) {
+      panVelocityX = deltaX;
+      panVelocityY = deltaY;
+      azimuthVelocity = 0;
+      applyPan(deltaX, deltaY);
+    } else {
+      azimuthVelocity = deltaX;
+      panVelocityX = 0;
+      panVelocityY = 0;
+      applyRotation(deltaX);
+    }
   }
 
   function onMouseUp(): void {
     isDragging = false;
+    isShiftHeld = false;
   }
 
   function onWheel(event: WheelEvent): void {
@@ -147,10 +204,17 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     lastTouchX = event.touches[0].clientX;
     lastTouchY = event.touches[0].clientY;
 
-    velocityX = deltaX;
-    velocityY = deltaY;
-
-    applyRotation(deltaX, deltaY);
+    if (interactionMode === 'pan') {
+      panVelocityX = deltaX;
+      panVelocityY = deltaY;
+      azimuthVelocity = 0;
+      applyPan(deltaX, deltaY);
+    } else {
+      azimuthVelocity = deltaX;
+      panVelocityX = 0;
+      panVelocityY = 0;
+      applyRotation(deltaX);
+    }
   }
 
   function onTouchEnd(event: TouchEvent): void {
@@ -169,7 +233,6 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
 
   return {
     tick(): void {
-      // Smooth zoom: exponential interpolation towards target distance
       const zoomDelta = targetDistance - distance;
       if (Math.abs(zoomDelta) > ZOOM_SNAP_THRESHOLD) {
         distance += zoomDelta * ZOOM_SMOOTHING_FACTOR;
@@ -181,26 +244,50 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
         return;
       }
 
-      if (
-        Math.abs(velocityX) < INERTIA_MIN_VELOCITY &&
-        Math.abs(velocityY) < INERTIA_MIN_VELOCITY
-      ) {
-        velocityX = 0;
-        velocityY = 0;
+      const hasAzimuthVelocity = Math.abs(azimuthVelocity) >= INERTIA_MIN_VELOCITY;
+      const hasPanVelocity =
+        Math.abs(panVelocityX) >= INERTIA_MIN_VELOCITY ||
+        Math.abs(panVelocityY) >= INERTIA_MIN_VELOCITY;
+
+      if (!hasAzimuthVelocity && !hasPanVelocity) {
+        resetVelocity();
         return;
       }
 
-      applyRotation(velocityX, velocityY);
+      if (hasAzimuthVelocity) {
+        applyRotation(azimuthVelocity);
+        azimuthVelocity *= INERTIA_DAMPING;
+      }
 
-      velocityX *= INERTIA_DAMPING;
-      velocityY *= INERTIA_DAMPING;
+      if (hasPanVelocity) {
+        applyPan(panVelocityX, panVelocityY);
+        panVelocityX *= INERTIA_DAMPING;
+        panVelocityY *= INERTIA_DAMPING;
+      }
     },
 
     getViewMatrix(): Float32Array {
-      const eye = vec3.scale(cameraPosition, distance);
-      const target = vec3.fromValues(0, 0, 0);
+      const eye = computeEyePosition();
+      const up = computeUpVector();
 
-      return mat4.lookAt(eye, target, cameraUp) as Float32Array;
+      return mat4.lookAt(
+        vec3.fromValues(eye[0], eye[1], eye[2]),
+        vec3.fromValues(target[0], target[1], target[2]),
+        vec3.fromValues(up[0], up[1], up[2])
+      ) as Float32Array;
+    },
+
+    getEyePosition(): [number, number, number] {
+      return computeEyePosition();
+    },
+
+    getDistance(): number {
+      return distance;
+    },
+
+    setInteractionMode(mode: CameraInteractionMode): void {
+      interactionMode = mode;
+      resetVelocity();
     },
 
     destroy(): void {
