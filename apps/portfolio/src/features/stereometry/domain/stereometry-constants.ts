@@ -35,17 +35,30 @@ export const PENTAGON_SIDES = 5;
 /** Edges: 5 base edges + 5 lateral edges (base to apex) */
 export const EDGE_COUNT = 10;
 
-/** Line width in screen pixels for wireframe rendering */
-export const LINE_WIDTH_PIXELS = 2.0;
-
 /** Number of vertices per line quad (2 triangles = 6 vertices) */
 export const VERTICES_PER_LINE_QUAD = 6;
 
-/** Brightness multiplier for edges hidden behind faces (0 = invisible, 1 = same as visible) */
-export const HIDDEN_EDGE_BRIGHTNESS = 0.25;
+// --- Visible edge dimensions ---
+/** Line width in screen pixels for visible normal edges */
+export const LINE_WIDTH_PIXELS = 3.0;
+/** Line width in screen pixels for visible highlighted edges */
+export const HIGHLIGHT_LINE_WIDTH_PIXELS = 5.0;
 
-/** Pipeline-overridable constant ID for edge brightness in the WGSL shader */
-export const EDGE_BRIGHTNESS_OVERRIDE_ID = 0;
+// --- Hidden edge dimensions (behind faces) ---
+/** Line width in screen pixels for hidden normal edges */
+export const HIDDEN_LINE_WIDTH_PIXELS = 5.0;
+/** Line width in screen pixels for hidden highlighted edges */
+export const HIDDEN_HIGHLIGHT_LINE_WIDTH_PIXELS = 7.0;
+/** Brightness multiplier for hidden elements (edges and vertex markers behind faces) */
+export const HIDDEN_BRIGHTNESS = 0.4;
+
+// --- Pipeline-overridable constant IDs for edge shader ---
+export const EDGE_NORMAL_WIDTH_OVERRIDE_ID = 0;
+export const EDGE_HIGHLIGHT_WIDTH_OVERRIDE_ID = 1;
+export const EDGE_BRIGHTNESS_OVERRIDE_ID = 2;
+
+// --- Pipeline-overridable constant ID for vertex marker shader ---
+export const MARKER_BRIGHTNESS_OVERRIDE_ID = 0;
 
 /** Face geometry: 5 side triangles + 3 base triangles (fan triangulation of pentagon) */
 export const SIDE_TRIANGLE_COUNT = 5;
@@ -63,3 +76,29 @@ export const FACE_POSITION_FLOATS = 3;
  */
 export const FACE_DEPTH_BIAS = 2;
 export const FACE_DEPTH_BIAS_SLOPE_SCALE = 1.0;
+
+/** Selection highlight color (light blue) */
+export const HIGHLIGHT_COLOR: readonly [number, number, number] = [0.4, 0.75, 1.0];
+
+/** Diameter in screen pixels for vertex marker billboard circles */
+export const VERTEX_MARKER_SIZE_PIXELS = 20.0;
+
+/** Click detection: max movement in pixels to still count as a click */
+export const CLICK_MOVEMENT_THRESHOLD = 3;
+
+/** Click detection: max time in milliseconds to still count as a click */
+export const CLICK_TIME_THRESHOLD_MS = 300;
+
+/** Hit testing: radius in screen pixels for vertex proximity detection */
+export const VERTEX_HIT_RADIUS_PIXELS = 15;
+
+/** Hit testing: max distance in screen pixels from edge line to count as a hit */
+export const EDGE_HIT_RADIUS_PIXELS = 10;
+
+/** Double-click/double-tap: max time between two clicks */
+export const DOUBLE_CLICK_TIME_THRESHOLD_MS = 400;
+/** Double-click/double-tap: max distance between two click positions */
+export const DOUBLE_CLICK_DISTANCE_THRESHOLD = 10;
+
+/** How far to extend a line beyond the edge endpoints (in world units) */
+export const LINE_EXTENSION_LENGTH = 1000;
