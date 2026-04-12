@@ -4,6 +4,7 @@ import {
   Gamepad2,
   Grid3X3,
   Info,
+  Pyramid,
   SlidersHorizontal,
   Sun,
   TrendingUp,
@@ -82,6 +83,10 @@ export const NavigationLinks = memo(({ onNavigate }: { onNavigate: () => void })
       <NavLink className={navLinkClass} to="/sudoku" onClick={onNavigate} end={false}>
         <Grid3X3 size={NAV_ICON_SIZE} />
         <span>Sudoku</span>
+      </NavLink>
+      <NavLink className={navLinkClass} to="/stereometry" onClick={onNavigate} end={false}>
+        <Pyramid size={NAV_ICON_SIZE} />
+        <span>Stereometry</span>
       </NavLink>
     </div>
 

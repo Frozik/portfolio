@@ -66,6 +66,16 @@ const rootRouter = createBrowserRouter(
           },
         },
         {
+          path: 'stereometry',
+          handle: { title: 'Stereometry' },
+          lazy: async () => {
+            const { Stereometry } = await import(
+              '../../features/stereometry/presentation/Stereometry'
+            );
+            return { Component: Stereometry };
+          },
+        },
+        {
           path: 'controls',
           handle: { title: 'Controls' },
           lazy: async () => {
