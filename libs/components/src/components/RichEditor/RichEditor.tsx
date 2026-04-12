@@ -30,6 +30,7 @@ export const RichEditor = memo(
     onGetElementSelectionWithValue = inputElementSelectionWithValue,
     onTextToHtml = inputTextToHtml,
     onFocusChanges,
+    onFocusSelection,
     onKeyDown,
   }: {
     className?: string;
@@ -45,12 +46,14 @@ export const RichEditor = memo(
     }) => { value: string; selection: ISelection } | false;
     onTextToHtml?: (text: string, editing: boolean) => string;
     onFocusChanges?: (focused: boolean) => void;
+    onFocusSelection?: (value: string) => ISelection | undefined;
     onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   }) => {
     const contentEditableRef = useRef<HTMLDivElement>(null);
     const selectionRangeRef = useRef<ISelection>(
       useMemo(() => ({ start: value.length, end: value.length }), [value])
     );
+    const valueBeforeEditRef = useRef(value);
 
     const [focused, setFocused] = useState(false);
 
@@ -99,8 +102,23 @@ export const RichEditor = memo(
     }, []);
 
     const handleFocused = useFunction(() => {
+      valueBeforeEditRef.current = value;
       setFocused(true);
       onFocusChanges?.(true);
+
+      if (onFocusSelection) {
+        const selection = onFocusSelection(value);
+        if (!isNil(selection)) {
+          // Deferred to next frame so the browser's focus-related selectionchange events
+          // settle first, then we override with the desired selection
+          requestAnimationFrame(() => {
+            if (!isNil(contentEditableRef.current)) {
+              selectionRangeRef.current = selection;
+              setElementSelection(contentEditableRef.current, selection);
+            }
+          });
+        }
+      }
     });
     const handleBlur = useFunction(() => {
       setFocused(false);
@@ -111,6 +129,13 @@ export const RichEditor = memo(
       onKeyDown?.(event);
 
       if (event.defaultPrevented) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onValueChanged?.(valueBeforeEditRef.current);
+        event.currentTarget.blur();
         return;
       }
 

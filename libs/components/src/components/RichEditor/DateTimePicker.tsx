@@ -9,6 +9,7 @@ import { memo, useMemo, useRef, useState } from 'react';
 import { useFunction } from '../../hooks';
 import { cn } from '../cn';
 import { CalendarPopup } from './components/CalendarPopup';
+import type { ISelection } from './defs';
 import { RichEditor } from './RichEditor';
 import styles from './styles.module.scss';
 
@@ -152,7 +153,19 @@ export const DateTimePicker = memo(
       setFocused(newFocused);
     });
 
+    const handleFocusSelection = useFunction((currentValue: string): ISelection | undefined => {
+      if (currentValue.length === 0) {
+        return undefined;
+      }
+      return { start: 0, end: currentValue.length };
+    });
+
     const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Escape') {
+        setError(undefined);
+        return;
+      }
+
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         const direction = event.key === 'ArrowUp' ? 1 : -1;
@@ -212,6 +225,7 @@ export const DateTimePicker = memo(
             }
             onValueChanged={setInputText}
             onFocusChanges={handleFocusChanges}
+            onFocusSelection={handleFocusSelection}
             onKeyDown={handleKeyDown}
           />
           {hasError && <div className={styles.errorTooltip}>{error}</div>}

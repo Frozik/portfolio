@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useFunction } from '../../hooks/useFunction';
 import { cn } from '../cn';
+import type { ISelection } from './defs';
 import { RichEditor } from './RichEditor';
 import styles from './styles.module.scss';
 import { numericElementSelectionWithValueBuilder, numericTextToHtmlBuilder } from './utils';
@@ -46,10 +47,30 @@ export const NumericEditor = memo(
       [allowedDecimals, pipStart, pipSize]
     );
 
-    const handleFocusChanges = useFunction((focused: boolean) => {
-      setFocused(focused);
+    const handleFocusSelection = useFunction((currentValue: string): ISelection | undefined => {
+      if (isNil(pipStart) || currentValue.length === 0) {
+        return undefined;
+      }
 
-      if (focused || !value.includes('.')) {
+      const decimalIndex = currentValue.indexOf('.');
+      const integerLength = decimalIndex >= 0 ? decimalIndex : currentValue.length;
+      const selectionStart = integerLength + pipStart;
+      const selectionEnd = selectionStart + pipSize;
+
+      if (selectionStart > currentValue.length) {
+        return undefined;
+      }
+
+      return {
+        start: Math.min(selectionStart, currentValue.length),
+        end: Math.min(selectionEnd, currentValue.length),
+      };
+    });
+
+    const handleFocusChanges = useFunction((newFocused: boolean) => {
+      setFocused(newFocused);
+
+      if (newFocused || !value.includes('.')) {
         return;
       }
 
@@ -80,6 +101,7 @@ export const NumericEditor = memo(
         placeholder={`<span class="${styles.placeholder}">${placeholder}</span>`}
         onValueChanged={setValue}
         onFocusChanges={handleFocusChanges}
+        onFocusSelection={handleFocusSelection}
       />
     );
   }
