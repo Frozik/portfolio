@@ -59,6 +59,7 @@
   --animate-bulb-swing: bulb-swing 3s ease-in-out infinite;
   --animate-bulb-glow: bulb-glow 2s ease-in-out infinite;
   --animate-bulb-rays: bulb-rays 2s ease-in-out infinite;
+  --animate-status-pulse: status-pulse 2s ease-in-out infinite;
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -106,6 +107,10 @@
   @keyframes bulb-rays {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 0.8; }
+  }
+  @keyframes status-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
   }
 }
 

@@ -1,5 +1,32 @@
+import { EDayOfWeek } from '@frozik/utils';
 import { Temporal, Intl as TemporalIntl } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
+import { AWAKE_END_HOUR, AWAKE_START_HOUR, MY_TIMEZONE } from './constants';
+import type { EAvailability } from './types';
+
+const WEEKEND: readonly EDayOfWeek[] = [EDayOfWeek.Saturday, EDayOfWeek.Sunday];
+
+export function getAvailability(): { status: EAvailability; localTime: string; title: string } {
+  const now = Temporal.Now.zonedDateTimeISO(MY_TIMEZONE);
+  const hour = now.hour;
+  const dayOfWeek = now.dayOfWeek;
+
+  const localTime = now.toLocaleString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const isWeekend = WEEKEND.includes(dayOfWeek as EDayOfWeek);
+  if (isWeekend) {
+    return { status: 'weekend', localTime, title: `${localTime} UTC+3 — Weekend, day off` };
+  }
+
+  const isAwake = hour >= AWAKE_START_HOUR && hour < AWAKE_END_HOUR;
+  return isAwake
+    ? { status: 'online', localTime, title: `${localTime} UTC+3 — Working hours` }
+    : { status: 'away', localTime, title: `${localTime} UTC+3 — Off hours, away` };
+}
 
 export function getYearsOfExperience(careerStart: Temporal.PlainDate): number {
   const today = Temporal.Now.plainDateISO();

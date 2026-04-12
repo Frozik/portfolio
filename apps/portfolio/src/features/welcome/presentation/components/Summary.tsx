@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { getYearsOfExperience } from '../utils';
+import { getYearsOfExperience } from '../../utils';
 import { SMALLEST_START_DATE } from './WorkExperience';
 
 export const Summary = memo(() => (

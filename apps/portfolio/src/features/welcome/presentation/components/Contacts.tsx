@@ -5,7 +5,7 @@ import { SvgGitHub } from '../../../../icons/SvgGitHub';
 import { SvgLinkedIn } from '../../../../icons/SvgLinkedIn';
 import { SvgTelegram } from '../../../../icons/SvgTelegram';
 import { Button, QRCodePopover } from '../../../../shared/ui';
-import { getAge } from '../utils';
+import { getAge } from '../../utils';
 import { AvailabilityStatus } from './AvailabilityStatus';
 
 export const Contacts = memo(() => {
@@ -13,9 +13,9 @@ export const Contacts = memo(() => {
 
   return (
     <div>
-      <h2>
-        Sharov Dmitry Nikolaevich{' '}
-        <Button variant="link" className="print:hidden" onClick={handlePrint}>
+      <h2 className="flex flex-wrap items-baseline gap-x-2">
+        <span>Sharov Dmitry Nikolaevich</span>
+        <Button variant="link" className="px-0 print:hidden" onClick={handlePrint}>
           <Download size={14} />
           Save PDF
         </Button>
@@ -83,7 +83,7 @@ export const Contacts = memo(() => {
         </ul>
       </address>
 
-      <AvailabilityStatus className="mt-2 flex items-center gap-2 text-sm" />
+      <AvailabilityStatus className="mt-2 flex flex-wrap items-center gap-x-2 text-sm" />
     </div>
   );
 });

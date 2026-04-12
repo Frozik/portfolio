@@ -4,7 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
-import { formatDateMonthYear, measureDuration } from '../utils';
+import { formatDateMonthYear, measureDuration } from '../../utils';
 
 interface IWork {
   start: Temporal.PlainDate;
