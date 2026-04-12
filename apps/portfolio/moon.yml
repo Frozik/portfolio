@@ -8,15 +8,19 @@ tags:
 fileGroups:
   sources:
     - 'src/**/*'
+  vite:
+    - 'public/**/*'
+    - 'src/**/*'
+    - 'index.html'
+    - 'vite.config.ts'
 
 tasks:
   build:
     command: 'pnpm run build'
     inputs:
-      - 'src/**/*'
+      - '@group(vite)'
       - 'tsconfig.json'
       - 'tsconfig.app.json'
-      - 'vite.config.ts'
     outputs:
       - 'dist'
     options:
