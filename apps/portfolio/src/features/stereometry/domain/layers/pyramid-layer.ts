@@ -8,42 +8,29 @@ import edgeShaderSource from '../shaders/pyramid.wgsl?raw';
 import vertexMarkerShaderSource from '../shaders/vertex-marker.wgsl?raw';
 import type { OrbitalCameraController } from '../stereometry-camera-controller';
 import {
-  BACKGROUND_COLOR,
-  DRAG_PREVIEW_COLOR,
   EDGE_BRIGHTNESS_OVERRIDE_ID,
   EDGE_DASH_LENGTH_OVERRIDE_ID,
   EDGE_GAP_LENGTH_OVERRIDE_ID,
   EDGE_HIGHLIGHT_WIDTH_OVERRIDE_ID,
   EDGE_NORMAL_WIDTH_OVERRIDE_ID,
-  EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
-  EXTENDED_LINE_WIDTH_PIXELS,
   FACE_DEPTH_BIAS,
   FACE_DEPTH_BIAS_SLOPE_SCALE,
   FACE_POSITION_FLOATS,
   FAR_PLANE,
   FLOATS_PER_EDGE_INSTANCE,
-  HIDDEN_BRIGHTNESS,
-  HIDDEN_DASH_LENGTH_PIXELS,
-  HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
-  HIDDEN_EXTENDED_LINE_WIDTH_PIXELS,
-  HIDDEN_GAP_LENGTH_PIXELS,
-  HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
-  HIDDEN_SEGMENT_WIDTH_PIXELS,
-  HIGHLIGHT_COLOR,
+  HOMOGENEOUS_W,
   MARKER_SIZE_OVERRIDE_ID,
   MARKER_USE_HIGHLIGHT_COLOR_OVERRIDE_ID,
   MSAA_SAMPLE_COUNT,
   NEAR_PLANE,
   ORTHO_SCALE,
-  SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
-  SEGMENT_WIDTH_PIXELS,
-  VERTEX_MARKER_SIZE_PIXELS,
-  VERTEX_MARKER_SMALL_SIZE_PIXELS,
+  STEREOMETRY_STYLES,
   VERTICES_PER_LINE_QUAD,
 } from '../stereometry-constants';
 import type { DragPreviewState } from '../stereometry-drag-connector';
 import { createWireframeFromTopology } from '../stereometry-geometry';
 import { extendLine, extendLineHalves } from '../stereometry-math';
+import { hexToRgb, resolveStyle } from '../stereometry-styles-processor';
 import type { FigureTopology, SceneState, SelectionState } from '../stereometry-types';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
@@ -93,9 +80,6 @@ const VERTEX_MARKER_SIZE_BYTE_OFFSET = 92;
 
 /** Number of vertices for a single marker quad (2 triangles) */
 const VERTICES_PER_MARKER_QUAD = 6;
-
-/** Homogeneous w-component for position vectors */
-const HOMOGENEOUS_W = 1.0;
 
 /**
  * Renders a pentagonal pyramid wireframe with hidden-edge dimming
@@ -157,12 +141,21 @@ export class PyramidLayer implements RenderLayer {
   private lastCanvasWidth = 0;
   private lastCanvasHeight = 0;
   private lastDevicePixelRatio = 1;
+  private readonly backgroundClearColor: GPUColor;
+  private readonly vertexHiddenBrightness: number;
 
   constructor(
     private readonly camera: OrbitalCameraController,
     private readonly msaaManager: MsaaTextureManager,
     private readonly topology: FigureTopology
-  ) {}
+  ) {
+    const backgroundStyle = resolveStyle(STEREOMETRY_STYLES, 'background', []);
+    const [bgR, bgG, bgB] = hexToRgb(backgroundStyle.color);
+    this.backgroundClearColor = { r: bgR, g: bgG, b: bgB, a: 1.0 };
+
+    const vertexHiddenStyle = resolveStyle(STEREOMETRY_STYLES, 'vertex', ['hidden']);
+    this.vertexHiddenBrightness = vertexHiddenStyle.brightness;
+  }
 
   init(context: GpuContext): void {
     this.device = context.device;
@@ -259,18 +252,21 @@ export class PyramidLayer implements RenderLayer {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    const vertexSelectedStyle = resolveStyle(STEREOMETRY_STYLES, 'vertex', ['selected']);
+    const previewVertexStyle = resolveStyle(STEREOMETRY_STYLES, 'vertex', ['preview']);
+
     this.device.queue.writeBuffer(
       this.uniformBuffer,
       HIGHLIGHT_COLOR_BYTE_OFFSET,
-      new Float32Array(HIGHLIGHT_COLOR)
+      new Float32Array(hexToRgb(vertexSelectedStyle.color))
     );
     this.device.queue.writeBuffer(
       this.uniformBuffer,
       VERTEX_MARKER_SIZE_BYTE_OFFSET,
-      new Float32Array([VERTEX_MARKER_SIZE_PIXELS])
+      new Float32Array([vertexSelectedStyle.size])
     );
 
-    // Preview uniform buffer with orange highlight color
+    // Preview uniform buffer with preview highlight color
     this.previewUniformBuffer = this.device.createBuffer({
       size: UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -278,12 +274,12 @@ export class PyramidLayer implements RenderLayer {
     this.device.queue.writeBuffer(
       this.previewUniformBuffer,
       HIGHLIGHT_COLOR_BYTE_OFFSET,
-      new Float32Array(DRAG_PREVIEW_COLOR)
+      new Float32Array(hexToRgb(previewVertexStyle.color))
     );
     this.device.queue.writeBuffer(
       this.previewUniformBuffer,
       VERTEX_MARKER_SIZE_BYTE_OFFSET,
-      new Float32Array([VERTEX_MARKER_SIZE_PIXELS])
+      new Float32Array([previewVertexStyle.size])
     );
 
     const bindGroupLayout = this.device.createBindGroupLayout({
@@ -312,38 +308,63 @@ export class PyramidLayer implements RenderLayer {
 
     this.depthFacesPipeline = this.createDepthFacesPipeline(pipelineLayout);
 
+    const segmentStyle = resolveStyle(STEREOMETRY_STYLES, 'segment', []);
+    const segmentSelectedStyle = resolveStyle(STEREOMETRY_STYLES, 'segment', ['selected']);
+    const segmentHiddenStyle = resolveStyle(STEREOMETRY_STYLES, 'segment', ['hidden']);
+    const segmentHiddenSelectedStyle = resolveStyle(STEREOMETRY_STYLES, 'segment', [
+      'hidden',
+      'selected',
+    ]);
+    const lineStyle = resolveStyle(STEREOMETRY_STYLES, 'line', []);
+    const lineSelectedStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['selected']);
+    const lineHiddenStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden']);
+    const lineHiddenSelectedStyle = resolveStyle(STEREOMETRY_STYLES, 'line', [
+      'hidden',
+      'selected',
+    ]);
+    const vertexStyle = resolveStyle(STEREOMETRY_STYLES, 'vertex', []);
+    const previewSegmentStyle = resolveStyle(STEREOMETRY_STYLES, 'segment', ['preview']);
+
     this.visibleEdgePipeline = this.createEdgePipeline(pipelineLayout, {
       depthCompare: 'less-equal',
       depthWriteEnabled: true,
-      normalWidth: SEGMENT_WIDTH_PIXELS,
-      highlightWidth: SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
+      normalWidth: segmentStyle.width,
+      highlightWidth: segmentSelectedStyle.width,
     });
 
     this.hiddenEdgePipeline = this.createEdgePipeline(pipelineLayout, {
       depthCompare: 'greater',
       depthWriteEnabled: false,
-      normalWidth: HIDDEN_SEGMENT_WIDTH_PIXELS,
-      highlightWidth: HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS,
-      brightness: HIDDEN_BRIGHTNESS,
-      dashLength: HIDDEN_DASH_LENGTH_PIXELS,
-      gapLength: HIDDEN_GAP_LENGTH_PIXELS,
+      normalWidth: segmentHiddenStyle.width,
+      highlightWidth: segmentHiddenSelectedStyle.width,
+      brightness: segmentHiddenStyle.brightness,
+      ...(segmentHiddenStyle.line.type === 'dashed'
+        ? {
+            dashLength: segmentHiddenStyle.line.dash,
+            gapLength: segmentHiddenStyle.line.gap,
+          }
+        : {}),
     });
 
     this.visibleLinePipeline = this.createEdgePipeline(pipelineLayout, {
       depthCompare: 'less-equal',
       depthWriteEnabled: true,
-      normalWidth: EXTENDED_LINE_WIDTH_PIXELS,
-      highlightWidth: EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
+      normalWidth: lineStyle.width,
+      highlightWidth: lineSelectedStyle.width,
     });
 
     this.hiddenLinePipeline = this.createEdgePipeline(pipelineLayout, {
       depthCompare: 'greater',
       depthWriteEnabled: false,
-      normalWidth: HIDDEN_EXTENDED_LINE_WIDTH_PIXELS,
-      highlightWidth: HIDDEN_EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS,
-      brightness: HIDDEN_BRIGHTNESS,
-      dashLength: HIDDEN_DASH_LENGTH_PIXELS,
-      gapLength: HIDDEN_GAP_LENGTH_PIXELS,
+      normalWidth: lineHiddenStyle.width,
+      highlightWidth: lineHiddenSelectedStyle.width,
+      brightness: lineHiddenStyle.brightness,
+      ...(lineHiddenStyle.line.type === 'dashed'
+        ? {
+            dashLength: lineHiddenStyle.line.dash,
+            gapLength: lineHiddenStyle.line.gap,
+          }
+        : {}),
     });
 
     this.selectionMarkerPipeline = this.createVertexMarkerPipeline(pipelineLayout, {
@@ -353,15 +374,15 @@ export class PyramidLayer implements RenderLayer {
     this.persistentMarkerPipeline = this.createVertexMarkerPipeline(pipelineLayout, {
       depthCompare: 'always',
       highlighted: false,
-      markerSize: VERTEX_MARKER_SMALL_SIZE_PIXELS,
+      markerSize: vertexStyle.size,
     });
 
-    // Preview edge pipeline: always visible, 3px width, uses preview bind group (orange)
+    // Preview edge pipeline: always visible, uses preview bind group (orange)
     this.previewEdgePipeline = this.createEdgePipeline(pipelineLayout, {
       depthCompare: 'always',
       depthWriteEnabled: false,
-      normalWidth: SEGMENT_WIDTH_PIXELS,
-      highlightWidth: SEGMENT_WIDTH_PIXELS,
+      normalWidth: previewSegmentStyle.width,
+      highlightWidth: previewSegmentStyle.width,
     });
   }
 
@@ -419,7 +440,7 @@ export class PyramidLayer implements RenderLayer {
           view: currentMsaaView,
           resolveTarget: canvasView,
           loadOp: 'clear',
-          clearValue: BACKGROUND_COLOR,
+          clearValue: this.backgroundClearColor,
           storeOp: 'discard',
         },
       ],
@@ -700,7 +721,9 @@ export class PyramidLayer implements RenderLayer {
 
     for (let index = 0; index < this.topologyVertexCount; index++) {
       const position = this.allVertexPositions[index];
-      brightness[index] = this.isVertexOccluded(viewDirection, position) ? HIDDEN_BRIGHTNESS : 1.0;
+      brightness[index] = this.isVertexOccluded(viewDirection, position)
+        ? this.vertexHiddenBrightness
+        : 1.0;
     }
 
     this.device.queue.writeBuffer(this.topologyVertexBrightnessBuffer, 0, brightness);

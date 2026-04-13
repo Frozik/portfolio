@@ -36,8 +36,9 @@ export const WebGpuGuard = memo(
             <div className="rounded-lg border border-border bg-surface-elevated/50 p-4">
               <h3 className="text-sm font-semibold text-text">{t.safariIOSTitle}</h3>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
-                {t.safariIOSSteps.map((step, index) => (
-                  <li key={index}>{step}</li>
+                {t.safariIOSSteps.map((step, stepIndex) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static translation array, order never changes
+                  <li key={stepIndex}>{step}</li>
                 ))}
               </ol>
             </div>
@@ -45,8 +46,9 @@ export const WebGpuGuard = memo(
             <div className="rounded-lg border border-border bg-surface-elevated/50 p-4">
               <h3 className="text-sm font-semibold text-text">{t.safariMacOSTitle}</h3>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
-                {t.safariMacOSSteps.map((step, index) => (
-                  <li key={index}>{step}</li>
+                {t.safariMacOSSteps.map((step, stepIndex) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static translation array, order never changes
+                  <li key={stepIndex}>{step}</li>
                 ))}
               </ol>
               <p className="mt-2 text-xs text-text-muted">{t.safariMacOSNote}</p>

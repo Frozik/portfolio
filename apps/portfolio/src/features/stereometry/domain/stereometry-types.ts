@@ -68,3 +68,28 @@ export interface SceneState {
 export const SELECTION_NONE: SelectionState = { type: 'none' };
 
 export type CameraInteractionMode = 'rotate' | 'pan';
+
+export type LineStyle =
+  | { readonly type: 'solid' }
+  | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
+
+/** Partial style — each entry overrides only the fields it defines */
+export type PartialElementStyle = {
+  readonly color?: string;
+  readonly width?: number;
+  readonly size?: number;
+  readonly brightness?: number;
+  readonly line?: LineStyle;
+};
+
+/** Resolved style — all fields populated after cascade resolution */
+export type ResolvedElementStyle = {
+  readonly color: string;
+  readonly width: number;
+  readonly size: number;
+  readonly brightness: number;
+  readonly line: LineStyle;
+};
+
+/** GPU-ready RGB float triple (0..1 range) */
+export type RgbFloat = readonly [number, number, number];

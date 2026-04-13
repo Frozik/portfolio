@@ -11,7 +11,8 @@ import {
  * pixels and the interaction lasts less than CLICK_TIME_THRESHOLD_MS milliseconds.
  * A double-click is two clicks within DOUBLE_CLICK_TIME_THRESHOLD_MS near the same position.
  *
- * Supports both mouse and single-finger touch. Multi-touch gestures are ignored.
+ * Uses Pointer Events for unified mouse/touch/pen handling, avoiding the
+ * duplicate-event problem where mobile browsers synthesize mouse events after touch.
  *
  * @returns Cleanup function that removes all event listeners.
  */
@@ -23,7 +24,7 @@ export function createClickDetector(
   let pointerDownX = 0;
   let pointerDownY = 0;
   let pointerDownTime = 0;
-  let isPointerDown = false;
+  let activePointerId: number | undefined;
 
   let lastClickX = 0;
   let lastClickY = 0;
@@ -62,18 +63,21 @@ export function createClickDetector(
     }
   }
 
-  function onMouseDown(event: MouseEvent): void {
+  function onPointerDown(event: PointerEvent): void {
+    if (!event.isPrimary) {
+      return;
+    }
+    activePointerId = event.pointerId;
     pointerDownX = event.clientX;
     pointerDownY = event.clientY;
     pointerDownTime = performance.now();
-    isPointerDown = true;
   }
 
-  function onMouseUp(event: MouseEvent): void {
-    if (!isPointerDown) {
+  function onPointerUp(event: PointerEvent): void {
+    if (event.pointerId !== activePointerId) {
       return;
     }
-    isPointerDown = false;
+    activePointerId = undefined;
 
     if (isWithinClickThreshold(event.clientX, event.clientY)) {
       const rect = canvas.getBoundingClientRect();
@@ -81,43 +85,11 @@ export function createClickDetector(
     }
   }
 
-  function onTouchStart(event: TouchEvent): void {
-    if (event.touches.length !== 1) {
-      isPointerDown = false;
-      return;
-    }
-    pointerDownX = event.touches[0].clientX;
-    pointerDownY = event.touches[0].clientY;
-    pointerDownTime = performance.now();
-    isPointerDown = true;
-  }
-
-  function onTouchEnd(event: TouchEvent): void {
-    if (!isPointerDown) {
-      return;
-    }
-    isPointerDown = false;
-
-    if (event.changedTouches.length !== 1) {
-      return;
-    }
-
-    const touch = event.changedTouches[0];
-    if (isWithinClickThreshold(touch.clientX, touch.clientY)) {
-      const rect = canvas.getBoundingClientRect();
-      handleClick(touch.clientX - rect.left, touch.clientY - rect.top);
-    }
-  }
-
-  canvas.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mouseup', onMouseUp);
-  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-  canvas.addEventListener('touchend', onTouchEnd);
+  canvas.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointerup', onPointerUp);
 
   return () => {
-    canvas.removeEventListener('mousedown', onMouseDown);
-    window.removeEventListener('mouseup', onMouseUp);
-    canvas.removeEventListener('touchstart', onTouchStart);
-    canvas.removeEventListener('touchend', onTouchEnd);
+    canvas.removeEventListener('pointerdown', onPointerDown);
+    window.removeEventListener('pointerup', onPointerUp);
   };
 }

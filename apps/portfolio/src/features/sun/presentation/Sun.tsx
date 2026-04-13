@@ -17,7 +17,7 @@ export const Sun = memo(() => {
   return (
     <WebGpuGuard className={commonStyles.fixedContainer}>
       <div className={commonStyles.fixedContainer}>
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+        <canvas ref={canvasRef} className="h-full w-full [touch-action:none]" />
       </div>
     </WebGpuGuard>
   );

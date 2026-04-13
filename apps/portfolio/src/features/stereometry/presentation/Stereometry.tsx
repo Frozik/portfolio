@@ -12,7 +12,6 @@ import type { CameraInteractionMode } from '../domain/stereometry-types';
 import { stereometryT } from './translations';
 
 const TOOLBAR_ICON_SIZE = 20;
-const TOOLBAR_BUTTON_SIZE = 40;
 const CLOSE_ICON_SIZE = 14;
 
 export const Stereometry = memo(() => {
@@ -63,7 +62,7 @@ export const Stereometry = memo(() => {
   return (
     <WebGpuGuard className={commonStyles.fixedContainer}>
       <div className={commonStyles.fixedContainer}>
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+        <canvas ref={canvasRef} className="h-full w-full [touch-action:none]" />
         <div className="absolute bottom-4 right-4 flex gap-2">
           <HelpPopover />
           <ToolbarButton onClick={handleUndo} label={stereometryT.toolbar.undo} disabled={!canUndo}>
@@ -113,7 +112,7 @@ const ToolbarButton = memo(
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        'flex items-center justify-center rounded-lg shadow-lg',
+        'flex size-10 items-center justify-center rounded-lg shadow-lg',
         'transition-all',
         disabled
           ? 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
@@ -121,7 +120,6 @@ const ToolbarButton = memo(
         !disabled && active && 'bg-blue-500 text-white',
         !disabled && !active && 'bg-neutral-800 text-neutral-400 hover:text-white'
       )}
-      style={{ width: TOOLBAR_BUTTON_SIZE, height: TOOLBAR_BUTTON_SIZE }}
     >
       {children}
     </button>
@@ -138,13 +136,12 @@ const HelpPopover = memo(() => {
           type="button"
           aria-label={stereometryT.toolbar.help}
           className={cn(
-            'flex items-center justify-center rounded-lg shadow-lg',
+            'flex size-10 items-center justify-center rounded-lg shadow-lg',
             'transition-all hover:scale-110 active:scale-95',
             isOpen
               ? 'bg-blue-500 text-white scale-110'
               : 'bg-neutral-800 text-neutral-400 hover:text-white'
           )}
-          style={{ width: TOOLBAR_BUTTON_SIZE, height: TOOLBAR_BUTTON_SIZE }}
         >
           <Info size={TOOLBAR_ICON_SIZE} />
         </button>

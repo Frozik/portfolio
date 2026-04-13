@@ -25,6 +25,8 @@ export interface DragToConnectCallbacks {
  * stopPropagation() prevents the camera and click detector from seeing
  * the event. Dragging to another vertex creates a user segment.
  *
+ * Uses Pointer Events for unified mouse/touch/pen handling.
+ *
  * @returns Cleanup function that removes all event listeners.
  */
 export function createDragToConnectController(
@@ -32,6 +34,7 @@ export function createDragToConnectController(
   callbacks: DragToConnectCallbacks
 ): VoidFunction {
   let isDragging = false;
+  let activePointerId: number | undefined;
   let startPosition: readonly [number, number, number] = [0, 0, 0];
 
   function getCanvasRelativeCoords(
@@ -56,8 +59,8 @@ export function createDragToConnectController(
     );
   }
 
-  function beginDrag(clientX: number, clientY: number): boolean {
-    const { screenX, screenY } = getCanvasRelativeCoords(clientX, clientY);
+  function beginDrag(event: PointerEvent): boolean {
+    const { screenX, screenY } = getCanvasRelativeCoords(event.clientX, event.clientY);
     const hitPosition = callbacks.performPointHitTest(screenX, screenY);
 
     if (hitPosition === undefined) {
@@ -65,6 +68,7 @@ export function createDragToConnectController(
     }
 
     isDragging = true;
+    activePointerId = event.pointerId;
     startPosition = hitPosition;
 
     callbacks.onDragStart();
@@ -104,36 +108,18 @@ export function createDragToConnectController(
     }
 
     isDragging = false;
+    activePointerId = undefined;
     callbacks.onDragUpdate(undefined);
-  }
-
-  function onMouseDown(event: MouseEvent): void {
-    if (beginDrag(event.clientX, event.clientY)) {
-      event.stopPropagation();
-    }
-  }
-
-  function onMouseMove(event: MouseEvent): void {
-    if (!isDragging) {
-      return;
-    }
-    updateDrag(event.clientX, event.clientY);
-  }
-
-  function onMouseUp(event: MouseEvent): void {
-    if (!isDragging) {
-      return;
-    }
-    endDrag(event.clientX, event.clientY);
   }
 
   function cancelDrag(): void {
     isDragging = false;
+    activePointerId = undefined;
     callbacks.onDragUpdate(undefined);
   }
 
-  function onTouchStart(event: TouchEvent): void {
-    // If a second finger touches during an active drag, cancel the drag
+  function onPointerDown(event: PointerEvent): void {
+    // If a second pointer arrives during an active drag, cancel the drag
     // and stop propagation so the camera doesn't enter pinch mode mid-drag
     if (isDragging) {
       cancelDrag();
@@ -141,52 +127,37 @@ export function createDragToConnectController(
       return;
     }
 
-    if (event.touches.length !== 1) {
+    if (!event.isPrimary) {
       return;
     }
-    const touch = event.touches[0];
-    if (beginDrag(touch.clientX, touch.clientY)) {
+
+    if (beginDrag(event)) {
       event.stopPropagation();
     }
   }
 
-  function onTouchMove(event: TouchEvent): void {
-    if (!isDragging || event.touches.length !== 1) {
+  function onPointerMove(event: PointerEvent): void {
+    if (!isDragging || event.pointerId !== activePointerId) {
       return;
     }
-    event.preventDefault();
-    const touch = event.touches[0];
-    updateDrag(touch.clientX, touch.clientY);
+    updateDrag(event.clientX, event.clientY);
   }
 
-  function onTouchEnd(event: TouchEvent): void {
-    if (!isDragging) {
+  function onPointerUp(event: PointerEvent): void {
+    if (!isDragging || event.pointerId !== activePointerId) {
       return;
     }
-    if (event.changedTouches.length !== 1) {
-      cancelDrag();
-      return;
-    }
-    const touch = event.changedTouches[0];
-    endDrag(touch.clientX, touch.clientY);
+    endDrag(event.clientX, event.clientY);
   }
 
   // Capture phase gives priority over camera and click detector (bubble phase)
-  canvas.addEventListener('mousedown', onMouseDown, { capture: true });
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
-  canvas.addEventListener('touchstart', onTouchStart, { capture: true });
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-  canvas.addEventListener('touchend', onTouchEnd);
+  canvas.addEventListener('pointerdown', onPointerDown, { capture: true });
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
 
   return () => {
-    canvas.removeEventListener('mousedown', onMouseDown, { capture: true });
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup', onMouseUp);
-    canvas.removeEventListener('touchstart', onTouchStart, {
-      capture: true,
-    });
-    canvas.removeEventListener('touchmove', onTouchMove);
-    canvas.removeEventListener('touchend', onTouchEnd);
+    canvas.removeEventListener('pointerdown', onPointerDown, { capture: true });
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
   };
 }

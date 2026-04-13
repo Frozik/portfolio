@@ -13,7 +13,12 @@ import { createSceneHistory } from './stereometry-history';
 import { hitTest, hitTestVertex } from './stereometry-hit-testing';
 import type { Vec3 } from './stereometry-math';
 import { subtractVec3 } from './stereometry-math';
-import { addUserSegment, createInitialScene, toggleLine } from './stereometry-scene';
+import {
+  addUserSegment,
+  createInitialScene,
+  removeUserSegment,
+  toggleLine,
+} from './stereometry-scene';
 import type { SceneState, SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
@@ -54,26 +59,41 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     notifyHistoryListeners();
   }
 
-  function performHitTest(screenX: number, screenY: number): SelectionState {
+  interface HitTestContext {
+    readonly canvasWidth: number;
+    readonly canvasHeight: number;
+    readonly devicePixelRatio: number;
+    readonly mvpMatrix: Float32Array;
+  }
+
+  function getHitTestContext(): HitTestContext | undefined {
     if (destroyed || !pyramidLayerRef) {
-      return SELECTION_NONE;
+      return undefined;
     }
 
-    const canvasWidth = canvas.clientWidth;
-    const canvasHeight = canvas.clientHeight;
-    const devicePixelRatio = Math.max(1, window.devicePixelRatio);
+    return {
+      canvasWidth: canvas.clientWidth,
+      canvasHeight: canvas.clientHeight,
+      devicePixelRatio: Math.max(1, window.devicePixelRatio),
+      mvpMatrix: pyramidLayerRef.getLastMvpMatrix(),
+    };
+  }
 
-    const extendedEdgeIndices = sceneState.lines.map(line => line.edgeIndex);
+  function performHitTest(screenX: number, screenY: number): SelectionState {
+    const context = getHitTestContext();
+    if (context === undefined) {
+      return SELECTION_NONE;
+    }
 
     return hitTest(
       screenX,
       screenY,
-      canvasWidth,
-      canvasHeight,
-      devicePixelRatio,
-      pyramidLayerRef.getLastMvpMatrix(),
+      context.canvasWidth,
+      context.canvasHeight,
+      context.devicePixelRatio,
+      context.mvpMatrix,
       topology,
-      extendedEdgeIndices,
+      sceneState.lines.map(line => line.edgeIndex),
       sceneState.userSegments
     );
   }
@@ -82,23 +102,20 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     screenX: number,
     screenY: number
   ): readonly [number, number, number] | undefined {
-    if (destroyed || !pyramidLayerRef) {
+    const context = getHitTestContext();
+    if (context === undefined) {
       return undefined;
     }
-
-    const canvasWidth = canvas.clientWidth;
-    const canvasHeight = canvas.clientHeight;
-    const devicePixelRatio = Math.max(1, window.devicePixelRatio);
 
     const allPositions = sceneState.vertices.map(vertex => vertex.position);
 
     const vertexIndex = hitTestVertex(
       screenX,
       screenY,
-      canvasWidth,
-      canvasHeight,
-      devicePixelRatio,
-      pyramidLayerRef.getLastMvpMatrix(),
+      context.canvasWidth,
+      context.canvasHeight,
+      context.devicePixelRatio,
+      context.mvpMatrix,
       allPositions
     );
 
@@ -142,8 +159,10 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
   function onCanvasDoubleClick(screenX: number, screenY: number): void {
     const hit = performHitTest(screenX, screenY);
 
-    if (hit.type === 'edge') {
+    if (hit.type === 'edge' || hit.type === 'line') {
       applySceneChange(toggleLine(sceneState, hit.edgeIndex, topology));
+    } else if (hit.type === 'userSegment') {
+      applySceneChange(removeUserSegment(sceneState, hit.userSegmentIndex, topology));
     }
   }
 

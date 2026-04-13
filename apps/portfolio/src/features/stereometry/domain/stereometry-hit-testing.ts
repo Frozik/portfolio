@@ -1,14 +1,15 @@
 import { isNil } from 'lodash-es';
 import { vec4 } from 'wgpu-matrix';
 
-import { EDGE_HIT_RADIUS_PIXELS, VERTEX_HIT_RADIUS_PIXELS } from './stereometry-constants';
+import {
+  EDGE_HIT_RADIUS_PIXELS,
+  HOMOGENEOUS_W,
+  VERTEX_HIT_RADIUS_PIXELS,
+} from './stereometry-constants';
 import type { Vec3 } from './stereometry-math';
 import { extendLine } from './stereometry-math';
 import type { FigureTopology, SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
-
-/** Homogeneous w-component for position vectors */
-const HOMOGENEOUS_W = 1.0;
 
 export interface HitTestLineSegment {
   readonly startPosition: Vec3;
@@ -57,15 +58,22 @@ export function hitTest(
 
   // 2. Check extended lines
   if (extendedEdgeIndices.length > 0) {
-    const extendedSegments = projectExtendedSegments(
+    const extendedLineSegments = extendedEdgeIndices.map(edgeIndex => {
+      const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
+      return {
+        startPosition: topology.vertices[vertexIndexA],
+        endPosition: topology.vertices[vertexIndexB],
+      };
+    });
+
+    const extendedProjected = projectExtendedLineSegments(
       mvpMatrix,
-      topology,
-      extendedEdgeIndices,
+      extendedLineSegments,
       gpuCanvasWidth,
       gpuCanvasHeight
     );
 
-    const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, extendedSegments);
+    const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, extendedProjected);
 
     if (!isNil(lineHit)) {
       return { type: 'line', edgeIndex: extendedEdgeIndices[lineHit] };
@@ -74,7 +82,7 @@ export function hitTest(
 
   // 3. Check user segments
   if (userSegments.length > 0) {
-    const userProjected = projectUserSegments(
+    const userProjected = projectExtendedLineSegments(
       mvpMatrix,
       userSegments,
       gpuCanvasWidth,
@@ -157,30 +165,7 @@ function projectVerticesToScreen(
   });
 }
 
-function projectExtendedSegments(
-  mvpMatrix: Float32Array,
-  topology: FigureTopology,
-  edgeIndices: readonly number[],
-  gpuCanvasWidth: number,
-  gpuCanvasHeight: number
-): ProjectedSegment[] {
-  return edgeIndices.map(edgeIndex => {
-    const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
-    const [farStart, farEnd] = extendLine(
-      topology.vertices[vertexIndexA],
-      topology.vertices[vertexIndexB]
-    );
-    const projected = projectVerticesToScreen(
-      mvpMatrix,
-      [farStart, farEnd],
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-    return { start: projected[0], end: projected[1] };
-  });
-}
-
-function projectUserSegments(
+function projectExtendedLineSegments(
   mvpMatrix: Float32Array,
   segments: readonly HitTestLineSegment[],
   gpuCanvasWidth: number,

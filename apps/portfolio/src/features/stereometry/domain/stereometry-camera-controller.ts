@@ -30,6 +30,8 @@ export interface OrbitalCameraController {
  * Pan mode translates the lookAt target along the camera's screen-plane axes.
  * Shift+drag always pans regardless of current mode.
  * Scroll/pinch always zooms.
+ *
+ * Uses Pointer Events for unified mouse/touch/pen handling.
  */
 export function createOrbitalCameraController(
   canvas: HTMLCanvasElement,
@@ -110,27 +112,59 @@ export function createOrbitalCameraController(
     panVelocityY = 0;
   }
 
-  let isDragging = false;
-  let lastMouseX = 0;
-  let lastMouseY = 0;
+  // --- Pointer tracking ---
+  // We track up to 2 pointers for single-finger drag and two-finger pinch zoom.
+  const activePointers = new Map<number, { clientX: number; clientY: number }>();
   let isShiftHeld = false;
+  let lastPinchDistance = 0;
 
-  function onMouseDown(event: MouseEvent): void {
-    isDragging = true;
-    lastMouseX = event.clientX;
-    lastMouseY = event.clientY;
-    isShiftHeld = event.shiftKey;
+  function getPointerDistance(): number {
+    const pointers = [...activePointers.values()];
+    const deltaX = pointers[0].clientX - pointers[1].clientX;
+    const deltaY = pointers[0].clientY - pointers[1].clientY;
+    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   }
 
-  function onMouseMove(event: MouseEvent): void {
-    if (!isDragging) {
+  function onPointerDown(event: PointerEvent): void {
+    activePointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    if (activePointers.size === 1) {
+      isShiftHeld = event.shiftKey;
+    } else if (activePointers.size === 2) {
+      lastPinchDistance = getPointerDistance();
+    }
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    const previous = activePointers.get(event.pointerId);
+    if (previous === undefined) {
       return;
     }
 
-    const deltaX = event.clientX - lastMouseX;
-    const deltaY = event.clientY - lastMouseY;
-    lastMouseX = event.clientX;
-    lastMouseY = event.clientY;
+    activePointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    // Two-finger pinch zoom
+    if (activePointers.size === 2) {
+      const currentDistance = getPointerDistance();
+      const scale = lastPinchDistance / currentDistance;
+      targetDistance = clampDistance(targetDistance * scale);
+      lastPinchDistance = currentDistance;
+      return;
+    }
+
+    // Single-pointer drag
+    if (activePointers.size !== 1) {
+      return;
+    }
+
+    const deltaX = event.clientX - previous.clientX;
+    const deltaY = event.clientY - previous.clientY;
 
     const shouldPan = isShiftHeld || interactionMode === 'pan';
 
@@ -147,9 +181,16 @@ export function createOrbitalCameraController(
     }
   }
 
-  function onMouseUp(): void {
-    isDragging = false;
-    isShiftHeld = false;
+  function onPointerUp(event: PointerEvent): void {
+    activePointers.delete(event.pointerId);
+
+    if (activePointers.size === 0) {
+      isShiftHeld = false;
+    }
+  }
+
+  function onPointerCancel(event: PointerEvent): void {
+    activePointers.delete(event.pointerId);
   }
 
   function onWheel(event: WheelEvent): void {
@@ -157,79 +198,11 @@ export function createOrbitalCameraController(
     targetDistance = clampDistance(targetDistance * (1 + event.deltaY * WHEEL_ZOOM_SENSITIVITY));
   }
 
-  canvas.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('wheel', onWheel, { passive: false });
-
-  let lastTouchX = 0;
-  let lastTouchY = 0;
-  let isTouching = false;
-  let lastPinchDistance = 0;
-
-  function getTouchDistance(event: TouchEvent): number {
-    const deltaX = event.touches[0].clientX - event.touches[1].clientX;
-    const deltaY = event.touches[0].clientY - event.touches[1].clientY;
-    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-  }
-
-  function onTouchStart(event: TouchEvent): void {
-    if (event.touches.length === 1) {
-      isTouching = true;
-      lastTouchX = event.touches[0].clientX;
-      lastTouchY = event.touches[0].clientY;
-    } else if (event.touches.length === 2) {
-      isTouching = false;
-      lastPinchDistance = getTouchDistance(event);
-    }
-  }
-
-  function onTouchMove(event: TouchEvent): void {
-    event.preventDefault();
-
-    if (event.touches.length === 2) {
-      const currentDistance = getTouchDistance(event);
-      const scale = lastPinchDistance / currentDistance;
-      targetDistance = clampDistance(targetDistance * scale);
-      lastPinchDistance = currentDistance;
-      return;
-    }
-
-    if (!isTouching || event.touches.length !== 1) {
-      return;
-    }
-
-    const deltaX = event.touches[0].clientX - lastTouchX;
-    const deltaY = event.touches[0].clientY - lastTouchY;
-    lastTouchX = event.touches[0].clientX;
-    lastTouchY = event.touches[0].clientY;
-
-    if (interactionMode === 'pan') {
-      panVelocityX = deltaX;
-      panVelocityY = deltaY;
-      azimuthVelocity = 0;
-      applyPan(deltaX, deltaY);
-    } else {
-      azimuthVelocity = deltaX;
-      panVelocityX = 0;
-      panVelocityY = 0;
-      applyRotation(deltaX);
-    }
-  }
-
-  function onTouchEnd(event: TouchEvent): void {
-    if (event.touches.length === 0) {
-      isTouching = false;
-    } else if (event.touches.length === 1) {
-      isTouching = true;
-      lastTouchX = event.touches[0].clientX;
-      lastTouchY = event.touches[0].clientY;
-    }
-  }
-
-  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-  canvas.addEventListener('touchend', onTouchEnd);
 
   return {
     tick(): void {
@@ -240,7 +213,7 @@ export function createOrbitalCameraController(
         distance = targetDistance;
       }
 
-      if (isDragging || isTouching) {
+      if (activePointers.size > 0) {
         return;
       }
 
@@ -291,13 +264,11 @@ export function createOrbitalCameraController(
     },
 
     destroy(): void {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
       canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onTouchEnd);
     },
   };
 }

@@ -21,6 +21,8 @@ export interface OrbitalCameraController {
  * Trackball-style orbital camera controller.
  * Rotations are applied in screen space so dragging always moves the object
  * in the direction of the cursor, regardless of current orientation.
+ *
+ * Uses Pointer Events for unified mouse/touch/pen handling.
  */
 export function createOrbitalCameraController(canvas: HTMLCanvasElement): OrbitalCameraController {
   let distance = INITIAL_CAMERA_DISTANCE;
@@ -66,101 +68,64 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     camPos = vec3.normalize(camPos);
   }
 
-  // ── Inertia ──────────────────────────────────────────────────────────
+  function clampDistance(value: number): number {
+    return Math.max(MIN_CAMERA_DISTANCE, Math.min(MAX_CAMERA_DISTANCE, value));
+  }
+
+  // --- Inertia ---
 
   let velocityX = 0;
   let velocityY = 0;
 
-  // ── Mouse ───────────────────────────────────────────────────────────
-
-  let isDragging = false;
-  let lastMouseX = 0;
-  let lastMouseY = 0;
-
-  function onMouseDown(e: MouseEvent) {
-    isDragging = true;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    if (!isDragging) {
-      return;
-    }
-
-    const dx = e.clientX - lastMouseX;
-    const dy = e.clientY - lastMouseY;
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-
-    velocityX = dx;
-    velocityY = dy;
-
-    applyRotation(dx, dy);
-  }
-
-  function onMouseUp() {
-    isDragging = false;
-  }
-
-  function onWheel(e: WheelEvent) {
-    e.preventDefault();
-    distance = Math.max(
-      MIN_CAMERA_DISTANCE,
-      Math.min(MAX_CAMERA_DISTANCE, distance * (1 + e.deltaY * WHEEL_ZOOM_SENSITIVITY))
-    );
-  }
-
-  canvas.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
-  canvas.addEventListener('wheel', onWheel, { passive: false });
-
-  // ── Touch — single finger rotation, two-finger pinch-to-zoom ──────
-
-  let lastTouchX = 0;
-  let lastTouchY = 0;
-  let isTouching = false;
+  // --- Pointer tracking ---
+  const activePointers = new Map<number, { clientX: number; clientY: number }>();
   let lastPinchDistance = 0;
 
-  function getTouchDistance(e: TouchEvent): number {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
+  function getPointerDistance(): number {
+    const pointers = [...activePointers.values()];
+    const dx = pointers[0].clientX - pointers[1].clientX;
+    const dy = pointers[0].clientY - pointers[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  function onTouchStart(e: TouchEvent) {
-    if (e.touches.length === 1) {
-      isTouching = true;
-      lastTouchX = e.touches[0].clientX;
-      lastTouchY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-      isTouching = false;
-      lastPinchDistance = getTouchDistance(e);
+  function onPointerDown(event: PointerEvent): void {
+    activePointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    if (activePointers.size === 2) {
+      lastPinchDistance = getPointerDistance();
     }
   }
 
-  function onTouchMove(e: TouchEvent) {
-    e.preventDefault();
+  function onPointerMove(event: PointerEvent): void {
+    const previous = activePointers.get(event.pointerId);
+    if (previous === undefined) {
+      return;
+    }
+
+    activePointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
 
     // Pinch-to-zoom with two fingers
-    if (e.touches.length === 2) {
-      const currentDistance = getTouchDistance(e);
+    if (activePointers.size === 2) {
+      const currentDistance = getPointerDistance();
       const scale = lastPinchDistance / currentDistance;
-      distance = Math.max(MIN_CAMERA_DISTANCE, Math.min(MAX_CAMERA_DISTANCE, distance * scale));
+      distance = clampDistance(distance * scale);
       lastPinchDistance = currentDistance;
       return;
     }
 
-    // Single finger rotation
-    if (!isTouching || e.touches.length !== 1) {
+    // Single pointer rotation
+    if (activePointers.size !== 1) {
       return;
     }
 
-    const dx = e.touches[0].clientX - lastTouchX;
-    const dy = e.touches[0].clientY - lastTouchY;
-    lastTouchX = e.touches[0].clientX;
-    lastTouchY = e.touches[0].clientY;
+    const dx = event.clientX - previous.clientX;
+    const dy = event.clientY - previous.clientY;
 
     velocityX = dx;
     velocityY = dy;
@@ -168,23 +133,28 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     applyRotation(dx, dy);
   }
 
-  function onTouchEnd(e: TouchEvent) {
-    if (e.touches.length === 0) {
-      isTouching = false;
-    } else if (e.touches.length === 1) {
-      isTouching = true;
-      lastTouchX = e.touches[0].clientX;
-      lastTouchY = e.touches[0].clientY;
-    }
+  function onPointerUp(event: PointerEvent): void {
+    activePointers.delete(event.pointerId);
   }
 
-  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-  canvas.addEventListener('touchend', onTouchEnd);
+  function onPointerCancel(event: PointerEvent): void {
+    activePointers.delete(event.pointerId);
+  }
+
+  function onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    distance = clampDistance(distance * (1 + event.deltaY * WHEEL_ZOOM_SENSITIVITY));
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+  canvas.addEventListener('wheel', onWheel, { passive: false });
 
   return {
     tick(): void {
-      if (isDragging || isTouching) {
+      if (activePointers.size > 0) {
         return;
       }
 
@@ -205,19 +175,17 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
 
     getViewMatrix(): Float32Array {
       const eye = vec3.scale(camPos, distance);
-      const target = vec3.fromValues(0, 0, 0);
+      const lookAtTarget = vec3.fromValues(0, 0, 0);
 
-      return mat4.lookAt(eye, target, camUp) as Float32Array;
+      return mat4.lookAt(eye, lookAtTarget, camUp) as Float32Array;
     },
 
     destroy(): void {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
       canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onTouchEnd);
     },
   };
 }
