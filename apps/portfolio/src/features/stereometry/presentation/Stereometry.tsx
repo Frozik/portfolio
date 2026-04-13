@@ -9,6 +9,7 @@ import commonStyles from '../../../shared/styles.module.scss';
 import type { StereometryControls } from '../domain/stereometry-draw';
 import { runStereometry } from '../domain/stereometry-draw';
 import type { CameraInteractionMode } from '../domain/stereometry-types';
+import { stereometryT } from './translations';
 
 const TOOLBAR_ICON_SIZE = 20;
 const TOOLBAR_BUTTON_SIZE = 40;
@@ -65,20 +66,24 @@ export const Stereometry = memo(() => {
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
         <div className="absolute bottom-4 right-4 flex gap-2">
           <HelpPopover />
-          <ToolbarButton onClick={handleUndo} label="Undo" disabled={!canUndo}>
+          <ToolbarButton onClick={handleUndo} label={stereometryT.toolbar.undo} disabled={!canUndo}>
             <Undo2 size={TOOLBAR_ICON_SIZE} />
           </ToolbarButton>
-          <ToolbarButton onClick={handleRedo} label="Redo" disabled={!canRedo}>
+          <ToolbarButton onClick={handleRedo} label={stereometryT.toolbar.redo} disabled={!canRedo}>
             <Redo2 size={TOOLBAR_ICON_SIZE} />
           </ToolbarButton>
           <ToolbarButton
             active={interactionMode === 'rotate'}
             onClick={handleSetRotateMode}
-            label="Rotate"
+            label={stereometryT.toolbar.rotate}
           >
             <RotateCcw size={TOOLBAR_ICON_SIZE} />
           </ToolbarButton>
-          <ToolbarButton active={interactionMode === 'pan'} onClick={handleSetPanMode} label="Pan">
+          <ToolbarButton
+            active={interactionMode === 'pan'}
+            onClick={handleSetPanMode}
+            label={stereometryT.toolbar.pan}
+          >
             <Move size={TOOLBAR_ICON_SIZE} />
           </ToolbarButton>
         </div>
@@ -131,7 +136,7 @@ const HelpPopover = memo(() => {
       <Popover.Trigger asChild>
         <button
           type="button"
-          aria-label="Help"
+          aria-label={stereometryT.toolbar.help}
           className={cn(
             'flex items-center justify-center rounded-lg shadow-lg',
             'transition-all hover:scale-110 active:scale-95',
@@ -157,46 +162,58 @@ const HelpPopover = memo(() => {
           )}
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="font-semibold text-white">Stereometry</span>
+            <span className="font-semibold text-white">{stereometryT.help.title}</span>
             <Popover.Close
-              aria-label="Close"
+              aria-label={stereometryT.toolbar.close}
               className="text-neutral-500 hover:text-white transition-colors"
             >
               <X size={CLOSE_ICON_SIZE} />
             </Popover.Close>
           </div>
-          <p className="mb-3 text-neutral-400">
-            Interactive 3D geometry tool for exploring a pentagonal pyramid.
-          </p>
+          <p className="mb-3 text-neutral-400">{stereometryT.help.description}</p>
           <ul className="space-y-1.5 text-neutral-300">
             <li>
-              <strong className="text-neutral-100">Drag</strong> — rotate the camera
+              <strong className="text-neutral-100">{stereometryT.help.controlLabels.drag}</strong> —{' '}
+              {stereometryT.help.controls.drag}
             </li>
             <li>
-              <strong className="text-neutral-100">Shift+Drag</strong> — pan the view
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.shiftDrag}
+              </strong>{' '}
+              — {stereometryT.help.controls.shiftDrag}
             </li>
             <li>
-              <strong className="text-neutral-100">Scroll / Pinch</strong> — zoom in and out
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.scrollPinch}
+              </strong>{' '}
+              — {stereometryT.help.controls.scrollPinch}
             </li>
             <li>
-              <strong className="text-neutral-100">Click edge/line</strong> — select it
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.clickEdge}
+              </strong>{' '}
+              — {stereometryT.help.controls.clickEdge}
             </li>
             <li>
-              <strong className="text-neutral-100">Double-click edge</strong> — extend edge into an
-              infinite line
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.doubleClickEdge}
+              </strong>{' '}
+              — {stereometryT.help.controls.doubleClickEdge}
             </li>
             <li>
-              <strong className="text-neutral-100">Drag vertex → vertex</strong> — draw a
-              construction line between two points
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.dragVertex}
+              </strong>{' '}
+              — {stereometryT.help.controls.dragVertex}
             </li>
             <li>
-              <strong className="text-neutral-100">Select edge/line + tap vertex</strong> — draw a
-              parallel line through that vertex
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.selectEdgeTapVertex}
+              </strong>{' '}
+              — {stereometryT.help.controls.selectEdgeTapVertex}
             </li>
           </ul>
-          <p className="mt-3 text-xs text-neutral-500">
-            Intersection points appear automatically where lines cross.
-          </p>
+          <p className="mt-3 text-xs text-neutral-500">{stereometryT.help.intersectionHint}</p>
           <Popover.Arrow className="fill-neutral-900" />
         </Popover.Content>
       </Popover.Portal>

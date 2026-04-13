@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import { OverlayLoader } from '../../shared/components/OverlayLoader';
+import { appT } from '../translations';
 import { ErrorPage } from './ErrorPage';
 import { Root } from './Root';
 
@@ -17,7 +18,7 @@ const rootRouter = createBrowserRouter(
       children: [
         {
           index: true,
-          handle: { title: 'CV' },
+          handle: { title: appT.pageTitles.cv },
           lazy: async () => {
             const { Welcome } = await import('../../features/welcome/presentation/Welcome');
             return { Component: Welcome };
@@ -25,7 +26,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'pendulum/:robotId?',
-          handle: { title: 'Pendulum' },
+          handle: { title: appT.pageTitles.pendulum },
           lazy: async () => {
             const { Pendulum } = await import('../../features/pendulum/presentation/Pendulum');
             return { Component: Pendulum };
@@ -33,7 +34,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'sudoku/:puzzle?',
-          handle: { title: 'Sudoku' },
+          handle: { title: appT.pageTitles.sudoku },
           lazy: async () => {
             const { Sudoku } = await import('../../features/sudoku/presentation/Sudoku');
             return { Component: Sudoku };
@@ -41,7 +42,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'sun',
-          handle: { title: 'Sun' },
+          handle: { title: appT.pageTitles.sun },
           lazy: async () => {
             const { Sun } = await import('../../features/sun/presentation/Sun');
             return { Component: Sun };
@@ -49,7 +50,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'graphics',
-          handle: { title: 'Graphics' },
+          handle: { title: appT.pageTitles.graphics },
           lazy: async () => {
             const { Charts } = await import('../../features/graphics/presentation/Charts');
             return { Component: Charts };
@@ -57,7 +58,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'timeseries',
-          handle: { title: 'Timeseries' },
+          handle: { title: appT.pageTitles.timeseries },
           lazy: async () => {
             const { Timeseries } = await import(
               '../../features/timeseries/presentation/Timeseries'
@@ -67,7 +68,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'stereometry',
-          handle: { title: 'Stereometry' },
+          handle: { title: appT.pageTitles.stereometry },
           lazy: async () => {
             const { Stereometry } = await import(
               '../../features/stereometry/presentation/Stereometry'
@@ -77,7 +78,7 @@ const rootRouter = createBrowserRouter(
         },
         {
           path: 'controls',
-          handle: { title: 'Controls' },
+          handle: { title: appT.pageTitles.controls },
           lazy: async () => {
             const { Controls } = await import('../../features/controls/presentation/Controls');
             return { Component: Controls };

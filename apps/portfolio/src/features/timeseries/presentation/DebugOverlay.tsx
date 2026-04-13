@@ -2,6 +2,7 @@ import { useFunction } from '@frozik/components';
 import { memo, useEffect, useState } from 'react';
 
 import type { ISharedTimeseriesRenderer } from '../domain/types';
+import { timeseriesT } from './translations';
 
 const FPS_POLL_INTERVAL_MS = 250;
 const IS_HOSTED = window.location.hostname.endsWith('github.io');
@@ -52,7 +53,7 @@ export const DebugOverlay = memo(({ renderer }: { renderer: ISharedTimeseriesRen
       <div className="flex w-full flex-col gap-1.5">
         {!IS_HOSTED && (
           <label className="flex cursor-pointer items-center justify-between gap-2">
-            <span>Debug</span>
+            <span>{timeseriesT.debugOverlay.debug}</span>
             <span className="relative inline-flex items-center">
               <input
                 type="checkbox"
@@ -65,7 +66,7 @@ export const DebugOverlay = memo(({ renderer }: { renderer: ISharedTimeseriesRen
           </label>
         )}
         <label className="flex cursor-pointer items-center justify-between gap-2">
-          <span>Loading delay</span>
+          <span>{timeseriesT.debugOverlay.loadingDelay}</span>
           <span className="relative inline-flex items-center">
             <input
               type="checkbox"

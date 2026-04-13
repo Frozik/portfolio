@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { Outlet, useMatches } from 'react-router-dom';
 
+import { getCurrentLanguage } from '../../shared/i18n';
+import { appT } from '../translations';
 import styles from './Root.module.scss';
 import { SidebarNavigation } from './sidebar/SidebarNavigation';
-
-const APP_TITLE = 'Portfolio';
 
 export const Root = () => {
   const matches = useMatches();
@@ -12,7 +12,11 @@ export const Root = () => {
   const pageTitle = (lastMatch?.handle as { title?: string } | undefined)?.title;
 
   useEffect(() => {
-    document.title = pageTitle ? `${pageTitle} — ${APP_TITLE}` : APP_TITLE;
+    document.documentElement.lang = getCurrentLanguage();
+  }, []);
+
+  useEffect(() => {
+    document.title = pageTitle ? `${pageTitle} — ${appT.appTitle}` : appT.appTitle;
   }, [pageTitle]);
 
   return (

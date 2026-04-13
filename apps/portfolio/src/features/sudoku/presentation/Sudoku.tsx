@@ -13,12 +13,13 @@ import { useSudokuStore } from '../application/useSudokuStore';
 import type { TTool } from '../domain/types';
 import { SudokuField } from './components/SudokuField';
 import styles from './Sudoku.module.scss';
+import { sudokuT } from './translations';
 
 const DIFFICULTY_OPTIONS = [
-  { label: 'Easy', value: 'easy' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Hard', value: 'hard' },
-  { label: 'Expert', value: 'expert' },
+  { label: sudokuT.difficulty.easy, value: 'easy' },
+  { label: sudokuT.difficulty.medium, value: 'medium' },
+  { label: sudokuT.difficulty.hard, value: 'hard' },
+  { label: sudokuT.difficulty.expert, value: 'expert' },
 ];
 
 export const Sudoku = observer(() => {

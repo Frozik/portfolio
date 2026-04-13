@@ -18,10 +18,14 @@ import { useNavigate } from 'react-router-dom';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
+import { getCurrentLanguage } from '../../../../shared/i18n';
 import { Badge, Button, DataTable, List, Tag } from '../../../../shared/ui';
 import { usePendulumStore } from '../../application/usePendulumStore';
+import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
 import styles from './GenerationsList.module.scss';
+
+const DATE_LOCALE = getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
 
 type TGenerationRow = Record<string, unknown> & {
   key: number;
@@ -67,21 +71,21 @@ const PlayerCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
 const generationColumns: ColumnDef<TGenerationRow, unknown>[] = [
   {
     accessorKey: 'id',
-    header: '#',
+    header: pendulumT.generationsList.columnId,
     size: 80,
     enableSorting: true,
     meta: { fixed: 'left' as const },
   },
   {
     accessorKey: 'maxScore',
-    header: 'Best score',
+    header: pendulumT.generationsList.columnBestScore,
     size: 110,
     meta: { fixed: 'left' as const },
     cell: ScoreCell,
   },
   ...Array.from({ length: MAX_PLAYER_COLUMNS }, (_, index) => ({
     accessorKey: `player-${index}` as const,
-    header: `Player #${index + 1}`,
+    header: pendulumT.generationsList.columnPlayer(index + 1),
     size: 340,
     cell: PlayerCell,
   })),
@@ -167,14 +171,16 @@ export const GenerationsList = observer(() => {
               onClick={() => handleContinueCompetition(startDate === 'new' ? undefined : startDate)}
             >
               {startDate === 'new'
-                ? 'Create New'
-                : `Continue with ${new Date(startDate).toLocaleString('ru-RU', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}`}
+                ? pendulumT.generationsList.createNew
+                : pendulumT.generationsList.continueWith(
+                    new Date(startDate).toLocaleString(DATE_LOCALE, {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  )}
             </Button>
           )}
         />

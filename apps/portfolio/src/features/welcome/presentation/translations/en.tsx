@@ -1,0 +1,592 @@
+import { Temporal } from '@js-temporal/polyfill';
+import type { ReactNode } from 'react';
+
+export interface IWorkTranslation {
+  start: Temporal.PlainDate;
+  end?: Temporal.PlainDate;
+  company: string;
+  website?: string;
+  location?: string;
+  scopeOfActivity?: ReactNode;
+  position: string;
+  description: ReactNode;
+}
+
+export const welcomeTranslationsEn = {
+  summary: {
+    title: 'Professional summary',
+    text: (yearsOfExperience: number) =>
+      `Senior Frontend Engineer and Team Leader with ${yearsOfExperience}+ years of experience building high-performance web applications. Specialized in WebGPU/WebGL data visualization, real-time trading systems, and scalable frontend architecture. Led a frontend team of 7 engineers at Yandex.Money — owned product architecture end-to-end (full-stack), established code review culture, mentored developers, and drove key architectural decisions. Delivered enterprise products at Deutsche Bank. Experienced in Agile/Scrum environments with cross-functional collaboration.`,
+  },
+  position: {
+    title: 'Desired position',
+    role: 'Senior Frontend Engineer, Team Leader',
+    specializations: 'Specializations: Team Leader, Developer',
+    employment: 'Employment: full time',
+  },
+  skills: {
+    title: 'Key skills',
+  },
+  workExperience: {
+    title: (duration: string) => `Work experience — ${duration}`,
+    tillNow: 'till now',
+  },
+  contacts: {
+    fullName: 'Sharov Dmitry Nikolaevich',
+    savePdf: 'Save PDF',
+    personalInfo: (age: number) => `Male, ${age} years, born on 10 November 1982`,
+    preferredContact: '— preferred means of communication',
+  },
+  availability: {
+    availableForRemote: 'Available for remote work',
+    myTime: 'My time',
+  },
+  statusLabels: {
+    online: 'Online',
+    away: 'Away',
+    weekend: 'Day off',
+  },
+  education: {
+    title: 'Education',
+    university: 'Novgorod Yaroslav the Wise State University, Veliky Novgorod',
+    degree: 'Specialist in Computers and Automated Systems Software',
+    faculty: 'Faculty of Electronics and Information Technology',
+  },
+  employmentHistory: [
+    {
+      start: new Temporal.PlainDate(2022, 2, 1),
+      company: 'IP Sharov Dmitry Nikolaevich',
+      position: 'Sole Proprietor',
+      description: (
+        <>
+          <h4>For High-Frequency Trading company:</h4>
+          <p>
+            Building a suite of 15+ web applications for a high-frequency trading platform — from
+            real-time data visualization to system configuration and risk management.
+          </p>
+
+          <h4>Data Visualization:</h4>
+          <ul>
+            <li>
+              High-performance WebGL charting engine rendering tens of millions of data points at
+              60fps with GPU-accelerated pan/zoom, scalable from years down to nanoseconds
+            </li>
+            <li>
+              Interactive dashboards with large-scale tables (millions of rows), customizable
+              layouts, and real-time data streaming via WebSocket
+            </li>
+            <li>
+              Backtesting environment for analyzing trading robot performance on historical data
+            </li>
+          </ul>
+
+          <h4>Trading Operations:</h4>
+          <ul>
+            <li>
+              Trading server management — configuration of accounts, instruments, robots, and risk
+              limits across multiple exchanges
+            </li>
+            <li>
+              Balance and position monitoring across all exchanges with risk configuration and
+              rebalancing rules
+            </li>
+            <li>
+              Middle Office application for Risk Management, PnL tracking, and trade corrections
+            </li>
+            <li>Trading statistics analysis and comprehensive report generation</li>
+          </ul>
+
+          <h4>Platform Infrastructure:</h4>
+          <ul>
+            <li>Shared component library, BFF (Backend For Frontend) layer</li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2019, 1, 1),
+      end: new Temporal.PlainDate(2022, 2, 1),
+      company: 'Deutsche Bank',
+      website: 'https://www.db.com/',
+      location: 'Russia, Saint Petersburg',
+      scopeOfActivity: 'Financial Sector / Banking',
+      position: 'Assistant Vice President (Senior Frontend Engineer)',
+      description: (
+        <>
+          <p>Development of DB Autobahn Web Application</p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>
+              Develop and maintain a business-critical web application, focusing on high-profit
+              trading
+            </li>
+            <li>Ensure seamless operation and top-quality functionality for users</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Built 5+ order entry forms for different trade types on the{' '}
+              <a
+                href="https://autobahn.db.com/autobahn/index.html"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Autobahn platform
+              </a>
+              ; maintained flagship trading and active order monitoring products
+            </li>
+            <li>Revamped and modernized several legacy applications</li>
+            <li>
+              Developed a shared UI controls library used across all Autobahn applications — trading
+              calendar with business day rules, sliding tenor support (TOM, TOD, SPOT), natural
+              language date input (e.g. &quot;tom 10am&quot;), financial data input fields, layout
+              components, and a wide range of other controls. The library was built following BEM
+              principles, ensuring maintainable, scalable, and reusable code. Controls were designed
+              to be composable, allowing complex UI components to be assembled through combinations
+              of simpler base controls, enabling rapid and consistent development across the entire
+              application suite.
+            </li>
+            <li>
+              Designed and proposed a page-description-based testing framework concept with server
+              response replay, along with a basic Proof-of-Concept implementation, enabling 100%
+              business functionality coverage.
+            </li>
+            <li>
+              Implemented interaction patterns and performance optimizations, achieving sub-second
+              application startup times across all applications — ensuring instant loading and
+              smooth operation regardless of the trader's network channel, even on the weakest VDI
+              setups.
+            </li>
+            <li>Investigated and resolved production incidents</li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2017, 4, 1),
+      end: new Temporal.PlainDate(2018, 12, 1),
+      company: 'Grid Dynamics (Raymond-James)',
+      website: 'https://griddynamics.com/',
+      location: 'Russia, Saint Petersburg',
+      position: 'Lead Frontend Developer',
+      description: (
+        <>
+          <p>Development of Internal-Use CRM Software for Raymond-James customer</p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>Develop and maintain a web-based CRM system to streamline internal processes.</li>
+            <li>
+              Collaborate with cross-functional teams to ensure seamless integration and efficient
+              functionality of the application.
+            </li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Built core CRM modules: visual workflow editor for customizable task pipelines, email
+              template management system, contact and deal management views, activity timeline, and
+              role-based access controls
+            </li>
+            <li>
+              Integrated the CRM with customer&apos;s existing infrastructure — email delivery
+              services, internal directories, and notification systems — delivering a seamless
+              migration from legacy tools
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2016, 11, 1),
+      end: new Temporal.PlainDate(2017, 4, 1),
+      company: 'Grid Dynamics',
+      website: 'https://griddynamics.com/',
+      location: 'Russia, Saint Petersburg',
+      position: 'Lead Frontend Developer',
+      description: (
+        <>
+          <p>Angular 2 E-commerce Pre-sale Web Application Developer</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            The objective of the project was to develop a proof-of-concept Angular 2 e-commerce
+            platform for one of GridDynamics clients. The solution consisted of three main
+            components: a customer-facing online store, an analytics platform for monitoring
+            inventory and sales performance, and an administration panel for managing the overall
+            system.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>Implement core application functionality</li>
+            <li>Develop custom UI controls</li>
+            <li>Analyze requirements and business needs</li>
+            <li>Design software architecture</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>Successfully developed the e-commerce application from the ground up</li>
+            <li>
+              Delivered a proof-of-concept solution that demonstrated the viability and potential
+              benefits of a comprehensive Angular 2-based e-commerce platform
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2012, 8, 1),
+      end: new Temporal.PlainDate(2016, 11, 1),
+      company: 'Yandex Money',
+      website: 'https://yoomoney.ru/',
+      location: 'Russia, Saint Petersburg',
+      scopeOfActivity: (
+        <>
+          IT / Internet / Banking
+          <ul>
+            <li>
+              Digital payment platform — electronic wallet for individuals and payment processing
+              for businesses (160,000+ online stores integrated)
+            </li>
+          </ul>
+        </>
+      ),
+      position: 'Lead developer => Team leader',
+      description: (
+        <>
+          <p>Contact Center Portal Development Lead</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            The project involved the development of a comprehensive Contact Center Portal, which
+            served as the central hub in an enterprise for managing all customer interactions
+            (calls, emails and requests from the main site). The goal was to minimize response times
+            and enhance service quality. The portal featured unique dashboards for both managers and
+            operators. The Manager Dashboard enabled the monitoring and control of operators
+            performance, service quality, growth planning, and strategic routing of inquiries. The
+            Operator Dashboard facilitated efficient processing of calls and emails, offering
+            features such as customer request and activities history, template responses for common
+            queries, and internal correspondence forwarding mechanisms.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>Team leadership and management</li>
+            <li>Full-stack software development</li>
+            <li>Software architecture and design</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Successfully developed a ground-breaking Contact Center Portal from scratch that
+              integrated customer requests in single place.
+            </li>
+            <li>
+              The Contact Center was recognized as the &quot;Achievement of the Year 2016&quot;,
+              significantly improving response times and raising the overall quality of service.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2010, 11, 1),
+      end: new Temporal.PlainDate(2012, 8, 1),
+      company: 'Yandex',
+      website: 'https://ya.ru/',
+      location: 'Russia, Saint Petersburg',
+      scopeOfActivity: (
+        <>
+          IT / Internet
+          <ul>
+            <li>
+              Internet Company (Search Engines, Payment Systems, Social Networks, Information and
+              Educational, Entertainment Resources, Website Promotion etc.)
+            </li>
+          </ul>
+        </>
+      ),
+      position: 'Developer',
+      description: (
+        <>
+          <p>Geospatial Data Analyst and Developer at Yandex.Maps</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            My work involved the analysis, processing, and rendering of geospatial data for
+            Yandex.Maps. I developed applications that assisted cartographers in adding and editing
+            map features (such as houses, roads, and more) using satellite imagery, aerial
+            photographs, and panoramic pictures, as well as checking for errors in supplier or
+            self-generated data.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>Develop tools to analyze and process geospatial data.</li>
+            <li>
+              Create applications for rendering geospatial data on{' '}
+              <a href="https://yandex.ru/maps" target="_blank" rel="noreferrer">
+                Yandex.Maps
+              </a>
+            </li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Developed cartographic tools for geospatial data analysis, processing, and rendering
+              on Yandex.Maps using satellite imagery and panoramic pictures.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2009, 12, 1),
+      end: new Temporal.PlainDate(2010, 11, 1),
+      company: 'Teklabs',
+      website: 'https://teklabs.com/',
+      location: 'Russia, Saint Petersburg',
+      scopeOfActivity: (
+        <>
+          IT / System Integration / Internet
+          <ul>
+            <li>
+              System Integration, Technological and Business Processes Automation, IT Consulting
+            </li>
+          </ul>
+        </>
+      ),
+      position: 'Lead developer',
+      description: (
+        <>
+          <p>Agricultural Data Management Web Application Developer</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            I contributed to the development of a web silverlight application designed to streamline
+            and automate the daily tasks of farmers and to process data from farms located across
+            the country. The application included features for monitoring animal feeding, health
+            care, production control, output volume tracking, and more.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>Develop and maintain multiple modules within the web application.</li>
+            <li>Collaborate with cross-functional teams to ensure a seamless user experience.</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Developed domain-specific modules: animal health monitoring, veterinary visit
+              tracking, milk quality control, and production output tracking.
+            </li>
+            <li>
+              Built a shared UI control library (dozens of components) adopted across the platform —
+              buttons, input fields, forms, collapsible accordion cards, and more.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2008, 1, 1),
+      end: new Temporal.PlainDate(2009, 12, 1),
+      company: 'Sitronics Telecom Solutions CZ',
+      website: 'https://sitronicsts.com/',
+      location: 'Czech Republic, Prague',
+      position: 'Lead developer',
+      description: (
+        <>
+          <p>Telecommunications Software Developer for Cellular Operators</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            I worked on the development of information systems and technologies catering to the
+            needs of cellular operators. The solutions provided included processing payments,
+            traffic management, tariff plan creation, communication equipment handling, and traffic
+            delivery from one user to another, among other services. Some of the largest cellular
+            operators using these systems or parts of them include MTS (a leading Russian cellular
+            operator), Vodafone Czech Republic, and more.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>
+              Develop online billing and self-care scenarios for various services such as calls,
+              GPRS, SMS/MMS, and USSD.
+            </li>
+            <li>Provide emergency support and resolve any critical issues as needed.</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Developed innovative services for cellular operators aimed at monitoring, billing, and
+              charging customer traffic for calls, GPRS, SMS/MMS, and USSD.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2006, 11, 1),
+      end: new Temporal.PlainDate(2007, 12, 1),
+      company: 'Tumlare Corporation',
+      website: 'https://kuonitumlare.com/',
+      location: 'Russia, Saint Petersburg',
+      scopeOfActivity: 'Travel Company',
+      position: 'Developer',
+      description: (
+        <>
+          <p>Web CMS Developer for Corporate Site Management</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            I was involved in the development of an internal-use Web Content Management System (CMS)
+            designed to control and manage the content of corporate websites and provide APIs for
+            other travel companies to integrate with our platform.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>
+              Develop, maintain and enhance the web-based CMS for the company&apos;s corporate site
+              management.
+            </li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Successfully implemented new features and functionalities to improve the user
+              experience and streamline the content management process in the CMS.
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2005, 4, 1),
+      end: new Temporal.PlainDate(2006, 11, 1),
+      company: '1C-Rarus',
+      website: 'https://rarus.ru/',
+      location: 'Russia, Moscow',
+      scopeOfActivity: (
+        <>
+          IT / System Integration / Internet
+          <ul>
+            <li>Software Development</li>
+            <li>
+              System Integration, Technological and Business Processes Automation, IT Consulting
+            </li>
+          </ul>
+        </>
+      ),
+      position: 'Developer',
+      description: (
+        <>
+          <p>Web Interface Developer for 1C:Enterprise Applications</p>
+
+          <h4>Project Description:</h4>
+          <p>
+            My role involved creating web interfaces for existing applications within the
+            1C:Enterprise system, a popular platform in Russia for automating a company&apos;s
+            financial and operational activities. These web interfaces enabled users to edit and
+            process data remotely via internet or intranet connections.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>
+              Develop user-friendly and responsive web interfaces for applications within the
+              1C:Enterprise system
+            </li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              Successfully developed several web interfaces for 1C:Enterprise applications,
+              enhancing the user experience and facilitating remote access for data management
+            </li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      start: new Temporal.PlainDate(2002, 3, 1),
+      end: new Temporal.PlainDate(2005, 4, 1),
+      company: 'Freelance',
+      location: 'Russia, Veliky Novgorod',
+      position: 'Freelancer',
+      description: (
+        <>
+          <h4>Freelance Software Developer and Web Designer</h4>
+          <p>
+            I have provided freelance software development and web design services to various
+            companies, such as Antares Software, Promogroup, Hansa Consulting, and individual
+            clients.
+          </p>
+
+          <h4>Responsibilities:</h4>
+          <ul>
+            <li>
+              Establish and maintain contact with clients to ensure their project requirements are
+              met
+            </li>
+            <li>Develop applications and websites according to specifications</li>
+          </ul>
+
+          <h4>Achievements:</h4>
+          <ul>
+            <li>
+              For Antares Software company:
+              <ul>
+                <li>
+                  Developed Cetris game for the&nbsp;
+                  <strong>C Pen 600C Handheld Scanner</strong>
+                </li>
+                <li>Windows CE devices games</li>
+                <li>File system for Windows games</li>
+              </ul>
+            </li>
+            <li>
+              For Promogroup company:
+              <ul>
+                <li>
+                  <strong>Gazinvest Bank</strong> web site
+                </li>
+                <li>
+                  <strong>ID Cards</strong> web site
+                </li>
+              </ul>
+            </li>
+            <li>
+              For Hansa Consulting company:
+              <ul>
+                <li>Implemented a content filtering HTTP proxy to enhance network security</li>
+              </ul>
+            </li>
+            <li>
+              For individual clients
+              <ul>
+                <li>
+                  Designed and developed various websites and standalone applications tailored to
+                  their needs
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </>
+      ),
+    },
+  ] as readonly IWorkTranslation[],
+} as const;

@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { Tag } from '../../../../shared/ui';
+import { welcomeT } from '../translations';
 
 export const Skills = memo(() => (
   <>
-    <h2 className="mx-5 mb-1 shrink-0 text-white print:text-black">Key skills</h2>
+    <h2 className="mx-5 mb-1 shrink-0 text-white print:text-black">{welcomeT.skills.title}</h2>
     <section className="mx-5 mb-5 flex shrink-0 flex-row gap-3 border-t border-[#434343] pt-0.5 print:border-t-[#ccc]">
       <div className="flex-1">
         <div className="mt-2 flex flex-wrap gap-1">

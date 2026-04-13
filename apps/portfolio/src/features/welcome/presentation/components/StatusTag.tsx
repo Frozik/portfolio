@@ -2,13 +2,14 @@ import { Laptop, Moon, Palmtree } from 'lucide-react';
 import { memo } from 'react';
 import { Tag } from '../../../../shared/ui';
 import type { EAvailability } from '../../types';
+import { welcomeT } from '../translations';
 
 const STATUS_ICON_SIZE = 14;
 
 const STATUS_CONFIG: Record<EAvailability, { label: string; color: string }> = {
-  online: { label: 'Online', color: 'green' },
-  away: { label: 'Away', color: 'orange' },
-  weekend: { label: 'Day off', color: 'cyan' },
+  online: { label: welcomeT.statusLabels.online, color: 'green' },
+  away: { label: welcomeT.statusLabels.away, color: 'orange' },
+  weekend: { label: welcomeT.statusLabels.weekend, color: 'cyan' },
 };
 
 function StatusIcon({ status }: { status: EAvailability }) {

@@ -2,6 +2,10 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
+import { sharedT } from '../translations';
+
+const { webGpuGuard: t } = sharedT;
+
 export const WebGpuGuard = memo(
   ({ children, className }: { children: ReactNode; className?: string }) => {
     if (isNil(navigator.gpu)) {
@@ -22,59 +26,35 @@ export const WebGpuGuard = memo(
           </svg>
 
           <div>
-            <h2 className="text-lg font-semibold text-text">WebGPU is not available</h2>
+            <h2 className="text-lg font-semibold text-text">{t.title}</h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-text-secondary">
-              This feature requires WebGPU, a modern GPU API for the web. Your browser either does
-              not support it or has it disabled.
+              {t.description}
             </p>
           </div>
 
           <div className="max-w-md space-y-4 text-left">
             <div className="rounded-lg border border-border bg-surface-elevated/50 p-4">
-              <h3 className="text-sm font-semibold text-text">Safari on iOS (17.4 – 18.x)</h3>
+              <h3 className="text-sm font-semibold text-text">{t.safariIOSTitle}</h3>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
-                <li>
-                  Open <strong className="text-text">Settings</strong> app
-                </li>
-                <li>
-                  Scroll to <strong className="text-text">Safari</strong>
-                </li>
-                <li>
-                  Tap <strong className="text-text">Advanced</strong> (at the bottom)
-                </li>
-                <li>
-                  Tap <strong className="text-text">Feature Flags</strong>
-                </li>
-                <li>
-                  Find <strong className="text-text">WebGPU</strong> and toggle it{' '}
-                  <strong className="text-success">ON</strong>
-                </li>
-                <li>Reload this page</li>
+                {t.safariIOSSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
               </ol>
             </div>
 
             <div className="rounded-lg border border-border bg-surface-elevated/50 p-4">
-              <h3 className="text-sm font-semibold text-text">Safari on macOS (17.4 – 18.x)</h3>
+              <h3 className="text-sm font-semibold text-text">{t.safariMacOSTitle}</h3>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
-                <li>
-                  Open <strong className="text-text">Safari → Settings → Feature Flags</strong>
-                </li>
-                <li>
-                  Find <strong className="text-text">WebGPU</strong> and enable it
-                </li>
-                <li>Reload this page</li>
+                {t.safariMacOSSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
               </ol>
-              <p className="mt-2 text-xs text-text-muted">
-                Safari 26+ (macOS Tahoe, fall 2026) will have WebGPU enabled by default.
-              </p>
+              <p className="mt-2 text-xs text-text-muted">{t.safariMacOSNote}</p>
             </div>
 
             <div className="rounded-lg border border-border bg-surface-elevated/50 p-4">
-              <h3 className="text-sm font-semibold text-text">Other browsers</h3>
-              <p className="mt-1 text-sm text-text-secondary">
-                Chrome 113+, Edge 113+, and Samsung Internet 24+ support WebGPU out of the box.
-                Firefox 141+ supports it on Windows and macOS (Apple Silicon).
-              </p>
+              <h3 className="text-sm font-semibold text-text">{t.otherBrowsersTitle}</h3>
+              <p className="mt-1 text-sm text-text-secondary">{t.otherBrowsersDescription}</p>
             </div>
           </div>
 
@@ -85,7 +65,7 @@ export const WebGpuGuard = memo(
               rel="noopener noreferrer"
               className="text-sm text-brand-400 underline hover:text-brand-300"
             >
-              Browser support table
+              {t.linkSupport}
             </a>
             <a
               href="https://webkit.org/blog/14879/webgpu-now-available-for-testing-in-safari-technology-preview/"
@@ -93,7 +73,7 @@ export const WebGpuGuard = memo(
               rel="noopener noreferrer"
               className="text-sm text-brand-400 underline hover:text-brand-300"
             >
-              WebKit blog: WebGPU in Safari
+              {t.linkWebKit}
             </a>
           </div>
         </div>

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 
 import { RadioGroup } from '../../../../shared/ui';
+import { controlsT } from '../translations';
 
 function Kbd({ children }: { children: ReactNode }): ReactNode {
   return (
@@ -19,21 +20,21 @@ const TIME_ZONE = Temporal.Now.timeZoneId();
 const WEEKEND_DAYS = new Set([6, 7]);
 
 const NEAREST_OPTIONS = [
-  { label: 'Future only', value: 'future' },
-  { label: 'Nearest', value: 'nearest' },
+  { label: controlsT.datePage.futureOnly, value: 'future' },
+  { label: controlsT.datePage.nearest, value: 'nearest' },
 ];
 
 const STEP_OPTIONS = [
-  { label: 'Minute', value: EDateTimeStep.Minute },
-  { label: 'Hour', value: EDateTimeStep.Hour },
-  { label: 'Day', value: EDateTimeStep.Day },
-  { label: 'Week', value: EDateTimeStep.Week },
+  { label: controlsT.datePage.stepMinute, value: EDateTimeStep.Minute },
+  { label: controlsT.datePage.stepHour, value: EDateTimeStep.Hour },
+  { label: controlsT.datePage.stepDay, value: EDateTimeStep.Day },
+  { label: controlsT.datePage.stepWeek, value: EDateTimeStep.Week },
 ];
 
 const TIME_RESOLUTION_OPTIONS = [
-  { label: 'Minutes', value: ETimeResolution.Minutes },
-  { label: 'Seconds', value: ETimeResolution.Seconds },
-  { label: 'Milliseconds', value: ETimeResolution.Milliseconds },
+  { label: controlsT.datePage.resolutionMinutes, value: ETimeResolution.Minutes },
+  { label: controlsT.datePage.resolutionSeconds, value: ETimeResolution.Seconds },
+  { label: controlsT.datePage.resolutionMilliseconds, value: ETimeResolution.Milliseconds },
 ];
 
 function getDayInfo(date: Temporal.PlainDate): DayInfo {
@@ -60,62 +61,69 @@ export const DatePage = memo(() => {
   return (
     <section className="mx-auto max-w-2xl space-y-8 px-6 py-8">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-text">Date / Time Picker</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-text">
+          {controlsT.datePage.title}
+        </h2>
         <p className="text-sm leading-relaxed text-text-secondary">
-          Smart date input with calendar popup and free-form text parsing. Use{' '}
+          {controlsT.datePage.description}{' '}
           <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
             ↑
           </kbd>{' '}
           <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
             ↓
           </kbd>{' '}
-          to step the value. Supported formats:
+          {controlsT.datePage.stepInstruction}
         </p>
         <ul className="mt-2 space-y-1 text-sm text-text-secondary">
           <li>
-            <span className="text-text-secondary">Keywords:</span> <Kbd>today</Kbd>{' '}
-            <Kbd>tomorrow</Kbd> <Kbd>tom</Kbd> <Kbd>yesterday</Kbd> <Kbd>now</Kbd> <Kbd>noon</Kbd>{' '}
-            <Kbd>midday</Kbd> <Kbd>midnight</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.keywords}</span>{' '}
+            <Kbd>today</Kbd> <Kbd>tomorrow</Kbd> <Kbd>tom</Kbd> <Kbd>yesterday</Kbd> <Kbd>now</Kbd>{' '}
+            <Kbd>noon</Kbd> <Kbd>midday</Kbd> <Kbd>midnight</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Boundaries:</span> <Kbd>eom</Kbd> <Kbd>bom</Kbd>{' '}
-            <Kbd>eoy</Kbd> <Kbd>boy</Kbd> <Kbd>eoq</Kbd>, <Kbd>end of month</Kbd>{' '}
-            <Kbd>start of year</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.boundaries}</span>{' '}
+            <Kbd>eom</Kbd> <Kbd>bom</Kbd> <Kbd>eoy</Kbd> <Kbd>boy</Kbd> <Kbd>eoq</Kbd>,{' '}
+            <Kbd>end of month</Kbd> <Kbd>start of year</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Weekdays:</span> <Kbd>mon</Kbd>–<Kbd>sun</Kbd>,{' '}
-            <Kbd>monday</Kbd>–<Kbd>sunday</Kbd>, <Kbd>next fri</Kbd>, <Kbd>last monday</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.weekdays}</span>{' '}
+            <Kbd>mon</Kbd>–<Kbd>sun</Kbd>, <Kbd>monday</Kbd>–<Kbd>sunday</Kbd>, <Kbd>next fri</Kbd>,{' '}
+            <Kbd>last monday</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Offsets:</span> <Kbd>+3d</Kbd> <Kbd>-1w</Kbd>{' '}
-            <Kbd>2m</Kbd> <Kbd>1y</Kbd>, <Kbd>in 3 days</Kbd>, <Kbd>2 weeks ago</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.offsets}</span>{' '}
+            <Kbd>+3d</Kbd> <Kbd>-1w</Kbd> <Kbd>2m</Kbd> <Kbd>1y</Kbd>, <Kbd>in 3 days</Kbd>,{' '}
+            <Kbd>2 weeks ago</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Dates:</span> <Kbd>2025-01-15</Kbd>{' '}
-            <Kbd>15/03/2025</Kbd> <Kbd>15.03.2025</Kbd> <Kbd>15 jan 2025</Kbd> <Kbd>jan 15 25</Kbd>{' '}
-            <Kbd>15 06 27</Kbd> <Kbd>10nov</Kbd> <Kbd>nov10</Kbd> <Kbd>15nov2025</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.dates}</span>{' '}
+            <Kbd>2025-01-15</Kbd> <Kbd>15/03/2025</Kbd> <Kbd>15.03.2025</Kbd> <Kbd>15 jan 2025</Kbd>{' '}
+            <Kbd>jan 15 25</Kbd> <Kbd>15 06 27</Kbd> <Kbd>10nov</Kbd> <Kbd>nov10</Kbd>{' '}
+            <Kbd>15nov2025</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Months:</span> <Kbd>jan</Kbd> <Kbd>december</Kbd>{' '}
-            <Kbd>january 2027</Kbd> <Kbd>jan &apos;27</Kbd> <Kbd>2027-01</Kbd> <Kbd>01/2027</Kbd>{' '}
-            <Kbd>2027 jan</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.months}</span>{' '}
+            <Kbd>jan</Kbd> <Kbd>december</Kbd> <Kbd>january 2027</Kbd> <Kbd>jan &apos;27</Kbd>{' '}
+            <Kbd>2027-01</Kbd> <Kbd>01/2027</Kbd> <Kbd>2027 jan</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Quarters:</span> <Kbd>Q1</Kbd> <Kbd>Q2 2025</Kbd>{' '}
-            <Kbd>Q3/2025</Kbd> <Kbd>1Q25</Kbd> <Kbd>4Q2025</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.quarters}</span>{' '}
+            <Kbd>Q1</Kbd> <Kbd>Q2 2025</Kbd> <Kbd>Q3/2025</Kbd> <Kbd>1Q25</Kbd> <Kbd>4Q2025</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Ordinals:</span> <Kbd>15th</Kbd>{' '}
-            <Kbd>the 1st</Kbd> <Kbd>22nd</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.ordinals}</span>{' '}
+            <Kbd>15th</Kbd> <Kbd>the 1st</Kbd> <Kbd>22nd</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Time:</span> <Kbd>13:00</Kbd> <Kbd>9:30:45</Kbd>{' '}
-            <Kbd>9:30:45.123</Kbd> <Kbd>9am</Kbd> <Kbd>5:30pm</Kbd> <Kbd>12am</Kbd> <Kbd>12pm</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.time}</span>{' '}
+            <Kbd>13:00</Kbd> <Kbd>9:30:45</Kbd> <Kbd>9:30:45.123</Kbd> <Kbd>9am</Kbd>{' '}
+            <Kbd>5:30pm</Kbd> <Kbd>12am</Kbd> <Kbd>12pm</Kbd>
           </li>
           <li>
-            <span className="text-text-secondary">Date + time:</span> <Kbd>tom 13:00</Kbd>{' '}
-            <Kbd>mon 9am</Kbd> <Kbd>next fri 17:00</Kbd> <Kbd>last mon 9am</Kbd> <Kbd>+3d 8:00</Kbd>{' '}
-            <Kbd>eom 23:59</Kbd> <Kbd>15 jan 2025 14:30</Kbd>
+            <span className="text-text-secondary">{controlsT.datePage.categories.dateTime}</span>{' '}
+            <Kbd>tom 13:00</Kbd> <Kbd>mon 9am</Kbd> <Kbd>next fri 17:00</Kbd>{' '}
+            <Kbd>last mon 9am</Kbd> <Kbd>+3d 8:00</Kbd> <Kbd>eom 23:59</Kbd>{' '}
+            <Kbd>15 jan 2025 14:30</Kbd>
           </li>
         </ul>
       </div>
@@ -129,13 +137,15 @@ export const DatePage = memo(() => {
           getDayInfo={getDayInfo}
           step={step}
           timeResolution={timeResolution}
-          placeholder="Type a date (tomorrow 13:00, mon 9am, 2024-01-15...)"
+          placeholder={controlsT.datePage.placeholder}
         />
       </div>
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">Arrow key step</span>
+          <span className="mb-2 block text-sm font-medium text-text">
+            {controlsT.datePage.arrowKeyStep}
+          </span>
           <RadioGroup
             options={STEP_OPTIONS}
             value={step}
@@ -145,7 +155,9 @@ export const DatePage = memo(() => {
         </div>
 
         <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">Time precision</span>
+          <span className="mb-2 block text-sm font-medium text-text">
+            {controlsT.datePage.timePrecision}
+          </span>
           <RadioGroup
             options={TIME_RESOLUTION_OPTIONS}
             value={timeResolution}
@@ -155,7 +167,9 @@ export const DatePage = memo(() => {
         </div>
 
         <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">Parse direction</span>
+          <span className="mb-2 block text-sm font-medium text-text">
+            {controlsT.datePage.parseDirection}
+          </span>
           <RadioGroup
             options={NEAREST_OPTIONS}
             value={nearest ? 'nearest' : 'future'}
@@ -163,15 +177,15 @@ export const DatePage = memo(() => {
             optionType="button"
           />
           <p className="text-xs text-text-secondary">
-            {nearest
-              ? 'Nearest match — "13:00" resolves to today even if already past'
-              : 'Future only — "13:00" advances to tomorrow if already past'}
+            {nearest ? controlsT.datePage.nearestHint : controlsT.datePage.futureHint}
           </p>
         </div>
 
         {value !== undefined && (
           <div className="rounded-lg border border-border bg-surface-elevated/30 px-4 py-3">
-            <span className="text-xs font-medium text-text-secondary">Resolved value</span>
+            <span className="text-xs font-medium text-text-secondary">
+              {controlsT.datePage.resolvedValue}
+            </span>
             <p className="mt-1 font-mono text-sm text-text">{value.toString()}</p>
           </div>
         )}

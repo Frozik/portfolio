@@ -22,6 +22,7 @@ import type {
   INeuronLayerDescriptor,
 } from '../../domain/players/types';
 import { ELayerType, ENeuronLayerType } from '../../domain/players/types';
+import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
 
 const NEURON_DIAMETER = 30;
@@ -401,10 +402,7 @@ export const DrawNeuralNetwork = observer(() => {
           }
           return (
             <div className={commonStyles.alertContainer}>
-              <Alert
-                message="Select a robot to display the structure of the neural network and its weights"
-                type="info"
-              />
+              <Alert message={pendulumT.neuralNetwork.selectRobotMessage} type="info" />
             </div>
           );
         },

@@ -15,6 +15,7 @@ import { useCompetition } from '../hooks/useCompetition';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
+import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
 import { PendulumPlayground } from './PendulumPlayground';
 
@@ -72,36 +73,10 @@ export const FitnessPlayground = observer(() => {
             <ValueDescriptorFail fail={vd.fail} />
           ) : (
             <Alert
-              message="Competition not started"
+              message={pendulumT.fitnessPlayground.competitionNotStarted}
               description={
                 <div className={commonStyles.leftAligned}>
-                  <p>
-                    This demo uses a genetic algorithm to evolve neural network weights that balance
-                    an inverted pendulum around the zero mark.
-                  </p>
-                  <ul>
-                    <li>
-                      Open the <strong>Generations</strong> tab and click{' '}
-                      <strong>Create New</strong> to start a new search, or select a previously
-                      saved training run to continue.
-                    </li>
-                    <li>
-                      The fitness function starts paused — press the play button to begin evolution.
-                    </li>
-                    <li>
-                      The generations table ranks neural networks by fitness score. Select any
-                      network to inspect it in the <strong>Test Playground</strong> or{' '}
-                      <strong>Neural Network</strong> tabs.
-                    </li>
-                    <li>
-                      In the test tab you can apply external force by clicking, holding, and
-                      dragging toward the pendulum weight.
-                    </li>
-                  </ul>
-                  <p>
-                    Simulation speed adapts automatically to available CPU performance while keeping
-                    the UI responsive.
-                  </p>
+                  {pendulumT.fitnessPlayground.description}
                 </div>
               }
               type="info"

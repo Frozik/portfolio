@@ -5,29 +5,10 @@ import { Link, useRouteError } from 'react-router-dom';
 
 import { cn } from '../../shared/lib/cn';
 import { Button } from '../../shared/ui';
+import { appT } from '../translations';
 
 const TEAPOT_STATUS = 418;
 const FIRST_STATUS = 404;
-const STATUS_MAP: Record<number, { text: string; message: string }> = {
-  404: { text: 'Not Found', message: 'This page wandered off into the void...' },
-  405: { text: 'Method Not Allowed', message: "You can't do that here!" },
-  406: { text: 'Not Acceptable', message: 'Nope, not gonna happen.' },
-  407: {
-    text: 'Proxy Auth Required',
-    message: 'Who are you? Identify yourself!',
-  },
-  408: { text: 'Request Timeout', message: 'Waited too long... fell asleep.' },
-  409: { text: 'Conflict', message: "Something's fighting something else." },
-  410: { text: 'Gone', message: "It was here. Now it's not. Poof." },
-  411: { text: 'Length Required', message: "How long? You didn't say!" },
-  412: { text: 'Precondition Failed', message: 'You forgot something important.' },
-  413: { text: 'Payload Too Large', message: "That's way too much stuff!" },
-  414: { text: 'URI Too Long', message: 'That URL goes on forever...' },
-  415: { text: 'Unsupported Media Type', message: "Can't read that format, sorry." },
-  416: { text: 'Range Not Satisfiable', message: 'That range is out of bounds.' },
-  417: { text: 'Expectation Failed', message: "Didn't live up to expectations..." },
-  418: { text: "I'm a Teapot", message: 'Short and stout. You found the easter egg!' },
-};
 
 const STAR_COUNT = 50;
 const STEAM_PARTICLE_COUNT = 3;
@@ -58,7 +39,7 @@ export const ErrorPage = memo(() => {
   const [glitchKey, setGlitchKey] = useState(0);
 
   const isTeapot = statusCode === TEAPOT_STATUS;
-  const statusInfo = STATUS_MAP[statusCode] ?? STATUS_MAP[FIRST_STATUS];
+  const statusInfo = appT.errorPage.statusMap[statusCode] ?? appT.errorPage.statusMap[FIRST_STATUS];
 
   const stars = useMemo(generateStars, []);
 
@@ -133,13 +114,13 @@ export const ErrorPage = memo(() => {
         <p className="max-w-md text-lg text-text-secondary">{statusInfo.message}</p>
 
         <p className="text-sm text-text-muted">
-          {isTeapot ? 'Click the number to start over' : 'Psst... try clicking the number'}
+          {isTeapot ? appT.errorPage.teapotHint : appT.errorPage.clickHint}
         </p>
 
         <Button asChild variant="secondary" size="lg" className="mt-4 gap-2">
           <Link to="/">
             <Home className="size-4" />
-            Take me home
+            {appT.errorPage.takeMeHome}
           </Link>
         </Button>
       </div>

@@ -6,6 +6,7 @@ import { SvgLinkedIn } from '../../../../icons/SvgLinkedIn';
 import { SvgTelegram } from '../../../../icons/SvgTelegram';
 import { Button, QRCodePopover } from '../../../../shared/ui';
 import { getAge } from '../../utils';
+import { welcomeT } from '../translations';
 import { AvailabilityStatus } from './AvailabilityStatus';
 
 export const Contacts = memo(() => {
@@ -14,14 +15,14 @@ export const Contacts = memo(() => {
   return (
     <div>
       <h2 className="flex flex-wrap items-baseline gap-x-2">
-        <span>Sharov Dmitry Nikolaevich</span>
+        <span>{welcomeT.contacts.fullName}</span>
         <Button variant="link" className="px-0 print:hidden" onClick={handlePrint}>
           <Download size={14} />
-          Save PDF
+          {welcomeT.contacts.savePdf}
         </Button>
       </h2>
 
-      <p>Male, {getAge()} years, born on 10 November 1982</p>
+      <p>{welcomeT.contacts.personalInfo(getAge())}</p>
 
       <address className="text-left not-italic [&_a]:text-white [&_a]:print:text-black [&_a]:print:no-underline [&_p]:mb-0">
         <ul>
@@ -37,7 +38,7 @@ export const Contacts = memo(() => {
                 <span className="font-mono">@Frozik</span>
               </a>
             </QRCodePopover>
-            — preferred means of communication
+            {welcomeT.contacts.preferredContact}
           </li>
           <li>
             <QRCodePopover value="https://wa.me/qr/TCOFX34ZSPXDN1">
