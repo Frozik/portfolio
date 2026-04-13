@@ -1,12 +1,12 @@
 import { useFunction } from '@frozik/components';
 import * as Popover from '@radix-ui/react-popover';
-import { Info, Move, RotateCcw, X } from 'lucide-react';
+import { Info, Move, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { cn } from '../../../shared/lib/cn';
 import commonStyles from '../../../shared/styles.module.scss';
-import type { OrbitalCameraController } from '../domain/stereometry-camera-controller';
+import type { StereometryControls } from '../domain/stereometry-draw';
 import { runStereometry } from '../domain/stereometry-draw';
 import type { CameraInteractionMode } from '../domain/stereometry-types';
 
@@ -16,17 +16,25 @@ const CLOSE_ICON_SIZE = 14;
 
 export const Stereometry = memo(() => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cameraRef = useRef<OrbitalCameraController | null>(null);
+  const controlsRef = useRef<StereometryControls | null>(null);
   const [interactionMode, setInteractionMode] = useState<CameraInteractionMode>('rotate');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   useEffect(() => {
     if (canvasRef.current) {
-      const { destroy, camera } = runStereometry(canvasRef.current);
-      cameraRef.current = camera;
+      const controls = runStereometry(canvasRef.current);
+      controlsRef.current = controls;
+
+      const unsubscribe = controls.subscribeHistory((undoAvailable, redoAvailable) => {
+        setCanUndo(undoAvailable);
+        setCanRedo(redoAvailable);
+      });
 
       return () => {
-        cameraRef.current = null;
-        destroy();
+        controlsRef.current = null;
+        unsubscribe();
+        controls.destroy();
       };
     }
 
@@ -35,12 +43,20 @@ export const Stereometry = memo(() => {
 
   const handleSetRotateMode = useFunction(() => {
     setInteractionMode('rotate');
-    cameraRef.current?.setInteractionMode('rotate');
+    controlsRef.current?.camera.setInteractionMode('rotate');
   });
 
   const handleSetPanMode = useFunction(() => {
     setInteractionMode('pan');
-    cameraRef.current?.setInteractionMode('pan');
+    controlsRef.current?.camera.setInteractionMode('pan');
+  });
+
+  const handleUndo = useFunction(() => {
+    controlsRef.current?.undo();
+  });
+
+  const handleRedo = useFunction(() => {
+    controlsRef.current?.redo();
   });
 
   return (
@@ -49,6 +65,12 @@ export const Stereometry = memo(() => {
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
         <div className="absolute bottom-4 right-4 flex gap-2">
           <HelpPopover />
+          <ToolbarButton onClick={handleUndo} label="Undo" disabled={!canUndo}>
+            <Undo2 size={TOOLBAR_ICON_SIZE} />
+          </ToolbarButton>
+          <ToolbarButton onClick={handleRedo} label="Redo" disabled={!canRedo}>
+            <Redo2 size={TOOLBAR_ICON_SIZE} />
+          </ToolbarButton>
           <ToolbarButton
             active={interactionMode === 'rotate'}
             onClick={handleSetRotateMode}
@@ -67,12 +89,14 @@ export const Stereometry = memo(() => {
 
 const ToolbarButton = memo(
   ({
-    active,
+    active = false,
+    disabled = false,
     onClick,
     children,
     label,
   }: {
-    active: boolean;
+    active?: boolean;
+    disabled?: boolean;
     onClick: () => void;
     children: React.ReactNode;
     label: string;
@@ -80,12 +104,17 @@ const ToolbarButton = memo(
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       aria-pressed={active}
       className={cn(
         'flex items-center justify-center rounded-lg shadow-lg',
-        'transition-all hover:scale-110 active:scale-95',
-        active ? 'bg-blue-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white'
+        'transition-all',
+        disabled
+          ? 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
+          : 'hover:scale-110 active:scale-95',
+        !disabled && active && 'bg-blue-500 text-white',
+        !disabled && !active && 'bg-neutral-800 text-neutral-400 hover:text-white'
       )}
       style={{ width: TOOLBAR_BUTTON_SIZE, height: TOOLBAR_BUTTON_SIZE }}
     >

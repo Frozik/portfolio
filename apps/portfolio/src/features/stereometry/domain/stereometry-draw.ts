@@ -9,17 +9,23 @@ import { createClickDetector } from './stereometry-click-detector';
 import { MSAA_SAMPLE_COUNT } from './stereometry-constants';
 import { createDragToConnectController } from './stereometry-drag-connector';
 import { createTopologyFromPuzzle } from './stereometry-geometry';
+import { createSceneHistory } from './stereometry-history';
 import { hitTest, hitTestVertex } from './stereometry-hit-testing';
 import type { Vec3 } from './stereometry-math';
 import { subtractVec3 } from './stereometry-math';
 import { addUserSegment, createInitialScene, toggleLine } from './stereometry-scene';
-import type { SelectionState } from './stereometry-types';
+import type { SceneState, SelectionState } from './stereometry-types';
 import { SELECTION_NONE } from './stereometry-types';
 
-export function runStereometry(canvas: HTMLCanvasElement): {
+export interface StereometryControls {
   destroy: VoidFunction;
   camera: OrbitalCameraController;
-} {
+  undo: () => void;
+  redo: () => void;
+  subscribeHistory: (listener: (canUndo: boolean, canRedo: boolean) => void) => VoidFunction;
+}
+
+export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
   let destroyed = false;
   let gpuCleanup: (() => void) | undefined;
 
@@ -30,6 +36,23 @@ export function runStereometry(canvas: HTMLCanvasElement): {
   let pyramidLayerRef: PyramidLayer | undefined;
   let sceneState = createInitialScene(topology);
   let currentSelection: SelectionState = SELECTION_NONE;
+
+  const history = createSceneHistory();
+  const historyListeners = new Set<(canUndo: boolean, canRedo: boolean) => void>();
+
+  function notifyHistoryListeners(): void {
+    for (const listener of historyListeners) {
+      listener(history.canUndo(), history.canRedo());
+    }
+  }
+
+  /** Applies a new scene state, saving the previous one to history. */
+  function applySceneChange(newState: SceneState): void {
+    history.push(sceneState);
+    sceneState = newState;
+    pyramidLayerRef?.applySceneState(sceneState);
+    notifyHistoryListeners();
+  }
 
   function performHitTest(screenX: number, screenY: number): SelectionState {
     if (destroyed || !pyramidLayerRef) {
@@ -120,8 +143,7 @@ export function runStereometry(canvas: HTMLCanvasElement): {
     const hit = performHitTest(screenX, screenY);
 
     if (hit.type === 'edge') {
-      sceneState = toggleLine(sceneState, hit.edgeIndex, topology);
-      pyramidLayerRef?.applySceneState(sceneState);
+      applySceneChange(toggleLine(sceneState, hit.edgeIndex, topology));
     }
   }
 
@@ -139,21 +161,18 @@ export function runStereometry(canvas: HTMLCanvasElement): {
       const direction = getSelectedDirection();
 
       if (direction !== undefined) {
-        // Create a parallel line through this vertex
         const endPosition: Vec3 = [
           vertexPosition[0] + direction[0],
           vertexPosition[1] + direction[1],
           vertexPosition[2] + direction[2],
         ];
-        sceneState = addUserSegment(sceneState, vertexPosition, endPosition, topology);
-        pyramidLayerRef?.applySceneState(sceneState);
+        applySceneChange(addUserSegment(sceneState, vertexPosition, endPosition, topology));
       }
 
       setSelection(SELECTION_NONE);
     },
     onDragComplete: (startPosition, endPosition) => {
-      sceneState = addUserSegment(sceneState, startPosition, endPosition, topology);
-      pyramidLayerRef?.applySceneState(sceneState);
+      applySceneChange(addUserSegment(sceneState, startPosition, endPosition, topology));
       setSelection(SELECTION_NONE);
     },
   });
@@ -168,15 +187,33 @@ export function runStereometry(canvas: HTMLCanvasElement): {
     }
   });
 
+  function restoreState(state: SceneState | undefined): void {
+    if (state === undefined) {
+      return;
+    }
+    sceneState = state;
+    pyramidLayerRef?.applySceneState(sceneState);
+    setSelection(SELECTION_NONE);
+    notifyHistoryListeners();
+  }
+
   return {
     destroy: () => {
       destroyed = true;
       camera.destroy();
       cleanupClickDetector();
       cleanupDragConnector();
+      historyListeners.clear();
       gpuCleanup?.();
     },
     camera,
+    undo: () => restoreState(history.undo(sceneState)),
+    redo: () => restoreState(history.redo(sceneState)),
+    subscribeHistory: listener => {
+      historyListeners.add(listener);
+      listener(history.canUndo(), history.canRedo());
+      return () => historyListeners.delete(listener);
+    },
   };
 }
 

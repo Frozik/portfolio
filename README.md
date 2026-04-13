@@ -145,6 +145,30 @@ WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
 - Render target pool: one GPU texture allocation reused across all same-size
   charts per frame
 
+### Stereometry
+
+Interactive 3D construction tool for exploring a pentagonal pyramid, rendered
+with WebGPU. Supports building construction lines, finding intersection points,
+and creating parallel lines — a digital geometry workbench.
+
+**Rendering:**
+- Multi-pass WebGPU pipeline: depth faces → hidden edges (dashed, dimmed) →
+  visible edges → extended lines → vertex/intersection markers
+- Orthographic projection with 4x MSAA anti-aliasing
+- CPU ray-triangle occlusion test (Moller-Trumbore) for per-vertex brightness
+- Hidden edges rendered as dashed lines with configurable dash/gap pattern
+
+**Interactions:**
+- Drag to rotate, Shift+drag to pan, scroll/pinch to zoom with inertia
+- Click an edge or line to select it (highlighted)
+- Double-click an edge to extend it into an infinite construction line
+- Drag from vertex to vertex to draw a construction line between two points
+  (orange preview line shown during drag, snap target vertex highlighted)
+- Select an edge/line, then tap a vertex to create a parallel line through it
+- Intersection points appear automatically where lines cross and become
+  available as construction vertices
+- Undo/redo for all construction actions
+
 ### Controls
 
 Interactive showcase of financial input controls from the `@frozik/components`
