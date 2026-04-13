@@ -49,9 +49,9 @@ export const HIDDEN_SEGMENT_HIGHLIGHT_WIDTH_PIXELS = 7.0;
 
 // --- Extended line dimensions (thinner than segments) ---
 /** Line width in screen pixels for visible extended lines */
-export const EXTENDED_LINE_WIDTH_PIXELS = 2;
+export const EXTENDED_LINE_WIDTH_PIXELS = 1;
 /** Line width in screen pixels for visible highlighted extended lines */
-export const EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS = 5;
+export const EXTENDED_LINE_HIGHLIGHT_WIDTH_PIXELS = 3;
 /** Line width in screen pixels for hidden extended lines */
 export const HIDDEN_EXTENDED_LINE_WIDTH_PIXELS = 2.5;
 /** Line width in screen pixels for hidden highlighted extended lines */
