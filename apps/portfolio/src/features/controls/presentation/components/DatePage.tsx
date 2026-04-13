@@ -1,10 +1,16 @@
-import { DateTimePicker, useFunction } from '@frozik/components';
-import type { DayInfo } from '@frozik/utils';
-import { EDateTimeStep, EDayType, ETimeResolution, parseFuzzyDate } from '@frozik/utils';
+import { DateTimePicker, useFunction, useToday } from '@frozik/components';
+import {
+  EDateTimeStep,
+  EDayOfWeek,
+  EDayType,
+  ETimeResolution,
+  parseFuzzyDate,
+} from '@frozik/utils';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 
+import { getCurrentLanguage } from '../../../../shared/i18n';
 import { RadioGroup } from '../../../../shared/ui';
 import { controlsT } from '../translations';
 
@@ -17,7 +23,7 @@ function Kbd({ children }: { children: ReactNode }): ReactNode {
 }
 
 const TIME_ZONE = Temporal.Now.timeZoneId();
-const WEEKEND_DAYS = new Set([6, 7]);
+const WEEKEND_DAYS = new Set([EDayOfWeek.Saturday, EDayOfWeek.Sunday]);
 
 const NEAREST_OPTIONS = [
   { label: controlsT.datePage.futureOnly, value: 'future' },
@@ -37,15 +43,16 @@ const TIME_RESOLUTION_OPTIONS = [
   { label: controlsT.datePage.resolutionMilliseconds, value: ETimeResolution.Milliseconds },
 ];
 
-function getDayInfo(date: Temporal.PlainDate): DayInfo {
+function getDayInfo(date: Temporal.PlainDate): EDayType {
   if (WEEKEND_DAYS.has(date.dayOfWeek)) {
-    return { type: EDayType.Weekend };
+    return EDayType.Weekend;
   }
 
-  return { type: EDayType.Business };
+  return EDayType.Business;
 }
 
 export const DatePage = memo(() => {
+  const today = useToday(TIME_ZONE);
   const [value, setValue] = useState<Temporal.ZonedDateTime | undefined>(undefined);
   const [step, setStep] = useState<EDateTimeStep>(EDateTimeStep.Day);
   const [timeResolution, setTimeResolution] = useState<ETimeResolution>(ETimeResolution.Minutes);
@@ -138,6 +145,8 @@ export const DatePage = memo(() => {
           step={step}
           timeResolution={timeResolution}
           placeholder={controlsT.datePage.placeholder}
+          today={today}
+          language={getCurrentLanguage()}
         />
       </div>
 

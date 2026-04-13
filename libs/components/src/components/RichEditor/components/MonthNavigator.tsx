@@ -2,21 +2,7 @@ import type { Temporal } from '@js-temporal/polyfill';
 import { memo, useMemo } from 'react';
 
 import { useFunction } from '../../../hooks';
-
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+import { getCalendarAriaLabels } from '../translations';
 
 export const MonthNavigator = memo(
   ({
@@ -25,16 +11,20 @@ export const MonthNavigator = memo(
     className,
     buttonClassName,
     labelClassName,
+    language,
   }: {
     yearMonth: Temporal.PlainYearMonth;
     onYearMonthChange: (yearMonth: Temporal.PlainYearMonth) => void;
     className: string;
     buttonClassName: string;
     labelClassName: string;
+    language: string;
   }) => {
+    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
+
     const label = useMemo(
-      () => `${MONTH_NAMES[yearMonth.month - 1]} ${yearMonth.year}`,
-      [yearMonth]
+      () => `${ariaLabels.monthNames[yearMonth.month - 1]} ${yearMonth.year}`,
+      [yearMonth, ariaLabels.monthNames]
     );
 
     const handlePrevMonth = useFunction(() => {
@@ -54,25 +44,47 @@ export const MonthNavigator = memo(
     });
 
     return (
-      <div className={className}>
+      <fieldset className={className} aria-label={ariaLabels.monthNavigation}>
         <div>
-          <button type="button" className={buttonClassName} onClick={handlePrevYear}>
+          <button
+            type="button"
+            className={buttonClassName}
+            onClick={handlePrevYear}
+            aria-label={ariaLabels.previousYear}
+          >
             {'<<'}
           </button>
-          <button type="button" className={buttonClassName} onClick={handlePrevMonth}>
+          <button
+            type="button"
+            className={buttonClassName}
+            onClick={handlePrevMonth}
+            aria-label={ariaLabels.previousMonth}
+          >
             {'<'}
           </button>
         </div>
-        <span className={labelClassName}>{label}</span>
+        <span className={labelClassName} aria-live="polite" aria-atomic="true">
+          {label}
+        </span>
         <div>
-          <button type="button" className={buttonClassName} onClick={handleNextMonth}>
+          <button
+            type="button"
+            className={buttonClassName}
+            onClick={handleNextMonth}
+            aria-label={ariaLabels.nextMonth}
+          >
             {'>'}
           </button>
-          <button type="button" className={buttonClassName} onClick={handleNextYear}>
+          <button
+            type="button"
+            className={buttonClassName}
+            onClick={handleNextYear}
+            aria-label={ariaLabels.nextYear}
+          >
             {'>>'}
           </button>
         </div>
-      </div>
+      </fieldset>
     );
   }
 );

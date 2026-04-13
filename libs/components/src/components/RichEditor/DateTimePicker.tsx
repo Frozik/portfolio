@@ -1,17 +1,18 @@
-import type { DateTimeParseResult, DayInfo, ETimeResolution } from '@frozik/utils';
+import type { DateTimeParseResult, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils';
 import { EDateTimeStep, stepDateTime } from '@frozik/utils';
 import { Temporal } from '@js-temporal/polyfill';
 import * as Popover from '@radix-ui/react-popover';
 import { isNil } from 'lodash-es';
 import type { KeyboardEvent } from 'react';
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useId, useMemo, useRef, useState } from 'react';
 
 import { useFunction } from '../../hooks';
 import { cn } from '../cn';
 import { CalendarPopup } from './components/CalendarPopup';
+import { RichEditor } from './components/RichEditor';
 import type { ISelection } from './defs';
-import { RichEditor } from './RichEditor';
 import styles from './styles.module.scss';
+import { getCalendarAriaLabels } from './translations/index';
 
 const DEFAULT_TIME_ZONE = 'UTC';
 const MIDNIGHT = new Temporal.PlainTime(0);
@@ -52,38 +53,39 @@ export const DateTimePicker = memo(
     timeZone = DEFAULT_TIME_ZONE,
     onParseInput,
     getDayInfo,
+    startOfWeek,
     step = EDateTimeStep.Day,
     timeResolution,
     minDate,
     maxDate,
     formatDate = defaultFormatDate,
     placeholder,
+    today,
     disabled = false,
+    language = 'en',
   }: {
     className?: string;
     value?: Temporal.ZonedDateTime;
-    onValueChange?: (value: Temporal.ZonedDateTime) => void;
+    onValueChange?: (value: Temporal.ZonedDateTime | undefined) => void;
     timeZone?: string;
     onParseInput: (text: string) => DateTimeParseResult;
-    getDayInfo: (date: Temporal.PlainDate) => DayInfo;
+    getDayInfo?: (date: Temporal.PlainDate) => EDayType;
+    startOfWeek?: EDayOfWeek;
     step?: EDateTimeStep;
     timeResolution?: ETimeResolution;
     minDate?: Temporal.PlainDate;
     maxDate?: Temporal.PlainDate;
     formatDate?: (value: Temporal.ZonedDateTime) => string;
     placeholder?: string;
+    today?: Temporal.PlainDate;
     disabled?: boolean;
+    language?: string;
   }) => {
+    const calendarAriaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
     const [focused, setFocused] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [inputText, setInputText] = useState('');
     const lastCommittedValueRef = useRef<Temporal.ZonedDateTime | undefined>(value);
-
-    const today = useMemo(
-      () => Temporal.Now.plainDateISO(timeZone),
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [timeZone]
-    );
 
     const displayText = useMemo(() => {
       if (focused) {
@@ -139,6 +141,8 @@ export const DateTimePicker = memo(
 
         if (trimmed.length === 0) {
           setError(undefined);
+          lastCommittedValueRef.current = undefined;
+          onValueChange?.(undefined);
         } else {
           const result = onParseInput(trimmed);
 
@@ -181,7 +185,11 @@ export const DateTimePicker = memo(
       if (event.key === 'Enter') {
         const trimmed = inputText.trim();
 
-        if (trimmed.length > 0) {
+        if (trimmed.length === 0) {
+          setError(undefined);
+          lastCommittedValueRef.current = undefined;
+          onValueChange?.(undefined);
+        } else {
           const result = onParseInput(trimmed);
 
           if (result.success) {
@@ -203,13 +211,17 @@ export const DateTimePicker = memo(
     });
 
     const handleTimeChange = useFunction((newTime: Temporal.PlainTime) => {
-      const currentDate = lastCommittedValueRef.current?.toPlainDate() ?? today;
+      const currentDate =
+        lastCommittedValueRef.current?.toPlainDate() ??
+        today ??
+        Temporal.Now.plainDateISO(timeZone);
       const zdt = currentDate.toZonedDateTime({ timeZone, plainTime: newTime });
       commitValue(zdt);
       setInputText(formatDate(clampToRange(zdt)));
     });
 
     const hasError = !isNil(error);
+    const errorId = useId();
 
     return (
       <Popover.Root open={focused}>
@@ -227,8 +239,15 @@ export const DateTimePicker = memo(
             onFocusChanges={handleFocusChanges}
             onFocusSelection={handleFocusSelection}
             onKeyDown={handleKeyDown}
+            aria-label={calendarAriaLabels.dateInputLabel}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? errorId : undefined}
           />
-          {hasError && <div className={styles.errorTooltip}>{error}</div>}
+          {hasError && (
+            <div id={errorId} className={styles.errorTooltip} role="alert">
+              {error}
+            </div>
+          )}
         </Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
@@ -241,11 +260,13 @@ export const DateTimePicker = memo(
               time={selectedPlainTime}
               today={today}
               getDayInfo={getDayInfo}
+              startOfWeek={startOfWeek}
               timeResolution={timeResolution}
               minDate={minDate}
               maxDate={maxDate}
               onSelectDate={handleSelectCalendarDate}
               onTimeChange={handleTimeChange}
+              language={language}
             />
           </Popover.Content>
         </Popover.Portal>

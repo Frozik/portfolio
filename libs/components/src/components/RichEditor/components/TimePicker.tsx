@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useFunction } from '../../../hooks';
 import styles from '../styles.module.scss';
+import { getCalendarAriaLabels } from '../translations';
 
 const HOURS_MAX = 23;
 const MINUTES_MAX = 59;
@@ -20,11 +21,14 @@ export const TimePicker = memo(
     time,
     resolution = Resolution.Minutes,
     onTimeChange,
+    language,
   }: {
     time: Temporal.PlainTime;
     resolution?: ETimeResolution;
     onTimeChange: (time: Temporal.PlainTime) => void;
+    language: string;
   }) => {
+    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
     const showSeconds = resolution === Resolution.Seconds || resolution === Resolution.Milliseconds;
     const showMilliseconds = resolution === Resolution.Milliseconds;
 
@@ -86,23 +90,58 @@ export const TimePicker = memo(
     const msStr = useMemo(() => String(time.millisecond).padStart(3, '0'), [time.millisecond]);
 
     return (
-      <div className={styles.timePicker} onMouseDown={handleMouseDown}>
-        <TimeUnit value={hourStr} onChange={handleHourChange} />
-        <span className={styles.timePickerSeparator}>:</span>
-        <TimeUnit value={minuteStr} onChange={handleMinuteChange} />
+      <fieldset
+        className={styles.timePicker}
+        onMouseDown={handleMouseDown}
+        aria-label={ariaLabels.time}
+      >
+        <TimeUnit
+          value={hourStr}
+          onChange={handleHourChange}
+          label={ariaLabels.hours}
+          increaseLabel={ariaLabels.increaseHours}
+          decreaseLabel={ariaLabels.decreaseHours}
+        />
+        <span className={styles.timePickerSeparator} aria-hidden="true">
+          :
+        </span>
+        <TimeUnit
+          value={minuteStr}
+          onChange={handleMinuteChange}
+          label={ariaLabels.minutes}
+          increaseLabel={ariaLabels.increaseMinutes}
+          decreaseLabel={ariaLabels.decreaseMinutes}
+        />
         {showSeconds && (
           <>
-            <span className={styles.timePickerSeparator}>:</span>
-            <TimeUnit value={secondStr} onChange={handleSecondChange} />
+            <span className={styles.timePickerSeparator} aria-hidden="true">
+              :
+            </span>
+            <TimeUnit
+              value={secondStr}
+              onChange={handleSecondChange}
+              label={ariaLabels.seconds}
+              increaseLabel={ariaLabels.increaseSeconds}
+              decreaseLabel={ariaLabels.decreaseSeconds}
+            />
           </>
         )}
         {showMilliseconds && (
           <>
-            <span className={styles.timePickerSeparator}>.</span>
-            <TimeUnit value={msStr} onChange={handleMsChange} wide />
+            <span className={styles.timePickerSeparator} aria-hidden="true">
+              .
+            </span>
+            <TimeUnit
+              value={msStr}
+              onChange={handleMsChange}
+              wide
+              label={ariaLabels.milliseconds}
+              increaseLabel={ariaLabels.increaseMilliseconds}
+              decreaseLabel={ariaLabels.decreaseMilliseconds}
+            />
           </>
         )}
-      </div>
+      </fieldset>
     );
   }
 );
@@ -155,19 +194,29 @@ const TimeUnit = memo(
     value,
     onChange,
     wide = false,
+    label,
+    increaseLabel,
+    decreaseLabel,
   }: {
     value: string;
     onChange: (diff: number) => void;
     wide?: boolean;
+    label: string;
+    increaseLabel: string;
+    decreaseLabel: string;
   }) => {
     const holdUp = useHoldRepeat(onChange, 1);
     const holdDown = useHoldRepeat(onChange, -1);
 
     return (
-      <div className={wide ? styles.timePickerUnitWide : styles.timePickerUnit}>
+      <fieldset
+        className={wide ? styles.timePickerUnitWide : styles.timePickerUnit}
+        aria-label={label}
+      >
         <button
           type="button"
           className={styles.timePickerBtn}
+          aria-label={increaseLabel}
           onClick={holdUp.onClick}
           onMouseDown={holdUp.onMouseDown}
           onMouseUp={holdUp.onMouseUp}
@@ -175,10 +224,13 @@ const TimeUnit = memo(
         >
           ▲
         </button>
-        <span className={styles.timePickerValue}>{value}</span>
+        <span className={styles.timePickerValue} aria-live="polite" aria-atomic="true">
+          {value}
+        </span>
         <button
           type="button"
           className={styles.timePickerBtn}
+          aria-label={decreaseLabel}
           onClick={holdDown.onClick}
           onMouseDown={holdDown.onMouseDown}
           onMouseUp={holdDown.onMouseUp}
@@ -186,7 +238,7 @@ const TimeUnit = memo(
         >
           ▼
         </button>
-      </div>
+      </fieldset>
     );
   }
 );

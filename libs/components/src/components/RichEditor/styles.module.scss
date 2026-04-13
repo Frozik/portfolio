@@ -50,75 +50,10 @@
   color: colors.$grey-7;
 }
 
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  background-color: colors.$grey-13;
-  padding: 4px;
-  justify-items: center;
-}
-
-
-.calendar-day-cell {
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-width: 1px;
-  border-style: solid;
-  border-color: transparent;
-  cursor: pointer;
-  color: colors.$grey-6;
-  border-radius: 4px;
-
-  &--today {
-    font-weight: bold;
-    color: colors.$grey-1;
-  }
-
-  &:hover:not(#\9) {
-    background-color: colors.$blue-5;
-  }
-
-  &--selected {
-    background-color: rgba(colors.$blue-5, 0.7);
-  }
-
-  &--weekend {
-    background-color: rgba(colors.$red-10, 0.5);
-
-    &.calendar-day-cell--selected {
-      background-color: rgba(colors.$red-6, 0.5);
-    }
-  }
-
-  &--tenor {
-    border-color: colors.$green-8;
-  }
-
-  &--overflow {
-    pointer-events: none;
-    color: colors.$grey-8;
-
-    &.calendar-day-cell--selected, &.calendar-day-cell--today {
-      color: colors.$grey-6;
-    }
-  }
-
-  &--header {
-    pointer-events: none;
-    font-weight: 700;
-  }
-
-  &--holiday {
-    background-color: rgba(colors.$red-10, 0.5);
-
-    &.calendar-day-cell--selected {
-      background-color: rgba(colors.$red-6, 0.5);
-    }
+.selection-hidden {
+  &::selection,
+  & *::selection {
+    background: transparent;
   }
 }
 
@@ -151,6 +86,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 4px 8px;
+  border: none;
+  margin: 0;
+  min-width: 0;
   color: colors.$gray-1;
   font-size: 18px;
   user-select: none;
@@ -188,8 +126,10 @@
   justify-content: center;
   gap: 2px;
   padding: 8px 4px 4px;
+  border: none;
   border-top: 1px solid colors.$grey-10;
-  margin-top: 4px;
+  margin: 4px 0 0;
+  min-width: 0;
 }
 
 .time-picker-separator {
@@ -205,6 +145,10 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .time-picker-unit {

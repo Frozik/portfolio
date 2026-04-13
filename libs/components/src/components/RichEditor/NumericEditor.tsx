@@ -3,9 +3,10 @@ import { isNil } from 'lodash-es';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useFunction } from '../../hooks/useFunction';
 import { cn } from '../cn';
+import { RichEditor } from './components/RichEditor';
 import type { ISelection } from './defs';
-import { RichEditor } from './RichEditor';
 import styles from './styles.module.scss';
+import { getCalendarAriaLabels } from './translations';
 import { numericElementSelectionWithValueBuilder, numericTextToHtmlBuilder } from './utils';
 
 export const NumericEditor = memo(
@@ -16,6 +17,7 @@ export const NumericEditor = memo(
     pipSize = 2,
     allowNegative = false,
     placeholder,
+    language = 'en',
   }: {
     className?: string;
     decimal?: number;
@@ -23,7 +25,10 @@ export const NumericEditor = memo(
     pipSize?: number;
     allowNegative?: boolean;
     placeholder?: string;
+    language?: string;
   }) => {
+    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
+
     const allowedDecimals = useMemo(
       () => (isNil(decimal) ? decimal : Math.max(decimal, 0)),
       [decimal]
@@ -102,6 +107,7 @@ export const NumericEditor = memo(
         onValueChanged={setValue}
         onFocusChanges={handleFocusChanges}
         onFocusSelection={handleFocusSelection}
+        aria-label={ariaLabels.numericInputLabel}
       />
     );
   }

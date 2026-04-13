@@ -5,4 +5,5 @@ export { useHasOverflow } from './useHasOverflow';
 export { useKeyboardAction } from './useKeyboardAction';
 export { useMouseAction } from './useMouseAction';
 export { useSyncState } from './useSyncState';
+export { useToday } from './useToday';
 export { useWakeLock } from './useWakeLock';

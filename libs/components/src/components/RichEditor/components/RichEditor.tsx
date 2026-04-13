@@ -4,8 +4,9 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import type { IOptions } from 'sanitize-html';
 import sanitizeHtml from 'sanitize-html';
 
-import { useFunction } from '../../hooks';
-import type { ISelection } from './defs';
+import { useFunction } from '../../../hooks';
+import type { ISelection } from '../defs';
+import styles from '../styles.module.scss';
 import {
   findNextTabStop,
   getElementSelection,
@@ -13,7 +14,7 @@ import {
   inputTextToHtml,
   isParentOf,
   setElementSelection,
-} from './utils';
+} from '../utils';
 
 const SANITIZE_CONFIG: IOptions = {
   allowedTags: [],
@@ -32,6 +33,9 @@ export const RichEditor = memo(
     onFocusChanges,
     onFocusSelection,
     onKeyDown,
+    'aria-label': ariaLabel,
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
   }: {
     className?: string;
     disabled?: boolean;
@@ -48,18 +52,28 @@ export const RichEditor = memo(
     onFocusChanges?: (focused: boolean) => void;
     onFocusSelection?: (value: string) => ISelection | undefined;
     onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+    'aria-label'?: string;
+    'aria-invalid'?: boolean;
+    'aria-describedby'?: string;
   }) => {
     const contentEditableRef = useRef<HTMLDivElement>(null);
     const selectionRangeRef = useRef<ISelection>(
       useMemo(() => ({ start: value.length, end: value.length }), [value])
     );
     const valueBeforeEditRef = useRef(value);
+    const previousValueRef = useRef(value);
+    const valueFromInputRef = useRef(false);
+    // Focus selection applied after pointer/keyboard focus settles (ProseMirror pattern)
+    const pendingFocusSelectionRef = useRef<ISelection | null>(null);
+    const focusCleanupRef = useRef<(() => void) | null>(null);
 
     const [focused, setFocused] = useState(false);
 
     const html = useMemo(() => onTextToHtml(value, focused), [onTextToHtml, value, focused]);
 
     const handleContentChange = useFunction(evt => {
+      pendingFocusSelectionRef.current = null;
+
       const oldValue = value;
       const newValue = sanitizeHtml(evt.currentTarget.innerHTML, SANITIZE_CONFIG);
 
@@ -81,6 +95,7 @@ export const RichEditor = memo(
         setElementSelection(evt.currentTarget, oldSelection);
       } else {
         selectionRangeRef.current = result.selection;
+        valueFromInputRef.current = true;
         onValueChanged?.(result.value);
       }
     });
@@ -90,6 +105,11 @@ export const RichEditor = memo(
         return;
       }
 
+      if (focused && value !== previousValueRef.current && !valueFromInputRef.current) {
+        selectionRangeRef.current = { start: value.length, end: value.length };
+      }
+      previousValueRef.current = value;
+      valueFromInputRef.current = false;
       setElementSelection(contentEditableRef.current, selectionRangeRef.current);
     });
 
@@ -101,6 +121,20 @@ export const RichEditor = memo(
       setFocused(isParentOf(document.activeElement, contentEditableRef.current));
     }, []);
 
+    // Applies the pending focus selection and clears it.
+    // Called via setTimeout(0) to run after all synchronous event handlers
+    // (mouseup, click, selectionchange) in the current event have completed.
+    const applyPendingFocusSelection = useFunction(() => {
+      const selection = pendingFocusSelectionRef.current;
+      pendingFocusSelectionRef.current = null;
+      if (!isNil(selection) && !isNil(contentEditableRef.current)) {
+        selectionRangeRef.current = selection;
+        setElementSelection(contentEditableRef.current, selection);
+        // Restore selection visibility now that the correct selection is set
+        contentEditableRef.current.classList.remove(styles.selectionHidden);
+      }
+    });
+
     const handleFocused = useFunction(() => {
       valueBeforeEditRef.current = value;
       setFocused(true);
@@ -109,18 +143,52 @@ export const RichEditor = memo(
       if (onFocusSelection) {
         const selection = onFocusSelection(value);
         if (!isNil(selection)) {
-          // Deferred to next frame so the browser's focus-related selectionchange events
-          // settle first, then we override with the desired selection
-          requestAnimationFrame(() => {
-            if (!isNil(contentEditableRef.current)) {
-              selectionRangeRef.current = selection;
-              setElementSelection(contentEditableRef.current, selection);
-            }
-          });
+          selectionRangeRef.current = selection;
+          pendingFocusSelectionRef.current = selection;
+
+          // Hide browser's default selection highlight during focus transition
+          contentEditableRef.current?.classList.add(styles.selectionHidden);
+
+          // ProseMirror pattern: wait for pointerup (mouse focus) or use a
+          // fallback timeout (keyboard focus). pointerup fires after mouseup,
+          // guaranteeing all browser selection events have completed.
+          const apply = () => {
+            focusCleanupRef.current = null;
+            // RAF runs before the next paint, so the user never sees the browser's
+            // intermediate selection. Safe here because we schedule from pointerup
+            // or fallback setTimeout — both are separate macrotasks, so this RAF
+            // is guaranteed to land in the next frame (not the current one).
+            requestAnimationFrame(applyPendingFocusSelection);
+          };
+
+          const onPointerUp = () => {
+            clearTimeout(fallbackTimer);
+            apply();
+          };
+
+          document.addEventListener('pointerup', onPointerUp, { once: true });
+
+          // Fallback: keyboard focus (Tab) has no pointerup.
+          // 50ms is enough for any click to complete but fast enough for keyboard UX.
+          const KEYBOARD_FOCUS_FALLBACK_MS = 50;
+          const fallbackTimer = setTimeout(() => {
+            document.removeEventListener('pointerup', onPointerUp);
+            apply();
+          }, KEYBOARD_FOCUS_FALLBACK_MS);
+
+          focusCleanupRef.current = () => {
+            document.removeEventListener('pointerup', onPointerUp);
+            clearTimeout(fallbackTimer);
+          };
         }
       }
     });
+
     const handleBlur = useFunction(() => {
+      pendingFocusSelectionRef.current = null;
+      focusCleanupRef.current?.();
+      focusCleanupRef.current = null;
+      contentEditableRef.current?.classList.remove(styles.selectionHidden);
       setFocused(false);
       onFocusChanges?.(false);
     });
@@ -155,8 +223,14 @@ export const RichEditor = memo(
         return;
       }
 
-      selectionRangeRef.current =
-        getElementSelection(contentEditableRef.current) ?? selectionRangeRef.current;
+      // While focus selection is pending, ignore all browser-initiated selectionchange events.
+      // The selection will be applied after the pointer/keyboard event sequence completes.
+      if (!isNil(pendingFocusSelectionRef.current)) {
+        return;
+      }
+
+      const sel = getElementSelection(contentEditableRef.current);
+      selectionRangeRef.current = sel ?? selectionRangeRef.current;
     });
 
     useEffect(() => {
@@ -187,6 +261,7 @@ export const RichEditor = memo(
     }, [updateFocused]);
 
     return (
+      // biome-ignore lint/a11y/useSemanticElements: contentEditable div requires dangerouslySetInnerHTML for rich text, cannot use <input> or <textarea>
       <div
         ref={contentEditableRef}
         className={className}
@@ -196,6 +271,13 @@ export const RichEditor = memo(
           overflow: 'hidden',
           display: 'inline-block',
         }}
+        role="textbox"
+        tabIndex={disabled ? -1 : 0}
+        aria-multiline={false}
+        aria-label={ariaLabel}
+        aria-disabled={disabled || undefined}
+        aria-invalid={ariaInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
         contentEditable={!disabled}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: RichEditor requires innerHTML for contentEditable
         dangerouslySetInnerHTML={{

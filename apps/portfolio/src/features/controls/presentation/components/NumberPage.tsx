@@ -1,6 +1,7 @@
 import { NumericEditor } from '@frozik/components';
 import { memo, useState } from 'react';
 
+import { getCurrentLanguage } from '../../../../shared/i18n';
 import { RangeSlider, Slider } from '../../../../shared/ui';
 import { controlsT } from '../translations';
 
@@ -43,6 +44,7 @@ export const NumberPage = memo(() => {
           pipSize={pipSize}
           allowNegative
           placeholder={controlsT.numberPage.placeholder}
+          language={getCurrentLanguage()}
         />
       </div>
 

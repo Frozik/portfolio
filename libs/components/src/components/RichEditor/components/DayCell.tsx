@@ -1,4 +1,3 @@
-import type { TenorDate } from '@frozik/utils';
 import type { Temporal } from '@js-temporal/polyfill';
 import { memo, useMemo } from 'react';
 import { useFunction } from '../../../hooks';
@@ -9,17 +8,11 @@ export const DayCell = memo(
     cell,
     gridColumn,
     gridRow,
-    calendarDayCellClassName,
-    calendarDayCellTodayClassName,
-    calendarDayCellSelectedClassName,
-    calendarDayCellWeekendClassName,
-    calendarDayCellTenorClassName,
-    calendarDayCellOverflowClassName,
     onSelectCalendarDate,
+    monthNames,
   }: {
     cell: {
       date: Temporal.PlainDate;
-      tenors: TenorDate[];
       weekend: boolean;
       today: boolean;
       selected: boolean;
@@ -27,13 +20,8 @@ export const DayCell = memo(
     };
     gridColumn: number;
     gridRow: number;
-    calendarDayCellClassName: string;
-    calendarDayCellTodayClassName: string;
-    calendarDayCellSelectedClassName: string;
-    calendarDayCellWeekendClassName: string;
-    calendarDayCellTenorClassName: string;
-    calendarDayCellOverflowClassName: string;
     onSelectCalendarDate?: (date: Temporal.PlainDate) => void;
+    monthNames: readonly string[];
   }) => {
     const handleDaySelect = useFunction(() => {
       onSelectCalendarDate?.(cell.date);
@@ -41,42 +29,42 @@ export const DayCell = memo(
 
     const className = useMemo(
       () =>
-        cell.overflow
-          ? cn(calendarDayCellClassName, calendarDayCellOverflowClassName, {
-              [calendarDayCellSelectedClassName]: cell.selected,
-              [calendarDayCellTodayClassName]: cell.today,
-            })
-          : cn(calendarDayCellClassName, {
-              [calendarDayCellTodayClassName]: cell.today,
-              [calendarDayCellSelectedClassName]: cell.selected,
-              [calendarDayCellWeekendClassName]: cell.weekend,
-              [calendarDayCellTenorClassName]: cell.tenors.length > 0,
-            }),
-      [
-        cell.overflow,
-        cell.selected,
-        cell.today,
-        cell.weekend,
-        cell.tenors.length,
-        calendarDayCellClassName,
-        calendarDayCellOverflowClassName,
-        calendarDayCellSelectedClassName,
-        calendarDayCellTodayClassName,
-        calendarDayCellWeekendClassName,
-        calendarDayCellTenorClassName,
-      ]
+        cn(
+          'flex size-7 cursor-pointer items-center justify-center rounded-sm border border-transparent p-0 font-inherit text-sm text-text-secondary hover:bg-brand-500',
+          // Background priority (low → high): transparent → today → weekend → weekend+today → selected → weekend+selected
+          !cell.weekend && !cell.selected && !cell.today && 'bg-transparent',
+          cell.today && !cell.weekend && !cell.selected && 'bg-brand-500/20',
+          cell.weekend && !cell.today && !cell.selected && 'bg-error/15',
+          cell.weekend && cell.today && !cell.selected && 'bg-error/25',
+          cell.selected && !cell.weekend && 'bg-brand-500/70',
+          cell.weekend && cell.selected && 'bg-error/40',
+          // Text
+          cell.today && 'font-bold text-text',
+          cell.overflow && 'pointer-events-none text-text-muted',
+          cell.overflow && (cell.selected || cell.today) && 'text-text-secondary'
+        ),
+      [cell.overflow, cell.selected, cell.today, cell.weekend]
+    );
+
+    const fullDateLabel = useMemo(
+      () => `${cell.date.day} ${monthNames[cell.date.month - 1]} ${cell.date.year}`,
+      [cell.date.day, cell.date.month, cell.date.year, monthNames]
     );
 
     return (
-      <div
+      <button
+        type="button"
         key={cell.date.toString()}
         style={{ gridColumn, gridRow }}
         className={className}
-        title={cell.tenors.map(({ tenor }) => tenor).join(', ')}
+        tabIndex={-1}
+        aria-label={fullDateLabel}
+        aria-pressed={cell.selected}
+        aria-current={cell.today ? 'date' : undefined}
         onClick={handleDaySelect}
       >
         {cell.date.day}
-      </div>
+      </button>
     );
   }
 );

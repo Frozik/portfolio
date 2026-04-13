@@ -1,5 +1,3 @@
-import type { Temporal } from '@js-temporal/polyfill';
-
 import type { Opaque } from '../types/base';
 
 export type ISO = Opaque<'ISO 8601', string>;
@@ -25,12 +23,6 @@ export enum EDayOfWeek {
   Sunday = 7,
 }
 
-export type Tenor = Opaque<'Tenor', string>;
-export interface TenorDate {
-  tenor: Tenor;
-  date: Temporal.PlainDate;
-}
-
 export enum EDateTimeStep {
   Minute = 'minute',
   Hour = 'hour',
@@ -48,9 +40,4 @@ export enum EDayType {
   Business = 'business',
   Holiday = 'holiday',
   Weekend = 'weekend',
-}
-
-export interface DayInfo {
-  readonly type: EDayType;
-  readonly tenor?: Tenor;
 }
