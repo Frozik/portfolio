@@ -1,24 +1,15 @@
 import { isNil } from 'lodash-es';
 import { vec4 } from 'wgpu-matrix';
 
-import {
-  EDGE_HIT_RADIUS_PIXELS,
-  HOMOGENEOUS_W,
-  VERTEX_HIT_RADIUS_PIXELS,
-} from './stereometry-constants';
-import type { Vec3 } from './stereometry-math';
-import { extendLine } from './stereometry-math';
-import type { FigureTopology, SelectionState } from './stereometry-types';
-import { SELECTION_NONE } from './stereometry-types';
-
-export interface HitTestLineSegment {
-  readonly startPosition: Vec3;
-  readonly endPosition: Vec3;
-}
+import { EDGE_HIT_RADIUS_PIXELS, HOMOGENEOUS_W, VERTEX_HIT_RADIUS_PIXELS } from './constants';
+import type { Vec3 } from './math';
+import { extendLine } from './math';
+import type { SceneLine, SelectionState } from './types';
+import { SELECTION_NONE } from './types';
 
 /**
- * Performs CPU hit testing against edges, extended lines, and user segments.
- * Priority: edges > extended lines > user segments.
+ * Performs CPU hit testing against edges and lines.
+ * Priority: edges > lines.
  */
 export function hitTest(
   screenX: number,
@@ -27,9 +18,9 @@ export function hitTest(
   canvasHeight: number,
   devicePixelRatio: number,
   mvpMatrix: Float32Array,
-  topology: FigureTopology,
-  extendedEdgeIndices: readonly number[],
-  userSegments: readonly HitTestLineSegment[]
+  topologyEdges: readonly [number, number][],
+  topologyVertices: readonly Vec3[],
+  lines: readonly SceneLine[]
 ): SelectionState {
   const gpuCanvasWidth = canvasWidth * devicePixelRatio;
   const gpuCanvasHeight = canvasHeight * devicePixelRatio;
@@ -39,13 +30,13 @@ export function hitTest(
 
   const projectedVertices = projectVerticesToScreen(
     mvpMatrix,
-    topology.vertices,
+    topologyVertices,
     gpuCanvasWidth,
     gpuCanvasHeight
   );
 
   // 1. Check topology edge segments
-  const edgeSegments = topology.edges.map(([indexA, indexB]) => ({
+  const edgeSegments = topologyEdges.map(([indexA, indexB]) => ({
     start: projectedVertices[indexA],
     end: projectedVertices[indexB],
   }));
@@ -56,19 +47,16 @@ export function hitTest(
     return { type: 'edge', edgeIndex: edgeHit };
   }
 
-  // 2. Check extended lines
-  if (extendedEdgeIndices.length > 0) {
-    const extendedLineSegments = extendedEdgeIndices.map(edgeIndex => {
-      const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
-      return {
-        startPosition: topology.vertices[vertexIndexA],
-        endPosition: topology.vertices[vertexIndexB],
-      };
-    });
+  // 2. Check lines (extended)
+  if (lines.length > 0) {
+    const lineSegments = lines.map(line => ({
+      startPosition: line.pointA,
+      endPosition: line.pointB,
+    }));
 
     const extendedProjected = projectExtendedLineSegments(
       mvpMatrix,
-      extendedLineSegments,
+      lineSegments,
       gpuCanvasWidth,
       gpuCanvasHeight
     );
@@ -76,23 +64,7 @@ export function hitTest(
     const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, extendedProjected);
 
     if (!isNil(lineHit)) {
-      return { type: 'line', edgeIndex: extendedEdgeIndices[lineHit] };
-    }
-  }
-
-  // 3. Check user segments
-  if (userSegments.length > 0) {
-    const userProjected = projectExtendedLineSegments(
-      mvpMatrix,
-      userSegments,
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-
-    const userHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, userProjected);
-
-    if (!isNil(userHit)) {
-      return { type: 'userSegment', userSegmentIndex: userHit };
+      return { type: 'line', lineIndex: lineHit };
     }
   }
 
@@ -138,6 +110,11 @@ interface ProjectedSegment {
   readonly end: ProjectedVertex;
 }
 
+interface ExtendableLineSegment {
+  readonly startPosition: Vec3;
+  readonly endPosition: Vec3;
+}
+
 function projectVerticesToScreen(
   mvpMatrix: Float32Array,
   vertices: readonly Vec3[],
@@ -167,7 +144,7 @@ function projectVerticesToScreen(
 
 function projectExtendedLineSegments(
   mvpMatrix: Float32Array,
-  segments: readonly HitTestLineSegment[],
+  segments: readonly ExtendableLineSegment[],
   gpuCanvasWidth: number,
   gpuCanvasHeight: number
 ): ProjectedSegment[] {

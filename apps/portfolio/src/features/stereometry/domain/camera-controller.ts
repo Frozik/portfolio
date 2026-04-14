@@ -3,6 +3,7 @@ import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
   INERTIA_MIN_VELOCITY,
+  INITIAL_AZIMUTH,
   INITIAL_CAMERA_DISTANCE,
   INITIAL_ELEVATION,
   MAX_CAMERA_DISTANCE,
@@ -12,11 +13,12 @@ import {
   WHEEL_ZOOM_SENSITIVITY,
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
-} from './stereometry-constants';
-import type { CameraInteractionMode } from './stereometry-types';
+} from './constants';
+import type { CameraInteractionMode } from './types';
 
 export interface OrbitalCameraController {
-  tick(): void;
+  /** Advances camera animation by one frame. Returns true if animation is still active. */
+  tick(): boolean;
   getViewMatrix(): Float32Array;
   getEyePosition(): [number, number, number];
   getDistance(): number;
@@ -37,7 +39,7 @@ export function createOrbitalCameraController(
   canvas: HTMLCanvasElement,
   rotationCenter: readonly [number, number, number] = [0, 0, 0]
 ): OrbitalCameraController {
-  let azimuth = 0;
+  let azimuth = INITIAL_AZIMUTH;
   const elevation = INITIAL_ELEVATION;
 
   let distance = INITIAL_CAMERA_DISTANCE;
@@ -205,16 +207,16 @@ export function createOrbitalCameraController(
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
   return {
-    tick(): void {
-      const zoomDelta = targetDistance - distance;
-      if (Math.abs(zoomDelta) > ZOOM_SNAP_THRESHOLD) {
-        distance += zoomDelta * ZOOM_SMOOTHING_FACTOR;
+    tick(): boolean {
+      const isZooming = Math.abs(targetDistance - distance) > ZOOM_SNAP_THRESHOLD;
+      if (isZooming) {
+        distance += (targetDistance - distance) * ZOOM_SMOOTHING_FACTOR;
       } else {
         distance = targetDistance;
       }
 
       if (activePointers.size > 0) {
-        return;
+        return true;
       }
 
       const hasAzimuthVelocity = Math.abs(azimuthVelocity) >= INERTIA_MIN_VELOCITY;
@@ -224,7 +226,7 @@ export function createOrbitalCameraController(
 
       if (!hasAzimuthVelocity && !hasPanVelocity) {
         resetVelocity();
-        return;
+        return isZooming;
       }
 
       if (hasAzimuthVelocity) {
@@ -237,6 +239,8 @@ export function createOrbitalCameraController(
         panVelocityX *= INERTIA_DAMPING;
         panVelocityY *= INERTIA_DAMPING;
       }
+
+      return true;
     },
 
     getViewMatrix(): Float32Array {

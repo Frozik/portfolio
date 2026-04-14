@@ -1,11 +1,14 @@
-import type { PartialElementStyle, ResolvedElementStyle, RgbFloat } from './stereometry-types';
+import type { PartialElementStyle, ResolvedElementStyle, RgbFloat } from './types';
 
 const DEFAULT_ELEMENT_STYLE: ResolvedElementStyle = {
   color: '#FFFFFF',
   width: 1.0,
   size: 1.0,
-  brightness: 1.0,
+  alpha: 1.0,
   line: { type: 'solid' },
+  markerType: 'solid',
+  strokeColor: '#FFFFFF',
+  strokeWidth: 0,
 };
 
 const HEX_RADIX = 16;
@@ -59,8 +62,11 @@ function mergePartialStyle(
     color: override.color ?? base.color,
     width: override.width ?? base.width,
     size: override.size ?? base.size,
-    brightness: override.brightness ?? base.brightness,
+    alpha: override.alpha ?? base.alpha,
     line: override.line ?? base.line,
+    markerType: override.markerType ?? base.markerType,
+    strokeColor: override.strokeColor ?? base.strokeColor,
+    strokeWidth: override.strokeWidth ?? base.strokeWidth,
   };
 }
 
@@ -74,18 +80,42 @@ function mergePartialStyle(
  * 4. styles['segment:selected'] (1 modifier)
  * 5. styles['segment:hidden:selected'] (2 modifiers, most specific)
  */
+/**
+ * Normalizes style map keys so that modifiers are in alphabetical order.
+ * This allows style authors to write keys in any modifier order.
+ */
+function normalizeStyleKeys(
+  styles: Readonly<Record<string, PartialElementStyle>>
+): Readonly<Record<string, PartialElementStyle>> {
+  const normalized: Record<string, PartialElementStyle> = {};
+
+  for (const [key, value] of Object.entries(styles)) {
+    const parts = key.split(':');
+    if (parts.length <= 2) {
+      normalized[key] = value;
+      continue;
+    }
+    const element = parts[0];
+    const modifiers = parts.slice(1).sort();
+    normalized[`${element}:${modifiers.join(':')}`] = value;
+  }
+
+  return normalized;
+}
+
 export function resolveStyle(
   styles: Readonly<Record<string, PartialElementStyle>>,
   element: string,
   modifiers: readonly string[]
 ): ResolvedElementStyle {
+  const normalizedStyles = normalizeStyleKeys(styles);
   const subsets = generateModifierSubsets(modifiers);
 
   let resolved = { ...DEFAULT_ELEMENT_STYLE };
 
   for (const subset of subsets) {
     const key = subset.length === 0 ? element : `${element}:${subset.join(':')}`;
-    const partial = styles[key];
+    const partial = normalizedStyles[key];
 
     if (partial !== undefined) {
       resolved = mergePartialStyle(resolved, partial);

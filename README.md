@@ -147,24 +147,62 @@ WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
 
 ### Stereometry
 
-Interactive 3D construction tool for exploring a pentagonal pyramid, rendered
-with WebGPU. Supports building construction lines, finding intersection points,
-and creating parallel lines — a digital geometry workbench.
+Interactive 3D construction tool for stereometry puzzles, rendered with WebGPU.
+Build construction lines, find intersection points, and explore cross-sections
+of 3D solids — a digital geometry workbench.
 
-**Rendering:**
-- Multi-pass WebGPU pipeline: depth faces → hidden edges (dashed, dimmed) →
-  visible edges → extended lines → vertex/intersection markers
+**Rendering architecture:**
+- Unified per-instance styling: each line segment and vertex marker carries its
+  own visible and hidden styles directly in the GPU instance buffer — no
+  per-modifier pipeline proliferation
+- Multi-pass WebGPU pipeline: depth pre-pass (faces) → hidden lines → visible
+  lines → vertex markers (with depth texture sampling for binary occlusion)
 - Orthographic projection with 4x MSAA anti-aliasing
-- CPU ray-triangle occlusion test (Moller-Trumbore) for per-vertex brightness
-- Hidden edges rendered as dashed lines with configurable dash/gap pattern
+- GPU-based vertex occlusion via depth texture sampling in the vertex shader —
+  the marker center is tested against the depth buffer, producing a binary
+  visible/hidden decision for the entire marker (no split-half artifacts)
+- Depth-based alpha fade: elements further from the camera smoothly fade to
+  transparency, controlled by `depthFadeRate` and `depthFadeMin` uniforms
+- All sizes (line width, marker diameter, dash/gap) specified in CSS pixels,
+  automatically scaled by `devicePixelRatio` in the shader
+
+**CSS-like style cascade:**
+- Styles defined as `'element:modifier1:modifier2'` keys with partial overrides
+  (e.g., `'line:hidden:selected'`), resolved by specificity like CSS
+- Modifiers are arbitrary strings — adding a new visual state (e.g., `marked`)
+  requires only a style entry, no code changes
+- Modifier order in keys is auto-normalized (alphabetically sorted)
+- Style properties: `color` (hex), `alpha`, `width`, `size`, `line`
+  (solid/dashed with dash/gap), `markerType` (solid/circle), `strokeColor`,
+  `strokeWidth`
+- Vertex markers support two render types: `solid` (filled circle) and `circle`
+  (stroke + fill with configurable stroke color and width)
+
+**Segment processor:**
+- Pure function that splits infinite lines into classified segments based on
+  geometry: `segment` (coincides with a topology edge), `inner` (inside the
+  figure or on a face), or regular (no modifier)
+- Face intersection via ray-triangle (Moller-Trumbore) and coplanar face
+  clipping for lines lying on figure faces
+- Topology edges, extended lines, and user-drawn lines are all unified as
+  `SceneLine` — no separate entity types
+
+**Puzzle format:**
+- Declarative puzzle definitions: figures (vertices + faces), input constraints
+  (additional points and lines), and expected results
+- `preparePuzzle()` derives edges from faces and builds topology automatically
 
 **Interactions:**
 - Drag to rotate, Shift+drag to pan, scroll/pinch to zoom with inertia
-- Click an edge or line to select it (highlighted)
+- Unified Pointer Events for mouse, touch, and pen (fixes mobile double-event
+  bug where touch + synthesized mouse caused false double-clicks)
+- Click an edge or line to select it (highlighted with cascade style)
 - Double-click an edge to extend it into an infinite construction line
+- Double-click a line to remove it
 - Drag from vertex to vertex to draw a construction line between two points
-  (orange preview line shown during drag, snap target vertex highlighted)
+  (preview line shown during drag, snap target vertex highlighted)
 - Select an edge/line, then tap a vertex to create a parallel line through it
+- Duplicate line prevention: adding a line that already exists is a no-op
 - Intersection points appear automatically where lines cross and become
   available as construction vertices
 - Undo/redo for all construction actions

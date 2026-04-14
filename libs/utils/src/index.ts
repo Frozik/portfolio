@@ -1,6 +1,7 @@
 export * from './assert';
 export * from './database';
 export * from './date';
+export { getIsHosted } from './isHosted';
 export { isProduction } from './isProduction';
 export * from './math';
 export { parseJson } from './parseJson';

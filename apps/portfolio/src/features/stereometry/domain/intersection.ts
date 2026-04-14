@@ -1,7 +1,7 @@
-import { LINE_INTERSECTION_MAX_DISTANCE } from './stereometry-constants';
-import type { Vec3 } from './stereometry-math';
-import { distanceSquared3, dot3, isNearAnyPoint, subtractVec3 } from './stereometry-math';
-import type { FigureTopology, IntersectionEntity, SceneState } from './stereometry-types';
+import { LINE_INTERSECTION_MAX_DISTANCE } from './constants';
+import type { Vec3 } from './math';
+import { distanceSquared3, dot3, isNearAnyPoint, subtractVec3 } from './math';
+import type { FigureTopology, IntersectionEntity, SceneState } from './types';
 
 /** Minimum denominator to consider lines non-parallel */
 const PARALLEL_EPSILON = 1e-10;
@@ -21,9 +21,7 @@ interface LineDefinition {
  * Computes all intersection points between all infinite lines in the scene
  * and between those lines and topology edge segments.
  *
- * Infinite lines come from two sources:
- * - Extended topology edges (scene.lines)
- * - User-drawn segments (scene.userSegments) — rendered as infinite lines
+ * Each SceneLine defines an infinite line through its pointA and pointB.
  *
  * Filters out intersections at existing topology vertices and duplicates.
  */
@@ -31,20 +29,10 @@ export function computeAllIntersections(
   scene: SceneState,
   topology: FigureTopology
 ): readonly IntersectionEntity[] {
-  const extendedEdgeIndices = new Set(scene.lines.map(line => line.edgeIndex));
-
-  const allLines: LineDefinition[] = [];
-
-  for (const line of scene.lines) {
-    allLines.push(getEdgeLine(line.edgeIndex, topology));
-  }
-
-  for (const segment of scene.userSegments) {
-    allLines.push({
-      point: segment.startPosition,
-      direction: subtractVec3(segment.endPosition, segment.startPosition),
-    });
-  }
+  const allLines: LineDefinition[] = scene.lines.map(line => ({
+    point: line.pointA,
+    direction: subtractVec3(line.pointB, line.pointA),
+  }));
 
   const results: IntersectionEntity[] = [];
   const resultPositions: Vec3[] = [];
@@ -62,7 +50,7 @@ export function computeAllIntersections(
       return;
     }
 
-    results.push({ position, sourceEdgeA: 0, sourceEdgeB: 0 });
+    results.push({ position });
     resultPositions.push(position);
   }
 
@@ -72,10 +60,6 @@ export function computeAllIntersections(
     }
 
     for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
-      if (extendedEdgeIndices.has(edgeIndex)) {
-        continue;
-      }
-
       tryAddIntersection(
         computeLineSegmentIntersection(allLines[indexA], getEdgeLine(edgeIndex, topology))
       );

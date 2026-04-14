@@ -1,4 +1,4 @@
-import type { SceneState } from './stereometry-types';
+import type { SceneState } from './types';
 
 const MAX_HISTORY_SIZE = 100;
 

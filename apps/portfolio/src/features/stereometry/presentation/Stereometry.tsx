@@ -1,14 +1,17 @@
 import { useFunction } from '@frozik/components';
+import { getIsHosted } from '@frozik/utils';
 import * as Popover from '@radix-ui/react-popover';
 import { Info, Move, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 
+const IS_HOSTED = getIsHosted();
+
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { cn } from '../../../shared/lib/cn';
 import commonStyles from '../../../shared/styles.module.scss';
-import type { StereometryControls } from '../domain/stereometry-draw';
-import { runStereometry } from '../domain/stereometry-draw';
-import type { CameraInteractionMode } from '../domain/stereometry-types';
+import type { StereometryControls } from '../domain/draw';
+import { runStereometry } from '../domain/draw';
+import type { CameraInteractionMode } from '../domain/types';
 import { stereometryT } from './translations';
 
 const TOOLBAR_ICON_SIZE = 20;
@@ -20,20 +23,24 @@ export const Stereometry = memo(() => {
   const [interactionMode, setInteractionMode] = useState<CameraInteractionMode>('rotate');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [fps, setFps] = useState(0);
 
   useEffect(() => {
     if (canvasRef.current) {
       const controls = runStereometry(canvasRef.current);
       controlsRef.current = controls;
 
-      const unsubscribe = controls.subscribeHistory((undoAvailable, redoAvailable) => {
+      const unsubscribeHistory = controls.subscribeHistory((undoAvailable, redoAvailable) => {
         setCanUndo(undoAvailable);
         setCanRedo(redoAvailable);
       });
 
+      const unsubscribeFps = controls.subscribeFps(setFps);
+
       return () => {
         controlsRef.current = null;
-        unsubscribe();
+        unsubscribeHistory();
+        unsubscribeFps();
         controls.destroy();
       };
     }
@@ -63,6 +70,11 @@ export const Stereometry = memo(() => {
     <WebGpuGuard className={commonStyles.fixedContainer}>
       <div className={commonStyles.fixedContainer}>
         <canvas ref={canvasRef} className="h-full w-full [touch-action:none]" />
+        {!IS_HOSTED && (
+          <div className="absolute top-3 right-3 rounded bg-black/60 px-2 py-0.5 font-mono text-xs text-neutral-400">
+            {fps} FPS
+          </div>
+        )}
         <div className="absolute bottom-4 right-4 flex gap-2">
           <HelpPopover />
           <ToolbarButton onClick={handleUndo} label={stereometryT.toolbar.undo} disabled={!canUndo}>
@@ -196,6 +208,12 @@ const HelpPopover = memo(() => {
                 {stereometryT.help.controlLabels.doubleClickEdge}
               </strong>{' '}
               — {stereometryT.help.controls.doubleClickEdge}
+            </li>
+            <li>
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.doubleClickLine}
+              </strong>{' '}
+              — {stereometryT.help.controls.doubleClickLine}
             </li>
             <li>
               <strong className="text-neutral-100">

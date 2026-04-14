@@ -1,11 +1,12 @@
 import { useFunction } from '@frozik/components';
+import { getIsHosted } from '@frozik/utils';
 import { memo, useEffect, useState } from 'react';
 
 import type { ISharedTimeseriesRenderer } from '../domain/types';
 import { timeseriesT } from './translations';
 
 const FPS_POLL_INTERVAL_MS = 250;
-const IS_HOSTED = window.location.hostname.endsWith('github.io');
+const IS_HOSTED = getIsHosted();
 
 const TOGGLE_TRACK =
   'relative h-4 w-7 shrink-0 cursor-pointer appearance-none rounded-full ' +

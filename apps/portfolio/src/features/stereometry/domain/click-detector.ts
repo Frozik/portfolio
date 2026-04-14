@@ -3,7 +3,7 @@ import {
   CLICK_TIME_THRESHOLD_MS,
   DOUBLE_CLICK_DISTANCE_THRESHOLD,
   DOUBLE_CLICK_TIME_THRESHOLD_MS,
-} from './stereometry-constants';
+} from './constants';
 
 /**
  * Distinguishes click and double-click from drag on a canvas element.
