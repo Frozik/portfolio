@@ -36,7 +36,9 @@ export function processVertexMarkers(
     const isTopologyVertex = isTopologyVertexPosition(position, topology.vertices);
     if (
       !isTopologyVertex &&
-      isPointInsideOrOnSurface(position, topology.faceTriangles, topology.vertices)
+      topology.figureFaceTriangles.some(figureTriangles =>
+        isPointInsideOrOnSurface(position, figureTriangles, topology.vertices)
+      )
     ) {
       modifiers.push('inner');
     }

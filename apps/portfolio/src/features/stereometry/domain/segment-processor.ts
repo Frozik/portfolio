@@ -8,24 +8,240 @@ import {
   rayTriangleIntersect,
   subtractVec3,
 } from './math';
-import type { FigureTopology, ProcessedSegment, SceneLine } from './types';
+import type { FigureTopology, ProcessedSegment, SceneLine, SelectionState } from './types';
 
 const COLLINEAR_THRESHOLD = 1e-8;
 const POSITION_EPSILON = 1e-6;
 const COPLANAR_DISTANCE_THRESHOLD = 1e-4;
 
+/** Sentinel value for topology edge segments (not from a user line) */
+const TOPOLOGY_EDGE_SOURCE_INDEX = -1;
+
+/**
+ * Produces all renderable segments: topology edges + user lines.
+ * Assigns modifiers including 'selected' based on current selection.
+ * Line segments that coincide with topology edges are dropped
+ * (the topology edge already renders there).
+ *
+ * Selection propagation:
+ * - Edge selected → topology edge + all lines passing through both edge vertices
+ * - Line selected → all line segments + topology edges collinear with the line
+ */
+/** Sentinel source index for the preview line */
+export const PREVIEW_LINE_SOURCE_INDEX = -2;
+
 export function processSegments(
   topology: FigureTopology,
-  lines: readonly SceneLine[]
+  lines: readonly SceneLine[],
+  selection: SelectionState,
+  previewLine?: SceneLine
 ): readonly ProcessedSegment[] {
-  const results: ProcessedSegment[] = [];
+  const selectedLineIndices = findSelectedLineIndices(selection, lines, topology);
+  const selectedEdgeIndices = findSelectedEdgeIndices(selection, lines, topology);
+
+  // 1. Process user lines → split into sub-segments with modifiers
+  const lineSegments: ProcessedSegment[] = [];
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const segments = processLine(lines[lineIndex], lineIndex, topology);
-    results.push(...segments);
+    const isSelected = selectedLineIndices.has(lineIndex);
+
+    for (const segment of segments) {
+      if (segment.modifiers.includes('segment')) {
+        continue;
+      }
+
+      const modifiers = isSelected ? [...segment.modifiers, 'selected'] : segment.modifiers;
+      lineSegments.push({ ...segment, modifiers });
+    }
   }
 
-  return results;
+  // 2. Process preview line (if dragging)
+  if (previewLine !== undefined) {
+    const segments = processLine(previewLine, PREVIEW_LINE_SOURCE_INDEX, topology);
+
+    for (const segment of segments) {
+      if (segment.modifiers.includes('segment')) {
+        continue;
+      }
+
+      lineSegments.push({
+        ...segment,
+        modifiers: [...segment.modifiers, 'preview'],
+      });
+    }
+  }
+
+  // 3. Build topology edge segments
+  const topologySegments = buildTopologyEdgeSegments(topology, selectedEdgeIndices);
+
+  // 4. Deduplicate: if two segments share the same positions, keep the one with more modifiers
+  return deduplicateSegments([...topologySegments, ...lineSegments]);
+}
+
+/**
+ * Removes duplicate segments at the same position.
+ * When two segments overlap, keeps the one with more modifiers (more specific styling).
+ */
+function deduplicateSegments(segments: readonly ProcessedSegment[]): readonly ProcessedSegment[] {
+  const segmentMap = new Map<string, ProcessedSegment>();
+
+  for (const segment of segments) {
+    const key = segmentPositionKey(segment.startPosition, segment.endPosition);
+
+    const existing = segmentMap.get(key);
+    if (existing === undefined || segment.modifiers.length > existing.modifiers.length) {
+      segmentMap.set(key, segment);
+    }
+  }
+
+  return [...segmentMap.values()];
+}
+
+function segmentPositionKey(
+  start: readonly [number, number, number],
+  end: readonly [number, number, number]
+): string {
+  const startKey = `${start[0].toFixed(6)},${start[1].toFixed(6)},${start[2].toFixed(6)}`;
+  const endKey = `${end[0].toFixed(6)},${end[1].toFixed(6)},${end[2].toFixed(6)}`;
+  // Normalize direction so A→B and B→A produce the same key
+  return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+}
+
+/**
+ * Determines which line indices should be highlighted.
+ * - Line selected → that line
+ * - Edge selected → lines whose pointA/pointB match the edge endpoints
+ */
+function findSelectedLineIndices(
+  selection: SelectionState,
+  lines: readonly SceneLine[],
+  topology: FigureTopology
+): ReadonlySet<number> {
+  const indices = new Set<number>();
+
+  switch (selection.type) {
+    case 'line':
+      indices.add(selection.lineIndex);
+      break;
+    case 'edge': {
+      const [vertexA, vertexB] = topology.edges[selection.edgeIndex];
+      const edgeStart = topology.vertices[vertexA];
+      const edgeEnd = topology.vertices[vertexB];
+
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+        if (
+          (positionsEqual(line.pointA, edgeStart) && positionsEqual(line.pointB, edgeEnd)) ||
+          (positionsEqual(line.pointA, edgeEnd) && positionsEqual(line.pointB, edgeStart))
+        ) {
+          indices.add(lineIndex);
+        }
+      }
+      break;
+    }
+    case 'none':
+      break;
+  }
+
+  return indices;
+}
+
+/**
+ * Determines which edge indices should be highlighted.
+ * - Edge selected → that edge
+ * - Line selected → edges whose endpoints match the line's pointA/pointB
+ */
+function findSelectedEdgeIndices(
+  selection: SelectionState,
+  lines: readonly SceneLine[],
+  topology: FigureTopology
+): ReadonlySet<number> {
+  const indices = new Set<number>();
+
+  switch (selection.type) {
+    case 'edge':
+      indices.add(selection.edgeIndex);
+      break;
+    case 'line': {
+      const line = lines[selection.lineIndex];
+
+      for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
+        const [vertexA, vertexB] = topology.edges[edgeIndex];
+        const edgeStart = topology.vertices[vertexA];
+        const edgeEnd = topology.vertices[vertexB];
+
+        if (isEdgeOnLine(edgeStart, edgeEnd, line.pointA, line.pointB)) {
+          indices.add(edgeIndex);
+        }
+      }
+      break;
+    }
+    case 'none':
+      break;
+  }
+
+  return indices;
+}
+
+/**
+ * Checks if a topology edge lies on an infinite line (collinear and on the same line).
+ */
+function isEdgeOnLine(edgeStart: Vec3, edgeEnd: Vec3, linePointA: Vec3, linePointB: Vec3): boolean {
+  const lineDir = subtractVec3(linePointB, linePointA);
+  const lineLength = lengthVec3(lineDir);
+
+  if (lineLength === 0) {
+    return false;
+  }
+
+  const normalizedLineDir: Vec3 = [
+    lineDir[0] / lineLength,
+    lineDir[1] / lineLength,
+    lineDir[2] / lineLength,
+  ];
+
+  // Check both edge endpoints are on the infinite line
+  const toEdgeStart = subtractVec3(edgeStart, linePointA);
+  const crossStart = cross3(normalizedLineDir, toEdgeStart);
+  if (lengthVec3(crossStart) > COLLINEAR_THRESHOLD) {
+    return false;
+  }
+
+  const toEdgeEnd = subtractVec3(edgeEnd, linePointA);
+  const crossEnd = cross3(normalizedLineDir, toEdgeEnd);
+  return lengthVec3(crossEnd) <= COLLINEAR_THRESHOLD;
+}
+
+function positionsEqual(
+  positionA: readonly [number, number, number],
+  positionB: readonly [number, number, number]
+): boolean {
+  return (
+    Math.abs(positionA[0] - positionB[0]) < POSITION_EPSILON &&
+    Math.abs(positionA[1] - positionB[1]) < POSITION_EPSILON &&
+    Math.abs(positionA[2] - positionB[2]) < POSITION_EPSILON
+  );
+}
+
+function buildTopologyEdgeSegments(
+  topology: FigureTopology,
+  selectedEdgeIndices: ReadonlySet<number>
+): readonly ProcessedSegment[] {
+  return topology.edges.map(([vertexA, vertexB], edgeIndex) => {
+    const modifiers: string[] = ['segment'];
+
+    if (selectedEdgeIndices.has(edgeIndex)) {
+      modifiers.push('selected');
+    }
+
+    return {
+      startPosition: topology.vertices[vertexA],
+      endPosition: topology.vertices[vertexB],
+      modifiers,
+      sourceLineIndex: TOPOLOGY_EDGE_SOURCE_INDEX,
+    };
+  });
 }
 
 function processLine(
@@ -133,23 +349,35 @@ function processLine(
 
     // Check if midpoint is on a collinear edge → 'segment'
     if (isInAnyInterval(midParam, segmentIntervals)) {
-      results.push({ startPosition, endPosition, modifier: 'segment', sourceLineIndex: lineIndex });
+      results.push({
+        startPosition,
+        endPosition,
+        modifiers: ['segment'],
+        sourceLineIndex: lineIndex,
+      });
       continue;
     }
 
     // Check if midpoint is in a coplanar face region → 'inner'
     if (isInAnyInterval(midParam, mergedCoplanarIntervals)) {
-      results.push({ startPosition, endPosition, modifier: 'inner', sourceLineIndex: lineIndex });
+      results.push({
+        startPosition,
+        endPosition,
+        modifiers: ['inner'],
+        sourceLineIndex: lineIndex,
+      });
       continue;
     }
 
-    // Test midpoint against the closed figure to determine inside/outside
+    // Test midpoint against each figure independently (handles overlapping figures)
     const midpoint = paramToPosition(midParam, farStart, normalizedDirection, lineLength);
-    const isInner = isPointInsideOrOnSurface(midpoint, topology.faceTriangles, topology.vertices);
+    const isInner = topology.figureFaceTriangles.some(figureTriangles =>
+      isPointInsideOrOnSurface(midpoint, figureTriangles, topology.vertices)
+    );
     results.push({
       startPosition,
       endPosition,
-      modifier: isInner ? 'inner' : undefined,
+      modifiers: isInner ? ['inner'] : [],
       sourceLineIndex: lineIndex,
     });
   }

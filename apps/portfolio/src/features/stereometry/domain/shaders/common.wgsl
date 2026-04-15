@@ -60,3 +60,21 @@ fn computeDepthFade(worldPosition: vec3<f32>) -> f32 {
     let normalizedDepth = forwardDist / uniforms.cameraDistance;
     return clamp(1.0 - normalizedDepth * uniforms.depthFadeRate, uniforms.depthFadeMin, 1.0);
 }
+
+/** Projects both endpoints to clip space with near-plane clamping */
+fn projectEndpoints(startPos: vec3<f32>, endPos: vec3<f32>) -> array<vec4<f32>, 2> {
+    let rawClipA = uniforms.mvp * vec4<f32>(startPos, 1.0);
+    let rawClipB = uniforms.mvp * vec4<f32>(endPos, 1.0);
+    return array<vec4<f32>, 2>(
+        clampToNearPlane(rawClipA, rawClipB),
+        clampToNearPlane(rawClipB, rawClipA),
+    );
+}
+
+/** Computes the perpendicular offset direction in screen space */
+fn computeScreenPerp(screenA: vec2<f32>, screenB: vec2<f32>) -> vec2<f32> {
+    let screenDir = screenB - screenA;
+    let screenLen = length(screenDir);
+    let safeDir = select(screenDir / screenLen, vec2<f32>(1.0, 0.0), screenLen < 0.001);
+    return vec2<f32>(-safeDir.y, safeDir.x);
+}

@@ -95,7 +95,7 @@ export const STEREOMETRY_STYLES = {
   'line:segment': {
     width: 3.0,
   },
-  'line:preview:segment': {
+  'line:preview': {
     color: '#44BB88',
   },
   'line:inner': {

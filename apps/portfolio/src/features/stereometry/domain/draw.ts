@@ -37,9 +37,6 @@ export interface StereometryControls {
   subscribeFps: (listener: (fps: number) => void) => VoidFunction;
 }
 
-/** Sentinel value for topology edge segments (not from a user line) */
-const TOPOLOGY_EDGE_SOURCE_INDEX = -1;
-
 export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
   let destroyed = false;
   let gpuCleanup: (() => void) | undefined;
@@ -51,6 +48,7 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
   let sceneLayerReference: SceneLayer | undefined;
   let sceneState = createInitialScene(topology);
   let currentSelection: SelectionState = SELECTION_NONE;
+  let currentPreviewLine: SceneLine | undefined;
 
   const history = createSceneHistory();
   const historyListeners = new Set<(canUndo: boolean, canRedo: boolean) => void>();
@@ -64,17 +62,14 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
 
   /** Applies processed segments to the scene layer */
   function applyToSceneLayer(state: SceneState): void {
-    const processedSegments = processSegments(topology, state.lines);
-
-    // Add topology edges that are NOT already covered by line segments
-    const coveredEdgeIndices = findCoveredEdgeIndices(processedSegments, topology);
-    const topologySegments = buildTopologyEdgeSegments(topology, coveredEdgeIndices);
-    const allProcessed = [...topologySegments, ...processedSegments];
-
-    // Convert all ProcessedSegments to StyledSegments with current selection
-    const styledSegments = allProcessed.map(segment =>
-      toStyledSegment(segment, currentSelection, topology, state.lines)
+    const allSegments = processSegments(
+      topology,
+      state.lines,
+      currentSelection,
+      currentPreviewLine
     );
+
+    const styledSegments = allSegments.map(segment => toStyledSegment(segment));
 
     sceneLayerReference?.applySceneState(state, styledSegments, currentSelection);
   }
@@ -213,6 +208,8 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     },
     onDragUpdate: preview => {
       sceneLayerReference?.setDragPreview(preview);
+      currentPreviewLine = sceneLayerReference?.getPreviewLine();
+      applyToSceneLayer(sceneState);
     },
     onVertexTap: vertexPosition => {
       const direction = getSelectedDirection();
@@ -336,63 +333,6 @@ async function initStereometry(
 }
 
 /**
- * Finds topology edge indices that are already covered by line segments
- * (modifier === 'segment' from the segment processor).
- */
-function findCoveredEdgeIndices(
-  processedSegments: readonly ProcessedSegment[],
-  topology: FigureTopology
-): ReadonlySet<number> {
-  const coveredIndices = new Set<number>();
-  const segmentParts = processedSegments.filter(segment => segment.modifier === 'segment');
-
-  for (const segment of segmentParts) {
-    for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
-      const [vertexA, vertexB] = topology.edges[edgeIndex];
-      const edgeStart = topology.vertices[vertexA];
-      const edgeEnd = topology.vertices[vertexB];
-
-      if (
-        (positionsEqual(segment.startPosition, edgeStart) &&
-          positionsEqual(segment.endPosition, edgeEnd)) ||
-        (positionsEqual(segment.startPosition, edgeEnd) &&
-          positionsEqual(segment.endPosition, edgeStart))
-      ) {
-        coveredIndices.add(edgeIndex);
-      }
-    }
-  }
-
-  return coveredIndices;
-}
-
-/**
- * Builds ProcessedSegments for topology edges that are not covered by line segments.
- */
-function buildTopologyEdgeSegments(
-  topology: FigureTopology,
-  coveredEdgeIndices: ReadonlySet<number>
-): readonly ProcessedSegment[] {
-  const segments: ProcessedSegment[] = [];
-
-  for (let edgeIndex = 0; edgeIndex < topology.edges.length; edgeIndex++) {
-    if (coveredEdgeIndices.has(edgeIndex)) {
-      continue;
-    }
-
-    const [vertexA, vertexB] = topology.edges[edgeIndex];
-    segments.push({
-      startPosition: topology.vertices[vertexA],
-      endPosition: topology.vertices[vertexB],
-      modifier: 'segment',
-      sourceLineIndex: TOPOLOGY_EDGE_SOURCE_INDEX,
-    });
-  }
-
-  return segments;
-}
-
-/**
  * Converts a resolved element style to a GPU-ready LineInstanceStyle.
  */
 function resolvedToInstanceStyle(resolved: ResolvedElementStyle): LineInstanceStyle {
@@ -409,23 +349,11 @@ function resolvedToInstanceStyle(resolved: ResolvedElementStyle): LineInstanceSt
 
 /**
  * Converts a ProcessedSegment to a StyledSegment by resolving visible and hidden styles
- * based on the segment's modifier and current selection state.
+ * from the segment's modifiers (already includes 'selected' if applicable).
  */
-function toStyledSegment(
-  segment: ProcessedSegment,
-  selection: SelectionState,
-  topology: FigureTopology,
-  allLines: readonly SceneLine[]
-): StyledSegment {
-  const modifiers: string[] = segment.modifier !== undefined ? [segment.modifier] : [];
-
-  const isSelected = isSegmentSelected(segment, selection, topology, allLines);
-  if (isSelected) {
-    modifiers.push('selected');
-  }
-
-  const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', modifiers);
-  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', ...modifiers]);
+function toStyledSegment(segment: ProcessedSegment): StyledSegment {
+  const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', segment.modifiers);
+  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', ...segment.modifiers]);
 
   return {
     startPosition: segment.startPosition,
@@ -433,68 +361,6 @@ function toStyledSegment(
     visibleStyle: resolvedToInstanceStyle(visibleResolved),
     hiddenStyle: resolvedToInstanceStyle(hiddenResolved),
     sourceLineIndex: segment.sourceLineIndex,
+    isTopologyEdge: segment.modifiers.includes('segment'),
   };
-}
-
-/**
- * Determines if a segment should be highlighted based on the current selection.
- *
- * - For 'line' selection: matches segments from the selected user line.
- * - For 'edge' selection: matches topology edge segments by comparing edge index.
- */
-function isSegmentSelected(
-  segment: ProcessedSegment,
-  selection: SelectionState,
-  topology: FigureTopology,
-  allLines: readonly SceneLine[]
-): boolean {
-  switch (selection.type) {
-    case 'none':
-      return false;
-    case 'line':
-      return segment.sourceLineIndex === selection.lineIndex;
-    case 'edge': {
-      const [vertexA, vertexB] = topology.edges[selection.edgeIndex];
-      const edgeStart = topology.vertices[vertexA];
-      const edgeEnd = topology.vertices[vertexB];
-
-      // Highlight the topology edge segment itself
-      if (
-        segment.modifier === 'segment' &&
-        segment.sourceLineIndex === TOPOLOGY_EDGE_SOURCE_INDEX &&
-        ((positionsEqual(segment.startPosition, edgeStart) &&
-          positionsEqual(segment.endPosition, edgeEnd)) ||
-          (positionsEqual(segment.startPosition, edgeEnd) &&
-            positionsEqual(segment.endPosition, edgeStart)))
-      ) {
-        return true;
-      }
-
-      // Also highlight all segments of a line that passes through this edge
-      if (segment.sourceLineIndex >= 0) {
-        const line = allLines[segment.sourceLineIndex];
-        if (
-          (positionsEqual(line.pointA, edgeStart) && positionsEqual(line.pointB, edgeEnd)) ||
-          (positionsEqual(line.pointA, edgeEnd) && positionsEqual(line.pointB, edgeStart))
-        ) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-  }
-}
-
-const POSITION_COMPARISON_EPSILON = 1e-6;
-
-function positionsEqual(
-  positionA: readonly [number, number, number],
-  positionB: readonly [number, number, number]
-): boolean {
-  return (
-    Math.abs(positionA[0] - positionB[0]) < POSITION_COMPARISON_EPSILON &&
-    Math.abs(positionA[1] - positionB[1]) < POSITION_COMPARISON_EPSILON &&
-    Math.abs(positionA[2] - positionB[2]) < POSITION_COMPARISON_EPSILON
-  );
 }

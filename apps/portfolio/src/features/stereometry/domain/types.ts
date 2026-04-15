@@ -147,8 +147,10 @@ export interface FigureTopology {
   readonly vertices: readonly (readonly [number, number, number])[];
   readonly edges: readonly [number, number][];
   readonly faces: readonly (readonly number[])[];
-  /** Triangulated faces for ray intersection testing */
+  /** Triangulated faces for ray intersection testing (all figures merged) */
   readonly faceTriangles: readonly [number, number, number][];
+  /** Triangulated faces grouped per figure (for per-figure inside/outside testing) */
+  readonly figureFaceTriangles: readonly (readonly [number, number, number][])[];
 }
 
 export interface VertexEntity {
@@ -167,15 +169,12 @@ export interface SceneLine {
   readonly pointB: readonly [number, number, number];
 }
 
-/** Modifiers describing what a segment of a line represents */
-export type SegmentModifier = 'segment' | 'inner';
-
 /** A renderable line piece output by the segment processor */
 export interface ProcessedSegment {
   readonly startPosition: readonly [number, number, number];
   readonly endPosition: readonly [number, number, number];
-  /** Modifier for this segment. Undefined = regular line (no special styling). */
-  readonly modifier?: SegmentModifier;
+  /** Style modifiers for this segment (e.g., 'segment', 'inner', 'selected') */
+  readonly modifiers: readonly string[];
   readonly sourceLineIndex: number;
 }
 
@@ -196,6 +195,8 @@ export interface StyledSegment {
   readonly visibleStyle: LineInstanceStyle;
   readonly hiddenStyle: LineInstanceStyle;
   readonly sourceLineIndex: number;
+  /** True for topology edge segments — rendered with depth texture sampling */
+  readonly isTopologyEdge: boolean;
 }
 
 /** Per-marker style for a single visibility pass */

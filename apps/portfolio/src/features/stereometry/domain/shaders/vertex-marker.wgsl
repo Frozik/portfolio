@@ -47,6 +47,9 @@ struct VertexOutput {
 
 const DEPTH_BIAS: f32 = 0.001;
 
+/** Pushes markers slightly toward the camera so they render on top of lines at the same depth */
+const MARKER_DEPTH_OFFSET: f32 = 0.002;
+
 /** Tests if the marker center is occluded by scene geometry in the depth buffer */
 fn isMarkerOccluded(centerClip: vec4<f32>) -> bool {
     let centerNdc = centerClip.xyz / centerClip.w;
@@ -83,7 +86,7 @@ fn vs(
     var result: VertexOutput;
     result.clipPosition = vec4<f32>(
         centerClip.xy + offsetNdc * centerClip.w,
-        centerClip.z,
+        centerClip.z - MARKER_DEPTH_OFFSET * centerClip.w,
         centerClip.w,
     );
     result.quadUV = vec2<f32>(sideX, sideY);

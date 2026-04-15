@@ -34,6 +34,7 @@ import { hexToRgb, resolveStyle } from '../styles-processor';
 import type {
   CameraProjection,
   FigureTopology,
+  SceneLine,
   SceneState,
   SelectionState,
   StyledSegment,
@@ -49,8 +50,23 @@ const FLOAT32_BYTES = 4;
 const FLOATS_PER_STYLED_LINE = 32;
 const STYLED_LINE_STRIDE = FLOATS_PER_STYLED_LINE * FLOAT32_BYTES;
 
-/** Pipeline-overridable constant ID for the useHiddenStyle flag in line.wgsl */
-const USE_HIDDEN_STYLE_OVERRIDE_ID = 0;
+/** Shared vertex attributes for styled line instances */
+const STYLED_LINE_ATTRIBUTES: GPUVertexAttribute[] = [
+  { shaderLocation: 0, offset: 0, format: 'float32x3' }, // startPos
+  { shaderLocation: 1, offset: 12, format: 'float32x3' }, // endPos
+  { shaderLocation: 2, offset: 24, format: 'float32' }, // visibleWidth
+  { shaderLocation: 3, offset: 28, format: 'float32x3' }, // visibleColor
+  { shaderLocation: 4, offset: 40, format: 'float32' }, // visibleAlpha
+  { shaderLocation: 5, offset: 44, format: 'float32' }, // visibleLineType
+  { shaderLocation: 6, offset: 48, format: 'float32' }, // visibleDash
+  { shaderLocation: 7, offset: 52, format: 'float32' }, // visibleGap
+  { shaderLocation: 8, offset: 56, format: 'float32' }, // hiddenWidth
+  { shaderLocation: 9, offset: 60, format: 'float32x3' }, // hiddenColor
+  { shaderLocation: 10, offset: 72, format: 'float32' }, // hiddenAlpha
+  { shaderLocation: 11, offset: 76, format: 'float32' }, // hiddenLineType
+  { shaderLocation: 12, offset: 80, format: 'float32' }, // hiddenDash
+  { shaderLocation: 13, offset: 84, format: 'float32' }, // hiddenGap
+];
 
 /** Vertex marker instance: position(3) + type(1) + visibleStyle(9) + hiddenStyle(9) + reserved(2) = 24 floats */
 const MARKER_INSTANCE_FLOATS = 24;
@@ -104,17 +120,16 @@ export class SceneLayer implements RenderLayer {
   private device!: GPUDevice;
   private format!: GPUTextureFormat;
 
-  private depthFacesPipeline!: GPURenderPipeline;
-  private visibleLinePipeline!: GPURenderPipeline;
-  private hiddenLinePipeline!: GPURenderPipeline;
+  private linePipeline!: GPURenderPipeline;
   private previewLinePipeline!: GPURenderPipeline;
   private markerPipeline!: GPURenderPipeline;
 
   private bindGroup!: GPUBindGroup;
-  private previewBindGroup!: GPUBindGroup;
+  private lineBindGroup!: GPUBindGroup;
+  private previewLineBindGroup!: GPUBindGroup;
   private markerBindGroup!: GPUBindGroup;
   private previewMarkerBindGroup!: GPUBindGroup;
-  private markerBindGroupLayout!: GPUBindGroupLayout;
+  private depthBindGroupLayout!: GPUBindGroupLayout;
   private uniformBuffer!: GPUBuffer;
   private previewUniformBuffer!: GPUBuffer;
   private faceVertexBuffer!: GPUBuffer;
@@ -133,6 +148,7 @@ export class SceneLayer implements RenderLayer {
   private styledLineCount = 0;
   private topologyVertexCount = 0;
   private hasDragPreview = false;
+  private currentPreviewLine: SceneLine | undefined;
   private hasSnapTarget = false;
   private lastCanvasWidth = 0;
   private lastCanvasHeight = 0;
@@ -245,38 +261,14 @@ export class SceneLayer implements RenderLayer {
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
     });
 
-    this.previewBindGroup = this.device.createBindGroup({
-      layout: bindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.previewUniformBuffer } }],
-    });
-
     const pipelineLayout = this.device.createPipelineLayout({
       bindGroupLayouts: [bindGroupLayout],
     });
 
-    this.depthFacesPipeline = this.createDepthFacesPipeline(pipelineLayout);
     this.depthPrePassPipeline = this.createDepthPrePassPipeline(pipelineLayout);
 
-    this.visibleLinePipeline = this.createStyledLinePipeline(pipelineLayout, {
-      depthCompare: 'less-equal',
-      depthWriteEnabled: true,
-      useHiddenStyle: false,
-    });
-
-    this.hiddenLinePipeline = this.createStyledLinePipeline(pipelineLayout, {
-      depthCompare: 'greater',
-      depthWriteEnabled: false,
-      useHiddenStyle: true,
-    });
-
-    this.previewLinePipeline = this.createStyledLinePipeline(pipelineLayout, {
-      depthCompare: 'always',
-      depthWriteEnabled: false,
-      useHiddenStyle: false,
-    });
-
-    // Marker bind group layout: uniform buffer + depth texture + depth sampler
-    this.markerBindGroupLayout = this.device.createBindGroupLayout({
+    // Bind group layout with depth texture (shared by lines and markers)
+    this.depthBindGroupLayout = this.device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -285,12 +277,12 @@ export class SceneLayer implements RenderLayer {
         },
         {
           binding: 1,
-          visibility: GPUShaderStage.VERTEX,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           texture: { sampleType: 'depth' },
         },
         {
           binding: 2,
-          visibility: GPUShaderStage.VERTEX,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           sampler: { type: 'non-filtering' },
         },
       ],
@@ -301,11 +293,13 @@ export class SceneLayer implements RenderLayer {
       magFilter: 'nearest',
     });
 
-    const markerPipelineLayout = this.device.createPipelineLayout({
-      bindGroupLayouts: [this.markerBindGroupLayout],
+    const depthPipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [this.depthBindGroupLayout],
     });
 
-    this.markerPipeline = this.createMarkerPipeline(markerPipelineLayout);
+    this.linePipeline = this.createLinePipeline(depthPipelineLayout);
+    this.previewLinePipeline = this.createPreviewLinePipeline(depthPipelineLayout);
+    this.markerPipeline = this.createMarkerPipeline(depthPipelineLayout);
   }
 
   update(state: FrameState): void {
@@ -403,7 +397,7 @@ export class SceneLayer implements RenderLayer {
     depthPrePass.draw(this.faceVertexCount);
     depthPrePass.end();
 
-    // Main render pass: faces (depth fill) + lines + markers
+    // Main render pass: line-only depth buffer for z-ordering, face depth sampled for style
     const mainPass = encoder.beginRenderPass({
       colorAttachments: [
         {
@@ -422,32 +416,18 @@ export class SceneLayer implements RenderLayer {
       },
     });
 
-    // Fill depth buffer with solid faces (no color output, determines hidden/visible lines)
-    mainPass.setPipeline(this.depthFacesPipeline);
-    mainPass.setBindGroup(0, this.bindGroup);
-    mainPass.setVertexBuffer(0, this.faceVertexBuffer);
-    mainPass.draw(this.faceVertexCount);
-
-    // Hidden styled lines (behind faces, per-instance hidden style)
+    // All lines in one pass (depth texture sampling for visible/hidden style)
     if (this.styledLineCount > 0) {
-      mainPass.setPipeline(this.hiddenLinePipeline);
-      mainPass.setBindGroup(0, this.bindGroup);
+      mainPass.setPipeline(this.linePipeline);
+      mainPass.setBindGroup(0, this.lineBindGroup);
       mainPass.setVertexBuffer(0, this.styledLineBuffer);
       mainPass.draw(VERTICES_PER_LINE_QUAD, this.styledLineCount);
     }
 
-    // Visible styled lines (in front of faces, per-instance visible style)
-    if (this.styledLineCount > 0) {
-      mainPass.setPipeline(this.visibleLinePipeline);
-      mainPass.setBindGroup(0, this.bindGroup);
-      mainPass.setVertexBuffer(0, this.styledLineBuffer);
-      mainPass.draw(VERTICES_PER_LINE_QUAD, this.styledLineCount);
-    }
-
-    // Preview line (always visible)
+    // Preview line (always visible, no occlusion)
     if (this.hasDragPreview) {
       mainPass.setPipeline(this.previewLinePipeline);
-      mainPass.setBindGroup(0, this.previewBindGroup);
+      mainPass.setBindGroup(0, this.previewLineBindGroup);
       mainPass.setVertexBuffer(0, this.previewLineBuffer);
       mainPass.draw(VERTICES_PER_LINE_QUAD, 1);
     }
@@ -488,10 +468,15 @@ export class SceneLayer implements RenderLayer {
    * When preview is defined, computes the end 3D position and writes preview buffers.
    * When undefined, clears the preview.
    */
+  getPreviewLine(): SceneLine | undefined {
+    return this.currentPreviewLine;
+  }
+
   setDragPreview(preview: DragPreviewState | undefined): void {
     if (isNil(preview)) {
       this.hasDragPreview = false;
       this.hasSnapTarget = false;
+      this.currentPreviewLine = undefined;
       return;
     }
 
@@ -502,6 +487,8 @@ export class SceneLayer implements RenderLayer {
           preview.cursorScreenY,
           preview.startPosition
         );
+
+    this.currentPreviewLine = { pointA: preview.startPosition, pointB: endPosition };
 
     const previewSegmentStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview', 'segment']);
     const [colorR, colorG, colorB] = hexToRgb(previewSegmentStyle.color);
@@ -611,7 +598,8 @@ export class SceneLayer implements RenderLayer {
   }
 
   /**
-   * Writes all styled segments into the unified GPU buffer.
+   * Splits styled segments into regular lines (hidden/visible passes)
+   * and topology edge segments (depth texture sampling pass).
    * Each segment is 32 floats (128 bytes) matching the shader LineInstance layout.
    */
   private applyStyledSegments(segments: readonly StyledSegment[]): void {
@@ -622,42 +610,9 @@ export class SceneLayer implements RenderLayer {
     }
 
     const instanceData = new Float32Array(this.styledLineCount * FLOATS_PER_STYLED_LINE);
-
     for (let index = 0; index < this.styledLineCount; index++) {
-      const segment = segments[index];
-      const offset = index * FLOATS_PER_STYLED_LINE;
-
-      // Positions
-      instanceData[offset] = segment.startPosition[0];
-      instanceData[offset + 1] = segment.startPosition[1];
-      instanceData[offset + 2] = segment.startPosition[2];
-      instanceData[offset + 3] = segment.endPosition[0];
-      instanceData[offset + 4] = segment.endPosition[1];
-      instanceData[offset + 5] = segment.endPosition[2];
-
-      // Visible style
-      instanceData[offset + 6] = segment.visibleStyle.width;
-      instanceData[offset + 7] = segment.visibleStyle.color[0];
-      instanceData[offset + 8] = segment.visibleStyle.color[1];
-      instanceData[offset + 9] = segment.visibleStyle.color[2];
-      instanceData[offset + 10] = segment.visibleStyle.alpha;
-      instanceData[offset + 11] = segment.visibleStyle.lineType;
-      instanceData[offset + 12] = segment.visibleStyle.dash;
-      instanceData[offset + 13] = segment.visibleStyle.gap;
-
-      // Hidden style
-      instanceData[offset + 14] = segment.hiddenStyle.width;
-      instanceData[offset + 15] = segment.hiddenStyle.color[0];
-      instanceData[offset + 16] = segment.hiddenStyle.color[1];
-      instanceData[offset + 17] = segment.hiddenStyle.color[2];
-      instanceData[offset + 18] = segment.hiddenStyle.alpha;
-      instanceData[offset + 19] = segment.hiddenStyle.lineType;
-      instanceData[offset + 20] = segment.hiddenStyle.dash;
-      instanceData[offset + 21] = segment.hiddenStyle.gap;
-
-      // Floats 22-31 are reserved (remain 0)
+      writeSegmentInstance(instanceData, index, segments[index]);
     }
-
     this.device.queue.writeBuffer(this.styledLineBuffer, 0, instanceData);
   }
 
@@ -729,78 +684,18 @@ export class SceneLayer implements RenderLayer {
     return buffer;
   }
 
-  private createDepthFacesPipeline(layout: GPUPipelineLayout): GPURenderPipeline {
-    const shaderModule = this.device.createShaderModule({ code: depthFacesShaderSource });
-
-    return this.device.createRenderPipeline({
-      layout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: 'vs',
-        buffers: [
-          {
-            arrayStride: FACE_VERTEX_STRIDE,
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-          },
-        ],
-      },
-      fragment: {
-        module: shaderModule,
-        entryPoint: 'fs',
-        targets: [{ format: this.format, writeMask: 0 }],
-      },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none',
-      },
-      depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: DEPTH_FORMAT,
-        depthBias: FACE_DEPTH_BIAS,
-        depthBiasSlopeScale: FACE_DEPTH_BIAS_SLOPE_SCALE,
-      },
-      multisample: { count: MSAA_SAMPLE_COUNT },
-    });
-  }
-
-  private createStyledLinePipeline(
-    layout: GPUPipelineLayout,
-    options: {
-      depthCompare: GPUCompareFunction;
-      depthWriteEnabled: boolean;
-      useHiddenStyle: boolean;
-    }
-  ): GPURenderPipeline {
+  private createLinePipeline(layout: GPUPipelineLayout): GPURenderPipeline {
     const shaderModule = this.device.createShaderModule({ code: lineShaderSource });
     return this.device.createRenderPipeline({
       layout,
       vertex: {
         module: shaderModule,
         entryPoint: 'vs',
-        constants: {
-          [USE_HIDDEN_STYLE_OVERRIDE_ID]: options.useHiddenStyle ? 1.0 : 0.0,
-        },
         buffers: [
           {
             arrayStride: STYLED_LINE_STRIDE,
             stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x3' }, // startPos
-              { shaderLocation: 1, offset: 12, format: 'float32x3' }, // endPos
-              { shaderLocation: 2, offset: 24, format: 'float32' }, // visibleWidth
-              { shaderLocation: 3, offset: 28, format: 'float32x3' }, // visibleColor
-              { shaderLocation: 4, offset: 40, format: 'float32' }, // visibleAlpha
-              { shaderLocation: 5, offset: 44, format: 'float32' }, // visibleLineType
-              { shaderLocation: 6, offset: 48, format: 'float32' }, // visibleDash
-              { shaderLocation: 7, offset: 52, format: 'float32' }, // visibleGap
-              { shaderLocation: 8, offset: 56, format: 'float32' }, // hiddenWidth
-              { shaderLocation: 9, offset: 60, format: 'float32x3' }, // hiddenColor
-              { shaderLocation: 10, offset: 72, format: 'float32' }, // hiddenAlpha
-              { shaderLocation: 11, offset: 76, format: 'float32' }, // hiddenLineType
-              { shaderLocation: 12, offset: 80, format: 'float32' }, // hiddenDash
-              { shaderLocation: 13, offset: 84, format: 'float32' }, // hiddenGap
-            ],
+            attributes: STYLED_LINE_ATTRIBUTES,
           },
         ],
       },
@@ -811,26 +706,54 @@ export class SceneLayer implements RenderLayer {
           {
             format: this.format,
             blend: {
-              color: {
-                srcFactor: 'src-alpha',
-                dstFactor: 'one-minus-src-alpha',
-                operation: 'add',
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
-                operation: 'add',
-              },
+              color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
             },
           },
         ],
       },
-      primitive: {
-        topology: 'triangle-list',
-      },
+      primitive: { topology: 'triangle-list' },
       depthStencil: {
-        depthWriteEnabled: options.depthWriteEnabled,
-        depthCompare: options.depthCompare,
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
+        format: DEPTH_FORMAT,
+      },
+      multisample: { count: MSAA_SAMPLE_COUNT },
+    });
+  }
+
+  private createPreviewLinePipeline(layout: GPUPipelineLayout): GPURenderPipeline {
+    const shaderModule = this.device.createShaderModule({ code: lineShaderSource });
+    return this.device.createRenderPipeline({
+      layout,
+      vertex: {
+        module: shaderModule,
+        entryPoint: 'vs',
+        buffers: [
+          {
+            arrayStride: STYLED_LINE_STRIDE,
+            stepMode: 'instance',
+            attributes: STYLED_LINE_ATTRIBUTES,
+          },
+        ],
+      },
+      fragment: {
+        module: shaderModule,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format: this.format,
+            blend: {
+              color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            },
+          },
+        ],
+      },
+      primitive: { topology: 'triangle-list' },
+      depthStencil: {
+        depthWriteEnabled: false,
+        depthCompare: 'always',
         format: DEPTH_FORMAT,
       },
       multisample: { count: MSAA_SAMPLE_COUNT },
@@ -920,8 +843,8 @@ export class SceneLayer implements RenderLayer {
         topology: 'triangle-list',
       },
       depthStencil: {
-        depthWriteEnabled: false,
-        depthCompare: 'always',
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
         format: DEPTH_FORMAT,
       },
       multisample: { count: MSAA_SAMPLE_COUNT },
@@ -1018,24 +941,61 @@ export class SceneLayer implements RenderLayer {
 
     const depthTextureView = this.samplingDepthTexture.createView();
 
+    const depthBindEntries = (buffer: GPUBuffer) => [
+      { binding: 0, resource: { buffer } },
+      { binding: 1, resource: depthTextureView },
+      { binding: 2, resource: this.depthSampler },
+    ];
+
+    this.lineBindGroup = this.device.createBindGroup({
+      layout: this.depthBindGroupLayout,
+      entries: depthBindEntries(this.uniformBuffer),
+    });
+
+    this.previewLineBindGroup = this.device.createBindGroup({
+      layout: this.depthBindGroupLayout,
+      entries: depthBindEntries(this.previewUniformBuffer),
+    });
+
     this.markerBindGroup = this.device.createBindGroup({
-      layout: this.markerBindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: depthTextureView },
-        { binding: 2, resource: this.depthSampler },
-      ],
+      layout: this.depthBindGroupLayout,
+      entries: depthBindEntries(this.uniformBuffer),
     });
 
     this.previewMarkerBindGroup = this.device.createBindGroup({
-      layout: this.markerBindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: this.previewUniformBuffer } },
-        { binding: 1, resource: depthTextureView },
-        { binding: 2, resource: this.depthSampler },
-      ],
+      layout: this.depthBindGroupLayout,
+      entries: depthBindEntries(this.previewUniformBuffer),
     });
 
     return this.samplingDepthTexture.createView();
   }
+}
+
+function writeSegmentInstance(buffer: Float32Array, index: number, segment: StyledSegment): void {
+  const offset = index * FLOATS_PER_STYLED_LINE;
+
+  buffer[offset] = segment.startPosition[0];
+  buffer[offset + 1] = segment.startPosition[1];
+  buffer[offset + 2] = segment.startPosition[2];
+  buffer[offset + 3] = segment.endPosition[0];
+  buffer[offset + 4] = segment.endPosition[1];
+  buffer[offset + 5] = segment.endPosition[2];
+
+  buffer[offset + 6] = segment.visibleStyle.width;
+  buffer[offset + 7] = segment.visibleStyle.color[0];
+  buffer[offset + 8] = segment.visibleStyle.color[1];
+  buffer[offset + 9] = segment.visibleStyle.color[2];
+  buffer[offset + 10] = segment.visibleStyle.alpha;
+  buffer[offset + 11] = segment.visibleStyle.lineType;
+  buffer[offset + 12] = segment.visibleStyle.dash;
+  buffer[offset + 13] = segment.visibleStyle.gap;
+
+  buffer[offset + 14] = segment.hiddenStyle.width;
+  buffer[offset + 15] = segment.hiddenStyle.color[0];
+  buffer[offset + 16] = segment.hiddenStyle.color[1];
+  buffer[offset + 17] = segment.hiddenStyle.color[2];
+  buffer[offset + 18] = segment.hiddenStyle.alpha;
+  buffer[offset + 19] = segment.hiddenStyle.lineType;
+  buffer[offset + 20] = segment.hiddenStyle.dash;
+  buffer[offset + 21] = segment.hiddenStyle.gap;
 }

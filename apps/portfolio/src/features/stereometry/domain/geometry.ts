@@ -14,11 +14,13 @@ export interface FigureWireframe {
 export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
   const allVertices: [number, number, number][] = [];
   const allFaces: (readonly number[])[] = [];
+  const perFigureFaces: (readonly number[])[][] = [];
   const edgeSet = new Set<string>();
   const edges: [number, number][] = [];
 
   for (const figure of puzzle.input.figures) {
     const vertexOffset = allVertices.length;
+    const figureFaces: (readonly number[])[] = [];
 
     // Add figure vertices to global list
     for (const position of figure.vertices) {
@@ -29,6 +31,7 @@ export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
     for (const face of figure.faces) {
       const globalFace = face.map(localIndex => localIndex + vertexOffset);
       allFaces.push(globalFace);
+      figureFaces.push(globalFace);
 
       for (let index = 0; index < globalFace.length; index++) {
         const nextIndex = (index + 1) % globalFace.length;
@@ -42,9 +45,11 @@ export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
         }
       }
     }
+
+    perFigureFaces.push(figureFaces);
   }
 
-  const topology = createTopology(allVertices, edges, allFaces);
+  const topology = createTopology(allVertices, edges, allFaces, perFigureFaces);
 
   return { name: puzzle.name, topology };
 }
@@ -56,15 +61,18 @@ export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
 function createTopology(
   vertices: readonly (readonly [number, number, number])[],
   edges: readonly [number, number][],
-  faces: readonly (readonly number[])[]
+  faces: readonly (readonly number[])[],
+  perFigureFaces: readonly (readonly (readonly number[])[])[]
 ): FigureTopology {
   const faceTriangles = triangulateFaces(faces);
+  const figureFaceTriangles = perFigureFaces.map(figureFaces => triangulateFaces(figureFaces));
 
   return {
     vertices,
     edges,
     faces,
     faceTriangles,
+    figureFaceTriangles,
   };
 }
 

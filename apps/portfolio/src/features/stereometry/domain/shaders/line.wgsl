@@ -1,6 +1,9 @@
 /**
- * Per-instance line with visible and hidden styles.
- * GPU depth test determines which style each pixel uses.
+ * Unified line shader with per-fragment depth texture sampling.
+ * Samples the face depth texture at the LINE CENTER (not the fragment position)
+ * to decide visible/hidden style. This ensures the entire line width uses one style,
+ * even when the line straddles a face edge.
+ * The depth attachment is a separate line-only depth buffer for z-ordering.
  */
 struct LineInstance {
     @location(0) startPos: vec3<f32>,
@@ -22,60 +25,32 @@ struct LineInstance {
 struct VertexOutput {
     @builtin(position) clipPosition: vec4<f32>,
     @location(0) @interpolate(linear) lineDistance: f32,
-    @location(1) @interpolate(flat) lineColor: vec3<f32>,
-    @location(2) lineAlpha: f32,
-    @location(3) @interpolate(flat) lineDash: f32,
-    @location(4) @interpolate(flat) lineGap: f32,
-    @location(5) worldDepth: f32,
+    @location(1) @interpolate(flat) visibleColor: vec3<f32>,
+    @location(2) @interpolate(flat) visibleAlpha: f32,
+    @location(3) @interpolate(flat) visibleDash: f32,
+    @location(4) @interpolate(flat) visibleGap: f32,
+    @location(5) @interpolate(flat) hiddenColor: vec3<f32>,
+    @location(6) @interpolate(flat) hiddenAlpha: f32,
+    @location(7) @interpolate(flat) hiddenDash: f32,
+    @location(8) @interpolate(flat) hiddenGap: f32,
+    @location(9) worldDepth: f32,
+    /** Line center UV for depth sampling (without width offset) */
+    @location(10) @interpolate(linear) lineCenterUV: vec2<f32>,
+    /** Line center NDC depth for occlusion comparison */
+    @location(11) @interpolate(linear) lineCenterDepth: f32,
 };
 
-/** Pipeline-overridable: 0 = visible pass, 1 = hidden pass */
-@id(0) override useHiddenStyle: f32 = 0.0;
+@group(0) @binding(1) var faceDepth: texture_depth_2d;
+@group(0) @binding(2) var depthSampler: sampler;
 
-/** Selects the active style (visible or hidden) and scales sizes to GPU pixels */
-fn selectLineStyle(line: LineInstance) -> array<f32, 7> {
-    let isHidden = useHiddenStyle > 0.5;
-    return array<f32, 7>(
-        cssToGpuPixels(select(line.visibleWidth, line.hiddenWidth, isHidden)),
-        select(line.visibleAlpha, line.hiddenAlpha, isHidden),
-        cssToGpuPixels(select(line.visibleDash, line.hiddenDash, isHidden)),
-        cssToGpuPixels(select(line.visibleGap, line.hiddenGap, isHidden)),
-        select(line.visibleColor.r, line.hiddenColor.r, isHidden),
-        select(line.visibleColor.g, line.hiddenColor.g, isHidden),
-        select(line.visibleColor.b, line.hiddenColor.b, isHidden),
-    );
-}
 
-/** Projects both endpoints to clip space with near-plane clamping */
-fn projectEndpoints(startPos: vec3<f32>, endPos: vec3<f32>) -> array<vec4<f32>, 2> {
-    let rawClipA = uniforms.mvp * vec4<f32>(startPos, 1.0);
-    let rawClipB = uniforms.mvp * vec4<f32>(endPos, 1.0);
-    return array<vec4<f32>, 2>(
-        clampToNearPlane(rawClipA, rawClipB),
-        clampToNearPlane(rawClipB, rawClipA),
-    );
-}
-
-/** Computes the perpendicular offset direction in screen space */
-fn computeScreenPerp(screenA: vec2<f32>, screenB: vec2<f32>) -> vec2<f32> {
-    let screenDir = screenB - screenA;
-    let screenLen = length(screenDir);
-    let safeDir = select(screenDir / screenLen, vec2<f32>(1.0, 0.0), screenLen < 0.001);
-    return vec2<f32>(-safeDir.y, safeDir.x);
-}
-
-/** Expands a line segment into a screen-space quad */
+/** Expands a line segment into a screen-space quad using max width of both styles */
 @vertex
 fn vs(
     @builtin(vertex_index) vertexIndex: u32,
     line: LineInstance
 ) -> VertexOutput {
-    let style = selectLineStyle(line);
-    let lineWidth = style[0];
-    let alpha = style[1];
-    let dash = style[2];
-    let gap = style[3];
-    let color = vec3<f32>(style[4], style[5], style[6]);
+    let lineWidth = max(cssToGpuPixels(line.visibleWidth), cssToGpuPixels(line.hiddenWidth));
 
     let corner = quadCornerIndex(vertexIndex);
     let isEnd = (corner & 2u) != 0u;
@@ -96,30 +71,53 @@ fn vs(
 
     let endpointPos = select(line.startPos, line.endPos, isEnd);
 
+    // Line center position (without perpendicular width offset)
+    let centerNdcXY = clipPos.xy / clipPos.w;
+    let centerUV = centerNdcXY * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
+    let centerDepth = max(clipPos.z, 0.0) / clipPos.w;
+
     var result: VertexOutput;
-    // Clamp z to near plane so lines extending towards the camera aren't clipped by the rasterizer
     result.clipPosition = vec4<f32>(clipPos.xy + offsetNdc * clipPos.w, max(clipPos.z, 0.0), clipPos.w);
     result.lineDistance = select(0.0, screenLen, isEnd);
-    result.lineColor = color;
-    result.lineAlpha = alpha;
-    result.lineDash = dash;
-    result.lineGap = gap;
+    result.visibleColor = line.visibleColor;
+    result.visibleAlpha = line.visibleAlpha;
+    result.visibleDash = cssToGpuPixels(line.visibleDash);
+    result.visibleGap = cssToGpuPixels(line.visibleGap);
+    result.hiddenColor = line.hiddenColor;
+    result.hiddenAlpha = line.hiddenAlpha;
+    result.hiddenDash = cssToGpuPixels(line.hiddenDash);
+    result.hiddenGap = cssToGpuPixels(line.hiddenGap);
     result.worldDepth = dot(endpointPos - uniforms.cameraTarget, uniforms.cameraForward);
+    result.lineCenterUV = centerUV;
+    result.lineCenterDepth = centerDepth;
     return result;
 }
 
-/** Renders a line fragment with dash pattern and depth fade */
+/** Renders a line fragment with occlusion test at the line center */
 @fragment
 fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
-    let patternLength = input.lineDash + input.lineGap;
+    // Sample face depth at the LINE CENTER, not the fragment position.
+    // This makes the entire line width use one style (visible or hidden).
+    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, input.lineCenterUV, 0);
+    let isOccluded = faceDepthValue < input.lineCenterDepth;
+
+    // Select style based on occlusion
+    let color = select(input.visibleColor, input.hiddenColor, isOccluded);
+    let alpha = select(input.visibleAlpha, input.hiddenAlpha, isOccluded);
+    let dash = select(input.visibleDash, input.hiddenDash, isOccluded);
+    let gap = select(input.visibleGap, input.hiddenGap, isOccluded);
+
+    // Dash pattern
+    let patternLength = dash + gap;
     if (patternLength > 0.0) {
-        if (input.lineDistance % patternLength >= input.lineDash) {
+        if (input.lineDistance % patternLength >= dash) {
             discard;
         }
     }
 
+    // Depth fade
     let normalizedDepth = input.worldDepth / uniforms.cameraDistance;
     let depthFade = clamp(1.0 - normalizedDepth * uniforms.depthFadeRate, uniforms.depthFadeMin, 1.0);
 
-    return vec4<f32>(input.lineColor, input.lineAlpha * depthFade);
+    return vec4<f32>(color, alpha * depthFade);
 }
