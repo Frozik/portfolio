@@ -35,7 +35,7 @@ export const DOUBLE_CLICK_DISTANCE_THRESHOLD = 10;
 /** Hit testing: radius in screen pixels for vertex proximity detection */
 export const VERTEX_HIT_RADIUS_PIXELS = 30;
 /** Hit testing: max distance in screen pixels from edge line to count as a hit */
-export const EDGE_HIT_RADIUS_PIXELS = 10;
+export const EDGE_HIT_RADIUS_PIXELS = 30;
 
 // --- Geometry / math ---
 

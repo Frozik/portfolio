@@ -115,6 +115,9 @@ interface ExtendableLineSegment {
   readonly endPosition: Vec3;
 }
 
+/** Minimum w for near-plane clipping (matches NEAR_CLIP_W in common.wgsl) */
+const NEAR_CLIP_W = 0.01;
+
 function projectVerticesToScreen(
   mvpMatrix: Float32Array,
   vertices: readonly Vec3[],
@@ -142,6 +145,64 @@ function projectVerticesToScreen(
   });
 }
 
+/**
+ * Projects two endpoints with near-plane clipping.
+ * If one endpoint is behind the camera, interpolates it to the near plane
+ * instead of discarding the entire segment.
+ */
+function projectSegmentToScreen(
+  mvpMatrix: Float32Array,
+  pointA: Vec3,
+  pointB: Vec3,
+  gpuCanvasWidth: number,
+  gpuCanvasHeight: number
+): ProjectedSegment {
+  const clipA = vec4.transformMat4(
+    vec4.fromValues(pointA[0], pointA[1], pointA[2], HOMOGENEOUS_W),
+    mvpMatrix
+  );
+  const clipB = vec4.transformMat4(
+    vec4.fromValues(pointB[0], pointB[1], pointB[2], HOMOGENEOUS_W),
+    mvpMatrix
+  );
+
+  // Both behind camera — no visible segment
+  if (clipA[3] <= 0 && clipB[3] <= 0) {
+    return {
+      start: { screenX: 0, screenY: 0, behindCamera: true },
+      end: { screenX: 0, screenY: 0, behindCamera: true },
+    };
+  }
+
+  // Clamp endpoints to near plane if behind camera
+  const clampedA = clipA[3] < NEAR_CLIP_W ? clampToNearPlane(clipA, clipB) : clipA;
+  const clampedB = clipB[3] < NEAR_CLIP_W ? clampToNearPlane(clipB, clipA) : clipB;
+
+  return {
+    start: clipToScreen(clampedA, gpuCanvasWidth, gpuCanvasHeight),
+    end: clipToScreen(clampedB, gpuCanvasWidth, gpuCanvasHeight),
+  };
+}
+
+function clampToNearPlane(point: Float32Array, other: Float32Array): Float32Array {
+  const parametricT = (NEAR_CLIP_W - point[3]) / (other[3] - point[3]);
+  return vec4.lerp(point, other, parametricT) as Float32Array;
+}
+
+function clipToScreen(
+  clipSpace: Float32Array,
+  gpuCanvasWidth: number,
+  gpuCanvasHeight: number
+): ProjectedVertex {
+  const ndcX = clipSpace[0] / clipSpace[3];
+  const ndcY = clipSpace[1] / clipSpace[3];
+  return {
+    screenX: (ndcX + 1) * 0.5 * gpuCanvasWidth,
+    screenY: (1 - ndcY) * 0.5 * gpuCanvasHeight,
+    behindCamera: false,
+  };
+}
+
 function projectExtendedLineSegments(
   mvpMatrix: Float32Array,
   segments: readonly ExtendableLineSegment[],
@@ -150,13 +211,7 @@ function projectExtendedLineSegments(
 ): ProjectedSegment[] {
   return segments.map(segment => {
     const [farStart, farEnd] = extendLine(segment.startPosition, segment.endPosition);
-    const projected = projectVerticesToScreen(
-      mvpMatrix,
-      [farStart, farEnd],
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-    return { start: projected[0], end: projected[1] };
+    return projectSegmentToScreen(mvpMatrix, farStart, farEnd, gpuCanvasWidth, gpuCanvasHeight);
   });
 }
 
