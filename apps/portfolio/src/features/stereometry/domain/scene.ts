@@ -1,6 +1,6 @@
+import { vec3 } from 'wgpu-matrix';
 import { computeAllIntersections } from './intersection';
 import type { Vec3 } from './math';
-import { cross3, distanceSquared3, lengthVec3, subtractVec3 } from './math';
 import type { FigureTopology, IntersectionEntity, SceneState, VertexEntity } from './types';
 
 /** Squared distance threshold for matching positions to topology vertices */
@@ -181,8 +181,8 @@ function linesCoincide(pointA1: Vec3, pointB1: Vec3, pointA2: Vec3, pointB2: Vec
   }
 
   // Check collinearity
-  const direction1 = subtractVec3(pointB1, pointA1);
-  const length1 = lengthVec3(direction1);
+  const direction1 = vec3.sub(pointB1, pointA1);
+  const length1 = vec3.len(direction1);
   if (length1 === 0) {
     return false;
   }
@@ -193,8 +193,8 @@ function linesCoincide(pointA1: Vec3, pointB1: Vec3, pointA2: Vec3, pointB2: Vec
     direction1[2] / length1,
   ];
 
-  const direction2 = subtractVec3(pointB2, pointA2);
-  const length2 = lengthVec3(direction2);
+  const direction2 = vec3.sub(pointB2, pointA2);
+  const length2 = vec3.len(direction2);
   if (length2 === 0) {
     return false;
   }
@@ -206,15 +206,15 @@ function linesCoincide(pointA1: Vec3, pointB1: Vec3, pointA2: Vec3, pointB2: Vec
   ];
 
   // Check parallel directions
-  const crossProduct = cross3(normalizedDirection, normalizedDirection2);
-  if (lengthVec3(crossProduct) > COLLINEAR_THRESHOLD) {
+  const crossProduct = vec3.cross(normalizedDirection, normalizedDirection2);
+  if (vec3.len(crossProduct) > COLLINEAR_THRESHOLD) {
     return false;
   }
 
   // Check if they lie on the same line (distance between the lines is near zero)
-  const toOtherLine = subtractVec3(pointA2, pointA1);
-  const crossToOther = cross3(normalizedDirection, toOtherLine);
-  return lengthVec3(crossToOther) < COLLINEAR_THRESHOLD;
+  const toOtherLine = vec3.sub(pointA2, pointA1);
+  const crossToOther = vec3.cross(normalizedDirection, toOtherLine);
+  return vec3.len(crossToOther) < COLLINEAR_THRESHOLD;
 }
 
 /** Checks if two segments have matching endpoints in either order. */
@@ -225,5 +225,5 @@ function segmentEndpointsMatch(startA: Vec3, endA: Vec3, startB: Vec3, endB: Vec
 }
 
 function positionsMatch(positionA: Vec3, positionB: Vec3): boolean {
-  return distanceSquared3(positionA, positionB) < POSITION_MATCH_THRESHOLD_SQUARED;
+  return vec3.distSq(positionA, positionB) < POSITION_MATCH_THRESHOLD_SQUARED;
 }

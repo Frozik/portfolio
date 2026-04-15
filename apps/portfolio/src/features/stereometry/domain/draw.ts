@@ -1,4 +1,5 @@
 import { createGpuContext, createMsaaTextureManager, RenderLayerManager } from '@frozik/utils';
+import { vec3 } from 'wgpu-matrix';
 import type { OrbitalCameraController } from './camera-controller';
 import { createOrbitalCameraController } from './camera-controller';
 import { createClickDetector } from './click-detector';
@@ -11,7 +12,6 @@ import { createSceneHistory } from './history';
 import { hitTest, hitTestVertex } from './hit-testing';
 import { SceneLayer } from './layers/scene-layer';
 import type { Vec3 } from './math';
-import { subtractVec3 } from './math';
 import { PENTAGONAL_PYRAMID } from './puzzles/pentagonal-pyramid';
 import { startRenderLoop } from './render-loop';
 import { addLine, createInitialScene, removeLine, toggleLine } from './scene';
@@ -146,11 +146,11 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     switch (currentSelection.type) {
       case 'edge': {
         const [vertexIndexA, vertexIndexB] = topology.edges[currentSelection.edgeIndex];
-        return subtractVec3(topology.vertices[vertexIndexB], topology.vertices[vertexIndexA]);
+        return vec3.sub(topology.vertices[vertexIndexB], topology.vertices[vertexIndexA]);
       }
       case 'line': {
         const line = sceneState.lines[currentSelection.lineIndex];
-        return subtractVec3(line.pointB, line.pointA);
+        return vec3.sub(line.pointB, line.pointA);
       }
       case 'none':
         return undefined;
@@ -174,16 +174,12 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     }
   }
 
-  function raiseReadyFps(): void {
-    fpsController.raise(EFpsLevel.Ready);
-  }
-
   function raiseInteractionFps(): void {
     fpsController.raise(EFpsLevel.Interaction);
   }
 
   canvas.addEventListener('pointerdown', raiseInteractionFps);
-  canvas.addEventListener('pointermove', raiseReadyFps);
+  canvas.addEventListener('pointermove', raiseInteractionFps);
   canvas.addEventListener('wheel', raiseInteractionFps);
 
   const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, onCanvasDoubleClick);
@@ -252,7 +248,7 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
       camera.destroy();
       fpsController.dispose();
       canvas.removeEventListener('pointerdown', raiseInteractionFps);
-      canvas.removeEventListener('pointermove', raiseReadyFps);
+      canvas.removeEventListener('pointermove', raiseInteractionFps);
       canvas.removeEventListener('wheel', raiseInteractionFps);
       cleanupClickDetector();
       cleanupDragConnector();

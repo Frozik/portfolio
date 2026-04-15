@@ -2,7 +2,6 @@ import { MS_PER_SECOND } from './constants';
 
 export enum EFpsLevel {
   Idle = 1,
-  Ready = 10,
   Resize = 60,
   Interaction = 60,
   Animation = 60,

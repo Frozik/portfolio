@@ -1,40 +1,8 @@
+import type { Vec3Arg } from 'wgpu-matrix';
+import { vec3 } from 'wgpu-matrix';
 import { LINE_EXTENSION_LENGTH } from './constants';
 
 export type Vec3 = readonly [number, number, number];
-
-export function subtractVec3(vectorA: Vec3, vectorB: Vec3): [number, number, number] {
-  return [vectorA[0] - vectorB[0], vectorA[1] - vectorB[1], vectorA[2] - vectorB[2]];
-}
-
-export function dot3(vectorA: Vec3, vectorB: Vec3): number {
-  return vectorA[0] * vectorB[0] + vectorA[1] * vectorB[1] + vectorA[2] * vectorB[2];
-}
-
-export function distanceSquared3(pointA: Vec3, pointB: Vec3): number {
-  return (pointA[0] - pointB[0]) ** 2 + (pointA[1] - pointB[1]) ** 2 + (pointA[2] - pointB[2]) ** 2;
-}
-
-export function lengthVec3(vector: Vec3): number {
-  return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
-}
-
-/**
- * Computes the normalized direction vector from positionA to positionB.
- * Returns undefined for degenerate zero-length segments.
- */
-export function normalizeDirection(
-  positionA: Vec3,
-  positionB: Vec3
-): [number, number, number] | undefined {
-  const direction = subtractVec3(positionB, positionA);
-  const length = lengthVec3(direction);
-
-  if (length === 0) {
-    return undefined;
-  }
-
-  return [direction[0] / length, direction[1] / length, direction[2] / length];
-}
 
 /**
  * Extends a line segment in both directions by LINE_EXTENSION_LENGTH.
@@ -44,14 +12,17 @@ export function extendLine(
   positionA: Vec3,
   positionB: Vec3
 ): [[number, number, number], [number, number, number]] {
-  const normalized = normalizeDirection(positionA, positionB);
+  const direction = vec3.sub(positionB, positionA);
+  const length = vec3.len(direction);
 
-  if (normalized === undefined) {
+  if (length === 0) {
     return [
       [positionA[0], positionA[1], positionA[2]],
       [positionB[0], positionB[1], positionB[2]],
     ];
   }
+
+  const normalized = vec3.scale(direction, 1 / length);
 
   return [
     [
@@ -73,27 +44,27 @@ export function extendLine(
  * More robust than ray casting for points exactly on face boundaries.
  */
 function isPointOnTriangle(point: Vec3, vertexA: Vec3, vertexB: Vec3, vertexC: Vec3): boolean {
-  const edgeAB = subtractVec3(vertexB, vertexA);
-  const edgeAC = subtractVec3(vertexC, vertexA);
-  const normal = cross3(edgeAB, edgeAC);
-  const normalLength = lengthVec3(normal);
+  const edgeAB = vec3.sub(vertexB, vertexA);
+  const edgeAC = vec3.sub(vertexC, vertexA);
+  const normal = vec3.cross(edgeAB, edgeAC);
+  const normalLength = vec3.len(normal);
 
   if (normalLength < SURFACE_EPSILON) {
     return false;
   }
 
-  const distanceToPlane = Math.abs(dot3(subtractVec3(point, vertexA), normal)) / normalLength;
+  const distanceToPlane = Math.abs(vec3.dot(vec3.sub(point, vertexA), normal)) / normalLength;
   if (distanceToPlane > SURFACE_EPSILON) {
     return false;
   }
 
   // Barycentric coordinates via dot product method
-  const dotABAB = dot3(edgeAB, edgeAB);
-  const dotABAC = dot3(edgeAB, edgeAC);
-  const dotACAC = dot3(edgeAC, edgeAC);
-  const ap = subtractVec3(point, vertexA);
-  const dotAPAB = dot3(ap, edgeAB);
-  const dotAPAC = dot3(ap, edgeAC);
+  const dotABAB = vec3.dot(edgeAB, edgeAB);
+  const dotABAC = vec3.dot(edgeAB, edgeAC);
+  const dotACAC = vec3.dot(edgeAC, edgeAC);
+  const ap = vec3.sub(point, vertexA);
+  const dotAPAB = vec3.dot(ap, edgeAB);
+  const dotAPAC = vec3.dot(ap, edgeAC);
   const denominator = dotABAB * dotACAC - dotABAC * dotABAC;
 
   if (Math.abs(denominator) < SURFACE_EPSILON * SURFACE_EPSILON) {
@@ -158,24 +129,16 @@ export function isPointInsideOrOnSurface(
  * Checks if a point is within the given distance threshold of any point in the list.
  */
 export function isNearAnyPoint(
-  point: Vec3,
+  point: Vec3Arg,
   points: readonly Vec3[],
   thresholdSquared: number
 ): boolean {
   for (const other of points) {
-    if (distanceSquared3(point, other) < thresholdSquared) {
+    if (vec3.distSq(point, other) < thresholdSquared) {
       return true;
     }
   }
   return false;
-}
-
-export function cross3(vectorA: Vec3, vectorB: Vec3): [number, number, number] {
-  return [
-    vectorA[1] * vectorB[2] - vectorA[2] * vectorB[1],
-    vectorA[2] * vectorB[0] - vectorA[0] * vectorB[2],
-    vectorA[0] * vectorB[1] - vectorA[1] * vectorB[0],
-  ];
 }
 
 const RAY_EPSILON = 1e-6;

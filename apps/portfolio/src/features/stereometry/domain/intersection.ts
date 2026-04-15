@@ -1,6 +1,7 @@
+import { vec3 } from 'wgpu-matrix';
 import { LINE_INTERSECTION_MAX_DISTANCE } from './constants';
 import type { Vec3 } from './math';
-import { distanceSquared3, dot3, isNearAnyPoint, subtractVec3 } from './math';
+import { isNearAnyPoint } from './math';
 import type { FigureTopology, IntersectionEntity, SceneState } from './types';
 
 /** Minimum denominator to consider lines non-parallel */
@@ -31,7 +32,7 @@ export function computeAllIntersections(
 ): readonly IntersectionEntity[] {
   const allLines: LineDefinition[] = scene.lines.map(line => ({
     point: line.pointA,
-    direction: subtractVec3(line.pointB, line.pointA),
+    direction: vec3.sub(line.pointB, line.pointA),
   }));
 
   const results: IntersectionEntity[] = [];
@@ -99,7 +100,7 @@ function getEdgeLine(edgeIndex: number, topology: FigureTopology): LineDefinitio
   const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
   const point = topology.vertices[vertexIndexA];
   const endPoint = topology.vertices[vertexIndexB];
-  return { point, direction: subtractVec3(endPoint, point) };
+  return { point, direction: vec3.sub(endPoint, point) };
 }
 
 interface ClosestPointResult {
@@ -117,18 +118,18 @@ function closestPointBetweenLines(
   pointQ: Vec3,
   directionE: Vec3
 ): ClosestPointResult | undefined {
-  const dotDD = dot3(directionD, directionD);
-  const dotDE = dot3(directionD, directionE);
-  const dotEE = dot3(directionE, directionE);
+  const dotDD = vec3.dot(directionD, directionD);
+  const dotDE = vec3.dot(directionD, directionE);
+  const dotEE = vec3.dot(directionE, directionE);
   const denominator = dotDD * dotEE - dotDE * dotDE;
 
   if (Math.abs(denominator) < PARALLEL_EPSILON) {
     return undefined;
   }
 
-  const w = subtractVec3(pointP, pointQ);
-  const dotDW = dot3(directionD, w);
-  const dotEW = dot3(directionE, w);
+  const w = vec3.sub(pointP, pointQ);
+  const dotDW = vec3.dot(directionD, w);
+  const dotEW = vec3.dot(directionE, w);
 
   const parameterA = (dotDE * dotEW - dotEE * dotDW) / denominator;
   const parameterB = (dotDD * dotEW - dotDE * dotDW) / denominator;
@@ -145,7 +146,7 @@ function closestPointBetweenLines(
     pointQ[2] + parameterB * directionE[2],
   ];
 
-  if (distanceSquared3(closestOnA, closestOnB) > LINE_INTERSECTION_MAX_DISTANCE ** 2) {
+  if (vec3.distSq(closestOnA, closestOnB) > LINE_INTERSECTION_MAX_DISTANCE ** 2) {
     return undefined;
   }
 

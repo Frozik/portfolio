@@ -1,15 +1,7 @@
+import { vec3 } from 'wgpu-matrix';
 import { STEREOMETRY_STYLES } from './constants';
 import type { Vec3 } from './math';
-import {
-  cross3,
-  distanceSquared3,
-  dot3,
-  extendLine,
-  isPointInsideOrOnSurface,
-  lengthVec3,
-  rayTriangleIntersect,
-  subtractVec3,
-} from './math';
+import { extendLine, isPointInsideOrOnSurface, rayTriangleIntersect } from './math';
 import { hexToRgb, resolveStyle } from './styles-processor';
 import type {
   FigureTopology,
@@ -332,8 +324,8 @@ function findSelectedEdgeIndices(
  * Checks if a topology edge lies on an infinite line (collinear and on the same line).
  */
 function isEdgeOnLine(edgeStart: Vec3, edgeEnd: Vec3, linePointA: Vec3, linePointB: Vec3): boolean {
-  const lineDir = subtractVec3(linePointB, linePointA);
-  const lineLength = lengthVec3(lineDir);
+  const lineDir = vec3.sub(linePointB, linePointA);
+  const lineLength = vec3.len(lineDir);
 
   if (lineLength === 0) {
     return false;
@@ -346,15 +338,15 @@ function isEdgeOnLine(edgeStart: Vec3, edgeEnd: Vec3, linePointA: Vec3, linePoin
   ];
 
   // Check both edge endpoints are on the infinite line
-  const toEdgeStart = subtractVec3(edgeStart, linePointA);
-  const crossStart = cross3(normalizedLineDir, toEdgeStart);
-  if (lengthVec3(crossStart) > COLLINEAR_THRESHOLD) {
+  const toEdgeStart = vec3.sub(edgeStart, linePointA);
+  const crossStart = vec3.cross(normalizedLineDir, toEdgeStart);
+  if (vec3.len(crossStart) > COLLINEAR_THRESHOLD) {
     return false;
   }
 
-  const toEdgeEnd = subtractVec3(edgeEnd, linePointA);
-  const crossEnd = cross3(normalizedLineDir, toEdgeEnd);
-  return lengthVec3(crossEnd) <= COLLINEAR_THRESHOLD;
+  const toEdgeEnd = vec3.sub(edgeEnd, linePointA);
+  const crossEnd = vec3.cross(normalizedLineDir, toEdgeEnd);
+  return vec3.len(crossEnd) <= COLLINEAR_THRESHOLD;
 }
 
 function positionsEqual(
@@ -395,8 +387,8 @@ function processLine(
   vertexPositions: readonly Vec3[]
 ): readonly ProcessedSegment[] {
   const [farStart, farEnd] = extendLine(line.pointA, line.pointB);
-  const lineDirection = subtractVec3(farEnd, farStart);
-  const lineLength = lengthVec3(lineDirection);
+  const lineDirection = vec3.sub(farEnd, farStart);
+  const lineLength = vec3.len(lineDirection);
 
   if (lineLength === 0) {
     return [];
@@ -480,7 +472,7 @@ function processLine(
         normalizedDirection,
         lineLength
       );
-      if (distanceSquared3(vertexPosition, projectedPosition) < POINT_ON_LINE_EPSILON_SQUARED) {
+      if (vec3.distSq(vertexPosition, projectedPosition) < POINT_ON_LINE_EPSILON_SQUARED) {
         splitParams.add(vertexParam);
       }
     }
@@ -552,7 +544,7 @@ function projectOntoLine(
   normalizedDirection: Vec3,
   lineLength: number
 ): number {
-  return dot3(subtractVec3(point, farStart), normalizedDirection) / lineLength;
+  return vec3.dot(vec3.sub(point, farStart), normalizedDirection) / lineLength;
 }
 
 function paramToPosition(
@@ -595,8 +587,8 @@ function findCollinearEdges(
     const [vertexIndexA, vertexIndexB] = topology.edges[edgeIndex];
     const edgeStart = topology.vertices[vertexIndexA];
     const edgeEnd = topology.vertices[vertexIndexB];
-    const edgeDirection = subtractVec3(edgeEnd, edgeStart);
-    const edgeLength = lengthVec3(edgeDirection);
+    const edgeDirection = vec3.sub(edgeEnd, edgeStart);
+    const edgeLength = vec3.len(edgeDirection);
 
     if (edgeLength === 0) {
       continue;
@@ -608,14 +600,14 @@ function findCollinearEdges(
       edgeDirection[2] / edgeLength,
     ];
 
-    const crossProduct = cross3(normalizedLineDirection, normalizedEdgeDirection);
-    if (lengthVec3(crossProduct) > COLLINEAR_THRESHOLD) {
+    const crossProduct = vec3.cross(normalizedLineDirection, normalizedEdgeDirection);
+    if (vec3.len(crossProduct) > COLLINEAR_THRESHOLD) {
       continue;
     }
 
-    const toEdge = subtractVec3(edgeStart, line.pointA);
-    const crossToEdge = cross3(normalizedLineDirection, toEdge);
-    if (lengthVec3(crossToEdge) < COLLINEAR_THRESHOLD) {
+    const toEdge = vec3.sub(edgeStart, line.pointA);
+    const crossToEdge = vec3.cross(normalizedLineDirection, toEdge);
+    if (vec3.len(crossToEdge) < COLLINEAR_THRESHOLD) {
       collinearEdges.push(edgeIndex);
     }
   }
@@ -681,10 +673,10 @@ function findCoplanarFaceIntervals(
     const faceVertices = faceVertexIndices.map(index => topology.vertices[index]);
 
     // Compute face normal and plane distance
-    const edgeAB = subtractVec3(faceVertices[1], faceVertices[0]);
-    const edgeAC = subtractVec3(faceVertices[2], faceVertices[0]);
-    const faceNormal = cross3(edgeAB, edgeAC);
-    const normalLength = lengthVec3(faceNormal);
+    const edgeAB = vec3.sub(faceVertices[1], faceVertices[0]);
+    const edgeAC = vec3.sub(faceVertices[2], faceVertices[0]);
+    const faceNormal = vec3.cross(edgeAB, edgeAC);
+    const normalLength = vec3.len(faceNormal);
 
     if (normalLength < POSITION_EPSILON) {
       continue;
@@ -697,12 +689,12 @@ function findCoplanarFaceIntervals(
     ];
 
     // Check if line direction is perpendicular to face normal (parallel to face)
-    if (Math.abs(dot3(normalizedDirection, unitNormal)) > COPLANAR_DISTANCE_THRESHOLD) {
+    if (Math.abs(vec3.dot(normalizedDirection, unitNormal)) > COPLANAR_DISTANCE_THRESHOLD) {
       continue;
     }
 
     // Check if the line lies on the face plane (distance from farStart to plane ≈ 0)
-    const distanceToPlane = dot3(subtractVec3(farStart, faceVertices[0]), unitNormal);
+    const distanceToPlane = vec3.dot(vec3.sub(farStart, faceVertices[0]), unitNormal);
     if (Math.abs(distanceToPlane) > COPLANAR_DISTANCE_THRESHOLD) {
       continue;
     }
@@ -737,19 +729,19 @@ function clipLineToConvexPolygon(
   let tMax = 1;
 
   // Compute face normal once (CCW winding → outward normal)
-  const faceEdgeAB = subtractVec3(polygonVertices[1], polygonVertices[0]);
-  const faceEdgeAC = subtractVec3(polygonVertices[2], polygonVertices[0]);
-  const faceNormal = cross3(faceEdgeAB, faceEdgeAC);
+  const faceEdgeAB = vec3.sub(polygonVertices[1], polygonVertices[0]);
+  const faceEdgeAC = vec3.sub(polygonVertices[2], polygonVertices[0]);
+  const faceNormal = vec3.cross(faceEdgeAB, faceEdgeAC);
 
   for (let index = 0; index < polygonVertices.length; index++) {
     const nextIndex = (index + 1) % polygonVertices.length;
     const edgeStart = polygonVertices[index];
     const edgeEnd = polygonVertices[nextIndex];
-    const edgeDir = subtractVec3(edgeEnd, edgeStart);
+    const edgeDir = vec3.sub(edgeEnd, edgeStart);
 
     // Inward-facing normal: cross(faceNormal, edgeDir) points inward for CCW-wound faces
-    const inwardNormal = cross3(faceNormal, edgeDir);
-    const inwardLength = lengthVec3(inwardNormal);
+    const inwardNormal = vec3.cross(faceNormal, edgeDir);
+    const inwardLength = vec3.len(inwardNormal);
 
     if (inwardLength < POSITION_EPSILON) {
       continue;
@@ -761,8 +753,8 @@ function clipLineToConvexPolygon(
       inwardNormal[2] / inwardLength,
     ];
 
-    const startOffset = dot3(subtractVec3(farStart, edgeStart), unitInward);
-    const directionDot = dot3(normalizedDirection, unitInward) * lineLength;
+    const startOffset = vec3.dot(vec3.sub(farStart, edgeStart), unitInward);
+    const directionDot = vec3.dot(normalizedDirection, unitInward) * lineLength;
 
     if (Math.abs(directionDot) < POSITION_EPSILON) {
       if (startOffset < -POSITION_EPSILON) {
@@ -876,15 +868,15 @@ function isVertexOnSelectedElement(
 }
 
 function isPointOnLineSegment(point: Vec3, segmentStart: Vec3, segmentEnd: Vec3): boolean {
-  const segmentDirection = subtractVec3(segmentEnd, segmentStart);
-  const segmentLengthSquared = dot3(segmentDirection, segmentDirection);
+  const segmentDirection = vec3.sub(segmentEnd, segmentStart);
+  const segmentLengthSquared = vec3.dot(segmentDirection, segmentDirection);
 
   if (segmentLengthSquared < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
-    return distanceSquared3(point, segmentStart) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+    return vec3.distSq(point, segmentStart) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
   }
 
-  const toPoint = subtractVec3(point, segmentStart);
-  const parameter = dot3(toPoint, segmentDirection) / segmentLengthSquared;
+  const toPoint = vec3.sub(point, segmentStart);
+  const parameter = vec3.dot(toPoint, segmentDirection) / segmentLengthSquared;
 
   if (parameter < -0.001 || parameter > 1.001) {
     return false;
@@ -896,19 +888,19 @@ function isPointOnLineSegment(point: Vec3, segmentStart: Vec3, segmentEnd: Vec3)
     segmentStart[2] + parameter * segmentDirection[2],
   ];
 
-  return distanceSquared3(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
+  return vec3.distSq(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
 }
 
 function isPointOnInfiniteLine(point: Vec3, linePointA: Vec3, linePointB: Vec3): boolean {
-  const lineDirection = subtractVec3(linePointB, linePointA);
-  const lineLengthSquared = dot3(lineDirection, lineDirection);
+  const lineDirection = vec3.sub(linePointB, linePointA);
+  const lineLengthSquared = vec3.dot(lineDirection, lineDirection);
 
   if (lineLengthSquared < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
-    return distanceSquared3(point, linePointA) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+    return vec3.distSq(point, linePointA) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
   }
 
-  const toPoint = subtractVec3(point, linePointA);
-  const parameter = dot3(toPoint, lineDirection) / lineLengthSquared;
+  const toPoint = vec3.sub(point, linePointA);
+  const parameter = vec3.dot(toPoint, lineDirection) / lineLengthSquared;
 
   const projection: Vec3 = [
     linePointA[0] + parameter * lineDirection[0],
@@ -916,16 +908,16 @@ function isPointOnInfiniteLine(point: Vec3, linePointA: Vec3, linePointB: Vec3):
     linePointA[2] + parameter * lineDirection[2],
   ];
 
-  return distanceSquared3(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
+  return vec3.distSq(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
 }
 
 function positionsMatch(positionA: Vec3, positionB: Vec3): boolean {
-  return distanceSquared3(positionA, positionB) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+  return vec3.distSq(positionA, positionB) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
 }
 
 function isTopologyVertexPosition(position: Vec3, topologyVertices: readonly Vec3[]): boolean {
   for (const vertex of topologyVertices) {
-    if (distanceSquared3(position, vertex) < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
+    if (vec3.distSq(position, vertex) < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
       return true;
     }
   }
