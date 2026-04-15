@@ -43,6 +43,11 @@ import type {
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const MIN_DIMENSION = 1;
 
+/** Pipeline-overridable render mode constants matching shader `override renderMode` */
+const RENDER_MODE_ALL = 0;
+const RENDER_MODE_HIDDEN_ONLY = 1;
+const RENDER_MODE_VISIBLE_ONLY = 2;
+
 const FLOAT32_BYTES = 4;
 
 /** Number of floats per styled line instance (32 = 128 bytes, matching shader LineInstance layout) */
@@ -106,12 +111,16 @@ const VERTICES_PER_MARKER_QUAD = 6;
  * Depth pre-pass (non-MSAA, no color):
  *   Renders solid faces into a non-MSAA depth texture for marker sampling.
  *
- * Main render pass (MSAA):
- *   1. Depth faces -- fill MSAA depth buffer (no color output)
- *   2. Hidden styled lines -- behind faces, per-instance hidden style
- *   3. Visible styled lines -- in front of faces, per-instance visible style
- *   4. Preview line -- always visible (drag-to-connect)
- *   5. Vertex markers -- GPU-based binary occlusion via depth texture sampling
+ * Main rendering (MSAA, two passes for layered visibility):
+ *
+ * Hidden pass (depth cleared):
+ *   1. Hidden lines -- occluded lines with hidden style
+ *   2. Hidden markers -- occluded markers on top of hidden lines
+ *
+ * Visible pass (depth cleared, color preserved):
+ *   3. Visible lines -- non-occluded lines with visible style
+ *   4. Visible markers -- non-occluded markers on top of visible lines
+ *   5. Preview line -- always visible (drag-to-connect)
  *   6. Preview start marker -- always visible
  *   7. Preview snap marker -- always visible
  */
@@ -119,9 +128,12 @@ export class SceneLayer implements RenderLayer {
   private device!: GPUDevice;
   private format!: GPUTextureFormat;
 
-  private linePipeline!: GPURenderPipeline;
+  private hiddenLinePipeline!: GPURenderPipeline;
+  private visibleLinePipeline!: GPURenderPipeline;
   private previewLinePipeline!: GPURenderPipeline;
-  private markerPipeline!: GPURenderPipeline;
+  private hiddenMarkerPipeline!: GPURenderPipeline;
+  private visibleMarkerPipeline!: GPURenderPipeline;
+  private previewMarkerPipeline!: GPURenderPipeline;
 
   private bindGroup!: GPUBindGroup;
   private lineBindGroup!: GPUBindGroup;
@@ -296,9 +308,21 @@ export class SceneLayer implements RenderLayer {
       bindGroupLayouts: [this.depthBindGroupLayout],
     });
 
-    this.linePipeline = this.createLinePipeline(depthPipelineLayout);
+    this.hiddenLinePipeline = this.createLinePipeline(depthPipelineLayout, RENDER_MODE_HIDDEN_ONLY);
+    this.visibleLinePipeline = this.createLinePipeline(
+      depthPipelineLayout,
+      RENDER_MODE_VISIBLE_ONLY
+    );
     this.previewLinePipeline = this.createPreviewLinePipeline(depthPipelineLayout);
-    this.markerPipeline = this.createMarkerPipeline(depthPipelineLayout);
+    this.hiddenMarkerPipeline = this.createMarkerPipeline(
+      depthPipelineLayout,
+      RENDER_MODE_HIDDEN_ONLY
+    );
+    this.visibleMarkerPipeline = this.createMarkerPipeline(
+      depthPipelineLayout,
+      RENDER_MODE_VISIBLE_ONLY
+    );
+    this.previewMarkerPipeline = this.createMarkerPipeline(depthPipelineLayout, RENDER_MODE_ALL);
   }
 
   update(state: FrameState): void {
@@ -396,66 +420,99 @@ export class SceneLayer implements RenderLayer {
     depthPrePass.draw(this.faceVertexCount);
     depthPrePass.end();
 
-    // Main render pass: line-only depth buffer for z-ordering, face depth sampled for style
-    const mainPass = encoder.beginRenderPass({
+    const depthView = currentDepthTexture.createView();
+
+    // Hidden pass: occluded lines and markers (drawn first, behind visible layer)
+    const hiddenPass = encoder.beginRenderPass({
       colorAttachments: [
         {
           view: currentMsaaView,
-          resolveTarget: canvasView,
           loadOp: 'clear',
           clearValue: this.backgroundClearColor,
-          storeOp: 'discard',
+          storeOp: 'store',
         },
       ],
       depthStencilAttachment: {
-        view: currentDepthTexture.createView(),
+        view: depthView,
         depthClearValue: 1.0,
         depthLoadOp: 'clear',
         depthStoreOp: 'discard',
       },
     });
 
-    // All lines in one pass (depth texture sampling for visible/hidden style)
     if (this.styledLineCount > 0) {
-      mainPass.setPipeline(this.linePipeline);
-      mainPass.setBindGroup(0, this.lineBindGroup);
-      mainPass.setVertexBuffer(0, this.styledLineBuffer);
-      mainPass.draw(VERTICES_PER_LINE_QUAD, this.styledLineCount);
+      hiddenPass.setPipeline(this.hiddenLinePipeline);
+      hiddenPass.setBindGroup(0, this.lineBindGroup);
+      hiddenPass.setVertexBuffer(0, this.styledLineBuffer);
+      hiddenPass.draw(VERTICES_PER_LINE_QUAD, this.styledLineCount);
+    }
+
+    if (this.topologyVertexCount > 0) {
+      hiddenPass.setPipeline(this.hiddenMarkerPipeline);
+      hiddenPass.setBindGroup(0, this.markerBindGroup);
+      hiddenPass.setVertexBuffer(0, this.topologyVertexMarkerBuffer);
+      hiddenPass.draw(VERTICES_PER_MARKER_QUAD, this.topologyVertexCount);
+    }
+
+    hiddenPass.end();
+
+    // Visible pass: non-occluded lines and markers + preview elements (on top of hidden)
+    const visiblePass = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: currentMsaaView,
+          resolveTarget: canvasView,
+          loadOp: 'load',
+          storeOp: 'discard',
+        },
+      ],
+      depthStencilAttachment: {
+        view: depthView,
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'discard',
+      },
+    });
+
+    if (this.styledLineCount > 0) {
+      visiblePass.setPipeline(this.visibleLinePipeline);
+      visiblePass.setBindGroup(0, this.lineBindGroup);
+      visiblePass.setVertexBuffer(0, this.styledLineBuffer);
+      visiblePass.draw(VERTICES_PER_LINE_QUAD, this.styledLineCount);
+    }
+
+    if (this.topologyVertexCount > 0) {
+      visiblePass.setPipeline(this.visibleMarkerPipeline);
+      visiblePass.setBindGroup(0, this.markerBindGroup);
+      visiblePass.setVertexBuffer(0, this.topologyVertexMarkerBuffer);
+      visiblePass.draw(VERTICES_PER_MARKER_QUAD, this.topologyVertexCount);
     }
 
     // Preview line (always visible, no occlusion)
     if (this.hasDragPreview) {
-      mainPass.setPipeline(this.previewLinePipeline);
-      mainPass.setBindGroup(0, this.previewLineBindGroup);
-      mainPass.setVertexBuffer(0, this.previewLineBuffer);
-      mainPass.draw(VERTICES_PER_LINE_QUAD, 1);
-    }
-
-    // Vertex markers (depth-sampled occlusion via sampling depth texture)
-    if (this.topologyVertexCount > 0) {
-      mainPass.setPipeline(this.markerPipeline);
-      mainPass.setBindGroup(0, this.markerBindGroup);
-      mainPass.setVertexBuffer(0, this.topologyVertexMarkerBuffer);
-      mainPass.draw(VERTICES_PER_MARKER_QUAD, this.topologyVertexCount);
+      visiblePass.setPipeline(this.previewLinePipeline);
+      visiblePass.setBindGroup(0, this.previewLineBindGroup);
+      visiblePass.setVertexBuffer(0, this.previewLineBuffer);
+      visiblePass.draw(VERTICES_PER_LINE_QUAD, 1);
     }
 
     // Preview start marker
     if (this.hasDragPreview) {
-      mainPass.setPipeline(this.markerPipeline);
-      mainPass.setBindGroup(0, this.previewMarkerBindGroup);
-      mainPass.setVertexBuffer(0, this.previewStartMarkerBuffer);
-      mainPass.draw(VERTICES_PER_MARKER_QUAD, 1);
+      visiblePass.setPipeline(this.previewMarkerPipeline);
+      visiblePass.setBindGroup(0, this.previewMarkerBindGroup);
+      visiblePass.setVertexBuffer(0, this.previewStartMarkerBuffer);
+      visiblePass.draw(VERTICES_PER_MARKER_QUAD, 1);
     }
 
     // Preview snap target marker
     if (this.hasSnapTarget) {
-      mainPass.setPipeline(this.markerPipeline);
-      mainPass.setBindGroup(0, this.previewMarkerBindGroup);
-      mainPass.setVertexBuffer(0, this.previewSnapMarkerBuffer);
-      mainPass.draw(VERTICES_PER_MARKER_QUAD, 1);
+      visiblePass.setPipeline(this.previewMarkerPipeline);
+      visiblePass.setBindGroup(0, this.previewMarkerBindGroup);
+      visiblePass.setVertexBuffer(0, this.previewSnapMarkerBuffer);
+      visiblePass.draw(VERTICES_PER_MARKER_QUAD, 1);
     }
 
-    mainPass.end();
+    visiblePass.end();
   }
 
   getLastMvpMatrix(): Float32Array {
@@ -544,6 +601,15 @@ export class SceneLayer implements RenderLayer {
       return;
     }
 
+    const requiredSize = this.topologyVertexCount * MARKER_INSTANCE_STRIDE;
+    if (requiredSize > this.topologyVertexMarkerBuffer.size) {
+      this.topologyVertexMarkerBuffer.destroy();
+      this.topologyVertexMarkerBuffer = this.device.createBuffer({
+        size: requiredSize,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+
     const markerData = new Float32Array(styledMarkers.length * MARKER_INSTANCE_FLOATS);
 
     for (let index = 0; index < styledMarkers.length; index++) {
@@ -594,6 +660,15 @@ export class SceneLayer implements RenderLayer {
 
     if (this.styledLineCount === 0) {
       return;
+    }
+
+    const requiredSize = this.styledLineCount * STYLED_LINE_STRIDE;
+    if (requiredSize > this.styledLineBuffer.size) {
+      this.styledLineBuffer.destroy();
+      this.styledLineBuffer = this.device.createBuffer({
+        size: requiredSize,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
     }
 
     const instanceData = new Float32Array(this.styledLineCount * FLOATS_PER_STYLED_LINE);
@@ -671,7 +746,7 @@ export class SceneLayer implements RenderLayer {
     return buffer;
   }
 
-  private createLinePipeline(layout: GPUPipelineLayout): GPURenderPipeline {
+  private createLinePipeline(layout: GPUPipelineLayout, renderMode: number): GPURenderPipeline {
     const shaderModule = this.device.createShaderModule({ code: lineShaderSource });
     return this.device.createRenderPipeline({
       layout,
@@ -689,6 +764,7 @@ export class SceneLayer implements RenderLayer {
       fragment: {
         module: shaderModule,
         entryPoint: 'fs',
+        constants: { renderMode },
         targets: [
           {
             format: this.format,
@@ -727,6 +803,7 @@ export class SceneLayer implements RenderLayer {
       fragment: {
         module: shaderModule,
         entryPoint: 'fs',
+        constants: { renderMode: RENDER_MODE_ALL },
         targets: [
           {
             format: this.format,
@@ -776,7 +853,7 @@ export class SceneLayer implements RenderLayer {
     });
   }
 
-  private createMarkerPipeline(layout: GPUPipelineLayout): GPURenderPipeline {
+  private createMarkerPipeline(layout: GPUPipelineLayout, renderMode: number): GPURenderPipeline {
     const shaderModule = this.device.createShaderModule({ code: vertexMarkerShaderSource });
 
     return this.device.createRenderPipeline({
@@ -808,6 +885,7 @@ export class SceneLayer implements RenderLayer {
       fragment: {
         module: shaderModule,
         entryPoint: 'fs',
+        constants: { renderMode },
         targets: [
           {
             format: this.format,
@@ -830,8 +908,8 @@ export class SceneLayer implements RenderLayer {
         topology: 'triangle-list',
       },
       depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
+        depthWriteEnabled: false,
+        depthCompare: 'always',
         format: DEPTH_FORMAT,
       },
       multisample: { count: MSAA_SAMPLE_COUNT },
@@ -839,9 +917,9 @@ export class SceneLayer implements RenderLayer {
   }
 
   /**
-   * Creates a 16-float marker instance for preview markers.
+   * Creates a 24-float marker instance for preview markers.
    * Uses the preview style for both visible and hidden fields since
-   * preview markers render with depthCompare: 'always'.
+   * preview markers render with renderMode=ALL and depthCompare: 'always'.
    */
   private createPreviewMarkerData(position: readonly [number, number, number]): Float32Array {
     const markerData = new Float32Array(MARKER_INSTANCE_FLOATS);

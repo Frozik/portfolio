@@ -174,12 +174,16 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     }
   }
 
+  function raiseReadyFps(): void {
+    fpsController.raise(EFpsLevel.Ready);
+  }
+
   function raiseInteractionFps(): void {
     fpsController.raise(EFpsLevel.Interaction);
   }
 
   canvas.addEventListener('pointerdown', raiseInteractionFps);
-  canvas.addEventListener('pointermove', raiseInteractionFps);
+  canvas.addEventListener('pointermove', raiseReadyFps);
   canvas.addEventListener('wheel', raiseInteractionFps);
 
   const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, onCanvasDoubleClick);
@@ -248,7 +252,7 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
       camera.destroy();
       fpsController.dispose();
       canvas.removeEventListener('pointerdown', raiseInteractionFps);
-      canvas.removeEventListener('pointermove', raiseInteractionFps);
+      canvas.removeEventListener('pointermove', raiseReadyFps);
       canvas.removeEventListener('wheel', raiseInteractionFps);
       cleanupClickDetector();
       cleanupDragConnector();

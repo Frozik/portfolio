@@ -96,7 +96,7 @@ export const STEREOMETRY_STYLES = {
     width: 3.0,
   },
   'line:preview': {
-    color: '#44BB88',
+    color: '#4488BB',
   },
   'line:inner': {
     width: 3.0,
@@ -104,25 +104,30 @@ export const STEREOMETRY_STYLES = {
 
   vertex: {
     markerType: 'circle',
-    color: '#FFFFFF',
+    color: '#000000',
     size: 10,
-    strokeColor: '#44AAFF',
-    strokeWidth: 3,
+    strokeColor: '#FFFFFF',
+    strokeWidth: 2,
   },
   'vertex:hidden': {
-    color: '#1A1A1F',
+    strokeColor: '#999999',
   },
   'vertex:selected': {
     color: '#55AAFF',
   },
   'vertex:hidden:selected': {
-    alpha: 1,
+    color: '#3388DD',
   },
   'vertex:inner': {
     strokeColor: '#AAFF44',
+    color: '#AAAAAA',
+  },
+  'vertex:inner:hidden': {
+    color: '#000000',
   },
   'vertex:preview': {
-    strokeColor: '#44BB88',
+    color: '#000000',
+    strokeColor: '#4488BB',
     strokeWidth: 6,
     size: 16,
   },

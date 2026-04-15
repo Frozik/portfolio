@@ -68,16 +68,73 @@ export function extendLine(
 }
 
 /**
+ * Tests if a point lies on the surface of a triangle using
+ * distance-to-plane + barycentric coordinate checks with epsilon tolerance.
+ * More robust than ray casting for points exactly on face boundaries.
+ */
+function isPointOnTriangle(point: Vec3, vertexA: Vec3, vertexB: Vec3, vertexC: Vec3): boolean {
+  const edgeAB = subtractVec3(vertexB, vertexA);
+  const edgeAC = subtractVec3(vertexC, vertexA);
+  const normal = cross3(edgeAB, edgeAC);
+  const normalLength = lengthVec3(normal);
+
+  if (normalLength < SURFACE_EPSILON) {
+    return false;
+  }
+
+  const distanceToPlane = Math.abs(dot3(subtractVec3(point, vertexA), normal)) / normalLength;
+  if (distanceToPlane > SURFACE_EPSILON) {
+    return false;
+  }
+
+  // Barycentric coordinates via dot product method
+  const dotABAB = dot3(edgeAB, edgeAB);
+  const dotABAC = dot3(edgeAB, edgeAC);
+  const dotACAC = dot3(edgeAC, edgeAC);
+  const ap = subtractVec3(point, vertexA);
+  const dotAPAB = dot3(ap, edgeAB);
+  const dotAPAC = dot3(ap, edgeAC);
+  const denominator = dotABAB * dotACAC - dotABAC * dotABAC;
+
+  if (Math.abs(denominator) < SURFACE_EPSILON * SURFACE_EPSILON) {
+    return false;
+  }
+
+  const baryV = (dotACAC * dotAPAB - dotABAC * dotAPAC) / denominator;
+  const baryW = (dotABAB * dotAPAC - dotABAC * dotAPAB) / denominator;
+  const baryU = 1 - baryV - baryW;
+
+  return baryU >= -SURFACE_EPSILON && baryV >= -SURFACE_EPSILON && baryW >= -SURFACE_EPSILON;
+}
+
+const SURFACE_EPSILON = 1e-4;
+
+/**
  * Tests if a point is inside or on the surface of a convex polyhedron
- * defined by its triangulated faces. Uses ray casting — counts intersections
- * with face triangles along an arbitrary direction.
+ * defined by its triangulated faces. Two-step approach:
+ * 1. Surface test — checks if the point lies on any face triangle (robust for coplanar points)
+ * 2. Ray casting — counts intersections for inside/outside classification
  */
 export function isPointInsideOrOnSurface(
   point: Vec3,
   faceTriangles: readonly [number, number, number][],
   vertices: readonly Vec3[]
 ): boolean {
-  // Cast ray in +X direction
+  // Step 1: check if the point lies on any face triangle (handles coplanar/edge cases)
+  for (const triangleIndices of faceTriangles) {
+    if (
+      isPointOnTriangle(
+        point,
+        vertices[triangleIndices[0]],
+        vertices[triangleIndices[1]],
+        vertices[triangleIndices[2]]
+      )
+    ) {
+      return true;
+    }
+  }
+
+  // Step 2: ray casting for points strictly inside the polyhedron
   const rayDirection: Vec3 = [1, 0, 0];
   let intersectionCount = 0;
 
@@ -94,7 +151,6 @@ export function isPointInsideOrOnSurface(
   }
 
   // Odd count = inside, even count = outside
-  // parameterT >= ~0 also catches points ON the surface
   return intersectionCount % 2 === 1;
 }
 

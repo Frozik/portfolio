@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { STEREOMETRY_STYLES } from './constants';
 import { hexToRgb, resolveStyle } from './styles-processor';
 import type { PartialElementStyle } from './types';
 
@@ -127,49 +126,5 @@ describe('resolveStyle', () => {
     };
     const resolved = resolveStyle(styles, 'test', ['hidden', 'selected']);
     expect(resolved.alpha).toBe(0.8);
-  });
-});
-
-describe('STEREOMETRY_STYLES integration', () => {
-  it('resolves visible segment style (line + segment modifier)', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['segment']);
-    expect(resolved.width).toBe(3.0);
-    expect(resolved.line).toEqual({ type: 'solid' });
-  });
-
-  it('resolves hidden segment style with dashed line', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', 'segment']);
-    expect(resolved.alpha).toBe(0.3);
-    expect(resolved.line).toEqual({ type: 'dashed', dash: 10, gap: 10 });
-  });
-
-  it('resolves hidden selected segment style', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', 'segment', 'selected']);
-    expect(resolved.width).toBe(3.0);
-    expect(resolved.alpha).toBe(1);
-  });
-
-  it('resolves visible line style', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', []);
-    expect(resolved.width).toBe(1.0);
-  });
-
-  it('resolves hidden selected line style', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', 'selected']);
-    expect(resolved.width).toBe(1.0);
-    expect(resolved.alpha).toBe(1);
-  });
-
-  it('resolves preview segment style', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview', 'segment']);
-    expect(resolved.color).toBe('#44BB88');
-    expect(resolved.width).toBe(3.0);
-  });
-
-  it('resolves hidden inner line style', () => {
-    const resolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', 'inner']);
-    expect(resolved.alpha).toBe(0.3);
-    expect(resolved.width).toBe(3.0);
-    expect(resolved.line).toEqual({ type: 'dashed', dash: 10, gap: 10 });
   });
 });

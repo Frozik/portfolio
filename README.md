@@ -155,12 +155,17 @@ of 3D solids — a digital geometry workbench.
 - Unified per-instance styling: each line segment and vertex marker carries its
   own visible and hidden styles directly in the GPU instance buffer — no
   per-modifier pipeline proliferation
-- Multi-pass WebGPU pipeline: depth pre-pass (faces) → hidden lines → visible
-  lines → vertex markers (with depth texture sampling for binary occlusion)
+- Layered visibility rendering: depth pre-pass (faces) → hidden lines → hidden
+  markers → visible lines → visible markers, using pipeline-overridable
+  `renderMode` constants to filter fragments by occlusion state. Two MSAA render
+  passes with independent depth buffers ensure visible elements always render on
+  top of hidden ones regardless of 3D depth
 - Orthographic projection with 4x MSAA anti-aliasing
 - GPU-based vertex occlusion via depth texture sampling in the vertex shader —
   the marker center is tested against the depth buffer, producing a binary
   visible/hidden decision for the entire marker (no split-half artifacts)
+- Markers render on top of lines within each visibility layer via
+  `depthCompare: 'always'` — no depth offset hacks
 - Depth-based alpha fade: elements further from the camera smoothly fade to
   transparency, controlled by `depthFadeRate` and `depthFadeMin` uniforms
 - All sizes (line width, marker diameter, dash/gap) specified in CSS pixels,
@@ -178,10 +183,14 @@ of 3D solids — a digital geometry workbench.
 - Vertex markers support two render types: `solid` (filled circle) and `circle`
   (stroke + fill with configurable stroke color and width)
 
-**Segment processor:**
+**Segment & marker processor:**
 - Pure function that splits infinite lines into classified segments based on
   geometry: `segment` (coincides with a topology edge), `inner` (inside the
   figure or on a face), or regular (no modifier)
+- Vertex markers receive `inner` modifier when on the figure surface (topology
+  vertices or intersection points on faces), using a two-step test:
+  point-on-triangle surface check (barycentric with epsilon tolerance) followed
+  by ray casting for interior points
 - Face intersection via ray-triangle (Moller-Trumbore) and coplanar face
   clipping for lines lying on figure faces
 - Topology edges, extended lines, and user-drawn lines are all unified as

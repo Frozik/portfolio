@@ -43,6 +43,13 @@ struct VertexOutput {
 @group(0) @binding(1) var faceDepth: texture_depth_2d;
 @group(0) @binding(2) var depthSampler: sampler;
 
+/**
+ * Render mode filter (pipeline-overridable constant):
+ *   0 = render all fragments (default, used by preview)
+ *   1 = render only hidden (occluded) fragments
+ *   2 = render only visible (non-occluded) fragments
+ */
+override renderMode: u32 = 0u;
 
 /** Expands a line segment into a screen-space quad using max width of both styles */
 @vertex
@@ -100,6 +107,10 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
     // This makes the entire line width use one style (visible or hidden).
     let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, input.lineCenterUV, 0);
     let isOccluded = faceDepthValue < input.lineCenterDepth;
+
+    // Filter by render mode: discard fragments that don't match the requested visibility
+    if (renderMode == 1u && !isOccluded) { discard; }
+    if (renderMode == 2u && isOccluded) { discard; }
 
     // Select style based on occlusion
     let color = select(input.visibleColor, input.hiddenColor, isOccluded);

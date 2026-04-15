@@ -40,15 +40,21 @@ struct VertexOutput {
     @location(3) @interpolate(flat) strokeColor: vec3<f32>,
     @location(4) @interpolate(flat) strokeWidthNormalized: f32,
     @location(5) @interpolate(flat) isCircleType: f32,
+    @location(6) @interpolate(flat) isOccluded: f32,
 };
 
 @group(0) @binding(1) var sceneDepth: texture_depth_2d;
 @group(0) @binding(2) var depthSampler: sampler;
 
-const DEPTH_BIAS: f32 = 0.001;
+/**
+ * Render mode filter (pipeline-overridable constant):
+ *   0 = render all fragments (default, used by preview)
+ *   1 = render only hidden (occluded) fragments
+ *   2 = render only visible (non-occluded) fragments
+ */
+override renderMode: u32 = 0u;
 
-/** Pushes markers slightly toward the camera so they render on top of lines at the same depth */
-const MARKER_DEPTH_OFFSET: f32 = 0.002;
+const DEPTH_BIAS: f32 = 0.001;
 
 /** Tests if the marker center is occluded by scene geometry in the depth buffer */
 fn isMarkerOccluded(centerClip: vec4<f32>) -> bool {
@@ -86,7 +92,7 @@ fn vs(
     var result: VertexOutput;
     result.clipPosition = vec4<f32>(
         centerClip.xy + offsetNdc * centerClip.w,
-        centerClip.z - MARKER_DEPTH_OFFSET * centerClip.w,
+        centerClip.z,
         centerClip.w,
     );
     result.quadUV = vec2<f32>(sideX, sideY);
@@ -95,6 +101,7 @@ fn vs(
     result.strokeColor = sColor;
     result.strokeWidthNormalized = strokeNormalized;
     result.isCircleType = marker.markerType;
+    result.isOccluded = select(0.0, 1.0, isOccluded);
     return result;
 }
 
@@ -106,6 +113,10 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
     if (dist > 1.0) {
         discard;
     }
+
+    // Filter by render mode: discard fragments that don't match the requested visibility
+    if (renderMode == 1u && input.isOccluded < 0.5) { discard; }
+    if (renderMode == 2u && input.isOccluded >= 0.5) { discard; }
 
     // Solid type: filled circle
     if (input.isCircleType < 0.5) {

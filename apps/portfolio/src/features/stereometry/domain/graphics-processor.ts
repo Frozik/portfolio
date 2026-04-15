@@ -120,7 +120,7 @@ function resolvedToMarkerStyle(resolved: {
  * per marker — GPU depth test decides which to use.
  *
  * Modifiers:
- * - `inner` — vertex is inside or on a face of the figure (not a topology vertex)
+ * - `inner` — vertex is on the surface of or inside the figure (topology vertices or intersection points on faces)
  * - `selected` — vertex lies on a currently selected line or edge
  */
 function processVertexMarkers(
@@ -137,7 +137,7 @@ function processVertexMarkers(
 
     const isTopologyVertex = isTopologyVertexPosition(position, topology.vertices);
     if (
-      !isTopologyVertex &&
+      isTopologyVertex ||
       topology.figureFaceTriangles.some(figureTriangles =>
         isPointInsideOrOnSurface(position, figureTriangles, topology.vertices)
       )
