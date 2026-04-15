@@ -92,6 +92,36 @@ export interface PuzzleExpectedResult {
  *
  * Edges of figures are derived from faces by `preparePuzzle()`.
  */
+/** Camera viewing angles */
+export interface PuzzleCameraAngle {
+  /** Elevation angle in radians (angle from horizontal) */
+  readonly elevation: number;
+  /** Azimuth angle in radians (horizontal rotation) */
+  readonly azimuth: number;
+}
+
+/** Camera distance (zoom) limits */
+export interface PuzzleCameraDistance {
+  readonly min: number;
+  readonly max: number;
+  readonly initial: number;
+}
+
+/** Camera projection type */
+export type CameraProjection = 'perspective' | 'orthographic';
+
+/** Camera configuration for a puzzle. All fields fall back to global defaults if omitted. */
+export interface PuzzleCamera {
+  /** Camera target point — the scene is centered on this position */
+  readonly center?: readonly [number, number, number];
+  /** Projection type. Defaults to 'perspective'. */
+  readonly projection?: CameraProjection;
+  /** Initial viewing angles */
+  readonly angle?: PuzzleCameraAngle;
+  /** Camera distance (zoom) limits and initial value */
+  readonly distance?: PuzzleCameraDistance;
+}
+
 export interface PuzzleDefinition {
   /** Display title of the puzzle */
   readonly name: string;
@@ -99,6 +129,8 @@ export interface PuzzleDefinition {
   readonly input: PuzzleInput;
   /** Correct answer — constructions the user must produce to solve the puzzle */
   readonly expected: PuzzleExpectedResult;
+  /** Camera configuration. Falls back to global defaults if omitted. */
+  readonly camera?: PuzzleCamera;
 }
 
 /** Result of preparePuzzle — everything the renderer and scene need */

@@ -45,8 +45,7 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
   let gpuCleanup: (() => void) | undefined;
 
   const { topology } = preparePuzzle(PENTAGONAL_PYRAMID);
-  const geometryCenter: readonly [number, number, number] = [0, 0, 0];
-  const camera = createOrbitalCameraController(canvas, geometryCenter);
+  const camera = createOrbitalCameraController(canvas, PENTAGONAL_PYRAMID.camera);
   const fpsController = new FpsController();
 
   let sceneLayerReference: SceneLayer | undefined;
@@ -302,7 +301,16 @@ async function initStereometry(
   const context = await createGpuContext(canvas);
 
   const msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
-  const sceneLayer = new SceneLayer(camera, msaaManager, topology, fpsController);
+  const sceneCenter = PENTAGONAL_PYRAMID.camera?.center ?? [0, 0, 0];
+  const sceneProjection = PENTAGONAL_PYRAMID.camera?.projection ?? 'perspective';
+  const sceneLayer = new SceneLayer(
+    camera,
+    msaaManager,
+    topology,
+    fpsController,
+    sceneCenter,
+    sceneProjection
+  );
 
   const layerManager = new RenderLayerManager([sceneLayer]);
 

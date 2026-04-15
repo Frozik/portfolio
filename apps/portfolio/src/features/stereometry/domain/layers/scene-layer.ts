@@ -9,6 +9,7 @@ import {
   FACE_DEPTH_BIAS_SLOPE_SCALE,
   FACE_POSITION_FLOATS,
   FAR_PLANE,
+  FIELD_OF_VIEW_RADIANS,
   HOMOGENEOUS_W,
   MSAA_SAMPLE_COUNT,
   NEAR_PLANE,
@@ -30,7 +31,13 @@ const lineShaderSource = commonShaderSource + lineSpecificSource;
 const vertexMarkerShaderSource = commonShaderSource + vertexMarkerSpecificSource;
 
 import { hexToRgb, resolveStyle } from '../styles-processor';
-import type { FigureTopology, SceneState, SelectionState, StyledSegment } from '../types';
+import type {
+  CameraProjection,
+  FigureTopology,
+  SceneState,
+  SelectionState,
+  StyledSegment,
+} from '../types';
 import { processVertexMarkers } from '../vertex-processor';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
@@ -144,7 +151,9 @@ export class SceneLayer implements RenderLayer {
     private readonly camera: OrbitalCameraController,
     private readonly msaaManager: MsaaTextureManager,
     private readonly topology: FigureTopology,
-    private readonly fpsController: FpsController
+    private readonly fpsController: FpsController,
+    private readonly sceneCenter: readonly [number, number, number],
+    private readonly projection: CameraProjection = 'perspective'
   ) {
     const backgroundStyle = resolveStyle(STEREOMETRY_STYLES, 'background', []);
     const [bgR, bgG, bgB] = hexToRgb(backgroundStyle.color);
@@ -308,16 +317,22 @@ export class SceneLayer implements RenderLayer {
     const viewMatrix = this.camera.getViewMatrix();
     const cameraDistance = this.camera.getDistance();
     const aspect = state.canvasWidth / Math.max(MIN_DIMENSION, state.canvasHeight);
-    const halfHeight = cameraDistance * ORTHO_SCALE;
-    const halfWidth = halfHeight * aspect;
-    const projectionMatrix = mat4.ortho(
-      -halfWidth,
-      halfWidth,
-      -halfHeight,
-      halfHeight,
-      NEAR_PLANE,
-      FAR_PLANE
-    );
+
+    const projectionMatrix =
+      this.projection === 'orthographic'
+        ? (() => {
+            const halfHeight = cameraDistance * ORTHO_SCALE;
+            const halfWidth = halfHeight * aspect;
+            return mat4.ortho(
+              -halfWidth,
+              halfWidth,
+              -halfHeight,
+              halfHeight,
+              NEAR_PLANE,
+              FAR_PLANE
+            );
+          })()
+        : mat4.perspective(FIELD_OF_VIEW_RADIANS, aspect, NEAR_PLANE, FAR_PLANE);
     const mvpMatrix = mat4.multiply(projectionMatrix, viewMatrix) as Float32Array;
 
     this.lastMvpMatrix.set(mvpMatrix);
@@ -334,7 +349,7 @@ export class SceneLayer implements RenderLayer {
     const cameraData = new Float32Array([state.devicePixelRatio, cameraDistance]);
     this.device.queue.writeBuffer(this.uniformBuffer, DPR_BYTE_OFFSET, cameraData);
     this.device.queue.writeBuffer(this.uniformBuffer, CAMERA_FORWARD_BYTE_OFFSET, cameraForward);
-    const cameraTarget = new Float32Array([0, 0, 0]);
+    const cameraTarget = new Float32Array(this.sceneCenter);
     this.device.queue.writeBuffer(this.uniformBuffer, CAMERA_TARGET_BYTE_OFFSET, cameraTarget);
 
     // Keep preview uniform buffer in sync

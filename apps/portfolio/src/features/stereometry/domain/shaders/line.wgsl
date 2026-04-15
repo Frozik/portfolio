@@ -21,7 +21,7 @@ struct LineInstance {
 
 struct VertexOutput {
     @builtin(position) clipPosition: vec4<f32>,
-    @location(0) lineDistance: f32,
+    @location(0) @interpolate(linear) lineDistance: f32,
     @location(1) @interpolate(flat) lineColor: vec3<f32>,
     @location(2) lineAlpha: f32,
     @location(3) @interpolate(flat) lineDash: f32,

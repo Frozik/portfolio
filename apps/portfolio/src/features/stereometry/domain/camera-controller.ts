@@ -14,7 +14,7 @@ import {
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
-import type { CameraInteractionMode } from './types';
+import type { CameraInteractionMode, PuzzleCamera } from './types';
 
 export interface OrbitalCameraController {
   /** Advances camera animation by one frame. Returns true if animation is still active. */
@@ -37,13 +37,18 @@ export interface OrbitalCameraController {
  */
 export function createOrbitalCameraController(
   canvas: HTMLCanvasElement,
-  rotationCenter: readonly [number, number, number] = [0, 0, 0]
+  puzzleCamera?: PuzzleCamera
 ): OrbitalCameraController {
-  let azimuth = INITIAL_AZIMUTH;
-  const elevation = INITIAL_ELEVATION;
+  const minDistance = puzzleCamera?.distance?.min ?? MIN_CAMERA_DISTANCE;
+  const maxDistance = puzzleCamera?.distance?.max ?? MAX_CAMERA_DISTANCE;
+  const initialDistance = puzzleCamera?.distance?.initial ?? INITIAL_CAMERA_DISTANCE;
+  const rotationCenter = puzzleCamera?.center ?? [0, 0, 0];
 
-  let distance = INITIAL_CAMERA_DISTANCE;
-  let targetDistance = INITIAL_CAMERA_DISTANCE;
+  let azimuth = puzzleCamera?.angle?.azimuth ?? INITIAL_AZIMUTH;
+  const elevation = puzzleCamera?.angle?.elevation ?? INITIAL_ELEVATION;
+
+  let distance = initialDistance;
+  let targetDistance = initialDistance;
 
   const target: [number, number, number] = [
     rotationCenter[0],
@@ -105,7 +110,7 @@ export function createOrbitalCameraController(
   }
 
   function clampDistance(value: number): number {
-    return Math.max(MIN_CAMERA_DISTANCE, Math.min(MAX_CAMERA_DISTANCE, value));
+    return Math.max(minDistance, Math.min(maxDistance, value));
   }
 
   function resetVelocity(): void {

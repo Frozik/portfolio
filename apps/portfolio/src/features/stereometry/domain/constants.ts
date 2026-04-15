@@ -16,7 +16,7 @@ export const INERTIA_MIN_VELOCITY = 0.1;
 export const ZOOM_SMOOTHING_FACTOR = 0.1;
 /** Distance threshold below which zoom snaps to target to avoid infinite lerp tail */
 export const ZOOM_SNAP_THRESHOLD = 0.001;
-const FIELD_OF_VIEW_RADIANS = Math.PI / 4;
+export const FIELD_OF_VIEW_RADIANS = Math.PI / 4;
 export const NEAR_PLANE = 0.1;
 export const FAR_PLANE = 100;
 /** Orthographic scale: half-height = distance * ORTHO_SCALE */
@@ -33,7 +33,7 @@ export const DOUBLE_CLICK_TIME_THRESHOLD_MS = 400;
 /** Double-click/double-tap: max distance between two click positions */
 export const DOUBLE_CLICK_DISTANCE_THRESHOLD = 10;
 /** Hit testing: radius in screen pixels for vertex proximity detection */
-export const VERTEX_HIT_RADIUS_PIXELS = 15;
+export const VERTEX_HIT_RADIUS_PIXELS = 30;
 /** Hit testing: max distance in screen pixels from edge line to count as a hit */
 export const EDGE_HIT_RADIUS_PIXELS = 10;
 
