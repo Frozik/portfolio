@@ -30,16 +30,15 @@ const depthFacesShaderSource = commonShaderSource + depthFacesSpecificSource;
 const lineShaderSource = commonShaderSource + lineSpecificSource;
 const vertexMarkerShaderSource = commonShaderSource + vertexMarkerSpecificSource;
 
+import type { ProcessedGraphics } from '../graphics-processor';
 import { hexToRgb, resolveStyle } from '../styles-processor';
 import type {
   CameraProjection,
   FigureTopology,
   SceneLine,
-  SceneState,
-  SelectionState,
+  StyledMarker,
   StyledSegment,
 } from '../types';
-import { processVertexMarkers } from '../vertex-processor';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const MIN_DIMENSION = 1;
@@ -531,26 +530,14 @@ export class SceneLayer implements RenderLayer {
   }
 
   /**
-   * Applies the full scene state and styled segments to GPU buffers.
+   * Applies the full processed graphics (segments + markers) to GPU buffers.
    */
-  applySceneState(
-    scene: SceneState,
-    segments: readonly StyledSegment[],
-    selection: SelectionState
-  ): void {
-    this.applyStyledMarkers(scene, selection);
-    this.applyStyledSegments(segments);
+  applySceneState(graphics: ProcessedGraphics): void {
+    this.applyStyledMarkers(graphics.markers);
+    this.applyStyledSegments(graphics.segments);
   }
 
-  private applyStyledMarkers(scene: SceneState, selection: SelectionState): void {
-    const vertexPositions = scene.vertices.map(vertex => vertex.position);
-    const styledMarkers = processVertexMarkers(
-      this.topology,
-      vertexPositions,
-      selection,
-      scene.lines
-    );
-
+  private applyStyledMarkers(styledMarkers: readonly StyledMarker[]): void {
     this.topologyVertexCount = styledMarkers.length;
 
     if (this.topologyVertexCount === 0) {

@@ -1,6 +1,8 @@
+import { STEREOMETRY_STYLES } from './constants';
 import type { Vec3 } from './math';
 import {
   cross3,
+  distanceSquared3,
   dot3,
   extendLine,
   isPointInsideOrOnSurface,
@@ -8,7 +10,19 @@ import {
   rayTriangleIntersect,
   subtractVec3,
 } from './math';
-import type { FigureTopology, ProcessedSegment, SceneLine, SelectionState } from './types';
+import { hexToRgb, resolveStyle } from './styles-processor';
+import type {
+  FigureTopology,
+  LineInstanceStyle,
+  MarkerInstanceStyle,
+  ProcessedSegment,
+  ResolvedElementStyle,
+  SceneLine,
+  SceneState,
+  SelectionState,
+  StyledMarker,
+  StyledSegment,
+} from './types';
 
 const COLLINEAR_THRESHOLD = 1e-8;
 const POSITION_EPSILON = 1e-6;
@@ -16,6 +30,138 @@ const COPLANAR_DISTANCE_THRESHOLD = 1e-4;
 
 /** Sentinel value for topology edge segments (not from a user line) */
 const TOPOLOGY_EDGE_SOURCE_INDEX = -1;
+
+/** Sentinel source index for the preview line */
+export const PREVIEW_LINE_SOURCE_INDEX = -2;
+
+const TOPOLOGY_VERTEX_EPSILON_SQUARED = 1e-10;
+const POINT_ON_LINE_EPSILON_SQUARED = 1e-8;
+
+export interface ProcessedGraphics {
+  readonly segments: readonly StyledSegment[];
+  readonly markers: readonly StyledMarker[];
+}
+
+export function processGraphics(
+  topology: FigureTopology,
+  scene: SceneState,
+  selection: SelectionState,
+  previewLine?: SceneLine
+): ProcessedGraphics {
+  const vertexPositions = scene.vertices.map(vertex => vertex.position);
+  const markers = processVertexMarkers(topology, vertexPositions, selection, scene.lines);
+
+  const processedSegments = processSegments(
+    topology,
+    scene.lines,
+    selection,
+    vertexPositions,
+    previewLine
+  );
+  const segments = processedSegments.map(segment => toStyledSegment(segment));
+
+  return { segments, markers };
+}
+
+/**
+ * Converts a resolved element style to a GPU-ready LineInstanceStyle.
+ */
+function resolvedToInstanceStyle(resolved: ResolvedElementStyle): LineInstanceStyle {
+  const [red, green, blue] = hexToRgb(resolved.color);
+  return {
+    width: resolved.width,
+    color: [red, green, blue],
+    alpha: resolved.alpha,
+    lineType: resolved.line.type === 'dashed' ? 1 : 0,
+    dash: resolved.line.type === 'dashed' ? resolved.line.dash : 0,
+    gap: resolved.line.type === 'dashed' ? resolved.line.gap : 0,
+  };
+}
+
+/**
+ * Converts a ProcessedSegment to a StyledSegment by resolving visible and hidden styles
+ * from the segment's modifiers (already includes 'selected' if applicable).
+ */
+function toStyledSegment(segment: ProcessedSegment): StyledSegment {
+  const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', segment.modifiers);
+  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', ...segment.modifiers]);
+
+  return {
+    startPosition: segment.startPosition,
+    endPosition: segment.endPosition,
+    visibleStyle: resolvedToInstanceStyle(visibleResolved),
+    hiddenStyle: resolvedToInstanceStyle(hiddenResolved),
+    sourceLineIndex: segment.sourceLineIndex,
+    isTopologyEdge: segment.modifiers.includes('segment'),
+  };
+}
+
+function resolvedToMarkerStyle(resolved: {
+  size: number;
+  color: string;
+  alpha: number;
+  strokeColor: string;
+  strokeWidth: number;
+}): MarkerInstanceStyle {
+  const [red, green, blue] = hexToRgb(resolved.color);
+  const [strokeR, strokeG, strokeB] = hexToRgb(resolved.strokeColor);
+  return {
+    size: resolved.size,
+    color: [red, green, blue],
+    alpha: resolved.alpha,
+    strokeColor: [strokeR, strokeG, strokeB],
+    strokeWidth: resolved.strokeWidth,
+  };
+}
+
+/**
+ * Processes vertex markers for rendering, applying modifiers based on
+ * geometry and selection state. Produces both visible and hidden styles
+ * per marker — GPU depth test decides which to use.
+ *
+ * Modifiers:
+ * - `inner` — vertex is inside or on a face of the figure (not a topology vertex)
+ * - `selected` — vertex lies on a currently selected line or edge
+ */
+function processVertexMarkers(
+  topology: FigureTopology,
+  vertexPositions: readonly Vec3[],
+  selection: SelectionState,
+  sceneLines: readonly SceneLine[]
+): readonly StyledMarker[] {
+  const markers: StyledMarker[] = [];
+
+  for (let markerIndex = 0; markerIndex < vertexPositions.length; markerIndex++) {
+    const position = vertexPositions[markerIndex];
+    const modifiers: string[] = [];
+
+    const isTopologyVertex = isTopologyVertexPosition(position, topology.vertices);
+    if (
+      !isTopologyVertex &&
+      topology.figureFaceTriangles.some(figureTriangles =>
+        isPointInsideOrOnSurface(position, figureTriangles, topology.vertices)
+      )
+    ) {
+      modifiers.push('inner');
+    }
+
+    if (isVertexOnSelectedElement(position, selection, topology, sceneLines)) {
+      modifiers.push('selected');
+    }
+
+    const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', modifiers);
+    const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', ['hidden', ...modifiers]);
+
+    markers.push({
+      position,
+      markerType: visibleResolved.markerType === 'circle' ? 1 : 0,
+      visibleStyle: resolvedToMarkerStyle(visibleResolved),
+      hiddenStyle: resolvedToMarkerStyle(hiddenResolved),
+    });
+  }
+
+  return markers;
+}
 
 /**
  * Produces all renderable segments: topology edges + user lines.
@@ -27,13 +173,11 @@ const TOPOLOGY_EDGE_SOURCE_INDEX = -1;
  * - Edge selected → topology edge + all lines passing through both edge vertices
  * - Line selected → all line segments + topology edges collinear with the line
  */
-/** Sentinel source index for the preview line */
-export const PREVIEW_LINE_SOURCE_INDEX = -2;
-
-export function processSegments(
+function processSegments(
   topology: FigureTopology,
   lines: readonly SceneLine[],
   selection: SelectionState,
+  vertexPositions: readonly Vec3[],
   previewLine?: SceneLine
 ): readonly ProcessedSegment[] {
   const selectedLineIndices = findSelectedLineIndices(selection, lines, topology);
@@ -43,7 +187,7 @@ export function processSegments(
   const lineSegments: ProcessedSegment[] = [];
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    const segments = processLine(lines[lineIndex], lineIndex, topology);
+    const segments = processLine(lines[lineIndex], lineIndex, topology, vertexPositions);
     const isSelected = selectedLineIndices.has(lineIndex);
 
     for (const segment of segments) {
@@ -58,7 +202,7 @@ export function processSegments(
 
   // 2. Process preview line (if dragging)
   if (previewLine !== undefined) {
-    const segments = processLine(previewLine, PREVIEW_LINE_SOURCE_INDEX, topology);
+    const segments = processLine(previewLine, PREVIEW_LINE_SOURCE_INDEX, topology, vertexPositions);
 
     for (const segment of segments) {
       if (segment.modifiers.includes('segment')) {
@@ -247,7 +391,8 @@ function buildTopologyEdgeSegments(
 function processLine(
   line: SceneLine,
   lineIndex: number,
-  topology: FigureTopology
+  topology: FigureTopology,
+  vertexPositions: readonly Vec3[]
 ): readonly ProcessedSegment[] {
   const [farStart, farEnd] = extendLine(line.pointA, line.pointB);
   const lineDirection = subtractVec3(farEnd, farStart);
@@ -323,6 +468,22 @@ function processLine(
   for (const interval of segmentIntervals) {
     splitParams.add(interval.start);
     splitParams.add(interval.end);
+  }
+
+  // Split at scene vertex positions that lie on this line (e.g., intersections with other user lines)
+  for (const vertexPosition of vertexPositions) {
+    const vertexParam = projectOntoLine(vertexPosition, farStart, normalizedDirection, lineLength);
+    if (vertexParam > POSITION_EPSILON && vertexParam < 1 - POSITION_EPSILON) {
+      const projectedPosition = paramToPosition(
+        vertexParam,
+        farStart,
+        normalizedDirection,
+        lineLength
+      );
+      if (distanceSquared3(vertexPosition, projectedPosition) < POINT_ON_LINE_EPSILON_SQUARED) {
+        splitParams.add(vertexParam);
+      }
+    }
   }
 
   const sortedParams = [...splitParams].sort((paramA, paramB) => paramA - paramB);
@@ -423,8 +584,6 @@ function isInAnyInterval(
   return false;
 }
 
-// --- Collinear edge detection ---
-
 function findCollinearEdges(
   line: SceneLine,
   topology: FigureTopology,
@@ -463,8 +622,6 @@ function findCollinearEdges(
 
   return collinearEdges;
 }
-
-// --- Face intersection split points (line pierces through faces) ---
 
 /**
  * Returns normalized parameters where the line intersects face triangles.
@@ -506,8 +663,6 @@ function findFaceIntersectionParams(
 
   return parameters;
 }
-
-// --- Coplanar face intervals (line lies on a face) ---
 
 function findCoplanarFaceIntervals(
   farStart: Vec3,
@@ -636,8 +791,6 @@ function clipLineToConvexPolygon(
   return { start: tMin, end: tMax };
 }
 
-// --- Utilities ---
-
 function isDuplicateParameter(parameter: number, existing: readonly number[]): boolean {
   for (const existingParam of existing) {
     if (Math.abs(parameter - existingParam) < POSITION_EPSILON) {
@@ -684,4 +837,97 @@ function mergeIntervals(
   }
 
   return merged;
+}
+
+function isVertexOnSelectedElement(
+  position: Vec3,
+  selection: SelectionState,
+  topology: FigureTopology,
+  sceneLines: readonly SceneLine[]
+): boolean {
+  switch (selection.type) {
+    case 'none':
+      return false;
+    case 'edge': {
+      const [vertexA, vertexB] = topology.edges[selection.edgeIndex];
+      const edgeStart = topology.vertices[vertexA];
+      const edgeEnd = topology.vertices[vertexB];
+
+      if (isPointOnLineSegment(position, edgeStart, edgeEnd)) {
+        return true;
+      }
+
+      for (const line of sceneLines) {
+        if (
+          (positionsMatch(line.pointA, edgeStart) && positionsMatch(line.pointB, edgeEnd)) ||
+          (positionsMatch(line.pointA, edgeEnd) && positionsMatch(line.pointB, edgeStart))
+        ) {
+          return isPointOnInfiniteLine(position, line.pointA, line.pointB);
+        }
+      }
+
+      return false;
+    }
+    case 'line': {
+      const line = sceneLines[selection.lineIndex];
+      return isPointOnInfiniteLine(position, line.pointA, line.pointB);
+    }
+  }
+}
+
+function isPointOnLineSegment(point: Vec3, segmentStart: Vec3, segmentEnd: Vec3): boolean {
+  const segmentDirection = subtractVec3(segmentEnd, segmentStart);
+  const segmentLengthSquared = dot3(segmentDirection, segmentDirection);
+
+  if (segmentLengthSquared < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
+    return distanceSquared3(point, segmentStart) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+  }
+
+  const toPoint = subtractVec3(point, segmentStart);
+  const parameter = dot3(toPoint, segmentDirection) / segmentLengthSquared;
+
+  if (parameter < -0.001 || parameter > 1.001) {
+    return false;
+  }
+
+  const projection: Vec3 = [
+    segmentStart[0] + parameter * segmentDirection[0],
+    segmentStart[1] + parameter * segmentDirection[1],
+    segmentStart[2] + parameter * segmentDirection[2],
+  ];
+
+  return distanceSquared3(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
+}
+
+function isPointOnInfiniteLine(point: Vec3, linePointA: Vec3, linePointB: Vec3): boolean {
+  const lineDirection = subtractVec3(linePointB, linePointA);
+  const lineLengthSquared = dot3(lineDirection, lineDirection);
+
+  if (lineLengthSquared < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
+    return distanceSquared3(point, linePointA) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+  }
+
+  const toPoint = subtractVec3(point, linePointA);
+  const parameter = dot3(toPoint, lineDirection) / lineLengthSquared;
+
+  const projection: Vec3 = [
+    linePointA[0] + parameter * lineDirection[0],
+    linePointA[1] + parameter * lineDirection[1],
+    linePointA[2] + parameter * lineDirection[2],
+  ];
+
+  return distanceSquared3(point, projection) < POINT_ON_LINE_EPSILON_SQUARED;
+}
+
+function positionsMatch(positionA: Vec3, positionB: Vec3): boolean {
+  return distanceSquared3(positionA, positionB) < TOPOLOGY_VERTEX_EPSILON_SQUARED;
+}
+
+function isTopologyVertexPosition(position: Vec3, topologyVertices: readonly Vec3[]): boolean {
+  for (const vertex of topologyVertices) {
+    if (distanceSquared3(position, vertex) < TOPOLOGY_VERTEX_EPSILON_SQUARED) {
+      return true;
+    }
+  }
+  return false;
 }

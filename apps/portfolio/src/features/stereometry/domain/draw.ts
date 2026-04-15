@@ -2,10 +2,11 @@ import { createGpuContext, createMsaaTextureManager, RenderLayerManager } from '
 import type { OrbitalCameraController } from './camera-controller';
 import { createOrbitalCameraController } from './camera-controller';
 import { createClickDetector } from './click-detector';
-import { MSAA_SAMPLE_COUNT, STEREOMETRY_STYLES } from './constants';
+import { MSAA_SAMPLE_COUNT } from './constants';
 import { createDragToConnectController } from './drag-connector';
 import { EFpsLevel, FpsController } from './fps-controller';
 import { preparePuzzle } from './geometry';
+import { processGraphics } from './graphics-processor';
 import { createSceneHistory } from './history';
 import { hitTest, hitTestVertex } from './hit-testing';
 import { SceneLayer } from './layers/scene-layer';
@@ -14,18 +15,7 @@ import { subtractVec3 } from './math';
 import { PENTAGONAL_PYRAMID } from './puzzles/pentagonal-pyramid';
 import { startRenderLoop } from './render-loop';
 import { addLine, createInitialScene, removeLine, toggleLine } from './scene';
-import { processSegments } from './segment-processor';
-import { hexToRgb, resolveStyle } from './styles-processor';
-import type {
-  FigureTopology,
-  LineInstanceStyle,
-  ProcessedSegment,
-  ResolvedElementStyle,
-  SceneLine,
-  SceneState,
-  SelectionState,
-  StyledSegment,
-} from './types';
+import type { FigureTopology, SceneLine, SceneState, SelectionState } from './types';
 import { SELECTION_NONE } from './types';
 
 export interface StereometryControls {
@@ -60,18 +50,11 @@ export function runStereometry(canvas: HTMLCanvasElement): StereometryControls {
     }
   }
 
-  /** Applies processed segments to the scene layer */
+  /** Applies processed graphics (segments + markers) to the scene layer */
   function applyToSceneLayer(state: SceneState): void {
-    const allSegments = processSegments(
-      topology,
-      state.lines,
-      currentSelection,
-      currentPreviewLine
-    );
+    const graphics = processGraphics(topology, state, currentSelection, currentPreviewLine);
 
-    const styledSegments = allSegments.map(segment => toStyledSegment(segment));
-
-    sceneLayerReference?.applySceneState(state, styledSegments, currentSelection);
+    sceneLayerReference?.applySceneState(graphics);
   }
 
   /** Applies a new scene state, saving the previous one to history. */
@@ -329,38 +312,5 @@ async function initStereometry(
       context.device.destroy();
     },
     sceneLayer,
-  };
-}
-
-/**
- * Converts a resolved element style to a GPU-ready LineInstanceStyle.
- */
-function resolvedToInstanceStyle(resolved: ResolvedElementStyle): LineInstanceStyle {
-  const [red, green, blue] = hexToRgb(resolved.color);
-  return {
-    width: resolved.width,
-    color: [red, green, blue],
-    alpha: resolved.alpha,
-    lineType: resolved.line.type === 'dashed' ? 1 : 0,
-    dash: resolved.line.type === 'dashed' ? resolved.line.dash : 0,
-    gap: resolved.line.type === 'dashed' ? resolved.line.gap : 0,
-  };
-}
-
-/**
- * Converts a ProcessedSegment to a StyledSegment by resolving visible and hidden styles
- * from the segment's modifiers (already includes 'selected' if applicable).
- */
-function toStyledSegment(segment: ProcessedSegment): StyledSegment {
-  const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', segment.modifiers);
-  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', ...segment.modifiers]);
-
-  return {
-    startPosition: segment.startPosition,
-    endPosition: segment.endPosition,
-    visibleStyle: resolvedToInstanceStyle(visibleResolved),
-    hiddenStyle: resolvedToInstanceStyle(hiddenResolved),
-    sourceLineIndex: segment.sourceLineIndex,
-    isTopologyEdge: segment.modifiers.includes('segment'),
   };
 }
