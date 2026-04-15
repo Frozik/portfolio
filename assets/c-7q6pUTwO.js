@@ -173,7 +173,7 @@ fn vs(
 
     let endpointPos = select(line.startPos, line.endPos, isEnd);
 
-    var result: Vertetput;
+    var result: VertexOutput;
     // Clamp z to near plane so lines extending towards the camera aren't clipped by the rasterizer
     result.clipPosition = vec4<f32>(clipPos.xy + offsetNdc * clipPos.w, max(clipPos.z, 0.0), clipPos.w);
     result.lineDistance = select(0.0, screenLen, isEnd);
