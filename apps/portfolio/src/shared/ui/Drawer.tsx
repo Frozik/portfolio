@@ -40,7 +40,9 @@ export const Drawer = memo(
         <div
           className={cn(
             // Shared base
-            'fixed z-50 flex flex-col bg-surface-elevated shadow-xl transition-transform duration-200',
+            'fixed z-50 flex flex-col bg-surface-elevated shadow-xl',
+            open && 'transition-transform duration-200',
+            !open && 'invisible',
             // Mobile: bottom sheet, 50% height
             'inset-x-0 bottom-0 h-1/2 rounded-t-2xl',
             open ? 'translate-y-0' : 'translate-y-full',

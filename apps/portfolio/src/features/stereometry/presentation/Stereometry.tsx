@@ -75,7 +75,7 @@ export const Stereometry = memo(() => {
             {fps} FPS
           </div>
         )}
-        <div className="absolute bottom-4 right-4 flex gap-2">
+        <div className="fixed right-4 bottom-4 flex gap-2">
           <HelpPopover />
           <ToolbarButton onClick={handleUndo} label={stereometryT.toolbar.undo} disabled={!canUndo}>
             <Undo2 size={TOOLBAR_ICON_SIZE} />
