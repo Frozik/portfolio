@@ -5,9 +5,9 @@ import { useResizeObserver } from 'usehooks-ts';
 import { cn } from '../../../../shared/lib/cn';
 import { puzzleSolved } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
+import { FIELD_CONTROLS_MARGIN_PX, FIELD_GAP_PX, FIELD_GROUP_GAP_PX } from '../layout-constants';
 import { FieldControls } from './FieldControls';
 import { FieldGroups } from './FieldGroups';
-import styles from './styles.module.scss';
 
 const CONTROL_LINES = 2;
 
@@ -38,12 +38,9 @@ export function SudokuField({
     box: 'border-box',
   });
 
-  const cellGap = Number.parseInt(styles.varFieldGroupGap, 10);
-  const groupGap = Number.parseInt(styles.varFieldGap, 10);
-  const fieldControlsMargin = Number.parseInt(styles.varFieldControlsMargin, 10);
-
-  const totalGap = (field.size - 1) * field.size * cellGap + (field.size + 1) * groupGap;
-  const controlsGap = fieldControlsMargin + (CONTROL_LINES + 1) * groupGap;
+  const totalGap =
+    (field.size - 1) * field.size * FIELD_GROUP_GAP_PX + (field.size + 1) * FIELD_GAP_PX;
+  const controlsGap = FIELD_CONTROLS_MARGIN_PX + (CONTROL_LINES + 1) * FIELD_GAP_PX;
 
   const cellWidth = width - totalGap;
   const cellHeight = height - totalGap - controlsGap;
@@ -51,7 +48,7 @@ export function SudokuField({
   const cellSize = Math.floor(
     Math.min(cellWidth / field.size ** 2, cellHeight / (field.size ** 2 + CONTROL_LINES))
   );
-  const groupSize = cellSize * field.size + (field.size - 1) * cellGap;
+  const groupSize = cellSize * field.size + (field.size - 1) * FIELD_GROUP_GAP_PX;
   const size = cellSize * field.size ** 2 + totalGap;
 
   const fieldGridStyle = useMemo(
@@ -84,9 +81,12 @@ export function SudokuField({
   const completed = puzzleSolved(field);
 
   return (
-    <div ref={ref} className={styles.fieldContainer}>
+    <div ref={ref} className="flex size-full flex-col items-center justify-center">
       <div
-        className={cn(styles.field, { [styles.fieldCompleted]: completed })}
+        className={cn(
+          'inline-grid select-none gap-1 overflow-hidden bg-neutral-900 p-1',
+          completed && 'bg-green-400/50'
+        )}
         style={fieldGridStyle}
         onMouseOut={handleOutCell}
       >

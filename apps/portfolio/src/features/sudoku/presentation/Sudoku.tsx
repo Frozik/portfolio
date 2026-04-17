@@ -8,18 +8,18 @@ import { getSudoku } from 'sudoku-gen';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { cn } from '../../../shared/lib/cn';
 import commonStyles from '../../../shared/styles.module.scss';
-import { RadioGroup } from '../../../shared/ui';
 import { useSudokuStore } from '../application/useSudokuStore';
 import type { TTool } from '../domain/types';
+import type { DifficultyOption, SudokuDifficulty } from './components/DifficultyPicker';
+import { DifficultyPicker } from './components/DifficultyPicker';
 import { SudokuField } from './components/SudokuField';
-import styles from './Sudoku.module.scss';
 import { sudokuT } from './translations';
 
-const DIFFICULTY_OPTIONS = [
-  { label: sudokuT.difficulty.easy, value: 'easy' },
-  { label: sudokuT.difficulty.medium, value: 'medium' },
-  { label: sudokuT.difficulty.hard, value: 'hard' },
-  { label: sudokuT.difficulty.expert, value: 'expert' },
+const DIFFICULTY_OPTIONS: readonly DifficultyOption[] = [
+  { value: 'easy', label: sudokuT.difficulty.easy, level: 1 },
+  { value: 'medium', label: sudokuT.difficulty.medium, level: 2 },
+  { value: 'hard', label: sudokuT.difficulty.hard, level: 3 },
+  { value: 'expert', label: sudokuT.difficulty.expert, level: 4 },
 ];
 
 export const Sudoku = observer(() => {
@@ -44,11 +44,8 @@ export const Sudoku = observer(() => {
 
   const handleMarkField = useFunction(() => store.markField());
 
-  const handleSelectPuzzleDifficulty = useFunction((value: string) => {
-    const puzzle = getSudoku(value as 'easy' | 'medium' | 'hard' | 'expert').puzzle.replace(
-      /-/g,
-      '0'
-    );
+  const handleSelectPuzzleDifficulty = useFunction((value: SudokuDifficulty) => {
+    const puzzle = getSudoku(value).puzzle.replace(/-/g, '0');
 
     navigate(`/sudoku/${puzzle}`);
   });
@@ -60,7 +57,12 @@ export const Sudoku = observer(() => {
   const handleRestartPuzzle = useFunction(() => store.restartPuzzle());
 
   return (
-    <div className={cn(styles.container, commonStyles.fixedContainer)}>
+    <div
+      className={cn(
+        'mx-auto flex min-h-0 select-none flex-col items-center justify-center max-[840px]:p-0',
+        commonStyles.fixedContainer
+      )}
+    >
       {matchValueDescriptor(store.field, {
         synced: ({ value: field }) => (
           <SudokuField
@@ -79,11 +81,9 @@ export const Sudoku = observer(() => {
           isFailValueDescriptor(vd) ? (
             <ValueDescriptorFail fail={vd.fail} />
           ) : (
-            <RadioGroup
+            <DifficultyPicker
               options={DIFFICULTY_OPTIONS}
-              value=""
-              onChange={handleSelectPuzzleDifficulty}
-              optionType="button"
+              onSelect={handleSelectPuzzleDifficulty}
             />
           ),
       })}

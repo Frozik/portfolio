@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react';
 import { getPairs } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
 import { FieldCell } from './FieldCell';
-import styles from './styles.module.scss';
 
 export function FieldGroups({
   field,
@@ -24,7 +23,7 @@ export function FieldGroups({
   return getPairs(field.size).map(([groupRow, groupColumn]) => (
     <div
       key={`${groupRow}:${groupColumn}`}
-      className={styles.fieldGroup}
+      className="grid gap-px"
       style={{
         ...groupGridStyle,
         gridColumn: groupColumn + 1,

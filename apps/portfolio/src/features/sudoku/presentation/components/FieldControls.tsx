@@ -6,12 +6,20 @@ import { cn } from '../../../../shared/lib/cn';
 import { getIndexesArray, getPairs, getUsedNumbers, hasMarks } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
 import { EToolType } from '../../domain/types';
-import styles from './styles.module.scss';
 
 const ICON_SCALE = 0.6;
 const FONT_SCALE = 0.8;
 const NOTE_ICON_SCALE = 0.8;
 const THIRD_DIVISOR = 3;
+
+const CONTROL_ITEM_BASE_CLASS =
+  'relative flex items-center justify-center bg-neutral-500 text-black hover:shadow-[1px_1px_1px_#f5f5f5,-1px_-1px_1px_#f5f5f5]';
+
+const CONTROL_ITEM_SELECTED_CLASS = 'bg-neutral-300';
+
+/** Pseudo-element showing how many times this number is already placed on the field. */
+const USAGE_BADGE_CLASS =
+  'after:absolute after:right-0.5 after:top-0.5 after:text-[40%] after:content-[attr(data-used)] after:[text-shadow:0_0_5px_#fff,0_0_10px_#fff]';
 
 export function FieldControls({
   field,
@@ -70,14 +78,14 @@ export function FieldControls({
   const marksSelected = hasMarks(field);
 
   return (
-    <div className={styles.controls}>
+    <div className="mt-2.5 inline-grid select-none gap-1 overflow-hidden bg-neutral-900 p-1">
       {getIndexesArray(field.size).map(index => {
         const offset = index * field.size;
 
         return (
           <div
             key={index}
-            className={styles.fieldGroup}
+            className="grid gap-px"
             style={{
               gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
               gridColumn: index + 1,
@@ -90,9 +98,11 @@ export function FieldControls({
               return (
                 <div
                   key={index}
-                  className={cn(styles.controlItem, {
-                    [styles.controlItemSelected]: toolValue === tool.value,
-                  })}
+                  className={cn(
+                    CONTROL_ITEM_BASE_CLASS,
+                    USAGE_BADGE_CLASS,
+                    toolValue === tool.value && CONTROL_ITEM_SELECTED_CLASS
+                  )}
                   style={baseStyle}
                   data-value={toolValue}
                   data-used={usedNumbersMap.get(toolValue) ?? 0}
@@ -107,7 +117,7 @@ export function FieldControls({
       })}
 
       <div
-        className={styles.fieldGroup}
+        className="grid gap-px"
         style={{
           ...baseStyle,
           gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
@@ -116,7 +126,7 @@ export function FieldControls({
         }}
       >
         <div
-          className={styles.controlItem}
+          className={CONTROL_ITEM_BASE_CLASS}
           style={{
             ...baseStyle,
             gridColumn: 1,
@@ -129,7 +139,7 @@ export function FieldControls({
         {hasHistory && (
           <>
             <div
-              className={styles.controlItem}
+              className={CONTROL_ITEM_BASE_CLASS}
               style={{
                 ...baseStyle,
                 gridColumn: 2,
@@ -139,7 +149,7 @@ export function FieldControls({
               <Trash2 size={Math.trunc(cellSize * ICON_SCALE)} />
             </div>
             <div
-              className={styles.controlItem}
+              className={CONTROL_ITEM_BASE_CLASS}
               style={{
                 ...baseStyle,
                 gridColumn: 3,
@@ -153,7 +163,7 @@ export function FieldControls({
       </div>
 
       <div
-        className={styles.fieldGroup}
+        className="grid gap-px"
         style={{
           ...baseStyle,
           gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
@@ -162,9 +172,10 @@ export function FieldControls({
         }}
       >
         <div
-          className={cn(styles.controlItem, {
-            [styles.controlItemSelected]: toolType === EToolType.Pen,
-          })}
+          className={cn(
+            CONTROL_ITEM_BASE_CLASS,
+            toolType === EToolType.Pen && CONTROL_ITEM_SELECTED_CLASS
+          )}
           style={{
             width: cellSize,
             height: cellSize,
@@ -180,9 +191,11 @@ export function FieldControls({
         </div>
 
         <div
-          className={cn(styles.controlItem, styles.controlItemNotes, {
-            [styles.controlItemSelected]: marksSelected,
-          })}
+          className={cn(
+            CONTROL_ITEM_BASE_CLASS,
+            'grid place-items-center',
+            marksSelected && CONTROL_ITEM_SELECTED_CLASS
+          )}
           style={{
             fontSize: `${thirdCellSize}px`,
             gridTemplateColumns: `repeat(${field.size}, ${thirdCellSize}px)`,
