@@ -1,6 +1,5 @@
 import type { RenderLayerManager } from '@frozik/utils';
-
-import { MS_PER_SECOND } from './chart-constants';
+import { MS_PER_SECOND } from '@frozik/utils';
 import type { FrameState, GpuContext } from './types';
 
 export interface RenderLoopOptions {

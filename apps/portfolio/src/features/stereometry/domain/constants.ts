@@ -1,4 +1,11 @@
-import type { PartialElementStyle } from './types';
+import type { PartialElementStyle } from './render-types';
+
+// --- FPS levels ---
+
+export const FPS_IDLE = 1;
+export const FPS_RESIZE = 60;
+export const FPS_INTERACTION = 60;
+export const FPS_ANIMATION = 60;
 
 // --- Camera ---
 
@@ -40,23 +47,17 @@ export const EDGE_HIT_RADIUS_PIXELS = 30;
 // --- Geometry / math ---
 
 /** How far to extend a line beyond the edge endpoints (in world units) */
-export const LINE_EXTENSION_LENGTH = 1000;
+export const LINE_EXTENSION_LENGTH = 20;
 /** Max 3D distance between two lines to consider them intersecting */
 export const LINE_INTERSECTION_MAX_DISTANCE = 0.01;
+/** Sentinel value indicating a line endpoint is not connected to any scene vertex */
+export const NO_CONNECTED_VERTEX_INDEX = -1;
 export const VERTICES_PER_TRIANGLE = 3;
 /** Floats per face vertex: position only (vec3) */
 export const FACE_POSITION_FLOATS = 3;
-/**
- * Depth bias applied to face geometry so that edges at the same 3D position
- * win the depth test against the face behind them (prevents z-fighting).
- */
-export const FACE_DEPTH_BIAS = 2;
-export const FACE_DEPTH_BIAS_SLOPE_SCALE = 1.0;
-
 // --- GPU pipeline / rendering ---
 
 export const MSAA_SAMPLE_COUNT = 4;
-export const MS_PER_SECOND = 1000;
 /** Homogeneous w-component for position vectors in clip-space transforms */
 export const HOMOGENEOUS_W = 1.0;
 /** Number of vertices per line quad (2 triangles = 6 vertices) */
@@ -101,6 +102,25 @@ export const STEREOMETRY_STYLES = {
   'line:inner': {
     width: 3.0,
   },
+  'line:input': {
+    color: '#FF8973',
+    width: 3.0,
+    alpha: 1,
+  },
+  'line:input:selected': {
+    color: '#A61A00',
+  },
+  'line:segment:input': {
+    color: '#FF8973',
+    width: 3.0,
+    alpha: 1,
+  },
+  'line:segment:input:selected': {
+    color: '#A61A00',
+  },
+  'line:solution': {
+    color: '#EFBF04',
+  },
 
   vertex: {
     markerType: 'circle',
@@ -123,6 +143,7 @@ export const STEREOMETRY_STYLES = {
     color: '#AAAAAA',
   },
   'vertex:inner:hidden': {
+    strokeColor: '#77CC22',
     color: '#000000',
   },
   'vertex:preview': {
@@ -130,6 +151,34 @@ export const STEREOMETRY_STYLES = {
     strokeColor: '#4488BB',
     strokeWidth: 6,
     size: 16,
+  },
+  'vertex:input': {
+    markerType: 'solid',
+    color: '#FF8973',
+    size: 10,
+  },
+  'vertex:input:hidden': {
+    markerType: 'solid',
+    color: '#FF8973',
+    size: 10,
+  },
+  'vertex:input:selected': {
+    markerType: 'solid',
+    color: '#A61A00',
+    size: 10,
+  },
+  'vertex:solution': {
+    markerType: 'solid',
+    color: '#EFBF04',
+  },
+  'vertex:solution:hidden': {
+    markerType: 'solid',
+    color: '#EFBF04',
+  },
+
+  'face:solution': {
+    color: '#EFBF04',
+    alpha: 0.1,
   },
 
   background: {

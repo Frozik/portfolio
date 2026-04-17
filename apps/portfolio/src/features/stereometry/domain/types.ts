@@ -1,13 +1,10 @@
-export type SelectionState =
-  | { readonly type: 'none' }
-  | { readonly type: 'edge'; readonly edgeIndex: number }
-  | { readonly type: 'line'; readonly lineIndex: number };
+import type { FigureTopology, Vec3Array } from './topology-types';
 
 /**
  * A closed 3D solid defined by its vertices and faces.
  * Edges are derived automatically from adjacent face vertices.
  *
- * Example — a tetrahedron:
+ * Example -- a tetrahedron:
  * ```
  * { vertices: [[0,0,0], [1,0,0], [0.5,1,0], [0.5,0.5,1]],
  *   faces: [[0,1,2], [0,1,3], [1,2,3], [0,2,3]] }
@@ -15,7 +12,7 @@ export type SelectionState =
  */
 export interface PuzzleFigure {
   /** Vertex positions in 3D space [x, y, z] */
-  readonly vertices: readonly (readonly [number, number, number])[];
+  readonly vertices: readonly Vec3Array[];
   /**
    * Each face is an array of vertex indices (into `vertices`) defining a planar polygon.
    * Vertex order determines the outward-facing normal (counter-clockwise winding).
@@ -27,13 +24,13 @@ export interface PuzzleFigure {
  * Input data shown to the user at the start of the puzzle.
  * Defines the geometric scene the user will work with.
  *
- * Example — "find the cross-section of a pyramid by a plane through 3 points":
+ * Example -- "find the cross-section of a pyramid by a plane through 3 points":
  * ```
  * { figures: [pyramidFigure],
  *   vertices: [[0.5, 0, 0.5], [0, -0.75, 0.5], [0.5, -0.75, -0.5]] }
  * ```
  *
- * Example — "find the cross-section by a plane through a point and a line":
+ * Example -- "find the cross-section by a plane through a point and a line":
  * ```
  * { figures: [pyramidFigure],
  *   vertices: [[0.5, 0, 0.5]],
@@ -47,22 +44,24 @@ export interface PuzzleInput {
    * Additional standalone points displayed in the scene.
    * Used as given points for construction tasks (e.g., "plane through 3 points").
    */
-  readonly vertices?: readonly (readonly [number, number, number])[];
+  readonly vertices?: readonly Vec3Array[];
   /**
    * Additional lines displayed in the scene, each defined by two 3D points.
    * Used as given lines for construction tasks (e.g., "plane through a point and a line").
    */
-  readonly lines?: readonly (readonly [
-    readonly [number, number, number],
-    readonly [number, number, number],
-  ])[];
+  readonly lines?: readonly (readonly [Vec3Array, Vec3Array])[];
+  /**
+   * Finite line segments displayed in the scene (not extended to infinity).
+   * Rendered with the 'segment' modifier (thicker styling like topology edges).
+   */
+  readonly segments?: readonly (readonly [Vec3Array, Vec3Array])[];
 }
 
 /**
  * The correct answer the user must construct to solve the puzzle.
  * The solver verifies the user's constructions against these values.
  *
- * Example — cross-section result (a triangle):
+ * Example -- cross-section result (a triangle):
  * ```
  * { lines: [
  *     [[0.5, 0, 0.5], [0, -0.75, 0.5]],
@@ -74,24 +73,16 @@ export interface PuzzleInput {
  */
 export interface PuzzleExpectedResult {
   /** Points that must be constructed (e.g., intersection points) */
-  readonly vertices?: readonly (readonly [number, number, number])[];
+  readonly vertices?: readonly Vec3Array[];
   /** Line segments that must be constructed (e.g., cross-section edges) */
-  readonly lines?: readonly (readonly [
-    readonly [number, number, number],
-    readonly [number, number, number],
-  ])[];
+  readonly lines?: readonly (readonly [Vec3Array, Vec3Array])[];
+  /**
+   * Planar polygons that must be identified (e.g., the cross-section polygon).
+   * Each face is an ordered list of coplanar 3D points defining the polygon boundary.
+   */
+  readonly faces?: readonly (readonly Vec3Array[])[];
 }
 
-/**
- * Complete puzzle definition — pure data, no computation.
- *
- * A puzzle consists of:
- * - `name` — display title
- * - `input` — the geometric scene and given elements shown to the user
- * - `expected` — the correct construction the user must produce
- *
- * Edges of figures are derived from faces by `preparePuzzle()`.
- */
 /** Camera viewing angles */
 export interface PuzzleCameraAngle {
   /** Elevation angle in radians (angle from horizontal) */
@@ -112,8 +103,8 @@ export type CameraProjection = 'perspective' | 'orthographic';
 
 /** Camera configuration for a puzzle. All fields fall back to global defaults if omitted. */
 export interface PuzzleCamera {
-  /** Camera target point — the scene is centered on this position */
-  readonly center?: readonly [number, number, number];
+  /** Camera target point -- the scene is centered on this position */
+  readonly center?: Vec3Array;
   /** Projection type. Defaults to 'perspective'. */
   readonly projection?: CameraProjection;
   /** Initial viewing angles */
@@ -123,140 +114,21 @@ export interface PuzzleCamera {
 }
 
 export interface PuzzleDefinition {
-  /** Display title of the puzzle */
-  readonly name: string;
+  /** Unique puzzle identifier, used as translation key and for persistence */
+  readonly id: string;
   /** Geometric scene and given elements shown to the user */
   readonly input: PuzzleInput;
-  /** Correct answer — constructions the user must produce to solve the puzzle */
+  /** Correct answer -- constructions the user must produce to solve the puzzle */
   readonly expected: PuzzleExpectedResult;
   /** Camera configuration. Falls back to global defaults if omitted. */
   readonly camera?: PuzzleCamera;
+  /** URL of an image illustrating the solution (imported via Vite). */
+  readonly solutionImage?: string;
 }
 
-/** Result of preparePuzzle — everything the renderer and scene need */
+/** Result of preparePuzzle -- everything the renderer and scene need */
 export interface PreparedPuzzle {
-  readonly name: string;
   readonly topology: FigureTopology;
 }
 
-/**
- * Computed topology derived from a PuzzleDefinition.
- * Includes precomputed data needed for rendering, hit testing, and intersection detection.
- */
-export interface FigureTopology {
-  readonly vertices: readonly (readonly [number, number, number])[];
-  readonly edges: readonly [number, number][];
-  readonly faces: readonly (readonly number[])[];
-  /** Triangulated faces for ray intersection testing (all figures merged) */
-  readonly faceTriangles: readonly [number, number, number][];
-  /** Triangulated faces grouped per figure (for per-figure inside/outside testing) */
-  readonly figureFaceTriangles: readonly (readonly [number, number, number][])[];
-}
-
-export interface VertexEntity {
-  readonly position: readonly [number, number, number];
-  /** Index in the topology vertices array, or undefined for computed vertices */
-  readonly topologyIndex: number | undefined;
-}
-
-export interface IntersectionEntity {
-  readonly position: readonly [number, number, number];
-}
-
-/** A line in the scene defined by two points */
-export interface SceneLine {
-  readonly pointA: readonly [number, number, number];
-  readonly pointB: readonly [number, number, number];
-}
-
-/** A renderable line piece output by the segment processor */
-export interface ProcessedSegment {
-  readonly startPosition: readonly [number, number, number];
-  readonly endPosition: readonly [number, number, number];
-  /** Style modifiers for this segment (e.g., 'segment', 'inner', 'selected') */
-  readonly modifiers: readonly string[];
-  readonly sourceLineIndex: number;
-}
-
-/** Per-instance line style for GPU rendering */
-export interface LineInstanceStyle {
-  readonly width: number;
-  readonly color: readonly [number, number, number];
-  readonly alpha: number;
-  readonly lineType: number;
-  readonly dash: number;
-  readonly gap: number;
-}
-
-/** A fully styled segment ready for GPU upload — one per instance in the line buffer */
-export interface StyledSegment {
-  readonly startPosition: readonly [number, number, number];
-  readonly endPosition: readonly [number, number, number];
-  readonly visibleStyle: LineInstanceStyle;
-  readonly hiddenStyle: LineInstanceStyle;
-  readonly sourceLineIndex: number;
-  /** True for topology edge segments — rendered with depth texture sampling */
-  readonly isTopologyEdge: boolean;
-}
-
-/** Per-marker style for a single visibility pass */
-export interface MarkerInstanceStyle {
-  readonly size: number;
-  readonly color: readonly [number, number, number];
-  readonly alpha: number;
-  readonly strokeColor: readonly [number, number, number];
-  readonly strokeWidth: number;
-}
-
-/** A fully styled vertex marker ready for GPU upload — carries both visible and hidden styles */
-export interface StyledMarker {
-  readonly position: readonly [number, number, number];
-  /** 0 = solid (filled circle), 1 = circle (stroke + fill) */
-  readonly markerType: number;
-  readonly visibleStyle: MarkerInstanceStyle;
-  readonly hiddenStyle: MarkerInstanceStyle;
-}
-
-export interface SceneState {
-  readonly vertices: readonly VertexEntity[];
-  readonly lines: readonly SceneLine[];
-  readonly intersections: readonly IntersectionEntity[];
-}
-
-export const SELECTION_NONE: SelectionState = { type: 'none' };
-
 export type CameraInteractionMode = 'rotate' | 'pan';
-
-export type LineStyle =
-  | { readonly type: 'solid' }
-  | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
-
-/** Partial style — each entry overrides only the fields it defines */
-export type MarkerType = 'solid' | 'circle';
-
-/** Partial style — each entry overrides only the fields it defines */
-export type PartialElementStyle = {
-  readonly color?: string;
-  readonly width?: number;
-  readonly size?: number;
-  readonly alpha?: number;
-  readonly line?: LineStyle;
-  readonly markerType?: MarkerType;
-  readonly strokeColor?: string;
-  readonly strokeWidth?: number;
-};
-
-/** Resolved style — all fields populated after cascade resolution */
-export type ResolvedElementStyle = {
-  readonly color: string;
-  readonly width: number;
-  readonly size: number;
-  readonly alpha: number;
-  readonly line: LineStyle;
-  readonly markerType: MarkerType;
-  readonly strokeColor: string;
-  readonly strokeWidth: number;
-};
-
-/** GPU-ready RGB float triple (0..1 range) */
-export type RgbFloat = readonly [number, number, number];

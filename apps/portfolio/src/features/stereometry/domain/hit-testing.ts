@@ -2,14 +2,14 @@ import { isNil } from 'lodash-es';
 import { vec4 } from 'wgpu-matrix';
 
 import { EDGE_HIT_RADIUS_PIXELS, HOMOGENEOUS_W, VERTEX_HIT_RADIUS_PIXELS } from './constants';
-import type { Vec3 } from './math';
 import { extendLine } from './math';
-import type { SceneLine, SelectionState } from './types';
-import { SELECTION_NONE } from './types';
+import type { SelectionState, TopologyLine, Vec3Array } from './topology-types';
+import { SELECTION_NONE } from './topology-types';
 
 /**
- * Performs CPU hit testing against edges and lines.
- * Priority: edges > lines.
+ * Performs CPU hit testing against scene lines and segments.
+ * Topology edges are non-interactive (purely visual boundaries).
+ * Returns a SelectionState with lineId (not lineIndex).
  */
 export function hitTest(
   screenX: number,
@@ -18,9 +18,7 @@ export function hitTest(
   canvasHeight: number,
   devicePixelRatio: number,
   mvpMatrix: Float32Array,
-  topologyEdges: readonly [number, number][],
-  topologyVertices: readonly Vec3[],
-  lines: readonly SceneLine[]
+  lines: readonly TopologyLine[]
 ): SelectionState {
   const gpuCanvasWidth = canvasWidth * devicePixelRatio;
   const gpuCanvasHeight = canvasHeight * devicePixelRatio;
@@ -28,43 +26,19 @@ export function hitTest(
   const pixelY = screenY * devicePixelRatio;
   const thresholdSquared = (EDGE_HIT_RADIUS_PIXELS * devicePixelRatio) ** 2;
 
-  const projectedVertices = projectVerticesToScreen(
-    mvpMatrix,
-    topologyVertices,
-    gpuCanvasWidth,
-    gpuCanvasHeight
-  );
-
-  // 1. Check topology edge segments
-  const edgeSegments = topologyEdges.map(([indexA, indexB]) => ({
-    start: projectedVertices[indexA],
-    end: projectedVertices[indexB],
-  }));
-
-  const edgeHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, edgeSegments);
-
-  if (!isNil(edgeHit)) {
-    return { type: 'edge', edgeIndex: edgeHit };
-  }
-
-  // 2. Check lines (extended)
   if (lines.length > 0) {
-    const lineSegments = lines.map(line => ({
-      startPosition: line.pointA,
-      endPosition: line.pointB,
-    }));
+    const projectedLines = lines.map(line => {
+      const isFiniteSegment = line.kind === 'edge' || line.kind === 'segment';
+      const [start, end] = isFiniteSegment
+        ? [line.pointA, line.pointB]
+        : extendLine(line.pointA, line.pointB);
+      return projectSegmentToScreen(mvpMatrix, start, end, gpuCanvasWidth, gpuCanvasHeight);
+    });
 
-    const extendedProjected = projectExtendedLineSegments(
-      mvpMatrix,
-      lineSegments,
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
-
-    const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, extendedProjected);
+    const lineHit = findNearestSegmentHit(pixelX, pixelY, thresholdSquared, projectedLines);
 
     if (!isNil(lineHit)) {
-      return { type: 'line', lineIndex: lineHit };
+      return { type: 'line', lineId: lines[lineHit].lineId };
     }
   }
 
@@ -82,7 +56,7 @@ export function hitTestVertex(
   canvasHeight: number,
   devicePixelRatio: number,
   mvpMatrix: Float32Array,
-  vertices: readonly Vec3[]
+  vertices: readonly Vec3Array[]
 ): number | undefined {
   const gpuCanvasWidth = canvasWidth * devicePixelRatio;
   const gpuCanvasHeight = canvasHeight * devicePixelRatio;
@@ -110,17 +84,12 @@ interface ProjectedSegment {
   readonly end: ProjectedVertex;
 }
 
-interface ExtendableLineSegment {
-  readonly startPosition: Vec3;
-  readonly endPosition: Vec3;
-}
-
 /** Minimum w for near-plane clipping (matches NEAR_CLIP_W in common.wgsl) */
 const NEAR_CLIP_W = 0.01;
 
 function projectVerticesToScreen(
   mvpMatrix: Float32Array,
-  vertices: readonly Vec3[],
+  vertices: readonly Vec3Array[],
   gpuCanvasWidth: number,
   gpuCanvasHeight: number
 ): ProjectedVertex[] {
@@ -152,8 +121,8 @@ function projectVerticesToScreen(
  */
 function projectSegmentToScreen(
   mvpMatrix: Float32Array,
-  pointA: Vec3,
-  pointB: Vec3,
+  pointA: Vec3Array,
+  pointB: Vec3Array,
   gpuCanvasWidth: number,
   gpuCanvasHeight: number
 ): ProjectedSegment {
@@ -201,18 +170,6 @@ function clipToScreen(
     screenY: (1 - ndcY) * 0.5 * gpuCanvasHeight,
     behindCamera: false,
   };
-}
-
-function projectExtendedLineSegments(
-  mvpMatrix: Float32Array,
-  segments: readonly ExtendableLineSegment[],
-  gpuCanvasWidth: number,
-  gpuCanvasHeight: number
-): ProjectedSegment[] {
-  return segments.map(segment => {
-    const [farStart, farEnd] = extendLine(segment.startPosition, segment.endPosition);
-    return projectSegmentToScreen(mvpMatrix, farStart, farEnd, gpuCanvasWidth, gpuCanvasHeight);
-  });
 }
 
 function findNearestVertexIndex(

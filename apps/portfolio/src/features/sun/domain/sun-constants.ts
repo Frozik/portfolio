@@ -22,5 +22,3 @@ export const FAR_PLANE = 100;
 export const MSAA_SAMPLE_COUNT = 4;
 
 export const VERTICES_PER_TRIANGLE = 3;
-
-export const MS_PER_SECOND = 1000;

@@ -1,26 +1,26 @@
-import type { SceneState } from './types';
+import type { SceneTopology } from './topology-types';
 
 const MAX_HISTORY_SIZE = 100;
 
 export interface SceneHistory {
-  push(state: SceneState): void;
-  undo(currentState: SceneState): SceneState | undefined;
-  redo(currentState: SceneState): SceneState | undefined;
+  push(state: SceneTopology): void;
+  undo(currentState: SceneTopology): SceneTopology | undefined;
+  redo(currentState: SceneTopology): SceneTopology | undefined;
   canUndo(): boolean;
   canRedo(): boolean;
 }
 
 /**
- * Creates an undo/redo history manager for scene states.
+ * Creates an undo/redo history manager for scene topology states.
  * Pushing a new state clears the redo stack.
  * Undo/redo require the current state so it can be saved to the opposite stack.
  */
 export function createSceneHistory(): SceneHistory {
-  const undoStack: SceneState[] = [];
-  const redoStack: SceneState[] = [];
+  const undoStack: SceneTopology[] = [];
+  const redoStack: SceneTopology[] = [];
 
   return {
-    push(state: SceneState): void {
+    push(state: SceneTopology): void {
       undoStack.push(state);
       redoStack.length = 0;
 
@@ -29,7 +29,7 @@ export function createSceneHistory(): SceneHistory {
       }
     },
 
-    undo(currentState: SceneState): SceneState | undefined {
+    undo(currentState: SceneTopology): SceneTopology | undefined {
       const previousState = undoStack.pop();
 
       if (previousState === undefined) {
@@ -40,7 +40,7 @@ export function createSceneHistory(): SceneHistory {
       return previousState;
     },
 
-    redo(currentState: SceneState): SceneState | undefined {
+    redo(currentState: SceneTopology): SceneTopology | undefined {
       const nextState = redoStack.pop();
 
       if (nextState === undefined) {

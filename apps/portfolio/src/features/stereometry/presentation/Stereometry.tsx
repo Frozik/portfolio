@@ -1,7 +1,7 @@
 import { useFunction } from '@frozik/components';
 import { getIsHosted } from '@frozik/utils';
 import * as Popover from '@radix-ui/react-popover';
-import { Info, Move, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
+import { Info, Move, Puzzle, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 
 const IS_HOSTED = getIsHosted();
@@ -11,7 +11,8 @@ import { cn } from '../../../shared/lib/cn';
 import commonStyles from '../../../shared/styles.module.scss';
 import type { StereometryControls } from '../domain/draw';
 import { runStereometry } from '../domain/draw';
-import type { CameraInteractionMode } from '../domain/types';
+import { PUZZLE_1_1 } from '../domain/puzzles/puzzle-1-1';
+import type { CameraInteractionMode, PuzzleDefinition } from '../domain/types';
 import { stereometryT } from './translations';
 
 const TOOLBAR_ICON_SIZE = 20;
@@ -23,11 +24,12 @@ export const Stereometry = memo(() => {
   const [interactionMode, setInteractionMode] = useState<CameraInteractionMode>('rotate');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [puzzle] = useState(PUZZLE_1_1);
   const [fps, setFps] = useState(0);
 
   useEffect(() => {
     if (canvasRef.current) {
-      const controls = runStereometry(canvasRef.current);
+      const controls = runStereometry(canvasRef.current, puzzle);
       controlsRef.current = controls;
 
       const unsubscribeHistory = controls.subscribeHistory((undoAvailable, redoAvailable) => {
@@ -46,7 +48,7 @@ export const Stereometry = memo(() => {
     }
 
     return undefined;
-  }, []);
+  }, [puzzle]);
 
   const handleSetRotateMode = useFunction(() => {
     setInteractionMode('rotate');
@@ -76,6 +78,7 @@ export const Stereometry = memo(() => {
           </div>
         )}
         <div className="fixed right-4 bottom-4 flex gap-2">
+          <PuzzlePopover puzzle={puzzle} />
           <HelpPopover />
           <ToolbarButton onClick={handleUndo} label={stereometryT.toolbar.undo} disabled={!canUndo}>
             <Undo2 size={TOOLBAR_ICON_SIZE} />
@@ -137,6 +140,70 @@ const ToolbarButton = memo(
     </button>
   )
 );
+
+const PuzzlePopover = memo(({ puzzle }: { puzzle: PuzzleDefinition }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const puzzleTranslations: Record<string, { name: string; description: string }> =
+    stereometryT.puzzles;
+  const translation = puzzleTranslations[puzzle.id];
+
+  if (translation === undefined) {
+    return null;
+  }
+
+  return (
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={stereometryT.toolbar.puzzle}
+          className={cn(
+            'flex size-10 items-center justify-center rounded-lg shadow-lg',
+            'transition-all hover:scale-110 active:scale-95',
+            isOpen
+              ? 'bg-blue-500 text-white scale-110'
+              : 'bg-neutral-800 text-neutral-400 hover:text-white'
+          )}
+        >
+          <Puzzle size={TOOLBAR_ICON_SIZE} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          sideOffset={8}
+          align="end"
+          className={cn(
+            'z-50 w-72 rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl',
+            'border border-neutral-700',
+            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+          )}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-semibold text-white">{translation.name}</span>
+            <Popover.Close
+              aria-label={stereometryT.toolbar.close}
+              className="text-neutral-500 hover:text-white transition-colors"
+            >
+              <X size={CLOSE_ICON_SIZE} />
+            </Popover.Close>
+          </div>
+          {puzzle.solutionImage !== undefined && (
+            <img
+              src={puzzle.solutionImage}
+              alt={stereometryT.solutionImageAlt}
+              className="mb-3 w-full rounded-md border border-neutral-700 object-cover"
+            />
+          )}
+          <p className="text-neutral-300">{translation.description}</p>
+          <Popover.Arrow className="fill-neutral-900" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+});
 
 const HelpPopover = memo(() => {
   const [isOpen, setIsOpen] = useState(false);

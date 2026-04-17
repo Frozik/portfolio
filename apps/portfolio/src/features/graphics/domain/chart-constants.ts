@@ -40,8 +40,6 @@ export const SHAPE_OPACITY_MAX = 1.0;
 
 export const OFFSCREEN_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
-export const MS_PER_SECOND = 1000;
-
 export function computeSinXSegmentCount(canvasWidth: number): number {
   return Math.trunc(canvasWidth / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
 }

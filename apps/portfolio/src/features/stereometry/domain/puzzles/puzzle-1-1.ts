@@ -1,7 +1,9 @@
+import puzzle_1_1_image from '../../../../assets/puzzle_1_1.png';
 import type { PuzzleDefinition } from '../types';
 
-export const PENTAGONAL_PYRAMID: PuzzleDefinition = {
-  name: 'Pentagonal Pyramid',
+export const PUZZLE_1_1: PuzzleDefinition = {
+  id: 'puzzle_1_1',
+  solutionImage: puzzle_1_1_image,
   camera: {
     center: [0, -0.25, 0],
     distance: { min: 3, max: 10, initial: 5 },
@@ -9,6 +11,19 @@ export const PENTAGONAL_PYRAMID: PuzzleDefinition = {
     projection: 'perspective',
   },
   input: {
+    vertices: [[0.205725, 0.225, -0.283156]],
+    lines: [
+      [
+        [1.5, -0.75, 1.5],
+        [-1.5, -0.75, 1],
+      ],
+    ],
+    segments: [
+      [
+        [-0.293893, 0, -0.404509],
+        [-0.475529, -0.75, 0.654509],
+      ],
+    ],
     figures: [
       {
         vertices: [
@@ -30,5 +45,15 @@ export const PENTAGONAL_PYRAMID: PuzzleDefinition = {
       },
     ],
   },
-  expected: {},
+  expected: {
+    faces: [
+      [
+        [0.205725, 0.225, -0.283156],
+        [0.506437, -0.048748, 0.164551],
+        [0, -0.624467, 0.916312],
+        [-0.600268, -0.196738, 0.195039],
+        [-0.219674, 0.189403, -0.302355],
+      ],
+    ],
+  },
 };

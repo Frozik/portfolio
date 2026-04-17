@@ -1,13 +1,12 @@
-import { assert, createMsaaTextureManager } from '@frozik/utils';
+import { assert, createMsaaTextureManager, MS_PER_SECOND } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 
 import {
+  FPS_IDLE,
   INITIAL_OFFSCREEN_HEIGHT,
   INITIAL_OFFSCREEN_WIDTH,
-  MS_PER_SECOND,
   MSAA_SAMPLE_COUNT,
 } from './constants';
-import { EFpsLevel } from './fps-controller';
 import candlestickSpecificSource from './shaders/candlestick.wgsl?raw';
 import commonShaderSource from './shaders/common.wgsl?raw';
 import debugLinesSource from './shaders/debug-lines.wgsl?raw';
@@ -241,7 +240,7 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       }
     }
 
-    return minInterval ?? MS_PER_SECOND / EFpsLevel.Idle;
+    return minInterval ?? MS_PER_SECOND / FPS_IDLE;
   }
 
   private startAnimationLoop(): void {
@@ -252,6 +251,10 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     const frame = (now: number): void => {
       if (this.disposed) {
         return;
+      }
+
+      for (const chart of this.charts) {
+        chart.fpsController.tick();
       }
 
       const minInterval = this.getMinFrameIntervalMs();

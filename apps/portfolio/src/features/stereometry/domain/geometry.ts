@@ -1,5 +1,6 @@
 import { FACE_POSITION_FLOATS, VERTICES_PER_TRIANGLE } from './constants';
-import type { FigureTopology, PreparedPuzzle, PuzzleDefinition } from './types';
+import type { FigureTopology, Vec3Array } from './topology-types';
+import type { PreparedPuzzle, PuzzleDefinition } from './types';
 
 export interface FigureWireframe {
   /** Face positions for depth-only rendering (position vec3 per vertex) */
@@ -12,7 +13,7 @@ export interface FigureWireframe {
  * deriving edges from faces, and building the full topology.
  */
 export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
-  const allVertices: [number, number, number][] = [];
+  const allVertices: Vec3Array[] = [];
   const allFaces: (readonly number[])[] = [];
   const perFigureFaces: (readonly number[])[][] = [];
   const edgeSet = new Set<string>();
@@ -51,7 +52,7 @@ export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
 
   const topology = createTopology(allVertices, edges, allFaces, perFigureFaces);
 
-  return { name: puzzle.name, topology };
+  return { topology };
 }
 
 /**
@@ -59,7 +60,7 @@ export function preparePuzzle(puzzle: PuzzleDefinition): PreparedPuzzle {
  * Computes derived data: face-edge mapping, triangulated faces, triangle-to-face index.
  */
 function createTopology(
-  vertices: readonly (readonly [number, number, number])[],
+  vertices: readonly Vec3Array[],
   edges: readonly [number, number][],
   faces: readonly (readonly number[])[],
   perFigureFaces: readonly (readonly (readonly number[])[])[]
@@ -119,11 +120,7 @@ function triangulateFaces(faces: readonly (readonly number[])[]): [number, numbe
   return faceTriangles;
 }
 
-function writePosition(
-  buffer: Float32Array,
-  vertexIndex: number,
-  position: readonly [number, number, number]
-): void {
+function writePosition(buffer: Float32Array, vertexIndex: number, position: Vec3Array): void {
   const offset = vertexIndex * FACE_POSITION_FLOATS;
 
   buffer[offset] = position[0];

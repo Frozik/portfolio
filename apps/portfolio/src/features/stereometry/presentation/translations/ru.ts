@@ -8,8 +8,17 @@ export const stereometryTranslationsRu: TranslationOf<typeof stereometryTranslat
     rotate: 'Вращение',
     pan: 'Перемещение',
     help: 'Справка',
+    puzzle: 'Задача',
     close: 'Закрыть',
   },
+  puzzles: {
+    puzzle_1_1: {
+      name: 'Сечение пятиугольной пирамиды',
+      description:
+        'Постройте сечение пирамиды, проходящее через заданную точку и параллельное двум заданным прямым.',
+    },
+  },
+  solutionImageAlt: 'Изображение ожидаемого решения',
   help: {
     title: 'Стереометрия',
     description:

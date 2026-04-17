@@ -1,5 +1,4 @@
 import { mat4, vec3 } from 'wgpu-matrix';
-
 import {
   INERTIA_DAMPING,
   INERTIA_MIN_VELOCITY,
@@ -14,13 +13,14 @@ import {
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
+import type { Vec3Array } from './topology-types';
 import type { CameraInteractionMode, PuzzleCamera } from './types';
 
 export interface OrbitalCameraController {
   /** Advances camera animation by one frame. Returns true if animation is still active. */
   tick(): boolean;
   getViewMatrix(): Float32Array;
-  getEyePosition(): [number, number, number];
+  getEyePosition(): Vec3Array;
   getDistance(): number;
   setInteractionMode(mode: CameraInteractionMode): void;
   destroy(): void;
@@ -62,7 +62,7 @@ export function createOrbitalCameraController(
   let panVelocityX = 0;
   let panVelocityY = 0;
 
-  function computeEyePosition(): [number, number, number] {
+  function computeEyePosition(): Vec3Array {
     return [
       target[0] + Math.sin(elevation) * Math.sin(azimuth) * distance,
       target[1] + Math.cos(elevation) * distance,
@@ -71,7 +71,7 @@ export function createOrbitalCameraController(
   }
 
   /** Screen-plane up vector derived from azimuth and elevation */
-  function computeUpVector(): [number, number, number] {
+  function computeUpVector(): Vec3Array {
     return [
       -Math.cos(elevation) * Math.sin(azimuth),
       Math.sin(elevation),
@@ -80,7 +80,7 @@ export function createOrbitalCameraController(
   }
 
   /** Screen-plane right vector (always horizontal) */
-  function computeRightVector(): [number, number, number] {
+  function computeRightVector(): Vec3Array {
     return [Math.cos(azimuth), 0, -Math.sin(azimuth)];
   }
 
@@ -259,7 +259,7 @@ export function createOrbitalCameraController(
       ) as Float32Array;
     },
 
-    getEyePosition(): [number, number, number] {
+    getEyePosition(): Vec3Array {
       return computeEyePosition();
     },
 

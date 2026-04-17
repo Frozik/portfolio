@@ -1,22 +1,19 @@
+import type { Vec3Array } from './topology-types';
+
 export interface DragPreviewState {
-  readonly startPosition: readonly [number, number, number];
+  readonly startPosition: Vec3Array;
   readonly cursorScreenX: number;
   readonly cursorScreenY: number;
-  readonly snapTargetPosition: readonly [number, number, number] | undefined;
+  readonly snapTargetPosition: Vec3Array | undefined;
 }
 
 export interface DragToConnectCallbacks {
-  readonly performPointHitTest: (
-    screenX: number,
-    screenY: number
-  ) => readonly [number, number, number] | undefined;
+  readonly performPointHitTest: (screenX: number, screenY: number) => Vec3Array | undefined;
+  readonly hasActiveSelection: () => boolean;
   readonly onDragStart: () => void;
   readonly onDragUpdate: (preview: DragPreviewState | undefined) => void;
-  readonly onVertexTap: (position: readonly [number, number, number]) => void;
-  readonly onDragComplete: (
-    startPosition: readonly [number, number, number],
-    endPosition: readonly [number, number, number]
-  ) => void;
+  readonly onVertexTap: (position: Vec3Array) => void;
+  readonly onDragComplete: (startPosition: Vec3Array, endPosition: Vec3Array) => void;
 }
 
 /**
@@ -35,7 +32,7 @@ export function createDragToConnectController(
 ): VoidFunction {
   let isDragging = false;
   let activePointerId: number | undefined;
-  let startPosition: readonly [number, number, number] = [0, 0, 0];
+  let startPosition: Vec3Array = [0, 0, 0];
 
   function getCanvasRelativeCoords(
     clientX: number,
@@ -48,10 +45,7 @@ export function createDragToConnectController(
     };
   }
 
-  function isSamePosition(
-    positionA: readonly [number, number, number],
-    positionB: readonly [number, number, number]
-  ): boolean {
+  function isSamePosition(positionA: Vec3Array, positionB: Vec3Array): boolean {
     return (
       positionA[0] === positionB[0] &&
       positionA[1] === positionB[1] &&
@@ -65,6 +59,13 @@ export function createDragToConnectController(
 
     if (hitPosition === undefined) {
       return false;
+    }
+
+    // When a line/edge is selected, tapping a vertex immediately creates
+    // a parallel line — no drag preview needed
+    if (callbacks.hasActiveSelection()) {
+      callbacks.onVertexTap(hitPosition);
+      return true;
     }
 
     isDragging = true;

@@ -1,4 +1,4 @@
-import type { PartialElementStyle, ResolvedElementStyle, RgbFloat } from './types';
+import type { PartialElementStyle, ResolvedElementStyle, RgbFloat } from './render-types';
 
 const DEFAULT_ELEMENT_STYLE: ResolvedElementStyle = {
   color: '#FFFFFF',

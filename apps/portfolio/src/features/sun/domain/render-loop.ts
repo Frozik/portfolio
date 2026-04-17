@@ -1,6 +1,5 @@
 import type { FrameState, GpuContext, RenderLayerManager } from '@frozik/utils';
-
-import { MS_PER_SECOND } from './sun-constants';
+import { MS_PER_SECOND } from '@frozik/utils';
 
 export interface RenderLoopOptions {
   readonly canvas: HTMLCanvasElement;

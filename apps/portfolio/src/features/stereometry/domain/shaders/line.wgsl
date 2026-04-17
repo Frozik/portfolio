@@ -34,10 +34,9 @@ struct VertexOutput {
     @location(7) @interpolate(flat) hiddenDash: f32,
     @location(8) @interpolate(flat) hiddenGap: f32,
     @location(9) worldDepth: f32,
-    /** Line center UV for depth sampling (without width offset) */
-    @location(10) @interpolate(linear) lineCenterUV: vec2<f32>,
-    /** Line center NDC depth for occlusion comparison */
-    @location(11) @interpolate(linear) lineCenterDepth: f32,
+    /** Clip-space endpoints for per-fragment spine depth computation */
+    @location(10) @interpolate(flat) clipStart: vec4<f32>,
+    @location(11) @interpolate(flat) clipEnd: vec4<f32>,
 };
 
 @group(0) @binding(1) var faceDepth: texture_depth_2d;
@@ -78,11 +77,6 @@ fn vs(
 
     let endpointPos = select(line.startPos, line.endPos, isEnd);
 
-    // Line center position (without perpendicular width offset)
-    let centerNdcXY = clipPos.xy / clipPos.w;
-    let centerUV = centerNdcXY * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
-    let centerDepth = max(clipPos.z, 0.0) / clipPos.w;
-
     var result: VertexOutput;
     result.clipPosition = vec4<f32>(clipPos.xy + offsetNdc * clipPos.w, max(clipPos.z, 0.0), clipPos.w);
     result.lineDistance = select(0.0, screenLen, isEnd);
@@ -95,18 +89,42 @@ fn vs(
     result.hiddenDash = cssToGpuPixels(line.hiddenDash);
     result.hiddenGap = cssToGpuPixels(line.hiddenGap);
     result.worldDepth = dot(endpointPos - uniforms.cameraTarget, uniforms.cameraForward);
-    result.lineCenterUV = centerUV;
-    result.lineCenterDepth = centerDepth;
+    result.clipStart = clipA;
+    result.clipEnd = clipB;
     return result;
 }
 
 /** Renders a line fragment with occlusion test at the line center */
 @fragment
 fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
-    // Sample face depth at the LINE CENTER, not the fragment position.
-    // This makes the entire line width use one style (visible or hidden).
-    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, input.lineCenterUV, 0);
-    let isOccluded = faceDepthValue < input.lineCenterDepth;
+    // Per-fragment spine-point depth: project fragment onto line spine,
+    // compute UV from screen position and depth from NDC interpolation.
+    let halfVP = uniforms.viewport * 0.5;
+    let screenA = (input.clipStart.xy / input.clipStart.w) * halfVP;
+    let screenB = (input.clipEnd.xy / input.clipEnd.w) * halfVP;
+    // @builtin(position).y increases downward, but NDC Y increases upward — invert Y
+    let fragmentScreen = vec2<f32>(input.clipPosition.x - halfVP.x, halfVP.y - input.clipPosition.y);
+
+    let lineDir = screenB - screenA;
+    let lineLenSq = dot(lineDir, lineDir);
+    let t = select(
+        clamp(dot(fragmentScreen - screenA, lineDir) / lineLenSq, 0.0, 1.0),
+        0.5,
+        lineLenSq < 0.001
+    );
+
+    // UV: derived from screen-space spine position (exact, no perspective error)
+    let spineScreen = screenA + t * lineDir;
+    let spineNdc = spineScreen / halfVP;
+    let spineUV = spineNdc * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
+
+    // Depth: linear interpolation of NDC depths (mathematically correct for screen-space t)
+    let depthA = max(input.clipStart.z, 0.0) / input.clipStart.w;
+    let depthB = max(input.clipEnd.z, 0.0) / input.clipEnd.w;
+    let spineDepth = mix(depthA, depthB, t);
+
+    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spineUV, 0);
+    let isOccluded = faceDepthValue < spineDepth;
 
     // Filter by render mode: discard fragments that don't match the requested visibility
     if (renderMode == 1u && !isOccluded) { discard; }

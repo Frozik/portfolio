@@ -5,8 +5,17 @@ export const stereometryTranslationsEn = {
     rotate: 'Rotate',
     pan: 'Pan',
     help: 'Help',
+    puzzle: 'Puzzle',
     close: 'Close',
   },
+  puzzles: {
+    puzzle_1_1: {
+      name: 'Section of a pentagonal pyramid',
+      description:
+        'Construct a cross-section of the pyramid through the given point, parallel to the two given lines.',
+    },
+  },
+  solutionImageAlt: 'Expected solution illustration',
   help: {
     title: 'Stereometry',
     description:

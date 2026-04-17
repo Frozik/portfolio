@@ -1,6 +1,7 @@
 /**
  * Per-instance marker with visible and hidden styles.
  * GPU depth texture sampling determines which style to use.
+ * Line ID texture sampling determines topology-based occlusion.
  *
  * Layout (24 floats = 96 bytes per instance):
  *   0-2:   position (vec3)
@@ -15,7 +16,8 @@
  *   17:    hiddenAlpha
  *   18-20: hiddenStrokeColor (RGB)
  *   21:    hiddenStrokeWidth
- *   22-23: reserved
+ *   22:    vertexIndex (scene vertex index for line-topology occlusion)
+ *   23:    reserved
  */
 struct MarkerInstance {
     @location(0) position: vec3<f32>,
@@ -30,6 +32,7 @@ struct MarkerInstance {
     @location(9) hiddenAlpha: f32,
     @location(10) hiddenStrokeColor: vec3<f32>,
     @location(11) hiddenStrokeWidth: f32,
+    @location(12) vertexIndex: f32,
 };
 
 struct VertexOutput {
@@ -41,10 +44,13 @@ struct VertexOutput {
     @location(4) @interpolate(flat) strokeWidthNormalized: f32,
     @location(5) @interpolate(flat) isCircleType: f32,
     @location(6) @interpolate(flat) isOccluded: f32,
+    @location(7) @interpolate(flat) vertexIndex: f32,
 };
 
 @group(0) @binding(1) var sceneDepth: texture_depth_2d;
 @group(0) @binding(2) var depthSampler: sampler;
+@group(0) @binding(3) var lineEndpointTexture: texture_2d<f32>;
+@group(0) @binding(4) var lineDepthTexture: texture_depth_2d;
 
 /**
  * Render mode filter (pipeline-overridable constant):
@@ -54,14 +60,18 @@ struct VertexOutput {
  */
 override renderMode: u32 = 0u;
 
-const DEPTH_BIAS: f32 = 0.001;
+/** When 0, skip line-topology occlusion check (used by preview markers) */
+override enableLineOcclusion: u32 = 1u;
+
+/** Threshold for comparing float-encoded vertex indices */
+const VERTEX_INDEX_MATCH_THRESHOLD: f32 = 0.5;
 
 /** Tests if the marker center is occluded by scene geometry in the depth buffer */
 fn isMarkerOccluded(centerClip: vec4<f32>) -> bool {
     let centerNdc = centerClip.xyz / centerClip.w;
     let centerUV = centerNdc.xy * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
     let sceneDepthAtCenter = textureSampleLevel(sceneDepth, depthSampler, centerUV, 0);
-    return sceneDepthAtCenter < (centerNdc.z - DEPTH_BIAS);
+    return sceneDepthAtCenter < centerNdc.z;
 }
 
 /** Expands a marker into a screen-space billboard quad with occlusion-based style */
@@ -102,6 +112,7 @@ fn vs(
     result.strokeWidthNormalized = strokeNormalized;
     result.isCircleType = marker.markerType;
     result.isOccluded = select(0.0, 1.0, isOccluded);
+    result.vertexIndex = marker.vertexIndex;
     return result;
 }
 
@@ -117,6 +128,21 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
     // Filter by render mode: discard fragments that don't match the requested visibility
     if (renderMode == 1u && input.isOccluded < 0.5) { discard; }
     if (renderMode == 2u && input.isOccluded >= 0.5) { discard; }
+
+    // Line-topology occlusion: discard if an unconnected line is in front
+    if (enableLineOcclusion == 1u) {
+        let pixelCoords = vec2<i32>(input.clipPosition.xy);
+        let lineEndpoints = textureLoad(lineEndpointTexture, pixelCoords, 0).rg;
+        let lineDepthValue = textureLoad(lineDepthTexture, pixelCoords, 0);
+        let markerDepth = input.clipPosition.z;
+
+        let lineInFront = lineDepthValue < markerDepth;
+        let startMatches = abs(lineEndpoints.x - input.vertexIndex) < VERTEX_INDEX_MATCH_THRESHOLD;
+        let endMatches = abs(lineEndpoints.y - input.vertexIndex) < VERTEX_INDEX_MATCH_THRESHOLD;
+        let isConnected = startMatches || endMatches;
+
+        if (lineInFront && !isConnected) { discard; }
+    }
 
     // Solid type: filled circle
     if (input.isCircleType < 0.5) {

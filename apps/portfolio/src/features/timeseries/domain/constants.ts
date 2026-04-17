@@ -1,3 +1,10 @@
+// --- FPS levels ---
+
+export const FPS_IDLE = 1;
+export const FPS_RESIZE = 60;
+export const FPS_ZOOM_ANIMATION = 60;
+export const FPS_INTERACTION = 60;
+
 /** Maximum number of data points stored per texture row. */
 export const TEXTURE_WIDTH = 2048;
 
@@ -55,9 +62,6 @@ export const POINTS_PER_SLOT = 256;
 /** Number of 256-point slots that fit in one texture row (2048 / 256). */
 export const SLOTS_PER_ROW = 8;
 
-/** Milliseconds per second. */
-export const MS_PER_SECOND = 1000;
-
 /** Minimum zoom factor per mouse wheel step. */
 export const ZOOM_FACTOR_MIN = 0.7;
 
@@ -66,6 +70,15 @@ export const ZOOM_FACTOR_MAX = 1.3;
 
 /** Minimum allowed time range in seconds (1 minute). */
 export const MIN_TIME_RANGE_SECONDS = 60;
+
+/** Exponential decay factor for pan inertia per frame (0 = instant stop, 1 = no friction). */
+export const PAN_INERTIA_DAMPING = 0.95;
+
+/** Minimum pan velocity in pixels/ms below which inertia stops. */
+export const PAN_INERTIA_MIN_VELOCITY = 0.01;
+
+/** Number of recent pointer moves used to estimate pan velocity. */
+export const PAN_VELOCITY_SAMPLE_COUNT = 5;
 
 /** Interpolation speed for animated zoom (0–1, higher = faster). */
 export const ZOOM_LERP_SPEED = 0.18;

@@ -85,6 +85,7 @@ export interface IPlotArea {
 }
 
 export interface IFpsController {
+  tick(): void;
   getFrameIntervalMs(): number;
   getCurrentFps(): number;
 }

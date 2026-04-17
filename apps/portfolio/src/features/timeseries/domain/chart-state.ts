@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert, FpsController } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 import { BlockDataPipeline } from './block-data-pipeline';
 import { BlockRegistry } from './block-registry';
@@ -15,6 +15,9 @@ import {
   AXIS_MARGIN_LEFT,
   AXIS_MARGIN_RIGHT,
   AXIS_MARGIN_TOP,
+  FPS_IDLE,
+  FPS_RESIZE,
+  FPS_ZOOM_ANIMATION,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
   GRID_LINE_COLOR,
@@ -27,7 +30,6 @@ import {
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from './constants';
-import { EFpsLevel, FpsController } from './fps-controller';
 import { SeriesLayer } from './layers/series-layer';
 import { SeriesLayerManager } from './layers/series-layer-manager';
 import { SlotAllocator } from './slot-allocator';
@@ -204,7 +206,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.seriesManager.initAll(renderer.device, renderer.bindGroupLayout, this.allocator);
     this.seriesManager.updateBindGroups(this.allocator.createView());
 
-    this.fpsController = new FpsController();
+    this.fpsController = new FpsController(FPS_IDLE);
 
     this.inputController = new ChartInputController(
       this.viewport,
@@ -219,7 +221,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasSize();
-      this.fpsController.raise(EFpsLevel.Resize);
+      this.fpsController.raise(FPS_RESIZE);
     });
     this.resizeObserver.observe(targetCanvas);
   }
@@ -253,6 +255,11 @@ export class TimeseriesChartState implements ITimeseriesChart {
   update(): void {
     this.updateCanvasSize();
 
+    // Apply pan inertia (decaying velocity after pointer release)
+    if (this.inputController.applyInertia()) {
+      this.fpsController.raise(FPS_ZOOM_ANIMATION);
+    }
+
     // Animate zoom: lerp current viewport toward target
     const dStart = this.viewport.targetTimeStart - this.viewport.viewTimeStart;
     const dEnd = this.viewport.targetTimeEnd - this.viewport.viewTimeEnd;
@@ -262,7 +269,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     if (Math.abs(dStart) > threshold || Math.abs(dEnd) > threshold) {
       this.viewport.viewTimeStart += dStart * ZOOM_LERP_SPEED;
       this.viewport.viewTimeEnd += dEnd * ZOOM_LERP_SPEED;
-      this.fpsController.raise(EFpsLevel.ZoomAnimation);
+      this.fpsController.raise(FPS_ZOOM_ANIMATION);
     } else {
       this.viewport.viewTimeStart = this.viewport.targetTimeStart;
       this.viewport.viewTimeEnd = this.viewport.targetTimeEnd;
@@ -283,7 +290,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     // Keep FPS high while blocks are loading (for shimmer animation)
     if (this.getLoadingRegions().length > 0) {
-      this.fpsController.raise(EFpsLevel.ZoomAnimation);
+      this.fpsController.raise(FPS_ZOOM_ANIMATION);
     }
 
     // Check if any series has enough points to render

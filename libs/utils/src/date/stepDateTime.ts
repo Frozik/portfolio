@@ -2,7 +2,7 @@ import type { Temporal } from '@js-temporal/polyfill';
 
 import { assertNever } from '../assert';
 
-import { EDateTimeStep } from './types';
+import { EDateTimeStep } from './constants';
 
 function getDuration(step: EDateTimeStep): Temporal.DurationLike {
   switch (step) {

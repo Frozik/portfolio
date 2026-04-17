@@ -1,16 +1,37 @@
-import { ZOOM_FACTOR_MAX, ZOOM_FACTOR_MIN } from './constants';
-import type { FpsController } from './fps-controller';
-import { EFpsLevel } from './fps-controller';
+import type { FpsController } from '@frozik/utils';
+import {
+  FPS_INTERACTION,
+  PAN_INERTIA_DAMPING,
+  PAN_INERTIA_MIN_VELOCITY,
+  PAN_VELOCITY_SAMPLE_COUNT,
+  ZOOM_FACTOR_MAX,
+  ZOOM_FACTOR_MIN,
+} from './constants';
 import type { IChartViewport } from './types';
 import { clampViewport, panViewport, zoomViewport } from './viewport';
+
+interface IVelocitySample {
+  readonly dx: number;
+  readonly timestamp: number;
+}
 
 /**
  * Chart viewport controller using Pointer Events for unified mouse/touch/pen handling.
  * Single-pointer drag pans the viewport, two-pointer pinch zooms, wheel zooms.
+ * Pan has inertia: after releasing the pointer the chart continues scrolling with decay.
  */
 export class ChartInputController {
   private readonly activePointers = new Map<number, { clientX: number; clientY: number }>();
   private lastPinchDistance = 0;
+
+  /** Recent pointer-move deltas used to estimate release velocity. */
+  private readonly velocitySamples: IVelocitySample[] = [];
+
+  /** Current inertia velocity in pixels per millisecond (0 = no inertia). */
+  private inertiaVelocity = 0;
+
+  /** Timestamp of the last inertia tick, used to compute per-frame delta. */
+  private lastInertiaTimestamp = 0;
 
   private readonly handlePointerDown: (event: PointerEvent) => void;
   private readonly handlePointerMove: (event: PointerEvent) => void;
@@ -30,7 +51,11 @@ export class ChartInputController {
         clientX: event.clientX,
         clientY: event.clientY,
       });
-      this.fpsController.raise(EFpsLevel.Interaction);
+      this.fpsController.raise(FPS_INTERACTION);
+
+      // Stop any ongoing inertia when the user grabs the chart again
+      this.inertiaVelocity = 0;
+      this.velocitySamples.length = 0;
 
       if (this.activePointers.size === 1) {
         this.canvas.style.cursor = 'grabbing';
@@ -49,7 +74,7 @@ export class ChartInputController {
         clientX: event.clientX,
         clientY: event.clientY,
       });
-      this.fpsController.raise(EFpsLevel.Interaction);
+      this.fpsController.raise(FPS_INTERACTION);
 
       // Two-pointer pinch zoom
       if (this.activePointers.size === 2) {
@@ -80,6 +105,8 @@ export class ChartInputController {
 
       const dx = event.clientX - previous.clientX;
 
+      this.recordVelocitySample(dx, event.timeStamp);
+
       const [newStart, newEnd] = clampViewport(
         ...panViewport(
           this.viewport.viewTimeStart,
@@ -101,6 +128,7 @@ export class ChartInputController {
 
       if (this.activePointers.size === 0) {
         this.canvas.style.cursor = 'grab';
+        this.startInertia();
       }
     };
 
@@ -131,12 +159,59 @@ export class ChartInputController {
       );
       this.viewport.targetTimeStart = newStart;
       this.viewport.targetTimeEnd = newEnd;
-      this.fpsController.raise(EFpsLevel.Interaction);
+      this.fpsController.raise(FPS_INTERACTION);
     };
   }
 
   get isInteracting(): boolean {
     return this.activePointers.size > 0;
+  }
+
+  /**
+   * Apply pan inertia decay. Must be called every frame from the chart's update loop.
+   * Returns true if inertia is still active (chart should keep rendering).
+   */
+  applyInertia(): boolean {
+    if (Math.abs(this.inertiaVelocity) < PAN_INERTIA_MIN_VELOCITY) {
+      this.inertiaVelocity = 0;
+      return false;
+    }
+
+    const now = performance.now();
+    const deltaMs = now - this.lastInertiaTimestamp;
+    this.lastInertiaTimestamp = now;
+
+    const deltaPixels = this.inertiaVelocity * deltaMs;
+
+    const [newStart, newEnd] = clampViewport(
+      ...panViewport(
+        this.viewport.viewTimeStart,
+        this.viewport.viewTimeEnd,
+        deltaPixels,
+        this.canvas.clientWidth
+      ),
+      this.dataMinTime,
+      this.dataMaxTime
+    );
+
+    // Stop inertia if viewport didn't change (hit data boundary)
+    if (newStart === this.viewport.viewTimeStart && newEnd === this.viewport.viewTimeEnd) {
+      this.inertiaVelocity = 0;
+      return false;
+    }
+
+    // Shift both view and target by the same delta so zoom lerp gap is preserved
+    const deltaStart = newStart - this.viewport.viewTimeStart;
+    const deltaEnd = newEnd - this.viewport.viewTimeEnd;
+
+    this.viewport.viewTimeStart = newStart;
+    this.viewport.viewTimeEnd = newEnd;
+    this.viewport.targetTimeStart += deltaStart;
+    this.viewport.targetTimeEnd += deltaEnd;
+
+    this.inertiaVelocity *= PAN_INERTIA_DAMPING;
+
+    return true;
   }
 
   attach(): void {
@@ -156,6 +231,39 @@ export class ChartInputController {
     this.canvas.removeEventListener('pointercancel', this.handlePointerCancel);
     this.canvas.removeEventListener('pointerleave', this.handlePointerUp);
     this.canvas.removeEventListener('wheel', this.handleWheel);
+  }
+
+  private recordVelocitySample(dx: number, timestamp: number): void {
+    this.velocitySamples.push({ dx, timestamp });
+
+    if (this.velocitySamples.length > PAN_VELOCITY_SAMPLE_COUNT) {
+      this.velocitySamples.shift();
+    }
+  }
+
+  private startInertia(): void {
+    if (this.velocitySamples.length < 2) {
+      this.velocitySamples.length = 0;
+      return;
+    }
+
+    const first = this.velocitySamples[0];
+    const last = this.velocitySamples[this.velocitySamples.length - 1];
+    const totalTime = last.timestamp - first.timestamp;
+
+    if (totalTime <= 0) {
+      this.velocitySamples.length = 0;
+      return;
+    }
+
+    let totalDx = 0;
+    for (const sample of this.velocitySamples) {
+      totalDx += sample.dx;
+    }
+
+    this.inertiaVelocity = totalDx / totalTime;
+    this.lastInertiaTimestamp = performance.now();
+    this.velocitySamples.length = 0;
   }
 
   private getPointerDistance(): number {

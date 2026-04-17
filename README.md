@@ -152,18 +152,31 @@ Build construction lines, find intersection points, and explore cross-sections
 of 3D solids — a digital geometry workbench.
 
 **Rendering architecture:**
-- Unified per-instance styling: each line segment and vertex marker carries its
-  own visible and hidden styles directly in the GPU instance buffer — no
-  per-modifier pipeline proliferation
-- Layered visibility rendering: depth pre-pass (faces) → hidden lines → hidden
-  markers → visible lines → visible markers, using pipeline-overridable
-  `renderMode` constants to filter fragments by occlusion state. Two MSAA render
-  passes with independent depth buffers ensure visible elements always render on
-  top of hidden ones regardless of 3D depth
-- Orthographic projection with 4x MSAA anti-aliasing
+- Topology on GPU: figure faces are triangulated once at init and uploaded into a
+  static vertex buffer (`faceVertexBuffer`). Line segments and vertex markers are
+  packed into dynamic instance buffers with per-instance visible + hidden styles
+  — no per-modifier pipeline proliferation
+- Three-pass rendering with pipeline-overridable `renderMode` constants:
+  1. **Depth pre-pass** (non-MSAA, no color output): renders solid faces into a
+     depth texture with depth bias — serves as the occlusion map for all
+     subsequent passes
+  2. **Hidden pass** (MSAA, fresh depth): line-ID pre-pass → hidden lines →
+     hidden markers — renders only fragments occluded by faces
+  3. **Visible pass** (MSAA, depth cleared, color preserved from hidden pass):
+     line-ID pre-pass → visible lines → visible markers → preview elements —
+     renders only non-occluded fragments on top of the hidden layer
+- Per-fragment spine-point depth: each line fragment projects onto the line's
+  center axis (spine), computes the exact UV and NDC depth at that point via
+  clip-space endpoint interpolation, and samples the face depth texture there —
+  eliminates the interpolation artifacts of quad-based depth at all camera angles
+- Orthographic and perspective projection with 4x MSAA anti-aliasing
 - GPU-based vertex occlusion via depth texture sampling in the vertex shader —
   the marker center is tested against the depth buffer, producing a binary
   visible/hidden decision for the entire marker (no split-half artifacts)
+- Two-layer marker occlusion: face depth test (samples pre-pass texture at
+  marker center) plus line topology check (line-ID pre-pass writes endpoint
+  vertex indices into an `rg32float` texture — markers skip discard when the
+  occluding line is connected to their vertex)
 - Markers render on top of lines within each visibility layer via
   `depthCompare: 'always'` — no depth offset hacks
 - Depth-based alpha fade: elements further from the camera smoothly fade to
@@ -193,6 +206,9 @@ of 3D solids — a digital geometry workbench.
   by ray casting for interior points
 - Face intersection via ray-triangle (Moller-Trumbore) and coplanar face
   clipping for lines lying on figure faces
+- Topology edges are split at intersection vertices so each sub-segment carries
+  the correct endpoint indices for the line-ID occlusion check — markers on
+  edges are never hidden by their own edge
 - Topology edges, extended lines, and user-drawn lines are all unified as
   `SceneLine` — no separate entity types
 

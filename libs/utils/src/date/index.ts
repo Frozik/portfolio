@@ -1,7 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { EDayOfWeek } from './constants';
 import { DAYS_IN_WEEK } from './fuzzy/constants';
-import { EDayOfWeek } from './types';
 
+export * from './constants';
 export { parseFuzzyDate } from './fuzzy';
 export type { DateTimeParseResult } from './fuzzy/types';
 export { stepDateTime } from './stepDateTime';

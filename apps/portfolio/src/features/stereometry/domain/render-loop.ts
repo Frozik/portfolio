@@ -1,8 +1,7 @@
-import type { FrameState, GpuContext, RenderLayerManager } from '@frozik/utils';
+import type { FpsController, FrameState, GpuContext, RenderLayerManager } from '@frozik/utils';
+import { MS_PER_SECOND } from '@frozik/utils';
 
-import { MS_PER_SECOND } from './constants';
-import type { FpsController } from './fps-controller';
-import { EFpsLevel } from './fps-controller';
+import { FPS_RESIZE } from './constants';
 
 /**
  * Tolerance in ms to avoid skipping a frame when rAF fires slightly early.
@@ -55,7 +54,7 @@ export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
 
   const resizeObserver = new ResizeObserver(() => {
     updateCanvasSize();
-    fpsController.raise(EFpsLevel.Resize);
+    fpsController.raise(FPS_RESIZE);
   });
   resizeObserver.observe(canvas);
 
@@ -93,6 +92,8 @@ export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
     if (disposed) {
       return;
     }
+
+    fpsController.tick();
 
     const interval = fpsController.getFrameIntervalMs();
     if (now - lastFrameTime < interval - THROTTLE_TOLERANCE_MS) {
