@@ -111,9 +111,7 @@ canvas context.
 
 Live heatmap of the Binance BTC/USDT orderbook with a price line on top
 and volume bars down the side — essentially a Bookmap-style
-depth-of-market display built on WebGPU. Design notes and invariants
-for contributors live in
-[`apps/portfolio/src/features/BINANCE.md`](apps/portfolio/src/features/BINANCE.md).
+depth-of-market display built on WebGPU.
 
 **What you see:**
 - Heatmap where every cell is one price level at one second, colored
