@@ -67,6 +67,16 @@ const rootRouter = createBrowserRouter(
           },
         },
         {
+          path: 'binance',
+          handle: { title: appT.pageTitles.binance },
+          lazy: async () => {
+            const { BinanceView } = await import(
+              '../../features/binance-view/presentation/BinanceView'
+            );
+            return { Component: BinanceView };
+          },
+        },
+        {
           path: 'stereometry',
           handle: { title: appT.pageTitles.stereometry },
           lazy: async () => {

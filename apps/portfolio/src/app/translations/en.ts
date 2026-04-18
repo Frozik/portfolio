@@ -7,6 +7,7 @@ export const appTranslationsEn = {
     sun: 'Sun',
     graphics: 'Graphics',
     timeseries: 'Timeseries',
+    binance: 'Binance Orderbook',
     stereometry: 'Stereometry',
     controls: 'Controls',
   },
@@ -24,6 +25,9 @@ export const appTranslationsEn = {
     timeseries: 'Timeseries',
     timeseriesTooltip:
       'WebGPU timeseries chart capable of rendering gigabytes of data at high FPS with near-zero CPU usage',
+    binance: 'Binance Orderbook',
+    binanceTooltip:
+      'Live Binance spot orderbook heatmap on WebGPU: green→red magnitude, rolling 1h history in IndexedDB, GPU min/max auto-fit',
     sectionGames: 'Games',
     sudoku: 'Sudoku',
     stereometry: 'Stereometry',

@@ -1,7 +1,6 @@
+import { packColor } from '@frozik/utils';
 import alea from 'alea';
 import { createNoise2D } from 'simplex-noise';
-
-import { packColor } from './color-packing';
 import {
   FBM_BASE_AMPLITUDE,
   FBM_BASE_FREQUENCY,

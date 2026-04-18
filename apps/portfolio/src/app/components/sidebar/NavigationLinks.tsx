@@ -1,4 +1,5 @@
 import {
+  Activity,
   Brain,
   ChartLine,
   Gamepad2,
@@ -60,6 +61,13 @@ export const NavigationLinks = memo(({ onNavigate }: { onNavigate: () => void })
         <span className="flex-1">{appT.navigation.timeseries}</span>
         <SvgRotateToLandscape className="hidden h-5 w-5 animate-pulse text-info md:hidden max-md:block" />
         <Tooltip title={appT.navigation.timeseriesTooltip} placement="right" className="max-w-64">
+          <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+        </Tooltip>
+      </NavLink>
+      <NavLink className={navLinkClass} to="/binance" onClick={onNavigate} end={false}>
+        <Activity size={NAV_ICON_SIZE} />
+        <span className="flex-1">{appT.navigation.binance}</span>
+        <Tooltip title={appT.navigation.binanceTooltip} placement="right" className="max-w-64">
           <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
         </Tooltip>
       </NavLink>

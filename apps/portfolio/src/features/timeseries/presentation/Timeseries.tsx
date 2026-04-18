@@ -1,8 +1,8 @@
+import { packColor, unpackColor } from '@frozik/utils';
 import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import commonStyles from '../../../shared/styles.module.scss';
-import { packColor, unpackColor } from '../domain/color-packing';
 import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
 import type { IDataPoint, ISeriesConfig } from '../domain/types';
 import { EChartType } from '../domain/types';

@@ -65,172 +65,147 @@ CPU usage and minimal GPU overhead. Features:
 - Variable line thickness with rounded joins between segments
 - Gradient coloring per segment
 - Transparent sin-Y wave layer composited over the main scene
-- Animated shapes (circles, polygons, stars) with fade-in/fade-out lifecycle
-- Multi-pass rendering pipeline with 4x MSAA anti-aliasing
+- Animated shapes (circles, polygons, stars) with fade-in / fade-out lifecycle
+- 4× MSAA anti-aliasing across the whole scene
 
 ### Timeseries
 
-Interactive time-series charts rendered through a **single shared WebGPU
-context** — a technique for bypassing the browser limit of ~6-8 concurrent
-WebGPU canvas contexts. Scales to unlimited charts with one `GPUDevice`.
+A 2×2 grid of interactive time-series charts, each with its own
+visualization style, all rendered through WebGPU on a single shared
+canvas context.
 
-**Shared Renderer pattern (Approach D):**
-- One `GPUDevice` + one `OffscreenCanvas` shared across all chart instances
-- Each chart renders sequentially into a pooled `GPUTexture`, then
-  `copyTextureToTexture` copies it to the canvas texture **in the same
-  command encoder** — GPU guarantees execution order within a single submit
-- `transferToImageBitmap()` + `drawImage()` blits the result to the visible
-  2D canvas
-- This eliminates the iOS Safari race condition where `transferToImageBitmap()`
-  could capture stale pixels (WebKit does a CPU readback that isn't
-  synchronized with Metal command buffer completion)
-- `RenderTargetPool` reuses GPU textures between charts — typically 1
-  allocation for all charts in a 2x2 grid
-- Renderer lifecycle managed by a React context provider owned by the page
-- Per-chart isolation: independent viewport, block registry, and input handling
+**What you see:**
+- Four independent charts: line + candlestick overlay, candlesticks only,
+  line only, and rhombus markers sized by value
+- Rhombus markers use colored threshold bands (blue / green / orange /
+  red) so extreme values are instantly spottable
+- Line thickness varies with the data — calm stretches render thin,
+  volatile patches render thick
+- Each chart has its own synthetic dataset, generated from multi-octave
+  simplex noise so zooming in reveals finer detail while the macro shape
+  stays stable
+- A shimmer loading bar slides across the chart while blocks of data
+  stream in, simulating real server-side loading
 
-**Block-based data pipeline:**
-- Data loaded in fixed-size 256-point blocks, cached in RTree, stored in
-  `rgba32float` GPU texture (timeDelta, valueDelta, size, packedColor per texel)
-- Period-aligned block boundaries (1h, 12h, 1d, 4d, 16d, 64d, 256d scales)
-- Slot allocator with LRU eviction: texture grows from 4 to 512 rows, then
-  recycles oldest blocks
-- Multi-block rendering via GPU storage buffer — shader reads
-  `BlockDescriptor[]` array to locate points across blocks
-- Cross-block line stitching handled automatically by `readGlobalPoint()` in
-  the shader
-- Per-block delta encoding preserves float32 precision across all zoom levels
-- Color packed as uint32-in-float32 with alpha in low byte to prevent
-  exponent overflow and NaN canonicalization
-- Architecture emulates server-side data loading (blocks can be replaced with
-  `fetch()` calls)
+**Interactions:**
+- Drag to pan, scroll or pinch to zoom, spring-animated transitions on
+  zoom and resize
+- Time axis labels scale automatically from hours all the way out to
+  months as you zoom out
+- Debug overlay with FPS counter and a toggle to visualize the data
+  block boundaries
+- Fullscreen with landscape lock on mobile
 
-**Noise-based data generation:**
-- Simplex noise + fractal Brownian motion (fBm) with 6 octaves
-- Deterministic and multi-scale: zoom in reveals detail, macro shape stays
-  stable
-- Each chart uses a unique seed for independent data
-- Bullish/bearish coloring (green/red) based on price direction
+**Behind the scenes:**
+- One WebGPU device drives all four charts, sidestepping the browser
+  limit of roughly 6–8 concurrent WebGPU canvas contexts
+- 4× MSAA on every chart, with a shared anti-aliasing texture that
+  resizes in place rather than being reallocated per chart
+- FPS gates down to 5 fps when nothing is moving and ramps back to 60
+  the instant you interact
+- Data arrives in fixed 256-point blocks that the GPU stitches into a
+  continuous line — the architecture maps 1:1 onto a real server-backed
+  data source if we ever swap the noise generator out
 
-**Multiple chart types with per-series configuration:**
-- 4-chart grid: line + candlestick, candlestick only, line only, rhombus
-  markers
-- Each series configured independently via `ISeriesConfig` (chart type, seed,
-  custom color/size functions)
-- Value-based styling: rhombus markers colored by threshold bands
-  (blue/green/orange/red), line thickness varying by value
-- Separate GPU render pipelines per chart type (line, candlestick, rhombus)
-- Simulated async data loading with animated shimmer loading bar
+### Binance Orderbook
 
-**Chart features:**
-- Animated zoom with lerp-based easing and viewport spring on resize
-- Pan and pinch-to-zoom touch support
-- Line, candlestick, and rhombus series (candlestick shape rendered entirely
-  in fragment shader)
-- Adaptive axis labels that scale from hours to months
-- Unified canvas rendering: 2D canvas (background + grid + axis labels with
-  backdrop + WebGPU blit + loading bars)
-- Debug overlay: real-time render FPS counter + block boundary visualization
-  toggle
-- Fullscreen + landscape lock on mobile devices
+Live heatmap of the Binance BTC/USDT orderbook with a price line on top
+and volume bars down the side — essentially a Bookmap-style
+depth-of-market display built on WebGPU. Design notes and invariants
+for contributors live in
+[`apps/portfolio/src/features/BINANCE.md`](apps/portfolio/src/features/BINANCE.md).
 
-**Performance optimizations:**
-- Event-driven FPS controller with debounced degradation
-  (interaction=60fps → idle=5fps)
-- Axis label memoization: only re-renders when viewport or canvas size changes
-- 4x MSAA anti-aliasing with shared texture (resized per chart, not
-  reallocated)
-- Relative snap threshold for zoom animation: prevents sub-pixel updates
-- Scissor rect clips GPU rendering to the plot area
-- Render target pool: one GPU texture allocation reused across all same-size
-  charts per frame
+**What you see:**
+- Heatmap where every cell is one price level at one second, colored
+  green → yellow → red by `price × volume` — heavy liquidity walls
+  pop, thin noise fades into the dark background
+- A mid-price line drawn on top, each segment colored by direction
+  (green up, red down, grey flat) with a black outline that stays
+  clean through sharp turns
+- Right-hand panel with a volume bar for every visible price level —
+  green for bids, red for asks, width proportional to the heaviest
+  level currently on screen
+- Crosshair with time and price labels pinned to the axes
+- Status badge in the corner; click to expand connection state,
+  snapshot counter, last tick time, and any errors
+
+**Interactions:**
+- Drag or swipe to pan into the past, scroll or pinch on the price
+  axis to zoom in
+- Hover any cell for a tooltip with timestamp, price, volume, and
+  side (bid / ask)
+- Auto-follow sticks to the latest data until you pan backward; scroll
+  all the way forward to the live edge and the chart re-latches
+- Cells that arrive during a disconnect render with diagonal stripes
+  so stale data is immediately distinguishable from live data
+
+**Data:**
+- Real Binance WebSocket feed (`BTCUSDT@depth@1000ms`) with the REST
+  snapshot merged in; sequence gaps and clean-close drops auto-resync
+  with interpolated backfill covering the downtime
+- 700 raw price levels per side aggregate into 64 `$1.50` bins for
+  display
+- Rolling one-hour history in IndexedDB (~7 MB on disk), lazy-loaded
+  when you pan into the past; cleared on page reload
+- Mid-price is computed locally from `(bestBid + bestAsk) / 2` — one
+  WebSocket powers the heatmap, the line, and the volume bars
+
+**Robustness:**
+- Follow mode survives background-tab throttling: when the browser
+  freezes the render loop, the chart catches up to the live edge the
+  moment the tab wakes up instead of getting stuck minutes in the
+  past
+- Offline detection hooks into `navigator.onLine` so reconnect waits
+  for the network instead of burning CPU on a dead socket
+- Cross-browser: shader compilation errors are surfaced through a
+  single console prefix so Chrome / Safari / Firefox quirks are
+  immediate to spot during development
 
 ### Stereometry
 
-Interactive 3D construction tool for stereometry puzzles, rendered with WebGPU.
-Build construction lines, find intersection points, and explore cross-sections
-of 3D solids — a digital geometry workbench.
+Interactive 3D construction tool for stereometry puzzles — a digital
+geometry workbench rendered with WebGPU. Pick a figure, draw
+construction lines, find intersection points, and explore cross-sections
+of solids.
 
-**Rendering architecture:**
-- Topology on GPU: figure faces are triangulated once at init and uploaded into a
-  static vertex buffer (`faceVertexBuffer`). Line segments and vertex markers are
-  packed into dynamic instance buffers with per-instance visible + hidden styles
-  — no per-modifier pipeline proliferation
-- Three-pass rendering with pipeline-overridable `renderMode` constants:
-  1. **Depth pre-pass** (non-MSAA, no color output): renders solid faces into a
-     depth texture with depth bias — serves as the occlusion map for all
-     subsequent passes
-  2. **Hidden pass** (MSAA, fresh depth): line-ID pre-pass → hidden lines →
-     hidden markers — renders only fragments occluded by faces
-  3. **Visible pass** (MSAA, depth cleared, color preserved from hidden pass):
-     line-ID pre-pass → visible lines → visible markers → preview elements —
-     renders only non-occluded fragments on top of the hidden layer
-- Per-fragment spine-point depth: each line fragment projects onto the line's
-  center axis (spine), computes the exact UV and NDC depth at that point via
-  clip-space endpoint interpolation, and samples the face depth texture there —
-  eliminates the interpolation artifacts of quad-based depth at all camera angles
-- Orthographic and perspective projection with 4x MSAA anti-aliasing
-- GPU-based vertex occlusion via depth texture sampling in the vertex shader —
-  the marker center is tested against the depth buffer, producing a binary
-  visible/hidden decision for the entire marker (no split-half artifacts)
-- Two-layer marker occlusion: face depth test (samples pre-pass texture at
-  marker center) plus line topology check (line-ID pre-pass writes endpoint
-  vertex indices into an `rg32float` texture — markers skip discard when the
-  occluding line is connected to their vertex)
-- Markers render on top of lines within each visibility layer via
-  `depthCompare: 'always'` — no depth offset hacks
-- Depth-based alpha fade: elements further from the camera smoothly fade to
-  transparency, controlled by `depthFadeRate` and `depthFadeMin` uniforms
-- All sizes (line width, marker diameter, dash/gap) specified in CSS pixels,
-  automatically scaled by `devicePixelRatio` in the shader
+**Construction:**
+- Drag from one vertex to another to draw a construction line; the
+  target vertex highlights when your line snaps to it
+- Double-click any edge to extend it into an infinite construction
+  line that cuts across the figure
+- Select a line, then tap a vertex to drop a parallel line through
+  that point
+- Double-click a line to delete it; duplicate lines are ignored
+  automatically
+- Intersection points appear wherever two lines cross and become
+  first-class snap targets for new lines
+- Full undo / redo history
 
-**CSS-like style cascade:**
-- Styles defined as `'element:modifier1:modifier2'` keys with partial overrides
-  (e.g., `'line:hidden:selected'`), resolved by specificity like CSS
-- Modifiers are arbitrary strings — adding a new visual state (e.g., `marked`)
-  requires only a style entry, no code changes
-- Modifier order in keys is auto-normalized (alphabetically sorted)
-- Style properties: `color` (hex), `alpha`, `width`, `size`, `line`
-  (solid/dashed with dash/gap), `markerType` (solid/circle), `strokeColor`,
-  `strokeWidth`
-- Vertex markers support two render types: `solid` (filled circle) and `circle`
-  (stroke + fill with configurable stroke color and width)
-
-**Segment & marker processor:**
-- Pure function that splits infinite lines into classified segments based on
-  geometry: `segment` (coincides with a topology edge), `inner` (inside the
-  figure or on a face), or regular (no modifier)
-- Vertex markers receive `inner` modifier when on the figure surface (topology
-  vertices or intersection points on faces), using a two-step test:
-  point-on-triangle surface check (barycentric with epsilon tolerance) followed
-  by ray casting for interior points
-- Face intersection via ray-triangle (Moller-Trumbore) and coplanar face
-  clipping for lines lying on figure faces
-- Topology edges are split at intersection vertices so each sub-segment carries
-  the correct endpoint indices for the line-ID occlusion check — markers on
-  edges are never hidden by their own edge
-- Topology edges, extended lines, and user-drawn lines are all unified as
-  `SceneLine` — no separate entity types
-
-**Puzzle format:**
-- Declarative puzzle definitions: figures (vertices + faces), input constraints
-  (additional points and lines), and expected results
-- `preparePuzzle()` derives edges from faces and builds topology automatically
+**Visuals:**
+- Parts of a line occluded by the solid render dashed; visible
+  stretches stay solid — decided per-fragment, so the effect stays
+  correct from every camera angle
+- Vertex markers render as filled or stroked circles and are
+  occlusion-tested against both the figure's faces and any lines
+  passing through them
+- Elements farther from the camera fade smoothly toward transparency,
+  giving a sense of depth without needing a grid
+- Selection, hover, and "inside the figure" states flow through a
+  CSS-like style cascade — adding a new state (e.g. `marked`) is a
+  one-line change
+- Orthographic or perspective projection with 4× MSAA anti-aliasing
 
 **Interactions:**
-- Drag to rotate, Shift+drag to pan, scroll/pinch to zoom with inertia
-- Unified Pointer Events for mouse, touch, and pen (fixes mobile double-event
-  bug where touch + synthesized mouse caused false double-clicks)
-- Click an edge or line to select it (highlighted with cascade style)
-- Double-click an edge to extend it into an infinite construction line
-- Double-click a line to remove it
-- Drag from vertex to vertex to draw a construction line between two points
-  (preview line shown during drag, snap target vertex highlighted)
-- Select an edge/line, then tap a vertex to create a parallel line through it
-- Duplicate line prevention: adding a line that already exists is a no-op
-- Intersection points appear automatically where lines cross and become
-  available as construction vertices
-- Undo/redo for all construction actions
+- Drag to rotate the camera, Shift+drag to pan, scroll or pinch to
+  zoom — with inertia on all three
+- Unified pointer handling works identically on mouse, touch, and
+  stylus; no duplicate events on mobile
+
+**Puzzle format:**
+- Declarative puzzle files: list of figures (vertices + faces), input
+  constraints (points, lines), expected result
+- Edges and face adjacency derive automatically from the face list —
+  puzzle authors only describe what's unique to the puzzle
 
 ### Controls
 

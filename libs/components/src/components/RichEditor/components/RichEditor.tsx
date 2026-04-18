@@ -1,8 +1,6 @@
 import { isEmpty, isNil } from 'lodash-es';
 import type { KeyboardEvent } from 'react';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { IOptions } from 'sanitize-html';
-import sanitizeHtml from 'sanitize-html';
 
 import { useFunction } from '../../../hooks';
 import type { ISelection } from '../defs';
@@ -16,10 +14,28 @@ import {
   setElementSelection,
 } from '../utils';
 
-const SANITIZE_CONFIG: IOptions = {
-  allowedTags: [],
-  allowedAttributes: false,
-};
+/**
+ * Strip every tag from a contenteditable HTML fragment, returning the
+ * plain text the user has typed / pasted. Replaces the previous
+ * `sanitize-html` call with a native DOMParser — sanitize-html ships
+ * `postcss` for style sanitisation, which in the browser pulls in
+ * `path` / `fs` / `url` / `source-map-js` Node built-ins and fills
+ * the dev console with "has been externalized for browser
+ * compatibility" warnings on every page load.
+ *
+ * DOMParser runs in an inert document: script / event-handler side
+ * effects do not fire at parse time. We still explicitly remove
+ * `<script>`, `<style>`, `<noscript>` and `<iframe>` before reading
+ * `textContent` so their character payloads don't leak into the
+ * output — matching `sanitize-html({ allowedTags: [] })`.
+ */
+function stripAllTags(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const element of doc.querySelectorAll('script, style, noscript, iframe')) {
+    element.remove();
+  }
+  return doc.body.textContent ?? '';
+}
 
 export const RichEditor = memo(
   ({
@@ -75,7 +91,7 @@ export const RichEditor = memo(
       pendingFocusSelectionRef.current = null;
 
       const oldValue = value;
-      const newValue = sanitizeHtml(evt.currentTarget.innerHTML, SANITIZE_CONFIG);
+      const newValue = stripAllTags(evt.currentTarget.innerHTML);
 
       const oldSelection = selectionRangeRef.current;
       const newSelection = getElementSelection(evt.currentTarget) ?? {

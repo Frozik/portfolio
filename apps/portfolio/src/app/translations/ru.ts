@@ -10,6 +10,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     sun: 'Солнце',
     graphics: 'Графика',
     timeseries: 'Таймсерии',
+    binance: 'Стакан Binance',
     stereometry: 'Стереометрия',
     controls: 'Элементы управления',
   },
@@ -28,6 +29,9 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     timeseries: 'Таймсерии',
     timeseriesTooltip:
       'WebGPU-график таймсерий, способный отрисовывать гигабайты данных с высоким FPS при почти нулевой нагрузке на CPU',
+    binance: 'Стакан Binance',
+    binanceTooltip:
+      'Живая тепловая карта стакана Binance spot на WebGPU: градиент зелёный→красный по объёму × цене, часовая история в IndexedDB, авто-подгон min/max на GPU',
     sectionGames: 'Игры',
     sudoku: 'Судоку',
     stereometry: 'Стереометрия',

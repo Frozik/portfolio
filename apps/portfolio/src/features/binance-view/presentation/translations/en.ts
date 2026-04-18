@@ -1,0 +1,32 @@
+export const binanceTranslationsEn = {
+  status: {
+    idle: 'Idle',
+    connecting: 'Connecting…',
+    connected: 'Connected',
+    reconnecting: 'Reconnecting…',
+    disconnected: 'Disconnected',
+    resyncing: 'Resyncing orderbook…',
+    error: 'Connection error',
+    unsupported: 'WebGPU device does not meet requirements (maxTextureDimension2D >= 8192)',
+  },
+  tooltip: {
+    time: 'Time',
+    price: 'Price',
+    volume: 'Volume',
+    side: 'Side',
+    bid: 'Bid',
+    ask: 'Ask',
+    loading: 'Loading…',
+  },
+  comingSoon: 'Binance orderbook heatmap — coming soon',
+  live: {
+    instrument: (instrument: string): string => `Instrument: ${instrument}`,
+    awaitingSnapshot: 'Waiting for REST snapshot…',
+    snapshotReceived: 'REST snapshot received, listening for updates',
+    totalSnapshots: (count: number): string => `Total snapshots received: ${count}`,
+    lastSnapshotTime: (isoTime: string): string => `Last snapshot: ${isoTime}`,
+    errorPrefix: 'Error: ',
+    expand: 'Show details',
+    collapse: 'Hide details',
+  },
+} as const;

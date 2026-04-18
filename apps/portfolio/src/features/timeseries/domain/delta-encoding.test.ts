@@ -1,4 +1,5 @@
-import { packColor } from './color-packing';
+import { packColor } from '@frozik/utils';
+
 import { FLOATS_PER_POINT } from './constants';
 import { encodePoints } from './delta-encoding';
 import type { IDataPoint } from './types';
