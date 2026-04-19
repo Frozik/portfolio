@@ -188,6 +188,7 @@ export class SceneLayer implements RenderLayer {
   private styledLineCount = 0;
   private topologyVertexCount = 0;
   private hasDragPreview = false;
+  private hasStartMarker = false;
   private currentPreviewLine:
     | { readonly pointA: Vec3Array; readonly pointB: Vec3Array }
     | undefined;
@@ -650,8 +651,8 @@ export class SceneLayer implements RenderLayer {
       visiblePass.draw(VERTICES_PER_LINE_QUAD, 1);
     }
 
-    // Preview start marker
-    if (this.hasDragPreview) {
+    // Preview start marker (only for vertex-originated drags)
+    if (this.hasStartMarker) {
       visiblePass.setPipeline(this.previewMarkerPipeline);
       visiblePass.setBindGroup(0, this.previewMarkerBindGroup);
       visiblePass.setVertexBuffer(0, this.previewStartMarkerBuffer);
@@ -685,48 +686,31 @@ export class SceneLayer implements RenderLayer {
   setDragPreview(preview: DragPreviewState | undefined): void {
     if (isNil(preview)) {
       this.hasDragPreview = false;
+      this.hasStartMarker = false;
       this.hasSnapTarget = false;
       this.currentPreviewLine = undefined;
       return;
     }
 
-    const endPosition = !isNil(preview.snapTargetPosition)
-      ? preview.snapTargetPosition
-      : this.unprojectToVertexPlane(
-          preview.cursorScreenX,
-          preview.cursorScreenY,
-          preview.startPosition
-        );
+    const { pointA, pointB } =
+      preview.kind === 'vertex'
+        ? this.computeVertexDragPreviewEndpoints(preview)
+        : this.computeLineDragPreviewEndpoints(preview);
 
-    this.currentPreviewLine = { pointA: preview.startPosition, pointB: endPosition };
-
-    const previewSegmentStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview', 'segment']);
-    const [colorR, colorG, colorB] = hexToRgb(previewSegmentStyle.color);
-
-    // Write a single styled line instance for the preview
-    const instanceData = new Float32Array(FLOATS_PER_STYLED_LINE);
-    instanceData[0] = preview.startPosition[0];
-    instanceData[1] = preview.startPosition[1];
-    instanceData[2] = preview.startPosition[2];
-    instanceData[3] = endPosition[0];
-    instanceData[4] = endPosition[1];
-    instanceData[5] = endPosition[2];
-    instanceData[6] = previewSegmentStyle.width;
-    instanceData[7] = colorR;
-    instanceData[8] = colorG;
-    instanceData[9] = colorB;
-    instanceData[10] = previewSegmentStyle.alpha;
-    // visibleLineType, visibleDash, visibleGap = 0 (solid)
-
-    this.device.queue.writeBuffer(this.previewLineBuffer, 0, instanceData);
-
+    this.currentPreviewLine = { pointA, pointB };
+    this.writePreviewLineBuffer(pointA, pointB);
     this.hasDragPreview = true;
 
-    this.device.queue.writeBuffer(
-      this.previewStartMarkerBuffer,
-      0,
-      this.createPreviewMarkerData(preview.startPosition)
-    );
+    if (preview.kind === 'vertex') {
+      this.device.queue.writeBuffer(
+        this.previewStartMarkerBuffer,
+        0,
+        this.createPreviewMarkerData(preview.startPosition)
+      );
+      this.hasStartMarker = true;
+    } else {
+      this.hasStartMarker = false;
+    }
 
     if (!isNil(preview.snapTargetPosition)) {
       this.device.queue.writeBuffer(
@@ -738,6 +722,62 @@ export class SceneLayer implements RenderLayer {
     } else {
       this.hasSnapTarget = false;
     }
+  }
+
+  private computeVertexDragPreviewEndpoints(
+    preview: Extract<DragPreviewState, { kind: 'vertex' }>
+  ): { pointA: Vec3Array; pointB: Vec3Array } {
+    const endPosition = !isNil(preview.snapTargetPosition)
+      ? preview.snapTargetPosition
+      : this.unprojectToVertexPlane(
+          preview.cursorScreenX,
+          preview.cursorScreenY,
+          preview.startPosition
+        );
+    return { pointA: preview.startPosition, pointB: endPosition };
+  }
+
+  private computeLineDragPreviewEndpoints(preview: Extract<DragPreviewState, { kind: 'line' }>): {
+    pointA: Vec3Array;
+    pointB: Vec3Array;
+  } {
+    // For line-drag the preview is a line parallel to the source direction,
+    // anchored at the snap vertex when one is under the cursor; otherwise
+    // anchored at the cursor's projection onto a plane through the source line.
+    const anchor = !isNil(preview.snapTargetPosition)
+      ? preview.snapTargetPosition
+      : this.unprojectToVertexPlane(
+          preview.cursorScreenX,
+          preview.cursorScreenY,
+          preview.planeAnchor
+        );
+    const pointB: Vec3Array = [
+      anchor[0] + preview.sourceDirection[0],
+      anchor[1] + preview.sourceDirection[1],
+      anchor[2] + preview.sourceDirection[2],
+    ];
+    return { pointA: anchor, pointB };
+  }
+
+  private writePreviewLineBuffer(pointA: Vec3Array, pointB: Vec3Array): void {
+    const previewStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview']);
+    const [colorR, colorG, colorB] = hexToRgb(previewStyle.color);
+
+    const instanceData = new Float32Array(FLOATS_PER_STYLED_LINE);
+    instanceData[0] = pointA[0];
+    instanceData[1] = pointA[1];
+    instanceData[2] = pointA[2];
+    instanceData[3] = pointB[0];
+    instanceData[4] = pointB[1];
+    instanceData[5] = pointB[2];
+    instanceData[6] = previewStyle.width;
+    instanceData[7] = colorR;
+    instanceData[8] = colorG;
+    instanceData[9] = colorB;
+    instanceData[10] = previewStyle.alpha;
+    // visibleLineType, visibleDash, visibleGap = 0 (solid)
+
+    this.device.queue.writeBuffer(this.previewLineBuffer, 0, instanceData);
   }
 
   /**

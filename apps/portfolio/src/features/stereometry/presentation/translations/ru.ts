@@ -32,6 +32,7 @@ export const stereometryTranslationsRu: TranslationOf<typeof stereometryTranslat
       doubleClickLine: 'удалить линию',
       dragVertex: 'провести вспомогательную линию между двумя точками',
       selectEdgeTapVertex: 'провести параллельную прямую через эту вершину',
+      holdDragLineVertex: 'предпросмотр и построение параллельной прямой через целевую вершину',
     },
     controlLabels: {
       drag: 'Перетаскивание',
@@ -42,6 +43,7 @@ export const stereometryTranslationsRu: TranslationOf<typeof stereometryTranslat
       doubleClickLine: 'Двойной клик по линии',
       dragVertex: 'Перетащить вершину \u2192 вершину',
       selectEdgeTapVertex: 'Выделить ребро + нажать на вершину',
+      holdDragLineVertex: 'Удержать выделенную линию \u2192 до вершины',
     },
     intersectionHint: 'Точки пересечения появляются автоматически при пересечении линий.',
   },

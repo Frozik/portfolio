@@ -174,8 +174,9 @@ const PuzzlePopover = memo(({ puzzle }: { puzzle: PuzzleDefinition }) => {
           side="top"
           sideOffset={8}
           align="end"
+          collisionPadding={16}
           className={cn(
-            'z-50 w-72 rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl',
+            'z-50 w-72 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl',
             'border border-neutral-700',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
@@ -230,8 +231,9 @@ const HelpPopover = memo(() => {
           side="top"
           sideOffset={8}
           align="end"
+          collisionPadding={16}
           className={cn(
-            'z-50 w-72 rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl',
+            'z-50 w-72 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl',
             'border border-neutral-700',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
@@ -293,6 +295,12 @@ const HelpPopover = memo(() => {
                 {stereometryT.help.controlLabels.selectEdgeTapVertex}
               </strong>{' '}
               — {stereometryT.help.controls.selectEdgeTapVertex}
+            </li>
+            <li>
+              <strong className="text-neutral-100">
+                {stereometryT.help.controlLabels.holdDragLineVertex}
+              </strong>{' '}
+              — {stereometryT.help.controls.holdDragLineVertex}
             </li>
           </ul>
           <p className="mt-3 text-xs text-neutral-500">{stereometryT.help.intersectionHint}</p>

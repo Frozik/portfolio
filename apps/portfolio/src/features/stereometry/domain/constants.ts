@@ -40,9 +40,30 @@ export const DOUBLE_CLICK_TIME_THRESHOLD_MS = 400;
 /** Double-click/double-tap: max distance between two click positions */
 export const DOUBLE_CLICK_DISTANCE_THRESHOLD = 10;
 /** Hit testing: radius in screen pixels for vertex proximity detection */
-export const VERTEX_HIT_RADIUS_PIXELS = 30;
+export const VERTEX_HIT_RADIUS_PIXELS = 20;
 /** Hit testing: max distance in screen pixels from edge line to count as a hit */
-export const EDGE_HIT_RADIUS_PIXELS = 30;
+export const EDGE_HIT_RADIUS_PIXELS = 20;
+/** Line hit: how long to hold a line before the drag-to-parallel gesture activates. */
+export const LINE_HOLD_DELAY_MS = 250;
+
+// --- Hit-test scoring weights (tune to steer the unified hit-test) ---
+//
+// Each candidate earns an additive score:
+//   score = typeBonus
+//         + HIT_PROXIMITY_WEIGHT * proximityScore  (1.0 for closest-to-ray, 0.0 for farthest)
+//         + HIT_DEPTH_WEIGHT     * depthScore      (1.0 for closest-to-camera, 0.0 for farthest)
+// where both scores are normalized in [0, 1] across collected candidates.
+
+/** Max bonus awarded to the candidate closest to the cursor ray (scaled by proximity). */
+export const HIT_PROXIMITY_WEIGHT = 0.2;
+/** Max bonus awarded to the candidate closest to the camera (scaled by relative depth). */
+export const HIT_DEPTH_WEIGHT = 0.1;
+/** Additive score bonus applied to vertex candidates. */
+export const HIT_VERTEX_TYPE_BONUS = 0.2;
+/** Additive score bonus applied to finite segments (edges and user segments). */
+export const HIT_SEGMENT_TYPE_BONUS = 0.1;
+/** Additive score bonus applied to infinite line candidates (extensions and user lines). */
+export const HIT_LINE_TYPE_BONUS = 0;
 
 // --- Geometry / math ---
 

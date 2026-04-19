@@ -10,10 +10,12 @@ import type { OrbitalCameraController } from './camera-controller';
 import { createOrbitalCameraController } from './camera-controller';
 import { createClickDetector } from './click-detector';
 import { FPS_IDLE, FPS_INTERACTION, MSAA_SAMPLE_COUNT } from './constants';
+import type { InitialDragHit } from './drag-connector';
 import { createDragToConnectController } from './drag-connector';
 import { preparePuzzle } from './geometry';
 import { createSceneHistory } from './history';
-import { hitTest, hitTestVertex } from './hit-testing';
+import type { AllowedHitTypes, SceneHit } from './hit-testing';
+import { hitTestScene } from './hit-testing';
 import { IntersectionCache } from './intersection';
 import { SceneLayer } from './layers/scene-layer';
 import { startRenderLoop } from './render-loop';
@@ -29,6 +31,8 @@ import {
 import type { FigureTopology, SceneTopology, SelectionState, Vec3Array } from './topology-types';
 import { SELECTION_NONE } from './topology-types';
 import type { PuzzleDefinition } from './types';
+
+const SNAP_ALLOWED_TYPES: AllowedHitTypes = ['vertex'];
 
 export interface StereometryControls {
   destroy: VoidFunction;
@@ -110,46 +114,62 @@ export function runStereometry(
     };
   }
 
-  function performHitTest(screenX: number, screenY: number): SelectionState {
-    const context = getHitTestContext();
-    if (context === undefined) {
-      return SELECTION_NONE;
-    }
-
-    return hitTest(
-      screenX,
-      screenY,
-      context.canvasWidth,
-      context.canvasHeight,
-      context.devicePixelRatio,
-      context.mvpMatrix,
-      sceneTopology.lines
-    );
-  }
-
-  function performPointHitTest(screenX: number, screenY: number): Vec3Array | undefined {
+  function performSceneHitTest(
+    screenX: number,
+    screenY: number,
+    allowedTypes?: AllowedHitTypes
+  ): SceneHit | undefined {
     const context = getHitTestContext();
     if (context === undefined) {
       return undefined;
     }
 
-    const allPositions = sceneTopology.vertices.map(vertex => vertex.position);
-
-    const vertexIndex = hitTestVertex(
+    return hitTestScene(
       screenX,
       screenY,
       context.canvasWidth,
       context.canvasHeight,
       context.devicePixelRatio,
       context.mvpMatrix,
-      allPositions
+      sceneTopology.lines,
+      sceneTopology.vertices.map(vertex => vertex.position),
+      allowedTypes
     );
+  }
 
-    if (vertexIndex !== undefined) {
-      return allPositions[vertexIndex];
+  function performHitTest(screenX: number, screenY: number): SelectionState {
+    const hit = performSceneHitTest(screenX, screenY);
+    if (hit?.type === 'line') {
+      return { type: 'line', lineId: hit.lineId };
     }
+    return SELECTION_NONE;
+  }
 
-    return undefined;
+  function performInitialHitTest(screenX: number, screenY: number): InitialDragHit | undefined {
+    const hit = performSceneHitTest(screenX, screenY);
+    if (hit === undefined) {
+      return undefined;
+    }
+    if (hit.type === 'vertex') {
+      return { kind: 'vertex', position: hit.position };
+    }
+    const sourceLine = sceneTopology.lines.find(candidate => candidate.lineId === hit.lineId);
+    if (sourceLine === undefined) {
+      return undefined;
+    }
+    const direction = vec3.sub(sourceLine.pointB, sourceLine.pointA);
+    return {
+      kind: 'line',
+      lineId: hit.lineId,
+      direction: [direction[0], direction[1], direction[2]],
+      planeAnchor: sourceLine.pointA,
+    };
+  }
+
+  /** Vertex-only hit test used during drag-to-connect — lines are ignored. */
+  function performSnapHitTest(screenX: number, screenY: number): Vec3Array | undefined {
+    const hit = performSceneHitTest(screenX, screenY, SNAP_ALLOWED_TYPES);
+    return hit?.type === 'vertex' ? hit.position : undefined;
   }
 
   function setSelection(selection: SelectionState): void {
@@ -184,43 +204,30 @@ export function runStereometry(
     setSelection(selection);
   }
 
-  function onCanvasDoubleClick(screenX: number, screenY: number): void {
-    const hit = performHitTest(screenX, screenY);
+  function handleLineDoubleTap(lineId: number): void {
+    const line = sceneTopology.lines.find(candidate => candidate.lineId === lineId);
+    if (line === undefined) {
+      return;
+    }
 
-    if (hit.type === 'line') {
-      const matchingLines = sceneTopology.lines.filter(
-        candidate => candidate.lineId === hit.lineId
-      );
+    currentSelection = SELECTION_NONE;
 
-      if (matchingLines.length === 0) {
-        return;
-      }
-
-      currentSelection = SELECTION_NONE;
-
-      const line = matchingLines[0];
-
-      switch (line.kind) {
-        case 'edge':
-        case 'segment':
-          applyTopologyChange(
-            extendToLine(sceneTopology, hit.lineId, figureTopology, intersectionCache)
-          );
-          break;
-        case 'edge-extended':
-        case 'segment-extended':
-          applyTopologyChange(
-            collapseExtendedLine(sceneTopology, hit.lineId, figureTopology, intersectionCache)
-          );
-          break;
-        case 'line':
-          applyTopologyChange(
-            removeLine(sceneTopology, hit.lineId, figureTopology, intersectionCache)
-          );
-          break;
-        default:
-          assertNever(line.kind);
-      }
+    switch (line.kind) {
+      case 'edge':
+      case 'segment':
+        applyTopologyChange(extendToLine(sceneTopology, lineId, figureTopology, intersectionCache));
+        break;
+      case 'edge-extended':
+      case 'segment-extended':
+        applyTopologyChange(
+          collapseExtendedLine(sceneTopology, lineId, figureTopology, intersectionCache)
+        );
+        break;
+      case 'line':
+        applyTopologyChange(removeLine(sceneTopology, lineId, figureTopology, intersectionCache));
+        break;
+      default:
+        assertNever(line.kind);
     }
   }
 
@@ -232,11 +239,17 @@ export function runStereometry(
   canvas.addEventListener('pointermove', raiseInteractionFps);
   canvas.addEventListener('wheel', raiseInteractionFps);
 
-  const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, onCanvasDoubleClick);
+  // Double-click detection for lines now lives in the drag-connector — the
+  // click-detector's double-click callback is kept only for potential
+  // empty-canvas gestures; today it does nothing.
+  const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, () => {});
 
   const cleanupDragConnector = createDragToConnectController(canvas, {
-    performPointHitTest,
+    performInitialHitTest,
+    performSnapHitTest,
     hasActiveSelection: () => currentSelection.type !== 'none',
+    isLineSelected: lineId =>
+      currentSelection.type === 'line' && currentSelection.lineId === lineId,
     onDragStart: () => {
       // Don't clear selection here -- onVertexTap needs it to create parallel lines
     },
@@ -245,6 +258,8 @@ export function runStereometry(
       currentPreviewLine = sceneLayerReference?.getPreviewLine();
       applyToSceneLayer(sceneTopology);
     },
+    onLineTap: lineId => setSelection({ type: 'line', lineId }),
+    onLineDoubleTap: handleLineDoubleTap,
     onVertexTap: vertexPosition => {
       const direction = getSelectedDirection();
 
