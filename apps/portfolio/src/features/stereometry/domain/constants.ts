@@ -40,7 +40,7 @@ export const DOUBLE_CLICK_TIME_THRESHOLD_MS = 400;
 /** Double-click/double-tap: max distance between two click positions */
 export const DOUBLE_CLICK_DISTANCE_THRESHOLD = 10;
 /** Hit testing: radius in screen pixels for vertex proximity detection */
-export const VERTEX_HIT_RADIUS_PIXELS = 20;
+export const VERTEX_HIT_RADIUS_PIXELS = 30;
 /** Hit testing: max distance in screen pixels from edge line to count as a hit */
 export const EDGE_HIT_RADIUS_PIXELS = 20;
 /** Line hit: how long to hold a line before the drag-to-parallel gesture activates. */
