@@ -23,6 +23,10 @@ export interface OrbitalCameraController {
   getEyePosition(): Vec3Array;
   getDistance(): number;
   setInteractionMode(mode: CameraInteractionMode): void;
+  /** Adds a pointer the controller didn't receive via its own pointerdown listener
+   *  (e.g. a capture-phase handler stopped propagation). Used by the drag-connector
+   *  to hand off the first finger when a second arrives so pinch-zoom still works. */
+  registerExternalPointer(pointerId: number, clientX: number, clientY: number): void;
   destroy(): void;
 }
 
@@ -270,6 +274,16 @@ export function createOrbitalCameraController(
     setInteractionMode(mode: CameraInteractionMode): void {
       interactionMode = mode;
       resetVelocity();
+    },
+
+    registerExternalPointer(pointerId: number, clientX: number, clientY: number): void {
+      if (activePointers.has(pointerId)) {
+        return;
+      }
+      activePointers.set(pointerId, { clientX, clientY });
+      if (activePointers.size === 2) {
+        lastPinchDistance = getPointerDistance();
+      }
     },
 
     destroy(): void {

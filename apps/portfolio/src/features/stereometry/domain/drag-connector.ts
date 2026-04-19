@@ -50,6 +50,10 @@ export interface DragToConnectCallbacks {
   readonly onLineTap: (lineId: number) => void;
   readonly onLineDoubleTap: (lineId: number) => void;
   readonly onDragComplete: (startPosition: Vec3Array, endPosition: Vec3Array) => void;
+  /** Invoked when a second pointer arrives during an active interaction so the
+   *  camera (which didn't see the first pointer-down because of stopPropagation)
+   *  can be handed the first pointer and start pinch-zoom. */
+  readonly onSecondPointer: (pointerId: number, clientX: number, clientY: number) => void;
 }
 
 /**
@@ -85,6 +89,10 @@ export function createDragToConnectController(
   let activePointerId: number | undefined;
   let pointerDownClientX = 0;
   let pointerDownClientY = 0;
+  // Last-seen position of the active pointer — kept in sync by pointermove so
+  // the camera-handoff on a second-pointer arrival passes accurate coords.
+  let lastClientX = 0;
+  let lastClientY = 0;
   let holdTimerId: number | undefined;
 
   // Double-tap tracking for lines. Resets after a double-tap is emitted so a
@@ -212,6 +220,8 @@ export function createDragToConnectController(
     activePointerId = event.pointerId;
     pointerDownClientX = event.clientX;
     pointerDownClientY = event.clientY;
+    lastClientX = event.clientX;
+    lastClientY = event.clientY;
 
     if (hit.kind === 'vertex') {
       // Vertex drag starts immediately — no hold required.
@@ -234,6 +244,8 @@ export function createDragToConnectController(
   }
 
   function updateInteraction(clientX: number, clientY: number): void {
+    lastClientX = clientX;
+    lastClientY = clientY;
     const { screenX, screenY } = getCanvasRelativeCoords(clientX, clientY);
 
     if (pendingHit !== undefined) {
@@ -319,11 +331,16 @@ export function createDragToConnectController(
   }
 
   function onPointerDown(event: PointerEvent): void {
-    // A second pointer arriving during an active interaction cancels it so
-    // the camera doesn't enter pinch mode mid-drag.
+    // A second pointer arriving during an active interaction cancels it and
+    // hands the first pointer off to the camera so pinch-zoom works even when
+    // the first finger landed on a vertex/line. We deliberately do NOT stop
+    // propagation here — the camera needs to see this (second) pointerdown to
+    // register it alongside the handed-off first pointer.
     if (activeHit !== undefined || pendingHit !== undefined) {
+      if (activePointerId !== undefined) {
+        callbacks.onSecondPointer(activePointerId, lastClientX, lastClientY);
+      }
       cancelInteraction();
-      event.stopPropagation();
       return;
     }
 

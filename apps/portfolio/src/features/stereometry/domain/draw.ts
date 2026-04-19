@@ -282,6 +282,9 @@ export function runStereometry(
       );
       setSelection(SELECTION_NONE);
     },
+    onSecondPointer: (pointerId, clientX, clientY) => {
+      camera.registerExternalPointer(pointerId, clientX, clientY);
+    },
   });
 
   const onFpsUpdate = (fps: number): void => {
