@@ -119,8 +119,8 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
     let spineUV = spineNdc * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
 
     // Depth: linear interpolation of NDC depths (mathematically correct for screen-space t)
-    let depthA = max(input.clipStart.z, 0.0) / input.clipStart.w;
-    let depthB = max(input.clipEnd.z, 0.0) / input.clipEnd.w;
+    let depthA = input.clipStart.z / input.clipStart.w;
+    let depthB = input.clipEnd.z / input.clipEnd.w;
     let spineDepth = mix(depthA, depthB, t);
 
     let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spineUV, 0);
