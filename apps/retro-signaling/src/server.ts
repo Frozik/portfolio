@@ -27,21 +27,22 @@ const PING_INTERVAL_MS = 30_000;
 const KEEPALIVE_INTERVAL_MS = 60_000;
 
 /**
- * Origin allowlist for the WebSocket upgrade handshake.
+ * Origin allowlist used for both the WebSocket upgrade and the HTTP CORS
+ * reflection.
  *
- * Browsers attach `Origin: scheme://host[:port]` to cross-origin WS
- * handshakes; non-browser clients (curl, custom scripts) can spoof it, so
- * this check is not a security boundary — it only stops casual reuse of
- * the server from unrelated web apps. Real abuse should be blocked at the
- * Fly.io edge or with auth tokens baked into the URL.
+ * Browsers attach `Origin: scheme://host[:port]` to cross-origin requests;
+ * non-browser clients (curl, custom scripts) can spoof it, so this check
+ * is not a security boundary — it only stops casual reuse of the server
+ * from unrelated web apps. Real abuse should be blocked at the edge
+ * (nginx ACL) or with auth tokens in the URL.
  *
  * Allowed:
  *   - https://frozik.github.io          (deployed portfolio, any path)
- *   - http://localhost[:port]           (local dev on any port)
+ *   - http(s)://localhost[:port]        (local dev, any port, any protocol)
  */
 const ORIGIN_PREDICATES: ReadonlyArray<(url: URL) => boolean> = [
   url => url.protocol === 'https:' && url.hostname === 'frozik.github.io',
-  url => url.protocol === 'http:' && url.hostname === 'localhost',
+  url => (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname === 'localhost',
 ];
 
 function isOriginAllowed(origin: string | undefined): boolean {
@@ -114,7 +115,32 @@ function countPeers(): number {
   return total;
 }
 
+// CORS: the portfolio client probes /health from the browser before
+// opening the WS, and that fetch is cross-origin. We reuse the same
+// allowlist as the WS upgrade — reflecting the Origin back is safer than
+// a blanket `*` and also permits credentialed requests if we ever need
+// them. Requests from disallowed origins get no CORS headers at all, so
+// the browser blocks the response (which is what we want).
+function buildCorsHeaders(origin: string | undefined): Record<string, string> {
+  if (!isOriginAllowed(origin) || origin === undefined) {
+    return {};
+  }
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
 const server = http.createServer((request, response) => {
+  const corsHeaders = buildCorsHeaders(request.headers.origin);
+
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204, corsHeaders);
+    response.end();
+    return;
+  }
   const url = request.url ?? '/';
   if (url === '/health' || url.startsWith('/health?')) {
     const body = JSON.stringify({
@@ -124,13 +150,14 @@ const server = http.createServer((request, response) => {
       peers: countPeers(),
     });
     response.writeHead(200, {
+      ...corsHeaders,
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
     });
     response.end(`${body}\n`);
     return;
   }
-  response.writeHead(200, { 'Content-Type': 'text/plain' });
+  response.writeHead(200, { ...corsHeaders, 'Content-Type': 'text/plain' });
   response.end('y-webrtc signaling: ok\n');
 });
 

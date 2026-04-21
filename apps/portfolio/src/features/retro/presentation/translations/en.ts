@@ -131,5 +131,8 @@ export const retroEnTranslations = {
     connectFailed: 'Could not connect to this retro.',
     copyFailed: 'Could not copy to clipboard.',
     actionForbidden: 'Only the facilitator can do that.',
+    signalingUnavailableTitle: 'WebRTC signaling server unavailable',
+    signalingUnavailableBody:
+      'The Retro feature needs a reachable signaling server to set up peer-to-peer sync. All configured endpoints are currently unreachable — this is usually temporary. Please refresh the page in a minute or try again later.',
   },
 } as const;
