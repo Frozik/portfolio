@@ -1,0 +1,45 @@
+.cardFlipContainer {
+  perspective: 1000px;
+  // Clip 3D rotation overflow: mid-flip the card briefly occupies more
+  // pixels than its final layout (perspective projection grows the far
+  // edges), which otherwise bubbles up to the column and the Room scroll
+  // container and surfaces a transient scrollbar.
+  overflow: hidden;
+}
+
+.cardFlipInner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.cardFlipInnerHidden {
+  transform: rotateY(180deg);
+}
+
+.cardFlipInnerRevealed {
+  transform: rotateY(0deg);
+}
+
+.cardFace,
+.cardBack {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cardFace {
+  // Firefox doesn't reliably honour `backface-visibility: hidden` when
+  // children share the same z-plane as their rotated sibling — giving the
+  // front face a tiny positive translateZ creates an explicit depth gap so
+  // the front stays the front and the back stays hidden after the flip.
+  transform: translateZ(1px);
+}
+
+.cardBack {
+  transform: rotateY(180deg) translateZ(1px);
+}

@@ -94,6 +94,30 @@ const rootRouter = createBrowserRouter(
             return { Component: Controls };
           },
         },
+        {
+          path: 'retro',
+          handle: { title: appT.pageTitles.retro },
+          lazy: async () => {
+            const { Retro } = await import('../../features/retro/presentation/Retro');
+            return { Component: Retro };
+          },
+          children: [
+            {
+              index: true,
+              lazy: async () => {
+                const { Lobby } = await import('../../features/retro/presentation/Lobby');
+                return { Component: Lobby };
+              },
+            },
+            {
+              path: ':roomId',
+              lazy: async () => {
+                const { Room } = await import('../../features/retro/presentation/Room');
+                return { Component: Room };
+              },
+            },
+          ],
+        },
       ],
     },
   ],

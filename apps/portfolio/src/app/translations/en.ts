@@ -10,6 +10,7 @@ export const appTranslationsEn = {
     binance: 'Binance Orderbook',
     stereometry: 'Stereometry',
     controls: 'Controls',
+    retro: 'Retro',
   },
   navigation: {
     curriculumVitae: 'Curriculum Vitae',
@@ -31,6 +32,10 @@ export const appTranslationsEn = {
     sectionGames: 'Games',
     sudoku: 'Sudoku',
     stereometry: 'Stereometry',
+    sectionCollab: 'Collaboration',
+    retro: 'Retro',
+    retroTooltip:
+      'Local-first collaborative retrospective board on Yjs CRDT and WebRTC — P2P sync, IndexedDB persistence, no backend required',
     sectionUIUX: 'UI/UX',
     controls: 'Controls',
   },

@@ -13,6 +13,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     binance: 'Стакан Binance',
     stereometry: 'Стереометрия',
     controls: 'Элементы управления',
+    retro: 'Ретро',
   },
   navigation: {
     curriculumVitae: 'Резюме',
@@ -35,6 +36,10 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     sectionGames: 'Игры',
     sudoku: 'Судоку',
     stereometry: 'Стереометрия',
+    sectionCollab: 'Коллаборация',
+    retro: 'Ретро',
+    retroTooltip:
+      'Локальная коллаборативная доска ретроспектив на Yjs CRDT и WebRTC — P2P-синхронизация, хранение в IndexedDB, без бекенда',
     sectionUIUX: 'UI/UX',
     controls: 'Элементы управления',
   },

@@ -23,6 +23,9 @@
     "types": "moon run :type-check"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@js-temporal/polyfill": "^0.5.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -63,7 +66,11 @@
     "usehooks-ts": "^3.1.1",
     "uuid": "^13.0.0",
     "webgpu-utils": "^2.0.3",
-    "wgpu-matrix": "^3.4.2"
+    "wgpu-matrix": "^3.4.2",
+    "ws": "^8.18.0",
+    "y-indexeddb": "^9.0.12",
+    "y-webrtc": "^10.3.0",
+    "yjs": "^13.6.20"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
@@ -76,6 +83,7 @@
     "@types/rbush": "^4.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.2",
     "@vitest/ui": "^4.1.2",

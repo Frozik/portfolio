@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Sun,
   TrendingUp,
+  Users,
 } from 'lucide-react';
 import { memo } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -84,6 +85,19 @@ export const NavigationLinks = memo(({ onNavigate }: { onNavigate: () => void })
       <NavLink className={navLinkClass} to="/stereometry" onClick={onNavigate} end={false}>
         <Pyramid size={NAV_ICON_SIZE} />
         <span>{appT.navigation.stereometry}</span>
+      </NavLink>
+    </div>
+
+    <div className="flex flex-col gap-1">
+      <span className="px-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+        {appT.navigation.sectionCollab}
+      </span>
+      <NavLink className={navLinkClass} to="/retro" onClick={onNavigate} end={false}>
+        <Users size={NAV_ICON_SIZE} />
+        <span className="flex-1">{appT.navigation.retro}</span>
+        <Tooltip title={appT.navigation.retroTooltip} placement="right" className="max-w-64">
+          <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+        </Tooltip>
       </NavLink>
     </div>
 

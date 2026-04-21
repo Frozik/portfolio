@@ -1,0 +1,33 @@
+language: typescript
+layer: application
+stack: backend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+
+tasks:
+  build:
+    command: 'pnpm run build'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+      - 'tsconfig.build.json'
+    outputs:
+      - 'dist'
+    options:
+      runInCI: true
+
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    options:
+      runInCI: true
+
+  madge:
+    command: 'madge src --circular --extensions ts ./src'

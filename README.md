@@ -232,3 +232,36 @@ shared library.
   (minutes, seconds, milliseconds)
 - Parse direction toggle: future-only vs nearest match
 - Weekend highlighting in calendar grid
+
+### Retro
+
+Local-first collaborative retrospective board for Agile teams. Zero backend —
+data lives in each participant's IndexedDB, syncs peer-to-peer via WebRTC
+(Yjs CRDT). For the WebRTC signaling handshake this demo runs its own
+`y-webrtc` server (`apps/retro-signaling`, a TypeScript + `ws` service
+deployed as a systemd unit behind nginx + Let's Encrypt on a bare Ubuntu
+VPS). The URL is injected at build time via `VITE_RETRO_SIGNALING_URLS`,
+with a fallback to the public `signaling.yjs.dev` / `y-webrtc-eu.fly.dev`
+servers when the env var is not set. The signaling channel is used only
+for the initial SDP exchange — once peers connect, data flows directly
+over WebRTC DataChannels.
+
+**Lobby** (`/retro`) — list of locally stored retros (name + creation date +
+participant count) plus Create and Join-by-link actions.
+
+**Room** (`/retro/:uuid`) — a columns board driven by the selected template:
+Scrum (Went Well / To Improve / Action Items), Mad / Sad / Glad, or
+Start / Stop / Continue. Cards added during Brainstorm render face-down
+(hidden until reveal) with a 3D flip animation that stagger-flips on phase
+advance to Group. Only the retro organizer (facilitator) can advance phases
+and control the shared timer.
+
+Data model is fully captured in the shared Yjs document (`meta`, `columns`,
+`cards`, `groups`, `votes`, `actionItems`); ephemeral presence (names,
+colors, typing indicators) is carried through Yjs awareness and never
+persisted.
+
+**Stack:** `yjs`, `y-indexeddb`, `y-webrtc` for CRDT storage + P2P sync;
+`@dnd-kit/*` for accessible drag-and-drop; MobX facade (`RoomStore`,
+`RetroLobbyStore`, `IdentityStore`) wraps Yjs so presentation stays
+library-agnostic. See `RETRO.md` for the full feature design.

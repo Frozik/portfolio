@@ -1,0 +1,17 @@
+{
+  "name": "@frozik/retro-signaling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "y-webrtc signaling server for the Retro feature — pub/sub relay for WebRTC SDP handshake",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --watch --experimental-strip-types src/server.ts",
+    "start": "node dist/server.js",
+    "types": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  }
+}
