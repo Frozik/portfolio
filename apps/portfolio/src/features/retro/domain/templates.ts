@@ -1,9 +1,8 @@
 import type { ColumnId, ITemplateConfig } from './types';
-import { ERetroTemplate } from './types';
 
-const SCRUM_TEMPLATE: ITemplateConfig = {
-  id: ERetroTemplate.Scrum,
-  name: 'Scrum',
+const SCRUM_TEMPLATE_EN: ITemplateConfig = {
+  id: 'scrum-en',
+  name: 'Scrum (EN)',
   description: 'Classic three-column retro: celebrate wins, surface issues, commit to actions.',
   columns: [
     {
@@ -30,71 +29,39 @@ const SCRUM_TEMPLATE: ITemplateConfig = {
   ],
 };
 
-const MAD_SAD_GLAD_TEMPLATE: ITemplateConfig = {
-  id: ERetroTemplate.MadSadGlad,
-  name: 'Mad Sad Glad',
-  description: 'Emotional retro — useful after a rough sprint when feelings matter.',
+const SCRUM_TEMPLATE_RU: ITemplateConfig = {
+  id: 'scrum-ru',
+  name: 'Scrum (RU)',
+  description:
+    'Классический ретро из трёх колонок: отмечаем успехи, вскрываем проблемы, фиксируем шаги.',
   columns: [
     {
-      id: 'msg-mad' as ColumnId,
-      title: 'Mad',
-      emoji: '😠',
-      color: '#ef4444',
-      prompt: 'What frustrated you?',
-    },
-    {
-      id: 'msg-sad' as ColumnId,
-      title: 'Sad',
-      emoji: '😢',
-      color: '#6366f1',
-      prompt: 'What disappointed you?',
-    },
-    {
-      id: 'msg-glad' as ColumnId,
-      title: 'Glad',
-      emoji: '😊',
+      id: 'scrum-went-well' as ColumnId,
+      title: 'Что прошло хорошо',
+      emoji: '🟢',
       color: '#22c55e',
-      prompt: 'What made you happy?',
-    },
-  ],
-};
-
-const START_STOP_CONTINUE_TEMPLATE: ITemplateConfig = {
-  id: ERetroTemplate.StartStopContinue,
-  name: 'Start Stop Continue',
-  description: 'Action-oriented retro focused on behavioural change.',
-  columns: [
-    {
-      id: 'ssc-start' as ColumnId,
-      title: 'Start doing',
-      emoji: '▶️',
-      color: '#22c55e',
-      prompt: 'What should we begin doing?',
+      prompt: 'Что сработало, чем вы гордитесь?',
     },
     {
-      id: 'ssc-stop' as ColumnId,
-      title: 'Stop doing',
-      emoji: '⏹️',
-      color: '#ef4444',
-      prompt: 'What should we stop doing?',
+      id: 'scrum-to-improve' as ColumnId,
+      title: 'Что улучшить',
+      emoji: '🟡',
+      color: '#eab308',
+      prompt: 'Что тормозило или шло не так?',
     },
     {
-      id: 'ssc-continue' as ColumnId,
-      title: 'Continue doing',
-      emoji: '🔁',
+      id: 'scrum-action-items' as ColumnId,
+      title: 'План действий',
+      emoji: '🎯',
       color: '#3b82f6',
-      prompt: 'What should we keep doing?',
+      prompt: 'Какие конкретные шаги попробуем в следующем спринте.',
     },
   ],
 };
 
-export const RETRO_TEMPLATES: readonly ITemplateConfig[] = [
-  SCRUM_TEMPLATE,
-  MAD_SAD_GLAD_TEMPLATE,
-  START_STOP_CONTINUE_TEMPLATE,
-];
+export const RETRO_TEMPLATES: readonly ITemplateConfig[] = [SCRUM_TEMPLATE_EN, SCRUM_TEMPLATE_RU];
 
-export function getTemplateById(templateId: ERetroTemplate): ITemplateConfig {
+export function getTemplateById(templateId: string): ITemplateConfig {
   const template = RETRO_TEMPLATES.find(candidate => candidate.id === templateId);
 
   if (template === undefined) {
@@ -102,8 +69,4 @@ export function getTemplateById(templateId: ERetroTemplate): ITemplateConfig {
   }
 
   return template;
-}
-
-export function getDefaultTemplate(): ITemplateConfig {
-  return SCRUM_TEMPLATE;
 }

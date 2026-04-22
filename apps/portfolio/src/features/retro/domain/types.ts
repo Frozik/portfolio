@@ -15,12 +15,6 @@ export enum ERetroPhase {
   Close = 'close',
 }
 
-export enum ERetroTemplate {
-  Scrum = 'scrum',
-  MadSadGlad = 'madSadGlad',
-  StartStopContinue = 'startStopContinue',
-}
-
 export interface IColumnConfig {
   id: ColumnId;
   title: string;
@@ -30,7 +24,7 @@ export interface IColumnConfig {
 }
 
 export interface ITemplateConfig {
-  id: ERetroTemplate;
+  id: string;
   name: string;
   description: string;
   columns: readonly IColumnConfig[];
@@ -69,7 +63,7 @@ export interface ITimerState {
 export interface IRetroMeta {
   name: string;
   createdAt: ISO;
-  template: ERetroTemplate;
+  template: string;
   phase: ERetroPhase;
   facilitatorClientId: ClientId | null;
   /** Display name of the current facilitator, kept in Yjs so it survives disconnect. */
@@ -81,7 +75,7 @@ export interface IRetroMeta {
 export interface IRoomIndexEntry {
   roomId: RoomId;
   name: string;
-  template: ERetroTemplate;
+  template: string;
   createdAt: ISO;
   lastVisitedAt: ISO;
   participantCount: number;

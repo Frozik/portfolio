@@ -6,18 +6,12 @@ import { memo, useState } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import { Slider } from '../../../../shared/ui/Slider';
 import type { ICreateRoomParams } from '../../application/RetroLobbyStore';
-import { ERetroTemplate } from '../../domain/types';
+import { RETRO_TEMPLATES } from '../../domain/templates';
 import { retroT as t } from '../translations';
 
 const MIN_VOTES = 1;
 const MAX_VOTES = 10;
 const DEFAULT_VOTES = 5;
-
-const TEMPLATE_OPTIONS: readonly ERetroTemplate[] = [
-  ERetroTemplate.Scrum,
-  ERetroTemplate.MadSadGlad,
-  ERetroTemplate.StartStopContinue,
-];
 
 interface CreateRetroDialogProps {
   open: boolean;
@@ -25,9 +19,11 @@ interface CreateRetroDialogProps {
   onCreate: (params: ICreateRoomParams) => void;
 }
 
+const DEFAULT_TEMPLATE_ID = RETRO_TEMPLATES[0]?.id ?? '';
+
 const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDialogProps) => {
   const [name, setName] = useState('');
-  const [template, setTemplate] = useState<ERetroTemplate>(ERetroTemplate.Scrum);
+  const [template, setTemplate] = useState<string>(DEFAULT_TEMPLATE_ID);
   const [votesPerParticipant, setVotesPerParticipant] = useState(DEFAULT_VOTES);
 
   const handleOpenChange = useFunction((nextOpen: boolean) => {
@@ -41,7 +37,7 @@ const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDial
   });
 
   const handleTemplateChange = useFunction((value: string) => {
-    setTemplate(value as ERetroTemplate);
+    setTemplate(value);
   });
 
   const handleVotesChange = useFunction((value: number) => {
@@ -109,13 +105,12 @@ const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDial
                 onValueChange={handleTemplateChange}
                 className="flex flex-col gap-2"
               >
-                {TEMPLATE_OPTIONS.map(templateId => {
-                  const templateCopy = t.templates[templateId];
-                  const radioId = `retro-template-${templateId}`;
+                {RETRO_TEMPLATES.map(templateConfig => {
+                  const radioId = `retro-template-${templateConfig.id}`;
 
                   return (
                     <label
-                      key={templateId}
+                      key={templateConfig.id}
                       htmlFor={radioId}
                       className={
                         'flex cursor-pointer items-start gap-3 rounded-lg border border-border ' +
@@ -126,7 +121,7 @@ const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDial
                     >
                       <RadioGroupPrimitive.Item
                         id={radioId}
-                        value={templateId}
+                        value={templateConfig.id}
                         className={
                           'mt-0.5 h-4 w-4 shrink-0 rounded-full border border-border bg-surface ' +
                           'data-[state=checked]:border-brand-500'
@@ -137,9 +132,9 @@ const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDial
                         </RadioGroupPrimitive.Indicator>
                       </RadioGroupPrimitive.Item>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-text">{templateCopy.name}</span>
+                        <span className="text-sm font-medium text-text">{templateConfig.name}</span>
                         <span className="text-xs text-text-secondary">
-                          {templateCopy.description}
+                          {templateConfig.description}
                         </span>
                       </div>
                     </label>

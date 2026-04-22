@@ -14,7 +14,7 @@ import type {
   IRetroSnapshot,
   VotesByTarget,
 } from './types';
-import { ERetroPhase, ERetroTemplate } from './types';
+import { ERetroPhase } from './types';
 
 const ALICE = 1 as ClientId;
 const BOB = 2 as ClientId;
@@ -84,7 +84,7 @@ function makeSnapshot(overrides: {
     meta: {
       name: 'Sprint 42 Retro',
       createdAt: ISO_CREATED_AT,
-      template: ERetroTemplate.Scrum,
+      template: 'scrum-en',
       phase: ERetroPhase.Close,
       facilitatorClientId: ALICE,
       facilitatorName: 'Alice',

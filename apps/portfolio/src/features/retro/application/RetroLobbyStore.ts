@@ -8,7 +8,7 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import type { ClientId, ERetroTemplate, IRoomIndexEntry, RoomId } from '../domain/types';
+import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
 import type { IRoomIndexRepo } from '../infrastructure/room-index-repo';
 import type { UserDirectoryStore } from './UserDirectoryStore';
 
@@ -17,7 +17,7 @@ const INITIAL_PARTICIPANT_COUNT = 0;
 
 export interface ICreateRoomParams {
   readonly name: string;
-  readonly template: ERetroTemplate;
+  readonly template: string;
   readonly votesPerParticipant: number;
 }
 
@@ -28,7 +28,7 @@ export interface ICreateRoomContext {
 export interface IJoinedRoomSnapshot {
   readonly roomId: RoomId;
   readonly name: string;
-  readonly template: ERetroTemplate;
+  readonly template: string;
   readonly createdAt: ISO;
   readonly facilitatorClientId: ClientId | null;
   readonly facilitatorName: string;

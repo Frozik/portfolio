@@ -7,7 +7,7 @@ import {
 } from '@frozik/utils';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
-import type { ClientId, ERetroTemplate, IRoomIndexEntry, RoomId } from '../domain/types';
+import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'retro-room-index';
 const CURRENT_DATABASE_VERSION = 1;
@@ -22,7 +22,7 @@ const ROOM_CREATED_AT_FIELD: keyof IDBRoomEntry = 'createdAt';
 interface IDBRoomEntry {
   readonly roomId: RoomId;
   readonly name: string;
-  readonly template: ERetroTemplate;
+  readonly template: string;
   readonly createdAt: ISO;
   readonly lastVisitedAt: ISO;
   readonly participantCount: number;
