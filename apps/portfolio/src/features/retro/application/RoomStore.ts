@@ -104,7 +104,12 @@ export class RoomStore {
   private readonly soundPlayer: ISoundPlayer;
   private toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private presenceHeartbeatId: ReturnType<typeof setInterval> | null = null;
-  private lastTimerSeverity: TimerSeverity = 'idle';
+  /**
+   * Last observed "whole seconds remaining" value. Used by `tickTimer`
+   * to detect second boundaries and fire countdown cues exactly once
+   * per crossed second.
+   */
+  private lastRemainingSec: number | null = null;
   private isDisposed = false;
 
   identity: IRetroIdentity;
@@ -232,14 +237,51 @@ export class RoomStore {
 
   tickTimer(): void {
     this.timerTickNow = Date.now();
-    const severity = this.timerSeverity;
-    if (severity !== this.lastTimerSeverity) {
-      if (severity === 'expired' && this.lastTimerSeverity !== 'expired') {
-        this.soundPlayer.play(ERetroSoundCue.TimerExpired);
-      } else if (severity === 'warning' && this.lastTimerSeverity === 'running') {
-        this.soundPlayer.play(ERetroSoundCue.TimerWarning);
+    this.maybeFireCountdownCue();
+  }
+
+  /**
+   * Second-accurate timer audio cues:
+   *   10s left  → single warning beep
+   *   5..1s left → short countdown tick on each crossed second
+   *   0s left   → triple expired beep
+   *
+   * Detection is based on crossing a whole-second boundary downwards,
+   * so each sound fires exactly once even though `tickTimer` runs twice
+   * per second.
+   */
+  private maybeFireCountdownCue(): void {
+    const timer = this.currentSnapshot?.meta.timer;
+    if (timer === undefined || timer.startedAt === null) {
+      this.lastRemainingSec = null;
+      return;
+    }
+
+    const remainingMs = computeRemainingMs(timer, this.timerTickNow as Milliseconds);
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1_000));
+    const previousSec = this.lastRemainingSec;
+    this.lastRemainingSec = remainingSec;
+
+    if (previousSec === null || previousSec <= remainingSec) {
+      return;
+    }
+
+    if (remainingSec === 0) {
+      this.soundPlayer.play(ERetroSoundCue.TimerExpired);
+      // Only the facilitator writes the pause — the Yjs update propagates
+      // to everyone so all peers stop the clock at 00:00 instead of
+      // letting it keep ticking into negative territory.
+      if (this.isFacilitator) {
+        this.pauseTimer();
       }
-      this.lastTimerSeverity = severity;
+      return;
+    }
+    if (remainingSec === 10) {
+      this.soundPlayer.play(ERetroSoundCue.TimerWarning);
+      return;
+    }
+    if (remainingSec >= 1 && remainingSec <= 5) {
+      this.soundPlayer.play(ERetroSoundCue.TimerCountdown);
     }
   }
 
@@ -249,10 +291,13 @@ export class RoomStore {
       return 'idle';
     }
     const { timer } = meta;
-    if (timer.startedAt === null) {
-      return 'idle';
-    }
     const remaining = computeRemainingMs(timer, this.timerTickNow as Milliseconds);
+    if (timer.startedAt === null) {
+      // Paused with 0 remaining is the auto-pause-at-expiry state — keep
+      // it visually "expired" (red clock) even though the timer isn't
+      // running. Any other paused/idle value stays neutral.
+      return remaining <= 0 ? 'expired' : 'idle';
+    }
     if (remaining <= 0) {
       return 'expired';
     }
@@ -294,10 +339,6 @@ export class RoomStore {
   get isFacilitator(): boolean {
     const facilitatorClientId = this.currentSnapshot?.meta.facilitatorClientId ?? null;
     return facilitatorClientId !== null && facilitatorClientId === this.identity.clientId;
-  }
-
-  playTimerExpiredChime(): void {
-    this.soundPlayer.play(ERetroSoundCue.TimerExpired);
   }
 
   unlockChime(): void {

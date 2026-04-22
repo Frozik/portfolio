@@ -87,7 +87,10 @@ const ColumnCardItemComponent = ({
     >
       <div
         ref={setDragRef}
-        className={cn(isDragging && 'opacity-40', canDrag && 'cursor-grab active:cursor-grabbing')}
+        className={cn(
+          isDragging && 'opacity-40',
+          canDrag && 'cursor-grab touch-manipulation select-none active:cursor-grabbing'
+        )}
         {...attributes}
         {...listeners}
       >

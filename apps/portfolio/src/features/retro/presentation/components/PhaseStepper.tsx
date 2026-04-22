@@ -35,7 +35,7 @@ export const PhaseStepper = observer(({ store }: PhaseStepperProps) => {
   const handleNext = useFunction(() => store.advancePhase());
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       {isFacilitator && (
         <Button
           variant="ghost"
@@ -47,7 +47,7 @@ export const PhaseStepper = observer(({ store }: PhaseStepperProps) => {
           <ChevronLeft size={14} />
         </Button>
       )}
-      <ol className="flex items-center gap-1 text-xs">
+      <ol className="flex min-w-0 flex-1 flex-wrap items-center gap-1 text-xs">
         {PHASE_ORDER.map((candidate, index) => {
           const isActive = candidate === phase;
           const isPast = index < activeIndex;
@@ -55,13 +55,23 @@ export const PhaseStepper = observer(({ store }: PhaseStepperProps) => {
             <li
               key={candidate}
               className={cn(
-                'rounded-full border px-2.5 py-1 font-medium',
-                isActive && 'border-brand-400 bg-brand-500/20 text-brand-200',
-                !isActive && isPast && 'border-border text-text-secondary',
-                !isActive && !isPast && 'border-border/50 text-text-muted'
+                'rounded-full border font-medium',
+                // Active pill always keeps the label for orientation.
+                isActive && 'border-brand-400 bg-brand-500/20 px-2.5 py-1 text-brand-200',
+                // On narrow screens non-active phases collapse into dots
+                // so the whole strip fits without horizontal scroll.
+                !isActive && 'h-2 w-2 p-0 sm:h-auto sm:w-auto sm:px-2.5 sm:py-1',
+                !isActive &&
+                  isPast &&
+                  'border-border bg-border sm:bg-transparent sm:text-text-secondary',
+                !isActive &&
+                  !isPast &&
+                  'border-border/50 bg-border/40 sm:bg-transparent sm:text-text-muted'
               )}
             >
-              {PHASE_LABELS[candidate]}
+              <span className={cn(isActive ? '' : 'hidden sm:inline')}>
+                {PHASE_LABELS[candidate]}
+              </span>
             </li>
           );
         })}

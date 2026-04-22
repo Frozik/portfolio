@@ -13,13 +13,11 @@ import type { RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
 import { ColumnList } from './components/ColumnList';
 import { DiscussPanel } from './components/DiscussPanel';
-import { EmptyRoomHint } from './components/EmptyRoomHint';
 import { ExportDialog } from './components/ExportDialog';
 import { IdentityDialog } from './components/IdentityDialog';
 import { RoomHeader } from './components/RoomHeader';
 import { ShareLinkDialog } from './components/ShareLinkDialog';
 import { useAwarenessPresence } from './hooks/useAwarenessPresence';
-import { useRetroSound } from './hooks/useRetroSound';
 import { useTimerTick } from './hooks/useTimerTick';
 import { retroT as t } from './translations';
 
@@ -54,8 +52,24 @@ export const Room = observer(() => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   useTimerTick(roomStore);
-  useRetroSound(roomStore);
   useAwarenessPresence(roomStore, identityStore);
+
+  // Resume the shared AudioContext on the first user gesture inside the
+  // room. Browsers keep it suspended until a real interaction, otherwise
+  // countdown beeps stay silent for participants who joined by link
+  // (i.e. never went through the identity dialog where `unlockChime` was
+  // originally wired).
+  useEffect(() => {
+    const unlock = (): void => {
+      roomStore.unlockChime();
+    };
+    document.addEventListener('pointerdown', unlock, { once: true });
+    document.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      document.removeEventListener('pointerdown', unlock);
+      document.removeEventListener('keydown', unlock);
+    };
+  }, [roomStore]);
 
   useEffect(() => {
     if (searchParams.get('created') === '1') {
@@ -115,7 +129,7 @@ export const Room = observer(() => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-6 text-text">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 text-text sm:p-6">
       {roomStore.connectionStatus === 'connecting' && (
         <div className="flex justify-center py-8">
           <Spinner />
@@ -131,8 +145,6 @@ export const Room = observer(() => {
       )}
 
       <RoomHeader store={roomStore} />
-
-      <EmptyRoomHint store={roomStore} />
 
       <ColumnList store={roomStore} />
 

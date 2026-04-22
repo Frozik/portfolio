@@ -65,8 +65,8 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     waitingForPeers: 'Ожидаем участников…',
     offlineBanner:
       'Другие участники не в сети. Ваши изменения синхронизируются, когда они подключатся.',
-    facilitatorBadge: 'Фасилитатор',
-    facilitatorOffline: 'Фасилитатор не в сети.',
+    facilitatorBadge: 'Владелец',
+    facilitatorOffline: 'Владелец не в сети.',
     takeOver: 'Принять роль',
     participantsLabel: 'Участники',
     addCardPlaceholder: 'Напишите карточку…',
@@ -137,7 +137,7 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     loadRoomsFailed: 'Не удалось загрузить ваши ретро.',
     connectFailed: 'Не удалось подключиться к этому ретро.',
     copyFailed: 'Не удалось скопировать в буфер обмена.',
-    actionForbidden: 'Это может сделать только фасилитатор.',
+    actionForbidden: 'Это может сделать только владелец.',
     signalingUnavailableTitle: 'Сигнальный сервер WebRTC недоступен',
     signalingUnavailableBody:
       'Для работы ретро нужен сигнальный сервер, который помогает участникам установить P2P-соединение. Все настроенные серверы сейчас недоступны — обычно это временно. Обнови страницу через минуту или попробуй позже.',

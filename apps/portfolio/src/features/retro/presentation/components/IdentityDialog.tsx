@@ -22,6 +22,13 @@ interface IdentityDialogProps {
   initialName: string;
   initialColor: string;
   onSubmit: (params: { name: string; color: string }) => void;
+  /**
+   * Optional close handler. When provided, the dialog renders a Cancel
+   * button and lets the user dismiss via Esc / outside click — used from
+   * the in-room identity edit flow where the profile already exists.
+   * When omitted (first-visit mandatory setup) the dialog is sticky.
+   */
+  onClose?: () => void;
 }
 
 interface ColorSwatchProps {
@@ -60,9 +67,11 @@ const IdentityDialogComponent = ({
   initialName,
   initialColor,
   onSubmit,
+  onClose,
 }: IdentityDialogProps) => {
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState(initialColor);
+  const cancellable = onClose !== undefined;
 
   const handleNameChange = useFunction((event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
@@ -87,10 +96,22 @@ const IdentityDialogComponent = ({
     event.preventDefault();
   });
 
+  const handleCancel = useFunction(() => {
+    setName(initialName);
+    setColor(initialColor);
+    onClose?.();
+  });
+
+  const handleOpenChange = useFunction((nextOpen: boolean) => {
+    if (!nextOpen && cancellable) {
+      handleCancel();
+    }
+  });
+
   const isSubmitDisabled = name.trim().length === 0;
 
   return (
-    <DialogPrimitive.Root open={open}>
+    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={
@@ -100,9 +121,9 @@ const IdentityDialogComponent = ({
           }
         />
         <DialogPrimitive.Content
-          onPointerDownOutside={preventClose}
-          onEscapeKeyDown={preventClose}
-          onInteractOutside={preventClose}
+          onPointerDownOutside={cancellable ? undefined : preventClose}
+          onEscapeKeyDown={cancellable ? undefined : preventClose}
+          onInteractOutside={cancellable ? undefined : preventClose}
           className={
             'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 ' +
             'rounded-xl border border-border bg-surface-elevated p-6 shadow-2xl ' +
@@ -152,7 +173,12 @@ const IdentityDialogComponent = ({
               </div>
             </div>
 
-            <div className="mt-2 flex justify-end">
+            <div className="mt-2 flex justify-end gap-2">
+              {cancellable && (
+                <Button type="button" variant="ghost" onClick={handleCancel}>
+                  {t.create.cancel}
+                </Button>
+              )}
               <Button type="submit" variant="primary" disabled={isSubmitDisabled}>
                 {t.identity.submit}
               </Button>

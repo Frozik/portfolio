@@ -44,6 +44,7 @@ export const Skills = memo(() => (
           <Tag color="purple">Design Systems</Tag>
           <Tag color="purple">Monorepo</Tag>
           <Tag color="purple">Message Queues</Tag>
+          <Tag color="purple">CRDT</Tag>
 
           <Tag color="orange">Node.js</Tag>
           <Tag color="orange">Fastify</Tag>
@@ -52,6 +53,7 @@ export const Skills = memo(() => (
           <Tag color="orange">GraphQL</Tag>
           <Tag color="orange">REST API</Tag>
           <Tag color="orange">WebSocket</Tag>
+          <Tag color="orange">WebRTC</Tag>
           <Tag color="orange">OAuth 2.0</Tag>
           <Tag color="orange">JWT</Tag>
 

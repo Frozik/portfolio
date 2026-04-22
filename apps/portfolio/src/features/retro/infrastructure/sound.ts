@@ -9,6 +9,7 @@ import { isNil } from 'lodash-es';
 export enum ERetroSoundCue {
   TimerExpired = 'timerExpired',
   TimerWarning = 'timerWarning',
+  TimerCountdown = 'timerCountdown',
   VoteCast = 'voteCast',
   ActionItemAdded = 'actionItemAdded',
 }
@@ -30,11 +31,23 @@ interface ICueProfile {
   readonly frequencyHz: number;
   readonly durationMs: number;
   readonly gain: number;
+  /**
+   * Optional repeat schedule — each cue fires `count` consecutive beeps
+   * separated by `gapMs` (measured start-to-start). Defaults to a single
+   * beep when absent.
+   */
+  readonly repeat?: { readonly count: number; readonly gapMs: number };
 }
 
 const CUE_PROFILES: Record<ERetroSoundCue, ICueProfile> = {
-  [ERetroSoundCue.TimerExpired]: { frequencyHz: 440, durationMs: 420, gain: 0.25 },
-  [ERetroSoundCue.TimerWarning]: { frequencyHz: 660, durationMs: 180, gain: 0.18 },
+  [ERetroSoundCue.TimerExpired]: {
+    frequencyHz: 440,
+    durationMs: 280,
+    gain: 0.28,
+    repeat: { count: 3, gapMs: 220 },
+  },
+  [ERetroSoundCue.TimerWarning]: { frequencyHz: 660, durationMs: 180, gain: 0.2 },
+  [ERetroSoundCue.TimerCountdown]: { frequencyHz: 880, durationMs: 90, gain: 0.16 },
   [ERetroSoundCue.VoteCast]: { frequencyHz: 880, durationMs: 80, gain: 0.12 },
   [ERetroSoundCue.ActionItemAdded]: { frequencyHz: 520, durationMs: 140, gain: 0.15 },
 };
@@ -53,9 +66,20 @@ export function createSoundPlayer(): ISoundPlayer {
   let audioContext: AudioContext | null = null;
   let enabled = true;
 
-  const getContext = (): AudioContext | null => {
+  /**
+   * Firefox refuses to `resume()` an `AudioContext` that was constructed
+   * outside an active user gesture — once it's suspended there it stays
+   * suspended for the rest of the page lifetime. To stay compatible we
+   * only *create* the context from `unlock()` (which is always invoked
+   * synchronously from a pointer / key event), and `play()` silently
+   * no-ops until that happens.
+   */
+  const getContext = (createIfMissing: boolean): AudioContext | null => {
     if (!isNil(audioContext)) {
       return audioContext;
+    }
+    if (!createIfMissing) {
+      return null;
     }
 
     const AudioContextCtor =
@@ -72,49 +96,61 @@ export function createSoundPlayer(): ISoundPlayer {
     return audioContext;
   };
 
+  const scheduleBeep = (
+    context: AudioContext,
+    profile: ICueProfile,
+    startAtSeconds: number
+  ): void => {
+    const durationSeconds = profile.durationMs / MS_IN_SECOND;
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(profile.frequencyHz, startAtSeconds);
+
+    gainNode.gain.setValueAtTime(0, startAtSeconds);
+    gainNode.gain.linearRampToValueAtTime(profile.gain, startAtSeconds + ATTACK_SECONDS);
+    gainNode.gain.linearRampToValueAtTime(
+      0,
+      startAtSeconds + Math.max(durationSeconds, ATTACK_SECONDS + RELEASE_SECONDS)
+    );
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    oscillator.start(startAtSeconds);
+    oscillator.stop(startAtSeconds + durationSeconds + SILENCE_TAIL_SECONDS);
+
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gainNode.disconnect();
+    };
+  };
+
   return {
     play(cue: ERetroSoundCue): void {
       if (!enabled) {
         return;
       }
 
-      const context = getContext();
+      const context = getContext(false);
 
-      if (isNil(context)) {
+      if (isNil(context) || context.state === 'suspended') {
         return;
       }
 
       const profile = CUE_PROFILES[cue];
       const now = context.currentTime;
-      const durationSeconds = profile.durationMs / MS_IN_SECOND;
+      const beats = profile.repeat?.count ?? 1;
+      const gapSeconds = (profile.repeat?.gapMs ?? 0) / MS_IN_SECOND;
 
-      const oscillator = context.createOscillator();
-      const gainNode = context.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(profile.frequencyHz, now);
-
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(profile.gain, now + ATTACK_SECONDS);
-      gainNode.gain.linearRampToValueAtTime(
-        0,
-        now + Math.max(durationSeconds, ATTACK_SECONDS + RELEASE_SECONDS)
-      );
-
-      oscillator.connect(gainNode);
-      gainNode.connect(context.destination);
-
-      oscillator.start(now);
-      oscillator.stop(now + durationSeconds + SILENCE_TAIL_SECONDS);
-
-      oscillator.onended = () => {
-        oscillator.disconnect();
-        gainNode.disconnect();
-      };
+      for (let index = 0; index < beats; index += 1) {
+        scheduleBeep(context, profile, now + index * gapSeconds);
+      }
     },
 
     unlock(): void {
-      const context = getContext();
+      const context = getContext(true);
       if (isNil(context)) {
         return;
       }

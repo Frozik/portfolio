@@ -3,7 +3,8 @@ import {
   closestCenter,
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -26,7 +27,13 @@ interface ColumnListProps {
 const ColumnListComponent = ({ store }: ColumnListProps) => {
   const snapshot = store.currentSnapshot;
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  // Separate sensors per input type so mobile long-press can coexist with
+  // page scroll and native text-selection, while desktop keeps the quick
+  // 4px activation.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  );
 
   const [activeCardId, setActiveCardId] = useState<CardId | null>(null);
 

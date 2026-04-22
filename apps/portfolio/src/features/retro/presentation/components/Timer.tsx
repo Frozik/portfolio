@@ -39,6 +39,12 @@ const severityClass: Record<string, string> = {
   expired: 'text-red-500',
 };
 
+/**
+ * Single compact timer block: [-] [clock] [+] [play/pause] [reset].
+ * Non-facilitators see only the clock; facilitators get the full control
+ * set. All controls live together so the whole widget can be shifted as
+ * one unit when the header wraps on mobile.
+ */
 export const Timer = observer(({ store }: TimerProps) => {
   const { isFacilitator, timerSeverity, remainingTimerMs } = store;
   const timer = store.currentSnapshot?.meta.timer;
@@ -54,62 +60,64 @@ export const Timer = observer(({ store }: TimerProps) => {
   });
 
   const isRunning = timer?.startedAt !== null && timer?.startedAt !== undefined;
-  // Only disable when already sitting exactly on the bound — the store
-  // clamps intermediate steps (e.g. -30s at 55s lands on 30s).
   const canDecrease = remainingTimerMs > MIN_TIMER_DURATION_MS;
   const canIncrease = remainingTimerMs < MAX_TIMER_DURATION_MS;
 
-  return (
-    <div className="flex items-center gap-3">
-      <span
-        className={cn(
-          'font-mono text-2xl font-semibold tabular-nums',
-          severityClass[timerSeverity] ?? severityClass.idle
-        )}
-      >
-        {formatClock(remainingTimerMs)}
-      </span>
-      {isFacilitator && (
-        <div className="flex items-center gap-1">
-          {isRunning ? (
-            <Button variant="ghost" size="sm" onClick={handlePause} aria-label={t.timer.pause}>
-              <Pause size={14} />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleStart}
-              aria-label={timer?.pausedRemainingMs !== null ? t.timer.resume : t.timer.start}
-            >
-              <Play size={14} />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDecrease}
-            disabled={!canDecrease}
-            aria-label={t.timer.decrease}
-            title={t.timer.adjustHint}
-          >
-            <Minus size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleIncrease}
-            disabled={!canIncrease}
-            aria-label={t.timer.increase}
-            title={t.timer.adjustHint}
-          >
-            <Plus size={14} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleReset} aria-label={t.timer.reset}>
-            <RotateCcw size={14} />
-          </Button>
-        </div>
+  const clockNode = (
+    <span
+      className={cn(
+        'select-none px-1 font-mono text-xl font-semibold tabular-nums sm:text-2xl',
+        severityClass[timerSeverity] ?? severityClass.idle
       )}
+    >
+      {formatClock(remainingTimerMs)}
+    </span>
+  );
+
+  if (!isFacilitator) {
+    return <div className="flex items-center">{clockNode}</div>;
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleDecrease}
+        disabled={!canDecrease}
+        aria-label={t.timer.decrease}
+        title={t.timer.adjustHint}
+      >
+        <Minus size={14} />
+      </Button>
+      {clockNode}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleIncrease}
+        disabled={!canIncrease}
+        aria-label={t.timer.increase}
+        title={t.timer.adjustHint}
+      >
+        <Plus size={14} />
+      </Button>
+      {isRunning ? (
+        <Button variant="ghost" size="sm" onClick={handlePause} aria-label={t.timer.pause}>
+          <Pause size={14} />
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleStart}
+          aria-label={timer?.pausedRemainingMs !== null ? t.timer.resume : t.timer.start}
+        >
+          <Play size={14} />
+        </Button>
+      )}
+      <Button variant="ghost" size="sm" onClick={handleReset} aria-label={t.timer.reset}>
+        <RotateCcw size={14} />
+      </Button>
     </div>
   );
 });

@@ -117,13 +117,13 @@ export const Lobby = observer(() => {
   const deleteDialogTitle = t.lobby.deleteDialogTitle.replace('{name}', pendingDeleteRoomName);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-8 text-text">
-      <header className="flex shrink-0 items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t.lobby.title}</h1>
-          <p className="text-text-muted">{t.lobby.subtitle}</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-4 text-text sm:p-8">
+      <header className="flex shrink-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold sm:text-3xl">{t.lobby.title}</h1>
+          <p className="text-sm text-text-muted sm:text-base">{t.lobby.subtitle}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={handleOpenIdentityDialog}
@@ -140,10 +140,6 @@ export const Lobby = observer(() => {
               {identityStore.hasName ? t.identity.editButton : t.identity.setButton}
             </span>
           </button>
-          <Button onClick={handleOpenCreateDialog} disabled={!identityStore.hasName}>
-            <Plus size={16} />
-            {t.lobby.createButton}
-          </Button>
         </div>
       </header>
 
@@ -157,6 +153,17 @@ export const Lobby = observer(() => {
 
       {isSyncedValueDescriptor(rooms) && (
         <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+          <li>
+            <button
+              type="button"
+              onClick={handleOpenCreateDialog}
+              disabled={!identityStore.hasName}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brand-500/40 bg-brand-500/5 p-4 text-sm font-medium text-brand-200 transition-colors hover:bg-brand-500/10 disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-text-muted"
+            >
+              <Plus size={16} />
+              {t.lobby.createButton}
+            </button>
+          </li>
           {rooms.value.length === 0 && (
             <li className="py-8 text-center text-text-muted">{t.lobby.emptyState}</li>
           )}
@@ -208,7 +215,7 @@ export const Lobby = observer(() => {
       )}
 
       <form
-        className="flex shrink-0 flex-col gap-2 border-t border-border pt-6"
+        className="flex shrink-0 flex-col gap-2 border-t border-border pt-6 pl-14 pl-0"
         onSubmit={handleJoinSubmit}
       >
         <label className="text-sm text-text-muted" htmlFor="retro-join-input">
@@ -223,7 +230,7 @@ export const Lobby = observer(() => {
             placeholder={t.lobby.joinByLinkPlaceholder}
             className="h-9 flex-1 rounded-md border border-border bg-surface-elevated px-3 text-sm text-text placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           />
-          <Button type="submit" variant="secondary">
+          <Button type="submit" variant="secondary" disabled={joinInput.trim().length === 0}>
             {t.lobby.joinSubmit}
           </Button>
         </div>
