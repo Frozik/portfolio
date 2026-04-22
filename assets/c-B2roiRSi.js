@@ -1,0 +1,1 @@
+var e=[`wss://y-webrtc-eu.fly.dev`,`wss://signaling.yjs.dev`],t=`wss://144.31.137.20.sslip.io:8443`;function n(){return typeof t!=`string`||t.trim().length===0?e:t.split(`,`).map(e=>e.trim()).filter(e=>e.length>0)}var r=`frozik-retro-`;function i(){return{signalingServers:n(),maxPeers:20,roomPrefix:r}}export{i as t};
