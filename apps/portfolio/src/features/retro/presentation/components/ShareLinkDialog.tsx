@@ -4,6 +4,7 @@ import { Copy } from 'lucide-react';
 import { memo } from 'react';
 
 import { Button } from '../../../../shared/ui/Button';
+import { QRCode } from '../../../../shared/ui/QRCode';
 import { retroT as t } from '../translations';
 
 interface ShareLinkDialogProps {
@@ -66,6 +67,13 @@ const ShareLinkDialogComponent = ({ open, onClose, url, onCopy }: ShareLinkDialo
               <Copy size={16} />
               {t.share.copyLink}
             </Button>
+
+            <div className="mt-2 flex flex-col items-center gap-2">
+              <span className="text-xs text-text-muted">{t.share.qrLabel}</span>
+              <div className="rounded-md bg-white p-3">
+                <QRCode size={200} value={url} />
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 flex justify-end">
