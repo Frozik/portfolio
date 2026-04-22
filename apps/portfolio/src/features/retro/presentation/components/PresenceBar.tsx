@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { Tooltip } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface PresenceBarProps {
   readonly store: RoomStore;

@@ -10,7 +10,12 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
 import * as Y from 'yjs';
-import { TIMER_WARNING_THRESHOLD_MS, TOAST_AUTOCLEAR_MS } from '../domain/constants';
+import {
+  MAX_TIMER_DURATION_MS,
+  MIN_TIMER_DURATION_MS,
+  TIMER_WARNING_THRESHOLD_MS,
+  TOAST_AUTOCLEAR_MS,
+} from '../domain/constants';
 import { createRetroSnapshot } from '../domain/retro-snapshot';
 import { getTemplateById } from '../domain/templates';
 import {
@@ -149,6 +154,7 @@ export class RoomStore {
         deleteCard: action,
         editCard: action,
         moveCardToColumn: action,
+        moveCardToPosition: action,
         groupCards: action,
         setTypingIn: action,
         setPhase: action,
@@ -490,6 +496,11 @@ export class RoomStore {
         this.removeCardFromGroup(draggedId, dragged.record.groupId as GroupId);
       }
 
+      // Drop per-card votes: once inside a group the card is no longer a
+      // vote target, and orphaned entries would count nowhere.
+      this.clearVotesFor(draggedId);
+      this.clearVotesFor(targetId);
+
       const groupId = this.ensureGroupForCard(target) as GroupId;
       const groupMap = this.handles.groups.get(groupId);
       if (groupMap === undefined) {
@@ -519,6 +530,73 @@ export class RoomStore {
       }
       sourceList.delete(draggedAfter.index, 1);
       destList.push([{ ...draggedAfter.record, columnId: groupColumnId, groupId }]);
+    });
+  }
+
+  /**
+   * Move a card to an absolute index inside its (or another) column's Y.Array,
+   * optionally attaching it to a target group. Used for gap-based reordering:
+   * the UI emits the Y.Array index where the card should land and the target
+   * group membership. The card may be:
+   *   - reordered within the same column/group (no group-membership change);
+   *   - moved between columns or groups (group-membership updates);
+   *   - detached from its old group (old group is cleaned up if it drops
+   *     below two members).
+   */
+  moveCardToPosition(
+    cardId: CardId,
+    targetColumnId: ColumnId,
+    targetIndex: number,
+    targetGroupId: GroupId | null
+  ): void {
+    this.providers.doc.transact(() => {
+      const location = this.findCardLocation(cardId);
+      if (location === null) {
+        return;
+      }
+
+      const previousGroupId = location.record.groupId;
+      if (previousGroupId !== null && previousGroupId !== targetGroupId) {
+        this.removeCardFromGroup(cardId, previousGroupId as GroupId);
+      }
+
+      const latestLocation = this.findCardLocation(cardId);
+      if (latestLocation === null) {
+        return;
+      }
+
+      const sourceList = this.handles.cards.get(latestLocation.columnId);
+      const destList = this.handles.cards.get(targetColumnId);
+      if (sourceList === undefined || destList === undefined) {
+        return;
+      }
+
+      sourceList.delete(latestLocation.index, 1);
+
+      let adjustedIndex = targetIndex;
+      if (latestLocation.columnId === targetColumnId && latestLocation.index < targetIndex) {
+        adjustedIndex -= 1;
+      }
+      adjustedIndex = Math.max(0, Math.min(adjustedIndex, destList.length));
+
+      destList.insert(adjustedIndex, [
+        {
+          ...latestLocation.record,
+          columnId: targetColumnId,
+          groupId: targetGroupId,
+        },
+      ]);
+
+      if (targetGroupId !== null && previousGroupId !== targetGroupId) {
+        const groupMap = this.handles.groups.get(targetGroupId);
+        if (groupMap !== undefined) {
+          const cardIds = this.readGroupCardIds(groupMap);
+          if (!cardIds.includes(cardId)) {
+            groupMap.set('cardIds', [...cardIds, cardId]);
+          }
+        }
+        this.clearVotesFor(cardId);
+      }
     });
   }
 
@@ -569,6 +647,10 @@ export class RoomStore {
     return groupId;
   }
 
+  private clearVotesFor(targetId: CardId | GroupId): void {
+    this.handles.votes.delete(targetId);
+  }
+
   private removeCardFromGroup(cardId: CardId, groupId: GroupId): void {
     const groupMap = this.handles.groups.get(groupId);
     if (groupMap === undefined) {
@@ -593,6 +675,7 @@ export class RoomStore {
       }
     }
     this.handles.groups.delete(groupId);
+    this.clearVotesFor(groupId);
   }
 
   private readGroupCardIds(groupMap: Y.Map<unknown>): readonly string[] {
@@ -694,7 +777,20 @@ export class RoomStore {
     if (timer === undefined) {
       return;
     }
-    this.writeTimer(extendTimer(timer, extraMs));
+    // Clamp the effective remaining time to [MIN, MAX] — e.g. on 55s the
+    // user can click -30s and land exactly on 30s instead of being fully
+    // rejected. The actual delta applied is the clamped one.
+    const currentRemainingMs = computeRemainingMs(timer, Date.now() as Milliseconds);
+    const rawNextRemaining = currentRemainingMs + extraMs;
+    const clampedNextRemaining = Math.min(
+      Math.max(rawNextRemaining, MIN_TIMER_DURATION_MS),
+      MAX_TIMER_DURATION_MS
+    );
+    const effectiveDelta = (clampedNextRemaining - currentRemainingMs) as Milliseconds;
+    if (effectiveDelta === 0) {
+      return;
+    }
+    this.writeTimer(extendTimer(timer, effectiveDelta));
   }
 
   resetTimer(durationMs: Milliseconds): void {

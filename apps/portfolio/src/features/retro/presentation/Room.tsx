@@ -1,5 +1,6 @@
 import { useFunction } from '@frozik/components';
 import { assert } from '@frozik/utils';
+import copy from 'copy-to-clipboard';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -20,7 +21,7 @@ import { ShareLinkDialog } from './components/ShareLinkDialog';
 import { useAwarenessPresence } from './hooks/useAwarenessPresence';
 import { useRetroSound } from './hooks/useRetroSound';
 import { useTimerTick } from './hooks/useTimerTick';
-import { retroEnTranslations as t } from './translations/en';
+import { retroT as t } from './translations';
 
 export const Room = observer(() => {
   const { roomId } = useParams();
@@ -99,8 +100,7 @@ export const Room = observer(() => {
   });
 
   const handleCopyLink = useFunction(() => {
-    void navigator.clipboard.writeText(window.location.href);
-    roomStore.showToast(t.room.linkCopied);
+    roomStore.showToast(copy(window.location.href) ? t.room.linkCopied : t.errors.copyFailed);
   });
 
   if (!identityStore.hasName) {
@@ -122,7 +122,13 @@ export const Room = observer(() => {
         </div>
       )}
 
-      {roomStore.lastToast !== null && <Alert type="info" message={roomStore.lastToast.message} />}
+      {roomStore.lastToast !== null && (
+        <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+          <div className="pointer-events-auto max-w-md shadow-lg shadow-black/40">
+            <Alert type="info" message={roomStore.lastToast.message} />
+          </div>
+        </div>
+      )}
 
       <RoomHeader store={roomStore} />
 

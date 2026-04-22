@@ -42,6 +42,7 @@
     "alea": "^1.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "copy-to-clipboard": "^3.3.3",
     "dockview": "^5.2.0",
     "hash-sum": "^2.0.0",
     "idb": "^8.0.3",

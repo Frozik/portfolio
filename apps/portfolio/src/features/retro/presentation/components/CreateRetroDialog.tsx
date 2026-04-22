@@ -7,7 +7,7 @@ import { Button } from '../../../../shared/ui/Button';
 import { Slider } from '../../../../shared/ui/Slider';
 import type { ICreateRoomParams } from '../../application/RetroLobbyStore';
 import { ERetroTemplate } from '../../domain/types';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 const MIN_VOTES = 1;
 const MAX_VOTES = 10;

@@ -1,7 +1,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useFunction } from '@frozik/components';
 import { observer } from 'mobx-react-lite';
-import { memo, useMemo } from 'react';
+import { Fragment, memo, useMemo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
 import type { RoomStore } from '../../application/RoomStore';
@@ -16,7 +16,7 @@ import type {
 } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
 import { countTotalVotesOnTarget } from '../../domain/voting';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 import { AddCardForm } from './AddCardForm';
 import { CardView } from './CardView';
 import { VoteButton } from './VoteButton';
@@ -29,6 +29,7 @@ interface ColumnCardItemProps {
   voteCount: number;
   staggerIndex: number;
   store: RoomStore;
+  showVoteButton: boolean;
   onDeleteCard: (cardId: CardId) => void;
   onEditCard: (cardId: CardId, text: string) => void;
 }
@@ -41,6 +42,7 @@ const ColumnCardItemComponent = ({
   voteCount,
   staggerIndex,
   store,
+  showVoteButton,
   onDeleteCard,
   onEditCard,
 }: ColumnCardItemProps) => {
@@ -58,7 +60,6 @@ const ColumnCardItemComponent = ({
     attributes,
     listeners,
     setNodeRef: setDragRef,
-    transform,
     isDragging,
   } = useDraggable({
     id: card.id,
@@ -74,11 +75,6 @@ const ColumnCardItemComponent = ({
     disabled: !dndEnabled,
   });
 
-  const dragStyle =
-    transform === null
-      ? undefined
-      : { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` };
-
   const showMergeHint = isOver && active !== null && active.id !== card.id;
 
   return (
@@ -91,8 +87,7 @@ const ColumnCardItemComponent = ({
     >
       <div
         ref={setDragRef}
-        style={dragStyle}
-        className={cn(isDragging && 'opacity-50', canDrag && 'cursor-grab active:cursor-grabbing')}
+        className={cn(isDragging && 'opacity-40', canDrag && 'cursor-grab active:cursor-grabbing')}
         {...attributes}
         {...listeners}
       >
@@ -100,12 +95,12 @@ const ColumnCardItemComponent = ({
           card={card}
           isOwn={isOwn}
           phase={phase}
-          showVotes={showVotes}
+          showVotes={showVotes && showVoteButton}
           voteCount={voteCount}
           staggerIndex={staggerIndex}
-          voteSlot={<VoteButton store={store} targetId={card.id} />}
-          onDelete={isOwn ? handleDelete : undefined}
-          onEdit={isOwn ? handleEdit : undefined}
+          voteSlot={showVoteButton ? <VoteButton store={store} targetId={card.id} /> : undefined}
+          onDelete={isOwn && dndEnabled ? handleDelete : undefined}
+          onEdit={isOwn && dndEnabled ? handleEdit : undefined}
         />
       </div>
     </div>
@@ -115,26 +110,70 @@ const ColumnCardItemComponent = ({
 const CARD_DROPPABLE_DATA = { type: 'card' } as const;
 const COLUMN_DROPPABLE_DATA = { type: 'column' } as const;
 
-type RenderItem =
-  | { kind: 'card'; card: IRetroCard }
-  | { kind: 'group'; id: GroupId; cards: readonly IRetroCard[] };
+interface IGapDropData {
+  readonly type: 'gap';
+  readonly targetColumnId: ColumnId;
+  readonly targetIndex: number;
+  readonly targetGroupId: GroupId | null;
+}
 
-function buildRenderItems(cards: readonly IRetroCard[]): RenderItem[] {
+interface GapDropZoneProps {
+  id: string;
+  data: IGapDropData;
+  disabled: boolean;
+}
+
+const GapDropZone = ({ id, data, disabled }: GapDropZoneProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id, data, disabled });
+  return (
+    <div ref={setNodeRef} aria-hidden="true" className="relative h-2 shrink-0">
+      {isOver && (
+        <div className="pointer-events-none absolute inset-x-2 top-1/2 h-1 -translate-y-1/2 rounded-full bg-brand-400" />
+      )}
+    </div>
+  );
+};
+
+type TRenderCard = { readonly card: IRetroCard; readonly columnIndex: number };
+type RenderItem =
+  | { readonly kind: 'card'; readonly card: IRetroCard; readonly columnIndex: number }
+  | {
+      readonly kind: 'group';
+      readonly id: GroupId;
+      readonly firstColumnIndex: number;
+      readonly cards: readonly TRenderCard[];
+    };
+
+function buildRenderItems(cards: readonly IRetroCard[]): readonly RenderItem[] {
   const items: RenderItem[] = [];
   const seenGroups = new Set<GroupId>();
-  cards.forEach(card => {
+  cards.forEach((card, index) => {
     if (card.groupId === null) {
-      items.push({ kind: 'card', card });
+      items.push({ kind: 'card', card, columnIndex: index });
       return;
     }
     if (seenGroups.has(card.groupId)) {
       return;
     }
     seenGroups.add(card.groupId);
-    const cardsInGroup = cards.filter(candidate => candidate.groupId === card.groupId);
-    items.push({ kind: 'group', id: card.groupId, cards: cardsInGroup });
+    const cardsInGroup: TRenderCard[] = [];
+    cards.forEach((candidate, candidateIndex) => {
+      if (candidate.groupId === card.groupId) {
+        cardsInGroup.push({ card: candidate, columnIndex: candidateIndex });
+      }
+    });
+    items.push({
+      kind: 'group',
+      id: card.groupId,
+      firstColumnIndex: index,
+      cards: cardsInGroup,
+    });
   });
   return items;
+}
+
+function firstColumnIndexOfItem(item: RenderItem): number {
+  return item.kind === 'card' ? item.columnIndex : item.firstColumnIndex;
 }
 
 const ColumnCardItem = memo(ColumnCardItemComponent);
@@ -170,6 +209,7 @@ const ColumnComponent = ({
 
   const showVotes = phase === ERetroPhase.Discuss;
   const isBrainstorm = phase === ERetroPhase.Brainstorm;
+  const dndEnabled = phase === ERetroPhase.Brainstorm || phase === ERetroPhase.Group;
 
   const typingOthers = isBrainstorm
     ? store.presentUsers.filter(
@@ -213,66 +253,116 @@ const ColumnComponent = ({
         </p>
       )}
 
-      <ul className="flex max-h-[480px] flex-col gap-2 overflow-y-auto pr-1">
+      <ul className="flex max-h-[480px] flex-col overflow-y-auto pr-1">
         {renderItems.map((item, itemIndex) => {
+          const columnGapKey = `col-${column.id}-${itemIndex}`;
+          const columnGap = (
+            <GapDropZone
+              id={columnGapKey}
+              data={{
+                type: 'gap',
+                targetColumnId: column.id,
+                targetIndex: firstColumnIndexOfItem(item),
+                targetGroupId: null,
+              }}
+              disabled={!dndEnabled}
+            />
+          );
+
           if (item.kind === 'card') {
             const { card } = item;
             const isOwn = card.authorClientId === myClientId;
             const voteCount = countTotalVotesOnTarget(votesByTarget, card.id);
             return (
-              <li key={card.id}>
-                <ColumnCardItem
-                  card={card}
-                  isOwn={isOwn}
-                  phase={phase}
-                  showVotes={showVotes}
-                  voteCount={voteCount}
-                  staggerIndex={itemIndex}
-                  store={store}
-                  onDeleteCard={onDeleteCard}
-                  onEditCard={onEditCard}
-                />
-              </li>
+              <Fragment key={card.id}>
+                {columnGap}
+                <li>
+                  <ColumnCardItem
+                    card={card}
+                    isOwn={isOwn}
+                    phase={phase}
+                    showVotes={showVotes}
+                    voteCount={voteCount}
+                    staggerIndex={itemIndex}
+                    store={store}
+                    showVoteButton
+                    onDeleteCard={onDeleteCard}
+                    onEditCard={onEditCard}
+                  />
+                </li>
+              </Fragment>
             );
           }
-          const groupVoteCount = countTotalVotesOnTarget(votesByTarget, item.id);
+
+          const lastGroupCardIndex = item.cards[item.cards.length - 1]?.columnIndex ?? -1;
+
           return (
-            <li key={item.id}>
-              <div className="flex flex-col gap-2 rounded-md border border-brand-500/40 bg-surface-overlay/60 p-2">
-                <div className="flex items-center justify-between gap-2 px-1 text-xs text-text-muted">
-                  <span className="font-medium">
-                    {t.room.groupLabel} · {item.cards.length}
-                  </span>
-                  {showVotes && groupVoteCount > 0 && (
-                    <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-0.5 text-xs font-medium text-brand-200">
-                      {groupVoteCount}
+            <Fragment key={item.id}>
+              {columnGap}
+              <li>
+                <div className="flex flex-col gap-2 rounded-md border border-brand-500/40 bg-surface-elevated p-2">
+                  <div className="flex items-center justify-between gap-2 px-1 text-xs">
+                    <span className="font-medium text-text-muted">
+                      {t.room.groupLabel} · {item.cards.length}
                     </span>
-                  )}
+                    <VoteButton store={store} targetId={item.id} />
+                  </div>
+                  <div className="flex flex-col">
+                    {item.cards.map((entry, innerIndex) => {
+                      const isOwn = entry.card.authorClientId === myClientId;
+                      return (
+                        <Fragment key={entry.card.id}>
+                          <GapDropZone
+                            id={`grp-${item.id}-${innerIndex}`}
+                            data={{
+                              type: 'gap',
+                              targetColumnId: column.id,
+                              targetIndex: entry.columnIndex,
+                              targetGroupId: item.id,
+                            }}
+                            disabled={!dndEnabled}
+                          />
+                          <ColumnCardItem
+                            card={entry.card}
+                            isOwn={isOwn}
+                            phase={phase}
+                            showVotes={false}
+                            voteCount={0}
+                            staggerIndex={itemIndex + innerIndex}
+                            store={store}
+                            showVoteButton={false}
+                            onDeleteCard={onDeleteCard}
+                            onEditCard={onEditCard}
+                          />
+                        </Fragment>
+                      );
+                    })}
+                    <GapDropZone
+                      id={`grp-${item.id}-end`}
+                      data={{
+                        type: 'gap',
+                        targetColumnId: column.id,
+                        targetIndex: lastGroupCardIndex + 1,
+                        targetGroupId: item.id,
+                      }}
+                      disabled={!dndEnabled}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  {item.cards.map((card, innerIndex) => {
-                    const isOwn = card.authorClientId === myClientId;
-                    const voteCount = countTotalVotesOnTarget(votesByTarget, card.id);
-                    return (
-                      <ColumnCardItem
-                        key={card.id}
-                        card={card}
-                        isOwn={isOwn}
-                        phase={phase}
-                        showVotes={showVotes}
-                        voteCount={voteCount}
-                        staggerIndex={itemIndex + innerIndex}
-                        store={store}
-                        onDeleteCard={onDeleteCard}
-                        onEditCard={onEditCard}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </li>
+              </li>
+            </Fragment>
           );
         })}
+        <GapDropZone
+          id={`col-${column.id}-end`}
+          data={{
+            type: 'gap',
+            targetColumnId: column.id,
+            targetIndex: cards.length,
+            targetGroupId: null,
+          }}
+          disabled={!dndEnabled}
+        />
       </ul>
 
       {isBrainstorm && <AddCardForm columnId={column.id} store={store} onSubmit={handleAddCard} />}
@@ -282,4 +372,4 @@ const ColumnComponent = ({
 
 export const Column = memo(observer(ColumnComponent));
 
-export type { ColumnProps };
+export type { ColumnProps, IGapDropData };

@@ -14,7 +14,7 @@ import type { ClientId, RoomId } from '../domain/types';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { CreateRetroDialog } from './components/CreateRetroDialog';
 import { IdentityDialog } from './components/IdentityDialog';
-import { retroEnTranslations as t } from './translations/en';
+import { retroT as t } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/retro\/([^/?#]+)/;
 

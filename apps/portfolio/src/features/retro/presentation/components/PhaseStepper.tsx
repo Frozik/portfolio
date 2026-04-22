@@ -5,7 +5,7 @@ import { cn } from '../../../../shared/lib/cn';
 import { Button } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
 import { ERetroPhase } from '../../domain/types';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface PhaseStepperProps {
   readonly store: RoomStore;

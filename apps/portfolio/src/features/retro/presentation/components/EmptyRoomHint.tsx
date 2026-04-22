@@ -1,7 +1,7 @@
 import { Users } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { RoomStore } from '../../application/RoomStore';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface EmptyRoomHintProps {
   readonly store: RoomStore;

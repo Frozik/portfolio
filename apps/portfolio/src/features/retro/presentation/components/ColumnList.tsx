@@ -1,13 +1,22 @@
-import type { DragEndEvent } from '@dnd-kit/core';
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useFunction } from '@frozik/components';
 import { observer } from 'mobx-react-lite';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, ColumnId, IRetroCard } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
 
+import { CardDragPreview } from './CardDragPreview';
+import type { IGapDropData } from './Column';
 import { Column } from './Column';
 
 interface ColumnListProps {
@@ -18,6 +27,8 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
   const snapshot = store.currentSnapshot;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const [activeCardId, setActiveCardId] = useState<CardId | null>(null);
 
   const handleAddCard = useFunction((columnId: ColumnId, text: string) => {
     store.addCard(columnId, text);
@@ -31,7 +42,16 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
     store.editCard(cardId, text);
   });
 
+  const handleDragStart = useFunction((event: DragStartEvent) => {
+    setActiveCardId(event.active.id as CardId);
+  });
+
+  const handleDragCancel = useFunction(() => {
+    setActiveCardId(null);
+  });
+
   const handleDragEnd = useFunction((event: DragEndEvent) => {
+    setActiveCardId(null);
     const over = event.over;
     if (over === null) {
       return;
@@ -40,11 +60,28 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
     if (over.id === cardId) {
       return;
     }
-    const overType = (over.data.current as { type?: string } | undefined)?.type;
+    const overData = over.data.current as
+      | { type?: 'card' | 'column' | 'gap' }
+      | IGapDropData
+      | undefined;
+    const overType = overData?.type;
+
+    if (overType === 'gap') {
+      const gapData = overData as IGapDropData;
+      store.moveCardToPosition(
+        cardId,
+        gapData.targetColumnId,
+        gapData.targetIndex,
+        gapData.targetGroupId
+      );
+      return;
+    }
+
     if (overType === 'card') {
       store.groupCards(cardId, over.id as CardId);
       return;
     }
+
     const targetColumnId = String(over.id) as ColumnId;
     store.moveCardToColumn(cardId, targetColumnId, Number.MAX_SAFE_INTEGER);
   });
@@ -65,6 +102,14 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
     return grouped;
   }, [snapshot]);
 
+  const activeCard = useMemo(
+    () =>
+      activeCardId === null
+        ? null
+        : (snapshot?.cards.find(candidate => candidate.id === activeCardId) ?? null),
+    [activeCardId, snapshot]
+  );
+
   if (snapshot === null) {
     return null;
   }
@@ -73,7 +118,13 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
     snapshot.meta.phase === ERetroPhase.Group || snapshot.meta.phase === ERetroPhase.Brainstorm;
 
   return (
-    <DndContext sensors={sensors} onDragEnd={dndEnabled ? handleDragEnd : undefined}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={dndEnabled ? handleDragStart : undefined}
+      onDragEnd={dndEnabled ? handleDragEnd : undefined}
+      onDragCancel={dndEnabled ? handleDragCancel : undefined}
+    >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {snapshot.columns.map(column => (
           <Column
@@ -90,6 +141,9 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
           />
         ))}
       </div>
+      <DragOverlay dropAnimation={null}>
+        {activeCard === null ? null : <CardDragPreview card={activeCard} />}
+      </DragOverlay>
     </DndContext>
   );
 };

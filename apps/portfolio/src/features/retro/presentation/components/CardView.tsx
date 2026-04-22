@@ -8,7 +8,7 @@ import { REDACTED_CARD_PLACEHOLDER } from '../../domain/constants';
 import type { ERetroPhase, IRetroCard } from '../../domain/types';
 import { useCardFlipState } from '../hooks/useCardFlipState';
 import styles from '../styles.module.scss';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface CardViewProps {
   card: IRetroCard;

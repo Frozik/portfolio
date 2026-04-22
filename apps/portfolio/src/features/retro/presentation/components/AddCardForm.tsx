@@ -4,7 +4,7 @@ import { memo, useState } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ColumnId } from '../../domain/types';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 const TEXTAREA_ROWS = 2;
 

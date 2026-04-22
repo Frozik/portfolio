@@ -7,7 +7,7 @@ import type { RoomStore } from '../../application/RoomStore';
 import { SOFT_ACTION_ITEM_LIMIT } from '../../domain/constants';
 import type { ActionItemId } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface ActionItemsListProps {
   readonly store: RoomStore;

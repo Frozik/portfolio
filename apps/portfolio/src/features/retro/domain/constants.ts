@@ -23,3 +23,15 @@ export const CARD_FLIP_DURATION_MS = 400 as Milliseconds;
 
 /** Toast message auto-clear delay. */
 export const TOAST_AUTOCLEAR_MS = 3_000 as Milliseconds;
+
+/** Minimum allowed timer duration the facilitator can dial to. */
+export const MIN_TIMER_DURATION_MS = 30_000 as Milliseconds;
+
+/** Maximum allowed timer duration the facilitator can dial to. */
+export const MAX_TIMER_DURATION_MS = (30 * 60 * 1_000) as Milliseconds;
+
+/** Coarse timer adjustment step — bound to a plain click on ±. */
+export const TIMER_ADJUST_STEP_COARSE_MS = 60_000 as Milliseconds;
+
+/** Fine timer adjustment step — bound to shift-click on ±. */
+export const TIMER_ADJUST_STEP_FINE_MS = 30_000 as Milliseconds;

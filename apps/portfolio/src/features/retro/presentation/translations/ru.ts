@@ -1,4 +1,7 @@
-export const retroRuTranslations = {
+import type { TranslationOf } from '../../../../shared/i18n';
+import type { retroEnTranslations } from './en';
+
+export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
   lobby: {
     title: 'Ретро',
     subtitle: 'Совместные ретроспективы — локально, без бэкенда',
@@ -92,6 +95,9 @@ export const retroRuTranslations = {
     resume: 'Продолжить',
     reset: 'Сбросить',
     addTwoMin: '+2 мин',
+    decrease: 'Уменьшить таймер',
+    increase: 'Увеличить таймер',
+    adjustHint: 'Клик: ±1 мин · Shift+клик: ±30 сек',
     expired: 'Время вышло',
     oneMinuteWarning: 'Осталась 1 минута',
   },
@@ -136,4 +142,4 @@ export const retroRuTranslations = {
     signalingUnavailableBody:
       'Для работы ретро нужен сигнальный сервер, который помогает участникам установить P2P-соединение. Все настроенные серверы сейчас недоступны — обычно это временно. Обнови страницу через минуту или попробуй позже.',
   },
-} as const;
+};

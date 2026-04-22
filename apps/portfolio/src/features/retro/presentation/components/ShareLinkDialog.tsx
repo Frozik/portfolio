@@ -4,7 +4,7 @@ import { Copy } from 'lucide-react';
 import { memo } from 'react';
 
 import { Button } from '../../../../shared/ui/Button';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface ShareLinkDialogProps {
   open: boolean;

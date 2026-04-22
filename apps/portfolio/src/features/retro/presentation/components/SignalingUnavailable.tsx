@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 export const SignalingUnavailable = () => {
   return (

@@ -5,7 +5,7 @@ import { cn } from '../../../../shared/lib/cn';
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, GroupId } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 interface VoteButtonProps {
   readonly store: RoomStore;

@@ -4,7 +4,7 @@ import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { Button } from '../../../../shared/ui/Button';
-import { retroEnTranslations as t } from '../translations/en';
+import { retroT as t } from '../translations';
 
 const COLOR_PALETTE: readonly string[] = [
   '#f97316',

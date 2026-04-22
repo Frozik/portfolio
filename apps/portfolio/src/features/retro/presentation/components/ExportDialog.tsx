@@ -1,13 +1,14 @@
 import { useFunction } from '@frozik/components';
 import * as Dialog from '@radix-ui/react-dialog';
+import copy from 'copy-to-clipboard';
 import { Copy, Download, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 import { Button } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
 import { renderSnapshotToMarkdown } from '../../domain/markdown-export';
-import { downloadFile, writeTextToClipboard } from '../../infrastructure/clipboard';
-import { retroEnTranslations as t } from '../translations/en';
+import { downloadFile } from '../../infrastructure/downloads';
+import { retroT as t } from '../translations';
 
 interface ExportDialogProps {
   readonly store: RoomStore;
@@ -24,10 +25,7 @@ export const ExportDialog = observer(({ store }: ExportDialogProps) => {
   }, [snapshot]);
 
   const handleCopy = useFunction(() => {
-    void writeTextToClipboard(markdown).then(
-      () => store.showToast(t.room.linkCopied),
-      () => store.showToast(t.errors.copyFailed)
-    );
+    store.showToast(copy(markdown) ? t.room.linkCopied : t.errors.copyFailed);
   });
 
   const handleDownload = useFunction(() => {
