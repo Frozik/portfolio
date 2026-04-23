@@ -10,6 +10,7 @@ import {
   Sun,
   TrendingUp,
   Users,
+  Video,
 } from 'lucide-react';
 import { memo } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -96,6 +97,13 @@ export const NavigationLinks = memo(({ onNavigate }: { onNavigate: () => void })
         <Users size={NAV_ICON_SIZE} />
         <span className="flex-1">{appT.navigation.retro}</span>
         <Tooltip title={appT.navigation.retroTooltip} placement="right" className="max-w-64">
+          <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
+        </Tooltip>
+      </NavLink>
+      <NavLink className={navLinkClass} to="/conf" onClick={onNavigate} end={false}>
+        <Video size={NAV_ICON_SIZE} />
+        <span className="flex-1">{appT.navigation.conf}</span>
+        <Tooltip title={appT.navigation.confTooltip} placement="right" className="max-w-64">
           <Info size={14} className="hidden text-text-muted pointer-events-auto md:block" />
         </Tooltip>
       </NavLink>

@@ -118,6 +118,30 @@ const rootRouter = createBrowserRouter(
             },
           ],
         },
+        {
+          path: 'conf',
+          handle: { title: appT.pageTitles.conf },
+          lazy: async () => {
+            const { Conf } = await import('../../features/conf/presentation/Conf');
+            return { Component: Conf };
+          },
+          children: [
+            {
+              index: true,
+              lazy: async () => {
+                const { ConfLobby } = await import('../../features/conf/presentation/ConfLobby');
+                return { Component: ConfLobby };
+              },
+            },
+            {
+              path: ':roomId',
+              lazy: async () => {
+                const { ConfRoom } = await import('../../features/conf/presentation/ConfRoom');
+                return { Component: ConfRoom };
+              },
+            },
+          ],
+        },
       ],
     },
   ],

@@ -265,3 +265,55 @@ persisted.
 `@dnd-kit/*` for accessible drag-and-drop; MobX facade (`RoomStore`,
 `RetroLobbyStore`, `IdentityStore`) wraps Yjs so presentation stays
 library-agnostic. See `RETRO.md` for the full feature design.
+
+### Conf
+
+Anonymous 2-person WebRTC video call with AR "glasses" and an emotion
+emoji **baked into the outgoing video track itself** (not rendered as a
+DOM overlay) — fully in-browser, no accounts. Reuses the same
+`y-webrtc` signaling server as Retro (zero server changes; conf rooms
+publish under a `frozik-conf-*` topic namespace) plus Google STUN for
+ICE.
+
+Each client runs a single MediaPipe `FaceLandmarker`
+(`@mediapipe/tasks-vision`, GPU delegate with WASM fallback) on its own
+camera feed, composites the video frame + glasses sprite + emotion
+emoji onto an off-DOM `<canvas>`, then exports the canvas via
+`canvas.captureStream(30)` as the outbound WebRTC video track
+(original audio track is attached alongside). The remote peer receives
+one already-composited track — no remote-side detection, no overlay
+element, identical view on both sides. AR toggle is a flag inside the
+compositor that skips the glasses / emoji draw; mute toggles
+`track.enabled` on the output track without renegotiation.
+
+Glasses position is computed from eye-corner landmarks (MediaPipe
+indices 33/133/263/362) as a pure domain function, then smoothed with
+an EMA before `ctx.drawImage(glassesSvg, …)`. Emotion is derived from
+the 52 ARKit-style blendshape scores MediaPipe emits alongside
+landmarks: `happy` / `surprised` / `sad` / `angry` / `neutral` via a
+max-excess-over-threshold classifier; a 2-frame hysteresis prevents
+emoji flicker. Adaptive quality polls `RTCPeerConnection.getStats()`
+every 2.5 s and steps `sender.setParameters` between HD / SD / Low
+tiers based on RTT + packet loss — no renegotiation.
+
+**Lobby** (`/conf`) — locally remembered rooms you created or visited,
+plus Create and Join-by-link actions.
+
+**Room** (`/conf/:uuid`) — side-by-side (left/right on desktop, stacked
+top/bottom on mobile) local + remote video tiles with mute audio / mute
+video / AR toggle / share link / leave controls plus a quality badge
+and RTT sparkline. The signaling protocol is a tiny typed discriminated
+union (`hello` / `offer` / `answer` / `ice` / `bye`) over the y-webrtc
+wire format; `hello` carries a per-session nonce so the receiver can
+tell an echo from a reconnect. Each browser keeps a persistent
+`participantId` in `localStorage`, so dropping the WiFi and coming back
+reclaims the same slot — even while the peer is still showing
+"Peer disconnected". Third-joiner is rejected with a `bye{full}`
+message. Perfect negotiation handles offer collisions.
+
+**Stack:** `@mediapipe/tasks-vision` (FaceLandmarker, GPU delegate with
+WASM fallback, `outputFaceBlendshapes: true`) loaded lazily from CDN;
+native `RTCPeerConnection` with perfect negotiation; `canvas.captureStream`
+for output compositing; plain WebSocket client talking the y-webrtc
+publish / subscribe protocol directly. See
+`apps/portfolio/src/features/conf/CONF.md` for the full feature design.

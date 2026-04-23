@@ -11,6 +11,7 @@ export const appTranslationsEn = {
     stereometry: 'Stereometry',
     controls: 'Controls',
     retro: 'Retro',
+    conf: 'Conf',
   },
   navigation: {
     curriculumVitae: 'Curriculum Vitae',
@@ -36,6 +37,9 @@ export const appTranslationsEn = {
     retro: 'Retro',
     retroTooltip:
       'Local-first collaborative retrospective board on Yjs CRDT and WebRTC — P2P sync, IndexedDB persistence, no backend required',
+    conf: 'Conf',
+    confTooltip:
+      'Anonymous 2-person WebRTC video call with in-browser MediaPipe face tracking — AR glasses overlay over both peers, no backend except signaling',
     sectionUIUX: 'UI/UX',
     controls: 'Controls',
   },

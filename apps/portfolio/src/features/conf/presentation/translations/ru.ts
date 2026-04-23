@@ -1,0 +1,73 @@
+import type { TranslationOf } from '../../../../shared/i18n';
+import type { confEnTranslations } from './en';
+
+export const confRuTranslations: TranslationOf<typeof confEnTranslations> = {
+  lobby: {
+    title: 'Conf',
+    subtitle: 'Анонимные видеозвонки на двоих с AR-очками — полностью P2P',
+    createButton: 'Создать комнату',
+    joinByLinkLabel: 'Или присоединиться к существующей комнате по ссылке',
+    joinByLinkPlaceholder: 'Вставьте ссылку или ID комнаты…',
+    joinSubmit: 'Присоединиться',
+    emptyState: 'Комнат пока нет. Создайте, чтобы начать.',
+    createdAt: 'Создана',
+    lastVisited: 'Последнее посещение',
+    deleteButton: 'Забыть',
+    deleteDialogTitle: 'Забыть эту комнату?',
+    deleteDialogDescription:
+      'Комната будет удалена из вашей локальной истории. Любой, у кого есть ссылка, всё ещё сможет в неё войти.',
+    deleteCancel: 'Отмена',
+  },
+  room: {
+    backToLobby: 'К списку комнат',
+    copyLink: 'Скопировать ссылку',
+    linkCopied: 'Ссылка скопирована в буфер обмена',
+    share: 'Поделиться',
+    leave: 'Покинуть звонок',
+    leaveDialogTitle: 'Покинуть комнату?',
+    leaveDialogDescription:
+      'Вы будете отключены от звонка. В комнату можно вернуться по той же ссылке.',
+    leaveConfirm: 'Выйти',
+    leaveCancel: 'Остаться',
+    muteAudio: 'Выключить микрофон',
+    unmuteAudio: 'Включить микрофон',
+    muteVideo: 'Выключить камеру',
+    unmuteVideo: 'Включить камеру',
+    arOn: 'Скрыть AR-очки',
+    arOff: 'Показать AR-очки',
+    localLabel: 'Вы',
+    remoteLabel: 'Собеседник',
+    cameraOffBadge: 'Камера выключена',
+    waitingForPeer: 'Поделитесь ссылкой, чтобы начать звонок',
+    connecting: 'Подключение…',
+    acquiringMedia: 'Запрашиваем камеру и микрофон…',
+    peerDisconnected: 'Собеседник отключился',
+    roomFullTitle: 'Комната заполнена',
+    roomFullDescription: 'В этой комнате уже два участника. Создайте новую.',
+    roomFullBack: 'К списку комнат',
+    errorTitle: 'Не удалось установить звонок',
+    errorDefault: 'Что-то пошло не так при установке звонка.',
+    quality: {
+      high: 'HD',
+      highTooltip: 'Высокое качество — 30 FPS, полное разрешение',
+      medium: 'SD',
+      mediumTooltip: 'Сниженное качество — 24 FPS, 66% разрешения (сеть ухудшилась)',
+      low: 'Low',
+      lowTooltip: 'Низкое качество — 15 FPS, 50% разрешения (плохое соединение)',
+    },
+  },
+  share: {
+    dialogTitle: 'Поделиться комнатой',
+    description: 'Отправьте ссылку собеседнику. Он присоединится, открыв её.',
+    copyLink: 'Скопировать ссылку',
+    qrLabel: 'Или отсканируйте QR-код',
+    done: 'Готово',
+  },
+  errors: {
+    loadRoomsFailed: 'Не удалось загрузить список недавних комнат.',
+    copyFailed: 'Не удалось скопировать в буфер обмена.',
+    signalingUnavailableTitle: 'Сигнальный сервер WebRTC недоступен',
+    signalingUnavailableBody:
+      'Для работы Conf нужен сигнальный сервер, который помогает установить P2P-соединение. Все настроенные серверы сейчас недоступны — обычно это временно. Обновите страницу через минуту или попробуйте позже.',
+  },
+};

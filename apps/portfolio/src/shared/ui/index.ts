@@ -23,6 +23,8 @@ export type { RadioGroupProps, RadioOption } from './RadioGroup';
 export { RadioGroup } from './RadioGroup';
 export type { RangeSliderProps, SliderProps } from './Slider';
 export { RangeSlider, Slider } from './Slider';
+export type { SparklineProps } from './Sparkline';
+export { Sparkline } from './Sparkline';
 export type { SpinnerProps } from './Spinner';
 export { Spinner } from './Spinner';
 export type { TagProps } from './Tag';

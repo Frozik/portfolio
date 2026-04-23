@@ -14,6 +14,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     stereometry: 'Стереометрия',
     controls: 'Элементы управления',
     retro: 'Ретро',
+    conf: 'Конф',
   },
   navigation: {
     curriculumVitae: 'Резюме',
@@ -40,6 +41,9 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     retro: 'Ретро',
     retroTooltip:
       'Локальная коллаборативная доска ретроспектив на Yjs CRDT и WebRTC — P2P-синхронизация, хранение в IndexedDB, без бекенда',
+    conf: 'Конф',
+    confTooltip:
+      'Анонимный WebRTC-видеозвонок на двух человек с face-tracking в браузере через MediaPipe — AR-очки поверх обоих собеседников, бэкенд только для сигналинга',
     sectionUIUX: 'UI/UX',
     controls: 'Элементы управления',
   },
