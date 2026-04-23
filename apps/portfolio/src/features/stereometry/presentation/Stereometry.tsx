@@ -8,7 +8,6 @@ const IS_HOSTED = getIsHosted();
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { cn } from '../../../shared/lib/cn';
-import commonStyles from '../../../shared/styles.module.scss';
 import type { StereometryControls } from '../domain/draw';
 import { runStereometry } from '../domain/draw';
 import { PUZZLE_1_1 } from '../domain/puzzles/puzzle-1-1';
@@ -69,8 +68,8 @@ export const Stereometry = memo(() => {
   });
 
   return (
-    <WebGpuGuard className={commonStyles.fixedContainer}>
-      <div className={commonStyles.fixedContainer}>
+    <WebGpuGuard className="h-full w-full">
+      <div className="h-full w-full">
         <canvas ref={canvasRef} className="h-full w-full [touch-action:none]" />
         {!IS_HOSTED && (
           <div className="absolute top-3 right-3 rounded bg-black/60 px-2 py-0.5 font-mono text-xs text-neutral-400">

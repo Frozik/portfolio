@@ -3,7 +3,7 @@ import type { ParticipantId } from './types';
 
 /**
  * Application-level signaling payloads exchanged between conf peers on
- * top of the retro-signaling server's generic y-webrtc-style pub/sub.
+ * top of the shared signaling server's generic y-webrtc-style pub/sub.
  *
  * The transport is broadcast inside a single topic per room
  * (`frozik-conf-<roomId>`) — every member of the topic receives every

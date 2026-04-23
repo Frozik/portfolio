@@ -16,6 +16,8 @@ export type { FloatingButtonGroupProps, FloatingButtonProps } from './FloatingBu
 export { FloatingButton, FloatingButtonGroup } from './FloatingButton';
 export type { ListProps } from './List';
 export { List } from './List';
+export type { ModalProps } from './Modal';
+export { Modal } from './Modal';
 export type { QRCodeProps } from './QRCode';
 export { QRCode } from './QRCode';
 export { QRCodePopover } from './QRCodePopover';

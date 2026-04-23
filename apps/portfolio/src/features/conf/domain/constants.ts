@@ -39,7 +39,7 @@ export const DETECT_MIN_INTERVAL_MS = 33 as Milliseconds;
 export const SIGNALING_RECONNECT_MIN_MS = 500 as Milliseconds;
 export const SIGNALING_RECONNECT_MAX_MS = 8_000 as Milliseconds;
 
-/** Application-level ping cadence, matches retro-signaling's server timeout minus a safety margin. */
+/** Application-level ping cadence, matches the signaling server's timeout minus a safety margin. */
 export const SIGNALING_HEARTBEAT_MS = 25_000 as Milliseconds;
 
 /**

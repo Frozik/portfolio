@@ -1,7 +1,6 @@
 import { memo, useEffect, useRef } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import commonStyles from '../../../shared/styles.module.scss';
 import { runCharter } from '../domain/chart-draw';
 
 export const Charts = memo(() => {
@@ -16,10 +15,8 @@ export const Charts = memo(() => {
   }, []);
 
   return (
-    <WebGpuGuard className={commonStyles.fixedContainer}>
-      <div className={commonStyles.fixedContainer}>
-        <canvas ref={canvasRef} className="h-full w-full" />
-      </div>
+    <WebGpuGuard className="h-full w-full">
+      <canvas ref={canvasRef} className="h-full w-full" />
     </WebGpuGuard>
   );
 });

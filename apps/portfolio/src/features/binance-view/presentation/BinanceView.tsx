@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useRef, useState } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import commonStyles from '../../../shared/styles.module.scss';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
 import { BINANCE_CONFIG } from '../domain/config';
 import type { ConnectionState } from '../domain/types';
@@ -201,7 +200,7 @@ const BinanceViewContent = observer(() => {
   }, [store, stopHoverLoop]);
 
   return (
-    <div className={`${commonStyles.fixedContainer} relative h-full w-full bg-[#1a1a1a]`}>
+    <div className="relative h-full w-full bg-[#1a1a1a]">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full [touch-action:none]"

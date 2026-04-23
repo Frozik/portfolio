@@ -1,5 +1,5 @@
 // Keep in sync with INSTANCE_COUNT in shaders/sun.wgsl
-export const INSTANCE_COUNT = 100_000;
+export const INSTANCE_COUNT = 1_000_000;
 
 export const BACKGROUND_COLOR = { r: 0.149, g: 0.149, b: 0.149, a: 1 };
 
@@ -9,8 +9,6 @@ export const INITIAL_CAMERA_DISTANCE = 16;
 export const MOUSE_ROTATE_SENSITIVITY = 0.005;
 export const WHEEL_ZOOM_SENSITIVITY = 0.01;
 export const INITIAL_ELEVATION = Math.PI / 2;
-export const ELEVATION_MIN = 0.01;
-export const ELEVATION_MAX = Math.PI - 0.01;
 
 export const INERTIA_DAMPING = 0.95;
 export const INERTIA_MIN_VELOCITY = 0.1;

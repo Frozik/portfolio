@@ -6,3 +6,12 @@ export const welcomeT = resolveTranslation({
   en: welcomeTranslationsEn,
   ru: welcomeTranslationsRu,
 });
+
+export type {
+  IContactLabels,
+  IExperienceTranslation,
+  IHeroStatTranslation,
+  INavSectionTranslation,
+  IProjectTranslation,
+  ISkillGroupTranslation,
+} from './en';

@@ -2,7 +2,6 @@ import { packColor, unpackColor } from '@frozik/utils';
 import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import commonStyles from '../../../shared/styles.module.scss';
 import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
 import type { IDataPoint, ISeriesConfig } from '../domain/types';
 import { EChartType } from '../domain/types';
@@ -109,7 +108,7 @@ const TimeseriesContent = memo(() => {
   const renderer = useSharedRenderer();
 
   return (
-    <div className={`${commonStyles.fixedContainer} relative grid grid-cols-2 grid-rows-2`}>
+    <div className="h-full w-full relative grid grid-cols-2 grid-rows-2">
       <DebugOverlay renderer={renderer} />
       {CHART_ZOOM_LEVELS.map((level, index) => (
         <TimeseriesChart

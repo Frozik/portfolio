@@ -7,7 +7,7 @@ export const CONF_ROOM_ID_NETWORK_PREFIX = 'frozik-conf-';
 
 /**
  * Conf reuses the env var that already points at the self-hosted
- * `apps/retro-signaling` server. The retro infrastructure reads the
+ * `apps/signaling` server. The retro infrastructure reads the
  * same variable — we do not spin up a separate signaling deployment.
  * Comma-separated; only the first reachable URL is used by conf.
  */

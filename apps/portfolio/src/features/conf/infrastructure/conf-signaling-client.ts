@@ -13,7 +13,7 @@ import {
 export type TConfSignalingConnectionState = 'idle' | 'connecting' | 'open' | 'closed';
 
 /**
- * Subset of the retro-signaling wire protocol conf cares about. We only
+ * Subset of the signaling wire protocol conf cares about. We only
  * parse `publish` envelopes — `pong` is accepted as a no-op, everything
  * else is ignored.
  */
@@ -45,7 +45,7 @@ const RECONNECT_BACKOFF_FACTOR = 2;
 const MAX_RETRY_BITS = 6; // caps the exponent so the shift does not overflow
 
 /**
- * WebSocket client that speaks the retro-signaling server's generic
+ * WebSocket client that speaks the shared signaling server's generic
  * pub/sub protocol (subscribe / unsubscribe / publish / ping) and
  * layers conf's `TConfSignalMessage` schema on top of the `publish`
  * envelope's `data` field.

@@ -1,14 +1,11 @@
 import { memo } from 'react';
-import { cn } from '../../../shared/lib/cn';
 
-import commonStyles from '../../../shared/styles.module.scss';
 import { DatePage } from './components/DatePage';
 import { NumberPage } from './components/NumberPage';
-import styles from './styles.module.scss';
 
 export const Controls = memo(() => {
   return (
-    <div className={cn(styles.container, commonStyles.fixedContainer)}>
+    <div className="h-full w-full md:pb-20">
       <NumberPage />
       <DatePage />
     </div>

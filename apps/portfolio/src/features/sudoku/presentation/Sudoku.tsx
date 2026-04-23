@@ -6,8 +6,6 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSudoku } from 'sudoku-gen';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
-import { cn } from '../../../shared/lib/cn';
-import commonStyles from '../../../shared/styles.module.scss';
 import { useSudokuStore } from '../application/useSudokuStore';
 import type { TTool } from '../domain/types';
 import type { DifficultyOption, SudokuDifficulty } from './components/DifficultyPicker';
@@ -57,12 +55,7 @@ export const Sudoku = observer(() => {
   const handleRestartPuzzle = useFunction(() => store.restartPuzzle());
 
   return (
-    <div
-      className={cn(
-        'mx-auto flex min-h-0 select-none flex-col items-center justify-center max-[840px]:p-0',
-        commonStyles.fixedContainer
-      )}
-    >
+    <div className="h-full w-full mx-auto flex min-h-0 select-none flex-col items-center justify-center max-[840px]:p-0">
       {matchValueDescriptor(store.field, {
         synced: ({ value: field }) => (
           <SudokuField
