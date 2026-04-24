@@ -1,0 +1,1 @@
+import{t as e}from"./c-BUyjkH1Q.js";function t(t){return e.Instant.fromEpochMilliseconds(t).toString()}function n(t){return e.Instant.from(t).epochMilliseconds}function r(){return n(i())}function i(){return e.Now.instant().toString()}export{r as n,t as r,i as t};

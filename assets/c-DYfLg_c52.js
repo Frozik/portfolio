@@ -1,0 +1,1 @@
+var e=`frozik-conf-`,t=`wss://144.31.137.20.sslip.io:8443`;function n(){return typeof t!=`string`||t.trim().length===0?[]:t.split(`,`).map(e=>e.trim()).filter(e=>e.length>0)}function r(){return{serverUrls:n(),roomPrefix:e}}function i(t){return`${e}${t}`}export{r as n,i as t};

@@ -1,0 +1,1 @@
+import{n as e,o as t}from"./c-AyPMouqq.js";var n=t(e());function r(e){let t=(0,n.useRef)(e);return t.current=e,(0,n.useCallback)(((...e)=>t.current(...e)),[])}export{r as t};

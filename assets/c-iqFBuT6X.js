@@ -1,0 +1,1 @@
+var e=`ru`;function t(){return navigator.language.startsWith(e)?`ru`:`en`}function n(e){return e[t()]}export{t as n,n as t};
