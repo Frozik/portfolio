@@ -2,9 +2,8 @@ export const VERTICES_PER_INSTANCE = 18;
 // Keep in sync with BORDER_SEGMENT_COUNT in shaders/chart.wgsl
 export const BORDER_SEGMENT_COUNT = 4;
 
-export const BACKGROUND_R = 0.149;
-export const BACKGROUND_G = 0.149;
-export const BACKGROUND_B = 0.149;
+// #07090c — shared scene background across all WebGPU demos.
+export const BACKGROUND_COLOR = { r: 0.02745, g: 0.03529, b: 0.04706, a: 1 };
 
 export const SIN_PEN_MIN = 2.0;
 export const SIN_PEN_MAX = 20.0;

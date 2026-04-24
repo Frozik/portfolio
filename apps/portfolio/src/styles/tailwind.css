@@ -47,6 +47,8 @@
   --color-landing-accent-dim: #1e3a5f;
   --color-landing-green: #4cd964;
   --color-landing-red: #ff4f58;
+  --color-landing-yellow: #f5c842;
+  --color-landing-purple: #a78bfa;
   --color-landing-border: rgb(255 255 255 / 0.08);
   --color-landing-border-soft: rgb(255 255 255 / 0.04);
 
@@ -274,6 +276,48 @@
   }
 }
 
+/* Pair of accent corner brackets — top-left and bottom-right only, 10 px.
+   Used on retro card surfaces to echo the landing's schematic aesthetic
+   without the full 8-segment frame that `thumb-corners` draws. */
+@utility card-corners {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--color-landing-accent);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  &::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+  }
+}
+
+/* Subtle lift on hover — 1 px translate with a short ease.
+   Borders and other surface tweaks are applied by callers directly. */
+@utility lift-hover {
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
 /* Corner brackets around project-card thumbnails — 8 orthogonal 12×1 line segments. */
 @utility thumb-corners {
   background:
@@ -302,6 +346,22 @@
     color: var(--color-landing-fg);
   }
 
+  /* Tailwind v4's preflight resets button cursor to `auto`, which leaves
+     our custom-styled CTAs without a pointer affordance. Restore it
+     globally; disabled buttons fall back to `not-allowed`. */
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  [type='button']:not(:disabled),
+  [type='submit']:not(:disabled),
+  [type='reset']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
   /* Print mode: white paper, black ink. Each landing section opts in via
      `print:hidden` for decorations and uses `print:` Tailwind variants to
      compact spacing. Forcing palette tokens to ink-friendly values means
@@ -321,6 +381,8 @@
       --color-landing-fg-faint: #555;
       --color-landing-accent: #000;
       --color-landing-accent-dim: #555;
+      --color-landing-yellow: #555;
+      --color-landing-purple: #555;
       --color-landing-border: #d0d0d0;
       --color-landing-border-soft: #d0d0d0;
     }

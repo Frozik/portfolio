@@ -37,7 +37,7 @@ type DataTableProps<TData> = {
   columnVisibility?: VisibilityState;
 };
 
-function DataTableInner<TData>({
+export function DataTable<TData>({
   columns,
   data,
   className,
@@ -144,7 +144,6 @@ const HeaderCell = memo(({ header }: { header: Header<RowData, unknown> }) => {
   );
 });
 
-// Memoized data row
 const DataRow = memo(({ row }: { row: Row<RowData> }) => (
   <tr className="border-b border-border hover:bg-surface-elevated">
     {row.getVisibleCells().map((cell: Cell<RowData, unknown>) => (
@@ -153,7 +152,6 @@ const DataRow = memo(({ row }: { row: Row<RowData> }) => (
   </tr>
 ));
 
-// Memoized data cell
 const DataCell = memo(({ cell }: { cell: Cell<RowData, unknown> }) => {
   const meta = cell.column.columnDef.meta;
   const isFixed = !isNil(meta?.fixed);
@@ -210,10 +208,6 @@ function VirtualBody({
     </tbody>
   );
 }
-
-// No memo — when used inside MobX observer, memo blocks re-renders
-// because MobX proxy refs may not change on shallow comparison.
-export const DataTable = DataTableInner;
 
 const SortIndicator = memo(({ direction }: { direction: false | 'asc' | 'desc' }) => {
   if (direction === 'asc') {

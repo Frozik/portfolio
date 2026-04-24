@@ -9,7 +9,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
+import { ERetroPhase } from '../domain/types';
 import type { IRoomIndexRepo } from '../infrastructure/room-index-repo';
+import { deleteYjsRoomPersistence } from '../infrastructure/yjs-providers';
 import type { UserDirectoryStore } from './UserDirectoryStore';
 
 const RECENT_ROOMS_LIMIT = 50;
@@ -33,6 +35,9 @@ export interface IJoinedRoomSnapshot {
   readonly facilitatorClientId: ClientId | null;
   readonly facilitatorName: string;
   readonly participantCount: number;
+  readonly phase: ERetroPhase;
+  /** clientIds currently visible via awareness, passed for merge into persisted list. */
+  readonly presentParticipantIds: readonly ClientId[];
 }
 
 export class RetroLobbyStore {
@@ -81,6 +86,10 @@ export class RetroLobbyStore {
   async deleteRoom(roomId: RoomId): Promise<void> {
     const repo = await this.repoPromise;
     await repo.remove(roomId);
+    // Wipe the per-room Yjs IndexedDB database so no trace of cards, votes
+    // or action items remains locally. Purely local — other peers keep
+    // their own CRDT copies.
+    await deleteYjsRoomPersistence(roomId);
     await this.loadRooms();
   }
 
@@ -104,6 +113,8 @@ export class RetroLobbyStore {
       lastVisitedAt: nowIso,
       participantCount: INITIAL_PARTICIPANT_COUNT,
       ownerClientId: context.ownerClientId,
+      phase: ERetroPhase.Brainstorm,
+      knownParticipantIds: [context.ownerClientId],
     };
 
     this.pendingCreate.set(roomId, params);
@@ -136,6 +147,12 @@ export class RetroLobbyStore {
       });
     }
 
+    const knownParticipantIds = mergeParticipantIds(
+      existing?.knownParticipantIds ?? [],
+      snapshot.presentParticipantIds,
+      ownerClientId
+    );
+
     const entry: IRoomIndexEntry = {
       roomId: snapshot.roomId,
       name: snapshot.name,
@@ -144,6 +161,8 @@ export class RetroLobbyStore {
       lastVisitedAt: nowIso,
       participantCount: snapshot.participantCount,
       ownerClientId,
+      phase: snapshot.phase,
+      knownParticipantIds,
     };
 
     if (
@@ -152,7 +171,9 @@ export class RetroLobbyStore {
       existing.template === entry.template &&
       existing.createdAt === entry.createdAt &&
       existing.participantCount === entry.participantCount &&
-      existing.ownerClientId === entry.ownerClientId
+      existing.ownerClientId === entry.ownerClientId &&
+      existing.phase === entry.phase &&
+      areClientIdListsEqual(existing.knownParticipantIds, entry.knownParticipantIds)
     ) {
       // Skip write when only lastVisitedAt would change — still touch it so
       // the recent-rooms ordering updates.
@@ -181,4 +202,44 @@ export class RetroLobbyStore {
     await repo.upsert(entry);
     await this.loadRooms();
   }
+}
+
+/**
+ * Merge currently-visible participant ids into the persisted list while
+ * preserving first-seen order. Always keeps `ownerClientId` at the head so
+ * the lobby can render the crowned slot even when the owner is offline
+ * right now. Duplicates are removed.
+ */
+function mergeParticipantIds(
+  existing: readonly ClientId[],
+  incoming: readonly ClientId[],
+  ownerClientId: ClientId | null
+): readonly ClientId[] {
+  const seen = new Set<ClientId>();
+  const result: ClientId[] = [];
+  const push = (clientId: ClientId): void => {
+    if (seen.has(clientId)) {
+      return;
+    }
+    seen.add(clientId);
+    result.push(clientId);
+  };
+  if (ownerClientId !== null) {
+    push(ownerClientId);
+  }
+  existing.forEach(push);
+  incoming.forEach(push);
+  return result;
+}
+
+function areClientIdListsEqual(left: readonly ClientId[], right: readonly ClientId[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
 }

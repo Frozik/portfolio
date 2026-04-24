@@ -1,10 +1,12 @@
 import { useFunction } from '@frozik/components';
-import { ArrowLeft, FileText, Share2 } from 'lucide-react';
+import { Eye, Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { NavLink } from 'react-router-dom';
-import { Button } from '../../../../shared/ui';
+
+import { cn } from '../../../../shared/lib/cn';
+import { MonoKicker } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
+import type { ClientId } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
 import { retroT as t } from '../translations';
 import { PhaseStepper } from './PhaseStepper';
@@ -15,71 +17,107 @@ interface RoomHeaderProps {
   readonly store: RoomStore;
 }
 
+const ICON_BUTTON_CLASSES =
+  'inline-flex h-[26px] w-[26px] items-center justify-center border border-landing-border-soft text-landing-fg-dim transition-colors hover:border-landing-accent/30 hover:text-landing-fg';
+
+/**
+ * Sticky top bar for the Room — mirrors the three-column grid from
+ * `apps/retro/board.jsx` TopBar + PhaseProgress: identity on the left
+ * (back link, room name, facilitator), Timer in the middle, Presence on
+ * the right. A second row under the bar hosts the PhaseStepper and,
+ * where relevant, per-phase action icons (Share / Results).
+ */
 export const RoomHeader = observer(({ store }: RoomHeaderProps) => {
   const directory = useUserDirectoryStore();
-  const name = store.currentSnapshot?.meta.name ?? t.lobby.title;
+  const snapshot = store.currentSnapshot;
+  const name = snapshot?.meta.name ?? t.lobby.title;
+
+  const facilitatorClientId = snapshot?.meta.facilitatorClientId ?? null;
+  const facilitatorProfile =
+    facilitatorClientId !== null ? directory.get(facilitatorClientId as ClientId) : null;
+  const facilitatorDisplayName =
+    (facilitatorProfile?.name ?? '').trim() !== ''
+      ? (facilitatorProfile?.name ?? '')
+      : (snapshot?.meta.facilitatorName.trim() ?? '');
+  const facilitatorColor = facilitatorProfile?.color ?? null;
 
   const handleOpenShareDialog = useFunction(() => store.openShareDialog());
   const handleOpenResults = useFunction(() => store.openExportDialog());
 
-  const facilitatorClientId = store.currentSnapshot?.meta.facilitatorClientId ?? null;
-  const facilitatorName =
-    facilitatorClientId !== null
-      ? directory.getName(facilitatorClientId).trim() ||
-        (store.currentSnapshot?.meta.facilitatorName?.trim() ?? '')
-      : '';
-
   return (
-    <header className="flex flex-col gap-3 border-b border-border pb-3">
-      {/* Row 1: back + title/facilitator (left) + full timer block (right).
-          flex-wrap lets the Timer drop to a separate row when the header
-          is too narrow to hold both side-by-side. */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <NavLink
-            to="/retro"
-            aria-label={t.close.backToLobby}
-            title={t.close.backToLobby}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-surface-elevated text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text"
-          >
-            <ArrowLeft size={16} />
-          </NavLink>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="min-w-0 break-words text-lg font-bold text-text sm:text-2xl">
+    <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-landing-border-soft bg-landing-bg/70 px-4 py-3.5 backdrop-blur-md sm:px-6">
+      <div className="flex items-start gap-4">
+        {/*
+         * Two-column outer flex:
+         *   1. Content (flex-1, wraps internally) — hosts room-info
+         *      (can shrink, never grows) and Timer (grows, never shrinks;
+         *      its min-content enforces wrap to a new row once the
+         *      remaining space no longer fits it).
+         *   2. Presence — fixed width, never shrinks or grows, so it
+         *      always sits at the right edge of the first row.
+         *
+         * Outer uses items-start + a shared min-h on all three slots
+         * (room-info / Timer wrapper / Presence wrapper) so that when
+         * Timer wraps to a new row, Presence stays vertically centered
+         * relative to the first row (not the expanded total height).
+         */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-4">
+          <div className="flex min-h-9 min-w-0 grow-0 items-center gap-3.5">
+            <MonoKicker tone="faint" className="shrink-0">
+              {t.lobby.roomKicker}
+            </MonoKicker>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h1 className="truncate text-[15px] leading-tight font-medium text-landing-fg">
                 {name}
               </h1>
+              {facilitatorDisplayName.length > 0 && (
+                <span className="flex items-center gap-1.5 font-mono text-[10px] text-landing-fg-faint">
+                  <span className="truncate">
+                    {t.lobby.hostedBy}{' '}
+                    <span className="text-landing-fg-dim">{facilitatorDisplayName}</span>
+                  </span>
+                  {facilitatorColor !== null && (
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      // Dot color is runtime-dynamic per participant.
+                      style={{ backgroundColor: facilitatorColor }}
+                    />
+                  )}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenShareDialog}
+              aria-label={t.room.shareLinkTitle}
+              title={t.room.shareLinkTitle}
+              className={cn(ICON_BUTTON_CLASSES, 'shrink-0')}
+            >
+              <Share2 size={12} />
+            </button>
+            {store.phase === ERetroPhase.Close && (
               <button
                 type="button"
-                onClick={handleOpenShareDialog}
-                aria-label={t.share.dialogTitle}
-                title={t.share.dialogTitle}
-                className="shrink-0 text-text-muted transition-colors hover:text-brand-300"
+                onClick={handleOpenResults}
+                aria-label={t.room.viewResultsTitle}
+                title={t.room.viewResultsTitle}
+                className={cn(ICON_BUTTON_CLASSES, 'shrink-0')}
               >
-                <Share2 size={18} />
+                <Eye size={12} />
               </button>
-            </div>
-            {facilitatorName.length > 0 && (
-              <span className="text-xs text-text-muted">
-                {t.lobby.ownerLabel}: {facilitatorName}
-              </span>
             )}
           </div>
+          <div className="flex min-h-9 flex-1 shrink-0 items-center justify-center">
+            <Timer store={store} />
+          </div>
         </div>
-        <Timer store={store} />
+        <div className="flex min-h-9 shrink-0 grow-0 items-center">
+          <PresencePanel store={store} />
+        </div>
       </div>
 
-      <PresencePanel store={store} />
-
-      {store.phase === ERetroPhase.Close && (
-        <div className="flex justify-end">
-          <Button variant="secondary" size="sm" onClick={handleOpenResults}>
-            <FileText size={14} /> {t.close.viewResults}
-          </Button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3 border-t border-landing-border-soft pt-3">
         <PhaseStepper store={store} />
       </div>
     </header>

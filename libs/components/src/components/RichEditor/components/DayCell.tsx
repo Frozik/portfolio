@@ -30,18 +30,18 @@ export const DayCell = memo(
     const className = useMemo(
       () =>
         cn(
-          'flex size-7 cursor-pointer items-center justify-center rounded-sm border border-transparent p-0 font-inherit text-sm text-text-secondary hover:bg-brand-500',
+          'flex size-7 cursor-pointer items-center justify-center border border-transparent p-0 font-mono text-[13px] text-landing-fg-dim transition-colors hover:border-landing-accent hover:text-landing-fg',
           // Background priority (low → high): transparent → today → weekend → weekend+today → selected → weekend+selected
           !cell.weekend && !cell.selected && !cell.today && 'bg-transparent',
-          cell.today && !cell.weekend && !cell.selected && 'bg-brand-500/20',
-          cell.weekend && !cell.today && !cell.selected && 'bg-error/15',
-          cell.weekend && cell.today && !cell.selected && 'bg-error/25',
-          cell.selected && !cell.weekend && 'bg-brand-500/70',
-          cell.weekend && cell.selected && 'bg-error/40',
+          cell.today && !cell.weekend && !cell.selected && 'bg-landing-accent/15',
+          cell.weekend && !cell.today && !cell.selected && 'bg-landing-red/12',
+          cell.weekend && cell.today && !cell.selected && 'bg-landing-red/20',
+          cell.selected && !cell.weekend && 'bg-landing-accent/55 text-landing-fg',
+          cell.weekend && cell.selected && 'bg-landing-red/40 text-landing-fg',
           // Text
-          cell.today && 'font-bold text-text',
-          cell.overflow && 'pointer-events-none text-text-muted',
-          cell.overflow && (cell.selected || cell.today) && 'text-text-secondary'
+          cell.today && 'font-semibold text-landing-fg',
+          cell.overflow && 'pointer-events-none text-landing-fg-faint',
+          cell.overflow && (cell.selected || cell.today) && 'text-landing-fg-dim'
         ),
       [cell.overflow, cell.selected, cell.today, cell.weekend]
     );

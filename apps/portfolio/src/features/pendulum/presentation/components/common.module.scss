@@ -48,13 +48,4 @@
     color: #ff7875;
     display: none;
   }
-
-  &:hover {
-    cursor: pointer;
-    color: #ff7875;
-
-    .description__close {
-      display: inline-block;
-    }
-  }
 }

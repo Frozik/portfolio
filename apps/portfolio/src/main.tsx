@@ -1,4 +1,3 @@
-import 'dockview/dist/styles/dockview.css';
 import './styles/tailwind.css';
 import './main.scss';
 

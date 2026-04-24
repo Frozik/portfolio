@@ -1,7 +1,8 @@
 // Keep in sync with INSTANCE_COUNT in shaders/sun.wgsl
 export const INSTANCE_COUNT = 1_000_000;
 
-export const BACKGROUND_COLOR = { r: 0.149, g: 0.149, b: 0.149, a: 1 };
+// #07090c — shared scene background across all WebGPU demos.
+export const BACKGROUND_COLOR = { r: 0.02745, g: 0.03529, b: 0.04706, a: 1 };
 
 export const MIN_CAMERA_DISTANCE = 5;
 export const MAX_CAMERA_DISTANCE = 20;

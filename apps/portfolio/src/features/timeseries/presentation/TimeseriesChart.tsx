@@ -35,7 +35,7 @@ export const TimeseriesChart = memo(
     }, [renderer, initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs]);
 
     return (
-      <div className="relative h-full w-full bg-[#1a1a1a]">
+      <div className="relative h-full w-full">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full [touch-action:none]" />
       </div>
     );

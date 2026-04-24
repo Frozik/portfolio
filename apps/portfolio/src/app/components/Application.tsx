@@ -33,7 +33,7 @@ const rootRouter = createBrowserRouter(
           element: <InnerLayout />,
           children: [
             {
-              path: 'pendulum/:robotId?',
+              path: 'pendulum',
               handle: { title: appT.pageTitles.pendulum },
               lazy: async () => {
                 const { Pendulum } = await import('../../features/pendulum/presentation/Pendulum');

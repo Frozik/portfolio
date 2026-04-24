@@ -8,30 +8,24 @@ import {
   Fail,
   isSyncedValueDescriptor,
   matchValueDescriptor,
-  parseJson,
   REQUESTING_VD,
   WAITING_VD,
 } from '@frozik/utils';
-import type { SerializedDockview } from 'dockview';
-import { isEqual, isNil } from 'lodash-es';
+import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import type { CommonStore, IMenuAction } from '../../../app/stores/CommonStore';
+import type { CommonStore } from '../../../app/stores/CommonStore';
 import type { IGeneration } from '../domain/defs';
-import { ALL_LAYOUTS, DEFAULT_LAYOUT, getLayout } from '../domain/layoutConfig';
 import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
 import type { TModuleIndexDBGenerations } from '../infrastructure/IndexedDBGenerationsRepository';
 import { createIndexDBGenerationsModule } from '../infrastructure/IndexedDBGenerationsRepository';
-import type { TModuleTabManager } from '../infrastructure/ModuleTabManager';
-import { createTabManagerModule } from '../infrastructure/ModuleTabManager';
 
-const PENDULUM_LAYOUT_KEY = '[settings] pendulum-layout';
 const DEFAULT_GRAVITY = 1;
 
 export class PendulumStore {
-  layout: ValueDescriptor<SerializedDockview> = WAITING_VD;
   playgroundGravity: number = DEFAULT_GRAVITY;
   gravity: number = DEFAULT_GRAVITY;
+  paused: boolean = true;
   competitionsList: ValueDescriptor<ISO[]> = WAITING_VD;
   currentCompetition: ValueDescriptor<{
     competitionStart: ISO;
@@ -39,8 +33,8 @@ export class PendulumStore {
   }> = WAITING_VD;
   currentRobotId: string | undefined = undefined;
   currentRobot: ValueDescriptor<TensorflowPlayer> = WAITING_VD;
+  isNeuralNetworkDialogOpen: boolean = false;
 
-  readonly tabManager: TModuleTabManager = createTabManagerModule();
   dbModule: TModuleIndexDBGenerations | undefined = undefined;
 
   private readonly commonStore: CommonStore;
@@ -61,7 +55,6 @@ export class PendulumStore {
         loadCompetitionSub: false,
         loadRobotSub: false,
         initialized: false,
-        tabManager: false,
       },
       { autoBind: true }
     );
@@ -71,16 +64,16 @@ export class PendulumStore {
     this.initGenerationsSync();
   }
 
-  setLayout(vd: ValueDescriptor<SerializedDockview>): void {
-    this.layout = vd;
-  }
-
   setPlaygroundGravity(g: number): void {
     this.playgroundGravity = g;
   }
 
   setGravity(g: number): void {
     this.gravity = g;
+  }
+
+  setPaused(paused: boolean): void {
+    this.paused = paused;
   }
 
   setCompetitionsList(vd: ValueDescriptor<ISO[]>): void {
@@ -125,9 +118,28 @@ export class PendulumStore {
     }
   }
 
-  updateLayout(layout: SerializedDockview): void {
-    localStorage.setItem(PENDULUM_LAYOUT_KEY, JSON.stringify(layout));
-    this.updateMenuActions(layout);
+  deleteCompetition(start: ISO): void {
+    if (isNil(this.dbModule)) {
+      return;
+    }
+
+    const isCurrent =
+      isSyncedValueDescriptor(this.currentCompetition) &&
+      this.currentCompetition.value.competitionStart === start;
+
+    this.dbModule.deleteCompetition$(start).catch((error: unknown) => {
+      runInAction(() => {
+        this.currentCompetition = createUnsyncedValueDescriptor(
+          convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
+        );
+      });
+    });
+
+    if (isCurrent) {
+      this.loadCompetitionSub?.();
+      this.loadCompetitionSub = undefined;
+      this.currentCompetition = EMPTY_VD;
+    }
   }
 
   loadCompetition(start: ISO): void {
@@ -161,6 +173,19 @@ export class PendulumStore {
 
     this.loadCompetitionSub = () => sub.unsubscribe();
     this.disposers.push(this.loadCompetitionSub);
+  }
+
+  setSelectedRobotId(robotId: string | undefined): void {
+    this.loadRobot(robotId);
+  }
+
+  openNeuralNetworkDialog(robotId: string): void {
+    this.loadRobot(robotId);
+    this.isNeuralNetworkDialogOpen = true;
+  }
+
+  closeNeuralNetworkDialog(): void {
+    this.isNeuralNetworkDialogOpen = false;
   }
 
   loadRobot(robotId: string | undefined): void {
@@ -218,15 +243,6 @@ export class PendulumStore {
     this.disposers.push(this.loadRobotSub);
   }
 
-  openTab(tabId: string): void {
-    void this.tabManager.openTab({
-      ...getLayout(tabId),
-      position: {
-        direction: 'below',
-      },
-    });
-  }
-
   private initialized = false;
 
   init(): void {
@@ -235,7 +251,6 @@ export class PendulumStore {
       return;
     }
     this.initialized = true;
-    this.initLayoutSync();
   }
 
   dispose(): void {
@@ -253,37 +268,6 @@ export class PendulumStore {
     }
     this.disposers.length = 0;
     this.commonStore.clearMenuActions();
-  }
-
-  private initLayoutSync(): void {
-    const rawLayout = localStorage.getItem(PENDULUM_LAYOUT_KEY) as string | null;
-    const initialLayout = parseJson(rawLayout) as SerializedDockview | undefined;
-    const layout = isNil(initialLayout) ? DEFAULT_LAYOUT : initialLayout;
-
-    this.layout = createSyncedValueDescriptor(layout);
-    this.updateMenuActions(layout);
-
-    let prevLayout: SerializedDockview | undefined = initialLayout;
-
-    const storageHandler = ({ storageArea, key, newValue }: StorageEvent) => {
-      const parsedLayout = parseJson<SerializedDockview>(newValue);
-
-      if (
-        storageArea === localStorage &&
-        key === PENDULUM_LAYOUT_KEY &&
-        !isNil(parsedLayout) &&
-        !isEqual(prevLayout, parsedLayout)
-      ) {
-        prevLayout = parsedLayout;
-        runInAction(() => {
-          this.layout = createSyncedValueDescriptor(parsedLayout);
-          this.updateMenuActions(parsedLayout);
-        });
-      }
-    };
-
-    window.addEventListener('storage', storageHandler, false);
-    this.disposers.push(() => window.removeEventListener('storage', storageHandler, false));
   }
 
   private initGenerationsSync(): void {
@@ -325,31 +309,5 @@ export class PendulumStore {
           );
         });
       });
-  }
-
-  private updateMenuActions(layout: SerializedDockview): void {
-    const allLayoutIds = ALL_LAYOUTS.map(({ id }) => id);
-    const existingLayoutIds = new Set(Object.keys(layout.panels));
-    const missingLayouts = allLayoutIds.filter(id => !existingLayoutIds.has(id));
-
-    const menuActions: IMenuAction[] = missingLayouts.map(id => ({
-      icon: getIconNameForTab(id),
-      name: id,
-      callback: () => this.openTab(id),
-      tooltip: id,
-    }));
-
-    this.commonStore.setMenuActions(menuActions);
-  }
-}
-
-function getIconNameForTab(tabId: string): string | undefined {
-  switch (tabId) {
-    case 'Test Playground':
-      return 'eye';
-    case 'Neural Network':
-      return 'network';
-    default:
-      return undefined;
   }
 }

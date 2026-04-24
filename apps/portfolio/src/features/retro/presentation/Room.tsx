@@ -3,7 +3,8 @@ import { assert } from '@frozik/utils';
 import copy from 'copy-to-clipboard';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { Alert, Spinner } from '../../../shared/ui';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
@@ -11,6 +12,7 @@ import { useRoomStore } from '../application/useRoomStore';
 import { getTemplateById } from '../domain/templates';
 import type { RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
+import { ClosePanel } from './components/ClosePanel';
 import { ColumnList } from './components/ColumnList';
 import { DiscussPanel } from './components/DiscussPanel';
 import { ExportDialog } from './components/ExportDialog';
@@ -50,9 +52,18 @@ export const Room = observer(() => {
     createIfMissing,
   });
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useTimerTick(roomStore);
   useAwarenessPresence(roomStore, identityStore);
+
+  const handleBackToLobby = useFunction(() => {
+    void navigate('/retro');
+  });
+  useRegisterTopNavBack({
+    label: t.room.backToLobbyLabel,
+    onActivate: handleBackToLobby,
+  });
 
   // Resume the shared AudioContext on the first user gesture inside the
   // room. Browsers keep it suspended until a real interaction, otherwise
@@ -81,7 +92,8 @@ export const Room = observer(() => {
   }, [roomStore, searchParams, setSearchParams]);
 
   const snapshotMeta = roomStore.currentSnapshot?.meta;
-  const participantCount = roomStore.presentUsers.length;
+  const presentUsers = roomStore.presentUsers;
+  const participantCount = presentUsers.length;
   useEffect(() => {
     if (snapshotMeta === undefined) {
       return;
@@ -94,6 +106,8 @@ export const Room = observer(() => {
       facilitatorClientId: snapshotMeta.facilitatorClientId,
       facilitatorName: snapshotMeta.facilitatorName,
       participantCount,
+      phase: snapshotMeta.phase,
+      presentParticipantIds: presentUsers.map(user => user.clientId),
     });
   }, [
     lobbyStore,
@@ -103,7 +117,9 @@ export const Room = observer(() => {
     snapshotMeta?.createdAt,
     snapshotMeta?.facilitatorClientId,
     snapshotMeta?.facilitatorName,
+    snapshotMeta?.phase,
     participantCount,
+    presentUsers,
     snapshotMeta,
   ]);
 
@@ -129,7 +145,7 @@ export const Room = observer(() => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 text-text sm:p-6">
+    <div className="flex min-h-0 flex-1 flex-col overflow-auto text-landing-fg">
       {roomStore.connectionStatus === 'connecting' && (
         <div className="flex justify-center py-8">
           <Spinner />
@@ -146,9 +162,12 @@ export const Room = observer(() => {
 
       <RoomHeader store={roomStore} />
 
-      <ColumnList store={roomStore} />
+      <div className="flex flex-col gap-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
+        <ColumnList store={roomStore} />
 
-      {roomStore.phase === ERetroPhase.Discuss && <DiscussPanel store={roomStore} />}
+        {roomStore.phase === ERetroPhase.Discuss && <DiscussPanel store={roomStore} />}
+        {roomStore.phase === ERetroPhase.Close && <ClosePanel store={roomStore} />}
+      </div>
 
       {roomStore.phase === ERetroPhase.Close && <ExportDialogAutoOpen store={roomStore} />}
 

@@ -7,27 +7,20 @@ import {
   parseFuzzyDate,
 } from '@frozik/utils';
 import { Temporal } from '@js-temporal/polyfill';
-import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 
 import { getCurrentLanguage } from '../../../../shared/i18n';
-import { RadioGroup } from '../../../../shared/ui';
+import { CardFrame, MonoKicker, RadioGroup, SectionNumber } from '../../../../shared/ui';
 import { controlsT } from '../translations';
-
-function Kbd({ children }: { children: ReactNode }): ReactNode {
-  return (
-    <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-      {children}
-    </kbd>
-  );
-}
+import { Kbd } from './Kbd';
 
 const TIME_ZONE = Temporal.Now.timeZoneId();
 const WEEKEND_DAYS = new Set([EDayOfWeek.Saturday, EDayOfWeek.Sunday]);
+const NEAREST_VALUE = 'nearest';
 
 const NEAREST_OPTIONS = [
   { label: controlsT.datePage.futureOnly, value: 'future' },
-  { label: controlsT.datePage.nearest, value: 'nearest' },
+  { label: controlsT.datePage.nearest, value: NEAREST_VALUE },
 ];
 
 const STEP_OPTIONS = [
@@ -65,77 +58,99 @@ export const DatePage = memo(() => {
     })
   );
 
-  return (
-    <section className="mx-auto max-w-2xl space-y-8 px-6 py-8">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-text">
-          {controlsT.datePage.title}
-        </h2>
-        <p className="text-sm leading-relaxed text-text-secondary">
-          {controlsT.datePage.description}{' '}
-          <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-            ↑
-          </kbd>{' '}
-          <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-            ↓
-          </kbd>{' '}
-          {controlsT.datePage.stepInstruction}
-        </p>
-        <ul className="mt-2 space-y-1 text-sm text-text-secondary">
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.keywords}</span>{' '}
-            <Kbd>today</Kbd> <Kbd>tomorrow</Kbd> <Kbd>tom</Kbd> <Kbd>yesterday</Kbd> <Kbd>now</Kbd>{' '}
-            <Kbd>noon</Kbd> <Kbd>midday</Kbd> <Kbd>midnight</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.boundaries}</span>{' '}
-            <Kbd>eom</Kbd> <Kbd>bom</Kbd> <Kbd>eoy</Kbd> <Kbd>boy</Kbd> <Kbd>eoq</Kbd>,{' '}
-            <Kbd>end of month</Kbd> <Kbd>start of year</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.weekdays}</span>{' '}
-            <Kbd>mon</Kbd>–<Kbd>sun</Kbd>, <Kbd>monday</Kbd>–<Kbd>sunday</Kbd>, <Kbd>next fri</Kbd>,{' '}
-            <Kbd>last monday</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.offsets}</span>{' '}
-            <Kbd>+3d</Kbd> <Kbd>-1w</Kbd> <Kbd>2m</Kbd> <Kbd>1y</Kbd>, <Kbd>in 3 days</Kbd>,{' '}
-            <Kbd>2 weeks ago</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.dates}</span>{' '}
-            <Kbd>2025-01-15</Kbd> <Kbd>15/03/2025</Kbd> <Kbd>15.03.2025</Kbd> <Kbd>15 jan 2025</Kbd>{' '}
-            <Kbd>jan 15 25</Kbd> <Kbd>15 06 27</Kbd> <Kbd>10nov</Kbd> <Kbd>nov10</Kbd>{' '}
-            <Kbd>15nov2025</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.months}</span>{' '}
-            <Kbd>jan</Kbd> <Kbd>december</Kbd> <Kbd>january 2027</Kbd> <Kbd>jan &apos;27</Kbd>{' '}
-            <Kbd>2027-01</Kbd> <Kbd>01/2027</Kbd> <Kbd>2027 jan</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.quarters}</span>{' '}
-            <Kbd>Q1</Kbd> <Kbd>Q2 2025</Kbd> <Kbd>Q3/2025</Kbd> <Kbd>1Q25</Kbd> <Kbd>4Q2025</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.ordinals}</span>{' '}
-            <Kbd>15th</Kbd> <Kbd>the 1st</Kbd> <Kbd>22nd</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.time}</span>{' '}
-            <Kbd>13:00</Kbd> <Kbd>9:30:45</Kbd> <Kbd>9:30:45.123</Kbd> <Kbd>9am</Kbd>{' '}
-            <Kbd>5:30pm</Kbd> <Kbd>12am</Kbd> <Kbd>12pm</Kbd>
-          </li>
-          <li>
-            <span className="text-text-secondary">{controlsT.datePage.categories.dateTime}</span>{' '}
-            <Kbd>tom 13:00</Kbd> <Kbd>mon 9am</Kbd> <Kbd>next fri 17:00</Kbd>{' '}
-            <Kbd>last mon 9am</Kbd> <Kbd>+3d 8:00</Kbd> <Kbd>eom 23:59</Kbd>{' '}
-            <Kbd>15 jan 2025 14:30</Kbd>
-          </li>
-        </ul>
-      </div>
+  const handleStepChange = useFunction((next: string) => {
+    setStep(next as EDateTimeStep);
+  });
 
-      <div className="rounded-xl border border-border bg-surface-elevated/50 p-6">
+  const handleResolutionChange = useFunction((next: string) => {
+    setTimeResolution(next as ETimeResolution);
+  });
+
+  const handleNearestChange = useFunction((next: string) => {
+    setNearest(next === NEAREST_VALUE);
+  });
+
+  return (
+    <section className="flex flex-col gap-5">
+      <SectionNumber number="03" label={controlsT.datePage.sectionKicker} />
+      <h2 className="text-[24px] font-medium text-landing-fg">{controlsT.datePage.title}</h2>
+      <p className="text-[14px] leading-[1.55] text-landing-fg-dim">
+        {controlsT.datePage.description} <Kbd>↑</Kbd> <Kbd>↓</Kbd>{' '}
+        {controlsT.datePage.stepInstruction}
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.keywords}
+          </MonoKicker>
+          <Kbd>today</Kbd> <Kbd>tomorrow</Kbd> <Kbd>tom</Kbd> <Kbd>yesterday</Kbd> <Kbd>now</Kbd>{' '}
+          <Kbd>noon</Kbd> <Kbd>midday</Kbd> <Kbd>midnight</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.boundaries}
+          </MonoKicker>
+          <Kbd>eom</Kbd> <Kbd>bom</Kbd> <Kbd>eoy</Kbd> <Kbd>boy</Kbd> <Kbd>eoq</Kbd>,{' '}
+          <Kbd>end of month</Kbd> <Kbd>start of year</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.weekdays}
+          </MonoKicker>
+          <Kbd>mon</Kbd>–<Kbd>sun</Kbd>, <Kbd>monday</Kbd>–<Kbd>sunday</Kbd>, <Kbd>next fri</Kbd>,{' '}
+          <Kbd>last monday</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.offsets}
+          </MonoKicker>
+          <Kbd>+3d</Kbd> <Kbd>-1w</Kbd> <Kbd>2m</Kbd> <Kbd>1y</Kbd>, <Kbd>in 3 days</Kbd>,{' '}
+          <Kbd>2 weeks ago</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.dates}
+          </MonoKicker>
+          <Kbd>2025-01-15</Kbd> <Kbd>15/03/2025</Kbd> <Kbd>15.03.2025</Kbd> <Kbd>15 jan 2025</Kbd>{' '}
+          <Kbd>jan 15 25</Kbd> <Kbd>15 06 27</Kbd> <Kbd>10nov</Kbd> <Kbd>nov10</Kbd>{' '}
+          <Kbd>15nov2025</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.months}
+          </MonoKicker>
+          <Kbd>jan</Kbd> <Kbd>december</Kbd> <Kbd>january 2027</Kbd> <Kbd>jan &apos;27</Kbd>{' '}
+          <Kbd>2027-01</Kbd> <Kbd>01/2027</Kbd> <Kbd>2027 jan</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.quarters}
+          </MonoKicker>
+          <Kbd>Q1</Kbd> <Kbd>Q2 2025</Kbd> <Kbd>Q3/2025</Kbd> <Kbd>1Q25</Kbd> <Kbd>4Q2025</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.ordinals}
+          </MonoKicker>
+          <Kbd>15th</Kbd> <Kbd>the 1st</Kbd> <Kbd>22nd</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.time}
+          </MonoKicker>
+          <Kbd>13:00</Kbd> <Kbd>9:30:45</Kbd> <Kbd>9:30:45.123</Kbd> <Kbd>9am</Kbd>{' '}
+          <Kbd>5:30pm</Kbd> <Kbd>12am</Kbd> <Kbd>12pm</Kbd>
+        </li>
+        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
+          <MonoKicker tone="faint" className="mr-1">
+            {controlsT.datePage.categories.dateTime}
+          </MonoKicker>
+          <Kbd>tom 13:00</Kbd> <Kbd>mon 9am</Kbd> <Kbd>next fri 17:00</Kbd> <Kbd>last mon 9am</Kbd>{' '}
+          <Kbd>+3d 8:00</Kbd> <Kbd>eom 23:59</Kbd> <Kbd>15 jan 2025 14:30</Kbd>
+        </li>
+      </ul>
+
+      <CardFrame className="p-6">
         <DateTimePicker
           value={value}
           onValueChange={setValue}
@@ -148,55 +163,47 @@ export const DatePage = memo(() => {
           today={today}
           language={getCurrentLanguage()}
         />
-      </div>
+      </CardFrame>
 
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">
-            {controlsT.datePage.arrowKeyStep}
-          </span>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
+          <MonoKicker tone="faint">{controlsT.datePage.arrowKeyStep}</MonoKicker>
           <RadioGroup
             options={STEP_OPTIONS}
             value={step}
-            onChange={setStep as (value: string) => void}
+            onChange={handleStepChange}
             optionType="button"
           />
         </div>
 
-        <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">
-            {controlsT.datePage.timePrecision}
-          </span>
+        <div className="flex flex-col gap-3">
+          <MonoKicker tone="faint">{controlsT.datePage.timePrecision}</MonoKicker>
           <RadioGroup
             options={TIME_RESOLUTION_OPTIONS}
             value={timeResolution}
-            onChange={setTimeResolution as (value: string) => void}
+            onChange={handleResolutionChange}
             optionType="button"
           />
         </div>
 
-        <div className="space-y-3">
-          <span className="mb-2 block text-sm font-medium text-text">
-            {controlsT.datePage.parseDirection}
-          </span>
+        <div className="flex flex-col gap-3">
+          <MonoKicker tone="faint">{controlsT.datePage.parseDirection}</MonoKicker>
           <RadioGroup
             options={NEAREST_OPTIONS}
-            value={nearest ? 'nearest' : 'future'}
-            onChange={(v: string) => setNearest(v === 'nearest')}
+            value={nearest ? NEAREST_VALUE : 'future'}
+            onChange={handleNearestChange}
             optionType="button"
           />
-          <p className="text-xs text-text-secondary">
+          <p className="text-xs text-landing-fg-faint">
             {nearest ? controlsT.datePage.nearestHint : controlsT.datePage.futureHint}
           </p>
         </div>
 
         {value !== undefined && (
-          <div className="rounded-lg border border-border bg-surface-elevated/30 px-4 py-3">
-            <span className="text-xs font-medium text-text-secondary">
-              {controlsT.datePage.resolvedValue}
-            </span>
-            <p className="mt-1 font-mono text-sm text-text">{value.toString()}</p>
-          </div>
+          <CardFrame className="px-4 py-3">
+            <MonoKicker tone="faint">{controlsT.datePage.resolvedKicker}</MonoKicker>
+            <p className="mt-1 font-mono text-sm text-landing-fg">{value.toString()}</p>
+          </CardFrame>
         )}
       </div>
     </section>

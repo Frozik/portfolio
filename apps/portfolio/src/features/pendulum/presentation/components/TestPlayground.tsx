@@ -10,7 +10,6 @@ import { isNil } from 'lodash-es';
 import { Bot, User, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
 import { usePendulumStore } from '../../application/usePendulumStore';
@@ -20,6 +19,7 @@ import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
 import commonStyles from './common.module.scss';
+import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
 
 const ICON_SIZE = 16;
@@ -51,7 +51,7 @@ export const TestPlayground = observer(() => {
   }>();
 
   const [renderer, setContextsWorld] = useRenderer();
-  const ticker = useFrameTicker(paused);
+  const ticker = useFrameTicker();
   const playground = usePlayground(ticker, renderer, { gravity });
 
   useEffect(
@@ -72,9 +72,7 @@ export const TestPlayground = observer(() => {
     playground.setAdditionalForcePosition(additionalForcePosition);
   }, [playground, additionalForcePosition]);
 
-  const navigate = useNavigate();
-
-  const handleRemovePlayer = useFunction(() => navigate(`/pendulum`));
+  const handleRemovePlayer = useFunction(() => store.setSelectedRobotId(undefined));
 
   if (isLoadingValueDescriptor(playerVD)) {
     return (
@@ -88,35 +86,38 @@ export const TestPlayground = observer(() => {
   }
 
   return (
-    <PendulumPlayground
-      paused={paused}
-      gravity={gravity}
-      pauseResumeKeyCode="Space"
-      onAdditionalForce={setAdditionalForcePosition}
-      onGravityChanged={handleGravityChange}
-      onPausedChanged={setPaused}
-      onSetContexts={setContextsWorld}
-    >
-      {isSyncedValueDescriptor(playerVD) && (
-        <>
-          {playerVD.value.type === EPlayerType.Human && (
-            <div className={commonStyles.description}>
-              <User size={ICON_SIZE} />
+    <>
+      <FrameTickerDriver ticker={ticker} paused={paused} />
+      <PendulumPlayground
+        paused={paused}
+        gravity={gravity}
+        pauseResumeKeyCode="Space"
+        onAdditionalForce={setAdditionalForcePosition}
+        onGravityChanged={handleGravityChange}
+        onPausedChanged={setPaused}
+        onSetContexts={setContextsWorld}
+      >
+        {isSyncedValueDescriptor(playerVD) && (
+          <>
+            {playerVD.value.type === EPlayerType.Human && (
+              <div className={commonStyles.description}>
+                <User size={ICON_SIZE} />
 
-              {playerVD.value.name}
-            </div>
-          )}
-          {playerVD.value.type === EPlayerType.Robot && (
-            <div className={commonStyles.descriptionWithRemoval} onClick={handleRemovePlayer}>
-              <Bot size={ICON_SIZE} />
+                {playerVD.value.name}
+              </div>
+            )}
+            {playerVD.value.type === EPlayerType.Robot && (
+              <div className={commonStyles.descriptionWithRemoval} onClick={handleRemovePlayer}>
+                <Bot size={ICON_SIZE} />
 
-              {playerVD.value.name}
+                {playerVD.value.name}
 
-              <X size={ICON_SIZE} className={commonStyles.descriptionClose} />
-            </div>
-          )}
-        </>
-      )}
-    </PendulumPlayground>
+                <X size={ICON_SIZE} className={commonStyles.descriptionClose} />
+              </div>
+            )}
+          </>
+        )}
+      </PendulumPlayground>
+    </>
   );
 });

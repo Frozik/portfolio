@@ -16,6 +16,13 @@ import { getCalendarAriaLabels } from './translations/index';
 
 const DEFAULT_TIME_ZONE = 'UTC';
 const MIDNIGHT = new Temporal.PlainTime(0);
+/**
+ * Floats above page-level stacking contexts (host apps often wrap their
+ * content in `relative z-10` layers to sit above a canvas background —
+ * Radix Portal's `z-index: auto` would otherwise place the popover below
+ * them).
+ */
+const POPOVER_Z_INDEX = 100;
 
 function defaultFormatDate(value: Temporal.ZonedDateTime): string {
   const date = value.toPlainDate().toString();
@@ -254,6 +261,7 @@ export const DateTimePicker = memo(
             sideOffset={4}
             onOpenAutoFocus={preventFocusSteal}
             onCloseAutoFocus={preventFocusSteal}
+            style={{ zIndex: POPOVER_Z_INDEX }}
           >
             <CalendarPopup
               value={selectedPlainDate}

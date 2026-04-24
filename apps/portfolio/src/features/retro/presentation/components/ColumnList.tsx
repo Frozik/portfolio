@@ -132,11 +132,12 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
       onDragEnd={dndEnabled ? handleDragEnd : undefined}
       onDragCancel={dndEnabled ? handleDragCancel : undefined}
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {snapshot.columns.map(column => (
+      <div className="grid grid-cols-1 gap-[18px] md:grid-cols-3">
+        {snapshot.columns.map((column, columnIndex) => (
           <Column
             key={column.id}
             column={column}
+            columnIndex={columnIndex}
             cards={cardsByColumn.get(column.id) ?? []}
             phase={snapshot.meta.phase}
             myClientId={store.identity.clientId as ClientId}

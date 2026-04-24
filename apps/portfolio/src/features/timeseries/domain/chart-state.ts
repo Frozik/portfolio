@@ -76,7 +76,7 @@ interface IFrameLayoutCache {
   yTicks: IAxisTick[];
 }
 
-const CHART_BACKGROUND_COLOR = '#1a1a1a';
+const CHART_BACKGROUND_COLOR = '#07090c';
 const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
 const MIN_POINTS_FOR_RENDERING = 2;

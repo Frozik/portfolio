@@ -54,6 +54,12 @@ const midPriceShaderSource = midPriceCommonWgsl + midPriceWgsl;
 // copy destination for the intermediate render target (Approach D).
 const OFFSCREEN_CTX_USAGE = 0x10 | 0x02;
 
+// Shared WebGPU scene background colour used across every demo. The
+// CPU-side Canvas2D layer is filled with this tone before the heatmap
+// bitmap is composited on top, so the spread-gap between best-bid and
+// best-ask reads as the same dark surface as sun / graphics / landing.
+const CHART_BACKGROUND_COLOR = '#07090c';
+
 /**
  * Fire off an async `getCompilationInfo()` query on a freshly created
  * shader module and log every diagnostic (error / warning / info) to
@@ -679,7 +685,7 @@ export class BinanceHeatmapRenderer {
     // top. The grid stays *under* the heatmap and is only visible
     // outside the cell quads if the bitmap ever leaves transparent
     // pixels — which it never does with the current clear colour.
-    this.target2d.fillStyle = '#1a1a1a';
+    this.target2d.fillStyle = CHART_BACKGROUND_COLOR;
     this.target2d.fillRect(0, 0, width, height);
     this.invokeOverlay(this.drawGridUnder, width, height, input);
     if (bitmap !== null) {

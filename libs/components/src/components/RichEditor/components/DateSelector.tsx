@@ -107,7 +107,7 @@ export const DateSelector = memo(
           <abbr
             key={index}
             className={cn(
-              'flex size-7 items-center justify-center text-sm font-bold text-text-secondary',
+              'flex size-7 items-center justify-center font-mono text-[10px] font-semibold tracking-[0.08em] text-landing-fg-faint uppercase',
               'pointer-events-none no-underline'
             )}
             title={ariaLabels.dayNames[dayIndex]}
@@ -121,7 +121,7 @@ export const DateSelector = memo(
     }, [startOfWeek, ariaLabels]);
 
     return (
-      <div className="grid grid-cols-7 gap-1 bg-surface p-1 justify-items-center">
+      <div className="grid grid-cols-7 gap-1 p-1 justify-items-center">
         {header}
         {dateGrid.map((row, rowIndex) =>
           row.map((cell, colIndex) => (

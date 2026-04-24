@@ -1,43 +1,26 @@
-import { useFrameTime } from '@frozik/components';
-import { isNil } from 'lodash-es';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 
 import type { ITicker } from '../../domain/types';
 
 const MIN_FPS = 30;
 
+export interface IFrameTicker extends ITicker {
+  update(deltaTime: DOMHighResTimeStamp): Promise<void>;
+  setFps(fps: number): void;
+}
+
 export function useFrameTicker(
-  paused: boolean,
   deltaTimeFn?: (
     deltaTime: DOMHighResTimeStamp,
     multiplier: number
   ) => DOMHighResTimeStamp | DOMHighResTimeStamp[]
-): ITicker {
-  const fpsRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (paused || isNil(deltaTimeFn)) {
-      return;
-    }
-
-    let be = performance.now();
-
-    let frameId = requestAnimationFrame(function loop() {
-      const now = performance.now();
-      fpsRef.current = Math.round(200 / (now - be)) * 5;
-      be = now;
-      frameId = requestAnimationFrame(loop);
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [paused, deltaTimeFn]);
-
-  const { deltaTime } = useFrameTime(paused);
-  const ticker = useMemo<ITicker & { update(deltaTime: DOMHighResTimeStamp): void }>(() => {
+): IFrameTicker {
+  return useMemo<IFrameTicker>(() => {
     const subscriptions = new Set<(deltaTime: DOMHighResTimeStamp) => Promise<void> | void>();
 
     let updateInProgress = false;
     let currentMultiplier = 1;
+    let fps = 0;
 
     return {
       subscribe(handler: (deltaTime: DOMHighResTimeStamp) => Promise<void> | void): VoidFunction {
@@ -50,9 +33,9 @@ export function useFrameTicker(
           return;
         }
 
-        if (fpsRef.current < MIN_FPS) {
+        if (fps < MIN_FPS) {
           currentMultiplier = Math.max(1, currentMultiplier - 1);
-        } else if (fpsRef.current >= MIN_FPS) {
+        } else if (fps >= MIN_FPS) {
           currentMultiplier++;
         }
 
@@ -74,12 +57,12 @@ export function useFrameTicker(
 
         updateInProgress = false;
       },
+      setFps(value: number): void {
+        fps = value;
+      },
       dispose(): void {
         subscriptions.clear();
       },
     };
   }, [deltaTimeFn]);
-  useEffect(() => void ticker.update(deltaTime), [deltaTime, ticker]);
-
-  return ticker;
 }

@@ -7,7 +7,7 @@ import {
 } from '@frozik/utils';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
-import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
+import type { ClientId, ERetroPhase, IRoomIndexEntry, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'retro-room-index';
 const CURRENT_DATABASE_VERSION = 1;
@@ -27,6 +27,8 @@ interface IDBRoomEntry {
   readonly lastVisitedAt: ISO;
   readonly participantCount: number;
   readonly ownerClientId?: ClientId | null;
+  readonly phase?: ERetroPhase | null;
+  readonly knownParticipantIds?: readonly ClientId[];
 }
 
 interface IRetroRoomsDB extends DBSchema {
@@ -139,6 +141,8 @@ function toRoomIndexEntry(row: IDBRoomEntry): IRoomIndexEntry {
     lastVisitedAt: row.lastVisitedAt,
     participantCount: row.participantCount,
     ownerClientId: row.ownerClientId ?? null,
+    phase: row.phase ?? null,
+    knownParticipantIds: row.knownParticipantIds ?? [],
   };
 }
 
@@ -151,5 +155,7 @@ function toDatabaseRow(entry: IRoomIndexEntry): IDBRoomEntry {
     lastVisitedAt: entry.lastVisitedAt,
     participantCount: entry.participantCount,
     ownerClientId: entry.ownerClientId,
+    phase: entry.phase,
+    knownParticipantIds: entry.knownParticipantIds,
   };
 }

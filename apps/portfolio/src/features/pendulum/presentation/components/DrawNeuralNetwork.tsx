@@ -6,11 +6,10 @@ import {
   matchValueDescriptor,
 } from '@frozik/utils';
 import { isNil } from 'lodash-es';
-import { Bot, X } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
@@ -36,7 +35,6 @@ const TEXT_MARGIN = 4;
 const WEIGHT_TEXT_FONT = '14px monospace';
 const ICON_SIZE = 16;
 
-// observer — reads MobX observable store.currentRobot
 export const DrawNeuralNetwork = observer(() => {
   const ref = useRef<HTMLDivElement>(null);
   const { width = 0, height = 0 } = useResizeObserver({
@@ -367,10 +365,6 @@ export const DrawNeuralNetwork = observer(() => {
     canvasRef
   );
 
-  const navigate = useNavigate();
-
-  const handleRemovePlayer = useFunction(() => navigate(`/pendulum`));
-
   return (
     <div ref={ref} className={commonStyles.container}>
       <canvas
@@ -381,12 +375,10 @@ export const DrawNeuralNetwork = observer(() => {
       />
       {matchValueDescriptor(robotVD, {
         synced: ({ value: robot }) => (
-          <div className={commonStyles.descriptionWithRemoval} onClick={handleRemovePlayer}>
+          <div className={commonStyles.descriptionWithRemoval}>
             <Bot size={ICON_SIZE} />
 
             {robot.name}
-
-            <X size={ICON_SIZE} className={commonStyles.descriptionClose} />
           </div>
         ),
         unsynced: vd => {

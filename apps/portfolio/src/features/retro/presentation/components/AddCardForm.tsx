@@ -1,7 +1,9 @@
 import { useFunction } from '@frozik/components';
+import { ArrowRight } from 'lucide-react';
 import { memo, useState } from 'react';
 
-import { Button } from '../../../../shared/ui/Button';
+import { cn } from '../../../../shared/lib/cn';
+import { MonoKicker } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ColumnId } from '../../domain/types';
 import { retroT as t } from '../translations';
@@ -57,7 +59,8 @@ const AddCardFormComponent = ({
     store.setTypingIn(null);
   });
 
-  const isSubmitDisabled = disabled || text.trim().length === 0;
+  const trimmedLength = text.trim().length;
+  const isSubmitDisabled = disabled || trimmedLength === 0;
 
   return (
     <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
@@ -67,21 +70,33 @@ const AddCardFormComponent = ({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        placeholder={t.room.addCardPlaceholder}
+        placeholder={t.room.writeCardPrompt}
         rows={TEXTAREA_ROWS}
         disabled={disabled}
         aria-label={`${t.room.addCardPlaceholder} (${columnId})`}
-        className={
-          'w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm text-text ' +
-          'placeholder:text-text-secondary ' +
-          'focus:outline-none focus:ring-2 focus:ring-brand-500 ' +
+        className={cn(
+          'w-full resize-none border-0 border-b border-dashed border-landing-border-soft bg-transparent px-0 py-1 text-[13px] leading-[1.5] text-landing-fg placeholder:text-landing-fg-faint',
+          'focus:border-landing-accent focus:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-50'
-        }
+        )}
       />
-      <div className="flex justify-end">
-        <Button type="submit" variant="primary" size="sm" disabled={isSubmitDisabled}>
-          {t.room.addCardSubmit}
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <MonoKicker tone="faint">
+          {text.length} {t.room.charsSuffix}
+        </MonoKicker>
+        <button
+          type="submit"
+          disabled={isSubmitDisabled}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-medium tracking-[0.08em] uppercase transition-colors',
+            isSubmitDisabled
+              ? 'cursor-not-allowed border border-landing-border-soft bg-transparent text-landing-fg-faint'
+              : 'cursor-pointer border-0 bg-landing-accent text-landing-bg hover:bg-landing-accent/90'
+          )}
+        >
+          {t.room.postSubmit}
+          <ArrowRight size={10} strokeWidth={2} />
+        </button>
       </div>
     </form>
   );

@@ -1,5 +1,13 @@
 export const controlsTranslationsEn = {
+  lobby: {
+    sectionKicker: 'controls',
+    headlinePrimary: 'UI',
+    headlineAccent: 'controls',
+    heroSubtitle:
+      'A pair of input primitives I rebuild on every project — a numeric editor with PIP highlighting and a date/time picker with free-form parsing.',
+  },
   datePage: {
+    sectionKicker: 'date / time',
     title: 'Date / Time Picker',
     description: 'Smart date input with calendar popup and free-form text parsing. Use',
     stepInstruction: 'to step the value. Supported formats:',
@@ -31,8 +39,10 @@ export const controlsTranslationsEn = {
     futureHint: 'Future only \u2014 "13:00" advances to tomorrow if already past',
     placeholder: 'Type a date (tomorrow 13:00, mon 9am, 2024-01-15...)',
     resolvedValue: 'Resolved value',
+    resolvedKicker: 'resolved',
   },
   numberPage: {
+    sectionKicker: 'numeric input',
     title: 'Rate / Amount / Number',
     description:
       'Numeric input control with configurable decimal precision and PIP highlighting. Useful for conversion rates and financial inputs.',

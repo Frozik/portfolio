@@ -7,7 +7,7 @@ import {
 } from '@frozik/utils';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
-import type { IConfRoomIndexEntry, RoomId } from '../domain';
+import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain';
 
 const DATABASE_NAME = 'frozik-conf';
 const CURRENT_DATABASE_VERSION = 1;
@@ -28,6 +28,7 @@ interface IDBConfRoomEntry {
   readonly roomId: RoomId;
   readonly createdAt: ISO;
   readonly lastVisitedAt: ISO;
+  readonly ownerParticipantId?: ParticipantId | null;
 }
 
 interface IConfRoomsDB extends DBSchema {
@@ -48,7 +49,14 @@ interface IConfRoomsDB extends DBSchema {
  */
 export interface IConfRoomIndexRepo {
   list(): Promise<readonly IConfRoomIndexEntry[]>;
-  add(roomId: RoomId, createdAt: ISO): Promise<void>;
+  add(roomId: RoomId, createdAt: ISO, ownerParticipantId: ParticipantId): Promise<void>;
+  /**
+   * Upsert a visit marker. If a row for `roomId` already exists, only
+   * `lastVisitedAt` is updated — `createdAt` and `ownerParticipantId` are
+   * preserved so the creator label stays stable across visits. If the row
+   * is missing (first time joining a room by link), a fresh row is
+   * inserted with `ownerParticipantId = null`.
+   */
   touchVisited(roomId: RoomId): Promise<void>;
   remove(roomId: RoomId): Promise<void>;
 }
@@ -72,23 +80,32 @@ export async function createConfRoomIndexRepo(
       return orderBy(rows, ROOM_CREATED_AT_FIELD, 'desc').map(toDomainEntry);
     },
 
-    async add(roomId: RoomId, createdAt: ISO): Promise<void> {
+    async add(roomId: RoomId, createdAt: ISO, ownerParticipantId: ParticipantId): Promise<void> {
       const row: IDBConfRoomEntry = {
         roomId,
         createdAt,
         lastVisitedAt: createdAt,
+        ownerParticipantId,
       };
       await database.put(ROOMS_TABLE_NAME, row);
     },
 
     async touchVisited(roomId: RoomId): Promise<void> {
       const existing = await database.get(ROOMS_TABLE_NAME, roomId);
+      const nowIso = getNowISO8601();
       if (isNil(existing)) {
+        const fresh: IDBConfRoomEntry = {
+          roomId,
+          createdAt: nowIso,
+          lastVisitedAt: nowIso,
+          ownerParticipantId: null,
+        };
+        await database.put(ROOMS_TABLE_NAME, fresh);
         return;
       }
       const updated: IDBConfRoomEntry = {
         ...existing,
-        lastVisitedAt: getNowISO8601(),
+        lastVisitedAt: nowIso,
       };
       await database.put(ROOMS_TABLE_NAME, updated);
     },
@@ -131,5 +148,6 @@ function toDomainEntry(row: IDBConfRoomEntry): IConfRoomIndexEntry {
     roomId: row.roomId,
     createdAt: row.createdAt,
     lastVisitedAt: row.lastVisitedAt,
+    ownerParticipantId: row.ownerParticipantId ?? null,
   };
 }

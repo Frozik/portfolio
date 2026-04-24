@@ -8,7 +8,7 @@ import {
 } from '@frozik/utils';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import type { IConfRoomIndexEntry, RoomId } from '../domain';
+import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain';
 import type { IConfRoomIndexRepo } from '../infrastructure';
 import { getOrCreateParticipantId } from '../infrastructure';
 
@@ -25,17 +25,20 @@ import { getOrCreateParticipantId } from '../infrastructure';
 export class ConfLobbyStore {
   rooms: ValueDescriptor<readonly IConfRoomIndexEntry[], readonly IConfRoomIndexEntry[]> = EMPTY_VD;
 
+  readonly localParticipantId: ParticipantId;
+
   constructor(private readonly repoPromise: Promise<IConfRoomIndexRepo>) {
     // Materialise the persistent participant id on first lobby mount so
     // the user has a stable identity before they ever enter a room —
     // that way reconnect detection works the very first time they drop
     // and rejoin, instead of only on their second room visit.
-    getOrCreateParticipantId();
+    this.localParticipantId = getOrCreateParticipantId();
 
     makeAutoObservable(
       this,
       {
         repoPromise: false,
+        localParticipantId: false,
       } as never,
       { autoBind: true }
     );
@@ -71,6 +74,12 @@ export class ConfLobbyStore {
     return roomId;
   }
 
+  isOwnedByMe(entry: IConfRoomIndexEntry): boolean {
+    return (
+      entry.ownerParticipantId !== null && entry.ownerParticipantId === this.localParticipantId
+    );
+  }
+
   async touchVisited(roomId: RoomId): Promise<void> {
     const repo = await this.repoPromise;
     await repo.touchVisited(roomId);
@@ -90,7 +99,7 @@ export class ConfLobbyStore {
 
   private async persistNewRoom(roomId: RoomId, createdAt: ISO): Promise<void> {
     const repo = await this.repoPromise;
-    await repo.add(roomId, createdAt);
+    await repo.add(roomId, createdAt, this.localParticipantId);
     await this.loadRooms();
   }
 }

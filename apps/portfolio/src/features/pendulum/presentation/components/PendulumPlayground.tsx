@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import { PauseCircle, PlayCircle } from 'lucide-react';
 import type React from 'react';
 import type { ReactNode } from 'react';
-import { memo, useEffect, useRef } from 'react';
+import { memo, useRef } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
 import { Renderer } from '../../../../shared/components/Renderer';
 import { Button, Slider } from '../../../../shared/ui';
@@ -55,8 +55,6 @@ export const PendulumPlayground = memo(
       }),
       isNil(onAdditionalForce) ? undefined : ref
     );
-
-    useEffect(() => void onPausedChanged(paused), [paused, onPausedChanged]);
 
     return (
       <div ref={ref} className={styles.container} tabIndex={-1}>

@@ -11,21 +11,17 @@ export const pendulumTranslationsEn = {
         </p>
         <ul>
           <li>
-            Open the <strong>Generations</strong> tab and click <strong>Create New</strong> to start
-            a new search, or select a previously saved training run to continue.
+            Click <strong>Create New Competition</strong> to start a new search, or pick a
+            previously saved training run to continue.
           </li>
           <li>
-            The fitness function starts paused — press the <strong>play</strong> button to begin
-            evolution.
+            The top <strong>Fitness Playground</strong> panel shows the search in progress as the
+            network learns to balance the pendulum. Use the pause button to suspend the search.
           </li>
           <li>
-            The generations table ranks neural networks by fitness score. Select any network to
-            inspect it in the <strong>Test Playground</strong> or <strong>Neural Network</strong>{' '}
-            tabs.
-          </li>
-          <li>
-            In the test tab you can apply external force by clicking, holding, and dragging toward
-            the pendulum weight.
+            In the <strong>Test Playground</strong> panel you can try to balance the pendulum
+            yourself, or watch how it's done by a robot picked from the <strong>Generations</strong>{' '}
+            panel.
           </li>
         </ul>
         <p>
@@ -41,6 +37,9 @@ export const pendulumTranslationsEn = {
     columnId: '#',
     columnBestScore: 'Best score',
     columnPlayer: (index: number) => `Player #${index}`,
+    useRobotInTest: 'Use in test playground',
+    viewNeuralNetwork: 'View neural network',
+    deleteCompetition: 'Delete competition',
   },
   neuralNetwork: {
     selectRobotMessage:

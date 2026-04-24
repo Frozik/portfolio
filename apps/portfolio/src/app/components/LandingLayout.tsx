@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { BackgroundCanvas } from './BackgroundCanvas';
 import { TopNav } from './TopNav';
+import { TopNavBackProvider } from './TopNavBackContext';
 
 /**
  * Layout for the landing route (`/`). Mounts the decorative background
@@ -22,12 +23,12 @@ export const LandingLayout = memo(() => {
   useDocumentTitle();
 
   return (
-    <>
+    <TopNavBackProvider>
       <BackgroundCanvas />
       <TopNav />
       <main className="relative z-[2]">
         <Outlet />
       </main>
-    </>
+    </TopNavBackProvider>
   );
 });

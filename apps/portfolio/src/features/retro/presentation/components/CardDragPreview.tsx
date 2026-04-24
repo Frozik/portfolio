@@ -6,8 +6,8 @@ interface CardDragPreviewProps {
 
 export const CardDragPreview = ({ card }: CardDragPreviewProps) => {
   return (
-    <div className="pointer-events-none w-full min-w-[200px] max-w-[320px] cursor-grabbing rounded-md border border-brand-400 bg-surface-elevated p-3 text-sm text-text shadow-lg shadow-black/40">
-      <p className="whitespace-pre-wrap break-words">{card.text}</p>
+    <div className="pointer-events-none w-full max-w-[320px] min-w-[200px] rotate-1 cursor-grabbing border border-landing-accent/60 bg-landing-bg-card px-3.5 py-3 text-[13px] leading-[1.5] text-landing-fg shadow-xl shadow-black/60">
+      <p className="m-0 whitespace-pre-wrap break-words">{card.text}</p>
     </div>
   );
 };

@@ -1,24 +1,20 @@
-import { useFunction } from '@frozik/components';
-import { isSyncedValueDescriptor, isWaitingArgumentsValueDescriptor } from '@frozik/utils';
-import type { DockviewApi, DockviewReadyEvent } from 'dockview';
-import { DockviewReact } from 'dockview';
-import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useUnmount } from 'usehooks-ts';
-import { OverlayLoader } from '../../../shared/components/OverlayLoader';
-import { cn } from '../../../shared/lib/cn';
+import { useEffect } from 'react';
+
+import { DialogShell } from '../../../shared/ui';
 import { usePendulumStore } from '../application/usePendulumStore';
+import { DrawNeuralNetwork } from './components/DrawNeuralNetwork';
+import { FitnessPlayground } from './components/FitnessPlayground';
+import { GenerationsList } from './components/GenerationsList';
+import { PendulumSection } from './components/PendulumSection';
+import { TestPlayground } from './components/TestPlayground';
 import { usePreventScreensaver } from './hooks/usePreventScreensaver';
-import { DEFAULT_LAYOUT, LAYOUT_COMPONENTS, LAYOUT_TAB_COMPONENTS } from './layout';
-import styles from './Pendulum.module.scss';
+import { pendulumT } from './translations';
 
 export const Pendulum = observer(() => {
   usePreventScreensaver();
 
   const store = usePendulumStore();
-  const { robotId } = useParams<{ robotId: string }>();
 
   // init is idempotent — safe to call on every mount (including StrictMode double-mount).
   // dispose is NOT tied to useEffect cleanup because StrictMode would destroy
@@ -27,49 +23,28 @@ export const Pendulum = observer(() => {
     store.init();
   }, [store]);
 
-  useEffect(() => {
-    store.loadRobot(robotId);
-  }, [store, robotId]);
-
-  const { registerApi, resetApi } = store.tabManager;
-
-  const layout = store.layout;
-
-  const [api, setApi] = useState<DockviewApi>();
-
-  useEffect(() => {
-    if (isNil(api)) {
-      return;
-    }
-
-    api.fromJSON(isSyncedValueDescriptor(layout) ? layout.value : DEFAULT_LAYOUT);
-  }, [api, layout]);
-
-  useEffect(() => {
-    if (isNil(api)) {
-      return;
-    }
-
-    const disposable = api.onDidLayoutChange(() => store.updateLayout(api.toJSON()));
-
-    return () => disposable.dispose();
-  }, [api, store]);
-
-  const handleLayoutReady = useFunction((event: DockviewReadyEvent) => {
-    setApi(event.api);
-    registerApi(event.api);
-  });
-
-  useUnmount(() => resetApi());
-
-  return isWaitingArgumentsValueDescriptor(layout) ? (
-    <OverlayLoader />
-  ) : (
-    <DockviewReact
-      className={cn(styles.container, 'dockview-theme-abyss')}
-      components={LAYOUT_COMPONENTS}
-      tabComponents={LAYOUT_TAB_COMPONENTS}
-      onReady={handleLayoutReady}
-    />
+  return (
+    <div className="relative flex h-full w-full flex-col bg-landing-bg">
+      <PendulumSection number="01" title={pendulumT.tabs.fitnessPlayground} heightClass="h-[34%]">
+        <FitnessPlayground />
+      </PendulumSection>
+      <PendulumSection number="02" title={pendulumT.tabs.generations} heightClass="h-[33%]">
+        <GenerationsList />
+      </PendulumSection>
+      <PendulumSection number="03" title={pendulumT.tabs.testPlayground} heightClass="h-[33%]">
+        <TestPlayground />
+      </PendulumSection>
+      <DialogShell
+        open={store.isNeuralNetworkDialogOpen}
+        onClose={store.closeNeuralNetworkDialog}
+        kicker="NEURAL NETWORK"
+        title={pendulumT.tabs.neuralNetwork}
+        className="w-[min(95vw,1100px)] p-6"
+      >
+        <div className="relative h-[70vh] w-full">
+          <DrawNeuralNetwork />
+        </div>
+      </DialogShell>
+    </div>
   );
 });

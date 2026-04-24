@@ -2,8 +2,9 @@ import { NumericEditor } from '@frozik/components';
 import { memo, useState } from 'react';
 
 import { getCurrentLanguage } from '../../../../shared/i18n';
-import { RangeSlider, Slider } from '../../../../shared/ui';
+import { CardFrame, MonoKicker, RangeSlider, SectionNumber, Slider } from '../../../../shared/ui';
 import { controlsT } from '../translations';
+import { Kbd } from './Kbd';
 
 export const NumberPage = memo(() => {
   const [value, setValue] = useState([2, 4]);
@@ -15,29 +16,15 @@ export const NumberPage = memo(() => {
       : [Math.min(value[0], value[1]), Math.max(value[0], value[1]) - Math.min(value[0], value[1])];
 
   return (
-    <section className="mx-auto max-w-2xl space-y-8 px-6 py-8">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-text">
-          {controlsT.numberPage.title}
-        </h2>
-        <p className="text-sm leading-relaxed text-text-secondary">
-          {controlsT.numberPage.description}{' '}
-          <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-            K
-          </kbd>
-          ,{' '}
-          <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-            M
-          </kbd>
-          ,{' '}
-          <kbd className="rounded bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-text">
-            B
-          </kbd>{' '}
-          {controlsT.numberPage.suffixHint}
-        </p>
-      </div>
+    <section className="flex flex-col gap-5">
+      <SectionNumber number="02" label={controlsT.numberPage.sectionKicker} />
+      <h2 className="text-[24px] font-medium text-landing-fg">{controlsT.numberPage.title}</h2>
+      <p className="text-[14px] leading-[1.55] text-landing-fg-dim">
+        {controlsT.numberPage.description} <Kbd>K</Kbd> <Kbd>M</Kbd> <Kbd>B</Kbd>{' '}
+        {controlsT.numberPage.suffixHint}
+      </p>
 
-      <div className="rounded-xl border border-border bg-surface-elevated/50 p-6">
+      <CardFrame className="p-6">
         <NumericEditor
           decimal={decimals}
           pipStart={pipStart}
@@ -46,20 +33,16 @@ export const NumberPage = memo(() => {
           placeholder={controlsT.numberPage.placeholder}
           language={getCurrentLanguage()}
         />
-      </div>
+      </CardFrame>
 
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <span className="mb-4 block text-sm font-medium text-text">
-            {controlsT.numberPage.pipStartSize}
-          </span>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
+          <MonoKicker tone="faint">{controlsT.numberPage.pipStartSize}</MonoKicker>
           <RangeSlider min={-2} max={6} step={1} value={value} onChange={setValue} showTooltip />
         </div>
 
-        <div className="space-y-3">
-          <span className="mb-4 block text-sm font-medium text-text">
-            {controlsT.numberPage.decimals}
-          </span>
+        <div className="flex flex-col gap-3">
+          <MonoKicker tone="faint">{controlsT.numberPage.decimals}</MonoKicker>
           <Slider min={0} max={10} step={1} value={decimals} onChange={setDecimals} showTooltip />
         </div>
       </div>

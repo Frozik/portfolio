@@ -3,9 +3,7 @@ import { isNil } from 'lodash-es';
 
 import {
   ALPHA_BLEND_STATE,
-  BACKGROUND_B,
-  BACKGROUND_G,
-  BACKGROUND_R,
+  BACKGROUND_COLOR,
   BORDER_SEGMENT_COUNT,
   computeSinXSegmentCount,
   MSAA_SAMPLE_COUNT,
@@ -92,12 +90,7 @@ export class MainPassLayer implements RenderLayer {
           view: currentMsaaView,
           resolveTarget: canvasView,
           loadOp: 'clear',
-          clearValue: {
-            r: BACKGROUND_R,
-            g: BACKGROUND_G,
-            b: BACKGROUND_B,
-            a: 1,
-          },
+          clearValue: BACKGROUND_COLOR,
           storeOp: 'discard',
         },
       ],

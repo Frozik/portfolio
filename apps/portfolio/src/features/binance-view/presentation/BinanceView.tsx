@@ -200,7 +200,7 @@ const BinanceViewContent = observer(() => {
   }, [store, stopHoverLoop]);
 
   return (
-    <div className="relative h-full w-full bg-[#1a1a1a]">
+    <div className="relative h-full w-full">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full [touch-action:none]"

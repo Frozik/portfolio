@@ -81,6 +81,18 @@ export interface IRoomIndexEntry {
   participantCount: number;
   /** clientId of the retro's facilitator. Resolved to a display name via `UserDirectoryStore`. */
   ownerClientId: ClientId | null;
+  /**
+   * Phase at the moment of the last visit. `null` for rows written before
+   * phase was tracked — treat as unknown rather than any concrete phase.
+   */
+  phase: ERetroPhase | null;
+  /**
+   * Union of all clientIds we have ever seen in this room (via awareness),
+   * ordered by first-seen (oldest first). Resolved to display name/color
+   * via `UserDirectoryStore`. Lobby renders the tail of this list to show
+   * the most recent participants.
+   */
+  knownParticipantIds: readonly ClientId[];
 }
 
 export interface IParticipant {

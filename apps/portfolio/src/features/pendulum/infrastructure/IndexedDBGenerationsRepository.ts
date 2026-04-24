@@ -116,6 +116,19 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
         )
       );
     },
+    deleteCompetition$(competitionStart: ISO): Promise<void> {
+      return firstValueFrom(
+        database$.pipe(
+          switchMap(database => {
+            return deleteCompetition(database, competitionStart);
+          }),
+          sendToTabs(DATABASE_CHANNEL_SYNC_KEY),
+          tap(() => {
+            databaseChanged$.next();
+          })
+        )
+      );
+    },
     getRobot$(robotName: string) {
       return database$.pipe(
         switchMap(database => {
@@ -131,6 +144,7 @@ export interface TModuleIndexDBGenerations {
   getCompetitionsStarts$(): Observable<ISO[]>;
   getGenerations$(competitionStart: ISO): Observable<IGeneration[]>;
   addGeneration$(competitionStart: ISO, generation: IGeneration): Promise<void>;
+  deleteCompetition$(competitionStart: ISO): Promise<void>;
   getRobot$(
     robotName: string
   ): Observable<
@@ -213,6 +227,7 @@ async function getGenerations(
   const orderedGenerations = orderBy(generations, GENERATION_ID_FIELD);
 
   const robotsTransaction = database.transaction(ROBOTS_TABLE_NAME, 'readonly');
+  const robotsStore = robotsTransaction.objectStore(ROBOTS_TABLE_NAME);
 
   const robotNamesSet = new Set<string>();
 
@@ -222,10 +237,14 @@ async function getGenerations(
     }
   }
 
+  const robotNames = Array.from(robotNamesSet);
+  const robotRecords = await Promise.all(robotNames.map(robotName => robotsStore.get(robotName)));
+
   const robotsMap = new Map<string, IDBRobot>();
 
-  for (const robotName of robotNamesSet) {
-    const robot = await robotsTransaction.objectStore(ROBOTS_TABLE_NAME).get(robotName);
+  for (let index = 0; index < robotNames.length; index += 1) {
+    const robotName = robotNames[index];
+    const robot = robotRecords[index];
 
     if (isNil(robot)) {
       throw new Error(`Robot "${robotName}" is not found`);
@@ -262,6 +281,49 @@ function getRobot(
     .transaction(ROBOTS_TABLE_NAME, 'readonly')
     .objectStore(ROBOTS_TABLE_NAME)
     .get(robotName);
+}
+
+async function deleteCompetition(
+  database: IDBPDatabase<IDBCompetitions>,
+  competitionStart: ISO
+): Promise<void> {
+  const transaction = database.transaction(
+    [GENERATIONS_TABLE_NAME, ROBOTS_TABLE_NAME],
+    'readwrite'
+  );
+  const generationsStore = transaction.objectStore(GENERATIONS_TABLE_NAME);
+  const robotsStore = transaction.objectStore(ROBOTS_TABLE_NAME);
+
+  const deletedGenerations = await generationsStore
+    .index(GENERATION_COMPETITION_START_INDEX)
+    .getAll(competitionStart);
+
+  const deletedRobotNames = new Set<string>();
+  for (const { robotNames } of deletedGenerations) {
+    for (const robotName of robotNames) {
+      deletedRobotNames.add(robotName);
+    }
+  }
+
+  await Promise.all(
+    deletedGenerations.map(({ id }) => generationsStore.delete([competitionStart, id]))
+  );
+
+  const remainingGenerations = await generationsStore.getAll();
+  const referencedRobotNames = new Set<string>();
+  for (const { robotNames } of remainingGenerations) {
+    for (const robotName of robotNames) {
+      referencedRobotNames.add(robotName);
+    }
+  }
+
+  await Promise.all(
+    Array.from(deletedRobotNames)
+      .filter(robotName => !referencedRobotNames.has(robotName))
+      .map(robotName => robotsStore.delete(robotName))
+  );
+
+  await transaction.done;
 }
 
 async function addGeneration(

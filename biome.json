@@ -16,6 +16,7 @@
       "!!**/build",
       "!!**/coverage",
       "!!**/storybook-static",
+      "!!apps/retro",
       "!!.moon",
       "!!.claude",
       "!!.nx",

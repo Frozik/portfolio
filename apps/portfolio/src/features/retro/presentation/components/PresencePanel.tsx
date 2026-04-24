@@ -1,18 +1,22 @@
 import { useFunction } from '@frozik/components';
-import { Crown, Users } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+
 import { cn } from '../../../../shared/lib/cn';
-import { Button, Tooltip } from '../../../../shared/ui';
+import { Tooltip } from '../../../../shared/ui';
 import type { RoomStore } from '../../application/RoomStore';
 import { useIdentityStore } from '../../application/useIdentityStore';
-import type { ClientId } from '../../domain/types';
+import type { ClientId, IParticipant } from '../../domain/types';
 import { retroT as t } from '../translations';
 import { IdentityDialog } from './IdentityDialog';
 
 interface PresencePanelProps {
   readonly store: RoomStore;
 }
+
+const MAX_VISIBLE_AVATARS = 3;
+const INITIALS_PART_LIMIT = 2;
 
 function initialsOf(name: string): string {
   const trimmed = name.trim();
@@ -21,22 +25,18 @@ function initialsOf(name: string): string {
   }
   const parts = trimmed.split(/\s+/);
   if (parts.length === 1) {
-    return (parts[0] ?? '?').slice(0, 2).toUpperCase();
+    return (parts[0] ?? '?').slice(0, INITIALS_PART_LIMIT).toUpperCase();
   }
   return `${parts[0]?.charAt(0) ?? ''}${parts[1]?.charAt(0) ?? ''}`.toUpperCase();
 }
 
 /**
- * Unified presence card replacing the earlier trio of PresenceBar,
- * EmptyRoomHint and FacilitatorMenu. Surfaces in one place:
- *   - who is online (colored avatars with tooltips)
- *   - current status ("waiting for others" / participant count)
- *   - a take-over action when the facilitator has dropped off
- *
- * Highlights: the facilitator avatar wears a crown overlay; the current
- * user's avatar gets a brand ring so they can spot themselves in a list.
- * The whole card picks an accent color (muted / brand / amber) based on
- * room state so the room's "health" is readable at a glance.
+ * Compact presence strip for the Room top bar. Shows up to three stacked
+ * user avatars (first slot reserved for the facilitator, marked with a
+ * crown), with overflow collapsed into a `+N members` chip. A pulsing
+ * status dot announces each participant is live; the current user's
+ * avatar opens the identity-edit dialog on click. When the facilitator
+ * is offline, any other participant can take over via the inline button.
  */
 export const PresencePanel = observer(({ store }: PresencePanelProps) => {
   const identityStore = useIdentityStore();
@@ -60,88 +60,56 @@ export const PresencePanel = observer(({ store }: PresencePanelProps) => {
     return null;
   }
 
-  const onlyMe = users.length <= 1;
+  // Order: facilitator first (if online), then everyone else. This keeps
+  // the crowned avatar anchored to the leftmost slot even when that user
+  // joined later than the rest.
+  const orderedUsers = [...users].sort((left, right) => {
+    if (facilitatorId === null) {
+      return 0;
+    }
+    if (left.clientId === facilitatorId) {
+      return -1;
+    }
+    if (right.clientId === facilitatorId) {
+      return 1;
+    }
+    return 0;
+  });
+
+  const visibleUsers = orderedUsers.slice(0, MAX_VISIBLE_AVATARS);
+  const overflowCount = Math.max(0, users.length - visibleUsers.length);
   const needsTakeOver = !store.isFacilitator && !isFacilitatorOnline;
 
-  const accent = needsTakeOver
-    ? 'border-amber-500/40 bg-amber-500/10'
-    : onlyMe
-      ? 'border-border bg-surface-elevated'
-      : 'border-brand-500/30 bg-surface-elevated';
-
-  const statusText = needsTakeOver
-    ? t.room.facilitatorOffline
-    : onlyMe
-      ? t.room.waitingForPeers
-      : `${t.room.participantsLabel}: ${users.length}`;
-
-  const statusClass = needsTakeOver ? 'text-amber-200' : onlyMe ? 'text-text-muted' : 'text-text';
-
   return (
-    <div
-      className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-3 py-2',
-        accent
-      )}
-    >
-      <div className={cn('flex min-w-0 items-center gap-2 text-sm', statusClass)}>
-        <Users size={16} className="shrink-0" />
-        <span className="truncate">{statusText}</span>
-      </div>
-
+    <div className="flex items-center gap-3">
       {needsTakeOver && (
-        <Button variant="secondary" size="sm" onClick={handleTakeOver}>
+        <button
+          type="button"
+          onClick={handleTakeOver}
+          title={t.room.takeOverHint}
+          className="border border-landing-yellow/40 bg-landing-yellow/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] text-landing-yellow uppercase transition-colors hover:bg-landing-yellow/20"
+        >
           {t.room.takeOver}
-        </Button>
+        </button>
       )}
 
-      {users.length > 0 && (
-        <div className="ml-auto flex items-center -space-x-2">
-          {users.map(user => {
-            const isFacilitator = user.clientId === facilitatorId;
-            const isMe = user.clientId === myClientId;
-            const tooltipParts = [
-              user.name,
-              isFacilitator ? t.room.facilitatorBadge : null,
-              isMe ? t.identity.editButton : null,
-            ].filter((part): part is string => part !== null);
-            const avatarClass = cn(
-              'relative flex h-8 w-8 select-none items-center justify-center rounded-full border-2 text-[11px] font-semibold text-white shadow-sm transition-transform hover:z-10 hover:scale-110',
-              isMe ? 'border-brand-400 cursor-pointer' : 'border-surface'
-            );
-            const avatarContent = (
-              <>
-                {initialsOf(user.name)}
-                {isFacilitator && (
-                  <Crown
-                    size={10}
-                    className="absolute -right-1 -top-1 rounded-full bg-amber-400 p-0.5 text-surface shadow-sm"
-                  />
-                )}
-              </>
-            );
-            return (
-              <Tooltip key={user.clientId} title={tooltipParts.join(' · ')} placement="bottom">
-                {isMe ? (
-                  <button
-                    type="button"
-                    onClick={handleOpenEditIdentity}
-                    aria-label={t.identity.editButton}
-                    className={avatarClass}
-                    style={{ backgroundColor: user.color }}
-                  >
-                    {avatarContent}
-                  </button>
-                ) : (
-                  <div className={avatarClass} style={{ backgroundColor: user.color }}>
-                    {avatarContent}
-                  </div>
-                )}
-              </Tooltip>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex items-center">
+        {visibleUsers.map((user, index) => (
+          <Avatar
+            key={user.clientId}
+            user={user}
+            isFacilitator={user.clientId === facilitatorId}
+            isMe={user.clientId === myClientId}
+            stackOffset={index > 0}
+            onEditIdentity={handleOpenEditIdentity}
+          />
+        ))}
+        {overflowCount > 0 && (
+          <span className="-ml-2 inline-flex h-[26px] items-center justify-center rounded-full border-2 border-landing-bg bg-landing-bg-elev px-2 font-mono text-[10px] text-landing-fg-dim">
+            {t.room.membersOverflow.replace('{count}', String(overflowCount))}
+          </span>
+        )}
+      </div>
 
       <IdentityDialog
         open={isEditIdentityOpen}
@@ -153,3 +121,65 @@ export const PresencePanel = observer(({ store }: PresencePanelProps) => {
     </div>
   );
 });
+
+interface AvatarProps {
+  readonly user: IParticipant;
+  readonly isFacilitator: boolean;
+  readonly isMe: boolean;
+  readonly stackOffset: boolean;
+  readonly onEditIdentity: () => void;
+}
+
+const Avatar = ({ user, isFacilitator, isMe, stackOffset, onEditIdentity }: AvatarProps) => {
+  const tooltipParts = [
+    user.name,
+    isFacilitator ? t.room.facilitatorBadge : null,
+    isMe ? t.identity.editButton : null,
+  ].filter((part): part is string => part !== null);
+
+  const avatarClassName = cn(
+    'relative inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-landing-bg text-[10px] font-semibold text-landing-bg shadow-sm transition-transform hover:z-10 hover:scale-110',
+    stackOffset && '-ml-2',
+    isMe && 'cursor-pointer ring-1 ring-landing-accent/60'
+  );
+
+  const avatarContent = (
+    <>
+      {initialsOf(user.name)}
+      <span
+        aria-hidden="true"
+        className="absolute right-0 bottom-0 h-1.5 w-1.5 animate-status-pulse rounded-full border border-landing-bg bg-landing-green"
+      />
+      {isFacilitator && (
+        <Crown
+          size={10}
+          strokeWidth={1.6}
+          aria-label={t.room.facilitatorBadge}
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-landing-yellow"
+        />
+      )}
+    </>
+  );
+
+  return (
+    <Tooltip title={tooltipParts.join(' · ')} placement="bottom">
+      {isMe ? (
+        <button
+          type="button"
+          onClick={onEditIdentity}
+          aria-label={t.identity.editButton}
+          className={avatarClassName}
+          // Avatar background is the user's self-picked color — runtime
+          // dynamic, so an inline style is the idiomatic fit here.
+          style={{ backgroundColor: user.color }}
+        >
+          {avatarContent}
+        </button>
+      ) : (
+        <div className={avatarClassName} style={{ backgroundColor: user.color }}>
+          {avatarContent}
+        </div>
+      )}
+    </Tooltip>
+  );
+};

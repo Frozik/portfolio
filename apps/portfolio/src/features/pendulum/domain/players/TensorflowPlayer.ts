@@ -32,6 +32,7 @@ const MUTATION_RATE_PRECISION = 4;
 
 export class TensorflowPlayer implements IRobotPlayer {
   private readonly model: LayersModel;
+  private disposed = false;
 
   readonly type = EPlayerType.Robot;
   readonly name: string;
@@ -212,6 +213,13 @@ export class TensorflowPlayer implements IRobotPlayer {
   }
 
   public dispose(): void {
+    // Idempotent: a player loaded into `store.currentRobot` is shared between
+    // `Playground` instances (e.g. React StrictMode double-mount), so the
+    // same tf.js model may be disposed more than once.
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
     this.model.dispose();
   }
 }

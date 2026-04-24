@@ -1053,13 +1053,15 @@ export class RoomStore {
       return null;
     }
 
-    // Validate templateId maps to a known template — throws if unknown.
-    getTemplateById(templateId as IRetroMeta['template']);
+    // Resolve templateId to a known template. Unknown ids (legacy templates
+    // that were renamed or removed) fall back to the first configured
+    // template inside getTemplateById.
+    const template = getTemplateById(templateId);
 
     return {
       name,
       createdAt: createdAt as IRetroMeta['createdAt'],
-      template: templateId as IRetroMeta['template'],
+      template: template.id as IRetroMeta['template'],
       phase: phase as IRetroMeta['phase'],
       facilitatorClientId:
         typeof facilitatorClientId === 'number' ? (facilitatorClientId as ClientId) : null,

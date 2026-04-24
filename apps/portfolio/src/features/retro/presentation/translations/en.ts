@@ -1,3 +1,5 @@
+import pluralize from 'pluralize';
+
 export const retroEnTranslations = {
   lobby: {
     title: 'Retro',
@@ -18,6 +20,37 @@ export const retroEnTranslations = {
     deleteDialogDescription:
       'The retro will be removed from your local storage. Other participants who still have the link keep their own copy.',
     deleteCancel: 'Cancel',
+    // New keys for the redesigned Lobby (Stage 3 will consume them).
+    roomsSectionKicker: 'rooms',
+    joinSectionKicker: 'join / existing room',
+    activeRoomsLabel: 'ACTIVE ROOMS',
+    headlinePrimary: 'Collaborative',
+    headlineAccent: 'retrospectives',
+    noRoomsYet: 'no rooms yet — create one above',
+    memberSingular: 'member',
+    memberPlural: 'members',
+    membersOverflow: '+{count} members',
+    hostedBy: 'hosted by',
+    roomIdLabel: 'id',
+    pasteLinkKicker: 'PASTE A LINK OR ROOM ID',
+    newRetroKicker: 'NEW RETRO / TITLE',
+    startNewTitle: 'Start a new retro',
+    startNewSubtitle: 'Opens in a new room with shareable link',
+    createSubmit: 'create',
+    joinSubmitShort: 'join',
+    cancelLabel: 'cancel',
+    copyLinkLabel: 'copy link',
+    heroSubtitle:
+      'Gather, reflect, act. Rooms live locally in your browser — no accounts, no servers. Share a link to invite your team.',
+    roomKicker: 'ROOM',
+    membersLabel: 'members',
+    activeRoomsSectionLabel: 'active rooms',
+    createOrJoinSectionLabel: 'create or join',
+    newRetroCardKicker: 'new retrospective',
+    joinByLinkCardKicker: 'join by link',
+    totalRoomsLabel: 'TOTAL ROOMS',
+    ownerBadgeTitle: 'Owner',
+    completedLabel: 'CLOSED',
   },
   create: {
     dialogTitle: 'Create a new retro',
@@ -29,6 +62,7 @@ export const retroEnTranslations = {
     votesLabel: 'Votes per participant',
     submit: 'Create',
     cancel: 'Cancel',
+    kicker: 'NEW RETRO',
   },
   templates: {
     scrum: {
@@ -55,6 +89,7 @@ export const retroEnTranslations = {
     editButton: 'Edit',
     setButton: 'Set name',
     unsetPlaceholder: 'Not set yet',
+    kicker: 'IDENTITY',
   },
   room: {
     copyLink: 'Copy link',
@@ -75,6 +110,32 @@ export const retroEnTranslations = {
     saveCard: 'Save',
     cancelEdit: 'Cancel',
     groupLabel: 'Group',
+    // New keys for the redesigned Room (Stage 3 will consume them).
+    cardsVotesKicker: 'CARDS / VOTES',
+    totalCardsKicker: 'TOTAL CARDS',
+    phaseKicker: 'PHASE',
+    yourVotesKicker: 'YOUR VOTES',
+    columnKicker: 'COLUMN',
+    onlineLabel: 'online',
+    copyShareLink: 'Copy share link',
+    postSubmit: 'post',
+    writeCardPrompt: "Write a card — share what's on your mind…",
+    charsSuffix: 'chars',
+    noCardsYet: 'no cards yet',
+    autosavingFooter: 'autosaving locally',
+    roomPrefix: 'room',
+    hostedBy: 'hosted by',
+    // New keys for the Stage-4 Room redesign (sticky top bar, presence, stepper).
+    backToLobbyLabel: 'Back to lobby',
+    membersOverflow: '+{count} members',
+    shareLinkTitle: 'Share this retro',
+    viewResultsTitle: 'View results',
+    takeOverHint: 'Take over as facilitator',
+    // New keys for the Stage-5 Room redesign (columns, cards, add form, voting).
+    cardsLabel: 'cards',
+    votesLabel: 'votes',
+    cardIndexUnknown: '???',
+    cardHiddenSummary: '{index} / {placeholder}',
   },
   phases: {
     brainstorm: 'Brainstorm',
@@ -84,6 +145,11 @@ export const retroEnTranslations = {
     close: 'Close',
     nextPhase: 'Next phase',
     prevPhase: 'Previous phase',
+    hintBrainstorm: 'Write cards privately, surface what matters.',
+    hintGroup: 'Cluster related cards together.',
+    hintVote: (remaining: number, total: number) => `${remaining} of ${total} votes left.`,
+    hintDiscuss: 'Talk through the top-voted clusters.',
+    hintClose: 'Lock in action items and owners.',
   },
   timer: {
     start: 'Start',
@@ -113,6 +179,16 @@ export const retroEnTranslations = {
     deleteActionItem: 'Delete',
     tooManyActionsWarning:
       'Research suggests teams complete more items when limited to 3 per retro.',
+    // Stage-6 Discuss redesign — kickers, headings, empty/tip copy.
+    phaseKicker: 'DISCUSS PHASE',
+    topCardsHeading: 'Top voted',
+    topCardsEmpty: 'no votes yet — nothing to discuss',
+    actionItemsKicker: 'ACTION ITEMS',
+    actionItemsTipKicker: 'tip: keep focused',
+    groupedCardsKicker: 'GROUPED',
+    cardsKicker: 'CARDS',
+    votesTag: (count: number) => pluralize('vote', count),
+    authorKicker: 'by',
   },
   close: {
     title: 'Retro complete',
@@ -121,6 +197,7 @@ export const retroEnTranslations = {
     exportDownload: 'Download as .md',
     backToLobby: 'Back to lobby',
     viewResults: 'Results',
+    exportKicker: 'EXPORT',
   },
   share: {
     dialogTitle: 'Share this retro',
@@ -128,6 +205,19 @@ export const retroEnTranslations = {
     copyLink: 'Copy link',
     qrLabel: 'Or scan the QR code',
     done: 'Done',
+    kicker: 'SHARE',
+    copied: 'Copied!',
+  },
+  confirm: {
+    kicker: 'CONFIRM',
+  },
+  markdown: {
+    cardsCount: (count: number) => `${count} ${pluralize('card', count)}`,
+    votesCount: (count: number) => `${count} ${pluralize('vote', count)}`,
+    actionItemsTitle: 'Action Items',
+    noCards: 'No cards.',
+    noActionItems: 'No action items.',
+    fromLabel: 'from',
   },
   errors: {
     loadRoomsFailed: 'Could not load your retros.',
@@ -137,5 +227,6 @@ export const retroEnTranslations = {
     signalingUnavailableTitle: 'WebRTC signaling server unavailable',
     signalingUnavailableBody:
       'The Retro feature needs a reachable signaling server to set up peer-to-peer sync. All configured endpoints are currently unreachable — this is usually temporary. Please refresh the page in a minute or try again later.',
+    signalingKicker: 'ERROR / SIGNALING',
   },
 } as const;

@@ -11,19 +11,18 @@ import {
 } from '@frozik/utils';
 import type { CellContext, ColumnDef, VisibilityState } from '@tanstack/react-table';
 import { isNil } from 'lodash-es';
+import { Bot, Network, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { memo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { getCurrentLanguage } from '../../../../shared/i18n';
-import { Badge, Button, DataTable, List, Tag } from '../../../../shared/ui';
+import { Button, DataTable, List, Tag, Tooltip } from '../../../../shared/ui';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
-import styles from './GenerationsList.module.scss';
 
 const DATE_LOCALE = getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
 
@@ -42,20 +41,42 @@ const ScoreCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
   return <Tag color={maxScore > 0 ? 'green' : maxScore < 0 ? 'red' : 'blue'}>{maxScore}</Tag>;
 };
 
+const PLAYER_ACTION_ICON_SIZE = 14;
+
 const PlayerCellContent = memo(({ player }: { player: { name: string; score: number } }) => {
-  const navigate = useNavigate();
-  const handleClick = useFunction(() => navigate(`/pendulum/${player.name}`));
+  const store = usePendulumStore();
+  const handleSelectForTest = useFunction(() => store.setSelectedRobotId(player.name));
+  const handleOpenNeuralNetwork = useFunction(() => store.openNeuralNetworkDialog(player.name));
 
   return (
-    <Badge
-      count={player.score}
-      overflowCount={player.score}
-      color={player.score > 0 ? 'green' : player.score < 0 ? 'red' : 'blue'}
-    >
-      <Button variant="link" onClick={handleClick}>
-        {player.name}
+    <div className="flex items-center gap-2">
+      <Tag
+        color={player.score > 0 ? 'green' : player.score < 0 ? 'red' : 'blue'}
+        className="shrink-0 whitespace-nowrap"
+      >
+        {player.score}
+      </Tag>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-landing-fg-dim transition-colors hover:text-landing-accent"
+        aria-label={pendulumT.generationsList.useRobotInTest}
+        title={pendulumT.generationsList.useRobotInTest}
+        onClick={handleSelectForTest}
+      >
+        <Bot size={PLAYER_ACTION_ICON_SIZE} />
       </Button>
-    </Badge>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-landing-fg-dim transition-colors hover:text-landing-accent"
+        aria-label={pendulumT.generationsList.viewNeuralNetwork}
+        title={pendulumT.generationsList.viewNeuralNetwork}
+        onClick={handleOpenNeuralNetwork}
+      >
+        <Network size={PLAYER_ACTION_ICON_SIZE} />
+      </Button>
+    </div>
   );
 });
 
@@ -67,20 +88,70 @@ const PlayerCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
   return <PlayerCellContent player={player} />;
 };
 
-// Stable column definitions — created once, never changes
+const COMPETITION_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+};
+
+const CompetitionListItem = memo(
+  ({
+    startDate,
+    onContinue,
+    onDelete,
+  }: {
+    startDate: 'new' | ISO;
+    onContinue: (competitionStart: ISO | undefined) => void;
+    onDelete: (competitionStart: ISO) => void;
+  }) => {
+    const handleContinueClick = useFunction(() =>
+      onContinue(startDate === 'new' ? undefined : startDate)
+    );
+    const handleDeleteClick = useFunction(() => {
+      if (startDate !== 'new') {
+        onDelete(startDate);
+      }
+    });
+
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="link" size="sm" onClick={handleContinueClick}>
+          {startDate === 'new'
+            ? pendulumT.generationsList.createNew
+            : pendulumT.generationsList.continueWith(
+                new Date(startDate).toLocaleString(DATE_LOCALE, COMPETITION_DATE_FORMAT)
+              )}
+        </Button>
+        {startDate !== 'new' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-landing-fg-dim transition-colors hover:text-red-500"
+            aria-label={pendulumT.generationsList.deleteCompetition}
+            title={pendulumT.generationsList.deleteCompetition}
+            onClick={handleDeleteClick}
+          >
+            <Trash2 size={PLAYER_ACTION_ICON_SIZE} />
+          </Button>
+        )}
+      </div>
+    );
+  }
+);
+
 const generationColumns: ColumnDef<TGenerationRow, unknown>[] = [
   {
     accessorKey: 'id',
     header: pendulumT.generationsList.columnId,
     size: 80,
     enableSorting: true,
-    meta: { fixed: 'left' as const },
   },
   {
     accessorKey: 'maxScore',
     header: pendulumT.generationsList.columnBestScore,
     size: 110,
-    meta: { fixed: 'left' as const },
     cell: ScoreCell,
   },
   ...Array.from({ length: MAX_PLAYER_COLUMNS }, (_, index) => ({
@@ -116,7 +187,22 @@ export const GenerationsList = observer(() => {
     } else {
       store.loadCompetition(competitionStart);
     }
+    store.setPaused(false);
   });
+
+  const handleDeleteCompetition = useFunction((competitionStart: ISO) => {
+    store.deleteCompetition(competitionStart);
+  });
+
+  const handleCreateNewCompetition = useFunction(() => handleContinueCompetition(undefined));
+
+  const renderCompetitionItem = useFunction((startDate: 'new' | ISO) => (
+    <CompetitionListItem
+      startDate={startDate}
+      onContinue={handleContinueCompetition}
+      onDelete={handleDeleteCompetition}
+    />
+  ));
 
   if (isWaitingArgumentsValueDescriptor(competitionsList)) {
     return (
@@ -145,7 +231,7 @@ export const GenerationsList = observer(() => {
   );
 
   return (
-    <div ref={ref} className={styles.container}>
+    <div ref={ref} className="relative h-full w-full overflow-hidden">
       {(isFailValueDescriptor(competitionsList) || isFailValueDescriptor(currentCompetition)) && (
         <ValueDescriptorFailAlert
           fail={(competitionsList.fail ?? currentCompetition.fail) as ValueDescriptorFail}
@@ -155,42 +241,47 @@ export const GenerationsList = observer(() => {
       {(isLoadingValueDescriptor(currentCompetition) ||
         isWaitingArgumentsValueDescriptor(currentCompetition) ||
         isLoadingValueDescriptor(competitionsList) ||
-        isWaitingArgumentsValueDescriptor(competitionsList)) && (
-        <List
-          className={styles.list}
-          loading={
-            isLoadingValueDescriptor(competitionsList) ||
-            isLoadingValueDescriptor(currentCompetition)
-          }
-          dataSource={competitionsDataSource}
-          renderItem={startDate => (
-            <Button
-              key="start"
-              variant="link"
-              size="sm"
-              onClick={() => handleContinueCompetition(startDate === 'new' ? undefined : startDate)}
+        isWaitingArgumentsValueDescriptor(competitionsList)) &&
+        (competitionsDataSource.length <= 1 &&
+        !isLoadingValueDescriptor(competitionsList) &&
+        !isLoadingValueDescriptor(currentCompetition) ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Tooltip
+              open
+              placement="bottom"
+              className="max-w-xl px-4 py-3"
+              title={
+                <div className="space-y-2 text-left">
+                  <div className="text-sm font-medium text-landing-fg">
+                    {pendulumT.fitnessPlayground.competitionNotStarted}
+                  </div>
+                  <div className="text-xs text-landing-fg-dim">
+                    {pendulumT.fitnessPlayground.description}
+                  </div>
+                </div>
+              }
             >
-              {startDate === 'new'
-                ? pendulumT.generationsList.createNew
-                : pendulumT.generationsList.continueWith(
-                    new Date(startDate).toLocaleString(DATE_LOCALE, {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  )}
-            </Button>
-          )}
-        />
-      )}
+              <Button variant="primary" size="lg" onClick={handleCreateNewCompetition}>
+                {pendulumT.generationsList.createNew}
+              </Button>
+            </Tooltip>
+          </div>
+        ) : (
+          <List
+            className="absolute inset-0 overflow-auto p-3"
+            loading={
+              isLoadingValueDescriptor(competitionsList) ||
+              isLoadingValueDescriptor(currentCompetition)
+            }
+            dataSource={competitionsDataSource}
+            renderItem={renderCompetitionItem}
+          />
+        ))}
 
       {isSyncOrEmptyValueDescriptor(currentCompetition) &&
         isSyncOrEmptyValueDescriptor(competitionsList) && (
           <DataTable
             virtual
-            className={styles.grid}
             data={generationDatasource}
             columns={generationColumns}
             columnVisibility={columnVisibility}

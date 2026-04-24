@@ -16,13 +16,17 @@ export type ParticipantId = Opaque<'ConfParticipantId', string>;
 
 /**
  * Persisted lobby entry for a previously created or visited conf room.
- * Schema is intentionally minimal — conf rooms carry no name, template
- * or identity, unlike retro's richer room index.
+ * Schema is intentionally minimal — conf rooms carry no name or template,
+ * but the lobby still shows a "created by me / peer" badge derived from
+ * `ownerParticipantId`. The field is `null` for rooms joined by link
+ * (we don't carry owner info across the signaling boundary) and for
+ * legacy rows written before this field was introduced.
  */
 export interface IConfRoomIndexEntry {
   readonly roomId: RoomId;
   readonly createdAt: ISO;
   readonly lastVisitedAt: ISO;
+  readonly ownerParticipantId: ParticipantId | null;
 }
 
 /**

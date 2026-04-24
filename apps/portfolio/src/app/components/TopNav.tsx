@@ -1,19 +1,55 @@
 import { useFunction } from '@frozik/components';
-import { Menu } from 'lucide-react';
-import { memo, useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Box,
+  Brain,
+  CandlestickChart,
+  Grid3x3,
+  LineChart,
+  Menu,
+  Shapes,
+  SlidersHorizontal,
+  StickyNote,
+  Sun,
+  Video,
+} from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { welcomeT } from '../../features/welcome/presentation/translations';
 import { SvgGitHub } from '../../icons/SvgGitHub';
+import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { cn } from '../../shared/lib/cn';
 import { Modal } from '../../shared/ui/Modal';
 import { QRCode } from '../../shared/ui/QRCode';
+import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
+import type { INavProject } from './MobileSectionMenu';
 import { MobileSectionMenu } from './MobileSectionMenu';
+import { useTopNavBack } from './TopNavBackContext';
 
 const GITHUB_URL = 'https://github.com/frozik/portfolio';
 const QR_SIZE_PX = 216;
 const ICON_SIZE_PX = 16;
-const PROJECTS_ROUTE_WITH_HASH = '/#projects';
+
+/**
+ * Stable ordering of the projects shown in the drawer menu. Each id
+ * corresponds both to the route segment (`/${id}`) and to an entry in
+ * `welcomeT.projects.entries` from which the display title is read.
+ * Icon is a small lucide glyph that hints at the project's theme.
+ */
+const PROJECT_ENTRIES: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
+  { id: 'pendulum', icon: Brain },
+  { id: 'sun', icon: Sun },
+  { id: 'graphics', icon: Shapes },
+  { id: 'timeseries', icon: LineChart },
+  { id: 'binance', icon: CandlestickChart },
+  { id: 'sudoku', icon: Grid3x3 },
+  { id: 'stereometry', icon: Box },
+  { id: 'retro', icon: StickyNote },
+  { id: 'conf', icon: Video },
+  { id: 'controls', icon: SlidersHorizontal },
+];
 
 const iconButtonClassName = cn(
   'group flex h-9 w-9 items-center justify-center rounded-sm',
@@ -69,16 +105,38 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
   const [qrOpen, setQrOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const fullscreen = useFullscreenLandscape();
+  const { config: backConfig } = useTopNavBack();
+
+  const handleBackActivate = useFunction(() => {
+    if (backConfig !== null) {
+      backConfig.onActivate();
+    }
+  });
 
   const handleQROpen = useFunction(() => setQrOpen(true));
   const handleQRClose = useFunction(() => setQrOpen(false));
   const handleMenuOpen = useFunction(() => setMenuOpen(true));
   const handleMenuClose = useFunction(() => setMenuOpen(false));
   const handleSectionNavigate = useFunction((sectionId: string) => scrollToSection(sectionId));
+  const handleProjectNavigate = useFunction((route: string) => {
+    void navigate(route);
+  });
+
+  const projects: readonly INavProject[] = useMemo(
+    () =>
+      PROJECT_ENTRIES.map(entry => ({
+        id: entry.id,
+        label: welcomeT.projects.entries[entry.id]?.title ?? entry.id,
+        route: `/${entry.id}`,
+        icon: entry.icon,
+      })),
+    []
+  );
 
   const handleBrandClick = useFunction(() => {
     if (variant === 'inner') {
-      navigate(PROJECTS_ROUTE_WITH_HASH);
+      navigate('/');
       return;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -88,20 +146,33 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
   const isLanding = variant === 'landing';
 
   return (
-    <div className="print:hidden">
-      <nav className="sticky top-0 z-50 border-b border-landing-border bg-landing-bg/70 backdrop-blur-xl">
+    <>
+      <nav className="sticky top-0 z-50 border-b border-landing-border bg-landing-bg/70 backdrop-blur-xl print:hidden">
         <div className="mx-auto flex max-w-[var(--container-narrow)] items-center justify-between gap-3 px-6 py-2 md:gap-6 md:px-12">
-          <button
-            type="button"
-            onClick={handleBrandClick}
-            className="shrink-0 cursor-pointer bg-transparent p-0 font-mono text-[13px] text-landing-fg"
-          >
-            {welcomeT.nav.brandRoot}
-            <span className="text-landing-fg-faint">{welcomeT.nav.brandPath}</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            {backConfig !== null && (
+              <button
+                type="button"
+                onClick={handleBackActivate}
+                className={iconButtonClassName}
+                aria-label={backConfig.label}
+                title={backConfig.label}
+              >
+                <ArrowLeft size={ICON_SIZE_PX} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleBrandClick}
+              className="cursor-pointer bg-transparent p-0 font-mono text-[13px] text-landing-fg"
+            >
+              {welcomeT.nav.brandRoot}
+              <span className="text-landing-fg-faint">{welcomeT.nav.brandPath}</span>
+            </button>
+          </div>
 
           {isLanding && (
-            <div className="hidden font-mono text-xs text-landing-fg-dim min-[950px]:flex min-[950px]:gap-8">
+            <div className="hidden font-mono text-xs text-landing-fg-dim min-[990px]:flex min-[990px]:gap-8">
               {welcomeT.nav.sections.map(section => (
                 <a
                   key={section.id}
@@ -116,6 +187,18 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
           )}
 
           <div className="flex items-center gap-1.5 md:gap-2">
+            {fullscreen.isSupported && (
+              <button
+                type="button"
+                onClick={fullscreen.enter}
+                className={iconButtonClassName}
+                aria-label={welcomeT.nav.fullscreenLandscape}
+                title={welcomeT.nav.fullscreenLandscape}
+              >
+                <SvgRotateToLandscape className="h-4 w-4" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleQROpen}
@@ -137,16 +220,14 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               <SvgGitHub width={ICON_SIZE_PX} height={ICON_SIZE_PX} />
             </a>
 
-            {isLanding && (
-              <button
-                type="button"
-                onClick={handleMenuOpen}
-                className={cn(iconButtonClassName, 'min-[950px]:hidden')}
-                aria-label={welcomeT.nav.openMenu}
-              >
-                <Menu size={ICON_SIZE_PX} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleMenuOpen}
+              className={iconButtonClassName}
+              aria-label={welcomeT.nav.openMenu}
+            >
+              <Menu size={ICON_SIZE_PX} />
+            </button>
           </div>
         </div>
       </nav>
@@ -166,16 +247,19 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
         </div>
       </Modal>
 
-      {isLanding && (
-        <MobileSectionMenu
-          open={menuOpen}
-          onClose={handleMenuClose}
-          sections={welcomeT.nav.sections}
-          title={welcomeT.nav.sectionsTitle}
-          onNavigate={handleSectionNavigate}
-        />
-      )}
-    </div>
+      <MobileSectionMenu
+        open={menuOpen}
+        onClose={handleMenuClose}
+        sections={welcomeT.nav.sections}
+        showSections={isLanding}
+        projects={projects}
+        title={welcomeT.nav.menuTitle}
+        sectionsHeading={welcomeT.nav.sectionsHeading}
+        projectsHeading={welcomeT.nav.projectsHeading}
+        onNavigateSection={handleSectionNavigate}
+        onNavigateProject={handleProjectNavigate}
+      />
+    </>
   );
 };
 

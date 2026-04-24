@@ -6,6 +6,7 @@ import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
+import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { cn } from '../../../shared/lib/cn';
 import { Sparkline, Tooltip } from '../../../shared/ui';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
@@ -64,6 +65,11 @@ export const ConfRoom = observer(() => {
   const handleLeave = useFunction(() => {
     roomStore.leave();
     void navigate(LOBBY_PATH);
+  });
+
+  useRegisterTopNavBack({
+    label: confT.room.backToLobby,
+    onActivate: handleLeave,
   });
 
   const handleOpenShare = useFunction(() => {

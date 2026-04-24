@@ -1,3 +1,4 @@
+import { deleteDB } from 'idb';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
@@ -70,4 +71,15 @@ export function createYjsRoomProviders(roomId: RoomId): IYjsRoomProviders {
       doc.destroy();
     },
   };
+}
+
+/**
+ * Wipe all locally-persisted Yjs state for `roomId`. Used when the user
+ * removes a retro from the lobby — purely local, other peers keep their
+ * own copy.
+ */
+export async function deleteYjsRoomPersistence(roomId: RoomId): Promise<void> {
+  const config = getSignalingConfig();
+  const databaseName = `${config.roomPrefix}${roomId}`;
+  await deleteDB(databaseName);
 }

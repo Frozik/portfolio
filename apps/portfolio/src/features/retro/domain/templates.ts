@@ -59,14 +59,16 @@ const SCRUM_TEMPLATE_RU: ITemplateConfig = {
   ],
 };
 
-export const RETRO_TEMPLATES: readonly ITemplateConfig[] = [SCRUM_TEMPLATE_EN, SCRUM_TEMPLATE_RU];
+export const RETRO_TEMPLATES: readonly [ITemplateConfig, ...ITemplateConfig[]] = [
+  SCRUM_TEMPLATE_EN,
+  SCRUM_TEMPLATE_RU,
+];
 
+/**
+ * Resolve a template by id. Unknown ids (legacy templates that were renamed
+ * or removed) fall back to the first configured template so that restoring
+ * an old Yjs doc doesn't crash the sync handler.
+ */
 export function getTemplateById(templateId: string): ITemplateConfig {
-  const template = RETRO_TEMPLATES.find(candidate => candidate.id === templateId);
-
-  if (template === undefined) {
-    throw new Error(`Unknown retro template: ${templateId}`);
-  }
-
-  return template;
+  return RETRO_TEMPLATES.find(candidate => candidate.id === templateId) ?? RETRO_TEMPLATES[0];
 }

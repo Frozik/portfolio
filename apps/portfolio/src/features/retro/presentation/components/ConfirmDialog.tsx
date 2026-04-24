@@ -1,9 +1,8 @@
-import { useFunction } from '@frozik/components';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
 import { memo } from 'react';
 
-import { Button } from '../../../../shared/ui';
+import { cn } from '../../../../shared/lib/cn';
+import { DialogShell } from '../../../../shared/ui';
+import { retroT as t } from '../translations';
 
 interface ConfirmDialogProps {
   readonly open: boolean;
@@ -26,47 +25,46 @@ const ConfirmDialogComponent = ({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) => {
-  const handleOpenChange = useFunction((nextOpen: boolean) => {
-    if (!nextOpen) {
-      onCancel();
-    }
-  });
+  const isDanger = tone === 'danger';
+
+  const footer = (
+    <>
+      <button
+        type="button"
+        onClick={onCancel}
+        className={cn(
+          'px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors',
+          'text-landing-fg-dim hover:text-landing-fg'
+        )}
+      >
+        {cancelLabel}
+      </button>
+      <button
+        type="button"
+        onClick={onConfirm}
+        className={cn(
+          'inline-flex items-center gap-1.5 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors',
+          'border-0',
+          isDanger
+            ? 'bg-landing-red text-white hover:bg-landing-red/90'
+            : 'bg-landing-accent text-landing-bg hover:bg-landing-accent/90'
+        )}
+      >
+        {confirmLabel}
+      </button>
+    </>
+  );
 
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex w-[min(420px,92vw)] -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl border border-border bg-surface p-5 text-text shadow-2xl">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                aria-label={cancelLabel}
-                className="text-text-secondary hover:text-text"
-              >
-                <X size={16} />
-              </button>
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="text-sm text-text-secondary">
-            {description}
-          </Dialog.Description>
-          <div className="mt-2 flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              {cancelLabel}
-            </Button>
-            <Button
-              variant={tone === 'danger' ? 'danger' : 'primary'}
-              size="sm"
-              onClick={onConfirm}
-            >
-              {confirmLabel}
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <DialogShell
+      open={open}
+      onClose={onCancel}
+      kicker={t.confirm.kicker}
+      title={title}
+      description={description}
+      closeLabel={cancelLabel}
+      footer={footer}
+    />
   );
 };
 

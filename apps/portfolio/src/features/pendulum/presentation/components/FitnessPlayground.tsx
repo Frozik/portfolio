@@ -6,17 +6,16 @@ import {
 } from '@frozik/utils';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
-import { Alert } from '../../../../shared/ui';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { useCompetition } from '../hooks/useCompetition';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
-import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
+import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
 
 export const FitnessPlayground = observer(() => {
@@ -24,7 +23,8 @@ export const FitnessPlayground = observer(() => {
 
   const currentCompetition = store.currentCompetition;
 
-  const [paused, setPaused] = useState(true);
+  const paused = store.paused;
+  const handlePausedChange = useFunction((next: boolean) => store.setPaused(next));
 
   const competition = useCompetition();
 
@@ -33,7 +33,6 @@ export const FitnessPlayground = observer(() => {
 
   const [renderer, setContexts] = useRenderer();
   const ticker = useFrameTicker(
-    paused,
     useFunction((_, multiplier) =>
       new Array(multiplier).fill(0).map(() => 8 + Math.round(Math.random() * 2400) / 100)
     )
@@ -48,42 +47,38 @@ export const FitnessPlayground = observer(() => {
     [playground, competition]
   );
 
-  return matchValueDescriptor(currentCompetition, {
-    synced: () => (
-      <PendulumPlayground
-        paused={paused}
-        gravity={gravity}
-        pauseResumeKeyCode="Space"
-        onGravityChanged={handleGravityChange}
-        onPausedChanged={setPaused}
-        onSetContexts={setContexts}
-      />
-    ),
-    unsynced: vd => {
-      if (isLoadingValueDescriptor(vd)) {
-        return (
-          <div className={commonStyles.alertContainer}>
-            <OverlayLoader />
-          </div>
-        );
-      }
-      return (
-        <div className={commonStyles.alertContainer}>
-          {isFailValueDescriptor(vd) ? (
-            <ValueDescriptorFail fail={vd.fail} />
-          ) : (
-            <Alert
-              message={pendulumT.fitnessPlayground.competitionNotStarted}
-              description={
-                <div className={commonStyles.leftAligned}>
-                  {pendulumT.fitnessPlayground.description}
-                </div>
-              }
-              type="info"
-            />
-          )}
-        </div>
-      );
-    },
-  });
+  return (
+    <>
+      <FrameTickerDriver ticker={ticker} paused={paused} />
+      {matchValueDescriptor(currentCompetition, {
+        synced: () => (
+          <PendulumPlayground
+            paused={paused}
+            gravity={gravity}
+            pauseResumeKeyCode="Space"
+            onGravityChanged={handleGravityChange}
+            onPausedChanged={handlePausedChange}
+            onSetContexts={setContexts}
+          />
+        ),
+        unsynced: vd => {
+          if (isLoadingValueDescriptor(vd)) {
+            return (
+              <div className={commonStyles.alertContainer}>
+                <OverlayLoader />
+              </div>
+            );
+          }
+          if (isFailValueDescriptor(vd)) {
+            return (
+              <div className={commonStyles.alertContainer}>
+                <ValueDescriptorFail fail={vd.fail} />
+              </div>
+            );
+          }
+          return null;
+        },
+      })}
+    </>
+  );
 });
