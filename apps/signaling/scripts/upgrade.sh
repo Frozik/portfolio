@@ -3,12 +3,12 @@
 # service. Expects install.sh to have been run previously.
 #
 # Run as root:
-#   sudo bash /opt/retro-signaling/apps/retro-signaling/scripts/upgrade.sh
+#   sudo bash /opt/signaling/apps/signaling/scripts/upgrade.sh
 
 set -euo pipefail
 
 SIGNALING_USER="signaling"
-SIGNALING_HOME="/opt/retro-signaling"
+SIGNALING_HOME="/opt/signaling"
 SERVICE_NAME="webrtc-signaling"
 
 if [[ -t 1 ]]; then
@@ -38,7 +38,7 @@ sudo -u "${SIGNALING_USER}" -H bash -c \
 
 info "Rebuilding"
 sudo -u "${SIGNALING_USER}" -H bash -c \
-  "cd '${SIGNALING_HOME}' && pnpm --filter @frozik/retro-signaling run build"
+  "cd '${SIGNALING_HOME}' && pnpm --filter @frozik/signaling run build"
 
 info "Restarting service"
 systemctl restart "${SERVICE_NAME}"

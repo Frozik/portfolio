@@ -1,8 +1,8 @@
 {
-  "name": "@frozik/retro-signaling",
+  "name": "@frozik/signaling",
   "version": "1.0.0",
   "private": true,
-  "description": "y-webrtc signaling server for the Retro feature — pub/sub relay for WebRTC SDP handshake",
+  "description": "y-webrtc-style signaling server — generic pub/sub relay for WebRTC SDP handshake (used by Retro and Conf features)",
   "type": "module",
   "main": "dist/server.js",
   "scripts": {

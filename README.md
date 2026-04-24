@@ -238,7 +238,7 @@ shared library.
 Local-first collaborative retrospective board for Agile teams. Zero backend —
 data lives in each participant's IndexedDB, syncs peer-to-peer via WebRTC
 (Yjs CRDT). For the WebRTC signaling handshake this demo runs its own
-`y-webrtc` server (`apps/retro-signaling`, a TypeScript + `ws` service
+`y-webrtc` server (`apps/signaling`, a TypeScript + `ws` service
 deployed as a systemd unit behind nginx + Let's Encrypt on a bare Ubuntu
 VPS). The URL is injected at build time via `VITE_RETRO_SIGNALING_URLS`,
 with a fallback to the public `signaling.yjs.dev` / `y-webrtc-eu.fly.dev`

@@ -3,15 +3,15 @@
 #
 # Target: fresh Ubuntu 22.04 / 24.04 with public IPv4.
 # Run as root:
-#   curl -fsSL https://raw.githubusercontent.com/frozik/portfolio/main/apps/retro-signaling/scripts/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/frozik/portfolio/main/apps/signaling/scripts/install.sh | sudo bash
 # or (after clone):
-#   sudo bash apps/retro-signaling/scripts/install.sh
+#   sudo bash apps/signaling/scripts/install.sh
 #
 # Handles: Node 22, pnpm, signaling system user, git clone, build, systemd
 # unit, UFW, nginx, Let's Encrypt cert for <IP>.sslip.io.
 #
 # Idempotent: re-running skips already-done steps. The only destructive
-# path is when /opt/retro-signaling contains orphan dotfiles — those are
+# path is when /opt/signaling contains orphan dotfiles — those are
 # wiped on clone (never touches an existing .git).
 
 set -euo pipefail
@@ -21,8 +21,8 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 REPO_URL="https://github.com/frozik/portfolio.git"
 SIGNALING_USER="signaling"
-SIGNALING_HOME="/opt/retro-signaling"
-SIGNALING_APP_DIR="${SIGNALING_HOME}/apps/retro-signaling"
+SIGNALING_HOME="/opt/signaling"
+SIGNALING_APP_DIR="${SIGNALING_HOME}/apps/signaling"
 NODE_MAJOR="22"
 PNPM_VERSION="10.14.0"
 SERVICE_NAME="webrtc-signaling"
@@ -139,7 +139,7 @@ step_install_and_build() {
   sudo -u "${SIGNALING_USER}" -H bash -c \
     "cd '${SIGNALING_HOME}' && pnpm install --frozen-lockfile"
   sudo -u "${SIGNALING_USER}" -H bash -c \
-    "cd '${SIGNALING_HOME}' && pnpm --filter @frozik/retro-signaling run build"
+    "cd '${SIGNALING_HOME}' && pnpm --filter @frozik/signaling run build"
   ok "Build ready: ${SIGNALING_APP_DIR}/dist/server.js"
 }
 

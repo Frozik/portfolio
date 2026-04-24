@@ -266,7 +266,7 @@ importers:
         specifier: workspace:*
         version: link:../../libs/typescript-config
 
-  apps/retro-signaling:
+  apps/signaling:
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*
