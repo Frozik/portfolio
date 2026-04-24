@@ -1,4 +1,4 @@
-import { nowEpochMs } from '@frozik/utils';
+import { nowEpochMs } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 
 import { MAX_INTERPOLATED_SNAPSHOTS } from './constants';

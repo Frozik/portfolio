@@ -1,10 +1,7 @@
-import type {
-  FpsController,
-  FrameState,
-  GpuContext,
-  MsaaTextureManager,
-  RenderLayer,
-} from '@frozik/utils';
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { FpsController } from '@frozik/utils/webgpu/fpsController';
+import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 import { mat4, vec4 } from 'wgpu-matrix';
 import type { OrbitalCameraController } from '../camera-controller';

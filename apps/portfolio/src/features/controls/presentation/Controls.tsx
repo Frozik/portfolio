@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { SectionNumber } from '../../../shared/ui';
+import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import { ControlsBackground } from './components/ControlsBackground';
 import { DatePage } from './components/DatePage';
 import { NumberPage } from './components/NumberPage';

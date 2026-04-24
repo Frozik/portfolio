@@ -1,14 +1,18 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Home } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
-import { Link, useRouteError } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { cn } from '../../shared/lib/cn';
-import { Button } from '../../shared/ui';
+import { Button } from '../../shared/ui/Button';
 import { appT } from '../translations';
 
 const TEAPOT_STATUS = 418;
 const FIRST_STATUS = 404;
+
+interface IErrorPageProps {
+  readonly initialStatus?: number;
+}
 
 const STAR_COUNT = 50;
 const STEAM_PARTICLE_COUNT = 3;
@@ -29,10 +33,7 @@ function generateStars(): Star[] {
   }));
 }
 
-export const ErrorPage = memo(() => {
-  const error = useRouteError() as { status?: number } | undefined;
-  const initialStatus = error?.status ?? FIRST_STATUS;
-
+const ErrorPageComponent = ({ initialStatus = FIRST_STATUS }: IErrorPageProps) => {
   const [statusCode, setStatusCode] = useState(
     initialStatus >= FIRST_STATUS && initialStatus <= TEAPOT_STATUS ? initialStatus : FIRST_STATUS
   );
@@ -126,4 +127,6 @@ export const ErrorPage = memo(() => {
       </div>
     </div>
   );
-});
+};
+
+export const ErrorPage = memo(ErrorPageComponent);

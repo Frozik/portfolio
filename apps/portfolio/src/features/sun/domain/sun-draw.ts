@@ -1,4 +1,6 @@
-import { createGpuContext, createMsaaTextureManager, RenderLayerManager } from '@frozik/utils';
+import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 
 import { SunLayer } from './layers/sun-layer';
 import { startRenderLoop } from './render-loop';

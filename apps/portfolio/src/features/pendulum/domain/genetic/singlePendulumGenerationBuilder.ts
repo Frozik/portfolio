@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { clamp, isNil, orderBy, shuffle, sum } from 'lodash-es';
 
 import { RAILS_HALF_LENGTH } from '../constants';

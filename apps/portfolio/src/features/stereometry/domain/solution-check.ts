@@ -1,4 +1,4 @@
-import { assertNever } from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isPointOnInfiniteLine, isPointOnSegment, positionsMatch } from './geometry-utils';
 import type { SceneTopology, TopologyLine, Vec3Array } from './topology-types';
 import type { PuzzleExpectedResult } from './types';

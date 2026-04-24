@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../../../shared/i18n';
+import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { stereometryTranslationsEn } from './en';
 
 export const stereometryTranslationsRu: TranslationOf<typeof stereometryTranslationsEn> = {

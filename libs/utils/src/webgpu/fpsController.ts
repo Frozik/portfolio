@@ -1,4 +1,4 @@
-import { MS_PER_SECOND } from '../date';
+import { MS_PER_SECOND } from '../date/constants';
 
 /** Debounce duration before an FPS level is automatically removed. */
 const FPS_DEBOUNCE_MS = 500;

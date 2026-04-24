@@ -1,4 +1,4 @@
-import type { FpsController } from '@frozik/utils';
+import type { FpsController } from '@frozik/utils/webgpu/fpsController';
 import {
   FPS_INTERACTION,
   PAN_INERTIA_DAMPING,

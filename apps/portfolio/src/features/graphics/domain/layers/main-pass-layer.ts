@@ -1,4 +1,6 @@
-import type { FrameState, GpuContext, MsaaTextureManager, RenderLayer } from '@frozik/utils';
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import {

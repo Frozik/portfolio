@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useRef } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import type { TEmotion } from '../../domain';
+import type { TEmotion } from '../../domain/emotion';
 import { EmotionBadge } from './EmotionBadge';
 
 export interface IVideoTileProps {

@@ -1,5 +1,5 @@
-import type { Temporal } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
+import type { Temporal } from 'temporal-polyfill';
 
 import { ensureFuture } from './ensure-future';
 import { parseFullPipeline } from './pipeline';

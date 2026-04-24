@@ -1,4 +1,5 @@
-import type { ISO, Opaque } from '@frozik/utils';
+import type { ISO } from '@frozik/utils/date/types';
+import type { Opaque } from '@frozik/utils/types/base';
 
 /**
  * Stable identifier of a conf room; used both in the URL and as the

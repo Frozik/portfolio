@@ -1,14 +1,15 @@
-import type { ISO, Milliseconds, ValueDescriptor } from '@frozik/utils';
+import type { ISO, Milliseconds } from '@frozik/utils/date/types';
+import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
-  convertErrorToFail,
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
   EMPTY_VD,
   isFailValueDescriptor,
   isSyncedValueDescriptor,
-} from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+} from '@frozik/utils/value-descriptors/utils';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
+import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
 import {
   MAX_TIMER_DURATION_MS,

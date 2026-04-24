@@ -1,4 +1,5 @@
-import type { ISO, Milliseconds, Opaque } from '@frozik/utils';
+import type { ISO, Milliseconds } from '@frozik/utils/date/types';
+import type { Opaque } from '@frozik/utils/types/base';
 
 export type RoomId = Opaque<'RoomId', string>;
 export type CardId = Opaque<'CardId', string>;

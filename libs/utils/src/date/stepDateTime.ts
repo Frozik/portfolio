@@ -1,6 +1,6 @@
-import type { Temporal } from '@js-temporal/polyfill';
+import type { Temporal } from 'temporal-polyfill';
 
-import { assertNever } from '../assert';
+import { assertNever } from '../assert/assertNever';
 
 import { EDateTimeStep } from './constants';
 

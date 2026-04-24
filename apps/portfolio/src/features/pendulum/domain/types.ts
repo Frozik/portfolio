@@ -1,4 +1,4 @@
-import type { ISO } from '@frozik/utils';
+import type { ISO } from '@frozik/utils/date/types';
 import type { Body, Engine } from 'matter-js';
 
 export interface IWorld {

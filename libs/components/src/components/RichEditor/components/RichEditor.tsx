@@ -1,8 +1,8 @@
 import { isEmpty, isNil } from 'lodash-es';
-import type { KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { useFunction } from '../../../hooks';
+import { useFunction } from '../../../hooks/useFunction';
 import type { ISelection } from '../defs';
 import styles from '../styles.module.scss';
 import {
@@ -87,7 +87,7 @@ export const RichEditor = memo(
 
     const html = useMemo(() => onTextToHtml(value, focused), [onTextToHtml, value, focused]);
 
-    const handleContentChange = useFunction(evt => {
+    const handleContentChange = useFunction((evt: FormEvent<HTMLDivElement>) => {
       pendingFocusSelectionRef.current = null;
 
       const oldValue = value;

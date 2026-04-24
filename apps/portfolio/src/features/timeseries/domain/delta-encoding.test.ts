@@ -1,4 +1,4 @@
-import { packColor } from '@frozik/utils';
+import { packColor } from '@frozik/utils/webgpu/colorPacking';
 
 import { FLOATS_PER_POINT } from './constants';
 import { encodePoints } from './delta-encoding';

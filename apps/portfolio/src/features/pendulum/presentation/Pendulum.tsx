@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 
-import { DialogShell } from '../../../shared/ui';
+import { DialogShell } from '../../../shared/ui/DialogShell';
 import { usePendulumStore } from '../application/usePendulumStore';
 import { DrawNeuralNetwork } from './components/DrawNeuralNetwork';
 import { FitnessPlayground } from './components/FitnessPlayground';

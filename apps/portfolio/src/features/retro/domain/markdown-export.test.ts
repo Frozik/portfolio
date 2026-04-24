@@ -1,4 +1,4 @@
-import type { ISO, Milliseconds } from '@frozik/utils';
+import type { ISO, Milliseconds } from '@frozik/utils/date/types';
 
 import { renderSnapshotToMarkdown } from './markdown-export';
 import type {

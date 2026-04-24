@@ -1,4 +1,4 @@
-import { packColor } from '@frozik/utils';
+import { packColor } from '@frozik/utils/webgpu/colorPacking';
 import alea from 'alea';
 import { createNoise2D } from 'simplex-noise';
 import {

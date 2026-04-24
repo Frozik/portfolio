@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import {
   MID_PRICE_MAX_WIDTH_PX,
   MID_PRICE_MIN_WIDTH_PX,

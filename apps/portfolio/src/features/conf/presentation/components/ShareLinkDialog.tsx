@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Copy } from 'lucide-react';
 import type { FocusEvent } from 'react';
 import { memo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { DialogShell } from '../../../../shared/ui';
+import { DialogShell } from '../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../shared/ui/QRCode';
 import { confT } from '../translations';
 

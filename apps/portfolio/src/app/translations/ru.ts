@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../shared/i18n';
+import type { TranslationOf } from '../../shared/i18n/types';
 import type { appTranslationsEn } from './en';
 
 export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {

@@ -1,11 +1,11 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   createSyncedValueDescriptor,
   isFailValueDescriptor,
   isLoadingValueDescriptor,
   isSyncedValueDescriptor,
   matchValueDescriptor,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { Bot, User, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';

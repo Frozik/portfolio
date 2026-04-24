@@ -1,4 +1,4 @@
-import type { ParticipantId } from '../domain';
+import type { ParticipantId } from '../domain/types';
 
 const LOCAL_STORAGE_KEY = 'frozik-conf-participant-id';
 

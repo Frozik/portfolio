@@ -1,4 +1,4 @@
-import { useRootStore } from '../../../app/stores';
+import { useRootStore } from '../../../app/stores/StoreContext';
 import { createRoomIndexRepo } from '../infrastructure/room-index-repo';
 import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';
 import { RetroLobbyStore } from './RetroLobbyStore';

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "analyze": "ANALYZE=true tsc -b && ANALYZE=true vite build",
     "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "serve": "vite",

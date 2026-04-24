@@ -1,6 +1,6 @@
-import { Temporal } from '@js-temporal/polyfill';
+import { Temporal } from 'temporal-polyfill';
 
-import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from './index';
+import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from './boundaries';
 
 describe('getStartOfMonth', () => {
   test.each([

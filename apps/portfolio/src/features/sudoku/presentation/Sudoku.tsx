@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { isFailValueDescriptor, matchValueDescriptor } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isFailValueDescriptor, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';

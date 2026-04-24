@@ -1,4 +1,4 @@
-import { useFrameTime } from '@frozik/components';
+import { useFrameTime } from '@frozik/components/hooks/useFrameTime';
 import { memo, useEffect } from 'react';
 
 import type { IFrameTicker } from '../hooks/useFrameTicker';

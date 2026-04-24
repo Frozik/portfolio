@@ -1,7 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+
+const ENABLE_BUNDLE_STATS = process.env.ANALYZE === 'true';
 
 const BASE = '/portfolio';
 
@@ -47,6 +50,14 @@ export default defineConfig({
         ],
       },
     }),
+    ENABLE_BUNDLE_STATS &&
+      visualizer({
+        filename: 'bundle-stats.html',
+        template: 'treemap',
+        gzipSize: true,
+        brotliSize: true,
+        open: true,
+      }),
   ],
   test: {
     environment: 'happy-dom',

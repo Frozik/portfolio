@@ -1,5 +1,5 @@
-import type { ISO } from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+import type { ISO } from '@frozik/utils/date/types';
+import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
 
 import { DEFAULT_BRAINSTORM_DURATION_MS } from './constants';

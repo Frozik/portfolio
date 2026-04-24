@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Eye, Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
 import { cn } from '../../../../shared/lib/cn';
-import { MonoKicker } from '../../../../shared/ui';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import type { ClientId } from '../../domain/types';

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { DialogShell } from '../../../../shared/ui';
+import { DialogShell } from '../../../../shared/ui/DialogShell';
 import { retroT as t } from '../translations';
 
 interface ConfirmDialogProps {

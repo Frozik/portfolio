@@ -1,4 +1,6 @@
-import { assert, createMsaaTextureManager, MS_PER_SECOND } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
+import { MS_PER_SECOND } from '@frozik/utils/date/constants';
+import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { isNil } from 'lodash-es';
 
 import {

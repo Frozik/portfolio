@@ -1,4 +1,4 @@
-import { packColor, unpackColor } from '@frozik/utils';
+import { packColor, unpackColor } from '@frozik/utils/webgpu/colorPacking';
 import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';

@@ -1,4 +1,4 @@
-import { useRootStore } from '../../../app/stores';
+import { useRootStore } from '../../../app/stores/StoreContext';
 import { createIdentityRepo } from '../infrastructure/identity-repo';
 import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';
 import { IdentityStore } from './IdentityStore';

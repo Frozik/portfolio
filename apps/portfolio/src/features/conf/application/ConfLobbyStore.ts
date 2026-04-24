@@ -1,16 +1,17 @@
-import type { ISO, ValueDescriptor } from '@frozik/utils';
+import { getNowISO8601 } from '@frozik/utils/date/now';
+import type { ISO } from '@frozik/utils/date/types';
+import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
-  convertErrorToFail,
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
   EMPTY_VD,
-  getNowISO8601,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain';
-import type { IConfRoomIndexRepo } from '../infrastructure';
-import { getOrCreateParticipantId } from '../infrastructure';
+import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain/types';
+import type { IConfRoomIndexRepo } from '../infrastructure/conf-room-index-repo';
+import { getOrCreateParticipantId } from '../infrastructure/participant-identity';
 
 /**
  * MobX store for the conf lobby. Mirrors `RetroLobbyStore` but is

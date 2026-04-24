@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { millisecondsToISO8601 } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { millisecondsToISO8601 } from '@frozik/utils/date/iso8601';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useRef, useState } from 'react';
 

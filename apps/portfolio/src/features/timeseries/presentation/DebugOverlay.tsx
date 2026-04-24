@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { getIsHosted } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { getIsHosted } from '@frozik/utils/isHosted';
 import { memo, useEffect, useState } from 'react';
 
 import type { ISharedTimeseriesRenderer } from '../domain/types';

@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { describe, expect, test, vi } from 'vitest';
 
 import { FLOATS_PER_TEXEL, SNAPSHOT_SLOTS, SNAPSHOTS_PER_BLOCK } from '../domain/constants';

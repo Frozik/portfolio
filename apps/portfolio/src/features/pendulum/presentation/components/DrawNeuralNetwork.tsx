@@ -1,10 +1,11 @@
-import { useFunction, useMouseAction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { useMouseAction } from '@frozik/components/hooks/useMouseAction';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import {
-  assertNever,
   isFailValueDescriptor,
   isLoadingValueDescriptor,
   matchValueDescriptor,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { Bot } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -13,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
-import { Alert } from '../../../../shared/ui';
+import { Alert } from '../../../../shared/ui/Alert';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import type {
   IAxonDescriptor,

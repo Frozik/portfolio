@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { Outlet } from 'react-router-dom';
 
-import { Spinner } from '../../../shared/ui';
+import { Spinner } from '../../../shared/ui/Spinner';
 import { ConfSignalingUnavailable } from './components/ConfSignalingUnavailable';
 import { useConfSignalingHealth } from './hooks/useConfSignalingHealth';
 

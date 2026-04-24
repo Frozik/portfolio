@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { memo, useEffect, useRef } from 'react';
 
 /**

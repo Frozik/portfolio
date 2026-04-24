@@ -1,4 +1,5 @@
-import { assert, FpsController } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
+import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { isNil } from 'lodash-es';
 import { BlockDataPipeline } from './block-data-pipeline';
 import { BlockRegistry } from './block-registry';

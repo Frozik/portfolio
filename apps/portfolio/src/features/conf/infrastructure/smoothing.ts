@@ -1,4 +1,4 @@
-import type { IGlassesTransform } from '../domain';
+import type { IGlassesTransform } from '../domain/glasses-transform';
 
 /**
  * Default EMA coefficient for glasses-transform smoothing.

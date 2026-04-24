@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
 import type { ReactNode } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
 export interface IExperienceTranslation {
   readonly id: string;

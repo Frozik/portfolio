@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 
 import { FLOATS_PER_TEXEL } from '../domain/constants';

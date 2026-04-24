@@ -1,4 +1,4 @@
-import { FpsController } from '@frozik/utils';
+import { FpsController } from '@frozik/utils/webgpu/fpsController';
 
 import { FPS_IDLE } from './constants';
 

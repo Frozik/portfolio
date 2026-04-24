@@ -1,12 +1,16 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 
-import type { IAdaptiveQualityState, IConnectionStats, TQualityTier } from '../domain';
+import type {
+  IAdaptiveQualityState,
+  IConnectionStats,
+  TQualityTier,
+} from '../domain/adaptive-quality';
 import {
   advanceAdaptiveQuality,
   createInitialAdaptiveQualityState,
   QUALITY_TIER_PARAMS,
-} from '../domain';
+} from '../domain/adaptive-quality';
 
 export interface IAdaptiveQualityController {
   readonly currentTier: TQualityTier;

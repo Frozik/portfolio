@@ -1,10 +1,11 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import { Fragment, memo, useMemo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { CardFrame, MonoKicker } from '../../../../shared/ui';
+import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import type {
   CardId,

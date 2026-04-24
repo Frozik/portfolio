@@ -1,6 +1,6 @@
 import { debounce, isNil } from 'lodash-es';
 
-import { assert } from '../assert';
+import { assert } from '../assert/assert';
 
 // biome-ignore lint/suspicious/noExplicitAny: generic wrapper requires any for arbitrary signatures
 export function debounceBy<A extends any[], F extends (...args: A) => any>(

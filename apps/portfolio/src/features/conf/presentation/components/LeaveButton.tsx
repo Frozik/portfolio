@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { PhoneOff } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { Tooltip } from '../../../../shared/ui';
+import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
 import { ConfirmDialog } from './ConfirmDialog';
 

@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo, useState } from 'react';
 
 import { CONTACT_LINKS } from '../../contentData';

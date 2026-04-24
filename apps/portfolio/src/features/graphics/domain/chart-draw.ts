@@ -1,4 +1,6 @@
-import { createGpuContext, createMsaaTextureManager, RenderLayerManager } from '@frozik/utils';
+import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 
 import { MSAA_SAMPLE_COUNT, OFFSCREEN_FORMAT } from './chart-constants';
 import { createOffscreenTextureManager } from './chart-textures';

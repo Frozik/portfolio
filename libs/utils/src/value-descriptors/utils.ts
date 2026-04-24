@@ -1,7 +1,7 @@
 import { isEqual, isFunction, isNil, isObject } from 'lodash-es';
-import type { Nil } from '../types';
+import type { Nil } from '../types/base';
 
-import { isEqualsFails, isFail } from './fails';
+import { isEqualsFails, isFail } from './fails/utils';
 import type {
   AnyValueDescriptor,
   ExtractSyncedValueDescriptor,

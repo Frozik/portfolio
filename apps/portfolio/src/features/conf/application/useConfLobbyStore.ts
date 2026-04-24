@@ -1,5 +1,5 @@
-import { useRootStore } from '../../../app/stores';
-import { createConfRoomIndexRepo } from '../infrastructure';
+import { useRootStore } from '../../../app/stores/StoreContext';
+import { createConfRoomIndexRepo } from '../infrastructure/conf-room-index-repo';
 import { ConfLobbyStore } from './ConfLobbyStore';
 
 const CONF_LOBBY_KEY = 'conf-lobby';

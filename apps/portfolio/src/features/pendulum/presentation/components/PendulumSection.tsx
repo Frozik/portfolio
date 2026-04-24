@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { MonoKicker } from '../../../../shared/ui';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 
 type PendulumSectionProps = {
   readonly number: string;

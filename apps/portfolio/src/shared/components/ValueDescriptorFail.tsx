@@ -1,6 +1,6 @@
-import type { AnyFail } from '@frozik/utils';
+import type { AnyFail } from '@frozik/utils/value-descriptors/fails/types';
 import { memo } from 'react';
-import { Alert } from '../ui';
+import { Alert } from '../ui/Alert';
 import styles from './styles.module.scss';
 
 export const ValueDescriptorFail = memo(

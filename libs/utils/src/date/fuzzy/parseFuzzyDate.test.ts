@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill';
+import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 import { parseFuzzyDate } from './parseFuzzyDate';
 import { parseTokenBased } from './pipeline';

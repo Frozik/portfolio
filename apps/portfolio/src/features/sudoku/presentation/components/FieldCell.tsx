@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isEmpty, isNil } from 'lodash-es';
 import { cn } from '../../../../shared/lib/cn';
 import { getPairs } from '../../domain/services';

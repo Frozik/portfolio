@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Minus, Plus, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { cn } from '../../../../shared/lib/cn';

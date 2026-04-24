@@ -1,21 +1,16 @@
-import type { EDayType, ValueDescriptor } from '@frozik/utils';
-import {
-  DAYS_IN_WEEK,
-  EDayType as DayType,
-  EDayOfWeek,
-  EMPTY_VD,
-  getEndOfMonth,
-  getStartOfMonth,
-  getStartOfWeek,
-  matchValueDescriptor,
-} from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from '@frozik/utils/date/boundaries';
+import type { EDayType } from '@frozik/utils/date/constants';
+import { EDayType as DayType, EDayOfWeek } from '@frozik/utils/date/constants';
+import { DAYS_IN_WEEK } from '@frozik/utils/date/fuzzy/constants';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
+import { EMPTY_VD, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
+import { Temporal } from 'temporal-polyfill';
 import { cn } from '../../cn';
 
-import { getCalendarAriaLabels } from '../translations';
+import { getCalendarAriaLabels } from '../translations/translations';
 import { DayCell } from './DayCell';
 
 function defaultGetDayInfo(date: Temporal.PlainDate): EDayType {

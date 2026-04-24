@@ -1,10 +1,8 @@
-import {
-  assertNever,
-  createGpuContext,
-  createMsaaTextureManager,
-  FpsController,
-  RenderLayerManager,
-} from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
+import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import { FpsController } from '@frozik/utils/webgpu/fpsController';
+import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { vec3 } from 'wgpu-matrix';
 import type { OrbitalCameraController } from './camera-controller';
 import { createOrbitalCameraController } from './camera-controller';

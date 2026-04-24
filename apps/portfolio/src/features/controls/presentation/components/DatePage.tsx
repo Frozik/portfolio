@@ -1,16 +1,16 @@
-import { DateTimePicker, useFunction, useToday } from '@frozik/components';
-import {
-  EDateTimeStep,
-  EDayOfWeek,
-  EDayType,
-  ETimeResolution,
-  parseFuzzyDate,
-} from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { useToday } from '@frozik/components/hooks/useToday';
+import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
+import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
 import { memo, useState } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
-import { getCurrentLanguage } from '../../../../shared/i18n';
-import { CardFrame, MonoKicker, RadioGroup, SectionNumber } from '../../../../shared/ui';
+import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { SectionNumber } from '../../../../shared/ui/SectionNumber';
 import { controlsT } from '../translations';
 import { Kbd } from './Kbd';
 

@@ -1,7 +1,8 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
 
-import { Badge, Button } from '../../../../shared/ui';
+import { Badge } from '../../../../shared/ui/Badge';
+import { Button } from '../../../../shared/ui/Button';
 
 export const Player = memo(
   ({

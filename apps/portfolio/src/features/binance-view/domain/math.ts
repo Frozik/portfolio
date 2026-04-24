@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 import { TEXTURE_WIDTH_FALLBACK, TEXTURE_WIDTH_PREFERRED, Y_AXIS_PANEL_CSS_PX } from './constants';
 import type { ITextureLayoutConfig, UnixTimeMs } from './types';

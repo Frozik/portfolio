@@ -1,14 +1,13 @@
-import type { ISO, TDatabaseErrorCallback } from '@frozik/utils';
+import { createDB, getDatabaseVersion } from '@frozik/utils/database';
+import type { ISO } from '@frozik/utils/date/types';
+import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
 import {
   createDatabase$,
-  createDB,
   databaseReconnect,
   EDatabaseErrorCallbackType,
-  getDatabaseVersion,
-  receiveFromTabs,
-  sendToTabs,
-  shareReplayWithDelayedReset,
-} from '@frozik/utils';
+} from '@frozik/utils/rx/database';
+import { shareReplayWithDelayedReset } from '@frozik/utils/rx/shareReplayWithDelayedReset';
+import { receiveFromTabs, sendToTabs } from '@frozik/utils/rx/syncBetweenTabs';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy, sortBy } from 'lodash-es';
 import type { Observable } from 'rxjs';

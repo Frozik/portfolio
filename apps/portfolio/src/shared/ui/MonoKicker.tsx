@@ -1,4 +1,4 @@
-import { assertNever } from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 

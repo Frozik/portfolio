@@ -1,4 +1,4 @@
-import { trim } from '@frozik/utils';
+import { trim } from '@frozik/utils/math/trim';
 import { isNil } from 'lodash-es';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useFunction } from '../../hooks/useFunction';
@@ -6,7 +6,7 @@ import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
 import type { ISelection } from './defs';
 import styles from './styles.module.scss';
-import { getCalendarAriaLabels } from './translations';
+import { getCalendarAriaLabels } from './translations/translations';
 import { numericElementSelectionWithValueBuilder, numericTextToHtmlBuilder } from './utils';
 
 export const NumericEditor = memo(

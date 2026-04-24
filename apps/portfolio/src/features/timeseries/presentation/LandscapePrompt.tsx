@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isFunction, isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';

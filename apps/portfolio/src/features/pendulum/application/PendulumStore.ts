@@ -1,16 +1,17 @@
-import type { ISO, ValueDescriptor } from '@frozik/utils';
+import type { ISO } from '@frozik/utils/date/types';
+import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
+import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
+import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
-  convertErrorToFail,
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
   EMPTY_VD,
-  EValueDescriptorErrorCode,
-  Fail,
   isSyncedValueDescriptor,
   matchValueDescriptor,
   REQUESTING_VD,
   WAITING_VD,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 

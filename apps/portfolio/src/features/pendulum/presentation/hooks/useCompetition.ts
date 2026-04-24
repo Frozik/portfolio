@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { isSyncedValueDescriptor } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isSyncedValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil, max } from 'lodash-es';
 import { useEffect, useState } from 'react';
 import { usePendulumStore } from '../../application/usePendulumStore';

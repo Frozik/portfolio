@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { describe, expect, it } from 'vitest';
 import type { IAdaptiveQualityState, IConnectionStats } from './adaptive-quality';
 import {

@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
+import { Temporal } from 'temporal-polyfill';
 
 import {
   MAX_AMBIGUOUS_HOUR,

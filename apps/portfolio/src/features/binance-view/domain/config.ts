@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 import {
   FLUSH_EVERY_SNAPSHOTS,

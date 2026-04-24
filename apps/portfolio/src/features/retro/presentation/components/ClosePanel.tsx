@@ -1,8 +1,9 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Eye } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
-import { CardFrame, MonoKicker } from '../../../../shared/ui';
+import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { ERetroPhase } from '../../domain/types';
 import { retroT as t } from '../translations';

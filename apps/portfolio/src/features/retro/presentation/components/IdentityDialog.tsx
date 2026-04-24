@@ -1,9 +1,10 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { DialogShell, MonoKicker } from '../../../../shared/ui';
+import { DialogShell } from '../../../../shared/ui/DialogShell';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { retroT as t } from '../translations';
 
 const COLOR_PALETTE: readonly string[] = [

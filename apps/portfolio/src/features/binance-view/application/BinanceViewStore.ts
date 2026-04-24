@@ -1,4 +1,4 @@
-import { nowEpochMs } from '@frozik/utils';
+import { nowEpochMs } from '@frozik/utils/date/now';
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { Subscription } from 'rxjs';
 

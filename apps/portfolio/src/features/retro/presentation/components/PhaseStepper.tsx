@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';

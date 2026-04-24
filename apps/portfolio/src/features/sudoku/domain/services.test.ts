@@ -1,4 +1,7 @@
-import { isFailValueDescriptor, isSyncedValueDescriptor } from '@frozik/utils';
+import {
+  isFailValueDescriptor,
+  isSyncedValueDescriptor,
+} from '@frozik/utils/value-descriptors/utils';
 import {
   addFieldMarks,
   applyToolToFieldReducer,

@@ -1,4 +1,6 @@
-import { useFunction, useKeyboardAction, useMouseAction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
+import { useMouseAction } from '@frozik/components/hooks/useMouseAction';
 import { isNil } from 'lodash-es';
 import { PauseCircle, PlayCircle } from 'lucide-react';
 import type React from 'react';
@@ -6,7 +8,8 @@ import type { ReactNode } from 'react';
 import { memo, useRef } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
 import { Renderer } from '../../../../shared/components/Renderer';
-import { Button, Slider } from '../../../../shared/ui';
+import { Button } from '../../../../shared/ui/Button';
+import { Slider } from '../../../../shared/ui/Slider';
 import styles from './PendulumPlayground.module.scss';
 
 const PAUSE_ICON_SIZE = 48;

@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 import type { IOrderbookBlockRecord, IOrderbookDb } from '../infrastructure/binance-indexeddb';
 

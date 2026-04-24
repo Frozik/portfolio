@@ -1,11 +1,12 @@
-import { useFunction } from '@frozik/components';
-import { assert } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { assert } from '@frozik/utils/assert/assert';
 import copy from 'copy-to-clipboard';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
-import { Alert, Spinner } from '../../../shared/ui';
+import { Alert } from '../../../shared/ui/Alert';
+import { Spinner } from '../../../shared/ui/Spinner';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useRoomStore } from '../application/useRoomStore';

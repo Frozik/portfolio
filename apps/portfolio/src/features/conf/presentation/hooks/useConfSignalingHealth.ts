@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { getConfSignalingConfig } from '../../infrastructure';
+import { getConfSignalingConfig } from '../../infrastructure/signaling-config';
 
 export type TConfSignalingHealthStatus = 'checking' | 'ok' | 'unavailable';
 

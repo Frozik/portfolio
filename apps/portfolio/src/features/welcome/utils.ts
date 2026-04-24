@@ -1,7 +1,7 @@
-import { Temporal, Intl as TemporalIntl } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
+import { Temporal, Intl as TemporalIntl } from 'temporal-polyfill';
 
-import { getCurrentLanguage } from '../../shared/i18n';
+import { getCurrentLanguage } from '../../shared/i18n/locale';
 
 export function getYearsOfExperience(careerStart: Temporal.PlainDate): number {
   const today = Temporal.Now.plainDateISO();

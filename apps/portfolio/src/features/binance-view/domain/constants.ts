@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 /** Preferred data-texture width (cells). Requires `maxTextureDimension2D >= 16384`. */
 export const TEXTURE_WIDTH_PREFERRED = 16384;

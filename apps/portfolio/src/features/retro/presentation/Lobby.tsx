@@ -1,12 +1,20 @@
-import { useFunction } from '@frozik/components';
-import { formatISO8601Local, isFailValueDescriptor, isSyncedValueDescriptor } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { formatISO8601Local } from '@frozik/utils/date/format';
+import {
+  isFailValueDescriptor,
+  isSyncedValueDescriptor,
+} from '@frozik/utils/value-descriptors/utils';
 import { Crown, Link2, Plus, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 import { cn } from '../../../shared/lib/cn';
-import { Alert, CardFrame, MonoKicker, SectionNumber, Spinner } from '../../../shared/ui';
+import { Alert } from '../../../shared/ui/Alert';
+import { CardFrame } from '../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../shared/ui/MonoKicker';
+import { SectionNumber } from '../../../shared/ui/SectionNumber';
+import { Spinner } from '../../../shared/ui/Spinner';
 import type { ICreateRoomParams } from '../application/RetroLobbyStore';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';

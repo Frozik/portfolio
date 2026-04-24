@@ -1,4 +1,4 @@
-import { parseJson } from '@frozik/utils';
+import { parseJson } from '@frozik/utils/parseJson';
 import { isNil } from 'lodash-es';
 
 /**

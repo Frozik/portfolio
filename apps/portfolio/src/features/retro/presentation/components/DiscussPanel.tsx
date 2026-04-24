@@ -1,7 +1,8 @@
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 
-import { CardFrame, MonoKicker } from '../../../../shared/ui';
+import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import type {

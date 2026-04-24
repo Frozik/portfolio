@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { useEffect, useState } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
 import {
   AWAKE_END_HOUR,

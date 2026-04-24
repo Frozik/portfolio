@@ -1,15 +1,12 @@
 import { useEffect } from 'react';
 
-import { useRootStore } from '../../../app/stores';
-import type { RoomId } from '../domain';
-import {
-  createAdaptiveQualityController,
-  createConfPeerConnection,
-  createConfSignalingClient,
-  createMediaStreamComposer,
-  getConfRoomTopic,
-  getConfSignalingConfig,
-} from '../infrastructure';
+import { useRootStore } from '../../../app/stores/StoreContext';
+import type { RoomId } from '../domain/types';
+import { createAdaptiveQualityController } from '../infrastructure/adaptive-quality-controller';
+import { createConfPeerConnection } from '../infrastructure/conf-peer-connection';
+import { createConfSignalingClient } from '../infrastructure/conf-signaling-client';
+import { createMediaStreamComposer } from '../infrastructure/media-stream-composer';
+import { getConfRoomTopic, getConfSignalingConfig } from '../infrastructure/signaling-config';
 import { ConfRoomStore } from './ConfRoomStore';
 
 function getConfRoomStoreKey(roomId: RoomId): string {

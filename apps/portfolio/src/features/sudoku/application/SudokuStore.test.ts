@@ -1,4 +1,4 @@
-import { EMPTY_VD, isSyncedValueDescriptor } from '@frozik/utils';
+import { EMPTY_VD, isSyncedValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 
 import { EToolType } from '../domain/types';
 import { SudokuStore } from './SudokuStore';

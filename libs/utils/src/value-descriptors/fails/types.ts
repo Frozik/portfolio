@@ -1,4 +1,4 @@
-import type { TStructurallyCloneable } from '../../types';
+import type { TStructurallyCloneable } from '../../types/serialization';
 
 export const FAIL_TAG = 'FAIL' as const;
 

@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components';
-import type { Milliseconds } from '@frozik/utils';
-import { assertNever } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { assertNever } from '@frozik/utils/assert/assertNever';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { Minus, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 

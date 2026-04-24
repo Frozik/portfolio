@@ -2,14 +2,27 @@ import './styles/tailwind.css';
 import './main.scss';
 
 import { isNil } from 'lodash-es';
-import { configure } from 'mobx';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { Application } from './app/components/Application';
-import { RootStore, StoreProvider } from './app/stores';
 
-configure({ enforceActions: 'always' });
+const CLOUDFLARE_BEACON_SRC = 'https://static.cloudflareinsights.com/beacon.min.js';
+const CLOUDFLARE_BEACON_TOKEN = '69d3e6095bfd4da3a3f4a48b99237a97';
+
+function injectCloudflareBeacon(): void {
+  const script = document.createElement('script');
+  script.src = CLOUDFLARE_BEACON_SRC;
+  script.defer = true;
+  script.setAttribute('data-cf-beacon', JSON.stringify({ token: CLOUDFLARE_BEACON_TOKEN }));
+  document.body.appendChild(script);
+}
+
+if (document.readyState === 'complete') {
+  injectCloudflareBeacon();
+} else {
+  window.addEventListener('load', injectCloudflareBeacon, { once: true });
+}
 
 const UPDATE_BANNER_DISPLAY_MS = 1500;
 
@@ -62,15 +75,11 @@ function bootstrap() {
     );
   }
 
-  const rootStore = new RootStore();
-
   const root = createRoot(container);
 
   root.render(
     <StrictMode>
-      <StoreProvider value={rootStore}>
-        <Application />
-      </StoreProvider>
+      <Application />
     </StrictMode>
   );
 }

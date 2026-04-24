@@ -1,4 +1,4 @@
-import { assertNever } from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import { vec3 } from 'wgpu-matrix';
 import { isPointOnInfiniteLine, isPointOnSegment } from './geometry-utils';
 import type { IntersectionCache } from './intersection';

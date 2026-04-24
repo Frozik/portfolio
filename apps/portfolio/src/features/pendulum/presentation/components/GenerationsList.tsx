@@ -1,5 +1,6 @@
-import { useFunction } from '@frozik/components';
-import type { ISO, ValueDescriptorFail } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import type { ISO } from '@frozik/utils/date/types';
+import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
   isEmptyValueDescriptor,
@@ -8,7 +9,7 @@ import {
   isSyncOrEmptyValueDescriptor,
   isWaitingArgumentsValueDescriptor,
   matchValueDescriptor,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import type { CellContext, ColumnDef, VisibilityState } from '@tanstack/react-table';
 import { isNil } from 'lodash-es';
 import { Bot, Network, Trash2 } from 'lucide-react';
@@ -18,8 +19,12 @@ import { memo, useRef } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
-import { getCurrentLanguage } from '../../../../shared/i18n';
-import { Button, DataTable, List, Tag, Tooltip } from '../../../../shared/ui';
+import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { Button } from '../../../../shared/ui/Button';
+import { DataTable } from '../../../../shared/ui/DataTable';
+import { List } from '../../../../shared/ui/List';
+import { Tag } from '../../../../shared/ui/Tag';
+import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';

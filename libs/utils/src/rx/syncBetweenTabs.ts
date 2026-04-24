@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 import type { MonoTypeOperatorFunction } from 'rxjs';
 import { Observable } from 'rxjs';
 
-import { assert } from '../assert';
+import { assert } from '../assert/assert';
 
 type TChannelKey = string;
 

@@ -2,12 +2,23 @@
   "name": "@frozik/components",
   "version": "0.1.0",
   "license": "MIT",
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./styles/": "./src/styles/"
+    "./styles/": "./src/styles/",
+    "./components/RichEditor/DateTimePicker": "./src/components/RichEditor/DateTimePicker.tsx",
+    "./components/RichEditor/NumericEditor": "./src/components/RichEditor/NumericEditor.tsx",
+    "./components/RichEditor/components/CalendarPopup": "./src/components/RichEditor/components/CalendarPopup.tsx",
+    "./components/RichEditor/components/DateSelector": "./src/components/RichEditor/components/DateSelector.tsx",
+    "./components/RichEditor/components/DayCell": "./src/components/RichEditor/components/DayCell.tsx",
+    "./components/RichEditor/components/MonthNavigator": "./src/components/RichEditor/components/MonthNavigator.tsx",
+    "./components/RichEditor/components/TimePicker": "./src/components/RichEditor/components/TimePicker.tsx",
+    "./components/RichEditor/components/RichEditor": "./src/components/RichEditor/components/RichEditor.tsx",
+    "./components/RouteLink/RouteLink": "./src/components/RouteLink/RouteLink.tsx",
+    "./*": "./src/*.ts"
   },
-  "main": "src/index.ts",
-  "typings": "src/index.ts",
   "files": [
     "dist",
     "src"

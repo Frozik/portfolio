@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { assert } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { assert } from '@frozik/utils/assert/assert';
 import copy from 'copy-to-clipboard';
 import { Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -8,11 +8,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { cn } from '../../../shared/lib/cn';
-import { Sparkline, Tooltip } from '../../../shared/ui';
+import { Sparkline } from '../../../shared/ui/Sparkline';
+import { Tooltip } from '../../../shared/ui/Tooltip';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
 import { useConfRoomStore } from '../application/useConfRoomStore';
-import type { RoomId } from '../domain';
-import { RTT_HISTORY_MAX_SAMPLES } from '../domain';
+import { RTT_HISTORY_MAX_SAMPLES } from '../domain/constants';
+import type { RoomId } from '../domain/types';
 import { ArToggleButton } from './components/ArToggleButton';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { LeaveButton } from './components/LeaveButton';

@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
 

@@ -1,8 +1,11 @@
-import { NumericEditor } from '@frozik/components';
+import { NumericEditor } from '@frozik/components/components/RichEditor/NumericEditor';
 import { memo, useState } from 'react';
 
-import { getCurrentLanguage } from '../../../../shared/i18n';
-import { CardFrame, MonoKicker, RangeSlider, SectionNumber, Slider } from '../../../../shared/ui';
+import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { SectionNumber } from '../../../../shared/ui/SectionNumber';
+import { RangeSlider, Slider } from '../../../../shared/ui/Slider';
 import { controlsT } from '../translations';
 import { Kbd } from './Kbd';
 

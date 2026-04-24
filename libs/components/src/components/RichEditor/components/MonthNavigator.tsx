@@ -1,8 +1,8 @@
-import type { Temporal } from '@js-temporal/polyfill';
 import { memo, useMemo } from 'react';
+import type { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks';
-import { getCalendarAriaLabels } from '../translations';
+import { useFunction } from '../../../hooks/useFunction';
+import { getCalendarAriaLabels } from '../translations/translations';
 
 export const MonthNavigator = memo(
   ({

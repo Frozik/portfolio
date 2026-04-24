@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { vec3 } from 'wgpu-matrix';
 import { LINE_INTERSECTION_MAX_DISTANCE } from './constants';
 import { isNearAnyPoint } from './math';

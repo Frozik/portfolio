@@ -1,17 +1,26 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { ParticipantId, RoomId, TConfSignalMessage, TEmotion, TQualityTier } from '../domain';
-import { MAX_PARTICIPANTS, RTT_HISTORY_MAX_SAMPLES } from '../domain';
+import type { TQualityTier } from '../domain/adaptive-quality';
+import { MAX_PARTICIPANTS, RTT_HISTORY_MAX_SAMPLES } from '../domain/constants';
+import type { TEmotion } from '../domain/emotion';
+import type { TConfSignalMessage } from '../domain/signaling-protocol';
+import type { ParticipantId, RoomId } from '../domain/types';
 import type {
   IAdaptiveQualityController,
   IAdaptiveQualityControllerParams,
+} from '../infrastructure/adaptive-quality-controller';
+import type {
   IConfPeerConnection,
   IConfPeerConnectionParams,
+} from '../infrastructure/conf-peer-connection';
+import type {
   IConfSignalingClient,
   IConfSignalingClientParams,
+} from '../infrastructure/conf-signaling-client';
+import type {
   IMediaStreamComposer,
   IMediaStreamComposerParams,
-} from '../infrastructure';
-import { getOrCreateParticipantId } from '../infrastructure';
+} from '../infrastructure/media-stream-composer';
+import { getOrCreateParticipantId } from '../infrastructure/participant-identity';
 
 /**
  * Lifecycle the view uses to render the right banner / spinner / error.

@@ -1,4 +1,4 @@
-import { useWakeLock } from '@frozik/components';
+import { useWakeLock } from '@frozik/components/hooks/useWakeLock';
 import { useEffect } from 'react';
 
 export function usePreventScreensaver() {

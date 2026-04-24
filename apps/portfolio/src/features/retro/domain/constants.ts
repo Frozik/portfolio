@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 export const DEFAULT_BRAINSTORM_DURATION_MS = 600_000 as Milliseconds; // 10 min
 export const DEFAULT_VOTES_PER_PARTICIPANT = 5;

@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { clamp, isNil } from 'lodash-es';
 import { Bodies, Body, Constraint, Engine, World } from 'matter-js';
 

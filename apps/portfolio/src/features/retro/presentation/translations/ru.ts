@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../../../shared/i18n';
+import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { retroEnTranslations } from './en';
 
 const RUSSIAN_TEEN_START = 11;

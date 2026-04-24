@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../../../shared/i18n';
+import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { pendulumTranslationsEn } from './en';
 
 export const pendulumTranslationsRu: TranslationOf<typeof pendulumTranslationsEn> = {

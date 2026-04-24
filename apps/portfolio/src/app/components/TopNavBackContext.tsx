@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { assert } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { assert } from '@frozik/utils/assert/assert';
 import type { ReactNode } from 'react';
 import { createContext, memo, useContext, useEffect, useMemo, useState } from 'react';
 

@@ -1,7 +1,9 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo, useState } from 'react';
 
-import avatarUrl from '../../../../../assets/avatar.png';
+import avatarAvifUrl from '../../../../../assets/avatar.avif';
+import avatarPngUrl from '../../../../../assets/avatar.png';
+import avatarWebpUrl from '../../../../../assets/avatar.webp';
 import { CONTACT_LINKS } from '../../contentData';
 import { useIsAwake } from '../../hooks/useIsAwake';
 import { welcomeT } from '../../translations';
@@ -40,11 +42,15 @@ const AboutComponent = () => {
         <div>
           <div className="relative mx-auto mb-6 aspect-square w-full max-w-[260px] overflow-visible md:mx-0">
             <div className="relative h-full w-full overflow-hidden rounded-full border-2 border-landing-border bg-landing-bg-card shadow-[0_0_0_1px_rgb(96_165_250_/_0.08)]">
-              <img
-                src={avatarUrl}
-                alt={welcomeT.hero.name}
-                className="block h-full w-full object-cover"
-              />
+              <picture>
+                <source srcSet={avatarAvifUrl} type="image/avif" />
+                <source srcSet={avatarWebpUrl} type="image/webp" />
+                <img
+                  src={avatarPngUrl}
+                  alt={welcomeT.hero.name}
+                  className="block h-full w-full object-cover"
+                />
+              </picture>
             </div>
             {isAwake ? <IdeaLightbulb /> : <SleepingZzz />}
           </div>

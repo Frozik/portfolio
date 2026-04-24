@@ -1,12 +1,13 @@
-import type { ISO, ValueDescriptor } from '@frozik/utils';
+import type { ISO } from '@frozik/utils/date/types';
+import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
-  convertErrorToFail,
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
   EMPTY_VD,
-} from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+} from '@frozik/utils/value-descriptors/utils';
 import { makeAutoObservable, runInAction } from 'mobx';
+import { Temporal } from 'temporal-polyfill';
 
 import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';

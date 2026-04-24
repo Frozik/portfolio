@@ -9,7 +9,7 @@ import { memo } from 'react';
 import type { NavigateOptions, To } from 'react-router-dom';
 import { createPath, useLocation, useNavigate, useResolvedPath } from 'react-router-dom';
 
-import { useFunction } from '../../hooks';
+import { useFunction } from '../../hooks/useFunction';
 import { shouldProcessLinkClick } from './utils';
 
 export const RouteLink = memo(

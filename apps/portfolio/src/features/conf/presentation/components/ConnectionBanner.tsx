@@ -1,4 +1,4 @@
-import { assertNever } from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import { memo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';

@@ -1,13 +1,14 @@
-import type { Milliseconds } from '@frozik/utils';
-import { parseJson } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
+import { parseJson } from '@frozik/utils/parseJson';
 import { isNil } from 'lodash-es';
-import type { ParticipantId, TConfSignalMessage } from '../domain';
-import { parseConfSignalMessage } from '../domain';
 import {
   SIGNALING_HEARTBEAT_MS,
   SIGNALING_RECONNECT_MAX_MS,
   SIGNALING_RECONNECT_MIN_MS,
 } from '../domain/constants';
+import type { TConfSignalMessage } from '../domain/signaling-protocol';
+import { parseConfSignalMessage } from '../domain/signaling-protocol';
+import type { ParticipantId } from '../domain/types';
 
 /** Connection lifecycle reported to subscribers. */
 export type TConfSignalingConnectionState = 'idle' | 'connecting' | 'open' | 'closed';

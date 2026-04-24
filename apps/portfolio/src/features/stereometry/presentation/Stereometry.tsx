@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components';
-import { getIsHosted } from '@frozik/utils';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { getIsHosted } from '@frozik/utils/isHosted';
 import * as Popover from '@radix-ui/react-popover';
 import { Info, Move, Puzzle, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';

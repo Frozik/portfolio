@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 import { DEFAULT_BRAINSTORM_DURATION_MS, TIMER_WARNING_THRESHOLD_MS } from './constants';
 import {

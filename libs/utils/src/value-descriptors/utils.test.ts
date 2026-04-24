@@ -1,5 +1,5 @@
 import { EValueDescriptorErrorCode } from './codes';
-import { Fail } from './fails';
+import { Fail } from './fails/fail';
 import type { ValueDescriptor, ValueDescriptorFail } from './types';
 import { EValueDescriptorPendingState, EValueDescriptorState } from './types';
 import {

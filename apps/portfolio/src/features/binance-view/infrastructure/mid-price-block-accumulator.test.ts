@@ -1,5 +1,5 @@
-import type { Milliseconds } from '@frozik/utils';
-import { packColor } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
+import { packColor } from '@frozik/utils/webgpu/colorPacking';
 import {
   MID_PRICE_COLOR_DOWN,
   MID_PRICE_COLOR_FLAT,

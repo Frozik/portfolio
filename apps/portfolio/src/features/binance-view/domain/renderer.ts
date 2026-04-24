@@ -1,4 +1,5 @@
-import { assert, createMsaaTextureManager } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
+import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { isNil } from 'lodash-es';
 import type { BlockRegistry } from './block-registry';
 import {

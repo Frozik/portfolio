@@ -1,6 +1,6 @@
 import { isEmpty, isNumber } from 'lodash-es';
 
-import { assert } from '../assert';
+import { assert } from '../assert/assert';
 import { FLOAT_DECIMALS_SEPARATOR, FLOAT_EXPONENT_MARKER } from './defs';
 import { getFractionLength } from './getFractionLength';
 

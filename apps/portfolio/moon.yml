@@ -42,3 +42,12 @@ tasks:
 
   madge:
     command: 'madge src --circular --extensions ts,tsx --ts-config tsconfig.json ./src'
+
+  analyze:
+    command: 'pnpm run analyze'
+    inputs:
+      - '@group(vite)'
+      - 'tsconfig.json'
+      - 'tsconfig.app.json'
+    outputs:
+      - 'bundle-stats.html'

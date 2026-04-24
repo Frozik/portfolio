@@ -1,13 +1,11 @@
-import type { ISO, TDatabaseErrorCallback } from '@frozik/utils';
-import {
-  createDB,
-  EDatabaseErrorCallbackType,
-  getDatabaseVersion,
-  getNowISO8601,
-} from '@frozik/utils';
+import { createDB, getDatabaseVersion } from '@frozik/utils/database';
+import { getNowISO8601 } from '@frozik/utils/date/now';
+import type { ISO } from '@frozik/utils/date/types';
+import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
+import { EDatabaseErrorCallbackType } from '@frozik/utils/rx/database';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
-import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain';
+import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'frozik-conf';
 const CURRENT_DATABASE_VERSION = 1;

@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { isNil } from 'lodash-es';
+import { Temporal } from 'temporal-polyfill';
 import {
   COLON_TIME_PARTS_MIN,
   COLON_TIME_PARTS_WITH_MS,

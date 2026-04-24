@@ -1,13 +1,14 @@
-import type { EDayOfWeek, EDayType, ETimeResolution, ValueDescriptor } from '@frozik/utils';
-import { createSyncedValueDescriptor, EMPTY_VD } from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+import type { EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
+import { createSyncedValueDescriptor, EMPTY_VD } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import type { MouseEvent } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks';
+import { useFunction } from '../../../hooks/useFunction';
 import styles from '../styles.module.scss';
-import { getCalendarAriaLabels } from '../translations/index';
+import { getCalendarAriaLabels } from '../translations/translations';
 import { DateSelector } from './DateSelector';
 import { MonthNavigator } from './MonthNavigator';
 import { TimePicker } from './TimePicker';

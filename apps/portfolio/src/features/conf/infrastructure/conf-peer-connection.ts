@@ -1,6 +1,9 @@
 import { isNil } from 'lodash-es';
-import type { ParticipantId, TConfDataChannelMessage, TConfSignalMessage } from '../domain';
-import { DEFAULT_ICE_SERVERS, parseConfDataChannelMessage } from '../domain';
+import type { TConfDataChannelMessage } from '../domain/data-channel-protocol';
+import { parseConfDataChannelMessage } from '../domain/data-channel-protocol';
+import { DEFAULT_ICE_SERVERS } from '../domain/ice-servers';
+import type { TConfSignalMessage } from '../domain/signaling-protocol';
+import type { ParticipantId } from '../domain/types';
 
 /**
  * Lifecycle states of the WebRTC peer connection as consumed by the

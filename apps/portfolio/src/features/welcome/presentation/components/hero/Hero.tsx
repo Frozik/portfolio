@@ -1,5 +1,5 @@
-import type { Temporal } from '@js-temporal/polyfill';
 import { memo, useMemo } from 'react';
+import type { Temporal } from 'temporal-polyfill';
 
 import { getYearsOfExperience } from '../../../utils';
 import type { IExperienceTranslation, IHeroStatTranslation } from '../../translations';

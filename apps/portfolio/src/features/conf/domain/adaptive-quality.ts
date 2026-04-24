@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 
 /**
  * Discrete quality tiers applied to the outbound video sender. Keeping

@@ -1,4 +1,4 @@
-import type { TStructurallyCloneable } from '../../types';
+import type { TStructurallyCloneable } from '../../types/serialization';
 
 import type { FailConstructor } from './types';
 import { FAIL_TAG } from './types';

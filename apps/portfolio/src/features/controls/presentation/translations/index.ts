@@ -1,4 +1,4 @@
-import { resolveTranslation } from '../../../../shared/i18n';
+import { resolveTranslation } from '../../../../shared/i18n/translate';
 import { controlsTranslationsEn } from './en';
 import { controlsTranslationsRu } from './ru';
 

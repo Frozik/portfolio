@@ -1,4 +1,4 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import type { Observable } from 'rxjs';
 import { from, of } from 'rxjs';

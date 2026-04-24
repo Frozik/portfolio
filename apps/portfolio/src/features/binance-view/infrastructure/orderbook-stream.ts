@@ -1,5 +1,5 @@
-import type { Milliseconds } from '@frozik/utils';
-import { nowEpochMs } from '@frozik/utils';
+import { nowEpochMs } from '@frozik/utils/date/now';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import type { Observable } from 'rxjs';
 import { concat, defer, from, of, throwError } from 'rxjs';
 import { finalize, map, retry, tap } from 'rxjs/operators';

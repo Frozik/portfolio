@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { Tooltip } from '../../../../shared/ui';
+import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { RoomStore } from '../../application/RoomStore';
 import { useIdentityStore } from '../../application/useIdentityStore';
 import type { ClientId, IParticipant } from '../../domain/types';

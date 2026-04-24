@@ -1,4 +1,4 @@
-import type { ISO } from '@frozik/utils';
+import type { ISO } from '@frozik/utils/date/types';
 
 import {
   canMutateCard,

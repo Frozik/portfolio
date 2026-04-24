@@ -1,7 +1,6 @@
 import { memo } from 'react';
-
-import type { TEmotion } from '../../domain';
-import { emotionToEmoji } from '../../domain';
+import type { TEmotion } from '../../domain/emotion';
+import { emotionToEmoji } from '../../domain/emotion';
 
 export interface IEmotionBadgeProps {
   readonly emotion: TEmotion;

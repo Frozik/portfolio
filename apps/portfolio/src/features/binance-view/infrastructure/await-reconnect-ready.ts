@@ -1,4 +1,4 @@
-import type { Milliseconds } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import type { Observable } from 'rxjs';
 import { fromEvent, take, timer } from 'rxjs';
 

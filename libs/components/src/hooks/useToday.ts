@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill';
 import { useEffect, useState } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
 const MILLIS_PER_SECOND = 1000;
 

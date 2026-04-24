@@ -1,12 +1,12 @@
-import type { ETimeResolution } from '@frozik/utils';
-import { ETimeResolution as Resolution } from '@frozik/utils';
-import { Temporal } from '@js-temporal/polyfill';
+import type { ETimeResolution } from '@frozik/utils/date/constants';
+import { ETimeResolution as Resolution } from '@frozik/utils/date/constants';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks';
+import { useFunction } from '../../../hooks/useFunction';
 import styles from '../styles.module.scss';
-import { getCalendarAriaLabels } from '../translations';
+import { getCalendarAriaLabels } from '../translations/translations';
 
 const HOURS_MAX = 23;
 const MINUTES_MAX = 59;

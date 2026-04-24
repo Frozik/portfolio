@@ -1,6 +1,6 @@
-import { Temporal } from '@js-temporal/polyfill';
+import { Temporal } from 'temporal-polyfill';
 
-import { assertNever } from '../../assert';
+import { assertNever } from '../../assert/assertNever';
 import { DAYS_IN_WEEK, MAX_ADVANCES } from './constants';
 import { EParseTemporality } from './types';
 
@@ -47,6 +47,6 @@ function getAdvanceDuration(temporality: EParseTemporality): Temporal.DurationLi
     case EParseTemporality.Boundary:
       return undefined;
     default:
-      assertNever(temporality);
+      return assertNever(temporality);
   }
 }

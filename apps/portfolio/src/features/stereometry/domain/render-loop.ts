@@ -1,5 +1,8 @@
-import type { FpsController, FrameState, GpuContext, RenderLayerManager } from '@frozik/utils';
-import { MS_PER_SECOND } from '@frozik/utils';
+import { MS_PER_SECOND } from '@frozik/utils/date/constants';
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { FpsController } from '@frozik/utils/webgpu/fpsController';
+import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
+import type { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 
 import { FPS_RESIZE } from './constants';
 

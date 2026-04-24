@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../../../shared/i18n';
+import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { sudokuTranslationsEn } from './en';
 
 export const sudokuTranslationsRu: TranslationOf<typeof sudokuTranslationsEn> = {

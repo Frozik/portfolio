@@ -1,11 +1,11 @@
-import type { ValueDescriptor } from '@frozik/utils';
+import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
+import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
+import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
-  convertErrorToFail,
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
-  EValueDescriptorErrorCode,
-  Fail,
-} from '@frozik/utils';
+} from '@frozik/utils/value-descriptors/utils';
 import { isEmpty, isNil } from 'lodash-es';
 
 import type { IField, IFieldCell, TTool } from './types';

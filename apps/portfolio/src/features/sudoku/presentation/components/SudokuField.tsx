@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { useResizeObserver } from 'usehooks-ts';

@@ -1,6 +1,6 @@
-import type { Temporal } from '@js-temporal/polyfill';
 import { memo, useMemo } from 'react';
-import { useFunction } from '../../../hooks';
+import type { Temporal } from 'temporal-polyfill';
+import { useFunction } from '../../../hooks/useFunction';
 import { cn } from '../../cn';
 
 export const DayCell = memo(

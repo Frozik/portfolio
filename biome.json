@@ -87,7 +87,17 @@
                   "**/features/*/sagas/**",
                   "**/features/*/modules/**"
                 ],
-                "message": "Import from the feature public API (features/*/index.ts or features/*/FeatureName.tsx) instead of reaching into feature internals."
+                "message": "Import from the feature public API (features/*/FeatureName.tsx) instead of reaching into feature internals."
+              },
+              {
+                "group": [
+                  "**/index",
+                  "**/index.ts",
+                  "**/index.tsx",
+                  "**/index.js",
+                  "**/index.jsx"
+                ],
+                "message": "Do not import from a barrel/index file. Import the specific file instead (e.g. '../shared/ui/Button' not '../shared/ui')."
               }
             ]
           }
@@ -102,7 +112,9 @@
         "noUnusedFunctionParameters": "warn"
       },
       "performance": {
-        "noAccumulatingSpread": "warn"
+        "noAccumulatingSpread": "warn",
+        "noBarrelFile": "error",
+        "noReExportAll": "error"
       },
       "security": {
         "noDangerouslySetInnerHtml": "warn"

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { useRootStore } from '../../../app/stores';
+import { useRootStore } from '../../../app/stores/StoreContext';
 import type { ITemplateConfig, RoomId } from '../domain/types';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
 import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';

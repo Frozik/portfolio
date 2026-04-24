@@ -1,4 +1,5 @@
-import type { Milliseconds, Opaque } from '@frozik/utils';
+import type { Milliseconds } from '@frozik/utils/date/types';
+import type { Opaque } from '@frozik/utils/types/base';
 
 export type UnixTimeMs = Opaque<'UnixTimeMs', number>;
 

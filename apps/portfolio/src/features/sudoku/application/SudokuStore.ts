@@ -1,5 +1,9 @@
-import type { ValueDescriptor } from '@frozik/utils';
-import { createSyncedValueDescriptor, EMPTY_VD, isSyncedValueDescriptor } from '@frozik/utils';
+import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
+import {
+  createSyncedValueDescriptor,
+  EMPTY_VD,
+  isSyncedValueDescriptor,
+} from '@frozik/utils/value-descriptors/utils';
 import { cloneDeep, isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 import {

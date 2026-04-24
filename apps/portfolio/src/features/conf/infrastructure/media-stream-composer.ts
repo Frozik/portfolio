@@ -1,13 +1,11 @@
-import { assert } from '@frozik/utils';
+import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 
-import type { IGlassesTransform, TEmotion } from '../domain';
-import {
-  classifyEmotion,
-  computeGlassesTransform,
-  DETECT_MIN_INTERVAL_MS,
-  GLASSES_BASE_WIDTH_PX,
-} from '../domain';
+import { DETECT_MIN_INTERVAL_MS, GLASSES_BASE_WIDTH_PX } from '../domain/constants';
+import type { TEmotion } from '../domain/emotion';
+import { classifyEmotion } from '../domain/emotion';
+import type { IGlassesTransform } from '../domain/glasses-transform';
+import { computeGlassesTransform } from '../domain/glasses-transform';
 import glassesAssetUrl from './assets/glasses.svg?url';
 import type { IFaceLandmarkerClient } from './face-landmarker-client';
 import { createFaceLandmarkerClient } from './face-landmarker-client';

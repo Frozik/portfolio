@@ -1,10 +1,10 @@
-import { assertNever } from '@frozik/utils';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import { SignalHigh, SignalLow, SignalMedium } from 'lucide-react';
 import { memo } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
-import { Tooltip } from '../../../../shared/ui';
-import type { TQualityTier } from '../../domain';
+import { Tooltip } from '../../../../shared/ui/Tooltip';
+import type { TQualityTier } from '../../domain/adaptive-quality';
 import { confT } from '../translations';
 
 const ICON_SIZE = 16;

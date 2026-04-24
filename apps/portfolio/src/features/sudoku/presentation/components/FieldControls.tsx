@@ -1,4 +1,4 @@
-import { useFunction } from '@frozik/components';
+import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { PenTool, Trash2, Undo, Undo2 } from 'lucide-react';
 import { useState } from 'react';

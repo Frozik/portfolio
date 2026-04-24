@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { IGlassesTransform } from '../domain';
+import type { IGlassesTransform } from '../domain/glasses-transform';
 import { DEFAULT_SMOOTHING_ALPHA, smoothGlassesTransform } from './smoothing';
 
 const FLOAT_TOLERANCE = 1e-9;

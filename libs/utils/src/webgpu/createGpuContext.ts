@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import { assert } from '../assert';
+import { assert } from '../assert/assert';
 
 export interface GpuContext {
   readonly device: GPUDevice;

@@ -1,4 +1,4 @@
-import type { TranslationOf } from '../../../../shared/i18n';
+import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { binanceTranslationsEn } from './en';
 
 export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> = {
