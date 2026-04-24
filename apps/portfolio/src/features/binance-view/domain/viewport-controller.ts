@@ -58,6 +58,7 @@ export interface IViewportControllerParams {
 interface IActivePointer {
   readonly id: number;
   clientX: number;
+  clientY: number;
 }
 
 /**
@@ -457,7 +458,11 @@ export class ViewportController {
     if (this.pointers.length >= 2) {
       return;
     }
-    this.pointers.push({ id: event.pointerId, clientX: event.clientX });
+    this.pointers.push({
+      id: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
     this.canvas.setPointerCapture(event.pointerId);
 
     if (this.pointers.length === 1) {
@@ -492,6 +497,7 @@ export class ViewportController {
       return;
     }
     pointer.clientX = event.clientX;
+    pointer.clientY = event.clientY;
 
     if (this.pointers.length >= 2) {
       this.accumulatePinchZoom();
@@ -576,7 +582,9 @@ export class ViewportController {
     if (this.pointers.length < 2) {
       return 0;
     }
-    return Math.abs(this.pointers[0].clientX - this.pointers[1].clientX);
+    const dx = this.pointers[0].clientX - this.pointers[1].clientX;
+    const dy = this.pointers[0].clientY - this.pointers[1].clientY;
+    return Math.hypot(dx, dy);
   }
 }
 

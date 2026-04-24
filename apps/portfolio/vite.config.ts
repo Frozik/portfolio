@@ -1,10 +1,12 @@
 import tailwindcss from '@tailwindcss/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const ENABLE_BUNDLE_STATS = process.env.ANALYZE === 'true';
+const ENABLE_HTTPS = process.env.HTTPS === 'true';
 
 const BASE = '/portfolio';
 
@@ -58,6 +60,7 @@ export default defineConfig({
         brotliSize: true,
         open: true,
       }),
+    ENABLE_HTTPS && basicSsl(),
   ],
   test: {
     environment: 'happy-dom',

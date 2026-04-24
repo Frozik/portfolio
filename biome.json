@@ -171,6 +171,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/signaling/src/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
     }
   ]
 }

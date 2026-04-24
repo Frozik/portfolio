@@ -190,9 +190,14 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
             {fullscreen.isSupported && (
               <button
                 type="button"
-                onClick={fullscreen.enter}
-                className={iconButtonClassName}
+                onClick={fullscreen.toggle}
+                className={cn(
+                  iconButtonClassName,
+                  fullscreen.isActive &&
+                    'border-landing-accent bg-landing-accent/10 text-landing-accent'
+                )}
                 aria-label={welcomeT.nav.fullscreenLandscape}
+                aria-pressed={fullscreen.isActive}
                 title={welcomeT.nav.fullscreenLandscape}
               >
                 <SvgRotateToLandscape className="h-4 w-4" />

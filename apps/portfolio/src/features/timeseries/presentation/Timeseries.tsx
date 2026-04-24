@@ -6,7 +6,6 @@ import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
 import type { IDataPoint, ISeriesConfig } from '../domain/types';
 import { EChartType } from '../domain/types';
 import { DebugOverlay } from './DebugOverlay';
-import { LandscapePrompt } from './LandscapePrompt';
 import { SharedRendererProvider, useSharedRenderer } from './SharedRendererContext';
 import { TimeseriesChart } from './TimeseriesChart';
 
@@ -126,11 +125,9 @@ const TimeseriesContent = memo(() => {
 export const Timeseries = memo(() => {
   return (
     <WebGpuGuard className="h-full w-full">
-      <LandscapePrompt>
-        <SharedRendererProvider>
-          <TimeseriesContent />
-        </SharedRendererProvider>
-      </LandscapePrompt>
+      <SharedRendererProvider>
+        <TimeseriesContent />
+      </SharedRendererProvider>
     </WebGpuGuard>
   );
 });

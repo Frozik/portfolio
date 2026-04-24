@@ -203,6 +203,6 @@ export const STEREOMETRY_STYLES = {
   },
 
   background: {
-    color: '#1A1A1F',
+    color: '#07090c',
   },
 } satisfies Readonly<Record<string, PartialElementStyle>>;
