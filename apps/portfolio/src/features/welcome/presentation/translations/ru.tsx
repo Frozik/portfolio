@@ -677,7 +677,6 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
         или <strong className="font-medium text-landing-fg">Team Lead</strong> —{' '}
         <strong className="font-medium text-landing-fg">удалённо</strong> или{' '}
         <strong className="font-medium text-landing-fg">в офисе</strong>.
-        <strong className="font-medium text-landing-fg">в офисе</strong>.
       </>
     ),
     footerCopyright: (year: number) =>
