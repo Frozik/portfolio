@@ -61,7 +61,11 @@ export class SunLayer implements RenderLayer {
 
     this.pipeline = this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
-      vertex: { module: shaderModule, entryPoint: 'vs' },
+      vertex: {
+        module: shaderModule,
+        entryPoint: 'vs',
+        constants: { INSTANCE_COUNT },
+      },
       fragment: {
         module: shaderModule,
         entryPoint: 'fs',

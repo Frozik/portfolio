@@ -1,10 +1,18 @@
 const PI: f32 = 3.1415926535;
 const TWO_PI: f32 = PI * 2.0;
-// Keep in sync with INSTANCE_COUNT in sun-constants.ts
-const INSTANCE_COUNT: f32 = 100000.0;
+override INSTANCE_COUNT: f32;
 const SPHERE_RADIUS: f32 = 5.0;
 const TRIANGLE_HALF_SIZE: f32 = 0.25;
 const EVERY_NTH_CENTER_LINE: f32 = 50.0;
+
+// Sunspot parameters
+const SPOT_NOISE_SCALE: f32 = 1.2;
+const SPOT_DRIFT_SPEED: f32 = 0.04;
+const SPOT_THRESHOLD_LOW: f32 = 0.3;
+const SPOT_THRESHOLD_HIGH: f32 = 0.8;
+const SPOT_DARKNESS_STRENGTH: f32 = 0.8;
+const SPOT_CALM_STRENGTH: f32 = 0.55;
+const SPOT_NOISE_SEED: vec3<f32> = vec3<f32>(11.3, 27.1, 19.8);
 
 // Golden angle ~ 2.39996322972865332...
 // For range reduction we compute (GOLDEN_ANGLE * instID) mod TWO_PI
@@ -32,6 +40,90 @@ struct VSOut {
 
 fn random(v3: vec3<f32>) -> f32 {
     return fract(sin(dot(v3, vec3<f32>(12.9898, 78.233, 34.258))) * 43758.5453123);
+}
+
+// 3D simplex noise (Ashima/Stefan Gustavson, ported to WGSL).
+// Returns approximately [-1, 1].
+fn mod289v3(x: vec3<f32>) -> vec3<f32> {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+fn mod289v4(x: vec4<f32>) -> vec4<f32> {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+fn permute(x: vec4<f32>) -> vec4<f32> {
+    return mod289v4(((x * 34.0) + 1.0) * x);
+}
+fn taylorInvSqrt(r: vec4<f32>) -> vec4<f32> {
+    return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+fn snoise(v: vec3<f32>) -> f32 {
+    let C = vec2<f32>(1.0 / 6.0, 1.0 / 3.0);
+    let D = vec4<f32>(0.0, 0.5, 1.0, 2.0);
+
+    var i: vec3<f32> = floor(v + dot(v, C.yyy));
+    let x0 = v - i + dot(i, C.xxx);
+
+    let g = step(x0.yzx, x0.xyz);
+    let l = 1.0 - g;
+    let i1 = min(g.xyz, l.zxy);
+    let i2 = max(g.xyz, l.zxy);
+
+    let x1 = x0 - i1 + C.xxx;
+    let x2 = x0 - i2 + 2.0 * C.xxx;
+    let x3 = x0 - 1.0 + 3.0 * C.xxx;
+
+    i = mod289v3(i);
+    let p = permute(permute(permute(
+            i.z + vec4<f32>(0.0, i1.z, i2.z, 1.0))
+          + i.y + vec4<f32>(0.0, i1.y, i2.y, 1.0))
+          + i.x + vec4<f32>(0.0, i1.x, i2.x, 1.0));
+
+    let nInv = 1.0 / 7.0;
+    let ns = nInv * D.wyz - D.xzx;
+
+    let j = p - 49.0 * floor(p * ns.z * ns.z);
+    let xFloor = floor(j * ns.z);
+    let yFloor = floor(j - 7.0 * xFloor);
+
+    let xCoord = xFloor * ns.x + ns.yyyy;
+    let yCoord = yFloor * ns.x + ns.yyyy;
+    let h = 1.0 - abs(xCoord) - abs(yCoord);
+
+    let b0 = vec4<f32>(xCoord.xy, yCoord.xy);
+    let b1 = vec4<f32>(xCoord.zw, yCoord.zw);
+
+    let s0 = floor(b0) * 2.0 + 1.0;
+    let s1 = floor(b1) * 2.0 + 1.0;
+    let sh = -step(h, vec4<f32>(0.0));
+
+    let a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+    let a1 = b1.xzyw + s1.xzyw * sh.zzww;
+
+    var p0 = vec3<f32>(a0.xy, h.x);
+    var p1 = vec3<f32>(a0.zw, h.y);
+    var p2 = vec3<f32>(a1.xy, h.z);
+    var p3 = vec3<f32>(a1.zw, h.w);
+
+    let norm = taylorInvSqrt(vec4<f32>(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+    p0 = p0 * norm.x;
+    p1 = p1 * norm.y;
+    p2 = p2 * norm.z;
+    p3 = p3 * norm.w;
+
+    var m = max(0.6 - vec4<f32>(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), vec4<f32>(0.0));
+    m = m * m;
+    return 42.0 * dot(m * m, vec4<f32>(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+}
+
+// Sunspot darkness 0..1 from fBm noise drifting over the sphere surface.
+fn sunspotDarkness(normal: vec3<f32>, time: f32) -> f32 {
+    let drift = vec3<f32>(time * SPOT_DRIFT_SPEED, time * SPOT_DRIFT_SPEED * 0.7, -time * SPOT_DRIFT_SPEED * 0.5);
+    let p = normal * SPOT_NOISE_SCALE + drift + SPOT_NOISE_SEED;
+    let base = snoise(p);
+    let detail = snoise(p * 2.3) * 0.5;
+    let value = pow(max(base + detail * 0.3, 0.0), 3.0);
+    return smoothstep(SPOT_THRESHOLD_LOW, SPOT_THRESHOLD_HIGH, value);
 }
 
 fn square(s: f32) -> f32 {
@@ -105,9 +197,13 @@ fn vs(
     let iPos = instPos(instID);
     let normal = normalize(iPos);
 
-    // Time-based animation
+    // Sunspot darkness from drifting fBm noise (0 = bright, 1 = dark).
+    let darkness = sunspotDarkness(normal, U.time);
+
+    // Time-based animation, calmed inside sunspots.
     let shift = random(iPos) * 2.0 - 1.0;
-    let sinVal = abs(sin(TWO_PI * (shift + time)));
+    let rawSinVal = abs(sin(TWO_PI * (shift + time)));
+    let sinVal = rawSinVal * (1.0 - darkness * SPOT_CALM_STRENGTH);
     pos *= (1.0 - sinVal) * 0.99 + 0.01;
 
     // Spin the triangle
@@ -131,7 +227,7 @@ fn vs(
 
     var out: VSOut;
     out.position = finalPos;
-    out.color = neonGradient(0.6 + sinVal * 0.4);
+    out.color = neonGradient(0.6 + sinVal * 0.4) * (1.0 - darkness * SPOT_DARKNESS_STRENGTH);
     return out;
 }
 
