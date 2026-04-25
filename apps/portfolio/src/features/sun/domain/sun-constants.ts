@@ -1,4 +1,4 @@
-export const INSTANCE_COUNT = 500_000;
+export const INSTANCE_COUNT = 250_000;
 
 // #07090c — shared scene background across all WebGPU demos.
 export const BACKGROUND_COLOR = { r: 0.02745, g: 0.03529, b: 0.04706, a: 1 };
