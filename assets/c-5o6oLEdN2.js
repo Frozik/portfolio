@@ -1,0 +1,1 @@
+import{C as e}from"./e--7L6UAn3.js";function t(t){if(!e(t))try{return JSON.parse(t)}catch{return}}export{t};
