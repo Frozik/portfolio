@@ -63,6 +63,7 @@ export const welcomeTranslationsEn = {
     projectsHeading: 'projects',
     closeQR: 'Close QR code',
     fullscreenLandscape: 'Fullscreen landscape',
+    backToHome: 'Back to home',
   },
   hero: {
     remote: 'Remote · worldwide',
@@ -689,7 +690,7 @@ export const welcomeTranslationsEn = {
       </>
     ),
     footerCopyright: (year: number) =>
-      `© ${year} — Dmitry Sharov · Built with React + WebGPU + WebRTC`,
+      `© ${year} — Dmitry Sharov · Built with React + WebGPU + WebSocket + WebRTC`,
   },
   statusLabels: {
     online: 'Online',

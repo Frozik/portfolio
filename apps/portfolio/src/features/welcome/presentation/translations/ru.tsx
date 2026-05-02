@@ -44,6 +44,7 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
     projectsHeading: 'проекты',
     closeQR: 'Закрыть QR-код',
     fullscreenLandscape: 'Полноэкранный режим (landscape)',
+    backToHome: 'На главную',
   },
   hero: {
     remote: 'Удалённо · по всему миру',
@@ -670,7 +671,7 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
     sectionNumber: '05',
     sectionKicker: 'контакты',
     headline1: 'Сложная задача на фронтенде?',
-    headline2: 'Поговорим.',
+    headline2: 'Обсудим.',
     lead: (
       <>
         Рассматриваю роли <strong className="font-medium text-landing-fg">Senior Frontend</strong>{' '}
@@ -680,7 +681,7 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
       </>
     ),
     footerCopyright: (year: number) =>
-      `© ${year} — Дмитрий Шаров · Сделано на React + WebGPU + WebRTC`,
+      `© ${year} — Дмитрий Шаров · Сделано на React + WebGPU + WebSocket + WebRTC`,
   },
   statusLabels: {
     online: 'В сети',

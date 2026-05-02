@@ -6,6 +6,7 @@ import {
   Brain,
   CandlestickChart,
   Grid3x3,
+  Home,
   LineChart,
   Menu,
   Shapes,
@@ -118,7 +119,13 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
   const handleQRClose = useFunction(() => setQrOpen(false));
   const handleMenuOpen = useFunction(() => setMenuOpen(true));
   const handleMenuClose = useFunction(() => setMenuOpen(false));
-  const handleSectionNavigate = useFunction((sectionId: string) => scrollToSection(sectionId));
+  const handleSectionNavigate = useFunction((sectionId: string) => {
+    if (variant === 'inner') {
+      void navigate(`/#${sectionId}`);
+      return;
+    }
+    scrollToSection(sectionId);
+  });
   const handleProjectNavigate = useFunction((route: string) => {
     void navigate(route);
   });
@@ -164,8 +171,9 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
             <button
               type="button"
               onClick={handleBrandClick}
-              className="cursor-pointer bg-transparent p-0 font-mono text-[13px] text-landing-fg"
+              className="flex cursor-pointer items-center gap-1.5 bg-transparent p-0 font-mono text-[13px] text-landing-fg"
             >
+              <Home size={ICON_SIZE_PX} className="text-landing-fg-dim" aria-hidden="true" />
               {welcomeT.nav.brandRoot}
               <span className="text-landing-fg-faint">{welcomeT.nav.brandPath}</span>
             </button>
@@ -184,6 +192,17 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
                 </a>
               ))}
             </div>
+          )}
+
+          {!isLanding && (
+            <button
+              type="button"
+              onClick={handleBrandClick}
+              className="hidden cursor-pointer items-center gap-2 bg-transparent p-0 font-mono text-xs text-landing-fg-dim transition-colors hover:text-landing-fg min-[990px]:flex"
+            >
+              <Home size={ICON_SIZE_PX} aria-hidden="true" />
+              {welcomeT.nav.backToHome}
+            </button>
           )}
 
           <div className="flex items-center gap-1.5 md:gap-2">
@@ -261,8 +280,10 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
         title={welcomeT.nav.menuTitle}
         sectionsHeading={welcomeT.nav.sectionsHeading}
         projectsHeading={welcomeT.nav.projectsHeading}
+        backToHomeLabel={welcomeT.nav.backToHome}
         onNavigateSection={handleSectionNavigate}
         onNavigateProject={handleProjectNavigate}
+        onNavigateHome={handleBrandClick}
       />
     </>
   );
