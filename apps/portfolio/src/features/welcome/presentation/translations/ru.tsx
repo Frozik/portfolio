@@ -55,7 +55,7 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
     headlineAccent: 'Team Lead',
     name: 'Дмитрий Шаров',
     lead: (years: number) =>
-      `${years} ${pluralizeRussianYears(years)} создаю высокопроизводительные веб-приложения — визуализация данных на WebGPU/WebGL, торговые системы реального времени и масштабируемая фронтенд-архитектура в Яндекс.Деньгах и Deutsche Bank.`,
+      `${years} ${pluralizeRussianYears(years)} создаю высокопроизводительные веб-приложения — визуализация данных на WebGPU/WebGL, торговые системы реального времени и масштабируемая фронтенд-архитектура.`,
     yearsOfExperienceLabel: 'Лет опыта',
     stats: [
       { value: '7', label: 'Инженеров в команде' },
@@ -80,10 +80,11 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
     ),
     paragraph2: (
       <>
-        В Яндекс.Деньгах руководил командой из семи инженеров, отвечал за архитектуру продукта,
-        внедрил культуру код-ревью и принимал ключевые архитектурные решения в микрофронтенд-
-        экосистеме. В Deutsche Bank выпускал продукты корпоративного уровня в Agile / Scrum
-        окружении с глубокой кросс-функциональной командной работой.
+        Руководил командой из семи инженеров, отвечал за архитектуру продуктов целиком — от
+        фронтенда и BFF-слоя до полной вертикали front-to-back. Выстраивал культуру код-ревью и
+        CI/CD-пайплайны, выпускал продукты корпоративного уровня в Agile / Scrum окружении с
+        глубокой кросс-функциональной командной работой между инженерами, дизайнерами и
+        продакт-менеджерами.
       </>
     ),
     paragraph3: (
@@ -695,6 +696,8 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
     copyLink: 'скопировать ссылку',
     copied: 'скопировано в буфер',
     qrLinkLabel: 'ССЫЛКА',
+    downloadCv: 'Скачать резюме (PDF)',
+    downloadingCv: 'Готовлю PDF…',
     entries: {
       telegram: { label: '@Frozik', qrTitle: 'TELEGRAM · @FROZIK' },
       whatsapp: { label: 'Дмитрий Шаров', qrTitle: 'WHATSAPP · ДМИТРИЙ ШАРОВ' },

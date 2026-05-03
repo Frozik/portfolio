@@ -13,6 +13,7 @@ import { SleepingZzz } from '../common/SleepingZzz';
 import type { IContactQRRequest } from '../contacts/ContactRow';
 import { ContactRow } from '../contacts/ContactRow';
 import { QRContactModal } from '../contacts/QRContactModal';
+import { DownloadCvButton } from './DownloadCvButton';
 
 const AboutComponent = () => {
   const [qrRequest, setQrRequest] = useState<IContactQRRequest | null>(null);
@@ -70,6 +71,7 @@ const AboutComponent = () => {
                 />
               );
             })}
+            <DownloadCvButton />
           </div>
         </div>
       </div>

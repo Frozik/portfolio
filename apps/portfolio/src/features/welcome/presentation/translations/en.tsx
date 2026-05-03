@@ -74,7 +74,7 @@ export const welcomeTranslationsEn = {
     headlineAccent: 'Team Lead',
     name: 'Dmitry Sharov',
     lead: (years: number) =>
-      `${years} years building high-performance web applications — WebGPU/WebGL data visualization, real-time trading systems, and scalable frontend architecture at Yandex.Money and Deutsche Bank.`,
+      `${years} years building high-performance web applications — WebGPU/WebGL data visualization, real-time trading systems, and scalable frontend architecture.`,
     yearsOfExperienceLabel: 'Years of experience',
     stats: [
       { value: '7', label: 'Engineers led' },
@@ -99,10 +99,11 @@ export const welcomeTranslationsEn = {
     ),
     paragraph2: (
       <>
-        At Yandex.Money I led a team of seven engineers, owning product architecture end-to-end,
-        establishing code review culture, and driving key architectural decisions across a
-        micro-frontend ecosystem. At Deutsche Bank I delivered enterprise-grade products in Agile /
-        Scrum environments with deeply cross-functional teams.
+        I led a team of seven engineers and owned product architecture end-to-end — from the
+        frontend and BFF layer down through the full front-to-back stack. I established code review
+        culture and CI/CD pipelines, and shipped enterprise-grade products in Agile / Scrum
+        environments with deeply cross-functional teamwork across engineers, designers, and product
+        managers.
       </>
     ),
     paragraph3: (
@@ -704,6 +705,8 @@ export const welcomeTranslationsEn = {
     copyLink: 'copy link',
     copied: 'copied to clipboard',
     qrLinkLabel: 'LINK',
+    downloadCv: 'Download CV (PDF)',
+    downloadingCv: 'Generating PDF…',
     entries: {
       telegram: { label: '@Frozik', qrTitle: 'TELEGRAM · @FROZIK' },
       whatsapp: { label: 'Dmitry Sharov', qrTitle: 'WHATSAPP · DMITRY SHAROV' },
