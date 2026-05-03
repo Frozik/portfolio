@@ -174,8 +174,10 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               className="flex cursor-pointer items-center gap-1.5 bg-transparent p-0 font-mono text-[13px] text-landing-fg"
             >
               <Home size={ICON_SIZE_PX} className="text-landing-fg-dim" aria-hidden="true" />
-              {welcomeT.nav.brandRoot}
-              <span className="text-landing-fg-faint">{welcomeT.nav.brandPath}</span>
+              <span className="hidden min-[450px]:inline">{welcomeT.nav.brandRoot}</span>
+              <span className="hidden text-landing-fg-faint min-[450px]:inline">
+                {welcomeT.nav.brandPath}
+              </span>
             </button>
           </div>
 
