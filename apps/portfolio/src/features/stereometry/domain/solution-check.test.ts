@@ -182,6 +182,42 @@ describe('computeSolutionStatus', () => {
     expect(status.solutionLineRanges).toHaveLength(3);
   });
 
+  it('populates solutionInfiniteLineAnchors only from expected.lines', () => {
+    const scene = createTetrahedronScene();
+    const expectedLine: readonly [Vec3Array, Vec3Array] = [
+      [0, 0, 0],
+      [2, 0, 0],
+    ];
+    const face: readonly Vec3Array[] = [
+      [0, 0, 0],
+      [2, 0, 0],
+      [1, 0, 2],
+    ];
+    const status = computeSolutionStatus({ lines: [expectedLine], faces: [face] }, scene);
+
+    expect(status.isSolved).toBe(true);
+    // Anchors come from expected.lines only — face perimeter edges are NOT included.
+    expect(status.solutionInfiniteLineAnchors).toHaveLength(1);
+    expect(status.solutionInfiniteLineAnchors[0]).toEqual(expectedLine);
+    // solutionLineRanges still contains both: 1 line + 3 face perimeter edges.
+    expect(status.solutionLineRanges).toHaveLength(4);
+  });
+
+  it('leaves solutionInfiniteLineAnchors empty when only expected.faces is provided', () => {
+    const scene = createTetrahedronScene();
+    const face: readonly Vec3Array[] = [
+      [0, 0, 0],
+      [2, 0, 0],
+      [1, 0, 2],
+    ];
+    const status = computeSolutionStatus({ faces: [face] }, scene);
+
+    expect(status.isSolved).toBe(true);
+    expect(status.solutionInfiniteLineAnchors).toHaveLength(0);
+    // Face perimeter ranges still populate solutionLineRanges (bounded marking only).
+    expect(status.solutionLineRanges).toHaveLength(3);
+  });
+
   it('does not allow a finite edge to cover a segment outside its bounds', () => {
     const scene = createTetrahedronScene();
     // Tetrahedron edge goes from [0,0,0] to [2,0,0]. Expected line reaches [3,0,0] — out of bounds.

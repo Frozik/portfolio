@@ -1,9 +1,9 @@
-import puzzle_1_1_image from '../../../../assets/puzzle_1_1.png';
+import solutionImage from '../../../../assets/puzzle_1.avif';
 import type { PuzzleDefinition } from '../types';
 
-export const PUZZLE_1_1: PuzzleDefinition = {
-  id: 'puzzle_1_1',
-  solutionImage: puzzle_1_1_image,
+export const PUZZLE_1: PuzzleDefinition = {
+  id: 'puzzle_1',
+  solutionImage,
   camera: {
     center: [0, -0.25, 0],
     distance: { min: 3, max: 10, initial: 5 },

@@ -38,6 +38,11 @@ const Stereometry = lazy(() =>
     default: m.Stereometry,
   }))
 );
+const StereometryPicker = lazy(() =>
+  import('../../features/stereometry/presentation/StereometryPicker').then(m => ({
+    default: m.StereometryPicker,
+  }))
+);
 const Controls = lazy(() =>
   import('../../features/controls/presentation/Controls').then(m => ({ default: m.Controls }))
 );
@@ -86,7 +91,8 @@ export const Application = memo(() => {
               <Route path="graphics" element={<Charts />} />
               <Route path="timeseries" element={<Timeseries />} />
               <Route path="binance" element={<BinanceView />} />
-              <Route path="stereometry" element={<Stereometry />} />
+              <Route path="stereometry" element={<StereometryPicker />} />
+              <Route path="stereometry/:puzzleId" element={<Stereometry />} />
               <Route path="controls" element={<Controls />} />
               <Route path="retro" element={<Retro />}>
                 <Route index element={<Lobby />} />

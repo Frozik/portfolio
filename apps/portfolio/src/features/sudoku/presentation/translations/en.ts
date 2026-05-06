@@ -5,4 +5,7 @@ export const sudokuTranslationsEn = {
     hard: 'Hard',
     expert: 'Expert',
   },
+  nav: {
+    backToDifficultyLabel: 'Back to difficulty',
+  },
 } as const;

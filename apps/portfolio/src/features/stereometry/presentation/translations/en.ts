@@ -8,11 +8,21 @@ export const stereometryTranslationsEn = {
     puzzle: 'Puzzle',
     close: 'Close',
   },
+  nav: {
+    backToPuzzlesLabel: 'Back to puzzles',
+  },
   puzzles: {
-    puzzle_1_1: {
+    puzzle_1: {
+      shortName: 'Pyramid section',
       name: 'Section of a pentagonal pyramid',
       description:
         'Construct a cross-section of the pyramid through the given point, parallel to the two given lines.',
+    },
+    puzzle_2: {
+      shortName: 'Plane intersection',
+      name: 'Intersection line of two planes (pentagonal prism)',
+      description:
+        'You are given a pentagonal prism and four segments forming two pairs of intersecting segments. Each pair defines a plane. Construct the line where the two planes intersect.',
     },
   },
   solutionImageAlt: 'Expected solution illustration',

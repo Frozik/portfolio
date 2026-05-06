@@ -196,17 +196,6 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
             </div>
           )}
 
-          {!isLanding && (
-            <button
-              type="button"
-              onClick={handleBrandClick}
-              className="hidden cursor-pointer items-center gap-2 bg-transparent p-0 font-mono text-xs text-landing-fg-dim transition-colors hover:text-landing-fg min-[990px]:flex"
-            >
-              <Home size={ICON_SIZE_PX} aria-hidden="true" />
-              {welcomeT.nav.backToHome}
-            </button>
-          )}
-
           <div className="flex items-center gap-1.5 md:gap-2">
             {fullscreen.isSupported && (
               <button

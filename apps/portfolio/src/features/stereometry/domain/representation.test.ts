@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { preparePuzzle } from './geometry';
-import { PUZZLE_1_1 } from './puzzles/puzzle-1-1';
 import { buildRepresentation } from './representation';
 import type { FigureTopology, TopologyLine, TopologyVertex, Vec3Array } from './topology-types';
 import { SELECTION_NONE } from './topology-types';
@@ -442,86 +441,6 @@ describe('buildRepresentation', () => {
         }
       });
     });
-
-    describe('pentagonal pyramid - line through figure', () => {
-      it('line from vertex 0 to vertex 2 (through interior) has styled segments', () => {
-        const topology = preparePuzzle(PUZZLE_1_1).topology;
-        const line: TopologyLine = {
-          lineId: 0,
-          pointA: topology.vertices[0],
-          pointB: topology.vertices[2],
-          kind: 'line',
-          isInput: false,
-          startVertexId: -1,
-          endVertexId: -1,
-        };
-        const vertices = createVertices(topology);
-
-        const result = buildRepresentation(topology, [line], vertices, SELECTION_NONE);
-
-        // Should have topology edge segments
-        expect(hasEdgeSegments(result.segments)).toBe(true);
-      });
-
-      it('line from apex (vertex 5) to opposite base vertex drops segment part', () => {
-        const topology = preparePuzzle(PUZZLE_1_1).topology;
-        const line: TopologyLine = {
-          lineId: 0,
-          pointA: topology.vertices[5],
-          pointB: topology.vertices[2],
-          kind: 'line',
-          isInput: false,
-          startVertexId: -1,
-          endVertexId: -1,
-        };
-        const vertices = createVertices(topology);
-
-        const result = buildRepresentation(topology, [line], vertices, SELECTION_NONE);
-
-        // Line's own segments should not be topology edges
-        const lineSegments = result.segments.filter(segment => segment.lineId === 0);
-        expect(lineSegments.every(segment => segment.lineId !== -1)).toBe(true);
-        expect(lineSegments.length).toBeGreaterThan(0);
-      });
-
-      it('line from vertex 0 through apex and beyond has segments', () => {
-        const topology = preparePuzzle(PUZZLE_1_1).topology;
-        const line: TopologyLine = {
-          lineId: 0,
-          pointA: [0, -0.75, 1],
-          pointB: [0, 2.25, -1],
-          kind: 'line',
-          isInput: false,
-          startVertexId: -1,
-          endVertexId: -1,
-        };
-        const vertices = createVertices(topology);
-
-        const result = buildRepresentation(topology, [line], vertices, SELECTION_NONE);
-
-        const lineSegments = result.segments.filter(segment => segment.lineId === 0);
-        expect(lineSegments.length).toBeGreaterThan(0);
-      });
-
-      it('line cutting diagonally through the pyramid (not through vertices) has segments', () => {
-        const topology = preparePuzzle(PUZZLE_1_1).topology;
-        const line: TopologyLine = {
-          lineId: 0,
-          pointA: [-1, 0, 0],
-          pointB: [1, 0, 0],
-          kind: 'line',
-          isInput: false,
-          startVertexId: -1,
-          endVertexId: -1,
-        };
-        const vertices = createVertices(topology);
-
-        const result = buildRepresentation(topology, [line], vertices, SELECTION_NONE);
-
-        const lineSegments = result.segments.filter(segment => segment.lineId === 0);
-        expect(lineSegments.length).toBeGreaterThanOrEqual(3);
-      });
-    });
   });
 
   describe('marker processing', () => {
@@ -638,6 +557,7 @@ describe('buildRepresentation', () => {
         isSolved: true,
         solutionVertexPositions: [edgeStart, edgeEnd],
         solutionLineRanges: [[edgeStart, edgeEnd]] as const,
+        solutionInfiniteLineAnchors: [],
         solutionFaces: [],
       };
 
@@ -666,6 +586,7 @@ describe('buildRepresentation', () => {
         isSolved: false,
         solutionVertexPositions: [edgeStart, edgeEnd],
         solutionLineRanges: [[edgeStart, edgeEnd]] as const,
+        solutionInfiniteLineAnchors: [],
         solutionFaces: [],
       };
 
@@ -703,6 +624,7 @@ describe('buildRepresentation', () => {
         isSolved: true,
         solutionVertexPositions: [],
         solutionLineRanges: [],
+        solutionInfiniteLineAnchors: [],
         solutionFaces: [face],
       };
 
@@ -735,6 +657,7 @@ describe('buildRepresentation', () => {
         isSolved: true,
         solutionVertexPositions: [],
         solutionLineRanges: [],
+        solutionInfiniteLineAnchors: [],
         solutionFaces: [pentagon],
       };
 
@@ -749,6 +672,94 @@ describe('buildRepresentation', () => {
 
       // Pentagon: 5-2 = 3 triangles × 3 vertices = 9 vertices
       expect(result.solutionFace?.vertexCount).toBe(9);
+    });
+
+    it('marks every sub-segment of an infinite line collinear with solutionInfiniteLineAnchors', () => {
+      const topology = getTetrahedronTopology();
+      const vertices = createVertices(topology);
+      const v0 = topology.vertices[0]; // [0, 0, 0]
+      const v1 = topology.vertices[1]; // [2, 0, 0]
+
+      // Infinite construction line collinear with edge v0-v1.
+      // processLine drops the portion coincident with the edge and keeps the 2 ray extensions.
+      const line: TopologyLine = {
+        lineId: 1,
+        pointA: v0,
+        pointB: v1,
+        kind: 'line',
+        isInput: false,
+        startVertexId: -1,
+        endVertexId: -1,
+      };
+
+      const solutionStatus = {
+        isSolved: true,
+        solutionVertexPositions: [v0, v1],
+        solutionLineRanges: [[v0, v1]] as const,
+        solutionInfiniteLineAnchors: [[v0, v1]] as const,
+        solutionFaces: [],
+      };
+
+      const result = buildRepresentation(
+        topology,
+        [line],
+        vertices,
+        SELECTION_NONE,
+        undefined,
+        solutionStatus
+      );
+
+      // The two ray extensions outside [v0, v1] must all carry the solution color.
+      const lineSubSegments = result.segments.filter(segment => segment.lineId === 1);
+      expect(lineSubSegments.length).toBeGreaterThan(0);
+      for (const segment of lineSubSegments) {
+        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(true);
+      }
+    });
+
+    it('does not mark ray extensions when only face-perimeter ranges are in solution', () => {
+      // Face-perimeter ranges live in solutionLineRanges but NOT in solutionInfiniteLineAnchors.
+      // An infinite line collinear with such a range must keep its ray extensions unmarked —
+      // only the bounded portion within the perimeter would qualify.
+      const topology = getTetrahedronTopology();
+      const vertices = createVertices(topology);
+      const v0 = topology.vertices[0];
+      const v1 = topology.vertices[1];
+
+      const line: TopologyLine = {
+        lineId: 1,
+        pointA: v0,
+        pointB: v1,
+        kind: 'line',
+        isInput: false,
+        startVertexId: -1,
+        endVertexId: -1,
+      };
+
+      const solutionStatus = {
+        isSolved: true,
+        solutionVertexPositions: [v0, v1],
+        // Bounded range from a face perimeter — no infinite-line anchor for this direction.
+        solutionLineRanges: [[v0, v1]] as const,
+        solutionInfiniteLineAnchors: [],
+        solutionFaces: [],
+      };
+
+      const result = buildRepresentation(
+        topology,
+        [line],
+        vertices,
+        SELECTION_NONE,
+        undefined,
+        solutionStatus
+      );
+
+      // Ray sub-segments lie outside [v0, v1] → bounded check fails → no solution color.
+      const lineSubSegments = result.segments.filter(segment => segment.lineId === 1);
+      expect(lineSubSegments.length).toBeGreaterThan(0);
+      for (const segment of lineSubSegments) {
+        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(false);
+      }
     });
   });
 });

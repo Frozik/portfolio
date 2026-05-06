@@ -28,7 +28,7 @@ import type {
   StyledSegment,
 } from './render-types';
 import type { SolutionStatus } from './solution-check';
-import { isSubSegmentInSolutionRange } from './solution-check';
+import { isSubSegmentInSolutionRange, lineCoversSegment } from './solution-check';
 import { hexToRgb, resolveStyle } from './styles-processor';
 import type {
   FigureTopology,
@@ -288,14 +288,25 @@ function buildSegments(
 
     const segments = processLine(line, figureTopology, vertices);
     const isSelected = selectedLineId !== undefined && line.lineId === selectedLineId;
+    const isInfiniteLine =
+      line.kind === 'line' || line.kind === 'edge-extended' || line.kind === 'segment-extended';
+    // Infinite lines collinear with an `expected.lines` anchor pair light up entirely —
+    // including ray extensions beyond the anchors — because the line direction itself
+    // is the solution. Face-perimeter ranges are bounded segments (not infinite lines)
+    // and are intentionally excluded from this rule, so face-edge directions don't
+    // cause a collinear infinite line to glow outside the polygon boundary.
+    const lineCoversSolutionFully =
+      isInfiniteLine &&
+      solutionStatus?.isSolved === true &&
+      solutionStatus.solutionInfiniteLineAnchors.some(([rangeStart, rangeEnd]) =>
+        lineCoversSegment(line, rangeStart, rangeEnd)
+      );
 
     for (const segment of segments) {
       // For infinite lines, sub-segments coincident with a collinear figure edge are marked 'segment' by processLine.
       // - 'edge-extended': this coincident portion IS the original edge — keep it and promote to 'edge' styling
       //   (buildTopologyEdgeSegments skips the extended edge to avoid duplicate render).
       // - 'line' and 'segment-extended': drop the coincident portion to avoid overlap with the finite element.
-      const isInfiniteLine =
-        line.kind === 'line' || line.kind === 'edge-extended' || line.kind === 'segment-extended';
       const isOnCollinearEdge = segment.modifiers.includes('segment');
       if (isInfiniteLine && isOnCollinearEdge && line.kind !== 'edge-extended') {
         continue;
@@ -326,7 +337,7 @@ function buildSegments(
         modifiers.push('selected');
       }
 
-      if (isSubSegmentInSolution(segment, solutionStatus)) {
+      if (lineCoversSolutionFully || isSubSegmentInSolution(segment, solutionStatus)) {
         modifiers.push('solution');
       }
 

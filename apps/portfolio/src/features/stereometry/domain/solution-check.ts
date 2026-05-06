@@ -16,6 +16,13 @@ export interface SolutionStatus {
   readonly solutionVertexPositions: readonly Vec3Array[];
   /** Line ranges [pointA, pointB] covered by the solution (expected lines + face perimeter edges) */
   readonly solutionLineRanges: readonly (readonly [Vec3Array, Vec3Array])[];
+  /**
+   * Anchor pairs from `expected.lines` only. These define infinite solution-line
+   * directions: a topology line collinear with such an anchor pair is fully part
+   * of the solution, including its ray extensions beyond the anchors.
+   * Face perimeter edges are NOT included here -- they are bounded segments.
+   */
+  readonly solutionInfiniteLineAnchors: readonly (readonly [Vec3Array, Vec3Array])[];
   /** Raw face polygons (ordered vertices) to be rendered as highlighted planes when solved */
   readonly solutionFaces: readonly (readonly Vec3Array[])[];
 }
@@ -24,6 +31,7 @@ const EMPTY_SOLUTION: SolutionStatus = {
   isSolved: false,
   solutionVertexPositions: [],
   solutionLineRanges: [],
+  solutionInfiniteLineAnchors: [],
   solutionFaces: [],
 };
 
@@ -83,6 +91,7 @@ export function computeSolutionStatus(
       ...faceVertexPositions,
     ],
     solutionLineRanges: allLineRanges,
+    solutionInfiniteLineAnchors: expectedLines,
     solutionFaces: expectedFaces,
   };
 }
@@ -92,7 +101,11 @@ export function computeSolutionStatus(
  * For infinite lines, both points must be collinear.
  * For finite edges/segments, both points must lie within the segment bounds.
  */
-function lineCoversSegment(line: TopologyLine, pointA: Vec3Array, pointB: Vec3Array): boolean {
+export function lineCoversSegment(
+  line: TopologyLine,
+  pointA: Vec3Array,
+  pointB: Vec3Array
+): boolean {
   switch (line.kind) {
     case 'line':
     case 'edge-extended':

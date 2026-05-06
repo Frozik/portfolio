@@ -2,9 +2,10 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isFailValueDescriptor, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSudoku } from 'sudoku-gen';
+import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { useSudokuStore } from '../application/useSudokuStore';
 import type { TTool } from '../domain/types';
@@ -50,12 +51,15 @@ export const Sudoku = observer(() => {
 
   const handleRestartGame = useFunction(() => navigate('/sudoku'));
 
+  const isSolvingPuzzle = !isNil(puzzle);
+
   const handleRestorePreviousState = useFunction(() => store.restorePreviousState());
 
   const handleRestartPuzzle = useFunction(() => store.restartPuzzle());
 
   return (
     <div className="h-full w-full mx-auto flex min-h-0 select-none flex-col items-center justify-center max-[840px]:p-0">
+      {isSolvingPuzzle && <SudokuBackNav onBack={handleRestartGame} />}
       {matchValueDescriptor(store.field, {
         synced: ({ value: field }) => (
           <SudokuField
@@ -82,4 +86,12 @@ export const Sudoku = observer(() => {
       })}
     </div>
   );
+});
+
+const SudokuBackNav = memo(({ onBack }: { readonly onBack: () => void }) => {
+  useRegisterTopNavBack({
+    label: sudokuT.nav.backToDifficultyLabel,
+    onActivate: onBack,
+  });
+  return null;
 });

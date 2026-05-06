@@ -8,4 +8,7 @@ export const sudokuTranslationsRu: TranslationOf<typeof sudokuTranslationsEn> = 
     hard: 'Сложный',
     expert: 'Эксперт',
   },
+  nav: {
+    backToDifficultyLabel: 'Назад к выбору сложности',
+  },
 };

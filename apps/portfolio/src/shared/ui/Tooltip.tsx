@@ -16,11 +16,22 @@ type TooltipProps = {
    * permanently-visible hints.
    */
   open?: boolean;
+  /** Delay before the tooltip appears on hover, in milliseconds. */
+  delayDuration?: number;
 };
 
+const DEFAULT_DELAY_MS = 200;
+
 export const Tooltip = memo(
-  ({ title, placement = 'top', children, className, open }: TooltipProps) => (
-    <TooltipPrimitive.Provider delayDuration={200}>
+  ({
+    title,
+    placement = 'top',
+    children,
+    className,
+    open,
+    delayDuration = DEFAULT_DELAY_MS,
+  }: TooltipProps) => (
+    <TooltipPrimitive.Provider delayDuration={delayDuration}>
       <TooltipPrimitive.Root open={open}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
