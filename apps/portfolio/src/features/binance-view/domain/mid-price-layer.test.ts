@@ -1,3 +1,4 @@
+import type { IMidPriceBlockIndexItem } from './block-store/create-mid-price-block-index';
 import {
   MID_PRICE_MAX_WIDTH_PX,
   MID_PRICE_MIN_WIDTH_PX,
@@ -11,7 +12,6 @@ import {
   writeMidPriceBlockDescriptors,
   writeMidPriceUniforms,
 } from './mid-price-layer';
-import type { IMidPriceBlockIndexItem } from './mid-price-types';
 import type { UnixTimeMs } from './types';
 
 interface ICaptured {
@@ -48,6 +48,10 @@ function makeBlockItem(
   last = blockId + 100
 ): IMidPriceBlockIndexItem {
   return {
+    minX: first,
+    maxX: last,
+    minY: 0,
+    maxY: 0,
     blockId: blockId as UnixTimeMs,
     firstTimestampMs: first as UnixTimeMs,
     lastTimestampMs: last as UnixTimeMs,

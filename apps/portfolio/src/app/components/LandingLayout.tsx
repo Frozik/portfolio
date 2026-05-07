@@ -5,6 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { BackgroundCanvas } from './BackgroundCanvas';
 import { TopNav } from './TopNav';
 import { TopNavBackProvider } from './TopNavBackContext';
+import { TopNavCenterProvider } from './TopNavCenterContext';
 
 /**
  * Layout for the landing route (`/`). Mounts the decorative background
@@ -24,11 +25,13 @@ export const LandingLayout = memo(() => {
 
   return (
     <TopNavBackProvider>
-      <BackgroundCanvas />
-      <TopNav />
-      <main className="relative z-[2]">
-        <Outlet />
-      </main>
+      <TopNavCenterProvider>
+        <BackgroundCanvas />
+        <TopNav />
+        <main className="relative z-[2]">
+          <Outlet />
+        </main>
+      </TopNavCenterProvider>
     </TopNavBackProvider>
   );
 });

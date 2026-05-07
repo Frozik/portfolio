@@ -33,19 +33,6 @@ export interface IMidPriceBlockMeta {
 }
 
 /**
- * Entry stored in the in-memory block index. Flat / time-only —
- * mid-price is 1-D so RBush would be over-engineering.
- */
-export interface IMidPriceBlockIndexItem {
-  readonly blockId: UnixTimeMs;
-  readonly firstTimestampMs: UnixTimeMs;
-  readonly basePrice: number;
-  lastTimestampMs: UnixTimeMs;
-  count: number;
-  textureRowIndex: number | undefined;
-}
-
-/**
  * Discrete direction of movement between two adjacent samples. The
  * renderer picks a color per segment based on this tag rather than
  * interpolating between continuous signed slopes — the visual is

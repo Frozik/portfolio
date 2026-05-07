@@ -159,6 +159,16 @@ depth-of-market display built on WebGPU.
   single console prefix so Chrome / Safari / Firefox quirks are
   immediate to spot during development
 
+**Trades layer:**
+- Live trades from Binance `@aggTrade` are aggregated into per-second
+  buckets and rendered as circles over the orderbook heatmap. Fill is
+  a pie chart split by notional-weighted buy / sell share (12 o'clock
+  clockwise, green / red); stroke is solid cyan
+- Click a circle for a popup with the raw trades in that second; hover
+  for a quick-stats pill
+- Persistence: aggregates + raw trades in IndexedDB (cleared on
+  `pagehide`), LRU-evicted at 32 / 8 blocks respectively
+
 ### Stereometry
 
 Interactive 3D construction tool for stereometry puzzles — a digital

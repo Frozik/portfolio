@@ -1,6 +1,7 @@
 import type { DBSchema, IDBPDatabase, StoreNames } from 'idb';
 import { openDB } from 'idb';
 
+import type { ITradeBlockRecord, ITradeBucketRawRecord } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
 
 export const DEFAULT_DB_NAME = 'binance-orderbook';
@@ -20,15 +21,22 @@ export const DEFAULT_DB_NAME = 'binance-orderbook';
  *        device kept the old store name and `clearAll` threw
  *        "NotFoundError: One of the specified object stores was not
  *        found" as soon as the new code opened a transaction.
+ *   v4 — adds the trades layer's two stores in a single migration
+ *        step: `trade-blocks` (per-block aggregate `Float32Array`
+ *        copies, written every flush) and `trade-buckets-raw` (raw
+ *        per-bucket trades, written only on block rotation — see
+ *        trades.md §3.3 for the cadence rationale).
  *
  * Bumps MUST stay idempotent: the upgrade handler can fire from any
  * earlier version, so every step recreates stores via the
  * `!contains()` guard and deletes legacy stores only after checking
  * that they exist.
  */
-export const DEFAULT_DB_VERSION = 3;
+export const DEFAULT_DB_VERSION = 4;
 export const ORDERBOOK_BLOCKS_STORE = 'orderbook-blocks';
 export const MID_PRICE_BLOCKS_STORE = 'mid-price-blocks';
+export const TRADE_BLOCKS_STORE = 'trade-blocks';
+export const TRADE_BUCKETS_RAW_STORE = 'trade-buckets-raw';
 /**
  * Legacy store name from v2 (when the overlay consumed Binance's
  * `@avgPrice` WebSocket). Retained here only so the v3 upgrade can
@@ -81,6 +89,28 @@ export interface IMidPriceDb {
 }
 
 /**
+ * Repository for the trades layer. Mirrors {@link IOrderbookDb}'s
+ * shape but keeps two physically separate stores: `trade-blocks` for
+ * per-block aggregate `Float32Array` copies (written every flush — 4 KB
+ * per record) and `trade-buckets-raw` for the raw `ITrade` payloads
+ * (written only on block rotation — up to ~4 MB per record). The split
+ * lets the popup lazy-reload raw trades without dragging in the
+ * aggregate row, and the aggregate reload (when a block re-enters the
+ * viewport) doesn't pay for the raw payload it doesn't need. See
+ * trades.md §3.3.
+ */
+export interface ITradesDb {
+  clearAll(): Promise<void>;
+  putBlock(record: ITradeBlockRecord): Promise<void>;
+  getBlock(blockId: UnixTimeMs): Promise<ITradeBlockRecord | undefined>;
+  deleteBlock(blockId: UnixTimeMs): Promise<void>;
+  putRawTrades(record: ITradeBucketRawRecord): Promise<void>;
+  getRawTrades(blockId: UnixTimeMs): Promise<ITradeBucketRawRecord | undefined>;
+  deleteRawTrades(blockId: UnixTimeMs): Promise<void>;
+  countBlocks(): Promise<number>;
+}
+
+/**
  * Bundle of per-feature stores inside a single binance IndexedDB.
  * `clearAll` / `close` act on the whole DB — the feature spec calls
  * for a clean slate on every page open so we never have to reason
@@ -89,6 +119,7 @@ export interface IMidPriceDb {
 export interface IBinanceDb {
   readonly orderbook: IOrderbookDb;
   readonly midPrice: IMidPriceDb;
+  readonly trades: ITradesDb;
   clearAll(): Promise<void>;
   close(): void;
 }
@@ -101,6 +132,14 @@ interface IBinanceDbSchema extends DBSchema {
   [MID_PRICE_BLOCKS_STORE]: {
     key: number;
     value: IMidPriceBlockRecord;
+  };
+  [TRADE_BLOCKS_STORE]: {
+    key: number;
+    value: ITradeBlockRecord;
+  };
+  [TRADE_BUCKETS_RAW_STORE]: {
+    key: number;
+    value: ITradeBucketRawRecord;
   };
 }
 
@@ -156,6 +195,47 @@ class MidPriceDb implements IMidPriceDb {
   }
 }
 
+class TradesDb implements ITradesDb {
+  constructor(private readonly db: IDBPDatabase<IBinanceDbSchema>) {}
+
+  async clearAll(): Promise<void> {
+    const tx = this.db.transaction([TRADE_BLOCKS_STORE, TRADE_BUCKETS_RAW_STORE], 'readwrite');
+    await Promise.all([
+      tx.objectStore(TRADE_BLOCKS_STORE).clear(),
+      tx.objectStore(TRADE_BUCKETS_RAW_STORE).clear(),
+    ]);
+    await tx.done;
+  }
+
+  async putBlock(record: ITradeBlockRecord): Promise<void> {
+    await this.db.put(TRADE_BLOCKS_STORE, record);
+  }
+
+  async getBlock(blockId: UnixTimeMs): Promise<ITradeBlockRecord | undefined> {
+    return this.db.get(TRADE_BLOCKS_STORE, blockId);
+  }
+
+  async deleteBlock(blockId: UnixTimeMs): Promise<void> {
+    await this.db.delete(TRADE_BLOCKS_STORE, blockId);
+  }
+
+  async putRawTrades(record: ITradeBucketRawRecord): Promise<void> {
+    await this.db.put(TRADE_BUCKETS_RAW_STORE, record);
+  }
+
+  async getRawTrades(blockId: UnixTimeMs): Promise<ITradeBucketRawRecord | undefined> {
+    return this.db.get(TRADE_BUCKETS_RAW_STORE, blockId);
+  }
+
+  async deleteRawTrades(blockId: UnixTimeMs): Promise<void> {
+    await this.db.delete(TRADE_BUCKETS_RAW_STORE, blockId);
+  }
+
+  async countBlocks(): Promise<number> {
+    return this.db.count(TRADE_BLOCKS_STORE);
+  }
+}
+
 /**
  * Open (or upgrade-and-open) the Binance IndexedDB used by the
  * orderbook + mid-price features. Upgrade handler is additive
@@ -189,20 +269,41 @@ export async function openBinanceDb(
       if (upgrading.objectStoreNames.contains(legacyStoreName)) {
         upgrading.deleteObjectStore(legacyStoreName);
       }
+      // v4 migration: trades layer (see trades.md §3.3). Two stores
+      // because aggregates and raw trades have very different
+      // payload sizes and access patterns — see `ITradesDb` doc.
+      if (!upgrading.objectStoreNames.contains(TRADE_BLOCKS_STORE)) {
+        upgrading.createObjectStore(TRADE_BLOCKS_STORE, { keyPath: 'blockId' });
+      }
+      if (!upgrading.objectStoreNames.contains(TRADE_BUCKETS_RAW_STORE)) {
+        upgrading.createObjectStore(TRADE_BUCKETS_RAW_STORE, { keyPath: 'blockId' });
+      }
     },
   });
 
   const orderbook = new OrderbookDb(db);
   const midPrice = new MidPriceDb(db);
+  const trades = new TradesDb(db);
 
   return {
     orderbook,
     midPrice,
+    trades,
     async clearAll() {
-      const tx = db.transaction([ORDERBOOK_BLOCKS_STORE, MID_PRICE_BLOCKS_STORE], 'readwrite');
+      const tx = db.transaction(
+        [
+          ORDERBOOK_BLOCKS_STORE,
+          MID_PRICE_BLOCKS_STORE,
+          TRADE_BLOCKS_STORE,
+          TRADE_BUCKETS_RAW_STORE,
+        ],
+        'readwrite'
+      );
       await Promise.all([
         tx.objectStore(ORDERBOOK_BLOCKS_STORE).clear(),
         tx.objectStore(MID_PRICE_BLOCKS_STORE).clear(),
+        tx.objectStore(TRADE_BLOCKS_STORE).clear(),
+        tx.objectStore(TRADE_BUCKETS_RAW_STORE).clear(),
       ]);
       await tx.done;
     },

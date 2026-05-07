@@ -1,4 +1,5 @@
 import { assert } from '@frozik/utils/assert/assert';
+import type { IMidPriceBlockIndexItem } from './block-store/create-mid-price-block-index';
 import {
   MID_PRICE_MAX_WIDTH_PX,
   MID_PRICE_MIN_WIDTH_PX,
@@ -8,7 +9,6 @@ import {
   MID_PRICE_WIDTH_SCALE,
   MSAA_SAMPLE_COUNT,
 } from './constants';
-import type { IMidPriceBlockIndexItem } from './mid-price-types';
 
 export const MID_PRICE_UNIFORMS_BYTES = 64;
 export const MID_PRICE_BLOCK_DESCRIPTOR_BYTES = 16;

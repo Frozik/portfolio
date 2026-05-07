@@ -28,6 +28,7 @@ import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import type { INavProject } from './MobileSectionMenu';
 import { MobileSectionMenu } from './MobileSectionMenu';
 import { useTopNavBack } from './TopNavBackContext';
+import { useTopNavCenterHostSetter } from './TopNavCenterContext';
 
 const GITHUB_URL = 'https://github.com/frozik/portfolio';
 const QR_SIZE_PX = 216;
@@ -108,6 +109,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
   const navigate = useNavigate();
   const fullscreen = useFullscreenLandscape();
   const { config: backConfig } = useTopNavBack();
+  const setCenterHost = useTopNavCenterHostSetter();
 
   const handleBackActivate = useFunction(() => {
     if (backConfig !== null) {
@@ -181,20 +183,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
             </button>
           </div>
 
-          {isLanding && (
-            <div className="hidden font-mono text-xs text-landing-fg-dim min-[990px]:flex min-[990px]:gap-8">
-              {welcomeT.nav.sections.map(section => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="transition-colors hover:text-landing-fg"
-                >
-                  <span className="mr-1.5 text-landing-fg-faint">{section.number}</span>
-                  {section.label}
-                </a>
-              ))}
-            </div>
-          )}
+          <div ref={setCenterHost} className="flex min-w-0 flex-1 items-center justify-center" />
 
           <div className="flex items-center gap-1.5 md:gap-2">
             {fullscreen.isSupported && (

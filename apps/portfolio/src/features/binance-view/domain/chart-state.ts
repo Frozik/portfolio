@@ -1,12 +1,20 @@
+import { BinanceChartRenderer } from '../application/binance-chart-renderer';
+import type { ITradesLayerStoreShape } from '../application/layers/layer-renderer';
 import { drawAxisLabels, drawGrid } from './axis-draw';
-import { BlockRegistry } from './block-registry';
+import { createHeatmapBlockIndex } from './block-store/create-heatmap-block-index';
+import { createMidPriceBlockIndex } from './block-store/create-mid-price-block-index';
+import { createTradesBlockIndex } from './block-store/create-trades-block-index';
 import type { DataController } from './data-controller';
 import type { IBlockFlushEventBridge } from './flush-bridge';
 import { plotWidthCssPx } from './math';
-import { MidPriceBlockIndex } from './mid-price-block-index';
-import type { IFrameOverlayInput, IMidPriceFlushEventBridge, IRenderFrameInput } from './renderer';
-import { BinanceHeatmapRenderer } from './renderer';
+import type {
+  IFrameOverlayInput,
+  IMidPriceFlushEventBridge,
+  IRenderFrameInput,
+  ITradeBlockFlushEventBridge,
+} from './render-frame-types';
 import type { TaskManager } from './task-manager';
+import type { IViewportStats } from './trades-scaling';
 import type { UnixTimeMs } from './types';
 import { ViewportController } from './viewport-controller';
 
@@ -39,14 +47,15 @@ export interface IBinanceChartStateInitParams {
  */
 export class BinanceChartState {
   readonly canvas: HTMLCanvasElement;
-  readonly registry = new BlockRegistry();
-  readonly midPriceIndex = new MidPriceBlockIndex();
+  readonly registry = createHeatmapBlockIndex();
+  readonly midPriceIndex = createMidPriceBlockIndex();
+  readonly tradesIndex = createTradesBlockIndex();
 
   private readonly pageOpenTimeMs: UnixTimeMs;
   private readonly updateSpeedMs: number;
   private priceStep: number;
 
-  private renderer: BinanceHeatmapRenderer | null = null;
+  private renderer: BinanceChartRenderer | null = null;
   private viewportControllerInternal: ViewportController | null = null;
 
   constructor(params: IBinanceChartStateParams) {
@@ -70,14 +79,25 @@ export class BinanceChartState {
     return this.viewportControllerInternal;
   }
 
+  /**
+   * Vertical price step used for cell sizing — exposed so the
+   * presentation layer can size the trade-bucket hit-test floor radius
+   * (`priceStep / priceRange × canvasHeightPx`) without dereferencing
+   * the renderer's frame input.
+   */
+  get currentPriceStep(): number {
+    return this.priceStep;
+  }
+
   async init(params: IBinanceChartStateInitParams): Promise<boolean> {
-    this.renderer = await BinanceHeatmapRenderer.create({
+    this.renderer = await BinanceChartRenderer.create({
       canvas: this.canvas,
       registry: this.registry,
       midPriceIndex: this.midPriceIndex,
       taskManager: params.taskManager,
       updateSpeedMs: this.updateSpeedMs,
       priceStep: this.priceStep,
+      chartState: this,
     });
 
     if (this.renderer === null) {
@@ -116,6 +136,41 @@ export class BinanceChartState {
     this.renderer?.writeFlushedMidPriceSamples(event);
   }
 
+  /**
+   * Single-writer entrypoint for the trades layer: forwards the
+   * block's `Float32Array` reference into the layer's descriptor
+   * cache (via the renderer) and upserts the matching `tradesIndex`
+   * entry. Mirrors `ingestMidPriceFlush` but keeps the index upsert
+   * at the chart-state layer so the trades layer renderer doesn't own
+   * the spatial index — see `trades-layer-renderer.ts` for the
+   * single-writer rationale.
+   */
+  ingestTradesFlush(event: ITradeBlockFlushEventBridge): void {
+    this.renderer?.writeFlushedTrades(event);
+    const meta = event.block;
+    this.tradesIndex.upsert({
+      minX: meta.firstBucketStartMs,
+      maxX: meta.lastBucketStartMs,
+      minY: 0,
+      maxY: 0,
+      blockId: meta.blockId,
+      textureRowIndex: meta.textureRowIndex,
+      bucketCount: meta.bucketCount,
+      basePrice: meta.basePrice,
+    });
+  }
+
+  /**
+   * Forward observable trades-store handle to the renderer so the
+   * trades layer can read `hoveredBucketKey` once per frame in
+   * `computeFrameState`. Called by the orchestrator
+   * (`BinanceViewStore.attachCanvas`) once the trades store has been
+   * constructed.
+   */
+  setTradesStore(view: ITradesLayerStoreShape | undefined): void {
+    this.renderer?.setTradesStore(view);
+  }
+
   setPriceStep(priceStep: number): void {
     this.priceStep = priceStep;
     this.viewportControllerInternal?.setPriceStep(priceStep);
@@ -127,6 +182,27 @@ export class BinanceChartState {
 
   releaseMidPriceBlockSlot(blockId: UnixTimeMs): void {
     this.renderer?.releaseMidPriceBlockSlot(blockId);
+  }
+
+  /**
+   * Drop the trade-block's GPU descriptor cache + its `tradesIndex`
+   * entry. Called by the orchestrator (via `TradesStreamStore`) when
+   * the rolling window evicts a block past `MAX_TRADE_BLOCKS_IN_RAM`.
+   */
+  releaseTradesBlockSlot(blockId: UnixTimeMs): void {
+    this.renderer?.releaseTradesBlockSlot(blockId);
+    this.tradesIndex.remove(blockId);
+  }
+
+  /**
+   * Read the trade layer's most recent per-frame `(vMin, vMax)` volume
+   * envelope from the renderer. Used by `TradesStreamStore.findBucketAt`
+   * to derive hit-test radii using the same envelope the renderer used
+   * this frame — keeps the click hit-zone congruent with the rendered
+   * radius envelope across all scaling modes.
+   */
+  getTradesLayerLastFrameStats(): IViewportStats | undefined {
+    return this.renderer?.getTradesLayerLastFrameStats();
   }
 
   dispose(): void {

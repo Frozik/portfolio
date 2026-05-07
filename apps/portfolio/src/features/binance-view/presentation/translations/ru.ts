@@ -12,6 +12,8 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     error: 'Ошибка подключения',
     unsupported:
       'WebGPU-устройство не поддерживает требуемые лимиты (maxTextureDimension2D ≥ 8192)',
+    tradesLabel: 'Сделки',
+    tradesGated: 'Ждём стакан',
   },
   tooltip: {
     time: 'Время',
@@ -22,6 +24,18 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     ask: 'Ask',
     loading: 'Загрузка…',
   },
+  tradePopup: {
+    close: 'Закрыть',
+    empty: 'Сделки не кэшированы',
+    loading: 'Загрузка истории…',
+    buy: 'ПОКУПКА',
+    sell: 'ПРОДАЖА',
+    summary: (volume: string, vwap: string): string => `Σ ${volume} @ ${vwap}`,
+    buyShare: (percent: string): string => `Покупка ${percent}%`,
+    sellShare: (percent: string): string => `Продажа ${percent}%`,
+    headerAggregates: (volume: string, vwap: string, count: number): string =>
+      `Σ ${volume} · vwap ${vwap} · сделок ${count}`,
+  },
   comingSoon: 'Тепловая карта стакана Binance — скоро',
   live: {
     instrument: (instrument: string): string => `Инструмент: ${instrument}`,
@@ -29,8 +43,13 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     snapshotReceived: 'REST-снепшот получен, слушаем обновления',
     totalSnapshots: (count: number): string => `Всего снепшотов получено: ${count}`,
     lastSnapshotTime: (isoTime: string): string => `Последний снепшот: ${isoTime}`,
+    totalTrades: (count: number): string => `Всего сделок получено: ${count}`,
+    lastTradeTime: (isoTime: string): string => `Последняя сделка: ${isoTime}`,
+    websocketLabel: 'Websocket',
+    orderbookSection: 'Стакан',
+    tradesSection: 'Сделки',
     errorPrefix: 'Ошибка: ',
-    expand: 'Показать детали',
-    collapse: 'Скрыть детали',
+    openStatusDetails: 'Открыть детали статуса',
+    closeStatusDetails: 'Закрыть детали статуса',
   },
 };

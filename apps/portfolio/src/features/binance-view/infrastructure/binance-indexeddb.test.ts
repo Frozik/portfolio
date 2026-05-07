@@ -189,8 +189,8 @@ describe('binance-indexeddb (v3)', () => {
     expect(await db.midPrice.countBlocks()).toBe(0);
   });
 
-  test('default version is v3', () => {
-    expect(DEFAULT_DB_VERSION).toBe(3);
+  test('default version is v4', () => {
+    expect(DEFAULT_DB_VERSION).toBe(4);
   });
 
   test('exported store names match the IDB object stores', async () => {

@@ -8,6 +8,8 @@ export const binanceTranslationsEn = {
     resyncing: 'Resyncing orderbook…',
     error: 'Connection error',
     unsupported: 'WebGPU device does not meet requirements (maxTextureDimension2D >= 8192)',
+    tradesLabel: 'Trades',
+    tradesGated: 'Waiting for book',
   },
   tooltip: {
     time: 'Time',
@@ -18,6 +20,18 @@ export const binanceTranslationsEn = {
     ask: 'Ask',
     loading: 'Loading…',
   },
+  tradePopup: {
+    close: 'Close',
+    empty: 'No trades cached',
+    loading: 'Loading from history…',
+    buy: 'BUY',
+    sell: 'SELL',
+    summary: (volume: string, vwap: string): string => `Σ ${volume} @ ${vwap}`,
+    buyShare: (percent: string): string => `Buy ${percent}%`,
+    sellShare: (percent: string): string => `Sell ${percent}%`,
+    headerAggregates: (volume: string, vwap: string, count: number): string =>
+      `Σ ${volume} · vwap ${vwap} · ${count} trades`,
+  },
   comingSoon: 'Binance orderbook heatmap — coming soon',
   live: {
     instrument: (instrument: string): string => `Instrument: ${instrument}`,
@@ -25,8 +39,13 @@ export const binanceTranslationsEn = {
     snapshotReceived: 'REST snapshot received, listening for updates',
     totalSnapshots: (count: number): string => `Total snapshots received: ${count}`,
     lastSnapshotTime: (isoTime: string): string => `Last snapshot: ${isoTime}`,
+    totalTrades: (count: number): string => `Total trades received: ${count}`,
+    lastTradeTime: (isoTime: string): string => `Last trade: ${isoTime}`,
+    websocketLabel: 'Websocket',
+    orderbookSection: 'Orderbook',
+    tradesSection: 'Trades',
     errorPrefix: 'Error: ',
-    expand: 'Show details',
-    collapse: 'Hide details',
+    openStatusDetails: 'Open status details',
+    closeStatusDetails: 'Close status details',
   },
 } as const;

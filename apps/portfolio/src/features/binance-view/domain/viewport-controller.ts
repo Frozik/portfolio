@@ -1,5 +1,7 @@
 import { clamp } from 'lodash-es';
-import type { BlockRegistry } from './block-registry';
+
+import type { BlockSpatialIndex } from './block-store/block-spatial-index';
+import type { IHeatmapBlockIndexItem } from './block-store/create-heatmap-block-index';
 import {
   DEFAULT_PRICE_MAX,
   DEFAULT_PRICE_MIN,
@@ -13,13 +15,11 @@ import {
   PIXELS_PER_MILLISECOND,
   VIEW_LERP_SPEED,
   VIEW_SNAP_THRESHOLD_MS,
-  WHEEL_ZOOM_STEP,
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD_LEVELS,
 } from './constants';
 import type { DataController } from './data-controller';
 import { getMidPrice } from './get-mid-price';
-
 import { lerp, plotWidthCssPx } from './math';
 import type { TaskManager } from './task-manager';
 import type { IHeatmapViewport, IOrderbookSnapshot, UnixTimeMs } from './types';
@@ -32,17 +32,16 @@ import {
   stepViewport,
   viewTimeStartMs,
 } from './viewport';
+import { ViewportInputController } from './viewport-input-controller';
 
 const DEFAULT_MID_PRICE_INTERVAL_MS = 500;
-
-const MIN_DRAG_DISTANCE_PX = 2;
 
 export interface IViewportControllerParams {
   readonly canvas: HTMLCanvasElement;
   readonly taskManager: TaskManager;
   readonly pageOpenTimeMs: UnixTimeMs;
   readonly priceStep: number;
-  readonly getRegistry: () => BlockRegistry;
+  readonly getRegistry: () => BlockSpatialIndex<IHeatmapBlockIndexItem>;
   /**
    * Optional snapshot source for auto-centering the Y axis on the
    * rightmost visible snapshot. When supplied, the controller
@@ -55,21 +54,16 @@ export interface IViewportControllerParams {
   readonly midPriceIntervalMs?: number;
 }
 
-interface IActivePointer {
-  readonly id: number;
-  clientX: number;
-  clientY: number;
-}
-
 /**
  * Single owner of the heatmap viewport: time-pan, Y-zoom,
  * follow-mode, and inertia for all of the above.
  *
- * Input events are only accumulated here (no viewport mutation inside
- * handlers) — `tick()` drains the queue once per RAF and applies
- * everything through the same lerp pipeline. This keeps the animation
- * smooth regardless of whether the browser fires pointermove at 60 or
- * 240 Hz, and puts inertia (pan + zoom) in a single place.
+ * Input events are accumulated by {@link ViewportInputController} (no
+ * viewport mutation inside handlers) — `tick()` drains the queue once
+ * per RAF and applies everything through the same lerp pipeline. This
+ * keeps the animation smooth regardless of whether the browser fires
+ * pointermove at 60 or 240 Hz, and puts inertia (pan + zoom) in a
+ * single place.
  *
  * Y-axis layout is derived, not measured: `priceMin/Max = midPrice ±
  * (visibleLevels / 2) × priceStep`. The target mid-price is pushed in
@@ -85,7 +79,8 @@ export class ViewportController {
   private readonly canvas: HTMLCanvasElement;
   private readonly taskManager: TaskManager;
   private readonly pageOpenTimeMs: UnixTimeMs;
-  private readonly getRegistry: () => BlockRegistry;
+  private readonly getRegistry: () => BlockSpatialIndex<IHeatmapBlockIndexItem>;
+  private readonly input: ViewportInputController;
 
   private priceStep: number;
   private midPrice: number | undefined = undefined;
@@ -97,20 +92,6 @@ export class ViewportController {
 
   private visibleLevels = INITIAL_VISIBLE_LEVELS;
   private targetVisibleLevels = INITIAL_VISIBLE_LEVELS;
-  private pendingZoomFactor = 1;
-
-  private pointers: IActivePointer[] = [];
-  private lastPointerX = 0;
-  private pendingDragDistance = 0;
-  private pendingDeltaPx = 0;
-  private isActuallyPanning = false;
-  private pinchInitialDistance: number | undefined = undefined;
-  /**
-   * Latest cursor position in CSS pixels relative to the canvas origin,
-   * or `undefined` when the pointer is outside. Consumed by the
-   * crosshair overlay in `axis-draw.ts` via {@link getCursorCss}.
-   */
-  private cursorCssPosition: { x: number; y: number } | undefined = undefined;
 
   private readonly midPriceUnsubscribe: (() => void) | undefined;
   private readonly midPriceSource: DataController | undefined;
@@ -155,18 +136,13 @@ export class ViewportController {
     this.viewport.priceMin = DEFAULT_PRICE_MIN;
     this.viewport.priceMax = DEFAULT_PRICE_MAX;
 
-    this.handlePointerDown = this.handlePointerDown.bind(this);
-    this.handlePointerMove = this.handlePointerMove.bind(this);
-    this.handlePointerUp = this.handlePointerUp.bind(this);
-    this.handlePointerLeave = this.handlePointerLeave.bind(this);
-    this.handleWheel = this.handleWheel.bind(this);
-
-    this.canvas.addEventListener('pointerdown', this.handlePointerDown);
-    this.canvas.addEventListener('pointermove', this.handlePointerMove);
-    this.canvas.addEventListener('pointerup', this.handlePointerUp);
-    this.canvas.addEventListener('pointercancel', this.handlePointerLeave);
-    this.canvas.addEventListener('pointerleave', this.handlePointerLeave);
-    this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
+    this.input = new ViewportInputController({
+      canvas: this.canvas,
+      taskManager: this.taskManager,
+      viewport: this.viewport,
+      onPanStart: this.handlePanStart,
+    });
+    this.input.attach();
 
     if (params.dataController !== undefined) {
       this.midPriceSource = params.dataController;
@@ -180,11 +156,11 @@ export class ViewportController {
   }
 
   get isPanning(): boolean {
-    return this.pointers.length === 1 && this.isActuallyPanning;
+    return this.input.isPanning;
   }
 
   get isZooming(): boolean {
-    return this.pointers.length >= 2;
+    return this.input.isZooming;
   }
 
   get isFollowing(): boolean {
@@ -199,10 +175,10 @@ export class ViewportController {
 
     const clampInput = this.buildClampInput();
 
-    if (this.isPanning) {
-      if (this.pendingDeltaPx !== 0) {
-        const deltaMs = -this.pendingDeltaPx / PIXELS_PER_MILLISECOND;
-        this.pendingDeltaPx = 0;
+    if (this.input.isPanning) {
+      const pendingDeltaPx = this.input.consumePendingDeltaPx();
+      if (pendingDeltaPx !== 0) {
+        const deltaMs = -pendingDeltaPx / PIXELS_PER_MILLISECOND;
         this.viewport.targetViewTimeEndMs = clampTargetEnd(
           (this.viewport.targetViewTimeEndMs + deltaMs) as UnixTimeMs,
           clampInput
@@ -218,7 +194,11 @@ export class ViewportController {
       clampInput
     );
 
-    stepViewport({ viewport: this.viewport, input: clampInput, isInteracting: this.isPanning });
+    stepViewport({
+      viewport: this.viewport,
+      input: clampInput,
+      isInteracting: this.input.isPanning,
+    });
 
     // Re-arm follow-pin only when the user actually pushed the target
     // all the way to the right clamp — i.e. scrolled past the live
@@ -248,7 +228,7 @@ export class ViewportController {
     // `pointermove` never fires, so without this raise the RAF loop
     // would drop to idle FPS and the time readout under the cursor
     // would stutter behind the actual data position.
-    if (this.cursorCssPosition !== undefined) {
+    if (this.input.getCursorCss() !== undefined) {
       this.taskManager.raise(FPS_INTERACTION);
     }
   }
@@ -350,12 +330,7 @@ export class ViewportController {
     this.midPriceUnsubscribe?.();
     this.midPriceToken++;
     this.lastResolvedSnapshot = undefined;
-    this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-    this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-    this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-    this.canvas.removeEventListener('pointercancel', this.handlePointerLeave);
-    this.canvas.removeEventListener('pointerleave', this.handlePointerLeave);
-    this.canvas.removeEventListener('wheel', this.handleWheel);
+    this.input.detach();
   }
 
   /**
@@ -365,7 +340,16 @@ export class ViewportController {
    * (no MobX observable) since the renderer pulls it every frame anyway.
    */
   getCursorCss(): { readonly x: number; readonly y: number } | undefined {
-    return this.cursorCssPosition;
+    return this.input.getCursorCss();
+  }
+
+  /**
+   * Latest snapshot resolved at the right edge of the viewport, or
+   * `undefined` before the first driver tick completes. Consumed by
+   * the axis overlay to render volume bars in the price panel.
+   */
+  getLastResolvedSnapshot(): IOrderbookSnapshot | undefined {
+    return this.lastResolvedSnapshot;
   }
 
   /**
@@ -396,21 +380,25 @@ export class ViewportController {
   };
 
   /**
-   * Latest snapshot resolved at the right edge of the viewport, or
-   * `undefined` before the first driver tick completes. Consumed by
-   * the axis overlay to render volume bars in the price panel.
+   * Fired by {@link ViewportInputController} the moment a single-pointer
+   * drag crosses the start-of-pan threshold. Snaps the viewport's
+   * `targetViewTimeEndMs` to the current view (so subsequent deltas
+   * accumulate from where the user actually grabbed the chart) and
+   * drops the sticky follow-pin — `tick` re-arms it once the user pans
+   * forward enough that the viewport sits inside the follow epsilon.
    */
-  getLastResolvedSnapshot(): IOrderbookSnapshot | undefined {
-    return this.lastResolvedSnapshot;
-  }
+  private readonly handlePanStart = (): void => {
+    this.viewport.targetViewTimeEndMs = this.viewport.viewTimeEndMs;
+    this.followPinned = false;
+  };
 
   private applyPendingZoom(): void {
-    if (this.pendingZoomFactor === 1) {
+    const pendingZoomFactor = this.input.consumePendingZoomFactor();
+    if (pendingZoomFactor === 1) {
       return;
     }
-    const next = this.targetVisibleLevels * this.pendingZoomFactor;
+    const next = this.targetVisibleLevels * pendingZoomFactor;
     this.targetVisibleLevels = clamp(next, MIN_VISIBLE_LEVELS, MAX_VISIBLE_LEVELS);
-    this.pendingZoomFactor = 1;
     this.taskManager.raise(FPS_INTERACTION);
   }
 
@@ -453,144 +441,4 @@ export class ViewportController {
       lastDisplaySnapshotTimeMs: this.lastDisplayMs,
     };
   }
-
-  private handlePointerDown(event: PointerEvent): void {
-    if (this.pointers.length >= 2) {
-      return;
-    }
-    this.pointers.push({
-      id: event.pointerId,
-      clientX: event.clientX,
-      clientY: event.clientY,
-    });
-    this.canvas.setPointerCapture(event.pointerId);
-
-    if (this.pointers.length === 1) {
-      this.lastPointerX = event.clientX;
-      this.pendingDragDistance = 0;
-      this.pendingDeltaPx = 0;
-      this.isActuallyPanning = false;
-    } else {
-      // Second pointer: transition into pinch; cancel any pending pan inertia.
-      this.isActuallyPanning = false;
-      this.pendingDeltaPx = 0;
-      this.viewport.panVelocityMsPerFrame = 0;
-      this.pinchInitialDistance = this.distanceBetweenPointers();
-    }
-  }
-
-  private handlePointerMove(event: PointerEvent): void {
-    // Track cursor for every move, not just drags — the crosshair
-    // overlay (and any future hover affordance) needs the position
-    // regardless of whether a button is held. Raising the FPS on each
-    // move keeps the crosshair glide-smooth; it auto-decays back to
-    // idle once the cursor stops.
-    const canvasRect = this.canvas.getBoundingClientRect();
-    this.cursorCssPosition = {
-      x: event.clientX - canvasRect.left,
-      y: event.clientY - canvasRect.top,
-    };
-    this.taskManager.raise(FPS_INTERACTION);
-
-    const pointer = this.pointers.find(candidate => candidate.id === event.pointerId);
-    if (pointer === undefined) {
-      return;
-    }
-    pointer.clientX = event.clientX;
-    pointer.clientY = event.clientY;
-
-    if (this.pointers.length >= 2) {
-      this.accumulatePinchZoom();
-      return;
-    }
-
-    const deltaPx = event.clientX - this.lastPointerX;
-    this.lastPointerX = event.clientX;
-
-    this.pendingDragDistance += Math.abs(deltaPx);
-    if (!this.isActuallyPanning && this.pendingDragDistance >= MIN_DRAG_DISTANCE_PX) {
-      this.isActuallyPanning = true;
-      // Break follow-mode: pin target to the current view and drop
-      // the sticky follow intent. `tick` will re-arm the pin when the
-      // user pans forward enough that the viewport sits inside the
-      // follow epsilon again.
-      this.viewport.targetViewTimeEndMs = this.viewport.viewTimeEndMs;
-      this.followPinned = false;
-    }
-
-    if (this.isActuallyPanning) {
-      this.pendingDeltaPx += deltaPx;
-    }
-  }
-
-  private handlePointerLeave(event: PointerEvent): void {
-    this.cursorCssPosition = undefined;
-    this.handlePointerUp(event);
-  }
-
-  private handlePointerUp(event: PointerEvent): void {
-    const beforeCount = this.pointers.length;
-    this.pointers = this.pointers.filter(candidate => candidate.id !== event.pointerId);
-    this.canvas.releasePointerCapture?.(event.pointerId);
-
-    if (beforeCount >= 2 && this.pointers.length < 2) {
-      this.pinchInitialDistance = undefined;
-      // After pinch release, a lingering pointer shouldn't immediately
-      // start panning — reset drag state so the user has to pass the
-      // distance threshold again.
-      this.pendingDragDistance = 0;
-      if (this.pointers.length === 1) {
-        this.lastPointerX = this.pointers[0].clientX;
-      }
-    }
-
-    if (this.pointers.length === 0) {
-      if (this.isActuallyPanning) {
-        this.taskManager.raise(FPS_FOLLOW_DRIFT);
-      }
-      this.isActuallyPanning = false;
-    }
-  }
-
-  private handleWheel(event: WheelEvent): void {
-    event.preventDefault();
-    const direction = normalizeWheelDirection(event);
-    if (direction === 0) {
-      return;
-    }
-    const factor = direction > 0 ? 1 + WHEEL_ZOOM_STEP : 1 / (1 + WHEEL_ZOOM_STEP);
-    this.pendingZoomFactor *= factor;
-  }
-
-  private accumulatePinchZoom(): void {
-    if (this.pointers.length < 2 || this.pinchInitialDistance === undefined) {
-      return;
-    }
-    const currentDistance = this.distanceBetweenPointers();
-    if (currentDistance === 0 || this.pinchInitialDistance === 0) {
-      return;
-    }
-    const ratio = this.pinchInitialDistance / currentDistance;
-    if (Math.abs(ratio - 1) < 1e-4) {
-      return;
-    }
-    this.pendingZoomFactor *= ratio;
-    this.pinchInitialDistance = currentDistance;
-  }
-
-  private distanceBetweenPointers(): number {
-    if (this.pointers.length < 2) {
-      return 0;
-    }
-    const dx = this.pointers[0].clientX - this.pointers[1].clientX;
-    const dy = this.pointers[0].clientY - this.pointers[1].clientY;
-    return Math.hypot(dx, dy);
-  }
-}
-
-function normalizeWheelDirection(event: WheelEvent): number {
-  if (event.deltaY === 0) {
-    return 0;
-  }
-  return Math.sign(event.deltaY);
 }
