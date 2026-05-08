@@ -1,4 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
+
 import type { TQualityTier } from '../domain/adaptive-quality';
 import { MAX_PARTICIPANTS, RTT_HISTORY_MAX_SAMPLES } from '../domain/constants';
 import type { TEmotion } from '../domain/emotion';

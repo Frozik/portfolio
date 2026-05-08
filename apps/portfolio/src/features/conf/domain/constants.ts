@@ -32,9 +32,6 @@ export const MIN_LANDMARKS_FOR_GLASSES = LANDMARK_INDEX_RIGHT_EYE_INNER + 1;
  */
 export const GLASSES_BASE_WIDTH_PX = 240;
 
-/** Target detection cadence. 30 Hz is a comfortable budget for a dual GPU-backed FaceLandmarker. */
-export const DETECT_MIN_INTERVAL_MS = 33 as Milliseconds;
-
 /** Signaling WebSocket reconnect backoff bounds. */
 export const SIGNALING_RECONNECT_MIN_MS = 500 as Milliseconds;
 export const SIGNALING_RECONNECT_MAX_MS = 8_000 as Milliseconds;

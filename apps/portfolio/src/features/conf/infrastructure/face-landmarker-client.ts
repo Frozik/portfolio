@@ -37,12 +37,15 @@ export type TFaceLandmarkerDetectResult = IFaceLandmarkerDetection | null;
 
 export interface IFaceLandmarkerClient {
   init(): Promise<void>;
-  detect(
-    bitmap: ImageBitmap,
-    timestamp: number,
-    videoWidth: number,
-    videoHeight: number
-  ): Promise<TFaceLandmarkerDetectResult>;
+  /**
+   * Run face detection on `bitmap` for the given monotonic `timestamp`.
+   * The caller retains ownership of `bitmap`: this method does NOT close
+   * it on any code path. That contract lets the composer keep the same
+   * bitmap around to paint as the output frame after detection finishes,
+   * guaranteeing video pixels and glasses landmarks come from a single
+   * snapshot.
+   */
+  detect(bitmap: ImageBitmap, timestamp: number): Promise<TFaceLandmarkerDetectResult>;
   dispose(): void;
 }
 
@@ -66,6 +69,27 @@ async function createLandmarker(delegate: 'GPU' | 'CPU'): Promise<FaceLandmarker
     numFaces: NUM_FACES,
     outputFaceBlendshapes: true,
   });
+}
+
+/**
+ * The MediaPipe GPU delegate is documented-broken on Android Chrome:
+ * its WebGL path produces `texImage2D: no video` /
+ * `GL_INVALID_FRAMEBUFFER_OPERATION` errors when binding live camera
+ * frames, which corrupts the VIDEO-mode tracker's `NormalizedRect`
+ * with NaNs and makes every subsequent `detectForVideo` throw
+ * `ROI contains NaN values`. The CPU (XNNPACK) path takes a different
+ * code path entirely and is the community-confirmed workaround. See
+ * google-ai-edge/mediapipe issues #5190, #5908, #5100, #5152, #4711.
+ *
+ * A UA sniff is the right granularity here: GPU init "succeeds" on
+ * Android — the failure shows up only at the first detect call — so a
+ * try/catch fallback is too late (the landmarker is already wedged).
+ */
+function shouldForceCpuDelegate(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  return /Android/i.test(navigator.userAgent);
 }
 
 function pickDetection(result: FaceLandmarkerResult): IFaceLandmarkerDetection | null {
@@ -97,11 +121,10 @@ function pickDetection(result: FaceLandmarkerResult): IFaceLandmarkerDetection |
  * call per detection on modern hardware — acceptable at 30 FPS and the
  * simplest shape compatible with the portfolio's dev + build setup.
  *
- * The wrapper enforces a single in-flight detection per client: if
- * `detect()` is called while another frame is being processed, the
- * incoming `ImageBitmap` is closed immediately and the call resolves
- * with `null`. Dropping a frame is always preferable to queueing and
- * amplifying latency.
+ * The wrapper enforces a single in-flight detection per client: a
+ * `detect()` call made while another is still in flight resolves with
+ * `null` immediately. The caller owns the `ImageBitmap` lifecycle on
+ * every code path — see `IFaceLandmarkerClient.detect`.
  */
 export function createFaceLandmarkerClient(
   params: IFaceLandmarkerClientParams = {}
@@ -114,11 +137,13 @@ export function createFaceLandmarkerClient(
     if (landmarker !== null || isDisposed) {
       return;
     }
-    try {
-      landmarker = await createLandmarker('GPU');
-      return;
-    } catch {
-      // GPU delegate is unavailable on some devices; fall back to WASM.
+    if (!shouldForceCpuDelegate()) {
+      try {
+        landmarker = await createLandmarker('GPU');
+        return;
+      } catch {
+        // GPU delegate is unavailable on some devices; fall back to WASM.
+      }
     }
     try {
       landmarker = await createLandmarker('CPU');
@@ -131,16 +156,12 @@ export function createFaceLandmarkerClient(
 
   async function detect(
     bitmap: ImageBitmap,
-    timestamp: number,
-    videoWidth: number,
-    videoHeight: number
+    timestamp: number
   ): Promise<TFaceLandmarkerDetectResult> {
     if (isDisposed || isProcessing || landmarker === null) {
-      bitmap.close();
       return null;
     }
-    if (videoWidth <= 0 || videoHeight <= 0) {
-      bitmap.close();
+    if (bitmap.width <= 0 || bitmap.height <= 0) {
       return null;
     }
     isProcessing = true;
@@ -152,7 +173,6 @@ export function createFaceLandmarkerClient(
       params.onError?.(message);
       return null;
     } finally {
-      bitmap.close();
       isProcessing = false;
     }
   }

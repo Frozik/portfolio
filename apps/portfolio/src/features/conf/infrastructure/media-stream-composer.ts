@@ -1,15 +1,13 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 
-import { DETECT_MIN_INTERVAL_MS, GLASSES_BASE_WIDTH_PX } from '../domain/constants';
+import { GLASSES_BASE_WIDTH_PX } from '../domain/constants';
 import type { TEmotion } from '../domain/emotion';
 import { classifyEmotion } from '../domain/emotion';
-import type { IGlassesTransform } from '../domain/glasses-transform';
 import { computeGlassesTransform } from '../domain/glasses-transform';
 import glassesAssetUrl from './assets/glasses.svg?url';
-import type { IFaceLandmarkerClient } from './face-landmarker-client';
+import type { IFaceLandmarkerClient, TFaceLandmarkerDetectResult } from './face-landmarker-client';
 import { createFaceLandmarkerClient } from './face-landmarker-client';
-import { DEFAULT_SMOOTHING_ALPHA, smoothGlassesTransform } from './smoothing';
 
 export interface IMediaStreamComposer {
   readonly stream: MediaStream;
@@ -45,7 +43,6 @@ const GLASSES_DRAW_HEIGHT_PX = GLASSES_INTRINSIC_HEIGHT_PX * GLASSES_SIZE_MULTIP
 const FALLBACK_CANVAS_WIDTH_PX = 640;
 const FALLBACK_CANVAS_HEIGHT_PX = 480;
 const RAD_PER_DEG = Math.PI / 180;
-const DETECTION_STALE_THRESHOLD_MS = 500;
 
 /**
  * Hysteresis for the emotion label so it doesn't flicker on every
@@ -115,15 +112,31 @@ async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
  * Architecture:
  *  - The raw `getUserMedia` stream feeds an off-DOM `<video>` element.
  *  - A frame loop (`requestVideoFrameCallback` with `requestAnimationFrame`
- *    fallback for Firefox) paints the current video frame onto a hidden
- *    `<canvas>`, then — if AR is enabled and a recent landmark result is
- *    available — draws the glasses sprite on top using a 2D affine
- *    transform derived from eye-corner landmarks.
- *  - `canvas.captureStream(targetFps)` exports the composited canvas as a
- *    `MediaStream.videoTrack`; the audio track from the raw stream is
+ *    fallback for Firefox) snapshots the live video into an
+ *    `ImageBitmap` and feeds it into the AR pipeline.
+ *  - The AR pipeline runs face detection on the snapshot, then paints
+ *    the SAME snapshot onto the output canvas with the glasses sprite
+ *    overlaid using a 2D affine transform from the snapshot's
+ *    eye-corner landmarks. Locking video pixels and glasses to the
+ *    same snapshot is what keeps the overlay rigidly attached — there
+ *    is no chase between detection and display because both come from
+ *    one frame.
+ *  - The detector is single-flight. Snapshots taken while detection is
+ *    busy are coalesced: the most recent unprocessed bitmap wins; older
+ *    pending snapshots are closed and discarded. As soon as the current
+ *    detection resolves, the freshest pending snapshot enters the
+ *    pipeline. Output framerate therefore matches the detector's
+ *    throughput (typically 30 Hz on GPU) at the cost of ~10–30 ms of
+ *    output latency vs. the live camera — imperceptible on a call,
+ *    indispensable for rigid glasses lock.
+ *  - When AR is disabled the pipeline is bypassed entirely: each
+ *    `requestVideoFrameCallback` paints `sourceVideo` straight onto the
+ *    output canvas, restoring zero-latency passthrough.
+ *  - `canvas.captureStream(targetFps)` exports the composited canvas as
+ *    a `MediaStream.videoTrack`; the audio track from the raw stream is
  *    attached alongside so the result can be fed directly into an
- *    `RTCPeerConnection`. A single detector per client — the remote
- *    peer receives a video track that already contains the glasses.
+ *    `RTCPeerConnection`. The remote peer receives a video track that
+ *    already contains the glasses.
  *
  * Mute semantics flip `MediaStreamTrack.enabled` on the OUTPUT tracks:
  * the canvas keeps drawing, but muted tracks carry silence / black
@@ -186,15 +199,23 @@ export async function createMediaStreamComposer(
   let isArEnabled = true;
   let isDisposed = false;
 
-  let latestTransform: IGlassesTransform | null = null;
-  let latestTransformAt = 0;
-  let detectionInFlight = false;
-  let lastDetectAt = 0;
+  let isProcessing = false;
+  let pendingBitmap: ImageBitmap | null = null;
+  let pendingBitmapTimestamp = 0;
   let pendingFrameHandle: number | null = null;
 
   let committedEmotion: TEmotion = 'neutral';
   let candidateEmotion: TEmotion | null = null;
   let candidateEmotionCount = 0;
+
+  function releasePendingBitmap(): void {
+    if (pendingBitmap === null) {
+      return;
+    }
+    pendingBitmap.close();
+    pendingBitmap = null;
+    pendingBitmapTimestamp = 0;
+  }
 
   function notifyEmotion(emotion: TEmotion): void {
     emotionListeners.forEach(listener => listener(emotion));
@@ -222,7 +243,9 @@ export async function createMediaStreamComposer(
 
   const landmarker: IFaceLandmarkerClient = createFaceLandmarkerClient({
     onError: () => {
-      latestTransform = null;
+      // Errors surface through detect() returning null; nothing to do
+      // here at the composer layer beyond letting the pipeline skip
+      // glasses for the affected frame.
     },
   });
 
@@ -240,67 +263,114 @@ export async function createMediaStreamComposer(
     track.enabled = enabled;
   }
 
-  function drawFrame(): void {
-    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
-    const hasFreshTransform =
-      latestTransform !== null &&
-      performance.now() - latestTransformAt <= DETECTION_STALE_THRESHOLD_MS;
-    if (!isArEnabled || !hasFreshTransform || latestTransform === null) {
-      return;
-    }
-    context.save();
-    context.translate(latestTransform.translateX, latestTransform.translateY);
-    context.rotate(latestTransform.rotateDeg * RAD_PER_DEG);
-    context.scale(latestTransform.scaleX, latestTransform.scaleY);
-    context.drawImage(
-      glassesImage,
-      -GLASSES_DRAW_WIDTH_PX / 2,
-      -GLASSES_DRAW_HEIGHT_PX / 2,
-      GLASSES_DRAW_WIDTH_PX,
-      GLASSES_DRAW_HEIGHT_PX
-    );
-    context.restore();
-  }
-
-  function maybeRunDetection(timestampMs: number): void {
-    if (!isArEnabled || isDisposed || detectionInFlight) {
-      return;
-    }
-    if (timestampMs - lastDetectAt < DETECT_MIN_INTERVAL_MS) {
-      return;
-    }
+  function paintPassthrough(): void {
     if (sourceVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
       return;
     }
-    lastDetectAt = timestampMs;
-    detectionInFlight = true;
-    void createImageBitmap(sourceVideo)
-      .then(bitmap => landmarker.detect(bitmap, timestampMs, canvas.width, canvas.height))
-      .then(detection => {
-        detectionInFlight = false;
-        if (isDisposed) {
-          return;
-        }
-        if (detection === null) {
-          latestTransform = null;
-          observeEmotion('neutral');
-          return;
-        }
-        observeEmotion(classifyEmotion(detection.blendshapes));
-        const next = computeGlassesTransform(detection.landmarks, {
-          width: canvas.width,
-          height: canvas.height,
-        });
-        if (next === null) {
-          latestTransform = null;
-          return;
-        }
-        latestTransform = smoothGlassesTransform(latestTransform, next, DEFAULT_SMOOTHING_ALPHA);
-        latestTransformAt = performance.now();
-      })
-      .catch(() => {
-        detectionInFlight = false;
+    context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+  }
+
+  async function processBitmap(bitmap: ImageBitmap, timestamp: number): Promise<void> {
+    isProcessing = true;
+    try {
+      let detection: TFaceLandmarkerDetectResult = null;
+      try {
+        detection = await landmarker.detect(bitmap, timestamp);
+      } catch {
+        // landmarker reports errors via onError; fall through with null.
+      }
+      if (isDisposed || !isArEnabled) {
+        return;
+      }
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      if (detection === null) {
+        observeEmotion('neutral');
+        return;
+      }
+      observeEmotion(classifyEmotion(detection.blendshapes));
+      const transform = computeGlassesTransform(detection.landmarks, {
+        width: canvas.width,
+        height: canvas.height,
       });
+      if (transform === null) {
+        return;
+      }
+      context.save();
+      context.translate(transform.translateX, transform.translateY);
+      context.rotate(transform.rotateDeg * RAD_PER_DEG);
+      context.scale(transform.scaleX, transform.scaleY);
+      context.drawImage(
+        glassesImage,
+        -GLASSES_DRAW_WIDTH_PX / 2,
+        -GLASSES_DRAW_HEIGHT_PX / 2,
+        GLASSES_DRAW_WIDTH_PX,
+        GLASSES_DRAW_HEIGHT_PX
+      );
+      context.restore();
+    } finally {
+      bitmap.close();
+      isProcessing = false;
+      // The most recent snapshot taken while we were busy enters the
+      // pipeline immediately — that is what keeps the output as fresh
+      // as the detector allows. If AR was switched off mid-flight the
+      // fast path is already in charge, so drop the pending snapshot.
+      if (pendingBitmap !== null && !isDisposed && isArEnabled) {
+        const nextBitmap = pendingBitmap;
+        const nextTimestamp = pendingBitmapTimestamp;
+        pendingBitmap = null;
+        pendingBitmapTimestamp = 0;
+        void processBitmap(nextBitmap, nextTimestamp);
+      } else {
+        releasePendingBitmap();
+      }
+    }
+  }
+
+  async function captureAndQueue(timestamp: number): Promise<void> {
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(sourceVideo);
+    } catch {
+      return;
+    }
+    if (isDisposed || !isArEnabled) {
+      bitmap.close();
+      return;
+    }
+    if (isProcessing) {
+      // Replace any older pending snapshot — newest frame wins so the
+      // pipeline always wakes up on the freshest pixels.
+      releasePendingBitmap();
+      pendingBitmap = bitmap;
+      pendingBitmapTimestamp = timestamp;
+      return;
+    }
+    void processBitmap(bitmap, timestamp);
+  }
+
+  function onVideoFrame(timestamp: number): void {
+    pendingFrameHandle = null;
+    if (isDisposed) {
+      return;
+    }
+    if (!isArEnabled) {
+      paintPassthrough();
+      scheduleNextFrame();
+      return;
+    }
+    // Android can deliver a `requestVideoFrameCallback` tick before the
+    // decoded frame queue has any pixels (`videoWidth === 0`), at which
+    // point feeding `detectForVideo` immediately produces a NaN ROI and
+    // wedges the VIDEO-mode tracker for the rest of the session. Defer
+    // detection until the source is ready in *both* dimensions.
+    if (
+      sourceVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+      sourceVideo.videoWidth > 0 &&
+      sourceVideo.videoHeight > 0
+    ) {
+      void captureAndQueue(timestamp);
+    }
+    scheduleNextFrame();
   }
 
   function scheduleNextFrame(): void {
@@ -308,24 +378,14 @@ export async function createMediaStreamComposer(
       return;
     }
     if (supportsRvfc(sourceVideo)) {
-      pendingFrameHandle = sourceVideo.requestVideoFrameCallback(now => {
-        pendingFrameHandle = null;
-        drawFrame();
-        // `now` is a monotonic DOMHighResTimeStamp (same clock as
-        // `performance.now()`), unlike `metadata.mediaTime` which
-        // stays at 0 for live `MediaStream` sources in Firefox —
-        // using mediaTime would gate detection off forever there.
-        maybeRunDetection(now);
-        scheduleNextFrame();
-      });
+      // `now` is a monotonic DOMHighResTimeStamp (same clock as
+      // `performance.now()`), unlike `metadata.mediaTime` which stays
+      // at 0 for live `MediaStream` sources in Firefox — using
+      // mediaTime would gate detection off forever there.
+      pendingFrameHandle = sourceVideo.requestVideoFrameCallback(onVideoFrame);
       return;
     }
-    pendingFrameHandle = window.requestAnimationFrame(nowMs => {
-      pendingFrameHandle = null;
-      drawFrame();
-      maybeRunDetection(nowMs);
-      scheduleNextFrame();
-    });
+    pendingFrameHandle = window.requestAnimationFrame(onVideoFrame);
   }
 
   function cancelScheduledFrame(): void {
@@ -375,7 +435,9 @@ export async function createMediaStreamComposer(
     }
     isArEnabled = enabled;
     if (!enabled) {
-      latestTransform = null;
+      // Drop any pending snapshot so we don't paint a stale frame from
+      // the AR pipeline over the live passthrough that takes over now.
+      releasePendingBitmap();
     }
     notifyAr();
   }
@@ -386,6 +448,7 @@ export async function createMediaStreamComposer(
     }
     isDisposed = true;
     cancelScheduledFrame();
+    releasePendingBitmap();
     landmarker.dispose();
     try {
       sourceVideo.pause();
