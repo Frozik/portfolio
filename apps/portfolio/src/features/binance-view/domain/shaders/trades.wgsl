@@ -6,7 +6,10 @@
 // into a buy / sell pie sector by `buyFraction`, and stamps a cyan
 // outline ring of constant device-pixel thickness on top.
 
-const QUAD_POSITIONS = array<vec2<f32>, 6>(
+// Explicit array type required for Safari/Metal — without it the
+// pipeline rejects with "Vertex library failed creation" while Chrome
+// (Naga/Tint) is happy to infer `array<vec2<f32>, 6>` from the RHS.
+const QUAD_POSITIONS: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
     vec2<f32>(-1.0, -1.0), vec2<f32>( 1.0, -1.0), vec2<f32>(-1.0,  1.0),
     vec2<f32>( 1.0, -1.0), vec2<f32>( 1.0,  1.0), vec2<f32>(-1.0,  1.0),
 );

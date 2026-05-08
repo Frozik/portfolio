@@ -344,6 +344,16 @@ export class ViewportController {
   }
 
   /**
+   * Suppress / resume crosshair cursor tracking. Toggled by the
+   * presentation layer when a click-pinned popup opens / closes so
+   * the crosshair doesn't follow a stationary mouse over other
+   * trade buckets while the user is reading the pinned popup.
+   */
+  setCursorSuppressed(value: boolean): void {
+    this.input.setCursorSuppressed(value);
+  }
+
+  /**
    * Latest snapshot resolved at the right edge of the viewport, or
    * `undefined` before the first driver tick completes. Consumed by
    * the axis overlay to render volume bars in the price panel.

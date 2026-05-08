@@ -104,7 +104,13 @@ export function getTradesPipelineDescriptor(params: {
   const sellLinear = hexToLinearRgb(COLOR_SELL);
   const outlineLinear = hexToLinearRgb(COLOR_OUTLINE);
 
-  const overrideConstants = {
+  // Pass overrides only to the stage that actually references them.
+  // Safari/Metal rejects the vertex pipeline ("Vertex library failed
+  // creation") when it sees pipeline-override constants that aren't
+  // used by `vsTrade` — particularly the `COLOR_*` overrides which
+  // are declared without default values. `vsTrade` uses none of these;
+  // every reference lives in `fsTrade`.
+  const fragmentConstants = {
     OUTLINE_PX,
     AA_WIDTH_PX,
     COLOR_BUY_R: buyLinear.r,
@@ -126,12 +132,11 @@ export function getTradesPipelineDescriptor(params: {
     vertex: {
       module,
       entryPoint: 'vsTrade',
-      constants: overrideConstants,
     },
     fragment: {
       module,
       entryPoint: 'fsTrade',
-      constants: overrideConstants,
+      constants: fragmentConstants,
       targets: [{ format, blend: alphaBlend }],
     },
     primitive: { topology: 'triangle-list' },

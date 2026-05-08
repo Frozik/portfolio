@@ -295,6 +295,7 @@ describe('TradesStreamStore', () => {
     const pointer = {
       worldTimeMs: SECOND_T_MS,
       priceTickPx: 10,
+      msPerPx: 0,
       pointerPx: { x: 50, y: 50 },
       worldToPx: () => ({ x: 50, y: 50 }),
     };
@@ -334,6 +335,7 @@ describe('TradesStreamStore', () => {
     const pointer = {
       worldTimeMs: SECOND_T_MS,
       priceTickPx: 10,
+      msPerPx: 0,
       pointerPx: { x: 50, y: 50 },
       worldToPx: () => ({ x: 50, y: 50 }),
     };

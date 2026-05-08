@@ -30,6 +30,16 @@ export interface ITradeHitTestPointer {
    * `build-trade-hit-test-pointer.ts` for the full rationale.
    */
   readonly priceTickPx: number;
+  /**
+   * Time-units (ms) per CSS pixel along the X axis at the time of the
+   * hit-test. Used to widen the spatial-index search range so a tap
+   * landing on the visual edge of a wide whale-bucket still reaches
+   * the bucket centre — without this, on narrow viewports the static
+   * `HIT_TOLERANCE_MS = 2 s` floor is smaller than the on-screen
+   * radius (in time-units) of a max-radius circle and the bucket gets
+   * silently filtered out.
+   */
+  readonly msPerPx: number;
   /** Pointer position in CSS pixels relative to canvas top-left. */
   readonly pointerPx: { readonly x: number; readonly y: number };
   /** Project a world-space point into CSS-px canvas coordinates. */
@@ -63,17 +73,30 @@ export function findBucketsAt(
   layerStats: IViewportStats | undefined,
   blockData: ReadonlyMap<UnixTimeMs, Float32Array>
 ): readonly ITradeBucketHitTestResult[] {
+  const stats = layerStats ?? computeBucketViewportStats([], DEFAULT_SCALING_MODE);
+  const rMinPx = pointer.priceTickPx * RADIUS_MIN_PRICE_TICK_MULT;
+  const rMaxPx = pointer.priceTickPx * RADIUS_MAX_PRICE_TICK_MULT;
+
+  // Spatial-index search range must cover the worst-case on-screen
+  // radius converted to time. A whale-bucket rendered at the px floor
+  // / cap can stretch ~1.5× a price-tick wide; on a narrow mobile
+  // viewport that easily exceeds the static `HIT_TOLERANCE_MS = 2 s`
+  // floor, and the bucket centre falls outside the index search
+  // window — the tap "lands on the circle" visually but the resolver
+  // never sees it. Widen tolerance to the bigger of the static floor
+  // and the visual envelope so the search is consistent with what
+  // the user actually sees.
+  const maxHitRadiusPx = Math.max(rMaxPx + HIT_AREA_RADIUS_PADDING_PX, HIT_AREA_RADIUS_MIN_PX);
+  const dynamicToleranceMs = maxHitRadiusPx * pointer.msPerPx;
+  const toleranceMs = Math.max(HIT_TOLERANCE_MS, dynamicToleranceMs);
+
   const items = tradesIndex.searchRange(
-    (pointer.worldTimeMs - HIT_TOLERANCE_MS) as UnixTimeMs,
-    (pointer.worldTimeMs + HIT_TOLERANCE_MS) as UnixTimeMs
+    (pointer.worldTimeMs - toleranceMs) as UnixTimeMs,
+    (pointer.worldTimeMs + toleranceMs) as UnixTimeMs
   );
   if (items.length === 0) {
     return [];
   }
-
-  const stats = layerStats ?? computeBucketViewportStats([], DEFAULT_SCALING_MODE);
-  const rMinPx = pointer.priceTickPx * RADIUS_MIN_PRICE_TICK_MULT;
-  const rMaxPx = pointer.priceTickPx * RADIUS_MAX_PRICE_TICK_MULT;
 
   const hits: ITradeBucketHitTestResult[] = [];
   for (const item of items) {

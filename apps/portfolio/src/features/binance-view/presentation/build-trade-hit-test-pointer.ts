@@ -85,6 +85,7 @@ export function buildTradeHitTestPointerFromCss(
 
   const fracX = cssX / plotWidthCss;
   const worldTimeMs = (viewTimeStartMs + fracX * timeRangeMs) as UnixTimeMs;
+  const msPerPx = timeRangeMs / plotWidthCss;
 
   const canvasHeightCssPx = canvasRect.height;
   const priceStep = chartState.currentPriceStep;
@@ -102,6 +103,7 @@ export function buildTradeHitTestPointerFromCss(
   return {
     worldTimeMs,
     priceTickPx,
+    msPerPx,
     pointerPx: { x: cssX, y: cssY },
     worldToPx,
   };

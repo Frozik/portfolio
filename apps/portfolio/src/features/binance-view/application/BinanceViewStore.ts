@@ -270,7 +270,11 @@ export class BinanceViewStore {
   }
 
   async resolveCellAt(pointerPx: { x: number; y: number }): Promise<void> {
-    if (this.orderbookStoreInternal === undefined) {
+    // `chartState === undefined` means init failed (e.g. Safari WebGPU
+    // pipeline rejection): the orderbook sub-store exists so the badge
+    // can surface `'unsupported'`, but its hit-test path reads
+    // `chartState.viewport` which throws before init. Skip silently.
+    if (this.chartState === undefined || this.orderbookStoreInternal === undefined) {
       return;
     }
     await this.orderbookStoreInternal.resolveCellAt(pointerPx);

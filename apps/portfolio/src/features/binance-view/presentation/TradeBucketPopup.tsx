@@ -15,6 +15,7 @@ import { formatBucketStart } from './trade-popup/format-trade-time';
 import { TradeBucketPopupBody } from './trade-popup/TradeBucketPopupBody';
 import { TradeBucketPopupHeader } from './trade-popup/TradeBucketPopupHeader';
 import { useIsMobileViewport } from './trade-popup/use-is-mobile-viewport';
+import { useTapSelectLockout } from './trade-popup/use-tap-select-lockout';
 import { binanceT } from './translations';
 
 /**
@@ -51,6 +52,12 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
   });
 
   const isMobile = useIsMobileViewport();
+  // Suppress text-selection on the popup for the first ~400 ms after
+  // mount so a touch-tap that drifts on the canvas doesn't leak its
+  // residual "drag-to-select" gesture into freshly-mounted popup text
+  // on Android Chrome (see hook docstring for the gesture rationale).
+  const isSelectLocked = useTapSelectLockout();
+  const lockedSelectClass = isSelectLocked ? 'select-none' : '';
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -86,7 +93,7 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
   if (isMobile) {
     return (
       <Drawer open={true} onClose={handleClose} placement="right" title={time}>
-        <div className="flex flex-col gap-2 text-xs text-text-secondary">
+        <div className={`flex flex-col gap-2 text-xs text-text-secondary ${lockedSelectClass}`}>
           <div className="font-mono text-text">
             {binanceT.tradePopup.headerAggregates(volume, vwap, tradeCount)}
           </div>

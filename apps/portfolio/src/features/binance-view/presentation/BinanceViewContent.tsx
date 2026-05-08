@@ -86,6 +86,17 @@ export const BinanceViewContent = observer(() => {
     if (event.buttons !== 0) {
       return;
     }
+    // While the click-pinned popup is open, freeze the hover overlays
+    // (orderbook tooltip + trade hover-pill / scale) and the crosshair.
+    // The crosshair side is handled by the viewport controller's
+    // `setCursorSuppressed`; here we just bail before scheduling a
+    // hover hit-test or moving the popup anchor.
+    if (store.tradesStore?.pinnedBucket !== undefined) {
+      pendingPointerRef.current = null;
+      lastHoverProbeRef.current = null;
+      setHoverAnchor(null);
+      return;
+    }
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
     const cssX = event.clientX - rect.left;
@@ -206,16 +217,32 @@ export const BinanceViewContent = observer(() => {
   const tradesStore = store.tradesStore;
   const isHoveringTradeBucket = tradesStore?.hoveredBucketKey !== undefined;
   const pinnedBucket = tradesStore?.pinnedBucket;
+  const isPopupPinned = pinnedBucket !== undefined;
   const pinnedTrades =
     pinnedBucket === undefined || tradesStore === undefined
       ? undefined
       : (tradesStore.getRawTradesForBucket(pinnedBucket.blockId, pinnedBucket.bucketStartMs) ?? []);
 
+  // Freeze every hover-overlay surface while the click-pinned popup is
+  // open so the crosshair / orderbook tooltip / trade-bucket hover-pill
+  // don't shift under the cursor as the user reads the popup. Pan and
+  // zoom keep working through the native input listeners.
+  useEffect(() => {
+    const chartState = store.chartStateView;
+    chartState?.viewportController.setCursorSuppressed(isPopupPinned);
+    if (isPopupPinned) {
+      setHoverAnchor(null);
+      store.clearSelectedCell();
+      tradesStore?.clearHoveredBucket();
+      lastHoverProbeRef.current = null;
+    }
+  }, [isPopupPinned, store, tradesStore]);
+
   return (
     <div className="relative h-full w-full">
       <canvas
         ref={canvasRef}
-        className={`absolute inset-0 h-full w-full [touch-action:none] ${isHoveringTradeBucket ? 'cursor-pointer' : ''}`}
+        className={`absolute inset-0 h-full w-full select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [touch-action:none] ${isHoveringTradeBucket ? 'cursor-pointer' : ''}`}
         onPointerMove={handleCanvasPointerMove}
         onPointerDown={handleCanvasPointerDown}
         onPointerUp={handleCanvasPointerUp}

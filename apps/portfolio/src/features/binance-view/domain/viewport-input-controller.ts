@@ -53,6 +53,13 @@ export class ViewportInputController {
    * or `undefined` when the pointer is outside.
    */
   private cursorCssPosition: { x: number; y: number } | undefined = undefined;
+  /**
+   * When `true`, `handlePointerMove` skips cursor tracking — used while
+   * a click-pinned popup (e.g. the trade-bucket popup) is open so the
+   * crosshair / hover overlays don't update under a stationary cursor.
+   * Pan / pinch input still flows through unchanged.
+   */
+  private cursorSuppressed = false;
 
   constructor(params: IViewportInputControllerParams) {
     this.canvas = params.canvas;
@@ -101,6 +108,19 @@ export class ViewportInputController {
     return this.cursorCssPosition;
   }
 
+  /**
+   * Toggle cursor tracking. Setting to `true` immediately clears the
+   * current cursor position so any in-flight crosshair render goes
+   * away on the next frame; subsequent pointer moves are ignored
+   * (for cursor purposes) until the flag is cleared again.
+   */
+  setCursorSuppressed(value: boolean): void {
+    this.cursorSuppressed = value;
+    if (value) {
+      this.cursorCssPosition = undefined;
+    }
+  }
+
   /** Read & reset the accumulated pan delta in CSS pixels. */
   consumePendingDeltaPx(): number {
     const value = this.pendingDeltaPx;
@@ -141,17 +161,20 @@ export class ViewportInputController {
   }
 
   private handlePointerMove(event: PointerEvent): void {
-    // Track cursor for every move, not just drags — the crosshair
-    // overlay (and any future hover affordance) needs the position
-    // regardless of whether a button is held. Raising the FPS on each
-    // move keeps the crosshair glide-smooth; it auto-decays back to
-    // idle once the cursor stops.
-    const canvasRect = this.canvas.getBoundingClientRect();
-    this.cursorCssPosition = {
-      x: event.clientX - canvasRect.left,
-      y: event.clientY - canvasRect.top,
-    };
-    this.taskManager.raise(FPS_INTERACTION);
+    // Crosshair tracking is mouse/pen-only. Touches don't get a hover
+    // notion — a finger tap shouldn't paint a crosshair where it
+    // landed and leave it stuck after the finger lifts. Suppression
+    // by an open popup (`cursorSuppressed`) also gates the crosshair
+    // off. Pan / pinch logic below still runs for touch and during
+    // suppression.
+    if (event.pointerType !== 'touch' && !this.cursorSuppressed) {
+      const canvasRect = this.canvas.getBoundingClientRect();
+      this.cursorCssPosition = {
+        x: event.clientX - canvasRect.left,
+        y: event.clientY - canvasRect.top,
+      };
+      this.taskManager.raise(FPS_INTERACTION);
+    }
 
     const pointer = this.pointers.find(candidate => candidate.id === event.pointerId);
     if (pointer === undefined) {
