@@ -87,12 +87,19 @@ export const HIT_AREA_RADIUS_PADDING_PX = 8;
 export const HIT_AREA_RADIUS_MIN_PX = 12;
 
 /**
- * Pointer travel below this threshold is treated as a click rather than
- * a drag for `pointerType === 'mouse' | 'pen'`.
+ * Horizontal pointer travel (CSS px) below this threshold is treated as
+ * a click rather than a drag for `pointerType === 'mouse' | 'pen'`.
+ * The viewport only pans along X, so vertical motion is intentionally
+ * ignored — matches the input controller's pan-distance accumulator.
  */
 export const MIN_DRAG_DISTANCE_PX_MOUSE = 2;
 
-/** Same threshold for `pointerType === 'touch'` — fingers wobble more. */
+/**
+ * Same horizontal threshold for `pointerType === 'touch'` — fingers
+ * wobble more, especially when reaching the top / bottom of a tall
+ * portrait canvas. Y wobble must not kill the tap because the chart
+ * never pans vertically.
+ */
 export const MIN_DRAG_DISTANCE_PX_TOUCH = 8;
 
 /**

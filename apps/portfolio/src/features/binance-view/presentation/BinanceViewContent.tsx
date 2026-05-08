@@ -150,12 +150,19 @@ export const BinanceViewContent = observer(() => {
     if (start === null) {
       return;
     }
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
-    const dragDist = Math.sqrt(dx * dx + dy * dy);
+    // The viewport only pans along the X (time) axis — Y is auto-fitted
+    // around the live mid-price. So tap-vs-drag is a horizontal-only
+    // question: a finger tap that wobbles vertically must still register
+    // as a tap. On Android-portrait, a thumb reaching to the top or
+    // bottom of the canvas pivots a few CSS px on Y just from the natural
+    // grip — with a 2D euclidean threshold those wobbles cleared 8 px and
+    // the bucket popup silently failed to open. Matching the input
+    // controller's X-only pan-distance keeps the two boundaries
+    // consistent.
+    const dx = Math.abs(event.clientX - start.x);
     const threshold =
       start.type === 'touch' ? MIN_DRAG_DISTANCE_PX_TOUCH : MIN_DRAG_DISTANCE_PX_MOUSE;
-    if (dragDist >= threshold) {
+    if (dx >= threshold) {
       return;
     }
     const tradesStore = store.tradesStore;

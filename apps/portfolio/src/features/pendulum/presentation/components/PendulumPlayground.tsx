@@ -1,6 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
-import { useMouseAction } from '@frozik/components/hooks/useMouseAction';
+import { usePointerAction } from '@frozik/components/hooks/usePointerAction';
 import { isNil } from 'lodash-es';
 import { PauseCircle, PlayCircle } from 'lucide-react';
 import type React from 'react';
@@ -48,7 +48,7 @@ export const PendulumPlayground = memo(
 
     useKeyboardAction(pauseResumeKeyCode, togglePaused, ref);
 
-    useMouseAction(
+    usePointerAction(
       useFunction(({ x, y, buttons }) => {
         if ((buttons & (2 ** 0)) === 0) {
           onAdditionalForce?.();

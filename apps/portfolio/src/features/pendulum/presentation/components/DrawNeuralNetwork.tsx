@@ -1,5 +1,5 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { useMouseAction } from '@frozik/components/hooks/useMouseAction';
+import { usePointerAction } from '@frozik/components/hooks/usePointerAction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import {
   isFailValueDescriptor,
@@ -342,7 +342,7 @@ export const DrawNeuralNetwork = observer(() => {
     selectedNeuron,
   ]);
 
-  useMouseAction(
+  usePointerAction(
     useFunction(({ x, y }) => {
       const offsetX = (width - neuralNetworkWidth) >> 1;
       const offsetY = (height - neuralNetworkHeight) >> 1;
