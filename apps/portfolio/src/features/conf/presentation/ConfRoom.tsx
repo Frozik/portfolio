@@ -7,15 +7,19 @@ import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
+import { AccountChip } from '../../../shared/communication/AccountChip';
+import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
+import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { cn } from '../../../shared/lib/cn';
 import { Sparkline } from '../../../shared/ui/Sparkline';
+import { Spinner } from '../../../shared/ui/Spinner';
 import { Tooltip } from '../../../shared/ui/Tooltip';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
 import { useConfRoomStore } from '../application/useConfRoomStore';
 import { RTT_HISTORY_MAX_SAMPLES } from '../domain/constants';
 import type { RoomId } from '../domain/types';
-import { ArToggleButton } from './components/ArToggleButton';
 import { ConnectionBanner } from './components/ConnectionBanner';
+import { GlassesPickerButton } from './components/GlassesPickerButton';
 import { LeaveButton } from './components/LeaveButton';
 import { MuteControls } from './components/MuteControls';
 import { QualityBadge } from './components/QualityBadge';
@@ -41,7 +45,28 @@ export const ConfRoom = observer(() => {
   assert(roomId !== undefined && roomId.length > 0, 'roomId is required');
   const typedRoomId = roomId as RoomId;
 
-  const roomStore = useConfRoomStore(typedRoomId);
+  // Pass the bare UUID — the server's HandshakeAuthSchema requires
+  // `auth.roomId` to be UUID v4. The CONF_ROOM_ID_NETWORK_PREFIX
+  // lives on the in-payload signaling topic (see conf-signaling-client),
+  // not on the server-visible roomId.
+  const client = useCommunicationClient(typedRoomId);
+  if (client === null) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+  return <ConfRoomBody typedRoomId={typedRoomId} client={client} />;
+});
+
+interface IConfRoomBodyProps {
+  readonly typedRoomId: RoomId;
+  readonly client: ICommunicationClient;
+}
+
+const ConfRoomBody = observer(({ typedRoomId, client }: IConfRoomBodyProps) => {
+  const roomStore = useConfRoomStore(typedRoomId, client);
   const lobbyStore = useConfLobbyStore();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,11 +112,16 @@ export const ConfRoom = observer(() => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-      <ConnectionBanner
-        state={roomStore.connectionState}
-        hasRemotePeer={roomStore.remoteStream !== null}
-        errorMessage={roomStore.errorMessage}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <ConnectionBanner
+            state={roomStore.connectionState}
+            hasRemotePeer={roomStore.remoteStream !== null}
+            errorMessage={roomStore.errorMessage}
+          />
+        </div>
+        <AccountChip />
+      </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2">
         <VideoTile
@@ -125,7 +155,10 @@ export const ConfRoom = observer(() => {
             onToggleAudio={roomStore.toggleAudio}
             onToggleVideo={roomStore.toggleVideo}
           />
-          <ArToggleButton isArEnabled={roomStore.isArEnabled} onToggle={roomStore.toggleAr} />
+          <GlassesPickerButton
+            selectedStyle={roomStore.glassesStyle}
+            onSelectStyle={roomStore.setGlassesStyle}
+          />
           {roomStore.connectionState === 'connected' && (
             <>
               <QualityBadge tier={roomStore.qualityTier} />

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160" stroke="#ff2a92" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Left lens: 5-point star centered on the wearer's left pupil (cx=70, cy=80),
+       outer radius 44.8, inner radius 19.6 — 70% of the previous 2x size, same
+       lens centre. Coordinates: angle_i = -pi/2 + i*pi/5, radius alternating
+       outer/inner. -->
+  <path d="M70 35.2 L81.5 64.1 L112.6 66.2 L88.6 86.1 L96.3 116.2 L70 99.6 L43.7 116.2 L51.4 86.1 L27.4 66.2 L58.5 64.1 Z" fill="rgba(255, 105, 180, 0.35)" />
+  <!-- Right lens: same star geometry shifted +100 along x. -->
+  <path d="M170 35.2 L181.5 64.1 L212.6 66.2 L188.6 86.1 L196.3 116.2 L170 99.6 L143.7 116.2 L151.4 86.1 L127.4 66.2 L158.5 64.1 Z" fill="rgba(255, 105, 180, 0.35)" />
+  <!-- Bridge across the ~48 px gap at the pupil line — gentle upward arc that
+       reads like the two lenses are connected by a delicate frame piece. -->
+  <path d="M98 80 Q120 63 142 80" fill="none" />
+</svg>

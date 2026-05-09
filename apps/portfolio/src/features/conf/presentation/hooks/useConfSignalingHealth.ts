@@ -1,22 +1,15 @@
 import { useEffect, useState } from 'react';
 
-import { getConfSignalingConfig } from '../../infrastructure/signaling-config';
+import { useCommunicationBaseUrl } from '../../../../shared/communication/CommunicationProvider';
 
 export type TConfSignalingHealthStatus = 'checking' | 'ok' | 'unavailable';
 
 const HEALTH_TIMEOUT_MS = 5_000;
-const HEALTH_PATH = '/health';
+const HEALTH_PATH = '/health/live';
 
-function toHealthUrl(signalingUrl: string): string | null {
+function toLivenessUrl(baseUrl: string): string | null {
   try {
-    const parsed = new URL(signalingUrl);
-    if (parsed.protocol === 'wss:') {
-      parsed.protocol = 'https:';
-    } else if (parsed.protocol === 'ws:') {
-      parsed.protocol = 'http:';
-    } else {
-      return null;
-    }
+    const parsed = new URL(baseUrl);
     parsed.pathname = HEALTH_PATH;
     parsed.search = '';
     return parsed.toString();
@@ -25,13 +18,13 @@ function toHealthUrl(signalingUrl: string): string | null {
   }
 }
 
-async function probeOne(signalingUrl: string): Promise<boolean> {
-  const healthUrl = toHealthUrl(signalingUrl);
-  if (healthUrl === null) {
+async function probe(baseUrl: string): Promise<boolean> {
+  const probeUrl = toLivenessUrl(baseUrl);
+  if (probeUrl === null) {
     return false;
   }
   try {
-    const response = await fetch(healthUrl, {
+    const response = await fetch(probeUrl, {
       method: 'GET',
       cache: 'no-store',
       signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
@@ -42,29 +35,20 @@ async function probeOne(signalingUrl: string): Promise<boolean> {
   }
 }
 
-async function checkConfSignalingHealth(): Promise<boolean> {
-  const { serverUrls } = getConfSignalingConfig();
-  if (serverUrls.length === 0) {
-    return false;
-  }
-  const probes = serverUrls.map(probeOne);
-  const results = await Promise.all(probes);
-  return results.some(isOk => isOk);
-}
-
 /**
- * Runs a one-shot `/health` probe against the configured signaling
- * servers on mount and reports the outcome. Used by the Conf feature
- * root to gate the UI: if nobody answers, we show an error screen
- * instead of the Lobby / Room which would otherwise hang in the
- * "connecting" state.
+ * Probes the communication server's liveness endpoint on mount and
+ * reports the outcome. Used by the Conf feature root to gate the
+ * UI: if the server is unreachable, we render an error screen
+ * instead of the Lobby / Room which would otherwise hang in
+ * "connecting" state forever.
  */
 export function useConfSignalingHealth(): TConfSignalingHealthStatus {
+  const baseUrl = useCommunicationBaseUrl();
   const [status, setStatus] = useState<TConfSignalingHealthStatus>('checking');
 
   useEffect(() => {
     let cancelled = false;
-    void checkConfSignalingHealth().then(isAvailable => {
+    void probe(baseUrl).then(isAvailable => {
       if (!cancelled) {
         setStatus(isAvailable ? 'ok' : 'unavailable');
       }
@@ -72,7 +56,7 @@ export function useConfSignalingHealth(): TConfSignalingHealthStatus {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [baseUrl]);
 
   return status;
 }

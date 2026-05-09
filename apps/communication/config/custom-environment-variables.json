@@ -1,0 +1,41 @@
+{
+  "server": {
+    "port": "PORT",
+    "tls": {
+      "enabled": "TLS_ENABLED",
+      "cert_path": "TLS_CERT_PATH",
+      "key_path": "TLS_KEY_PATH"
+    }
+  },
+  "auth": {
+    "google_oauth_client_id": "GOOGLE_OAUTH_CLIENT_ID",
+    "token_expiry_warning_seconds": "TOKEN_EXPIRY_WARNING_SECONDS",
+    "clock_tolerance_seconds": "CLOCK_TOLERANCE_SECONDS",
+    "jwks": {
+      "fetch_max_attempts": "JWKS_FETCH_MAX_ATTEMPTS",
+      "fetch_timeout_ms": "JWKS_FETCH_TIMEOUT_MS"
+    }
+  },
+  "turn": {
+    "shared_secret": "TURN_SHARED_SECRET",
+    "realm": "TURN_REALM",
+    "ttl_seconds": "TURN_TTL_SECONDS"
+  },
+  "edge": {
+    "haproxy_enabled": "EDGE_HAPROXY_ENABLED"
+  },
+  "logging": {
+    "level": "LOG_LEVEL"
+  },
+  "build": {
+    "id": "BUILD_ID",
+    "commit": "BUILD_COMMIT",
+    "version": "BUILD_VERSION"
+  },
+  "admin": {
+    "token": "ADMIN_TOKEN"
+  },
+  "redis": {
+    "url": "REDIS_URL"
+  }
+}

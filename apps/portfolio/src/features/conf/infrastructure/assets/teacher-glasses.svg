@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Left lens: narrow rounded rectangle centered on the wearer's left pupil
+       (cx=70, cy=40), 50x28 px. Faint cool tint so the eyes still show through. -->
+  <rect x="45" y="26" width="50" height="28" rx="4" fill="rgba(220, 230, 240, 0.25)" />
+  <!-- Right lens: same rectangle shifted +100 along x. -->
+  <rect x="145" y="26" width="50" height="28" rx="4" fill="rgba(220, 230, 240, 0.25)" />
+  <!-- Top-side bridge connecting the inner upper corners — typical of strict
+       reading-glasses frames. -->
+  <path d="M95 30 L145 30" fill="none" />
+</svg>

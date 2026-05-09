@@ -40,6 +40,17 @@ export const SIGNALING_RECONNECT_MAX_MS = 8_000 as Milliseconds;
 export const SIGNALING_HEARTBEAT_MS = 25_000 as Milliseconds;
 
 /**
+ * Grace period after `RTCPeerConnection.iceConnectionState` first hits
+ * `disconnected` before we proactively `peer.close()`. ICE consent
+ * freshness can recover from a transient network blip during this
+ * window (e.g. wifi switch); if it doesn't, we tear the peer down
+ * **before** the browser surfaces an `iceConnectionState: failed`
+ * warning to the console (Firefox prints "WebRTC: ICE failed" — Chrome
+ * is quieter but the underlying state is the same).
+ */
+export const PEER_DISCONNECTED_GRACE_MS = 5_000 as Milliseconds;
+
+/**
  * Rolling window of round-trip-time samples retained by the adaptive
  * quality layer for the sparkline in the room control bar. At a poll
  * cadence of 2.5 s, 30 samples ≈ 75 s of history — enough to see

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-
 import { useRootStore } from '../../../app/stores/StoreContext';
+import { useRefcountedFeatureStore } from '../../../app/stores/useRefcountedFeatureStore';
+import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import type { ITemplateConfig, RoomId } from '../domain/types';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
 import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';
@@ -16,6 +16,7 @@ export interface IUseRoomStoreParams {
     readonly template: ITemplateConfig;
     readonly votesPerParticipant: number;
   } | null;
+  readonly client: ICommunicationClient;
 }
 
 function getRoomStoreKey(roomId: RoomId): string {
@@ -45,7 +46,10 @@ export function useRoomStore(params: IUseRoomStoreParams): RoomStore {
   );
 
   const store = rootStore.getOrCreateFeatureStore(storeKey, () => {
-    const providers = createYjsRoomProviders(params.roomId);
+    const providers = createYjsRoomProviders({
+      roomId: params.roomId,
+      client: params.client,
+    });
     return new RoomStore(
       params.roomId,
       params.identity,
@@ -55,11 +59,7 @@ export function useRoomStore(params: IUseRoomStoreParams): RoomStore {
     );
   });
 
-  useEffect(() => {
-    return () => {
-      rootStore.disposeFeatureStore(storeKey);
-    };
-  }, [rootStore, storeKey]);
+  useRefcountedFeatureStore(rootStore, storeKey);
 
   return store;
 }

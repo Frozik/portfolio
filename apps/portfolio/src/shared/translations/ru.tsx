@@ -42,4 +42,15 @@ export const sharedTranslationsRu: SharedTranslation = {
     linkSupport: 'Таблица поддержки браузерами',
     linkWebKit: 'Блог WebKit: WebGPU в Safari',
   },
+  signInGate: {
+    title: 'Войдите, чтобы продолжить',
+    description:
+      'Сервер коммуникаций требует аккаунт Google для проверки личности при сквозном сигналинге. Токен хранится только в этой вкладке и забывается при её закрытии.',
+    missingClientId:
+      'Переменная VITE_GOOGLE_OAUTH_CLIENT_ID не задана. Вход невозможен, пока деплой не предоставит Google OAuth client id.',
+  },
+  accountChip: {
+    signOutAriaLabel: 'Выйти из сервера коммуникаций',
+    noEmailFallback: 'Email не указан',
+  },
 };

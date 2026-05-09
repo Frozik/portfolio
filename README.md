@@ -9,7 +9,7 @@ Portfolio monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
 
 **Tech stack**: React 19, TypeScript 6, MobX, Tailwind CSS v4, Radix UI, Vite 8,
-WebGPU, TensorFlow.js, Matter.js, Dockview.
+WebGPU, WebRTC, TensorFlow.js, Matter.js, Dockview.
 
 ## Getting Started
 
@@ -245,19 +245,13 @@ shared library.
 
 ### Retro
 
-Local-first collaborative retrospective board for Agile teams. Zero backend —
-data lives in each participant's IndexedDB, syncs peer-to-peer via WebRTC
-(Yjs CRDT). For the WebRTC signaling handshake this demo runs its own
-`y-webrtc` server (`apps/signaling`, a TypeScript + `ws` service
-deployed as a systemd unit behind nginx + Let's Encrypt on a bare Ubuntu
-VPS). The URL is injected at build time via `VITE_RETRO_SIGNALING_URLS`,
-with a fallback to the public `signaling.yjs.dev` / `y-webrtc-eu.fly.dev`
-servers when the env var is not set. The signaling channel is used only
-for the initial SDP exchange — once peers connect, data flows directly
-over WebRTC DataChannels.
+Collaborative retrospective board for Agile teams. Sign in with Google,
+create a board, share the link — participants sync in real time directly
+between browsers, with no central database holding the data.
 
-**Lobby** (`/retro`) — list of locally stored retros (name + creation date +
-participant count) plus Create and Join-by-link actions.
+**Lobby** (`/retro`) — list of locally stored retros (name, creation date,
+participant count) plus Create and Join-by-link actions. The default
+nickname is seeded from your Google profile; sign-out is a click away.
 
 **Room** (`/retro/:uuid`) — a columns board driven by the selected template:
 Scrum (Went Well / To Improve / Action Items), Mad / Sad / Glad, or
@@ -266,64 +260,67 @@ Start / Stop / Continue. Cards added during Brainstorm render face-down
 advance to Group. Only the retro organizer (facilitator) can advance phases
 and control the shared timer.
 
-Data model is fully captured in the shared Yjs document (`meta`, `columns`,
-`cards`, `groups`, `votes`, `actionItems`); ephemeral presence (names,
-colors, typing indicators) is carried through Yjs awareness and never
-persisted.
+**Behind the scenes:**
+- Each participant's IndexedDB is the source of truth — retros sync
+  directly between browsers over WebRTC, and the underlying CRDT
+  guarantees both sides converge to the same state regardless of message
+  order or temporary disconnects
+- A small backend service handles only the initial peer-to-peer
+  handshake and hands out short-lived TURN credentials for NAT
+  traversal; once two browsers connect, retro data flows directly
+  between them and the server is no longer in the loop
+- Sign-in is Google OpenID Connect; the session token lives only in
+  `sessionStorage`, so closing the tab fully signs the user out
 
-**Stack:** `yjs`, `y-indexeddb`, `y-webrtc` for CRDT storage + P2P sync;
-`@dnd-kit/*` for accessible drag-and-drop; MobX facade (`RoomStore`,
+**Stack:** `yjs`, `y-indexeddb`, `y-webrtc` for CRDT storage and P2P
+sync; `@dnd-kit/*` for accessible drag-and-drop; `@react-oauth/google` +
+`jwt-decode` for the sign-in flow; MobX facade (`RoomStore`,
 `RetroLobbyStore`, `IdentityStore`) wraps Yjs so presentation stays
-library-agnostic. See `RETRO.md` for the full feature design.
+library-agnostic. The signaling backend
+([`apps/communication`](./apps/communication/README.md)) is a Fastify 5
++ Socket.IO 4 server with a `coturn` TURN sidecar, deployed on a single
+Ubuntu VPS. See `RETRO.md` for the full feature design.
 
 ### Conf
 
-Anonymous 2-person WebRTC video call with AR "glasses" and an emotion
-emoji **baked into the outgoing video track itself** (not rendered as a
-DOM overlay) — fully in-browser, no accounts. Reuses the same
-`y-webrtc` signaling server as Retro (zero server changes; conf rooms
-publish under a `frozik-conf-*` topic namespace) plus Google STUN for
-ICE.
-
-Each client runs a single MediaPipe `FaceLandmarker`
-(`@mediapipe/tasks-vision`, GPU delegate with WASM fallback) on its own
-camera feed, composites the video frame + glasses sprite + emotion
-emoji onto an off-DOM `<canvas>`, then exports the canvas via
-`canvas.captureStream(30)` as the outbound WebRTC video track
-(original audio track is attached alongside). The remote peer receives
-one already-composited track — no remote-side detection, no overlay
-element, identical view on both sides. AR toggle is a flag inside the
-compositor that skips the glasses / emoji draw; mute toggles
-`track.enabled` on the output track without renegotiation.
-
-Glasses position is computed from eye-corner landmarks (MediaPipe
-indices 33/133/263/362) as a pure domain function, then smoothed with
-an EMA before `ctx.drawImage(glassesSvg, …)`. Emotion is derived from
-the 52 ARKit-style blendshape scores MediaPipe emits alongside
-landmarks: `happy` / `surprised` / `sad` / `angry` / `neutral` via a
-max-excess-over-threshold classifier; a 2-frame hysteresis prevents
-emoji flicker. Adaptive quality polls `RTCPeerConnection.getStats()`
-every 2.5 s and steps `sender.setParameters` between HD / SD / Low
-tiers based on RTT + packet loss — no renegotiation.
+2-person video call with AR "glasses" and an emotion emoji baked
+straight into the outgoing video stream — fully in-browser, no plugins.
+Sign in with Google, create a room, share the link.
 
 **Lobby** (`/conf`) — locally remembered rooms you created or visited,
-plus Create and Join-by-link actions.
+plus Create and Join-by-link actions. Same Google sign-in as Retro;
+sign-out sits next to the room counter.
 
-**Room** (`/conf/:uuid`) — side-by-side (left/right on desktop, stacked
-top/bottom on mobile) local + remote video tiles with mute audio / mute
-video / AR toggle / share link / leave controls plus a quality badge
-and RTT sparkline. The signaling protocol is a tiny typed discriminated
-union (`hello` / `offer` / `answer` / `ice` / `bye`) over the y-webrtc
-wire format; `hello` carries a per-session nonce so the receiver can
-tell an echo from a reconnect. Each browser keeps a persistent
-`participantId` in `localStorage`, so dropping the WiFi and coming back
-reclaims the same slot — even while the peer is still showing
-"Peer disconnected". Third-joiner is rejected with a `bye{full}`
-message. Perfect negotiation handles offer collisions.
+**Room** (`/conf/:uuid`) — local + remote video tiles, side-by-side on
+desktop and stacked on mobile, with mute audio / mute video / AR toggle
+/ share link / leave controls plus a quality badge and an RTT
+sparkline. Each browser keeps a persistent participant id locally, so
+a WiFi drop and return reclaims the same slot even while the peer is
+still showing "Peer disconnected". A third joiner is politely turned
+away with a "room full" message.
+
+**Behind the scenes:**
+- Each side runs Google's MediaPipe face detector on its own camera
+  feed, draws the glasses sprite and emotion emoji onto a hidden
+  canvas, and sends that composited canvas as the outgoing video
+  track — the remote peer receives an already-finished frame, with no
+  remote-side detection and no overlay element. The same trick lets
+  the AR and mute toggles flip without renegotiating the call.
+- Emotion (`happy` / `surprised` / `sad` / `angry` / `neutral`) is
+  picked from MediaPipe's facial-blendshape scores, with a short
+  hysteresis so the emoji doesn't flicker on borderline expressions.
+- Adaptive video quality watches round-trip time and packet loss every
+  couple of seconds and steps the encoder between HD / SD / Low tiers
+  without dropping the call.
+- Same OIDC-authenticated signaling backend as Retro; once the call is
+  up, audio and video flow peer-to-peer over WebRTC.
 
 **Stack:** `@mediapipe/tasks-vision` (FaceLandmarker, GPU delegate with
-WASM fallback, `outputFaceBlendshapes: true`) loaded lazily from CDN;
-native `RTCPeerConnection` with perfect negotiation; `canvas.captureStream`
-for output compositing; plain WebSocket client talking the y-webrtc
-publish / subscribe protocol directly. See
-`apps/portfolio/src/features/conf/CONF.md` for the full feature design.
+WASM fallback) loaded lazily from CDN; native `RTCPeerConnection` with
+perfect negotiation; `canvas.captureStream` for output compositing;
+`socket.io-client` against
+[`apps/communication`](./apps/communication/README.md) for
+OIDC-authenticated signaling; `@react-oauth/google` + `jwt-decode` for
+the sign-in flow. See
+[`apps/portfolio/src/features/conf/CONF.md`](./apps/portfolio/src/features/conf/CONF.md)
+for the full feature design.

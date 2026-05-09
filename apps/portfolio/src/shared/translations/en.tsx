@@ -14,8 +14,21 @@ interface WebGpuGuardTranslation {
   linkWebKit: string;
 }
 
+interface SignInGateTranslation {
+  title: string;
+  description: string;
+  missingClientId: string;
+}
+
+interface AccountChipTranslation {
+  signOutAriaLabel: string;
+  noEmailFallback: string;
+}
+
 export interface SharedTranslation {
   webGpuGuard: WebGpuGuardTranslation;
+  signInGate: SignInGateTranslation;
+  accountChip: AccountChipTranslation;
 }
 
 export const sharedTranslationsEn: SharedTranslation = {
@@ -59,5 +72,16 @@ export const sharedTranslationsEn: SharedTranslation = {
       'Chrome 113+, Edge 113+, and Samsung Internet 24+ support WebGPU out of the box. Firefox 141+ supports it on Windows and macOS (Apple Silicon).',
     linkSupport: 'Browser support table',
     linkWebKit: 'WebKit blog: WebGPU in Safari',
+  },
+  signInGate: {
+    title: 'Sign in to continue',
+    description:
+      'The communication server requires a Google account to verify your identity for end-to-end signaling. The token is held in this tab only and is forgotten when the tab closes.',
+    missingClientId:
+      'VITE_GOOGLE_OAUTH_CLIENT_ID is not configured. Sign-in will fail until the deploy provides a Google OAuth client id.',
+  },
+  accountChip: {
+    signOutAriaLabel: 'Sign out of the communication server',
+    noEmailFallback: 'No email',
   },
 };

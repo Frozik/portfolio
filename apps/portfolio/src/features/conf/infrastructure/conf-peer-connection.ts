@@ -1,7 +1,6 @@
 import { isNil } from 'lodash-es';
 import type { TConfDataChannelMessage } from '../domain/data-channel-protocol';
 import { parseConfDataChannelMessage } from '../domain/data-channel-protocol';
-import { DEFAULT_ICE_SERVERS } from '../domain/ice-servers';
 import type { TConfSignalMessage } from '../domain/signaling-protocol';
 import type { ParticipantId } from '../domain/types';
 
@@ -28,7 +27,13 @@ export interface IConfPeerConnectionParams {
    * known and passes the result in here.
    */
   readonly isPolite: boolean;
-  readonly iceServers?: readonly RTCIceServer[];
+  /**
+   * ICE servers the peer connection will use. v1.1 sources these
+   * from the communication server's `turn:request-credentials`
+   * ack — the static `DEFAULT_ICE_SERVERS` list was removed when
+   * the server became the single source of TURN truth.
+   */
+  readonly iceServers: readonly RTCIceServer[];
   /** Id of the local participant — stamped onto every outbound signal. */
   readonly self: ParticipantId;
   /** Called whenever the peer connection produces a signaling message to send. */
@@ -47,6 +52,15 @@ export interface IConfPeerConnection {
   getVideoSender(): RTCRtpSender | null;
   sendDataMessage(message: TConfDataChannelMessage): void;
   handleSignal(message: TConfSignalMessage): Promise<void>;
+  /**
+   * v2: swap the active TURN credentials and request an ICE restart so
+   * media keeps flowing past the previous credential's TTL. Returns
+   * `true` if `setConfiguration` is supported and the restart was
+   * issued, `false` if the browser does not support it (in which case
+   * the existing call continues with the old creds and the next call
+   * naturally picks up fresh ones).
+   */
+  refreshIceServers(iceServers: ReadonlyArray<RTCIceServer>): boolean;
   close(): void;
 }
 
@@ -88,7 +102,7 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
   const { isPolite, iceServers, self, onSignal } = params;
 
   const peer = new RTCPeerConnection({
-    iceServers: [...(iceServers ?? DEFAULT_ICE_SERVERS)],
+    iceServers: [...iceServers],
   });
 
   const remoteStream = new MediaStream();
@@ -276,6 +290,34 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
     }
   }
 
+  function refreshIceServers(nextIceServers: ReadonlyArray<RTCIceServer>): boolean {
+    if (isClosed) {
+      return false;
+    }
+    // `setConfiguration` is widely supported on modern Chrome/Firefox/Safari
+    // but not in older WebViews — guard so the renew path degrades to "next
+    // call gets new creds, this one continues with old" instead of crashing.
+    if (typeof peer.setConfiguration !== 'function') {
+      return false;
+    }
+    try {
+      peer.setConfiguration({ iceServers: [...nextIceServers] });
+    } catch {
+      return false;
+    }
+    // `restartIce` triggers a fresh `negotiationneeded` cycle which the
+    // perfect-negotiation handler above already routes correctly.
+    if (typeof peer.restartIce === 'function') {
+      try {
+        peer.restartIce();
+      } catch {
+        // Best-effort — falling through still leaves the new iceServers
+        // installed for any subsequent renegotiation.
+      }
+    }
+    return true;
+  }
+
   function close(): void {
     if (isClosed) {
       return;
@@ -337,6 +379,7 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
     getVideoSender: () => videoSender,
     sendDataMessage,
     handleSignal,
+    refreshIceServers,
     close,
   };
 }

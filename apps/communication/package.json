@@ -1,0 +1,21 @@
+{
+  "name": "@frozik/communication",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Socket.IO command/response relay server (OIDC-authenticated)",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "NODE_CONFIG_DIR=./config NODE_CONFIG_ENV=development node --watch --experimental-strip-types src/main.ts",
+    "start": "NODE_CONFIG_DIR=./config NODE_CONFIG_ENV=production node dist/main.js",
+    "test": "vitest run --root ../.. apps/communication",
+    "types": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@frozik/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  }
+}

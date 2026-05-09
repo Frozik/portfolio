@@ -1,0 +1,6 @@
+[server]
+cors_allowed_origins = ["http://localhost:5173"]
+
+[logging]
+level = "debug"
+pretty = true

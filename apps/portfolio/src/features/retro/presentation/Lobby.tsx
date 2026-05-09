@@ -8,7 +8,8 @@ import { Crown, Link2, Plus, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-
+import { AccountChip } from '../../../shared/communication/AccountChip';
+import { useAuthSession } from '../../../shared/communication/CommunicationProvider';
 import { cn } from '../../../shared/lib/cn';
 import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
@@ -248,6 +249,7 @@ export const Lobby = observer(() => {
   const lobbyStore = useRetroLobbyStore();
   const identityStore = useIdentityStore();
   const directory = useUserDirectoryStore();
+  const session = useAuthSession();
   const navigate = useNavigate();
   const myClientId = identityStore.identity.clientId as ClientId;
   const [joinInput, setJoinInput] = useState('');
@@ -257,6 +259,28 @@ export const Lobby = observer(() => {
   useEffect(() => {
     void lobbyStore.loadRooms();
   }, [lobbyStore]);
+
+  // Seed the nickname from Google's `name` claim (or `email` fallback)
+  // the first time we have both a signed-in session AND no stored
+  // identity. After this, the user can rename via the identity dialog
+  // — we never overwrite a persisted nickname on subsequent logins.
+  useEffect(() => {
+    if (identityStore.hasName) {
+      return;
+    }
+    if (!session.isSignedIn) {
+      return;
+    }
+    const profile = session.profile;
+    if (profile === null) {
+      return;
+    }
+    const seed = profile.name.trim().length > 0 ? profile.name : (profile.email ?? '');
+    if (seed.trim().length === 0) {
+      return;
+    }
+    identityStore.setName(seed);
+  }, [identityStore, identityStore.hasName, session, session.isSignedIn, session.profile]);
 
   useEffect(() => {
     if (!identityStore.hasName) {
@@ -347,12 +371,15 @@ export const Lobby = observer(() => {
               </p>
             </div>
             <div className="flex flex-col items-end justify-between gap-5 self-stretch">
-              <IdentityChip
-                name={identityStore.identity.name}
-                color={identityStore.identity.color}
-                hasName={identityStore.hasName}
-                onEdit={handleOpenIdentityDialog}
-              />
+              <div className="flex items-center gap-2">
+                <IdentityChip
+                  name={identityStore.identity.name}
+                  color={identityStore.identity.color}
+                  hasName={identityStore.hasName}
+                  onEdit={handleOpenIdentityDialog}
+                />
+                <AccountChip />
+              </div>
               <div className="flex flex-col items-end gap-1.5">
                 <MonoKicker tone="faint">{t.lobby.totalRoomsLabel}</MonoKicker>
                 <div className="font-mono text-[52px] leading-none text-landing-fg">

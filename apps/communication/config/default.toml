@@ -1,0 +1,74 @@
+[server]
+port = 4445
+host = "0.0.0.0"
+cors_allowed_origins = []
+shutdown_grace_ms = 11000
+
+[server.tls]
+enabled = false
+cert_path = ""
+key_path = ""
+
+[auth]
+google_oauth_client_id = ""
+token_expiry_warning_seconds = 60
+clock_tolerance_seconds = 5
+
+[auth.jwks]
+fetch_max_attempts = 3
+fetch_timeout_ms = 5000
+
+[room]
+max_listeners = 50
+response_gather_timeout_ms = 10000
+max_http_buffer_bytes = 1048576
+max_tabs_per_user = 5
+max_inflight_dispatches_per_socket = 32
+# Per-room allowlist (v2). Empty = no enforcement (any authenticated user can
+# join any room). Each entry: { roomId = "<uuid>", userIds = ["sub-1", ...] }.
+# An entry with empty userIds is treated as "no enforcement for this room"
+# (parsed but does nothing).
+allowlist = []
+
+[signal]
+max_publish_per_second_per_socket = 100
+max_publish_burst = 200
+max_payload_bytes = 16384
+
+[turn]
+enabled = false
+shared_secret = ""
+realm = ""
+ttl_seconds = 43200
+urls = []
+credential_requests_per_minute_per_socket = 5
+
+[edge]
+haproxy_enabled = false
+
+[security]
+handshake_rate_per_ip_per_minute = 60
+failed_handshake_block_threshold = 10
+failed_handshake_block_seconds = 30
+
+[admin]
+token = ""
+port = 4446
+
+[logging]
+level = "info"
+pretty = false
+
+[build]
+id = "unknown"
+commit = "unknown"
+version = "unknown"
+
+[redis]
+# v2 multi-node scaling. When disabled, the server uses an in-process room
+# registry and a stock single-node Socket.IO adapter (no Redis dependency).
+# Enable per host to fan-out room state + broadcasts across nodes via
+# `@socket.io/redis-adapter` and a hash-per-room layout in Redis.
+enabled = false
+url = "redis://127.0.0.1:6379"
+key_prefix = "comm:"

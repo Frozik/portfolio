@@ -5,6 +5,8 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
+import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
+import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { Alert } from '../../../shared/ui/Alert';
 import { Spinner } from '../../../shared/ui/Spinner';
 import { useIdentityStore } from '../application/useIdentityStore';
@@ -29,6 +31,32 @@ export const Room = observer(() => {
   assert(roomId !== undefined && roomId.length > 0, 'roomId is required');
   const typedRoomId = roomId as RoomId;
 
+  // Pass the bare UUID — the server's HandshakeAuthSchema requires
+  // `auth.roomId` to be UUID v4. ROOM_ID_NETWORK_PREFIX lives on the
+  // y-webrtc *topic* (see yjs-providers.ts) where it disambiguates
+  // retro from conf inside the signaling adapter; the server never
+  // sees the topic, only the UUID we send here.
+  const client = useCommunicationClient(typedRoomId);
+  if (client === null) {
+    // The communication socket is mid-handshake (the SignInGate
+    // ancestor has already established the user is signed in).
+    // Render a spinner so feature-specific stores aren't built
+    // against a half-initialised client.
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+  return <RoomBody typedRoomId={typedRoomId} client={client} />;
+});
+
+interface IRoomBodyProps {
+  readonly typedRoomId: RoomId;
+  readonly client: ICommunicationClient;
+}
+
+const RoomBody = observer(({ typedRoomId, client }: IRoomBodyProps) => {
   const identityStore = useIdentityStore();
   const lobbyStore = useRetroLobbyStore();
 
@@ -51,6 +79,7 @@ export const Room = observer(() => {
     roomId: typedRoomId,
     identity: identityStore.identity,
     createIfMissing,
+    client,
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();

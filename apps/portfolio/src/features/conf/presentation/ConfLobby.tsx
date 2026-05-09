@@ -10,6 +10,7 @@ import type { ChangeEvent, FormEvent, MouseEvent } from 'react';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
+import { AccountChip } from '../../../shared/communication/AccountChip';
 import { cn } from '../../../shared/lib/cn';
 import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
@@ -167,10 +168,13 @@ export const ConfLobby = observer(() => {
                 {confT.lobby.heroSubtitle}
               </p>
             </div>
-            <div className="flex flex-col items-end gap-1.5">
-              <MonoKicker tone="faint">{confT.lobby.totalRoomsLabel}</MonoKicker>
-              <div className="font-mono text-[52px] leading-none text-landing-fg">
-                {formatRoomCount(activeRoomCount)}
+            <div className="flex flex-col items-end gap-5">
+              <AccountChip />
+              <div className="flex flex-col items-end gap-1.5">
+                <MonoKicker tone="faint">{confT.lobby.totalRoomsLabel}</MonoKicker>
+                <div className="font-mono text-[52px] leading-none text-landing-fg">
+                  {formatRoomCount(activeRoomCount)}
+                </div>
               </div>
             </div>
           </div>

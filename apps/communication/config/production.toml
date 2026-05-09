@@ -1,0 +1,10 @@
+[server.tls]
+enabled = true
+cert_path = "/etc/letsencrypt/live/communication/fullchain.pem"
+key_path = "/etc/letsencrypt/live/communication/privkey.pem"
+
+[edge]
+haproxy_enabled = true
+
+[turn]
+enabled = true

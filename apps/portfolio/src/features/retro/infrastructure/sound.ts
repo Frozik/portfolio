@@ -58,43 +58,66 @@ const SILENCE_TAIL_SECONDS = 0.02;
 const MS_IN_SECOND = 1_000;
 
 /**
- * Build a sound player bound to a shared `AudioContext`. The context is
- * created lazily on the first `play()` call so we never request audio
- * permission speculatively.
+ * Module-scoped `AudioContext` shared across every retro `SoundPlayer`
+ * built in this tab. We hoist it above per-room players so the very
+ * first user gesture anywhere inside the retro feature (lobby, room,
+ * identity dialog…) constructs and primes it — rather than only the
+ * room-scope `pointerdown` handler that races the timer for users who
+ * land directly in a running room.
+ *
+ * Firefox refuses to `resume()` an `AudioContext` that was constructed
+ * outside an active user gesture — once it's suspended there it stays
+ * suspended for the rest of the page lifetime. To stay compatible we
+ * only *create* the context from {@link primeRetroAudio} (which is
+ * always invoked synchronously from a pointer / key / touch / click
+ * event), and `play()` silently no-ops until that happens.
+ */
+let sharedAudioContext: AudioContext | null = null;
+
+function getSharedContext(createIfMissing: boolean): AudioContext | null {
+  if (!isNil(sharedAudioContext)) {
+    return sharedAudioContext;
+  }
+  if (!createIfMissing) {
+    return null;
+  }
+
+  const AudioContextCtor =
+    typeof window === 'undefined'
+      ? undefined
+      : (window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+
+  if (isNil(AudioContextCtor)) {
+    return null;
+  }
+
+  sharedAudioContext = new AudioContextCtor();
+  return sharedAudioContext;
+}
+
+/**
+ * Idempotent: called from a user-gesture handler at the retro feature
+ * root, ensures the shared `AudioContext` exists and is `'running'`.
+ * Subsequent `play()` calls (timer ticks, vote acks, …) become audible.
+ */
+export function primeRetroAudio(): void {
+  const context = getSharedContext(true);
+  if (isNil(context)) {
+    return;
+  }
+  if (context.state === 'suspended') {
+    void context.resume();
+  }
+}
+
+/**
+ * Build a sound player. Audio scheduling is bound to the
+ * module-level shared context; `play()` is silent until
+ * {@link primeRetroAudio} runs from a user gesture.
  */
 export function createSoundPlayer(): ISoundPlayer {
-  let audioContext: AudioContext | null = null;
   let enabled = true;
-
-  /**
-   * Firefox refuses to `resume()` an `AudioContext` that was constructed
-   * outside an active user gesture — once it's suspended there it stays
-   * suspended for the rest of the page lifetime. To stay compatible we
-   * only *create* the context from `unlock()` (which is always invoked
-   * synchronously from a pointer / key event), and `play()` silently
-   * no-ops until that happens.
-   */
-  const getContext = (createIfMissing: boolean): AudioContext | null => {
-    if (!isNil(audioContext)) {
-      return audioContext;
-    }
-    if (!createIfMissing) {
-      return null;
-    }
-
-    const AudioContextCtor =
-      typeof window === 'undefined'
-        ? undefined
-        : (window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
-
-    if (isNil(AudioContextCtor)) {
-      return null;
-    }
-
-    audioContext = new AudioContextCtor();
-    return audioContext;
-  };
 
   const scheduleBeep = (
     context: AudioContext,
@@ -133,7 +156,7 @@ export function createSoundPlayer(): ISoundPlayer {
         return;
       }
 
-      const context = getContext(false);
+      const context = getSharedContext(false);
 
       if (isNil(context) || context.state === 'suspended') {
         return;
@@ -150,24 +173,19 @@ export function createSoundPlayer(): ISoundPlayer {
     },
 
     unlock(): void {
-      const context = getContext(true);
-      if (isNil(context)) {
-        return;
-      }
-      if (context.state === 'suspended') {
-        void context.resume();
-      }
+      primeRetroAudio();
     },
 
     setEnabled(nextEnabled: boolean): void {
       enabled = nextEnabled;
     },
 
-    dispose(): void {
-      if (!isNil(audioContext)) {
-        void audioContext.close();
-        audioContext = null;
-      }
-    },
+    /**
+     * Per-player dispose is a no-op — the shared context lives for the
+     * lifetime of the tab so the next room (or rejoin) keeps it primed.
+     * Closing it would force every future room to re-prompt for a user
+     * gesture before sound works.
+     */
+    dispose(): void {},
   };
 }
