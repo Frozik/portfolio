@@ -1,1 +1,0 @@
-import{a as e}from"./c-BuTfruC8.js";import{t}from"./c-BntOQq3G.js";var n=e(t());function r(e){let t=(0,n.useRef)(e);return t.current=e,(0,n.useCallback)(((...e)=>t.current(...e)),[])}export{r as t};
