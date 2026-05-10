@@ -269,8 +269,9 @@ and control the shared timer.
   handshake and hands out short-lived TURN credentials for NAT
   traversal; once two browsers connect, retro data flows directly
   between them and the server is no longer in the loop
-- Sign-in is Google OpenID Connect; the session token lives only in
-  `sessionStorage`, so closing the tab fully signs the user out
+- Sign-in is Google or Yandex (the user picks the provider on the
+  sign-in screen); the session token lives only in `sessionStorage`,
+  so closing the tab fully signs the user out
 
 **Stack:** `yjs`, `y-indexeddb`, `y-webrtc` for CRDT storage and P2P
 sync; `@dnd-kit/*` for accessible drag-and-drop; `@react-oauth/google` +
@@ -285,11 +286,11 @@ Ubuntu VPS. See `RETRO.md` for the full feature design.
 
 2-person video call with AR "glasses" and an emotion emoji baked
 straight into the outgoing video stream — fully in-browser, no plugins.
-Sign in with Google, create a room, share the link.
+Sign in with Google or Yandex, create a room, share the link.
 
 **Lobby** (`/conf`) — locally remembered rooms you created or visited,
-plus Create and Join-by-link actions. Same Google sign-in as Retro;
-sign-out sits next to the room counter.
+plus Create and Join-by-link actions. Same multi-provider sign-in as
+Retro; sign-out sits next to the room counter.
 
 **Room** (`/conf/:uuid`) — local + remote video tiles, side-by-side on
 desktop and stacked on mobile, with mute audio / mute video / AR toggle

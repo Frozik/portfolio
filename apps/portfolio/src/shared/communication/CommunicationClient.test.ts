@@ -109,32 +109,34 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => null,
+      getCredentials: () => null,
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
     expect(ioMock).not.toHaveBeenCalled();
   });
 
-  it('passes roomId + idToken in the Socket.IO handshake', () => {
+  it('passes roomId + provider + token in the Socket.IO handshake', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'room-7',
-      getIdToken: () => 'tok-1',
+      getCredentials: () => ({ provider: 'google', token: 'tok-1' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
     expect(ioMock).toHaveBeenCalledTimes(1);
     const args = ioMock.mock.calls[0];
     expect(args[0]).toBe('http://server');
-    expect(args[1]).toMatchObject({ auth: { roomId: 'room-7', idToken: 'tok-1' } });
+    expect(args[1]).toMatchObject({
+      auth: { roomId: 'room-7', provider: 'google', token: 'tok-1' },
+    });
   });
 
   it('forwards inbound signal:event to subscribers', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
@@ -152,7 +154,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
@@ -169,7 +171,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
@@ -181,7 +183,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();
@@ -205,7 +207,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: refresh,
     });
     client.connect();
@@ -219,7 +221,7 @@ describe('CommunicationClient', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
     const refreshEmit = fakeSocket.emitted.find(call => call.event === 'auth:refresh-token');
     expect(refreshEmit).toBeDefined();
-    expect(refreshEmit?.args[0]).toEqual({ idToken: 'new-token' });
+    expect(refreshEmit?.args[0]).toEqual({ token: 'new-token' });
   });
 
   it('skips the refresh emit when the host returns null', async () => {
@@ -227,7 +229,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: refresh,
     });
     client.connect();
@@ -242,7 +244,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     const states: string[] = [];
@@ -257,7 +259,7 @@ describe('CommunicationClient', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'r1',
-      getIdToken: () => 'tok',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
       onTokenRefreshNeeded: () => Promise.resolve(null),
     });
     client.connect();

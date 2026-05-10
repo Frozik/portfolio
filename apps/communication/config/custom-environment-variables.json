@@ -9,6 +9,8 @@
   },
   "auth": {
     "google_oauth_client_id": "GOOGLE_OAUTH_CLIENT_ID",
+    "yandex_oauth_client_id": "YANDEX_OAUTH_CLIENT_ID",
+    "yandex_oauth_client_secret": "YANDEX_OAUTH_CLIENT_SECRET",
     "token_expiry_warning_seconds": "TOKEN_EXPIRY_WARNING_SECONDS",
     "clock_tolerance_seconds": "CLOCK_TOLERANCE_SECONDS",
     "jwks": {

@@ -45,12 +45,17 @@ export const sharedTranslationsRu: SharedTranslation = {
   signInGate: {
     title: 'Войдите, чтобы продолжить',
     description:
-      'Сервер коммуникаций требует аккаунт Google для проверки личности при сквозном сигналинге. Токен хранится только в этой вкладке и забывается при её закрытии.',
+      'Сервер коммуникаций подтверждает личность через Google или Яндекс для сквозного сигналинга. Токен хранится только в этой вкладке и забывается при её закрытии.',
     missingClientId:
-      'Переменная VITE_GOOGLE_OAUTH_CLIENT_ID не задана. Вход невозможен, пока деплой не предоставит Google OAuth client id.',
+      'Ни один OAuth-провайдер не настроен. Войти невозможно, пока деплой не предоставит хотя бы один client id (Google или Яндекс).',
+    yandexButton: 'Войти через Яндекс',
   },
   accountChip: {
     signOutAriaLabel: 'Выйти из сервера коммуникаций',
     noEmailFallback: 'Email не указан',
+    providerLabels: {
+      google: 'Вход через Google',
+      yandex: 'Вход через Яндекс',
+    },
   },
 };

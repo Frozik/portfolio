@@ -62,6 +62,7 @@ remote_run_script ensure-system-user
 remote_run_script ensure-repo-clone
 remote_run_script build-app
 remote_run_script generate-turn-secret
+remote_run_script render-oauth-secrets
 remote_run_script render-toml-configs
 remote_run_script render-systemd-unit
 remote_run_script render-renewal-hook

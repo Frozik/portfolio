@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
+import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { Milliseconds, UserId } from '../domain/types';
 import { ConnectionLifecycle } from './ConnectionLifecycle';
@@ -8,16 +9,13 @@ import type { IServerLogger } from './ports/IServerLogger';
 import type { Result } from './Result';
 import { err, ok } from './Result';
 
-const GOOGLE_CLIENT_ID = 'google-client-id-1234.apps.googleusercontent.com';
-const GOOGLE_ISSUER = 'https://accounts.google.com';
 const VALID_ROOM_ID = '11111111-2222-4333-8444-555555555555';
-const USER_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' as UserId;
+const USER_ID = 'google:aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' as UserId;
 
 function makeClaims(overrides: Partial<TokenClaims> = {}): TokenClaims {
   return {
     sub: USER_ID,
-    aud: GOOGLE_CLIENT_ID,
-    iss: GOOGLE_ISSUER,
+    provider: 'google',
     iat: 1_700_000_000_000 as Milliseconds,
     exp: 1_700_003_600_000 as Milliseconds,
     name: 'Alice',
@@ -31,6 +29,12 @@ function makeVerifier(next: () => Promise<Result<TokenClaims, AuthErrorCode>>): 
       return next();
     },
   };
+}
+
+function singleVerifierMap(
+  verifier: IIdentityVerifier
+): ReadonlyMap<TIdentityProvider, IIdentityVerifier> {
+  return new Map([['google', verifier]]);
 }
 
 function makeLogger(): IServerLogger {
@@ -56,9 +60,7 @@ describe('ConnectionLifecycle.onHandshake', () => {
   beforeEach(() => {
     verifyResult = ok(makeClaims());
     lifecycle = new ConnectionLifecycle({
-      verifier: makeVerifier(async () => verifyResult),
-      googleClientId: GOOGLE_CLIENT_ID,
-      googleIssuers: [GOOGLE_ISSUER],
+      verifiers: singleVerifierMap(makeVerifier(async () => verifyResult)),
       audit: makeAudit(),
       logger: makeLogger(),
       roomAllowlist: [],
@@ -68,12 +70,14 @@ describe('ConnectionLifecycle.onHandshake', () => {
   it('returns identity on happy path', async () => {
     const result = await lifecycle.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.identity.userId).toBe(USER_ID);
       expect(result.value.identity.displayName).toBe('Alice');
+      expect(result.value.provider).toBe('google');
       expect(result.value.socketId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       );
@@ -83,7 +87,8 @@ describe('ConnectionLifecycle.onHandshake', () => {
   it('rejects missing-fields when handshake payload fails parsing', async () => {
     const result = await lifecycle.onHandshake({
       roomId: 'not-a-uuid',
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -95,7 +100,8 @@ describe('ConnectionLifecycle.onHandshake', () => {
     verifyResult = err('auth/expired-token');
     const result = await lifecycle.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -103,39 +109,15 @@ describe('ConnectionLifecycle.onHandshake', () => {
     }
   });
 
-  it('rejects wrong audience', async () => {
-    verifyResult = ok(makeClaims({ aud: 'someone-else' }));
+  it('rejects with invalid-token when the requested provider has no registered verifier', async () => {
     const result = await lifecycle.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'yandex',
+      token: 'jwt',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('auth/wrong-audience');
-    }
-  });
-
-  it('rejects when azp does not match the client id', async () => {
-    verifyResult = ok(makeClaims({ azp: 'different-azp' }));
-    const result = await lifecycle.onHandshake({
-      roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe('auth/wrong-audience');
-    }
-  });
-
-  it('rejects wrong issuer', async () => {
-    verifyResult = ok(makeClaims({ iss: 'https://evil.example' }));
-    const result = await lifecycle.onHandshake({
-      roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe('auth/wrong-issuer');
+      expect(result.error).toBe('auth/invalid-token');
     }
   });
 
@@ -143,7 +125,8 @@ describe('ConnectionLifecycle.onHandshake', () => {
     verifyResult = ok(makeClaims({ name: undefined, email: 'alice@example.com' }));
     const result = await lifecycle.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -153,16 +136,15 @@ describe('ConnectionLifecycle.onHandshake', () => {
 
   it('rejects with forbidden-room when allowlist excludes the user', async () => {
     const restricted = new ConnectionLifecycle({
-      verifier: makeVerifier(async () => ok(makeClaims())),
-      googleClientId: GOOGLE_CLIENT_ID,
-      googleIssuers: [GOOGLE_ISSUER],
+      verifiers: singleVerifierMap(makeVerifier(async () => ok(makeClaims()))),
       audit: makeAudit(),
       logger: makeLogger(),
       roomAllowlist: [{ roomId: VALID_ROOM_ID, userIds: ['some-other-user'] }],
     });
     const result = await restricted.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -172,18 +154,54 @@ describe('ConnectionLifecycle.onHandshake', () => {
 
   it('admits a listed user when allowlist contains their userId', async () => {
     const restricted = new ConnectionLifecycle({
-      verifier: makeVerifier(async () => ok(makeClaims())),
-      googleClientId: GOOGLE_CLIENT_ID,
-      googleIssuers: [GOOGLE_ISSUER],
+      verifiers: singleVerifierMap(makeVerifier(async () => ok(makeClaims()))),
       audit: makeAudit(),
       logger: makeLogger(),
       roomAllowlist: [{ roomId: VALID_ROOM_ID, userIds: [USER_ID] }],
     });
     const result = await restricted.onHandshake({
       roomId: VALID_ROOM_ID,
-      idToken: 'jwt',
+      provider: 'google',
+      token: 'jwt',
     });
     expect(result.ok).toBe(true);
+  });
+
+  it('routes Yandex handshakes to the Yandex verifier', async () => {
+    const verifiers = new Map<TIdentityProvider, IIdentityVerifier>([
+      [
+        'google',
+        makeVerifier(async () => err('auth/invalid-token')), // would fail if invoked
+      ],
+      [
+        'yandex',
+        makeVerifier(async () =>
+          ok(
+            makeClaims({
+              sub: 'yandex:1234' as UserId,
+              provider: 'yandex',
+              name: 'Иван',
+            })
+          )
+        ),
+      ],
+    ]);
+    const router = new ConnectionLifecycle({
+      verifiers,
+      audit: makeAudit(),
+      logger: makeLogger(),
+      roomAllowlist: [],
+    });
+    const result = await router.onHandshake({
+      roomId: VALID_ROOM_ID,
+      provider: 'yandex',
+      token: 'yandex-jwt',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.identity.userId).toBe('yandex:1234');
+      expect(result.value.provider).toBe('yandex');
+    }
   });
 });
 
@@ -194,9 +212,7 @@ describe('ConnectionLifecycle.onRefresh', () => {
   beforeEach(() => {
     verifyResult = ok(makeClaims({ iat: 1_700_001_000_000 as Milliseconds }));
     lifecycle = new ConnectionLifecycle({
-      verifier: makeVerifier(async () => verifyResult),
-      googleClientId: GOOGLE_CLIENT_ID,
-      googleIssuers: [GOOGLE_ISSUER],
+      verifiers: singleVerifierMap(makeVerifier(async () => verifyResult)),
       audit: makeAudit(),
       logger: makeLogger(),
       roomAllowlist: [],
@@ -210,7 +226,23 @@ describe('ConnectionLifecycle.onRefresh', () => {
   });
 
   it('rejects when sub differs', async () => {
-    const current = makeClaims({ sub: 'other-user' as UserId });
+    const current = makeClaims({ sub: 'google:other-user' as UserId });
+    const result = await lifecycle.onRefresh(current, 'new-jwt');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('auth/sub-mismatch');
+    }
+  });
+
+  it('rejects when provider switches between sessions', async () => {
+    verifyResult = ok(
+      makeClaims({
+        sub: USER_ID,
+        provider: 'yandex',
+        iat: 1_700_001_000_000 as Milliseconds,
+      })
+    );
+    const current = makeClaims({ provider: 'google' });
     const result = await lifecycle.onRefresh(current, 'new-jwt');
     expect(result.ok).toBe(false);
     if (!result.ok) {

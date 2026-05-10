@@ -15,35 +15,36 @@ import type { IServerConfig } from '../application/config/server-config-schema';
 import { PresenceBroadcaster } from '../application/PresenceBroadcaster';
 import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
 import { SignalRelay } from '../application/SignalRelay';
+import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import { InMemoryRoomRegistry } from '../domain/InMemoryRoomRegistry';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
 import type { CertWatcher } from '../infrastructure/CertWatcher';
 import { startCertWatcher } from '../infrastructure/CertWatcher';
 import { createRedisAdapterFactory } from '../infrastructure/createRedisAdapter';
-import { GoogleIdentityVerifier } from '../infrastructure/GoogleIdentityVerifier';
 import { PinoAuditLogger } from '../infrastructure/PinoAuditLogger';
 import { createPinoLogger, PinoServerLogger } from '../infrastructure/PinoServerLogger';
 import { RedisRoomRegistry } from '../infrastructure/RedisRoomRegistry';
 import { SocketIORoomTransport } from '../infrastructure/SocketIORoomTransport';
+import { VERIFIER_FACTORIES } from '../infrastructure/verifier-registry';
 import type { LifecycleState } from './http-routes';
 import { registerAdminHttpRoutes, registerPublicHttpRoutes } from './http-routes';
 import type { CommunicationMetrics } from './metrics';
 import { createCommunicationMetrics } from './metrics';
 import { registerSocketHandlers } from './socket-handlers';
 
-const GOOGLE_ISSUERS: ReadonlyArray<string> = [
-  'https://accounts.google.com',
-  'accounts.google.com',
-];
-const GOOGLE_JWKS_URL = new URL('https://www.googleapis.com/oauth2/v3/certs');
-
 const DRAIN_POLL_INTERVAL_MS = 100;
 const ADMIN_HOST = '127.0.0.1';
 
 export type BootstrapOverrides = {
-  /** Stub the verifier in tests so we don't need the network. */
-  identityVerifier?: IIdentityVerifier & Partial<IVerifierHealth>;
+  /**
+   * Stub one or more verifiers in tests so we don't need the network.
+   * Any provider not listed here falls back to its production
+   * implementation (Google → JWKS, Yandex → HS256 secret-keyed).
+   */
+  identityVerifiers?: Partial<
+    Record<TIdentityProvider, IIdentityVerifier & Partial<IVerifierHealth>>
+  >;
 };
 
 export type BootstrapResult = {
@@ -65,26 +66,34 @@ export async function bootstrap(
   const auditPino = rootPino.child({ audit: true });
   const auditLogger = new PinoAuditLogger(auditPino);
 
-  const verifier =
-    overrides.identityVerifier ??
-    new GoogleIdentityVerifier({
-      audience: config.auth.google_oauth_client_id,
-      issuers: GOOGLE_ISSUERS,
-      jwksUrl: GOOGLE_JWKS_URL,
-      clockToleranceSec: config.auth.clock_tolerance_seconds,
-      fetchMaxAttempts: config.auth.jwks.fetch_max_attempts,
-      fetchTimeoutMs: config.auth.jwks.fetch_timeout_ms,
-    });
+  // Build the provider → verifier map by iterating the registered
+  // factory list. Each factory decides whether its provider has the
+  // config it needs (Google requires `google_oauth_client_id`; Yandex
+  // requires both client_id + client_secret). Test overrides win
+  // unconditionally so integration tests can stub a verifier without
+  // also satisfying its real config requirements.
+  const verifiers = new Map<TIdentityProvider, IIdentityVerifier & Partial<IVerifierHealth>>();
+  for (const factory of VERIFIER_FACTORIES) {
+    const override = overrides.identityVerifiers?.[factory.id];
+    if (override !== undefined) {
+      verifiers.set(factory.id, override);
+    } else if (factory.isConfigured(config.auth)) {
+      verifiers.set(factory.id, factory.build(config.auth));
+    }
+  }
 
-  const verifierHealth: IVerifierHealth = isVerifierHealth(verifier)
-    ? verifier
-    : {
-        getJwksFetchHealth: () => ({
-          lastSuccessAtMs: null,
-          lastFailureAtMs: null,
-          consecutiveFailures: 0,
-        }),
-      };
+  // Pick the first registered verifier that exposes JWKS-fetch health
+  // for the public `/health` endpoint. In practice that is Google
+  // (Yandex is HS256-symmetric — its `IVerifierHealth` impl returns
+  // dummy stats, fine to surface). Falls back to a stub when no
+  // verifier is registered (development with no providers configured).
+  const verifierHealth: IVerifierHealth = pickHealthVerifier(verifiers) ?? {
+    getJwksFetchHealth: () => ({
+      lastSuccessAtMs: null,
+      lastFailureAtMs: null,
+      consecutiveFailures: 0,
+    }),
+  };
 
   const metrics = createCommunicationMetrics();
 
@@ -216,9 +225,7 @@ export async function bootstrap(
   const presenceBroadcaster = new PresenceBroadcaster({ presenceTransport: transport });
 
   const connectionLifecycle = new ConnectionLifecycle({
-    verifier,
-    googleClientId: config.auth.google_oauth_client_id,
-    googleIssuers: GOOGLE_ISSUERS,
+    verifiers,
     audit: auditLogger,
     logger: serverLogger,
     roomAllowlist: config.room.allowlist,
@@ -393,6 +400,17 @@ function buildHttpServer(
 
 function isVerifierHealth(value: object): value is IVerifierHealth {
   return typeof (value as { getJwksFetchHealth?: unknown }).getJwksFetchHealth === 'function';
+}
+
+function pickHealthVerifier(
+  verifiers: ReadonlyMap<TIdentityProvider, IIdentityVerifier & Partial<IVerifierHealth>>
+): IVerifierHealth | null {
+  for (const verifier of verifiers.values()) {
+    if (isVerifierHealth(verifier)) {
+      return verifier;
+    }
+  }
+  return null;
 }
 
 function isHttpsServer(server: HttpServer): server is HttpsServer {

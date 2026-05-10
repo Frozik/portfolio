@@ -227,7 +227,7 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
     socket.on(AUTH_REFRESH_TOKEN, async (raw, ack: (response: IRefreshTokenAck) => void) => {
       try {
         const payload = parseRefreshTokenPayload(raw);
-        const result = await deps.connectionLifecycle.onRefresh(ctx.claims, payload.idToken);
+        const result = await deps.connectionLifecycle.onRefresh(ctx.claims, payload.token);
         if (!result.ok) {
           deps.metrics.counters.tokenRefreshTotal.inc({ outcome: result.error });
           ack({ ok: false, error: result.error });

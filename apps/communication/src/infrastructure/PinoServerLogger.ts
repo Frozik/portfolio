@@ -7,13 +7,23 @@ import type { IServerLogger } from '../application/ports/IServerLogger';
 // list both top-level and nested forms.
 const REDACT_PATHS: ReadonlyArray<string> = [
   'idToken',
+  'token',
+  'access_token',
+  'accessToken',
   'turn_secret',
   'shared_secret',
   'static-auth-secret',
   'TURN_SHARED_SECRET',
+  'YANDEX_OAUTH_CLIENT_SECRET',
+  'yandex_oauth_client_secret',
   'authorization',
   'auth.google_oauth_client_id',
+  'auth.yandex_oauth_client_id',
+  'auth.yandex_oauth_client_secret',
   '*.idToken',
+  '*.token',
+  '*.access_token',
+  '*.accessToken',
   '*.shared_secret',
   '*.authorization',
 ];

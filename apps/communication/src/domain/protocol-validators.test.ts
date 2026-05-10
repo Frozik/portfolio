@@ -25,15 +25,34 @@ const VALID_UUID = '11111111-2222-4333-8444-555555555555';
 
 describe('protocol-validators', () => {
   describe('parseHandshakeAuth', () => {
-    it('accepts a valid payload', () => {
-      const result = parseHandshakeAuth({ roomId: VALID_UUID, idToken: 'jwt-token' });
-      expect(result).toEqual({ roomId: VALID_UUID, idToken: 'jwt-token' });
+    it('accepts a valid Google handshake', () => {
+      const result = parseHandshakeAuth({
+        roomId: VALID_UUID,
+        provider: 'google',
+        token: 'jwt-token',
+      });
+      expect(result).toEqual({ roomId: VALID_UUID, provider: 'google', token: 'jwt-token' });
+    });
+
+    it('accepts a valid Yandex handshake', () => {
+      const result = parseHandshakeAuth({
+        roomId: VALID_UUID,
+        provider: 'yandex',
+        token: 'jwt-token',
+      });
+      expect(result.provider).toBe('yandex');
     });
 
     it('rejects invalid roomId', () => {
-      expect(() => parseHandshakeAuth({ roomId: 'not-a-uuid', idToken: 'x' })).toThrow(
-        InvalidPayloadError
-      );
+      expect(() =>
+        parseHandshakeAuth({ roomId: 'not-a-uuid', provider: 'google', token: 'x' })
+      ).toThrow(InvalidPayloadError);
+    });
+
+    it('rejects unknown provider', () => {
+      expect(() =>
+        parseHandshakeAuth({ roomId: VALID_UUID, provider: 'apple', token: 'x' })
+      ).toThrow(InvalidPayloadError);
     });
   });
 
@@ -157,10 +176,10 @@ describe('protocol-validators', () => {
 
   describe('parseRefreshTokenPayload', () => {
     it('accepts a valid payload', () => {
-      expect(parseRefreshTokenPayload({ idToken: 'jwt' }).idToken).toBe('jwt');
+      expect(parseRefreshTokenPayload({ token: 'jwt' }).token).toBe('jwt');
     });
-    it('rejects empty idToken', () => {
-      expect(() => parseRefreshTokenPayload({ idToken: '' })).toThrow(InvalidPayloadError);
+    it('rejects empty token', () => {
+      expect(() => parseRefreshTokenPayload({ token: '' })).toThrow(InvalidPayloadError);
     });
   });
 

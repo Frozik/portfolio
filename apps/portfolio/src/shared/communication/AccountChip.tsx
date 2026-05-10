@@ -39,6 +39,12 @@ export const AccountChip = observer(({ className }: IAccountChipProps) => {
   const { name, email, pictureUrl } = session.profile;
   const initial = (name.trim()[0] ?? email?.trim()[0] ?? '?').toUpperCase();
   const displayedEmail = email ?? sharedT.accountChip.noEmailFallback;
+  // Lookup is exhaustive over TIdentityProvider — adding a new provider
+  // forces a translation entry, the TypeScript compiler refuses to
+  // build until both en/ru maps cover the new key.
+  const providerLabel =
+    session.provider !== null ? sharedT.accountChip.providerLabels[session.provider] : '';
+  const tooltip = `${providerLabel}${email !== undefined ? ` · ${email}` : ''}`;
 
   return (
     <div
@@ -46,15 +52,14 @@ export const AccountChip = observer(({ className }: IAccountChipProps) => {
         'inline-flex items-center gap-2.5 rounded-full border border-landing-border bg-landing-surface py-1 pr-1 pl-1.5 text-landing-fg',
         className
       )}
+      title={tooltip}
     >
       <Avatar src={pictureUrl} alt={name} size="sm" className="h-7 w-7 shrink-0 text-[11px]">
         {initial}
       </Avatar>
       <div className="flex min-w-0 flex-col leading-tight">
         <span className="truncate text-xs font-medium">{name}</span>
-        <span className="truncate text-[11px] text-landing-fg-dim" title={email ?? undefined}>
-          {displayedEmail}
-        </span>
+        <span className="truncate text-[11px] text-landing-fg-dim">{displayedEmail}</span>
       </div>
       <button
         type="button"

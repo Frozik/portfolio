@@ -8,6 +8,11 @@ set -euo pipefail
 
 SSH_HOST="${SSH_HOST:-}"
 GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}"
+# Yandex OAuth — both fields optional. When unset, the Yandex sign-in
+# path stays disabled and the server rejects handshakes for that
+# provider as `auth/invalid-token`.
+YANDEX_OAUTH_CLIENT_ID="${YANDEX_OAUTH_CLIENT_ID:-}"
+YANDEX_OAUTH_CLIENT_SECRET="${YANDEX_OAUTH_CLIENT_SECRET:-}"
 CERT_EMAIL="${CERT_EMAIL:-}"
 EDGE_HAPROXY_ENABLED="${EDGE_HAPROXY_ENABLED:-true}"
 COMMUNICATION_DOMAIN="${COMMUNICATION_DOMAIN:-}"
@@ -32,6 +37,11 @@ Optional:
   --domain            Override domain (default: <IP>.sslip.io)
   --cors-origin       Add a CORS-allowed origin (repeatable; default:
                       https://frozik.github.io,http://localhost:5173)
+  --yandex-client-id      Yandex OAuth application ID (public — written to
+                          the rendered TOML override).
+  --yandex-client-secret  Yandex OAuth client_secret (sensitive — only
+                          written to the systemd EnvironmentFile, never
+                          to a TOML or any committed artifact).
 USAGE
 }
 
@@ -56,6 +66,10 @@ _parse_common() {
         SSH_HOST="$2"; shift 2;;
       --google-client-id)
         GOOGLE_OAUTH_CLIENT_ID="$2"; shift 2;;
+      --yandex-client-id)
+        YANDEX_OAUTH_CLIENT_ID="$2"; shift 2;;
+      --yandex-client-secret)
+        YANDEX_OAUTH_CLIENT_SECRET="$2"; shift 2;;
       --cert-email)
         CERT_EMAIL="$2"; shift 2;;
       --no-haproxy)
@@ -106,7 +120,19 @@ validate_install_args() {
     usage_install
     exit 2
   fi
-  export SSH_HOST GOOGLE_OAUTH_CLIENT_ID CERT_EMAIL EDGE_HAPROXY_ENABLED COMMUNICATION_DOMAIN COMMUNICATION_CORS_ORIGINS INSTALL_REDIS HARDEN_SSH
+  # Yandex pair: either both empty (provider disabled) or both set.
+  if [[ -n "${YANDEX_OAUTH_CLIENT_ID}" && -z "${YANDEX_OAUTH_CLIENT_SECRET}" ]]; then
+    err "--yandex-client-id was provided without --yandex-client-secret"
+    usage_install
+    exit 2
+  fi
+  if [[ -z "${YANDEX_OAUTH_CLIENT_ID}" && -n "${YANDEX_OAUTH_CLIENT_SECRET}" ]]; then
+    err "--yandex-client-secret was provided without --yandex-client-id"
+    usage_install
+    exit 2
+  fi
+  export SSH_HOST GOOGLE_OAUTH_CLIENT_ID YANDEX_OAUTH_CLIENT_ID YANDEX_OAUTH_CLIENT_SECRET \
+    CERT_EMAIL EDGE_HAPROXY_ENABLED COMMUNICATION_DOMAIN COMMUNICATION_CORS_ORIGINS INSTALL_REDIS HARDEN_SSH
 }
 
 validate_upgrade_args() {

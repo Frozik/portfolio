@@ -138,9 +138,10 @@ describe('GoogleIdentityVerifier (integration)', () => {
     const result = await verifier.verify(token);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.sub).toBe(TEST_SUB);
-      expect(result.value.aud).toBe(TEST_AUDIENCE);
-      expect(result.value.iss).toBe(TEST_ISSUER);
+      // sub is namespaced by provider so cross-provider userId collisions
+      // are impossible by construction.
+      expect(result.value.sub).toBe(`google:${TEST_SUB}`);
+      expect(result.value.provider).toBe('google');
       expect(result.value.name).toBe('Alice');
     }
     const health = verifier.getJwksFetchHealth();

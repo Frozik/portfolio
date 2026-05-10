@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AuthErrorCode, Identity, TokenClaims } from '../domain/Identity';
+import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
 import type { IHandshakeAuth } from '../domain/protocol';
@@ -14,9 +15,13 @@ import { err, ok } from './Result';
 import { checkRoomAllowlist } from './RoomAllowlistChecker';
 
 type ConnectionLifecycleDeps = {
-  verifier: IIdentityVerifier;
-  googleClientId: string;
-  googleIssuers: ReadonlyArray<string>;
+  /**
+   * Map of OIDC provider → verifier. Each verifier internally validates
+   * provider-specific signing keys, issuer, and audience claims; this
+   * class only routes by provider and consumes the canonical
+   * `TokenClaims` they return.
+   */
+  verifiers: ReadonlyMap<TIdentityProvider, IIdentityVerifier>;
   audit: IAuditLogger;
   logger: IServerLogger;
   // v2: per-room allowlist. Empty = no enforcement.
@@ -27,6 +32,7 @@ export type HandshakeOutput = {
   identity: Identity;
   claims: TokenClaims;
   socketId: SocketId;
+  provider: TIdentityProvider;
 };
 
 export class ConnectionLifecycle {
@@ -42,20 +48,19 @@ export class ConnectionLifecycle {
       return err('auth/missing-fields');
     }
 
-    const verifyResult = await this.deps.verifier.verify(parsed.idToken);
+    const verifier = this.deps.verifiers.get(parsed.provider);
+    if (verifier === undefined) {
+      // Provider was disabled at deploy time (no client_id / secret). The
+      // wire schema accepted it but we can't actually verify the token —
+      // surface as invalid rather than a server error.
+      return err('auth/invalid-token');
+    }
+
+    const verifyResult = await verifier.verify(parsed.token);
     if (!verifyResult.ok) {
       return err(verifyResult.error);
     }
     const claims = verifyResult.value;
-
-    const audienceCheck = this.checkAudience(claims);
-    if (!audienceCheck.ok) {
-      return audienceCheck;
-    }
-    const issuerCheck = this.checkIssuer(claims);
-    if (!issuerCheck.ok) {
-      return issuerCheck;
-    }
 
     if (claims.name === undefined || claims.name.trim() === '') {
       return err('auth/missing-name-claim');
@@ -80,19 +85,30 @@ export class ConnectionLifecycle {
       displayName,
       socketId,
     };
-    return ok({ identity, claims, socketId });
+    return ok({ identity, claims, socketId, provider: parsed.provider });
   }
 
   public async onRefresh(
     currentClaims: TokenClaims,
-    newIdToken: string
+    newToken: string
   ): Promise<Result<TokenClaims, AuthErrorCode>> {
-    const verifyResult = await this.deps.verifier.verify(newIdToken);
+    const verifier = this.deps.verifiers.get(currentClaims.provider);
+    if (verifier === undefined) {
+      // Same caveat as `onHandshake`: provider was disabled mid-flight
+      // (re-deploy stripped its config). Force re-auth.
+      return err('auth/invalid-token');
+    }
+
+    const verifyResult = await verifier.verify(newToken);
     if (!verifyResult.ok) {
       return err(verifyResult.error);
     }
     const newClaims = verifyResult.value;
 
+    if (newClaims.provider !== currentClaims.provider) {
+      // Defensive: client tried to swap providers under the same socket.
+      return err('auth/sub-mismatch');
+    }
     if (newClaims.sub !== currentClaims.sub) {
       return err('auth/sub-mismatch');
     }
@@ -103,36 +119,10 @@ export class ConnectionLifecycle {
     if (currentClaims.sid !== undefined && currentClaims.sid !== newClaims.sid) {
       return err('auth/invalid-token');
     }
-
-    const audienceCheck = this.checkAudience(newClaims);
-    if (!audienceCheck.ok) {
-      return audienceCheck;
-    }
-    const issuerCheck = this.checkIssuer(newClaims);
-    if (!issuerCheck.ok) {
-      return issuerCheck;
-    }
     return ok(newClaims);
   }
 
   public onDisconnect(socketId: SocketId, roomId: RoomId, registry: IRoomRegistry): void {
     registry.release(roomId, socketId);
-  }
-
-  private checkAudience(claims: TokenClaims): Result<true, AuthErrorCode> {
-    if (claims.aud !== this.deps.googleClientId) {
-      return err('auth/wrong-audience');
-    }
-    if (claims.azp !== undefined && claims.azp !== this.deps.googleClientId) {
-      return err('auth/wrong-audience');
-    }
-    return ok(true);
-  }
-
-  private checkIssuer(claims: TokenClaims): Result<true, AuthErrorCode> {
-    if (!this.deps.googleIssuers.includes(claims.iss)) {
-      return err('auth/wrong-issuer');
-    }
-    return ok(true);
   }
 }

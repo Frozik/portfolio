@@ -9,6 +9,7 @@ import { LandingLayout } from './LandingLayout';
 const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const GOOGLE_OAUTH_CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ?? '';
+const YANDEX_OAUTH_CLIENT_ID = import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '';
 const COMMUNICATION_BASE_URL = import.meta.env.VITE_COMMUNICATION_URL ?? 'http://localhost:4445';
 
 const Welcome = lazy(() =>
@@ -68,6 +69,11 @@ const ConfRoom = lazy(() =>
   import('../../features/conf/presentation/ConfRoom').then(m => ({ default: m.ConfRoom }))
 );
 const ErrorPage = lazy(() => import('./ErrorPage').then(m => ({ default: m.ErrorPage })));
+const YandexOauthCallbackPage = lazy(() =>
+  import('../../shared/communication/oidc/YandexOauthCallbackPage').then(m => ({
+    default: m.YandexOauthCallbackPage,
+  }))
+);
 const StoreBootstrap = lazy(() =>
   import('../stores/StoreBootstrap').then(m => ({ default: m.StoreBootstrap }))
 );
@@ -84,6 +90,7 @@ export const Application = memo(() => {
       <ErrorBoundary>
         <CommunicationProvider
           googleClientId={GOOGLE_OAUTH_CLIENT_ID}
+          yandexClientId={YANDEX_OAUTH_CLIENT_ID}
           baseUrl={COMMUNICATION_BASE_URL}
         >
           <Suspense fallback={<OverlayLoader />}>
@@ -110,6 +117,7 @@ export const Application = memo(() => {
                   <Route path=":roomId" element={<ConfRoom />} />
                 </Route>
               </Route>
+              <Route path="oauth/yandex/callback" element={<YandexOauthCallbackPage />} />
               <Route path="*" element={<ErrorPage />} />
             </Routes>
           </Suspense>

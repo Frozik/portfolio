@@ -39,7 +39,6 @@ import { bootstrap } from './bootstrap';
 const ROOM_ID = '550e8400-e29b-41d4-a716-446655440000';
 const ALT_ROOM_ID = '550e8400-e29b-41d4-a716-446655440001';
 const TEST_AUDIENCE = 'test-client';
-const TEST_ISSUER = 'https://accounts.google.com';
 const ONE_SECOND_MS = 1_000;
 const HANDSHAKE_TIMEOUT_MS = 1_500;
 const TEST_TIMEOUT_MS = 15_000;
@@ -55,6 +54,8 @@ function buildConfig(overrides: Partial<IServerConfig> = {}): IServerConfig {
     },
     auth: {
       google_oauth_client_id: TEST_AUDIENCE,
+      yandex_oauth_client_id: '',
+      yandex_oauth_client_secret: '',
       token_expiry_warning_seconds: 1,
       clock_tolerance_seconds: 0,
       jwks: { fetch_max_attempts: 1, fetch_timeout_ms: 100 },
@@ -117,8 +118,7 @@ class StubIdentityVerifier implements IIdentityVerifier, IVerifierHealth {
       sub: sub as UserId,
       iat: (iat * ONE_SECOND_MS) as Milliseconds,
       exp: ((iat + ttlSec) * ONE_SECOND_MS) as Milliseconds,
-      iss: TEST_ISSUER,
-      aud: TEST_AUDIENCE,
+      provider: 'google',
       name,
       sid: options.sid,
     };
@@ -127,8 +127,8 @@ class StubIdentityVerifier implements IIdentityVerifier, IVerifierHealth {
     return { token, claims };
   }
 
-  async verify(idToken: string): Promise<Result<TokenClaims, AuthErrorCode>> {
-    const claims = this.issuedTokens.get(idToken);
+  async verify(token: string): Promise<Result<TokenClaims, AuthErrorCode>> {
+    const claims = this.issuedTokens.get(token);
     if (claims === undefined) {
       this.lastFailureAtMs = Date.now();
       this.consecutiveFailures += 1;
@@ -167,7 +167,7 @@ type RunningServer = {
 async function startServer(): Promise<RunningServer> {
   const verifier = new StubIdentityVerifier();
   const config = buildConfig();
-  const result = await bootstrap(config, { identityVerifier: verifier });
+  const result = await bootstrap(config, { identityVerifiers: { google: verifier } });
   const ports = await result.start();
   return {
     bootstrap: result,
@@ -194,7 +194,7 @@ type ConnectedClient = {
 
 function connectClient(
   port: number,
-  auth: { roomId: string; idToken: string }
+  auth: { roomId: string; provider: 'google' | 'yandex'; token: string }
 ): Promise<ConnectedClient> {
   return new Promise((resolve, reject) => {
     const client = ioClient(`http://127.0.0.1:${port}`, {
@@ -319,7 +319,8 @@ describe('bootstrap (integration)', () => {
       const issued = server.verifier.issue('drain-probe', 'Probe');
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: issued.token,
+        provider: 'google' as const,
+        token: issued.token,
       });
       await waitFor(() => connected.presenceEvents[0]);
 
@@ -345,7 +346,8 @@ describe('bootstrap (integration)', () => {
       const issued = server.verifier.issue('user-1', 'Alice');
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: issued.token,
+        provider: 'google' as const,
+        token: issued.token,
       });
       const presence = await waitFor(() => connected.presenceEvents[0]);
       expect(presence.socketCount).toBeGreaterThanOrEqual(1);
@@ -363,7 +365,7 @@ describe('bootstrap (integration)', () => {
           transports: ['websocket'],
           forceNew: true,
           reconnection: false,
-          auth: { roomId: ROOM_ID, idToken: 'bogus' },
+          auth: { roomId: ROOM_ID, provider: 'google' as const, token: 'bogus' },
         });
         client.on('connect_error', error => {
           const augmented = error as Error & { data?: { code: string } };
@@ -385,11 +387,13 @@ describe('bootstrap (integration)', () => {
       const tokenB = server.verifier.issue('user-B', 'Bob');
       const connectedA = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const connectedB = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenB.token,
+        provider: 'google' as const,
+        token: tokenB.token,
       });
       const clientA = connectedA.client;
       const clientB = connectedB.client;
@@ -437,11 +441,13 @@ describe('bootstrap (integration)', () => {
       const tokenB = server.verifier.issue('signal-B', 'SigB');
       const connectedA = await connectClient(server.publicPort, {
         roomId: ALT_ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const connectedB = await connectClient(server.publicPort, {
         roomId: ALT_ROOM_ID,
-        idToken: tokenB.token,
+        provider: 'google' as const,
+        token: tokenB.token,
       });
       const clientA = connectedA.client;
       const clientB = connectedB.client;
@@ -484,7 +490,8 @@ describe('bootstrap (integration)', () => {
       const tokenA = server.verifier.issue('refresh-A', 'Alice', { ttlSec: 3 });
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const client = connected.client;
       await waitFor(() => connected.presenceEvents[0]);
@@ -499,14 +506,10 @@ describe('bootstrap (integration)', () => {
           () => reject(new Error('refresh ack timeout')),
           HANDSHAKE_TIMEOUT_MS
         );
-        client.emit(
-          AUTH_REFRESH_TOKEN,
-          { idToken: newToken.token },
-          (response: IRefreshTokenAck) => {
-            clearTimeout(timer);
-            resolve(response);
-          }
-        );
+        client.emit(AUTH_REFRESH_TOKEN, { token: newToken.token }, (response: IRefreshTokenAck) => {
+          clearTimeout(timer);
+          resolve(response);
+        });
       });
       expect(ack.ok).toBe(true);
       if (ack.ok) {
@@ -524,7 +527,8 @@ describe('bootstrap (integration)', () => {
       const tokenA = server.verifier.issue('renew-A', 'Alice', { ttlSec: 3 });
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const client = connected.client;
       await waitFor(() => connected.presenceEvents[0]);
@@ -536,7 +540,7 @@ describe('bootstrap (integration)', () => {
         iat: Math.floor(Date.now() / ONE_SECOND_MS) + 5,
       });
       const ack = await new Promise<IRefreshTokenAck>(resolve => {
-        client.emit(AUTH_REFRESH_TOKEN, { idToken: newToken.token }, (r: IRefreshTokenAck) =>
+        client.emit(AUTH_REFRESH_TOKEN, { token: newToken.token }, (r: IRefreshTokenAck) =>
           resolve(r)
         );
       });
@@ -557,7 +561,8 @@ describe('bootstrap (integration)', () => {
       const tokenA = server.verifier.issue('exp-A', 'Alice', { ttlSec: 3 });
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const client = connected.client;
       await waitFor(() => connected.presenceEvents[0]);
@@ -570,7 +575,7 @@ describe('bootstrap (integration)', () => {
         iat: Math.floor(Date.now() / ONE_SECOND_MS) + 5,
       });
       const ack = await new Promise<IRefreshTokenAck>(resolve => {
-        client.emit(AUTH_REFRESH_TOKEN, { idToken: newToken.token }, (r: IRefreshTokenAck) =>
+        client.emit(AUTH_REFRESH_TOKEN, { token: newToken.token }, (r: IRefreshTokenAck) =>
           resolve(r)
         );
       });
@@ -587,7 +592,8 @@ describe('bootstrap (integration)', () => {
       const tokenA = server.verifier.issue('turn-A', 'Alice');
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const client = connected.client;
       await waitFor(() => connected.presenceEvents[0]);
@@ -623,7 +629,8 @@ describe('bootstrap (integration)', () => {
       const tokenA = server.verifier.issue('drain-A', 'Alice');
       const connected = await connectClient(server.publicPort, {
         roomId: ROOM_ID,
-        idToken: tokenA.token,
+        provider: 'google' as const,
+        token: tokenA.token,
       });
       const client = connected.client;
       await waitFor(() => connected.presenceEvents[0]);

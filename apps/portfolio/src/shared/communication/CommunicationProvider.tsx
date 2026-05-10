@@ -4,42 +4,64 @@ import type { ReactElement, ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 
 import { AuthSession } from './AuthSession';
-import { requestGoogleSilentRefresh } from './googleSilentRefresh';
+import type { IOidcProvider } from './oidc/IOidcProvider';
+import { OIDC_PROVIDER_FACTORIES } from './oidc/oidc-provider-registry';
+import type { TIdentityProvider } from './oidc/types';
+
+/**
+ * Sentinel client_id passed to `<GoogleOAuthProvider>` when the env
+ * var is missing. Lets the React tree mount even without a real
+ * Google client; the `<SignInGate>` surfaces a clear error instead of
+ * letting the WebSocket handshake silently 401.
+ */
+const FALLBACK_GOOGLE_CLIENT_ID = '__missing__';
 
 interface ICommunicationContextValue {
   readonly authSession: AuthSession;
   readonly baseUrl: string;
   readonly googleClientId: string;
+  readonly yandexClientId: string;
+  readonly providers: ReadonlyMap<TIdentityProvider, IOidcProvider>;
 }
 
 const CommunicationContext = createContext<ICommunicationContextValue | null>(null);
 
 interface ICommunicationProviderProps {
   readonly googleClientId: string;
+  readonly yandexClientId: string;
   readonly baseUrl: string;
   readonly children: ReactNode;
 }
 
-const FALLBACK_GOOGLE_CLIENT_ID = '__missing__';
-
 /**
- * Wraps the React tree with the auth session + Google identity
- * provider needed by every retro / conf entry point.
- *
- * If `googleClientId` is empty the inner Google provider is given
- * a sentinel value so its components can render — the
- * `<SignInGate>` will surface a clear error rather than silently
- * 401-ing on the WebSocket handshake.
+ * Wraps the React tree with the auth session + identity providers
+ * needed by every retro / conf entry point. Both Google and Yandex
+ * are optional; when their env-var-supplied client_id is empty, the
+ * matching provider stays disabled (sign-in button hidden, server
+ * rejects handshakes for that provider).
  */
 export function CommunicationProvider({
   googleClientId,
+  yandexClientId,
   baseUrl,
   children,
 }: ICommunicationProviderProps): ReactElement {
   const authSession = useMemo(() => new AuthSession(), []);
+
+  const providers = useMemo<ReadonlyMap<TIdentityProvider, IOidcProvider>>(() => {
+    const env = { googleClientId, yandexClientId };
+    const map = new Map<TIdentityProvider, IOidcProvider>();
+    for (const factory of OIDC_PROVIDER_FACTORIES) {
+      if (factory.isConfigured(env)) {
+        map.set(factory.id, factory.build(env));
+      }
+    }
+    return map;
+  }, [googleClientId, yandexClientId]);
+
   const value = useMemo<ICommunicationContextValue>(
-    () => ({ authSession, baseUrl, googleClientId }),
-    [authSession, baseUrl, googleClientId]
+    () => ({ authSession, baseUrl, googleClientId, yandexClientId, providers }),
+    [authSession, baseUrl, googleClientId, yandexClientId, providers]
   );
   const effectiveClientId =
     googleClientId.trim().length === 0 ? FALLBACK_GOOGLE_CLIENT_ID : googleClientId;
@@ -47,45 +69,43 @@ export function CommunicationProvider({
   return (
     <GoogleOAuthProvider clientId={effectiveClientId}>
       <CommunicationContext.Provider value={value}>
-        <SilentRefreshBridge session={authSession} clientId={effectiveClientId} />
+        <ProviderBridge session={authSession} providers={providers} />
         {children}
       </CommunicationContext.Provider>
     </GoogleOAuthProvider>
   );
 }
 
-interface ISilentRefreshBridgeProps {
+interface IProviderBridgeProps {
   readonly session: AuthSession;
-  readonly clientId: string;
+  readonly providers: ReadonlyMap<TIdentityProvider, IOidcProvider>;
 }
 
 /**
- * Installs the silent ID-token refresh handler on the session once
- * the Google Identity Services script reports `scriptLoadedSuccessfully`.
- * Re-registers whenever the signed-in account changes so the GIS
- * `login_hint` follows the active profile email — without this, a
- * refresh after a Google account switch would race against the wrong
- * Google session.
+ * Installs the silent-refresh runners on the session once the relevant
+ * SDKs (Google's GIS) report ready. Also re-decodes the rehydrated
+ * profile via the matching provider — `AuthSession` keeps decoding
+ * generic so it doesn't grow per-provider claim logic.
  *
- * Must be a child of `<GoogleOAuthProvider>` because `useGoogleOAuth`
+ * Must live inside `<GoogleOAuthProvider>` because `useGoogleOAuth`
  * is the only public surface that exposes script load state.
  */
-const SilentRefreshBridge = observer(({ session, clientId }: ISilentRefreshBridgeProps) => {
+const ProviderBridge = observer(({ session, providers }: IProviderBridgeProps) => {
   const { scriptLoadedSuccessfully } = useGoogleOAuth();
-  const loginHint = session.profile?.email;
 
   useEffect(() => {
-    if (!scriptLoadedSuccessfully) {
+    // Wait until GIS finishes loading when Google is enabled —
+    // otherwise `GoogleOidcProvider.silentRefresh` would no-op anyway
+    // because `window.google` isn't present yet.
+    if (providers.has('google') && !scriptLoadedSuccessfully) {
       return undefined;
     }
-    if (clientId.trim().length === 0 || clientId === FALLBACK_GOOGLE_CLIENT_ID) {
-      return undefined;
-    }
-    session.setRefreshHandler(() => requestGoogleSilentRefresh({ clientId, loginHint }));
+    session.setProviders(providers);
+    session.completeRehydrate();
     return () => {
-      session.clearRefreshHandler();
+      session.clearProviders();
     };
-  }, [scriptLoadedSuccessfully, clientId, loginHint, session]);
+  }, [providers, scriptLoadedSuccessfully, session]);
 
   return null;
 });
@@ -111,4 +131,12 @@ export function useCommunicationBaseUrl(): string {
 
 export function useGoogleClientId(): string {
   return useCommunicationContext().googleClientId;
+}
+
+export function useYandexClientId(): string {
+  return useCommunicationContext().yandexClientId;
+}
+
+export function useOidcProviders(): ReadonlyMap<TIdentityProvider, IOidcProvider> {
+  return useCommunicationContext().providers;
 }

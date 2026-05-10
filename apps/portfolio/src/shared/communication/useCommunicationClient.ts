@@ -99,7 +99,13 @@ export function useCommunicationClient(roomId: string): ICommunicationClient | n
       createCommunicationClient({
         baseUrl,
         roomId,
-        getIdToken: () => sessionRef.current.idToken,
+        getCredentials: () => {
+          const current = sessionRef.current;
+          if (current.provider === null || current.token === null) {
+            return null;
+          }
+          return { provider: current.provider, token: current.token };
+        },
         onTokenRefreshNeeded: () => sessionRef.current.requestRefresh(),
       })
     );

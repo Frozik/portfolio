@@ -185,6 +185,65 @@ mark. New origins take about five minutes to propagate.
 
 ---
 
+## Yandex OAuth setup (optional)
+
+The communication server can also accept Yandex-issued tokens. Set up
+is parallel to Google; the Yandex sign-in button stays hidden in the
+frontend and the server rejects `provider: 'yandex'` handshakes when
+either of the two Yandex env vars below is empty.
+
+### Step-by-step
+
+1. **Open the Yandex OAuth console**: <https://oauth.yandex.com/>.
+   Sign in with the Yandex account you want to own this OAuth client.
+
+2. **Create a new app**:
+   - Platform: select **Web services** (not "Mobile / Desktop").
+   - **Suggest hostname** — production hostname of the deployment (no
+     scheme, no path). For the GitHub Pages portfolio that is
+     `frozik.github.io`.
+   - **Redirect URI** — register all three. The path resolves to a
+     React route inside the SPA (`<YandexOauthCallbackPage>`) that
+     parses the OAuth fragment, posts it back to the opener, and
+     closes the popup:
+     - `http://localhost:5173/portfolio/oauth/yandex/callback`
+     - `http://localhost:4173/portfolio/oauth/yandex/callback`
+     - `https://frozik.github.io/portfolio/oauth/yandex/callback`
+   - **Permissions** — `openid` is enough for sign-in. Adding
+     `login:info` and `login:email` is optional and only adds richer
+     profile fields to the issued JWT.
+
+3. **Copy the Client ID and Client Secret** from the app's properties
+   page. The client_id is public, the client_secret must be treated
+   as a real secret.
+
+   - Set `VITE_YANDEX_OAUTH_CLIENT_ID=<client_id>` in
+     `apps/portfolio/.env.local` (already gitignored via `*.local`).
+   - Pass the secret via `--yandex-client-secret <SECRET>` when
+     running `install.sh`. The orchestrator writes it to
+     `/etc/communication/oauth-secrets` (mode 600, owner
+     `communication`) on the VPS — never to a TOML or any committed
+     artifact.
+
+4. **Validate**: after re-running `install.sh` with the new flags, the
+   `<SignInGate>` shows two buttons (Google + Yandex). Yandex sign-in
+   opens a popup, returns an opaque `access_token`, then the frontend
+   exchanges it for a signed JWT via
+   `https://login.yandex.ru/info?format=jwt`. The server verifies
+   that JWT with `HS256` against `YANDEX_OAUTH_CLIENT_SECRET`.
+
+### Token rules the server enforces (Yandex)
+
+- `iss` must equal `login.yandex.ru`.
+- `alg` is pinned to `HS256` (the only algorithm Yandex's `/info` uses).
+- `uid` must be present and non-empty — surfaced as `userId =
+  yandex:${uid}` so it cannot collide with a Google `sub`.
+
+If the JWT signature does not match the configured client_secret the
+handshake fails with `auth/invalid-token`.
+
+---
+
 ## Environment variables
 
 Configuration is layered: `default.toml` -> `<NODE_CONFIG_ENV>.toml` ->
@@ -197,6 +256,8 @@ env vars (mapped via `config/custom-environment-variables.json`).
 | `TLS_CERT_PATH`                  | `server.tls.cert_path`          | `/etc/letsencrypt/live/...`        |
 | `TLS_KEY_PATH`                   | `server.tls.key_path`           |                                    |
 | `GOOGLE_OAUTH_CLIENT_ID`         | `auth.google_oauth_client_id`   | **Required**                       |
+| `YANDEX_OAUTH_CLIENT_ID`         | `auth.yandex_oauth_client_id`   | Optional — required for Yandex sign-in |
+| `YANDEX_OAUTH_CLIENT_SECRET`     | `auth.yandex_oauth_client_secret` | Optional, **secret** — sourced via systemd EnvironmentFile |
 | `JWKS_FETCH_MAX_ATTEMPTS`        | `auth.jwks.fetch_max_attempts`  |                                    |
 | `JWKS_FETCH_TIMEOUT_MS`          | `auth.jwks.fetch_timeout_ms`    |                                    |
 | `TURN_SHARED_SECRET`             | `turn.shared_secret`            | **Required**, sourced via systemd  |

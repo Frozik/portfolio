@@ -11,8 +11,7 @@ const USER_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' as UserId;
 function makeClaims(overrides: Partial<TokenClaims> = {}): TokenClaims {
   return {
     sub: USER_ID,
-    aud: 'aud',
-    iss: 'iss',
+    provider: 'google',
     iat: NOW_MS as Milliseconds,
     exp: EXPIRY_MS as Milliseconds,
     name: 'Alice',
@@ -93,5 +92,38 @@ describe('TokenLifecycle', () => {
     vi.advanceTimersByTime(EXPIRY_MS - NOW_MS + 10_000);
     expect(onWarning).not.toHaveBeenCalled();
     expect(onExpired).not.toHaveBeenCalled();
+  });
+
+  it('handles long-TTL claims (Yandex JWTs are valid for ~1 year) without firing immediately', () => {
+    // Yandex' `/info?format=jwt` issues JWTs with year-long TTLs. The
+    // unguarded `setTimeout(callback, expMs - nowMs)` would clamp such
+    // a delay to 1 ms (it overflows int32) and fire `onExpired`
+    // immediately — kicking the user out the moment they connect.
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1_000;
+    const lifecycle = new TokenLifecycle({ warningSeconds: WARNING_SECONDS });
+    const onWarning = vi.fn();
+    const onExpired = vi.fn();
+    lifecycle.arm(makeClaims({ exp: (NOW_MS + ONE_YEAR_MS) as Milliseconds }), {
+      onWarning,
+      onExpired,
+    });
+
+    // 30 days in: chained setTimeout has crossed the 24.8-day max
+    // boundary at least once but no callback fired.
+    vi.advanceTimersByTime(30 * 24 * 60 * 60 * 1_000);
+    expect(onWarning).not.toHaveBeenCalled();
+    expect(onExpired).not.toHaveBeenCalled();
+
+    // Step past the warning point (year minus 60s).
+    vi.advanceTimersByTime(ONE_YEAR_MS - 30 * 24 * 60 * 60 * 1_000 - WARNING_SECONDS * 1_000);
+    expect(onWarning).toHaveBeenCalledTimes(1);
+    expect(onWarning).toHaveBeenCalledWith(WARNING_SECONDS);
+    expect(onExpired).not.toHaveBeenCalled();
+
+    // Cross the expiry point.
+    vi.advanceTimersByTime(WARNING_SECONDS * 1_000);
+    expect(onExpired).toHaveBeenCalledTimes(1);
+
+    lifecycle.dispose();
   });
 });

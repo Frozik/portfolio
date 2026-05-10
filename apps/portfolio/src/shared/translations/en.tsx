@@ -18,11 +18,21 @@ interface SignInGateTranslation {
   title: string;
   description: string;
   missingClientId: string;
+  yandexButton: string;
 }
 
 interface AccountChipTranslation {
   signOutAriaLabel: string;
   noEmailFallback: string;
+  /**
+   * Per-provider account-chip tooltip. Keyed by `TIdentityProvider`
+   * so adding a new provider forces a translation entry — TypeScript
+   * compiler errors out on an incomplete `Record<TIdentityProvider, …>`.
+   */
+  providerLabels: {
+    google: string;
+    yandex: string;
+  };
 }
 
 export interface SharedTranslation {
@@ -76,12 +86,17 @@ export const sharedTranslationsEn: SharedTranslation = {
   signInGate: {
     title: 'Sign in to continue',
     description:
-      'The communication server requires a Google account to verify your identity for end-to-end signaling. The token is held in this tab only and is forgotten when the tab closes.',
+      'The communication server verifies your identity through Google or Yandex for end-to-end signaling. The token is held in this tab only and is forgotten when the tab closes.',
     missingClientId:
-      'VITE_GOOGLE_OAUTH_CLIENT_ID is not configured. Sign-in will fail until the deploy provides a Google OAuth client id.',
+      'No identity providers are configured. Sign-in will fail until the deploy supplies at least one OAuth client id (Google or Yandex).',
+    yandexButton: 'Sign in with Yandex',
   },
   accountChip: {
     signOutAriaLabel: 'Sign out of the communication server',
     noEmailFallback: 'No email',
+    providerLabels: {
+      google: 'Signed in with Google',
+      yandex: 'Signed in with Yandex',
+    },
   },
 };

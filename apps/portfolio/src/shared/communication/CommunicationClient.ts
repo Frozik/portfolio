@@ -2,6 +2,7 @@ import type { Observable } from 'rxjs';
 import { BehaviorSubject } from 'rxjs';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
+import type { TIdentityProvider } from './oidc/types';
 
 /**
  * Wire-protocol event names. Mirrored from
@@ -22,17 +23,27 @@ const ACK_TIMEOUT_MS = 10_000;
 
 export type TConnectionState = 'idle' | 'connecting' | 'open' | 'closed';
 
+export interface IAuthCredentials {
+  readonly provider: TIdentityProvider;
+  readonly token: string;
+}
+
 export interface ICommunicationClientParams {
   readonly baseUrl: string;
   readonly roomId: string;
-  /** Returns the current ID token, or `null` if the user is signed out. */
-  readonly getIdToken: () => string | null;
+  /**
+   * Returns the current `{ provider, token }` pair, or `null` if the
+   * user is signed out. The provider stays stable for the lifetime of
+   * a socket — the server caches it on the first handshake.
+   */
+  readonly getCredentials: () => IAuthCredentials | null;
   /**
    * Called when the server emits `auth:token-expiring`. The host
-   * should resolve to a fresh ID token (silent refresh via the
-   * Google identity SDK). Resolving `null` indicates that no
-   * refresh is possible — the client will surface the expiry
-   * via the `auth:token-expired` event when it eventually fires.
+   * should resolve to a fresh provider-issued JWT (Google: silent
+   * refresh via GIS; Yandex: re-call `/info?format=jwt`). Resolving
+   * `null` indicates that no refresh is possible — the client will
+   * surface the expiry via the `auth:token-expired` event when it
+   * eventually fires.
    */
   readonly onTokenRefreshNeeded: () => Promise<string | null>;
 }
@@ -157,7 +168,7 @@ class TinyEmitter<T> {
 export function createCommunicationClient(
   params: ICommunicationClientParams
 ): ICommunicationClient {
-  const { baseUrl, roomId, getIdToken, onTokenRefreshNeeded } = params;
+  const { baseUrl, roomId, getCredentials, onTokenRefreshNeeded } = params;
 
   const signalEmitter = new TinyEmitter<ISignalEvent>();
   const presenceEmitter = new TinyEmitter<IRoomPresenceEvent>();
@@ -224,7 +235,7 @@ export function createCommunicationClient(
     // (or eventual `auth:token-expired`) drives the next attempt.
     socket.timeout(ACK_TIMEOUT_MS).emit(
       AUTH_REFRESH_TOKEN,
-      { idToken: nextToken },
+      { token: nextToken },
       // Ack callback intentionally a no-op: failure is observable
       // via the next `auth:token-*` server event.
       () => undefined
@@ -235,16 +246,20 @@ export function createCommunicationClient(
     if (socket !== null) {
       return;
     }
-    const idToken = getIdToken();
-    if (idToken === null) {
-      // No token → caller should surface a sign-in prompt; we keep
-      // the client in `idle` so a later `connect()` after sign-in
-      // can succeed without recreating the wrapper.
+    const credentials = getCredentials();
+    if (credentials === null) {
+      // No active sign-in → caller should surface a sign-in prompt;
+      // we keep the client in `idle` so a later `connect()` after
+      // sign-in can succeed without recreating the wrapper.
       return;
     }
     setState('connecting');
     const next = io(baseUrl, {
-      auth: { roomId, idToken },
+      auth: {
+        roomId,
+        provider: credentials.provider,
+        token: credentials.token,
+      },
       transports: ['websocket'],
       reconnection: true,
       // Keep noise low while debugging — feature stores log

@@ -11,6 +11,13 @@ key_path = ""
 
 [auth]
 google_oauth_client_id = ""
+yandex_oauth_client_id = ""
+# yandex_oauth_client_secret is intentionally absent from this TOML and
+# sourced only via the YANDEX_OAUTH_CLIENT_SECRET env var (parallel to
+# TURN_SHARED_SECRET). Leaving it empty in the merged config disables
+# the Yandex verifier — any handshake quoting `provider: 'yandex'` is
+# rejected as `auth/invalid-token`.
+yandex_oauth_client_secret = ""
 token_expiry_warning_seconds = 60
 clock_tolerance_seconds = 5
 

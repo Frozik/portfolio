@@ -1,4 +1,5 @@
 import type { AuthErrorCode } from './Identity';
+import type { TIdentityProvider } from './IdentityProvider';
 import type { SignalAck } from './Signal';
 
 // Event-name string-literal constants. Both client and server MUST use these
@@ -19,7 +20,15 @@ export const SERVER_DRAINING = 'server:draining';
 
 export interface IHandshakeAuth {
   roomId: string;
-  idToken: string;
+  /** Discriminator for which OIDC provider issued `token`. */
+  provider: TIdentityProvider;
+  /**
+   * Provider-issued JWT presented by the client.
+   *  - Google: id_token (RS256, verified via JWKS).
+   *  - Yandex: JWT returned by `/info?format=jwt` (HS256, verified
+   *    against the registered application's `client_secret`).
+   */
+  token: string;
 }
 
 export interface IInitiatePayload {
@@ -67,7 +76,8 @@ export interface ITokenExpiringEvent {
 }
 
 export interface IRefreshTokenPayload {
-  idToken: string;
+  /** New provider-issued JWT. Provider stays the same as the handshake. */
+  token: string;
 }
 
 export type IRefreshTokenAck =

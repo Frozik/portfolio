@@ -7,11 +7,17 @@ import { err, ok } from '../application/Result';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { Milliseconds, UserId } from '../domain/types';
+import type { IVerifierFactory } from './IVerifierFactory';
 
 const SECONDS_TO_MS = 1000;
 const RETRY_MIN_TIMEOUT_MS = 100;
 const RETRY_BACKOFF_FACTOR = 5;
 const ALLOWED_ALGORITHM = 'RS256';
+const GOOGLE_ISSUERS: ReadonlyArray<string> = [
+  'https://accounts.google.com',
+  'accounts.google.com',
+];
+const GOOGLE_JWKS_URL = new URL('https://www.googleapis.com/oauth2/v3/certs');
 
 export type GoogleIdentityVerifierConfig = {
   audience: string;
@@ -34,11 +40,11 @@ export class GoogleIdentityVerifier implements IIdentityVerifier, IVerifierHealt
     });
   }
 
-  async verify(idToken: string): Promise<Result<TokenClaims, AuthErrorCode>> {
+  async verify(token: string): Promise<Result<TokenClaims, AuthErrorCode>> {
     try {
       const { payload } = await pRetry(
         () =>
-          jwtVerify(idToken, this.jwks, {
+          jwtVerify(token, this.jwks, {
             algorithms: [ALLOWED_ALGORITHM], // C4 — pin alg, reject HS256 / "none"
             issuer: [...this.cfg.issuers],
             audience: this.cfg.audience,
@@ -72,15 +78,15 @@ export class GoogleIdentityVerifier implements IIdentityVerifier, IVerifierHealt
       }
 
       const claims: TokenClaims = {
-        sub: sub as UserId,
+        // Namespace by provider so userIds across providers cannot
+        // collide (Google's sub is numeric digits, so is Yandex' uid).
+        sub: `google:${sub}` as UserId,
         exp: (expSec * SECONDS_TO_MS) as Milliseconds,
         iat: (iatSec * SECONDS_TO_MS) as Milliseconds,
-        iss: typeof payload.iss === 'string' ? payload.iss : '',
-        aud: typeof payload.aud === 'string' ? payload.aud : '',
+        provider: 'google',
         name: typeof payload.name === 'string' ? payload.name : undefined,
         email: typeof payload.email === 'string' ? payload.email : undefined,
         sid: typeof payload.sid === 'string' ? payload.sid : undefined,
-        azp: typeof payload.azp === 'string' ? payload.azp : undefined,
       };
       return ok(claims);
     } catch (error: unknown) {
@@ -156,3 +162,21 @@ function isTransientJwksError(error: unknown): boolean {
   }
   return false;
 }
+
+/**
+ * Factory entry consumed by `verifier-registry.ts`. Lives next to its
+ * verifier so adding a new provider only ever touches one folder.
+ */
+export const googleVerifierFactory: IVerifierFactory = {
+  id: 'google',
+  isConfigured: auth => auth.google_oauth_client_id.length > 0,
+  build: auth =>
+    new GoogleIdentityVerifier({
+      audience: auth.google_oauth_client_id,
+      issuers: GOOGLE_ISSUERS,
+      jwksUrl: GOOGLE_JWKS_URL,
+      clockToleranceSec: auth.clock_tolerance_seconds,
+      fetchMaxAttempts: auth.jwks.fetch_max_attempts,
+      fetchTimeoutMs: auth.jwks.fetch_timeout_ms,
+    }),
+};

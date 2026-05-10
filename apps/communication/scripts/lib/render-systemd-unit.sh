@@ -9,6 +9,14 @@ require_env GOOGLE_OAUTH_CLIENT_ID
 
 UNIT_PATH="/etc/systemd/system/communication.service"
 
+# Public-id env entries. Yandex client_id is included only when set so
+# the unit file stays clean for Google-only deploys.
+PUBLIC_ID_ENV_LINES="Environment=GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}"
+if [[ -n "${YANDEX_OAUTH_CLIENT_ID:-}" ]]; then
+  PUBLIC_ID_ENV_LINES="${PUBLIC_ID_ENV_LINES}
+Environment=YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}"
+fi
+
 info "Rendering ${UNIT_PATH}"
 cat > "${UNIT_PATH}" <<UNIT
 [Unit]
@@ -20,9 +28,13 @@ Type=simple
 User=communication
 WorkingDirectory=/opt/communication/apps/communication
 EnvironmentFile=/etc/communication/turn-secret
+# Optional — leading dash makes systemd treat a missing file as no-op.
+# render-oauth-secrets.sh writes this only when at least one provider
+# secret is configured (Yandex today).
+EnvironmentFile=-/etc/communication/oauth-secrets
 Environment=NODE_CONFIG_DIR=/opt/communication/apps/communication/config
 Environment=NODE_CONFIG_ENV=production
-Environment=GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+${PUBLIC_ID_ENV_LINES}
 # Run source directly via tsx — handles TypeScript stripping AND
 # extensionless ESM imports that Node strict ESM rejects natively.
 # tsx is a runtime dep installed by 'pnpm install' in build-app.sh.

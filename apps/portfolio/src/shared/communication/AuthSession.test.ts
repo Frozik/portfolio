@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthSession } from './AuthSession';
+import type { IOidcProvider } from './oidc/IOidcProvider';
+import type { IOidcProfile, IOidcSignInResult, TIdentityProvider } from './oidc/types';
 
 const SECONDS_PER_MS = 1_000;
 
@@ -17,6 +19,52 @@ function buildJwt(payload: Record<string, unknown>): string {
 
 const STORAGE_KEY = 'communication.auth.idToken';
 
+function makeGoogleProfile(): IOidcProfile {
+  return {
+    userId: 'google:user-1',
+    name: 'Alice',
+    email: 'alice@example.com',
+    pictureUrl: 'https://example.com/alice.png',
+  };
+}
+
+class StubProvider implements IOidcProvider {
+  public readonly id: TIdentityProvider;
+  public readonly displayName: string;
+  public silentRefreshResult: IOidcSignInResult | null = null;
+  public signOutInvocations = 0;
+  public silentRefreshInvocations = 0;
+
+  public constructor(id: TIdentityProvider, displayName: string) {
+    this.id = id;
+    this.displayName = displayName;
+  }
+
+  public signIn(): Promise<IOidcSignInResult | null> {
+    return Promise.resolve(null);
+  }
+
+  public silentRefresh(): Promise<IOidcSignInResult | null> {
+    this.silentRefreshInvocations += 1;
+    return Promise.resolve(this.silentRefreshResult);
+  }
+
+  public decodeProfile(_token: string): IOidcProfile {
+    if (this.id === 'yandex') {
+      return {
+        userId: 'yandex:42',
+        name: 'Иван',
+        email: 'ivan@yandex.ru',
+      };
+    }
+    return makeGoogleProfile();
+  }
+
+  public signOut(): void {
+    this.signOutInvocations += 1;
+  }
+}
+
 describe('AuthSession', () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -31,90 +79,145 @@ describe('AuthSession', () => {
   it('starts signed-out when sessionStorage is empty', () => {
     const session = new AuthSession();
     expect(session.isSignedIn).toBe(false);
-    expect(session.idToken).toBeNull();
+    expect(session.token).toBeNull();
+    expect(session.provider).toBeNull();
     expect(session.profile).toBeNull();
     expect(session.expiresAtMs).toBeNull();
   });
 
-  it('decodes a Google ID token into a profile snapshot', () => {
+  it('adopts a sign-in result', () => {
     const session = new AuthSession();
     const expSec = Math.floor(Date.now() / SECONDS_PER_MS) + 3600;
-    const token = buildJwt({
-      sub: 'user-1',
-      name: 'Alice',
-      email: 'alice@example.com',
-      picture: 'https://example.com/alice.png',
-      exp: expSec,
-      iat: Math.floor(Date.now() / SECONDS_PER_MS),
-    });
+    const token = buildJwt({ sub: 'user-1', exp: expSec, iat: 0 });
+    session.adoptResult('google', { token, profile: makeGoogleProfile() });
 
-    session.setIdToken(token);
-
-    expect(session.idToken).toBe(token);
+    expect(session.token).toBe(token);
+    expect(session.provider).toBe('google');
     expect(session.expiresAtMs).toBe(expSec * SECONDS_PER_MS);
-    expect(session.profile).toEqual({
-      userId: 'user-1',
-      name: 'Alice',
-      email: 'alice@example.com',
-      pictureUrl: 'https://example.com/alice.png',
-    });
+    expect(session.profile?.name).toBe('Alice');
     expect(session.isSignedIn).toBe(true);
   });
 
-  it('persists the token to sessionStorage and rehydrates on construction', () => {
+  it('persists the session JSON envelope and rehydrates on construction', () => {
     const expSec = Math.floor(Date.now() / SECONDS_PER_MS) + 3600;
-    const token = buildJwt({ sub: 'user-2', name: 'Bob', exp: expSec, iat: 0 });
+    const token = buildJwt({ sub: 'user-2', exp: expSec, iat: 0 });
 
     const first = new AuthSession();
-    first.setIdToken(token);
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBe(token);
+    first.adoptResult('yandex', {
+      token,
+      profile: { userId: 'yandex:42', name: 'Иван' },
+    });
+    const persisted = sessionStorage.getItem(STORAGE_KEY) ?? '';
+    expect(persisted.startsWith('{')).toBe(true);
+    expect(JSON.parse(persisted)).toEqual({ provider: 'yandex', token });
 
     const second = new AuthSession();
-    expect(second.idToken).toBe(token);
-    expect(second.profile?.name).toBe('Bob');
+    expect(second.provider).toBe('yandex');
+    expect(second.token).toBe(token);
     expect(second.isSignedIn).toBe(true);
+    // Profile re-decode happens via the provider lookup — until
+    // `setProviders` runs, the rehydrated session has no profile.
+    expect(second.profile).toBeNull();
+    second.setProviders(new Map([['yandex', new StubProvider('yandex', 'Яндекс')]]));
+    expect(second.profile?.name).toBe('Иван');
   });
 
-  it('treats a malformed token as a sign-out', () => {
+  it('migrates legacy plain-string sessionStorage entries to Google', () => {
+    const expSec = Math.floor(Date.now() / SECONDS_PER_MS) + 3600;
+    const token = buildJwt({ sub: 'legacy', exp: expSec, iat: 0 });
+    sessionStorage.setItem(STORAGE_KEY, token);
+
     const session = new AuthSession();
-    session.setIdToken('not-a-valid-jwt');
-    expect(session.idToken).toBeNull();
+    expect(session.provider).toBe('google');
+    expect(session.token).toBe(token);
+    expect(session.isSignedIn).toBe(true);
+  });
+
+  it('treats a malformed token as a sign-out on adoptResult', () => {
+    const session = new AuthSession();
+    session.adoptResult('google', {
+      token: 'not-a-valid-jwt',
+      profile: makeGoogleProfile(),
+    });
+    expect(session.token).toBeNull();
+    expect(session.provider).toBeNull();
     expect(session.profile).toBeNull();
-    expect(session.expiresAtMs).toBeNull();
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it('reports isSignedIn=false once the token has expired', () => {
     const session = new AuthSession();
     const expSec = Math.floor(Date.now() / SECONDS_PER_MS) + 60;
-    session.setIdToken(buildJwt({ sub: 'user-3', name: 'Carol', exp: expSec, iat: 0 }));
+    session.adoptResult('google', {
+      token: buildJwt({ sub: 'user-3', exp: expSec, iat: 0 }),
+      profile: makeGoogleProfile(),
+    });
     expect(session.isSignedIn).toBe(true);
-
     vi.setSystemTime(new Date(Date.now() + 120_000));
     expect(session.isSignedIn).toBe(false);
   });
 
-  it('clears state on signOut', () => {
+  it('clears state on signOut and forwards to every provider', () => {
     const session = new AuthSession();
-    session.setIdToken(
-      buildJwt({
+    const google = new StubProvider('google', 'Google');
+    const yandex = new StubProvider('yandex', 'Яндекс');
+    session.setProviders(
+      new Map<TIdentityProvider, IOidcProvider>([
+        ['google', google],
+        ['yandex', yandex],
+      ])
+    );
+    session.adoptResult('google', {
+      token: buildJwt({
         sub: 'user-4',
-        name: 'Dave',
         exp: Math.floor(Date.now() / SECONDS_PER_MS) + 3600,
         iat: 0,
-      })
-    );
+      }),
+      profile: makeGoogleProfile(),
+    });
     session.signOut();
-    expect(session.idToken).toBeNull();
+
+    expect(session.token).toBeNull();
+    expect(session.provider).toBeNull();
     expect(session.profile).toBeNull();
-    expect(session.expiresAtMs).toBeNull();
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    // Both providers see the sign-out — Yandex caches an OAuth
+    // access_token internally and needs to clear it.
+    expect(google.signOutInvocations).toBe(1);
+    expect(yandex.signOutInvocations).toBe(1);
   });
 
-  it('falls back to "Anonymous" when the JWT lacks a name claim', () => {
+  it('routes silent refresh to the active provider', async () => {
     const session = new AuthSession();
+    const google = new StubProvider('google', 'Google');
+    session.setProviders(new Map([['google', google]]));
     const expSec = Math.floor(Date.now() / SECONDS_PER_MS) + 3600;
-    session.setIdToken(buildJwt({ sub: 'user-5', exp: expSec, iat: 0 }));
-    expect(session.profile?.name).toBe('Anonymous');
+    session.adoptResult('google', {
+      token: buildJwt({ sub: 'user-5', exp: expSec, iat: 0 }),
+      profile: makeGoogleProfile(),
+    });
+
+    google.silentRefreshResult = {
+      token: buildJwt({ sub: 'user-5', exp: expSec + 3600, iat: 0 }),
+      profile: { ...makeGoogleProfile(), name: 'Alice (renamed)' },
+    };
+    const refreshed = await session.requestRefresh();
+    expect(google.silentRefreshInvocations).toBe(1);
+    expect(refreshed).not.toBeNull();
+    expect(session.profile?.name).toBe('Alice (renamed)');
+  });
+
+  it('returns null on requestRefresh when no provider is registered', async () => {
+    const session = new AuthSession();
+    session.adoptResult('google', {
+      token: buildJwt({
+        sub: 'user-6',
+        exp: Math.floor(Date.now() / SECONDS_PER_MS) + 3600,
+        iat: 0,
+      }),
+      profile: makeGoogleProfile(),
+    });
+    const refreshed = await session.requestRefresh();
+    expect(refreshed).toBeNull();
   });
 });

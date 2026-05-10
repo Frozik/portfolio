@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UUID_V4_REGEX } from './constants';
 import { InvalidPayloadError } from './errors';
+import { IDENTITY_PROVIDERS } from './IdentityProvider';
 
 // Maximum size of a `signal:publish` payload after JSON serialization. Bytes,
 // not characters — verified via `Buffer.byteLength(json, 'utf8')`.
@@ -35,7 +36,8 @@ const initiatorSummarySchema = z.object({
 
 export const HandshakeAuthSchema = z.object({
   roomId: z.string().regex(UUID_V4_REGEX, 'roomId must be a UUID v4'),
-  idToken: z.string().min(1, 'idToken must not be empty'),
+  provider: z.enum(IDENTITY_PROVIDERS),
+  token: z.string().min(1, 'token must not be empty'),
 });
 
 export const InitiatePayloadSchema = z.object({
@@ -97,7 +99,7 @@ export const TokenExpiringEventSchema = z.object({
 });
 
 export const RefreshTokenPayloadSchema = z.object({
-  idToken: z.string().min(1),
+  token: z.string().min(1),
 });
 
 const authErrorCodeSchema = z.enum([
