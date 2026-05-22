@@ -1,1 +1,0 @@
-import{b as e,y as t}from"./c-ChXijGi_2.js";function n(n,r){return e(function(e,i){var a=0;e.subscribe(t(i,function(e){return n.call(r,e,a++)&&i.next(e)}))})}export{n as t};
