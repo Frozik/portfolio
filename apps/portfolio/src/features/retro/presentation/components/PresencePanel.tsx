@@ -1,15 +1,13 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isNil } from 'lodash-es';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { RoomStore } from '../../application/RoomStore';
-import { useIdentityStore } from '../../application/useIdentityStore';
 import type { ClientId, IParticipant } from '../../domain/types';
 import { retroT as t } from '../translations';
-import { IdentityDialog } from './IdentityDialog';
 
 interface PresencePanelProps {
   readonly store: RoomStore;
@@ -17,6 +15,14 @@ interface PresencePanelProps {
 
 const MAX_VISIBLE_AVATARS = 3;
 const INITIALS_PART_LIMIT = 2;
+
+/**
+ * Single neutral background for initials-only avatars (Yandex users
+ * with no avatar set, or peers whose `pictureUrl` hasn't been
+ * received via awareness yet). Per-user colors are gone — identity
+ * is derived entirely from OIDC.
+ */
+const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
 
 function initialsOf(name: string): string {
   const trimmed = name.trim();
@@ -34,26 +40,16 @@ function initialsOf(name: string): string {
  * Compact presence strip for the Room top bar. Shows up to three stacked
  * user avatars (first slot reserved for the facilitator, marked with a
  * crown), with overflow collapsed into a `+N members` chip. A pulsing
- * status dot announces each participant is live; the current user's
- * avatar opens the identity-edit dialog on click. When the facilitator
+ * status dot announces each participant is live. When the facilitator
  * is offline, any other participant can take over via the inline button.
  */
 export const PresencePanel = observer(({ store }: PresencePanelProps) => {
-  const identityStore = useIdentityStore();
   const users = store.presentUsers;
   const myClientId = store.identity.clientId as ClientId;
   const facilitatorId = store.currentSnapshot?.meta.facilitatorClientId ?? null;
   const isFacilitatorOnline =
     facilitatorId !== null && users.some(user => user.clientId === facilitatorId);
 
-  const [isEditIdentityOpen, setIsEditIdentityOpen] = useState(false);
-  const handleOpenEditIdentity = useFunction(() => setIsEditIdentityOpen(true));
-  const handleCloseEditIdentity = useFunction(() => setIsEditIdentityOpen(false));
-  const handleSubmitIdentity = useFunction((params: { name: string; color: string }) => {
-    identityStore.setName(params.name);
-    identityStore.setColor(params.color);
-    setIsEditIdentityOpen(false);
-  });
   const handleTakeOver = useFunction(() => store.claimFacilitator());
 
   if (store.currentSnapshot === null) {
@@ -101,7 +97,6 @@ export const PresencePanel = observer(({ store }: PresencePanelProps) => {
             isFacilitator={user.clientId === facilitatorId}
             isMe={user.clientId === myClientId}
             stackOffset={index > 0}
-            onEditIdentity={handleOpenEditIdentity}
           />
         ))}
         {overflowCount > 0 && (
@@ -110,14 +105,6 @@ export const PresencePanel = observer(({ store }: PresencePanelProps) => {
           </span>
         )}
       </div>
-
-      <IdentityDialog
-        open={isEditIdentityOpen}
-        initialName={identityStore.identity.name}
-        initialColor={identityStore.identity.color}
-        onSubmit={handleSubmitIdentity}
-        onClose={handleCloseEditIdentity}
-      />
     </div>
   );
 });
@@ -127,59 +114,43 @@ interface AvatarProps {
   readonly isFacilitator: boolean;
   readonly isMe: boolean;
   readonly stackOffset: boolean;
-  readonly onEditIdentity: () => void;
 }
 
-const Avatar = ({ user, isFacilitator, isMe, stackOffset, onEditIdentity }: AvatarProps) => {
-  const tooltipParts = [
-    user.name,
-    isFacilitator ? t.room.facilitatorBadge : null,
-    isMe ? t.identity.editButton : null,
-  ].filter((part): part is string => part !== null);
-
-  const avatarClassName = cn(
-    'relative inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-landing-bg text-[10px] font-semibold text-landing-bg shadow-sm transition-transform hover:z-10 hover:scale-110',
-    stackOffset && '-ml-2',
-    isMe && 'cursor-pointer ring-1 ring-landing-accent/60'
+const Avatar = ({ user, isFacilitator, isMe, stackOffset }: AvatarProps) => {
+  const tooltipParts = [user.name, isFacilitator ? t.room.facilitatorBadge : null].filter(
+    (part): part is string => part !== null
   );
 
-  const avatarContent = (
-    <>
-      {initialsOf(user.name)}
-      <span
-        aria-hidden="true"
-        className="absolute right-0 bottom-0 h-1.5 w-1.5 animate-status-pulse rounded-full border border-landing-bg bg-landing-green"
-      />
-      {isFacilitator && (
-        <Crown
-          size={10}
-          strokeWidth={1.6}
-          aria-label={t.room.facilitatorBadge}
-          className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-landing-yellow"
-        />
-      )}
-    </>
+  const avatarClassName = cn(
+    'relative inline-flex h-[26px] w-[26px] items-center justify-center overflow-hidden rounded-full border-2 border-landing-bg text-[10px] font-semibold text-landing-bg shadow-sm transition-transform hover:z-10 hover:scale-110',
+    stackOffset && '-ml-2',
+    isMe && 'ring-1 ring-landing-accent/60'
   );
 
   return (
     <Tooltip title={tooltipParts.join(' · ')} placement="bottom">
-      {isMe ? (
-        <button
-          type="button"
-          onClick={onEditIdentity}
-          aria-label={t.identity.editButton}
-          className={avatarClassName}
-          // Avatar background is the user's self-picked color — runtime
-          // dynamic, so an inline style is the idiomatic fit here.
-          style={{ backgroundColor: user.color }}
-        >
-          {avatarContent}
-        </button>
-      ) : (
-        <div className={avatarClassName} style={{ backgroundColor: user.color }}>
-          {avatarContent}
-        </div>
-      )}
+      <div
+        className={avatarClassName}
+        style={isNil(user.pictureUrl) ? { backgroundColor: FALLBACK_AVATAR_BG } : undefined}
+      >
+        {isNil(user.pictureUrl) ? (
+          initialsOf(user.name)
+        ) : (
+          <img src={user.pictureUrl} alt={user.name} className="h-full w-full object-cover" />
+        )}
+        <span
+          aria-hidden="true"
+          className="absolute right-0 bottom-0 h-1.5 w-1.5 animate-status-pulse rounded-full border border-landing-bg bg-landing-green"
+        />
+        {isFacilitator && (
+          <Crown
+            size={10}
+            strokeWidth={1.6}
+            aria-label={t.room.facilitatorBadge}
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-landing-yellow"
+          />
+        )}
+      </div>
     </Tooltip>
   );
 };

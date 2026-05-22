@@ -1,46 +1,70 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, reaction } from 'mobx';
 
+import type { AuthSession } from '../../../shared/communication/AuthSession';
 import type { ClientId } from '../domain/types';
 import type { IIdentityRepo, IRetroIdentity } from '../infrastructure/identity-repo';
 import type { UserDirectoryStore } from './UserDirectoryStore';
 
+const GUEST_DISPLAY_NAME = 'Guest';
+
+/**
+ * Holds the runtime identity used by the retro feature. The display
+ * name and avatar are derived from the OIDC session (`AuthSession`) —
+ * there is no in-app editing UI. Only the `clientId` is persisted (in
+ * localStorage via {@link IIdentityRepo}) so awareness events stay
+ * attributable to the same user across reloads.
+ *
+ * On every change to the OIDC profile (sign-in, profile refresh) the
+ * derived identity is published to {@link UserDirectoryStore} so peers
+ * and the local lobby see the latest name + avatar.
+ */
 export class IdentityStore {
-  identity: IRetroIdentity;
+  private readonly clientId: number;
+  private disposeProfileReaction: (() => void) | null = null;
 
   constructor(
     private readonly repo: IIdentityRepo,
-    private readonly directory: UserDirectoryStore
+    private readonly directory: UserDirectoryStore,
+    private readonly session: AuthSession
   ) {
-    // Blank default: forces IdentityDialog on first visit so the user
-    // picks a real display name before participating.
-    this.identity = this.repo.getOrCreate('');
-    makeAutoObservable(this, { repo: false, directory: false } as never, { autoBind: true });
-    this.publishToDirectory();
-  }
-
-  get hasName(): boolean {
-    return this.identity.name.trim().length > 0;
-  }
-
-  setName(name: string): void {
-    this.identity = { ...this.identity, name };
-    this.repo.save(this.identity);
-    this.publishToDirectory();
-  }
-
-  setColor(color: string): void {
-    this.identity = { ...this.identity, color };
-    this.repo.save(this.identity);
-    this.publishToDirectory();
-  }
-
-  private publishToDirectory(): void {
-    void this.directory.upsert({
-      clientId: this.identity.clientId as ClientId,
-      name: this.identity.name,
-      color: this.identity.color,
+    this.clientId = this.repo.getOrCreateClientId();
+    makeAutoObservable(this, { repo: false, directory: false, session: false } as never, {
+      autoBind: true,
     });
+    this.disposeProfileReaction = reaction(
+      () => this.identity,
+      identity => {
+        void this.directory.upsert({
+          clientId: identity.clientId as ClientId,
+          name: identity.name,
+          pictureUrl: identity.pictureUrl,
+        });
+      },
+      { fireImmediately: true }
+    );
   }
 
-  dispose(): void {}
+  get identity(): IRetroIdentity {
+    return {
+      clientId: this.clientId,
+      name: this.name,
+      pictureUrl: this.pictureUrl,
+    };
+  }
+
+  get name(): string {
+    const raw = this.session.profile?.name?.trim();
+    return raw !== undefined && raw.length > 0 ? raw : GUEST_DISPLAY_NAME;
+  }
+
+  get pictureUrl(): string | undefined {
+    return this.session.profile?.pictureUrl ?? undefined;
+  }
+
+  dispose(): void {
+    if (this.disposeProfileReaction !== null) {
+      this.disposeProfileReaction();
+      this.disposeProfileReaction = null;
+    }
+  }
 }

@@ -102,7 +102,6 @@ const CardViewComponent = ({
   const cardIndexLabel = formatCardIndex(cardIndex);
   const authorProfile = directory.get(card.authorClientId as ClientId);
   const authorName = (authorProfile?.name ?? '').trim();
-  const authorColor = authorProfile?.color ?? null;
 
   return (
     <div className={cn(styles.cardFlipContainer, 'relative min-h-[96px] w-full')}>
@@ -171,14 +170,6 @@ const CardViewComponent = ({
             {!isEditing && (
               <div className="mt-auto flex items-center justify-between gap-2 pt-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  {authorColor !== null && (
-                    <span
-                      aria-hidden="true"
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      // Per-author dot color is runtime-dynamic.
-                      style={{ backgroundColor: authorColor }}
-                    />
-                  )}
                   {authorName.length > 0 && (
                     <MonoKicker tone="dim" className="truncate">
                       {authorName}

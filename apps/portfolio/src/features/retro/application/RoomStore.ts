@@ -204,7 +204,7 @@ export class RoomStore {
     const participant: IParticipant = {
       clientId: this.identity.clientId as ClientId,
       name: this.identity.name,
-      color: this.identity.color,
+      pictureUrl: this.identity.pictureUrl,
       typingInColumnId: null,
     };
     this.providers.webrtc.awareness.setLocalStateField('user', participant);
@@ -386,7 +386,7 @@ export class RoomStore {
       void this.directory.upsert({
         clientId: user.clientId,
         name: user.name,
-        color: user.color,
+        pictureUrl: user.pictureUrl,
       });
     });
     this.presentUsers = users;
@@ -732,7 +732,7 @@ export class RoomStore {
     const participant: IParticipant = {
       clientId: this.identity.clientId as ClientId,
       name: this.identity.name,
-      color: this.identity.color,
+      pictureUrl: this.identity.pictureUrl,
       typingInColumnId: columnId,
     };
     this.providers.webrtc.awareness.setLocalStateField('user', participant);
@@ -988,7 +988,6 @@ export class RoomStore {
         void this.directory.seedIfMissing({
           clientId: snapshot.meta.facilitatorClientId,
           name: snapshot.meta.facilitatorName,
-          color: '#64748b',
         });
       }
 

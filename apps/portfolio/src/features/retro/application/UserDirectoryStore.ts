@@ -47,12 +47,12 @@ export class UserDirectoryStore {
   async upsert(input: {
     readonly clientId: ClientId;
     readonly name: string;
-    readonly color: string;
+    readonly pictureUrl?: string;
   }): Promise<void> {
     const profile: IUserProfile = {
       clientId: input.clientId,
       name: input.name,
-      color: input.color,
+      pictureUrl: input.pictureUrl,
       lastSeenAt: nowIso(),
     };
     runInAction(() => {
@@ -71,7 +71,7 @@ export class UserDirectoryStore {
   async seedIfMissing(input: {
     readonly clientId: ClientId;
     readonly name: string;
-    readonly color: string;
+    readonly pictureUrl?: string;
   }): Promise<void> {
     if (this.profiles.has(input.clientId)) {
       return;

@@ -1,19 +1,16 @@
-import { parseJson } from '@frozik/utils/parseJson';
 import { isNil } from 'lodash-es';
 
 /**
- * Local-only identity of the current participant. The `clientId` is a
- * stable number that survives page reloads so awareness events can be
- * attributed to the same "user" across sessions on the same device.
- *
- * This repo intentionally lives in localStorage (not IndexedDB) — it is
- * tiny, must be synchronously readable on boot, and never synced between
- * tabs of the same browser as each tab is treated as a distinct client.
+ * Runtime identity surfaced to retro UI. `clientId` is the only piece
+ * we persist locally — it must stay stable across reloads so awareness
+ * events can be attributed to the same "user" on the same device. The
+ * display name and avatar are derived from the OIDC session and never
+ * touch localStorage.
  */
 export interface IRetroIdentity {
   readonly clientId: number;
   readonly name: string;
-  readonly color: string;
+  readonly pictureUrl?: string;
 }
 
 const STORAGE_KEY = 'retro:identity';
@@ -24,94 +21,55 @@ const STORAGE_KEY = 'retro:identity';
  */
 const MAX_RANDOM_CLIENT_ID = 2_147_483_647;
 
-const DEFAULT_COLORS: readonly string[] = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#06b6d4',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-];
-
 export interface IIdentityRepo {
-  load(): IRetroIdentity | null;
-  save(identity: IRetroIdentity): void;
+  /**
+   * Reads the persisted `clientId`, generating + storing a fresh one
+   * on first visit. Old localStorage entries (which used to carry a
+   * `{ clientId, name, color }` envelope) are migrated transparently
+   * by extracting just the `clientId` field.
+   */
+  getOrCreateClientId(): number;
   clear(): void;
-  getOrCreate(defaultName: string): IRetroIdentity;
 }
 
 export function createIdentityRepo(storage: Storage = localStorage): IIdentityRepo {
   return {
-    load(): IRetroIdentity | null {
+    getOrCreateClientId(): number {
       const raw = storage.getItem(STORAGE_KEY);
-
-      if (isNil(raw)) {
-        return null;
+      if (!isNil(raw)) {
+        const existing = readClientId(raw);
+        if (existing !== null) {
+          return existing;
+        }
       }
-
-      const parsed = parseJson<unknown>(raw);
-
-      if (isNil(parsed) || !isValidIdentity(parsed)) {
-        return null;
-      }
-
-      return parsed;
-    },
-
-    save(identity: IRetroIdentity): void {
-      storage.setItem(STORAGE_KEY, JSON.stringify(identity));
+      const next = generateClientId();
+      storage.setItem(STORAGE_KEY, JSON.stringify({ clientId: next }));
+      return next;
     },
 
     clear(): void {
       storage.removeItem(STORAGE_KEY);
     },
-
-    getOrCreate(defaultName: string): IRetroIdentity {
-      const raw = storage.getItem(STORAGE_KEY);
-
-      if (!isNil(raw)) {
-        const parsed = parseJson<unknown>(raw);
-
-        if (!isNil(parsed) && isValidIdentity(parsed)) {
-          return parsed;
-        }
-      }
-
-      const identity: IRetroIdentity = {
-        clientId: generateClientId(),
-        name: defaultName,
-        color: pickRandomColor(),
-      };
-
-      storage.setItem(STORAGE_KEY, JSON.stringify(identity));
-
-      return identity;
-    },
   };
+}
+
+function readClientId(raw: string): number | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof (parsed as { clientId?: unknown }).clientId === 'number' &&
+      Number.isFinite((parsed as { clientId: number }).clientId)
+    ) {
+      return (parsed as { clientId: number }).clientId;
+    }
+  } catch {
+    // Fall through to null — malformed entry forces a fresh id.
+  }
+  return null;
 }
 
 function generateClientId(): number {
   return Math.floor(Math.random() * MAX_RANDOM_CLIENT_ID);
-}
-
-function pickRandomColor(): string {
-  const index = Math.floor(Math.random() * DEFAULT_COLORS.length);
-  return DEFAULT_COLORS[index] ?? DEFAULT_COLORS[0] ?? '#3b82f6';
-}
-
-function isValidIdentity(candidate: unknown): candidate is IRetroIdentity {
-  if (isNil(candidate) || typeof candidate !== 'object') {
-    return false;
-  }
-
-  const record = candidate as Record<string, unknown>;
-
-  return (
-    typeof record.clientId === 'number' &&
-    Number.isFinite(record.clientId) &&
-    typeof record.name === 'string' &&
-    typeof record.color === 'string'
-  );
 }

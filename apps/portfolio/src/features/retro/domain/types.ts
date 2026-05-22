@@ -99,7 +99,7 @@ export interface IRoomIndexEntry {
 export interface IParticipant {
   clientId: ClientId;
   name: string;
-  color: string;
+  pictureUrl?: string;
   typingInColumnId: ColumnId | null;
 }
 

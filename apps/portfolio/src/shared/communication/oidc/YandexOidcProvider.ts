@@ -25,7 +25,25 @@ interface IYandexInfoJwtPayload {
   readonly display_name?: string;
   readonly email?: string;
   readonly default_email?: string;
+  /**
+   * Yandex avatar id. Only populated when the OAuth app has the
+   * "Access to user's avatar" permission enabled. In JWT payloads
+   * the field is `avatar_id` (not `default_avatar_id` like the JSON
+   * `/info` response). When absent or when `is_avatar_empty` is true,
+   * the user has no real avatar and we fall back to initials.
+   */
+  readonly avatar_id?: string;
+  readonly is_avatar_empty?: boolean;
 }
+
+/**
+ * Size keyword from the Yandex avatar URL convention. 100×100 retina
+ * gives crisp 50px rendering on standard displays — matches the sizes
+ * used in our retro avatars + AccountChip.
+ *
+ * https://yandex.com/dev/id/doc/en/user-information
+ */
+const YANDEX_AVATAR_SIZE = 'islands-retina-50';
 
 interface IYandexCallbackMessage {
   readonly type: typeof YANDEX_OAUTH_MESSAGE_TYPE;
@@ -266,10 +284,16 @@ function mapPayloadToProfile(payload: IYandexInfoJwtPayload): IOidcProfile {
     firstNonEmpty(payload.login) ??
     FALLBACK_DISPLAY_NAME;
   const email = firstNonEmpty(payload.default_email) ?? firstNonEmpty(payload.email);
+  const avatarId = firstNonEmpty(payload.avatar_id);
+  const pictureUrl =
+    avatarId !== undefined && payload.is_avatar_empty !== true
+      ? `https://avatars.yandex.net/get-yapic/${avatarId}/${YANDEX_AVATAR_SIZE}`
+      : undefined;
   return {
     userId: `yandex:${subString}`,
     name,
     email,
+    pictureUrl,
   };
 }
 

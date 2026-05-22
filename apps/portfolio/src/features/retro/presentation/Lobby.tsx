@@ -4,12 +4,12 @@ import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
+import { isNil } from 'lodash-es';
 import { Crown, Link2, Plus, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AccountChip } from '../../../shared/communication/AccountChip';
-import { useAuthSession } from '../../../shared/communication/CommunicationProvider';
 import { cn } from '../../../shared/lib/cn';
 import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
@@ -24,7 +24,6 @@ import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { CreateRetroDialog } from './components/CreateRetroDialog';
-import { IdentityDialog } from './components/IdentityDialog';
 import { retroT as t } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/retro\/([^/?#]+)/;
@@ -35,11 +34,12 @@ const LOCAL_DATETIME_MINUTES_LENGTH = 16;
 const INITIALS_PART_LIMIT = 2;
 const UNKNOWN_PARTICIPANT_INITIAL = '?';
 
-const FILLER_AVATAR_COLORS: readonly string[] = [
-  'var(--color-landing-purple)',
-  'var(--color-landing-yellow)',
-  'var(--color-landing-green)',
-];
+/**
+ * Single neutral background for initials-only avatars (Yandex users
+ * with no avatar set, or peers we haven't yet seen via awareness).
+ * Per-user colors are gone — identity is derived entirely from OIDC.
+ */
+const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
 
 function initialsOf(name: string): string {
   const trimmed = name.trim();
@@ -102,7 +102,7 @@ const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
 
   const slots: {
     key: string;
-    color: string;
+    pictureUrl?: string;
     initials: string;
     isOwner: boolean;
     isMe: boolean;
@@ -114,7 +114,7 @@ const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
     const ownerName = ownerProfile?.name ?? '';
     slots.push({
       key: `owner-${ownerClientId}`,
-      color: ownerProfile?.color ?? FILLER_AVATAR_COLORS[0],
+      pictureUrl: ownerProfile?.pictureUrl,
       initials: initialsOf(ownerName),
       isOwner: true,
       isMe: ownerClientId === myClientId,
@@ -122,12 +122,11 @@ const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
     });
   }
 
-  visibleNonOwners.forEach((clientId, index) => {
+  visibleNonOwners.forEach(clientId => {
     const profile = directory.get(clientId);
-    const fillerIndex = index % FILLER_AVATAR_COLORS.length;
     slots.push({
       key: `p-${clientId}`,
-      color: profile?.color ?? FILLER_AVATAR_COLORS[fillerIndex],
+      pictureUrl: profile?.pictureUrl,
       initials: profile !== null ? initialsOf(profile.name) : UNKNOWN_PARTICIPANT_INITIAL,
       isOwner: false,
       isMe: clientId === myClientId,
@@ -141,14 +140,18 @@ const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
         <span
           key={slot.key}
           className={cn(
-            'relative inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-landing-bg text-[10px] font-semibold text-landing-bg',
+            'relative inline-flex h-[26px] w-[26px] items-center justify-center overflow-hidden rounded-full border-2 border-landing-bg text-[10px] font-semibold text-landing-bg',
             slotIndex > 0 && '-ml-2',
             slot.isMe && 'z-10 ring-1 ring-landing-accent/60'
           )}
-          style={{ backgroundColor: slot.color }}
+          style={isNil(slot.pictureUrl) ? { backgroundColor: FALLBACK_AVATAR_BG } : undefined}
           title={slot.title}
         >
-          {slot.initials}
+          {isNil(slot.pictureUrl) ? (
+            slot.initials
+          ) : (
+            <img src={slot.pictureUrl} alt={slot.title} className="h-full w-full object-cover" />
+          )}
           {slot.isOwner && (
             <Crown
               size={10}
@@ -223,70 +226,18 @@ const RoomRow = memo(({ room, isMine, ownerDisplayName, onDelete }: RoomRowProps
   );
 });
 
-interface IdentityChipProps {
-  readonly name: string;
-  readonly color: string;
-  readonly hasName: boolean;
-  readonly onEdit: () => void;
-}
-
-const IdentityChip = memo(({ name, color, hasName, onEdit }: IdentityChipProps) => (
-  <button
-    type="button"
-    onClick={onEdit}
-    className="flex items-center gap-2 border border-landing-border bg-landing-bg-elev/60 px-2 py-1.5 text-landing-fg transition-colors hover:border-landing-accent/40"
-  >
-    <span
-      className="h-4 w-4 rounded-full border border-landing-border"
-      style={{ backgroundColor: color }}
-    />
-    <span className="text-xs">{hasName ? name : t.identity.unsetPlaceholder}</span>
-    <MonoKicker tone="faint">{hasName ? t.identity.editButton : t.identity.setButton}</MonoKicker>
-  </button>
-));
-
 export const Lobby = observer(() => {
   const lobbyStore = useRetroLobbyStore();
   const identityStore = useIdentityStore();
   const directory = useUserDirectoryStore();
-  const session = useAuthSession();
   const navigate = useNavigate();
   const myClientId = identityStore.identity.clientId as ClientId;
   const [joinInput, setJoinInput] = useState('');
   const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<RoomId | null>(null);
-  const [isIdentityDialogOpen, setIsIdentityDialogOpen] = useState(false);
 
   useEffect(() => {
     void lobbyStore.loadRooms();
   }, [lobbyStore]);
-
-  // Seed the nickname from Google's `name` claim (or `email` fallback)
-  // the first time we have both a signed-in session AND no stored
-  // identity. After this, the user can rename via the identity dialog
-  // — we never overwrite a persisted nickname on subsequent logins.
-  useEffect(() => {
-    if (identityStore.hasName) {
-      return;
-    }
-    if (!session.isSignedIn) {
-      return;
-    }
-    const profile = session.profile;
-    if (profile === null) {
-      return;
-    }
-    const seed = profile.name.trim().length > 0 ? profile.name : (profile.email ?? '');
-    if (seed.trim().length === 0) {
-      return;
-    }
-    identityStore.setName(seed);
-  }, [identityStore, identityStore.hasName, session, session.isSignedIn, session.profile]);
-
-  useEffect(() => {
-    if (!identityStore.hasName) {
-      setIsIdentityDialogOpen(true);
-    }
-  }, [identityStore.hasName]);
 
   const handleCreate = useFunction((params: ICreateRoomParams) => {
     const roomId = lobbyStore.createRoom(params, { ownerClientId: myClientId });
@@ -331,16 +282,6 @@ export const Lobby = observer(() => {
     setPendingDeleteRoomId(null);
   });
 
-  const handleOpenIdentityDialog = useFunction(() => {
-    setIsIdentityDialogOpen(true);
-  });
-
-  const handleIdentitySubmit = useFunction((params: { name: string; color: string }) => {
-    identityStore.setName(params.name);
-    identityStore.setColor(params.color);
-    setIsIdentityDialogOpen(false);
-  });
-
   const { rooms } = lobbyStore;
   const showLoader = !isSyncedValueDescriptor(rooms) && !isFailValueDescriptor(rooms);
   const hasSyncedRooms = isSyncedValueDescriptor(rooms);
@@ -371,15 +312,7 @@ export const Lobby = observer(() => {
               </p>
             </div>
             <div className="flex flex-col items-end justify-between gap-5 self-stretch">
-              <div className="flex items-center gap-2">
-                <IdentityChip
-                  name={identityStore.identity.name}
-                  color={identityStore.identity.color}
-                  hasName={identityStore.hasName}
-                  onEdit={handleOpenIdentityDialog}
-                />
-                <AccountChip />
-              </div>
+              <AccountChip />
               <div className="flex flex-col items-end gap-1.5">
                 <MonoKicker tone="faint">{t.lobby.totalRoomsLabel}</MonoKicker>
                 <div className="font-mono text-[52px] leading-none text-landing-fg">
@@ -456,8 +389,7 @@ export const Lobby = observer(() => {
               <button
                 type="button"
                 onClick={handleOpenCreateDialog}
-                disabled={!identityStore.hasName}
-                className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90"
               >
                 {t.lobby.createSubmit} →
               </button>
@@ -499,13 +431,6 @@ export const Lobby = observer(() => {
         open={lobbyStore.isCreateDialogOpen}
         onClose={handleCloseCreateDialog}
         onCreate={handleCreate}
-      />
-
-      <IdentityDialog
-        open={isIdentityDialogOpen}
-        initialName={identityStore.identity.name}
-        initialColor={identityStore.identity.color}
-        onSubmit={handleIdentitySubmit}
       />
 
       <ConfirmDialog

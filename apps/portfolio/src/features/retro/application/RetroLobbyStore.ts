@@ -144,7 +144,6 @@ export class RetroLobbyStore {
       void this.directory.seedIfMissing({
         clientId: snapshot.facilitatorClientId,
         name: snapshot.facilitatorName,
-        color: '#64748b',
       });
     }
 

@@ -19,7 +19,6 @@ import { ClosePanel } from './components/ClosePanel';
 import { ColumnList } from './components/ColumnList';
 import { DiscussPanel } from './components/DiscussPanel';
 import { ExportDialog } from './components/ExportDialog';
-import { IdentityDialog } from './components/IdentityDialog';
 import { RoomHeader } from './components/RoomHeader';
 import { ShareLinkDialog } from './components/ShareLinkDialog';
 import { useAwarenessPresence } from './hooks/useAwarenessPresence';
@@ -153,26 +152,9 @@ const RoomBody = observer(({ typedRoomId, client }: IRoomBodyProps) => {
     snapshotMeta,
   ]);
 
-  const handleIdentitySubmit = useFunction((params: { name: string; color: string }) => {
-    identityStore.setName(params.name);
-    identityStore.setColor(params.color);
-    roomStore.unlockChime();
-  });
-
   const handleCopyLink = useFunction(() => {
     roomStore.showToast(copy(window.location.href) ? t.room.linkCopied : t.errors.copyFailed);
   });
-
-  if (!identityStore.hasName) {
-    return (
-      <IdentityDialog
-        open
-        initialName={identityStore.identity.name}
-        initialColor={identityStore.identity.color}
-        onSubmit={handleIdentitySubmit}
-      />
-    );
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-auto text-landing-fg">

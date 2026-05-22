@@ -140,10 +140,6 @@ const RankedEntryRow = observer(({ entry, rank, directory }: RankedEntryRowProps
     entry.kind === 'card'
       ? (directory.get(entry.card.authorClientId as ClientId)?.name ?? '').trim()
       : '';
-  const authorColor =
-    entry.kind === 'card'
-      ? (directory.get(entry.card.authorClientId as ClientId)?.color ?? null)
-      : null;
 
   return (
     <CardFrame
@@ -195,14 +191,6 @@ const RankedEntryRow = observer(({ entry, rank, directory }: RankedEntryRowProps
           )}
           {authorName.length > 0 && (
             <span className="flex items-center gap-1.5">
-              {authorColor !== null && (
-                <span
-                  aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  // Author color is the participant's self-picked palette entry.
-                  style={{ backgroundColor: authorColor }}
-                />
-              )}
               <MonoKicker tone="dim">
                 {t.discuss.authorKicker} {authorName}
               </MonoKicker>

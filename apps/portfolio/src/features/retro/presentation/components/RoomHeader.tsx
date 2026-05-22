@@ -39,8 +39,6 @@ export const RoomHeader = observer(({ store }: RoomHeaderProps) => {
     (facilitatorProfile?.name ?? '').trim() !== ''
       ? (facilitatorProfile?.name ?? '')
       : (snapshot?.meta.facilitatorName.trim() ?? '');
-  const facilitatorColor = facilitatorProfile?.color ?? null;
-
   const handleOpenShareDialog = useFunction(() => store.openShareDialog());
   const handleOpenResults = useFunction(() => store.openExportDialog());
 
@@ -76,14 +74,6 @@ export const RoomHeader = observer(({ store }: RoomHeaderProps) => {
                     {t.lobby.hostedBy}{' '}
                     <span className="text-landing-fg-dim">{facilitatorDisplayName}</span>
                   </span>
-                  {facilitatorColor !== null && (
-                    <span
-                      aria-hidden="true"
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      // Dot color is runtime-dynamic per participant.
-                      style={{ backgroundColor: facilitatorColor }}
-                    />
-                  )}
                 </span>
               )}
             </div>

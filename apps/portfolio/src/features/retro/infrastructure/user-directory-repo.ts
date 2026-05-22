@@ -21,14 +21,14 @@ const USERS_TABLE_NAME = 'users';
 export interface IUserProfile {
   readonly clientId: ClientId;
   readonly name: string;
-  readonly color: string;
+  readonly pictureUrl?: string;
   readonly lastSeenAt: ISO;
 }
 
 interface IDBUserRow {
   readonly clientId: ClientId;
   readonly name: string;
-  readonly color: string;
+  readonly pictureUrl?: string;
   readonly lastSeenAt: ISO;
 }
 
@@ -65,7 +65,7 @@ export async function createUserDirectoryRepo(
       await database.put(USERS_TABLE_NAME, {
         clientId: profile.clientId,
         name: profile.name,
-        color: profile.color,
+        pictureUrl: profile.pictureUrl,
         lastSeenAt: profile.lastSeenAt,
       });
     },
@@ -100,7 +100,7 @@ function toProfile(row: IDBUserRow): IUserProfile {
   return {
     clientId: row.clientId,
     name: row.name,
-    color: row.color,
+    pictureUrl: row.pictureUrl,
     lastSeenAt: row.lastSeenAt,
   };
 }
