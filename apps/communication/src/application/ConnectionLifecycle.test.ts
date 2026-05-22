@@ -63,7 +63,6 @@ describe('ConnectionLifecycle.onHandshake', () => {
       verifiers: singleVerifierMap(makeVerifier(async () => verifyResult)),
       audit: makeAudit(),
       logger: makeLogger(),
-      roomAllowlist: [],
     });
   });
 
@@ -78,9 +77,21 @@ describe('ConnectionLifecycle.onHandshake', () => {
       expect(result.value.identity.userId).toBe(USER_ID);
       expect(result.value.identity.displayName).toBe('Alice');
       expect(result.value.provider).toBe('google');
+      expect(result.value.claims).not.toBeNull();
       expect(result.value.socketId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       );
+    }
+  });
+
+  it('returns anonymous identity when no provider/token is presented', async () => {
+    const result = await lifecycle.onHandshake({ roomId: VALID_ROOM_ID });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.identity.userId.startsWith('anon:')).toBe(true);
+      expect(result.value.identity.displayName).toBe('Guest');
+      expect(result.value.provider).toBeNull();
+      expect(result.value.claims).toBeNull();
     }
   });
 
@@ -134,39 +145,6 @@ describe('ConnectionLifecycle.onHandshake', () => {
     }
   });
 
-  it('rejects with forbidden-room when allowlist excludes the user', async () => {
-    const restricted = new ConnectionLifecycle({
-      verifiers: singleVerifierMap(makeVerifier(async () => ok(makeClaims()))),
-      audit: makeAudit(),
-      logger: makeLogger(),
-      roomAllowlist: [{ roomId: VALID_ROOM_ID, userIds: ['some-other-user'] }],
-    });
-    const result = await restricted.onHandshake({
-      roomId: VALID_ROOM_ID,
-      provider: 'google',
-      token: 'jwt',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe('auth/forbidden-room');
-    }
-  });
-
-  it('admits a listed user when allowlist contains their userId', async () => {
-    const restricted = new ConnectionLifecycle({
-      verifiers: singleVerifierMap(makeVerifier(async () => ok(makeClaims()))),
-      audit: makeAudit(),
-      logger: makeLogger(),
-      roomAllowlist: [{ roomId: VALID_ROOM_ID, userIds: [USER_ID] }],
-    });
-    const result = await restricted.onHandshake({
-      roomId: VALID_ROOM_ID,
-      provider: 'google',
-      token: 'jwt',
-    });
-    expect(result.ok).toBe(true);
-  });
-
   it('routes Yandex handshakes to the Yandex verifier', async () => {
     const verifiers = new Map<TIdentityProvider, IIdentityVerifier>([
       [
@@ -190,7 +168,6 @@ describe('ConnectionLifecycle.onHandshake', () => {
       verifiers,
       audit: makeAudit(),
       logger: makeLogger(),
-      roomAllowlist: [],
     });
     const result = await router.onHandshake({
       roomId: VALID_ROOM_ID,
@@ -215,7 +192,6 @@ describe('ConnectionLifecycle.onRefresh', () => {
       verifiers: singleVerifierMap(makeVerifier(async () => verifyResult)),
       audit: makeAudit(),
       logger: makeLogger(),
-      roomAllowlist: [],
     });
   });
 

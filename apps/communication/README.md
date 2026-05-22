@@ -4,14 +4,12 @@ Socket.IO command/response relay + WebRTC signaling + ephemeral TURN
 credentials, with Google Sign-In (OIDC) auth on the handshake.
 
 This server replaced the legacy `apps/signaling/` deployment. It keeps
-the WebSocket transport (Socket.IO 4.x), adds OIDC-protected handshakes,
-a typed command/response protocol, and ephemeral coturn credentials so
+the WebSocket transport (Socket.IO 4.x), adds OIDC-protected handshakes
+(Google and Yandex via a pluggable `IIdentityVerifier` strategy), a
+typed command/response protocol, and ephemeral coturn credentials so
 relay traffic is never billed against an unauthenticated user. The
 portfolio frontend (`retro` and `conf` features) signals exclusively
 through this server.
-
-For protocol details, threat model, and deferred decisions, see
-[`server.md`](./server.md).
 
 ---
 
@@ -79,11 +77,14 @@ bash apps/communication/scripts/install.sh \
 3. **`install-ssh-keys.sh`** appends each unique pub key to the target's
    `/root/.ssh/authorized_keys` (append-only; existing keys preserved).
 4. **`disable-ssh-password-auth.sh`** writes
-   `/etc/ssh/sshd_config.d/50-communication.conf` with
-   `PasswordAuthentication no` + `PermitRootLogin prohibit-password` and
-   reloads sshd. Validated with `sshd -t` first; refuses to run if
-   `authorized_keys` is empty. Skip via `--no-harden-ssh` if you need a
-   password fallback (rare; not recommended).
+   `/etc/ssh/sshd_config.d/01-communication.conf` with
+   `PasswordAuthentication no` + `PermitRootLogin prohibit-password`
+   and reloads sshd. The `01-` prefix is load-bearing — Ubuntu
+   cloud-init ships `50-cloud-init.conf` with `PasswordAuthentication
+   yes`, and OpenSSH applies the FIRST match per option, so our
+   drop-in must lex before it. Validated with `sshd -t` first; refuses
+   to run if `authorized_keys` is empty. Skip via `--no-harden-ssh`
+   if you need a password fallback (rare; not recommended).
 5. **System packages, redis, system user, repo clone, build, secrets,
    configs, certbot, HAProxy/coturn render, UFW, services, smoke
    test** — see `scripts/install.sh` for the exact order.
@@ -97,8 +98,11 @@ To upgrade an existing install:
 bash apps/communication/scripts/upgrade.sh --ssh-host root@<IP>
 ```
 
-Upgrade does: `git pull --ff-only`, `pnpm install --frozen-lockfile`,
-build, `SIGTERM` + 16s drain, `start`, smoke-test.
+Upgrade does: `git fetch + reset --hard origin/main` (force-push
+resilient, with the install-rendered `production.toml` backed up
+across the reset so its CORS / port / TURN URLs survive), `pnpm
+install --frozen-lockfile`, build, `SIGTERM` + 16s drain, `start`,
+smoke-test.
 
 ---
 
@@ -166,9 +170,13 @@ side OAuth code flow, only ID-token verification.)
 - `aud` must equal `--google-client-id`.
 - `azp` (if present) must equal `--google-client-id`.
 - `alg` is pinned to RS256.
-- `name` claim is required (the `email` cascade was removed for
-  privacy — see plan §13.1). On refresh: `sub` stable, `iat` monotonic,
-  `sid` (if present) stable.
+- `name` claim is required — the server uses it as the public display
+  name; without it the handshake fails with
+  `auth/missing-name-claim`. (We deliberately do not fall back to
+  `email`, so users joining a room never broadcast their address to
+  other participants.)
+- On refresh: `sub` stable, `iat` monotonic, `sid` (if present)
+  stable.
 
 If the frontend Client ID and the server's `--google-client-id` differ,
 handshake fails with `auth/wrong-audience`. Use the same string everywhere.
@@ -292,16 +300,27 @@ runs TURNS on `:5349`.
 
 ## Protocol summary
 
-Authenticate at the Socket.IO handshake by sending the room id and the
-Google ID token in the `auth` payload:
+Authenticate at the Socket.IO handshake by sending the room id, the
+provider discriminator (`'google'` or `'yandex'`), and the
+provider-issued JWT in the `auth` payload:
 
 ```ts
 const socket = io('wss://<IP>.sslip.io', {
-  auth: { roomId: 'retro/team-x', idToken: googleIdToken },
+  auth: {
+    roomId: '11111111-2222-4333-8444-555555555555',
+    provider: 'google', // or 'yandex'
+    token: jwt,
+  },
 });
 ```
 
-Three top-level message families (full schema in [`server.md`](./server.md)):
+The server routes the token to the matching `IIdentityVerifier`
+implementation. Google JWTs are verified offline against Google's
+JWKS (RS256); Yandex JWTs are verified offline with `HS256` against
+the configured `YANDEX_OAUTH_CLIENT_SECRET`. Either way, the
+downstream protocol is identical from this point on.
+
+Three top-level message families:
 
 ```ts
 // 1. Command / response relay (initiator → server → other room sockets)
@@ -339,11 +358,19 @@ socket.emit('turn:request-credentials', undefined, (ack) => {
 
 ## OAuth scope requirement
 
-Clients MUST request `openid profile email`. The handshake reads the
-`name` claim to derive a stable display name; without it the server
-rejects with `auth/missing-name-claim`. The `email` claim is requested
-for future features but is not used to derive `displayName` (privacy:
-emails would otherwise broadcast to every room participant).
+The server only reads two claims from the verified token:
+
+- A stable user identifier — Google's `sub` or Yandex' `uid`. The
+  identifier is namespaced by provider on the server side
+  (`google:<sub>`, `yandex:<uid>`) so cross-provider collisions are
+  impossible by construction.
+- A non-empty `name` claim, used as the public display name. Missing
+  → handshake rejected with `auth/missing-name-claim`.
+
+Both providers include these by default in the standard OpenID Connect
+scopes (`openid profile`). The `email` scope is requested for future
+features but is never used to derive the display name — emails would
+otherwise broadcast to every room participant.
 
 ---
 
@@ -379,8 +406,8 @@ removed the legacy server source tree.
 
 HAProxy's `send-proxy-v2` is intentionally **disabled** on both backends
 (see `scripts/lib/render-haproxy-cfg.sh`). The Fastify side does not yet
-parse the PROXY protocol v2 header — wiring it through `proxy-protocol-js`
-in `bootstrap.ts` is on the deferred list (see plan §13.2).
+parse the PROXY protocol v2 header — wiring it through
+`proxy-protocol-js` in `bootstrap.ts` is on the deferred list.
 
 **Operational consequence:** the Node service sees every incoming
 connection as originating from `127.0.0.1` (HAProxy's loopback to the
@@ -424,5 +451,8 @@ public IP and re-run `install.sh` with `--domain my.example.com`.
 
 ---
 
-For full design rationale, the threat model, and the catalogue of
-intentionally deferred decisions, see [`server.md`](./server.md).
+The source tree under `src/` follows DDD layers (`domain/`,
+`application/`, `infrastructure/`, `presentation/`) — read
+`presentation/bootstrap.ts` to see the composition root, or
+`infrastructure/verifier-registry.ts` to see how a third OIDC provider
+would slot in.

@@ -17,8 +17,7 @@ export const confEnTranslations = {
     sectionKicker: 'conf',
     headlinePrimary: 'Anonymous',
     headlineAccent: 'video calls',
-    heroSubtitle:
-      'Two-person peer-to-peer calls with optional AR overlays. No accounts, no server-side recordings — rooms live only in your browser.',
+    heroSubtitle: 'Two-person peer-to-peer calls with AR overlays.',
     totalRoomsLabel: 'TOTAL ROOMS',
     activeRoomsSectionLabel: 'your rooms',
     createOrJoinSectionLabel: 'create or join',

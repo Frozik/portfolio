@@ -35,8 +35,11 @@ export interface ICommunicationClientParams {
    * Returns the current `{ provider, token }` pair, or `null` if the
    * user is signed out. The provider stays stable for the lifetime of
    * a socket — the server caches it on the first handshake.
+   *
+   * Omit entirely to connect anonymously — the handshake then sends
+   * only `{ roomId }` and the server assigns a `Guest` identity.
    */
-  readonly getCredentials: () => IAuthCredentials | null;
+  readonly getCredentials?: () => IAuthCredentials | null;
   /**
    * Called when the server emits `auth:token-expiring`. The host
    * should resolve to a fresh provider-issued JWT (Google: silent
@@ -44,8 +47,11 @@ export interface ICommunicationClientParams {
    * `null` indicates that no refresh is possible — the client will
    * surface the expiry via the `auth:token-expired` event when it
    * eventually fires.
+   *
+   * Required only when `getCredentials` is provided; anonymous
+   * handshakes never receive `auth:token-expiring`.
    */
-  readonly onTokenRefreshNeeded: () => Promise<string | null>;
+  readonly onTokenRefreshNeeded?: () => Promise<string | null>;
 }
 
 /** Generic "from" envelope present on every inbound `signal:event`. */
@@ -218,7 +224,7 @@ export function createCommunicationClient(
   }
 
   async function refreshToken(): Promise<void> {
-    if (socket === null || !socket.connected) {
+    if (socket === null || !socket.connected || onTokenRefreshNeeded === undefined) {
       return;
     }
     let nextToken: string | null;
@@ -246,20 +252,28 @@ export function createCommunicationClient(
     if (socket !== null) {
       return;
     }
-    const credentials = getCredentials();
-    if (credentials === null) {
-      // No active sign-in → caller should surface a sign-in prompt;
-      // we keep the client in `idle` so a later `connect()` after
-      // sign-in can succeed without recreating the wrapper.
-      return;
-    }
-    setState('connecting');
-    const next = io(baseUrl, {
-      auth: {
+    let authPayload: { roomId: string; provider?: string; token?: string };
+    if (getCredentials === undefined) {
+      // Anonymous handshake — no provider/token. The server assigns a
+      // `Guest` identity scoped to this socket.
+      authPayload = { roomId };
+    } else {
+      const credentials = getCredentials();
+      if (credentials === null) {
+        // No active sign-in → caller should surface a sign-in prompt;
+        // we keep the client in `idle` so a later `connect()` after
+        // sign-in can succeed without recreating the wrapper.
+        return;
+      }
+      authPayload = {
         roomId,
         provider: credentials.provider,
         token: credentials.token,
-      },
+      };
+    }
+    setState('connecting');
+    const next = io(baseUrl, {
+      auth: authPayload,
       transports: ['websocket'],
       reconnection: true,
       // Keep noise low while debugging — feature stores log

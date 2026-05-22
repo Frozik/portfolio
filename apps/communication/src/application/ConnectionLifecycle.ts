@@ -5,14 +5,14 @@ import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
 import type { IHandshakeAuth } from '../domain/protocol';
 import { parseHandshakeAuth } from '../domain/protocol-validators';
-import type { DisplayName, RoomId, SocketId } from '../domain/types';
+import type { DisplayName, RoomId, SocketId, UserId } from '../domain/types';
 import { assertDisplayName } from '../domain/types';
-import type { RoomAllowlistEntry } from './config/sections/room-section';
 import type { IAuditLogger } from './ports/IAuditLogger';
 import type { IServerLogger } from './ports/IServerLogger';
 import type { Result } from './Result';
 import { err, ok } from './Result';
-import { checkRoomAllowlist } from './RoomAllowlistChecker';
+
+const ANONYMOUS_DISPLAY_NAME = assertDisplayName('Guest');
 
 type ConnectionLifecycleDeps = {
   /**
@@ -24,15 +24,19 @@ type ConnectionLifecycleDeps = {
   verifiers: ReadonlyMap<TIdentityProvider, IIdentityVerifier>;
   audit: IAuditLogger;
   logger: IServerLogger;
-  // v2: per-room allowlist. Empty = no enforcement.
-  roomAllowlist: ReadonlyArray<RoomAllowlistEntry>;
 };
 
 export type HandshakeOutput = {
   identity: Identity;
-  claims: TokenClaims;
+  /**
+   * Verified OIDC claims, or `null` for anonymous handshakes that
+   * arrived without a `provider`/`token` pair. Downstream code that
+   * needs an expiry timer or refresh capability must gate on this.
+   */
+  claims: TokenClaims | null;
   socketId: SocketId;
-  provider: TIdentityProvider;
+  /** `null` for anonymous handshakes. */
+  provider: TIdentityProvider | null;
 };
 
 export class ConnectionLifecycle {
@@ -46,6 +50,20 @@ export class ConnectionLifecycle {
       parsed = parseHandshakeAuth(handshakeAuth);
     } catch (_caught) {
       return err('auth/missing-fields');
+    }
+
+    const socketId: SocketId = randomUUID();
+
+    if (parsed.provider === undefined || parsed.token === undefined) {
+      // Anonymous handshake — no OIDC token presented. The room joins
+      // without identity verification; downstream features that need
+      // displayName use a generic placeholder.
+      const identity: Identity = {
+        userId: `anon:${randomUUID()}` as UserId,
+        displayName: ANONYMOUS_DISPLAY_NAME,
+        socketId,
+      };
+      return ok({ identity, claims: null, socketId, provider: null });
     }
 
     const verifier = this.deps.verifiers.get(parsed.provider);
@@ -73,13 +91,6 @@ export class ConnectionLifecycle {
       return err('auth/missing-name-claim');
     }
 
-    // v2: per-room allowlist (§13.2). Pure check; no I/O.
-    const allowlistResult = checkRoomAllowlist(parsed.roomId, claims.sub, this.deps.roomAllowlist);
-    if (!allowlistResult.ok) {
-      return err('auth/forbidden-room');
-    }
-
-    const socketId: SocketId = randomUUID();
     const identity: Identity = {
       userId: claims.sub,
       displayName,

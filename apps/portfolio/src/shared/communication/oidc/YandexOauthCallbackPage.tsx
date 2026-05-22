@@ -50,7 +50,7 @@ export function YandexOauthCallbackPage(): ReactElement {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#07090c] p-4 text-center text-sm text-text-muted">
+    <main className="flex min-h-dvh items-center justify-center bg-[#07090c] p-4 text-center text-sm text-text-muted">
       Signing you in…
     </main>
   );

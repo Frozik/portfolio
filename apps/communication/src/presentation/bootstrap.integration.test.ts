@@ -66,7 +66,6 @@ function buildConfig(overrides: Partial<IServerConfig> = {}): IServerConfig {
       max_http_buffer_bytes: 1_048_576,
       max_tabs_per_user: 5,
       max_inflight_dispatches_per_socket: 32,
-      allowlist: [],
     },
     signal: {
       max_publish_per_second_per_socket: 100,

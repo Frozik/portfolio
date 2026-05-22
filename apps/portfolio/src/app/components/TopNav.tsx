@@ -156,7 +156,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 border-b border-landing-border bg-landing-bg/70 backdrop-blur-xl print:hidden">
+      <nav className="sticky top-0 z-50 border-b border-landing-border bg-landing-bg/70 backdrop-blur-sm print:hidden">
         <div className="mx-auto flex max-w-[var(--container-narrow)] items-center justify-between gap-3 px-6 py-2 md:gap-6 md:px-12">
           <div className="flex shrink-0 items-center gap-2 md:gap-3">
             {backConfig !== null && (

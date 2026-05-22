@@ -50,7 +50,7 @@ const ErrorPageComponent = ({ initialStatus = FIRST_STATUS }: IErrorPageProps) =
   });
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-surface">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         {stars.map(star => (
           <div

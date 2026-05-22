@@ -36,8 +36,8 @@ const initiatorSummarySchema = z.object({
 
 export const HandshakeAuthSchema = z.object({
   roomId: z.string().regex(UUID_V4_REGEX, 'roomId must be a UUID v4'),
-  provider: z.enum(IDENTITY_PROVIDERS),
-  token: z.string().min(1, 'token must not be empty'),
+  provider: z.enum(IDENTITY_PROVIDERS).optional(),
+  token: z.string().min(1, 'token must not be empty').optional(),
 });
 
 export const InitiatePayloadSchema = z.object({
@@ -112,7 +112,6 @@ const authErrorCodeSchema = z.enum([
   'auth/missing-name-claim',
   'auth/sub-mismatch',
   'auth/rate-limited',
-  'auth/forbidden-room',
 ]);
 
 export const RefreshTokenAckSchema = z.discriminatedUnion('ok', [

@@ -122,3 +122,36 @@ export function useCommunicationClient(roomId: string): ICommunicationClient | n
 
   return client;
 }
+
+/**
+ * Anonymous variant of {@link useCommunicationClient}. Skips the
+ * `AuthSession` dependency entirely — the handshake sends only
+ * `{ roomId }` and the server assigns a `Guest` identity scoped to
+ * this socket. Backed by the same refcounted pool, so multiple
+ * components mounted against the same `(baseUrl, roomId)` share one
+ * connection.
+ *
+ * Use this for features that do not need user identity (e.g. conf
+ * rooms identified by URL only). Token refresh / expiry events never
+ * fire on this path.
+ */
+export function useAnonymousCommunicationClient(roomId: string): ICommunicationClient | null {
+  const baseUrl = useCommunicationBaseUrl();
+  const [client, setClient] = useState<ICommunicationClient | null>(null);
+
+  useEffect(() => {
+    const key = poolKey(baseUrl, roomId);
+    const acquired = acquireClient(key, () =>
+      createCommunicationClient({
+        baseUrl,
+        roomId,
+      })
+    );
+    setClient(acquired);
+    return () => {
+      releaseClient(key);
+    };
+  }, [baseUrl, roomId]);
+
+  return client;
+}

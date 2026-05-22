@@ -44,9 +44,11 @@ type RateLimitWindow = {
 
 type SocketContextData = {
   identity: Identity;
-  claims: TokenClaims;
+  /** `null` for anonymous handshakes — no token lifecycle, no refresh. */
+  claims: TokenClaims | null;
   roomId: RoomId;
-  tokenLifecycle: TokenLifecycle;
+  /** `null` for anonymous handshakes — there is no token to expire. */
+  tokenLifecycle: TokenLifecycle | null;
   signalRateBucket: { tokens: number; lastRefillMs: number };
   turnCredsBucket: { count: number; windowStartMs: number };
   inflightControllers: Set<AbortController>;
@@ -139,9 +141,12 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
       identity: adopted,
       claims: result.value.claims,
       roomId,
-      tokenLifecycle: new TokenLifecycle({
-        warningSeconds: deps.config.auth.token_expiry_warning_seconds,
-      }),
+      tokenLifecycle:
+        result.value.claims === null
+          ? null
+          : new TokenLifecycle({
+              warningSeconds: deps.config.auth.token_expiry_warning_seconds,
+            }),
       signalRateBucket: {
         tokens: deps.config.signal.max_publish_burst,
         lastRefillMs: nowMs,
@@ -226,6 +231,12 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
 
     socket.on(AUTH_REFRESH_TOKEN, async (raw, ack: (response: IRefreshTokenAck) => void) => {
       try {
+        if (ctx.claims === null || ctx.tokenLifecycle === null) {
+          // Anonymous handshakes never present a token in the first
+          // place — there's nothing to refresh.
+          ack({ ok: false, error: 'auth/invalid-token' });
+          return;
+        }
         const payload = parseRefreshTokenPayload(raw);
         const result = await deps.connectionLifecycle.onRefresh(ctx.claims, payload.token);
         if (!result.ok) {
@@ -320,7 +331,7 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
     );
 
     socket.on('disconnect', () => {
-      ctx.tokenLifecycle.dispose();
+      ctx.tokenLifecycle?.dispose();
       for (const controller of ctx.inflightControllers) {
         controller.abort();
       }
@@ -365,6 +376,10 @@ function readContext(socket: Socket): SocketContextData | null {
 function armTokenLifecycle(socket: Socket, deps: SocketHandlersDeps): void {
   const ctx = readContext(socket);
   assert(ctx !== null, 'socket context must be populated before arming token lifecycle');
+  // Anonymous handshakes have no token to expire — there's nothing to arm.
+  if (ctx.claims === null || ctx.tokenLifecycle === null) {
+    return;
+  }
   ctx.tokenLifecycle.arm(ctx.claims, buildTokenLifecycleCallbacks(socket, deps));
 }
 
@@ -375,7 +390,10 @@ function buildTokenLifecycleCallbacks(
   return {
     onWarning(secondsRemaining: number): void {
       const ctx = readContext(socket);
-      if (ctx === null) {
+      if (ctx === null || ctx.claims === null) {
+        // ctx.claims === null means anonymous handshake — TokenLifecycle
+        // was never armed for it, so this callback should not fire. Guard
+        // defensively in case of races.
         return;
       }
       deps.transport.emitTokenExpiring(socket.id, {

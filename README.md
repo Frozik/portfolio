@@ -274,13 +274,13 @@ and control the shared timer.
   so closing the tab fully signs the user out
 
 **Stack:** `yjs`, `y-indexeddb`, `y-webrtc` for CRDT storage and P2P
-sync; `@dnd-kit/*` for accessible drag-and-drop; `@react-oauth/google` +
-`jwt-decode` for the sign-in flow; MobX facade (`RoomStore`,
-`RetroLobbyStore`, `IdentityStore`) wraps Yjs so presentation stays
-library-agnostic. The signaling backend
+sync; `@dnd-kit/*` for accessible drag-and-drop; pluggable sign-in
+abstraction (`IOidcProvider`) with Google and Yandex strategies;
+MobX facade (`RoomStore`, `RetroLobbyStore`, `IdentityStore`) wraps
+Yjs so presentation stays library-agnostic. The signaling backend
 ([`apps/communication`](./apps/communication/README.md)) is a Fastify 5
 + Socket.IO 4 server with a `coturn` TURN sidecar, deployed on a single
-Ubuntu VPS. See `RETRO.md` for the full feature design.
+Ubuntu VPS.
 
 ### Conf
 
@@ -293,20 +293,22 @@ plus Create and Join-by-link actions. Same multi-provider sign-in as
 Retro; sign-out sits next to the room counter.
 
 **Room** (`/conf/:uuid`) — local + remote video tiles, side-by-side on
-desktop and stacked on mobile, with mute audio / mute video / AR toggle
-/ share link / leave controls plus a quality badge and an RTT
-sparkline. Each browser keeps a persistent participant id locally, so
-a WiFi drop and return reclaims the same slot even while the peer is
-still showing "Peer disconnected". A third joiner is politely turned
-away with a "room full" message.
+desktop and stacked on mobile, with mute audio / mute video / a
+glasses-style picker (none / round / pink hippie stars / teacher
+rectangles) / share link / leave controls, plus a quality badge and
+an RTT sparkline. Each browser keeps a persistent participant id
+locally, so a WiFi drop and return reclaims the same slot even while
+the peer is still showing "Peer disconnected". A third joiner is
+politely turned away with a "room full" message.
 
 **Behind the scenes:**
 - Each side runs Google's MediaPipe face detector on its own camera
-  feed, draws the glasses sprite and emotion emoji onto a hidden
-  canvas, and sends that composited canvas as the outgoing video
-  track — the remote peer receives an already-finished frame, with no
-  remote-side detection and no overlay element. The same trick lets
-  the AR and mute toggles flip without renegotiating the call.
+  feed, draws the chosen glasses sprite and emotion emoji onto a
+  hidden canvas, and sends that composited canvas as the outgoing
+  video track — the remote peer receives an already-finished frame,
+  with no remote-side detection and no overlay element. The same
+  trick lets the user switch glasses style or mute / unmute without
+  renegotiating the call.
 - Emotion (`happy` / `surprised` / `sad` / `angry` / `neutral`) is
   picked from MediaPipe's facial-blendshape scores, with a short
   hysteresis so the emoji doesn't flicker on borderline expressions.
@@ -321,7 +323,5 @@ WASM fallback) loaded lazily from CDN; native `RTCPeerConnection` with
 perfect negotiation; `canvas.captureStream` for output compositing;
 `socket.io-client` against
 [`apps/communication`](./apps/communication/README.md) for
-OIDC-authenticated signaling; `@react-oauth/google` + `jwt-decode` for
-the sign-in flow. See
-[`apps/portfolio/src/features/conf/CONF.md`](./apps/portfolio/src/features/conf/CONF.md)
-for the full feature design.
+OIDC-authenticated signaling; the same pluggable Google + Yandex
+sign-in abstraction (`IOidcProvider`) Retro uses.

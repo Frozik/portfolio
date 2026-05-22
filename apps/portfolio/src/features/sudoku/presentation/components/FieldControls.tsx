@@ -1,6 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
-import { PenTool, Trash2, Undo, Undo2 } from 'lucide-react';
+import { LayoutGrid, PenTool, Trash2, Undo } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../../../shared/lib/cn';
 import { getIndexesArray, getPairs, getUsedNumbers, hasMarks } from '../../domain/services';
@@ -133,7 +133,7 @@ export function FieldControls({
           }}
           onClick={onExitGame}
         >
-          <Undo2 size={Math.trunc(cellSize * ICON_SCALE)} />
+          <LayoutGrid size={Math.trunc(cellSize * ICON_SCALE)} fill="currentColor" />
         </div>
 
         {hasHistory && (

@@ -40,5 +40,4 @@ export type AuthErrorCode =
   | 'auth/jwks-unreachable'
   | 'auth/missing-name-claim'
   | 'auth/sub-mismatch'
-  | 'auth/rate-limited'
-  | 'auth/forbidden-room';
+  | 'auth/rate-limited';

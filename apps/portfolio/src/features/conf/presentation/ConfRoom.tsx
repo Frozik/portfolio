@@ -7,9 +7,8 @@ import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
-import { AccountChip } from '../../../shared/communication/AccountChip';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
-import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
+import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { cn } from '../../../shared/lib/cn';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -48,8 +47,9 @@ export const ConfRoom = observer(() => {
   // Pass the bare UUID — the server's HandshakeAuthSchema requires
   // `auth.roomId` to be UUID v4. The CONF_ROOM_ID_NETWORK_PREFIX
   // lives on the in-payload signaling topic (see conf-signaling-client),
-  // not on the server-visible roomId.
-  const client = useCommunicationClient(typedRoomId);
+  // not on the server-visible roomId. The anonymous variant skips OIDC
+  // sign-in entirely — conf rooms are open by URL.
+  const client = useAnonymousCommunicationClient(typedRoomId);
   if (client === null) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center">
@@ -120,7 +120,6 @@ const ConfRoomBody = observer(({ typedRoomId, client }: IConfRoomBodyProps) => {
             errorMessage={roomStore.errorMessage}
           />
         </div>
-        <AccountChip />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2">

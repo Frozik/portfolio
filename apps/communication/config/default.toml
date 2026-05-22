@@ -31,11 +31,6 @@ response_gather_timeout_ms = 10000
 max_http_buffer_bytes = 1048576
 max_tabs_per_user = 5
 max_inflight_dispatches_per_socket = 32
-# Per-room allowlist (v2). Empty = no enforcement (any authenticated user can
-# join any room). Each entry: { roomId = "<uuid>", userIds = ["sub-1", ...] }.
-# An entry with empty userIds is treated as "no enforcement for this room"
-# (parsed but does nothing).
-allowlist = []
 
 [signal]
 max_publish_per_second_per_socket = 100

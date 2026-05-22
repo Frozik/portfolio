@@ -20,8 +20,7 @@ export const confRuTranslations: TranslationOf<typeof confEnTranslations> = {
     sectionKicker: 'conf',
     headlinePrimary: 'Анонимные',
     headlineAccent: 'видеозвонки',
-    heroSubtitle:
-      'Звонки один-на-один по P2P с AR-наложениями поверх лица. Без аккаунтов и записей на сервере — комнаты живут только в вашем браузере.',
+    heroSubtitle: 'Звонки один-на-один по P2P с AR.',
     totalRoomsLabel: 'ВСЕГО КОМНАТ',
     activeRoomsSectionLabel: 'ваши комнаты',
     createOrJoinSectionLabel: 'создать или войти',

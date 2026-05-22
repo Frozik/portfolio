@@ -7,16 +7,6 @@ const MAX_HTTP_BUFFER_BYTES_MAX = 16_777_216; // 16 MiB
 const MAX_TABS_PER_USER_MAX = 32;
 const MAX_INFLIGHT_DISPATCHES_PER_SOCKET_MAX = 1_024;
 
-// v2: per-room allowlist entry. If `userIds` is empty, the entry is treated as
-// "no enforcement for this room" (parsed-but-noop). An entry whose `userIds`
-// is non-empty restricts joins to listed Google `sub` values.
-export const RoomAllowlistEntrySchema = z.object({
-  roomId: z.string().min(1),
-  userIds: z.array(z.string().min(1)).readonly(),
-});
-
-export type RoomAllowlistEntry = z.infer<typeof RoomAllowlistEntrySchema>;
-
 export const RoomSectionSchema = z.object({
   max_listeners: z.number().int().min(1).max(MAX_LISTENERS_UPPER),
   response_gather_timeout_ms: z
@@ -31,7 +21,6 @@ export const RoomSectionSchema = z.object({
     .int()
     .min(1)
     .max(MAX_INFLIGHT_DISPATCHES_PER_SOCKET_MAX),
-  allowlist: z.array(RoomAllowlistEntrySchema).readonly(),
 });
 
 export type RoomSection = z.infer<typeof RoomSectionSchema>;

@@ -20,15 +20,22 @@ export const SERVER_DRAINING = 'server:draining';
 
 export interface IHandshakeAuth {
   roomId: string;
-  /** Discriminator for which OIDC provider issued `token`. */
-  provider: TIdentityProvider;
+  /**
+   * Discriminator for which OIDC provider issued `token`. Optional —
+   * when omitted (together with `token`), the connection joins the
+   * room anonymously and no identity verification runs.
+   */
+  provider?: TIdentityProvider;
   /**
    * Provider-issued JWT presented by the client.
    *  - Google: id_token (RS256, verified via JWKS).
    *  - Yandex: JWT returned by `/info?format=jwt` (HS256, verified
    *    against the registered application's `client_secret`).
+   *
+   * Optional — when omitted (together with `provider`), the
+   * connection joins anonymously.
    */
-  token: string;
+  token?: string;
 }
 
 export interface IInitiatePayload {

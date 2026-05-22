@@ -228,7 +228,6 @@ export async function bootstrap(
     verifiers,
     audit: auditLogger,
     logger: serverLogger,
-    roomAllowlist: config.room.allowlist,
   });
 
   const signalRelay = new SignalRelay({
