@@ -39,7 +39,12 @@ const solutionFaceShaderSource = commonShaderSource + solutionFaceSpecificSource
 const vertexMarkerShaderSource = commonShaderSource + vertexMarkerSpecificSource;
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
-const LINE_ENDPOINT_FORMAT: GPUTextureFormat = 'rg32float';
+/**
+ * Endpoint vertex indices are small integers (marker count is well below 2048,
+ * where f16 stops being exact), so 16-bit floats are lossless here and halve
+ * the bandwidth of the two line-id passes compared to rg32float.
+ */
+const LINE_ENDPOINT_FORMAT: GPUTextureFormat = 'rg16float';
 const MIN_DIMENSION = 1;
 
 /**
@@ -57,8 +62,8 @@ const RENDER_MODE_VISIBLE_ONLY = 2;
 
 const FLOAT32_BYTES = 4;
 
-/** Number of floats per styled line instance (32 = 128 bytes, matching shader LineInstance layout) */
-const FLOATS_PER_STYLED_LINE = 32;
+/** Number of floats per styled line instance (24 = 96 bytes; the last attribute ends at offset 96) */
+const FLOATS_PER_STYLED_LINE = 24;
 const STYLED_LINE_STRIDE = FLOATS_PER_STYLED_LINE * FLOAT32_BYTES;
 
 /** Shared vertex attributes for styled line instances */
@@ -110,12 +115,17 @@ const SOLUTION_FACE_VERTEX_STRIDE = SOLUTION_FACE_VERTEX_FLOATS * FLOAT32_BYTES;
  *   Total:                         116 bytes → 128 (padded to multiple of 16)
  */
 const UNIFORM_BUFFER_SIZE = 128;
-const MVP_BYTE_OFFSET = 0;
-const VIEWPORT_BYTE_OFFSET = 64;
-const DPR_BYTE_OFFSET = 72;
-const CAMERA_FORWARD_BYTE_OFFSET = 80;
-const DEPTH_FADE_BYTE_OFFSET = 108;
-const CAMERA_TARGET_BYTE_OFFSET = 96;
+
+// Float offsets into the uniform staging array (byte offset / 4, see layout above).
+// The whole staging array is uploaded with a single writeBuffer per dirty frame.
+const MVP_FLOAT_OFFSET = 0;
+const VIEWPORT_FLOAT_OFFSET = 16;
+const DPR_FLOAT_OFFSET = 18;
+const CAMERA_DISTANCE_FLOAT_OFFSET = 19;
+const CAMERA_FORWARD_FLOAT_OFFSET = 20;
+const CAMERA_TARGET_FLOAT_OFFSET = 24;
+const DEPTH_FADE_RATE_FLOAT_OFFSET = 27;
+const DEPTH_FADE_MIN_FLOAT_OFFSET = 28;
 
 /** Number of vertices for a single marker quad (2 triangles) */
 const VERTICES_PER_MARKER_QUAD = 6;
@@ -157,13 +167,10 @@ export class SceneLayer implements RenderLayer {
 
   private bindGroup!: GPUBindGroup;
   private lineBindGroup!: GPUBindGroup;
-  private previewLineBindGroup!: GPUBindGroup;
   private markerBindGroup!: GPUBindGroup;
-  private previewMarkerBindGroup!: GPUBindGroup;
   private depthBindGroupLayout!: GPUBindGroupLayout;
   private markerBindGroupLayout!: GPUBindGroupLayout;
   private uniformBuffer!: GPUBuffer;
-  private previewUniformBuffer!: GPUBuffer;
   private faceVertexBuffer!: GPUBuffer;
   private styledLineBuffer!: GPUBuffer;
   private topologyVertexMarkerBuffer!: GPUBuffer;
@@ -177,9 +184,21 @@ export class SceneLayer implements RenderLayer {
   private depthSampler!: GPUSampler;
   private faceVertexCount = 0;
   private depthTexture: GPUTexture | null = null;
+  private depthTextureView: GPUTextureView | null = null;
   private samplingDepthTexture: GPUTexture | null = null;
+  private samplingDepthTextureView: GPUTextureView | null = null;
   private lineEndpointTexture: GPUTexture | null = null;
+  private lineEndpointTextureView: GPUTextureView | null = null;
   private lineDepthTexture: GPUTexture | null = null;
+  private lineDepthTextureView: GPUTextureView | null = null;
+
+  /** Set by scene/preview/camera/viewport changes; consumed by the render loop to skip idle frames */
+  private dirty = true;
+  private readonly uniformStaging = new Float32Array(UNIFORM_BUFFER_SIZE / FLOAT32_BYTES);
+  private readonly projectionScratch = mat4.create() as Float32Array;
+  private readonly mvpScratch = mat4.create() as Float32Array;
+  private readonly previewLineStaging = new Float32Array(FLOATS_PER_STYLED_LINE);
+  private readonly previewMarkerStaging = new Float32Array(MARKER_INSTANCE_FLOATS);
 
   private lastMvpMatrix = new Float32Array(16);
   private styledLineCount = 0;
@@ -201,6 +220,11 @@ export class SceneLayer implements RenderLayer {
     alpha: number;
     strokeColor: Vec3Array;
     strokeWidth: number;
+  };
+  private readonly linePreviewStyle: {
+    width: number;
+    color: Vec3Array;
+    alpha: number;
   };
 
   constructor(
@@ -224,6 +248,13 @@ export class SceneLayer implements RenderLayer {
       strokeColor: hexToRgb(resolvedPreview.strokeColor),
       strokeWidth: resolvedPreview.strokeWidth,
     };
+
+    const resolvedLinePreview = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview']);
+    this.linePreviewStyle = {
+      width: resolvedLinePreview.width,
+      color: hexToRgb(resolvedLinePreview.color),
+      alpha: resolvedLinePreview.alpha,
+    };
   }
 
   init(context: GpuContext): void {
@@ -244,19 +275,15 @@ export class SceneLayer implements RenderLayer {
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
-    // Max segments: topology edges + user lines split by intersections
-    const maxIntersections = (this.topology.edges.length * (this.topology.edges.length - 1)) / 2;
-    const maxStyledSegments = Math.max(1, this.topology.edges.length + maxIntersections);
-
+    // Line and marker buffers start at one instance each — applyStyledSegments /
+    // applyStyledMarkers grow them on demand when the scene needs more
     this.styledLineBuffer = this.device.createBuffer({
-      size: Math.max(STYLED_LINE_STRIDE, maxStyledSegments * STYLED_LINE_STRIDE),
+      size: STYLED_LINE_STRIDE,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
-    // Vertex markers: topology vertices + potential intersection vertices
-    const maxVertexCount = this.topology.vertices.length + maxIntersections;
     this.topologyVertexMarkerBuffer = this.device.createBuffer({
-      size: maxVertexCount * MARKER_INSTANCE_STRIDE,
+      size: MARKER_INSTANCE_STRIDE,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
@@ -280,17 +307,6 @@ export class SceneLayer implements RenderLayer {
       size: UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-
-    // Preview uniform buffer (shares same layout, used for preview lines)
-    this.previewUniformBuffer = this.device.createBuffer({
-      size: UNIFORM_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    // Write depth fade parameters (constant, same for both buffers)
-    const depthFadeData = new Float32Array([DEPTH_FADE_RATE, DEPTH_FADE_MIN]);
-    this.device.queue.writeBuffer(this.uniformBuffer, DEPTH_FADE_BYTE_OFFSET, depthFadeData);
-    this.device.queue.writeBuffer(this.previewUniformBuffer, DEPTH_FADE_BYTE_OFFSET, depthFadeData);
 
     const bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
@@ -420,54 +436,88 @@ export class SceneLayer implements RenderLayer {
     const cameraDistance = this.camera.getDistance();
     const aspect = state.canvasWidth / Math.max(MIN_DIMENSION, state.canvasHeight);
 
-    const projectionMatrix =
-      this.projection === 'orthographic'
-        ? (() => {
-            const halfHeight = cameraDistance * ORTHO_SCALE;
-            const halfWidth = halfHeight * aspect;
-            return mat4.ortho(
-              -halfWidth,
-              halfWidth,
-              -halfHeight,
-              halfHeight,
-              NEAR_PLANE,
-              FAR_PLANE
-            );
-          })()
-        : mat4.perspective(FIELD_OF_VIEW_RADIANS, aspect, NEAR_PLANE, FAR_PLANE);
-    const mvpMatrix = mat4.multiply(projectionMatrix, viewMatrix) as Float32Array;
+    if (this.projection === 'orthographic') {
+      const halfHeight = cameraDistance * ORTHO_SCALE;
+      const halfWidth = halfHeight * aspect;
+      mat4.ortho(
+        -halfWidth,
+        halfWidth,
+        -halfHeight,
+        halfHeight,
+        NEAR_PLANE,
+        FAR_PLANE,
+        this.projectionScratch
+      );
+    } else {
+      mat4.perspective(
+        FIELD_OF_VIEW_RADIANS,
+        aspect,
+        NEAR_PLANE,
+        FAR_PLANE,
+        this.projectionScratch
+      );
+    }
+    const mvpMatrix = mat4.multiply(
+      this.projectionScratch,
+      viewMatrix,
+      this.mvpScratch
+    ) as Float32Array;
+
+    const viewportChanged =
+      state.canvasWidth !== this.lastCanvasWidth ||
+      state.canvasHeight !== this.lastCanvasHeight ||
+      state.devicePixelRatio !== this.lastDevicePixelRatio;
+
+    if (isAnimating || viewportChanged || !matricesEqual(this.lastMvpMatrix, mvpMatrix)) {
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug logging
+      console.log(
+        '>>> dirty source',
+        JSON.stringify({
+          isAnimating,
+          viewportChanged,
+          mvpChanged: !matricesEqual(this.lastMvpMatrix, mvpMatrix),
+        })
+      );
+      this.dirty = true;
+    }
+
+    if (!this.dirty) {
+      return;
+    }
 
     this.lastMvpMatrix.set(mvpMatrix);
     this.lastCanvasWidth = state.canvasWidth;
     this.lastCanvasHeight = state.canvasHeight;
     this.lastDevicePixelRatio = state.devicePixelRatio;
 
+    const staging = this.uniformStaging;
+    staging.set(mvpMatrix, MVP_FLOAT_OFFSET);
+    staging[VIEWPORT_FLOAT_OFFSET] = state.canvasWidth;
+    staging[VIEWPORT_FLOAT_OFFSET + 1] = state.canvasHeight;
+    staging[DPR_FLOAT_OFFSET] = state.devicePixelRatio;
+    staging[CAMERA_DISTANCE_FLOAT_OFFSET] = cameraDistance;
     // Camera forward direction (from view matrix, negative Z axis)
-    const cameraForward = new Float32Array([-viewMatrix[2], -viewMatrix[6], -viewMatrix[10]]);
+    staging[CAMERA_FORWARD_FLOAT_OFFSET] = -viewMatrix[2];
+    staging[CAMERA_FORWARD_FLOAT_OFFSET + 1] = -viewMatrix[6];
+    staging[CAMERA_FORWARD_FLOAT_OFFSET + 2] = -viewMatrix[10];
+    staging[CAMERA_TARGET_FLOAT_OFFSET] = this.sceneCenter[0];
+    staging[CAMERA_TARGET_FLOAT_OFFSET + 1] = this.sceneCenter[1];
+    staging[CAMERA_TARGET_FLOAT_OFFSET + 2] = this.sceneCenter[2];
+    staging[DEPTH_FADE_RATE_FLOAT_OFFSET] = DEPTH_FADE_RATE;
+    staging[DEPTH_FADE_MIN_FLOAT_OFFSET] = DEPTH_FADE_MIN;
 
-    this.device.queue.writeBuffer(this.uniformBuffer, MVP_BYTE_OFFSET, mvpMatrix);
-    const viewportData = new Float32Array([state.canvasWidth, state.canvasHeight]);
-    this.device.queue.writeBuffer(this.uniformBuffer, VIEWPORT_BYTE_OFFSET, viewportData);
-    const cameraData = new Float32Array([state.devicePixelRatio, cameraDistance]);
-    this.device.queue.writeBuffer(this.uniformBuffer, DPR_BYTE_OFFSET, cameraData);
-    this.device.queue.writeBuffer(this.uniformBuffer, CAMERA_FORWARD_BYTE_OFFSET, cameraForward);
-    const cameraTarget = new Float32Array(this.sceneCenter);
-    this.device.queue.writeBuffer(this.uniformBuffer, CAMERA_TARGET_BYTE_OFFSET, cameraTarget);
+    this.device.queue.writeBuffer(this.uniformBuffer, 0, staging);
+  }
 
-    // Keep preview uniform buffer in sync
-    this.device.queue.writeBuffer(this.previewUniformBuffer, MVP_BYTE_OFFSET, mvpMatrix);
-    this.device.queue.writeBuffer(this.previewUniformBuffer, VIEWPORT_BYTE_OFFSET, viewportData);
-    this.device.queue.writeBuffer(this.previewUniformBuffer, DPR_BYTE_OFFSET, cameraData);
-    this.device.queue.writeBuffer(
-      this.previewUniformBuffer,
-      CAMERA_FORWARD_BYTE_OFFSET,
-      cameraForward
-    );
-    this.device.queue.writeBuffer(
-      this.previewUniformBuffer,
-      CAMERA_TARGET_BYTE_OFFSET,
-      cameraTarget
-    );
+  /**
+   * Returns whether anything changed since the last consumed frame and resets
+   * the flag. The render loop uses this to skip encoding/submitting frames
+   * for a static scene (render-on-demand).
+   */
+  consumeDirty(): boolean {
+    const wasDirty = this.dirty;
+    this.dirty = false;
+    return wasDirty;
   }
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
@@ -482,8 +532,8 @@ export class SceneLayer implements RenderLayer {
       return;
     }
 
-    const currentDepthTexture = this.ensureDepthTexture(state.canvasWidth, state.canvasHeight);
-    const currentSamplingDepthView = this.ensureSamplingDepthTexture(
+    const depthView = this.ensureDepthView(state.canvasWidth, state.canvasHeight);
+    const currentSamplingDepthView = this.ensureSamplingDepthView(
       state.canvasWidth,
       state.canvasHeight
     );
@@ -511,11 +561,14 @@ export class SceneLayer implements RenderLayer {
       currentSamplingDepthView
     );
 
-    const depthView = currentDepthTexture.createView();
     const sentinelClearValue = { r: -1, g: -1, b: 0, a: 0 };
 
+    // Line ID pre-passes only feed the marker topology check — skip both when
+    // there are no markers to test (or no lines to occlude them)
+    const lineIdPassNeeded = this.styledLineCount > 0 && this.topologyVertexCount > 0;
+
     // Hidden line ID pre-pass: render hidden line endpoint indices for marker topology check
-    if (this.styledLineCount > 0) {
+    if (lineIdPassNeeded) {
       const hiddenLineIdPass = encoder.beginRenderPass({
         colorAttachments: [
           {
@@ -583,7 +636,7 @@ export class SceneLayer implements RenderLayer {
     hiddenPass.end();
 
     // Visible line ID pre-pass: render visible line endpoint indices for marker topology check
-    if (this.styledLineCount > 0) {
+    if (lineIdPassNeeded) {
       const visibleLineIdPass = encoder.beginRenderPass({
         colorAttachments: [
           {
@@ -643,7 +696,7 @@ export class SceneLayer implements RenderLayer {
     // Preview line (always visible, no occlusion)
     if (this.hasDragPreview) {
       visiblePass.setPipeline(this.previewLinePipeline);
-      visiblePass.setBindGroup(0, this.previewLineBindGroup);
+      visiblePass.setBindGroup(0, this.lineBindGroup);
       visiblePass.setVertexBuffer(0, this.previewLineBuffer);
       visiblePass.draw(VERTICES_PER_LINE_QUAD, 1);
     }
@@ -651,7 +704,7 @@ export class SceneLayer implements RenderLayer {
     // Preview start marker (only for vertex-originated drags)
     if (this.hasStartMarker) {
       visiblePass.setPipeline(this.previewMarkerPipeline);
-      visiblePass.setBindGroup(0, this.previewMarkerBindGroup);
+      visiblePass.setBindGroup(0, this.markerBindGroup);
       visiblePass.setVertexBuffer(0, this.previewStartMarkerBuffer);
       visiblePass.draw(VERTICES_PER_MARKER_QUAD, 1);
     }
@@ -659,7 +712,7 @@ export class SceneLayer implements RenderLayer {
     // Preview snap target marker
     if (this.hasSnapTarget) {
       visiblePass.setPipeline(this.previewMarkerPipeline);
-      visiblePass.setBindGroup(0, this.previewMarkerBindGroup);
+      visiblePass.setBindGroup(0, this.markerBindGroup);
       visiblePass.setVertexBuffer(0, this.previewSnapMarkerBuffer);
       visiblePass.draw(VERTICES_PER_MARKER_QUAD, 1);
     }
@@ -681,6 +734,8 @@ export class SceneLayer implements RenderLayer {
   }
 
   setDragPreview(preview: DragPreviewState | undefined): void {
+    this.dirty = true;
+
     if (isNil(preview)) {
       this.hasDragPreview = false;
       this.hasStartMarker = false;
@@ -757,22 +812,22 @@ export class SceneLayer implements RenderLayer {
   }
 
   private writePreviewLineBuffer(pointA: Vec3Array, pointB: Vec3Array): void {
-    const previewStyle = resolveStyle(STEREOMETRY_STYLES, 'line', ['preview']);
-    const [colorR, colorG, colorB] = hexToRgb(previewStyle.color);
+    const { width, color, alpha } = this.linePreviewStyle;
 
-    const instanceData = new Float32Array(FLOATS_PER_STYLED_LINE);
+    const instanceData = this.previewLineStaging;
     instanceData[0] = pointA[0];
     instanceData[1] = pointA[1];
     instanceData[2] = pointA[2];
     instanceData[3] = pointB[0];
     instanceData[4] = pointB[1];
     instanceData[5] = pointB[2];
-    instanceData[6] = previewStyle.width;
-    instanceData[7] = colorR;
-    instanceData[8] = colorG;
-    instanceData[9] = colorB;
-    instanceData[10] = previewStyle.alpha;
-    // visibleLineType, visibleDash, visibleGap = 0 (solid)
+    instanceData[6] = width;
+    instanceData[7] = color[0];
+    instanceData[8] = color[1];
+    instanceData[9] = color[2];
+    instanceData[10] = alpha;
+    // visibleLineType, visibleDash, visibleGap and the hidden style stay 0 (solid,
+    // preview renders with renderMode=ALL and never reaches the line ID pass)
 
     this.device.queue.writeBuffer(this.previewLineBuffer, 0, instanceData);
   }
@@ -781,6 +836,7 @@ export class SceneLayer implements RenderLayer {
    * Applies the full processed graphics (segments + markers) to GPU buffers.
    */
   applySceneState(graphics: SceneRepresentation): void {
+    this.dirty = true;
     this.applyStyledMarkers(graphics.markers);
     this.applyStyledSegments(graphics.segments);
     this.applySolutionFace(graphics.solutionFace);
@@ -891,7 +947,6 @@ export class SceneLayer implements RenderLayer {
 
   dispose(): void {
     this.uniformBuffer.destroy();
-    this.previewUniformBuffer.destroy();
     this.faceVertexBuffer.destroy();
     this.solutionFaceBuffer.destroy();
     this.styledLineBuffer.destroy();
@@ -1218,7 +1273,9 @@ export class SceneLayer implements RenderLayer {
    * preview markers render with renderMode=ALL and depthCompare: 'always'.
    */
   private createPreviewMarkerData(position: Vec3Array): Float32Array {
-    const markerData = new Float32Array(MARKER_INSTANCE_FLOATS);
+    // writeBuffer copies the data synchronously, so reusing one staging array
+    // for both preview markers (start + snap) is safe
+    const markerData = this.previewMarkerStaging;
 
     const style = this.vertexPreviewStyle;
 
@@ -1255,13 +1312,14 @@ export class SceneLayer implements RenderLayer {
     return markerData;
   }
 
-  private ensureDepthTexture(width: number, height: number): GPUTexture {
+  private ensureDepthView(width: number, height: number): GPUTextureView {
     if (
       !isNil(this.depthTexture) &&
+      !isNil(this.depthTextureView) &&
       this.depthTexture.width === width &&
       this.depthTexture.height === height
     ) {
-      return this.depthTexture;
+      return this.depthTextureView;
     }
 
     this.depthTexture?.destroy();
@@ -1272,23 +1330,25 @@ export class SceneLayer implements RenderLayer {
       sampleCount: MSAA_SAMPLE_COUNT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    return this.depthTexture;
+    this.depthTextureView = this.depthTexture.createView();
+    return this.depthTextureView;
   }
 
   /**
    * Ensures a non-MSAA depth texture exists for sampling in marker shaders.
-   * Recreates marker bind groups when the texture changes size.
+   * Recreates the line bind group when the texture changes size.
    */
-  private ensureSamplingDepthTexture(width: number, height: number): GPUTextureView {
+  private ensureSamplingDepthView(width: number, height: number): GPUTextureView {
     const safeWidth = Math.max(MIN_DIMENSION, width);
     const safeHeight = Math.max(MIN_DIMENSION, height);
 
     if (
       !isNil(this.samplingDepthTexture) &&
+      !isNil(this.samplingDepthTextureView) &&
       this.samplingDepthTexture.width === safeWidth &&
       this.samplingDepthTexture.height === safeHeight
     ) {
-      return this.samplingDepthTexture.createView();
+      return this.samplingDepthTextureView;
     }
 
     this.samplingDepthTexture?.destroy();
@@ -1300,32 +1360,25 @@ export class SceneLayer implements RenderLayer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
 
-    const depthTextureView = this.samplingDepthTexture.createView();
-
-    const depthBindEntries = (buffer: GPUBuffer) => [
-      { binding: 0, resource: { buffer } },
-      { binding: 1, resource: depthTextureView },
-      { binding: 2, resource: this.depthSampler },
-    ];
+    this.samplingDepthTextureView = this.samplingDepthTexture.createView();
 
     this.lineBindGroup = this.device.createBindGroup({
       layout: this.depthBindGroupLayout,
-      entries: depthBindEntries(this.uniformBuffer),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: this.samplingDepthTextureView },
+        { binding: 2, resource: this.depthSampler },
+      ],
     });
 
-    this.previewLineBindGroup = this.device.createBindGroup({
-      layout: this.depthBindGroupLayout,
-      entries: depthBindEntries(this.previewUniformBuffer),
-    });
+    // The marker bind group is created in ensureLineIdTextures (depends on both depth + line ID textures)
 
-    // Marker bind groups are created in ensureLineIdTextures (depends on both depth + line ID textures)
-
-    return this.samplingDepthTexture.createView();
+    return this.samplingDepthTextureView;
   }
 
   /**
    * Ensures non-MSAA line ID textures exist for topology-based marker occlusion.
-   * Recreates marker bind groups when textures change size.
+   * Recreates the marker bind group when textures change size.
    */
   private ensureLineIdTextures(
     width: number,
@@ -1337,13 +1390,14 @@ export class SceneLayer implements RenderLayer {
 
     if (
       !isNil(this.lineEndpointTexture) &&
-      !isNil(this.lineDepthTexture) &&
+      !isNil(this.lineEndpointTextureView) &&
+      !isNil(this.lineDepthTextureView) &&
       this.lineEndpointTexture.width === safeWidth &&
       this.lineEndpointTexture.height === safeHeight
     ) {
       return {
-        endpointView: this.lineEndpointTexture.createView(),
-        depthView: this.lineDepthTexture.createView(),
+        endpointView: this.lineEndpointTextureView,
+        depthView: this.lineDepthTextureView,
       };
     }
 
@@ -1364,29 +1418,31 @@ export class SceneLayer implements RenderLayer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
 
-    const endpointView = this.lineEndpointTexture.createView();
-    const lineDepthView = this.lineDepthTexture.createView();
-
-    const markerBindEntries = (buffer: GPUBuffer) => [
-      { binding: 0, resource: { buffer } },
-      { binding: 1, resource: faceDepthView },
-      { binding: 2, resource: this.depthSampler },
-      { binding: 3, resource: endpointView },
-      { binding: 4, resource: lineDepthView },
-    ];
+    this.lineEndpointTextureView = this.lineEndpointTexture.createView();
+    this.lineDepthTextureView = this.lineDepthTexture.createView();
 
     this.markerBindGroup = this.device.createBindGroup({
       layout: this.markerBindGroupLayout,
-      entries: markerBindEntries(this.uniformBuffer),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: faceDepthView },
+        { binding: 2, resource: this.depthSampler },
+        { binding: 3, resource: this.lineEndpointTextureView },
+        { binding: 4, resource: this.lineDepthTextureView },
+      ],
     });
 
-    this.previewMarkerBindGroup = this.device.createBindGroup({
-      layout: this.markerBindGroupLayout,
-      entries: markerBindEntries(this.previewUniformBuffer),
-    });
-
-    return { endpointView, depthView: lineDepthView };
+    return { endpointView: this.lineEndpointTextureView, depthView: this.lineDepthTextureView };
   }
+}
+
+function matricesEqual(matrixA: Float32Array, matrixB: Float32Array): boolean {
+  for (let index = 0; index < matrixA.length; index++) {
+    if (matrixA[index] !== matrixB[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function writeSegmentInstance(buffer: Float32Array, index: number, segment: StyledSegment): void {

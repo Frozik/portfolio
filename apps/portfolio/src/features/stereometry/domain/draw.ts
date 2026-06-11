@@ -374,6 +374,7 @@ async function initStereometry(
     layerManager,
     fpsController,
     onFpsUpdate,
+    shouldRender: () => sceneLayer.consumeDirty(),
   });
 
   return {

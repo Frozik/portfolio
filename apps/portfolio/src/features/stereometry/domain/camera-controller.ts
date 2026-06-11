@@ -2,6 +2,7 @@ import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
   INERTIA_MIN_VELOCITY,
+  INERTIA_RELEASE_TIMEOUT_MS,
   INITIAL_AZIMUTH,
   INITIAL_CAMERA_DISTANCE,
   INITIAL_ELEVATION,
@@ -9,6 +10,7 @@ import {
   MIN_CAMERA_DISTANCE,
   MOUSE_PAN_SENSITIVITY,
   MOUSE_ROTATE_SENSITIVITY,
+  PINCH_MIN_DISTANCE_PX,
   WHEEL_ZOOM_SENSITIVITY,
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
@@ -128,6 +130,7 @@ export function createOrbitalCameraController(
   const activePointers = new Map<number, { clientX: number; clientY: number }>();
   let isShiftHeld = false;
   let lastPinchDistance = 0;
+  let lastDragMoveTime = 0;
 
   function getPointerDistance(): number {
     const pointers = [...activePointers.values()];
@@ -141,6 +144,15 @@ export function createOrbitalCameraController(
       clientX: event.clientX,
       clientY: event.clientY,
     });
+
+    // Without capture, releasing the pointer outside the browser window can
+    // lose the pointerup — activePointers would stay non-empty and the camera
+    // would report "animating" forever, keeping the render loop hot
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic events (tests) have no active pointer to capture
+    }
 
     if (activePointers.size === 1) {
       isShiftHeld = event.shiftKey;
@@ -163,6 +175,9 @@ export function createOrbitalCameraController(
     // Two-finger pinch zoom
     if (activePointers.size === 2) {
       const currentDistance = getPointerDistance();
+      if (currentDistance < PINCH_MIN_DISTANCE_PX) {
+        return;
+      }
       const scale = lastPinchDistance / currentDistance;
       targetDistance = clampDistance(targetDistance * scale);
       lastPinchDistance = currentDistance;
@@ -176,6 +191,7 @@ export function createOrbitalCameraController(
 
     const deltaX = event.clientX - previous.clientX;
     const deltaY = event.clientY - previous.clientY;
+    lastDragMoveTime = performance.now();
 
     const shouldPan = isShiftHeld || interactionMode === 'pan';
 
@@ -197,11 +213,24 @@ export function createOrbitalCameraController(
 
     if (activePointers.size === 0) {
       isShiftHeld = false;
+
+      // "Drag, hold still, release" must not fling the camera with the
+      // stale velocity of the last movement before the pause
+      if (performance.now() - lastDragMoveTime > INERTIA_RELEASE_TIMEOUT_MS) {
+        resetVelocity();
+      }
     }
   }
 
   function onPointerCancel(event: PointerEvent): void {
     activePointers.delete(event.pointerId);
+  }
+
+  /** Last line of defence against stuck pointers: drop all tracking on focus loss */
+  function onWindowBlur(): void {
+    activePointers.clear();
+    isShiftHeld = false;
+    resetVelocity();
   }
 
   function onWheel(event: WheelEvent): void {
@@ -213,6 +242,7 @@ export function createOrbitalCameraController(
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerCancel);
+  window.addEventListener('blur', onWindowBlur);
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
   return {
@@ -225,6 +255,8 @@ export function createOrbitalCameraController(
       }
 
       if (activePointers.size > 0) {
+        // biome-ignore lint/suspicious/noConsole: temporary >>> debug logging
+        console.log('>>> tick: activePointers', activePointers.size, [...activePointers.keys()]);
         return true;
       }
 
@@ -291,6 +323,7 @@ export function createOrbitalCameraController(
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerCancel);
+      window.removeEventListener('blur', onWindowBlur);
       canvas.removeEventListener('wheel', onWheel);
     },
   };

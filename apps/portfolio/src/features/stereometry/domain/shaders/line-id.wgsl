@@ -72,30 +72,11 @@ fn vs(
 
 @fragment
 fn fs(input: LineIdOutput) -> @location(0) vec2<f32> {
-    // Per-fragment spine-point depth (same as line.wgsl)
-    let halfVP = uniforms.viewport * 0.5;
-    let screenA = (input.clipStart.xy / input.clipStart.w) * halfVP;
-    let screenB = (input.clipEnd.xy / input.clipEnd.w) * halfVP;
-    let fragmentScreen = vec2<f32>(input.clipPosition.x - halfVP.x, halfVP.y - input.clipPosition.y);
+    // Per-fragment spine-point depth, shared with the color line pass via common.wgsl
+    let spine = computeSpineSample(input.clipStart, input.clipEnd, input.clipPosition);
 
-    let lineDir = screenB - screenA;
-    let lineLenSq = dot(lineDir, lineDir);
-    let t = select(
-        clamp(dot(fragmentScreen - screenA, lineDir) / lineLenSq, 0.0, 1.0),
-        0.5,
-        lineLenSq < 0.001
-    );
-
-    let spineScreen = screenA + t * lineDir;
-    let spineNdc = spineScreen / halfVP;
-    let spineUV = spineNdc * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
-
-    let depthA = max(input.clipStart.z, 0.0) / input.clipStart.w;
-    let depthB = max(input.clipEnd.z, 0.0) / input.clipEnd.w;
-    let spineDepth = mix(depthA, depthB, t);
-
-    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spineUV, 0);
-    let isOccluded = faceDepthValue < spineDepth;
+    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spine.uv, 0);
+    let isOccluded = faceDepthValue < spine.depth;
 
     if (renderMode == 1u && !isOccluded) { discard; }
     if (renderMode == 2u && isOccluded) { discard; }

@@ -25,41 +25,51 @@ export interface RenderLoopOptions {
   readonly layerManager: RenderLayerManager;
   readonly fpsController: FpsController;
   readonly onFpsUpdate?: (fps: number) => void;
+  /**
+   * Called after layer updates, before encoding. Return false to skip
+   * encoding/submitting the frame (render-on-demand for static scenes).
+   */
+  readonly shouldRender?: () => boolean;
 }
 
 export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
-  const { canvas, context, layerManager, fpsController, onFpsUpdate } = options;
+  const { canvas, context, layerManager, fpsController, onFpsUpdate, shouldRender } = options;
   const { device, canvasContext } = context;
 
   let canvasWidth = 0;
   let canvasHeight = 0;
   let currentDpr = Math.max(1, window.devicePixelRatio);
 
-  function updateCanvasSize(): boolean {
+  /** Fallback measurement; forces layout, so it only runs on observe gaps (initial mount, DPR change) */
+  function measureCanvasSize(): void {
     currentDpr = Math.max(1, window.devicePixelRatio);
-    const width = Math.floor(canvas.clientWidth * currentDpr);
-    const height = Math.floor(canvas.clientHeight * currentDpr);
-
-    const changed = canvas.width !== width || canvas.height !== height;
-
-    if (changed) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    canvasWidth = width;
-    canvasHeight = height;
-
-    return changed;
+    canvasWidth = Math.floor(canvas.clientWidth * currentDpr);
+    canvasHeight = Math.floor(canvas.clientHeight * currentDpr);
   }
 
-  updateCanvasSize();
+  measureCanvasSize();
 
-  const resizeObserver = new ResizeObserver(() => {
-    updateCanvasSize();
+  // Canvas size comes from ResizeObserver entries instead of reading
+  // clientWidth/clientHeight every frame (which forces a layout pass)
+  const resizeObserver = new ResizeObserver(entries => {
+    const entry = entries[entries.length - 1];
+    const devicePixelSize = entry.devicePixelContentBoxSize?.[0];
+    if (devicePixelSize !== undefined) {
+      canvasWidth = devicePixelSize.inlineSize;
+      canvasHeight = devicePixelSize.blockSize;
+      currentDpr = Math.max(1, window.devicePixelRatio);
+    } else {
+      measureCanvasSize();
+    }
     fpsController.raise(FPS_RESIZE);
   });
-  resizeObserver.observe(canvas);
+  try {
+    resizeObserver.observe(canvas, { box: 'device-pixel-content-box' });
+  } catch {
+    // Safari does not support device-pixel-content-box observation — fall back
+    // to the CSS box; size is then derived via devicePixelRatio in the callback
+    resizeObserver.observe(canvas);
+  }
 
   let animationFrameId = 0;
   let disposed = false;
@@ -69,26 +79,31 @@ export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
   const renderFrameTimes: number[] = [];
   let lastFpsUpdate = 0;
 
-  function trackRenderFps(now: number): void {
+  /** Trims old samples and reports the rolling FPS; also called on skipped frames so the value decays to 0 */
+  function reportFps(now: number): void {
+    if (now - lastFpsUpdate < FPS_UPDATE_INTERVAL_MS) {
+      return;
+    }
+    lastFpsUpdate = now;
+
     const fpsWindowMs = Math.max(MIN_FPS_WINDOW_MS, fpsController.getFrameIntervalMs() * 3);
-
-    renderFrameTimes.push(now);
-
     const cutoff = now - fpsWindowMs;
     while (renderFrameTimes.length > 0 && renderFrameTimes[0] < cutoff) {
       renderFrameTimes.shift();
     }
 
-    if (now - lastFpsUpdate >= FPS_UPDATE_INTERVAL_MS) {
-      lastFpsUpdate = now;
-      const elapsed =
-        renderFrameTimes.length > 1
-          ? renderFrameTimes[renderFrameTimes.length - 1] - renderFrameTimes[0]
-          : 0;
-      const fps =
-        elapsed > 0 ? Math.round(((renderFrameTimes.length - 1) / elapsed) * MS_PER_SECOND) : 0;
-      onFpsUpdate?.(fps);
-    }
+    const elapsed =
+      renderFrameTimes.length > 1
+        ? renderFrameTimes[renderFrameTimes.length - 1] - renderFrameTimes[0]
+        : 0;
+    const fps =
+      elapsed > 0 ? Math.round(((renderFrameTimes.length - 1) / elapsed) * MS_PER_SECOND) : 0;
+    onFpsUpdate?.(fps);
+  }
+
+  function trackRenderFps(now: number): void {
+    renderFrameTimes.push(now);
+    reportFps(now);
   }
 
   function frame(now: number): void {
@@ -106,13 +121,21 @@ export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
 
     lastFrameTime = now;
 
-    trackRenderFps(now);
-
-    updateCanvasSize();
+    // DPR changes without a box resize (e.g. moving the window between
+    // monitors) don't fire the ResizeObserver — re-measure when DPR moved
+    if (Math.max(1, window.devicePixelRatio) !== currentDpr) {
+      measureCanvasSize();
+      fpsController.raise(FPS_RESIZE);
+    }
 
     if (canvasWidth === 0 || canvasHeight === 0) {
       animationFrameId = requestAnimationFrame(frame);
       return;
+    }
+
+    if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
     }
 
     const time = (performance.now() - startTime) / MS_PER_SECOND;
@@ -125,6 +148,15 @@ export function startRenderLoop(options: RenderLoopOptions): VoidFunction {
     };
 
     layerManager.updateAll(state);
+
+    // Render-on-demand: skip encoding when nothing changed since the last frame
+    if (shouldRender !== undefined && !shouldRender()) {
+      reportFps(now);
+      animationFrameId = requestAnimationFrame(frame);
+      return;
+    }
+
+    trackRenderFps(now);
 
     const canvasTexture = canvasContext.getCurrentTexture();
     const canvasView = canvasTexture.createView();

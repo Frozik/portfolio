@@ -6,6 +6,8 @@ export type RgbFloat = readonly [number, number, number];
 // Style types
 export type LineStyle =
   | { readonly type: 'solid' }
+  /** dash/gap are world units along the segment — the pattern is anchored to
+   *  the geometry (both endpoints end in a dash) and stable under camera motion */
   | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
 
 export type MarkerType = 'solid' | 'circle';

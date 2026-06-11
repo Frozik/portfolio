@@ -27,6 +27,7 @@ import type {
   StyledMarker,
   StyledSegment,
 } from './render-types';
+import { mergeCollinearSegments } from './segment-merge';
 import type { SolutionStatus } from './solution-check';
 import { isSubSegmentInSolutionRange, lineCoversSegment } from './solution-check';
 import { hexToRgb, resolveStyle } from './styles-processor';
@@ -377,7 +378,7 @@ function buildSegments(
     solutionStatus
   );
 
-  return deduplicateSegments([...topologySegments, ...lineSegments]);
+  return mergeCollinearSegments(deduplicateSegments([...topologySegments, ...lineSegments]));
 }
 
 function isSubSegmentInSolution(

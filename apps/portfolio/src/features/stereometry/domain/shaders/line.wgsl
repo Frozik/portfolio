@@ -24,7 +24,10 @@ struct LineInstance {
 
 struct VertexOutput {
     @builtin(position) clipPosition: vec4<f32>,
-    @location(0) @interpolate(linear) lineDistance: f32,
+    /** World-space distance along the segment; perspective-correct interpolation
+     *  reconstructs the true world position, so the dash phase is anchored to
+     *  the geometry and never crawls under camera motion */
+    @location(0) lineDistance: f32,
     @location(1) @interpolate(flat) visibleColor: vec3<f32>,
     @location(2) @interpolate(flat) visibleAlpha: f32,
     @location(3) @interpolate(flat) visibleDash: f32,
@@ -62,9 +65,9 @@ fn vs(
     let isEnd = (corner & 2u) != 0u;
     let side = quadSideX(corner);
 
-    let clips = projectEndpoints(line.startPos, line.endPos);
-    let clipA = clips[0];
-    let clipB = clips[1];
+    let projected = projectEndpointsWithParams(line.startPos, line.endPos);
+    let clipA = projected.clipA;
+    let clipB = projected.clipB;
     let clipPos = select(clipA, clipB, isEnd);
 
     let halfViewport = uniforms.viewport * 0.5;
@@ -73,21 +76,27 @@ fn vs(
     let perp = computeScreenPerp(screenA, screenB);
 
     let offsetNdc = pixelsToNdc(perp * side * lineWidth * 0.5);
-    let screenLen = length(screenB - screenA);
 
     let endpointPos = select(line.startPos, line.endPos, isEnd);
 
+    // Dash pattern lives in world units along the segment: stable under camera
+    // motion, with the pattern fitted so both segment endpoints end in a dash
+    let worldLen = distance(line.endPos, line.startPos);
+    let endpointParam = select(projected.paramA, projected.paramB, isEnd);
+    let visiblePattern = fitDashPattern(line.visibleDash, line.visibleGap, worldLen);
+    let hiddenPattern = fitDashPattern(line.hiddenDash, line.hiddenGap, worldLen);
+
     var result: VertexOutput;
     result.clipPosition = vec4<f32>(clipPos.xy + offsetNdc * clipPos.w, max(clipPos.z, 0.0), clipPos.w);
-    result.lineDistance = select(0.0, screenLen, isEnd);
+    result.lineDistance = endpointParam * worldLen;
     result.visibleColor = line.visibleColor;
     result.visibleAlpha = line.visibleAlpha;
-    result.visibleDash = cssToGpuPixels(line.visibleDash);
-    result.visibleGap = cssToGpuPixels(line.visibleGap);
+    result.visibleDash = visiblePattern.x;
+    result.visibleGap = visiblePattern.y;
     result.hiddenColor = line.hiddenColor;
     result.hiddenAlpha = line.hiddenAlpha;
-    result.hiddenDash = cssToGpuPixels(line.hiddenDash);
-    result.hiddenGap = cssToGpuPixels(line.hiddenGap);
+    result.hiddenDash = hiddenPattern.x;
+    result.hiddenGap = hiddenPattern.y;
     result.worldDepth = dot(endpointPos - uniforms.cameraTarget, uniforms.cameraForward);
     result.clipStart = clipA;
     result.clipEnd = clipB;
@@ -97,34 +106,11 @@ fn vs(
 /** Renders a line fragment with occlusion test at the line center */
 @fragment
 fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
-    // Per-fragment spine-point depth: project fragment onto line spine,
-    // compute UV from screen position and depth from NDC interpolation.
-    let halfVP = uniforms.viewport * 0.5;
-    let screenA = (input.clipStart.xy / input.clipStart.w) * halfVP;
-    let screenB = (input.clipEnd.xy / input.clipEnd.w) * halfVP;
-    // @builtin(position).y increases downward, but NDC Y increases upward — invert Y
-    let fragmentScreen = vec2<f32>(input.clipPosition.x - halfVP.x, halfVP.y - input.clipPosition.y);
+    // Per-fragment spine-point depth, shared with the line-id pass via common.wgsl
+    let spine = computeSpineSample(input.clipStart, input.clipEnd, input.clipPosition);
 
-    let lineDir = screenB - screenA;
-    let lineLenSq = dot(lineDir, lineDir);
-    let t = select(
-        clamp(dot(fragmentScreen - screenA, lineDir) / lineLenSq, 0.0, 1.0),
-        0.5,
-        lineLenSq < 0.001
-    );
-
-    // UV: derived from screen-space spine position (exact, no perspective error)
-    let spineScreen = screenA + t * lineDir;
-    let spineNdc = spineScreen / halfVP;
-    let spineUV = spineNdc * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
-
-    // Depth: linear interpolation of NDC depths (mathematically correct for screen-space t)
-    let depthA = input.clipStart.z / input.clipStart.w;
-    let depthB = input.clipEnd.z / input.clipEnd.w;
-    let spineDepth = mix(depthA, depthB, t);
-
-    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spineUV, 0);
-    let isOccluded = faceDepthValue < spineDepth;
+    let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spine.uv, 0);
+    let isOccluded = faceDepthValue < spine.depth;
 
     // Filter by render mode: discard fragments that don't match the requested visibility
     if (renderMode == 1u && !isOccluded) { discard; }
@@ -144,9 +130,7 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
         }
     }
 
-    // Depth fade
-    let normalizedDepth = input.worldDepth / uniforms.cameraDistance;
-    let depthFade = clamp(1.0 - normalizedDepth * uniforms.depthFadeRate, uniforms.depthFadeMin, 1.0);
+    let depthFade = depthFadeFromForwardDistance(input.worldDepth);
 
     return vec4<f32>(color, alpha * depthFade);
 }

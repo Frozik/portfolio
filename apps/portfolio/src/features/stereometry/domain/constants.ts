@@ -19,6 +19,13 @@ export const MOUSE_PAN_SENSITIVITY = 0.003;
 export const WHEEL_ZOOM_SENSITIVITY = 0.01;
 export const INERTIA_DAMPING = 0.95;
 export const INERTIA_MIN_VELOCITY = 0.1;
+/**
+ * If the pointer was held still for longer than this before release,
+ * the stored velocity is stale — discard it instead of starting inertia.
+ */
+export const INERTIA_RELEASE_TIMEOUT_MS = 80;
+/** Minimum pinch distance in pixels; below this the zoom ratio becomes unstable (division by ~0) */
+export const PINCH_MIN_DISTANCE_PX = 1;
 /** Exponential smoothing factor for zoom animation (0 = no movement, 1 = instant) */
 export const ZOOM_SMOOTHING_FACTOR = 0.1;
 /** Distance threshold below which zoom snaps to target to avoid infinite lerp tail */
@@ -106,7 +113,9 @@ export const STEREOMETRY_STYLES = {
   },
   'line:hidden': {
     alpha: 0.3,
-    line: { type: 'dashed' as const, dash: 10.0, gap: 10.0 },
+    // dash/gap are WORLD units (anchored to geometry, stable under camera
+    // motion); 0.05 ≈ the former 10 css px at the default camera distance
+    line: { type: 'dashed' as const, dash: 0.05, gap: 0.05 },
   },
   'line:selected': {
     color: '#55AAFF',
@@ -127,6 +136,12 @@ export const STEREOMETRY_STYLES = {
     color: '#FF8973',
     width: 3.0,
     alpha: 1,
+  },
+  'line:input:hidden': {
+    alpha: 0.3,
+  },
+  'line:segment:input:hidden': {
+    alpha: 0.3,
   },
   'line:input:selected': {
     color: '#A61A00',
@@ -182,6 +197,7 @@ export const STEREOMETRY_STYLES = {
     markerType: 'solid',
     color: '#FF8973',
     size: 10,
+    alpha: 0.6,
   },
   'vertex:input:selected': {
     markerType: 'solid',
