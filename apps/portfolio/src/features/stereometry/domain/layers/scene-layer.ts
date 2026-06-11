@@ -469,15 +469,6 @@ export class SceneLayer implements RenderLayer {
       state.devicePixelRatio !== this.lastDevicePixelRatio;
 
     if (isAnimating || viewportChanged || !matricesEqual(this.lastMvpMatrix, mvpMatrix)) {
-      // biome-ignore lint/suspicious/noConsole: temporary >>> debug logging
-      console.log(
-        '>>> dirty source',
-        JSON.stringify({
-          isAnimating,
-          viewportChanged,
-          mvpChanged: !matricesEqual(this.lastMvpMatrix, mvpMatrix),
-        })
-      );
       this.dirty = true;
     }
 

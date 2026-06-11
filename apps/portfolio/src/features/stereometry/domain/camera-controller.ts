@@ -255,8 +255,6 @@ export function createOrbitalCameraController(
       }
 
       if (activePointers.size > 0) {
-        // biome-ignore lint/suspicious/noConsole: temporary >>> debug logging
-        console.log('>>> tick: activePointers', activePointers.size, [...activePointers.keys()]);
         return true;
       }
 
