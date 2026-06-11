@@ -66,11 +66,16 @@ export class SocketIORoomTransport
 
     for (const remoteSocket of responders) {
       let settled = false;
+      // Long-lived sockets answer many dispatches — the disconnect/abort
+      // listeners must not outlive this dispatch, or they accumulate on the
+      // socket until MaxListenersExceededWarning (and leak until disconnect).
+      let removeListeners: VoidFunction = () => {};
       const settle = (result: TransportAckResult): void => {
         if (settled) {
           return;
         }
         settled = true;
+        removeListeners();
         queue.push(result);
         pending -= 1;
         notify();
@@ -89,12 +94,18 @@ export class SocketIORoomTransport
       const onDisconnect = (): void => {
         settle({ kind: 'responder-disconnected', responderSocketId: remoteSocket.id });
       };
-      localSocket.once('disconnect', onDisconnect);
 
       // Caller-driven abort path
       const abortHandler = (): void => {
         settle({ kind: 'responder-disconnected', responderSocketId: remoteSocket.id });
       };
+
+      removeListeners = (): void => {
+        localSocket.off('disconnect', onDisconnect);
+        options.signal.removeEventListener('abort', abortHandler);
+      };
+
+      localSocket.once('disconnect', onDisconnect);
       if (options.signal.aborted) {
         abortHandler();
       } else {

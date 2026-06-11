@@ -15,6 +15,7 @@ export interface IRedisLike {
   hGetAll(key: string): Promise<Record<string, string>>;
   hLen(key: string): Promise<number>;
   del(key: string | string[]): Promise<number>;
+  expire(key: string, seconds: number): Promise<unknown>;
   /**
    * Async generator yielding batches of keys matching `MATCH`. Mirrors
    * node-redis v5's `scanIterator`, which yields **arrays** of keys rather
@@ -31,6 +32,16 @@ export type RedisRoomRegistryParams = {
    */
   keyPrefix?: string;
 };
+
+/**
+ * Room hashes expire unless a live node keeps refreshing them. Without a TTL
+ * a crashed node leaves its sockets in the hash forever ("ghost members");
+ * `hydrate` then resurrects them on every `ensure`, counting toward
+ * max-listeners until the room is permanently `room/full`.
+ */
+const ROOM_TTL_SECONDS = 300;
+/** How often live nodes re-arm the TTL of the rooms they host. */
+const TTL_HEARTBEAT_INTERVAL_MS = 60_000;
 
 /**
  * Room subclass that writes membership changes through to Redis.
@@ -51,7 +62,10 @@ class RedisBackedRoom extends Room {
   public override addMember(socketId: SocketId, identity: Identity): ReturnType<Room['addMember']> {
     const result = super.addMember(socketId, identity);
     if (result.ok) {
-      void this.client.hSet(this.key, socketId, JSON.stringify(identity)).catch(() => undefined);
+      void this.client
+        .hSet(this.key, socketId, JSON.stringify(identity))
+        .then(() => this.client.expire(this.key, ROOM_TTL_SECONDS))
+        .catch(() => undefined);
     }
     return result;
   }
@@ -98,10 +112,22 @@ export class RedisRoomRegistry implements IRoomRegistry {
   private readonly client: IRedisLike;
   private readonly keyPrefix: string;
   private readonly localRooms = new Map<RoomId, RedisBackedRoom>();
+  private readonly ttlHeartbeat: ReturnType<typeof setInterval>;
 
   public constructor(params: RedisRoomRegistryParams) {
     this.client = params.client;
     this.keyPrefix = params.keyPrefix ?? 'comm:';
+    this.ttlHeartbeat = setInterval(() => {
+      this.refreshRoomTtls();
+    }, TTL_HEARTBEAT_INTERVAL_MS);
+    // Node timers expose unref(); browser-typed test environments don't —
+    // the timer must never keep a process alive on its own.
+    (this.ttlHeartbeat as unknown as { unref?: () => void }).unref?.();
+  }
+
+  /** Stops the TTL heartbeat. Call on shutdown. */
+  public dispose(): void {
+    clearInterval(this.ttlHeartbeat);
   }
 
   public ensure(roomId: RoomId, limits: RoomLimits): Room {
@@ -158,6 +184,12 @@ export class RedisRoomRegistry implements IRoomRegistry {
 
   private roomKey(roomId: RoomId): string {
     return `${this.keyPrefix}room:${roomId}`;
+  }
+
+  private refreshRoomTtls(): void {
+    for (const roomId of this.localRooms.keys()) {
+      void this.client.expire(this.roomKey(roomId), ROOM_TTL_SECONDS).catch(() => undefined);
+    }
   }
 
   private async hydrate(roomId: RoomId, room: RedisBackedRoom): Promise<void> {

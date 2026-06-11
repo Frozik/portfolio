@@ -40,10 +40,20 @@ export const HandshakeAuthSchema = z.object({
   token: z.string().min(1, 'token must not be empty').optional(),
 });
 
+// Caps on `command:initiate` — the payload is re-broadcast to up to
+// max_listeners responders × max_inflight dispatches, so an uncapped body is
+// a ×~1500 traffic amplifier inside the room.
+const COMMAND_MAX_LENGTH = 128;
+const CORRELATION_ID_MAX_LENGTH = 128;
+export const MAX_INITIATE_PAYLOAD_BYTES = 65_536;
+
 export const InitiatePayloadSchema = z.object({
-  command: z.string().min(1, 'command must not be empty'),
+  command: z.string().min(1, 'command must not be empty').max(COMMAND_MAX_LENGTH),
   payload: z.unknown(),
-  correlationId: z.string().min(1, 'correlationId must not be empty'),
+  correlationId: z
+    .string()
+    .min(1, 'correlationId must not be empty')
+    .max(CORRELATION_ID_MAX_LENGTH),
 });
 
 export const InitiateAckSchema = z.object({
@@ -119,30 +129,12 @@ export const RefreshTokenAckSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(false), error: authErrorCodeSchema }),
 ]);
 
-export const SignalPublishPayloadSchema = z
-  .object({
-    payload: z.unknown(),
-    correlationId: z.string().min(1).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.payload === null || value.payload === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        message: SIGNAL_PAYLOAD_NULL_MESSAGE,
-        path: ['payload'],
-      });
-      return;
-    }
-    const json = JSON.stringify(value.payload);
-    const byteLength = Buffer.byteLength(json, 'utf8');
-    if (byteLength > MAX_SIGNAL_PAYLOAD_BYTES) {
-      ctx.addIssue({
-        code: 'custom',
-        message: SIGNAL_PAYLOAD_TOO_LARGE_MESSAGE,
-        path: ['payload'],
-      });
-    }
-  });
+// Size and null checks live in `parseSignalPublishPayload` (not in a zod
+// refinement) so the byte cap can come from server config per call.
+export const SignalPublishPayloadSchema = z.object({
+  payload: z.unknown(),
+  correlationId: z.string().min(1).optional(),
+});
 
 export const SignalEventOutboundSchema = z.object({
   payload: z.unknown(),
@@ -178,7 +170,14 @@ export function parseHandshakeAuth(raw: unknown): z.infer<typeof HandshakeAuthSc
   return runParse(HandshakeAuthSchema, raw);
 }
 export function parseInitiatePayload(raw: unknown): z.infer<typeof InitiatePayloadSchema> {
-  return runParse(InitiatePayloadSchema, raw);
+  const parsed = runParse(InitiatePayloadSchema, raw);
+  if (parsed.payload !== null && parsed.payload !== undefined) {
+    const byteLength = Buffer.byteLength(JSON.stringify(parsed.payload), 'utf8');
+    if (byteLength > MAX_INITIATE_PAYLOAD_BYTES) {
+      throw new InvalidPayloadError('initiate-payload-too-large');
+    }
+  }
+  return parsed;
 }
 export function parseInitiateAck(raw: unknown): z.infer<typeof InitiateAckSchema> {
   return runParse(InitiateAckSchema, raw);
@@ -205,20 +204,23 @@ export function parseRefreshTokenAck(raw: unknown): z.infer<typeof RefreshTokenA
   return runParse(RefreshTokenAckSchema, raw);
 }
 export function parseSignalPublishPayload(
-  raw: unknown
+  raw: unknown,
+  maxPayloadBytes: number = MAX_SIGNAL_PAYLOAD_BYTES
 ): z.infer<typeof SignalPublishPayloadSchema> {
   // Distinguish null/oversized from generic-invalid so the caller can map to
   // the correct `SignalAck.error`.
   const result = SignalPublishPayloadSchema.safeParse(raw);
   if (!result.success) {
     const messages = result.error.issues.map(issue => issue.message);
-    if (messages.includes(SIGNAL_PAYLOAD_TOO_LARGE_MESSAGE)) {
-      throw new InvalidPayloadError(SIGNAL_PAYLOAD_TOO_LARGE_MESSAGE);
-    }
-    if (messages.includes(SIGNAL_PAYLOAD_NULL_MESSAGE)) {
-      throw new InvalidPayloadError(SIGNAL_PAYLOAD_NULL_MESSAGE);
-    }
     throw new InvalidPayloadError(messages[0] ?? 'invalid payload');
+  }
+  const { payload } = result.data;
+  if (payload === null || payload === undefined) {
+    throw new InvalidPayloadError(SIGNAL_PAYLOAD_NULL_MESSAGE);
+  }
+  const byteLength = Buffer.byteLength(JSON.stringify(payload), 'utf8');
+  if (byteLength > maxPayloadBytes) {
+    throw new InvalidPayloadError(SIGNAL_PAYLOAD_TOO_LARGE_MESSAGE);
   }
   return result.data;
 }

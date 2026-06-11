@@ -19,6 +19,7 @@ import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import { InMemoryRoomRegistry } from '../domain/InMemoryRoomRegistry';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
+import type { RoomId } from '../domain/types';
 import type { CertWatcher } from '../infrastructure/CertWatcher';
 import { startCertWatcher } from '../infrastructure/CertWatcher';
 import { createRedisAdapterFactory } from '../infrastructure/createRedisAdapter';
@@ -31,7 +32,7 @@ import type { LifecycleState } from './http-routes';
 import { registerAdminHttpRoutes, registerPublicHttpRoutes } from './http-routes';
 import type { CommunicationMetrics } from './metrics';
 import { createCommunicationMetrics } from './metrics';
-import { registerSocketHandlers } from './socket-handlers';
+import { readContext, registerSocketHandlers } from './socket-handlers';
 
 const DRAIN_POLL_INTERVAL_MS = 100;
 const ADMIN_HOST = '127.0.0.1';
@@ -111,16 +112,18 @@ export async function bootstrap(
     const { createClient } = await import('redis');
     const redisClient = createClient({ url: config.redis.url });
     await redisClient.connect();
-    roomRegistry = new RedisRoomRegistry({
+    const redisRoomRegistry = new RedisRoomRegistry({
       client: redisClient,
       keyPrefix: config.redis.key_prefix,
     });
+    roomRegistry = redisRoomRegistry;
     const adapter = await createRedisAdapterFactory({
       url: config.redis.url,
       keyPrefix: config.redis.key_prefix,
     });
     redisAdapterFactory = adapter.adapterFactory;
     redisAdapterCleanup = async (): Promise<void> => {
+      redisRoomRegistry.dispose();
       await adapter.close();
       try {
         await redisClient.quit();
@@ -191,7 +194,6 @@ export async function bootstrap(
 
   registerPublicHttpRoutes(publicApp, {
     verifierHealth,
-    metricsRegistry: metrics.registry,
     lifecycleState,
   });
 
@@ -252,6 +254,7 @@ export async function bootstrap(
   });
 
   // Admin app — separate Fastify on a separate port, bound to localhost.
+  // Hosts /metrics too: counters are reconnaissance data on a public relay.
   const adminApp = Fastify({ logger: false });
   registerAdminHttpRoutes(adminApp, {
     adminToken: config.admin.token,
@@ -259,6 +262,7 @@ export async function bootstrap(
     setLogLevel: (level: 'debug' | 'info' | 'warn' | 'error') => {
       rootPino.level = level;
     },
+    metricsRegistry: metrics.registry,
   });
 
   // v2: zero-drop TLS context reload. When TLS is on, watch the cert + key
@@ -321,11 +325,14 @@ export async function bootstrap(
     lifecycleState.isDraining = true;
 
     // Tell every connected client we're going down so they can plan a
-    // reconnect.
+    // reconnect. emitDraining broadcasts to the whole room — emit once per
+    // room, not once per socket, to avoid duplicate events.
+    const drainedRooms = new Set<RoomId>();
     for (const [, socket] of io.sockets.sockets) {
-      const data = socket.data as { roomId?: string };
-      if (typeof data.roomId === 'string') {
-        transport.emitDraining(data.roomId as never);
+      const ctx = readContext(socket);
+      if (ctx !== null && !drainedRooms.has(ctx.roomId)) {
+        drainedRooms.add(ctx.roomId);
+        transport.emitDraining(ctx.roomId);
       }
     }
 

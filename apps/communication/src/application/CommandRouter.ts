@@ -44,6 +44,14 @@ export type RouteInitiateInput = {
 
 export type RouteInitiateOutput = {
   ack: IInitiateAck;
+  /**
+   * Settles when the background fanout fully completes (or aborts). Never
+   * rejects. Callers use it to keep drain/abort bookkeeping alive for the
+   * whole dispatch without delaying the ack (ack-before-fanout).
+   */
+  fanoutDone: Promise<void>;
+  /** Set when the dispatch was rejected synchronously (no fanout happened). */
+  rejectionReason?: 'too-many-in-flight';
 };
 
 export class CommandRouter {
@@ -73,7 +81,11 @@ export class CommandRouter {
         correlationId: payload.correlationId,
         command: payload.command,
       });
-      return { ack: this.buildAck(room, payload.correlationId) };
+      return {
+        ack: this.buildAck(room, payload.correlationId),
+        fanoutDone: Promise.resolve(),
+        rejectionReason: 'too-many-in-flight',
+      };
     }
 
     const dispatch: PendingDispatch = {
@@ -109,8 +121,9 @@ export class CommandRouter {
     };
 
     // Drive the fanout asynchronously — the ack returns immediately
-    // (M1 ack-before-fanout).
-    void this.driveFanout({
+    // (M1 ack-before-fanout). driveFanout never rejects (errors are logged
+    // and the dispatch is released in its finally).
+    const fanoutDone = this.driveFanout({
       initiatorSocketId,
       roomId,
       executeEvent,
@@ -120,7 +133,7 @@ export class CommandRouter {
       payload,
     });
 
-    return { ack };
+    return { ack, fanoutDone };
   }
 
   private buildAck(room: Room, correlationId: CorrelationId): IInitiateAck {

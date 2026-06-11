@@ -6,10 +6,12 @@ credentials, with Google Sign-In (OIDC) auth on the handshake.
 This server replaced the legacy `apps/signaling/` deployment. It keeps
 the WebSocket transport (Socket.IO 4.x), adds OIDC-protected handshakes
 (Google and Yandex via a pluggable `IIdentityVerifier` strategy), a
-typed command/response protocol, and ephemeral coturn credentials so
-relay traffic is never billed against an unauthenticated user. The
-portfolio frontend (`retro` and `conf` features) signals exclusively
-through this server.
+typed command/response protocol, and ephemeral coturn credentials.
+Anonymous (optional-auth) sessions can also obtain TURN credentials —
+conference rooms work without sign-in — but with a shorter relay window
+(`turn.anonymous_ttl_seconds`, default 600 s) on top of the per-socket
+request limits and coturn quotas. The portfolio frontend (`retro` and
+`conf` features) signals exclusively through this server.
 
 ---
 

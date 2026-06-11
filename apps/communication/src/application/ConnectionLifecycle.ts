@@ -2,10 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { AuthErrorCode, Identity, TokenClaims } from '../domain/Identity';
 import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
-import type { IRoomRegistry } from '../domain/IRoomRegistry';
 import type { IHandshakeAuth } from '../domain/protocol';
 import { parseHandshakeAuth } from '../domain/protocol-validators';
-import type { DisplayName, RoomId, SocketId, UserId } from '../domain/types';
+import type { DisplayName, SocketId, UserId } from '../domain/types';
 import { assertDisplayName } from '../domain/types';
 import type { IAuditLogger } from './ports/IAuditLogger';
 import type { IServerLogger } from './ports/IServerLogger';
@@ -27,6 +26,10 @@ type ConnectionLifecycleDeps = {
 };
 
 export type HandshakeOutput = {
+  /**
+   * Identity with a PLACEHOLDER socketId — the presentation layer replaces
+   * it with the real socket.id once the connection is admitted.
+   */
   identity: Identity;
   /**
    * Verified OIDC claims, or `null` for anonymous handshakes that
@@ -34,9 +37,6 @@ export type HandshakeOutput = {
    * needs an expiry timer or refresh capability must gate on this.
    */
   claims: TokenClaims | null;
-  socketId: SocketId;
-  /** `null` for anonymous handshakes. */
-  provider: TIdentityProvider | null;
 };
 
 export class ConnectionLifecycle {
@@ -63,7 +63,7 @@ export class ConnectionLifecycle {
         displayName: ANONYMOUS_DISPLAY_NAME,
         socketId,
       };
-      return ok({ identity, claims: null, socketId, provider: null });
+      return ok({ identity, claims: null });
     }
 
     const verifier = this.deps.verifiers.get(parsed.provider);
@@ -96,7 +96,7 @@ export class ConnectionLifecycle {
       displayName,
       socketId,
     };
-    return ok({ identity, claims, socketId, provider: parsed.provider });
+    return ok({ identity, claims });
   }
 
   public async onRefresh(
@@ -131,9 +131,5 @@ export class ConnectionLifecycle {
       return err('auth/invalid-token');
     }
     return ok(newClaims);
-  }
-
-  public onDisconnect(socketId: SocketId, roomId: RoomId, registry: IRoomRegistry): void {
-    registry.release(roomId, socketId);
   }
 }

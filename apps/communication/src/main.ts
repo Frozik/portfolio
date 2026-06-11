@@ -1,6 +1,14 @@
 import { loadConfig } from './infrastructure/load-config';
 import { bootstrap } from './presentation/bootstrap';
 
+// Safety net: a single escaped rejection must not take down every active
+// call on the relay. Handler bugs are logged and the process stays up
+// (uncaught synchronous exceptions still crash — state may be corrupt there).
+process.on('unhandledRejection', reason => {
+  // biome-ignore lint/suspicious/noConsole: process-level safety net runs outside the request-scoped logger
+  console.error('[communication] unhandled rejection', reason);
+});
+
 const config = loadConfig();
 const { start, drain } = await bootstrap(config);
 

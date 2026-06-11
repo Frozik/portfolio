@@ -76,11 +76,8 @@ describe('ConnectionLifecycle.onHandshake', () => {
     if (result.ok) {
       expect(result.value.identity.userId).toBe(USER_ID);
       expect(result.value.identity.displayName).toBe('Alice');
-      expect(result.value.provider).toBe('google');
       expect(result.value.claims).not.toBeNull();
-      expect(result.value.socketId).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      );
+      expect(result.value.claims?.provider).toBe('google');
     }
   });
 
@@ -90,7 +87,6 @@ describe('ConnectionLifecycle.onHandshake', () => {
     if (result.ok) {
       expect(result.value.identity.userId.startsWith('anon:')).toBe(true);
       expect(result.value.identity.displayName).toBe('Guest');
-      expect(result.value.provider).toBeNull();
       expect(result.value.claims).toBeNull();
     }
   });
@@ -177,7 +173,7 @@ describe('ConnectionLifecycle.onHandshake', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.identity.userId).toBe('yandex:1234');
-      expect(result.value.provider).toBe('yandex');
+      expect(result.value.claims?.provider).toBe('yandex');
     }
   });
 });

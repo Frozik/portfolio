@@ -42,6 +42,13 @@ type RateLimitWindow = {
   windowStartMs: number;
 };
 
+type AttemptWindow = {
+  attempts: number;
+  windowStartMs: number;
+};
+
+const ATTEMPT_WINDOW_MS = SECONDS_PER_MINUTE * MS_PER_SECOND;
+
 type SocketContextData = {
   identity: Identity;
   /** `null` for anonymous handshakes — no token lifecycle, no refresh. */
@@ -49,12 +56,15 @@ type SocketContextData = {
   roomId: RoomId;
   /** `null` for anonymous handshakes — there is no token to expire. */
   tokenLifecycle: TokenLifecycle | null;
-  signalRateBucket: { tokens: number; lastRefillMs: number };
   turnCredsBucket: { count: number; windowStartMs: number };
   inflightControllers: Set<AbortController>;
 };
 
-type SocketWithData = Socket & { data: Partial<SocketContextData> & Record<string, unknown> };
+// The context lives as ONE object under `socket.data.ctx` and is always read
+// and mutated by reference. Copying fields out (the previous shape) made
+// refresh-handler mutations invisible to the token-lifecycle callbacks, which
+// re-read the context later and saw stale claims.
+type SocketWithData = Socket & { data: { ctx?: SocketContextData } };
 
 export type SocketHandlersDeps = {
   connectionLifecycle: ConnectionLifecycle;
@@ -71,23 +81,49 @@ export type SocketHandlersDeps = {
 
 export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersDeps): void {
   const failedHandshakeWindows = new Map<string, RateLimitWindow>();
+  const handshakeAttemptWindows = new Map<string, AttemptWindow>();
   const handshakeBlockWindowMs =
     deps.config.security.failed_handshake_block_seconds * MS_PER_SECOND;
 
+  // Behind HAProxy (TCP/SNI passthrough) every connection arrives from the
+  // loopback — per-IP accounting here would throttle ALL users as one client
+  // (one attacker's failures block everyone). In that mode the per-source
+  // protection is delegated to the edge (per-src stick-table in haproxy.cfg)
+  // and disabled in-process.
+  const perIpAccountingEnabled = !deps.config.edge.haproxy_enabled;
+
   io.use(async (socket: Socket, next: (err?: Error) => void) => {
-    const remoteIp = extractRemoteIp(socket);
     const nowMs = Temporal.Now.instant().epochMilliseconds;
-    const window = failedHandshakeWindows.get(remoteIp);
 
-    if (window !== undefined && window.blockedUntilMs > nowMs) {
-      deps.metrics.counters.handshakeRateLimitedTotal.inc();
-      const error = new Error('auth/rate-limited');
-      (error as Error & { data?: { code: AuthErrorCode } }).data = { code: 'auth/rate-limited' };
-      next(error);
-      return;
+    if (perIpAccountingEnabled) {
+      const remoteIp = extractRemoteIp(socket);
+      const window = failedHandshakeWindows.get(remoteIp);
+
+      if (window !== undefined && window.blockedUntilMs > nowMs) {
+        deps.metrics.counters.handshakeRateLimitedTotal.inc();
+        next(buildHandshakeError('auth/rate-limited'));
+        return;
+      }
+
+      // Socket.IO handshakes never reach the fastify rate-limit plugin
+      // (engine.io intercepts the request before routing), so the total
+      // attempt rate is limited here as well — not only failed attempts.
+      if (
+        !consumeHandshakeAttempt(
+          handshakeAttemptWindows,
+          remoteIp,
+          nowMs,
+          deps.config.security.handshake_rate_per_ip_per_minute
+        )
+      ) {
+        deps.metrics.counters.handshakeRateLimitedTotal.inc();
+        next(buildHandshakeError('auth/rate-limited'));
+        return;
+      }
+
+      pruneStaleHandshakeWindows(failedHandshakeWindows, nowMs, handshakeBlockWindowMs);
+      pruneStaleAttemptWindows(handshakeAttemptWindows, nowMs);
     }
-
-    pruneStaleHandshakeWindows(failedHandshakeWindows, nowMs, handshakeBlockWindowMs);
 
     const handshakeStart = Temporal.Now.instant().epochMilliseconds;
     // socket.handshake.auth is typed as `{ [key: string]: any }` by socket.io
@@ -102,10 +138,10 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
 
     if (!result.ok) {
       deps.metrics.counters.authHandshakeFailureTotal.inc({ code: result.error });
-      registerHandshakeFailure(failedHandshakeWindows, remoteIp, nowMs, deps);
-      const error = new Error(result.error);
-      (error as Error & { data?: { code: AuthErrorCode } }).data = { code: result.error };
-      next(error);
+      if (perIpAccountingEnabled) {
+        registerHandshakeFailure(failedHandshakeWindows, extractRemoteIp(socket), nowMs, deps);
+      }
+      next(buildHandshakeError(result.error));
       return;
     }
 
@@ -117,9 +153,7 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
       }
       roomId = assertRoomId(rawRoomId);
     } catch (_caught) {
-      const error = new Error('auth/missing-fields');
-      (error as Error & { data?: { code: AuthErrorCode } }).data = { code: 'auth/missing-fields' };
-      next(error);
+      next(buildHandshakeError('auth/missing-fields'));
       return;
     }
 
@@ -130,10 +164,7 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
     const adopted: Identity = { ...result.value.identity, socketId: socket.id };
     const addResult = room.addMember(socket.id, adopted);
     if (!addResult.ok) {
-      const code = addResult.error.code;
-      const error = new Error(code);
-      (error as Error & { data?: { code: string } }).data = { code };
-      next(error);
+      next(buildHandshakeError(addResult.error.code));
       return;
     }
 
@@ -147,14 +178,10 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
           : new TokenLifecycle({
               warningSeconds: deps.config.auth.token_expiry_warning_seconds,
             }),
-      signalRateBucket: {
-        tokens: deps.config.signal.max_publish_burst,
-        lastRefillMs: nowMs,
-      },
       turnCredsBucket: { count: 0, windowStartMs: nowMs },
       inflightControllers: new Set<AbortController>(),
     };
-    Object.assign(socket.data, data);
+    (socket as SocketWithData).data.ctx = data;
 
     await socket.join(roomId);
     next();
@@ -179,13 +206,13 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
 
     armTokenLifecycle(socket, deps);
 
-    socket.on(COMMAND_INITIATE, async (raw, ack: (response: IInitiateAck) => void) => {
-      try {
-        const payload = parseInitiatePayload(raw);
-        const controller = new AbortController();
-        ctx.inflightControllers.add(controller);
-        deps.metrics.gauges.pendingCorrelations.inc();
+    registerAckHandler<IInitiateAck>(socket, COMMAND_INITIATE, deps, async (raw, ack) => {
+      const payload = parseInitiatePayload(raw);
+      const controller = new AbortController();
+      ctx.inflightControllers.add(controller);
+      deps.metrics.gauges.pendingCorrelations.inc();
 
+      try {
         const fanoutSize = Math.max(0, room.count() - 1);
         deps.metrics.histograms.broadcastFanoutListeners.observe(fanoutSize);
 
@@ -199,22 +226,25 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
           signal: controller.signal,
         });
         ack(result.ack);
-
-        // Continue tracking — fanout completes asynchronously inside CommandRouter
-        // but we can already release our own bookkeeping once the ack is out.
-        ctx.inflightControllers.delete(controller);
-        deps.metrics.gauges.pendingCorrelations.dec();
+        if (result.rejectionReason !== undefined) {
+          deps.metrics.counters.dispatchRejectedTotal.inc({ reason: result.rejectionReason });
+        }
         deps.metrics.histograms.dispatchDurationSeconds.observe(
           (Temporal.Now.instant().epochMilliseconds - dispatchStart) / MS_PER_SECOND
         );
-      } catch (caught) {
-        deps.logger.warn('socket-handlers.initiate-failed', {
-          message: caught instanceof Error ? caught.message : String(caught),
-        });
+
+        // The ack goes out before the fanout finishes (ack-before-fanout), but
+        // the gauge and the abort controller must live until the fanout
+        // settles: drain() waits on pendingCorrelations, and disconnect aborts
+        // in-flight fanouts through the controller.
+        await result.fanoutDone;
+      } finally {
+        ctx.inflightControllers.delete(controller);
+        deps.metrics.gauges.pendingCorrelations.dec();
       }
     });
 
-    socket.on(SIGNAL_PUBLISH, async (raw, ack: (response: ISignalAck) => void) => {
+    registerAckHandler<ISignalAck>(socket, SIGNAL_PUBLISH, deps, async (raw, ack) => {
       const start = Temporal.Now.instant().epochMilliseconds;
       const result = await deps.signalRelay.relay(socket.id, ctx.identity, ctx.roomId, raw);
       deps.metrics.histograms.signalPublishHandlerDurationMs.observe(
@@ -229,7 +259,7 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
       ack(result);
     });
 
-    socket.on(AUTH_REFRESH_TOKEN, async (raw, ack: (response: IRefreshTokenAck) => void) => {
+    registerAckHandler<IRefreshTokenAck>(socket, AUTH_REFRESH_TOKEN, deps, async (raw, ack) => {
       try {
         if (ctx.claims === null || ctx.tokenLifecycle === null) {
           // Anonymous handshakes never present a token in the first
@@ -303,9 +333,11 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
       }
     });
 
-    socket.on(
+    registerAckHandler<ITurnCredentialsAck | { ok: false; error: string }>(
+      socket,
       TURN_REQUEST_CREDENTIALS,
-      (_raw, ack: (response: ITurnCredentialsAck | { ok: false; error: string }) => void) => {
+      deps,
+      (_raw, ack) => {
         const nowMs = Temporal.Now.instant().epochMilliseconds;
         const windowMs = SECONDS_PER_MINUTE * MS_PER_SECOND;
         if (nowMs - ctx.turnCredsBucket.windowStartMs > windowMs) {
@@ -318,10 +350,19 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
         }
         ctx.turnCredsBucket.count += 1;
 
+        // Anonymous sessions get a shorter relay window: relay traffic is the
+        // costliest resource and an anonymous identity is free to mint, so the
+        // abuse window stays narrow while optional-auth calls can still
+        // traverse symmetric NATs.
+        const ttlSec =
+          ctx.claims === null
+            ? deps.config.turn.anonymous_ttl_seconds
+            : deps.config.turn.ttl_seconds;
+
         const creds = issueTurnCredentials({
           userIdHash: hashUserId(ctx.identity.userId),
           sharedSecret: deps.config.turn.shared_secret,
-          ttlSec: deps.config.turn.ttl_seconds,
+          ttlSec,
           urls: deps.config.turn.urls,
           nowMs,
         });
@@ -349,28 +390,39 @@ export function registerSocketHandlers(io: SocketIOServer, deps: SocketHandlersD
   });
 }
 
-function readContext(socket: Socket): SocketContextData | null {
-  const partial = (socket as SocketWithData).data;
-  if (
-    partial.identity === undefined ||
-    partial.claims === undefined ||
-    partial.roomId === undefined ||
-    partial.tokenLifecycle === undefined ||
-    partial.signalRateBucket === undefined ||
-    partial.turnCredsBucket === undefined ||
-    partial.inflightControllers === undefined
-  ) {
-    return null;
-  }
-  return {
-    identity: partial.identity,
-    claims: partial.claims,
-    roomId: partial.roomId,
-    tokenLifecycle: partial.tokenLifecycle,
-    signalRateBucket: partial.signalRateBucket,
-    turnCredsBucket: partial.turnCredsBucket,
-    inflightControllers: partial.inflightControllers,
-  };
+export function readContext(socket: Socket): SocketContextData | null {
+  return (socket as SocketWithData).data.ctx ?? null;
+}
+
+/**
+ * Registers a socket event handler whose protocol requires an ack callback.
+ *
+ * Socket.IO passes through whatever the client sent — a malicious emit
+ * without an ack leaves `ack` undefined, and calling it would throw inside
+ * the listener. For async handlers that surfaces as an unhandled rejection,
+ * which kills the whole process (trivial remote DoS). The wrapper validates
+ * the callback and contains both sync and async handler failures.
+ */
+function registerAckHandler<TAck>(
+  socket: Socket,
+  event: string,
+  deps: SocketHandlersDeps,
+  handler: (raw: unknown, ack: (response: TAck) => void) => void | Promise<void>
+): void {
+  socket.on(event, (raw: unknown, ack: unknown) => {
+    if (typeof ack !== 'function') {
+      deps.logger.warn('socket-handlers.missing-ack', { event });
+      return;
+    }
+    void Promise.resolve()
+      .then(() => handler(raw, ack as (response: TAck) => void))
+      .catch((caught: unknown) => {
+        deps.logger.warn('socket-handlers.handler-failed', {
+          event,
+          message: caught instanceof Error ? caught.message : String(caught),
+        });
+      });
+  });
 }
 
 function armTokenLifecycle(socket: Socket, deps: SocketHandlersDeps): void {
@@ -408,10 +460,46 @@ function buildTokenLifecycleCallbacks(
   };
 }
 
+/** Socket.IO connect_error carries machine-readable codes via `error.data.code` */
+function buildHandshakeError(code: AuthErrorCode | string): Error {
+  const error = new Error(code);
+  (error as Error & { data?: { code: string } }).data = { code };
+  return error;
+}
+
+/**
+ * Sliding-window counter for TOTAL handshake attempts per IP. Returns false
+ * when the per-minute budget is exhausted.
+ */
+function consumeHandshakeAttempt(
+  windows: Map<string, AttemptWindow>,
+  remoteIp: string,
+  nowMs: number,
+  limitPerMinute: number
+): boolean {
+  const window = windows.get(remoteIp) ?? { attempts: 0, windowStartMs: nowMs };
+  if (nowMs - window.windowStartMs > ATTEMPT_WINDOW_MS) {
+    window.attempts = 0;
+    window.windowStartMs = nowMs;
+  }
+  window.attempts += 1;
+  windows.set(remoteIp, window);
+  return window.attempts <= limitPerMinute;
+}
+
+function pruneStaleAttemptWindows(windows: Map<string, AttemptWindow>, nowMs: number): void {
+  for (const [ip, window] of windows) {
+    if (nowMs - window.windowStartMs > ATTEMPT_WINDOW_MS) {
+      windows.delete(ip);
+    }
+  }
+}
+
 function extractRemoteIp(socket: Socket): string {
-  // socket.handshake.address is populated by the engine using the TCP source
-  // address; the proxy-protocol wrapper rewrites this to the original client
-  // IP when haproxy_enabled is true.
+  // socket.handshake.address is the raw TCP source address. NOTE: behind
+  // HAProxy (TCP/SNI passthrough) this is always the loopback — per-IP
+  // accounting is disabled in that mode (edge.haproxy_enabled = true) and
+  // enforced by HAProxy's per-src stick-table at the edge instead.
   const fromHandshake = socket.handshake.address;
   if (typeof fromHandshake === 'string' && fromHandshake.length > 0) {
     return fromHandshake;

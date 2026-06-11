@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Registry } from 'prom-client';
 import { Temporal } from 'temporal-polyfill';
@@ -28,7 +29,6 @@ export type LifecycleState = {
 
 export type PublicRoutesDeps = {
   verifierHealth: IVerifierHealth;
-  metricsRegistry: Registry;
   lifecycleState: LifecycleState;
 };
 
@@ -37,6 +37,7 @@ export type AdminRoutesDeps = {
   logger: IServerLogger;
   /** Mutable hook so /admin/log-level can re-tune the live pino logger. */
   setLogLevel: (level: 'debug' | 'info' | 'warn' | 'error') => void;
+  metricsRegistry: Registry;
 };
 
 const LogLevelBodySchema = z.object({
@@ -95,23 +96,26 @@ export function registerPublicHttpRoutes(app: FastifyInstance, deps: PublicRoute
       build: lifecycle.buildInfo,
     });
   });
+}
 
-  app.get('/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
+export function registerAdminHttpRoutes(adminApp: FastifyInstance, deps: AdminRoutesDeps): void {
+  // Prometheus metrics live on the admin app (bound to 127.0.0.1): room and
+  // auth-failure counters are reconnaissance data for a public-facing relay.
+  // No bearer token — the loopback bind is the access control, and a token
+  // would complicate the local Prometheus scrape config for nothing.
+  adminApp.get('/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
     const body = await deps.metricsRegistry.metrics();
     return reply
       .code(STATUS_OK)
       .header('content-type', deps.metricsRegistry.contentType)
       .send(body);
   });
-}
 
-export function registerAdminHttpRoutes(adminApp: FastifyInstance, deps: AdminRoutesDeps): void {
   adminApp.post('/admin/log-level', async (request: FastifyRequest, reply: FastifyReply) => {
     if (deps.adminToken === '') {
       return reply.code(STATUS_UNAUTHORIZED).send({ ok: false, error: 'admin-disabled' });
     }
-    const header = request.headers.authorization;
-    if (typeof header !== 'string' || header !== `Bearer ${deps.adminToken}`) {
+    if (!bearerTokenMatches(request.headers.authorization, deps.adminToken)) {
       return reply.code(STATUS_UNAUTHORIZED).send({ ok: false, error: 'unauthorized' });
     }
     const parsed = LogLevelBodySchema.safeParse(request.body);
@@ -122,6 +126,16 @@ export function registerAdminHttpRoutes(adminApp: FastifyInstance, deps: AdminRo
     deps.logger.info('admin.log-level-changed', { level: parsed.data.level });
     return reply.code(STATUS_OK).send({ ok: true });
   });
+}
+
+/** Constant-time bearer comparison — `!==` leaks the match length via timing */
+function bearerTokenMatches(header: string | undefined, adminToken: string): boolean {
+  if (typeof header !== 'string') {
+    return false;
+  }
+  const expected = Buffer.from(`Bearer ${adminToken}`);
+  const received = Buffer.from(header);
+  return expected.length === received.length && timingSafeEqual(expected, received);
 }
 
 function isJwksDegraded(health: {

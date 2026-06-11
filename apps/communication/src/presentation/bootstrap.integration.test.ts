@@ -77,6 +77,7 @@ function buildConfig(overrides: Partial<IServerConfig> = {}): IServerConfig {
       shared_secret: 'test-secret',
       realm: 'test-realm',
       ttl_seconds: 3_600,
+      anonymous_ttl_seconds: 600,
       urls: ['turn:turn.example.com:3478'],
       credential_requests_per_minute_per_socket: 5,
     },
@@ -479,6 +480,44 @@ describe('bootstrap (integration)', () => {
 
       clientA.disconnect();
       clientB.disconnect();
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'emits without ack callbacks do not kill the server',
+    async () => {
+      const issued = server.verifier.issue('no-ack', 'NoAck');
+      const connected = await connectClient(server.publicPort, {
+        roomId: ROOM_ID,
+        provider: 'google' as const,
+        token: issued.token,
+      });
+      const client = connected.client;
+      await waitFor(() => connected.presenceEvents[0]);
+
+      // A malicious client can emit ack-requiring events WITHOUT the ack
+      // argument; before the registerAckHandler guard each of these turned
+      // into an unhandled rejection that killed the process.
+      client.emit(SIGNAL_PUBLISH, { payload: { sdp: 'x' } });
+      client.emit(COMMAND_INITIATE, { command: 'noop', payload: {}, correlationId: 'no-ack-1' });
+      client.emit(TURN_REQUEST_CREDENTIALS, {});
+      client.emit(AUTH_REFRESH_TOKEN, { token: 'whatever' });
+
+      // The server is healthy if a follow-up ack'ed request still round-trips.
+      const ackResult = await new Promise<ISignalAck>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error('signal ack timeout')),
+          HANDSHAKE_TIMEOUT_MS
+        );
+        client.emit(SIGNAL_PUBLISH, { payload: { probe: true } }, (response: ISignalAck) => {
+          clearTimeout(timer);
+          resolve(response);
+        });
+      });
+      expect(ackResult.ok).toBe(true);
+
+      client.disconnect();
     },
     TEST_TIMEOUT_MS
   );

@@ -16,26 +16,21 @@ export type CommunicationMetrics = {
     dispatchDurationSeconds: Histogram<string>;
     broadcastFanoutListeners: Histogram<string>;
     authHandshakeDurationSeconds: Histogram<string>;
-    jwksFetchDurationSeconds: Histogram<string>;
-    responderResponseDurationSeconds: Histogram<'kind'>;
     signalPublishHandlerDurationMs: Histogram<string>;
     signalPublishRecipients: Histogram<string>;
   };
   counters: {
-    orphanedResponsesTotal: Counter<string>;
     authHandshakeFailureTotal: Counter<'code'>;
     tokenRefreshTotal: Counter<'outcome'>;
     dispatchRejectedTotal: Counter<'reason'>;
     handshakeRateLimitedTotal: Counter<string>;
     signalPublishTotal: Counter<'outcome'>;
     turnCredentialsIssuedTotal: Counter<string>;
-    proxyProtocolParseFailureTotal: Counter<string>;
   };
   gauges: {
     activeRooms: Gauge<string>;
     activeSockets: Gauge<string>;
     pendingCorrelations: Gauge<string>;
-    jwksConsecutiveFailures: Gauge<string>;
   };
 };
 
@@ -61,19 +56,6 @@ export function createCommunicationMetrics(): CommunicationMetrics {
       buckets: [...DEFAULT_HISTOGRAM_BUCKETS_SECONDS],
       registers: [registry],
     }),
-    jwksFetchDurationSeconds: new Histogram({
-      name: 'communication_jwks_fetch_duration_seconds',
-      help: 'Duration of remote JWKS fetches.',
-      buckets: [...DEFAULT_HISTOGRAM_BUCKETS_SECONDS],
-      registers: [registry],
-    }),
-    responderResponseDurationSeconds: new Histogram({
-      name: 'communication_responder_response_duration_seconds',
-      help: 'Duration from execute fanout to per-responder ack/timeout/disconnect.',
-      labelNames: ['kind'],
-      buckets: [...DEFAULT_HISTOGRAM_BUCKETS_SECONDS],
-      registers: [registry],
-    }),
     signalPublishHandlerDurationMs: new Histogram({
       name: 'communication_signal_publish_handler_duration_ms',
       help: 'Server-side duration of signal:publish handler in milliseconds.',
@@ -89,11 +71,6 @@ export function createCommunicationMetrics(): CommunicationMetrics {
   };
 
   const counters = {
-    orphanedResponsesTotal: new Counter({
-      name: 'communication_orphaned_responses_total',
-      help: 'Responder acks received for which no in-flight dispatch exists.',
-      registers: [registry],
-    }),
     authHandshakeFailureTotal: new Counter({
       name: 'communication_auth_handshake_failure_total',
       help: 'Auth handshake failures by error code.',
@@ -128,11 +105,6 @@ export function createCommunicationMetrics(): CommunicationMetrics {
       help: 'TURN credential issuance count.',
       registers: [registry],
     }),
-    proxyProtocolParseFailureTotal: new Counter({
-      name: 'communication_proxy_protocol_parse_failure_total',
-      help: 'PROXY protocol v2 parse failures.',
-      registers: [registry],
-    }),
   };
 
   const gauges = {
@@ -149,11 +121,6 @@ export function createCommunicationMetrics(): CommunicationMetrics {
     pendingCorrelations: new Gauge({
       name: 'communication_pending_correlations',
       help: 'Number of in-flight dispatch correlations server-wide.',
-      registers: [registry],
-    }),
-    jwksConsecutiveFailures: new Gauge({
-      name: 'communication_jwks_consecutive_failures',
-      help: 'Consecutive JWKS fetch failures since the last success.',
       registers: [registry],
     }),
   };

@@ -25,6 +25,13 @@ function makeIdentity(socketId: string, userId = 'u1'): Identity {
  */
 class FakeRedis implements IRedisLike {
   private readonly hashes = new Map<string, Map<string, string>>();
+  /** key → last TTL set via `expire`, for assertions */
+  readonly ttls = new Map<string, number>();
+
+  async expire(key: string, seconds: number): Promise<boolean> {
+    this.ttls.set(key, seconds);
+    return true;
+  }
 
   async hSet(key: string, field: string, value: string): Promise<number> {
     let bucket = this.hashes.get(key);

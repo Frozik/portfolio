@@ -19,8 +19,7 @@ type SignalRelayDeps = {
   roomRegistry: IRoomRegistry;
   ratePerSec: number;
   burst: number;
-  /** Currently informational — the per-payload byte cap is enforced by the
-   * domain validator. Kept on the relay so 3b can wire it from config. */
+  /** Maximum JSON-serialized `signal:publish` payload size accepted, bytes. */
   payloadMaxBytes: number;
 };
 
@@ -42,7 +41,7 @@ export class SignalRelay {
   ): Promise<SignalAck> {
     let parsed: ReturnType<typeof parseSignalPublishPayload>;
     try {
-      parsed = parseSignalPublishPayload(raw);
+      parsed = parseSignalPublishPayload(raw, this.deps.payloadMaxBytes);
     } catch (caught) {
       if (caught instanceof InvalidPayloadError) {
         if (caught.message === SIGNAL_PAYLOAD_TOO_LARGE) {

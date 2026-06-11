@@ -37,17 +37,25 @@ frontend sni_router
   bind *:443
   mode tcp
   tcp-request inspect-delay 5s
+  # Per-source connection rate limiting lives HERE, where real client IPs
+  # are visible. The node app intentionally disables its own per-IP
+  # accounting when edge.haproxy_enabled = true: behind TCP/SNI passthrough
+  # it would see every client as 127.0.0.1 and one attacker's failures
+  # would block all users (global-cap bug).
+  stick-table type ip size 100k expire 10m store conn_rate(60s),conn_cur
+  tcp-request connection track-sc0 src
+  tcp-request connection reject if { sc0_conn_rate gt 60 }
+  tcp-request connection reject if { sc0_conn_cur gt 20 }
   tcp-request content accept if { req.ssl_hello_type 1 }
   use_backend fastify if { req.ssl_sni -i -m str ${COMMUNICATION_DOMAIN} }
   use_backend coturn  if { req.ssl_sni -i -m str ${TURN_DOMAIN} }
   default_backend reject
 
-# NOTE: send-proxy-v2 is intentionally OFF in v1 — Fastify currently
-# does not parse PROXY protocol v2 (proxy-protocol-js is in deps but
-# the bootstrap wiring is deferred to v2.x). Without it the backends
-# see HAProxy's loopback IP for every connection — per-IP rate-limit
-# (M11) effectively becomes a global cap. Acceptable for personal
-# scale; revisit when the parser is wired.
+# NOTE: send-proxy-v2 stays OFF — the node side does not parse PROXY
+# protocol v2 (wiring it into the TLS-terminating server is non-trivial),
+# so the backends see the loopback IP for every connection. Per-source
+# protection is therefore enforced by the stick-table above; the node app
+# skips its per-IP handshake accounting when edge.haproxy_enabled = true.
 backend fastify
   mode tcp
   server fastify 127.0.0.1:8443

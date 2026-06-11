@@ -30,7 +30,6 @@ const FORBIDDEN_MODULES = [
   '@fastify/rate-limit',
   'pino',
   'pino-pretty',
-  'proxy-protocol-js',
   'p-retry',
   'redis',
   '@redis/client',

@@ -18,11 +18,12 @@ if [[ ! -f "${TARGET_DIR}/apps/communication/package.json" ]]; then
   die "${TARGET_DIR}/apps/communication/package.json missing — the cloned ref does not contain apps/communication. Did you push the latest changes to the remote (REPO_URL=${REPO_URL:-https://github.com/frozik/portfolio.git})?"
 fi
 
-# Type-check only. The service runs source directly via
-# `node --experimental-strip-types` (see render-systemd-unit.sh) — we
-# do not emit a dist/ bundle in production. Catches type errors here
-# so they fail the install loudly instead of crashing the service at
-# boot.
+# Type-check only. The systemd service runs source directly via tsx
+# (see render-systemd-unit.sh ExecStart) — no dist/ bundle is emitted
+# for the systemd deployment; dist is built only for the Docker image
+# (`pnpm build` in Dockerfile, consumed by `pnpm start`). The check
+# catches type errors here so they fail the install loudly instead of
+# crashing the service at boot.
 info "Type-checking @frozik/communication"
 sudo -u "${USER_NAME}" -H bash -c "cd '${TARGET_DIR}' && pnpm --filter @frozik/communication types"
 
