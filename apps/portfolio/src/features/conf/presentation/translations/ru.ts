@@ -82,7 +82,8 @@ export const confRuTranslations: TranslationOf<typeof confEnTranslations> = {
     description: 'Отправьте ссылку собеседнику. Он присоединится, открыв её.',
     copyLink: 'Скопировать ссылку',
     qrLabel: 'Или отсканируйте QR-код',
-    done: 'Готово',
+    kicker: 'ПОДЕЛИТЬСЯ',
+    copied: 'Скопировано!',
   },
   errors: {
     loadRoomsFailed: 'Не удалось загрузить список недавних комнат.',

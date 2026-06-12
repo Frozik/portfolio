@@ -8,6 +8,7 @@ import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { Alert } from '../../../shared/ui/Alert';
+import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Spinner } from '../../../shared/ui/Spinner';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
@@ -20,7 +21,6 @@ import { ColumnList } from './components/ColumnList';
 import { DiscussPanel } from './components/DiscussPanel';
 import { ExportDialog } from './components/ExportDialog';
 import { RoomHeader } from './components/RoomHeader';
-import { ShareLinkDialog } from './components/ShareLinkDialog';
 import { useAwarenessPresence } from './hooks/useAwarenessPresence';
 import { useTimerTick } from './hooks/useTimerTick';
 import { retroT as t } from './translations';
@@ -190,6 +190,12 @@ const RoomBody = observer(({ typedRoomId, client }: IRoomBodyProps) => {
         onClose={roomStore.closeShareDialog}
         url={window.location.href}
         onCopy={handleCopyLink}
+        kicker={t.share.kicker}
+        title={t.share.dialogTitle}
+        description={t.share.description}
+        qrLabel={t.share.qrLabel}
+        copyLabel={t.share.copyLink}
+        copiedLabel={t.share.copied}
       />
     </div>
   );

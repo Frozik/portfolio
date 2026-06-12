@@ -3,9 +3,9 @@ import { PhoneOff } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
+import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
-import { ConfirmDialog } from './ConfirmDialog';
 
 const ICON_SIZE = 18;
 

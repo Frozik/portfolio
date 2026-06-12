@@ -13,6 +13,7 @@ import { AccountChip } from '../../../shared/communication/AccountChip';
 import { cn } from '../../../shared/lib/cn';
 import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { MonoKicker } from '../../../shared/ui/MonoKicker';
 import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -22,7 +23,6 @@ import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useUserDirectoryStore } from '../application/useUserDirectoryStore';
 import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
-import { ConfirmDialog } from './components/ConfirmDialog';
 import { CreateRetroDialog } from './components/CreateRetroDialog';
 import { retroT as t } from './translations';
 
@@ -435,6 +435,7 @@ export const Lobby = observer(() => {
 
       <ConfirmDialog
         open={pendingDeleteRoomId !== null}
+        kicker={t.confirm.kicker}
         title={deleteDialogTitle}
         description={t.lobby.deleteDialogDescription}
         confirmLabel={t.lobby.deleteButton}

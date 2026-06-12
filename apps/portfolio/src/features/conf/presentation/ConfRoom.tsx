@@ -10,6 +10,7 @@ import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { cn } from '../../../shared/lib/cn';
+import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { Spinner } from '../../../shared/ui/Spinner';
 import { Tooltip } from '../../../shared/ui/Tooltip';
@@ -22,7 +23,6 @@ import { GlassesPickerButton } from './components/GlassesPickerButton';
 import { LeaveButton } from './components/LeaveButton';
 import { MuteControls } from './components/MuteControls';
 import { QualityBadge } from './components/QualityBadge';
-import { ShareLinkDialog } from './components/ShareLinkDialog';
 import { VideoTile } from './components/VideoTile';
 import { confT } from './translations';
 
@@ -199,6 +199,12 @@ const ConfRoomBody = observer(({ typedRoomId, client }: IConfRoomBodyProps) => {
         onClose={handleCloseShare}
         url={window.location.href}
         onCopy={handleCopyLink}
+        kicker={confT.share.kicker}
+        title={confT.share.dialogTitle}
+        description={confT.share.description}
+        qrLabel={confT.share.qrLabel}
+        copyLabel={confT.share.copyLink}
+        copiedLabel={confT.share.copied}
       />
     </div>
   );

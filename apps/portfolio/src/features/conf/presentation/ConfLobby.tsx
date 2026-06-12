@@ -13,6 +13,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../../../shared/lib/cn';
 import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { MonoKicker } from '../../../shared/ui/MonoKicker';
 import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -20,7 +21,6 @@ import type { ConfLobbyStore } from '../application/ConfLobbyStore';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
 import type { IConfRoomIndexEntry, RoomId } from '../domain/types';
 import { ConfBackground } from './components/ConfBackground';
-import { ConfirmDialog } from './components/ConfirmDialog';
 import { confT } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/conf\/([^/?#]+)/;

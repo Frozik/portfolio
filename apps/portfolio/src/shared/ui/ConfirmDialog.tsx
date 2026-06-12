@@ -1,19 +1,26 @@
 import { memo } from 'react';
 
-import { cn } from '../../../../shared/lib/cn';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
+import { cn } from '../lib/cn';
+import { DialogShell } from './DialogShell';
 
-export interface IConfirmDialogProps {
+interface ConfirmDialogProps {
   readonly open: boolean;
   readonly title: string;
   readonly description: string;
   readonly confirmLabel: string;
   readonly cancelLabel: string;
   readonly tone?: 'neutral' | 'danger';
+  /** Optional mono kicker shown above the title (e.g. "CONFIRM"). */
+  readonly kicker?: string;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
 
+/**
+ * Confirm/cancel dialog over the shared {@link DialogShell}. Used by retro and
+ * conf for destructive (`tone="danger"`) and neutral confirmations — texts are
+ * passed in so each feature keeps its own translations.
+ */
 const ConfirmDialogComponent = ({
   open,
   title,
@@ -21,9 +28,10 @@ const ConfirmDialogComponent = ({
   confirmLabel,
   cancelLabel,
   tone = 'neutral',
+  kicker,
   onConfirm,
   onCancel,
-}: IConfirmDialogProps) => {
+}: ConfirmDialogProps) => {
   const footer = (
     <>
       <button
@@ -40,10 +48,10 @@ const ConfirmDialogComponent = ({
         type="button"
         onClick={onConfirm}
         className={cn(
-          'inline-flex items-center gap-1.5 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors',
+          'inline-flex items-center gap-1.5 border-0 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-landing-bg transition-colors',
           tone === 'danger'
-            ? 'border-0 bg-landing-red text-landing-bg hover:bg-landing-red/90'
-            : 'border-0 bg-landing-accent text-landing-bg hover:bg-landing-accent/90'
+            ? 'bg-landing-red hover:bg-landing-red/90'
+            : 'bg-landing-accent hover:bg-landing-accent/90'
         )}
       >
         {confirmLabel}
@@ -55,6 +63,7 @@ const ConfirmDialogComponent = ({
     <DialogShell
       open={open}
       onClose={onCancel}
+      kicker={kicker}
       title={title}
       description={description}
       closeLabel={cancelLabel}
@@ -64,3 +73,5 @@ const ConfirmDialogComponent = ({
 };
 
 export const ConfirmDialog = memo(ConfirmDialogComponent);
+
+export type { ConfirmDialogProps };

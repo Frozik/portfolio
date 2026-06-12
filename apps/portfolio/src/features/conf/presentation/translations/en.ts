@@ -79,7 +79,8 @@ export const confEnTranslations = {
     description: 'Send the link to the person you want to call. They join by opening it.',
     copyLink: 'Copy link',
     qrLabel: 'Or scan the QR code',
-    done: 'Done',
+    kicker: 'SHARE',
+    copied: 'Copied!',
   },
   errors: {
     loadRoomsFailed: 'Could not load your recent rooms.',
