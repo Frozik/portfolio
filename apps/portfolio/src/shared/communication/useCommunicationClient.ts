@@ -1,27 +1,16 @@
+import { createRefcountedPool } from '@frozik/utils/refcountedPool';
 import { useEffect, useRef, useState } from 'react';
 import type { ICommunicationClient } from './CommunicationClient';
 import { createCommunicationClient } from './CommunicationClient';
 import { useAuthSession, useCommunicationBaseUrl } from './CommunicationProvider';
 
 /**
- * Refcount entry kept per `(baseUrl, roomId)` pair. Multiple components
- * mounted against the same room share one connection. A short
- * `cleanupHandle` window after the last release absorbs React 19
- * strict-mode's mount → cleanup → mount cycle: the cleanup decrements
- * the refcount to zero and arms a deferred disconnect; the immediate
- * remount finds the entry still cached, cancels the pending disconnect,
- * and bumps the refcount back to 1 — without ever tearing down the
- * Socket.IO handshake mid-flight.
+ * Per-`(mode, baseUrl, roomId)` connection pool. Multiple components against
+ * the same room share one Socket.IO client; the shared refcount + grace logic
+ * (incl. absorbing React 19 strict-mode's mount → cleanup → mount cycle) lives
+ * in {@link createRefcountedPool}.
  */
-interface IPoolEntry {
-  client: ICommunicationClient;
-  refCount: number;
-  cleanupHandle: ReturnType<typeof setTimeout> | null;
-}
-
-const STRICT_MODE_GRACE_MS = 100;
-
-const clientPool = new Map<string, IPoolEntry>();
+const clientPool = createRefcountedPool<ICommunicationClient>(client => client.disconnect());
 
 /**
  * The auth mode is part of the key: an authenticated and an anonymous
@@ -34,38 +23,15 @@ function poolKey(baseUrl: string, roomId: string, mode: 'auth' | 'anon'): string
 }
 
 function acquireClient(key: string, factory: () => ICommunicationClient): ICommunicationClient {
-  const cached = clientPool.get(key);
-  if (cached !== undefined) {
-    if (cached.cleanupHandle !== null) {
-      clearTimeout(cached.cleanupHandle);
-      cached.cleanupHandle = null;
-    }
-    cached.refCount += 1;
-    return cached.client;
-  }
-  const created = factory();
-  clientPool.set(key, { client: created, refCount: 1, cleanupHandle: null });
-  created.connect();
-  return created;
+  return clientPool.acquire(key, () => {
+    const created = factory();
+    created.connect();
+    return created;
+  });
 }
 
 function releaseClient(key: string): void {
-  const entry = clientPool.get(key);
-  if (entry === undefined) {
-    return;
-  }
-  entry.refCount -= 1;
-  if (entry.refCount > 0) {
-    return;
-  }
-  entry.cleanupHandle = setTimeout(() => {
-    const current = clientPool.get(key);
-    if (current === undefined || current.refCount > 0) {
-      return;
-    }
-    current.client.disconnect();
-    clientPool.delete(key);
-  }, STRICT_MODE_GRACE_MS);
+  clientPool.release(key);
 }
 
 /**
