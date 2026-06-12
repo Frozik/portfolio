@@ -1,5 +1,4 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
 
 import { DialogShell } from '../../../shared/ui/DialogShell';
 import { usePendulumStore } from '../application/usePendulumStore';
@@ -15,13 +14,6 @@ export const Pendulum = observer(() => {
   usePreventScreensaver();
 
   const store = usePendulumStore();
-
-  // init is idempotent — safe to call on every mount (including StrictMode double-mount).
-  // dispose is NOT tied to useEffect cleanup because StrictMode would destroy
-  // the singleton store's subscriptions and re-init would create conflicting IndexedDB connections.
-  useEffect(() => {
-    store.init();
-  }, [store]);
 
   return (
     <div className="relative flex h-full w-full flex-col bg-landing-bg">

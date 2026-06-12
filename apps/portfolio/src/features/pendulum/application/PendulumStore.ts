@@ -15,7 +15,6 @@ import {
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import type { CommonStore } from '../../../app/stores/CommonStore';
 import type { IGeneration } from '../domain/defs';
 import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
 import type { TModuleIndexDBGenerations } from '../infrastructure/IndexedDBGenerationsRepository';
@@ -38,30 +37,23 @@ export class PendulumStore {
 
   dbModule: TModuleIndexDBGenerations | undefined = undefined;
 
-  private readonly commonStore: CommonStore;
   private readonly disposers: (() => void)[] = [];
   private loadCompetitionSub?: () => void;
   private loadRobotSub?: () => void;
 
-  constructor(commonStore: CommonStore) {
-    this.commonStore = commonStore;
-    makeAutoObservable<
-      PendulumStore,
-      'commonStore' | 'disposers' | 'loadCompetitionSub' | 'loadRobotSub' | 'initialized'
-    >(
+  constructor() {
+    makeAutoObservable<PendulumStore, 'disposers' | 'loadCompetitionSub' | 'loadRobotSub'>(
       this,
       {
-        commonStore: false,
         disposers: false,
         loadCompetitionSub: false,
         loadRobotSub: false,
-        initialized: false,
       },
       { autoBind: true }
     );
 
     // Initialize IndexedDB module immediately in constructor.
-    // This runs once when the store singleton is created — no lifecycle coupling.
+    // Runs once per store instance; subscriptions are torn down in dispose().
     this.initGenerationsSync();
   }
 
@@ -157,9 +149,26 @@ export class PendulumStore {
     const sub = obs$.subscribe({
       next: (generations: IGeneration[]) => {
         runInAction(() => {
+          // The DB snapshot may lag behind optimistic appends from
+          // addCompetitionRun (persistence is fire-and-forget and slow while
+          // TF training saturates the main thread). Replacing the list
+          // wholesale would briefly drop freshly computed generations — keep
+          // the optimistic tail that the snapshot does not know about yet.
+          const snapshotMaxId =
+            generations.length > 0
+              ? generations[generations.length - 1].id
+              : Number.NEGATIVE_INFINITY;
+          const optimisticTail =
+            isSyncedValueDescriptor(this.currentCompetition) &&
+            this.currentCompetition.value.competitionStart === start
+              ? this.currentCompetition.value.generations.filter(
+                  generation => generation.id > snapshotMaxId
+                )
+              : [];
+
           this.currentCompetition = createSyncedValueDescriptor({
             competitionStart: start,
-            generations,
+            generations: [...generations, ...optimisticTail],
           });
         });
       },
@@ -173,7 +182,6 @@ export class PendulumStore {
     });
 
     this.loadCompetitionSub = () => sub.unsubscribe();
-    this.disposers.push(this.loadCompetitionSub);
   }
 
   setSelectedRobotId(robotId: string | undefined): void {
@@ -241,34 +249,18 @@ export class PendulumStore {
     });
 
     this.loadRobotSub = () => sub.unsubscribe();
-    this.disposers.push(this.loadRobotSub);
-  }
-
-  private initialized = false;
-
-  init(): void {
-    // Idempotent — safe to call multiple times (e.g. StrictMode double-mount).
-    if (this.initialized) {
-      return;
-    }
-    this.initialized = true;
   }
 
   dispose(): void {
-    // Only dispose if actually initialized — prevents StrictMode
-    // cleanup from destroying the store that will be re-init'd immediately.
-    if (!this.initialized) {
-      return;
-    }
-    this.initialized = false;
     this.loadRobotSub?.();
     this.loadRobotSub = undefined;
+    this.loadCompetitionSub?.();
+    this.loadCompetitionSub = undefined;
 
     for (const disposer of this.disposers) {
       disposer();
     }
     this.disposers.length = 0;
-    this.commonStore.clearMenuActions();
   }
 
   private initGenerationsSync(): void {

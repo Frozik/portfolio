@@ -100,10 +100,6 @@ export class ViewportInputController {
     return this.pointers.length >= 2;
   }
 
-  get isActuallyPanning(): boolean {
-    return this.actuallyPanning;
-  }
-
   getCursorCss(): { readonly x: number; readonly y: number } | undefined {
     return this.cursorCssPosition;
   }

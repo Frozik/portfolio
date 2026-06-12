@@ -19,14 +19,16 @@ import {
   isWaitingArgumentsValueDescriptor,
   matchValueDescriptor,
   mergeMetaValueDescriptor,
-  RECEIVING_VD,
   REQUESTING_VD,
-  upsertMetaValueDescriptor,
   WAITING_VD,
 } from './utils';
 
 const UNKNOWN_FAIL: ValueDescriptorFail = Fail(EValueDescriptorErrorCode.UNKNOWN, {
   message: 'test error',
+});
+
+const RECEIVING_TEST_VD = createUnsyncedValueDescriptor(null, {
+  pendingState: EValueDescriptorPendingState.Receiving,
 });
 
 describe('createSyncedValueDescriptor', () => {
@@ -237,8 +239,8 @@ describe('pending state checks', () => {
   });
 
   describe('isReceivingValueDescriptor', () => {
-    it('returns true for RECEIVING_VD', () => {
-      expect(isReceivingValueDescriptor(RECEIVING_VD)).toBe(true);
+    it('returns true for a receiving VD', () => {
+      expect(isReceivingValueDescriptor(RECEIVING_TEST_VD)).toBe(true);
     });
 
     it('returns false for REQUESTING_VD', () => {
@@ -251,8 +253,8 @@ describe('pending state checks', () => {
       expect(isLoadingValueDescriptor(REQUESTING_VD)).toBe(true);
     });
 
-    it('returns true for RECEIVING_VD', () => {
-      expect(isLoadingValueDescriptor(RECEIVING_VD)).toBe(true);
+    it('returns true for a receiving VD', () => {
+      expect(isLoadingValueDescriptor(RECEIVING_TEST_VD)).toBe(true);
     });
 
     it('returns false for WAITING_VD', () => {
@@ -356,17 +358,6 @@ describe('REQUESTING_VD', () => {
   });
 });
 
-describe('RECEIVING_VD', () => {
-  it('has correct structure', () => {
-    expect(RECEIVING_VD).toEqual({
-      state: EValueDescriptorState.Unsynced,
-      value: null,
-      fail: null,
-      meta: { pendingState: EValueDescriptorPendingState.Receiving },
-    });
-  });
-});
-
 describe('mergeMetaValueDescriptor', () => {
   it('merges two meta states preferring first', () => {
     const a = { pendingState: EValueDescriptorPendingState.Requesting };
@@ -385,27 +376,6 @@ describe('mergeMetaValueDescriptor', () => {
 
   it('returns null pendingState when both are null', () => {
     expect(mergeMetaValueDescriptor(null, null)).toEqual({ pendingState: null });
-  });
-});
-
-describe('upsertMetaValueDescriptor', () => {
-  it('updates meta on a synced VD', () => {
-    const vd = createSyncedValueDescriptor(10);
-    const result = upsertMetaValueDescriptor(vd, {
-      pendingState: EValueDescriptorPendingState.Requesting,
-    });
-
-    expect(result.meta).toEqual({ pendingState: EValueDescriptorPendingState.Requesting });
-    expect(result.value).toBe(10);
-  });
-
-  it('merges meta on an unsynced VD preserving existing', () => {
-    const vd = createUnsyncedValueDescriptor(UNKNOWN_FAIL, {
-      pendingState: EValueDescriptorPendingState.Receiving,
-    });
-    const result = upsertMetaValueDescriptor(vd, {});
-
-    expect(result.meta).toEqual({ pendingState: EValueDescriptorPendingState.Receiving });
   });
 });
 

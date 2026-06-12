@@ -2,7 +2,6 @@ import { clamp } from 'lodash-es';
 import {
   DEFAULT_PRICE_MAX,
   DEFAULT_PRICE_MIN,
-  FOLLOW_EPSILON_MS,
   FUTURE_PADDING_MS,
   PAN_INERTIA_DAMPING,
   PAN_INERTIA_MIN_VELOCITY_MS,
@@ -79,16 +78,6 @@ export function clampTargetEnd(targetEndMs: UnixTimeMs, input: IViewportClampInp
     return maxEnd as UnixTimeMs;
   }
   return clamp(targetEndMs, minEnd, maxEnd) as UnixTimeMs;
-}
-
-export function isFollowing(
-  viewport: IHeatmapViewport,
-  lastDisplayMs: UnixTimeMs | undefined
-): boolean {
-  if (lastDisplayMs === undefined) {
-    return true;
-  }
-  return lastDisplayMs - viewport.viewTimeEndMs < FOLLOW_EPSILON_MS;
 }
 
 /**

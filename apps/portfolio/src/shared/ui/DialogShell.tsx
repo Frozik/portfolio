@@ -10,8 +10,6 @@ import { MonoKicker } from './MonoKicker';
 const CLOSE_ICON_SIZE_PX = 14;
 const DEFAULT_CLOSE_LABEL = 'Close';
 
-type DialogShellAccent = 'yellow' | 'purple';
-
 type DialogShellProps = {
   readonly open: boolean;
   readonly onClose: () => void;
@@ -33,13 +31,6 @@ type DialogShellProps = {
    * expose extra actions.
    */
   readonly headerExtra?: ReactNode;
-  /**
-   * Accent palette applied to the dialog. Defaults to `'yellow'`, which is
-   * the current Retro design. `'purple'` is reserved for the Conf feature
-   * and does not yet introduce visual changes — the prop is declared now so
-   * call sites can be wired up ahead of the styling rollout.
-   */
-  readonly accent?: DialogShellAccent;
 };
 
 /**
@@ -60,7 +51,6 @@ const DialogShellComponent = ({
   closeLabel = DEFAULT_CLOSE_LABEL,
   dismissible = true,
   headerExtra,
-  accent = 'yellow',
 }: DialogShellProps) => {
   const handleOpenChange = useFunction((nextOpen: boolean) => {
     if (!nextOpen) {
@@ -85,7 +75,6 @@ const DialogShellComponent = ({
           )}
         />
         <DialogPrimitive.Content
-          data-accent={accent}
           onPointerDownOutside={hardInteractionGuard}
           onEscapeKeyDown={hardInteractionGuard}
           onInteractOutside={hardInteractionGuard}

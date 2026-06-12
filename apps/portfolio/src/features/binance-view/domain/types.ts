@@ -3,11 +3,6 @@ import type { Opaque } from '@frozik/utils/types/base';
 
 export type UnixTimeMs = Opaque<'UnixTimeMs', number>;
 
-export interface IOrderbookLevel {
-  readonly price: number;
-  readonly volume: number;
-}
-
 export interface IOrderbookSnapshot {
   readonly eventTimeMs: UnixTimeMs;
   readonly bids: ReadonlyArray<readonly [price: number, volume: number]>;
@@ -64,21 +59,9 @@ export type ConnectionState =
   | 'idle'
   | 'connecting'
   | 'connected'
-  | 'reconnecting'
   | 'disconnected'
   | 'error'
   | 'unsupported';
-
-export interface IBinanceViewState {
-  connection: ConnectionState;
-  instrument: string;
-  priceStep: number | undefined;
-  pageOpenTimeMs: UnixTimeMs | undefined;
-  lastDisplaySnapshotTimeMs: UnixTimeMs | undefined;
-  snapshotsReceivedCount: number;
-  errorMessage: string | undefined;
-  hoveredCell: IHitTestResult | undefined;
-}
 
 export interface IBinanceConfig {
   readonly instrument: string;
@@ -96,5 +79,4 @@ export interface IBinanceConfig {
   readonly flushEverySnapshots: number;
   readonly maxSequenceGapRetries: number;
   readonly reconnectDelayMs: Milliseconds;
-  readonly fallbackPriceStep: number;
 }

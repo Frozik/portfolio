@@ -13,7 +13,6 @@ export interface IFullscreenLandscape {
 
 interface ISavedState {
   readonly wasFullscreen: boolean;
-  readonly previousOrientation: OrientationLockType;
 }
 
 /**
@@ -69,7 +68,6 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
 
     savedStateRef.current = {
       wasFullscreen: document.fullscreenElement !== null,
-      previousOrientation: screen.orientation.type as OrientationLockType,
     };
 
     try {

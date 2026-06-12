@@ -16,40 +16,6 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     retro: 'Ретро',
     conf: 'Конф',
   },
-  navigation: {
-    curriculumVitae: 'Резюме',
-    sectionAI: 'ИИ',
-    pendulum: 'Маятник',
-    pendulumMobileWarning: 'Только десктоп',
-    pendulumTooltip:
-      'Генетический алгоритм эволюционирует нейронные сети для балансировки перевёрнутого маятника.',
-    sectionWebGPU: 'WebGPU',
-    sun: 'Солнце',
-    graphics: 'Графика',
-    graphicsTooltip:
-      'GPU-ускоренный рендеринг фигур, линий со скруглёнными соединениями и прозрачностью — почти нулевая нагрузка на CPU и минимальная на GPU',
-    timeseries: 'Таймсерии',
-    timeseriesTooltip:
-      'WebGPU-график таймсерий, способный отрисовывать гигабайты данных с высоким FPS при почти нулевой нагрузке на CPU',
-    binance: 'Стакан Binance',
-    binanceTooltip:
-      'Живая тепловая карта стакана Binance spot на WebGPU: градиент зелёный→красный по объёму × цене, часовая история в IndexedDB, авто-подгон min/max на GPU',
-    sectionGames: 'Игры',
-    sudoku: 'Судоку',
-    stereometry: 'Стереометрия',
-    sectionCollab: 'Коллаборация',
-    retro: 'Ретро',
-    retroTooltip:
-      'Локальная коллаборативная доска ретроспектив на Yjs CRDT и WebRTC — P2P-синхронизация, хранение в IndexedDB, без бекенда',
-    conf: 'Конф',
-    confTooltip:
-      'Анонимный WebRTC-видеозвонок на двух человек с face-tracking в браузере через MediaPipe — AR-очки поверх обоих собеседников, бэкенд только для сигналинга',
-    sectionUIUX: 'UI/UX',
-    controls: 'Элементы управления',
-  },
-  sidebar: {
-    scanToOpen: 'Сканируйте, чтобы открыть эту страницу',
-  },
   errorPage: {
     statusMap: {
       404: { text: 'Не найдено', message: 'Эта страница куда-то затерялась...' },

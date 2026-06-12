@@ -38,7 +38,6 @@ export const controlsTranslationsEn = {
     nearestHint: 'Nearest match \u2014 "13:00" resolves to today even if already past',
     futureHint: 'Future only \u2014 "13:00" advances to tomorrow if already past',
     placeholder: 'Type a date (tomorrow 13:00, mon 9am, 2024-01-15...)',
-    resolvedValue: 'Resolved value',
     resolvedKicker: 'resolved',
   },
   numberPage: {

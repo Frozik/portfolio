@@ -47,20 +47,6 @@ export function resolvePreviousWeekdaySlots(
   return dateToSlots(today.subtract({ days: offset }));
 }
 
-export function resolvePartialDayMonthSlots(
-  day: number,
-  monthName: string,
-  today: Temporal.PlainDate
-): ISlotMap | undefined {
-  const month = MONTH_MAP.get(monthName.toLowerCase());
-
-  if (isNil(month)) {
-    return undefined;
-  }
-
-  return resolvePartialDayMonthNumericSlots(day, month, today);
-}
-
 export function resolvePartialDayMonthNumericSlots(
   day: number,
   month: number,

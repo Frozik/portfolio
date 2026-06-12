@@ -1,3 +1,4 @@
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 
@@ -5,15 +6,18 @@ import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
+import { enumerateVoteTargets } from '../../domain/retro-snapshot';
 import type {
+  CardId,
   ClientId,
   ColumnId,
+  GroupId,
   IColumnConfig,
   IRetroCard,
   IRetroGroup,
 } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';
-import { countTotalVotesOnTarget } from '../../domain/voting';
+import { rankTargetsByVotes } from '../../domain/voting';
 import { retroT as t } from '../translations';
 import { ActionItemsList } from './ActionItemsList';
 
@@ -60,32 +64,49 @@ export const DiscussPanel = observer(({ store }: DiscussPanelProps) => {
       columnById.set(column.id, column);
     });
 
-    const cardEntries: TRankedEntry[] = snapshot.cards
-      .filter(card => card.groupId === null)
-      .map(card => ({
-        kind: 'card' as const,
-        id: card.id,
-        card,
-        column: columnById.get(card.columnId) ?? null,
-        votes: countTotalVotesOnTarget(snapshot.votes, card.id),
-      }));
-
-    const groupEntries: TRankedEntry[] = snapshot.groups.map(group => {
-      const cardsInGroup = snapshot.cards.filter(card => card.groupId === group.id);
-      return {
-        kind: 'group' as const,
-        id: group.id,
-        group,
-        column: columnById.get(group.columnId) ?? null,
-        cards: cardsInGroup,
-        votes: countTotalVotesOnTarget(snapshot.votes, group.id),
-      };
+    const groupById = new Map<GroupId, IRetroGroup>();
+    snapshot.groups.forEach(group => {
+      groupById.set(group.id, group);
     });
 
-    return [...cardEntries, ...groupEntries]
-      .filter(entry => entry.votes > 0)
-      .sort((left, right) => right.votes - left.votes)
-      .slice(0, TOP_CARDS_LIMIT);
+    const cardById = new Map<CardId, IRetroCard>();
+    snapshot.cards.forEach(card => {
+      cardById.set(card.id, card);
+    });
+
+    const rankedTargets = rankTargetsByVotes(enumerateVoteTargets(snapshot), snapshot.votes);
+
+    const entries: TRankedEntry[] = [];
+    for (const { targetId, totalVotes } of rankedTargets) {
+      if (totalVotes === 0 || entries.length >= TOP_CARDS_LIMIT) {
+        break;
+      }
+
+      const group = groupById.get(targetId as GroupId);
+      if (!isNil(group)) {
+        entries.push({
+          kind: 'group',
+          id: group.id,
+          group,
+          column: columnById.get(group.columnId) ?? null,
+          cards: snapshot.cards.filter(card => card.groupId === group.id),
+          votes: totalVotes,
+        });
+        continue;
+      }
+
+      const card = cardById.get(targetId as CardId);
+      if (!isNil(card)) {
+        entries.push({
+          kind: 'card',
+          id: card.id,
+          card,
+          column: columnById.get(card.columnId) ?? null,
+          votes: totalVotes,
+        });
+      }
+    }
+    return entries;
   }, [snapshot]);
 
   if (store.phase !== ERetroPhase.Discuss) {

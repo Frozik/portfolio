@@ -1,6 +1,7 @@
 import { formatISO8601Local } from '@frozik/utils/date/format';
 import type { ISO } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
+import { getCardsInColumn } from './retro-snapshot';
 import type {
   CardId,
   IActionItem,
@@ -55,7 +56,7 @@ export function renderSnapshotToMarkdown(
   lines.push('');
 
   for (const column of snapshot.columns) {
-    const cardsInColumn = snapshot.cards.filter(card => card.columnId === column.id);
+    const cardsInColumn = getCardsInColumn(snapshot, column.id);
     const groupsInColumn = snapshot.groups.filter(group => group.columnId === column.id);
 
     lines.push(`## ${column.title} (${labels.cardsCount(cardsInColumn.length)})`);

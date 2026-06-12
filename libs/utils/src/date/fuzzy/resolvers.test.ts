@@ -6,7 +6,6 @@ import {
   resolveNextWeekdaySlots,
   resolveOrdinalDaySlots,
   resolvePartialDayMonthNumericSlots,
-  resolvePartialDayMonthSlots,
   resolvePreviousWeekdaySlots,
   resolveQuarterSlots,
 } from './resolvers';
@@ -80,34 +79,6 @@ describe('resolvePreviousWeekdaySlots', () => {
 
   it('returns undefined for invalid day name', () => {
     expect(resolvePreviousWeekdaySlots('xyz', wednesday)).toBeUndefined();
-  });
-});
-
-describe('resolvePartialDayMonthSlots', () => {
-  const today = Temporal.PlainDate.from('2024-06-15');
-
-  it('resolves future day+month in current year', () => {
-    expect(resolvePartialDayMonthSlots(25, 'dec', today)).toEqual({
-      year: 2024,
-      month: 12,
-      day: 25,
-    });
-  });
-
-  it('resolves past day+month to next year', () => {
-    expect(resolvePartialDayMonthSlots(1, 'jan', today)).toEqual({
-      year: 2025,
-      month: 1,
-      day: 1,
-    });
-  });
-
-  it('returns undefined for unknown month', () => {
-    expect(resolvePartialDayMonthSlots(1, 'xyz', today)).toBeUndefined();
-  });
-
-  it('returns undefined for invalid day in month', () => {
-    expect(resolvePartialDayMonthSlots(31, 'feb', today)).toBeUndefined();
   });
 });
 

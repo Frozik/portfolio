@@ -45,7 +45,7 @@ export const VoteButton = observer(({ store, targetId }: VoteButtonProps) => {
     );
   }
 
-  const canAdd = store.canVoteMore;
+  const canAdd = store.canAddVoteTo(targetId);
   const isVoted = myVotes > 0;
 
   return (

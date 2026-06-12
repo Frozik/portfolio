@@ -72,18 +72,6 @@ export function mergeMetaValueDescriptor(
   };
 }
 
-export function upsertMetaValueDescriptor<T extends AnyValueDescriptor>(
-  vd: T,
-  meta: Partial<MetaState>
-): T {
-  return {
-    state: vd.state,
-    fail: vd.fail,
-    value: vd.value,
-    meta: mergeMetaValueDescriptor(meta, vd.meta),
-  } as T;
-}
-
 export const EMPTY_VD: UnsyncedValueDescriptor = {
   state: EValueDescriptorState.Unsynced,
   value: null,
@@ -106,15 +94,6 @@ export const REQUESTING_VD: UnsyncedValueDescriptor = {
   fail: null,
   meta: {
     pendingState: EValueDescriptorPendingState.Requesting,
-  },
-};
-
-export const RECEIVING_VD: UnsyncedValueDescriptor = {
-  state: EValueDescriptorState.Unsynced,
-  value: null,
-  fail: null,
-  meta: {
-    pendingState: EValueDescriptorPendingState.Receiving,
   },
 };
 

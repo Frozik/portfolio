@@ -53,7 +53,7 @@ export class BinanceChartState {
 
   private readonly pageOpenTimeMs: UnixTimeMs;
   private readonly updateSpeedMs: number;
-  private priceStep: number;
+  private readonly priceStep: number;
 
   private renderer: BinanceChartRenderer | null = null;
   private viewportControllerInternal: ViewportController | null = null;
@@ -169,11 +169,6 @@ export class BinanceChartState {
    */
   setTradesStore(view: ITradesLayerStoreShape | undefined): void {
     this.renderer?.setTradesStore(view);
-  }
-
-  setPriceStep(priceStep: number): void {
-    this.priceStep = priceStep;
-    this.viewportControllerInternal?.setPriceStep(priceStep);
   }
 
   releaseBlockSlot(blockId: UnixTimeMs): void {

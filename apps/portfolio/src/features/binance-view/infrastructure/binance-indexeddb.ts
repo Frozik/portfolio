@@ -45,13 +45,6 @@ export const TRADE_BUCKETS_RAW_STORE = 'trade-buckets-raw';
  */
 const LEGACY_AVG_PRICE_BLOCKS_STORE = 'avg-price-blocks';
 
-/**
- * @deprecated Use {@link ORDERBOOK_BLOCKS_STORE}. Retained as a
- * re-export so legacy imports still compile during the transition;
- * remove once no external module references it.
- */
-export const BLOCKS_STORE = ORDERBOOK_BLOCKS_STORE;
-
 export interface IOrderbookBlockRecord {
   readonly blockId: UnixTimeMs;
   readonly firstTimestampMs: UnixTimeMs;
@@ -310,26 +303,5 @@ export async function openBinanceDb(
     close() {
       db.close();
     },
-  };
-}
-
-/**
- * @deprecated Prefer {@link openBinanceDb} — returns the orderbook-only
- * view into the full Binance DB for existing callers that haven't
- * migrated yet. Same lifetime semantics as before; `close()` closes
- * the shared underlying database.
- */
-export async function openOrderbookDb(
-  dbName: string = DEFAULT_DB_NAME,
-  dbVersion: number = DEFAULT_DB_VERSION
-): Promise<IOrderbookDb> {
-  const binance = await openBinanceDb(dbName, dbVersion);
-  return {
-    clearAll: () => binance.orderbook.clearAll(),
-    putBlock: record => binance.orderbook.putBlock(record),
-    getBlock: blockId => binance.orderbook.getBlock(blockId),
-    deleteBlock: blockId => binance.orderbook.deleteBlock(blockId),
-    countBlocks: () => binance.orderbook.countBlocks(),
-    close: () => binance.close(),
   };
 }

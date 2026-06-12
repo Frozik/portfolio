@@ -138,10 +138,6 @@ export class DataController {
     return this.pickLevelAt(located, pointerPrice, priceStep, pointerPx);
   }
 
-  clearCache(): void {
-    this.cache.clear();
-  }
-
   dispose(): void {
     this.cache.clear();
   }

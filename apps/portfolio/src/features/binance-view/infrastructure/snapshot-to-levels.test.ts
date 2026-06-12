@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { FLOATS_PER_TEXEL, SNAPSHOT_SLOTS, TEXEL_INTERP_CHANNEL } from '../domain/constants';
 import type { IOrderbookSnapshot, UnixTimeMs } from '../domain/types';
-import { levelSide, snapshotToLevels } from './snapshot-to-levels';
+import { snapshotToLevels } from './snapshot-to-levels';
 
 const DEPTH = 50;
 
@@ -120,22 +120,5 @@ describe('snapshotToLevels', () => {
     const snapshot = makeSnapshot({ bids: [[100, 1]] });
     const result = snapshotToLevels(snapshot, SNAPSHOT_SLOTS, DEPTH, false);
     expect(result[TEXEL_INTERP_CHANNEL]).toBe(0);
-  });
-});
-
-describe('levelSide', () => {
-  test('returns bid for indices [0 .. depth)', () => {
-    expect(levelSide(0, DEPTH)).toBe('bid');
-    expect(levelSide(DEPTH - 1, DEPTH)).toBe('bid');
-  });
-
-  test('returns ask for indices [depth .. 2*depth)', () => {
-    expect(levelSide(DEPTH, DEPTH)).toBe('ask');
-    expect(levelSide(2 * DEPTH - 1, DEPTH)).toBe('ask');
-  });
-
-  test('returns padding beyond 2*depth', () => {
-    expect(levelSide(2 * DEPTH, DEPTH)).toBe('padding');
-    expect(levelSide(127, DEPTH)).toBe('padding');
   });
 });

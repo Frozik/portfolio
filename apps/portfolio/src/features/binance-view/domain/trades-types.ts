@@ -136,18 +136,3 @@ export interface ITradeBucketRawRecord {
     readonly trades: ReadonlyArray<ITrade>;
   }>;
 }
-
-/**
- * Repository contract owned by the infrastructure layer (IDB-backed).
- * Defined here so the application layer can depend on the abstraction
- * without importing IndexedDB code.
- */
-export interface ITradesBlockRepository {
-  putBlock(record: ITradeBlockRecord): Promise<void>;
-  getBlock(blockId: UnixTimeMs): Promise<ITradeBlockRecord | undefined>;
-  deleteBlock(blockId: UnixTimeMs): Promise<void>;
-
-  putRawTrades(record: ITradeBucketRawRecord): Promise<void>;
-  getRawTrades(blockId: UnixTimeMs): Promise<ITradeBucketRawRecord | undefined>;
-  deleteRawTrades(blockId: UnixTimeMs): Promise<void>;
-}

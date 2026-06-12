@@ -1,5 +1,3 @@
-import { CommonStore } from './CommonStore';
-
 interface IDisposable {
   dispose: () => void;
 }
@@ -14,8 +12,6 @@ function isDisposable(value: unknown): value is IDisposable {
 }
 
 export class RootStore {
-  readonly commonStore = new CommonStore();
-
   private featureStores = new Map<string, unknown>();
 
   getOrCreateFeatureStore<T>(key: string, factory: () => T): T {

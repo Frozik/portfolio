@@ -1,3 +1,4 @@
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { ISO, Milliseconds } from '@frozik/utils/date/types';
 import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
@@ -8,20 +9,23 @@ import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
+import { isNil } from 'lodash-es';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
 import {
   MAX_TIMER_DURATION_MS,
   MIN_TIMER_DURATION_MS,
-  TIMER_WARNING_THRESHOLD_MS,
   TOAST_AUTOCLEAR_MS,
 } from '../domain/constants';
 import { createRetroSnapshot } from '../domain/retro-snapshot';
 import { getTemplateById } from '../domain/templates';
 import {
   computeRemainingMs,
+  ETimerStatus,
   extendTimer,
+  getTimerStatus,
+  isTimerInWarningZone,
   pauseTimer as pauseTimerState,
   resetTimer as resetTimerState,
   startTimer as startTimerState,
@@ -44,6 +48,7 @@ import type {
   VotesByTarget,
 } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
+import { canPlaceVote, canRetractVote, countVotesUsedByClient } from '../domain/voting';
 import type { IRetroDocHandles } from '../domain/yjs-schema';
 import {
   getRetroHandles,
@@ -142,7 +147,6 @@ export class RoomStore {
         remainingTimerMs: computed,
         phase: computed,
         myVotesUsed: computed,
-        canVoteMore: computed,
         isFacilitator: computed,
         connectionStatus: computed,
         updateSnapshotFromDoc: action,
@@ -287,25 +291,27 @@ export class RoomStore {
   }
 
   get timerSeverity(): TimerSeverity {
-    const meta = this.currentSnapshot?.meta;
-    if (meta === undefined) {
+    const timer = this.currentSnapshot?.meta.timer;
+    if (isNil(timer)) {
       return 'idle';
     }
-    const { timer } = meta;
-    const remaining = computeRemainingMs(timer, this.timerTickNow as Milliseconds);
-    if (timer.startedAt === null) {
-      // Paused with 0 remaining is the auto-pause-at-expiry state — keep
-      // it visually "expired" (red clock) even though the timer isn't
-      // running. Any other paused/idle value stays neutral.
-      return remaining <= 0 ? 'expired' : 'idle';
+    const now = this.timerTickNow as Milliseconds;
+    const status = getTimerStatus(timer, now);
+    switch (status) {
+      case ETimerStatus.Idle:
+        return 'idle';
+      case ETimerStatus.Paused:
+        // Paused with 0 remaining is the auto-pause-at-expiry state — keep
+        // it visually "expired" (red clock) even though the timer isn't
+        // running. Any other paused value stays neutral.
+        return computeRemainingMs(timer, now) <= 0 ? 'expired' : 'idle';
+      case ETimerStatus.Expired:
+        return 'expired';
+      case ETimerStatus.Running:
+        return isTimerInWarningZone(timer, now) ? 'warning' : 'running';
+      default:
+        return assertNever(status);
     }
-    if (remaining <= 0) {
-      return 'expired';
-    }
-    if (remaining <= TIMER_WARNING_THRESHOLD_MS) {
-      return 'warning';
-    }
-    return 'running';
   }
 
   get remainingTimerMs(): Milliseconds {
@@ -325,16 +331,26 @@ export class RoomStore {
     if (votes === undefined) {
       return 0;
     }
-    let total = 0;
-    votes.forEach(perClient => {
-      total += perClient.get(this.identity.clientId as ClientId) ?? 0;
-    });
-    return total;
+    return countVotesUsedByClient(votes, this.identity.clientId as ClientId);
   }
 
-  get canVoteMore(): boolean {
-    const limit = this.currentSnapshot?.meta.votesPerParticipant ?? 0;
-    return this.myVotesUsed < limit;
+  /**
+   * Whether the local client may place one more vote on `targetId` —
+   * consults the domain rules (Vote phase, total allowance, per-target
+   * limit). Drives the disabled state of the "+" vote button.
+   */
+  canAddVoteTo(targetId: CardId | GroupId): boolean {
+    const snapshot = this.currentSnapshot;
+    if (isNil(snapshot)) {
+      return false;
+    }
+    return canPlaceVote({
+      phase: snapshot.meta.phase,
+      votes: snapshot.votes,
+      targetId,
+      clientId: this.identity.clientId as ClientId,
+      votesPerParticipant: snapshot.meta.votesPerParticipant,
+    }).allowed;
   }
 
   get isFacilitator(): boolean {
@@ -871,7 +887,7 @@ export class RoomStore {
   }
 
   addVote(targetId: CardId | GroupId): void {
-    if (!this.canVoteMore) {
+    if (!this.canAddVoteTo(targetId)) {
       return;
     }
     this.providers.doc.transact(() => {
@@ -887,6 +903,14 @@ export class RoomStore {
   }
 
   removeVote(targetId: CardId | GroupId): void {
+    const snapshot = this.currentSnapshot;
+    if (isNil(snapshot)) {
+      return;
+    }
+    const clientId = this.identity.clientId as ClientId;
+    if (!canRetractVote(snapshot.meta.phase, snapshot.votes, targetId, clientId)) {
+      return;
+    }
     this.providers.doc.transact(() => {
       const perClient = this.handles.votes.get(targetId);
       if (perClient === undefined) {

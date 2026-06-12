@@ -53,13 +53,6 @@ export function readDatabaseItem<TSchema extends DBSchema>(
   return transaction.store.get(key);
 }
 
-export function readDatabaseItems<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readonly'>,
-  keys: StoreKey<TSchema, StoreNames<TSchema>>[]
-): Promise<StoreValue<TSchema, StoreNames<TSchema>> | undefined>[] {
-  return keys.map(key => transaction.store.get(key));
-}
-
 export function updateDatabaseItem<TSchema extends DBSchema>(
   transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
   key: StoreKey<TSchema, StoreNames<TSchema>>,
@@ -68,23 +61,9 @@ export function updateDatabaseItem<TSchema extends DBSchema>(
   return transaction.store.put(item, key);
 }
 
-export function updateDatabaseItems<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
-  entities: [StoreKey<TSchema, StoreNames<TSchema>>, StoreValue<TSchema, StoreNames<TSchema>>][]
-): Promise<StoreKey<TSchema, StoreNames<TSchema>>>[] {
-  return entities.map(([key, item]) => updateDatabaseItem(transaction, key, item));
-}
-
 export function deleteDatabaseItem<TSchema extends DBSchema>(
   transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
   key: StoreKey<TSchema, StoreNames<TSchema>>
 ): Promise<void> {
   return transaction.store.delete(key);
-}
-
-export function deleteDatabaseItems<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
-  keys: StoreKey<TSchema, StoreNames<TSchema>>[]
-): Promise<void>[] {
-  return keys.map(key => transaction.store.delete(key));
 }

@@ -217,16 +217,19 @@ async function getGenerations(
   database: IDBPDatabase<IDBCompetitions>,
   competitionStart: ISO
 ): Promise<IGeneration[]> {
-  const generationsTransaction = database.transaction(GENERATIONS_TABLE_NAME, 'readonly');
+  // Single readonly transaction over both stores — generations and their
+  // robots come from one consistent snapshot (two separate transactions could
+  // straddle a concurrent write/delete and observe a generation without its
+  // robots).
+  const transaction = database.transaction([GENERATIONS_TABLE_NAME, ROBOTS_TABLE_NAME], 'readonly');
 
-  const competitionStartIndex = generationsTransaction
+  const competitionStartIndex = transaction
     .objectStore(GENERATIONS_TABLE_NAME)
     .index(GENERATION_COMPETITION_START_INDEX);
   const generations = await competitionStartIndex.getAll(competitionStart);
   const orderedGenerations = orderBy(generations, GENERATION_ID_FIELD);
 
-  const robotsTransaction = database.transaction(ROBOTS_TABLE_NAME, 'readonly');
-  const robotsStore = robotsTransaction.objectStore(ROBOTS_TABLE_NAME);
+  const robotsStore = transaction.objectStore(ROBOTS_TABLE_NAME);
 
   const robotNamesSet = new Set<string>();
 
@@ -330,21 +333,39 @@ async function addGeneration(
   competitionStart: ISO,
   generation: IGeneration
 ): Promise<void> {
-  for (const player of generation.players) {
-    const robot = await database.get(ROBOTS_TABLE_NAME, player.name);
+  // ONE readwrite transaction over both stores. This is load-bearing twice:
+  // 1) atomicity — readers can never observe a generation whose robots are
+  //    only partially written;
+  // 2) ordering — IndexedDB serializes overlapping readwrite transactions in
+  //    creation order, so concurrent addGeneration calls (the training loop
+  //    does not await persistence) commit in generation order. With the old
+  //    per-operation auto-commit transactions generation N+1 could land
+  //    BEFORE generation N, and the full re-read triggered by databaseChanged$
+  //    briefly rendered a list with a hole in the middle.
+  const transaction = database.transaction(
+    [ROBOTS_TABLE_NAME, GENERATIONS_TABLE_NAME],
+    'readwrite'
+  );
+  const robotsStore = transaction.objectStore(ROBOTS_TABLE_NAME);
+  const generationsStore = transaction.objectStore(GENERATIONS_TABLE_NAME);
 
-    await database.put(ROBOTS_TABLE_NAME, {
-      type: ERobotType.TensorFlow,
-      name: player.name,
-      modelUrl: player.modelUrl,
-      score: isNil(robot) ? player.score : Math.max(robot.score, player.score),
-    });
-  }
+  await Promise.all([
+    ...generation.players.map(async player => {
+      const robot = await robotsStore.get(player.name);
+      await robotsStore.put({
+        type: ERobotType.TensorFlow,
+        name: player.name,
+        modelUrl: player.modelUrl,
+        score: isNil(robot) ? player.score : Math.max(robot.score, player.score),
+      });
+    }),
+    generationsStore.put({
+      competitionStart,
+      id: generation.id,
+      maxScore: generation.maxScore,
+      robotNames: generation.players.map(({ name }) => name),
+    }),
+  ]);
 
-  await database.put(GENERATIONS_TABLE_NAME, {
-    competitionStart,
-    id: generation.id,
-    maxScore: generation.maxScore,
-    robotNames: generation.players.map(({ name }) => name),
-  });
+  await transaction.done;
 }

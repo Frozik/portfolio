@@ -19,7 +19,6 @@ import { binanceT } from './translations';
 const CONNECTION_RANK: Record<ConnectionState, number> = {
   connected: 0,
   connecting: 1,
-  reconnecting: 1,
   idle: 2,
   disconnected: 3,
   error: 4,

@@ -13,39 +13,6 @@ export const appTranslationsEn = {
     retro: 'Retro',
     conf: 'Conf',
   },
-  navigation: {
-    curriculumVitae: 'Curriculum Vitae',
-    sectionAI: 'AI',
-    pendulum: 'Pendulum',
-    pendulumMobileWarning: 'Not optimized for mobile',
-    pendulumTooltip: 'Genetic algorithm evolves neural networks to balance an inverted pendulum.',
-    sectionWebGPU: 'WebGPU',
-    sun: 'Sun',
-    graphics: 'Graphics',
-    graphicsTooltip:
-      'GPU-accelerated rendering of shapes, lines with rounded joins, and transparency — near-zero CPU usage and minimal GPU overhead',
-    timeseries: 'Timeseries',
-    timeseriesTooltip:
-      'WebGPU timeseries chart capable of rendering gigabytes of data at high FPS with near-zero CPU usage',
-    binance: 'Binance Orderbook',
-    binanceTooltip:
-      'Live Binance spot orderbook heatmap on WebGPU: green→red magnitude, rolling 1h history in IndexedDB, GPU min/max auto-fit',
-    sectionGames: 'Games',
-    sudoku: 'Sudoku',
-    stereometry: 'Stereometry',
-    sectionCollab: 'Collaboration',
-    retro: 'Retro',
-    retroTooltip:
-      'Local-first collaborative retrospective board on Yjs CRDT and WebRTC — P2P sync, IndexedDB persistence, no backend required',
-    conf: 'Conf',
-    confTooltip:
-      'Anonymous 2-person WebRTC video call with in-browser MediaPipe face tracking — AR glasses overlay over both peers, no backend except signaling',
-    sectionUIUX: 'UI/UX',
-    controls: 'Controls',
-  },
-  sidebar: {
-    scanToOpen: 'Scan to open this page',
-  },
   errorPage: {
     statusMap: {
       404: { text: 'Not Found', message: 'This page wandered off into the void...' },

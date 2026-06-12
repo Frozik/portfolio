@@ -377,7 +377,6 @@ describe('TradesStreamStore', () => {
     expect(store.tradesReceivedCount).toBe(0);
     expect(store.tradesConnection).toBe('idle');
     expect(store.tradesErrorMessage).toBeUndefined();
-    expect(store.tradeBlocksPersisted).toBe(0);
     expect(store.pinnedBucket).toBeUndefined();
     expect(store.hoveredBucketKey).toBeUndefined();
     expect(store.getRawTradesForBucket(SECOND_T_MS, SECOND_T_MS)).toBeUndefined();

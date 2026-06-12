@@ -10,8 +10,6 @@ export function statusLabel(connection: ConnectionState): string {
       return binanceT.status.connecting;
     case 'connected':
       return binanceT.status.connected;
-    case 'reconnecting':
-      return binanceT.status.reconnecting;
     case 'disconnected':
       return binanceT.status.disconnected;
     case 'error':
@@ -26,7 +24,6 @@ export function statusBadgeClass(connection: ConnectionState): string {
     case 'connected':
       return 'bg-success/20 text-success';
     case 'connecting':
-    case 'reconnecting':
       return 'bg-info/20 text-info animate-pulse';
     case 'disconnected':
       return 'bg-warning/20 text-warning';

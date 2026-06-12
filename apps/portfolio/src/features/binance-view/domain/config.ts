@@ -21,5 +21,4 @@ export const BINANCE_CONFIG: IBinanceConfig = {
   flushEverySnapshots: FLUSH_EVERY_SNAPSHOTS,
   maxSequenceGapRetries: MAX_SEQUENCE_GAP_RETRIES,
   reconnectDelayMs: RECONNECT_DELAY_MS,
-  fallbackPriceStep: 0.01,
 };

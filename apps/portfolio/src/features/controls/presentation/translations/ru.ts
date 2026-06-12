@@ -42,7 +42,6 @@ export const controlsTranslationsRu: TranslationOf<typeof controlsTranslationsEn
     nearestHint: 'Ближайшее совпадение \u2014 "13:00" разрешается в сегодня, даже если уже прошло',
     futureHint: 'Только будущее \u2014 "13:00" переносится на завтра, если уже прошло',
     placeholder: 'Введите дату (tomorrow 13:00, mon 9am, 2024-01-15...)',
-    resolvedValue: 'Результат',
     resolvedKicker: 'результат',
   },
   numberPage: {

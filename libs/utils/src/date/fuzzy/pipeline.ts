@@ -94,18 +94,6 @@ function tryParseISODateTime(input: string, timeZone: string): IPipelineResult |
   return undefined;
 }
 
-export function parseTokenBased(
-  input: string,
-  today: Temporal.PlainDate,
-  timeZone: string
-): Temporal.ZonedDateTime | undefined {
-  const result = resolveWithFsmPipeline(input, today, timeZone);
-  if (isNil(result)) {
-    return undefined;
-  }
-  return result.value;
-}
-
 /**
  * Unified FSM-based token pipeline.
  * Uses the FSM tokenizer to produce separator-aware tokens,

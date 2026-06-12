@@ -4,13 +4,7 @@ import type { ValueDescriptorFail } from '../types';
 import { ValueDescriptorError } from './error';
 import { Fail } from './fail';
 import { FAIL_TAG } from './types';
-import {
-  convertErrorToFail,
-  convertFailToError,
-  findWorstFailIndex,
-  isEqualsFails,
-  isFail,
-} from './utils';
+import { convertErrorToFail, convertFailToError, isEqualsFails, isFail } from './utils';
 
 describe('isFail', () => {
   it('returns true for a Fail object', () => {
@@ -123,34 +117,5 @@ describe('convertFailToError', () => {
     expect(restored.message).toBe(original.message);
     expect(restored.code).toBe(original.code);
     expect(restored.description).toBe(original.description);
-  });
-});
-
-describe('findWorstFailIndex', () => {
-  it('returns index of highest-priority fail', () => {
-    const fails: ValueDescriptorFail[] = [
-      Fail(EValueDescriptorErrorCode.CANCELLED, { message: 'a' }),
-      Fail(EValueDescriptorErrorCode.UNAUTHENTICATED, { message: 'b' }),
-      Fail(EValueDescriptorErrorCode.NOT_FOUND, { message: 'c' }),
-    ];
-
-    expect(findWorstFailIndex(fails)).toBe(1);
-  });
-
-  it('returns 0 for a single-element array', () => {
-    const fails: ValueDescriptorFail[] = [
-      Fail(EValueDescriptorErrorCode.UNKNOWN, { message: 'only' }),
-    ];
-
-    expect(findWorstFailIndex(fails)).toBe(0);
-  });
-
-  it('returns first index when all fails are equal priority', () => {
-    const fails: ValueDescriptorFail[] = [
-      Fail(EValueDescriptorErrorCode.UNKNOWN, { message: 'a' }),
-      Fail(EValueDescriptorErrorCode.UNKNOWN, { message: 'b' }),
-    ];
-
-    expect(findWorstFailIndex(fails)).toBe(0);
   });
 });

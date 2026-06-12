@@ -39,9 +39,6 @@ export const PAN_INERTIA_DAMPING = 0.95;
 /** Minimum pan velocity in ms/frame before inertia stops. */
 export const PAN_INERTIA_MIN_VELOCITY_MS = 0.5;
 
-/** Distance (ms) within which viewport is considered "following" latest data. */
-export const FOLLOW_EPSILON_MS = 1000;
-
 /** Snap threshold for lerp (ms): when |delta| < this, snap to target. */
 export const VIEW_SNAP_THRESHOLD_MS = 2;
 

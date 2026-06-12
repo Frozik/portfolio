@@ -6,14 +6,10 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     idle: 'Ожидание',
     connecting: 'Подключение…',
     connected: 'Подключено',
-    reconnecting: 'Переподключение…',
     disconnected: 'Отключено',
-    resyncing: 'Синхронизация стакана…',
     error: 'Ошибка подключения',
     unsupported:
       'WebGPU-устройство не поддерживает требуемые лимиты (maxTextureDimension2D ≥ 8192)',
-    tradesLabel: 'Сделки',
-    tradesGated: 'Ждём стакан',
   },
   tooltip: {
     time: 'Время',
@@ -36,9 +32,7 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     headerAggregates: (volume: string, vwap: string, count: number): string =>
       `Σ ${volume} · vwap ${vwap} · сделок ${count}`,
   },
-  comingSoon: 'Тепловая карта стакана Binance — скоро',
   live: {
-    instrument: (instrument: string): string => `Инструмент: ${instrument}`,
     awaitingSnapshot: 'Ожидаем REST-снепшот…',
     snapshotReceived: 'REST-снепшот получен, слушаем обновления',
     totalSnapshots: (count: number): string => `Всего снепшотов получено: ${count}`,

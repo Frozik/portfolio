@@ -9,7 +9,6 @@ export const MS_PAD_LENGTH = 3;
 export const NOON_HOUR = 12;
 export const MAX_TOKEN_COUNT = 7;
 export const QUARTER_DIVISOR = 3;
-export const MAX_AMBIGUOUS_HOUR = 23;
 
 export const SCORE_CERTAIN = 1.0;
 export const SCORE_VERY_HIGH = 0.9;

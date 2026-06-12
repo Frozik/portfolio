@@ -65,7 +65,6 @@ export class TradesStreamStore {
   tradesReceivedCount = 0;
   /** `eventTimeMs` of the most recent trade observed, or `undefined` before the first batch. */
   lastTradeTimeMs: UnixTimeMs | undefined = undefined;
-  tradeBlocksPersisted = 0;
   pinnedBucket: ITradeBucketHitTestResult | undefined = undefined;
   hoveredBucketKey: UnixTimeMs | undefined = undefined;
 
@@ -141,14 +140,6 @@ export class TradesStreamStore {
     });
   }
 
-  stop(): void {
-    this.subscription?.unsubscribe();
-    this.subscription = undefined;
-    this.accumulator?.dispose();
-    this.accumulator = undefined;
-    this.tradesConnection = 'idle';
-  }
-
   dispose(): void {
     this.subscription?.unsubscribe();
     this.subscription = undefined;
@@ -164,7 +155,6 @@ export class TradesStreamStore {
     this.tradesErrorMessage = undefined;
     this.tradesReceivedCount = 0;
     this.lastTradeTimeMs = undefined;
-    this.tradeBlocksPersisted = 0;
   }
 
   /**
@@ -335,7 +325,6 @@ export class TradesStreamStore {
       }
 
       if (event.isNewBlock) {
-        this.tradeBlocksPersisted += 1;
         this.enforceTradesHistoryCap();
       }
     });

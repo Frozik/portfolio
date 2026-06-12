@@ -68,6 +68,11 @@ export function DataTable<TData>({
 
   const { rows } = table.getRowModel();
 
+  // estimateSize is only the FIRST guess — real row heights are measured via
+  // measureElement refs on every rendered <tr>. Without measurement the
+  // cumulative error (real height − estimate) per row shifts the virtualizer's
+  // coordinate space away from reality, and on long lists rows visually
+  // disappear / reappear while scrolling.
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollContainerRef.current,
@@ -144,13 +149,28 @@ const HeaderCell = memo(({ header }: { header: Header<RowData, unknown> }) => {
   );
 });
 
-const DataRow = memo(({ row }: { row: Row<RowData> }) => (
-  <tr className="border-b border-border hover:bg-surface-elevated">
-    {row.getVisibleCells().map((cell: Cell<RowData, unknown>) => (
-      <DataCell key={cell.id} cell={cell} />
-    ))}
-  </tr>
-));
+const DataRow = memo(
+  ({
+    row,
+    index,
+    measureRef,
+  }: {
+    row: Row<RowData>;
+    /** Virtual item index — read by the virtualizer's measureElement via data-index */
+    index?: number;
+    measureRef?: (element: HTMLTableRowElement | null) => void;
+  }) => (
+    <tr
+      ref={measureRef}
+      data-index={index}
+      className="border-b border-border hover:bg-surface-elevated"
+    >
+      {row.getVisibleCells().map((cell: Cell<RowData, unknown>) => (
+        <DataCell key={cell.id} cell={cell} />
+      ))}
+    </tr>
+  )
+);
 
 const DataCell = memo(({ cell }: { cell: Cell<RowData, unknown> }) => {
   const meta = cell.column.columnDef.meta;
@@ -192,7 +212,14 @@ function VirtualBody({
       )}
       {virtualRows.map(virtualRow => {
         const row = rows[virtualRow.index];
-        return <DataRow key={row.id} row={row} />;
+        return (
+          <DataRow
+            key={row.id}
+            row={row}
+            index={virtualRow.index}
+            measureRef={virtualizer.measureElement}
+          />
+        );
       })}
       {virtualRows.length > 0 && (
         <tr>

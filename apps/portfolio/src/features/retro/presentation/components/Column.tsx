@@ -7,6 +7,7 @@ import { cn } from '../../../../shared/lib/cn';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
+import { canMutateCard, countPeersTypingInColumn } from '../../domain/anonymity';
 import type {
   CardId,
   ClientId,
@@ -40,6 +41,7 @@ interface ColumnCardItemProps {
   cardIndex: number;
   columnAccentColor: string;
   isOwn: boolean;
+  myClientId: ClientId;
   phase: ERetroPhase;
   showVotes: boolean;
   voteCount: number;
@@ -55,6 +57,7 @@ const ColumnCardItemComponent = ({
   cardIndex,
   columnAccentColor,
   isOwn,
+  myClientId,
   phase,
   showVotes,
   voteCount,
@@ -117,6 +120,7 @@ const ColumnCardItemComponent = ({
           cardIndex={cardIndex}
           accentColor={columnAccentColor}
           isOwn={isOwn}
+          myClientId={myClientId}
           phase={phase}
           showVotes={showVotes && showVoteButton}
           voteCount={voteCount}
@@ -245,11 +249,9 @@ const ColumnComponent = ({
   const isBrainstorm = phase === ERetroPhase.Brainstorm;
   const dndEnabled = phase === ERetroPhase.Brainstorm || phase === ERetroPhase.Group;
 
-  const typingOthers = isBrainstorm
-    ? store.presentUsers.filter(
-        user => user.clientId !== myClientId && user.typingInColumnId === column.id
-      )
-    : [];
+  const typingPeersCount = isBrainstorm
+    ? countPeersTypingInColumn(store.presentUsers, column.id, myClientId)
+    : 0;
 
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -295,12 +297,12 @@ const ColumnComponent = ({
           </div>
         </div>
 
-        {typingOthers.length > 0 && (
+        {typingPeersCount > 0 && (
           <div className="row-divider px-4 py-2">
             <MonoKicker tone="faint" className="italic">
-              {typingOthers.length === 1
+              {typingPeersCount === 1
                 ? t.room.someoneIsWriting
-                : `${typingOthers.length} ${t.room.multipleWriting}`}
+                : `${typingPeersCount} ${t.room.multipleWriting}`}
             </MonoKicker>
           </div>
         )}
@@ -330,7 +332,7 @@ const ColumnComponent = ({
 
             if (item.kind === 'card') {
               const { card } = item;
-              const isOwn = card.authorClientId === myClientId;
+              const isOwn = canMutateCard(card, myClientId);
               const voteCount = countTotalVotesOnTarget(votesByTarget, card.id);
               return (
                 <Fragment key={card.id}>
@@ -341,6 +343,7 @@ const ColumnComponent = ({
                       cardIndex={item.columnIndex}
                       columnAccentColor={column.color}
                       isOwn={isOwn}
+                      myClientId={myClientId}
                       phase={phase}
                       showVotes={showVotes}
                       voteCount={voteCount}
@@ -370,7 +373,7 @@ const ColumnComponent = ({
                     </div>
                     <div className="flex flex-col">
                       {item.cards.map((entry, innerIndex) => {
-                        const isOwn = entry.card.authorClientId === myClientId;
+                        const isOwn = canMutateCard(entry.card, myClientId);
                         return (
                           <Fragment key={entry.card.id}>
                             <GapDropZone
@@ -388,6 +391,7 @@ const ColumnComponent = ({
                               cardIndex={entry.columnIndex}
                               columnAccentColor={column.color}
                               isOwn={isOwn}
+                              myClientId={myClientId}
                               phase={phase}
                               showVotes={false}
                               voteCount={0}

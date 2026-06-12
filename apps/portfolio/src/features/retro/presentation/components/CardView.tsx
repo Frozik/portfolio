@@ -7,6 +7,7 @@ import { cn } from '../../../../shared/lib/cn';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
+import { visibleCardText } from '../../domain/anonymity';
 import { REDACTED_CARD_PLACEHOLDER } from '../../domain/constants';
 import type { ClientId, ERetroPhase, IRetroCard } from '../../domain/types';
 import { useCardFlipState } from '../hooks/useCardFlipState';
@@ -18,6 +19,7 @@ interface CardViewProps {
   cardIndex: number;
   accentColor: string;
   isOwn: boolean;
+  myClientId: ClientId;
   phase: ERetroPhase;
   showVotes: boolean;
   voteCount: number;
@@ -40,6 +42,7 @@ const CardViewComponent = ({
   cardIndex,
   accentColor,
   isOwn,
+  myClientId,
   phase,
   showVotes,
   voteCount,
@@ -102,6 +105,10 @@ const CardViewComponent = ({
   const cardIndexLabel = formatCardIndex(cardIndex);
   const authorProfile = directory.get(card.authorClientId as ClientId);
   const authorName = (authorProfile?.name ?? '').trim();
+  // While the card is face-down (someone else's card during Brainstorm) the
+  // face side must not leak the real text into the DOM — render the
+  // redacted placeholder instead. Post-reveal this is just `card.text`.
+  const displayText = visibleCardText(card, phase, myClientId);
 
   return (
     <div className={cn(styles.cardFlipContainer, 'relative min-h-[96px] w-full')}>
@@ -163,7 +170,7 @@ const CardViewComponent = ({
               </div>
             ) : (
               <p className="m-0 flex-1 pr-4 text-[13px] leading-[1.5] whitespace-pre-wrap break-words text-landing-fg">
-                {card.text}
+                {displayText}
               </p>
             )}
 

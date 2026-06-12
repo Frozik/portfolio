@@ -1,6 +1,5 @@
 import type {
   CardId,
-  ClientId,
   GroupId,
   IActionItem,
   IColumnConfig,
@@ -34,50 +33,6 @@ export function createRetroSnapshot(input: ICreateSnapshotInput): IRetroSnapshot
     actionItems: input.actionItems,
     votes: input.votes,
   };
-}
-
-export interface ISnapshotSummary {
-  totalCards: number;
-  totalGroups: number;
-  totalActionItems: number;
-  totalVotesCast: number;
-  participantCount: number;
-}
-
-/**
- * Compact numeric summary used by the Close-phase modal.
- */
-export function summarizeSnapshot(snapshot: IRetroSnapshot): ISnapshotSummary {
-  const participants = new Set<ClientId>();
-  let totalVotesCast = 0;
-
-  snapshot.cards.forEach(card => participants.add(card.authorClientId));
-
-  snapshot.votes.forEach(votesForTarget => {
-    votesForTarget.forEach((count, clientId) => {
-      participants.add(clientId);
-      totalVotesCast += count;
-    });
-  });
-
-  return {
-    totalCards: snapshot.cards.length,
-    totalGroups: snapshot.groups.length,
-    totalActionItems: snapshot.actionItems.length,
-    totalVotesCast,
-    participantCount: participants.size,
-  };
-}
-
-/**
- * Resolve the group a card belongs to (if any). Helper used by both
- * markdown export and the Group-phase renderer.
- */
-export function findGroupForCard(
-  cardId: CardId,
-  groups: readonly IRetroGroup[]
-): IRetroGroup | undefined {
-  return groups.find(group => group.cardIds.includes(cardId));
 }
 
 /**

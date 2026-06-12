@@ -1,10 +1,9 @@
 import { createDB, getDatabaseVersion } from '@frozik/utils/database';
-import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
 import { EDatabaseErrorCallbackType } from '@frozik/utils/rx/database';
 import type { DBSchema, IDBPDatabase } from 'idb';
-import { isNil, orderBy } from 'lodash-es';
+import { orderBy } from 'lodash-es';
 import type { ClientId, ERetroPhase, IRoomIndexEntry, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'retro-room-index';
@@ -48,7 +47,6 @@ interface IRetroRoomsDB extends DBSchema {
 export interface IRoomIndexRepo {
   listRecent(limit: number): Promise<IRoomIndexEntry[]>;
   upsert(entry: IRoomIndexEntry): Promise<void>;
-  touchVisited(roomId: RoomId, participantCount: number): Promise<void>;
   remove(roomId: RoomId): Promise<void>;
 }
 
@@ -74,22 +72,6 @@ export async function createRoomIndexRepo(
 
     async upsert(entry: IRoomIndexEntry): Promise<void> {
       await database.put(ROOMS_TABLE_NAME, toDatabaseRow(entry));
-    },
-
-    async touchVisited(roomId: RoomId, participantCount: number): Promise<void> {
-      const existing = await database.get(ROOMS_TABLE_NAME, roomId);
-
-      if (isNil(existing)) {
-        return;
-      }
-
-      const updated: IDBRoomEntry = {
-        ...existing,
-        lastVisitedAt: nowIso(),
-        participantCount,
-      };
-
-      await database.put(ROOMS_TABLE_NAME, updated);
     },
 
     async remove(roomId: RoomId): Promise<void> {
@@ -124,10 +106,6 @@ async function openRoomIndexDatabase(
       }
     },
   });
-}
-
-function nowIso(): ISO {
-  return getNowISO8601();
 }
 
 function toRoomIndexEntry(row: IDBRoomEntry): IRoomIndexEntry {

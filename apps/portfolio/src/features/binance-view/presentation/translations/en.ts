@@ -3,13 +3,9 @@ export const binanceTranslationsEn = {
     idle: 'Idle',
     connecting: 'Connecting…',
     connected: 'Connected',
-    reconnecting: 'Reconnecting…',
     disconnected: 'Disconnected',
-    resyncing: 'Resyncing orderbook…',
     error: 'Connection error',
     unsupported: 'WebGPU device does not meet requirements (maxTextureDimension2D >= 8192)',
-    tradesLabel: 'Trades',
-    tradesGated: 'Waiting for book',
   },
   tooltip: {
     time: 'Time',
@@ -32,9 +28,7 @@ export const binanceTranslationsEn = {
     headerAggregates: (volume: string, vwap: string, count: number): string =>
       `Σ ${volume} · vwap ${vwap} · ${count} trades`,
   },
-  comingSoon: 'Binance orderbook heatmap — coming soon',
   live: {
-    instrument: (instrument: string): string => `Instrument: ${instrument}`,
     awaitingSnapshot: 'Waiting for REST snapshot…',
     snapshotReceived: 'REST snapshot received, listening for updates',
     totalSnapshots: (count: number): string => `Total snapshots received: ${count}`,

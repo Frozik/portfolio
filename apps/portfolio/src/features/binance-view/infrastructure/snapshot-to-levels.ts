@@ -47,17 +47,3 @@ export function snapshotToLevels(
 
   return buffer;
 }
-
-/**
- * Classify a level slot into `bid` / `ask` / `padding` based on its
- * position within the snapshot column.
- */
-export function levelSide(levelIndex: number, depth: number): 'bid' | 'ask' | 'padding' {
-  if (levelIndex < depth) {
-    return 'bid';
-  }
-  if (levelIndex < 2 * depth) {
-    return 'ask';
-  }
-  return 'padding';
-}

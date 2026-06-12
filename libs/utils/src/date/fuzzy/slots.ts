@@ -2,19 +2,13 @@ import { isNil } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 
 import {
-  MAX_AMBIGUOUS_HOUR,
   MS_PAD_LENGTH,
   NOON_HOUR,
   TWO_DIGIT_YEAR_BASE_HIGH,
   TWO_DIGIT_YEAR_BASE_LOW,
   TWO_DIGIT_YEAR_CUTOFF,
 } from './constants';
-import { MONTH_MAP } from './lookups';
 import type { ISlotMap } from './types';
-
-export function mergeSlots(base: ISlotMap, override: ISlotMap): ISlotMap {
-  return { ...base, ...override };
-}
 
 export function dateToSlots(date: Temporal.PlainDate): ISlotMap {
   return { year: date.year, month: date.month, day: date.day };
@@ -43,17 +37,6 @@ export function slotsToPlainTime(slots: ISlotMap): Temporal.PlainTime | undefine
   } catch {
     return undefined;
   }
-}
-
-export function applyTimeSlotsToZDT(
-  zonedDateTime: Temporal.ZonedDateTime,
-  timeSlots: ISlotMap
-): Temporal.ZonedDateTime | undefined {
-  const time = slotsToPlainTime(timeSlots);
-  if (isNil(time)) {
-    return undefined;
-  }
-  return zonedDateTime.withPlainTime(time);
 }
 
 export function normalizeYear(yearStr: string): number {
@@ -99,46 +82,6 @@ export function tryBuildDateSlots(year: number, month: number, day: number): ISl
   try {
     Temporal.PlainDate.from({ year, month, day }, { overflow: 'reject' });
     return { year, month, day };
-  } catch {
-    return undefined;
-  }
-}
-
-export function tryBuildDateFromName(
-  day: number,
-  monthName: string,
-  year: number
-): ISlotMap | undefined {
-  const month = MONTH_MAP.get(monthName.toLowerCase());
-
-  if (isNil(month)) {
-    return undefined;
-  }
-
-  return tryBuildDateSlots(year, month, day);
-}
-
-export function isAmbiguousHour(yearStr: string): boolean {
-  return yearStr.length <= 2 && Number(yearStr) <= MAX_AMBIGUOUS_HOUR;
-}
-
-export function assembleZDT(
-  slots: ISlotMap,
-  today: Temporal.PlainDate,
-  timeZone: string
-): Temporal.ZonedDateTime | undefined {
-  const year = slots.year ?? today.year;
-  const month = slots.month ?? today.month;
-  const day = slots.day ?? today.day;
-  const hour = slots.hour ?? 0;
-  const minute = slots.minute ?? 0;
-  const second = slots.second ?? 0;
-  const ms = slots.ms ?? 0;
-
-  try {
-    const date = Temporal.PlainDate.from({ year, month, day });
-    const time = new Temporal.PlainTime(hour, minute, second, ms);
-    return date.toZonedDateTime({ timeZone, plainTime: time });
   } catch {
     return undefined;
   }

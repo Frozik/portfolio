@@ -1,4 +1,4 @@
-import { Fail, FailFactory } from './fail';
+import { Fail } from './fail';
 import { FAIL_TAG } from './types';
 
 describe('Fail', () => {
@@ -20,35 +20,5 @@ describe('Fail', () => {
       code: 'UNKNOWN',
       meta: { message: 'something went wrong' },
     });
-  });
-});
-
-describe('FailFactory', () => {
-  it('creates scoped fails with prefix', () => {
-    const createFail = FailFactory('TestScope');
-    const fail = createFail('TIMEOUT');
-
-    expect(fail).toEqual({
-      tag: FAIL_TAG,
-      code: '[TestScope]: TIMEOUT',
-      meta: undefined,
-    });
-  });
-
-  it('creates scoped fails with prefix and meta', () => {
-    const createFail = FailFactory('ScopeMeta');
-    const fail = createFail('ERR', { detail: 42 });
-
-    expect(fail).toEqual({
-      tag: FAIL_TAG,
-      code: '[ScopeMeta]: ERR',
-      meta: { detail: 42 },
-    });
-  });
-
-  it('throws on duplicate prefix', () => {
-    FailFactory('UniquePrefix');
-
-    expect(() => FailFactory('UniquePrefix')).toThrow('Prefix UniquePrefix already used');
   });
 });

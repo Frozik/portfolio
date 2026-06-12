@@ -16,7 +16,6 @@
     "./components/RichEditor/components/MonthNavigator": "./src/components/RichEditor/components/MonthNavigator.tsx",
     "./components/RichEditor/components/TimePicker": "./src/components/RichEditor/components/TimePicker.tsx",
     "./components/RichEditor/components/RichEditor": "./src/components/RichEditor/components/RichEditor.tsx",
-    "./components/RouteLink/RouteLink": "./src/components/RouteLink/RouteLink.tsx",
     "./*": "./src/*.ts"
   },
   "files": [

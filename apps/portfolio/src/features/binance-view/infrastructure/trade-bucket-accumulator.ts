@@ -54,29 +54,6 @@ interface IActiveBlockState {
 }
 
 /**
- * Snapshot of the active (still-open) bucket, used by hit-test for the
- * "live" second. The active bucket is **not** in the texture nor in the
- * spatial index — but its raw trades may still be needed for the popup.
- */
-export interface ITradeActiveBucketSnapshot {
-  readonly bucketStartMs: UnixTimeMs;
-  readonly rawTrades: ReadonlyArray<ITrade>;
-  readonly truncated: boolean;
-}
-
-/**
- * Snapshot of the active (still-open) block, including the
- * authoritative `Float32Array` buffer and the per-bucket raw-trades
- * map. The buffer is shared with the accumulator — consumers must
- * never mutate it; copy the slice they need.
- */
-export interface ITradeActiveBlockSnapshot {
-  readonly meta: ITradeBlockMeta;
-  readonly data: Float32Array;
-  readonly rawTradesByBucket: ReadonlyMap<UnixTimeMs, ITrade[]>;
-}
-
-/**
  * Event emitted when a closed bucket has been packed into the block's
  * texture buffer (`isNewBlock=false`), or when a fresh block has just
  * been created after rotation (`isNewBlock=true`). `data` is shared
@@ -177,37 +154,6 @@ export class TradeBucketAccumulator {
     // Open a fresh active bucket for the new second.
     this.activeBucket = this.createBucket(bucketStartMs);
     this.accumulateTrade(this.activeBucket, trade);
-  }
-
-  /**
-   * Snapshot of the active (still-open) block including authoritative
-   * texture buffer. Returns `undefined` before the first trade.
-   */
-  getActiveBlockData(): ITradeActiveBlockSnapshot | undefined {
-    if (this.activeBlock === undefined) {
-      return undefined;
-    }
-    return {
-      meta: this.activeBlock.meta,
-      data: this.activeBlock.data,
-      rawTradesByBucket: this.activeBlock.rawTradesByBucket,
-    };
-  }
-
-  /**
-   * Snapshot of the active (still-open) bucket. Returns `undefined`
-   * before the first trade. The active bucket is not yet persisted nor
-   * rendered; consumers may need its raw trades for "live" hit-test.
-   */
-  getActiveBucketSnapshot(): ITradeActiveBucketSnapshot | undefined {
-    if (this.activeBucket === undefined) {
-      return undefined;
-    }
-    return {
-      bucketStartMs: this.activeBucket.bucketStartMs,
-      rawTrades: this.activeBucket.rawTrades,
-      truncated: this.activeBucket.truncated,
-    };
   }
 
   /** Drops active state. Partial active bucket is lost. Idempotent. */

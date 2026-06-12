@@ -16,7 +16,6 @@ import type {
 import type { IBinanceDb, IOrderbookBlockRecord } from '../infrastructure/binance-indexeddb';
 import type { IBlockFlushEvent } from '../infrastructure/block-accumulator';
 import { BlockAccumulator } from '../infrastructure/block-accumulator';
-import { fetchPriceStep } from '../infrastructure/exchange-info';
 import { liveOrderBook$ } from '../infrastructure/orderbook-stream';
 
 import type { IOrderbookGate } from './IOrderbookGate';
@@ -63,8 +62,6 @@ export class OrderbookStreamStore implements IOrderbookGate {
   connection: ConnectionState = 'idle';
   snapshotsReceived = 0;
   lastDisplaySnapshotTimeMs: UnixTimeMs | undefined = undefined;
-  blocksPersisted = 0;
-  priceStep: number | undefined = undefined;
   errorMessage: string | undefined = undefined;
   selectedCell: IHitTestResult | undefined = undefined;
   /**
@@ -125,8 +122,6 @@ export class OrderbookStreamStore implements IOrderbookGate {
 
     this.connection = 'connecting';
     this.errorMessage = undefined;
-
-    void this.loadPriceStep();
 
     this.accumulator = new BlockAccumulator({
       snapshotsPerBlock: BINANCE_CONFIG.snapshotsPerBlock,
@@ -200,17 +195,6 @@ export class OrderbookStreamStore implements IOrderbookGate {
     this.hasFirstOrderbookSnapshot = false;
   }
 
-  private async loadPriceStep(): Promise<void> {
-    // Kept for the status overlay — the renderer itself uses
-    // `aggregationQuoteStep` as the effective cell step, so we just
-    // record the raw tickSize here without propagating it to the
-    // chart state.
-    const fetched = await fetchPriceStep(BINANCE_CONFIG.apiHost, this.instrument);
-    runInAction(() => {
-      this.priceStep = fetched ?? BINANCE_CONFIG.fallbackPriceStep;
-    });
-  }
-
   private handleSnapshot(snapshot: IQuantizedSnapshot): void {
     this.snapshotsReceived++;
     if (!this.hasFirstOrderbookSnapshot) {
@@ -262,11 +246,6 @@ export class OrderbookStreamStore implements IOrderbookGate {
     };
     try {
       await this.db.orderbook.putBlock(record);
-      if (event.isNewBlock) {
-        runInAction(() => {
-          this.blocksPersisted++;
-        });
-      }
     } catch (error) {
       // biome-ignore lint/suspicious/noConsole: surfaces quota-exceeded / write failure
       console.warn('binance-view: IndexedDB putBlock failed', error);

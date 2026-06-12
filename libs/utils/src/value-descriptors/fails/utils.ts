@@ -30,31 +30,3 @@ export function convertErrorToFail(error: Error | ValueDescriptorError): ValueDe
 export function convertFailToError(fail: ValueDescriptorFail): ValueDescriptorError {
   return new ValueDescriptorError(fail.meta.message, fail.code, fail.meta.description);
 }
-
-export function findWorstFailIndex(fails: ValueDescriptorFail[]): number {
-  return fails.reduce((worstIndex, fail, index) => {
-    return MAP_VALUE_DESCRIPTOR_CODE_TO_WEIGHT[fail.code] >
-      MAP_VALUE_DESCRIPTOR_CODE_TO_WEIGHT[(fails[worstIndex] as ValueDescriptorFail).code]
-      ? index
-      : worstIndex;
-  }, 0);
-}
-
-const MAP_VALUE_DESCRIPTOR_CODE_TO_WEIGHT = {
-  [EValueDescriptorErrorCode.UNAUTHENTICATED]: 16,
-  [EValueDescriptorErrorCode.PERMISSION_DENIED]: 15,
-  [EValueDescriptorErrorCode.DATA_LOSS]: 14,
-  [EValueDescriptorErrorCode.ABORTED]: 13,
-  [EValueDescriptorErrorCode.FAILED_PRECONDITION]: 12,
-  [EValueDescriptorErrorCode.UNKNOWN]: 11,
-  [EValueDescriptorErrorCode.INTERNAL]: 10,
-  [EValueDescriptorErrorCode.UNAVAILABLE]: 9,
-  [EValueDescriptorErrorCode.NOT_FOUND]: 8,
-  [EValueDescriptorErrorCode.OUT_OF_RANGE]: 7,
-  [EValueDescriptorErrorCode.UNIMPLEMENTED]: 6,
-  [EValueDescriptorErrorCode.INVALID_ARGUMENT]: 5,
-  [EValueDescriptorErrorCode.DEADLINE_EXCEEDED]: 4,
-  [EValueDescriptorErrorCode.RESOURCE_EXHAUSTED]: 3,
-  [EValueDescriptorErrorCode.ALREADY_EXISTS]: 2,
-  [EValueDescriptorErrorCode.CANCELLED]: 1,
-};

@@ -351,8 +351,6 @@ describe('TradeBucketAccumulator', () => {
     );
 
     expect(flushes).toHaveLength(0);
-    expect(accumulator.getActiveBlockData()).toBeUndefined();
-    expect(accumulator.getActiveBucketSnapshot()).toBeUndefined();
   });
 
   it('texture layout invariant: firstBucketStartMs + timeDeltaMs equals bucketStartMs', () => {

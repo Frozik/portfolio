@@ -9,7 +9,6 @@ import {
   MID_PRICE_BLOCKS_STORE,
   ORDERBOOK_BLOCKS_STORE,
   openBinanceDb,
-  openOrderbookDb,
 } from './binance-indexeddb';
 
 function makeRecord(blockId: number, countValue = 128) {
@@ -43,7 +42,13 @@ function uniqueDbName() {
 }
 
 describe('orderbook-indexeddb', () => {
-  let openedDbs: Awaited<ReturnType<typeof openOrderbookDb>>[] = [];
+  let openedDbs: Awaited<ReturnType<typeof openBinanceDb>>[] = [];
+
+  async function openOrderbookView() {
+    const binanceDb = await openBinanceDb(uniqueDbName());
+    openedDbs.push(binanceDb);
+    return binanceDb.orderbook;
+  }
 
   afterEach(() => {
     for (const db of openedDbs) {
@@ -53,8 +58,7 @@ describe('orderbook-indexeddb', () => {
   });
 
   test('putBlock + getBlock round-trip the record', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     const record = makeRecord(1000);
     await db.putBlock(record);
@@ -67,8 +71,7 @@ describe('orderbook-indexeddb', () => {
   });
 
   test('putBlock upserts existing keys (no duplicates)', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     await db.putBlock(makeRecord(1000, 16));
     await db.putBlock(makeRecord(1000, 64));
@@ -79,8 +82,7 @@ describe('orderbook-indexeddb', () => {
   });
 
   test('clearAll removes every record', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     await db.putBlock(makeRecord(1000));
     await db.putBlock(makeRecord(2000));
@@ -91,8 +93,7 @@ describe('orderbook-indexeddb', () => {
   });
 
   test('deleteBlock removes a single record, leaves others intact', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     await db.putBlock(makeRecord(1000));
     await db.putBlock(makeRecord(2000));
@@ -103,15 +104,13 @@ describe('orderbook-indexeddb', () => {
   });
 
   test('getBlock returns undefined for missing keys', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     expect(await db.getBlock(999 as UnixTimeMs)).toBeUndefined();
   });
 
   test('concurrent putBlock calls preserve consistency', async () => {
-    const db = await openOrderbookDb(uniqueDbName());
-    openedDbs.push(db);
+    const db = await openOrderbookView();
 
     await Promise.all([
       db.putBlock(makeRecord(1000)),

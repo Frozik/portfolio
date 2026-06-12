@@ -28,7 +28,6 @@ import {
   clampTargetEnd,
   createInitialViewport,
   engageFollow,
-  isFollowing,
   stepViewport,
   viewTimeStartMs,
 } from './viewport';
@@ -82,7 +81,7 @@ export class ViewportController {
   private readonly getRegistry: () => BlockSpatialIndex<IHeatmapBlockIndexItem>;
   private readonly input: ViewportInputController;
 
-  private priceStep: number;
+  private readonly priceStep: number;
   private midPrice: number | undefined = undefined;
   private targetMidPrice: number | undefined = undefined;
   private lastDisplayMs: UnixTimeMs | undefined = undefined;
@@ -153,18 +152,6 @@ export class ViewportController {
       this.midPriceSource = undefined;
       this.midPriceUnsubscribe = undefined;
     }
-  }
-
-  get isPanning(): boolean {
-    return this.input.isPanning;
-  }
-
-  get isZooming(): boolean {
-    return this.input.isZooming;
-  }
-
-  get isFollowing(): boolean {
-    return isFollowing(this.viewport, this.lastDisplayMs);
   }
 
   /** Run one animation step. Called from the renderer's RAF tick. */
@@ -278,18 +265,6 @@ export class ViewportController {
   }
 
   /**
-   * Whether the viewport is currently pinned to the live edge. The
-   * flag reflects user intent — `true` after page load, the
-   * auto-follow re-engagement in `tick`, or a pan that brought the
-   * view back inside the follow epsilon; `false` only after an
-   * explicit backward pan. Consumed by overlays that want to show a
-   * "jump to live" affordance when the chart is not tracking.
-   */
-  isFollowPinned(): boolean {
-    return this.followPinned;
-  }
-
-  /**
    * Command the Y-axis to lerp toward `mid`. Called by the
    * {@link PositionController} — the first call snaps the visible mid
    * to avoid gliding away from the default, subsequent calls only
@@ -310,20 +285,8 @@ export class ViewportController {
     return this.magnitudeMax;
   }
 
-  setPriceStep(priceStep: number): void {
-    this.priceStep = priceStep;
-  }
-
   viewTimeStartMsForPlotWidth(plotWidthPx: number): UnixTimeMs {
     return viewTimeStartMs(this.viewport, plotWidthPx);
-  }
-
-  getLastDisplayMs(): UnixTimeMs | undefined {
-    return this.lastDisplayMs;
-  }
-
-  getVisibleLevels(): number {
-    return this.visibleLevels;
   }
 
   dispose(): void {

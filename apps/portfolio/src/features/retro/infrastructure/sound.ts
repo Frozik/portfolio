@@ -10,8 +10,6 @@ export enum ERetroSoundCue {
   TimerExpired = 'timerExpired',
   TimerWarning = 'timerWarning',
   TimerCountdown = 'timerCountdown',
-  VoteCast = 'voteCast',
-  ActionItemAdded = 'actionItemAdded',
 }
 
 export interface ISoundPlayer {
@@ -23,7 +21,6 @@ export interface ISoundPlayer {
    * fire from timers or effects are audible.
    */
   unlock(): void;
-  setEnabled(enabled: boolean): void;
   dispose(): void;
 }
 
@@ -48,8 +45,6 @@ const CUE_PROFILES: Record<ERetroSoundCue, ICueProfile> = {
   },
   [ERetroSoundCue.TimerWarning]: { frequencyHz: 660, durationMs: 180, gain: 0.2 },
   [ERetroSoundCue.TimerCountdown]: { frequencyHz: 880, durationMs: 90, gain: 0.16 },
-  [ERetroSoundCue.VoteCast]: { frequencyHz: 880, durationMs: 80, gain: 0.12 },
-  [ERetroSoundCue.ActionItemAdded]: { frequencyHz: 520, durationMs: 140, gain: 0.15 },
 };
 
 const ATTACK_SECONDS = 0.01;
@@ -117,8 +112,6 @@ export function primeRetroAudio(): void {
  * {@link primeRetroAudio} runs from a user gesture.
  */
 export function createSoundPlayer(): ISoundPlayer {
-  let enabled = true;
-
   const scheduleBeep = (
     context: AudioContext,
     profile: ICueProfile,
@@ -152,10 +145,6 @@ export function createSoundPlayer(): ISoundPlayer {
 
   return {
     play(cue: ERetroSoundCue): void {
-      if (!enabled) {
-        return;
-      }
-
       const context = getSharedContext(false);
 
       if (isNil(context) || context.state === 'suspended') {
@@ -174,10 +163,6 @@ export function createSoundPlayer(): ISoundPlayer {
 
     unlock(): void {
       primeRetroAudio();
-    },
-
-    setEnabled(nextEnabled: boolean): void {
-      enabled = nextEnabled;
     },
 
     /**

@@ -55,8 +55,7 @@ export class BlockAccumulator {
   }
 
   addSnapshot(snapshot: IQuantizedSnapshot): void {
-    const { snapshotsPerBlock, flushEverySnapshots, snapshotSlots, depth, updateSpeedMs, onFlush } =
-      this.params;
+    const { snapshotsPerBlock, flushEverySnapshots, snapshotSlots, depth, onFlush } = this.params;
 
     let latestMagnitudeMin = Number.POSITIVE_INFINITY;
     let latestMagnitudeMax = 0;
@@ -136,9 +135,6 @@ export class BlockAccumulator {
         latestMagnitudeMax,
       });
     }
-
-    // Suppress unused param linting; kept for future per-block rollover tuning.
-    void updateSpeedMs;
   }
 
   getActiveBlock(): { meta: IBlockMeta; data: Float32Array } | null {
