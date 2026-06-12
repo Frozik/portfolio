@@ -3,6 +3,7 @@ import { parseConfSignalMessage } from './signaling-protocol';
 import type { ParticipantId } from './types';
 
 const ALICE = 'alice' as ParticipantId;
+const BOB = 'bob' as ParticipantId;
 
 describe('parseConfSignalMessage', () => {
   it('parses a well-formed hello message with session', () => {
@@ -77,6 +78,23 @@ describe('parseConfSignalMessage', () => {
       reason: 'leave',
     });
     expect(parseConfSignalMessage({ type: 'bye', from: ALICE, reason: 'full' })).toEqual({
+      type: 'bye',
+      from: ALICE,
+      reason: 'full',
+    });
+  });
+
+  it('parses bye{full} with an addressed target', () => {
+    expect(parseConfSignalMessage({ type: 'bye', from: ALICE, reason: 'full', to: BOB })).toEqual({
+      type: 'bye',
+      from: ALICE,
+      reason: 'full',
+      to: BOB,
+    });
+  });
+
+  it('drops an empty target instead of returning to: ""', () => {
+    expect(parseConfSignalMessage({ type: 'bye', from: ALICE, reason: 'full', to: '' })).toEqual({
       type: 'bye',
       from: ALICE,
       reason: 'full',

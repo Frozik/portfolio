@@ -7,7 +7,6 @@ import {
   EDatabaseErrorCallbackType,
 } from '@frozik/utils/rx/database';
 import { shareReplayWithDelayedReset } from '@frozik/utils/rx/shareReplayWithDelayedReset';
-import { receiveFromTabs, sendToTabs } from '@frozik/utils/rx/syncBetweenTabs';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy, sortBy } from 'lodash-es';
 import type { Observable } from 'rxjs';
@@ -51,8 +50,6 @@ const ROBOT_SCORE_INDEX = 'by-score';
 const ROBOT_NAME_FIELD: keyof IDBRobot = 'name';
 const ROBOT_SCORE_FIELD: keyof IDBRobot = 'score';
 
-const DATABASE_CHANNEL_SYNC_KEY = '__DB-COMPETITIONS-SYNC';
-
 interface IDBCompetitions extends DBSchema {
   [ROBOTS_TABLE_NAME]: {
     value: IDBRobot;
@@ -75,14 +72,14 @@ interface IDBCompetitions extends DBSchema {
 export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGenerations> {
   const databaseChanged$ = new Subject<void>();
 
+  // Cross-tab sync was removed together with the dockable layout that needed
+  // it — `databaseChanged$` keeps SAME-tab consumers (competitions list,
+  // generations subscription) fresh after local writes; a second tab simply
+  // shows data as of its own load.
   const database$ = createDatabase$<IDBCompetitions>(createGenerationDB).pipe(
     databaseReconnect(),
     switchMap(database => {
-      return merge(
-        of(database),
-        receiveFromTabs<void>(DATABASE_CHANNEL_SYNC_KEY).pipe(map(() => database)),
-        databaseChanged$.pipe(map(() => database))
-      );
+      return merge(of(database), databaseChanged$.pipe(map(() => database)));
     }),
     shareReplayWithDelayedReset(SHARE_RESET_DELAY)
   );
@@ -108,7 +105,6 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
           switchMap(database => {
             return addGeneration(database, competitionStart, generation);
           }),
-          sendToTabs(DATABASE_CHANNEL_SYNC_KEY),
           tap(() => {
             databaseChanged$.next();
           })
@@ -121,7 +117,6 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
           switchMap(database => {
             return deleteCompetition(database, competitionStart);
           }),
-          sendToTabs(DATABASE_CHANNEL_SYNC_KEY),
           tap(() => {
             databaseChanged$.next();
           })

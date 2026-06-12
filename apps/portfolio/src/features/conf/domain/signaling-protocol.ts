@@ -7,11 +7,13 @@ import type { ParticipantId } from './types';
  *
  * The transport is broadcast inside a single topic per room
  * (`frozik-conf-<roomId>`) — every member of the topic receives every
- * message. Recipients filter out their own echoes via `from === self`;
- * for a 2-peer room this is enough to route correctly without an
- * explicit `to` field. When a 3rd joiner triggers a `bye { full }`,
- * both existing peers broadcast it and the newcomer receives at least
- * one copy.
+ * message. Recipients filter out their own echoes via `from === self`.
+ *
+ * `bye { full }` MUST carry a `to` addressed at the rejected newcomer:
+ * without it, when a 3rd participant joins, BOTH existing peers broadcast
+ * `bye { full }` and each receives the OTHER's copy, wrongly flipping
+ * itself into `room-full` and killing a healthy call. `bye { leave }` is
+ * an un-addressed broadcast — it concerns the whole topic.
  */
 export type TConfSignalMessage =
   | { readonly type: 'hello'; readonly from: ParticipantId; readonly session: string }
@@ -26,6 +28,8 @@ export type TConfSignalMessage =
       readonly type: 'bye';
       readonly from: ParticipantId;
       readonly reason?: 'full' | 'leave';
+      /** Target participant — set for `full` (addressed rejection), omitted for `leave`. */
+      readonly to?: ParticipantId;
     };
 
 /** Possible values of the `type` discriminator, extracted for validation loops. */
@@ -135,14 +139,19 @@ export function parseConfSignalMessage(value: unknown): TConfSignalMessage | nul
       return { type, from: participantId, candidate };
     }
     case 'bye': {
-      const { reason } = value;
+      const { reason, to } = value;
+      const target = asParticipantId(to);
       if (isNil(reason)) {
-        return { type, from: participantId };
+        return target === null
+          ? { type, from: participantId }
+          : { type, from: participantId, to: target };
       }
       if (!isByeReason(reason)) {
         return null;
       }
-      return { type, from: participantId, reason };
+      return target === null
+        ? { type, from: participantId, reason }
+        : { type, from: participantId, reason, to: target };
     }
   }
 }

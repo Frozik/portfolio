@@ -43,12 +43,35 @@ function lineKey(line: TopologyLine): string {
   return `${pointA[0].toFixed(POSITION_KEY_PRECISION)},${pointA[1].toFixed(POSITION_KEY_PRECISION)},${pointA[2].toFixed(POSITION_KEY_PRECISION)}|${pointB[0].toFixed(POSITION_KEY_PRECISION)},${pointB[1].toFixed(POSITION_KEY_PRECISION)},${pointB[2].toFixed(POSITION_KEY_PRECISION)}|${kindSuffix}`;
 }
 
+/** Separator joining the two components of a cache key (line||line or line||edge).
+ * Line keys themselves use a single `|`, so the double `||` is unambiguous. */
+const PAIR_KEY_SEPARATOR = '||';
+
 function pairKey(keyA: string, keyB: string): string {
-  return keyA < keyB ? `${keyA}||${keyB}` : `${keyB}||${keyA}`;
+  return keyA < keyB
+    ? `${keyA}${PAIR_KEY_SEPARATOR}${keyB}`
+    : `${keyB}${PAIR_KEY_SEPARATOR}${keyA}`;
 }
 
 function edgePairKey(lineKeyValue: string, edgeIndex: number): string {
-  return `${lineKeyValue}||e:${edgeIndex}`;
+  return `${lineKeyValue}${PAIR_KEY_SEPARATOR}e:${edgeIndex}`;
+}
+
+/**
+ * Returns true if the given cache key references the supplied line key as one of
+ * its two components. Uses exact, structured matching (split on the pair
+ * separator + `===`) instead of substring matching: mirrored coordinates produce
+ * line keys that are substrings of each other (e.g. `0.293893` vs `-0.293893`),
+ * so `includes()` would wrongly evict unrelated pairs.
+ */
+function cacheKeyReferencesLine(cacheKey: string, removedLineKey: string): boolean {
+  const separatorIndex = cacheKey.indexOf(PAIR_KEY_SEPARATOR);
+  if (separatorIndex === -1) {
+    return false;
+  }
+  const componentA = cacheKey.slice(0, separatorIndex);
+  const componentB = cacheKey.slice(separatorIndex + PAIR_KEY_SEPARATOR.length);
+  return componentA === removedLineKey || componentB === removedLineKey;
 }
 
 /**
@@ -102,7 +125,7 @@ export class IntersectionCache {
       const removedSet = new Set(removedKeys);
       for (const cacheKey of this.cache.keys()) {
         for (const removed of removedSet) {
-          if (cacheKey.includes(removed)) {
+          if (cacheKeyReferencesLine(cacheKey, removed)) {
             this.cache.delete(cacheKey);
             break;
           }

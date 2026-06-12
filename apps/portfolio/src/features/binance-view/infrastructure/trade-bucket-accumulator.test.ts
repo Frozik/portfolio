@@ -287,10 +287,19 @@ describe('TradeBucketAccumulator', () => {
     const completedBlockEvent = flushes[blocksToTest - 1];
     const newBlockEvent = flushes[blocksToTest];
     expect(completedBlockEvent.isNewBlock).toBe(false);
+    // The sealed block is flagged so the orchestrator persists its raw
+    // trades; the fresh empty block is not.
+    expect(completedBlockEvent.closedByRotation).toBe(true);
     expect(completedBlockEvent.block.bucketCount).toBe(blocksToTest);
     expect(newBlockEvent.isNewBlock).toBe(true);
+    expect(newBlockEvent.closedByRotation).toBe(false);
     expect(newBlockEvent.block.blockId).not.toBe(completedBlockEvent.block.blockId);
     expect(newBlockEvent.block.bucketCount).toBe(0);
+
+    // Mid-block bucket closes must never be flagged as rotation seals.
+    for (let flushIndex = 0; flushIndex < blocksToTest - 1; flushIndex++) {
+      expect(flushes[flushIndex].closedByRotation).toBe(false);
+    }
   });
 
   it('truncates raw trades past the soft cap but keeps aggregates exact', () => {

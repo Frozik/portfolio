@@ -23,8 +23,14 @@ const STRICT_MODE_GRACE_MS = 100;
 
 const clientPool = new Map<string, IPoolEntry>();
 
-function poolKey(baseUrl: string, roomId: string): string {
-  return `${baseUrl}::${roomId}`;
+/**
+ * The auth mode is part of the key: an authenticated and an anonymous
+ * consumer for the SAME (baseUrl, roomId) — e.g. a retro and a conf room
+ * that happen to share a roomId — must NOT share one socket, or the second
+ * caller would inherit a client connected in the wrong identity mode.
+ */
+function poolKey(baseUrl: string, roomId: string, mode: 'auth' | 'anon'): string {
+  return `${mode}::${baseUrl}::${roomId}`;
 }
 
 function acquireClient(key: string, factory: () => ICommunicationClient): ICommunicationClient {
@@ -94,7 +100,7 @@ export function useCommunicationClient(roomId: string): ICommunicationClient | n
       setClient(null);
       return undefined;
     }
-    const key = poolKey(baseUrl, roomId);
+    const key = poolKey(baseUrl, roomId, 'auth');
     const acquired = acquireClient(key, () =>
       createCommunicationClient({
         baseUrl,
@@ -140,7 +146,7 @@ export function useAnonymousCommunicationClient(roomId: string): ICommunicationC
   const [client, setClient] = useState<ICommunicationClient | null>(null);
 
   useEffect(() => {
-    const key = poolKey(baseUrl, roomId);
+    const key = poolKey(baseUrl, roomId, 'anon');
     const acquired = acquireClient(key, () =>
       createCommunicationClient({
         baseUrl,

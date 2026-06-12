@@ -116,7 +116,7 @@ describe('CommunicationClient', () => {
     expect(ioMock).not.toHaveBeenCalled();
   });
 
-  it('passes roomId + provider + token in the Socket.IO handshake', () => {
+  it('passes roomId + provider + token via the Socket.IO auth callback', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',
       roomId: 'room-7',
@@ -127,9 +127,37 @@ describe('CommunicationClient', () => {
     expect(ioMock).toHaveBeenCalledTimes(1);
     const args = ioMock.mock.calls[0];
     expect(args[0]).toBe('http://server');
-    expect(args[1]).toMatchObject({
-      auth: { roomId: 'room-7', provider: 'google', token: 'tok-1' },
+    // `auth` is a callback (re-invoked on every reconnect) — invoke it to read
+    // the handshake payload it would hand to the server.
+    const options = args[1] as { auth: (cb: (payload: unknown) => void) => void };
+    let captured: unknown;
+    options.auth(payload => {
+      captured = payload;
     });
+    expect(captured).toEqual({ roomId: 'room-7', provider: 'google', token: 'tok-1' });
+  });
+
+  it('auth callback reflects a refreshed token on reconnect', () => {
+    let currentToken = 'tok-old';
+    const client = createCommunicationClient({
+      baseUrl: 'http://server',
+      roomId: 'room-7',
+      getCredentials: () => ({ provider: 'google', token: currentToken }),
+      onTokenRefreshNeeded: () => Promise.resolve(null),
+    });
+    client.connect();
+    const options = ioMock.mock.calls[0][1] as {
+      auth: (cb: (payload: unknown) => void) => void;
+    };
+
+    // Token rolled over (proactive refresh / token-expiring) while connected;
+    // the NEXT handshake the auth callback produces must carry the fresh token.
+    currentToken = 'tok-fresh';
+    let captured: unknown;
+    options.auth(payload => {
+      captured = payload;
+    });
+    expect(captured).toEqual({ roomId: 'room-7', provider: 'google', token: 'tok-fresh' });
   });
 
   it('forwards inbound signal:event to subscribers', () => {

@@ -26,8 +26,9 @@ import { liveTrades$ } from '../infrastructure/trades-stream';
 
 import type { IOrderbookGate } from './IOrderbookGate';
 
-// IDB persistence: aggregates on every flush, raw trades only on rotation.
-// See §3.3 of trades.md plan.
+// IDB persistence: aggregates on every flush, raw trades only on the
+// `closedByRotation` event (the sealed block carrying its final
+// rawTradesByBucket). See §3.3 of trades.md plan.
 
 export type { ITradeHitTestPointer } from '../domain/trades-hit-test';
 
@@ -333,9 +334,15 @@ export class TradesStreamStore {
     // helpers are async and only touch IDB — no observable mutations
     // land here. Aggregates write every flush; raw-trade dumps are
     // gated on block rotation (see trades.md §3.3 cadence rationale).
+    //
+    // Raw trades must be persisted from the `closedByRotation` event —
+    // the block that was just *sealed*, carrying its full
+    // `rawTradesByBucket`. The `isNewBlock=true` event carries the fresh
+    // EMPTY block, so persisting on it stored empty arrays and left
+    // evicted blocks with no recoverable trade history (popup empty).
     if (this.db !== undefined) {
       void persistAggregateBlock(this.db, event);
-      if (event.isNewBlock) {
+      if (event.closedByRotation) {
         void persistRawTrades(this.db, event);
       }
     }

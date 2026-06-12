@@ -24,6 +24,13 @@ export function createDatabase$<T extends DBSchema>(
       observer.error(new Error(`Database is in '${type}' state, reconnecting`));
     }).then(
       database => {
+        if (observer.closed) {
+          // Unsubscribed (or errored) while the connection was still opening —
+          // the teardown already ran with `db === undefined`, so close here or
+          // the connection leaks and blocks future version upgrades.
+          database.close();
+          return;
+        }
         db = database;
         observer.next(database);
       },

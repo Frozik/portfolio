@@ -2,11 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import type { TQualityTier } from '../domain/adaptive-quality';
-import {
-  MAX_PARTICIPANTS,
-  PEER_DISCONNECTED_GRACE_MS,
-  RTT_HISTORY_MAX_SAMPLES,
-} from '../domain/constants';
+import { PEER_DISCONNECTED_GRACE_MS, RTT_HISTORY_MAX_SAMPLES } from '../domain/constants';
 import type { TEmotion } from '../domain/emotion';
 import type { TGlassesStyle } from '../domain/glasses-style';
 import { DEFAULT_GLASSES_STYLE } from '../domain/glasses-style';
@@ -457,7 +453,7 @@ export class ConfRoomStore {
         return;
       }
       case 'bye': {
-        this.onRemoteBye(message.from, message.reason ?? 'leave');
+        this.onRemoteBye(message.from, message.reason ?? 'leave', message.to);
         return;
       }
     }
@@ -653,9 +649,12 @@ export class ConfRoomStore {
     void this.peer.handleSignal(message);
   }
 
-  private onRemoteBye(from: ParticipantId, reason: 'full' | 'leave'): void {
+  private onRemoteBye(from: ParticipantId, reason: 'full' | 'leave', to?: ParticipantId): void {
     if (reason === 'full') {
-      if (MAX_PARTICIPANTS > 0) {
+      // Only the addressed newcomer reacts. Without this, two existing peers
+      // each broadcasting bye{full} at a 3rd joiner would flip EACH OTHER into
+      // room-full and kill an otherwise healthy 2-peer call.
+      if (to === this.participantId) {
         this.connectionState = 'room-full';
       }
       return;
@@ -757,7 +756,7 @@ export class ConfRoomStore {
     this.qualityTier = controller.currentTier;
   }
 
-  private publishBye(reason: 'full' | 'leave', _target?: ParticipantId): void {
+  private publishBye(reason: 'full' | 'leave', target?: ParticipantId): void {
     if (this.signaling === null) {
       return;
     }
@@ -765,6 +764,8 @@ export class ConfRoomStore {
       type: 'bye',
       from: this.participantId,
       reason,
+      // `full` is addressed at the rejected newcomer; `leave` is a broadcast.
+      ...(target === undefined ? {} : { to: target }),
     });
   }
 

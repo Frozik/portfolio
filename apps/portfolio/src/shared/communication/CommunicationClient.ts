@@ -248,32 +248,42 @@ export function createCommunicationClient(
     );
   }
 
+  // Builds the handshake auth payload from the LATEST credentials. Returns
+  // null only when an authenticated client has no active sign-in yet.
+  function buildAuthPayload(): { roomId: string; provider?: string; token?: string } | null {
+    if (getCredentials === undefined) {
+      // Anonymous handshake — no provider/token. The server assigns a
+      // `Guest` identity scoped to this socket.
+      return { roomId };
+    }
+    const credentials = getCredentials();
+    if (credentials === null) {
+      return null;
+    }
+    return { roomId, provider: credentials.provider, token: credentials.token };
+  }
+
   function connect(): void {
     if (socket !== null) {
       return;
     }
-    let authPayload: { roomId: string; provider?: string; token?: string };
-    if (getCredentials === undefined) {
-      // Anonymous handshake — no provider/token. The server assigns a
-      // `Guest` identity scoped to this socket.
-      authPayload = { roomId };
-    } else {
-      const credentials = getCredentials();
-      if (credentials === null) {
-        // No active sign-in → caller should surface a sign-in prompt;
-        // we keep the client in `idle` so a later `connect()` after
-        // sign-in can succeed without recreating the wrapper.
-        return;
-      }
-      authPayload = {
-        roomId,
-        provider: credentials.provider,
-        token: credentials.token,
-      };
+    if (buildAuthPayload() === null) {
+      // No active sign-in → caller should surface a sign-in prompt; we keep
+      // the client in `idle` so a later `connect()` after sign-in can
+      // succeed without recreating the wrapper.
+      return;
     }
     setState('connecting');
     const next = io(baseUrl, {
-      auth: authPayload,
+      // `auth` as a callback is re-invoked on every (re)connect, so an
+      // automatic reconnect after a network blip presents a FRESH token
+      // rather than the possibly-expired one captured at first connect.
+      auth: cb => {
+        const payload = buildAuthPayload();
+        // A null payload (signed out mid-session) sends an empty handshake;
+        // the server rejects it and onTokenExpired/disconnect handles cleanup.
+        cb(payload ?? { roomId });
+      },
       transports: ['websocket'],
       reconnection: true,
       // Keep noise low while debugging — feature stores log

@@ -17,10 +17,12 @@ import type { UnixTimeMs } from '../domain/types';
  *
  * Block rotation: when the active block reaches `maxBucketsPerBlock`,
  * the accumulator emits **two** flush events — one with
- * `isNewBlock=false` for the just-completed block, then one with
- * `isNewBlock=true` for the freshly created one — so the orchestrator
- * can persist the closed block before the new block's first bucket is
- * mutated.
+ * `isNewBlock=false` + `closedByRotation=true` for the just-completed
+ * (sealed) block, then one with `isNewBlock=true` for the freshly
+ * created one — so the orchestrator can persist the closed block's raw
+ * trades before the new block's first bucket is mutated. The
+ * `closedByRotation` event is the only one carrying a block's final
+ * `rawTradesByBucket`.
  *
  * Raw-trade handoff: when a bucket closes, its `rawTrades` array is
  * stored **by reference** under `block.rawTradesByBucket`. The active
@@ -58,12 +60,23 @@ interface IActiveBlockState {
  * texture buffer (`isNewBlock=false`), or when a fresh block has just
  * been created after rotation (`isNewBlock=true`). `data` is shared
  * with the accumulator — do not mutate.
+ *
+ * `closedByRotation` flags the single event where the block has just
+ * been *sealed* by rotation — i.e. its `bucketCount` has reached
+ * `maxBucketsPerBlock` and no further buckets will ever be appended to
+ * it. Only on this event is `rawTradesByBucket` final and complete, so
+ * it is the correct (and only) moment to dump the block's raw trades to
+ * persistence. Every other `isNewBlock=false` event is a mid-block
+ * bucket close where the block is still accumulating, and the
+ * `isNewBlock=true` event carries the *new* empty block — neither
+ * should trigger a raw-trade dump.
  */
 export interface ITradeBlockFlushEvent {
   readonly block: ITradeBlockMeta;
   readonly data: Float32Array;
   readonly rawTradesByBucket: ReadonlyMap<UnixTimeMs, ITrade[]>;
   readonly isNewBlock: boolean;
+  readonly closedByRotation: boolean;
 }
 
 export interface ITradeBucketAccumulatorParams {
@@ -128,11 +141,15 @@ export class TradeBucketAccumulator {
 
     if (block.meta.bucketCount >= this.maxBucketsPerBlock) {
       // Rotate: emit completed block first, then create + emit fresh block.
+      // `closedByRotation=true` marks the sealed block whose raw trades
+      // are now final — the only event the orchestrator should persist
+      // raw trades from.
       this.onFlush({
         block: block.meta,
         data: block.data,
         rawTradesByBucket: block.rawTradesByBucket,
         isNewBlock: false,
+        closedByRotation: true,
       });
       const newBlock = this.createBlock(bucketStartMs, trade.price);
       this.activeBlock = newBlock;
@@ -141,6 +158,7 @@ export class TradeBucketAccumulator {
         data: newBlock.data,
         rawTradesByBucket: newBlock.rawTradesByBucket,
         isNewBlock: true,
+        closedByRotation: false,
       });
     } else {
       this.onFlush({
@@ -148,6 +166,7 @@ export class TradeBucketAccumulator {
         data: block.data,
         rawTradesByBucket: block.rawTradesByBucket,
         isNewBlock: false,
+        closedByRotation: false,
       });
     }
 

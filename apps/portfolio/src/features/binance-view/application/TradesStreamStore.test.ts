@@ -30,6 +30,7 @@ import { createTradesBlockIndex } from '../domain/block-store/create-trades-bloc
 import type { BinanceChartState } from '../domain/chart-state';
 import { BINANCE_CONFIG } from '../domain/config';
 import type { ITradeBlockFlushEventBridge } from '../domain/render-frame-types';
+import { MAX_BUCKETS_PER_BLOCK } from '../domain/trades-constants';
 import type {
   ITrade,
   ITradeBlockIndexItem,
@@ -254,6 +255,48 @@ describe('TradesStreamStore', () => {
     // rotation only.
     await flushMicrotasks();
     expect(dbState.putBlockCalls.length).toBeGreaterThanOrEqual(1);
+
+    store.dispose();
+  });
+
+  it('persists the CLOSED block raw trades to trade-buckets-raw on rotation', async () => {
+    const { store, gate, dbState } = buildStore();
+    store.startStream();
+    gate.hasFirstOrderbookSnapshot = true;
+
+    // Fill an entire block (MAX_BUCKETS_PER_BLOCK closed buckets) plus one
+    // extra second to trigger rotation. Each distinct second contributes a
+    // bucket with exactly one raw trade; the second that closes the block
+    // is what rotates it and seals the closed block.
+    const lastSecondIndex = MAX_BUCKETS_PER_BLOCK; // 0..MAX inclusive
+    for (let secondIndex = 0; secondIndex <= lastSecondIndex; secondIndex++) {
+      liveTradesSubject.next([
+        makeTrade({
+          eventTimeMs: (SECOND_T_MS + secondIndex * MS_PER_SECOND) as UnixTimeMs,
+          price: 100 + secondIndex,
+          quantity: 1,
+          isBuyerMaker: false,
+        }),
+      ]);
+    }
+
+    await flushMicrotasks();
+
+    // Exactly one raw-trade dump must have landed — for the sealed (closed
+    // by rotation) block, which is the FIRST block, keyed by SECOND_T_MS.
+    const closedBlockRaw = dbState.putRawTradesCalls.find(record => record.blockId === SECOND_T_MS);
+    expect(closedBlockRaw).toBeDefined();
+    // The closed block must carry its actual raw trades, not an empty map.
+    expect(closedBlockRaw?.bucketsRaw.length).toBe(MAX_BUCKETS_PER_BLOCK);
+    const totalPersistedTrades = (closedBlockRaw?.bucketsRaw ?? []).reduce(
+      (sum, bucket) => sum + bucket.trades.length,
+      0
+    );
+    expect(totalPersistedTrades).toBe(MAX_BUCKETS_PER_BLOCK);
+
+    // The fresh EMPTY block must NOT have been persisted with empty raw
+    // trades — the only raw-trade dump is the sealed block.
+    expect(dbState.putRawTradesCalls.length).toBe(1);
 
     store.dispose();
   });
