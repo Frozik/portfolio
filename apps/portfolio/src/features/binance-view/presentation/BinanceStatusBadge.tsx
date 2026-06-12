@@ -1,15 +1,22 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { millisecondsToISO8601 } from '@frozik/utils/date/iso8601';
+import { Wifi, WifiOff } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
-import { BINANCE_CONFIG } from '../domain/config';
 import type { ConnectionState } from '../domain/types';
 
-import { statusBadgeClass, statusLabel } from './status-format';
+import {
+  isConnectionOffline,
+  statusBadgeClass,
+  statusIconClass,
+  statusLabel,
+} from './status-format';
 import { binanceT } from './translations';
+
+const STATUS_ICON_SIZE = 15;
 
 /**
  * Worst-of severity rank — higher = worse. Used to fold the orderbook
@@ -122,9 +129,14 @@ export const BinanceStatusBadge = observer(() => {
         onClick={togglePopup}
         aria-label={isOpen ? binanceT.live.closeStatusDetails : binanceT.live.openStatusDetails}
         aria-expanded={isOpen}
-        className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ${statusBadgeClass(worst)}`}
+        title={statusLabel(worst)}
+        className={`flex items-center rounded-full p-1 ${statusIconClass(worst)} hover:bg-surface-elevated`}
       >
-        {BINANCE_CONFIG.instrument}
+        {isConnectionOffline(worst) ? (
+          <WifiOff size={STATUS_ICON_SIZE} />
+        ) : (
+          <Wifi size={STATUS_ICON_SIZE} />
+        )}
       </button>
       {isOpen ? (
         <BinanceStatusPopup

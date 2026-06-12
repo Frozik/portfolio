@@ -18,6 +18,7 @@ import {
   buildTradeHitTestPointerFromCss,
 } from './build-trade-hit-test-pointer';
 import { HoverInfoPopup } from './HoverInfoPopup';
+import { InstrumentSelector } from './InstrumentSelector';
 import { TradeBucketPopup } from './TradeBucketPopup';
 
 export const BinanceViewContent = observer(() => {
@@ -257,7 +258,10 @@ export const BinanceViewContent = observer(() => {
         onContextMenu={handleCanvasContextMenu}
       />
       <TopNavCenterPortal>
-        <BinanceStatusBadge />
+        <div className="flex items-center gap-2">
+          <InstrumentSelector />
+          <BinanceStatusBadge />
+        </div>
       </TopNavCenterPortal>
       {hoverAnchor !== null ? <HoverInfoPopup anchorPx={hoverAnchor} /> : null}
       {pinnedBucket !== undefined && tradesStore !== undefined ? (

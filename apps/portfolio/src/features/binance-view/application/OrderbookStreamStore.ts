@@ -33,6 +33,7 @@ export interface IOrderbookStreamStoreParams {
   readonly dataController: DataController;
   readonly db: IBinanceDb | undefined;
   readonly instrument: string;
+  readonly aggregationQuoteStep: number;
   readonly updateSpeedMs: Milliseconds;
   /**
    * Fan-out hook fired on every quantized snapshot processed by this
@@ -76,6 +77,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
   private readonly dataController: DataController;
   private readonly db: IBinanceDb | undefined;
   private readonly instrument: string;
+  private readonly aggregationQuoteStep: number;
   private readonly updateSpeedMs: Milliseconds;
   private readonly onQuantizedSnapshot: ((snapshot: IQuantizedSnapshot) => void) | undefined;
 
@@ -95,6 +97,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
     this.dataController = params.dataController;
     this.db = params.db;
     this.instrument = params.instrument;
+    this.aggregationQuoteStep = params.aggregationQuoteStep;
     this.updateSpeedMs = params.updateSpeedMs;
     this.onQuantizedSnapshot = params.onQuantizedSnapshot;
 
@@ -139,7 +142,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
       depth: BINANCE_CONFIG.rawDepth,
       updateSpeedMs: this.updateSpeedMs,
       restSnapshotLimit: BINANCE_CONFIG.restSnapshotLimit,
-      aggregationQuoteStep: BINANCE_CONFIG.aggregationQuoteStep,
+      aggregationQuoteStep: this.aggregationQuoteStep,
       reconnectDelayMs: BINANCE_CONFIG.reconnectDelayMs,
       maxSequenceGapRetries: BINANCE_CONFIG.maxSequenceGapRetries,
     }).subscribe({
@@ -167,7 +170,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
         height: this.chartState.canvas.clientHeight,
       },
       viewport: this.chartState.viewport,
-      priceStep: BINANCE_CONFIG.aggregationQuoteStep,
+      priceStep: this.aggregationQuoteStep,
     });
     if (token !== this.hitTestToken) {
       return;

@@ -6,13 +6,14 @@ import {
   RECONNECT_DELAY_MS,
   SNAPSHOTS_PER_BLOCK,
 } from './constants';
+import { DEFAULT_INSTRUMENT } from './instruments';
 import type { IBinanceConfig } from './types';
 
 export const BINANCE_CONFIG: IBinanceConfig = {
-  instrument: 'BTCUSDT',
+  instrument: DEFAULT_INSTRUMENT.symbol,
   rawDepth: 800,
   aggregatedDepth: 64,
-  aggregationQuoteStep: 1.5,
+  aggregationQuoteStep: DEFAULT_INSTRUMENT.aggregationQuoteStep,
   updateSpeedMs: 1000 as Milliseconds,
   streamHost: 'wss://stream.binance.com:9443',
   apiHost: 'https://api.binance.com/api/v3',

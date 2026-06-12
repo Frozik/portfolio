@@ -34,3 +34,23 @@ export function statusBadgeClass(connection: ConnectionState): string {
       return 'bg-surface-elevated text-text-muted';
   }
 }
+
+export function statusIconClass(connection: ConnectionState): string {
+  switch (connection) {
+    case 'connected':
+      return 'text-success';
+    case 'connecting':
+      return 'text-info animate-pulse';
+    case 'disconnected':
+      return 'text-warning';
+    case 'error':
+    case 'unsupported':
+      return 'text-error';
+    case 'idle':
+      return 'text-text-muted';
+  }
+}
+
+export function isConnectionOffline(connection: ConnectionState): boolean {
+  return connection === 'error' || connection === 'unsupported';
+}

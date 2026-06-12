@@ -5,10 +5,11 @@ import { BinanceChartState } from '../domain/chart-state';
 import { BINANCE_CONFIG } from '../domain/config';
 import { SNAPSHOT_SLOTS } from '../domain/constants';
 import { DataController } from '../domain/data-controller';
+import { DEFAULT_INSTRUMENT, findInstrument, instrumentDbName } from '../domain/instruments';
 import { TaskManager } from '../domain/task-manager';
 import type { ConnectionState, IHitTestResult, UnixTimeMs } from '../domain/types';
 import type { IBinanceDb } from '../infrastructure/binance-indexeddb';
-import { DEFAULT_DB_NAME, openBinanceDb } from '../infrastructure/binance-indexeddb';
+import { openBinanceDb } from '../infrastructure/binance-indexeddb';
 
 import { MidPriceStreamStore } from './MidPriceStreamStore';
 import { OrderbookStreamStore } from './OrderbookStreamStore';
@@ -39,6 +40,16 @@ export class BinanceViewStore {
   private midPriceStoreInternal: MidPriceStreamStore | undefined = undefined;
   private tradesStoreInternal: TradesStreamStore | undefined = undefined;
 
+  /** Currently selected instrument symbol (observable — drives the UI selector). */
+  instrument: string = DEFAULT_INSTRUMENT.symbol;
+
+  /**
+   * The canvas handed to {@link attachCanvas}. Retained so {@link setInstrument}
+   * can tear the pipeline down and re-attach the SAME canvas under a new
+   * instrument without the presentation layer re-mounting.
+   */
+  private currentCanvas: HTMLCanvasElement | undefined = undefined;
+
   /**
    * Monotonic counter bumped on every `dispose()`. An in-flight
    * `attachCanvas` captures this token at entry and aborts if it no
@@ -49,6 +60,10 @@ export class BinanceViewStore {
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
+  }
+
+  private get aggregationQuoteStep(): number {
+    return findInstrument(this.instrument).aggregationQuoteStep;
   }
 
   get orderbookStore(): OrderbookStreamStore | undefined {
@@ -103,11 +118,13 @@ export class BinanceViewStore {
     if (this.chartState !== undefined) {
       return;
     }
+    this.currentCanvas = canvas;
     const token = this.attachToken;
+    const dbName = instrumentDbName(this.instrument);
 
     let db: IBinanceDb | undefined;
     try {
-      db = await openBinanceDb();
+      db = await openBinanceDb(dbName);
       await db.clearAll();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
@@ -116,7 +133,7 @@ export class BinanceViewStore {
         db?.close();
         try {
           await new Promise<void>((resolve, reject) => {
-            const request = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
+            const request = indexedDB.deleteDatabase(dbName);
             request.onsuccess = (): void => resolve();
             request.onerror = (): void =>
               reject(request.error ?? new Error('deleteDatabase failed'));
@@ -126,7 +143,7 @@ export class BinanceViewStore {
             // freshly-open DB that's already past the quota wall.
             request.onblocked = (): void => resolve();
           });
-          db = await openBinanceDb();
+          db = await openBinanceDb(dbName);
         } catch (recoveryError) {
           // biome-ignore lint/suspicious/noConsole: surfaces unrecoverable IDB failure
           console.warn('binance-view: IDB recovery failed, persistence disabled', recoveryError);
@@ -156,7 +173,7 @@ export class BinanceViewStore {
       // raw tickSize — rendering at $0.01 would collapse each row into
       // a single sub-pixel strip. Sub-stores keep `priceStep` for
       // diagnostics only.
-      priceStep: BINANCE_CONFIG.aggregationQuoteStep,
+      priceStep: this.aggregationQuoteStep,
     });
 
     const taskManager = new TaskManager();
@@ -188,7 +205,8 @@ export class BinanceViewStore {
       chartState: state,
       dataController,
       db,
-      instrument: BINANCE_CONFIG.instrument,
+      instrument: this.instrument,
+      aggregationQuoteStep: this.aggregationQuoteStep,
       updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
       onQuantizedSnapshot: midPriceStore.ingestOrderbookSnapshot,
     });
@@ -197,7 +215,7 @@ export class BinanceViewStore {
     const tradesStore = new TradesStreamStore({
       chartState: state,
       db,
-      instrument: BINANCE_CONFIG.instrument,
+      instrument: this.instrument,
       gate: orderbookStore,
     });
 
@@ -267,6 +285,22 @@ export class BinanceViewStore {
     this.orderbookStoreInternal?.startStream();
     this.midPriceStoreInternal?.startStream();
     this.tradesStoreInternal?.startStream();
+  }
+
+  async setInstrument(symbol: string): Promise<void> {
+    if (symbol === this.instrument) {
+      return;
+    }
+    const canvas = this.currentCanvas;
+    this.dispose();
+    runInAction(() => {
+      this.instrument = symbol;
+    });
+    if (canvas === undefined) {
+      return;
+    }
+    await this.attachCanvas(canvas);
+    this.startStream();
   }
 
   async resolveCellAt(pointerPx: { x: number; y: number }): Promise<void> {
