@@ -1,5 +1,6 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { MS_PER_SECOND } from '@frozik/utils/date/constants';
+import { FpsMeter } from '@frozik/utils/webgpu/fpsMeter';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { isNil } from 'lodash-es';
 
@@ -24,8 +25,6 @@ import { RenderTargetPool } from './render-target-pool';
 import type { IPlotArea, ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
 const THROTTLE_TOLERANCE_MS = 2;
-const MIN_FPS_WINDOW_MS = 1000;
-const FPS_UPDATE_INTERVAL_MS = 250;
 const LOADING_BAR_HEIGHT_PX = 5;
 const SHIMMER_COLOR_LIGHT = 'rgba(100, 160, 255, 0.6)';
 const SHIMMER_COLOR_DARK = 'rgba(30, 80, 180, 0.8)';
@@ -172,8 +171,11 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
   private lastFrameTime = 0;
   private disposed = false;
   private needsReconfigure = false;
-  private readonly renderFrameTimes: number[] = [];
-  private lastFpsUpdate = 0;
+  private readonly fpsMeter = new FpsMeter({
+    onUpdate: fps => {
+      this.renderFps = fps;
+    },
+  });
 
   constructor(
     device: GPUDevice,
@@ -266,38 +268,12 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
       }
 
       this.lastFrameTime = now;
-      this.trackRenderFps(now);
+      this.fpsMeter.tick(now, this.getMinFrameIntervalMs());
       this.renderAllCharts();
       this.animationFrameId = requestAnimationFrame(frame);
     };
 
     this.animationFrameId = requestAnimationFrame(frame);
-  }
-
-  private trackRenderFps(now: number): void {
-    // Use a window that captures at least 3 frames at the current rate
-    const fpsWindowMs = Math.max(MIN_FPS_WINDOW_MS, this.getMinFrameIntervalMs() * 3);
-
-    this.renderFrameTimes.push(now);
-
-    // Trim old entries beyond the window
-    const cutoff = now - fpsWindowMs;
-    while (this.renderFrameTimes.length > 0 && this.renderFrameTimes[0] < cutoff) {
-      this.renderFrameTimes.shift();
-    }
-
-    // Update FPS periodically
-    if (now - this.lastFpsUpdate >= FPS_UPDATE_INTERVAL_MS) {
-      this.lastFpsUpdate = now;
-      const elapsed =
-        this.renderFrameTimes.length > 1
-          ? this.renderFrameTimes[this.renderFrameTimes.length - 1] - this.renderFrameTimes[0]
-          : 0;
-      this.renderFps =
-        elapsed > 0
-          ? Math.round(((this.renderFrameTimes.length - 1) / elapsed) * MS_PER_SECOND)
-          : 0;
-    }
   }
 
   private stopAnimationLoop(): void {

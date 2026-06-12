@@ -3,11 +3,12 @@ import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
+import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
 import { vec3 } from 'wgpu-matrix';
 import type { OrbitalCameraController } from './camera-controller';
 import { createOrbitalCameraController } from './camera-controller';
 import { createClickDetector } from './click-detector';
-import { FPS_IDLE, FPS_INTERACTION, MSAA_SAMPLE_COUNT } from './constants';
+import { FPS_IDLE, FPS_INTERACTION, FPS_RESIZE, MSAA_SAMPLE_COUNT } from './constants';
 import type { InitialDragHit } from './drag-connector';
 import { createDragToConnectController } from './drag-connector';
 import { preparePuzzle } from './geometry';
@@ -16,7 +17,6 @@ import type { AllowedHitTypes, SceneHit } from './hit-testing';
 import { hitTestScene } from './hit-testing';
 import { IntersectionCache } from './intersection';
 import { SceneLayer } from './layers/scene-layer';
-import { startRenderLoop } from './render-loop';
 import { buildRepresentation } from './representation';
 import { computeSolutionStatus } from './solution-check';
 import {
@@ -375,6 +375,7 @@ async function initStereometry(
     fpsController,
     onFpsUpdate,
     shouldRender: () => sceneLayer.consumeDirty(),
+    onResize: () => fpsController.raise(FPS_RESIZE),
   });
 
   return {

@@ -1,9 +1,9 @@
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
+import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
 
 import { SunLayer } from './layers/sun-layer';
-import { startRenderLoop } from './render-loop';
 import { createOrbitalCameraController } from './sun-camera-controller';
 import { MSAA_SAMPLE_COUNT } from './sun-constants';
 
