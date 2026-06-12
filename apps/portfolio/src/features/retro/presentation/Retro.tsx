@@ -3,11 +3,11 @@ import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { SignInGate } from '../../../shared/communication/SignInGate';
+import { useSignalingHealth } from '../../../shared/communication/useSignalingHealth';
 import { Spinner } from '../../../shared/ui/Spinner';
 import { primeRetroAudio } from '../infrastructure/sound';
 import { RetroBackground } from './components/RetroBackground';
 import { SignalingUnavailable } from './components/SignalingUnavailable';
-import { useSignalingHealth } from './hooks/useSignalingHealth';
 
 const AUDIO_PRIME_EVENTS: ReadonlyArray<keyof DocumentEventMap> = [
   'pointerdown',

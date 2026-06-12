@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-import { useCommunicationBaseUrl } from '../../../../shared/communication/CommunicationProvider';
+import { useCommunicationBaseUrl } from './CommunicationProvider';
 
-export type TConfSignalingHealthStatus = 'checking' | 'ok' | 'unavailable';
+export type TSignalingHealthStatus = 'checking' | 'ok' | 'unavailable';
 
 const HEALTH_TIMEOUT_MS = 5_000;
 const HEALTH_PATH = '/health/live';
@@ -36,15 +36,18 @@ async function probe(baseUrl: string): Promise<boolean> {
 }
 
 /**
- * Probes the communication server's liveness endpoint on mount and
- * reports the outcome. Used by the Conf feature root to gate the
- * UI: if the server is unreachable, we render an error screen
- * instead of the Lobby / Room which would otherwise hang in
- * "connecting" state forever.
+ * One-shot liveness probe of the communication server on mount, reported as
+ * `'checking' | 'ok' | 'unavailable'`. Feature roots (retro / conf) use it to
+ * gate the UI: when the server is unreachable they render an error screen
+ * instead of a Lobby / Room that would otherwise hang in "connecting" forever.
+ *
+ * Probes the SAME `baseUrl` the feature's sockets connect through
+ * (`useCommunicationBaseUrl`), so the health check can never target a
+ * different server than the live connection.
  */
-export function useConfSignalingHealth(): TConfSignalingHealthStatus {
+export function useSignalingHealth(): TSignalingHealthStatus {
   const baseUrl = useCommunicationBaseUrl();
-  const [status, setStatus] = useState<TConfSignalingHealthStatus>('checking');
+  const [status, setStatus] = useState<TSignalingHealthStatus>('checking');
 
   useEffect(() => {
     let cancelled = false;

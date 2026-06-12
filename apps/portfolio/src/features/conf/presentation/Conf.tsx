@@ -1,12 +1,12 @@
 import { observer } from 'mobx-react-lite';
 import { Outlet } from 'react-router-dom';
 
+import { useSignalingHealth } from '../../../shared/communication/useSignalingHealth';
 import { Spinner } from '../../../shared/ui/Spinner';
 import { ConfSignalingUnavailable } from './components/ConfSignalingUnavailable';
-import { useConfSignalingHealth } from './hooks/useConfSignalingHealth';
 
 export const Conf = observer(() => {
-  const healthStatus = useConfSignalingHealth();
+  const healthStatus = useSignalingHealth();
 
   return (
     <div className="h-full w-full flex flex-col text-text">
