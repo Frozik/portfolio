@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { cn } from '../../../../../shared/lib/cn';
-import { Modal } from '../../../../../shared/ui/Modal';
+import { DialogShell } from '../../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../../shared/ui/QRCode';
 import { welcomeT } from '../../translations';
 
@@ -32,7 +32,8 @@ const QRContactModalComponent = ({ open, value, title, onClose }: QRContactModal
   });
 
   return (
-    <Modal
+    <DialogShell
+      compact
       open={open}
       onClose={onClose}
       title={title}
@@ -63,7 +64,7 @@ const QRContactModalComponent = ({ open, value, title, onClose }: QRContactModal
           welcomeT.contacts.copyLink
         )}
       </button>
-    </Modal>
+    </DialogShell>
   );
 };
 

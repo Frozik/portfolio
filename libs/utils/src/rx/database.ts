@@ -1,14 +1,11 @@
 import type { DBSchema, IDBPDatabase } from 'idb';
 import type { MonoTypeOperatorFunction } from 'rxjs';
 import { Observable, retry, timer } from 'rxjs';
+import type { TDatabaseErrorCallback } from '../database';
+import { EDatabaseErrorCallbackType } from '../database';
 
-export enum EDatabaseErrorCallbackType {
-  Blocked = 'Blocked',
-  Blocking = 'Blocking',
-  Terminated = 'Terminated',
-}
-
-export type TDatabaseErrorCallback = (type: EDatabaseErrorCallbackType) => void | Promise<void>;
+// Re-exported so existing `@frozik/utils/rx/database` imports keep working.
+export { EDatabaseErrorCallbackType, type TDatabaseErrorCallback };
 
 export type TDatabaseCreator<T extends DBSchema> = (
   callback: TDatabaseErrorCallback

@@ -3,8 +3,12 @@ javascript:
   syncPackageManagerField: true
   dedupeOnLockfileChange: false
 
+# Pinned to an exact version (not a loose '22') so proto resolves it from the
+# local cache without fetching nodejs.org's version index — otherwise a TTL
+# refresh of that index fails the build when offline (e.g. the pre-commit hook
+# with no network). Matches pnpm's exact pin below.
 node:
-  version: '22'
+  version: '22.22.2'
 
 pnpm:
   version: '10.14.0'

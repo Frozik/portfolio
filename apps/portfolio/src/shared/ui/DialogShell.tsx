@@ -31,6 +31,11 @@ type DialogShellProps = {
    * expose extra actions.
    */
   readonly headerExtra?: ReactNode;
+  /**
+   * Compact preset: narrower surface and a small mono-label title/description
+   * instead of the large heading. Used for terse utility dialogs (QR codes).
+   */
+  readonly compact?: boolean;
 };
 
 /**
@@ -51,6 +56,7 @@ const DialogShellComponent = ({
   closeLabel = DEFAULT_CLOSE_LABEL,
   dismissible = true,
   headerExtra,
+  compact = false,
 }: DialogShellProps) => {
   const handleOpenChange = useFunction((nextOpen: boolean) => {
     if (!nextOpen) {
@@ -79,7 +85,8 @@ const DialogShellComponent = ({
           onEscapeKeyDown={hardInteractionGuard}
           onInteractOutside={hardInteractionGuard}
           className={cn(
-            'fixed left-1/2 top-1/2 z-[110] w-[min(90vw,520px)] -translate-x-1/2 -translate-y-1/2',
+            'fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2',
+            compact ? 'w-[min(90vw,380px)]' : 'w-[min(90vw,520px)]',
             'rounded-sm border border-landing-border bg-landing-bg-card p-8 text-landing-fg shadow-2xl',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
@@ -88,17 +95,29 @@ const DialogShellComponent = ({
           )}
         >
           <div className="mb-5 flex items-start justify-between gap-4">
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-col gap-1">
               {kicker !== undefined && (
                 <MonoKicker tone="accent" className="tracking-widest text-[10.5px]">
                   {kicker}
                 </MonoKicker>
               )}
-              <DialogPrimitive.Title className="mt-1 text-[22px] font-medium text-landing-fg">
+              <DialogPrimitive.Title
+                className={cn(
+                  compact
+                    ? 'font-mono text-[10.5px] uppercase tracking-widest text-landing-accent'
+                    : 'mt-1 text-[22px] font-medium text-landing-fg'
+                )}
+              >
                 {title}
               </DialogPrimitive.Title>
               {description !== undefined && (
-                <DialogPrimitive.Description className="mt-1.5 text-[13.5px] font-light text-landing-fg-dim">
+                <DialogPrimitive.Description
+                  className={cn(
+                    compact
+                      ? 'font-mono text-[10px] uppercase tracking-widest text-landing-fg-faint'
+                      : 'mt-1.5 text-[13.5px] font-light text-landing-fg-dim'
+                  )}
+                >
                   {description}
                 </DialogPrimitive.Description>
               )}

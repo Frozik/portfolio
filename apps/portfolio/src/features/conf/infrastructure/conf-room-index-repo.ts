@@ -1,8 +1,7 @@
-import { createDB, getDatabaseVersion } from '@frozik/utils/database';
+import type { TDatabaseErrorCallback } from '@frozik/utils/database';
+import { openVersionedDatabase } from '@frozik/utils/database';
 import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
-import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
-import { EDatabaseErrorCallbackType } from '@frozik/utils/rx/database';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
 import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain/types';
@@ -114,23 +113,13 @@ export async function createConfRoomIndexRepo(
   };
 }
 
-async function openConfRoomIndexDatabase(
+function openConfRoomIndexDatabase(
   dbCallback: TDatabaseErrorCallback
 ): Promise<IDBPDatabase<IConfRoomsDB>> {
-  const currentVersion = (await getDatabaseVersion(DATABASE_NAME)) ?? 0;
-  const requestedVersion = Math.max(currentVersion, CURRENT_DATABASE_VERSION);
-
-  return createDB<IConfRoomsDB>(DATABASE_NAME, requestedVersion, {
-    async blocked() {
-      await dbCallback(EDatabaseErrorCallbackType.Blocked);
-    },
-    async blocking() {
-      await dbCallback(EDatabaseErrorCallbackType.Blocking);
-    },
-    async terminated() {
-      await dbCallback(EDatabaseErrorCallbackType.Terminated);
-    },
-    upgrade(database: IDBPDatabase<IConfRoomsDB>, oldVersion: number) {
+  return openVersionedDatabase<IConfRoomsDB>(
+    DATABASE_NAME,
+    CURRENT_DATABASE_VERSION,
+    (database, oldVersion) => {
       if (oldVersion < 1) {
         const store = database.createObjectStore(ROOMS_TABLE_NAME, {
           keyPath: ROOM_ID_FIELD,
@@ -138,7 +127,8 @@ async function openConfRoomIndexDatabase(
         store.createIndex(ROOMS_LAST_VISITED_INDEX, ROOM_LAST_VISITED_FIELD);
       }
     },
-  });
+    dbCallback
+  );
 }
 
 function toDomainEntry(row: IDBConfRoomEntry): IConfRoomIndexEntry {

@@ -1,8 +1,7 @@
-import { createDB, getDatabaseVersion } from '@frozik/utils/database';
+import type { TDatabaseErrorCallback } from '@frozik/utils/database';
+import { openVersionedDatabase } from '@frozik/utils/database';
 import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
-import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
-import { EDatabaseErrorCallbackType } from '@frozik/utils/rx/database';
 import type { DBSchema, IDBPDatabase } from 'idb';
 
 import type { ClientId } from '../domain/types';
@@ -72,28 +71,19 @@ export async function createUserDirectoryRepo(
   };
 }
 
-async function openUserDirectoryDatabase(
+function openUserDirectoryDatabase(
   dbCallback: TDatabaseErrorCallback
 ): Promise<IDBPDatabase<IUserDirectoryDB>> {
-  const currentVersion = (await getDatabaseVersion(DATABASE_NAME)) ?? 0;
-  const requestedVersion = Math.max(currentVersion, CURRENT_DATABASE_VERSION);
-
-  return createDB<IUserDirectoryDB>(DATABASE_NAME, requestedVersion, {
-    async blocked() {
-      await dbCallback(EDatabaseErrorCallbackType.Blocked);
-    },
-    async blocking() {
-      await dbCallback(EDatabaseErrorCallbackType.Blocking);
-    },
-    async terminated() {
-      await dbCallback(EDatabaseErrorCallbackType.Terminated);
-    },
-    upgrade(database: IDBPDatabase<IUserDirectoryDB>, oldVersion: number) {
+  return openVersionedDatabase<IUserDirectoryDB>(
+    DATABASE_NAME,
+    CURRENT_DATABASE_VERSION,
+    (database, oldVersion) => {
       if (oldVersion < 1) {
         database.createObjectStore(USERS_TABLE_NAME, { keyPath: 'clientId' });
       }
     },
-  });
+    dbCallback
+  );
 }
 
 function toProfile(row: IDBUserRow): IUserProfile {

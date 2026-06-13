@@ -22,7 +22,7 @@ import { welcomeT } from '../../features/welcome/presentation/translations';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { cn } from '../../shared/lib/cn';
-import { Modal } from '../../shared/ui/Modal';
+import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import type { INavProject } from './MobileSectionMenu';
@@ -236,7 +236,8 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
         </div>
       </nav>
 
-      <Modal
+      <DialogShell
+        compact
         open={qrOpen}
         onClose={handleQRClose}
         title={welcomeT.nav.openOnPhone}
@@ -249,7 +250,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
         <div className="break-all font-mono text-[12px] leading-[1.5] text-landing-fg-dim">
           {getCurrentPageUrl()}
         </div>
-      </Modal>
+      </DialogShell>
 
       <MobileSectionMenu
         open={menuOpen}
