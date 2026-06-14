@@ -12,6 +12,7 @@
     "types": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@frozik/communication-protocol": "workspace:*",
     "@frozik/components": "workspace:*",
     "@frozik/utils": "workspace:*"
   },

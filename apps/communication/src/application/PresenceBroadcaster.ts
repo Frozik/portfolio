@@ -1,5 +1,5 @@
+import type { IRoomPresenceEvent } from '@frozik/communication-protocol/messages';
 import { uniqBy } from 'lodash-es';
-import type { IRoomPresenceEvent } from '../domain/protocol';
 import type { Room } from '../domain/Room';
 import type { RoomId } from '../domain/types';
 import type { IPresenceTransport } from './ports/IPresenceTransport';

@@ -1,4 +1,5 @@
-import type { IOidcProfile, IOidcSignInResult, TIdentityProvider } from './types';
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
+import type { IOidcProfile, IOidcSignInResult } from './types';
 
 /**
  * Provider-agnostic facade for sign-in + silent refresh + profile

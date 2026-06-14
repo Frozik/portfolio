@@ -1,6 +1,6 @@
+import type { IRoomPresenceEvent } from '@frozik/communication-protocol/messages';
 import { describe, expect, it } from 'vitest';
 import type { Identity } from '../domain/Identity';
-import type { IRoomPresenceEvent } from '../domain/protocol';
 import { Room } from '../domain/Room';
 import type { DisplayName, RoomId, UserId } from '../domain/types';
 import { PresenceBroadcaster } from './PresenceBroadcaster';

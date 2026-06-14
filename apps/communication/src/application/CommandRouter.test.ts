@@ -1,6 +1,10 @@
+import type {
+  IExecuteEvent,
+  IInitiatePayload,
+  IResponseEvent,
+} from '@frozik/communication-protocol/messages';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Identity } from '../domain/Identity';
-import type { IExecuteEvent, IInitiatePayload, IResponseEvent } from '../domain/protocol';
 import type { RoomLimits } from '../domain/Room';
 import { Room } from '../domain/Room';
 import type { DisplayName, RoomId, SocketId, UserId } from '../domain/types';

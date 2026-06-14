@@ -1,24 +1,5 @@
 // @vitest-environment node
-import type { Socket as ClientSocket } from 'socket.io-client';
-import { io as ioClient } from 'socket.io-client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { IServerConfig } from '../application/config/server-config-schema';
-import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
-import type { Result } from '../application/Result';
-import { err, ok } from '../application/Result';
-import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
-import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
-import type {
-  IExecuteAck,
-  IExecuteEvent,
-  IInitiateAck,
-  IRefreshTokenAck,
-  IResponseEvent,
-  IRoomPresenceEvent,
-  ISignalAck,
-  ISignalEventOutbound,
-  ITurnCredentialsAck,
-} from '../domain/protocol';
+
 import {
   AUTH_REFRESH_TOKEN,
   AUTH_TOKEN_EXPIRING,
@@ -31,7 +12,27 @@ import {
   SIGNAL_PUBLISH,
   TURN_CREDENTIALS_RENEWED,
   TURN_REQUEST_CREDENTIALS,
-} from '../domain/protocol';
+} from '@frozik/communication-protocol/events';
+import type {
+  IExecuteAck,
+  IExecuteEvent,
+  IInitiateAck,
+  IRefreshTokenAck,
+  IResponseEvent,
+  IRoomPresenceEvent,
+  SignalAck as ISignalAck,
+  ISignalEventOutbound,
+  ITurnCredentialsAck,
+} from '@frozik/communication-protocol/messages';
+import type { Socket as ClientSocket } from 'socket.io-client';
+import { io as ioClient } from 'socket.io-client';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { IServerConfig } from '../application/config/server-config-schema';
+import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
+import type { Result } from '../application/Result';
+import { err, ok } from '../application/Result';
+import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
+import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { Milliseconds, UserId } from '../domain/types';
 import type { BootstrapResult } from './bootstrap';
 import { bootstrap } from './bootstrap';

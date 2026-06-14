@@ -1,13 +1,11 @@
+import type {
+  ISignalEventOutbound,
+  ITurnCredentialsAck,
+  SignalAck,
+} from '@frozik/communication-protocol/messages';
 import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type {
-  ICommunicationClient,
-  ISignalEvent,
-  ITurnCredentials,
-  TConnectionState,
-  TSignalAck,
-} from './CommunicationClient';
+import type { ICommunicationClient, TConnectionState } from './CommunicationClient';
 import {
   buildCommunicationSignalingUrl,
   installCommunicationWebSocketShim,
@@ -15,12 +13,12 @@ import {
 } from './YWebrtcSignalingConnAdapter';
 
 interface IFakeClient extends ICommunicationClient {
-  triggerSignal(event: ISignalEvent): void;
+  triggerSignal(event: ISignalEventOutbound): void;
   publishedPayloads: unknown[];
 }
 
 function createFakeClient(): IFakeClient {
-  const signalListeners = new Set<(event: ISignalEvent) => void>();
+  const signalListeners = new Set<(event: ISignalEventOutbound) => void>();
   const stateListeners = new Set<(state: TConnectionState) => void>();
   const stateSubject = new BehaviorSubject<TConnectionState>('open');
   const publishedPayloads: unknown[] = [];
@@ -33,11 +31,11 @@ function createFakeClient(): IFakeClient {
     disconnect() {
       // no-op
     },
-    signalPublish(payload: unknown): Promise<TSignalAck> {
+    signalPublish(payload: unknown): Promise<SignalAck> {
       publishedPayloads.push(payload);
       return Promise.resolve({ ok: true, recipientCount: 1 });
     },
-    requestTurnCredentials(): Promise<ITurnCredentials> {
+    requestTurnCredentials(): Promise<ITurnCredentialsAck> {
       return Promise.resolve({
         username: 'u',
         credential: 'c',

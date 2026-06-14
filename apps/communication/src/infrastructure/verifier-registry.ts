@@ -8,7 +8,8 @@ import { yandexVerifierFactory } from './YandexIdentityVerifier';
  * when its `isConfigured(auth)` returns `false`.
  *
  * Adding a new provider:
- *  1. Append it to `IDENTITY_PROVIDERS` in `domain/IdentityProvider.ts`.
+ *  1. Append it to `IDENTITY_PROVIDERS` in
+ *     `@frozik/communication-protocol/identity`.
  *  2. Drop a `*IdentityVerifier.ts` next to the existing two and
  *     export a factory.
  *  3. Add the factory to this array.

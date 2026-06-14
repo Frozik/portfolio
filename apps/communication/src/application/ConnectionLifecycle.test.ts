@@ -1,6 +1,6 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
-import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import type { Milliseconds, UserId } from '../domain/types';
 import { ConnectionLifecycle } from './ConnectionLifecycle';

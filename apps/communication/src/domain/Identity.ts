@@ -1,5 +1,7 @@
-import type { TIdentityProvider } from './IdentityProvider';
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import type { DisplayName, Milliseconds, UserId } from './types';
+
+export type { AuthErrorCode } from '@frozik/communication-protocol/messages';
 
 export type Identity = {
   userId: UserId;
@@ -30,14 +32,3 @@ export type TokenClaims = {
    */
   sid?: string;
 };
-
-export type AuthErrorCode =
-  | 'auth/invalid-token'
-  | 'auth/expired-token'
-  | 'auth/wrong-audience'
-  | 'auth/wrong-issuer'
-  | 'auth/missing-fields'
-  | 'auth/jwks-unreachable'
-  | 'auth/missing-name-claim'
-  | 'auth/sub-mismatch'
-  | 'auth/rate-limited';

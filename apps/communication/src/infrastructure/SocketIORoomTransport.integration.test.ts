@@ -2,12 +2,20 @@
 import type { Server as HttpServer } from 'node:http';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import {
+  COMMAND_EXECUTE,
+  ROOM_PRESENCE,
+  SIGNAL_EVENT,
+} from '@frozik/communication-protocol/events';
+import type {
+  IExecuteEvent,
+  IRoomPresenceEvent,
+  ISignalEventOutbound,
+} from '@frozik/communication-protocol/messages';
 import { Server as SocketIOServer } from 'socket.io';
 import type { Socket as ClientSocket } from 'socket.io-client';
 import { io as ioClient } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { IExecuteEvent, IRoomPresenceEvent, ISignalEventOutbound } from '../domain/protocol';
-import { COMMAND_EXECUTE, ROOM_PRESENCE, SIGNAL_EVENT } from '../domain/protocol';
 import type { RoomId } from '../domain/types';
 import { SocketIORoomTransport } from './SocketIORoomTransport';
 

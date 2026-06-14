@@ -1,6 +1,7 @@
+import type { ISignalEventOutbound } from '@frozik/communication-protocol/messages';
 import { merge, of, Subscription } from 'rxjs';
 import { filter, map, switchMap, take } from 'rxjs/operators';
-import type { ICommunicationClient, ISignalEvent } from './CommunicationClient';
+import type { ICommunicationClient } from './CommunicationClient';
 
 /**
  * URL scheme used to mark a signaling URL as backed by a
@@ -76,7 +77,7 @@ export function registerCommunicationSignaling(params: {
     sockets: new Set<MockWebSocket>(),
     unsubscribeSignal: null,
   };
-  entry.unsubscribeSignal = client.onSignalEvent((event: ISignalEvent) => {
+  entry.unsubscribeSignal = client.onSignalEvent((event: ISignalEventOutbound) => {
     // y-webrtc routes inbound signaling envelopes through
     // `WebsocketClient`'s `onmessage` handler. The lib parses the
     // string as JSON and dispatches based on `m.type === 'publish'`

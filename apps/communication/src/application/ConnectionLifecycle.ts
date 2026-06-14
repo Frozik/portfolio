@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
+import type { IHandshakeAuth } from '@frozik/communication-protocol/messages';
 import type { AuthErrorCode, Identity, TokenClaims } from '../domain/Identity';
-import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
-import type { IHandshakeAuth } from '../domain/protocol';
 import { parseHandshakeAuth } from '../domain/protocol-validators';
 import type { DisplayName, SocketId, UserId } from '../domain/types';
 import { assertDisplayName } from '../domain/types';

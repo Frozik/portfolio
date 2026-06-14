@@ -1,20 +1,3 @@
-import type { Server as SocketIOServer } from 'socket.io';
-import type {
-  BroadcastRequestOptions,
-  ICommandTransport,
-  TransportAckResult,
-} from '../application/ports/ICommandTransport';
-import type { ILifecycleTransport } from '../application/ports/ILifecycleTransport';
-import type { IPresenceTransport } from '../application/ports/IPresenceTransport';
-import type { ISignalTransport } from '../application/ports/ISignalTransport';
-import type {
-  IExecuteAck,
-  IExecuteEvent,
-  IResponseEvent,
-  IRoomPresenceEvent,
-  ISignalEventOutbound,
-  ITokenExpiringEvent,
-} from '../domain/protocol';
 import {
   AUTH_TOKEN_EXPIRED,
   AUTH_TOKEN_EXPIRING,
@@ -24,7 +7,24 @@ import {
   SERVER_DRAINING,
   SIGNAL_EVENT,
   TURN_CREDENTIALS_RENEWED,
-} from '../domain/protocol';
+} from '@frozik/communication-protocol/events';
+import type {
+  IExecuteAck,
+  IExecuteEvent,
+  IResponseEvent,
+  IRoomPresenceEvent,
+  ISignalEventOutbound,
+  ITokenExpiringEvent,
+} from '@frozik/communication-protocol/messages';
+import type { Server as SocketIOServer } from 'socket.io';
+import type {
+  BroadcastRequestOptions,
+  ICommandTransport,
+  TransportAckResult,
+} from '../application/ports/ICommandTransport';
+import type { ILifecycleTransport } from '../application/ports/ILifecycleTransport';
+import type { IPresenceTransport } from '../application/ports/IPresenceTransport';
+import type { ISignalTransport } from '../application/ports/ISignalTransport';
 import type { RoomId, SocketId } from '../domain/types';
 
 // Single class implements all four transport ports — they share the

@@ -1,3 +1,15 @@
+import {
+  AUTH_REFRESH_TOKEN,
+  COMMAND_INITIATE,
+  SIGNAL_PUBLISH,
+  TURN_REQUEST_CREDENTIALS,
+} from '@frozik/communication-protocol/events';
+import type {
+  IInitiateAck,
+  IRefreshTokenAck,
+  SignalAck as ISignalAck,
+  ITurnCredentialsAck,
+} from '@frozik/communication-protocol/messages';
 import { assert } from '@frozik/utils/assert/assert';
 import type { Socket, Server as SocketIOServer } from 'socket.io';
 import { Temporal } from 'temporal-polyfill';
@@ -15,18 +27,6 @@ import { TokenLifecycle } from '../application/TokenLifecycle';
 import { InvalidPayloadError } from '../domain/errors';
 import type { AuthErrorCode, Identity, TokenClaims } from '../domain/Identity';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
-import type {
-  IInitiateAck,
-  IRefreshTokenAck,
-  ISignalAck,
-  ITurnCredentialsAck,
-} from '../domain/protocol';
-import {
-  AUTH_REFRESH_TOKEN,
-  COMMAND_INITIATE,
-  SIGNAL_PUBLISH,
-  TURN_REQUEST_CREDENTIALS,
-} from '../domain/protocol';
 import { parseInitiatePayload, parseRefreshTokenPayload } from '../domain/protocol-validators';
 import type { RoomId } from '../domain/types';
 import { assertDisplayName, assertRoomId } from '../domain/types';

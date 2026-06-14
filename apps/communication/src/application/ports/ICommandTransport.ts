@@ -1,4 +1,4 @@
-import type { IExecuteEvent, IResponseEvent } from '../../domain/protocol';
+import type { IExecuteEvent, IResponseEvent } from '@frozik/communication-protocol/messages';
 import type { RoomId, SocketId } from '../../domain/types';
 
 export type TransportAckResult =

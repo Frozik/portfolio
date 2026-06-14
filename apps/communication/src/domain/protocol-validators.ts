@@ -1,7 +1,7 @@
+import { IDENTITY_PROVIDERS } from '@frozik/communication-protocol/identity';
 import { z } from 'zod';
 import { UUID_V4_REGEX } from './constants';
 import { InvalidPayloadError } from './errors';
-import { IDENTITY_PROVIDERS } from './IdentityProvider';
 
 // Maximum size of a `signal:publish` payload after JSON serialization. Bytes,
 // not characters — verified via `Buffer.byteLength(json, 'utf8')`.

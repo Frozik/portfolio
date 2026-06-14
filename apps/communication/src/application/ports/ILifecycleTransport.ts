@@ -1,4 +1,4 @@
-import type { ITokenExpiringEvent } from '../../domain/protocol';
+import type { ITokenExpiringEvent } from '@frozik/communication-protocol/messages';
 import type { RoomId, SocketId } from '../../domain/types';
 
 export interface ILifecycleTransport {

@@ -1,6 +1,6 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import type { AuthSection } from '../application/config/sections/auth-section';
 import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
-import type { TIdentityProvider } from '../domain/IdentityProvider';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 
 /**

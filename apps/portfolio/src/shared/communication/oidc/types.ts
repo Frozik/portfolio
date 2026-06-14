@@ -1,15 +1,8 @@
 /**
- * Single source of truth for the OIDC providers the frontend
- * understands. Both `IOidcProvider` strategy implementations and the
- * sign-in button registry derive from this tuple — adding a new
- * provider is one line here, then one entry in each registry array.
- *
- * Mirrored on the server in
- * `apps/communication/src/domain/IdentityProvider.ts`.
+ * OIDC-specific client types. The provider discriminator (`TIdentityProvider`)
+ * lives in `@frozik/communication-protocol/identity` — import it directly from
+ * there at each use site.
  */
-export const IDENTITY_PROVIDERS = ['google', 'yandex'] as const;
-
-export type TIdentityProvider = (typeof IDENTITY_PROVIDERS)[number];
 
 /**
  * Snapshot of the user's profile pulled out of a verified provider

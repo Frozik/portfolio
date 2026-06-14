@@ -1,12 +1,11 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { GoogleOAuthProvider, useGoogleOAuth } from '@react-oauth/google';
 import { observer } from 'mobx-react-lite';
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
-
 import { AuthSession } from './AuthSession';
 import type { IOidcProvider } from './oidc/IOidcProvider';
 import { OIDC_PROVIDER_FACTORIES } from './oidc/oidc-provider-registry';
-import type { TIdentityProvider } from './oidc/types';
 
 /**
  * Sentinel client_id passed to `<GoogleOAuthProvider>` when the env

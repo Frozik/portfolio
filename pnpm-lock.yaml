@@ -330,6 +330,9 @@ importers:
 
   apps/communication:
     dependencies:
+      '@frozik/communication-protocol':
+        specifier: workspace:*
+        version: link:../../libs/communication-protocol
       '@frozik/utils':
         specifier: workspace:*
         version: link:../../libs/utils
@@ -340,6 +343,9 @@ importers:
 
   apps/portfolio:
     dependencies:
+      '@frozik/communication-protocol':
+        specifier: workspace:*
+        version: link:../../libs/communication-protocol
       '@frozik/components':
         specifier: workspace:*
         version: link:../../libs/components
@@ -350,6 +356,12 @@ importers:
       '@frozik/typescript-config':
         specifier: workspace:*
         version: link:../../libs/typescript-config
+
+  libs/communication-protocol:
+    devDependencies:
+      '@frozik/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
 
   libs/components:
     dependencies:

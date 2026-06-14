@@ -1,7 +1,8 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { IOidcProvider } from './oidc/IOidcProvider';
-import type { IOidcProfile, IOidcSignInResult, TIdentityProvider } from './oidc/types';
+import type { IOidcProfile, IOidcSignInResult } from './oidc/types';
 
 interface IExpiringJwtPayload {
   /** Unix epoch seconds. */

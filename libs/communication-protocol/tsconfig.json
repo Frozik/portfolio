@@ -1,0 +1,5 @@
+{
+  "extends": "@frozik/typescript-config/lib",
+  "include": ["src"],
+  "compilerOptions": {}
+}

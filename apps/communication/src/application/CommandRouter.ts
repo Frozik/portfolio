@@ -1,11 +1,11 @@
-import { uniqBy } from 'lodash-es';
-import type { Identity } from '../domain/Identity';
 import type {
   IExecuteEvent,
   IInitiateAck,
   IInitiatePayload,
   IResponseEvent,
-} from '../domain/protocol';
+} from '@frozik/communication-protocol/messages';
+import { uniqBy } from 'lodash-es';
+import type { Identity } from '../domain/Identity';
 import type { Room } from '../domain/Room';
 import type { CorrelationId, RoomId, SocketId } from '../domain/types';
 import type { IAuditLogger } from './ports/IAuditLogger';

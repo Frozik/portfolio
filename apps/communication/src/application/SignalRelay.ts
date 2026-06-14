@@ -1,8 +1,8 @@
+import type { ISignalEventOutbound } from '@frozik/communication-protocol/messages';
 import { Temporal } from 'temporal-polyfill';
 import { InvalidPayloadError } from '../domain/errors';
 import type { Identity } from '../domain/Identity';
 import type { IRoomRegistry } from '../domain/IRoomRegistry';
-import type { ISignalEventOutbound } from '../domain/protocol';
 import {
   parseSignalPublishPayload,
   SIGNAL_PAYLOAD_NULL,

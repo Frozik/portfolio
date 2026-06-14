@@ -1,23 +1,26 @@
+import {
+  AUTH_REFRESH_TOKEN,
+  AUTH_TOKEN_EXPIRED,
+  AUTH_TOKEN_EXPIRING,
+  ROOM_PRESENCE,
+  SERVER_DRAINING,
+  SIGNAL_EVENT,
+  SIGNAL_PUBLISH,
+  TURN_CREDENTIALS_RENEWED,
+  TURN_REQUEST_CREDENTIALS,
+} from '@frozik/communication-protocol/events';
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
+import type {
+  IRoomPresenceEvent,
+  ISignalEventOutbound,
+  ITokenExpiringEvent,
+  ITurnCredentialsAck,
+  SignalAck,
+} from '@frozik/communication-protocol/messages';
 import type { Observable } from 'rxjs';
 import { BehaviorSubject } from 'rxjs';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
-import type { TIdentityProvider } from './oidc/types';
-
-/**
- * Wire-protocol event names. Mirrored from
- * `apps/communication/src/domain/protocol.ts` — kept inline here so
- * the browser bundle stays free of any server-package imports.
- */
-const SIGNAL_PUBLISH = 'signal:publish';
-const SIGNAL_EVENT = 'signal:event';
-const TURN_REQUEST_CREDENTIALS = 'turn:request-credentials';
-const TURN_CREDENTIALS_RENEWED = 'turn:credentials-renewed';
-const AUTH_REFRESH_TOKEN = 'auth:refresh-token';
-const AUTH_TOKEN_EXPIRING = 'auth:token-expiring';
-const AUTH_TOKEN_EXPIRED = 'auth:token-expired';
-const ROOM_PRESENCE = 'room:presence';
-const SERVER_DRAINING = 'server:draining';
 
 const ACK_TIMEOUT_MS = 10_000;
 
@@ -54,55 +57,8 @@ export interface ICommunicationClientParams {
   readonly onTokenRefreshNeeded?: () => Promise<string | null>;
 }
 
-/** Generic "from" envelope present on every inbound `signal:event`. */
-export interface ISignalSender {
-  readonly userId: string;
-  readonly displayName: string;
-  readonly socketId: string;
-}
-
-export interface ISignalEvent {
-  readonly payload: unknown;
-  readonly from: ISignalSender;
-  readonly correlationId?: string;
-}
-
-export type TSignalAck =
-  | { readonly ok: true; readonly recipientCount: number }
-  | {
-      readonly ok: false;
-      readonly error:
-        | 'rate-limited'
-        | 'payload-too-large'
-        | 'invalid-payload'
-        | 'not-in-room'
-        | 'internal';
-    };
-
-export interface IRoomPresenceUser {
-  readonly userId: string;
-  readonly displayName: string;
-}
-
-export interface IRoomPresenceEvent {
-  readonly socketCount: number;
-  readonly users: ReadonlyArray<IRoomPresenceUser>;
-}
-
-export interface ITokenExpiringEvent {
-  readonly expiresAt: string;
-  readonly secondsRemaining: number;
-}
-
-export interface ITurnCredentials {
-  readonly username: string;
-  readonly credential: string;
-  readonly ttl: number;
-  readonly urls: ReadonlyArray<string>;
-}
-
 export type TTurnAck =
-  | (ITurnCredentials & { readonly ok?: true })
+  | (ITurnCredentialsAck & { readonly ok?: true })
   | { readonly ok: false; readonly error: string };
 
 type TUnsubscribe = () => void;
@@ -111,9 +67,9 @@ export interface ICommunicationClient {
   readonly state: TConnectionState;
   connect(): void;
   disconnect(): void;
-  signalPublish(payload: unknown, correlationId?: string): Promise<TSignalAck>;
-  requestTurnCredentials(): Promise<ITurnCredentials>;
-  onSignalEvent(listener: (event: ISignalEvent) => void): TUnsubscribe;
+  signalPublish(payload: unknown, correlationId?: string): Promise<SignalAck>;
+  requestTurnCredentials(): Promise<ITurnCredentialsAck>;
+  onSignalEvent(listener: (event: ISignalEventOutbound) => void): TUnsubscribe;
   onRoomPresence(listener: (event: IRoomPresenceEvent) => void): TUnsubscribe;
   onTokenExpiring(listener: (event: ITokenExpiringEvent) => void): TUnsubscribe;
   onTokenExpired(listener: () => void): TUnsubscribe;
@@ -176,7 +132,7 @@ export function createCommunicationClient(
 ): ICommunicationClient {
   const { baseUrl, roomId, getCredentials, onTokenRefreshNeeded } = params;
 
-  const signalEmitter = new TinyEmitter<ISignalEvent>();
+  const signalEmitter = new TinyEmitter<ISignalEventOutbound>();
   const presenceEmitter = new TinyEmitter<IRoomPresenceEvent>();
   const tokenExpiringEmitter = new TinyEmitter<ITokenExpiringEvent>();
   const tokenExpiredEmitter = new TinyEmitter<void>();
@@ -202,7 +158,7 @@ export function createCommunicationClient(
     active.on('disconnect', () => setState('closed'));
     active.on('connect_error', () => setState('closed'));
 
-    active.on(SIGNAL_EVENT, (event: ISignalEvent) => {
+    active.on(SIGNAL_EVENT, (event: ISignalEventOutbound) => {
       signalEmitter.emit(event);
     });
     active.on(ROOM_PRESENCE, (event: IRoomPresenceEvent) => {
@@ -304,7 +260,7 @@ export function createCommunicationClient(
     setState('closed');
   }
 
-  function signalPublish(payload: unknown, correlationId?: string): Promise<TSignalAck> {
+  function signalPublish(payload: unknown, correlationId?: string): Promise<SignalAck> {
     return new Promise((resolve, reject) => {
       if (socket === null || !socket.connected) {
         reject(new Error('communication-client/not-connected'));
@@ -315,7 +271,7 @@ export function createCommunicationClient(
         .emit(
           SIGNAL_PUBLISH,
           { payload, correlationId },
-          (ackError: Error | null, ack: TSignalAck) => {
+          (ackError: Error | null, ack: SignalAck) => {
             if (ackError !== null) {
               reject(ackError);
               return;
@@ -326,7 +282,7 @@ export function createCommunicationClient(
     });
   }
 
-  function requestTurnCredentials(): Promise<ITurnCredentials> {
+  function requestTurnCredentials(): Promise<ITurnCredentialsAck> {
     return new Promise((resolve, reject) => {
       if (socket === null || !socket.connected) {
         reject(new Error('communication-client/not-connected'));
@@ -343,7 +299,7 @@ export function createCommunicationClient(
             reject(new Error(`communication-client/turn-${ack.error}`));
             return;
           }
-          resolve(ack as ITurnCredentials);
+          resolve(ack as ITurnCredentialsAck);
         });
     });
   }

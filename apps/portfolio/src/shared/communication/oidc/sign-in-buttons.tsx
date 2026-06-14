@@ -1,14 +1,14 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { CredentialResponse } from '@react-oauth/google';
 import { GoogleLogin } from '@react-oauth/google';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType, ReactElement } from 'react';
 import { memo, useState } from 'react';
-
 import { sharedT } from '../../translations';
 import { GoogleOidcProvider } from './GoogleOidcProvider';
 import type { IOidcProvider } from './IOidcProvider';
-import type { IOidcSignInResult, TIdentityProvider } from './types';
+import type { IOidcSignInResult } from './types';
 
 /**
  * Props every provider's sign-in button receives. The button drives

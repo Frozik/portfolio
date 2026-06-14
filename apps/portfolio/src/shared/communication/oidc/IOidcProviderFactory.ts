@@ -1,5 +1,5 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import type { IOidcProvider } from './IOidcProvider';
-import type { TIdentityProvider } from './types';
 
 /**
  * Browser-side env values consumed by every provider's factory. Kept
@@ -19,7 +19,8 @@ export interface IOidcEnv {
  * `<CommunicationProvider>` iterates over.
  *
  * Adding a new provider:
- *  1. Append it to `IDENTITY_PROVIDERS` in `types.ts`.
+ *  1. Append it to `IDENTITY_PROVIDERS` in
+ *     `@frozik/communication-protocol/identity`.
  *  2. Drop a `*OidcProvider.ts` next to the existing two and export
  *     a factory.
  *  3. Add the factory to the registry array.

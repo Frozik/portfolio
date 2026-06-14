@@ -1,12 +1,9 @@
+import type { ITurnCredentialsAck } from '@frozik/communication-protocol/messages';
 import { deleteDB } from 'idb';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
-
-import type {
-  ICommunicationClient,
-  ITurnCredentials,
-} from '../../../shared/communication/CommunicationClient';
+import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import {
   buildCommunicationSignalingUrl,
   installCommunicationWebSocketShim,
@@ -39,7 +36,7 @@ export interface ICreateYjsRoomProvidersParams {
  * into the `RTCIceServer` shape consumed by `simple-peer`'s
  * underlying `RTCPeerConnection`.
  */
-function toIceServer(creds: ITurnCredentials): RTCIceServer {
+function toIceServer(creds: ITurnCredentialsAck): RTCIceServer {
   return {
     urls: [...creds.urls],
     username: creds.username,

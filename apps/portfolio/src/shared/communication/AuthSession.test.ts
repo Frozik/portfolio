@@ -1,8 +1,8 @@
+import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { AuthSession } from './AuthSession';
 import type { IOidcProvider } from './oidc/IOidcProvider';
-import type { IOidcProfile, IOidcSignInResult, TIdentityProvider } from './oidc/types';
+import type { IOidcProfile, IOidcSignInResult } from './oidc/types';
 
 const SECONDS_PER_MS = 1_000;
 
