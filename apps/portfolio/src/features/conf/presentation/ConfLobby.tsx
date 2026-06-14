@@ -1,22 +1,23 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { formatISO8601Local } from '@frozik/utils/date/format';
 import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import { Link2, Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
-import { cn } from '../../../shared/lib/cn';
-import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
+import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';
+import { JoinByLinkCard } from '../../../shared/ui/lobby/JoinByLinkCard';
+import { LobbyHero } from '../../../shared/ui/lobby/LobbyHero';
+import { extractRoomIdFromInput, formatLocalDateTime } from '../../../shared/ui/lobby/lobbyFormat';
+import { RoomListSection } from '../../../shared/ui/lobby/RoomListSection';
 import { MonoKicker } from '../../../shared/ui/MonoKicker';
 import { SectionNumber } from '../../../shared/ui/SectionNumber';
-import { Spinner } from '../../../shared/ui/Spinner';
 import type { ConfLobbyStore } from '../application/ConfLobbyStore';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
 import type { IConfRoomIndexEntry, RoomId } from '../domain/types';
@@ -25,29 +26,6 @@ import { confT } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/conf\/([^/?#]+)/;
 const CREATED_QUERY_FLAG = '?created=1';
-const ROOM_COUNT_PAD_LENGTH = 2;
-const ROOM_COUNT_PAD_CHAR = '0';
-const LOCAL_DATETIME_MINUTES_LENGTH = 16;
-
-function extractRoomIdFromInput(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  const match = trimmed.match(ROOM_ID_FROM_URL_PATTERN);
-  if (match !== null) {
-    return match[1] ?? null;
-  }
-  return trimmed;
-}
-
-function formatRoomCount(count: number): string {
-  return String(count).padStart(ROOM_COUNT_PAD_LENGTH, ROOM_COUNT_PAD_CHAR);
-}
-
-function formatLocalDateTime(iso: IConfRoomIndexEntry['createdAt']): string {
-  return formatISO8601Local(iso).slice(0, LOCAL_DATETIME_MINUTES_LENGTH);
-}
 
 interface IRoomRowProps {
   readonly room: IConfRoomIndexEntry;
@@ -116,7 +94,7 @@ export const ConfLobby = observer(() => {
 
   const handleJoinSubmit = useFunction((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const roomId = extractRoomIdFromInput(joinInput);
+    const roomId = extractRoomIdFromInput(joinInput, ROOM_ID_FROM_URL_PATTERN);
     if (roomId === null) {
       return;
     }
@@ -139,10 +117,18 @@ export const ConfLobby = observer(() => {
     setPendingDeleteRoomId(null);
   });
 
+  const getRoomKey = useFunction((room: IConfRoomIndexEntry) => room.roomId);
+
+  const renderRoom = useFunction((room: IConfRoomIndexEntry) => (
+    <RoomRow room={room} lobbyStore={lobbyStore} onDelete={handleRequestDelete} />
+  ));
+
   const { rooms } = lobbyStore;
-  const showLoader = !isSyncedValueDescriptor(rooms) && !isFailValueDescriptor(rooms);
-  const hasSyncedRooms = isSyncedValueDescriptor(rooms);
-  const roomList: readonly IConfRoomIndexEntry[] = hasSyncedRooms ? rooms.value : [];
+  const isLoading = !isSyncedValueDescriptor(rooms) && !isFailValueDescriptor(rooms);
+  const isError = isFailValueDescriptor(rooms);
+  const roomList: readonly IConfRoomIndexEntry[] = isSyncedValueDescriptor(rooms)
+    ? rooms.value
+    : [];
   const activeRoomCount = roomList.length;
 
   return (
@@ -152,120 +138,49 @@ export const ConfLobby = observer(() => {
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-[var(--container-narrow)] flex-col gap-12 px-6 pt-12 pb-20 sm:px-8">
-        <section className="flex flex-col gap-6">
-          <SectionNumber number="01" label={confT.lobby.sectionKicker} />
-          <div className="flex flex-wrap items-end justify-between gap-8">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[1.02] tracking-[-0.03em] text-landing-fg">
-                {confT.lobby.headlinePrimary}
-                <br />
-                <span className="font-serif text-landing-fg-faint italic">
-                  {confT.lobby.headlineAccent}
-                </span>
-              </h1>
-              <p className="mt-5 max-w-[520px] text-[15px] leading-[1.5] text-landing-fg-dim">
-                {confT.lobby.heroSubtitle}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1.5">
-              <MonoKicker tone="faint">{confT.lobby.totalRoomsLabel}</MonoKicker>
-              <div className="font-mono text-[52px] leading-none text-landing-fg">
-                {formatRoomCount(activeRoomCount)}
-              </div>
-            </div>
-          </div>
-        </section>
+        <LobbyHero
+          sectionNumber="01"
+          sectionLabel={confT.lobby.sectionKicker}
+          headlinePrimary={confT.lobby.headlinePrimary}
+          headlineAccent={confT.lobby.headlineAccent}
+          heroSubtitle={confT.lobby.heroSubtitle}
+          totalRoomsLabel={confT.lobby.totalRoomsLabel}
+          roomCount={activeRoomCount}
+        />
 
-        <section className="flex flex-col gap-5">
-          <SectionNumber number="02" label={confT.lobby.activeRoomsSectionLabel} />
-
-          {isFailValueDescriptor(rooms) && (
-            <Alert type="error" message={confT.errors.loadRoomsFailed} />
-          )}
-
-          {showLoader && (
-            <div className="flex justify-center py-8">
-              <Spinner />
-            </div>
-          )}
-
-          {hasSyncedRooms && roomList.length === 0 && (
-            <div className="border border-dashed border-landing-border-soft bg-landing-bg-card/40 px-6 py-10 text-center font-mono text-xs text-landing-fg-faint">
-              {confT.lobby.noRoomsYet}
-            </div>
-          )}
-
-          {hasSyncedRooms && roomList.length > 0 && (
-            <ul className="flex flex-col gap-3">
-              {roomList.map(room => (
-                <li key={room.roomId}>
-                  <RoomRow room={room} lobbyStore={lobbyStore} onDelete={handleRequestDelete} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <RoomListSection
+          sectionNumber="02"
+          sectionLabel={confT.lobby.activeRoomsSectionLabel}
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={confT.errors.loadRoomsFailed}
+          emptyMessage={confT.lobby.noRoomsYet}
+          rooms={roomList}
+          getKey={getRoomKey}
+          renderRoom={renderRoom}
+        />
 
         <section className="flex flex-col gap-5">
           <SectionNumber number="03" label={confT.lobby.createOrJoinSectionLabel} />
 
-          <CardFrame>
-            <div className="flex items-center justify-between gap-4 px-6 py-5">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-landing-accent/40 text-landing-accent">
-                  <Plus size={14} />
-                </div>
-                <div className="min-w-0">
-                  <MonoKicker tone="faint">{confT.lobby.newRetroCardKicker}</MonoKicker>
-                  <div className="mt-1 text-sm font-medium text-landing-fg">
-                    {confT.lobby.startNewTitle}
-                  </div>
-                  <div className="mt-0.5 font-mono text-[11px] text-landing-fg-faint">
-                    {confT.lobby.startNewSubtitle}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleCreate}
-                className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90"
-              >
-                {confT.lobby.createSubmit} →
-              </button>
-            </div>
-          </CardFrame>
+          <CreateRoomCard
+            kicker={confT.lobby.newRetroCardKicker}
+            title={confT.lobby.startNewTitle}
+            subtitle={confT.lobby.startNewSubtitle}
+            buttonLabel={confT.lobby.createSubmit}
+            onAction={handleCreate}
+          />
 
-          <CardFrame>
-            <form onSubmit={handleJoinSubmit} className="flex flex-col gap-3 px-6 py-5">
-              <div className="flex items-center gap-2">
-                <Link2 size={14} className="text-landing-accent" />
-                <MonoKicker tone="faint">{confT.lobby.joinByLinkCardKicker}</MonoKicker>
-              </div>
-              <MonoKicker tone="faint" className="text-[10px]">
-                {confT.lobby.pasteLinkKicker}
-              </MonoKicker>
-              <div className="flex items-center gap-3">
-                <input
-                  id="conf-join-input"
-                  type="text"
-                  value={joinInput}
-                  onChange={handleJoinInputChange}
-                  placeholder={confT.lobby.joinByLinkPlaceholder}
-                  className={cn(
-                    'flex-1 border-0 border-b border-landing-border bg-transparent py-2 font-mono text-[15px] text-landing-fg',
-                    'placeholder:text-landing-fg-faint focus:border-landing-accent/40 focus:outline-none'
-                  )}
-                />
-                <button
-                  type="submit"
-                  disabled={joinInput.trim().length === 0}
-                  className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {confT.lobby.joinSubmitShort} →
-                </button>
-              </div>
-            </form>
-          </CardFrame>
+          <JoinByLinkCard
+            inputId="conf-join-input"
+            value={joinInput}
+            onChange={handleJoinInputChange}
+            onSubmit={handleJoinSubmit}
+            kicker={confT.lobby.joinByLinkCardKicker}
+            pasteHint={confT.lobby.pasteLinkKicker}
+            placeholder={confT.lobby.joinByLinkPlaceholder}
+            submitLabel={confT.lobby.joinSubmitShort}
+          />
         </section>
       </div>
 

@@ -1,22 +1,24 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { formatISO8601Local } from '@frozik/utils/date/format';
 import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import { Crown, Link2, Plus, X } from 'lucide-react';
+import { Crown, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AccountChip } from '../../../shared/communication/AccountChip';
 import { cn } from '../../../shared/lib/cn';
-import { Alert } from '../../../shared/ui/Alert';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
+import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';
+import { JoinByLinkCard } from '../../../shared/ui/lobby/JoinByLinkCard';
+import { LobbyHero } from '../../../shared/ui/lobby/LobbyHero';
+import { extractRoomIdFromInput, formatLocalDateTime } from '../../../shared/ui/lobby/lobbyFormat';
+import { RoomListSection } from '../../../shared/ui/lobby/RoomListSection';
 import { MonoKicker } from '../../../shared/ui/MonoKicker';
 import { SectionNumber } from '../../../shared/ui/SectionNumber';
-import { Spinner } from '../../../shared/ui/Spinner';
 import type { ICreateRoomParams } from '../application/RetroLobbyStore';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
@@ -28,9 +30,6 @@ import { retroT as t } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/retro\/([^/?#]+)/;
 const MAX_VISIBLE_AVATARS = 3;
-const ROOM_COUNT_PAD_LENGTH = 2;
-const ROOM_COUNT_PAD_CHAR = '0';
-const LOCAL_DATETIME_MINUTES_LENGTH = 16;
 const INITIALS_PART_LIMIT = 2;
 const UNKNOWN_PARTICIPANT_INITIAL = '?';
 
@@ -51,26 +50,6 @@ function initialsOf(name: string): string {
     return (parts[0] ?? UNKNOWN_PARTICIPANT_INITIAL).slice(0, INITIALS_PART_LIMIT).toUpperCase();
   }
   return `${parts[0]?.charAt(0) ?? ''}${parts[1]?.charAt(0) ?? ''}`.toUpperCase();
-}
-
-function extractRoomIdFromInput(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  const match = trimmed.match(ROOM_ID_FROM_URL_PATTERN);
-  if (match !== null) {
-    return match[1] ?? null;
-  }
-  return trimmed;
-}
-
-function formatRoomCount(count: number): string {
-  return String(count).padStart(ROOM_COUNT_PAD_LENGTH, ROOM_COUNT_PAD_CHAR);
-}
-
-function formatLocalDateTime(iso: IRoomIndexEntry['createdAt']): string {
-  return formatISO8601Local(iso).slice(0, LOCAL_DATETIME_MINUTES_LENGTH);
 }
 
 interface RoomAvatarsProps {
@@ -259,7 +238,7 @@ export const Lobby = observer(() => {
 
   const handleJoinSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const roomId = extractRoomIdFromInput(joinInput);
+    const roomId = extractRoomIdFromInput(joinInput, ROOM_ID_FROM_URL_PATTERN);
     if (roomId === null) {
       return;
     }
@@ -282,14 +261,32 @@ export const Lobby = observer(() => {
     setPendingDeleteRoomId(null);
   });
 
+  const getRoomKey = useFunction((room: IRoomIndexEntry) => room.roomId);
+
+  const renderRoom = useFunction((room: IRoomIndexEntry) => {
+    const isMine = room.ownerClientId === myClientId;
+    const ownerClientId = room.ownerClientId;
+    const ownerProfile = ownerClientId !== null ? directory.get(ownerClientId) : null;
+    const ownerDisplayName =
+      ownerProfile !== null && ownerProfile.name.trim().length > 0 ? ownerProfile.name : '';
+    return (
+      <RoomRow
+        room={room}
+        isMine={isMine}
+        ownerDisplayName={ownerDisplayName}
+        onDelete={handleRequestDeleteRoom}
+      />
+    );
+  });
+
   const { rooms } = lobbyStore;
-  const showLoader = !isSyncedValueDescriptor(rooms) && !isFailValueDescriptor(rooms);
-  const hasSyncedRooms = isSyncedValueDescriptor(rooms);
-  const roomList: readonly IRoomIndexEntry[] = hasSyncedRooms ? rooms.value : [];
+  const isLoading = !isSyncedValueDescriptor(rooms) && !isFailValueDescriptor(rooms);
+  const isError = isFailValueDescriptor(rooms);
+  const roomList: readonly IRoomIndexEntry[] = isSyncedValueDescriptor(rooms) ? rooms.value : [];
   const activeRoomCount = roomList.length;
 
   const pendingDeleteRoomName =
-    pendingDeleteRoomId !== null && hasSyncedRooms
+    pendingDeleteRoomId !== null
       ? (roomList.find(room => room.roomId === pendingDeleteRoomId)?.name ?? '')
       : '';
   const deleteDialogTitle = t.lobby.deleteDialogTitle.replace('{name}', pendingDeleteRoomName);
@@ -297,133 +294,48 @@ export const Lobby = observer(() => {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="mx-auto flex w-full max-w-[var(--container-narrow)] flex-col gap-12 px-6 pt-12 pb-20 sm:px-8">
-        <section className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-end justify-between gap-8">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[clamp(40px,8vw,64px)] font-medium leading-[1.02] tracking-[-0.03em] text-landing-fg">
-                {t.lobby.headlinePrimary}
-                <br />
-                <span className="font-serif text-landing-fg-faint italic">
-                  {t.lobby.headlineAccent}
-                </span>
-              </h1>
-              <p className="mt-5 max-w-[520px] text-[15px] leading-[1.5] text-landing-fg-dim">
-                {t.lobby.heroSubtitle}
-              </p>
-            </div>
-            <div className="flex flex-col items-end justify-between gap-5 self-stretch">
-              <AccountChip />
-              <div className="flex flex-col items-end gap-1.5">
-                <MonoKicker tone="faint">{t.lobby.totalRoomsLabel}</MonoKicker>
-                <div className="font-mono text-[52px] leading-none text-landing-fg">
-                  {formatRoomCount(activeRoomCount)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <LobbyHero
+          headlinePrimary={t.lobby.headlinePrimary}
+          headlineAccent={t.lobby.headlineAccent}
+          heroSubtitle={t.lobby.heroSubtitle}
+          totalRoomsLabel={t.lobby.totalRoomsLabel}
+          roomCount={activeRoomCount}
+          accessory={<AccountChip />}
+        />
 
-        <section className="flex flex-col gap-5">
-          <SectionNumber number="01" label={t.lobby.activeRoomsSectionLabel} />
-
-          {isFailValueDescriptor(rooms) && (
-            <Alert type="error" message={t.errors.loadRoomsFailed} />
-          )}
-
-          {showLoader && (
-            <div className="flex justify-center py-8">
-              <Spinner />
-            </div>
-          )}
-
-          {hasSyncedRooms && roomList.length === 0 && (
-            <div className="border border-dashed border-landing-border-soft bg-landing-bg-card/40 px-6 py-10 text-center font-mono text-xs text-landing-fg-faint">
-              {t.lobby.noRoomsYet}
-            </div>
-          )}
-
-          {hasSyncedRooms && roomList.length > 0 && (
-            <ul className="flex flex-col gap-3">
-              {roomList.map(room => {
-                const isMine = room.ownerClientId === myClientId;
-                const ownerClientId = room.ownerClientId;
-                const ownerProfile = ownerClientId !== null ? directory.get(ownerClientId) : null;
-                const ownerDisplayName =
-                  ownerProfile !== null && ownerProfile.name.trim().length > 0
-                    ? ownerProfile.name
-                    : '';
-                return (
-                  <li key={room.roomId}>
-                    <RoomRow
-                      room={room}
-                      isMine={isMine}
-                      ownerDisplayName={ownerDisplayName}
-                      onDelete={handleRequestDeleteRoom}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        <RoomListSection
+          sectionNumber="01"
+          sectionLabel={t.lobby.activeRoomsSectionLabel}
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={t.errors.loadRoomsFailed}
+          emptyMessage={t.lobby.noRoomsYet}
+          rooms={roomList}
+          getKey={getRoomKey}
+          renderRoom={renderRoom}
+        />
 
         <section className="flex flex-col gap-5">
           <SectionNumber number="02" label={t.lobby.createOrJoinSectionLabel} />
 
-          <CardFrame>
-            <div className="flex items-center justify-between gap-4 px-6 py-5">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-landing-accent/40 text-landing-accent">
-                  <Plus size={14} />
-                </div>
-                <div className="min-w-0">
-                  <MonoKicker tone="faint">{t.lobby.newRetroCardKicker}</MonoKicker>
-                  <div className="mt-1 text-sm font-medium text-landing-fg">
-                    {t.lobby.startNewTitle}
-                  </div>
-                  <div className="mt-0.5 font-mono text-[11px] text-landing-fg-faint">
-                    {t.lobby.startNewSubtitle}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenCreateDialog}
-                className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90"
-              >
-                {t.lobby.createSubmit} →
-              </button>
-            </div>
-          </CardFrame>
+          <CreateRoomCard
+            kicker={t.lobby.newRetroCardKicker}
+            title={t.lobby.startNewTitle}
+            subtitle={t.lobby.startNewSubtitle}
+            buttonLabel={t.lobby.createSubmit}
+            onAction={handleOpenCreateDialog}
+          />
 
-          <CardFrame>
-            <form onSubmit={handleJoinSubmit} className="flex flex-col gap-3 px-6 py-5">
-              <div className="flex items-center gap-2">
-                <Link2 size={14} className="text-landing-accent" />
-                <MonoKicker tone="faint">{t.lobby.joinByLinkCardKicker}</MonoKicker>
-              </div>
-              <MonoKicker tone="faint" className="text-[10px]">
-                {t.lobby.pasteLinkKicker}
-              </MonoKicker>
-              <div className="flex items-center gap-3">
-                <input
-                  id="retro-join-input"
-                  type="text"
-                  value={joinInput}
-                  onChange={handleJoinInputChange}
-                  placeholder={t.lobby.joinByLinkPlaceholder}
-                  className="flex-1 border-0 border-b border-landing-border bg-transparent py-2 font-mono text-[15px] text-landing-fg placeholder:text-landing-fg-faint focus:border-landing-accent/40 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={joinInput.trim().length === 0}
-                  className="shrink-0 border-0 bg-landing-accent px-4 py-2 font-mono text-xs font-medium text-landing-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {t.lobby.joinSubmitShort} →
-                </button>
-              </div>
-            </form>
-          </CardFrame>
+          <JoinByLinkCard
+            inputId="retro-join-input"
+            value={joinInput}
+            onChange={handleJoinInputChange}
+            onSubmit={handleJoinSubmit}
+            kicker={t.lobby.joinByLinkCardKicker}
+            pasteHint={t.lobby.pasteLinkKicker}
+            placeholder={t.lobby.joinByLinkPlaceholder}
+            submitLabel={t.lobby.joinSubmitShort}
+          />
         </section>
       </div>
 
