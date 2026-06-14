@@ -154,8 +154,9 @@ const RoomBody = observer(
       snapshotMeta,
     ]);
 
-    const handleCopyLink = useFunction(() => {
-      roomStore.showToast(copy(window.location.href) ? t.room.linkCopied : t.errors.copyFailed);
+    const handleCopyLink = useFunction(async () => {
+      const copied = await copy(window.location.href);
+      roomStore.showToast(copied ? t.room.linkCopied : t.errors.copyFailed);
     });
 
     return (

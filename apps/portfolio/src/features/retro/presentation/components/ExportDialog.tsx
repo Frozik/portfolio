@@ -53,8 +53,8 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
     return DOMPurify.sanitize(rawHtml);
   }, [markdown]);
 
-  const handleCopy = useFunction(() => {
-    const ok = copy(markdown);
+  const handleCopy = useFunction(async () => {
+    const ok = await copy(markdown);
     store.showToast(ok ? t.room.linkCopied : t.errors.copyFailed);
     if (ok) {
       setCopied(true);
