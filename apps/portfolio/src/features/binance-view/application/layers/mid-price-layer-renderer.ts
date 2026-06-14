@@ -2,17 +2,20 @@ import type { BlockSpatialIndex } from '../../domain/block-store/block-spatial-i
 import type { IMidPriceBlockIndexItem } from '../../domain/block-store/create-mid-price-block-index';
 import { MAX_MID_PRICE_BLOCKS } from '../../domain/constants';
 import { plotWidthDevicePx } from '../../domain/math';
-import type { IMidPriceLayerResources, IMidPriceVisibleBlock } from '../../domain/mid-price-layer';
+import type { IMidPriceFlushEventBridge } from '../../domain/render-frame-types';
+import type { UnixTimeMs } from '../../domain/types';
+import type {
+  IMidPriceLayerResources,
+  IMidPriceVisibleBlock,
+} from '../../infrastructure/mid-price-layer';
 import {
   createMidPriceBindGroup,
   createMidPriceResources,
   MID_PRICE_VERTEX_COUNT_PER_INSTANCE,
   writeMidPriceBlockDescriptors,
   writeMidPriceUniforms,
-} from '../../domain/mid-price-layer';
-import { MidPriceTextureRowManager } from '../../domain/mid-price-texture-manager';
-import type { IMidPriceFlushEventBridge } from '../../domain/render-frame-types';
-import type { UnixTimeMs } from '../../domain/types';
+} from '../../infrastructure/mid-price-layer';
+import { MidPriceTextureRowManager } from '../../infrastructure/mid-price-texture-manager';
 import type { ILayerFrameContext, ILayerRenderer } from './layer-renderer';
 
 type MidPriceBlockIndex = BlockSpatialIndex<IMidPriceBlockIndexItem>;

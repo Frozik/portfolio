@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 import { memo, useEffect, useRef } from 'react';
 
-import { TimeseriesChartState } from '../domain/chart-state';
+import { TimeseriesChartState } from '../application/render/chart-state';
 import type { ISeriesConfig } from '../domain/types';
 import { useSharedRenderer } from './SharedRendererContext';
 

@@ -38,6 +38,18 @@ export interface ITextureSlot {
   readonly slotIndex: number;
 }
 
+/**
+ * Domain port for slot-based texture storage. Implemented by the
+ * infrastructure SlotAllocator. Exposes only the pure, GPU-free surface
+ * the domain block pipeline depends on (allocate, write, touch), keeping
+ * the domain layer free of GPU types.
+ */
+export interface ISlotAllocator {
+  allocateSlot(): ITextureSlot | null;
+  writeSlotData(slot: ITextureSlot, encoded: Float32Array, pointCount: number): void;
+  touch(slot: ITextureSlot): void;
+}
+
 export interface IBlockEntry {
   minX: number;
   maxX: number;
@@ -88,69 +100,4 @@ export interface IFpsController {
   tick(): void;
   getFrameIntervalMs(): number;
   getCurrentFps(): number;
-}
-
-export interface ITimeseriesChart {
-  readonly targetCanvas: HTMLCanvasElement;
-  readonly target2dContext: CanvasRenderingContext2D;
-  readonly width: number;
-  readonly height: number;
-  readonly fpsController: IFpsController;
-  readonly seriesManager: ISeriesLayerManager;
-  syncCanvasSize(): boolean;
-  update(): void;
-  prepareDrawCommands(): IPlotArea | null;
-  getLoadingRegions(): ILoadingRegion[];
-  getViewport(): { timeStart: number; timeEnd: number };
-  renderCanvasGrid(): void;
-  renderCanvasAxes(): void;
-  dispose(): void;
-}
-
-export interface ISeriesLayer {
-  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: unknown): void;
-  updateBindGroup(dataTextureView: GPUTextureView): void;
-  writeUniforms(
-    blocks: ReadonlyArray<IBlockEntry>,
-    canvasWidth: number,
-    canvasHeight: number,
-    viewTimeStart: number,
-    viewTimeEnd: number,
-    viewValueMin: number,
-    viewValueMax: number
-  ): void;
-  render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void;
-  renderDebug(
-    pass: GPURenderPassEncoder,
-    debugPipeline: GPURenderPipeline,
-    plotArea: IPlotArea
-  ): void;
-  readonly instanceCount: number;
-  readonly bindGroup: GPUBindGroup | null;
-  dispose(): void;
-}
-
-export interface ISeriesLayerManager {
-  renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void;
-  renderDebug(
-    pass: GPURenderPassEncoder,
-    debugPipeline: GPURenderPipeline,
-    plotArea: IPlotArea
-  ): void;
-  dispose(): void;
-}
-
-export interface ISharedTimeseriesRenderer {
-  readonly device: GPUDevice;
-  readonly format: GPUTextureFormat;
-  readonly bindGroupLayout: GPUBindGroupLayout;
-  readonly linePipeline: GPURenderPipeline;
-  readonly candlestickPipeline: GPURenderPipeline;
-  readonly rhombusPipeline: GPURenderPipeline;
-  readonly debugPipeline: GPURenderPipeline;
-  debugMode: boolean;
-  instantLoad: boolean;
-  readonly renderFps: number;
-  registerChart(chart: ITimeseriesChart): VoidFunction;
-  destroy(): void;
 }

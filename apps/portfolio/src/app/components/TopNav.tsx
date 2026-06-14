@@ -17,14 +17,13 @@ import {
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { welcomeT } from '../../features/welcome/presentation/translations';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { cn } from '../../shared/lib/cn';
 import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
+import { appT } from '../translations';
 import type { INavProject } from './MobileSectionMenu';
 import { MobileSectionMenu } from './MobileSectionMenu';
 import { useTopNavBack } from './TopNavBackContext';
@@ -37,7 +36,7 @@ const ICON_SIZE_PX = 16;
 /**
  * Stable ordering of the projects shown in the drawer menu. Each id
  * corresponds both to the route segment (`/${id}`) and to an entry in
- * `welcomeT.projects.entries` from which the display title is read.
+ * `appT.pageTitles` from which the display title is read.
  * Icon is a small lucide glyph that hints at the project's theme.
  */
 const PROJECT_ENTRIES: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
@@ -136,7 +135,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
     () =>
       PROJECT_ENTRIES.map(entry => ({
         id: entry.id,
-        label: welcomeT.projects.entries[entry.id]?.title ?? entry.id,
+        label: (appT.pageTitles as Record<string, string>)[entry.id] ?? entry.id,
         route: `/${entry.id}`,
         icon: entry.icon,
       })),
@@ -176,9 +175,9 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               className="flex cursor-pointer items-center gap-1.5 bg-transparent p-0 font-mono text-[13px] text-landing-fg"
             >
               <Home size={ICON_SIZE_PX} className="text-landing-fg-dim" aria-hidden="true" />
-              <span className="hidden min-[450px]:inline">{welcomeT.nav.brandRoot}</span>
+              <span className="hidden min-[450px]:inline">{appT.nav.brandRoot}</span>
               <span className="hidden text-landing-fg-faint min-[450px]:inline">
-                {welcomeT.nav.brandPath}
+                {appT.nav.brandPath}
               </span>
             </button>
           </div>
@@ -195,9 +194,9 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
                   fullscreen.isActive &&
                     'border-landing-accent bg-landing-accent/10 text-landing-accent'
                 )}
-                aria-label={welcomeT.nav.fullscreenLandscape}
+                aria-label={appT.nav.fullscreenLandscape}
                 aria-pressed={fullscreen.isActive}
-                title={welcomeT.nav.fullscreenLandscape}
+                title={appT.nav.fullscreenLandscape}
               >
                 <SvgRotateToLandscape className="h-4 w-4" />
               </button>
@@ -207,8 +206,8 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               type="button"
               onClick={handleQROpen}
               className={iconButtonClassName}
-              aria-label={welcomeT.nav.showQR}
-              title={welcomeT.nav.openOnPhone}
+              aria-label={appT.nav.showQR}
+              title={appT.nav.openOnPhone}
             >
               <IconQR />
             </button>
@@ -218,8 +217,8 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               target="_blank"
               rel="noopener noreferrer"
               className={iconButtonClassName}
-              aria-label={welcomeT.nav.sourceOnGitHub}
-              title={welcomeT.nav.sourceOnGitHub}
+              aria-label={appT.nav.sourceOnGitHub}
+              title={appT.nav.sourceOnGitHub}
             >
               <SvgGitHub width={ICON_SIZE_PX} height={ICON_SIZE_PX} />
             </a>
@@ -228,7 +227,7 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
               type="button"
               onClick={handleMenuOpen}
               className={iconButtonClassName}
-              aria-label={welcomeT.nav.openMenu}
+              aria-label={appT.nav.openMenu}
             >
               <Menu size={ICON_SIZE_PX} />
             </button>
@@ -240,9 +239,9 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
         compact
         open={qrOpen}
         onClose={handleQRClose}
-        title={welcomeT.nav.openOnPhone}
+        title={appT.nav.openOnPhone}
         description="URL"
-        closeLabel={welcomeT.nav.closeQR}
+        closeLabel={appT.nav.closeQR}
       >
         <div className="mb-5 flex justify-center rounded-sm bg-white p-4">
           <QRCode value={getCurrentPageUrl()} size={QR_SIZE_PX} className="bg-transparent p-0" />
@@ -255,13 +254,13 @@ const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
       <MobileSectionMenu
         open={menuOpen}
         onClose={handleMenuClose}
-        sections={welcomeT.nav.sections}
+        sections={appT.nav.sections}
         showSections={isLanding}
         projects={projects}
-        title={welcomeT.nav.menuTitle}
-        sectionsHeading={welcomeT.nav.sectionsHeading}
-        projectsHeading={welcomeT.nav.projectsHeading}
-        backToHomeLabel={welcomeT.nav.backToHome}
+        title={appT.nav.menuTitle}
+        sectionsHeading={appT.nav.sectionsHeading}
+        projectsHeading={appT.nav.projectsHeading}
+        backToHomeLabel={appT.nav.backToHome}
         onNavigateSection={handleSectionNavigate}
         onNavigateProject={handleProjectNavigate}
         onNavigateHome={handleBrandClick}

@@ -1,15 +1,14 @@
 import { nowEpochMs } from '@frozik/utils/date/now';
 import { makeAutoObservable, runInAction } from 'mobx';
-
-import { BinanceChartState } from '../domain/chart-state';
+import type { IBinanceDb } from '../domain/binance-db';
 import { BINANCE_CONFIG } from '../domain/config';
 import { SNAPSHOT_SLOTS } from '../domain/constants';
 import { DataController } from '../domain/data-controller';
 import { DEFAULT_INSTRUMENT, findInstrument, instrumentDbName } from '../domain/instruments';
-import { TaskManager } from '../domain/task-manager';
 import type { ConnectionState, IHitTestResult, UnixTimeMs } from '../domain/types';
-import type { IBinanceDb } from '../infrastructure/binance-indexeddb';
 import { openBinanceDb } from '../infrastructure/binance-indexeddb';
+import { TaskManager } from '../infrastructure/task-manager';
+import { BinanceChartState } from './chart-state';
 
 import { MidPriceStreamStore } from './MidPriceStreamStore';
 import { OrderbookStreamStore } from './OrderbookStreamStore';

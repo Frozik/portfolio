@@ -3,8 +3,13 @@ import { POINTS_PER_SLOT } from './constants';
 import { generateTimeseriesData } from './data-generator';
 import { encodePoints } from './delta-encoding';
 import { alignedPeriods } from './period-alignment';
-import type { SlotAllocator } from './slot-allocator';
-import type { ETimeScale, IBlockEntry, ILoadingRegion, PointTransformFunction } from './types';
+import type {
+  ETimeScale,
+  IBlockEntry,
+  ILoadingRegion,
+  ISlotAllocator,
+  PointTransformFunction,
+} from './types';
 import { EChartType } from './types';
 
 /** Simulated loading delay in milliseconds. */
@@ -29,7 +34,7 @@ export class BlockDataPipeline {
   private requestCounter = 0;
 
   constructor(
-    private readonly allocator: SlotAllocator,
+    private readonly allocator: ISlotAllocator,
     private readonly registry: BlockRegistry,
     private readonly seed: string,
     private readonly chartType: EChartType,

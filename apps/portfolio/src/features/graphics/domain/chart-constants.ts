@@ -37,8 +37,6 @@ export const SHAPE_INSTANCE_BYTES = 48;
 export const SHAPE_OPACITY_MIN = 0.6;
 export const SHAPE_OPACITY_MAX = 1.0;
 
-export const OFFSCREEN_FORMAT: GPUTextureFormat = 'rgba8unorm';
-
 export function computeSinXSegmentCount(canvasWidth: number): number {
   return Math.trunc(canvasWidth / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
 }
@@ -46,16 +44,3 @@ export function computeSinXSegmentCount(canvasWidth: number): number {
 export function computeSinYSegmentCount(canvasHeight: number): number {
   return Math.trunc(canvasHeight / SIN_PEN_MAX / SIN_SEGMENTS_DIVISOR) * SIN_SEGMENTS_DIVISOR + 1;
 }
-
-export const ALPHA_BLEND_STATE: GPUBlendState = {
-  color: {
-    srcFactor: 'src-alpha',
-    dstFactor: 'one-minus-src-alpha',
-    operation: 'add',
-  },
-  alpha: {
-    srcFactor: 'one',
-    dstFactor: 'one-minus-src-alpha',
-    operation: 'add',
-  },
-};

@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef } from 'react';
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import { runSun } from '../domain/sun-draw';
+import { runSun } from '../application/render/sun-draw';
 
 export const Sun = memo(() => {
   const canvasRef = useRef<HTMLCanvasElement>(null);

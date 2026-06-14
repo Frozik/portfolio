@@ -9,7 +9,7 @@ import type { IHeatmapViewport } from '../../domain/types';
  * Narrow read-only view of the chart state surface that layer renderers
  * consume. Defining it here (instead of importing the concrete
  * `BinanceChartState`) keeps layer-renderer.ts free of inbound
- * dependencies on `domain/chart-state.ts`, which itself imports
+ * dependencies on `application/chart-state.ts`, which itself imports
  * `BinanceChartRenderer` and would otherwise create a 4-file import
  * cycle (chart-state → binance-chart-renderer → heatmap-layer-renderer
  * → layer-renderer → chart-state).

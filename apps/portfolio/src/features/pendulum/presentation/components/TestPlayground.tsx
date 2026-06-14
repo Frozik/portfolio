@@ -18,6 +18,7 @@ import { EPlayerType } from '../../domain/types';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
+import { WindowKeyStateSource } from '../input/WindowKeyStateSource';
 import commonStyles from './common.module.scss';
 import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
@@ -36,7 +37,7 @@ export const TestPlayground = observer(() => {
         unsynced: vd =>
           isLoadingValueDescriptor(vd) || isFailValueDescriptor(vd)
             ? vd
-            : createSyncedValueDescriptor(new HumanPlayer()),
+            : createSyncedValueDescriptor(new HumanPlayer(new WindowKeyStateSource())),
       }),
     [robotVD]
   );

@@ -3,6 +3,28 @@ import type { appTranslationsEn } from './en';
 
 export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
   appTitle: 'Портфолио',
+  nav: {
+    brandRoot: 'frozik.github.io',
+    brandPath: '/portfolio',
+    sections: [
+      { id: 'about', label: 'обо мне', number: '01' },
+      { id: 'skills', label: 'навыки', number: '02' },
+      { id: 'work', label: 'опыт', number: '03' },
+      { id: 'projects', label: 'проекты', number: '04' },
+      { id: 'contact', label: 'контакты', number: '05' },
+    ],
+    openOnPhone: 'Открыть на телефоне',
+    sourceOnGitHub: 'Исходники на GitHub',
+    showQR: 'Показать QR-код этой страницы',
+    openMenu: 'Открыть меню',
+    menuTitle: 'Навигация',
+    sectionsTitle: 'Разделы',
+    sectionsHeading: 'разделы',
+    projectsHeading: 'проекты',
+    closeQR: 'Закрыть QR-код',
+    fullscreenLandscape: 'Полноэкранный режим (landscape)',
+    backToHome: 'На главную',
+  },
   pageTitles: {
     cv: 'Резюме',
     pendulum: 'Маятник',

@@ -11,7 +11,6 @@ export type {
   IContactLabels,
   IExperienceTranslation,
   IHeroStatTranslation,
-  INavSectionTranslation,
   IProjectTranslation,
   ISkillGroupTranslation,
 } from './en';

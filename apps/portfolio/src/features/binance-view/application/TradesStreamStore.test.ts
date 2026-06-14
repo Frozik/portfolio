@@ -13,7 +13,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 // satisfies just the surface the trades store touches (`tradesIndex`,
 // `ingestTradesFlush`, `releaseTradesBlockSlot`,
 // `getTradesLayerLastFrameStats`).
-vi.mock('../domain/chart-state', () => {
+vi.mock('./chart-state', () => {
   return {
     BinanceChartState: class {},
   };
@@ -26,8 +26,8 @@ vi.mock('../infrastructure/trades-stream', () => {
   };
 });
 
+import type { IBinanceDb } from '../domain/binance-db';
 import { createTradesBlockIndex } from '../domain/block-store/create-trades-block-index';
-import type { BinanceChartState } from '../domain/chart-state';
 import { BINANCE_CONFIG } from '../domain/config';
 import type { ITradeBlockFlushEventBridge } from '../domain/render-frame-types';
 import { MAX_BUCKETS_PER_BLOCK } from '../domain/trades-constants';
@@ -40,7 +40,7 @@ import type {
   TradeId,
 } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
-import type { IBinanceDb } from '../infrastructure/binance-indexeddb';
+import type { BinanceChartState } from './chart-state';
 
 import type { IOrderbookGate } from './IOrderbookGate';
 import { TradesStreamStore } from './TradesStreamStore';

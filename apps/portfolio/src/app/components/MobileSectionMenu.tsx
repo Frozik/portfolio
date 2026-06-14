@@ -2,9 +2,8 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
 import { Home } from 'lucide-react';
 import { memo } from 'react';
-
-import type { INavSectionTranslation } from '../../features/welcome/presentation/translations';
 import { Drawer } from '../../shared/ui/Drawer';
+import type { INavSectionTranslation } from '../translations';
 import { GameOfLifeBackground } from './GameOfLifeBackground';
 
 const PROJECT_ICON_SIZE_PX = 16;

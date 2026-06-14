@@ -2,17 +2,17 @@ import type { BlockSpatialIndex } from '../../domain/block-store/block-spatial-i
 import type { IHeatmapBlockIndexItem } from '../../domain/block-store/create-heatmap-block-index';
 import { INITIAL_GPU_BLOCKS, MAX_GPU_BLOCKS, SNAPSHOT_SLOTS } from '../../domain/constants';
 import type { IBlockFlushEventBridge } from '../../domain/flush-bridge';
-import type { IHeatmapLayerResources, IVisibleBlock } from '../../domain/heatmap-layer';
+import { plotWidthDevicePx } from '../../domain/math';
+import type { ITextureLayoutConfig, UnixTimeMs } from '../../domain/types';
+import type { IHeatmapLayerResources, IVisibleBlock } from '../../infrastructure/heatmap-layer';
 import {
   createHeatmapBindGroup,
   createHeatmapResources,
   HEATMAP_VERTEX_COUNT_PER_INSTANCE,
   writeBlockDescriptors,
   writeHeatmapUniforms,
-} from '../../domain/heatmap-layer';
-import { plotWidthDevicePx } from '../../domain/math';
-import { TextureRowManager } from '../../domain/texture-row-manager';
-import type { ITextureLayoutConfig, UnixTimeMs } from '../../domain/types';
+} from '../../infrastructure/heatmap-layer';
+import { TextureRowManager } from '../../infrastructure/texture-row-manager';
 import type { ILayerFrameContext, ILayerRenderer } from './layer-renderer';
 
 type HeatmapBlockRegistry = BlockSpatialIndex<IHeatmapBlockIndexItem>;

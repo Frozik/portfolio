@@ -1,7 +1,6 @@
+import type { IBinanceDb } from '../domain/binance-db';
 import type { ITrade } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
-
-import type { IBinanceDb } from './binance-indexeddb';
 import type { ITradeBlockFlushEvent } from './trade-bucket-accumulator';
 
 /**

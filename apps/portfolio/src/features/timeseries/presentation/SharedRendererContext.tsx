@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 import { createContext, memo, useContext, useEffect, useState } from 'react';
-import { createSharedRenderer } from '../domain/shared-renderer';
-import type { ISharedTimeseriesRenderer } from '../domain/types';
+import { createSharedRenderer } from '../application/render/shared-renderer';
+import type { ISharedTimeseriesRenderer } from '../application/render/types';
 
 const SharedRendererContext = createContext<ISharedTimeseriesRenderer | null>(null);
 

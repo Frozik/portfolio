@@ -7,27 +7,27 @@ import {
   TEXTURE_WIDTH_FALLBACK,
   TEXTURE_WIDTH_PREFERRED,
 } from '../../domain/constants';
+import { getTextureLayoutConfig } from '../../domain/math';
+import type { ITextureLayoutConfig } from '../../domain/types';
 import {
   createHeatmapBindGroupLayout,
   getHeatmapPipelineDescriptor,
-} from '../../domain/heatmap-layer';
-import { getTextureLayoutConfig } from '../../domain/math';
+} from '../../infrastructure/heatmap-layer';
 import {
   createMidPriceBindGroupLayout,
   getMidPriceInteriorPipelineDescriptor,
   getMidPriceOutlinePipelineDescriptor,
-} from '../../domain/mid-price-layer';
-import commonWgsl from '../../domain/shaders/common.wgsl?raw';
-import heatmapWgsl from '../../domain/shaders/heatmap.wgsl?raw';
-import midPriceWgsl from '../../domain/shaders/mid-price.wgsl?raw';
-import midPriceCommonWgsl from '../../domain/shaders/mid-price-common.wgsl?raw';
-import tradesWgsl from '../../domain/shaders/trades.wgsl?raw';
-import tradesCommonWgsl from '../../domain/shaders/trades-common.wgsl?raw';
+} from '../../infrastructure/mid-price-layer';
+import commonWgsl from '../../infrastructure/shaders/common.wgsl?raw';
+import heatmapWgsl from '../../infrastructure/shaders/heatmap.wgsl?raw';
+import midPriceWgsl from '../../infrastructure/shaders/mid-price.wgsl?raw';
+import midPriceCommonWgsl from '../../infrastructure/shaders/mid-price-common.wgsl?raw';
+import tradesWgsl from '../../infrastructure/shaders/trades.wgsl?raw';
+import tradesCommonWgsl from '../../infrastructure/shaders/trades-common.wgsl?raw';
 import {
   createTradesBindGroupLayout,
   getTradesPipelineDescriptor,
-} from '../../domain/trades-layer';
-import type { ITextureLayoutConfig } from '../../domain/types';
+} from '../../infrastructure/trades-layer';
 
 import { createPipelineWithLogging, logShaderDiagnostics } from './diagnostics';
 

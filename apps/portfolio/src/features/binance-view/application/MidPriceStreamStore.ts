@@ -1,7 +1,6 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 import { makeAutoObservable } from 'mobx';
-
-import type { BinanceChartState } from '../domain/chart-state';
+import type { IBinanceDb } from '../domain/binance-db';
 import {
   MAX_MID_PRICE_BLOCKS,
   MID_PRICE_FLUSH_EVERY_SAMPLES,
@@ -9,9 +8,9 @@ import {
 } from '../domain/constants';
 import { getMidPrice } from '../domain/get-mid-price';
 import type { IQuantizedSnapshot } from '../domain/types';
-import type { IBinanceDb } from '../infrastructure/binance-indexeddb';
 import type { IMidPriceFlushEvent } from '../infrastructure/mid-price-block-accumulator';
 import { MidPriceBlockAccumulator } from '../infrastructure/mid-price-block-accumulator';
+import type { BinanceChartState } from './chart-state';
 
 export interface IMidPriceStreamStoreParams {
   readonly chartState: BinanceChartState;

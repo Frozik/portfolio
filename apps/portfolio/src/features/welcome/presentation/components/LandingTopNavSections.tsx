@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { welcomeT } from '../translations';
+import { appT } from '../../../../app/translations';
 
 /**
  * Anchor navigation rendered inside the {@link TopNav} center slot on
@@ -11,7 +11,7 @@ import { welcomeT } from '../translations';
 export const LandingTopNavSections = memo(() => {
   return (
     <div className="hidden font-mono text-xs text-landing-fg-dim min-[990px]:flex min-[990px]:gap-8">
-      {welcomeT.nav.sections.map(section => (
+      {appT.nav.sections.map(section => (
         <a
           key={section.id}
           href={`#${section.id}`}

@@ -11,17 +11,20 @@ import {
   RADIUS_MAX_PRICE_TICK_MULT,
   RADIUS_MIN_PRICE_TICK_MULT,
 } from '../../domain/trades-constants';
-import type { ITradesLayerResources, ITradesVisibleBucket } from '../../domain/trades-layer';
+import type { IViewportStats } from '../../domain/trades-scaling';
+import { computeBucketViewportStats, computeRadiusPx } from '../../domain/trades-scaling';
+import type { UnixTimeMs } from '../../domain/types';
+import type {
+  ITradesLayerResources,
+  ITradesVisibleBucket,
+} from '../../infrastructure/trades-layer';
 import {
   createTradesBindGroup,
   createTradesResources,
   TRADES_VERTEX_COUNT_PER_INSTANCE,
   writeTradesBucketDescriptors,
   writeTradesUniforms,
-} from '../../domain/trades-layer';
-import type { IViewportStats } from '../../domain/trades-scaling';
-import { computeBucketViewportStats, computeRadiusPx } from '../../domain/trades-scaling';
-import type { UnixTimeMs } from '../../domain/types';
+} from '../../infrastructure/trades-layer';
 import type { IHoverAnimState } from './hover-anim-controller';
 import {
   INITIAL_HOVER_STATE,

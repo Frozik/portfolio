@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import { runCharter } from '../domain/chart-draw';
+import { runCharter } from '../application/render/chart-draw';
 
 export const Charts = memo(() => {
   const canvasRef = useRef<HTMLCanvasElement>(null);

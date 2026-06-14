@@ -11,10 +11,10 @@ import type {
   IRenderFrameInput,
   ITradeBlockFlushEventBridge,
 } from '../domain/render-frame-types';
-import { RenderTargetPool } from '../domain/render-target-pool';
-import type { TaskManager } from '../domain/task-manager';
 import type { IViewportStats } from '../domain/trades-scaling';
 import type { ITextureLayoutConfig, UnixTimeMs } from '../domain/types';
+import { RenderTargetPool } from '../infrastructure/render-target-pool';
+import type { TaskManager } from '../infrastructure/task-manager';
 import {
   initRendererResources,
   OFFSCREEN_CTX_USAGE,

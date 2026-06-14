@@ -1,5 +1,33 @@
+export interface INavSectionTranslation {
+  readonly id: string;
+  readonly label: string;
+  readonly number: string;
+}
+
 export const appTranslationsEn = {
   appTitle: 'Portfolio',
+  nav: {
+    brandRoot: 'frozik.github.io',
+    brandPath: '/portfolio',
+    sections: [
+      { id: 'about', label: 'about', number: '01' },
+      { id: 'skills', label: 'skills', number: '02' },
+      { id: 'work', label: 'work', number: '03' },
+      { id: 'projects', label: 'projects', number: '04' },
+      { id: 'contact', label: 'contact', number: '05' },
+    ] as readonly INavSectionTranslation[],
+    openOnPhone: 'Open on phone',
+    sourceOnGitHub: 'Source on GitHub',
+    showQR: 'Show QR code for this page',
+    openMenu: 'Open menu',
+    menuTitle: 'Navigation',
+    sectionsTitle: 'Sections',
+    sectionsHeading: 'sections',
+    projectsHeading: 'projects',
+    closeQR: 'Close QR code',
+    fullscreenLandscape: 'Fullscreen landscape',
+    backToHome: 'Back to home',
+  },
   pageTitles: {
     cv: 'CV',
     pendulum: 'Pendulum',

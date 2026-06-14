@@ -1,5 +1,5 @@
+import type { BinanceChartState } from '../application/chart-state';
 import type { ITradeHitTestPointer } from '../application/TradesStreamStore';
-import type { BinanceChartState } from '../domain/chart-state';
 import { plotWidthCssPx } from '../domain/math';
 import type { UnixTimeMs } from '../domain/types';
 

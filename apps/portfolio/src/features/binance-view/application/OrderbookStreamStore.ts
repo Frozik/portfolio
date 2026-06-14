@@ -1,8 +1,7 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { Subscription } from 'rxjs';
-
-import type { BinanceChartState } from '../domain/chart-state';
+import type { IBinanceDb, IOrderbookBlockRecord } from '../domain/binance-db';
 import { BINANCE_CONFIG } from '../domain/config';
 import { MAX_HISTORY_BLOCKS, SNAPSHOT_SLOTS } from '../domain/constants';
 import type { DataController, IActiveBlockSource } from '../domain/data-controller';
@@ -13,10 +12,10 @@ import type {
   IQuantizedSnapshot,
   UnixTimeMs,
 } from '../domain/types';
-import type { IBinanceDb, IOrderbookBlockRecord } from '../infrastructure/binance-indexeddb';
 import type { IBlockFlushEvent } from '../infrastructure/block-accumulator';
 import { BlockAccumulator } from '../infrastructure/block-accumulator';
 import { liveOrderBook$ } from '../infrastructure/orderbook-stream';
+import type { BinanceChartState } from './chart-state';
 
 import type { IOrderbookGate } from './IOrderbookGate';
 

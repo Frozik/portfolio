@@ -1,6 +1,6 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 
-import type { IOrderbookBlockRecord, IOrderbookDb } from '../infrastructure/binance-indexeddb';
+import type { IOrderbookBlockRecord, IOrderbookDb } from './binance-db';
 import { BlockRecordLruCache } from './block-record-lru-cache';
 import type { BlockSpatialIndex } from './block-store/block-spatial-index';
 import type { IHeatmapBlockIndexItem } from './block-store/create-heatmap-block-index';

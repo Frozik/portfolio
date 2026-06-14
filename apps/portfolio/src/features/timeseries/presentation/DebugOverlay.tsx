@@ -2,7 +2,7 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { getIsHosted } from '@frozik/utils/isHosted';
 import { memo, useEffect, useState } from 'react';
 
-import type { ISharedTimeseriesRenderer } from '../domain/types';
+import type { ISharedTimeseriesRenderer } from '../application/render/types';
 import { timeseriesT } from './translations';
 
 const FPS_POLL_INTERVAL_MS = 250;

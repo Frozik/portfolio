@@ -1,42 +1,34 @@
 import type { IAction, IHumanPlayer } from '../types';
 import { EPlayerType } from '../types';
+import type { IKeyStateSource } from './IKeyStateSource';
 
 export const VELOCITY_COEFFICIENT = 0.2;
+const SHIFT_SPEED_MULTIPLIER = 5;
 
 export class HumanPlayer implements IHumanPlayer {
   readonly type = EPlayerType.Human;
   readonly name = 'Human';
 
-  private readonly pressedKeys = new Set<string>();
-
-  constructor() {
-    window.addEventListener('keydown', this.handleKeyDownEvent);
-    window.addEventListener('keyup', this.handleKeyUpEvent);
-  }
+  constructor(private readonly keyState: IKeyStateSource) {}
 
   public play(): IAction {
     let carVelocity = 0;
 
-    if (this.pressedKeys.has('ArrowLeft')) {
+    if (this.keyState.isPressed('ArrowLeft')) {
       carVelocity--;
     }
-    if (this.pressedKeys.has('ArrowRight')) {
+    if (this.keyState.isPressed('ArrowRight')) {
       carVelocity++;
     }
 
-    if (this.pressedKeys.has('ShiftLeft') || this.pressedKeys.has('ShiftRight')) {
-      carVelocity *= 5;
+    if (this.keyState.isPressed('ShiftLeft') || this.keyState.isPressed('ShiftRight')) {
+      carVelocity *= SHIFT_SPEED_MULTIPLIER;
     }
 
     return { pivotVelocity: carVelocity * VELOCITY_COEFFICIENT };
   }
 
   public dispose(): void {
-    window.removeEventListener('keydown', this.handleKeyDownEvent);
-    window.removeEventListener('keyup', this.handleKeyUpEvent);
+    this.keyState.dispose();
   }
-
-  private readonly handleKeyDownEvent = ({ code }: KeyboardEvent) => this.pressedKeys.add(code);
-
-  private readonly handleKeyUpEvent = ({ code }: KeyboardEvent) => this.pressedKeys.delete(code);
 }

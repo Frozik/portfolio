@@ -2,6 +2,7 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import { appT } from '../../../../../app/translations';
 import { cn } from '../../../../../shared/lib/cn';
 import { DialogShell } from '../../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../../shared/ui/QRCode';
@@ -38,7 +39,7 @@ const QRContactModalComponent = ({ open, value, title, onClose }: QRContactModal
       onClose={onClose}
       title={title}
       description={welcomeT.contacts.qrLinkLabel}
-      closeLabel={welcomeT.nav.closeQR}
+      closeLabel={appT.nav.closeQR}
     >
       <div className="mb-5 flex justify-center rounded-sm bg-white p-4">
         <QRCode value={value} size={QR_PIXEL_SIZE_PX} className="bg-transparent p-0" />

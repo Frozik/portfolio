@@ -1,4 +1,4 @@
-import type { IOrderbookBlockRecord } from '../infrastructure/binance-indexeddb';
+import type { IOrderbookBlockRecord } from './binance-db';
 
 import type { UnixTimeMs } from './types';
 

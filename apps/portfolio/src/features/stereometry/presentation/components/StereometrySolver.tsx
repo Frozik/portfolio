@@ -6,8 +6,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { useRegisterTopNavBack } from '../../../../app/components/TopNavBackContext';
 import { WebGpuGuard } from '../../../../shared/components/WebGpuGuard';
-import type { StereometryControls } from '../../domain/draw';
-import { runStereometry } from '../../domain/draw';
+import type { StereometryControls } from '../../application/render/draw';
+import { runStereometry } from '../../application/render/draw';
 import type { CameraInteractionMode, PuzzleDefinition } from '../../domain/types';
 import { TOOLBAR_ICON_SIZE } from '../constants';
 import { stereometryT } from '../translations';

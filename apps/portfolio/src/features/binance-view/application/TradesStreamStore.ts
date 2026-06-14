@@ -1,7 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { Subscription } from 'rxjs';
-
-import type { BinanceChartState } from '../domain/chart-state';
+import type { IBinanceDb } from '../domain/binance-db';
 import { BINANCE_CONFIG } from '../domain/config';
 import {
   ACTIVE_BUCKET_RAW_TRADES_SOFT_CAP,
@@ -14,7 +13,6 @@ import type { ITradeHitTestPointer } from '../domain/trades-hit-test';
 import { decodeBucketAt, findBucketsAt, pickMostRecentBucket } from '../domain/trades-hit-test';
 import type { ITrade, ITradeBucket, ITradeBucketHitTestResult } from '../domain/trades-types';
 import type { ConnectionState, UnixTimeMs } from '../domain/types';
-import type { IBinanceDb } from '../infrastructure/binance-indexeddb';
 import type { ITradeBlockFlushEvent } from '../infrastructure/trade-bucket-accumulator';
 import { TradeBucketAccumulator } from '../infrastructure/trade-bucket-accumulator';
 import {
@@ -23,6 +21,7 @@ import {
   persistRawTrades,
 } from '../infrastructure/trades-persistence';
 import { liveTrades$ } from '../infrastructure/trades-stream';
+import type { BinanceChartState } from './chart-state';
 
 import type { IOrderbookGate } from './IOrderbookGate';
 
