@@ -1,5 +1,10 @@
-// GPUTextureUsage.RENDER_ATTACHMENT = 0x10, COPY_SRC = 0x01
-const RENDER_TARGET_USAGE = 0x10 | 0x01;
+// WebGPU GPUTextureUsage flags by their numeric spec values — referenced by
+// name here instead of raw hex, but not via the `GPUTextureUsage` global since
+// that isn't defined in the happy-dom test environment this module is imported
+// under.
+const TEXTURE_USAGE_RENDER_ATTACHMENT = 0x10;
+const TEXTURE_USAGE_COPY_SRC = 0x01;
+const RENDER_TARGET_USAGE = TEXTURE_USAGE_RENDER_ATTACHMENT | TEXTURE_USAGE_COPY_SRC;
 
 /**
  * Pool of reusable GPUTexture instances used as intermediate render targets.

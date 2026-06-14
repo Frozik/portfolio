@@ -5,21 +5,6 @@ import { cn } from '../lib/cn';
 
 type TooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
 
-type TooltipProps = {
-  title: ReactNode;
-  placement?: TooltipPlacement;
-  children: ReactNode;
-  className?: string;
-  /**
-   * Controlled open state. When provided, the tooltip ignores hover/focus
-   * triggers and is shown/hidden based on this value. Use `true` for
-   * permanently-visible hints.
-   */
-  open?: boolean;
-  /** Delay before the tooltip appears on hover, in milliseconds. */
-  delayDuration?: number;
-};
-
 const DEFAULT_DELAY_MS = 200;
 
 export const Tooltip = memo(
@@ -30,7 +15,20 @@ export const Tooltip = memo(
     className,
     open,
     delayDuration = DEFAULT_DELAY_MS,
-  }: TooltipProps) => (
+  }: {
+    title: ReactNode;
+    placement?: TooltipPlacement;
+    children: ReactNode;
+    className?: string;
+    /**
+     * Controlled open state. When provided, the tooltip ignores hover/focus
+     * triggers and is shown/hidden based on this value. Use `true` for
+     * permanently-visible hints.
+     */
+    open?: boolean;
+    /** Delay before the tooltip appears on hover, in milliseconds. */
+    delayDuration?: number;
+  }) => (
     <TooltipPrimitive.Provider delayDuration={delayDuration}>
       <TooltipPrimitive.Root open={open}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
@@ -52,5 +50,3 @@ export const Tooltip = memo(
     </TooltipPrimitive.Provider>
   )
 );
-
-export type { TooltipPlacement, TooltipProps };

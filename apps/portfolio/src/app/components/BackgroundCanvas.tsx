@@ -52,10 +52,6 @@ interface IParticle {
   a: number;
 }
 
-type BackgroundCanvasProps = {
-  readonly opacity?: number;
-};
-
 function parseAccent(raw: string): readonly [number, number, number] {
   const match = raw.trim().match(HEX_COLOR_PATTERN);
   if (!match) {
@@ -87,7 +83,11 @@ function createParticles(): IParticle[] {
   }));
 }
 
-const BackgroundCanvasComponent = ({ opacity = DEFAULT_OPACITY }: BackgroundCanvasProps) => {
+const BackgroundCanvasComponent = ({
+  opacity = DEFAULT_OPACITY,
+}: {
+  readonly opacity?: number;
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -250,5 +250,3 @@ const BackgroundCanvasComponent = ({ opacity = DEFAULT_OPACITY }: BackgroundCanv
 };
 
 export const BackgroundCanvas = memo(BackgroundCanvasComponent);
-
-export type { BackgroundCanvasProps };

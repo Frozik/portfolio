@@ -8,13 +8,6 @@ import { confT } from '../translations';
 
 const ICON_SIZE = 18;
 
-export interface IMuteControlsProps {
-  readonly isAudioMuted: boolean;
-  readonly isVideoMuted: boolean;
-  readonly onToggleAudio: () => void;
-  readonly onToggleVideo: () => void;
-}
-
 const buttonBaseClass =
   'flex h-10 w-10 items-center justify-center rounded-full border border-border ' +
   'text-text transition-colors focus-visible:outline-none focus-visible:ring-2 ' +
@@ -25,7 +18,12 @@ const MuteControlsComponent = ({
   isVideoMuted,
   onToggleAudio,
   onToggleVideo,
-}: IMuteControlsProps) => {
+}: {
+  readonly isAudioMuted: boolean;
+  readonly isVideoMuted: boolean;
+  readonly onToggleAudio: () => void;
+  readonly onToggleVideo: () => void;
+}) => {
   const handleToggleAudio = useFunction(() => {
     onToggleAudio();
   });

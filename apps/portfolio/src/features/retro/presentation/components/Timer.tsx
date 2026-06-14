@@ -15,10 +15,6 @@ import {
 } from '../../domain/constants';
 import { retroT as t } from '../translations';
 
-interface TimerProps {
-  readonly store: RoomStore;
-}
-
 const MS_PER_SECOND = 1_000;
 const SECONDS_PER_MINUTE = 60;
 const PERCENT_MULTIPLIER = 100;
@@ -61,7 +57,7 @@ const ICON_BUTTON_CLASSES =
  * Clock color shifts from green (running) → yellow (final minute) → red
  * (expired) based on `store.timerSeverity`.
  */
-export const Timer = observer(({ store }: TimerProps) => {
+export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
   const { isFacilitator, timerSeverity, remainingTimerMs } = store;
   const timer = store.currentSnapshot?.meta.timer;
 

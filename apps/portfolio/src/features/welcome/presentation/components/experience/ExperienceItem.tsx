@@ -4,11 +4,7 @@ import { formatDateMonthYear, measureDuration } from '../../../utils';
 import type { IExperienceTranslation } from '../../translations';
 import { welcomeT } from '../../translations';
 
-type ExperienceItemProps = {
-  readonly entry: IExperienceTranslation;
-};
-
-const ExperienceItemComponent = ({ entry }: ExperienceItemProps) => {
+const ExperienceItemComponent = ({ entry }: { readonly entry: IExperienceTranslation }) => {
   const startLabel = formatDateMonthYear(entry.start);
   const endLabel = entry.end ? formatDateMonthYear(entry.end) : welcomeT.experience.tillNow;
   const duration = measureDuration(entry.start, entry.end);

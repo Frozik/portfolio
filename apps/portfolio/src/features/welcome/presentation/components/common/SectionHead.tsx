@@ -4,13 +4,6 @@ import { cn } from '../../../../../shared/lib/cn';
 
 const ACCENT_MARKER = /\*([^*]+)\*/g;
 
-type SectionHeadProps = {
-  readonly number: string;
-  readonly kicker: string;
-  readonly title: string;
-  readonly className?: string;
-};
-
 function renderTitleWithAccents(title: string): readonly React.ReactNode[] {
   const chunks: React.ReactNode[] = [];
   let cursor = 0;
@@ -33,7 +26,17 @@ function renderTitleWithAccents(title: string): readonly React.ReactNode[] {
   return chunks;
 }
 
-const SectionHeadComponent = ({ number, kicker, title, className }: SectionHeadProps) => (
+const SectionHeadComponent = ({
+  number,
+  kicker,
+  title,
+  className,
+}: {
+  readonly number: string;
+  readonly kicker: string;
+  readonly title: string;
+  readonly className?: string;
+}) => (
   <header
     className={cn('mb-8 md:mb-12 print:mb-2 print:md:mb-2', 'print:break-before-page', className)}
   >

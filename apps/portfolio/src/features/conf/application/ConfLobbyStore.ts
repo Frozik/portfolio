@@ -35,12 +35,12 @@ export class ConfLobbyStore {
     // and rejoin, instead of only on their second room visit.
     this.localParticipantId = getOrCreateParticipantId();
 
-    makeAutoObservable(
+    makeAutoObservable<ConfLobbyStore, 'repoPromise' | 'localParticipantId'>(
       this,
       {
         repoPromise: false,
         localParticipantId: false,
-      } as never,
+      },
       { autoBind: true }
     );
   }

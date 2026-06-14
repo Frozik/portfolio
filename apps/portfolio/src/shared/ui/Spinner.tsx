@@ -19,15 +19,11 @@ const spinnerVariants = cva(
   }
 );
 
-type SpinnerProps = VariantProps<typeof spinnerVariants> & {
-  className?: string;
-};
-
-export const Spinner = memo(({ size, className }: SpinnerProps) => (
-  <div className={cn('flex items-center justify-center', className)} role="status">
-    <div className={cn(spinnerVariants({ size }))} />
-    <span className="sr-only">Loading...</span>
-  </div>
-));
-
-export type { SpinnerProps };
+export const Spinner = memo(
+  ({ size, className }: VariantProps<typeof spinnerVariants> & { className?: string }) => (
+    <div className={cn('flex items-center justify-center', className)} role="status">
+      <div className={cn(spinnerVariants({ size }))} />
+      <span className="sr-only">Loading...</span>
+    </div>
+  )
+);

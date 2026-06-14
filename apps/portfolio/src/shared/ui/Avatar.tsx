@@ -33,5 +33,3 @@ export const Avatar = memo(({ src, alt = '', size, children, className }: Avatar
     {!isNil(src) ? <img src={src} alt={alt} className="h-full w-full object-cover" /> : children}
   </span>
 ));
-
-export type { AvatarProps };

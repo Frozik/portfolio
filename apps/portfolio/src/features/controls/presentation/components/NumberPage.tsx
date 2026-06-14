@@ -9,6 +9,13 @@ import { RangeSlider, Slider } from '../../../../shared/ui/Slider';
 import { controlsT } from '../translations';
 import { Kbd } from './Kbd';
 
+const PIP_RANGE_MIN = -2;
+const PIP_RANGE_MAX = 6;
+const PIP_RANGE_STEP = 1;
+const DECIMALS_MIN = 0;
+const DECIMALS_MAX = 10;
+const DECIMALS_STEP = 1;
+
 export const NumberPage = memo(() => {
   const [value, setValue] = useState([2, 4]);
   const [decimals, setDecimals] = useState(6);
@@ -41,12 +48,26 @@ export const NumberPage = memo(() => {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <MonoKicker tone="faint">{controlsT.numberPage.pipStartSize}</MonoKicker>
-          <RangeSlider min={-2} max={6} step={1} value={value} onChange={setValue} showTooltip />
+          <RangeSlider
+            min={PIP_RANGE_MIN}
+            max={PIP_RANGE_MAX}
+            step={PIP_RANGE_STEP}
+            value={value}
+            onChange={setValue}
+            showTooltip
+          />
         </div>
 
         <div className="flex flex-col gap-3">
           <MonoKicker tone="faint">{controlsT.numberPage.decimals}</MonoKicker>
-          <Slider min={0} max={10} step={1} value={decimals} onChange={setDecimals} showTooltip />
+          <Slider
+            min={DECIMALS_MIN}
+            max={DECIMALS_MAX}
+            step={DECIMALS_STEP}
+            value={decimals}
+            onChange={setDecimals}
+            showTooltip
+          />
         </div>
       </div>
     </section>

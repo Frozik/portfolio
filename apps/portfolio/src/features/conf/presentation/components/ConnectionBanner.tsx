@@ -5,12 +5,6 @@ import { cn } from '../../../../shared/lib/cn';
 import type { TConfRoomConnectionState } from '../../application/ConfRoomStore';
 import { confT } from '../translations';
 
-export interface IConnectionBannerProps {
-  readonly state: TConfRoomConnectionState;
-  readonly hasRemotePeer: boolean;
-  readonly errorMessage: string | null;
-}
-
 interface IBannerContent {
   readonly text: string;
   readonly tone: 'info' | 'warn' | 'error';
@@ -56,7 +50,11 @@ const ConnectionBannerComponent = ({
   state,
   hasRemotePeer,
   errorMessage,
-}: IConnectionBannerProps) => {
+}: {
+  readonly state: TConfRoomConnectionState;
+  readonly hasRemotePeer: boolean;
+  readonly errorMessage: string | null;
+}) => {
   const content = resolveBannerContent(state, hasRemotePeer, errorMessage);
   if (content === null) {
     return null;

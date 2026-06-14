@@ -25,13 +25,6 @@ interface ICommunicationContextValue {
 
 const CommunicationContext = createContext<ICommunicationContextValue | null>(null);
 
-interface ICommunicationProviderProps {
-  readonly googleClientId: string;
-  readonly yandexClientId: string;
-  readonly baseUrl: string;
-  readonly children: ReactNode;
-}
-
 /**
  * Wraps the React tree with the auth session + identity providers
  * needed by every retro / conf entry point. Both Google and Yandex
@@ -44,7 +37,12 @@ export function CommunicationProvider({
   yandexClientId,
   baseUrl,
   children,
-}: ICommunicationProviderProps): ReactElement {
+}: {
+  readonly googleClientId: string;
+  readonly yandexClientId: string;
+  readonly baseUrl: string;
+  readonly children: ReactNode;
+}): ReactElement {
   const authSession = useMemo(() => new AuthSession(), []);
 
   const providers = useMemo<ReadonlyMap<TIdentityProvider, IOidcProvider>>(() => {
@@ -75,11 +73,6 @@ export function CommunicationProvider({
   );
 }
 
-interface IProviderBridgeProps {
-  readonly session: AuthSession;
-  readonly providers: ReadonlyMap<TIdentityProvider, IOidcProvider>;
-}
-
 /**
  * Installs the silent-refresh runners on the session once the relevant
  * SDKs (Google's GIS) report ready. Also re-decodes the rehydrated
@@ -89,25 +82,33 @@ interface IProviderBridgeProps {
  * Must live inside `<GoogleOAuthProvider>` because `useGoogleOAuth`
  * is the only public surface that exposes script load state.
  */
-const ProviderBridge = observer(({ session, providers }: IProviderBridgeProps) => {
-  const { scriptLoadedSuccessfully } = useGoogleOAuth();
+const ProviderBridge = observer(
+  ({
+    session,
+    providers,
+  }: {
+    readonly session: AuthSession;
+    readonly providers: ReadonlyMap<TIdentityProvider, IOidcProvider>;
+  }) => {
+    const { scriptLoadedSuccessfully } = useGoogleOAuth();
 
-  useEffect(() => {
-    // Wait until GIS finishes loading when Google is enabled —
-    // otherwise `GoogleOidcProvider.silentRefresh` would no-op anyway
-    // because `window.google` isn't present yet.
-    if (providers.has('google') && !scriptLoadedSuccessfully) {
-      return undefined;
-    }
-    session.setProviders(providers);
-    session.completeRehydrate();
-    return () => {
-      session.clearProviders();
-    };
-  }, [providers, scriptLoadedSuccessfully, session]);
+    useEffect(() => {
+      // Wait until GIS finishes loading when Google is enabled —
+      // otherwise `GoogleOidcProvider.silentRefresh` would no-op anyway
+      // because `window.google` isn't present yet.
+      if (providers.has('google') && !scriptLoadedSuccessfully) {
+        return undefined;
+      }
+      session.setProviders(providers);
+      session.completeRehydrate();
+      return () => {
+        session.clearProviders();
+      };
+    }, [providers, scriptLoadedSuccessfully, session]);
 
-  return null;
-});
+    return null;
+  }
+);
 
 function useCommunicationContext(): ICommunicationContextValue {
   const context = useContext(CommunicationContext);

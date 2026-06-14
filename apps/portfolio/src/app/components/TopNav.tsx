@@ -24,8 +24,8 @@ import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import { appT } from '../translations';
-import type { INavProject } from './MobileSectionMenu';
 import { MobileSectionMenu } from './MobileSectionMenu';
+import type { INavProject } from './navTypes';
 import { useTopNavBack } from './TopNavBackContext';
 import { useTopNavCenterHostSetter } from './TopNavCenterContext';
 
@@ -98,11 +98,7 @@ function getCurrentPageUrl(): string {
 
 type TopNavVariant = 'landing' | 'inner';
 
-type TopNavProps = {
-  readonly variant?: TopNavVariant;
-};
-
-const TopNavComponent = ({ variant = 'landing' }: TopNavProps) => {
+const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVariant }) => {
   const [qrOpen, setQrOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();

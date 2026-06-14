@@ -1,6 +1,7 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
+import { memo } from 'react';
 
 import { sharedT } from '../translations';
 import { Alert } from '../ui/Alert';
@@ -9,9 +10,26 @@ import type { IOidcProvider } from './oidc/IOidcProvider';
 import { SIGN_IN_BUTTONS } from './oidc/sign-in-buttons';
 import type { IOidcSignInResult } from './oidc/types';
 
-interface ISignInGateProps {
-  readonly children: ReactNode;
-}
+/**
+ * Renders the registry button for a single provider and binds its result
+ * callback to the owning provider — keeps the gate's map free of an inline
+ * closure that would capture `provider` per iteration.
+ */
+const SignInProviderButton = memo(
+  ({
+    provider,
+    onResult,
+  }: {
+    readonly provider: IOidcProvider;
+    readonly onResult: (provider: IOidcProvider, result: IOidcSignInResult) => void;
+  }) => {
+    const Button = SIGN_IN_BUTTONS[provider.id];
+    const handleResult = useFunction((result: IOidcSignInResult) => {
+      onResult(provider, result);
+    });
+    return <Button provider={provider} onResult={handleResult} />;
+  }
+);
 
 /**
  * Gates access to a feature behind an OIDC sign-in. Renders one button
@@ -20,7 +38,7 @@ interface ISignInGateProps {
  * provider-specific branching lives here; adding a third provider is
  * purely a registry edit.
  */
-export const SignInGate = observer(({ children }: ISignInGateProps) => {
+export const SignInGate = observer(({ children }: { readonly children: ReactNode }) => {
   const session = useAuthSession();
   const providers = useOidcProviders();
 
@@ -43,16 +61,9 @@ export const SignInGate = observer(({ children }: ISignInGateProps) => {
       </p>
       {!hasAnyProvider && <Alert type="warning" message={sharedT.signInGate.missingClientId} />}
       <div className="flex flex-col items-stretch gap-3">
-        {orderedProviders.map(provider => {
-          const Button = SIGN_IN_BUTTONS[provider.id];
-          return (
-            <Button
-              key={provider.id}
-              provider={provider}
-              onResult={result => handleResult(provider, result)}
-            />
-          );
-        })}
+        {orderedProviders.map(provider => (
+          <SignInProviderButton key={provider.id} provider={provider} onResult={handleResult} />
+        ))}
       </div>
     </div>
   );

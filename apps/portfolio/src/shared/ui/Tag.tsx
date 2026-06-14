@@ -23,16 +23,18 @@ const tagVariants = cva(
   'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium print:border-gray-400 print:bg-transparent print:text-black'
 );
 
-type TagProps = VariantProps<typeof tagVariants> & {
-  color?: string;
-  children?: ReactNode;
-  className?: string;
-};
+export const Tag = memo(
+  ({
+    color,
+    children,
+    className,
+  }: VariantProps<typeof tagVariants> & {
+    color?: string;
+    children?: ReactNode;
+    className?: string;
+  }) => {
+    const colorClasses = color ? (TAG_COLOR_MAP[color] ?? DEFAULT_TAG_STYLE) : DEFAULT_TAG_STYLE;
 
-export const Tag = memo(({ color, children, className }: TagProps) => {
-  const colorClasses = color ? (TAG_COLOR_MAP[color] ?? DEFAULT_TAG_STYLE) : DEFAULT_TAG_STYLE;
-
-  return <span className={cn(tagVariants(), colorClasses, className)}>{children}</span>;
-});
-
-export type { TagProps };
+    return <span className={cn(tagVariants(), colorClasses, className)}>{children}</span>;
+  }
+);

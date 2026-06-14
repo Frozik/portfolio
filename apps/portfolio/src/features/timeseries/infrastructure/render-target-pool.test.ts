@@ -16,7 +16,11 @@ function createMockDevice(): GPUDevice {
 }
 
 const TEST_FORMAT = 'bgra8unorm' as GPUTextureFormat;
-const EXPECTED_USAGE = 0x10 | 0x01; // RENDER_ATTACHMENT | COPY_SRC
+
+// Mirror GPUTextureUsage flags locally — happy-dom does not expose the global.
+const RENDER_ATTACHMENT = 0x10;
+const COPY_SRC = 0x01;
+const EXPECTED_USAGE = RENDER_ATTACHMENT | COPY_SRC;
 
 describe('RenderTargetPool', () => {
   it('should create a new texture on first acquire', () => {

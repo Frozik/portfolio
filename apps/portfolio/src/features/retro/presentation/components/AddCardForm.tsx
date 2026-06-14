@@ -10,19 +10,17 @@ import { retroT as t } from '../translations';
 
 const TEXTAREA_ROWS = 2;
 
-interface AddCardFormProps {
-  columnId: ColumnId;
-  store: RoomStore;
-  onSubmit: (text: string) => void;
-  disabled?: boolean;
-}
-
 const AddCardFormComponent = ({
   columnId,
   store,
   onSubmit,
   disabled = false,
-}: AddCardFormProps) => {
+}: {
+  columnId: ColumnId;
+  store: RoomStore;
+  onSubmit: (text: string) => void;
+  disabled?: boolean;
+}) => {
   const [text, setText] = useState('');
 
   const submit = useFunction(() => {
@@ -103,5 +101,3 @@ const AddCardFormComponent = ({
 };
 
 export const AddCardForm = memo(AddCardFormComponent);
-
-export type { AddCardFormProps };

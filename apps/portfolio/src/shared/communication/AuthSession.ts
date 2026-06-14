@@ -68,7 +68,7 @@ export class AuthSession {
   private inFlightRefresh: Promise<string | null> | null = null;
 
   public constructor() {
-    makeAutoObservable(
+    makeAutoObservable<AuthSession, 'providers' | 'refreshTimer' | 'inFlightRefresh'>(
       this,
       {
         // Internal lifecycle plumbing — not observable UI state. Marking
@@ -77,7 +77,7 @@ export class AuthSession {
         providers: false,
         refreshTimer: false,
         inFlightRefresh: false,
-      } as never,
+      },
       { autoBind: true }
     );
     this.rehydrate();

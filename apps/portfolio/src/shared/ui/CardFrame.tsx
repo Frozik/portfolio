@@ -3,7 +3,17 @@ import { memo } from 'react';
 
 import { cn } from '../lib/cn';
 
-type CardFrameProps = {
+/**
+ * Wrapper that decorates its children with the pair of accent corner
+ * brackets defined by the `card-corners` utility. Optional accent dot and
+ * lift-on-hover behaviour match the `apps/retro/board.jsx` prototype.
+ */
+const CardFrameComponent = ({
+  children,
+  accentColor,
+  hoverable,
+  className,
+}: {
   readonly children: ReactNode;
   /**
    * Optional hex color for a 6×6 accent dot in the top-right corner. Omit to
@@ -14,14 +24,7 @@ type CardFrameProps = {
   /** Applies the `lift-hover` utility — a 1 px translateY on hover. */
   readonly hoverable?: boolean;
   readonly className?: string;
-};
-
-/**
- * Wrapper that decorates its children with the pair of accent corner
- * brackets defined by the `card-corners` utility. Optional accent dot and
- * lift-on-hover behaviour match the `apps/retro/board.jsx` prototype.
- */
-const CardFrameComponent = ({ children, accentColor, hoverable, className }: CardFrameProps) => (
+}) => (
   <div
     className={cn(
       'card-corners relative border border-landing-border-soft bg-landing-bg-card',

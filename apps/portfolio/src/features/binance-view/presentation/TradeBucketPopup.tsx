@@ -34,19 +34,17 @@ import { binanceT } from './translations';
  * Layout selection is reactive: a `matchMedia` listener flips between
  * the two when the viewport crosses the breakpoint mid-session.
  */
-export interface ITradeBucketPopupProps {
-  readonly hit: ITradeBucketHitTestResult;
-  readonly trades: readonly ITrade[];
-  readonly tradesStore: TradesStreamStore;
-  readonly onClose: () => void;
-}
-
 export const TradeBucketPopup = observer(function TradeBucketPopup({
   hit,
   trades,
   tradesStore,
   onClose,
-}: ITradeBucketPopupProps) {
+}: {
+  readonly hit: ITradeBucketHitTestResult;
+  readonly trades: readonly ITrade[];
+  readonly tradesStore: TradesStreamStore;
+  readonly onClose: () => void;
+}) {
   const handleClose = useFunction(() => {
     onClose();
   });

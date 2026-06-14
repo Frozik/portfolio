@@ -56,13 +56,13 @@ export class RetroLobbyStore {
     private readonly repoPromise: Promise<IRoomIndexRepo>,
     private readonly directory: UserDirectoryStore
   ) {
-    makeAutoObservable(
+    makeAutoObservable<RetroLobbyStore, 'repoPromise' | 'directory' | 'pendingCreate'>(
       this,
       {
         repoPromise: false,
         directory: false,
         pendingCreate: false,
-      } as never,
+      },
       { autoBind: true }
     );
   }

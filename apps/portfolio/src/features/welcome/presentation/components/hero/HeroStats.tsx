@@ -2,11 +2,7 @@ import { memo } from 'react';
 
 import type { IHeroStatTranslation } from '../../translations';
 
-type HeroStatsProps = {
-  readonly items: readonly IHeroStatTranslation[];
-};
-
-const HeroStatsComponent = ({ items }: HeroStatsProps) => (
+const HeroStatsComponent = ({ items }: { readonly items: readonly IHeroStatTranslation[] }) => (
   <div className="flex flex-wrap gap-6 border-t border-landing-border-soft pt-6 md:gap-12 md:pt-8">
     {items.map(item => (
       <div key={item.label} className="flex flex-col gap-1">

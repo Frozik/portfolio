@@ -16,11 +16,7 @@ interface ITopNavBackContextValue {
 
 const TopNavBackContext = createContext<ITopNavBackContextValue | null>(null);
 
-interface ITopNavBackProviderProps {
-  readonly children: ReactNode;
-}
-
-export const TopNavBackProvider = memo(({ children }: ITopNavBackProviderProps) => {
+export const TopNavBackProvider = memo(({ children }: { readonly children: ReactNode }) => {
   const [config, setConfig] = useState<ITopNavBackConfig | null>(null);
   const register = useFunction((next: ITopNavBackConfig) => setConfig(next));
   const clear = useFunction(() => setConfig(null));

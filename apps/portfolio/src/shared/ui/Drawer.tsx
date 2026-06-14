@@ -3,17 +3,22 @@ import type { ReactNode } from 'react';
 import { memo, useEffect } from 'react';
 import { cn } from '../lib/cn';
 
-type DrawerProps = {
-  title?: ReactNode;
-  open: boolean;
-  onClose: () => void;
-  placement?: 'left' | 'right';
-  children?: ReactNode;
-  className?: string;
-};
-
 export const Drawer = memo(
-  ({ title, open, onClose, placement = 'right', children, className }: DrawerProps) => {
+  ({
+    title,
+    open,
+    onClose,
+    placement = 'right',
+    children,
+    className,
+  }: {
+    title?: ReactNode;
+    open: boolean;
+    onClose: () => void;
+    placement?: 'left' | 'right';
+    children?: ReactNode;
+    className?: string;
+  }) => {
     useEffect(() => {
       if (!open) {
         return;
@@ -76,5 +81,3 @@ export const Drawer = memo(
     );
   }
 );
-
-export type { DrawerProps };

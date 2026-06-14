@@ -13,10 +13,6 @@ import { PhaseStepper } from './PhaseStepper';
 import { PresencePanel } from './PresencePanel';
 import { Timer } from './Timer';
 
-interface RoomHeaderProps {
-  readonly store: RoomStore;
-}
-
 const ICON_BUTTON_CLASSES =
   'inline-flex h-[26px] w-[26px] items-center justify-center border border-landing-border-soft text-landing-fg-dim transition-colors hover:border-landing-accent/30 hover:text-landing-fg';
 
@@ -27,7 +23,7 @@ const ICON_BUTTON_CLASSES =
  * the right. A second row under the bar hosts the PhaseStepper and,
  * where relevant, per-phase action icons (Share / Results).
  */
-export const RoomHeader = observer(({ store }: RoomHeaderProps) => {
+export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) => {
   const directory = useUserDirectoryStore();
   const snapshot = store.currentSnapshot;
   const name = snapshot?.meta.name ?? t.lobby.title;

@@ -6,12 +6,6 @@ import { cn } from '../lib/cn';
 
 type MonoKickerTone = 'faint' | 'dim' | 'accent';
 
-type MonoKickerProps = {
-  readonly children: ReactNode;
-  readonly tone?: MonoKickerTone;
-  readonly className?: string;
-};
-
 function toneClass(tone: MonoKickerTone): string {
   switch (tone) {
     case 'faint':
@@ -30,7 +24,15 @@ function toneClass(tone: MonoKickerTone): string {
  * (section kickers, micro-captions, badge-style counters). Keeps the
  * tracking and size consistent with the prototype.
  */
-const MonoKickerComponent = ({ children, tone = 'faint', className }: MonoKickerProps) => (
+const MonoKickerComponent = ({
+  children,
+  tone = 'faint',
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly tone?: MonoKickerTone;
+  readonly className?: string;
+}) => (
   <span
     className={cn('font-mono text-[10px] uppercase tracking-[0.1em]', toneClass(tone), className)}
   >

@@ -10,12 +10,13 @@ const HOVERED_SPEED = 1;
 const IDLE_SPEED = 0.45;
 const MS_PER_SECOND = 1000;
 
-type ProjectFxProps = {
+const ProjectFxComponent = ({
+  kind,
+  hovered,
+}: {
   readonly kind: TProjectFxKind;
   readonly hovered: boolean;
-};
-
-const ProjectFxComponent = ({ kind, hovered }: ProjectFxProps) => {
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoveredRef = useRef(hovered);
 

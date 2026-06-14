@@ -5,15 +5,6 @@ import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { TOOLBAR_TOOLTIP_DELAY_MS } from '../constants';
 
-type ToolbarButtonProps = {
-  active?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-  label: string;
-  tooltipDelayMs?: number;
-};
-
 export const ToolbarButton = memo(
   ({
     active = false,
@@ -22,7 +13,14 @@ export const ToolbarButton = memo(
     children,
     label,
     tooltipDelayMs = TOOLBAR_TOOLTIP_DELAY_MS,
-  }: ToolbarButtonProps) => (
+  }: {
+    active?: boolean;
+    disabled?: boolean;
+    onClick: () => void;
+    children: ReactNode;
+    label: string;
+    tooltipDelayMs?: number;
+  }) => (
     <Tooltip title={label} delayDuration={tooltipDelayMs}>
       <button
         type="button"

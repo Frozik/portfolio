@@ -43,9 +43,14 @@ export async function createSharedRenderer(): Promise<ISharedTimeseriesRenderer>
   assert(!isNil(ctx), 'Failed to get WebGPU context on OffscreenCanvas');
 
   const format = navigator.gpu.getPreferredCanvasFormat();
-  // COPY_DST (0x02) needed: render target is copied into this canvas texture via
+  // COPY_DST needed: render target is copied into this canvas texture via
   // copyTextureToTexture in the same command encoder (Approach D for iOS sync fix)
-  ctx.configure({ device, format, alphaMode: 'premultiplied', usage: 0x10 | 0x02 });
+  ctx.configure({
+    device,
+    format,
+    alphaMode: 'premultiplied',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
+  });
 
   const lineShaderModule = device.createShaderModule({ code: lineShaderSource });
   const candlestickShaderModule = device.createShaderModule({ code: candlestickShaderSource });
@@ -385,13 +390,13 @@ class SharedTimeseriesRenderer implements ISharedTimeseriesRenderer {
     ) {
       this.offscreen.width = width;
       this.offscreen.height = height;
-      // COPY_DST (0x02): canvas texture receives data via copyTextureToTexture
-      // RENDER_ATTACHMENT (0x10): kept for spec compatibility
+      // COPY_DST: canvas texture receives data via copyTextureToTexture
+      // RENDER_ATTACHMENT: kept for spec compatibility
       this.ctx.configure({
         device: this.device,
         format: this.format,
         alphaMode: 'premultiplied',
-        usage: 0x10 | 0x02,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
       });
       this.needsReconfigure = false;
     }

@@ -4,22 +4,6 @@ import { Alert } from '../Alert';
 import { SectionNumber } from '../SectionNumber';
 import { Spinner } from '../Spinner';
 
-interface RoomListSectionProps<TRoom> {
-  readonly sectionNumber: string;
-  readonly sectionLabel: string;
-  /** Loading state — value descriptor neither synced nor failed yet. */
-  readonly isLoading: boolean;
-  /** Load failed — shows `errorMessage` in an error alert. */
-  readonly isError: boolean;
-  readonly errorMessage: string;
-  /** Shown when the list synced to zero rooms. */
-  readonly emptyMessage: string;
-  /** Synced rooms; empty while loading or on error. */
-  readonly rooms: readonly TRoom[];
-  readonly getKey: (room: TRoom) => string;
-  readonly renderRoom: (room: TRoom) => ReactNode;
-}
-
 /**
  * Shared "active rooms" lobby section: section marker, then exactly one of
  * error / loading / empty / list. The per-feature row markup is supplied via
@@ -36,7 +20,21 @@ export function RoomListSection<TRoom>({
   rooms,
   getKey,
   renderRoom,
-}: RoomListSectionProps<TRoom>) {
+}: {
+  readonly sectionNumber: string;
+  readonly sectionLabel: string;
+  /** Loading state — value descriptor neither synced nor failed yet. */
+  readonly isLoading: boolean;
+  /** Load failed — shows `errorMessage` in an error alert. */
+  readonly isError: boolean;
+  readonly errorMessage: string;
+  /** Shown when the list synced to zero rooms. */
+  readonly emptyMessage: string;
+  /** Synced rooms; empty while loading or on error. */
+  readonly rooms: readonly TRoom[];
+  readonly getKey: (room: TRoom) => string;
+  readonly renderRoom: (room: TRoom) => ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-5">
       <SectionNumber number={sectionNumber} label={sectionLabel} />

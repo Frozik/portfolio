@@ -1,11 +1,11 @@
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
-
 import {
   computeSinYSegmentCount,
   MSAA_SAMPLE_COUNT,
   VERTICES_PER_INSTANCE,
 } from '../../domain/chart-constants';
-import type { FrameState, GpuContext, RenderLayer } from '../../domain/types';
 import { ALPHA_BLEND_STATE, OFFSCREEN_FORMAT } from '../chart-gpu-constants';
 import type { OffscreenTextureManager } from '../chart-textures';
 import commonShaderSource from '../shaders/common.wgsl?raw';

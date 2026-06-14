@@ -3,21 +3,19 @@ import { memo } from 'react';
 import { cn } from '../lib/cn';
 import { Spinner } from './Spinner';
 
-type ListProps<T> = {
-  dataSource: T[];
-  renderItem: (item: T, index: number) => ReactNode;
-  rowKey?: (item: T, index: number) => string | number;
-  loading?: boolean;
-  className?: string;
-};
-
 function ListInner<T>({
   dataSource,
   renderItem,
   rowKey,
   loading = false,
   className,
-}: ListProps<T>) {
+}: {
+  dataSource: T[];
+  renderItem: (item: T, index: number) => ReactNode;
+  rowKey?: (item: T, index: number) => string | number;
+  loading?: boolean;
+  className?: string;
+}) {
   if (loading) {
     return (
       <div className={cn('flex items-center justify-center py-8', className)}>
@@ -41,5 +39,3 @@ function ListInner<T>({
 }
 
 export const List = memo(ListInner) as typeof ListInner;
-
-export type { ListProps };

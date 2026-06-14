@@ -7,14 +7,15 @@ import { SvgTelegram } from '../../../../../icons/SvgTelegram';
 
 export type TContactIconKey = 'telegram' | 'whatsapp' | 'email' | 'github' | 'linkedin';
 
-type ContactIconProps = {
-  readonly iconKey: TContactIconKey;
-  readonly size?: number;
-};
-
 const DEFAULT_SIZE = 16;
 
-const ContactIconComponent = ({ iconKey, size = DEFAULT_SIZE }: ContactIconProps) => {
+const ContactIconComponent = ({
+  iconKey,
+  size = DEFAULT_SIZE,
+}: {
+  readonly iconKey: TContactIconKey;
+  readonly size?: number;
+}) => {
   switch (iconKey) {
     case 'telegram':
       return <SvgTelegram width={size} height={size} />;

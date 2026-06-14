@@ -13,7 +13,7 @@ const MIN_POINTS_TO_RENDER = 2;
 
 type TSparklineTrend = 'up' | 'down' | 'flat';
 
-export interface SparklineProps {
+interface SparklineProps {
   /** Numeric data points rendered as a polyline, oldest → newest. */
   readonly data: readonly number[];
   /** Virtual viewBox width for the SVG coordinate system. */

@@ -11,6 +11,29 @@ interface ITopContext {
   jitterDetector: number[];
 }
 
+// Upper bound on bob speed considered for the velocity bonus/penalty.
+const MAX_TRACKED_VELOCITY = 10;
+// Number of recent normalized positions kept to detect oscillation (jitter).
+const JITTER_WINDOW_SIZE = 50;
+// Normalized-position band around the rail center treated as "on target".
+const CENTER_POSITION_THRESHOLD = 0.1;
+// Normalized-position band beyond which the cart is penalized for drifting.
+const OFF_CENTER_POSITION_THRESHOLD = 0.2;
+
+// Time-based reward shaping: dampened vs. linear accumulation of upright time.
+const DAMPENED_TIME_DIVISOR = 800;
+const LINEAR_TIME_DIVISOR = 50;
+// Bonus for holding upright while keeping the cart still (few direction changes).
+const STEADINESS_TIME_DIVISOR = 20;
+const MAX_STEADINESS_DIRECTION_CHANGES = 5;
+
+// Multipliers turning raw measures into score contributions.
+const CENTERING_BONUS_WEIGHT = 10;
+const VELOCITY_BONUS_WEIGHT = 10;
+const ACTION_BONUS_WEIGHT = 10;
+const OFF_CENTER_PENALTY_WEIGHT = 100;
+const JITTER_PENALTY_WEIGHT = 10;
+
 export function singlePendulumScoreCalculatorBuilder(world: IWorld) {
   const context: ITopContext = {
     positiveTime: 0,
@@ -27,11 +50,11 @@ export function singlePendulumScoreCalculatorBuilder(world: IWorld) {
     const angleVector = Vector.sub(bob.position, pivot.position);
     const angle = Vector.angle(angleVector, { x: 0, y: 1 });
     const isOnTop = angle > 0;
-    const velocity = clamp(Vector.magnitude(bob.velocity), 0, 10);
+    const velocity = clamp(Vector.magnitude(bob.velocity), 0, MAX_TRACKED_VELOCITY);
     const position = Math.abs(zNormalization(pivot.position.x, RAILS_HALF_LENGTH));
 
     context.jitterDetector.push(position);
-    if (context.jitterDetector.length > 50) {
+    if (context.jitterDetector.length > JITTER_WINDOW_SIZE) {
       context.jitterDetector.shift();
     }
 
@@ -69,26 +92,31 @@ export function singlePendulumScoreCalculatorBuilder(world: IWorld) {
 
       sign = currentSign;
 
-      if (position < 0.1) {
-        zeroPosition += 0.1 - position;
+      if (position < CENTER_POSITION_THRESHOLD) {
+        zeroPosition += CENTER_POSITION_THRESHOLD - position;
       }
     }
 
     const targetBonus =
-      Math.max((context.positiveTime * (1 + noAction)) / 800, context.positiveTime / 50) +
-      (context.positiveTime / 20) * Math.max(0, 5 - directionChanges);
-    const positionBonus = isOnTop ? zeroPosition * 10 : 0;
-    const velocityBonus = isOnTop ? (10 - velocity) * 10 : 0;
-    const actionBonus = isOnTop ? 0 : velocity * 10;
+      Math.max(
+        (context.positiveTime * (1 + noAction)) / DAMPENED_TIME_DIVISOR,
+        context.positiveTime / LINEAR_TIME_DIVISOR
+      ) +
+      (context.positiveTime / STEADINESS_TIME_DIVISOR) *
+        Math.max(0, MAX_STEADINESS_DIRECTION_CHANGES - directionChanges);
+    const positionBonus = isOnTop ? zeroPosition * CENTERING_BONUS_WEIGHT : 0;
+    const velocityBonus = isOnTop ? (MAX_TRACKED_VELOCITY - velocity) * VELOCITY_BONUS_WEIGHT : 0;
+    const actionBonus = isOnTop ? 0 : velocity * ACTION_BONUS_WEIGHT;
 
     const bonus = targetBonus + positionBonus + velocityBonus + actionBonus;
 
-    const positionPenalty = position > 0.2 ? position * 100 : 0;
+    const positionPenalty =
+      position > OFF_CENTER_POSITION_THRESHOLD ? position * OFF_CENTER_PENALTY_WEIGHT : 0;
     const targetPenalty = Math.max(
-      (context.negativeTime * (1 + noAction)) / 800,
-      context.negativeTime / 50
+      (context.negativeTime * (1 + noAction)) / DAMPENED_TIME_DIVISOR,
+      context.negativeTime / LINEAR_TIME_DIVISOR
     );
-    const jitterPenalty = directionChanges * 10;
+    const jitterPenalty = directionChanges * JITTER_PENALTY_WEIGHT;
 
     const penalty = positionPenalty + targetPenalty + jitterPenalty;
 

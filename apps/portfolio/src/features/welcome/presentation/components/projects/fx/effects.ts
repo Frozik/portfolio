@@ -20,37 +20,37 @@ function drawNeural({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const points: Array<Array<[number, number]>> = layers.map((count, layerIndex) => {
     const x = padX + layerIndex * layerWidth;
     const nodes: Array<[number, number]> = [];
-    for (let i = 0; i < count; i++) {
-      const y = padY + (height - padY * 2) * (count === 1 ? 0.5 : i / (count - 1));
+    for (let nodeIndex = 0; nodeIndex < count; nodeIndex++) {
+      const y = padY + (height - padY * 2) * (count === 1 ? 0.5 : nodeIndex / (count - 1));
       nodes.push([x, y]);
     }
     return nodes;
   });
 
   for (let layerIndex = 0; layerIndex < points.length - 1; layerIndex++) {
-    for (const a of points[layerIndex]) {
-      for (const b of points[layerIndex + 1]) {
-        const phase = (time * speed * 0.8 + (a[0] + a[1]) * 0.003) % 1;
+    for (const fromNode of points[layerIndex]) {
+      for (const toNode of points[layerIndex + 1]) {
+        const phase = (time * speed * 0.8 + (fromNode[0] + fromNode[1]) * 0.003) % 1;
         ctx.strokeStyle = accent(0.08);
         ctx.lineWidth = 0.8 * dpr;
         ctx.beginPath();
-        ctx.moveTo(a[0], a[1]);
-        ctx.lineTo(b[0], b[1]);
+        ctx.moveTo(fromNode[0], fromNode[1]);
+        ctx.lineTo(toNode[0], toNode[1]);
         ctx.stroke();
-        const px = a[0] + (b[0] - a[0]) * phase;
-        const py = a[1] + (b[1] - a[1]) * phase;
+        const particleX = fromNode[0] + (toNode[0] - fromNode[0]) * phase;
+        const particleY = fromNode[1] + (toNode[1] - fromNode[1]) * phase;
         ctx.fillStyle = accent(0.9 * (1 - phase));
         ctx.beginPath();
-        ctx.arc(px, py, 1.6 * dpr, 0, Math.PI * 2);
+        ctx.arc(particleX, particleY, 1.6 * dpr, 0, Math.PI * 2);
         ctx.fill();
       }
     }
   }
 
   const allNodes = points.flat();
-  for (let i = 0; i < allNodes.length; i++) {
-    const [x, y] = allNodes[i];
-    const pulse = 0.5 + 0.5 * Math.sin(time * speed * 2 + i);
+  for (let nodeIndex = 0; nodeIndex < allNodes.length; nodeIndex++) {
+    const [x, y] = allNodes[nodeIndex];
+    const pulse = 0.5 + 0.5 * Math.sin(time * speed * 2 + nodeIndex);
     ctx.fillStyle = accent(0.25 + pulse * 0.4);
     ctx.beginPath();
     ctx.arc(x, y, (3 + pulse * 1.5) * dpr, 0, Math.PI * 2);
@@ -69,17 +69,17 @@ function drawFlare({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCont
   const radius = Math.min(width, height) * 0.42;
   const rayCount = 36;
 
-  for (let i = 0; i < rayCount; i++) {
-    const angle = (i / rayCount) * Math.PI * 2 + time * speed * 0.15;
-    const length = radius * (0.95 + 0.1 * Math.sin(time * speed * 2 + i));
+  for (let rayIndex = 0; rayIndex < rayCount; rayIndex++) {
+    const angle = (rayIndex / rayCount) * Math.PI * 2 + time * speed * 0.15;
+    const length = radius * (0.95 + 0.1 * Math.sin(time * speed * 2 + rayIndex));
     const x1 = cx + Math.cos(angle) * radius * 0.95;
     const y1 = cy + Math.sin(angle) * radius * 0.95;
     const x2 = cx + Math.cos(angle) * length * 1.15;
     const y2 = cy + Math.sin(angle) * length * 1.15;
-    const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-    grad.addColorStop(0, accent(0.5));
-    grad.addColorStop(1, accent(0));
-    ctx.strokeStyle = grad;
+    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+    gradient.addColorStop(0, accent(0.5));
+    gradient.addColorStop(1, accent(0));
+    ctx.strokeStyle = gradient;
     ctx.lineWidth = 1.2 * dpr;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -134,12 +134,12 @@ function drawShapes(
   }
 
   const shapes = state.shapes as IFloatingShape[];
-  const dt = 0.016 * speed;
+  const deltaTime = 0.016 * speed;
 
   for (const shape of shapes) {
-    shape.x += shape.vx * dt;
-    shape.y += shape.vy * dt;
-    shape.rotation += shape.vr * dt;
+    shape.x += shape.vx * deltaTime;
+    shape.y += shape.vy * deltaTime;
+    shape.rotation += shape.vr * deltaTime;
     if (shape.x < 0 || shape.x > 1) {
       shape.vx *= -1;
     }
@@ -153,11 +153,11 @@ function drawShapes(
     ctx.translate(cx, cy);
     ctx.rotate(shape.rotation);
     ctx.beginPath();
-    for (let i = 0; i <= shape.sides; i++) {
-      const angle = (i / shape.sides) * Math.PI * 2;
+    for (let vertexIndex = 0; vertexIndex <= shape.sides; vertexIndex++) {
+      const angle = (vertexIndex / shape.sides) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
-      if (i === 0) {
+      if (vertexIndex === 0) {
         ctx.moveTo(x, y);
       } else {
         ctx.lineTo(x, y);
@@ -178,7 +178,7 @@ function drawCrosshair({ ctx, width, height, time, speed, accent, dpr }: IFxDraw
   const candleW = Math.max(5 * dpr, width / 32);
   const gap = Math.max(dpr, candleW * 0.25);
   const pitch = candleW + gap;
-  const n = Math.ceil(width / pitch) + 4;
+  const visibleCandleCount = Math.ceil(width / pitch) + 4;
   const scroll = (time * speed * 0.6) % 1;
   const offsetX = -scroll * pitch;
   const startIdx = Math.floor(time * speed * 0.6);
@@ -187,54 +187,60 @@ function drawCrosshair({ ctx, width, height, time, speed, accent, dpr }: IFxDraw
   const chartBottom = height - vertPad;
   const chartH = chartBottom - chartTop;
 
-  const series: Array<{ o: number; c: number; hi: number; lo: number; i: number }> = [];
+  const series: Array<{ open: number; close: number; high: number; low: number; index: number }> =
+    [];
   let price = 100;
-  for (let i = startIdx - 50; i <= startIdx + n; i++) {
-    const drift = (pseudoRandom(i, 1) - 0.5) * 6;
-    const o = price;
-    const c = price + drift;
-    const hi = Math.max(o, c) + pseudoRandom(i, 2) * 3;
-    const lo = Math.min(o, c) - pseudoRandom(i, 3) * 3;
-    if (i >= startIdx) {
-      series.push({ o, c, hi, lo, i });
+  for (
+    let candleIndex = startIdx - 50;
+    candleIndex <= startIdx + visibleCandleCount;
+    candleIndex++
+  ) {
+    const drift = (pseudoRandom(candleIndex, 1) - 0.5) * 6;
+    const open = price;
+    const close = price + drift;
+    const high = Math.max(open, close) + pseudoRandom(candleIndex, 2) * 3;
+    const low = Math.min(open, close) - pseudoRandom(candleIndex, 3) * 3;
+    if (candleIndex >= startIdx) {
+      series.push({ open, close, high, low, index: candleIndex });
     }
-    price = c;
+    price = close;
   }
 
-  let vmin = Number.POSITIVE_INFINITY;
-  let vmax = Number.NEGATIVE_INFINITY;
+  let valueMin = Number.POSITIVE_INFINITY;
+  let valueMax = Number.NEGATIVE_INFINITY;
   for (const candle of series) {
-    if (candle.lo < vmin) {
-      vmin = candle.lo;
+    if (candle.low < valueMin) {
+      valueMin = candle.low;
     }
-    if (candle.hi > vmax) {
-      vmax = candle.hi;
+    if (candle.high > valueMax) {
+      valueMax = candle.high;
     }
   }
-  const vpad = (vmax - vmin) * 0.08;
-  vmin -= vpad;
-  vmax += vpad;
-  const priceToY = (p: number) => chartBottom - ((p - vmin) / (vmax - vmin)) * chartH;
+  const valuePadding = (valueMax - valueMin) * 0.08;
+  valueMin -= valuePadding;
+  valueMax += valuePadding;
+  const priceToY = (priceValue: number) =>
+    chartBottom - ((priceValue - valueMin) / (valueMax - valueMin)) * chartH;
 
   ctx.strokeStyle = accent(0.06);
   ctx.lineWidth = dpr;
-  for (let g = 1; g < 5; g++) {
-    const y = chartTop + (chartH * g) / 5;
+  for (let gridLineIndex = 1; gridLineIndex < 5; gridLineIndex++) {
+    const y = chartTop + (chartH * gridLineIndex) / 5;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
   }
 
-  for (let k = 0; k < series.length; k++) {
-    const can = series[k];
-    const x = offsetX + k * pitch;
+  for (let candleIndex = 0; candleIndex < series.length; candleIndex++) {
+    const candle = series[candleIndex];
+    const x = offsetX + candleIndex * pitch;
     const xMid = x + candleW / 2;
-    const bullish = can.c >= can.o;
-    const bodyTop = priceToY(Math.max(can.o, can.c));
-    const bodyBot = priceToY(Math.min(can.o, can.c));
-    const yHi = priceToY(can.hi);
-    const yLo = priceToY(can.lo);
+    const bullish = candle.close >= candle.open;
+    const bodyTop = priceToY(Math.max(candle.open, candle.close));
+    const bodyBot = priceToY(Math.min(candle.open, candle.close));
+    const yHi = priceToY(candle.high);
+    const yLo = priceToY(candle.low);
     const color = bullish ? accent(0.85) : accent(0.35);
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1, dpr);
@@ -255,7 +261,7 @@ function drawCrosshair({ ctx, width, height, time, speed, accent, dpr }: IFxDraw
 
   const last = series[series.length - 1];
   if (last) {
-    const py = priceToY(last.c);
+    const py = priceToY(last.close);
     ctx.strokeStyle = accent(0.5);
     ctx.lineWidth = dpr;
     ctx.setLineDash([2 * dpr, 3 * dpr]);
@@ -305,10 +311,12 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const midRaw =
     rows / 2 + Math.sin(time * speed * 0.18) * 4 + Math.sin(time * speed * 0.07 + 1.2) * 2.5;
 
-  const midY = (col: number) => {
-    const localT = time - col * (colW / (gridW * speed * 0.5 + 1)) * 0.15;
+  const midY = (column: number) => {
+    const localTime = time - column * (colW / (gridW * speed * 0.5 + 1)) * 0.15;
     return (
-      rows / 2 + Math.sin(localT * speed * 0.18) * 4 + Math.sin(localT * speed * 0.07 + 1.2) * 2.5
+      rows / 2 +
+      Math.sin(localTime * speed * 0.18) * 4 +
+      Math.sin(localTime * speed * 0.07 + 1.2) * 2.5
     );
   };
 
@@ -318,28 +326,28 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   ctx.fillStyle = 'rgba(7,9,12,0.4)';
   ctx.fillRect(0, 0, gridW, gridH);
 
-  const colIdx0 = Math.floor(time * speed * 0.8);
-  for (let c = 0; c < cols; c++) {
-    const colAbs = colIdx0 + c;
-    const x = offsetX + c * colW;
-    const midAtCol = midY(c);
+  const firstColumnIndex = Math.floor(time * speed * 0.8);
+  for (let columnIndex = 0; columnIndex < cols; columnIndex++) {
+    const columnAbsolute = firstColumnIndex + columnIndex;
+    const x = offsetX + columnIndex * colW;
+    const midAtColumn = midY(columnIndex);
 
-    for (let r = 0; r < rows; r++) {
-      const dist = r - midAtCol;
-      const absD = Math.abs(dist);
-      let base = Math.exp(-((absD / 4.2) ** 2)) * 0.6;
-      const noise = pseudoRandom(colAbs * 0.3, r);
-      base += noise * noise * 0.5 * Math.max(0, 1 - absD / 12);
-      const wallSeed = r + Math.floor((colAbs / 35) % 999);
-      if (pseudoRandom(wallSeed, r * 0.11) > 0.82) {
-        base += 0.55 * Math.max(0, 1 - absD / 10);
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      const distance = rowIndex - midAtColumn;
+      const absDistance = Math.abs(distance);
+      let base = Math.exp(-((absDistance / 4.2) ** 2)) * 0.6;
+      const noise = pseudoRandom(columnAbsolute * 0.3, rowIndex);
+      base += noise * noise * 0.5 * Math.max(0, 1 - absDistance / 12);
+      const wallSeed = rowIndex + Math.floor((columnAbsolute / 35) % 999);
+      if (pseudoRandom(wallSeed, rowIndex * 0.11) > 0.82) {
+        base += 0.55 * Math.max(0, 1 - absDistance / 10);
       }
       if (base < 0.03) {
         continue;
       }
       const intensity = Math.min(1, base);
-      const isBid = r > midAtCol;
-      const y = r * cellH;
+      const isBid = rowIndex > midAtColumn;
+      const y = rowIndex * cellH;
       ctx.fillStyle = isBid ? accent(intensity * 0.9) : accent(intensity * 0.45);
       ctx.fillRect(x, y, colW + 0.5, cellH + 0.5);
     }
@@ -352,12 +360,12 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   ctx.beginPath();
   const samples = 40;
   ctx.moveTo(0, midY(cols - 1) * cellH + cellH / 2);
-  for (let s = 1; s <= samples; s++) {
-    const p = s / samples;
-    const col = (cols - 1) * (1 - p);
-    const x = p * gridW;
-    const my = midY(col) * cellH + cellH / 2;
-    ctx.lineTo(x, my);
+  for (let sampleIndex = 1; sampleIndex <= samples; sampleIndex++) {
+    const progress = sampleIndex / samples;
+    const column = (cols - 1) * (1 - progress);
+    const x = progress * gridW;
+    const y = midY(column) * cellH + cellH / 2;
+    ctx.lineTo(x, y);
   }
   ctx.stroke();
   ctx.setLineDash([]);
@@ -367,10 +375,10 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   ctx.textAlign = 'left';
   const basePrice = 67892.5;
   const step = 2.5;
-  for (let r = 2; r < rows; r += 4) {
-    const y = r * cellH + cellH / 2;
-    const p = basePrice + (rows / 2 - r) * step;
-    ctx.fillText(p.toFixed(1), gridW + 4 * dpr, y + 3 * dpr);
+  for (let rowIndex = 2; rowIndex < rows; rowIndex += 4) {
+    const y = rowIndex * cellH + cellH / 2;
+    const price = basePrice + (rows / 2 - rowIndex) * step;
+    ctx.fillText(price.toFixed(1), gridW + 4 * dpr, y + 3 * dpr);
   }
 
   const price = (basePrice + (rows / 2 - midRaw) * step).toFixed(2);
@@ -410,51 +418,51 @@ function drawCursor({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const cellH = height / size;
 
   const empties: Array<[number, number]> = [];
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (SUDOKU_BOARD[r][c] === '.') {
-        empties.push([r, c]);
+  for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < size; columnIndex++) {
+      if (SUDOKU_BOARD[rowIndex][columnIndex] === '.') {
+        empties.push([rowIndex, columnIndex]);
       }
     }
   }
   if (empties.length === 0) {
     return;
   }
-  const idx = Math.floor(time * speed * 0.6) % empties.length;
-  const [curR, curC] = empties[idx];
-  const boxR = Math.floor(curR / 3) * 3;
-  const boxC = Math.floor(curC / 3) * 3;
-  const guess = '123456789'[idx % 9];
+  const emptyIndex = Math.floor(time * speed * 0.6) % empties.length;
+  const [cursorRow, cursorColumn] = empties[emptyIndex];
+  const boxRow = Math.floor(cursorRow / 3) * 3;
+  const boxColumn = Math.floor(cursorColumn / 3) * 3;
+  const guess = '123456789'[emptyIndex % 9];
 
   ctx.fillStyle = accent(0.05);
-  ctx.fillRect(0, curR * cellH, width, cellH);
-  ctx.fillRect(curC * cellW, 0, cellW, height);
+  ctx.fillRect(0, cursorRow * cellH, width, cellH);
+  ctx.fillRect(cursorColumn * cellW, 0, cellW, height);
   ctx.fillStyle = accent(0.07);
-  ctx.fillRect(boxC * cellW, boxR * cellH, cellW * 3, cellH * 3);
+  ctx.fillRect(boxColumn * cellW, boxRow * cellH, cellW * 3, cellH * 3);
 
   ctx.fillStyle = accent(0.14);
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (SUDOKU_BOARD[r][c] === guess) {
-        ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+  for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < size; columnIndex++) {
+      if (SUDOKU_BOARD[rowIndex][columnIndex] === guess) {
+        ctx.fillRect(columnIndex * cellW, rowIndex * cellH, cellW, cellH);
       }
     }
   }
 
   ctx.fillStyle = accent(0.28);
-  ctx.fillRect(curC * cellW, curR * cellH, cellW, cellH);
+  ctx.fillRect(cursorColumn * cellW, cursorRow * cellH, cellW, cellH);
 
   ctx.strokeStyle = accent(0.15);
   ctx.lineWidth = dpr;
   ctx.beginPath();
-  for (let i = 1; i < size; i++) {
-    if (i % 3 === 0) {
+  for (let lineIndex = 1; lineIndex < size; lineIndex++) {
+    if (lineIndex % 3 === 0) {
       continue;
     }
-    const x = i * cellW;
+    const x = lineIndex * cellW;
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
-    const y = i * cellH;
+    const y = lineIndex * cellH;
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
@@ -463,11 +471,11 @@ function drawCursor({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   ctx.strokeStyle = accent(0.5);
   ctx.lineWidth = 1.5 * dpr;
   ctx.beginPath();
-  for (let i = 0; i <= size; i += 3) {
-    const x = i * cellW;
+  for (let lineIndex = 0; lineIndex <= size; lineIndex += 3) {
+    const x = lineIndex * cellW;
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
-    const y = i * cellH;
+    const y = lineIndex * cellH;
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
@@ -477,26 +485,31 @@ function drawCursor({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   ctx.font = `${fontSize}px ${MONO_FONT_STACK}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const ch = SUDOKU_BOARD[r][c];
-      if (ch === '.') {
+  for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < size; columnIndex++) {
+      const character = SUDOKU_BOARD[rowIndex][columnIndex];
+      if (character === '.') {
         continue;
       }
-      const same = ch === guess;
-      ctx.fillStyle = same ? accent(1) : accent(0.55);
-      ctx.fillText(ch, c * cellW + cellW / 2, r * cellH + cellH / 2 + dpr);
+      const isGuessMatch = character === guess;
+      ctx.fillStyle = isGuessMatch ? accent(1) : accent(0.55);
+      ctx.fillText(character, columnIndex * cellW + cellW / 2, rowIndex * cellH + cellH / 2 + dpr);
     }
   }
 
   if (Math.floor(time * 3) % 2 === 0) {
     ctx.fillStyle = accent(1);
-    ctx.fillText(guess, curC * cellW + cellW / 2, curR * cellH + cellH / 2 + dpr);
+    ctx.fillText(guess, cursorColumn * cellW + cellW / 2, cursorRow * cellH + cellH / 2 + dpr);
   }
 
   ctx.strokeStyle = accent(1);
   ctx.lineWidth = 2 * dpr;
-  ctx.strokeRect(curC * cellW + dpr, curR * cellH + dpr, cellW - 2 * dpr, cellH - 2 * dpr);
+  ctx.strokeRect(
+    cursorColumn * cellW + dpr,
+    cursorRow * cellH + dpr,
+    cellW - 2 * dpr,
+    cellH - 2 * dpr
+  );
 
   ctx.textAlign = 'start';
   ctx.textBaseline = 'alphabetic';
@@ -510,8 +523,8 @@ function drawRotate({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const apexHeight = 1.55;
 
   const base3: Array<[number, number, number]> = [];
-  for (let i = 0; i < 5; i++) {
-    const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+  for (let vertexIndex = 0; vertexIndex < 5; vertexIndex++) {
+    const angle = (vertexIndex / 5) * Math.PI * 2 - Math.PI / 2;
     base3.push([Math.cos(angle) * baseRadius, 0, Math.sin(angle) * baseRadius]);
   }
   const apex3: [number, number, number] = [0, -apexHeight, 0];

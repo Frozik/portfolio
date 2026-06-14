@@ -50,156 +50,159 @@ export const Room = observer(() => {
   return <RoomBody typedRoomId={typedRoomId} client={client} />;
 });
 
-interface IRoomBodyProps {
-  readonly typedRoomId: RoomId;
-  readonly client: ICommunicationClient;
-}
-
-const RoomBody = observer(({ typedRoomId, client }: IRoomBodyProps) => {
-  const identityStore = useIdentityStore();
-  const lobbyStore = useRetroLobbyStore();
-
-  // If this Room was just navigated-to from the lobby's Create action, the
-  // lobby store holds the template/name/votes so that `initRetroDoc` runs
-  // here and the creator is recorded as the facilitator. Consumed once.
-  const createIfMissing = useMemo(() => {
-    const pending = lobbyStore.getPendingCreate(typedRoomId);
-    if (pending === null) {
-      return null;
-    }
-    return {
-      name: pending.name,
-      template: getTemplateById(pending.template),
-      votesPerParticipant: pending.votesPerParticipant,
-    };
-  }, [lobbyStore, typedRoomId]);
-
-  const roomStore = useRoomStore({
-    roomId: typedRoomId,
-    identity: identityStore.identity,
-    createIfMissing,
-    client,
-  });
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  useTimerTick(roomStore);
-  useAwarenessPresence(roomStore, identityStore);
-
-  const handleBackToLobby = useFunction(() => {
-    void navigate('/retro');
-  });
-  useRegisterTopNavBack({
-    label: t.room.backToLobbyLabel,
-    onActivate: handleBackToLobby,
-  });
-
-  // Resume the shared AudioContext on the first user gesture inside the
-  // room. Browsers keep it suspended until a real interaction, otherwise
-  // countdown beeps stay silent for participants who joined by link
-  // (i.e. never went through the identity dialog where `unlockChime` was
-  // originally wired).
-  useEffect(() => {
-    const unlock = (): void => {
-      roomStore.unlockChime();
-    };
-    document.addEventListener('pointerdown', unlock, { once: true });
-    document.addEventListener('keydown', unlock, { once: true });
-    return () => {
-      document.removeEventListener('pointerdown', unlock);
-      document.removeEventListener('keydown', unlock);
-    };
-  }, [roomStore]);
-
-  useEffect(() => {
-    if (searchParams.get('created') === '1') {
-      roomStore.openShareDialog();
-      const next = new URLSearchParams(searchParams);
-      next.delete('created');
-      setSearchParams(next, { replace: true });
-    }
-  }, [roomStore, searchParams, setSearchParams]);
-
-  const snapshotMeta = roomStore.currentSnapshot?.meta;
-  const presentUsers = roomStore.presentUsers;
-  const participantCount = presentUsers.length;
-  useEffect(() => {
-    if (snapshotMeta === undefined) {
-      return;
-    }
-    void lobbyStore.upsertJoinedRoom({
-      roomId: typedRoomId,
-      name: snapshotMeta.name,
-      template: snapshotMeta.template,
-      createdAt: snapshotMeta.createdAt,
-      facilitatorClientId: snapshotMeta.facilitatorClientId,
-      facilitatorName: snapshotMeta.facilitatorName,
-      participantCount,
-      phase: snapshotMeta.phase,
-      presentParticipantIds: presentUsers.map(user => user.clientId),
-    });
-  }, [
-    lobbyStore,
+const RoomBody = observer(
+  ({
     typedRoomId,
-    snapshotMeta?.name,
-    snapshotMeta?.template,
-    snapshotMeta?.createdAt,
-    snapshotMeta?.facilitatorClientId,
-    snapshotMeta?.facilitatorName,
-    snapshotMeta?.phase,
-    participantCount,
-    presentUsers,
-    snapshotMeta,
-  ]);
+    client,
+  }: {
+    readonly typedRoomId: RoomId;
+    readonly client: ICommunicationClient;
+  }) => {
+    const identityStore = useIdentityStore();
+    const lobbyStore = useRetroLobbyStore();
 
-  const handleCopyLink = useFunction(() => {
-    roomStore.showToast(copy(window.location.href) ? t.room.linkCopied : t.errors.copyFailed);
-  });
+    // If this Room was just navigated-to from the lobby's Create action, the
+    // lobby store holds the template/name/votes so that `initRetroDoc` runs
+    // here and the creator is recorded as the facilitator. Consumed once.
+    const createIfMissing = useMemo(() => {
+      const pending = lobbyStore.getPendingCreate(typedRoomId);
+      if (pending === null) {
+        return null;
+      }
+      return {
+        name: pending.name,
+        template: getTemplateById(pending.template),
+        votesPerParticipant: pending.votesPerParticipant,
+      };
+    }, [lobbyStore, typedRoomId]);
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto text-landing-fg">
-      {roomStore.connectionStatus === 'connecting' && (
-        <div className="flex justify-center py-8">
-          <Spinner />
-        </div>
-      )}
+    const roomStore = useRoomStore({
+      roomId: typedRoomId,
+      identity: identityStore.identity,
+      createIfMissing,
+      client,
+    });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
 
-      {roomStore.lastToast !== null && (
-        <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-          <div className="pointer-events-auto max-w-md shadow-lg shadow-black/40">
-            <Alert type="info" message={roomStore.lastToast.message} />
+    useTimerTick(roomStore);
+    useAwarenessPresence(roomStore, identityStore);
+
+    const handleBackToLobby = useFunction(() => {
+      void navigate('/retro');
+    });
+    useRegisterTopNavBack({
+      label: t.room.backToLobbyLabel,
+      onActivate: handleBackToLobby,
+    });
+
+    // Resume the shared AudioContext on the first user gesture inside the
+    // room. Browsers keep it suspended until a real interaction, otherwise
+    // countdown beeps stay silent for participants who joined by link
+    // (i.e. never went through the identity dialog where `unlockChime` was
+    // originally wired).
+    useEffect(() => {
+      const unlock = (): void => {
+        roomStore.unlockChime();
+      };
+      document.addEventListener('pointerdown', unlock, { once: true });
+      document.addEventListener('keydown', unlock, { once: true });
+      return () => {
+        document.removeEventListener('pointerdown', unlock);
+        document.removeEventListener('keydown', unlock);
+      };
+    }, [roomStore]);
+
+    useEffect(() => {
+      if (searchParams.get('created') === '1') {
+        roomStore.openShareDialog();
+        const next = new URLSearchParams(searchParams);
+        next.delete('created');
+        setSearchParams(next, { replace: true });
+      }
+    }, [roomStore, searchParams, setSearchParams]);
+
+    const snapshotMeta = roomStore.currentSnapshot?.meta;
+    const presentUsers = roomStore.presentUsers;
+    const participantCount = presentUsers.length;
+    useEffect(() => {
+      if (snapshotMeta === undefined) {
+        return;
+      }
+      void lobbyStore.upsertJoinedRoom({
+        roomId: typedRoomId,
+        name: snapshotMeta.name,
+        template: snapshotMeta.template,
+        createdAt: snapshotMeta.createdAt,
+        facilitatorClientId: snapshotMeta.facilitatorClientId,
+        facilitatorName: snapshotMeta.facilitatorName,
+        participantCount,
+        phase: snapshotMeta.phase,
+        presentParticipantIds: presentUsers.map(user => user.clientId),
+      });
+    }, [
+      lobbyStore,
+      typedRoomId,
+      snapshotMeta?.name,
+      snapshotMeta?.template,
+      snapshotMeta?.createdAt,
+      snapshotMeta?.facilitatorClientId,
+      snapshotMeta?.facilitatorName,
+      snapshotMeta?.phase,
+      participantCount,
+      presentUsers,
+      snapshotMeta,
+    ]);
+
+    const handleCopyLink = useFunction(() => {
+      roomStore.showToast(copy(window.location.href) ? t.room.linkCopied : t.errors.copyFailed);
+    });
+
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto text-landing-fg">
+        {roomStore.connectionStatus === 'connecting' && (
+          <div className="flex justify-center py-8">
+            <Spinner />
           </div>
+        )}
+
+        {roomStore.lastToast !== null && (
+          <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+            <div className="pointer-events-auto max-w-md shadow-lg shadow-black/40">
+              <Alert type="info" message={roomStore.lastToast.message} />
+            </div>
+          </div>
+        )}
+
+        <RoomHeader store={roomStore} />
+
+        <div className="flex flex-col gap-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
+          <ColumnList store={roomStore} />
+
+          {roomStore.phase === ERetroPhase.Discuss && <DiscussPanel store={roomStore} />}
+          {roomStore.phase === ERetroPhase.Close && <ClosePanel store={roomStore} />}
         </div>
-      )}
 
-      <RoomHeader store={roomStore} />
+        {roomStore.phase === ERetroPhase.Close && <ExportDialogAutoOpen store={roomStore} />}
 
-      <div className="flex flex-col gap-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
-        <ColumnList store={roomStore} />
+        <ExportDialog store={roomStore} />
 
-        {roomStore.phase === ERetroPhase.Discuss && <DiscussPanel store={roomStore} />}
-        {roomStore.phase === ERetroPhase.Close && <ClosePanel store={roomStore} />}
+        <ShareLinkDialog
+          open={roomStore.isShareDialogOpen}
+          onClose={roomStore.closeShareDialog}
+          url={window.location.href}
+          onCopy={handleCopyLink}
+          kicker={t.share.kicker}
+          title={t.share.dialogTitle}
+          description={t.share.description}
+          qrLabel={t.share.qrLabel}
+          copyLabel={t.share.copyLink}
+          copiedLabel={t.share.copied}
+        />
       </div>
-
-      {roomStore.phase === ERetroPhase.Close && <ExportDialogAutoOpen store={roomStore} />}
-
-      <ExportDialog store={roomStore} />
-
-      <ShareLinkDialog
-        open={roomStore.isShareDialogOpen}
-        onClose={roomStore.closeShareDialog}
-        url={window.location.href}
-        onCopy={handleCopyLink}
-        kicker={t.share.kicker}
-        title={t.share.dialogTitle}
-        description={t.share.description}
-        qrLabel={t.share.qrLabel}
-        copyLabel={t.share.copyLink}
-        copiedLabel={t.share.copied}
-      />
-    </div>
-  );
-});
+    );
+  }
+);
 
 const ExportDialogAutoOpen = observer(
   ({ store }: { readonly store: ReturnType<typeof useRoomStore> }) => {

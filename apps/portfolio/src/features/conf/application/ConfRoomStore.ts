@@ -151,7 +151,24 @@ export class ConfRoomStore {
     this.participantId = getOrCreateParticipantId();
     this.sessionId = crypto.randomUUID();
 
-    makeAutoObservable(
+    makeAutoObservable<
+      ConfRoomStore,
+      | 'roomId'
+      | 'participantId'
+      | 'sessionId'
+      | 'deps'
+      | 'unsubscribeSignalingMessages'
+      | 'unsubscribePeerState'
+      | 'unsubscribeRemoteStream'
+      | 'unsubscribeMediaMute'
+      | 'unsubscribeMediaGlasses'
+      | 'unsubscribeMediaEmotion'
+      | 'unsubscribeDataMessages'
+      | 'unsubscribeQualityTier'
+      | 'unsubscribeQualityStats'
+      | 'unsubscribeTurnRenewed'
+      | 'peerDisconnectedTimer'
+    >(
       this,
       {
         roomId: false,
@@ -173,7 +190,7 @@ export class ConfRoomStore {
         unsubscribeQualityStats: false,
         unsubscribeTurnRenewed: false,
         peerDisconnectedTimer: false,
-      } as never,
+      },
       { autoBind: true }
     );
   }

@@ -9,11 +9,7 @@ configure({ enforceActions: 'always' });
 
 const rootStore = new RootStore();
 
-interface IStoreBootstrapProps {
-  readonly children: ReactNode;
-}
-
-const StoreBootstrapComponent = ({ children }: IStoreBootstrapProps) => (
+const StoreBootstrapComponent = ({ children }: { readonly children: ReactNode }) => (
   <StoreProvider value={rootStore}>{children}</StoreProvider>
 );
 

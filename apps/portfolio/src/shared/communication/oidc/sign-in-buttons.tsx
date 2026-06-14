@@ -17,7 +17,7 @@ import type { IOidcSignInResult } from './types';
  * touch `AuthSession` directly — `<SignInGate>` adopts the result
  * into the session so all providers go through the same code path.
  */
-export interface ISignInButtonProps {
+interface ISignInButtonProps {
   readonly provider: IOidcProvider;
   readonly onResult: (result: IOidcSignInResult) => void;
 }

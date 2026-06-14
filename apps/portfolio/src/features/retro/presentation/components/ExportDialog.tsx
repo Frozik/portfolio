@@ -34,11 +34,7 @@ const PROSE_CLASSES = cn(
   '[&_input[type=checkbox]]:mr-1.5 [&_input[type=checkbox]]:accent-landing-accent'
 );
 
-interface ExportDialogProps {
-  readonly store: RoomStore;
-}
-
-export const ExportDialog = observer(({ store }: ExportDialogProps) => {
+export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) => {
   const snapshot = store.currentSnapshot;
   const [copied, setCopied] = useState(false);
 

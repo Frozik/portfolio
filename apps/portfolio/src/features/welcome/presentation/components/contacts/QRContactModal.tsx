@@ -12,14 +12,17 @@ const QR_PIXEL_SIZE_PX = 216;
 const COPY_RESET_DELAY_MS = 1800;
 const ICON_SIZE_PX = 12;
 
-type QRContactModalProps = {
+const QRContactModalComponent = ({
+  open,
+  value,
+  title,
+  onClose,
+}: {
   readonly open: boolean;
   readonly value: string;
   readonly title: string;
   readonly onClose: () => void;
-};
-
-const QRContactModalComponent = ({ open, value, title, onClose }: QRContactModalProps) => {
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useFunction(async () => {

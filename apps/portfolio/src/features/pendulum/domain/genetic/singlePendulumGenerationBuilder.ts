@@ -20,6 +20,25 @@ enum EAction {
   New = 'new',
 }
 
+// Fraction of the population kept as elite survivors each generation (top 1/5th).
+const ELITE_FRACTION_DIVISOR = 5;
+
+// Mutation rates (gaussian noise scale applied to network weights) by survivor tier.
+const HALT_PLAYER_MUTATION_RATE = 0.02;
+const LOW_PLAYER_MUTATION_RATES = [0.005, 0.05, 0.1] as const;
+const ELITE_MUTATION_RATES = [0.01, 0.05] as const;
+
+// Mutation rates used by the random-action breeding phase.
+const STANDARD_MUTATION_RATE = 0.1;
+const AGGRESSIVE_MUTATION_RATE = 0.2;
+
+// Relative probabilities for breeding actions when filling the rest of the population.
+const MUTATE_PROBABILITY = 50;
+const AGGRESSIVE_MUTATION_PROBABILITY = 5;
+const CROSSOVER_PROBABILITY = 10;
+const PICK_PROBABILITY = 5;
+const NEW_PLAYER_PROBABILITY = 1;
+
 export function singlePendulumGenerationBuilder(populationSize: number, maxRuns: number) {
   return async (
     playersWithScore: IScoredPlayer[],
@@ -32,7 +51,9 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
       return false;
     }
 
-    const partSize = Math.trunc(Math.min(playersWithScore.length, populationSize) / 5);
+    const partSize = Math.trunc(
+      Math.min(playersWithScore.length, populationSize) / ELITE_FRACTION_DIVISOR
+    );
 
     const orderedPlayersWithScores = orderBy(playersWithScore, ({ score }) => score, 'desc').filter(
       (playerWithScore: IScoredPlayer): playerWithScore is IScoredPlayer<IRobotPlayer> =>
@@ -46,11 +67,11 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
 
     for (const { player, score } of orderedPlayersWithScores.slice(0, partSize)) {
       if (score <= timeStep * HALT_PLAYER_SCORE_PER_MS) {
-        newPopulation.push(await player.mutate(0.02));
+        newPopulation.push(await player.mutate(HALT_PLAYER_MUTATION_RATE));
       } else if (score <= timeStep * LOW_PLAYER_SCORE_PER_MS) {
-        newPopulation.push(await player.mutate(0.005));
-        newPopulation.push(await player.mutate(0.05));
-        newPopulation.push(await player.mutate(0.1));
+        for (const mutationRate of LOW_PLAYER_MUTATION_RATES) {
+          newPopulation.push(await player.mutate(mutationRate));
+        }
       } else {
         newPopulation.push(putPlayerInRandomPosition(player, timeStep, score));
       }
@@ -59,8 +80,9 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
     for (let index = 0; index < partSize; index++) {
       const bestPlayer = newPopulation[index];
       if (!('player' in bestPlayer) && !isNil(bestPlayer.mutate)) {
-        newPopulation.push(await bestPlayer.mutate(0.01));
-        newPopulation.push(await bestPlayer.mutate(0.05));
+        for (const mutationRate of ELITE_MUTATION_RATES) {
+          newPopulation.push(await bestPlayer.mutate(mutationRate));
+        }
       }
     }
 
@@ -68,25 +90,25 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
 
     while (newPopulation.length < populationSize) {
       const action = actionRandom(
-        { action: EAction.Mutate, probability: 50 },
-        { action: EAction.AggressiveMutation, probability: 5 },
-        { action: EAction.Crossover, probability: 10 },
-        { action: EAction.Pick, probability: 5 },
-        { action: EAction.New, probability: 1 }
+        { action: EAction.Mutate, probability: MUTATE_PROBABILITY },
+        { action: EAction.AggressiveMutation, probability: AGGRESSIVE_MUTATION_PROBABILITY },
+        { action: EAction.Crossover, probability: CROSSOVER_PROBABILITY },
+        { action: EAction.Pick, probability: PICK_PROBABILITY },
+        { action: EAction.New, probability: NEW_PLAYER_PROBABILITY }
       );
 
       switch (action) {
         case EAction.Mutate: {
           const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
 
-          newPopulation.push(await randomPlayer.mutate(0.1));
+          newPopulation.push(await randomPlayer.mutate(STANDARD_MUTATION_RATE));
 
           break;
         }
         case EAction.AggressiveMutation: {
           const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
 
-          newPopulation.push(await randomPlayer.mutate(0.2));
+          newPopulation.push(await randomPlayer.mutate(AGGRESSIVE_MUTATION_RATE));
 
           break;
         }

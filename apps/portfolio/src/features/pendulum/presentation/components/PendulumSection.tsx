@@ -4,21 +4,19 @@ import { memo } from 'react';
 import { cn } from '../../../../shared/lib/cn';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 
-type PendulumSectionProps = {
-  readonly number: string;
-  readonly title: string;
-  readonly heightClass: string;
-  readonly children: ReactNode;
-  readonly className?: string;
-};
-
 const PendulumSectionComponent = ({
   number,
   title,
   heightClass,
   children,
   className,
-}: PendulumSectionProps) => (
+}: {
+  readonly number: string;
+  readonly title: string;
+  readonly heightClass: string;
+  readonly children: ReactNode;
+  readonly className?: string;
+}) => (
   <section
     className={cn(
       'group relative w-full overflow-hidden border-b border-landing-border-soft last:border-b-0',
@@ -35,5 +33,3 @@ const PendulumSectionComponent = ({
 );
 
 export const PendulumSection = memo(PendulumSectionComponent);
-
-export type { PendulumSectionProps };

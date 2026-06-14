@@ -1,6 +1,7 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { LayoutGrid, PenTool, Trash2, Undo } from 'lucide-react';
+import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { cn } from '../../../../shared/lib/cn';
 import { getIndexesArray, getPairs, getUsedNumbers, hasMarks } from '../../domain/services';
@@ -21,202 +22,206 @@ const CONTROL_ITEM_SELECTED_CLASS = 'bg-neutral-300';
 const USAGE_BADGE_CLASS =
   'after:absolute after:right-0.5 after:top-0.5 after:text-[40%] after:content-[attr(data-used)] after:[text-shadow:0_0_5px_#fff,0_0_10px_#fff]';
 
-export function FieldControls({
-  field,
-  tool,
-  cellSize,
-  hasHistory,
-  onRestorePreviousState,
-  onChangeTool,
-  onMarkField,
-  onExitGame,
-  onRestartGame,
-}: {
-  field: IField;
-  cellSize: number;
-  tool: TTool;
-  hasHistory: boolean;
-  onRestorePreviousState: VoidFunction;
-  onChangeTool: (tool: TTool) => void;
-  onMarkField: VoidFunction;
-  onExitGame: VoidFunction;
-  onRestartGame: VoidFunction;
-}) {
-  const [toolType, setToolType] = useState<EToolType.Pen | EToolType.Notes>(
-    tool.type === EToolType.None ? EToolType.Pen : tool.type
-  );
+export const FieldControls = observer(
+  ({
+    field,
+    tool,
+    cellSize,
+    hasHistory,
+    onRestorePreviousState,
+    onChangeTool,
+    onMarkField,
+    onExitGame,
+    onRestartGame,
+  }: {
+    field: IField;
+    cellSize: number;
+    tool: TTool;
+    hasHistory: boolean;
+    onRestorePreviousState: VoidFunction;
+    onChangeTool: (tool: TTool) => void;
+    onMarkField: VoidFunction;
+    onExitGame: VoidFunction;
+    onRestartGame: VoidFunction;
+  }) => {
+    const [toolType, setToolType] = useState<EToolType.Pen | EToolType.Notes>(
+      tool.type === EToolType.None ? EToolType.Pen : tool.type
+    );
 
-  const handleToolValueChange = useFunction(event =>
-    onChangeTool({
-      type: toolType,
-      value: Number.parseInt(event.target.dataset.value, 10),
-    })
-  );
+    const handleToolValueChange = useFunction(event =>
+      onChangeTool({
+        type: toolType,
+        value: Number.parseInt(event.target.dataset.value, 10),
+      })
+    );
 
-  const usedNumbersMap = getUsedNumbers(field);
+    const usedNumbersMap = getUsedNumbers(field);
 
-  const handleToggleToolType = useFunction(() => {
-    const newToolType = toolType === EToolType.Pen ? EToolType.Notes : EToolType.Pen;
+    const handleToggleToolType = useFunction(() => {
+      const newToolType = toolType === EToolType.Pen ? EToolType.Notes : EToolType.Pen;
 
-    setToolType(newToolType);
+      setToolType(newToolType);
 
-    if (isNil(tool.value)) {
-      onChangeTool({ type: EToolType.None, value: tool.value });
-    } else {
-      onChangeTool({ type: newToolType, value: tool.value });
-    }
-  });
+      if (isNil(tool.value)) {
+        onChangeTool({ type: EToolType.None, value: tool.value });
+      } else {
+        onChangeTool({ type: newToolType, value: tool.value });
+      }
+    });
 
-  const baseStyle = {
-    width: cellSize,
-    height: cellSize,
-    fontSize: Math.trunc(cellSize * FONT_SCALE),
-  };
+    const baseStyle = {
+      width: cellSize,
+      height: cellSize,
+      fontSize: Math.trunc(cellSize * FONT_SCALE),
+    };
 
-  const thirdCellSize = Math.trunc(cellSize / THIRD_DIVISOR);
+    const thirdCellSize = Math.trunc(cellSize / THIRD_DIVISOR);
 
-  const marksSelected = hasMarks(field);
+    const marksSelected = hasMarks(field);
 
-  return (
-    <div className="mt-2.5 inline-grid select-none gap-1 overflow-hidden bg-neutral-900 p-1">
-      {getIndexesArray(field.size).map(index => {
-        const offset = index * field.size;
+    return (
+      <div className="mt-2.5 inline-grid select-none gap-1 overflow-hidden bg-neutral-900 p-1">
+        {getIndexesArray(field.size).map(index => {
+          const offset = index * field.size;
 
-        return (
-          <div
-            key={index}
-            className="grid gap-px"
-            style={{
-              gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
-              gridColumn: index + 1,
-              gridRow: 1,
-            }}
-          >
-            {getIndexesArray(field.size).map(index => {
-              const toolValue = offset + index + 1;
+          return (
+            <div
+              key={index}
+              className="grid gap-px"
+              style={{
+                gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
+                gridColumn: index + 1,
+                gridRow: 1,
+              }}
+            >
+              {getIndexesArray(field.size).map(index => {
+                const toolValue = offset + index + 1;
 
-              return (
-                <div
-                  key={index}
-                  className={cn(
-                    CONTROL_ITEM_BASE_CLASS,
-                    USAGE_BADGE_CLASS,
-                    toolValue === tool.value && CONTROL_ITEM_SELECTED_CLASS
-                  )}
-                  style={baseStyle}
-                  data-value={toolValue}
-                  data-used={usedNumbersMap.get(toolValue) ?? 0}
-                  onClick={handleToolValueChange}
-                >
-                  {toolValue}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      CONTROL_ITEM_BASE_CLASS,
+                      USAGE_BADGE_CLASS,
+                      toolValue === tool.value && CONTROL_ITEM_SELECTED_CLASS
+                    )}
+                    style={baseStyle}
+                    data-value={toolValue}
+                    data-used={usedNumbersMap.get(toolValue) ?? 0}
+                    onClick={handleToolValueChange}
+                  >
+                    {toolValue}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
 
-      <div
-        className="grid gap-px"
-        style={{
-          ...baseStyle,
-          gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
-          gridColumn: 1,
-          gridRow: 2,
-        }}
-      >
         <div
-          className={CONTROL_ITEM_BASE_CLASS}
+          className="grid gap-px"
           style={{
             ...baseStyle,
+            gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
             gridColumn: 1,
+            gridRow: 2,
           }}
-          onClick={onExitGame}
         >
-          <LayoutGrid size={Math.trunc(cellSize * ICON_SCALE)} fill="currentColor" />
-        </div>
+          <div
+            className={CONTROL_ITEM_BASE_CLASS}
+            style={{
+              ...baseStyle,
+              gridColumn: 1,
+            }}
+            onClick={onExitGame}
+          >
+            <LayoutGrid size={Math.trunc(cellSize * ICON_SCALE)} fill="currentColor" />
+          </div>
 
-        {hasHistory && (
-          <>
-            <div
-              className={CONTROL_ITEM_BASE_CLASS}
-              style={{
-                ...baseStyle,
-                gridColumn: 2,
-              }}
-              onClick={onRestartGame}
-            >
-              <Trash2 size={Math.trunc(cellSize * ICON_SCALE)} />
-            </div>
-            <div
-              className={CONTROL_ITEM_BASE_CLASS}
-              style={{
-                ...baseStyle,
-                gridColumn: 3,
-              }}
-              onClick={onRestorePreviousState}
-            >
-              <Undo size={Math.trunc(cellSize * ICON_SCALE)} />
-            </div>
-          </>
-        )}
-      </div>
-
-      <div
-        className="grid gap-px"
-        style={{
-          ...baseStyle,
-          gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
-          gridColumn: field.size,
-          gridRow: 2,
-        }}
-      >
-        <div
-          className={cn(
-            CONTROL_ITEM_BASE_CLASS,
-            toolType === EToolType.Pen && CONTROL_ITEM_SELECTED_CLASS
+          {hasHistory && (
+            <>
+              <div
+                className={CONTROL_ITEM_BASE_CLASS}
+                style={{
+                  ...baseStyle,
+                  gridColumn: 2,
+                }}
+                onClick={onRestartGame}
+              >
+                <Trash2 size={Math.trunc(cellSize * ICON_SCALE)} />
+              </div>
+              <div
+                className={CONTROL_ITEM_BASE_CLASS}
+                style={{
+                  ...baseStyle,
+                  gridColumn: 3,
+                }}
+                onClick={onRestorePreviousState}
+              >
+                <Undo size={Math.trunc(cellSize * ICON_SCALE)} />
+              </div>
+            </>
           )}
-          style={{
-            width: cellSize,
-            height: cellSize,
-            gridColumn: field.size - 1,
-          }}
-          onClick={handleToggleToolType}
-        >
-          <PenTool
-            size={Math.trunc(
-              toolType === EToolType.Notes ? thirdCellSize * NOTE_ICON_SCALE : cellSize * ICON_SCALE
-            )}
-          />
         </div>
 
         <div
-          className={cn(
-            CONTROL_ITEM_BASE_CLASS,
-            'grid place-items-center',
-            marksSelected && CONTROL_ITEM_SELECTED_CLASS
-          )}
+          className="grid gap-px"
           style={{
-            fontSize: `${thirdCellSize}px`,
-            gridTemplateColumns: `repeat(${field.size}, ${thirdCellSize}px)`,
-            gridTemplateRows: `repeat(${field.size}, ${thirdCellSize}px)`,
+            ...baseStyle,
+            gridTemplateColumns: `repeat(${field.size}, ${cellSize}px)`,
             gridColumn: field.size,
+            gridRow: 2,
           }}
         >
-          {getPairs(field.size).map(([row, column]) => (
-            <div
-              key={`${row}-${column}`}
-              style={{
-                gridColumn: column + 1,
-                gridRow: row + 1,
-              }}
-              onClick={onMarkField}
-            >
-              {row * field.size + column + 1}
-            </div>
-          ))}
+          <div
+            className={cn(
+              CONTROL_ITEM_BASE_CLASS,
+              toolType === EToolType.Pen && CONTROL_ITEM_SELECTED_CLASS
+            )}
+            style={{
+              width: cellSize,
+              height: cellSize,
+              gridColumn: field.size - 1,
+            }}
+            onClick={handleToggleToolType}
+          >
+            <PenTool
+              size={Math.trunc(
+                toolType === EToolType.Notes
+                  ? thirdCellSize * NOTE_ICON_SCALE
+                  : cellSize * ICON_SCALE
+              )}
+            />
+          </div>
+
+          <div
+            className={cn(
+              CONTROL_ITEM_BASE_CLASS,
+              'grid place-items-center',
+              marksSelected && CONTROL_ITEM_SELECTED_CLASS
+            )}
+            style={{
+              fontSize: `${thirdCellSize}px`,
+              gridTemplateColumns: `repeat(${field.size}, ${thirdCellSize}px)`,
+              gridTemplateRows: `repeat(${field.size}, ${thirdCellSize}px)`,
+              gridColumn: field.size,
+            }}
+          >
+            {getPairs(field.size).map(([row, column]) => (
+              <div
+                key={`${row}-${column}`}
+                style={{
+                  gridColumn: column + 1,
+                  gridRow: row + 1,
+                }}
+                onClick={onMarkField}
+              >
+                {row * field.size + column + 1}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);

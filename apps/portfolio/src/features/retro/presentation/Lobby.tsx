@@ -52,11 +52,7 @@ function initialsOf(name: string): string {
   return `${parts[0]?.charAt(0) ?? ''}${parts[1]?.charAt(0) ?? ''}`.toUpperCase();
 }
 
-interface RoomAvatarsProps {
-  readonly room: IRoomIndexEntry;
-}
-
-const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
+const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
   const directory = useUserDirectoryStore();
   const identityStore = useIdentityStore();
   const myClientId = identityStore.identity.clientId as ClientId;
@@ -149,61 +145,66 @@ const RoomAvatars = observer(({ room }: RoomAvatarsProps) => {
   );
 });
 
-interface RoomRowProps {
-  readonly room: IRoomIndexEntry;
-  readonly isMine: boolean;
-  readonly ownerDisplayName: string;
-  readonly onDelete: (roomId: RoomId) => void;
-}
+const RoomRow = memo(
+  ({
+    room,
+    isMine,
+    ownerDisplayName,
+    onDelete,
+  }: {
+    readonly room: IRoomIndexEntry;
+    readonly isMine: boolean;
+    readonly ownerDisplayName: string;
+    readonly onDelete: (roomId: RoomId) => void;
+  }) => {
+    const handleDelete = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onDelete(room.roomId);
+    });
 
-const RoomRow = memo(({ room, isMine, ownerDisplayName, onDelete }: RoomRowProps) => {
-  const handleDelete = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onDelete(room.roomId);
-  });
-
-  return (
-    <CardFrame hoverable className="relative">
-      <NavLink
-        to={`/retro/${room.roomId}`}
-        className="flex items-center gap-6 px-6 py-5 text-landing-fg no-underline"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <MonoKicker tone="faint">{t.lobby.roomKicker}</MonoKicker>
-            <span aria-hidden="true" className="font-mono text-[10px] text-landing-fg-faint">
-              ·
-            </span>
-            <MonoKicker tone="faint">{formatLocalDateTime(room.createdAt)}</MonoKicker>
-            {room.phase === ERetroPhase.Close && (
-              <span className="border border-landing-purple/40 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.08em] text-landing-purple">
-                {t.lobby.completedLabel}
+    return (
+      <CardFrame hoverable className="relative">
+        <NavLink
+          to={`/retro/${room.roomId}`}
+          className="flex items-center gap-6 px-6 py-5 text-landing-fg no-underline"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <MonoKicker tone="faint">{t.lobby.roomKicker}</MonoKicker>
+              <span aria-hidden="true" className="font-mono text-[10px] text-landing-fg-faint">
+                ·
               </span>
-            )}
+              <MonoKicker tone="faint">{formatLocalDateTime(room.createdAt)}</MonoKicker>
+              {room.phase === ERetroPhase.Close && (
+                <span className="border border-landing-purple/40 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.08em] text-landing-purple">
+                  {t.lobby.completedLabel}
+                </span>
+              )}
+            </div>
+            <div className="mt-1 truncate text-base font-medium text-landing-fg">{room.name}</div>
+            <div className="mt-1 font-mono text-[11px] text-landing-fg-faint">
+              {t.lobby.hostedBy}{' '}
+              <span className="text-landing-fg-dim">
+                {isMine ? t.lobby.youLabel : ownerDisplayName.length > 0 ? ownerDisplayName : '—'}
+              </span>{' '}
+              · {room.participantCount} {t.lobby.membersLabel}
+            </div>
           </div>
-          <div className="mt-1 truncate text-base font-medium text-landing-fg">{room.name}</div>
-          <div className="mt-1 font-mono text-[11px] text-landing-fg-faint">
-            {t.lobby.hostedBy}{' '}
-            <span className="text-landing-fg-dim">
-              {isMine ? t.lobby.youLabel : ownerDisplayName.length > 0 ? ownerDisplayName : '—'}
-            </span>{' '}
-            · {room.participantCount} {t.lobby.membersLabel}
-          </div>
-        </div>
-        <RoomAvatars room={room} />
-      </NavLink>
-      <button
-        type="button"
-        onClick={handleDelete}
-        aria-label={t.lobby.deleteButton}
-        className="absolute top-2.5 right-2.5 flex h-6 w-6 items-center justify-center text-landing-fg-faint transition-colors hover:text-landing-red"
-      >
-        <X size={14} />
-      </button>
-    </CardFrame>
-  );
-});
+          <RoomAvatars room={room} />
+        </NavLink>
+        <button
+          type="button"
+          onClick={handleDelete}
+          aria-label={t.lobby.deleteButton}
+          className="absolute top-2.5 right-2.5 flex h-6 w-6 items-center justify-center text-landing-fg-faint transition-colors hover:text-landing-red"
+        >
+          <X size={14} />
+        </button>
+      </CardFrame>
+    );
+  }
+);
 
 export const Lobby = observer(() => {
   const lobbyStore = useRetroLobbyStore();

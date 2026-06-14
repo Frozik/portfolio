@@ -13,15 +13,6 @@ const COLOR_MAP: Record<string, string> = {
   gold: 'bg-yellow-500',
 };
 
-type BadgeProps = {
-  count?: number;
-  overflowCount?: number;
-  color?: string;
-  dot?: boolean;
-  children?: ReactNode;
-  className?: string;
-};
-
 const DEFAULT_OVERFLOW_COUNT = 99;
 
 export const Badge = memo(
@@ -32,7 +23,14 @@ export const Badge = memo(
     dot = false,
     children,
     className,
-  }: BadgeProps) => {
+  }: {
+    count?: number;
+    overflowCount?: number;
+    color?: string;
+    dot?: boolean;
+    children?: ReactNode;
+    className?: string;
+  }) => {
     const colorClass = COLOR_MAP[color] ?? 'bg-error';
     const displayCount = !isNil(count) && count > overflowCount ? `${overflowCount}+` : count;
     const showBadge = dot || !isNil(count);
@@ -55,5 +53,3 @@ export const Badge = memo(
     );
   }
 );
-
-export type { BadgeProps };

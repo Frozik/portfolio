@@ -1,4 +1,5 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import { nowEpochMs } from '@frozik/utils/date/now';
 import type { ISO, Milliseconds } from '@frozik/utils/date/types';
 import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
@@ -96,7 +97,7 @@ const PRESENCE_HEARTBEAT_INTERVAL_MS = 10_000;
 export class RoomStore {
   snapshot: ValueDescriptor<IRetroSnapshot | null, IRetroSnapshot | null> = EMPTY_VD;
   currentSnapshot: IRetroSnapshot | null = null;
-  timerTickNow: number = Date.now();
+  timerTickNow: number = nowEpochMs();
 
   presentUsers: readonly IParticipant[] = [];
   isShareDialogOpen: boolean = false;
@@ -241,7 +242,7 @@ export class RoomStore {
   }
 
   tickTimer(): void {
-    this.timerTickNow = Date.now();
+    this.timerTickNow = nowEpochMs();
     this.maybeFireCountdownCue();
   }
 
@@ -813,7 +814,7 @@ export class RoomStore {
     if (timer === undefined) {
       return;
     }
-    this.writeTimer(startTimerState(timer, Date.now() as Milliseconds));
+    this.writeTimer(startTimerState(timer, nowEpochMs() as Milliseconds));
   }
 
   pauseTimer(): void {
@@ -824,7 +825,7 @@ export class RoomStore {
     if (timer === undefined) {
       return;
     }
-    this.writeTimer(pauseTimerState(timer, Date.now() as Milliseconds));
+    this.writeTimer(pauseTimerState(timer, nowEpochMs() as Milliseconds));
   }
 
   addTimerMilliseconds(extraMs: Milliseconds): void {
@@ -838,7 +839,7 @@ export class RoomStore {
     // Clamp the effective remaining time to [MIN, MAX] — e.g. on 55s the
     // user can click -30s and land exactly on 30s instead of being fully
     // rejected. The actual delta applied is the clamped one.
-    const currentRemainingMs = computeRemainingMs(timer, Date.now() as Milliseconds);
+    const currentRemainingMs = computeRemainingMs(timer, nowEpochMs() as Milliseconds);
     const rawNextRemaining = currentRemainingMs + extraMs;
     const clampedNextRemaining = Math.min(
       Math.max(rawNextRemaining, MIN_TIMER_DURATION_MS),

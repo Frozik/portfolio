@@ -4,14 +4,6 @@ import { memo } from 'react';
 import { CardFrame } from '../CardFrame';
 import { MonoKicker } from '../MonoKicker';
 
-interface CreateRoomCardProps {
-  readonly kicker: string;
-  readonly title: string;
-  readonly subtitle: string;
-  readonly buttonLabel: string;
-  readonly onAction: () => void;
-}
-
 /**
  * Shared "start a new room" lobby card. Visual is identical across retro and
  * conf; only the click behaviour (dialog vs. immediate create) differs, hence
@@ -23,7 +15,13 @@ const CreateRoomCardComponent = ({
   subtitle,
   buttonLabel,
   onAction,
-}: CreateRoomCardProps) => (
+}: {
+  readonly kicker: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly buttonLabel: string;
+  readonly onAction: () => void;
+}) => (
   <CardFrame>
     <div className="flex items-center justify-between gap-4 px-6 py-5">
       <div className="flex min-w-0 items-center gap-4">

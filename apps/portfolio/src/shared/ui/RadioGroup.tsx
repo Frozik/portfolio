@@ -7,16 +7,20 @@ type RadioOption = {
   value: string;
 };
 
-type RadioGroupProps = {
-  options: RadioOption[];
-  value: string;
-  onChange: (value: string) => void;
-  optionType?: 'default' | 'button';
-  className?: string;
-};
-
 export const RadioGroup = memo(
-  ({ options, value, onChange, optionType = 'default', className }: RadioGroupProps) => {
+  ({
+    options,
+    value,
+    onChange,
+    optionType = 'default',
+    className,
+  }: {
+    options: RadioOption[];
+    value: string;
+    onChange: (value: string) => void;
+    optionType?: 'default' | 'button';
+    className?: string;
+  }) => {
     if (optionType === 'button') {
       return (
         <RadioGroupPrimitive.Root
@@ -73,5 +77,3 @@ export const RadioGroup = memo(
     );
   }
 );
-
-export type { RadioGroupProps, RadioOption };

@@ -19,9 +19,11 @@ export class UserDirectoryStore {
   profiles = observable.map<ClientId, IUserProfile>(new Map(), { deep: false });
 
   constructor(private readonly repoPromise: Promise<IUserDirectoryRepo>) {
-    makeAutoObservable(this, { repoPromise: false, profiles: observable.ref } as never, {
-      autoBind: true,
-    });
+    makeAutoObservable<UserDirectoryStore, 'repoPromise' | 'profiles'>(
+      this,
+      { repoPromise: false, profiles: observable.ref },
+      { autoBind: true }
+    );
     void this.hydrate();
   }
 

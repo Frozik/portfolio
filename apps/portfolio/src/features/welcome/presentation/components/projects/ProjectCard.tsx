@@ -9,15 +9,19 @@ import { ProjectFx } from './ProjectFx';
 
 const INDEX_PAD_SIZE = 2;
 
-type ProjectCardProps = {
+const ProjectCardComponent = ({
+  id,
+  route,
+  fx,
+  content,
+  index,
+}: {
   readonly id: string;
   readonly route: string;
   readonly fx: TProjectFxKind;
   readonly content: IProjectTranslation;
   readonly index: number;
-};
-
-const ProjectCardComponent = ({ id, route, fx, content, index }: ProjectCardProps) => {
+}) => {
   const [hovered, setHovered] = useState(false);
 
   const handleEnter = useFunction(() => setHovered(true));

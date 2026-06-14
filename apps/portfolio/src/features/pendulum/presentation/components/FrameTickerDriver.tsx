@@ -6,12 +6,13 @@ import type { IFrameTicker } from '../hooks/useFrameTicker';
 const FPS_SAMPLE_SCALE = 200;
 const FPS_SAMPLE_ROUNDING = 5;
 
-type FrameTickerDriverProps = {
+const FrameTickerDriverComponent = ({
+  ticker,
+  paused,
+}: {
   readonly ticker: IFrameTicker;
   readonly paused: boolean;
-};
-
-const FrameTickerDriverComponent = ({ ticker, paused }: FrameTickerDriverProps) => {
+}) => {
   const { deltaTime } = useFrameTime(paused);
 
   useEffect(() => {

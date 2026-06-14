@@ -60,152 +60,155 @@ export const ConfRoom = observer(() => {
   return <ConfRoomBody typedRoomId={typedRoomId} client={client} />;
 });
 
-interface IConfRoomBodyProps {
-  readonly typedRoomId: RoomId;
-  readonly client: ICommunicationClient;
-}
+const ConfRoomBody = observer(
+  ({
+    typedRoomId,
+    client,
+  }: {
+    readonly typedRoomId: RoomId;
+    readonly client: ICommunicationClient;
+  }) => {
+    const roomStore = useConfRoomStore(typedRoomId, client);
+    const lobbyStore = useConfLobbyStore();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-const ConfRoomBody = observer(({ typedRoomId, client }: IConfRoomBodyProps) => {
-  const roomStore = useConfRoomStore(typedRoomId, client);
-  const lobbyStore = useConfLobbyStore();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+    useEffect(() => {
+      void roomStore.join();
+    }, [roomStore]);
 
-  useEffect(() => {
-    void roomStore.join();
-  }, [roomStore]);
+    useEffect(() => {
+      void lobbyStore.touchVisited(typedRoomId);
+    }, [lobbyStore, typedRoomId]);
 
-  useEffect(() => {
-    void lobbyStore.touchVisited(typedRoomId);
-  }, [lobbyStore, typedRoomId]);
+    useEffect(() => {
+      if (searchParams.get(CREATED_QUERY_FLAG) === '1') {
+        roomStore.openShareDialog();
+        const next = new URLSearchParams(searchParams);
+        next.delete(CREATED_QUERY_FLAG);
+        setSearchParams(next, { replace: true });
+      }
+    }, [roomStore, searchParams, setSearchParams]);
 
-  useEffect(() => {
-    if (searchParams.get(CREATED_QUERY_FLAG) === '1') {
+    const handleLeave = useFunction(() => {
+      roomStore.leave();
+      void navigate(LOBBY_PATH);
+    });
+
+    useRegisterTopNavBack({
+      label: confT.room.backToLobby,
+      onActivate: handleLeave,
+    });
+
+    const handleOpenShare = useFunction(() => {
       roomStore.openShareDialog();
-      const next = new URLSearchParams(searchParams);
-      next.delete(CREATED_QUERY_FLAG);
-      setSearchParams(next, { replace: true });
-    }
-  }, [roomStore, searchParams, setSearchParams]);
+    });
 
-  const handleLeave = useFunction(() => {
-    roomStore.leave();
-    void navigate(LOBBY_PATH);
-  });
+    const handleCloseShare = useFunction(() => {
+      roomStore.closeShareDialog();
+    });
 
-  useRegisterTopNavBack({
-    label: confT.room.backToLobby,
-    onActivate: handleLeave,
-  });
+    const handleCopyLink = useFunction(() => {
+      copy(window.location.href);
+    });
 
-  const handleOpenShare = useFunction(() => {
-    roomStore.openShareDialog();
-  });
-
-  const handleCloseShare = useFunction(() => {
-    roomStore.closeShareDialog();
-  });
-
-  const handleCopyLink = useFunction(() => {
-    copy(window.location.href);
-  });
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <ConnectionBanner
-            state={roomStore.connectionState}
-            hasRemotePeer={roomStore.remoteStream !== null}
-            errorMessage={roomStore.errorMessage}
-          />
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <ConnectionBanner
+              state={roomStore.connectionState}
+              hasRemotePeer={roomStore.remoteStream !== null}
+              errorMessage={roomStore.errorMessage}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2">
-        <VideoTile
-          stream={roomStore.localStream}
-          isLocal
-          isVideoMuted={roomStore.isVideoMuted}
-          placeholderLabel={confT.room.localLabel}
-          cameraOffLabel={confT.room.cameraOffBadge}
-          emotion={roomStore.isArEnabled ? roomStore.localEmotion : undefined}
-        />
-        <VideoTile
-          stream={roomStore.remoteStream}
-          isLocal={false}
-          isVideoMuted={false}
-          placeholderLabel={confT.room.remoteLabel}
-          cameraOffLabel={confT.room.cameraOffBadge}
-          emotion={roomStore.isArEnabled ? roomStore.remoteEmotion : undefined}
-        />
-      </div>
-
-      <div className="flex shrink-0 items-center justify-center">
-        <div
-          className={cn(
-            'flex items-center gap-3 rounded-full border border-border',
-            'bg-surface-elevated/90 px-4 py-2 shadow-lg backdrop-blur-sm'
-          )}
-        >
-          <MuteControls
-            isAudioMuted={roomStore.isAudioMuted}
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2">
+          <VideoTile
+            stream={roomStore.localStream}
+            isLocal
             isVideoMuted={roomStore.isVideoMuted}
-            onToggleAudio={roomStore.toggleAudio}
-            onToggleVideo={roomStore.toggleVideo}
+            placeholderLabel={confT.room.localLabel}
+            cameraOffLabel={confT.room.cameraOffBadge}
+            emotion={roomStore.isArEnabled ? roomStore.localEmotion : undefined}
           />
-          <GlassesPickerButton
-            selectedStyle={roomStore.glassesStyle}
-            onSelectStyle={roomStore.setGlassesStyle}
+          <VideoTile
+            stream={roomStore.remoteStream}
+            isLocal={false}
+            isVideoMuted={false}
+            placeholderLabel={confT.room.remoteLabel}
+            cameraOffLabel={confT.room.cameraOffBadge}
+            emotion={roomStore.isArEnabled ? roomStore.remoteEmotion : undefined}
           />
-          {roomStore.connectionState === 'connected' && (
-            <>
-              <QualityBadge tier={roomStore.qualityTier} />
-              {roomStore.rttHistoryMs.length >= 2 && (
-                <Tooltip
-                  title={`RTT ${roomStore.rttHistoryMs[roomStore.rttHistoryMs.length - 1]?.toFixed(
-                    RTT_TOOLTIP_DECIMALS
-                  )} ms`}
-                  placement="top"
-                >
-                  <Sparkline
-                    data={roomStore.rttHistoryMs}
-                    viewBoxWidth={RTT_SPARKLINE_WIDTH_PX}
-                    viewBoxHeight={RTT_SPARKLINE_HEIGHT_PX}
-                    maxPoints={RTT_HISTORY_MAX_SAMPLES}
-                    invertTrend
-                    className="shrink-0"
-                  />
-                </Tooltip>
-              )}
-            </>
-          )}
-          <Tooltip title={confT.room.share} placement="top">
-            <button
-              type="button"
-              aria-label={confT.room.share}
-              onClick={handleOpenShare}
-              className={shareButtonClass}
-            >
-              <Share2 size={SHARE_ICON_SIZE} />
-            </button>
-          </Tooltip>
-          <LeaveButton onLeave={handleLeave} />
         </div>
-      </div>
 
-      <ShareLinkDialog
-        open={roomStore.isShareDialogOpen}
-        onClose={handleCloseShare}
-        url={window.location.href}
-        onCopy={handleCopyLink}
-        kicker={confT.share.kicker}
-        title={confT.share.dialogTitle}
-        description={confT.share.description}
-        qrLabel={confT.share.qrLabel}
-        copyLabel={confT.share.copyLink}
-        copiedLabel={confT.share.copied}
-      />
-    </div>
-  );
-});
+        <div className="flex shrink-0 items-center justify-center">
+          <div
+            className={cn(
+              'flex items-center gap-3 rounded-full border border-border',
+              'bg-surface-elevated/90 px-4 py-2 shadow-lg backdrop-blur-sm'
+            )}
+          >
+            <MuteControls
+              isAudioMuted={roomStore.isAudioMuted}
+              isVideoMuted={roomStore.isVideoMuted}
+              onToggleAudio={roomStore.toggleAudio}
+              onToggleVideo={roomStore.toggleVideo}
+            />
+            <GlassesPickerButton
+              selectedStyle={roomStore.glassesStyle}
+              onSelectStyle={roomStore.setGlassesStyle}
+            />
+            {roomStore.connectionState === 'connected' && (
+              <>
+                <QualityBadge tier={roomStore.qualityTier} />
+                {roomStore.rttHistoryMs.length >= 2 && (
+                  <Tooltip
+                    title={`RTT ${roomStore.rttHistoryMs[
+                      roomStore.rttHistoryMs.length - 1
+                    ]?.toFixed(RTT_TOOLTIP_DECIMALS)} ms`}
+                    placement="top"
+                  >
+                    <Sparkline
+                      data={roomStore.rttHistoryMs}
+                      viewBoxWidth={RTT_SPARKLINE_WIDTH_PX}
+                      viewBoxHeight={RTT_SPARKLINE_HEIGHT_PX}
+                      maxPoints={RTT_HISTORY_MAX_SAMPLES}
+                      invertTrend
+                      className="shrink-0"
+                    />
+                  </Tooltip>
+                )}
+              </>
+            )}
+            <Tooltip title={confT.room.share} placement="top">
+              <button
+                type="button"
+                aria-label={confT.room.share}
+                onClick={handleOpenShare}
+                className={shareButtonClass}
+              >
+                <Share2 size={SHARE_ICON_SIZE} />
+              </button>
+            </Tooltip>
+            <LeaveButton onLeave={handleLeave} />
+          </div>
+        </div>
+
+        <ShareLinkDialog
+          open={roomStore.isShareDialogOpen}
+          onClose={handleCloseShare}
+          url={window.location.href}
+          onCopy={handleCopyLink}
+          kicker={confT.share.kicker}
+          title={confT.share.dialogTitle}
+          description={confT.share.description}
+          qrLabel={confT.share.qrLabel}
+          copyLabel={confT.share.copyLink}
+          copiedLabel={confT.share.copied}
+        />
+      </div>
+    );
+  }
+);

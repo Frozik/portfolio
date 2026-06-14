@@ -9,16 +9,12 @@ import { confT } from '../translations';
 
 const ICON_SIZE = 18;
 
-export interface ILeaveButtonProps {
-  readonly onLeave: () => void;
-}
-
 const buttonClass =
   'flex h-10 w-10 items-center justify-center rounded-full border border-border ' +
   'bg-error text-white transition-colors hover:opacity-90 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500';
 
-const LeaveButtonComponent = ({ onLeave }: ILeaveButtonProps) => {
+const LeaveButtonComponent = ({ onLeave }: { readonly onLeave: () => void }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleOpenConfirm = useFunction(() => {

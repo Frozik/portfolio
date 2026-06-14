@@ -80,60 +80,60 @@ export function visibleYRange(
   timeStart: number,
   timeEnd: number
 ): [number, number] | undefined {
-  const len = pointTimes.length;
+  const pointCount = pointTimes.length;
 
-  if (len === 0) {
+  if (pointCount === 0) {
     return undefined;
   }
 
   // Binary search: find first index where time >= timeStart
-  let lo = 0;
-  let hi = len;
+  let lowerBound = 0;
+  let upperBound = pointCount;
 
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (pointTimes[mid] < timeStart) {
-      lo = mid + 1;
+  while (lowerBound < upperBound) {
+    const middle = (lowerBound + upperBound) >> 1;
+    if (pointTimes[middle] < timeStart) {
+      lowerBound = middle + 1;
     } else {
-      hi = mid;
+      upperBound = middle;
     }
   }
 
-  const startIdx = lo;
+  const startIndex = lowerBound;
 
   // Binary search: find last index where time <= timeEnd
-  lo = startIdx;
-  hi = len;
+  lowerBound = startIndex;
+  upperBound = pointCount;
 
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (pointTimes[mid] <= timeEnd) {
-      lo = mid + 1;
+  while (lowerBound < upperBound) {
+    const middle = (lowerBound + upperBound) >> 1;
+    if (pointTimes[middle] <= timeEnd) {
+      lowerBound = middle + 1;
     } else {
-      hi = mid;
+      upperBound = middle;
     }
   }
 
-  const endIdx = lo;
+  const endIndex = lowerBound;
 
-  if (startIdx >= endIdx) {
+  if (startIndex >= endIndex) {
     return undefined;
   }
 
-  let minVal = Number.POSITIVE_INFINITY;
-  let maxVal = Number.NEGATIVE_INFINITY;
+  let minValue = Number.POSITIVE_INFINITY;
+  let maxValue = Number.NEGATIVE_INFINITY;
 
-  for (let i = startIdx; i < endIdx; i++) {
-    const v = pointValues[i];
-    if (v < minVal) {
-      minVal = v;
+  for (let index = startIndex; index < endIndex; index++) {
+    const value = pointValues[index];
+    if (value < minValue) {
+      minValue = value;
     }
-    if (v > maxVal) {
-      maxVal = v;
+    if (value > maxValue) {
+      maxValue = value;
     }
   }
 
-  return [minVal, maxVal];
+  return [minValue, maxValue];
 }
 
 /**

@@ -79,10 +79,6 @@ interface IThought {
   readonly size: number;
 }
 
-type RetroBackgroundProps = {
-  readonly opacity?: number;
-};
-
 function parseAccent(raw: string): readonly [number, number, number] {
   const match = raw.trim().match(HEX_COLOR_PATTERN);
   if (match === null) {
@@ -130,7 +126,7 @@ function spawnThought(thoughts: IThought[], originX: number, originY: number): v
   }
 }
 
-const RetroBackgroundComponent = ({ opacity = DEFAULT_OPACITY }: RetroBackgroundProps) => {
+const RetroBackgroundComponent = ({ opacity = DEFAULT_OPACITY }: { readonly opacity?: number }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -332,5 +328,3 @@ const RetroBackgroundComponent = ({ opacity = DEFAULT_OPACITY }: RetroBackground
 };
 
 export const RetroBackground = memo(RetroBackgroundComponent);
-
-export type { RetroBackgroundProps };

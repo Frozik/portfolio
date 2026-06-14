@@ -10,20 +10,23 @@ export interface DifficultyOption {
   readonly level: 1 | 2 | 3 | 4;
 }
 
-interface DifficultyPickerProps {
-  readonly options: readonly DifficultyOption[];
-  readonly onSelect: (value: SudokuDifficulty) => void;
-}
-
 const TOTAL_METER_SEGMENTS = 4;
 
-export const DifficultyPicker = memo(({ options, onSelect }: DifficultyPickerProps) => (
-  <div className="grid grid-cols-2 gap-4 p-4 sm:gap-5">
-    {options.map(option => (
-      <DifficultyCard key={option.value} option={option} onSelect={onSelect} />
-    ))}
-  </div>
-));
+export const DifficultyPicker = memo(
+  ({
+    options,
+    onSelect,
+  }: {
+    readonly options: readonly DifficultyOption[];
+    readonly onSelect: (value: SudokuDifficulty) => void;
+  }) => (
+    <div className="grid grid-cols-2 gap-4 p-4 sm:gap-5">
+      {options.map(option => (
+        <DifficultyCard key={option.value} option={option} onSelect={onSelect} />
+      ))}
+    </div>
+  )
+);
 
 const DifficultyCard = memo(
   ({

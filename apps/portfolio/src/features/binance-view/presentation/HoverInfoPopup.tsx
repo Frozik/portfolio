@@ -9,27 +9,6 @@ import type { IHitTestResult } from '../domain/types';
 
 import { binanceT } from './translations';
 
-/**
- * Unified hover popup that merges the orderbook cell tooltip and the
- * trades-bucket preview into a single panel anchored at the cursor.
- *
- * Sections (top-to-bottom):
- *   1. Trades aggregate (vwap, total volume, buy share, trade count) —
- *      shown when the cursor sits inside a closed bucket's hit-zone.
- *   2. Horizontal divider — shown only when both sections are active.
- *   3. Orderbook cell (price level, side, volume, time) — shown when
- *      the cursor sits over a heatmap cell with persisted volume data.
- *
- * If neither section has data the popup is unmounted entirely (returns
- * `null`); we never render an empty frame. Position is edge-aware —
- * mirrors the previous {@link CellTooltip} policy: prefer bottom-right
- * of the cursor, flip to the opposite quadrant near the parent edges,
- * clamp to the edge margin afterwards.
- */
-export interface IHoverInfoPopupProps {
-  readonly anchorPx: { readonly x: number; readonly y: number };
-}
-
 const POPUP_OFFSET_PX = 14;
 const POPUP_EDGE_MARGIN_PX = 4;
 
@@ -58,11 +37,7 @@ function formatCellSide(side: 'bid' | 'ask' | 'padding'): string {
   }
 }
 
-interface ITradesSectionProps {
-  readonly bucket: ITradeBucket;
-}
-
-function TradesSection({ bucket }: ITradesSectionProps): React.ReactElement {
+function TradesSection({ bucket }: { readonly bucket: ITradeBucket }): React.ReactElement {
   const sellFraction = 1 - bucket.buyFraction;
   const showBuy = bucket.buyFraction > 0;
   const showSell = sellFraction > 0;
@@ -83,11 +58,7 @@ function TradesSection({ bucket }: ITradesSectionProps): React.ReactElement {
   );
 }
 
-interface IOrderbookSectionProps {
-  readonly cell: IHitTestResult;
-}
-
-function OrderbookSection({ cell }: IOrderbookSectionProps): React.ReactElement {
+function OrderbookSection({ cell }: { readonly cell: IHitTestResult }): React.ReactElement {
   const timeIso = millisecondsToISO8601(cell.timestampMs);
   return (
     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 px-3 py-2 font-mono">
@@ -103,7 +74,28 @@ function OrderbookSection({ cell }: IOrderbookSectionProps): React.ReactElement 
   );
 }
 
-export const HoverInfoPopup = observer(function HoverInfoPopup({ anchorPx }: IHoverInfoPopupProps) {
+/**
+ * Unified hover popup that merges the orderbook cell tooltip and the
+ * trades-bucket preview into a single panel anchored at the cursor.
+ *
+ * Sections (top-to-bottom):
+ *   1. Trades aggregate (vwap, total volume, buy share, trade count) —
+ *      shown when the cursor sits inside a closed bucket's hit-zone.
+ *   2. Horizontal divider — shown only when both sections are active.
+ *   3. Orderbook cell (price level, side, volume, time) — shown when
+ *      the cursor sits over a heatmap cell with persisted volume data.
+ *
+ * If neither section has data the popup is unmounted entirely (returns
+ * `null`); we never render an empty frame. Position is edge-aware —
+ * mirrors the previous {@link CellTooltip} policy: prefer bottom-right
+ * of the cursor, flip to the opposite quadrant near the parent edges,
+ * clamp to the edge margin afterwards.
+ */
+export const HoverInfoPopup = observer(function HoverInfoPopup({
+  anchorPx,
+}: {
+  readonly anchorPx: { readonly x: number; readonly y: number };
+}) {
   const store = useBinanceViewStore();
   const cell = store.selectedCell;
   const bucket = store.tradesStore?.hoveredBucket;

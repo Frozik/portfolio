@@ -4,14 +4,17 @@ import { Link } from 'react-router-dom';
 
 import { cn } from '../../../../shared/lib/cn';
 
-type PuzzleCardProps = {
+const PuzzleCardComponent = ({
+  puzzleId,
+  shortName,
+  solutionImage,
+  imageAlt,
+}: {
   readonly puzzleId: string;
   readonly shortName: string;
   readonly solutionImage: string | undefined;
   readonly imageAlt: string;
-};
-
-const PuzzleCardComponent = ({ puzzleId, shortName, solutionImage, imageAlt }: PuzzleCardProps) => (
+}) => (
   <Link
     to={`/stereometry/${puzzleId}`}
     className={cn(

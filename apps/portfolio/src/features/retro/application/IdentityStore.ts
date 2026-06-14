@@ -28,9 +28,11 @@ export class IdentityStore {
     private readonly session: AuthSession
   ) {
     this.clientId = this.repo.getOrCreateClientId();
-    makeAutoObservable(this, { repo: false, directory: false, session: false } as never, {
-      autoBind: true,
-    });
+    makeAutoObservable<IdentityStore, 'repo' | 'directory' | 'session'>(
+      this,
+      { repo: false, directory: false, session: false },
+      { autoBind: true }
+    );
     this.disposeProfileReaction = reaction(
       () => this.identity,
       identity => {

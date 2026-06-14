@@ -47,5 +47,3 @@ export const Alert = memo(({ type = 'info', message, description, className }: A
     </div>
   );
 });
-
-export type { AlertProps };

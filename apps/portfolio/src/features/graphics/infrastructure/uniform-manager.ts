@@ -1,7 +1,7 @@
+import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 import { mat4 } from 'wgpu-matrix';
-
 import {
   BORDER_MARGIN,
   computeSinXSegmentCount,
@@ -10,7 +10,6 @@ import {
   SIN_PEN_MAX,
   SIN_PEN_MIN,
 } from '../domain/chart-constants';
-import type { FrameState } from '../domain/types';
 
 export interface UniformManager {
   readonly buffer: GPUBuffer;

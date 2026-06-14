@@ -9,10 +9,6 @@ import { confT } from '../translations';
 
 const ICON_SIZE = 16;
 
-export interface IQualityBadgeProps {
-  readonly tier: TQualityTier;
-}
-
 interface ITierPresentation {
   readonly label: string;
   readonly tooltip: string;
@@ -48,7 +44,7 @@ function resolveTierPresentation(tier: TQualityTier): ITierPresentation {
   }
 }
 
-const QualityBadgeComponent = ({ tier }: IQualityBadgeProps) => {
+const QualityBadgeComponent = ({ tier }: { readonly tier: TQualityTier }) => {
   const presentation = resolveTierPresentation(tier);
   const { Icon } = presentation;
   return (

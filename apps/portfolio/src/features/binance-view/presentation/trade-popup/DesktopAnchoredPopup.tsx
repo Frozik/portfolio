@@ -8,13 +8,6 @@ import {
   POPUP_WIDTH_PX,
 } from './constants';
 
-interface IDesktopAnchoredPopupProps {
-  readonly pointerPx: { readonly x: number; readonly y: number };
-  /** Dependencies that should re-trigger the edge-aware position pass. */
-  readonly reflowDeps: ReadonlyArray<unknown>;
-  readonly children: ReactElement | ReactElement[];
-}
-
 /**
  * Edge-aware absolute-positioned wrapper used on desktop. Mirrors the
  * orderbook `CellTooltip` policy: prefer bottom-right of the click
@@ -25,7 +18,12 @@ export function DesktopAnchoredPopup({
   pointerPx,
   reflowDeps,
   children,
-}: IDesktopAnchoredPopupProps): ReactElement {
+}: {
+  readonly pointerPx: { readonly x: number; readonly y: number };
+  /** Dependencies that should re-trigger the edge-aware position pass. */
+  readonly reflowDeps: ReadonlyArray<unknown>;
+  readonly children: ReactElement | ReactElement[];
+}): ReactElement {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {

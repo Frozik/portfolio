@@ -27,51 +27,55 @@ import { confT } from './translations';
 const ROOM_ID_FROM_URL_PATTERN = /\/conf\/([^/?#]+)/;
 const CREATED_QUERY_FLAG = '?created=1';
 
-interface IRoomRowProps {
-  readonly room: IConfRoomIndexEntry;
-  readonly lobbyStore: ConfLobbyStore;
-  readonly onDelete: (roomId: RoomId) => void;
-}
+const RoomRow = memo(
+  ({
+    room,
+    lobbyStore,
+    onDelete,
+  }: {
+    readonly room: IConfRoomIndexEntry;
+    readonly lobbyStore: ConfLobbyStore;
+    readonly onDelete: (roomId: RoomId) => void;
+  }) => {
+    const handleDelete = useFunction((event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onDelete(room.roomId);
+    });
 
-const RoomRow = memo(({ room, lobbyStore, onDelete }: IRoomRowProps) => {
-  const handleDelete = useFunction((event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onDelete(room.roomId);
-  });
+    const isMine = lobbyStore.isOwnedByMe(room);
 
-  const isMine = lobbyStore.isOwnedByMe(room);
-
-  return (
-    <CardFrame hoverable className="relative">
-      <NavLink
-        to={`/conf/${room.roomId}`}
-        className="flex items-center gap-6 px-6 py-5 text-landing-fg no-underline"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <MonoKicker tone="faint">{confT.lobby.roomKicker}</MonoKicker>
-            <span aria-hidden="true" className="font-mono text-[10px] text-landing-fg-faint">
-              ·
-            </span>
-            <MonoKicker tone="faint">{formatLocalDateTime(room.createdAt)}</MonoKicker>
+    return (
+      <CardFrame hoverable className="relative">
+        <NavLink
+          to={`/conf/${room.roomId}`}
+          className="flex items-center gap-6 px-6 py-5 text-landing-fg no-underline"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <MonoKicker tone="faint">{confT.lobby.roomKicker}</MonoKicker>
+              <span aria-hidden="true" className="font-mono text-[10px] text-landing-fg-faint">
+                ·
+              </span>
+              <MonoKicker tone="faint">{formatLocalDateTime(room.createdAt)}</MonoKicker>
+            </div>
+            <div className="mt-1 font-mono text-[11px] text-landing-fg-faint">
+              {isMine ? confT.lobby.creatorMe : confT.lobby.creatorPeer}
+            </div>
           </div>
-          <div className="mt-1 font-mono text-[11px] text-landing-fg-faint">
-            {isMine ? confT.lobby.creatorMe : confT.lobby.creatorPeer}
-          </div>
-        </div>
-      </NavLink>
-      <button
-        type="button"
-        onClick={handleDelete}
-        aria-label={confT.lobby.deleteButton}
-        className="absolute top-2.5 right-2.5 flex h-6 w-6 items-center justify-center text-landing-fg-faint transition-colors hover:text-landing-red"
-      >
-        <X size={14} />
-      </button>
-    </CardFrame>
-  );
-});
+        </NavLink>
+        <button
+          type="button"
+          onClick={handleDelete}
+          aria-label={confT.lobby.deleteButton}
+          className="absolute top-2.5 right-2.5 flex h-6 w-6 items-center justify-center text-landing-fg-faint transition-colors hover:text-landing-red"
+        >
+          <X size={14} />
+        </button>
+      </CardFrame>
+    );
+  }
+);
 
 export const ConfLobby = observer(() => {
   const lobbyStore = useConfLobbyStore();

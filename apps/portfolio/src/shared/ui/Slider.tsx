@@ -10,16 +10,20 @@ const TOOLTIP_DELAY_DURATION = 0;
 
 type TooltipSide = 'top' | 'right';
 
-type SliderThumbWithTooltipProps = {
-  disabled: boolean;
-  showTooltip: boolean;
-  formatTooltip: (value: number) => ReactNode;
-  tooltipSide: TooltipSide;
-  value: number;
-};
-
 const SliderThumbWithTooltip = memo(
-  ({ disabled, showTooltip, formatTooltip, tooltipSide, value }: SliderThumbWithTooltipProps) => {
+  ({
+    disabled,
+    showTooltip,
+    formatTooltip,
+    tooltipSide,
+    value,
+  }: {
+    disabled: boolean;
+    showTooltip: boolean;
+    formatTooltip: (value: number) => ReactNode;
+    tooltipSide: TooltipSide;
+    value: number;
+  }) => {
     const [isHovering, setIsHovering] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -85,19 +89,6 @@ const SliderThumbWithTooltip = memo(
   }
 );
 
-type SliderProps = {
-  min: number;
-  max: number;
-  step?: number;
-  value: number;
-  onChange: (value: number) => void;
-  disabled?: boolean;
-  vertical?: boolean;
-  className?: string;
-  showTooltip?: boolean;
-  formatTooltip?: (value: number) => ReactNode;
-};
-
 export const Slider = memo(
   ({
     min,
@@ -110,8 +101,23 @@ export const Slider = memo(
     className,
     showTooltip = false,
     formatTooltip = String,
-  }: SliderProps) => {
+  }: {
+    min: number;
+    max: number;
+    step?: number;
+    value: number;
+    onChange: (value: number) => void;
+    disabled?: boolean;
+    vertical?: boolean;
+    className?: string;
+    showTooltip?: boolean;
+    formatTooltip?: (value: number) => ReactNode;
+  }) => {
     const sliderValue = useMemo(() => [value], [value]);
+
+    const handleValueChange = useFunction((values: number[]) => {
+      onChange(values[0]);
+    });
 
     return (
       <SliderPrimitive.Root
@@ -119,7 +125,7 @@ export const Slider = memo(
         max={max}
         step={step}
         value={sliderValue}
-        onValueChange={values => onChange(values[0])}
+        onValueChange={handleValueChange}
         disabled={disabled}
         orientation={vertical ? 'vertical' : 'horizontal'}
         className={cn(
@@ -151,18 +157,6 @@ export const Slider = memo(
   }
 );
 
-type RangeSliderProps = {
-  min: number;
-  max: number;
-  step?: number;
-  value: number[];
-  onChange: (value: number[]) => void;
-  disabled?: boolean;
-  className?: string;
-  showTooltip?: boolean;
-  formatTooltip?: (value: number) => ReactNode;
-};
-
 export const RangeSlider = memo(
   ({
     min,
@@ -174,7 +168,17 @@ export const RangeSlider = memo(
     className,
     showTooltip = false,
     formatTooltip = String,
-  }: RangeSliderProps) => (
+  }: {
+    min: number;
+    max: number;
+    step?: number;
+    value: number[];
+    onChange: (value: number[]) => void;
+    disabled?: boolean;
+    className?: string;
+    showTooltip?: boolean;
+    formatTooltip?: (value: number) => ReactNode;
+  }) => (
     <SliderPrimitive.Root
       min={min}
       max={max}
@@ -191,7 +195,7 @@ export const RangeSlider = memo(
       <SliderPrimitive.Track className="relative h-1.5 w-full grow rounded-full bg-surface-overlay">
         <SliderPrimitive.Range className="absolute h-full rounded-full bg-brand-500" />
       </SliderPrimitive.Track>
-      {value.map((v, index) => (
+      {value.map((thumbValue, index) => (
         <SliderThumbWithTooltip
           // biome-ignore lint/suspicious/noArrayIndexKey: Radix Slider thumbs are positional — count and order are stable, and values can duplicate
           key={index}
@@ -199,11 +203,9 @@ export const RangeSlider = memo(
           showTooltip={showTooltip}
           formatTooltip={formatTooltip}
           tooltipSide="top"
-          value={v}
+          value={thumbValue}
         />
       ))}
     </SliderPrimitive.Root>
   )
 );
-
-export type { RangeSliderProps, SliderProps };

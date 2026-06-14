@@ -2,21 +2,19 @@ import type { ReactElement } from 'react';
 
 import { binanceT } from '../translations';
 
-interface ITradeBucketPopupHeaderProps {
-  readonly time: string;
-  readonly volume: string;
-  readonly vwap: string;
-  readonly tradeCount: number;
-  readonly onClose: () => void;
-}
-
 export function TradeBucketPopupHeader({
   time,
   volume,
   vwap,
   tradeCount,
   onClose,
-}: ITradeBucketPopupHeaderProps): ReactElement {
+}: {
+  readonly time: string;
+  readonly volume: string;
+  readonly vwap: string;
+  readonly tradeCount: number;
+  readonly onClose: () => void;
+}): ReactElement {
   return (
     <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
       <div className="font-mono">

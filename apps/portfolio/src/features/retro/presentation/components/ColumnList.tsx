@@ -20,11 +20,7 @@ import { CardDragPreview } from './CardDragPreview';
 import type { IGapDropData } from './Column';
 import { Column } from './Column';
 
-interface ColumnListProps {
-  store: RoomStore;
-}
-
-const ColumnListComponent = ({ store }: ColumnListProps) => {
+const ColumnListComponent = ({ store }: { store: RoomStore }) => {
   const snapshot = store.currentSnapshot;
 
   // Separate sensors per input type so mobile long-press can coexist with
@@ -157,5 +153,3 @@ const ColumnListComponent = ({ store }: ColumnListProps) => {
 };
 
 export const ColumnList = observer(ColumnListComponent);
-
-export type { ColumnListProps };

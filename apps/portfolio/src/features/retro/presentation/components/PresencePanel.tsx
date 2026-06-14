@@ -9,10 +9,6 @@ import type { RoomStore } from '../../application/RoomStore';
 import type { ClientId, IParticipant } from '../../domain/types';
 import { retroT as t } from '../translations';
 
-interface PresencePanelProps {
-  readonly store: RoomStore;
-}
-
 const MAX_VISIBLE_AVATARS = 3;
 const INITIALS_PART_LIMIT = 2;
 
@@ -43,7 +39,7 @@ function initialsOf(name: string): string {
  * status dot announces each participant is live. When the facilitator
  * is offline, any other participant can take over via the inline button.
  */
-export const PresencePanel = observer(({ store }: PresencePanelProps) => {
+export const PresencePanel = observer(({ store }: { readonly store: RoomStore }) => {
   const users = store.presentUsers;
   const myClientId = store.identity.clientId as ClientId;
   const facilitatorId = store.currentSnapshot?.meta.facilitatorClientId ?? null;
@@ -109,14 +105,17 @@ export const PresencePanel = observer(({ store }: PresencePanelProps) => {
   );
 });
 
-interface AvatarProps {
+const Avatar = ({
+  user,
+  isFacilitator,
+  isMe,
+  stackOffset,
+}: {
   readonly user: IParticipant;
   readonly isFacilitator: boolean;
   readonly isMe: boolean;
   readonly stackOffset: boolean;
-}
-
-const Avatar = ({ user, isFacilitator, isMe, stackOffset }: AvatarProps) => {
+}) => {
   const tooltipParts = [user.name, isFacilitator ? t.room.facilitatorBadge : null].filter(
     (part): part is string => part !== null
   );

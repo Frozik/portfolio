@@ -1,3 +1,5 @@
+import { Temporal } from 'temporal-polyfill';
+
 import { AXIS_FONT_SIZE, AXIS_LABEL_COLOR, AXIS_LINE_COLOR } from '../constants';
 
 import type { IAxisDrawInput, IAxisRect } from './shared';
@@ -40,10 +42,12 @@ function pickTimeStepMs(rangeMs: number, plotWidthPx: number): number {
 }
 
 export function formatTimeLabel(timestampMs: number): string {
-  const date = new Date(timestampMs);
-  const hours = date.getUTCHours().toString().padStart(TIME_PAD, '0');
-  const minutes = date.getUTCMinutes().toString().padStart(TIME_PAD, '0');
-  const seconds = date.getUTCSeconds().toString().padStart(TIME_PAD, '0');
+  const time = Temporal.Instant.fromEpochMilliseconds(timestampMs)
+    .toZonedDateTimeISO('UTC')
+    .toPlainTime();
+  const hours = time.hour.toString().padStart(TIME_PAD, '0');
+  const minutes = time.minute.toString().padStart(TIME_PAD, '0');
+  const seconds = time.second.toString().padStart(TIME_PAD, '0');
   return `${hours}:${minutes}:${seconds}`;
 }
 

@@ -14,21 +14,6 @@ import { useCardFlipState } from '../hooks/useCardFlipState';
 import styles from '../styles.module.scss';
 import { retroT as t } from '../translations';
 
-interface CardViewProps {
-  card: IRetroCard;
-  cardIndex: number;
-  accentColor: string;
-  isOwn: boolean;
-  myClientId: ClientId;
-  phase: ERetroPhase;
-  showVotes: boolean;
-  voteCount: number;
-  voteSlot?: ReactNode;
-  staggerIndex?: number;
-  onEdit?: (text: string) => void;
-  onDelete?: () => void;
-}
-
 const STAGGER_STEP_MS = 60;
 const CARD_INDEX_PAD_LENGTH = 3;
 const CARD_INDEX_PAD_CHAR = '0';
@@ -50,7 +35,20 @@ const CardViewComponent = ({
   staggerIndex = 0,
   onEdit,
   onDelete,
-}: CardViewProps) => {
+}: {
+  card: IRetroCard;
+  cardIndex: number;
+  accentColor: string;
+  isOwn: boolean;
+  myClientId: ClientId;
+  phase: ERetroPhase;
+  showVotes: boolean;
+  voteCount: number;
+  voteSlot?: ReactNode;
+  staggerIndex?: number;
+  onEdit?: (text: string) => void;
+  onDelete?: () => void;
+}) => {
   const directory = useUserDirectoryStore();
   const flipState = useCardFlipState(phase, isOwn);
   const isHidden = flipState === 'hidden';
@@ -221,5 +219,3 @@ const CardViewComponent = ({
 };
 
 export const CardView = memo(CardViewComponent);
-
-export type { CardViewProps };

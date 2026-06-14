@@ -3,16 +3,20 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { cn } from '../lib/cn';
 
-type DropdownProps = {
-  trigger: ReactNode;
-  children: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  className?: string;
-};
-
 export const Dropdown = memo(
-  ({ trigger, children, open, onOpenChange, className }: DropdownProps) => (
+  ({
+    trigger,
+    children,
+    open,
+    onOpenChange,
+    className,
+  }: {
+    trigger: ReactNode;
+    children: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    className?: string;
+  }) => (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
@@ -31,15 +35,18 @@ export const Dropdown = memo(
   )
 );
 
-type DropdownItemProps = {
-  children: ReactNode;
-  onSelect?: () => void;
-  disabled?: boolean;
-  className?: string;
-};
-
 export const DropdownItem = memo(
-  ({ children, onSelect, disabled, className }: DropdownItemProps) => (
+  ({
+    children,
+    onSelect,
+    disabled,
+    className,
+  }: {
+    children: ReactNode;
+    onSelect?: () => void;
+    disabled?: boolean;
+    className?: string;
+  }) => (
     <DropdownMenu.Item
       onSelect={onSelect}
       disabled={disabled}
@@ -54,5 +61,3 @@ export const DropdownItem = memo(
     </DropdownMenu.Item>
   )
 );
-
-export type { DropdownItemProps, DropdownProps };

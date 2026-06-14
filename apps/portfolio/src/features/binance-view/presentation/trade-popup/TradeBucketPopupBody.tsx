@@ -16,19 +16,17 @@ import {
 } from './constants';
 import { formatTradeTime } from './format-trade-time';
 
-interface ITradeBucketPopupBodyProps {
-  readonly trades: readonly ITrade[];
-  readonly totalNotional: number;
-  readonly isLoading: boolean;
-  readonly maxHeightPx: number;
-}
-
 export function TradeBucketPopupBody({
   trades,
   totalNotional,
   isLoading,
   maxHeightPx,
-}: ITradeBucketPopupBodyProps): ReactElement {
+}: {
+  readonly trades: readonly ITrade[];
+  readonly totalNotional: number;
+  readonly isLoading: boolean;
+  readonly maxHeightPx: number;
+}): ReactElement {
   const sorted = [...trades].sort(
     (left, right) => (right.quantity as number) - (left.quantity as number)
   );

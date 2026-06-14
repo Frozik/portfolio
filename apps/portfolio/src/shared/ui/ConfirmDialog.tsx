@@ -3,19 +3,6 @@ import { memo } from 'react';
 import { cn } from '../lib/cn';
 import { DialogShell } from './DialogShell';
 
-interface ConfirmDialogProps {
-  readonly open: boolean;
-  readonly title: string;
-  readonly description: string;
-  readonly confirmLabel: string;
-  readonly cancelLabel: string;
-  readonly tone?: 'neutral' | 'danger';
-  /** Optional mono kicker shown above the title (e.g. "CONFIRM"). */
-  readonly kicker?: string;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
-}
-
 /**
  * Confirm/cancel dialog over the shared {@link DialogShell}. Used by retro and
  * conf for destructive (`tone="danger"`) and neutral confirmations — texts are
@@ -31,7 +18,18 @@ const ConfirmDialogComponent = ({
   kicker,
   onConfirm,
   onCancel,
-}: ConfirmDialogProps) => {
+}: {
+  readonly open: boolean;
+  readonly title: string;
+  readonly description: string;
+  readonly confirmLabel: string;
+  readonly cancelLabel: string;
+  readonly tone?: 'neutral' | 'danger';
+  /** Optional mono kicker shown above the title (e.g. "CONFIRM"). */
+  readonly kicker?: string;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}) => {
   const footer = (
     <>
       <button
@@ -73,5 +71,3 @@ const ConfirmDialogComponent = ({
 };
 
 export const ConfirmDialog = memo(ConfirmDialogComponent);
-
-export type { ConfirmDialogProps };

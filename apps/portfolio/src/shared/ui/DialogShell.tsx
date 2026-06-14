@@ -10,7 +10,26 @@ import { MonoKicker } from './MonoKicker';
 const CLOSE_ICON_SIZE_PX = 14;
 const DEFAULT_CLOSE_LABEL = 'Close';
 
-type DialogShellProps = {
+/**
+ * Shared Radix Dialog shell for the landing-design surfaces. Applies the
+ * landing design language (`--color-landing-*` palette, mono kicker, hairline
+ * accent borders) consistently across dialogs so they read as one family of
+ * surfaces.
+ */
+const DialogShellComponent = ({
+  open,
+  onClose,
+  kicker,
+  title,
+  description,
+  footer,
+  children,
+  className,
+  closeLabel = DEFAULT_CLOSE_LABEL,
+  dismissible = true,
+  headerExtra,
+  compact = false,
+}: {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly kicker?: string;
@@ -36,28 +55,7 @@ type DialogShellProps = {
    * instead of the large heading. Used for terse utility dialogs (QR codes).
    */
   readonly compact?: boolean;
-};
-
-/**
- * Shared Radix Dialog shell for the landing-design surfaces. Applies the
- * landing design language (`--color-landing-*` palette, mono kicker, hairline
- * accent borders) consistently across dialogs so they read as one family of
- * surfaces.
- */
-const DialogShellComponent = ({
-  open,
-  onClose,
-  kicker,
-  title,
-  description,
-  footer,
-  children,
-  className,
-  closeLabel = DEFAULT_CLOSE_LABEL,
-  dismissible = true,
-  headerExtra,
-  compact = false,
-}: DialogShellProps) => {
+}) => {
   const handleOpenChange = useFunction((nextOpen: boolean) => {
     if (!nextOpen) {
       onClose();
@@ -150,5 +148,3 @@ const DialogShellComponent = ({
 };
 
 export const DialogShell = memo(DialogShellComponent);
-
-export type { DialogShellProps };

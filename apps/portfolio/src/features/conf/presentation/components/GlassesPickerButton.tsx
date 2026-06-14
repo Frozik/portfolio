@@ -36,49 +36,44 @@ const GLASSES_LABEL: Record<TGlassesStyle, string> = {
   teacher: confT.room.glassesStyleTeacher,
 };
 
-export interface IGlassesPickerButtonProps {
-  readonly selectedStyle: TGlassesStyle;
-  readonly onSelectStyle: (style: TGlassesStyle) => void;
-}
-
-interface IGlassesIconProps {
-  readonly style: TGlassesStyle;
-}
-
 /**
  * Inline preview element used inside dropdown items. The SVG assets are
  * 240×80 (3:1) — rendering at `h-6 w-auto` gives ~72×24 px, which keeps
  * the lens shapes recognisable at menu scale.
  */
-const GlassesIcon = memo(({ style }: IGlassesIconProps) => {
+const GlassesIcon = memo(({ style }: { readonly style: TGlassesStyle }) => {
   if (style === 'none') {
     return <EyeOff className="h-6 w-6" aria-hidden="true" />;
   }
   return <img src={GLASSES_PREVIEW_URL[style]} alt="" aria-hidden="true" className="h-6 w-auto" />;
 });
 
-interface IGlassesPickerItemProps {
-  readonly style: TGlassesStyle;
-  readonly isSelected: boolean;
-  readonly onSelect: (style: TGlassesStyle) => void;
-}
-
-const GlassesPickerItem = memo(({ style, isSelected, onSelect }: IGlassesPickerItemProps) => {
-  const handleSelect = useFunction(() => {
-    onSelect(style);
-  });
-  return (
-    <DropdownItem
-      onSelect={handleSelect}
-      className={cn('gap-3', isSelected && 'bg-brand-500/15 text-brand-200')}
-    >
-      <span className="flex h-6 w-20 shrink-0 items-center justify-center">
-        <GlassesIcon style={style} />
-      </span>
-      <span>{GLASSES_LABEL[style]}</span>
-    </DropdownItem>
-  );
-});
+const GlassesPickerItem = memo(
+  ({
+    style,
+    isSelected,
+    onSelect,
+  }: {
+    readonly style: TGlassesStyle;
+    readonly isSelected: boolean;
+    readonly onSelect: (style: TGlassesStyle) => void;
+  }) => {
+    const handleSelect = useFunction(() => {
+      onSelect(style);
+    });
+    return (
+      <DropdownItem
+        onSelect={handleSelect}
+        className={cn('gap-3', isSelected && 'bg-brand-500/15 text-brand-200')}
+      >
+        <span className="flex h-6 w-20 shrink-0 items-center justify-center">
+          <GlassesIcon style={style} />
+        </span>
+        <span>{GLASSES_LABEL[style]}</span>
+      </DropdownItem>
+    );
+  }
+);
 
 /**
  * Replaces the binary AR-on / AR-off button with a 4-way picker:
@@ -94,7 +89,10 @@ const GlassesPickerItem = memo(({ style, isSelected, onSelect }: IGlassesPickerI
 const GlassesPickerButtonComponent = ({
   selectedStyle,
   onSelectStyle,
-}: IGlassesPickerButtonProps) => {
+}: {
+  readonly selectedStyle: TGlassesStyle;
+  readonly onSelectStyle: (style: TGlassesStyle) => void;
+}) => {
   const isActive = selectedStyle !== 'none';
   return (
     <Tooltip title={confT.room.glassesPickerLabel} placement="top">

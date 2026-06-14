@@ -27,16 +27,6 @@ const DEFAULT_ROW_HEIGHT = 40;
 const coreRowModel = getCoreRowModel();
 const sortedRowModel = getSortedRowModel();
 
-type DataTableProps<TData> = {
-  columns: ColumnDef<TData, unknown>[];
-  data: TData[];
-  className?: string;
-  virtual?: boolean;
-  scrollHeight?: number;
-  initialSorting?: SortingState;
-  columnVisibility?: VisibilityState;
-};
-
 export function DataTable<TData>({
   columns,
   data,
@@ -45,7 +35,15 @@ export function DataTable<TData>({
   scrollHeight,
   initialSorting,
   columnVisibility,
-}: DataTableProps<TData>) {
+}: {
+  columns: ColumnDef<TData, unknown>[];
+  data: TData[];
+  className?: string;
+  virtual?: boolean;
+  scrollHeight?: number;
+  initialSorting?: SortingState;
+  columnVisibility?: VisibilityState;
+}) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   // Force re-render when scroll container mounts so virtualizer can measure it
@@ -245,5 +243,3 @@ const SortIndicator = memo(({ direction }: { direction: false | 'asc' | 'desc' }
   }
   return <ArrowUpDown size={SORT_ICON_SIZE} className="opacity-30" />;
 });
-
-export type { DataTableProps };

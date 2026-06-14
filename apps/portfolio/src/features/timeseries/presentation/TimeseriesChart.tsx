@@ -5,15 +5,18 @@ import { TimeseriesChartState } from '../application/render/chart-state';
 import type { ISeriesConfig } from '../domain/types';
 import { useSharedRenderer } from './SharedRendererContext';
 
-interface ITimeseriesChartProps {
-  initialTimeStart: number;
-  initialTimeEnd: number;
-  chartSeed: string;
-  seriesConfigs: readonly ISeriesConfig[];
-}
-
 export const TimeseriesChart = memo(
-  ({ initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs }: ITimeseriesChartProps) => {
+  ({
+    initialTimeStart,
+    initialTimeEnd,
+    chartSeed,
+    seriesConfigs,
+  }: {
+    initialTimeStart: number;
+    initialTimeEnd: number;
+    chartSeed: string;
+    seriesConfigs: readonly ISeriesConfig[];
+  }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const renderer = useSharedRenderer();
 

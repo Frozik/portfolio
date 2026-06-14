@@ -28,12 +28,13 @@ const STATUS_VISUALS: Record<TAvailabilityStatus, IStatusVisual> = {
   },
 };
 
-type AvailabilityBadgeProps = {
+const AvailabilityBadgeComponent = ({
+  suffix,
+  className,
+}: {
   readonly suffix?: string;
   readonly className?: string;
-};
-
-const AvailabilityBadgeComponent = ({ suffix, className }: AvailabilityBadgeProps) => {
+}) => {
   const status = useAvailability();
   const visual = STATUS_VISUALS[status];
   const Icon = visual.icon;

@@ -19,7 +19,8 @@ import shapesSpecificSource from '../shaders/shapes.wgsl?raw';
 
 const shapesShaderSource = commonShaderSource + shapesSpecificSource;
 
-import type { FrameState, GpuContext, RenderLayer } from '../../domain/types';
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import type { UniformManager } from '../uniform-manager';
 import { createUniformManager } from '../uniform-manager';
 

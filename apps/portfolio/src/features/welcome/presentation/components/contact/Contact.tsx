@@ -1,4 +1,5 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { getNowPlainDate } from '@frozik/utils/date/now';
 import { memo, useState } from 'react';
 
 import { CONTACT_LINKS } from '../../contentData';
@@ -8,7 +9,7 @@ import type { IContactQRRequest } from '../contacts/ContactRow';
 import { ContactRow } from '../contacts/ContactRow';
 import { QRContactModal } from '../contacts/QRContactModal';
 
-const COPYRIGHT_YEAR = 2026;
+const COPYRIGHT_YEAR = getNowPlainDate().year;
 
 const ContactComponent = () => {
   const [qrRequest, setQrRequest] = useState<IContactQRRequest | null>(null);

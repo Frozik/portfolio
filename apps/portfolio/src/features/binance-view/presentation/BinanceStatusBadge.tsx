@@ -157,11 +157,11 @@ export const BinanceStatusBadge = observer(() => {
   );
 });
 
-interface IWebsocketStatusLineProps {
+function WebsocketStatusLine({
+  connection,
+}: {
   readonly connection: ConnectionState;
-}
-
-function WebsocketStatusLine({ connection }: IWebsocketStatusLineProps): React.ReactElement {
+}): React.ReactElement {
   return (
     <p className="flex items-center gap-1.5">
       <span>{binanceT.live.websocketLabel}</span>
@@ -172,20 +172,6 @@ function WebsocketStatusLine({ connection }: IWebsocketStatusLineProps): React.R
       </span>
     </p>
   );
-}
-
-interface IBinanceStatusPopupProps {
-  readonly ref: React.RefObject<HTMLDivElement | null>;
-  readonly orderbookConn: ConnectionState;
-  readonly tradesConn: ConnectionState;
-  readonly hasFirstSnapshot: boolean;
-  readonly snapshotsReceived: number;
-  readonly lastSnapshotIso: string | undefined;
-  readonly tradesReceived: number | undefined;
-  readonly lastTradeIso: string | undefined;
-  readonly orderbookErrorMessage: string | undefined;
-  readonly tradesErrorMessage: string | undefined;
-  readonly onDismiss: () => void;
 }
 
 function BinanceStatusPopup({
@@ -200,7 +186,19 @@ function BinanceStatusPopup({
   orderbookErrorMessage,
   tradesErrorMessage,
   onDismiss,
-}: IBinanceStatusPopupProps): React.ReactElement {
+}: {
+  readonly ref: React.RefObject<HTMLDivElement | null>;
+  readonly orderbookConn: ConnectionState;
+  readonly tradesConn: ConnectionState;
+  readonly hasFirstSnapshot: boolean;
+  readonly snapshotsReceived: number;
+  readonly lastSnapshotIso: string | undefined;
+  readonly tradesReceived: number | undefined;
+  readonly lastTradeIso: string | undefined;
+  readonly orderbookErrorMessage: string | undefined;
+  readonly tradesErrorMessage: string | undefined;
+  readonly onDismiss: () => void;
+}): React.ReactElement {
   return (
     <div
       ref={ref}

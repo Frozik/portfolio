@@ -10,11 +10,7 @@ import { retroT as t } from '../translations';
 
 const ICON_SIZE_PX = 12;
 
-interface ClosePanelProps {
-  readonly store: RoomStore;
-}
-
-export const ClosePanel = observer(({ store }: ClosePanelProps) => {
+export const ClosePanel = observer(({ store }: { readonly store: RoomStore }) => {
   const handleOpenResults = useFunction(() => store.openExportDialog());
 
   if (store.phase !== ERetroPhase.Close) {

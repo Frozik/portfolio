@@ -10,10 +10,6 @@ import { appT } from '../translations';
 const TEAPOT_STATUS = 418;
 const FIRST_STATUS = 404;
 
-interface IErrorPageProps {
-  readonly initialStatus?: number;
-}
-
 const STAR_COUNT = 50;
 const STEAM_PARTICLE_COUNT = 3;
 
@@ -33,7 +29,11 @@ function generateStars(): Star[] {
   }));
 }
 
-const ErrorPageComponent = ({ initialStatus = FIRST_STATUS }: IErrorPageProps) => {
+const ErrorPageComponent = ({
+  initialStatus = FIRST_STATUS,
+}: {
+  readonly initialStatus?: number;
+}) => {
   const [statusCode, setStatusCode] = useState(
     initialStatus >= FIRST_STATUS && initialStatus <= TEAPOT_STATUS ? initialStatus : FIRST_STATUS
   );

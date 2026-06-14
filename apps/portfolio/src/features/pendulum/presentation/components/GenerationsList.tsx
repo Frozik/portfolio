@@ -1,4 +1,5 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 import {
@@ -16,6 +17,7 @@ import { Bot, Network, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { memo, useRef } from 'react';
+import { Temporal } from 'temporal-polyfill';
 import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
@@ -126,7 +128,9 @@ const CompetitionListItem = memo(
           {startDate === 'new'
             ? pendulumT.generationsList.createNew
             : pendulumT.generationsList.continueWith(
-                new Date(startDate).toLocaleString(DATE_LOCALE, COMPETITION_DATE_FORMAT)
+                Temporal.Instant.from(startDate)
+                  .toZonedDateTimeISO(Temporal.Now.timeZoneId())
+                  .toLocaleString(DATE_LOCALE, COMPETITION_DATE_FORMAT)
               )}
         </Button>
         {startDate !== 'new' && (
@@ -185,7 +189,7 @@ export const GenerationsList = observer(() => {
     if (isNil(competitionStart)) {
       store.setCurrentCompetition(
         createSyncedValueDescriptor({
-          competitionStart: new Date().toISOString() as ISO,
+          competitionStart: getNowISO8601(),
           generations: [],
         })
       );

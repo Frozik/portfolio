@@ -36,22 +36,6 @@ function formatColumnCode(columnIndex: number): string {
   return String.fromCharCode(COLUMN_CODE_BASE_CHAR_CODE + columnIndex);
 }
 
-interface ColumnCardItemProps {
-  card: IRetroCard;
-  cardIndex: number;
-  columnAccentColor: string;
-  isOwn: boolean;
-  myClientId: ClientId;
-  phase: ERetroPhase;
-  showVotes: boolean;
-  voteCount: number;
-  staggerIndex: number;
-  store: RoomStore;
-  showVoteButton: boolean;
-  onDeleteCard: (cardId: CardId) => void;
-  onEditCard: (cardId: CardId, text: string) => void;
-}
-
 const ColumnCardItemComponent = ({
   card,
   cardIndex,
@@ -66,7 +50,21 @@ const ColumnCardItemComponent = ({
   showVoteButton,
   onDeleteCard,
   onEditCard,
-}: ColumnCardItemProps) => {
+}: {
+  card: IRetroCard;
+  cardIndex: number;
+  columnAccentColor: string;
+  isOwn: boolean;
+  myClientId: ClientId;
+  phase: ERetroPhase;
+  showVotes: boolean;
+  voteCount: number;
+  staggerIndex: number;
+  store: RoomStore;
+  showVoteButton: boolean;
+  onDeleteCard: (cardId: CardId) => void;
+  onEditCard: (cardId: CardId, text: string) => void;
+}) => {
   const handleDelete = useFunction(() => {
     onDeleteCard(card.id);
   });
@@ -144,13 +142,15 @@ interface IGapDropData {
   readonly targetGroupId: GroupId | null;
 }
 
-interface GapDropZoneProps {
+const GapDropZone = ({
+  id,
+  data,
+  disabled,
+}: {
   id: string;
   data: IGapDropData;
   disabled: boolean;
-}
-
-const GapDropZone = ({ id, data, disabled }: GapDropZoneProps) => {
+}) => {
   const { setNodeRef, isOver } = useDroppable({ id, data, disabled });
   return (
     <div ref={setNodeRef} aria-hidden="true" className="relative h-2 shrink-0">
@@ -205,19 +205,6 @@ function firstColumnIndexOfItem(item: RenderItem): number {
 
 const ColumnCardItem = memo(ColumnCardItemComponent);
 
-interface ColumnProps {
-  column: IColumnConfig;
-  columnIndex: number;
-  cards: readonly IRetroCard[];
-  phase: ERetroPhase;
-  myClientId: ClientId;
-  votesByTarget: VotesByTarget;
-  store: RoomStore;
-  onAddCard: (columnId: ColumnId, text: string) => void;
-  onDeleteCard: (cardId: CardId) => void;
-  onEditCard: (cardId: CardId, text: string) => void;
-}
-
 const ColumnComponent = ({
   column,
   columnIndex,
@@ -229,7 +216,18 @@ const ColumnComponent = ({
   onAddCard,
   onDeleteCard,
   onEditCard,
-}: ColumnProps) => {
+}: {
+  column: IColumnConfig;
+  columnIndex: number;
+  cards: readonly IRetroCard[];
+  phase: ERetroPhase;
+  myClientId: ClientId;
+  votesByTarget: VotesByTarget;
+  store: RoomStore;
+  onAddCard: (columnId: ColumnId, text: string) => void;
+  onDeleteCard: (cardId: CardId) => void;
+  onEditCard: (cardId: CardId, text: string) => void;
+}) => {
   const handleAddCard = useFunction((text: string) => {
     onAddCard(column.id, text);
   });
@@ -444,4 +442,4 @@ const ColumnComponent = ({
 
 export const Column = memo(observer(ColumnComponent));
 
-export type { ColumnProps, IGapDropData };
+export type { IGapDropData };

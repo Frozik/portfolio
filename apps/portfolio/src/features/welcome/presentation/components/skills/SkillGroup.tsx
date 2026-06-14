@@ -1,11 +1,12 @@
 import { memo } from 'react';
 
-type SkillGroupProps = {
+const SkillGroupComponent = ({
+  group,
+  items,
+}: {
   readonly group: string;
   readonly items: readonly string[];
-};
-
-const SkillGroupComponent = ({ group, items }: SkillGroupProps) => (
+}) => (
   <div className="print:flex print:items-baseline print:gap-2 print:break-inside-avoid print:py-0.5">
     <div className="mb-4 font-mono text-[11px] uppercase tracking-wider text-landing-accent md:text-xs print:mb-0 print:shrink-0">
       {group}

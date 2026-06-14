@@ -13,17 +13,6 @@ export interface IContactQRRequest {
   readonly title: string;
 }
 
-type ContactRowProps = {
-  readonly iconKey: TContactIconKey;
-  readonly label: string;
-  readonly href: string;
-  readonly qrValue?: string;
-  readonly qrTitle?: string;
-  readonly preferred?: boolean;
-  readonly preferredLabel?: string;
-  readonly onQRRequest?: (payload: IContactQRRequest) => void;
-};
-
 function MiniQR({ className }: { className?: string }) {
   return (
     <svg
@@ -54,7 +43,16 @@ const ContactRowComponent = ({
   preferred,
   preferredLabel = welcomeT.contacts.preferredLabel,
   onQRRequest,
-}: ContactRowProps) => {
+}: {
+  readonly iconKey: TContactIconKey;
+  readonly label: string;
+  readonly href: string;
+  readonly qrValue?: string;
+  readonly qrTitle?: string;
+  readonly preferred?: boolean;
+  readonly preferredLabel?: string;
+  readonly onQRRequest?: (payload: IContactQRRequest) => void;
+}) => {
   const isMailto = href.startsWith('mailto:');
 
   const handleQRClick = useFunction(() => {

@@ -5,18 +5,6 @@ import { memo } from 'react';
 import { CardFrame } from '../CardFrame';
 import { MonoKicker } from '../MonoKicker';
 
-interface JoinByLinkCardProps {
-  /** Unique input id — distinct per feature so labels never collide. */
-  readonly inputId: string;
-  readonly value: string;
-  readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  readonly kicker: string;
-  readonly pasteHint: string;
-  readonly placeholder: string;
-  readonly submitLabel: string;
-}
-
 /**
  * Shared "join by link" lobby card: paste a room URL or id and submit. The
  * submit button disables on empty input. Identical between retro and conf.
@@ -30,7 +18,17 @@ const JoinByLinkCardComponent = ({
   pasteHint,
   placeholder,
   submitLabel,
-}: JoinByLinkCardProps) => (
+}: {
+  /** Unique input id — distinct per feature so labels never collide. */
+  readonly inputId: string;
+  readonly value: string;
+  readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  readonly kicker: string;
+  readonly pasteHint: string;
+  readonly placeholder: string;
+  readonly submitLabel: string;
+}) => (
   <CardFrame>
     <form onSubmit={onSubmit} className="flex flex-col gap-3 px-6 py-5">
       <div className="flex items-center gap-2">

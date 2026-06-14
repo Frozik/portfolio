@@ -17,64 +17,72 @@ const MAX_VOTES = 10;
 const DEFAULT_VOTES = 5;
 const CHECK_ICON_SIZE_PX = 12;
 
-interface CreateRetroDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (params: ICreateRoomParams) => void;
-}
-
 const DEFAULT_TEMPLATE_ID = RETRO_TEMPLATES[0].id;
 
-interface TemplateCardProps {
-  readonly template: ITemplateConfig;
-  readonly selected: boolean;
-  readonly onSelect: (id: string) => void;
-}
+const TemplateCard = memo(
+  ({
+    template,
+    selected,
+    onSelect,
+  }: {
+    readonly template: ITemplateConfig;
+    readonly selected: boolean;
+    readonly onSelect: (id: string) => void;
+  }) => {
+    const handleClick = useFunction(() => {
+      onSelect(template.id);
+    });
 
-const TemplateCard = memo(({ template, selected, onSelect }: TemplateCardProps) => {
-  const handleClick = useFunction(() => {
-    onSelect(template.id);
-  });
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-pressed={selected}
-      className={cn(
-        'w-full text-left transition-colors',
-        'focus:outline-none focus-visible:outline-none'
-      )}
-    >
-      <CardFrame
-        hoverable
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-pressed={selected}
         className={cn(
-          'p-3.5 transition-colors',
-          selected ? 'border-landing-accent bg-landing-accent/10' : 'hover:border-landing-accent/40'
+          'w-full text-left transition-colors',
+          'focus:outline-none focus-visible:outline-none'
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-[13.5px] font-medium text-landing-fg">{template.name}</span>
-            <span className="text-[12px] font-light text-landing-fg-dim">
-              {template.description}
-            </span>
-          </div>
-          {selected && (
-            <span
-              aria-hidden="true"
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-landing-accent text-landing-bg"
-            >
-              <Check size={CHECK_ICON_SIZE_PX} strokeWidth={3} />
-            </span>
+        <CardFrame
+          hoverable
+          className={cn(
+            'p-3.5 transition-colors',
+            selected
+              ? 'border-landing-accent bg-landing-accent/10'
+              : 'hover:border-landing-accent/40'
           )}
-        </div>
-      </CardFrame>
-    </button>
-  );
-});
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[13.5px] font-medium text-landing-fg">{template.name}</span>
+              <span className="text-[12px] font-light text-landing-fg-dim">
+                {template.description}
+              </span>
+            </div>
+            {selected && (
+              <span
+                aria-hidden="true"
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-landing-accent text-landing-bg"
+              >
+                <Check size={CHECK_ICON_SIZE_PX} strokeWidth={3} />
+              </span>
+            )}
+          </div>
+        </CardFrame>
+      </button>
+    );
+  }
+);
 
-const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDialogProps) => {
+const CreateRetroDialogComponent = ({
+  open,
+  onClose,
+  onCreate,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly onCreate: (params: ICreateRoomParams) => void;
+}) => {
   const [name, setName] = useState('');
   const [template, setTemplate] = useState<string>(DEFAULT_TEMPLATE_ID);
   const [votesPerParticipant, setVotesPerParticipant] = useState(DEFAULT_VOTES);
@@ -187,5 +195,3 @@ const CreateRetroDialogComponent = ({ open, onClose, onCreate }: CreateRetroDial
 };
 
 export const CreateRetroDialog = memo(CreateRetroDialogComponent);
-
-export type { CreateRetroDialogProps };

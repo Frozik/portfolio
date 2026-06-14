@@ -8,10 +8,6 @@ import type { RoomStore } from '../../application/RoomStore';
 import { ERetroPhase } from '../../domain/types';
 import { retroT as t } from '../translations';
 
-interface PhaseStepperProps {
-  readonly store: RoomStore;
-}
-
 const PHASE_ORDER: readonly ERetroPhase[] = [
   ERetroPhase.Brainstorm,
   ERetroPhase.Group,
@@ -45,7 +41,7 @@ const PHASE_NUMBER_PAD_CHAR = '0';
  * faint. The facilitator also gets prev/next controls on either side so
  * the whole strip is the full phase-navigation UI.
  */
-export const PhaseStepper = observer(({ store }: PhaseStepperProps) => {
+export const PhaseStepper = observer(({ store }: { readonly store: RoomStore }) => {
   const { phase, isFacilitator } = store;
   const activeIndex = PHASE_ORDER.indexOf(phase);
 
@@ -129,16 +125,6 @@ export const PhaseStepper = observer(({ store }: PhaseStepperProps) => {
   );
 });
 
-interface PhaseButtonProps {
-  readonly label: string;
-  readonly phaseNumber: string;
-  readonly isActive: boolean;
-  readonly isPast: boolean;
-  readonly phase: ERetroPhase;
-  readonly canNavigate: boolean;
-  readonly onNavigate: (phase: ERetroPhase) => void;
-}
-
 const PhaseButton = ({
   label,
   phaseNumber,
@@ -147,7 +133,15 @@ const PhaseButton = ({
   phase,
   canNavigate,
   onNavigate,
-}: PhaseButtonProps) => {
+}: {
+  readonly label: string;
+  readonly phaseNumber: string;
+  readonly isActive: boolean;
+  readonly isPast: boolean;
+  readonly phase: ERetroPhase;
+  readonly canNavigate: boolean;
+  readonly onNavigate: (phase: ERetroPhase) => void;
+}) => {
   const handleClick = useFunction(() => {
     if (!canNavigate) {
       return;

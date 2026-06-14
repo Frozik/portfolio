@@ -11,19 +11,6 @@ const QR_PIXEL_SIZE_PX = 216;
 const COPY_RESET_DELAY_MS = 1800;
 const ICON_SIZE_PX = 12;
 
-interface ShareLinkDialogProps {
-  readonly open: boolean;
-  readonly onClose: () => void;
-  readonly url: string;
-  readonly onCopy: () => void;
-  readonly title: string;
-  readonly description: string;
-  readonly kicker: string;
-  readonly qrLabel: string;
-  readonly copyLabel: string;
-  readonly copiedLabel: string;
-}
-
 /**
  * Share-by-link dialog over the shared {@link DialogShell}: the URL, a QR code,
  * and a copy button that flips to a confirmation tick for
@@ -41,7 +28,18 @@ const ShareLinkDialogComponent = ({
   qrLabel,
   copyLabel,
   copiedLabel,
-}: ShareLinkDialogProps) => {
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly url: string;
+  readonly onCopy: () => void;
+  readonly title: string;
+  readonly description: string;
+  readonly kicker: string;
+  readonly qrLabel: string;
+  readonly copyLabel: string;
+  readonly copiedLabel: string;
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useFunction(() => {
@@ -101,5 +99,3 @@ const ShareLinkDialogComponent = ({
 };
 
 export const ShareLinkDialog = memo(ShareLinkDialogComponent);
-
-export type { ShareLinkDialogProps };

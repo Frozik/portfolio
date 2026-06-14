@@ -36,6 +36,8 @@ import { readContext, registerSocketHandlers } from './socket-handlers';
 
 const DRAIN_POLL_INTERVAL_MS = 100;
 const ADMIN_HOST = '127.0.0.1';
+const SOCKET_PING_INTERVAL_MS = 25_000;
+const SOCKET_PING_TIMEOUT_MS = 20_000;
 
 export type BootstrapOverrides = {
   /**
@@ -203,8 +205,8 @@ export async function bootstrap(
       credentials: true,
     },
     maxHttpBufferSize: config.room.max_http_buffer_bytes,
-    pingInterval: 25_000,
-    pingTimeout: 20_000,
+    pingInterval: SOCKET_PING_INTERVAL_MS,
+    pingTimeout: SOCKET_PING_TIMEOUT_MS,
     transports: ['websocket', 'polling'],
   });
 

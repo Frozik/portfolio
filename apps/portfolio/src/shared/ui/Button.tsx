@@ -53,5 +53,4 @@ ButtonComponent.displayName = 'Button';
 
 export const Button = memo(ButtonComponent);
 
-export type { ButtonProps };
 export { buttonVariants };

@@ -21,11 +21,7 @@ type SetHost = (element: HTMLDivElement | null) => void;
 const HostContext = createContext<HTMLDivElement | null>(null);
 const SetHostContext = createContext<SetHost | null>(null);
 
-interface ITopNavCenterProviderProps {
-  readonly children: ReactNode;
-}
-
-export const TopNavCenterProvider = memo(({ children }: ITopNavCenterProviderProps) => {
+export const TopNavCenterProvider = memo(({ children }: { readonly children: ReactNode }) => {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   return (
     <SetHostContext.Provider value={setHost}>
@@ -45,10 +41,6 @@ export function useTopNavCenterHostSetter(): SetHost {
   return setter;
 }
 
-interface ITopNavCenterPortalProps {
-  readonly children: ReactNode;
-}
-
 /**
  * Renders `children` into the {@link TopNav} center slot via a React
  * portal. Returns `null` until the slot's DOM element is available
@@ -56,7 +48,7 @@ interface ITopNavCenterPortalProps {
  * portal in place. Safe to render unconditionally.
  */
 export const TopNavCenterPortal = memo(
-  ({ children }: ITopNavCenterPortalProps): ReactElement | null => {
+  ({ children }: { readonly children: ReactNode }): ReactElement | null => {
     const host = useContext(HostContext);
     if (host === null) {
       return null;
