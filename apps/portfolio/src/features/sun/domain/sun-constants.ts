@@ -1,8 +1,5 @@
 export const INSTANCE_COUNT = 250_000;
 
-// #07090c — shared scene background across all WebGPU demos.
-export const BACKGROUND_COLOR = { r: 0.02745, g: 0.03529, b: 0.04706, a: 1 };
-
 export const MIN_CAMERA_DISTANCE = 5;
 export const MAX_CAMERA_DISTANCE = 20;
 export const INITIAL_CAMERA_DISTANCE = 16;

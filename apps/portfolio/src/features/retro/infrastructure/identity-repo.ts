@@ -1,4 +1,4 @@
-import { isNil } from 'lodash-es';
+import { getOrCreatePersistentId } from '../../../shared/lib/getOrCreatePersistentId';
 
 /**
  * Runtime identity surfaced to retro UI. `clientId` is the only piece
@@ -35,16 +35,13 @@ export interface IIdentityRepo {
 export function createIdentityRepo(storage: Storage = localStorage): IIdentityRepo {
   return {
     getOrCreateClientId(): number {
-      const raw = storage.getItem(STORAGE_KEY);
-      if (!isNil(raw)) {
-        const existing = readClientId(raw);
-        if (existing !== null) {
-          return existing;
-        }
-      }
-      const next = generateClientId();
-      storage.setItem(STORAGE_KEY, JSON.stringify({ clientId: next }));
-      return next;
+      return getOrCreatePersistentId({
+        key: STORAGE_KEY,
+        generate: generateClientId,
+        parse: readClientId,
+        serialize: clientId => JSON.stringify({ clientId }),
+        storage,
+      });
     },
 
     clear(): void {

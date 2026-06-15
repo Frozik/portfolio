@@ -1,3 +1,5 @@
+import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
+import { isNil } from 'lodash-es';
 import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
@@ -10,7 +12,6 @@ import {
   MIN_CAMERA_DISTANCE,
   MOUSE_PAN_SENSITIVITY,
   MOUSE_ROTATE_SENSITIVITY,
-  PINCH_MIN_DISTANCE_PX,
   WHEEL_ZOOM_SENSITIVITY,
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
@@ -134,9 +135,12 @@ export function createOrbitalCameraController(
 
   function getPointerDistance(): number {
     const pointers = [...activePointers.values()];
-    const deltaX = pointers[0].clientX - pointers[1].clientX;
-    const deltaY = pointers[0].clientY - pointers[1].clientY;
-    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    return pointerDistance(
+      pointers[0].clientX,
+      pointers[0].clientY,
+      pointers[1].clientX,
+      pointers[1].clientY
+    );
   }
 
   function onPointerDown(event: PointerEvent): void {
@@ -175,10 +179,10 @@ export function createOrbitalCameraController(
     // Two-finger pinch zoom
     if (activePointers.size === 2) {
       const currentDistance = getPointerDistance();
-      if (currentDistance < PINCH_MIN_DISTANCE_PX) {
+      const scale = computePinchScale(lastPinchDistance, currentDistance);
+      if (isNil(scale)) {
         return;
       }
-      const scale = lastPinchDistance / currentDistance;
       targetDistance = clampDistance(targetDistance * scale);
       lastPinchDistance = currentDistance;
       return;

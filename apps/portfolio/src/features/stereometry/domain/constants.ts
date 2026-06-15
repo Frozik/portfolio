@@ -1,3 +1,5 @@
+import { SCENE_BACKGROUND_HEX } from '@frozik/utils/webgpu/backgroundColor';
+
 import type { PartialElementStyle } from './render-types';
 
 // --- FPS levels ---
@@ -24,8 +26,6 @@ export const INERTIA_MIN_VELOCITY = 0.1;
  * the stored velocity is stale — discard it instead of starting inertia.
  */
 export const INERTIA_RELEASE_TIMEOUT_MS = 80;
-/** Minimum pinch distance in pixels; below this the zoom ratio becomes unstable (division by ~0) */
-export const PINCH_MIN_DISTANCE_PX = 1;
 /** Exponential smoothing factor for zoom animation (0 = no movement, 1 = instant) */
 export const ZOOM_SMOOTHING_FACTOR = 0.1;
 /** Distance threshold below which zoom snaps to target to avoid infinite lerp tail */
@@ -219,6 +219,6 @@ export const STEREOMETRY_STYLES = {
   },
 
   background: {
-    color: '#07090c',
+    color: SCENE_BACKGROUND_HEX,
   },
 } satisfies Readonly<Record<string, PartialElementStyle>>;

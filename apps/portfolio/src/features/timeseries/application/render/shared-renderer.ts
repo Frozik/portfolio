@@ -2,6 +2,7 @@ import { assert } from '@frozik/utils/assert/assert';
 import { MS_PER_SECOND } from '@frozik/utils/date/constants';
 import { FpsMeter } from '@frozik/utils/webgpu/fpsMeter';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
+import { RenderTargetPool } from '@frozik/utils/webgpu/renderTargetPool';
 import { isNil } from 'lodash-es';
 
 import {
@@ -22,7 +23,6 @@ const rhombusShaderSource = commonShaderSource + rhombusSpecificSource;
 const debugShaderSource = commonShaderSource + debugLinesSource;
 
 import type { IPlotArea } from '../../domain/types';
-import { RenderTargetPool } from '../../infrastructure/render-target-pool';
 import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
 
 const THROTTLE_TOLERANCE_MS = 2;

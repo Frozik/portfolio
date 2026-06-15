@@ -1,4 +1,6 @@
 import type { FpsController } from '@frozik/utils/webgpu/fpsController';
+import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
+import { isNil } from 'lodash-es';
 import {
   FPS_INTERACTION,
   PAN_INERTIA_DAMPING,
@@ -79,7 +81,10 @@ export class ChartInputController {
       // Two-pointer pinch zoom
       if (this.activePointers.size === 2) {
         const currentDistance = this.getPointerDistance();
-        const scale = this.lastPinchDistance / currentDistance;
+        const scale = computePinchScale(this.lastPinchDistance, currentDistance);
+        if (isNil(scale)) {
+          return;
+        }
         const centerNormalized = this.getPointerCenter();
 
         const [newStart, newEnd] = clampViewport(
@@ -268,9 +273,12 @@ export class ChartInputController {
 
   private getPointerDistance(): number {
     const pointers = [...this.activePointers.values()];
-    const dx = pointers[0].clientX - pointers[1].clientX;
-    const dy = pointers[0].clientY - pointers[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
+    return pointerDistance(
+      pointers[0].clientX,
+      pointers[0].clientY,
+      pointers[1].clientX,
+      pointers[1].clientY
+    );
   }
 
   private getPointerCenter(): number {

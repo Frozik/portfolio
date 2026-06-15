@@ -7,10 +7,10 @@ import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
 
 import { cn } from '../../../../shared/lib/cn';
+import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';
 import { renderSnapshotToMarkdown } from '../../domain/markdown-export';
-import { downloadFile } from '../../infrastructure/downloads';
 import { retroT as t } from '../translations';
 
 const COPY_RESET_DELAY_MS = 1800;

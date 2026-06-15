@@ -1,4 +1,5 @@
 import { assert } from '@frozik/utils/assert/assert';
+import { SCENE_BACKGROUND_HEX } from '@frozik/utils/webgpu/backgroundColor';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { isNil } from 'lodash-es';
 import { BlockDataPipeline } from '../../domain/block-data-pipeline';
@@ -76,7 +77,6 @@ interface IFrameLayoutCache {
   yTicks: IAxisTick[];
 }
 
-const CHART_BACKGROUND_COLOR = '#07090c';
 const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
 const MIN_POINTS_FOR_RENDERING = 2;
@@ -579,7 +579,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
     const valueRange = layout.valueMax - layout.valueMin;
 
     // Fill background
-    ctx.fillStyle = CHART_BACKGROUND_COLOR;
+    ctx.fillStyle = SCENE_BACKGROUND_HEX;
     ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
     ctx.strokeStyle = GRID_LINE_COLOR;

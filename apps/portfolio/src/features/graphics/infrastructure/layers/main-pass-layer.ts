@@ -1,10 +1,10 @@
+import { SCENE_BACKGROUND_COLOR } from '@frozik/utils/webgpu/backgroundColor';
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import {
-  BACKGROUND_COLOR,
   BORDER_SEGMENT_COUNT,
   computeSinXSegmentCount,
   MSAA_SAMPLE_COUNT,
@@ -92,7 +92,7 @@ export class MainPassLayer implements RenderLayer {
           view: currentMsaaView,
           resolveTarget: canvasView,
           loadOp: 'clear',
-          clearValue: BACKGROUND_COLOR,
+          clearValue: SCENE_BACKGROUND_COLOR,
           storeOp: 'discard',
         },
       ],

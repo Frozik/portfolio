@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { RenderTargetPool } from './render-target-pool';
+import { RenderTargetPool } from './renderTargetPool';
 
 function createMockDevice(): GPUDevice {
   return {

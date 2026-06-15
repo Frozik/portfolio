@@ -14,8 +14,8 @@ const RENDER_TARGET_USAGE = TEXTURE_USAGE_RENDER_ATTACHMENT | TEXTURE_USAGE_COPY
  * This guarantees GPU execution order and eliminates the iOS Safari race condition
  * where transferToImageBitmap() could capture stale pixels.
  *
- * Since all charts in the 2x2 grid share the same dimensions, the pool typically
- * holds a single texture that is reused across all charts each frame.
+ * When all targets share the same dimensions, the pool typically holds a single
+ * texture that is reused across all acquire/release cycles each frame.
  */
 export class RenderTargetPool {
   private readonly available: GPUTexture[] = [];

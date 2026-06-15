@@ -1,3 +1,4 @@
+import { SCENE_BACKGROUND_COLOR } from '@frozik/utils/webgpu/backgroundColor';
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
@@ -6,7 +7,6 @@ import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 import { mat4 } from 'wgpu-matrix';
 import {
-  BACKGROUND_COLOR,
   FAR_PLANE,
   FIELD_OF_VIEW_RADIANS,
   INSTANCE_COUNT,
@@ -120,7 +120,7 @@ export class SunLayer implements RenderLayer {
           view: currentMsaaView,
           resolveTarget: canvasView,
           loadOp: 'clear',
-          clearValue: BACKGROUND_COLOR,
+          clearValue: SCENE_BACKGROUND_COLOR,
           storeOp: 'discard',
         },
       ],
