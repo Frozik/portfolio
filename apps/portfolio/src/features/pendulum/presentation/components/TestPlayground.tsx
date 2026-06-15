@@ -9,11 +9,12 @@ import {
 import { isNil } from 'lodash-es';
 import { Bot, User, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { HumanPlayer } from '../../domain/players/HumanPlayer';
+import type { TPlayer } from '../../domain/types';
 import { EPlayerType } from '../../domain/types';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
@@ -30,17 +31,45 @@ export const TestPlayground = observer(() => {
 
   const robotVD = store.currentRobot;
 
-  const playerVD = useMemo(
-    () =>
-      matchValueDescriptor(robotVD, {
-        synced: ({ value: robot }) => createSyncedValueDescriptor(robot),
-        unsynced: vd =>
-          isLoadingValueDescriptor(vd) || isFailValueDescriptor(vd)
-            ? vd
-            : createSyncedValueDescriptor(new HumanPlayer(new WindowKeyStateSource())),
+  // The fallback HumanPlayer is built in an effect (not render) so its window
+  // listeners are cleaned up on unmount and not leaked by StrictMode double-mount.
+  const [humanPlayer, setHumanPlayer] = useState<HumanPlayer>();
+  const needsHumanPlayer =
+    !isLoadingValueDescriptor(robotVD) &&
+    !isFailValueDescriptor(robotVD) &&
+    !isSyncedValueDescriptor(robotVD);
+
+  useEffect(() => {
+    if (!needsHumanPlayer) {
+      setHumanPlayer(undefined);
+      return;
+    }
+
+    const player = new HumanPlayer(new WindowKeyStateSource());
+    setHumanPlayer(player);
+
+    return () => {
+      player.dispose();
+      setHumanPlayer(undefined);
+    };
+  }, [needsHumanPlayer]);
+
+  const playerVD = matchValueDescriptor(robotVD, {
+    synced: ({ value: robot }) =>
+      createSyncedValueDescriptor<{ player: TPlayer; owned: boolean }>({
+        player: robot,
+        owned: false,
       }),
-    [robotVD]
-  );
+    unsynced: vd =>
+      isLoadingValueDescriptor(vd) || isFailValueDescriptor(vd)
+        ? vd
+        : isNil(humanPlayer)
+          ? vd
+          : createSyncedValueDescriptor<{ player: TPlayer; owned: boolean }>({
+              player: humanPlayer,
+              owned: true,
+            }),
+  });
 
   const [paused, setPaused] = useState(true);
 
@@ -55,14 +84,16 @@ export const TestPlayground = observer(() => {
   const ticker = useFrameTicker();
   const playground = usePlayground(ticker, renderer, { gravity });
 
+  const player = isSyncedValueDescriptor(playerVD) ? playerVD.value : undefined;
+
   useEffect(
     () =>
       void playground?.clear().then(() => {
-        if (isSyncedValueDescriptor(playerVD)) {
-          playground.addPlayer(playerVD.value);
+        if (!isNil(player)) {
+          playground.addPlayer(player.player, { owned: player.owned });
         }
       }),
-    [playground, playerVD]
+    [playground, player]
   );
 
   useEffect(() => {
@@ -98,20 +129,20 @@ export const TestPlayground = observer(() => {
         onPausedChanged={setPaused}
         onSetContexts={setContextsWorld}
       >
-        {isSyncedValueDescriptor(playerVD) && (
+        {!isNil(player) && (
           <>
-            {playerVD.value.type === EPlayerType.Human && (
+            {player.player.type === EPlayerType.Human && (
               <div className={commonStyles.description}>
                 <User size={ICON_SIZE} />
 
-                {playerVD.value.name}
+                {player.player.name}
               </div>
             )}
-            {playerVD.value.type === EPlayerType.Robot && (
+            {player.player.type === EPlayerType.Robot && (
               <div className={commonStyles.descriptionWithRemoval} onClick={handleRemovePlayer}>
                 <Bot size={ICON_SIZE} />
 
-                {playerVD.value.name}
+                {player.player.name}
 
                 <X size={ICON_SIZE} className={commonStyles.descriptionClose} />
               </div>

@@ -39,7 +39,7 @@ export const appTranslationsEn = {
     stereometry: 'Stereometry',
     controls: 'Controls',
     retro: 'Retro',
-    conf: 'Conf',
+    conf: 'Conference',
   },
   errorPage: {
     statusMap: {

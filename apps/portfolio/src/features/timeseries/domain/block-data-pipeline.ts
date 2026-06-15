@@ -4,13 +4,13 @@ import { generateTimeseriesData } from './data-generator';
 import { encodePoints } from './delta-encoding';
 import { alignedPeriods } from './period-alignment';
 import type {
+  EChartType,
   ETimeScale,
   IBlockEntry,
   ILoadingRegion,
   ISlotAllocator,
   PointTransformFunction,
 } from './types';
-import { EChartType } from './types';
 
 /** Simulated loading delay in milliseconds. */
 const LOADING_DELAY_MS = 1_000;
@@ -31,7 +31,6 @@ interface IPendingBlock {
  */
 export class BlockDataPipeline {
   private readonly pendingBlocks = new Map<string, IPendingBlock>();
-  private requestCounter = 0;
 
   constructor(
     private readonly allocator: ISlotAllocator,
@@ -40,7 +39,6 @@ export class BlockDataPipeline {
     private readonly chartType: EChartType,
     private readonly colorFn?: PointTransformFunction,
     private readonly sizeFn?: PointTransformFunction,
-    private readonly isDebug?: () => boolean,
     private readonly isInstantLoad?: () => boolean
   ) {}
 
@@ -73,18 +71,6 @@ export class BlockDataPipeline {
       const pending = this.pendingBlocks.get(pendingKey);
 
       if (pending === undefined) {
-        this.requestCounter++;
-        const requestNumber = this.requestCounter;
-
-        if (this.isDebug?.()) {
-          // biome-ignore lint/suspicious/noConsole: debug logging controlled by debug mode toggle
-          console.log(
-            `>>> [#${requestNumber}] REQUEST ${EChartType[this.chartType]}` +
-              ` [${period.start} → ${period.end}]` +
-              ` scale=${scale}`
-          );
-        }
-
         // Start "loading" this block
         this.pendingBlocks.set(pendingKey, {
           periodStart: period.start,
@@ -100,16 +86,6 @@ export class BlockDataPipeline {
         this.pendingBlocks.delete(pendingKey);
         const newEntries = this.generateBlocksForPeriod(period.start, period.end, scale);
         visibleEntries.push(...newEntries);
-
-        if (this.isDebug?.()) {
-          const totalPoints = newEntries.reduce((sum, entry) => sum + entry.pointCount, 0);
-          // biome-ignore lint/suspicious/noConsole: debug logging controlled by debug mode toggle
-          console.log(
-            `>>> [#${this.requestCounter}] RESPONSE ${EChartType[this.chartType]}` +
-              ` [${period.start} → ${period.end}]` +
-              ` ${newEntries.length} block(s), ${totalPoints} points`
-          );
-        }
       }
       // Otherwise still loading — skip this block
     }

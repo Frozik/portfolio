@@ -392,6 +392,7 @@ export class ConfRoomStore {
       client: this.client,
       topic: this.topic,
       self: this.participantId,
+      selfSession: this.sessionId,
     });
     const unsubscribeMessages = signaling.onMessage(message => {
       this.handleSignalingMessage(message);

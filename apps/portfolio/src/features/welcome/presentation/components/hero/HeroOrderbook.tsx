@@ -415,7 +415,17 @@ const HeroOrderbookComponent = () => {
     };
 
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    window.addEventListener('resize', resize);
+
+    const handleResize = () => {
+      resize();
+      // Resize clears the canvas backing store; under reduced motion there's no
+      // rAF loop to repaint, so draw one static frame to avoid a blank hero.
+      if (prefersReducedMotion) {
+        tick(performance.now());
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
     if (prefersReducedMotion) {
       tick(performance.now());
     } else {
@@ -423,7 +433,7 @@ const HeroOrderbookComponent = () => {
     }
 
     return () => {
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', handleResize);
       if (frameId !== 0) {
         cancelAnimationFrame(frameId);
       }

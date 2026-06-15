@@ -69,6 +69,7 @@ export const Drawer = memo(
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             {title && <h2 className="text-lg font-semibold text-text">{title}</h2>}
             <button
+              type="button"
               className="rounded-md p-1 text-text-secondary hover:bg-surface-overlay hover:text-text"
               onClick={onClose}
             >

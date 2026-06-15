@@ -90,17 +90,47 @@ function renderBlock(node: ReactNode, key: number): ReactNode {
   return null;
 }
 
+function isNestedListElement(node: ReactNode): boolean {
+  if (!isValidElement(node)) {
+    return false;
+  }
+  const type = getElementType(node);
+  return type === 'ul' || type === 'ol';
+}
+
 function renderListItem(node: ReactNode, key: number): ReactNode {
   if (!isValidElement(node) || getElementType(node) !== 'li') {
     return null;
   }
   const props = node.props as { children?: ReactNode };
+
+  // An <li>'s inline content renders next to the bullet; nested <ul>/<ol> render
+  // as indented block lists below — otherwise they collapse to bulletless inline text.
+  const inlineChildren: ReactNode[] = [];
+  const nestedLists: ReactNode[] = [];
+  Children.forEach(Children.toArray(props.children), child => {
+    if (isNestedListElement(child)) {
+      nestedLists.push(child);
+    } else {
+      inlineChildren.push(child);
+    }
+  });
+
+  const nestedBlocks: ReactNode[] = [];
+  nestedLists.forEach((nestedList, nestedIndex) => {
+    const renderedList = renderBlock(nestedList, nestedIndex);
+    if (renderedList !== null) {
+      nestedBlocks.push(renderedList);
+    }
+  });
+
   return (
     <View key={key} style={pdfStyles.descListItem} wrap={false}>
       <Text style={pdfStyles.descBullet}>•</Text>
-      <Text style={pdfStyles.descListText}>
-        {renderInlineChildren(props.children, EMPTY_INLINE_STYLE)}
-      </Text>
+      <View style={pdfStyles.descListText}>
+        <Text>{renderInlineChildren(inlineChildren, EMPTY_INLINE_STYLE)}</Text>
+        {nestedBlocks.length > 0 && <View style={pdfStyles.descNestedList}>{nestedBlocks}</View>}
+      </View>
     </View>
   );
 }

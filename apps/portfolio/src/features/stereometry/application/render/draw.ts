@@ -305,6 +305,10 @@ export function runStereometry(
         sceneLayerReference = sceneLayer;
         applyToSceneLayer(sceneTopology);
       }
+    },
+    (error: unknown) => {
+      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU stereometry renderer init failure
+      console.error('Failed to initialize stereometry renderer', error);
     }
   );
 

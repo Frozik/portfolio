@@ -67,6 +67,12 @@ const FALLBACK_CANVAS_HEIGHT_PX = 480;
 const RAD_PER_DEG = Math.PI / 180;
 
 /**
+ * Max wait for the source's first decoded frame. A frozen camera never fires
+ * `loadeddata`; on timeout we proceed with fallback canvas dims rather than hang.
+ */
+const FIRST_VIDEO_FRAME_TIMEOUT_MS = 5_000;
+
+/**
  * Hysteresis for the emotion label so it doesn't flicker on every
  * detection: a new classification must appear on this many consecutive
  * detections before it replaces the committed emotion. With a ~30 Hz
@@ -118,11 +124,17 @@ async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
     return;
   }
   await new Promise<void>(resolve => {
-    const handleReady = (): void => {
-      video.removeEventListener('loadeddata', handleReady);
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const settle = (): void => {
+      video.removeEventListener('loadeddata', settle);
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
       resolve();
     };
-    video.addEventListener('loadeddata', handleReady);
+    video.addEventListener('loadeddata', settle);
+    timeoutHandle = setTimeout(settle, FIRST_VIDEO_FRAME_TIMEOUT_MS);
   });
 }
 

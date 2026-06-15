@@ -76,7 +76,12 @@ export const FieldCell = observer(
       <div
         data-hover-row-column={isRowOrColumnHovered || undefined}
         className={cn(
-          'flex bg-neutral-700',
+          // `min-w-0 min-h-0 overflow-hidden leading-none` clamp the cell to its
+          // grid track: without them a filled cell's text (fontSize = cellSize,
+          // line-box > track) inflates the box past its track via the grid default
+          // `min-height: auto`, overlapping the neighbouring cell and stealing its
+          // clicks (a click meant for the empty neighbour erased the filled cell).
+          'flex min-h-0 min-w-0 overflow-hidden bg-neutral-700 leading-none',
           isFixed ? 'cursor-not-allowed' : 'cursor-pointer',
           hasValue && 'items-center justify-center',
           !hasValue && hasNotes && 'grid place-items-center',

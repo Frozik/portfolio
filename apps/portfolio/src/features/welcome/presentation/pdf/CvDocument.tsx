@@ -2,7 +2,12 @@ import { Document, Image, Link, Page, Text, View } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 
 import avatarPngUrl from '../../../../assets/avatar.png';
-import { formatDateMonthYear, getYearsOfExperience, measureDuration } from '../../utils';
+import {
+  findEarliestStart,
+  formatDateMonthYear,
+  getYearsOfExperience,
+  measureDuration,
+} from '../../utils';
 import { CONTACT_LINKS } from '../contentData';
 import type { IExperienceTranslation } from '../translations';
 import { welcomeT } from '../translations';
@@ -41,8 +46,7 @@ function getCareerStartYears(): number {
   if (entries.length === 0) {
     return 0;
   }
-  const firstEntry = entries[entries.length - 1];
-  return getYearsOfExperience(firstEntry.start);
+  return getYearsOfExperience(findEarliestStart(entries));
 }
 
 function ExperienceEntryView({

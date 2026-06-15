@@ -53,6 +53,43 @@ describe('loadField', () => {
     const result = loadField('12345');
     expect(isFailValueDescriptor(result)).toBe(true);
   });
+
+  it('parses a 16x16 puzzle whose high values are encoded as letters (size=4 boundary)', () => {
+    // 16x16 board: 256 cells, values 0..16 encoded in radix 17 (0-9 + a-g).
+    // 'g' is the highest value (16) and is exactly the boundary that a fixed
+    // radix of 10 would fail to parse, producing a Fixed cell with NaN.
+    const SIZE_4_CELL_COUNT = 4 ** 4;
+    const boardChars = new Array<string>(SIZE_4_CELL_COUNT).fill('0');
+    // First cell holds the maximum value (16 => 'g'), the rest stay empty.
+    boardChars[0] = 'g';
+    const result = loadField(boardChars.join(''));
+
+    expect(isSyncedValueDescriptor(result)).toBe(true);
+
+    if (!isSyncedValueDescriptor(result)) {
+      return;
+    }
+
+    const field = result.value;
+    expect(field.size).toBe(4);
+    expect(field.cells).toHaveLength(SIZE_4_CELL_COUNT);
+
+    const MAX_VALUE = 16;
+    expect(field.cells[0].type).toBe(EFieldType.Fixed);
+    expect(field.cells[0].value).toBe(MAX_VALUE);
+    expect(field.cells[1].type).toBe(EFieldType.Guess);
+    expect(field.cells[1].value).toBeUndefined();
+  });
+
+  it('returns fail VD when a character cannot be parsed (never produces a Fixed NaN cell)', () => {
+    // 'z' is not a valid digit in radix 17 and must not become a Fixed NaN cell.
+    const SIZE_4_CELL_COUNT = 4 ** 4;
+    const boardChars = new Array<string>(SIZE_4_CELL_COUNT).fill('0');
+    boardChars[0] = 'z';
+    const result = loadField(boardChars.join(''));
+
+    expect(isFailValueDescriptor(result)).toBe(true);
+  });
 });
 
 describe('applyToolToFieldReducer', () => {

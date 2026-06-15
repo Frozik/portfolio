@@ -22,13 +22,19 @@ export function runCharter(canvas: HTMLCanvasElement): VoidFunction {
   let destroyed = false;
   let gpuCleanup: (() => void) | undefined;
 
-  void initCharter(canvas).then(cleanup => {
-    if (destroyed) {
-      cleanup();
-    } else {
-      gpuCleanup = cleanup;
+  void initCharter(canvas).then(
+    cleanup => {
+      if (destroyed) {
+        cleanup();
+      } else {
+        gpuCleanup = cleanup;
+      }
+    },
+    (error: unknown) => {
+      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU charts renderer init failure
+      console.error('Failed to initialize charts renderer', error);
     }
-  });
+  );
 
   return () => {
     destroyed = true;

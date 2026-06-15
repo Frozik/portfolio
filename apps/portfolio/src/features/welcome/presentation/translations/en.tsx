@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
+import { selectPluralForm } from '../../../../shared/i18n/plural';
+
 export interface IExperienceTranslation {
   readonly id: string;
   readonly start: Temporal.PlainDate;
@@ -37,6 +39,14 @@ export interface IContactLabels {
 }
 
 export const welcomeTranslationsEn = {
+  dateLocale: 'en-US',
+  duration: {
+    lessThanAMonth: 'less than a month',
+    years: (value: number) =>
+      `${value} ${selectPluralForm('en', value, { one: 'year', other: 'years' })}`,
+    months: (value: number) =>
+      `${value} ${selectPluralForm('en', value, { one: 'month', other: 'months' })}`,
+  },
   hero: {
     remote: 'Remote · worldwide',
     utc: 'UTC+3',

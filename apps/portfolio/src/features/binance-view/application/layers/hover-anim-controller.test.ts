@@ -46,8 +46,7 @@ describe('tickHoverAnim — pre-enter delay', () => {
 
   test('just past the enter delay: scale starts moving toward HOVER_SCALE_FACTOR', () => {
     const stateAfterEnter = startEnterTransition(INITIAL_HOVER_STATE, BUCKET_KEY_A, 0);
-    // 1 ms past the delay window; transitionStartMs was set to nowMs=0,
-    // so progress at t=81 ms is 81/120 ≈ 0.675 → eased ≈ 0.965 → scale grows.
+    // 1 ms past the delay: progress is 1/HOVER_ENTER_MS, so scale has only just lifted off 1.
     const sample = tickHoverAnim(stateAfterEnter, HOVER_ENTER_DELAY_MS + 1);
     expect(sample.activeBucketKey).toBe(BUCKET_KEY_A);
     expect(sample.scale).toBeGreaterThan(1);
@@ -117,6 +116,9 @@ describe('rapid toggle', () => {
     const enterB = startEnterTransition(enterA, BUCKET_KEY_B, 50);
     expect(enterB.activeBucketKey).toBe(BUCKET_KEY_B);
     expect(enterB.targetScale).toBe(HOVER_SCALE_FACTOR);
-    expect(enterB.transitionStartMs).toBe(50);
+    // Animation clock is anchored after the intent-delay so the full
+    // enter duration plays once the delay elapses.
+    expect(enterB.transitionStartMs).toBe(50 + HOVER_ENTER_DELAY_MS);
+    expect(enterB.enterDelayUntilMs).toBe(50 + HOVER_ENTER_DELAY_MS);
   });
 });

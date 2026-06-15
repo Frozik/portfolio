@@ -73,13 +73,17 @@ export function startEnterTransition(
 
   const { scale: currentScale } = tickHoverAnim(prev, nowMs);
 
+  const enterDelayUntilMs = nowMs + HOVER_ENTER_DELAY_MS;
+
   return {
     activeBucketKey: bucketKey,
     startScale: currentScale,
     targetScale: HOVER_SCALE_FACTOR,
-    transitionStartMs: nowMs,
+    // Anchor the clock after the intent-delay (not at `nowMs`) — anchoring earlier
+    // let progress advance during the delay, showing only the eased curve's tail.
+    transitionStartMs: enterDelayUntilMs,
     transitionDurMs: HOVER_ENTER_MS,
-    enterDelayUntilMs: nowMs + HOVER_ENTER_DELAY_MS,
+    enterDelayUntilMs,
   };
 }
 

@@ -66,9 +66,6 @@ function extractPollInputs(report: RTCStatsReport): IRawPollInputs {
       if (!isNil(entry.packetsSent)) {
         outboundPacketsSent = entry.packetsSent;
       }
-      if (!isNil(entry.availableOutgoingBitrate)) {
-        availableOutgoingBitrate = entry.availableOutgoingBitrate;
-      }
       return;
     }
 
@@ -86,6 +83,10 @@ function extractPollInputs(report: RTCStatsReport): IRawPollInputs {
       const isSelected = entry.nominated === true && entry.state === 'succeeded';
       if (isSelected && !isNil(entry.currentRoundTripTime)) {
         rttSeconds = entry.currentRoundTripTime;
+      }
+      // `availableOutgoingBitrate` lives on candidate-pair, not outbound-rtp.
+      if (isSelected && !isNil(entry.availableOutgoingBitrate)) {
+        availableOutgoingBitrate = entry.availableOutgoingBitrate;
       }
       return;
     }
@@ -147,14 +148,15 @@ async function applyTier(sender: RTCRtpSender, tier: TQualityTier): Promise<void
  * outbound video sender.
  *
  * Stats extraction:
- *  - `outbound-rtp` (kind: video) supplies `packetsSent` cumulative
- *    counter and Chrome's `availableOutgoingBitrate` estimate.
+ *  - `outbound-rtp` (kind: video) supplies the `packetsSent` cumulative
+ *    counter.
  *  - `remote-inbound-rtp` (kind: video) — paired report from the remote
  *    peer — supplies `packetsLost` cumulative counter and a per-stream
  *    `roundTripTime`.
  *  - `candidate-pair` with `nominated: true, state: 'succeeded'`
  *    supplies `currentRoundTripTime` as a fallback RTT source for the
- *    first polls before remote-inbound arrives.
+ *    first polls before remote-inbound arrives, plus Chrome's
+ *    `availableOutgoingBitrate` bandwidth estimate.
  *
  * Packet loss is a fraction over the last poll window, derived from
  * deltas of cumulative counters; the first poll always yields `null`

@@ -1,11 +1,10 @@
-import { nowEpochMs } from '@frozik/utils/date/now';
 import type { Milliseconds } from '@frozik/utils/date/types';
 import type { Observable } from 'rxjs';
-import { concat, defer, from, of, throwError } from 'rxjs';
-import { finalize, map, retry, tap } from 'rxjs/operators';
+import { concat, defer, of, throwError } from 'rxjs';
+import { map, retry } from 'rxjs/operators';
 
 import { aggregateSnapshotByBin } from '../domain/aggregate-snapshot';
-import type { IOrderbookSnapshot, IQuantizedSnapshot, UnixTimeMs } from '../domain/types';
+import type { IOrderbookSnapshot, IQuantizedSnapshot } from '../domain/types';
 
 import { awaitReconnectReady } from './await-reconnect-ready';
 import type { IRawOrderBookUpdate } from './binance-raw.types';
@@ -18,32 +17,6 @@ import { webSocketWithOpenTimeout } from './ws-open-timeout';
 
 const DEFAULT_RECONNECT_DELAY_MS: Milliseconds = 1000 as Milliseconds;
 const DEFAULT_MAX_SEQUENCE_GAP_RETRIES = 5;
-
-function generateInterpolatedSnapshots(
-  lastSnapshot: IOrderbookSnapshotData,
-  disconnectTimeMs: UnixTimeMs,
-  reconnectTimeMs: UnixTimeMs,
-  updateIntervalMs: Milliseconds
-): IOrderbookSnapshotData[] {
-  const snapshots: IOrderbookSnapshotData[] = [];
-  const duration = reconnectTimeMs - disconnectTimeMs;
-
-  if (duration <= 0) {
-    return snapshots;
-  }
-
-  const count = Math.ceil(duration / updateIntervalMs);
-
-  for (let index = 1; index <= count; index++) {
-    const interpolatedTimeMs = (disconnectTimeMs + index * updateIntervalMs) as UnixTimeMs;
-    if (interpolatedTimeMs >= reconnectTimeMs) {
-      break;
-    }
-    snapshots.push({ ...lastSnapshot, eventTimeMs: interpolatedTimeMs });
-  }
-
-  return snapshots;
-}
 
 function createOrderBookStream$(params: {
   streamHost: string;
@@ -115,19 +88,7 @@ export function liveOrderBook$(params: ILiveOrderBookParams): Observable<IQuanti
   const restUrl = `${apiHost}/depth?symbol=${instrument.toUpperCase()}&limit=${restSnapshotLimit}`;
   const effectiveReconnectDelayMs = reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS;
 
-  let lastSnapshot: IOrderbookSnapshotData | null = null;
-  let disconnectTimeMs: UnixTimeMs | null = null;
-  let isFirstConnection = true;
-
   return defer(() => {
-    let interpolatedSnapshots: IOrderbookSnapshotData[] = [];
-    let savedDisconnectTimeMs: UnixTimeMs | null = null;
-
-    if (lastSnapshot !== null && disconnectTimeMs !== null && !isFirstConnection) {
-      savedDisconnectTimeMs = disconnectTimeMs;
-      disconnectTimeMs = null;
-    }
-
     const stream$ = createOrderBookStream$({
       streamHost,
       instrument,
@@ -136,27 +97,7 @@ export function liveOrderBook$(params: ILiveOrderBookParams): Observable<IQuanti
       restUrl,
       onSequenceGap,
       maxSequenceGapRetries,
-    }).pipe(
-      tap(snapshot => {
-        if (savedDisconnectTimeMs !== null && lastSnapshot !== null) {
-          const reconnectTimeMs = nowEpochMs() as UnixTimeMs;
-          interpolatedSnapshots = generateInterpolatedSnapshots(
-            lastSnapshot,
-            savedDisconnectTimeMs,
-            reconnectTimeMs,
-            updateSpeedMs
-          );
-          savedDisconnectTimeMs = null;
-        }
-        lastSnapshot = snapshot;
-        isFirstConnection = false;
-      }),
-      finalize(() => {
-        if (lastSnapshot !== null && !isFirstConnection) {
-          disconnectTimeMs = nowEpochMs() as UnixTimeMs;
-        }
-      })
-    );
+    });
 
     // RxJS `retry` reacts to `error`, not to `complete` — but browsers
     // routinely deliver a network drop as a *clean* WebSocket close,
@@ -164,10 +105,6 @@ export function liveOrderBook$(params: ILiveOrderBookParams): Observable<IQuanti
     // Append a tail observable that errors synchronously on subscribe,
     // so once `stream$` completes we force-trigger the outer retry.
     const closedTrigger$ = defer(() => throwError(() => new OrderBookStreamClosedError()));
-
-    if (interpolatedSnapshots.length > 0) {
-      return concat(from(interpolatedSnapshots), stream$, closedTrigger$);
-    }
 
     return concat(stream$, closedTrigger$);
   }).pipe(

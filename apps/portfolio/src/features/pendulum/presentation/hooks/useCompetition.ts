@@ -71,7 +71,7 @@ export function useCompetition(): ICompetition | undefined {
                 playerWithScore.player.type === EPlayerType.Robot
             )
             .map(async ({ player, score }) => {
-              const modelUrl = `indexeddb://${competition.start}-player-${player.name}}`;
+              const modelUrl = `indexeddb://${competition.start}-player-${player.name}`;
 
               await player.save(modelUrl);
 

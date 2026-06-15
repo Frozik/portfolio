@@ -39,6 +39,9 @@ export class BinanceViewStore {
   private midPriceStoreInternal: MidPriceStreamStore | undefined = undefined;
   private tradesStoreInternal: TradesStreamStore | undefined = undefined;
 
+  /** Set when {@link attachCanvas} rejects before any orderbook sub-store exists, so {@link connection} reports `'unsupported'` instead of hanging on `'connecting'`. */
+  private attachFailed = false;
+
   /** Currently selected instrument symbol (observable — drives the UI selector). */
   instrument: string = DEFAULT_INSTRUMENT.symbol;
 
@@ -89,7 +92,15 @@ export class BinanceViewStore {
   }
 
   get connection(): ConnectionState {
+    if (this.attachFailed && this.orderbookStoreInternal === undefined) {
+      return 'unsupported';
+    }
     return this.orderbookStoreInternal?.connection ?? 'idle';
+  }
+
+  markUnsupported(): void {
+    this.attachFailed = true;
+    this.orderbookStoreInternal?.markUnsupported();
   }
 
   get snapshotsReceived(): number {
@@ -218,7 +229,18 @@ export class BinanceViewStore {
       gate: orderbookStore,
     });
 
-    const ok = await state.init({ taskManager, dataController });
+    // `BinanceChartRenderer.create` can reject outright (e.g. Safari's Metal back-end
+    // rejects pipeline creation rather than returning null); treat it like `ok === false`
+    // so the failure surfaces as `'unsupported'` instead of escaping as an unhandled rejection.
+    let ok = false;
+    try {
+      ok = await state.init({ taskManager, dataController });
+    } catch (error) {
+      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU init failure
+      console.warn('binance-view: WebGPU renderer init failed, marking unsupported', error);
+      ok = false;
+    }
+
     if (!ok) {
       orderbookStore.markUnsupported();
       // Promote into the public slot so the status overlay reflects
@@ -319,6 +341,7 @@ export class BinanceViewStore {
 
   dispose(): void {
     this.attachToken++;
+    this.attachFailed = false;
     if (this.pageHideHandler !== undefined) {
       window.removeEventListener('pagehide', this.pageHideHandler);
       this.pageHideHandler = undefined;

@@ -190,7 +190,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
         config.chartType,
         config.colorFn,
         config.sizeFn,
-        () => renderer.debugMode,
         () => renderer.instantLoad
       );
       this.dataPipelines.push(dataPipeline);

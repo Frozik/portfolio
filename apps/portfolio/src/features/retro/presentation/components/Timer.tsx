@@ -1,6 +1,7 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Milliseconds } from '@frozik/utils/date/types';
+import { isNil } from 'lodash-es';
 import { Minus, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
@@ -157,8 +158,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
         <button
           type="button"
           onClick={handleStart}
-          aria-label={timer?.pausedRemainingMs !== null ? t.timer.resume : t.timer.start}
-          title={timer?.pausedRemainingMs !== null ? t.timer.resume : t.timer.start}
+          aria-label={!isNil(timer?.pausedRemainingMs) ? t.timer.resume : t.timer.start}
+          title={!isNil(timer?.pausedRemainingMs) ? t.timer.resume : t.timer.start}
           className={cn(ICON_BUTTON_CLASSES, 'text-landing-green hover:text-landing-green')}
         >
           <Play size={12} />

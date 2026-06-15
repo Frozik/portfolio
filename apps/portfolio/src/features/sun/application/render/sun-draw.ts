@@ -12,13 +12,19 @@ export function runSun(canvas: HTMLCanvasElement): VoidFunction {
 
   const camera = createOrbitalCameraController(canvas);
 
-  void initSun(canvas, camera).then(cleanup => {
-    if (destroyed) {
-      cleanup();
-    } else {
-      gpuCleanup = cleanup;
+  void initSun(canvas, camera).then(
+    cleanup => {
+      if (destroyed) {
+        cleanup();
+      } else {
+        gpuCleanup = cleanup;
+      }
+    },
+    (error: unknown) => {
+      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU sun renderer init failure
+      console.error('Failed to initialize sun renderer', error);
     }
-  });
+  );
 
   return () => {
     destroyed = true;

@@ -43,19 +43,23 @@ export function useFrameTicker(
 
         updateInProgress = true;
 
-        if (Array.isArray(newDeltaTime)) {
-          for (const dt of newDeltaTime) {
+        try {
+          if (Array.isArray(newDeltaTime)) {
+            for (const dt of newDeltaTime) {
+              for (const handler of subscriptions) {
+                await handler(dt);
+              }
+            }
+          } else {
             for (const handler of subscriptions) {
-              await handler(dt);
+              await handler(newDeltaTime);
             }
           }
-        } else {
-          for (const handler of subscriptions) {
-            await handler(newDeltaTime);
-          }
+        } finally {
+          // Release even if a handler throws — otherwise updateInProgress stays
+          // true forever and the simulation silently freezes.
+          updateInProgress = false;
         }
-
-        updateInProgress = false;
       },
       setFps(value: number): void {
         fps = value;

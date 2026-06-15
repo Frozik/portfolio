@@ -1,6 +1,8 @@
 import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
+import { nowEpochMs } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
+import { now } from 'mobx-utils';
 import type { IOidcProvider } from './oidc/IOidcProvider';
 import type { IOidcProfile, IOidcSignInResult } from './oidc/types';
 
@@ -38,6 +40,8 @@ const PROACTIVE_REFRESH_LEAD_MS = 60_000;
 
 /** Lower bound on the proactive refresh delay — never schedule for the past. */
 const MIN_REFRESH_DELAY_MS = 1_000;
+
+const SIGNED_IN_CLOCK_INTERVAL_MS = 1_000;
 
 interface IStoredSession {
   readonly provider: TIdentityProvider;
@@ -84,7 +88,10 @@ export class AuthSession {
   }
 
   public get isSignedIn(): boolean {
-    return this.token !== null && this.expiresAtMs !== null && this.expiresAtMs > Date.now();
+    // `now()` (mobx-utils) ticks reactively so this computed re-evaluates as time
+    // passes; the instant itself comes from the Temporal-based `nowEpochMs()`.
+    now(SIGNED_IN_CLOCK_INTERVAL_MS);
+    return this.token !== null && this.expiresAtMs !== null && this.expiresAtMs > nowEpochMs();
   }
 
   public get currentProvider(): TIdentityProvider | null {
@@ -267,7 +274,7 @@ export class AuthSession {
       return;
     }
     const delay = Math.max(
-      this.expiresAtMs - Date.now() - PROACTIVE_REFRESH_LEAD_MS,
+      this.expiresAtMs - nowEpochMs() - PROACTIVE_REFRESH_LEAD_MS,
       MIN_REFRESH_DELAY_MS
     );
     this.refreshTimer = setTimeout(() => {

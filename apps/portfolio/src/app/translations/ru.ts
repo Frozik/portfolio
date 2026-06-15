@@ -35,8 +35,8 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     binance: 'Стакан Binance',
     stereometry: 'Стереометрия',
     controls: 'Элементы управления',
-    retro: 'Ретро',
-    conf: 'Конф',
+    retro: 'Ретроспектива',
+    conf: 'Конференция',
   },
   errorPage: {
     statusMap: {

@@ -239,6 +239,11 @@ export const pdfStyles = StyleSheet.create({
     paddingLeft: 0,
     marginBottom: 1,
   },
+  descNestedList: {
+    flexDirection: 'column',
+    marginTop: 1,
+    paddingLeft: BULLET_INDENT_PT,
+  },
   descBullet: {
     width: BULLET_INDENT_PT,
     color: COLOR_TEXT_FAINT,

@@ -165,6 +165,8 @@ export class RetroLobbyStore {
       knownParticipantIds,
     };
 
+    await repo.upsert(entry);
+
     if (
       existing !== undefined &&
       existing.name === entry.name &&
@@ -175,13 +177,12 @@ export class RetroLobbyStore {
       existing.phase === entry.phase &&
       areClientIdListsEqual(existing.knownParticipantIds, entry.knownParticipantIds)
     ) {
-      // Skip write when only lastVisitedAt would change — still touch it so
-      // the recent-rooms ordering updates.
-      await repo.upsert(entry);
+      // Only lastVisitedAt changed — the row is already persisted above so the
+      // recent-rooms ordering updates, but the visible data is unchanged, so
+      // skip the observable reload.
       return;
     }
 
-    await repo.upsert(entry);
     await this.loadRooms();
   }
 

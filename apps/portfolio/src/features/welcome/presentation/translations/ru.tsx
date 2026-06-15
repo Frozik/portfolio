@@ -1,29 +1,22 @@
 import { Temporal } from 'temporal-polyfill';
 
+import { selectPluralForm } from '../../../../shared/i18n/plural';
 import type { welcomeTranslationsEn } from './en';
 
-const RUSSIAN_PLURAL_MOD_100_BOUNDARY = 100;
-const RUSSIAN_PLURAL_MOD_10_BOUNDARY = 10;
-const RUSSIAN_PLURAL_TEEN_START = 11;
-const RUSSIAN_PLURAL_TEEN_END = 19;
-const RUSSIAN_PLURAL_FEW_END = 4;
+const RUSSIAN_YEAR_FORMS = { one: 'год', few: 'года', many: 'лет' } as const;
 
 function pluralizeRussianYears(value: number): string {
-  const mod100 = value % RUSSIAN_PLURAL_MOD_100_BOUNDARY;
-  const mod10 = value % RUSSIAN_PLURAL_MOD_10_BOUNDARY;
-  if (mod100 >= RUSSIAN_PLURAL_TEEN_START && mod100 <= RUSSIAN_PLURAL_TEEN_END) {
-    return 'лет';
-  }
-  if (mod10 === 1) {
-    return 'год';
-  }
-  if (mod10 >= 2 && mod10 <= RUSSIAN_PLURAL_FEW_END) {
-    return 'года';
-  }
-  return 'лет';
+  return selectPluralForm('ru', value, RUSSIAN_YEAR_FORMS);
 }
 
 export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
+  dateLocale: 'ru-RU',
+  duration: {
+    lessThanAMonth: 'менее месяца',
+    years: (value: number) => `${value} ${selectPluralForm('ru', value, RUSSIAN_YEAR_FORMS)}`,
+    months: (value: number) =>
+      `${value} ${selectPluralForm('ru', value, { one: 'месяц', few: 'месяца', many: 'месяцев' })}`,
+  },
   hero: {
     remote: 'Удалённо · по всему миру',
     utc: 'UTC+3',
@@ -625,7 +618,7 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
       },
       retro: {
         meta: 'Коллаборация · P2P',
-        title: 'Retro',
+        title: 'Ретроспектива',
         description:
           'Доска ретроспективы в реальном времени. Участники подключаются по WebRTC peer-to-peer — карточки, голосование, таймер и фазы синхронизируются без центрального сервера.',
         status: 'p2p',

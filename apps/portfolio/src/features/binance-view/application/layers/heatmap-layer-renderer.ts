@@ -70,9 +70,10 @@ export class HeatmapLayerRenderer implements ILayerRenderer {
   private readonly device: GPUDevice;
   private readonly pipeline: GPURenderPipeline;
   private readonly registry: HeatmapBlockRegistry;
+  private readonly bindGroupLayout: GPUBindGroupLayout;
   private readonly textureRowManager: TextureRowManager;
   private readonly resources: IHeatmapLayerResources;
-  private readonly bindGroup: GPUBindGroup;
+  private bindGroup: GPUBindGroup;
 
   private frameState: IHeatmapFrameState | null = null;
   private totalInstances = 0;
@@ -81,6 +82,10 @@ export class HeatmapLayerRenderer implements ILayerRenderer {
     this.device = params.device;
     this.pipeline = params.pipeline;
     this.registry = params.registry;
+    this.bindGroupLayout = params.bindGroupLayout;
+
+    // Resources must exist before the manager: its grow callback invokes `rebuildBindGroup`, which reads them.
+    this.resources = createHeatmapResources(params.device, MAX_GPU_BLOCKS);
 
     this.textureRowManager = new TextureRowManager({
       device: params.device,
@@ -93,15 +98,24 @@ export class HeatmapLayerRenderer implements ILayerRenderer {
           item.textureRowIndex = undefined;
         }
       },
+      // On grow the data texture is recreated; rebind so draws don't reference the destroyed texture.
+      onTextureRecreated: () => this.rebuildBindGroup(),
     });
 
-    this.resources = createHeatmapResources(params.device, MAX_GPU_BLOCKS);
-    this.bindGroup = createHeatmapBindGroup(
-      params.device,
-      params.bindGroupLayout,
+    this.bindGroup = this.createBindGroup();
+  }
+
+  private createBindGroup(): GPUBindGroup {
+    return createHeatmapBindGroup(
+      this.device,
+      this.bindGroupLayout,
       this.resources,
       this.textureRowManager.createView()
     );
+  }
+
+  private rebuildBindGroup(): void {
+    this.bindGroup = this.createBindGroup();
   }
 
   /**

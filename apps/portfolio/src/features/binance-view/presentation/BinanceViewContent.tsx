@@ -208,12 +208,24 @@ export const BinanceViewContent = observer(() => {
 
     let active = true;
 
-    void store.attachCanvas(canvas).then(() => {
+    const attachAndStream = async (): Promise<void> => {
+      try {
+        await store.attachCanvas(canvas);
+      } catch (error) {
+        // Route a rejected `attachCanvas` to the `'unsupported'` overlay rather than letting
+        // an unhandled rejection leave the status badge stuck on `'connecting'`.
+        // biome-ignore lint/suspicious/noConsole: surfaces canvas attach failure
+        console.warn('binance-view: attachCanvas failed', error);
+        store.markUnsupported();
+        return;
+      }
       if (!active) {
         return;
       }
       store.startStream();
-    });
+    };
+
+    void attachAndStream();
 
     return () => {
       active = false;

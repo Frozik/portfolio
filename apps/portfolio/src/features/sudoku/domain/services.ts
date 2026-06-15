@@ -11,6 +11,14 @@ import { isEmpty, isNil } from 'lodash-es';
 import type { IField, IFieldCell, TTool } from './types';
 import { ECellStatus, EFieldType, EToolType } from './types';
 
+/**
+ * A field char encodes a value in [0, size²], so the radix must be size² + 1
+ * (10 for 9×9, 17 for 16×16) — a fixed radix of 10 makes 16×16's a–g parse to NaN.
+ */
+function getFieldRadix(size: number): number {
+  return size ** 2 + 1;
+}
+
 export function loadField(fieldData: string): ValueDescriptor<IField> {
   const size = Math.round(fieldData.length ** 0.25);
 
@@ -33,8 +41,13 @@ export function loadField(fieldData: string): ValueDescriptor<IField> {
   }
 
   try {
+    const radix = getFieldRadix(size);
     const cells = Array.from(fieldData).map(cellValue => {
-      const value = Number.parseInt(cellValue.replace(/[.\-*]/g, '0'), Math.max(10, size));
+      const value = Number.parseInt(cellValue.replace(/[.\-*]/g, '0'), radix);
+
+      if (Number.isNaN(value)) {
+        throw new Error(`Field contains an unparseable character: "${cellValue}"`);
+      }
 
       return value === 0
         ? {
@@ -106,7 +119,7 @@ export function applyToolToFieldReducer(
   if (tool.type === EToolType.Pen) {
     if (cell.value !== tool.value) {
       cell.value = tool.value;
-      cell.notes = cell.notes = cell.notes.filter(note => note !== tool.value);
+      cell.notes = cell.notes.filter(note => note !== tool.value);
 
       getBoundCells(field, row, column).forEach(({ row, column, cell }) => {
         cells[getIndex(row, column, field.size)] = {

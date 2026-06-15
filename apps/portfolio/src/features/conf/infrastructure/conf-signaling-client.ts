@@ -19,6 +19,8 @@ export interface IConfSignalingClientParams {
   readonly topic: string;
   /** Participant id of the local client; used to drop self-echoes. */
   readonly self: ParticipantId;
+  /** Per-instance nonce; distinguishes two tabs of one browser (which share `self`). */
+  readonly selfSession: string;
 }
 
 type TMessageListener = (message: TConfSignalMessage) => void;
@@ -41,6 +43,8 @@ export interface IConfSignalingClient {
 interface IConfSignalEnvelope {
   readonly kind: 'conf-signal';
   readonly topic: string;
+  /** Sender's session nonce; absent on older peers (then treated as a different session). */
+  readonly fromSession?: string;
   readonly message: TConfSignalMessage;
 }
 
@@ -52,6 +56,7 @@ function isConfSignalEnvelope(value: unknown): value is IConfSignalEnvelope {
   return (
     envelope.kind === 'conf-signal' &&
     typeof envelope.topic === 'string' &&
+    (envelope.fromSession === undefined || typeof envelope.fromSession === 'string') &&
     typeof envelope.message === 'object' &&
     envelope.message !== null
   );
@@ -70,15 +75,13 @@ function isConfSignalEnvelope(value: unknown): value is IConfSignalEnvelope {
  *  - Mirrors the connection state observable so existing callers
  *    (and any future UI hooks) keep the same shape they had on
  *    the WebSocket implementation.
- *  - Drops messages whose `topic` does not match `params.topic`
- *    (cross-room safety) or whose `from` matches `self` (the
- *    server already filters self-echoes — this is belt-and-braces
- *    for proxies that may loop).
+ *  - Drops messages whose `topic` differs (cross-room) or that are
+ *    true self-echoes (same `from` AND same session).
  */
 export function createConfSignalingClient(
   params: IConfSignalingClientParams
 ): IConfSignalingClient {
-  const { client, topic, self } = params;
+  const { client, topic, self, selfSession } = params;
   const messageListeners = new Set<TMessageListener>();
   const stateListeners = new Set<TStateListener>();
   let state: TConfSignalingConnectionState = client.state === 'open' ? 'open' : 'connecting';
@@ -105,7 +108,12 @@ export function createConfSignalingClient(
   const pendingPublishes: TConfSignalMessage[] = [];
 
   function sendNow(message: TConfSignalMessage): void {
-    const envelope: IConfSignalEnvelope = { kind: 'conf-signal', topic, message };
+    const envelope: IConfSignalEnvelope = {
+      kind: 'conf-signal',
+      topic,
+      fromSession: selfSession,
+      message,
+    };
     client.signalPublish(envelope).catch(() => undefined);
   }
 
@@ -146,7 +154,8 @@ export function createConfSignalingClient(
     if (message === null) {
       return;
     }
-    if (message.from === self) {
+    // Self-echo only when both id and session match — two tabs share `self` but not `selfSession`.
+    if (message.from === self && envelope.fromSession === selfSession) {
       return;
     }
     for (const listener of messageListeners) {

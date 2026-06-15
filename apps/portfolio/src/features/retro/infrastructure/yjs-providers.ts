@@ -130,6 +130,9 @@ export function createYjsRoomProviders(params: ICreateYjsRoomProvidersParams): I
     destroy(): void {
       isDestroyed = true;
       persistence.off('synced', handleSynced);
+      // Settle `whenSynced()` so a pending `initialize()` doesn't hang forever
+      // when we destroy before the provider reaches `synced`.
+      syncedResolve?.();
       webrtc.destroy();
       persistence.destroy();
       doc.destroy();

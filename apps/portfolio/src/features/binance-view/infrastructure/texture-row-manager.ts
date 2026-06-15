@@ -14,6 +14,8 @@ export interface ITextureRowManagerParams {
   readonly maxBlocks?: number;
   /** Called when a block is evicted from GPU so the owner can mark it in RBush. */
   readonly onEvict?: (blockId: UnixTimeMs) => void;
+  /** Called after a grow recreates the backing texture; the owner must rebuild any bind group via {@link TextureRowManager.createView}. */
+  readonly onTextureRecreated?: () => void;
 }
 
 /**
@@ -32,6 +34,7 @@ export class TextureRowManager {
   private readonly layout: ITextureLayoutConfig;
   private readonly maxBlocks: number;
   private readonly onEvict: ((blockId: UnixTimeMs) => void) | undefined;
+  private readonly onTextureRecreated: (() => void) | undefined;
 
   private texture: GPUTexture;
   private capacityBlocks: number;
@@ -46,6 +49,7 @@ export class TextureRowManager {
     this.layout = params.layout;
     this.maxBlocks = params.maxBlocks ?? MAX_GPU_BLOCKS;
     this.onEvict = params.onEvict;
+    this.onTextureRecreated = params.onTextureRecreated;
     this.capacityBlocks = params.initialBlocks ?? INITIAL_GPU_BLOCKS;
 
     this.texture = this.device.createTexture({
@@ -229,5 +233,7 @@ export class TextureRowManager {
     this.texture.destroy();
     this.texture = newTexture;
     this.capacityBlocks = newCapacityBlocks;
+
+    this.onTextureRecreated?.();
   }
 }

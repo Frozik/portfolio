@@ -1,5 +1,6 @@
 import type { LayersModel, Tensor } from '@tensorflow/tfjs';
 import {
+  io,
   layers,
   loadLayersModel,
   randomNormal,
@@ -231,10 +232,7 @@ async function cloneModel(model: LayersModel): Promise<LayersModel> {
         resolve(modelArtifact);
 
         return {
-          modelArtifactsInfo: {
-            dateSaved: new Date(),
-            modelTopologyType: 'JSON',
-          },
+          modelArtifactsInfo: io.getModelArtifactsInfoForJSON(modelArtifact),
         };
       },
     })

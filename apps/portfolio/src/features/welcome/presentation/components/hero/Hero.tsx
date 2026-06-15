@@ -1,19 +1,11 @@
 import { memo, useMemo } from 'react';
-import type { Temporal } from 'temporal-polyfill';
 
-import { getYearsOfExperience } from '../../../utils';
-import type { IExperienceTranslation, IHeroStatTranslation } from '../../translations';
+import { findEarliestStart, getYearsOfExperience } from '../../../utils';
+import type { IHeroStatTranslation } from '../../translations';
 import { welcomeT } from '../../translations';
 import { HeroMetaBar } from './HeroMetaBar';
 import { HeroOrderbook } from './HeroOrderbook';
 import { HeroStats } from './HeroStats';
-
-function findEarliestStart(entries: readonly IExperienceTranslation[]): Temporal.PlainDate {
-  return entries.reduce<Temporal.PlainDate>(
-    (earliest, entry) => (entry.start.since(earliest).sign < 0 ? entry.start : earliest),
-    entries[0].start
-  );
-}
 
 const HeroComponent = () => {
   const { yearsOfExperience, stats } = useMemo(() => {
