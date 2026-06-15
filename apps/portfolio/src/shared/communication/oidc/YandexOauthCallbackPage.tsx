@@ -37,6 +37,9 @@ export function YandexOauthCallbackPage(): ReactElement {
     if (error.length > 0) {
       payload.error = error;
     }
+    // Drop the implicit-flow `access_token` from the URL before anything else, so
+    // it doesn't linger in the popup's history/address bar (XSS-reachable).
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     try {
       // Hard-pinned target origin — never `'*'`. The opener double-
       // checks `event.origin === window.location.origin` for symmetry.

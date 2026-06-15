@@ -41,6 +41,14 @@ const PROACTIVE_REFRESH_LEAD_MS = 60_000;
 /** Lower bound on the proactive refresh delay — never schedule for the past. */
 const MIN_REFRESH_DELAY_MS = 1_000;
 
+/**
+ * Upper bound on a `setTimeout` delay: the 32-bit signed-int ceiling. Larger
+ * delays overflow and fire immediately — which turned a long-lived (~year)
+ * Yandex token into a tight refresh loop. Cap the schedule here; it simply
+ * re-arms when this fires.
+ */
+const MAX_SETTIMEOUT_DELAY_MS = 2_147_483_647;
+
 const SIGNED_IN_CLOCK_INTERVAL_MS = 1_000;
 
 interface IStoredSession {
@@ -70,9 +78,16 @@ export class AuthSession {
   private providers: TRefreshLookup | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private inFlightRefresh: Promise<string | null> | null = null;
+  // Bumped on every sign-out. An in-flight silent refresh captures the value at
+  // start and only adopts its result if it's unchanged — otherwise a refresh
+  // that resolves just after logout would silently sign the user back in.
+  private refreshGeneration = 0;
 
   public constructor() {
-    makeAutoObservable<AuthSession, 'providers' | 'refreshTimer' | 'inFlightRefresh'>(
+    makeAutoObservable<
+      AuthSession,
+      'providers' | 'refreshTimer' | 'inFlightRefresh' | 'refreshGeneration'
+    >(
       this,
       {
         // Internal lifecycle plumbing — not observable UI state. Marking
@@ -81,6 +96,7 @@ export class AuthSession {
         providers: false,
         refreshTimer: false,
         inFlightRefresh: false,
+        refreshGeneration: false,
       },
       { autoBind: true }
     );
@@ -137,6 +153,7 @@ export class AuthSession {
       return Promise.resolve(null);
     }
     const loginHint = this.profile?.email;
+    const generation = this.refreshGeneration;
     const promise = (async () => {
       let nextResult: IOidcSignInResult | null;
       try {
@@ -144,7 +161,9 @@ export class AuthSession {
       } catch {
         nextResult = null;
       }
-      if (nextResult !== null) {
+      // Discard a refresh that resolved after a sign-out — adopting it would
+      // silently sign the user back in (and restart the proactive-refresh loop).
+      if (nextResult !== null && this.refreshGeneration === generation) {
         this.adoptResult(provider.id, nextResult);
         return nextResult.token;
       }
@@ -181,6 +200,9 @@ export class AuthSession {
   }
 
   public signOut(): void {
+    // Invalidate any in-flight silent refresh so its result is discarded
+    // instead of re-adopting the session after this sign-out.
+    this.refreshGeneration += 1;
     // Forward sign-out to every registered provider so their internal
     // caches (Yandex' OAuth access_token in particular) get cleared.
     if (this.providers !== null) {
@@ -273,9 +295,10 @@ export class AuthSession {
     if (this.providers === null || this.expiresAtMs === null) {
       return;
     }
-    const delay = Math.max(
-      this.expiresAtMs - nowEpochMs() - PROACTIVE_REFRESH_LEAD_MS,
-      MIN_REFRESH_DELAY_MS
+    const expiresInMs = this.expiresAtMs - nowEpochMs();
+    const delay = Math.min(
+      Math.max(expiresInMs - PROACTIVE_REFRESH_LEAD_MS, MIN_REFRESH_DELAY_MS),
+      MAX_SETTIMEOUT_DELAY_MS
     );
     this.refreshTimer = setTimeout(() => {
       this.refreshTimer = null;
