@@ -134,9 +134,7 @@ export class RetroLobbyStore {
   async upsertJoinedRoom(snapshot: IJoinedRoomSnapshot): Promise<void> {
     const repo = await this.repoPromise;
     const nowIso = Temporal.Now.instant().toString() as ISO;
-    const existing = (await repo.listRecent(Number.MAX_SAFE_INTEGER)).find(
-      entry => entry.roomId === snapshot.roomId
-    );
+    const existing = await repo.get(snapshot.roomId);
 
     const ownerClientId = existing?.ownerClientId ?? snapshot.facilitatorClientId;
 
@@ -168,7 +166,7 @@ export class RetroLobbyStore {
     await repo.upsert(entry);
 
     if (
-      existing !== undefined &&
+      existing !== null &&
       existing.name === entry.name &&
       existing.template === entry.template &&
       existing.createdAt === entry.createdAt &&

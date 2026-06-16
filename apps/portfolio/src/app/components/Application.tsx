@@ -2,6 +2,7 @@ import { lazy, memo, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { CommunicationProvider } from '../../shared/communication/CommunicationProvider';
 import { OverlayLoader } from '../../shared/components/OverlayLoader';
+import { TooltipProvider } from '../../shared/ui/Tooltip';
 import { ErrorBoundary } from './ErrorBoundary';
 import { InnerLayout } from './InnerLayout';
 import { LandingLayout } from './LandingLayout';
@@ -93,34 +94,36 @@ export const Application = memo(() => {
           yandexClientId={YANDEX_OAUTH_CLIENT_ID}
           baseUrl={COMMUNICATION_BASE_URL}
         >
-          <Suspense fallback={<OverlayLoader />}>
-            <Routes>
-              <Route element={<LandingLayout />}>
-                <Route index element={<Welcome />} />
-              </Route>
-              <Route element={<InnerRoot />}>
-                <Route path="pendulum" element={<Pendulum />} />
-                <Route path="sudoku/:puzzle?" element={<Sudoku />} />
-                <Route path="sun" element={<Sun />} />
-                <Route path="graphics" element={<Charts />} />
-                <Route path="timeseries" element={<Timeseries />} />
-                <Route path="binance" element={<BinanceView />} />
-                <Route path="stereometry" element={<StereometryPicker />} />
-                <Route path="stereometry/:puzzleId" element={<Stereometry />} />
-                <Route path="controls" element={<Controls />} />
-                <Route path="retro" element={<Retro />}>
-                  <Route index element={<Lobby />} />
-                  <Route path=":roomId" element={<Room />} />
+          <TooltipProvider>
+            <Suspense fallback={<OverlayLoader />}>
+              <Routes>
+                <Route element={<LandingLayout />}>
+                  <Route index element={<Welcome />} />
                 </Route>
-                <Route path="conf" element={<Conf />}>
-                  <Route index element={<ConfLobby />} />
-                  <Route path=":roomId" element={<ConfRoom />} />
+                <Route element={<InnerRoot />}>
+                  <Route path="pendulum" element={<Pendulum />} />
+                  <Route path="sudoku/:puzzle?" element={<Sudoku />} />
+                  <Route path="sun" element={<Sun />} />
+                  <Route path="graphics" element={<Charts />} />
+                  <Route path="timeseries" element={<Timeseries />} />
+                  <Route path="binance" element={<BinanceView />} />
+                  <Route path="stereometry" element={<StereometryPicker />} />
+                  <Route path="stereometry/:puzzleId" element={<Stereometry />} />
+                  <Route path="controls" element={<Controls />} />
+                  <Route path="retro" element={<Retro />}>
+                    <Route index element={<Lobby />} />
+                    <Route path=":roomId" element={<Room />} />
+                  </Route>
+                  <Route path="conf" element={<Conf />}>
+                    <Route index element={<ConfLobby />} />
+                    <Route path=":roomId" element={<ConfRoom />} />
+                  </Route>
                 </Route>
-              </Route>
-              <Route path="oauth/yandex/callback" element={<YandexOauthCallbackPage />} />
-              <Route path="*" element={<ErrorPage />} />
-            </Routes>
-          </Suspense>
+                <Route path="oauth/yandex/callback" element={<YandexOauthCallbackPage />} />
+                <Route path="*" element={<ErrorPage />} />
+              </Routes>
+            </Suspense>
+          </TooltipProvider>
         </CommunicationProvider>
       </ErrorBoundary>
     </BrowserRouter>

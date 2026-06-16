@@ -7,6 +7,16 @@ type TooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
 
 const DEFAULT_DELAY_MS = 200;
 
+/**
+ * Single Radix tooltip provider for the whole app. Mounted once near the app
+ * root (see Application) so every Tooltip shares one provider instead of
+ * spinning up its own — per-instance delays are still honoured because each
+ * Tooltip's Root overrides `delayDuration`.
+ */
+export const TooltipProvider = memo(({ children }: { children: ReactNode }) => (
+  <TooltipPrimitive.Provider delayDuration={DEFAULT_DELAY_MS}>{children}</TooltipPrimitive.Provider>
+));
+
 export const Tooltip = memo(
   ({
     title,
@@ -29,24 +39,26 @@ export const Tooltip = memo(
     /** Delay before the tooltip appears on hover, in milliseconds. */
     delayDuration?: number;
   }) => (
-    <TooltipPrimitive.Provider delayDuration={delayDuration}>
-      <TooltipPrimitive.Root open={open}>
-        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            side={placement}
-            sideOffset={4}
-            className={cn(
-              'z-50 rounded-md bg-surface-overlay px-3 py-1.5 text-sm text-text shadow-md',
-              'animate-in fade-in-0 zoom-in-95',
-              className
-            )}
-          >
-            {title}
-            <TooltipPrimitive.Arrow className="fill-surface-overlay" />
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
-    </TooltipPrimitive.Provider>
+    // The TooltipPrimitive.Provider lives once at the app root (see
+    // TooltipProvider in Application). `delayDuration` is set per-instance on
+    // Root, which overrides the provider's value — preserving the previous
+    // per-tooltip delay behaviour without a provider per instance.
+    <TooltipPrimitive.Root open={open} delayDuration={delayDuration}>
+      <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          side={placement}
+          sideOffset={4}
+          className={cn(
+            'z-50 rounded-md bg-surface-overlay px-3 py-1.5 text-sm text-text shadow-md',
+            'animate-in fade-in-0 zoom-in-95',
+            className
+          )}
+        >
+          {title}
+          <TooltipPrimitive.Arrow className="fill-surface-overlay" />
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   )
 );

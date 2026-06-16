@@ -70,23 +70,30 @@ interface IDBCompetitions extends DBSchema {
 }
 
 export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGenerations> {
-  const databaseChanged$ = new Subject<void>();
+  // Two independent invalidation signals, deliberately NOT merged:
+  // - `competitionsChanged$` refreshes the competitions LIST (a brand-new
+  //   competition's first generation must make its start appear; a delete must
+  //   remove it).
+  // - `generationsChanged$` refreshes the generations of the open competition.
+  //
+  // `addGeneration$` only pings `competitionsChanged$`. It must NOT trigger a
+  // full generations re-read: the originating tab already appended the row
+  // optimistically (PendulumStore.addCompetitionRun), so re-reading every
+  // generation from IndexedDB on each persisted generation is pure redundant
+  // work. Cross-tab sync was removed with the dockable layout, so there is no
+  // other tab to refresh here either.
+  const competitionsChanged$ = new Subject<void>();
+  const generationsChanged$ = new Subject<void>();
 
-  // Cross-tab sync was removed together with the dockable layout that needed
-  // it — `databaseChanged$` keeps SAME-tab consumers (competitions list,
-  // generations subscription) fresh after local writes; a second tab simply
-  // shows data as of its own load.
   const database$ = createDatabase$<IDBCompetitions>(createGenerationDB).pipe(
     databaseReconnect(),
-    switchMap(database => {
-      return merge(of(database), databaseChanged$.pipe(map(() => database)));
-    }),
     shareReplayWithDelayedReset(SHARE_RESET_DELAY)
   );
 
   return {
     getCompetitionsStarts$(): Observable<ISO[]> {
       return database$.pipe(
+        switchMap(database => merge(of(database), competitionsChanged$.pipe(map(() => database)))),
         switchMap(database => {
           return from(getCompetitions(database));
         })
@@ -94,6 +101,7 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
     },
     getGenerations$(competitionStart: ISO): Observable<IGeneration[]> {
       return database$.pipe(
+        switchMap(database => merge(of(database), generationsChanged$.pipe(map(() => database)))),
         switchMap(database => {
           return from(getGenerations(database, competitionStart));
         })
@@ -106,7 +114,9 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
             return addGeneration(database, competitionStart, generation);
           }),
           tap(() => {
-            databaseChanged$.next();
+            // Only the list needs to react — the open competition's generations
+            // are kept current optimistically by the caller.
+            competitionsChanged$.next();
           })
         )
       );
@@ -118,7 +128,10 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
             return deleteCompetition(database, competitionStart);
           }),
           tap(() => {
-            databaseChanged$.next();
+            // A delete affects both the list (start removed) and any open
+            // generations view of the deleted competition.
+            competitionsChanged$.next();
+            generationsChanged$.next();
           })
         )
       );

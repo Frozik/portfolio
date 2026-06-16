@@ -43,6 +43,42 @@ import { NO_VERTEX_ID } from './topology-types';
 const COPLANAR_DISTANCE_THRESHOLD = 1e-4;
 
 /**
+ * Per-figure memo of the "point lies inside or on any figure face" predicate.
+ *
+ * `isPointInsideOrOnSurface` is a winding-number scan over every figure triangle
+ * and runs once per scene vertex (markers) and per construction sub-segment
+ * midpoint on every rebuild — i.e. on every pointermove during a drag. The
+ * predicate depends only on the point and the immutable `figureTopology`, so the
+ * result is cached on the point's array identity within that figure's scope.
+ *
+ * Position arrays in `SceneTopology` are immutable for a given topology version
+ * (only preview line / selection change during a drag — not the vertex array),
+ * so the same array reference recurs across rebuilds and hits the cache. Keying
+ * on identity (not a rounded string) is exact: no precision collisions, and a
+ * shared value implies a shared reference here.
+ */
+const figureInnerPointCaches = new WeakMap<FigureTopology, WeakMap<Vec3Array, boolean>>();
+
+function isPointInAnyFigureFace(figureTopology: FigureTopology, point: Vec3Array): boolean {
+  let pointCache = figureInnerPointCaches.get(figureTopology);
+  if (pointCache === undefined) {
+    pointCache = new WeakMap();
+    figureInnerPointCaches.set(figureTopology, pointCache);
+  }
+
+  const cached = pointCache.get(point);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const isInside = figureTopology.figureFaceTriangles.some(figureTriangles =>
+    isPointInsideOrOnSurface(point, figureTriangles, figureTopology.vertices)
+  );
+  pointCache.set(point, isInside);
+  return isInside;
+}
+
+/**
  * Builds a complete scene representation from topology data.
  * Replaces the old processGraphics function.
  */
@@ -228,12 +264,7 @@ function buildMarkers(
       figureTopology.vertices,
       VERTEX_MATCH_EPSILON_SQ
     );
-    if (
-      isTopologyVertex ||
-      figureTopology.figureFaceTriangles.some(figureTriangles =>
-        isPointInsideOrOnSurface(position, figureTriangles, figureTopology.vertices)
-      )
-    ) {
+    if (isTopologyVertex || isPointInAnyFigureFace(figureTopology, position)) {
       modifiers.push('inner');
     }
 
@@ -828,9 +859,7 @@ function processLine(
     }
 
     const midpoint = paramToPosition(midParam, farStart, normalizedDirection, lineLength);
-    const isInner = figureTopology.figureFaceTriangles.some(figureTriangles =>
-      isPointInsideOrOnSurface(midpoint, figureTriangles, figureTopology.vertices)
-    );
+    const isInner = isPointInAnyFigureFace(figureTopology, midpoint);
     results.push(
       createRenderSegment(
         startPosition,

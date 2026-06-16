@@ -113,7 +113,28 @@ export class TradesStreamStore {
     this.instrument = params.instrument;
     this.gate = params.gate;
 
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable<
+      TradesStreamStore,
+      'recentBucketRawTrades' | 'recentBlockOrder' | 'reloadTokens' | 'blockData'
+    >(
+      this,
+      {
+        // Heavy non-UI caches mutated on the hot `flush` path (the raw-
+        // trades map nests up to ~2000 `ITrade` objects per block, plus
+        // the per-block `Float32Array` aggregates). MobX deep-tracking
+        // them would re-proxy every nested entry on each flush for zero
+        // reactive benefit: the only observable triggers consumers depend
+        // on are the `hoveredBucketKey` / `pinnedBucket` UI seats, which
+        // drive the `hoveredBucket` getter and the popup's raw-trade read.
+        // Keeping the caches raw also lets us assign them outside
+        // `runInAction` without tripping strict-mode warnings.
+        recentBucketRawTrades: false,
+        recentBlockOrder: false,
+        reloadTokens: false,
+        blockData: false,
+      },
+      { autoBind: true }
+    );
   }
 
   startStream(): void {

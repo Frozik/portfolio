@@ -117,6 +117,17 @@ export class RoomStore {
    * per crossed second.
    */
   private lastRemainingSec: number | null = null;
+  /**
+   * Last name/avatar we wrote to the directory per clientId. Awareness fires
+   * on every field change (including typing focus/blur that never touches
+   * identity), so we compare against this map and only re-`upsert` when a
+   * user's display name or picture actually changed — avoiding an IndexedDB
+   * write on every awareness tick.
+   */
+  private readonly lastUpsertedProfiles = new Map<
+    ClientId,
+    { readonly name: string; readonly pictureUrl: string | undefined }
+  >();
   private isDisposed = false;
 
   identity: IRetroIdentity;
@@ -400,6 +411,18 @@ export class RoomStore {
 
     const users = Array.from(deduped.values()).map(entry => entry.user);
     users.forEach(user => {
+      const lastUpserted = this.lastUpsertedProfiles.get(user.clientId);
+      if (
+        lastUpserted !== undefined &&
+        lastUpserted.name === user.name &&
+        lastUpserted.pictureUrl === user.pictureUrl
+      ) {
+        return;
+      }
+      this.lastUpsertedProfiles.set(user.clientId, {
+        name: user.name,
+        pictureUrl: user.pictureUrl,
+      });
       void this.directory.upsert({
         clientId: user.clientId,
         name: user.name,

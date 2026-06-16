@@ -30,6 +30,37 @@ export const BinanceViewContent = observer(() => {
   const pointerStartRef = useRef<{ x: number; y: number; type: string } | null>(null);
   const lastHoverProbeRef = useRef<{ x: number; y: number } | null>(null);
   const [hoverAnchor, setHoverAnchor] = useState<{ x: number; y: number } | null>(null);
+  // The hover popup anchor follows the cursor on every `pointermove`.
+  // Writing it straight to React state re-rendered the whole observer
+  // content tree per event; instead the latest position is stashed in a
+  // ref and a single rAF flushes it to state, coalescing a burst of
+  // pointer events into one render per frame. Clears stay synchronous.
+  const pendingHoverAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const hoverAnchorRafIdRef = useRef<number | undefined>(undefined);
+
+  const flushHoverAnchor = useFunction(() => {
+    hoverAnchorRafIdRef.current = undefined;
+    const next = pendingHoverAnchorRef.current;
+    if (next !== null) {
+      setHoverAnchor(next);
+    }
+  });
+
+  const scheduleHoverAnchor = useFunction((point: { x: number; y: number }) => {
+    pendingHoverAnchorRef.current = point;
+    if (hoverAnchorRafIdRef.current === undefined) {
+      hoverAnchorRafIdRef.current = requestAnimationFrame(flushHoverAnchor);
+    }
+  });
+
+  const clearHoverAnchor = useFunction(() => {
+    pendingHoverAnchorRef.current = null;
+    if (hoverAnchorRafIdRef.current !== undefined) {
+      cancelAnimationFrame(hoverAnchorRafIdRef.current);
+      hoverAnchorRafIdRef.current = undefined;
+    }
+    setHoverAnchor(null);
+  });
 
   // While the pointer is hovering (not dragging), re-resolve what sits
   // underneath the cursor on every animation frame. This catches viewport
@@ -95,7 +126,7 @@ export const BinanceViewContent = observer(() => {
     if (store.tradesStore?.pinnedBucket !== undefined) {
       pendingPointerRef.current = null;
       lastHoverProbeRef.current = null;
-      setHoverAnchor(null);
+      clearHoverAnchor();
       return;
     }
     const canvas = event.currentTarget;
@@ -106,8 +137,9 @@ export const BinanceViewContent = observer(() => {
     startHoverLoop();
     // Anchor for the unified hover popup — orderbook cell + trades
     // bucket sections share this position so the popup follows the
-    // cursor regardless of which section is currently active.
-    setHoverAnchor({ x: cssX, y: cssY });
+    // cursor regardless of which section is currently active. rAF-
+    // throttled so a burst of pointer events coalesces into one render.
+    scheduleHoverAnchor({ x: cssX, y: cssY });
 
     // Trades hover hit-test runs alongside the orderbook cell tooltip.
     // Touch pointers don't get hover (no preview pill) — only mouse/pen.
@@ -182,7 +214,7 @@ export const BinanceViewContent = observer(() => {
     stopHoverLoop();
     store.clearSelectedCell();
     store.tradesStore?.clearHoveredBucket();
-    setHoverAnchor(null);
+    clearHoverAnchor();
     lastHoverProbeRef.current = null;
   });
 
@@ -230,9 +262,10 @@ export const BinanceViewContent = observer(() => {
     return () => {
       active = false;
       stopHoverLoop();
+      clearHoverAnchor();
       store.dispose();
     };
-  }, [store, stopHoverLoop]);
+  }, [store, stopHoverLoop, clearHoverAnchor]);
 
   const tradesStore = store.tradesStore;
   const isHoveringTradeBucket = tradesStore?.hoveredBucketKey !== undefined;
@@ -251,12 +284,12 @@ export const BinanceViewContent = observer(() => {
     const chartState = store.chartStateView;
     chartState?.viewportController.setCursorSuppressed(isPopupPinned);
     if (isPopupPinned) {
-      setHoverAnchor(null);
+      clearHoverAnchor();
       store.clearSelectedCell();
       tradesStore?.clearHoveredBucket();
       lastHoverProbeRef.current = null;
     }
-  }, [isPopupPinned, store, tradesStore]);
+  }, [isPopupPinned, store, tradesStore, clearHoverAnchor]);
 
   return (
     <div className="relative h-full w-full">

@@ -2,7 +2,6 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isEmpty, isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { cn } from '../../../../shared/lib/cn';
-import { getPairs } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
 import { ECellStatus, EFieldType } from '../../domain/types';
 
@@ -96,24 +95,31 @@ export const FieldCell = observer(
         onMouseOver={handleMouseOver}
         onClick={handleClick}
       >
-        {isNil(cell.value)
-          ? getPairs(field.size).map(([row, column], index) => {
-              const noteValue = index + 1;
+        {hasValue
+          ? value
+          : hasNotes &&
+            notes.map(noteValue => {
+              // Note `noteValue` always occupies the same fixed grid track:
+              // its 0-based index maps row-major to (row, column) within the
+              // size×size note grid, identical to the previous full-placeholder
+              // layout — we just skip the empty placeholders.
+              const noteIndex = noteValue - 1;
+              const noteRow = Math.floor(noteIndex / field.size);
+              const noteColumn = noteIndex % field.size;
 
               return (
                 <div
                   key={noteValue}
                   className={cn(noteValue === tool.value && `text-blue-600 ${NOTE_GLOW_CLASS}`)}
                   style={{
-                    gridColumn: column + 1,
-                    gridRow: row + 1,
+                    gridColumn: noteColumn + 1,
+                    gridRow: noteRow + 1,
                   }}
                 >
-                  {notes.includes(noteValue) ? noteValue : undefined}
+                  {noteValue}
                 </div>
               );
-            })
-          : value}
+            })}
       </div>
     );
   }

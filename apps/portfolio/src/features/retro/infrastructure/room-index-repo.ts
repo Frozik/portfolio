@@ -2,7 +2,7 @@ import type { TDatabaseErrorCallback } from '@frozik/utils/database';
 import { openVersionedDatabase } from '@frozik/utils/database';
 import type { ISO } from '@frozik/utils/date/types';
 import type { DBSchema, IDBPDatabase } from 'idb';
-import { orderBy } from 'lodash-es';
+import { isNil, orderBy } from 'lodash-es';
 import type { ClientId, ERetroPhase, IRoomIndexEntry, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'retro-room-index';
@@ -45,6 +45,11 @@ interface IRetroRoomsDB extends DBSchema {
  */
 export interface IRoomIndexRepo {
   listRecent(limit: number): Promise<IRoomIndexEntry[]>;
+  /**
+   * Read a single room entry by id, or `null` when no row exists. A keyed
+   * lookup so callers that only need one room avoid scanning the whole store.
+   */
+  get(roomId: RoomId): Promise<IRoomIndexEntry | null>;
   upsert(entry: IRoomIndexEntry): Promise<void>;
   remove(roomId: RoomId): Promise<void>;
 }
@@ -67,6 +72,11 @@ export async function createRoomIndexRepo(
       const rows = await store.getAll();
 
       return orderBy(rows, ROOM_CREATED_AT_FIELD, 'desc').slice(0, limit).map(toRoomIndexEntry);
+    },
+
+    async get(roomId: RoomId): Promise<IRoomIndexEntry | null> {
+      const row = await database.get(ROOMS_TABLE_NAME, roomId);
+      return isNil(row) ? null : toRoomIndexEntry(row);
     },
 
     async upsert(entry: IRoomIndexEntry): Promise<void> {

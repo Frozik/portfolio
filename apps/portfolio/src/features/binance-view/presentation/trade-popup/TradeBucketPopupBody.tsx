@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { ReactElement } from 'react';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { Spinner } from '../../../../shared/ui/Spinner';
 import { COLOR_BUY, COLOR_SELL } from '../../domain/trades-constants';
@@ -27,8 +27,13 @@ export function TradeBucketPopupBody({
   readonly isLoading: boolean;
   readonly maxHeightPx: number;
 }): ReactElement {
-  const sorted = [...trades].sort(
-    (left, right) => (right.quantity as number) - (left.quantity as number)
+  // Sort by descending quantity. The bucket can hold up to ~2000 trades,
+  // and this body re-renders on every scroll frame (the virtualizer drives
+  // re-renders) — memoize so the sort only re-runs when the source array
+  // identity changes, not on each scroll tick.
+  const sorted = useMemo(
+    () => [...trades].sort((left, right) => (right.quantity as number) - (left.quantity as number)),
+    [trades]
   );
 
   const parentRef = useRef<HTMLDivElement>(null);

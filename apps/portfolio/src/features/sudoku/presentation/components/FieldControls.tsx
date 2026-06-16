@@ -206,6 +206,7 @@ export const FieldControls = observer(
               gridTemplateRows: `repeat(${field.size}, ${thirdCellSize}px)`,
               gridColumn: field.size,
             }}
+            onClick={onMarkField}
           >
             {getPairs(field.size).map(([row, column]) => (
               <div
@@ -214,7 +215,6 @@ export const FieldControls = observer(
                   gridColumn: column + 1,
                   gridRow: row + 1,
                 }}
-                onClick={onMarkField}
               >
                 {row * field.size + column + 1}
               </div>

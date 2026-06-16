@@ -3,6 +3,10 @@ import { useMemo } from 'react';
 import type { ITicker } from '../../domain/types';
 
 const MIN_FPS = 30;
+// Upper bound for the adaptive speed multiplier. Without a cap it grows
+// unbounded while FPS stays healthy, scheduling ever more simulation work per
+// frame until the tab eventually stalls.
+const MAX_MULTIPLIER = 16;
 
 export interface IFrameTicker extends ITicker {
   update(deltaTime: DOMHighResTimeStamp): Promise<void>;
@@ -36,7 +40,7 @@ export function useFrameTicker(
         if (fps < MIN_FPS) {
           currentMultiplier = Math.max(1, currentMultiplier - 1);
         } else if (fps >= MIN_FPS) {
-          currentMultiplier++;
+          currentMultiplier = Math.min(MAX_MULTIPLIER, currentMultiplier + 1);
         }
 
         const newDeltaTime = deltaTimeFn?.(deltaTime, currentMultiplier) ?? deltaTime;

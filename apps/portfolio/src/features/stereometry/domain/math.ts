@@ -105,7 +105,7 @@ export function isPointInsideOrOnSurface(
   //
   // Face winding may be inconsistent across the mesh, so we orient each triangle
   // so its normal points away from the mesh centroid before summing.
-  const centroid = computeCentroid(vertices);
+  const centroid = getCentroid(vertices);
   let windingAngle = 0;
 
   for (const triangleIndices of faceTriangles) {
@@ -148,6 +148,25 @@ function computeCentroid(vertices: readonly Vec3Array[]): Vec3Array {
 
   const count = vertices.length;
   return [sumX / count, sumY / count, sumZ / count];
+}
+
+/**
+ * The centroid depends only on the vertex set, which is the immutable
+ * `figureTopology.vertices` array for the whole session. `isPointInsideOrOnSurface`
+ * runs per scene vertex on every rebuild, so recomputing the same O(V) centroid
+ * each call is pure waste. Memoize on the array identity (exact: same vertices →
+ * same centroid).
+ */
+const centroidCache = new WeakMap<readonly Vec3Array[], Vec3Array>();
+
+function getCentroid(vertices: readonly Vec3Array[]): Vec3Array {
+  const cached = centroidCache.get(vertices);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const centroid = computeCentroid(vertices);
+  centroidCache.set(vertices, centroid);
+  return centroid;
 }
 
 /**

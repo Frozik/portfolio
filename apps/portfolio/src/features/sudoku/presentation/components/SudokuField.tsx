@@ -47,8 +47,14 @@ export const SudokuField = observer(
     const cellWidth = width - totalGap;
     const cellHeight = height - totalGap - controlsGap;
 
-    const cellSize = Math.floor(
-      Math.min(cellWidth / field.size ** 2, cellHeight / (field.size ** 2 + CONTROL_LINES))
+    // Clamp to ≥0: before the ResizeObserver reports a real size the container
+    // can measure 0, making `cellWidth`/`cellHeight` negative — which propagated
+    // negative `width`/`height` into the control icons (`<svg>` rejects them).
+    const cellSize = Math.max(
+      0,
+      Math.floor(
+        Math.min(cellWidth / field.size ** 2, cellHeight / (field.size ** 2 + CONTROL_LINES))
+      )
     );
     const groupSize = cellSize * field.size + (field.size - 1) * FIELD_GROUP_GAP_PX;
     const size = cellSize * field.size ** 2 + totalGap;
