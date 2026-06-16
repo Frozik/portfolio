@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import * as Popover from '@radix-ui/react-popover';
 import { Info, X } from 'lucide-react';
 import { memo, useState } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { CLOSE_ICON_SIZE, TOOLBAR_ICON_SIZE, TOOLBAR_TOOLTIP_DELAY_MS } from '../constants';
 import { stereometryT } from '../translations';

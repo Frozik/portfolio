@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const spinnerVariants = cva(
   'animate-spin rounded-full border-solid border-brand-500 border-t-transparent',

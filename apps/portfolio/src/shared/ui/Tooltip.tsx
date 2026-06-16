@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 type TooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
 

@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';

@@ -1,9 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Home } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-import { cn } from '../../shared/lib/cn';
 import { Button } from '../../shared/ui/Button';
 import { appT } from '../translations';
 

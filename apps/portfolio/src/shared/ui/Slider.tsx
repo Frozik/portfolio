@@ -1,9 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import type { ReactNode } from 'react';
 import { memo, useMemo, useState } from 'react';
-import { cn } from '../lib/cn';
 
 const TOOLTIP_SIDE_OFFSET = 4;
 const TOOLTIP_DELAY_DURATION = 0;

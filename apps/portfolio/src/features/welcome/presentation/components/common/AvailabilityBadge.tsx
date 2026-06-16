@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { Laptop, Moon, Palmtree } from 'lucide-react';
 import { memo } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 import type { TAvailabilityStatus } from '../../hooks/useAvailability';
 import { useAvailability } from '../../hooks/useAvailability';
 import { welcomeT } from '../../translations';

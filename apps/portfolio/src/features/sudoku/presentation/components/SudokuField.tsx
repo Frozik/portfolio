@@ -1,9 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
-import { cn } from '../../../../shared/lib/cn';
 import { puzzleSolved } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
 import { FIELD_CONTROLS_MARGIN_PX, FIELD_GAP_PX, FIELD_GROUP_GAP_PX } from '../layout-constants';

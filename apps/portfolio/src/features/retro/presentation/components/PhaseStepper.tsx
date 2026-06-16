@@ -1,9 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import type { RoomStore } from '../../application/RoomStore';
 import { ERetroPhase } from '../../domain/types';
 import { retroT as t } from '../translations';

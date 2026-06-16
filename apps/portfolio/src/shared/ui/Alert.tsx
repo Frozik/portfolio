@@ -1,9 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const alertVariants = cva('flex gap-3 rounded-lg border p-4', {
   variants: {

@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { memo } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
 

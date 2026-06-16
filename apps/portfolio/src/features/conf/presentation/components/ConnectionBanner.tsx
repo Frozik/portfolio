@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { memo } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import type { TConfRoomConnectionState } from '../../application/ConfRoomStore';
 import { confT } from '../translations';
 

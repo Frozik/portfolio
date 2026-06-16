@@ -1,6 +1,5 @@
+import { cn } from '@frozik/components/components/cn';
 import { memo } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 
 const TONE_STYLES = {
   green: 'bg-landing-green text-landing-green',

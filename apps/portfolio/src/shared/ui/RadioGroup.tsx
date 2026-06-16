@@ -1,6 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 type RadioOption = {
   label: string;

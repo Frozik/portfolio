@@ -1,9 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
-
 import { appT } from '../../../../../app/translations';
-import { cn } from '../../../../../shared/lib/cn';
 import { DialogShell } from '../../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../../shared/ui/QRCode';
 import { welcomeT } from '../../translations';

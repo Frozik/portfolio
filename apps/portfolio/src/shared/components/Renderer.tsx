@@ -1,6 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { isNil } from 'lodash-es';
 import { memo, useEffect, useRef } from 'react';
-import { cn } from '../lib/cn';
 
 import styles from './styles.module.scss';
 

@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { LogOut } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-
-import { cn } from '../lib/cn';
 import { sharedT } from '../translations';
 import { Avatar } from '../ui/Avatar';
 import { useAuthSession } from './CommunicationProvider';

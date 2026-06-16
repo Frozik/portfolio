@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ArrowRight } from 'lucide-react';
 import { memo, useState } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ColumnId } from '../../domain/types';

@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { SignalHigh, SignalLow, SignalMedium } from 'lucide-react';
 import { memo } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { TQualityTier } from '../../domain/adaptive-quality';
 import { confT } from '../translations';

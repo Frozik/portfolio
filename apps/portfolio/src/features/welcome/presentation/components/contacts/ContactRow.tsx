@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 import { welcomeT } from '../../translations';
 import type { TContactIconKey } from './ContactIcon';
 import { ContactIcon } from './ContactIcon';

@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 export const Dropdown = memo(
   ({

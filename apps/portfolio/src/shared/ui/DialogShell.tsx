@@ -1,10 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-
-import { cn } from '../lib/cn';
 import { MonoKicker } from './MonoKicker';
 
 const CLOSE_ICON_SIZE_PX = 14;

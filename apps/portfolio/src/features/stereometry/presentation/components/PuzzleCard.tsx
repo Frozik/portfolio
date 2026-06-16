@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { isNil } from 'lodash-es';
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-
-import { cn } from '../../../../shared/lib/cn';
 
 const PuzzleCardComponent = ({
   puzzleId,

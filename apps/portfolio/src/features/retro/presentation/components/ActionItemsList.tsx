@@ -1,9 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';

@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useEffect } from 'react';
-import { cn } from '../lib/cn';
 
 export const Drawer = memo(
   ({

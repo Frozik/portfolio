@@ -1,6 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { QRCodeSVG } from 'qrcode.react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const DEFAULT_QR_SIZE = 128;
 

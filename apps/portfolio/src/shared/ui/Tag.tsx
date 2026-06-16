@@ -1,8 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const TAG_COLOR_MAP: Record<string, string> = {
   green: 'border-success/40 bg-success/15 text-success',

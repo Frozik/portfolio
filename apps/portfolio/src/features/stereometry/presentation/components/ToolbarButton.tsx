@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { TOOLBAR_TOOLTIP_DELAY_MS } from '../constants';
 

@@ -1,6 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
-import { cn } from '../../../../shared/lib/cn';
 
 export type SudokuDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 

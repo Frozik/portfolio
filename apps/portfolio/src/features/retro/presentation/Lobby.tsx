@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   isFailValueDescriptor,
@@ -9,7 +10,6 @@ import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AccountChip } from '../../../shared/communication/AccountChip';
-import { cn } from '../../../shared/lib/cn';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';

@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 
 const PendulumSectionComponent = ({

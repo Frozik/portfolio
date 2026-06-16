@@ -1,6 +1,5 @@
+import { cn } from '@frozik/components/components/cn';
 import { memo, useEffect, useRef, useState } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 
 const MIN_SHOW_DELAY_MS = 2_000;
 const MAX_SHOW_DELAY_MS = 5_000;

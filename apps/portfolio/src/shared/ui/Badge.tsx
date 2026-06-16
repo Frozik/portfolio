@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const COLOR_MAP: Record<string, string> = {
   green: 'bg-success',

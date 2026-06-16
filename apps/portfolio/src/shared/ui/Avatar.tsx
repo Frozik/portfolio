@@ -1,9 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 
 const avatarVariants = cva(
   'inline-flex items-center justify-center overflow-hidden rounded-full bg-surface-overlay text-text font-medium',

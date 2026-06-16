@@ -1,9 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { LayoutGrid, PenTool, Trash2, Undo } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { cn } from '../../../../shared/lib/cn';
 import { getIndexesArray, getPairs, getUsedNumbers, hasMarks } from '../../domain/services';
 import type { IField, TTool } from '../../domain/types';
 import { EToolType } from '../../domain/types';

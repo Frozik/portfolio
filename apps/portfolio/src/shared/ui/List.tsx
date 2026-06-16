@@ -1,6 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { cn } from '../lib/cn';
 import { Spinner } from './Spinner';
 
 function ListInner<T>({

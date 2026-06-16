@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Minus, Plus, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { cn } from '../../../../shared/lib/cn';
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, GroupId } from '../../domain/types';
 import { ERetroPhase } from '../../domain/types';

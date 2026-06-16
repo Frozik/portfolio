@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import type {
   Cell,
   ColumnDef,
@@ -18,7 +19,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { isNil } from 'lodash-es';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
-import { cn } from '../lib/cn';
 
 const SORT_ICON_SIZE = 14;
 const DEFAULT_ROW_HEIGHT = 40;

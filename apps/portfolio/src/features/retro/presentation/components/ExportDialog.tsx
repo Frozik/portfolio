@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import copy from 'copy-to-clipboard';
 import DOMPurify from 'dompurify';
@@ -5,8 +6,6 @@ import { Check, Copy, Download } from 'lucide-react';
 import { marked } from 'marked';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
-
-import { cn } from '../../../../shared/lib/cn';
 import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';

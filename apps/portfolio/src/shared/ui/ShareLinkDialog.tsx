@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, Copy } from 'lucide-react';
 import { memo, useState } from 'react';
-
-import { cn } from '../lib/cn';
 import { DialogShell } from './DialogShell';
 import { MonoKicker } from './MonoKicker';
 import { QRCode } from './QRCode';

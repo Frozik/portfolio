@@ -1,6 +1,5 @@
+import { cn } from '@frozik/components/components/cn';
 import { Fragment, memo } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 
 const ACCENT_MARKER = /\*([^*]+)\*/g;
 

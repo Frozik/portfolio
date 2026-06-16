@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-
-import { cn } from '../lib/cn';
 
 type MonoKickerTone = 'faint' | 'dim' | 'accent';
 

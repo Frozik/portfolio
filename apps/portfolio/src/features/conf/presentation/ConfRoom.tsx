@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
 import copy from 'copy-to-clipboard';
@@ -5,11 +6,9 @@ import { Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
-import { cn } from '../../../shared/lib/cn';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { Spinner } from '../../../shared/ui/Spinner';

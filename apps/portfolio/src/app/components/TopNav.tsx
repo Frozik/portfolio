@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -19,7 +20,6 @@ import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
-import { cn } from '../../shared/lib/cn';
 import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';

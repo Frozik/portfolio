@@ -1,7 +1,6 @@
+import { cn } from '@frozik/components/components/cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-
-import { cn } from '../lib/cn';
 
 /**
  * Wrapper that decorates its children with the pair of accent corner

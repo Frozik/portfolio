@@ -1,9 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-
-import { cn } from '../../../../shared/lib/cn';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ClientId, IParticipant } from '../../domain/types';

@@ -1,7 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isEmpty, isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { cn } from '../../../../shared/lib/cn';
 import type { IField, TTool } from '../../domain/types';
 import { ECellStatus, EFieldType } from '../../domain/types';
 

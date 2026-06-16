@@ -1,11 +1,10 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 import { Minus, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-
-import { cn } from '../../../../shared/lib/cn';
 import type { RoomStore, TimerSeverity } from '../../application/RoomStore';
 import {
   DEFAULT_BRAINSTORM_DURATION_MS,

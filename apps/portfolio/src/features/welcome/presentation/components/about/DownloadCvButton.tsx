@@ -1,8 +1,7 @@
+import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Download, Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
-
-import { cn } from '../../../../../shared/lib/cn';
 import { welcomeT } from '../../translations';
 
 const ICON_SIZE_PX = 14;
