@@ -1,4 +1,7 @@
+import 'fake-indexeddb/auto';
+
 import type { DBSchema, IDBPDatabase } from 'idb';
+import { openDB } from 'idb';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { TDatabaseCreator } from './database';
@@ -105,5 +108,70 @@ describe('createDatabase$', () => {
     // A blocking/terminated event after the handle is open surfaces as an error
     capturedCallback?.(EDatabaseErrorCallbackType.Blocking);
     expect(capturedError?.message).toContain(EDatabaseErrorCallbackType.Blocking);
+  });
+});
+
+let reconnectDbCounter = 0;
+
+function uniqueDatabaseName(): string {
+  reconnectDbCounter += 1;
+  return `createDatabase-reconnect-${reconnectDbCounter}`;
+}
+
+/**
+ * Subscribes to a database observable and resolves with the live subscription
+ * once the first handle is emitted, so callers wait on the real async open
+ * instead of a fixed number of microtask ticks.
+ */
+function subscribeAndAwaitFirstHandle(
+  database$: ReturnType<typeof createDatabase$<DBSchema>>
+): Promise<{
+  handle: IDBPDatabase<DBSchema>;
+  subscription: ReturnType<typeof database$.subscribe>;
+}> {
+  return new Promise((resolve, reject) => {
+    const subscription = database$.subscribe({
+      next: handle => resolve({ handle, subscription }),
+      error: reject,
+    });
+  });
+}
+
+describe('createDatabase$ reconnect path (real IndexedDB)', () => {
+  it('opens a fresh connection for a subscriber that arrives after the previous one closed', async () => {
+    const databaseName = uniqueDatabaseName();
+    let openCount = 0;
+    const creator: TDatabaseCreator<DBSchema> = () => {
+      openCount += 1;
+      return openDB<DBSchema>(databaseName, 1);
+    };
+
+    const first = await subscribeAndAwaitFirstHandle(createDatabase$(creator));
+    expect(openCount).toBe(1);
+
+    // Closing the first subscription tears the connection down.
+    first.subscription.unsubscribe();
+
+    // A new subscriber opens a brand-new connection rather than reusing the
+    // closed one.
+    const second = await subscribeAndAwaitFirstHandle(createDatabase$(creator));
+    expect(openCount).toBe(2);
+    expect(second.handle).not.toBe(first.handle);
+
+    second.subscription.unsubscribe();
+  });
+
+  it('closes the real connection on unsubscribe so a later version upgrade is not blocked', async () => {
+    const databaseName = uniqueDatabaseName();
+    const creator: TDatabaseCreator<DBSchema> = () => openDB<DBSchema>(databaseName, 1);
+
+    const { subscription } = await subscribeAndAwaitFirstHandle(createDatabase$(creator));
+    subscription.unsubscribe();
+
+    // If the connection were leaked, this higher-version open would hang on a
+    // `blocked` event. It resolving proves the prior connection was closed.
+    const upgraded = await openDB<DBSchema>(databaseName, 2);
+    expect(upgraded.version).toBe(2);
+    upgraded.close();
   });
 });
