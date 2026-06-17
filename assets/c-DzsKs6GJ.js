@@ -1,1 +1,0 @@
-var e={container:`_container_1g9nc_1`,canvas:`_canvas_1g9nc_10`};export{e as t};

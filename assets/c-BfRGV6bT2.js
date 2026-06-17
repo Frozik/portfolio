@@ -1,1 +1,0 @@
-function e(e,t){if(!e)throw Error(t||`assertion failed`)}export{e as t};

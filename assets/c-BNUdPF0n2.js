@@ -1,1 +1,0 @@
-import{g as e,h as t}from"./c-zpaShlsK2.js";function n(n,r){return e(function(e,i){var a=0;e.subscribe(t(i,function(e){return n.call(r,e,a++)&&i.next(e)}))})}export{n as t};

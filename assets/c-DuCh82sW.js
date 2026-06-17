@@ -1,1 +1,0 @@
-function e(){return window.location.hostname.endsWith(`github.io`)}export{e as t};
