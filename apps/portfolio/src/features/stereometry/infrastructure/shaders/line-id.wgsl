@@ -76,7 +76,7 @@ fn fs(input: LineIdOutput) -> @location(0) vec2<f32> {
     let spine = computeSpineSample(input.clipStart, input.clipEnd, input.clipPosition);
 
     let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spine.uv, 0);
-    let isOccluded = isDepthOccluded(faceDepthValue, spine.depth);
+    let isOccluded = faceDepthValue < spine.depth;
 
     if (renderMode == 1u && !isOccluded) { discard; }
     if (renderMode == 2u && isOccluded) { discard; }

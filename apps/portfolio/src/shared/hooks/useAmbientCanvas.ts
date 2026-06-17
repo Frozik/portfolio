@@ -106,13 +106,25 @@ export function useAmbientCanvas(
     let pageVisible = !document.hidden;
     let onScreen = true;
 
-    const applySize = (): void => {
-      dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
-      cssWidth = canvas.clientWidth;
-      cssHeight = canvas.clientHeight;
-      canvas.width = Math.round(cssWidth * dpr);
-      canvas.height = Math.round(cssHeight * dpr);
+    const applySize = (): boolean => {
+      const nextDpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+      const nextCssWidth = canvas.clientWidth;
+      const nextCssHeight = canvas.clientHeight;
+      const nextWidth = Math.round(nextCssWidth * nextDpr);
+      const nextHeight = Math.round(nextCssHeight * nextDpr);
+      // Assigning canvas.width/height clears the backing store even when the value
+      // is unchanged, so skip no-op resizes — ResizeObserver fires spuriously and
+      // each needless clear flickers the canvas blank for a frame.
+      if (nextWidth === canvas.width && nextHeight === canvas.height) {
+        return false;
+      }
+      dpr = nextDpr;
+      cssWidth = nextCssWidth;
+      cssHeight = nextCssHeight;
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
       onResizeRef.current?.({ ctx, cssWidth, cssHeight, dpr });
+      return true;
     };
 
     const renderStatic = (): void => {
@@ -128,7 +140,7 @@ export function useAmbientCanvas(
       });
     };
 
-    const loop = (timestamp: DOMHighResTimeStamp): void => {
+    const renderFrame = (timestamp: DOMHighResTimeStamp): void => {
       if (!timingStarted) {
         startMs = timestamp;
         lastMs = timestamp;
@@ -146,6 +158,10 @@ export function useAmbientCanvas(
         timestamp,
         isStatic: false,
       });
+    };
+
+    const loop = (timestamp: DOMHighResTimeStamp): void => {
+      renderFrame(timestamp);
       frameId = requestAnimationFrame(loop);
     };
 
@@ -186,9 +202,18 @@ export function useAmbientCanvas(
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      applySize();
+      if (!applySize()) {
+        return;
+      }
+      // The width/height assignment just cleared the backing store. Repaint
+      // synchronously here — ResizeObserver callbacks run before paint, so the
+      // canvas is never shown blank. Otherwise the next rAF leaves one empty
+      // frame, which reads as a flicker during continuous resize. The animated
+      // path repaints at the current time (no jump back to the t=0 frame).
       if (prefersReducedMotion) {
         renderStatic();
+      } else {
+        renderFrame(performance.now());
       }
     });
     resizeObserver.observe(canvas);

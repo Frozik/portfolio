@@ -33,35 +33,30 @@ export const Drawer = memo(
 
     return (
       <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-        <DialogPrimitive.Portal forceMount>
+        <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
-            forceMount
             className={cn(
-              'fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-200',
-              open ? 'opacity-100' : 'pointer-events-none opacity-0'
+              'fixed inset-0 z-40 bg-black/50 backdrop-blur-sm',
+              'data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out'
             )}
           />
           <DialogPrimitive.Content
-            forceMount
             aria-describedby={undefined}
             className={cn(
               'fixed z-50 flex flex-col bg-surface-elevated shadow-xl',
-              // Mobile: bottom sheet, 50% height. Desktop: side drawer.
+              // Mobile: bottom sheet, 50% height (slides up from the bottom)
               'inset-x-0 bottom-0 h-1/2 rounded-t-2xl',
+              'data-[state=open]:animate-slide-in-bottom data-[state=closed]:animate-slide-out-bottom',
+              // Desktop: side drawer. `animate-*` is a single property, so the `md:`
+              // variant fully replaces the mobile vertical slide — no diagonal motion.
               'md:inset-x-auto md:top-0 md:h-full md:w-80 md:rounded-t-none',
               {
-                'transition-transform duration-200': open,
-                invisible: !open,
-                // Mobile vertical slide (reset to 0 on desktop, which slides horizontally)
-                'translate-y-0': open,
-                'translate-y-full': !open,
-                'md:translate-y-0': !open,
-                // Desktop side + horizontal slide
                 'md:left-0': placement === 'left',
                 'md:right-0': placement === 'right',
-                'md:translate-x-0': open,
-                'md:-translate-x-full': placement === 'left' && !open,
-                'md:translate-x-full': placement === 'right' && !open,
+                'md:data-[state=open]:animate-slide-in-left md:data-[state=closed]:animate-slide-out-left':
+                  placement === 'left',
+                'md:data-[state=open]:animate-slide-in-right md:data-[state=closed]:animate-slide-out-right':
+                  placement === 'right',
               },
               className
             )}

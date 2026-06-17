@@ -71,7 +71,7 @@ fn isMarkerOccluded(centerClip: vec4<f32>) -> bool {
     let centerNdc = centerClip.xyz / centerClip.w;
     let centerUV = centerNdc.xy * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5, 0.5);
     let sceneDepthAtCenter = textureSampleLevel(sceneDepth, depthSampler, centerUV, 0);
-    return isDepthOccluded(sceneDepthAtCenter, centerNdc.z);
+    return sceneDepthAtCenter < centerNdc.z;
 }
 
 /** Expands a marker into a screen-space billboard quad with occlusion-based style */
@@ -81,13 +81,6 @@ fn vs(
     marker: MarkerInstance,
 ) -> VertexOutput {
     let centerClip = uniforms.mvp * vec4<f32>(marker.position, 1.0);
-    // Occlusion is sampled here in the vertex stage even though all 6 quad
-    // vertices sample the same marker-center texel (~6× redundant). It is kept
-    // here deliberately: the result selects the marker SIZE/color below, and the
-    // quad must be expanded to that size in the vertex stage — a fragment-stage
-    // sample could not feed back into vertex expansion. With <50 markers/frame
-    // the extra samples are negligible; do NOT copy this per-vertex sampling
-    // pattern into shaders where the result only affects fragment color.
     let isOccluded = isMarkerOccluded(centerClip);
 
     let markerSize = select(marker.visibleSize, marker.hiddenSize, isOccluded);

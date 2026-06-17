@@ -40,11 +40,6 @@ struct VertexOutput {
     /** Clip-space endpoints for per-fragment spine depth computation */
     @location(10) @interpolate(flat) clipStart: vec4<f32>,
     @location(11) @interpolate(flat) clipEnd: vec4<f32>,
-    /** Half-viewport-scaled screen endpoints, for the SDF cap/feather coverage */
-    @location(12) @interpolate(flat) screenStart: vec2<f32>,
-    @location(13) @interpolate(flat) screenEnd: vec2<f32>,
-    @location(14) @interpolate(flat) visibleHalfWidthPx: f32,
-    @location(15) @interpolate(flat) hiddenHalfWidthPx: f32,
 };
 
 @group(0) @binding(1) var faceDepth: texture_depth_2d;
@@ -64,9 +59,7 @@ fn vs(
     @builtin(vertex_index) vertexIndex: u32,
     line: LineInstance
 ) -> VertexOutput {
-    let visibleHalfWidth = cssToGpuPixels(line.visibleWidth) * 0.5;
-    let hiddenHalfWidth = cssToGpuPixels(line.hiddenWidth) * 0.5;
-    let lineHalfWidth = max(visibleHalfWidth, hiddenHalfWidth);
+    let lineWidth = max(cssToGpuPixels(line.visibleWidth), cssToGpuPixels(line.hiddenWidth));
 
     let corner = quadCornerIndex(vertexIndex);
     let isEnd = (corner & 2u) != 0u;
@@ -81,15 +74,8 @@ fn vs(
     let screenA = (clipA.xy / clipA.w) * halfViewport;
     let screenB = (clipB.xy / clipB.w) * halfViewport;
     let perp = computeScreenPerp(screenA, screenB);
-    // Longitudinal axis (screen space); zero-length segments fall back to perp's normal
-    let along = vec2<f32>(perp.y, -perp.x);
 
-    // Extend the quad past each endpoint by half-width + feather so the SDF has
-    // room to round the cap instead of clipping it to a butt end.
-    let capExtend = lineHalfWidth + FEATHER_HALF_PX;
-    let capSign = select(-1.0, 1.0, isEnd);
-    let offsetPixels = perp * side * (lineHalfWidth + FEATHER_HALF_PX) + along * capSign * capExtend;
-    let offsetNdc = pixelsToNdc(offsetPixels);
+    let offsetNdc = pixelsToNdc(perp * side * lineWidth * 0.5);
 
     let endpointPos = select(line.startPos, line.endPos, isEnd);
 
@@ -114,10 +100,6 @@ fn vs(
     result.worldDepth = dot(endpointPos - uniforms.cameraTarget, uniforms.cameraForward);
     result.clipStart = clipA;
     result.clipEnd = clipB;
-    result.screenStart = screenA;
-    result.screenEnd = screenB;
-    result.visibleHalfWidthPx = visibleHalfWidth;
-    result.hiddenHalfWidthPx = hiddenHalfWidth;
     return result;
 }
 
@@ -128,7 +110,7 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
     let spine = computeSpineSample(input.clipStart, input.clipEnd, input.clipPosition);
 
     let faceDepthValue = textureSampleLevel(faceDepth, depthSampler, spine.uv, 0);
-    let isOccluded = isDepthOccluded(faceDepthValue, spine.depth);
+    let isOccluded = faceDepthValue < spine.depth;
 
     // Filter by render mode: discard fragments that don't match the requested visibility
     if (renderMode == 1u && !isOccluded) { discard; }
@@ -148,16 +130,7 @@ fn fs(input: VertexOutput) -> @location(0) vec4<f32> {
         }
     }
 
-    // SDF cap/feather: round the caps and anti-alias the edges of the line at
-    // the occlusion-selected width inside the (wider) max-width quad.
-    let halfWidthPx = select(input.visibleHalfWidthPx, input.hiddenHalfWidthPx, isOccluded);
-    let spineDistance = distanceToSpine(input.screenStart, input.screenEnd, input.clipPosition);
-    let coverage = lineSdfCoverage(spineDistance, halfWidthPx);
-    if (coverage <= 0.0) {
-        discard;
-    }
-
     let depthFade = depthFadeFromForwardDistance(input.worldDepth);
 
-    return vec4<f32>(color, alpha * depthFade * coverage);
+    return vec4<f32>(color, alpha * depthFade);
 }

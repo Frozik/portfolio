@@ -77,6 +77,8 @@
   --animate-slide-in-top: slide-in-top 400ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-in-right: slide-in-right 200ms ease-out;
   --animate-slide-out-right: slide-out-right 150ms ease-in;
+  --animate-slide-in-bottom: slide-in-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-out-bottom: slide-out-bottom 200ms ease-in;
   --animate-zzz-1: zzz-float 2.5s ease-in-out infinite;
   --animate-zzz-2: zzz-float 2.5s ease-in-out 0.4s infinite;
   --animate-zzz-3: zzz-float 2.5s ease-in-out 0.8s infinite;
@@ -121,6 +123,14 @@
   @keyframes slide-out-right {
     from { transform: translateX(0); }
     to { transform: translateX(100%); }
+  }
+  @keyframes slide-in-bottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes slide-out-bottom {
+    from { transform: translateY(0); }
+    to { transform: translateY(100%); }
   }
   @keyframes zzz-float {
     0%, 100% { opacity: 0.3; transform: translateY(0); }
