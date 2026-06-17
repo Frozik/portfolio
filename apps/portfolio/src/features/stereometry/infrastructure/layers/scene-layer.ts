@@ -47,14 +47,6 @@ const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const LINE_ENDPOINT_FORMAT: GPUTextureFormat = 'rg16float';
 const MIN_DIMENSION = 1;
 
-/**
- * Depth bias for face geometry in the depth pre-pass.
- * Pushes face depth slightly further from camera so that coplanar lines
- * are classified as "in front" rather than z-fighting with the face.
- */
-const FACE_DEPTH_BIAS = 2;
-const FACE_DEPTH_BIAS_SLOPE_SCALE = 1.0;
-
 /** Pipeline-overridable render mode constants matching shader `override renderMode` */
 const RENDER_MODE_ALL = 0;
 const RENDER_MODE_HIDDEN_ONLY = 1;
@@ -131,6 +123,13 @@ const DEPTH_FADE_MIN_FLOAT_OFFSET = 28;
 const VERTICES_PER_MARKER_QUAD = 6;
 
 /**
+ * Squared-distance threshold on the (unit) camera-forward vector below which the
+ * marker depth order is treated as unchanged. Re-sorting markers only on a
+ * meaningful camera-direction change keeps a static scene off the upload path.
+ */
+const MARKER_SORT_FORWARD_EPSILON_SQ = 1e-6;
+
+/**
  * Renders a stereometry scene with hidden-edge dimming
  * and interactive selection highlighting.
  *
@@ -203,6 +202,12 @@ export class SceneLayer implements RenderLayer {
   private lastMvpMatrix = new Float32Array(16);
   private styledLineCount = 0;
   private topologyVertexCount = 0;
+  /** Markers kept CPU-side so they can be re-sorted back-to-front per camera direction */
+  private styledMarkers: readonly StyledMarker[] = [];
+  /** Reusable index array for the depth sort (avoids per-frame allocation) */
+  private readonly markerSortOrder: number[] = [];
+  /** Camera forward direction the marker buffer was last sorted against */
+  private readonly lastMarkerSortForward = new Float32Array([Number.NaN, Number.NaN, Number.NaN]);
   private hasDragPreview = false;
   private hasStartMarker = false;
   private currentPreviewLine:
@@ -498,6 +503,10 @@ export class SceneLayer implements RenderLayer {
     staging[DEPTH_FADE_MIN_FLOAT_OFFSET] = DEPTH_FADE_MIN;
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, staging);
+
+    // Re-sort overlapping markers back-to-front for the new camera direction
+    // (the staging forward components were just written above).
+    this.uploadSortedMarkers();
   }
 
   /**
@@ -853,6 +862,7 @@ export class SceneLayer implements RenderLayer {
   }
 
   private applyStyledMarkers(styledMarkers: readonly StyledMarker[]): void {
+    this.styledMarkers = styledMarkers;
     this.topologyVertexCount = styledMarkers.length;
 
     if (this.topologyVertexCount === 0) {
@@ -868,10 +878,62 @@ export class SceneLayer implements RenderLayer {
       });
     }
 
-    const markerData = new Float32Array(styledMarkers.length * MARKER_INSTANCE_FLOATS);
+    // A new scene invalidates the previous sort; force a re-sort on the next upload.
+    this.lastMarkerSortForward[0] = Number.NaN;
+    this.uploadSortedMarkers();
+  }
 
-    for (let index = 0; index < styledMarkers.length; index++) {
-      const marker = styledMarkers[index];
+  /**
+   * Uploads the marker instances ordered back-to-front along the current camera
+   * forward axis. Markers blend with `depthCompare: 'always'`, so their on-screen
+   * stacking is purely the draw order — without this, overlapping markers would
+   * stack by scene-vertex index and a far marker could paint over a near one.
+   * Re-sorting is skipped while the camera forward direction is unchanged.
+   */
+  private uploadSortedMarkers(): void {
+    if (this.topologyVertexCount === 0) {
+      return;
+    }
+
+    const forwardX = this.uniformStaging[CAMERA_FORWARD_FLOAT_OFFSET];
+    const forwardY = this.uniformStaging[CAMERA_FORWARD_FLOAT_OFFSET + 1];
+    const forwardZ = this.uniformStaging[CAMERA_FORWARD_FLOAT_OFFSET + 2];
+
+    const deltaX = forwardX - this.lastMarkerSortForward[0];
+    const deltaY = forwardY - this.lastMarkerSortForward[1];
+    const deltaZ = forwardZ - this.lastMarkerSortForward[2];
+    const forwardUnchanged =
+      deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ < MARKER_SORT_FORWARD_EPSILON_SQ;
+    if (forwardUnchanged) {
+      return;
+    }
+
+    this.lastMarkerSortForward[0] = forwardX;
+    this.lastMarkerSortForward[1] = forwardY;
+    this.lastMarkerSortForward[2] = forwardZ;
+
+    const markers = this.styledMarkers;
+    const order = this.markerSortOrder;
+    order.length = markers.length;
+    for (let index = 0; index < markers.length; index++) {
+      order[index] = index;
+    }
+
+    const [targetX, targetY, targetZ] = this.sceneCenter;
+    const forwardDistance = (marker: StyledMarker): number =>
+      (marker.position[0] - targetX) * forwardX +
+      (marker.position[1] - targetY) * forwardY +
+      (marker.position[2] - targetZ) * forwardZ;
+
+    // Back-to-front: larger forward distance (farther from camera) drawn first.
+    order.sort(
+      (indexA, indexB) => forwardDistance(markers[indexB]) - forwardDistance(markers[indexA])
+    );
+
+    const markerData = new Float32Array(markers.length * MARKER_INSTANCE_FLOATS);
+
+    for (let index = 0; index < markers.length; index++) {
+      const marker = markers[order[index]];
       const offset = index * MARKER_INSTANCE_FLOATS;
 
       // Position + type
@@ -1107,8 +1169,9 @@ export class SceneLayer implements RenderLayer {
         depthWriteEnabled: true,
         depthCompare: 'less',
         format: DEPTH_FORMAT,
-        depthBias: FACE_DEPTH_BIAS,
-        depthBiasSlopeScale: FACE_DEPTH_BIAS_SLOPE_SCALE,
+        // No depth bias: coplanar-line separation is handled slope-independently
+        // by DEPTH_OCCLUSION_EPSILON in common.wgsl. A pipeline slope-scaled bias
+        // here caused hidden-line bleed at silhouettes (see common.wgsl).
       },
     });
   }

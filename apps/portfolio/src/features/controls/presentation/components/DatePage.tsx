@@ -3,7 +3,8 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
-import { memo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Fragment, memo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
@@ -17,6 +18,129 @@ import { Kbd } from './Kbd';
 const TIME_ZONE = Temporal.Now.timeZoneId();
 const WEEKEND_DAYS = new Set([EDayOfWeek.Saturday, EDayOfWeek.Sunday]);
 const NEAREST_VALUE = 'nearest';
+
+const DEFAULT_TOKEN_SEPARATOR = ' ';
+
+type FormatToken = { readonly text: string; readonly after?: string };
+
+type FormatCategory = {
+  readonly label: ReactNode;
+  readonly tokens: ReadonlyArray<FormatToken>;
+};
+
+const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
+  {
+    label: controlsT.datePage.categories.keywords,
+    tokens: [
+      { text: 'today' },
+      { text: 'tomorrow' },
+      { text: 'tom' },
+      { text: 'yesterday' },
+      { text: 'now' },
+      { text: 'noon' },
+      { text: 'midday' },
+      { text: 'midnight' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.boundaries,
+    tokens: [
+      { text: 'eom' },
+      { text: 'bom' },
+      { text: 'eoy' },
+      { text: 'boy' },
+      { text: 'eoq', after: ', ' },
+      { text: 'end of month' },
+      { text: 'start of year' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.weekdays,
+    tokens: [
+      { text: 'mon', after: '–' },
+      { text: 'sun', after: ', ' },
+      { text: 'monday', after: '–' },
+      { text: 'sunday', after: ', ' },
+      { text: 'next fri', after: ', ' },
+      { text: 'last monday' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.offsets,
+    tokens: [
+      { text: '+3d' },
+      { text: '-1w' },
+      { text: '2m' },
+      { text: '1y', after: ', ' },
+      { text: 'in 3 days', after: ', ' },
+      { text: '2 weeks ago' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.dates,
+    tokens: [
+      { text: '2025-01-15' },
+      { text: '15/03/2025' },
+      { text: '15.03.2025' },
+      { text: '15 jan 2025' },
+      { text: 'jan 15 25' },
+      { text: '15 06 27' },
+      { text: '10nov' },
+      { text: 'nov10' },
+      { text: '15nov2025' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.months,
+    tokens: [
+      { text: 'jan' },
+      { text: 'december' },
+      { text: 'january 2027' },
+      { text: "jan '27" },
+      { text: '2027-01' },
+      { text: '01/2027' },
+      { text: '2027 jan' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.quarters,
+    tokens: [
+      { text: 'Q1' },
+      { text: 'Q2 2025' },
+      { text: 'Q3/2025' },
+      { text: '1Q25' },
+      { text: '4Q2025' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.ordinals,
+    tokens: [{ text: '15th' }, { text: 'the 1st' }, { text: '22nd' }],
+  },
+  {
+    label: controlsT.datePage.categories.time,
+    tokens: [
+      { text: '13:00' },
+      { text: '9:30:45' },
+      { text: '9:30:45.123' },
+      { text: '9am' },
+      { text: '5:30pm' },
+      { text: '12am' },
+      { text: '12pm' },
+    ],
+  },
+  {
+    label: controlsT.datePage.categories.dateTime,
+    tokens: [
+      { text: 'tom 13:00' },
+      { text: 'mon 9am' },
+      { text: 'next fri 17:00' },
+      { text: 'last mon 9am' },
+      { text: '+3d 8:00' },
+      { text: 'eom 23:59' },
+      { text: '15 jan 2025 14:30' },
+    ],
+  },
+];
 
 const NEAREST_OPTIONS = [
   { label: controlsT.datePage.futureOnly, value: 'future' },
@@ -79,75 +203,24 @@ export const DatePage = memo(() => {
         {controlsT.datePage.stepInstruction}
       </p>
       <ul className="flex flex-col gap-1.5">
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.keywords}
-          </MonoKicker>
-          <Kbd>today</Kbd> <Kbd>tomorrow</Kbd> <Kbd>tom</Kbd> <Kbd>yesterday</Kbd> <Kbd>now</Kbd>{' '}
-          <Kbd>noon</Kbd> <Kbd>midday</Kbd> <Kbd>midnight</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.boundaries}
-          </MonoKicker>
-          <Kbd>eom</Kbd> <Kbd>bom</Kbd> <Kbd>eoy</Kbd> <Kbd>boy</Kbd> <Kbd>eoq</Kbd>,{' '}
-          <Kbd>end of month</Kbd> <Kbd>start of year</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.weekdays}
-          </MonoKicker>
-          <Kbd>mon</Kbd>–<Kbd>sun</Kbd>, <Kbd>monday</Kbd>–<Kbd>sunday</Kbd>, <Kbd>next fri</Kbd>,{' '}
-          <Kbd>last monday</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.offsets}
-          </MonoKicker>
-          <Kbd>+3d</Kbd> <Kbd>-1w</Kbd> <Kbd>2m</Kbd> <Kbd>1y</Kbd>, <Kbd>in 3 days</Kbd>,{' '}
-          <Kbd>2 weeks ago</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.dates}
-          </MonoKicker>
-          <Kbd>2025-01-15</Kbd> <Kbd>15/03/2025</Kbd> <Kbd>15.03.2025</Kbd> <Kbd>15 jan 2025</Kbd>{' '}
-          <Kbd>jan 15 25</Kbd> <Kbd>15 06 27</Kbd> <Kbd>10nov</Kbd> <Kbd>nov10</Kbd>{' '}
-          <Kbd>15nov2025</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.months}
-          </MonoKicker>
-          <Kbd>jan</Kbd> <Kbd>december</Kbd> <Kbd>january 2027</Kbd> <Kbd>jan &apos;27</Kbd>{' '}
-          <Kbd>2027-01</Kbd> <Kbd>01/2027</Kbd> <Kbd>2027 jan</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.quarters}
-          </MonoKicker>
-          <Kbd>Q1</Kbd> <Kbd>Q2 2025</Kbd> <Kbd>Q3/2025</Kbd> <Kbd>1Q25</Kbd> <Kbd>4Q2025</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.ordinals}
-          </MonoKicker>
-          <Kbd>15th</Kbd> <Kbd>the 1st</Kbd> <Kbd>22nd</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.time}
-          </MonoKicker>
-          <Kbd>13:00</Kbd> <Kbd>9:30:45</Kbd> <Kbd>9:30:45.123</Kbd> <Kbd>9am</Kbd>{' '}
-          <Kbd>5:30pm</Kbd> <Kbd>12am</Kbd> <Kbd>12pm</Kbd>
-        </li>
-        <li className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim">
-          <MonoKicker tone="faint" className="mr-1">
-            {controlsT.datePage.categories.dateTime}
-          </MonoKicker>
-          <Kbd>tom 13:00</Kbd> <Kbd>mon 9am</Kbd> <Kbd>next fri 17:00</Kbd> <Kbd>last mon 9am</Kbd>{' '}
-          <Kbd>+3d 8:00</Kbd> <Kbd>eom 23:59</Kbd> <Kbd>15 jan 2025 14:30</Kbd>
-        </li>
+        {FORMAT_CATEGORIES.map(category => (
+          <li
+            key={String(category.label)}
+            className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim"
+          >
+            <MonoKicker tone="faint" className="mr-1">
+              {category.label}
+            </MonoKicker>
+            {category.tokens.map((token, tokenIndex) => (
+              <Fragment key={token.text}>
+                <Kbd>{token.text}</Kbd>
+                {tokenIndex < category.tokens.length - 1
+                  ? (token.after ?? DEFAULT_TOKEN_SEPARATOR)
+                  : null}
+              </Fragment>
+            ))}
+          </li>
+        ))}
       </ul>
 
       <CardFrame className="p-6">

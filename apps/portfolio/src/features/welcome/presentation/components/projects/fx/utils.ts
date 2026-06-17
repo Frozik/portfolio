@@ -1,6 +1,4 @@
-const DEFAULT_ACCENT_RGB: readonly [number, number, number] = [96, 165, 250];
-const HEX_COLOR_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-const HEX_RADIX = 16;
+import { DEFAULT_ACCENT_RGB, HEX_COLOR_PATTERN, HEX_RADIX } from '../../../canvasTheme';
 
 export function readAccentRgb(): readonly [number, number, number] {
   if (typeof window === 'undefined') {

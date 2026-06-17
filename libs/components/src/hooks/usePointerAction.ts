@@ -42,9 +42,9 @@ export function usePointerAction(
 }
 
 function getPropsFromEvent(event: PointerEvent) {
-  const { target, button, buttons, clientX, clientY } = event;
+  const { currentTarget, button, buttons, clientX, clientY } = event;
 
-  const { left, top } = (target as HTMLElement).getBoundingClientRect();
+  const { left, top } = (currentTarget as HTMLElement).getBoundingClientRect();
 
   const x = clientX - left;
   const y = clientY - top;

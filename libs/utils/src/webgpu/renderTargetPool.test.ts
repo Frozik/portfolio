@@ -68,6 +68,24 @@ describe('RenderTargetPool', () => {
     expect(large.height).toBe(600);
   });
 
+  it('should destroy stale-sized pooled textures when acquiring a new size', () => {
+    const pool = new RenderTargetPool();
+    const device = createMockDevice();
+
+    // Simulate a resize: acquire + release at the old size, then acquire the new size.
+    const oldSize = pool.acquire(device, 400, 300, TEST_FORMAT);
+    pool.release(oldSize);
+
+    pool.acquire(device, 800, 600, TEST_FORMAT);
+
+    // The stale old-size texture must be destroyed, not leaked in the pool.
+    expect(oldSize.destroy).toHaveBeenCalledOnce();
+
+    // It must not be reusable afterwards — a fresh old-size acquire allocates anew.
+    const reAcquiredOldSize = pool.acquire(device, 400, 300, TEST_FORMAT);
+    expect(reAcquiredOldSize).not.toBe(oldSize);
+  });
+
   it('should destroy all textures on dispose', () => {
     const pool = new RenderTargetPool();
     const device = createMockDevice();

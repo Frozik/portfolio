@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface IWakeLockOptions {
   onError?: (error: Error) => void;
@@ -62,6 +62,21 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
 
     await wakeLock.current?.release();
   }, [isSupported]);
+
+  // Release any acquired wake lock when the component unmounts, otherwise the
+  // sentinel keeps the screen awake forever after the consumer is gone. Release
+  // the ref directly (not via `release`) so we don't emit the "release before
+  // request" warning when no lock was ever acquired, and guard against an
+  // already-released sentinel.
+  useEffect(() => {
+    return () => {
+      const sentinel = wakeLock.current;
+      if (sentinel != null && !sentinel.released) {
+        void sentinel.release();
+      }
+      wakeLock.current = null;
+    };
+  }, []);
 
   return {
     isSupported,

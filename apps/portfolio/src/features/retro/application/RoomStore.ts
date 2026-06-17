@@ -17,6 +17,7 @@ import * as Y from 'yjs';
 import {
   MAX_TIMER_DURATION_MS,
   MIN_TIMER_DURATION_MS,
+  PHASE_ORDER,
   TOAST_AUTOCLEAR_MS,
 } from '../domain/constants';
 import { createRetroSnapshot } from '../domain/retro-snapshot';
@@ -54,6 +55,8 @@ import type { IRetroDocHandles } from '../domain/yjs-schema';
 import {
   getRetroHandles,
   initRetroDoc,
+  YJS_GROUP_FIELD_CARD_IDS,
+  YJS_GROUP_FIELD_COLUMN_ID,
   YJS_META_FIELD_CREATED_AT,
   YJS_META_FIELD_FACILITATOR_CLIENT_ID,
   YJS_META_FIELD_FACILITATOR_NAME,
@@ -591,11 +594,11 @@ export class RoomStore {
 
       const currentCardIds = this.readGroupCardIds(groupMap);
       if (!currentCardIds.includes(draggedId)) {
-        groupMap.set('cardIds', [...currentCardIds, draggedId]);
+        groupMap.set(YJS_GROUP_FIELD_CARD_IDS, [...currentCardIds, draggedId]);
       }
 
       const groupColumnId =
-        (groupMap.get('columnId') as ColumnId | undefined) ?? target.record.columnId;
+        (groupMap.get(YJS_GROUP_FIELD_COLUMN_ID) as ColumnId | undefined) ?? target.record.columnId;
 
       // Re-read dragged location — `removeCardFromGroup` may have mutated
       // the card record (when the previous group dissolved into a singleton
@@ -791,36 +794,22 @@ export class RoomStore {
     if (!this.isFacilitator) {
       return;
     }
-    const order: readonly ERetroPhase[] = [
-      ERetroPhase.Brainstorm,
-      ERetroPhase.Group,
-      ERetroPhase.Vote,
-      ERetroPhase.Discuss,
-      ERetroPhase.Close,
-    ];
-    const index = order.indexOf(this.phase);
-    if (index < 0 || index === order.length - 1) {
+    const index = PHASE_ORDER.indexOf(this.phase);
+    if (index < 0 || index === PHASE_ORDER.length - 1) {
       return;
     }
-    this.setPhase(order[index + 1] as ERetroPhase);
+    this.setPhase(PHASE_ORDER[index + 1] as ERetroPhase);
   }
 
   rewindPhase(): void {
     if (!this.isFacilitator) {
       return;
     }
-    const order: readonly ERetroPhase[] = [
-      ERetroPhase.Brainstorm,
-      ERetroPhase.Group,
-      ERetroPhase.Vote,
-      ERetroPhase.Discuss,
-      ERetroPhase.Close,
-    ];
-    const index = order.indexOf(this.phase);
+    const index = PHASE_ORDER.indexOf(this.phase);
     if (index <= 0) {
       return;
     }
-    this.setPhase(order[index - 1] as ERetroPhase);
+    this.setPhase(PHASE_ORDER[index - 1] as ERetroPhase);
   }
 
   private writeTimer(timer: IRetroMeta['timer']): void {

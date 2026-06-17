@@ -49,6 +49,10 @@ export class ChartInputController {
     private readonly fpsController: FpsController
   ) {
     this.handlePointerDown = (event: PointerEvent): void => {
+      // Capture the pointer so move/up keep firing on the canvas even after the
+      // pointer leaves its bounds mid-drag — otherwise a pan would be aborted.
+      this.canvas.setPointerCapture(event.pointerId);
+
       this.activePointers.set(event.pointerId, {
         clientX: event.clientX,
         clientY: event.clientY,
@@ -129,6 +133,10 @@ export class ChartInputController {
     };
 
     this.handlePointerUp = (event: PointerEvent): void => {
+      if (this.canvas.hasPointerCapture(event.pointerId)) {
+        this.canvas.releasePointerCapture(event.pointerId);
+      }
+
       this.activePointers.delete(event.pointerId);
 
       if (this.activePointers.size === 0) {
@@ -224,7 +232,6 @@ export class ChartInputController {
     this.canvas.addEventListener('pointermove', this.handlePointerMove);
     this.canvas.addEventListener('pointerup', this.handlePointerUp);
     this.canvas.addEventListener('pointercancel', this.handlePointerCancel);
-    this.canvas.addEventListener('pointerleave', this.handlePointerUp);
     this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
     this.canvas.style.cursor = 'grab';
   }
@@ -234,7 +241,6 @@ export class ChartInputController {
     this.canvas.removeEventListener('pointermove', this.handlePointerMove);
     this.canvas.removeEventListener('pointerup', this.handlePointerUp);
     this.canvas.removeEventListener('pointercancel', this.handlePointerCancel);
-    this.canvas.removeEventListener('pointerleave', this.handlePointerUp);
     this.canvas.removeEventListener('wheel', this.handleWheel);
   }
 

@@ -3,7 +3,7 @@ import { isSyncedValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil, max } from 'lodash-es';
 import { useEffect, useState } from 'react';
 import { usePendulumStore } from '../../application/usePendulumStore';
-import { HALT_PLAYER_SCORE_PER_MS } from '../../domain/genetic/constants';
+import { HALT_PLAYER_SCORE_PER_MS, POPULATION_SIZE } from '../../domain/genetic/constants';
 import { createTensorflowPlayers } from '../../domain/genetic/createTensorflowPlayers';
 import { loadTensorflowPlayers } from '../../domain/genetic/loadTensorflowPlayers';
 import { singlePendulumGenerationBuilder } from '../../domain/genetic/singlePendulumGenerationBuilder';
@@ -11,7 +11,6 @@ import { singlePendulumScoreCalculatorBuilder } from '../../domain/genetic/singl
 import type { ICompetition, IRobotPlayer, IScoredPlayer, TPlayer } from '../../domain/types';
 import { EPlayerType } from '../../domain/types';
 
-const POPULATION_SIZE = 30;
 const MAX_RUNS = 10_000;
 const FITNESS_RUN_INTERVAL = 20_000;
 

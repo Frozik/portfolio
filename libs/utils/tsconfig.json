@@ -1,5 +1,7 @@
 {
   "extends": "@frozik/typescript-config/lib",
   "include": ["src"],
-  "compilerOptions": {}
+  "compilerOptions": {
+    "types": ["@webgpu/types", "vitest/globals"]
+  }
 }

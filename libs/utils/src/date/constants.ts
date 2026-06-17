@@ -1,6 +1,9 @@
 /** Number of milliseconds in one second. */
 export const MS_PER_SECOND = 1000;
 
+/** Number of days in one week. */
+export const DAYS_IN_WEEK = 7;
+
 export enum EDayOfWeek {
   Monday = 1,
   Tuesday = 2,

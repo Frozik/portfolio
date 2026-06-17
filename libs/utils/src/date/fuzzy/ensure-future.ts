@@ -1,7 +1,8 @@
 import { Temporal } from 'temporal-polyfill';
 
 import { assertNever } from '../../assert/assertNever';
-import { DAYS_IN_WEEK, MAX_ADVANCES } from './constants';
+import { DAYS_IN_WEEK } from '../constants';
+import { MAX_ADVANCES } from './constants';
 import { EParseTemporality } from './types';
 
 export function ensureFuture(

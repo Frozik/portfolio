@@ -7,10 +7,9 @@
  * preserve the visual fidelity of the ported design reference.
  */
 
-import type { IFxDrawContext, TAccentAlpha, TFxDraw } from './types';
+import { DARK_SURFACE_HEX, darkSurface, MONO_FONT_STACK } from '../../../canvasTheme';
+import type { IFxDrawContext, TAccentAlpha, TFxDraw, TProjectFxKind } from './types';
 import { pseudoRandom } from './utils';
-
-const MONO_FONT_STACK = 'ui-monospace, Menlo, Monaco, Consolas, monospace';
 
 function drawNeural({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
   const layers = [3, 5, 5, 1];
@@ -323,7 +322,7 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const scroll = (time * speed * 0.8) % 1;
   const offsetX = -scroll * colW;
 
-  ctx.fillStyle = 'rgba(7,9,12,0.4)';
+  ctx.fillStyle = darkSurface(0.4);
   ctx.fillRect(0, 0, gridW, gridH);
 
   const firstColumnIndex = Math.floor(time * speed * 0.8);
@@ -385,7 +384,7 @@ function drawTicker({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCon
   const priceWidth = ctx.measureText(price).width + 10 * dpr;
   ctx.fillStyle = accent(1);
   ctx.fillRect(gridW + 2 * dpr, midLineY - 8 * dpr, priceWidth, 16 * dpr);
-  ctx.fillStyle = '#07090c';
+  ctx.fillStyle = DARK_SURFACE_HEX;
   ctx.fillText(price, gridW + 7 * dpr, midLineY + 3.5 * dpr);
 
   ctx.fillStyle = accent(0.6);
@@ -703,7 +702,7 @@ function drawPeers({ ctx, width, height, time, speed, accent, dpr }: IFxDrawCont
     ctx.beginPath();
     ctx.arc(x, y, 7 * dpr, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#07090c';
+    ctx.fillStyle = DARK_SURFACE_HEX;
     ctx.font = `${8 * dpr}px ${MONO_FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -839,7 +838,7 @@ function drawAR({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext
   ctx.fillText('AR · LIVE', 10 * dpr, height - 10 * dpr);
 }
 
-const DRAW_FUNCTIONS: Record<string, TFxDraw> = {
+const DRAW_FUNCTIONS: Record<TProjectFxKind, TFxDraw> = {
   neural: drawNeural,
   flare: drawFlare,
   shapes: drawShapes,
@@ -852,8 +851,8 @@ const DRAW_FUNCTIONS: Record<string, TFxDraw> = {
   ar: drawAR,
 };
 
-export function getFxDraw(kind: string): TFxDraw {
-  return DRAW_FUNCTIONS[kind] ?? drawNeural;
+export function getFxDraw(kind: TProjectFxKind): TFxDraw {
+  return DRAW_FUNCTIONS[kind];
 }
 
 export function buildAccentFn(rgb: readonly [number, number, number]): TAccentAlpha {

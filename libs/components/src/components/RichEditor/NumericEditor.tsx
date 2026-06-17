@@ -1,6 +1,6 @@
 import { trim } from '@frozik/utils/math/trim';
 import { isNil } from 'lodash-es';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useFunction } from '../../hooks/useFunction';
 import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
@@ -9,9 +9,34 @@ import styles from './styles.module.scss';
 import { getCalendarAriaLabels } from './translations/translations';
 import { numericElementSelectionWithValueBuilder, numericTextToHtmlBuilder } from './utils';
 
+/**
+ * Convert a numeric editing buffer into the controlled `number` value.
+ * Empty, partial (`"-"`, `"."`), or otherwise non-finite buffers map to
+ * `undefined` — the editor has no committed value in those states.
+ */
+function parseNumericText(text: string): number | undefined {
+  if (text.length === 0) {
+    return undefined;
+  }
+
+  const parsed = Number(text);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * Render a controlled `number` value into the editing buffer. `undefined`
+ * clears the buffer; a finite number is shown as its plain string form.
+ */
+function formatNumericValue(value: number | undefined): string {
+  return isNil(value) ? '' : String(value);
+}
+
 export const NumericEditor = memo(
   ({
     className,
+    value,
+    onValueChange,
     decimal,
     pipStart,
     pipSize = 2,
@@ -20,6 +45,8 @@ export const NumericEditor = memo(
     language = 'en',
   }: {
     className?: string;
+    value?: number;
+    onValueChange?: (value: number | undefined) => void;
     decimal?: number;
     pipStart?: number;
     pipSize?: number;
@@ -34,8 +61,33 @@ export const NumericEditor = memo(
       [decimal]
     );
 
-    const [value, setValue] = useState('');
+    const [editingText, setEditingText] = useState(() => formatNumericValue(value));
     const [focused, setFocused] = useState(false);
+    // Mirrors the last value emitted through `onValueChange` so prop changes that
+    // merely echo our own commit don't fight the editing buffer.
+    const lastEmittedValueRef = useRef(value);
+
+    // Sync the controlled value into the editing buffer when it changes
+    // externally and the user is not mid-edit (DateTimePicker pattern).
+    useEffect(() => {
+      if (focused || value === lastEmittedValueRef.current) {
+        return;
+      }
+
+      lastEmittedValueRef.current = value;
+      setEditingText(formatNumericValue(value));
+    }, [value, focused]);
+
+    const commitText = useFunction((nextText: string) => {
+      setEditingText(nextText);
+
+      const nextValue = parseNumericText(nextText);
+
+      if (nextValue !== lastEmittedValueRef.current) {
+        lastEmittedValueRef.current = nextValue;
+        onValueChange?.(nextValue);
+      }
+    });
 
     const handleElementSelectionWithValue = useMemo(
       () => numericElementSelectionWithValueBuilder({ allowNegative }),
@@ -75,21 +127,21 @@ export const NumericEditor = memo(
     const handleFocusChanges = useFunction((newFocused: boolean) => {
       setFocused(newFocused);
 
-      if (newFocused || !value.includes('.')) {
+      if (newFocused || !editingText.includes('.')) {
         return;
       }
 
       if (!isNil(allowedDecimals) || !isNil(pipStart)) {
-        const newValue = trim(
-          value,
+        const trimmedText = trim(
+          editingText,
           Math.max(allowedDecimals ?? 0, isNil(pipStart) ? 0 : pipStart + pipSize)
         );
 
-        if (newValue !== value) {
-          setValue(newValue);
+        if (trimmedText !== editingText) {
+          commitText(trimmedText);
         }
       } else {
-        setValue(value.replace(/0+$/g, ''));
+        commitText(editingText.replace(/0+$/g, ''));
       }
     });
 
@@ -102,9 +154,13 @@ export const NumericEditor = memo(
         className={cn(styles.editor, className)}
         onGetElementSelectionWithValue={handleElementSelectionWithValue}
         onTextToHtml={handleTextToHtml}
-        value={value}
-        placeholder={`<span class="${styles.placeholder}">${placeholder}</span>`}
-        onValueChanged={setValue}
+        value={editingText}
+        placeholder={
+          !isNil(placeholder)
+            ? `<span class="${styles.placeholder}">${placeholder}</span>`
+            : undefined
+        }
+        onValueChanged={commitText}
         onFocusChanges={handleFocusChanges}
         onFocusSelection={handleFocusSelection}
         aria-label={ariaLabels.numericInputLabel}

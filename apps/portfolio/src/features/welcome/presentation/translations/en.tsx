@@ -598,8 +598,8 @@ export const welcomeTranslationsEn = {
         meta: 'WebGPU · Rendering test',
         title: 'Sun',
         description:
-          'A WebGPU rendering test — a million particles shaded on the GPU to validate the pipeline and push throughput.',
-        status: '1M vertices',
+          'A WebGPU rendering test — a quarter-million particles shaded on the GPU to validate the pipeline and push throughput.',
+        status: '250K particles',
       },
       graphics: {
         meta: 'WebGPU · Primitives',

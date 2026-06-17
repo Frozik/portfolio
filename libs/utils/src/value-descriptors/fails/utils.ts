@@ -27,6 +27,10 @@ export function convertErrorToFail(error: Error | ValueDescriptorError): ValueDe
       });
 }
 
+export function toFail(error: unknown): ValueDescriptorFail {
+  return convertErrorToFail(error instanceof Error ? error : new Error(String(error)));
+}
+
 export function convertFailToError(fail: ValueDescriptorFail): ValueDescriptorError {
   return new ValueDescriptorError(fail.meta.message, fail.code, fail.meta.description);
 }

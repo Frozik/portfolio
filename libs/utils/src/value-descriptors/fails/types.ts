@@ -3,8 +3,8 @@ import type { TStructurallyCloneable } from '../../types/serialization';
 export const FAIL_TAG = 'FAIL' as const;
 
 export type ScopedFail<
-  S extends Exclude<string, ''>,
-  C extends Exclude<string, ''>,
+  S extends string,
+  C extends string,
   M extends undefined | TStructurallyCloneable = never,
 > = FailStruct<`[${S}]: ${C}`, M>;
 

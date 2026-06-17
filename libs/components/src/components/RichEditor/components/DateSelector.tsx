@@ -1,7 +1,6 @@
 import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from '@frozik/utils/date/boundaries';
 import type { EDayType } from '@frozik/utils/date/constants';
-import { EDayType as DayType, EDayOfWeek } from '@frozik/utils/date/constants';
-import { DAYS_IN_WEEK } from '@frozik/utils/date/fuzzy/constants';
+import { DAYS_IN_WEEK, EDayType as DayType, EDayOfWeek } from '@frozik/utils/date/constants';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import { EMPTY_VD, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
@@ -102,7 +101,7 @@ export const DateSelector = memo(
           <abbr
             key={index}
             className={cn(
-              'flex size-7 items-center justify-center font-mono text-[10px] font-semibold tracking-[0.08em] text-landing-fg-faint uppercase',
+              'flex size-7 items-center justify-center font-mono text-[10px] font-semibold tracking-[0.08em] text-[var(--color-landing-fg-faint,#76819a)] uppercase',
               'pointer-events-none no-underline'
             )}
             title={ariaLabels.dayNames[dayIndex]}

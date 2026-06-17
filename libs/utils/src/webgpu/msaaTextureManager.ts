@@ -10,9 +10,6 @@ export interface MsaaTextureManager {
   dispose(): void;
 }
 
-// GPUTextureUsage.RENDER_ATTACHMENT = 0x10
-const RENDER_ATTACHMENT_USAGE = 0x10;
-
 export function createMsaaTextureManager(sampleCount: number): MsaaTextureManager {
   let msaaTexture: GPUTexture | null = null;
   let msaaView: GPUTextureView | null = null;
@@ -44,7 +41,7 @@ export function createMsaaTextureManager(sampleCount: number): MsaaTextureManage
         size: [width, height],
         format,
         sampleCount,
-        usage: RENDER_ATTACHMENT_USAGE,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
       msaaView = msaaTexture.createView();
       currentWidth = width;

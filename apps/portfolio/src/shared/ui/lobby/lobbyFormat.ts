@@ -1,4 +1,4 @@
-import { formatISO8601Local } from '@frozik/utils/date/format';
+import { formatDateTimeLocal } from '@frozik/utils/date/format';
 import type { ISO } from '@frozik/utils/date/types';
 
 const ROOM_COUNT_PAD_LENGTH = 2;
@@ -29,5 +29,5 @@ export function formatRoomCount(count: number): string {
 
 /** Local "YYYY-MM-DD HH:mm" timestamp for a room's `createdAt`. */
 export function formatLocalDateTime(iso: ISO): string {
-  return formatISO8601Local(iso).slice(0, LOCAL_DATETIME_MINUTES_LENGTH);
+  return formatDateTimeLocal(iso).slice(0, LOCAL_DATETIME_MINUTES_LENGTH);
 }

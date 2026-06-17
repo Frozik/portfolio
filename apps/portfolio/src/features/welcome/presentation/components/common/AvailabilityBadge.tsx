@@ -34,7 +34,7 @@ const AvailabilityBadgeComponent = ({
   readonly suffix?: string;
   readonly className?: string;
 }) => {
-  const status = useAvailability();
+  const { status } = useAvailability();
   const visual = STATUS_VISUALS[status];
   const Icon = visual.icon;
 

@@ -34,7 +34,7 @@ interface IDBGeneration {
   robotNames: string[];
 }
 
-const CURRENT_DATABASE_VERSION = 1;
+const CURRENT_DATABASE_VERSION = 2;
 const DATABASE_NAME = 'competitions';
 
 const ROBOTS_TABLE_NAME = 'robots';
@@ -50,12 +50,13 @@ const ROBOT_SCORE_INDEX = 'by-score';
 const ROBOT_NAME_FIELD: keyof IDBRobot = 'name';
 const ROBOT_SCORE_FIELD: keyof IDBRobot = 'score';
 
+const REMOVE_REDUNDANT_NAME_INDEX_VERSION = 2;
+
 interface IDBCompetitions extends DBSchema {
   [ROBOTS_TABLE_NAME]: {
     value: IDBRobot;
     key: string;
     indexes: {
-      [ROBOT_NAME_INDEX]: string;
       [ROBOT_SCORE_INDEX]: number;
     };
   };
@@ -175,7 +176,12 @@ export async function createGenerationDB(
     async terminated() {
       await dbCallback(EDatabaseErrorCallbackType.Terminated);
     },
-    upgrade(database: IDBPDatabase<IDBCompetitions>, oldVersion: number) {
+    upgrade(
+      database: IDBPDatabase<IDBCompetitions>,
+      oldVersion: number,
+      _newVersion: number | null,
+      transaction
+    ) {
       if (oldVersion < 1) {
         const generationsStore = database.createObjectStore(GENERATIONS_TABLE_NAME, {
           keyPath: [GENERATION_COMPETITION_START_FIELD, GENERATION_ID_FIELD],
@@ -191,8 +197,13 @@ export async function createGenerationDB(
           keyPath: ROBOT_NAME_FIELD,
         });
 
-        robotsStore.createIndex(ROBOT_NAME_INDEX, ROBOT_NAME_FIELD);
         robotsStore.createIndex(ROBOT_SCORE_INDEX, ROBOT_SCORE_FIELD);
+      }
+
+      if (oldVersion > 0 && oldVersion < REMOVE_REDUNDANT_NAME_INDEX_VERSION) {
+        // The `by-name` index duplicated the robots store's `name` keyPath, so
+        // lookups already go through the primary key. Drop the dead index.
+        transaction.objectStore(ROBOTS_TABLE_NAME).deleteIndex(ROBOT_NAME_INDEX);
       }
     },
   });
@@ -304,33 +315,27 @@ async function deleteCompetition(
   const generationsStore = transaction.objectStore(GENERATIONS_TABLE_NAME);
   const robotsStore = transaction.objectStore(ROBOTS_TABLE_NAME);
 
-  const deletedGenerations = await generationsStore
-    .index(GENERATION_COMPETITION_START_INDEX)
-    .getAll(competitionStart);
-
-  const deletedRobotNames = new Set<string>();
-  for (const { robotNames } of deletedGenerations) {
-    for (const robotName of robotNames) {
-      deletedRobotNames.add(robotName);
-    }
-  }
-
-  await Promise.all(
-    deletedGenerations.map(({ id }) => generationsStore.delete([competitionStart, id]))
-  );
-
-  const remainingGenerations = await generationsStore.getAll();
+  // Robot names are unique to a competition lineage: a continued competition
+  // reloads its own players by name, while mutated/crossover/new players always
+  // get fresh ids. No robot referenced by this competition is referenced by
+  // another, so deleting its robots needs no whole-store cross-reference scan —
+  // we walk only this competition's generations via the keyed index.
   const referencedRobotNames = new Set<string>();
-  for (const { robotNames } of remainingGenerations) {
-    for (const robotName of robotNames) {
+
+  let generationCursor = await generationsStore
+    .index(GENERATION_COMPETITION_START_INDEX)
+    .openCursor(competitionStart);
+
+  while (!isNil(generationCursor)) {
+    for (const robotName of generationCursor.value.robotNames) {
       referencedRobotNames.add(robotName);
     }
+    await generationCursor.delete();
+    generationCursor = await generationCursor.continue();
   }
 
   await Promise.all(
-    Array.from(deletedRobotNames)
-      .filter(robotName => !referencedRobotNames.has(robotName))
-      .map(robotName => robotsStore.delete(robotName))
+    Array.from(referencedRobotNames).map(robotName => robotsStore.delete(robotName))
   );
 
   await transaction.done;

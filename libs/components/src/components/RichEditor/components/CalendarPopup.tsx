@@ -3,7 +3,7 @@ import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import { createSyncedValueDescriptor, EMPTY_VD } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import type { MouseEvent } from 'react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
@@ -52,10 +52,7 @@ export const CalendarPopup = memo(
       });
     });
 
-    const userNavigatedRef = useRef(false);
-
     const handleYearMonthChange = useFunction((ym: Temporal.PlainYearMonth) => {
-      userNavigatedRef.current = true;
       setYearMonth(ym);
     });
 
@@ -63,8 +60,6 @@ export const CalendarPopup = memo(
       if (isNil(value)) {
         return;
       }
-
-      userNavigatedRef.current = false;
 
       const valueYM = Temporal.PlainYearMonth.from({ year: value.year, month: value.month });
       setYearMonth(prev => (Temporal.PlainYearMonth.compare(valueYM, prev) !== 0 ? valueYM : prev));

@@ -28,6 +28,7 @@ import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { usePendulumStore } from '../../application/usePendulumStore';
+import { POPULATION_SIZE } from '../../domain/genetic/constants';
 import { pendulumT } from '../translations';
 import commonStyles from './common.module.scss';
 
@@ -40,8 +41,6 @@ type TGenerationRow = Record<string, unknown> & {
 };
 
 type TPlayerValue = { name: string; modelUrl: string; score: number } | undefined;
-
-const MAX_PLAYER_COLUMNS = 30;
 
 const ScoreCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
   const maxScore = getValue<number>();
@@ -163,7 +162,7 @@ const generationColumns: ColumnDef<TGenerationRow, unknown>[] = [
     size: 110,
     cell: ScoreCell,
   },
-  ...Array.from({ length: MAX_PLAYER_COLUMNS }, (_, index) => ({
+  ...Array.from({ length: POPULATION_SIZE }, (_, index) => ({
     accessorKey: `player-${index}` as const,
     header: pendulumT.generationsList.columnPlayer(index + 1),
     size: 340,
@@ -227,7 +226,7 @@ export const GenerationsList = observer(() => {
   });
 
   const columnVisibility: VisibilityState = {};
-  for (let i = 0; i < MAX_PLAYER_COLUMNS; i++) {
+  for (let i = 0; i < POPULATION_SIZE; i++) {
     columnVisibility[`player-${i}`] = i < maxPopulationSize;
   }
 

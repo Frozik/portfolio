@@ -1,13 +1,8 @@
 import { useRootStore } from '../../../app/stores/StoreContext';
-import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';
-import { UserDirectoryStore } from './UserDirectoryStore';
-
-const USER_DIRECTORY_KEY = 'retro-user-directory';
+import type { UserDirectoryStore } from './UserDirectoryStore';
+import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
 
 export function useUserDirectoryStore(): UserDirectoryStore {
   const rootStore = useRootStore();
-  return rootStore.getOrCreateFeatureStore(
-    USER_DIRECTORY_KEY,
-    () => new UserDirectoryStore(createUserDirectoryRepo())
-  );
+  return getUserDirectoryStore(rootStore);
 }

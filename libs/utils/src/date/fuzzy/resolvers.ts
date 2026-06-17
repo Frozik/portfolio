@@ -1,13 +1,8 @@
 import { isNil } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 
-import {
-  DAYS_IN_WEEK,
-  MIN_4_DIGIT_YEAR,
-  MONTHS_IN_YEAR,
-  NOON_HOUR,
-  QUARTER_DIVISOR,
-} from './constants';
+import { DAYS_IN_WEEK } from '../constants';
+import { MIN_4_DIGIT_YEAR, MONTHS_IN_YEAR, NOON_HOUR, QUARTER_DIVISOR } from './constants';
 import { MONTH_MAP, QUARTER_START_MONTH, WEEKDAY_MAP } from './lookups';
 import { dateToSlots, slotsToPlainDate, tryBuildDateSlots } from './slots';
 import type { ISlotMap, IToken } from './types';
@@ -123,12 +118,12 @@ function unitToDuration(unit: string, amount: number): Temporal.DurationLike {
   }
 }
 
-function negateDuration(duration: Temporal.DurationLike): Temporal.DurationLike {
+export function negateDuration(duration: Temporal.DurationLike): Temporal.DurationLike {
   return {
-    years: duration.years,
-    months: duration.months,
-    weeks: duration.weeks,
-    days: duration.days,
+    years: isNil(duration.years) ? undefined : -duration.years,
+    months: isNil(duration.months) ? undefined : -duration.months,
+    weeks: isNil(duration.weeks) ? undefined : -duration.weeks,
+    days: isNil(duration.days) ? undefined : -duration.days,
   };
 }
 
@@ -141,7 +136,10 @@ export function applyOffsetSlots(
   const signedAmount = amount * direction;
   const duration = unitToDuration(unit, signedAmount);
 
-  const result = signedAmount >= 0 ? today.add(duration) : today.subtract(negateDuration(duration));
+  // `duration` always carries the absolute magnitude (see `unitToDuration`),
+  // so the negative branch adds the negated duration — equivalent to
+  // subtracting the positive one — keeping the offset direction correct.
+  const result = signedAmount >= 0 ? today.add(duration) : today.add(negateDuration(duration));
 
   return dateToSlots(result);
 }

@@ -3,10 +3,9 @@ import { useRefcountedFeatureStore } from '../../../app/stores/useRefcountedFeat
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import type { ITemplateConfig, RoomId } from '../domain/types';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
-import { createUserDirectoryRepo } from '../infrastructure/user-directory-repo';
 import { createYjsRoomProviders } from '../infrastructure/yjs-providers';
 import { RoomStore } from './RoomStore';
-import { UserDirectoryStore } from './UserDirectoryStore';
+import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
 
 export interface IUseRoomStoreParams {
   readonly roomId: RoomId;
@@ -19,8 +18,35 @@ export interface IUseRoomStoreParams {
   readonly client: ICommunicationClient;
 }
 
-function getRoomStoreKey(roomId: RoomId): string {
-  return `retro-room:${roomId}`;
+/**
+ * Stable per-instance id for every `ICommunicationClient`. A sign-out →
+ * sign-in cycle disconnects the old client and constructs a fresh one;
+ * folding this id into the room-store key (see {@link getRoomStoreKey})
+ * guarantees the old `RoomStore` — whose Yjs providers are bound to the
+ * now-disconnected client — is torn down rather than reused for the new
+ * client. A `WeakMap` keys off the client instance itself so ids are
+ * reclaimed automatically when a client is garbage-collected.
+ */
+const clientInstanceIds = new WeakMap<ICommunicationClient, string>();
+
+function getClientInstanceId(client: ICommunicationClient): string {
+  const existing = clientInstanceIds.get(client);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const id = crypto.randomUUID();
+  clientInstanceIds.set(client, id);
+  return id;
+}
+
+/**
+ * The room-store key is scoped by both `roomId` and the owning client
+ * instance. Keying on `roomId` alone let a store outlive the client that
+ * created it across a sign-out → sign-in within the refcount grace window;
+ * including the client id evicts the stale store when its owner changes.
+ */
+function getRoomStoreKey(roomId: RoomId, client: ICommunicationClient): string {
+  return `retro-room:${roomId}:${getClientInstanceId(client)}`;
 }
 
 /**
@@ -34,16 +60,11 @@ function getRoomStoreKey(roomId: RoomId): string {
  * `useEffect` cleanup purposely disposes on unmount rather than on deps
  * change: the factory closure is stable for the component's lifetime.
  */
-const USER_DIRECTORY_KEY = 'retro-user-directory';
-
 export function useRoomStore(params: IUseRoomStoreParams): RoomStore {
   const rootStore = useRootStore();
-  const storeKey = getRoomStoreKey(params.roomId);
+  const storeKey = getRoomStoreKey(params.roomId, params.client);
 
-  const directory = rootStore.getOrCreateFeatureStore(
-    USER_DIRECTORY_KEY,
-    () => new UserDirectoryStore(createUserDirectoryRepo())
-  );
+  const directory = getUserDirectoryStore(rootStore);
 
   const store = rootStore.getOrCreateFeatureStore(storeKey, () => {
     const providers = createYjsRoomProviders({

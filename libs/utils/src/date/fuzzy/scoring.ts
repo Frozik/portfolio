@@ -6,7 +6,10 @@ import {
   CERTAIN_OTHER_MAX,
   CERTAIN_THRESHOLD,
   HOURS_IN_DAY,
+  MIN_3_DIGIT_VALUE,
   MIN_4_DIGIT_YEAR,
+  MIN_NON_DAY_VALUE,
+  MIN_TWO_DIGIT_YEAR_VALUE,
   MONTHS_IN_YEAR,
   POSITION_BOOST,
   SCORE_CERTAIN,
@@ -66,7 +69,7 @@ function getBaseScores(value: number): Record<ESlot, number> {
     };
   }
 
-  if (value >= 100) {
+  if (value >= MIN_3_DIGIT_VALUE) {
     return {
       year: SCORE_ZERO,
       month: SCORE_ZERO,
@@ -78,7 +81,7 @@ function getBaseScores(value: number): Record<ESlot, number> {
     };
   }
 
-  if (value >= 60) {
+  if (value >= MIN_TWO_DIGIT_YEAR_VALUE) {
     return {
       year: SCORE_VERY_HIGH,
       month: SCORE_ZERO,
@@ -90,7 +93,7 @@ function getBaseScores(value: number): Record<ESlot, number> {
     };
   }
 
-  if (value >= 32) {
+  if (value >= MIN_NON_DAY_VALUE) {
     return {
       year: SCORE_VERY_LOW,
       month: SCORE_ZERO,

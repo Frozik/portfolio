@@ -19,6 +19,7 @@ const DECIMALS_STEP = 1;
 export const NumberPage = memo(() => {
   const [value, setValue] = useState([2, 4]);
   const [decimals, setDecimals] = useState(6);
+  const [numericValue, setNumericValue] = useState<number | undefined>(undefined);
 
   const [pipStart, pipSize] =
     value[0] === value[1]
@@ -36,6 +37,8 @@ export const NumberPage = memo(() => {
 
       <CardFrame className="p-6">
         <NumericEditor
+          value={numericValue}
+          onValueChange={setNumericValue}
           decimal={decimals}
           pipStart={pipStart}
           pipSize={pipSize}

@@ -1,21 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import type { LucideIcon } from 'lucide-react';
-import {
-  ArrowLeft,
-  Box,
-  Brain,
-  CandlestickChart,
-  Grid3x3,
-  Home,
-  LineChart,
-  Menu,
-  Shapes,
-  SlidersHorizontal,
-  StickyNote,
-  Sun,
-  Video,
-} from 'lucide-react';
+import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
+import { ArrowLeft, Home, Menu } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SvgGitHub } from '../../icons/SvgGitHub';
@@ -23,6 +10,7 @@ import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
+import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
 import { MobileSectionMenu } from './MobileSectionMenu';
 import type { INavProject } from './navTypes';
@@ -32,25 +20,6 @@ import { useTopNavCenterHostSetter } from './TopNavCenterContext';
 const GITHUB_URL = 'https://github.com/frozik/portfolio';
 const QR_SIZE_PX = 216;
 const ICON_SIZE_PX = 16;
-
-/**
- * Stable ordering of the projects shown in the drawer menu. Each id
- * corresponds both to the route segment (`/${id}`) and to an entry in
- * `appT.pageTitles` from which the display title is read.
- * Icon is a small lucide glyph that hints at the project's theme.
- */
-const PROJECT_ENTRIES: readonly { readonly id: string; readonly icon: LucideIcon }[] = [
-  { id: 'pendulum', icon: Brain },
-  { id: 'sun', icon: Sun },
-  { id: 'graphics', icon: Shapes },
-  { id: 'timeseries', icon: LineChart },
-  { id: 'binance', icon: CandlestickChart },
-  { id: 'sudoku', icon: Grid3x3 },
-  { id: 'stereometry', icon: Box },
-  { id: 'retro', icon: StickyNote },
-  { id: 'conf', icon: Video },
-  { id: 'controls', icon: SlidersHorizontal },
-];
 
 const iconButtonClassName = cn(
   'group flex h-9 w-9 items-center justify-center rounded-sm',
@@ -129,12 +98,15 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
 
   const projects: readonly INavProject[] = useMemo(
     () =>
-      PROJECT_ENTRIES.map(entry => ({
-        id: entry.id,
-        label: (appT.pageTitles as Record<string, string>)[entry.id] ?? entry.id,
-        route: `/${entry.id}`,
-        icon: entry.icon,
-      })),
+      ROUTE_METADATA.filter(entry => entry.navVisible).map(entry => {
+        assert(!isNil(entry.icon), 'nav-visible route metadata must declare an icon');
+        return {
+          id: entry.segment,
+          label: appT.pageTitles[entry.titleKey],
+          route: `/${entry.segment}`,
+          icon: entry.icon,
+        };
+      }),
     []
   );
 

@@ -183,15 +183,7 @@ export function numericTextToHtmlBuilder({
 }
 
 export function isParentOf(el: Element | null, parent: Element): boolean {
-  if (isNil(el)) {
-    return false;
-  }
-
-  if (el === parent) {
-    return true;
-  }
-
-  return isParentOf(el.parentElement, parent);
+  return parent.contains(el);
 }
 
 export function* traverseTextNodes(node: Node): Generator<Node> {

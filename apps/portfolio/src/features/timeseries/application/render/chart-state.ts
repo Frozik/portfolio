@@ -81,6 +81,15 @@ const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
 const MIN_POINTS_FOR_RENDERING = 2;
 
+/** Raw (sub-pixel) plot rectangle in device pixels — single source of truth for plot geometry. */
+interface IPlotGeometry {
+  readonly dpr: number;
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 function getVerticesPerInstance(chartType: EChartType): number {
   switch (chartType) {
     case EChartType.Line:
@@ -172,8 +181,10 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     // Shared slot allocator (one texture) and block registry (one RTree)
     this.registry = new BlockRegistry();
-    this.allocator = new SlotAllocator(renderer.device, undefined, undefined, undefined, slot => {
-      this.registry.removeBySlot(slot);
+    this.allocator = new SlotAllocator(renderer.device, {
+      onEvict: slot => {
+        this.registry.removeBySlot(slot);
+      },
     });
 
     this.lastTextureCapacity = this.allocator.getCapacity();
@@ -233,14 +244,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
     return this.canvasHeight;
   }
 
-  /** Sync canvas pixel dimensions to CSS size. Returns true if canvas was resized. */
+  /**
+   * Sync the backing-store pixel dimensions to the device-pixel size already
+   * computed by updateCanvasSize() earlier this frame. Reuses the cached values
+   * instead of re-reading clientWidth/clientHeight (which would force a second
+   * layout flush per frame). Returns true if the backing store was resized.
+   */
   syncCanvasSize(): boolean {
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const width = Math.floor(this.targetCanvas.clientWidth * dpr);
-    const height = Math.floor(this.targetCanvas.clientHeight * dpr);
-
-    this.canvasWidth = width;
-    this.canvasHeight = height;
+    const width = this.canvasWidth;
+    const height = this.canvasHeight;
 
     if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
       this.targetCanvas.width = width;
@@ -355,19 +367,31 @@ export class TimeseriesChartState implements ITimeseriesChart {
       this.viewport.viewValueMax
     );
 
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const plotX = Math.floor(AXIS_MARGIN_LEFT * dpr);
-    const plotY = Math.floor(AXIS_MARGIN_TOP * dpr);
-    const plotWidth = Math.max(
-      0,
-      this.canvasWidth - Math.floor((AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr)
-    );
-    const plotHeight = Math.max(
-      0,
-      this.canvasHeight - Math.floor((AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr)
-    );
+    const geometry = this.computePlotGeometry();
 
-    return { x: plotX, y: plotY, width: plotWidth, height: plotHeight };
+    return {
+      x: Math.floor(geometry.left),
+      y: Math.floor(geometry.top),
+      width: Math.max(0, Math.floor(geometry.width)),
+      height: Math.max(0, Math.floor(geometry.height)),
+    };
+  }
+
+  /**
+   * Raw sub-pixel plot rectangle in device pixels. Single source of truth so the
+   * GPU scissor rect (floored, in prepareDrawCommands) and the 2D-canvas axis/grid
+   * geometry (in getFrameLayout) derive from identical values and cannot drift.
+   */
+  private computePlotGeometry(): IPlotGeometry {
+    const dpr = Math.max(1, window.devicePixelRatio);
+
+    return {
+      dpr,
+      left: AXIS_MARGIN_LEFT * dpr,
+      top: AXIS_MARGIN_TOP * dpr,
+      width: this.canvasWidth - (AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr,
+      height: this.canvasHeight - (AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr,
+    };
   }
 
   /**
@@ -378,7 +402,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
    */
   private getFrameLayout(): IFrameLayoutCache | null {
     const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
-    const dpr = Math.max(1, window.devicePixelRatio);
 
     const cache = this.layoutCache;
 
@@ -394,10 +417,13 @@ export class TimeseriesChartState implements ITimeseriesChart {
       return cache;
     }
 
-    const plotLeft = AXIS_MARGIN_LEFT * dpr;
-    const plotTop = AXIS_MARGIN_TOP * dpr;
-    const plotWidth = this.canvasWidth - (AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr;
-    const plotHeight = this.canvasHeight - (AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr;
+    const {
+      dpr,
+      left: plotLeft,
+      top: plotTop,
+      width: plotWidth,
+      height: plotHeight,
+    } = this.computePlotGeometry();
 
     if (plotWidth <= 0 || plotHeight <= 0) {
       this.layoutCache = null;
@@ -646,12 +672,14 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
   private updateCanvasSize(): void {
     const dpr = Math.max(1, window.devicePixelRatio);
-    const newWidth = Math.floor(this.targetCanvas.clientWidth * dpr);
+    const clientWidth = this.targetCanvas.clientWidth;
+    const clientHeight = this.targetCanvas.clientHeight;
+    const newWidth = Math.floor(clientWidth * dpr);
 
     const oldWidth = this.canvasWidth;
 
     this.canvasWidth = newWidth;
-    this.canvasHeight = Math.floor(this.targetCanvas.clientHeight * dpr);
+    this.canvasHeight = Math.floor(clientHeight * dpr);
 
     // Spring effect on time axis
     if (oldWidth > 0 && newWidth !== oldWidth) {

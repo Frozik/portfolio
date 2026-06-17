@@ -10,6 +10,7 @@ import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AccountChip } from '../../../shared/communication/AccountChip';
+import { initialsOf, UNKNOWN_PARTICIPANT_INITIAL } from '../../../shared/lib/initialsOf';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';
@@ -30,8 +31,6 @@ import { retroT as t } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/retro\/([^/?#]+)/;
 const MAX_VISIBLE_AVATARS = 3;
-const INITIALS_PART_LIMIT = 2;
-const UNKNOWN_PARTICIPANT_INITIAL = '?';
 
 /**
  * Single neutral background for initials-only avatars (Yandex users
@@ -39,18 +38,6 @@ const UNKNOWN_PARTICIPANT_INITIAL = '?';
  * Per-user colors are gone — identity is derived entirely from OIDC.
  */
 const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
-
-function initialsOf(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) {
-    return UNKNOWN_PARTICIPANT_INITIAL;
-  }
-  const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) {
-    return (parts[0] ?? UNKNOWN_PARTICIPANT_INITIAL).slice(0, INITIALS_PART_LIMIT).toUpperCase();
-  }
-  return `${parts[0]?.charAt(0) ?? ''}${parts[1]?.charAt(0) ?? ''}`.toUpperCase();
-}
 
 const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
   const directory = useUserDirectoryStore();

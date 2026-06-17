@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from 'react';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useFunction } from '../../../hooks/useFunction';
+import { cn } from '../../cn';
 import type { ISelection } from '../defs';
 import styles from '../styles.module.scss';
 import {
@@ -129,14 +130,6 @@ export const RichEditor = memo(
       setElementSelection(contentEditableRef.current, selectionRangeRef.current);
     });
 
-    useEffect(() => {
-      if (isNil(contentEditableRef.current)) {
-        return;
-      }
-
-      setFocused(isParentOf(document.activeElement, contentEditableRef.current));
-    }, []);
-
     // Applies the pending focus selection and clears it.
     // Called via setTimeout(0) to run after all synchronous event handlers
     // (mouseup, click, selectionchange) in the current event have completed.
@@ -259,6 +252,17 @@ export const RichEditor = memo(
       return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, [handleSelectionChange, focused]);
 
+    // When the editor unmounts while focused, neither `handleBlur` nor the
+    // pointerup/fallback callbacks run, so the document `pointerup` listener and
+    // the pending fallback timer registered in `handleFocused` would leak. Run
+    // the stored focus cleanup on unmount to remove both in every teardown path.
+    useEffect(() => {
+      return () => {
+        focusCleanupRef.current?.();
+        focusCleanupRef.current = null;
+      };
+    }, []);
+
     const updateFocused = useFunction((newFocused: boolean) => {
       if (newFocused === focused) {
         return;
@@ -280,13 +284,7 @@ export const RichEditor = memo(
       // biome-ignore lint/a11y/useSemanticElements: contentEditable div requires dangerouslySetInnerHTML for rich text, cannot use <input> or <textarea>
       <div
         ref={contentEditableRef}
-        className={className}
-        style={{
-          textOverflow: 'clip',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          display: 'inline-block',
-        }}
+        className={cn(styles.contentEditable, className)}
         role="textbox"
         tabIndex={disabled ? -1 : 0}
         aria-multiline={false}

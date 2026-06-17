@@ -1,8 +1,6 @@
 const HALF: f32 = 0.5;
-// Keep in sync with SHAPE_FADE_DURATION in chart-draw.ts
-const FADE_DURATION: f32 = 0.5;
+override FADE_DURATION: f32;
 const BORDER_THICKNESS: f32 = 0.08;
-const SHAPE_TYPE_COUNT: u32 = 10u;
 
 // Shape type constants
 const SHAPE_CIRCLE: u32 = 0u;

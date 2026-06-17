@@ -1,12 +1,4 @@
-import type {
-  DBSchema,
-  IDBPDatabase,
-  IDBPTransaction,
-  OpenDBCallbacks,
-  StoreKey,
-  StoreNames,
-  StoreValue,
-} from 'idb';
+import type { DBSchema, IDBPDatabase, OpenDBCallbacks } from 'idb';
 import { openDB } from 'idb';
 
 /** IndexedDB lifecycle errors surfaced to a repository's error callback. */
@@ -79,26 +71,4 @@ export async function openVersionedDatabase<Schema extends DBSchema>(
     terminated: onError && (() => onError(EDatabaseErrorCallbackType.Terminated)),
     upgrade: (database, oldVersion) => upgrade(database, oldVersion),
   });
-}
-
-export function readDatabaseItem<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readonly'>,
-  key: StoreKey<TSchema, StoreNames<TSchema>>
-): Promise<StoreValue<TSchema, StoreNames<TSchema>> | undefined> {
-  return transaction.store.get(key);
-}
-
-export function updateDatabaseItem<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
-  key: StoreKey<TSchema, StoreNames<TSchema>>,
-  item: StoreValue<TSchema, StoreNames<TSchema>>
-): Promise<StoreKey<TSchema, StoreNames<TSchema>>> {
-  return transaction.store.put(item, key);
-}
-
-export function deleteDatabaseItem<TSchema extends DBSchema>(
-  transaction: IDBPTransaction<TSchema, [StoreNames<TSchema>], 'readwrite'>,
-  key: StoreKey<TSchema, StoreNames<TSchema>>
-): Promise<void> {
-  return transaction.store.delete(key);
 }

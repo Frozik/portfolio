@@ -17,8 +17,8 @@ import type {
   ITurnCredentialsAck,
   SignalAck,
 } from '@frozik/communication-protocol/messages';
-import type { Observable } from 'rxjs';
-import { BehaviorSubject } from 'rxjs';
+import type { Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Subject as RxSubject } from 'rxjs';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 
@@ -90,25 +90,11 @@ export interface ICommunicationClient {
   readonly state$: Observable<TConnectionState>;
 }
 
-class TinyEmitter<T> {
-  private readonly listeners = new Set<(value: T) => void>();
-
-  public on(listener: (value: T) => void): TUnsubscribe {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  public emit(value: T): void {
-    for (const listener of this.listeners) {
-      listener(value);
-    }
-  }
-
-  public clear(): void {
-    this.listeners.clear();
-  }
+function subscribeTo<T>(subject: Subject<T>, listener: (value: T) => void): TUnsubscribe {
+  const subscription = subject.subscribe(listener);
+  return () => {
+    subscription.unsubscribe();
+  };
 }
 
 /**
@@ -132,14 +118,25 @@ export function createCommunicationClient(
 ): ICommunicationClient {
   const { baseUrl, roomId, getCredentials, onTokenRefreshNeeded } = params;
 
-  const signalEmitter = new TinyEmitter<ISignalEventOutbound>();
-  const presenceEmitter = new TinyEmitter<IRoomPresenceEvent>();
-  const tokenExpiringEmitter = new TinyEmitter<ITokenExpiringEvent>();
-  const tokenExpiredEmitter = new TinyEmitter<void>();
-  const drainingEmitter = new TinyEmitter<void>();
-  const turnRenewedEmitter = new TinyEmitter<void>();
-  const stateEmitter = new TinyEmitter<TConnectionState>();
+  const signalSubject = new RxSubject<ISignalEventOutbound>();
+  const presenceSubject = new RxSubject<IRoomPresenceEvent>();
+  const tokenExpiringSubject = new RxSubject<ITokenExpiringEvent>();
+  const tokenExpiredSubject = new RxSubject<void>();
+  const drainingSubject = new RxSubject<void>();
+  const turnRenewedSubject = new RxSubject<void>();
+  const stateChangeSubject = new RxSubject<TConnectionState>();
   const stateSubject = new BehaviorSubject<TConnectionState>('idle');
+
+  const completeAllSubjects = (): void => {
+    signalSubject.complete();
+    presenceSubject.complete();
+    tokenExpiringSubject.complete();
+    tokenExpiredSubject.complete();
+    drainingSubject.complete();
+    turnRenewedSubject.complete();
+    stateChangeSubject.complete();
+    stateSubject.complete();
+  };
 
   let socket: Socket | null = null;
   let state: TConnectionState = 'idle';
@@ -149,7 +146,7 @@ export function createCommunicationClient(
       return;
     }
     state = next;
-    stateEmitter.emit(next);
+    stateChangeSubject.next(next);
     stateSubject.next(next);
   }
 
@@ -159,23 +156,23 @@ export function createCommunicationClient(
     active.on('connect_error', () => setState('closed'));
 
     active.on(SIGNAL_EVENT, (event: ISignalEventOutbound) => {
-      signalEmitter.emit(event);
+      signalSubject.next(event);
     });
     active.on(ROOM_PRESENCE, (event: IRoomPresenceEvent) => {
-      presenceEmitter.emit(event);
+      presenceSubject.next(event);
     });
     active.on(AUTH_TOKEN_EXPIRING, (event: ITokenExpiringEvent) => {
-      tokenExpiringEmitter.emit(event);
+      tokenExpiringSubject.next(event);
       void refreshToken();
     });
     active.on(AUTH_TOKEN_EXPIRED, () => {
-      tokenExpiredEmitter.emit();
+      tokenExpiredSubject.next();
     });
     active.on(SERVER_DRAINING, () => {
-      drainingEmitter.emit();
+      drainingSubject.next();
     });
     active.on(TURN_CREDENTIALS_RENEWED, () => {
-      turnRenewedEmitter.emit();
+      turnRenewedSubject.next();
     });
   }
 
@@ -258,6 +255,7 @@ export function createCommunicationClient(
     socket.removeAllListeners();
     socket = null;
     setState('closed');
+    completeAllSubjects();
   }
 
   function signalPublish(payload: unknown, correlationId?: string): Promise<SignalAck> {
@@ -312,13 +310,13 @@ export function createCommunicationClient(
     disconnect,
     signalPublish,
     requestTurnCredentials,
-    onSignalEvent: listener => signalEmitter.on(listener),
-    onRoomPresence: listener => presenceEmitter.on(listener),
-    onTokenExpiring: listener => tokenExpiringEmitter.on(listener),
-    onTokenExpired: listener => tokenExpiredEmitter.on(listener),
-    onServerDraining: listener => drainingEmitter.on(listener),
-    onTurnCredentialsRenewed: listener => turnRenewedEmitter.on(listener),
-    onConnectionStateChange: listener => stateEmitter.on(listener),
+    onSignalEvent: listener => subscribeTo(signalSubject, listener),
+    onRoomPresence: listener => subscribeTo(presenceSubject, listener),
+    onTokenExpiring: listener => subscribeTo(tokenExpiringSubject, listener),
+    onTokenExpired: listener => subscribeTo(tokenExpiredSubject, listener),
+    onServerDraining: listener => subscribeTo(drainingSubject, listener),
+    onTurnCredentialsRenewed: listener => subscribeTo(turnRenewedSubject, listener),
+    onConnectionStateChange: listener => subscribeTo(stateChangeSubject, listener),
     state$: stateSubject.asObservable(),
   };
 }

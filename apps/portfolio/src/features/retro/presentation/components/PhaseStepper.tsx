@@ -4,16 +4,9 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';
 import type { RoomStore } from '../../application/RoomStore';
+import { PHASE_ORDER } from '../../domain/constants';
 import { ERetroPhase } from '../../domain/types';
 import { retroT as t } from '../translations';
-
-const PHASE_ORDER: readonly ERetroPhase[] = [
-  ERetroPhase.Brainstorm,
-  ERetroPhase.Group,
-  ERetroPhase.Vote,
-  ERetroPhase.Discuss,
-  ERetroPhase.Close,
-];
 
 const PHASE_LABELS: Record<ERetroPhase, string> = {
   [ERetroPhase.Brainstorm]: t.phases.brainstorm,
@@ -21,6 +14,20 @@ const PHASE_LABELS: Record<ERetroPhase, string> = {
   [ERetroPhase.Vote]: t.phases.vote,
   [ERetroPhase.Discuss]: t.phases.discuss,
   [ERetroPhase.Close]: t.phases.close,
+};
+
+type PhaseStatus = 'active' | 'past' | 'future';
+
+const PHASE_NUMBER_COLOR: Record<PhaseStatus, string> = {
+  active: 'text-landing-accent',
+  past: 'text-landing-green',
+  future: 'text-landing-fg-faint',
+};
+
+const PHASE_LABEL_COLOR: Record<PhaseStatus, string> = {
+  active: 'font-medium text-landing-fg',
+  past: 'text-landing-fg-dim',
+  future: 'text-landing-fg-faint',
 };
 
 const STATIC_PHASE_HINTS: Record<Exclude<ERetroPhase, ERetroPhase.Vote>, string> = {
@@ -147,6 +154,9 @@ const PhaseButton = ({
     }
     onNavigate(phase);
   });
+
+  const status: PhaseStatus = isActive ? 'active' : isPast ? 'past' : 'future';
+
   return (
     <button
       type="button"
@@ -162,26 +172,10 @@ const PhaseButton = ({
         !canNavigate && 'cursor-default'
       )}
     >
-      <span
-        className={cn(
-          'font-mono text-[10px] tracking-[0.08em]',
-          isActive ? 'text-landing-accent' : isPast ? 'text-landing-green' : 'text-landing-fg-faint'
-        )}
-      >
+      <span className={cn('font-mono text-[10px] tracking-[0.08em]', PHASE_NUMBER_COLOR[status])}>
         {phaseNumber}
       </span>
-      <span
-        className={cn(
-          'text-xs',
-          isActive
-            ? 'font-medium text-landing-fg'
-            : isPast
-              ? 'text-landing-fg-dim'
-              : 'text-landing-fg-faint'
-        )}
-      >
-        {label}
-      </span>
+      <span className={cn('text-xs', PHASE_LABEL_COLOR[status])}>{label}</span>
       {isPast && <Check size={10} className="text-landing-green" strokeWidth={1.6} />}
     </button>
   );

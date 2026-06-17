@@ -30,6 +30,13 @@ export class RenderTargetPool {
       return texture;
     }
 
+    // No pooled texture matches the requested size — every remaining one is
+    // stale (e.g. after a resize). Destroy them so they don't leak GPU memory.
+    for (const staleTexture of this.available) {
+      staleTexture.destroy();
+    }
+    this.available.length = 0;
+
     return device.createTexture({
       size: [width, height],
       format,

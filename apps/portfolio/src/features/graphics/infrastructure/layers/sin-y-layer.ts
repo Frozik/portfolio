@@ -8,13 +8,10 @@ import {
 } from '../../domain/chart-constants';
 import { ALPHA_BLEND_STATE, OFFSCREEN_FORMAT } from '../chart-gpu-constants';
 import type { OffscreenTextureManager } from '../chart-textures';
-import commonShaderSource from '../shaders/common.wgsl?raw';
 import type { UniformManager } from '../uniform-manager';
-import { createUniformManager } from '../uniform-manager';
 
 export class SinYLayer implements RenderLayer {
   private device!: GPUDevice;
-  private uniformManager!: UniformManager;
   private sinYPipeline!: GPURenderPipeline;
   private bindGroup!: GPUBindGroup;
 
@@ -23,12 +20,12 @@ export class SinYLayer implements RenderLayer {
     private readonly compositeBindGroupLayout: GPUBindGroupLayout,
     private readonly compositeSampler: GPUSampler,
     private readonly compositeUniformBuffer: GPUBuffer,
-    private readonly chartShaderModule: GPUShaderModule
+    private readonly chartShaderModule: GPUShaderModule,
+    private readonly uniformManager: UniformManager
   ) {}
 
   init(context: GpuContext): void {
     this.device = context.device;
-    this.uniformManager = createUniformManager(this.device, commonShaderSource);
 
     const bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
@@ -65,9 +62,7 @@ export class SinYLayer implements RenderLayer {
     });
   }
 
-  update(state: FrameState): void {
-    this.uniformManager.writeFromFrameState(this.device, state);
-  }
+  update(): void {}
 
   render(encoder: GPUCommandEncoder, _canvasView: GPUTextureView, state: FrameState): void {
     const sinYCount = computeSinYSegmentCount(state.canvasHeight);
@@ -106,7 +101,5 @@ export class SinYLayer implements RenderLayer {
     pass.end();
   }
 
-  dispose(): void {
-    this.uniformManager.dispose();
-  }
+  dispose(): void {}
 }

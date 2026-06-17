@@ -26,6 +26,10 @@ export function useKeyboardAction(
     }
   });
   const handleKeyUpEvent = useFunction(({ code }: KeyboardEvent) => void pressedKeys.delete(code));
+  // When the window loses focus the matching keyup may never arrive, leaving a
+  // key "stuck" as pressed. Reset the held-keys set on blur so the next focus
+  // starts clean.
+  const handleWindowBlur = useFunction(() => pressedKeys.clear());
 
   useEffect(() => {
     if (isEmpty(keyCodes)) {
@@ -36,10 +40,12 @@ export function useKeyboardAction(
 
     element.addEventListener('keydown', handleKeyDownEvent as EventListener);
     element.addEventListener('keyup', handleKeyUpEvent as EventListener);
+    window.addEventListener('blur', handleWindowBlur);
 
     return () => {
       element.removeEventListener('keydown', handleKeyDownEvent as EventListener);
       element.removeEventListener('keyup', handleKeyUpEvent as EventListener);
+      window.removeEventListener('blur', handleWindowBlur);
     };
-  }, [handleKeyDownEvent, handleKeyUpEvent, keyCodes, ref]);
+  }, [handleKeyDownEvent, handleKeyUpEvent, handleWindowBlur, keyCodes, ref]);
 }

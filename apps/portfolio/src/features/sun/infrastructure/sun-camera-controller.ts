@@ -3,6 +3,7 @@ import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
   INERTIA_MIN_VELOCITY,
+  INERTIA_STALE_MOVE_MS,
   INITIAL_CAMERA_DISTANCE,
   INITIAL_ELEVATION,
   MAX_CAMERA_DISTANCE,
@@ -76,6 +77,7 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
 
   let velocityX = 0;
   let velocityY = 0;
+  let lastMoveTimestamp = 0;
 
   // --- Pointer tracking ---
   const activePointers = new Map<number, { clientX: number; clientY: number }>();
@@ -127,8 +129,16 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     const dx = event.clientX - previous.clientX;
     const dy = event.clientY - previous.clientY;
 
-    velocityX = dx;
-    velocityY = dy;
+    const elapsedSinceLastMove = event.timeStamp - lastMoveTimestamp;
+    lastMoveTimestamp = event.timeStamp;
+
+    if (elapsedSinceLastMove > INERTIA_STALE_MOVE_MS) {
+      velocityX = 0;
+      velocityY = 0;
+    } else {
+      velocityX = dx;
+      velocityY = dy;
+    }
 
     applyRotation(dx, dy);
   }

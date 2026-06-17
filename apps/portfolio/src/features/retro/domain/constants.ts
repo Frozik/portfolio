@@ -1,5 +1,20 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 
+import { ERetroPhase } from './types';
+
+/**
+ * Canonical linear order of retro phases. The single source of truth for
+ * the stepper UI and the facilitator's advance/rewind transitions — keep
+ * every "next/previous phase" derivation indexing into this array.
+ */
+export const PHASE_ORDER: readonly ERetroPhase[] = [
+  ERetroPhase.Brainstorm,
+  ERetroPhase.Group,
+  ERetroPhase.Vote,
+  ERetroPhase.Discuss,
+  ERetroPhase.Close,
+];
+
 export const DEFAULT_BRAINSTORM_DURATION_MS = 600_000 as Milliseconds; // 10 min
 export const DEFAULT_VOTES_PER_PARTICIPANT = 5;
 export const SOFT_ACTION_ITEM_LIMIT = 3;

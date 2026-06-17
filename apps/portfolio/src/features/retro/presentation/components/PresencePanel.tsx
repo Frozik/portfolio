@@ -3,13 +3,13 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { initialsOf } from '../../../../shared/lib/initialsOf';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ClientId, IParticipant } from '../../domain/types';
 import { retroT as t } from '../translations';
 
 const MAX_VISIBLE_AVATARS = 3;
-const INITIALS_PART_LIMIT = 2;
 
 /**
  * Single neutral background for initials-only avatars (Yandex users
@@ -18,18 +18,6 @@ const INITIALS_PART_LIMIT = 2;
  * is derived entirely from OIDC.
  */
 const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
-
-function initialsOf(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) {
-    return '?';
-  }
-  const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) {
-    return (parts[0] ?? '?').slice(0, INITIALS_PART_LIMIT).toUpperCase();
-  }
-  return `${parts[0]?.charAt(0) ?? ''}${parts[1]?.charAt(0) ?? ''}`.toUpperCase();
-}
 
 /**
  * Compact presence strip for the Room top bar. Shows up to three stacked

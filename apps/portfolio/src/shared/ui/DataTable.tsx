@@ -4,7 +4,6 @@ import type {
   ColumnDef,
   Header,
   Row,
-  RowData,
   SortingState,
   VisibilityState,
 } from '@tanstack/react-table';
@@ -97,21 +96,17 @@ export function DataTable<TData>({
           {headerGroups.map(headerGroup => (
             <tr key={headerGroup.id} className="border-b border-border">
               {headerGroup.headers.map(header => (
-                <HeaderCell key={header.id} header={header as Header<RowData, unknown>} />
+                <HeaderCell key={header.id} header={header} />
               ))}
             </tr>
           ))}
         </thead>
         {virtual ? (
-          <VirtualBody
-            rows={rows as Row<RowData>[]}
-            virtualizer={virtualizer}
-            columnCount={columns.length}
-          />
+          <VirtualBody rows={rows} virtualizer={virtualizer} columnCount={columns.length} />
         ) : (
           <tbody>
             {rows.map(row => (
-              <DataRow key={row.id} row={row as Row<RowData>} />
+              <DataRow key={row.id} row={row} />
             ))}
           </tbody>
         )}
@@ -121,7 +116,7 @@ export function DataTable<TData>({
 }
 
 // Memoized header cell
-const HeaderCell = memo(({ header }: { header: Header<RowData, unknown> }) => {
+function HeaderCellInner<TData>({ header }: { header: Header<TData, unknown> }) {
   const meta = header.column.columnDef.meta;
   const isFixed = !isNil(meta?.fixed);
 
@@ -145,32 +140,36 @@ const HeaderCell = memo(({ header }: { header: Header<RowData, unknown> }) => {
       </span>
     </th>
   );
-});
+}
 
-const DataRow = memo(
-  ({
-    row,
-    index,
-    measureRef,
-  }: {
-    row: Row<RowData>;
-    /** Virtual item index — read by the virtualizer's measureElement via data-index */
-    index?: number;
-    measureRef?: (element: HTMLTableRowElement | null) => void;
-  }) => (
+const HeaderCell = memo(HeaderCellInner) as typeof HeaderCellInner;
+
+function DataRowInner<TData>({
+  row,
+  index,
+  measureRef,
+}: {
+  row: Row<TData>;
+  /** Virtual item index — read by the virtualizer's measureElement via data-index */
+  index?: number;
+  measureRef?: (element: HTMLTableRowElement | null) => void;
+}) {
+  return (
     <tr
       ref={measureRef}
       data-index={index}
       className="border-b border-border hover:bg-surface-elevated"
     >
-      {row.getVisibleCells().map((cell: Cell<RowData, unknown>) => (
+      {row.getVisibleCells().map((cell: Cell<TData, unknown>) => (
         <DataCell key={cell.id} cell={cell} />
       ))}
     </tr>
-  )
-);
+  );
+}
 
-const DataCell = memo(({ cell }: { cell: Cell<RowData, unknown> }) => {
+const DataRow = memo(DataRowInner) as typeof DataRowInner;
+
+function DataCellInner<TData>({ cell }: { cell: Cell<TData, unknown> }) {
   const meta = cell.column.columnDef.meta;
   const isFixed = !isNil(meta?.fixed);
 
@@ -186,15 +185,17 @@ const DataCell = memo(({ cell }: { cell: Cell<RowData, unknown> }) => {
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </td>
   );
-});
+}
+
+const DataCell = memo(DataCellInner) as typeof DataCellInner;
 
 // Virtual body — only renders visible rows. No memo — virtualizer state is mutable.
-function VirtualBody({
+function VirtualBody<TData>({
   rows,
   virtualizer,
   columnCount,
 }: {
-  rows: Row<RowData>[];
+  rows: Row<TData>[];
   virtualizer: Virtualizer<HTMLDivElement, Element>;
   columnCount: number;
 }) {

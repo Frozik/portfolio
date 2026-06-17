@@ -1,7 +1,7 @@
 import type { ISO } from '@frozik/utils/date/types';
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
 import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
-import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
@@ -103,9 +103,7 @@ export class PendulumStore {
         .addGeneration$(data.competitionStart, data.generation)
         .catch((error: unknown) => {
           runInAction(() => {
-            this.currentCompetition = createUnsyncedValueDescriptor(
-              convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-            );
+            this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
           });
         });
     }
@@ -122,9 +120,7 @@ export class PendulumStore {
 
     this.dbModule.deleteCompetition$(start).catch((error: unknown) => {
       runInAction(() => {
-        this.currentCompetition = createUnsyncedValueDescriptor(
-          convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-        );
+        this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
       });
     });
 
@@ -174,9 +170,7 @@ export class PendulumStore {
       },
       error: (error: unknown) => {
         runInAction(() => {
-          this.currentCompetition = createUnsyncedValueDescriptor(
-            convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-          );
+          this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
         });
       },
     });
@@ -232,18 +226,14 @@ export class PendulumStore {
           },
           error => {
             runInAction(() => {
-              this.currentRobot = createUnsyncedValueDescriptor(
-                convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-              );
+              this.currentRobot = createUnsyncedValueDescriptor(toFail(error));
             });
           }
         );
       },
       error: error => {
         runInAction(() => {
-          this.currentRobot = createUnsyncedValueDescriptor(
-            convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-          );
+          this.currentRobot = createUnsyncedValueDescriptor(toFail(error));
         });
       },
     });
@@ -286,9 +276,7 @@ export class PendulumStore {
           },
           error: (error: unknown) => {
             runInAction(() => {
-              this.competitionsList = createUnsyncedValueDescriptor(
-                convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-              );
+              this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
             });
           },
         });
@@ -297,9 +285,7 @@ export class PendulumStore {
       })
       .catch((error: unknown) => {
         runInAction(() => {
-          this.competitionsList = createUnsyncedValueDescriptor(
-            convertErrorToFail(error instanceof Error ? error : new Error(String(error)))
-          );
+          this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
         });
       });
   }

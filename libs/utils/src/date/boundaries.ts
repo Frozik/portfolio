@@ -1,7 +1,6 @@
 import { Temporal } from 'temporal-polyfill';
 
-import { EDayOfWeek } from './constants';
-import { DAYS_IN_WEEK } from './fuzzy/constants';
+import { DAYS_IN_WEEK, EDayOfWeek } from './constants';
 
 export function getStartOfMonth(yearMonth: Temporal.PlainYearMonth): Temporal.PlainDate {
   return Temporal.PlainDate.from({

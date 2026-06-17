@@ -1,3 +1,4 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { LRUCache } from 'lru-cache';
 
 import {
@@ -38,11 +39,20 @@ export class SlotAllocator implements ISlotAllocator {
 
   constructor(
     device: GPUDevice,
-    initialRows: number = TEXTURE_INITIAL_ROWS,
-    maxRows: number = TEXTURE_MAX_ROWS,
-    textureWidth: number = TEXTURE_WIDTH,
-    onEvict?: (slot: ITextureSlot) => void
+    options: {
+      initialRows?: number;
+      maxRows?: number;
+      textureWidth?: number;
+      onEvict?: (slot: ITextureSlot) => void;
+    } = {}
   ) {
+    const {
+      initialRows = TEXTURE_INITIAL_ROWS,
+      maxRows = TEXTURE_MAX_ROWS,
+      textureWidth = TEXTURE_WIDTH,
+      onEvict,
+    } = options;
+
     this.device = device;
     this.maxRows = maxRows;
     this.textureWidth = textureWidth;
@@ -64,7 +74,8 @@ export class SlotAllocator implements ISlotAllocator {
   allocateSlot(): ITextureSlot | null {
     // Phase 1: free list
     if (this.freeSlots.length > 0) {
-      const slotIndex = this.freeSlots.pop() as number;
+      const slotIndex = this.freeSlots.pop();
+      assert(slotIndex !== undefined, 'free list reported non-empty but pop() returned undefined');
       return this.registerSlot(slotIndex);
     }
 

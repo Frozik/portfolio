@@ -17,6 +17,26 @@ const VERTICES_PER_QUAD: u32 = 6u;
 /** Minimum w value for near-plane clipping (prevents behind-camera artifacts) */
 const NEAR_CLIP_W: f32 = 0.01;
 
+/**
+ * NDC-depth slack for the line/marker occlusion test against the face depth
+ * pre-pass. A fragment counts as occluded only when the face is in front of it
+ * by MORE than this epsilon.
+ *
+ * Replaces the former pipeline `depthBiasSlopeScale` on the pre-pass: a
+ * slope-scaled bias explodes for silhouette faces (seen near edge-on, the
+ * depth slope is huge), pushing them far behind the geometry and misclassifying
+ * lines just behind the silhouette as visible ("hidden-line bleed"). A fixed
+ * NDC epsilon is slope-independent, so the separation is uniform across the
+ * figure. All three occlusion consumers (color line, line-id, marker) must use
+ * the SAME value or their visible/hidden classification diverges.
+ */
+const DEPTH_OCCLUSION_EPSILON: f32 = 0.0008;
+
+/** Whether a sampled face depth occludes a fragment at the given NDC depth. */
+fn isDepthOccluded(faceDepthValue: f32, fragmentDepth: f32) -> bool {
+    return faceDepthValue < fragmentDepth - DEPTH_OCCLUSION_EPSILON;
+}
+
 /** Maps vertex index (0..5) to quad corner index (0..3) */
 fn quadCornerIndex(vertexIndex: u32) -> u32 {
     let cornerMap = array<u32, 6>(0u, 2u, 1u, 1u, 2u, 3u);
@@ -116,6 +136,47 @@ fn fitDashPattern(dashLen: f32, gapLen: f32, totalLen: f32) -> vec2<f32> {
     let dashCount = max(1.0, round((totalLen + gapLen) / period));
     let scale = totalLen / (dashCount * period - gapLen);
     return vec2<f32>(dashLen * scale, gapLen * scale);
+}
+
+/**
+ * Edge softness (GPU pixels) for the line SDF. The fragment alpha ramps from
+ * full to zero across ±FEATHER_HALF_PX around the line's half-width boundary,
+ * giving anti-aliased long edges and ROUNDED caps even with MSAA disabled. Quads
+ * are extended longitudinally by this much (plus the cap radius) so the feather
+ * has room at the segment ends — without it caps would be clipped to butt ends
+ * and leave 1-2 px gaps at joins/corners at width >= 3.
+ */
+const FEATHER_HALF_PX: f32 = 0.75;
+
+/**
+ * Signed screen-space distance from a fragment to the segment spine (screenA→screenB),
+ * i.e. the capsule SDF without the radius term. screen* are half-viewport-scaled
+ * NDC coordinates; fragmentPosition is `@builtin(position)` (Y grows downward).
+ */
+fn distanceToSpine(screenA: vec2<f32>, screenB: vec2<f32>, fragmentPosition: vec4<f32>) -> f32 {
+    let halfViewport = uniforms.viewport * 0.5;
+    let fragmentScreen = vec2<f32>(
+        fragmentPosition.x - halfViewport.x,
+        halfViewport.y - fragmentPosition.y
+    );
+    let lineDir = screenB - screenA;
+    let lineLenSq = dot(lineDir, lineDir);
+    let parametricT = select(
+        clamp(dot(fragmentScreen - screenA, lineDir) / lineLenSq, 0.0, 1.0),
+        0.0,
+        lineLenSq < 0.001
+    );
+    let closest = screenA + parametricT * lineDir;
+    return length(fragmentScreen - closest);
+}
+
+/**
+ * SDF coverage (0..1) for a line of the given half-width: 1 inside, feathered to
+ * 0 across the FEATHER_HALF_PX band at the edge. Rounds caps because the distance
+ * is measured to the clamped segment, not an infinite line.
+ */
+fn lineSdfCoverage(distanceToSpine: f32, halfWidthPx: f32) -> f32 {
+    return 1.0 - smoothstep(halfWidthPx - FEATHER_HALF_PX, halfWidthPx + FEATHER_HALF_PX, distanceToSpine);
 }
 
 /** Computes the perpendicular offset direction in screen space */

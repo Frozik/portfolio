@@ -1,8 +1,6 @@
 const PI: f32 = 3.14159265358979323846;
 const HALF: f32 = 0.5;
 const BORDER_POINT_COUNT: u32 = 5u;
-// Keep in sync with BORDER_SEGMENT_COUNT in chart-draw.ts
-const BORDER_SEGMENT_COUNT: u32 = 4u;
 
 struct VSOut {
     @builtin(position) position: vec4<f32>,

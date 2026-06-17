@@ -1,4 +1,4 @@
-import { formatISO8601Local } from '@frozik/utils/date/format';
+import { formatDateTimeLocal } from '@frozik/utils/date/format';
 import type { ISO } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 import { getCardsInColumn } from './retro-snapshot';
@@ -157,7 +157,7 @@ function renderActionItem(
 }
 
 function formatIsoAsDate(iso: ISO): string {
-  return formatISO8601Local(iso).slice(0, 10);
+  return formatDateTimeLocal(iso).slice(0, 10);
 }
 
 /**

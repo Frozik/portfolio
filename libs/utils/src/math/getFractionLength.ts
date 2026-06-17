@@ -1,12 +1,12 @@
 import { isEmpty, isNumber } from 'lodash-es';
 
-import { FLOAT_DECIMALS_SEPARATOR, FLOAT_EXPONENT_MARKER } from './defs';
+import { FINITE_NUMBER_PATTERN, FLOAT_DECIMALS_SEPARATOR, FLOAT_EXPONENT_MARKER } from './defs';
 
 export function getFractionLength(value: number | string): number {
   if (
     isNumber(value)
       ? Number.isNaN(value) || !Number.isFinite(value)
-      : isEmpty(value) || !/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(value)
+      : isEmpty(value) || !FINITE_NUMBER_PATTERN.test(value)
   ) {
     return Number.NaN;
   }

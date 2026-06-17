@@ -1,26 +1,18 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 
 import avatarAvifUrl from '../../../../../assets/avatar.avif';
 import avatarPngUrl from '../../../../../assets/avatar.png';
 import avatarWebpUrl from '../../../../../assets/avatar.webp';
-import { CONTACT_LINKS } from '../../contentData';
-import { useIsAwake } from '../../hooks/useIsAwake';
+import { useAvailability } from '../../hooks/useAvailability';
 import { welcomeT } from '../../translations';
 import { IdeaLightbulb } from '../common/IdeaLightbulb';
 import { SectionHead } from '../common/SectionHead';
 import { SleepingZzz } from '../common/SleepingZzz';
-import type { IContactQRRequest } from '../contacts/ContactRow';
-import { ContactRow } from '../contacts/ContactRow';
-import { QRContactModal } from '../contacts/QRContactModal';
+import { ContactList } from '../contacts/ContactList';
 import { DownloadCvButton } from './DownloadCvButton';
 
 const AboutComponent = () => {
-  const [qrRequest, setQrRequest] = useState<IContactQRRequest | null>(null);
-  const isAwake = useIsAwake();
-
-  const handleQRRequest = useFunction((payload: IContactQRRequest) => setQrRequest(payload));
-  const handleQRClose = useFunction(() => setQrRequest(null));
+  const { isAwake } = useAvailability();
 
   return (
     <section
@@ -55,33 +47,11 @@ const AboutComponent = () => {
             </div>
             {isAwake ? <IdeaLightbulb /> : <SleepingZzz />}
           </div>
-          <div className="flex flex-col font-mono text-[13px]">
-            {CONTACT_LINKS.map(link => {
-              const labels = welcomeT.contacts.entries[link.iconKey];
-              return (
-                <ContactRow
-                  key={link.iconKey}
-                  iconKey={link.iconKey}
-                  label={labels.label}
-                  href={link.href}
-                  qrValue={link.qrValue}
-                  qrTitle={link.qrValue ? labels.qrTitle : undefined}
-                  preferred={link.preferred}
-                  onQRRequest={handleQRRequest}
-                />
-              );
-            })}
+          <ContactList className="flex flex-col font-mono text-[13px]">
             <DownloadCvButton />
-          </div>
+          </ContactList>
         </div>
       </div>
-
-      <QRContactModal
-        open={qrRequest !== null}
-        value={qrRequest?.value ?? ''}
-        title={qrRequest?.title ?? ''}
-        onClose={handleQRClose}
-      />
     </section>
   );
 };

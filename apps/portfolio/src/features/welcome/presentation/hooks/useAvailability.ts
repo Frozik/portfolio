@@ -10,24 +10,36 @@ import {
 
 export type TAvailabilityStatus = 'online' | 'away' | 'weekend';
 
+export interface IAvailability {
+  readonly status: TAvailabilityStatus;
+  readonly isAwake: boolean;
+}
+
 const SATURDAY = 6;
 const SUNDAY = 7;
 
-function resolveStatus(): TAvailabilityStatus {
+function resolveAvailability(): IAvailability {
   const now = Temporal.Now.zonedDateTimeISO(MY_TIMEZONE);
-  if (now.dayOfWeek === SATURDAY || now.dayOfWeek === SUNDAY) {
-    return 'weekend';
+  const isAwake = now.hour >= AWAKE_START_HOUR && now.hour < AWAKE_END_HOUR;
+  const isWeekend = now.dayOfWeek === SATURDAY || now.dayOfWeek === SUNDAY;
+
+  if (isWeekend) {
+    return { status: 'weekend', isAwake };
   }
-  return now.hour >= AWAKE_START_HOUR && now.hour < AWAKE_END_HOUR ? 'online' : 'away';
+
+  return { status: isAwake ? 'online' : 'away', isAwake };
 }
 
-export function useAvailability(): TAvailabilityStatus {
-  const [status, setStatus] = useState(resolveStatus);
+export function useAvailability(): IAvailability {
+  const [availability, setAvailability] = useState(resolveAvailability);
 
   useEffect(() => {
-    const intervalId = setInterval(() => setStatus(resolveStatus()), STATUS_CHECK_INTERVAL_MS);
+    const intervalId = setInterval(
+      () => setAvailability(resolveAvailability()),
+      STATUS_CHECK_INTERVAL_MS
+    );
     return () => clearInterval(intervalId);
   }, []);
 
-  return status;
+  return availability;
 }

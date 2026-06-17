@@ -1,7 +1,6 @@
+import { MS_PER_SECOND } from '@frozik/utils/date/constants';
 import { useEffect, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
-
-const MILLIS_PER_SECOND = 1000;
 
 function getPlainDateNow(timeZone: string): Temporal.PlainDate {
   return Temporal.Now.plainDateISO(timeZone);
@@ -17,7 +16,7 @@ function getMillisUntilMidnight(timeZone: string): number {
   const nanosUntilMidnight = midnight.epochNanoseconds - now.epochNanoseconds;
   const millisUntilMidnight = Number(nanosUntilMidnight / BigInt(1_000_000));
 
-  return Math.max(millisUntilMidnight, MILLIS_PER_SECOND);
+  return Math.max(millisUntilMidnight, MS_PER_SECOND);
 }
 
 /**

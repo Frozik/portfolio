@@ -2,6 +2,7 @@ import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 import {
   applyOffsetSlots,
+  negateDuration,
   resolveMonthNameToSlots,
   resolveNextWeekdaySlots,
   resolveOrdinalDaySlots,
@@ -245,6 +246,35 @@ describe('applyOffsetSlots', () => {
       year: 2025,
       month: 6,
       day: 15,
+    });
+  });
+});
+
+describe('negateDuration', () => {
+  it('flips the sign of every present field', () => {
+    expect(negateDuration({ years: 1, months: 2, weeks: 3, days: 4 })).toEqual({
+      years: -1,
+      months: -2,
+      weeks: -3,
+      days: -4,
+    });
+  });
+
+  it('flips negative fields back to positive', () => {
+    expect(negateDuration({ days: -5 })).toEqual({
+      years: undefined,
+      months: undefined,
+      weeks: undefined,
+      days: 5,
+    });
+  });
+
+  it('leaves absent fields undefined rather than negating zero', () => {
+    expect(negateDuration({ weeks: 2 })).toEqual({
+      years: undefined,
+      months: undefined,
+      weeks: -2,
+      days: undefined,
     });
   });
 });

@@ -34,6 +34,16 @@ export const YJS_META_FIELD_VOTES_PER_PARTICIPANT = 'votesPerParticipant';
 export const YJS_META_FIELD_TIMER = 'timer';
 
 /**
+ * Field keys for a group stored as a `Y.Map<unknown>` inside the `groups`
+ * collection (see {@link IYjsGroupRecord}). Kept as named constants so the
+ * map is not stringly-indexed across the application layer.
+ */
+export const YJS_GROUP_FIELD_ID = 'id';
+export const YJS_GROUP_FIELD_COLUMN_ID = 'columnId';
+export const YJS_GROUP_FIELD_TITLE = 'title';
+export const YJS_GROUP_FIELD_CARD_IDS = 'cardIds';
+
+/**
  * Flat shape of a single card as stored inside `Y.Array`.
  *
  * Kept as a plain object (not a Y.Map) because we only edit the `text`

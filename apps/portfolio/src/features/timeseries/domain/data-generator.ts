@@ -13,20 +13,9 @@ import {
   OCTAVE_OFFSET,
 } from './constants';
 import type { IDataPoint } from './types';
-import { ETimeScale } from './types';
 
-/** Uniform point count for all scales. */
-const DEFAULT_POINTS_PER_PERIOD = 180;
-
-const POINTS_PER_SCALE: Record<ETimeScale, number> = {
-  [ETimeScale.Hour1]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Hour12]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Day1]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Day4]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Day16]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Day64]: DEFAULT_POINTS_PER_PERIOD,
-  [ETimeScale.Day256]: DEFAULT_POINTS_PER_PERIOD,
-};
+/** Uniform point count generated per period, identical across all time scales. */
+const POINTS_PER_PERIOD = 180;
 
 const LINE_SIZE_MIN = 1;
 const LINE_SIZE_MAX = 10;
@@ -79,7 +68,7 @@ function computePointSize(noise2D: ReturnType<typeof createNoise2D>, time: numbe
 }
 
 /**
- * Generate timeseries data for a given time range, scale, and seed.
+ * Generate timeseries data for a given time range and seed.
  *
  * Uses fractal Brownian motion (fBm) built on simplex noise for smooth,
  * deterministic, and seed-controllable data generation. Different seeds
@@ -88,10 +77,9 @@ function computePointSize(noise2D: ReturnType<typeof createNoise2D>, time: numbe
 export function generateTimeseriesData(
   timeStart: number,
   timeEnd: number,
-  scale: ETimeScale,
   seed: string
 ): IDataPoint[] {
-  const pointCount = POINTS_PER_SCALE[scale];
+  const pointCount = POINTS_PER_PERIOD;
   const duration = timeEnd - timeStart;
   const step = duration / (pointCount - 1);
 

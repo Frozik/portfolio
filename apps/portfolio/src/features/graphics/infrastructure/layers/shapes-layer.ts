@@ -21,14 +21,13 @@ const shapesShaderSource = commonShaderSource + shapesSpecificSource;
 
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
+import { SHAPE_FADE_DURATION } from '../../domain/chart-constants';
 import type { UniformManager } from '../uniform-manager';
-import { createUniformManager } from '../uniform-manager';
 
 const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
 
 export class ShapesLayer implements RenderLayer {
   private device!: GPUDevice;
-  private uniformManager!: UniformManager;
   private shapesPipeline!: GPURenderPipeline;
   private shapesBindGroup!: GPUBindGroup;
   private shapesStorageBuffer!: GPUBuffer;
@@ -36,9 +35,10 @@ export class ShapesLayer implements RenderLayer {
   private readonly shapeDataBuffer = createShapeDataBuffer(MAX_SHAPE_BUFFER_COUNT);
   private shapes: ReturnType<typeof initializeShapes> = [];
 
+  constructor(private readonly uniformManager: UniformManager) {}
+
   init(context: GpuContext): void {
     this.device = context.device;
-    this.uniformManager = createUniformManager(this.device, shapesShaderSource);
 
     const shapesShaderModule = this.device.createShaderModule({
       code: shapesShaderSource,
@@ -68,7 +68,11 @@ export class ShapesLayer implements RenderLayer {
       layout: this.device.createPipelineLayout({
         bindGroupLayouts: [shapesBindGroupLayout],
       }),
-      vertex: { module: shapesShaderModule, entryPoint: 'vsShapes' },
+      vertex: {
+        module: shapesShaderModule,
+        entryPoint: 'vsShapes',
+        constants: { FADE_DURATION: SHAPE_FADE_DURATION },
+      },
       fragment: {
         module: shapesShaderModule,
         entryPoint: 'fsShapes',
@@ -103,8 +107,6 @@ export class ShapesLayer implements RenderLayer {
   }
 
   update(state: FrameState): void {
-    this.uniformManager.writeFromFrameState(this.device, state);
-
     const { time, canvasWidth, canvasHeight, devicePixelRatio } = state;
     const halfWidth = canvasWidth * HALF;
     const halfHeight = canvasHeight * HALF;
@@ -169,7 +171,6 @@ export class ShapesLayer implements RenderLayer {
   }
 
   dispose(): void {
-    this.uniformManager.dispose();
     this.shapesStorageBuffer.destroy();
   }
 }

@@ -4,6 +4,14 @@ import type {
   IAmbientCanvasFrame,
   IAmbientCanvasResize,
 } from '../../../../../shared/hooks/useAmbientCanvas';
+import {
+  DEFAULT_ACCENT_RGB,
+  DEFAULT_GREEN_RGB,
+  DEFAULT_RED_RGB,
+  HEX_COLOR_PATTERN,
+  HEX_RADIX,
+  MONO_FONT_STACK,
+} from '../../canvasTheme';
 
 /**
  * Hero orderbook — a scrolling depth heatmap (BTC/USDT) with a live trade tape.
@@ -59,14 +67,8 @@ const TAPE_MAIN_ALPHA = 0.9;
 const TAPE_PRICE_JITTER = 4;
 const TAG_FONT_SIZE_PX = 9;
 const TAPE_FONT_SIZE_PX = 10;
-const MONO_FONT_STACK = 'ui-monospace, Menlo, Monaco, Consolas, monospace';
 const TAG_BOTTOM_OFFSET_PX = 12;
 const TAG_LEFT_OFFSET_PX = 10;
-const DEFAULT_ACCENT_RGB: readonly [number, number, number] = [96, 165, 250];
-const DEFAULT_GREEN_RGB: readonly [number, number, number] = [76, 217, 100];
-const DEFAULT_RED_RGB: readonly [number, number, number] = [255, 79, 88];
-const HEX_COLOR_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-const HEX_RADIX = 16;
 
 type Rgb = readonly [number, number, number];
 

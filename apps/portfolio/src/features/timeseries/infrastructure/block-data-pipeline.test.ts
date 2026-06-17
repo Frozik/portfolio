@@ -58,13 +58,12 @@ describe('BlockDataPipeline', () => {
     it('generates blocks after loading delay', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
 
       const scale = ETimeScale.Hour1;
@@ -94,13 +93,12 @@ describe('BlockDataPipeline', () => {
     it('caches blocks on repeated calls with same viewport', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
 
       const scale = ETimeScale.Hour1;
@@ -130,13 +128,12 @@ describe('BlockDataPipeline', () => {
     it('returns blocks sorted by timeStart', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
 
       const scale = ETimeScale.Hour1;
@@ -152,13 +149,12 @@ describe('BlockDataPipeline', () => {
     it('generates blocks for each period independently', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(
         allocator,
         registry,
@@ -188,13 +184,12 @@ describe('BlockDataPipeline', () => {
     it('each block has valid pointTimes and pointValues', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
 
       const scale = ETimeScale.Hour1;
@@ -220,9 +215,12 @@ describe('BlockDataPipeline', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
       const maxRows = 1;
-      const allocator = new SlotAllocator(device, maxRows, maxRows, TEST_TEXTURE_WIDTH, slot =>
-        registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: maxRows,
+        maxRows,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
       const pipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
 
       const scale = ETimeScale.Hour1;
@@ -247,13 +245,12 @@ describe('BlockDataPipeline', () => {
     it('two pipelines with different chart types coexist in one registry', () => {
       const device = createMockDevice();
       const registry = new BlockRegistry();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH,
-        slot => registry.removeBySlot(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => registry.removeBySlot(slot),
+      });
 
       const linePipeline = new BlockDataPipeline(allocator, registry, TEST_SEED, EChartType.Line);
       const candlestickPipeline = new BlockDataPipeline(

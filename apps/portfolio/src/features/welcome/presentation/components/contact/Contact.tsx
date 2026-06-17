@@ -1,22 +1,13 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { getNowPlainDate } from '@frozik/utils/date/now';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 
-import { CONTACT_LINKS } from '../../contentData';
 import { welcomeT } from '../../translations';
 import { AvailabilityBadge } from '../common/AvailabilityBadge';
-import type { IContactQRRequest } from '../contacts/ContactRow';
-import { ContactRow } from '../contacts/ContactRow';
-import { QRContactModal } from '../contacts/QRContactModal';
+import { ContactList } from '../contacts/ContactList';
 
 const COPYRIGHT_YEAR = getNowPlainDate().year;
 
 const ContactComponent = () => {
-  const [qrRequest, setQrRequest] = useState<IContactQRRequest | null>(null);
-
-  const handleQRRequest = useFunction((payload: IContactQRRequest) => setQrRequest(payload));
-  const handleQRClose = useFunction(() => setQrRequest(null));
-
   return (
     <section
       id="contact"
@@ -36,36 +27,13 @@ const ContactComponent = () => {
           {welcomeT.contact.lead}
         </p>
 
-        <div className="mb-14 grid max-w-[720px] grid-cols-1 gap-x-10 gap-y-1 font-mono text-[13px] md:mb-16 md:grid-cols-2">
-          {CONTACT_LINKS.map(link => {
-            const labels = welcomeT.contacts.entries[link.iconKey];
-            return (
-              <ContactRow
-                key={link.iconKey}
-                iconKey={link.iconKey}
-                label={labels.label}
-                href={link.href}
-                qrValue={link.qrValue}
-                qrTitle={link.qrValue ? labels.qrTitle : undefined}
-                preferred={link.preferred}
-                onQRRequest={handleQRRequest}
-              />
-            );
-          })}
-        </div>
+        <ContactList className="mb-14 grid max-w-[720px] grid-cols-1 gap-x-10 gap-y-1 font-mono text-[13px] md:mb-16 md:grid-cols-2" />
 
         <div className="flex flex-col justify-between gap-4 border-t border-landing-border-soft pt-7 font-mono text-[10.5px] uppercase tracking-wider text-landing-fg-faint md:flex-row md:items-center md:text-[11px]">
           <div>{welcomeT.contact.footerCopyright(COPYRIGHT_YEAR)}</div>
           <AvailabilityBadge suffix={welcomeT.hero.utc} />
         </div>
       </div>
-
-      <QRContactModal
-        open={qrRequest !== null}
-        value={qrRequest?.value ?? ''}
-        title={qrRequest?.title ?? ''}
-        onClose={handleQRClose}
-      />
     </section>
   );
 };

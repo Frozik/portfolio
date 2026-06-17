@@ -2,26 +2,13 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { getCurrentLanguage } from '../../shared/i18n/locale';
+import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
-
-const PATH_SEGMENT_TO_TITLE_KEY: Record<string, keyof typeof appT.pageTitles> = {
-  '': 'cv',
-  pendulum: 'pendulum',
-  sudoku: 'sudoku',
-  sun: 'sun',
-  graphics: 'graphics',
-  timeseries: 'timeseries',
-  binance: 'binance',
-  stereometry: 'stereometry',
-  controls: 'controls',
-  retro: 'retro',
-  conf: 'conf',
-};
 
 function resolveTitle(pathname: string): string | undefined {
   const firstSegment = pathname.split('/')[1] ?? '';
-  const key = PATH_SEGMENT_TO_TITLE_KEY[firstSegment];
-  return key ? appT.pageTitles[key] : undefined;
+  const metadata = ROUTE_METADATA.find(entry => entry.segment === firstSegment);
+  return metadata ? appT.pageTitles[metadata.titleKey] : undefined;
 }
 
 /**

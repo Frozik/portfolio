@@ -1,6 +1,5 @@
 export const HOURS_IN_DAY = 24;
 export const MONTHS_IN_YEAR = 12;
-export const DAYS_IN_WEEK = 7;
 export const MIN_4_DIGIT_YEAR = 1000;
 export const TWO_DIGIT_YEAR_CUTOFF = 50;
 export const TWO_DIGIT_YEAR_BASE_HIGH = 1900;
@@ -25,6 +24,13 @@ export const ADJACENCY_BOOST = 0.5;
 export const AMPM_BOOST = 0.2;
 export const CERTAIN_THRESHOLD = 0.95;
 export const CERTAIN_OTHER_MAX = 0.1;
+
+/** Smallest 3-digit value — a number this large can only be a millisecond count. */
+export const MIN_3_DIGIT_VALUE = 100;
+/** Values above the largest minute/second (59) can only be a 2-digit year. */
+export const MIN_TWO_DIGIT_YEAR_VALUE = 60;
+/** Values above the largest day-of-month (31) cannot be a day. */
+export const MIN_NON_DAY_VALUE = 32;
 
 export const MAX_ADVANCES = 2;
 export const COLON_TIME_PARTS_MIN = 2;

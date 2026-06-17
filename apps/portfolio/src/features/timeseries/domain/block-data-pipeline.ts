@@ -124,7 +124,7 @@ export class BlockDataPipeline {
     periodEnd: number,
     scale: ETimeScale
   ): IBlockEntry[] {
-    const points = generateTimeseriesData(periodStart, periodEnd, scale, this.seed);
+    const points = generateTimeseriesData(periodStart, periodEnd, this.seed);
 
     if (points.length === 0) {
       return [];

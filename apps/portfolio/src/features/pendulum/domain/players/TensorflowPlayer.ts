@@ -13,8 +13,6 @@ import {
 import type { ModelArtifacts, SaveResult } from '@tensorflow/tfjs-core/dist/io/types';
 import { isNil, round } from 'lodash-es';
 import { Vector } from 'matter-js';
-import { ulid } from 'ulidx';
-import { v4 as uuidv4 } from 'uuid';
 
 import { RAILS_HALF_LENGTH } from '../constants';
 import type { IAction, IRobotPlayer, IWorld } from '../types';
@@ -23,7 +21,19 @@ import { zNormalization } from '../utils';
 import type { TLayerDescriptor } from './types';
 import { ELayerType, ENeuronLayerType } from './types';
 
-setBackend('cpu');
+const TF_BACKEND = 'cpu';
+
+// Memoized so the backend switch is awaited exactly once before the first model
+// is built. The previous top-level `setBackend('cpu')` was a floating promise:
+// a synchronous `new TensorflowPlayer()` could run model ops before the backend
+// resolved, and a rejection went unhandled. Entry points that build models
+// (`createTensorflowPlayers`, `load`) await this first.
+let backendReady: Promise<void> | undefined;
+
+export function ensureTensorflowBackend(): Promise<void> {
+  backendReady ??= setBackend(TF_BACKEND).then(() => undefined);
+  return backendReady;
+}
 
 export const MAX_PIVOT_VELOCITY = 1;
 
@@ -40,10 +50,11 @@ export class TensorflowPlayer implements IRobotPlayer {
 
   constructor(name?: string, model?: LayersModel) {
     this.model = model ?? this.init();
-    this.name = name ?? ulid();
+    this.name = name ?? crypto.randomUUID();
   }
 
   static async load(name: string, url: string): Promise<TensorflowPlayer> {
+    await ensureTensorflowBackend();
     const model = await loadLayersModel(url);
     return new TensorflowPlayer(name, model);
   }
@@ -94,8 +105,8 @@ export class TensorflowPlayer implements IRobotPlayer {
             const rightSize = weight.shape[1];
 
             const currentLeftNeuronIds =
-              leftNeuronIds ?? new Array(leftSize).fill(0).map(() => uuidv4());
-            const rightNeuronIds = new Array(rightSize).fill(0).map(() => uuidv4());
+              leftNeuronIds ?? new Array(leftSize).fill(0).map(() => crypto.randomUUID());
+            const rightNeuronIds = new Array(rightSize).fill(0).map(() => crypto.randomUUID());
 
             if (layers.length === 0) {
               layers.push({
@@ -117,7 +128,7 @@ export class TensorflowPlayer implements IRobotPlayer {
                 const rightIndex = index % rightSize;
 
                 return {
-                  id: uuidv4(),
+                  id: crypto.randomUUID(),
                   from: currentLeftNeuronIds[leftIndex],
                   to: rightNeuronIds[rightIndex],
                   weight: weights[leftIndex][rightIndex],

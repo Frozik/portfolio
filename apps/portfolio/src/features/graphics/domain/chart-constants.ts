@@ -1,5 +1,4 @@
 export const VERTICES_PER_INSTANCE = 18;
-// Keep in sync with BORDER_SEGMENT_COUNT in shaders/chart.wgsl
 export const BORDER_SEGMENT_COUNT = 4;
 
 export const SIN_PEN_MIN = 2.0;
@@ -18,13 +17,11 @@ export const SIN_Y_LAYER_OPACITY = 0.7;
 export const SHAPE_DENSITY = 1e-4;
 // Upper bound for GPU buffer pre-allocation. Sufficient for ~8K display at 2x DPR.
 export const MAX_SHAPE_BUFFER_COUNT = 16_384;
-// Keep in sync with FADE_DURATION in shaders/shapes.wgsl
 export const SHAPE_FADE_DURATION = 0.5;
 export const SHAPE_HOLD_DURATION_MIN = 2.0;
 export const SHAPE_HOLD_DURATION_MAX = 3.0;
 export const SHAPE_SIZE_MIN = 40;
 export const SHAPE_SIZE_MAX = 160;
-// Keep in sync with SHAPE_TYPE_COUNT in shaders/shapes.wgsl
 export const SHAPE_TYPE_COUNT = 10;
 export const SHAPE_VERTICES_PER_INSTANCE = 6;
 export const SHAPE_MIN_BRIGHTNESS = 0.4;

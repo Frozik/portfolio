@@ -53,12 +53,11 @@ describe('SlotAllocator', () => {
   describe('basic allocation', () => {
     it('allocates first slot at row 0, slotIndex 0', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const slot = allocator.allocateSlot();
 
@@ -72,12 +71,11 @@ describe('SlotAllocator', () => {
 
     it('allocates slots sequentially within a row', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const slots: ITextureSlot[] = [];
       for (let index = 0; index < SLOTS_PER_ROW; index++) {
@@ -103,12 +101,11 @@ describe('SlotAllocator', () => {
 
     it('advances high-water-mark with each allocation', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       expect(allocator.getHighWaterMark()).toBe(0);
 
@@ -125,12 +122,11 @@ describe('SlotAllocator', () => {
   describe('texture growth', () => {
     it('doubles texture capacity when all slots in current capacity are used', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const totalSlots = TEST_INITIAL_ROWS * SLOTS_PER_ROW;
 
@@ -151,7 +147,11 @@ describe('SlotAllocator', () => {
     it('caps growth at maxRows', () => {
       const device = createMockDevice();
       const maxRows = 4;
-      const allocator = new SlotAllocator(device, 2, maxRows, TEST_TEXTURE_WIDTH);
+      const allocator = new SlotAllocator(device, {
+        initialRows: 2,
+        maxRows,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const totalSlots = maxRows * SLOTS_PER_ROW;
 
@@ -168,12 +168,11 @@ describe('SlotAllocator', () => {
   describe('free list', () => {
     it('reuses released slots', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const slot1 = allocator.allocateSlot() as ITextureSlot;
       allocator.allocateSlot();
@@ -192,12 +191,11 @@ describe('SlotAllocator', () => {
 
     it('free list is LIFO (stack)', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const slot1 = allocator.allocateSlot() as ITextureSlot;
       const slot2 = allocator.allocateSlot() as ITextureSlot;
@@ -225,9 +223,12 @@ describe('SlotAllocator', () => {
       const evictedSlots: ITextureSlot[] = [];
       const device = createMockDevice();
       const maxRows = 2;
-      const allocator = new SlotAllocator(device, maxRows, maxRows, TEST_TEXTURE_WIDTH, slot =>
-        evictedSlots.push(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: maxRows,
+        maxRows,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => evictedSlots.push(slot),
+      });
 
       const totalSlots = maxRows * SLOTS_PER_ROW;
 
@@ -251,9 +252,12 @@ describe('SlotAllocator', () => {
       const evictedSlots: ITextureSlot[] = [];
       const device = createMockDevice();
       const maxRows = 1;
-      const allocator = new SlotAllocator(device, maxRows, maxRows, TEST_TEXTURE_WIDTH, slot =>
-        evictedSlots.push(slot)
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: maxRows,
+        maxRows,
+        textureWidth: TEST_TEXTURE_WIDTH,
+        onEvict: slot => evictedSlots.push(slot),
+      });
 
       const totalSlots = SLOTS_PER_ROW;
       const slots: ITextureSlot[] = [];
@@ -279,12 +283,11 @@ describe('SlotAllocator', () => {
   describe('writeSlotData', () => {
     it('writes data to the correct texture position', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const slot = allocator.allocateSlot() as ITextureSlot;
       const pointCount = 100;
@@ -301,12 +304,11 @@ describe('SlotAllocator', () => {
   describe('getTextureOffset', () => {
     it('computes correct offset for first slot', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const offset = allocator.getTextureOffset({ row: 0, slotIndex: 0 });
       expect(offset).toBe(0);
@@ -316,12 +318,11 @@ describe('SlotAllocator', () => {
 
     it('computes correct offset for second slot in first row', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const offset = allocator.getTextureOffset({ row: 0, slotIndex: 1 });
       expect(offset).toBe(POINTS_PER_SLOT);
@@ -331,12 +332,11 @@ describe('SlotAllocator', () => {
 
     it('computes correct offset for first slot in second row', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const offset = allocator.getTextureOffset({ row: 1, slotIndex: 0 });
       expect(offset).toBe(TEST_TEXTURE_WIDTH);
@@ -346,12 +346,11 @@ describe('SlotAllocator', () => {
 
     it('computes correct offset for arbitrary slot', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       const offset = allocator.getTextureOffset({ row: 3, slotIndex: 5 });
       expect(offset).toBe(3 * TEST_TEXTURE_WIDTH + 5 * POINTS_PER_SLOT);
@@ -363,12 +362,11 @@ describe('SlotAllocator', () => {
   describe('touch', () => {
     it('is a no-op for unknown slot', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       // Should not throw
       allocator.touch({ row: 99, slotIndex: 7 });
@@ -380,12 +378,11 @@ describe('SlotAllocator', () => {
   describe('dispose', () => {
     it('destroys the texture and clears state', () => {
       const device = createMockDevice();
-      const allocator = new SlotAllocator(
-        device,
-        TEST_INITIAL_ROWS,
-        TEST_MAX_ROWS,
-        TEST_TEXTURE_WIDTH
-      );
+      const allocator = new SlotAllocator(device, {
+        initialRows: TEST_INITIAL_ROWS,
+        maxRows: TEST_MAX_ROWS,
+        textureWidth: TEST_TEXTURE_WIDTH,
+      });
 
       allocator.allocateSlot();
       allocator.dispose();

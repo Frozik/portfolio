@@ -1,7 +1,8 @@
 import type { IBlockEntry, IPlotArea } from '../../domain/types';
+import type { SlotAllocator } from '../slot-allocator';
 
 export interface ISeriesLayer {
-  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: unknown): void;
+  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: SlotAllocator): void;
   updateBindGroup(dataTextureView: GPUTextureView): void;
   writeUniforms(
     blocks: ReadonlyArray<IBlockEntry>,

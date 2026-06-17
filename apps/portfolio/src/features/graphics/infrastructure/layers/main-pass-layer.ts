@@ -11,26 +11,23 @@ import {
   VERTICES_PER_INSTANCE,
 } from '../../domain/chart-constants';
 import { ALPHA_BLEND_STATE } from '../chart-gpu-constants';
-import commonShaderSource from '../shaders/common.wgsl?raw';
 import type { UniformManager } from '../uniform-manager';
-import { createUniformManager } from '../uniform-manager';
 
 export class MainPassLayer implements RenderLayer {
   private device!: GPUDevice;
   private format!: GPUTextureFormat;
-  private uniformManager!: UniformManager;
   private pipeline!: GPURenderPipeline;
   private bindGroup!: GPUBindGroup;
 
   constructor(
     private readonly chartShaderModule: GPUShaderModule,
-    private readonly msaaManager: MsaaTextureManager
+    private readonly msaaManager: MsaaTextureManager,
+    private readonly uniformManager: UniformManager
   ) {}
 
   init(context: GpuContext): void {
     this.device = context.device;
     this.format = context.format;
-    this.uniformManager = createUniformManager(this.device, commonShaderSource);
 
     const bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
@@ -67,9 +64,7 @@ export class MainPassLayer implements RenderLayer {
     });
   }
 
-  update(state: FrameState): void {
-    this.uniformManager.writeFromFrameState(this.device, state);
-  }
+  update(): void {}
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
     const sinXCount = computeSinXSegmentCount(state.canvasWidth);
@@ -108,7 +103,5 @@ export class MainPassLayer implements RenderLayer {
     pass.end();
   }
 
-  dispose(): void {
-    this.uniformManager.dispose();
-  }
+  dispose(): void {}
 }
