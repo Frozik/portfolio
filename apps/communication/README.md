@@ -390,11 +390,14 @@ removed the legacy server source tree.
 
 - **Graceful upgrade**: `bash apps/communication/scripts/upgrade.sh
   --ssh-host root@<IP>` — `SIGTERM` + 16s drain + start, smoke-tested.
-- **Cert renewal**: handled by `certbot.timer` + the deploy hook at
-  `/etc/letsencrypt/renewal-hooks/deploy/communication.sh`. The hook
-  reloads HAProxy and coturn, then drains the Node service. Active
-  WebSocket sessions are dropped roughly every 60 days at renewal time
-  — clients reconnect transparently.
+- **Cert renewal**: handled by `certbot.timer` + hooks under
+  `/etc/letsencrypt/renewal-hooks/`. `pre/open-http-port.sh` and
+  `post/close-http-port.sh` toggle UFW for port 80 around the HTTP-01
+  challenge (the firewall denies :80 the rest of the time — without
+  these hooks renewals time out and the cert silently expires, which
+  took the service down in Aug 2026). `deploy/communication.sh` reloads
+  HAProxy and coturn; the Node service picks up the new cert in place
+  via fs.watch (CertWatcher), so active sessions survive renewals.
 - **Cert expiry alerts**: `communication-cert-check.timer` runs daily
   and warns to journald 7 days before expiry.
 - **Live log level**:
