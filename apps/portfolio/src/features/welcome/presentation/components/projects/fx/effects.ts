@@ -838,6 +838,255 @@ function drawAR({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext
   ctx.fillText('AR · LIVE', 10 * dpr, height - 10 * dpr);
 }
 
+function drawTanks({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
+  const cell = 16 * dpr;
+  ctx.strokeStyle = accent(0.05);
+  ctx.lineWidth = dpr;
+  for (let gridX = cell; gridX < width; gridX += cell) {
+    ctx.beginPath();
+    ctx.moveTo(gridX, 0);
+    ctx.lineTo(gridX, height);
+    ctx.stroke();
+  }
+  for (let gridY = cell; gridY < height; gridY += cell) {
+    ctx.beginPath();
+    ctx.moveTo(0, gridY);
+    ctx.lineTo(width, gridY);
+    ctx.stroke();
+  }
+
+  const wallX = width * 0.78;
+  const brickW = width * 0.055;
+  const brickH = height * 0.11;
+  const brickRows = 5;
+  const brickColumns = 2;
+  const wallTop = height * 0.5 - (brickRows * brickH) / 2;
+  const volleyPeriod = 1.6;
+  const volley = Math.floor((time * speed) / volleyPeriod);
+  const volleyPhase = ((time * speed) / volleyPeriod) % 1;
+  const totalBricks = brickRows * brickColumns;
+  const destroyedCount = volley % (totalBricks + 4);
+
+  for (let row = 0; row < brickRows; row++) {
+    for (let column = 0; column < brickColumns; column++) {
+      const brickIndex = row * brickColumns + column;
+      if (brickIndex < destroyedCount) {
+        continue;
+      }
+      const x = wallX + column * brickW;
+      const y = wallTop + row * brickH;
+      ctx.fillStyle = accent(0.07);
+      ctx.fillRect(x, y, brickW - 2 * dpr, brickH - 2 * dpr);
+      ctx.strokeStyle = accent(0.35);
+      ctx.lineWidth = dpr;
+      ctx.strokeRect(x, y, brickW - 2 * dpr, brickH - 2 * dpr);
+      ctx.beginPath();
+      ctx.moveTo(x, y + brickH / 2);
+      ctx.lineTo(x + brickW - 2 * dpr, y + brickH / 2);
+      ctx.stroke();
+    }
+  }
+
+  const volleyStart = (volley * volleyPeriod) / speed;
+  const tankY = height / 2 + Math.sin(volleyStart * speed * 0.9) * height * 0.22;
+  const liveTankY = height / 2 + Math.sin(time * speed * 0.9) * height * 0.22;
+  const tankX = width * 0.16;
+  const bodyW = width * 0.09;
+  const bodyH = bodyW * 0.78;
+
+  ctx.strokeStyle = accent(0.9);
+  ctx.lineWidth = 1.4 * dpr;
+  ctx.strokeRect(tankX - bodyW / 2, liveTankY - bodyH / 2, bodyW, bodyH);
+  const treadOffset = (time * speed * 26 * dpr) % (6 * dpr);
+  ctx.strokeStyle = accent(0.5);
+  ctx.lineWidth = dpr;
+  for (const side of [-1, 1]) {
+    const treadX = tankX + side * (bodyW / 2 + 2.5 * dpr);
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
+    ctx.lineDashOffset = -treadOffset;
+    ctx.beginPath();
+    ctx.moveTo(treadX, liveTankY - bodyH / 2);
+    ctx.lineTo(treadX, liveTankY + bodyH / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.strokeStyle = accent(0.9);
+  ctx.lineWidth = 1.4 * dpr;
+  ctx.beginPath();
+  ctx.arc(tankX, liveTankY, bodyW * 0.26, 0, Math.PI * 2);
+  ctx.stroke();
+  const barrelLength = bodyW * 0.75;
+  ctx.beginPath();
+  ctx.moveTo(tankX + bodyW * 0.26, liveTankY);
+  ctx.lineTo(tankX + bodyW * 0.26 + barrelLength, liveTankY);
+  ctx.stroke();
+
+  const barrelTip = tankX + bodyW * 0.26 + barrelLength;
+  const flightEnd = 0.55;
+  if (volleyPhase < flightEnd) {
+    const bulletX = barrelTip + (wallX - barrelTip) * (volleyPhase / flightEnd);
+    ctx.fillStyle = accent(0.95);
+    ctx.fillRect(bulletX - 2 * dpr, tankY - 1.5 * dpr, 4 * dpr, 3 * dpr);
+    ctx.strokeStyle = accent(0.25);
+    ctx.lineWidth = dpr;
+    ctx.beginPath();
+    ctx.moveTo(barrelTip, tankY);
+    ctx.lineTo(bulletX, tankY);
+    ctx.stroke();
+  } else if (volleyPhase < flightEnd + 0.18) {
+    const flash = 1 - (volleyPhase - flightEnd) / 0.18;
+    const radius = (6 + 10 * (1 - flash)) * dpr;
+    const gradient = ctx.createRadialGradient(wallX, tankY, 0, wallX, tankY, radius);
+    gradient.addColorStop(0, accent(0.85 * flash));
+    gradient.addColorStop(1, accent(0));
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(wallX, tankY, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = accent(0.75);
+  ctx.font = `${9 * dpr}px ${MONO_FONT_STACK}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('STAGE 01', 10 * dpr, height - 10 * dpr);
+}
+
+function drawArtillery({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
+  const groundY = height * 0.82;
+  const columns = 46;
+  const columnWidth = width / columns;
+  const terrainHeight = (columnIndex: number) =>
+    groundY -
+    height *
+      (0.1 +
+        0.16 * Math.sin(columnIndex * 0.34) +
+        0.07 * Math.sin(columnIndex * 0.93 + 1.7) +
+        0.04 * pseudoRandom(columnIndex, 5));
+
+  ctx.strokeStyle = accent(0.55);
+  ctx.lineWidth = 1.3 * dpr;
+  ctx.beginPath();
+  for (let columnIndex = 0; columnIndex <= columns; columnIndex++) {
+    const x = columnIndex * columnWidth;
+    const y = terrainHeight(columnIndex);
+    if (columnIndex === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = accent(0.12);
+  ctx.lineWidth = dpr;
+  for (let columnIndex = 1; columnIndex < columns; columnIndex += 3) {
+    const x = columnIndex * columnWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, terrainHeight(columnIndex));
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  const shooterColumn = 6;
+  const targetColumn = 37;
+  const shooterX = shooterColumn * columnWidth;
+  const shooterY = terrainHeight(shooterColumn);
+  const targetX = targetColumn * columnWidth;
+  const targetY = terrainHeight(targetColumn);
+
+  const shotPeriod = 2.4;
+  const shotPhase = ((time * speed) / shotPeriod) % 1;
+  const flightEnd = 0.7;
+  const apexHeight = height * 0.62;
+  const arcAt = (progress: number) => ({
+    x: shooterX + (targetX - shooterX) * progress,
+    y:
+      shooterY + (targetY - shooterY) * progress - apexHeight * 4 * progress * (1 - progress) * 0.5,
+  });
+
+  const barrelAngle = -Math.PI / 4;
+  const barrelLength = width * 0.075;
+  ctx.strokeStyle = accent(0.95);
+  ctx.lineWidth = 1.6 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(shooterX, shooterY - 3 * dpr);
+  ctx.lineTo(
+    shooterX + Math.cos(barrelAngle) * barrelLength,
+    shooterY - 3 * dpr + Math.sin(barrelAngle) * barrelLength
+  );
+  ctx.stroke();
+  ctx.fillStyle = accent(1);
+  ctx.beginPath();
+  ctx.arc(shooterX, shooterY - 3 * dpr, 3.4 * dpr, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = accent(0.7);
+  ctx.beginPath();
+  ctx.arc(targetX, targetY - 3 * dpr, 2.6 * dpr, 0, Math.PI * 2);
+  ctx.fill();
+
+  const flightProgress = Math.min(1, shotPhase / flightEnd);
+  const dotCount = 26;
+  for (let dotIndex = 0; dotIndex <= dotCount; dotIndex++) {
+    const progress = (dotIndex / dotCount) * flightProgress;
+    if (progress <= 0) {
+      continue;
+    }
+    const point = arcAt(progress);
+    ctx.fillStyle = accent(0.18 + 0.5 * (progress / Math.max(flightProgress, 0.001)));
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 1.5 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (shotPhase < flightEnd) {
+    const shell = arcAt(flightProgress);
+    ctx.fillStyle = accent(1);
+    ctx.beginPath();
+    ctx.arc(shell.x, shell.y, 2.6 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const blast = 1 - (shotPhase - flightEnd) / (1 - flightEnd);
+    const radius = (7 + 22 * (1 - blast)) * dpr;
+    const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius);
+    gradient.addColorStop(0, accent(0.8 * blast));
+    gradient.addColorStop(1, accent(0));
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = accent(0.5 * blast);
+    ctx.lineWidth = 1.2 * dpr;
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, radius * 0.85, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  const windDashCount = 5;
+  const windDrift = (time * speed * 28 * dpr) % (30 * dpr);
+  ctx.strokeStyle = accent(0.3);
+  ctx.lineWidth = dpr;
+  for (let dashIndex = 0; dashIndex < windDashCount; dashIndex++) {
+    const y = height * (0.13 + dashIndex * 0.055);
+    const x = (width * 0.12 + windDrift + dashIndex * 18 * dpr) % (width * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 16 * dpr, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 16 * dpr, y);
+    ctx.lineTo(x + 11 * dpr, y - 3 * dpr);
+    ctx.moveTo(x + 16 * dpr, y);
+    ctx.lineTo(x + 11 * dpr, y + 3 * dpr);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = accent(0.75);
+  ctx.font = `${9 * dpr}px ${MONO_FONT_STACK}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('WIND \u219242', 10 * dpr, height - 10 * dpr);
+}
+
 const DRAW_FUNCTIONS: Record<TProjectFxKind, TFxDraw> = {
   neural: drawNeural,
   flare: drawFlare,
@@ -849,6 +1098,8 @@ const DRAW_FUNCTIONS: Record<TProjectFxKind, TFxDraw> = {
   peers: drawPeers,
   typing: drawTyping,
   ar: drawAR,
+  tanks: drawTanks,
+  artillery: drawArtillery,
 };
 
 export function getFxDraw(kind: TProjectFxKind): TFxDraw {

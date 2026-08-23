@@ -22,6 +22,12 @@ const Pendulum = lazy(() =>
 const Sudoku = lazy(() =>
   import('../../features/sudoku/presentation/Sudoku').then(m => ({ default: m.Sudoku }))
 );
+const Tanks = lazy(() =>
+  import('../../features/tanks/presentation/Tanks').then(m => ({ default: m.Tanks }))
+);
+const Scorched = lazy(() =>
+  import('../../features/scorched/presentation/Scorched').then(m => ({ default: m.Scorched }))
+);
 const Sun = lazy(() =>
   import('../../features/sun/presentation/Sun').then(m => ({ default: m.Sun }))
 );
@@ -103,6 +109,8 @@ export const Application = memo(() => {
                 <Route element={<InnerRoot />}>
                   <Route path="pendulum" element={<Pendulum />} />
                   <Route path="sudoku/:puzzle?" element={<Sudoku />} />
+                  <Route path="tanks" element={<Tanks />} />
+                  <Route path="scorched" element={<Scorched />} />
                   <Route path="sun" element={<Sun />} />
                   <Route path="graphics" element={<Charts />} />
                   <Route path="timeseries" element={<Timeseries />} />

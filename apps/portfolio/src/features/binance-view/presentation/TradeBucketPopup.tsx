@@ -110,10 +110,7 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
   }
 
   return (
-    <DesktopAnchoredPopup
-      pointerPx={hit.pointerPx}
-      reflowDeps={[hit.pointerPx.x, hit.pointerPx.y, tradeCount, isLoading]}
-    >
+    <DesktopAnchoredPopup pointerPx={hit.pointerPx}>
       <TradeBucketPopupHeader
         time={time}
         volume={volume}

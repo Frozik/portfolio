@@ -32,6 +32,8 @@ export const appTranslationsEn = {
     cv: 'CV',
     pendulum: 'Pendulum',
     sudoku: 'Sudoku',
+    tanks: 'Tanks',
+    scorched: 'Ashfall',
     sun: 'Sun',
     graphics: 'Graphics',
     timeseries: 'Timeseries',

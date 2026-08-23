@@ -636,6 +636,20 @@ export const welcomeTranslationsEn = {
           '3D stereometry trainer — construct lines and planes on polyhedra and solve classical problems, like finding the section of a pyramid by a plane defined through two lines.',
         status: '3d',
       },
+      tanks: {
+        meta: 'Games · WebGPU arcade',
+        title: 'Tanks',
+        description:
+          'A Battle City remake rendered on WebGPU — all 35 original stages with physics, enemy AI and timings traced from the original game, pixel art and sound synthesized entirely in code. Keyboard or touch.',
+        status: '35 stages',
+      },
+      scorched: {
+        meta: 'Games · WebGPU artillery',
+        title: 'Scorched',
+        description:
+          'A Scorched Earth remake on WebGPU — hot-seat artillery for up to ten tanks over destructible terrain, with the original manual\u2019s weapons catalog, wind, shields and eight AI personalities. Crater carving, falling dirt and explosion particles all run in compute shaders.',
+        status: '33 weapons',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

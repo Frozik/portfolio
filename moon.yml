@@ -31,10 +31,5 @@ tasks:
   test-coverage:
     command: 'vitest run --coverage'
 
-  build:
-    command: 'moon run portfolio:build'
-    options:
-      runInCI: true
-
   deploy:
     command: 'gh-pages -d apps/portfolio/dist'

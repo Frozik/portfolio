@@ -29,6 +29,8 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     cv: 'Резюме',
     pendulum: 'Маятник',
     sudoku: 'Судоку',
+    tanks: 'Танчики',
+    scorched: 'Выжженная земля',
     sun: 'Солнце',
     graphics: 'Графика',
     timeseries: 'Таймсерии',

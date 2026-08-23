@@ -16,12 +16,9 @@ import {
  */
 export function DesktopAnchoredPopup({
   pointerPx,
-  reflowDeps,
   children,
 }: {
   readonly pointerPx: { readonly x: number; readonly y: number };
-  /** Dependencies that should re-trigger the edge-aware position pass. */
-  readonly reflowDeps: ReadonlyArray<unknown>;
   readonly children: ReactElement | ReactElement[];
 }): ReactElement {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -29,39 +26,50 @@ export function DesktopAnchoredPopup({
   useLayoutEffect(() => {
     const node = rootRef.current;
     if (node === null) {
-      return;
-    }
-    const parent = node.offsetParent as HTMLElement | null;
-    const parentRect = parent?.getBoundingClientRect();
-    const parentWidth = parentRect?.width ?? window.innerWidth;
-    const parentHeight = parentRect?.height ?? window.innerHeight;
-    const popupRect = node.getBoundingClientRect();
-    const popupWidth = popupRect.width;
-    const popupHeight = popupRect.height;
-
-    let nextLeft = pointerPx.x + POPUP_OFFSET_PX;
-    if (nextLeft + popupWidth + POPUP_EDGE_MARGIN_PX > parentWidth) {
-      nextLeft = pointerPx.x - popupWidth - POPUP_OFFSET_PX;
+      return undefined;
     }
 
-    let nextTop = pointerPx.y + POPUP_OFFSET_PX;
-    if (nextTop + popupHeight + POPUP_EDGE_MARGIN_PX > parentHeight) {
-      nextTop = pointerPx.y - popupHeight - POPUP_OFFSET_PX;
-    }
+    const reflow = (): void => {
+      const parent = node.offsetParent as HTMLElement | null;
+      const parentRect = parent?.getBoundingClientRect();
+      const parentWidth = parentRect?.width ?? window.innerWidth;
+      const parentHeight = parentRect?.height ?? window.innerHeight;
+      const popupRect = node.getBoundingClientRect();
+      const popupWidth = popupRect.width;
+      const popupHeight = popupRect.height;
 
-    const clampedLeft = Math.max(
-      POPUP_EDGE_MARGIN_PX,
-      Math.min(nextLeft, parentWidth - popupWidth - POPUP_EDGE_MARGIN_PX)
-    );
-    const clampedTop = Math.max(
-      POPUP_EDGE_MARGIN_PX,
-      Math.min(nextTop, parentHeight - popupHeight - POPUP_EDGE_MARGIN_PX)
-    );
+      let nextLeft = pointerPx.x + POPUP_OFFSET_PX;
+      if (nextLeft + popupWidth + POPUP_EDGE_MARGIN_PX > parentWidth) {
+        nextLeft = pointerPx.x - popupWidth - POPUP_OFFSET_PX;
+      }
 
-    node.style.left = `${clampedLeft}px`;
-    node.style.top = `${clampedTop}px`;
-    node.style.visibility = 'visible';
-  }, reflowDeps);
+      let nextTop = pointerPx.y + POPUP_OFFSET_PX;
+      if (nextTop + popupHeight + POPUP_EDGE_MARGIN_PX > parentHeight) {
+        nextTop = pointerPx.y - popupHeight - POPUP_OFFSET_PX;
+      }
+
+      const clampedLeft = Math.max(
+        POPUP_EDGE_MARGIN_PX,
+        Math.min(nextLeft, parentWidth - popupWidth - POPUP_EDGE_MARGIN_PX)
+      );
+      const clampedTop = Math.max(
+        POPUP_EDGE_MARGIN_PX,
+        Math.min(nextTop, parentHeight - popupHeight - POPUP_EDGE_MARGIN_PX)
+      );
+
+      node.style.left = `${clampedLeft}px`;
+      node.style.top = `${clampedTop}px`;
+      node.style.visibility = 'visible';
+    };
+
+    reflow();
+
+    // Content arriving later (loading → data) resizes the popup and can push it past an edge.
+    const resizeObserver = new ResizeObserver(reflow);
+    resizeObserver.observe(node);
+
+    return () => resizeObserver.disconnect();
+  }, [pointerPx.x, pointerPx.y]);
 
   return (
     <div

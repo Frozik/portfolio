@@ -75,6 +75,7 @@
   --animate-slide-in-left: slide-in-left 200ms ease-out;
   --animate-slide-out-left: slide-out-left 150ms ease-in;
   --animate-slide-in-top: slide-in-top 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-out-top: slide-out-top 150ms ease-in;
   --animate-slide-in-right: slide-in-right 200ms ease-out;
   --animate-slide-out-right: slide-out-right 150ms ease-in;
   --animate-slide-in-bottom: slide-in-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -107,6 +108,10 @@
   @keyframes slide-in-top {
     from { transform: translateY(-100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes slide-out-top {
+    from { transform: translateY(0); }
+    to { transform: translateY(-100%); }
   }
   @keyframes slide-in-left {
     from { transform: translateX(-100%); }

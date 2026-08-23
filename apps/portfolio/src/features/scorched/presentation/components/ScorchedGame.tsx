@@ -1,0 +1,186 @@
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { useIsCoarsePointer } from '@frozik/components/hooks/useIsCoarsePointer';
+import { useWakeLock } from '@frozik/components/hooks/useWakeLock';
+import { getIsHosted } from '@frozik/utils/isHosted';
+import { isNil } from 'lodash-es';
+import { observer } from 'mobx-react-lite';
+import { useEffect, useMemo, useRef } from 'react';
+
+import type { IScorchedSimulationHost } from '../../application/render/scorched-draw';
+import { runScorched } from '../../application/render/scorched-draw';
+import { ScorchedAudioController } from '../../application/ScorchedAudioController';
+import { useScorchedStore } from '../../application/useScorchedStore';
+import { AimGhost } from '../../infrastructure/aim-ghost';
+import { KeyAimSource } from '../../infrastructure/key-aim-source';
+import { PointerAimSource } from '../../infrastructure/pointer-aim-source';
+import { mergeScorchedInputs } from '../../infrastructure/scorched-input';
+import { pickRandomSkyPreset } from '../../infrastructure/sky-presets';
+import { useDragAim } from '../hooks/useDragAim';
+import { useFieldTransform } from '../hooks/useFieldTransform';
+import { FieldOverlays } from './FieldOverlays';
+import { HandoverOverlay } from './HandoverOverlay';
+import { MatchResultOverlay } from './MatchResultOverlay';
+import { RosterScreen } from './RosterScreen';
+import { RoundResultOverlay } from './RoundResultOverlay';
+import { ScorchedHud } from './ScorchedHud';
+import { ShopScreen } from './ShopScreen';
+import { ShotSetupBar } from './ShotSetupBar';
+import { TouchControls } from './TouchControls';
+import { TurnActionsBar } from './TurnActionsBar';
+import { WeaponCarousel } from './WeaponCarousel';
+
+const IS_HOSTED = getIsHosted();
+const DESCENDING_VELOCITY = 0;
+const NOT_DESCENDING = 0;
+
+/**
+ * The route's playable shell: the WebGPU canvas, the HUD strip of §13, the flow overlays and the
+ * virtual controls of §12.2.
+ *
+ * This component owns the renderer, the input sources and the audio controller (§12): the store
+ * holds data only, so the side-effectful pieces live and die with the canvas element. Strict-mode
+ * double-mount is safe — `runScorched` tolerates teardown before its async GPU init lands, and
+ * everything created here is disposed in the effect cleanup.
+ */
+export const ScorchedGame = observer(() => {
+  const store = useScorchedStore();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioControllerRef = useRef<ScorchedAudioController | undefined>(undefined);
+  const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
+  const { status, isTicking, fps } = store;
+  const skyPreset = useMemo(() => pickRandomSkyPreset(), []);
+  const aimGhost = useMemo(() => new AimGhost(), []);
+  const pointerSource = useMemo(() => new PointerAimSource(), []);
+  const isCoarsePointer = useIsCoarsePointer();
+  const transform = useFieldTransform(canvasRef);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (isNil(canvas)) {
+      return undefined;
+    }
+
+    const audioController = new ScorchedAudioController(store);
+    const keyAimSource = new KeyAimSource();
+    /**
+     * How fast the fastest descending shell is travelling, so the whistle can be pitched by it
+     * (§16.4). Zero while nothing is on its way down, which is what the cue triggers on.
+     */
+    const readDescentSpeed = (): number =>
+      store.roundRef.current.projectiles.reduce(
+        (fastest, projectile) =>
+          projectile.state.velocity.y < DESCENDING_VELOCITY
+            ? Math.max(
+                fastest,
+                Math.hypot(projectile.state.velocity.x, projectile.state.velocity.y)
+              )
+            : fastest,
+        NOT_DESCENDING
+      );
+    const host: IScorchedSimulationHost = {
+      isTicking: () => store.isTicking,
+      readInput: () => mergeScorchedInputs(keyAimSource.read(), pointerSource.read()),
+      advanceFrame: elapsedSeconds => store.advanceFrame(elapsedSeconds),
+      applyInput: input => store.applyInput(input),
+      tick: () => store.tick(),
+    };
+
+    audioControllerRef.current = audioController;
+
+    const stopRenderer = runScorched({
+      canvas,
+      roundRef: store.roundRef,
+      host,
+      skyPreset,
+      aimGhost,
+      onEvents: events => audioController.onFrame(events, readDescentSpeed()),
+      onFpsUpdate: IS_HOSTED ? undefined : store.setFps,
+    });
+
+    return () => {
+      stopRenderer();
+      keyAimSource.dispose();
+      pointerSource.dispose();
+      audioController.dispose();
+      audioControllerRef.current = undefined;
+    };
+  }, [store, skyPreset, aimGhost, pointerSource]);
+
+  useEffect(() => {
+    if (!isTicking) {
+      return undefined;
+    }
+
+    void requestWakeLock();
+
+    return () => {
+      void releaseWakeLock();
+    };
+  }, [isTicking, requestWakeLock, releaseWakeLock]);
+
+  const dragHandlers = useDragAim({
+    transform,
+    pointerInput: pointerSource,
+    aimGhost,
+    getOrigin: () => {
+      const playerId = store.activePlayerId;
+
+      return isNil(playerId) ? undefined : store.roundRef.current.getTank(playerId);
+    },
+    getMaxPower: () => store.maxPower,
+    isEnabled: store.isAiming && !store.isAiTurn,
+  });
+
+  /** The first touch of the canvas is as good a gesture as any to start the audio with. */
+  const handleCanvasPointerDown = useFunction(
+    (event: Parameters<typeof dragHandlers.onPointerDown>[0]) => {
+      audioControllerRef.current?.unlock();
+      dragHandlers.onPointerDown(event);
+    }
+  );
+
+  /** [§13] The till rings from the screen that spends the money; the controller lives here. */
+  const handlePurchase = useFunction(() => {
+    audioControllerRef.current?.playPurchase();
+  });
+
+  const isPlaying = status === 'playing';
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <ScorchedHud />
+
+      {/* overflow-hidden: an overlay past the edge would scrollbar the main and resize the canvas */}
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <canvas
+          ref={canvasRef}
+          onPointerDown={handleCanvasPointerDown}
+          onPointerMove={dragHandlers.onPointerMove}
+          onPointerUp={dragHandlers.onPointerUp}
+          onPointerCancel={dragHandlers.onPointerCancel}
+          className="h-full w-full [touch-action:none]"
+        />
+
+        <FieldOverlays transform={transform} />
+
+        {isPlaying ? <ShotSetupBar /> : null}
+        {isPlaying ? <TurnActionsBar /> : null}
+        {isPlaying && isCoarsePointer ? <TouchControls pointerInput={pointerSource} /> : null}
+        {isPlaying && store.isWeaponCarouselOpen ? <WeaponCarousel /> : null}
+
+        {status === 'setup' ? <RosterScreen /> : null}
+        {status === 'handover' ? <HandoverOverlay /> : null}
+        {status === 'round-over' ? <RoundResultOverlay /> : null}
+        {status === 'shop' ? <ShopScreen onPurchase={handlePurchase} /> : null}
+        {status === 'match-over' ? <MatchResultOverlay /> : null}
+
+        {IS_HOSTED ? null : (
+          <div className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 font-mono text-xs text-neutral-400">
+            {fps} FPS
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});

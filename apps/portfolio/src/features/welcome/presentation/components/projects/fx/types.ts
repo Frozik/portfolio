@@ -8,7 +8,9 @@ export type TProjectFxKind =
   | 'rotate'
   | 'peers'
   | 'ar'
-  | 'typing';
+  | 'typing'
+  | 'tanks'
+  | 'artillery';
 
 export type TAccentAlpha = (alpha: number) => string;
 
