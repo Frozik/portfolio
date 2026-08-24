@@ -1,0 +1,1 @@
+function e(e){throw Error(`assertNever invocation for "${e}" type of ${typeof e}`)}export{e as t};

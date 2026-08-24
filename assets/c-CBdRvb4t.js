@@ -1,1 +1,0 @@
-function e(){return window.location.hostname.endsWith(`github.io`)}function t(e,t,n,r){let i=e-n,a=t-r;return Math.sqrt(i*i+a*a)}function n(e,t){return t<1?null:e/t}export{t as n,e as r,n as t};

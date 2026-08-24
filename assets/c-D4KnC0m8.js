@@ -1,0 +1,1 @@
+function e(e,t,n,r){let i=e-n,a=t-r;return Math.sqrt(i*i+a*a)}function t(e,t){return t<1?null:e/t}export{e as n,t};
