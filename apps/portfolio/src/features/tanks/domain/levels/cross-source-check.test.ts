@@ -89,22 +89,21 @@ function countEnemyTypes(stageNumber: number): Partial<Record<EnemyType, number>
 }
 
 describe('original stages cross-checked against the second MIT source', () => {
-  it.each(CROSS_CHECKED_STAGES)('stage $stageNumber matches cattle-bity cell for cell', ({
-    stageNumber,
-    secondSourceCells,
-    extraBrickCells,
-  }) => {
-    expect(countTerrainKinds(stageNumber)).toEqual({
-      ...secondSourceCells,
-      brick: (secondSourceCells.brick ?? 0) + BASE_NEST_BRICK_CELLS + (extraBrickCells ?? 0),
-      eagle: BASE_EAGLE_CELLS,
-    });
-  });
+  it.each(CROSS_CHECKED_STAGES)(
+    'stage $stageNumber matches cattle-bity cell for cell',
+    ({ stageNumber, secondSourceCells, extraBrickCells }) => {
+      expect(countTerrainKinds(stageNumber)).toEqual({
+        ...secondSourceCells,
+        brick: (secondSourceCells.brick ?? 0) + BASE_NEST_BRICK_CELLS + (extraBrickCells ?? 0),
+        eagle: BASE_EAGLE_CELLS,
+      });
+    }
+  );
 
-  it.each(CROSS_CHECKED_STAGES)('stage $stageNumber fields the cross-checked enemy mix', ({
-    stageNumber,
-    enemyCounts,
-  }) => {
-    expect(countEnemyTypes(stageNumber)).toEqual(enemyCounts);
-  });
+  it.each(CROSS_CHECKED_STAGES)(
+    'stage $stageNumber fields the cross-checked enemy mix',
+    ({ stageNumber, enemyCounts }) => {
+      expect(countEnemyTypes(stageNumber)).toEqual(enemyCounts);
+    }
+  );
 });
