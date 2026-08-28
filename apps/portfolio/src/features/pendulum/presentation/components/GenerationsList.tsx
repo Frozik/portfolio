@@ -11,7 +11,7 @@ import {
   isWaitingArgumentsValueDescriptor,
   matchValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import type { CellContext, ColumnDef, VisibilityState } from '@tanstack/react-table';
+import type { CellContext, ColumnDef, ColumnVisibilityState } from '@tanstack/react-table';
 import { isNil } from 'lodash-es';
 import { Bot, Network, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -23,6 +23,7 @@ import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { Button } from '../../../../shared/ui/Button';
+import type { TDataTableFeatures } from '../../../../shared/ui/DataTable';
 import { DataTable } from '../../../../shared/ui/DataTable';
 import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
@@ -42,7 +43,7 @@ type TGenerationRow = Record<string, unknown> & {
 
 type TPlayerValue = { name: string; modelUrl: string; score: number } | undefined;
 
-const ScoreCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
+const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
   const maxScore = getValue<number>();
   return <Tag color={maxScore > 0 ? 'green' : maxScore < 0 ? 'red' : 'blue'}>{maxScore}</Tag>;
 };
@@ -86,7 +87,7 @@ const PlayerCellContent = memo(({ player }: { player: { name: string; score: num
   );
 });
 
-const PlayerCell = ({ getValue }: CellContext<TGenerationRow, unknown>) => {
+const PlayerCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
   const player = getValue() as TPlayerValue;
   if (isNil(player)) {
     return null;
@@ -149,7 +150,7 @@ const CompetitionListItem = memo(
   }
 );
 
-const generationColumns: ColumnDef<TGenerationRow, unknown>[] = [
+const generationColumns: ColumnDef<TDataTableFeatures, TGenerationRow, unknown>[] = [
   {
     accessorKey: 'id',
     header: pendulumT.generationsList.columnId,
@@ -225,7 +226,7 @@ export const GenerationsList = observer(() => {
     unsynced: vd => (isEmptyValueDescriptor(vd) ? ['new' as const] : []),
   });
 
-  const columnVisibility: VisibilityState = {};
+  const columnVisibility: ColumnVisibilityState = {};
   for (let i = 0; i < POPULATION_SIZE; i++) {
     columnVisibility[`player-${i}`] = i < maxPopulationSize;
   }

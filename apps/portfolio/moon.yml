@@ -41,7 +41,7 @@ tasks:
       runInCI: true
 
   madge:
-    command: 'madge src --circular --extensions ts,tsx --ts-config tsconfig.json ./src'
+    command: 'madge src --circular --extensions ts,tsx ./src'
 
   analyze:
     command: 'pnpm run analyze'

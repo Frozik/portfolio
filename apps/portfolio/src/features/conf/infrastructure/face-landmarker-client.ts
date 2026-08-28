@@ -7,7 +7,7 @@ import { isNil } from 'lodash-es';
  * version so a silent upstream update cannot break the detector at
  * runtime; bump deliberately alongside `@mediapipe/tasks-vision`.
  */
-const MEDIAPIPE_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm';
+const MEDIAPIPE_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
 
 /** Public model bundle Google ships for FaceLandmarker. */
 const FACE_LANDMARKER_MODEL_URL =

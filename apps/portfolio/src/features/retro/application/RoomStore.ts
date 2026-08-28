@@ -11,7 +11,15 @@ import {
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import { action, computed, makeObservable, observable, runInAction } from 'mobx';
+import {
+  action,
+  actionBound,
+  computed,
+  makeObservable,
+  observable,
+  observableRef,
+  runInAction,
+} from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
 import {
@@ -149,15 +157,15 @@ export class RoomStore {
     makeObservable(
       this,
       {
-        snapshot: observable.ref,
-        currentSnapshot: observable.ref,
-        timerTickNow: observable.ref,
-        presentUsers: observable.ref,
+        snapshot: observableRef,
+        currentSnapshot: observableRef,
+        timerTickNow: observableRef,
+        presentUsers: observableRef,
         isShareDialogOpen: observable,
         isExportDialogOpen: observable,
         isCreateDialogOpen: observable,
-        lastToast: observable.ref,
-        identity: observable.ref,
+        lastToast: observableRef,
+        identity: observableRef,
         timerSeverity: computed,
         remainingTimerMs: computed,
         phase: computed,
@@ -167,12 +175,12 @@ export class RoomStore {
         updateSnapshotFromDoc: action,
         tickTimer: action,
         updatePresentUsers: action,
-        openShareDialog: action.bound,
-        closeShareDialog: action.bound,
-        openExportDialog: action.bound,
-        closeExportDialog: action.bound,
-        openCreateDialog: action.bound,
-        closeCreateDialog: action.bound,
+        openShareDialog: actionBound,
+        closeShareDialog: actionBound,
+        openExportDialog: actionBound,
+        closeExportDialog: actionBound,
+        openCreateDialog: actionBound,
+        closeCreateDialog: actionBound,
         showToast: action,
         clearToast: action,
         addCard: action,

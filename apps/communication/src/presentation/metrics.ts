@@ -1,4 +1,4 @@
-import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry } from '@prometheus-io/client';
 
 // Default histogram buckets (seconds) per M17.
 const DEFAULT_HISTOGRAM_BUCKETS_SECONDS = [0.01, 0.05, 0.1, 0.5, 1, 5, 10] as const;
@@ -13,24 +13,24 @@ const SIGNAL_PUBLISH_RECIPIENTS_BUCKETS = [1, 2, 5, 10, 20, 50, 100] as const;
 export type CommunicationMetrics = {
   registry: Registry;
   histograms: {
-    dispatchDurationSeconds: Histogram<string>;
-    broadcastFanoutListeners: Histogram<string>;
-    authHandshakeDurationSeconds: Histogram<string>;
-    signalPublishHandlerDurationMs: Histogram<string>;
-    signalPublishRecipients: Histogram<string>;
+    dispatchDurationSeconds: Histogram<never>;
+    broadcastFanoutListeners: Histogram<never>;
+    authHandshakeDurationSeconds: Histogram<never>;
+    signalPublishHandlerDurationMs: Histogram<never>;
+    signalPublishRecipients: Histogram<never>;
   };
   counters: {
     authHandshakeFailureTotal: Counter<'code'>;
     tokenRefreshTotal: Counter<'outcome'>;
     dispatchRejectedTotal: Counter<'reason'>;
-    handshakeRateLimitedTotal: Counter<string>;
+    handshakeRateLimitedTotal: Counter<never>;
     signalPublishTotal: Counter<'outcome'>;
-    turnCredentialsIssuedTotal: Counter<string>;
+    turnCredentialsIssuedTotal: Counter<never>;
   };
   gauges: {
-    activeRooms: Gauge<string>;
-    activeSockets: Gauge<string>;
-    pendingCorrelations: Gauge<string>;
+    activeRooms: Gauge<never>;
+    activeSockets: Gauge<never>;
+    pendingCorrelations: Gauge<never>;
   };
 };
 

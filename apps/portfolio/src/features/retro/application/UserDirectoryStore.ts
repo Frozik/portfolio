@@ -1,4 +1,4 @@
-import { makeAutoObservable, observable, runInAction } from 'mobx';
+import { makeAutoObservable, observable, observableRef, runInAction } from 'mobx';
 
 import type { ClientId } from '../domain/types';
 import type { IUserDirectoryRepo, IUserProfile } from '../infrastructure/user-directory-repo';
@@ -21,7 +21,7 @@ export class UserDirectoryStore {
   constructor(private readonly repoPromise: Promise<IUserDirectoryRepo>) {
     makeAutoObservable<UserDirectoryStore, 'repoPromise' | 'profiles'>(
       this,
-      { repoPromise: false, profiles: observable.ref },
+      { repoPromise: false, profiles: observableRef },
       { autoBind: true }
     );
     void this.hydrate();

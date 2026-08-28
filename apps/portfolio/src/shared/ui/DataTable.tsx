@@ -2,16 +2,22 @@ import { cn } from '@frozik/components/components/cn';
 import type {
   Cell,
   ColumnDef,
+  ColumnVisibilityState,
   Header,
   Row,
+  RowData,
   SortingState,
-  VisibilityState,
 } from '@tanstack/react-table';
 import {
+  columnSizingFeature,
+  columnVisibilityFeature,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
+  metaHelper,
+  rowSortingFeature,
+  sortFns,
+  tableFeatures,
+  useTable,
 } from '@tanstack/react-table';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -22,11 +28,19 @@ import { memo, useCallback, useRef, useState } from 'react';
 const SORT_ICON_SIZE = 14;
 const DEFAULT_ROW_HEIGHT = 40;
 
-// Stable references — TanStack best practice: create model getters ONCE outside component
-const coreRowModel = getCoreRowModel();
-const sortedRowModel = getSortedRowModel();
+// Stable reference — TanStack best practice: declare the feature set ONCE outside component
+const dataTableFeatures = tableFeatures({
+  rowSortingFeature,
+  columnVisibilityFeature,
+  columnSizingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns,
+  columnMeta: metaHelper<{ readonly fixed?: 'left' | 'right' }>(),
+});
 
-export function DataTable<TData>({
+export type TDataTableFeatures = typeof dataTableFeatures;
+
+export function DataTable<TData extends RowData>({
   columns,
   data,
   className,
@@ -35,13 +49,13 @@ export function DataTable<TData>({
   initialSorting,
   columnVisibility,
 }: {
-  columns: ColumnDef<TData, unknown>[];
+  columns: ColumnDef<TDataTableFeatures, TData, unknown>[];
   data: TData[];
   className?: string;
   virtual?: boolean;
   scrollHeight?: number;
   initialSorting?: SortingState;
-  columnVisibility?: VisibilityState;
+  columnVisibility?: ColumnVisibilityState;
 }) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -54,13 +68,12 @@ export function DataTable<TData>({
     }
   }, []);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
     columns,
     state: { sorting, columnVisibility },
     onSortingChange: setSorting,
-    getCoreRowModel: coreRowModel,
-    getSortedRowModel: sortedRowModel,
   });
 
   const { rows } = table.getRowModel();
@@ -116,7 +129,11 @@ export function DataTable<TData>({
 }
 
 // Memoized header cell
-function HeaderCellInner<TData>({ header }: { header: Header<TData, unknown> }) {
+function HeaderCellInner<TData extends RowData>({
+  header,
+}: {
+  header: Header<TDataTableFeatures, TData, unknown>;
+}) {
   const meta = header.column.columnDef.meta;
   const isFixed = !isNil(meta?.fixed);
 
@@ -144,12 +161,12 @@ function HeaderCellInner<TData>({ header }: { header: Header<TData, unknown> }) 
 
 const HeaderCell = memo(HeaderCellInner) as typeof HeaderCellInner;
 
-function DataRowInner<TData>({
+function DataRowInner<TData extends RowData>({
   row,
   index,
   measureRef,
 }: {
-  row: Row<TData>;
+  row: Row<TDataTableFeatures, TData>;
   /** Virtual item index — read by the virtualizer's measureElement via data-index */
   index?: number;
   measureRef?: (element: HTMLTableRowElement | null) => void;
@@ -160,7 +177,7 @@ function DataRowInner<TData>({
       data-index={index}
       className="border-b border-border hover:bg-surface-elevated"
     >
-      {row.getVisibleCells().map((cell: Cell<TData, unknown>) => (
+      {row.getVisibleCells().map((cell: Cell<TDataTableFeatures, TData, unknown>) => (
         <DataCell key={cell.id} cell={cell} />
       ))}
     </tr>
@@ -169,7 +186,11 @@ function DataRowInner<TData>({
 
 const DataRow = memo(DataRowInner) as typeof DataRowInner;
 
-function DataCellInner<TData>({ cell }: { cell: Cell<TData, unknown> }) {
+function DataCellInner<TData extends RowData>({
+  cell,
+}: {
+  cell: Cell<TDataTableFeatures, TData, unknown>;
+}) {
   const meta = cell.column.columnDef.meta;
   const isFixed = !isNil(meta?.fixed);
 
@@ -190,12 +211,12 @@ function DataCellInner<TData>({ cell }: { cell: Cell<TData, unknown> }) {
 const DataCell = memo(DataCellInner) as typeof DataCellInner;
 
 // Virtual body — only renders visible rows. No memo — virtualizer state is mutable.
-function VirtualBody<TData>({
+function VirtualBody<TData extends RowData>({
   rows,
   virtualizer,
   columnCount,
 }: {
-  rows: Row<TData>[];
+  rows: Row<TDataTableFeatures, TData>[];
   virtualizer: Virtualizer<HTMLDivElement, Element>;
   columnCount: number;
 }) {

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
+import type { Registry } from '@prometheus-io/client';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { Registry } from 'prom-client';
 import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
 import type { IServerLogger } from '../application/ports/IServerLogger';

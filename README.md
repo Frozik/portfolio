@@ -8,7 +8,7 @@
 Portfolio monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
 
-**Tech stack**: React 19, TypeScript 6, MobX, Tailwind CSS v4, Radix UI, Vite 8,
+**Tech stack**: React 19, TypeScript 7, MobX 7, Tailwind CSS v4, Radix UI, Vite 8,
 WebGPU, WebRTC, TensorFlow.js, Matter.js, Dockview.
 
 ## Getting Started

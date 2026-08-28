@@ -26,7 +26,7 @@ const FORBIDDEN_MODULES = [
   'jose',
   'config',
   'toml',
-  'prom-client',
+  '@prometheus-io/client',
   '@fastify/rate-limit',
   'pino',
   'pino-pretty',
