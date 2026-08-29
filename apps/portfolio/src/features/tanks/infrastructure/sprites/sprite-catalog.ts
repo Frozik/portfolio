@@ -122,7 +122,7 @@ function addTankSprites(catalog: Map<string, SpriteDefinition>): void {
         addSprite(
           catalog,
           getPlayerTankSpriteId(playerSlot, starLevel, frameIndex),
-          createTankBitmap(PLAYER_TANK_HULL, frameIndex),
+          createTankBitmap(PLAYER_TANK_HULL, frameIndex, 'band'),
           createPlayerTankPalette(playerSlot, starLevel)
         );
       }

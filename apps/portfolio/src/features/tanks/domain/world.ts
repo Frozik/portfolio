@@ -549,11 +549,10 @@ export class TanksWorld {
   private destroyEnemy(enemy: EnemyTank, awardsPoints: boolean): void {
     this.enemyTanks = this.enemyTanks.filter(candidate => candidate !== enemy);
 
-    if (!awardsPoints) {
-      return;
-    }
-
-    const points = getEnemyPoints(enemy.type);
+    // Grenade kills explode like any other (`points: 0` marks them), but — like
+    // the ROM — award no score, no popup, no tally entry and never chain-drop a
+    // power-up from a destroyed carrier.
+    const points = awardsPoints ? getEnemyPoints(enemy.type) : 0;
 
     this.events.push({
       type: 'enemy-destroyed',
@@ -561,6 +560,11 @@ export class TanksWorld {
       position: getTankCenter(enemy),
       points,
     });
+
+    if (!awardsPoints) {
+      return;
+    }
+
     this.addScore(points);
 
     if (enemy.isPowerUpCarrier) {

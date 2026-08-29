@@ -31,6 +31,14 @@ describe('toScoreDigits', () => {
 });
 
 describe('ScorePopupList', () => {
+  it('skips zero-point kills — grenade kills explode without a reward popup', () => {
+    const popups = new ScorePopupList();
+
+    popups.consume([kill(0)]);
+
+    expect(popups.items).toHaveLength(0);
+  });
+
   it('floats a kill reward over the dead tank', () => {
     const popups = new ScorePopupList();
 

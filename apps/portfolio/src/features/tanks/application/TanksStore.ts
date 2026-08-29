@@ -167,7 +167,10 @@ export class TanksStore {
     for (const event of events) {
       switch (event.type) {
         case 'enemy-destroyed':
-          this.stageEnemiesDestroyed++;
+          // Grenade kills come with points: 0 and stay out of the stage tally (§11.5).
+          if (event.points > 0) {
+            this.stageEnemiesDestroyed++;
+          }
           break;
         case 'score-awarded':
           this.stagePoints += event.points;

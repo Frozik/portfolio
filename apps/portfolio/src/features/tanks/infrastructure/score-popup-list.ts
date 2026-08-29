@@ -33,8 +33,9 @@ export function toScoreDigits(points: number): readonly number[] {
 }
 
 /**
- * Not MobX for the same reason as `EffectList`. Grenade kills publish no `enemy-destroyed`
- * event, which is why they get no popup — §11.5's rule falls out of the event stream.
+ * Not MobX for the same reason as `EffectList`. Grenade kills arrive as
+ * `enemy-destroyed` with `points: 0` (they explode but award nothing — §11.5),
+ * so zero-point kills are skipped here.
  */
 export class ScorePopupList {
   private popups: ScorePopup[] = [];
@@ -51,7 +52,9 @@ export class ScorePopupList {
           this.clear();
           break;
         case 'enemy-destroyed':
-          this.spawn(event.points, event.position, SCORE_POPUP_KILL_TICKS);
+          if (event.points > 0) {
+            this.spawn(event.points, event.position, SCORE_POPUP_KILL_TICKS);
+          }
           break;
         case 'power-up-taken':
           this.spawn(POWER_UP_PICKUP_POINTS, event.position, SCORE_POPUP_PICKUP_TICKS);

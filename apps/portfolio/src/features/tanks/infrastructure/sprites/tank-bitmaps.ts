@@ -5,28 +5,37 @@ const BARREL_ROW_COUNT = 3;
 const TRACK_EMPTY_ROW = '....';
 const TRACK_LIGHT_ROW = '1331';
 const TRACK_DARK_ROW = '3113';
+/** Player tracks read as horizontal tread bands instead of the enemies' checker. */
+const PLAYER_TRACK_LIGHT_ROW = '1111';
+const PLAYER_TRACK_DARK_ROW = '3333';
 /** Track shoe spacing in pixels; shifting it by one row between frames makes the tank crawl. */
 const TRACK_PATTERN_PERIOD = 3;
 
+export type TankTrackStyle = 'checker' | 'band';
+
 export const TANK_TRACK_FRAME_COUNT = 2;
 
-/** Signature silhouette: a long slim barrel widening into a rounded turret cap. */
+/**
+ * Signature silhouette: muzzle brake on a long barrel, a pointed pentagonal
+ * turret and a V-chevron on the hull — nothing the enemy hulls share, so the
+ * player reads by shape alone.
+ */
 export const PLAYER_TANK_HULL: SpriteBitmap = [
+  '..2222..',
   '...22...',
   '...22...',
   '...22...',
   '..2222..',
+  '.222222.',
+  '.222222.',
   '.122221.',
-  '.122221.',
-  '11122111',
+  '11222211',
   '11111111',
+  '13111131',
   '11311311',
+  '11133111',
   '11111111',
-  '11111111',
-  '11311311',
-  '11111111',
-  '11111111',
-  '.111111.',
+  '.113311.',
   '.111111.',
 ];
 
@@ -110,17 +119,27 @@ export const ARMOR_ENEMY_HULL: SpriteBitmap = [
   '.111111.',
 ];
 
-function createTrackRow(rowIndex: number, frameIndex: number): string {
+function createTrackRow(rowIndex: number, frameIndex: number, style: TankTrackStyle): string {
   if (rowIndex < BARREL_ROW_COUNT) {
     return TRACK_EMPTY_ROW;
   }
 
-  return (rowIndex + frameIndex) % TRACK_PATTERN_PERIOD === 0 ? TRACK_DARK_ROW : TRACK_LIGHT_ROW;
+  const isDarkRow = (rowIndex + frameIndex) % TRACK_PATTERN_PERIOD === 0;
+
+  if (style === 'band') {
+    return isDarkRow ? PLAYER_TRACK_DARK_ROW : PLAYER_TRACK_LIGHT_ROW;
+  }
+
+  return isDarkRow ? TRACK_DARK_ROW : TRACK_LIGHT_ROW;
 }
 
-export function createTankBitmap(hull: SpriteBitmap, frameIndex: number): SpriteBitmap {
+export function createTankBitmap(
+  hull: SpriteBitmap,
+  frameIndex: number,
+  trackStyle: TankTrackStyle = 'checker'
+): SpriteBitmap {
   return hull.map((hullRow, rowIndex) => {
-    const trackRow = createTrackRow(rowIndex, frameIndex);
+    const trackRow = createTrackRow(rowIndex, frameIndex, trackStyle);
 
     return trackRow + hullRow + trackRow;
   });
