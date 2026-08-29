@@ -1,9 +1,9 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { isFunction, isNil } from 'lodash-es';
+import { isFunction } from 'lodash-es';
 import { useEffect, useRef, useState } from 'react';
 
 export interface IFullscreenLandscape {
-  /** True only when the browser exposes both fullscreen and orientation-lock APIs (mobile / tablet). */
+  /** True when the browser can put the page fullscreen (orientation lock stays best-effort). */
   readonly isSupported: boolean;
   /** True while the user's "enter" request is still active — restored by `toggle()`. */
   readonly isActive: boolean;
@@ -18,9 +18,12 @@ interface ISavedState {
 /**
  * Capability-aware "go fullscreen + landscape" toggle.
  *
- * Desktops and most iOS Safari builds will report `isSupported = false`
- * because `screen.orientation.lock` is missing — the consumer should hide
- * the trigger UI in that case.
+ * Support is gated on the Fullscreen API alone: that is what the button
+ * delivers everywhere, while landscape orientation lock is a best-effort
+ * bonus on devices that can rotate (desktop browsers either omit
+ * `screen.orientation.lock` entirely, like Safari, or throw
+ * `NotSupportedError` from it, like Chrome). iOS Safari reports
+ * `fullscreenEnabled = false` for page elements, so the trigger hides there.
  *
  * Second tap exits fullscreen and unlocks orientation, but only undoes
  * what this toggle actually changed: if the user was already fullscreen
@@ -32,8 +35,9 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
   const savedStateRef = useRef<ISavedState | null>(null);
 
   useEffect(() => {
-    const orientation = (screen as Screen & { orientation?: ScreenOrientation }).orientation;
-    setIsSupported(!isNil(orientation) && isFunction(orientation.lock));
+    setIsSupported(
+      document.fullscreenEnabled && isFunction(document.documentElement.requestFullscreen)
+    );
   }, []);
 
   useEffect(() => {
