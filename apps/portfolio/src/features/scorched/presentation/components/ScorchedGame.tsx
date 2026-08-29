@@ -30,8 +30,7 @@ import { TurnActionsBar } from './TurnActionsBar';
 import { WeaponCarousel } from './WeaponCarousel';
 
 const IS_HOSTED = getIsHosted();
-const DESCENDING_VELOCITY = 0;
-const NOT_DESCENDING = 0;
+const NO_DESCENT_SPEED = 0;
 
 /**
  * The route's playable shell: the WebGPU canvas, the HUD strip of §13, the flow overlays and the
@@ -68,16 +67,12 @@ export const ScorchedGame = observer(() => {
      * (§16.4). Zero while nothing is on its way down, which is what the cue triggers on.
      */
     const readDescentSpeed = (): number =>
-      store.roundRef.current.projectiles.reduce(
-        (fastest, projectile) =>
-          projectile.state.velocity.y < DESCENDING_VELOCITY
-            ? Math.max(
-                fastest,
-                Math.hypot(projectile.state.velocity.x, projectile.state.velocity.y)
-              )
-            : fastest,
-        NOT_DESCENDING
-      );
+      store.roundRef.current.projectiles.reduce((fastest, projectile) => {
+        const { x: velocityX, y: velocityY } = projectile.state.velocity;
+        const isDescending = velocityY < 0;
+
+        return isDescending ? Math.max(fastest, Math.hypot(velocityX, velocityY)) : fastest;
+      }, NO_DESCENT_SPEED);
     const host: IScorchedSimulationHost = {
       isTicking: () => store.isTicking,
       readInput: () => mergeScorchedInputs(keyAimSource.read(), pointerSource.read()),

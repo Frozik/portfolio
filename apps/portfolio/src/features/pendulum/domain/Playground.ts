@@ -33,7 +33,7 @@ interface IPlaygroundCompetition {
 }
 
 export class Playground {
-  private _gravity = 1;
+  private gravity = 1;
   private queueRenderFrameId: number | undefined;
   private tickerStarted = false;
   private playersWithWorlds: IPlaygroundItem[] = [];
@@ -126,7 +126,7 @@ export class Playground {
               : { player: item, pendulumOptions: this.defaultPendulumOptions };
 
           const world = createWorld(pendulumOptions);
-          world.engine.gravity.y = this._gravity;
+          world.engine.gravity.y = this.gravity;
 
           this.playersWithWorlds.push({
             player,
@@ -188,7 +188,7 @@ export class Playground {
     const pendulumOptions = { ...this.defaultPendulumOptions, ...options?.pendulumOptions };
 
     const world = createWorld(pendulumOptions);
-    world.engine.gravity.y = this._gravity;
+    world.engine.gravity.y = this.gravity;
 
     this.playersWithWorlds.push({
       player,
@@ -231,7 +231,7 @@ export class Playground {
 
     for (const player of players) {
       const world = createWorld(options);
-      world.engine.gravity.y = this._gravity;
+      world.engine.gravity.y = this.gravity;
 
       this.playersWithWorlds.push({
         player,
@@ -280,7 +280,9 @@ export class Playground {
   }
 
   setGravity(gravity: number) {
-    this._gravity = gravity;
-    this.playersWithWorlds.map(({ world }) => (world.engine.gravity.y = gravity));
+    this.gravity = gravity;
+    this.playersWithWorlds.forEach(({ world }) => {
+      world.engine.gravity.y = gravity;
+    });
   }
 }

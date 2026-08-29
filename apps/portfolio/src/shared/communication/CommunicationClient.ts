@@ -17,8 +17,8 @@ import type {
   ITurnCredentialsAck,
   SignalAck,
 } from '@frozik/communication-protocol/messages';
-import type { Observable, Subject } from 'rxjs';
-import { BehaviorSubject, Subject as RxSubject } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { BehaviorSubject, Subject as RxSubject, skip } from 'rxjs';
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 
@@ -65,7 +65,18 @@ type TUnsubscribe = () => void;
 
 export interface ICommunicationClient {
   readonly state: TConnectionState;
+  /**
+   * Open the socket (idempotent while the client is live). Throws once
+   * {@link ICommunicationClient.disconnect} has run — a disconnected client is
+   * terminal, see there.
+   */
   connect(): void;
+  /**
+   * Terminal teardown: drops the socket and completes every event stream, so
+   * all listeners are released. The instance cannot be revived — callers that
+   * need a new connection build a fresh client (which is what the refcounted
+   * pool behind `useCommunicationClient` does).
+   */
   disconnect(): void;
   signalPublish(payload: unknown, correlationId?: string): Promise<SignalAck>;
   requestTurnCredentials(): Promise<ITurnCredentialsAck>;
@@ -81,6 +92,11 @@ export interface ICommunicationClient {
    * issue an ICE restart so the new creds take effect mid-call.
    */
   onTurnCredentialsRenewed(listener: () => void): TUnsubscribe;
+  /**
+   * Fires on every state TRANSITION — the current value is not replayed to a
+   * late subscriber. Subscribe to {@link ICommunicationClient.state$} instead
+   * when the current value matters.
+   */
   onConnectionStateChange(listener: (state: TConnectionState) => void): TUnsubscribe;
   /**
    * Reactive view of {@link state}. Replays the current value to every new
@@ -90,8 +106,8 @@ export interface ICommunicationClient {
   readonly state$: Observable<TConnectionState>;
 }
 
-function subscribeTo<T>(subject: Subject<T>, listener: (value: T) => void): TUnsubscribe {
-  const subscription = subject.subscribe(listener);
+function subscribeTo<T>(source: Observable<T>, listener: (value: T) => void): TUnsubscribe {
+  const subscription = source.subscribe(listener);
   return () => {
     subscription.unsubscribe();
   };
@@ -124,7 +140,6 @@ export function createCommunicationClient(
   const tokenExpiredSubject = new RxSubject<void>();
   const drainingSubject = new RxSubject<void>();
   const turnRenewedSubject = new RxSubject<void>();
-  const stateChangeSubject = new RxSubject<TConnectionState>();
   const stateSubject = new BehaviorSubject<TConnectionState>('idle');
 
   const completeAllSubjects = (): void => {
@@ -134,19 +149,18 @@ export function createCommunicationClient(
     tokenExpiredSubject.complete();
     drainingSubject.complete();
     turnRenewedSubject.complete();
-    stateChangeSubject.complete();
     stateSubject.complete();
   };
 
   let socket: Socket | null = null;
   let state: TConnectionState = 'idle';
+  let isDisposed = false;
 
   function setState(next: TConnectionState): void {
     if (state === next) {
       return;
     }
     state = next;
-    stateChangeSubject.next(next);
     stateSubject.next(next);
   }
 
@@ -217,6 +231,12 @@ export function createCommunicationClient(
   }
 
   function connect(): void {
+    if (isDisposed) {
+      throw new Error(
+        'communication-client/disposed: connect() after disconnect() is not supported — ' +
+          'create a fresh client instead'
+      );
+    }
     if (socket !== null) {
       return;
     }
@@ -248,12 +268,15 @@ export function createCommunicationClient(
   }
 
   function disconnect(): void {
-    if (socket === null) {
+    if (isDisposed) {
       return;
     }
-    socket.disconnect();
-    socket.removeAllListeners();
-    socket = null;
+    isDisposed = true;
+    if (socket !== null) {
+      socket.disconnect();
+      socket.removeAllListeners();
+      socket = null;
+    }
     setState('closed');
     completeAllSubjects();
   }
@@ -316,7 +339,7 @@ export function createCommunicationClient(
     onTokenExpired: listener => subscribeTo(tokenExpiredSubject, listener),
     onServerDraining: listener => subscribeTo(drainingSubject, listener),
     onTurnCredentialsRenewed: listener => subscribeTo(turnRenewedSubject, listener),
-    onConnectionStateChange: listener => subscribeTo(stateChangeSubject, listener),
+    onConnectionStateChange: listener => subscribeTo(stateSubject.pipe(skip(1)), listener),
     state$: stateSubject.asObservable(),
   };
 }

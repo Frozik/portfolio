@@ -3,6 +3,7 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
+import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { Fragment, memo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
@@ -272,7 +273,7 @@ export const DatePage = memo(() => {
           </p>
         </div>
 
-        {value !== undefined && (
+        {!isNil(value) && (
           <CardFrame className="px-4 py-3">
             <MonoKicker tone="faint">{controlsT.datePage.resolvedKicker}</MonoKicker>
             <p className="mt-1 font-mono text-sm text-landing-fg">{value.toString()}</p>

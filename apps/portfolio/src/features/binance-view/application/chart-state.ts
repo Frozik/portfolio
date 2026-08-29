@@ -1,3 +1,5 @@
+import { assert } from '@frozik/utils/assert/assert';
+
 import { drawAxisLabels, drawGrid } from '../domain/axis-draw';
 import { createHeatmapBlockIndex } from '../domain/block-store/create-heatmap-block-index';
 import { createMidPriceBlockIndex } from '../domain/block-store/create-mid-price-block-index';
@@ -12,7 +14,7 @@ import type {
   ITradeBlockFlushEventBridge,
 } from '../domain/render-frame-types';
 import type { IViewportStats } from '../domain/trades-scaling';
-import type { UnixTimeMs } from '../domain/types';
+import type { IHeatmapViewport, UnixTimeMs } from '../domain/types';
 import type { TaskManager } from '../infrastructure/task-manager';
 import { ViewportController } from '../infrastructure/viewport-controller';
 import { BinanceChartRenderer } from './binance-chart-renderer';
@@ -65,17 +67,19 @@ export class BinanceChartState {
     this.priceStep = params.priceStep;
   }
 
-  get viewport() {
-    if (this.viewportControllerInternal === null) {
-      throw new Error('BinanceChartState: viewport accessed before init');
-    }
+  get viewport(): IHeatmapViewport {
+    assert(
+      this.viewportControllerInternal !== null,
+      'BinanceChartState: viewport accessed before init'
+    );
     return this.viewportControllerInternal.viewport;
   }
 
   get viewportController(): ViewportController {
-    if (this.viewportControllerInternal === null) {
-      throw new Error('BinanceChartState: viewportController accessed before init');
-    }
+    assert(
+      this.viewportControllerInternal !== null,
+      'BinanceChartState: viewportController accessed before init'
+    );
     return this.viewportControllerInternal;
   }
 
@@ -238,9 +242,10 @@ export class BinanceChartState {
   };
 
   private readonly provideFrameInput = (): IRenderFrameInput => {
-    if (this.viewportControllerInternal === null) {
-      throw new Error('BinanceChartState: frame requested before init');
-    }
+    assert(
+      this.viewportControllerInternal !== null,
+      'BinanceChartState: frame requested before init'
+    );
     this.viewportControllerInternal.tick();
     const plotWidth = plotWidthCssPx(Math.max(1, this.canvas.clientWidth));
     const startMs = this.viewportControllerInternal.viewTimeStartMsForPlotWidth(plotWidth);

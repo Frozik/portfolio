@@ -1,5 +1,6 @@
 import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
 import { nowEpochMs } from '@frozik/utils/date/now';
+import { jwtDecode } from 'jwt-decode';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { observableNow } from '../lib/observableNow';
@@ -315,22 +316,19 @@ export class AuthSession {
   }
 }
 
+/**
+ * Read the lifetime claims out of a provider-issued JWT. Only `exp` and
+ * `iat` are touched — the provider-specific claim shape stays the
+ * concern of each `IOidcProvider`. Throws (via `jwt-decode`, or on a
+ * payload without numeric lifetime claims) so callers can treat an
+ * undecodable token as "no session".
+ */
 function decodeExpiry(token: string): IExpiringJwtPayload {
-  // Inline decode — we deliberately avoid `jwt-decode` here so this
-  // file stays generic over provider claim shapes. The JWT body is
-  // base64url; we only need `exp` and `iat`.
-  const parts = token.split('.');
-  if (parts.length < 2) {
-    throw new Error('auth-session/malformed-token');
-  }
-  const body = parts[1] ?? '';
-  const padded = body + '='.repeat((4 - (body.length % 4)) % 4);
-  const decoded = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
-  const parsed = JSON.parse(decoded) as Partial<IExpiringJwtPayload>;
-  if (typeof parsed.exp !== 'number' || typeof parsed.iat !== 'number') {
+  const payload = jwtDecode<Partial<IExpiringJwtPayload>>(token);
+  if (typeof payload.exp !== 'number' || typeof payload.iat !== 'number') {
     throw new Error('auth-session/missing-exp');
   }
-  return { exp: parsed.exp, iat: parsed.iat };
+  return { exp: payload.exp, iat: payload.iat };
 }
 
 function parseStoredSession(raw: string): IStoredSession | null {

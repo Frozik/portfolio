@@ -3,8 +3,6 @@ import { ScalingMode } from './trades-types';
 /**
  * Constants for the trades layer. Grouped by purpose; values are fixed
  * at compile-time and shared between domain/application/presentation.
- *
- * See trades.md §2.5 for the canonical table of values and rationale.
  */
 
 // — Texture geometry —
@@ -26,14 +24,14 @@ export const MAX_TRADE_BLOCKS_IN_RAM = 32;
 
 /**
  * Hard cap on raw-trade payloads kept in RAM for the popup. Older
- * buckets fall through to IDB lazy-load (see trades.md §3.5).
+ * buckets fall through to IDB lazy-load.
  */
 export const MAX_RAW_TRADES_BLOCKS_IN_RAM = 8;
 
 /**
  * Soft cap on the number of raw trades retained for the live (open)
  * bucket. Above this count the accumulator drops the oldest entries to
- * keep the popup snappy on heavy bursts (see trades.md §3.5).
+ * keep the popup snappy on heavy bursts.
  */
 export const ACTIVE_BUCKET_RAW_TRADES_SOFT_CAP = 2000;
 
@@ -104,7 +102,7 @@ export const MIN_DRAG_DISTANCE_PX_TOUCH = 8;
 
 /**
  * Time tolerance (ms) when matching a pointer to nearby buckets along
- * the X axis — see trades.md §3.7.
+ * the X axis.
  */
 export const HIT_TOLERANCE_MS = 2000;
 

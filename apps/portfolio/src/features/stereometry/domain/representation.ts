@@ -26,6 +26,7 @@ import type {
   SolutionFaceRenderData,
   StyledMarker,
   StyledSegment,
+  StyleModifier,
 } from './render-types';
 import { mergeCollinearSegments } from './segment-merge';
 import type { SolutionStatus } from './solution-check';
@@ -78,10 +79,7 @@ function isPointInAnyFigureFace(figureTopology: FigureTopology, point: Vec3Array
   return isInside;
 }
 
-/**
- * Builds a complete scene representation from topology data.
- * Replaces the old processGraphics function.
- */
+/** Builds a complete scene representation from topology data. */
 export function buildRepresentation(
   figureTopology: FigureTopology,
   lines: readonly TopologyLine[],
@@ -126,7 +124,8 @@ function buildSolutionFace(
     return undefined;
   }
 
-  const resolved = resolveStyle(STEREOMETRY_STYLES, 'face', ['solution']);
+  const solutionModifiers: readonly StyleModifier[] = ['solution'];
+  const resolved = resolveStyle(STEREOMETRY_STYLES, 'face', solutionModifiers);
   const [red, green, blue] = hexToRgb(resolved.color);
   const alpha = resolved.alpha;
 
@@ -182,7 +181,7 @@ function getEdgeEndpoints(
 function createRenderSegment(
   startPosition: Vec3Array,
   endPosition: Vec3Array,
-  modifiers: readonly string[],
+  modifiers: readonly StyleModifier[],
   lineId: number,
   startVertexIndex: number,
   endVertexIndex: number
@@ -210,8 +209,9 @@ function resolvedToLineInstanceStyle(resolved: ResolvedElementStyle): LineInstan
 }
 
 function toStyledSegment(segment: RenderSegment): StyledSegment {
+  const hiddenModifiers: readonly StyleModifier[] = ['hidden', ...segment.modifiers];
   const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', segment.modifiers);
-  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', ['hidden', ...segment.modifiers]);
+  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', hiddenModifiers);
 
   return {
     startPosition: segment.startPosition,
@@ -253,7 +253,7 @@ function buildMarkers(
   for (let markerIndex = 0; markerIndex < sceneVertices.length; markerIndex++) {
     const vertex = sceneVertices[markerIndex];
     const position = vertex.position;
-    const modifiers: string[] = [];
+    const modifiers: StyleModifier[] = [];
 
     if (vertex.kind === 'input') {
       modifiers.push('input');
@@ -281,8 +281,9 @@ function buildMarkers(
       modifiers.push('solution');
     }
 
+    const hiddenModifiers: readonly StyleModifier[] = ['hidden', ...modifiers];
     const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', modifiers);
-    const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', ['hidden', ...modifiers]);
+    const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', hiddenModifiers);
 
     markers.push({
       position,
@@ -574,7 +575,7 @@ function buildTopologyEdgeSegments(
   const pushEdgeSubSegment = (
     startPosition: Vec3Array,
     endPosition: Vec3Array,
-    baseModifiers: readonly string[],
+    baseModifiers: readonly StyleModifier[],
     startMarkerIndex: number,
     endMarkerIndex: number
   ): void => {
@@ -612,7 +613,7 @@ function buildTopologyEdgeSegments(
       continue;
     }
 
-    const modifiers: string[] = ['edge', 'segment'];
+    const modifiers: StyleModifier[] = ['edge', 'segment'];
     if (selectedEdgeIndices.has(edgeIndex)) {
       modifiers.push('selected');
     }

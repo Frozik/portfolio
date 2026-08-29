@@ -126,8 +126,8 @@ describe('ScorchedStore', () => {
     store.setPlayerController(1, { kind: 'human' });
     store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
-    store.buy({ kind: 'weapon', weaponId: 'nuke' });
-    store.buy({ kind: 'weapon', weaponId: 'nuke' });
+    store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
+    store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
     store.leaveShop();
     store.leaveShop();
     store.confirmHandover();
@@ -287,12 +287,12 @@ describe('ScorchedStore', () => {
     fireAndSettle(store);
     store.confirmHandover();
 
-    const popupCount = store.damagePopups.length;
+    const popupCount = store.overlays.damagePopups.length;
 
     store.advanceFrame(5);
 
-    expect(store.damagePopups.length).toBeLessThanOrEqual(popupCount);
-    expect(store.damagePopups).toHaveLength(0);
+    expect(store.overlays.damagePopups.length).toBeLessThanOrEqual(popupCount);
+    expect(store.overlays.damagePopups).toHaveLength(0);
   });
 
   it('persists the mute preference through the injected storage', () => {
@@ -461,7 +461,7 @@ describe('ScorchedStore between-round shop', () => {
 
     store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
-    store.buy({ kind: 'weapon', weaponId: 'nuke' });
+    store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
     store.leaveShop();
     store.confirmHandover();
 
@@ -474,7 +474,7 @@ describe('ScorchedStore between-round shop', () => {
 
     store.continueAfterRound();
 
-    expect(store.buy({ kind: 'item', itemId: 'shield' })).toBe(true);
+    expect(store.shop.buy({ kind: 'item', itemId: 'shield' })).toBe(true);
 
     store.leaveShop();
     store.confirmHandover();
@@ -519,9 +519,9 @@ describe('ScorchedStore shields', () => {
     const store = createStore();
 
     reachFirstShop(store);
-    store.buy({ kind: 'item', itemId: 'shield' });
+    store.shop.buy({ kind: 'item', itemId: 'shield' });
 
-    const bought = store.getOwnedCount(0, { kind: 'item', itemId: 'shield' });
+    const bought = store.shop.getOwnedCount(0, { kind: 'item', itemId: 'shield' });
 
     store.leaveShop();
     store.confirmHandover();
@@ -535,7 +535,7 @@ describe('ScorchedStore shields', () => {
     const store = createStore();
 
     reachFirstShop(store);
-    store.buy({ kind: 'item', itemId: 'shield' });
+    store.shop.buy({ kind: 'item', itemId: 'shield' });
     store.leaveShop();
     store.confirmHandover();
 

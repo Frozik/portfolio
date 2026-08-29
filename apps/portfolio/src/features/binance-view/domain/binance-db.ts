@@ -55,7 +55,6 @@ export interface IMidPriceDb {
  * rotation — up to ~4 MB per record). The split lets the popup lazy-reload raw
  * trades without dragging in the aggregate row, and the aggregate reload (when a
  * block re-enters the viewport) doesn't pay for the raw payload it doesn't need.
- * See trades.md §3.3.
  */
 export interface ITradesDb {
   clearAll(): Promise<void>;

@@ -11,7 +11,7 @@ import { ForestLayer } from '../../infrastructure/layers/forest-layer';
 import { SpriteLayer } from '../../infrastructure/layers/sprite-layer';
 import { SpriteOverlayLayer } from '../../infrastructure/layers/sprite-overlay-layer';
 import { TerrainLayer } from '../../infrastructure/layers/terrain-layer';
-import { UniformUpdateLayer } from '../../infrastructure/layers/uniform-update-layer';
+import { createUniformUpdateLayer } from '../../infrastructure/layers/uniform-update-layer';
 import { createQuadPipeline } from '../../infrastructure/quad-pipeline';
 import { ScorePopupList } from '../../infrastructure/score-popup-list';
 import { createSpriteAtlas } from '../../infrastructure/sprite-atlas';
@@ -142,7 +142,7 @@ async function initTanks(options: ITanksRenderOptions): Promise<VoidFunction> {
     // Draw order is the concealment model (§11.3): ground, bodies, canopy, indicators.
     const layerManager = new RenderLayerManager([
       new SimulationDriver(worldRef, effects, scorePopups, host),
-      new UniformUpdateLayer(uniforms),
+      createUniformUpdateLayer(uniforms),
       new TerrainLayer(quadPipeline, terrainCache),
       new SpriteLayer(quadPipeline, atlas, worldRef, effects),
       new ForestLayer(quadPipeline, terrainCache),

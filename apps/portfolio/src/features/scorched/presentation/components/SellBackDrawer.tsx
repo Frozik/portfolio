@@ -63,7 +63,7 @@ export const SellBackDrawer = observer(
     const store = useScorchedStore();
 
     const handleSell = useFunction((entry: ShopEntryRef) => {
-      store.sell(entry, ONE_UNIT);
+      store.shop.sell(entry, ONE_UNIT);
     });
 
     return (

@@ -16,11 +16,11 @@ import { usePendulumStore } from '../../application/usePendulumStore';
 import { HumanPlayer } from '../../domain/players/HumanPlayer';
 import type { TPlayer } from '../../domain/types';
 import { EPlayerType } from '../../domain/types';
+import { OVERLAY_MESSAGE_CONTAINER_CLASS, PLAYER_LABEL_CLASS } from '../constants';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
 import { WindowKeyStateSource } from '../input/WindowKeyStateSource';
-import commonStyles from './common.module.scss';
 import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
 
@@ -108,7 +108,7 @@ export const TestPlayground = observer(() => {
 
   if (isLoadingValueDescriptor(playerVD)) {
     return (
-      <div className={commonStyles.alertContainer}>
+      <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
         <OverlayLoader />
       </div>
     );
@@ -132,19 +132,19 @@ export const TestPlayground = observer(() => {
         {!isNil(player) && (
           <>
             {player.player.type === EPlayerType.Human && (
-              <div className={commonStyles.description}>
+              <div className={PLAYER_LABEL_CLASS}>
                 <User size={ICON_SIZE} />
 
                 {player.player.name}
               </div>
             )}
             {player.player.type === EPlayerType.Robot && (
-              <div className={commonStyles.descriptionWithRemoval} onClick={handleRemovePlayer}>
+              <div className={PLAYER_LABEL_CLASS} onClick={handleRemovePlayer}>
                 <Bot size={ICON_SIZE} />
 
                 {player.player.name}
 
-                <X size={ICON_SIZE} className={commonStyles.descriptionClose} />
+                <X size={ICON_SIZE} />
               </div>
             )}
           </>

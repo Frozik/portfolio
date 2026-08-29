@@ -1,3 +1,4 @@
+import { createPointerGestureTracker } from '@frozik/utils/webgpu/pointerGestureTracker';
 import { mat4, vec3 } from 'wgpu-matrix';
 
 import {
@@ -12,7 +13,7 @@ import {
   WHEEL_ZOOM_SENSITIVITY,
 } from '../domain/sun-constants';
 
-export interface OrbitalCameraController {
+export interface SunCameraController {
   tick(): void;
   getViewMatrix(): Float32Array;
   destroy(): void;
@@ -22,14 +23,11 @@ export interface OrbitalCameraController {
  * Trackball-style orbital camera controller.
  * Rotations are applied in screen space so dragging always moves the object
  * in the direction of the cursor, regardless of current orientation.
- *
- * Uses Pointer Events for unified mouse/touch/pen handling.
  */
-export function createOrbitalCameraController(canvas: HTMLCanvasElement): OrbitalCameraController {
+export function createSunCameraController(canvas: HTMLCanvasElement): SunCameraController {
   let distance = INITIAL_CAMERA_DISTANCE;
 
   // Camera position on the unit sphere, scaled by distance at render time.
-  // Initialize from spherical coordinates matching the old defaults.
   const initialAzimuth = 0;
   const initialElevation = INITIAL_ELEVATION;
   let camPos = vec3.fromValues(
@@ -73,64 +71,13 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     return Math.max(MIN_CAMERA_DISTANCE, Math.min(MAX_CAMERA_DISTANCE, value));
   }
 
-  // --- Inertia ---
-
   let velocityX = 0;
   let velocityY = 0;
   let lastMoveTimestamp = 0;
 
-  // --- Pointer tracking ---
-  const activePointers = new Map<number, { clientX: number; clientY: number }>();
-  let lastPinchDistance = 0;
-
-  function getPointerDistance(): number {
-    const pointers = [...activePointers.values()];
-    const dx = pointers[0].clientX - pointers[1].clientX;
-    const dy = pointers[0].clientY - pointers[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  function onPointerDown(event: PointerEvent): void {
-    activePointers.set(event.pointerId, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-    });
-
-    if (activePointers.size === 2) {
-      lastPinchDistance = getPointerDistance();
-    }
-  }
-
-  function onPointerMove(event: PointerEvent): void {
-    const previous = activePointers.get(event.pointerId);
-    if (previous === undefined) {
-      return;
-    }
-
-    activePointers.set(event.pointerId, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-    });
-
-    // Pinch-to-zoom with two fingers
-    if (activePointers.size === 2) {
-      const currentDistance = getPointerDistance();
-      const scale = lastPinchDistance / currentDistance;
-      distance = clampDistance(distance * scale);
-      lastPinchDistance = currentDistance;
-      return;
-    }
-
-    // Single pointer rotation
-    if (activePointers.size !== 1) {
-      return;
-    }
-
-    const dx = event.clientX - previous.clientX;
-    const dy = event.clientY - previous.clientY;
-
-    const elapsedSinceLastMove = event.timeStamp - lastMoveTimestamp;
-    lastMoveTimestamp = event.timeStamp;
+  function handleDrag(dx: number, dy: number, timeStamp: number): void {
+    const elapsedSinceLastMove = timeStamp - lastMoveTimestamp;
+    lastMoveTimestamp = timeStamp;
 
     if (elapsedSinceLastMove > INERTIA_STALE_MOVE_MS) {
       velocityX = 0;
@@ -143,28 +90,29 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     applyRotation(dx, dy);
   }
 
-  function onPointerUp(event: PointerEvent): void {
-    activePointers.delete(event.pointerId);
+  function handlePinch(scale: number): void {
+    distance = clampDistance(distance * scale);
   }
 
-  function onPointerCancel(event: PointerEvent): void {
-    activePointers.delete(event.pointerId);
+  function handleWheel(deltaY: number): void {
+    distance = clampDistance(distance * (1 + deltaY * WHEEL_ZOOM_SENSITIVITY));
   }
 
-  function onWheel(event: WheelEvent): void {
-    event.preventDefault();
-    distance = clampDistance(distance * (1 + event.deltaY * WHEEL_ZOOM_SENSITIVITY));
+  function handleReset(): void {
+    velocityX = 0;
+    velocityY = 0;
   }
 
-  canvas.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerCancel);
-  canvas.addEventListener('wheel', onWheel, { passive: false });
+  const gestureTracker = createPointerGestureTracker(canvas, {
+    onDrag: handleDrag,
+    onPinch: handlePinch,
+    onWheel: handleWheel,
+    onReset: handleReset,
+  });
 
   return {
     tick(): void {
-      if (activePointers.size > 0) {
+      if (gestureTracker.hasActivePointers()) {
         return;
       }
 
@@ -191,11 +139,7 @@ export function createOrbitalCameraController(canvas: HTMLCanvasElement): Orbita
     },
 
     destroy(): void {
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
-      canvas.removeEventListener('wheel', onWheel);
+      gestureTracker.destroy();
     },
   };
 }

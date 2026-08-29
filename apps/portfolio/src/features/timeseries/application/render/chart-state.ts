@@ -1,133 +1,39 @@
 import { assert } from '@frozik/utils/assert/assert';
-import { SCENE_BACKGROUND_HEX } from '@frozik/utils/webgpu/backgroundColor';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { isNil } from 'lodash-es';
-import { BlockDataPipeline } from '../../domain/block-data-pipeline';
+import { drawChartAxes } from '../../domain/axis-draw/axes';
+import { drawChartGrid } from '../../domain/axis-draw/grid';
+import type { BlockDataPipeline } from '../../domain/block-data-pipeline';
 import { BlockRegistry } from '../../domain/block-registry';
 import {
-  AXIS_FONT_FAMILY,
-  AXIS_FONT_SIZE,
-  AXIS_LABEL_BG_COLOR,
-  AXIS_LABEL_BG_PADDING_X,
-  AXIS_LABEL_BG_PADDING_Y,
-  AXIS_LABEL_COLOR,
-  AXIS_LINE_COLOR,
-  AXIS_MARGIN_BOTTOM,
-  AXIS_MARGIN_LEFT,
-  AXIS_MARGIN_RIGHT,
-  AXIS_MARGIN_TOP,
   FPS_IDLE,
   FPS_RESIZE,
   FPS_ZOOM_ANIMATION,
   FULL_YEAR_SECONDS,
   GLOBAL_EPOCH_OFFSET,
-  GRID_LINE_COLOR,
-  TICK_LENGTH,
-  VERTICES_PER_CANDLESTICK,
-  VERTICES_PER_RHOMBUS,
-  VERTICES_PER_SEGMENT,
-  X_LABEL_Y_AXIS_CLEARANCE,
-  Y_LABEL_X_AXIS_CLEARANCE,
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from '../../domain/constants';
-import { TickCache } from '../../domain/tick-cache';
-import type {
-  ETimeScale,
-  IAxisTick,
-  IChartViewport,
-  ILoadingRegion,
-  IPlotArea,
-  ISeriesConfig,
-} from '../../domain/types';
-import { EChartType } from '../../domain/types';
-import { autoScaleY, scaleFromTimeRange, visibleYRange } from '../../domain/viewport';
+import type { IChartFrameLayout } from '../../domain/frame-layout';
+import { FrameLayoutCache } from '../../domain/frame-layout';
+import { computePlotGeometry } from '../../domain/plot-geometry';
+import type { IChartViewport, ILoadingRegion, IPlotArea, ISeriesConfig } from '../../domain/types';
+import {
+  autoScaleY,
+  scaleFromTimeRange,
+  visibleValueRangeAcrossSeries,
+} from '../../domain/viewport';
+import { CanvasSizeTracker } from '../../infrastructure/canvas-size-tracker';
 import { ChartInputController } from '../../infrastructure/chart-input';
-import { SeriesLayer } from '../../infrastructure/layers/series-layer';
-import { SeriesLayerManager } from '../../infrastructure/layers/series-layer-manager';
+import type { SeriesLayerManager } from '../../infrastructure/layers/series-layer-manager';
 import { SlotAllocator } from '../../infrastructure/slot-allocator';
 import { TextMeasureCache } from '../../infrastructure/text-measure-cache';
+import { createSeries } from './series-factory';
 import type { ISharedTimeseriesRenderer, ITimeseriesChart } from './types';
-
-/**
- * Cached per-frame geometry and tick data. Recomputed only when viewport
- * or canvas size changes — avoids redundant computeXTicks/computeYTicks
- * calls (which allocate Temporal objects and format strings) and plot
- * geometry recalculations across renderCanvasGrid + renderCanvasAxes.
- */
-interface IFrameLayoutCache {
-  // Cache keys — inputs that trigger recomputation
-  timeStart: number;
-  timeEnd: number;
-  valueMin: number;
-  valueMax: number;
-  canvasWidth: number;
-  canvasHeight: number;
-
-  // Cached computed values
-  dpr: number;
-  plotLeft: number;
-  plotTop: number;
-  plotWidth: number;
-  plotHeight: number;
-  plotRight: number;
-  plotBottom: number;
-  scale: ETimeScale;
-  xTicks: IAxisTick[];
-  yTicks: IAxisTick[];
-}
 
 const INITIAL_VALUE_MIN = 0;
 const INITIAL_VALUE_MAX = 200;
 const MIN_POINTS_FOR_RENDERING = 2;
-
-/** Raw (sub-pixel) plot rectangle in device pixels — single source of truth for plot geometry. */
-interface IPlotGeometry {
-  readonly dpr: number;
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-function getVerticesPerInstance(chartType: EChartType): number {
-  switch (chartType) {
-    case EChartType.Line:
-      return VERTICES_PER_SEGMENT;
-    case EChartType.Candlestick:
-      return VERTICES_PER_CANDLESTICK;
-    case EChartType.Rhombus:
-      return VERTICES_PER_RHOMBUS;
-  }
-}
-
-function getNeedsStitching(chartType: EChartType): boolean {
-  switch (chartType) {
-    case EChartType.Line:
-    case EChartType.Candlestick:
-      return true;
-    case EChartType.Rhombus:
-      return false;
-  }
-}
-
-function getGpuPipeline(
-  chartType: EChartType,
-  renderer: ISharedTimeseriesRenderer
-): GPURenderPipeline {
-  switch (chartType) {
-    case EChartType.Line:
-      return renderer.linePipeline;
-    case EChartType.Candlestick:
-      return renderer.candlestickPipeline;
-    case EChartType.Rhombus:
-      return renderer.rhombusPipeline;
-  }
-}
-
-const LABEL_BG_RADIUS = 2;
-const X_LABEL_GAP = 3;
-const Y_LABEL_GAP = 4;
 
 export class TimeseriesChartState implements ITimeseriesChart {
   readonly targetCanvas: HTMLCanvasElement;
@@ -145,13 +51,11 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
   private readonly inputController: ChartInputController;
   private readonly resizeObserver: ResizeObserver;
+  private readonly canvasSize: CanvasSizeTracker;
   private readonly textCache = new TextMeasureCache();
-  private readonly tickCache = new TickCache();
+  private readonly layoutCache = new FrameLayoutCache();
 
-  private canvasWidth = 0;
-  private canvasHeight = 0;
   private lastTextureCapacity = 0;
-  private layoutCache: IFrameLayoutCache | null = null;
 
   constructor(
     renderer: ISharedTimeseriesRenderer,
@@ -179,7 +83,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
       viewValueMax: INITIAL_VALUE_MAX,
     };
 
-    // Shared slot allocator (one texture) and block registry (one RTree)
     this.registry = new BlockRegistry();
     this.allocator = new SlotAllocator(renderer.device, {
       onEvict: slot => {
@@ -189,32 +92,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
 
     this.lastTextureCapacity = this.allocator.getCapacity();
 
-    // Create pipelines and layers from series configs
-    this.dataPipelines = [];
-    this.seriesManager = new SeriesLayerManager();
-
-    for (const config of seriesConfigs) {
-      const dataPipeline = new BlockDataPipeline(
-        this.allocator,
-        this.registry,
-        `${seed}${config.seedSuffix}`,
-        config.chartType,
-        config.colorFn,
-        config.sizeFn,
-        () => renderer.instantLoad
-      );
-      this.dataPipelines.push(dataPipeline);
-
-      const layer = new SeriesLayer(
-        getVerticesPerInstance(config.chartType),
-        getNeedsStitching(config.chartType)
-      );
-      const gpuPipeline = getGpuPipeline(config.chartType, renderer);
-      this.seriesManager.addSeries(layer, gpuPipeline);
-    }
-
-    this.seriesManager.initAll(renderer.device, renderer.bindGroupLayout, this.allocator);
-    this.seriesManager.updateBindGroups(this.allocator.createView());
+    const { dataPipelines, seriesManager } = createSeries({
+      renderer,
+      seriesConfigs,
+      allocator: this.allocator,
+      registry: this.registry,
+      seed,
+    });
+    this.dataPipelines = dataPipelines;
+    this.seriesManager = seriesManager;
 
     this.fpsController = new FpsController(FPS_IDLE);
 
@@ -227,51 +113,36 @@ export class TimeseriesChartState implements ITimeseriesChart {
     );
     this.inputController.attach();
 
-    this.updateCanvasSize();
+    this.canvasSize = new CanvasSizeTracker(targetCanvas, (newWidth, previousWidth) => {
+      this.springTimeAxis(newWidth, previousWidth);
+    });
 
     this.resizeObserver = new ResizeObserver(() => {
-      this.updateCanvasSize();
+      this.canvasSize.measure();
       this.fpsController.raise(FPS_RESIZE);
     });
     this.resizeObserver.observe(targetCanvas);
   }
 
   get width(): number {
-    return this.canvasWidth;
+    return this.canvasSize.width;
   }
 
   get height(): number {
-    return this.canvasHeight;
+    return this.canvasSize.height;
   }
 
-  /**
-   * Sync the backing-store pixel dimensions to the device-pixel size already
-   * computed by updateCanvasSize() earlier this frame. Reuses the cached values
-   * instead of re-reading clientWidth/clientHeight (which would force a second
-   * layout flush per frame). Returns true if the backing store was resized.
-   */
   syncCanvasSize(): boolean {
-    const width = this.canvasWidth;
-    const height = this.canvasHeight;
-
-    if (this.targetCanvas.width !== width || this.targetCanvas.height !== height) {
-      this.targetCanvas.width = width;
-      this.targetCanvas.height = height;
-      return true;
-    }
-
-    return false;
+    return this.canvasSize.syncBackingStore();
   }
 
   update(): void {
-    this.updateCanvasSize();
+    this.canvasSize.measure();
 
-    // Apply pan inertia (decaying velocity after pointer release)
     if (this.inputController.applyInertia()) {
       this.fpsController.raise(FPS_ZOOM_ANIMATION);
     }
 
-    // Animate zoom: lerp current viewport toward target
     const dStart = this.viewport.targetTimeStart - this.viewport.viewTimeStart;
     const dEnd = this.viewport.targetTimeEnd - this.viewport.viewTimeEnd;
     const currentRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
@@ -290,7 +161,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
   prepareDrawCommands(): IPlotArea | null {
     const scale = scaleFromTimeRange(this.viewport.viewTimeStart, this.viewport.viewTimeEnd);
 
-    // Ensure blocks for each series pipeline
     const allBlockSets = this.dataPipelines.map(pipeline =>
       pipeline.ensureBlocksForViewport(
         this.viewport.viewTimeStart,
@@ -304,7 +174,6 @@ export class TimeseriesChartState implements ITimeseriesChart {
       this.fpsController.raise(FPS_ZOOM_ANIMATION);
     }
 
-    // Check if any series has enough points to render
     const hasAnyData = allBlockSets.some(blocks => {
       const totalPoints = blocks.reduce((sum, block) => sum + block.pointCount, 0);
       return totalPoints >= MIN_POINTS_FOR_RENDERING;
@@ -317,57 +186,45 @@ export class TimeseriesChartState implements ITimeseriesChart {
       }
     }
 
-    // Touch all visible blocks for LRU tracking
     for (const blocks of allBlockSets) {
       for (const block of blocks) {
         this.allocator.touch(block.slot);
       }
     }
 
-    // Y auto-scale from all visible blocks
-    let globalMin = Number.POSITIVE_INFINITY;
-    let globalMax = Number.NEGATIVE_INFINITY;
+    const valueRange = visibleValueRangeAcrossSeries(
+      allBlockSets,
+      this.viewport.viewTimeStart,
+      this.viewport.viewTimeEnd
+    );
 
-    for (const blocks of allBlockSets) {
-      for (const block of blocks) {
-        const range = visibleYRange(
-          block.pointTimes,
-          block.pointValues,
-          this.viewport.viewTimeStart,
-          this.viewport.viewTimeEnd
-        );
-        if (range !== undefined) {
-          globalMin = Math.min(globalMin, range[0]);
-          globalMax = Math.max(globalMax, range[1]);
-        }
-      }
-    }
-
-    if (globalMin < globalMax) {
-      const [yMin, yMax] = autoScaleY(globalMin, globalMax);
+    if (valueRange !== undefined) {
+      const [yMin, yMax] = autoScaleY(valueRange[0], valueRange[1]);
       this.viewport.viewValueMin = yMin;
       this.viewport.viewValueMax = yMax;
     }
 
-    // Rebuild bind groups if texture grew
     const currentCapacity = this.allocator.getCapacity();
     if (currentCapacity !== this.lastTextureCapacity) {
       this.lastTextureCapacity = currentCapacity;
       this.rebuildLayerBindGroups();
     }
 
-    // Write uniforms for all series
     this.seriesManager.writeAllUniforms(
       allBlockSets,
-      this.canvasWidth,
-      this.canvasHeight,
+      this.canvasSize.width,
+      this.canvasSize.height,
       this.viewport.viewTimeStart,
       this.viewport.viewTimeEnd,
       this.viewport.viewValueMin,
       this.viewport.viewValueMax
     );
 
-    const geometry = this.computePlotGeometry();
+    const geometry = computePlotGeometry(
+      this.canvasSize.width,
+      this.canvasSize.height,
+      this.canvasSize.devicePixelRatio
+    );
 
     return {
       x: Math.floor(geometry.left),
@@ -377,270 +234,20 @@ export class TimeseriesChartState implements ITimeseriesChart {
     };
   }
 
-  /**
-   * Raw sub-pixel plot rectangle in device pixels. Single source of truth so the
-   * GPU scissor rect (floored, in prepareDrawCommands) and the 2D-canvas axis/grid
-   * geometry (in getFrameLayout) derive from identical values and cannot drift.
-   */
-  private computePlotGeometry(): IPlotGeometry {
-    const dpr = Math.max(1, window.devicePixelRatio);
-
-    return {
-      dpr,
-      left: AXIS_MARGIN_LEFT * dpr,
-      top: AXIS_MARGIN_TOP * dpr,
-      width: this.canvasWidth - (AXIS_MARGIN_LEFT + AXIS_MARGIN_RIGHT) * dpr,
-      height: this.canvasHeight - (AXIS_MARGIN_TOP + AXIS_MARGIN_BOTTOM) * dpr,
-    };
-  }
-
-  /**
-   * Computes or returns cached layout: plot geometry, scale, and axis ticks.
-   * Recomputed only when viewport or canvas size changes — saves ~2-4ms/frame
-   * by avoiding redundant computeXTicks/computeYTicks calls (Temporal objects,
-   * string formatting, tick thinning) across renderCanvasGrid + renderCanvasAxes.
-   */
-  private getFrameLayout(): IFrameLayoutCache | null {
-    const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = this.viewport;
-
-    const cache = this.layoutCache;
-
-    if (
-      cache !== null &&
-      cache.timeStart === viewTimeStart &&
-      cache.timeEnd === viewTimeEnd &&
-      cache.valueMin === viewValueMin &&
-      cache.valueMax === viewValueMax &&
-      cache.canvasWidth === this.canvasWidth &&
-      cache.canvasHeight === this.canvasHeight
-    ) {
-      return cache;
-    }
-
-    const {
-      dpr,
-      left: plotLeft,
-      top: plotTop,
-      width: plotWidth,
-      height: plotHeight,
-    } = this.computePlotGeometry();
-
-    if (plotWidth <= 0 || plotHeight <= 0) {
-      this.layoutCache = null;
-      return null;
-    }
-
-    const scale = scaleFromTimeRange(viewTimeStart, viewTimeEnd);
-    const clientPlotWidth = plotWidth / dpr;
-    const clientPlotHeight = plotHeight / dpr;
-
-    this.layoutCache = {
-      timeStart: viewTimeStart,
-      timeEnd: viewTimeEnd,
-      valueMin: viewValueMin,
-      valueMax: viewValueMax,
-      canvasWidth: this.canvasWidth,
-      canvasHeight: this.canvasHeight,
-      dpr,
-      plotLeft,
-      plotTop,
-      plotWidth,
-      plotHeight,
-      plotRight: plotLeft + plotWidth,
-      plotBottom: plotTop + plotHeight,
-      scale,
-      xTicks: this.tickCache.getXTicks(viewTimeStart, viewTimeEnd, scale, clientPlotWidth),
-      yTicks: this.tickCache.getYTicks(viewValueMin, viewValueMax, clientPlotHeight),
-    };
-
-    return this.layoutCache;
-  }
-
   renderCanvasAxes(): void {
     const layout = this.getFrameLayout();
 
-    if (layout === null) {
-      return;
-    }
-
-    const { dpr, plotLeft, plotTop, plotRight, plotBottom, plotWidth, plotHeight, xTicks, yTicks } =
-      layout;
-    const ctx = this.target2dContext;
-    const timeRange = layout.timeEnd - layout.timeStart;
-    const valueRange = layout.valueMax - layout.valueMin;
-
-    const fontSize = AXIS_FONT_SIZE * dpr;
-    const tickLength = TICK_LENGTH * dpr;
-    const bgPaddingX = AXIS_LABEL_BG_PADDING_X * dpr;
-    const bgPaddingY = AXIS_LABEL_BG_PADDING_Y * dpr;
-    const bgRadius = LABEL_BG_RADIUS * dpr;
-    const xLabelGap = X_LABEL_GAP * dpr;
-    const yLabelGap = Y_LABEL_GAP * dpr;
-    const xClearance = X_LABEL_Y_AXIS_CLEARANCE * dpr;
-    const yClearance = Y_LABEL_X_AXIS_CLEARANCE * dpr;
-
-    // Axis lines (L-shape: left edge top→bottom, then bottom edge left→right)
-    ctx.strokeStyle = AXIS_LINE_COLOR;
-    ctx.lineWidth = dpr;
-    ctx.beginPath();
-    ctx.moveTo(plotLeft, plotTop);
-    ctx.lineTo(plotLeft, plotBottom);
-    ctx.lineTo(plotRight, plotBottom);
-    ctx.stroke();
-
-    ctx.font = `${fontSize}px ${AXIS_FONT_FAMILY}`;
-    ctx.textBaseline = 'alphabetic';
-
-    // Glyph metrics cached per font size — avoids measureText('0') every frame.
-    // Uses 'alphabetic' baseline + measured centerOffset for true visual centering
-    // (Canvas 'middle' baseline sits too high for digit-only labels).
-    const { centerOffset: glyphCenterOffset } = this.textCache.getGlyphMetrics(ctx);
-
-    // X-axis ticks + labels
-    for (const tick of xTicks) {
-      const normalized = (tick.position - layout.timeStart) / timeRange;
-      const pixelX = plotLeft + normalized * plotWidth;
-
-      if (pixelX < plotLeft || pixelX > plotRight) {
-        continue;
-      }
-
-      // Tick mark
-      ctx.strokeStyle = AXIS_LINE_COLOR;
-      ctx.lineWidth = dpr;
-      ctx.beginPath();
-      ctx.moveTo(pixelX, plotBottom);
-      ctx.lineTo(pixelX, plotBottom - tickLength);
-      ctx.stroke();
-
-      // Label positioning
-      const textWidth = this.textCache.measureWidth(ctx, tick.label);
-      const labelLeft = pixelX - textWidth / 2 - bgPaddingX;
-
-      // Skip if too close to Y-axis
-      if (labelLeft < plotLeft + xClearance) {
-        continue;
-      }
-
-      const labelCenterY = plotBottom - tickLength - xLabelGap - fontSize / 2;
-      const boxHeight = fontSize + bgPaddingY * 2;
-
-      // Background rect
-      ctx.fillStyle = AXIS_LABEL_BG_COLOR;
-      ctx.beginPath();
-      ctx.roundRect(
-        pixelX - textWidth / 2 - bgPaddingX,
-        labelCenterY - boxHeight / 2,
-        textWidth + bgPaddingX * 2,
-        boxHeight,
-        bgRadius
-      );
-      ctx.fill();
-
-      // Label text
-      ctx.fillStyle = AXIS_LABEL_COLOR;
-      ctx.textAlign = 'center';
-      ctx.fillText(tick.label, pixelX, labelCenterY + glyphCenterOffset);
-    }
-
-    // Y-axis ticks + labels
-    for (const tick of yTicks) {
-      const normalized = (tick.position - layout.valueMin) / valueRange;
-      const pixelY = plotBottom - normalized * plotHeight;
-
-      if (pixelY < plotTop || pixelY > plotBottom) {
-        continue;
-      }
-
-      // Tick mark
-      ctx.strokeStyle = AXIS_LINE_COLOR;
-      ctx.lineWidth = dpr;
-      ctx.beginPath();
-      ctx.moveTo(plotLeft, pixelY);
-      ctx.lineTo(plotLeft + tickLength, pixelY);
-      ctx.stroke();
-
-      // Label positioning — center vertically on tick mark
-      const labelX = plotLeft + tickLength + yLabelGap;
-      const labelCenterY = pixelY;
-      const boxHeight = fontSize + bgPaddingY * 2;
-
-      // Skip if too close to X-axis
-      if (labelCenterY + boxHeight / 2 > plotBottom - yClearance) {
-        continue;
-      }
-
-      const textWidth = this.textCache.measureWidth(ctx, tick.label);
-
-      // Background rect
-      ctx.fillStyle = AXIS_LABEL_BG_COLOR;
-      ctx.beginPath();
-      ctx.roundRect(
-        labelX - bgPaddingX,
-        labelCenterY - boxHeight / 2,
-        textWidth + bgPaddingX * 2,
-        boxHeight,
-        bgRadius
-      );
-      ctx.fill();
-
-      // Label text
-      ctx.fillStyle = AXIS_LABEL_COLOR;
-      ctx.textAlign = 'start';
-      ctx.fillText(tick.label, labelX, labelCenterY + glyphCenterOffset);
+    if (layout !== null) {
+      drawChartAxes(this.target2dContext, layout, this.textCache);
     }
   }
 
   renderCanvasGrid(): void {
     const layout = this.getFrameLayout();
 
-    if (layout === null) {
-      return;
+    if (layout !== null) {
+      drawChartGrid(this.target2dContext, layout);
     }
-
-    const { dpr, plotLeft, plotTop, plotRight, plotBottom, plotWidth, plotHeight, xTicks, yTicks } =
-      layout;
-    const ctx = this.target2dContext;
-    const timeRange = layout.timeEnd - layout.timeStart;
-    const valueRange = layout.valueMax - layout.valueMin;
-
-    // Fill background
-    ctx.fillStyle = SCENE_BACKGROUND_HEX;
-    ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-
-    ctx.strokeStyle = GRID_LINE_COLOR;
-    ctx.lineWidth = dpr * 0.5;
-    ctx.setLineDash([10 * dpr, 10 * dpr]);
-    ctx.beginPath();
-
-    // Vertical grid lines
-    for (const tick of xTicks) {
-      const normalized = (tick.position - layout.timeStart) / timeRange;
-      const pixelX = plotLeft + normalized * plotWidth;
-
-      if (pixelX < plotLeft || pixelX > plotRight) {
-        continue;
-      }
-
-      ctx.moveTo(pixelX, plotTop);
-      ctx.lineTo(pixelX, plotBottom);
-    }
-
-    // Horizontal grid lines
-    for (const tick of yTicks) {
-      const normalized = (tick.position - layout.valueMin) / valueRange;
-      const pixelY = plotBottom - normalized * plotHeight;
-
-      if (pixelY < plotTop || pixelY > plotBottom) {
-        continue;
-      }
-
-      ctx.moveTo(plotLeft, pixelY);
-      ctx.lineTo(plotRight, pixelY);
-    }
-
-    ctx.stroke();
-    ctx.setLineDash([]);
   }
 
   getLoadingRegions(): ILoadingRegion[] {
@@ -666,29 +273,26 @@ export class TimeseriesChartState implements ITimeseriesChart {
     this.fpsController.dispose();
   }
 
+  private getFrameLayout(): IChartFrameLayout | null {
+    return this.layoutCache.getLayout(
+      this.viewport,
+      this.canvasSize.width,
+      this.canvasSize.height,
+      this.canvasSize.devicePixelRatio
+    );
+  }
+
   private rebuildLayerBindGroups(): void {
     this.seriesManager.updateBindGroups(this.allocator.createView());
   }
 
-  private updateCanvasSize(): void {
-    const dpr = Math.max(1, window.devicePixelRatio);
-    const clientWidth = this.targetCanvas.clientWidth;
-    const clientHeight = this.targetCanvas.clientHeight;
-    const newWidth = Math.floor(clientWidth * dpr);
+  /** Keep the visible time range proportional to the canvas width on resize. */
+  private springTimeAxis(newWidth: number, previousWidth: number): void {
+    const timeRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
+    const springTimeRange = timeRange * (newWidth / previousWidth);
+    const timeCenter = (this.viewport.viewTimeStart + this.viewport.viewTimeEnd) / 2;
 
-    const oldWidth = this.canvasWidth;
-
-    this.canvasWidth = newWidth;
-    this.canvasHeight = Math.floor(clientHeight * dpr);
-
-    // Spring effect on time axis
-    if (oldWidth > 0 && newWidth !== oldWidth) {
-      const timeRange = this.viewport.viewTimeEnd - this.viewport.viewTimeStart;
-      const springTimeRange = timeRange * (newWidth / oldWidth);
-      const timeCenter = (this.viewport.viewTimeStart + this.viewport.viewTimeEnd) / 2;
-
-      this.viewport.viewTimeStart = timeCenter - springTimeRange / 2;
-      this.viewport.viewTimeEnd = timeCenter + springTimeRange / 2;
-    }
+    this.viewport.viewTimeStart = timeCenter - springTimeRange / 2;
+    this.viewport.viewTimeEnd = timeCenter + springTimeRange / 2;
   }
 }

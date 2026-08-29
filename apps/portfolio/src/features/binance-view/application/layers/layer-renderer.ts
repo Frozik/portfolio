@@ -26,15 +26,13 @@ export interface ILayerChartStateView {
 }
 
 /**
- * Forward-declared structural shape of the trades stream store —
- * referenced by {@link ILayerFrameContext.tradesStore} so layer
- * renderers can read trades-specific reactive state without depending
- * on the concrete `TradesStreamStore` class (which lands in a later
- * step). The full interface is supplied through structural typing once
- * `TradesStreamStore` is wired into the orchestrator.
- *
- * Optional today; turns into a concrete `TradesStreamStore` shape once
- * §2.11 store-split is in place.
+ * Structural shape of the trades stream store — referenced by
+ * {@link ILayerFrameContext.tradesStore} so layer renderers can read
+ * trades-specific reactive state without importing the concrete
+ * `TradesStreamStore`. Structural typing is load-bearing here:
+ * `TradesStreamStore` already depends on `BinanceChartState` →
+ * `BinanceChartRenderer` → this module, so a nominal import would close
+ * a cycle inside the application layer.
  */
 export interface ITradesLayerStoreShape {
   readonly hoveredBucketKey: number | undefined;

@@ -106,25 +106,33 @@ export function useAmbientCanvas(
     let pageVisible = !document.hidden;
     let onScreen = true;
 
-    const applySize = (): boolean => {
+    const applySize = (force: boolean): boolean => {
       const nextDpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
       const nextCssWidth = canvas.clientWidth;
       const nextCssHeight = canvas.clientHeight;
       const nextWidth = Math.round(nextCssWidth * nextDpr);
       const nextHeight = Math.round(nextCssHeight * nextDpr);
+      const backingChanged = nextWidth !== canvas.width || nextHeight !== canvas.height;
       // Assigning canvas.width/height clears the backing store even when the value
       // is unchanged, so skip no-op resizes — ResizeObserver fires spuriously and
-      // each needless clear flickers the canvas blank for a frame.
-      if (nextWidth === canvas.width && nextHeight === canvas.height) {
+      // each needless clear flickers the canvas blank for a frame. The initial call
+      // must still run (`force`): on a re-run of this effect over an already-sized
+      // canvas (React StrictMode remounts the same element) the early return would
+      // leave dpr/cssWidth/cssHeight at their initial 1/0/0 and skip onResize,
+      // and every subsequent frame would draw with wrong metrics until a real
+      // resize happened to come through.
+      if (!backingChanged && !force) {
         return false;
       }
       dpr = nextDpr;
       cssWidth = nextCssWidth;
       cssHeight = nextCssHeight;
-      canvas.width = nextWidth;
-      canvas.height = nextHeight;
+      if (backingChanged) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
       onResizeRef.current?.({ ctx, cssWidth, cssHeight, dpr });
-      return true;
+      return backingChanged;
     };
 
     const renderStatic = (): void => {
@@ -194,7 +202,7 @@ export function useAmbientCanvas(
       }
     };
 
-    applySize();
+    applySize(true);
     if (prefersReducedMotion) {
       renderStatic();
     } else {
@@ -202,7 +210,7 @@ export function useAmbientCanvas(
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      if (!applySize()) {
+      if (!applySize(false)) {
         return;
       }
       // The width/height assignment just cleared the backing store. Repaint
@@ -235,10 +243,35 @@ export function useAmbientCanvas(
       intersectionObserver.observe(canvas);
     }
 
+    // ResizeObserver only fires when the element's CSS size changes, so a
+    // devicePixelRatio change alone (window dragged to another monitor, browser
+    // zoom) would leave the backing store at the old density. Watch the current
+    // dpr via a one-shot matchMedia listener, re-armed after every change.
+    let dprMediaQuery: MediaQueryList | null = null;
+    const watchDprChange = (): void => {
+      dprMediaQuery?.removeEventListener('change', handleDprChange);
+      dprMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      dprMediaQuery.addEventListener('change', handleDprChange);
+    };
+    function handleDprChange(): void {
+      if (applySize(false)) {
+        // Same reasoning as the ResizeObserver path: the assignment cleared the
+        // backing store, so repaint immediately instead of showing a blank frame.
+        if (prefersReducedMotion) {
+          renderStatic();
+        } else {
+          renderFrame(performance.now());
+        }
+      }
+      watchDprChange();
+    }
+    watchDprChange();
+
     return () => {
       stop();
       resizeObserver.disconnect();
       intersectionObserver?.disconnect();
+      dprMediaQuery?.removeEventListener('change', handleDprChange);
       if (pauseWhenHidden) {
         document.removeEventListener('visibilitychange', handleVisibility);
       }

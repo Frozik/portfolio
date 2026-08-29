@@ -27,7 +27,7 @@ import type { IOrderbookGate } from './IOrderbookGate';
 
 // IDB persistence: aggregates on every flush, raw trades only on the
 // `closedByRotation` event (the sealed block carrying its final
-// rawTradesByBucket). See §3.3 of trades.md plan.
+// rawTradesByBucket).
 
 export type { ITradeHitTestPointer } from '../domain/trades-hit-test';
 
@@ -40,11 +40,11 @@ export interface ITradesStreamStoreParams {
 
 /**
  * Per-stream sub-store extracted from the legacy `BinanceViewStore`
- * god-store (§2.11). Owns the live trades subscription, the trade-
+ * god-store. Owns the live trades subscription, the trade-
  * bucket accumulator, raw-trade RAM cache, and connection-state
  * indicators surfaced by the trades surface.
  *
- * Trade ingest is gated on the §1.1 sentinel exposed by
+ * Trade ingest is gated on the first-snapshot sentinel exposed by
  * {@link IOrderbookGate}: trades arriving before the first orderbook
  * snapshot are dropped because the trade-block timeDelta encoding
  * resolves against a not-yet-defined system of coordinates. Once the
@@ -298,7 +298,7 @@ export class TradesStreamStore {
   }
 
   private handleTradeBatch(batch: readonly ITrade[]): void {
-    // §1.1 gating — drop trades arriving before the first orderbook
+    // Gating — drop trades arriving before the first orderbook
     // snapshot. Without that anchor the trade-block timeDelta encoding
     // resolves to an undefined coordinate frame.
     if (!this.gate.hasFirstOrderbookSnapshot) {
@@ -324,36 +324,32 @@ export class TradesStreamStore {
   }
 
   private handleFlush(event: ITradeBlockFlushEvent): void {
-    runInAction(() => {
-      this.chartState.ingestTradesFlush(event);
-      this.blockData.set(event.block.blockId, event.data);
+    this.chartState.ingestTradesFlush(event);
+    this.blockData.set(event.block.blockId, event.data);
 
-      const bucketRawMap = new Map(event.rawTradesByBucket);
-      this.recentBucketRawTrades.set(event.block.blockId, bucketRawMap);
-      // `Set.add` is idempotent and preserves insertion order — re-
-      // inserting an existing key does NOT bump it to the end (per JS
-      // spec), which matches the original FIFO semantics here: a block
-      // gets enqueued exactly once on its first flush and stays in
-      // place until cap-trim or `enforceTradesHistoryCap` evicts it.
-      this.recentBlockOrder.add(event.block.blockId);
-      while (this.recentBlockOrder.size > MAX_RAW_TRADES_BLOCKS_IN_RAM) {
-        const oldest: UnixTimeMs | undefined = this.recentBlockOrder.values().next().value;
-        if (oldest === undefined) {
-          break;
-        }
-        this.recentBlockOrder.delete(oldest);
-        this.recentBucketRawTrades.delete(oldest);
+    const bucketRawMap = new Map(event.rawTradesByBucket);
+    this.recentBucketRawTrades.set(event.block.blockId, bucketRawMap);
+    // `Set.add` is idempotent and preserves insertion order — re-
+    // inserting an existing key does NOT bump it to the end (per JS
+    // spec), which matches the original FIFO semantics here: a block
+    // gets enqueued exactly once on its first flush and stays in
+    // place until cap-trim or `enforceTradesHistoryCap` evicts it.
+    this.recentBlockOrder.add(event.block.blockId);
+    while (this.recentBlockOrder.size > MAX_RAW_TRADES_BLOCKS_IN_RAM) {
+      const oldest: UnixTimeMs | undefined = this.recentBlockOrder.values().next().value;
+      if (oldest === undefined) {
+        break;
       }
+      this.recentBlockOrder.delete(oldest);
+      this.recentBucketRawTrades.delete(oldest);
+    }
 
-      if (event.isNewBlock) {
-        this.enforceTradesHistoryCap();
-      }
-    });
+    if (event.isNewBlock) {
+      this.enforceTradesHistoryCap();
+    }
 
-    // Persistence runs outside the `runInAction` wrapper because the
-    // helpers are async and only touch IDB — no observable mutations
-    // land here. Aggregates write every flush; raw-trade dumps are
-    // gated on block rotation (see trades.md §3.3 cadence rationale).
+    // Aggregates are written on every flush; raw-trade dumps only on block
+    // rotation, so the whole-block payload is stored exactly once per block.
     //
     // Raw trades must be persisted from the `closedByRotation` event —
     // the block that was just *sealed*, carrying its full

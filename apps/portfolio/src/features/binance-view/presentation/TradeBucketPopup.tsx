@@ -20,8 +20,7 @@ import { binanceT } from './translations';
 
 /**
  * Click-pinned popup that lists every raw trade aggregated into a
- * bucket (see trades.md §1.4.2). Sorted by quantity desc so whales sit
- * at the top.
+ * bucket. Sorted by quantity desc so whales sit at the top.
  *
  * Two layouts share the same content:
  *   - **Desktop** — absolute-positioned panel anchored at the click

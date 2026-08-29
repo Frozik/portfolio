@@ -373,15 +373,39 @@ export function createDragToConnectController(
     endInteraction(event.clientX, event.clientY);
   }
 
+  // The OS can take the pointer away mid-gesture (system edge swipe, palm
+  // rejection); no pointerup follows, so the preview line would hang forever
+  function onPointerCancel(event: PointerEvent): void {
+    if (event.pointerId !== activePointerId) {
+      return;
+    }
+    if (activeHit === undefined && pendingHit === undefined) {
+      return;
+    }
+    cancelInteraction();
+  }
+
+  /** Last line of defence against a stuck preview: drop the gesture on focus loss */
+  function onWindowBlur(): void {
+    if (activeHit === undefined && pendingHit === undefined) {
+      return;
+    }
+    cancelInteraction();
+  }
+
   // Capture phase gives priority over camera and click detector (bubble phase)
   canvas.addEventListener('pointerdown', onPointerDown, { capture: true });
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+  window.addEventListener('blur', onWindowBlur);
 
   return () => {
     clearHoldTimer();
     canvas.removeEventListener('pointerdown', onPointerDown, { capture: true });
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerCancel);
+    window.removeEventListener('blur', onWindowBlur);
   };
 }

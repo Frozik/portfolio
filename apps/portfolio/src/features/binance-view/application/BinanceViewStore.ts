@@ -6,7 +6,7 @@ import { SNAPSHOT_SLOTS } from '../domain/constants';
 import { DataController } from '../domain/data-controller';
 import { DEFAULT_INSTRUMENT, findInstrument, instrumentDbName } from '../domain/instruments';
 import type { ConnectionState, IHitTestResult, UnixTimeMs } from '../domain/types';
-import { openBinanceDb } from '../infrastructure/binance-indexeddb';
+import { openBinanceDbWithQuotaRecovery } from '../infrastructure/binance-indexeddb-recovery';
 import { TaskManager } from '../infrastructure/task-manager';
 import { BinanceChartState } from './chart-state';
 
@@ -14,8 +14,19 @@ import { MidPriceStreamStore } from './MidPriceStreamStore';
 import { OrderbookStreamStore } from './OrderbookStreamStore';
 import { TradesStreamStore } from './TradesStreamStore';
 
+/** Everything a single {@link BinanceViewStore.attachCanvas} run creates. */
+interface IAttachedPipeline {
+  readonly tradesStore: TradesStreamStore;
+  readonly orderbookStore: OrderbookStreamStore;
+  readonly midPriceStore: MidPriceStreamStore;
+  readonly state: BinanceChartState;
+  readonly taskManager: TaskManager;
+  readonly dataController: DataController;
+  readonly db: IBinanceDb | undefined;
+}
+
 /**
- * Slim orchestrator for the binance-view feature (§2.11). Owns the
+ * Slim orchestrator for the binance-view feature. Owns the
  * canvas-bound infrastructure shared by every per-stream sub-store —
  * `chartState`, the IndexedDB connection, the `TaskManager`
  * scheduler, the `DataController` LRU cache, and the `pagehide`
@@ -130,41 +141,8 @@ export class BinanceViewStore {
     }
     this.currentCanvas = canvas;
     const token = this.attachToken;
-    const dbName = instrumentDbName(this.instrument);
 
-    let db: IBinanceDb | undefined;
-    try {
-      db = await openBinanceDb(dbName);
-      await db.clearAll();
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        // biome-ignore lint/suspicious/noConsole: surfaces quota recovery
-        console.warn('binance-view: IDB quota exceeded, deleting database for fresh start');
-        db?.close();
-        try {
-          await new Promise<void>((resolve, reject) => {
-            const request = indexedDB.deleteDatabase(dbName);
-            request.onsuccess = (): void => resolve();
-            request.onerror = (): void =>
-              reject(request.error ?? new Error('deleteDatabase failed'));
-            // Best-effort: another tab is holding the DB open. Proceed
-            // anyway — `openBinanceDb` will block until the other tab
-            // closes the connection, and on success we end up with a
-            // freshly-open DB that's already past the quota wall.
-            request.onblocked = (): void => resolve();
-          });
-          db = await openBinanceDb(dbName);
-        } catch (recoveryError) {
-          // biome-ignore lint/suspicious/noConsole: surfaces unrecoverable IDB failure
-          console.warn('binance-view: IDB recovery failed, persistence disabled', recoveryError);
-          db = undefined;
-        }
-      } else {
-        // biome-ignore lint/suspicious/noConsole: surfaces silent IndexedDB failure (private mode, quota)
-        console.warn('binance-view: IndexedDB unavailable, history will not persist', error);
-        db = undefined;
-      }
-    }
+    const db = await openBinanceDbWithQuotaRecovery(instrumentDbName(this.instrument));
 
     // `dispose()` bumped the token while we were opening IDB — abandon
     // this init so we don't leak a renderer onto a disposed store.
@@ -173,11 +151,81 @@ export class BinanceViewStore {
       return;
     }
 
-    const pageOpenTimeMs = nowEpochMs() as UnixTimeMs;
+    const pipeline = this.buildPipeline(canvas, db);
+    const { state, taskManager, dataController, orderbookStore, midPriceStore, tradesStore } =
+      pipeline;
 
+    // `BinanceChartRenderer.create` can reject outright (e.g. Safari's Metal back-end
+    // rejects pipeline creation rather than returning null); treat it like `ok === false`
+    // so the failure surfaces as `'unsupported'` instead of escaping as an unhandled rejection.
+    let ok = false;
+    try {
+      ok = await state.init({ taskManager, dataController });
+    } catch (error) {
+      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU init failure
+      console.warn('binance-view: WebGPU renderer init failed, marking unsupported', error);
+      ok = false;
+    }
+
+    if (!ok) {
+      orderbookStore.markUnsupported();
+      // Promote into the public slot so the status overlay reflects
+      // the `'unsupported'` state — but tear down everything else
+      // (the renderer never came up). The orderbook store has nothing
+      // to dispose besides its accumulator (not yet created), so its
+      // `dispose()` is a no-op here apart from resetting fields.
+      this.tearDownPipeline(pipeline, { keepOrderbookStore: true });
+      runInAction(() => {
+        this.orderbookStoreInternal = orderbookStore;
+      });
+      return;
+    }
+
+    // Token could have been bumped while we awaited WebGPU device +
+    // pipeline creation. Throw the fresh renderer away immediately.
+    if (token !== this.attachToken) {
+      this.tearDownPipeline(pipeline, { keepOrderbookStore: false });
+      return;
+    }
+
+    const pageHideHandler = (): void => {
+      // Fire-and-forget: if the transaction doesn't complete before
+      // unload, the next attach() call will re-issue clearAll() at
+      // startup anyway.
+      void this.db?.clearAll();
+    };
+
+    // Wire the trades store handle into the chart-state so the trades
+    // layer can observe `hoveredBucketKey` per frame. Done before the
+    // `runInAction` block to keep the renderer's `tradesStoreView`
+    // ref consistent with the public slot we're about to publish.
+    state.setTradesStore(tradesStore);
+
+    // All assignments land after an `await` — outside the synchronous
+    // span of the auto-bound action, so MobX strict mode rejects them
+    // unless wrapped.
+    runInAction(() => {
+      this.db = db;
+      this.chartState = state;
+      this.taskManager = taskManager;
+      this.dataController = dataController;
+      this.pageHideHandler = pageHideHandler;
+      this.orderbookStoreInternal = orderbookStore;
+      this.midPriceStoreInternal = midPriceStore;
+      this.tradesStoreInternal = tradesStore;
+    });
+    window.addEventListener('pagehide', pageHideHandler);
+  }
+
+  /**
+   * Construct the per-attach collaborator graph. Nothing is published into
+   * the store's public slots here — the caller decides that once the
+   * renderer reports whether WebGPU actually came up.
+   */
+  private buildPipeline(canvas: HTMLCanvasElement, db: IBinanceDb | undefined): IAttachedPipeline {
     const state = new BinanceChartState({
       canvas,
-      pageOpenTimeMs,
+      pageOpenTimeMs: nowEpochMs() as UnixTimeMs,
       updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
       // The heatmap cell height is the aggregation bin size, not the
       // raw tickSize — rendering at $0.01 would collapse each row into
@@ -229,77 +277,30 @@ export class BinanceViewStore {
       gate: orderbookStore,
     });
 
-    // `BinanceChartRenderer.create` can reject outright (e.g. Safari's Metal back-end
-    // rejects pipeline creation rather than returning null); treat it like `ok === false`
-    // so the failure surfaces as `'unsupported'` instead of escaping as an unhandled rejection.
-    let ok = false;
-    try {
-      ok = await state.init({ taskManager, dataController });
-    } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU init failure
-      console.warn('binance-view: WebGPU renderer init failed, marking unsupported', error);
-      ok = false;
+    return { tradesStore, orderbookStore, midPriceStore, state, taskManager, dataController, db };
+  }
+
+  /**
+   * Tear down everything {@link buildPipeline} created, in the same LIFO
+   * order as {@link dispose}: trades first (its gate reads orderbook
+   * state), then mid-price (consumer of orderbook snapshots), then
+   * orderbook (subscription owner), then the shared infra.
+   * `keepOrderbookStore` is set when the caller promotes that sub-store
+   * into the public slot instead of discarding it.
+   */
+  private tearDownPipeline(
+    pipeline: IAttachedPipeline,
+    { keepOrderbookStore }: { readonly keepOrderbookStore: boolean }
+  ): void {
+    pipeline.tradesStore.dispose();
+    if (!keepOrderbookStore) {
+      pipeline.orderbookStore.dispose();
     }
-
-    if (!ok) {
-      orderbookStore.markUnsupported();
-      // Promote into the public slot so the status overlay reflects
-      // the `'unsupported'` state — but tear down everything else
-      // (the renderer never came up). The orderbook store has nothing
-      // to dispose besides its accumulator (not yet created), so its
-      // `dispose()` is a no-op here apart from resetting fields.
-      tradesStore.dispose();
-      midPriceStore.dispose();
-      state.dispose();
-      taskManager.dispose();
-      dataController.dispose();
-      db?.close();
-      runInAction(() => {
-        this.orderbookStoreInternal = orderbookStore;
-      });
-      return;
-    }
-
-    // Token could have been bumped while we awaited WebGPU device +
-    // pipeline creation. Throw the fresh renderer away immediately.
-    if (token !== this.attachToken) {
-      tradesStore.dispose();
-      orderbookStore.dispose();
-      midPriceStore.dispose();
-      state.dispose();
-      taskManager.dispose();
-      dataController.dispose();
-      db?.close();
-      return;
-    }
-
-    const pageHideHandler = (): void => {
-      // Fire-and-forget: if the transaction doesn't complete before
-      // unload, the next attach() call will re-issue clearAll() at
-      // startup anyway.
-      void this.db?.clearAll();
-    };
-
-    // Wire the trades store handle into the chart-state so the trades
-    // layer can observe `hoveredBucketKey` per frame. Done before the
-    // `runInAction` block to keep the renderer's `tradesStoreView`
-    // ref consistent with the public slot we're about to publish.
-    state.setTradesStore(tradesStore);
-
-    // All assignments land after an `await` — outside the synchronous
-    // span of the auto-bound action, so MobX strict mode rejects them
-    // unless wrapped.
-    runInAction(() => {
-      this.db = db;
-      this.chartState = state;
-      this.taskManager = taskManager;
-      this.dataController = dataController;
-      this.pageHideHandler = pageHideHandler;
-      this.orderbookStoreInternal = orderbookStore;
-      this.midPriceStoreInternal = midPriceStore;
-      this.tradesStoreInternal = tradesStore;
-    });
-    window.addEventListener('pagehide', pageHideHandler);
+    pipeline.midPriceStore.dispose();
+    pipeline.state.dispose();
+    pipeline.taskManager.dispose();
+    pipeline.dataController.dispose();
+    pipeline.db?.close();
   }
 
   startStream(): void {

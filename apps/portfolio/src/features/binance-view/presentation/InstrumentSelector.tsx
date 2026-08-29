@@ -1,12 +1,38 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { memo } from 'react';
 
 import { Dropdown, DropdownItem } from '../../../shared/ui/Dropdown';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
 import { BINANCE_INSTRUMENTS } from '../domain/instruments';
 
 const CHEVRON_SIZE = 12;
+
+const InstrumentOption = memo(
+  ({
+    symbol,
+    isSelected,
+    onSelect,
+  }: {
+    readonly symbol: string;
+    readonly isSelected: boolean;
+    readonly onSelect: (symbol: string) => void;
+  }) => {
+    const handleSelect = useFunction(() => {
+      onSelect(symbol);
+    });
+
+    return (
+      <DropdownItem
+        onSelect={handleSelect}
+        className={isSelected ? 'font-mono text-xs text-landing-accent' : 'font-mono text-xs'}
+      >
+        {symbol}
+      </DropdownItem>
+    );
+  }
+);
 
 export const InstrumentSelector = observer(() => {
   const store = useBinanceViewStore();
@@ -28,17 +54,12 @@ export const InstrumentSelector = observer(() => {
       }
     >
       {BINANCE_INSTRUMENTS.map(option => (
-        <DropdownItem
+        <InstrumentOption
           key={option.symbol}
-          onSelect={() => handleSelect(option.symbol)}
-          className={
-            option.symbol === store.instrument
-              ? 'font-mono text-xs text-landing-accent'
-              : 'font-mono text-xs'
-          }
-        >
-          {option.symbol}
-        </DropdownItem>
+          symbol={option.symbol}
+          isSelected={option.symbol === store.instrument}
+          onSelect={handleSelect}
+        />
       ))}
     </Dropdown>
   );

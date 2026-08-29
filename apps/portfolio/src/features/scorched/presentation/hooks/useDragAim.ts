@@ -1,4 +1,5 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import type { LetterboxTransform } from '@frozik/utils/webgpu/letterboxTransform';
 import { isNil } from 'lodash-es';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
@@ -7,7 +8,6 @@ import { FIELD_HEIGHT_WU, TANK_CENTER_OFFSET_WU } from '../../domain/constants';
 import type { AimGhost } from '../../infrastructure/aim-ghost';
 import { resolveDragAim } from '../../infrastructure/drag-aim';
 import type { IPointerAimInput } from '../../infrastructure/pointer-aim-source';
-import type { ScorchedViewTransform } from '../../infrastructure/view-transform';
 import { toWorldPosition } from '../../infrastructure/view-transform';
 
 export interface DragAimHandlers {
@@ -28,7 +28,7 @@ export interface DragAimOrigin {
  * the gesture and nothing else — firing is a separate, deliberate act.
  */
 export function useDragAim(params: {
-  readonly transform: ScorchedViewTransform;
+  readonly transform: LetterboxTransform;
   readonly pointerInput: IPointerAimInput;
   readonly aimGhost: AimGhost;
   readonly getOrigin: () => DragAimOrigin | undefined;

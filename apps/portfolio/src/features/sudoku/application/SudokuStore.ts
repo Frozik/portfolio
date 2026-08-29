@@ -4,7 +4,7 @@ import {
   EMPTY_VD,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import { cloneDeep, isNil } from 'lodash-es';
+import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 import {
   addFieldMarks,
@@ -67,13 +67,11 @@ export class SudokuStore {
       return;
     }
 
-    // Clone BEFORE applying tool — applyToolToFieldReducer may shallow-mutate
-    // nested arrays (e.g. notes) in the original field via shared references.
-    const snapshot = cloneDeep(this.field.value);
-    const newField = applyToolToFieldReducer(this.field.value, this.tool, row, column);
+    const previousField = this.field.value;
+    const newField = applyToolToFieldReducer(previousField, this.tool, row, column);
 
-    if (this.field.value !== newField) {
-      this.history = [...this.history, snapshot];
+    if (previousField !== newField) {
+      this.history = [...this.history, previousField];
     }
 
     this.field = createSyncedValueDescriptor(newField);
@@ -84,7 +82,7 @@ export class SudokuStore {
       return;
     }
 
-    this.history = [...this.history, cloneDeep(this.field.value)];
+    this.history = [...this.history, this.field.value];
 
     if (hasMarks(this.field.value)) {
       this.field = createSyncedValueDescriptor(removeFieldMarks(this.field.value));

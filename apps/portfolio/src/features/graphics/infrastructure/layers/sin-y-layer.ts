@@ -9,6 +9,7 @@ import {
 import { ALPHA_BLEND_STATE, OFFSCREEN_FORMAT } from '../chart-gpu-constants';
 import type { OffscreenTextureManager } from '../chart-textures';
 import type { UniformManager } from '../uniform-manager';
+import type { CompositeLayerResources } from './composite-layer';
 
 export class SinYLayer implements RenderLayer {
   private device!: GPUDevice;
@@ -17,9 +18,7 @@ export class SinYLayer implements RenderLayer {
 
   constructor(
     private readonly textureManager: OffscreenTextureManager,
-    private readonly compositeBindGroupLayout: GPUBindGroupLayout,
-    private readonly compositeSampler: GPUSampler,
-    private readonly compositeUniformBuffer: GPUBuffer,
+    private readonly resources: CompositeLayerResources,
     private readonly chartShaderModule: GPUShaderModule,
     private readonly uniformManager: UniformManager
   ) {}
@@ -70,9 +69,9 @@ export class SinYLayer implements RenderLayer {
     const offscreen = this.textureManager.ensureOffscreenTextures(
       state.canvasWidth,
       state.canvasHeight,
-      this.compositeBindGroupLayout,
-      this.compositeSampler,
-      this.compositeUniformBuffer
+      this.resources.compositeBindGroupLayout,
+      this.resources.compositeSampler,
+      this.resources.compositeUniformBuffer
     );
 
     if (isNil(offscreen)) {

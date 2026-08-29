@@ -911,7 +911,9 @@ export class SceneLayer implements RenderLayer {
   /**
    * Splits styled segments into regular lines (hidden/visible passes)
    * and topology edge segments (depth texture sampling pass).
-   * Each segment is 32 floats (128 bytes) matching the shader LineInstance layout.
+   * Each segment is 24 floats (96 bytes): the 22 floats of the shader
+   * LineInstance layout plus the two endpoint vertex indices consumed only by
+   * the line-ID pre-pass.
    */
   private applyStyledSegments(segments: readonly StyledSegment[]): void {
     this.styledLineCount = segments.length;

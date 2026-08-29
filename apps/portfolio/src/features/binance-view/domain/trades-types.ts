@@ -6,7 +6,7 @@ import type { UnixTimeMs } from './types';
 /**
  * Domain model for the trades layer of binance-view.
  *
- * Aggregation invariants (see trades.md §1.5):
+ * Aggregation invariants:
  *  - Trades are bucketed per second: `bucketStartMs = floor(eventTimeMs / 1000) * 1000`.
  *  - Buckets containing zero trades are NOT emitted, so the GPU texture is
  *    sparse along the time axis. The shader cannot reconstruct a bucket's
@@ -57,8 +57,7 @@ export interface ITrade {
 
 /**
  * Per-second aggregate that lands in the GPU texture (4 floats per
- * texel). All field formulas live in trades.md §1.5. `vwap` is
- * notional-weighted (`Σ qty·price / Σ qty`) and `buyFraction` is the
+ * texel). `vwap` is notional-weighted (`Σ qty·price / Σ qty`) and `buyFraction` is the
  * notional fraction of taker-buy aggression (`isBuyerMaker === false`).
  *
  * No `tradeCount` field — the GPU texture only carries 4 floats per
@@ -119,15 +118,15 @@ export interface ITradeBlockRecord {
   readonly basePrice: number;
   readonly bucketCount: number;
   readonly textureRowIndex: number | undefined;
-  /** Packed `Float32Array` of bucket aggregates — see trades.md §2.2. */
+  /** Packed `Float32Array` of bucket aggregates, 4 floats per bucket. */
   readonly data: ArrayBuffer;
 }
 
 /**
  * Raw-trade payload for one block, persisted in the
  * `'trade-buckets-raw'` IDB store. Written only on block rotation
- * (whole-block dump) — see trades.md §1.6 / §3.3 for the cadence
- * trade-off.
+ * (whole-block dump), so the multi-megabyte payload is written once per
+ * block instead of on every flush.
  */
 export interface ITradeBucketRawRecord {
   readonly blockId: UnixTimeMs;

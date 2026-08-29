@@ -20,7 +20,7 @@ export interface IMidPriceStreamStoreParams {
 
 /**
  * Per-stream sub-store extracted from the legacy `BinanceViewStore`
- * god-store (§2.11). Owns the mid-price block accumulator, the IDB
+ * god-store. Owns the mid-price block accumulator, the IDB
  * persistence path, and the eviction loop that keeps the GPU texture
  * within {@link MAX_MID_PRICE_BLOCKS}.
  *

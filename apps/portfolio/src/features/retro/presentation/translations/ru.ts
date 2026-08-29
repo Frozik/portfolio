@@ -86,20 +86,6 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     cancel: 'Отмена',
     kicker: 'НОВОЕ РЕТРО',
   },
-  templates: {
-    scrum: {
-      name: 'Scrum (3 колонки)',
-      description: 'Что прошло хорошо / Что улучшить / План действий — классический Agile-формат.',
-    },
-    madSadGlad: {
-      name: 'Злой / Грустный / Радостный',
-      description: 'Фокус на эмоциях. Хорошо подходит для тяжёлых спринтов.',
-    },
-    startStopContinue: {
-      name: 'Начать / Прекратить / Продолжить',
-      description: 'Простейший формат, ориентированный на действия.',
-    },
-  },
   identity: {
     dialogTitle: 'Как вас зовут?',
     dialogDescription: 'Это имя и цвет будут видны другим участникам комнаты.',
@@ -195,8 +181,8 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
   },
   discuss: {
     topCards: 'Карточки с наибольшим числом голосов',
-    addActionItem: 'Добавить пункт плана',
-    actionItemsTitle: 'План действий',
+    addActionItem: 'Добавить задачу',
+    actionItemsTitle: 'Итоговые задачи',
     actionItemPlaceholder: 'Что мы с этим будем делать?',
     actionItemOwnerLabel: 'Ответственный',
     deleteActionItem: 'Удалить',
@@ -206,7 +192,7 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     phaseKicker: 'ФАЗА ОБСУЖДЕНИЯ',
     topCardsHeading: 'Наиболее проголосованные',
     topCardsEmpty: 'голосов пока нет — обсуждать нечего',
-    actionItemsKicker: 'ПЛАН ДЕЙСТВИЙ',
+    actionItemsKicker: 'ИТОГОВЫЕ ЗАДАЧИ',
     actionItemsTipKicker: 'совет: сохраняйте фокус',
     groupedCardsKicker: 'ГРУППА',
     cardsKicker: 'КАРТОЧКИ',
@@ -217,6 +203,7 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     title: 'Ретро завершено',
     summarySubtitle: 'Вы можете экспортировать результаты ниже.',
     exportCopy: 'Скопировать markdown в буфер обмена',
+    markdownCopied: 'Markdown скопирован в буфер обмена',
     exportDownload: 'Скачать как .md',
     backToLobby: 'Вернуться к списку',
     viewResults: 'Результаты',
@@ -238,9 +225,9 @@ export const retroRuTranslations: TranslationOf<typeof retroEnTranslations> = {
     cardsCount: (count: number) =>
       `${count} ${pluralizeRu(count, 'карточка', 'карточки', 'карточек')}`,
     votesCount: (count: number) => `${count} ${pluralizeRu(count, 'голос', 'голоса', 'голосов')}`,
-    actionItemsTitle: 'План действий',
+    actionItemsTitle: 'Итоговые задачи',
     noCards: 'Нет карточек.',
-    noActionItems: 'Нет пунктов плана.',
+    noActionItems: 'Нет итоговых задач.',
     fromLabel: 'из',
   },
   errors: {

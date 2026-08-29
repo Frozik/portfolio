@@ -15,7 +15,7 @@ import {
   VERTICES_PER_TRIANGLE,
 } from '../../domain/sun-constants';
 import sunShaderSource from '../shaders/sun.wgsl?raw';
-import type { OrbitalCameraController } from '../sun-camera-controller';
+import type { SunCameraController } from '../sun-camera-controller';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const MIN_DIMENSION = 1;
@@ -28,9 +28,10 @@ export class SunLayer implements RenderLayer {
   private uniformBuffer!: GPUBuffer;
   private uniformView!: StructuredView;
   private depthTexture: GPUTexture | null = null;
+  private depthTextureView: GPUTextureView | null = null;
 
   constructor(
-    private readonly camera: OrbitalCameraController,
+    private readonly camera: SunCameraController,
     private readonly msaaManager: MsaaTextureManager
   ) {}
 
@@ -112,7 +113,7 @@ export class SunLayer implements RenderLayer {
       return;
     }
 
-    const currentDepthTexture = this.ensureDepthTexture(state.canvasWidth, state.canvasHeight);
+    const currentDepthView = this.ensureDepthView(state.canvasWidth, state.canvasHeight);
 
     const pass = encoder.beginRenderPass({
       colorAttachments: [
@@ -125,7 +126,7 @@ export class SunLayer implements RenderLayer {
         },
       ],
       depthStencilAttachment: {
-        view: currentDepthTexture.createView(),
+        view: currentDepthView,
         depthClearValue: 1.0,
         depthLoadOp: 'clear',
         depthStoreOp: 'discard',
@@ -143,13 +144,14 @@ export class SunLayer implements RenderLayer {
     this.depthTexture?.destroy();
   }
 
-  private ensureDepthTexture(width: number, height: number): GPUTexture {
+  private ensureDepthView(width: number, height: number): GPUTextureView {
     if (
       !isNil(this.depthTexture) &&
+      !isNil(this.depthTextureView) &&
       this.depthTexture.width === width &&
       this.depthTexture.height === height
     ) {
-      return this.depthTexture;
+      return this.depthTextureView;
     }
 
     this.depthTexture?.destroy();
@@ -160,6 +162,7 @@ export class SunLayer implements RenderLayer {
       sampleCount: MSAA_SAMPLE_COUNT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    return this.depthTexture;
+    this.depthTextureView = this.depthTexture.createView();
+    return this.depthTextureView;
   }
 }

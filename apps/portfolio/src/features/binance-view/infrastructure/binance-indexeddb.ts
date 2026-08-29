@@ -32,8 +32,8 @@ export const DEFAULT_DB_NAME = 'binance-orderbook';
  *   v4 — adds the trades layer's two stores in a single migration
  *        step: `trade-blocks` (per-block aggregate `Float32Array`
  *        copies, written every flush) and `trade-buckets-raw` (raw
- *        per-bucket trades, written only on block rotation — see
- *        trades.md §3.3 for the cadence rationale).
+ *        per-bucket trades, written only on block rotation, so the
+ *        whole-block payload is stored exactly once per block).
  *
  * Bumps MUST stay idempotent: the upgrade handler can fire from any
  * earlier version, so every step recreates stores via the
@@ -198,7 +198,7 @@ export async function openBinanceDb(
       if (upgrading.objectStoreNames.contains(legacyStoreName)) {
         upgrading.deleteObjectStore(legacyStoreName);
       }
-      // v4 migration: trades layer (see trades.md §3.3). Two stores
+      // v4 migration: trades layer. Two stores
       // because aggregates and raw trades have very different
       // payload sizes and access patterns — see `ITradesDb` doc.
       if (!upgrading.objectStoreNames.contains(TRADE_BLOCKS_STORE)) {

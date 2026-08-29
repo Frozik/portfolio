@@ -1,35 +1,18 @@
+import { assert } from '@frozik/utils/assert/assert';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { IMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { createMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import { planAiItemPurchases, planAiPurchases } from '../domain/ai/shopping';
 import { getMaxPower } from '../domain/ballistics';
-import {
-  DAMAGE_POPUP_SECONDS,
-  MAX_POWER,
-  MIN_PLAYER_COUNT,
-  PLASMA_MIN_BATTERIES,
-  TANK_CENTER_OFFSET_WU,
-  TAUNT_LINE_COUNT,
-  TAUNT_VISIBLE_SECONDS,
-} from '../domain/constants';
-import { getItem } from '../domain/items';
+import { MAX_POWER, MIN_PLAYER_COUNT, PLASMA_MIN_BATTERIES } from '../domain/constants';
 import type { MatchPlayerState } from '../domain/match';
 import { ScorchedMatch } from '../domain/match';
 import type { ScorchedRound } from '../domain/round';
 import type { MatchStanding, RoundHighlight } from '../domain/scoring';
 import { findBiggestHit, findTopDamageDealer } from '../domain/scoring';
-import type { CartLine, ShopEntryRef } from '../domain/shop';
-import {
-  addCartPurchase,
-  quoteShopPurchase,
-  quoteShopSellBack,
-  removeCartUnits,
-} from '../domain/shop';
-import type { TauntKind } from '../domain/taunts';
-import { pickTaunt } from '../domain/taunts';
+import { getTankCenter } from '../domain/tank-geometry';
 import type {
   AimState,
   GuidanceKind,
@@ -48,6 +31,8 @@ import { AiTurnDriver } from '../infrastructure/ai-turn-driver';
 import { fromDialDegrees, turnDial } from '../infrastructure/aim-dial';
 import type { ScorchedInput } from '../infrastructure/scorched-input';
 import { ScorchedRoundRef } from '../infrastructure/scorched-round-ref';
+import { OverlayStore } from './OverlayStore';
+import { ShopStore } from './ShopStore';
 import type { ScorchedSetupOptions } from './scorched-setup';
 import { createMatchOptions, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
 
@@ -69,27 +54,6 @@ export interface IScorchedPlayerState {
   isAlive: boolean;
   cash: number;
   kills: number;
-}
-
-/** A floating number is either a wound or a repair; the overlay colours and signs it either way. */
-export type HealthPopupKind = 'damage' | 'repair';
-
-/** [§13] A health number floating away from the tank it happened to. */
-export interface IDamagePopup {
-  readonly id: number;
-  readonly playerId: PlayerId;
-  readonly kind: HealthPopupKind;
-  readonly amount: number;
-  readonly position: Vector2;
-  remainingSeconds: number;
-}
-
-/** [§12] A taunt bubble over a tank; the text itself is resolved from the translations. */
-export interface ITauntBubble {
-  readonly playerId: PlayerId;
-  readonly kind: TauntKind;
-  readonly lineIndex: number;
-  remainingSeconds: number;
 }
 
 export interface IRoundHighlights {
@@ -186,24 +150,22 @@ export class ScorchedStore {
   survivorIds: readonly PlayerId[] = [];
   roundHighlights: IRoundHighlights = NO_HIGHLIGHTS;
   standings: readonly MatchStanding[] = [];
-  damagePopups: IDamagePopup[] = [];
-  taunts: ITauntBubble[] = [];
   aiThinkingPlayerId: PlayerId | undefined;
-  shopPlayerId: PlayerId | undefined;
-  shopCart: readonly CartLine[] = [];
   isMuted: boolean;
   fps = 0;
 
   /** The live round handle the renderer reads through, across rounds and rematches. */
   readonly roundRef: ScorchedRoundRef;
+  /** [§13] The between-rounds counter, with its own observable state. */
+  readonly shop: ShopStore;
+  /** [§12, §13] The floating health numbers and taunt bubbles drawn over the field. */
+  readonly overlays: OverlayStore;
 
   private readonly mutedStorage: IMutedStorage;
   private readonly aiDriver = new AiTurnDriver();
   private match: ScorchedMatch;
-  private shopQueue: PlayerId[] = [];
   private pendingEvents: WorldEvent[] = [];
   private readonly rememberedWeapons = new Map<PlayerId, WeaponId>();
-  private nextPopupId = 1;
 
   constructor(mutedStorage: IMutedStorage = createMutedStorage(MUTED_STORAGE_KEY)) {
     this.mutedStorage = mutedStorage;
@@ -212,26 +174,31 @@ export class ScorchedStore {
     // The roster screen is what opens; this round is only here so the renderer has a field to
     // draw behind it, and `startMatch` replaces it outright — its opening events lead nowhere.
     this.roundRef = new ScorchedRoundRef(this.openRound().round);
+    this.shop = new ShopStore({
+      getMatch: () => this.match,
+      isCounterOpen: () => this.status === 'shop',
+      onMatchChanged: () => {
+        this.syncPlayersFromMatch();
+      },
+    });
+    this.overlays = new OverlayStore({
+      getTankCenter: playerId => this.resolveTankCenter(playerId),
+      getTalkProbabilityPercent: () => this.setup.advanced.talkProbabilityPercent,
+    });
 
     makeAutoObservable<
       ScorchedStore,
-      | 'mutedStorage'
-      | 'aiDriver'
-      | 'match'
-      | 'shopQueue'
-      | 'pendingEvents'
-      | 'nextPopupId'
-      | 'rememberedWeapons'
+      'mutedStorage' | 'aiDriver' | 'match' | 'pendingEvents' | 'rememberedWeapons'
     >(
       this,
       {
         roundRef: false,
+        shop: false,
+        overlays: false,
         mutedStorage: false,
         aiDriver: false,
         match: false,
-        shopQueue: false,
         pendingEvents: false,
-        nextPopupId: false,
         rememberedWeapons: false,
       },
       { autoBind: true }
@@ -265,7 +232,7 @@ export class ScorchedStore {
   }
 
   get shopPlayer(): IScorchedPlayerState | undefined {
-    return this.players.find(player => player.id === this.shopPlayerId);
+    return this.players.find(player => player.id === this.shop.playerId);
   }
 
   /** What Tab walks and the carousel lists: the free baby missile plus whatever is still owned. */
@@ -341,15 +308,14 @@ export class ScorchedStore {
     if (this.setup.startingCash > 0) {
       this.standings = [];
       this.roundHighlights = NO_HIGHLIGHTS;
-      this.damagePopups = [];
-      this.taunts = [];
+      this.overlays.clear();
       this.isFuelMoveMode = false;
       this.resetPlayers();
       this.survivorIds = this.players.map(player => player.id);
-      this.runAiShopping();
-      this.shopQueue = this.players
-        .filter(player => player.controller.kind === 'human')
-        .map(player => player.id);
+      this.shop.runAiShopping(this.aiShopperIds);
+      this.shop.setQueue(
+        this.players.filter(player => player.controller.kind === 'human').map(player => player.id)
+      );
       this.openNextShop();
 
       return;
@@ -361,8 +327,7 @@ export class ScorchedStore {
     this.survivorIds = [];
     this.standings = [];
     this.roundHighlights = NO_HIGHLIGHTS;
-    this.damagePopups = [];
-    this.taunts = [];
+    this.overlays.clear();
     this.isFuelMoveMode = false;
     this.resetPlayers();
     this.resetShot();
@@ -393,7 +358,7 @@ export class ScorchedStore {
 
     this.match.completeRound();
     this.syncPlayersFromMatch();
-    this.runAiShopping();
+    this.shop.runAiShopping(this.aiShopperIds);
 
     if (this.match.phase === 'finished') {
       this.standings = this.match.standings;
@@ -402,8 +367,10 @@ export class ScorchedStore {
       return;
     }
 
-    this.shopQueue = this.survivorIds.filter(
-      playerId => this.players.find(player => player.id === playerId)?.controller.kind === 'human'
+    this.shop.setQueue(
+      this.survivorIds.filter(
+        playerId => this.players.find(player => player.id === playerId)?.controller.kind === 'human'
+      )
     );
     this.openNextShop();
   }
@@ -413,86 +380,6 @@ export class ScorchedStore {
     if (this.status === 'shop') {
       this.openNextShop();
     }
-  }
-
-  buy(entry: ShopEntryRef): boolean {
-    const playerId = this.shopPlayerId;
-    const player = isNil(playerId) ? undefined : this.getMatchPlayer(playerId);
-
-    if (this.status !== 'shop' || isNil(playerId) || isNil(player)) {
-      return false;
-    }
-
-    const quote = quoteShopPurchase(
-      entry,
-      this.match.roundsRemaining,
-      player.cash,
-      this.getOwnedCount(playerId, entry)
-    );
-    const isBought =
-      entry.kind === 'weapon'
-        ? this.match.buyWeapon(playerId, entry.weaponId)
-        : this.match.buyItem(playerId, entry.itemId);
-
-    if (!isBought) {
-      return false;
-    }
-
-    this.shopCart = addCartPurchase(this.shopCart, entry, quote);
-    this.syncPlayersFromMatch();
-
-    return true;
-  }
-
-  sell(entry: ShopEntryRef, units: number): boolean {
-    const playerId = this.shopPlayerId;
-
-    if (this.status !== 'shop' || isNil(playerId)) {
-      return false;
-    }
-
-    const owned = this.getOwnedCount(playerId, entry);
-    const sold = Math.max(0, Math.min(units, owned));
-    const isSold =
-      entry.kind === 'weapon'
-        ? this.match.sellWeapon(playerId, entry.weaponId, sold)
-        : this.match.sellItem(playerId, entry.itemId, sold);
-
-    if (!isSold) {
-      return false;
-    }
-
-    this.shopCart = removeCartUnits(
-      this.shopCart,
-      entry,
-      sold,
-      quoteShopSellBack(entry, this.match.roundsRemaining, sold)
-    );
-    this.syncPlayersFromMatch();
-
-    return true;
-  }
-
-  getOwnedCount(playerId: PlayerId, entry: ShopEntryRef): number {
-    const player = this.getMatchPlayer(playerId);
-
-    if (isNil(player)) {
-      return 0;
-    }
-
-    return entry.kind === 'weapon'
-      ? (player.weapons[entry.weaponId] ?? 0)
-      : (player.items[entry.itemId] ?? 0);
-  }
-
-  /** The shop lists an entry only when the match's arms level unlocks it [MANUAL §6]. */
-  isShopEntryUnlocked(entry: ShopEntryRef): boolean {
-    const armsLevel =
-      entry.kind === 'weapon'
-        ? getWeapon(entry.weaponId).armsLevel
-        : getItem(entry.itemId).armsLevel;
-
-    return armsLevel <= this.match.armsLevel;
   }
 
   /** [MANUAL §8] Helicopter out: forfeits the round's points, but denies the killer their bounty. */
@@ -568,7 +455,7 @@ export class ScorchedStore {
    * damage numbers, the taunt bubbles and the AI winding its barrel across (§9, §13).
    */
   advanceFrame(elapsedSeconds: number): readonly WorldEvent[] {
-    this.ageOverlays(elapsedSeconds);
+    this.overlays.age(elapsedSeconds);
 
     const queued = this.drainPendingEvents();
     const aiEvents = this.advanceAiTurn(elapsedSeconds);
@@ -751,7 +638,7 @@ export class ScorchedStore {
 
     return this.roundRef.current.tanks
       .filter(tank => tank.isAlive && tank.playerId !== playerId)
-      .map(tank => ({ x: tank.columnIndex + 0.5, y: tank.positionY + TANK_CENTER_OFFSET_WU }))
+      .map(tank => getTankCenter(tank))
       .reduce<Vector2 | undefined>(
         (nearest, position) =>
           isNil(nearest) ||
@@ -781,36 +668,28 @@ export class ScorchedStore {
     const events = [...this.match.startRound()];
     const round = this.match.round;
 
-    if (isNil(round)) {
-      throw new Error('the match failed to open its round');
-    }
+    assert(!isNil(round), 'the match failed to open its round');
 
     return { round, events };
   }
 
   private openNextShop(): void {
-    const nextPlayerId = this.shopQueue.shift();
-
-    if (isNil(nextPlayerId)) {
+    if (!this.shop.openNext()) {
       this.startNextRound();
 
       return;
     }
 
-    this.shopPlayerId = nextPlayerId;
-    this.shopCart = [];
     this.status = 'shop';
   }
 
   private startNextRound(): void {
     const opened = this.openRound();
 
-    this.shopPlayerId = undefined;
-    this.shopCart = [];
+    this.shop.close();
     this.survivorIds = [];
     this.roundHighlights = NO_HIGHLIGHTS;
-    this.damagePopups = [];
-    this.taunts = [];
+    this.overlays.clear();
     this.isFuelMoveMode = false;
     this.roundRef.replace(opened.round);
     this.resetShot();
@@ -823,35 +702,11 @@ export class ScorchedStore {
     this.applyRoundEvents(opened.events);
   }
 
-  /**
-   * [§9, §8] The AIs restock between rounds so a long match does not become a baby-missile duel —
-   * but the shop is for survivors, exactly as it is for the humans queued ahead of them.
-   */
-  private runAiShopping(): void {
-    for (const player of this.players) {
-      if (player.controller.kind !== 'ai' || !this.survivorIds.includes(player.id)) {
-        continue;
-      }
-
-      for (const itemId of planAiItemPurchases({
-        cash: this.getMatchPlayer(player.id)?.cash ?? 0,
-        armsLevel: this.match.armsLevel,
-        roundsRemaining: this.match.roundsRemaining,
-        getOwnedCount: itemId => this.getMatchPlayer(player.id)?.items[itemId] ?? 0,
-      })) {
-        this.match.buyItem(player.id, itemId);
-      }
-
-      // The weapon rack shops from what the defence run left in the bank.
-      for (const weaponId of planAiPurchases(
-        this.getMatchPlayer(player.id)?.cash ?? 0,
-        this.match.armsLevel
-      )) {
-        this.match.buyWeapon(player.id, weaponId);
-      }
-    }
-
-    this.syncPlayersFromMatch();
+  /** The AIs that lived to shop; the humans among the survivors queue at the counter instead. */
+  private get aiShopperIds(): readonly PlayerId[] {
+    return this.players
+      .filter(player => player.controller.kind === 'ai' && this.survivorIds.includes(player.id))
+      .map(player => player.id);
   }
 
   private resetPlayers(): void {
@@ -894,14 +749,14 @@ export class ScorchedStore {
   private applyRoundEvent(event: WorldEvent): void {
     switch (event.type) {
       case 'tank-damaged':
-        this.pushHealthPopup(event.playerId, 'damage', event.amount);
+        this.overlays.pushHealthPopup(event.playerId, 'damage', event.amount);
         this.aiDriver.recordAttack(event.playerId, event.sourceId);
         break;
       case 'tank-repaired':
-        this.pushHealthPopup(event.playerId, 'repair', event.amount);
+        this.overlays.pushHealthPopup(event.playerId, 'repair', event.amount);
         break;
       case 'tank-destroyed':
-        this.pushTaunt(event.playerId, 'death');
+        this.overlays.pushTaunt(event.playerId, 'death');
         break;
       case 'projectile-ended':
         this.aiDriver.recordImpact(event.position);
@@ -931,7 +786,7 @@ export class ScorchedStore {
     this.resetShot();
     this.isFuelMoveMode = false;
     this.syncTurnItemCounts();
-    this.pushTaunt(playerId, 'attack');
+    this.overlays.pushTaunt(playerId, 'attack');
 
     if (player?.controller.kind === 'human' && humanCount >= MIN_PLAYER_COUNT) {
       this.status = 'handover';
@@ -950,56 +805,10 @@ export class ScorchedStore {
     this.status = 'round-over';
   }
 
-  private pushHealthPopup(playerId: PlayerId, kind: HealthPopupKind, amount: number): void {
+  private resolveTankCenter(playerId: PlayerId): Vector2 | undefined {
     const tank = this.roundRef.current.getTank(playerId);
 
-    if (isNil(tank)) {
-      return;
-    }
-
-    this.damagePopups = [
-      ...this.damagePopups,
-      {
-        id: this.nextPopupId++,
-        playerId,
-        kind,
-        amount: Math.round(amount),
-        position: { x: tank.columnIndex + 0.5, y: tank.positionY + TANK_CENTER_OFFSET_WU },
-        remainingSeconds: DAMAGE_POPUP_SECONDS,
-      },
-    ];
-  }
-
-  private pushTaunt(playerId: PlayerId, kind: TauntKind): void {
-    const pick = pickTaunt(kind, TAUNT_LINE_COUNT, this.setup.advanced.talkProbabilityPercent);
-
-    if (isNil(pick)) {
-      return;
-    }
-
-    this.taunts = [
-      ...this.taunts.filter(taunt => taunt.playerId !== playerId),
-      {
-        playerId,
-        kind: pick.kind,
-        lineIndex: pick.lineIndex,
-        remainingSeconds: TAUNT_VISIBLE_SECONDS,
-      },
-    ];
-  }
-
-  private ageOverlays(elapsedSeconds: number): void {
-    if (this.damagePopups.length > 0) {
-      this.damagePopups = this.damagePopups
-        .map(popup => ({ ...popup, remainingSeconds: popup.remainingSeconds - elapsedSeconds }))
-        .filter(popup => popup.remainingSeconds > 0);
-    }
-
-    if (this.taunts.length > 0) {
-      this.taunts = this.taunts
-        .map(taunt => ({ ...taunt, remainingSeconds: taunt.remainingSeconds - elapsedSeconds }))
-        .filter(taunt => taunt.remainingSeconds > 0);
-    }
+    return isNil(tank) ? undefined : getTankCenter(tank);
   }
 
   /**

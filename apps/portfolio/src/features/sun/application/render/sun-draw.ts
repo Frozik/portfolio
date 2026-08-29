@@ -2,41 +2,30 @@ import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
+import type { GpuAppSession } from '@frozik/utils/webgpu/runGpuApp';
+import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
 import { MSAA_SAMPLE_COUNT } from '../../domain/sun-constants';
 import { SunLayer } from '../../infrastructure/layers/sun-layer';
-import { createOrbitalCameraController } from '../../infrastructure/sun-camera-controller';
+import { createSunCameraController } from '../../infrastructure/sun-camera-controller';
 
 export function runSun(canvas: HTMLCanvasElement): VoidFunction {
-  let destroyed = false;
-  let gpuCleanup: (() => void) | undefined;
+  const camera = createSunCameraController(canvas);
 
-  const camera = createOrbitalCameraController(canvas);
-
-  void initSun(canvas, camera).then(
-    cleanup => {
-      if (destroyed) {
-        cleanup();
-      } else {
-        gpuCleanup = cleanup;
-      }
-    },
-    (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU sun renderer init failure
-      console.error('Failed to initialize sun renderer', error);
-    }
-  );
+  const stopGpuApp = runGpuApp({
+    init: () => initSun(canvas, camera),
+    initErrorMessage: 'Failed to initialize sun renderer',
+  });
 
   return () => {
-    destroyed = true;
     camera.destroy();
-    gpuCleanup?.();
+    stopGpuApp();
   };
 }
 
 async function initSun(
   canvas: HTMLCanvasElement,
-  camera: ReturnType<typeof createOrbitalCameraController>
-): Promise<VoidFunction> {
+  camera: ReturnType<typeof createSunCameraController>
+): Promise<GpuAppSession> {
   const context = await createGpuContext(canvas);
 
   const msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
@@ -52,10 +41,12 @@ async function initSun(
     layerManager,
   });
 
-  return () => {
-    stopRenderLoop();
-    layerManager.dispose();
-    msaaManager.dispose();
-    context.device.destroy();
+  return {
+    cleanup: () => {
+      stopRenderLoop();
+      layerManager.dispose();
+      msaaManager.dispose();
+      context.device.destroy();
+    },
   };
 }

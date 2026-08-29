@@ -2,7 +2,7 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { TopNavCenterPortal } from '../../../app/components/TopNavCenterContext';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
@@ -13,102 +13,22 @@ import {
 } from '../domain/trades-constants';
 
 import { BinanceStatusBadge } from './BinanceStatusBadge';
-import {
-  buildTradeHitTestPointer,
-  buildTradeHitTestPointerFromCss,
-} from './build-trade-hit-test-pointer';
+import { buildTradeHitTestPointer } from './build-trade-hit-test-pointer';
 import { HoverInfoPopup } from './HoverInfoPopup';
+import { useHoverAnchor } from './hooks/useHoverAnchor';
+import { useHoverHitTestLoop } from './hooks/useHoverHitTestLoop';
 import { InstrumentSelector } from './InstrumentSelector';
 import { TradeBucketPopup } from './TradeBucketPopup';
 
 export const BinanceViewContent = observer(() => {
   const store = useBinanceViewStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pendingPointerRef = useRef<{ x: number; y: number } | null>(null);
-  const hoverActiveRef = useRef(false);
-  const hoverRafIdRef = useRef<number | undefined>(undefined);
   const pointerStartRef = useRef<{ x: number; y: number; type: string } | null>(null);
   const lastHoverProbeRef = useRef<{ x: number; y: number } | null>(null);
-  const [hoverAnchor, setHoverAnchor] = useState<{ x: number; y: number } | null>(null);
-  // The hover popup anchor follows the cursor on every `pointermove`.
-  // Writing it straight to React state re-rendered the whole observer
-  // content tree per event; instead the latest position is stashed in a
-  // ref and a single rAF flushes it to state, coalescing a burst of
-  // pointer events into one render per frame. Clears stay synchronous.
-  const pendingHoverAnchorRef = useRef<{ x: number; y: number } | null>(null);
-  const hoverAnchorRafIdRef = useRef<number | undefined>(undefined);
-
-  const flushHoverAnchor = useFunction(() => {
-    hoverAnchorRafIdRef.current = undefined;
-    const next = pendingHoverAnchorRef.current;
-    if (next !== null) {
-      setHoverAnchor(next);
-    }
-  });
-
-  const scheduleHoverAnchor = useFunction((point: { x: number; y: number }) => {
-    pendingHoverAnchorRef.current = point;
-    if (hoverAnchorRafIdRef.current === undefined) {
-      hoverAnchorRafIdRef.current = requestAnimationFrame(flushHoverAnchor);
-    }
-  });
-
-  const clearHoverAnchor = useFunction(() => {
-    pendingHoverAnchorRef.current = null;
-    if (hoverAnchorRafIdRef.current !== undefined) {
-      cancelAnimationFrame(hoverAnchorRafIdRef.current);
-      hoverAnchorRafIdRef.current = undefined;
-    }
-    setHoverAnchor(null);
-  });
-
-  // While the pointer is hovering (not dragging), re-resolve what sits
-  // underneath the cursor on every animation frame. This catches viewport
-  // motion (follow-mode auto-pan, RAF-driven zoom / pan inertia) that
-  // changes what's underneath a stationary mouse — without this the
-  // tooltip would freeze on the last snapshot the cursor moved over.
-  // The trades hit-test runs alongside the orderbook cell tooltip so
-  // the hover-pill / scale-up updates as buckets pan under the cursor.
-  const hoverLoop = useFunction(() => {
-    hoverRafIdRef.current = undefined;
-    if (!hoverActiveRef.current) {
-      return;
-    }
-    const point = pendingPointerRef.current;
-    if (point !== null) {
-      void store.resolveCellAt(point);
-
-      const tradesStore = store.tradesStore;
-      const chartState = store.chartStateView;
-      const canvas = canvasRef.current;
-      if (tradesStore !== undefined && chartState !== undefined && canvas !== null) {
-        const rect = canvas.getBoundingClientRect();
-        const pointer = buildTradeHitTestPointerFromCss(rect, point.x, point.y, chartState);
-        if (pointer !== undefined) {
-          tradesStore.setHoveredBucketAt(pointer);
-        }
-      }
-    }
-    hoverRafIdRef.current = requestAnimationFrame(hoverLoop);
-  });
-
-  const startHoverLoop = useFunction(() => {
-    if (hoverActiveRef.current) {
-      return;
-    }
-    hoverActiveRef.current = true;
-    if (hoverRafIdRef.current === undefined) {
-      hoverRafIdRef.current = requestAnimationFrame(hoverLoop);
-    }
-  });
-
-  const stopHoverLoop = useFunction(() => {
-    hoverActiveRef.current = false;
-    if (hoverRafIdRef.current !== undefined) {
-      cancelAnimationFrame(hoverRafIdRef.current);
-      hoverRafIdRef.current = undefined;
-    }
-    pendingPointerRef.current = null;
+  const { hoverAnchor, scheduleHoverAnchor, clearHoverAnchor } = useHoverAnchor();
+  const { trackPointer, clearTrackedPointer, stopHoverLoop } = useHoverHitTestLoop({
+    store,
+    canvasRef,
   });
 
   const handleCanvasPointerMove = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -124,7 +44,7 @@ export const BinanceViewContent = observer(() => {
     // `setCursorSuppressed`; here we just bail before scheduling a
     // hover hit-test or moving the popup anchor.
     if (store.tradesStore?.pinnedBucket !== undefined) {
-      pendingPointerRef.current = null;
+      clearTrackedPointer();
       lastHoverProbeRef.current = null;
       clearHoverAnchor();
       return;
@@ -133,8 +53,7 @@ export const BinanceViewContent = observer(() => {
     const rect = canvas.getBoundingClientRect();
     const cssX = event.clientX - rect.left;
     const cssY = event.clientY - rect.top;
-    pendingPointerRef.current = { x: cssX, y: cssY };
-    startHoverLoop();
+    trackPointer({ x: cssX, y: cssY });
     // Anchor for the unified hover popup — orderbook cell + trades
     // bucket sections share this position so the popup follows the
     // cursor regardless of which section is currently active. rAF-

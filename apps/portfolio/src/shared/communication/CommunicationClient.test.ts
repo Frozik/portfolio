@@ -283,6 +283,47 @@ describe('CommunicationClient', () => {
     expect(states).toEqual(['connecting', 'open', 'closed']);
   });
 
+  it('replays the current state via state$ but not via onConnectionStateChange', () => {
+    const client = createCommunicationClient({
+      baseUrl: 'http://server',
+      roomId: 'r1',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
+      onTokenRefreshNeeded: () => Promise.resolve(null),
+    });
+    client.connect();
+    fakeSocket.trigger('connect');
+
+    // Subscribed AFTER the socket already reached `open`.
+    const replayed: string[] = [];
+    const subscription = client.state$.subscribe(state => replayed.push(state));
+    const changes: string[] = [];
+    client.onConnectionStateChange(state => changes.push(state));
+
+    expect(replayed).toEqual(['open']);
+    expect(changes).toEqual([]);
+
+    fakeSocket.trigger('disconnect');
+    expect(replayed).toEqual(['open', 'closed']);
+    expect(changes).toEqual(['closed']);
+    subscription.unsubscribe();
+  });
+
+  it('throws on connect() after disconnect() instead of opening a dead socket', () => {
+    const client = createCommunicationClient({
+      baseUrl: 'http://server',
+      roomId: 'r1',
+      getCredentials: () => ({ provider: 'google', token: 'tok' }),
+      onTokenRefreshNeeded: () => Promise.resolve(null),
+    });
+    client.connect();
+    fakeSocket.trigger('connect');
+    client.disconnect();
+
+    expect(client.state).toBe('closed');
+    expect(() => client.connect()).toThrow('communication-client/disposed');
+    expect(ioMock).toHaveBeenCalledTimes(1);
+  });
+
   it('fires onTurnCredentialsRenewed when the server emits turn:credentials-renewed', () => {
     const client = createCommunicationClient({
       baseUrl: 'http://server',

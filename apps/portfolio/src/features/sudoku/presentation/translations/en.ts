@@ -8,4 +8,10 @@ export const sudokuTranslationsEn = {
   nav: {
     backToDifficultyLabel: 'Back to difficulty',
   },
+  controls: {
+    restartPuzzle: 'Restart puzzle',
+    undoLastMove: 'Undo last move',
+    penMode: 'Pen mode',
+    candidateMarks: 'Candidate marks',
+  },
 } as const;

@@ -8,7 +8,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
-import { copyToClipboard } from '../../../shared/lib/copyToClipboard';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -107,10 +106,6 @@ const ConfRoomBody = observer(
       roomStore.closeShareDialog();
     });
 
-    const handleCopyLink = useFunction(() => {
-      void copyToClipboard(window.location.href);
-    });
-
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
         <div className="flex items-center justify-between gap-3">
@@ -199,13 +194,13 @@ const ConfRoomBody = observer(
           open={roomStore.isShareDialogOpen}
           onClose={handleCloseShare}
           url={window.location.href}
-          onCopy={handleCopyLink}
           kicker={confT.share.kicker}
           title={confT.share.dialogTitle}
           description={confT.share.description}
           qrLabel={confT.share.qrLabel}
           copyLabel={confT.share.copyLink}
           copiedLabel={confT.share.copied}
+          copyFailedLabel={confT.errors.copyFailed}
         />
       </div>
     );

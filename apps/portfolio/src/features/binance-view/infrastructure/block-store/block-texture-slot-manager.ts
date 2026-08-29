@@ -1,5 +1,7 @@
 import { assert } from '@frozik/utils/assert/assert';
-import { LRUCache } from 'lru-cache';
+import type { ISlotPoolGrowth } from '@frozik/utils/webgpu/lruSlotPool';
+
+import { KeyedSlotPool } from './keyed-slot-pool';
 
 /**
  * Bytes per texel for the texture formats this manager currently supports.
@@ -31,20 +33,16 @@ export interface IBlockTextureSlotManagerOptions<TKey extends NonNullable<unknow
 }
 
 /**
- * Generic LRU-pool manager for **1-row strip + packed-slots** texture
- * geometry: each slot occupies a single contiguous run of
- * `slotWidthTexels` texels in a row, with `slotsPerRow` slots packed
- * per row. Used by mid-price (and later trades). The orderbook layer
- * uses {@link TextureRowManager} instead — its multi-row block geometry
- * is materially different and is not abstracted by this class.
+ * Manager for **1-row strip + packed-slots** texture geometry: each
+ * slot occupies a single contiguous run of `slotWidthTexels` texels in
+ * a row, with `slotsPerRow` slots packed per row. Used by mid-price
+ * (and later trades). The orderbook layer uses {@link TextureRowManager}
+ * instead — its multi-row block geometry is materially different and is
+ * not abstracted by this class.
  *
- * Allocation order:
- *   1. Existing slot for `key` (touch LRU recency).
- *   2. Free list (previously released slots).
- *   3. High-water-mark — append a new slot if below current capacity.
- *   4. Grow texture by `growStep` (up to `maxSlotCount`).
- *   5. LRU-evict the least-recently-used slot — fires `onEvict` with
- *      the evicted key, then reuses its slot.
+ * Slot bookkeeping (free list → high-water-mark → grow → LRU eviction,
+ * plus the key↔slot mapping) is delegated to {@link KeyedSlotPool}; this
+ * class owns only the texel layout and the uploads.
  */
 export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
   private readonly device: GPUDevice;
@@ -53,19 +51,12 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
   private readonly slotWidthTexels: number;
   private readonly slotsPerRow: number;
   private readonly textureWidth: number;
-  private readonly maxSlotCount: number;
   private readonly growStep: number;
-  private readonly onEvict: (key: TKey) => void;
   private readonly label: string | undefined;
+  private readonly slots: KeyedSlotPool<TKey>;
 
   private texture: GPUTexture;
-  private capacitySlots: number;
-  private highWaterMark = 0;
   private disposed = false;
-
-  private readonly freeSlots: number[] = [];
-  private readonly lru: LRUCache<number, TKey>;
-  private readonly keyToSlot = new Map<TKey, number>();
 
   constructor(options: IBlockTextureSlotManagerOptions<TKey>) {
     assert(
@@ -95,55 +86,35 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
     this.slotWidthTexels = options.slotWidthTexels;
     this.slotsPerRow = options.slotsPerRow;
     this.textureWidth = options.slotWidthTexels * options.slotsPerRow;
-    this.maxSlotCount = options.maxSlotCount;
     this.growStep = options.growStep;
-    this.onEvict = options.onEvict;
     this.label = options.label;
-    this.capacitySlots = options.initialSlotCount;
 
-    this.texture = this.createBackingTexture(this.capacitySlots);
-    this.lru = new LRUCache({ max: this.maxSlotCount });
+    this.texture = this.createBackingTexture(options.initialSlotCount);
+    this.slots = new KeyedSlotPool({
+      initialCapacity: options.initialSlotCount,
+      maxCapacity: options.maxSlotCount,
+      growCapacity: this.nextCapacitySlots,
+      onGrow: this.handleGrow,
+      onEvict: options.onEvict,
+    });
   }
 
   allocate(key: TKey): number {
     this.assertNotDisposed();
 
-    const existing = this.keyToSlot.get(key);
-    if (existing !== undefined) {
-      this.lru.get(existing);
-      return existing;
-    }
-
-    const slotIndex =
-      this.popFreeSlot() ??
-      this.advanceHighWaterMark() ??
-      this.growAndAdvance() ??
-      this.evictAndReuseSlot();
-
-    this.keyToSlot.set(key, slotIndex);
-    this.lru.set(slotIndex, key);
-    return slotIndex;
+    return this.slots.allocate(key);
   }
 
   touch(key: TKey): void {
-    const slotIndex = this.keyToSlot.get(key);
-    if (slotIndex !== undefined) {
-      this.lru.get(slotIndex);
-    }
+    this.slots.touch(key);
   }
 
   free(key: TKey): void {
-    const slotIndex = this.keyToSlot.get(key);
-    if (slotIndex === undefined) {
-      return;
-    }
-    this.keyToSlot.delete(key);
-    this.lru.delete(slotIndex);
-    this.freeSlots.push(slotIndex);
+    this.slots.free(key);
   }
 
   getSlot(key: TKey): number | undefined {
-    return this.keyToSlot.get(key);
+    return this.slots.getSlot(key);
   }
 
   /**
@@ -190,11 +161,11 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
   }
 
   get currentCapacitySlots(): number {
-    return this.capacitySlots;
+    return this.slots.capacity;
   }
 
   get currentAllocatedSlots(): number {
-    return this.keyToSlot.size;
+    return this.slots.allocatedCount;
   }
 
   dispose(): void {
@@ -203,9 +174,7 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
     }
     this.disposed = true;
     this.texture.destroy();
-    this.lru.clear();
-    this.keyToSlot.clear();
-    this.freeSlots.length = 0;
+    this.slots.clear();
   }
 
   private assertNotDisposed(): void {
@@ -218,54 +187,19 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
     return { row, column };
   }
 
-  private popFreeSlot(): number | undefined {
-    return this.freeSlots.pop();
-  }
+  private readonly nextCapacitySlots = (currentCapacitySlots: number): number =>
+    currentCapacitySlots + this.growStep;
 
-  private advanceHighWaterMark(): number | undefined {
-    if (this.highWaterMark >= this.capacitySlots) {
-      return undefined;
-    }
-    const slotIndex = this.highWaterMark;
-    this.highWaterMark++;
-    return slotIndex;
-  }
+  private readonly handleGrow = ({
+    previousCapacity,
+    newCapacity,
+    usedSlots,
+  }: ISlotPoolGrowth): void => {
+    const newTexture = this.createBackingTexture(newCapacity);
 
-  private growAndAdvance(): number | undefined {
-    if (this.capacitySlots >= this.maxSlotCount) {
-      return undefined;
-    }
-    const newCapacity = Math.min(this.capacitySlots + this.growStep, this.maxSlotCount);
-    this.growTexture(newCapacity);
-    const slotIndex = this.highWaterMark;
-    this.highWaterMark++;
-    return slotIndex;
-  }
-
-  private evictAndReuseSlot(): number {
-    const oldestSlot = this.lru.rkeys().next().value;
-    assert(
-      oldestSlot !== undefined,
-      'BlockTextureSlotManager: cannot evict — LRU empty despite exhausted capacity'
-    );
-    const evictedKey = this.lru.get(oldestSlot);
-    this.lru.delete(oldestSlot);
-    if (evictedKey !== undefined) {
-      this.keyToSlot.delete(evictedKey);
-      this.onEvict(evictedKey);
-    }
-    return oldestSlot;
-  }
-
-  private growTexture(newCapacitySlots: number): void {
-    const newTexture = this.createBackingTexture(newCapacitySlots);
-
-    if (this.highWaterMark > 0) {
-      const oldHeightRows = Math.ceil(this.capacitySlots / this.slotsPerRow);
-      const usedHeightRows = Math.min(
-        oldHeightRows,
-        Math.ceil(this.highWaterMark / this.slotsPerRow)
-      );
+    if (usedSlots > 0) {
+      const oldHeightRows = Math.ceil(previousCapacity / this.slotsPerRow);
+      const usedHeightRows = Math.min(oldHeightRows, Math.ceil(usedSlots / this.slotsPerRow));
       const encoder = this.device.createCommandEncoder({ label: this.growEncoderLabel() });
       encoder.copyTextureToTexture(
         { texture: this.texture, origin: { x: 0, y: 0, z: 0 } },
@@ -277,8 +211,7 @@ export class BlockTextureSlotManager<TKey extends NonNullable<unknown>> {
 
     this.texture.destroy();
     this.texture = newTexture;
-    this.capacitySlots = newCapacitySlots;
-  }
+  };
 
   private createBackingTexture(capacitySlots: number): GPUTexture {
     const heightRows = Math.ceil(capacitySlots / this.slotsPerRow);

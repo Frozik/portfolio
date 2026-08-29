@@ -17,7 +17,7 @@ import { SkyLayer } from '../../infrastructure/layers/sky-layer';
 import { TankLayer } from '../../infrastructure/layers/tank-layer';
 import { TerrainComputeLayer } from '../../infrastructure/layers/terrain-compute-layer';
 import { TerrainLayer } from '../../infrastructure/layers/terrain-layer';
-import { UniformUpdateLayer } from '../../infrastructure/layers/uniform-update-layer';
+import { createUniformUpdateLayer } from '../../infrastructure/layers/uniform-update-layer';
 import { ParticlePool } from '../../infrastructure/particles/particle-pool';
 import {
   createBurningPoolFlames,
@@ -274,7 +274,7 @@ async function initScorched(options: IScorchedRenderOptions): Promise<VoidFuncti
         shake,
         onEvents,
       }),
-      new UniformUpdateLayer(uniforms, shake),
+      createUniformUpdateLayer(uniforms, shake),
       new TerrainComputeLayer(roundRef, textures, compute, opQueue),
       new SkyLayer(uniforms.buffer, skyPreset),
       new TerrainLayer(uniforms.buffer, textures),

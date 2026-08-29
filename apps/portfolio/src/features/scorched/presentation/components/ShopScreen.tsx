@@ -45,7 +45,7 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
     () =>
       groupBy(
         WEAPONS.filter(weapon =>
-          store.isShopEntryUnlocked({ kind: 'weapon', weaponId: weapon.id })
+          store.shop.isEntryUnlocked({ kind: 'weapon', weaponId: weapon.id })
         ),
         weapon => weapon.family
       ),
@@ -53,13 +53,13 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
   );
 
   const unlockedItems = ITEMS.filter(item =>
-    store.isShopEntryUnlocked({ kind: 'item', itemId: item.id })
+    store.shop.isEntryUnlocked({ kind: 'item', itemId: item.id })
   );
 
   // Not memoised on purpose: the list depends on the inventory this screen is actively changing,
   // and MobX already limits the re-render to the mutations that matter.
   const buildSellables = (): readonly SellableEntry[] => {
-    const playerId = store.shopPlayerId;
+    const playerId = store.shop.playerId;
 
     if (isNil(playerId)) {
       return [];
@@ -68,19 +68,19 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
     const weaponRows = WEAPONS.map<SellableEntry>(weapon => ({
       entry: { kind: 'weapon', weaponId: weapon.id },
       name: getWeaponName(weapon.id),
-      ownedCount: store.getOwnedCount(playerId, { kind: 'weapon', weaponId: weapon.id }),
+      ownedCount: store.shop.getOwnedCount(playerId, { kind: 'weapon', weaponId: weapon.id }),
     }));
     const itemRows = ITEMS.map<SellableEntry>(item => ({
       entry: { kind: 'item', itemId: item.id },
       name: scorchedT.itemNames[item.id],
-      ownedCount: store.getOwnedCount(playerId, { kind: 'item', itemId: item.id }),
+      ownedCount: store.shop.getOwnedCount(playerId, { kind: 'item', itemId: item.id }),
     }));
 
     return [...weaponRows, ...itemRows].filter(row => row.ownedCount > 0);
   };
 
   const handleBuy = useFunction((entry: ShopEntryRef) => {
-    if (store.buy(entry)) {
+    if (store.shop.buy(entry)) {
       onPurchase();
     }
   });
@@ -97,7 +97,7 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
       entry,
       roundsRemaining,
       cash,
-      isNil(store.shopPlayerId) ? 0 : store.getOwnedCount(store.shopPlayerId, entry)
+      isNil(store.shop.playerId) ? 0 : store.shop.getOwnedCount(store.shop.playerId, entry)
     );
 
   return (
@@ -161,9 +161,9 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
                           description={scorchedT.weapons[weapon.id]}
                           quote={quoteFor(entry)}
                           ownedCount={
-                            isNil(store.shopPlayerId)
+                            isNil(store.shop.playerId)
                               ? 0
-                              : store.getOwnedCount(store.shopPlayerId, entry)
+                              : store.shop.getOwnedCount(store.shop.playerId, entry)
                           }
                           onBuy={handleBuy}
                         />
@@ -189,9 +189,9 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
                       description={scorchedT.items[item.id]}
                       quote={quoteFor(entry)}
                       ownedCount={
-                        isNil(store.shopPlayerId)
+                        isNil(store.shop.playerId)
                           ? 0
-                          : store.getOwnedCount(store.shopPlayerId, entry)
+                          : store.shop.getOwnedCount(store.shop.playerId, entry)
                       }
                       onBuy={handleBuy}
                     />
@@ -204,11 +204,11 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
           <aside className={cn(GLASS_PANEL_CLASS, 'h-fit lg:sticky lg:top-6')}>
             <h3 className={sectionTitleClass}>{scorchedT.shop.cart}</h3>
 
-            {store.shopCart.length === 0 ? (
+            {store.shop.cart.length === 0 ? (
               <p className="pt-2 text-xs text-text-muted">{scorchedT.shop.cartEmpty}</p>
             ) : (
               <ul className="flex flex-col gap-1 pt-2">
-                {store.shopCart.map(line => (
+                {store.shop.cart.map(line => (
                   <li
                     key={`${line.entry.kind}:${
                       line.entry.kind === 'weapon' ? line.entry.weaponId : line.entry.itemId
@@ -233,7 +233,7 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
               <div className="flex justify-between">
                 <dt className="text-text-muted">{scorchedT.shop.total}</dt>
                 <dd className="font-mono tabular-nums text-text">
-                  {formatCash(getCartTotal(store.shopCart))}
+                  {formatCash(getCartTotal(store.shop.cart))}
                 </dd>
               </div>
               <div className="flex justify-between">

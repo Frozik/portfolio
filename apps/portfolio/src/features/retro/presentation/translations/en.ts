@@ -64,20 +64,6 @@ export const retroEnTranslations = {
     cancel: 'Cancel',
     kicker: 'NEW RETRO',
   },
-  templates: {
-    scrum: {
-      name: 'Scrum (3 columns)',
-      description: 'Went Well / To Improve / Action Items — the classic Agile format.',
-    },
-    madSadGlad: {
-      name: 'Mad / Sad / Glad',
-      description: 'Emotion-focused. Good for tough sprints.',
-    },
-    startStopContinue: {
-      name: 'Start / Stop / Continue',
-      description: 'Simplest action-oriented format.',
-    },
-  },
   identity: {
     dialogTitle: 'Who are you?',
     dialogDescription: 'This name and color are shown to other participants in the room.',
@@ -173,7 +159,7 @@ export const retroEnTranslations = {
   discuss: {
     topCards: 'Top cards by vote',
     addActionItem: 'Add action item',
-    actionItemsTitle: 'Action items',
+    actionItemsTitle: 'Action items (outcomes)',
     actionItemPlaceholder: 'What will we do about it?',
     actionItemOwnerLabel: 'Owner',
     deleteActionItem: 'Delete',
@@ -183,7 +169,7 @@ export const retroEnTranslations = {
     phaseKicker: 'DISCUSS PHASE',
     topCardsHeading: 'Top voted',
     topCardsEmpty: 'no votes yet — nothing to discuss',
-    actionItemsKicker: 'ACTION ITEMS',
+    actionItemsKicker: 'ACTION ITEMS (OUTCOMES)',
     actionItemsTipKicker: 'tip: keep focused',
     groupedCardsKicker: 'GROUPED',
     cardsKicker: 'CARDS',
@@ -194,6 +180,7 @@ export const retroEnTranslations = {
     title: 'Retro complete',
     summarySubtitle: 'You can export the results below.',
     exportCopy: 'Copy markdown to clipboard',
+    markdownCopied: 'Markdown copied to clipboard',
     exportDownload: 'Download as .md',
     backToLobby: 'Back to lobby',
     viewResults: 'Results',
@@ -214,7 +201,7 @@ export const retroEnTranslations = {
   markdown: {
     cardsCount: (count: number) => `${count} ${pluralize('card', count)}`,
     votesCount: (count: number) => `${count} ${pluralize('vote', count)}`,
-    actionItemsTitle: 'Action Items',
+    actionItemsTitle: 'Action items (outcomes)',
     noCards: 'No cards.',
     noActionItems: 'No action items.',
     fromLabel: 'from',

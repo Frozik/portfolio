@@ -11,4 +11,10 @@ export const sudokuTranslationsRu: TranslationOf<typeof sudokuTranslationsEn> = 
   nav: {
     backToDifficultyLabel: 'Назад к выбору сложности',
   },
+  controls: {
+    restartPuzzle: 'Начать заново',
+    undoLastMove: 'Отменить последний ход',
+    penMode: 'Режим ручки',
+    candidateMarks: 'Пометки-кандидаты',
+  },
 };

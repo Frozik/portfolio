@@ -1,7 +1,10 @@
-import { LRUCache } from 'lru-cache';
+import type { ISlotPoolGrowth } from '@frozik/utils/webgpu/lruSlotPool';
+import { doubleSlotCapacity } from '@frozik/utils/webgpu/lruSlotPool';
 
 import { FLOATS_PER_TEXEL, INITIAL_GPU_BLOCKS, MAX_GPU_BLOCKS } from '../domain/constants';
 import type { ITextureLayoutConfig, UnixTimeMs } from '../domain/types';
+
+import { KeyedSlotPool } from './block-store/keyed-slot-pool';
 
 const TEXTURE_FORMAT: GPUTextureFormat = 'rgba32float';
 const TEXTURE_USAGE =
@@ -23,83 +26,53 @@ export interface ITextureRowManagerParams {
  * divided into contiguous `rowsPerBlock`-row slots, one per orderbook
  * block.
  *
- * Allocation order:
- *   1. Free list (previously released block slots).
- *   2. High-water-mark (append new slot if below capacity).
- *   3. Grow texture (double block capacity up to `maxBlocks`).
- *   4. LRU eviction (remove oldest accessed block, return its slot).
+ * Slot bookkeeping (free list → high-water-mark → grow → LRU eviction,
+ * plus the block↔slot mapping) is delegated to {@link KeyedSlotPool};
+ * this class owns the multi-row texel layout and the uploads.
  */
 export class TextureRowManager {
   private readonly device: GPUDevice;
   private readonly layout: ITextureLayoutConfig;
-  private readonly maxBlocks: number;
   private readonly onEvict: ((blockId: UnixTimeMs) => void) | undefined;
   private readonly onTextureRecreated: (() => void) | undefined;
+  private readonly slots: KeyedSlotPool<UnixTimeMs>;
 
   private texture: GPUTexture;
-  private capacityBlocks: number;
-  private highWaterMark = 0;
-
-  private readonly freeSlots: number[] = [];
-  private readonly lru: LRUCache<number, UnixTimeMs>;
-  private readonly blockToSlot = new Map<UnixTimeMs, number>();
 
   constructor(params: ITextureRowManagerParams) {
+    const initialBlocks = params.initialBlocks ?? INITIAL_GPU_BLOCKS;
+
     this.device = params.device;
     this.layout = params.layout;
-    this.maxBlocks = params.maxBlocks ?? MAX_GPU_BLOCKS;
     this.onEvict = params.onEvict;
     this.onTextureRecreated = params.onTextureRecreated;
-    this.capacityBlocks = params.initialBlocks ?? INITIAL_GPU_BLOCKS;
 
-    this.texture = this.device.createTexture({
-      size: [this.layout.textureWidth, this.capacityBlocks * this.layout.rowsPerBlock],
-      format: TEXTURE_FORMAT,
-      usage: TEXTURE_USAGE,
+    this.texture = this.createBackingTexture(initialBlocks);
+    this.slots = new KeyedSlotPool({
+      initialCapacity: initialBlocks,
+      maxCapacity: params.maxBlocks ?? MAX_GPU_BLOCKS,
+      growCapacity: doubleSlotCapacity,
+      onGrow: this.handleGrow,
+      onEvict: this.handleEvict,
     });
-
-    this.lru = new LRUCache({ max: this.maxBlocks });
   }
 
   /**
    * Reserve a slot for `blockId`. If the block already has a slot, return
-   * it (updating LRU recency). Otherwise follow the 4-step strategy.
+   * it (updating LRU recency).
    */
   allocate(blockId: UnixTimeMs): number {
-    const existing = this.blockToSlot.get(blockId);
-    if (existing !== undefined) {
-      this.lru.get(existing);
-      return existing;
-    }
-
-    const slotIndex =
-      this.popFreeSlot() ??
-      this.advanceHighWaterMark() ??
-      this.growAndAdvance() ??
-      this.evictAndReuseSlot();
-
-    this.blockToSlot.set(blockId, slotIndex);
-    this.lru.set(slotIndex, blockId);
-    return slotIndex;
+    return this.slots.allocate(blockId);
   }
 
   /** Refresh recency for an already-allocated block. */
   touch(blockId: UnixTimeMs): void {
-    const slotIndex = this.blockToSlot.get(blockId);
-    if (slotIndex !== undefined) {
-      this.lru.get(slotIndex);
-    }
+    this.slots.touch(blockId);
   }
 
   /** Release a block's slot back to the free list. */
   release(blockId: UnixTimeMs): void {
-    const slotIndex = this.blockToSlot.get(blockId);
-    if (slotIndex === undefined) {
-      return;
-    }
-    this.blockToSlot.delete(blockId);
-    this.lru.delete(slotIndex);
-    this.freeSlots.push(slotIndex);
+    this.slots.free(blockId);
   }
 
   /**
@@ -156,71 +129,31 @@ export class TextureRowManager {
   }
 
   get currentCapacityBlocks(): number {
-    return this.capacityBlocks;
+    return this.slots.capacity;
   }
 
   get currentAllocatedBlocks(): number {
-    return this.blockToSlot.size;
+    return this.slots.allocatedCount;
   }
 
   getSlotForBlock(blockId: UnixTimeMs): number | undefined {
-    return this.blockToSlot.get(blockId);
+    return this.slots.getSlot(blockId);
   }
 
   dispose(): void {
     this.texture.destroy();
-    this.lru.clear();
-    this.blockToSlot.clear();
-    this.freeSlots.length = 0;
+    this.slots.clear();
   }
 
-  private popFreeSlot(): number | undefined {
-    return this.freeSlots.pop();
-  }
+  private readonly handleEvict = (blockId: UnixTimeMs): void => {
+    this.onEvict?.(blockId);
+  };
 
-  private advanceHighWaterMark(): number | undefined {
-    if (this.highWaterMark >= this.capacityBlocks) {
-      return undefined;
-    }
-    const slotIndex = this.highWaterMark;
-    this.highWaterMark++;
-    return slotIndex;
-  }
+  private readonly handleGrow = ({ newCapacity, usedSlots }: ISlotPoolGrowth): void => {
+    const newTexture = this.createBackingTexture(newCapacity);
 
-  private growAndAdvance(): number | undefined {
-    if (this.capacityBlocks >= this.maxBlocks) {
-      return undefined;
-    }
-    const newCapacity = Math.min(this.capacityBlocks * 2, this.maxBlocks);
-    this.growTexture(newCapacity);
-    const slotIndex = this.highWaterMark;
-    this.highWaterMark++;
-    return slotIndex;
-  }
-
-  private evictAndReuseSlot(): number {
-    const oldestSlot = this.lru.rkeys().next().value;
-    if (oldestSlot === undefined) {
-      throw new Error('TextureRowManager: cannot evict — LRU is empty despite exhausted capacity');
-    }
-    const evictedBlockId = this.lru.get(oldestSlot);
-    this.lru.delete(oldestSlot);
-    if (evictedBlockId !== undefined) {
-      this.blockToSlot.delete(evictedBlockId);
-      this.onEvict?.(evictedBlockId);
-    }
-    return oldestSlot;
-  }
-
-  private growTexture(newCapacityBlocks: number): void {
-    const newTexture = this.device.createTexture({
-      size: [this.layout.textureWidth, newCapacityBlocks * this.layout.rowsPerBlock],
-      format: TEXTURE_FORMAT,
-      usage: TEXTURE_USAGE,
-    });
-
-    if (this.highWaterMark > 0) {
-      const rowsUsed = this.highWaterMark * this.layout.rowsPerBlock;
+    if (usedSlots > 0) {
+      const rowsUsed = usedSlots * this.layout.rowsPerBlock;
       const encoder = this.device.createCommandEncoder();
       encoder.copyTextureToTexture(
         { texture: this.texture, origin: { x: 0, y: 0, z: 0 } },
@@ -232,8 +165,15 @@ export class TextureRowManager {
 
     this.texture.destroy();
     this.texture = newTexture;
-    this.capacityBlocks = newCapacityBlocks;
 
     this.onTextureRecreated?.();
+  };
+
+  private createBackingTexture(capacityBlocks: number): GPUTexture {
+    return this.device.createTexture({
+      size: [this.layout.textureWidth, capacityBlocks * this.layout.rowsPerBlock],
+      format: TEXTURE_FORMAT,
+      usage: TEXTURE_USAGE,
+    });
   }
 }

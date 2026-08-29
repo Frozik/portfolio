@@ -6,7 +6,7 @@ export interface OffscreenTextureManager {
     height: number,
     compositeBindGroupLayout: GPUBindGroupLayout,
     compositeSampler: GPUSampler,
-    compositeUniformBuf: GPUBuffer
+    compositeUniformBuffer: GPUBuffer
   ): {
     offscreenMsaaView: GPUTextureView;
     offscreenResolveView: GPUTextureView;
@@ -32,7 +32,7 @@ export function createOffscreenTextureManager(
       height: number,
       compositeBindGroupLayout: GPUBindGroupLayout,
       compositeSampler: GPUSampler,
-      compositeUniformBuf: GPUBuffer
+      compositeUniformBuffer: GPUBuffer
     ) {
       if (
         !isNil(offscreenMsaaTexture) &&
@@ -78,7 +78,7 @@ export function createOffscreenTextureManager(
         entries: [
           { binding: 0, resource: offscreenResolveView },
           { binding: 1, resource: compositeSampler },
-          { binding: 2, resource: { buffer: compositeUniformBuf } },
+          { binding: 2, resource: { buffer: compositeUniformBuffer } },
         ],
       });
 

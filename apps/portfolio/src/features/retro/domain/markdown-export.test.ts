@@ -171,7 +171,7 @@ describe('renderSnapshotToMarkdown', () => {
 
     const markdown = renderSnapshotToMarkdown(snapshot);
 
-    expect(markdown).toContain('## Action Items (1)');
+    expect(markdown).toContain('## Action items (outcomes) (1)');
     expect(markdown).toContain('- [ ] Ship markdown export');
   });
 
@@ -180,7 +180,7 @@ describe('renderSnapshotToMarkdown', () => {
 
     const markdown = renderSnapshotToMarkdown(snapshot);
 
-    expect(markdown).toContain('## Action Items (0)');
+    expect(markdown).toContain('## Action items (outcomes) (0)');
     expect(markdown).toContain('_No action items._');
   });
 

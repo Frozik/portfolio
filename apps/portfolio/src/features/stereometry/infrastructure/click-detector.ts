@@ -85,11 +85,23 @@ export function createClickDetector(
     }
   }
 
+  // An OS-cancelled pointer never delivers pointerup; without this the tracked
+  // id stays live and a later gesture reusing that id would be measured against
+  // the abandoned press position
+  function onPointerCancel(event: PointerEvent): void {
+    if (event.pointerId !== activePointerId) {
+      return;
+    }
+    activePointerId = undefined;
+  }
+
   canvas.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
 
   return () => {
     canvas.removeEventListener('pointerdown', onPointerDown);
     window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerCancel);
   };
 }

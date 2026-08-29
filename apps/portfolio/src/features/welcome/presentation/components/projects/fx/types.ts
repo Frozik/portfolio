@@ -24,4 +24,11 @@ export interface IFxDrawContext {
   readonly dpr: number;
 }
 
-export type TFxDraw = (context: IFxDrawContext, state: Record<string, unknown>) => void;
+/** Draw function of a stateful effect — receives its own typed state bag. */
+export type TFxDraw<TState> = (context: IFxDrawContext, state: TState) => void;
+
+/** Frame callback of an effect instance; its state (if any) is already bound. */
+export type TFxRender = (context: IFxDrawContext) => void;
+
+/** Creates one effect instance with a fresh state bag, one per card. */
+export type TFxEffectFactory = () => TFxRender;

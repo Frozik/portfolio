@@ -1,10 +1,6 @@
 import { LRUCache } from 'lru-cache';
 
-interface IGlyphMetrics {
-  readonly ascent: number;
-  readonly descent: number;
-  readonly centerOffset: number;
-}
+import type { IGlyphMetrics, ITextMeasurer } from '../domain/text-measurer';
 
 const DEFAULT_MAX_SIZE = 500;
 
@@ -18,7 +14,7 @@ const DEFAULT_MAX_SIZE = 500;
  * At 60fps with ~20 axis labels per chart, this avoids ~1200 measureText()
  * calls per second per chart — each is a synchronous browser layout query.
  */
-export class TextMeasureCache {
+export class TextMeasureCache implements ITextMeasurer {
   private widthCache: LRUCache<string, number>;
   private currentFont = '';
   private glyphMetrics: IGlyphMetrics | null = null;

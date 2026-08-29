@@ -12,6 +12,21 @@ export type LineStyle =
 
 export type MarkerType = 'solid' | 'circle';
 
+/**
+ * Modifiers a scene element can carry. They select the `element:modifier[:…]`
+ * entries of the style map (see `STEREOMETRY_STYLES`) and also group segments
+ * for deduplication and collinear merging.
+ */
+export type StyleModifier =
+  | 'edge'
+  | 'hidden'
+  | 'inner'
+  | 'input'
+  | 'preview'
+  | 'segment'
+  | 'selected'
+  | 'solution';
+
 // Partial style for cascade resolution
 export type PartialElementStyle = {
   readonly color?: string;
@@ -41,7 +56,7 @@ export interface RenderSegment {
   readonly startPosition: Vec3Array;
   readonly endPosition: Vec3Array;
   readonly lineId: number;
-  readonly modifiers: readonly string[];
+  readonly modifiers: readonly StyleModifier[];
   readonly startVertexIndex: number;
   readonly endVertexIndex: number;
 }
@@ -80,7 +95,7 @@ export interface MarkerInstanceStyle {
 export interface RenderMarker {
   readonly position: Vec3Array;
   readonly vertexId: number;
-  readonly modifiers: readonly string[];
+  readonly modifiers: readonly StyleModifier[];
   readonly vertexIndex: number;
 }
 

@@ -49,13 +49,13 @@ export interface IOrderbookStreamStoreParams {
 
 /**
  * Per-stream sub-store extracted from the legacy `BinanceViewStore`
- * god-store (§2.11). Owns the live orderbook subscription, the block
+ * god-store. Owns the live orderbook subscription, the block
  * accumulator, hit-test resolution against the shared
  * {@link DataController}, and the connection-state indicators surfaced
  * by the status overlay.
  *
  * Implements {@link IOrderbookGate} so {@link TradesStreamStore} can
- * read the §1.1 gating sentinel without coupling to the rest of the
+ * read the first-snapshot gating sentinel without coupling to the rest of the
  * orderbook surface.
  */
 export class OrderbookStreamStore implements IOrderbookGate {
@@ -65,7 +65,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
   errorMessage: string | undefined = undefined;
   selectedCell: IHitTestResult | undefined = undefined;
   /**
-   * §1.1 gating sentinel — flipped to `true` exactly once when the
+   * Trade-ingest gating sentinel — flipped to `true` exactly once when the
    * first depth snapshot is processed in `handleSnapshot`. Stays `true`
    * for the rest of the store's lifetime (incl. across WS reconnects);
    * only `dispose` resets it.
@@ -216,10 +216,7 @@ export class OrderbookStreamStore implements IOrderbookGate {
 
   private handleFlush(event: IBlockFlushEvent): void {
     this.chartState.ingestFlush(event);
-
-    runInAction(() => {
-      this.lastDisplaySnapshotTimeMs = event.block.lastTimestampMs;
-    });
+    this.lastDisplaySnapshotTimeMs = event.block.lastTimestampMs;
 
     void this.persistFlushedBlock(event);
 

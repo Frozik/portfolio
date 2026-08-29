@@ -3,7 +3,7 @@ import { memo, useEffect, useRef } from 'react';
 
 import { TimeseriesChartState } from '../application/render/chart-state';
 import type { ISeriesConfig } from '../domain/types';
-import { useSharedRenderer } from './SharedRendererContext';
+import { useSharedRendererState } from './SharedRendererContext';
 
 export const TimeseriesChart = memo(
   ({
@@ -18,7 +18,7 @@ export const TimeseriesChart = memo(
     seriesConfigs: readonly ISeriesConfig[];
   }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const renderer = useSharedRenderer();
+    const { renderer } = useSharedRendererState();
 
     useEffect(() => {
       if (isNil(renderer) || isNil(canvasRef.current)) {

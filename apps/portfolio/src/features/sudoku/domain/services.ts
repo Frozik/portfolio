@@ -1,6 +1,6 @@
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
 import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
-import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
+import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
@@ -66,20 +66,15 @@ export function loadField(fieldData: string): ValueDescriptor<IField> {
 
     const validatedField = validateField({ size, cells });
 
-    for (let row = 0; row < validatedField.size ** 2; row++) {
-      for (let column = 0; column < validatedField.size ** 2; column++) {
-        const index = getIndex(row, column, validatedField.size);
-        const cell = validatedField.cells[index];
+    const demotedCells = validatedField.cells.map(cell =>
+      cell.status === ECellStatus.Wrong && cell.type === EFieldType.Fixed
+        ? { ...cell, type: EFieldType.Guess }
+        : cell
+    );
 
-        if (cell.status === ECellStatus.Wrong && cell.type === EFieldType.Fixed) {
-          cell.type = EFieldType.Guess;
-        }
-      }
-    }
-
-    return createSyncedValueDescriptor(validatedField);
+    return createSyncedValueDescriptor({ ...validatedField, cells: demotedCells });
   } catch (error) {
-    return createUnsyncedValueDescriptor(convertErrorToFail(error as Error));
+    return createUnsyncedValueDescriptor(toFail(error));
   }
 }
 
@@ -214,10 +209,11 @@ function validateField(field: IField): IField {
             (boundRow !== row || boundColumn !== column) && value === cell.value
         );
 
-      cells[index] = {
-        ...cell,
-        status: isWrong ? ECellStatus.Wrong : ECellStatus.Unknown,
-      };
+      const status = isWrong ? ECellStatus.Wrong : ECellStatus.Unknown;
+
+      if (cell.status !== status) {
+        cells[index] = { ...cell, status };
+      }
     }
   }
 

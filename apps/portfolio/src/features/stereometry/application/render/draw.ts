@@ -1,237 +1,59 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
-import { vec3 } from 'wgpu-matrix';
+import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
 import { FPS_IDLE, FPS_INTERACTION, FPS_RESIZE, MSAA_SAMPLE_COUNT } from '../../domain/constants';
 import { preparePuzzle } from '../../domain/geometry';
-import { createSceneHistory } from '../../domain/history';
-import type { AllowedHitTypes, SceneHit } from '../../domain/hit-testing';
-import { hitTestScene } from '../../domain/hit-testing';
-import { IntersectionCache } from '../../domain/intersection';
-import { buildRepresentation } from '../../domain/representation';
-import { computeSolutionStatus } from '../../domain/solution-check';
-import {
-  addLine,
-  collapseExtendedLine,
-  createTopologyFromPuzzle,
-  extendToLine,
-  removeLine,
-} from '../../domain/topology';
-import type {
-  FigureTopology,
-  SceneTopology,
-  SelectionState,
-  Vec3Array,
-} from '../../domain/topology-types';
-import { SELECTION_NONE } from '../../domain/topology-types';
+import type { FigureTopology } from '../../domain/topology-types';
 import type { PuzzleDefinition } from '../../domain/types';
 import type { OrbitalCameraController } from '../../infrastructure/camera-controller';
 import { createOrbitalCameraController } from '../../infrastructure/camera-controller';
 import { createClickDetector } from '../../infrastructure/click-detector';
-import type { InitialDragHit } from '../../infrastructure/drag-connector';
 import { createDragToConnectController } from '../../infrastructure/drag-connector';
 import { SceneLayer } from '../../infrastructure/layers/scene-layer';
+import { createSceneHitTester } from '../scene-hit-tester';
+import { createSceneStateController } from '../scene-state-controller';
 
-const SNAP_ALLOWED_TYPES: AllowedHitTypes = ['vertex'];
+export interface IStereometryRunParams {
+  readonly canvas: HTMLCanvasElement;
+  readonly puzzle: PuzzleDefinition;
+  readonly onHistoryChange: (canUndo: boolean, canRedo: boolean) => void;
+  readonly onFpsUpdate: (fps: number) => void;
+}
 
 export interface StereometryControls {
   destroy: VoidFunction;
   camera: OrbitalCameraController;
-  undo: () => void;
-  redo: () => void;
-  subscribeHistory: (listener: (canUndo: boolean, canRedo: boolean) => void) => VoidFunction;
-  subscribeFps: (listener: (fps: number) => void) => VoidFunction;
+  undo: VoidFunction;
+  redo: VoidFunction;
 }
 
-export function runStereometry(
-  canvas: HTMLCanvasElement,
-  puzzle: PuzzleDefinition
-): StereometryControls {
-  let destroyed = false;
-  let gpuCleanup: (() => void) | undefined;
+/**
+ * Wires the stereometry session together: scene state, hit testing, pointer
+ * controllers and the WebGPU render loop. Holds no scene state of its own —
+ * it only connects the pieces and owns their teardown.
+ */
+export function runStereometry(params: IStereometryRunParams): StereometryControls {
+  const { canvas, puzzle, onHistoryChange, onFpsUpdate } = params;
+
+  let sceneLayerReference: SceneLayer | undefined;
 
   const { topology: figureTopology } = preparePuzzle(puzzle);
   const camera = createOrbitalCameraController(canvas, puzzle.camera);
   const fpsController = new FpsController(FPS_IDLE);
 
-  const intersectionCache = new IntersectionCache();
+  const sceneState = createSceneStateController({ puzzle, figureTopology, onHistoryChange });
 
-  let sceneLayerReference: SceneLayer | undefined;
-  let sceneTopology = createTopologyFromPuzzle(figureTopology, puzzle.input, intersectionCache);
-  let currentSelection: SelectionState = SELECTION_NONE;
-  let currentPreviewLine: { readonly pointA: Vec3Array; readonly pointB: Vec3Array } | undefined;
-
-  const history = createSceneHistory();
-  const historyListeners = new Set<(canUndo: boolean, canRedo: boolean) => void>();
-  const fpsListeners = new Set<(fps: number) => void>();
-
-  function notifyHistoryListeners(): void {
-    for (const listener of historyListeners) {
-      listener(history.canUndo(), history.canRedo());
-    }
-  }
-
-  /** Applies the representation to the scene layer */
-  function applyToSceneLayer(topology: SceneTopology): void {
-    const solutionStatus = computeSolutionStatus(puzzle.expected, topology);
-    const representation = buildRepresentation(
-      figureTopology,
-      topology.lines,
-      topology.vertices,
-      currentSelection,
-      currentPreviewLine,
-      solutionStatus
-    );
-
-    sceneLayerReference?.applySceneState(representation);
-  }
-
-  /** Applies a new topology state, saving the previous one to history. */
-  function applyTopologyChange(newTopology: SceneTopology): void {
-    history.push(sceneTopology);
-    sceneTopology = newTopology;
-    applyToSceneLayer(sceneTopology);
-    notifyHistoryListeners();
-  }
-
-  interface HitTestContext {
-    readonly canvasWidth: number;
-    readonly canvasHeight: number;
-    readonly devicePixelRatio: number;
-    readonly mvpMatrix: Float32Array;
-  }
-
-  function getHitTestContext(): HitTestContext | undefined {
-    if (destroyed || !sceneLayerReference) {
-      return undefined;
-    }
-
-    return {
-      canvasWidth: canvas.clientWidth,
-      canvasHeight: canvas.clientHeight,
-      devicePixelRatio: Math.max(1, window.devicePixelRatio),
-      mvpMatrix: sceneLayerReference.getLastMvpMatrix(),
-    };
-  }
-
-  function performSceneHitTest(
-    screenX: number,
-    screenY: number,
-    allowedTypes?: AllowedHitTypes
-  ): SceneHit | undefined {
-    const context = getHitTestContext();
-    if (context === undefined) {
-      return undefined;
-    }
-
-    return hitTestScene(
-      screenX,
-      screenY,
-      context.canvasWidth,
-      context.canvasHeight,
-      context.devicePixelRatio,
-      context.mvpMatrix,
-      sceneTopology.lines,
-      sceneTopology.vertices.map(vertex => vertex.position),
-      allowedTypes
-    );
-  }
-
-  function performHitTest(screenX: number, screenY: number): SelectionState {
-    const hit = performSceneHitTest(screenX, screenY);
-    if (hit?.type === 'line') {
-      return { type: 'line', lineId: hit.lineId };
-    }
-    return SELECTION_NONE;
-  }
-
-  function performInitialHitTest(screenX: number, screenY: number): InitialDragHit | undefined {
-    const hit = performSceneHitTest(screenX, screenY);
-    if (hit === undefined) {
-      return undefined;
-    }
-    if (hit.type === 'vertex') {
-      return { kind: 'vertex', position: hit.position };
-    }
-    const sourceLine = sceneTopology.lines.find(candidate => candidate.lineId === hit.lineId);
-    if (sourceLine === undefined) {
-      return undefined;
-    }
-    const direction = vec3.sub(sourceLine.pointB, sourceLine.pointA);
-    return {
-      kind: 'line',
-      lineId: hit.lineId,
-      direction: [direction[0], direction[1], direction[2]],
-      planeAnchor: sourceLine.pointA,
-    };
-  }
-
-  /** Vertex-only hit test used during drag-to-connect — lines are ignored. */
-  function performSnapHitTest(screenX: number, screenY: number): Vec3Array | undefined {
-    const hit = performSceneHitTest(screenX, screenY, SNAP_ALLOWED_TYPES);
-    return hit?.type === 'vertex' ? hit.position : undefined;
-  }
-
-  function setSelection(selection: SelectionState): void {
-    currentSelection = selection;
-    // Re-apply to rebuild StyledSegments with updated selection
-    applyToSceneLayer(sceneTopology);
-  }
-
-  /**
-   * Returns the direction vector of the currently selected line.
-   * Returns undefined if nothing is selected.
-   */
-  function getSelectedDirection(): Vec3Array | undefined {
-    switch (currentSelection.type) {
-      case 'line': {
-        const selectedLineId = currentSelection.lineId;
-        const line = sceneTopology.lines.find(candidate => candidate.lineId === selectedLineId);
-        if (line === undefined) {
-          return undefined;
-        }
-        return vec3.sub(line.pointB, line.pointA);
-      }
-      case 'none':
-        return undefined;
-      default:
-        assertNever(currentSelection);
-    }
-  }
+  const hitTester = createSceneHitTester({
+    canvas,
+    getTopology: sceneState.getTopology,
+    getMvpMatrix: () => sceneLayerReference?.getLastMvpMatrix(),
+  });
 
   function onCanvasClick(screenX: number, screenY: number): void {
-    const selection = performHitTest(screenX, screenY);
-    setSelection(selection);
-  }
-
-  function handleLineDoubleTap(lineId: number): void {
-    const line = sceneTopology.lines.find(candidate => candidate.lineId === lineId);
-    if (line === undefined) {
-      return;
-    }
-
-    currentSelection = SELECTION_NONE;
-
-    switch (line.kind) {
-      case 'edge':
-      case 'segment':
-        applyTopologyChange(extendToLine(sceneTopology, lineId, figureTopology, intersectionCache));
-        break;
-      case 'edge-extended':
-      case 'segment-extended':
-        applyTopologyChange(
-          collapseExtendedLine(sceneTopology, lineId, figureTopology, intersectionCache)
-        );
-        break;
-      case 'line':
-        applyTopologyChange(removeLine(sceneTopology, lineId, figureTopology, intersectionCache));
-        break;
-      default:
-        assertNever(line.kind);
-    }
+    sceneState.setSelection(hitTester.hitTestSelection(screenX, screenY));
   }
 
   function raiseInteractionFps(): void {
@@ -248,83 +70,38 @@ export function runStereometry(
   const cleanupClickDetector = createClickDetector(canvas, onCanvasClick, () => {});
 
   const cleanupDragConnector = createDragToConnectController(canvas, {
-    performInitialHitTest,
-    performSnapHitTest,
-    hasActiveSelection: () => currentSelection.type !== 'none',
-    isLineSelected: lineId =>
-      currentSelection.type === 'line' && currentSelection.lineId === lineId,
+    performInitialHitTest: hitTester.hitTestDragStart,
+    performSnapHitTest: hitTester.hitTestSnapVertex,
+    hasActiveSelection: sceneState.hasSelection,
+    isLineSelected: sceneState.isLineSelected,
     onDragStart: () => {
       // Don't clear selection here -- onVertexTap needs it to create parallel lines
     },
     onDragUpdate: preview => {
       sceneLayerReference?.setDragPreview(preview);
-      currentPreviewLine = sceneLayerReference?.getPreviewLine();
-      applyToSceneLayer(sceneTopology);
+      sceneState.setPreviewLine(sceneLayerReference?.getPreviewLine());
     },
-    onLineTap: lineId => setSelection({ type: 'line', lineId }),
-    onLineDoubleTap: handleLineDoubleTap,
-    onVertexTap: vertexPosition => {
-      const direction = getSelectedDirection();
-
-      if (direction !== undefined) {
-        const endPosition: Vec3Array = [
-          vertexPosition[0] + direction[0],
-          vertexPosition[1] + direction[1],
-          vertexPosition[2] + direction[2],
-        ];
-        applyTopologyChange(
-          addLine(sceneTopology, vertexPosition, endPosition, figureTopology, intersectionCache)
-        );
-      }
-
-      setSelection(SELECTION_NONE);
-    },
-    onDragComplete: (startPosition, endPosition) => {
-      applyTopologyChange(
-        addLine(sceneTopology, startPosition, endPosition, figureTopology, intersectionCache)
-      );
-      setSelection(SELECTION_NONE);
-    },
+    onLineTap: lineId => sceneState.setSelection({ type: 'line', lineId }),
+    onLineDoubleTap: sceneState.toggleLineExtension,
+    onVertexTap: sceneState.createParallelLineAtVertex,
+    onDragComplete: sceneState.connectVertices,
     onSecondPointer: (pointerId, clientX, clientY) => {
       camera.registerExternalPointer(pointerId, clientX, clientY);
     },
   });
 
-  const onFpsUpdate = (fps: number): void => {
-    for (const listener of fpsListeners) {
-      listener(fps);
-    }
-  };
-
-  void initStereometry(canvas, camera, figureTopology, puzzle, fpsController, onFpsUpdate).then(
-    ({ cleanup, sceneLayer }) => {
-      if (destroyed) {
-        cleanup();
-      } else {
-        gpuCleanup = cleanup;
-        sceneLayerReference = sceneLayer;
-        applyToSceneLayer(sceneTopology);
-      }
+  const stopGpuApp = runGpuApp({
+    init: () => initStereometry(canvas, camera, figureTopology, puzzle, fpsController, onFpsUpdate),
+    onReady: ({ sceneLayer }) => {
+      sceneLayerReference = sceneLayer;
+      sceneState.attachRenderer(sceneLayer);
     },
-    (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU stereometry renderer init failure
-      console.error('Failed to initialize stereometry renderer', error);
-    }
-  );
-
-  function restoreState(state: SceneTopology | undefined): void {
-    if (state === undefined) {
-      return;
-    }
-    sceneTopology = state;
-    applyToSceneLayer(sceneTopology);
-    setSelection(SELECTION_NONE);
-    notifyHistoryListeners();
-  }
+    initErrorMessage: 'Failed to initialize stereometry renderer',
+  });
 
   return {
     destroy: () => {
-      destroyed = true;
+      sceneLayerReference = undefined;
       camera.destroy();
       fpsController.dispose();
       canvas.removeEventListener('pointerdown', raiseInteractionFps);
@@ -332,22 +109,11 @@ export function runStereometry(
       canvas.removeEventListener('wheel', raiseInteractionFps);
       cleanupClickDetector();
       cleanupDragConnector();
-      historyListeners.clear();
-      fpsListeners.clear();
-      gpuCleanup?.();
+      stopGpuApp();
     },
     camera,
-    undo: () => restoreState(history.undo(sceneTopology)),
-    redo: () => restoreState(history.redo(sceneTopology)),
-    subscribeHistory: listener => {
-      historyListeners.add(listener);
-      listener(history.canUndo(), history.canRedo());
-      return () => historyListeners.delete(listener);
-    },
-    subscribeFps: listener => {
-      fpsListeners.add(listener);
-      return () => fpsListeners.delete(listener);
-    },
+    undo: sceneState.undo,
+    redo: sceneState.redo,
   };
 }
 

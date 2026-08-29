@@ -1,6 +1,4 @@
-import type { ISynthVoicePlayer, SoundPatch } from '@frozik/utils/audio/synth';
-import { createSynthVoicePlayer } from '@frozik/utils/audio/synth';
-import { isNil, noop } from 'lodash-es';
+import { createSoundEngine } from '@frozik/utils/audio/soundEngine';
 
 import type { ScorchedJingleId } from './jingles';
 import { SCORCHED_JINGLES, toScorchedJinglePatch } from './jingles';
@@ -31,136 +29,57 @@ export interface IScorchedSoundEngine {
 
 /** Headroom for a nuke layered over the wind and a jingle without clipping. */
 const MASTER_GAIN = 0.6;
-const MUTED_GAIN = 0;
-/** Slow enough to avoid a click on the mute button, fast enough to feel instant. */
-const MUTE_RAMP_SECONDS = 0.03;
 
-function resolveAudioContextConstructor(): typeof AudioContext | undefined {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-
-  return (
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-  );
-}
-
-/**
- * The thin shell over the shared synth (§12.2): it owns the `AudioContext`, the master gain and
- * the wind ambience, and does nothing at all until a user gesture unlocks it — events fired before
- * that are dropped rather than queued, because a burst of stale explosions arriving the moment the
- * player taps Start would be worse than the silence.
- */
 export function createScorchedSoundEngine(): IScorchedSoundEngine {
-  let context: AudioContext | undefined;
-  let masterGain: GainNode | undefined;
-  let voicePlayer: ISynthVoicePlayer | undefined;
-  let wind: IWindAmbience | undefined;
-  let isMuted = false;
   let windUnits = 0;
   let isWindAudible = false;
 
-  function applyMasterGain(): void {
-    if (isNil(context) || isNil(masterGain)) {
-      return;
-    }
+  const engine = createSoundEngine<IWindAmbience>({
+    masterGain: MASTER_GAIN,
+    createAmbience: (context, destination) => {
+      const wind = createWindAmbience(context, destination);
 
-    masterGain.gain.linearRampToValueAtTime(
-      isMuted ? MUTED_GAIN : MASTER_GAIN,
-      context.currentTime + MUTE_RAMP_SECONDS
-    );
-  }
+      wind.setWind(windUnits);
+      wind.setActive(isWindAudible);
 
-  function playPatch(patch: SoundPatch): void {
-    if (isNil(context) || isNil(voicePlayer) || context.state !== 'running') {
-      return;
-    }
-
-    voicePlayer.play(patch, context.currentTime);
-  }
+      return wind;
+    },
+  });
 
   return {
-    unlock(): void {
-      if (isNil(context)) {
-        const AudioContextConstructor = resolveAudioContextConstructor();
-
-        if (isNil(AudioContextConstructor)) {
-          return;
-        }
-
-        context = new AudioContextConstructor();
-        masterGain = context.createGain();
-        masterGain.gain.setValueAtTime(isMuted ? MUTED_GAIN : MASTER_GAIN, context.currentTime);
-        masterGain.connect(context.destination);
-        voicePlayer = createSynthVoicePlayer(context, masterGain);
-        wind = createWindAmbience(context, masterGain);
-        wind.setWind(windUnits);
-        wind.setActive(isWindAudible);
-      }
-
-      if (context.state === 'suspended') {
-        context.resume().catch(noop);
-      }
-    },
+    unlock: engine.unlock,
 
     play(sfxId: ScorchedSfxId): void {
-      playPatch(SCORCHED_SFX_PATCHES[sfxId]);
+      engine.playPatch(SCORCHED_SFX_PATCHES[sfxId]);
     },
 
     playAll(sfxIds: readonly ScorchedSfxId[]): void {
       for (const sfxId of sfxIds) {
-        playPatch(SCORCHED_SFX_PATCHES[sfxId]);
+        engine.playPatch(SCORCHED_SFX_PATCHES[sfxId]);
       }
     },
 
     playWhistle(speedRatio: number): void {
-      playPatch(createWhistlePatch(speedRatio));
+      engine.playPatch(createWhistlePatch(speedRatio));
     },
 
     playJingle(jingleId: ScorchedJingleId): void {
-      playPatch(toScorchedJinglePatch(SCORCHED_JINGLES[jingleId]));
+      engine.playPatch(toScorchedJinglePatch(SCORCHED_JINGLES[jingleId]));
     },
 
     setWind(nextWindUnits: number): void {
       windUnits = nextWindUnits;
-      wind?.setWind(nextWindUnits);
+      engine.getAmbience()?.setWind(nextWindUnits);
     },
 
     setWindAudible(isAudible: boolean): void {
       isWindAudible = isAudible;
-      wind?.setActive(isAudible);
+      engine.getAmbience()?.setActive(isAudible);
     },
 
-    setMuted(nextIsMuted: boolean): void {
-      isMuted = nextIsMuted;
-      applyMasterGain();
-    },
-
-    suspend(): void {
-      if (!isNil(context) && context.state === 'running') {
-        context.suspend().catch(noop);
-      }
-    },
-
-    resume(): void {
-      if (!isNil(context) && context.state === 'suspended') {
-        context.resume().catch(noop);
-      }
-    },
-
-    dispose(): void {
-      wind?.dispose();
-      wind = undefined;
-      voicePlayer?.dispose();
-      voicePlayer = undefined;
-      masterGain?.disconnect();
-      masterGain = undefined;
-
-      const closingContext = context;
-      context = undefined;
-
-      void closingContext?.close();
-    },
+    setMuted: engine.setMuted,
+    suspend: engine.suspend,
+    resume: engine.resume,
+    dispose: engine.dispose,
   };
 }

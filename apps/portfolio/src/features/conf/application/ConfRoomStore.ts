@@ -1,3 +1,4 @@
+import { DisposableBag } from '@frozik/utils/disposable/DisposableBag';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
@@ -122,16 +123,19 @@ export class ConfRoomStore {
   private remotePeerId: ParticipantId | null = null;
   private remoteSessionId: string | null = null;
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
-  private unsubscribeSignalingMessages: (() => void) | null = null;
-  private unsubscribePeerState: (() => void) | null = null;
-  private unsubscribeRemoteStream: (() => void) | null = null;
-  private unsubscribeMediaMute: (() => void) | null = null;
-  private unsubscribeMediaGlasses: (() => void) | null = null;
-  private unsubscribeMediaEmotion: (() => void) | null = null;
-  private unsubscribeDataMessages: (() => void) | null = null;
-  private unsubscribeQualityTier: (() => void) | null = null;
-  private unsubscribeQualityStats: (() => void) | null = null;
-  private unsubscribeTurnRenewed: (() => void) | null = null;
+  /**
+   * Teardown for everything that lives as long as the joined session: the
+   * media composer, the signaling client and the client-level
+   * `turn:credentials-renewed` listener. Drained only by `dispose()`.
+   */
+  private readonly sessionDisposables = new DisposableBag();
+  /**
+   * Teardown for everything scoped to a single remote peer (peer
+   * connection, its listeners, the adaptive-quality controller). Drained
+   * and refilled on every peer re-creation — a reconnect after a drop must
+   * not touch the session-level resources above.
+   */
+  private readonly peerDisposables = new DisposableBag();
   /**
    * Timer armed when the peer connection first reports
    * `iceConnectionState: 'disconnected'`. A transient network blip can
@@ -157,16 +161,8 @@ export class ConfRoomStore {
       | 'participantId'
       | 'sessionId'
       | 'deps'
-      | 'unsubscribeSignalingMessages'
-      | 'unsubscribePeerState'
-      | 'unsubscribeRemoteStream'
-      | 'unsubscribeMediaMute'
-      | 'unsubscribeMediaGlasses'
-      | 'unsubscribeMediaEmotion'
-      | 'unsubscribeDataMessages'
-      | 'unsubscribeQualityTier'
-      | 'unsubscribeQualityStats'
-      | 'unsubscribeTurnRenewed'
+      | 'sessionDisposables'
+      | 'peerDisposables'
       | 'peerDisconnectedTimer'
     >(
       this,
@@ -176,19 +172,11 @@ export class ConfRoomStore {
         sessionId: false,
         deps: false,
         // Teardown handles — not UI state, no consumer subscribes to
-        // them. Marking them non-observable lets the join flow assign
+        // them. Marking them non-observable lets the join flow register
         // them outside a `runInAction` (otherwise MobX strict-mode
-        // flags every assignment as a violation).
-        unsubscribeSignalingMessages: false,
-        unsubscribePeerState: false,
-        unsubscribeRemoteStream: false,
-        unsubscribeMediaMute: false,
-        unsubscribeMediaGlasses: false,
-        unsubscribeMediaEmotion: false,
-        unsubscribeDataMessages: false,
-        unsubscribeQualityTier: false,
-        unsubscribeQualityStats: false,
-        unsubscribeTurnRenewed: false,
+        // flags every mutation as a violation).
+        sessionDisposables: false,
+        peerDisposables: false,
         peerDisconnectedTimer: false,
       },
       { autoBind: true }
@@ -256,63 +244,11 @@ export class ConfRoomStore {
     }
     this.isDisposed = true;
 
-    this.unsubscribeSignalingMessages?.();
-    this.unsubscribeSignalingMessages = null;
-    this.unsubscribePeerState?.();
-    this.unsubscribePeerState = null;
-    this.unsubscribeRemoteStream?.();
-    this.unsubscribeRemoteStream = null;
-    this.unsubscribeMediaMute?.();
-    this.unsubscribeMediaMute = null;
-    this.unsubscribeMediaGlasses?.();
-    this.unsubscribeMediaGlasses = null;
-    this.unsubscribeMediaEmotion?.();
-    this.unsubscribeMediaEmotion = null;
-    this.unsubscribeDataMessages?.();
-    this.unsubscribeDataMessages = null;
-    this.unsubscribeQualityTier?.();
-    this.unsubscribeQualityTier = null;
-    this.unsubscribeQualityStats?.();
-    this.unsubscribeQualityStats = null;
-    this.unsubscribeTurnRenewed?.();
-    this.unsubscribeTurnRenewed = null;
-
-    try {
-      this.adaptiveQuality?.dispose();
-    } catch {
-      // Controller dispose is idempotent but may race with ongoing polls.
-    }
-    this.adaptiveQuality = null;
-    this.rttHistoryMs = [];
-
-    try {
-      this.peer?.close();
-    } catch {
-      // Already-closed peers throw; safe to ignore during teardown.
-    }
-    this.peer = null;
-
-    try {
-      this.signaling?.dispose();
-    } catch {
-      // Signaling dispose is best-effort — the websocket may already be closed.
-    }
-    this.signaling = null;
-
-    try {
-      this.media?.dispose();
-    } catch {
-      // Tracks may already be stopped when unmount happens mid-navigation.
-    }
-    this.media = null;
+    this.disposePeerAndStream();
+    this.sessionDisposables.disposeAll();
 
     this.localStream = null;
-    this.remoteStream = null;
     this.localEmotion = 'neutral';
-    this.remoteEmotion = 'neutral';
-    this.remotePeerId = null;
-    this.remoteSessionId = null;
-    this.pendingIceCandidates = [];
   }
 
   private async runJoinFlow(): Promise<void> {
@@ -384,7 +320,7 @@ export class ConfRoomStore {
     // `auth:refresh-token`; we use it as a hint to fetch fresh creds and
     // (when a peer is live) restart ICE so media keeps flowing past the
     // current credential's TTL.
-    this.unsubscribeTurnRenewed = this.client.onTurnCredentialsRenewed(() => {
+    const unsubscribeTurnRenewed = this.client.onTurnCredentialsRenewed(() => {
       void this.handleTurnCredentialsRenewed();
     });
 
@@ -398,6 +334,31 @@ export class ConfRoomStore {
       this.handleSignalingMessage(message);
     });
 
+    // Registered in creation order so the LIFO drain tears each resource's
+    // listeners down before the resource itself, and disposes the signaling
+    // client before the media composer it publishes about.
+    this.sessionDisposables.add(() => {
+      try {
+        media.dispose();
+      } catch {
+        // Tracks may already be stopped when unmount happens mid-navigation.
+      }
+      this.media = null;
+    });
+    this.sessionDisposables.add(unsubscribeMute);
+    this.sessionDisposables.add(unsubscribeGlasses);
+    this.sessionDisposables.add(unsubscribeEmotion);
+    this.sessionDisposables.add(unsubscribeTurnRenewed);
+    this.sessionDisposables.add(() => {
+      try {
+        signaling.dispose();
+      } catch {
+        // Signaling dispose is best-effort — the websocket may already be closed.
+      }
+      this.signaling = null;
+    });
+    this.sessionDisposables.add(unsubscribeMessages);
+
     runInAction(() => {
       this.media = media;
       this.localStream = media.stream;
@@ -405,11 +366,7 @@ export class ConfRoomStore {
       this.isVideoMuted = media.isVideoMuted;
       this.glassesStyle = media.glassesStyle;
       this.localEmotion = media.currentEmotion;
-      this.unsubscribeMediaMute = unsubscribeMute;
-      this.unsubscribeMediaGlasses = unsubscribeGlasses;
-      this.unsubscribeMediaEmotion = unsubscribeEmotion;
       this.signaling = signaling;
-      this.unsubscribeSignalingMessages = unsubscribeMessages;
       this.connectionState = 'connecting';
     });
 
@@ -567,63 +524,81 @@ export class ConfRoomStore {
       },
     });
     this.peer = peer;
-    this.unsubscribePeerState = peer.onStateChange(state => {
-      runInAction(() => {
-        if (this.isDisposed) {
-          return;
-        }
-        switch (state) {
-          case 'idle':
-          case 'connecting': {
-            this.cancelPeerDisconnectedTimer();
-            this.connectionState = 'connecting';
-            return;
-          }
-          case 'connected': {
-            this.cancelPeerDisconnectedTimer();
-            this.connectionState = 'connected';
-            this.errorMessage = null;
-            this.startAdaptiveQuality();
-            return;
-          }
-          case 'disconnected': {
-            // Transient blip recovery window: keep the peer alive long
-            // enough for ICE consent freshness to reconverge (e.g. wifi
-            // switch). If we are still disconnected when the timer
-            // fires, dispose the peer ourselves — that beats the
-            // browser's own ICE-failed transition (~25-30 s) by ~20 s
-            // and keeps the warning out of the console.
-            this.connectionState = 'peer-disconnected';
-            this.armPeerDisconnectedTimer();
-            return;
-          }
-          case 'failed': {
-            this.cancelPeerDisconnectedTimer();
-            this.applyErrorState('Peer connection failed');
-            return;
-          }
-          case 'closed': {
-            this.cancelPeerDisconnectedTimer();
-            if (this.connectionState !== 'error' && this.connectionState !== 'room-full') {
-              this.connectionState = 'peer-disconnected';
-            }
-            return;
-          }
-        }
-      });
-    });
-    this.unsubscribeRemoteStream = peer.onRemoteStream(stream => {
-      runInAction(() => {
-        this.remoteStream = stream;
-      });
-    });
-    this.unsubscribeDataMessages = peer.onDataMessage(message => {
-      if (message.kind === 'emotion') {
-        runInAction(() => {
-          this.remoteEmotion = message.value;
-        });
+    // Registered before the listeners below so the LIFO drain unsubscribes
+    // them all before `close()` — a closing peer emits a final state change
+    // that must not reach a store already tearing the peer down.
+    this.peerDisposables.add(() => {
+      try {
+        peer.close();
+      } catch {
+        // Already-closed peers throw; safe to ignore during teardown.
       }
+      this.peer = null;
     });
+    this.peerDisposables.add(this.cancelPeerDisconnectedTimer);
+    this.peerDisposables.add(
+      peer.onStateChange(state => {
+        runInAction(() => {
+          if (this.isDisposed) {
+            return;
+          }
+          switch (state) {
+            case 'idle':
+            case 'connecting': {
+              this.cancelPeerDisconnectedTimer();
+              this.connectionState = 'connecting';
+              return;
+            }
+            case 'connected': {
+              this.cancelPeerDisconnectedTimer();
+              this.connectionState = 'connected';
+              this.errorMessage = null;
+              this.startAdaptiveQuality();
+              return;
+            }
+            case 'disconnected': {
+              // Transient blip recovery window: keep the peer alive long
+              // enough for ICE consent freshness to reconverge (e.g. wifi
+              // switch). If we are still disconnected when the timer
+              // fires, dispose the peer ourselves — that beats the
+              // browser's own ICE-failed transition (~25-30 s) by ~20 s
+              // and keeps the warning out of the console.
+              this.connectionState = 'peer-disconnected';
+              this.armPeerDisconnectedTimer();
+              return;
+            }
+            case 'failed': {
+              this.cancelPeerDisconnectedTimer();
+              this.applyErrorState('Peer connection failed');
+              return;
+            }
+            case 'closed': {
+              this.cancelPeerDisconnectedTimer();
+              if (this.connectionState !== 'error' && this.connectionState !== 'room-full') {
+                this.connectionState = 'peer-disconnected';
+              }
+              return;
+            }
+          }
+        });
+      })
+    );
+    this.peerDisposables.add(
+      peer.onRemoteStream(stream => {
+        runInAction(() => {
+          this.remoteStream = stream;
+        });
+      })
+    );
+    this.peerDisposables.add(
+      peer.onDataMessage(message => {
+        if (message.kind === 'emotion') {
+          runInAction(() => {
+            this.remoteEmotion = message.value;
+          });
+        }
+      })
+    );
     peer.onDataChannelOpen(() => {
       // Push our current emotion once the channel is live so the remote
       // renders the correct badge immediately, without waiting for the
@@ -712,29 +687,7 @@ export class ConfRoomStore {
   }
 
   private disposePeerAndStream(): void {
-    this.cancelPeerDisconnectedTimer();
-    this.unsubscribePeerState?.();
-    this.unsubscribePeerState = null;
-    this.unsubscribeRemoteStream?.();
-    this.unsubscribeRemoteStream = null;
-    this.unsubscribeDataMessages?.();
-    this.unsubscribeDataMessages = null;
-    this.unsubscribeQualityTier?.();
-    this.unsubscribeQualityTier = null;
-    this.unsubscribeQualityStats?.();
-    this.unsubscribeQualityStats = null;
-    try {
-      this.adaptiveQuality?.dispose();
-    } catch {
-      // Best-effort teardown.
-    }
-    this.adaptiveQuality = null;
-    try {
-      this.peer?.close();
-    } catch {
-      // Best-effort teardown.
-    }
-    this.peer = null;
+    this.peerDisposables.disposeAll();
     this.remoteStream = null;
     this.remoteEmotion = 'neutral';
     this.remotePeerId = null;
@@ -756,20 +709,32 @@ export class ConfRoomStore {
       peerConnection: this.peer.nativePeerConnection,
       videoSender,
     });
-    this.unsubscribeQualityTier = controller.onTierChange(tier => {
-      runInAction(() => {
-        this.qualityTier = tier;
-      });
-    });
-    this.unsubscribeQualityStats = controller.onStatsSample(stats => {
-      if (stats.rttMs === null) {
-        return;
+    this.peerDisposables.add(() => {
+      try {
+        controller.dispose();
+      } catch {
+        // Best-effort teardown.
       }
-      const sampledRtt = stats.rttMs;
-      runInAction(() => {
-        this.rttHistoryMs = [...this.rttHistoryMs, sampledRtt].slice(-RTT_HISTORY_MAX_SAMPLES);
-      });
+      this.adaptiveQuality = null;
     });
+    this.peerDisposables.add(
+      controller.onTierChange(tier => {
+        runInAction(() => {
+          this.qualityTier = tier;
+        });
+      })
+    );
+    this.peerDisposables.add(
+      controller.onStatsSample(stats => {
+        if (stats.rttMs === null) {
+          return;
+        }
+        const sampledRtt = stats.rttMs;
+        runInAction(() => {
+          this.rttHistoryMs = [...this.rttHistoryMs, sampledRtt].slice(-RTT_HISTORY_MAX_SAMPLES);
+        });
+      })
+    );
     this.adaptiveQuality = controller;
     this.qualityTier = controller.currentTier;
   }

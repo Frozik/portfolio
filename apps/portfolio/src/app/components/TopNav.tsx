@@ -6,6 +6,7 @@ import { ArrowLeft, Home, Menu } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SvgGitHub } from '../../icons/SvgGitHub';
+import { SvgQrCode } from '../../icons/SvgQrCode';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
 import { DialogShell } from '../../shared/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
@@ -28,27 +29,6 @@ const iconButtonClassName = cn(
   'hover:border-landing-accent hover:bg-landing-accent/10 hover:text-landing-accent',
   'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-landing-accent'
 );
-
-function IconQR() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      aria-hidden="true"
-      className="h-4 w-4"
-    >
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="5.5" y="5.5" width="2" height="2" fill="currentColor" stroke="none" />
-      <rect x="16.5" y="5.5" width="2" height="2" fill="currentColor" stroke="none" />
-      <rect x="5.5" y="16.5" width="2" height="2" fill="currentColor" stroke="none" />
-      <path d="M14 14h3v3M17 19h1M20 14v1M20 17v4M14 19h1" />
-    </svg>
-  );
-}
 
 function scrollToSection(sectionId: string): void {
   const target = document.getElementById(sectionId);
@@ -177,7 +157,7 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
               aria-label={appT.nav.showQR}
               title={appT.nav.openOnPhone}
             >
-              <IconQR />
+              <SvgQrCode className="h-4 w-4" />
             </button>
 
             <a

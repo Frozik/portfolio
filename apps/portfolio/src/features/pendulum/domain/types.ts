@@ -39,7 +39,7 @@ export interface IRobotPlayer {
   play(world: IWorld, deltaTime: DOMHighResTimeStamp): Promise<IAction> | IAction;
 
   mutate(mutationRate?: number): Promise<IRobotPlayer>;
-  crossoverModels?(secondParent: IRobotPlayer): Promise<IRobotPlayer>;
+  crossoverModels(secondParent: IRobotPlayer): Promise<IRobotPlayer>;
 
   save(url: string): Promise<void>;
 

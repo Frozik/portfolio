@@ -10,11 +10,11 @@ import { useEffect } from 'react';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
 import { usePendulumStore } from '../../application/usePendulumStore';
+import { OVERLAY_MESSAGE_CONTAINER_CLASS } from '../constants';
 import { useCompetition } from '../hooks/useCompetition';
 import { useFrameTicker } from '../hooks/useFrameTicker';
 import { usePlayground } from '../hooks/usePlayground';
 import { useRenderer } from '../hooks/useRenderer';
-import commonStyles from './common.module.scss';
 import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
 
@@ -64,14 +64,14 @@ export const FitnessPlayground = observer(() => {
         unsynced: vd => {
           if (isLoadingValueDescriptor(vd)) {
             return (
-              <div className={commonStyles.alertContainer}>
+              <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
                 <OverlayLoader />
               </div>
             );
           }
           if (isFailValueDescriptor(vd)) {
             return (
-              <div className={commonStyles.alertContainer}>
+              <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
                 <ValueDescriptorFail fail={vd.fail} />
               </div>
             );

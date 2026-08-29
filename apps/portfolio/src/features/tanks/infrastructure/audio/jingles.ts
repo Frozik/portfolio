@@ -1,30 +1,13 @@
+import type { IJingle, IJingleNote } from '@frozik/utils/audio/jingle';
+import { toJingleSoundPatch } from '@frozik/utils/audio/jingle';
 import type { NoteName } from '@frozik/utils/audio/noteFrequency';
-import { getNoteFrequencyHz } from '@frozik/utils/audio/noteFrequency';
-import type { SoundPatch, SynthWaveform } from '@frozik/utils/audio/synth';
+import type { SoundPatch } from '@frozik/utils/audio/synth';
 import { TICKS_PER_SECOND } from '../../domain/constants';
-
-/**
- * Melodies may come from two sources only: our own compositions and the public domain (§12.3).
- * Transcriptions of the original game's tunes stay copyrighted no matter who typed the notes in.
- */
-export interface IJingleNote {
-  readonly note: NoteName;
-  readonly durationTicks: number;
-}
-
-export interface IJingle {
-  readonly waveform: SynthWaveform;
-  readonly peakGain: number;
-  readonly notes: readonly IJingleNote[];
-}
 
 export type JingleId = 'stage-start' | 'game-over';
 
 const QUARTER_NOTE_TICKS = 14;
 const HALF_NOTE_TICKS = QUARTER_NOTE_TICKS * 2;
-/** Notes stop a hair before the next one starts, so repeated pitches stay countable. */
-const NOTE_GAP_SECONDS = 0.02;
-const NOTE_ATTACK_SECONDS = 0.008;
 const SECONDS_PER_TICK = 1 / TICKS_PER_SECOND;
 
 function quarter(note: NoteName): IJingleNote {
@@ -63,28 +46,5 @@ export const JINGLES: Readonly<Record<JingleId, IJingle>> = {
 };
 
 export function toJinglePatch(jingle: IJingle): SoundPatch {
-  let elapsedSeconds = 0;
-
-  return jingle.notes.map(({ note, durationTicks }) => {
-    const delaySeconds = elapsedSeconds;
-    const noteSeconds = durationTicks * SECONDS_PER_TICK;
-
-    elapsedSeconds += noteSeconds;
-
-    return {
-      delaySeconds,
-      recipe: {
-        waveform: jingle.waveform,
-        pitch: { startHz: getNoteFrequencyHz(note) },
-        gain: {
-          peak: jingle.peakGain,
-          attackSeconds: NOTE_ATTACK_SECONDS,
-          decaySeconds: Math.max(
-            noteSeconds - NOTE_ATTACK_SECONDS - NOTE_GAP_SECONDS,
-            NOTE_GAP_SECONDS
-          ),
-        },
-      },
-    };
-  });
+  return toJingleSoundPatch(jingle, SECONDS_PER_TICK);
 }

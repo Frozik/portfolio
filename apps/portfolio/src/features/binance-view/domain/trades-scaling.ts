@@ -5,8 +5,7 @@ import { ScalingMode } from './trades-types';
 
 /**
  * Pure functions that map a bucket's `volumeTotal` to a circle radius
- * in device pixels. Selected scaling mode is dev-time only — see
- * trades.md §1.3.
+ * in device pixels. The selected scaling mode is dev-time only.
  *
  * Two stages by design:
  *   1. {@link computeBucketViewportStats} reduces the visible buckets'

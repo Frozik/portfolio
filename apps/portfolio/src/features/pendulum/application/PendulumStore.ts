@@ -8,17 +8,18 @@ import {
   createUnsyncedValueDescriptor,
   EMPTY_VD,
   isSyncedValueDescriptor,
-  matchValueDescriptor,
   REQUESTING_VD,
   WAITING_VD,
 } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
 
 import type { IGeneration } from '../domain/defs';
 import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
+import type { ICompetition } from '../domain/types';
 import type { TModuleIndexDBGenerations } from '../infrastructure/IndexedDBGenerationsRepository';
 import { createIndexDBGenerationsModule } from '../infrastructure/IndexedDBGenerationsRepository';
+import { createFitnessCompetition } from './createFitnessCompetition';
 
 const DEFAULT_GRAVITY = 1;
 
@@ -34,6 +35,7 @@ export class PendulumStore {
   currentRobotId: string | undefined = undefined;
   currentRobot: ValueDescriptor<TensorflowPlayer> = WAITING_VD;
   isNeuralNetworkDialogOpen: boolean = false;
+  competition: ICompetition | undefined = undefined;
 
   dbModule: TModuleIndexDBGenerations | undefined = undefined;
 
@@ -48,6 +50,10 @@ export class PendulumStore {
         disposers: false,
         loadCompetitionSub: false,
         loadRobotSub: false,
+        // The competition is a stateful orchestrator, not a data bag: deep
+        // observability would turn its `generationsCount` getter into a cached
+        // computed over a plain closure counter and never invalidate it.
+        competition: observableRef,
       },
       { autoBind: true }
     );
@@ -55,6 +61,19 @@ export class PendulumStore {
     // Initialize IndexedDB module immediately in constructor.
     // Runs once per store instance; subscriptions are torn down in dispose().
     this.initGenerationsSync();
+
+    // Keyed on the competition start alone — appending a generation must not
+    // rebuild the running competition (that would restart the playground).
+    this.disposers.push(
+      reaction(
+        () =>
+          isSyncedValueDescriptor(this.currentCompetition)
+            ? this.currentCompetition.value.competitionStart
+            : undefined,
+        this.syncCompetition,
+        { fireImmediately: true }
+      )
+    );
   }
 
   setPlaygroundGravity(g: number): void {
@@ -253,6 +272,19 @@ export class PendulumStore {
     this.disposers.length = 0;
   }
 
+  private syncCompetition(competitionStart: ISO | undefined): void {
+    if (isNil(competitionStart)) {
+      this.competition = undefined;
+      return;
+    }
+
+    this.competition = createFitnessCompetition({
+      competitionStart,
+      getGenerations: () => this.generations,
+      onGenerationCompleted: generation => this.addCompetitionRun({ competitionStart, generation }),
+    });
+  }
+
   private initGenerationsSync(): void {
     void createIndexDBGenerationsModule()
       .then(dbModule => {
@@ -268,10 +300,8 @@ export class PendulumStore {
         const sub = dbModule.getCompetitionsStarts$().subscribe({
           next: (starts: ISO[]) => {
             runInAction(() => {
-              this.competitionsList = matchValueDescriptor(
-                createSyncedValueDescriptor(starts) as ValueDescriptor<ISO[]>,
-                ({ value }) => (value.length > 0 ? createSyncedValueDescriptor(value) : EMPTY_VD)
-              );
+              this.competitionsList =
+                starts.length > 0 ? createSyncedValueDescriptor(starts) : EMPTY_VD;
             });
           },
           error: (error: unknown) => {

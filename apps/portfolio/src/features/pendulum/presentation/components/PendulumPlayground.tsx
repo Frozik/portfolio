@@ -10,10 +10,14 @@ import { useResizeObserver } from 'usehooks-ts';
 import { Renderer } from '../../../../shared/components/Renderer';
 import { Button } from '../../../../shared/ui/Button';
 import { Slider } from '../../../../shared/ui/Slider';
-import styles from './PendulumPlayground.module.scss';
 
 const PAUSE_ICON_SIZE = 48;
 const BUTTON_ICON_SIZE = 18;
+
+const FILL_PARENT_CLASS = 'absolute inset-0 flex items-center justify-center overflow-hidden';
+
+const PAUSED_ICON_CLASS =
+  'cursor-pointer rounded-full bg-[#1677ff] p-0.5 text-[60px] text-[#e6f7ff] hover:p-2';
 
 export const PendulumPlayground = memo(
   ({
@@ -60,23 +64,31 @@ export const PendulumPlayground = memo(
     );
 
     return (
-      <div ref={ref} className={styles.container} tabIndex={-1}>
+      <div
+        ref={ref}
+        className="relative h-full w-full touch-none border border-transparent focus-within:border-[#1d39c4]"
+        tabIndex={-1}
+      >
         <Renderer
-          className={styles.containerParentFill}
+          className={FILL_PARENT_CLASS}
           width={width}
           height={height}
           onCanvasContext={onSetContexts}
         />
         {paused && (
-          <div className={styles.containerParentFill}>
+          <div className={FILL_PARENT_CLASS}>
             <PlayCircle
-              className={styles.containerPaused}
+              className={PAUSED_ICON_CLASS}
               size={PAUSE_ICON_SIZE}
               onClick={togglePaused}
             />
           </div>
         )}
-        <Button className={styles.worldPauseAction} variant="secondary" onClick={togglePaused}>
+        <Button
+          className="absolute right-4 bottom-4 z-[1]"
+          variant="secondary"
+          onClick={togglePaused}
+        >
           {paused ? (
             <PlayCircle size={BUTTON_ICON_SIZE} />
           ) : (
@@ -84,7 +96,7 @@ export const PendulumPlayground = memo(
           )}
         </Button>
         <Slider
-          className={styles.worldGravity}
+          className="absolute top-[100px] right-4 bottom-[74px] z-[1] h-auto"
           value={gravity}
           vertical
           onChange={onGravityChanged}

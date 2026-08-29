@@ -9,9 +9,9 @@ import type { UnixTimeMs } from '../../domain/types';
 /**
  * Pure state-machine for the trade-bucket hover animation.
  *
- * Lives next to the trades layer renderer rather than in MobX (see
- * trades.md §3.8): the renderer drives this from `requestAnimationFrame`
- * directly, so per-frame mutations don't pay any observable ceremony.
+ * Lives next to the trades layer renderer rather than in MobX: the
+ * renderer drives this from `requestAnimationFrame` directly, so
+ * per-frame mutations don't pay any observable ceremony.
  * The only MobX boundary is `hoveredBucketKey` on the trades store —
  * the renderer reads it once per frame and feeds transitions through
  * {@link startEnterTransition} / {@link startLeaveTransition}.

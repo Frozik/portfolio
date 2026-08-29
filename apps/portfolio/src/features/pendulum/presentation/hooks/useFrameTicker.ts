@@ -39,7 +39,7 @@ export function useFrameTicker(
 
         if (fps < MIN_FPS) {
           currentMultiplier = Math.max(1, currentMultiplier - 1);
-        } else if (fps >= MIN_FPS) {
+        } else {
           currentMultiplier = Math.min(MAX_MULTIPLIER, currentMultiplier + 1);
         }
 

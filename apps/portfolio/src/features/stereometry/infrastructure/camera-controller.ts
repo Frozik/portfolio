@@ -1,5 +1,4 @@
-import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
-import { isNil } from 'lodash-es';
+import { createPointerGestureTracker } from '@frozik/utils/webgpu/pointerGestureTracker';
 import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
@@ -126,75 +125,14 @@ export function createOrbitalCameraController(
     panVelocityY = 0;
   }
 
-  // --- Pointer tracking ---
-  // We track up to 2 pointers for single-finger drag and two-finger pinch zoom.
-  const activePointers = new Map<number, { clientX: number; clientY: number }>();
   let isShiftHeld = false;
-  let lastPinchDistance = 0;
   let lastDragMoveTime = 0;
 
-  function getPointerDistance(): number {
-    const pointers = [...activePointers.values()];
-    return pointerDistance(
-      pointers[0].clientX,
-      pointers[0].clientY,
-      pointers[1].clientX,
-      pointers[1].clientY
-    );
+  function handleGestureStart(event: PointerEvent): void {
+    isShiftHeld = event.shiftKey;
   }
 
-  function onPointerDown(event: PointerEvent): void {
-    activePointers.set(event.pointerId, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-    });
-
-    // Without capture, releasing the pointer outside the browser window can
-    // lose the pointerup — activePointers would stay non-empty and the camera
-    // would report "animating" forever, keeping the render loop hot
-    try {
-      canvas.setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic events (tests) have no active pointer to capture
-    }
-
-    if (activePointers.size === 1) {
-      isShiftHeld = event.shiftKey;
-    } else if (activePointers.size === 2) {
-      lastPinchDistance = getPointerDistance();
-    }
-  }
-
-  function onPointerMove(event: PointerEvent): void {
-    const previous = activePointers.get(event.pointerId);
-    if (previous === undefined) {
-      return;
-    }
-
-    activePointers.set(event.pointerId, {
-      clientX: event.clientX,
-      clientY: event.clientY,
-    });
-
-    // Two-finger pinch zoom
-    if (activePointers.size === 2) {
-      const currentDistance = getPointerDistance();
-      const scale = computePinchScale(lastPinchDistance, currentDistance);
-      if (isNil(scale)) {
-        return;
-      }
-      targetDistance = clampDistance(targetDistance * scale);
-      lastPinchDistance = currentDistance;
-      return;
-    }
-
-    // Single-pointer drag
-    if (activePointers.size !== 1) {
-      return;
-    }
-
-    const deltaX = event.clientX - previous.clientX;
-    const deltaY = event.clientY - previous.clientY;
+  function handleDrag(deltaX: number, deltaY: number): void {
     lastDragMoveTime = performance.now();
 
     const shouldPan = isShiftHeld || interactionMode === 'pan';
@@ -212,42 +150,37 @@ export function createOrbitalCameraController(
     }
   }
 
-  function onPointerUp(event: PointerEvent): void {
-    activePointers.delete(event.pointerId);
+  function handlePinch(scale: number): void {
+    targetDistance = clampDistance(targetDistance * scale);
+  }
 
-    if (activePointers.size === 0) {
-      isShiftHeld = false;
+  function handleWheel(deltaY: number): void {
+    targetDistance = clampDistance(targetDistance * (1 + deltaY * WHEEL_ZOOM_SENSITIVITY));
+  }
 
-      // "Drag, hold still, release" must not fling the camera with the
-      // stale velocity of the last movement before the pause
-      if (performance.now() - lastDragMoveTime > INERTIA_RELEASE_TIMEOUT_MS) {
-        resetVelocity();
-      }
+  function handleGestureEnd(): void {
+    isShiftHeld = false;
+
+    // "Drag, hold still, release" must not fling the camera with the
+    // stale velocity of the last movement before the pause
+    if (performance.now() - lastDragMoveTime > INERTIA_RELEASE_TIMEOUT_MS) {
+      resetVelocity();
     }
   }
 
-  function onPointerCancel(event: PointerEvent): void {
-    activePointers.delete(event.pointerId);
-  }
-
-  /** Last line of defence against stuck pointers: drop all tracking on focus loss */
-  function onWindowBlur(): void {
-    activePointers.clear();
+  function handleReset(): void {
     isShiftHeld = false;
     resetVelocity();
   }
 
-  function onWheel(event: WheelEvent): void {
-    event.preventDefault();
-    targetDistance = clampDistance(targetDistance * (1 + event.deltaY * WHEEL_ZOOM_SENSITIVITY));
-  }
-
-  canvas.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerCancel);
-  window.addEventListener('blur', onWindowBlur);
-  canvas.addEventListener('wheel', onWheel, { passive: false });
+  const gestureTracker = createPointerGestureTracker(canvas, {
+    onDrag: handleDrag,
+    onPinch: handlePinch,
+    onWheel: handleWheel,
+    onReset: handleReset,
+    onGestureStart: handleGestureStart,
+    onGestureEnd: handleGestureEnd,
+  });
 
   return {
     tick(): boolean {
@@ -258,7 +191,7 @@ export function createOrbitalCameraController(
         distance = targetDistance;
       }
 
-      if (activePointers.size > 0) {
+      if (gestureTracker.hasActivePointers()) {
         return true;
       }
 
@@ -311,22 +244,11 @@ export function createOrbitalCameraController(
     },
 
     registerExternalPointer(pointerId: number, clientX: number, clientY: number): void {
-      if (activePointers.has(pointerId)) {
-        return;
-      }
-      activePointers.set(pointerId, { clientX, clientY });
-      if (activePointers.size === 2) {
-        lastPinchDistance = getPointerDistance();
-      }
+      gestureTracker.registerExternalPointer(pointerId, clientX, clientY);
     },
 
     destroy(): void {
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
-      window.removeEventListener('blur', onWindowBlur);
-      canvas.removeEventListener('wheel', onWheel);
+      gestureTracker.destroy();
     },
   };
 }

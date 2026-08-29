@@ -2,12 +2,12 @@ import type {
   IAmbientCanvasAnimation,
   IAmbientCanvasFrame,
 } from '../../../../../shared/hooks/useAmbientCanvas';
-import { buildAccentFn, getFxDraw } from './fx/effects';
+import { createFxRender } from './fx/effect-registry';
 import type { TAccentAlpha, TProjectFxKind } from './fx/types';
-import { readAccentRgb } from './fx/utils';
+import { buildAccentFn, readAccentRgb } from './fx/utils';
 
 /**
- * Per-card project FX overlay — runs one of the `fx/effects.ts` draw functions
+ * Per-card project FX overlay — runs one of the `fx/effects/*` draw functions
  * over the card canvas. Pure animation logic; the React shell lives in
  * `ProjectFx.tsx`. The effect `kind` is fixed for the card's life (resolved
  * once), while `hovered` toggles the playback speed and is mirrored from React
@@ -29,10 +29,10 @@ export interface IProjectFxAnimation extends IAmbientCanvasAnimation {
 }
 
 export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimation {
-  const draw = getFxDraw(kind);
-  // Per-effect mutable state bag (shapes drift, typing progression, …). Persists
-  // across frames; the card never changes `kind`, so it never needs resetting.
-  const fxState: Record<string, unknown> = {};
+  // The effect instance owns its state bag (shapes drift, typing progression, …),
+  // which persists across frames; the card never changes `kind`, so it never
+  // needs resetting.
+  const render = createFxRender(kind);
   let accent: TAccentAlpha = buildAccentFn(readAccentRgb());
   let hovered = false;
 
@@ -49,18 +49,15 @@ export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimat
         return;
       }
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      draw(
-        {
-          ctx,
-          width: ctx.canvas.width,
-          height: ctx.canvas.height,
-          time: frame.elapsedMs / MS_PER_SECOND,
-          speed: hovered ? HOVERED_SPEED : IDLE_SPEED,
-          accent,
-          dpr: frame.dpr,
-        },
-        fxState
-      );
+      render({
+        ctx,
+        width: ctx.canvas.width,
+        height: ctx.canvas.height,
+        time: frame.elapsedMs / MS_PER_SECOND,
+        speed: hovered ? HOVERED_SPEED : IDLE_SPEED,
+        accent,
+        dpr: frame.dpr,
+      });
     },
 
     setHovered(next: boolean): void {

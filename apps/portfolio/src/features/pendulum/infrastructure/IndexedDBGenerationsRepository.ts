@@ -52,6 +52,18 @@ const ROBOT_SCORE_FIELD: keyof IDBRobot = 'score';
 
 const REMOVE_REDUNDANT_NAME_INDEX_VERSION = 2;
 
+const ROBOT_MODEL_URL_SCHEME = 'indexeddb://';
+
+/**
+ * Address under which a robot's tf.js model is persisted. The scheme and the
+ * naming convention are storage knowledge: a model saved here is later read
+ * back by `TensorflowPlayer.load` through the very same URL stored on the
+ * robot record.
+ */
+export function buildRobotModelUrl(competitionStart: ISO, robotName: string): string {
+  return `${ROBOT_MODEL_URL_SCHEME}${competitionStart}-player-${robotName}`;
+}
+
 interface IDBCompetitions extends DBSchema {
   [ROBOTS_TABLE_NAME]: {
     value: IDBRobot;

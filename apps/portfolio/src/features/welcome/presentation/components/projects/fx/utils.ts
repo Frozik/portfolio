@@ -1,4 +1,5 @@
 import { DEFAULT_ACCENT_RGB, HEX_COLOR_PATTERN, HEX_RADIX } from '../../../canvasTheme';
+import type { TAccentAlpha } from './types';
 
 export function readAccentRgb(): readonly [number, number, number] {
   if (typeof window === 'undefined') {
@@ -25,4 +26,8 @@ export function readAccentRgb(): readonly [number, number, number] {
 export function pseudoRandom(x: number, y: number): number {
   const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
   return value - Math.floor(value);
+}
+
+export function buildAccentFn(rgb: readonly [number, number, number]): TAccentAlpha {
+  return (alpha: number) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
 }

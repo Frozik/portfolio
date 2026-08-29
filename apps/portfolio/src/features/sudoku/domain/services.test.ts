@@ -21,6 +21,17 @@ const VALID_PUZZLE =
 const SOLVED_PUZZLE =
   '534678912672195348198342567859761423426853791713924856961537284287419635345286179';
 
+/** Any in-place write to the field, its cells or their notes throws in strict mode. */
+function freezeField(field: IField): IField {
+  field.cells.forEach(cell => {
+    Object.freeze(cell.notes);
+    Object.freeze(cell);
+  });
+  Object.freeze(field.cells);
+
+  return Object.freeze(field);
+}
+
 describe('loadField', () => {
   it('parses a valid 9x9 puzzle string and returns synced VD', () => {
     const result = loadField(VALID_PUZZLE);
@@ -162,6 +173,30 @@ describe('applyToolToFieldReducer', () => {
 
     const result = applyToolToFieldReducer(field, tool, 0, 2);
     expect(result).toBe(field);
+  });
+
+  it('leaves the input field untouched, including nested notes', () => {
+    // `addFieldMarks` fills every cell with notes so both note paths are exercised:
+    // the pen tool strips the written value from the bound cells' notes and the
+    // notes tool toggles a candidate on the target cell.
+    const field = freezeField(addFieldMarks(getLoadedField(VALID_PUZZLE)));
+    const snapshot = structuredClone(field);
+
+    applyToolToFieldReducer(field, { type: EToolType.Pen, value: 4 }, 0, 2);
+    applyToolToFieldReducer(field, { type: EToolType.Notes, value: 7 }, 0, 2);
+
+    expect(field).toEqual(snapshot);
+  });
+
+  it('reuses cells that the tool does not affect', () => {
+    const field = getLoadedField(VALID_PUZZLE);
+    const tool: TTool = { type: EToolType.Pen, value: 4 };
+
+    const result = applyToolToFieldReducer(field, tool, 0, 2);
+
+    // Last cell of the board — outside the row, column and group of (0, 2).
+    const UNAFFECTED_CELL_INDEX = 80;
+    expect(result.cells[UNAFFECTED_CELL_INDEX]).toBe(field.cells[UNAFFECTED_CELL_INDEX]);
   });
 });
 

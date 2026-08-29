@@ -24,7 +24,7 @@ export interface MarkdownExportLabels {
 export const DEFAULT_MARKDOWN_EXPORT_LABELS: MarkdownExportLabels = {
   cardsCount: count => `${count} ${count === 1 ? 'card' : 'cards'}`,
   votesCount: count => `${count} ${count === 1 ? 'vote' : 'votes'}`,
-  actionItemsTitle: 'Action Items',
+  actionItemsTitle: 'Action items (outcomes)',
   noCards: 'No cards.',
   noActionItems: 'No action items.',
   fromLabel: 'from',

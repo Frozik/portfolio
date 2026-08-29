@@ -1,6 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { nowEpochMs } from '@frozik/utils/date/now';
-import type { ISO, Milliseconds } from '@frozik/utils/date/types';
+import type { Milliseconds } from '@frozik/utils/date/types';
 import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
@@ -11,25 +11,14 @@ import {
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import {
-  action,
-  actionBound,
-  computed,
-  makeObservable,
-  observable,
-  observableRef,
-  runInAction,
-} from 'mobx';
-import { Temporal } from 'temporal-polyfill';
-import * as Y from 'yjs';
+import { computedStruct, makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
+
 import {
   MAX_TIMER_DURATION_MS,
   MIN_TIMER_DURATION_MS,
   PHASE_ORDER,
   TOAST_AUTOCLEAR_MS,
 } from '../domain/constants';
-import { createRetroSnapshot } from '../domain/retro-snapshot';
-import { getTemplateById } from '../domain/templates';
 import {
   computeRemainingMs,
   ETimerStatus,
@@ -46,52 +35,39 @@ import type {
   ClientId,
   ColumnId,
   GroupId,
-  IActionItem,
-  IColumnConfig,
   IParticipant,
-  IRetroCard,
-  IRetroGroup,
-  IRetroMeta,
   IRetroSnapshot,
   ITemplateConfig,
   RoomId,
-  VotesByTarget,
 } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
 import { canPlaceVote, canRetractVote, countVotesUsedByClient } from '../domain/voting';
-import type { IRetroDocHandles } from '../domain/yjs-schema';
-import {
-  getRetroHandles,
-  initRetroDoc,
-  YJS_GROUP_FIELD_CARD_IDS,
-  YJS_GROUP_FIELD_COLUMN_ID,
-  YJS_META_FIELD_CREATED_AT,
-  YJS_META_FIELD_FACILITATOR_CLIENT_ID,
-  YJS_META_FIELD_FACILITATOR_NAME,
-  YJS_META_FIELD_NAME,
-  YJS_META_FIELD_PHASE,
-  YJS_META_FIELD_TEMPLATE,
-  YJS_META_FIELD_TIMER,
-  YJS_META_FIELD_VOTES_PER_PARTICIPANT,
-} from '../domain/yjs-schema';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
-import type { ISoundPlayer } from '../infrastructure/sound';
-import { createSoundPlayer, ERetroSoundCue } from '../infrastructure/sound';
+import { RetroDocGateway } from '../infrastructure/RetroDocGateway';
+import { createSoundPlayer } from '../infrastructure/sound';
 import type { IYjsRoomProviders } from '../infrastructure/yjs-providers';
+import { PresenceTracker } from './PresenceTracker';
+import type { IJoinedRoomSnapshot, RetroLobbyStore } from './RetroLobbyStore';
+import { TimerCueController } from './TimerCueController';
 import type { UserDirectoryStore } from './UserDirectoryStore';
 
 /**
- * Parameters required to either open an existing room (skipped init) or
- * create a fresh one (initialized on first sync).
+ * Parameters required to create a fresh room — the doc is initialized on
+ * first sync. `null` on the store means "open an existing room".
  */
-export interface IRoomStoreInit {
+export interface IRoomCreateParams {
+  readonly name: string;
+  readonly template: ITemplateConfig;
+  readonly votesPerParticipant: number;
+}
+
+export interface IRoomStoreParams {
   readonly roomId: RoomId;
   readonly identity: IRetroIdentity;
-  readonly createIfMissing: {
-    readonly name: string;
-    readonly template: ITemplateConfig;
-    readonly votesPerParticipant: number;
-  } | null;
+  readonly providers: IYjsRoomProviders;
+  readonly createIfMissing: IRoomCreateParams | null;
+  readonly directory: UserDirectoryStore;
+  readonly lobby: RetroLobbyStore;
 }
 
 export type TimerSeverity = 'idle' | 'running' | 'warning' | 'expired';
@@ -103,8 +79,12 @@ export interface IToast {
   readonly message: string;
 }
 
-const PRESENCE_HEARTBEAT_INTERVAL_MS = 10_000;
-
+/**
+ * MobX facade over a single live retro room. All Y.Doc reads/writes go
+ * through {@link RetroDocGateway}, awareness through {@link PresenceTracker}
+ * and timer audio through {@link TimerCueController} — the store itself only
+ * owns observable UI state, phase/facilitator policy and lifecycle.
+ */
 export class RoomStore {
   snapshot: ValueDescriptor<IRetroSnapshot | null, IRetroSnapshot | null> = EMPTY_VD;
   currentSnapshot: IRetroSnapshot | null = null;
@@ -116,125 +96,98 @@ export class RoomStore {
   isCreateDialogOpen: boolean = false;
   lastToast: IToast | null = null;
 
-  private readonly handles: IRetroDocHandles;
-  private readonly onAfterTransaction: () => void;
-  private readonly onAwarenessChange: () => void;
-  private readonly soundPlayer: ISoundPlayer;
+  identity: IRetroIdentity;
+  readonly roomId: RoomId;
+
+  private readonly providers: IYjsRoomProviders;
+  private readonly createIfMissing: IRoomCreateParams | null;
+  private readonly directory: UserDirectoryStore;
+  private readonly lobby: RetroLobbyStore;
+  private readonly gateway: RetroDocGateway;
+  private readonly presence: PresenceTracker;
+  private readonly timerCues: TimerCueController;
+  private readonly disposers: (() => void)[] = [];
   private toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private presenceHeartbeatId: ReturnType<typeof setInterval> | null = null;
-  /**
-   * Last observed "whole seconds remaining" value. Used by `tickTimer`
-   * to detect second boundaries and fire countdown cues exactly once
-   * per crossed second.
-   */
-  private lastRemainingSec: number | null = null;
-  /**
-   * Last name/avatar we wrote to the directory per clientId. Awareness fires
-   * on every field change (including typing focus/blur that never touches
-   * identity), so we compare against this map and only re-`upsert` when a
-   * user's display name or picture actually changed — avoiding an IndexedDB
-   * write on every awareness tick.
-   */
-  private readonly lastUpsertedProfiles = new Map<
-    ClientId,
-    { readonly name: string; readonly pictureUrl: string | undefined }
-  >();
   private isDisposed = false;
 
-  identity: IRetroIdentity;
+  constructor(params: IRoomStoreParams) {
+    this.roomId = params.roomId;
+    this.identity = params.identity;
+    this.providers = params.providers;
+    this.createIfMissing = params.createIfMissing;
+    this.directory = params.directory;
+    this.lobby = params.lobby;
+    this.gateway = new RetroDocGateway(params.providers.doc);
+    this.timerCues = new TimerCueController(createSoundPlayer(), () => {
+      this.handleTimerExpired();
+    });
+    this.presence = new PresenceTracker({
+      awareness: params.providers.webrtc.awareness,
+      directory: params.directory,
+      onPresentUsersChange: users => {
+        this.applyPresentUsers(users);
+      },
+    });
 
-  constructor(
-    readonly roomId: RoomId,
-    initialIdentity: IRetroIdentity,
-    private readonly providers: IYjsRoomProviders,
-    private readonly createIfMissing: IRoomStoreInit['createIfMissing'],
-    private readonly directory: UserDirectoryStore
-  ) {
-    this.identity = initialIdentity;
-    this.handles = getRetroHandles(providers.doc);
-    this.soundPlayer = createSoundPlayer();
-
-    makeObservable(
+    makeAutoObservable<
+      RoomStore,
+      | 'providers'
+      | 'createIfMissing'
+      | 'directory'
+      | 'lobby'
+      | 'gateway'
+      | 'presence'
+      | 'timerCues'
+      | 'disposers'
+      | 'toastTimeoutId'
+      | 'isDisposed'
+      | 'joinedRoomSnapshot'
+    >(
       this,
       {
         snapshot: observableRef,
         currentSnapshot: observableRef,
         timerTickNow: observableRef,
         presentUsers: observableRef,
-        isShareDialogOpen: observable,
-        isExportDialogOpen: observable,
-        isCreateDialogOpen: observable,
         lastToast: observableRef,
         identity: observableRef,
-        timerSeverity: computed,
-        remainingTimerMs: computed,
-        phase: computed,
-        myVotesUsed: computed,
-        isFacilitator: computed,
-        connectionStatus: computed,
-        updateSnapshotFromDoc: action,
-        tickTimer: action,
-        updatePresentUsers: action,
-        openShareDialog: actionBound,
-        closeShareDialog: actionBound,
-        openExportDialog: actionBound,
-        closeExportDialog: actionBound,
-        openCreateDialog: actionBound,
-        closeCreateDialog: actionBound,
-        showToast: action,
-        clearToast: action,
-        addCard: action,
-        deleteCard: action,
-        editCard: action,
-        moveCardToColumn: action,
-        moveCardToPosition: action,
-        groupCards: action,
-        setTypingIn: action,
-        setPhase: action,
-        advancePhase: action,
-        rewindPhase: action,
-        startTimer: action,
-        pauseTimer: action,
-        addTimerMilliseconds: action,
-        resetTimer: action,
-        transferFacilitator: action,
-        claimFacilitator: action,
-        addVote: action,
-        removeVote: action,
-        addActionItem: action,
-        deleteActionItem: action,
-        updateIdentity: action,
+        presentParticipantIds: computedStruct,
+        joinedRoomSnapshot: computedStruct,
+        // Deliberately NOT an action: the UI calls it while rendering, so it
+        // must stay tracked — actions run untracked and would freeze the
+        // vote button's disabled state.
+        canAddVoteTo: false,
+        providers: false,
+        createIfMissing: false,
+        directory: false,
+        lobby: false,
+        gateway: false,
+        presence: false,
+        timerCues: false,
+        disposers: false,
+        toastTimeoutId: false,
+        isDisposed: false,
       },
       { autoBind: true }
     );
 
-    this.onAfterTransaction = (): void => this.updateSnapshotFromDoc();
-    providers.doc.on('afterTransaction', this.onAfterTransaction);
-
-    this.onAwarenessChange = (): void => this.updatePresentUsers();
-    providers.webrtc.awareness.on('change', this.onAwarenessChange);
-
-    this.publishLocalPresence();
-
-    // Keep awareness alive: republish every 10s so peers never drop us as
-    // stale (awareness default timeout is ~30s on most y-webrtc setups).
-    this.presenceHeartbeatId = setInterval(() => {
-      if (!this.isDisposed) {
-        this.publishLocalPresence();
-      }
-    }, PRESENCE_HEARTBEAT_INTERVAL_MS);
+    this.publishPresence();
+    this.disposers.push(
+      this.gateway.subscribe(() => {
+        this.updateSnapshotFromDoc();
+      })
+    );
+    this.disposers.push(
+      reaction(
+        () => this.joinedRoomSnapshot,
+        joined => {
+          this.publishJoinedRoom(joined);
+        },
+        { fireImmediately: true }
+      )
+    );
 
     void this.initialize();
-  }
-
-  publishLocalPresence(): void {
-    const participant: IParticipant = {
-      clientId: this.identity.clientId as ClientId,
-      name: this.identity.name,
-      pictureUrl: this.identity.pictureUrl,
-      typingInColumnId: null,
-    };
-    this.providers.webrtc.awareness.setLocalStateField('user', participant);
   }
 
   /**
@@ -245,7 +198,7 @@ export class RoomStore {
    */
   updateIdentity(identity: IRetroIdentity): void {
     this.identity = identity;
-    this.publishLocalPresence();
+    this.publishPresence();
 
     if (!this.isFacilitator) {
       return;
@@ -254,63 +207,12 @@ export class RoomStore {
     if (storedName === identity.name) {
       return;
     }
-    this.providers.doc.transact(() => {
-      this.handles.meta.set(YJS_META_FIELD_FACILITATOR_NAME, identity.name);
-    });
-  }
-
-  updateSnapshotFromDoc(): void {
-    this.currentSnapshot = this.buildSnapshot();
+    this.gateway.setFacilitatorName(identity.name);
   }
 
   tickTimer(): void {
     this.timerTickNow = nowEpochMs();
-    this.maybeFireCountdownCue();
-  }
-
-  /**
-   * Second-accurate timer audio cues:
-   *   10s left  → single warning beep
-   *   5..1s left → short countdown tick on each crossed second
-   *   0s left   → triple expired beep
-   *
-   * Detection is based on crossing a whole-second boundary downwards,
-   * so each sound fires exactly once even though `tickTimer` runs twice
-   * per second.
-   */
-  private maybeFireCountdownCue(): void {
-    const timer = this.currentSnapshot?.meta.timer;
-    if (timer === undefined || timer.startedAt === null) {
-      this.lastRemainingSec = null;
-      return;
-    }
-
-    const remainingMs = computeRemainingMs(timer, this.timerTickNow as Milliseconds);
-    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1_000));
-    const previousSec = this.lastRemainingSec;
-    this.lastRemainingSec = remainingSec;
-
-    if (previousSec === null || previousSec <= remainingSec) {
-      return;
-    }
-
-    if (remainingSec === 0) {
-      this.soundPlayer.play(ERetroSoundCue.TimerExpired);
-      // Only the facilitator writes the pause — the Yjs update propagates
-      // to everyone so all peers stop the clock at 00:00 instead of
-      // letting it keep ticking into negative territory.
-      if (this.isFacilitator) {
-        this.pauseTimer();
-      }
-      return;
-    }
-    if (remainingSec === 10) {
-      this.soundPlayer.play(ERetroSoundCue.TimerWarning);
-      return;
-    }
-    if (remainingSec >= 1 && remainingSec <= 5) {
-      this.soundPlayer.play(ERetroSoundCue.TimerCountdown);
-    }
+    this.timerCues.handleTick(this.currentSnapshot?.meta.timer, this.timerTickNow as Milliseconds);
   }
 
   get timerSeverity(): TimerSeverity {
@@ -339,7 +241,7 @@ export class RoomStore {
 
   get remainingTimerMs(): Milliseconds {
     const timer = this.currentSnapshot?.meta.timer;
-    if (timer === undefined) {
+    if (isNil(timer)) {
       return 0 as Milliseconds;
     }
     return computeRemainingMs(timer, this.timerTickNow as Milliseconds);
@@ -351,10 +253,10 @@ export class RoomStore {
 
   get myVotesUsed(): number {
     const votes = this.currentSnapshot?.votes;
-    if (votes === undefined) {
+    if (isNil(votes)) {
       return 0;
     }
-    return countVotesUsedByClient(votes, this.identity.clientId as ClientId);
+    return countVotesUsedByClient(votes, this.clientId);
   }
 
   /**
@@ -371,7 +273,7 @@ export class RoomStore {
       phase: snapshot.meta.phase,
       votes: snapshot.votes,
       targetId,
-      clientId: this.identity.clientId as ClientId,
+      clientId: this.clientId,
       votesPerParticipant: snapshot.meta.votesPerParticipant,
     }).allowed;
   }
@@ -382,7 +284,7 @@ export class RoomStore {
   }
 
   unlockChime(): void {
-    this.soundPlayer.unlock();
+    this.timerCues.unlock();
   }
 
   get connectionStatus(): ConnectionStatus {
@@ -398,49 +300,13 @@ export class RoomStore {
     return 'connecting';
   }
 
-  updatePresentUsers(): void {
-    const states = this.providers.webrtc.awareness.getStates();
-    const meta = this.providers.webrtc.awareness.meta as Map<number, { lastUpdated: number }>;
-
-    // Awareness is keyed by per-session Yjs client ids, but our user
-    // identity has its own stable `clientId` (from localStorage). When the
-    // same person reconnects they appear twice until the stale awareness
-    // entry times out — dedupe here by identity.clientId, keeping the
-    // entry with the freshest `lastUpdated` meta.
-    const deduped = new Map<number, { user: IParticipant; lastUpdated: number }>();
-    states.forEach((state, yjsClientId) => {
-      const user = (state as { user?: IParticipant }).user;
-      if (user === undefined) {
-        return;
-      }
-      const lastUpdated = meta.get(yjsClientId)?.lastUpdated ?? 0;
-      const existing = deduped.get(user.clientId);
-      if (existing === undefined || lastUpdated >= existing.lastUpdated) {
-        deduped.set(user.clientId, { user, lastUpdated });
-      }
-    });
-
-    const users = Array.from(deduped.values()).map(entry => entry.user);
-    users.forEach(user => {
-      const lastUpserted = this.lastUpsertedProfiles.get(user.clientId);
-      if (
-        lastUpserted !== undefined &&
-        lastUpserted.name === user.name &&
-        lastUpserted.pictureUrl === user.pictureUrl
-      ) {
-        return;
-      }
-      this.lastUpsertedProfiles.set(user.clientId, {
-        name: user.name,
-        pictureUrl: user.pictureUrl,
-      });
-      void this.directory.upsert({
-        clientId: user.clientId,
-        name: user.name,
-        pictureUrl: user.pictureUrl,
-      });
-    });
-    this.presentUsers = users;
+  /**
+   * Stable list of the clientIds currently visible through awareness.
+   * Structurally compared so it only "changes" when room membership does —
+   * heartbeats republishing the same roster are absorbed.
+   */
+  get presentParticipantIds(): readonly ClientId[] {
+    return this.presentUsers.map(user => user.clientId);
   }
 
   openShareDialog(): void {
@@ -483,319 +349,43 @@ export class RoomStore {
   }
 
   addCard(columnId: ColumnId, text: string): void {
-    const trimmed = text.trim();
-    if (trimmed.length === 0) {
-      return;
-    }
-    const cards = this.handles.cards.get(columnId);
-    if (cards === undefined) {
-      return;
-    }
-    const card = {
-      id: crypto.randomUUID() as CardId,
-      authorClientId: this.identity.clientId as ClientId,
-      columnId,
-      text: trimmed,
-      createdAt: Temporal.Now.instant().toString() as ISO,
-      groupId: null,
-    };
-    this.providers.doc.transact(() => {
-      cards.push([card]);
-    });
+    this.gateway.addCard({ columnId, authorClientId: this.clientId, text });
   }
 
   deleteCard(cardId: CardId): void {
-    this.providers.doc.transact(() => {
-      const location = this.findCardLocation(cardId);
-      if (location === null) {
-        return;
-      }
-      if (location.record.groupId !== null) {
-        this.removeCardFromGroup(cardId, location.record.groupId as GroupId);
-      }
-      const list = this.handles.cards.get(location.columnId);
-      if (list === undefined) {
-        return;
-      }
-      list.delete(location.index, 1);
-    });
+    this.gateway.deleteCard(cardId);
   }
 
   editCard(cardId: CardId, text: string): void {
-    const trimmed = text.trim();
-    if (trimmed.length === 0) {
-      return;
-    }
-    this.providers.doc.transact(() => {
-      this.handles.cards.forEach(list => {
-        for (let index = 0; index < list.length; index++) {
-          const record = list.get(index);
-          if (record.id !== cardId) {
-            continue;
-          }
-          if (record.authorClientId !== (this.identity.clientId as ClientId)) {
-            return;
-          }
-          list.delete(index, 1);
-          list.insert(index, [{ ...record, text: trimmed }]);
-          return;
-        }
-      });
-    });
+    this.gateway.editCard({ cardId, authorClientId: this.clientId, text });
   }
 
   moveCardToColumn(cardId: CardId, targetColumnId: ColumnId, targetIndex: number): void {
-    this.providers.doc.transact(() => {
-      const location = this.findCardLocation(cardId);
-      if (location === null) {
-        return;
-      }
-      if (location.record.groupId !== null) {
-        this.removeCardFromGroup(cardId, location.record.groupId as GroupId);
-      }
-      const sourceList = this.handles.cards.get(location.columnId);
-      const targetList = this.handles.cards.get(targetColumnId);
-      if (sourceList === undefined || targetList === undefined) {
-        return;
-      }
-      sourceList.delete(location.index, 1);
-      const clampedIndex = Math.max(0, Math.min(targetIndex, targetList.length));
-      targetList.insert(clampedIndex, [
-        { ...location.record, columnId: targetColumnId, groupId: null },
-      ]);
-    });
+    this.gateway.moveCardToColumn({ cardId, targetColumnId, targetIndex });
   }
 
-  /**
-   * Merge `draggedId` into `targetId`'s group. If the target card has no
-   * group yet, a new group is created wrapping both cards; otherwise the
-   * dragged card is appended to the existing group. The dragged card is
-   * moved into the target's column if it was living elsewhere. If the
-   * dragged card was in a different group, that group is cleaned up
-   * (dissolved when it drops below 2 cards).
-   */
-  groupCards(draggedId: CardId, targetId: CardId): void {
-    if (draggedId === targetId) {
-      return;
-    }
-    this.providers.doc.transact(() => {
-      const target = this.findCardLocation(targetId);
-      const dragged = this.findCardLocation(draggedId);
-      if (target === null || dragged === null) {
-        return;
-      }
-
-      if (dragged.record.groupId !== null && dragged.record.groupId !== target.record.groupId) {
-        this.removeCardFromGroup(draggedId, dragged.record.groupId as GroupId);
-      }
-
-      // Drop per-card votes: once inside a group the card is no longer a
-      // vote target, and orphaned entries would count nowhere.
-      this.clearVotesFor(draggedId);
-      this.clearVotesFor(targetId);
-
-      const groupId = this.ensureGroupForCard(target) as GroupId;
-      const groupMap = this.handles.groups.get(groupId);
-      if (groupMap === undefined) {
-        return;
-      }
-
-      const currentCardIds = this.readGroupCardIds(groupMap);
-      if (!currentCardIds.includes(draggedId)) {
-        groupMap.set(YJS_GROUP_FIELD_CARD_IDS, [...currentCardIds, draggedId]);
-      }
-
-      const groupColumnId =
-        (groupMap.get(YJS_GROUP_FIELD_COLUMN_ID) as ColumnId | undefined) ?? target.record.columnId;
-
-      // Re-read dragged location — `removeCardFromGroup` may have mutated
-      // the card record (when the previous group dissolved into a singleton
-      // it flipped the sibling's groupId, not the dragged card's).
-      const draggedAfter = this.findCardLocation(draggedId);
-      if (draggedAfter === null) {
-        return;
-      }
-
-      const sourceList = this.handles.cards.get(draggedAfter.columnId);
-      const destList = this.handles.cards.get(groupColumnId);
-      if (sourceList === undefined || destList === undefined) {
-        return;
-      }
-      sourceList.delete(draggedAfter.index, 1);
-      destList.push([{ ...draggedAfter.record, columnId: groupColumnId, groupId }]);
-    });
-  }
-
-  /**
-   * Move a card to an absolute index inside its (or another) column's Y.Array,
-   * optionally attaching it to a target group. Used for gap-based reordering:
-   * the UI emits the Y.Array index where the card should land and the target
-   * group membership. The card may be:
-   *   - reordered within the same column/group (no group-membership change);
-   *   - moved between columns or groups (group-membership updates);
-   *   - detached from its old group (old group is cleaned up if it drops
-   *     below two members).
-   */
   moveCardToPosition(
     cardId: CardId,
     targetColumnId: ColumnId,
     targetIndex: number,
     targetGroupId: GroupId | null
   ): void {
-    this.providers.doc.transact(() => {
-      const location = this.findCardLocation(cardId);
-      if (location === null) {
-        return;
-      }
-
-      const previousGroupId = location.record.groupId;
-      if (previousGroupId !== null && previousGroupId !== targetGroupId) {
-        this.removeCardFromGroup(cardId, previousGroupId as GroupId);
-      }
-
-      const latestLocation = this.findCardLocation(cardId);
-      if (latestLocation === null) {
-        return;
-      }
-
-      const sourceList = this.handles.cards.get(latestLocation.columnId);
-      const destList = this.handles.cards.get(targetColumnId);
-      if (sourceList === undefined || destList === undefined) {
-        return;
-      }
-
-      sourceList.delete(latestLocation.index, 1);
-
-      let adjustedIndex = targetIndex;
-      if (latestLocation.columnId === targetColumnId && latestLocation.index < targetIndex) {
-        adjustedIndex -= 1;
-      }
-      adjustedIndex = Math.max(0, Math.min(adjustedIndex, destList.length));
-
-      destList.insert(adjustedIndex, [
-        {
-          ...latestLocation.record,
-          columnId: targetColumnId,
-          groupId: targetGroupId,
-        },
-      ]);
-
-      if (targetGroupId !== null && previousGroupId !== targetGroupId) {
-        const groupMap = this.handles.groups.get(targetGroupId);
-        if (groupMap !== undefined) {
-          const cardIds = this.readGroupCardIds(groupMap);
-          if (!cardIds.includes(cardId)) {
-            groupMap.set('cardIds', [...cardIds, cardId]);
-          }
-        }
-        this.clearVotesFor(cardId);
-      }
-    });
+    this.gateway.moveCardToPosition({ cardId, targetColumnId, targetIndex, targetGroupId });
   }
 
-  private findCardLocation(
-    cardId: CardId
-  ): { columnId: ColumnId; index: number; record: IRetroCard } | null {
-    let result: { columnId: ColumnId; index: number; record: IRetroCard } | null = null;
-    this.handles.cards.forEach((list, columnId) => {
-      if (result !== null) {
-        return;
-      }
-      for (let index = 0; index < list.length; index++) {
-        const record = list.get(index);
-        if (record.id === cardId) {
-          result = {
-            columnId: columnId as ColumnId,
-            index,
-            record: record as IRetroCard,
-          };
-          return;
-        }
-      }
-    });
-    return result;
-  }
-
-  private ensureGroupForCard(location: {
-    columnId: ColumnId;
-    index: number;
-    record: IRetroCard;
-  }): string {
-    if (location.record.groupId !== null) {
-      return location.record.groupId;
-    }
-    const groupId = crypto.randomUUID();
-    const groupMap = new Y.Map<unknown>();
-    groupMap.set('id', groupId);
-    groupMap.set('columnId', location.record.columnId);
-    groupMap.set('title', '');
-    groupMap.set('cardIds', [location.record.id]);
-    this.handles.groups.set(groupId, groupMap);
-
-    const list = this.handles.cards.get(location.columnId);
-    if (list !== undefined) {
-      list.delete(location.index, 1);
-      list.insert(location.index, [{ ...location.record, groupId: groupId as GroupId }]);
-    }
-    return groupId;
-  }
-
-  private clearVotesFor(targetId: CardId | GroupId): void {
-    this.handles.votes.delete(targetId);
-  }
-
-  private removeCardFromGroup(cardId: CardId, groupId: GroupId): void {
-    const groupMap = this.handles.groups.get(groupId);
-    if (groupMap === undefined) {
-      return;
-    }
-    const nextCardIds = this.readGroupCardIds(groupMap).filter(id => id !== cardId);
-
-    if (nextCardIds.length >= 2) {
-      groupMap.set('cardIds', nextCardIds);
-      return;
-    }
-
-    // Dissolve group: clear sibling's groupId (if any) and drop the map.
-    if (nextCardIds.length === 1) {
-      const lastLocation = this.findCardLocation(nextCardIds[0] as CardId);
-      if (lastLocation !== null) {
-        const list = this.handles.cards.get(lastLocation.columnId);
-        if (list !== undefined) {
-          list.delete(lastLocation.index, 1);
-          list.insert(lastLocation.index, [{ ...lastLocation.record, groupId: null }]);
-        }
-      }
-    }
-    this.handles.groups.delete(groupId);
-    this.clearVotesFor(groupId);
-  }
-
-  private readGroupCardIds(groupMap: Y.Map<unknown>): readonly string[] {
-    const raw = groupMap.get('cardIds');
-    if (!Array.isArray(raw)) {
-      return [];
-    }
-    return raw.filter((value): value is string => typeof value === 'string');
+  groupCards(draggedId: CardId, targetId: CardId): void {
+    this.gateway.groupCards(draggedId, targetId);
   }
 
   setTypingIn(columnId: ColumnId | null): void {
-    const participant: IParticipant = {
-      clientId: this.identity.clientId as ClientId,
-      name: this.identity.name,
-      pictureUrl: this.identity.pictureUrl,
-      typingInColumnId: columnId,
-    };
-    this.providers.webrtc.awareness.setLocalStateField('user', participant);
+    this.presence.publishTyping(columnId);
   }
 
   setPhase(phase: ERetroPhase): void {
     if (!this.isFacilitator) {
       return;
     }
-    this.providers.doc.transact(() => {
-      this.handles.meta.set(YJS_META_FIELD_PHASE, phase);
-    });
+    this.gateway.setPhase(phase);
   }
 
   advancePhase(): void {
@@ -820,21 +410,15 @@ export class RoomStore {
     this.setPhase(PHASE_ORDER[index - 1] as ERetroPhase);
   }
 
-  private writeTimer(timer: IRetroMeta['timer']): void {
-    this.providers.doc.transact(() => {
-      this.handles.meta.set(YJS_META_FIELD_TIMER, timer);
-    });
-  }
-
   startTimer(): void {
     if (!this.isFacilitator) {
       return;
     }
     const timer = this.currentSnapshot?.meta.timer;
-    if (timer === undefined) {
+    if (isNil(timer)) {
       return;
     }
-    this.writeTimer(startTimerState(timer, nowEpochMs() as Milliseconds));
+    this.gateway.setTimer(startTimerState(timer, nowEpochMs() as Milliseconds));
   }
 
   pauseTimer(): void {
@@ -842,10 +426,10 @@ export class RoomStore {
       return;
     }
     const timer = this.currentSnapshot?.meta.timer;
-    if (timer === undefined) {
+    if (isNil(timer)) {
       return;
     }
-    this.writeTimer(pauseTimerState(timer, nowEpochMs() as Milliseconds));
+    this.gateway.setTimer(pauseTimerState(timer, nowEpochMs() as Milliseconds));
   }
 
   addTimerMilliseconds(extraMs: Milliseconds): void {
@@ -853,7 +437,7 @@ export class RoomStore {
       return;
     }
     const timer = this.currentSnapshot?.meta.timer;
-    if (timer === undefined) {
+    if (isNil(timer)) {
       return;
     }
     // Clamp the effective remaining time to [MIN, MAX] — e.g. on 55s the
@@ -869,14 +453,14 @@ export class RoomStore {
     if (effectiveDelta === 0) {
       return;
     }
-    this.writeTimer(extendTimer(timer, effectiveDelta));
+    this.gateway.setTimer(extendTimer(timer, effectiveDelta));
   }
 
   resetTimer(durationMs: Milliseconds): void {
     if (!this.isFacilitator) {
       return;
     }
-    this.writeTimer(resetTimerState(durationMs));
+    this.gateway.setTimer(resetTimerState(durationMs));
   }
 
   transferFacilitator(clientId: ClientId): void {
@@ -884,11 +468,7 @@ export class RoomStore {
       return;
     }
     const targetUser = this.presentUsers.find(user => user.clientId === clientId);
-    const nextName = targetUser?.name ?? '';
-    this.providers.doc.transact(() => {
-      this.handles.meta.set(YJS_META_FIELD_FACILITATOR_CLIENT_ID, clientId);
-      this.handles.meta.set(YJS_META_FIELD_FACILITATOR_NAME, nextName);
-    });
+    this.gateway.setFacilitator(clientId, targetUser?.name ?? '');
   }
 
   claimFacilitator(): void {
@@ -898,29 +478,14 @@ export class RoomStore {
     if (isCurrentOnline) {
       return;
     }
-    this.providers.doc.transact(() => {
-      this.handles.meta.set(
-        YJS_META_FIELD_FACILITATOR_CLIENT_ID,
-        this.identity.clientId as ClientId
-      );
-      this.handles.meta.set(YJS_META_FIELD_FACILITATOR_NAME, this.identity.name);
-    });
+    this.gateway.setFacilitator(this.clientId, this.identity.name);
   }
 
   addVote(targetId: CardId | GroupId): void {
     if (!this.canAddVoteTo(targetId)) {
       return;
     }
-    this.providers.doc.transact(() => {
-      let perClient = this.handles.votes.get(targetId);
-      if (perClient === undefined) {
-        perClient = new Y.Map<number>();
-        this.handles.votes.set(targetId, perClient);
-      }
-      const key = String(this.identity.clientId);
-      const current = perClient.get(key) ?? 0;
-      perClient.set(key, current + 1);
-    });
+    this.gateway.addVote(targetId, this.clientId);
   }
 
   removeVote(targetId: CardId | GroupId): void {
@@ -928,53 +493,18 @@ export class RoomStore {
     if (isNil(snapshot)) {
       return;
     }
-    const clientId = this.identity.clientId as ClientId;
-    if (!canRetractVote(snapshot.meta.phase, snapshot.votes, targetId, clientId)) {
+    if (!canRetractVote(snapshot.meta.phase, snapshot.votes, targetId, this.clientId)) {
       return;
     }
-    this.providers.doc.transact(() => {
-      const perClient = this.handles.votes.get(targetId);
-      if (perClient === undefined) {
-        return;
-      }
-      const key = String(this.identity.clientId);
-      const current = perClient.get(key) ?? 0;
-      if (current <= 1) {
-        perClient.delete(key);
-      } else {
-        perClient.set(key, current - 1);
-      }
-    });
+    this.gateway.removeVote(targetId, this.clientId);
   }
 
   addActionItem(text: string, sourceGroupId: GroupId | null = null): void {
-    const trimmed = text.trim();
-    if (trimmed.length === 0) {
-      return;
-    }
-    this.providers.doc.transact(() => {
-      this.handles.actionItems.push([
-        {
-          id: crypto.randomUUID() as ActionItemId,
-          text: trimmed,
-          sourceGroupId,
-          ownerClientId: null,
-          createdAt: Temporal.Now.instant().toString() as ISO,
-        },
-      ]);
-    });
+    this.gateway.addActionItem(text, sourceGroupId);
   }
 
   deleteActionItem(id: ActionItemId): void {
-    this.providers.doc.transact(() => {
-      for (let index = 0; index < this.handles.actionItems.length; index++) {
-        const record = this.handles.actionItems.get(index);
-        if (record.id === id) {
-          this.handles.actionItems.delete(index, 1);
-          return;
-        }
-      }
-    });
+    this.gateway.deleteActionItem(id);
   }
 
   dispose(): void {
@@ -983,27 +513,77 @@ export class RoomStore {
     }
 
     this.isDisposed = true;
-    this.providers.doc.off('afterTransaction', this.onAfterTransaction);
-    this.providers.webrtc.awareness.off('change', this.onAwarenessChange);
-    // Explicitly clear awareness before disconnecting so other peers see
-    // us leave instantly instead of waiting for the default 30s timeout.
-    // Without this, a quick rejoin produces a duplicate user entry on
-    // peers until the stale awareness state expires.
-    try {
-      this.providers.webrtc.awareness.setLocalState(null);
-    } catch {
-      // awareness may already be torn down — ignore.
-    }
+    this.disposers.forEach(dispose => dispose());
+    this.disposers.length = 0;
+    this.presence.dispose();
     if (this.toastTimeoutId !== null) {
       clearTimeout(this.toastTimeoutId);
       this.toastTimeoutId = null;
     }
-    if (this.presenceHeartbeatId !== null) {
-      clearInterval(this.presenceHeartbeatId);
-      this.presenceHeartbeatId = null;
-    }
-    this.soundPlayer.dispose();
+    this.timerCues.dispose();
     this.providers.destroy();
+  }
+
+  private get clientId(): ClientId {
+    return this.identity.clientId as ClientId;
+  }
+
+  /**
+   * Everything the lobby's recent-rooms index records about this room.
+   * Structurally compared, so the reaction that persists it fires on real
+   * changes only — not on every Yjs transaction or awareness heartbeat.
+   */
+  private get joinedRoomSnapshot(): IJoinedRoomSnapshot | null {
+    const meta = this.currentSnapshot?.meta;
+    if (isNil(meta)) {
+      return null;
+    }
+    return {
+      roomId: this.roomId,
+      name: meta.name,
+      template: meta.template,
+      createdAt: meta.createdAt,
+      facilitatorClientId: meta.facilitatorClientId,
+      facilitatorName: meta.facilitatorName,
+      participantCount: this.presentUsers.length,
+      phase: meta.phase,
+      presentParticipantIds: this.presentParticipantIds,
+    };
+  }
+
+  private publishJoinedRoom(joined: IJoinedRoomSnapshot | null): void {
+    if (isNil(joined)) {
+      return;
+    }
+    void this.lobby.upsertJoinedRoom(joined);
+  }
+
+  private publishPresence(): void {
+    this.presence.publishIdentity({
+      clientId: this.clientId,
+      name: this.identity.name,
+      pictureUrl: this.identity.pictureUrl,
+    });
+  }
+
+  private applyPresentUsers(users: readonly IParticipant[]): void {
+    this.presentUsers = users;
+  }
+
+  private updateSnapshotFromDoc(): void {
+    this.currentSnapshot = this.gateway.buildSnapshot();
+  }
+
+  /**
+   * Only the facilitator writes the pause — the Yjs update propagates to
+   * everyone so all peers stop the clock at 00:00 instead of letting it keep
+   * ticking into negative territory.
+   */
+  private handleTimerExpired(): void {
+    if (!this.isFacilitator) {
+      return;
+    }
+    this.pauseTimer();
   }
 
   private async initialize(): Promise<void> {
@@ -1014,22 +594,23 @@ export class RoomStore {
         return;
       }
 
-      if (this.createIfMissing !== null) {
-        initRetroDoc(this.handles, {
-          name: this.createIfMissing.name,
-          template: this.createIfMissing.template,
-          facilitatorClientId: this.identity.clientId as ClientId,
+      const createParams = this.createIfMissing;
+      if (!isNil(createParams)) {
+        this.gateway.initializeIfMissing({
+          name: createParams.name,
+          template: createParams.template,
+          facilitatorClientId: this.clientId,
           facilitatorName: this.identity.name,
-          votesPerParticipant: this.createIfMissing.votesPerParticipant,
+          votesPerParticipant: createParams.votesPerParticipant,
         });
       }
 
-      const snapshot = this.buildSnapshot();
+      const snapshot = this.gateway.buildSnapshot();
 
       // Bootstrap the directory with the facilitator profile extracted
       // from meta — covers the case where we open a room whose facilitator
       // is offline. Any later awareness update will overwrite this entry.
-      if (snapshot !== null && snapshot.meta.facilitatorClientId !== null) {
+      if (!isNil(snapshot) && !isNil(snapshot.meta.facilitatorClientId)) {
         void this.directory.seedIfMissing({
           clientId: snapshot.meta.facilitatorClientId,
           name: snapshot.meta.facilitatorName,
@@ -1047,158 +628,5 @@ export class RoomStore {
         this.snapshot = createUnsyncedValueDescriptor<IRetroSnapshot | null>(null, fail);
       });
     }
-  }
-
-  private buildSnapshot(): IRetroSnapshot | null {
-    if (!this.handles.meta.has(YJS_META_FIELD_CREATED_AT)) {
-      return null;
-    }
-
-    const meta = this.readMeta();
-
-    if (meta === null) {
-      return null;
-    }
-
-    const columns = this.handles.columns.toArray() as readonly IColumnConfig[];
-    const cards = this.readCards(columns);
-    const groups = this.readGroups();
-    const actionItems = this.readActionItems();
-    const votes = this.readVotes();
-
-    return createRetroSnapshot({
-      meta,
-      columns,
-      cards,
-      groups,
-      actionItems,
-      votes,
-    });
-  }
-
-  private readMeta(): IRetroMeta | null {
-    const name = this.handles.meta.get(YJS_META_FIELD_NAME);
-    const createdAt = this.handles.meta.get(YJS_META_FIELD_CREATED_AT);
-    const templateId = this.handles.meta.get(YJS_META_FIELD_TEMPLATE);
-    const phase = this.handles.meta.get(YJS_META_FIELD_PHASE);
-    const facilitatorClientId = this.handles.meta.get(YJS_META_FIELD_FACILITATOR_CLIENT_ID);
-    const facilitatorName = this.handles.meta.get(YJS_META_FIELD_FACILITATOR_NAME);
-    const votesPerParticipant = this.handles.meta.get(YJS_META_FIELD_VOTES_PER_PARTICIPANT);
-    const timer = this.handles.meta.get(YJS_META_FIELD_TIMER);
-
-    if (
-      typeof name !== 'string' ||
-      typeof createdAt !== 'string' ||
-      typeof templateId !== 'string' ||
-      typeof phase !== 'string' ||
-      typeof votesPerParticipant !== 'number' ||
-      timer === undefined ||
-      timer === null
-    ) {
-      return null;
-    }
-
-    // Resolve templateId to a known template. Unknown ids (legacy templates
-    // that were renamed or removed) fall back to the first configured
-    // template inside getTemplateById.
-    const template = getTemplateById(templateId);
-
-    return {
-      name,
-      createdAt: createdAt as IRetroMeta['createdAt'],
-      template: template.id as IRetroMeta['template'],
-      phase: phase as IRetroMeta['phase'],
-      facilitatorClientId:
-        typeof facilitatorClientId === 'number' ? (facilitatorClientId as ClientId) : null,
-      facilitatorName: typeof facilitatorName === 'string' ? facilitatorName : '',
-      votesPerParticipant,
-      timer: timer as IRetroMeta['timer'],
-    };
-  }
-
-  private readCards(columns: readonly IColumnConfig[]): readonly IRetroCard[] {
-    const collected: IRetroCard[] = [];
-
-    columns.forEach(column => {
-      const list = this.handles.cards.get(column.id);
-
-      if (list === undefined) {
-        return;
-      }
-
-      list.forEach(record => {
-        collected.push({
-          id: record.id as CardId,
-          authorClientId: record.authorClientId as ClientId,
-          columnId: record.columnId,
-          text: record.text,
-          createdAt: record.createdAt as IRetroCard['createdAt'],
-          groupId: record.groupId === null ? null : (record.groupId as GroupId),
-        });
-      });
-    });
-
-    return collected;
-  }
-
-  private readGroups(): readonly IRetroGroup[] {
-    const collected: IRetroGroup[] = [];
-
-    this.handles.groups.forEach(groupMap => {
-      const id = groupMap.get('id');
-      const columnId = groupMap.get('columnId');
-      const title = groupMap.get('title');
-      const cardIds = groupMap.get('cardIds');
-
-      if (
-        typeof id !== 'string' ||
-        typeof columnId !== 'string' ||
-        typeof title !== 'string' ||
-        !Array.isArray(cardIds)
-      ) {
-        return;
-      }
-
-      collected.push({
-        id: id as GroupId,
-        columnId: columnId as IRetroGroup['columnId'],
-        title,
-        cardIds: cardIds
-          .filter((value): value is string => typeof value === 'string')
-          .map(value => value as CardId),
-      });
-    });
-
-    return collected;
-  }
-
-  private readActionItems(): readonly IActionItem[] {
-    return this.handles.actionItems.toArray().map(record => ({
-      id: record.id as IActionItem['id'],
-      text: record.text,
-      sourceGroupId: record.sourceGroupId === null ? null : (record.sourceGroupId as GroupId),
-      ownerClientId: record.ownerClientId === null ? null : (record.ownerClientId as ClientId),
-      createdAt: record.createdAt as IActionItem['createdAt'],
-    }));
-  }
-
-  private readVotes(): VotesByTarget {
-    const collected = new Map<CardId | GroupId, ReadonlyMap<ClientId, number>>();
-
-    this.handles.votes.forEach((perClient, targetId) => {
-      const perClientMap = new Map<ClientId, number>();
-
-      perClient.forEach((count, clientId) => {
-        const parsedClientId = Number(clientId);
-
-        if (Number.isFinite(parsedClientId) && typeof count === 'number') {
-          perClientMap.set(parsedClientId as ClientId, count);
-        }
-      });
-
-      collected.set(targetId as CardId | GroupId, perClientMap);
-    });
-
-    return collected;
   }
 }

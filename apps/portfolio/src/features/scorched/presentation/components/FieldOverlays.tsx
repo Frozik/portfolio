@@ -1,3 +1,4 @@
+import type { LetterboxTransform } from '@frozik/utils/webgpu/letterboxTransform';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 
@@ -9,7 +10,6 @@ import {
   TAUNT_VISIBLE_SECONDS,
 } from '../../domain/constants';
 import { getPlayerColor } from '../../infrastructure/player-colors';
-import type { ScorchedViewTransform } from '../../infrastructure/view-transform';
 import { toScreenPosition } from '../../infrastructure/view-transform';
 import { scorchedT } from '../translations';
 
@@ -26,7 +26,7 @@ const REPAIR_COLOR = 'var(--color-emerald-400)';
  * both are short-lived, and both are far cheaper as DOM than as a glyph atlas in a shape batch.
  */
 export const FieldOverlays = observer(
-  ({ transform }: { readonly transform: ScorchedViewTransform }) => {
+  ({ transform }: { readonly transform: LetterboxTransform }) => {
     const store = useScorchedStore();
 
     if (transform.scale <= 0) {
@@ -35,7 +35,7 @@ export const FieldOverlays = observer(
 
     return (
       <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
-        {store.damagePopups.map(popup => {
+        {store.overlays.damagePopups.map(popup => {
           const screen = toScreenPosition(
             transform,
             popup.position.x,
@@ -61,7 +61,7 @@ export const FieldOverlays = observer(
           );
         })}
 
-        {store.taunts.map(taunt => {
+        {store.overlays.taunts.map(taunt => {
           const tank = store.roundRef.current.getTank(taunt.playerId);
 
           if (isNil(tank)) {

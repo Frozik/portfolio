@@ -9,7 +9,7 @@ Portfolio monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
 
 **Tech stack**: React 19, TypeScript 7, MobX 7, Tailwind CSS v4, Radix UI, Vite 8,
-WebGPU, WebRTC, TensorFlow.js, Matter.js, Dockview.
+WebGPU, WebRTC, Yjs, Socket.IO, TensorFlow.js, MediaPipe, Matter.js.
 
 ## Getting Started
 
@@ -50,11 +50,12 @@ and neuron counts. Hover over a neuron to inspect its weights and biases.
 
 ### Sudoku
 
-Sudoku game with pen/notes tool modes, undo history, and field validation.
+Sudoku game with four difficulty levels, pen/notes tool modes, undo history,
+and field validation.
 
 ### Sun
 
-WebGPU particle visualization — 100,000 billboard instances on a sphere with
+WebGPU particle visualization — 250,000 billboard instances on a sphere with
 time-based animation, neon gradient coloring, and 4x MSAA anti-aliasing.
 Interactive orbit camera via mouse drag and touch with rotation inertia.
 
@@ -101,7 +102,7 @@ canvas context.
   limit of roughly 6–8 concurrent WebGPU canvas contexts
 - 4× MSAA on every chart, with a shared anti-aliasing texture that
   resizes in place rather than being reallocated per chart
-- FPS gates down to 5 fps when nothing is moving and ramps back to 60
+- FPS gates down to 10 fps when nothing is moving and ramps back to 60
   the instant you interact
 - Data arrives in fixed 256-point blocks that the GPU stitches into a
   continuous line — the architecture maps 1:1 onto a real server-backed
@@ -109,9 +110,10 @@ canvas context.
 
 ### Binance Orderbook
 
-Live heatmap of the Binance BTC/USDT orderbook with a price line on top
-and volume bars down the side — essentially a Bookmap-style
-depth-of-market display built on WebGPU.
+Live heatmap of a Binance spot orderbook with a price line on top and
+volume bars down the side — essentially a Bookmap-style depth-of-market
+display built on WebGPU. BTC, ETH, SOL and DOGE are switchable from the
+instrument selector, each with its own price-bin height.
 
 **What you see:**
 - Heatmap where every cell is one price level at one second, colored
@@ -138,11 +140,12 @@ depth-of-market display built on WebGPU.
   so stale data is immediately distinguishable from live data
 
 **Data:**
-- Real Binance WebSocket feed (`BTCUSDT@depth@1000ms`) with the REST
+- Real Binance WebSocket feed (`<symbol>@depth@1000ms`) with the REST
   snapshot merged in; sequence gaps and clean-close drops auto-resync
   with interpolated backfill covering the downtime
-- 700 raw price levels per side aggregate into 64 `$1.50` bins for
-  display
+- 800 raw price levels per side aggregate into 64 bins for display
+  (`$1.50` per bin on BTC, scaled to a comparable fraction of price on
+  the other instruments)
 - Rolling one-hour history in IndexedDB (~7 MB on disk), lazy-loaded
   when you pan into the past; cleared on page reload
 - Mid-price is computed locally from `(bestBid + bestAsk) / 2` — one
@@ -234,7 +237,7 @@ original ROM.
   and no binary files
 
 **Engine:**
-- Pure TypeScript domain (100% unit-tested, 500+ tests) driving a
+- Pure TypeScript domain (100% unit-tested, 400+ tests) driving a
   fixed-timestep 60 Hz simulation, decoupled from display refresh
 - Instanced WebGPU rendering: terrain quadrants, sprites with palette
   variants, see-through forest canopy above the tanks, effects overlay
@@ -299,17 +302,17 @@ shared library.
 
 ### Retro
 
-Collaborative retrospective board for Agile teams. Sign in with Google,
-create a board, share the link — participants sync in real time directly
-between browsers, with no central database holding the data.
+Collaborative retrospective board for Agile teams. Sign in with Google or
+Yandex, create a board, share the link — participants sync in real time
+directly between browsers, with no central database holding the data.
 
 **Lobby** (`/retro`) — list of locally stored retros (name, creation date,
 participant count) plus Create and Join-by-link actions. The default
-nickname is seeded from your Google profile; sign-out is a click away.
+nickname is seeded from your sign-in profile; sign-out is a click away.
 
 **Room** (`/retro/:uuid`) — a columns board driven by the selected template:
-Scrum (Went Well / To Improve / Action Items), Mad / Sad / Glad, or
-Start / Stop / Continue. Cards added during Brainstorm render face-down
+the classic Scrum three-column format (Went Well / To Improve / Action
+Items), in English or Russian. Cards added during Brainstorm render face-down
 (hidden until reveal) with a 3D flip animation that stagger-flips on phase
 advance to Group. Only the retro organizer (facilitator) can advance phases
 and control the shared timer.
@@ -340,11 +343,11 @@ Ubuntu VPS.
 
 2-person video call with AR "glasses" and an emotion emoji baked
 straight into the outgoing video stream — fully in-browser, no plugins.
-Sign in with Google or Yandex, create a room, share the link.
+Create a room, share the link; no sign-in required.
 
 **Lobby** (`/conf`) — locally remembered rooms you created or visited,
-plus Create and Join-by-link actions. Same multi-provider sign-in as
-Retro; sign-out sits next to the room counter.
+plus Create and Join-by-link actions. Calls are anonymous: a room id is
+all a participant needs, and the room list never leaves the browser.
 
 **Room** (`/conf/:uuid`) — local + remote video tiles, side-by-side on
 desktop and stacked on mobile, with mute audio / mute video / a
@@ -369,13 +372,13 @@ politely turned away with a "room full" message.
 - Adaptive video quality watches round-trip time and packet loss every
   couple of seconds and steps the encoder between HD / SD / Low tiers
   without dropping the call.
-- Same OIDC-authenticated signaling backend as Retro; once the call is
-  up, audio and video flow peer-to-peer over WebRTC.
+- Same signaling backend as Retro, joined anonymously — the server hands
+  out short-lived TURN credentials with a tighter relay window for
+  unauthenticated sessions. Once the call is up, audio and video flow
+  peer-to-peer over WebRTC.
 
 **Stack:** `@mediapipe/tasks-vision` (FaceLandmarker, GPU delegate with
 WASM fallback) loaded lazily from CDN; native `RTCPeerConnection` with
 perfect negotiation; `canvas.captureStream` for output compositing;
 `socket.io-client` against
-[`apps/communication`](./apps/communication/README.md) for
-OIDC-authenticated signaling; the same pluggable Google + Yandex
-sign-in abstraction (`IOidcProvider`) Retro uses.
+[`apps/communication`](./apps/communication/README.md) for signaling.

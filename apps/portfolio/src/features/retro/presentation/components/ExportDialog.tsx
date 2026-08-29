@@ -4,15 +4,14 @@ import DOMPurify from 'dompurify';
 import { Check, Copy, Download } from 'lucide-react';
 import { marked } from 'marked';
 import { observer } from 'mobx-react-lite';
-import { useMemo, useState } from 'react';
-import { copyToClipboard } from '../../../../shared/lib/copyToClipboard';
+import { useMemo } from 'react';
+import { useCopyToClipboard } from '../../../../shared/hooks/useCopyToClipboard';
 import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';
 import { renderSnapshotToMarkdown } from '../../domain/markdown-export';
 import { retroT as t } from '../translations';
 
-const COPY_RESET_DELAY_MS = 1800;
 const ICON_SIZE_PX = 12;
 const SAFE_NAME_PATTERN = /[^a-z0-9-]+/gi;
 const SAFE_NAME_FALLBACK = 'retro';
@@ -35,7 +34,7 @@ const PROSE_CLASSES = cn(
 
 export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) => {
   const snapshot = store.currentSnapshot;
-  const [copied, setCopied] = useState(false);
+  const { status: copyStatus, copy } = useCopyToClipboard();
 
   const markdown = useMemo(() => {
     if (snapshot === null) {
@@ -53,12 +52,8 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
   }, [markdown]);
 
   const handleCopy = useFunction(async () => {
-    const ok = await copyToClipboard(markdown);
-    store.showToast(ok ? t.room.linkCopied : t.errors.copyFailed);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), COPY_RESET_DELAY_MS);
-    }
+    const copied = await copy(markdown);
+    store.showToast(copied ? t.close.markdownCopied : t.errors.copyFailed);
   });
 
   const handleDownload = useFunction(() => {
@@ -81,8 +76,8 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
           'hover:border-landing-accent hover:bg-landing-accent/10'
         )}
       >
-        {copied ? <Check size={ICON_SIZE_PX} /> : <Copy size={ICON_SIZE_PX} />}
-        {copied ? t.share.copied : t.close.exportCopy}
+        {copyStatus === 'copied' ? <Check size={ICON_SIZE_PX} /> : <Copy size={ICON_SIZE_PX} />}
+        {copyStatus === 'copied' ? t.share.copied : t.close.exportCopy}
       </button>
       <button
         type="button"

@@ -4,8 +4,8 @@ import type { ITrade, ITradeBlockMeta, ITradeBucket } from '../domain/trades-typ
 import type { UnixTimeMs } from '../domain/types';
 
 /**
- * Two-level accumulator for per-second trade buckets (see trades.md
- * §1.5 / §2.3). Keeps an open **active bucket** that aggregates
+ * Two-level accumulator for per-second trade buckets. Keeps an open
+ * **active bucket** that aggregates
  * incoming trades for the current second, and an open **active block**
  * that collects the closed buckets into a texture-aligned
  * `Float32Array` (4 floats × `maxBucketsPerBlock` buckets).
@@ -214,10 +214,9 @@ export class TradeBucketAccumulator {
   }
 
   private appendBucketToBlock(block: IActiveBlockState, bucket: ITradeBucket): void {
-    // 1) Write 4 floats at offset bucketCount * floatsPerBucket.
-    // 2) THEN increment bucketCount.
-    // 3) THEN update lastBucketStartMs.
-    // (Order matches trades.md §2.3 pseudocode.)
+    // Write order is load-bearing: 4 floats at offset
+    // `bucketCount * floatsPerBucket` first, THEN `bucketCount`, THEN
+    // `lastBucketStartMs` — the counter doubles as the write cursor.
     const offset = block.meta.bucketCount * this.floatsPerBucket;
     block.data[offset + 0] = bucket.bucketStartMs - block.meta.firstBucketStartMs;
     block.data[offset + 1] = bucket.vwap - block.meta.basePrice;

@@ -116,7 +116,7 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
           const randomPlayer1 = pickRandomArrayElement(orderedPlayersWithScores).player;
           const randomPlayer2 = pickRandomArrayElement(orderedPlayersWithScores).player;
 
-          if (randomPlayer1 !== randomPlayer2 && !isNil(randomPlayer1.crossoverModels)) {
+          if (randomPlayer1 !== randomPlayer2) {
             newPopulation.push(await randomPlayer1.crossoverModels(randomPlayer2));
           }
 

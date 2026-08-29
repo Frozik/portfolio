@@ -6,7 +6,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
-import { copyToClipboard } from '../../../shared/lib/copyToClipboard';
 import { Alert } from '../../../shared/ui/Alert';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -14,7 +13,7 @@ import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useRoomStore } from '../application/useRoomStore';
 import { getTemplateById } from '../domain/templates';
-import type { ClientId, RoomId } from '../domain/types';
+import type { RoomId } from '../domain/types';
 import { ERetroPhase } from '../domain/types';
 import { ClosePanel } from './components/ClosePanel';
 import { ColumnList } from './components/ColumnList';
@@ -122,67 +121,7 @@ const RoomBody = observer(
       }
     }, [roomStore, searchParams, setSearchParams]);
 
-    const snapshotMeta = roomStore.currentSnapshot?.meta;
-    const presentUsers = roomStore.presentUsers;
-    const participantCount = presentUsers.length;
-    // Derive a stable scalar key from the present participants' clientIds so
-    // the upsert effect re-runs only when room membership actually changes —
-    // not on every heartbeat, which mutates `presentUsers` (a fresh array) and
-    // `snapshotMeta` (a fresh object on every Yjs transaction) without
-    // changing any of the fields the recent-rooms index records.
-    const presentParticipantsKey = presentUsers.map(user => user.clientId).join(',');
-    // Re-materialise the clientId list only when the membership key changes, so
-    // the array passed to the effect keeps a stable reference across heartbeats.
-    const presentParticipantIds = useMemo<readonly ClientId[]>(
-      () =>
-        presentParticipantsKey.length === 0
-          ? []
-          : presentParticipantsKey.split(',').map(id => Number(id) as ClientId),
-      [presentParticipantsKey]
-    );
-    const metaName = snapshotMeta?.name;
-    const metaTemplate = snapshotMeta?.template;
-    const metaCreatedAt = snapshotMeta?.createdAt;
-    const metaFacilitatorClientId = snapshotMeta?.facilitatorClientId;
-    const metaFacilitatorName = snapshotMeta?.facilitatorName;
-    const metaPhase = snapshotMeta?.phase;
-    useEffect(() => {
-      if (
-        metaName === undefined ||
-        metaTemplate === undefined ||
-        metaCreatedAt === undefined ||
-        metaFacilitatorClientId === undefined ||
-        metaFacilitatorName === undefined ||
-        metaPhase === undefined
-      ) {
-        return;
-      }
-      void lobbyStore.upsertJoinedRoom({
-        roomId: typedRoomId,
-        name: metaName,
-        template: metaTemplate,
-        createdAt: metaCreatedAt,
-        facilitatorClientId: metaFacilitatorClientId,
-        facilitatorName: metaFacilitatorName,
-        participantCount,
-        phase: metaPhase,
-        presentParticipantIds,
-      });
-    }, [
-      lobbyStore,
-      typedRoomId,
-      metaName,
-      metaTemplate,
-      metaCreatedAt,
-      metaFacilitatorClientId,
-      metaFacilitatorName,
-      metaPhase,
-      participantCount,
-      presentParticipantIds,
-    ]);
-
-    const handleCopyLink = useFunction(async () => {
-      const copied = await copyToClipboard(window.location.href);
+    const handleCopyResult = useFunction((copied: boolean) => {
       roomStore.showToast(copied ? t.room.linkCopied : t.errors.copyFailed);
     });
 
@@ -219,13 +158,14 @@ const RoomBody = observer(
           open={roomStore.isShareDialogOpen}
           onClose={roomStore.closeShareDialog}
           url={window.location.href}
-          onCopy={handleCopyLink}
+          onCopyResult={handleCopyResult}
           kicker={t.share.kicker}
           title={t.share.dialogTitle}
           description={t.share.description}
           qrLabel={t.share.qrLabel}
           copyLabel={t.share.copyLink}
           copiedLabel={t.share.copied}
+          copyFailedLabel={t.errors.copyFailed}
         />
       </div>
     );

@@ -10,7 +10,7 @@ import {
   tensor2d,
   tidy,
 } from '@tensorflow/tfjs';
-import { isNil, round } from 'lodash-es';
+import { isEqual, isNil, round } from 'lodash-es';
 import { Vector } from 'matter-js';
 
 import { RAILS_HALF_LENGTH } from '../constants';
@@ -39,6 +39,13 @@ export const MAX_PIVOT_VELOCITY = 1;
 const MAX_BOB_VELOCITY = 50;
 const MAX_MUTATION_RATE = 0.2;
 const MUTATION_RATE_PRECISION = 4;
+
+/**
+ * Signals that two parents cannot be crossed over because their networks do not
+ * line up. Breeding treats it as an expected outcome (fall back to a mutation);
+ * every other failure stays fatal.
+ */
+class IncompatibleModelTopologyError extends Error {}
 
 export class TensorflowPlayer implements IRobotPlayer {
   private readonly model: LayersModel;
@@ -175,13 +182,21 @@ export class TensorflowPlayer implements IRobotPlayer {
     return new TensorflowPlayer(undefined, newModel);
   }
 
-  public async crossoverModels?(secondParent: IRobotPlayer): Promise<IRobotPlayer> {
+  public async crossoverModels(secondParent: IRobotPlayer): Promise<IRobotPlayer> {
+    if (!(secondParent instanceof TensorflowPlayer)) {
+      return await this.mutate();
+    }
+
     try {
-      const newModel = await crossoverModels(this.model, (secondParent as TensorflowPlayer).model);
+      const newModel = await crossoverModels(this.model, secondParent.model);
 
       return new TensorflowPlayer(undefined, newModel);
-    } catch {
-      return await this.mutate();
+    } catch (error) {
+      if (error instanceof IncompatibleModelTopologyError) {
+        return await this.mutate();
+      }
+
+      throw error;
     }
   }
 
@@ -256,36 +271,52 @@ async function crossoverModels(father: LayersModel, mother: LayersModel): Promis
   const motherLayers = mother.layers;
 
   if (fatherLayers.length !== motherLayers.length) {
-    throw new Error('Layers of parents are not equal');
+    throw new IncompatibleModelTopologyError('Parents have a different number of layers');
   }
 
   const childModel = await cloneModel(father);
 
-  tidy(() =>
-    fatherLayers.forEach((layer, index) => {
-      const fatherLayerWeights = layer.getWeights();
-      const motherLayerWeights2 = motherLayers[index].getWeights();
+  try {
+    tidy(() =>
+      fatherLayers.forEach((layer, index) => {
+        const fatherLayerWeights = layer.getWeights();
+        const motherLayerWeights = motherLayers[index].getWeights();
 
-      if (fatherLayerWeights.length !== motherLayerWeights2.length) {
-        childModel.dispose();
-        throw new Error('Layers of parents are not equal');
-      }
+        if (fatherLayerWeights.length !== motherLayerWeights.length) {
+          throw new IncompatibleModelTopologyError(
+            'Parent layers have a different number of weight tensors'
+          );
+        }
 
-      const childWeights = fatherLayerWeights.map((fatherWeights, weightIndex) => {
-        const motherWeights = motherLayerWeights2[weightIndex];
+        const childWeights = fatherLayerWeights.map((fatherWeights, weightIndex) => {
+          const motherWeights = motherLayerWeights[weightIndex];
 
-        const shape = fatherWeights.shape;
-        const crossoverPoint = Math.trunc(Math.random() * shape[0]);
+          const shape = fatherWeights.shape;
 
-        const fatherValues = (fatherWeights.arraySync() as number[]).slice(0, crossoverPoint);
-        const motherValues = (motherWeights.arraySync() as number[]).slice(crossoverPoint);
+          // Shapes are compared up front so a topology mismatch surfaces as
+          // `IncompatibleModelTopologyError` (a breeding fallback) instead of an
+          // opaque tf.js `setWeights` failure, which is indistinguishable from a
+          // genuine runtime fault.
+          if (!isEqual(shape, motherWeights.shape)) {
+            throw new IncompatibleModelTopologyError('Parent weight tensors have different shapes');
+          }
 
-        return tensor([...fatherValues, ...motherValues], shape);
-      });
+          const crossoverPoint = Math.trunc(Math.random() * shape[0]);
 
-      childModel.layers[index].setWeights(childWeights);
-    })
-  );
+          const fatherValues = (fatherWeights.arraySync() as number[]).slice(0, crossoverPoint);
+          const motherValues = (motherWeights.arraySync() as number[]).slice(crossoverPoint);
+
+          return tensor([...fatherValues, ...motherValues], shape);
+        });
+
+        childModel.layers[index].setWeights(childWeights);
+      })
+    );
+  } catch (error) {
+    childModel.dispose();
+
+    throw error;
+  }
 
   return childModel;
 }

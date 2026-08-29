@@ -1,4 +1,5 @@
 import { MIN_TIME_RANGE_SECONDS, Y_PADDING_RATIO } from './constants';
+import type { IBlockEntry } from './types';
 import { ETimeScale } from './types';
 
 /**
@@ -134,6 +135,34 @@ export function visibleYRange(
   }
 
   return [minValue, maxValue];
+}
+
+/**
+ * Combine the visible Y ranges of every block of every series into a single
+ * range. Returns `undefined` when the visible points span no range at all
+ * (empty viewport or a single repeated value) — callers keep the previous
+ * Y-axis rather than collapsing it to zero height.
+ */
+export function visibleValueRangeAcrossSeries(
+  seriesBlocks: ReadonlyArray<readonly IBlockEntry[]>,
+  timeStart: number,
+  timeEnd: number
+): [number, number] | undefined {
+  let globalMin = Number.POSITIVE_INFINITY;
+  let globalMax = Number.NEGATIVE_INFINITY;
+
+  for (const blocks of seriesBlocks) {
+    for (const block of blocks) {
+      const range = visibleYRange(block.pointTimes, block.pointValues, timeStart, timeEnd);
+
+      if (range !== undefined) {
+        globalMin = Math.min(globalMin, range[0]);
+        globalMax = Math.max(globalMax, range[1]);
+      }
+    }
+  }
+
+  return globalMin < globalMax ? [globalMin, globalMax] : undefined;
 }
 
 /**

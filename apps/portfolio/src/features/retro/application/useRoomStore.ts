@@ -1,20 +1,18 @@
 import { useRootStore } from '../../../app/stores/StoreContext';
 import { useRefcountedFeatureStore } from '../../../app/stores/useRefcountedFeatureStore';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
-import type { ITemplateConfig, RoomId } from '../domain/types';
+import type { RoomId } from '../domain/types';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
 import { createYjsRoomProviders } from '../infrastructure/yjs-providers';
+import type { IRoomCreateParams } from './RoomStore';
 import { RoomStore } from './RoomStore';
+import { getRetroLobbyStore } from './retroLobbyStoreAccessor';
 import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
 
 export interface IUseRoomStoreParams {
   readonly roomId: RoomId;
   readonly identity: IRetroIdentity;
-  readonly createIfMissing: {
-    readonly name: string;
-    readonly template: ITemplateConfig;
-    readonly votesPerParticipant: number;
-  } | null;
+  readonly createIfMissing: IRoomCreateParams | null;
   readonly client: ICommunicationClient;
 }
 
@@ -65,19 +63,21 @@ export function useRoomStore(params: IUseRoomStoreParams): RoomStore {
   const storeKey = getRoomStoreKey(params.roomId, params.client);
 
   const directory = getUserDirectoryStore(rootStore);
+  const lobby = getRetroLobbyStore(rootStore);
 
   const store = rootStore.getOrCreateFeatureStore(storeKey, () => {
     const providers = createYjsRoomProviders({
       roomId: params.roomId,
       client: params.client,
     });
-    return new RoomStore(
-      params.roomId,
-      params.identity,
+    return new RoomStore({
+      roomId: params.roomId,
+      identity: params.identity,
       providers,
-      params.createIfMissing,
-      directory
-    );
+      createIfMissing: params.createIfMissing,
+      directory,
+      lobby,
+    });
   });
 
   useRefcountedFeatureStore(rootStore, storeKey);

@@ -2,6 +2,8 @@ import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
+import type { GpuAppSession } from '@frozik/utils/webgpu/runGpuApp';
+import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
 
 import { MSAA_SAMPLE_COUNT } from '../../domain/chart-constants';
 import { OFFSCREEN_FORMAT } from '../../infrastructure/chart-gpu-constants';
@@ -21,30 +23,13 @@ import { createUniformManager } from '../../infrastructure/uniform-manager';
 const chartShaderSource = chartCommonSource + chartSpecificSource;
 
 export function runCharter(canvas: HTMLCanvasElement): VoidFunction {
-  let destroyed = false;
-  let gpuCleanup: (() => void) | undefined;
-
-  void initCharter(canvas).then(
-    cleanup => {
-      if (destroyed) {
-        cleanup();
-      } else {
-        gpuCleanup = cleanup;
-      }
-    },
-    (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU charts renderer init failure
-      console.error('Failed to initialize charts renderer', error);
-    }
-  );
-
-  return () => {
-    destroyed = true;
-    gpuCleanup?.();
-  };
+  return runGpuApp({
+    init: () => initCharter(canvas),
+    initErrorMessage: 'Failed to initialize charts renderer',
+  });
 }
 
-async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
+async function initCharter(canvas: HTMLCanvasElement): Promise<GpuAppSession> {
   const context = await createGpuContext(canvas);
   const { device } = context;
 
@@ -67,9 +52,7 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
   const mainPassLayer = new MainPassLayer(chartShaderModule, msaaManager, uniformManager);
   const sinYLayer = new SinYLayer(
     offscreenTextureManager,
-    compositeResources.compositeBindGroupLayout,
-    compositeResources.compositeSampler,
-    compositeResources.compositeUniformBuffer,
+    compositeResources,
     chartShaderModule,
     uniformManager
   );
@@ -92,12 +75,15 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<VoidFunction> {
     layerManager,
   });
 
-  return () => {
-    stopRenderLoop();
-    layerManager.dispose();
-    uniformManager.dispose();
-    msaaManager.dispose();
-    offscreenTextureManager.destroy();
-    device.destroy();
+  return {
+    cleanup: () => {
+      stopRenderLoop();
+      layerManager.dispose();
+      compositeResources.compositeUniformBuffer.destroy();
+      uniformManager.dispose();
+      msaaManager.dispose();
+      offscreenTextureManager.destroy();
+      device.destroy();
+    },
   };
 }

@@ -38,6 +38,11 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
 
   useEffect(() => {
     const handleFullscreenChange = (): void => {
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+      console.log('>>> fullscreenchange', {
+        fullscreenElement: document.fullscreenElement?.tagName ?? null,
+        hasSavedState: savedStateRef.current !== null,
+      });
       if (document.fullscreenElement === null && savedStateRef.current !== null) {
         savedStateRef.current = null;
         screen.orientation?.unlock?.();
@@ -51,6 +56,11 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
   }, []);
 
   const toggle = useFunction(async () => {
+    // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+    console.log('>>> fullscreen toggle', {
+      isActive,
+      fullscreenElement: document.fullscreenElement?.tagName ?? null,
+    });
     if (isActive) {
       const saved = savedStateRef.current;
       savedStateRef.current = null;
@@ -60,8 +70,9 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
         if (saved !== null && !saved.wasFullscreen && document.fullscreenElement !== null) {
           await document.exitFullscreen();
         }
-      } catch {
-        // Browser refused — state is already reset.
+      } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+        console.log('>>> fullscreen exit failed', error);
       }
       return;
     }
@@ -74,7 +85,13 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
       if (document.fullscreenElement === null) {
         await document.documentElement.requestFullscreen();
       }
-    } catch {
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+      console.log('>>> requestFullscreen resolved', {
+        fullscreenElement: document.fullscreenElement?.tagName ?? null,
+      });
+    } catch (error) {
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+      console.log('>>> requestFullscreen failed', error);
       savedStateRef.current = null;
       return;
     }
@@ -84,8 +101,11 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
     // to show "active" because fullscreen itself succeeded.
     try {
       await screen.orientation?.lock?.('landscape');
-    } catch {
-      // Desktop / unsupported — ignore.
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+      console.log('>>> orientation lock resolved');
+    } catch (error) {
+      // biome-ignore lint/suspicious/noConsole: temporary >>> debug trace
+      console.log('>>> orientation lock rejected (expected on desktop)', error);
     }
 
     setIsActive(true);

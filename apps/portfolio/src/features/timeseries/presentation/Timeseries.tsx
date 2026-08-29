@@ -2,17 +2,18 @@ import { packColor, unpackColor } from '@frozik/utils/webgpu/colorPacking';
 import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
+import { WebGpuUnsupportedNotice } from '../../../shared/components/WebGpuUnsupportedNotice';
 import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
 import type { IDataPoint, ISeriesConfig } from '../domain/types';
 import { EChartType } from '../domain/types';
 import { DebugOverlay } from './DebugOverlay';
-import { SharedRendererProvider, useSharedRenderer } from './SharedRendererContext';
+import { SharedRendererProvider, useSharedRendererState } from './SharedRendererContext';
 import { TimeseriesChart } from './TimeseriesChart';
 
-const RHOMBUS_RED_THRESHOLD = 110;
-const RHOMBUS_ORANGE_THRESHOLD = 105;
-const RHOMBUS_GREEN_THRESHOLD = 100;
-const RHOMBUS_BLUE_THRESHOLD = 95;
+const VALUE_THRESHOLD_HIGHEST = 110;
+const VALUE_THRESHOLD_HIGH = 105;
+const VALUE_THRESHOLD_MEDIUM = 100;
+const VALUE_THRESHOLD_LOW = 95;
 
 const RHOMBUS_COLOR_RED = packColor(0.9, 0.2, 0.2, 1.0);
 const RHOMBUS_COLOR_ORANGE = packColor(1.0, 0.6, 0.1, 1.0);
@@ -32,32 +33,32 @@ const LINE_SIZE_LEVEL_4 = 8;
 const LINE_SIZE_LEVEL_5 = 10;
 
 function lineSizeByValue(value: number): number {
-  if (value > RHOMBUS_RED_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_HIGHEST) {
     return LINE_SIZE_LEVEL_5;
   }
-  if (value > RHOMBUS_ORANGE_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_HIGH) {
     return LINE_SIZE_LEVEL_4;
   }
-  if (value > RHOMBUS_GREEN_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_MEDIUM) {
     return LINE_SIZE_LEVEL_3;
   }
-  if (value > RHOMBUS_BLUE_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_LOW) {
     return LINE_SIZE_LEVEL_2;
   }
   return LINE_SIZE_LEVEL_1;
 }
 
 function rhombusColorByValue(value: number): number {
-  if (value > RHOMBUS_RED_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_HIGHEST) {
     return RHOMBUS_COLOR_RED;
   }
-  if (value > RHOMBUS_ORANGE_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_HIGH) {
     return RHOMBUS_COLOR_ORANGE;
   }
-  if (value > RHOMBUS_GREEN_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_MEDIUM) {
     return RHOMBUS_COLOR_DEFAULT;
   }
-  if (value > RHOMBUS_BLUE_THRESHOLD) {
+  if (value > VALUE_THRESHOLD_LOW) {
     return RHOMBUS_COLOR_GREEN;
   }
   return RHOMBUS_COLOR_BLUE;
@@ -104,7 +105,11 @@ const CHART_SERIES_CONFIGS: readonly (readonly ISeriesConfig[])[] = [
 ];
 
 const TimeseriesContent = memo(() => {
-  const renderer = useSharedRenderer();
+  const { status, renderer } = useSharedRendererState();
+
+  if (status === 'unsupported') {
+    return <WebGpuUnsupportedNotice className="h-full w-full" />;
+  }
 
   return (
     <div className="h-full w-full relative grid grid-cols-2 grid-rows-2">

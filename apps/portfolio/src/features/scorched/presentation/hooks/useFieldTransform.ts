@@ -1,12 +1,12 @@
+import type { LetterboxTransform } from '@frozik/utils/webgpu/letterboxTransform';
 import { isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect, useState } from 'react';
 
 import { FIELD_HEIGHT_WU, FIELD_WIDTH_WU } from '../../domain/constants';
-import type { ScorchedViewTransform } from '../../infrastructure/view-transform';
 import { computeViewTransform } from '../../infrastructure/view-transform';
 
-const NO_TRANSFORM: ScorchedViewTransform = { scale: 0, originX: 0, originY: 0 };
+const NO_TRANSFORM: LetterboxTransform = { scale: 0, originX: 0, originY: 0 };
 
 /**
  * Where the letterboxed field currently sits inside the canvas, in CSS pixels. The GPU layers
@@ -16,8 +16,8 @@ const NO_TRANSFORM: ScorchedViewTransform = { scale: 0, originX: 0, originY: 0 }
  */
 export function useFieldTransform(
   canvasRef: RefObject<HTMLCanvasElement | null>
-): ScorchedViewTransform {
-  const [transform, setTransform] = useState<ScorchedViewTransform>(NO_TRANSFORM);
+): LetterboxTransform {
+  const [transform, setTransform] = useState<LetterboxTransform>(NO_TRANSFORM);
 
   useEffect(() => {
     const canvas = canvasRef.current;

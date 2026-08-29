@@ -1,3 +1,4 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { EMPTY_VD, isSyncedValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 
 import { EToolType } from '../domain/types';
@@ -100,6 +101,27 @@ describe('SudokuStore', () => {
         return;
       }
       expect(store.field.value.cells[2].value).toBe(originalField.value.cells[2].value);
+    });
+
+    it('keeps every snapshot independent from the moves made after it', () => {
+      store.loadPuzzle(VALID_PUZZLE);
+
+      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.applyTool(0, 2);
+
+      store.setTool({ type: EToolType.Notes, value: 7 });
+      store.applyTool(0, 3);
+
+      store.restorePreviousState();
+      store.restorePreviousState();
+
+      assert(isSyncedValueDescriptor(store.field), 'field must be synced after undo');
+
+      const PEN_CELL_INDEX = 2;
+      const NOTES_CELL_INDEX = 3;
+
+      expect(store.field.value.cells[PEN_CELL_INDEX].value).toBeUndefined();
+      expect(store.field.value.cells[NOTES_CELL_INDEX].notes).toEqual([]);
     });
 
     it('does nothing when history is empty', () => {

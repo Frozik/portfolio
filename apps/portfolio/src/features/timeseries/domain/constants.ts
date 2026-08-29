@@ -1,5 +1,3 @@
-// --- FPS levels ---
-
 export const FPS_IDLE = 10;
 export const FPS_RESIZE = 60;
 export const FPS_ZOOM_ANIMATION = 60;

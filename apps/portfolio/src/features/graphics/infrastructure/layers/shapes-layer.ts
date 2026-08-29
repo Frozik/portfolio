@@ -1,6 +1,9 @@
+import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import {
   HALF,
   MAX_SHAPE_BUFFER_COUNT,
+  SHAPE_FADE_DURATION,
   SHAPE_INSTANCE_BYTES,
   SHAPE_VERTICES_PER_INSTANCE,
 } from '../../domain/chart-constants';
@@ -16,13 +19,9 @@ import {
 } from '../../domain/chart-shapes';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import shapesSpecificSource from '../shaders/shapes.wgsl?raw';
+import type { UniformManager } from '../uniform-manager';
 
 const shapesShaderSource = commonShaderSource + shapesSpecificSource;
-
-import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
-import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
-import { SHAPE_FADE_DURATION } from '../../domain/chart-constants';
-import type { UniformManager } from '../uniform-manager';
 
 const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
 

@@ -122,7 +122,6 @@ export class CompositeLayer implements RenderLayer {
     pass.end();
   }
 
-  dispose(): void {
-    this.resources.compositeUniformBuffer.destroy();
-  }
+  /** `resources` are shared with `SinYLayer` and destroyed by their creator */
+  dispose(): void {}
 }

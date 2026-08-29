@@ -1,7 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
-import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
   isEmptyValueDescriptor,
@@ -15,10 +14,9 @@ import type { CellContext, ColumnDef, ColumnVisibilityState } from '@tanstack/re
 import { isNil } from 'lodash-es';
 import { Bot, Network, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import type React from 'react';
-import { memo, useRef } from 'react';
+import type { ComponentProps } from 'react';
+import { memo } from 'react';
 import { Temporal } from 'temporal-polyfill';
-import { useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
@@ -29,38 +27,48 @@ import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { usePendulumStore } from '../../application/usePendulumStore';
+import type { IGeneration } from '../../domain/defs';
 import { POPULATION_SIZE } from '../../domain/genetic/constants';
+import { OVERLAY_MESSAGE_CONTAINER_CLASS } from '../constants';
 import { pendulumT } from '../translations';
-import commonStyles from './common.module.scss';
 
-const DATE_LOCALE = getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
+function getDateLocale(): string {
+  return getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
+}
 
-type TGenerationRow = Record<string, unknown> & {
-  key: number;
+type TGenerationPlayer = IGeneration['players'][number];
+
+type TGenerationRow = {
   id: number;
   maxScore: number;
+  players: TGenerationPlayer[];
 };
 
-type TPlayerValue = { name: string; modelUrl: string; score: number } | undefined;
+function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
+  if (score > 0) {
+    return 'green';
+  }
+  if (score < 0) {
+    return 'red';
+  }
+  return 'blue';
+}
 
 const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
   const maxScore = getValue<number>();
-  return <Tag color={maxScore > 0 ? 'green' : maxScore < 0 ? 'red' : 'blue'}>{maxScore}</Tag>;
+  return <Tag color={scoreTagColor(maxScore)}>{maxScore}</Tag>;
 };
 
 const PLAYER_ACTION_ICON_SIZE = 14;
 
-const PlayerCellContent = memo(({ player }: { player: { name: string; score: number } }) => {
+const PlayerCellContent = memo(({ player }: { player: TGenerationPlayer }) => {
   const store = usePendulumStore();
   const handleSelectForTest = useFunction(() => store.setSelectedRobotId(player.name));
   const handleOpenNeuralNetwork = useFunction(() => store.openNeuralNetworkDialog(player.name));
 
   return (
     <div className="flex items-center gap-2">
-      <Tag
-        color={player.score > 0 ? 'green' : player.score < 0 ? 'red' : 'blue'}
-        className="shrink-0 whitespace-nowrap"
-      >
+      <Tag color={scoreTagColor(player.score)} className="shrink-0 whitespace-nowrap">
         {player.score}
       </Tag>
       <Button
@@ -88,7 +96,7 @@ const PlayerCellContent = memo(({ player }: { player: { name: string; score: num
 });
 
 const PlayerCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
-  const player = getValue() as TPlayerValue;
+  const player = getValue<TGenerationPlayer | undefined>();
   if (isNil(player)) {
     return null;
   }
@@ -130,7 +138,7 @@ const CompetitionListItem = memo(
             : pendulumT.generationsList.continueWith(
                 Temporal.Instant.from(startDate)
                   .toZonedDateTimeISO(Temporal.Now.timeZoneId())
-                  .toLocaleString(DATE_LOCALE, COMPETITION_DATE_FORMAT)
+                  .toLocaleString(getDateLocale(), COMPETITION_DATE_FORMAT)
               )}
         </Button>
         {startDate !== 'new' && (
@@ -150,6 +158,30 @@ const CompetitionListItem = memo(
   }
 );
 
+const StartCompetitionPrompt = memo(({ onStart }: { onStart: VoidFunction }) => (
+  <div className="absolute inset-0 flex items-center justify-center">
+    <Tooltip
+      open
+      placement="bottom"
+      className="max-w-xl px-4 py-3"
+      title={
+        <div className="space-y-2 text-left">
+          <div className="text-sm font-medium text-landing-fg">
+            {pendulumT.fitnessPlayground.competitionNotStarted}
+          </div>
+          <div className="text-xs text-landing-fg-dim">
+            {pendulumT.fitnessPlayground.description}
+          </div>
+        </div>
+      }
+    >
+      <Button variant="primary" size="lg" onClick={onStart}>
+        {pendulumT.generationsList.createNew}
+      </Button>
+    </Tooltip>
+  </div>
+));
+
 const generationColumns: ColumnDef<TDataTableFeatures, TGenerationRow, unknown>[] = [
   {
     accessorKey: 'id',
@@ -163,21 +195,16 @@ const generationColumns: ColumnDef<TDataTableFeatures, TGenerationRow, unknown>[
     size: 110,
     cell: ScoreCell,
   },
-  ...Array.from({ length: POPULATION_SIZE }, (_, index) => ({
-    accessorKey: `player-${index}` as const,
-    header: pendulumT.generationsList.columnPlayer(index + 1),
+  ...Array.from({ length: POPULATION_SIZE }, (_, playerIndex) => ({
+    id: `player-${playerIndex}`,
+    accessorFn: ({ players }: TGenerationRow) => players[playerIndex],
+    header: pendulumT.generationsList.columnPlayer(playerIndex + 1),
     size: 340,
     cell: PlayerCell,
   })),
 ];
 
 export const GenerationsList = observer(() => {
-  const ref = useRef<HTMLDivElement>(null);
-  useResizeObserver({
-    ref: ref as React.RefObject<HTMLElement>,
-    box: 'border-box',
-  });
-
   const store = usePendulumStore();
 
   const competitionsList = store.competitionsList;
@@ -215,7 +242,7 @@ export const GenerationsList = observer(() => {
 
   if (isWaitingArgumentsValueDescriptor(competitionsList)) {
     return (
-      <div className={commonStyles.alertContainer}>
+      <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
         <OverlayLoader />
       </div>
     );
@@ -227,76 +254,51 @@ export const GenerationsList = observer(() => {
   });
 
   const columnVisibility: ColumnVisibilityState = {};
-  for (let i = 0; i < POPULATION_SIZE; i++) {
-    columnVisibility[`player-${i}`] = i < maxPopulationSize;
+  for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex++) {
+    columnVisibility[`player-${playerIndex}`] = playerIndex < maxPopulationSize;
   }
 
-  const generationDatasource: TGenerationRow[] = generations.map(
-    ({ id, maxScore, players }) =>
-      Object.assign(
-        { key: id, id, maxScore },
-        Object.fromEntries(players.map((player, i) => [`player-${i}`, player]))
-      ) as TGenerationRow
-  );
+  const generationRows: TGenerationRow[] = generations;
+
+  const failedDescriptor = [competitionsList, currentCompetition].find(isFailValueDescriptor);
+
+  const isCompetitionsListLoading = isLoadingValueDescriptor(competitionsList);
+  const isCurrentCompetitionLoading = isLoadingValueDescriptor(currentCompetition);
+  const isAnythingLoading = isCompetitionsListLoading || isCurrentCompetitionLoading;
+
+  const hasCompetitionsToPick = competitionsDataSource.length > 1;
+  const isCompetitionPending =
+    isAnythingLoading || isWaitingArgumentsValueDescriptor(currentCompetition);
+  const showsStartPrompt = !hasCompetitionsToPick && !isAnythingLoading;
+  const showsGenerations =
+    isSyncOrEmptyValueDescriptor(currentCompetition) &&
+    isSyncOrEmptyValueDescriptor(competitionsList);
 
   return (
-    <div ref={ref} className="relative h-full w-full overflow-hidden">
-      {(isFailValueDescriptor(competitionsList) || isFailValueDescriptor(currentCompetition)) && (
-        <ValueDescriptorFailAlert
-          fail={(competitionsList.fail ?? currentCompetition.fail) as ValueDescriptorFail}
-        />
-      )}
+    <div className="relative h-full w-full overflow-hidden">
+      {!isNil(failedDescriptor) && <ValueDescriptorFailAlert fail={failedDescriptor.fail} />}
 
-      {(isLoadingValueDescriptor(currentCompetition) ||
-        isWaitingArgumentsValueDescriptor(currentCompetition) ||
-        isLoadingValueDescriptor(competitionsList) ||
-        isWaitingArgumentsValueDescriptor(competitionsList)) &&
-        (competitionsDataSource.length <= 1 &&
-        !isLoadingValueDescriptor(competitionsList) &&
-        !isLoadingValueDescriptor(currentCompetition) ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Tooltip
-              open
-              placement="bottom"
-              className="max-w-xl px-4 py-3"
-              title={
-                <div className="space-y-2 text-left">
-                  <div className="text-sm font-medium text-landing-fg">
-                    {pendulumT.fitnessPlayground.competitionNotStarted}
-                  </div>
-                  <div className="text-xs text-landing-fg-dim">
-                    {pendulumT.fitnessPlayground.description}
-                  </div>
-                </div>
-              }
-            >
-              <Button variant="primary" size="lg" onClick={handleCreateNewCompetition}>
-                {pendulumT.generationsList.createNew}
-              </Button>
-            </Tooltip>
-          </div>
+      {isCompetitionPending &&
+        (showsStartPrompt ? (
+          <StartCompetitionPrompt onStart={handleCreateNewCompetition} />
         ) : (
           <List
             className="absolute inset-0 overflow-auto p-3"
-            loading={
-              isLoadingValueDescriptor(competitionsList) ||
-              isLoadingValueDescriptor(currentCompetition)
-            }
+            loading={isAnythingLoading}
             dataSource={competitionsDataSource}
             renderItem={renderCompetitionItem}
           />
         ))}
 
-      {isSyncOrEmptyValueDescriptor(currentCompetition) &&
-        isSyncOrEmptyValueDescriptor(competitionsList) && (
-          <DataTable
-            virtual
-            data={generationDatasource}
-            columns={generationColumns}
-            columnVisibility={columnVisibility}
-            initialSorting={[{ id: 'id', desc: true }]}
-          />
-        )}
+      {showsGenerations && (
+        <DataTable
+          virtual
+          data={generationRows}
+          columns={generationColumns}
+          columnVisibility={columnVisibility}
+          initialSorting={[{ id: 'id', desc: true }]}
+        />
+      )}
     </div>
   );
 });
