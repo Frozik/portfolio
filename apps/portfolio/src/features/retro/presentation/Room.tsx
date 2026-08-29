@@ -1,12 +1,12 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
-import copy from 'copy-to-clipboard';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
+import { copyToClipboard } from '../../../shared/lib/copyToClipboard';
 import { Alert } from '../../../shared/ui/Alert';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -182,7 +182,7 @@ const RoomBody = observer(
     ]);
 
     const handleCopyLink = useFunction(async () => {
-      const copied = await copy(window.location.href);
+      const copied = await copyToClipboard(window.location.href);
       roomStore.showToast(copied ? t.room.linkCopied : t.errors.copyFailed);
     });
 

@@ -2,7 +2,7 @@ import type { TIdentityProvider } from '@frozik/communication-protocol/identity'
 import { nowEpochMs } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
-import { now } from 'mobx-utils';
+import { observableNow } from '../lib/observableNow';
 import type { IOidcProvider } from './oidc/IOidcProvider';
 import type { IOidcProfile, IOidcSignInResult } from './oidc/types';
 
@@ -104,9 +104,9 @@ export class AuthSession {
   }
 
   public get isSignedIn(): boolean {
-    // `now()` (mobx-utils) ticks reactively so this computed re-evaluates as time
+    // `observableNow` ticks reactively so this computed re-evaluates as time
     // passes; the instant itself comes from the Temporal-based `nowEpochMs()`.
-    now(SIGNED_IN_CLOCK_INTERVAL_MS);
+    observableNow(SIGNED_IN_CLOCK_INTERVAL_MS);
     return this.token !== null && this.expiresAtMs !== null && this.expiresAtMs > nowEpochMs();
   }
 

@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import copy from 'copy-to-clipboard';
 import DOMPurify from 'dompurify';
 import { Check, Copy, Download } from 'lucide-react';
 import { marked } from 'marked';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
+import { copyToClipboard } from '../../../../shared/lib/copyToClipboard';
 import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';
@@ -53,7 +53,7 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
   }, [markdown]);
 
   const handleCopy = useFunction(async () => {
-    const ok = await copy(markdown);
+    const ok = await copyToClipboard(markdown);
     store.showToast(ok ? t.room.linkCopied : t.errors.copyFailed);
     if (ok) {
       setCopied(true);

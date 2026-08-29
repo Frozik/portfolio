@@ -10,7 +10,6 @@ import {
   tensor2d,
   tidy,
 } from '@tensorflow/tfjs';
-import type { ModelArtifacts, SaveResult } from '@tensorflow/tfjs-core/dist/io/types';
 import { isNil, round } from 'lodash-es';
 import { Vector } from 'matter-js';
 
@@ -237,9 +236,9 @@ export class TensorflowPlayer implements IRobotPlayer {
 }
 
 async function cloneModel(model: LayersModel): Promise<LayersModel> {
-  const modelData = await new Promise<ModelArtifacts>(resolve =>
+  const modelData = await new Promise<io.ModelArtifacts>(resolve =>
     model.save({
-      async save(modelArtifact: ModelArtifacts): Promise<SaveResult> {
+      async save(modelArtifact: io.ModelArtifacts): Promise<io.SaveResult> {
         resolve(modelArtifact);
 
         return {
