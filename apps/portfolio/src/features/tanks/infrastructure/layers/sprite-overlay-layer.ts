@@ -11,6 +11,7 @@ import {
   POWER_UP_BLINK_TICKS,
   SCORE_POPUP_DIGIT_ADVANCE_WU,
   SHIELD_FRAME_TICKS,
+  SHIELD_SIZE_WU,
   SPAWN_TWINKLE_FRAME_TICKS,
 } from '../render-constants';
 import type { ScorePopup, ScorePopupList } from '../score-popup-list';
@@ -35,6 +36,8 @@ const SPAWN_TWINKLE_FRAME_SEQUENCE: readonly number[] = [
 const LAST_TWINKLE_STEP = SPAWN_TWINKLE_FRAME_SEQUENCE.length - 1;
 
 const GLYPH_GAP_WU = SCORE_POPUP_DIGIT_ADVANCE_WU - DIGIT_WIDTH_WU;
+
+const SHIELD_CENTER_OFFSET_WU = (SHIELD_SIZE_WU - TANK_SIZE_WU) / 2;
 
 /** Drawn after the forest: bonuses and state indicators must never hide behind the canopy (§11.3). */
 export class SpriteOverlayLayer implements RenderLayer {
@@ -106,12 +109,13 @@ export class SpriteOverlayLayer implements RenderLayer {
 
     const frameIndex = Math.floor(tick / SHIELD_FRAME_TICKS) % SHIELD_FRAME_COUNT;
 
-    this.pushTankSizedQuad(
-      getShieldSpriteId(frameIndex),
-      player.positionX,
-      player.positionY,
-      ROTATION_TURNS_BY_DIRECTION[player.direction]
-    );
+    this.instances.push({
+      positionXWu: player.positionX - SHIELD_CENTER_OFFSET_WU,
+      positionYWu: player.positionY - SHIELD_CENTER_OFFSET_WU,
+      widthWu: SHIELD_SIZE_WU,
+      heightWu: SHIELD_SIZE_WU,
+      uvRect: this.atlas.getUvRect(getShieldSpriteId(frameIndex)),
+    });
   }
 
   private pushPowerUp(powerUp: PowerUpDrop | undefined, tick: number): void {

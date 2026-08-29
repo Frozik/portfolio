@@ -19,6 +19,8 @@ export const CARRIER_FLASH_TICKS = 8;
 /** Bullet clangs are tank-sized; a tank or eagle going up is authored at 32 × 32 wu. */
 export const SMALL_EXPLOSION_SIZE_WU = 16;
 export const LARGE_EXPLOSION_SIZE_WU = 32;
+/** A tile larger than the tank so the invulnerability ring surrounds the hull. */
+export const SHIELD_SIZE_WU = 24;
 
 export const MAX_ACTIVE_EFFECTS = 24;
 
