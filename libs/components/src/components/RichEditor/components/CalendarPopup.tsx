@@ -20,6 +20,7 @@ export const CalendarPopup = memo(
     today,
     getDayInfo,
     startOfWeek,
+    showTime = true,
     timeResolution,
     minDate,
     maxDate,
@@ -32,6 +33,7 @@ export const CalendarPopup = memo(
     today?: Temporal.PlainDate;
     getDayInfo?: (date: Temporal.PlainDate) => EDayType;
     startOfWeek?: EDayOfWeek;
+    showTime?: boolean;
     timeResolution?: ETimeResolution;
     minDate?: Temporal.PlainDate;
     maxDate?: Temporal.PlainDate;
@@ -102,12 +104,14 @@ export const CalendarPopup = memo(
           onSelectCalendarDate={onSelectDate}
           language={language}
         />
-        <TimePicker
-          time={time}
-          resolution={timeResolution}
-          onTimeChange={onTimeChange}
-          language={language}
-        />
+        {showTime && (
+          <TimePicker
+            time={time}
+            resolution={timeResolution}
+            onTimeChange={onTimeChange}
+            language={language}
+          />
+        )}
       </section>
     );
   }

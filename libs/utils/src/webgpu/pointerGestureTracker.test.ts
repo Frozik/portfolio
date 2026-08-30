@@ -45,6 +45,7 @@ function createHandlerMocks() {
   return {
     onDrag: vi.fn<PointerGestureHandlers['onDrag']>(),
     onPinch: vi.fn<PointerGestureHandlers['onPinch']>(),
+    onTwoPointerDrag: vi.fn<NonNullable<PointerGestureHandlers['onTwoPointerDrag']>>(),
     onWheel: vi.fn<PointerGestureHandlers['onWheel']>(),
     onReset: vi.fn<VoidFunction>(),
     onGestureStart: vi.fn<NonNullable<PointerGestureHandlers['onGestureStart']>>(),
@@ -167,6 +168,34 @@ describe('createPointerGestureTracker', () => {
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: PINCH_MIN_DISTANCE_PX, clientY: 0 });
 
     expect(handlers.onPinch).toHaveBeenCalledWith(200 / PINCH_MIN_DISTANCE_PX);
+  });
+
+  it('reports how far the midpoint between two pointers travelled', () => {
+    pressPointer(element, { pointerId: FIRST_POINTER_ID, clientX: 0, clientY: 0 });
+    pressPointer(element, { pointerId: SECOND_POINTER_ID, clientX: 200, clientY: 0 });
+
+    movePointer({ pointerId: SECOND_POINTER_ID, clientX: 200, clientY: 40 });
+
+    expect(handlers.onTwoPointerDrag).toHaveBeenCalledWith(0, 20);
+    expect(handlers.onPinch).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reports the two-pointer drag of a degenerate pinch frame', () => {
+    pressPointer(element, { pointerId: FIRST_POINTER_ID, clientX: 0, clientY: 0 });
+    pressPointer(element, { pointerId: SECOND_POINTER_ID, clientX: 200, clientY: 0 });
+
+    movePointer({ pointerId: SECOND_POINTER_ID, clientX: 0, clientY: 0 });
+
+    expect(handlers.onPinch).not.toHaveBeenCalled();
+    expect(handlers.onTwoPointerDrag).toHaveBeenCalledWith(-100, 0);
+  });
+
+  it('leaves the two-pointer drag alone while a single pointer moves', () => {
+    pressPointer(element, { pointerId: FIRST_POINTER_ID, clientX: 0, clientY: 0 });
+
+    movePointer({ pointerId: FIRST_POINTER_ID, clientX: 30, clientY: 10 });
+
+    expect(handlers.onTwoPointerDrag).not.toHaveBeenCalled();
   });
 
   it('reports the gesture end once the last pointer is released', () => {

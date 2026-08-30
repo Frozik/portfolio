@@ -5,6 +5,7 @@ export interface ISelection {
 
 export interface ICalendarAriaLabels {
   readonly dateInputLabel: string;
+  readonly dateOnlyInputLabel: string;
   readonly numericInputLabel: string;
   readonly datePicker: string;
   readonly monthNavigation: string;

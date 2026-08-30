@@ -10,7 +10,8 @@ export type TProjectFxKind =
   | 'ar'
   | 'typing'
   | 'tanks'
-  | 'artillery';
+  | 'artillery'
+  | 'contours';
 
 export type TAccentAlpha = (alpha: number) => string;
 

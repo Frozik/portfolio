@@ -26,6 +26,10 @@ const MIDNIGHT = new Temporal.PlainTime(0);
  */
 const POPOVER_Z_INDEX = 100;
 
+function formatDateOnly(value: Temporal.ZonedDateTime): string {
+  return value.toPlainDate().toString();
+}
+
 function defaultFormatDate(value: Temporal.ZonedDateTime): string {
   const date = value.toPlainDate().toString();
   const hasTime =
@@ -64,10 +68,11 @@ export const DateTimePicker = memo(
     getDayInfo,
     startOfWeek,
     step = EDateTimeStep.Day,
+    showTime = true,
     timeResolution,
     minDate,
     maxDate,
-    formatDate = defaultFormatDate,
+    formatDate = showTime ? defaultFormatDate : formatDateOnly,
     placeholder,
     today,
     disabled = false,
@@ -81,6 +86,8 @@ export const DateTimePicker = memo(
     getDayInfo?: (date: Temporal.PlainDate) => EDayType;
     startOfWeek?: EDayOfWeek;
     step?: EDateTimeStep;
+    /** Date-only when off: the popup drops its clock and the field prints the day alone. */
+    showTime?: boolean;
     timeResolution?: ETimeResolution;
     minDate?: Temporal.PlainDate;
     maxDate?: Temporal.PlainDate;
@@ -248,7 +255,9 @@ export const DateTimePicker = memo(
             onFocusChanges={handleFocusChanges}
             onFocusSelection={handleFocusSelection}
             onKeyDown={handleKeyDown}
-            aria-label={calendarAriaLabels.dateInputLabel}
+            aria-label={
+              showTime ? calendarAriaLabels.dateInputLabel : calendarAriaLabels.dateOnlyInputLabel
+            }
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : undefined}
           />
@@ -271,6 +280,7 @@ export const DateTimePicker = memo(
               today={today}
               getDayInfo={getDayInfo}
               startOfWeek={startOfWeek}
+              showTime={showTime}
               timeResolution={timeResolution}
               minDate={minDate}
               maxDate={maxDate}

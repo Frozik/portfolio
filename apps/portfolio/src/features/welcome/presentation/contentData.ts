@@ -50,6 +50,7 @@ export const PROJECT_ROUTES: readonly IProjectRoute[] = [
   { id: 'stereometry', route: '/stereometry', fx: 'rotate' },
   { id: 'tanks', route: '/tanks', fx: 'tanks' },
   { id: 'scorched', route: '/scorched', fx: 'artillery' },
+  { id: 'site-planner', route: '/site-planner', fx: 'contours' },
   { id: 'retro', route: '/retro', fx: 'peers' },
   { id: 'conf', route: '/conf', fx: 'ar' },
   { id: 'controls', route: '/controls', fx: 'typing' },

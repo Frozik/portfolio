@@ -11,6 +11,7 @@
 
 import { drawAR } from './effects/draw-ar';
 import { drawArtillery } from './effects/draw-artillery';
+import { drawContours } from './effects/draw-contours';
 import { drawCrosshair } from './effects/draw-crosshair';
 import { drawCursor } from './effects/draw-cursor';
 import { drawFlare } from './effects/draw-flare';
@@ -50,6 +51,7 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   ar: createStatelessFxEffect(drawAR),
   tanks: createStatelessFxEffect(drawTanks),
   artillery: createStatelessFxEffect(drawArtillery),
+  contours: createStatelessFxEffect(drawContours),
 };
 
 export function createFxRender(kind: TProjectFxKind): TFxRender {

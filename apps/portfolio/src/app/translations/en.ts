@@ -39,6 +39,7 @@ export const appTranslationsEn = {
     timeseries: 'Timeseries',
     binance: 'Binance Orderbook',
     stereometry: 'Stereometry',
+    sitePlanner: 'Site Planner',
     controls: 'Controls',
     retro: 'Retro',
     conf: 'Conference',

@@ -2,6 +2,7 @@ import type { ICalendarAriaLabels } from '../defs';
 
 export const calendarAriaLabelsEn: ICalendarAriaLabels = {
   dateInputLabel: 'Date and time input',
+  dateOnlyInputLabel: 'Date input',
   numericInputLabel: 'Numeric input',
   datePicker: 'Date picker',
   monthNavigation: 'Month navigation',

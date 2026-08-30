@@ -1,0 +1,57 @@
+/* Seats OpenStreetMap's one, light, raster style in the app's dark surface, and
+   dresses the controls Leaflet builds for itself. Loaded after `leaflet.css` in
+   the same lazy chunk, so these rules take the ties Leaflet's own single-class
+   selectors would otherwise win. Colors read from `--color-landing-*` with the
+   hard-coded fallbacks this repo's other third-party skin uses. */
+
+.map {
+  height: 60vh;
+  max-height: 520px;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-landing-border, rgb(255 255 255 / 0.08));
+  border-radius: 2px;
+  background: var(--color-landing-bg, #07090c);
+
+  /* Only the tiles are inverted: the pin, the zoom bar and the attribution sit
+     in panes of their own and keep the colors given to them below. */
+  :global(.leaflet-tile-pane) {
+    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+  }
+
+  :global(.leaflet-control-attribution) {
+    background: color-mix(in srgb, var(--color-landing-bg, #07090c) 80%, transparent);
+    color: var(--color-landing-fg-dim, #a2adbd);
+
+    a {
+      color: var(--color-landing-accent, #60a5fa);
+    }
+  }
+
+  :global(.leaflet-bar) a {
+    background: var(--color-landing-bg-card, #0f1320);
+    border-bottom-color: var(--color-landing-border, rgb(255 255 255 / 0.08));
+    color: var(--color-landing-fg, #e7ecf3);
+
+    &:hover {
+      background: var(--color-landing-bg-elev, #0d1016);
+    }
+  }
+}
+
+/* The class Leaflet puts on the pin's own element, in place of its
+   `leaflet-div-icon` default — none of that default's light chrome comes along. */
+.marker {
+  color: var(--color-landing-accent, #60a5fa);
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.6));
+
+  path {
+    fill: currentcolor;
+    stroke: var(--color-landing-bg-card, #0f1320);
+    stroke-width: 1.5;
+  }
+
+  circle {
+    fill: var(--color-landing-bg-card, #0f1320);
+  }
+}

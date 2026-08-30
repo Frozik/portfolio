@@ -36,6 +36,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     timeseries: 'Таймсерии',
     binance: 'Стакан Binance',
     stereometry: 'Стереометрия',
+    sitePlanner: 'Планировщик участка',
     controls: 'Элементы управления',
     retro: 'Ретроспектива',
     conf: 'Конференция',

@@ -2,6 +2,7 @@ import type { ICalendarAriaLabels } from '../defs';
 
 export const calendarAriaLabelsRu: ICalendarAriaLabels = {
   dateInputLabel: 'Ввод даты и времени',
+  dateOnlyInputLabel: 'Ввод даты',
   numericInputLabel: 'Числовой ввод',
   datePicker: 'Выбор даты',
   monthNavigation: 'Навигация по месяцам',

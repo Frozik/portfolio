@@ -8,7 +8,14 @@ const URL_REVOKE_DELAY_MS = 2_000;
  * asynchronously so Safari has a chance to finish reading it.
  */
 export function downloadFile(filename: string, contents: string, mimeType: string): void {
-  const blob = new Blob([contents], { type: mimeType });
+  downloadBlob(filename, new Blob([contents], { type: mimeType }));
+}
+
+/**
+ * The same download flow for a payload that was never text — an image encoded
+ * by `canvas.toBlob`, for instance, which has no string form to go through.
+ */
+export function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
 
   const anchor = document.createElement('a');

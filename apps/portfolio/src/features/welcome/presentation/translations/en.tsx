@@ -650,6 +650,13 @@ export const welcomeTranslationsEn = {
           'A Scorched Earth remake on WebGPU — hot-seat artillery for up to ten tanks over destructible terrain, with the original manual\u2019s weapons catalog, wind, shields and eight AI personalities. Crater carving, falling dirt and explosion particles all run in compute shaders.',
         status: '33 weapons',
       },
+      'site-planner': {
+        meta: 'CAD · 2D plan + 3D terrain',
+        title: 'Site Planner',
+        description:
+          'A land-plot planner. Compose the plot outline and the building footprint from rectangles and circles, survey the ground with elevation marks, plant trees and lay paths — then look at it in 3D on WebGPU, with shadows cast by the real sun of a chosen date and time, slope and cut/fill analysis. Trace a scanned site plan, export the sheet as PNG or the plan as JSON.',
+        status: '2d → 3d',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

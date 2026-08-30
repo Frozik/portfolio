@@ -12,6 +12,8 @@ const BASE = '/portfolio';
 
 export default defineConfig({
   base: BASE,
+  // Low-poly 3D assets (CC0, Kenney car kit) ship as raw GLB binaries.
+  assetsInclude: ['**/*.glb'],
   plugins: [
     tailwindcss(),
     react(),

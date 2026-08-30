@@ -15,6 +15,13 @@ export interface PointerGestureHandlers {
   readonly onDrag: (deltaX: number, deltaY: number, timeStamp: number) => void;
   /** Two-pointer pinch: multiply the tracked zoom distance by `scale`. */
   readonly onPinch: (scale: number) => void;
+  /**
+   * How far the midpoint between two pointers moved, in client pixels. Reported
+   * alongside {@link onPinch} — the two are the same gesture, and a camera that
+   * offers panning on touch reads both from it. Optional: consumers that only
+   * zoom on two fingers leave it out.
+   */
+  readonly onTwoPointerDrag?: (deltaX: number, deltaY: number) => void;
   readonly onWheel: (deltaY: number) => void;
   /** Focus loss dropped every tracked pointer — consumers should reset momentum. */
   readonly onReset: VoidFunction;
@@ -51,6 +58,35 @@ export function createPointerGestureTracker(
     return pointerDistance(first.clientX, first.clientY, second.clientX, second.clientY);
   }
 
+  function measurePinchCenter(): PointerPosition {
+    const [first, second] = [...activePointers.values()];
+    return {
+      clientX: (first.clientX + second.clientX) / PINCH_POINTER_COUNT,
+      clientY: (first.clientY + second.clientY) / PINCH_POINTER_COUNT,
+    };
+  }
+
+  /**
+   * A two-finger gesture carries a zoom and a translation at once, so a
+   * degenerate separation (skipped zoom) must still report the translation.
+   */
+  function reportPinch(previousCenter: PointerPosition): void {
+    const currentDistance = measurePinchDistance();
+    const scale = computePinchScale(lastPinchDistance, currentDistance);
+
+    if (!isNil(scale)) {
+      lastPinchDistance = currentDistance;
+      handlers.onPinch(scale);
+    }
+
+    const center = measurePinchCenter();
+
+    handlers.onTwoPointerDrag?.(
+      center.clientX - previousCenter.clientX,
+      center.clientY - previousCenter.clientY
+    );
+  }
+
   function trackPointer(pointerId: number, clientX: number, clientY: number): void {
     activePointers.set(pointerId, { clientX, clientY });
 
@@ -82,18 +118,15 @@ export function createPointerGestureTracker(
       return;
     }
 
-    activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
-
     if (activePointers.size === PINCH_POINTER_COUNT) {
-      const currentDistance = measurePinchDistance();
-      const scale = computePinchScale(lastPinchDistance, currentDistance);
-      if (isNil(scale)) {
-        return;
-      }
-      lastPinchDistance = currentDistance;
-      handlers.onPinch(scale);
+      const previousCenter = measurePinchCenter();
+
+      activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      reportPinch(previousCenter);
       return;
     }
+
+    activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
 
     if (activePointers.size !== DRAG_POINTER_COUNT) {
       return;
