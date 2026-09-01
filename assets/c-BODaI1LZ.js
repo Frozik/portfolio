@@ -1,0 +1,1 @@
+import{z as e}from"./e-DhGn5ZsU.js";function t(t,n=`UTC`){let r=e.Instant.from(t).toZonedDateTimeISO(n);return`${String(r.year).padStart(4,`0`)}-${String(r.month).padStart(2,`0`)}-${String(r.day).padStart(2,`0`)} ${String(r.hour).padStart(2,`0`)}:${String(r.minute).padStart(2,`0`)}:${String(r.second).padStart(2,`0`)}`}function n(n){return t(n,e.Now.timeZoneId())}export{n as t};
