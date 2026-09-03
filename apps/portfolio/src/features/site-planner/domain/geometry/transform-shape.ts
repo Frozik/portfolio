@@ -1,9 +1,10 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { CircleShape, RectangleShape, Shape } from '../model/shapes';
+import type { BoxedShape, CircleShape, Shape } from '../model/shapes';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
+import type { RotatedFrame } from './polygonize-shape';
 import { planToRectangleLocal, rectangleLocalToPlan } from './polygonize-shape';
 
 /**
@@ -31,12 +32,30 @@ export interface RectangleHandleFactors {
 export function moveShape(shape: Shape, center: Vector2): Shape {
   switch (shape.kind) {
     case 'rectangle':
-      return { ...shape, center };
     case 'circle':
+    case 'ellipse':
       return { ...shape, center };
     default:
       return assertNever(shape);
   }
+}
+
+/**
+ * A rotated rectangle as a resize gesture sees it: the frame and its extents.
+ * Stated structurally so everything box-shaped on the plan — a drawn shape, a
+ * floor slab — is resized by the same gesture rather than by a copy of it.
+ */
+export interface RotatedRectangle extends RotatedFrame {
+  readonly width: Meters;
+  readonly length: Meters;
+}
+
+export function resizeBox<T extends BoxedShape>(
+  shape: T,
+  factors: RectangleHandleFactors,
+  cornerPoint: Vector2
+): T {
+  return { ...shape, ...resizeRotatedRectangle(shape, factors, cornerPoint) };
 }
 
 /**
@@ -45,11 +64,11 @@ export function moveShape(shape: Shape, center: Vector2): Shape {
  * flips the rectangle over it instead of jamming, and the rotation is preserved
  * because the whole computation happens in the rectangle's own frame.
  */
-export function resizeRectangle(
-  rectangle: RectangleShape,
+export function resizeRotatedRectangle(
+  rectangle: RotatedRectangle,
   factors: RectangleHandleFactors,
   cornerPoint: Vector2
-): RectangleShape {
+): RotatedRectangle {
   const anchorLocal: Vector2 = {
     x: -factors.widthFactor * rectangle.width,
     y: -factors.lengthFactor * rectangle.length,
@@ -79,11 +98,11 @@ export function resizeRectangle(
  * a gesture that never moved has to stay recognisably empty so the caller can
  * discard it instead of dropping a sliver on the plan.
  */
-export function fitRectangleToDiagonal(
-  rectangle: RectangleShape,
+export function fitBoxToDiagonal<T extends BoxedShape>(
+  rectangle: T,
   anchor: Vector2,
   corner: Vector2
-): RectangleShape {
+): T {
   return {
     ...rectangle,
     center: { x: (anchor.x + corner.x) / 2, y: (anchor.y + corner.y) / 2 },
@@ -94,10 +113,10 @@ export function fitRectangleToDiagonal(
 }
 
 /** Wraps into `[0, 360)` so a rotation readout never shows an accumulated turn count. */
-export function setRectangleRotation(
-  rectangle: RectangleShape,
+export function setRectangleRotation<T extends BoxedShape>(
+  rectangle: T,
   rotationDegrees: number
-): RectangleShape {
+): T {
   return {
     ...rectangle,
     rotationDegrees:

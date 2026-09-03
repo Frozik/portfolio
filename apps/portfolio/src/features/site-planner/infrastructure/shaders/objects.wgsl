@@ -40,6 +40,20 @@ fn fsObject(input: ObjectVertex) -> @location(0) vec4<f32> {
     return vec4<f32>(color * sunShading(normal, shadowFactor(input.lightSpacePosition, normal)), 1.0);
 }
 
+// A storey the editor is not aimed at: the same house, painted faintly so the
+// active storey reads through it. Only the colour pass ghosts — the shadow
+// pass always draws the whole building, because a shadow belongs to the house
+// and not to whatever the editor happens to be pointing at.
+const GHOST_ALPHA: f32 = 0.18;
+
+@fragment
+fn fsGhostObject(input: ObjectVertex) -> @location(0) vec4<f32> {
+    let normal = normalize(input.normal);
+    let color = select(WALL_COLOR, ROOF_COLOR, abs(normal.y) > ROOF_NORMAL_THRESHOLD);
+
+    return vec4<f32>(color * sunShading(normal, 1.0), GHOST_ALPHA);
+}
+
 // The house and the paving as the sun sees them, for the shadow map. Only the
 // position is read: the pass writes depth and nothing else.
 @vertex

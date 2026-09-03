@@ -7,6 +7,10 @@ import type { UtilitySystem } from './foundation';
 
 export type FurnitureId = Opaque<'FurnitureId', string>;
 
+export function createFurnitureId(): FurnitureId {
+  return crypto.randomUUID() as FurnitureId;
+}
+
 /**
  * Everything the furniture catalogue offers (`building-editor.md` §6):
  * household pieces and the plumbing fixtures — the fixtures carry the system
@@ -278,7 +282,7 @@ export function createFurniture({
   readonly position: Vector2;
 }): FurnitureInstance {
   return {
-    id: crypto.randomUUID() as FurnitureId,
+    id: createFurnitureId(),
     catalogId,
     position,
     rotationDegrees: 0,

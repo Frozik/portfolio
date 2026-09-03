@@ -1,9 +1,15 @@
+import { assertNever } from '@frozik/utils/assert/assertNever';
+import type { DuctId } from './ducts';
 import type { DeviceId } from './electrical';
+import type { FireplaceId } from './fireplaces';
 import type { FurnitureId } from './furniture';
 import type { OpeningId } from './openings';
 import type { UtilityRouteId } from './routing';
 import type { ShapeId } from './shapes';
 import type { BuildingId, CarId, MarkId, PathId, TreeId } from './site-plan';
+
+import type { StairId } from './stairs';
+import type { SupportId } from './supports';
 import type { WallId } from './walls';
 
 /** Which composition a selected shape belongs to. */
@@ -20,6 +26,7 @@ export type PlanTool =
   | 'pan'
   | 'rectangle'
   | 'circle'
+  | 'ellipse'
   | 'elevation'
   | 'tree'
   | 'path'
@@ -31,7 +38,7 @@ export type PlanTool =
  * in the palette — the one that stands for whichever was armed last — so the list
  * is the order that button offers them in.
  */
-export const SHAPE_TOOLS = ['rectangle', 'circle'] as const;
+export const SHAPE_TOOLS = ['rectangle', 'circle', 'ellipse'] as const;
 
 export type ShapeTool = (typeof SHAPE_TOOLS)[number];
 
@@ -67,6 +74,31 @@ export type Selection =
       readonly furnitureId: FurnitureId;
     }
   | {
+      readonly kind: 'stair';
+      readonly buildingId: BuildingId;
+      readonly stairId: StairId;
+    }
+  | {
+      readonly kind: 'support';
+      readonly buildingId: BuildingId;
+      readonly supportId: SupportId;
+    }
+  | {
+      readonly kind: 'fireplace';
+      readonly buildingId: BuildingId;
+      readonly fireplaceId: FireplaceId;
+    }
+  | {
+      readonly kind: 'duct';
+      readonly buildingId: BuildingId;
+      readonly ductId: DuctId;
+    }
+  | {
+      readonly kind: 'slab';
+      readonly buildingId: BuildingId;
+      readonly slabId: ShapeId;
+    }
+  | {
       readonly kind: 'device';
       readonly buildingId: BuildingId;
       readonly deviceId: DeviceId;
@@ -80,4 +112,86 @@ export interface ActiveGroup {
   readonly owner: ShapeOwner;
   /** Nothing means the root term list of the owning composition. */
   readonly groupId: ShapeId | undefined;
+}
+
+/**
+ * Where a selection can survive: `view` selections outlive the editor that
+ * made them, `editor` ones belong to an open object and must go when it
+ * closes — otherwise Delete in view mode reaches inside a building nobody can
+ * see. A table rather than a list of `||`s so a new kind of object cannot be
+ * forgotten here: the record stops compiling until it is classified.
+ */
+export const SELECTION_SCOPE: Readonly<Record<Selection['kind'], 'view' | 'editor'>> = {
+  shape: 'editor',
+  group: 'editor',
+  mark: 'editor',
+  wall: 'editor',
+  opening: 'editor',
+  furniture: 'editor',
+  device: 'editor',
+  stair: 'editor',
+  support: 'editor',
+  slab: 'editor',
+  fireplace: 'editor',
+  duct: 'editor',
+  tree: 'view',
+  car: 'view',
+  path: 'view',
+  building: 'view',
+  utilityRoute: 'view',
+};
+
+/**
+ * Whether two selections point at the same thing. Selections are plain data,
+ * so «the same» is what the fields say — which is what lets Shift-click toggle
+ * one out of a group without holding on to object identity.
+ */
+export function isSameSelection(left: Selection, right: Selection): boolean {
+  return selectionKey(left) === selectionKey(right);
+}
+
+/**
+ * A selection's identity as one string. Selections are plain data of two or
+ * three primitive fields, so their identity IS their fields — spelling that
+ * out beats comparing them structurally through a cast.
+ */
+function selectionKey(selection: Selection): string {
+  switch (selection.kind) {
+    case 'shape':
+      return `shape:${selection.owner}:${selection.shapeId}`;
+    case 'group':
+      return `group:${selection.owner}:${selection.groupId}`;
+    case 'mark':
+      return `mark:${selection.markId}`;
+    case 'tree':
+      return `tree:${selection.treeId}`;
+    case 'car':
+      return `car:${selection.carId}`;
+    case 'path':
+      return `path:${selection.pathId}`;
+    case 'utilityRoute':
+      return `route:${selection.routeId}`;
+    case 'building':
+      return `building:${selection.buildingId}`;
+    case 'wall':
+      return `wall:${selection.buildingId}:${selection.wallId}`;
+    case 'opening':
+      return `opening:${selection.buildingId}:${selection.openingId}`;
+    case 'furniture':
+      return `furniture:${selection.buildingId}:${selection.furnitureId}`;
+    case 'device':
+      return `device:${selection.buildingId}:${selection.deviceId}`;
+    case 'stair':
+      return `stair:${selection.buildingId}:${selection.stairId}`;
+    case 'support':
+      return `support:${selection.buildingId}:${selection.supportId}`;
+    case 'slab':
+      return `slab:${selection.buildingId}:${selection.slabId}`;
+    case 'fireplace':
+      return `fireplace:${selection.buildingId}:${selection.fireplaceId}`;
+    case 'duct':
+      return `duct:${selection.buildingId}:${selection.ductId}`;
+    default:
+      return assertNever(selection);
+  }
 }

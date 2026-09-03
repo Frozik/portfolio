@@ -3,8 +3,10 @@ import type { Paths64 } from 'clipper2-ts';
 import { EndType, inflatePaths, JoinType } from 'clipper2-ts';
 
 import type { Opening } from '../model/openings';
+import { doorSwingOf } from '../model/openings';
 import type { Wall } from '../model/walls';
 import { isWallClosed, MIN_WALL_POINTS } from '../model/walls';
+import type { Meters } from '../units';
 import { assembleMultiPolygon } from './evaluate-composition';
 import { toClipperPath, toClipperUnits } from './frame';
 import type { MultiPolygon } from './polygon-types';
@@ -289,4 +291,69 @@ function offsetPolyline(
       y: point.y + direction.y * scale * Math.sign(delta),
     };
   });
+}
+
+/**
+ * Where a door's leaf hangs and how it sweeps, in plan metres: the hinge, the
+ * point the open leaf reaches, and the quarter arc between them. This is the
+ * swing every floor plan draws — without it a plan cannot answer whether the
+ * wardrobe beside the door will clear it, which is the first thing anyone
+ * furnishing a room needs to know.
+ */
+export interface DoorSwingGeometry {
+  readonly hinge: Vector2;
+  /** The far edge of the leaf when the door stands open. */
+  readonly leafEnd: Vector2;
+  readonly radiusMeters: Meters;
+  /** Radians, canvas convention: from the closed leaf to the open one. */
+  readonly startAngle: number;
+  readonly endAngle: number;
+  readonly isCounterClockwise: boolean;
+}
+
+export function buildDoorSwing(wall: Wall, opening: Opening): DoorSwingGeometry | undefined {
+  if (opening.kind !== 'door') {
+    return undefined;
+  }
+
+  const centerline = wallCenterline(wall);
+  const stretch = subPolyline(
+    centerline,
+    opening.offsetMeters - opening.widthMeters / 2,
+    opening.offsetMeters + opening.widthMeters / 2
+  );
+
+  if (stretch.length < MIN_WALL_POINTS) {
+    return undefined;
+  }
+
+  const { hingeSide, swing } = doorSwingOf(opening);
+  const start = stretch[0];
+  const end = stretch[stretch.length - 1];
+  const hinge = hingeSide === 'start' ? start : end;
+  const jamb = hingeSide === 'start' ? end : start;
+  const along = { x: jamb.x - hinge.x, y: jamb.y - hinge.y };
+  const radiusMeters = Math.hypot(along.x, along.y);
+
+  if (radiusMeters === 0) {
+    return undefined;
+  }
+
+  // The leaf sweeps a quarter turn off the wall, to the side it opens on;
+  // plan y runs north, so «inward» is the left of the wall's own direction.
+  const turn = swing === 'inward' ? Math.PI / 2 : -Math.PI / 2;
+  const startAngle = Math.atan2(along.y, along.x);
+  const endAngle = startAngle + turn;
+
+  return {
+    hinge,
+    leafEnd: {
+      x: hinge.x + Math.cos(endAngle) * radiusMeters,
+      y: hinge.y + Math.sin(endAngle) * radiusMeters,
+    },
+    radiusMeters,
+    startAngle,
+    endAngle,
+    isCounterClockwise: turn < 0,
+  };
 }

@@ -2,7 +2,7 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { RectangleShape, Shape } from '../model/shapes';
+import type { BoxedShape, Shape } from '../model/shapes';
 import { DEGREES_TO_RADIANS } from '../units';
 import { planToRectangleLocal, rectangleLocalToPlan } from './polygonize-shape';
 
@@ -25,6 +25,7 @@ function anchorLocalOffset(shape: Shape): Vector2 {
 
   switch (shape.kind) {
     case 'rectangle':
+    case 'ellipse':
       return { x: factors.x * shape.width, y: factors.y * shape.length };
     case 'circle':
       return { x: factors.x * shape.radius, y: factors.y * shape.radius };
@@ -37,6 +38,7 @@ function anchorLocalOffset(shape: Shape): Vector2 {
 export function anchorPlanPosition(shape: Shape): Vector2 {
   switch (shape.kind) {
     case 'rectangle':
+    case 'ellipse':
       return rectangleLocalToPlan(shape, anchorLocalOffset(shape));
     case 'circle': {
       const offset = anchorLocalOffset(shape);
@@ -58,7 +60,8 @@ export function setAnchorPlanPosition<T extends Shape>(shape: T, planPoint: Vect
 
 function computeAnchorFactors(shape: Shape, planPoint: Vector2): Vector2 {
   switch (shape.kind) {
-    case 'rectangle': {
+    case 'rectangle':
+    case 'ellipse': {
       if (shape.width === 0 || shape.length === 0) {
         return CENTER_ANCHOR;
       }
@@ -100,10 +103,10 @@ export function moveShapeByAnchor<T extends Shape>(shape: T, planPoint: Vector2)
  * plan position stays put and the centre orbits it, which is what makes the
  * anchor a pivot rather than a caption.
  */
-export function rotateRectangleAroundAnchor(
-  rectangle: RectangleShape,
+export function rotateRectangleAroundAnchor<T extends BoxedShape>(
+  rectangle: T,
   rotationDegrees: number
-): RectangleShape {
+): T {
   const pivot = anchorPlanPosition(rectangle);
   const offset = anchorLocalOffset(rectangle);
   const radians = rotationDegrees * DEGREES_TO_RADIANS;
@@ -127,7 +130,10 @@ export function rotateRectangleAroundAnchor(
  */
 export function anchorSnapPoints(shape: Shape): readonly Vector2[] {
   switch (shape.kind) {
+    // An ellipse offers the same nine: its bounding box's corners and sides
+    // are what a drawing is aligned to, exactly as a rectangle's are.
     case 'rectangle':
+    case 'ellipse':
       return RECTANGLE_ANCHOR_FACTORS.map(factors =>
         rectangleLocalToPlan(shape, { x: factors.x * shape.width, y: factors.y * shape.length })
       );

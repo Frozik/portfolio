@@ -6,7 +6,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '../../../../shared/ui/Button';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
-import type { SiteLocationChanges } from '../../domain/model/site-plan-edits';
+import type { SiteLocationChanges } from '../../domain/model/settings-edits';
 import { lookupTimeZoneId } from '../../infrastructure/timezone-lookup';
 import { COORDINATE_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';

@@ -10,6 +10,7 @@ export const TOOL_HOTKEYS: Record<PlanTool, string> = {
   pan: 'H',
   rectangle: 'R',
   circle: 'C',
+  ellipse: 'I',
   elevation: 'E',
   tree: 'T',
   path: 'P',

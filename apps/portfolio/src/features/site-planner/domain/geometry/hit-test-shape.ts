@@ -1,10 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { CircleShape, RectangleShape, Shape } from '../model/shapes';
+import type { CircleShape, EllipseShape, RectangleShape, Shape } from '../model/shapes';
 import type { Meters } from '../units';
 import type { RotatedFrame } from './polygonize-shape';
-import { planToRectangleLocal } from './polygonize-shape';
+import { planToRectangleLocal, polygonizeShape } from './polygonize-shape';
+import { distanceToRing } from './segment-distance';
 
 const HALF = 0.5;
 
@@ -80,6 +81,8 @@ export function isPointInsideShape(shape: Shape, point: Vector2): boolean {
       return isPointInsideRotatedBox(rectangleBox(shape), point);
     case 'circle':
       return distanceToCenter(shape, point) <= shape.radius;
+    case 'ellipse':
+      return isPointInsideEllipse(shape, point);
     default:
       return assertNever(shape);
   }
@@ -92,6 +95,10 @@ export function distanceToShapeOutline(shape: Shape, point: Vector2): Meters {
       return distanceToRotatedBoxOutline(rectangleBox(shape), point);
     case 'circle':
       return Math.abs(distanceToCenter(shape, point) - shape.radius);
+    // The exact distance to an ellipse has no closed form; answering with the
+    // very ring it is drawn as keeps picking and drawing in agreement.
+    case 'ellipse':
+      return distanceToRing(polygonizeShape(shape), point);
     default:
       return assertNever(shape);
   }
@@ -102,6 +109,19 @@ export function hitTestShape(shape: Shape, point: Vector2, toleranceMeters: Mete
   return (
     isPointInsideShape(shape, point) || distanceToShapeOutline(shape, point) <= toleranceMeters
   );
+}
+
+/** Inside the unit circle its own frame maps it onto — exact, no sampling. */
+function isPointInsideEllipse(ellipse: EllipseShape, point: Vector2): boolean {
+  const local = planToRectangleLocal(ellipse, point);
+  const halfWidth = ellipse.width / 2;
+  const halfLength = ellipse.length / 2;
+
+  if (halfWidth === 0 || halfLength === 0) {
+    return false;
+  }
+
+  return (local.x / halfWidth) ** 2 + (local.y / halfLength) ** 2 <= 1;
 }
 
 function rectangleBox({ center, rotationDegrees, width, length }: RectangleShape): RotatedBox {

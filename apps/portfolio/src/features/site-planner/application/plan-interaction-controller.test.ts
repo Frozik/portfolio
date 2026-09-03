@@ -5,16 +5,17 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CAR_LENGTH_METERS } from '../domain/constants';
 import { anchorPlanPosition } from '../domain/geometry/shape-anchor';
 import { OBJECT_EDITOR_SPECS } from '../domain/model/editor-mode';
+import type { DeviceKind } from '../domain/model/electrical';
 import type { CsgOperand, Shape } from '../domain/model/shapes';
 import { createCircle, createRectangle, flattenShapes, isShapeGroup } from '../domain/model/shapes';
 import { openingsOf, storeysOf, wallsOf } from '../domain/model/site-plan';
 import { devicesOf, furnitureOf, groupsOf, switchLinksOf } from '../domain/model/storeys';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
-import { ROTATION_HANDLE_GAP_PX } from '../domain/plan-draw/draw-selection';
 import type { PlanModifiers } from '../domain/view/plan-input';
 import { NO_MODIFIERS } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
 import { PlanInteractionController, TOOL_HOTKEYS } from './plan-interaction-controller';
+import { ROTATION_HANDLE_GAP_PX } from './render/plan-draw/draw-selection';
 import { SitePlannerStore } from './SitePlannerStore';
 
 /** Keeps the interaction under test off IndexedDB and out of every other test's way. */
@@ -301,6 +302,31 @@ describe('PlanInteractionController', () => {
       expect(store.boundary.terms[1].operation).toBe('union');
     });
 
+    it('draws an ellipse with the I tool, stated by the box it fills', () => {
+      controller.onKeyDown('i', NO_MODIFIERS);
+
+      expect(store.activeTool).toBe('ellipse');
+
+      drag({ x: 2, y: 2 }, { x: 10, y: 8 });
+
+      const shapes = boundaryShapes();
+
+      expect(shapes[1]).toMatchObject({
+        kind: 'ellipse',
+        center: { x: 6, y: 5 },
+        width: 8,
+        length: 6,
+      });
+      // R30: a drawn shape hands the pointer back with itself selected, ready
+      // for the exact width to be typed into СВОЙСТВА.
+      expect(store.activeTool).toBe('select');
+      expect(store.selection).toEqual({
+        kind: 'shape',
+        owner: 'boundary',
+        shapeId: shapes[1].id,
+      });
+    });
+
     it('draws the footprint into the freshly added building', () => {
       store.addBuilding('Дом');
       store.setActiveTool('rectangle');
@@ -562,6 +588,9 @@ describe('PlanInteractionController', () => {
     it('plants the species chosen last', () => {
       controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
       store.updateTree({ ...store.trees[0], species: 'deciduous' });
+      // A placed object hands the pointer back to the select tool (R30), so
+      // planting a second one asks for the tool again.
+      store.setActiveTool('tree');
       controller.onPointerDown({ x: 20, y: 10 }, NO_MODIFIERS);
 
       expect(store.trees[1].species).toBe('deciduous');
@@ -1790,6 +1819,20 @@ describe('PlanInteractionController', () => {
       expect(store.selection).toMatchObject({ kind: 'furniture', furnitureId: item.id });
     });
 
+    it('stays in hand so a room is furnished piece after piece (R32)', () => {
+      openWithWall();
+      controller.onKeyDown('f', NO_MODIFIERS);
+      store.setArmedFurnitureId('sofa');
+      controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 11 }, NO_MODIFIERS);
+
+      expect(store.activeTool).toBe('building:furniture');
+
+      controller.onPointerDown({ x: 12, y: 11 }, NO_MODIFIERS);
+
+      expect(activeFurniture()).toHaveLength(2);
+    });
+
     it('snaps a dragged piece back-to-wall by the magnet', () => {
       openWithWall();
       controller.onKeyDown('f', NO_MODIFIERS);
@@ -1951,15 +1994,18 @@ describe('PlanInteractionController', () => {
     it('wires the panel to a consumer and a switch to a light', () => {
       const building = openWithWall();
 
+      // The electric tool is sticky (R32): one arming, then socket after socket.
       controller.onKeyDown('k', NO_MODIFIERS);
-      store.setArmedDeviceKind('panel');
-      controller.onPointerDown({ x: 7, y: 8 }, NO_MODIFIERS);
-      store.setArmedDeviceKind('outlet');
-      controller.onPointerDown({ x: 12, y: 8 }, NO_MODIFIERS);
-      store.setArmedDeviceKind('switch');
-      controller.onPointerDown({ x: 9, y: 8 }, NO_MODIFIERS);
-      store.setArmedDeviceKind('light');
-      controller.onPointerDown({ x: 10, y: 12 }, NO_MODIFIERS);
+
+      const placeDevice = (kind: DeviceKind, at: Vector2): void => {
+        store.setArmedDeviceKind(kind);
+        controller.onPointerDown(at, NO_MODIFIERS);
+      };
+
+      placeDevice('panel', { x: 7, y: 8 });
+      placeDevice('outlet', { x: 12, y: 8 });
+      placeDevice('switch', { x: 9, y: 8 });
+      placeDevice('light', { x: 10, y: 12 });
 
       const [panel, outlet, wallSwitch, light] = groundDevices();
 
@@ -2264,6 +2310,326 @@ describe('PlanInteractionController', () => {
 
       expect(store.utilityRoutes).toHaveLength(1);
       expect(store.editorMode.kind).toBe('edit');
+    });
+  });
+  describe('stairs as objects on the canvas', () => {
+    const openHouseWithStair = (): void => {
+      const building = store.addBuilding('Дом');
+
+      store.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      store.setActiveTool('building:stair');
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+      // The tool hands itself back to select the moment the stair lands (R30).
+    };
+
+    it('places a stair where the tool clicked', () => {
+      openHouseWithStair();
+
+      expect(store.editedStoreyScene?.stairs).toHaveLength(1);
+    });
+
+    it('takes hold of a stair by its body and drags it', () => {
+      openHouseWithStair();
+
+      const before = store.editedStoreyScene?.stairs[0].stair.position;
+
+      drag({ x: 10, y: 10 }, { x: 7, y: 7 });
+
+      const after = store.editedStoreyScene?.stairs[0].stair.position;
+
+      expect(store.selection?.kind).toBe('stair');
+      expect(after).not.toEqual(before);
+    });
+
+    it('adds a second stair to the selection with Shift', () => {
+      openHouseWithStair();
+      store.setActiveTool('building:stair');
+      controller.onPointerDown({ x: 14, y: 14 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 14, y: 14 }, NO_MODIFIERS);
+      store.setActiveTool('select');
+
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 14, y: 14 }, SHIFT_HELD);
+      controller.onPointerUp({ x: 14, y: 14 }, SHIFT_HELD);
+
+      expect(store.selections).toHaveLength(2);
+    });
+
+    it('hands the stair over to the select tool the moment it lands (R30)', () => {
+      openHouseWithStair();
+
+      expect(store.activeTool).toBe('select');
+      expect(store.editedStoreyScene?.stairs).toHaveLength(1);
+
+      // The very next click adjusts the stair rather than placing a second one.
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+
+      expect(store.editedStoreyScene?.stairs).toHaveLength(1);
+      expect(store.selection?.kind).toBe('stair');
+    });
+
+    it('deletes the selected stair with the keyboard', () => {
+      openHouseWithStair();
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onKeyDown('Delete', NO_MODIFIERS);
+
+      expect(store.editedStoreyScene?.stairs).toHaveLength(0);
+    });
+  });
+
+  describe('posts and cancelled gestures', () => {
+    const openHouse = (): void => {
+      const building = store.addBuilding('Дом');
+
+      store.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+    };
+
+    const placeWith = (tool: 'building:stair' | 'building:support', at: Vector2): void => {
+      store.setActiveTool(tool);
+      controller.onPointerDown(at, NO_MODIFIERS);
+      controller.onPointerUp(at, NO_MODIFIERS);
+      store.setActiveTool('select');
+    };
+
+    it('picks a post by clicking it and takes it away with Delete', () => {
+      openHouse();
+      placeWith('building:support', { x: 10, y: 10 });
+
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+
+      expect(store.selection?.kind).toBe('support');
+
+      controller.onKeyDown('Delete', NO_MODIFIERS);
+
+      expect(store.editedStoreyScene?.supports).toHaveLength(0);
+    });
+
+    it('puts a dragged stair back where it was when the gesture is cancelled', () => {
+      openHouse();
+      placeWith('building:stair', { x: 10, y: 10 });
+
+      const before = store.editedStoreyScene?.stairs[0].stair.position;
+
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerMove({ x: 6, y: 6 }, NO_MODIFIERS);
+      controller.onPointerCancel();
+
+      expect(store.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
+
+      // And the gesture is over: moving the pointer again must not drag on.
+      controller.onPointerMove({ x: 2, y: 2 }, NO_MODIFIERS);
+
+      expect(store.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
+    });
+
+    it('drops an editor-only selection when the building closes', () => {
+      openHouse();
+      placeWith('building:stair', { x: 10, y: 10 });
+
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+
+      expect(store.selection?.kind).toBe('stair');
+
+      store.exitEditMode();
+
+      // Otherwise Delete in view mode would reach into a building nobody sees.
+      expect(store.selections).toHaveLength(0);
+    });
+  });
+
+  describe('floor slabs', () => {
+    /** A 16 × 16 house with a second storey open and one slab laid on it. */
+    const openUpperStorey = (): void => {
+      const building = store.addBuilding('Дом');
+
+      store.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      store.addStoreyToEditedBuilding({ copyWalls: false });
+    };
+
+    const clickSlabAt = (at: Vector2): void => {
+      store.setActiveTool('building:slab');
+      controller.onPointerDown(at, NO_MODIFIERS);
+      controller.onPointerUp(at, NO_MODIFIERS);
+    };
+
+    const openUpperStoreyWithSlab = (): void => {
+      openUpperStorey();
+      clickSlabAt({ x: 10, y: 10 });
+    };
+
+    it('lays a default plate with one click, selects it and hands back the select tool', () => {
+      openUpperStoreyWithSlab();
+
+      expect(store.activeStoreySlabs).toHaveLength(1);
+      expect(store.selection?.kind).toBe('slab');
+      // R30: the next click adjusts the plate rather than laying a second one.
+      expect(store.activeTool).toBe('select');
+    });
+
+    it('draws the armed primitive out with a rubber band', () => {
+      openUpperStorey();
+      store.setArmedShapeTool('ellipse');
+      store.setActiveTool('building:slab');
+      drag({ x: 6, y: 6 }, { x: 14, y: 12 });
+
+      const [slab] = store.activeStoreySlabs;
+
+      assert(slab.kind === 'ellipse', 'the armed primitive is what is drawn');
+      expect(slab.width).toBeCloseTo(8);
+      expect(slab.length).toBeCloseTo(6);
+      expect(store.activeTool).toBe('select');
+    });
+
+    it('takes the storey outline from the slabs, whatever shape they are', () => {
+      openUpperStorey();
+      store.setArmedShapeTool('circle');
+      store.setActiveTool('building:slab');
+      drag({ x: 10, y: 10 }, { x: 14, y: 10 });
+
+      const [slab] = store.activeStoreySlabs;
+
+      assert(slab.kind === 'circle', 'the circle tool draws a circle');
+      expect(slab.radius).toBeCloseTo(4);
+      expect(store.editedStoreyScene?.footprint.length).toBe(1);
+    });
+
+    it('magnetises a dragged slab to the walls of the storey below', () => {
+      const building = store.addBuilding('Дом');
+
+      store.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      // A room downstairs whose corner stands at (5, 5).
+      store.appendDraftWallPoint({ x: 5, y: 5 });
+      store.appendDraftWallPoint({ x: 13, y: 5 });
+      store.commitDraftWall();
+      store.addStoreyToEditedBuilding({ copyWalls: false });
+      clickSlabAt({ x: 10, y: 10 });
+
+      // The plate is 6 × 4 about (10, 10), so its lower-left corner sits at
+      // (7, 8). Dragged to within a grip of the corner below, it lands ON it.
+      drag({ x: 10, y: 10 }, { x: 8.2, y: 7.2 });
+
+      const [slab] = store.activeStoreySlabs;
+
+      assert(slab.kind === 'rectangle', 'the default plate is a rectangle');
+      expect(slab.center.x).toBeCloseTo(8);
+      expect(slab.center.y).toBeCloseTo(7);
+    });
+
+    it('leaves the slab where the pointer put it while Alt suspends the magnet', () => {
+      openUpperStoreyWithSlab();
+      drag({ x: 10, y: 10 }, { x: 8.2, y: 7.2 }, ALT_HELD);
+
+      const [slab] = store.activeStoreySlabs;
+
+      expect(slab.center).toEqual({ x: 8.2, y: 7.2 });
+    });
+
+    it('picks the slab under the pointer only where nothing else answers', () => {
+      openUpperStoreyWithSlab();
+      store.setSelection(undefined);
+
+      controller.onPointerDown({ x: 11, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 11, y: 10 }, NO_MODIFIERS);
+
+      expect(store.selection?.kind).toBe('slab');
+
+      // Off the plate — 6 × 4 about (10, 10) — nothing is selected.
+      controller.onPointerDown({ x: 10, y: 18 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 18 }, NO_MODIFIERS);
+
+      expect(store.selection).toBeUndefined();
+    });
+
+    it('drags the slab by its body', () => {
+      openUpperStoreyWithSlab();
+      drag({ x: 10, y: 10 }, { x: 13, y: 10 });
+
+      expect(store.activeStoreySlabs[0].center).toEqual({ x: 13, y: 10 });
+    });
+
+    it('resizes the slab by an edge grip, holding the opposite edge', () => {
+      openUpperStoreyWithSlab();
+
+      // The east edge grip of a 6 × 4 plate centred on (10, 10), dragged out.
+      drag({ x: 13, y: 10 }, { x: 15, y: 10 });
+
+      const [slab] = store.activeStoreySlabs;
+
+      assert(slab.kind === 'rectangle', 'the default plate is a rectangle');
+      expect(slab.width).toBeCloseTo(8);
+      expect(slab.length).toBeCloseTo(4);
+      expect(slab.center.x).toBeCloseTo(11);
+    });
+
+    it('puts a cancelled resize back the size it was', () => {
+      openUpperStoreyWithSlab();
+
+      const before = store.activeStoreySlabs[0];
+
+      controller.onPointerDown({ x: 13, y: 10 }, NO_MODIFIERS);
+      controller.onPointerMove({ x: 18, y: 10 }, NO_MODIFIERS);
+      controller.onPointerCancel();
+
+      expect(store.activeStoreySlabs[0]).toEqual(before);
+    });
+
+    it('deletes the selected slab with the keyboard', () => {
+      openUpperStoreyWithSlab();
+      controller.onKeyDown('Delete', NO_MODIFIERS);
+
+      expect(store.activeStoreySlabs).toHaveLength(0);
+    });
+  });
+
+  describe('regression: selecting things in the building editor', () => {
+    const openHouse = (): void => {
+      const building = store.addBuilding('Дом');
+
+      store.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+    };
+
+    it('selects a piece of furniture by clicking it', () => {
+      openHouse();
+      store.setActiveTool('building:furniture');
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+      store.setActiveTool('select');
+
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+
+      expect(store.selection?.kind).toBe('furniture');
     });
   });
 });

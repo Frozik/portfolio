@@ -15,6 +15,7 @@ const SPACE_KEY = ' ';
 const UNDO_KEY = 'z';
 /** The Windows redo chord; macOS spells the same thing Cmd+Shift+Z. */
 const REDO_KEY = 'y';
+const DUPLICATE_KEY = 'd';
 
 type HistoryAction = 'undo' | 'redo';
 /** Tailwind utility toggled on the canvas while the pan modifier is held. */
@@ -328,6 +329,17 @@ export function attachPlanPointerInput({
 
     if (!isNil(historyAction)) {
       applyHistoryAction(target, historyAction);
+      event.preventDefault();
+
+      return;
+    }
+
+    // Duplicate rides the same chord as everywhere else. It is claimed here,
+    // beside undo, because the plain-key path below deliberately ignores
+    // chords — and because Alt is already «suspend snapping» in this editor,
+    // so the market's Alt+drag copy has no room.
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === DUPLICATE_KEY) {
+      target.duplicateSelected();
       event.preventDefault();
 
       return;

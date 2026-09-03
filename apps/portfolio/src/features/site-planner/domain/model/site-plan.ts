@@ -21,6 +21,7 @@ import { normalizeTurnDegrees } from '../units';
 import type { Foundation, UtilityEntry } from './foundation';
 import { DEFAULT_FOUNDATION, DEFAULT_FROST_DEPTH_METERS } from './foundation';
 import type { Opening } from './openings';
+import type { PitchedRoof } from './roofs';
 import type { RoomLabel } from './rooms';
 import type { UtilityRoute } from './routing';
 import type { ShapeComposition } from './shapes';
@@ -86,6 +87,17 @@ export interface Building {
    * (`materializeStoreys`) and the legacy fields stop being read.
    */
   readonly storeys?: readonly Storey[];
+  /**
+   * The pitched roof crowning the top storey. Absent means the flat model the
+   * building had before — a ceiling slab with roof zones over it — which is
+   * still what a garage or a carport wants.
+   */
+  readonly pitchedRoof?: PitchedRoof;
+}
+
+/** The building's pitched roof, or nothing while its top is flat. */
+export function pitchedRoofOf(building: Building): PitchedRoof | undefined {
+  return building.pitchedRoof;
 }
 
 /** The building's foundation, defaulted for plans that predate the field. */

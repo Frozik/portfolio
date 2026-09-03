@@ -6,6 +6,7 @@ import type { CarInstance, SitePath, TreeInstance } from '../model/site-plan';
 import type { Meters } from '../units';
 import { carRotatedBox } from './car-geometry';
 import { hitTestRotatedBox } from './hit-test-shape';
+import { distanceToSegment } from './segment-distance';
 
 const HALF = 0.5;
 
@@ -97,25 +98,4 @@ export function hitTestUtilityRoute(
   toleranceMeters: Meters
 ): boolean {
   return distanceToPolyline(route.points, point) <= toleranceMeters;
-}
-
-export function distanceToSegment(start: Vector2, end: Vector2, point: Vector2): Meters {
-  const segmentX = end.x - start.x;
-  const segmentY = end.y - start.y;
-  const squaredLength = segmentX * segmentX + segmentY * segmentY;
-
-  if (squaredLength === 0) {
-    return Math.hypot(start.x - point.x, start.y - point.y);
-  }
-
-  const projection = clamp(
-    ((point.x - start.x) * segmentX + (point.y - start.y) * segmentY) / squaredLength,
-    0,
-    1
-  );
-
-  return Math.hypot(
-    start.x + projection * segmentX - point.x,
-    start.y + projection * segmentY - point.y
-  );
 }

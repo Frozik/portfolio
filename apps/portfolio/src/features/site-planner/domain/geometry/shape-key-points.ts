@@ -1,7 +1,7 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { RectangleShape, Shape } from '../model/shapes';
+import type { BoxedShape, Shape } from '../model/shapes';
 import { rectangleLocalToPlan } from './polygonize-shape';
 
 const HALF = 0.5;
@@ -23,6 +23,7 @@ const RECTANGLE_CORNER_FACTORS: readonly Vector2[] = [
 export function getShapeKeyPoints(shape: Shape): readonly Vector2[] {
   switch (shape.kind) {
     case 'rectangle':
+    case 'ellipse':
       return rectangleKeyPoints(shape);
     case 'circle':
       return [shape.center];
@@ -31,7 +32,7 @@ export function getShapeKeyPoints(shape: Shape): readonly Vector2[] {
   }
 }
 
-function rectangleKeyPoints(rectangle: RectangleShape): readonly Vector2[] {
+function rectangleKeyPoints(rectangle: BoxedShape): readonly Vector2[] {
   return [
     ...RECTANGLE_CORNER_FACTORS.map(factors =>
       rectangleLocalToPlan(rectangle, {

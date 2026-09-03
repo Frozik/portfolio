@@ -89,6 +89,7 @@ function operandPaths(operand: CsgOperand): Paths64 {
       return foldTerms(operand.terms);
     case 'rectangle':
     case 'circle':
+    case 'ellipse':
       return [toClipperPath(polygonizeShape(operand))];
     default:
       return assertNever(operand);

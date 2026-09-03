@@ -3,13 +3,13 @@ import { isNil } from 'lodash-es';
 import { reaction } from 'mobx';
 
 import { computeMultiPolygonBounds } from '../../domain/geometry/bounding-box';
-import type { PlanContent, PlanEditorChrome, PlanLabels } from '../../domain/plan-draw/draw-plan';
-import { drawPlan } from '../../domain/plan-draw/draw-plan';
 import type { AnalysisRaster } from '../../domain/terrain/analysis-raster';
 import type { PlanViewport } from '../../domain/view/plan-viewport';
 import { createPlanViewport, fitToBounds, resizeViewport } from '../../domain/view/plan-viewport';
 import type { SitePlannerStore } from '../SitePlannerStore';
 import { attachPlanNavigation } from './attach-plan-navigation';
+import type { PlanContent, PlanEditorChrome, PlanLabels } from './plan-draw/draw-plan';
+import { drawPlan } from './plan-draw/draw-plan';
 import { createRasterImage } from './plan-images';
 import { readPlanChrome, readPlanContent } from './read-plan-content';
 

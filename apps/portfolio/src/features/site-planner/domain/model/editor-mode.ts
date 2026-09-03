@@ -33,6 +33,7 @@ const SITE_EDIT_TOOLS: readonly PlanTool[] = [
   'pan',
   'rectangle',
   'circle',
+  'ellipse',
   'elevation',
   'path',
   'measure',
@@ -84,9 +85,14 @@ export const OBJECT_EDITOR_SPECS: Readonly<Record<EditTargetKind, ObjectEditorSp
   building: {
     sharedTools: BUILDING_EDIT_TOOLS,
     ownTools: [
+      { id: 'building:slab', hotkey: 'b' },
       { id: 'building:wall', hotkey: 'w' },
       { id: 'building:opening', hotkey: 'o' },
       { id: 'building:furniture', hotkey: 'f' },
+      { id: 'building:stair', hotkey: 's' },
+      { id: 'building:support', hotkey: 'g' },
+      { id: 'building:fireplace', hotkey: 'j' },
+      { id: 'building:duct', hotkey: 'd' },
       { id: 'building:electric', hotkey: 'k' },
       { id: 'building:connect', hotkey: 'l' },
     ],
@@ -208,6 +214,11 @@ export function editorDoorFor(selection: Selection): EditorDoor | undefined {
     case 'opening':
     case 'furniture':
     case 'device':
+    case 'stair':
+    case 'support':
+    case 'slab':
+    case 'fireplace':
+    case 'duct':
       return undefined;
     default:
       return assertNever(selection);

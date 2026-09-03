@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { describe, expect, it } from 'vitest';
 
-import { findKeyPointSnap } from './object-snapping';
+import { findKeyPointSnap, findNearestSnapPoint, wallSnapPoints } from './object-snapping';
 
 const CAPTURE_RADIUS_METERS = 1;
 
@@ -61,5 +61,43 @@ describe('findKeyPointSnap', () => {
     expect(findKeyPointSnap([], [{ x: 0, y: 0 }], CAPTURE_RADIUS_METERS)).toBeUndefined();
     expect(findKeyPointSnap(OWN_POINTS, [], CAPTURE_RADIUS_METERS)).toBeUndefined();
     expect(findKeyPointSnap(OWN_POINTS, [{ x: 0, y: 0 }], 0)).toBeUndefined();
+  });
+});
+
+describe('wallSnapPoints', () => {
+  it('offers every corner and the midpoint of every stretch', () => {
+    const points = wallSnapPoints([
+      {
+        points: [
+          { x: 0, y: 0 },
+          { x: 4, y: 0 },
+        ],
+      },
+    ]);
+
+    expect(points).toEqual([
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      { x: 4, y: 0 },
+    ]);
+  });
+
+  it('offers nothing for a wall of a single corner', () => {
+    expect(wallSnapPoints([{ points: [{ x: 1, y: 1 }] }])).toEqual([{ x: 1, y: 1 }]);
+  });
+});
+
+describe('findNearestSnapPoint', () => {
+  const CANDIDATES = [
+    { x: 0, y: 0 },
+    { x: 5, y: 0 },
+  ];
+
+  it('catches the nearer candidate within reach', () => {
+    expect(findNearestSnapPoint(CANDIDATES, { x: 4.8, y: 0.1 }, 0.5)).toEqual({ x: 5, y: 0 });
+  });
+
+  it('catches nothing when every candidate is too far', () => {
+    expect(findNearestSnapPoint(CANDIDATES, { x: 2.5, y: 0 }, 0.5)).toBeUndefined();
   });
 });

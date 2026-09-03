@@ -1,12 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-
-import {
-  computePolylinePointHandles,
-  findPathPointHandleAt,
-} from '../../domain/plan-draw/draw-paths';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
+import { computePolylinePointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
 import type { InteractionContext } from './editor-interaction';
 import { offsetBetween, snapPointToGrid } from './grid-snapping';
 import { HANDLE_HIT_RADIUS_PX } from './plan-picking';

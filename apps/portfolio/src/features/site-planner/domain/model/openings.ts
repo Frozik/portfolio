@@ -24,6 +24,47 @@ export interface Opening {
   readonly sillMeters: Meters;
   /** Top of the opening above the floor. */
   readonly headMeters: Meters;
+  /**
+   * Which jamb a door is hung on, looking along the wall's drawn direction,
+   * and which way the leaf swings off it. Absent on windows and on doors
+   * saved before swings existed — read via {@link doorSwingOf}.
+   *
+   * A plan without swing arcs cannot answer «will the wardrobe clear the
+   * door», which is why every reference planner draws them and why a plan
+   * that omits them does not read as a plan.
+   */
+  readonly hingeSide?: DoorHingeSide;
+  readonly swing?: DoorSwing;
+}
+
+/** The jamb the leaf hangs on, along the wall's own direction. */
+export type DoorHingeSide = 'start' | 'end';
+
+/** Which side of the wall the leaf opens towards. */
+export type DoorSwing = 'inward' | 'outward';
+
+export const DEFAULT_DOOR_HINGE_SIDE: DoorHingeSide = 'start';
+export const DEFAULT_DOOR_SWING: DoorSwing = 'inward';
+
+/** How a door opens, defaulted for doors that predate the fields. */
+export function doorSwingOf(opening: Opening): {
+  readonly hingeSide: DoorHingeSide;
+  readonly swing: DoorSwing;
+} {
+  return {
+    hingeSide: opening.hingeSide ?? DEFAULT_DOOR_HINGE_SIDE,
+    swing: opening.swing ?? DEFAULT_DOOR_SWING,
+  };
+}
+
+/** Flips the leaf to the other jamb — the two-click convention of the market. */
+export function flipHingeSide(hingeSide: DoorHingeSide): DoorHingeSide {
+  return hingeSide === 'start' ? 'end' : 'start';
+}
+
+/** Flips which way the door opens. */
+export function flipSwing(swing: DoorSwing): DoorSwing {
+  return swing === 'inward' ? 'outward' : 'inward';
 }
 
 /**
@@ -75,5 +116,8 @@ export function createOpening({
     widthMeters: template.widthMeters,
     sillMeters: template.sillMeters,
     headMeters: template.headMeters,
+    ...(template.kind === 'door'
+      ? { hingeSide: DEFAULT_DOOR_HINGE_SIDE, swing: DEFAULT_DOOR_SWING }
+      : {}),
   };
 }

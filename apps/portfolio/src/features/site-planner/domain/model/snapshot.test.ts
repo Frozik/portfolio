@@ -666,3 +666,78 @@ describe('serializeSitePlan / parseSnapshot', () => {
     expect(parseSnapshot(serializeWith(legacyPayload))).toBeDefined();
   });
 });
+
+describe('stairs and posts in the snapshot', () => {
+  const planWithStorey = (storeyFields: Record<string, unknown>) => {
+    const plan = createRichSitePlan();
+    const [building] = plan.buildings;
+
+    return {
+      ...plan,
+      buildings: [
+        {
+          ...building,
+          storeys: [
+            {
+              id: 'storey-1',
+              heightMeters: 2.7,
+              walls: [],
+              openings: [],
+              roomLabels: [],
+              roofZoneLabels: [],
+              ...storeyFields,
+            },
+          ],
+        },
+      ],
+    };
+  };
+
+  it('round-trips a stair with its hand and turn', () => {
+    const stair = {
+      id: 'stair-1',
+      kind: 'l-shaped',
+      position: { x: 3, y: 4 },
+      rotationDegrees: 90,
+      widthMeters: 1,
+      isMirrored: true,
+    };
+    const parsed = parseSnapshot(serializeWith(planWithStorey({ stairs: [stair] })));
+
+    expect(parsed?.buildings[0]?.storeys?.[0]?.stairs).toEqual([stair]);
+  });
+
+  it('round-trips a support post', () => {
+    const post = { id: 'post-1', position: { x: 1, y: 2 }, profile: 'round', sizeMeters: 0.15 };
+    const parsed = parseSnapshot(serializeWith(planWithStorey({ supports: [post] })));
+
+    expect(parsed?.buildings[0]?.storeys?.[0]?.supports).toEqual([post]);
+  });
+
+  it('accepts a storey saved before stairs and posts existed', () => {
+    const parsed = parseSnapshot(serializeWith(planWithStorey({})));
+
+    expect(parsed?.buildings[0]?.storeys?.[0]?.stairs).toBeUndefined();
+    expect(parsed?.buildings[0]?.storeys?.[0]?.supports).toBeUndefined();
+  });
+
+  it('refuses a stair of an unknown kind rather than loading it broken', () => {
+    const parsed = parseSnapshot(
+      serializeWith(
+        planWithStorey({
+          stairs: [
+            {
+              id: 'stair-1',
+              kind: 'escalator',
+              position: { x: 0, y: 0 },
+              rotationDegrees: 0,
+              widthMeters: 1,
+            },
+          ],
+        })
+      )
+    );
+
+    expect(parsed).toBeUndefined();
+  });
+});

@@ -2,6 +2,9 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { Meters } from '../units';
 
+/** How close, on screen, a cursor has to come before a key point catches it. */
+export const KEY_POINT_SNAP_RADIUS_PX = 10;
+
 /**
  * A pair of key points close enough to be joined, and the translation that
  * joins them. `delta` is what a gesture dragging a whole shape adds to its
@@ -47,6 +50,56 @@ export function findKeyPointSnap(
 
       closestDistance = distance;
       closest = { delta, ownPoint, targetPoint };
+    }
+  }
+
+  return closest;
+}
+
+/**
+ * The points a drawn corner should catch on: every drawn corner of the walls
+ * already standing, and the midpoint of every stretch between them. This is
+ * the CAD object snap — endpoint and midpoint — and unlike the angle lock it
+ * is ALWAYS live: a wall that starts «about here» beside another wall's corner
+ * is a wall that will not close its room.
+ */
+export function wallSnapPoints(
+  walls: readonly { readonly points: readonly Vector2[] }[]
+): readonly Vector2[] {
+  const points: Vector2[] = [];
+
+  for (const wall of walls) {
+    for (let index = 0; index < wall.points.length; index += 1) {
+      const point = wall.points[index];
+
+      points.push(point);
+
+      const next = wall.points[index + 1];
+
+      if (next !== undefined) {
+        points.push({ x: (point.x + next.x) / 2, y: (point.y + next.y) / 2 });
+      }
+    }
+  }
+
+  return points;
+}
+
+/** The nearest snap point within reach, or nothing when none is close. */
+export function findNearestSnapPoint(
+  candidates: readonly Vector2[],
+  point: Vector2,
+  maxDistanceMeters: Meters
+): Vector2 | undefined {
+  let closest: Vector2 | undefined;
+  let closestDistance = maxDistanceMeters;
+
+  for (const candidate of candidates) {
+    const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+
+    if (distance <= closestDistance) {
+      closestDistance = distance;
+      closest = candidate;
     }
   }
 

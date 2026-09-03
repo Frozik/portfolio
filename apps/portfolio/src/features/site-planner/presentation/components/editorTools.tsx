@@ -1,13 +1,28 @@
 import type { LucideIcon } from 'lucide-react';
-import { Armchair, BrickWall, Cable, DoorOpen, Zap } from 'lucide-react';
+import {
+  Armchair,
+  BrickWall,
+  Cable,
+  Columns2,
+  DoorOpen,
+  Flame,
+  Footprints,
+  Square,
+  Wind,
+  Zap,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { EditorToolId, EditTargetKind } from '../../domain/model/editor-mode';
 import { sitePlannerT } from '../translations';
 import { ElectricToolButton } from './ElectricToolButton';
+import { FireplaceToolButton } from './FireplaceToolButton';
 import type { FlyoutSide } from './FlyoutToolButton';
 import { FurnitureToolButton } from './FurnitureToolButton';
+import { OpeningToolButton } from './OpeningToolButton';
+import { SlabToolButton } from './SlabToolButton';
+import { StairToolButton } from './StairToolButton';
 import { StoreySwitcher } from './StoreySwitcher';
 
 /**
@@ -33,6 +48,12 @@ export interface EditorToolPresentation {
 }
 
 export const EDITOR_TOOL_PRESENTATIONS: Partial<Record<EditorToolId, EditorToolPresentation>> = {
+  'building:slab': {
+    icon: Square,
+    label: sitePlannerT.slabs.toolLabel,
+    hint: sitePlannerT.slabs.toolHint,
+    Flyout: SlabToolButton,
+  },
   'building:wall': {
     icon: BrickWall,
     label: sitePlannerT.walls.toolLabel,
@@ -42,12 +63,35 @@ export const EDITOR_TOOL_PRESENTATIONS: Partial<Record<EditorToolId, EditorToolP
     icon: DoorOpen,
     label: sitePlannerT.openings.toolLabel,
     hint: sitePlannerT.openings.toolHint,
+    Flyout: OpeningToolButton,
   },
   'building:furniture': {
     icon: Armchair,
     label: sitePlannerT.furniture.toolLabel,
     hint: sitePlannerT.furniture.toolHint,
     Flyout: FurnitureToolButton,
+  },
+  'building:stair': {
+    icon: Footprints,
+    label: sitePlannerT.stairs.toolLabel,
+    hint: sitePlannerT.stairs.toolHint,
+    Flyout: StairToolButton,
+  },
+  'building:support': {
+    icon: Columns2,
+    label: sitePlannerT.supports.toolLabel,
+    hint: sitePlannerT.supports.toolHint,
+  },
+  'building:fireplace': {
+    icon: Flame,
+    label: sitePlannerT.heating.toolLabel,
+    hint: sitePlannerT.heating.toolHint,
+    Flyout: FireplaceToolButton,
+  },
+  'building:duct': {
+    icon: Wind,
+    label: sitePlannerT.ventilation.toolLabel,
+    hint: sitePlannerT.ventilation.toolHint,
   },
   'building:electric': {
     icon: Zap,

@@ -20,21 +20,21 @@ export class WallPointGestures extends PolylinePointGestures<Wall> {
       selected: () => context.store.selectedWall,
       positions: wall => wall.points,
       isClosed: wall => isWallClosed(wall),
-      // Walls stand on the foundation: a corner moved or planted past the
-      // slab lands on its edge instead.
+      // A ground-storey corner moved or planted past the slab lands on its
+      // edge; an upper storey's corner is free to overhang (R24).
       movePoint: (wall, pointIndex, position) =>
         context.store.moveWallPoint(
           buildingId,
           wall.id,
           pointIndex,
-          context.store.clampToFoundation(buildingId, position)
+          context.store.clampWallPoint(buildingId, position)
         ),
       insertPoint: (wall, segmentIndex, position) =>
         context.store.insertWallPoint(
           buildingId,
           wall.id,
           segmentIndex,
-          context.store.clampToFoundation(buildingId, position)
+          context.store.clampWallPoint(buildingId, position)
         ),
       restore: wall => context.store.restoreWall(buildingId, wall),
       snapPoint: (wall, pointIndex, position) =>

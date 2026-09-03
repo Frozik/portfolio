@@ -30,7 +30,30 @@ export interface CircleShape {
   readonly anchorFactors?: Vector2;
 }
 
-export type Shape = RectangleShape | CircleShape;
+/**
+ * An ellipse stated by the BOX it is inscribed in rather than by two radii:
+ * same centre, same two extents, same turn as a rectangle — so every gesture,
+ * handle, anchor and dimension a rectangle already has works on it unchanged.
+ */
+export interface EllipseShape {
+  readonly kind: 'ellipse';
+  readonly id: ShapeId;
+  readonly center: Vector2;
+  /** Extent across the local X axis — the full width of the bounding box. */
+  readonly width: Meters;
+  readonly length: Meters;
+  readonly anchorFactors?: Vector2;
+  readonly rotationDegrees: number;
+}
+
+export type Shape = RectangleShape | CircleShape | EllipseShape;
+
+/** The shapes a rotated box describes; the two the same grips manipulate. */
+export type BoxedShape = RectangleShape | EllipseShape;
+
+export function isBoxedShape(shape: Shape): shape is BoxedShape {
+  return shape.kind === 'rectangle' || shape.kind === 'ellipse';
+}
 
 export type CsgOperation = 'union' | 'subtract';
 
@@ -154,6 +177,20 @@ export function createRectangle({
   return { kind: 'rectangle', id: createShapeId(), center, width, length, rotationDegrees };
 }
 
+export function createEllipse({
+  center,
+  width,
+  length,
+  rotationDegrees,
+}: {
+  readonly center: Vector2;
+  readonly width: Meters;
+  readonly length: Meters;
+  readonly rotationDegrees: number;
+}): EllipseShape {
+  return { kind: 'ellipse', id: createShapeId(), center, width, length, rotationDegrees };
+}
+
 export function createCircle({
   center,
   radius,
@@ -162,6 +199,24 @@ export function createCircle({
   readonly radius: Meters;
 }): CircleShape {
   return { kind: 'circle', id: createShapeId(), center, radius };
+}
+
+/**
+ * The zero-sized shape a drawing gesture grows from. The tools are named after
+ * the kinds they draw, so the rubber band, the slab tool and any future drawing
+ * surface all mint their draft here rather than each keeping its own ternary.
+ */
+export function createEmptyShape(kind: Shape['kind'], center: Vector2): Shape {
+  switch (kind) {
+    case 'rectangle':
+      return createRectangle({ center, width: 0, length: 0, rotationDegrees: 0 });
+    case 'ellipse':
+      return createEllipse({ center, width: 0, length: 0, rotationDegrees: 0 });
+    case 'circle':
+      return createCircle({ center, radius: 0 });
+    default:
+      return assertNever(kind);
+  }
 }
 
 function collectNestedGroupIds(terms: readonly CsgTerm[], ids: Set<ShapeId>): void {
@@ -182,6 +237,7 @@ function collectShapes(terms: readonly CsgTerm[], shapes: Shape[]): void {
         break;
       case 'rectangle':
       case 'circle':
+      case 'ellipse':
         shapes.push(operand);
 
         break;

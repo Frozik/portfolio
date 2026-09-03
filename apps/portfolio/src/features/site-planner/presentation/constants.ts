@@ -18,6 +18,8 @@ export const UTILITY_TOOL = 'utility' satisfies PlanTool;
 /** The glyph on a tool button, and the smaller one on a row of its flyout. */
 export const TOOL_ICON_SIZE_PX = 18;
 export const FLYOUT_ICON_SIZE_PX = 16;
+/** The pencil affordance beside a value that opens its editor. */
+export const EDIT_ICON_SIZE_PX = 14;
 
 /**
  * History group of the plot's north offset. Two panels type into it — the

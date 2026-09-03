@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createCircle, createRectangle } from '../model/shapes';
 import {
-  fitRectangleToDiagonal,
+  fitBoxToDiagonal,
   MIN_SHAPE_EXTENT_METERS,
   moveShape,
-  resizeRectangle,
+  resizeBox,
   rotationDegreesTowards,
   setCircleRadius,
   setRectangleRotation,
@@ -37,9 +37,9 @@ describe('moveShape', () => {
   });
 });
 
-describe('resizeRectangle', () => {
+describe('resizeBox', () => {
   it('pins the opposite corner while the grabbed one follows the pointer', () => {
-    const resized = resizeRectangle(RECTANGLE, TOP_RIGHT, { x: 20, y: 30 });
+    const resized = resizeBox(RECTANGLE, TOP_RIGHT, { x: 20, y: 30 });
 
     expect(resized.width).toBeCloseTo(14, 9);
     expect(resized.length).toBeCloseTo(16, 9);
@@ -48,7 +48,7 @@ describe('resizeRectangle', () => {
   });
 
   it('leaves the untouched axis of an edge handle alone', () => {
-    const resized = resizeRectangle(RECTANGLE, RIGHT_EDGE, { x: 20, y: 30 });
+    const resized = resizeBox(RECTANGLE, RIGHT_EDGE, { x: 20, y: 30 });
 
     expect(resized.length).toBe(RECTANGLE.length);
     expect(resized.center.y).toBe(RECTANGLE.center.y);
@@ -64,7 +64,7 @@ describe('resizeRectangle', () => {
     });
     // Local +x points to plan north once rotated, so the pinned left edge sits
     // at plan y = -5 and dragging to plan y = 10 spans fifteen metres.
-    const resized = resizeRectangle(rotated, RIGHT_EDGE, { x: 0, y: 10 });
+    const resized = resizeBox(rotated, RIGHT_EDGE, { x: 0, y: 10 });
 
     expect(resized.width).toBeCloseTo(15, 9);
     expect(resized.center.x).toBeCloseTo(0, 9);
@@ -72,16 +72,16 @@ describe('resizeRectangle', () => {
   });
 
   it('never shrinks past the minimum extent', () => {
-    const resized = resizeRectangle(RECTANGLE, TOP_RIGHT, { x: 6, y: 14 });
+    const resized = resizeBox(RECTANGLE, TOP_RIGHT, { x: 6, y: 14 });
 
     expect(resized.width).toBe(MIN_SHAPE_EXTENT_METERS);
     expect(resized.length).toBe(MIN_SHAPE_EXTENT_METERS);
   });
 });
 
-describe('fitRectangleToDiagonal', () => {
+describe('fitBoxToDiagonal', () => {
   it('spans the two corners and leaves a degenerate drag empty', () => {
-    const spanned = fitRectangleToDiagonal(RECTANGLE, { x: 0, y: 0 }, { x: 6, y: -4 });
+    const spanned = fitBoxToDiagonal(RECTANGLE, { x: 0, y: 0 }, { x: 6, y: -4 });
 
     expect(spanned).toMatchObject({
       center: { x: 3, y: -2 },
@@ -89,7 +89,7 @@ describe('fitRectangleToDiagonal', () => {
       length: 4,
       rotationDegrees: 0,
     });
-    expect(fitRectangleToDiagonal(RECTANGLE, { x: 2, y: 2 }, { x: 2, y: 2 }).width).toBe(0);
+    expect(fitBoxToDiagonal(RECTANGLE, { x: 2, y: 2 }, { x: 2, y: 2 }).width).toBe(0);
   });
 });
 

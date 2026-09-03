@@ -41,4 +41,6 @@ export interface PlanInputTarget {
    */
   onUndo(): void;
   onRedo(): void;
+  /** The duplicate chord, claimed with the history ones for the same reason. */
+  duplicateSelected(): void;
 }

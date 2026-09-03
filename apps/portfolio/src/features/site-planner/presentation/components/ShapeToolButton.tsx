@@ -1,6 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
-import { Circle, Square } from 'lucide-react';
+import { Circle, Egg, Square } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -16,15 +16,17 @@ import { TOOL_HOTKEYS } from './toolHotkeys';
 const SHAPE_TOOL_LABELS: Record<ShapeTool, string> = {
   rectangle: sitePlannerT.tools.rectangle,
   circle: sitePlannerT.tools.circle,
+  ellipse: sitePlannerT.tools.ellipse,
 };
 
-const SHAPE_TOOL_ICONS: Record<ShapeTool, LucideIcon> = {
+export const SHAPE_TOOL_ICONS: Record<ShapeTool, LucideIcon> = {
   rectangle: Square,
   circle: Circle,
+  ellipse: Egg,
 };
 
 /** One unheaded run: every shape the plan can be drawn with belongs to the same family. */
-const SHAPE_TOOL_GROUPS: readonly FlyoutVariantGroup<ShapeTool>[] = [
+export const SHAPE_TOOL_GROUPS: readonly FlyoutVariantGroup<ShapeTool>[] = [
   {
     key: 'shapes',
     variants: SHAPE_TOOLS.map(tool => {

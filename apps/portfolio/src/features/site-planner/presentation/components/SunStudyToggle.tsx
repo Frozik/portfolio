@@ -19,8 +19,8 @@ export const SunStudyToggle = observer(({ store }: { readonly store: SitePlanner
     <ToolbarIconButton
       icon={Sun}
       label={sitePlannerT.sun.toggle}
-      isActive={store.isSunStudyOpen}
-      onActivate={store.toggleSunStudy}
+      isActive={store.sun.isOpen}
+      onActivate={store.sun.toggleOpen}
     />
   );
 });

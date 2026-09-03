@@ -2,9 +2,8 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
-
+import { formatCubicMeters } from '../../application/render/plan-draw/shared';
 import type { OverlayMode, SitePlannerStore } from '../../application/SitePlannerStore';
-import { formatCubicMeters } from '../../domain/plan-draw/shared';
 import type { RampColor } from '../../domain/terrain/analysis-raster';
 import { CUT_FILL_RAMP, SLOPE_RAMP, toCssColor } from '../../domain/terrain/analysis-raster';
 import { GENTLE_SLOPE_PERCENT, STEEP_SLOPE_PERCENT } from '../../domain/terrain/slope';

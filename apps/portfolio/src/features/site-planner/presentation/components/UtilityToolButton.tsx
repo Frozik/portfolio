@@ -1,11 +1,10 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Waypoints } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-
+import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { UtilitySystem } from '../../domain/model/foundation';
 import { TRENCH_SYSTEMS } from '../../domain/model/routing';
-import { UTILITY_SYSTEM_COLORS } from '../../domain/plan-draw/draw-house';
 import { TOOL_ICON_SIZE_PX, UTILITY_TOOL } from '../constants';
 import { sitePlannerT } from '../translations';
 import type { FlyoutSide, FlyoutVariantGroup } from './FlyoutToolButton';

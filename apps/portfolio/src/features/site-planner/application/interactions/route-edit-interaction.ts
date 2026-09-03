@@ -3,12 +3,9 @@ import { isNil } from 'lodash-es';
 
 import type { UtilityRouteId } from '../../domain/model/routing';
 import { MIN_ROUTE_POINTS } from '../../domain/model/routing';
-import {
-  computePolylinePointHandles,
-  findPathPointHandleAt,
-} from '../../domain/plan-draw/draw-paths';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
+import { computePolylinePointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { DELETE_KEYS } from './editor-interaction';
 import { HANDLE_HIT_RADIUS_PX } from './plan-picking';

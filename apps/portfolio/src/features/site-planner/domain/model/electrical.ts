@@ -5,6 +5,10 @@ import type { Meters } from '../units';
 import type { WallId } from './walls';
 
 export type DeviceId = Opaque<'DeviceId', string>;
+
+export function createDeviceId(): DeviceId {
+  return crypto.randomUUID() as DeviceId;
+}
 export type CircuitGroupId = Opaque<'CircuitGroupId', string>;
 
 /**
@@ -70,7 +74,7 @@ export function createWallDevice({
   readonly offsetMeters: Meters;
 }): ElectricalDevice {
   return {
-    id: crypto.randomUUID() as DeviceId,
+    id: createDeviceId(),
     kind,
     host: {
       kind: 'wall',
@@ -83,7 +87,7 @@ export function createWallDevice({
 
 export function createCeilingLight(position: Vector2): ElectricalDevice {
   return {
-    id: crypto.randomUUID() as DeviceId,
+    id: createDeviceId(),
     kind: 'light',
     host: { kind: 'ceiling', position },
   };

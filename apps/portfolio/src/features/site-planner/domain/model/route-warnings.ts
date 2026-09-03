@@ -1,9 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-
-import { distanceToSegment } from '../geometry/hit-test-objects';
 import { isPointInMultiPolygon } from '../geometry/polygon-booleans';
 import type { MultiPolygon } from '../geometry/polygon-types';
+import { distanceToSegment } from '../geometry/segment-distance';
 import type { TrenchProfile } from '../terrain/trench-profile';
 import type { Meters } from '../units';
 import type { UtilityRoute, UtilityRouteId } from './routing';

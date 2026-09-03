@@ -18,10 +18,10 @@ import type {
   SitePath,
   TreeInstance,
 } from '../../domain/model/site-plan';
-import type { ShapeHandle } from '../../domain/plan-draw/draw-selection';
-import { HANDLE_SIZE_PX } from '../../domain/plan-draw/draw-selection';
 import type { Meters } from '../../domain/units';
 import type { PlanViewport } from '../../domain/view/plan-viewport';
+import type { ShapeHandle } from '../render/plan-draw/draw-selection';
+import { HANDLE_SIZE_PX } from '../render/plan-draw/draw-selection';
 import type { SitePlannerStore } from '../SitePlannerStore';
 
 /** Grab radius around a handle centre — a forgiving target over the drawn square. */
@@ -202,6 +202,7 @@ function pickFromOperand(
       return pickFromTerms(operand.terms, planPoint, toleranceMeters);
     case 'rectangle':
     case 'circle':
+    case 'ellipse':
       return hitTestShape(operand, planPoint, toleranceMeters) ? operand : undefined;
     default:
       return assertNever(operand);

@@ -30,6 +30,8 @@ export interface SceneTerrain {
 export interface SceneObjects {
   /** The extruded footprint; nothing while the plan has no house. */
   readonly house: LitMesh | undefined;
+  /** Storeys the building editor is not aimed at, drawn faintly. */
+  readonly houseGhost: LitMesh | undefined;
   /** The concrete solids the buildings stand on; nothing without a footprint. */
   readonly foundations: LitMesh | undefined;
   /** The green and terrace covers over the exposed ceilings. */

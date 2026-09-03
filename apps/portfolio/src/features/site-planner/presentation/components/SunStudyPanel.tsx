@@ -26,7 +26,7 @@ const MIDNIGHT = new Temporal.PlainTime(0);
  * over the bottom of the canvas so the scene it changes stays in sight.
  */
 export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const { sunDate, sunDayWindow, sunTimeMinutes } = store;
+  const { date: sunDate, dayWindow, timeMinutes } = store.sun;
   const { timeZoneId } = store.settings.location;
   const today = useToday(timeZoneId);
 
@@ -45,15 +45,15 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
 
   const handleDateChange = useFunction((picked: Temporal.ZonedDateTime | undefined) => {
     if (!isNil(picked)) {
-      store.setSunDate(picked.toPlainDate());
+      store.sun.setDate(picked.toPlainDate());
     }
   });
 
-  if (!store.isSunStudyOpen) {
+  if (!store.sun.isOpen) {
     return undefined;
   }
 
-  const animationLabel = store.isSunAnimating
+  const animationLabel = store.sun.isAnimating
     ? sitePlannerT.sun.pauseDay
     : sitePlannerT.sun.playDay;
 
@@ -82,11 +82,11 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
         <legend className="sr-only">{sitePlannerT.sun.time}</legend>
         <Sunrise size={ICON_SIZE_PX} className="shrink-0 text-text-muted" aria-hidden />
         <Slider
-          min={sunDayWindow.sunriseMinutes}
-          max={sunDayWindow.sunsetMinutes}
+          min={dayWindow.sunriseMinutes}
+          max={dayWindow.sunsetMinutes}
           step={TIME_STEP_MINUTES}
-          value={sunTimeMinutes}
-          onChange={store.setSunTimeMinutes}
+          value={timeMinutes}
+          onChange={store.sun.setTimeMinutes}
           showTooltip
           formatTooltip={formatClockTime}
         />
@@ -94,18 +94,18 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
       </fieldset>
 
       <output className="w-12 shrink-0 text-center font-mono text-xs text-text">
-        {formatClockTime(sunTimeMinutes)}
+        {formatClockTime(timeMinutes)}
       </output>
 
       <Tooltip title={animationLabel} placement="top">
         <button
           type="button"
           aria-label={animationLabel}
-          aria-pressed={store.isSunAnimating}
-          onClick={store.toggleSunAnimation}
+          aria-pressed={store.sun.isAnimating}
+          onClick={store.sun.toggleAnimation}
           className="flex size-8 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors duration-150 hover:bg-white/10 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
-          {store.isSunAnimating ? (
+          {store.sun.isAnimating ? (
             <Pause size={ICON_SIZE_PX} aria-hidden />
           ) : (
             <Play size={ICON_SIZE_PX} aria-hidden />

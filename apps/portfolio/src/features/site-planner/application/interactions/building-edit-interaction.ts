@@ -1,37 +1,48 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { isNil } from 'lodash-es';
-
+import { clamp, isNil } from 'lodash-es';
+import { TYPED_LENGTH_KEY_PATTERN } from '../../domain/geometry/draw-constraints';
 import { magnetizeFurnitureToWall } from '../../domain/geometry/furniture-magnetism';
 import { distanceToPolyline } from '../../domain/geometry/hit-test-objects';
-import { hitTestRotatedBox } from '../../domain/geometry/hit-test-shape';
-import { bearingDegreesTowards } from '../../domain/geometry/transform-shape';
+import type { RotatedBox } from '../../domain/geometry/hit-test-shape';
+import { hitTestRotatedBox, hitTestShape } from '../../domain/geometry/hit-test-shape';
+import { isPointOnStair } from '../../domain/geometry/stair-footprint';
+
 import {
+  pointAlongPolyline,
   polylineLength,
   projectOntoPolyline,
   wallCenterline,
 } from '../../domain/geometry/wall-geometry';
+import type { VerticalDuct } from '../../domain/model/ducts';
 import type { ElectricalDevice } from '../../domain/model/electrical';
+import type { Fireplace } from '../../domain/model/fireplaces';
+import { FIREPLACE_SPECS } from '../../domain/model/fireplaces';
 import type { FurnitureInstance } from '../../domain/model/furniture';
 import { findFurnitureEntry, furnitureBox } from '../../domain/model/furniture';
 import type { Opening } from '../../domain/model/openings';
+import type { Selection } from '../../domain/model/selection';
 import type { BuildingId } from '../../domain/model/site-plan';
 import { storeysOf } from '../../domain/model/site-plan';
+import type { Slab } from '../../domain/model/slabs';
+import type { StairInstance } from '../../domain/model/stairs';
 import type { Storey } from '../../domain/model/storeys';
 import { devicesOf, furnitureOf } from '../../domain/model/storeys';
+import type { SupportPost } from '../../domain/model/supports';
 import type { Wall } from '../../domain/model/walls';
 import { isWallClosed, MIN_CLOSED_WALL_POINTS } from '../../domain/model/walls';
-import { computeFurnitureHandles } from '../../domain/plan-draw/draw-furniture';
-import {
-  computePolylinePointHandles,
-  findPathPointHandleAt,
-} from '../../domain/plan-draw/draw-paths';
+import type { Meters } from '../../domain/units';
 import { normalizeTurnDegrees } from '../../domain/units';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
-import { rotationStepDegrees, snapLength } from '../../domain/view/snapping';
+import { computeFurnitureHandles } from '../render/plan-draw/draw-furniture';
+import { computePolylinePointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
+import type { SitePlannerStore } from '../SitePlannerStore';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
-import { gridStep, offsetBetween, snapPointToGrid } from './grid-snapping';
+import { gridStep, snapPointToGrid } from './grid-snapping';
+import type { DraggedObject } from './object-drag-gestures';
+import { ObjectDragGestures } from './object-drag-gestures';
 import { findHandleAt, HANDLE_HIT_RADIUS_PX } from './plan-picking';
+import { ShapeGestures } from './shape-gestures';
 import { applyWallHandleHover, WallPointGestures } from './wall-point-gestures';
 
 /** How far outside its body a wall still answers a click, in pixels. */
@@ -40,29 +51,6 @@ const WALL_PICK_TOLERANCE_PX = 6;
 const FURNITURE_MAGNET_RADIUS_METERS = 0.5;
 /** The grab radius around a device symbol, generous around the drawn glyph. */
 const DEVICE_PICK_RADIUS_PX = 10;
-
-/**
- * Sliding an opening along its host wall — a 1-D drag: however the pointer
- * roams, the opening only ever moves along the wall's centreline.
- */
-interface OpeningDrag {
-  readonly startOpening: Opening;
-  readonly wall: Wall;
-}
-
-/** Sliding a wall device along its host, or a ceiling light across the plan. */
-interface DeviceDrag {
-  readonly startDevice: ElectricalDevice;
-  readonly wall: Wall | undefined;
-  readonly grabOffset: Vector2;
-}
-
-/** Moving or turning a piece of furniture; which of the two the grip decides. */
-interface FurnitureDrag {
-  readonly kind: 'move' | 'rotate';
-  readonly startFurniture: FurnitureInstance;
-  readonly grabOffset: Vector2;
-}
 
 /**
  * The building editor's canvas behaviour (`building-editor.md` §4, stage 2):
@@ -74,14 +62,29 @@ export class BuildingEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
   private readonly buildingId: BuildingId;
   private readonly wallGestures: WallPointGestures;
-  private openingDrag: OpeningDrag | undefined = undefined;
-  private furnitureDrag: FurnitureDrag | undefined = undefined;
-  private deviceDrag: DeviceDrag | undefined = undefined;
+  private readonly slabs: ShapeGestures<void>;
+  private readonly objects: ObjectDragGestures;
 
   constructor(context: InteractionContext, buildingId: BuildingId) {
     this.context = context;
     this.buildingId = buildingId;
     this.wallGestures = new WallPointGestures(context, buildingId);
+    this.objects = new ObjectDragGestures(context);
+    // Everything on a storey is drawn against walls that are already standing,
+    // so the object snap is live without a modifier here — the OSNAP habit the
+    // wall tool already follows (`building-editor.md` §2). A slab is caught by
+    // the corners and side middles of the storey BELOW as well as by its own
+    // storey's, which is what makes «flush with the room downstairs» a gesture
+    // rather than four typed numbers.
+    this.slabs = new ShapeGestures<void>(context, {
+      isSnapAlwaysLive: true,
+      update: slab => context.store.updateSlab(buildingId, slab),
+      add: slab => {
+        context.store.addSlab(slab);
+        context.store.finishPlacement();
+      },
+      snapPoints: excludedShapeId => context.store.slabSnapPoints(excludedShapeId),
+    });
   }
 
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): boolean {
@@ -89,20 +92,67 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     switch (store.activeTool) {
       case 'select':
-        this.beginSelectGesture(planPoint);
+        this.beginSelectGesture(planPoint, modifiers);
 
         return true;
       case 'building:wall':
-        // Walls stand on the foundation: a click past the slab lands on its edge.
+        // The ground storey stands on the foundation, so a click past the
+        // slab lands on its edge; an upper storey may overhang (R24).
+        // `draftWallCursor` is the previewed corner — angle lock and typed
+        // length included — so what the rubber band showed is what lands.
         store.appendDraftWallPoint(
-          store.clampToFoundation(this.buildingId, snapPointToGrid(store, planPoint, modifiers))
+          store.clampWallPoint(
+            this.buildingId,
+            store.draftWallCursor ?? snapPointToGrid(store, planPoint, modifiers)
+          )
         );
+        store.setTypedLengthText(undefined);
 
         return true;
       case 'building:opening':
-        this.placeOpening(planPoint);
+        // Nothing lands when the click missed every wall, and a tool that
+        // placed nothing must stay in hand rather than quietly give up.
+        if (this.placeOpening(planPoint)) {
+          store.finishPlacement();
+        }
 
         return true;
+      case 'building:slab':
+        // Drawn like any shape on the plot — the armed primitive, dragged out.
+        // A click that never moved lays a plate of a sensible default size, so
+        // the tool answers both ways of asking for a floor.
+        this.slabs.beginDraw(store.armedShapeTool, undefined, planPoint, modifiers);
+
+        return true;
+      case 'building:fireplace':
+        // A fireplace is placed like a stair: one click says where, and its
+        // flue derives from there up through the roof.
+        store.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
+        store.finishPlacement();
+
+        return true;
+      case 'building:duct':
+        store.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
+        store.finishPlacement();
+
+        return true;
+      case 'building:support':
+        // A post is placed like a socket: one click, both ends derived.
+        store.placeSupportAt(snapPointToGrid(store, planPoint, modifiers));
+        store.finishPlacement();
+
+        return true;
+      case 'building:stair':
+        // A stair is placed, not drawn: its run comes from the storey height,
+        // so the click only says where. Snapping keeps it off half-metres.
+        store.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
+        store.finishPlacement();
+
+        return true;
+      // Furniture and electrics are STICKY: a room is furnished and a storey
+      // wired by placing one piece after another, so these two tools stay in
+      // hand. The piece that lands is still selected, so its properties are
+      // there to type — only the tool is not taken away.
       case 'building:furniture':
         store.placeFurnitureAt(this.buildingId, snapPointToGrid(store, planPoint, modifiers));
 
@@ -121,27 +171,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onPointerMove(planPoint: Vector2, modifiers: PlanModifiers): boolean {
-    const deviceDrag = this.deviceDrag;
-
-    if (!isNil(deviceDrag)) {
-      this.dragDeviceTo(deviceDrag, planPoint, modifiers);
-
-      return true;
-    }
-
-    const furnitureDrag = this.furnitureDrag;
-
-    if (!isNil(furnitureDrag)) {
-      this.dragFurnitureTo(furnitureDrag, planPoint, modifiers);
-
-      return true;
-    }
-
-    const openingDrag = this.openingDrag;
-
-    if (!isNil(openingDrag)) {
-      this.slideOpening(openingDrag, planPoint, modifiers);
-
+    if (this.objects.move(planPoint, modifiers) || this.slabs.move(planPoint, modifiers)) {
       return true;
     }
 
@@ -161,37 +191,16 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onPointerUp(planPoint: Vector2, modifiers: PlanModifiers): boolean {
-    const deviceDrag = this.deviceDrag;
-
-    if (!isNil(deviceDrag)) {
-      this.deviceDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.dragDeviceTo(deviceDrag, planPoint, modifiers);
-      }
-
+    if (this.objects.release(planPoint, modifiers)) {
       return true;
     }
 
-    const furnitureDrag = this.furnitureDrag;
-
-    if (!isNil(furnitureDrag)) {
-      this.furnitureDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.dragFurnitureTo(furnitureDrag, planPoint, modifiers);
-      }
-
-      return true;
-    }
-
-    const openingDrag = this.openingDrag;
-
-    if (!isNil(openingDrag)) {
-      this.openingDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.slideOpening(openingDrag, planPoint, modifiers);
+    if (this.slabs.release(planPoint, modifiers)) {
+      // A press and a release with nothing in between is the click that lays a
+      // default plate; the gesture itself has nothing to commit.
+      if (!this.context.hasPointerMoved() && this.context.store.activeTool === 'building:slab') {
+        this.context.store.placeSlabAt(snapPointToGrid(this.context.store, planPoint, modifiers));
+        this.context.store.finishPlacement();
       }
 
       return true;
@@ -227,45 +236,8 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onPointerCancel(): void {
-    const deviceDrag = this.deviceDrag;
-
-    if (!isNil(deviceDrag)) {
-      this.deviceDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.context.store.moveDevice(this.buildingId, deviceDrag.startDevice.id, {
-          host: deviceDrag.startDevice.host,
-        });
-      }
-    }
-
-    const furnitureDrag = this.furnitureDrag;
-
-    if (!isNil(furnitureDrag)) {
-      this.furnitureDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.context.store.moveFurniture(this.buildingId, furnitureDrag.startFurniture.id, {
-          position: furnitureDrag.startFurniture.position,
-          rotationDegrees: furnitureDrag.startFurniture.rotationDegrees,
-        });
-      }
-    }
-
-    const openingDrag = this.openingDrag;
-
-    if (!isNil(openingDrag)) {
-      this.openingDrag = undefined;
-
-      if (this.context.hasPointerMoved()) {
-        this.context.store.moveOpening(
-          this.buildingId,
-          openingDrag.startOpening.id,
-          openingDrag.startOpening.offsetMeters
-        );
-      }
-    }
-
+    this.objects.cancel();
+    this.slabs.cancel();
     this.wallGestures.cancel();
   }
 
@@ -332,8 +304,33 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onKeyDown(key: string, _modifiers: PlanModifiers): boolean {
-    if (key === 'Enter' && this.context.store.draftWallPoints.length > 0) {
-      this.context.store.commitDraftWall();
+    const { store } = this.context;
+
+    if (key === 'Enter' && store.draftWallPoints.length > 0) {
+      store.commitDraftWall();
+
+      return true;
+    }
+
+    if (store.draftWallPoints.length === 0) {
+      return false;
+    }
+
+    // The CAD value-control box: aim roughly, then state the length. Digits
+    // and one separator accumulate; Backspace peels the number back and, once
+    // it is empty, takes the last corner with it.
+    if (TYPED_LENGTH_KEY_PATTERN.test(key)) {
+      store.appendTypedLengthKey(key);
+
+      return true;
+    }
+
+    if (key === 'Backspace') {
+      if (isNil(store.typedLengthText)) {
+        store.dropLastDraftWallPoint();
+      } else {
+        store.setTypedLengthText(undefined);
+      }
 
       return true;
     }
@@ -348,9 +345,8 @@ export class BuildingEditInteraction implements EditorInteraction {
   hasTransientInteraction(): boolean {
     return (
       this.wallGestures.hasActive() ||
-      !isNil(this.openingDrag) ||
-      !isNil(this.furnitureDrag) ||
-      !isNil(this.deviceDrag) ||
+      this.objects.hasActive() ||
+      this.slabs.hasActive() ||
       !isNil(this.context.store.pendingConnectDeviceId) ||
       this.context.store.draftWallPoints.length > 0
     );
@@ -366,13 +362,18 @@ export class BuildingEditInteraction implements EditorInteraction {
    * What the select tool takes hold of, nearest grip first: a drawn point of
    * the selected wall, then whichever wall's body lies under the pointer.
    */
-  private beginSelectGesture(planPoint: Vector2): void {
+  private beginSelectGesture(planPoint: Vector2, modifiers: PlanModifiers): void {
     if (
+      this.beginSlabHandle(planPoint) ||
+      this.beginStairRotation(planPoint) ||
+      this.beginHeatingDrag(planPoint, modifiers) ||
       this.beginFurnitureRotation(planPoint) ||
       this.wallGestures.begin(planPoint, { allowInsert: true }) ||
-      this.beginDeviceDrag(planPoint) ||
-      this.beginOpeningDrag(planPoint) ||
-      this.beginFurnitureDrag(planPoint)
+      this.beginDeviceDrag(planPoint, modifiers) ||
+      this.beginOpeningDrag(planPoint, modifiers) ||
+      this.beginSupportDrag(planPoint, modifiers) ||
+      this.beginStairDrag(planPoint, modifiers) ||
+      this.beginFurnitureDrag(planPoint, modifiers)
     ) {
       return;
     }
@@ -380,7 +381,11 @@ export class BuildingEditInteraction implements EditorInteraction {
     const wall = this.pickWall(planPoint);
 
     if (isNil(wall)) {
-      this.context.store.setSelection(undefined);
+      // The floor answers last: everything on a storey stands on it, so a slab
+      // that answered first would swallow every click meant for empty floor.
+      if (!this.beginSlabDrag(planPoint, modifiers)) {
+        this.context.store.setSelection(undefined);
+      }
 
       return;
     }
@@ -393,16 +398,18 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   /** With the opening tool in hand, a click hangs the armed preset on a wall. */
-  private placeOpening(planPoint: Vector2): void {
+  private placeOpening(planPoint: Vector2): boolean {
     const wall = this.pickWall(planPoint);
 
     if (isNil(wall)) {
-      return;
+      return false;
     }
 
     const { offsetMeters } = projectOntoPolyline(wallCenterline(wall), planPoint);
 
     this.context.store.addOpeningAt(this.buildingId, wall.id, offsetMeters);
+
+    return true;
   }
 
   /**
@@ -410,8 +417,8 @@ export class BuildingEditInteraction implements EditorInteraction {
    * wins over its host, the way handles win over bodies. A grabbed opening is
    * recorded before the drag: one step to undo, expiring when no move follows.
    */
-  private beginOpeningDrag(planPoint: Vector2): boolean {
-    const { store, getViewport } = this.context;
+  private beginOpeningDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { getViewport } = this.context;
     const storey = this.activeStorey();
 
     if (isNil(storey)) {
@@ -436,30 +443,42 @@ export class BuildingEditInteraction implements EditorInteraction {
         projection.distanceMeters <= wall.thicknessMeters / 2 + toleranceMeters;
 
       if (isOnOpening) {
-        store.setSelection({ kind: 'opening', buildingId: this.buildingId, openingId: opening.id });
-        store.pushHistory();
-        this.openingDrag = { startOpening: opening, wall };
+        this.select(
+          { kind: 'opening', buildingId: this.buildingId, openingId: opening.id },
+          modifiers
+        );
 
-        return true;
+        return this.objects.beginMove(this.draggedOpening(opening, wall), planPoint);
       }
     }
 
     return false;
   }
 
-  /** The 1-D slide: project, snap along the wall, and keep the whole width on it. */
-  private slideOpening(drag: OpeningDrag, planPoint: Vector2, modifiers: PlanModifiers): void {
+  /**
+   * An opening does not roam: however the pointer moves, it slides ALONG its
+   * host wall and keeps its whole width on it.
+   */
+  private draggedOpening(opening: Opening, wall: Wall): DraggedObject {
     const { store } = this.context;
-    const centerline = wallCenterline(drag.wall);
-    const projection = projectOntoPolyline(centerline, planPoint);
-    const step = gridStep(store, modifiers);
-    const snapped =
-      step > 0 ? Math.round(projection.offsetMeters / step) * step : projection.offsetMeters;
-    const halfWidth = drag.startOpening.widthMeters / 2;
-    const total = polylineLength(centerline);
-    const clamped = Math.max(halfWidth, Math.min(snapped, Math.max(halfWidth, total - halfWidth)));
+    const centerline = wallCenterline(wall);
 
-    store.moveOpening(this.buildingId, drag.startOpening.id, clamped);
+    return {
+      origin: pointAlongPolyline(centerline, opening.offsetMeters) ?? { x: 0, y: 0 },
+      moveTo: (draggedPoint, modifiers) => {
+        const projection = projectOntoPolyline(centerline, draggedPoint);
+        const halfWidth = opening.widthMeters / 2;
+        const total = polylineLength(centerline);
+        const snapped = snapAlong(store, projection.offsetMeters, modifiers);
+
+        store.moveOpening(
+          this.buildingId,
+          opening.id,
+          clamp(snapped, halfWidth, Math.max(halfWidth, total - halfWidth))
+        );
+      },
+      restore: () => store.moveOpening(this.buildingId, opening.id, opening.offsetMeters),
+    };
   }
 
   /** With the electric tool: wall kinds hang on a wall, a light goes on the ceiling. */
@@ -540,7 +559,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   /** Takes hold of the device under the pointer and selects it. */
-  private beginDeviceDrag(planPoint: Vector2): boolean {
+  private beginDeviceDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store } = this.context;
     const device = this.pickDevice(planPoint);
 
@@ -558,49 +577,54 @@ export class BuildingEditInteraction implements EditorInteraction {
     const scene = store.editedStoreyScene;
     const symbol = scene?.devices.find(candidate => candidate.id === device.id);
 
-    store.setSelection({ kind: 'device', buildingId: this.buildingId, deviceId: device.id });
-    store.pushHistory();
-    this.deviceDrag = {
-      startDevice: device,
-      wall,
-      grabOffset: isNil(symbol) ? { x: 0, y: 0 } : offsetBetween(planPoint, symbol.position),
-    };
+    this.select({ kind: 'device', buildingId: this.buildingId, deviceId: device.id }, modifiers);
 
-    return true;
+    return this.objects.beginMove(
+      this.draggedDevice(device, wall, symbol?.position ?? planPoint),
+      planPoint
+    );
   }
 
   /** A wall device slides along its host; a ceiling light roams the grid. */
-  private dragDeviceTo(drag: DeviceDrag, planPoint: Vector2, modifiers: PlanModifiers): void {
+  private draggedDevice(
+    device: ElectricalDevice,
+    wall: Wall | undefined,
+    origin: Vector2
+  ): DraggedObject {
     const { store } = this.context;
-    const { startDevice, wall } = drag;
 
-    if (startDevice.host.kind === 'wall' && !isNil(wall)) {
-      const centerline = wallCenterline(wall);
-      const projection = projectOntoPolyline(centerline, planPoint);
-      const step = gridStep(store, modifiers);
-      const snapped =
-        step > 0 ? Math.round(projection.offsetMeters / step) * step : projection.offsetMeters;
-      const clamped = Math.max(0, Math.min(snapped, polylineLength(centerline)));
+    return {
+      origin,
+      moveTo: (draggedPoint, modifiers) => {
+        if (device.host.kind === 'wall' && !isNil(wall)) {
+          const centerline = wallCenterline(wall);
+          const projection = projectOntoPolyline(centerline, draggedPoint);
 
-      store.moveDevice(this.buildingId, startDevice.id, {
-        host: { ...startDevice.host, offsetMeters: clamped },
-      });
+          store.moveDevice(this.buildingId, device.id, {
+            host: {
+              ...device.host,
+              offsetMeters: clamp(
+                snapAlong(store, projection.offsetMeters, modifiers),
+                0,
+                polylineLength(centerline)
+              ),
+            },
+          });
 
-      return;
-    }
+          return;
+        }
 
-    if (startDevice.host.kind === 'ceiling') {
-      store.moveDevice(this.buildingId, startDevice.id, {
-        host: {
-          kind: 'ceiling',
-          position: snapPointToGrid(
-            store,
-            { x: planPoint.x + drag.grabOffset.x, y: planPoint.y + drag.grabOffset.y },
-            modifiers
-          ),
-        },
-      });
-    }
+        if (device.host.kind === 'ceiling') {
+          store.moveDevice(this.buildingId, device.id, {
+            host: {
+              kind: 'ceiling',
+              position: snapPointToGrid(store, draggedPoint, modifiers),
+            },
+          });
+        }
+      },
+      restore: () => store.moveDevice(this.buildingId, device.id, { host: device.host }),
+    };
   }
 
   /**
@@ -625,19 +649,278 @@ export class BuildingEditInteraction implements EditorInteraction {
       return false;
     }
 
-    store.pushHistory();
-    this.furnitureDrag = {
-      kind: 'rotate',
-      startFurniture: furniture,
-      grabOffset: { x: 0, y: 0 },
-    };
-
-    return true;
+    return this.objects.beginRotate(this.draggedFurniture(furniture));
   }
 
   /** Takes hold of the piece under the pointer, topmost first, and selects it. */
-  private beginFurnitureDrag(planPoint: Vector2): boolean {
+  /**
+   * Selects, or — with Shift — adds to what is already selected. One helper so
+   * every body in this editor answers the modifier the same way.
+   */
+  private select(selection: Selection, modifiers: PlanModifiers): void {
+    const { store } = this.context;
+
+    if (modifiers.isShiftPressed) {
+      store.toggleSelection(selection);
+
+      return;
+    }
+
+    store.setSelection(selection);
+  }
+
+  /** The grips of the selected slab: turn, and the eight that resize it. */
+  private beginSlabHandle(planPoint: Vector2): boolean {
+    const slab = this.selectedSlab();
+
+    return !isNil(slab) && this.slabs.beginHandle(slab, undefined, planPoint);
+  }
+
+  /** Takes hold of the slab under the pointer — the floor itself, dragged whole. */
+  private beginSlabDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
+    const slabs = store.activeStoreySlabs;
+    const toleranceMeters = WALL_PICK_TOLERANCE_PX / getViewport().pixelsPerMeter;
+
+    for (let index = slabs.length - 1; index >= 0; index -= 1) {
+      const slab = slabs[index];
+
+      if (!hitTestShape(slab, planPoint, toleranceMeters)) {
+        continue;
+      }
+
+      this.select({ kind: 'slab', buildingId: this.buildingId, slabId: slab.id }, modifiers);
+      this.slabs.beginMove(slab, undefined, planPoint);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /** The slab the selection names, resolved against the active storey. */
+  private selectedSlab(): Slab | undefined {
+    const { store } = this.context;
+    const selection = store.selection;
+
+    return selection?.kind === 'slab'
+      ? store.activeStoreySlabs.find(candidate => candidate.id === selection.slabId)
+      : undefined;
+  }
+
+  /**
+   * Takes hold of a fireplace or a shaft. Both are small and both are drawn
+   * over whatever room they stand in, so they answer before the walls do; a
+   * shaft only answers on the storey it STARTS on — the section of it crossing
+   * an upper floor is a hole, not a handle.
+   */
+  private beginHeatingDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { store, getViewport } = this.context;
+    const scene = store.editedStoreyScene;
+
+    if (isNil(scene)) {
+      return false;
+    }
+
+    const toleranceMeters = HANDLE_HIT_RADIUS_PX / getViewport().pixelsPerMeter;
+
+    for (const section of scene.ducts) {
+      if (!section.startsHere || !isPointOnStair([section.footprint], planPoint, toleranceMeters)) {
+        continue;
+      }
+
+      // A flue belongs to its fireplace: grabbing it grabs the fireplace.
+      const owner = scene.fireplaces.find(
+        candidate => candidate.fireplace.id === section.fireplaceId
+      );
+
+      if (!isNil(owner)) {
+        return this.grabFireplace(owner.fireplace, planPoint, modifiers);
+      }
+
+      this.select(
+        { kind: 'duct', buildingId: this.buildingId, ductId: section.duct.id },
+        modifiers
+      );
+
+      return this.objects.beginMove(this.draggedDuct(section.duct), planPoint);
+    }
+
+    for (const fireplaceScene of scene.fireplaces) {
+      if (hitTestRotatedBox(fireplaceBox(fireplaceScene.fireplace), planPoint, toleranceMeters)) {
+        return this.grabFireplace(fireplaceScene.fireplace, planPoint, modifiers);
+      }
+    }
+
+    return false;
+  }
+
+  private grabFireplace(
+    fireplace: Fireplace,
+    planPoint: Vector2,
+    modifiers: PlanModifiers
+  ): boolean {
+    this.select(
+      { kind: 'fireplace', buildingId: this.buildingId, fireplaceId: fireplace.id },
+      modifiers
+    );
+
+    return this.objects.beginMove(this.draggedFireplace(fireplace), planPoint);
+  }
+
+  /** A fireplace slides and turns; its flue follows, because the flue derives. */
+  private draggedFireplace(fireplace: Fireplace): DraggedObject {
+    const { store } = this.context;
+
+    return {
+      origin: fireplace.position,
+      moveTo: (draggedPoint, modifiers) =>
+        store.moveFireplace(this.buildingId, fireplace.id, {
+          position: snapPointToGrid(store, draggedPoint, modifiers),
+        }),
+      turnTo: rotationDegrees =>
+        store.moveFireplace(this.buildingId, fireplace.id, { rotationDegrees }),
+      restore: () =>
+        store.moveFireplace(this.buildingId, fireplace.id, {
+          position: fireplace.position,
+          rotationDegrees: fireplace.rotationDegrees,
+        }),
+    };
+  }
+
+  /** A shaft only ever slides: it has no facing to turn. */
+  private draggedDuct(duct: VerticalDuct): DraggedObject {
+    const { store } = this.context;
+
+    return {
+      origin: duct.position,
+      moveTo: (draggedPoint, modifiers) =>
+        store.moveDuct(this.buildingId, duct.id, {
+          position: snapPointToGrid(store, draggedPoint, modifiers),
+        }),
+      restore: () => store.moveDuct(this.buildingId, duct.id, { position: duct.position }),
+    };
+  }
+
+  /** Takes hold of a post: a small target, so it is picked before the stairs. */
+  private beginSupportDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { store, getViewport } = this.context;
+    const scene = store.editedStoreyScene;
+
+    if (isNil(scene)) {
+      return false;
+    }
+
+    const toleranceMeters = HANDLE_HIT_RADIUS_PX / getViewport().pixelsPerMeter;
+
+    for (let index = scene.supports.length - 1; index >= 0; index -= 1) {
+      const supportScene = scene.supports[index];
+
+      if (!isPointOnStair([supportScene.footprint], planPoint, toleranceMeters)) {
+        continue;
+      }
+
+      this.select(
+        { kind: 'support', buildingId: this.buildingId, supportId: supportScene.post.id },
+        modifiers
+      );
+
+      return this.objects.beginMove(this.draggedSupport(supportScene.post), planPoint);
+    }
+
+    return false;
+  }
+
+  /** Takes hold of a stair's body: the same grab as a sofa's. */
+  private beginStairDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { store, getViewport } = this.context;
+    const scene = store.editedStoreyScene;
+
+    if (isNil(scene)) {
+      return false;
+    }
+
+    const toleranceMeters = WALL_PICK_TOLERANCE_PX / getViewport().pixelsPerMeter;
+
+    for (let index = scene.stairs.length - 1; index >= 0; index -= 1) {
+      const stairScene = scene.stairs[index];
+
+      if (!isPointOnStair(stairScene.footprint, planPoint, toleranceMeters)) {
+        continue;
+      }
+
+      this.select(
+        { kind: 'stair', buildingId: this.buildingId, stairId: stairScene.stair.id },
+        modifiers
+      );
+
+      return this.objects.beginMove(this.draggedStair(stairScene.stair), planPoint);
+    }
+
+    return false;
+  }
+
+  /** The turn grip of the selected stair — furniture's grip, same distance. */
+  private beginStairRotation(planPoint: Vector2): boolean {
+    const { store, getViewport } = this.context;
+    const selection = store.selection;
+    const scene = store.editedStoreyScene;
+
+    if (selection?.kind !== 'stair' || isNil(scene)) {
+      return false;
+    }
+
+    const stairScene = scene.stairs.find(candidate => candidate.stair.id === selection.stairId);
+
+    if (isNil(stairScene)) {
+      return false;
+    }
+
+    const { rotationGrip } = stairScene;
+    const toleranceMeters = HANDLE_HIT_RADIUS_PX / getViewport().pixelsPerMeter;
+
+    if (Math.hypot(planPoint.x - rotationGrip.x, planPoint.y - rotationGrip.y) > toleranceMeters) {
+      return false;
+    }
+
+    return this.objects.beginRotate(this.draggedStair(stairScene.stair));
+  }
+
+  /** A post only ever slides: it has no facing to turn and no hand to mirror. */
+  private draggedSupport(post: SupportPost): DraggedObject {
+    const { store } = this.context;
+
+    return {
+      origin: post.position,
+      moveTo: (draggedPoint, modifiers) =>
+        store.moveSupport(this.buildingId, post.id, {
+          position: snapPointToGrid(store, draggedPoint, modifiers),
+        }),
+      restore: () => store.moveSupport(this.buildingId, post.id, { position: post.position }),
+    };
+  }
+
+  /** A stair is an object like any other (R26): it moves and it turns. */
+  private draggedStair(stair: StairInstance): DraggedObject {
+    const { store } = this.context;
+
+    return {
+      origin: stair.position,
+      moveTo: (draggedPoint, modifiers) =>
+        store.moveStair(this.buildingId, stair.id, {
+          position: snapPointToGrid(store, draggedPoint, modifiers),
+        }),
+      turnTo: rotationDegrees => store.moveStair(this.buildingId, stair.id, { rotationDegrees }),
+      restore: () =>
+        store.moveStair(this.buildingId, stair.id, {
+          position: stair.position,
+          rotationDegrees: stair.rotationDegrees,
+        }),
+    };
+  }
+
+  private beginFurnitureDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { getViewport } = this.context;
     const storey = this.activeStorey();
 
     if (isNil(storey)) {
@@ -652,19 +935,12 @@ export class BuildingEditInteraction implements EditorInteraction {
       const box = furnitureBox(item);
 
       if (!isNil(box) && hitTestRotatedBox(box, planPoint, toleranceMeters)) {
-        store.setSelection({
-          kind: 'furniture',
-          buildingId: this.buildingId,
-          furnitureId: item.id,
-        });
-        store.pushHistory();
-        this.furnitureDrag = {
-          kind: 'move',
-          startFurniture: item,
-          grabOffset: offsetBetween(planPoint, item.position),
-        };
+        this.select(
+          { kind: 'furniture', buildingId: this.buildingId, furnitureId: item.id },
+          modifiers
+        );
 
-        return true;
+        return this.objects.beginMove(this.draggedFurniture(item), planPoint);
       }
     }
 
@@ -676,52 +952,45 @@ export class BuildingEditInteraction implements EditorInteraction {
    * 3D magnet turns its back flush against the face; Alt suspends both.
    * Turning snaps the heading the way every other turn on the plan does.
    */
-  private dragFurnitureTo(drag: FurnitureDrag, planPoint: Vector2, modifiers: PlanModifiers): void {
+  private draggedFurniture(item: FurnitureInstance): DraggedObject {
     const { store } = this.context;
-    const { startFurniture } = drag;
 
-    if (drag.kind === 'rotate') {
-      store.moveFurniture(this.buildingId, startFurniture.id, {
-        rotationDegrees: normalizeTurnDegrees(
-          snapLength(
-            bearingDegreesTowards(startFurniture.position, planPoint),
-            rotationStepDegrees(modifiers)
-          )
-        ),
-      });
+    return {
+      origin: item.position,
+      moveTo: (draggedPoint, modifiers) => {
+        const storey = this.activeStorey();
+        const entry = findFurnitureEntry(item.catalogId);
+        const magnetized =
+          modifiers.isAltPressed || isNil(storey) || isNil(entry)
+            ? undefined
+            : magnetizeFurnitureToWall({
+                position: draggedPoint,
+                depthMeters: entry.depthMeters,
+                walls: storey.walls,
+                thresholdMeters: FURNITURE_MAGNET_RADIUS_METERS,
+              });
 
-      return;
-    }
-
-    const dragged = {
-      x: planPoint.x + drag.grabOffset.x,
-      y: planPoint.y + drag.grabOffset.y,
+        store.moveFurniture(
+          this.buildingId,
+          item.id,
+          isNil(magnetized)
+            ? {
+                position: snapPointToGrid(store, draggedPoint, modifiers),
+                rotationDegrees: item.rotationDegrees,
+              }
+            : {
+                position: magnetized.position,
+                rotationDegrees: normalizeTurnDegrees(magnetized.rotationDegrees),
+              }
+        );
+      },
+      turnTo: rotationDegrees => store.moveFurniture(this.buildingId, item.id, { rotationDegrees }),
+      restore: () =>
+        store.moveFurniture(this.buildingId, item.id, {
+          position: item.position,
+          rotationDegrees: item.rotationDegrees,
+        }),
     };
-    const storey = this.activeStorey();
-    const entry = findFurnitureEntry(startFurniture.catalogId);
-    const magnetized =
-      modifiers.isAltPressed || isNil(storey) || isNil(entry)
-        ? undefined
-        : magnetizeFurnitureToWall({
-            position: dragged,
-            depthMeters: entry.depthMeters,
-            walls: storey.walls,
-            thresholdMeters: FURNITURE_MAGNET_RADIUS_METERS,
-          });
-
-    if (!isNil(magnetized)) {
-      store.moveFurniture(this.buildingId, startFurniture.id, {
-        position: magnetized.position,
-        rotationDegrees: normalizeTurnDegrees(magnetized.rotationDegrees),
-      });
-
-      return;
-    }
-
-    store.moveFurniture(this.buildingId, startFurniture.id, {
-      position: snapPointToGrid(store, dragged, modifiers),
-      rotationDegrees: startFurniture.rotationDegrees,
-    });
   }
 
   /** The storey the editor is aimed at — the only one the canvas offers. */
@@ -763,4 +1032,27 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     return undefined;
   }
+}
+
+/** The body of a fireplace as a box, for picking it off the plan. */
+function fireplaceBox(fireplace: Fireplace): RotatedBox {
+  const spec = FIREPLACE_SPECS[fireplace.kind];
+
+  return {
+    center: fireplace.position,
+    rotationDegrees: fireplace.rotationDegrees,
+    extentX: spec.widthMeters,
+    extentY: spec.depthMeters,
+  };
+}
+
+/** Snapping ALONG a wall: the same grid step, applied to one dimension. */
+function snapAlong(
+  store: SitePlannerStore,
+  offsetMeters: Meters,
+  modifiers: PlanModifiers
+): Meters {
+  const step = gridStep(store, modifiers);
+
+  return step > 0 ? Math.round(offsetMeters / step) * step : offsetMeters;
 }

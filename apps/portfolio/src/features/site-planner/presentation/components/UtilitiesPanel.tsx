@@ -4,13 +4,12 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { Trash2, TriangleAlert } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-
+import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
+import { formatCubicMeters, formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { RouteWarning } from '../../domain/model/route-warnings';
 import type { UtilityRoute } from '../../domain/model/routing';
 import { routeLengthMeters } from '../../domain/model/routing';
-import { UTILITY_SYSTEM_COLORS } from '../../domain/plan-draw/draw-house';
-import { formatCubicMeters, formatMeters } from '../../domain/plan-draw/shared';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';

@@ -69,6 +69,7 @@ export const sitePlannerTranslationsEn = {
     pan: 'Pan',
     rectangle: 'Rectangle',
     circle: 'Circle',
+    ellipse: 'Ellipse',
     elevation: 'Elevation mark',
     /** The tool that places whatever its button is armed with: a tree, or a car. */
     tree: 'Place object',
@@ -262,6 +263,113 @@ export const sitePlannerTranslationsEn = {
       radiator: 'Radiator',
     },
   },
+  stairs: {
+    panelTitle: 'Stairs',
+    toolLabel: 'Stair',
+    toolHint: 'Pick a stair kind and click the plan — it ties this storey to the one above.',
+    menu: 'Choose the stair kind',
+    /** The climb direction a floor plan states beside every stair. */
+    up: 'UP',
+    width: 'Flight width',
+    steps: 'Steps',
+    riser: 'Riser',
+    tread: 'Tread',
+    remove: 'Remove the stair',
+    mirror: 'Mirror the stair',
+    rotate: 'Turn a quarter',
+
+    emptyHint: 'No stairs on this storey yet.',
+    uncomfortable: 'Steps outside the comfortable bands',
+    kinds: {
+      straight: 'Straight',
+      'l-shaped': 'Quarter turn',
+      'u-shaped': 'Half turn',
+      spiral: 'Spiral',
+    },
+  },
+  slabs: {
+    panelTitle: 'Floor slabs',
+    toolLabel: 'Slab',
+    toolHint:
+      'Drag to draw a slab with the armed shape, or click to lay a 6 × 4 m one · its edges snap to the walls of the storey below · Alt suspends snapping',
+    remove: 'Remove slab',
+    rotate: 'Turn by 90°',
+    emptyHint: 'No slabs on this storey — its outline still follows the walls.',
+    kinds: {
+      rectangle: 'Slab',
+      circle: 'Round slab',
+      ellipse: 'Oval slab',
+    },
+  },
+  heating: {
+    panelTitle: 'Stoves and fireplaces',
+    toolLabel: 'Fireplace',
+    toolHint:
+      'Click the plan to stand a fireplace or a stove. Its flue rises on its own: through every storey above and out over the roof at the height the norm asks for.',
+    menu: 'Choose the fire',
+    kinds: {
+      fireplace: 'Fireplace',
+      stove: 'Stove',
+      saunaStove: 'Sauna stove',
+    },
+    rotate: 'Turn by 90°',
+    remove: 'Remove the fire',
+    emptyHint: 'No fires on this storey.',
+    flue: 'Flue',
+    topAboveRoof: 'Top above the roof',
+  },
+  ventilation: {
+    panelTitle: 'Ventilation',
+    toolLabel: 'Vent shaft',
+    toolHint:
+      'Click the plan to stand a ventilation shaft. It passes through the floors above and comes out over the roof.',
+    remove: 'Remove the shaft',
+    emptyHint: 'No shafts on this storey. A wet room and a sauna each want one of their own.',
+    kinds: {
+      flue: 'Flue',
+      vent: 'Vent shaft',
+    },
+    passingThrough: 'passes through',
+    startsHere: 'starts here',
+    top: 'Top',
+  },
+  supports: {
+    panelTitle: 'Posts',
+    toolLabel: 'Post',
+    toolHint:
+      'Click the plan — the post spans from the floor or the ground under it to the ceiling above.',
+    remove: 'Remove the post',
+    emptyHint: 'No posts on this storey yet.',
+    length: 'Post length',
+  },
+  warnings: {
+    panelTitle: 'Findings',
+    empty: 'Nothing to look at.',
+    furnitureOverStairwell: 'This piece stands over the stairwell — there is no floor under it.',
+    wallOverStairwell: 'This wall crosses the stairwell — nothing carries it.',
+    stairUncomfortable: 'Steps outside the comfortable bands: riser 15–19 cm, tread 25–30 cm.',
+    /** Both quote the overhang, so the number is the argument. */
+    cantileverUnsupported: (overhang: string) =>
+      `A ${overhang} overhang with no post — ordinary framing carries about 0.6 m.`,
+    cantileverEngineered: (overhang: string) =>
+      `A ${overhang} overhang needs an engineered structure; ordinary joists will not span it.`,
+    roomWithoutExhaust: (room: string) =>
+      `${room}: no exhaust shaft inside the room — a wet or a fired room needs one of its own.`,
+    saunaWithoutStove: 'The sauna has no stove — nothing heats the room.',
+    ductOutsideRoof: 'The shaft stands off the roof outline — it has nowhere to come out.',
+    roofTooFlat: (pitch: number) =>
+      `A ${pitch}° roof does not shed: snow sits on it, and most coverings ask for 14° at least.`,
+    storeyTooLow: (height: string) => `A ${height} storey is below the 2.2 m habitable minimum.`,
+  },
+  panelGroups: {
+    tool: 'Tool',
+    plot: 'Plot',
+    structure: 'Structure',
+    interior: 'Interior',
+    services: 'Services',
+    findings: 'Findings',
+    properties: 'Properties',
+  },
   storeys: {
     /** «Этаж N» caption of one storey button in the mode bar. */
     storeyTitle: 'Storey',
@@ -271,8 +379,34 @@ export const sitePlannerTranslationsEn = {
     /** Chief Architect's reference display: the storey below ghosts through. */
     referenceToggle: 'Ghost the storey below',
     remove: 'Remove the storey',
+    removeKicker: 'REMOVE',
+    removeConfirmTitle: 'Remove the storey?',
+    removeConfirmDescription:
+      'Its walls, openings, furniture, wiring and the stairs climbing into it go with it. Ctrl+Z brings everything back.',
+    removeConfirm: 'Remove the storey',
+    removeCancel: 'Keep it',
+    panelTitle: 'Storey',
+    height: 'Storey height',
+    floorLevel: 'Floor level',
+    floorToFloor: 'Floor to floor',
+    floorAboveGround: 'Floor above ground',
+    floorLevelAbsolute: 'Absolute level',
   },
   roof: {
+    pitchedTitle: 'Pitched roof',
+    addPitched: 'Make it pitched',
+    removePitched: 'Remove the pitched roof',
+    kinds: {
+      gable: 'Gable',
+      hip: 'Hip',
+      shed: 'Shed',
+    },
+    pitch: 'Pitch, °',
+    overhang: 'Overhang',
+    ridge: 'Ridge, °',
+    ridgeHeight: 'Ridge above the eaves',
+    flatHint:
+      'The top is flat: a ceiling slab with roof zones over it. A pitched roof stands over the top storey.',
     panelTitle: 'Roof',
     /** «Зона N» caption of one exposed-ceiling region. */
     zoneTitle: 'Zone',
@@ -284,6 +418,8 @@ export const sitePlannerTranslationsEn = {
     emptyHint: 'Zones appear on the exposed ceiling — wherever no storey stands above.',
   },
   openings: {
+    menu: 'Choose the opening kind',
+    panelTitle: 'Openings',
     toolLabel: 'Opening',
     toolHint: 'Click a wall to hang the armed opening on it; drag one to slide it along.',
     /** What the opening tool places next. «Окно в пол» is a floor-sill window. */
@@ -419,6 +555,7 @@ export const sitePlannerTranslationsEn = {
     },
   },
   properties: {
+    toolTitle: 'Tool',
     title: 'Properties',
     centerX: 'X',
     centerY: 'Y',
@@ -613,6 +750,7 @@ export const sitePlannerTranslationsEn = {
       pan: 'Drag to move the canvas · Space+drag and the wheel pan and zoom in every tool',
       rectangle: 'Drag to draw a rectangle · Shift snaps its first corner to other shapes',
       circle: 'Drag out from the centre to draw a circle · Shift snaps the centre to other shapes',
+      ellipse: 'Drag to draw an ellipse · Shift snaps its first corner to other shapes',
       elevation:
         'Click to place a mark and type its elevation · drag a flag to move it · Delete removes',
       tree: 'Click to place the armed object · drag to move it · the grip at a car’s nose turns it · Delete removes',

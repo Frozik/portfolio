@@ -3,8 +3,9 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
+import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { editedBuildingId } from '../../domain/model/editor-mode';
@@ -63,8 +64,16 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
   const handleAddEmpty = useFunction(() => store.addStoreyToEditedBuilding({ copyWalls: false }));
   const handleAddCopy = useFunction(() => store.addStoreyToEditedBuilding({ copyWalls: true }));
   const handleToggleReference = useFunction(() => store.toggleReferenceStorey());
-  const handleRemove = useFunction(() => {
+  const [isRemoveConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const handleRemoveRequest = useFunction(() => setRemoveConfirmOpen(true));
+  const handleRemoveCancel = useFunction(() => setRemoveConfirmOpen(false));
+  // A storey carries its walls, openings, furniture, wiring — and now the
+  // stairs that climbed into it. One mis-aimed 24 px click is a day's work,
+  // and the chip cannot say «Ctrl+Z» loudly enough to make that acceptable.
+  const handleRemoveConfirm = useFunction(() => {
     const activeStoreyId = store.activeStoreyId;
+
+    setRemoveConfirmOpen(false);
 
     if (!isNil(activeStoreyId)) {
       store.removeStoreyFromEdited(activeStoreyId);
@@ -116,41 +125,52 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
           {labels.addCopy}
         </DropdownItem>
       </Dropdown>
-      {isUpperActive ? (
-        <>
-          <button
-            type="button"
-            aria-label={labels.referenceToggle}
-            aria-pressed={store.isReferenceStoreyVisible}
-            title={labels.referenceToggle}
-            onClick={handleToggleReference}
-            className={cn(
-              'flex size-6 shrink-0 items-center justify-center rounded-md text-brand-500',
-              'transition-colors duration-150 hover:bg-brand-500/20',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
-            )}
-          >
-            {store.isReferenceStoreyVisible ? (
-              <Eye size={GLYPH_SIZE_PX} aria-hidden />
-            ) : (
-              <EyeOff size={GLYPH_SIZE_PX} aria-hidden />
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label={labels.remove}
-            title={labels.remove}
-            onClick={handleRemove}
-            className={cn(
-              'flex size-6 shrink-0 items-center justify-center rounded-md text-brand-500',
-              'transition-colors duration-150 hover:bg-brand-500/20',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500'
-            )}
-          >
-            <Trash2 size={GLYPH_SIZE_PX} aria-hidden />
-          </button>
-        </>
-      ) : undefined}
+      <button
+        type="button"
+        aria-label={labels.referenceToggle}
+        aria-pressed={store.isReferenceStoreyVisible}
+        title={labels.referenceToggle}
+        onClick={handleToggleReference}
+        disabled={!isUpperActive}
+        className={cn(
+          'flex size-6 shrink-0 items-center justify-center rounded-md text-brand-500',
+          'transition-colors duration-150 hover:bg-brand-500/20',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          'disabled:cursor-default disabled:text-text-secondary/40 disabled:hover:bg-transparent'
+        )}
+      >
+        {store.isReferenceStoreyVisible ? (
+          <Eye size={GLYPH_SIZE_PX} aria-hidden />
+        ) : (
+          <EyeOff size={GLYPH_SIZE_PX} aria-hidden />
+        )}
+      </button>
+      <button
+        type="button"
+        aria-label={labels.remove}
+        title={labels.remove}
+        onClick={handleRemoveRequest}
+        disabled={!isUpperActive}
+        className={cn(
+          'flex size-6 shrink-0 items-center justify-center rounded-md text-brand-500',
+          'transition-colors duration-150 hover:bg-brand-500/20',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          'disabled:cursor-default disabled:text-text-secondary/40 disabled:hover:bg-transparent'
+        )}
+      >
+        <Trash2 size={GLYPH_SIZE_PX} aria-hidden />
+      </button>
+      <ConfirmDialog
+        open={isRemoveConfirmOpen}
+        kicker={labels.removeKicker}
+        title={labels.removeConfirmTitle}
+        description={labels.removeConfirmDescription}
+        confirmLabel={labels.removeConfirm}
+        cancelLabel={labels.removeCancel}
+        tone="danger"
+        onConfirm={handleRemoveConfirm}
+        onCancel={handleRemoveCancel}
+      />
     </div>
   );
 });

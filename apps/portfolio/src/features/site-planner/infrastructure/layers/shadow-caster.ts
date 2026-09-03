@@ -8,6 +8,15 @@
  * living somewhere else.
  */
 export interface ShadowCaster {
-  /** Encodes the caster's depth-only draws into an already opened shadow pass. */
+  /**
+   * Encodes the caster's depth-only draws into an already opened shadow pass.
+   *
+   * The pass draws the WHOLE model, always. A shadow is a property of the
+   * building, not of what the editor is currently aimed at: dimming a storey
+   * to ghost it while editing another must change its alpha in the colour
+   * pass only. Dropping ghosted storeys out of this pass would light up the
+   * yard and the roof terrace the moment someone opened the ground floor —
+   * the sun study would answer a different plan than the one on screen.
+   */
   drawShadow(pass: GPURenderPassEncoder): void;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCircle, createRectangle } from '../model/shapes';
+import { createCircle, createEllipse, createRectangle } from '../model/shapes';
 import type { Ring } from './polygon-types';
 import {
   CIRCLE_SAGITTA_METERS,
@@ -102,5 +102,41 @@ describe('polygonizeShape for a circle', () => {
       Math.PI * radius * radius - 0.01 * 2 * Math.PI * radius
     );
     expect(signedArea(ring)).toBeLessThan(Math.PI * radius * radius);
+  });
+});
+
+describe('polygonizeShape for an ellipse', () => {
+  const ellipse = createEllipse({
+    center: { x: 2, y: -1 },
+    width: 8,
+    length: 4,
+    rotationDegrees: 0,
+  });
+
+  // The ring is INSCRIBED, as a circle's is: an extreme is reached exactly
+  // only where a sample happens to land, so the box is met to within a chord.
+  it('spans the bounding box the ellipse is inscribed in', () => {
+    const ring = polygonizeShape(ellipse);
+
+    expect(Math.max(...ring.map(point => point.x))).toBeCloseTo(6, 1);
+    expect(Math.min(...ring.map(point => point.x))).toBeCloseTo(-2, 1);
+    expect(Math.max(...ring.map(point => point.y))).toBeCloseTo(1, 1);
+    expect(Math.min(...ring.map(point => point.y))).toBeCloseTo(-3, 1);
+  });
+
+  it('runs counter-clockwise and encloses very nearly πab', () => {
+    const area = signedArea(polygonizeShape(ellipse));
+    const exact = Math.PI * 4 * 2;
+
+    expect(area).toBeGreaterThan(0);
+    // Inscribed, so a hair under the true area — within half a percent of it.
+    expect(area).toBeLessThan(exact);
+    expect(area).toBeGreaterThan(exact * 0.995);
+  });
+
+  it('counts its segments by the longer semi-axis, where the chords sag most', () => {
+    const ring = polygonizeShape(ellipse);
+
+    expect(ring).toHaveLength(countCircleSegments(4));
   });
 });

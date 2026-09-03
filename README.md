@@ -280,10 +280,14 @@ the result in 3D to see how the house sits on the slope. The plan is the
 source of truth — every mesh, contour and overlay is a pure function of it.
 
 **Plan (canvas2d):**
-- The plot outline and the building footprint are compositions of rectangles
-  and circles combined with union / subtract. The shapes stay parametric, so
-  every size, position and rotation is also typed in exactly — metres and
-  degrees from the keyboard, not dragged by eye
+- The plot outline and the building footprint are compositions of rectangles,
+  circles and ellipses combined with union / subtract. The shapes stay
+  parametric, so every size, position and rotation is also typed in exactly —
+  metres and degrees from the keyboard, not dragged by eye. A drawn shape hands
+  the pointer straight back to the select tool with itself selected and the
+  keyboard in its size field, so the rough drag is replaced by the surveyed
+  number without reaching for the mouse again — and the next click adjusts what
+  was just drawn instead of starting another one
 - Terms nest to any depth: any of them can be wrapped into a group, and a
   group folds on its own before joining the fold around it. That is what
   makes "cut a hole in this shape, then subtract the whole result from the
@@ -349,9 +353,13 @@ source of truth — every mesh, contour and overlay is a pure function of it.
   actually moved
 
 **Buildings:**
-- A building opens its own **editor** (double-click it): walls are drawn as
-  reference polylines — exterior by the outer face, interior by the
-  centreline, the ArchiCAD/Revit convention — and carry a construction from
+- A building opens its own **editor** (double-click it): walls are drawn with
+  a rubber band, a live «length · angle» readout beside the cursor and a
+  typed length that fixes the segment exactly — the CAD value box — with
+  Shift locking the angle and object snap catching the ends and midpoints of
+  the walls already standing. They are reference polylines — exterior by the
+  outer face, interior by the centreline, the ArchiCAD/Revit convention — and
+  carry a construction from
   a catalog (brick, ceramic block, foam concrete, timber, frame, glazing),
   each with its typical thickness typed over freely. The plan fills every
   wall's mitred body (glazing stays translucent), and once a building has
@@ -362,12 +370,76 @@ source of truth — every mesh, contour and overlay is a pure function of it.
   button, and the contour seals with a mitred seam; Alt+double click cuts a
   ring back open at any corner, or splits an open wall in two, doors and
   sockets staying exactly where they hung
-- **Storeys stack** with a switcher right in the mode bar: draw the second
-  floor's walls over part of the first and the closed loop IS its footprint —
+- **Storeys stack** with a switcher right in the mode bar. Each one has a
+  geometry of its own: its **floor slabs** are objects, and a slab is simply a
+  shape — the same rectangle, circle or ellipse the plot is drawn with, rubber
+  banded out, dragged, resized and turned by the very same grips, or laid as a
+  default plate with a single click. Its edges snap to the walls of the storey
+  below without holding a modifier, the way OSNAP works in a CAD editor, so
+  «flush with the room downstairs» is a gesture rather than four typed numbers.
+  The union of a storey's slabs is its outline, and its walls are held inside
+  it — a wall belongs to the floor it stands on and cannot wander off it. That
+  is also what lets a floor reach past the storey below with nothing on it: a
+  balcony, a canopy deck, the overhang. A new storey inherits copies of the
+  slabs beneath it, and a storey drawn before slabs existed still takes its
+  outline from the loop its walls close —
   whatever stays uncovered becomes exposed ceiling, zoned as plain membrane,
   a walkable **terrace** or a **green roof** (tinted on the plan, laid as
-  real covers in 3D). The storey below ghosts through while you build on top,
-  and new buildings start from presets — house, shed, carport on piers
+  real covers in 3D). Every storey carries a floor slab and a roof slab, so a
+  house reads as a solid and casts a solid shadow; ±0.000 stands on the
+  цоколь, storeys stack floor to floor, and the panel states each one's clear
+  height, its level and how far its floor is above the ground. The storey
+  below ghosts through while you build on top, storeys the editor is not
+  aimed at ghost in 3D as well — while still casting their full shadow,
+  because a shadow belongs to the house and not to what is being edited — and
+  new buildings start from presets: house, shed, carport on piers
+- **Stairs** come from a catalogue like furniture — straight, quarter turn,
+  half turn, spiral — and only their intent is stored: the run derives from
+  the floor-to-floor height at a comfortable riser, so raising a storey
+  re-treads every stair standing in it. A stair cuts its own stairwell in the
+  floor above, by headroom rather than by outline, so the floor over the
+  lower flight — where the wardrobe upstairs stands — is left alone. One
+  placed outside its storey is a porch: it climbs from the graded ground to
+  the floor. Stairs move, turn and mirror like any other object, and the plan
+  states them the way a floor plan does: treads, the climb arrow and «UP · N»
+- **Overhangs and canopies**: an upper storey may reach past the one below —
+  its floor is drawn solid, its soffit closed underneath — and **posts** hold
+  it up, each deriving its own length from the floor or the graded ground
+  beneath it up to one shared ceiling datum, so a canopy on a slope stands
+  level. A storey with posts and no walls is a carport: a deck on posts, with
+  a carport's shadow rather than a block's
+- **Placing is one-shot**: a stair, a post, a slab, a tree hands the pointer
+  straight back to the select tool with itself selected, so the next click
+  adjusts it instead of dropping a second one beside it. Two kinds of tool stay
+  in hand — those that draw a run (walls, paths, trenches, elevation marks),
+  whose gesture already says when it is finished, and furniture and electrics,
+  because furnishing a room and wiring a storey are runs of placements in their
+  own right
+- **Pitched roofs** crown the top storey — gable, hip or shed — from four
+  numbers: the shape, the slope, the overhang and which way the ridge runs.
+  The roof is one height function over the plan and every slope is a plane, so
+  an L-shaped house gets a roof cut to its own outline rather than to its
+  bounding box, a hip over a square plan collapses into a pyramid on its own,
+  and the plan draws the ridge, the hips and the slope arrows as the lines
+  where those planes actually meet. It is built as a solid — slope, soffit,
+  fascia and the gable walls that close the ends — because a one-sided roof
+  casts the wrong shadow and shows a hole from underneath
+- **Fireplaces and stoves** stand as objects, and their **flue derives**: it
+  rises behind the firebox, opens the floor of every storey above it and comes
+  out over the roof at the height the norm asks for — half a metre above a
+  ridge it stands close to, level with it a little further out, clearing its
+  own stretch of slope beyond that. Drag the fireplace and the chimney follows,
+  because there is nothing else to drag
+- **Ventilation is planned per storey**: shafts are planted on the floor they
+  start on and drawn on every floor they pass through — the chimney in the
+  middle of the upstairs bedroom is a thing to plan the walls around, so the
+  plan shows it. A **sauna** is a room type that asks for both: a shaft of its
+  own (a wet or fired room may not share one) and a stove to heat it
+- **Findings** collect every advisory into one list you can walk: a wardrobe
+  standing over a stairwell, a wall crossing it, a stair outside the
+  comfortable bands, an overhang past what ordinary framing carries with no
+  post under it, a storey too low to live in. Each row names the rule and
+  takes the editor to the place it is about — nothing is ever blocked
 - **Furniture** places from a catalogue of 33 real-sized pieces — beds to a
   kitchen run, IKEA-class wardrobes, dressers and a TV stand, fridge, stove
   and washing machine, plus plumbing fixtures that

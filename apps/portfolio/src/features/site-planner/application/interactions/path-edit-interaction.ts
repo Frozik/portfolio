@@ -1,11 +1,10 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-
+import { MIN_PATH_POINTS } from '../../domain/model/site-object-edits';
 import type { PathId } from '../../domain/model/site-plan';
-import { MIN_PATH_POINTS } from '../../domain/model/site-plan-edits';
-import { computePathPointHandles, findPathPointHandleAt } from '../../domain/plan-draw/draw-paths';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
+import { computePathPointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { DELETE_KEYS } from './editor-interaction';
 import { applyPathHandleHover, PathPointGestures } from './path-point-gestures';

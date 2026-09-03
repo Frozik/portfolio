@@ -76,6 +76,11 @@ const CAR_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
 /** What stands on the ground, as the layer takes it. */
 interface ObjectsInput {
   readonly house: LitMesh | undefined;
+  /**
+   * The storeys the editor is not aimed at, drawn faintly (plan §6.4). Empty
+   * outside the building editor, where the whole house is solid.
+   */
+  readonly houseGhost: LitMesh | undefined;
   readonly foundations: LitMesh | undefined;
   readonly roofOverlays: RoofOverlayGeometry;
   readonly furniture: readonly SceneFurniture[];
@@ -109,6 +114,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
   private device: GPUDevice | undefined;
   private format!: GPUTextureFormat;
   private housePipeline!: GPURenderPipeline;
+  private houseGhostPipeline!: GPURenderPipeline;
   private foundationPipeline!: GPURenderPipeline;
   private greenRoofPipeline!: GPURenderPipeline;
   private terracePipeline!: GPURenderPipeline;
@@ -123,6 +129,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
   private bindGroup!: GPUBindGroup;
 
   private houseMesh: GpuMesh | undefined;
+  private houseGhostMesh: GpuMesh | undefined;
   private foundationsMesh: GpuMesh | undefined;
   private greenRoofMesh: GpuMesh | undefined;
   private terraceMesh: GpuMesh | undefined;
@@ -181,6 +188,15 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     const shadowLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
 
     this.housePipeline = this.createLitPipeline(device, shaderModule, layout, 'fsObject');
+    this.houseGhostPipeline = this.createLitPipeline(
+      device,
+      shaderModule,
+      layout,
+      'fsGhostObject',
+      {
+        isGhost: true,
+      }
+    );
     this.foundationPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsFoundation');
     this.greenRoofPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsGreenRoof');
     this.terracePipeline = this.createLitPipeline(device, shaderModule, layout, 'fsTerrace');
@@ -336,6 +352,8 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.drawMesh(pass, this.terracePipeline, this.terraceMesh);
     this.drawTrees(pass, this.treePipeline);
     this.drawCars(pass, this.carPipeline);
+    // Ghost storeys blend over the solid scene, so they come after it.
+    this.drawMesh(pass, this.houseGhostPipeline, this.houseGhostMesh);
     // Furniture rides the cars' pipeline: the same position-and-turn instancing.
     this.drawFurniture(pass, this.carPipeline);
 
@@ -351,6 +369,11 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.drawMesh(pass, this.meshShadowPipeline, this.blendPathMesh);
     this.drawMesh(pass, this.meshShadowPipeline, this.foundationsMesh);
     this.drawMesh(pass, this.meshShadowPipeline, this.houseMesh);
+    // Ghosted storeys cast their full shadow: dimming a storey is a reading
+    // aid for the editor, not a change to the building, and a house that
+    // stopped shading its own yard the moment its ground floor was opened
+    // would answer the sun study for a plan nobody drew.
+    this.drawMesh(pass, this.meshShadowPipeline, this.houseGhostMesh);
     this.drawMesh(pass, this.meshShadowPipeline, this.greenRoofMesh);
     this.drawMesh(pass, this.meshShadowPipeline, this.terraceMesh);
     this.drawFurniture(pass, this.carShadowPipeline);
@@ -360,6 +383,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
 
   dispose(): void {
     releaseGpuMesh(this.houseMesh);
+    releaseGpuMesh(this.houseGhostMesh);
     releaseGpuMesh(this.foundationsMesh);
     releaseGpuMesh(this.greenRoofMesh);
     releaseGpuMesh(this.terraceMesh);
@@ -367,6 +391,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     releaseGpuMesh(this.asphaltPathMesh);
     releaseGpuMesh(this.blendPathMesh);
     this.houseMesh = undefined;
+    this.houseGhostMesh = undefined;
     this.foundationsMesh = undefined;
     this.greenRoofMesh = undefined;
     this.terraceMesh = undefined;
@@ -413,9 +438,12 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     {
       vertexEntryPoint = 'vsObject',
       buffers = [positionLayout(0), positionLayout(1)],
+      isGhost = false,
     }: {
       readonly vertexEntryPoint?: string;
       readonly buffers?: readonly GPUVertexBufferLayout[];
+      /** A ghosted storey blends over the scene and keeps the depth it finds. */
+      readonly isGhost?: boolean;
     } = {}
   ): GPURenderPipeline {
     return device.createRenderPipeline({
@@ -428,13 +456,31 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
       fragment: {
         module: shaderModule,
         entryPoint: fragmentEntryPoint,
-        targets: [{ format: this.format }],
+        targets: [
+          isGhost
+            ? {
+                format: this.format,
+                blend: {
+                  color: {
+                    srcFactor: 'src-alpha',
+                    dstFactor: 'one-minus-src-alpha',
+                    operation: 'add',
+                  },
+                  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                },
+              }
+            : { format: this.format },
+        ],
       },
       // The lighting comes from the supplied normals rather than from the facing,
       // and the apron is a sheet with no inside to hide — so a camera dropped
       // below the pad sees the skirt instead of seeing through the house.
       primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
+      depthStencil: {
+        format: DEPTH_FORMAT,
+        depthWriteEnabled: !isGhost,
+        depthCompare: 'less',
+      },
       multisample: { count: MSAA_SAMPLE_COUNT },
     });
   }
@@ -639,6 +685,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.pendingObjects = undefined;
 
     releaseGpuMesh(this.houseMesh);
+    releaseGpuMesh(this.houseGhostMesh);
     releaseGpuMesh(this.foundationsMesh);
     releaseGpuMesh(this.greenRoofMesh);
     releaseGpuMesh(this.terraceMesh);
@@ -646,6 +693,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     releaseGpuMesh(this.asphaltPathMesh);
     releaseGpuMesh(this.blendPathMesh);
     this.houseMesh = uploadLitMesh(device, objects.house);
+    this.houseGhostMesh = uploadLitMesh(device, objects.houseGhost);
     this.foundationsMesh = uploadLitMesh(device, objects.foundations);
     this.greenRoofMesh = uploadLitMesh(device, objects.roofOverlays.green);
     this.terraceMesh = uploadLitMesh(device, objects.roofOverlays.terrace);

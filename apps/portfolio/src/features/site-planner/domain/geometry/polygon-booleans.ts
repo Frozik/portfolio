@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Paths64 } from 'clipper2-ts';
-import { difference, FillRule, intersect } from 'clipper2-ts';
+import { difference, FillRule, intersect, union } from 'clipper2-ts';
 
 import { assembleMultiPolygon } from './evaluate-composition';
 import { toClipperPath } from './frame';
@@ -31,6 +31,23 @@ export function subtractPolygons(subject: MultiPolygon, clip: MultiPolygon): Mul
 }
 
 /** The region both cover, re-assembled into validated polygons with holes. */
+/**
+ * Everything the parts cover, welded into one shape. Overlapping slabs of a
+ * storey are one floor, not two stacked ones, so the outline they define has
+ * to be their union rather than their list.
+ */
+export function unionPolygons(parts: readonly MultiPolygon[]): MultiPolygon {
+  const present = parts.filter(part => part.length > 0);
+
+  if (present.length <= 1) {
+    return present[0] ?? [];
+  }
+
+  return present.reduce((merged, part) =>
+    assembleMultiPolygon(union(toPaths(merged), toPaths(part), FillRule.NonZero))
+  );
+}
+
 export function intersectPolygons(subject: MultiPolygon, clip: MultiPolygon): MultiPolygon {
   if (subject.length === 0 || clip.length === 0) {
     return [];

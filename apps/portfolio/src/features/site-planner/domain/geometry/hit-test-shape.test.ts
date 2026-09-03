@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { describe, expect, it } from 'vitest';
 
-import { createCircle, createRectangle } from '../model/shapes';
+import { createCircle, createEllipse, createRectangle } from '../model/shapes';
 import { distanceToShapeOutline, hitTestShape, isPointInsideShape } from './hit-test-shape';
 
 const DEGREES_TO_RADIANS = Math.PI / 180;
@@ -114,5 +114,41 @@ describe('hitTestShape', () => {
 
     expect(hitTestShape(circle, { x: 5.4, y: 0 }, 0.5)).toBe(true);
     expect(hitTestShape(circle, { x: 5.6, y: 0 }, 0.5)).toBe(false);
+  });
+});
+
+describe('ellipse hit testing', () => {
+  const ellipse = createEllipse({
+    center: { x: 0, y: 0 },
+    width: 8,
+    length: 4,
+    rotationDegrees: 0,
+  });
+
+  it('accepts what the curve encloses and refuses the corners of its box', () => {
+    expect(isPointInsideShape(ellipse, { x: 0, y: 0 })).toBe(true);
+    expect(isPointInsideShape(ellipse, { x: 3.9, y: 0 })).toBe(true);
+    expect(isPointInsideShape(ellipse, { x: 4.1, y: 0 })).toBe(false);
+    expect(isPointInsideShape(ellipse, { x: 0, y: 1.9 })).toBe(true);
+    // Inside the bounding box, outside the ellipse — the whole point of it.
+    expect(isPointInsideShape(ellipse, { x: 3.9, y: 1.9 })).toBe(false);
+  });
+
+  it('turns with the shape', () => {
+    const turned = createEllipse({
+      center: { x: 0, y: 0 },
+      width: 8,
+      length: 4,
+      rotationDegrees: 90,
+    });
+
+    expect(isPointInsideShape(turned, { x: 0, y: 3.9 })).toBe(true);
+    expect(isPointInsideShape(turned, { x: 3.9, y: 0 })).toBe(false);
+  });
+
+  it('measures the distance to the curve, so a click near it still picks it', () => {
+    expect(distanceToShapeOutline(ellipse, { x: 4.2, y: 0 })).toBeCloseTo(0.2, 2);
+    expect(hitTestShape(ellipse, { x: 4.2, y: 0 }, 0.3)).toBe(true);
+    expect(hitTestShape(ellipse, { x: 4.2, y: 0 }, 0.1)).toBe(false);
   });
 });

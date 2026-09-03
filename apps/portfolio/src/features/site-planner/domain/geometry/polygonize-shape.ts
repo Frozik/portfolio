@@ -2,7 +2,7 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
-import type { CircleShape, RectangleShape, Shape } from '../model/shapes';
+import type { CircleShape, EllipseShape, RectangleShape, Shape } from '../model/shapes';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
 import type { Ring } from './polygon-types';
@@ -33,6 +33,8 @@ export function polygonizeShape(shape: Shape): Ring {
       return polygonizeRectangle(shape);
     case 'circle':
       return polygonizeCircle(shape);
+    case 'ellipse':
+      return polygonizeEllipse(shape);
     default:
       return assertNever(shape);
   }
@@ -93,7 +95,7 @@ export function planToRectangleLocal(
  * own axes expressed in plan axes. Handles and dimension lines placed at a fixed
  * pixel offset from an edge take their bearing from here.
  */
-export function rectangleLocalDirection(rectangle: RectangleShape, local: Vector2): Vector2 {
+export function rectangleLocalDirection(rectangle: RotatedFrame, local: Vector2): Vector2 {
   const point = rectangleLocalToPlan(rectangle, local);
 
   return { x: point.x - rectangle.center.x, y: point.y - rectangle.center.y };
@@ -111,6 +113,31 @@ function polygonizeRectangle(rectangle: RectangleShape): Ring {
   ];
 
   return localCorners.map(local => rectangleLocalToPlan(rectangle, local));
+}
+
+/**
+ * The ellipse sampled in its own frame and turned with it. The segment count
+ * comes from the LONGER semi-axis: that is where the chords sag furthest from
+ * the true curve, so counting by it keeps the whole outline within tolerance.
+ */
+function polygonizeEllipse(ellipse: EllipseShape): Ring {
+  const semiWidth = ellipse.width / 2;
+  const semiLength = ellipse.length / 2;
+  const segments = countCircleSegments(Math.max(semiWidth, semiLength));
+  const ring: Vector2[] = [];
+
+  for (let segment = 0; segment < segments; segment += 1) {
+    const angle = (2 * Math.PI * segment) / segments;
+
+    ring.push(
+      rectangleLocalToPlan(ellipse, {
+        x: semiWidth * Math.cos(angle),
+        y: semiLength * Math.sin(angle),
+      })
+    );
+  }
+
+  return ring;
 }
 
 function polygonizeCircle({ center, radius }: CircleShape): Ring {

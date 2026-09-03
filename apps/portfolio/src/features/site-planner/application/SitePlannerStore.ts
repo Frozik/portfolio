@@ -4,9 +4,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isEqual, isNil } from 'lodash-es';
 import type { IReactionDisposer } from 'mobx';
 import { makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
-import type { Temporal } from 'temporal-polyfill';
 import {
-  APRON_DEPTH_METERS,
   DEFAULT_PATH_WIDTH_METERS,
   DEFAULT_SITE_LENGTH_METERS,
   DEFAULT_SITE_WIDTH_METERS,
@@ -14,38 +12,75 @@ import {
 } from '../domain/constants';
 import type { BoundingBox } from '../domain/geometry/bounding-box';
 import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
+import { foundationVolumeCubicMeters, pointOnOutline } from '../domain/geometry/building-outline';
+import type { SegmentReadout } from '../domain/geometry/draw-constraints';
 import {
-  foundationVolumeCubicMeters,
-  multiPolygonArea,
-  pointOnOutline,
-} from '../domain/geometry/building-outline';
+  appendTypedLengthKey as appendTypedLengthKeyText,
+  applyTypedLength,
+  constrainToAngleStep,
+  parseTypedLength,
+  segmentReadout,
+} from '../domain/geometry/draw-constraints';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
-import { extrudeFootprint, extrudePrism } from '../domain/geometry/extrude-footprint';
 import type { LitMesh, PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
-import { mergeLitMeshes } from '../domain/geometry/lit-mesh';
 import { buildPathRibbon, offsetPolygons } from '../domain/geometry/offset-polygon';
 import type { PathRibbon } from '../domain/geometry/path-ribbon';
 import { buildPathRibbons } from '../domain/geometry/path-ribbon';
-import {
-  clampPointToMultiPolygon,
-  interiorPointOf,
-  isPointInMultiPolygon,
-  subtractPolygons,
-} from '../domain/geometry/polygon-booleans';
+import { defaultRidgeDegrees } from '../domain/geometry/pitched-roof';
+import { clampPointToMultiPolygon, subtractPolygons } from '../domain/geometry/polygon-booleans';
 import { computeMultiPolygonCentroid } from '../domain/geometry/polygon-centroid';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
-import {
-  buildOpeningBody,
-  buildWallBodies,
-  buildWallBody,
-  buildWallHull,
-  pointAlongPolyline,
-  wallCenterline,
-} from '../domain/geometry/wall-geometry';
-import type { WireAnchor } from '../domain/geometry/wire-routing';
-import { routeWire } from '../domain/geometry/wire-routing';
+import { getShapeKeyPoints } from '../domain/geometry/shape-key-points';
+import { slabsOutline } from '../domain/geometry/slab-geometry';
+import { setRectangleRotation } from '../domain/geometry/transform-shape';
 import type { BuildingPresetId } from '../domain/model/building-presets';
 import { findBuildingPreset } from '../domain/model/building-presets';
+
+// The scene types live with the derivation that produces them; the store
+// re-exports them so every consumer keeps the import path it already uses.
+export type {
+  BuildingRoom,
+  PlanDevice,
+  PlanOpeningShape,
+  PlanWire,
+  RoofZoneScene,
+  StairScene,
+  StoreyScene,
+  SupportScene,
+} from './storey-scenes';
+
+import {
+  addBuilding as addBuildingIn,
+  addUtilityEntry as addUtilityEntryIn,
+  findBuilding as findBuildingIn,
+  removeBuilding as removeBuildingIn,
+  removeUtilityEntry as removeUtilityEntryFrom,
+  replaceBuilding as replaceBuildingIn,
+  updateBuilding as updateBuildingIn,
+  updateFoundation as updateFoundationIn,
+  updateUtilityEntry as updateUtilityEntryIn,
+} from '../domain/model/building-edits';
+import type { BuildingWarning } from '../domain/model/building-warnings';
+import { collectBuildingWarnings } from '../domain/model/building-warnings';
+import {
+  addTerm,
+  moveTerm as moveTermIn,
+  removeTerm as removeTermFrom,
+  reorderTerm as reorderTermIn,
+  updateShape as replaceShapeIn,
+  setTermOperation as setTermOperationIn,
+  ungroupTerm as ungroupTermIn,
+  wrapTermInGroup as wrapTermInGroupIn,
+} from '../domain/model/composition-edits';
+import {
+  addDevice as addDeviceIn,
+  assignDeviceToPanel as assignDeviceToPanelIn,
+  findDevice as findDeviceIn,
+  linkSwitchToLight as linkSwitchToLightIn,
+  updateDevice as updateDeviceIn,
+} from '../domain/model/device-edits';
+import type { DuctId, VerticalDuct } from '../domain/model/ducts';
+import { createDuct } from '../domain/model/ducts';
 import type {
   ActiveTool,
   EditedObjectDescriptor,
@@ -55,6 +90,7 @@ import type {
 } from '../domain/model/editor-mode';
 import {
   describeEditedObject,
+  editedBuildingId,
   editedTargetSelection,
   isPlanTool,
   isSiteEditMode,
@@ -67,6 +103,8 @@ import {
   createWallDevice,
   DEFAULT_DEVICE_KIND,
 } from '../domain/model/electrical';
+import type { Fireplace, FireplaceId, FireplaceKind } from '../domain/model/fireplaces';
+import { createFireplace } from '../domain/model/fireplaces';
 import type {
   Foundation,
   UtilityEntry,
@@ -81,8 +119,18 @@ import { createOpening, DEFAULT_OPENING_PRESET } from '../domain/model/openings'
 import type { ElevationMarkDraft } from '../domain/model/parse-elevation-csv';
 import type { PlacedObject } from '../domain/model/placed-object';
 import { CAR_PLACED_OBJECT, DEFAULT_PLACED_OBJECT } from '../domain/model/placed-object';
-import type { RoomLabelId, RoomTypeId } from '../domain/model/rooms';
-import { createRoomLabel, isWetRoomType } from '../domain/model/rooms';
+import type { PitchedRoof } from '../domain/model/roofs';
+import { createPitchedRoof } from '../domain/model/roofs';
+import type { RoomTypeId } from '../domain/model/rooms';
+import { createRoomLabel } from '../domain/model/rooms';
+import {
+  addUtilityRoute as addUtilityRouteIn,
+  insertUtilityRoutePoint as insertUtilityRoutePointIn,
+  moveUtilityRoutePoint as moveUtilityRoutePointIn,
+  removeUtilityRoute as removeUtilityRouteFrom,
+  removeUtilityRoutePoint as removeUtilityRoutePointIn,
+  updateUtilityRoute as updateUtilityRouteIn,
+} from '../domain/model/route-edits';
 import type { RouteWarning } from '../domain/model/route-warnings';
 import { collectRouteWarnings } from '../domain/model/route-warnings';
 import type { UtilityRoute, UtilityRouteId } from '../domain/model/routing';
@@ -93,7 +141,14 @@ import {
   trenchDepthMeters,
 } from '../domain/model/routing';
 import type { ActiveGroup, Selection, ShapeOwner, ShapeTool } from '../domain/model/selection';
-import { DEFAULT_SHAPE_TOOL, isShapeTool } from '../domain/model/selection';
+import {
+  DEFAULT_SHAPE_TOOL,
+  isSameSelection,
+  isShapeTool,
+  SELECTION_SCOPE,
+} from '../domain/model/selection';
+import type { SiteSettingsChanges } from '../domain/model/settings-edits';
+import { updateSettings as updateSettingsWith } from '../domain/model/settings-edits';
 import type {
   CsgOperation,
   CsgTerm,
@@ -108,9 +163,31 @@ import {
   findShape,
   findTerm,
   flattenShapes,
+  isBoxedShape,
   shapesExcept,
 } from '../domain/model/shapes';
 import type { SiteObjectState } from '../domain/model/site-object';
+import {
+  addCar,
+  addMark,
+  addPath,
+  addTree,
+  insertPathPoint as insertPathPointIn,
+  moveMark,
+  movePathPoint as movePathPointIn,
+  removeCar as removeCarFrom,
+  removeMark,
+  removePath as removePathFrom,
+  removePathPoint as removePathPointIn,
+  removeTree as removeTreeFrom,
+  updateCar as replaceCarIn,
+  updateTree as replaceTreeIn,
+  setMarkElevation as setMarkElevationIn,
+  setPathPointWidth as setPathPointWidthIn,
+  setPathSegmentSurface as setPathSegmentSurfaceIn,
+  updatePath as updatePathIn,
+  updatePathWidth as updatePathWidthIn,
+} from '../domain/model/site-object-edits';
 import type {
   Building,
   BuildingId,
@@ -138,122 +215,79 @@ import {
   entriesOf,
   foundationOf,
   frostDepthOf,
+  pitchedRoofOf,
   storeysOf,
   TREE_SPECIES_DEFAULT_SIZES,
   utilityRoutesOf,
 } from '../domain/model/site-plan';
-import type { SiteSettingsChanges } from '../domain/model/site-plan-edits';
+import type { Slab } from '../domain/model/slabs';
+import { createSlab, NO_SLABS } from '../domain/model/slabs';
+import { parseSnapshot } from '../domain/model/snapshot';
+import type { StairId, StairInstance, StairKind } from '../domain/model/stairs';
+import { createStair, DEFAULT_STAIR_KIND } from '../domain/model/stairs';
 import {
-  addBuilding as addBuildingIn,
-  addCar,
-  addDevice as addDeviceIn,
-  addFurniture as addFurnitureIn,
-  addMark,
-  addOpening as addOpeningIn,
-  addPath,
   addStorey as addStoreyIn,
-  addTerm,
-  addTree,
-  addUtilityEntry as addUtilityEntryIn,
-  addUtilityRoute as addUtilityRouteIn,
-  addWall as addWallIn,
-  assignDeviceToPanel as assignDeviceToPanelIn,
-  closeWallRing as closeWallRingIn,
-  cutWallAtPoint as cutWallAtPointIn,
-  findBuilding as findBuildingIn,
-  findDevice as findDeviceIn,
-  findFurniture as findFurnitureIn,
-  findOpening as findOpeningIn,
-  findWall as findWallIn,
-  insertPathPoint as insertPathPointIn,
-  insertUtilityRoutePoint as insertUtilityRoutePointIn,
-  insertWallPoint as insertWallPointIn,
-  linkSwitchToLight as linkSwitchToLightIn,
-  moveMark,
-  movePathPoint as movePathPointIn,
-  moveTerm as moveTermIn,
-  moveUtilityRoutePoint as moveUtilityRoutePointIn,
-  moveWallPoint as moveWallPointIn,
-  removeBuilding as removeBuildingIn,
-  removeCar as removeCarFrom,
-  removeDevice as removeDeviceFrom,
-  removeFurniture as removeFurnitureFrom,
-  removeMark,
-  removeOpening as removeOpeningFrom,
-  removePath as removePathFrom,
-  removePathPoint as removePathPointIn,
+  addStoreyObject,
+  findStoreyObject,
   removeRoofZoneLabel as removeRoofZoneLabelFrom,
   removeRoomLabel as removeRoomLabelFrom,
   removeStorey as removeStoreyFrom,
-  removeTerm as removeTermFrom,
-  removeTree as removeTreeFrom,
-  removeUtilityEntry as removeUtilityEntryFrom,
-  removeUtilityRoute as removeUtilityRouteFrom,
-  removeUtilityRoutePoint as removeUtilityRoutePointIn,
-  removeWall as removeWallFrom,
-  removeWallPoint as removeWallPointIn,
-  reorderTerm as reorderTermIn,
-  replaceBuilding as replaceBuildingIn,
-  updateCar as replaceCarIn,
-  updateShape as replaceShapeIn,
-  updateTree as replaceTreeIn,
-  setMarkElevation as setMarkElevationIn,
-  setPathPointWidth as setPathPointWidthIn,
-  setPathSegmentSurface as setPathSegmentSurfaceIn,
-  setTermOperation as setTermOperationIn,
-  ungroupTerm as ungroupTermIn,
-  updateBuilding as updateBuildingIn,
-  updateDevice as updateDeviceIn,
-  updateFoundation as updateFoundationIn,
-  updateFurniture as updateFurnitureIn,
-  updateOpening as updateOpeningIn,
-  updatePath as updatePathIn,
-  updatePathWidth as updatePathWidthIn,
-  updateSettings as updateSettingsWith,
-  updateUtilityEntry as updateUtilityEntryIn,
-  updateUtilityRoute as updateUtilityRouteIn,
-  updateWall as updateWallIn,
+  setPitchedRoof as setPitchedRoofIn,
+  updateStoreyHeight as updateStoreyHeightIn,
+  updateStoreyObject,
   upsertRoofZoneLabel as upsertRoofZoneLabelIn,
   upsertRoomLabel as upsertRoomLabelIn,
-  wrapTermInGroup as wrapTermInGroupIn,
-} from '../domain/model/site-plan-edits';
-import { parseSnapshot } from '../domain/model/snapshot';
-import type { RoofCover, RoofZoneLabelId, Storey, StoreyId } from '../domain/model/storeys';
+} from '../domain/model/storey-edits';
+import type { SelectedStoreyObject } from '../domain/model/storey-object-selection';
+import {
+  selectedStoreyObject,
+  storeyObjectSelector,
+} from '../domain/model/storey-object-selection';
+import type { StoreyObjectKey } from '../domain/model/storey-objects';
+import {
+  DUCT_OBJECTS,
+  FIREPLACE_OBJECTS,
+  FURNITURE_OBJECTS,
+  SLAB_OBJECTS,
+  STAIR_OBJECTS,
+  SUPPORT_OBJECTS,
+} from '../domain/model/storey-objects';
+import type { RoofCover, StoreyId } from '../domain/model/storeys';
 import {
   createRoofZoneLabel,
   createStorey,
   DEFAULT_ROOF_COVER,
-  DEFAULT_UPPER_STOREY_HEIGHT_METERS,
-  devicesOf,
-  furnitureOf,
-  groupsOf,
-  switchLinksOf,
+  slabsOf,
 } from '../domain/model/storeys';
+import type { SupportId, SupportPost } from '../domain/model/supports';
+import { createSupport } from '../domain/model/supports';
+import {
+  addOpening as addOpeningIn,
+  addWall as addWallIn,
+  closeWallRing as closeWallRingIn,
+  cutWallAtPoint as cutWallAtPointIn,
+  findOpening as findOpeningIn,
+  findWall as findWallIn,
+  insertWallPoint as insertWallPointIn,
+  moveWallPoint as moveWallPointIn,
+  removeOpening as removeOpeningFrom,
+  removeWall as removeWallFrom,
+  removeWallPoint as removeWallPointIn,
+  updateOpening as updateOpeningIn,
+  updateWall as updateWallIn,
+} from '../domain/model/wall-edits';
 import type { Wall, WallId } from '../domain/model/walls';
 import { createWall, MIN_CLOSED_WALL_POINTS, MIN_WALL_POINTS } from '../domain/model/walls';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
-import type { FlowField } from '../domain/plan-draw/draw-flow-arrows';
-import type { PathDraft, PathHandleHighlight } from '../domain/plan-draw/draw-paths';
-import type { UtilityRouteDraft } from '../domain/plan-draw/draw-utility-routes';
-import type { PlanWallBody } from '../domain/plan-draw/draw-walls';
-import type { DayWindow } from '../domain/sun/day-window';
-import { clampTimeToWindow, computeDayWindow } from '../domain/sun/day-window';
-import type { Sunlight } from '../domain/sun/sun-direction';
-import { computeSunlight } from '../domain/sun/sun-direction';
-import type { SunPosition } from '../domain/sun/sun-position';
-import { computeSunPosition } from '../domain/sun/sun-position';
-import { resolveMoment, today } from '../domain/sun/sun-study';
 import type { AnalysisRaster } from '../domain/terrain/analysis-raster';
 import { buildCutFillRaster, buildSlopeRaster } from '../domain/terrain/analysis-raster';
 import { buildHeightfield } from '../domain/terrain/build-heightfield';
 import type { ContourPolyline } from '../domain/terrain/contours';
 import { buildContours } from '../domain/terrain/contours';
 import type { CutFillReport } from '../domain/terrain/cut-fill';
-import {
-  computeCutFill,
-  computeFootprintElevations,
-  computePadElevation,
-} from '../domain/terrain/cut-fill';
+import { computeCutFill, computePadElevation } from '../domain/terrain/cut-fill';
+import type { GradedPad } from '../domain/terrain/design-grade';
+import { groundElevationAt } from '../domain/terrain/design-grade';
 import {
   drapeBlendStrips,
   drapePolygons,
@@ -270,15 +304,41 @@ import { buildPlotCoverage } from '../domain/terrain/plot-coverage';
 import type { TrenchProfile } from '../domain/terrain/trench-profile';
 import { buildTrenchProfile } from '../domain/terrain/trench-profile';
 import type { Meters } from '../domain/units';
+import { normalizeTurnDegrees } from '../domain/units';
 import type { KeyPointSnap } from '../domain/view/object-snapping';
+import {
+  findNearestSnapPoint,
+  KEY_POINT_SNAP_RADIUS_PX,
+  wallSnapPoints,
+} from '../domain/view/object-snapping';
+import type { PlanModifiers } from '../domain/view/plan-input';
+import { NO_MODIFIERS } from '../domain/view/plan-input';
 import type { PlanLayerKind } from '../domain/view/plan-layers';
 import { ALL_PLAN_LAYERS, togglePlanLayer } from '../domain/view/plan-layers';
 import type { PlanViewport } from '../domain/view/plan-viewport';
 import { createPlanViewport, DEFAULT_PIXELS_PER_METER } from '../domain/view/plan-viewport';
-import { planToWorld } from '../domain/view/world-frame';
+import { NO_SNAP_STEP, snapPoint } from '../domain/view/snapping';
 import { createIndexedDBSitePlanRepository } from '../infrastructure/IndexedDBSitePlanRepository';
+import type { BuildingScene } from './building-scene';
+import type { DuctRun } from './duct-scenes';
+import { deriveDuctRuns } from './duct-scenes';
 import type { EditorSession } from './editor-sessions';
 import { createEditorSession } from './editor-sessions';
+import type { FlowField } from './render/plan-draw/draw-flow-arrows';
+import type { PathDraft, PathHandleHighlight } from './render/plan-draw/draw-paths';
+import type { UtilityRouteDraft } from './render/plan-draw/draw-utility-routes';
+import type { GhostPass } from './render/scene-meshes';
+import {
+  buildBuildingMeshes,
+  buildFoundationSolids,
+  buildRoofOverlays,
+  buildSceneFurniture,
+} from './render/scene-meshes';
+import type { PitchedRoofScene } from './roof-scenes';
+import { derivePitchedRoofScene } from './roof-scenes';
+import { SunStudy } from './SunStudy';
+import type { BuildingRoom, RoofZoneScene, StairScene, StoreyScene } from './storey-scenes';
+import { deriveStoreyScenes, maxOverhangMeters, seedPointOf } from './storey-scenes';
 
 /**
  * How often the day animation advances, and by how much. Fifty milliseconds is
@@ -286,8 +346,6 @@ import { createEditorSession } from './editor-sessions';
  * day in about twenty seconds — long enough to watch a shadow travel, short
  * enough not to wait for it.
  */
-const SUN_ANIMATION_INTERVAL_MS = 50;
-const SUN_ANIMATION_STEP_MINUTES = 3;
 
 /** Which consumer of the site plan is on screen: the 2D plan editor or the 3D view. */
 export type SitePlannerViewMode = 'plan' | 'scene';
@@ -321,6 +379,9 @@ const AUTOSAVE_DELAY_MS = 500;
 /** Shared by every derived-geometry getter that has nothing to evaluate. */
 
 const NO_MEASURE_POINTS: readonly Vector2[] = [];
+const NO_SELECTIONS: readonly Selection[] = [];
+/** The turn a «rotate» button applies — a quarter, the way rooms are square. */
+const QUARTER_TURN_DEGREES = 90;
 const NO_DRAFT_PATH_POINTS: readonly Vector2[] = [];
 const NO_DRAFT_UTILITY_POINTS: readonly Vector2[] = [];
 /** Shared by the skeleton list whenever no gesture is running. */
@@ -352,93 +413,10 @@ const NEW_MARK_ELEVATION_METERS: Meters = 0;
 
 /** A calibration is exactly two points on the picture plus the span between them. */
 
-/** One opening resolved for the plan: its cut body, named and kinded. */
-export interface PlanOpeningShape {
-  readonly id: OpeningId;
-  readonly kind: 'door' | 'window';
-  readonly polygons: MultiPolygon;
-}
-
-/** One derived room: a region the walls enclose, with its assigned type. */
-export interface BuildingRoom {
-  readonly storeyId: StoreyId;
-  readonly polygons: MultiPolygon;
-  readonly areaSquareMeters: number;
-  readonly centroid: Vector2 | undefined;
-  readonly roomTypeId: RoomTypeId | undefined;
-  readonly labelId: RoomLabelId | undefined;
-  readonly isWet: boolean;
-}
-
-/** One region of a storey's exposed ceiling, with the cover pinned to it. */
-export interface RoofZoneScene {
-  readonly storeyId: StoreyId;
-  readonly polygons: MultiPolygon;
-  readonly cover: RoofCover;
-  readonly areaSquareMeters: number;
-  readonly centroid: Vector2 | undefined;
-  readonly labelId: RoofZoneLabelId | undefined;
-}
-
-/** One device resolved onto the plan, its symbol point placed. */
-export interface PlanDevice {
-  readonly id: DeviceId;
-  readonly kind: DeviceKind;
-  readonly position: Vector2;
-}
-
-/** One derived wire run, panel→consumer or switch→light. */
-export interface PlanWire {
-  readonly points: readonly Vector2[];
-  /** A switch→light link draws dashed; a circuit run draws solid. */
-  readonly isSwitchLink: boolean;
-}
-
-/** One storey resolved for drawing and stacking — see `buildingScenes`. */
-export interface StoreyScene {
-  readonly storey: Storey;
-  readonly level: number;
-  /** Ground: the building composition's fold; upper: the hull of its walls. */
-  readonly footprint: MultiPolygon;
-  /** Bottom of this storey's walls; nothing while the building has no pad. */
-  readonly baseElevation: Meters | undefined;
-  readonly wallShapes: readonly PlanWallBody[];
-  readonly wallBodies: MultiPolygon;
-  readonly openingShapes: readonly PlanOpeningShape[];
-  readonly rooms: readonly BuildingRoom[];
-  /** This storey's exposed ceiling — what no storey above covers — zoned. */
-  readonly roofZones: readonly RoofZoneScene[];
-  readonly furniture: readonly FurnitureInstance[];
-  readonly devices: readonly PlanDevice[];
-  /** The wiring, derived per §8: along the walls wherever they connect. */
-  readonly wires: readonly PlanWire[];
-}
-
-/** One utility entry resolved onto the plan — where its system enters the house. */
-export interface PlanUtilityEntry {
-  readonly id: UtilityEntryId;
-  readonly system: UtilitySystem;
-  readonly position: Vector2;
-}
-
-/** One building resolved against the terrain — see `buildingScenes`. */
-export interface BuildingScene {
-  readonly building: Building;
-  readonly polygons: MultiPolygon;
-  readonly padElevation: Meters | undefined;
-  readonly cutFill: CutFillReport | undefined;
-  readonly foundation: Foundation;
-  /** Concrete estimate for the panel; piers are not estimated (no count yet). */
-  readonly foundationVolumeCubicMeters: number | undefined;
-  /** Entries the footprint can actually place — nothing without an outline. */
-  readonly entryPoints: readonly PlanUtilityEntry[];
-  /** The storeys resolved bottom-up; index = level. */
-  readonly storeys: readonly StoreyScene[];
-}
-
 /** History groups of the house fields, so a typed number stays one step to undo. */
 const MANUAL_PAD_HISTORY_GROUP = 'house:manual-pad';
 const WALL_HEIGHT_HISTORY_GROUP = 'house:wall-height';
+const STOREY_HEIGHT_HISTORY_GROUP = 'building:storey-height';
 const WALL_HISTORY_GROUP = 'wall';
 const OPENING_HISTORY_GROUP = 'opening';
 const FURNITURE_HISTORY_GROUP = 'furniture';
@@ -446,14 +424,8 @@ const DEVICE_HISTORY_GROUP = 'device';
 const FOUNDATION_HISTORY_GROUP = 'foundation';
 const ENTRY_HISTORY_GROUP = 'entry';
 const ROUTE_HISTORY_GROUP = 'route';
+const PITCHED_ROOF_HISTORY_GROUP = 'building:roof';
 
-/**
- * The foundation stands this much proud of the walls all round — the real
- * цоколь detail, and what keeps its faces off the walls' in the depth buffer.
- */
-const FOUNDATION_LEDGE_METERS = 0.05;
-/** The visible build-up of a terrace deck or a green roof's planting bed. */
-const ROOF_COVER_THICKNESS_METERS = 0.08;
 /** New entries land spaced along the outline instead of stacking at its start. */
 const ENTRY_SPACING_METERS = 3;
 
@@ -488,7 +460,14 @@ export class SitePlannerStore {
    */
   armedShapeTool: ShapeTool = DEFAULT_SHAPE_TOOL;
   overlayMode: OverlayMode = 'none';
-  selection: Selection | undefined = undefined;
+  /**
+   * What is selected, in the order it was picked. Kept as a LIST so a group of
+   * things can be moved, duplicated or deleted at once — «change the material
+   * of these six walls» was twelve clicks while it was a single value. Every
+   * existing reader takes {@link selection}, the last one picked, so the
+   * single-selection paths are unchanged.
+   */
+  selections: readonly Selection[] = NO_SELECTIONS;
   /** Ad-hoc ruler anchors, consumed as consecutive pairs; cleared on tool change. */
   measurePoints: readonly Vector2[] = NO_MEASURE_POINTS;
   /** Where a newly drawn shape joins the tree, chosen in the structure panel. */
@@ -539,6 +518,14 @@ export class SitePlannerStore {
   /** Pointer position in plan metres, for the status-bar readout. */
   cursorPlanPoint: Vector2 | undefined = undefined;
   /**
+   * Modifiers held at the last pointer move. The draft previews read them so
+   * the segment on screen is the segment a click would commit — Shift locking
+   * it square is only honest if the preview is locked too.
+   */
+  cursorModifiers: PlanModifiers = NO_MODIFIERS;
+  /** A length typed while a wall segment is being aimed (the CAD VCB). */
+  typedLengthText: string | undefined = undefined;
+  /**
    * The polyline handle under or held by the pointer — a path's or a trench's,
    * whichever is selected — echoed back as its highlight.
    */
@@ -578,21 +565,12 @@ export class SitePlannerStore {
   fileIssue: SitePlanFileIssue | undefined = undefined;
 
   /**
-   * The sun study — the date and the time of day the 3D view is lit at, and
-   * whether the day is playing. Ephemeral by design: it is a way of looking at
-   * the plan rather than part of it, so it stays out of the snapshot, out of
-   * storage and out of the undo stack.
+   * The sun study — its own object ({@link SunStudy}), because it is a concern
+   * with state and a running timer of its own rather than eight more fields
+   * here. Ephemeral by design: a way of looking at the plan rather than part
+   * of it, so it stays out of the snapshot, storage and the undo stack.
    */
-  isSunStudyOpen = false;
-  sunDate: Temporal.PlainDate;
-  isSunAnimating = false;
-  /**
-   * The time the user has chosen, before it is fitted to the daylight of the
-   * day being studied. Nothing until they choose one: a study opened on a fresh
-   * date starts at midday of that date's own daylight rather than at a time
-   * carried over from another season.
-   */
-  sunTimeOverrideMinutes: number | undefined = undefined;
+  readonly sun: SunStudy;
 
   saveState: SitePlanSaveState = 'saved';
   /**
@@ -611,9 +589,10 @@ export class SitePlannerStore {
   private lastRecordedAtMs = 0;
   private readonly disposeHistoryCommit: IReactionDisposer;
   private disposeAutosave: IReactionDisposer | undefined = undefined;
-  private sunAnimationTimer: ReturnType<typeof setInterval> | undefined = undefined;
   private saveRequestId = 0;
   private isDisposed = false;
+  /** True while one command is applying several edits — see `runBatched`. */
+  private isBatchingHistory = false;
 
   constructor(repository: ISitePlanRepository = createIndexedDBSitePlanRepository()) {
     this.repository = repository;
@@ -628,7 +607,7 @@ export class SitePlannerStore {
     this.paths = defaultPlan.paths;
     this.utilityRoutes = utilityRoutesOf(defaultPlan);
     this.settings = defaultPlan.settings;
-    this.sunDate = today(defaultPlan.settings.location);
+    this.sun = new SunStudy(() => this.settings.location);
 
     makeAutoObservable<
       SitePlannerStore,
@@ -639,9 +618,9 @@ export class SitePlannerStore {
       | 'lastRecordedAtMs'
       | 'disposeHistoryCommit'
       | 'disposeAutosave'
-      | 'sunAnimationTimer'
       | 'saveRequestId'
       | 'isDisposed'
+      | 'isBatchingHistory'
     >(
       this,
       {
@@ -652,10 +631,8 @@ export class SitePlannerStore {
         lastRecordedAtMs: false,
         disposeHistoryCommit: false,
         disposeAutosave: false,
-        sunAnimationTimer: false,
         saveRequestId: false,
         isDisposed: false,
-        sunDate: observableRef,
         boundary: observableRef,
         elevationMarks: observableRef,
         buildings: observableRef,
@@ -667,7 +644,8 @@ export class SitePlannerStore {
         nextPlacedObject: observableRef,
         settings: observableRef,
         activeGroup: observableRef,
-        selection: observableRef,
+        selections: observableRef,
+        isBatchingHistory: false,
         measurePoints: observableRef,
         draftShape: observableRef,
         draftMark: observableRef,
@@ -921,9 +899,120 @@ export class SitePlannerStore {
 
           return isNil(position) ? [] : [{ id: entry.id, system: entry.system, position }];
         }),
-        storeys: deriveStoreyScenes(building, polygons, padElevation),
+        ...withPitchedRoof(
+          building,
+          deriveStoreyScenes(building, polygons, padElevation, this.groundElevationAt)
+        ),
       };
     });
+  }
+
+  /**
+   * The ground as it will be once the pads are built — what anything standing
+   * beside a house must be measured against (plan O-S8). The raw heightfield
+   * is the survey before anyone built, and half a metre from the цоколь the
+   * two differ by the whole cut.
+   */
+  get groundElevationAt(): (point: Vector2) => Meters {
+    const pads = this.gradedPads;
+    const field = this.heightfield;
+
+    return point => groundElevationAt(field, pads, point);
+  }
+
+  /**
+   * The levelled platforms the buildings stand on. Derived straight from the
+   * compositions rather than from `buildingScenes`, which would be circular:
+   * the scenes need the graded ground to place what stands beside them.
+   */
+  get gradedPads(): readonly GradedPad[] {
+    return this.buildings.flatMap(building => {
+      const polygons = evaluateComposition(building.composition);
+
+      if (polygons.length === 0) {
+        return [];
+      }
+
+      const elevation = computePadElevation({
+        field: this.heightfield,
+        polygons,
+        mode: building.padElevationMode,
+        manualPadElevation: building.manualPadElevation,
+      });
+
+      return isNil(elevation) ? [] : [{ polygons, elevation }];
+    });
+  }
+
+  /**
+   * Every advisory the open building earns (§6.5): furniture and walls over a
+   * stairwell, stairs outside the comfort bands, an unsupported overhang, a
+   * storey too low to live on. One list, because to the person holding the
+   * mouse they are all «something to look at here».
+   */
+  get buildingWarnings(): readonly BuildingWarning[] {
+    const buildingId = editedBuildingId(this.editorMode);
+
+    if (isNil(buildingId)) {
+      return NO_BUILDING_WARNINGS;
+    }
+
+    const scene = this.buildingScenes.find(candidate => candidate.building.id === buildingId);
+
+    if (isNil(scene)) {
+      return NO_BUILDING_WARNINGS;
+    }
+
+    return collectBuildingWarnings(
+      scene.storeys.map((storeyScene, level) => {
+        const below = scene.storeys[level - 1];
+        const overhang =
+          isNil(below) || storeyScene.footprint.length === 0
+            ? undefined
+            : subtractPolygons(storeyScene.footprint, below.footprint);
+        const overhangAt = isNil(overhang) ? undefined : computeMultiPolygonCentroid(overhang);
+
+        return {
+          storeyId: storeyScene.storey.id,
+          heightMeters: storeyScene.storey.heightMeters,
+          footprint: storeyScene.footprint,
+          stairwell: storeyScene.stairCutouts,
+          furniture: storeyScene.furniture.map(piece => ({
+            id: piece.id,
+            position: piece.position,
+          })),
+          walls: storeyScene.wallShapes.map(wall => ({ id: wall.id, body: wall.polygons })),
+          stairs: storeyScene.stairs.map(stairScene => ({
+            id: stairScene.stair.id,
+            position: stairScene.stair.position,
+            isComfortable: stairScene.isComfortable,
+          })),
+          supportPositions: storeyScene.supports.map(supportScene => supportScene.post.position),
+          // The roof stands on the TOP storey, so that is the storey its
+          // findings belong to and the one the panel travels to.
+          roofPitchDegrees:
+            level === scene.storeys.length - 1 ? scene.pitchedRoof?.roof.pitchDegrees : undefined,
+          rooms: storeyScene.rooms.map(room => ({
+            roomTypeId: room.roomTypeId,
+            polygons: room.polygons,
+            at: room.centroid,
+          })),
+          saunaStovePositions: storeyScene.fireplaces
+            .filter(fireplaceScene => fireplaceScene.fireplace.kind === 'saunaStove')
+            .map(fireplaceScene => fireplaceScene.fireplace.position),
+          ventPositions: storeyScene.ducts
+            .filter(section => section.duct.kind === 'vent')
+            .map(section => section.duct.position),
+          strandedDucts: scene.ducts
+            .filter(run => run.isOutsideRoof && run.storeyId === storeyScene.storey.id)
+            .map(run => ({ id: run.duct.id, at: run.duct.position })),
+          footprintBelow: below?.footprint,
+          overhang: overhang ?? [],
+          overhangMeters: isNil(overhang) ? 0 : maxOverhangMeters(overhang, below.footprint),
+          overhangAt,
+        };
+      })
+    );
   }
 
   /** The earthworks of every building added up — what the overlay legend reports. */
@@ -948,101 +1037,38 @@ export class SitePlannerStore {
    * whole footprint as the fallback for a building with no walls at all.
    */
   get buildingsGeometry(): LitMesh | undefined {
-    const meshes = this.buildingScenes.flatMap(scene => {
-      const { building, polygons, padElevation, storeys } = scene;
-
-      if (isNil(padElevation) || polygons.length === 0) {
-        return [];
-      }
-
-      const elevations = computeFootprintElevations(this.heightfield, polygons);
-
-      if (isNil(elevations)) {
-        return [];
-      }
-
-      const apronBaseElevation =
-        Math.min(elevations.minElevation, padElevation) - APRON_DEPTH_METERS;
-      const hasAnyWalls = storeys.some(storeyScene => storeyScene.wallBodies.length > 0);
-
-      // A building drawn only as a footprint keeps the classic massing block.
-      if (!hasAnyWalls) {
-        return [
-          extrudeFootprint({
-            polygons,
-            padElevation,
-            wallHeight: building.wallHeight,
-            // A pad sunk below the ground it covers still needs a skirt going
-            // down, so the apron starts from whichever of the two is lower.
-            apronBaseElevation,
-          }),
-        ];
-      }
-
-      return storeys.flatMap(storeyScene => {
-        const { storey, level, wallBodies, openingShapes, baseElevation } = storeyScene;
-
-        if (isNil(baseElevation) || wallBodies.length === 0) {
-          return [];
-        }
-
-        // Openings cut full-height slots; the masonry under each sill and the
-        // lintel over each head come back as closed prisms.
-        const slotted = subtractPolygons(
-          wallBodies,
-          openingShapes.flatMap(shape => shape.polygons)
-        );
-        const walls = slotted.length > 0 ? slotted : wallBodies;
-        const shell =
-          level === 0
-            ? extrudeFootprint({
-                polygons: walls,
-                padElevation: baseElevation,
-                wallHeight: storey.heightMeters,
-                apronBaseElevation,
-              })
-            : extrudePrism({
-                polygons: walls,
-                baseElevation,
-                topElevation: baseElevation + storey.heightMeters,
-              });
-        const pieces = storey.openings.flatMap(opening => {
-          const shape = openingShapes.find(candidate => candidate.id === opening.id);
-
-          if (isNil(shape) || shape.polygons.length === 0) {
-            return [];
-          }
-
-          const prisms: LitMesh[] = [];
-
-          if (opening.sillMeters > 0) {
-            prisms.push(
-              extrudePrism({
-                polygons: shape.polygons,
-                baseElevation,
-                topElevation: baseElevation + Math.min(opening.sillMeters, storey.heightMeters),
-              })
-            );
-          }
-
-          if (opening.headMeters < storey.heightMeters) {
-            prisms.push(
-              extrudePrism({
-                polygons: shape.polygons,
-                baseElevation: baseElevation + opening.headMeters,
-                topElevation: baseElevation + storey.heightMeters,
-              })
-            );
-          }
-
-          return prisms;
-        });
-
-        return [shell, ...pieces];
-      });
+    return buildBuildingMeshes({
+      scenes: this.buildingScenes,
+      heightfield: this.heightfield,
+      pass: this.ghostPass,
     });
+  }
 
-    return mergeLitMeshes(meshes);
+  /**
+   * The storeys the editor is NOT aimed at while a building is open (§6.4):
+   * the same geometry, handed to the blended pipeline so the active storey
+   * reads through them. Nothing outside the building editor — a house being
+   * looked at rather than edited is solid all the way up.
+   */
+  get buildingsGhostGeometry(): LitMesh | undefined {
+    return this.editorSession?.kind === 'building'
+      ? buildBuildingMeshes({
+          scenes: this.buildingScenes,
+          heightfield: this.heightfield,
+          pass: { ...this.ghostPass, ghosted: true },
+        })
+      : undefined;
+  }
+
+  /** The pass that draws what is being edited, or everything when nothing is. */
+  private get ghostPass(): GhostPass {
+    const session = this.editorSession;
+
+    return {
+      ghosted: false,
+      editedBuildingId: session?.kind === 'building' ? session.buildingId : undefined,
+      activeStoreyId: this.activeStoreyId,
+    };
   }
 
   /**
@@ -1050,36 +1076,7 @@ export class SitePlannerStore {
    * slab each — the plain membrane stays the roof the extrusion already has.
    */
   get roofOverlaysGeometry(): RoofOverlayGeometry {
-    const green: LitMesh[] = [];
-    const terrace: LitMesh[] = [];
-
-    for (const scene of this.buildingScenes) {
-      for (const storeyScene of scene.storeys) {
-        const { baseElevation, storey } = storeyScene;
-
-        if (isNil(baseElevation)) {
-          continue;
-        }
-
-        const ceiling = baseElevation + storey.heightMeters;
-
-        for (const zone of storeyScene.roofZones) {
-          if (zone.cover === 'membrane' || zone.polygons.length === 0) {
-            continue;
-          }
-
-          const slab = extrudePrism({
-            polygons: zone.polygons,
-            baseElevation: ceiling,
-            topElevation: ceiling + ROOF_COVER_THICKNESS_METERS,
-          });
-
-          (zone.cover === 'green' ? green : terrace).push(slab);
-        }
-      }
-    }
-
-    return { green: mergeLitMeshes(green), terrace: mergeLitMeshes(terrace) };
+    return buildRoofOverlays(this.buildingScenes);
   }
 
   /**
@@ -1092,27 +1089,7 @@ export class SitePlannerStore {
    * turn carried as-is (the car's convention, which the shader shares).
    */
   get sceneFurniture(): readonly SceneFurniture[] {
-    const instances: SceneFurniture[] = [];
-
-    for (const scene of this.buildingScenes) {
-      for (const storeyScene of scene.storeys) {
-        const { baseElevation } = storeyScene;
-
-        if (isNil(baseElevation)) {
-          continue;
-        }
-
-        for (const item of storeyScene.furniture) {
-          instances.push({
-            catalogId: item.catalogId,
-            position: planToWorld(item.position, baseElevation + item.elevationMeters),
-            rotationDegrees: item.rotationDegrees,
-          });
-        }
-      }
-    }
-
-    return instances;
+    return buildSceneFurniture(this.buildingScenes);
   }
 
   /**
@@ -1122,39 +1099,7 @@ export class SitePlannerStore {
    * faces from fighting over the same pixels.
    */
   get foundationsGeometry(): LitMesh | undefined {
-    const meshes = this.buildingScenes.flatMap(scene => {
-      const { polygons, padElevation, foundation } = scene;
-      const height = foundation.depthMeters + foundation.heightAboveGroundMeters;
-
-      if (isNil(padElevation) || polygons.length === 0 || height <= 0) {
-        return [];
-      }
-
-      const outset = offsetPolygons(polygons, FOUNDATION_LEDGE_METERS);
-
-      if (outset.length === 0) {
-        return [];
-      }
-
-      const elevations = computeFootprintElevations(this.heightfield, outset);
-
-      if (isNil(elevations)) {
-        return [];
-      }
-
-      const baseElevation = padElevation - foundation.depthMeters;
-
-      return [
-        extrudeFootprint({
-          polygons: outset,
-          padElevation: baseElevation,
-          wallHeight: height,
-          apronBaseElevation: Math.min(elevations.minElevation, baseElevation) - APRON_DEPTH_METERS,
-        }),
-      ];
-    });
-
-    return mergeLitMeshes(meshes);
+    return buildFoundationSolids({ scenes: this.buildingScenes, heightfield: this.heightfield });
   }
 
   /**
@@ -1261,8 +1206,18 @@ export class SitePlannerStore {
       : findMark(this.elevationMarks, elevationInputMarkId);
   }
 
+  /**
+   * The shape the properties panel and the plan chrome act on. A floor slab is
+   * a shape like any other, so it answers here too — which is what gives it the
+   * selection outline, the grips, the dimension lines and the typed fields
+   * without a second implementation of any of them.
+   */
   get selectedShape(): Shape | undefined {
     const { selection } = this;
+
+    if (selection?.kind === 'slab') {
+      return this.activeStoreySlabs.find(candidate => candidate.id === selection.slabId);
+    }
 
     if (isNil(selection) || selection.kind !== 'shape') {
       return undefined;
@@ -1333,41 +1288,6 @@ export class SitePlannerStore {
     return Math.round((this.viewport.pixelsPerMeter / DEFAULT_PIXELS_PER_METER) * PERCENT_SCALE);
   }
 
-  /** Sunrise and sunset of the studied date — the span the time slider covers. */
-  get sunDayWindow(): DayWindow {
-    return computeDayWindow({ date: this.sunDate, location: this.settings.location });
-  }
-
-  /** The studied time of day, always inside the daylight of the studied date. */
-  get sunTimeMinutes(): number {
-    const { sunDayWindow, sunTimeOverrideMinutes } = this;
-
-    return clampTimeToWindow(sunTimeOverrideMinutes ?? middleOf(sunDayWindow), sunDayWindow);
-  }
-
-  get sunMoment(): Temporal.ZonedDateTime {
-    return resolveMoment({
-      date: this.sunDate,
-      timeMinutes: this.sunTimeMinutes,
-      timeZoneId: this.settings.location.timeZoneId,
-    });
-  }
-
-  get sunPosition(): SunPosition {
-    const { latitudeDegrees, longitudeDegrees } = this.settings.location;
-
-    return computeSunPosition({ moment: this.sunMoment, latitudeDegrees, longitudeDegrees });
-  }
-
-  /**
-   * The light the 3D view is rendered with. It depends on the studied moment and
-   * on the site's location alone, so it survives every edit to the geometry —
-   * and every edit to the geometry leaves it untouched.
-   */
-  get sunlight(): Sunlight {
-    return computeSunlight(this.sunPosition, this.settings.location.northOffsetDegrees);
-  }
-
   /**
    * Edits the settings section. Fields typed digit by digit — a latitude, a
    * setback — pass their own `groupKey`, so a burst of keystrokes stays one step
@@ -1404,7 +1324,7 @@ export class SitePlannerStore {
 
     this.applySnapshot(plan);
     this.pendingHistoryPlan = previousPlan;
-    this.selection = undefined;
+    this.selections = NO_SELECTIONS;
     this.clearGestureState();
   }
 
@@ -1462,6 +1382,13 @@ export class SitePlannerStore {
    * step.
    */
   pushHistory(groupKey?: string): void {
+    // Inside a batch the first push already captured the state before the
+    // whole operation; the rest would each start a step of their own and one
+    // undo would take back only part of what one command did.
+    if (this.isBatchingHistory) {
+      return;
+    }
+
     const nowMs = performance.now();
     const isGroupedRepeat =
       !isNil(groupKey) &&
@@ -1487,15 +1414,17 @@ export class SitePlannerStore {
   setViewMode(viewMode: SitePlannerViewMode): void {
     this.viewMode = viewMode;
 
-    // The editing modes are 2D contracts; the 3D view always shows the whole plan.
-    if (viewMode === 'scene' && this.editorMode.kind === 'edit') {
-      this.exitEditMode();
-    }
+    // The two views are two windows onto one plan, so the editing session
+    // survives the switch: which building is open, which storey is active and
+    // what the tool is armed with are not 2D state. Dropping them here made
+    // Tab a silent way to lose your place — and made showing the active storey
+    // in 3D impossible, because arriving there always ended the session first.
+    // Canvas gestures are still the plan's; the 3D view stays a viewer.
 
     // Nothing watches the sun outside the 3D view, and a timer left running
     // would keep recomputing a light nobody is looking at.
     if (viewMode !== 'scene') {
-      this.stopSunAnimation();
+      this.sun.stopAnimation();
     }
 
     // Cut/fill is an earthworks planning readout — it belongs to the plan, so
@@ -1510,49 +1439,38 @@ export class SitePlannerStore {
     this.setViewMode(this.viewMode === 'plan' ? 'scene' : 'plan');
   }
 
-  /** The ☀ toolbar button: shows or hides the sun study bar over the 3D view. */
-  toggleSunStudy(): void {
-    this.isSunStudyOpen = !this.isSunStudyOpen;
-
-    if (!this.isSunStudyOpen) {
-      this.stopSunAnimation();
-    }
-  }
-
-  setSunDate(sunDate: Temporal.PlainDate): void {
-    this.sunDate = sunDate;
-  }
-
-  setSunTimeMinutes(timeMinutes: number): void {
-    this.sunTimeOverrideMinutes = timeMinutes;
-  }
-
-  toggleSunAnimation(): void {
-    if (this.isSunAnimating) {
-      this.stopSunAnimation();
-
-      return;
-    }
-
-    this.isSunAnimating = true;
-    this.sunAnimationTimer = setInterval(this.advanceSunAnimation, SUN_ANIMATION_INTERVAL_MS);
-  }
-
-  stopSunAnimation(): void {
-    if (!isNil(this.sunAnimationTimer)) {
-      clearInterval(this.sunAnimationTimer);
-      this.sunAnimationTimer = undefined;
-    }
-
-    this.isSunAnimating = false;
-  }
-
   /** The overlay segment of the toolbar; it colours the plan and the 3D view alike. */
   setOverlayMode(overlayMode: OverlayMode): void {
     this.overlayMode = overlayMode;
   }
 
   /** Switching tools abandons whatever the previous one had in flight. */
+  /**
+   * One-shot placement (R30): the moment an object lands, the tool hands it
+   * over to the select tool with the object selected, so the very next click
+   * adjusts what was just placed instead of dropping a second one beside it —
+   * the direct-manipulation habit of Figma and Planner 5D. The tool's own key
+   * or its rail button re-arms it for the next one.
+   *
+   * Two kinds of tool stay in hand instead. Those that draw a RUN — walls,
+   * paths, trenches, elevation marks — because their gesture already says when
+   * it is finished. And furniture and electrics, because furnishing a room and
+   * wiring a storey ARE runs of placements: 💬 the sofa is followed by the
+   * table, the socket by the next socket.
+   */
+  finishPlacement(): void {
+    this.setActiveTool('select');
+  }
+
+  /**
+   * Arms a primitive without reaching for a tool. The plot's shape tool and the
+   * building's slab tool draw the SAME primitives, so they share the armed one:
+   * whichever was last picked is what both of them draw.
+   */
+  setArmedShapeTool(armedShapeTool: ShapeTool): void {
+    this.armedShapeTool = armedShapeTool;
+  }
+
   setActiveTool(activeTool: ActiveTool): void {
     if (!isToolAllowed(this.editorMode, activeTool)) {
       return;
@@ -1572,12 +1490,38 @@ export class SitePlannerStore {
     this.cancelDraftPath();
   }
 
-  setSelection(selection: Selection | undefined): void {
-    this.selection = selection;
+  /** The last thing picked: what the properties panel and the gestures read. */
+  get selection(): Selection | undefined {
+    return this.selections[this.selections.length - 1];
+  }
 
-    if (isNil(selection) || selection.kind !== 'path') {
+  setSelection(selection: Selection | undefined): void {
+    this.setSelections(isNil(selection) ? NO_SELECTIONS : [selection]);
+  }
+
+  setSelections(selections: readonly Selection[]): void {
+    this.selections = selections;
+
+    if (this.selection?.kind !== 'path') {
       this.setSelectedPathPointIndex(undefined);
     }
+  }
+
+  /**
+   * Shift-click: adds what was clicked to the selection, or takes it back out.
+   * The market's grammar — Figma, Blender, SketchUp all read Shift this way.
+   */
+  toggleSelection(selection: Selection): void {
+    const without = this.selections.filter(candidate => !isSameSelection(candidate, selection));
+
+    this.setSelections(
+      without.length === this.selections.length ? [...this.selections, selection] : without
+    );
+  }
+
+  /** Whether this exact thing is among the selected — what the plan draws lit. */
+  isSelected(selection: Selection): boolean {
+    return this.selections.some(candidate => isSameSelection(candidate, selection));
   }
 
   /**
@@ -1622,22 +1566,12 @@ export class SitePlannerStore {
     this.editorSession = undefined;
     this.editorMode = VIEW_MODE;
 
-    const { selection } = this;
-
-    if (
-      !isNil(selection) &&
-      (selection.kind === 'shape' ||
-        selection.kind === 'group' ||
-        selection.kind === 'mark' ||
-        selection.kind === 'wall' ||
-        selection.kind === 'opening' ||
-        selection.kind === 'furniture' ||
-        selection.kind === 'device')
-    ) {
-      this.selection = undefined;
-    }
-
-    this.setActiveTool('select');
+    // Selections belonging to the closed editor go with it; the ones that
+    // live on the plan stay. Filtering the whole list — not just the last
+    // one picked — is what makes this right for a multiple selection.
+    this.setSelections(
+      this.selections.filter(candidate => SELECTION_SCOPE[candidate.kind] === 'view')
+    );
   }
 
   /** The path session's edited point, read through the store's one access point. */
@@ -1728,12 +1662,52 @@ export class SitePlannerStore {
     }
   }
 
+  setCursorModifiers(cursorModifiers: PlanModifiers): void {
+    this.cursorModifiers = cursorModifiers;
+  }
+
+  /** The metres the typed text stands for, or nothing while it is unusable. */
+  get typedLengthMeters(): Meters | undefined {
+    return parseTypedLength(this.typedLengthText);
+  }
+
+  /** Types into the VCB: the next committed segment takes this exact length. */
+  setTypedLengthText(typedLengthText: string | undefined): void {
+    this.typedLengthText = typedLengthText;
+  }
+
+  appendTypedLengthKey(key: string): void {
+    this.typedLengthText = appendTypedLengthKeyText(this.typedLengthText, key);
+  }
+
+  dropLastDraftWallPoint(): void {
+    if (this.editorSession?.kind === 'building') {
+      this.editorSession.dropLastDraftWallPoint();
+    }
+  }
+
   setCursorPlanPoint(cursorPlanPoint: Vector2 | undefined): void {
     this.cursorPlanPoint = cursorPlanPoint;
   }
 
   setViewport(viewport: PlanViewport): void {
     this.viewport = viewport;
+  }
+
+  /** Brings a point of the plan to the middle of the view — «take me there». */
+  centreOn(point: Vector2): void {
+    this.viewport = { ...this.viewport, centerMeters: point };
+  }
+
+  /**
+   * Answers a finding in the Замечания panel: aims the editor at the storey it
+   * belongs to and brings its place into view. A list of findings is only
+   * useful if each row is a way to get to the thing it is about.
+   */
+  revealWarning(warning: BuildingWarning): void {
+    this.setViewMode('plan');
+    this.setActiveStorey(warning.storeyId);
+    this.centreOn(warning.at);
   }
 
   setCameraYawDegrees(cameraYawDegrees: number): void {
@@ -1759,7 +1733,7 @@ export class SitePlannerStore {
 
     this.pushHistory();
     this.elevationMarks = addMark(this.elevationMarks, mark);
-    this.selection = { kind: 'mark', markId: mark.id };
+    this.selections = [{ kind: 'mark', markId: mark.id }];
     this.elevationInputMarkId = mark.id;
 
     return mark;
@@ -1790,7 +1764,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'mark' && selection.markId === markId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
 
     if (this.elevationInputMarkId === markId) {
@@ -1834,7 +1808,7 @@ export class SitePlannerStore {
 
     this.pushHistory();
     this.trees = addTree(this.trees, tree);
-    this.selection = { kind: 'tree', treeId: tree.id };
+    this.selections = [{ kind: 'tree', treeId: tree.id }];
 
     return tree;
   }
@@ -1856,7 +1830,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'tree' && selection.treeId === treeId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -1866,7 +1840,7 @@ export class SitePlannerStore {
 
     this.pushHistory();
     this.cars = addCar(this.cars, car);
-    this.selection = { kind: 'car', carId: car.id };
+    this.selections = [{ kind: 'car', carId: car.id }];
 
     return car;
   }
@@ -1884,7 +1858,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'car' && selection.carId === carId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -1911,7 +1885,7 @@ export class SitePlannerStore {
 
     this.pushHistory();
     this.paths = addPath(this.paths, path);
-    this.selection = { kind: 'path', pathId: path.id };
+    this.selections = [{ kind: 'path', pathId: path.id }];
   }
 
   cancelDraftPath(): void {
@@ -2000,7 +1974,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'path' && selection.pathId === pathId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -2027,7 +2001,7 @@ export class SitePlannerStore {
 
     this.pushHistory();
     this.utilityRoutes = addUtilityRouteIn(this.utilityRoutes, route);
-    this.selection = { kind: 'utilityRoute', routeId: route.id };
+    this.selections = [{ kind: 'utilityRoute', routeId: route.id }];
   }
 
   cancelDraftUtilityRoute(): void {
@@ -2105,7 +2079,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'utilityRoute' && selection.routeId === routeId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -2159,6 +2133,12 @@ export class SitePlannerStore {
   /** The keyboard path of R20: the properties panel edits whatever is selected. */
   updateSelectedShape(shape: Shape): void {
     const { selection } = this;
+
+    if (selection?.kind === 'slab') {
+      this.updateSlab(selection.buildingId, shape);
+
+      return;
+    }
 
     if (isNil(selection) || selection.kind !== 'shape') {
       return;
@@ -2255,9 +2235,448 @@ export class SitePlannerStore {
       : findWallIn(this.buildings, selection.buildingId, selection.wallId);
   }
 
+  /** Which stair the tool will place next — the flyout's armed catalogue row. */
+  get armedStairKind(): StairKind {
+    return this.editorSession?.kind === 'building'
+      ? this.editorSession.armedStairKind
+      : DEFAULT_STAIR_KIND;
+  }
+
+  setArmedStairKind(kind: StairKind): void {
+    if (this.editorSession?.kind === 'building') {
+      this.editorSession.setArmedStairKind(kind);
+    }
+  }
+
+  /**
+   * Puts a stair on the active storey, climbing toward the storey above. It
+   * lands where it was clicked, its run derived from that storey's floor to
+   * floor — the footprint is an output, so there is nothing to size by hand.
+   */
+  placeStairAt(planPoint: Vector2): void {
+    const session = this.editorSession;
+    const storeyId = this.activeStoreyId;
+
+    if (session?.kind !== 'building' || isNil(storeyId)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.buildings = addStoreyObject(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      STAIR_OBJECTS,
+      createStair({ kind: session.armedStairKind, position: planPoint })
+    );
+  }
+
+  /**
+   * Puts a post where it was clicked. Both of its ends derive — the floor or
+   * the graded ground beneath it, the storey's ceiling above — so a canopy on
+   * a slope gets posts of the right, different lengths without anyone typing
+   * a number.
+   */
+  placeSupportAt(planPoint: Vector2): void {
+    const session = this.editorSession;
+    const storeyId = this.activeStoreyId;
+
+    if (session?.kind !== 'building' || isNil(storeyId)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.buildings = addStoreyObject(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      SUPPORT_OBJECTS,
+      createSupport({ position: planPoint })
+    );
+  }
+
+  /**
+   * Puts a fireplace where it was clicked (R34). Its flue is DERIVED — it
+   * rises behind the firebox, through every storey above and out of the roof
+   * at the height СП 7.13130 asks for — so a fireplace dragged across the room
+   * takes its chimney with it and nothing has to be re-drawn.
+   */
+  placeFireplaceAt(planPoint: Vector2): void {
+    const session = this.editorSession;
+    const storeyId = this.activeStoreyId;
+
+    if (session?.kind !== 'building' || isNil(storeyId)) {
+      return;
+    }
+
+    const fireplace = createFireplace({ kind: session.armedFireplaceKind, position: planPoint });
+
+    this.pushHistory();
+    this.buildings = addStoreyObject(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      FIREPLACE_OBJECTS,
+      fireplace
+    );
+    this.setSelection({
+      kind: 'fireplace',
+      buildingId: session.buildingId,
+      fireplaceId: fireplace.id,
+    });
+  }
+
+  /** Slides or turns a fireplace; a drag stays one step to undo. */
+  moveFireplace(
+    buildingId: BuildingId,
+    fireplaceId: FireplaceId,
+    changes: Partial<Omit<Fireplace, 'id' | 'kind'>>
+  ): void {
+    this.buildings = updateStoreyObject(
+      this.buildings,
+      buildingId,
+      FIREPLACE_OBJECTS,
+      fireplaceId,
+      changes
+    );
+  }
+
+  /** Turns a fireplace by a quarter — the quick way to aim it into the room. */
+  rotateFireplaceByQuarter(buildingId: BuildingId, fireplaceId: FireplaceId): void {
+    const fireplace = findStoreyObject(this.buildings, buildingId, FIREPLACE_OBJECTS, fireplaceId);
+
+    if (isNil(fireplace)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.moveFireplace(buildingId, fireplaceId, {
+      rotationDegrees: normalizeTurnDegrees(fireplace.rotationDegrees + QUARTER_TURN_DEGREES),
+    });
+  }
+
+  removeFireplaceFrom(buildingId: BuildingId, fireplaceId: FireplaceId): void {
+    this.takeStoreyObjectAway('fireplace', buildingId, fireplaceId);
+  }
+
+  /** Plants a ventilation shaft on the active storey (R35). */
+  placeDuctAt(planPoint: Vector2): void {
+    const session = this.editorSession;
+    const storeyId = this.activeStoreyId;
+
+    if (session?.kind !== 'building' || isNil(storeyId)) {
+      return;
+    }
+
+    const duct = createDuct({ kind: 'vent', position: planPoint });
+
+    this.pushHistory();
+    this.buildings = addStoreyObject(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      DUCT_OBJECTS,
+      duct
+    );
+    this.setSelection({ kind: 'duct', buildingId: session.buildingId, ductId: duct.id });
+  }
+
+  /**
+   * How high a shaft comes out, by its id — the derived number the panels
+   * state. A fireplace's flue answers to the fireplace's own id.
+   */
+  ductTopElevationOf(ductId: string): Meters | undefined {
+    const session = this.editorSession;
+
+    if (session?.kind !== 'building') {
+      return undefined;
+    }
+
+    return this.buildingScenes
+      .find(candidate => candidate.building.id === session.buildingId)
+      ?.ducts.find(run => run.duct.id === ductId)?.topElevation;
+  }
+
+  /** Which fire the rail's flyout is armed with. */
+  get armedFireplaceKind(): FireplaceKind {
+    return this.editorSession?.kind === 'building'
+      ? this.editorSession.armedFireplaceKind
+      : 'fireplace';
+  }
+
+  setArmedFireplaceKind(kind: FireplaceKind): void {
+    if (this.editorSession?.kind === 'building') {
+      this.editorSession.setArmedFireplaceKind(kind);
+    }
+  }
+
+  /** Slides a shaft; the drag announced its own history step when it began. */
+  moveDuct(
+    buildingId: BuildingId,
+    ductId: DuctId,
+    changes: Partial<Omit<VerticalDuct, 'id' | 'kind'>>
+  ): void {
+    this.buildings = updateStoreyObject(this.buildings, buildingId, DUCT_OBJECTS, ductId, changes);
+  }
+
+  removeDuctFrom(buildingId: BuildingId, ductId: DuctId): void {
+    this.takeStoreyObjectAway('duct', buildingId, ductId);
+  }
+
+  /**
+   * Crowns the edited building with a pitched roof, or takes it off. The ridge
+   * starts along the top storey's longer side — the way a roof is actually
+   * framed — so the default already looks like a house.
+   */
+  togglePitchedRoof(): void {
+    const session = this.editorSession;
+
+    if (session?.kind !== 'building') {
+      return;
+    }
+
+    const scene = this.buildingScenes.find(
+      candidate => candidate.building.id === session.buildingId
+    );
+    const top = scene?.storeys[scene.storeys.length - 1];
+
+    this.pushHistory();
+    this.buildings = setPitchedRoofIn(
+      this.buildings,
+      session.buildingId,
+      isNil(scene?.pitchedRoof)
+        ? createPitchedRoof({
+            ridgeDegrees: isNil(top) ? 0 : defaultRidgeDegrees(top.footprint),
+          })
+        : undefined
+    );
+  }
+
+  /** Changes one property of the roof; a typed number stays one step to undo. */
+  updatePitchedRoof(changes: Partial<PitchedRoof>): void {
+    const session = this.editorSession;
+    const roof = this.editedPitchedRoof;
+
+    if (session?.kind !== 'building' || isNil(roof)) {
+      return;
+    }
+
+    this.pushHistory(PITCHED_ROOF_HISTORY_GROUP);
+    this.buildings = setPitchedRoofIn(this.buildings, session.buildingId, { ...roof, ...changes });
+  }
+
+  /** The edited building's roof, or nothing while its top is flat. */
+  get editedPitchedRoof(): PitchedRoof | undefined {
+    const session = this.editorSession;
+    const building =
+      session?.kind === 'building' ? findBuildingIn(this.buildings, session.buildingId) : undefined;
+
+    return isNil(building) ? undefined : pitchedRoofOf(building);
+  }
+
+  /** The edited building's roof as it was resolved — heights and all. */
+  get editedPitchedRoofScene(): PitchedRoofScene | undefined {
+    const session = this.editorSession;
+
+    return session?.kind !== 'building'
+      ? undefined
+      : this.buildingScenes.find(candidate => candidate.building.id === session.buildingId)
+          ?.pitchedRoof;
+  }
+
+  /**
+   * Lays a slab where it was clicked — the floor of an upper storey, drawn as
+   * an object rather than derived from the walls. A cantilevered second floor
+   * needs a floor of its own to stand on, and walls are then held to it. The
+   * plate that lands is a plain shape, so the tool that drew it can be any of
+   * the primitives the plot itself is drawn with.
+   */
+  placeSlabAt(planPoint: Vector2): void {
+    this.addSlab(createSlab(planPoint));
+  }
+
+  /** Puts a drawn slab on the active storey and selects it. */
+  addSlab(slab: Slab): void {
+    const session = this.editorSession;
+    const storeyId = this.activeStoreyId;
+
+    if (session?.kind !== 'building' || isNil(storeyId)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.buildings = addStoreyObject(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      SLAB_OBJECTS,
+      slab
+    );
+    this.setSelection({ kind: 'slab', buildingId: session.buildingId, slabId: slab.id });
+  }
+
+  /** Writes a slab back; a drag announced its own history step when it began. */
+  updateSlab(buildingId: BuildingId, slab: Slab): void {
+    this.buildings = updateStoreyObject(this.buildings, buildingId, SLAB_OBJECTS, slab.id, slab);
+  }
+
+  /** Turns a slab by a quarter, the way a stair or a table turns. */
+  rotateSlabByQuarter(buildingId: BuildingId, slabId: ShapeId): void {
+    const slab = findStoreyObject(this.buildings, buildingId, SLAB_OBJECTS, slabId);
+
+    if (isNil(slab) || !isBoxedShape(slab)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.updateSlab(
+      buildingId,
+      setRectangleRotation(slab, slab.rotationDegrees + QUARTER_TURN_DEGREES)
+    );
+  }
+
+  removeSlabFrom(buildingId: BuildingId, slabId: ShapeId): void {
+    this.takeStoreyObjectAway('slab', buildingId, slabId);
+  }
+
+  /** Slides a post; the drag announced its own history step when it began. */
+  moveSupport(
+    buildingId: BuildingId,
+    supportId: SupportId,
+    changes: Partial<Omit<SupportPost, 'id'>>
+  ): void {
+    this.buildings = updateStoreyObject(
+      this.buildings,
+      buildingId,
+      SUPPORT_OBJECTS,
+      supportId,
+      changes
+    );
+  }
+
+  removeSupportFrom(buildingId: BuildingId, supportId: SupportId): void {
+    this.takeStoreyObjectAway('support', buildingId, supportId);
+  }
+
+  /** Slides or turns a stair; a drag stays one step to undo, like furniture. */
+  moveStair(
+    buildingId: BuildingId,
+    stairId: StairId,
+    changes: Partial<Omit<StairInstance, 'id' | 'kind'>>
+  ): void {
+    this.buildings = updateStoreyObject(
+      this.buildings,
+      buildingId,
+      STAIR_OBJECTS,
+      stairId,
+      changes
+    );
+  }
+
+  /**
+   * Turns a stair by a quarter — the quick way to aim it along a wall. The
+   * grip is for the odd angle; this is for the four that a room actually
+   * wants, and it takes one click rather than an aimed drag.
+   */
+  rotateStairByQuarter(buildingId: BuildingId, stairId: StairId): void {
+    const stair = findStoreyObject(this.buildings, buildingId, STAIR_OBJECTS, stairId);
+
+    if (isNil(stair)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.buildings = updateStoreyObject(this.buildings, buildingId, STAIR_OBJECTS, stairId, {
+      rotationDegrees: normalizeTurnDegrees(stair.rotationDegrees + QUARTER_TURN_DEGREES),
+    });
+  }
+
+  /** Flips a stair to its other hand — the mirrored plan of the same stair. */
+  mirrorStair(buildingId: BuildingId, stairId: StairId): void {
+    const stair = findStoreyObject(this.buildings, buildingId, STAIR_OBJECTS, stairId);
+
+    if (isNil(stair)) {
+      return;
+    }
+
+    this.pushHistory();
+    this.buildings = updateStoreyObject(this.buildings, buildingId, STAIR_OBJECTS, stairId, {
+      isMirrored: stair.isMirrored !== true,
+    });
+  }
+
+  removeStairFrom(buildingId: BuildingId, stairId: StairId): void {
+    this.takeStoreyObjectAway('stair', buildingId, stairId);
+  }
+
   /** The polyline of the wall being clicked out inside the building editor. */
   get draftWallPoints(): readonly Vector2[] {
     return this.editorSession?.kind === 'building' ? this.editorSession.draftWallPoints : [];
+  }
+
+  /**
+   * Where the wall being drawn would reach if it were committed now: the
+   * cursor, grid-snapped, angle-locked while Shift is down and pushed to the
+   * typed length if one was typed. Both the rubber band and the click itself
+   * read this, so what is on screen is what gets built.
+   */
+  get draftWallCursor(): Vector2 | undefined {
+    const points = this.draftWallPoints;
+    const cursor = this.cursorPlanPoint;
+
+    if (points.length === 0 || isNil(cursor)) {
+      return undefined;
+    }
+
+    const last = points[points.length - 1];
+
+    // Object snap wins over both the grid and the angle lock, the way OSNAP
+    // outranks ORTHO in every CAD: catching the corner of an existing wall is
+    // the most specific intent a cursor can express. Alt suspends it with
+    // every other snap.
+    if (!this.cursorModifiers.isAltPressed) {
+      const caught = findNearestSnapPoint(
+        this.wallSnapCandidates,
+        cursor,
+        KEY_POINT_SNAP_RADIUS_PX / this.viewport.pixelsPerMeter
+      );
+
+      if (!isNil(caught)) {
+        return caught;
+      }
+    }
+
+    const { isSnapEnabled, gridStepMeters } = this.settings;
+    const snapped = snapPoint(
+      cursor,
+      isSnapEnabled && !this.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
+    );
+    const locked = this.cursorModifiers.isShiftPressed
+      ? constrainToAngleStep(last, snapped)
+      : snapped;
+
+    return isNil(this.typedLengthMeters)
+      ? locked
+      : applyTypedLength(last, locked, this.typedLengthMeters);
+  }
+
+  /** Corners and midpoints of the walls already standing on the active storey. */
+  get wallSnapCandidates(): readonly Vector2[] {
+    const scene = this.editedStoreyScene;
+
+    return isNil(scene) ? [] : wallSnapPoints(scene.storey.walls);
+  }
+
+  /** Length and angle of the segment in flight — the readout by the cursor. */
+  get draftWallReadout(): SegmentReadout | undefined {
+    const points = this.draftWallPoints;
+    const cursor = this.draftWallCursor;
+
+    if (points.length === 0 || isNil(cursor)) {
+      return undefined;
+    }
+
+    return segmentReadout(points[points.length - 1], cursor);
   }
 
   appendDraftWallPoint(point: Vector2): void {
@@ -2344,6 +2763,72 @@ export class SitePlannerStore {
     return isNil(scene) ? point : clampPointToMultiPolygon(scene.polygons, point);
   }
 
+  /**
+   * Where a wall corner of the ACTIVE storey may land: on that storey's own
+   * floor and no further. The ground storey's floor is the foundation slab;
+   * an upper storey's floor is the slabs it was given, which is what lets it
+   * overhang the storey below (R24) while still standing on something.
+   *
+   * An upper storey with no slabs yet constrains nothing — storeys drawn
+   * before slabs existed keep deriving their outline from the walls, and
+   * clamping them to an empty outline would pin every corner to one point.
+   */
+  clampWallPoint(buildingId: BuildingId, point: Vector2): Vector2 {
+    const building = findBuildingIn(this.buildings, buildingId);
+
+    if (isNil(building)) {
+      return point;
+    }
+
+    if (storeysOf(building)[0]?.id === this.activeStoreyId) {
+      return this.clampToFoundation(buildingId, point);
+    }
+
+    const slabs = this.activeStoreySlabs;
+
+    return slabs.length === 0 ? point : clampPointToMultiPolygon(slabsOutline(slabs), point);
+  }
+
+  /**
+   * What a slab is magnetised to while it is drawn, dragged or resized: the
+   * corners and side middles of the walls STANDING BELOW it, the corners of the
+   * storey below's own outline, its own storey's walls, and the other slabs of
+   * that storey. Positioning a floor by eye against the rooms underneath is
+   * hopeless — this is what makes «flush with the wall downstairs» a gesture.
+   */
+  slabSnapPoints(excludedShapeId: ShapeId): readonly Vector2[] {
+    const session = this.editorSession;
+
+    if (session?.kind !== 'building') {
+      return NO_SNAP_POINTS;
+    }
+
+    const scene = this.buildingScenes.find(
+      candidate => candidate.building.id === session.buildingId
+    );
+    const level = this.editedStoreyScene?.level;
+
+    if (isNil(scene) || isNil(level)) {
+      return NO_SNAP_POINTS;
+    }
+
+    const own = scene.storeys[level];
+    const below = scene.storeys[level - 1];
+
+    return [
+      ...wallSnapPoints(own.storey.walls),
+      ...own.slabs.filter(slab => slab.id !== excludedShapeId).flatMap(getShapeKeyPoints),
+      ...(isNil(below)
+        ? []
+        : [...wallSnapPoints(below.storey.walls), ...outlineCorners(below.footprint)]),
+    ];
+  }
+
+  /** The slabs of the storey being edited — the floor its walls are held to. */
+  get activeStoreySlabs(): readonly Slab[] {
+    return this.editedStoreyScene?.slabs ?? NO_SLABS;
+  }
+
   /** Replaces one drawn point; the caller announces the history step it belongs to. */
   moveWallPoint(buildingId: BuildingId, wallId: WallId, pointIndex: number, point: Vector2): void {
     this.buildings = moveWallPointIn(this.buildings, buildingId, wallId, pointIndex, point);
@@ -2387,7 +2872,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'wall' && selection.wallId === wallId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -2450,7 +2935,7 @@ export class SitePlannerStore {
     const { selection } = this;
 
     if (!isNil(selection) && selection.kind === 'opening' && selection.openingId === openingId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -2522,7 +3007,12 @@ export class SitePlannerStore {
 
     return isNil(selection) || selection.kind !== 'furniture'
       ? undefined
-      : findFurnitureIn(this.buildings, selection.buildingId, selection.furnitureId);
+      : findStoreyObject(
+          this.buildings,
+          selection.buildingId,
+          FURNITURE_OBJECTS,
+          selection.furnitureId
+        );
   }
 
   /** What the furniture tool places next, chosen in the МЕБЕЛЬ panel. */
@@ -2551,7 +3041,13 @@ export class SitePlannerStore {
     const furniture = createFurniture({ catalogId: this.armedFurnitureId, position });
 
     this.pushHistory();
-    this.buildings = addFurnitureIn(this.buildings, buildingId, storeyId, furniture);
+    this.buildings = addStoreyObject(
+      this.buildings,
+      buildingId,
+      storeyId,
+      FURNITURE_OBJECTS,
+      furniture
+    );
     this.setSelection({ kind: 'furniture', buildingId, furnitureId: furniture.id });
   }
 
@@ -2565,7 +3061,13 @@ export class SitePlannerStore {
     changes: Partial<Omit<FurnitureInstance, 'id' | 'catalogId'>>
   ): void {
     this.pushHistory(`${FURNITURE_HISTORY_GROUP}:${furnitureId}`);
-    this.buildings = updateFurnitureIn(this.buildings, buildingId, furnitureId, changes);
+    this.buildings = updateStoreyObject(
+      this.buildings,
+      buildingId,
+      FURNITURE_OBJECTS,
+      furnitureId,
+      changes
+    );
   }
 
   /** Follows the pointer; the caller announces the history step it belongs to. */
@@ -2574,22 +3076,17 @@ export class SitePlannerStore {
     furnitureId: FurnitureId,
     changes: Partial<Omit<FurnitureInstance, 'id' | 'catalogId'>>
   ): void {
-    this.buildings = updateFurnitureIn(this.buildings, buildingId, furnitureId, changes);
+    this.buildings = updateStoreyObject(
+      this.buildings,
+      buildingId,
+      FURNITURE_OBJECTS,
+      furnitureId,
+      changes
+    );
   }
 
   removeFurniture(buildingId: BuildingId, furnitureId: FurnitureId): void {
-    this.pushHistory();
-    this.buildings = removeFurnitureFrom(this.buildings, buildingId, furnitureId);
-
-    const { selection } = this;
-
-    if (
-      !isNil(selection) &&
-      selection.kind === 'furniture' &&
-      selection.furnitureId === furnitureId
-    ) {
-      this.selection = undefined;
-    }
+    this.takeStoreyObjectAway('furniture', buildingId, furnitureId);
   }
 
   /** The device the selection names, when it still exists. */
@@ -2683,14 +3180,7 @@ export class SitePlannerStore {
   }
 
   removeDevice(buildingId: BuildingId, deviceId: DeviceId): void {
-    this.pushHistory();
-    this.buildings = removeDeviceFrom(this.buildings, buildingId, deviceId);
-
-    const { selection } = this;
-
-    if (!isNil(selection) && selection.kind === 'device' && selection.deviceId === deviceId) {
-      this.selection = undefined;
-    }
+    this.takeStoreyObjectAway('device', buildingId, deviceId);
   }
 
   /**
@@ -2773,6 +3263,48 @@ export class SitePlannerStore {
     }
   }
 
+  /**
+   * Which storey the editor is aimed at, counting from one — what the status
+   * bar states so «where am I» is answered on the canvas, not only by a chip.
+   */
+  get activeStoreyOrdinal(): number | undefined {
+    const scene = this.editedStoreyScene;
+
+    return isNil(scene) ? undefined : scene.level + 1;
+  }
+
+  /** Steps the active storey up or down the stack — the PgUp/PgDn of the editor. */
+  stepActiveStorey(direction: 1 | -1): void {
+    const session = this.editorSession;
+
+    if (session?.kind !== 'building') {
+      return;
+    }
+
+    const building = findBuildingIn(this.buildings, session.buildingId);
+
+    if (isNil(building)) {
+      return;
+    }
+
+    const storeys = storeysOf(building);
+    const currentLevel = storeys.findIndex(storey => storey.id === this.activeStoreyId);
+    const nextLevel = currentLevel + direction;
+
+    if (nextLevel >= 0 && nextLevel < storeys.length) {
+      this.setActiveStorey(storeys[nextLevel].id);
+    }
+  }
+
+  /** The selected stair, resolved against the active storey's scene. */
+  get selectedStairScene(): StairScene | undefined {
+    const { selection } = this;
+
+    return selection?.kind === 'stair'
+      ? this.editedStoreyScene?.stairs.find(stairScene => stairScene.stair.id === selection.stairId)
+      : undefined;
+  }
+
   /** The edited building's active storey, resolved against the scenes. */
   get editedStoreyScene(): StoreyScene | undefined {
     const session = this.editorSession;
@@ -2805,7 +3337,13 @@ export class SitePlannerStore {
    * a copy of the storey below's walls (new identities, openings left behind)
    * — and aims the editor at it (`building-editor.md` §5).
    */
-  addStoreyToEditedBuilding({ copyWalls }: { readonly copyWalls: boolean }): void {
+  addStoreyToEditedBuilding({
+    copyWalls,
+    copyOpenings = true,
+  }: {
+    readonly copyWalls: boolean;
+    readonly copyOpenings?: boolean;
+  }): void {
     const session = this.editorSession;
 
     if (session?.kind !== 'building') {
@@ -2818,12 +3356,40 @@ export class SitePlannerStore {
       return;
     }
 
-    const below = storeysOf(building)[storeysOf(building).length - 1];
+    const storeys = storeysOf(building);
+    // The ACTIVE storey is the one being copied, not whichever happens to be
+    // topmost: «add a floor like this one» is what a typical-floor building
+    // asks for, and the active storey is the one on screen.
+    const source = storeys.find(candidate => candidate.id === this.activeStoreyId) ?? storeys[0];
+    const copiedWalls = copyWalls
+      ? source.walls.map(wall => ({ ...wall, id: crypto.randomUUID() as Wall['id'] }))
+      : [];
+    // Openings ride along with the walls they are hosted on, remapped onto the
+    // new wall identities: an upper storey whose outer walls repeat the ones
+    // below almost always repeats their windows too, and cutting them again by
+    // hand is the click-tax every reference editor spares its users.
+    const wallIdByOrigin = new Map(
+      source.walls.map((wall, index) => [wall.id, copiedWalls[index]?.id])
+    );
+    const copiedOpenings =
+      copyWalls && copyOpenings
+        ? source.openings.flatMap(opening => {
+            const wallId = wallIdByOrigin.get(opening.wallId);
+
+            return isNil(wallId)
+              ? []
+              : [{ ...opening, id: crypto.randomUUID() as Opening['id'], wallId }];
+          })
+        : [];
+    // The floor comes along even with «empty storey»: a storey stands on the
+    // one below it, and a new floor with no plates would leave its walls
+    // nothing to be held to and nothing to be drawn on.
+    const copiedSlabs = slabsOf(source).map(slab => ({ ...slab, id: createShapeId() }));
     const storey = createStorey({
-      heightMeters: DEFAULT_UPPER_STOREY_HEIGHT_METERS,
-      walls: copyWalls
-        ? below.walls.map(wall => ({ ...wall, id: crypto.randomUUID() as Wall['id'] }))
-        : [],
+      heightMeters: source.heightMeters,
+      walls: copiedWalls,
+      openings: copiedOpenings,
+      slabs: copiedSlabs,
     });
 
     this.pushHistory();
@@ -2847,6 +3413,23 @@ export class SitePlannerStore {
     if (!isNil(building) && this.activeStoreyId === storeyId) {
       this.setActiveStorey(storeysOf(building)[0].id);
     }
+  }
+
+  /** Types one storey's height; a keystroke burst stays one undo step. */
+  setStoreyHeightOnEdited(storeyId: StoreyId, heightMeters: Meters): void {
+    const session = this.editorSession;
+
+    if (session?.kind !== 'building') {
+      return;
+    }
+
+    this.pushHistory(`${STOREY_HEIGHT_HISTORY_GROUP}:${storeyId}`);
+    this.buildings = updateStoreyHeightIn(
+      this.buildings,
+      session.buildingId,
+      storeyId,
+      heightMeters
+    );
   }
 
   /** Mints a named structure and aims the editor at it, ready to draw. */
@@ -2887,7 +3470,7 @@ export class SitePlannerStore {
         ((selection.kind === 'shape' || selection.kind === 'group') &&
           selection.owner === buildingId))
     ) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
 
     if (activeGroup.owner === buildingId) {
@@ -2963,7 +3546,7 @@ export class SitePlannerStore {
     const composition = resolveComposition(owner, this.boundary, this.buildings);
 
     if (!isNil(composition) && !isNil(findGroupTerm(composition, groupId))) {
-      this.selection = { kind: 'group', owner, groupId };
+      this.selections = [{ kind: 'group', owner, groupId }];
       this.activeGroup = { owner, groupId };
     }
   }
@@ -2981,13 +3564,136 @@ export class SitePlannerStore {
     this.dropSelectionOf(owner, operandId);
   }
 
+  /** Deletes everything selected — one step to undo, however many things. */
   removeSelected(): void {
-    const { selection } = this;
+    const { selections } = this;
 
-    if (isNil(selection)) {
+    if (selections.length === 0) {
       return;
     }
 
+    this.pushHistory();
+    this.runBatched(() => {
+      for (const selection of selections) {
+        this.removeOneSelected(selection);
+      }
+    });
+    this.setSelections(NO_SELECTIONS);
+  }
+
+  /** Runs a command whose several edits are one step of history. */
+  private runBatched(command: VoidFunction): void {
+    this.isBatchingHistory = true;
+
+    try {
+      command();
+    } finally {
+      this.isBatchingHistory = false;
+    }
+  }
+
+  /**
+   * Duplicates whatever is selected, offset by one grid step so the copies
+   * are visible and grabbable rather than hidden exactly under the originals.
+   * The copies become the selection, so a second Ctrl+D steps on again.
+   */
+  duplicateSelected(): void {
+    const { selections } = this;
+
+    if (selections.length === 0) {
+      return;
+    }
+
+    this.pushHistory();
+
+    const offset = this.settings.gridStepMeters;
+    const copies: Selection[] = [];
+
+    this.runBatched(() => {
+      for (const selection of selections) {
+        copies.push(...this.duplicateOne(selection, offset));
+      }
+    });
+
+    if (copies.length > 0) {
+      this.setSelections(copies);
+    }
+  }
+
+  /** One object's copy, placed a step away; nothing for what cannot be copied. */
+  /**
+   * One object's copy, placed a step away; nothing for what cannot be copied.
+   *
+   * Every storey object copies the same way — find it, mint an id, shift it,
+   * put it on the active storey, hand back its selection — so that dance
+   * lives once in {@link copyStoreyObject} and a kind contributes only what
+   * is different about it. Adding the next kind is three lines here.
+   */
+  private duplicateOne(selection: Selection, offsetMeters: Meters): readonly Selection[] {
+    const selected = selectedStoreyObject(selection);
+    const storeyId = this.activeStoreyId;
+
+    // Walls, openings, rooms and site shapes are not copied: each has a host or
+    // a place in a tree that a blind offset would misplace, so their kinds
+    // contribute no `duplicate` to the table.
+    if (isNil(selected) || isNil(storeyId) || isNil(selected.selector.duplicate)) {
+      return NO_SELECTIONS;
+    }
+
+    const copied = selected.selector.duplicate({
+      buildings: this.buildings,
+      buildingId: selected.buildingId,
+      storeyId,
+      id: selected.id,
+      offset: { x: offsetMeters, y: offsetMeters },
+    });
+
+    if (isNil(copied)) {
+      return NO_SELECTIONS;
+    }
+
+    this.buildings = copied.buildings;
+
+    return [copied.selection];
+  }
+
+  private removeSelectedStoreyObject(selection: Selection): void {
+    const selected = selectedStoreyObject(selection);
+
+    if (!isNil(selected)) {
+      this.takeStoreyObjectAway(selected.selector.key, selected.buildingId, selected.id);
+    }
+  }
+
+  /**
+   * Takes one storey object off its storey — whichever kind it is — and drops
+   * any selection that named it. The kinds differ in what removal MEANS only
+   * for a device, which is unwired as it goes; the table carries that
+   * difference, so every caller here is one line.
+   */
+  private takeStoreyObjectAway(key: StoreyObjectKey, buildingId: BuildingId, id: string): void {
+    const selector = storeyObjectSelector(key);
+
+    this.pushHistory();
+    this.buildings = selector.remove(this.buildings, buildingId, id);
+    this.dropSelectionsNaming({ selector, buildingId, id });
+  }
+
+  /** Drops whatever selection pointed at an object that has just left the plan. */
+  private dropSelectionsNaming(selected: SelectedStoreyObject): void {
+    this.selections = this.selections.filter(candidate => {
+      const named = selectedStoreyObject(candidate);
+
+      return (
+        isNil(named) ||
+        named.selector.key !== selected.selector.key ||
+        named.id !== selected.id ||
+        named.buildingId !== selected.buildingId
+      );
+    });
+  }
+
+  private removeOneSelected(selection: Selection): void {
     switch (selection.kind) {
       case 'shape':
         this.removeTerm(selection.owner, selection.shapeId);
@@ -3030,11 +3736,13 @@ export class SitePlannerStore {
 
         return;
       case 'furniture':
-        this.removeFurniture(selection.buildingId, selection.furnitureId);
-
-        return;
       case 'device':
-        this.removeDevice(selection.buildingId, selection.deviceId);
+      case 'stair':
+      case 'support':
+      case 'slab':
+      case 'fireplace':
+      case 'duct':
+        this.removeSelectedStoreyObject(selection);
 
         return;
       default:
@@ -3047,7 +3755,7 @@ export class SitePlannerStore {
     this.isDisposed = true;
     this.editorSession?.dispose();
     this.editorSession = undefined;
-    this.stopSunAnimation();
+    this.sun.stopAnimation();
     this.disposeHistoryCommit();
     this.disposeAutosave?.();
     this.disposeAutosave = undefined;
@@ -3058,7 +3766,7 @@ export class SitePlannerStore {
     const selected = selectedOperand(this.selection);
 
     if (!isNil(selected) && selected.owner === owner && selected.operandId === operandId) {
-      this.selection = undefined;
+      this.selections = NO_SELECTIONS;
     }
   }
 
@@ -3066,13 +3774,6 @@ export class SitePlannerStore {
    * One tick of the day animation: the sun moves on, and the sunset sends it
    * back to the sunrise so the day plays as a loop.
    */
-  private advanceSunAnimation(): void {
-    const { sunDayWindow, sunTimeMinutes } = this;
-    const nextTimeMinutes = sunTimeMinutes + SUN_ANIMATION_STEP_MINUTES;
-
-    this.sunTimeOverrideMinutes =
-      nextTimeMinutes > sunDayWindow.sunsetMinutes ? sunDayWindow.sunriseMinutes : nextTimeMinutes;
-  }
 
   /**
    * Turns the announced state into a step, now that the plan has moved off it.
@@ -3234,6 +3935,11 @@ function selectedOperand(selection: Selection | undefined): SelectedOperand | un
     case 'opening':
     case 'furniture':
     case 'device':
+    case 'stair':
+    case 'support':
+    case 'slab':
+    case 'fireplace':
+    case 'duct':
     case 'utilityRoute':
       return undefined;
     default:
@@ -3241,254 +3947,37 @@ function selectedOperand(selection: Selection | undefined): SelectedOperand | un
   }
 }
 
-/** Midday of the daylight — where a sun study opens before anything is dragged. */
-function middleOf(window: DayWindow): number {
-  return (window.sunriseMinutes + window.sunsetMinutes) / 2;
-}
-
 function findMark(marks: readonly ElevationMark[], markId: MarkId): ElevationMark | undefined {
   return marks.find(mark => mark.id === markId);
 }
 
-/**
- * Where a region's seed label lands: the centroid while it actually lies in
- * the region, an interior fallback otherwise — an annular exposed ceiling
- * centres on its own hole.
- */
-function seedPointOf(polygons: MultiPolygon, centroid: Vector2 | undefined): Vector2 | undefined {
-  if (!isNil(centroid) && isPointInMultiPolygon(polygons, centroid)) {
-    return centroid;
-  }
-
-  return interiorPointOf(polygons);
-}
-
-const NO_ROOMS: readonly BuildingRoom[] = [];
-const NO_STOREY_SCENES: readonly StoreyScene[] = [];
+const NO_BUILDING_WARNINGS: readonly BuildingWarning[] = [];
 
 /**
- * Every storey resolved bottom-up (`building-editor.md` §5): the ground
- * storey stands on the building's composition, an upper one on the hull its
- * own walls enclose — which is what makes a smaller second floor a надстройка
- * and leaves the rest of the floor below as exposed ceiling. Each storey's
- * exposed ceiling — what the storey above does not cover — is cut into roof
- * zones the way rooms are cut out of a floor.
+ * The storeys with the roof that crowns them. Free function rather than an
+ * inline expression: the roof reads the TOP storey, which only exists once the
+ * storeys are resolved, and naming that dependency keeps it visible.
  */
-function deriveStoreyScenes(
+function withPitchedRoof(
   building: Building,
-  groundFootprint: MultiPolygon,
-  padElevation: Meters | undefined
-): readonly StoreyScene[] {
-  const storeys = storeysOf(building);
+  storeys: readonly StoreyScene[]
+): {
+  readonly storeys: readonly StoreyScene[];
+  readonly pitchedRoof: PitchedRoofScene | undefined;
+  readonly ducts: readonly DuctRun[];
+} {
+  // The order is the dependency: the storeys carry the shafts, the top storey
+  // carries the roof, and the roof is what says how high a shaft must come out.
+  const pitchedRoof = derivePitchedRoofScene(pitchedRoofOf(building), storeys);
 
-  if (storeys.length === 0) {
-    return NO_STOREY_SCENES;
-  }
-
-  const resolved: {
-    readonly storey: Storey;
-    readonly footprint: MultiPolygon;
-    readonly wallBodies: MultiPolygon;
-  }[] = storeys.map((storey, level) => {
-    const wallBodies = buildWallBodies(storey.walls);
-
-    return {
-      storey,
-      wallBodies,
-      footprint: level === 0 ? groundFootprint : buildWallHull(wallBodies),
-    };
-  });
-
-  let baseElevation = padElevation;
-
-  return resolved.map(({ storey, footprint, wallBodies }, level) => {
-    const storeyBase = baseElevation;
-
-    if (!isNil(baseElevation)) {
-      baseElevation += storey.heightMeters;
-    }
-
-    const above = resolved[level + 1]?.footprint ?? [];
-    const exposed = subtractPolygons(footprint, above);
-
-    return {
-      storey,
-      level,
-      footprint,
-      baseElevation: storeyBase,
-      wallShapes: storey.walls.map(wall => ({
-        id: wall.id,
-        material: wall.material,
-        polygons: buildWallBody(wall),
-      })),
-      wallBodies,
-      openingShapes: storey.openings.flatMap(opening => {
-        const wall = storey.walls.find(candidate => candidate.id === opening.wallId);
-
-        return isNil(wall)
-          ? []
-          : [{ id: opening.id, kind: opening.kind, polygons: buildOpeningBody(wall, opening) }];
-      }),
-      rooms: deriveRooms(storey, footprint, wallBodies),
-      roofZones: deriveRoofZones(storey, exposed),
-      furniture: furnitureOf(storey),
-      devices: devicesOf(storey).flatMap(device => {
-        const position = devicePlanPosition(storey, device);
-
-        return isNil(position) ? [] : [{ id: device.id, kind: device.kind, position }];
-      }),
-      wires: deriveWires(storey),
-    };
-  });
+  return { storeys, pitchedRoof, ducts: deriveDuctRuns(storeys, pitchedRoof) };
 }
+const NO_SNAP_POINTS: readonly Vector2[] = [];
 
-/** Where a device's symbol stands on the plan, its wall host resolved. */
-function devicePlanPosition(storey: Storey, device: ElectricalDevice): Vector2 | undefined {
-  const { host } = device;
-
-  if (host.kind === 'ceiling') {
-    return host.position;
-  }
-
-  const wall = storey.walls.find(candidate => candidate.id === host.wallId);
-
-  if (isNil(wall)) {
-    return undefined;
-  }
-
-  return pointAlongPolyline(wallCenterline(wall), host.offsetMeters);
+/** Every corner of an outline — what a floor is aligned to when no wall is. */
+function outlineCorners(polygons: MultiPolygon): readonly Vector2[] {
+  return polygons.flatMap(polygon => [polygon.outer, ...polygon.holes].flat());
 }
-
-/** An anchor for the wire router: the wall host, or the resolved free point. */
-function deviceAnchor(device: ElectricalDevice): WireAnchor | undefined {
-  if (device.host.kind === 'wall') {
-    return {
-      kind: 'wall',
-      wallId: device.host.wallId,
-      offsetMeters: device.host.offsetMeters,
-    };
-  }
-
-  return { kind: 'point', position: device.host.position };
-}
-
-/**
- * The wiring the circuits imply (`building-editor.md` §7/§8): one run from
- * the panel to every consumer of its группа, walked along the walls, and a
- * dashed link from every switch to the light it commands.
- */
-function deriveWires(storey: Storey): readonly PlanWire[] {
-  const devices = devicesOf(storey);
-  const byId = new Map(devices.map(device => [device.id, device]));
-  const wires: PlanWire[] = [];
-  const routeBetween = (fromId: DeviceId, toId: DeviceId): readonly Vector2[] | undefined => {
-    const from = byId.get(fromId);
-    const to = byId.get(toId);
-
-    if (isNil(from) || isNil(to)) {
-      return undefined;
-    }
-
-    const fromAnchor = deviceAnchor(from);
-    const toAnchor = deviceAnchor(to);
-
-    if (isNil(fromAnchor) || isNil(toAnchor)) {
-      return undefined;
-    }
-
-    const points = routeWire(storey.walls, fromAnchor, toAnchor);
-
-    return points.length > 1 ? points : undefined;
-  };
-
-  for (const group of groupsOf(storey)) {
-    for (const deviceId of group.deviceIds) {
-      const points = routeBetween(group.panelId, deviceId);
-
-      if (!isNil(points)) {
-        wires.push({ points, isSwitchLink: false });
-      }
-    }
-  }
-
-  for (const link of switchLinksOf(storey)) {
-    const points = routeBetween(link.switchId, link.lightId);
-
-    if (!isNil(points)) {
-      wires.push({ points, isSwitchLink: true });
-    }
-  }
-
-  return wires;
-}
-
-/**
- * The rooms the walls cut the footprint into: footprint minus wall bodies,
- * each remaining region one room, its type looked up by which region holds a
- * stored label's seed point.
- */
-function deriveRooms(
-  storey: Storey,
-  footprint: MultiPolygon,
-  wallBodies: MultiPolygon
-): readonly BuildingRoom[] {
-  if (wallBodies.length === 0 || footprint.length === 0) {
-    return NO_ROOMS;
-  }
-
-  const cut = subtractPolygons(footprint, wallBodies);
-  // A room is what the walls ENCLOSE. A footprint slightly wider than the
-  // wall ring leaves a hairline frame between the walls and the slab's edge —
-  // real leftover concrete, but no room — so regions outside the wall hull
-  // are dropped. Until any enclosure exists (partitions running edge to edge,
-  // the pre-ring way of drawing), the footprint boundary stands in for the
-  // exterior walls and every cut region counts.
-  const hull = buildWallHull(wallBodies);
-  const enclosed = cut.filter(region => {
-    const probe = interiorPointOf([region]);
-
-    return !isNil(probe) && isPointInMultiPolygon(hull, probe);
-  });
-  const regions = enclosed.length > 0 ? enclosed : cut;
-
-  return regions.map(region => {
-    const polygons = [region];
-    const label = storey.roomLabels.find(candidate =>
-      isPointInMultiPolygon(polygons, candidate.position)
-    );
-
-    return {
-      storeyId: storey.id,
-      polygons,
-      areaSquareMeters: multiPolygonArea(polygons),
-      centroid: computeMultiPolygonCentroid(polygons),
-      roomTypeId: label?.roomTypeId,
-      labelId: label?.id,
-      isWet: isNil(label) ? false : isWetRoomType(label.roomTypeId),
-    };
-  });
-}
-
-/** The roof-zone counterpart of {@link deriveRooms}, over the exposed ceiling. */
-function deriveRoofZones(storey: Storey, exposed: MultiPolygon): readonly RoofZoneScene[] {
-  return exposed.map(region => {
-    const polygons = [region];
-    const label = storey.roofZoneLabels.find(candidate =>
-      isPointInMultiPolygon(polygons, candidate.position)
-    );
-
-    return {
-      storeyId: storey.id,
-      polygons,
-      cover: label?.cover ?? DEFAULT_ROOF_COVER,
-      areaSquareMeters: multiPolygonArea(polygons),
-      centroid: computeMultiPolygonCentroid(polygons),
-      labelId: label?.id,
-    };
-  });
-}
-
-/** Drops points that repeat the one before them, wherever the repetition came from. */
 function dropRepeatedPoints(points: readonly Vector2[]): readonly Vector2[] {
   return points.filter((point, index) => index === 0 || !isEqual(point, points[index - 1]));
 }

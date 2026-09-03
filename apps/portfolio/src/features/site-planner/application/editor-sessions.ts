@@ -5,11 +5,14 @@ import { makeAutoObservable } from 'mobx';
 import type { EditTarget } from '../domain/model/editor-mode';
 import type { DeviceId, DeviceKind } from '../domain/model/electrical';
 import { DEFAULT_DEVICE_KIND } from '../domain/model/electrical';
+import type { FireplaceKind } from '../domain/model/fireplaces';
 import type { FurnitureCatalogId } from '../domain/model/furniture';
 import { DEFAULT_FURNITURE_CATALOG_ID } from '../domain/model/furniture';
 import type { OpeningPreset } from '../domain/model/openings';
 import { DEFAULT_OPENING_PRESET } from '../domain/model/openings';
 import type { BuildingId } from '../domain/model/site-plan';
+import type { StairKind } from '../domain/model/stairs';
+import { DEFAULT_STAIR_KIND } from '../domain/model/stairs';
 import type { StoreyId } from '../domain/model/storeys';
 
 /**
@@ -93,8 +96,27 @@ export class BuildingEditSession {
     this.buildingId = buildingId;
   }
 
+  /** The stair kind the flyout is armed with; sticky, like every other tool. */
+  armedStairKind: StairKind = DEFAULT_STAIR_KIND;
+
+  setArmedStairKind(armedStairKind: StairKind): void {
+    this.armedStairKind = armedStairKind;
+  }
+
+  /** Which fire the flyout is armed with — a fireplace, a stove, a sauna's. */
+  armedFireplaceKind: FireplaceKind = 'fireplace';
+
+  setArmedFireplaceKind(armedFireplaceKind: FireplaceKind): void {
+    this.armedFireplaceKind = armedFireplaceKind;
+  }
+
   appendDraftWallPoint(point: Vector2): void {
     this.draftWallPoints = [...this.draftWallPoints, point];
+  }
+
+  /** Peels the last corner back — the Backspace of every polyline tool. */
+  dropLastDraftWallPoint(): void {
+    this.draftWallPoints = this.draftWallPoints.slice(0, -1);
   }
 
   clearDraftWall(): void {

@@ -19,7 +19,6 @@ import {
   translateSiteObject,
 } from '../domain/model/site-object';
 import type { Building, CarInstance } from '../domain/model/site-plan';
-import { computeCarHandles } from '../domain/plan-draw/draw-cars';
 import { normalizeTurnDegrees } from '../domain/units';
 import type { PlanInputTarget, PlanModifiers } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
@@ -46,6 +45,7 @@ import {
   RoutePointGestures,
 } from './interactions/route-point-gestures';
 import { SiteEditInteraction } from './interactions/site-edit-interaction';
+import { computeCarHandles } from './render/plan-draw/draw-cars';
 import type { SitePlannerStore } from './SitePlannerStore';
 
 export const TOOL_HOTKEYS: Readonly<Record<string, PlanTool | undefined>> = {
@@ -53,6 +53,7 @@ export const TOOL_HOTKEYS: Readonly<Record<string, PlanTool | undefined>> = {
   h: 'pan',
   r: 'rectangle',
   c: 'circle',
+  i: 'ellipse',
   e: 'elevation',
   t: 'tree',
   p: 'path',
@@ -137,6 +138,7 @@ export class PlanInteractionController implements PlanInputTarget {
 
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): void {
     this.store.setCursorPlanPoint(planPoint);
+    this.store.setCursorModifiers(modifiers);
     this.hasPointerMoved = false;
 
     const interaction = this.currentEditInteraction();
@@ -183,6 +185,7 @@ export class PlanInteractionController implements PlanInputTarget {
       // viewport before an interaction target is consulted.
       case 'rectangle':
       case 'circle':
+      case 'ellipse':
       case 'elevation':
       case 'pan':
         return;
@@ -193,6 +196,9 @@ export class PlanInteractionController implements PlanInputTarget {
 
   onPointerMove(planPoint: Vector2, modifiers: PlanModifiers): void {
     this.store.setCursorPlanPoint(planPoint);
+    // The draft previews read these, so the segment drawn is the segment a
+    // click commits — Shift locking it square has to be visible to be honest.
+    this.store.setCursorModifiers(modifiers);
     this.hasPointerMoved = true;
 
     const interaction = this.currentEditInteraction();
@@ -323,6 +329,12 @@ export class PlanInteractionController implements PlanInputTarget {
   onPointerLeave(): void {
     this.store.setCursorPlanPoint(undefined);
     this.store.setPathHandleHighlight(undefined);
+  }
+
+  /** Ctrl/Cmd+D: copies whatever is selected, one grid step along. */
+  duplicateSelected(): void {
+    this.onPointerCancel();
+    this.store.duplicateSelected();
   }
 
   onKeyDown(key: string, modifiers: PlanModifiers): boolean {
@@ -623,6 +635,7 @@ export class PlanInteractionController implements PlanInputTarget {
     }
 
     this.store.placeSelectedObject(snapPointToGrid(this.store, planPoint, modifiers));
+    this.store.finishPlacement();
   }
 
   /**

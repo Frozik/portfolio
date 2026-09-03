@@ -1,7 +1,7 @@
 import { clamp } from 'lodash-es';
 
 import type { BoundingBox } from '../geometry/bounding-box';
-import { chooseNiceStepAtMost } from '../plan-draw/shared';
+import { chooseNiceStepAtMost } from '../geometry/nice-step';
 import type { Meters } from '../units';
 import type { PlanViewport } from './plan-viewport';
 import {

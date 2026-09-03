@@ -6,9 +6,9 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 
 import { Button } from '../../../../shared/ui/Button';
+import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElevationMark } from '../../domain/model/site-plan';
-import { formatMeters } from '../../domain/plan-draw/shared';
 import { METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import { ElevationCsvDialog } from './ElevationCsvDialog';

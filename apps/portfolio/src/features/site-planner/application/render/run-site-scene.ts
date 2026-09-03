@@ -150,7 +150,7 @@ export function runSiteScene({
       // The sun moves on its own — the study's slider and its day animation —
       // and moves nothing else, so it is watched apart from the geometry.
       stopWatchingSun = reaction(
-        () => store.sunlight,
+        () => store.sun.light,
         sunlight => sink.applySun(sunlight),
         { fireImmediately: true }
       );
@@ -308,6 +308,7 @@ function readSceneTerrain(store: SitePlannerStore): SceneTerrain {
 function readSceneObjects(store: SitePlannerStore): SceneObjects {
   return {
     house: store.buildingsGeometry,
+    houseGhost: store.buildingsGhostGeometry,
     foundations: store.foundationsGeometry,
     roofOverlays: store.roofOverlaysGeometry,
     furniture: store.sceneFurniture,
