@@ -38,12 +38,12 @@ const SYSTEM_GROUPS: readonly FlyoutVariantGroup<UtilitySystem>[] = [
  */
 export const UtilityToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedSystem = store.nextUtilitySystem;
+    const armedSystem = store.utilities.nextUtilitySystem;
 
     const handleActivate = useFunction(() => store.setActiveTool(UTILITY_TOOL));
 
     const handleChoose = useFunction((system: UtilitySystem) => {
-      store.setNextUtilitySystem(system);
+      store.utilities.setNextUtilitySystem(system);
       store.setActiveTool(UTILITY_TOOL);
     });
 

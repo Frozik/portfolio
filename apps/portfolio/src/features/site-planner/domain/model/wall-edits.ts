@@ -11,11 +11,6 @@ import { devicesOf } from './storeys';
 import type { Wall, WallId } from './walls';
 import { createWall, isWallClosed, MIN_CLOSED_WALL_POINTS, MIN_WALL_POINTS } from './walls';
 
-/** The storey holding the wall — how host-addressed edits find their floor. */
-export function findStoreyOfWall(building: Building, wallId: WallId): Storey | undefined {
-  return storeysOf(building).find(storey => storey.walls.some(wall => wall.id === wallId));
-}
-
 export function addWall(
   buildings: readonly Building[],
   buildingId: BuildingId,

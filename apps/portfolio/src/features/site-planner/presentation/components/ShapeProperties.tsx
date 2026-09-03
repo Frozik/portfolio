@@ -201,7 +201,7 @@ const EmptyProperties = observer(({ store }: { readonly store: SitePlannerStore 
   const { activeTool } = store;
 
   if (activeTool === PLACED_OBJECT_TOOL) {
-    const armedObject = store.nextPlacedObject;
+    const armedObject = store.siteObjects.nextPlacedObject;
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -242,7 +242,7 @@ export const SelectedGroupProperties = observer(
 
     const handleOperationChange = useFunction((value: string) => {
       if (value !== operation && !isNil(selection) && selection.kind === 'group') {
-        store.toggleTermOperation(selection.owner, group.id);
+        store.composition.toggleTermOperation(selection.owner, group.id);
       }
     });
 
@@ -267,14 +267,14 @@ export const SelectedGroupProperties = observer(
 
 export const SelectedShapeProperties = observer(
   ({ store }: { readonly store: SitePlannerStore }) => {
-    const shape = store.selectedShape;
+    const shape = store.composition.selectedShape;
     const { isPropertiesFocusPending } = store;
     const sizeFieldRef = useRef<HTMLFieldSetElement>(null);
     // Typing a number arrives one keystroke at a time; the field the keystrokes
     // belong to is what collapses them into a single step to undo.
     const handleChange = useFunction((nextShape: Shape, field: ShapeField) => {
       store.pushHistory(`${nextShape.id}:${field}`);
-      store.updateSelectedShape(nextShape);
+      store.composition.updateSelectedShape(nextShape);
     });
 
     // A shape just drawn with the pointer asks for the keyboard, so its rough

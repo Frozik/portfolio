@@ -44,12 +44,12 @@ const PLACED_OBJECT_GROUPS: readonly FlyoutVariantGroup<PlacedObject>[] = [
  */
 export const PlacedObjectToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedObject = store.nextPlacedObject;
+    const armedObject = store.siteObjects.nextPlacedObject;
 
     const handleActivate = useFunction(() => store.setActiveTool(PLACED_OBJECT_TOOL));
 
     const handleChoose = useFunction((object: PlacedObject) => {
-      store.setNextPlacedObject(object);
+      store.siteObjects.setNextPlacedObject(object);
       store.setActiveTool(PLACED_OBJECT_TOOL);
     });
 

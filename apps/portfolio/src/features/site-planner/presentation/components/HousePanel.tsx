@@ -68,7 +68,7 @@ const PadModeSelect = observer(
     const currentLabel = padModes[building.padElevationMode];
 
     const handleSelect = useFunction((mode: PadElevationMode) => {
-      store.setPadElevationMode(building.id, mode);
+      store.building.setPadElevationMode(building.id, mode);
     });
 
     return (
@@ -195,16 +195,16 @@ const FoundationBlock = observer(
     const currentLabel = labels.kinds[foundation.kind];
 
     const handleKindSelect = useFunction((kind: FoundationKind) => {
-      store.updateFoundation(building.id, { kind });
+      store.building.updateFoundation(building.id, { kind });
     });
     const handleDepthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.updateFoundation(building.id, { depthMeters: value });
+        store.building.updateFoundation(building.id, { depthMeters: value });
       }
     });
     const handlePlinthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.updateFoundation(building.id, { heightAboveGroundMeters: value });
+        store.building.updateFoundation(building.id, { heightAboveGroundMeters: value });
       }
     });
 
@@ -301,16 +301,16 @@ const EntryRow = observer(
 
     const handleOffsetChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.updateUtilityEntry(building.id, entry.id, { outlineOffsetMeters: value });
+        store.utilities.updateUtilityEntry(building.id, entry.id, { outlineOffsetMeters: value });
       }
     });
     const handleDepthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.updateUtilityEntry(building.id, entry.id, { depthMeters: value });
+        store.utilities.updateUtilityEntry(building.id, entry.id, { depthMeters: value });
       }
     });
     const handleRemove = useFunction(() => {
-      store.removeUtilityEntry(building.id, entry.id);
+      store.utilities.removeUtilityEntry(building.id, entry.id);
     });
 
     return (
@@ -367,7 +367,7 @@ const EntriesBlock = observer(
     const entries = entriesOf(scene.building);
 
     const handleAdd = useFunction((system: UtilitySystem) => {
-      store.addUtilityEntry(scene.building.id, system);
+      store.utilities.addUtilityEntry(scene.building.id, system);
     });
 
     return (
@@ -414,16 +414,16 @@ const BuildingBlock = observer(
 
     const handleManualPadChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.setManualPadElevation(building.id, value);
+        store.building.setManualPadElevation(building.id, value);
       }
     });
     const handleWallHeightChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
-        store.setWallHeight(building.id, value);
+        store.building.setWallHeight(building.id, value);
       }
     });
     const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
-      store.renameBuilding(building.id, event.target.value);
+      store.building.renameBuilding(building.id, event.target.value);
     });
 
     const { meterUnit } = sitePlannerT.plan;
@@ -479,7 +479,7 @@ const BuildingBlock = observer(
 
 /** Every structure on the plot, each with its own pad, walls and earthworks. */
 export const BuildingsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const scenes = store.buildingScenes;
+  const scenes = store.scene.buildingScenes;
 
   if (scenes.length === 0) {
     return undefined;

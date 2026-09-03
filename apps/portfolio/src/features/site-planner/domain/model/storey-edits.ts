@@ -146,20 +146,6 @@ export function findStoreyObject<TInstance extends StoreyObject>(
         .find(item => item.id === itemId);
 }
 
-/** The storey one object stands on — where a finding about it belongs. */
-export function findStoreyOf<TInstance extends StoreyObject>(
-  buildings: readonly Building[],
-  buildingId: BuildingId,
-  kind: StoreyObjectKind<TInstance>,
-  itemId: NoInfer<TInstance['id']>
-): Storey | undefined {
-  const building = buildings.find(candidate => candidate.id === buildingId);
-
-  return isNil(building)
-    ? undefined
-    : storeysOf(building).find(storey => kind.read(storey).some(item => item.id === itemId));
-}
-
 /**
  * Crowns the building with a pitched roof, or takes it off — `undefined` is
  * the flat top the building had before, not an error.

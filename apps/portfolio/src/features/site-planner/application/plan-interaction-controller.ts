@@ -173,11 +173,13 @@ export class PlanInteractionController implements PlanInputTarget {
 
         return;
       case 'path':
-        this.store.appendDraftPathPoint(snapPointToGrid(this.store, planPoint, modifiers));
+        this.store.siteObjects.appendDraftPathPoint(
+          snapPointToGrid(this.store, planPoint, modifiers)
+        );
 
         return;
       case 'utility':
-        this.store.appendDraftUtilityPoint(this.snapUtilityPoint(planPoint, modifiers));
+        this.store.utilities.appendDraftUtilityPoint(this.snapUtilityPoint(planPoint, modifiers));
 
         return;
       // The site editor's own tools were consumed above; the pan tool never
@@ -241,7 +243,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    if (!isNil(this.store.selectedUtilityRoute)) {
+    if (!isNil(this.store.utilities.selectedUtilityRoute)) {
       applyRouteHandleHover(this.context, planPoint, { includeMidpoints: false });
 
       return;
@@ -304,7 +306,7 @@ export class PlanInteractionController implements PlanInputTarget {
       this.carTurn = undefined;
 
       if (this.hasPointerMoved) {
-        this.store.updateCar(carTurn.startCar);
+        this.store.siteObjects.updateCar(carTurn.startCar);
       }
     }
 
@@ -317,7 +319,7 @@ export class PlanInteractionController implements PlanInputTarget {
       this.objectDrag = undefined;
 
       if (this.hasPointerMoved) {
-        this.store.applySiteObject(objectDrag.startObject);
+        this.store.siteObjects.applySiteObject(objectDrag.startObject);
       }
     }
 
@@ -366,14 +368,14 @@ export class PlanInteractionController implements PlanInputTarget {
       return true;
     }
 
-    if (key === COMMIT_KEY && this.store.draftPathPoints.length > 0) {
-      this.store.commitDraftPath();
+    if (key === COMMIT_KEY && this.store.siteObjects.draftPathPoints.length > 0) {
+      this.store.siteObjects.commitDraftPath();
 
       return true;
     }
 
-    if (key === COMMIT_KEY && this.store.draftUtilityPoints.length > 0) {
-      this.store.commitDraftUtilityRoute();
+    if (key === COMMIT_KEY && this.store.utilities.draftUtilityPoints.length > 0) {
+      this.store.utilities.commitDraftUtilityRoute();
 
       return true;
     }
@@ -437,8 +439,8 @@ export class PlanInteractionController implements PlanInputTarget {
       !isNil(this.carTurn) ||
       this.viewPathGestures.hasActive() ||
       this.viewRouteGestures.hasActive() ||
-      this.store.draftPathPoints.length > 0 ||
-      this.store.draftUtilityPoints.length > 0 ||
+      this.store.siteObjects.draftPathPoints.length > 0 ||
+      this.store.utilities.draftUtilityPoints.length > 0 ||
       this.store.measurePoints.length > 0
     );
   }
@@ -447,8 +449,8 @@ export class PlanInteractionController implements PlanInputTarget {
     this.onPointerCancel();
     this.currentEditInteraction()?.cancelTransients();
     this.store.setMeasurePoints([]);
-    this.store.cancelDraftPath();
-    this.store.cancelDraftUtilityRoute();
+    this.store.siteObjects.cancelDraftPath();
+    this.store.utilities.cancelDraftUtilityRoute();
   }
 
   /** Enter descends into the selected object's editor, when it has one. */
@@ -478,14 +480,14 @@ export class PlanInteractionController implements PlanInputTarget {
    * emptiness. Finishing a drawn polyline still comes first.
    */
   onDoubleClick(planPoint: Vector2, modifiers: PlanModifiers): void {
-    if (this.store.draftPathPoints.length > 0) {
-      this.store.commitDraftPath();
+    if (this.store.siteObjects.draftPathPoints.length > 0) {
+      this.store.siteObjects.commitDraftPath();
 
       return;
     }
 
-    if (this.store.draftUtilityPoints.length > 0) {
-      this.store.commitDraftUtilityRoute();
+    if (this.store.utilities.draftUtilityPoints.length > 0) {
+      this.store.utilities.commitDraftUtilityRoute();
 
       return;
     }
@@ -634,7 +636,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    this.store.placeSelectedObject(snapPointToGrid(this.store, planPoint, modifiers));
+    this.store.siteObjects.placeSelectedObject(snapPointToGrid(this.store, planPoint, modifiers));
     this.store.finishPlacement();
   }
 
@@ -674,7 +676,7 @@ export class PlanInteractionController implements PlanInputTarget {
       modifiers
     );
 
-    this.store.applySiteObject(
+    this.store.siteObjects.applySiteObject(
       translateSiteObject(drag.startObject, {
         x: reference.x - drag.startReference.x,
         y: reference.y - drag.startReference.y,
@@ -718,10 +720,10 @@ export class PlanInteractionController implements PlanInputTarget {
    */
   private snapUtilityPoint(planPoint: Vector2, modifiers: PlanModifiers): Vector2 {
     const withinMeters = ENTRY_SNAP_RADIUS_PX / this.getViewport().pixelsPerMeter;
-    const entryPoint = this.store.nearestEntryPoint(
+    const entryPoint = this.store.utilities.nearestEntryPoint(
       planPoint,
       withinMeters,
-      this.store.nextUtilitySystem
+      this.store.utilities.nextUtilitySystem
     );
 
     return entryPoint ?? snapPointToGrid(this.store, planPoint, modifiers);
@@ -762,7 +764,7 @@ export class PlanInteractionController implements PlanInputTarget {
    * announcement no move follows simply expires.
    */
   private beginCarRotation(planPoint: Vector2): boolean {
-    const car = this.store.selectedCar;
+    const car = this.store.siteObjects.selectedCar;
 
     if (isNil(car)) {
       return false;
@@ -791,7 +793,7 @@ export class PlanInteractionController implements PlanInputTarget {
   private turnCarTo(turn: CarTurn, planPoint: Vector2, modifiers: PlanModifiers): void {
     const { startCar } = turn;
 
-    this.store.updateCar({
+    this.store.siteObjects.updateCar({
       ...startCar,
       rotationDegrees: normalizeTurnDegrees(
         snapLength(

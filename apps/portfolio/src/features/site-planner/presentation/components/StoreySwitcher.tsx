@@ -60,10 +60,16 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
   const building = store.buildings.find(candidate => candidate.id === buildingId);
   const labels = sitePlannerT.storeys;
 
-  const handleSelect = useFunction((storeyId: StoreyId) => store.setActiveStorey(storeyId));
-  const handleAddEmpty = useFunction(() => store.addStoreyToEditedBuilding({ copyWalls: false }));
-  const handleAddCopy = useFunction(() => store.addStoreyToEditedBuilding({ copyWalls: true }));
-  const handleToggleReference = useFunction(() => store.toggleReferenceStorey());
+  const handleSelect = useFunction((storeyId: StoreyId) =>
+    store.building.setActiveStorey(storeyId)
+  );
+  const handleAddEmpty = useFunction(() =>
+    store.building.addStoreyToEditedBuilding({ copyWalls: false })
+  );
+  const handleAddCopy = useFunction(() =>
+    store.building.addStoreyToEditedBuilding({ copyWalls: true })
+  );
+  const handleToggleReference = useFunction(() => store.building.toggleReferenceStorey());
   const [isRemoveConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const handleRemoveRequest = useFunction(() => setRemoveConfirmOpen(true));
   const handleRemoveCancel = useFunction(() => setRemoveConfirmOpen(false));
@@ -71,12 +77,12 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
   // stairs that climbed into it. One mis-aimed 24 px click is a day's work,
   // and the chip cannot say «Ctrl+Z» loudly enough to make that acceptable.
   const handleRemoveConfirm = useFunction(() => {
-    const activeStoreyId = store.activeStoreyId;
+    const activeStoreyId = store.building.activeStoreyId;
 
     setRemoveConfirmOpen(false);
 
     if (!isNil(activeStoreyId)) {
-      store.removeStoreyFromEdited(activeStoreyId);
+      store.building.removeStoreyFromEdited(activeStoreyId);
     }
   });
 
@@ -85,7 +91,7 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
   }
 
   const storeys = storeysOf(building);
-  const activeStoreyId = store.activeStoreyId;
+  const activeStoreyId = store.building.activeStoreyId;
   const activeLevel = storeys.findIndex(storey => storey.id === activeStoreyId);
   const isUpperActive = activeLevel > 0;
 
@@ -128,7 +134,7 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
       <button
         type="button"
         aria-label={labels.referenceToggle}
-        aria-pressed={store.isReferenceStoreyVisible}
+        aria-pressed={store.building.isReferenceStoreyVisible}
         title={labels.referenceToggle}
         onClick={handleToggleReference}
         disabled={!isUpperActive}
@@ -139,7 +145,7 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
           'disabled:cursor-default disabled:text-text-secondary/40 disabled:hover:bg-transparent'
         )}
       >
-        {store.isReferenceStoreyVisible ? (
+        {store.building.isReferenceStoreyVisible ? (
           <Eye size={GLYPH_SIZE_PX} aria-hidden />
         ) : (
           <EyeOff size={GLYPH_SIZE_PX} aria-hidden />

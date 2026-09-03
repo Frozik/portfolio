@@ -29,7 +29,7 @@ export const StatusBar = observer(
   }) => {
     const { meterUnit } = sitePlannerT.plan;
     const { cursorPlanPoint } = store;
-    const activeStoreyOrdinal = store.activeStoreyOrdinal;
+    const activeStoreyOrdinal = store.building.activeStoreyOrdinal;
 
     return (
       <StatusBarShell>

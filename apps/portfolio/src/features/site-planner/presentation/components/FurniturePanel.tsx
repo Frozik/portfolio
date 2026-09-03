@@ -30,7 +30,7 @@ const PlacedRow = memo(
       store.setSelection({ kind: 'furniture', buildingId, furnitureId: item.id });
     });
     const handleRemove = useFunction(() => {
-      store.removeFurniture(buildingId, item.id);
+      store.storeyObjects.removeFurniture(buildingId, item.id);
     });
 
     return (
@@ -69,7 +69,7 @@ const PlacedRow = memo(
  */
 export const FurniturePanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

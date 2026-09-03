@@ -32,7 +32,7 @@ const MarkRow = observer(
       !isNil(selection) && selection.kind === 'mark' && selection.markId === mark.id;
 
     const handleSelect = useFunction(() => store.setSelection({ kind: 'mark', markId: mark.id }));
-    const handleRemove = useFunction(() => store.removeElevationMark(mark.id));
+    const handleRemove = useFunction(() => store.siteObjects.removeElevationMark(mark.id));
 
     return (
       <li
@@ -105,7 +105,7 @@ export const ElevationMarksPanel = observer(({ store }: { readonly store: SitePl
       <ElevationCsvDialog
         open={isCsvDialogOpen}
         onClose={handleCloseCsvDialog}
-        onSubmit={store.addElevationMarks}
+        onSubmit={store.siteObjects.addElevationMarks}
       />
     </PlannerPanel>
   );

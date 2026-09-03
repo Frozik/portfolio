@@ -52,7 +52,7 @@ export const SelectedWallProperties = observer(
       if (!isNil(buildingId) && !isNil(material)) {
         // A new construction brings its typical thickness with it; a typed
         // thickness is a later edit that then survives on its own.
-        store.updateWallProperties(buildingId, wall.id, {
+        store.walls.updateWallProperties(buildingId, wall.id, {
           material,
           thicknessMeters: WALL_MATERIAL_DEFAULT_THICKNESS[material],
         });
@@ -60,19 +60,19 @@ export const SelectedWallProperties = observer(
     });
     const handleThicknessChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateWallProperties(buildingId, wall.id, { thicknessMeters: value });
+        store.walls.updateWallProperties(buildingId, wall.id, { thicknessMeters: value });
       }
     });
     const handleReferenceLineChange = useFunction((value: string) => {
       const referenceLine = parseWallReferenceLine(value);
 
       if (!isNil(buildingId) && !isNil(referenceLine)) {
-        store.updateWallProperties(buildingId, wall.id, { referenceLine });
+        store.walls.updateWallProperties(buildingId, wall.id, { referenceLine });
       }
     });
     const handleCloseRing = useFunction(() => {
       if (!isNil(buildingId)) {
-        store.closeWallRing(buildingId, wall.id);
+        store.walls.closeWallRing(buildingId, wall.id);
       }
     });
 
@@ -121,7 +121,7 @@ export const SelectedWallProperties = observer(
 export const SelectedBuildingProperties = observer(
   ({ store, building }: { readonly store: SitePlannerStore; readonly building: Building }) => {
     const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
-      store.renameBuilding(building.id, event.target.value);
+      store.building.renameBuilding(building.id, event.target.value);
     });
     const handleEdit = useFunction(() => {
       store.openEditorDoor({

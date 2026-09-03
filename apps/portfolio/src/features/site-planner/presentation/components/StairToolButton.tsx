@@ -38,12 +38,12 @@ const TOOL_HOTKEY =
  */
 export const StairToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedKind = store.armedStairKind;
+    const armedKind = store.storeyObjects.armedStairKind;
 
     const handleActivate = useFunction(() => store.setActiveTool('building:stair'));
 
     const handleChoose = useFunction((kind: StairKind) => {
-      store.setArmedStairKind(kind);
+      store.storeyObjects.setArmedStairKind(kind);
       store.setActiveTool('building:stair');
     });
 

@@ -47,13 +47,13 @@ const TOOL_HOTKEY =
  */
 export const ElectricToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedKind = store.armedDeviceKind;
+    const armedKind = store.storeyObjects.armedDeviceKind;
     const ArmedIcon = KIND_ICONS[armedKind];
 
     const handleActivate = useFunction(() => store.setActiveTool('building:electric'));
 
     const handleChoose = useFunction((kind: DeviceKind) => {
-      store.setArmedDeviceKind(kind);
+      store.storeyObjects.setArmedDeviceKind(kind);
       store.setActiveTool('building:electric');
     });
 

@@ -48,7 +48,7 @@ function toolOptionsFor(store: SitePlannerStore): ReactNode {
     case 'building:connect':
       return <PanelHint>{sitePlannerT.electrical.connectHint}</PanelHint>;
     case 'utility':
-      return isNil(store.selectedUtilityRoute) ? (
+      return isNil(store.utilities.selectedUtilityRoute) ? (
         <UtilityToolProperties store={store} />
       ) : undefined;
     default:
@@ -60,9 +60,12 @@ function toolOptionsFor(store: SitePlannerStore): ReactNode {
  * The keyboard path of R20: exact numbers for whatever the canvas has selected.
  */
 const SelectionProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const { selectedMark, selectedTree, selectedCar, selectedPath, selectedGroupTerm } = store;
-  const { selectedBuilding, selectedWall, selectedOpening, selectedFurniture } = store;
-  const { selectedDevice, selectedUtilityRoute } = store;
+  const { selectedGroupTerm } = store.composition;
+  const { selectedMark, selectedTree, selectedCar, selectedPath } = store.siteObjects;
+  const { selectedBuilding } = store.building;
+  const { selectedWall, selectedOpening } = store.walls;
+  const { selectedFurniture, selectedDevice } = store.storeyObjects;
+  const { selectedUtilityRoute } = store.utilities;
 
   if (!isNil(selectedDevice)) {
     return <SelectedDeviceProperties store={store} device={selectedDevice} />;

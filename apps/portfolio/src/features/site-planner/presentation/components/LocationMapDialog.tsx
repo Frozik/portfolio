@@ -7,7 +7,6 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { SiteLocationChanges } from '../../domain/model/settings-edits';
-import { lookupTimeZoneId } from '../../infrastructure/timezone-lookup';
 import { COORDINATE_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import styles from './LocationMapDialog.module.scss';
@@ -73,11 +72,17 @@ export const LocationMapDialog = memo(
   ({
     initialLatitudeDegrees,
     initialLongitudeDegrees,
+    resolveTimeZoneId,
     onApply,
     onClose,
   }: {
     readonly initialLatitudeDegrees: number;
     readonly initialLongitudeDegrees: number;
+    /** Answers the IANA zone of a picked point; the store's offline lookup. */
+    readonly resolveTimeZoneId: (
+      latitudeDegrees: number,
+      longitudeDegrees: number
+    ) => string | undefined;
     readonly onApply: (location: SiteLocationChanges) => void;
     readonly onClose: VoidFunction;
   }) => {
@@ -89,7 +94,10 @@ export const LocationMapDialog = memo(
     const [point, setPoint] = useState(() =>
       toWrappedPoint(initialLatitudeDegrees, initialLongitudeDegrees)
     );
-    const timeZoneId = useMemo(() => lookupTimeZoneId(point.lat, point.lng), [point]);
+    const timeZoneId = useMemo(
+      () => resolveTimeZoneId(point.lat, point.lng),
+      [resolveTimeZoneId, point]
+    );
 
     useEffect(() => {
       if (isNil(container)) {

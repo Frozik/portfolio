@@ -66,7 +66,7 @@ export class RouteEditInteraction implements EditorInteraction {
   /** Over a square it takes the bend out; over emptiness it closes the editor. */
   onDoubleClick(planPoint: Vector2, _modifiers: PlanModifiers): void {
     const { store, getViewport } = this.context;
-    const route = store.selectedUtilityRoute;
+    const route = store.utilities.selectedUtilityRoute;
 
     if (isNil(route) || route.id !== this.routeId) {
       return;
@@ -89,7 +89,7 @@ export class RouteEditInteraction implements EditorInteraction {
       // The double click's presses have already grabbed the point and announced
       // a step; removing is what the gesture turns out to have been.
       this.gestures.drop();
-      store.removeUtilityRoutePoint(route.id, handle.index);
+      store.utilities.removeUtilityRoutePoint(route.id, handle.index);
       // The removed point's highlight would light its successor by index.
       store.setPathHandleHighlight(undefined);
     }

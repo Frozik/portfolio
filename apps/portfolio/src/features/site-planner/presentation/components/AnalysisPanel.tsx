@@ -3,10 +3,11 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { formatCubicMeters } from '../../application/render/plan-draw/shared';
-import type { OverlayMode, SitePlannerStore } from '../../application/SitePlannerStore';
+import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { RampColor } from '../../domain/terrain/analysis-raster';
 import { CUT_FILL_RAMP, SLOPE_RAMP, toCssColor } from '../../domain/terrain/analysis-raster';
 import { GENTLE_SLOPE_PERCENT, STEEP_SLOPE_PERCENT } from '../../domain/terrain/slope';
+import type { OverlayMode } from '../../domain/view/overlay-mode';
 import { sitePlannerT } from '../translations';
 
 /** What the legend calls itself: the analysis it is explaining. */
@@ -70,7 +71,7 @@ const SlopeLegend = memo(() => (
  * than computing a second opinion of them.
  */
 const CutFillLegend = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const report = store.totalCutFill;
+  const report = store.scene.totalCutFill;
 
   if (isNil(report)) {
     return <span className="text-[11px] text-text-secondary">{sitePlannerT.analysis.noHouse}</span>;

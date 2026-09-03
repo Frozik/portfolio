@@ -18,7 +18,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const StairsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
   const labels = sitePlannerT.stairs;
   const { meterUnit } = sitePlannerT.plan;
 
@@ -41,19 +41,19 @@ export const StairsPanel = observer(({ store }: { readonly store: SitePlannerSto
           key: 'rotate',
           label: labels.rotate,
           icon: RotateCw,
-          onClick: () => store.rotateStairByQuarter(buildingId, stair.id),
+          onClick: () => store.storeyObjects.rotateStairByQuarter(buildingId, stair.id),
         },
         {
           key: 'mirror',
           label: labels.mirror,
           icon: FlipHorizontal2,
-          onClick: () => store.mirrorStair(buildingId, stair.id),
+          onClick: () => store.storeyObjects.mirrorStair(buildingId, stair.id),
         },
         {
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.removeStairFrom(buildingId, stair.id),
+          onClick: () => store.storeyObjects.removeStairFrom(buildingId, stair.id),
         },
       ],
     };

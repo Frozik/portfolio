@@ -17,7 +17,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const SupportsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
   const labels = sitePlannerT.supports;
   const { meterUnit } = sitePlannerT.plan;
 
@@ -41,7 +41,7 @@ export const SupportsPanel = observer(({ store }: { readonly store: SitePlannerS
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.removeSupportFrom(buildingId, post.id),
+          onClick: () => store.storeyObjects.removeSupportFrom(buildingId, post.id),
         },
       ],
     };

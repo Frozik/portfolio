@@ -12,13 +12,13 @@ import { applyPolylineHandleHover, PolylinePointGestures } from './polyline-poin
 export class PathPointGestures extends PolylinePointGestures<SitePath> {
   constructor(context: InteractionContext) {
     super(context, {
-      selected: () => context.store.selectedPath,
+      selected: () => context.store.siteObjects.selectedPath,
       positions: path => path.points.map(point => point.position),
       movePoint: (path, pointIndex, position) =>
-        context.store.movePathPoint(path.id, pointIndex, position),
+        context.store.siteObjects.movePathPoint(path.id, pointIndex, position),
       insertPoint: (path, segmentIndex, position) =>
-        context.store.insertPathPoint(path.id, segmentIndex, position),
-      restore: path => context.store.updatePath(path),
+        context.store.siteObjects.insertPathPoint(path.id, segmentIndex, position),
+      restore: path => context.store.siteObjects.updatePath(path),
       onGrabbed: pointIndex => context.store.setSelectedPathPointIndex(pointIndex),
     });
   }
@@ -33,7 +33,7 @@ export function applyPathHandleHover(
   applyPolylineHandleHover(
     context,
     planPoint,
-    context.store.selectedPath?.points.map(point => point.position),
+    context.store.siteObjects.selectedPath?.points.map(point => point.position),
     options
   );
 }

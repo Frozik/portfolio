@@ -29,13 +29,13 @@ const WallRow = observer(
     readonly ordinal: number;
   }) => {
     const labels = sitePlannerT.walls;
-    const isSelected = store.selectedWall?.id === wall.id;
+    const isSelected = store.walls.selectedWall?.id === wall.id;
 
     const handleSelect = useFunction(() => {
       store.setSelection({ kind: 'wall', buildingId, wallId: wall.id });
     });
     const handleRemove = useFunction(() => {
-      store.removeWall(buildingId, wall.id);
+      store.walls.removeWall(buildingId, wall.id);
     });
 
     return (
@@ -79,7 +79,7 @@ const WallRow = observer(
 /** The building editor's wall inventory: select from the list, remove, or read. */
 export const WallsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

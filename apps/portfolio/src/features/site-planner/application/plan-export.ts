@@ -37,7 +37,7 @@ export async function exportPlanPng({
   readonly labels: PlanLabels;
 }): Promise<boolean> {
   const content = readPlanContent(store);
-  const viewport = computeExportViewport(store.siteBounds);
+  const viewport = computeExportViewport(store.terrain.siteBounds);
 
   const canvas = document.createElement('canvas');
 

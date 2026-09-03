@@ -38,12 +38,12 @@ const TOOL_HOTKEY =
  */
 export const FireplaceToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedKind = store.armedFireplaceKind;
+    const armedKind = store.storeyObjects.armedFireplaceKind;
 
     const handleActivate = useFunction(() => store.setActiveTool('building:fireplace'));
 
     const handleChoose = useFunction((kind: FireplaceKind) => {
-      store.setArmedFireplaceKind(kind);
+      store.storeyObjects.setArmedFireplaceKind(kind);
       store.setActiveTool('building:fireplace');
     });
 

@@ -17,7 +17,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
   const labels = sitePlannerT.heating;
 
   if (isNil(buildingId) || isNil(scene)) {
@@ -25,7 +25,7 @@ export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerSt
   }
 
   const rows: readonly ObjectRow[] = scene.fireplaces.map(({ fireplace }) => {
-    const topElevation = store.ductTopElevationOf(fireplace.id);
+    const topElevation = store.storeyObjects.ductTopElevationOf(fireplace.id);
 
     return {
       key: fireplace.id,
@@ -41,13 +41,13 @@ export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerSt
           key: 'rotate',
           label: labels.rotate,
           icon: RotateCw,
-          onClick: () => store.rotateFireplaceByQuarter(buildingId, fireplace.id),
+          onClick: () => store.storeyObjects.rotateFireplaceByQuarter(buildingId, fireplace.id),
         },
         {
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.removeFireplaceFrom(buildingId, fireplace.id),
+          onClick: () => store.storeyObjects.removeFireplaceFrom(buildingId, fireplace.id),
         },
       ],
     };

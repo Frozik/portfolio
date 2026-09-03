@@ -85,7 +85,7 @@ const WarningRow = memo(
  * hiding them in amber highlights on the canvas would waste that.
  */
 export const WarningsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const warnings = store.buildingWarnings;
+  const warnings = store.scene.buildingWarnings;
 
   return (
     <PlannerPanel title={sitePlannerT.warnings.panelTitle}>

@@ -17,26 +17,26 @@ import { applyPolylineHandleHover, PolylinePointGestures } from './polyline-poin
 export class WallPointGestures extends PolylinePointGestures<Wall> {
   constructor(context: InteractionContext, buildingId: BuildingId) {
     super(context, {
-      selected: () => context.store.selectedWall,
+      selected: () => context.store.walls.selectedWall,
       positions: wall => wall.points,
       isClosed: wall => isWallClosed(wall),
       // A ground-storey corner moved or planted past the slab lands on its
       // edge; an upper storey's corner is free to overhang (R24).
       movePoint: (wall, pointIndex, position) =>
-        context.store.moveWallPoint(
+        context.store.walls.moveWallPoint(
           buildingId,
           wall.id,
           pointIndex,
-          context.store.clampWallPoint(buildingId, position)
+          context.store.walls.clampWallPoint(buildingId, position)
         ),
       insertPoint: (wall, segmentIndex, position) =>
-        context.store.insertWallPoint(
+        context.store.walls.insertWallPoint(
           buildingId,
           wall.id,
           segmentIndex,
-          context.store.clampWallPoint(buildingId, position)
+          context.store.walls.clampWallPoint(buildingId, position)
         ),
-      restore: wall => context.store.restoreWall(buildingId, wall),
+      restore: wall => context.store.walls.restoreWall(buildingId, wall),
       snapPoint: (wall, pointIndex, position) =>
         oppositeEndWithinReach(context, wall, pointIndex, position),
     });
@@ -79,7 +79,7 @@ function oppositeEndWithinReach(
 
 /** The hover half, over the selected wall's handles. */
 export function applyWallHandleHover(context: InteractionContext, planPoint: Vector2): void {
-  const wall = context.store.selectedWall;
+  const wall = context.store.walls.selectedWall;
 
   applyPolylineHandleHover(context, planPoint, wall?.points, {
     includeMidpoints: true,

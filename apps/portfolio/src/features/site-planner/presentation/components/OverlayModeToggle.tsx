@@ -2,8 +2,8 @@ import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
-
-import type { OverlayMode, SitePlannerStore } from '../../application/SitePlannerStore';
+import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { OverlayMode } from '../../domain/view/overlay-mode';
 import { sitePlannerT } from '../translations';
 
 interface OverlayModeOption {

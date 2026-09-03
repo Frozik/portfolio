@@ -167,7 +167,7 @@ const TerrainSection = observer(({ store }: { readonly store: SitePlannerStore }
       />
       <PropertyField
         label={sitePlannerT.settings.terrain.frostDepth}
-        value={store.frostDepthMeters}
+        value={store.utilities.frostDepthMeters}
         decimal={METER_DECIMALS}
         onValueChange={handleFrostDepthChange}
       />
@@ -290,6 +290,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
           <LocationMapDialog
             initialLatitudeDegrees={location.latitudeDegrees}
             initialLongitudeDegrees={location.longitudeDegrees}
+            resolveTimeZoneId={store.timeZoneIdAt}
             onApply={handleMapApply}
             onClose={handleMapClose}
           />

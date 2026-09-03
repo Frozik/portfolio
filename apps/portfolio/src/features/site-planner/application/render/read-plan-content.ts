@@ -19,11 +19,11 @@ import type { PlanContent, PlanEditorChrome } from './plan-draw/draw-plan';
 function readPlanBuilding(store: SitePlannerStore, scene: BuildingScene): PlanBuilding {
   const isEdited = editedBuildingId(store.editorMode) === scene.building.id;
   const active = isEdited
-    ? scene.storeys.find(storeyScene => storeyScene.storey.id === store.activeStoreyId)
+    ? scene.storeys.find(storeyScene => storeyScene.storey.id === store.building.activeStoreyId)
     : undefined;
   const displayed = active ?? scene.storeys[0];
   const below =
-    isEdited && !isNil(active) && active.level > 0 && store.isReferenceStoreyVisible
+    isEdited && !isNil(active) && active.level > 0 && store.building.isReferenceStoreyVisible
       ? scene.storeys[active.level - 1]
       : undefined;
 
@@ -110,11 +110,11 @@ function readPlanBuilding(store: SitePlannerStore, scene: BuildingScene): PlanBu
 export function readPlanContent(store: SitePlannerStore): PlanContent {
   return {
     boundaryPolygons: store.boundaryPolygons,
-    buildings: store.buildingScenes.map(scene => readPlanBuilding(store, scene)),
+    buildings: store.scene.buildingScenes.map(scene => readPlanBuilding(store, scene)),
     setbackRings: store.setbackRings,
-    contours: store.contours,
-    analysisRaster: store.analysisRaster,
-    flowField: store.flowField,
+    contours: store.terrain.contours,
+    analysisRaster: store.scene.analysisRaster,
+    flowField: store.scene.flowField,
     elevationMarks: store.elevationMarks,
     trees: store.trees,
     cars: store.cars,
@@ -139,39 +139,39 @@ function overhangsOf(storeys: readonly StoreyScene[]): MultiPolygon {
 /** What the editor is acting on right now; an exported sheet asks for none of it. */
 export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
   return {
-    pathDraft: store.draftPathPreview,
-    utilityDraft: store.draftUtilityPreview,
-    selectedUtilityRoute: store.selectedUtilityRoute,
-    selectedShape: store.selectedShape,
-    selectedMarkId: store.selectedMark?.id,
-    selectedTreeId: store.selectedTree?.id,
-    selectedCar: store.selectedCar,
-    selectedBuildingId: store.selectedBuilding?.id,
-    selectedPath: store.selectedPath,
+    pathDraft: store.siteObjects.draftPathPreview,
+    utilityDraft: store.utilities.draftUtilityPreview,
+    selectedUtilityRoute: store.utilities.selectedUtilityRoute,
+    selectedShape: store.composition.selectedShape,
+    selectedMarkId: store.siteObjects.selectedMark?.id,
+    selectedTreeId: store.siteObjects.selectedTree?.id,
+    selectedCar: store.siteObjects.selectedCar,
+    selectedBuildingId: store.building.selectedBuilding?.id,
+    selectedPath: store.siteObjects.selectedPath,
     pathHandleHighlight: store.pathHandleHighlight,
     selectedPathPointIndex: store.selectedPathPointIndex,
     hoveredPathSegmentIndex: store.hoveredPathSegmentIndex,
     editFocus: store.editorMode.kind === 'edit' ? store.editorMode.target : undefined,
-    selectedWall: store.selectedWall,
-    wallDraftPoints: store.draftWallPoints,
-    wallDraftCursor: store.draftWallCursor,
-    wallDraftReadout: store.draftWallReadout,
-    selectedOpeningId: store.selectedOpening?.id,
-    selectedFurniture: store.selectedFurniture,
-    selectedDeviceId: store.selectedDevice?.id,
+    selectedWall: store.walls.selectedWall,
+    wallDraftPoints: store.walls.draftWallPoints,
+    wallDraftCursor: store.walls.draftWallCursor,
+    wallDraftReadout: store.walls.draftWallReadout,
+    selectedOpeningId: store.walls.selectedOpening?.id,
+    selectedFurniture: store.storeyObjects.selectedFurniture,
+    selectedDeviceId: store.storeyObjects.selectedDevice?.id,
     selectedStairId: store.selection?.kind === 'stair' ? store.selection.stairId : undefined,
     selectedSupportId: store.selection?.kind === 'support' ? store.selection.supportId : undefined,
     selectedSlabId: store.selection?.kind === 'slab' ? store.selection.slabId : undefined,
     selectedFireplaceId:
       store.selection?.kind === 'fireplace' ? store.selection.fireplaceId : undefined,
     selectedDuctId: store.selection?.kind === 'duct' ? store.selection.ductId : undefined,
-    selectedStairGrip: store.selectedStairScene?.rotationGrip,
-    pendingConnectDeviceId: store.pendingConnectDeviceId,
-    hoveredRoomIndex: store.hoveredRoomIndex,
+    selectedStairGrip: store.storeyObjects.selectedStairScene?.rotationGrip,
+    pendingConnectDeviceId: store.storeyObjects.pendingConnectDeviceId,
+    hoveredRoomIndex: store.building.hoveredRoomIndex,
     draftShape: store.draftShape,
     draftMark: store.draftMark,
     measurePoints: store.measurePoints,
-    gestureSkeletonShapes: store.gestureSkeletonShapes,
+    gestureSkeletonShapes: store.composition.gestureSkeletonShapes,
     keyPointSnap: store.activeKeyPointSnap,
   };
 }

@@ -143,7 +143,7 @@ export function runSiteScene({
       // upload rather than a buffer one, so it is watched apart from the ground
       // it is painted over.
       stopWatchingOverlay = reaction(
-        () => store.analysisRaster,
+        () => store.scene.analysisRaster,
         raster => sink.applyOverlay(raster),
         { fireImmediately: true }
       );
@@ -298,23 +298,23 @@ async function initSiteScene({
 /** One reactive read of everything the ground of the scene is built from. */
 function readSceneTerrain(store: SitePlannerStore): SceneTerrain {
   return {
-    field: store.heightfield,
+    field: store.terrain.heightfield,
     boundaryPolygons: store.boundaryPolygons,
-    coverage: store.plotCoverage,
+    coverage: store.terrain.plotCoverage,
   };
 }
 
 /** One reactive read of everything standing on that ground. */
 function readSceneObjects(store: SitePlannerStore): SceneObjects {
   return {
-    house: store.buildingsGeometry,
-    houseGhost: store.buildingsGhostGeometry,
-    foundations: store.foundationsGeometry,
-    roofOverlays: store.roofOverlaysGeometry,
-    furniture: store.sceneFurniture,
-    trees: store.sceneTrees,
-    cars: store.sceneCars,
-    pathDrape: store.pathDrapeGeometry,
+    house: store.scene.buildingsGeometry,
+    houseGhost: store.scene.buildingsGhostGeometry,
+    foundations: store.scene.foundationsGeometry,
+    roofOverlays: store.scene.roofOverlaysGeometry,
+    furniture: store.scene.sceneFurniture,
+    trees: store.scene.sceneTrees,
+    cars: store.scene.sceneCars,
+    pathDrape: store.scene.pathDrapeGeometry,
   };
 }
 

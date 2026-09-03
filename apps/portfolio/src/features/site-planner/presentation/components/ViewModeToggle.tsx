@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
 
-import type { SitePlannerViewMode } from '../../application/SitePlannerStore';
+import type { SitePlannerViewMode } from '../../domain/view/view-mode';
 import { sitePlannerT } from '../translations';
 
 interface ViewModeOption {

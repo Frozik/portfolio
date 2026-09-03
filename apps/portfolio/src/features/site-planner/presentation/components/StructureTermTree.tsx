@@ -222,7 +222,9 @@ const TermOperationToggle = observer(
     readonly operation: CsgOperation;
   }) => {
     const isUnion = operation === 'union';
-    const handleToggleOperation = useFunction(() => store.toggleTermOperation(owner, operandId));
+    const handleToggleOperation = useFunction(() =>
+      store.composition.toggleTermOperation(owner, operandId)
+    );
 
     return (
       <button
@@ -263,9 +265,13 @@ const TermActions = observer(
   }) => {
     const isCoarsePointer = useIsCoarsePointer();
 
-    const handleMoveUp = useFunction(() => store.reorderTerm(owner, operandId, index - 1));
-    const handleMoveDown = useFunction(() => store.reorderTerm(owner, operandId, index + 1));
-    const handleRemove = useFunction(() => store.removeTerm(owner, operandId));
+    const handleMoveUp = useFunction(() =>
+      store.composition.reorderTerm(owner, operandId, index - 1)
+    );
+    const handleMoveDown = useFunction(() =>
+      store.composition.reorderTerm(owner, operandId, index + 1)
+    );
+    const handleRemove = useFunction(() => store.composition.removeTerm(owner, operandId));
 
     return (
       <div
@@ -352,7 +358,7 @@ const ShapeTermRow = observer(
     const handleSelect = useFunction(() =>
       store.setSelection({ kind: 'shape', owner, shapeId: shape.id })
     );
-    const handleWrapInGroup = useFunction(() => store.wrapTermInGroup(owner, shape.id));
+    const handleWrapInGroup = useFunction(() => store.composition.wrapTermInGroup(owner, shape.id));
 
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
       id: shape.id,
@@ -440,7 +446,8 @@ const GroupTermRow = observer(
     readonly depth: number;
     readonly blockedGroupIds: ReadonlySet<ShapeId>;
   }) => {
-    const { selection, resolvedActiveGroup } = store;
+    const { selection } = store;
+    const { resolvedActiveGroup } = store.composition;
     const isSelected =
       !isNil(selection) && selection.kind === 'group' && selection.groupId === group.id;
     const isActive =
@@ -449,9 +456,9 @@ const GroupTermRow = observer(
 
     const handleSelect = useFunction(() => {
       store.setSelection({ kind: 'group', owner, groupId: group.id });
-      store.setActiveGroup(owner, group.id);
+      store.composition.setActiveGroup(owner, group.id);
     });
-    const handleUngroup = useFunction(() => store.ungroupTerm(owner, group.id));
+    const handleUngroup = useFunction(() => store.composition.ungroupTerm(owner, group.id));
 
     const isDropBlocked = blockedGroupIds.has(group.id);
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
@@ -669,9 +676,9 @@ export const GroupSection = observer(
     readonly onRemove?: VoidFunction;
   }) => {
     const terms = resolveTerms(store, owner) ?? NO_TERMS;
-    const { resolvedActiveGroup } = store;
+    const { resolvedActiveGroup } = store.composition;
     const isActive = resolvedActiveGroup.owner === owner && isNil(resolvedActiveGroup.groupId);
-    const handleActivate = useFunction(() => store.setActiveGroup(owner));
+    const handleActivate = useFunction(() => store.composition.setActiveGroup(owner));
 
     const sensors = useSensors(
       useSensor(PointerSensor, {
@@ -704,7 +711,7 @@ export const GroupSection = observer(
       const target = readDropTarget(over?.data.current);
 
       if (!isNil(target)) {
-        store.moveTerm(owner, active.id as ShapeId, target.groupId, target.index);
+        store.composition.moveTerm(owner, active.id as ShapeId, target.groupId, target.index);
       }
     });
 

@@ -114,7 +114,7 @@ const TreeRow = observer(
       !isNil(selection) && selection.kind === 'tree' && selection.treeId === tree.id;
 
     const handleSelect = useFunction(() => store.setSelection({ kind: 'tree', treeId: tree.id }));
-    const handleRemove = useFunction(() => store.removeTree(tree.id));
+    const handleRemove = useFunction(() => store.siteObjects.removeTree(tree.id));
 
     return (
       <ObjectRow
@@ -135,7 +135,7 @@ const CarRow = observer(
     const isSelected = !isNil(selection) && selection.kind === 'car' && selection.carId === car.id;
 
     const handleSelect = useFunction(() => store.setSelection({ kind: 'car', carId: car.id }));
-    const handleRemove = useFunction(() => store.removeCar(car.id));
+    const handleRemove = useFunction(() => store.siteObjects.removeCar(car.id));
 
     return (
       <ObjectRow
@@ -157,7 +157,7 @@ const PathRow = observer(
       !isNil(selection) && selection.kind === 'path' && selection.pathId === path.id;
 
     const handleSelect = useFunction(() => store.setSelection({ kind: 'path', pathId: path.id }));
-    const handleRemove = useFunction(() => store.removePath(path.id));
+    const handleRemove = useFunction(() => store.siteObjects.removePath(path.id));
 
     return (
       <ObjectRow

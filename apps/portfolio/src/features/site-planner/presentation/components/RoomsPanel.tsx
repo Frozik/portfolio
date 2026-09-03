@@ -68,10 +68,10 @@ const RoomRow = observer(
       : labels.types[room.roomTypeId];
 
     const handleSelect = useFunction((roomTypeId: RoomTypeId | undefined) => {
-      store.setRoomType(buildingId, room, roomTypeId);
+      store.building.setRoomType(buildingId, room, roomTypeId);
     });
-    const handlePointerEnter = useFunction(() => store.setHoveredRoomIndex(ordinal - 1));
-    const handlePointerLeave = useFunction(() => store.setHoveredRoomIndex(undefined));
+    const handlePointerEnter = useFunction(() => store.building.setHoveredRoomIndex(ordinal - 1));
+    const handlePointerLeave = useFunction(() => store.building.setHoveredRoomIndex(undefined));
 
     return (
       <div
@@ -137,7 +137,7 @@ const RoomRow = observer(
  */
 export const RoomsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

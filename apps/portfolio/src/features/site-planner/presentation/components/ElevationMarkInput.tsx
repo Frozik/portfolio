@@ -121,14 +121,14 @@ const ElevationField = memo(
  * viewport, so it follows the flag through a pan or a zoom.
  */
 export const ElevationMarkInput = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const mark = store.elevationInputMark;
+  const mark = store.siteObjects.elevationInputMark;
 
   const handleApply = useFunction((elevation: Meters) => {
     if (!isNil(mark)) {
-      store.setElevationMarkElevation(mark.id, elevation);
+      store.siteObjects.setElevationMarkElevation(mark.id, elevation);
     }
 
-    store.closeElevationInput();
+    store.siteObjects.closeElevationInput();
   });
 
   if (isNil(mark)) {
@@ -141,7 +141,7 @@ export const ElevationMarkInput = observer(({ store }: { readonly store: SitePla
       mark={mark}
       screenPoint={planToScreen(store.viewport, mark.position)}
       onApply={handleApply}
-      onCancel={store.closeElevationInput}
+      onCancel={store.siteObjects.closeElevationInput}
     />
   );
 });

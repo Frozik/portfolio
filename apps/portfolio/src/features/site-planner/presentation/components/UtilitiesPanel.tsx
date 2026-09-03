@@ -22,13 +22,13 @@ const ROUTE_LENGTH_DECIMALS = 1;
 const RouteRow = observer(
   ({ store, route }: { readonly store: SitePlannerStore; readonly route: UtilityRoute }) => {
     const labels = sitePlannerT.utilities;
-    const isSelected = store.selectedUtilityRoute?.id === route.id;
+    const isSelected = store.utilities.selectedUtilityRoute?.id === route.id;
 
     const handleSelect = useFunction(() => {
       store.setSelection({ kind: 'utilityRoute', routeId: route.id });
     });
     const handleRemove = useFunction(() => {
-      store.removeUtilityRoute(route.id);
+      store.utilities.removeUtilityRoute(route.id);
     });
 
     return (
@@ -108,7 +108,7 @@ function describeWarning(warning: RouteWarning, routes: readonly UtilityRoute[])
 export const UtilitiesPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.utilities;
   const routes = store.utilityRoutes;
-  const warnings = store.routeWarnings;
+  const warnings = store.utilities.routeWarnings;
   const hasGas = routes.some(route => route.system === 'gas');
 
   return (
@@ -133,7 +133,7 @@ export const UtilitiesPanel = observer(({ store }: { readonly store: SitePlanner
       {routes.length > 0 ? (
         <span className="font-mono text-[10px] text-text-secondary">
           {`${labels.trenchVolume}: ${formatCubicMeters(
-            store.totalTrenchVolumeCubicMeters,
+            store.utilities.totalTrenchVolumeCubicMeters,
             sitePlannerT.house.cubicMeterUnit
           )}`}
         </span>

@@ -256,12 +256,12 @@ export const SelectedMarkProperties = observer(
       store.pushHistory(`${nextMark.id}:${field}`);
 
       if (field === 'elevation') {
-        store.setElevationMarkElevation(nextMark.id, nextMark.elevation);
+        store.siteObjects.setElevationMarkElevation(nextMark.id, nextMark.elevation);
 
         return;
       }
 
-      store.moveElevationMark(nextMark.id, nextMark.position);
+      store.siteObjects.moveElevationMark(nextMark.id, nextMark.position);
     });
 
     return <MarkProperties mark={mark} onChange={handleChange} />;
@@ -272,7 +272,7 @@ export const SelectedTreeProperties = observer(
   ({ store, tree }: { readonly store: SitePlannerStore; readonly tree: TreeInstance }) => {
     const handleChange = useFunction((nextTree: TreeInstance, field: TreeField) => {
       store.pushHistory(`${nextTree.id}:${field}`);
-      store.updateTree(nextTree);
+      store.siteObjects.updateTree(nextTree);
     });
 
     return <TreeProperties tree={tree} onChange={handleChange} />;
@@ -283,7 +283,7 @@ export const SelectedCarProperties = observer(
   ({ store, car }: { readonly store: SitePlannerStore; readonly car: CarInstance }) => {
     const handleChange = useFunction((nextCar: CarInstance, field: CarField) => {
       store.pushHistory(`${nextCar.id}:${field}`);
-      store.updateCar(nextCar);
+      store.siteObjects.updateCar(nextCar);
     });
 
     return <CarProperties car={car} onChange={handleChange} />;
@@ -296,7 +296,7 @@ export const SelectedPathProperties = observer(
 
     const handleWidthChange = useFunction((width: number) => {
       store.pushHistory(`${path.id}:width`);
-      store.setPathWidth(path.id, width);
+      store.siteObjects.setPathWidth(path.id, width);
     });
 
     const handleEnterEditMode = useFunction(() =>
@@ -352,19 +352,19 @@ const PathPointProperties = observer(
     const handlePositionXChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:x`);
-        store.movePathPoint(path.id, pointIndex, { x: value, y: point.position.y });
+        store.siteObjects.movePathPoint(path.id, pointIndex, { x: value, y: point.position.y });
       }
     });
     const handlePositionYChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:y`);
-        store.movePathPoint(path.id, pointIndex, { x: point.position.x, y: value });
+        store.siteObjects.movePathPoint(path.id, pointIndex, { x: point.position.x, y: value });
       }
     });
     const handleWidthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:width`);
-        store.setPathPointWidth(path.id, pointIndex, value);
+        store.siteObjects.setPathPointWidth(path.id, pointIndex, value);
       }
     });
 

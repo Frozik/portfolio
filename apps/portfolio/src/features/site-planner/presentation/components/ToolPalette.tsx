@@ -154,7 +154,7 @@ const SiteEditorButton = observer(
     const handleToggle = useFunction(() => {
       if (store.isEditingBuilding) {
         // The editor stays open — the aim just moves from the house to the plot.
-        store.setActiveGroup('boundary');
+        store.composition.setActiveGroup('boundary');
       } else if (isSiteEditMode(store.editorMode)) {
         store.exitEditMode();
       } else {
@@ -187,7 +187,7 @@ const HouseEditorButton = observer(
       if (store.isEditingBuilding) {
         store.exitEditMode();
       } else {
-        store.enterBuildingEditing(sitePlannerT.structure.house);
+        store.building.enterBuildingEditing(sitePlannerT.structure.house);
       }
     });
 

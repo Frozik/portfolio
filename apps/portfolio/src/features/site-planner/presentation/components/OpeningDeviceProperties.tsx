@@ -38,22 +38,22 @@ export const SelectedOpeningProperties = observer(
 
     const handleOffsetChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateOpeningProperties(buildingId, opening.id, { offsetMeters: value });
+        store.walls.updateOpeningProperties(buildingId, opening.id, { offsetMeters: value });
       }
     });
     const handleWidthChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateOpeningProperties(buildingId, opening.id, { widthMeters: value });
+        store.walls.updateOpeningProperties(buildingId, opening.id, { widthMeters: value });
       }
     });
     const handleSillChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateOpeningProperties(buildingId, opening.id, { sillMeters: value });
+        store.walls.updateOpeningProperties(buildingId, opening.id, { sillMeters: value });
       }
     });
     const handleHeadChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateOpeningProperties(buildingId, opening.id, { headMeters: value });
+        store.walls.updateOpeningProperties(buildingId, opening.id, { headMeters: value });
       }
     });
 
@@ -110,28 +110,30 @@ export const SelectedFurnitureProperties = observer(
 
     const handleXChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateFurnitureProperties(buildingId, furniture.id, {
+        store.storeyObjects.updateFurnitureProperties(buildingId, furniture.id, {
           position: { x: value, y: furniture.position.y },
         });
       }
     });
     const handleYChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateFurnitureProperties(buildingId, furniture.id, {
+        store.storeyObjects.updateFurnitureProperties(buildingId, furniture.id, {
           position: { x: furniture.position.x, y: value },
         });
       }
     });
     const handleRotationChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateFurnitureProperties(buildingId, furniture.id, {
+        store.storeyObjects.updateFurnitureProperties(buildingId, furniture.id, {
           rotationDegrees: normalizeTurnDegrees(value),
         });
       }
     });
     const handleElevationChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
-        store.updateFurnitureProperties(buildingId, furniture.id, { elevationMeters: value });
+        store.storeyObjects.updateFurnitureProperties(buildingId, furniture.id, {
+          elevationMeters: value,
+        });
       }
     });
 
@@ -186,28 +188,28 @@ export const SelectedDeviceProperties = observer(
 
     const handleOffsetChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'wall') {
-        store.updateDeviceProperties(buildingId, device.id, {
+        store.storeyObjects.updateDeviceProperties(buildingId, device.id, {
           host: { ...host, offsetMeters: value },
         });
       }
     });
     const handleHeightChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'wall') {
-        store.updateDeviceProperties(buildingId, device.id, {
+        store.storeyObjects.updateDeviceProperties(buildingId, device.id, {
           host: { ...host, heightMeters: value },
         });
       }
     });
     const handleXChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'ceiling') {
-        store.updateDeviceProperties(buildingId, device.id, {
+        store.storeyObjects.updateDeviceProperties(buildingId, device.id, {
           host: { kind: 'ceiling', position: { x: value, y: host.position.y } },
         });
       }
     });
     const handleYChange = useFunction((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'ceiling') {
-        store.updateDeviceProperties(buildingId, device.id, {
+        store.storeyObjects.updateDeviceProperties(buildingId, device.id, {
           host: { kind: 'ceiling', position: { x: host.position.x, y: value } },
         });
       }
@@ -265,7 +267,7 @@ export const OpeningToolProperties = observer(({ store }: { readonly store: Site
     const preset = parseOpeningPreset(value);
 
     if (!isNil(preset)) {
-      store.setArmedOpeningPreset(preset);
+      store.walls.setArmedOpeningPreset(preset);
     }
   });
 
@@ -273,7 +275,7 @@ export const OpeningToolProperties = observer(({ store }: { readonly store: Site
     <div className="flex flex-col gap-2">
       <PropertyRow label={labels.presetLabel} isControlStretched>
         <RadioGroup
-          value={store.armedOpeningPreset}
+          value={store.walls.armedOpeningPreset}
           options={OPENING_PRESET_OPTIONS}
           onChange={handlePresetChange}
         />
@@ -292,7 +294,7 @@ export const ElectricToolProperties = observer(
       const kind = parseDeviceKind(value);
 
       if (!isNil(kind)) {
-        store.setArmedDeviceKind(kind);
+        store.storeyObjects.setArmedDeviceKind(kind);
       }
     });
 
@@ -300,7 +302,7 @@ export const ElectricToolProperties = observer(
       <div className="flex flex-col gap-2">
         <PropertyRow label={labels.armedLabel} isControlStretched>
           <RadioGroup
-            value={store.armedDeviceKind}
+            value={store.storeyObjects.armedDeviceKind}
             options={DEVICE_KIND_OPTIONS}
             onChange={handleKindChange}
           />

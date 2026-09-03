@@ -26,14 +26,14 @@ export const SlabsPanel = observer(({ store }: { readonly store: SitePlannerStor
     return null;
   }
 
-  const rows: readonly ObjectRow[] = store.activeStoreySlabs.map((slab, index) => {
+  const rows: readonly ObjectRow[] = store.storeyObjects.activeStoreySlabs.map((slab, index) => {
     const turn: readonly ObjectRowAction[] = isBoxedShape(slab)
       ? [
           {
             key: 'rotate',
             label: labels.rotate,
             icon: RotateCw,
-            onClick: () => store.rotateSlabByQuarter(buildingId, slab.id),
+            onClick: () => store.storeyObjects.rotateSlabByQuarter(buildingId, slab.id),
           },
         ]
       : [];
@@ -50,7 +50,7 @@ export const SlabsPanel = observer(({ store }: { readonly store: SitePlannerStor
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.removeSlabFrom(buildingId, slab.id),
+          onClick: () => store.storeyObjects.removeSlabFrom(buildingId, slab.id),
         },
       ],
     };

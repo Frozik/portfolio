@@ -78,12 +78,12 @@ export class BuildingEditInteraction implements EditorInteraction {
     // rather than four typed numbers.
     this.slabs = new ShapeGestures<void>(context, {
       isSnapAlwaysLive: true,
-      update: slab => context.store.updateSlab(buildingId, slab),
+      update: slab => context.store.storeyObjects.updateSlab(buildingId, slab),
       add: slab => {
-        context.store.addSlab(slab);
+        context.store.storeyObjects.addSlab(slab);
         context.store.finishPlacement();
       },
-      snapPoints: excludedShapeId => context.store.slabSnapPoints(excludedShapeId),
+      snapPoints: excludedShapeId => context.store.storeyObjects.slabSnapPoints(excludedShapeId),
     });
   }
 
@@ -100,13 +100,13 @@ export class BuildingEditInteraction implements EditorInteraction {
         // slab lands on its edge; an upper storey may overhang (R24).
         // `draftWallCursor` is the previewed corner — angle lock and typed
         // length included — so what the rubber band showed is what lands.
-        store.appendDraftWallPoint(
-          store.clampWallPoint(
+        store.walls.appendDraftWallPoint(
+          store.walls.clampWallPoint(
             this.buildingId,
-            store.draftWallCursor ?? snapPointToGrid(store, planPoint, modifiers)
+            store.walls.draftWallCursor ?? snapPointToGrid(store, planPoint, modifiers)
           )
         );
-        store.setTypedLengthText(undefined);
+        store.walls.setTypedLengthText(undefined);
 
         return true;
       case 'building:opening':
@@ -127,25 +127,25 @@ export class BuildingEditInteraction implements EditorInteraction {
       case 'building:fireplace':
         // A fireplace is placed like a stair: one click says where, and its
         // flue derives from there up through the roof.
-        store.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
+        store.storeyObjects.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
         store.finishPlacement();
 
         return true;
       case 'building:duct':
-        store.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
+        store.storeyObjects.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
         store.finishPlacement();
 
         return true;
       case 'building:support':
         // A post is placed like a socket: one click, both ends derived.
-        store.placeSupportAt(snapPointToGrid(store, planPoint, modifiers));
+        store.storeyObjects.placeSupportAt(snapPointToGrid(store, planPoint, modifiers));
         store.finishPlacement();
 
         return true;
       case 'building:stair':
         // A stair is placed, not drawn: its run comes from the storey height,
         // so the click only says where. Snapping keeps it off half-metres.
-        store.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
+        store.storeyObjects.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
         store.finishPlacement();
 
         return true;
@@ -154,7 +154,10 @@ export class BuildingEditInteraction implements EditorInteraction {
       // hand. The piece that lands is still selected, so its properties are
       // there to type — only the tool is not taken away.
       case 'building:furniture':
-        store.placeFurnitureAt(this.buildingId, snapPointToGrid(store, planPoint, modifiers));
+        store.storeyObjects.placeFurnitureAt(
+          this.buildingId,
+          snapPointToGrid(store, planPoint, modifiers)
+        );
 
         return true;
       case 'building:electric':
@@ -181,7 +184,10 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     // With the select tool idle over the selected wall, the handles announce
     // themselves — and the event is spent, or the shell would clear the hover.
-    if (this.context.store.activeTool === 'select' && !isNil(this.context.store.selectedWall)) {
+    if (
+      this.context.store.activeTool === 'select' &&
+      !isNil(this.context.store.walls.selectedWall)
+    ) {
       applyWallHandleHover(this.context, planPoint);
 
       return true;
@@ -199,7 +205,9 @@ export class BuildingEditInteraction implements EditorInteraction {
       // A press and a release with nothing in between is the click that lays a
       // default plate; the gesture itself has nothing to commit.
       if (!this.context.hasPointerMoved() && this.context.store.activeTool === 'building:slab') {
-        this.context.store.placeSlabAt(snapPointToGrid(this.context.store, planPoint, modifiers));
+        this.context.store.storeyObjects.placeSlabAt(
+          snapPointToGrid(this.context.store, planPoint, modifiers)
+        );
         this.context.store.finishPlacement();
       }
 
@@ -221,7 +229,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   /** Closes the selected wall once its two ends stand on one point. */
   private sealRingIfEndsMeet(): void {
     const { store } = this.context;
-    const wall = store.selectedWall;
+    const wall = store.walls.selectedWall;
 
     if (isNil(wall) || isWallClosed(wall) || wall.points.length < MIN_CLOSED_WALL_POINTS + 1) {
       return;
@@ -231,7 +239,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     const last = wall.points[wall.points.length - 1];
 
     if (first.x === last.x && first.y === last.y) {
-      store.closeWallRing(this.buildingId, wall.id);
+      store.walls.closeWallRing(this.buildingId, wall.id);
     }
   }
 
@@ -249,8 +257,8 @@ export class BuildingEditInteraction implements EditorInteraction {
   onDoubleClick(planPoint: Vector2, modifiers: PlanModifiers): void {
     const { store } = this.context;
 
-    if (store.draftWallPoints.length > 0) {
-      store.commitDraftWall();
+    if (store.walls.draftWallPoints.length > 0) {
+      store.walls.commitDraftWall();
 
       return;
     }
@@ -267,7 +275,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   /** The corner the double click landed on, removed — or cut with Alt held. */
   private editWallCornerAt(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
-    const wall = store.selectedWall;
+    const wall = store.walls.selectedWall;
 
     if (isNil(wall)) {
       return false;
@@ -292,9 +300,9 @@ export class BuildingEditInteraction implements EditorInteraction {
     this.wallGestures.drop();
 
     if (modifiers.isAltPressed) {
-      store.cutWallAtPoint(this.buildingId, wall.id, handle.index);
+      store.walls.cutWallAtPoint(this.buildingId, wall.id, handle.index);
     } else {
-      store.removeWallPoint(this.buildingId, wall.id, handle.index);
+      store.walls.removeWallPoint(this.buildingId, wall.id, handle.index);
     }
 
     // The gone point's highlight would light its successor by index.
@@ -306,13 +314,13 @@ export class BuildingEditInteraction implements EditorInteraction {
   onKeyDown(key: string, _modifiers: PlanModifiers): boolean {
     const { store } = this.context;
 
-    if (key === 'Enter' && store.draftWallPoints.length > 0) {
-      store.commitDraftWall();
+    if (key === 'Enter' && store.walls.draftWallPoints.length > 0) {
+      store.walls.commitDraftWall();
 
       return true;
     }
 
-    if (store.draftWallPoints.length === 0) {
+    if (store.walls.draftWallPoints.length === 0) {
       return false;
     }
 
@@ -320,16 +328,16 @@ export class BuildingEditInteraction implements EditorInteraction {
     // and one separator accumulate; Backspace peels the number back and, once
     // it is empty, takes the last corner with it.
     if (TYPED_LENGTH_KEY_PATTERN.test(key)) {
-      store.appendTypedLengthKey(key);
+      store.walls.appendTypedLengthKey(key);
 
       return true;
     }
 
     if (key === 'Backspace') {
-      if (isNil(store.typedLengthText)) {
-        store.dropLastDraftWallPoint();
+      if (isNil(store.walls.typedLengthText)) {
+        store.walls.dropLastDraftWallPoint();
       } else {
-        store.setTypedLengthText(undefined);
+        store.walls.setTypedLengthText(undefined);
       }
 
       return true;
@@ -347,15 +355,15 @@ export class BuildingEditInteraction implements EditorInteraction {
       this.wallGestures.hasActive() ||
       this.objects.hasActive() ||
       this.slabs.hasActive() ||
-      !isNil(this.context.store.pendingConnectDeviceId) ||
-      this.context.store.draftWallPoints.length > 0
+      !isNil(this.context.store.storeyObjects.pendingConnectDeviceId) ||
+      this.context.store.walls.draftWallPoints.length > 0
     );
   }
 
   cancelTransients(): void {
     this.onPointerCancel();
-    this.context.store.cancelDraftWall();
-    this.context.store.setPendingConnectDeviceId(undefined);
+    this.context.store.walls.cancelDraftWall();
+    this.context.store.storeyObjects.setPendingConnectDeviceId(undefined);
   }
 
   /**
@@ -407,7 +415,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     const { offsetMeters } = projectOntoPolyline(wallCenterline(wall), planPoint);
 
-    this.context.store.addOpeningAt(this.buildingId, wall.id, offsetMeters);
+    this.context.store.walls.addOpeningAt(this.buildingId, wall.id, offsetMeters);
 
     return true;
   }
@@ -471,23 +479,26 @@ export class BuildingEditInteraction implements EditorInteraction {
         const total = polylineLength(centerline);
         const snapped = snapAlong(store, projection.offsetMeters, modifiers);
 
-        store.moveOpening(
+        store.walls.moveOpening(
           this.buildingId,
           opening.id,
           clamp(snapped, halfWidth, Math.max(halfWidth, total - halfWidth))
         );
       },
-      restore: () => store.moveOpening(this.buildingId, opening.id, opening.offsetMeters),
+      restore: () => store.walls.moveOpening(this.buildingId, opening.id, opening.offsetMeters),
     };
   }
 
   /** With the electric tool: wall kinds hang on a wall, a light goes on the ceiling. */
   private placeDevice(planPoint: Vector2, modifiers: PlanModifiers): void {
     const { store } = this.context;
-    const kind = store.armedDeviceKind;
+    const kind = store.storeyObjects.armedDeviceKind;
 
     if (kind === 'light') {
-      store.addCeilingLightAt(this.buildingId, snapPointToGrid(store, planPoint, modifiers));
+      store.storeyObjects.addCeilingLightAt(
+        this.buildingId,
+        snapPointToGrid(store, planPoint, modifiers)
+      );
 
       return;
     }
@@ -500,7 +511,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     const { offsetMeters } = projectOntoPolyline(wallCenterline(wall), planPoint);
 
-    store.addWallDeviceAt(this.buildingId, kind, wall.id, offsetMeters);
+    store.storeyObjects.addWallDeviceAt(this.buildingId, kind, wall.id, offsetMeters);
   }
 
   /**
@@ -512,28 +523,28 @@ export class BuildingEditInteraction implements EditorInteraction {
     const device = this.pickDevice(planPoint);
 
     if (isNil(device)) {
-      store.setPendingConnectDeviceId(undefined);
+      store.storeyObjects.setPendingConnectDeviceId(undefined);
 
       return;
     }
 
-    const pending = store.pendingConnectDeviceId;
+    const pending = store.storeyObjects.pendingConnectDeviceId;
 
     if (isNil(pending)) {
-      store.setPendingConnectDeviceId(device.id);
+      store.storeyObjects.setPendingConnectDeviceId(device.id);
 
       return;
     }
 
-    store.connectDevices(this.buildingId, pending, device.id);
-    store.setPendingConnectDeviceId(undefined);
+    store.storeyObjects.connectDevices(this.buildingId, pending, device.id);
+    store.storeyObjects.setPendingConnectDeviceId(undefined);
   }
 
   /** The topmost device whose symbol area covers the point. */
   private pickDevice(planPoint: Vector2): ElectricalDevice | undefined {
     const { store, getViewport } = this.context;
     const storey = this.activeStorey();
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
 
     if (isNil(storey) || isNil(scene)) {
       return undefined;
@@ -574,7 +585,7 @@ export class BuildingEditInteraction implements EditorInteraction {
             device.host.kind === 'wall' ? candidate.id === device.host.wallId : false
           )
         : undefined;
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
     const symbol = scene?.devices.find(candidate => candidate.id === device.id);
 
     this.select({ kind: 'device', buildingId: this.buildingId, deviceId: device.id }, modifiers);
@@ -600,7 +611,7 @@ export class BuildingEditInteraction implements EditorInteraction {
           const centerline = wallCenterline(wall);
           const projection = projectOntoPolyline(centerline, draggedPoint);
 
-          store.moveDevice(this.buildingId, device.id, {
+          store.storeyObjects.moveDevice(this.buildingId, device.id, {
             host: {
               ...device.host,
               offsetMeters: clamp(
@@ -615,7 +626,7 @@ export class BuildingEditInteraction implements EditorInteraction {
         }
 
         if (device.host.kind === 'ceiling') {
-          store.moveDevice(this.buildingId, device.id, {
+          store.storeyObjects.moveDevice(this.buildingId, device.id, {
             host: {
               kind: 'ceiling',
               position: snapPointToGrid(store, draggedPoint, modifiers),
@@ -623,7 +634,8 @@ export class BuildingEditInteraction implements EditorInteraction {
           });
         }
       },
-      restore: () => store.moveDevice(this.buildingId, device.id, { host: device.host }),
+      restore: () =>
+        store.storeyObjects.moveDevice(this.buildingId, device.id, { host: device.host }),
     };
   }
 
@@ -633,7 +645,7 @@ export class BuildingEditInteraction implements EditorInteraction {
    */
   private beginFurnitureRotation(planPoint: Vector2): boolean {
     const { store, getViewport } = this.context;
-    const furniture = store.selectedFurniture;
+    const furniture = store.storeyObjects.selectedFurniture;
 
     if (isNil(furniture)) {
       return false;
@@ -679,7 +691,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   /** Takes hold of the slab under the pointer — the floor itself, dragged whole. */
   private beginSlabDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
-    const slabs = store.activeStoreySlabs;
+    const slabs = store.storeyObjects.activeStoreySlabs;
     const toleranceMeters = WALL_PICK_TOLERANCE_PX / getViewport().pixelsPerMeter;
 
     for (let index = slabs.length - 1; index >= 0; index -= 1) {
@@ -704,7 +716,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     const selection = store.selection;
 
     return selection?.kind === 'slab'
-      ? store.activeStoreySlabs.find(candidate => candidate.id === selection.slabId)
+      ? store.storeyObjects.activeStoreySlabs.find(candidate => candidate.id === selection.slabId)
       : undefined;
   }
 
@@ -716,7 +728,7 @@ export class BuildingEditInteraction implements EditorInteraction {
    */
   private beginHeatingDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
 
     if (isNil(scene)) {
       return false;
@@ -775,13 +787,13 @@ export class BuildingEditInteraction implements EditorInteraction {
     return {
       origin: fireplace.position,
       moveTo: (draggedPoint, modifiers) =>
-        store.moveFireplace(this.buildingId, fireplace.id, {
+        store.storeyObjects.moveFireplace(this.buildingId, fireplace.id, {
           position: snapPointToGrid(store, draggedPoint, modifiers),
         }),
       turnTo: rotationDegrees =>
-        store.moveFireplace(this.buildingId, fireplace.id, { rotationDegrees }),
+        store.storeyObjects.moveFireplace(this.buildingId, fireplace.id, { rotationDegrees }),
       restore: () =>
-        store.moveFireplace(this.buildingId, fireplace.id, {
+        store.storeyObjects.moveFireplace(this.buildingId, fireplace.id, {
           position: fireplace.position,
           rotationDegrees: fireplace.rotationDegrees,
         }),
@@ -795,17 +807,18 @@ export class BuildingEditInteraction implements EditorInteraction {
     return {
       origin: duct.position,
       moveTo: (draggedPoint, modifiers) =>
-        store.moveDuct(this.buildingId, duct.id, {
+        store.storeyObjects.moveDuct(this.buildingId, duct.id, {
           position: snapPointToGrid(store, draggedPoint, modifiers),
         }),
-      restore: () => store.moveDuct(this.buildingId, duct.id, { position: duct.position }),
+      restore: () =>
+        store.storeyObjects.moveDuct(this.buildingId, duct.id, { position: duct.position }),
     };
   }
 
   /** Takes hold of a post: a small target, so it is picked before the stairs. */
   private beginSupportDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
 
     if (isNil(scene)) {
       return false;
@@ -834,7 +847,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   /** Takes hold of a stair's body: the same grab as a sofa's. */
   private beginStairDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store, getViewport } = this.context;
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
 
     if (isNil(scene)) {
       return false;
@@ -864,7 +877,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   private beginStairRotation(planPoint: Vector2): boolean {
     const { store, getViewport } = this.context;
     const selection = store.selection;
-    const scene = store.editedStoreyScene;
+    const scene = store.building.editedStoreyScene;
 
     if (selection?.kind !== 'stair' || isNil(scene)) {
       return false;
@@ -893,10 +906,11 @@ export class BuildingEditInteraction implements EditorInteraction {
     return {
       origin: post.position,
       moveTo: (draggedPoint, modifiers) =>
-        store.moveSupport(this.buildingId, post.id, {
+        store.storeyObjects.moveSupport(this.buildingId, post.id, {
           position: snapPointToGrid(store, draggedPoint, modifiers),
         }),
-      restore: () => store.moveSupport(this.buildingId, post.id, { position: post.position }),
+      restore: () =>
+        store.storeyObjects.moveSupport(this.buildingId, post.id, { position: post.position }),
     };
   }
 
@@ -907,12 +921,13 @@ export class BuildingEditInteraction implements EditorInteraction {
     return {
       origin: stair.position,
       moveTo: (draggedPoint, modifiers) =>
-        store.moveStair(this.buildingId, stair.id, {
+        store.storeyObjects.moveStair(this.buildingId, stair.id, {
           position: snapPointToGrid(store, draggedPoint, modifiers),
         }),
-      turnTo: rotationDegrees => store.moveStair(this.buildingId, stair.id, { rotationDegrees }),
+      turnTo: rotationDegrees =>
+        store.storeyObjects.moveStair(this.buildingId, stair.id, { rotationDegrees }),
       restore: () =>
-        store.moveStair(this.buildingId, stair.id, {
+        store.storeyObjects.moveStair(this.buildingId, stair.id, {
           position: stair.position,
           rotationDegrees: stair.rotationDegrees,
         }),
@@ -970,7 +985,7 @@ export class BuildingEditInteraction implements EditorInteraction {
                 thresholdMeters: FURNITURE_MAGNET_RADIUS_METERS,
               });
 
-        store.moveFurniture(
+        store.storeyObjects.moveFurniture(
           this.buildingId,
           item.id,
           isNil(magnetized)
@@ -984,9 +999,10 @@ export class BuildingEditInteraction implements EditorInteraction {
               }
         );
       },
-      turnTo: rotationDegrees => store.moveFurniture(this.buildingId, item.id, { rotationDegrees }),
+      turnTo: rotationDegrees =>
+        store.storeyObjects.moveFurniture(this.buildingId, item.id, { rotationDegrees }),
       restore: () =>
-        store.moveFurniture(this.buildingId, item.id, {
+        store.storeyObjects.moveFurniture(this.buildingId, item.id, {
           position: item.position,
           rotationDegrees: item.rotationDegrees,
         }),
@@ -1004,7 +1020,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     const storeys = storeysOf(building);
 
-    return storeys.find(storey => storey.id === store.activeStoreyId) ?? storeys[0];
+    return storeys.find(storey => storey.id === store.building.activeStoreyId) ?? storeys[0];
   }
 
   /** The topmost wall whose body covers the point; later walls lie over earlier. */

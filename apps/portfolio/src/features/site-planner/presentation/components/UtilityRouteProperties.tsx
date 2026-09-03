@@ -42,19 +42,19 @@ const SLOPE_DECIMALS = 1;
 export const SelectedUtilityRouteProperties = observer(
   ({ store, route }: { readonly store: SitePlannerStore; readonly route: UtilityRoute }) => {
     const labels = sitePlannerT.utilities;
-    const profile = store.trenchProfiles.get(route.id);
+    const profile = store.utilities.trenchProfiles.get(route.id);
     const isEditingThisRoute = editedUtilityRouteId(store.editorMode) === route.id;
 
     const handleSystemChange = useFunction((value: string) => {
       const system = parseTrenchSystem(value);
 
       if (!isNil(system)) {
-        store.setUtilityRouteSystem(route.id, system);
+        store.utilities.setUtilityRouteSystem(route.id, system);
       }
     });
     const handleDiameterChange = useFunction((value: number | undefined) => {
       if (!isNil(value) && value > 0) {
-        store.setUtilityRouteDiameter(route.id, value);
+        store.utilities.setUtilityRouteDiameter(route.id, value);
       }
     });
     const handleEnterEditMode = useFunction(() =>
@@ -121,7 +121,7 @@ export const UtilityToolProperties = observer(({ store }: { readonly store: Site
     const system = parseTrenchSystem(value);
 
     if (!isNil(system)) {
-      store.setNextUtilitySystem(system);
+      store.utilities.setNextUtilitySystem(system);
     }
   });
 
@@ -129,7 +129,7 @@ export const UtilityToolProperties = observer(({ store }: { readonly store: Site
     <div className="flex flex-col gap-2">
       <PropertyRow label={labels.systemLabel} isControlStretched>
         <RadioGroup
-          value={store.nextUtilitySystem}
+          value={store.utilities.nextUtilitySystem}
           options={TRENCH_SYSTEM_OPTIONS}
           onChange={handleSystemChange}
         />

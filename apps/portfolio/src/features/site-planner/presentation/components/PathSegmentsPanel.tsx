@@ -71,18 +71,18 @@ const SegmentBlock = observer(
     const handleStartWidthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${segmentIndex}:width`);
-        store.setPathPointWidth(path.id, segmentIndex, value);
+        store.siteObjects.setPathPointWidth(path.id, segmentIndex, value);
       }
     });
     const handleEndWidthChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${segmentIndex + 1}:width`);
-        store.setPathPointWidth(path.id, segmentIndex + 1, value);
+        store.siteObjects.setPathPointWidth(path.id, segmentIndex + 1, value);
       }
     });
     const handleSurfaceSelect = useFunction((next: PathSurface) => {
       if (next !== surface) {
-        store.setPathSegmentSurface(path.id, segmentIndex, next);
+        store.siteObjects.setPathSegmentSurface(path.id, segmentIndex, next);
       }
     });
     const handlePointerEnter = useFunction(() => store.setHoveredPathSegmentIndex(segmentIndex));
@@ -151,7 +151,7 @@ const SegmentBlock = observer(
  */
 export const PathSegmentsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const pathId = editedPathId(store.editorMode);
-  const path = store.selectedPath;
+  const path = store.siteObjects.selectedPath;
 
   if (isNil(pathId) || isNil(path) || path.id !== pathId) {
     return null;

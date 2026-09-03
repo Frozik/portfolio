@@ -18,7 +18,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const VentilationPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
   const labels = sitePlannerT.ventilation;
 
   if (isNil(buildingId) || isNil(scene)) {
@@ -28,14 +28,14 @@ export const VentilationPanel = observer(({ store }: { readonly store: SitePlann
   const rows: readonly ObjectRow[] = scene.ducts.map(section => {
     const { duct } = section;
     const isOwn = section.startsHere && isNil(section.fireplaceId);
-    const topElevation = store.ductTopElevationOf(duct.id);
+    const topElevation = store.storeyObjects.ductTopElevationOf(duct.id);
     const actions: readonly ObjectRowAction[] = isOwn
       ? [
           {
             key: 'remove',
             label: labels.remove,
             icon: Trash2,
-            onClick: () => store.removeDuctFrom(buildingId, duct.id),
+            onClick: () => store.storeyObjects.removeDuctFrom(buildingId, duct.id),
           },
         ]
       : [];

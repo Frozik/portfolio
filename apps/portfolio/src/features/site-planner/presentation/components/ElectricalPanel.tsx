@@ -33,7 +33,7 @@ const DeviceRow = memo(
       store.setSelection({ kind: 'device', buildingId, deviceId: device.id });
     });
     const handleRemove = useFunction(() => {
-      store.removeDevice(buildingId, device.id);
+      store.storeyObjects.removeDevice(buildingId, device.id);
     });
 
     return (
@@ -73,7 +73,7 @@ const DeviceRow = memo(
  */
 export const ElectricalPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

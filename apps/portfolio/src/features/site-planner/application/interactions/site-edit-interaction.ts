@@ -58,9 +58,9 @@ export class SiteEditInteraction implements EditorInteraction {
     this.context = context;
     this.shapes = new ShapeGestures(context, {
       isSnapAlwaysLive: false,
-      update: (shape, { owner }) => context.store.updateShape(owner, shape),
+      update: (shape, { owner }) => context.store.composition.updateShape(owner, shape),
       add: (shape, { owner, groupId }) => {
-        context.store.addShapeTerm(owner, shape, 'union', groupId);
+        context.store.composition.addShapeTerm(owner, shape, 'union', groupId);
         context.store.setSelection({ kind: 'shape', owner, shapeId: shape.id });
         // A drawn shape is sized by eye, so the panel is handed the keyboard
         // with it: the exact width is one typed number away, with no trip to
@@ -69,7 +69,9 @@ export class SiteEditInteraction implements EditorInteraction {
         context.store.finishPlacement();
       },
       snapPoints: excludedShapeId =>
-        shapesExcept(context.store.allShapes, excludedShapeId).flatMap(getShapeKeyPoints),
+        shapesExcept(context.store.composition.allShapes, excludedShapeId).flatMap(
+          getShapeKeyPoints
+        ),
     });
   }
 
@@ -122,7 +124,7 @@ export class SiteEditInteraction implements EditorInteraction {
         this.context.hasPointerMoved() &&
         !isEqual(movedMark.position, markDrag.startMark.position)
       ) {
-        store.moveElevationMark(movedMark.id, movedMark.position);
+        store.siteObjects.moveElevationMark(movedMark.id, movedMark.position);
       }
 
       return true;
@@ -164,13 +166,13 @@ export class SiteEditInteraction implements EditorInteraction {
     return (
       this.shapes.hasActive() ||
       !isNil(this.markDrag) ||
-      !isNil(this.context.store.elevationInputMarkId)
+      !isNil(this.context.store.siteObjects.elevationInputMarkId)
     );
   }
 
   cancelTransients(): void {
     this.onPointerCancel();
-    this.context.store.closeElevationInput();
+    this.context.store.siteObjects.closeElevationInput();
   }
 
   /**
@@ -223,7 +225,7 @@ export class SiteEditInteraction implements EditorInteraction {
   private selectedShapeTarget(): { readonly shape: Shape; readonly owner: ShapeOwner } | undefined {
     const { store } = this.context;
     const { selection } = store;
-    const shape = store.selectedShape;
+    const shape = store.composition.selectedShape;
 
     return isNil(shape) || selection?.kind !== 'shape'
       ? undefined
@@ -234,7 +236,7 @@ export class SiteEditInteraction implements EditorInteraction {
     const { store } = this.context;
 
     store.setSelection(undefined);
-    this.shapes.beginDraw(tool, store.resolvedActiveGroup, planPoint, modifiers);
+    this.shapes.beginDraw(tool, store.composition.resolvedActiveGroup, planPoint, modifiers);
   }
 
   /**
@@ -249,7 +251,7 @@ export class SiteEditInteraction implements EditorInteraction {
 
     const { store } = this.context;
 
-    store.addElevationMark(snapPointToGrid(store, planPoint, modifiers));
+    store.siteObjects.addElevationMark(snapPointToGrid(store, planPoint, modifiers));
   }
 
   /** Takes hold of the mark under the pointer, if any, and selects it. */
@@ -262,7 +264,7 @@ export class SiteEditInteraction implements EditorInteraction {
     }
 
     store.setSelection({ kind: 'mark', markId: mark.id });
-    store.closeElevationInput();
+    store.siteObjects.closeElevationInput();
     // Recorded before the drag takes hold: everything until the pointer comes
     // up is one step, and an announcement no move follows simply expires.
     store.pushHistory();
@@ -285,7 +287,7 @@ export class SiteEditInteraction implements EditorInteraction {
 
   private nudgeSelection(direction: Vector2, modifiers: PlanModifiers): boolean {
     const { store } = this.context;
-    const shape = store.selectedShape;
+    const shape = store.composition.selectedShape;
 
     if (isNil(shape)) {
       return false;
@@ -296,7 +298,7 @@ export class SiteEditInteraction implements EditorInteraction {
 
     // Held arrow keys repeat; grouping them keeps a slide across the plot one step.
     store.pushHistory(`${NUDGE_HISTORY_GROUP}:${shape.id}`);
-    store.updateSelectedShape(
+    store.composition.updateSelectedShape(
       moveShape(shape, {
         x: shape.center.x + direction.x * step,
         y: shape.center.y + direction.y * step,

@@ -76,7 +76,7 @@ const ZoneRow = observer(
     const caption = `${labels.zoneTitle} ${ordinal} · ${labels.covers[zone.cover]}`;
 
     const handleSelect = useFunction((cover: RoofCover) => {
-      store.setRoofCover(buildingId, zone, cover);
+      store.building.setRoofCover(buildingId, zone, cover);
     });
 
     return (
@@ -131,32 +131,32 @@ const ROOF_KIND_OPTIONS = PITCHED_ROOF_KINDS.map(kind => ({
  */
 const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.roof;
-  const roof = store.editedPitchedRoof;
-  const scene = store.editedPitchedRoofScene;
+  const roof = store.building.editedPitchedRoof;
+  const scene = store.building.editedPitchedRoofScene;
 
-  const handleToggle = useFunction(() => store.togglePitchedRoof());
+  const handleToggle = useFunction(() => store.building.togglePitchedRoof());
   const handleKindChange = useFunction((kind: string) => {
     const parsed = parsePitchedRoofKind(kind);
 
     if (!isNil(parsed)) {
-      store.updatePitchedRoof({ kind: parsed });
+      store.building.updatePitchedRoof({ kind: parsed });
     }
   });
   const handlePitchChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updatePitchedRoof({
+      store.building.updatePitchedRoof({
         pitchDegrees: clamp(value, MIN_ROOF_PITCH_DEGREES, MAX_ROOF_PITCH_DEGREES),
       });
     }
   });
   const handleOverhangChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updatePitchedRoof({ overhangMeters: Math.max(0, value) });
+      store.building.updatePitchedRoof({ overhangMeters: Math.max(0, value) });
     }
   });
   const handleRidgeChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updatePitchedRoof({ ridgeDegrees: normalizeTurnDegrees(value) });
+      store.building.updatePitchedRoof({ ridgeDegrees: normalizeTurnDegrees(value) });
     }
   });
 
@@ -211,7 +211,7 @@ const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerSto
  */
 export const RoofPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.editedStoreyScene;
+  const scene = store.building.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;
