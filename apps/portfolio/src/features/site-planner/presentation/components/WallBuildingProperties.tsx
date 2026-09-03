@@ -152,3 +152,25 @@ export const SelectedBuildingProperties = observer(
     );
   }
 );
+
+/**
+ * The wall tool's card: the one-press perimeter trace, and the drawing
+ * legend — the click grammar and the modifier keys. The snaps themselves are
+ * automatic (corners, base points, the circle rim); the keys only steer or
+ * suspend them, so the card is a legend rather than a mode switch.
+ */
+export const WallToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
+  const labels = sitePlannerT.walls;
+  const handleTrace = useFunction(() => store.walls.traceBaseOutlineWalls());
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button variant="secondary" size="sm" onClick={handleTrace}>
+        {labels.traceOutline}
+      </Button>
+      <PanelHint>{labels.traceOutlineHint}</PanelHint>
+      <PanelHint>{labels.drawHint}</PanelHint>
+      <PanelHint>{labels.modifierHint}</PanelHint>
+    </div>
+  );
+});

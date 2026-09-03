@@ -103,7 +103,7 @@ export class BuildingEditInteraction implements EditorInteraction {
         store.walls.appendDraftWallPoint(
           store.walls.clampWallPoint(
             this.buildingId,
-            store.walls.draftWallCursor ?? snapPointToGrid(store, planPoint, modifiers)
+            store.walls.draftWallCursor ?? store.walls.firstWallPointAt(planPoint)
           )
         );
         store.walls.setTypedLengthText(undefined);

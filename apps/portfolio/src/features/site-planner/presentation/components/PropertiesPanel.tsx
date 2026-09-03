@@ -20,7 +20,11 @@ import {
   SelectedTreeProperties,
 } from './SiteObjectProperties';
 import { SelectedUtilityRouteProperties, UtilityToolProperties } from './UtilityRouteProperties';
-import { SelectedBuildingProperties, SelectedWallProperties } from './WallBuildingProperties';
+import {
+  SelectedBuildingProperties,
+  SelectedWallProperties,
+  WallToolProperties,
+} from './WallBuildingProperties';
 
 /**
  * What the tool in hand is set to, when it has settings of its own: the
@@ -41,6 +45,8 @@ export const ToolOptionsPanel = observer(({ store }: { readonly store: SitePlann
 
 function toolOptionsFor(store: SitePlannerStore): ReactNode {
   switch (store.activeTool) {
+    case 'building:wall':
+      return <WallToolProperties store={store} />;
     case 'building:opening':
       return <OpeningToolProperties store={store} />;
     case 'building:electric':

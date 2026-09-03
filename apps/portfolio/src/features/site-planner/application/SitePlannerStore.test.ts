@@ -1959,3 +1959,70 @@ describe('SitePlannerStore stair rotation', () => {
     store.dispose();
   });
 });
+
+describe('walls on a round base', () => {
+  const layOutRoundHouse = (store: SitePlannerStore) => {
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Ротонда');
+
+    store.composition.addShapeTerm(
+      building.id,
+      createCircle({ center: { x: 10, y: 10 }, radius: 5 }),
+      'union'
+    );
+    store.exitEditMode();
+    store.enterEditMode({ kind: 'building', buildingId: building.id });
+
+    return building;
+  };
+
+  it('traces the whole perimeter as one closed wall lying on the true radius', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    layOutRoundHouse(store);
+    store.walls.traceBaseOutlineWalls();
+
+    const [wall] = storeysOf(store.buildings[0])[0].walls;
+
+    expect(wall.isClosed).toBe(true);
+
+    for (const point of wall.points) {
+      expect(Math.hypot(point.x - 10, point.y - 10)).toBeCloseTo(5);
+    }
+
+    // Pressing the button again must not stack a second ring on the first.
+    store.walls.traceBaseOutlineWalls();
+
+    expect(storeysOf(store.buildings[0])[0].walls).toHaveLength(1);
+
+    store.dispose();
+  });
+
+  it('slides the rubber band onto the rim instead of hopping between facets', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    layOutRoundHouse(store);
+    store.walls.appendDraftWallPoint({ x: 15, y: 10 });
+    // A cursor between facets, slightly inside the rim: it must land AT the
+    // radius, not on the grid and not on a polygonization corner.
+    store.setCursorPlanPoint({ x: 10 + 4.9 * Math.cos(0.3), y: 10 + 4.9 * Math.sin(0.3) });
+
+    const cursor = store.walls.draftWallCursor;
+
+    expect(cursor).toBeDefined();
+    expect(Math.hypot((cursor?.x ?? 0) - 10, (cursor?.y ?? 0) - 10)).toBeCloseTo(5);
+
+    store.dispose();
+  });
+
+  it('hands the first click to a circle quadrant within reach', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    layOutRoundHouse(store);
+
+    expect(store.walls.firstWallPointAt({ x: 10.3, y: 15.2 })).toEqual({ x: 10, y: 15 });
+
+    store.dispose();
+  });
+});

@@ -467,6 +467,13 @@ export const sitePlannerTranslationsEn = {
     wallTitle: 'Wall',
     toolLabel: 'Wall',
     toolHint: 'Click out the wall line; Enter or a double click finishes it.',
+    traceOutline: 'Wall along the outline',
+    traceOutlineHint:
+      'A closed wall along the storey base in one press — on a round house that is the whole perimeter at once.',
+    drawHint:
+      'Click out the line; a click on the first point closes the ring. Enter or a double click finishes the wall, Esc cancels.',
+    modifierHint:
+      'Digits — exact segment length · Shift — 15° angle lock · Alt — suspend every snap (wall corners, base points, circle rim, grid). The cursor catches corners and circle quadrants by itself and glides along the rim.',
     material: 'Material',
     materials: {
       brick: 'Brick masonry',

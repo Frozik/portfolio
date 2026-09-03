@@ -1,6 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
+import { baseSnapPoints, slideOntoCircleRim } from '../domain/geometry/base-snap-points';
 import { dropRepeatedPoints } from '../domain/geometry/dedupe-polyline';
 import type { SegmentReadout } from '../domain/geometry/draw-constraints';
 import {
@@ -10,12 +11,15 @@ import {
   parseTypedLength,
   segmentReadout,
 } from '../domain/geometry/draw-constraints';
+import { evaluateComposition } from '../domain/geometry/evaluate-composition';
 import { clampPointToMultiPolygon } from '../domain/geometry/polygon-booleans';
 import { slabsOutline } from '../domain/geometry/slab-geometry';
 import { findBuilding as findBuildingIn } from '../domain/model/building-edits';
 import type { Opening, OpeningId, OpeningPreset } from '../domain/model/openings';
 import { createOpening, DEFAULT_OPENING_PRESET } from '../domain/model/openings';
 import type { Selection } from '../domain/model/selection';
+import type { Shape } from '../domain/model/shapes';
+import { flattenShapes } from '../domain/model/shapes';
 import type { BuildingId } from '../domain/model/site-plan';
 import { storeysOf } from '../domain/model/site-plan';
 import {
@@ -34,7 +38,12 @@ import {
   updateWall as updateWallIn,
 } from '../domain/model/wall-edits';
 import type { Wall, WallId } from '../domain/model/walls';
-import { createWall, MIN_CLOSED_WALL_POINTS, MIN_WALL_POINTS } from '../domain/model/walls';
+import {
+  createWall,
+  isWallClosed,
+  MIN_CLOSED_WALL_POINTS,
+  MIN_WALL_POINTS,
+} from '../domain/model/walls';
 import type { Meters } from '../domain/units';
 import {
   findNearestSnapPoint,
@@ -62,6 +71,15 @@ const OPENING_HISTORY_GROUP = 'opening';
 const DRAWN_RING_SEAM_EPSILON_METERS = 0.05;
 
 const NO_SELECTIONS: readonly Selection[] = [];
+
+function hasWallOnRing(walls: readonly Wall[], ring: readonly Vector2[]): boolean {
+  return walls.some(
+    wall =>
+      isWallClosed(wall) &&
+      wall.points.length === ring.length &&
+      wall.points.every((point, index) => point.x === ring[index].x && point.y === ring[index].y)
+  );
+}
 
 export class WallEditorModel {
   /** A length typed while a wall segment is being aimed (the CAD VCB). */
@@ -157,6 +175,26 @@ export class WallEditorModel {
       }
     }
 
+    // The rim of a round base is where its walls live, and no grid point lies
+    // on it: within reach the cursor rides the TRUE circle instead. Shift
+    // (angle lock) and a typed length state a direction of their own, so
+    // either one outranks the rim; Alt suspends it with every other snap.
+    if (
+      !this.core.cursorModifiers.isAltPressed &&
+      !this.core.cursorModifiers.isShiftPressed &&
+      isNil(this.typedLengthMeters)
+    ) {
+      const onRim = slideOntoCircleRim(
+        this.baseShapes,
+        cursor,
+        KEY_POINT_SNAP_RADIUS_PX / this.core.viewport.pixelsPerMeter
+      );
+
+      if (!isNil(onRim)) {
+        return onRim;
+      }
+    }
+
     const { isSnapEnabled, gridStepMeters } = this.core.settings;
     const snapped = snapPoint(
       cursor,
@@ -175,7 +213,33 @@ export class WallEditorModel {
   get wallSnapCandidates(): readonly Vector2[] {
     const scene = this.building.editedStoreyScene;
 
-    return isNil(scene) ? [] : wallSnapPoints(scene.storey.walls);
+    return isNil(scene)
+      ? []
+      : [...wallSnapPoints(scene.storey.walls), ...baseSnapPoints(this.baseShapes)];
+  }
+
+  /**
+   * The parametric shapes the active storey stands on: the footprint's own
+   * leaves on the ground floor, the slabs above it. These carry the TRUE
+   * geometry — a circle here is a circle, not its polygonized facets — which
+   * is what the base snaps and the rim slide are read from.
+   */
+  get baseShapes(): readonly Shape[] {
+    const session = this.core.editorSession;
+
+    if (session?.kind !== 'building') {
+      return [];
+    }
+
+    const building = findBuildingIn(this.core.buildings, session.buildingId);
+
+    if (isNil(building)) {
+      return [];
+    }
+
+    return storeysOf(building)[0]?.id === this.building.activeStoreyId
+      ? flattenShapes(building.composition)
+      : this.storeyObjects.activeStoreySlabs;
   }
 
   /** Length and angle of the segment in flight — the readout by the cursor. */
@@ -207,6 +271,90 @@ export class WallEditorModel {
    * one step to undo — and hands it over selected, its numbers one typed
    * change away in the panel.
    */
+  /**
+   * Where the FIRST click of the wall tool lands: the same object and rim
+   * snaps the rubber band uses, minus the angle lock and typed length — with
+   * no previous point there is no direction to hold yet.
+   */
+  firstWallPointAt(planPoint: Vector2): Vector2 {
+    const withinMeters = KEY_POINT_SNAP_RADIUS_PX / this.core.viewport.pixelsPerMeter;
+
+    if (!this.core.cursorModifiers.isAltPressed) {
+      const caught = findNearestSnapPoint(this.wallSnapCandidates, planPoint, withinMeters);
+
+      if (!isNil(caught)) {
+        return caught;
+      }
+
+      const onRim = slideOntoCircleRim(this.baseShapes, planPoint, withinMeters);
+
+      if (!isNil(onRim)) {
+        return onRim;
+      }
+    }
+
+    const { isSnapEnabled, gridStepMeters } = this.core.settings;
+
+    return snapPoint(
+      planPoint,
+      isSnapEnabled && !this.core.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
+    );
+  }
+
+  /**
+   * One click instead of a facet-by-facet trace: a closed wall ring along
+   * every outer ring of the storey's base — the footprint on the ground
+   * floor, the slabs above. A ring the storey already carries wall-for-wall
+   * is skipped, so the button cannot stack a second wall on the first.
+   */
+  traceBaseOutlineWalls(): void {
+    const session = this.core.editorSession;
+
+    if (session?.kind !== 'building') {
+      return;
+    }
+
+    const building = findBuildingIn(this.core.buildings, session.buildingId);
+    const storeyId = this.building.activeStoreyId;
+
+    if (isNil(building) || isNil(storeyId)) {
+      return;
+    }
+
+    const isGround = storeysOf(building)[0]?.id === storeyId;
+    const polygons = isGround
+      ? evaluateComposition(building.composition)
+      : slabsOutline(this.storeyObjects.activeStoreySlabs);
+    const storey = storeysOf(building).find(candidate => candidate.id === storeyId);
+    const rings = polygons
+      .map(polygon => dropRepeatedPoints(polygon.outer))
+      .filter(ring => ring.length >= MIN_CLOSED_WALL_POINTS)
+      .filter(ring => !hasWallOnRing(storey?.walls ?? [], ring));
+
+    if (rings.length === 0) {
+      return;
+    }
+
+    this.core.pushHistory();
+
+    let firstWall: Wall | undefined;
+
+    for (const ring of rings) {
+      const wall: Wall = { ...createWall({ points: ring }), isClosed: true };
+
+      firstWall = firstWall ?? wall;
+      this.core.buildings = addWallIn(this.core.buildings, session.buildingId, storeyId, wall);
+    }
+
+    if (!isNil(firstWall)) {
+      this.core.setSelection({
+        kind: 'wall',
+        buildingId: session.buildingId,
+        wallId: firstWall.id,
+      });
+    }
+  }
+
   commitDraftWall(): void {
     const session = this.core.editorSession;
 
