@@ -15,7 +15,7 @@ import { BuildingsPanel } from './HousePanel';
 import { ObjectsPanel } from './ObjectsPanel';
 import { PanelGroup } from './PanelGroup';
 import { PathSegmentsPanel } from './PathSegmentsPanel';
-import { PropertiesPanel, ToolOptionsPanel } from './PropertiesPanel';
+import { hasToolOptions, PropertiesPanel, ToolOptionsPanel } from './PropertiesPanel';
 import { RoofPanel } from './RoofPanel';
 import { RoomsPanel } from './RoomsPanel';
 import { SiteCard } from './SiteCard';
@@ -35,6 +35,12 @@ type PanelComponent = ComponentType<{ readonly store: SitePlannerStore }>;
 interface PanelSection {
   readonly title: string;
   readonly panels: readonly PanelComponent[];
+  /**
+   * Left out, the group always shows. A group whose every panel can come back
+   * empty names the same predicate its panels decide by — a standing heading
+   * over nothing reads as something gone missing.
+   */
+  readonly isVisible?: (store: SitePlannerStore) => boolean;
 }
 
 /**
@@ -48,14 +54,14 @@ interface PanelSection {
  * one being worked in was usually below the fold.
  */
 const VIEW_SECTIONS: readonly PanelSection[] = [
-  { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel] },
+  { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
   { title: sitePlannerT.panelGroups.plot, panels: [ObjectsPanel, SiteCard, UtilitiesPanel] },
   { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
 ];
 
 const EDITOR_SECTIONS: Readonly<Record<EditTargetKind, readonly PanelSection[]>> = {
   site: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel] },
+    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
     {
       title: sitePlannerT.panelGroups.plot,
       panels: [StructurePanel, BuildingsPanel, ElevationMarksPanel],
@@ -67,12 +73,12 @@ const EDITOR_SECTIONS: Readonly<Record<EditTargetKind, readonly PanelSection[]>>
   ],
   // Trench editing is when norm findings get fixed, so they stay in view.
   utilityRoute: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel] },
+    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
     { title: sitePlannerT.panelGroups.services, panels: [UtilitiesPanel] },
     { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
   ],
   building: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel] },
+    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
     { title: sitePlannerT.panelGroups.findings, panels: [WarningsPanel] },
     {
       title: sitePlannerT.panelGroups.structure,
@@ -106,20 +112,22 @@ export const PlanSidePanels = observer(({ store }: { readonly store: SitePlanner
 
   return (
     <>
-      {sections.map(section => (
-        <PanelGroup
-          key={section.title}
-          title={section.title}
-          isOpen={!closedTitles.includes(section.title)}
-          onToggle={handleToggle}
-        >
-          {section.panels.map((Panel, index) => (
-            // The list is a fixed table row: panels have no identity beyond their place.
-            // biome-ignore lint/suspicious/noArrayIndexKey: static per-mode panel order
-            <Panel key={index} store={store} />
-          ))}
-        </PanelGroup>
-      ))}
+      {sections
+        .filter(section => section.isVisible?.(store) ?? true)
+        .map(section => (
+          <PanelGroup
+            key={section.title}
+            title={section.title}
+            isOpen={!closedTitles.includes(section.title)}
+            onToggle={handleToggle}
+          >
+            {section.panels.map((Panel, index) => (
+              // The list is a fixed table row: panels have no identity beyond their place.
+              // biome-ignore lint/suspicious/noArrayIndexKey: static per-mode panel order
+              <Panel key={index} store={store} />
+            ))}
+          </PanelGroup>
+        ))}
     </>
   );
 });

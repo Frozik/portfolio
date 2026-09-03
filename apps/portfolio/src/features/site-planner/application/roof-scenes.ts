@@ -10,7 +10,7 @@ import {
   roofPeakMeters,
   roofPlan,
 } from '../domain/geometry/pitched-roof';
-import { interiorPointOf } from '../domain/geometry/polygon-booleans';
+import { interiorPointOf, unionPolygons } from '../domain/geometry/polygon-booleans';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import { buildPitchedRoofMesh } from '../domain/geometry/roof-mesh';
 import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
@@ -39,9 +39,22 @@ export interface PitchedRoofScene {
   readonly slopeArrows: readonly PlanSlopeArrow[];
   /** The storey outline the roof stands on; its gable walls close on it. */
   readonly footprint: MultiPolygon;
+  /**
+   * The ring the GABLE band stands on: the crowned storey's wall bodies
+   * unioned with its footprint, so the triangle continues the walls' OUTER
+   * face. Built from the drawn outline alone it stood half a wall thickness
+   * behind the facade — a recessed gable with a ledge under it.
+   */
+  readonly gableFootprint: MultiPolygon;
   /** The storey the roof crowns — the highest one that HAS a footprint. */
   readonly crownedStoreyId: StoreyId;
   readonly eaveElevation: Meters | undefined;
+  /**
+   * Where the crowned storey's masonry ends — one ceiling slab BELOW the
+   * eaves. Two датums, deliberately named apart: the roof planes bear on the
+   * slab (`eaveElevation`), the gable masonry continues from the wall head.
+   */
+  readonly wallTopElevation: Meters | undefined;
   /** Where the ridge stands; nothing while the building has no pad. */
   readonly ridgeElevation: Meters | undefined;
 }
@@ -70,9 +83,12 @@ export function derivePitchedRoofScene(
   // The slopes start on the ceiling slab, not on the wall head: that slab is
   // what the rafters actually bear on, and half a metre of error here shows up
   // in every elevation the roof takes part in.
-  const eaveElevation = isNil(top.baseElevation)
+  const wallTopElevation = isNil(top.baseElevation)
     ? undefined
-    : top.baseElevation + top.storey.heightMeters + SLAB_THICKNESS_METERS;
+    : top.baseElevation + top.storey.heightMeters;
+  const eaveElevation = isNil(wallTopElevation)
+    ? undefined
+    : wallTopElevation + SLAB_THICKNESS_METERS;
 
   const faces = roofFaces(plan, frame, roof);
 
@@ -88,8 +104,11 @@ export function derivePitchedRoofScene(
       return isNil(at) ? [] : [{ at, direction: descentDirection(frame, face.plane) }];
     }),
     footprint: top.footprint,
+    gableFootprint:
+      top.wallBodies.length === 0 ? top.footprint : unionPolygons([top.footprint, top.wallBodies]),
     crownedStoreyId: top.storey.id,
     eaveElevation,
+    wallTopElevation,
     ridgeElevation: isNil(eaveElevation) ? undefined : eaveElevation + roofPeakMeters(frame, roof),
   };
 }
@@ -118,8 +137,9 @@ export function buildPitchedRoofSolid(scene: PitchedRoofScene | undefined): LitM
   return buildPitchedRoofMesh({
     faces: scene.faces,
     frame: scene.frame,
-    footprint: scene.footprint,
+    footprint: scene.gableFootprint,
     eaveElevation: scene.eaveElevation,
+    wallTopElevation: scene.wallTopElevation ?? scene.eaveElevation,
     thicknessMeters: ROOF_THICKNESS_METERS,
   });
 }

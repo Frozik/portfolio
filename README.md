@@ -280,6 +280,11 @@ the result in 3D to see how the house sits on the slope. The plan is the
 source of truth — every mesh, contour and overlay is a pure function of it.
 
 **Plan (canvas2d):**
+- Stock houses: a catalogue dialog offers complete ready buildings — walls,
+  rooms, furniture, electrics, utility entries, a pitched roof — each
+  previewed by the very renderer the plan uses, placed with every id minted
+  anew, and editable like anything drawn by hand; a building saved from
+  another plan loads from a JSON file the same way
 - The plot outline and the building footprint are compositions of rectangles,
   circles and ellipses combined with union / subtract. The shapes stay
   parametric, so every size, position and rotation is also typed in exactly —

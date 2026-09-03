@@ -44,6 +44,11 @@ export const ToolOptionsPanel = observer(({ store }: { readonly store: SitePlann
   return <PlannerPanel title={sitePlannerT.properties.toolTitle}>{options}</PlannerPanel>;
 });
 
+/** Whether the tool in hand has settings — what decides if its GROUP shows at all. */
+export function hasToolOptions(store: SitePlannerStore): boolean {
+  return !isNil(toolOptionsFor(store));
+}
+
 function toolOptionsFor(store: SitePlannerStore): ReactNode {
   switch (store.activeTool) {
     case 'building:wall':

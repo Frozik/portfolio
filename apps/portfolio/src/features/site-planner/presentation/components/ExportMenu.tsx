@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import { Download } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -23,6 +23,7 @@ const JSON_FILE_ACCEPT = 'application/json,.json';
  */
 export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleExportJson = useFunction(() => exportPlanJson(store.snapshot));
 
@@ -52,9 +53,16 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
 
   return (
     <>
-      <Tooltip title={sitePlannerT.file.menu} placement="bottom">
+      {/* An open menu silences the tooltip: hovering the items kept the
+          trigger's tooltip up, and it stood over the menu it named. */}
+      <Tooltip
+        title={sitePlannerT.file.menu}
+        placement="bottom"
+        open={isMenuOpen ? false : undefined}
+      >
         <span className="inline-flex">
           <Dropdown
+            onOpenChange={setIsMenuOpen}
             trigger={
               <button
                 type="button"

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createOpening } from '../model/openings';
 import { createWall } from '../model/walls';
 import { multiPolygonArea } from './building-outline';
+import { subtractPolygons } from './polygon-booleans';
 import {
   buildOpeningBody,
   buildWallBodies,
@@ -151,11 +152,35 @@ describe('subPolyline', () => {
 });
 
 describe('buildOpeningBody', () => {
-  it('occupies the opening width at the wall thickness', () => {
+  it('occupies the opening width just past the wall thickness — a cutter, not a lining', () => {
     const wall = { ...createWall({ points: STRAIGHT_POINTS }), thicknessMeters: 0.4 };
     const opening = createOpening({ wallId: wall.id, preset: 'door', offsetMeters: 5 });
     const body = buildOpeningBody(wall, opening);
+    const area = multiPolygonArea(body);
 
-    expect(multiPolygonArea(body)).toBeCloseTo(0.9 * 0.4, 2);
+    expect(area).toBeGreaterThan(0.9 * 0.4);
+    expect(area).toBeLessThan(0.9 * 0.45);
+  });
+
+  it('severs the wall in two at any bearing, never leaving a film over the opening', () => {
+    // The booleans run on clipper's integer grid: with the cutter inflated to
+    // EXACTLY the wall thickness, a turned wall's rounding left a millimetre
+    // film of masonry across the opening — the painted-over-window bug. The
+    // axis-aligned bearings only pass by rounding both solids identically.
+    for (const bearingDegrees of [0, 10, 34, 45, 77]) {
+      const radians = (bearingDegrees * Math.PI) / 180;
+      const turned = (point: { readonly x: number; readonly y: number }) => ({
+        x: 3.1 + point.x * Math.cos(radians) - point.y * Math.sin(radians),
+        y: 7.2 + point.x * Math.sin(radians) + point.y * Math.cos(radians),
+      });
+      const wall = {
+        ...createWall({ points: STRAIGHT_POINTS.map(turned) }),
+        thicknessMeters: 0.38,
+      };
+      const opening = createOpening({ wallId: wall.id, preset: 'window', offsetMeters: 5 });
+      const slotted = subtractPolygons(buildWallBodies([wall]), buildOpeningBody(wall, opening));
+
+      expect(slotted, `bearing ${bearingDegrees}°`).toHaveLength(2);
+    }
   });
 });

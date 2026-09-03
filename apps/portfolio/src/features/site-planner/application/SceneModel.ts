@@ -12,7 +12,7 @@ import type { BuildingWarning } from '../domain/model/building-warnings';
 import { collectBuildingWarnings } from '../domain/model/building-warnings';
 import { editedBuildingId } from '../domain/model/editor-mode';
 import type { Building, PathSurface } from '../domain/model/site-plan';
-import { entriesOf, foundationOf, pitchedRoofOf } from '../domain/model/site-plan';
+import { entriesOf, foundationOf, padDropOf, pitchedRoofOf } from '../domain/model/site-plan';
 import type { AnalysisRaster } from '../domain/terrain/analysis-raster';
 import { buildCutFillRaster, buildSlopeRaster } from '../domain/terrain/analysis-raster';
 import type { CutFillReport } from '../domain/terrain/cut-fill';
@@ -148,6 +148,7 @@ export class SceneModel {
               polygons,
               mode: building.padElevationMode,
               manualPadElevation: building.manualPadElevation,
+              dropMeters: padDropOf(building),
             });
 
       const foundation = foundationOf(building);

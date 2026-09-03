@@ -47,7 +47,7 @@ import { drawFlowArrows } from './draw-flow-arrows';
 import { computeFurnitureHandles } from './draw-furniture';
 import { drawGrid } from './draw-grid';
 import type { PlanBuilding } from './draw-house';
-import { drawBuildings } from './draw-house';
+import { drawBuildingSelection, drawBuildings } from './draw-house';
 import { drawMarks } from './draw-marks';
 import { drawMeasure } from './draw-measure';
 import type { PathDraft, PathHandleHighlight } from './draw-paths';
@@ -361,7 +361,7 @@ export function drawPlan(
   }
 
   if (!isNil(chrome)) {
-    drawChrome(ctx, viewport, { chrome, visibleLayers, meterUnit });
+    drawChrome(ctx, viewport, { chrome, buildings: content.buildings, visibleLayers, meterUnit });
   }
 
   drawCompass(ctx, viewport, { northOffsetDegrees: content.northOffsetDegrees, northLabel });
@@ -405,10 +405,12 @@ function drawChrome(
   viewport: PlanViewport,
   {
     chrome,
+    buildings,
     visibleLayers,
     meterUnit,
   }: {
     readonly chrome: PlanEditorChrome;
+    readonly buildings: readonly PlanBuilding[];
     readonly visibleLayers: ReadonlySet<PlanLayerKind>;
     readonly meterUnit: string;
   }
@@ -433,6 +435,16 @@ function drawChrome(
 
   if (!isNil(selectedCar)) {
     drawCarSelection(ctx, viewport, selectedCar);
+  }
+
+  // The whole-building turn grip belongs to VIEW mode alone: inside an editor
+  // the building is worked on, not arranged, and the grip would fight tools.
+  if (isNil(chrome.editFocus) && !isNil(chrome.selectedBuildingId)) {
+    const selectedBuilding = buildings.find(building => building.id === chrome.selectedBuildingId);
+
+    if (!isNil(selectedBuilding)) {
+      drawBuildingSelection(ctx, viewport, selectedBuilding.polygons);
+    }
   }
 
   const { selectedPath } = chrome;

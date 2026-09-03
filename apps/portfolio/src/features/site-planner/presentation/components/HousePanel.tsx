@@ -12,7 +12,7 @@ import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { FoundationKind } from '../../domain/model/foundation';
 import { FOUNDATION_KINDS } from '../../domain/model/foundation';
 import type { PadElevationMode } from '../../domain/model/site-plan';
-import { PAD_ELEVATION_MODES } from '../../domain/model/site-plan';
+import { PAD_ELEVATION_MODES, padDropOf } from '../../domain/model/site-plan';
 import { METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import { PlannerPanel } from './PlannerPanel';
@@ -277,6 +277,11 @@ const BuildingBlock = observer(
         store.building.setManualPadElevation(building.id, value);
       }
     });
+    const handlePadDropChange = useFunction((value: number | undefined) => {
+      if (!isNil(value)) {
+        store.building.setPadDrop(building.id, value);
+      }
+    });
     const handleWallHeightChange = useFunction((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.setWallHeight(building.id, value);
@@ -315,11 +320,19 @@ const BuildingBlock = observer(
             onValueChange={handleManualPadChange}
           />
         ) : (
-          <PropertyRow label={sitePlannerT.house.padElevation}>
-            <PropertyValue
-              value={isNil(padElevation) ? '' : formatMeters(padElevation, meterUnit)}
+          <>
+            <PropertyRow label={sitePlannerT.house.padElevation}>
+              <PropertyValue
+                value={isNil(padElevation) ? '' : formatMeters(padElevation, meterUnit)}
+              />
+            </PropertyRow>
+            <PropertyField
+              label={sitePlannerT.house.padDrop}
+              value={padDropOf(building)}
+              decimal={METER_DECIMALS}
+              onValueChange={handlePadDropChange}
             />
-          </PropertyRow>
+          </>
         )}
 
         <PropertyField

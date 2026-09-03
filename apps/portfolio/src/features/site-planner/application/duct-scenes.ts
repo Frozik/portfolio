@@ -1,7 +1,12 @@
 import { isNil } from 'lodash-es';
 
 import type { DuctRoofContext } from '../domain/geometry/duct-geometry';
-import { ductFootprint, ductTopElevation } from '../domain/geometry/duct-geometry';
+import {
+  crownHeadHeight,
+  ductCrownPieces,
+  ductFootprint,
+  ductTopElevation,
+} from '../domain/geometry/duct-geometry';
 import { extrudePrism } from '../domain/geometry/extrude-footprint';
 import type { LitMesh } from '../domain/geometry/lit-mesh';
 import { isPointInMultiPolygon } from '../domain/geometry/polygon-booleans';
@@ -76,13 +81,23 @@ export function buildHeatingSolids(
   storeys: readonly StoreyScene[],
   runs: readonly DuctRun[]
 ): readonly LitMesh[] {
-  const shafts = runs.map(run =>
+  // The shaft stops one head-course short of its mouth: the оголовок band
+  // wraps that last course whole, so the two meet on an internal face and the
+  // open-air top wears the head, four posts and the floating rain cap.
+  const shafts = runs.flatMap(run => [
     extrudePrism({
       polygons: [ductFootprint(run.duct)],
       baseElevation: run.baseElevation,
-      topElevation: run.topElevation,
-    })
-  );
+      topElevation: run.topElevation - crownHeadHeight(),
+    }),
+    ...ductCrownPieces(run.duct, run.topElevation).map(piece =>
+      extrudePrism({
+        polygons: piece.polygons,
+        baseElevation: piece.baseElevation,
+        topElevation: piece.topElevation,
+      })
+    ),
+  ]);
   const bodies = storeys.flatMap(storeyScene =>
     storeyScene.fireplaces.flatMap(fireplaceScene =>
       isNil(storeyScene.baseElevation) || isNil(fireplaceScene.topElevation)

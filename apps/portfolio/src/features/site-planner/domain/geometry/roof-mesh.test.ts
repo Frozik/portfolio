@@ -53,7 +53,37 @@ function buildGableMesh() {
   };
 }
 
+const WALL_TOP = EAVE_ELEVATION - 0.22;
+
 describe('the gable end of a pitched roof', () => {
+  it('grows the band from the wall top through the slab belt, not from the eaves', () => {
+    const frame = roofFrameOf(FOOTPRINT, GABLE.ridgeDegrees);
+
+    assert(!isNil(frame), 'a rectangle names a frame');
+
+    const plan = roofPlan(FOOTPRINT, GABLE.overhangMeters);
+    const mesh = buildPitchedRoofMesh({
+      faces: roofFaces(plan, frame, GABLE),
+      frame,
+      footprint: FOOTPRINT,
+      eaveElevation: EAVE_ELEVATION,
+      wallTopElevation: WALL_TOP,
+      thicknessMeters: ROOF_THICKNESS,
+    });
+
+    let lowestOnEnd = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < mesh.positions.length; index += POSITION_STRIDE) {
+      if (Math.abs(mesh.positions[index] - GABLE_END_X) < AXIS_EPSILON) {
+        lowestOnEnd = Math.min(lowestOnEnd, mesh.positions[index + 1]);
+      }
+    }
+
+    // The masonry datum: one ceiling slab below the eaves. Starting at the
+    // eaves left an open slab-tall slit between the gable and its wall.
+    expect(lowestOnEnd).toBeCloseTo(WALL_TOP);
+  });
+
   it('closes the wall triangle up to the ridge instead of leaving a hole', () => {
     const { frame, mesh } = buildGableMesh();
 

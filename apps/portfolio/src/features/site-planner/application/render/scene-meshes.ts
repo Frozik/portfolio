@@ -5,7 +5,11 @@ import { extrudeFootprint, extrudePrism } from '../../domain/geometry/extrude-fo
 import type { LitMesh, RoofOverlayGeometry } from '../../domain/geometry/lit-mesh';
 import { mergeLitMeshes } from '../../domain/geometry/lit-mesh';
 import { offsetPolygons } from '../../domain/geometry/offset-polygon';
-import { subtractPolygons } from '../../domain/geometry/polygon-booleans';
+import {
+  intersectPolygons,
+  subtractPolygons,
+  unionPolygons,
+} from '../../domain/geometry/polygon-booleans';
 import {
   buildFloorPlate,
   buildRoofPlate,
@@ -144,8 +148,12 @@ export function buildBuildingMeshes({
       // whose shadow is a ring, and there is nothing for a stair to pierce.
       // The stairs of the storey BELOW pierce this floor — that is the
       // stairwell, derived rather than drawn (the Sweet Home 3D model).
+      // The plate reaches the walls' OUTER plane, not the drawn footprint:
+      // wall bodies stand half a thickness proud of the outline, and a plate
+      // stopping at the outline left an open 0.19 m slit around every storey —
+      // read from outside as the upper floor overhanging the lower.
       const floorPlate = buildFloorPlate({
-        footprint,
+        footprint: unionPolygons([footprint, wallBodies]),
         // A shaft is a hole through the house: the floor it crosses is
         // opened for it exactly as it is for a stair.
         cutouts: [...storeyScene.stairCutouts, ...storeyScene.ductCutouts],
@@ -196,12 +204,21 @@ export function buildBuildingMeshes({
           return [];
         }
 
+        // The cutter overshoots the wall faces (its contract); the sill and
+        // lintel fill only the slot itself, so they are the cutter clipped
+        // back to the wall — used raw they would stand proud of every face.
+        const slotFill = intersectPolygons(shape.polygons, wallBodies);
+
+        if (slotFill.length === 0) {
+          return [];
+        }
+
         const prisms: LitMesh[] = [];
 
         if (opening.sillMeters > 0) {
           prisms.push(
             extrudePrism({
-              polygons: shape.polygons,
+              polygons: slotFill,
               baseElevation,
               topElevation: baseElevation + Math.min(opening.sillMeters, storey.heightMeters),
             })
@@ -211,7 +228,7 @@ export function buildBuildingMeshes({
         if (opening.headMeters < storey.heightMeters) {
           prisms.push(
             extrudePrism({
-              polygons: shape.polygons,
+              polygons: slotFill,
               baseElevation: baseElevation + opening.headMeters,
               topElevation: baseElevation + storey.heightMeters,
             })

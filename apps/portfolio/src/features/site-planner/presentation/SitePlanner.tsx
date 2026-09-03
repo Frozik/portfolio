@@ -12,6 +12,7 @@ import { Button } from '../../../shared/ui/Button';
 import { Drawer } from '../../../shared/ui/Drawer';
 import type { SitePlannerStore } from '../application/SitePlannerStore';
 import { useSitePlannerStore } from '../application/useSitePlannerStore';
+import { ClearSiteButton } from './components/ClearSiteButton';
 import { ExportMenu } from './components/ExportMenu';
 import { HistoryControls } from './components/HistoryControls';
 import { ModeBar } from './components/ModeBar';
@@ -127,6 +128,7 @@ export const SitePlanner = observer(() => {
           onActivate={handleOpenSettings}
         />
         <ExportMenu store={store} />
+        <ClearSiteButton store={store} />
         {hasPanelsButton ? (
           <ToolbarIconButton
             icon={PanelRight}

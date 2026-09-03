@@ -755,7 +755,7 @@ export class BuildingEditInteraction implements EditorInteraction {
       return false;
     }
 
-    return this.objects.beginRotate(this.draggedFurniture(furniture));
+    return this.objects.beginRotate(this.draggedFurniture(furniture), planPoint);
   }
 
   /** Takes hold of the piece under the pointer, topmost first, and selects it. */
@@ -990,7 +990,7 @@ export class BuildingEditInteraction implements EditorInteraction {
       return false;
     }
 
-    return this.objects.beginRotate(this.draggedStair(stairScene.stair));
+    return this.objects.beginRotate(this.draggedStair(stairScene.stair), planPoint);
   }
 
   /** A post only ever slides: it has no facing to turn and no hand to mirror. */
@@ -1014,6 +1014,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     return {
       origin: stair.position,
+      startRotationDegrees: stair.rotationDegrees,
       moveTo: (draggedPoint, modifiers) =>
         store.storeyObjects.moveStair(this.buildingId, stair.id, {
           position: snapPointToGrid(store, draggedPoint, modifiers),
@@ -1066,6 +1067,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     return {
       origin: item.position,
+      startRotationDegrees: item.rotationDegrees,
       moveTo: (draggedPoint, modifiers) => {
         const storey = this.activeStorey();
         const entry = findFurnitureEntry(item.catalogId);

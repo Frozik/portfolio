@@ -138,6 +138,30 @@ describe('computePadElevation', () => {
     expect(padElevation).toBeCloseTo(16);
   });
 
+  it('sinks the terrain datum by the посадка, so a house buries its цоколь', () => {
+    const padElevation = computePadElevation({
+      field,
+      polygons: FOOTPRINT,
+      mode: 'terrain-center',
+      manualPadElevation: undefined,
+      dropMeters: 0.3,
+    });
+
+    expect(padElevation).toBeCloseTo(16 - 0.3);
+  });
+
+  it('leaves a typed manual elevation alone: absolute numbers take no drop', () => {
+    const padElevation = computePadElevation({
+      field,
+      polygons: FOOTPRINT,
+      mode: 'manual',
+      manualPadElevation: 5,
+      dropMeters: 0.3,
+    });
+
+    expect(padElevation).toBe(5);
+  });
+
   it('averages the ground it covers in the terrain-mean mode', () => {
     const padElevation = computePadElevation({
       field,

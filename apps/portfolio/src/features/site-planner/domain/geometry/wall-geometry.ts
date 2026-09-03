@@ -215,9 +215,21 @@ export function pointAlongPolyline(points: readonly Vector2[], offset: number): 
 }
 
 /**
+ * How far the opening's cutter overshoots the wall faces. A cutter must CROSS
+ * the faces it opens, never merely meet them: the booleans run on clipper's
+ * integer grid, and on a turned wall the rounded cutter can fall a millimetre
+ * short of the rounded face — the subtraction then leaves a millimetre film of
+ * wall across the whole opening, read as a painted-over window. Axis-aligned
+ * walls only hid this by rounding both solids identically.
+ */
+const OPENING_CUT_CLEARANCE_METERS = 0.005;
+
+/**
  * The solid an opening cuts out of its wall on the plan: the occupied stretch
- * of the centreline inflated to the wall's own thickness — so a slid opening
- * follows every bend its wall takes.
+ * of the centreline inflated past the wall's own thickness (see
+ * {@link OPENING_CUT_CLEARANCE_METERS}) — so a slid opening follows every bend
+ * its wall takes. A solid FILLING part of the slot must intersect this with
+ * the wall body rather than use it raw, or it stands proud of the faces.
  */
 export function buildOpeningBody(wall: Wall, opening: Opening): MultiPolygon {
   const centerline = wallCenterline(wall);
@@ -226,7 +238,7 @@ export function buildOpeningBody(wall: Wall, opening: Opening): MultiPolygon {
     opening.offsetMeters - opening.widthMeters / 2,
     opening.offsetMeters + opening.widthMeters / 2
   );
-  const halfThickness = toClipperUnits(wall.thicknessMeters / 2);
+  const halfThickness = toClipperUnits(wall.thicknessMeters / 2 + OPENING_CUT_CLEARANCE_METERS);
 
   if (stretch.length < MIN_WALL_POINTS || halfThickness <= 0) {
     return [];

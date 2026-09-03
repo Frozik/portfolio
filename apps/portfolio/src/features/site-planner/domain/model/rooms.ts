@@ -14,7 +14,13 @@ export type RoomTypeId =
   | 'boiler'
   | 'sauna'
   | 'garage'
-  | 'hall';
+  | 'hall'
+  | 'dining'
+  | 'wardrobe'
+  | 'laundry'
+  | 'office'
+  | 'pantry'
+  | 'veranda';
 
 export interface RoomType {
   readonly id: RoomTypeId;
@@ -31,6 +37,12 @@ export const ROOM_TYPES: readonly RoomType[] = [
   { id: 'sauna', isWet: true },
   { id: 'garage', isWet: false },
   { id: 'hall', isWet: false },
+  { id: 'dining', isWet: false },
+  { id: 'wardrobe', isWet: false },
+  { id: 'laundry', isWet: true },
+  { id: 'office', isWet: false },
+  { id: 'pantry', isWet: false },
+  { id: 'veranda', isWet: false },
 ];
 
 export function parseRoomType(value: string): RoomTypeId | undefined {

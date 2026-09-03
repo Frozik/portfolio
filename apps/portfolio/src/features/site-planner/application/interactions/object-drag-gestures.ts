@@ -27,6 +27,12 @@ export interface DraggedObject {
   readonly moveTo: (draggedPoint: Vector2, modifiers: PlanModifiers) => void;
   /** Turns it; absent for what has no facing — a post, a shaft, a slab. */
   readonly turnTo?: (rotationDegrees: number) => void;
+  /**
+   * The facing at the grab — the datum a turn is measured FROM. Setting the
+   * rotation to the grip's absolute bearing instead once made every grabbed
+   * piece jump into line with the pointer before the drag even moved.
+   */
+  readonly startRotationDegrees?: number;
   /** Puts it back exactly where it was — what a cancelled gesture owes. */
   readonly restore: () => void;
 }
@@ -38,6 +44,8 @@ interface ActiveDrag {
   readonly kind: DragKind;
   /** From the pointer to the object's origin, so the grab point stays under it. */
   readonly grabOffset: Vector2;
+  /** Where the pointer stood on the dial at the grab; turns are deltas from it. */
+  readonly grabBearingDegrees: number;
 }
 
 /**
@@ -66,19 +74,29 @@ export class ObjectDragGestures {
    */
   beginMove(object: DraggedObject, planPoint: Vector2): boolean {
     this.context.store.pushHistory();
-    this.drag = { object, kind: 'move', grabOffset: offsetBetween(planPoint, object.origin) };
+    this.drag = {
+      object,
+      kind: 'move',
+      grabOffset: offsetBetween(planPoint, object.origin),
+      grabBearingDegrees: 0,
+    };
 
     return true;
   }
 
   /** Takes hold of the turn grip; the object stays put and only its facing moves. */
-  beginRotate(object: DraggedObject): boolean {
+  beginRotate(object: DraggedObject, planPoint: Vector2): boolean {
     if (isNil(object.turnTo)) {
       return false;
     }
 
     this.context.store.pushHistory();
-    this.drag = { object, kind: 'rotate', grabOffset: { x: 0, y: 0 } };
+    this.drag = {
+      object,
+      kind: 'rotate',
+      grabOffset: { x: 0, y: 0 },
+      grabBearingDegrees: bearingDegreesTowards(object.origin, planPoint),
+    };
 
     return true;
   }
@@ -124,12 +142,17 @@ export class ObjectDragGestures {
 
   private apply(drag: ActiveDrag, planPoint: Vector2, modifiers: PlanModifiers): void {
     if (drag.kind === 'rotate') {
+      // The turn is the DELTA the pointer has swept since the grab, snapped,
+      // added onto the facing the piece was grabbed with — so taking hold of
+      // the grip never moves anything, wherever on the dial it happens to be.
+      const sweptDegrees = normalizeTurnDegrees(
+        bearingDegreesTowards(drag.object.origin, planPoint) - drag.grabBearingDegrees
+      );
+
       drag.object.turnTo?.(
         normalizeTurnDegrees(
-          snapLength(
-            bearingDegreesTowards(drag.object.origin, planPoint),
-            rotationStepDegrees(modifiers)
-          )
+          (drag.object.startRotationDegrees ?? 0) +
+            snapLength(sweptDegrees, rotationStepDegrees(modifiers))
         )
       );
 

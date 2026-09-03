@@ -38,6 +38,7 @@ export function buildPitchedRoofMesh({
   frame,
   footprint,
   eaveElevation,
+  wallTopElevation = eaveElevation,
   thicknessMeters,
 }: {
   readonly faces: readonly RoofFace[];
@@ -46,6 +47,14 @@ export function buildPitchedRoofMesh({
   readonly footprint: MultiPolygon;
   /** Where the slopes start: the top of the storey's ceiling slab. */
   readonly eaveElevation: Meters;
+  /**
+   * Where the storey's masonry ends. TWO datums meet at a roof: the walls top
+   * out here, and the roof planes start one ceiling slab higher — the slab is
+   * what the rafters bear on. The gable band is masonry, so it grows from
+   * THIS datum through the slab belt up to the soffit; conflating it with the
+   * eaves once lifted every gable one slab off its wall, leaving a slit.
+   */
+  readonly wallTopElevation?: Meters;
   readonly thicknessMeters: Meters;
 }): LitMesh {
   const builder: MeshBuilder = { positions: [], normals: [], indices: [] };
@@ -66,7 +75,14 @@ export function buildPitchedRoofMesh({
     }
   }
 
-  appendGableWalls(builder, { faces, frame, footprint, eaveElevation, thicknessMeters });
+  appendGableWalls(builder, {
+    faces,
+    frame,
+    footprint,
+    eaveElevation,
+    wallTopElevation,
+    thicknessMeters,
+  });
 
   if (builder.indices.length === 0) {
     return EMPTY_LIT_MESH;
@@ -189,12 +205,14 @@ function appendGableWalls(
     frame,
     footprint,
     eaveElevation,
+    wallTopElevation,
     thicknessMeters,
   }: {
     readonly faces: readonly RoofFace[];
     readonly frame: RoofFrame;
     readonly footprint: MultiPolygon;
     readonly eaveElevation: Meters;
+    readonly wallTopElevation: Meters;
     readonly thicknessMeters: Meters;
   }
 ): void {
@@ -239,10 +257,10 @@ function appendGableWalls(
   };
 
   for (const polygon of footprint) {
-    appendWallBand(builder, polygon.outer, eaveElevation, soffitAt, subdivideAt);
+    appendWallBand(builder, polygon.outer, wallTopElevation, soffitAt, subdivideAt);
 
     for (const hole of polygon.holes) {
-      appendWallBand(builder, hole, eaveElevation, soffitAt, subdivideAt);
+      appendWallBand(builder, hole, wallTopElevation, soffitAt, subdivideAt);
     }
   }
 }

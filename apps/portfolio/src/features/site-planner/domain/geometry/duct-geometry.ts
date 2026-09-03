@@ -1,6 +1,5 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-
 import type { VerticalDuct } from '../model/ducts';
 import {
   DUCT_ABOVE_ROOF_METERS,
@@ -12,9 +11,10 @@ import { FIREPLACE_SPECS, FLUE_BACK_OFFSET_FACTOR } from '../model/fireplaces';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
 import { rotatedBoxRing } from './hit-test-shape';
+import { offsetPolygons } from './offset-polygon';
 import type { RoofCrease, RoofFace, RoofFrame } from './pitched-roof';
 import { roofHeightAt } from './pitched-roof';
-import type { PolygonWithHoles } from './polygon-types';
+import type { MultiPolygon, PolygonWithHoles } from './polygon-types';
 import { distanceToSegment } from './segment-distance';
 
 /** The body of a fireplace on the plan: its box, turned the way it faces. */
@@ -137,4 +137,89 @@ function distanceToRidge(creases: readonly RoofCrease[], point: Vector2): Meters
   }
 
   return closest;
+}
+
+/** How proud the head band stands of the shaft — the brick оголовок course. */
+const CROWN_HEAD_OUTSET_METERS: Meters = 0.05;
+const CROWN_HEAD_HEIGHT_METERS: Meters = 0.14;
+/** The rain cap: a plate overhanging the head, floating on an air gap. */
+const CROWN_CAP_OUTSET_METERS: Meters = 0.11;
+const CROWN_CAP_THICKNESS_METERS: Meters = 0.05;
+/** The open band the exhaust leaves through, between head and cap. */
+const CROWN_VENT_GAP_METERS: Meters = 0.12;
+const CROWN_POST_SIZE_METERS: Meters = 0.04;
+/** Posts stand this far in from each head corner, clear of its edge. */
+const CROWN_POST_INSET_METERS: Meters = 0.07;
+
+/** One vertical prism of the crown, ready for the extruder. */
+export interface DuctCrownPiece {
+  readonly polygons: MultiPolygon;
+  readonly baseElevation: Meters;
+  readonly topElevation: Meters;
+}
+
+/**
+ * The оголовок dressing a shaft where it stands in the open air: the head
+ * band crowning the masonry, four corner posts and the rain cap floating over
+ * the vent gap. The SHAFT should stop at `topElevation - crownHeadHeight()` —
+ * the head fully wraps its last course, so their meeting stays an internal
+ * face rather than two visible coplanar caps.
+ */
+export function ductCrownPieces(
+  duct: VerticalDuct,
+  topElevation: Meters
+): readonly DuctCrownPiece[] {
+  const footprint: MultiPolygon = [ductFootprint(duct)];
+  const head = offsetPolygons(footprint, CROWN_HEAD_OUTSET_METERS);
+  const cap = offsetPolygons(footprint, CROWN_CAP_OUTSET_METERS);
+  const capBase = topElevation + CROWN_VENT_GAP_METERS;
+  const half = CROWN_POST_SIZE_METERS / 2;
+  const corners = ductFootprint(duct).outer;
+  const centre = duct.position;
+  const posts: DuctCrownPiece[] = corners.map(corner => {
+    const towardCentre = { x: centre.x - corner.x, y: centre.y - corner.y };
+    const length = Math.hypot(towardCentre.x, towardCentre.y);
+    const at =
+      length === 0
+        ? corner
+        : {
+            x: corner.x + (towardCentre.x / length) * CROWN_POST_INSET_METERS,
+            y: corner.y + (towardCentre.y / length) * CROWN_POST_INSET_METERS,
+          };
+
+    return {
+      polygons: [
+        {
+          outer: [
+            { x: at.x - half, y: at.y - half },
+            { x: at.x + half, y: at.y - half },
+            { x: at.x + half, y: at.y + half },
+            { x: at.x - half, y: at.y + half },
+          ],
+          holes: [],
+        },
+      ],
+      baseElevation: topElevation,
+      topElevation: capBase,
+    };
+  });
+
+  return [
+    {
+      polygons: head,
+      baseElevation: topElevation - CROWN_HEAD_HEIGHT_METERS,
+      topElevation,
+    },
+    ...posts,
+    {
+      polygons: cap,
+      baseElevation: capBase,
+      topElevation: capBase + CROWN_CAP_THICKNESS_METERS,
+    },
+  ];
+}
+
+/** How much of the shaft's top the head band swallows — see {@link ductCrownPieces}. */
+export function crownHeadHeight(): Meters {
+  return CROWN_HEAD_HEIGHT_METERS;
 }

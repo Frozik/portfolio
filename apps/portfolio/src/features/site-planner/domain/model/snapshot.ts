@@ -363,6 +363,17 @@ function isElevationMark(value: unknown): value is ElevationMark {
   );
 }
 
+/**
+ * One building brought in from a file — the «Готовый дом → Из файла» path.
+ * The same validator the whole-plan snapshot uses; ids are reminted at
+ * placement, so a file exported twice cannot collide with itself.
+ */
+export function parseStockBuilding(raw: string): Building | undefined {
+  const value = parseJson(raw);
+
+  return isBuilding(value) ? value : undefined;
+}
+
 function isBuilding(value: unknown): value is Building {
   return (
     isRecord(value) &&
@@ -371,6 +382,7 @@ function isBuilding(value: unknown): value is Building {
     isShapeComposition(value.composition) &&
     isOneOf(value.padElevationMode, PAD_ELEVATION_MODES) &&
     (value.manualPadElevation === undefined || isFiniteNumber(value.manualPadElevation)) &&
+    (value.padDropMeters === undefined || isFiniteNumber(value.padDropMeters)) &&
     isPositiveNumber(value.wallHeight) &&
     // Foundation and entries arrived after v5; absent means the defaults
     // (the underlay/anchorFactors precedent — optional field, no version bump).

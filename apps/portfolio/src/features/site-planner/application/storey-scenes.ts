@@ -24,7 +24,7 @@ import {
 } from '../domain/geometry/stair-footprint';
 import type { StairStep } from '../domain/geometry/stair-mesh';
 import { stairStepPolygons, supportFootprint } from '../domain/geometry/stair-mesh';
-import { floorToFloorMeters } from '../domain/geometry/storey-plates';
+import { floorToFloorMeters, SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
 import { supportSpan } from '../domain/geometry/support-span';
 import type { DoorSwingGeometry } from '../domain/geometry/wall-geometry';
 import {
@@ -293,9 +293,14 @@ export function deriveStoreyScenes(
   // where the earth is, the foundation carries the floor that much higher.
   // Every hosted height — window sills, socket heights, a stair's climb —
   // is measured from this datum, so getting it wrong shifts all of them.
+  // The SLAB rests ON the foundation, so the finished floor is one slab
+  // thickness above its top. Setting the floor AT the foundation top once put
+  // the plate's top cap and the foundation's top cap in the same plane — two
+  // visible coplanar faces, and with `cullMode: 'none'` the whole floor
+  // shimmered with z-fighting moiré.
   const groundFloorElevation = isNil(padElevation)
     ? undefined
-    : padElevation + foundationOf(building).heightAboveGroundMeters;
+    : padElevation + foundationOf(building).heightAboveGroundMeters + SLAB_THICKNESS_METERS;
 
   const resolved: {
     readonly storey: Storey;
@@ -619,16 +624,28 @@ export function deriveRooms(
   // A room is what the walls ENCLOSE. A footprint slightly wider than the
   // wall ring leaves a hairline frame between the walls and the slab's edge —
   // real leftover concrete, but no room — so regions outside the wall hull
-  // are dropped. Until any enclosure exists (partitions running edge to edge,
-  // the pre-ring way of drawing), the footprint boundary stands in for the
-  // exterior walls and every cut region counts.
+  // are dropped, UNLESS a stored label claims one: a veranda is exactly a
+  // deliberate floor outside the walls, and planting its label is how the
+  // planner says this leftover is a place, not concrete. Until any enclosure
+  // exists (partitions running edge to edge, the pre-ring way of drawing),
+  // the footprint boundary stands in for the exterior walls and every cut
+  // region counts.
   const hull = buildWallHull(wallBodies);
-  const enclosed = cut.filter(region => {
-    const probe = interiorPointOf([region]);
+  const enclosed = new Set(
+    cut.filter(region => {
+      const probe = interiorPointOf([region]);
 
-    return !isNil(probe) && isPointInMultiPolygon(hull, probe);
-  });
-  const regions = enclosed.length > 0 ? enclosed : cut;
+      return !isNil(probe) && isPointInMultiPolygon(hull, probe);
+    })
+  );
+  const regions =
+    enclosed.size > 0
+      ? cut.filter(
+          region =>
+            enclosed.has(region) ||
+            storey.roomLabels.some(candidate => isPointInMultiPolygon([region], candidate.position))
+        )
+      : cut;
 
   return regions.map(region => {
     const polygons = [region];

@@ -989,6 +989,24 @@ export class SitePlannerStore implements PlanEditorCore {
     this.storeyObjects.updateSlab(buildingId, slab);
   }
 
+  /**
+   * Sweeps the plot clean: every placed object — buildings, trees, cars,
+   * paths, trenches — gone in ONE undo step. The plot itself survives: its
+   * boundary, elevation marks and settings are the site, not objects on it.
+   */
+  clearSite(): void {
+    this.exitEditMode();
+    this.siteObjects.cancelDraftPath();
+    this.utilities.cancelDraftUtilityRoute();
+    this.pushHistory();
+    this.buildings = [];
+    this.trees = [];
+    this.cars = [];
+    this.paths = [];
+    this.utilityRoutes = [];
+    this.selections = NO_SELECTIONS;
+  }
+
   /** Teardown hook honoured by the refcounted feature-store lifecycle. */
   dispose(): void {
     this.isDisposed = true;

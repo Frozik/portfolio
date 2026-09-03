@@ -1,7 +1,10 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { multiPolygonArea } from '../domain/geometry/building-outline';
+import { subtractPolygons } from '../domain/geometry/polygon-booleans';
+import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
 import { DEFAULT_FOUNDATION } from '../domain/model/foundation';
 import type {
   CsgOperand,
@@ -21,6 +24,7 @@ import {
   storeysOf,
 } from '../domain/model/site-plan';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
+import { STOCK_HOUSE_TEMPLATES } from '../domain/templates/stock-houses';
 import { SitePlannerStore } from './SitePlannerStore';
 
 const AUTOSAVE_DELAY_MS = 500;
@@ -2218,6 +2222,251 @@ describe('a pitched roof over an unfinished top storey', () => {
     store.building.togglePitchedRoof();
 
     expect(pitchedRoofOf(store.buildings[0])).toBeUndefined();
+
+    store.dispose();
+  });
+});
+
+describe('placing a stock house', () => {
+  it('lands the dacha complete — walls, furniture, entries, roof — and selects it', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('dacha-8x6');
+
+    const [building] = store.buildings;
+
+    expect(building.name).toBe('Дачный дом 8×6');
+    expect(storeysOf(building)[0].walls.length).toBeGreaterThan(0);
+    expect((storeysOf(building)[0].furniture ?? []).length).toBeGreaterThan(0);
+    expect(entriesOf(building).map(entry => entry.system)).toContain('gas');
+    expect(pitchedRoofOf(building)?.kind).toBe('gable');
+    expect(store.selection).toMatchObject({ kind: 'building', buildingId: building.id });
+    // The scene resolves it end to end: rooms derived, the roof standing.
+    expect(store.scene.buildingScenes[0].storeys[0].rooms.length).toBeGreaterThan(0);
+    expect(store.scene.buildingScenes[0].pitchedRoof).toBeDefined();
+
+    store.dispose();
+  });
+
+  it('stands the same template twice without the two sharing a single id', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('bath-6x4');
+    store.building.placeStockHouse('bath-6x4');
+
+    const [first, second] = store.buildings;
+
+    expect(store.buildings).toHaveLength(2);
+    expect(first.id).not.toBe(second.id);
+    expect(storeysOf(first)[0].id).not.toBe(storeysOf(second)[0].id);
+
+    store.dispose();
+  });
+});
+
+describe('the ground floor datum', () => {
+  it('rests the slab ON the foundation, so no two visible caps share a plane', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('garage-4x7');
+
+    const [scene] = store.scene.buildingScenes;
+    const foundationTop = (scene.padElevation ?? 0) + scene.foundation.heightAboveGroundMeters;
+
+    // Floor AT the foundation top once made the plate's and the foundation's
+    // top caps coplanar — the whole floor shimmered with z-fighting moiré.
+    expect(scene.storeys[0].baseElevation).toBeCloseTo(foundationTop + SLAB_THICKNESS_METERS);
+
+    store.dispose();
+  });
+});
+
+describe('stock houses resolved in 3D', () => {
+  it('keeps every stair inside its storey and clear of the wall bodies', () => {
+    for (const template of STOCK_HOUSE_TEMPLATES) {
+      const store = new SitePlannerStore(createRepository());
+
+      store.building.placeStockHouse(template.id);
+
+      const [scene] = store.scene.buildingScenes;
+
+      for (const storeyScene of scene.storeys) {
+        const inner = subtractPolygons(storeyScene.footprint, storeyScene.wallBodies);
+
+        for (const stairScene of storeyScene.stairs) {
+          const stairBounds = computeMultiPolygonBounds(stairScene.footprint);
+          const room = computeMultiPolygonBounds(inner);
+
+          assert(!isNil(stairBounds) && !isNil(room), 'both are bounded');
+          expect(stairBounds.minX).toBeGreaterThanOrEqual(room.minX);
+          expect(stairBounds.maxX).toBeLessThanOrEqual(room.maxX);
+          expect(stairBounds.minY).toBeGreaterThanOrEqual(room.minY);
+          expect(stairBounds.maxY).toBeLessThanOrEqual(room.maxY);
+        }
+      }
+
+      store.dispose();
+    }
+  });
+
+  it('lands a fresh house цоколь-deep: the pad sinks by the plinth height', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('dacha-8x6');
+
+    const [scene] = store.scene.buildingScenes;
+
+    // Flat ground stands at 0; the default посадка buries the 0.3 m цоколь,
+    // so the floor lands one slab over the ground instead of perching on it.
+    expect(scene.building.padDropMeters).toBeCloseTo(0.3);
+    expect(scene.padElevation).toBeCloseTo(-0.3);
+
+    store.dispose();
+  });
+
+  it('derives the open veranda as a room, though it stands outside the walls', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('residence-19x12');
+
+    const [scene] = store.scene.buildingScenes;
+    const veranda = scene.storeys[0].rooms.find(room => room.roomTypeId === 'veranda');
+
+    // A leftover region outside the wall hull is dropped as slab trim — UNLESS
+    // a label claims it. The veranda is exactly that claim.
+    expect(veranda).toBeDefined();
+    expect(veranda?.areaSquareMeters ?? 0).toBeGreaterThan(10);
+
+    store.dispose();
+  });
+
+  it('derives both open rooms of the terrace house: the recessed терраса and the porch', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('terrace-house-16x13');
+
+    const [scene] = store.scene.buildingScenes;
+    const verandas = scene.storeys[0].rooms.filter(room => room.roomTypeId === 'veranda');
+
+    // The терраса sits in the H-plan's notch — outside the ring walls' hull
+    // but inside the footprint — and the крыльцо outside the south wall.
+    expect(verandas).toHaveLength(2);
+
+    store.dispose();
+  });
+
+  it('closes the seam between storeys: the floor plate reaches the wall plane', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('family-cottage-10x9');
+
+    const [scene] = store.scene.buildingScenes;
+    const walls = computeMultiPolygonBounds(scene.storeys[1].wallBodies);
+    const mesh = store.scene.buildingsGeometry;
+
+    assert(!isNil(walls) && !isNil(mesh), 'the cottage resolves');
+
+    // The upper floor plate spans [base, base + slab]; a plate stopping at the
+    // drawn footprint left a 0.19 m open slit under the upper walls, read from
+    // outside as the second storey overhanging the first.
+    const base = scene.storeys[1].baseElevation ?? 0;
+    const plateBottom = base - SLAB_THICKNESS_METERS;
+    let plateMinX = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < mesh.positions.length; index += 3) {
+      if (Math.abs(mesh.positions[index + 1] - plateBottom) < 0.005) {
+        plateMinX = Math.min(plateMinX, mesh.positions[index]);
+      }
+    }
+
+    expect(plateMinX).toBeLessThanOrEqual(walls.minX + 0.01);
+
+    store.dispose();
+  });
+});
+
+describe('turning a whole building in view mode', () => {
+  it('rotates the footprint, the furnishings and the roof ridge as one thing', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('family-cottage-10x9');
+
+    const before = store.buildings[0];
+    const beforeSofa = storeysOf(before)[0].furniture?.find(piece => piece.catalogId === 'sofa');
+    const beforeRidge = pitchedRoofOf(before)?.ridgeDegrees ?? 0;
+    const bounds = computeMultiPolygonBounds(store.scene.buildingScenes[0].polygons);
+
+    assert(!isNil(bounds) && !isNil(beforeSofa), 'the cottage resolves');
+    store.building.turnWholeBuilding(before, 90);
+
+    const after = store.buildings[0];
+    const afterSofa = storeysOf(after)[0].furniture?.find(piece => piece.catalogId === 'sofa');
+    const pivot = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+
+    // The sofa lands where a 90° turn about the footprint centre puts it,
+    // facing 90° further round; the ridge follows the same turn.
+    expect(afterSofa?.position.x).toBeCloseTo(pivot.x - (beforeSofa.position.y - pivot.y));
+    expect(afterSofa?.position.y).toBeCloseTo(pivot.y + (beforeSofa.position.x - pivot.x));
+    expect(afterSofa?.rotationDegrees).toBeCloseTo((beforeSofa.rotationDegrees + 90) % 360);
+    expect(pitchedRoofOf(after)?.ridgeDegrees).toBeCloseTo((beforeRidge + 90) % 360);
+    // And the scene still resolves whole — walls, rooms, roof.
+    expect(store.scene.buildingScenes[0].storeys[0].rooms.length).toBeGreaterThan(0);
+    expect(store.scene.buildingScenes[0].pitchedRoof).toBeDefined();
+
+    store.dispose();
+  });
+});
+
+describe('clearing the plot', () => {
+  it('removes every placed object in one undo step and keeps the site itself', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('bath-6x4');
+    store.siteObjects.plantTree({ x: 30, y: 5 }, 'pine');
+    store.siteObjects.placeCar({ x: 32, y: 8 });
+    store.siteObjects.addElevationMark({ x: 3, y: 3 });
+
+    const markCount = store.elevationMarks.length;
+
+    store.clearSite();
+
+    expect(store.buildings).toHaveLength(0);
+    expect(store.trees).toHaveLength(0);
+    expect(store.cars).toHaveLength(0);
+    expect(store.paths).toHaveLength(0);
+    expect(store.utilityRoutes).toHaveLength(0);
+    // The site itself survives: marks are the survey, not an object on it.
+    expect(store.elevationMarks).toHaveLength(markCount);
+    expect(store.selection).toBeUndefined();
+
+    store.undo();
+
+    expect(store.buildings).toHaveLength(1);
+    expect(store.trees).toHaveLength(1);
+    expect(store.cars).toHaveLength(1);
+
+    store.dispose();
+  });
+});
+
+describe('the gable band of a pitched roof', () => {
+  it('stands on the walls’ outer plane, not on the drawn outline', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.building.placeStockHouse('family-cottage-10x9');
+
+    const [scene] = store.scene.buildingScenes;
+    const top = scene.storeys[scene.storeys.length - 1];
+    const gable = computeMultiPolygonBounds(scene.pitchedRoof?.gableFootprint ?? []);
+    const walls = computeMultiPolygonBounds(top.wallBodies);
+    const outline = computeMultiPolygonBounds(top.footprint);
+
+    assert(!isNil(gable) && !isNil(walls) && !isNil(outline), 'the cottage resolves');
+    // Drawn-outline gables sat half a wall thickness behind the facade,
+    // recessed with a ledge under the triangle.
+    expect(gable.maxX).toBeCloseTo(walls.maxX);
+    expect(gable.minX).toBeCloseTo(walls.minX);
+    expect(gable.maxX).toBeGreaterThan(outline.maxX);
 
     store.dispose();
   });

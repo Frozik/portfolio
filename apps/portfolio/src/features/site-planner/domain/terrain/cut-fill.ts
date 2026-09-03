@@ -83,18 +83,22 @@ export function computeFootprintElevations(
 
 /**
  * The level the house stands on. Nothing without a footprint to level — the
- * plan has no house then, and no pad to speak of.
+ * plan has no house then, and no pad to speak of. The посадка (`dropMeters`)
+ * sinks the terrain-derived datum — a manual elevation is an absolute number
+ * the user typed and takes no drop.
  */
 export function computePadElevation({
   field,
   polygons,
   mode,
   manualPadElevation,
+  dropMeters = 0,
 }: {
   readonly field: Heightfield;
   readonly polygons: MultiPolygon;
   readonly mode: PadElevationMode;
   readonly manualPadElevation: Meters | undefined;
+  readonly dropMeters?: Meters;
 }): Meters | undefined {
   if (mode === 'manual' && !isNil(manualPadElevation)) {
     return manualPadElevation;
@@ -111,11 +115,11 @@ export function computePadElevation({
     // A pad switched to manual before a number was typed into it starts level
     // with the ground under the centre, which is where a new footprint begins.
     case 'manual':
-      return elevations.centerElevation;
+      return elevations.centerElevation - dropMeters;
     case 'terrain-mean':
-      return elevations.meanElevation;
+      return elevations.meanElevation - dropMeters;
     case 'terrain-min':
-      return elevations.minElevation;
+      return elevations.minElevation - dropMeters;
     default:
       return assertNever(mode);
   }

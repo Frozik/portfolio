@@ -21,11 +21,32 @@ function readPlanBuilding(store: SitePlannerStore, scene: BuildingScene): PlanBu
   const active = isEdited
     ? scene.storeys.find(storeyScene => storeyScene.storey.id === store.building.activeStoreyId)
     : undefined;
-  const displayed = active ?? scene.storeys[0];
   const below =
     isEdited && !isNil(active) && active.level > 0 && store.building.isReferenceStoreyVisible
       ? scene.storeys[active.level - 1]
       : undefined;
+
+  return planBuildingOf(scene, { isEdited, active, below });
+}
+
+/**
+ * The pure half of the mapping: one resolved building scene as the sheet
+ * draws it. Shared by the live editor path above and the stock-house preview,
+ * which assembles a scene of its own with no store anywhere near.
+ */
+export function planBuildingOf(
+  scene: BuildingScene,
+  {
+    isEdited,
+    active,
+    below,
+  }: {
+    readonly isEdited: boolean;
+    readonly active: StoreyScene | undefined;
+    readonly below: StoreyScene | undefined;
+  }
+): PlanBuilding {
+  const displayed = active ?? scene.storeys[0];
 
   return {
     id: scene.building.id,

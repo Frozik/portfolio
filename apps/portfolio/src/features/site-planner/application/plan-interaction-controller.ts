@@ -1,7 +1,7 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-
+import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { bearingDegreesTowards } from '../domain/geometry/transform-shape';
 import type { EditorMode, EditTarget } from '../domain/model/editor-mode';
 import {
@@ -46,6 +46,7 @@ import {
 } from './interactions/route-point-gestures';
 import { SiteEditInteraction } from './interactions/site-edit-interaction';
 import { computeCarHandles } from './render/plan-draw/draw-cars';
+import { computeBuildingHandles } from './render/plan-draw/draw-house';
 import type { SitePlannerStore } from './SitePlannerStore';
 
 export const TOOL_HOTKEYS: Readonly<Record<string, PlanTool | undefined>> = {
@@ -87,6 +88,15 @@ interface ObjectDrag {
 /** Turning the selected car by the grip ahead of its nose. */
 interface CarTurn {
   readonly startCar: CarInstance;
+  /** Where on the dial the grip was taken; the turn is the sweep from here. */
+  readonly grabBearingDegrees: number;
+}
+
+/** Turning the whole selected building by the grip over its footprint. */
+interface BuildingTurn {
+  readonly startBuilding: Building;
+  readonly pivot: Vector2;
+  readonly startBearingDegrees: number;
 }
 
 /**
@@ -107,6 +117,7 @@ export class PlanInteractionController implements PlanInputTarget {
   private readonly context: InteractionContext;
   private objectDrag: ObjectDrag | undefined = undefined;
   private carTurn: CarTurn | undefined = undefined;
+  private buildingTurn: BuildingTurn | undefined = undefined;
   /** View mode's grip on the points of a selected path (squares only there). */
   private readonly viewPathGestures: PathPointGestures;
   /** The same grip on a selected trench's bends. */
@@ -215,6 +226,12 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
+    if (!isNil(this.buildingTurn)) {
+      this.turnBuildingTo(this.buildingTurn, planPoint, modifiers);
+
+      return;
+    }
+
     if (!isNil(this.objectDrag)) {
       this.dragObjectTo(this.objectDrag, planPoint, modifiers);
 
@@ -271,6 +288,18 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
+    const buildingTurn = this.buildingTurn;
+
+    if (!isNil(buildingTurn)) {
+      this.buildingTurn = undefined;
+
+      if (this.hasPointerMoved) {
+        this.turnBuildingTo(buildingTurn, planPoint, modifiers);
+      }
+
+      return;
+    }
+
     const objectDrag = this.objectDrag;
 
     if (!isNil(objectDrag)) {
@@ -307,6 +336,18 @@ export class PlanInteractionController implements PlanInputTarget {
 
       if (this.hasPointerMoved) {
         this.store.siteObjects.updateCar(carTurn.startCar);
+      }
+    }
+
+    const buildingTurn = this.buildingTurn;
+
+    // The building followed the pointer whole, so an interrupted turn puts the
+    // whole of it back — a zero-degree turn from the start IS the restore.
+    if (!isNil(buildingTurn)) {
+      this.buildingTurn = undefined;
+
+      if (this.hasPointerMoved) {
+        this.store.building.turnWholeBuilding(buildingTurn.startBuilding, 0);
       }
     }
 
@@ -599,6 +640,7 @@ export class PlanInteractionController implements PlanInputTarget {
   private beginViewSelectGesture(planPoint: Vector2): void {
     if (
       this.beginCarRotation(planPoint) ||
+      this.beginBuildingRotation(planPoint) ||
       this.viewPathGestures.begin(planPoint, { allowInsert: false }) ||
       this.viewRouteGestures.begin(planPoint, { allowInsert: false })
     ) {
@@ -763,6 +805,62 @@ export class PlanInteractionController implements PlanInputTarget {
    * takes hold: everything until the pointer comes up is one step, and an
    * announcement no move follows simply expires.
    */
+  /**
+   * The grip over the selected building's footprint turns the WHOLE house —
+   * storeys, furniture and the roof ridge together. View mode only: inside an
+   * editor the building is being worked on, not arranged.
+   */
+  private beginBuildingRotation(planPoint: Vector2): boolean {
+    const building = this.store.building.selectedBuilding;
+
+    if (isNil(building) || this.store.editorMode.kind !== 'view') {
+      return false;
+    }
+
+    const scene = this.store.scene.buildingScenes.find(
+      candidate => candidate.building.id === building.id
+    );
+    const bounds = isNil(scene) ? undefined : computeMultiPolygonBounds(scene.polygons);
+
+    if (isNil(scene) || isNil(bounds)) {
+      return false;
+    }
+
+    const viewport = this.getViewport();
+    const handle = findHandleAt(
+      computeBuildingHandles(scene.polygons, viewport),
+      planToScreen(viewport, planPoint)
+    );
+
+    if (isNil(handle)) {
+      return false;
+    }
+
+    const pivot: Vector2 = {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
+    };
+
+    this.store.pushHistory();
+    this.buildingTurn = {
+      startBuilding: building,
+      pivot,
+      startBearingDegrees: bearingDegreesTowards(pivot, planPoint),
+    };
+
+    return true;
+  }
+
+  /** The turn follows the grip: the bearing delta, snapped like every turn. */
+  private turnBuildingTo(turn: BuildingTurn, planPoint: Vector2, modifiers: PlanModifiers): void {
+    const delta = snapLength(
+      normalizeTurnDegrees(bearingDegreesTowards(turn.pivot, planPoint) - turn.startBearingDegrees),
+      rotationStepDegrees(modifiers)
+    );
+
+    this.store.building.turnWholeBuilding(turn.startBuilding, delta);
+  }
+
   private beginCarRotation(planPoint: Vector2): boolean {
     const car = this.store.siteObjects.selectedCar;
 
@@ -781,7 +879,10 @@ export class PlanInteractionController implements PlanInputTarget {
     }
 
     this.store.pushHistory();
-    this.carTurn = { startCar: car };
+    this.carTurn = {
+      startCar: car,
+      grabBearingDegrees: bearingDegreesTowards(car.position, planPoint),
+    };
 
     return true;
   }
@@ -792,14 +893,17 @@ export class PlanInteractionController implements PlanInputTarget {
    */
   private turnCarTo(turn: CarTurn, planPoint: Vector2, modifiers: PlanModifiers): void {
     const { startCar } = turn;
+    // A delta from the grab, not the pointer's absolute bearing: setting the
+    // heading to the bearing works only while the grip happens to sit dead
+    // ahead — grabbed anywhere else, the car would jump into line first.
+    const sweptDegrees = normalizeTurnDegrees(
+      bearingDegreesTowards(startCar.position, planPoint) - turn.grabBearingDegrees
+    );
 
     this.store.siteObjects.updateCar({
       ...startCar,
       rotationDegrees: normalizeTurnDegrees(
-        snapLength(
-          bearingDegreesTowards(startCar.position, planPoint),
-          rotationStepDegrees(modifiers)
-        )
+        startCar.rotationDegrees + snapLength(sweptDegrees, rotationStepDegrees(modifiers))
       ),
     });
   }

@@ -3,7 +3,7 @@ import { createElevationMark, createTree } from '../../../domain/model/site-plan
 import type { PlanLayerKind } from '../../../domain/view/plan-layers';
 import { PLAN_LAYER_KINDS } from '../../../domain/view/plan-layers';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
-import type { PlanContent, PlanLabels } from './draw-plan';
+import type { PlanContent, PlanEditorChrome, PlanLabels } from './draw-plan';
 import { drawPlan } from './draw-plan';
 import {
   callsOf,
@@ -39,6 +39,12 @@ const ROOM_TYPE_NAMES: PlanLabels['roomTypeNames'] = {
   hall: 'hall',
   garage: 'garage',
   boiler: 'boiler',
+  dining: 'dining',
+  wardrobe: 'wardrobe',
+  laundry: 'laundry',
+  office: 'office',
+  pantry: 'pantry',
+  veranda: 'veranda',
 };
 
 const LABELS: PlanLabels = {
@@ -166,5 +172,122 @@ describe('drawPlan', () => {
 
     expect(valuesSet(calls, 'strokeStyle')).not.toContain(PLAN_COLORS.selectionStroke);
     expect(valuesSet(calls, 'strokeStyle')).not.toContain(PLAN_COLORS.snapIndicatorStroke);
+  });
+});
+
+describe('the whole-building turn grip', () => {
+  const BUILDING: PlanContent['buildings'][number] = {
+    id: 'house-1' as PlanContent['buildings'][number]['id'],
+    name: 'Дом',
+    polygons: [
+      {
+        outer: [
+          { x: -4, y: -3 },
+          { x: 4, y: -3 },
+          { x: 4, y: 3 },
+          { x: -4, y: 3 },
+        ],
+        holes: [],
+      },
+    ],
+    padElevation: undefined,
+    entries: [],
+    walls: [],
+    openings: [],
+    rooms: [],
+    referenceWalls: [],
+    upperFootprints: [],
+    roofZones: [],
+    furniture: [],
+    stairs: [],
+    supports: [],
+    slabs: [],
+    pitchedRoof: undefined,
+    fireplaces: [],
+    ducts: [],
+    overhangFloor: [],
+    devices: [],
+    wires: [],
+  };
+
+  function chromeWith(overrides: Partial<PlanEditorChrome>): PlanEditorChrome {
+    return {
+      pathDraft: undefined,
+      utilityDraft: undefined,
+      selectedUtilityRoute: undefined,
+      selectedShape: undefined,
+      selectedMarkId: undefined,
+      selectedTreeId: undefined,
+      selectedCar: undefined,
+      selectedPath: undefined,
+      selectedBuildingId: undefined,
+      pathHandleHighlight: undefined,
+      selectedPathPointIndex: undefined,
+      hoveredPathSegmentIndex: undefined,
+      editFocus: undefined,
+      selectedWall: undefined,
+      wallDraftPoints: [],
+      wallDraftCursor: undefined,
+      wallDraftReadout: undefined,
+      selectedOpeningId: undefined,
+      selectedFurniture: undefined,
+      selectedStairId: undefined,
+      selectedSupportId: undefined,
+      selectedSlabId: undefined,
+      selectedFireplaceId: undefined,
+      selectedDuctId: undefined,
+      selectedEntryId: undefined,
+      selectedStairGrip: undefined,
+      selectedDeviceId: undefined,
+      pendingConnectDeviceId: undefined,
+      hoveredRoomIndex: undefined,
+      draftShape: undefined,
+      draftMark: undefined,
+      measurePoints: [],
+      gestureSkeletonShapes: [],
+      keyPointSnap: undefined,
+      ...overrides,
+    };
+  }
+
+  function paintWithChrome(chrome: PlanEditorChrome) {
+    const { ctx, calls } = createRecordingContext();
+
+    stubRecordingPath2D(calls);
+    drawPlan(ctx, VIEWPORT, {
+      content: contentWith({ buildings: [BUILDING] }),
+      chrome,
+      images: { overlayImage: undefined },
+      labels: LABELS,
+    });
+
+    return calls;
+  }
+
+  /** The grip circle: an arc above the footprint's top edge, at plan (0, 3). */
+  function gripArcs(calls: ReturnType<typeof createRecordingContext>['calls']) {
+    return callsOf(calls, 'arc').filter(call => {
+      const x = call.args[0] as number;
+      const y = call.args[1] as number;
+
+      return Math.abs(x - 200) < 1 && y < 120;
+    });
+  }
+
+  it('stands over the selected building in view mode', () => {
+    const calls = paintWithChrome(chromeWith({ selectedBuildingId: BUILDING.id }));
+
+    expect(gripArcs(calls).length).toBeGreaterThan(0);
+  });
+
+  it('leaves the rail to the editors: no grip while one is open', () => {
+    const calls = paintWithChrome(
+      chromeWith({
+        selectedBuildingId: BUILDING.id,
+        editFocus: { kind: 'site' },
+      })
+    );
+
+    expect(gripArcs(calls)).toHaveLength(0);
   });
 });

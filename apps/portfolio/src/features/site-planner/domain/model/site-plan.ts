@@ -69,6 +69,14 @@ export interface Building {
   readonly padElevationMode: PadElevationMode;
   /** Only meaningful in the `manual` mode. */
   readonly manualPadElevation: Meters | undefined;
+  /**
+   * Посадка: how far below the terrain datum its mode names the pad sinks.
+   * Defaults to the цоколь height, so a fresh house buries its plinth and the
+   * floor lands a slab above the ground instead of perching 40 cm over it.
+   * Absent in plans saved before посадка existed — read via {@link padDropOf};
+   * absent means 0, which keeps every old plan exactly as it stood.
+   */
+  readonly padDropMeters?: Meters;
   readonly wallHeight: Meters;
   /** Absent in plans saved before foundations existed — read via {@link foundationOf}. */
   readonly foundation?: Foundation;
@@ -438,10 +446,16 @@ export function createBuilding({
     composition,
     padElevationMode: DEFAULT_PAD_ELEVATION_MODE,
     manualPadElevation: undefined,
+    padDropMeters: DEFAULT_FOUNDATION.heightAboveGroundMeters,
     wallHeight: DEFAULT_WALL_HEIGHT_METERS,
     foundation: DEFAULT_FOUNDATION,
     entries: [],
   };
+}
+
+/** The посадка of the building; absent (pre-посадка plans) reads as 0. */
+export function padDropOf(building: Building): Meters {
+  return building.padDropMeters ?? 0;
 }
 
 export function createDefaultSitePlan(): SitePlan {

@@ -1,15 +1,22 @@
+import type { Vector2 } from '@frozik/utils/math/vector2';
 import { findLast, isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
+import { DEFAULT_SITE_LENGTH_METERS, DEFAULT_SITE_WIDTH_METERS } from '../domain/constants';
+import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
+import { evaluateComposition } from '../domain/geometry/evaluate-composition';
 import { defaultRidgeDegrees } from '../domain/geometry/pitched-roof';
 import {
   addBuilding as addBuildingIn,
   findBuilding as findBuildingIn,
   removeBuilding as removeBuildingIn,
+  replaceBuilding as replaceBuildingIn,
+  rotateBuilding,
   updateBuilding as updateBuildingIn,
   updateFoundation as updateFoundationIn,
 } from '../domain/model/building-edits';
 import type { BuildingPresetId } from '../domain/model/building-presets';
 import { findBuildingPreset, presetUtilityEntries } from '../domain/model/building-presets';
+import { instantiateBuildingTemplate } from '../domain/model/building-template';
 import { isSiteEditMode } from '../domain/model/editor-mode';
 import type { Foundation } from '../domain/model/foundation';
 import type { Opening } from '../domain/model/openings';
@@ -45,6 +52,7 @@ import {
   slabsOf,
 } from '../domain/model/storeys';
 import type { Wall } from '../domain/model/walls';
+import { findStockHouseTemplate } from '../domain/templates/stock-houses';
 import type { Meters } from '../domain/units';
 import type { CompositionModel } from './CompositionModel';
 import type { PlanEditorCore } from './editor-core';
@@ -62,12 +70,16 @@ import { seedPointOf } from './storey-scenes';
  */
 /** History groups of the house fields, so a typed number stays one step to undo. */
 const MANUAL_PAD_HISTORY_GROUP = 'house:manual-pad';
+const PAD_DROP_HISTORY_GROUP = 'house:pad-drop';
 const WALL_HEIGHT_HISTORY_GROUP = 'house:wall-height';
 const FOUNDATION_HISTORY_GROUP = 'foundation';
 const PITCHED_ROOF_HISTORY_GROUP = 'building:roof';
 const STOREY_HEIGHT_HISTORY_GROUP = 'building:storey-height';
 
 const NO_SELECTIONS: readonly Selection[] = [];
+
+const FREE_SPOT_STEP_METERS = 3;
+const FREE_SPOT_ATTEMPTS = 8;
 
 export class BuildingModel {
   private readonly core: PlanEditorCore;
@@ -144,6 +156,11 @@ export class BuildingModel {
   setManualPadElevation(buildingId: BuildingId, manualPadElevation: Meters): void {
     this.core.pushHistory(`${MANUAL_PAD_HISTORY_GROUP}:${buildingId}`);
     this.core.buildings = updateBuildingIn(this.core.buildings, buildingId, { manualPadElevation });
+  }
+
+  setPadDrop(buildingId: BuildingId, padDropMeters: Meters): void {
+    this.core.pushHistory(`${PAD_DROP_HISTORY_GROUP}:${buildingId}`);
+    this.core.buildings = updateBuildingIn(this.core.buildings, buildingId, { padDropMeters });
   }
 
   setWallHeight(buildingId: BuildingId, wallHeight: Meters): void {
@@ -513,6 +530,96 @@ export class BuildingModel {
   }
 
   /** Mints a named structure and aims the editor at it, ready to draw. */
+  /**
+   * Turns the whole selected building about its footprint centre — walls,
+   * furnishings and the roof's ridge together. History-less: the grip gesture
+   * announces one step on pointer-down, exactly like turning a car.
+   */
+  turnWholeBuilding(startBuilding: Building, byDegrees: number): void {
+    const bounds = computeMultiPolygonBounds(evaluateComposition(startBuilding.composition));
+
+    if (isNil(bounds)) {
+      return;
+    }
+
+    const pivot: Vector2 = {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
+    };
+
+    this.core.buildings = replaceBuildingIn(
+      this.core.buildings,
+      rotateBuilding(startBuilding, byDegrees, pivot)
+    );
+  }
+
+  /**
+   * Stamps a stock house from the catalogue onto the plot: fresh ids, centred
+   * on a free spot, selected — from there it is any other building.
+   */
+  placeStockHouse(templateId: string): Building | undefined {
+    const template = findStockHouseTemplate(templateId);
+
+    if (isNil(template)) {
+      return undefined;
+    }
+
+    return this.placeReadyBuilding(template.building);
+  }
+
+  /**
+   * Places a complete building brought from outside (a template file, one day
+   * a converter) the same way a stock house lands: reminted, centred, selected.
+   */
+  placeReadyBuilding(building: Building): Building {
+    const spot = this.freeSpotFor(building);
+    const placed = instantiateBuildingTemplate({ id: 'imported', building }, spot);
+
+    this.core.pushHistory();
+    this.core.buildings = addBuildingIn(this.core.buildings, placed);
+    this.core.setSelection({ kind: 'building', buildingId: placed.id });
+
+    return placed;
+  }
+
+  /**
+   * Where a new ready building lands: the plot centre, stepped rightward past
+   * whatever already stands there — never on top of an existing footprint.
+   */
+  private freeSpotFor(building: Building): Vector2 {
+    const templateBounds = computeMultiPolygonBounds(evaluateComposition(building.composition));
+    const widthMeters = isNil(templateBounds)
+      ? FREE_SPOT_STEP_METERS
+      : templateBounds.maxX - templateBounds.minX;
+    const plotBounds = computeMultiPolygonBounds(this.core.boundaryPolygons);
+    const start: Vector2 = isNil(plotBounds)
+      ? { x: DEFAULT_SITE_WIDTH_METERS / 2, y: DEFAULT_SITE_LENGTH_METERS / 2 }
+      : { x: (plotBounds.minX + plotBounds.maxX) / 2, y: (plotBounds.minY + plotBounds.maxY) / 2 };
+    const taken = this.core.buildings.map(existing =>
+      computeMultiPolygonBounds(evaluateComposition(existing.composition))
+    );
+
+    for (let attempt = 0; attempt < FREE_SPOT_ATTEMPTS; attempt += 1) {
+      const candidate: Vector2 = {
+        x: start.x + attempt * (widthMeters + FREE_SPOT_STEP_METERS),
+        y: start.y,
+      };
+      const overlaps = taken.some(
+        bounds =>
+          !isNil(bounds) &&
+          Math.abs(candidate.x - (bounds.minX + bounds.maxX) / 2) < widthMeters &&
+          Math.abs(candidate.y - (bounds.minY + bounds.maxY) / 2) <
+            (bounds.maxY - bounds.minY + FREE_SPOT_STEP_METERS) / 2 + widthMeters / 2
+      );
+
+      if (!overlaps) {
+        return candidate;
+      }
+    }
+
+    return start;
+  }
+
   addBuilding(name: string, presetId?: BuildingPresetId): Building {
     const preset = isNil(presetId) ? undefined : findBuildingPreset(presetId);
     const created = createBuilding({ name });

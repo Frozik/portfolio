@@ -121,17 +121,34 @@ export const sitePlannerTranslationsEn = {
     endWidth: 'Width at end',
     hint: 'Neighbouring segments share their bend, so a width edited here moves in both rows.',
   },
+  stockHouses: {
+    title: 'Stock houses',
+    menu: 'Building menu',
+    storeysFact: 'Storeys',
+    roomsFact: 'Rooms',
+    menuItem: 'Add a stock house…',
+    place: 'Place on the plot',
+    fromFile: 'From a file…',
+    hint: 'The house lands furnished, wired, with utility entries and a roof — from there it is edited like any other. A file is a building saved from another plan.',
+    fileIssue: 'That file is not a saved building — it takes JSON exported from this planner.',
+  },
   objects: {
     title: 'Objects',
     buildings: 'Buildings',
     emptyBuildings: 'Add a building — a stock house comes with its utility entries.',
     storeySuffix: 'fl.',
+    clear: 'Clear the plot',
+    clearTitle: 'Clear the plot?',
+    clearDescription:
+      'Every building, tree, car, path and trench will be removed. The boundary, elevation marks and settings stay. One Ctrl+Z undoes it.',
+    clearConfirm: 'Clear',
+    clearCancel: 'Cancel',
   },
   structure: {
     title: 'Structure',
     boundary: 'Plot',
     house: 'House',
-    addBuilding: 'Add a building',
+    addBuilding: 'New building',
     /** The add-building menu offers a preset per structure kind (R19). */
     presets: {
       house: 'House',
@@ -463,6 +480,12 @@ export const sitePlannerTranslationsEn = {
       sauna: 'Sauna',
       garage: 'Garage',
       hall: 'Hall',
+      dining: 'Dining room',
+      wardrobe: 'Walk-in closet',
+      laundry: 'Laundry',
+      office: 'Office',
+      pantry: 'Pantry',
+      veranda: 'Veranda',
     },
   },
   walls: {
@@ -516,6 +539,7 @@ export const sitePlannerTranslationsEn = {
       manual: 'Set by hand',
     },
     padElevation: 'Pad',
+    padDrop: 'Lower by',
     wallHeight: 'Walls',
     earthworks: 'Earthworks',
     /** Soil taken away, where the pad sits below the ground. */

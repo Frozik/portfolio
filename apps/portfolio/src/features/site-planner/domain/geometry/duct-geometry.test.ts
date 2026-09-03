@@ -4,8 +4,15 @@ import type { VerticalDuct } from '../model/ducts';
 import { createDuct } from '../model/ducts';
 import { createFireplace } from '../model/fireplaces';
 import { createPitchedRoof } from '../model/roofs';
+import { computeMultiPolygonBounds } from './bounding-box';
 import type { DuctRoofContext } from './duct-geometry';
-import { ductTopElevation, fluePosition } from './duct-geometry';
+import {
+  crownHeadHeight,
+  ductCrownPieces,
+  ductFootprint,
+  ductTopElevation,
+  fluePosition,
+} from './duct-geometry';
 import { roofCreases, roofFaces, roofFrameOf, roofPeakMeters, roofPlan } from './pitched-roof';
 import type { MultiPolygon } from './polygon-types';
 
@@ -95,5 +102,40 @@ describe('fluePosition', () => {
 
     expect(flue.x).toBeCloseTo(-0.7 * 0.25);
     expect(flue.y).toBeCloseTo(0);
+  });
+});
+
+describe('ductCrownPieces', () => {
+  const duct = createDuct({ kind: 'vent', position: { x: 10, y: 10 } });
+  const TOP = 9;
+
+  it('dresses the mouth: a proud head, four posts across the vent gap, a floating cap', () => {
+    const pieces = ductCrownPieces(duct, TOP);
+
+    expect(pieces).toHaveLength(6);
+
+    const [head] = pieces;
+    const cap = pieces[pieces.length - 1];
+    const posts = pieces.slice(1, -1);
+    const headBounds = computeMultiPolygonBounds(head.polygons);
+    const shaftBounds = computeMultiPolygonBounds([ductFootprint(duct)]);
+    const capBounds = computeMultiPolygonBounds(cap.polygons);
+
+    // The head wraps the shaft, the cap overhangs the head.
+    expect(headBounds?.maxX ?? 0).toBeGreaterThan(shaftBounds?.maxX ?? 0);
+    expect(capBounds?.maxX ?? 0).toBeGreaterThan(headBounds?.maxX ?? 0);
+    // The head tops out exactly at the mouth; the cap floats above the gap.
+    expect(head.topElevation).toBe(TOP);
+    expect(cap.baseElevation).toBeGreaterThan(TOP);
+
+    for (const post of posts) {
+      expect(post.baseElevation).toBe(TOP);
+      expect(post.topElevation).toBe(cap.baseElevation);
+    }
+  });
+
+  it('leaves the shaft a head-course to hide inside the band', () => {
+    expect(crownHeadHeight()).toBeGreaterThan(0);
+    expect(crownHeadHeight()).toBeLessThan(0.5);
   });
 });

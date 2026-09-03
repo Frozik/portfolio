@@ -5,6 +5,7 @@ import { DEFAULT_SITE_LENGTH_METERS, DEFAULT_SITE_WIDTH_METERS } from '../domain
 import type { BoundingBox } from '../domain/geometry/bounding-box';
 import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
+import { padDropOf } from '../domain/model/site-plan';
 import { buildHeightfield } from '../domain/terrain/build-heightfield';
 import type { ContourPolyline } from '../domain/terrain/contours';
 import { buildContours } from '../domain/terrain/contours';
@@ -87,6 +88,7 @@ export class TerrainModel {
         polygons,
         mode: building.padElevationMode,
         manualPadElevation: building.manualPadElevation,
+        dropMeters: padDropOf(building),
       });
 
       return isNil(elevation) ? [] : [{ polygons, elevation }];
