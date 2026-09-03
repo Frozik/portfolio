@@ -580,6 +580,7 @@ function isUtilityEntry(value: unknown): value is UtilityEntry {
     isNonEmptyString(value.id) &&
     isOneOf(value.system, ENTRY_SYSTEMS) &&
     isFiniteNumber(value.outlineOffsetMeters) &&
+    (value.floorPosition === undefined || isVector2(value.floorPosition)) &&
     (value.kind === 'sleeve' || value.kind === 'facade') &&
     isFiniteNumber(value.depthMeters) &&
     (value.sleeveDiameterMeters === undefined || isPositiveNumber(value.sleeveDiameterMeters))

@@ -102,6 +102,9 @@ export const sitePlannerTranslationsRu: TranslationOf<typeof sitePlannerTranslat
   },
   objects: {
     title: 'Объекты',
+    buildings: 'Строения',
+    emptyBuildings: 'Добавьте строение — типовой дом придёт с вводами коммуникаций.',
+    storeySuffix: 'эт.',
   },
   structure: {
     title: 'Структура',
@@ -484,7 +487,12 @@ export const sitePlannerTranslationsRu: TranslationOf<typeof sitePlannerTranslat
     entries: {
       title: 'Вводы',
       add: 'Добавить ввод',
+      editorHint:
+        'Клик выбирает ввод, Delete убирает. Перетаскивание у края скользит по контуру, утащенный внутрь пятна ввод уходит через плиту фундамента (газ — только по фасаду). Отсюда разводятся внутренние сети, снаружи к вводам примагничиваются траншеи.',
       offset: 'По контуру',
+      floorX: 'В плите · X',
+      floorY: 'В плите · Y',
+      throughFloor: 'через плиту',
       depth: 'Глубина',
       facadeHeight: 'Высота',
       remove: 'Убрать ввод',

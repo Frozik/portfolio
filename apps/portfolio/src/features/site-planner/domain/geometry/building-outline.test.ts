@@ -4,6 +4,7 @@ import { DEFAULT_FOUNDATION } from '../model/foundation';
 import {
   foundationVolumeCubicMeters,
   multiPolygonArea,
+  offsetAlongOutline,
   outlineLength,
   pointOnOutline,
 } from './building-outline';
@@ -101,5 +102,39 @@ describe('foundationVolumeCubicMeters', () => {
     expect(
       foundationVolumeCubicMeters({ ...DEFAULT_FOUNDATION, kind: 'pier' }, RECTANGLE)
     ).toBeUndefined();
+  });
+});
+
+describe('offsetAlongOutline', () => {
+  const square: MultiPolygon = [
+    {
+      outer: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 },
+      ],
+      holes: [],
+    },
+  ];
+
+  it('round-trips with pointOnOutline', () => {
+    for (const offset of [0, 3, 12.5, 27]) {
+      const point = pointOnOutline(square, offset);
+
+      expect(point).toBeDefined();
+      expect(offsetAlongOutline(square, point ?? { x: 0, y: 0 })).toBeCloseTo(offset);
+    }
+  });
+
+  it('projects a point beside the outline onto its nearest edge', () => {
+    // Off the bottom edge, 3 m along it.
+    expect(offsetAlongOutline(square, { x: 3, y: -2 })).toBeCloseTo(3);
+    // Off the right edge: 10 m of bottom edge walked first.
+    expect(offsetAlongOutline(square, { x: 12, y: 4 })).toBeCloseTo(14);
+  });
+
+  it('answers nothing for an empty outline', () => {
+    expect(offsetAlongOutline([], { x: 1, y: 1 })).toBeUndefined();
   });
 });

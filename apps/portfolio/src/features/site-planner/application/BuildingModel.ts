@@ -1,4 +1,4 @@
-import { isNil } from 'lodash-es';
+import { findLast, isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 import { defaultRidgeDegrees } from '../domain/geometry/pitched-roof';
 import {
@@ -9,7 +9,7 @@ import {
   updateFoundation as updateFoundationIn,
 } from '../domain/model/building-edits';
 import type { BuildingPresetId } from '../domain/model/building-presets';
-import { findBuildingPreset } from '../domain/model/building-presets';
+import { findBuildingPreset, presetUtilityEntries } from '../domain/model/building-presets';
 import { isSiteEditMode } from '../domain/model/editor-mode';
 import type { Foundation } from '../domain/model/foundation';
 import type { Opening } from '../domain/model/openings';
@@ -20,7 +20,13 @@ import { createRoomLabel } from '../domain/model/rooms';
 import type { Selection } from '../domain/model/selection';
 import { createShapeId } from '../domain/model/shapes';
 import type { Building, BuildingId, PadElevationMode } from '../domain/model/site-plan';
-import { createBuilding, foundationOf, pitchedRoofOf, storeysOf } from '../domain/model/site-plan';
+import {
+  createBuilding,
+  foundationOf,
+  frostDepthOf,
+  pitchedRoofOf,
+  storeysOf,
+} from '../domain/model/site-plan';
 import {
   addStorey as addStoreyIn,
   removeRoofZoneLabel as removeRoofZoneLabelFrom,
@@ -166,18 +172,29 @@ export class BuildingModel {
       return;
     }
 
+    const building = findBuildingIn(this.core.buildings, session.buildingId);
+
+    if (isNil(building)) {
+      return;
+    }
+
     const scene = this.scene.buildingScenes.find(
       candidate => candidate.building.id === session.buildingId
     );
-    const top = scene?.storeys[scene.storeys.length - 1];
+    // The crowned storey: the highest one that exists as built mass — an empty
+    // freshly added level has no footprint for a ridge to be guessed from.
+    const crowned = findLast(scene?.storeys ?? [], storeyScene => storeyScene.footprint.length > 0);
 
     this.core.pushHistory();
+    // The DOCUMENT decides which way this toggles. Asking the derived scene
+    // instead once made «Убрать» add a second roof: over an empty top storey
+    // the scene derives no roof even while the building carries one.
     this.core.buildings = setPitchedRoofIn(
       this.core.buildings,
       session.buildingId,
-      isNil(scene?.pitchedRoof)
+      isNil(pitchedRoofOf(building))
         ? createPitchedRoof({
-            ridgeDegrees: isNil(top) ? 0 : defaultRidgeDegrees(top.footprint),
+            ridgeDegrees: isNil(crowned) ? 0 : defaultRidgeDegrees(crowned.footprint),
           })
         : undefined
     );
@@ -507,6 +524,11 @@ export class BuildingModel {
           ...created,
           wallHeight: preset.wallHeightMeters,
           foundation: { ...foundationOf(created), kind: preset.foundationKind },
+          // A stock building comes with its utility entries already on the
+          // outline — the badges appear once a footprint exists, and from
+          // then on the plot work is routing trenches to them, not placing
+          // entries by hand.
+          entries: presetUtilityEntries(preset, frostDepthOf(this.core.settings)),
         };
 
     this.core.pushHistory();

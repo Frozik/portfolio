@@ -163,9 +163,19 @@ export class SceneModel {
         foundationVolumeCubicMeters:
           polygons.length === 0 ? undefined : foundationVolumeCubicMeters(foundation, polygons),
         entryPoints: entriesOf(building).flatMap(entry => {
-          const position = pointOnOutline(polygons, entry.outlineOffsetMeters);
+          const position =
+            entry.floorPosition ?? pointOnOutline(polygons, entry.outlineOffsetMeters);
 
-          return isNil(position) ? [] : [{ id: entry.id, system: entry.system, position }];
+          return isNil(position)
+            ? []
+            : [
+                {
+                  id: entry.id,
+                  system: entry.system,
+                  position,
+                  isThroughFloor: !isNil(entry.floorPosition),
+                },
+              ];
         }),
         ...withPitchedRoof(
           building,
@@ -219,10 +229,12 @@ export class SceneModel {
             isComfortable: stairScene.isComfortable,
           })),
           supportPositions: storeyScene.supports.map(supportScene => supportScene.post.position),
-          // The roof stands on the TOP storey, so that is the storey its
-          // findings belong to and the one the panel travels to.
+          // The roof's findings belong to the storey it crowns — the highest
+          // one with built mass — and that is where the panel travels to.
           roofPitchDegrees:
-            level === scene.storeys.length - 1 ? scene.pitchedRoof?.roof.pitchDegrees : undefined,
+            storeyScene.storey.id === scene.pitchedRoof?.crownedStoreyId
+              ? scene.pitchedRoof.roof.pitchDegrees
+              : undefined,
           rooms: storeyScene.rooms.map(room => ({
             roomTypeId: room.roomTypeId,
             polygons: room.polygons,

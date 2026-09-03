@@ -19,6 +19,7 @@ import {
   SelectedPathProperties,
   SelectedTreeProperties,
 } from './SiteObjectProperties';
+import { SelectedEntryProperties } from './UtilityEntriesBlock';
 import { SelectedUtilityRouteProperties, UtilityToolProperties } from './UtilityRouteProperties';
 import {
   SelectedBuildingProperties,
@@ -79,6 +80,10 @@ const SelectionProperties = observer(({ store }: { readonly store: SitePlannerSt
 
   if (!isNil(selectedUtilityRoute)) {
     return <SelectedUtilityRouteProperties store={store} route={selectedUtilityRoute} />;
+  }
+
+  if (!isNil(store.utilities.selectedUtilityEntry)) {
+    return <SelectedEntryProperties store={store} />;
   }
 
   if (!isNil(selectedFurniture)) {

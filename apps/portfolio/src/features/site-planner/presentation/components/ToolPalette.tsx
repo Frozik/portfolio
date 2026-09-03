@@ -271,10 +271,18 @@ function paletteEntryKey(entry: PaletteEntry): string {
 }
 
 /**
- * Whether the mode shows an entry: tools follow the mode's tool table, while
- * the two editor doors stand in every mode — they ARE the mode switch.
+ * Whether the mode shows an entry: tools follow the mode's tool table, and the
+ * editor doors are the mode switch — with one deliberate absence: the house
+ * door leaves the rail while the site editor is aimed at the PLOT, because
+ * that mode is about the plot's shape and heights, and a door that adds or
+ * opens a building there pulls the work off the plot. Aimed at a building's
+ * footprint the door stays — lit, as the way back out.
  */
-function isEntryVisible(entry: PaletteEntry, allowedTools: readonly PlanTool[]): boolean {
+function isEntryVisible(
+  entry: PaletteEntry,
+  allowedTools: readonly PlanTool[],
+  isPlotFocused: boolean
+): boolean {
   switch (entry.kind) {
     case 'tool':
       return allowedTools.includes(entry.descriptor.tool);
@@ -285,8 +293,9 @@ function isEntryVisible(entry: PaletteEntry, allowedTools: readonly PlanTool[]):
     case 'utility-flyout':
       return allowedTools.includes('utility');
     case 'site-editor':
-    case 'house-editor':
       return true;
+    case 'house-editor':
+      return !isPlotFocused;
     default:
       return assertNever(entry);
   }
@@ -308,6 +317,7 @@ export const ToolPalette = observer(
   }) => {
     const isHorizontal = orientation === 'horizontal';
     const allowedTools = allowedPlanTools(store.editorMode);
+    const isPlotFocused = isSiteEditMode(store.editorMode) && !store.isEditingBuilding;
 
     return (
       <nav
@@ -317,7 +327,7 @@ export const ToolPalette = observer(
           isHorizontal ? 'flex-row overflow-x-auto' : 'flex-col'
         )}
       >
-        {PALETTE.filter(entry => isEntryVisible(entry, allowedTools)).map(entry => (
+        {PALETTE.filter(entry => isEntryVisible(entry, allowedTools, isPlotFocused)).map(entry => (
           <PaletteButton
             key={paletteEntryKey(entry)}
             entry={entry}

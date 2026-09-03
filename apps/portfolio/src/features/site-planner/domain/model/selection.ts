@@ -2,6 +2,7 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { DuctId } from './ducts';
 import type { DeviceId } from './electrical';
 import type { FireplaceId } from './fireplaces';
+import type { UtilityEntryId } from './foundation';
 import type { FurnitureId } from './furniture';
 import type { OpeningId } from './openings';
 import type { UtilityRouteId } from './routing';
@@ -62,6 +63,11 @@ export type Selection =
   | { readonly kind: 'building'; readonly buildingId: BuildingId }
   | { readonly kind: 'path'; readonly pathId: PathId }
   | { readonly kind: 'utilityRoute'; readonly routeId: UtilityRouteId }
+  | {
+      readonly kind: 'utilityEntry';
+      readonly buildingId: BuildingId;
+      readonly entryId: UtilityEntryId;
+    }
   | { readonly kind: 'wall'; readonly buildingId: BuildingId; readonly wallId: WallId }
   | {
       readonly kind: 'opening';
@@ -127,6 +133,7 @@ export const SELECTION_SCOPE: Readonly<Record<Selection['kind'], 'view' | 'edito
   mark: 'editor',
   wall: 'editor',
   opening: 'editor',
+  utilityEntry: 'editor',
   furniture: 'editor',
   device: 'editor',
   stair: 'editor',
@@ -171,6 +178,8 @@ function selectionKey(selection: Selection): string {
       return `path:${selection.pathId}`;
     case 'utilityRoute':
       return `route:${selection.routeId}`;
+    case 'utilityEntry':
+      return `entry:${selection.buildingId}:${selection.entryId}`;
     case 'building':
       return `building:${selection.buildingId}`;
     case 'wall':

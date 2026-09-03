@@ -219,6 +219,7 @@ export function editorDoorFor(selection: Selection): EditorDoor | undefined {
     case 'slab':
     case 'fireplace':
     case 'duct':
+    case 'utilityEntry':
       return undefined;
     default:
       return assertNever(selection);

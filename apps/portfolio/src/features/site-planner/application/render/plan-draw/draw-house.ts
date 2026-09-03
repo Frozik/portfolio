@@ -50,6 +50,9 @@ import {
 const HOUSE_LINE_WIDTH_PX = 1.8;
 const SELECTED_LINE_WIDTH_PX = 2.4;
 const ENTRY_RADIUS_PX = 6;
+/** The dashed ring of a sleeve through the slab; outline entries ring solid. */
+const ENTRY_FLOOR_DASH_PX: readonly number[] = [3, 2];
+const NO_DASH: readonly number[] = [];
 const ENTRY_LETTER_FONT_SIZE_PX = 8;
 const FULL_CIRCLE_RADIANS = 2 * Math.PI;
 
@@ -69,8 +72,11 @@ export const UTILITY_SYSTEM_COLORS: Readonly<Record<UtilitySystem, string>> = {
 
 /** One utility entry as the drawing needs it: which system, and where it enters. */
 export interface PlanBuildingEntry {
+  readonly id: string;
   readonly system: UtilitySystem;
   readonly position: Vector2;
+  /** A sleeve through the slab wears a dashed ring; an outline entry a solid one. */
+  readonly isThroughFloor: boolean;
 }
 
 export interface HouseStyle {
@@ -144,6 +150,7 @@ export function drawBuildings(
     entryLetters,
     focusBuildingId,
     selectedWallId,
+    selectedEntryId,
     selectedOpeningId,
     selectedFurnitureId,
     selectedStairId,
@@ -173,6 +180,7 @@ export function drawBuildings(
     readonly selectedSlabId?: ShapeId;
     readonly selectedFireplaceId?: FireplaceId;
     readonly selectedDuctId?: DuctId;
+    readonly selectedEntryId?: string;
     readonly selectedDeviceId?: DeviceId;
     readonly pendingConnectDeviceId?: DeviceId;
     /** The КОМНАТЫ row under the pointer; that room answers lit on the plan. */
@@ -266,7 +274,7 @@ export function drawBuildings(
 
   for (const building of buildings) {
     if (focusBuildingId === undefined || building.id === focusBuildingId) {
-      drawUtilityEntries(ctx, viewport, building.entries, entryLetters);
+      drawUtilityEntries(ctx, viewport, building.entries, entryLetters, selectedEntryId);
     }
   }
 }
@@ -280,7 +288,8 @@ function drawUtilityEntries(
   ctx: CanvasRenderingContext2D,
   viewport: PlanViewport,
   entries: readonly PlanBuildingEntry[],
-  entryLetters: Readonly<Record<UtilitySystem, string>>
+  entryLetters: Readonly<Record<UtilitySystem, string>>,
+  selectedEntryId?: string
 ): void {
   if (entries.length === 0) {
     return;
@@ -295,11 +304,13 @@ function drawUtilityEntries(
   for (const entry of entries) {
     const { x, y } = planToScreen(viewport, entry.position);
 
+    ctx.setLineDash(entry.isThroughFloor ? ENTRY_FLOOR_DASH_PX : NO_DASH);
     ctx.beginPath();
     ctx.arc(x, y, ENTRY_RADIUS_PX, 0, FULL_CIRCLE_RADIANS);
     ctx.fillStyle = UTILITY_SYSTEM_COLORS[entry.system];
     ctx.fill();
-    ctx.strokeStyle = PLAN_COLORS.labelBackdrop;
+    ctx.strokeStyle =
+      entry.id === selectedEntryId ? PLAN_COLORS.selectionStroke : PLAN_COLORS.labelBackdrop;
     ctx.stroke();
     ctx.fillStyle = PLAN_COLORS.labelBackdrop;
     ctx.fillText(entryLetters[entry.system], x, y);

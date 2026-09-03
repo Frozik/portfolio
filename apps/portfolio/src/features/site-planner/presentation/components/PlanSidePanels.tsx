@@ -8,6 +8,7 @@ import type { EditTargetKind } from '../../domain/model/editor-mode';
 import { sitePlannerT } from '../translations';
 import { ElectricalPanel } from './ElectricalPanel';
 import { ElevationMarksPanel } from './ElevationMarksPanel';
+import { EntriesPanel } from './EntriesPanel';
 import { FurniturePanel } from './FurniturePanel';
 import { HeatingPanel } from './HeatingPanel';
 import { BuildingsPanel } from './HousePanel';
@@ -80,7 +81,7 @@ const EDITOR_SECTIONS: Readonly<Record<EditTargetKind, readonly PanelSection[]>>
     { title: sitePlannerT.panelGroups.interior, panels: [FurniturePanel, RoomsPanel] },
     {
       title: sitePlannerT.panelGroups.services,
-      panels: [HeatingPanel, VentilationPanel, ElectricalPanel],
+      panels: [EntriesPanel, HeatingPanel, VentilationPanel, ElectricalPanel],
     },
     { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
   ],

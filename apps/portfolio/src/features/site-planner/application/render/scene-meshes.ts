@@ -245,9 +245,9 @@ export function buildBuildingMeshes({
   // BOTH — as this did before it moved here — drew every chimney twice, once
   // solid and once blended over itself.
   const crowns = scenes.flatMap(scene => {
-    const top = scene.storeys[scene.storeys.length - 1];
+    const crownedStoreyId = scene.pitchedRoof?.crownedStoreyId;
     const roof =
-      isNil(top) || isGhosted(scene, top.storey.id, pass) !== ghosted
+      isNil(crownedStoreyId) || isGhosted(scene, crownedStoreyId, pass) !== ghosted
         ? undefined
         : buildPitchedRoofSolid(scene.pitchedRoof);
     const storeys = scene.storeys.filter(

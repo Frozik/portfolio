@@ -1,4 +1,5 @@
 import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { multiPolygonArea } from '../domain/geometry/building-outline';
 import { DEFAULT_FOUNDATION } from '../domain/model/foundation';
@@ -16,6 +17,7 @@ import {
   createPathId,
   entriesOf,
   foundationOf,
+  pitchedRoofOf,
   storeysOf,
 } from '../domain/model/site-plan';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
@@ -2022,6 +2024,200 @@ describe('walls on a round base', () => {
     layOutRoundHouse(store);
 
     expect(store.walls.firstWallPointAt({ x: 10.3, y: 15.2 })).toEqual({ x: 10, y: 15 });
+
+    store.dispose();
+  });
+});
+
+describe('preset utility entries', () => {
+  it('hands a stock house its full entry set, spaced along the outline', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Дом', 'house');
+    const entries = entriesOf(store.buildings[0]);
+
+    expect(entries.map(entry => entry.system)).toEqual(['power', 'water', 'sewer', 'gas']);
+    expect(entries.map(entry => entry.outlineOffsetMeters)).toEqual([0, 3, 6, 9]);
+    // Gas is never concealed (СП 62): its stock entry rides the facade.
+    expect(entries[3].kind).toBe('facade');
+    expect(building.id).toBe(store.buildings[0].id);
+
+    store.dispose();
+  });
+
+  it('gives a shed only power, and a hand-made building nothing at all', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.enterEditMode({ kind: 'site' });
+    store.building.addBuilding('Сарай', 'shed');
+    store.building.addBuilding('Своё');
+
+    expect(entriesOf(store.buildings[0]).map(entry => entry.system)).toEqual(['power']);
+    expect(entriesOf(store.buildings[1])).toHaveLength(0);
+
+    store.dispose();
+  });
+});
+
+describe('utility entries as editor objects', () => {
+  it('names the selected entry and removes it with the selection', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Дом', 'house');
+
+    store.exitEditMode();
+    store.enterEditMode({ kind: 'building', buildingId: building.id });
+
+    const [entry] = entriesOf(store.buildings[0]);
+
+    store.setSelection({ kind: 'utilityEntry', buildingId: building.id, entryId: entry.id });
+
+    expect(store.utilities.selectedUtilityEntry?.entry.id).toBe(entry.id);
+
+    store.removeSelected();
+
+    expect(entriesOf(store.buildings[0]).map(candidate => candidate.id)).not.toContain(entry.id);
+    expect(store.utilities.selectedUtilityEntry).toBeUndefined();
+
+    store.dispose();
+  });
+
+  it('slides an entry along the outline without announcing its own history step', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Дом', 'house');
+    const [entry] = entriesOf(store.buildings[0]);
+
+    store.utilities.moveUtilityEntry(building.id, entry.id, 7.5);
+
+    expect(entriesOf(store.buildings[0])[0].outlineOffsetMeters).toBe(7.5);
+
+    store.dispose();
+  });
+});
+
+describe('utility entries through the slab', () => {
+  const layOut = (store: SitePlannerStore) => {
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Дом', 'house');
+
+    return building;
+  };
+
+  it('puts a water entry through the floor and resolves its badge at that point', () => {
+    const store = new SitePlannerStore(createRepository());
+    const building = layOut(store);
+
+    store.composition.addShapeTerm(
+      building.id,
+      createRectangle({ center: { x: 10, y: 10 }, width: 10, length: 8, rotationDegrees: 0 }),
+      'union'
+    );
+
+    const water = entriesOf(store.buildings[0]).find(entry => entry.system === 'water');
+
+    assert(!isNil(water), 'the stock house carries a water entry');
+    store.utilities.moveEntryToFloor(building.id, water.id, { x: 9, y: 9 });
+
+    const moved = entriesOf(store.buildings[0]).find(entry => entry.system === 'water');
+
+    expect(moved?.floorPosition).toEqual({ x: 9, y: 9 });
+
+    const scene = store.scene.buildingScenes[0];
+    const badge = scene.entryPoints.find(point => point.id === water.id);
+
+    expect(badge?.position).toEqual({ x: 9, y: 9 });
+    expect(badge?.isThroughFloor).toBe(true);
+
+    store.dispose();
+  });
+
+  it('refuses gas — СП 62 keeps it on the facade', () => {
+    const store = new SitePlannerStore(createRepository());
+    const building = layOut(store);
+    const gas = entriesOf(store.buildings[0]).find(entry => entry.system === 'gas');
+
+    assert(!isNil(gas), 'the stock house carries a gas entry');
+    store.utilities.moveEntryToFloor(building.id, gas.id, { x: 9, y: 9 });
+
+    expect(
+      entriesOf(store.buildings[0]).find(entry => entry.system === 'gas')?.floorPosition
+    ).toBeUndefined();
+
+    store.dispose();
+  });
+
+  it('returns an entry to the outline when it is slid back there', () => {
+    const store = new SitePlannerStore(createRepository());
+    const building = layOut(store);
+    const [entry] = entriesOf(store.buildings[0]);
+
+    store.utilities.moveEntryToFloor(building.id, entry.id, { x: 9, y: 9 });
+    store.utilities.moveUtilityEntry(building.id, entry.id, 4);
+
+    const back = entriesOf(store.buildings[0])[0];
+
+    expect(back.floorPosition).toBeUndefined();
+    expect(back.outlineOffsetMeters).toBe(4);
+
+    store.dispose();
+  });
+});
+
+describe('a pitched roof over an unfinished top storey', () => {
+  const layOutWithEmptyUpperStorey = (store: SitePlannerStore) => {
+    store.enterEditMode({ kind: 'site' });
+
+    const building = store.building.addBuilding('Дом', 'house');
+
+    store.composition.addShapeTerm(
+      building.id,
+      createRectangle({ center: { x: 10, y: 10 }, width: 10, length: 8, rotationDegrees: 0 }),
+      'union'
+    );
+    store.exitEditMode();
+    store.enterEditMode({ kind: 'building', buildingId: building.id });
+    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+
+    return building;
+  };
+
+  it('crowns the highest storey that has built mass instead of vanishing', () => {
+    const store = new SitePlannerStore(createRepository());
+
+    layOutWithEmptyUpperStorey(store);
+    store.building.togglePitchedRoof();
+
+    const scene = store.scene.buildingScenes[0];
+
+    expect(scene.pitchedRoof).toBeDefined();
+    expect(scene.pitchedRoof?.crownedStoreyId).toBe(scene.storeys[0].storey.id);
+    // The crowned ground storey is ghosted while the empty top is active, so
+    // the roof rides the GHOST pass — present in 3D either way.
+    expect(store.scene.buildingsGhostGeometry?.positions.length ?? 0).toBeGreaterThan(0);
+
+    store.dispose();
+  });
+
+  it('removes the roof on the second press even while the scene cannot draw it', () => {
+    const store = new SitePlannerStore(createRepository());
+    const building = layOutWithEmptyUpperStorey(store);
+
+    store.building.togglePitchedRoof();
+
+    expect(pitchedRoofOf(store.buildings[0])).toBeDefined();
+    expect(building.id).toBe(store.buildings[0].id);
+
+    store.building.togglePitchedRoof();
+
+    expect(pitchedRoofOf(store.buildings[0])).toBeUndefined();
 
     store.dispose();
   });

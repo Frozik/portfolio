@@ -1,4 +1,5 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Opaque } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
@@ -57,6 +58,9 @@ export const ENTRY_SYSTEMS: readonly UtilitySystem[] = [
   'gas',
 ];
 
+/** Fresh entries walk along the outline this far apart, so badges never stack. */
+export const ENTRY_SPACING_METERS: Meters = 3;
+
 export type UtilityEntryId = Opaque<'UtilityEntryId', string>;
 
 export type UtilityEntryKind = 'sleeve' | 'facade';
@@ -71,6 +75,13 @@ export interface UtilityEntry {
   readonly system: UtilitySystem;
   /** Position along the footprint's outer outline, from its start. */
   readonly outlineOffsetMeters: Meters;
+  /**
+   * Present when the entry comes up THROUGH the slab instead of through the
+   * outline — the sleeve cast into the foundation floor. The outline offset
+   * stays behind as the anchor the entry returns to when dragged back to the
+   * edge; a reader resolves the position as `floorPosition ?? on-outline`.
+   */
+  readonly floorPosition?: Vector2;
   readonly kind: UtilityEntryKind;
   /** Below grade for a sleeve; above ground for a facade entry. */
   readonly depthMeters: Meters;
@@ -104,6 +115,11 @@ const SEWER_SLEEVE_DIAMETER_METERS: Meters = 0.16;
  */
 export function entryKindFor(system: UtilitySystem): UtilityEntryKind {
   return system === 'gas' ? 'facade' : 'sleeve';
+}
+
+/** Gas may only ride the facade (СП 62) — every other system may come up through the slab. */
+export function canEnterThroughFloor(system: UtilitySystem): boolean {
+  return system !== 'gas';
 }
 
 /** The norm-derived starting depth for a system's entry; always editable after. */

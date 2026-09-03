@@ -71,6 +71,7 @@ function selectedOperand(selection: Selection | undefined): SelectedOperand | un
     case 'fireplace':
     case 'duct':
     case 'utilityRoute':
+    case 'utilityEntry':
       return undefined;
     default:
       return assertNever(selection);

@@ -1,28 +1,31 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp, isNil } from 'lodash-es';
+import { offsetAlongOutline, pointOnOutline } from '../../domain/geometry/building-outline';
 import { TYPED_LENGTH_KEY_PATTERN } from '../../domain/geometry/draw-constraints';
 import { magnetizeFurnitureToWall } from '../../domain/geometry/furniture-magnetism';
 import { distanceToPolyline } from '../../domain/geometry/hit-test-objects';
 import type { RotatedBox } from '../../domain/geometry/hit-test-shape';
 import { hitTestRotatedBox, hitTestShape } from '../../domain/geometry/hit-test-shape';
+import { clampPointToMultiPolygon } from '../../domain/geometry/polygon-booleans';
 import { isPointOnStair } from '../../domain/geometry/stair-footprint';
-
 import {
   pointAlongPolyline,
   polylineLength,
   projectOntoPolyline,
   wallCenterline,
 } from '../../domain/geometry/wall-geometry';
+import { findBuilding as findBuildingIn } from '../../domain/model/building-edits';
 import type { VerticalDuct } from '../../domain/model/ducts';
 import type { ElectricalDevice } from '../../domain/model/electrical';
 import type { Fireplace } from '../../domain/model/fireplaces';
 import { FIREPLACE_SPECS } from '../../domain/model/fireplaces';
+import { canEnterThroughFloor } from '../../domain/model/foundation';
 import type { FurnitureInstance } from '../../domain/model/furniture';
 import { findFurnitureEntry, furnitureBox } from '../../domain/model/furniture';
 import type { Opening } from '../../domain/model/openings';
 import type { Selection } from '../../domain/model/selection';
 import type { BuildingId } from '../../domain/model/site-plan';
-import { storeysOf } from '../../domain/model/site-plan';
+import { entriesOf, storeysOf } from '../../domain/model/site-plan';
 import type { Slab } from '../../domain/model/slabs';
 import type { StairInstance } from '../../domain/model/stairs';
 import type { Storey } from '../../domain/model/storeys';
@@ -51,6 +54,8 @@ const WALL_PICK_TOLERANCE_PX = 6;
 const FURNITURE_MAGNET_RADIUS_METERS = 0.5;
 /** The grab radius around a device symbol, generous around the drawn glyph. */
 const DEVICE_PICK_RADIUS_PX = 10;
+/** Дальше этого от контура утащенный ввод уходит в плиту, ближе — липнет к краю. */
+const ENTRY_OUTLINE_STICK_RADIUS_PX = 14;
 
 /**
  * The building editor's canvas behaviour (`building-editor.md` §4, stage 2):
@@ -377,6 +382,7 @@ export class BuildingEditInteraction implements EditorInteraction {
       this.beginHeatingDrag(planPoint, modifiers) ||
       this.beginFurnitureRotation(planPoint) ||
       this.wallGestures.begin(planPoint, { allowInsert: true }) ||
+      this.beginEntryDrag(planPoint, modifiers) ||
       this.beginDeviceDrag(planPoint, modifiers) ||
       this.beginOpeningDrag(planPoint, modifiers) ||
       this.beginSupportDrag(planPoint, modifiers) ||
@@ -567,6 +573,94 @@ export class BuildingEditInteraction implements EditorInteraction {
     }
 
     return undefined;
+  }
+
+  /**
+   * Takes hold of a utility entry badge and selects it. The badge rides the
+   * footprint outline, so the drag slides it there: the dragged point projects
+   * back to an arc-length offset — the one number the entry actually is.
+   */
+  private beginEntryDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const { store, getViewport } = this.context;
+    const scene = store.scene.buildingScenes.find(
+      candidate => candidate.building.id === this.buildingId
+    );
+
+    if (isNil(scene)) {
+      return false;
+    }
+
+    const pickRadiusMeters = DEVICE_PICK_RADIUS_PX / getViewport().pixelsPerMeter;
+    const picked = scene.entryPoints.find(
+      entry =>
+        Math.hypot(entry.position.x - planPoint.x, entry.position.y - planPoint.y) <=
+        pickRadiusMeters
+    );
+
+    if (isNil(picked)) {
+      return false;
+    }
+
+    const building = findBuildingIn(store.buildings, this.buildingId);
+    const entry = isNil(building)
+      ? undefined
+      : entriesOf(building).find(candidate => candidate.id === picked.id);
+
+    if (isNil(entry)) {
+      return false;
+    }
+
+    this.select(
+      { kind: 'utilityEntry', buildingId: this.buildingId, entryId: entry.id },
+      modifiers
+    );
+
+    return this.objects.beginMove(
+      {
+        origin: picked.position,
+        // The drag decides the placement: near the outline the badge rides it
+        // (and gas may ride nothing else — СП 62); carried into the footprint
+        // it becomes a sleeve through the slab, clamped to stay inside.
+        moveTo: (draggedPoint, dragModifiers) => {
+          const offset = offsetAlongOutline(scene.polygons, draggedPoint);
+
+          if (isNil(offset)) {
+            return;
+          }
+
+          const onOutline = pointOnOutline(scene.polygons, offset);
+          const stickRadiusMeters =
+            ENTRY_OUTLINE_STICK_RADIUS_PX / this.context.getViewport().pixelsPerMeter;
+          const sticksToOutline =
+            !canEnterThroughFloor(entry.system) ||
+            isNil(onOutline) ||
+            Math.hypot(draggedPoint.x - onOutline.x, draggedPoint.y - onOutline.y) <=
+              stickRadiusMeters;
+
+          if (sticksToOutline) {
+            store.utilities.moveUtilityEntry(
+              this.buildingId,
+              entry.id,
+              snapAlong(store, offset, dragModifiers)
+            );
+          } else {
+            store.utilities.moveEntryToFloor(
+              this.buildingId,
+              entry.id,
+              clampPointToMultiPolygon(
+                scene.polygons,
+                snapPointToGrid(store, draggedPoint, dragModifiers)
+              )
+            );
+          }
+        },
+        restore: () =>
+          isNil(entry.floorPosition)
+            ? store.utilities.moveUtilityEntry(this.buildingId, entry.id, entry.outlineOffsetMeters)
+            : store.utilities.moveEntryToFloor(this.buildingId, entry.id, entry.floorPosition),
+      },
+      planPoint
+    );
   }
 
   /** Takes hold of the device under the pointer and selects it. */

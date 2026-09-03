@@ -123,6 +123,9 @@ export const sitePlannerTranslationsEn = {
   },
   objects: {
     title: 'Objects',
+    buildings: 'Buildings',
+    emptyBuildings: 'Add a building — a stock house comes with its utility entries.',
+    storeySuffix: 'fl.',
   },
   structure: {
     title: 'Structure',
@@ -540,8 +543,13 @@ export const sitePlannerTranslationsEn = {
     entries: {
       title: 'Utility entries',
       add: 'Add an entry',
+      editorHint:
+        'Click selects an entry, Delete removes it. Dragged near the edge it rides the outline; carried into the footprint it goes through the foundation slab (gas stays on the facade). Indoor runs start from them, and site trenches snap onto them outside.',
       /** Position along the footprint outline, in metres from its start. */
       offset: 'Along outline',
+      floorX: 'Through slab · X',
+      floorY: 'Through slab · Y',
+      throughFloor: 'through the slab',
       depth: 'Depth',
       /** A facade entry (gas) sits above ground rather than below it. */
       facadeHeight: 'Height',

@@ -965,6 +965,10 @@ export class SitePlannerStore implements PlanEditorCore {
         this.storeyObjects.removeSelectedStoreyObject(selection);
 
         return;
+      case 'utilityEntry':
+        this.utilities.removeUtilityEntry(selection.buildingId, selection.entryId);
+
+        return;
       default:
         assertNever(selection);
     }

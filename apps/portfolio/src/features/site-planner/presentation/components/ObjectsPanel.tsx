@@ -2,14 +2,18 @@ import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { LucideIcon } from 'lucide-react';
-import { Car, Route, Trash2, TreePine } from 'lucide-react';
+import { Car, Home, Plus, Route, Trash2, TreePine } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { Button } from '../../../../shared/ui/Button';
+import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { CarInstance, SitePath, TreeInstance } from '../../domain/model/site-plan';
-import { uniformPathWidth } from '../../domain/model/site-plan';
+import type { BuildingPresetId } from '../../domain/model/building-presets';
+import { BUILDING_PRESETS } from '../../domain/model/building-presets';
+import type { Building, CarInstance, SitePath, TreeInstance } from '../../domain/model/site-plan';
+import { storeysOf, uniformPathWidth } from '../../domain/model/site-plan';
 import { DEGREE_DECIMALS, METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
@@ -198,6 +202,89 @@ const CarsSection = observer(({ store }: { readonly store: SitePlannerStore }) =
   </ObjectSection>
 ));
 
+const BuildingRow = observer(
+  ({ store, building }: { readonly store: SitePlannerStore; readonly building: Building }) => {
+    const { selection } = store;
+    const isSelected =
+      !isNil(selection) && selection.kind === 'building' && selection.buildingId === building.id;
+
+    const handleSelect = useFunction(() =>
+      store.setSelection({ kind: 'building', buildingId: building.id })
+    );
+    const handleRemove = useFunction(() => store.building.removeBuilding(building.id));
+
+    return (
+      <ObjectRow
+        label={building.name}
+        detail={`${storeysOf(building).length} ${sitePlannerT.objects.storeySuffix}`}
+        isSelected={isSelected}
+        removeLabel={sitePlannerT.structure.removeBuilding}
+        onSelect={handleSelect}
+        onRemove={handleRemove}
+      />
+    );
+  }
+);
+
+const BuildingPresetItem = memo(
+  ({
+    presetId,
+    onSelect,
+  }: {
+    readonly presetId: BuildingPresetId;
+    readonly onSelect: (presetId: BuildingPresetId) => void;
+  }) => {
+    const handleSelect = useFunction(() => onSelect(presetId));
+
+    return (
+      <DropdownItem onSelect={handleSelect} className="gap-2 py-1.5 text-xs">
+        {sitePlannerT.structure.presets[presetId]}
+      </DropdownItem>
+    );
+  }
+);
+
+/**
+ * Placing a whole building is view-mode work, like planting a tree: the site
+ * editor is for the plot's own shape and heights, so the add lives here and
+ * the footprint drawing waits behind «Редактировать участок».
+ */
+const BuildingsSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
+  const handleAdd = useFunction((presetId: BuildingPresetId) => {
+    store.building.addBuilding(
+      `${sitePlannerT.structure.presets[presetId]} ${store.buildings.length + 1}`,
+      presetId
+    );
+  });
+
+  return (
+    <div className="flex flex-col gap-1">
+      <ObjectSection
+        icon={Home}
+        title={sitePlannerT.objects.buildings}
+        count={store.buildings.length}
+        emptyHint={sitePlannerT.objects.emptyBuildings}
+      >
+        {store.buildings.map(building => (
+          <BuildingRow key={building.id} store={store} building={building} />
+        ))}
+      </ObjectSection>
+      <Dropdown
+        trigger={
+          <Button variant="ghost" size="sm">
+            <Plus size={ICON_SIZE_PX} aria-hidden />
+            {sitePlannerT.structure.addBuilding}
+          </Button>
+        }
+      >
+        {BUILDING_PRESETS.map(preset => (
+          <BuildingPresetItem key={preset.id} presetId={preset.id} onSelect={handleAdd} />
+        ))}
+      </Dropdown>
+    </div>
+  );
+});
+
 const PathsSection = observer(({ store }: { readonly store: SitePlannerStore }) => (
   <ObjectSection
     icon={Route}
@@ -218,6 +305,7 @@ const PathsSection = observer(({ store }: { readonly store: SitePlannerStore }) 
  */
 export const ObjectsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => (
   <PlannerPanel title={sitePlannerT.objects.title}>
+    <BuildingsSection store={store} />
     <TreesSection store={store} />
     <CarsSection store={store} />
     <PathsSection store={store} />

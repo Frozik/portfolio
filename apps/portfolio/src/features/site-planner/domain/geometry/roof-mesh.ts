@@ -14,6 +14,8 @@ const COORDINATES_PER_PLAN_VERTEX = 2;
 const WORLD_COORDINATES_PER_VERTEX = 3;
 const MIN_RING_VERTEX_COUNT = 3;
 const MIN_EDGE_LENGTH_METERS: Meters = 1e-9;
+/** Two planes closer than this along a whole edge are the same plane. */
+const CROSSING_EPSILON = 1e-9;
 
 interface MeshBuilder {
   readonly positions: number[];
@@ -198,12 +200,49 @@ function appendGableWalls(
 ): void {
   const soffitAt = (point: Vector2): Meters =>
     eaveElevation + roofSurfaceHeight(faces, frame, point) - thicknessMeters;
+  // The roof over an edge is the lower envelope of planes — PIECEWISE linear.
+  // A gable's end edge peaks at its middle while both corners sit on the
+  // eaves, so sampling only the corners once threw the whole triangle away
+  // and left the house open at both ends. The edge is split wherever the
+  // governing plane changes; within each piece the height is truly linear.
+  const subdivideAt = (from: Vector2, to: Vector2): readonly Vector2[] => {
+    const spans = faces.map(face => ({
+      start: roofHeightAt(frame, face.plane, from),
+      end: roofHeightAt(frame, face.plane, to),
+    }));
+    const crossings: number[] = [];
+
+    for (let first = 0; first < spans.length; first += 1) {
+      for (let second = first + 1; second < spans.length; second += 1) {
+        const gapAtStart = spans[first].start - spans[second].start;
+        const gapAtEnd = spans[first].end - spans[second].end;
+        const denominator = gapAtStart - gapAtEnd;
+
+        if (Math.abs(denominator) < CROSSING_EPSILON) {
+          continue;
+        }
+
+        const t = gapAtStart / denominator;
+
+        if (t > CROSSING_EPSILON && t < 1 - CROSSING_EPSILON) {
+          crossings.push(t);
+        }
+      }
+    }
+
+    crossings.sort((left, right) => left - right);
+
+    return crossings.map(t => ({
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t,
+    }));
+  };
 
   for (const polygon of footprint) {
-    appendWallBand(builder, polygon.outer, eaveElevation, soffitAt);
+    appendWallBand(builder, polygon.outer, eaveElevation, soffitAt, subdivideAt);
 
     for (const hole of polygon.holes) {
-      appendWallBand(builder, hole, eaveElevation, soffitAt);
+      appendWallBand(builder, hole, eaveElevation, soffitAt, subdivideAt);
     }
   }
 }
@@ -227,42 +266,57 @@ function appendWallBand(
   builder: MeshBuilder,
   ring: Ring,
   eaveElevation: Meters,
-  soffitAt: (point: Vector2) => Meters
+  soffitAt: (point: Vector2) => Meters,
+  subdivideAt: (from: Vector2, to: Vector2) => readonly Vector2[]
 ): void {
   if (ring.length < MIN_RING_VERTEX_COUNT) {
     return;
   }
 
   for (let index = 0; index < ring.length; index += 1) {
-    const from = ring[index];
-    const to = ring[(index + 1) % ring.length];
-    const edgeX = to.x - from.x;
-    const edgeY = to.y - from.y;
-    const length = Math.hypot(edgeX, edgeY);
-    const fromTop = soffitAt(from);
-    const toTop = soffitAt(to);
+    const edgeFrom = ring[index];
+    const edgeTo = ring[(index + 1) % ring.length];
+    const chain = [edgeFrom, ...subdivideAt(edgeFrom, edgeTo), edgeTo];
 
-    if (length < MIN_EDGE_LENGTH_METERS || (fromTop <= eaveElevation && toTop <= eaveElevation)) {
-      continue;
+    for (let piece = 0; piece < chain.length - 1; piece += 1) {
+      appendWallPiece(builder, chain[piece], chain[piece + 1], eaveElevation, soffitAt);
     }
-
-    const normal: WorldPoint = [edgeY / length, 0, edgeX / length];
-    const firstVertex = countVertices(builder);
-
-    appendVertex(builder, planToWorld(from, eaveElevation), normal);
-    appendVertex(builder, planToWorld(to, eaveElevation), normal);
-    appendVertex(builder, planToWorld(to, Math.max(toTop, eaveElevation)), normal);
-    appendVertex(builder, planToWorld(from, Math.max(fromTop, eaveElevation)), normal);
-
-    builder.indices.push(
-      firstVertex,
-      firstVertex + 1,
-      firstVertex + 2,
-      firstVertex,
-      firstVertex + 2,
-      firstVertex + 3
-    );
   }
+}
+
+function appendWallPiece(
+  builder: MeshBuilder,
+  from: Vector2,
+  to: Vector2,
+  eaveElevation: Meters,
+  soffitAt: (point: Vector2) => Meters
+): void {
+  const edgeX = to.x - from.x;
+  const edgeY = to.y - from.y;
+  const length = Math.hypot(edgeX, edgeY);
+  const fromTop = soffitAt(from);
+  const toTop = soffitAt(to);
+
+  if (length < MIN_EDGE_LENGTH_METERS || (fromTop <= eaveElevation && toTop <= eaveElevation)) {
+    return;
+  }
+
+  const normal: WorldPoint = [edgeY / length, 0, edgeX / length];
+  const firstVertex = countVertices(builder);
+
+  appendVertex(builder, planToWorld(from, eaveElevation), normal);
+  appendVertex(builder, planToWorld(to, eaveElevation), normal);
+  appendVertex(builder, planToWorld(to, Math.max(toTop, eaveElevation)), normal);
+  appendVertex(builder, planToWorld(from, Math.max(fromTop, eaveElevation)), normal);
+
+  builder.indices.push(
+    firstVertex,
+    firstVertex + 1,
+    firstVertex + 2,
+    firstVertex,
+    firstVertex + 2,
+    firstVertex + 3
+  );
 }
 
 function appendVertex(builder: MeshBuilder, position: WorldPoint, normal: WorldPoint): void {

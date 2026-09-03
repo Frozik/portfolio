@@ -13,6 +13,8 @@ export interface PlanUtilityEntry {
   readonly id: UtilityEntryId;
   readonly system: UtilitySystem;
   readonly position: Vector2;
+  /** True when the entry rises through the slab rather than through the outline. */
+  readonly isThroughFloor: boolean;
 }
 
 /** One building resolved against the terrain — see `buildingScenes`. */

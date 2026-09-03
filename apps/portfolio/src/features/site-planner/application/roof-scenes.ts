@@ -1,5 +1,5 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { isNil } from 'lodash-es';
+import { findLast, isNil } from 'lodash-es';
 import type { LitMesh } from '../domain/geometry/lit-mesh';
 
 import type { RoofCrease, RoofFace, RoofFrame, RoofPlane } from '../domain/geometry/pitched-roof';
@@ -16,6 +16,7 @@ import { buildPitchedRoofMesh } from '../domain/geometry/roof-mesh';
 import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
 import type { PitchedRoof } from '../domain/model/roofs';
 import { ROOF_THICKNESS_METERS } from '../domain/model/roofs';
+import type { StoreyId } from '../domain/model/storeys';
 import type { Meters } from '../domain/units';
 import { DEGREES_TO_RADIANS } from '../domain/units';
 import type { PlanSlopeArrow } from './render/plan-draw/draw-pitched-roof';
@@ -38,6 +39,8 @@ export interface PitchedRoofScene {
   readonly slopeArrows: readonly PlanSlopeArrow[];
   /** The storey outline the roof stands on; its gable walls close on it. */
   readonly footprint: MultiPolygon;
+  /** The storey the roof crowns — the highest one that HAS a footprint. */
+  readonly crownedStoreyId: StoreyId;
   readonly eaveElevation: Meters | undefined;
   /** Where the ridge stands; nothing while the building has no pad. */
   readonly ridgeElevation: Meters | undefined;
@@ -47,9 +50,13 @@ export function derivePitchedRoofScene(
   roof: PitchedRoof | undefined,
   storeys: readonly StoreyScene[]
 ): PitchedRoofScene | undefined {
-  const top = storeys[storeys.length - 1];
+  // The roof crowns the highest storey that exists as built mass. A freshly
+  // added storey with no walls and no slabs has no footprint yet — the roof
+  // stays on what stands below it rather than vanishing into the empty level,
+  // and climbs up on its own once the new storey gains a floor or walls.
+  const top = findLast(storeys, storeyScene => storeyScene.footprint.length > 0);
 
-  if (isNil(roof) || isNil(top) || top.footprint.length === 0) {
+  if (isNil(roof) || isNil(top)) {
     return undefined;
   }
 
@@ -81,6 +88,7 @@ export function derivePitchedRoofScene(
       return isNil(at) ? [] : [{ at, direction: descentDirection(frame, face.plane) }];
     }),
     footprint: top.footprint,
+    crownedStoreyId: top.storey.id,
     eaveElevation,
     ridgeElevation: isNil(eaveElevation) ? undefined : eaveElevation + roofPeakMeters(frame, roof),
   };

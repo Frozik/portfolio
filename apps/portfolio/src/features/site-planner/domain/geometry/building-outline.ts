@@ -82,6 +82,47 @@ export function pointOnOutline(polygons: MultiPolygon, offsetMeters: Meters): Ve
   return undefined;
 }
 
+/**
+ * The inverse of {@link pointOnOutline}: the arc-length offset of the outline
+ * point nearest to `point` — what a dragged entry badge writes back. Walks the
+ * same rings in the same order, so the two stay each other's round trip.
+ */
+export function offsetAlongOutline(polygons: MultiPolygon, point: Vector2): Meters | undefined {
+  let walked = 0;
+  let nearestOffset: Meters | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const polygon of polygons) {
+    const ring = polygon.outer;
+
+    for (let index = 0; index < ring.length; index += 1) {
+      const from = ring[index];
+      const to = ring[(index + 1) % ring.length];
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const segment = Math.hypot(dx, dy);
+
+      if (segment > 0) {
+        const t = Math.min(
+          1,
+          Math.max(0, ((point.x - from.x) * dx + (point.y - from.y) * dy) / (segment * segment))
+        );
+        const projected = { x: from.x + dx * t, y: from.y + dy * t };
+        const distance = Math.hypot(point.x - projected.x, point.y - projected.y);
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestOffset = walked + segment * t;
+        }
+      }
+
+      walked += segment;
+    }
+  }
+
+  return nearestOffset;
+}
+
 /** Shoelace area of the fold's result: outers bound material, holes subtract. */
 export function multiPolygonArea(polygons: MultiPolygon): number {
   return polygons.reduce(

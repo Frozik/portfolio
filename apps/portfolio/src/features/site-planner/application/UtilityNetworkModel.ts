@@ -9,7 +9,11 @@ import {
   updateUtilityEntry as updateUtilityEntryIn,
 } from '../domain/model/building-edits';
 import type { UtilityEntry, UtilityEntryId, UtilitySystem } from '../domain/model/foundation';
-import { createUtilityEntry } from '../domain/model/foundation';
+import {
+  canEnterThroughFloor,
+  createUtilityEntry,
+  ENTRY_SPACING_METERS,
+} from '../domain/model/foundation';
 import {
   addUtilityRoute as addUtilityRouteIn,
   insertUtilityRoutePoint as insertUtilityRoutePointIn,
@@ -44,8 +48,6 @@ const NO_SELECTIONS: readonly Selection[] = [];
 const MIN_ROUTE_POINT_COUNT = 2;
 const ROUTE_HISTORY_GROUP = 'route';
 const ENTRY_HISTORY_GROUP = 'entry';
-/** Fresh entries walk along the outline this far apart, so badges never stack. */
-const ENTRY_SPACING_METERS = 3;
 
 /**
  * The utility networks as the editor works them: the trench being clicked out,
@@ -157,6 +159,59 @@ export class UtilityNetworkModel {
     return isNil(selection) || selection.kind !== 'utilityRoute'
       ? undefined
       : this.core.utilityRoutes.find(route => route.id === selection.routeId);
+  }
+
+  /** The entry the selection names, with the building it sits on. */
+  get selectedUtilityEntry():
+    | { readonly buildingId: BuildingId; readonly entry: UtilityEntry }
+    | undefined {
+    const { selection } = this.core;
+
+    if (isNil(selection) || selection.kind !== 'utilityEntry') {
+      return undefined;
+    }
+
+    const building = findBuildingIn(this.core.buildings, selection.buildingId);
+    const entry = isNil(building)
+      ? undefined
+      : entriesOf(building).find(candidate => candidate.id === selection.entryId);
+
+    return isNil(entry) ? undefined : { buildingId: selection.buildingId, entry };
+  }
+
+  /**
+   * Slides an entry along the outline WITHOUT announcing history — the drag
+   * gesture announces once on pointer-down, exactly like moving a device.
+   */
+  moveUtilityEntry(
+    buildingId: BuildingId,
+    entryId: UtilityEntryId,
+    outlineOffsetMeters: Meters
+  ): void {
+    this.core.buildings = updateUtilityEntryIn(this.core.buildings, buildingId, entryId, {
+      outlineOffsetMeters,
+      floorPosition: undefined,
+    });
+  }
+
+  /**
+   * Puts an entry through the slab at a point of the floor — the sleeve cast
+   * into the foundation. Gas is refused: СП 62 keeps it on the facade, so its
+   * badge can only slide the outline. History-less like the outline move.
+   */
+  moveEntryToFloor(buildingId: BuildingId, entryId: UtilityEntryId, position: Vector2): void {
+    const building = findBuildingIn(this.core.buildings, buildingId);
+    const entry = isNil(building)
+      ? undefined
+      : entriesOf(building).find(candidate => candidate.id === entryId);
+
+    if (isNil(entry) || !canEnterThroughFloor(entry.system)) {
+      return;
+    }
+
+    this.core.buildings = updateUtilityEntryIn(this.core.buildings, buildingId, entryId, {
+      floorPosition: position,
+    });
   }
 
   setNextUtilitySystem(system: UtilitySystem): void {

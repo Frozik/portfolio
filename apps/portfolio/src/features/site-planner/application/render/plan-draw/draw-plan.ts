@@ -143,6 +143,7 @@ export interface PlanEditorChrome {
   readonly selectedSlabId: ShapeId | undefined;
   readonly selectedFireplaceId: FireplaceId | undefined;
   readonly selectedDuctId: DuctId | undefined;
+  readonly selectedEntryId: string | undefined;
   /** Where the selected stair's turn grip stands, in plan metres. */
   readonly selectedStairGrip: Vector2 | undefined;
   readonly selectedDeviceId: DeviceId | undefined;
@@ -302,6 +303,7 @@ export function drawPlan(
       selectedSlabId: chrome?.selectedSlabId,
       selectedFireplaceId: chrome?.selectedFireplaceId,
       selectedDuctId: chrome?.selectedDuctId,
+      selectedEntryId: chrome?.selectedEntryId,
       selectedDeviceId: chrome?.selectedDeviceId,
       pendingConnectDeviceId: chrome?.pendingConnectDeviceId,
       hoveredRoomIndex: chrome?.hoveredRoomIndex,

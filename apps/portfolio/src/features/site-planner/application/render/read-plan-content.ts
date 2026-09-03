@@ -165,6 +165,7 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
     selectedFireplaceId:
       store.selection?.kind === 'fireplace' ? store.selection.fireplaceId : undefined,
     selectedDuctId: store.selection?.kind === 'duct' ? store.selection.ductId : undefined,
+    selectedEntryId: store.utilities.selectedUtilityEntry?.entry.id,
     selectedStairGrip: store.storeyObjects.selectedStairScene?.rotationGrip,
     pendingConnectDeviceId: store.storeyObjects.pendingConnectDeviceId,
     hoveredRoomIndex: store.building.hoveredRoomIndex,
