@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { isNil } from 'lodash-es';
 import type { SegmentReadout } from '../../../domain/geometry/draw-constraints';
+import { unionPolygons } from '../../../domain/geometry/polygon-booleans';
 import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { DoorSwingGeometry } from '../../../domain/geometry/wall-geometry';
 import type { OpeningId, OpeningKind } from '../../../domain/model/openings';
@@ -40,8 +41,12 @@ export interface PlanWallBody {
 }
 
 /**
- * The walls of one building over its footprint: each body filled by material —
- * glazing stays translucent — and the selected one outlined in the accent.
+ * The walls of one building over its footprint. Masonry is drawn as ONE
+ * WELDED BODY — the union of every non-glazing wall — the way built walls
+ * actually meet: body by body, the translucent fills stacked into dark
+ * patches at every junction and each wall's outline ran straight through its
+ * neighbour. Glazing keeps its own translucent sheet per wall, and the
+ * selected wall answers with an accent outline of its own body on top.
  */
 export function drawWallBodies(
   ctx: CanvasRenderingContext2D,
@@ -56,19 +61,40 @@ export function drawWallBodies(
   ctx.save();
   ctx.lineJoin = 'round';
 
+  const masonry = unionPolygons(
+    walls.filter(wall => wall.material !== 'glazing').map(wall => wall.polygons)
+  );
+
+  if (masonry.length > 0) {
+    const path = buildMultiPolygonPath(masonry, viewport);
+
+    ctx.fillStyle = WALL_FILL;
+    ctx.fill(path, 'nonzero');
+    ctx.strokeStyle = WALL_STROKE;
+    ctx.lineWidth = WALL_LINE_WIDTH_PX;
+    ctx.stroke(path);
+  }
+
   for (const wall of walls) {
-    if (wall.polygons.length === 0) {
+    if (wall.material !== 'glazing' || wall.polygons.length === 0) {
       continue;
     }
 
     const path = buildMultiPolygonPath(wall.polygons, viewport);
-    const isSelected = wall.id === selectedWallId;
 
-    ctx.fillStyle = wall.material === 'glazing' ? GLAZING_FILL : WALL_FILL;
+    ctx.fillStyle = GLAZING_FILL;
     ctx.fill(path, 'nonzero');
-    ctx.strokeStyle = isSelected ? PLAN_COLORS.selectionStroke : WALL_STROKE;
-    ctx.lineWidth = isSelected ? SELECTED_LINE_WIDTH_PX : WALL_LINE_WIDTH_PX;
+    ctx.strokeStyle = WALL_STROKE;
+    ctx.lineWidth = WALL_LINE_WIDTH_PX;
     ctx.stroke(path);
+  }
+
+  const selected = walls.find(wall => wall.id === selectedWallId);
+
+  if (!isNil(selected) && selected.polygons.length > 0) {
+    ctx.strokeStyle = PLAN_COLORS.selectionStroke;
+    ctx.lineWidth = SELECTED_LINE_WIDTH_PX;
+    ctx.stroke(buildMultiPolygonPath(selected.polygons, viewport));
   }
 
   ctx.restore();
@@ -409,4 +435,62 @@ export function drawWallDraft(
     `${formatMeters(readout.lengthMeters, meterUnit, DRAFT_READOUT_DECIMALS)} · ${readout.angleDegrees.toFixed(0)}°`,
     { x: anchor.x, y: anchor.y - DRAFT_READOUT_OFFSET_PX }
   );
+}
+
+const JUNCTION_RING_RADIUS_PX = 6;
+const BADGE_DISTANCE_PX = 26;
+const BADGE_RADIUS_PX = 8;
+const BADGE_FILL = 'rgba(13, 16, 22, 0.9)';
+const BADGE_FONT_PX = 10;
+
+/**
+ * The break UI over a selected wall junction: an accent ring on the node and a
+ * numbered badge a hand's reach out along every incident edge — the numbers
+ * the digit/D keys answer to.
+ */
+export function drawJunctionBadges(
+  ctx: CanvasRenderingContext2D,
+  viewport: PlanViewport,
+  junction: {
+    readonly position: Vector2;
+    readonly edges: readonly { readonly farPoint: Vector2 }[];
+  }
+): void {
+  const center = planToScreen(viewport, junction.position);
+
+  ctx.save();
+  ctx.strokeStyle = PLAN_COLORS.selectionStroke;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, JUNCTION_RING_RADIUS_PX, 0, FULL_CIRCLE_RADIANS);
+  ctx.stroke();
+
+  junction.edges.forEach((edge, index) => {
+    const far = planToScreen(viewport, edge.farPoint);
+    const length = Math.hypot(far.x - center.x, far.y - center.y);
+
+    if (length === 0) {
+      return;
+    }
+
+    const reach = Math.min(BADGE_DISTANCE_PX, length / 2);
+    const x = center.x + ((far.x - center.x) / length) * reach;
+    const y = center.y + ((far.y - center.y) / length) * reach;
+
+    ctx.fillStyle = BADGE_FILL;
+    ctx.beginPath();
+    ctx.arc(x, y, BADGE_RADIUS_PX, 0, FULL_CIRCLE_RADIANS);
+    ctx.fill();
+    ctx.strokeStyle = PLAN_COLORS.selectionStroke;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = PLAN_COLORS.textStrong;
+    ctx.font = planMonoFont(BADGE_FONT_PX);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(index + 1), x, y);
+  });
+
+  ctx.restore();
 }

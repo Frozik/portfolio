@@ -37,6 +37,14 @@ import {
   updateOpening as updateOpeningIn,
   updateWall as updateWallIn,
 } from '../domain/model/wall-edits';
+import type { JunctionEdge } from '../domain/model/wall-topology';
+import {
+  junctionEdgesAt,
+  junctionVerticesAt,
+  moveWallJunctionIn,
+  normalizeBuildingWallCrossings as normalizeBuildingWallCrossingsIn,
+  removeWallEdgeIn,
+} from '../domain/model/wall-topology';
 import type { Wall, WallId } from '../domain/model/walls';
 import {
   createWall,
@@ -84,6 +92,12 @@ function hasWallOnRing(walls: readonly Wall[], ring: readonly Vector2[]): boolea
 export class WallEditorModel {
   /** A length typed while a wall segment is being aimed (the CAD VCB). */
   typedLengthText: string | undefined = undefined;
+  /**
+   * The junction the break UI is aimed at — a spot on the plan where wall
+   * vertices coincide. Set by clicking a vertex handle; the numbered-edge
+   * badges and the digit/D/S keys live only while this stands.
+   */
+  selectedJunction: Vector2 | undefined = undefined;
   private readonly core: PlanEditorCore;
   private readonly scene: SceneModel;
   private readonly building: BuildingModel;
@@ -347,6 +361,7 @@ export class WallEditorModel {
     }
 
     if (!isNil(firstWall)) {
+      this.normalizeCrossings(session.buildingId);
       this.core.setSelection({
         kind: 'wall',
         buildingId: session.buildingId,
@@ -394,6 +409,7 @@ export class WallEditorModel {
 
     this.core.pushHistory();
     this.core.buildings = addWallIn(this.core.buildings, session.buildingId, storeyId, wall);
+    this.normalizeCrossings(session.buildingId);
     this.core.setSelection({ kind: 'wall', buildingId: session.buildingId, wallId: wall.id });
   }
 
@@ -446,6 +462,90 @@ export class WallEditorModel {
     const slabs = this.storeyObjects.activeStoreySlabs;
 
     return slabs.length === 0 ? point : clampPointToMultiPolygon(slabsOutline(slabs), point);
+  }
+
+  /** The walls of the storey being edited — where junctions live. */
+  private get activeStoreyWalls(): readonly Wall[] {
+    const session = this.core.editorSession;
+
+    if (session?.kind !== 'building') {
+      return [];
+    }
+
+    const building = findBuildingIn(this.core.buildings, session.buildingId);
+    const storeyId =
+      this.building.activeStoreyId ?? (isNil(building) ? undefined : storeysOf(building)[0].id);
+
+    return isNil(building) || isNil(storeyId)
+      ? []
+      : (storeysOf(building).find(storey => storey.id === storeyId)?.walls ?? []);
+  }
+
+  /** The numbered edges of the selected junction, in badge order. */
+  get selectedJunctionEdges(): readonly JunctionEdge[] {
+    return isNil(this.selectedJunction)
+      ? []
+      : junctionEdgesAt(this.activeStoreyWalls, this.selectedJunction);
+  }
+
+  selectJunction(position: Vector2 | undefined): void {
+    this.selectedJunction = position;
+  }
+
+  /**
+   * Re-derives the crossing vertices after a finished wall edit — the
+   * invariant that every стык is a junction. Belongs to the edit's own
+   * history step, so it never announces one.
+   */
+  normalizeCrossings(buildingId: BuildingId): void {
+    this.core.buildings = normalizeBuildingWallCrossingsIn(this.core.buildings, buildingId);
+  }
+
+  /** Moves the whole junction: every coincident vertex of the storey follows. */
+  moveWallJunction(buildingId: BuildingId, from: Vector2, to: Vector2): void {
+    const storeyId = this.building.activeStoreyId;
+
+    if (isNil(storeyId)) {
+      return;
+    }
+
+    this.core.buildings = moveWallJunctionIn(
+      this.core.buildings,
+      buildingId,
+      storeyId,
+      from,
+      this.clampWallPoint(buildingId, to)
+    );
+  }
+
+  /** The junction UI's «цифра N»: removes that edge, dealing what it hosted. */
+  removeWallEdge(buildingId: BuildingId, wallId: WallId, segmentIndex: number): void {
+    this.core.pushHistory();
+    this.core.buildings = removeWallEdgeIn(this.core.buildings, buildingId, wallId, segmentIndex);
+    this.normalizeCrossings(buildingId);
+  }
+
+  /**
+   * The junction UI's «S»: cuts the wall standing at the selected junction in
+   * two right there — the selected wall when it runs through, else whichever
+   * does. Both halves keep the junction, so the стык survives the cut.
+   */
+  splitWallAtJunction(buildingId: BuildingId): void {
+    const junction = this.selectedJunction;
+
+    if (isNil(junction)) {
+      return;
+    }
+
+    const refs = junctionVerticesAt(this.activeStoreyWalls, junction);
+    const target = refs.find(ref => ref.wallId === this.selectedWall?.id) ?? refs[0];
+
+    if (isNil(target)) {
+      return;
+    }
+
+    this.core.pushHistory();
+    this.cutWallAtPoint(buildingId, target.wallId, target.pointIndex);
   }
 
   /** Replaces one drawn point; the caller announces the history step it belongs to. */

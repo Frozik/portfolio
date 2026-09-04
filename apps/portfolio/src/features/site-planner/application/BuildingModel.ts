@@ -51,6 +51,7 @@ import {
   DEFAULT_ROOF_COVER,
   slabsOf,
 } from '../domain/model/storeys';
+import { normalizeBuildingWallCrossings } from '../domain/model/wall-topology';
 import type { Wall } from '../domain/model/walls';
 import { findStockHouseTemplate } from '../domain/templates/stock-houses';
 import type { Meters } from '../domain/units';
@@ -577,6 +578,9 @@ export class BuildingModel {
 
     this.core.pushHistory();
     this.core.buildings = addBuildingIn(this.core.buildings, placed);
+    // Authored templates keep their wall literals lean; the junction vertices
+    // at every T-стык derive here, so a placed house is editable node by node.
+    this.core.buildings = normalizeBuildingWallCrossings(this.core.buildings, placed.id);
     this.core.setSelection({ kind: 'building', buildingId: placed.id });
 
     return placed;

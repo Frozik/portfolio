@@ -226,6 +226,7 @@ describe('the whole-building turn grip', () => {
       hoveredPathSegmentIndex: undefined,
       editFocus: undefined,
       selectedWall: undefined,
+      selectedWallJunction: undefined,
       wallDraftPoints: [],
       wallDraftCursor: undefined,
       wallDraftReadout: undefined,

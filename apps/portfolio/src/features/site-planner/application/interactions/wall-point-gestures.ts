@@ -2,7 +2,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
 import type { BuildingId } from '../../domain/model/site-plan';
-import type { Wall } from '../../domain/model/walls';
+import { storeysOf } from '../../domain/model/site-plan';
+import type { Wall, WallId } from '../../domain/model/walls';
 import { isWallClosed } from '../../domain/model/walls';
 import type { InteractionContext } from './editor-interaction';
 import { HANDLE_HIT_RADIUS_PX } from './plan-picking';
@@ -20,15 +21,19 @@ export class WallPointGestures extends PolylinePointGestures<Wall> {
       selected: () => context.store.walls.selectedWall,
       positions: wall => wall.points,
       isClosed: wall => isWallClosed(wall),
-      // A ground-storey corner moved or planted past the slab lands on its
-      // edge; an upper storey's corner is free to overhang (R24).
-      movePoint: (wall, pointIndex, position) =>
-        context.store.walls.moveWallPoint(
-          buildingId,
-          wall.id,
-          pointIndex,
-          context.store.walls.clampWallPoint(buildingId, position)
-        ),
+      // Dragging a vertex drags its JUNCTION: every wall vertex standing on
+      // the same spot follows, so a T-стык stays a T-стык (wall topology is
+      // coincidence — `wall-topology.ts`). The junction is read off the LIVE
+      // wall each move: after the first apply all members already stand at
+      // the previous target, one lookup away. A ground-storey corner moved
+      // past the slab lands on its edge; an upper storey's is free (R24).
+      movePoint: (wall, pointIndex, position) => {
+        const from = liveVertexPosition(context, buildingId, wall.id, pointIndex);
+
+        if (!isNil(from)) {
+          context.store.walls.moveWallJunction(buildingId, from, position);
+        }
+      },
       insertPoint: (wall, segmentIndex, position) =>
         context.store.walls.insertWallPoint(
           buildingId,
@@ -37,10 +42,54 @@ export class WallPointGestures extends PolylinePointGestures<Wall> {
           context.store.walls.clampWallPoint(buildingId, position)
         ),
       restore: wall => context.store.walls.restoreWall(buildingId, wall),
+      // A junction drag edits the neighbours too, so the cancel snapshot is
+      // the storey's whole wall list, not the one grabbed wall.
+      captureRestore: () => {
+        const walls = activeStoreyWallsOf(context, buildingId);
+
+        return () => {
+          for (const wall of walls) {
+            context.store.walls.restoreWall(buildingId, wall);
+          }
+        };
+      },
+      // A finished drag re-derives the crossings it may have made or broken;
+      // a plain CLICK on the vertex aims the break UI at its junction.
+      onReleased: (hasMoved, wall, pointIndex) => {
+        if (hasMoved) {
+          context.store.walls.normalizeCrossings(buildingId);
+
+          return;
+        }
+
+        const position = liveVertexPosition(context, buildingId, wall.id, pointIndex);
+
+        context.store.walls.selectJunction(position);
+      },
       snapPoint: (wall, pointIndex, position) =>
         oppositeEndWithinReach(context, wall, pointIndex, position),
     });
   }
+}
+
+function activeStoreyWallsOf(context: InteractionContext, buildingId: BuildingId): readonly Wall[] {
+  const building = context.store.buildings.find(candidate => candidate.id === buildingId);
+  const storeyId = context.store.building.activeStoreyId;
+  const storeys = isNil(building) ? [] : storeysOf(building);
+
+  return (storeys.find(storey => storey.id === storeyId) ?? storeys[0])?.walls ?? [];
+}
+
+/** Where the vertex stands RIGHT NOW — the startTarget snapshot is stale mid-drag. */
+function liveVertexPosition(
+  context: InteractionContext,
+  buildingId: BuildingId,
+  wallId: WallId,
+  pointIndex: number
+): Vector2 | undefined {
+  const wall = activeStoreyWallsOf(context, buildingId).find(candidate => candidate.id === wallId);
+
+  return wall?.points[pointIndex];
 }
 
 /**

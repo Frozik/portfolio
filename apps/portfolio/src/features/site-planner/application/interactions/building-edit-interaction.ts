@@ -31,7 +31,9 @@ import type { StairInstance } from '../../domain/model/stairs';
 import type { Storey } from '../../domain/model/storeys';
 import { devicesOf, furnitureOf } from '../../domain/model/storeys';
 import type { SupportPost } from '../../domain/model/supports';
-import type { Wall } from '../../domain/model/walls';
+import type { JunctionEdge } from '../../domain/model/wall-topology';
+import { edgeJunctionVertexIndex } from '../../domain/model/wall-topology';
+import type { Wall, WallId } from '../../domain/model/walls';
 import { isWallClosed, MIN_CLOSED_WALL_POINTS } from '../../domain/model/walls';
 import type { Meters } from '../../domain/units';
 import { normalizeTurnDegrees } from '../../domain/units';
@@ -69,6 +71,12 @@ export class BuildingEditInteraction implements EditorInteraction {
   private readonly wallGestures: WallPointGestures;
   private readonly slabs: ShapeGestures<void>;
   private readonly objects: ObjectDragGestures;
+  /** «D + цифра»: the edge's end torn off its junction, riding the pointer. */
+  private detachCarry:
+    | { readonly wallId: WallId; readonly pointIndex: number; readonly restore: () => void }
+    | undefined = undefined;
+  /** The `D` half of «D + цифра» was pressed; the next digit detaches. */
+  private isDetachArmed = false;
 
   constructor(context: InteractionContext, buildingId: BuildingId) {
     this.context = context;
@@ -95,8 +103,18 @@ export class BuildingEditInteraction implements EditorInteraction {
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store } = this.context;
 
+    // A detach in flight plants where the press lands; nothing else answers.
+    if (!isNil(this.detachCarry)) {
+      this.plantDetachedVertex(planPoint, modifiers);
+
+      return true;
+    }
+
     switch (store.activeTool) {
       case 'select':
+        // A press re-aims the break UI: the junction it lands on re-selects
+        // on release, any other target leaves no junction selected.
+        store.walls.selectJunction(undefined);
         this.beginSelectGesture(planPoint, modifiers);
 
         return true;
@@ -179,6 +197,22 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onPointerMove(planPoint: Vector2, modifiers: PlanModifiers): boolean {
+    const carry = this.detachCarry;
+
+    if (!isNil(carry)) {
+      this.context.store.walls.moveWallPoint(
+        this.buildingId,
+        carry.wallId,
+        carry.pointIndex,
+        this.context.store.walls.clampWallPoint(
+          this.buildingId,
+          snapPointToGrid(this.context.store, planPoint, modifiers)
+        )
+      );
+
+      return true;
+    }
+
     if (this.objects.move(planPoint, modifiers) || this.slabs.move(planPoint, modifiers)) {
       return true;
     }
@@ -249,6 +283,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   onPointerCancel(): void {
+    this.cancelDetach();
     this.objects.cancel();
     this.slabs.cancel();
     this.wallGestures.cancel();
@@ -319,6 +354,10 @@ export class BuildingEditInteraction implements EditorInteraction {
   onKeyDown(key: string, _modifiers: PlanModifiers): boolean {
     const { store } = this.context;
 
+    if (this.onJunctionKey(key)) {
+      return true;
+    }
+
     if (key === 'Enter' && store.walls.draftWallPoints.length > 0) {
       store.walls.commitDraftWall();
 
@@ -355,11 +394,141 @@ export class BuildingEditInteraction implements EditorInteraction {
     return false;
   }
 
+  /**
+   * The break UI of the selected wall junction (`building-editor.md` §4, the
+   * approved AutoCAD-style keys): while a junction is selected, a digit
+   * removes that numbered edge, `D`+digit tears it off the junction and hands
+   * its end to the pointer, `S` cuts the wall in two right here, Escape backs
+   * out. These keys OUTRANK the tool hotkeys — the controller delegates here
+   * first — or `s` and `d` would arm the stair and duct tools instead.
+   */
+  private onJunctionKey(key: string): boolean {
+    const { store } = this.context;
+
+    if (!isNil(this.detachCarry)) {
+      if (key === 'Escape') {
+        this.cancelDetach();
+
+        return true;
+      }
+
+      return false;
+    }
+
+    const junction = store.walls.selectedJunction;
+
+    if (isNil(junction)) {
+      return false;
+    }
+
+    if (key === 'Escape') {
+      store.walls.selectJunction(undefined);
+      this.isDetachArmed = false;
+
+      return true;
+    }
+
+    const lower = key.toLowerCase();
+
+    if (lower === 'd') {
+      this.isDetachArmed = true;
+
+      return true;
+    }
+
+    if (lower === 's') {
+      store.walls.splitWallAtJunction(this.buildingId);
+      this.isDetachArmed = false;
+
+      return true;
+    }
+
+    if (/^[1-9]$/.test(key)) {
+      const edge = store.walls.selectedJunctionEdges[Number(key) - 1];
+
+      if (!isNil(edge)) {
+        if (this.isDetachArmed) {
+          this.beginDetach(edge, junction);
+        } else {
+          store.walls.removeWallEdge(this.buildingId, edge.wallId, edge.segmentIndex);
+        }
+      }
+
+      this.isDetachArmed = false;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Tears the edge's end off the junction; the pointer carries it until a click plants it. */
+  private beginDetach(edge: JunctionEdge, junction: Vector2): void {
+    const { store } = this.context;
+    const storey = this.activeStorey();
+    const wall = storey?.walls.find(candidate => candidate.id === edge.wallId);
+
+    if (isNil(storey) || isNil(wall)) {
+      return;
+    }
+
+    const pointIndex = edgeJunctionVertexIndex(wall, edge.segmentIndex, junction);
+
+    if (isNil(pointIndex)) {
+      return;
+    }
+
+    const snapshot = storey.walls;
+
+    store.pushHistory();
+    this.detachCarry = {
+      wallId: wall.id,
+      pointIndex,
+      restore: () => {
+        for (const kept of snapshot) {
+          store.walls.restoreWall(this.buildingId, kept);
+        }
+      },
+    };
+  }
+
+  private plantDetachedVertex(planPoint: Vector2, modifiers: PlanModifiers): void {
+    const carry = this.detachCarry;
+
+    if (isNil(carry)) {
+      return;
+    }
+
+    this.detachCarry = undefined;
+    this.context.store.walls.moveWallPoint(
+      this.buildingId,
+      carry.wallId,
+      carry.pointIndex,
+      this.context.store.walls.clampWallPoint(
+        this.buildingId,
+        snapPointToGrid(this.context.store, planPoint, modifiers)
+      )
+    );
+    this.context.store.walls.normalizeCrossings(this.buildingId);
+  }
+
+  private cancelDetach(): void {
+    const carry = this.detachCarry;
+
+    if (isNil(carry)) {
+      return;
+    }
+
+    this.detachCarry = undefined;
+    carry.restore();
+  }
+
   hasTransientInteraction(): boolean {
     return (
       this.wallGestures.hasActive() ||
       this.objects.hasActive() ||
       this.slabs.hasActive() ||
+      !isNil(this.detachCarry) ||
       !isNil(this.context.store.storeyObjects.pendingConnectDeviceId) ||
       this.context.store.walls.draftWallPoints.length > 0
     );

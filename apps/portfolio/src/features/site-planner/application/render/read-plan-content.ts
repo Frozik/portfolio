@@ -174,6 +174,9 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
     hoveredPathSegmentIndex: store.hoveredPathSegmentIndex,
     editFocus: store.editorMode.kind === 'edit' ? store.editorMode.target : undefined,
     selectedWall: store.walls.selectedWall,
+    selectedWallJunction: isNil(store.walls.selectedJunction)
+      ? undefined
+      : { position: store.walls.selectedJunction, edges: store.walls.selectedJunctionEdges },
     wallDraftPoints: store.walls.draftWallPoints,
     wallDraftCursor: store.walls.draftWallCursor,
     wallDraftReadout: store.walls.draftWallReadout,

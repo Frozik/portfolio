@@ -99,6 +99,9 @@ export const WallsPanel = observer(({ store }: { readonly store: SitePlannerStor
           ordinal={index + 1}
         />
       ))}
+      {isNil(store.walls.selectedJunction) ? undefined : (
+        <PanelHint>{labels.junctionHint}</PanelHint>
+      )}
       <PanelHint>{walls.length === 0 ? labels.emptyHint : labels.hint}</PanelHint>
     </PlannerPanel>
   );

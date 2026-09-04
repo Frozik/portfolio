@@ -500,6 +500,8 @@ export const sitePlannerTranslationsEn = {
       'Click out the line; a click on the first point closes the ring. Enter or a double click finishes the wall, Esc cancels.',
     modifierHint:
       'Digits — exact segment length · Shift — 15° angle lock · Alt — suspend every snap (wall corners, base points, circle rim, grid). The cursor catches corners and circle quadrants by itself and glides along the rim.',
+    junctionHint:
+      'Junction selected, edges numbered. Digit — remove that edge · D + digit — tear the edge off the junction and carry it (a click plants it) · S — cut the wall in two here · Esc — deselect.',
     material: 'Material',
     materials: {
       brick: 'Brick masonry',

@@ -2632,4 +2632,113 @@ describe('PlanInteractionController', () => {
       expect(store.selection?.kind).toBe('furniture');
     });
   });
+
+  describe('wall junctions: the coincidence topology', () => {
+    const drawWallBetween = (from: Vector2, to: Vector2): void => {
+      controller.onKeyDown('w', NO_MODIFIERS);
+      controller.onPointerDown(from, NO_MODIFIERS);
+      controller.onPointerDown(to, NO_MODIFIERS);
+      controller.onKeyDown('Enter', NO_MODIFIERS);
+    };
+
+    const groundWalls = () => storeysOf(store.buildings[0])[0].walls;
+
+    const hasVertexAt = (points: readonly Vector2[], x: number, y: number) =>
+      points.some(point => Math.abs(point.x - x) < 0.01 && Math.abs(point.y - y) < 0.01);
+
+    /** A cross of two walls meeting at (10, 10), the across one selected. */
+    const openWithCross = (): void => {
+      store.enterEditMode({ kind: 'site' });
+
+      const building = store.building.addBuilding('Дом');
+
+      store.composition.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 12, length: 12, rotationDegrees: 0 }),
+        'union'
+      );
+      store.exitEditMode();
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      drawWallBetween({ x: 6, y: 10 }, { x: 14, y: 10 });
+      drawWallBetween({ x: 10, y: 6 }, { x: 10, y: 14 });
+      controller.onKeyDown('v', NO_MODIFIERS);
+      controller.onPointerDown({ x: 8, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 8, y: 10 }, NO_MODIFIERS);
+    };
+
+    const aimAtJunction = (): void => {
+      controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
+    };
+
+    it('plants the crossing vertex in BOTH walls the moment the second one lands', () => {
+      openWithCross();
+
+      const [across, up] = groundWalls();
+
+      expect(hasVertexAt(across.points, 10, 10)).toBe(true);
+      expect(hasVertexAt(up.points, 10, 10)).toBe(true);
+    });
+
+    it('drags the junction as one: every wall through it follows', () => {
+      openWithCross();
+
+      drag({ x: 10, y: 10 }, { x: 11, y: 11 });
+
+      for (const wall of groundWalls()) {
+        expect(hasVertexAt(wall.points, 11, 11)).toBe(true);
+        expect(hasVertexAt(wall.points, 10, 10)).toBe(false);
+      }
+    });
+
+    it('aims the break UI with a plain click on the vertex: edges numbered', () => {
+      openWithCross();
+      aimAtJunction();
+
+      expect(store.walls.selectedJunction).toBeDefined();
+      expect(store.walls.selectedJunctionEdges).toHaveLength(4);
+    });
+
+    it('removes the numbered edge on its digit', () => {
+      openWithCross();
+      aimAtJunction();
+
+      expect(controller.onKeyDown('1', NO_MODIFIERS)).toBe(true);
+
+      // Edge 1 was the across wall's western run: no wall reaches (6, 10) now.
+      expect(groundWalls().some(wall => hasVertexAt(wall.points, 6, 10))).toBe(false);
+    });
+
+    it('cuts the selected wall in two at the junction on S', () => {
+      openWithCross();
+      aimAtJunction();
+
+      expect(controller.onKeyDown('s', NO_MODIFIERS)).toBe(true);
+      expect(groundWalls()).toHaveLength(3);
+    });
+
+    it('tears an edge off the junction with D + digit and plants it where the click lands', () => {
+      openWithCross();
+      aimAtJunction();
+
+      expect(controller.onKeyDown('d', NO_MODIFIERS)).toBe(true);
+      expect(controller.onKeyDown('1', NO_MODIFIERS)).toBe(true);
+
+      controller.onPointerMove({ x: 7, y: 12 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 7, y: 12 }, NO_MODIFIERS);
+
+      const [across, up] = groundWalls();
+
+      // The across wall's end left the junction; the upright kept its vertex.
+      expect(hasVertexAt(across.points, 7, 12)).toBe(true);
+      expect(hasVertexAt(up.points, 10, 10)).toBe(true);
+    });
+
+    it('keeps s and d armed as tools while no junction is selected', () => {
+      openWithCross();
+
+      expect(controller.onKeyDown('s', NO_MODIFIERS)).toBe(true);
+      expect(store.activeTool).toBe('building:stair');
+    });
+  });
 });

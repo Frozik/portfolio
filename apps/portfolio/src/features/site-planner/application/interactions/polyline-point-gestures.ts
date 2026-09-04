@@ -31,6 +31,18 @@ export interface PolylinePointAdapter<T> {
    * dragged endpoint onto its opposite end.
    */
   readonly snapPoint?: (target: T, pointIndex: number, position: Vector2) => Vector2 | undefined;
+  /**
+   * A drag that edits beyond the grabbed polyline (a wall junction pulls its
+   * neighbours) snapshots the wider state here; a cancel then replays the
+   * closure instead of restoring the one target.
+   */
+  readonly captureRestore?: () => () => void;
+  /**
+   * The gesture's epilogue: `hasMoved` false is the plain CLICK on a vertex —
+   * what selects a wall junction — true follows a finished drag, where a wall
+   * re-derives its crossings.
+   */
+  readonly onReleased?: (hasMoved: boolean, target: T, pointIndex: number) => void;
 }
 
 /**
@@ -45,6 +57,8 @@ interface PolylinePointDrag<T> {
   readonly grabOffset: Vector2;
   /** A midpoint grab has already planted its point, so a cancel must restore even unmoved. */
   readonly wasInserted: boolean;
+  /** The adapter's wider snapshot, when it captured one at the grab. */
+  readonly restoreCaptured?: () => void;
 }
 
 /**
@@ -94,12 +108,15 @@ export class PolylinePointGestures<T> {
 
     store.pushHistory();
 
+    const restoreCaptured = this.adapter.captureRestore?.();
+
     if (handle.kind === 'vertex') {
       this.drag = {
         startTarget: target,
         pointIndex: handle.index,
         grabOffset: offsetBetween(planPoint, positions[handle.index]),
         wasInserted: false,
+        restoreCaptured,
       };
     } else {
       this.adapter.insertPoint(target, handle.index, planPoint);
@@ -108,6 +125,7 @@ export class PolylinePointGestures<T> {
         pointIndex: handle.index + 1,
         grabOffset: { x: 0, y: 0 },
         wasInserted: true,
+        restoreCaptured,
       };
     }
 
@@ -148,9 +166,13 @@ export class PolylinePointGestures<T> {
 
     this.drag = undefined;
 
-    if (this.context.hasPointerMoved()) {
+    const hasMoved = this.context.hasPointerMoved();
+
+    if (hasMoved) {
       this.applyDrag(drag, planPoint, modifiers);
     }
+
+    this.adapter.onReleased?.(hasMoved || drag.wasInserted, drag.startTarget, drag.pointIndex);
 
     return true;
   }
@@ -169,7 +191,11 @@ export class PolylinePointGestures<T> {
     this.drag = undefined;
 
     if (this.context.hasPointerMoved() || drag.wasInserted) {
-      this.adapter.restore(drag.startTarget);
+      if (isNil(drag.restoreCaptured)) {
+        this.adapter.restore(drag.startTarget);
+      } else {
+        drag.restoreCaptured();
+      }
     }
   }
 

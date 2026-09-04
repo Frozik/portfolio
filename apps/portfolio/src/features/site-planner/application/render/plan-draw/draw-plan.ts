@@ -65,7 +65,7 @@ import { drawSnapIndicator } from './draw-snap-indicator';
 import { drawTrees } from './draw-trees';
 import type { UtilityRouteDraft } from './draw-utility-routes';
 import { drawUtilityRoutes } from './draw-utility-routes';
-import { drawWallDraft } from './draw-walls';
+import { drawJunctionBadges, drawWallDraft } from './draw-walls';
 import { buildMultiPolygonPath, EDIT_DIM_ALPHA, PLAN_COLORS } from './shared';
 
 /** Localised chrome captions; the drawing modules stay free of i18n. */
@@ -130,6 +130,10 @@ export interface PlanEditorChrome {
   readonly editFocus: EditTarget | undefined;
   /** The selected wall inside the building editor, with the draft polyline. */
   readonly selectedWall: Wall | undefined;
+  /** The junction the break UI is aimed at, with its numbered edges. */
+  readonly selectedWallJunction:
+    | { readonly position: Vector2; readonly edges: readonly { readonly farPoint: Vector2 }[] }
+    | undefined;
   readonly wallDraftPoints: readonly Vector2[];
   /** Where the next wall corner would land, and how far away it is. */
   readonly wallDraftCursor: Vector2 | undefined;
@@ -486,6 +490,12 @@ function drawChrome(
       chrome.pathHandleHighlight,
       undefined
     );
+  }
+
+  const { selectedWallJunction } = chrome;
+
+  if (!isNil(selectedWallJunction)) {
+    drawJunctionBadges(ctx, viewport, selectedWallJunction);
   }
 
   const { selectedFurniture } = chrome;

@@ -381,6 +381,17 @@ export class PlanInteractionController implements PlanInputTarget {
   }
 
   onKeyDown(key: string, modifiers: PlanModifiers): boolean {
+    // The wall-junction break UI owns the keyboard while a junction is
+    // selected: its `s`/`d`/digits would otherwise arm the stair and duct
+    // tools before the interaction ever saw them.
+    if (!isNil(this.store.walls.selectedJunction)) {
+      const editInteraction = this.currentEditInteraction();
+
+      if (!isNil(editInteraction) && editInteraction.onKeyDown(key, modifiers)) {
+        return true;
+      }
+    }
+
     const tool = TOOL_HOTKEYS[key.toLowerCase()];
 
     if (!isNil(tool)) {
