@@ -1,6 +1,7 @@
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
+
 import { SIN_Y_LAYER_OPACITY } from '../../domain/chart-constants';
 import { ALPHA_BLEND_STATE } from '../chart-gpu-constants';
 import type { OffscreenTextureManager } from '../chart-textures';
@@ -9,78 +10,55 @@ import compositeShaderSource from '../shaders/composite.wgsl?raw';
 const FULLSCREEN_TRIANGLE_VERTEX_COUNT = 3;
 const COMPOSITE_UNIFORM_ALIGNMENT = 16;
 
+/** Bindings shared by the offscreen targets and the composite pipeline; owned by the composition root. */
 export interface CompositeLayerResources {
-  readonly compositeBindGroupLayout: GPUBindGroupLayout;
-  readonly compositeSampler: GPUSampler;
-  readonly compositeUniformBuffer: GPUBuffer;
+  readonly bindGroupLayout: GPUBindGroupLayout;
+  readonly sampler: GPUSampler;
+  readonly uniformBuffer: GPUBuffer;
+  dispose(): void;
 }
 
 export function createCompositeLayerResources(device: GPUDevice): CompositeLayerResources {
-  const compositeBindGroupLayout = device.createBindGroupLayout({
+  const bindGroupLayout = device.createBindGroupLayout({
     entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: { type: 'filtering' },
-      },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
   });
-
-  const compositeSampler = device.createSampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-
-  const compositeUniformBuffer = device.createBuffer({
+  const sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+  const uniformBuffer = device.createBuffer({
     size: COMPOSITE_UNIFORM_ALIGNMENT,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-
-  const opacityData = new Float32Array([SIN_Y_LAYER_OPACITY, 0, 0, 0]);
-  device.queue.writeBuffer(compositeUniformBuffer, 0, opacityData);
+  device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([SIN_Y_LAYER_OPACITY, 0, 0, 0]));
 
   return {
-    compositeBindGroupLayout,
-    compositeSampler,
-    compositeUniformBuffer,
+    bindGroupLayout,
+    sampler,
+    uniformBuffer,
+    dispose(): void {
+      uniformBuffer.destroy();
+    },
   };
 }
 
+/** Blends the offscreen sin-Y image over the canvas with a fullscreen triangle. */
 export class CompositeLayer implements RenderLayer {
-  private compositePipeline!: GPURenderPipeline;
+  private readonly pipeline: GPURenderPipeline;
 
   constructor(
+    context: GpuContext,
     private readonly textureManager: OffscreenTextureManager,
-    private readonly resources: CompositeLayerResources
-  ) {}
-
-  init(context: GpuContext): void {
+    resources: CompositeLayerResources
+  ) {
     const { device, format } = context;
-
-    const compositeShaderModule = device.createShaderModule({
-      code: compositeShaderSource,
-    });
-
-    this.compositePipeline = device.createRenderPipeline({
-      layout: device.createPipelineLayout({
-        bindGroupLayouts: [this.resources.compositeBindGroupLayout],
-      }),
-      vertex: {
-        module: compositeShaderModule,
-        entryPoint: 'vsComposite',
-      },
+    const shaderModule = device.createShaderModule({ code: compositeShaderSource });
+    this.pipeline = device.createRenderPipeline({
+      layout: device.createPipelineLayout({ bindGroupLayouts: [resources.bindGroupLayout] }),
+      vertex: { module: shaderModule, entryPoint: 'vsComposite' },
       fragment: {
-        module: compositeShaderModule,
+        module: shaderModule,
         entryPoint: 'fsComposite',
         targets: [{ format, blend: ALPHA_BLEND_STATE }],
       },
@@ -88,40 +66,21 @@ export class CompositeLayer implements RenderLayer {
     });
   }
 
-  update(_state: FrameState): void {
-    // No per-frame update needed
-  }
+  update(): void {}
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
-    const offscreen = this.textureManager.ensureOffscreenTextures(
-      state.canvasWidth,
-      state.canvasHeight,
-      this.resources.compositeBindGroupLayout,
-      this.resources.compositeSampler,
-      this.resources.compositeUniformBuffer
-    );
-
+    const offscreen = this.textureManager.ensure(state.canvasWidth, state.canvasHeight);
     if (isNil(offscreen)) {
       return;
     }
-
     const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: canvasView,
-          loadOp: 'load',
-          storeOp: 'store',
-        },
-      ],
+      colorAttachments: [{ view: canvasView, loadOp: 'load', storeOp: 'store' }],
     });
-
-    pass.setPipeline(this.compositePipeline);
+    pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, offscreen.compositeBindGroup);
     pass.draw(FULLSCREEN_TRIANGLE_VERTEX_COUNT, 1, 0, 0);
-
     pass.end();
   }
 
-  /** `resources` are shared with `SinYLayer` and destroyed by their creator */
   dispose(): void {}
 }

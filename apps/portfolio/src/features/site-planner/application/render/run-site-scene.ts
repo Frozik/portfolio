@@ -1,4 +1,5 @@
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import { createDepthTextureManager } from '@frozik/utils/webgpu/depthTextureManager';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { createMsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
@@ -14,7 +15,6 @@ import type { Heightfield } from '../../domain/terrain/heightfield';
 import { computeElevationRange } from '../../domain/terrain/heightfield';
 import type { Meters } from '../../domain/units';
 import { planToWorld } from '../../domain/view/world-frame';
-import { createDepthTextureManager } from '../../infrastructure/depth-texture-manager';
 import { ObjectsLayer } from '../../infrastructure/layers/objects-layer';
 import { createSceneUpdateLayer } from '../../infrastructure/layers/scene-update-layer';
 import { ShadowLayer } from '../../infrastructure/layers/shadow-layer';
@@ -23,6 +23,7 @@ import { TerrainLayer } from '../../infrastructure/layers/terrain-layer';
 import type { OrbitCamera, OrbitCameraHome } from '../../infrastructure/orbit-camera';
 import { createOrbitCamera } from '../../infrastructure/orbit-camera';
 import {
+  DEPTH_FORMAT,
   FPS_ANIMATION,
   FPS_IDLE,
   FPS_INTERACTION,
@@ -204,7 +205,7 @@ async function initSiteScene({
 
     const uniforms = createSceneUniforms(device);
     const msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
-    const depthManager = createDepthTextureManager(MSAA_SAMPLE_COUNT);
+    const depthManager = createDepthTextureManager(MSAA_SAMPLE_COUNT, DEPTH_FORMAT);
     const shadowMap = createShadowMap(device);
     const terrainLayer = new TerrainLayer(uniforms.buffer, msaaManager, depthManager, shadowMap);
     const objectsLayer = new ObjectsLayer(uniforms.buffer, msaaManager, depthManager, shadowMap);

@@ -1,62 +1,102 @@
 import {
-  HALF,
   MAX_SHAPE_BUFFER_COUNT,
+  SHAPE_BRIGHTNESS_EPSILON,
   SHAPE_DENSITY,
   SHAPE_FADE_DURATION,
   SHAPE_HOLD_DURATION_MAX,
   SHAPE_HOLD_DURATION_MIN,
-  SHAPE_INSTANCE_BYTES,
   SHAPE_MIN_BRIGHTNESS,
   SHAPE_OPACITY_MAX,
   SHAPE_OPACITY_MIN,
   SHAPE_SIZE_MAX,
   SHAPE_SIZE_MIN,
-  SHAPE_TYPE_COUNT,
 } from './chart-constants';
 
+/** In shader order: the index of a name is the shape id the shader switches on. */
+export const SHAPE_TYPES = [
+  'circle',
+  'square',
+  'rhombus',
+  'pentagon',
+  'hexagon',
+  'star',
+  'triangleUp',
+  'triangleDown',
+  'triangleLeft',
+  'triangleRight',
+] as const;
+
+export type ShapeType = (typeof SHAPE_TYPES)[number];
+export type ShapeFillMode = 'solid' | 'outline';
+
+export interface RgbColor {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+}
+
 export interface ShapeInstance {
-  x: number;
-  y: number;
-  halfSize: number;
-  spawnTime: number;
-  r: number;
-  g: number;
-  b: number;
-  holdDuration: number;
-  shapeType: number;
-  fillMode: number;
-  maxOpacity: number;
+  readonly x: number;
+  readonly y: number;
+  readonly halfSize: number;
+  readonly spawnTime: number;
+  readonly color: RgbColor;
+  readonly holdDuration: number;
+  readonly shapeType: ShapeType;
+  readonly fillMode: ShapeFillMode;
+  readonly maxOpacity: number;
 }
 
-export function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+/** Half extents of the canvas in device pixels; shapes spawn fully inside them. */
+export interface ShapeBounds {
+  readonly halfWidth: number;
+  readonly halfHeight: number;
 }
 
-export function spawnShape(time: number): ShapeInstance {
-  let r = Math.random();
-  let g = Math.random();
-  let b = Math.random();
-  // Ensure minimum brightness
-  const brightness = (r + g + b) / 3;
-  if (brightness < SHAPE_MIN_BRIGHTNESS) {
-    const boost = SHAPE_MIN_BRIGHTNESS / Math.max(brightness, 0.01);
-    r = Math.min(1, r * boost);
-    g = Math.min(1, g * boost);
-    b = Math.min(1, b * boost);
+/** Uniform `[0, 1)` source, injectable so spawning is deterministic under test. */
+export type RandomSource = () => number;
+
+const RGB_CHANNEL_COUNT = 3;
+const AVERAGE_LIFETIME =
+  2 * SHAPE_FADE_DURATION + (SHAPE_HOLD_DURATION_MIN + SHAPE_HOLD_DURATION_MAX) / 2;
+
+function randomInRange(random: RandomSource, min: number, max: number): number {
+  return min + random() * (max - min);
+}
+
+function pickRandom<T>(random: RandomSource, options: readonly T[]): T {
+  return options[Math.floor(random() * options.length)];
+}
+
+export function ensureMinimumBrightness(color: RgbColor): RgbColor {
+  const brightness = (color.r + color.g + color.b) / RGB_CHANNEL_COUNT;
+  if (brightness >= SHAPE_MIN_BRIGHTNESS) {
+    return color;
   }
-
+  const boost = SHAPE_MIN_BRIGHTNESS / Math.max(brightness, SHAPE_BRIGHTNESS_EPSILON);
   return {
-    x: 0,
-    y: 0,
-    halfSize: randomInRange(SHAPE_SIZE_MIN / 2, SHAPE_SIZE_MAX / 2),
+    r: Math.min(1, color.r * boost),
+    g: Math.min(1, color.g * boost),
+    b: Math.min(1, color.b * boost),
+  };
+}
+
+export function spawnShape(
+  time: number,
+  bounds: ShapeBounds,
+  random: RandomSource = Math.random
+): ShapeInstance {
+  const halfSize = randomInRange(random, SHAPE_SIZE_MIN / 2, SHAPE_SIZE_MAX / 2);
+  return {
+    x: randomInRange(random, -bounds.halfWidth + halfSize, bounds.halfWidth - halfSize),
+    y: randomInRange(random, -bounds.halfHeight + halfSize, bounds.halfHeight - halfSize),
+    halfSize,
     spawnTime: time,
-    r,
-    g,
-    b,
-    holdDuration: randomInRange(SHAPE_HOLD_DURATION_MIN, SHAPE_HOLD_DURATION_MAX),
-    shapeType: Math.floor(Math.random() * SHAPE_TYPE_COUNT),
-    fillMode: Math.random() < HALF ? 0 : 1,
-    maxOpacity: randomInRange(SHAPE_OPACITY_MIN, SHAPE_OPACITY_MAX),
+    color: ensureMinimumBrightness({ r: random(), g: random(), b: random() }),
+    holdDuration: randomInRange(random, SHAPE_HOLD_DURATION_MIN, SHAPE_HOLD_DURATION_MAX),
+    shapeType: pickRandom(random, SHAPE_TYPES),
+    fillMode: pickRandom(random, ['solid', 'outline']),
+    maxOpacity: randomInRange(random, SHAPE_OPACITY_MIN, SHAPE_OPACITY_MAX),
   };
 }
 
@@ -64,85 +104,50 @@ export function getShapeLifetime(shape: ShapeInstance): number {
   return 2 * SHAPE_FADE_DURATION + shape.holdDuration;
 }
 
-export function writeShapeToBuffer(
-  shape: ShapeInstance,
-  buffer: Float32Array,
-  offset: number
-): void {
-  const FLOATS_PER_VEC4 = 4;
-  // vec4 0: x, y, halfSize, spawnTime
-  buffer[offset] = shape.x;
-  buffer[offset + 1] = shape.y;
-  buffer[offset + 2] = shape.halfSize;
-  buffer[offset + 3] = shape.spawnTime;
-  // vec4 1: r, g, b, holdDuration
-  buffer[offset + FLOATS_PER_VEC4] = shape.r;
-  buffer[offset + FLOATS_PER_VEC4 + 1] = shape.g;
-  buffer[offset + FLOATS_PER_VEC4 + 2] = shape.b;
-  buffer[offset + FLOATS_PER_VEC4 + 3] = shape.holdDuration;
-  // vec4 2: shapeType, fillMode, maxOpacity, 0
-  const VEC4_2_OFFSET = FLOATS_PER_VEC4 * 2;
-  buffer[offset + VEC4_2_OFFSET] = shape.shapeType;
-  buffer[offset + VEC4_2_OFFSET + 1] = shape.fillMode;
-  buffer[offset + VEC4_2_OFFSET + 2] = shape.maxOpacity;
-  buffer[offset + VEC4_2_OFFSET + 3] = 0;
-}
-
-/**
- * Compute shape count based on CSS (logical) pixel area.
- * Physical pixel dimensions are divided by DPR so Retina displays
- * don't get an excessive number of shapes.
- */
+/** Shape count from the CSS pixel area, so Retina displays are not flooded. */
 export function computeShapeCount(
   canvasWidth: number,
   canvasHeight: number,
   devicePixelRatio: number
 ): number {
   const cssArea = (canvasWidth / devicePixelRatio) * (canvasHeight / devicePixelRatio);
-
   return Math.min(Math.max(1, Math.round(cssArea * SHAPE_DENSITY)), MAX_SHAPE_BUFFER_COUNT);
 }
 
-export function initializeShapes(count: number): ShapeInstance[] {
-  const shapes: ShapeInstance[] = [];
-  const averageLifetime =
-    2 * SHAPE_FADE_DURATION + (SHAPE_HOLD_DURATION_MIN + SHAPE_HOLD_DURATION_MAX) / 2;
-
-  for (let i = 0; i < count; i++) {
-    const shape = spawnShape(0);
-    // Stagger spawn times so shapes don't all appear at once
-    shape.spawnTime = -(averageLifetime / count) * i;
-    shapes.push(shape);
-  }
-
-  return shapes;
-}
-
-export function resizeShapes(
-  shapes: ShapeInstance[],
-  newCount: number,
+/** `count` shapes with spawn times spread back over one average lifetime, so they fade in staggered. */
+export function spawnStaggeredShapes(
+  count: number,
   time: number,
-  halfW: number,
-  halfH: number
-): void {
-  if (newCount > shapes.length) {
-    const averageLifetime =
-      2 * SHAPE_FADE_DURATION + (SHAPE_HOLD_DURATION_MIN + SHAPE_HOLD_DURATION_MAX) / 2;
-    const addCount = newCount - shapes.length;
-
-    for (let i = 0; i < addCount; i++) {
-      const shape = spawnShape(time);
-      // Stagger spawn times so new shapes fade in gradually
-      shape.spawnTime = time - (averageLifetime / addCount) * i;
-      shape.x = randomInRange(-halfW + shape.halfSize, halfW - shape.halfSize);
-      shape.y = randomInRange(-halfH + shape.halfSize, halfH - shape.halfSize);
-      shapes.push(shape);
-    }
-  } else if (newCount < shapes.length) {
-    shapes.splice(newCount);
-  }
+  bounds: ShapeBounds,
+  random: RandomSource = Math.random
+): readonly ShapeInstance[] {
+  return Array.from({ length: count }, (_, index) =>
+    spawnShape(time - (AVERAGE_LIFETIME / count) * index, bounds, random)
+  );
 }
 
-export function createShapeDataBuffer(count: number): Float32Array {
-  return new Float32Array((count * SHAPE_INSTANCE_BYTES) / Float32Array.BYTES_PER_ELEMENT);
+/** Grows the population with staggered newcomers or trims it to `count`. */
+export function resizeShapes(
+  shapes: readonly ShapeInstance[],
+  count: number,
+  time: number,
+  bounds: ShapeBounds,
+  random: RandomSource = Math.random
+): readonly ShapeInstance[] {
+  if (count < shapes.length) {
+    return shapes.slice(0, count);
+  }
+  return [...shapes, ...spawnStaggeredShapes(count - shapes.length, time, bounds, random)];
+}
+
+/** Replaces every shape whose lifetime has run out with a fresh one spawned now. */
+export function replaceExpiredShapes(
+  shapes: readonly ShapeInstance[],
+  time: number,
+  bounds: ShapeBounds,
+  random: RandomSource = Math.random
+): readonly ShapeInstance[] {
+  return shapes.map(shape =>
+    time - shape.spawnTime > getShapeLifetime(shape) ? spawnShape(time, bounds, random) : shape
+  );
 }

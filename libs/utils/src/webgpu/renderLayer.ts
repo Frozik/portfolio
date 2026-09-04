@@ -8,7 +8,8 @@ export interface FrameState {
 }
 
 export interface RenderLayer {
-  init(context: GpuContext): void;
+  /** Deferred GPU bring-up; a layer built with its `GpuContext` in hand has none. */
+  init?(context: GpuContext): void;
   update(state: FrameState): void;
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void;
   dispose(): void;

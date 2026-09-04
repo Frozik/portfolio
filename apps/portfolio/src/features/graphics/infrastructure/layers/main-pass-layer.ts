@@ -13,19 +13,19 @@ import {
 import { ALPHA_BLEND_STATE } from '../chart-gpu-constants';
 import type { UniformManager } from '../uniform-manager';
 
+/** Clears the canvas and draws the sin-X curve with the border segments. */
 export class MainPassLayer implements RenderLayer {
-  private device!: GPUDevice;
-  private format!: GPUTextureFormat;
-  private pipeline!: GPURenderPipeline;
-  private bindGroup!: GPUBindGroup;
+  private readonly device: GPUDevice;
+  private readonly format: GPUTextureFormat;
+  private readonly pipeline: GPURenderPipeline;
+  private readonly bindGroup: GPUBindGroup;
 
   constructor(
-    private readonly chartShaderModule: GPUShaderModule,
+    context: GpuContext,
+    chartShaderModule: GPUShaderModule,
     private readonly msaaManager: MsaaTextureManager,
-    private readonly uniformManager: UniformManager
-  ) {}
-
-  init(context: GpuContext): void {
+    uniformManager: UniformManager
+  ) {
     this.device = context.device;
     this.format = context.format;
 
@@ -38,53 +38,41 @@ export class MainPassLayer implements RenderLayer {
         },
       ],
     });
-
     this.pipeline = this.device.createRenderPipeline({
-      layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [bindGroupLayout],
-      }),
-      vertex: { module: this.chartShaderModule, entryPoint: 'vs' },
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+      vertex: { module: chartShaderModule, entryPoint: 'vs' },
       fragment: {
-        module: this.chartShaderModule,
+        module: chartShaderModule,
         entryPoint: 'fs',
         targets: [{ format: this.format, blend: ALPHA_BLEND_STATE }],
       },
       primitive: { topology: 'triangle-list' },
       multisample: { count: MSAA_SAMPLE_COUNT },
     });
-
     this.bindGroup = this.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.uniformManager.buffer },
-        },
-      ],
+      entries: [{ binding: 0, resource: { buffer: uniformManager.buffer } }],
     });
   }
 
   update(): void {}
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
-    const sinXCount = computeSinXSegmentCount(state.canvasWidth);
-    const mainInstances = sinXCount + BORDER_SEGMENT_COUNT;
-
-    const currentMsaaView = this.msaaManager.ensureView(
+    const msaaView = this.msaaManager.ensureView(
       this.device,
       this.format,
       state.canvasWidth,
       state.canvasHeight
     );
-
-    if (isNil(currentMsaaView)) {
+    if (isNil(msaaView)) {
       return;
     }
+    const instanceCount = computeSinXSegmentCount(state.canvasWidth) + BORDER_SEGMENT_COUNT;
 
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          view: currentMsaaView,
+          view: msaaView,
           resolveTarget: canvasView,
           loadOp: 'clear',
           clearValue: SCENE_BACKGROUND_COLOR,
@@ -92,14 +80,9 @@ export class MainPassLayer implements RenderLayer {
         },
       ],
     });
-
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
-
-    if (mainInstances > 0) {
-      pass.draw(VERTICES_PER_INSTANCE, mainInstances, 0, 0);
-    }
-
+    pass.draw(VERTICES_PER_INSTANCE, instanceCount, 0, 0);
     pass.end();
   }
 

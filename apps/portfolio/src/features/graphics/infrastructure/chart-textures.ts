@@ -1,93 +1,81 @@
 import { isNil } from 'lodash-es';
 
-export interface OffscreenTextureManager {
-  ensureOffscreenTextures(
-    width: number,
-    height: number,
-    compositeBindGroupLayout: GPUBindGroupLayout,
-    compositeSampler: GPUSampler,
-    compositeUniformBuffer: GPUBuffer
-  ): {
-    offscreenMsaaView: GPUTextureView;
-    offscreenResolveView: GPUTextureView;
-    compositeBindGroup: GPUBindGroup;
-  } | null;
-  destroy(): void;
+export interface OffscreenTargets {
+  readonly msaaView: GPUTextureView;
+  readonly resolveView: GPUTextureView;
+  /** Composite bind group sampling `resolveView`; rebuilt with the textures. */
+  readonly compositeBindGroup: GPUBindGroup;
 }
 
+export interface OffscreenTextureManager {
+  ensure(width: number, height: number): OffscreenTargets | undefined;
+  dispose(): void;
+}
+
+/**
+ * The MSAA offscreen target the sin-Y pass draws into and the composite pass
+ * samples, kept in step with the canvas size.
+ */
 export function createOffscreenTextureManager(
   device: GPUDevice,
-  offscreenFormat: GPUTextureFormat,
-  msaaSampleCount: number
+  options: {
+    readonly format: GPUTextureFormat;
+    readonly sampleCount: number;
+    readonly compositeBindGroupLayout: GPUBindGroupLayout;
+    readonly compositeSampler: GPUSampler;
+    readonly compositeUniformBuffer: GPUBuffer;
+  }
 ): OffscreenTextureManager {
-  let offscreenMsaaTexture: GPUTexture | null = null;
-  let offscreenMsaaView: GPUTextureView | null = null;
-  let offscreenResolveTexture: GPUTexture | null = null;
-  let offscreenResolveView: GPUTextureView | null = null;
-  let compositeBindGroup: GPUBindGroup | null = null;
+  let msaaTexture: GPUTexture | undefined;
+  let resolveTexture: GPUTexture | undefined;
+  let targets: OffscreenTargets | undefined;
+
+  function destroyTextures(): void {
+    msaaTexture?.destroy();
+    resolveTexture?.destroy();
+    msaaTexture = undefined;
+    resolveTexture = undefined;
+    targets = undefined;
+  }
 
   return {
-    ensureOffscreenTextures(
-      width: number,
-      height: number,
-      compositeBindGroupLayout: GPUBindGroupLayout,
-      compositeSampler: GPUSampler,
-      compositeUniformBuffer: GPUBuffer
-    ) {
-      if (
-        !isNil(offscreenMsaaTexture) &&
-        offscreenMsaaTexture.width === width &&
-        offscreenMsaaTexture.height === height
-      ) {
-        if (isNil(offscreenMsaaView) || isNil(offscreenResolveView) || isNil(compositeBindGroup)) {
-          return null;
-        }
-        return { offscreenMsaaView, offscreenResolveView, compositeBindGroup };
+    ensure(width: number, height: number): OffscreenTargets | undefined {
+      if (!isNil(msaaTexture) && msaaTexture.width === width && msaaTexture.height === height) {
+        return targets;
       }
-
-      offscreenMsaaTexture?.destroy();
-      offscreenResolveTexture?.destroy();
-
+      destroyTextures();
       if (width === 0 || height === 0) {
-        offscreenMsaaTexture = null;
-        offscreenMsaaView = null;
-        offscreenResolveTexture = null;
-        offscreenResolveView = null;
-        compositeBindGroup = null;
-        return null;
+        return undefined;
       }
 
-      offscreenMsaaTexture = device.createTexture({
+      msaaTexture = device.createTexture({
         size: [width, height],
-        format: offscreenFormat,
-        sampleCount: msaaSampleCount,
+        format: options.format,
+        sampleCount: options.sampleCount,
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
-      offscreenMsaaView = offscreenMsaaTexture.createView();
-
-      offscreenResolveTexture = device.createTexture({
+      resolveTexture = device.createTexture({
         size: [width, height],
-        format: offscreenFormat,
+        format: options.format,
         sampleCount: 1,
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
-      offscreenResolveView = offscreenResolveTexture.createView();
-
-      compositeBindGroup = device.createBindGroup({
-        layout: compositeBindGroupLayout,
-        entries: [
-          { binding: 0, resource: offscreenResolveView },
-          { binding: 1, resource: compositeSampler },
-          { binding: 2, resource: { buffer: compositeUniformBuffer } },
-        ],
-      });
-
-      return { offscreenMsaaView, offscreenResolveView, compositeBindGroup };
+      const resolveView = resolveTexture.createView();
+      targets = {
+        msaaView: msaaTexture.createView(),
+        resolveView,
+        compositeBindGroup: device.createBindGroup({
+          layout: options.compositeBindGroupLayout,
+          entries: [
+            { binding: 0, resource: resolveView },
+            { binding: 1, resource: options.compositeSampler },
+            { binding: 2, resource: { buffer: options.compositeUniformBuffer } },
+          ],
+        }),
+      };
+      return targets;
     },
 
-    destroy(): void {
-      offscreenMsaaTexture?.destroy();
-      offscreenResolveTexture?.destroy();
-    },
+    dispose: destroyTextures,
   };
 }

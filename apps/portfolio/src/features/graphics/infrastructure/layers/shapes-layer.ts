@@ -1,49 +1,47 @@
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
+
 import {
-  HALF,
   MAX_SHAPE_BUFFER_COUNT,
   SHAPE_FADE_DURATION,
-  SHAPE_INSTANCE_BYTES,
   SHAPE_VERTICES_PER_INSTANCE,
 } from '../../domain/chart-constants';
+import type { ShapeBounds, ShapeInstance } from '../../domain/chart-shapes';
 import {
   computeShapeCount,
-  createShapeDataBuffer,
-  getShapeLifetime,
-  initializeShapes,
-  randomInRange,
+  replaceExpiredShapes,
   resizeShapes,
-  spawnShape,
-  writeShapeToBuffer,
+  spawnStaggeredShapes,
 } from '../../domain/chart-shapes';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import shapesSpecificSource from '../shaders/shapes.wgsl?raw';
+import {
+  createShapeDataBuffer,
+  SHAPE_INSTANCE_BYTES,
+  writeShapeInstances,
+} from '../shape-instance-buffer';
 import type { UniformManager } from '../uniform-manager';
 
 const shapesShaderSource = commonShaderSource + shapesSpecificSource;
 
-const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
+const PREMULTIPLIED_BLEND: GPUBlendState = {
+  color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+};
 
+/** A population of fading shapes sized to the canvas, uploaded once per frame as instances. */
 export class ShapesLayer implements RenderLayer {
-  private device!: GPUDevice;
-  private shapesPipeline!: GPURenderPipeline;
-  private shapesBindGroup!: GPUBindGroup;
-  private shapesStorageBuffer!: GPUBuffer;
+  private readonly device: GPUDevice;
+  private readonly pipeline: GPURenderPipeline;
+  private readonly bindGroup: GPUBindGroup;
+  private readonly storageBuffer: GPUBuffer;
+  private readonly shapeData = createShapeDataBuffer(MAX_SHAPE_BUFFER_COUNT);
+  private shapes: readonly ShapeInstance[] = [];
 
-  private readonly shapeDataBuffer = createShapeDataBuffer(MAX_SHAPE_BUFFER_COUNT);
-  private shapes: ReturnType<typeof initializeShapes> = [];
-
-  constructor(private readonly uniformManager: UniformManager) {}
-
-  init(context: GpuContext): void {
+  constructor(context: GpuContext, uniformManager: UniformManager) {
     this.device = context.device;
-
-    const shapesShaderModule = this.device.createShaderModule({
-      code: shapesShaderSource,
-    });
-
-    const shapesBindGroupLayout = this.device.createBindGroupLayout({
+    const shaderModule = this.device.createShaderModule({ code: shapesShaderSource });
+    const bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -57,119 +55,62 @@ export class ShapesLayer implements RenderLayer {
         },
       ],
     });
-
-    this.shapesStorageBuffer = this.device.createBuffer({
+    this.storageBuffer = this.device.createBuffer({
       size: MAX_SHAPE_BUFFER_COUNT * SHAPE_INSTANCE_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-
-    this.shapesPipeline = this.device.createRenderPipeline({
-      layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [shapesBindGroupLayout],
-      }),
+    this.pipeline = this.device.createRenderPipeline({
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
       vertex: {
-        module: shapesShaderModule,
+        module: shaderModule,
         entryPoint: 'vsShapes',
         constants: { FADE_DURATION: SHAPE_FADE_DURATION },
       },
       fragment: {
-        module: shapesShaderModule,
+        module: shaderModule,
         entryPoint: 'fsShapes',
-        targets: [
-          {
-            format: context.format,
-            blend: {
-              color: {
-                srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
-                operation: 'add',
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
-                operation: 'add',
-              },
-            },
-          },
-        ],
+        targets: [{ format: context.format, blend: PREMULTIPLIED_BLEND }],
       },
       primitive: { topology: 'triangle-list' },
     });
-
-    this.shapesBindGroup = this.device.createBindGroup({
-      layout: shapesBindGroupLayout,
+    this.bindGroup = this.device.createBindGroup({
+      layout: bindGroupLayout,
       entries: [
-        { binding: 0, resource: { buffer: this.uniformManager.buffer } },
-        { binding: 1, resource: { buffer: this.shapesStorageBuffer } },
+        { binding: 0, resource: { buffer: uniformManager.buffer } },
+        { binding: 1, resource: { buffer: this.storageBuffer } },
       ],
     });
   }
 
   update(state: FrameState): void {
     const { time, canvasWidth, canvasHeight, devicePixelRatio } = state;
-    const halfWidth = canvasWidth * HALF;
-    const halfHeight = canvasHeight * HALF;
+    const bounds: ShapeBounds = { halfWidth: canvasWidth / 2, halfHeight: canvasHeight / 2 };
+    const count = computeShapeCount(canvasWidth, canvasHeight, devicePixelRatio);
 
-    if (this.shapes.length === 0) {
-      const initialCount = computeShapeCount(canvasWidth, canvasHeight, devicePixelRatio);
-      this.shapes = initializeShapes(initialCount);
-    }
+    const population =
+      this.shapes.length === 0
+        ? spawnStaggeredShapes(count, time, bounds)
+        : resizeShapes(this.shapes, count, time, bounds);
+    this.shapes = replaceExpiredShapes(population, time, bounds);
 
-    const currentShapeCount = computeShapeCount(canvasWidth, canvasHeight, devicePixelRatio);
-    if (currentShapeCount !== this.shapes.length) {
-      resizeShapes(this.shapes, currentShapeCount, time, halfWidth, halfHeight);
-    }
-
-    for (let shapeIndex = 0; shapeIndex < this.shapes.length; shapeIndex++) {
-      const shape = this.shapes[shapeIndex];
-      const elapsed = time - shape.spawnTime;
-      const lifetime = getShapeLifetime(shape);
-
-      if (elapsed > lifetime) {
-        const newShape = spawnShape(time);
-        newShape.x = randomInRange(-halfWidth + newShape.halfSize, halfWidth - newShape.halfSize);
-        newShape.y = randomInRange(-halfHeight + newShape.halfSize, halfHeight - newShape.halfSize);
-        this.shapes[shapeIndex] = newShape;
-      }
-
-      writeShapeToBuffer(
-        this.shapes[shapeIndex],
-        this.shapeDataBuffer,
-        shapeIndex * FLOATS_PER_SHAPE
-      );
-    }
-
-    this.device.queue.writeBuffer(
-      this.shapesStorageBuffer,
-      0,
-      this.shapeDataBuffer.buffer,
-      0,
-      this.shapes.length * SHAPE_INSTANCE_BYTES
-    );
+    const byteLength = writeShapeInstances(this.shapeData, this.shapes);
+    this.device.queue.writeBuffer(this.storageBuffer, 0, this.shapeData.buffer, 0, byteLength);
   }
 
-  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, _state: FrameState): void {
+  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView): void {
     if (this.shapes.length === 0) {
       return;
     }
-
     const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: canvasView,
-          loadOp: 'load',
-          storeOp: 'store',
-        },
-      ],
+      colorAttachments: [{ view: canvasView, loadOp: 'load', storeOp: 'store' }],
     });
-
-    pass.setPipeline(this.shapesPipeline);
-    pass.setBindGroup(0, this.shapesBindGroup);
+    pass.setPipeline(this.pipeline);
+    pass.setBindGroup(0, this.bindGroup);
     pass.draw(SHAPE_VERTICES_PER_INSTANCE, this.shapes.length, 0, 0);
     pass.end();
   }
 
   dispose(): void {
-    this.shapesStorageBuffer.destroy();
+    this.storageBuffer.destroy();
   }
 }

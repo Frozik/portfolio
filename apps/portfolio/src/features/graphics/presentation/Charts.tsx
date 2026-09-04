@@ -1,18 +1,11 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo } from 'react';
 
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
+import { useGpuCanvas } from '../../../shared/hooks/useGpuCanvas';
 import { runCharter } from '../application/render/chart-draw';
 
 export const Charts = memo(() => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (canvasRef.current) {
-      return runCharter(canvasRef.current);
-    }
-
-    return undefined;
-  }, []);
+  const canvasRef = useGpuCanvas(runCharter);
 
   return (
     <WebGpuGuard className="h-full w-full">

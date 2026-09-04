@@ -4,6 +4,7 @@ import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
 import type { GpuAppSession } from '@frozik/utils/webgpu/runGpuApp';
 import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
+import { createUpdateOnlyLayer } from '@frozik/utils/webgpu/updateOnlyLayer';
 
 import { MSAA_SAMPLE_COUNT } from '../../domain/chart-constants';
 import { OFFSCREEN_FORMAT } from '../../infrastructure/chart-gpu-constants';
@@ -15,7 +16,6 @@ import {
 import { MainPassLayer } from '../../infrastructure/layers/main-pass-layer';
 import { ShapesLayer } from '../../infrastructure/layers/shapes-layer';
 import { SinYLayer } from '../../infrastructure/layers/sin-y-layer';
-import { UniformUpdateLayer } from '../../infrastructure/layers/uniform-update-layer';
 import chartSpecificSource from '../../infrastructure/shaders/chart.wgsl?raw';
 import chartCommonSource from '../../infrastructure/shaders/common.wgsl?raw';
 import { createUniformManager } from '../../infrastructure/uniform-manager';
@@ -33,56 +33,35 @@ async function initCharter(canvas: HTMLCanvasElement): Promise<GpuAppSession> {
   const context = await createGpuContext(canvas);
   const { device } = context;
 
-  const chartShaderModule = device.createShaderModule({
-    code: chartShaderSource,
-  });
-
-  const offscreenTextureManager = createOffscreenTextureManager(
-    device,
-    OFFSCREEN_FORMAT,
-    MSAA_SAMPLE_COUNT
-  );
-
+  const chartShaderModule = device.createShaderModule({ code: chartShaderSource });
+  const uniformManager = createUniformManager(device, chartCommonSource);
   const msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
   const compositeResources = createCompositeLayerResources(device);
-
-  const uniformManager = createUniformManager(device, chartCommonSource);
-
-  const uniformUpdateLayer = new UniformUpdateLayer(uniformManager);
-  const mainPassLayer = new MainPassLayer(chartShaderModule, msaaManager, uniformManager);
-  const sinYLayer = new SinYLayer(
-    offscreenTextureManager,
-    compositeResources,
-    chartShaderModule,
-    uniformManager
-  );
-  const compositeLayer = new CompositeLayer(offscreenTextureManager, compositeResources);
-  const shapesLayer = new ShapesLayer(uniformManager);
+  const offscreenTextureManager = createOffscreenTextureManager(device, {
+    format: OFFSCREEN_FORMAT,
+    sampleCount: MSAA_SAMPLE_COUNT,
+    compositeBindGroupLayout: compositeResources.bindGroupLayout,
+    compositeSampler: compositeResources.sampler,
+    compositeUniformBuffer: compositeResources.uniformBuffer,
+  });
 
   const layerManager = new RenderLayerManager([
-    uniformUpdateLayer,
-    mainPassLayer,
-    sinYLayer,
-    compositeLayer,
-    shapesLayer,
+    createUpdateOnlyLayer(uniformManager.writeFromFrameState),
+    new MainPassLayer(context, chartShaderModule, msaaManager, uniformManager),
+    new SinYLayer(context, offscreenTextureManager, chartShaderModule, uniformManager),
+    new CompositeLayer(context, offscreenTextureManager, compositeResources),
+    new ShapesLayer(context, uniformManager),
   ]);
-
-  layerManager.initAll(context);
-
-  const stopRenderLoop = startRenderLoop({
-    canvas,
-    context,
-    layerManager,
-  });
+  const stopRenderLoop = startRenderLoop({ canvas, context, layerManager });
 
   return {
     cleanup: () => {
       stopRenderLoop();
       layerManager.dispose();
-      compositeResources.compositeUniformBuffer.destroy();
+      offscreenTextureManager.dispose();
+      compositeResources.dispose();
       uniformManager.dispose();
       msaaManager.dispose();
-      offscreenTextureManager.destroy();
       device.destroy();
     },
   };

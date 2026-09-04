@@ -1,6 +1,5 @@
 const PI: f32 = 3.1415926535;
 const TWO_PI: f32 = PI * 2.0;
-override INSTANCE_COUNT: f32;
 const SPHERE_RADIUS: f32 = 5.0;
 const TRIANGLE_HALF_SIZE: f32 = 0.25;
 const EVERY_NTH_CENTER_LINE: f32 = 50.0;
@@ -25,7 +24,7 @@ const TP_LO: f32 = 0.0019353071795864769; // TWO_PI - TP_HI
 
 struct Uniforms {
     time: f32,
-    _pad0: f32,
+    instanceCount: f32,             // instances laid out on the sphere this frame
     _pad1: f32,
     _pad2: f32,
     mvp: mat4x4<f32>,
@@ -152,7 +151,7 @@ fn reducedTheta(instID: f32) -> f32 {
 }
 
 fn instPos(instID: f32) -> vec3<f32> {
-    let y = 1.0 - (instID / (INSTANCE_COUNT - 1.0)) * 2.0;
+    let y = 1.0 - (instID / (U.instanceCount - 1.0)) * 2.0;
     let radius = sqrt(1.0 - square(y));
     let theta = reducedTheta(instID);
 

@@ -2,25 +2,25 @@ import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 import { mat4 } from 'wgpu-matrix';
+
 import {
   BORDER_MARGIN,
   computeSinXSegmentCount,
   computeSinYSegmentCount,
-  HALF,
   SIN_PEN_MAX,
   SIN_PEN_MIN,
 } from '../domain/chart-constants';
 
 export interface UniformManager {
   readonly buffer: GPUBuffer;
-  writeFromFrameState(device: GPUDevice, state: FrameState): void;
+  writeFromFrameState(state: FrameState): void;
   dispose(): void;
 }
 
+/** The `U` uniform block shared by every chart pass; its layout comes from the shader source. */
 export function createUniformManager(device: GPUDevice, shaderSource: string): UniformManager {
   const definitions = makeShaderDataDefinitions(shaderSource);
   const uniformView: StructuredView = makeStructuredView(definitions.uniforms.U);
-
   const buffer = device.createBuffer({
     size: uniformView.arrayBuffer.byteLength,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -28,16 +28,13 @@ export function createUniformManager(device: GPUDevice, shaderSource: string): U
 
   return {
     buffer,
-    writeFromFrameState(gpuDevice: GPUDevice, state: FrameState): void {
-      const halfWidth = state.canvasWidth * HALF;
-      const halfHeight = state.canvasHeight * HALF;
-      const mvp = mat4.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, -1, 1);
-
+    writeFromFrameState(state: FrameState): void {
+      const halfWidth = state.canvasWidth / 2;
+      const halfHeight = state.canvasHeight / 2;
       const sinXCount = computeSinXSegmentCount(state.canvasWidth);
-      const sinYCount = computeSinYSegmentCount(state.canvasHeight);
 
       uniformView.set({
-        mvp,
+        mvp: mat4.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, -1, 1),
         viewport: [state.canvasWidth, state.canvasHeight],
         time: state.time,
         sinCount: sinXCount,
@@ -45,10 +42,9 @@ export function createUniformManager(device: GPUDevice, shaderSource: string): U
         sinPenMax: SIN_PEN_MAX,
         borderMargin: BORDER_MARGIN,
         borderOffset: sinXCount,
-        sinYCount,
+        sinYCount: computeSinYSegmentCount(state.canvasHeight),
       });
-
-      gpuDevice.queue.writeBuffer(buffer, 0, uniformView.arrayBuffer);
+      device.queue.writeBuffer(buffer, 0, uniformView.arrayBuffer);
     },
     dispose(): void {
       buffer.destroy();

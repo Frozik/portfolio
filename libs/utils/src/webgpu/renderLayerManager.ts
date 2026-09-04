@@ -6,7 +6,7 @@ export class RenderLayerManager {
 
   initAll(context: GpuContext): void {
     for (const layer of this.layers) {
-      layer.init(context);
+      layer.init?.(context);
     }
   }
 

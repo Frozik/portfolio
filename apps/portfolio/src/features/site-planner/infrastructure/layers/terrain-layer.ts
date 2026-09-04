@@ -1,5 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { DepthTextureManager } from '@frozik/utils/webgpu/depthTextureManager';
 import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
@@ -13,7 +14,6 @@ import type { Heightfield } from '../../domain/terrain/heightfield';
 import { computeElevationRange, sampleHeight } from '../../domain/terrain/heightfield';
 import type { Meters } from '../../domain/units';
 import { planToWorld } from '../../domain/view/world-frame';
-import type { DepthTextureManager } from '../depth-texture-manager';
 import { DEPTH_FORMAT, MSAA_SAMPLE_COUNT, UNIFORM_ALIGNMENT_BYTES } from '../render-constants';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import shadowShaderSource from '../shaders/shadow.wgsl?raw';

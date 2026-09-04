@@ -1,4 +1,9 @@
-export const INSTANCE_COUNT = 250_000;
+/** Instance budgets from richest to cheapest; the sphere is re-laid out for whichever is active. */
+export const INSTANCE_COUNT_LEVELS = [250_000, 100_000, 25_000] as const;
+/** Rolling FPS under which the current budget is considered too heavy for the device. */
+export const LOW_FPS_THRESHOLD = 30;
+/** Consecutive low FPS reports (one per meter update) before stepping down a level. */
+export const LOW_FPS_REPORTS_TO_STEP_DOWN = 8;
 
 export const MIN_CAMERA_DISTANCE = 5;
 export const MAX_CAMERA_DISTANCE = 20;

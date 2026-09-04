@@ -1,6 +1,7 @@
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
+
 import {
   computeSinYSegmentCount,
   MSAA_SAMPLE_COUNT,
@@ -9,24 +10,20 @@ import {
 import { ALPHA_BLEND_STATE, OFFSCREEN_FORMAT } from '../chart-gpu-constants';
 import type { OffscreenTextureManager } from '../chart-textures';
 import type { UniformManager } from '../uniform-manager';
-import type { CompositeLayerResources } from './composite-layer';
 
+/** Draws the sin-Y curve into the offscreen target that `CompositeLayer` blends over the canvas. */
 export class SinYLayer implements RenderLayer {
-  private device!: GPUDevice;
-  private sinYPipeline!: GPURenderPipeline;
-  private bindGroup!: GPUBindGroup;
+  private readonly pipeline: GPURenderPipeline;
+  private readonly bindGroup: GPUBindGroup;
 
   constructor(
+    context: GpuContext,
     private readonly textureManager: OffscreenTextureManager,
-    private readonly resources: CompositeLayerResources,
-    private readonly chartShaderModule: GPUShaderModule,
-    private readonly uniformManager: UniformManager
-  ) {}
-
-  init(context: GpuContext): void {
-    this.device = context.device;
-
-    const bindGroupLayout = this.device.createBindGroupLayout({
+    chartShaderModule: GPUShaderModule,
+    uniformManager: UniformManager
+  ) {
+    const { device } = context;
+    const bindGroupLayout = device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -35,68 +32,44 @@ export class SinYLayer implements RenderLayer {
         },
       ],
     });
-
-    this.sinYPipeline = this.device.createRenderPipeline({
-      layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [bindGroupLayout],
-      }),
-      vertex: { module: this.chartShaderModule, entryPoint: 'vsSinY' },
+    this.pipeline = device.createRenderPipeline({
+      layout: device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+      vertex: { module: chartShaderModule, entryPoint: 'vsSinY' },
       fragment: {
-        module: this.chartShaderModule,
+        module: chartShaderModule,
         entryPoint: 'fsSinY',
         targets: [{ format: OFFSCREEN_FORMAT, blend: ALPHA_BLEND_STATE }],
       },
       primitive: { topology: 'triangle-list' },
       multisample: { count: MSAA_SAMPLE_COUNT },
     });
-
-    this.bindGroup = this.device.createBindGroup({
+    this.bindGroup = device.createBindGroup({
       layout: bindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.uniformManager.buffer },
-        },
-      ],
+      entries: [{ binding: 0, resource: { buffer: uniformManager.buffer } }],
     });
   }
 
   update(): void {}
 
   render(encoder: GPUCommandEncoder, _canvasView: GPUTextureView, state: FrameState): void {
-    const sinYCount = computeSinYSegmentCount(state.canvasHeight);
-
-    const offscreen = this.textureManager.ensureOffscreenTextures(
-      state.canvasWidth,
-      state.canvasHeight,
-      this.resources.compositeBindGroupLayout,
-      this.resources.compositeSampler,
-      this.resources.compositeUniformBuffer
-    );
-
+    const offscreen = this.textureManager.ensure(state.canvasWidth, state.canvasHeight);
     if (isNil(offscreen)) {
       return;
     }
-
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          view: offscreen.offscreenMsaaView,
-          resolveTarget: offscreen.offscreenResolveView,
+          view: offscreen.msaaView,
+          resolveTarget: offscreen.resolveView,
           loadOp: 'clear',
           clearValue: { r: 0, g: 0, b: 0, a: 0 },
           storeOp: 'discard',
         },
       ],
     });
-
-    pass.setPipeline(this.sinYPipeline);
+    pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
-
-    if (sinYCount > 0) {
-      pass.draw(VERTICES_PER_INSTANCE, sinYCount, 0, 0);
-    }
-
+    pass.draw(VERTICES_PER_INSTANCE, computeSinYSegmentCount(state.canvasHeight), 0, 0);
     pass.end();
   }
 

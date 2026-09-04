@@ -1,4 +1,5 @@
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
+import type { DepthTextureManager } from '@frozik/utils/webgpu/depthTextureManager';
 import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
@@ -21,7 +22,6 @@ import type { SceneTree } from '../../domain/terrain/place-trees';
 import type { WorldPoint } from '../../domain/view/world-frame';
 import carTextureUrl from '../assets/car-colormap.png?url';
 import carModelUrl from '../assets/car-suv.glb?url';
-import type { DepthTextureManager } from '../depth-texture-manager';
 import { fitCarMesh } from '../gltf/fit-car-mesh';
 import { parseGlb } from '../gltf/parse-glb';
 import { DEPTH_FORMAT, MSAA_SAMPLE_COUNT } from '../render-constants';
