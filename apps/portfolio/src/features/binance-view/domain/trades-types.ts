@@ -26,18 +26,6 @@ export type TradeId = Opaque<'TradeId', number>;
 export type Quantity = Opaque<'Quantity', number>;
 
 /**
- * Volume-radius scaling mode. Selected at dev-time via
- * {@link ../domain/trades-constants.DEFAULT_SCALING_MODE}; not exposed
- * as user-facing state. All three branches are kept in code so the
- * developer can A/B them by editing one constant.
- */
-export enum ScalingMode {
-  Linear = 'linear',
-  Log = 'log',
-  Percentile = 'percentile',
-}
-
-/**
  * One raw trade as received from Binance's `<symbol>@aggTrade` stream
  * (after parsing). Stored separately from the GPU texture — the texture
  * holds aggregates only; raw trades back the click-popup's table.
@@ -74,20 +62,21 @@ export interface ITradeBucket {
   readonly buyFraction: number;
 }
 
-/**
- * Mutable metadata for a trade-block held in RAM. `blockId` equals
- * `firstBucketStartMs` (single source of truth for keying). Mutable
- * fields advance each time a new bucket is appended; immutables are
- * fixed at block-creation. `textureRowIndex` is `undefined` while the
- * block is LRU-evicted from the GPU texture.
- */
+/** A closed bucket's trade prices in arrival order: the candle of that second. */
+export interface IClosedTradeBucket extends ITradeBucket {
+  readonly open: number;
+  readonly high: number;
+  readonly low: number;
+  readonly close: number;
+}
+
+/** Metadata for a trade-block; `blockId` equals `firstBucketStartMs`. */
 export interface ITradeBlockMeta {
   readonly blockId: UnixTimeMs;
   readonly firstBucketStartMs: UnixTimeMs;
   readonly basePrice: number;
-  lastBucketStartMs: UnixTimeMs;
-  bucketCount: number;
-  textureRowIndex: number | undefined;
+  readonly lastBucketStartMs: UnixTimeMs;
+  readonly bucketCount: number;
 }
 
 /**
@@ -97,8 +86,8 @@ export interface ITradeBlockMeta {
  * length, `basePrice` for de-biasing texel Y values).
  */
 export interface ITradeBlockIndexItem extends IBlockSpatialIndexItem {
-  bucketCount: number;
-  basePrice: number;
+  readonly bucketCount: number;
+  readonly basePrice: number;
 }
 
 /** Result of a synchronous trade-bucket hit-test (click or hover). */
@@ -117,7 +106,6 @@ export interface ITradeBlockRecord {
   readonly lastBucketStartMs: UnixTimeMs;
   readonly basePrice: number;
   readonly bucketCount: number;
-  readonly textureRowIndex: number | undefined;
   /** Packed `Float32Array` of bucket aggregates, 4 floats per bucket. */
   readonly data: ArrayBuffer;
 }

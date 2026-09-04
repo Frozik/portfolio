@@ -1,15 +1,18 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { millisecondsToISO8601 } from '@frozik/utils/date/iso8601';
+import { isNil } from 'lodash-es';
 import { Wifi, WifiOff } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
+import type { IAttachFailure } from '../application/BinanceViewStore';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
-import type { ConnectionState } from '../domain/types';
+import type { ConnectionState, PersistenceState } from '../domain/types';
 
 import {
   isConnectionOffline,
+  pickWorstStatus,
   statusBadgeClass,
   statusIconClass,
   statusLabel,
@@ -19,55 +22,25 @@ import { binanceT } from './translations';
 const STATUS_ICON_SIZE = 15;
 
 /**
- * Worst-of severity rank — higher = worse. Used to fold the orderbook
- * REST + websocket and the trades websocket states into a single
- * indicator color so the badge reads as the chart's overall health.
- */
-const CONNECTION_RANK: Record<ConnectionState, number> = {
-  connected: 0,
-  connecting: 1,
-  idle: 2,
-  disconnected: 3,
-  error: 4,
-  unsupported: 4,
-};
-
-function pickWorstConnection(states: readonly ConnectionState[]): ConnectionState {
-  let worst = states[0];
-  for (const candidate of states) {
-    if (CONNECTION_RANK[candidate] > CONNECTION_RANK[worst]) {
-      worst = candidate;
-    }
-  }
-  return worst;
-}
-
-/**
- * Badge mounted inside the {@link TopNav} center slot. Shows the
- * trading instrument's ticker; the badge color reflects the worst-of
- * status across the orderbook REST snapshot, the orderbook websocket,
- * and the trades websocket. Click opens a popup pinned below the
- * badge with per-channel diagnostics (REST status, WS status, total
- * counts, last-event time).
+ * Badge in the top-nav centre slot. Its colour is the worst of the
+ * orderbook and trades channels (plus WebGPU availability); clicking opens
+ * per-channel diagnostics.
  */
 export const BinanceStatusBadge = observer(() => {
   const store = useBinanceViewStore();
   const tradesStore = store.tradesStore;
   const orderbookStore = store.orderbookStore;
 
-  const orderbookConn = store.connection;
-  const tradesConn = tradesStore?.tradesConnection ?? 'idle';
+  const orderbookConnection = orderbookStore?.connection ?? 'idle';
+  const tradesConnection = tradesStore?.tradesConnection ?? 'idle';
   const hasFirstSnapshot = orderbookStore?.hasFirstOrderbookSnapshot ?? false;
+  const attachFailure = store.attachFailure;
 
-  // Even a "connected" WS doesn't mean the page is fully alive while
-  // we're still waiting on the first REST snapshot — the chart needs
-  // both. Bump the displayed worst-status to at-least `connecting`
-  // until the snapshot lands so the badge color matches the user's
-  // mental model of "is the data flowing yet?".
-  let worst = pickWorstConnection([orderbookConn, tradesConn]);
-  if (!hasFirstSnapshot && CONNECTION_RANK[worst] < CONNECTION_RANK.connecting) {
-    worst = 'connecting';
-  }
+  const worst = pickWorstStatus({
+    connections: [orderbookConnection, tradesConnection],
+    hasFirstSnapshot,
+    failure: attachFailure?.kind,
+  });
 
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -80,15 +53,13 @@ export const BinanceStatusBadge = observer(() => {
     setIsOpen(false);
   });
 
-  // Close on outside click and on Escape — same dismissal contract as
-  // the orderbook cell tooltip / trades popup elsewhere in the feature.
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
     const handlePointerDown = (event: MouseEvent): void => {
-      const target = event.target as Node | null;
-      if (target === null) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
         return;
       }
       if (buttonRef.current?.contains(target) === true) {
@@ -112,14 +83,8 @@ export const BinanceStatusBadge = observer(() => {
     };
   }, [isOpen]);
 
-  const lastSnapshotIso =
-    store.lastDisplaySnapshotTimeMs === undefined
-      ? undefined
-      : millisecondsToISO8601(store.lastDisplaySnapshotTimeMs);
-  const lastTradeIso =
-    tradesStore?.lastTradeTimeMs === undefined
-      ? undefined
-      : millisecondsToISO8601(tradesStore.lastTradeTimeMs);
+  const lastSnapshotTimeMs = orderbookStore?.lastDisplaySnapshotTimeMs;
+  const lastTradeTimeMs = tradesStore?.lastTradeTimeMs;
 
   return (
     <div className="relative">
@@ -141,15 +106,19 @@ export const BinanceStatusBadge = observer(() => {
       {isOpen ? (
         <BinanceStatusPopup
           ref={popupRef}
-          orderbookConn={orderbookConn}
-          tradesConn={tradesConn}
+          orderbookConnection={orderbookConnection}
+          tradesConnection={tradesConnection}
           hasFirstSnapshot={hasFirstSnapshot}
-          snapshotsReceived={store.snapshotsReceived}
-          lastSnapshotIso={lastSnapshotIso}
+          snapshotsReceived={orderbookStore?.snapshotsReceived ?? 0}
+          lastSnapshotIso={
+            isNil(lastSnapshotTimeMs) ? undefined : millisecondsToISO8601(lastSnapshotTimeMs)
+          }
           tradesReceived={tradesStore?.tradesReceivedCount}
-          lastTradeIso={lastTradeIso}
-          orderbookErrorMessage={store.errorMessage}
+          lastTradeIso={isNil(lastTradeTimeMs) ? undefined : millisecondsToISO8601(lastTradeTimeMs)}
+          orderbookErrorMessage={orderbookStore?.errorMessage}
           tradesErrorMessage={tradesStore?.tradesErrorMessage}
+          failure={attachFailure}
+          persistence={store.persistence}
           onDismiss={closePopup}
         />
       ) : null}
@@ -174,10 +143,42 @@ function WebsocketStatusLine({
   );
 }
 
+function ErrorLine({
+  message,
+}: {
+  readonly message: string | undefined;
+}): React.ReactElement | null {
+  if (isNil(message)) {
+    return null;
+  }
+  return (
+    <p className="text-error">
+      {binanceT.live.errorPrefix}
+      {message}
+    </p>
+  );
+}
+
+function PersistenceLine({
+  persistence,
+}: {
+  readonly persistence: PersistenceState;
+}): React.ReactElement {
+  if (persistence.status === 'persisting') {
+    return <p>{binanceT.live.persistenceOn}</p>;
+  }
+  return (
+    <p className="text-warning">
+      {binanceT.live.persistenceOff}
+      {persistence.reason.meta.message}
+    </p>
+  );
+}
+
 function BinanceStatusPopup({
   ref,
-  orderbookConn,
-  tradesConn,
+  orderbookConnection,
+  tradesConnection,
   hasFirstSnapshot,
   snapshotsReceived,
   lastSnapshotIso,
@@ -185,11 +186,13 @@ function BinanceStatusPopup({
   lastTradeIso,
   orderbookErrorMessage,
   tradesErrorMessage,
+  failure,
+  persistence,
   onDismiss,
 }: {
   readonly ref: React.RefObject<HTMLDivElement | null>;
-  readonly orderbookConn: ConnectionState;
-  readonly tradesConn: ConnectionState;
+  readonly orderbookConnection: ConnectionState;
+  readonly tradesConnection: ConnectionState;
   readonly hasFirstSnapshot: boolean;
   readonly snapshotsReceived: number;
   readonly lastSnapshotIso: string | undefined;
@@ -197,6 +200,8 @@ function BinanceStatusPopup({
   readonly lastTradeIso: string | undefined;
   readonly orderbookErrorMessage: string | undefined;
   readonly tradesErrorMessage: string | undefined;
+  readonly failure: IAttachFailure | undefined;
+  readonly persistence: PersistenceState;
   readonly onDismiss: () => void;
 }): React.ReactElement {
   return (
@@ -215,42 +220,50 @@ function BinanceStatusPopup({
         ×
       </button>
 
+      {isNil(failure) ? null : (
+        <section className="flex flex-col gap-1 pr-6">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-text">
+            {failure.kind === 'webgpu'
+              ? binanceT.status.unsupported
+              : binanceT.live.instrumentUnavailable}
+          </h4>
+          <ErrorLine message={failure.reason.meta.message} />
+        </section>
+      )}
+
       <section className="flex flex-col gap-1 pr-6">
         <h4 className="text-[11px] font-semibold uppercase tracking-wide text-text">
           {binanceT.live.orderbookSection}
         </h4>
         <p>{hasFirstSnapshot ? binanceT.live.snapshotReceived : binanceT.live.awaitingSnapshot}</p>
-        <WebsocketStatusLine connection={orderbookConn} />
+        <WebsocketStatusLine connection={orderbookConnection} />
         <p className="font-mono">{binanceT.live.totalSnapshots(snapshotsReceived)}</p>
-        {lastSnapshotIso !== undefined ? (
+        {isNil(lastSnapshotIso) ? null : (
           <p className="font-mono">{binanceT.live.lastSnapshotTime(lastSnapshotIso)}</p>
-        ) : null}
-        {orderbookErrorMessage !== undefined ? (
-          <p className="text-error">
-            {binanceT.live.errorPrefix}
-            {orderbookErrorMessage}
-          </p>
-        ) : null}
+        )}
+        <ErrorLine message={orderbookErrorMessage} />
       </section>
 
-      {tradesReceived !== undefined ? (
+      {isNil(tradesReceived) ? null : (
         <section className="mt-3 flex flex-col gap-1 border-t border-border pr-6 pt-3">
           <h4 className="text-[11px] font-semibold uppercase tracking-wide text-text">
             {binanceT.live.tradesSection}
           </h4>
-          <WebsocketStatusLine connection={tradesConn} />
+          <WebsocketStatusLine connection={tradesConnection} />
           <p className="font-mono">{binanceT.live.totalTrades(tradesReceived)}</p>
-          {lastTradeIso !== undefined ? (
+          {isNil(lastTradeIso) ? null : (
             <p className="font-mono">{binanceT.live.lastTradeTime(lastTradeIso)}</p>
-          ) : null}
-          {tradesErrorMessage !== undefined ? (
-            <p className="text-error">
-              {binanceT.live.errorPrefix}
-              {tradesErrorMessage}
-            </p>
-          ) : null}
+          )}
+          <ErrorLine message={tradesErrorMessage} />
         </section>
-      ) : null}
+      )}
+
+      <section className="mt-3 flex flex-col gap-1 border-t border-border pr-6 pt-3">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-text">
+          {binanceT.live.historySection}
+        </h4>
+        <PersistenceLine persistence={persistence} />
+      </section>
     </div>
   );
 }

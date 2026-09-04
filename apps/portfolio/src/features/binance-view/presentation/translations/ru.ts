@@ -8,8 +8,7 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     connected: 'Подключено',
     disconnected: 'Отключено',
     error: 'Ошибка подключения',
-    unsupported:
-      'WebGPU-устройство не поддерживает требуемые лимиты (maxTextureDimension2D ≥ 8192)',
+    unsupported: 'WebGPU недоступен',
   },
   tooltip: {
     time: 'Время',
@@ -43,6 +42,10 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     orderbookSection: 'Стакан',
     tradesSection: 'Сделки',
     errorPrefix: 'Ошибка: ',
+    historySection: 'История',
+    instrumentUnavailable: 'Инструмент недоступен',
+    persistenceOn: 'Блоки сохраняются в IndexedDB',
+    persistenceOff: 'История не сохраняется: ',
     openStatusDetails: 'Открыть детали статуса',
     closeStatusDetails: 'Закрыть детали статуса',
   },

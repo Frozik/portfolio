@@ -1,375 +1,327 @@
 import { nowEpochMs } from '@frozik/utils/date/now';
-import { makeAutoObservable, runInAction } from 'mobx';
+import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
+import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
+import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
+import { isNil } from 'lodash-es';
+import { makeAutoObservable, observableRef, runInAction } from 'mobx';
+import { deriveAggregationQuoteStep } from '../domain/aggregation-step';
 import type { IBinanceDb } from '../domain/binance-db';
 import { BINANCE_CONFIG } from '../domain/config';
 import { SNAPSHOT_SLOTS } from '../domain/constants';
 import { DataController } from '../domain/data-controller';
-import { DEFAULT_INSTRUMENT, findInstrument, instrumentDbName } from '../domain/instruments';
-import type { ConnectionState, IHitTestResult, UnixTimeMs } from '../domain/types';
-import { openBinanceDbWithQuotaRecovery } from '../infrastructure/binance-indexeddb-recovery';
+import type { IInstrument, InstrumentSymbol } from '../domain/instruments';
+import { DEFAULT_INSTRUMENT, findCuratedInstrument, instrumentDbName } from '../domain/instruments';
+import type { IChartCanvases } from '../domain/ports/chart-renderer';
+import type { IInstrumentCatalog } from '../domain/ports/instrument-catalog';
+import type { PersistenceState, UnixTimeMs } from '../domain/types';
+import type { BinanceDbOpenResult } from '../infrastructure/binance-indexeddb-recovery';
 import { TaskManager } from '../infrastructure/task-manager';
+import { CandleStreamStore } from './CandleStreamStore';
+import type { IChartStateDeps } from './chart-state';
 import { BinanceChartState } from './chart-state';
-
-import { MidPriceStreamStore } from './MidPriceStreamStore';
 import { OrderbookStreamStore } from './OrderbookStreamStore';
+import { PersistenceGate } from './persistence-gate';
 import { TradesStreamStore } from './TradesStreamStore';
 
-/** Everything a single {@link BinanceViewStore.attachCanvas} run creates. */
-interface IAttachedPipeline {
-  readonly tradesStore: TradesStreamStore;
-  readonly orderbookStore: OrderbookStreamStore;
-  readonly midPriceStore: MidPriceStreamStore;
-  readonly state: BinanceChartState;
+export interface IBinanceViewStoreDeps extends IChartStateDeps {
+  readonly openDb: (dbName: string) => Promise<BinanceDbOpenResult>;
+  readonly instrumentCatalog: IInstrumentCatalog;
+}
+
+/** Why the chart could not be brought up: the device lacks WebGPU, or the exchange has no such symbol. */
+export interface IAttachFailure {
+  readonly kind: 'webgpu' | 'instrument';
+  readonly reason: ValueDescriptorFail;
+}
+
+interface IPipeline {
+  readonly db: IBinanceDb | undefined;
+  readonly chartState: BinanceChartState;
   readonly taskManager: TaskManager;
   readonly dataController: DataController;
-  readonly db: IBinanceDb | undefined;
+  readonly persistence: PersistenceGate;
+  readonly orderbookStore: OrderbookStreamStore;
+  readonly candleStore: CandleStreamStore;
+  readonly tradesStore: TradesStreamStore;
 }
 
 /**
- * Slim orchestrator for the binance-view feature. Owns the
- * canvas-bound infrastructure shared by every per-stream sub-store —
- * `chartState`, the IndexedDB connection, the `TaskManager`
- * scheduler, the `DataController` LRU cache, and the `pagehide`
- * handler — and delegates per-stream observable state (connection,
- * accumulators, hit-test results) to {@link OrderbookStreamStore} and
- * {@link MidPriceStreamStore}.
- *
- * Public surface (`connection`, `snapshotsReceived`,
- * `lastDisplaySnapshotTimeMs`, `errorMessage`, `selectedCell`,
- * `resolveCellAt`, `clearSelectedCell`) is intentionally preserved as
- * thin proxies onto the orderbook sub-store so existing presentation
- * components don't need to know about the split.
+ * Where the canvas attachment stands. `attaching` may be abandoned by a
+ * detach while the exchange, IndexedDB or WebGPU is still answering;
+ * `failed` keeps the reason for the status badge.
+ */
+type Attachment =
+  | { readonly phase: 'detached' }
+  | {
+      readonly phase: 'attaching';
+      readonly canvases: IChartCanvases;
+      readonly abort: AbortController;
+    }
+  | { readonly phase: 'attached'; readonly canvases: IChartCanvases; readonly pipeline: IPipeline }
+  | {
+      readonly phase: 'failed';
+      readonly canvases: IChartCanvases;
+      readonly failure: IAttachFailure;
+    };
+
+const PERSISTING: PersistenceState = { status: 'persisting' };
+
+/**
+ * Orchestrates the feature: opens IndexedDB, builds the per-stream stores
+ * around one chart state, and tears the whole pipeline down on detach or
+ * instrument change. Per-stream observable state lives in the sub-stores.
  */
 export class BinanceViewStore {
-  private chartState: BinanceChartState | undefined = undefined;
-  private db: IBinanceDb | undefined = undefined;
-  private taskManager: TaskManager | undefined = undefined;
-  private dataController: DataController | undefined = undefined;
-  private pageHideHandler: (() => void) | undefined = undefined;
-  private orderbookStoreInternal: OrderbookStreamStore | undefined = undefined;
-  private midPriceStoreInternal: MidPriceStreamStore | undefined = undefined;
-  private tradesStoreInternal: TradesStreamStore | undefined = undefined;
+  instrument: InstrumentSymbol = DEFAULT_INSTRUMENT.symbol;
+  persistence: PersistenceState = PERSISTING;
+  private attachment: Attachment = { phase: 'detached' };
 
-  /** Set when {@link attachCanvas} rejects before any orderbook sub-store exists, so {@link connection} reports `'unsupported'` instead of hanging on `'connecting'`. */
-  private attachFailed = false;
-
-  /** Currently selected instrument symbol (observable — drives the UI selector). */
-  instrument: string = DEFAULT_INSTRUMENT.symbol;
-
-  /**
-   * The canvas handed to {@link attachCanvas}. Retained so {@link setInstrument}
-   * can tear the pipeline down and re-attach the SAME canvas under a new
-   * instrument without the presentation layer re-mounting.
-   */
-  private currentCanvas: HTMLCanvasElement | undefined = undefined;
-
-  /**
-   * Monotonic counter bumped on every `dispose()`. An in-flight
-   * `attachCanvas` captures this token at entry and aborts if it no
-   * longer matches — this prevents React StrictMode's double-mount
-   * from leaving two renderers stuck on the same canvas.
-   */
-  private attachToken = 0;
-
-  constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
+  constructor(private readonly deps: IBinanceViewStoreDeps) {
+    makeAutoObservable<BinanceViewStore, 'deps' | 'attachment'>(
+      this,
+      { deps: false, attachment: observableRef },
+      { autoBind: true }
+    );
   }
 
-  private get aggregationQuoteStep(): number {
-    return findInstrument(this.instrument).aggregationQuoteStep;
+  get chartState(): BinanceChartState | undefined {
+    return this.pipeline?.chartState;
   }
 
   get orderbookStore(): OrderbookStreamStore | undefined {
-    return this.orderbookStoreInternal;
+    return this.pipeline?.orderbookStore;
   }
 
-  get midPriceStore(): MidPriceStreamStore | undefined {
-    return this.midPriceStoreInternal;
+  get candleStore(): CandleStreamStore | undefined {
+    return this.pipeline?.candleStore;
   }
 
   get tradesStore(): TradesStreamStore | undefined {
-    return this.tradesStoreInternal;
+    return this.pipeline?.tradesStore;
   }
 
-  /**
-   * Public read-only handle for the live chart-state. Exposed so the
-   * presentation layer can build a hit-test pointer descriptor for the
-   * trades hover/click handlers (see
-   * `presentation/build-trade-hit-test-pointer.ts`). Returns
-   * `undefined` until {@link attachCanvas} resolves.
-   */
-  get chartStateView(): BinanceChartState | undefined {
-    return this.chartState;
+  get attachFailure(): IAttachFailure | undefined {
+    return this.attachment.phase === 'failed' ? this.attachment.failure : undefined;
   }
 
-  get connection(): ConnectionState {
-    if (this.attachFailed && this.orderbookStoreInternal === undefined) {
-      return 'unsupported';
-    }
-    return this.orderbookStoreInternal?.connection ?? 'idle';
-  }
-
-  markUnsupported(): void {
-    this.attachFailed = true;
-    this.orderbookStoreInternal?.markUnsupported();
-  }
-
-  get snapshotsReceived(): number {
-    return this.orderbookStoreInternal?.snapshotsReceived ?? 0;
-  }
-
-  get lastDisplaySnapshotTimeMs(): UnixTimeMs | undefined {
-    return this.orderbookStoreInternal?.lastDisplaySnapshotTimeMs;
-  }
-
-  get errorMessage(): string | undefined {
-    return this.orderbookStoreInternal?.errorMessage;
-  }
-
-  get selectedCell(): IHitTestResult | undefined {
-    return this.orderbookStoreInternal?.selectedCell;
-  }
-
-  /**
-   * Wire the canvas to a new chart-state, open IndexedDB (clearing any
-   * leftover blocks), and start the WebGPU renderer. Must be called
-   * before `startStream`.
-   */
-  async attachCanvas(canvas: HTMLCanvasElement): Promise<void> {
-    if (this.chartState !== undefined) {
+  /** Binds the canvases, opens the database and starts every stream. Never rejects. */
+  async attachCanvas(canvases: IChartCanvases): Promise<void> {
+    if (this.attachment.phase !== 'detached') {
       return;
     }
-    this.currentCanvas = canvas;
-    const token = this.attachToken;
+    const abort = new AbortController();
+    this.attachment = { phase: 'attaching', canvases, abort };
 
-    const db = await openBinanceDbWithQuotaRecovery(instrumentDbName(this.instrument));
-
-    // `dispose()` bumped the token while we were opening IDB — abandon
-    // this init so we don't leak a renderer onto a disposed store.
-    if (token !== this.attachToken) {
-      db?.close();
+    const instrument = await this.resolveInstrument(this.instrument);
+    if (abort.signal.aborted) {
       return;
     }
-
-    const pipeline = this.buildPipeline(canvas, db);
-    const { state, taskManager, dataController, orderbookStore, midPriceStore, tradesStore } =
-      pipeline;
-
-    // `BinanceChartRenderer.create` can reject outright (e.g. Safari's Metal back-end
-    // rejects pipeline creation rather than returning null); treat it like `ok === false`
-    // so the failure surfaces as `'unsupported'` instead of escaping as an unhandled rejection.
-    let ok = false;
-    try {
-      ok = await state.init({ taskManager, dataController });
-    } catch (error) {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU init failure
-      console.warn('binance-view: WebGPU renderer init failed, marking unsupported', error);
-      ok = false;
-    }
-
-    if (!ok) {
-      orderbookStore.markUnsupported();
-      // Promote into the public slot so the status overlay reflects
-      // the `'unsupported'` state — but tear down everything else
-      // (the renderer never came up). The orderbook store has nothing
-      // to dispose besides its accumulator (not yet created), so its
-      // `dispose()` is a no-op here apart from resetting fields.
-      this.tearDownPipeline(pipeline, { keepOrderbookStore: true });
+    if (!('symbol' in instrument)) {
       runInAction(() => {
-        this.orderbookStoreInternal = orderbookStore;
+        this.attachment = { phase: 'failed', canvases, failure: instrument };
       });
       return;
     }
 
-    // Token could have been bumped while we awaited WebGPU device +
-    // pipeline creation. Throw the fresh renderer away immediately.
-    if (token !== this.attachToken) {
-      this.tearDownPipeline(pipeline, { keepOrderbookStore: false });
+    const opened = await this.deps.openDb(instrumentDbName(instrument.symbol));
+    if (abort.signal.aborted) {
+      closeOpened(opened);
+      return;
+    }
+    const db = this.adoptOpenResult(opened);
+
+    const pipeline = this.buildPipeline(canvases, instrument, db);
+    const rendererFailure = await pipeline.chartState.init({
+      taskManager: pipeline.taskManager,
+      dataController: pipeline.dataController,
+    });
+    if (abort.signal.aborted) {
+      tearDownPipeline(pipeline);
+      return;
+    }
+    if (!isNil(rendererFailure)) {
+      tearDownPipeline(pipeline);
+      runInAction(() => {
+        this.attachment = {
+          phase: 'failed',
+          canvases,
+          failure: { kind: 'webgpu', reason: rendererFailure },
+        };
+      });
       return;
     }
 
-    const pageHideHandler = (): void => {
-      // Fire-and-forget: if the transaction doesn't complete before
-      // unload, the next attach() call will re-issue clearAll() at
-      // startup anyway.
-      void this.db?.clearAll();
-    };
-
-    // Wire the trades store handle into the chart-state so the trades
-    // layer can observe `hoveredBucketKey` per frame. Done before the
-    // `runInAction` block to keep the renderer's `tradesStoreView`
-    // ref consistent with the public slot we're about to publish.
-    state.setTradesStore(tradesStore);
-
-    // All assignments land after an `await` — outside the synchronous
-    // span of the auto-bound action, so MobX strict mode rejects them
-    // unless wrapped.
     runInAction(() => {
-      this.db = db;
-      this.chartState = state;
-      this.taskManager = taskManager;
-      this.dataController = dataController;
-      this.pageHideHandler = pageHideHandler;
-      this.orderbookStoreInternal = orderbookStore;
-      this.midPriceStoreInternal = midPriceStore;
-      this.tradesStoreInternal = tradesStore;
+      this.attachment = { phase: 'attached', canvases, pipeline };
     });
-    window.addEventListener('pagehide', pageHideHandler);
+    pipeline.orderbookStore.startStream();
+    pipeline.candleStore.startStream();
+    pipeline.tradesStore.startStream();
   }
 
-  /**
-   * Construct the per-attach collaborator graph. Nothing is published into
-   * the store's public slots here — the caller decides that once the
-   * renderer reports whether WebGPU actually came up.
-   */
-  private buildPipeline(canvas: HTMLCanvasElement, db: IBinanceDb | undefined): IAttachedPipeline {
-    const state = new BinanceChartState({
-      canvas,
-      pageOpenTimeMs: nowEpochMs() as UnixTimeMs,
-      updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
-      // The heatmap cell height is the aggregation bin size, not the
-      // raw tickSize — rendering at $0.01 would collapse each row into
-      // a single sub-pixel strip. Sub-stores keep `priceStep` for
-      // diagnostics only.
-      priceStep: this.aggregationQuoteStep,
-    });
+  detachCanvas(): void {
+    const attachment = this.attachment;
+    this.attachment = { phase: 'detached' };
+    this.persistence = PERSISTING;
+    switch (attachment.phase) {
+      case 'attaching':
+        attachment.abort.abort();
+        return;
+      case 'attached':
+        tearDownPipeline(attachment.pipeline);
+        return;
+      case 'failed':
+      case 'detached':
+        return;
+    }
+  }
 
+  async setInstrument(symbol: InstrumentSymbol): Promise<void> {
+    if (symbol === this.instrument) {
+      return;
+    }
+    const attachment = this.attachment;
+    this.detachCanvas();
+    this.instrument = symbol;
+    if (attachment.phase !== 'detached') {
+      await this.attachCanvas(attachment.canvases);
+    }
+  }
+
+  dispose(): void {
+    this.detachCanvas();
+  }
+
+  private get pipeline(): IPipeline | undefined {
+    return this.attachment.phase === 'attached' ? this.attachment.pipeline : undefined;
+  }
+
+  private adoptOpenResult(opened: BinanceDbOpenResult): IBinanceDb | undefined {
+    if (opened.kind === 'opened') {
+      return opened.db;
+    }
+    runInAction(() => {
+      this.persistence = { status: 'disabled', reason: opened.reason };
+    });
+    return undefined;
+  }
+
+  private disablePersistence(reason: ValueDescriptorFail): void {
+    this.persistence = { status: 'disabled', reason };
+  }
+
+  /** Curated symbols carry a hand-tuned step; anything else is asked of the exchange. */
+  private async resolveInstrument(symbol: InstrumentSymbol): Promise<IInstrument | IAttachFailure> {
+    const curatedInstrument = findCuratedInstrument(symbol);
+    if (!isNil(curatedInstrument)) {
+      return curatedInstrument;
+    }
+    const lookup = await this.deps.instrumentCatalog.lookup(symbol);
+    switch (lookup.kind) {
+      case 'listed':
+        return {
+          symbol,
+          aggregationQuoteStep: deriveAggregationQuoteStep({
+            tickSize: lookup.listing.tickSize,
+            referencePrice: lookup.listing.lastPrice,
+            binsPerSide: BINANCE_CONFIG.aggregatedDepth,
+          }),
+        };
+      case 'unknown':
+        return {
+          kind: 'instrument',
+          reason: Fail(EValueDescriptorErrorCode.NOT_FOUND, {
+            message: `${symbol} is not traded on Binance spot`,
+          }),
+        };
+      case 'failed':
+        return { kind: 'instrument', reason: lookup.reason };
+    }
+  }
+
+  private buildPipeline(
+    canvases: IChartCanvases,
+    instrument: IInstrument,
+    db: IBinanceDb | undefined
+  ): IPipeline {
+    const { aggregationQuoteStep } = instrument;
+    const persistence = new PersistenceGate(db, this.disablePersistence);
     const taskManager = new TaskManager();
 
-    // mid-price first: it has no upstream dependencies and is captured
-    // by `onQuantizedSnapshot` below. Constructing it first keeps the
-    // orderbook fan-out closure simple (no `let`/forward-decl dance).
-    const midPriceStore = new MidPriceStreamStore({
-      chartState: state,
-      db,
+    let tradesStoreRef: TradesStreamStore | undefined;
+    let candleStoreRef: CandleStreamStore | undefined;
+    const chartState = new BinanceChartState({
+      canvases,
+      pageOpenTimeMs: nowEpochMs() as UnixTimeMs,
       updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
+      // The heatmap cell height is the aggregation bin, not the raw tick size.
+      priceStep: aggregationQuoteStep,
+      readHoveredBucketKey: () => tradesStoreRef?.hoveredBucketKey,
+      requestCandleBlocks: blockIds => candleStoreRef?.requestBlocks(blockIds),
+      deps: this.deps,
     });
 
-    // The active-block closure resolves through `orderbookStore` once
-    // it's constructed below; until then it returns `null`, which
-    // matches the pre-split contract (no in-flight block before
-    // `startStream`).
+    const candleStore = new CandleStreamStore({ chartState, persistence });
+    candleStoreRef = candleStore;
+
     let orderbookStoreRef: OrderbookStreamStore | undefined;
     const dataController = new DataController({
-      registry: state.registry,
+      registry: chartState.registry,
       db: db?.orderbook,
-      getActiveBlock: () => orderbookStoreRef?.getActiveBlock() ?? null,
+      getActiveBlock: () => orderbookStoreRef?.getActiveBlock(),
       updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
       depth: BINANCE_CONFIG.aggregatedDepth,
       snapshotSlots: SNAPSHOT_SLOTS,
     });
 
     const orderbookStore = new OrderbookStreamStore({
-      chartState: state,
+      chartState,
       dataController,
-      db,
-      instrument: this.instrument,
-      aggregationQuoteStep: this.aggregationQuoteStep,
+      persistence,
+      instrument: instrument.symbol,
+      aggregationQuoteStep,
       updateSpeedMs: BINANCE_CONFIG.updateSpeedMs,
-      onQuantizedSnapshot: midPriceStore.ingestOrderbookSnapshot,
     });
     orderbookStoreRef = orderbookStore;
 
     const tradesStore = new TradesStreamStore({
-      chartState: state,
-      db,
-      instrument: this.instrument,
+      chartState,
+      persistence,
+      instrument: instrument.symbol,
       gate: orderbookStore,
+      onBucketClosed: candleStore.ingestClosedBucket,
     });
+    tradesStoreRef = tradesStore;
 
-    return { tradesStore, orderbookStore, midPriceStore, state, taskManager, dataController, db };
+    return {
+      db,
+      chartState,
+      taskManager,
+      dataController,
+      persistence,
+      orderbookStore,
+      candleStore,
+      tradesStore,
+    };
   }
+}
 
-  /**
-   * Tear down everything {@link buildPipeline} created, in the same LIFO
-   * order as {@link dispose}: trades first (its gate reads orderbook
-   * state), then mid-price (consumer of orderbook snapshots), then
-   * orderbook (subscription owner), then the shared infra.
-   * `keepOrderbookStore` is set when the caller promotes that sub-store
-   * into the public slot instead of discarding it.
-   */
-  private tearDownPipeline(
-    pipeline: IAttachedPipeline,
-    { keepOrderbookStore }: { readonly keepOrderbookStore: boolean }
-  ): void {
-    pipeline.tradesStore.dispose();
-    if (!keepOrderbookStore) {
-      pipeline.orderbookStore.dispose();
-    }
-    pipeline.midPriceStore.dispose();
-    pipeline.state.dispose();
-    pipeline.taskManager.dispose();
-    pipeline.dataController.dispose();
-    pipeline.db?.close();
+function closeOpened(opened: BinanceDbOpenResult): void {
+  if (opened.kind === 'opened') {
+    opened.db.close();
   }
+}
 
-  startStream(): void {
-    this.orderbookStoreInternal?.startStream();
-    this.midPriceStoreInternal?.startStream();
-    this.tradesStoreInternal?.startStream();
-  }
-
-  async setInstrument(symbol: string): Promise<void> {
-    if (symbol === this.instrument) {
-      return;
-    }
-    const canvas = this.currentCanvas;
-    this.dispose();
-    runInAction(() => {
-      this.instrument = symbol;
-    });
-    if (canvas === undefined) {
-      return;
-    }
-    await this.attachCanvas(canvas);
-    this.startStream();
-  }
-
-  async resolveCellAt(pointerPx: { x: number; y: number }): Promise<void> {
-    // `chartState === undefined` means init failed (e.g. Safari WebGPU
-    // pipeline rejection): the orderbook sub-store exists so the badge
-    // can surface `'unsupported'`, but its hit-test path reads
-    // `chartState.viewport` which throws before init. Skip silently.
-    if (this.chartState === undefined || this.orderbookStoreInternal === undefined) {
-      return;
-    }
-    await this.orderbookStoreInternal.resolveCellAt(pointerPx);
-  }
-
-  clearSelectedCell(): void {
-    this.orderbookStoreInternal?.clearSelectedCell();
-  }
-
-  dispose(): void {
-    this.attachToken++;
-    this.attachFailed = false;
-    if (this.pageHideHandler !== undefined) {
-      window.removeEventListener('pagehide', this.pageHideHandler);
-      this.pageHideHandler = undefined;
-    }
-    // LIFO sub-store teardown: trades first (its gate reads
-    // orderbook state), then mid-price (consumer of orderbook
-    // snapshots), then orderbook (subscription owner). Orchestrator-
-    // owned shared infra (chart-state, task-manager, data-controller)
-    // tears down after — chart-state disposes ViewportController,
-    // which unsubscribes from TaskManager, so order matters.
-    this.chartState?.setTradesStore(undefined);
-    this.tradesStoreInternal?.dispose();
-    this.tradesStoreInternal = undefined;
-    this.midPriceStoreInternal?.dispose();
-    this.midPriceStoreInternal = undefined;
-    this.orderbookStoreInternal?.dispose();
-    this.orderbookStoreInternal = undefined;
-    this.chartState?.dispose();
-    this.chartState = undefined;
-    this.taskManager?.dispose();
-    this.taskManager = undefined;
-    this.dataController?.dispose();
-    this.dataController = undefined;
-    if (this.db !== undefined) {
-      const db = this.db;
-      this.db = undefined;
-      void db.clearAll().finally(() => db.close());
-    }
+/** LIFO: consumers of the streams first, then the subscription owners, then shared infrastructure. */
+function tearDownPipeline(pipeline: IPipeline): void {
+  pipeline.candleStore.dispose();
+  pipeline.tradesStore.dispose();
+  pipeline.orderbookStore.dispose();
+  pipeline.chartState.dispose();
+  pipeline.taskManager.dispose();
+  pipeline.dataController.dispose();
+  const db = pipeline.db;
+  if (!isNil(db)) {
+    void db.clearAll().finally(() => db.close());
   }
 }

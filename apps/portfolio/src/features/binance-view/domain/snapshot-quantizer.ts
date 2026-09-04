@@ -1,7 +1,7 @@
 import { nowEpochMs } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 
-import { MAX_INTERPOLATED_SNAPSHOTS } from './constants';
+import { MAX_INTERPOLATED_SNAPSHOTS, QUANTIZER_LATE_ARRIVAL_GRACE_MS } from './constants';
 import { TimestampedEventBuffer } from './timestamped-event-buffer';
 import type { IOrderbookSnapshot, IQuantizedSnapshot, UnixTimeMs } from './types';
 
@@ -17,6 +17,7 @@ export interface ISnapshotQuantizerParams {
   readonly now?: () => number;
   readonly scheduler?: IQuantizerScheduler;
   readonly maxInterpolatedSnapshots?: number;
+  readonly lateArrivalGraceMs?: number;
 }
 
 interface IBufferedSnapshot {
@@ -36,17 +37,17 @@ const DEFAULT_SCHEDULER: IQuantizerScheduler = {
 const EMPTY_LEVELS: ReadonlyArray<readonly [number, number]> = [];
 
 /**
- * Aligns raw orderbook snapshots onto fixed 1-second buckets anchored
- * at the first snapshot's second (wall-clock ms truncated), filling
- * empty buckets by repeating the last emitted snapshot with an
- * `isInterpolated: true` flag. After `maxInterpolatedSnapshots`
- * consecutive repeats the quantizer keeps ticking but emits empty
- * snapshots (`bids = asks = []`, `isInterpolated: true`) so downstream
- * visuals keep moving — otherwise the heatmap would freeze during
- * long disconnects instead of showing the gap.
+ * Aligns raw orderbook snapshots onto 1-second buckets keyed by the
+ * exchange's event time. A bucket closes by event-time watermark: the first
+ * snapshot stamped at or beyond the bucket's end closes it, so an update
+ * that reaches us a few hundred milliseconds after its second has ended on
+ * the wall clock still lands where it belongs. Only when the stream goes
+ * silent does the wall-clock fallback (`lateArrivalGraceMs` past the bucket
+ * end) close the bucket, repeating the last snapshot with
+ * `isInterpolated: true` up to `maxInterpolatedSnapshots` and emitting empty
+ * snapshots after that so the chart keeps advancing through a gap.
  *
- * Pure — the scheduler and wall clock are injected so tests can drive
- * the timer deterministically. No RxJS, no MobX.
+ * The scheduler and clock are injected so tests drive time deterministically.
  */
 export class SnapshotQuantizer {
   private readonly buffer = new TimestampedEventBuffer<IBufferedSnapshot>();
@@ -54,10 +55,11 @@ export class SnapshotQuantizer {
   private readonly now: () => number;
   private readonly scheduler: IQuantizerScheduler;
   private readonly maxInterpolatedSnapshots: number;
+  private readonly lateArrivalGraceMs: number;
 
   private started = false;
   private currentSecMs: UnixTimeMs = 0 as UnixTimeMs;
-  private lastEmittedSnapshot: IOrderbookSnapshot | null = null;
+  private lastEmittedSnapshot: IOrderbookSnapshot | undefined = undefined;
   private interpolationCount = 0;
   private timerHandle: unknown = undefined;
   private disposed = false;
@@ -67,6 +69,7 @@ export class SnapshotQuantizer {
     this.now = params.now ?? nowEpochMs;
     this.scheduler = params.scheduler ?? DEFAULT_SCHEDULER;
     this.maxInterpolatedSnapshots = params.maxInterpolatedSnapshots ?? MAX_INTERPOLATED_SNAPSHOTS;
+    this.lateArrivalGraceMs = params.lateArrivalGraceMs ?? QUANTIZER_LATE_ARRIVAL_GRACE_MS;
   }
 
   push(snapshot: IOrderbookSnapshot): void {
@@ -75,8 +78,15 @@ export class SnapshotQuantizer {
     }
     this.buffer.enqueue({ timestampMs: snapshot.eventTimeMs, snapshot });
     if (!this.started) {
-      this.start(snapshot.eventTimeMs);
+      this.started = true;
+      this.currentSecMs = bucketStart(snapshot.eventTimeMs);
+      this.scheduleFallback();
+      return;
     }
+    while (snapshot.eventTimeMs >= this.currentBucketEndMs) {
+      this.closeCurrentBucket();
+    }
+    this.scheduleFallback();
   }
 
   dispose(): void {
@@ -84,65 +94,45 @@ export class SnapshotQuantizer {
     this.scheduler.clearTimeout(this.timerHandle);
     this.timerHandle = undefined;
     this.buffer.clear();
-    this.lastEmittedSnapshot = null;
+    this.lastEmittedSnapshot = undefined;
     this.interpolationCount = 0;
     this.started = false;
   }
 
-  private start(firstTimestampMs: UnixTimeMs): void {
-    this.started = true;
-    this.currentSecMs = (Math.floor(firstTimestampMs / BUCKET_DURATION_MS) *
-      BUCKET_DURATION_MS) as UnixTimeMs;
-    this.scheduleNextTick();
+  private get currentBucketEndMs(): number {
+    return this.currentSecMs + BUCKET_DURATION_MS;
   }
 
-  private readonly tick = (): void => {
+  /** Wall-clock fallback: closes every bucket whose grace period has expired. */
+  private readonly onFallbackTimer = (): void => {
     if (this.disposed) {
       return;
     }
-    this.processCurrentSecond();
-    this.currentSecMs = (this.currentSecMs + BUCKET_DURATION_MS) as UnixTimeMs;
-
-    // Catch-up loop: if the timer fired late (tab throttled, CPU spike)
-    // or we've just gotten a snapshot from several seconds in the past,
-    // fast-forward through any buckets whose wall-clock end has already
-    // passed so we never fall behind silently.
-    while (this.now() >= this.currentSecMs + BUCKET_DURATION_MS) {
-      this.processCurrentSecond();
-      this.currentSecMs = (this.currentSecMs + BUCKET_DURATION_MS) as UnixTimeMs;
+    this.closeCurrentBucket();
+    while (this.now() >= this.currentBucketEndMs + this.lateArrivalGraceMs) {
+      this.closeCurrentBucket();
     }
-
-    this.scheduleNextTick();
+    this.scheduleFallback();
   };
 
-  private processCurrentSecond(): void {
-    const fromMs = this.currentSecMs;
-    const toMs = (this.currentSecMs + BUCKET_DURATION_MS) as UnixTimeMs;
-    const drained = this.buffer.drain(fromMs, toMs);
+  private closeCurrentBucket(): void {
+    const drained = this.buffer.drain(this.currentSecMs, this.currentBucketEndMs as UnixTimeMs);
+    const latest = drained.at(-1)?.snapshot;
 
-    if (drained.length > 0) {
-      const latest = drained[drained.length - 1].snapshot;
+    if (!isNil(latest)) {
       this.emit(latest.bids, latest.asks, false);
       this.lastEmittedSnapshot = latest;
       this.interpolationCount = 0;
-      return;
+    } else if (!isNil(this.lastEmittedSnapshot)) {
+      if (this.interpolationCount < this.maxInterpolatedSnapshots) {
+        this.emit(this.lastEmittedSnapshot.bids, this.lastEmittedSnapshot.asks, true);
+        this.interpolationCount += 1;
+      } else {
+        this.emit(EMPTY_LEVELS, EMPTY_LEVELS, true);
+      }
     }
 
-    if (this.lastEmittedSnapshot === null) {
-      // Haven't seen a real snapshot yet — keep the timer ticking but
-      // don't invent bids/asks out of thin air.
-      return;
-    }
-
-    if (this.interpolationCount < this.maxInterpolatedSnapshots) {
-      this.emit(this.lastEmittedSnapshot.bids, this.lastEmittedSnapshot.asks, true);
-      this.interpolationCount += 1;
-      return;
-    }
-
-    // Past the cap — emit an empty snapshot so the chart keeps
-    // advancing; downstream treats this as "data stream is silent".
-    this.emit(EMPTY_LEVELS, EMPTY_LEVELS, true);
+    this.currentSecMs = this.currentBucketEndMs as UnixTimeMs;
   }
 
   private emit(
@@ -150,17 +140,17 @@ export class SnapshotQuantizer {
     asks: ReadonlyArray<readonly [number, number]>,
     isInterpolated: boolean
   ): void {
-    this.onEmit({
-      eventTimeMs: this.currentSecMs,
-      bids,
-      asks,
-      isInterpolated,
-    });
+    this.onEmit({ eventTimeMs: this.currentSecMs, bids, asks, isInterpolated });
   }
 
-  private scheduleNextTick(): void {
-    const fireAtMs = this.currentSecMs + BUCKET_DURATION_MS;
+  private scheduleFallback(): void {
+    this.scheduler.clearTimeout(this.timerHandle);
+    const fireAtMs = this.currentBucketEndMs + this.lateArrivalGraceMs;
     const delayMs = Math.max(0, fireAtMs - this.now());
-    this.timerHandle = this.scheduler.setTimeout(this.tick, delayMs);
+    this.timerHandle = this.scheduler.setTimeout(this.onFallbackTimer, delayMs);
   }
+}
+
+function bucketStart(timestampMs: UnixTimeMs): UnixTimeMs {
+  return (Math.floor(timestampMs / BUCKET_DURATION_MS) * BUCKET_DURATION_MS) as UnixTimeMs;
 }

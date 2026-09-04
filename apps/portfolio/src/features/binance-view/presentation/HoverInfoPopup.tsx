@@ -1,4 +1,5 @@
 import { millisecondsToISO8601 } from '@frozik/utils/date/iso8601';
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useLayoutEffect, useRef } from 'react';
@@ -75,21 +76,9 @@ function OrderbookSection({ cell }: { readonly cell: IHitTestResult }): React.Re
 }
 
 /**
- * Unified hover popup that merges the orderbook cell tooltip and the
- * trades-bucket preview into a single panel anchored at the cursor.
- *
- * Sections (top-to-bottom):
- *   1. Trades aggregate (vwap, total volume, buy share, trade count) —
- *      shown when the cursor sits inside a closed bucket's hit-zone.
- *   2. Horizontal divider — shown only when both sections are active.
- *   3. Orderbook cell (price level, side, volume, time) — shown when
- *      the cursor sits over a heatmap cell with persisted volume data.
- *
- * If neither section has data the popup is unmounted entirely (returns
- * `null`); we never render an empty frame. Position is edge-aware —
- * mirrors the previous {@link CellTooltip} policy: prefer bottom-right
- * of the cursor, flip to the opposite quadrant near the parent edges,
- * clamp to the edge margin afterwards.
+ * Hover popup merging the trades-bucket preview and the orderbook cell
+ * tooltip at the cursor. Edge-aware: prefers bottom-right, flips to the
+ * opposite quadrant near the parent edges, then clamps to the margin.
  */
 export const HoverInfoPopup = observer(function HoverInfoPopup({
   anchorPx,
@@ -97,20 +86,16 @@ export const HoverInfoPopup = observer(function HoverInfoPopup({
   readonly anchorPx: { readonly x: number; readonly y: number };
 }) {
   const store = useBinanceViewStore();
-  const cell = store.selectedCell;
+  const cell = store.orderbookStore?.selectedCell;
   const bucket = store.tradesStore?.hoveredBucket;
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Edge-aware repositioning — measure after layout, prefer
-  // bottom-right of the cursor, flip to the opposite quadrant when the
-  // popup would clip the parent edges, clamp to the margin.
   useLayoutEffect(() => {
     const node = rootRef.current;
-    if (node === null || (cell === undefined && bucket === undefined)) {
+    if (isNil(node) || (isNil(cell) && isNil(bucket))) {
       return;
     }
-    const parent = node.offsetParent as HTMLElement | null;
-    const parentRect = parent?.getBoundingClientRect();
+    const parentRect = node.offsetParent?.getBoundingClientRect();
     const parentWidth = parentRect?.width ?? window.innerWidth;
     const parentHeight = parentRect?.height ?? window.innerHeight;
     const popupRect = node.getBoundingClientRect();
@@ -139,28 +124,21 @@ export const HoverInfoPopup = observer(function HoverInfoPopup({
     node.style.left = `${clampedLeft}px`;
     node.style.top = `${clampedTop}px`;
     node.style.visibility = 'visible';
-    // Re-measure when sections appear / disappear so the popup
-    // re-flips against the new content size.
   }, [anchorPx, cell, bucket]);
 
-  if (cell === undefined && bucket === undefined) {
+  if (isNil(cell) && isNil(bucket)) {
     return null;
   }
 
   return (
     <div
       ref={rootRef}
-      // Start hidden: the layout effect measures actual size, flips
-      // direction if needed, then sets `visibility` — without this the
-      // popup paints once at the raw anchor before correcting.
-      style={{ visibility: 'hidden', left: 0, top: 0 }}
-      className="pointer-events-none absolute z-30 min-w-[180px] rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-lg backdrop-blur"
+      // Starts invisible so the layout effect can measure and place it before the first paint.
+      className="pointer-events-none invisible absolute left-0 top-0 z-30 min-w-[180px] rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-lg backdrop-blur"
     >
-      {bucket !== undefined ? <TradesSection bucket={bucket} /> : null}
-      {bucket !== undefined && cell !== undefined ? (
-        <hr className="border-t border-border" />
-      ) : null}
-      {cell !== undefined ? <OrderbookSection cell={cell} /> : null}
+      {isNil(bucket) ? null : <TradesSection bucket={bucket} />}
+      {!isNil(bucket) && !isNil(cell) ? <hr className="border-t border-border" /> : null}
+      {isNil(cell) ? null : <OrderbookSection cell={cell} />}
     </div>
   );
 });

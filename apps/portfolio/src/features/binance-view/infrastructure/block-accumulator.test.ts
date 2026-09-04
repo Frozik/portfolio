@@ -2,8 +2,8 @@ import type { Milliseconds } from '@frozik/utils/date/types';
 import { describe, expect, test, vi } from 'vitest';
 
 import { FLOATS_PER_TEXEL, SNAPSHOT_SLOTS, SNAPSHOTS_PER_BLOCK } from '../domain/constants';
+import type { IBlockFlushEvent } from '../domain/flush-events';
 import type { IQuantizedSnapshot, UnixTimeMs } from '../domain/types';
-import type { IBlockFlushEvent } from './block-accumulator';
 import { BlockAccumulator } from './block-accumulator';
 
 const UPDATE_SPEED_MS = 1000 as Milliseconds;
@@ -94,7 +94,7 @@ describe('BlockAccumulator', () => {
     // No flush yet (only 1 snapshot pending in new block); addSnapshot doesn't
     // invoke onFlush until 16 accumulate. Verify active block:
     const active = accumulator.getActiveBlock();
-    expect(active).not.toBeNull();
+    expect(active).toBeDefined();
     expect(active?.meta.blockId).not.toBe(firstBlockId);
   });
 
@@ -115,10 +115,8 @@ describe('BlockAccumulator', () => {
     accumulator.addSnapshot(buildSnapshot(firstTs + 1000));
 
     const active = accumulator.getActiveBlock();
-    if (active === null) {
-      throw new Error('active block should not be null');
-    }
-    const data = active.data;
+    expect(active).toBeDefined();
+    const data = active?.data ?? new Float32Array();
 
     // Snapshot 0 cell 0: timeDelta = 0
     expect(data[0]).toBe(0);
@@ -146,7 +144,7 @@ describe('BlockAccumulator', () => {
 
     expect(onFlush).toHaveBeenCalledTimes(0);
     const active = accumulator.getActiveBlock();
-    expect(active).not.toBeNull();
+    expect(active).toBeDefined();
     // Not yet flushed: meta.count still 0, but data already contains 5 snapshots
     expect(active?.meta.count).toBe(0);
   });

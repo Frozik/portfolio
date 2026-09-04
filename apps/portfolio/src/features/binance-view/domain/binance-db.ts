@@ -1,32 +1,14 @@
+import type { ICandleBlockRecord } from './candle-types';
 import type { ITradeBlockRecord, ITradeBucketRawRecord } from './trades-types';
 import type { UnixTimeMs } from './types';
 
-/**
- * Persistence DTOs and repository ports for the binance-view IndexedDB.
- *
- * These are domain-owned contracts (the bridge-type pattern, mirroring
- * `trades-types.ts`): the domain's data/LRU controllers depend only on these
- * interfaces, and `infrastructure/binance-indexeddb.ts` provides the concrete
- * `idb`-backed implementation. Keeping the records and the `I*Db` ports here
- * is what lets the domain stay free of any `infrastructure/` import.
- */
+/** Persistence records and repository ports; `infrastructure/binance-indexeddb.ts` implements them. */
 
 export interface IOrderbookBlockRecord {
   readonly blockId: UnixTimeMs;
   readonly firstTimestampMs: UnixTimeMs;
   readonly lastTimestampMs: UnixTimeMs;
   readonly count: number;
-  readonly textureRowIndex: number | undefined;
-  readonly data: ArrayBuffer;
-}
-
-export interface IMidPriceBlockRecord {
-  readonly blockId: UnixTimeMs;
-  readonly firstTimestampMs: UnixTimeMs;
-  readonly lastTimestampMs: UnixTimeMs;
-  readonly basePrice: number;
-  readonly count: number;
-  readonly textureRowIndex: number | undefined;
   readonly data: ArrayBuffer;
 }
 
@@ -39,10 +21,10 @@ export interface IOrderbookDb {
   close(): void;
 }
 
-export interface IMidPriceDb {
+export interface ICandleDb {
   clearAll(): Promise<void>;
-  putBlock(record: IMidPriceBlockRecord): Promise<void>;
-  getBlock(blockId: UnixTimeMs): Promise<IMidPriceBlockRecord | undefined>;
+  putBlock(record: ICandleBlockRecord): Promise<void>;
+  getBlock(blockId: UnixTimeMs): Promise<ICandleBlockRecord | undefined>;
   deleteBlock(blockId: UnixTimeMs): Promise<void>;
   countBlocks(): Promise<number>;
 }
@@ -74,7 +56,7 @@ export interface ITradesDb {
  */
 export interface IBinanceDb {
   readonly orderbook: IOrderbookDb;
-  readonly midPrice: IMidPriceDb;
+  readonly candles: ICandleDb;
   readonly trades: ITradesDb;
   clearAll(): Promise<void>;
   close(): void;

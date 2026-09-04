@@ -1,6 +1,11 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 
-import { TEXTURE_WIDTH_FALLBACK, TEXTURE_WIDTH_PREFERRED, Y_AXIS_PANEL_CSS_PX } from './constants';
+import {
+  TEXTURE_WIDTH_FALLBACK,
+  TEXTURE_WIDTH_PREFERRED,
+  VOLUME_PANEL_CSS_PX,
+  Y_AXIS_PANEL_CSS_PX,
+} from './constants';
 import type { ITextureLayoutConfig, UnixTimeMs } from './types';
 
 /**
@@ -36,6 +41,15 @@ export function plotWidthCssPx(canvasClientWidthCss: number): number {
  */
 export function plotWidthDevicePx(canvasDeviceWidthPx: number, devicePixelRatio: number): number {
   return Math.max(1, canvasDeviceWidthPx - Y_AXIS_PANEL_CSS_PX * devicePixelRatio);
+}
+
+/** Height of the price area in CSS pixels — the canvas minus the volume panel below it. */
+export function plotHeightCssPx(canvasClientHeightCss: number): number {
+  return Math.max(1, canvasClientHeightCss - VOLUME_PANEL_CSS_PX);
+}
+
+export function plotHeightDevicePx(canvasDeviceHeightPx: number, devicePixelRatio: number): number {
+  return Math.max(1, canvasDeviceHeightPx - VOLUME_PANEL_CSS_PX * devicePixelRatio);
 }
 
 /**

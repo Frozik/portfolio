@@ -1,5 +1,8 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 import type { Opaque } from '@frozik/utils/types/base';
+import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
+
+import type { InstrumentSymbol } from './instruments';
 
 export type UnixTimeMs = Opaque<'UnixTimeMs', number>;
 
@@ -18,18 +21,12 @@ export interface IQuantizedSnapshot extends IOrderbookSnapshot {
   readonly isInterpolated: boolean;
 }
 
-/**
- * Metadata for a single orderbook block (128 snapshots × 128 levels).
- *
- * `textureRowIndex` is `undefined` when the block has been LRU-evicted
- * from the GPU texture; data remains in IndexedDB and can be reloaded.
- */
+/** Metadata for a single orderbook block (128 snapshots × 128 levels). */
 export interface IBlockMeta {
   readonly blockId: UnixTimeMs;
   readonly firstTimestampMs: UnixTimeMs;
-  lastTimestampMs: UnixTimeMs;
-  count: number;
-  textureRowIndex: number | undefined;
+  readonly lastTimestampMs: UnixTimeMs;
+  readonly count: number;
 }
 
 export interface ITextureLayoutConfig {
@@ -55,16 +52,19 @@ export interface IHitTestResult {
   readonly pointerPx: { readonly x: number; readonly y: number };
 }
 
-export type ConnectionState =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'disconnected'
-  | 'error'
-  | 'unsupported';
+export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+
+/**
+ * Whether flushed blocks reach IndexedDB. The first write or open failure
+ * disables persistence for the rest of the session — the chart keeps running
+ * from RAM and the status popup shows why history will not survive a reload.
+ */
+export type PersistenceState =
+  | { readonly status: 'persisting' }
+  | { readonly status: 'disabled'; readonly reason: ValueDescriptorFail };
 
 export interface IBinanceConfig {
-  readonly instrument: string;
+  readonly instrument: InstrumentSymbol;
   /** Raw levels per side taken from the full Binance order book. */
   readonly rawDepth: number;
   /** Price bins per side placed into the heatmap column (≤ `SNAPSHOT_SLOTS / 2`). */

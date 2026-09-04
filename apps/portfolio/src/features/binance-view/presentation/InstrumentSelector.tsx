@@ -2,10 +2,14 @@ import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Dropdown, DropdownItem } from '../../../shared/ui/Dropdown';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
-import { BINANCE_INSTRUMENTS } from '../domain/instruments';
+import type { InstrumentSymbol } from '../domain/instruments';
+import { CURATED_INSTRUMENTS } from '../domain/instruments';
+
+import { instrumentRoute } from './instrument-route';
 
 const CHEVRON_SIZE = 12;
 
@@ -15,9 +19,9 @@ const InstrumentOption = memo(
     isSelected,
     onSelect,
   }: {
-    readonly symbol: string;
+    readonly symbol: InstrumentSymbol;
     readonly isSelected: boolean;
-    readonly onSelect: (symbol: string) => void;
+    readonly onSelect: (symbol: InstrumentSymbol) => void;
   }) => {
     const handleSelect = useFunction(() => {
       onSelect(symbol);
@@ -36,10 +40,15 @@ const InstrumentOption = memo(
 
 export const InstrumentSelector = observer(() => {
   const store = useBinanceViewStore();
+  const navigate = useNavigate();
 
-  const handleSelect = useFunction((symbol: string) => {
-    void store.setInstrument(symbol);
+  const handleSelect = useFunction((symbol: InstrumentSymbol) => {
+    void navigate(instrumentRoute(symbol));
   });
+
+  const symbols = CURATED_INSTRUMENTS.some(option => option.symbol === store.instrument)
+    ? CURATED_INSTRUMENTS.map(option => option.symbol)
+    : [store.instrument, ...CURATED_INSTRUMENTS.map(option => option.symbol)];
 
   return (
     <Dropdown
@@ -53,11 +62,11 @@ export const InstrumentSelector = observer(() => {
         </button>
       }
     >
-      {BINANCE_INSTRUMENTS.map(option => (
+      {symbols.map(symbol => (
         <InstrumentOption
-          key={option.symbol}
-          symbol={option.symbol}
-          isSelected={option.symbol === store.instrument}
+          key={symbol}
+          symbol={symbol}
+          isSelected={symbol === store.instrument}
           onSelect={handleSelect}
         />
       ))}

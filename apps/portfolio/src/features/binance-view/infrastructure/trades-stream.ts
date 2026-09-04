@@ -1,8 +1,10 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
+import { isNil } from 'lodash-es';
 import type { Observable } from 'rxjs';
 import { animationFrameScheduler, bufferTime, EMPTY, of } from 'rxjs';
 import { filter, map, mergeMap, retry } from 'rxjs/operators';
 
+import type { InstrumentSymbol } from '../domain/instruments';
 import type { ITrade, Quantity, TradeId } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
 
@@ -48,7 +50,7 @@ const DEFAULT_RECONNECT_DELAY_MS: Milliseconds = 1000 as Milliseconds;
 
 export interface ILiveTradesParams {
   readonly streamHost: string;
-  readonly instrument: string;
+  readonly instrument: InstrumentSymbol;
   readonly reconnectDelayMs?: Milliseconds;
 }
 
@@ -62,7 +64,7 @@ export function liveTrades$(params: ILiveTradesParams): Observable<ReadonlyArray
   return webSocketWithOpenTimeout<ICombinedStreamMessage<IRawAggTrade>>({ url: wsUrl }).pipe(
     filter(message => message.stream === expectedStreamName),
     map(message => mapRawAggTradeToITrade(message.data)),
-    mergeMap(trade => (trade === null ? EMPTY : of(trade))),
+    mergeMap(trade => (isNil(trade) ? EMPTY : of(trade))),
     bufferTime<ITrade>(0, animationFrameScheduler),
     filter(batch => batch.length > 0),
     retry({ delay: () => awaitReconnectReady(effectiveReconnectDelayMs) })
@@ -71,13 +73,13 @@ export function liveTrades$(params: ILiveTradesParams): Observable<ReadonlyArray
 
 /**
  * Validates and normalises a raw `@aggTrade` payload into the domain
- * {@link ITrade} shape. Returns `null` on any validation failure so
+ * {@link ITrade} shape. Returns `undefined` on any validation failure so
  * the caller can drop the message via `mergeMap` without erroring the
  * outer stream.
  *
  * Exported for unit tests.
  */
-export function mapRawAggTradeToITrade(raw: IRawAggTrade): ITrade | null {
+export function mapRawAggTradeToITrade(raw: IRawAggTrade): ITrade | undefined {
   const price = Number.parseFloat(raw.p);
   // Strictly positive — the bucket accumulator's `closeBucket` asserts
   // `volumeTotal > 0` / `notionalSum > 0`, so a zero or negative leg
@@ -86,17 +88,17 @@ export function mapRawAggTradeToITrade(raw: IRawAggTrade): ITrade | null {
   // markets; rejecting them keeps the assert path defensible against
   // malformed payloads (e.g. partial WS frames on reconnect).
   if (!Number.isFinite(price) || price <= 0) {
-    return null;
+    return undefined;
   }
   const quantity = Number.parseFloat(raw.q);
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    return null;
+    return undefined;
   }
   if (!Number.isFinite(raw.a) || !Number.isInteger(raw.a)) {
-    return null;
+    return undefined;
   }
   if (!Number.isFinite(raw.T)) {
-    return null;
+    return undefined;
   }
   return {
     tradeId: raw.a as TradeId,

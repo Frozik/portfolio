@@ -4,6 +4,7 @@ import { concat, defer, of, throwError } from 'rxjs';
 import { map, retry } from 'rxjs/operators';
 
 import { aggregateSnapshotByBin } from '../domain/aggregate-snapshot';
+import type { InstrumentSymbol } from '../domain/instruments';
 import type { IOrderbookSnapshot, IQuantizedSnapshot } from '../domain/types';
 
 import { awaitReconnectReady } from './await-reconnect-ready';
@@ -20,7 +21,7 @@ const DEFAULT_MAX_SEQUENCE_GAP_RETRIES = 5;
 
 function createOrderBookStream$(params: {
   streamHost: string;
-  instrument: string;
+  instrument: InstrumentSymbol;
   updateSpeedMs: Milliseconds;
   depth: number;
   restUrl: string;
@@ -57,7 +58,7 @@ function createOrderBookStream$(params: {
 export interface ILiveOrderBookParams {
   readonly streamHost: string;
   readonly apiHost: string;
-  readonly instrument: string;
+  readonly instrument: InstrumentSymbol;
   readonly depth: number;
   readonly updateSpeedMs: Milliseconds;
   readonly restSnapshotLimit: number;

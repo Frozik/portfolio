@@ -9,7 +9,6 @@ import {
   FPS_INTERACTION,
   FUTURE_PADDING_MS,
   INITIAL_VISIBLE_LEVELS,
-  MAGNITUDE_EMA_ALPHA,
   MAX_VISIBLE_LEVELS,
   MIN_VISIBLE_LEVELS,
   PIXELS_PER_MILLISECOND,
@@ -20,6 +19,8 @@ import {
 } from '../domain/constants';
 import type { DataController } from '../domain/data-controller';
 import { getMidPrice } from '../domain/get-mid-price';
+import type { IMagnitudeRange } from '../domain/magnitude-range';
+import { INITIAL_MAGNITUDE_RANGE, updateMagnitudeRange } from '../domain/magnitude-range';
 import { lerp, plotWidthCssPx } from '../domain/math';
 import type { IHeatmapViewport, IOrderbookSnapshot, UnixTimeMs } from '../domain/types';
 import type { IViewportClampInput } from '../domain/viewport';
@@ -85,9 +86,7 @@ export class ViewportController {
   private midPrice: number | undefined = undefined;
   private targetMidPrice: number | undefined = undefined;
   private lastDisplayMs: UnixTimeMs | undefined = undefined;
-  private magnitudeMin = 0;
-  private magnitudeMax = 1;
-  private magnitudeInitialized = false;
+  private magnitudeRange: IMagnitudeRange | undefined = undefined;
 
   private visibleLevels = INITIAL_VISIBLE_LEVELS;
   private targetVisibleLevels = INITIAL_VISIBLE_LEVELS;
@@ -95,33 +94,14 @@ export class ViewportController {
   private readonly midPriceUnsubscribe: (() => void) | undefined;
   private readonly midPriceSource: DataController | undefined;
   private midPriceToken = 0;
-  /**
-   * Latest snapshot the 2 Hz driver has resolved for
-   * `viewport.viewTimeEndMs`. The Y-axis volume-bars overlay reads it
-   * every frame to render per-level bid/ask volumes in the right-hand
-   * price panel. Kept here instead of re-fetching per frame so we
-   * don't spam `DataController.resolveSnapshotAt` / IDB; the 500 ms
-   * cadence of the driver matches snapshot arrival from the stream.
-   */
+  /** Snapshot at the right edge, refreshed by the driver task rather than per frame. */
   private lastResolvedSnapshot: IOrderbookSnapshot | undefined = undefined;
   /**
-   * Sticky "stay at the live edge" intent. Follow-mode used to be
-   * derived purely from `isFollowing(viewport)` — which breaks when
-   * the tab sits in the background: RAF is throttled so the viewport
-   * stops stepping, but snapshots keep arriving through the WebSocket
-   * and `lastDisplayMs` keeps advancing. After ~1 s the gap exceeds
-   * `FOLLOW_EPSILON_MS`, `isFollowing` flips to `false`, `engageFollow`
-   * stops firing, and when the tab wakes up the chart is stuck in
-   * the past forever.
-   *
-   * The pinned flag records the *intent* separately from the
-   * instantaneous geometry: once a user has scrolled all the way to
-   * the live edge (or on initial load, when there is no history to
-   * look at), we treat them as "wanting to track live data" and keep
-   * jumping `targetViewTimeEndMs` to the newest flush. The only way
-   * to drop the pin is an explicit pan backward — the pan handler
-   * sets `followPinned = false`; the `tick` loop then re-engages it
-   * the moment the user pans forward past the follow epsilon again.
+   * Sticky "stay at the live edge" intent. Deriving follow mode from the
+   * viewport geometry alone broke in background tabs: RAF stops stepping
+   * while snapshots keep arriving, the gap outgrows the follow epsilon and
+   * the chart woke up stuck in the past. Only an explicit backward pan
+   * drops the pin; `tick` re-arms it once the user pushes to the right clamp.
    */
   private followPinned = true;
 
@@ -187,14 +167,6 @@ export class ViewportController {
       isInteracting: this.input.isPanning,
     });
 
-    // Re-arm follow-pin only when the user actually pushed the target
-    // all the way to the right clamp — i.e. scrolled past the live
-    // edge (or threw the chart that way with inertia). Using "target
-    // is near live" as the trigger (`isFollowing`) was wrong: a tiny
-    // backward pan that stops inside `FOLLOW_EPSILON_MS` would leave
-    // the viewport close to the edge, then tick would re-pin on the
-    // next frame, and the next flush would yank it forward again —
-    // the exact "jumps forward, flag won't clear" behaviour.
     if (!this.followPinned && this.lastDisplayMs !== undefined) {
       const rightClamp = this.lastDisplayMs + FUTURE_PADDING_MS;
       if (this.viewport.targetViewTimeEndMs >= rightClamp - VIEW_SNAP_THRESHOLD_MS) {
@@ -209,54 +181,26 @@ export class ViewportController {
       this.taskManager.raise(FPS_FOLLOW_DRIFT);
     }
 
-    // While the cursor is tracked, keep the renderer at interaction
-    // FPS so the crosshair time / price labels update every frame.
-    // In follow mode the chart slides under a stationary cursor —
-    // `pointermove` never fires, so without this raise the RAF loop
-    // would drop to idle FPS and the time readout under the cursor
-    // would stutter behind the actual data position.
+    // In follow mode the chart slides under a stationary cursor, so the crosshair
+    // labels need interaction FPS even without `pointermove`.
     if (this.input.getCursorCss() !== undefined) {
       this.taskManager.raise(FPS_INTERACTION);
     }
   }
 
-  /**
-   * Called on every flush: advances `lastDisplayMs`, engages follow
-   * if the viewport was at the live edge, and updates the magnitude
-   * EMA used for heatmap color normalization. Mid-price is NOT set
-   * here — {@link PositionController} drives it via
-   * {@link setTargetMidPrice}, decoupling Y-axis centering from flush
-   * cadence.
-   */
+  /** Advances the live edge, folds the flush into the magnitude range and re-engages follow mode. */
   onFlushArrived(params: {
     readonly lastDisplayMs: UnixTimeMs;
     readonly latestMagnitudeMin: number;
     readonly latestMagnitudeMax: number;
   }): boolean {
     this.lastDisplayMs = params.lastDisplayMs;
-    // Empty flushes (both magnitude bounds are 0 → no live levels in
-    // the snapshot) mean the quantizer is filling a disconnect gap.
-    // Skip magnitude updates so colors don't drift toward zero while
-    // the chart keeps advancing.
-    const isEmptyFlush = params.latestMagnitudeMin === 0 && params.latestMagnitudeMax === 0;
-    if (!isEmptyFlush) {
-      if (!this.magnitudeInitialized) {
-        this.magnitudeMin = params.latestMagnitudeMin;
-        this.magnitudeMax = params.latestMagnitudeMax;
-        this.magnitudeInitialized = true;
-      } else {
-        this.magnitudeMin = lerp(this.magnitudeMin, params.latestMagnitudeMin, MAGNITUDE_EMA_ALPHA);
-        this.magnitudeMax = lerp(this.magnitudeMax, params.latestMagnitudeMax, MAGNITUDE_EMA_ALPHA);
-      }
-    }
+    this.magnitudeRange = updateMagnitudeRange(
+      this.magnitudeRange,
+      params.latestMagnitudeMin,
+      params.latestMagnitudeMax
+    );
 
-    // Use the sticky `followPinned` flag rather than the instantaneous
-    // `isFollowing(viewport)` check: the latter lies while the tab is
-    // backgrounded (RAF is throttled → `viewTimeEndMs` doesn't step →
-    // the gap to `lastDisplayMs` outgrows `FOLLOW_EPSILON_MS` within
-    // a second). Using the pinned intent survives arbitrarily long
-    // periods of RAF starvation and immediately snaps the chart back
-    // to live data on re-activation.
     if (this.followPinned) {
       engageFollow(this.viewport, params.lastDisplayMs, this.buildClampInput());
       this.taskManager.raise(FPS_FOLLOW_DRIFT);
@@ -264,12 +208,7 @@ export class ViewportController {
     return this.followPinned;
   }
 
-  /**
-   * Command the Y-axis to lerp toward `mid`. Called by the
-   * {@link PositionController} — the first call snaps the visible mid
-   * to avoid gliding away from the default, subsequent calls only
-   * update the target and let `tick()` animate the transition.
-   */
+  /** The first call snaps the visible mid; later calls only move the target `tick()` lerps toward. */
   setTargetMidPrice(mid: number): void {
     this.targetMidPrice = mid;
     if (this.midPrice === undefined) {
@@ -277,12 +216,8 @@ export class ViewportController {
     }
   }
 
-  getMagnitudeMin(): number {
-    return this.magnitudeMin;
-  }
-
-  getMagnitudeMax(): number {
-    return this.magnitudeMax;
+  getMagnitudeRange(): IMagnitudeRange {
+    return this.magnitudeRange ?? INITIAL_MAGNITUDE_RANGE;
   }
 
   viewTimeStartMsForPlotWidth(plotWidthPx: number): UnixTimeMs {
@@ -298,9 +233,7 @@ export class ViewportController {
 
   /**
    * Cursor position in CSS pixels relative to the canvas origin, or
-   * `undefined` while the pointer is outside the canvas. Used by the
-   * crosshair overlay in `axis-draw.ts` — intentionally a snapshot read
-   * (no MobX observable) since the renderer pulls it every frame anyway.
+   * `undefined` while the pointer is outside the canvas.
    */
   getCursorCss(): { readonly x: number; readonly y: number } | undefined {
     return this.input.getCursorCss();
@@ -325,13 +258,7 @@ export class ViewportController {
     return this.lastResolvedSnapshot;
   }
 
-  /**
-   * Periodic task body (driven by the shared TaskManager): pull the
-   * mid-price at the right edge of the visible window from the data
-   * controller and lerp the Y axis toward it. A monotonic token
-   * discards stale async results so a slower IDB read can't overwrite
-   * a fresher on-screen mid.
-   */
+  /** Driver task: pulls the mid-price at the right edge; a token discards stale async reads. */
   private readonly refreshTargetMidPrice = (): void => {
     const source = this.midPriceSource;
     if (source === undefined) {
@@ -352,14 +279,7 @@ export class ViewportController {
     });
   };
 
-  /**
-   * Fired by {@link ViewportInputController} the moment a single-pointer
-   * drag crosses the start-of-pan threshold. Snaps the viewport's
-   * `targetViewTimeEndMs` to the current view (so subsequent deltas
-   * accumulate from where the user actually grabbed the chart) and
-   * drops the sticky follow-pin — `tick` re-arms it once the user pans
-   * forward enough that the viewport sits inside the follow epsilon.
-   */
+  /** A pan starts from where the user grabbed the chart and drops the follow pin. */
   private readonly handlePanStart = (): void => {
     this.viewport.targetViewTimeEndMs = this.viewport.viewTimeEndMs;
     this.followPinned = false;
@@ -390,8 +310,6 @@ export class ViewportController {
       return;
     }
     if (this.targetMidPrice !== undefined) {
-      // Snap thresold = half a tick, so the lerp doesn't crawl forever
-      // at sub-tick magnitudes (matches the viewTimeEnd lerp behaviour).
       const snapEpsilon = this.priceStep / 2;
       const delta = this.targetMidPrice - this.midPrice;
       if (Math.abs(delta) < snapEpsilon) {

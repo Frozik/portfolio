@@ -10,7 +10,7 @@ import { BlockSpatialIndex } from './block-spatial-index';
  * IDB rolling-window cap.
  */
 export interface IHeatmapBlockIndexItem extends IBlockSpatialIndexItem {
-  count: number;
+  readonly count: number;
 }
 
 /**

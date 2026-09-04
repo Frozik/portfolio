@@ -4,6 +4,8 @@ import type { IQuantizerScheduler } from './snapshot-quantizer';
 import { SnapshotQuantizer } from './snapshot-quantizer';
 import type { IOrderbookSnapshot, IQuantizedSnapshot, UnixTimeMs } from './types';
 
+const GRACE_MS = 1500;
+
 interface IFakeTimer {
   readonly fireAtMs: number;
   readonly callback: () => void;
@@ -27,11 +29,7 @@ class FakeClock {
     return {
       setTimeout: (callback, delayMs) => {
         const id = this.nextId++;
-        this.timers.set(id, {
-          fireAtMs: this.nowMs + delayMs,
-          callback,
-          cancelled: false,
-        });
+        this.timers.set(id, { fireAtMs: this.nowMs + delayMs, callback, cancelled: false });
         return id;
       },
       clearTimeout: handle => {
@@ -46,10 +44,7 @@ class FakeClock {
     };
   }
 
-  /**
-   * Advance wall-clock time to `targetMs` firing every pending timer in
-   * chronological order. Timers scheduled mid-advance are honored.
-   */
+  /** Advances to `targetMs`, firing pending timers in order; timers scheduled mid-advance are honoured. */
   advanceTo(targetMs: number): void {
     while (true) {
       let nextId: number | undefined;
@@ -98,40 +93,55 @@ describe('SnapshotQuantizer', () => {
       now: () => clock.now(),
       scheduler: clock.scheduler,
       maxInterpolatedSnapshots,
+      lateArrivalGraceMs: GRACE_MS,
     });
   }
 
-  test('first snapshot truncates ms and anchors bucket grid', () => {
+  test('a snapshot from the next second closes the previous bucket without waiting for the clock', () => {
     clock.setNow(1543);
     const quantizer = makeQuantizer();
     quantizer.push(snapshot(1543));
-
-    clock.advanceTo(2000);
+    quantizer.push(snapshot(2100, 101));
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].eventTimeMs).toBe(1000);
     expect(emitted[0].isInterpolated).toBe(false);
   });
 
-  test('takes latest snapshot within the bucket when multiple arrive', () => {
+  test('an update arriving after its second has ended on the wall clock still lands in its bucket', () => {
+    clock.setNow(1000);
+    const quantizer = makeQuantizer();
+    quantizer.push(snapshot(1000, 100));
+
+    // The exchange stamped this update inside second 1, but the network delivered it at 2300.
+    clock.advanceTo(2300);
+    quantizer.push(snapshot(1800, 105));
+    clock.advanceTo(2000 + GRACE_MS);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].isInterpolated).toBe(false);
+    expect(emitted[0].bids[0][0]).toBe(105);
+  });
+
+  test('takes the latest snapshot within the bucket when multiple arrive', () => {
     clock.setNow(1200);
     const quantizer = makeQuantizer();
     quantizer.push(snapshot(1200, 100));
     quantizer.push(snapshot(1500, 101));
     quantizer.push(snapshot(1800, 102));
 
-    clock.advanceTo(2000);
+    clock.advanceTo(2000 + GRACE_MS);
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].bids[0][0]).toBe(102);
   });
 
-  test('emits repeat-last up to cap, then empty snapshots to keep chart moving', () => {
+  test('once the stream goes silent, repeats the last snapshot up to the cap, then emits empty ones', () => {
     clock.setNow(1000);
     const quantizer = makeQuantizer(5);
     quantizer.push(snapshot(1000, 100));
 
-    clock.advanceTo(8000);
+    clock.advanceTo(8000 + GRACE_MS);
 
     // 1 real + 5 repeat-last-with-data + 1 empty (past cap) = 7
     expect(emitted).toHaveLength(7);
@@ -147,7 +157,7 @@ describe('SnapshotQuantizer', () => {
     expect(emitted[6].asks).toEqual([]);
     expect(emitted[6].eventTimeMs).toBe(7000);
 
-    clock.advanceTo(10_000);
+    clock.advanceTo(10_000 + GRACE_MS);
     expect(emitted).toHaveLength(9);
     expect(emitted[7].bids).toEqual([]);
     expect(emitted[8].bids).toEqual([]);
@@ -158,29 +168,25 @@ describe('SnapshotQuantizer', () => {
     const quantizer = makeQuantizer(5);
     quantizer.push(snapshot(1000, 100));
 
-    clock.advanceTo(4000); // 1 real + 2 interp at 2000,3000
+    clock.setNow(4600);
+    quantizer.push(snapshot(4500, 200));
     expect(emitted.map(snap => snap.isInterpolated)).toEqual([false, true, true]);
 
-    quantizer.push(snapshot(4500, 200));
-    clock.advanceTo(5000);
+    clock.advanceTo(5000 + GRACE_MS);
     expect(emitted[3].isInterpolated).toBe(false);
     expect(emitted[3].bids[0][0]).toBe(200);
 
-    // Two more empty buckets — interp counter should be reset, new cap of 5 begins
-    clock.advanceTo(7000);
+    clock.advanceTo(7000 + GRACE_MS);
     expect(emitted[4].isInterpolated).toBe(true);
     expect(emitted[4].bids[0][0]).toBe(200);
     expect(emitted[5].isInterpolated).toBe(true);
   });
 
-  test('catches up multiple buckets when first snapshot is backdated', () => {
-    // Clock is at 5000 but the first snapshot reports eventTimeMs = 1000 —
-    // the quantizer must fast-forward through the stale buckets instead of
-    // going silent for 4 seconds while it ticks back to wall-clock now.
+  test('catches up through stale buckets when the first snapshot is backdated', () => {
     clock.setNow(5000);
     const quantizer = makeQuantizer(10);
     quantizer.push(snapshot(1000, 100));
-    clock.advanceTo(5000);
+    clock.advanceTo(5000 + GRACE_MS);
 
     expect(emitted).toHaveLength(4);
     expect(emitted[0].isInterpolated).toBe(false);
@@ -191,14 +197,14 @@ describe('SnapshotQuantizer', () => {
     }
   });
 
-  test('does not emit anything before first push', () => {
+  test('does not emit anything before the first push', () => {
     clock.setNow(1000);
     makeQuantizer();
     clock.advanceTo(10_000);
     expect(emitted).toHaveLength(0);
   });
 
-  test('dispose cancels pending timer and clears buffer', () => {
+  test('dispose cancels the pending timer and clears the buffer', () => {
     clock.setNow(1000);
     const quantizer = makeQuantizer();
     quantizer.push(snapshot(1000, 100));

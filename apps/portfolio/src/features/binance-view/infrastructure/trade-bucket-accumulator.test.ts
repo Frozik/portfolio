@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-
+import type { ITradeBlockFlushEvent } from '../domain/flush-events';
 import type { ITrade, Quantity, TradeId } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
-
-import type { ITradeBlockFlushEvent } from './trade-bucket-accumulator';
 import { TradeBucketAccumulator } from './trade-bucket-accumulator';
 
 const FLOATS_PER_BUCKET = 4;

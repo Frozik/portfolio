@@ -38,8 +38,10 @@ struct HeatmapUniforms {
     // full canvas (for pixel→clip mapping); `plotWidthPx` excludes the
     // right-hand Y-axis panel so heatmap cells only occupy the plot area.
     plotWidthPx: f32,
-    _pad1: u32,
-    _pad2: u32,
+    // Height of the price area in device pixels; the band below it hosts the volume panel.
+    plotHeightPx: f32,
+    // Overall alpha of the layer; lowered while candles are drawn over it.
+    alphaMultiplier: f32,
     _pad3: u32,
     _pad4: u32,
 };
@@ -89,8 +91,8 @@ fn timeDeltaToPixelX(timeDeltaMs: f32) -> f32 {
 fn priceToPixelY(price: f32) -> f32 {
     let range = priceMax() - priceMin();
     let normalized = (price - priceMin()) / range;
-    // Flip so higher prices are at the top of the canvas.
-    return (1.0 - normalized) * U.viewport.y;
+    // Flip so higher prices are at the top of the price area.
+    return (1.0 - normalized) * U.plotHeightPx;
 }
 
 fn pixelToClip(pixel: vec2<f32>) -> vec2<f32> {
@@ -112,5 +114,5 @@ fn timeStepHalfPixels() -> f32 {
 
 fn priceStepHalfPixels() -> f32 {
     let range = priceMax() - priceMin();
-    return 0.5 * U.priceStep / range * U.viewport.y;
+    return 0.5 * U.priceStep / range * U.plotHeightPx;
 }

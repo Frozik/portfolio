@@ -85,6 +85,14 @@ export const RECONNECT_DELAY_MS: Milliseconds = 1000 as Milliseconds;
 /** Cap on how many repeat-last interpolated snapshots are emitted in a row. */
 export const MAX_INTERPOLATED_SNAPSHOTS = 5;
 
+/**
+ * How long past a bucket's end the quantizer waits for a late update before
+ * closing the bucket by wall clock. Binance stamps `@depth@1000ms` updates
+ * ~0.8 s into each second and they reach the browser 0.1–0.7 s later, so a
+ * zero-grace deadline dropped a noticeable share of real updates as stale.
+ */
+export const QUANTIZER_LATE_ARRIVAL_GRACE_MS = 1500;
+
 /** Diagonal stripe period in pixels for marking interpolated cells. */
 export const STRIPE_PERIOD_PX = 8;
 
@@ -107,12 +115,6 @@ export const FPS_FOLLOW_DRIFT = 60;
 
 /** MSAA sample count for anti-aliased rendering. */
 export const MSAA_SAMPLE_COUNT = 4;
-
-/** Initial offscreen canvas width (resized before first render). */
-export const INITIAL_OFFSCREEN_WIDTH = 1024;
-
-/** Initial offscreen canvas height. */
-export const INITIAL_OFFSCREEN_HEIGHT = 768;
 
 /** Axis styling. */
 export const AXIS_LABEL_COLOR = '#ccc';
@@ -150,98 +152,45 @@ export const Y_AXIS_VOLUME_BAR_INSET_PX = 4;
  */
 export const Y_AXIS_VOLUME_MIN_BAR_WIDTH_PX = 2;
 
-/**
- * Samples per block on the mid-price line. Matches `POINTS_PER_SLOT =
- * 256` from the timeseries feature so the GPU texture-slot math is
- * shared between the two. At 1 Hz cadence each block covers 256 s
- * (~4 min 16 s). The mid-price source is the live orderbook itself —
- * every flushed orderbook snapshot yields one mid-price sample via
- * `(bestBid + bestAsk) / 2`, so there is no separate WebSocket
- * subscription and the cadence matches the orderbook's.
- */
-export const MID_PRICE_SAMPLES_PER_BLOCK = 256;
+/** Candles per block: 256 one-second candles ≈ 4 min 16 s, two texels each. */
+export const CANDLES_PER_BLOCK = 256;
 
-/** Flush cadence in samples (1 → live rendering every second). */
-export const MID_PRICE_FLUSH_EVERY_SAMPLES = 1;
+/** Rolling-window cap of candle blocks kept in the index and IndexedDB (≈ 68 min). */
+export const MAX_CANDLE_HISTORY_BLOCKS = 16;
 
-/**
- * Rolling-window cap in IndexedDB. 16 × 256 × 1 s ≈ 68 min — slightly
- * longer than the orderbook's 1 h so the line keeps up with history.
- */
-export const MAX_MID_PRICE_BLOCKS = 16;
+/** Candle data-texture width in texels; one block is `CANDLES_PER_BLOCK × 2` texels wide. */
+export const CANDLE_TEXTURE_WIDTH = 2048;
 
-/** Mid-price data-texture width in texels (one row = 8 blocks). */
-export const MID_PRICE_TEXTURE_WIDTH = 2048;
+/** Rows of the candle GPU texture; 2 rows × 4 slots = 8 resident blocks, older ones reload from IndexedDB. */
+export const CANDLE_TEXTURE_ROWS = 2;
 
-/** Initial rows in the mid-price GPU texture (2 × 8 = 16 slots → fits the cap). */
-export const MID_PRICE_TEXTURE_INITIAL_ROWS = 2;
+/** Simple moving average windows, in candles (seconds). */
+export const MOVING_AVERAGE_SHORT_PERIOD = 5;
+export const MOVING_AVERAGE_LONG_PERIOD = 10;
 
-/** Maximum rows in the mid-price GPU texture (grow-path unused at current cap). */
-export const MID_PRICE_TEXTURE_MAX_ROWS = 2;
+/** Band under the price area: volume bars on top, time-axis labels along the bottom. CSS pixels. */
+export const VOLUME_PANEL_CSS_PX = 96;
+export const TIME_AXIS_LABELS_CSS_PX = 24;
+export const VOLUME_BARS_CSS_PX = VOLUME_PANEL_CSS_PX - TIME_AXIS_LABELS_CSS_PX;
+/** Volume bar width as a fraction of the one-second slot. */
+export const VOLUME_BAR_WIDTH_RATIO = 0.8;
+/** Heatmap alpha while candles are drawn over it, so the candles stay readable. */
+export const HEATMAP_ALPHA_UNDER_CANDLES = 0.55;
 
-/** Minimum drawn line width (device pixels). Passed to the shader as a uniform. */
-export const MID_PRICE_MIN_WIDTH_PX = 10;
+/** Candle body width as a fraction of the one-second slot. */
+export const CANDLE_BODY_WIDTH_RATIO = 0.7;
+/** Wick and body outline thickness in CSS pixels. */
+export const CANDLE_WICK_WIDTH_PX = 1.5;
+/** Floor on the body height so a flat candle is still visible. */
+export const CANDLE_MIN_BODY_HEIGHT_PX = 1.5;
+/** Moving-average line thickness in CSS pixels. */
+export const MOVING_AVERAGE_LINE_WIDTH_PX = 2;
 
-/** Maximum drawn line width (device pixels). Passed to the shader as a uniform. */
-export const MID_PRICE_MAX_WIDTH_PX = 10;
-
-/**
- * Scalar used inside the shader to grow the line width with the
- * relative price change between two adjacent samples. The shader
- * computes
- *
- *     width = clamp(minWidthPx × |Δprice / price| × WIDTH_SCALE,
- *                   minWidthPx, maxWidthPx)
- *
- * so that `|Δprice / price| = 1 / (WIDTH_SCALE × maxWidth/minWidth)`
- * saturates to `maxWidthPx`. At the default values this is 1/150000 ≈
- * 0.00067 %, which roughly matches the per-second volatility of
- * BTCUSDT during calm trading; tune via this constant rather than
- * rewriting the formula.
- */
-export const MID_PRICE_WIDTH_SCALE = 40_000;
-
-/**
- * Relative price changes (`|Δprice / price|`) with absolute value
- * below this threshold are treated as "flat" — the segment is
- * painted with the neutral grey colour rather than green / red. Set
- * very low (one millionth of the price) so only genuinely unchanged
- * samples fall into the flat bucket; any meaningful movement gets a
- * directional colour.
- */
-export const MID_PRICE_FLAT_RATIO_EPSILON = 1e-6;
-
-/** Rising-price segment color (RGBA 0..1). */
-export const MID_PRICE_COLOR_UP: readonly [number, number, number, number] = [0.08, 0.5, 0.18, 1.0];
-
-/** Falling-price segment color. */
-export const MID_PRICE_COLOR_DOWN: readonly [number, number, number, number] = [
-  0.6, 0.12, 0.12, 1.0,
-];
-
-/** Flat-price segment color (neutral grey). */
-export const MID_PRICE_COLOR_FLAT: readonly [number, number, number, number] = [0.0, 0.0, 0.0, 1.0];
-
-/**
- * Vertices emitted per line segment instance (6 body + 6 join at sample B).
- *
- * We intentionally skip a cap at sample A: adjacent segments share
- * sample A as the previous segment's sample B, so the previous
- * segment's join-B already covers the junction. Drawing a second cap
- * here in the current segment's instance would paint the current
- * segment's black outline on top of the previous segment's body. The
- * very first sample in the chart is therefore rendered with a flat
- * end — acceptable cosmetic trade-off for correct junction stitching.
- */
-export const MID_PRICE_VERTICES_PER_INSTANCE = 12;
-
-/**
- * Black outline width on each side of the mid-price line, in device
- * pixels. The geometry is expanded by `2 × MID_PRICE_OUTLINE_WIDTH_PX`
- * (one on each side) and the fragment shader fills the outer band with
- * black — separating the line visually from the heatmap underneath.
- */
-export const MID_PRICE_OUTLINE_WIDTH_PX = 4;
+export const CANDLE_COLOR_UP = '#2ea043';
+export const CANDLE_COLOR_DOWN = '#e53935';
+export const CANDLE_COLOR_OUTLINE = '#0b0d10';
+export const MOVING_AVERAGE_SHORT_COLOR = '#f5c518';
+export const MOVING_AVERAGE_LONG_COLOR = '#4fc3f7';
 
 /** Crosshair line color — semi-transparent white, dashed. */
 export const CROSSHAIR_LINE_COLOR = 'rgba(230, 230, 230, 0.7)';

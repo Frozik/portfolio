@@ -5,8 +5,8 @@ import { afterEach, describe, expect, test } from 'vitest';
 
 import type { UnixTimeMs } from '../domain/types';
 import {
+  CANDLE_BLOCKS_STORE,
   DEFAULT_DB_VERSION,
-  MID_PRICE_BLOCKS_STORE,
   ORDERBOOK_BLOCKS_STORE,
   openBinanceDb,
 } from './binance-indexeddb';
@@ -17,19 +17,17 @@ function makeRecord(blockId: number, countValue = 128) {
     firstTimestampMs: blockId as UnixTimeMs,
     lastTimestampMs: (blockId + 128_000) as UnixTimeMs,
     count: countValue,
-    textureRowIndex: 0,
     data: new ArrayBuffer(256),
   };
 }
 
-function makeMidPriceRecord(blockId: number, countValue = 10) {
+function makeCandleRecord(blockId: number, countValue = 10) {
   return {
     blockId: blockId as UnixTimeMs,
-    firstTimestampMs: blockId as UnixTimeMs,
-    lastTimestampMs: (blockId + 10_000) as UnixTimeMs,
+    firstBucketStartMs: blockId as UnixTimeMs,
+    lastBucketStartMs: (blockId + 10_000) as UnixTimeMs,
     basePrice: 50_000,
     count: countValue,
-    textureRowIndex: 0,
     data: new ArrayBuffer(256),
   };
 }
@@ -140,18 +138,18 @@ describe('binance-indexeddb (v3)', () => {
     openedDbs.push(db);
 
     await db.orderbook.putBlock(makeRecord(1000));
-    await db.midPrice.putBlock(makeMidPriceRecord(2000));
+    await db.candles.putBlock(makeCandleRecord(2000));
 
     expect(await db.orderbook.countBlocks()).toBe(1);
-    expect(await db.midPrice.countBlocks()).toBe(1);
+    expect(await db.candles.countBlocks()).toBe(1);
   });
 
-  test('round-trips mid-price records with the basePrice field', async () => {
+  test('round-trips candle records with the basePrice field', async () => {
     const db = await openBinanceDb(uniqueDbName());
     openedDbs.push(db);
 
-    await db.midPrice.putBlock(makeMidPriceRecord(1000));
-    const loaded = await db.midPrice.getBlock(1000 as UnixTimeMs);
+    await db.candles.putBlock(makeCandleRecord(1000));
+    const loaded = await db.candles.getBlock(1000 as UnixTimeMs);
     expect(loaded).toBeDefined();
     expect(loaded?.basePrice).toBe(50_000);
   });
@@ -161,14 +159,14 @@ describe('binance-indexeddb (v3)', () => {
     openedDbs.push(db);
 
     await db.orderbook.putBlock(makeRecord(1000));
-    await db.midPrice.putBlock(makeMidPriceRecord(2000));
+    await db.candles.putBlock(makeCandleRecord(2000));
     await db.clearAll();
 
     expect(await db.orderbook.countBlocks()).toBe(0);
-    expect(await db.midPrice.countBlocks()).toBe(0);
+    expect(await db.candles.countBlocks()).toBe(0);
   });
 
-  test('v1 → v3 upgrade preserves existing orderbook data and adds the mid-price store', async () => {
+  test('upgrade from v1 preserves existing orderbook data and adds the candle store', async () => {
     const dbName = uniqueDbName();
 
     // Pre-seed a v1-shaped DB (only the orderbook store exists).
@@ -180,16 +178,16 @@ describe('binance-indexeddb (v3)', () => {
     await v1.put(ORDERBOOK_BLOCKS_STORE, makeRecord(1000));
     v1.close();
 
-    // Open at the current version — migration should add mid-price-blocks.
+    // Open at the current version — migration should add the candle store.
     const db = await openBinanceDb(dbName);
     openedDbs.push(db);
 
     expect(await db.orderbook.getBlock(1000 as UnixTimeMs)).toBeDefined();
-    expect(await db.midPrice.countBlocks()).toBe(0);
+    expect(await db.candles.countBlocks()).toBe(0);
   });
 
-  test('default version is v4', () => {
-    expect(DEFAULT_DB_VERSION).toBe(4);
+  test('default version is v5', () => {
+    expect(DEFAULT_DB_VERSION).toBe(5);
   });
 
   test('exported store names match the IDB object stores', async () => {
@@ -198,8 +196,8 @@ describe('binance-indexeddb (v3)', () => {
 
     // Smoke-check: putting into each store via the store-name constants works.
     await db.orderbook.putBlock({ ...makeRecord(1000), blockId: 1000 as UnixTimeMs });
-    await db.midPrice.putBlock({ ...makeMidPriceRecord(2000), blockId: 2000 as UnixTimeMs });
+    await db.candles.putBlock({ ...makeCandleRecord(2000), blockId: 2000 as UnixTimeMs });
     expect(ORDERBOOK_BLOCKS_STORE).toBe('orderbook-blocks');
-    expect(MID_PRICE_BLOCKS_STORE).toBe('mid-price-blocks');
+    expect(CANDLE_BLOCKS_STORE).toBe('candle-blocks');
   });
 });

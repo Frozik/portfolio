@@ -11,12 +11,13 @@ import type { UnixTimeMs } from '../types';
  * `minY` / `maxY` are stubbed to 0 in single-axis (time-only) layouts.
  */
 export interface IBlockSpatialIndexItem {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-  blockId: UnixTimeMs;
-  textureRowIndex: number | undefined;
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+  readonly blockId: UnixTimeMs;
+  /** GPU texture slot, or `undefined` while the block is LRU-evicted from the texture. */
+  readonly textureRowIndex: number | undefined;
 }
 
 const RBUSH_MAX_ENTRIES = 9;
@@ -29,9 +30,8 @@ const RBUSH_MAX_ENTRIES = 9;
  * format-specific fields — see `create-heatmap-block-index.ts`,
  * `create-mid-price-block-index.ts`, `create-trades-block-index.ts`.
  *
- * Single-writer invariant: callers must not mutate items in-place after
- * insertion; updates go through `upsert(item)` which removes and
- * re-inserts the entry to keep the RBush consistent.
+ * Items are immutable: every update goes through `upsert(item)`, which
+ * removes and re-inserts the entry so the RBush stays consistent.
  */
 export class BlockSpatialIndex<TItem extends IBlockSpatialIndexItem> {
   private readonly tree = new RBush<TItem>(RBUSH_MAX_ENTRIES);

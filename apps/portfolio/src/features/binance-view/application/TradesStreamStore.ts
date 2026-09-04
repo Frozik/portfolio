@@ -1,7 +1,11 @@
+import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { Subscription } from 'rxjs';
-import type { IBinanceDb } from '../domain/binance-db';
+
 import { BINANCE_CONFIG } from '../domain/config';
+import type { ITradeBlockFlushEvent } from '../domain/flush-events';
+import type { InstrumentSymbol } from '../domain/instruments';
+import { RawTradesCache } from '../domain/raw-trades-cache';
 import {
   ACTIVE_BUCKET_RAW_TRADES_SOFT_CAP,
   FLOATS_PER_BUCKET,
@@ -11,9 +15,13 @@ import {
 } from '../domain/trades-constants';
 import type { ITradeHitTestPointer } from '../domain/trades-hit-test';
 import { decodeBucketAt, findBucketsAt, pickMostRecentBucket } from '../domain/trades-hit-test';
-import type { ITrade, ITradeBucket, ITradeBucketHitTestResult } from '../domain/trades-types';
+import type {
+  IClosedTradeBucket,
+  ITrade,
+  ITradeBucket,
+  ITradeBucketHitTestResult,
+} from '../domain/trades-types';
 import type { ConnectionState, UnixTimeMs } from '../domain/types';
-import type { ITradeBlockFlushEvent } from '../infrastructure/trade-bucket-accumulator';
 import { TradeBucketAccumulator } from '../infrastructure/trade-bucket-accumulator';
 import {
   loadRawTradesFromDb,
@@ -22,123 +30,67 @@ import {
 } from '../infrastructure/trades-persistence';
 import { liveTrades$ } from '../infrastructure/trades-stream';
 import type { BinanceChartState } from './chart-state';
-
 import type { IOrderbookGate } from './IOrderbookGate';
-
-// IDB persistence: aggregates on every flush, raw trades only on the
-// `closedByRotation` event (the sealed block carrying its final
-// rawTradesByBucket).
-
-export type { ITradeHitTestPointer } from '../domain/trades-hit-test';
+import type { PersistenceGate } from './persistence-gate';
 
 export interface ITradesStreamStoreParams {
   readonly chartState: BinanceChartState;
-  readonly db: IBinanceDb | undefined;
-  readonly instrument: string;
+  readonly persistence: PersistenceGate;
+  readonly instrument: InstrumentSymbol;
   readonly gate: IOrderbookGate;
+  /** Fan-out of every closed second to the candle store. */
+  readonly onBucketClosed?: (bucket: IClosedTradeBucket) => void;
 }
 
 /**
- * Per-stream sub-store extracted from the legacy `BinanceViewStore`
- * god-store. Owns the live trades subscription, the trade-
- * bucket accumulator, raw-trade RAM cache, and connection-state
- * indicators surfaced by the trades surface.
+ * Owns the live trades subscription, the bucket accumulator, the raw-trade
+ * RAM cache and the hover / pinned bucket selection.
  *
- * Trade ingest is gated on the first-snapshot sentinel exposed by
- * {@link IOrderbookGate}: trades arriving before the first orderbook
- * snapshot are dropped because the trade-block timeDelta encoding
- * resolves against a not-yet-defined system of coordinates. Once the
- * sentinel flips, the gate stays open for the rest of the store's
- * lifetime (incl. across orderbook WS reconnects) — only `dispose`
- * resets it.
- *
- * Pinned/hovered bucket fields ({@link pinnedBucket},
- * {@link hoveredBucketKey}) are observable seats populated by the
- * presentation layer when the pointer math is wired in
- * `BinanceView.tsx`. Hit-test resolution lives in pure domain
- * functions (`domain/trades-hit-test.ts`) — this store only feeds
- * them the in-RAM block data and applies the click/hover policies.
+ * Trades that arrive before the first orderbook snapshot are dropped: the
+ * trade-block time encoding resolves against the orderbook's coordinate
+ * frame, which does not exist yet. Once {@link IOrderbookGate} opens it
+ * stays open across reconnects until `dispose`.
  */
 export class TradesStreamStore {
   tradesConnection: ConnectionState = 'idle';
   tradesErrorMessage: string | undefined = undefined;
   tradesReceivedCount = 0;
-  /** `eventTimeMs` of the most recent trade observed, or `undefined` before the first batch. */
   lastTradeTimeMs: UnixTimeMs | undefined = undefined;
   pinnedBucket: ITradeBucketHitTestResult | undefined = undefined;
   hoveredBucketKey: UnixTimeMs | undefined = undefined;
 
   private readonly chartState: BinanceChartState;
-  private readonly db: IBinanceDb | undefined;
-  private readonly instrument: string;
+  private readonly persistence: PersistenceGate;
+  private readonly instrument: InstrumentSymbol;
   private readonly gate: IOrderbookGate;
+  private readonly onBucketClosed: ((bucket: IClosedTradeBucket) => void) | undefined;
 
   private accumulator: TradeBucketAccumulator | undefined = undefined;
   private subscription: Subscription | undefined = undefined;
-
-  /**
-   * RAM cache of raw trades for recently-flushed blocks, used by the
-   * popup table when the user clicks a bucket. Outer key is `blockId`,
-   * inner map is `bucketStartMs → ITrade[]`. Bounded by
-   * {@link MAX_RAW_TRADES_BLOCKS_IN_RAM} — older blocks fall through
-   * to lazy IDB reload.
-   */
-  private readonly recentBucketRawTrades = new Map<UnixTimeMs, Map<UnixTimeMs, ITrade[]>>();
-  /**
-   * Insertion-ordered set of `blockId`s currently held in
-   * {@link recentBucketRawTrades}. Used as a FIFO eviction queue when
-   * the cap is exceeded — `Set` insertion order is preserved by JS
-   * spec, so the oldest entry is always `set.values().next().value`.
-   * `Set` over `Array` here keeps the cap-trim and eviction paths
-   * `O(1)` (the array `indexOf`/`splice` was `O(n)` and grew with
-   * `MAX_RAW_TRADES_BLOCKS_IN_RAM`).
-   */
-  private readonly recentBlockOrder = new Set<UnixTimeMs>();
-  /**
-   * Per-block reload-token guard against races: when the same block is
-   * reloaded concurrently (e.g. a fresh hover overrides an older
-   * click), only the last reload is allowed to mutate the cache.
-   */
+  private readonly rawTrades = new RawTradesCache(MAX_RAW_TRADES_BLOCKS_IN_RAM);
+  /** Per-block reload generation: only the latest concurrent reload may publish. */
   private readonly reloadTokens = new Map<UnixTimeMs, number>();
-  /**
-   * Authoritative `Float32Array` reference for every flushed block
-   * — kept alongside the renderer's own copy so the store can decode
-   * bucket aggregates synchronously when the popup needs them.
-   */
+  /** Block aggregates by reference, so hit-tests decode buckets without touching the renderer. */
   private readonly blockData = new Map<UnixTimeMs, Float32Array>();
 
   constructor(params: ITradesStreamStoreParams) {
     this.chartState = params.chartState;
-    this.db = params.db;
+    this.persistence = params.persistence;
     this.instrument = params.instrument;
     this.gate = params.gate;
+    this.onBucketClosed = params.onBucketClosed;
 
-    makeAutoObservable<
-      TradesStreamStore,
-      'recentBucketRawTrades' | 'recentBlockOrder' | 'reloadTokens' | 'blockData'
-    >(
+    makeAutoObservable<TradesStreamStore, 'rawTrades' | 'reloadTokens' | 'blockData'>(
       this,
-      {
-        // Heavy non-UI caches mutated on the hot `flush` path (the raw-
-        // trades map nests up to ~2000 `ITrade` objects per block, plus
-        // the per-block `Float32Array` aggregates). MobX deep-tracking
-        // them would re-proxy every nested entry on each flush for zero
-        // reactive benefit: the only observable triggers consumers depend
-        // on are the `hoveredBucketKey` / `pinnedBucket` UI seats, which
-        // drive the `hoveredBucket` getter and the popup's raw-trade read.
-        // Keeping the caches raw also lets us assign them outside
-        // `runInAction` without tripping strict-mode warnings.
-        recentBucketRawTrades: false,
-        recentBlockOrder: false,
-        reloadTokens: false,
-        blockData: false,
-      },
+      // Hot-path caches with thousands of nested trades: deep tracking would re-proxy
+      // every entry per flush for no reactive benefit.
+      { rawTrades: false, reloadTokens: false, blockData: false },
       { autoBind: true }
     );
   }
 
   startStream(): void {
-    if (this.subscription !== undefined) {
+    if (!isNil(this.subscription)) {
       return;
     }
     this.tradesConnection = 'connecting';
@@ -149,6 +101,7 @@ export class TradesStreamStore {
       floatsPerBucket: FLOATS_PER_BUCKET,
       activeBucketRawTradesSoftCap: ACTIVE_BUCKET_RAW_TRADES_SOFT_CAP,
       onFlush: this.handleFlush,
+      onBucketClosed: this.onBucketClosed,
     });
 
     this.subscription = liveTrades$({
@@ -166,8 +119,7 @@ export class TradesStreamStore {
     this.subscription = undefined;
     this.accumulator?.dispose();
     this.accumulator = undefined;
-    this.recentBucketRawTrades.clear();
-    this.recentBlockOrder.clear();
+    this.rawTrades.clear();
     this.reloadTokens.clear();
     this.blockData.clear();
     this.pinnedBucket = undefined;
@@ -178,66 +130,43 @@ export class TradesStreamStore {
     this.lastTradeTimeMs = undefined;
   }
 
-  /**
-   * Synchronous read of raw trades for a closed bucket. Returns
-   * `undefined` when the block has been evicted from RAM — the popup
-   * is responsible for kicking off a lazy IDB reload in that case.
-   */
+  /** `undefined` once the block left the RAM cache — the popup then asks for {@link loadRawTradesFromIDB}. */
   getRawTradesForBucket(
     blockId: UnixTimeMs,
     bucketStartMs: UnixTimeMs
   ): readonly ITrade[] | undefined {
-    return this.recentBucketRawTrades.get(blockId)?.get(bucketStartMs);
+    return this.rawTrades.get(blockId, bucketStartMs);
   }
 
-  /**
-   * Lazy IDB reload for the popup. When the user clicks a bucket
-   * whose block has been evicted from {@link recentBucketRawTrades},
-   * the popup calls this to restore the entry from `trade-buckets-raw`.
-   *
-   * Per-`blockId` reload generation guards against races: if the same
-   * block is reloaded concurrently (e.g. a fresh hover overrides an
-   * older click), only the last reload is allowed to mutate the cache.
-   *
-   * The cap-trim runs on flush, not here — a lazy-loaded block can
-   * temporarily push the cache one entry over
-   * {@link MAX_RAW_TRADES_BLOCKS_IN_RAM} until the next flush, which
-   * is acceptable.
-   */
   async loadRawTradesFromIDB(blockId: UnixTimeMs): Promise<void> {
-    if (this.db === undefined) {
+    const db = this.persistence.db;
+    if (isNil(db)) {
       return;
     }
-    const myGen = (this.reloadTokens.get(blockId) ?? 0) + 1;
-    this.reloadTokens.set(blockId, myGen);
-    const bucketMap = await loadRawTradesFromDb(this.db, blockId);
-    if (bucketMap === undefined) {
+    const generation = (this.reloadTokens.get(blockId) ?? 0) + 1;
+    this.reloadTokens.set(blockId, generation);
+
+    const result = await loadRawTradesFromDb(db.trades, blockId);
+    if (this.reloadTokens.get(blockId) !== generation) {
       return;
     }
-    if (this.reloadTokens.get(blockId) !== myGen) {
-      return;
+    switch (result.kind) {
+      case 'loaded':
+        runInAction(() => {
+          this.rawTrades.set(blockId, result.buckets);
+        });
+        return;
+      case 'failed':
+        this.persistence.disable(result.reason);
+        return;
+      case 'missing':
+        return;
     }
-    runInAction(() => {
-      this.recentBucketRawTrades.set(blockId, bucketMap);
-      this.recentBlockOrder.add(blockId);
-    });
   }
 
   selectBucketAt(pointer: ITradeHitTestPointer): void {
-    const candidates = findBucketsAt(
-      pointer,
-      this.chartState.tradesIndex,
-      this.chartState.getTradesLayerLastFrameStats(),
-      this.blockData
-    );
-    const hit = pickMostRecentBucket(candidates);
-    if (hit === undefined) {
-      if (this.pinnedBucket !== undefined) {
-        this.pinnedBucket = undefined;
-      }
-      return;
-    }
-    if (this.pinnedBucket?.bucketStartMs === hit.bucketStartMs) {
+    const hit = pickMostRecentBucket(this.findBucketsAt(pointer));
+    if (isNil(hit) || this.pinnedBucket?.bucketStartMs === hit.bucketStartMs) {
       this.pinnedBucket = undefined;
       return;
     }
@@ -245,35 +174,22 @@ export class TradesStreamStore {
   }
 
   /**
-   * Hover hit-test with two layered rules (see {@link findBucketsAt}):
-   *   - **Sticky** — if the cursor is still inside the currently
-   *     hovered bucket's hit-zone, do nothing. The hover stays put
-   *     until the cursor leaves that specific circle, even if other
-   *     overlapping circles' zones cover the pointer too.
-   *   - **Most-recent wins** — when the sticky bucket is no longer a
-   *     candidate (or there was no prior hover), pick the candidate
-   *     with the greatest `bucketStartMs`. This matches the renderer's
-   *     z-lift policy so the visually-on-top circle is always the
-   *     interactive one.
+   * Sticky hover: the current bucket keeps the hover while the cursor stays
+   * inside its hit-zone; otherwise the most recent candidate wins, matching
+   * the renderer's z-lift order.
    */
   setHoveredBucketAt(pointer: ITradeHitTestPointer): void {
-    const candidates = findBucketsAt(
-      pointer,
-      this.chartState.tradesIndex,
-      this.chartState.getTradesLayerLastFrameStats(),
-      this.blockData
-    );
+    const candidates = this.findBucketsAt(pointer);
     const currentHover = this.hoveredBucketKey;
     if (
-      currentHover !== undefined &&
+      !isNil(currentHover) &&
       candidates.some(candidate => candidate.bucketStartMs === currentHover)
     ) {
       return;
     }
-    const hit = pickMostRecentBucket(candidates);
-    const newKey = hit?.bucketStartMs;
-    if (newKey !== this.hoveredBucketKey) {
-      this.hoveredBucketKey = newKey;
+    const nextKey = pickMostRecentBucket(candidates)?.bucketStartMs;
+    if (nextKey !== this.hoveredBucketKey) {
+      this.hoveredBucketKey = nextKey;
     }
   }
 
@@ -285,109 +201,69 @@ export class TradesStreamStore {
     this.hoveredBucketKey = undefined;
   }
 
-  /**
-   * Computed snapshot of the currently hovered bucket reconstructed from
-   * the texture-side `Float32Array` cache. Used by the hover pill to
-   * render aggregates without re-doing the linear scan in the component.
-   */
   get hoveredBucket(): ITradeBucket | undefined {
-    if (this.hoveredBucketKey === undefined) {
+    if (isNil(this.hoveredBucketKey)) {
       return undefined;
     }
     return decodeBucketAt(this.hoveredBucketKey, this.chartState.tradesIndex, this.blockData);
   }
 
+  private findBucketsAt(pointer: ITradeHitTestPointer): readonly ITradeBucketHitTestResult[] {
+    return findBucketsAt(pointer, this.chartState.tradesIndex, this.blockData);
+  }
+
   private handleTradeBatch(batch: readonly ITrade[]): void {
-    // Gating — drop trades arriving before the first orderbook
-    // snapshot. Without that anchor the trade-block timeDelta encoding
-    // resolves to an undefined coordinate frame.
     if (!this.gate.hasFirstOrderbookSnapshot) {
       return;
     }
-    if (this.tradesConnection !== 'connected') {
-      this.tradesConnection = 'connected';
-    }
+    this.tradesConnection = 'connected';
     this.tradesReceivedCount += batch.length;
-    // Trade-event timestamps inside a single batch are monotonically
-    // non-decreasing, so the last entry's `eventTimeMs` is the freshest
-    // observation. Using batch[length-1] avoids a per-trade max scan.
-    const newest = batch[batch.length - 1]?.eventTimeMs;
-    if (newest !== undefined) {
+    // Timestamps within a batch are non-decreasing, so the last entry is the freshest.
+    const newest = batch.at(-1)?.eventTimeMs;
+    if (!isNil(newest)) {
       this.lastTradeTimeMs = newest;
     }
-    if (this.accumulator === undefined) {
-      return;
-    }
     for (const trade of batch) {
-      this.accumulator.addTrade(trade);
+      this.accumulator?.addTrade(trade);
     }
   }
 
   private handleFlush(event: ITradeBlockFlushEvent): void {
     this.chartState.ingestTradesFlush(event);
     this.blockData.set(event.block.blockId, event.data);
-
-    const bucketRawMap = new Map(event.rawTradesByBucket);
-    this.recentBucketRawTrades.set(event.block.blockId, bucketRawMap);
-    // `Set.add` is idempotent and preserves insertion order — re-
-    // inserting an existing key does NOT bump it to the end (per JS
-    // spec), which matches the original FIFO semantics here: a block
-    // gets enqueued exactly once on its first flush and stays in
-    // place until cap-trim or `enforceTradesHistoryCap` evicts it.
-    this.recentBlockOrder.add(event.block.blockId);
-    while (this.recentBlockOrder.size > MAX_RAW_TRADES_BLOCKS_IN_RAM) {
-      const oldest: UnixTimeMs | undefined = this.recentBlockOrder.values().next().value;
-      if (oldest === undefined) {
-        break;
-      }
-      this.recentBlockOrder.delete(oldest);
-      this.recentBucketRawTrades.delete(oldest);
-    }
+    this.rawTrades.set(event.block.blockId, new Map(event.rawTradesByBucket));
 
     if (event.isNewBlock) {
       this.enforceTradesHistoryCap();
     }
 
-    // Aggregates are written on every flush; raw-trade dumps only on block
-    // rotation, so the whole-block payload is stored exactly once per block.
-    //
-    // Raw trades must be persisted from the `closedByRotation` event —
-    // the block that was just *sealed*, carrying its full
-    // `rawTradesByBucket`. The `isNewBlock=true` event carries the fresh
-    // EMPTY block, so persisting on it stored empty arrays and left
-    // evicted blocks with no recoverable trade history (popup empty).
-    if (this.db !== undefined) {
-      void persistAggregateBlock(this.db, event);
-      if (event.closedByRotation) {
-        void persistRawTrades(this.db, event);
+    this.persistence.write(async db => {
+      const aggregateFail = await persistAggregateBlock(db.trades, event);
+      const rawFail = event.closedByRotation ? await persistRawTrades(db.trades, event) : undefined;
+      const fail = aggregateFail ?? rawFail;
+      if (!isNil(fail)) {
+        this.persistence.disable(fail);
       }
-    }
+    });
   }
 
   private enforceTradesHistoryCap(): void {
     const tradesIndex = this.chartState.tradesIndex;
     while (tradesIndex.size > MAX_TRADE_BLOCKS_IN_RAM) {
       const oldestStartMs = tradesIndex.oldestStartMs();
-      if (oldestStartMs === undefined) {
-        break;
+      if (isNil(oldestStartMs)) {
+        return;
       }
-      const item = tradesIndex.findByBlockId(oldestStartMs);
-      if (item === undefined) {
-        break;
-      }
-      this.chartState.releaseTradesBlockSlot(item.blockId);
-      this.blockData.delete(item.blockId);
-      this.recentBucketRawTrades.delete(item.blockId);
-      this.recentBlockOrder.delete(item.blockId);
-      void this.db?.trades.deleteBlock(item.blockId).catch(() => undefined);
-      void this.db?.trades.deleteRawTrades(item.blockId).catch(() => undefined);
+      this.chartState.releaseTradesBlockSlot(oldestStartMs);
+      this.blockData.delete(oldestStartMs);
+      this.rawTrades.delete(oldestStartMs);
+      this.persistence.write(db => db.trades.deleteBlock(oldestStartMs));
+      this.persistence.write(db => db.trades.deleteRawTrades(oldestStartMs));
     }
   }
 
   private handleStreamError(error: unknown): void {
-    runInAction(() => {
-      this.tradesConnection = 'error';
-      this.tradesErrorMessage = error instanceof Error ? error.message : String(error);
-    });
+    this.tradesConnection = 'error';
+    this.tradesErrorMessage = error instanceof Error ? error.message : String(error);
   }
 }

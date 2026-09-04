@@ -119,7 +119,7 @@ export const Application = memo(() => {
                   <Route path="sun" element={<Sun />} />
                   <Route path="graphics" element={<Charts />} />
                   <Route path="timeseries" element={<Timeseries />} />
-                  <Route path="binance" element={<BinanceView />} />
+                  <Route path="binance/:instrument?" element={<BinanceView />} />
                   <Route path="stereometry" element={<StereometryPicker />} />
                   <Route path="stereometry/:puzzleId" element={<Stereometry />} />
                   <Route path="site-planner" element={<SitePlanner />} />

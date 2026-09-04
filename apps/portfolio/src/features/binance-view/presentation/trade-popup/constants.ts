@@ -1,4 +1,3 @@
-export const POPUP_WIDTH_PX = 340;
 export const POPUP_OFFSET_PX = 16;
 export const POPUP_MAX_HEIGHT_PX = 320;
 export const POPUP_EDGE_MARGIN_PX = 8;

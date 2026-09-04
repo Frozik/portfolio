@@ -116,7 +116,7 @@ fn fsHeatmap(in: VsOut) -> @location(0) vec4<f32> {
     // Alpha rides the same magnitude ramp as the color: green cells
     // fade into the dark background, red cells stay fully opaque. The
     // pipeline uses non-premultiplied alpha blending.
-    let alpha = mix(CELL_ALPHA_LOW, 1.0, t);
+    let alpha = mix(CELL_ALPHA_LOW, 1.0, t) * U.alphaMultiplier;
 
     // Interpolated cells (repeat-last fillers) get darkened diagonal
     // stripes in screen space so gaps are obvious without changing the

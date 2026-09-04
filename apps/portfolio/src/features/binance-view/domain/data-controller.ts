@@ -6,8 +6,6 @@ import type { BlockSpatialIndex } from './block-store/block-spatial-index';
 import type { IHeatmapBlockIndexItem } from './block-store/create-heatmap-block-index';
 import { FLOATS_PER_TEXEL } from './constants';
 
-type BlockRegistry = BlockSpatialIndex<IHeatmapBlockIndexItem>;
-
 import type {
   IBlockMeta,
   IHeatmapViewport,
@@ -17,6 +15,8 @@ import type {
 } from './types';
 import { viewTimeStartMs } from './viewport';
 
+type BlockRegistry = BlockSpatialIndex<IHeatmapBlockIndexItem>;
+
 export interface IActiveBlockSource {
   readonly meta: IBlockMeta;
   readonly data: Float32Array;
@@ -25,7 +25,7 @@ export interface IActiveBlockSource {
 export interface IDataControllerParams {
   readonly registry: BlockRegistry;
   readonly db: IOrderbookDb | undefined;
-  readonly getActiveBlock: () => IActiveBlockSource | null;
+  readonly getActiveBlock: () => IActiveBlockSource | undefined;
   readonly updateSpeedMs: Milliseconds;
   readonly depth: number;
   readonly snapshotSlots: number;
@@ -38,7 +38,7 @@ export interface IResolveCellParams {
    * The heatmap plot area in CSS pixels — i.e. full canvas width
    * minus the right-hand Y-axis panel, full canvas height.
    * `pointerPx.x` is treated as an offset into this rect; pointers
-   * that fall in the Y-axis panel (x > width) resolve to `null`.
+   * that fall in the Y-axis panel (x > width) resolve to `undefined`.
    */
   readonly plotRect: { readonly width: number; readonly height: number };
   readonly viewport: IHeatmapViewport;
@@ -54,21 +54,14 @@ interface ILocatedSnapshot {
 const DEFAULT_CACHE_CAPACITY = 3;
 
 /**
- * Sole owner of snapshot lookups: active-block fast path, in-memory
- * LRU cache of historical blocks, and async IndexedDB read-through.
- *
- * Every consumer that needs historical / current snapshot data
- * (positioning, hit-test, future exports) goes through this
- * controller. Nobody else touches the cache or the DB directly.
- *
- * Returns a fresh `IOrderbookSnapshot` reconstructed from block data —
- * callers can treat it uniformly regardless of whether the data came
- * from RAM, the LRU cache, or IndexedDB.
+ * Sole owner of snapshot lookups: active-block fast path, in-memory LRU
+ * cache of historical blocks, and async IndexedDB read-through. Callers
+ * receive a reconstructed `IOrderbookSnapshot` whatever the source was.
  */
 export class DataController {
   private readonly registry: BlockRegistry;
   private readonly db: IOrderbookDb | undefined;
-  private readonly getActiveBlockSource: () => IActiveBlockSource | null;
+  private readonly getActiveBlockSource: () => IActiveBlockSource | undefined;
   private readonly updateSpeedMs: Milliseconds;
   private readonly depth: number;
   private readonly snapshotSlots: number;
@@ -84,12 +77,7 @@ export class DataController {
     this.cache = new BlockRecordLruCache(params.cacheCapacity ?? DEFAULT_CACHE_CAPACITY);
   }
 
-  /**
-   * Resolve the most recent snapshot at (or before) `timeMs`. Returns
-   * `undefined` only when no block is available — otherwise it falls
-   * back to the nearest earlier block so panning past the live edge
-   * still yields a sensible right-edge snapshot for Y-axis centering.
-   */
+  /** Most recent snapshot at or before `timeMs`; falls back to the nearest earlier block. */
   async resolveSnapshotAt(timeMs: UnixTimeMs): Promise<IOrderbookSnapshot | undefined> {
     const located = await this.locateSnapshot(timeMs, { allowNearestEarlier: true });
     if (located === undefined) {
@@ -98,32 +86,30 @@ export class DataController {
     return this.reconstructSnapshot(located);
   }
 
-  /**
-   * Resolve the specific price-level cell under a pointer. Strict
-   * containment — if the pointer is outside any block's time range,
-   * returns `null` (matches the old free-standing `hitTest` behaviour).
-   */
-  async resolveCellAt(params: IResolveCellParams): Promise<IHitTestResult | null> {
+  /** Resolves the price-level cell under a pointer; strict containment, no nearest-block fallback. */
+  async resolveCellAt(params: IResolveCellParams): Promise<IHitTestResult | undefined> {
     const { pointerPx, plotRect, viewport, priceStep } = params;
 
     if (plotRect.width <= 0 || plotRect.height <= 0) {
-      return null;
+      return undefined;
     }
-    // Hovering inside the right-hand Y-axis panel is not a cell hit —
-    // `plotRect` excludes the panel so any pointer past its right edge
-    // is on the axis label strip, not a heatmap cell.
-    if (pointerPx.x < 0 || pointerPx.x > plotRect.width) {
-      return null;
+    const isInsidePlot =
+      pointerPx.x >= 0 &&
+      pointerPx.x <= plotRect.width &&
+      pointerPx.y >= 0 &&
+      pointerPx.y <= plotRect.height;
+    if (!isInsidePlot) {
+      return undefined;
     }
 
     const viewStartMs = viewTimeStartMs(viewport, plotRect.width);
     const viewRangeMs = viewport.viewTimeEndMs - viewStartMs;
     if (viewRangeMs <= 0) {
-      return null;
+      return undefined;
     }
     const priceRange = viewport.priceMax - viewport.priceMin;
     if (priceRange <= 0) {
-      return null;
+      return undefined;
     }
 
     const pointerTimeMs = (viewStartMs +
@@ -132,7 +118,7 @@ export class DataController {
 
     const located = await this.locateSnapshot(pointerTimeMs, { allowNearestEarlier: false });
     if (located === undefined) {
-      return null;
+      return undefined;
     }
 
     return this.pickLevelAt(located, pointerPrice, priceStep, pointerPx);
@@ -152,16 +138,11 @@ export class DataController {
     }
 
     const source = await this.loadBlockSource(block.blockId);
-    if (source === null) {
+    if (source === undefined) {
       return undefined;
     }
 
     const snapshotIndex = this.findSnapshotIndex(source, timeMs, {
-      // Only the "positioning" path (allowNearestEarlier=true) falls
-      // back to the latest snapshot when the pointer is beyond the
-      // last delta. Hit-test must stay strict — otherwise hovering in
-      // a time slot that has no snapshot would still match the
-      // nearest-right cell and pop an incorrect tooltip.
       allowFallbackToLast: options.allowNearestEarlier,
     });
     if (snapshotIndex < 0) {
@@ -175,16 +156,8 @@ export class DataController {
     timeMs: UnixTimeMs,
     allowNearestEarlier: boolean
   ): { readonly blockId: UnixTimeMs } | undefined {
-    // Every snapshot renders as a 1-cell wide tile centred on its
-    // `eventTimeMs` — the shader extends it by `updateSpeedMs / 2` on
-    // each side. A block's effective pointer-hit range therefore is
-    // `[firstTimestampMs - halfCell, lastTimestampMs + halfCell]`,
-    // not the strict `[minX, maxX]` stored in the registry. Hovering
-    // on the very first or very last cell of a block falls into this
-    // overhang — without the widening the tooltip silently drops on
-    // pixels that visibly render. `findSnapshotIndex` already uses
-    // the same half-cell tolerance to pick the nearest snapshot, so
-    // this keeps the two layers consistent.
+    // A snapshot tile extends `updateSpeedMs / 2` on each side of its timestamp,
+    // so a block is hit half a cell beyond its stored `[minX, maxX]`.
     const halfCell = this.updateSpeedMs / 2;
     const widened = this.registry.searchRange(
       (timeMs - halfCell) as UnixTimeMs,
@@ -194,16 +167,9 @@ export class DataController {
       let best: (typeof widened)[number] | undefined;
       let bestDistance = Number.POSITIVE_INFINITY;
       for (const candidate of widened) {
-        // Strict containment is the unambiguously correct match — the
-        // pointer time really is inside this block's snapshot range.
         if (candidate.minX <= timeMs && candidate.maxX >= timeMs) {
           return candidate;
         }
-        // Otherwise pick the block whose nearest endpoint is closest
-        // to `timeMs`. Two candidates only show up at the exact touch
-        // point between two adjacent blocks, and whichever endpoint
-        // the pointer is closer to matches the visual cell the user
-        // perceives it hovering over.
         const distance = Math.min(
           Math.abs(candidate.minX - timeMs),
           Math.abs(candidate.maxX - timeMs)
@@ -221,9 +187,6 @@ export class DataController {
     if (!allowNearestEarlier) {
       return undefined;
     }
-    // Positioning path (Y-axis auto-centering) — when the pointer is
-    // past the live edge, fall back to the latest block starting at
-    // or before `timeMs`.
     const oldest = this.registry.oldestStartMs();
     if (oldest === undefined) {
       return undefined;
@@ -241,9 +204,9 @@ export class DataController {
     return best;
   }
 
-  private async loadBlockSource(blockId: UnixTimeMs): Promise<IActiveBlockSource | null> {
+  private async loadBlockSource(blockId: UnixTimeMs): Promise<IActiveBlockSource | undefined> {
     const activeBlock = this.getActiveBlockSource();
-    if (activeBlock !== null && activeBlock.meta.blockId === blockId) {
+    if (activeBlock !== undefined && activeBlock.meta.blockId === blockId) {
       return activeBlock;
     }
     const cached = this.cache.get(blockId);
@@ -251,31 +214,20 @@ export class DataController {
       return { meta: recordToMeta(cached), data: new Float32Array(cached.data) };
     }
     if (this.db === undefined) {
-      return null;
+      return undefined;
     }
     const record = await this.db.getBlock(blockId);
     if (record === undefined) {
-      return null;
+      return undefined;
     }
     this.cache.put(record);
     return { meta: recordToMeta(record), data: new Float32Array(record.data) };
   }
 
   /**
-   * Linear scan over `count` snapshots by the `timeDelta` stored in
-   * every texel's first channel. Snapshots live in arrival order, not
-   * wall-clock position, so we find the nearest by delta rather than
-   * computing an index from `timeMs`.
-   *
-   * Tolerance is `updateSpeedMs / 2` — half a snapshot interval,
-   * matching the on-screen cell width. A pointer further from the
-   * nearest snapshot than half a cell is considered to be in an
-   * empty time slot and returns `-1`.
-   *
-   * `allowFallbackToLast: true` makes the function also return the
-   * latest snapshot when the pointer is past the last `timeDelta` —
-   * used by the Y-axis positioning path so follow-mode's future
-   * padding still gets a usable mid.
+   * Snapshots live in arrival order, so the nearest one is found by the
+   * `timeDelta` stored in each texel within half a cell; `-1` when the
+   * slot is empty. The positioning path may fall back to the last snapshot.
    */
   private findSnapshotIndex(
     source: IActiveBlockSource,
@@ -333,7 +285,7 @@ export class DataController {
     pointerPrice: number,
     priceStep: number,
     pointerPx: { readonly x: number; readonly y: number }
-  ): IHitTestResult | null {
+  ): IHitTestResult | undefined {
     const { meta, data, snapshotIndex } = located;
     const base = snapshotIndex * this.snapshotSlots * FLOATS_PER_TEXEL;
     const tolerance = priceStep / 2;
@@ -354,16 +306,10 @@ export class DataController {
     }
 
     if (bestLevel < 0) {
-      return null;
+      return undefined;
     }
 
     const cellOffset = base + bestLevel * FLOATS_PER_TEXEL;
-    // Every texel's first channel carries this snapshot's real
-    // `timeDelta` — snapshots live in arrival order, not wall-clock
-    // position, so we must read the stored delta instead of
-    // multiplying the arrival index by `updateSpeedMs`. The vertex
-    // shader reads the same channel for X positioning, keeping the
-    // tooltip aligned with what the user actually sees.
     return {
       blockId: meta.blockId,
       timestampMs: (meta.firstTimestampMs + data[base]) as UnixTimeMs,
@@ -391,6 +337,5 @@ function recordToMeta(record: IOrderbookBlockRecord): IBlockMeta {
     firstTimestampMs: record.firstTimestampMs,
     lastTimestampMs: record.lastTimestampMs,
     count: record.count,
-    textureRowIndex: record.textureRowIndex,
   };
 }

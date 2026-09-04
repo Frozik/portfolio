@@ -1,4 +1,5 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 
@@ -11,13 +12,9 @@ interface IPointerPosition {
 }
 
 /**
- * Re-resolves what sits underneath a hovering (non-dragging) pointer on
- * every animation frame. This catches viewport motion — follow-mode
- * auto-pan, rAF-driven zoom / pan inertia — that changes what's under a
- * stationary mouse; without it the tooltip would freeze on the last
- * snapshot the cursor moved over. The trades hit-test runs alongside the
- * orderbook cell tooltip so the hover-pill / scale-up updates as buckets
- * pan under the cursor.
+ * Re-resolves what sits under a hovering pointer every animation frame, so
+ * follow-mode auto-pan and inertia keep the tooltip current under a
+ * stationary mouse.
  */
 export function useHoverHitTestLoop({
   store,
@@ -30,7 +27,7 @@ export function useHoverHitTestLoop({
   readonly clearTrackedPointer: VoidFunction;
   readonly stopHoverLoop: VoidFunction;
 } {
-  const pendingPointerRef = useRef<IPointerPosition | null>(null);
+  const pendingPointerRef = useRef<IPointerPosition | undefined>(undefined);
   const hoverActiveRef = useRef(false);
   const rafIdRef = useRef<number | undefined>(undefined);
 
@@ -40,16 +37,16 @@ export function useHoverHitTestLoop({
       return;
     }
     const point = pendingPointerRef.current;
-    if (point !== null) {
-      void store.resolveCellAt(point);
+    if (!isNil(point)) {
+      void store.orderbookStore?.resolveCellAt(point);
 
       const tradesStore = store.tradesStore;
-      const chartState = store.chartStateView;
+      const chartState = store.chartState;
       const canvas = canvasRef.current;
-      if (tradesStore !== undefined && chartState !== undefined && canvas !== null) {
+      if (!isNil(tradesStore) && !isNil(chartState) && !isNil(canvas)) {
         const rect = canvas.getBoundingClientRect();
         const pointer = buildTradeHitTestPointerFromCss(rect, point.x, point.y, chartState);
-        if (pointer !== undefined) {
+        if (!isNil(pointer)) {
           tradesStore.setHoveredBucketAt(pointer);
         }
       }
@@ -69,7 +66,7 @@ export function useHoverHitTestLoop({
   });
 
   const clearTrackedPointer = useFunction(() => {
-    pendingPointerRef.current = null;
+    pendingPointerRef.current = undefined;
   });
 
   const stopHoverLoop = useFunction(() => {
@@ -78,7 +75,7 @@ export function useHoverHitTestLoop({
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = undefined;
     }
-    pendingPointerRef.current = null;
+    pendingPointerRef.current = undefined;
   });
 
   useEffect(

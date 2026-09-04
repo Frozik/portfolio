@@ -1,114 +1,122 @@
 import { assert } from '@frozik/utils/assert/assert';
-
-import { drawAxisLabels, drawGrid } from '../domain/axis-draw';
+import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
+import { isNil } from 'lodash-es';
+import { createCandleBlockIndex } from '../domain/block-store/create-candle-block-index';
 import { createHeatmapBlockIndex } from '../domain/block-store/create-heatmap-block-index';
-import { createMidPriceBlockIndex } from '../domain/block-store/create-mid-price-block-index';
 import { createTradesBlockIndex } from '../domain/block-store/create-trades-block-index';
+import type { ICandleBlockRecord } from '../domain/candle-types';
 import type { DataController } from '../domain/data-controller';
-import type { IBlockFlushEventBridge } from '../domain/flush-bridge';
+import type {
+  IBlockFlushEvent,
+  ICandleFlushEvent,
+  ITradeBlockFlushEvent,
+} from '../domain/flush-events';
 import { plotWidthCssPx } from '../domain/math';
 import type {
-  IFrameOverlayInput,
-  IMidPriceFlushEventBridge,
-  IRenderFrameInput,
-  ITradeBlockFlushEventBridge,
-} from '../domain/render-frame-types';
-import type { IViewportStats } from '../domain/trades-scaling';
+  CreateChartRenderer,
+  IChartCanvases,
+  IChartRenderer,
+} from '../domain/ports/chart-renderer';
+import type { IRenderFrameInput } from '../domain/render-frame-types';
 import type { IHeatmapViewport, UnixTimeMs } from '../domain/types';
 import type { TaskManager } from '../infrastructure/task-manager';
-import { ViewportController } from '../infrastructure/viewport-controller';
-import { BinanceChartRenderer } from './binance-chart-renderer';
-import type { ITradesLayerStoreShape } from './layers/layer-renderer';
+import type {
+  IViewportControllerParams,
+  ViewportController,
+} from '../infrastructure/viewport-controller';
+
+export interface IChartStateDeps {
+  readonly createRenderer: CreateChartRenderer;
+  readonly createViewportController: (params: IViewportControllerParams) => ViewportController;
+}
 
 export interface IBinanceChartStateParams {
-  readonly canvas: HTMLCanvasElement;
+  readonly canvases: IChartCanvases;
   readonly pageOpenTimeMs: UnixTimeMs;
   readonly updateSpeedMs: number;
   readonly priceStep: number;
+  /** Trade bucket under the cursor, owned by the trades store and read once per frame. */
+  readonly readHoveredBucketKey: () => UnixTimeMs | undefined;
+  /** Candle blocks the renderer found evicted from the texture; the candle store reloads them. */
+  readonly requestCandleBlocks: (blockIds: readonly UnixTimeMs[]) => void;
+  readonly deps: IChartStateDeps;
 }
 
 export interface IBinanceChartStateInitParams {
-  /** Shared scheduler used by ViewportController's auto-centering task. */
   readonly taskManager: TaskManager;
-  /** Snapshot source consulted by ViewportController to derive the target mid-price. */
   readonly dataController: DataController;
 }
 
+interface IChartSession {
+  readonly renderer: IChartRenderer;
+  readonly viewportController: ViewportController;
+}
+
+const MIN_PLOT_WIDTH_PX = 1;
+
 /**
- * Orchestrates the heatmap for one canvas.
- *
- * Owns the RBush registry and the WebGPU renderer; delegates every
- * piece of viewport / input / follow-mode / zoom state to
- * {@link ViewportController}. `ingestFlush` funnels new data into the
- * renderer and surfaces the latest magnitude bounds and
- * `lastDisplayMs` to the viewport controller.
- *
- * Y-axis centering lives inside {@link ViewportController} — it
- * subscribes to the shared `TaskManager` and pulls the rightmost
- * snapshot from `DataController` at a fixed cadence.
+ * Owns the spatial indexes of one chart and the session (renderer + viewport
+ * controller) bound to its canvas. Flush events are forwarded to the renderer
+ * and the viewport; the frame input is assembled here so the renderer never
+ * touches controllers.
  */
 export class BinanceChartState {
+  /** The chart canvas: pointer input and CSS size are read from it. */
   readonly canvas: HTMLCanvasElement;
+  private readonly canvases: IChartCanvases;
   readonly registry = createHeatmapBlockIndex();
-  readonly midPriceIndex = createMidPriceBlockIndex();
+  readonly candleIndex = createCandleBlockIndex();
   readonly tradesIndex = createTradesBlockIndex();
 
   private readonly pageOpenTimeMs: UnixTimeMs;
   private readonly updateSpeedMs: number;
   private readonly priceStep: number;
-
-  private renderer: BinanceChartRenderer | null = null;
-  private viewportControllerInternal: ViewportController | null = null;
+  private readonly readHoveredBucketKey: () => UnixTimeMs | undefined;
+  private readonly requestCandleBlocks: (blockIds: readonly UnixTimeMs[]) => void;
+  private readonly deps: IChartStateDeps;
+  private session: IChartSession | undefined = undefined;
 
   constructor(params: IBinanceChartStateParams) {
-    this.canvas = params.canvas;
+    this.canvases = params.canvases;
+    this.canvas = params.canvases.chartCanvas;
     this.pageOpenTimeMs = params.pageOpenTimeMs;
     this.updateSpeedMs = params.updateSpeedMs;
     this.priceStep = params.priceStep;
+    this.readHoveredBucketKey = params.readHoveredBucketKey;
+    this.requestCandleBlocks = params.requestCandleBlocks;
+    this.deps = params.deps;
   }
 
   get viewport(): IHeatmapViewport {
-    assert(
-      this.viewportControllerInternal !== null,
-      'BinanceChartState: viewport accessed before init'
-    );
-    return this.viewportControllerInternal.viewport;
+    return this.requireSession().viewportController.viewport;
   }
 
   get viewportController(): ViewportController {
-    assert(
-      this.viewportControllerInternal !== null,
-      'BinanceChartState: viewportController accessed before init'
-    );
-    return this.viewportControllerInternal;
+    return this.requireSession().viewportController;
   }
 
-  /**
-   * Vertical price step used for cell sizing — exposed so the
-   * presentation layer can size the trade-bucket hit-test floor radius
-   * (`priceStep / priceRange × canvasHeightPx`) without dereferencing
-   * the renderer's frame input.
-   */
+  /** Vertical price step used for cell sizing and the trade-bucket hit-test radius. */
   get currentPriceStep(): number {
     return this.priceStep;
   }
 
-  async init(params: IBinanceChartStateInitParams): Promise<boolean> {
-    this.renderer = await BinanceChartRenderer.create({
-      canvas: this.canvas,
+  /** Resolves to the failure reason when WebGPU cannot be brought up on this device. */
+  async init(params: IBinanceChartStateInitParams): Promise<ValueDescriptorFail | undefined> {
+    const init = await this.deps.createRenderer({
+      canvases: this.canvases,
       registry: this.registry,
-      midPriceIndex: this.midPriceIndex,
-      taskManager: params.taskManager,
-      updateSpeedMs: this.updateSpeedMs,
-      priceStep: this.priceStep,
-      chartState: this,
+      candleIndex: this.candleIndex,
+      tradesIndex: this.tradesIndex,
+      scheduleFrames: renderFrame =>
+        params.taskManager.subscribe(renderFrame, { minIntervalMs: 0 }),
+      readFrameInput: this.provideFrameInput,
+      requestCandleBlocks: this.requestCandleBlocks,
     });
-
-    if (this.renderer === null) {
-      return false;
+    if (init.kind === 'unsupported') {
+      return init.reason;
     }
 
-    this.viewportControllerInternal = new ViewportController({
+    const viewportController = this.deps.createViewportController({
       canvas: this.canvas,
       taskManager: params.taskManager,
       pageOpenTimeMs: this.pageOpenTimeMs,
@@ -117,40 +125,35 @@ export class BinanceChartState {
       dataController: params.dataController,
     });
 
-    this.renderer.setFrameInputSource(this.provideFrameInput);
-    this.renderer.setGridUnderCallback(this.drawGridUnder);
-    this.renderer.setLabelsOverCallback(this.drawLabelsOver);
-    this.renderer.start();
-    return true;
+    this.session = { renderer: init.renderer, viewportController };
+    init.renderer.start();
+    return undefined;
   }
 
-  ingestFlush(event: IBlockFlushEventBridge): void {
-    if (this.renderer === null || this.viewportControllerInternal === null) {
+  ingestFlush(event: IBlockFlushEvent): void {
+    const session = this.session;
+    if (isNil(session)) {
       return;
     }
-    this.renderer.writeFlushedSnapshots(event);
-    this.viewportControllerInternal.onFlushArrived({
+    session.renderer.writeFlushedSnapshots(event);
+    session.viewportController.onFlushArrived({
       lastDisplayMs: event.block.lastTimestampMs,
       latestMagnitudeMin: event.latestMagnitudeMin,
       latestMagnitudeMax: event.latestMagnitudeMax,
     });
   }
 
-  ingestMidPriceFlush(event: IMidPriceFlushEventBridge): void {
-    this.renderer?.writeFlushedMidPriceSamples(event);
+  ingestCandleFlush(event: ICandleFlushEvent): void {
+    this.session?.renderer.writeFlushedCandles(event);
   }
 
-  /**
-   * Single-writer entrypoint for the trades layer: forwards the
-   * block's `Float32Array` reference into the layer's descriptor
-   * cache (via the renderer) and upserts the matching `tradesIndex`
-   * entry. Mirrors `ingestMidPriceFlush` but keeps the index upsert
-   * at the chart-state layer so the trades layer renderer doesn't own
-   * the spatial index — see `trades-layer-renderer.ts` for the
-   * single-writer rationale.
-   */
-  ingestTradesFlush(event: ITradeBlockFlushEventBridge): void {
-    this.renderer?.writeFlushedTrades(event);
+  restoreCandleBlock(record: ICandleBlockRecord): void {
+    this.session?.renderer.restoreCandleBlock(record);
+  }
+
+  /** Feeds the renderer's descriptor cache and keeps the trades index (owned here) in step. */
+  ingestTradesFlush(event: ITradeBlockFlushEvent): void {
+    this.session?.renderer.writeFlushedTrades(event);
     const meta = event.block;
     this.tradesIndex.upsert({
       minX: meta.firstBucketStartMs,
@@ -158,108 +161,53 @@ export class BinanceChartState {
       minY: 0,
       maxY: 0,
       blockId: meta.blockId,
-      textureRowIndex: meta.textureRowIndex,
+      textureRowIndex: undefined,
       bucketCount: meta.bucketCount,
       basePrice: meta.basePrice,
     });
   }
 
-  /**
-   * Forward observable trades-store handle to the renderer so the
-   * trades layer can read `hoveredBucketKey` once per frame in
-   * `computeFrameState`. Called by the orchestrator
-   * (`BinanceViewStore.attachCanvas`) once the trades store has been
-   * constructed.
-   */
-  setTradesStore(view: ITradesLayerStoreShape | undefined): void {
-    this.renderer?.setTradesStore(view);
-  }
-
   releaseBlockSlot(blockId: UnixTimeMs): void {
-    this.renderer?.releaseBlockSlot(blockId);
+    this.session?.renderer.releaseBlockSlot(blockId);
   }
 
-  releaseMidPriceBlockSlot(blockId: UnixTimeMs): void {
-    this.renderer?.releaseMidPriceBlockSlot(blockId);
+  releaseCandleBlockSlot(blockId: UnixTimeMs): void {
+    this.session?.renderer.releaseCandleBlockSlot(blockId);
   }
 
-  /**
-   * Drop the trade-block's GPU descriptor cache + its `tradesIndex`
-   * entry. Called by the orchestrator (via `TradesStreamStore`) when
-   * the rolling window evicts a block past `MAX_TRADE_BLOCKS_IN_RAM`.
-   */
   releaseTradesBlockSlot(blockId: UnixTimeMs): void {
-    this.renderer?.releaseTradesBlockSlot(blockId);
+    this.session?.renderer.releaseTradesBlockSlot(blockId);
     this.tradesIndex.remove(blockId);
   }
 
-  /**
-   * Read the trade layer's most recent per-frame `(vMin, vMax)` volume
-   * envelope from the renderer. Used by `TradesStreamStore.findBucketAt`
-   * to derive hit-test radii using the same envelope the renderer used
-   * this frame — keeps the click hit-zone congruent with the rendered
-   * radius envelope across all scaling modes.
-   */
-  getTradesLayerLastFrameStats(): IViewportStats | undefined {
-    return this.renderer?.getTradesLayerLastFrameStats();
-  }
-
   dispose(): void {
-    this.viewportControllerInternal?.dispose();
-    this.viewportControllerInternal = null;
-    this.renderer?.dispose();
-    this.renderer = null;
+    this.session?.viewportController.dispose();
+    this.session?.renderer.dispose();
+    this.session = undefined;
   }
 
-  private readonly drawGridUnder = (input: IFrameOverlayInput): void => {
-    drawGrid({
-      ctx: input.ctx,
-      canvasWidthPx: input.canvasWidthPx,
-      canvasHeightPx: input.canvasHeightPx,
-      devicePixelRatio: input.devicePixelRatio,
-      viewTimeStartMs: input.frame.viewTimeStartMs,
-      viewTimeEndMs: input.frame.viewTimeEndMs,
-      priceMin: input.frame.priceMin,
-      priceMax: input.frame.priceMax,
-      priceStep: input.frame.priceStep,
-    });
-  };
-
-  private readonly drawLabelsOver = (input: IFrameOverlayInput): void => {
-    drawAxisLabels({
-      ctx: input.ctx,
-      canvasWidthPx: input.canvasWidthPx,
-      canvasHeightPx: input.canvasHeightPx,
-      devicePixelRatio: input.devicePixelRatio,
-      viewTimeStartMs: input.frame.viewTimeStartMs,
-      viewTimeEndMs: input.frame.viewTimeEndMs,
-      priceMin: input.frame.priceMin,
-      priceMax: input.frame.priceMax,
-      priceStep: input.frame.priceStep,
-      cursorCss: input.frame.cursorCss,
-      lastSnapshot: input.frame.lastSnapshot,
-    });
-  };
+  private requireSession(): IChartSession {
+    assert(!isNil(this.session), 'BinanceChartState: accessed before init');
+    return this.session;
+  }
 
   private readonly provideFrameInput = (): IRenderFrameInput => {
-    assert(
-      this.viewportControllerInternal !== null,
-      'BinanceChartState: frame requested before init'
-    );
-    this.viewportControllerInternal.tick();
-    const plotWidth = plotWidthCssPx(Math.max(1, this.canvas.clientWidth));
-    const startMs = this.viewportControllerInternal.viewTimeStartMsForPlotWidth(plotWidth);
+    const { viewportController } = this.requireSession();
+    viewportController.tick();
+    const plotWidth = plotWidthCssPx(Math.max(MIN_PLOT_WIDTH_PX, this.canvas.clientWidth));
+    const magnitude = viewportController.getMagnitudeRange();
     return {
-      viewTimeStartMs: startMs,
-      viewTimeEndMs: this.viewportControllerInternal.viewport.viewTimeEndMs,
-      priceMin: this.viewportControllerInternal.viewport.priceMin,
-      priceMax: this.viewportControllerInternal.viewport.priceMax,
-      magnitudeMin: this.viewportControllerInternal.getMagnitudeMin(),
-      magnitudeMax: this.viewportControllerInternal.getMagnitudeMax(),
+      viewTimeStartMs: viewportController.viewTimeStartMsForPlotWidth(plotWidth),
+      viewTimeEndMs: viewportController.viewport.viewTimeEndMs,
+      priceMin: viewportController.viewport.priceMin,
+      priceMax: viewportController.viewport.priceMax,
+      magnitudeMin: magnitude.min,
+      magnitudeMax: magnitude.max,
       priceStep: this.priceStep,
       timeStepMs: this.updateSpeedMs,
-      cursorCss: this.viewportControllerInternal.getCursorCss(),
-      lastSnapshot: this.viewportControllerInternal.getLastResolvedSnapshot(),
+      cursorCss: viewportController.getCursorCss(),
+      lastSnapshot: viewportController.getLastResolvedSnapshot(),
+      hoveredBucketKey: this.readHoveredBucketKey(),
     };
   };
 }

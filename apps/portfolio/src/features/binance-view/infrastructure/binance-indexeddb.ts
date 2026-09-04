@@ -3,73 +3,41 @@ import { openDB } from 'idb';
 
 import type {
   IBinanceDb,
-  IMidPriceBlockRecord,
-  IMidPriceDb,
+  ICandleDb,
   IOrderbookBlockRecord,
   IOrderbookDb,
   ITradesDb,
 } from '../domain/binance-db';
+import type { ICandleBlockRecord } from '../domain/candle-types';
 import type { ITradeBlockRecord, ITradeBucketRawRecord } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
 
 export const DEFAULT_DB_NAME = 'binance-orderbook';
 /**
- * Schema version. History:
- *
- *   v1 — only `orderbook-blocks`.
- *   v2 — added a sibling store for the price-line overlay. It was
- *        originally named `avg-price-blocks` (when the overlay pulled
- *        from Binance's `@avgPrice` stream); after the refactor to
- *        computing mid from `(bestBid + bestAsk) / 2` directly from
- *        orderbook snapshots, the store was renamed to
- *        `mid-price-blocks`.
- *   v3 — drops the old `avg-price-blocks` store (if present on a
- *        returning user's device) and creates `mid-price-blocks`.
- *        Without the bump, users who already had a v2 DB on their
- *        device kept the old store name and `clearAll` threw
- *        "NotFoundError: One of the specified object stores was not
- *        found" as soon as the new code opened a transaction.
- *   v4 — adds the trades layer's two stores in a single migration
- *        step: `trade-blocks` (per-block aggregate `Float32Array`
- *        copies, written every flush) and `trade-buckets-raw` (raw
- *        per-bucket trades, written only on block rotation, so the
- *        whole-block payload is stored exactly once per block).
- *
- * Bumps MUST stay idempotent: the upgrade handler can fire from any
- * earlier version, so every step recreates stores via the
- * `!contains()` guard and deletes legacy stores only after checking
- * that they exist.
+ * Schema history: v1 orderbook only; v2 `avg-price-blocks`; v3 renamed it to
+ * `mid-price-blocks`; v4 added the two trade stores; v5 replaced the
+ * mid-price line with `candle-blocks`. Every step is idempotent (guarded by
+ * `contains`) because the upgrade can start from any earlier version.
  */
-export const DEFAULT_DB_VERSION = 4;
+export const DEFAULT_DB_VERSION = 5;
 export const ORDERBOOK_BLOCKS_STORE = 'orderbook-blocks';
-export const MID_PRICE_BLOCKS_STORE = 'mid-price-blocks';
+export const CANDLE_BLOCKS_STORE = 'candle-blocks';
 export const TRADE_BLOCKS_STORE = 'trade-blocks';
 export const TRADE_BUCKETS_RAW_STORE = 'trade-buckets-raw';
 /**
- * Legacy store name from v2 (when the overlay consumed Binance's
- * `@avgPrice` WebSocket). Retained here only so the v3 upgrade can
- * drop it from returning users' browsers — nothing in the app
- * writes to or reads from it anymore.
+ * Store names of earlier schema versions, dropped on upgrade. The schema type
+ * only describes current stores, so the legacy names are widened to `StoreNames`.
  */
-const LEGACY_AVG_PRICE_BLOCKS_STORE = 'avg-price-blocks';
+const LEGACY_STORES: readonly StoreNames<IBinanceDbSchema>[] = [
+  'avg-price-blocks' as StoreNames<IBinanceDbSchema>,
+  'mid-price-blocks' as StoreNames<IBinanceDbSchema>,
+];
 
 interface IBinanceDbSchema extends DBSchema {
-  [ORDERBOOK_BLOCKS_STORE]: {
-    key: number;
-    value: IOrderbookBlockRecord;
-  };
-  [MID_PRICE_BLOCKS_STORE]: {
-    key: number;
-    value: IMidPriceBlockRecord;
-  };
-  [TRADE_BLOCKS_STORE]: {
-    key: number;
-    value: ITradeBlockRecord;
-  };
-  [TRADE_BUCKETS_RAW_STORE]: {
-    key: number;
-    value: ITradeBucketRawRecord;
-  };
+  [ORDERBOOK_BLOCKS_STORE]: { key: number; value: IOrderbookBlockRecord };
+  [CANDLE_BLOCKS_STORE]: { key: number; value: ICandleBlockRecord };
+  [TRADE_BLOCKS_STORE]: { key: number; value: ITradeBlockRecord };
+  [TRADE_BUCKETS_RAW_STORE]: { key: number; value: ITradeBucketRawRecord };
 }
 
 class OrderbookDb implements IOrderbookDb {
@@ -100,27 +68,27 @@ class OrderbookDb implements IOrderbookDb {
   }
 }
 
-class MidPriceDb implements IMidPriceDb {
+class CandleDb implements ICandleDb {
   constructor(private readonly db: IDBPDatabase<IBinanceDbSchema>) {}
 
   async clearAll(): Promise<void> {
-    await this.db.clear(MID_PRICE_BLOCKS_STORE);
+    await this.db.clear(CANDLE_BLOCKS_STORE);
   }
 
-  async putBlock(record: IMidPriceBlockRecord): Promise<void> {
-    await this.db.put(MID_PRICE_BLOCKS_STORE, record);
+  async putBlock(record: ICandleBlockRecord): Promise<void> {
+    await this.db.put(CANDLE_BLOCKS_STORE, record);
   }
 
-  async getBlock(blockId: UnixTimeMs): Promise<IMidPriceBlockRecord | undefined> {
-    return this.db.get(MID_PRICE_BLOCKS_STORE, blockId);
+  async getBlock(blockId: UnixTimeMs): Promise<ICandleBlockRecord | undefined> {
+    return this.db.get(CANDLE_BLOCKS_STORE, blockId);
   }
 
   async deleteBlock(blockId: UnixTimeMs): Promise<void> {
-    await this.db.delete(MID_PRICE_BLOCKS_STORE, blockId);
+    await this.db.delete(CANDLE_BLOCKS_STORE, blockId);
   }
 
   async countBlocks(): Promise<number> {
-    return this.db.count(MID_PRICE_BLOCKS_STORE);
+    return this.db.count(CANDLE_BLOCKS_STORE);
   }
 }
 
@@ -128,12 +96,7 @@ class TradesDb implements ITradesDb {
   constructor(private readonly db: IDBPDatabase<IBinanceDbSchema>) {}
 
   async clearAll(): Promise<void> {
-    const tx = this.db.transaction([TRADE_BLOCKS_STORE, TRADE_BUCKETS_RAW_STORE], 'readwrite');
-    await Promise.all([
-      tx.objectStore(TRADE_BLOCKS_STORE).clear(),
-      tx.objectStore(TRADE_BUCKETS_RAW_STORE).clear(),
-    ]);
-    await tx.done;
+    await Promise.all([this.db.clear(TRADE_BLOCKS_STORE), this.db.clear(TRADE_BUCKETS_RAW_STORE)]);
   }
 
   async putBlock(record: ITradeBlockRecord): Promise<void> {
@@ -165,76 +128,40 @@ class TradesDb implements ITradesDb {
   }
 }
 
-/**
- * Open (or upgrade-and-open) the Binance IndexedDB used by the
- * orderbook + mid-price features. Upgrade handler is additive
- * only — it never drops a store — so v1 data (orderbook-only)
- * upgrades cleanly to v2 without losing anything on disk. Clearing is
- * done explicitly by callers via `clearAll()`.
- */
+const CURRENT_STORES = [
+  ORDERBOOK_BLOCKS_STORE,
+  CANDLE_BLOCKS_STORE,
+  TRADE_BLOCKS_STORE,
+  TRADE_BUCKETS_RAW_STORE,
+] as const;
+
 export async function openBinanceDb(
   dbName: string = DEFAULT_DB_NAME,
   dbVersion: number = DEFAULT_DB_VERSION
 ): Promise<IBinanceDb> {
   const db = await openDB<IBinanceDbSchema>(dbName, dbVersion, {
     upgrade(upgrading) {
-      if (!upgrading.objectStoreNames.contains(ORDERBOOK_BLOCKS_STORE)) {
-        upgrading.createObjectStore(ORDERBOOK_BLOCKS_STORE, { keyPath: 'blockId' });
+      for (const store of CURRENT_STORES) {
+        if (!upgrading.objectStoreNames.contains(store)) {
+          upgrading.createObjectStore(store, { keyPath: 'blockId' });
+        }
       }
-      if (!upgrading.objectStoreNames.contains(MID_PRICE_BLOCKS_STORE)) {
-        upgrading.createObjectStore(MID_PRICE_BLOCKS_STORE, { keyPath: 'blockId' });
-      }
-      // v3 migration: the overlay store was renamed from
-      // `avg-price-blocks` to `mid-price-blocks`. Returning users
-      // would otherwise keep the legacy store forever and the
-      // `clearAll` transaction below would still reference the new
-      // name that doesn't exist on their device. Deletion is
-      // idempotent (`contains` guard), so re-running the upgrade is
-      // safe. The schema type `IBinanceDbSchema` describes *current*
-      // stores only — we widen the legacy name to the idb-typed
-      // `StoreNames` union so `deleteObjectStore` accepts it; at
-      // runtime it's just a string and both APIs accept any string.
-      const legacyStoreName = LEGACY_AVG_PRICE_BLOCKS_STORE as StoreNames<IBinanceDbSchema>;
-      if (upgrading.objectStoreNames.contains(legacyStoreName)) {
-        upgrading.deleteObjectStore(legacyStoreName);
-      }
-      // v4 migration: trades layer. Two stores
-      // because aggregates and raw trades have very different
-      // payload sizes and access patterns — see `ITradesDb` doc.
-      if (!upgrading.objectStoreNames.contains(TRADE_BLOCKS_STORE)) {
-        upgrading.createObjectStore(TRADE_BLOCKS_STORE, { keyPath: 'blockId' });
-      }
-      if (!upgrading.objectStoreNames.contains(TRADE_BUCKETS_RAW_STORE)) {
-        upgrading.createObjectStore(TRADE_BUCKETS_RAW_STORE, { keyPath: 'blockId' });
+      for (const legacyStore of LEGACY_STORES) {
+        if (upgrading.objectStoreNames.contains(legacyStore)) {
+          upgrading.deleteObjectStore(legacyStore);
+        }
       }
     },
   });
 
-  const orderbook = new OrderbookDb(db);
-  const midPrice = new MidPriceDb(db);
-  const trades = new TradesDb(db);
-
   return {
-    orderbook,
-    midPrice,
-    trades,
+    orderbook: new OrderbookDb(db),
+    candles: new CandleDb(db),
+    trades: new TradesDb(db),
     async clearAll() {
-      const tx = db.transaction(
-        [
-          ORDERBOOK_BLOCKS_STORE,
-          MID_PRICE_BLOCKS_STORE,
-          TRADE_BLOCKS_STORE,
-          TRADE_BUCKETS_RAW_STORE,
-        ],
-        'readwrite'
-      );
-      await Promise.all([
-        tx.objectStore(ORDERBOOK_BLOCKS_STORE).clear(),
-        tx.objectStore(MID_PRICE_BLOCKS_STORE).clear(),
-        tx.objectStore(TRADE_BLOCKS_STORE).clear(),
-        tx.objectStore(TRADE_BUCKETS_RAW_STORE).clear(),
-      ]);
-      await tx.done;
+      const transaction = db.transaction(CURRENT_STORES, 'readwrite');
+      await Promise.all(CURRENT_STORES.map(store => transaction.objectStore(store).clear()));
+      await transaction.done;
     },
     close() {
       db.close();

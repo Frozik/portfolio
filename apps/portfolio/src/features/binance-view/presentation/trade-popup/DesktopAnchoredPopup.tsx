@@ -1,18 +1,13 @@
+import { isNil } from 'lodash-es';
 import type { ReactElement } from 'react';
 import { useLayoutEffect, useRef } from 'react';
 
-import {
-  POPUP_EDGE_MARGIN_PX,
-  POPUP_MAX_HEIGHT_PX,
-  POPUP_OFFSET_PX,
-  POPUP_WIDTH_PX,
-} from './constants';
+import { POPUP_EDGE_MARGIN_PX, POPUP_OFFSET_PX } from './constants';
 
 /**
- * Edge-aware absolute-positioned wrapper used on desktop. Mirrors the
- * orderbook `CellTooltip` policy: prefer bottom-right of the click
- * point, flip to the opposite quadrant if the popup would clip the
- * parent edges, then clamp to the edge margin.
+ * Edge-aware absolute-positioned wrapper used on desktop: prefers
+ * bottom-right of the click point, flips to the opposite quadrant near the
+ * parent edges, then clamps to the edge margin.
  */
 export function DesktopAnchoredPopup({
   pointerPx,
@@ -25,13 +20,12 @@ export function DesktopAnchoredPopup({
 
   useLayoutEffect(() => {
     const node = rootRef.current;
-    if (node === null) {
+    if (isNil(node)) {
       return undefined;
     }
 
     const reflow = (): void => {
-      const parent = node.offsetParent as HTMLElement | null;
-      const parentRect = parent?.getBoundingClientRect();
+      const parentRect = node.offsetParent?.getBoundingClientRect();
       const parentWidth = parentRect?.width ?? window.innerWidth;
       const parentHeight = parentRect?.height ?? window.innerHeight;
       const popupRect = node.getBoundingClientRect();
@@ -74,17 +68,8 @@ export function DesktopAnchoredPopup({
   return (
     <div
       ref={rootRef}
-      // Start hidden: the layout effect measures the actual size, flips
-      // direction if needed, then sets `visibility` — without this we
-      // paint once at the raw pointer position before correcting.
-      style={{
-        visibility: 'hidden',
-        left: 0,
-        top: 0,
-        width: POPUP_WIDTH_PX,
-        maxHeight: POPUP_MAX_HEIGHT_PX,
-      }}
-      className="absolute z-40 flex flex-col rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-xl backdrop-blur"
+      // Starts invisible so the layout effect can measure and place it before the first paint.
+      className="invisible absolute left-0 top-0 z-40 flex max-h-[320px] w-[340px] flex-col rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-xl backdrop-blur"
     >
       {children}
     </div>

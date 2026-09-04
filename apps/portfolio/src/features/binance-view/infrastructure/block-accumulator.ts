@@ -2,21 +2,12 @@ import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 
 import { FLOATS_PER_TEXEL } from '../domain/constants';
+import type { IActiveBlockSource } from '../domain/data-controller';
+import type { IBlockFlushEvent } from '../domain/flush-events';
 import { floorToBlockStart } from '../domain/math';
 import type { IBlockMeta, IQuantizedSnapshot, UnixTimeMs } from '../domain/types';
 
 import { snapshotToLevels } from './snapshot-to-levels';
-
-export interface IBlockFlushEvent {
-  readonly block: IBlockMeta;
-  readonly data: Float32Array;
-  readonly isNewBlock: boolean;
-  readonly addedSnapshots: number;
-  /** Min `price × volume` observed across the last snapshot. `0` if no non-zero volumes. */
-  readonly latestMagnitudeMin: number;
-  /** Max `price × volume` observed across the last snapshot. */
-  readonly latestMagnitudeMax: number;
-}
 
 export interface IBlockAccumulatorParams {
   readonly snapshotsPerBlock: number;
@@ -27,28 +18,26 @@ export interface IBlockAccumulatorParams {
   readonly onFlush: (event: IBlockFlushEvent) => void;
 }
 
+interface IActiveBlock {
+  meta: IBlockMeta;
+  readonly data: Float32Array;
+  pendingSnapshots: number;
+}
+
+interface IMagnitudeBounds {
+  readonly min: number;
+  readonly max: number;
+}
+
 /**
- * Accumulates incoming orderbook snapshots into fixed-size blocks and
- * flushes them in batches of `flushEverySnapshots` to the renderer,
- * IndexedDB, and RBush via the `onFlush` callback.
- *
- * Responsibilities:
- * - lays out each snapshot into a per-block `Float32Array` (128×128×4
- *   floats, 256 KB) at the right `(snapshotIndex, levelIndex)` offset,
- * - fills `timeDelta = eventTime - firstTimestampMs` per cell,
- * - rolls over to a fresh block when `snapshotsPerBlock` is reached,
- * - exposes the active (in-progress) block for `DataController` lookups.
- *
- * Mid-price derivation lives outside this module — `DataController`
- * + `getMidPrice` recompute it on demand from block data when the
- * position controller needs to re-center the Y axis.
+ * Lays incoming orderbook snapshots into fixed-size blocks (one
+ * `Float32Array` of `snapshotsPerBlock × snapshotSlots` texels) and flushes
+ * every `flushEverySnapshots` snapshots or when a block fills up. The
+ * flushed `meta` is a fresh immutable value; `data` stays the live buffer.
  */
 export class BlockAccumulator {
   private readonly params: IBlockAccumulatorParams;
-
-  private activeMeta: IBlockMeta | null = null;
-  private activeData: Float32Array | null = null;
-  private pendingSnapshots = 0;
+  private activeBlock: IActiveBlock | undefined = undefined;
 
   constructor(params: IBlockAccumulatorParams) {
     this.params = params;
@@ -56,46 +45,12 @@ export class BlockAccumulator {
 
   addSnapshot(snapshot: IQuantizedSnapshot): void {
     const { snapshotsPerBlock, flushEverySnapshots, snapshotSlots, depth, onFlush } = this.params;
+    const magnitude = latestMagnitudeBounds(snapshot);
 
-    let latestMagnitudeMin = Number.POSITIVE_INFINITY;
-    let latestMagnitudeMax = 0;
-    for (const [price, volume] of snapshot.bids) {
-      if (volume <= 0) {
-        continue;
-      }
-      const magnitude = price * volume;
-      if (magnitude < latestMagnitudeMin) {
-        latestMagnitudeMin = magnitude;
-      }
-      if (magnitude > latestMagnitudeMax) {
-        latestMagnitudeMax = magnitude;
-      }
+    if (isNil(this.activeBlock) || this.activeBlock.meta.count >= snapshotsPerBlock) {
+      this.activeBlock = this.startNewBlock(snapshot.eventTimeMs);
     }
-    for (const [price, volume] of snapshot.asks) {
-      if (volume <= 0) {
-        continue;
-      }
-      const magnitude = price * volume;
-      if (magnitude < latestMagnitudeMin) {
-        latestMagnitudeMin = magnitude;
-      }
-      if (magnitude > latestMagnitudeMax) {
-        latestMagnitudeMax = magnitude;
-      }
-    }
-    if (!Number.isFinite(latestMagnitudeMin)) {
-      latestMagnitudeMin = 0;
-    }
-
-    if (isNil(this.activeMeta) || this.activeMeta.count >= snapshotsPerBlock) {
-      this.startNewBlock(snapshot.eventTimeMs);
-    }
-
-    const meta = this.activeMeta;
-    const data = this.activeData;
-    if (isNil(meta) || isNil(data)) {
-      return;
-    }
+    const block = this.activeBlock;
 
     const snapshotLayout = snapshotToLevels(
       snapshot,
@@ -103,66 +58,80 @@ export class BlockAccumulator {
       depth,
       snapshot.isInterpolated
     );
-    const timeDelta = snapshot.eventTimeMs - meta.firstTimestampMs;
-    const snapshotIndex = meta.count + this.pendingSnapshots;
+    const timeDelta = snapshot.eventTimeMs - block.meta.firstTimestampMs;
+    const snapshotIndex = block.meta.count + block.pendingSnapshots;
     const baseOffset = snapshotIndex * snapshotSlots * FLOATS_PER_TEXEL;
 
-    data.set(snapshotLayout, baseOffset);
-    // Write per-cell time delta (shared across all levels of this snapshot).
+    block.data.set(snapshotLayout, baseOffset);
     for (let levelIndex = 0; levelIndex < snapshotSlots; levelIndex++) {
-      const cellOffset = baseOffset + levelIndex * FLOATS_PER_TEXEL;
-      data[cellOffset] = timeDelta;
+      block.data[baseOffset + levelIndex * FLOATS_PER_TEXEL] = timeDelta;
+    }
+    block.pendingSnapshots++;
+
+    const reachedFlushBatch = block.pendingSnapshots >= flushEverySnapshots;
+    const reachedBlockEnd = block.meta.count + block.pendingSnapshots >= snapshotsPerBlock;
+    if (!reachedFlushBatch && !reachedBlockEnd) {
+      return;
     }
 
-    this.pendingSnapshots++;
+    const isNewBlock = block.meta.count === 0;
+    const addedSnapshots = block.pendingSnapshots;
+    block.meta = {
+      ...block.meta,
+      count: block.meta.count + addedSnapshots,
+      lastTimestampMs: snapshot.eventTimeMs,
+    };
+    block.pendingSnapshots = 0;
 
-    const reachedFlushBatch = this.pendingSnapshots >= flushEverySnapshots;
-    const reachedBlockEnd = meta.count + this.pendingSnapshots >= snapshotsPerBlock;
-
-    if (reachedFlushBatch || reachedBlockEnd) {
-      const isNewBlock = meta.count === 0;
-      const addedSnapshots = this.pendingSnapshots;
-      meta.count += this.pendingSnapshots;
-      meta.lastTimestampMs = snapshot.eventTimeMs;
-      this.pendingSnapshots = 0;
-
-      onFlush({
-        block: meta,
-        data,
-        isNewBlock,
-        addedSnapshots,
-        latestMagnitudeMin,
-        latestMagnitudeMax,
-      });
-    }
+    onFlush({
+      block: block.meta,
+      data: block.data,
+      isNewBlock,
+      addedSnapshots,
+      latestMagnitudeMin: magnitude.min,
+      latestMagnitudeMax: magnitude.max,
+    });
   }
 
-  getActiveBlock(): { meta: IBlockMeta; data: Float32Array } | null {
-    if (isNil(this.activeMeta) || isNil(this.activeData)) {
-      return null;
+  getActiveBlock(): IActiveBlockSource | undefined {
+    if (isNil(this.activeBlock)) {
+      return undefined;
     }
-    return { meta: this.activeMeta, data: this.activeData };
+    return { meta: this.activeBlock.meta, data: this.activeBlock.data };
   }
 
   dispose(): void {
-    this.activeMeta = null;
-    this.activeData = null;
-    this.pendingSnapshots = 0;
+    this.activeBlock = undefined;
   }
 
-  private startNewBlock(firstSnapshotMs: UnixTimeMs): void {
+  private startNewBlock(firstSnapshotMs: UnixTimeMs): IActiveBlock {
     const { snapshotsPerBlock, snapshotSlots, updateSpeedMs } = this.params;
-
     const blockStart = floorToBlockStart(firstSnapshotMs, snapshotsPerBlock, updateSpeedMs);
 
-    this.activeMeta = {
-      blockId: blockStart,
-      firstTimestampMs: blockStart,
-      lastTimestampMs: firstSnapshotMs,
-      count: 0,
-      textureRowIndex: undefined,
+    return {
+      meta: {
+        blockId: blockStart,
+        firstTimestampMs: blockStart,
+        lastTimestampMs: firstSnapshotMs,
+        count: 0,
+      },
+      data: new Float32Array(snapshotsPerBlock * snapshotSlots * FLOATS_PER_TEXEL),
+      pendingSnapshots: 0,
     };
-    this.activeData = new Float32Array(snapshotsPerBlock * snapshotSlots * FLOATS_PER_TEXEL);
-    this.pendingSnapshots = 0;
   }
+}
+
+/** Min/max `price × volume` over the live levels; `{0, 0}` when the snapshot carries no volume. */
+function latestMagnitudeBounds(snapshot: IQuantizedSnapshot): IMagnitudeBounds {
+  let min = Number.POSITIVE_INFINITY;
+  let max = 0;
+  for (const [price, volume] of [...snapshot.bids, ...snapshot.asks]) {
+    if (volume <= 0) {
+      continue;
+    }
+    const magnitude = price * volume;
+    min = Math.min(min, magnitude);
+    max = Math.max(max, magnitude);
+  }
+  return { min: Number.isFinite(min) ? min : 0, max };
 }
