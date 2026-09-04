@@ -1,6 +1,7 @@
 import type { ISynthVoicePlayer, SoundPatch } from '@frozik/utils/audio/synth';
 import { createSynthVoicePlayer } from '@frozik/utils/audio/synth';
 import { isNil, noop } from 'lodash-es';
+import { resolveAudioContextConstructor } from './audioContextConstructor';
 
 /** A looping layer a feature hangs off the master bus — an engine hum, a wind bed, a drone. */
 export interface IAmbienceLayer {
@@ -25,17 +26,6 @@ export interface ISoundEngine<TAmbience extends IAmbienceLayer = IAmbienceLayer>
 const MUTED_GAIN = 0;
 /** Slow enough to avoid a click on the mute button, fast enough to feel instant. */
 const MUTE_RAMP_SECONDS = 0.03;
-
-function resolveAudioContextConstructor(): typeof AudioContext | undefined {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-
-  return (
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-  );
-}
 
 /**
  * The shared shell every feature's sound engine is built on: it owns the `AudioContext`, the

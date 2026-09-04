@@ -1,5 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -14,7 +15,6 @@ import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useRoomStore } from '../application/useRoomStore';
 import { getTemplateById } from '../domain/templates';
 import type { RoomId } from '../domain/types';
-import { ERetroPhase } from '../domain/types';
 import { ClosePanel } from './components/ClosePanel';
 import { ColumnList } from './components/ColumnList';
 import { DiscussPanel } from './components/DiscussPanel';
@@ -22,7 +22,7 @@ import { ExportDialog } from './components/ExportDialog';
 import { RoomHeader } from './components/RoomHeader';
 import { useAwarenessPresence } from './hooks/useAwarenessPresence';
 import { useTimerTick } from './hooks/useTimerTick';
-import { retroT as t } from './translations';
+import { retroT } from './translations';
 
 export const Room = observer(() => {
   const { roomId } = useParams();
@@ -65,8 +65,8 @@ const RoomBody = observer(
     // here and the creator is recorded as the facilitator. Consumed once.
     const createIfMissing = useMemo(() => {
       const pending = lobbyStore.getPendingCreate(typedRoomId);
-      if (pending === null) {
-        return null;
+      if (isNil(pending)) {
+        return undefined;
       }
       return {
         name: pending.name,
@@ -91,30 +91,13 @@ const RoomBody = observer(
       void navigate('/retro');
     });
     useRegisterTopNavBack({
-      label: t.room.backToLobbyLabel,
+      label: retroT.room.backToLobbyLabel,
       onActivate: handleBackToLobby,
     });
 
-    // Resume the shared AudioContext on the first user gesture inside the
-    // room. Browsers keep it suspended until a real interaction, otherwise
-    // countdown beeps stay silent for participants who joined by link
-    // (i.e. never went through the identity dialog where `unlockChime` was
-    // originally wired).
-    useEffect(() => {
-      const unlock = (): void => {
-        roomStore.unlockChime();
-      };
-      document.addEventListener('pointerdown', unlock, { once: true });
-      document.addEventListener('keydown', unlock, { once: true });
-      return () => {
-        document.removeEventListener('pointerdown', unlock);
-        document.removeEventListener('keydown', unlock);
-      };
-    }, [roomStore]);
-
     useEffect(() => {
       if (searchParams.get('created') === '1') {
-        roomStore.openShareDialog();
+        roomStore.showDialog('share');
         const next = new URLSearchParams(searchParams);
         next.delete('created');
         setSearchParams(next, { replace: true });
@@ -122,7 +105,7 @@ const RoomBody = observer(
     }, [roomStore, searchParams, setSearchParams]);
 
     const handleCopyResult = useFunction((copied: boolean) => {
-      roomStore.showToast(copied ? t.room.linkCopied : t.errors.copyFailed);
+      roomStore.toast.show(copied ? retroT.room.linkCopied : retroT.errors.copyFailed);
     });
 
     return (
@@ -133,10 +116,10 @@ const RoomBody = observer(
           </div>
         )}
 
-        {roomStore.lastToast !== null && (
+        {!isNil(roomStore.toast.current) && (
           <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
             <div className="pointer-events-auto max-w-md shadow-lg shadow-black/40">
-              <Alert type="info" message={roomStore.lastToast.message} />
+              <Alert type="info" message={roomStore.toast.current.message} />
             </div>
           </div>
         )}
@@ -146,26 +129,26 @@ const RoomBody = observer(
         <div className="flex flex-col gap-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
           <ColumnList store={roomStore} />
 
-          {roomStore.phase === ERetroPhase.Discuss && <DiscussPanel store={roomStore} />}
-          {roomStore.phase === ERetroPhase.Close && <ClosePanel store={roomStore} />}
+          {roomStore.phase === 'discuss' && <DiscussPanel store={roomStore} />}
+          {roomStore.phase === 'close' && <ClosePanel store={roomStore} />}
         </div>
 
-        {roomStore.phase === ERetroPhase.Close && <ExportDialogAutoOpen store={roomStore} />}
+        {roomStore.phase === 'close' && <ExportDialogAutoOpen store={roomStore} />}
 
         <ExportDialog store={roomStore} />
 
         <ShareLinkDialog
-          open={roomStore.isShareDialogOpen}
-          onClose={roomStore.closeShareDialog}
+          open={roomStore.openDialog === 'share'}
+          onClose={roomStore.closeDialog}
           url={window.location.href}
           onCopyResult={handleCopyResult}
-          kicker={t.share.kicker}
-          title={t.share.dialogTitle}
-          description={t.share.description}
-          qrLabel={t.share.qrLabel}
-          copyLabel={t.share.copyLink}
-          copiedLabel={t.share.copied}
-          copyFailedLabel={t.errors.copyFailed}
+          kicker={retroT.share.kicker}
+          title={retroT.share.dialogTitle}
+          description={retroT.share.description}
+          qrLabel={retroT.share.qrLabel}
+          copyLabel={retroT.share.copyLink}
+          copiedLabel={retroT.share.copied}
+          copyFailedLabel={retroT.errors.copyFailed}
         />
       </div>
     );
@@ -175,9 +158,7 @@ const RoomBody = observer(
 const ExportDialogAutoOpen = observer(
   ({ store }: { readonly store: ReturnType<typeof useRoomStore> }) => {
     useEffect(() => {
-      if (!store.isExportDialogOpen) {
-        store.openExportDialog();
-      }
+      store.showDialog('export');
     }, [store]);
     return null;
   }

@@ -40,7 +40,7 @@ const BYE_REASONS = ['full', 'leave'] as const;
 type TByeReason = (typeof BYE_REASONS)[number];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return !isNil(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function isSignalMessageType(value: unknown): value is TConfSignalMessageType {
@@ -53,16 +53,16 @@ function isByeReason(value: unknown): value is TByeReason {
   return typeof value === 'string' && BYE_REASONS.includes(value as TByeReason);
 }
 
-function asParticipantId(value: unknown): ParticipantId | null {
+function asParticipantId(value: unknown): ParticipantId | undefined {
   if (typeof value !== 'string' || value.length === 0) {
-    return null;
+    return undefined;
   }
   return value as ParticipantId;
 }
 
-function asCandidate(value: unknown): RTCIceCandidateInit | null {
+function asCandidate(value: unknown): RTCIceCandidateInit | undefined {
   if (!isRecord(value)) {
-    return null;
+    return undefined;
   }
   const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = value;
   const init: RTCIceCandidateInit = {};
@@ -70,56 +70,52 @@ function asCandidate(value: unknown): RTCIceCandidateInit | null {
   if (typeof candidate === 'string') {
     init.candidate = candidate;
   } else if (!isNil(candidate)) {
-    return null;
+    return undefined;
   }
-
-  if (typeof sdpMid === 'string' || sdpMid === null) {
+  if (typeof sdpMid === 'string') {
     init.sdpMid = sdpMid;
   } else if (!isNil(sdpMid)) {
-    return null;
+    return undefined;
   }
-
-  if (typeof sdpMLineIndex === 'number' || sdpMLineIndex === null) {
+  if (typeof sdpMLineIndex === 'number') {
     init.sdpMLineIndex = sdpMLineIndex;
   } else if (!isNil(sdpMLineIndex)) {
-    return null;
+    return undefined;
   }
-
-  if (typeof usernameFragment === 'string' || usernameFragment === null) {
+  if (typeof usernameFragment === 'string') {
     init.usernameFragment = usernameFragment;
   } else if (!isNil(usernameFragment)) {
-    return null;
+    return undefined;
   }
-
   return init;
 }
 
 /**
- * Validate and narrow an incoming signaling payload. Returns `null` for
+ * Validate and narrow an incoming signaling payload. Returns `undefined` for
  * anything that does not match the wire schema — callers should drop
- * null results silently so a buggy or malicious peer cannot crash the
+ * undefined results silently so a buggy or malicious peer cannot crash the
  * room.
  */
-export function parseConfSignalMessage(value: unknown): TConfSignalMessage | null {
+export function parseConfSignalMessage(value: unknown): TConfSignalMessage | undefined {
   if (!isRecord(value)) {
-    return null;
+    return undefined;
   }
 
   const { type, from } = value;
   if (!isSignalMessageType(type)) {
-    return null;
+    return undefined;
   }
 
   const participantId = asParticipantId(from);
-  if (participantId === null) {
-    return null;
+  if (participantId === undefined) {
+    return undefined;
   }
 
   switch (type) {
     case 'hello': {
       const { session } = value;
       if (typeof session !== 'string' || session.length === 0) {
-        return null;
+        return undefined;
       }
       return { type, from: participantId, session };
     }
@@ -127,14 +123,14 @@ export function parseConfSignalMessage(value: unknown): TConfSignalMessage | nul
     case 'answer': {
       const { sdp } = value;
       if (typeof sdp !== 'string' || sdp.length === 0) {
-        return null;
+        return undefined;
       }
       return { type, from: participantId, sdp };
     }
     case 'ice': {
       const candidate = asCandidate(value.candidate);
-      if (candidate === null) {
-        return null;
+      if (candidate === undefined) {
+        return undefined;
       }
       return { type, from: participantId, candidate };
     }
@@ -142,14 +138,14 @@ export function parseConfSignalMessage(value: unknown): TConfSignalMessage | nul
       const { reason, to } = value;
       const target = asParticipantId(to);
       if (isNil(reason)) {
-        return target === null
+        return target === undefined
           ? { type, from: participantId }
           : { type, from: participantId, to: target };
       }
       if (!isByeReason(reason)) {
-        return null;
+        return undefined;
       }
-      return target === null
+      return target === undefined
         ? { type, from: participantId, reason }
         : { type, from: participantId, reason, to: target };
     }

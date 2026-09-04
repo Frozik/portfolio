@@ -1,6 +1,3 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
-import { nowEpochMs } from '@frozik/utils/date/now';
-import type { Milliseconds } from '@frozik/utils/date/types';
 import { convertErrorToFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
@@ -13,22 +10,7 @@ import {
 import { isNil } from 'lodash-es';
 import { computedStruct, makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
 
-import {
-  MAX_TIMER_DURATION_MS,
-  MIN_TIMER_DURATION_MS,
-  PHASE_ORDER,
-  TOAST_AUTOCLEAR_MS,
-} from '../domain/constants';
-import {
-  computeRemainingMs,
-  ETimerStatus,
-  extendTimer,
-  getTimerStatus,
-  isTimerInWarningZone,
-  pauseTimer as pauseTimerState,
-  resetTimer as resetTimerState,
-  startTimer as startTimerState,
-} from '../domain/timer';
+import { PHASE_ORDER } from '../domain/constants';
 import type {
   ActionItemId,
   CardId,
@@ -38,76 +20,76 @@ import type {
   IParticipant,
   IRetroSnapshot,
   ITemplateConfig,
+  RetroPhase,
   RoomId,
 } from '../domain/types';
-import { ERetroPhase } from '../domain/types';
-import { canPlaceVote, canRetractVote, countVotesUsedByClient } from '../domain/voting';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
 import { RetroDocGateway } from '../infrastructure/RetroDocGateway';
+import type { ISoundPlayer } from '../infrastructure/sound';
 import { createSoundPlayer } from '../infrastructure/sound';
 import type { IYjsRoomProviders } from '../infrastructure/yjs-providers';
 import { PresenceTracker } from './PresenceTracker';
 import type { IJoinedRoomSnapshot, RetroLobbyStore } from './RetroLobbyStore';
-import { TimerCueController } from './TimerCueController';
+import { TimerModel } from './TimerModel';
+import { ToastModel } from './ToastModel';
 import type { UserDirectoryStore } from './UserDirectoryStore';
+import { VotingModel } from './VotingModel';
 
-/**
- * Parameters required to create a fresh room — the doc is initialized on
- * first sync. `null` on the store means "open an existing room".
- */
+/** Set when the room is opened right after creation: the doc is initialised on first sync. */
 export interface IRoomCreateParams {
   readonly name: string;
   readonly template: ITemplateConfig;
   readonly votesPerParticipant: number;
 }
 
+/** What the room needs from the user directory: seeding and mirroring profiles. */
+export type RoomUserDirectory = Pick<UserDirectoryStore, 'upsert' | 'seedIfMissing'>;
+/** What the room needs from the lobby: recording itself in the recent-rooms index. */
+export type RoomLobbyIndex = Pick<RetroLobbyStore, 'upsertJoinedRoom'>;
+
 export interface IRoomStoreParams {
   readonly roomId: RoomId;
   readonly identity: IRetroIdentity;
   readonly providers: IYjsRoomProviders;
-  readonly createIfMissing: IRoomCreateParams | null;
-  readonly directory: UserDirectoryStore;
-  readonly lobby: RetroLobbyStore;
+  readonly createIfMissing: IRoomCreateParams | undefined;
+  readonly directory: RoomUserDirectory;
+  readonly lobby: RoomLobbyIndex;
+  /** Defaults to the synthesised cue player; tests pass a silent one. */
+  readonly soundPlayer?: ISoundPlayer;
 }
-
-export type TimerSeverity = 'idle' | 'running' | 'warning' | 'expired';
 
 export type ConnectionStatus = 'connecting' | 'synced' | 'failed' | 'disposed';
+export type RoomDialog = 'share' | 'export';
 
-export interface IToast {
-  readonly id: string;
-  readonly message: string;
-}
+type RoomSnapshotDescriptor = ValueDescriptor<
+  IRetroSnapshot | undefined,
+  IRetroSnapshot | undefined
+>;
 
 /**
- * MobX facade over a single live retro room. All Y.Doc reads/writes go
- * through {@link RetroDocGateway}, awareness through {@link PresenceTracker}
- * and timer audio through {@link TimerCueController} — the store itself only
- * owns observable UI state, phase/facilitator policy and lifecycle.
+ * MobX facade over one live retro room. Doc reads and writes go through
+ * {@link RetroDocGateway}, presence through {@link PresenceTracker}; the
+ * clock, votes and toasts are sub-models. The store keeps the snapshot,
+ * the phase and facilitator policy, the open dialog and the lifecycle.
  */
 export class RoomStore {
-  snapshot: ValueDescriptor<IRetroSnapshot | null, IRetroSnapshot | null> = EMPTY_VD;
-  currentSnapshot: IRetroSnapshot | null = null;
-  timerTickNow: number = nowEpochMs();
-
+  snapshot: RoomSnapshotDescriptor = EMPTY_VD;
   presentUsers: readonly IParticipant[] = [];
-  isShareDialogOpen: boolean = false;
-  isExportDialogOpen: boolean = false;
-  isCreateDialogOpen: boolean = false;
-  lastToast: IToast | null = null;
-
+  openDialog: RoomDialog | undefined = undefined;
   identity: IRetroIdentity;
+
   readonly roomId: RoomId;
+  readonly timer: TimerModel;
+  readonly voting: VotingModel;
+  readonly toast = new ToastModel();
 
   private readonly providers: IYjsRoomProviders;
-  private readonly createIfMissing: IRoomCreateParams | null;
-  private readonly directory: UserDirectoryStore;
-  private readonly lobby: RetroLobbyStore;
+  private readonly createIfMissing: IRoomCreateParams | undefined;
+  private readonly directory: RoomUserDirectory;
+  private readonly lobby: RoomLobbyIndex;
   private readonly gateway: RetroDocGateway;
   private readonly presence: PresenceTracker;
-  private readonly timerCues: TimerCueController;
-  private readonly disposers: (() => void)[] = [];
-  private toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly disposers: VoidFunction[] = [];
   private isDisposed = false;
 
   constructor(params: IRoomStoreParams) {
@@ -118,11 +100,20 @@ export class RoomStore {
     this.directory = params.directory;
     this.lobby = params.lobby;
     this.gateway = new RetroDocGateway(params.providers.doc);
-    this.timerCues = new TimerCueController(createSoundPlayer(), () => {
-      this.handleTimerExpired();
+    this.timer = new TimerModel({
+      readTimer: () => this.currentSnapshot?.meta.timer,
+      writeTimer: timer => this.gateway.setTimer(timer),
+      isFacilitator: () => this.isFacilitator,
+      soundPlayer: params.soundPlayer ?? createSoundPlayer(),
+    });
+    this.voting = new VotingModel({
+      readSnapshot: () => this.currentSnapshot,
+      readClientId: () => this.clientId,
+      addVote: this.gateway.addVote.bind(this.gateway),
+      removeVote: this.gateway.removeVote.bind(this.gateway),
     });
     this.presence = new PresenceTracker({
-      awareness: params.providers.webrtc.awareness,
+      awareness: params.providers.awareness,
       directory: params.directory,
       onPresentUsersChange: users => {
         this.applyPresentUsers(users);
@@ -137,154 +128,43 @@ export class RoomStore {
       | 'lobby'
       | 'gateway'
       | 'presence'
-      | 'timerCues'
       | 'disposers'
-      | 'toastTimeoutId'
       | 'isDisposed'
       | 'joinedRoomSnapshot'
     >(
       this,
       {
         snapshot: observableRef,
-        currentSnapshot: observableRef,
-        timerTickNow: observableRef,
         presentUsers: observableRef,
-        lastToast: observableRef,
         identity: observableRef,
+        timer: false,
+        voting: false,
+        toast: false,
         presentParticipantIds: computedStruct,
         joinedRoomSnapshot: computedStruct,
-        // Deliberately NOT an action: the UI calls it while rendering, so it
-        // must stay tracked — actions run untracked and would freeze the
-        // vote button's disabled state.
-        canAddVoteTo: false,
         providers: false,
         createIfMissing: false,
         directory: false,
         lobby: false,
         gateway: false,
         presence: false,
-        timerCues: false,
         disposers: false,
-        toastTimeoutId: false,
         isDisposed: false,
       },
       { autoBind: true }
     );
 
     this.publishPresence();
+    this.disposers.push(this.gateway.subscribe(this.refreshSnapshot));
     this.disposers.push(
-      this.gateway.subscribe(() => {
-        this.updateSnapshotFromDoc();
-      })
-    );
-    this.disposers.push(
-      reaction(
-        () => this.joinedRoomSnapshot,
-        joined => {
-          this.publishJoinedRoom(joined);
-        },
-        { fireImmediately: true }
-      )
+      reaction(() => this.joinedRoomSnapshot, this.publishJoinedRoom, { fireImmediately: true })
     );
 
     void this.initialize();
   }
 
-  /**
-   * Replace the cached identity (used after the user edits their name or
-   * color in the lobby). Republishes awareness and, if this client is the
-   * facilitator, mirrors the new display name into `meta.facilitatorName`
-   * so other peers and the lobby index see the rename.
-   */
-  updateIdentity(identity: IRetroIdentity): void {
-    this.identity = identity;
-    this.publishPresence();
-
-    if (!this.isFacilitator) {
-      return;
-    }
-    const storedName = this.currentSnapshot?.meta.facilitatorName ?? '';
-    if (storedName === identity.name) {
-      return;
-    }
-    this.gateway.setFacilitatorName(identity.name);
-  }
-
-  tickTimer(): void {
-    this.timerTickNow = nowEpochMs();
-    this.timerCues.handleTick(this.currentSnapshot?.meta.timer, this.timerTickNow as Milliseconds);
-  }
-
-  get timerSeverity(): TimerSeverity {
-    const timer = this.currentSnapshot?.meta.timer;
-    if (isNil(timer)) {
-      return 'idle';
-    }
-    const now = this.timerTickNow as Milliseconds;
-    const status = getTimerStatus(timer, now);
-    switch (status) {
-      case ETimerStatus.Idle:
-        return 'idle';
-      case ETimerStatus.Paused:
-        // Paused with 0 remaining is the auto-pause-at-expiry state — keep
-        // it visually "expired" (red clock) even though the timer isn't
-        // running. Any other paused value stays neutral.
-        return computeRemainingMs(timer, now) <= 0 ? 'expired' : 'idle';
-      case ETimerStatus.Expired:
-        return 'expired';
-      case ETimerStatus.Running:
-        return isTimerInWarningZone(timer, now) ? 'warning' : 'running';
-      default:
-        return assertNever(status);
-    }
-  }
-
-  get remainingTimerMs(): Milliseconds {
-    const timer = this.currentSnapshot?.meta.timer;
-    if (isNil(timer)) {
-      return 0 as Milliseconds;
-    }
-    return computeRemainingMs(timer, this.timerTickNow as Milliseconds);
-  }
-
-  get phase(): ERetroPhase {
-    return this.currentSnapshot?.meta.phase ?? ERetroPhase.Brainstorm;
-  }
-
-  get myVotesUsed(): number {
-    const votes = this.currentSnapshot?.votes;
-    if (isNil(votes)) {
-      return 0;
-    }
-    return countVotesUsedByClient(votes, this.clientId);
-  }
-
-  /**
-   * Whether the local client may place one more vote on `targetId` —
-   * consults the domain rules (Vote phase, total allowance, per-target
-   * limit). Drives the disabled state of the "+" vote button.
-   */
-  canAddVoteTo(targetId: CardId | GroupId): boolean {
-    const snapshot = this.currentSnapshot;
-    if (isNil(snapshot)) {
-      return false;
-    }
-    return canPlaceVote({
-      phase: snapshot.meta.phase,
-      votes: snapshot.votes,
-      targetId,
-      clientId: this.clientId,
-      votesPerParticipant: snapshot.meta.votesPerParticipant,
-    }).allowed;
-  }
-
-  get isFacilitator(): boolean {
-    const facilitatorClientId = this.currentSnapshot?.meta.facilitatorClientId ?? null;
-    return facilitatorClientId !== null && facilitatorClientId === this.identity.clientId;
-  }
-
-  unlockChime(): void {
-    this.timerCues.unlock();
+  get currentSnapshot(): IRetroSnapshot | undefined {
+    return isSyncedValueDescriptor(this.snapshot) ? this.snapshot.value : undefined;
   }
 
   get connectionStatus(): ConnectionStatus {
@@ -294,58 +174,41 @@ export class RoomStore {
     if (isSyncedValueDescriptor(this.snapshot)) {
       return 'synced';
     }
-    if (isFailValueDescriptor(this.snapshot)) {
-      return 'failed';
-    }
-    return 'connecting';
+    return isFailValueDescriptor(this.snapshot) ? 'failed' : 'connecting';
   }
 
-  /**
-   * Stable list of the clientIds currently visible through awareness.
-   * Structurally compared so it only "changes" when room membership does —
-   * heartbeats republishing the same roster are absorbed.
-   */
+  get phase(): RetroPhase {
+    return this.currentSnapshot?.meta.phase ?? 'brainstorm';
+  }
+
+  get isFacilitator(): boolean {
+    const facilitatorClientId = this.currentSnapshot?.meta.facilitatorClientId;
+    return !isNil(facilitatorClientId) && facilitatorClientId === this.clientId;
+  }
+
+  /** Structurally compared, so heartbeats republishing the same roster are absorbed. */
   get presentParticipantIds(): readonly ClientId[] {
     return this.presentUsers.map(user => user.clientId);
   }
 
-  openShareDialog(): void {
-    this.isShareDialogOpen = true;
-  }
-
-  closeShareDialog(): void {
-    this.isShareDialogOpen = false;
-  }
-
-  openExportDialog(): void {
-    this.isExportDialogOpen = true;
-  }
-
-  closeExportDialog(): void {
-    this.isExportDialogOpen = false;
-  }
-
-  openCreateDialog(): void {
-    this.isCreateDialogOpen = true;
-  }
-
-  closeCreateDialog(): void {
-    this.isCreateDialogOpen = false;
-  }
-
-  showToast(message: string): void {
-    if (this.toastTimeoutId !== null) {
-      clearTimeout(this.toastTimeoutId);
+  /**
+   * Replaces the identity after the user edited their profile: republishes
+   * awareness and, for the facilitator, mirrors the new name into the doc.
+   */
+  updateIdentity(identity: IRetroIdentity): void {
+    this.identity = identity;
+    this.publishPresence();
+    if (this.isFacilitator && this.currentSnapshot?.meta.facilitatorName !== identity.name) {
+      this.gateway.setFacilitatorName(identity.name);
     }
-    this.lastToast = { id: crypto.randomUUID(), message };
-    this.toastTimeoutId = setTimeout(() => {
-      runInAction(() => this.clearToast());
-    }, TOAST_AUTOCLEAR_MS);
   }
 
-  clearToast(): void {
-    this.lastToast = null;
-    this.toastTimeoutId = null;
+  showDialog(dialog: RoomDialog): void {
+    this.openDialog = dialog;
+  }
+
+  closeDialog(): void {
+    this.openDialog = undefined;
   }
 
   addCard(columnId: ColumnId, text: string): void {
@@ -368,7 +231,7 @@ export class RoomStore {
     cardId: CardId,
     targetColumnId: ColumnId,
     targetIndex: number,
-    targetGroupId: GroupId | null
+    targetGroupId: GroupId | undefined
   ): void {
     this.gateway.moveCardToPosition({ cardId, targetColumnId, targetIndex, targetGroupId });
   }
@@ -377,90 +240,22 @@ export class RoomStore {
     this.gateway.groupCards(draggedId, targetId);
   }
 
-  setTypingIn(columnId: ColumnId | null): void {
+  setTypingIn(columnId: ColumnId | undefined): void {
     this.presence.publishTyping(columnId);
   }
 
-  setPhase(phase: ERetroPhase): void {
-    if (!this.isFacilitator) {
-      return;
+  setPhase(phase: RetroPhase): void {
+    if (this.isFacilitator) {
+      this.gateway.setPhase(phase);
     }
-    this.gateway.setPhase(phase);
   }
 
   advancePhase(): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    const index = PHASE_ORDER.indexOf(this.phase);
-    if (index < 0 || index === PHASE_ORDER.length - 1) {
-      return;
-    }
-    this.setPhase(PHASE_ORDER[index + 1] as ERetroPhase);
+    this.stepPhase(1);
   }
 
   rewindPhase(): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    const index = PHASE_ORDER.indexOf(this.phase);
-    if (index <= 0) {
-      return;
-    }
-    this.setPhase(PHASE_ORDER[index - 1] as ERetroPhase);
-  }
-
-  startTimer(): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    const timer = this.currentSnapshot?.meta.timer;
-    if (isNil(timer)) {
-      return;
-    }
-    this.gateway.setTimer(startTimerState(timer, nowEpochMs() as Milliseconds));
-  }
-
-  pauseTimer(): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    const timer = this.currentSnapshot?.meta.timer;
-    if (isNil(timer)) {
-      return;
-    }
-    this.gateway.setTimer(pauseTimerState(timer, nowEpochMs() as Milliseconds));
-  }
-
-  addTimerMilliseconds(extraMs: Milliseconds): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    const timer = this.currentSnapshot?.meta.timer;
-    if (isNil(timer)) {
-      return;
-    }
-    // Clamp the effective remaining time to [MIN, MAX] — e.g. on 55s the
-    // user can click -30s and land exactly on 30s instead of being fully
-    // rejected. The actual delta applied is the clamped one.
-    const currentRemainingMs = computeRemainingMs(timer, nowEpochMs() as Milliseconds);
-    const rawNextRemaining = currentRemainingMs + extraMs;
-    const clampedNextRemaining = Math.min(
-      Math.max(rawNextRemaining, MIN_TIMER_DURATION_MS),
-      MAX_TIMER_DURATION_MS
-    );
-    const effectiveDelta = (clampedNextRemaining - currentRemainingMs) as Milliseconds;
-    if (effectiveDelta === 0) {
-      return;
-    }
-    this.gateway.setTimer(extendTimer(timer, effectiveDelta));
-  }
-
-  resetTimer(durationMs: Milliseconds): void {
-    if (!this.isFacilitator) {
-      return;
-    }
-    this.gateway.setTimer(resetTimerState(durationMs));
+    this.stepPhase(-1);
   }
 
   transferFacilitator(clientId: ClientId): void {
@@ -471,35 +266,17 @@ export class RoomStore {
     this.gateway.setFacilitator(clientId, targetUser?.name ?? '');
   }
 
+  /** Anyone may take over while the current facilitator is offline. */
   claimFacilitator(): void {
-    const currentClientId = this.currentSnapshot?.meta.facilitatorClientId ?? null;
+    const currentClientId = this.currentSnapshot?.meta.facilitatorClientId;
     const isCurrentOnline =
-      currentClientId !== null && this.presentUsers.some(user => user.clientId === currentClientId);
-    if (isCurrentOnline) {
-      return;
+      !isNil(currentClientId) && this.presentUsers.some(user => user.clientId === currentClientId);
+    if (!isCurrentOnline) {
+      this.gateway.setFacilitator(this.clientId, this.identity.name);
     }
-    this.gateway.setFacilitator(this.clientId, this.identity.name);
   }
 
-  addVote(targetId: CardId | GroupId): void {
-    if (!this.canAddVoteTo(targetId)) {
-      return;
-    }
-    this.gateway.addVote(targetId, this.clientId);
-  }
-
-  removeVote(targetId: CardId | GroupId): void {
-    const snapshot = this.currentSnapshot;
-    if (isNil(snapshot)) {
-      return;
-    }
-    if (!canRetractVote(snapshot.meta.phase, snapshot.votes, targetId, this.clientId)) {
-      return;
-    }
-    this.gateway.removeVote(targetId, this.clientId);
-  }
-
-  addActionItem(text: string, sourceGroupId: GroupId | null = null): void {
+  addActionItem(text: string, sourceGroupId?: GroupId): void {
     this.gateway.addActionItem(text, sourceGroupId);
   }
 
@@ -511,16 +288,12 @@ export class RoomStore {
     if (this.isDisposed) {
       return;
     }
-
     this.isDisposed = true;
     this.disposers.forEach(dispose => dispose());
     this.disposers.length = 0;
     this.presence.dispose();
-    if (this.toastTimeoutId !== null) {
-      clearTimeout(this.toastTimeoutId);
-      this.toastTimeoutId = null;
-    }
-    this.timerCues.dispose();
+    this.toast.dispose();
+    this.timer.dispose();
     this.providers.destroy();
   }
 
@@ -528,15 +301,11 @@ export class RoomStore {
     return this.identity.clientId as ClientId;
   }
 
-  /**
-   * Everything the lobby's recent-rooms index records about this room.
-   * Structurally compared, so the reaction that persists it fires on real
-   * changes only — not on every Yjs transaction or awareness heartbeat.
-   */
-  private get joinedRoomSnapshot(): IJoinedRoomSnapshot | null {
+  /** What the lobby's recent-rooms index records; structurally compared so only real changes persist. */
+  private get joinedRoomSnapshot(): IJoinedRoomSnapshot | undefined {
     const meta = this.currentSnapshot?.meta;
     if (isNil(meta)) {
-      return null;
+      return undefined;
     }
     return {
       roomId: this.roomId,
@@ -551,11 +320,17 @@ export class RoomStore {
     };
   }
 
-  private publishJoinedRoom(joined: IJoinedRoomSnapshot | null): void {
-    if (isNil(joined)) {
-      return;
+  private stepPhase(direction: 1 | -1): void {
+    const nextPhase = PHASE_ORDER[PHASE_ORDER.indexOf(this.phase) + direction];
+    if (!isNil(nextPhase)) {
+      this.setPhase(nextPhase);
     }
-    void this.lobby.upsertJoinedRoom(joined);
+  }
+
+  private publishJoinedRoom(joined: IJoinedRoomSnapshot | undefined): void {
+    if (!isNil(joined)) {
+      void this.lobby.upsertJoinedRoom(joined);
+    }
   }
 
   private publishPresence(): void {
@@ -570,62 +345,46 @@ export class RoomStore {
     this.presentUsers = users;
   }
 
-  private updateSnapshotFromDoc(): void {
-    this.currentSnapshot = this.gateway.buildSnapshot();
-  }
-
-  /**
-   * Only the facilitator writes the pause — the Yjs update propagates to
-   * everyone so all peers stop the clock at 00:00 instead of letting it keep
-   * ticking into negative territory.
-   */
-  private handleTimerExpired(): void {
-    if (!this.isFacilitator) {
-      return;
+  /** Every committed doc transaction, local or remote, refreshes the synced snapshot. */
+  private refreshSnapshot(): void {
+    if (isSyncedValueDescriptor(this.snapshot)) {
+      this.snapshot = createSyncedValueDescriptor(this.gateway.buildSnapshot());
     }
-    this.pauseTimer();
   }
 
   private async initialize(): Promise<void> {
     try {
       await this.providers.whenSynced();
-
       if (this.isDisposed) {
         return;
       }
-
-      const createParams = this.createIfMissing;
-      if (!isNil(createParams)) {
+      if (!isNil(this.createIfMissing)) {
         this.gateway.initializeIfMissing({
-          name: createParams.name,
-          template: createParams.template,
+          name: this.createIfMissing.name,
+          template: this.createIfMissing.template,
           facilitatorClientId: this.clientId,
           facilitatorName: this.identity.name,
-          votesPerParticipant: createParams.votesPerParticipant,
+          votesPerParticipant: this.createIfMissing.votesPerParticipant,
         });
       }
 
       const snapshot = this.gateway.buildSnapshot();
-
-      // Bootstrap the directory with the facilitator profile extracted
-      // from meta — covers the case where we open a room whose facilitator
-      // is offline. Any later awareness update will overwrite this entry.
-      if (!isNil(snapshot) && !isNil(snapshot.meta.facilitatorClientId)) {
+      // A room whose facilitator is offline still shows their name: seed the
+      // directory from the doc until an awareness update overwrites it.
+      const facilitatorClientId = snapshot?.meta.facilitatorClientId;
+      if (!isNil(snapshot) && !isNil(facilitatorClientId)) {
         void this.directory.seedIfMissing({
-          clientId: snapshot.meta.facilitatorClientId,
+          clientId: facilitatorClientId,
           name: snapshot.meta.facilitatorName,
         });
       }
-
       runInAction(() => {
-        this.currentSnapshot = snapshot;
-        this.snapshot = createSyncedValueDescriptor<IRetroSnapshot | null>(snapshot);
+        this.snapshot = createSyncedValueDescriptor(snapshot);
       });
     } catch (error) {
       const fail = convertErrorToFail(error instanceof Error ? error : new Error(String(error)));
-
       runInAction(() => {
-        this.snapshot = createUnsyncedValueDescriptor<IRetroSnapshot | null>(null, fail);
+        this.snapshot = createUnsyncedValueDescriptor<IRetroSnapshot | undefined>(undefined, fail);
       });
     }
   }

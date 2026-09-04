@@ -1,4 +1,5 @@
 import { cn } from '@frozik/components/components/cn';
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useRef } from 'react';
 import type { TEmotion } from '../../domain/emotion';
@@ -6,7 +7,7 @@ import { EmotionBadge } from './EmotionBadge';
 
 const VideoTileComponent = observer(
   (props: {
-    readonly stream: MediaStream | null;
+    readonly stream: MediaStream | undefined;
     readonly isLocal: boolean;
     readonly isVideoMuted: boolean;
     readonly placeholderLabel: string;
@@ -14,14 +15,14 @@ const VideoTileComponent = observer(
     readonly emotion?: TEmotion;
   }) => {
     const { stream, isLocal, isVideoMuted, placeholderLabel, cameraOffLabel, emotion } = props;
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
       const videoElement = videoRef.current;
-      if (videoElement === null) {
+      if (isNil(videoElement)) {
         return;
       }
-      videoElement.srcObject = stream;
+      videoElement.srcObject = stream ?? null;
       return () => {
         if (videoElement.srcObject === stream) {
           videoElement.srcObject = null;
@@ -30,7 +31,7 @@ const VideoTileComponent = observer(
     }, [stream]);
 
     const showCameraOffBadge = isLocal && isVideoMuted;
-    const showWaitingPlaceholder = stream === null;
+    const showWaitingPlaceholder = isNil(stream);
 
     return (
       <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-black">

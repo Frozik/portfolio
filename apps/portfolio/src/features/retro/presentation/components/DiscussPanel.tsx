@@ -16,9 +16,8 @@ import type {
   IRetroCard,
   IRetroGroup,
 } from '../../domain/types';
-import { ERetroPhase } from '../../domain/types';
 import { rankTargetsByVotes } from '../../domain/voting';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 import { ActionItemsList } from './ActionItemsList';
 
 const TOP_CARDS_LIMIT = 5;
@@ -30,14 +29,14 @@ type TRankedEntry =
       readonly kind: 'card';
       readonly id: string;
       readonly card: IRetroCard;
-      readonly column: IColumnConfig | null;
+      readonly column: IColumnConfig | undefined;
       readonly votes: number;
     }
   | {
       readonly kind: 'group';
       readonly id: string;
       readonly group: IRetroGroup;
-      readonly column: IColumnConfig | null;
+      readonly column: IColumnConfig | undefined;
       readonly cards: readonly IRetroCard[];
       readonly votes: number;
     };
@@ -51,7 +50,7 @@ export const DiscussPanel = observer(({ store }: { readonly store: RoomStore }) 
   const snapshot = store.currentSnapshot;
 
   const ranked = useMemo<readonly TRankedEntry[]>(() => {
-    if (snapshot === null) {
+    if (snapshot === undefined) {
       return [];
     }
 
@@ -84,7 +83,7 @@ export const DiscussPanel = observer(({ store }: { readonly store: RoomStore }) 
           kind: 'group',
           id: group.id,
           group,
-          column: columnById.get(group.columnId) ?? null,
+          column: columnById.get(group.columnId) ?? undefined,
           cards: snapshot.cards.filter(card => card.groupId === group.id),
           votes: totalVotes,
         });
@@ -97,7 +96,7 @@ export const DiscussPanel = observer(({ store }: { readonly store: RoomStore }) 
           kind: 'card',
           id: card.id,
           card,
-          column: columnById.get(card.columnId) ?? null,
+          column: columnById.get(card.columnId) ?? undefined,
           votes: totalVotes,
         });
       }
@@ -105,11 +104,11 @@ export const DiscussPanel = observer(({ store }: { readonly store: RoomStore }) 
     return entries;
   }, [snapshot]);
 
-  if (store.phase !== ERetroPhase.Discuss) {
+  if (store.phase !== 'discuss') {
     return null;
   }
 
-  if (snapshot === null) {
+  if (snapshot === undefined) {
     return null;
   }
 
@@ -117,15 +116,17 @@ export const DiscussPanel = observer(({ store }: { readonly store: RoomStore }) 
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3.5">
-          <MonoKicker tone="accent">{t.discuss.phaseKicker}</MonoKicker>
+          <MonoKicker tone="accent">{retroT.discuss.phaseKicker}</MonoKicker>
           <span className="section-rule" />
         </div>
-        <h2 className="m-0 text-[15px] font-medium text-landing-fg">{t.discuss.topCardsHeading}</h2>
+        <h2 className="m-0 text-[15px] font-medium text-landing-fg">
+          {retroT.discuss.topCardsHeading}
+        </h2>
       </div>
 
       {ranked.length === 0 ? (
         <CardFrame className="px-4 py-6">
-          <MonoKicker tone="faint">{t.discuss.topCardsEmpty}</MonoKicker>
+          <MonoKicker tone="faint">{retroT.discuss.topCardsEmpty}</MonoKicker>
         </CardFrame>
       ) : (
         <ol className="flex flex-col gap-2.5">
@@ -153,7 +154,7 @@ const RankedEntryRow = observer(
     readonly directory: ReturnType<typeof useUserDirectoryStore>;
   }) => {
     const columnTitle = entry.column?.title ?? '';
-    const columnColor = entry.column?.color ?? null;
+    const columnColor = entry.column?.color ?? undefined;
     const rankLabel = formatRank(rank);
 
     const authorName =
@@ -179,7 +180,7 @@ const RankedEntryRow = observer(
           ) : (
             <div className="flex flex-col gap-1.5">
               <MonoKicker tone="dim">
-                {t.discuss.groupedCardsKicker} · {entry.cards.length} {t.room.cardsLabel}
+                {retroT.discuss.groupedCardsKicker} · {entry.cards.length} {retroT.room.cardsLabel}
               </MonoKicker>
               <ul className="flex flex-col gap-1">
                 {entry.cards.map(card => (
@@ -198,7 +199,7 @@ const RankedEntryRow = observer(
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {columnTitle.length > 0 && (
               <span className="flex items-center gap-1.5">
-                {columnColor !== null && (
+                {columnColor !== undefined && (
                   <span
                     aria-hidden="true"
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -212,7 +213,7 @@ const RankedEntryRow = observer(
             {authorName.length > 0 && (
               <span className="flex items-center gap-1.5">
                 <MonoKicker tone="dim">
-                  {t.discuss.authorKicker} {authorName}
+                  {retroT.discuss.authorKicker} {authorName}
                 </MonoKicker>
               </span>
             )}
@@ -221,7 +222,7 @@ const RankedEntryRow = observer(
 
         <span className="inline-flex shrink-0 items-center gap-1 border border-landing-accent/40 bg-landing-accent/10 px-2 py-[3px] font-mono text-[11px] tracking-[0.08em] text-landing-accent">
           {entry.votes}
-          <span className="text-landing-accent/70">{t.discuss.votesTag(entry.votes)}</span>
+          <span className="text-landing-accent/70">{retroT.discuss.votesTag(entry.votes)}</span>
         </span>
       </CardFrame>
     );

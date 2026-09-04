@@ -1,6 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import DOMPurify from 'dompurify';
+import { isNil } from 'lodash-es';
 import { Check, Copy, Download } from 'lucide-react';
 import { marked } from 'marked';
 import { observer } from 'mobx-react-lite';
@@ -10,7 +11,7 @@ import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';
 import { renderSnapshotToMarkdown } from '../../domain/markdown-export';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 const ICON_SIZE_PX = 12;
 const SAFE_NAME_PATTERN = /[^a-z0-9-]+/gi;
@@ -37,10 +38,10 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
   const { status: copyStatus, copy } = useCopyToClipboard();
 
   const markdown = useMemo(() => {
-    if (snapshot === null) {
+    if (isNil(snapshot)) {
       return '';
     }
-    return renderSnapshotToMarkdown(snapshot, t.markdown);
+    return renderSnapshotToMarkdown(snapshot, retroT.markdown);
   }, [snapshot]);
 
   const htmlContent = useMemo(() => {
@@ -53,7 +54,7 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
 
   const handleCopy = useFunction(async () => {
     const copied = await copy(markdown);
-    store.showToast(copied ? t.close.markdownCopied : t.errors.copyFailed);
+    store.toast.show(copied ? retroT.close.markdownCopied : retroT.errors.copyFailed);
   });
 
   const handleDownload = useFunction(() => {
@@ -62,7 +63,7 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
   });
 
   const handleClose = useFunction(() => {
-    store.closeExportDialog();
+    store.closeDialog();
   });
 
   const footer = (
@@ -77,7 +78,7 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
         )}
       >
         {copyStatus === 'copied' ? <Check size={ICON_SIZE_PX} /> : <Copy size={ICON_SIZE_PX} />}
-        {copyStatus === 'copied' ? t.share.copied : t.close.exportCopy}
+        {copyStatus === 'copied' ? retroT.share.copied : retroT.close.exportCopy}
       </button>
       <button
         type="button"
@@ -88,18 +89,18 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
         )}
       >
         <Download size={ICON_SIZE_PX} />
-        {t.close.exportDownload}
+        {retroT.close.exportDownload}
       </button>
     </>
   );
 
   return (
     <DialogShell
-      open={store.isExportDialogOpen}
+      open={store.openDialog === 'export'}
       onClose={handleClose}
-      kicker={t.close.exportKicker}
-      title={t.close.title}
-      description={t.close.summarySubtitle}
+      kicker={retroT.close.exportKicker}
+      title={retroT.close.title}
+      description={retroT.close.summarySubtitle}
       className="w-[min(92vw,640px)]"
       footer={footer}
     >

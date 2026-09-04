@@ -1,68 +1,14 @@
+import { parseJson } from '@frozik/utils/parseJson';
 import { isNil } from 'lodash-es';
+
 import type { TConfDataChannelMessage } from '../domain/data-channel-protocol';
 import { parseConfDataChannelMessage } from '../domain/data-channel-protocol';
+import type {
+  IConfPeerConnection,
+  IConfPeerConnectionParams,
+  TConfPeerConnectionState,
+} from '../domain/ports/peer-connection';
 import type { TConfSignalMessage } from '../domain/signaling-protocol';
-import type { ParticipantId } from '../domain/types';
-
-/**
- * Lifecycle states of the WebRTC peer connection as consumed by the
- * application layer. Mapped from the native `RTCPeerConnectionState`
- * plus a leading `idle` for the moment between construction and the
- * first negotiation attempt.
- */
-export type TConfPeerConnectionState =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'disconnected'
-  | 'failed'
-  | 'closed';
-
-export interface IConfPeerConnectionParams {
-  /**
-   * Deterministic "polite" role required by the perfect-negotiation
-   * pattern. Exactly one peer must be polite; conf resolves this by
-   * comparing the two `ParticipantId` UUIDs lexically — the smaller id
-   * is polite. The application layer computes this once both ids are
-   * known and passes the result in here.
-   */
-  readonly isPolite: boolean;
-  /**
-   * ICE servers the peer connection will use. v1.1 sources these
-   * from the communication server's `turn:request-credentials`
-   * ack — the static `DEFAULT_ICE_SERVERS` list was removed when
-   * the server became the single source of TURN truth.
-   */
-  readonly iceServers: readonly RTCIceServer[];
-  /** Id of the local participant — stamped onto every outbound signal. */
-  readonly self: ParticipantId;
-  /** Called whenever the peer connection produces a signaling message to send. */
-  readonly onSignal: (message: TConfSignalMessage) => void;
-}
-
-export interface IConfPeerConnection {
-  readonly state: TConfPeerConnectionState;
-  readonly remoteStream: MediaStream | null;
-  readonly nativePeerConnection: RTCPeerConnection;
-  onStateChange(listener: (state: TConfPeerConnectionState) => void): () => void;
-  onRemoteStream(listener: (stream: MediaStream | null) => void): () => void;
-  onDataMessage(listener: (message: TConfDataChannelMessage) => void): () => void;
-  onDataChannelOpen(listener: () => void): () => void;
-  setLocalStream(stream: MediaStream): void;
-  getVideoSender(): RTCRtpSender | null;
-  sendDataMessage(message: TConfDataChannelMessage): void;
-  handleSignal(message: TConfSignalMessage): Promise<void>;
-  /**
-   * v2: swap the active TURN credentials and request an ICE restart so
-   * media keeps flowing past the previous credential's TTL. Returns
-   * `true` if `setConfiguration` is supported and the restart was
-   * issued, `false` if the browser does not support it (in which case
-   * the existing call continues with the old creds and the next call
-   * naturally picks up fresh ones).
-   */
-  refreshIceServers(iceServers: ReadonlyArray<RTCIceServer>): boolean;
-  close(): void;
-}
 
 function mapConnectionState(nativeState: RTCPeerConnectionState): TConfPeerConnectionState {
   switch (nativeState) {
@@ -82,44 +28,30 @@ function mapConnectionState(nativeState: RTCPeerConnectionState): TConfPeerConne
 }
 
 /**
- * WebRTC peer-connection wrapper implementing the MDN "perfect
- * negotiation" pattern.
- *
- * Perfect negotiation in a nutshell:
- *  - Both peers can create offers at any time (including simultaneous
- *    "glare").
- *  - One peer is marked polite; on a glare it rolls back its own
- *    pending local description and accepts the remote offer.
- *  - The impolite peer ignores remote offers that arrive while it is
- *    still busy with its own.
- *
- * Conf uses this wrapper once per room. AR and mute are orthogonal to
- * renegotiation — AR is a pure CSS overlay and mute flips
- * `track.enabled`, so this wrapper only ever negotiates once per
- * connection.
+ * `RTCPeerConnection` wrapper implementing MDN's perfect negotiation: both
+ * peers may offer at any time; on a glare the polite one rolls back and
+ * accepts the remote offer while the impolite one ignores it. Mute flips
+ * `track.enabled` and the AR overlay is painted into the track, so a call
+ * negotiates once.
  */
 export function createConfPeerConnection(params: IConfPeerConnectionParams): IConfPeerConnection {
   const { isPolite, iceServers, self, onSignal } = params;
 
-  const peer = new RTCPeerConnection({
-    iceServers: [...iceServers],
-  });
-
+  const peer = new RTCPeerConnection({ iceServers: [...iceServers] });
   const remoteStream = new MediaStream();
   const stateListeners = new Set<(state: TConfPeerConnectionState) => void>();
-  const streamListeners = new Set<(stream: MediaStream | null) => void>();
+  const streamListeners = new Set<(stream: MediaStream | undefined) => void>();
   const dataListeners = new Set<(message: TConfDataChannelMessage) => void>();
-  const dataOpenListeners = new Set<() => void>();
+  const dataOpenListeners = new Set<VoidFunction>();
 
   let state: TConfPeerConnectionState = 'idle';
-  let remoteStreamEmitted: MediaStream | null = null;
-  let videoSender: RTCRtpSender | null = null;
+  let remoteStreamEmitted: MediaStream | undefined;
+  let videoSender: RTCRtpSender | undefined;
   let isMakingOffer = false;
   let ignoreRemoteOffer = false;
   let isClosed = false;
 
-  // Negotiated (both peers open with the same id) so we don't have to
-  // pick a "host" role — works symmetrically with perfect negotiation.
+  // Negotiated on both sides with the same id, so no peer has to be the "host".
   const dataChannel = peer.createDataChannel('conf-side', {
     negotiated: true,
     id: 0,
@@ -129,22 +61,14 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
   dataChannel.addEventListener('open', () => {
     dataOpenListeners.forEach(listener => listener());
   });
-
   dataChannel.addEventListener('message', event => {
     if (typeof event.data !== 'string') {
       return;
     }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(event.data);
-    } catch {
-      return;
+    const message = parseConfDataChannelMessage(parseJson<unknown>(event.data));
+    if (!isNil(message)) {
+      dataListeners.forEach(listener => listener(message));
     }
-    const message = parseConfDataChannelMessage(parsed);
-    if (message === null) {
-      return;
-    }
-    dataListeners.forEach(listener => listener(message));
   });
 
   function setState(next: TConfPeerConnectionState): void {
@@ -155,7 +79,7 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
     stateListeners.forEach(listener => listener(next));
   }
 
-  function emitRemoteStream(stream: MediaStream | null): void {
+  function emitRemoteStream(stream: MediaStream | undefined): void {
     if (remoteStreamEmitted === stream) {
       return;
     }
@@ -166,22 +90,15 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
   peer.addEventListener('connectionstatechange', () => {
     setState(mapConnectionState(peer.connectionState));
   });
-
   peer.addEventListener('icecandidate', event => {
-    if (isNil(event.candidate)) {
-      return;
+    if (!isNil(event.candidate)) {
+      onSignal({ type: 'ice', from: self, candidate: event.candidate.toJSON() });
     }
-    onSignal({ type: 'ice', from: self, candidate: event.candidate.toJSON() });
   });
-
   peer.addEventListener('negotiationneeded', () => {
     void runNegotiation();
   });
-
   peer.addEventListener('track', event => {
-    // Add any incoming track to the shared remote stream; emit it to
-    // subscribers on the first track so the presentation layer can
-    // bind `<video srcObject>` as soon as media arrives.
     remoteStream.addTrack(event.track);
     emitRemoteStream(remoteStream);
   });
@@ -190,31 +107,19 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
     if (isClosed) {
       return;
     }
+    isMakingOffer = true;
     try {
-      isMakingOffer = true;
       await peer.setLocalDescription();
       const { localDescription } = peer;
-      if (isNil(localDescription) || localDescription.type !== 'offer') {
-        return;
+      if (!isNil(localDescription) && localDescription.type === 'offer') {
+        onSignal({ type: 'offer', from: self, sdp: localDescription.sdp });
       }
-      onSignal({ type: 'offer', from: self, sdp: localDescription.sdp });
     } catch {
-      // Negotiation failure is surfaced via `connectionstatechange`.
+      // A failed local offer is reported through `connectionstatechange`; the
+      // perfect-negotiation pattern retries on the next `negotiationneeded`.
     } finally {
       isMakingOffer = false;
     }
-  }
-
-  function setLocalStream(stream: MediaStream): void {
-    if (isClosed) {
-      return;
-    }
-    stream.getTracks().forEach(track => {
-      const sender = peer.addTrack(track, stream);
-      if (track.kind === 'video') {
-        videoSender = sender;
-      }
-    });
   }
 
   async function handleOffer(sdp: string): Promise<void> {
@@ -226,27 +131,24 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
     await peer.setRemoteDescription({ type: 'offer', sdp });
     await peer.setLocalDescription();
     const { localDescription } = peer;
-    if (isNil(localDescription) || localDescription.type !== 'answer') {
-      return;
+    if (!isNil(localDescription) && localDescription.type === 'answer') {
+      onSignal({ type: 'answer', from: self, sdp: localDescription.sdp });
     }
-    onSignal({ type: 'answer', from: self, sdp: localDescription.sdp });
   }
 
   async function handleAnswer(sdp: string): Promise<void> {
-    if (peer.signalingState !== 'have-local-offer') {
-      return;
+    if (peer.signalingState === 'have-local-offer') {
+      await peer.setRemoteDescription({ type: 'answer', sdp });
     }
-    await peer.setRemoteDescription({ type: 'answer', sdp });
   }
 
+  /** Candidates for an offer the polite side rolled back are expected to fail and are dropped. */
   async function handleIce(candidate: RTCIceCandidateInit): Promise<void> {
     try {
       await peer.addIceCandidate(candidate);
-    } catch {
-      // Late candidates after the connection closes, or candidates the
-      // polite side ignored during a glare, arrive here. Safe to drop.
+    } catch (error) {
       if (!ignoreRemoteOffer) {
-        throw new Error('failed to add remote ICE candidate');
+        throw error;
       }
     }
   }
@@ -256,89 +158,29 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
       return;
     }
     switch (message.type) {
-      case 'offer': {
+      case 'offer':
         await handleOffer(message.sdp);
         return;
-      }
-      case 'answer': {
+      case 'answer':
         await handleAnswer(message.sdp);
         return;
-      }
-      case 'ice': {
+      case 'ice':
         await handleIce(message.candidate);
         return;
-      }
       case 'hello':
-      case 'bye': {
-        // Session-level messages handled by the application layer.
+      case 'bye':
         return;
-      }
     }
   }
 
-  function sendDataMessage(message: TConfDataChannelMessage): void {
-    if (isClosed || dataChannel.readyState !== 'open') {
-      // Drop silently: data channel isn't up yet (negotiating), or the
-      // peer is torn down. Ambient signals (emotion, etc.) are safe to
-      // drop since the next commit will retry.
-      return;
-    }
-    try {
-      dataChannel.send(JSON.stringify(message));
-    } catch {
-      // Send can race with channel close; swallow and move on.
-    }
-  }
-
-  function refreshIceServers(nextIceServers: ReadonlyArray<RTCIceServer>): boolean {
-    if (isClosed) {
+  function refreshIceServers(nextIceServers: readonly RTCIceServer[]): boolean {
+    // Older WebViews lack `setConfiguration`; the call then keeps its current credentials.
+    if (isClosed || typeof peer.setConfiguration !== 'function') {
       return false;
     }
-    // `setConfiguration` is widely supported on modern Chrome/Firefox/Safari
-    // but not in older WebViews — guard so the renew path degrades to "next
-    // call gets new creds, this one continues with old" instead of crashing.
-    if (typeof peer.setConfiguration !== 'function') {
-      return false;
-    }
-    try {
-      peer.setConfiguration({ iceServers: [...nextIceServers] });
-    } catch {
-      return false;
-    }
-    // `restartIce` triggers a fresh `negotiationneeded` cycle which the
-    // perfect-negotiation handler above already routes correctly.
-    if (typeof peer.restartIce === 'function') {
-      try {
-        peer.restartIce();
-      } catch {
-        // Best-effort — falling through still leaves the new iceServers
-        // installed for any subsequent renegotiation.
-      }
-    }
+    peer.setConfiguration({ iceServers: [...nextIceServers] });
+    peer.restartIce();
     return true;
-  }
-
-  function close(): void {
-    if (isClosed) {
-      return;
-    }
-    isClosed = true;
-    try {
-      dataChannel.close();
-    } catch {
-      // Already-closed channels throw; ignore.
-    }
-    try {
-      peer.close();
-    } catch {
-      // Already-closed connections throw; ignore.
-    }
-    stateListeners.clear();
-    streamListeners.clear();
-    dataListeners.clear();
-    dataOpenListeners.clear();
-    setState('closed');
-    emitRemoteStream(null);
   }
 
   return {
@@ -375,11 +217,39 @@ export function createConfPeerConnection(params: IConfPeerConnectionParams): ICo
         dataOpenListeners.delete(listener);
       };
     },
-    setLocalStream,
+    setLocalStream(stream) {
+      if (isClosed) {
+        return;
+      }
+      for (const track of stream.getTracks()) {
+        const sender = peer.addTrack(track, stream);
+        if (track.kind === 'video') {
+          videoSender = sender;
+        }
+      }
+    },
     getVideoSender: () => videoSender,
-    sendDataMessage,
+    /** Ambient signals are dropped while the channel is not open; the next change resends them. */
+    sendDataMessage(message) {
+      if (!isClosed && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify(message));
+      }
+    },
     handleSignal,
     refreshIceServers,
-    close,
+    close() {
+      if (isClosed) {
+        return;
+      }
+      isClosed = true;
+      dataChannel.close();
+      peer.close();
+      stateListeners.clear();
+      streamListeners.clear();
+      dataListeners.clear();
+      dataOpenListeners.clear();
+      setState('closed');
+      emitRemoteStream(undefined);
+    },
   };
 }

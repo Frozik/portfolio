@@ -8,10 +8,10 @@ import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import { visibleCardText } from '../../domain/anonymity';
 import { REDACTED_CARD_PLACEHOLDER } from '../../domain/constants';
-import type { ClientId, ERetroPhase, IRetroCard } from '../../domain/types';
+import type { ClientId, IRetroCard, RetroPhase } from '../../domain/types';
 import { useCardFlipState } from '../hooks/useCardFlipState';
 import styles from '../styles.module.scss';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 const STAGGER_STEP_MS = 60;
 const CARD_INDEX_PAD_LENGTH = 3;
@@ -40,7 +40,7 @@ const CardViewComponent = ({
   accentColor: string;
   isOwn: boolean;
   myClientId: ClientId;
-  phase: ERetroPhase;
+  phase: RetroPhase;
   showVotes: boolean;
   voteCount: number;
   voteSlot?: ReactNode;
@@ -120,10 +120,10 @@ const CardViewComponent = ({
         <div className={cn(styles.cardBack, 'w-full')} aria-hidden="true">
           <CardFrame className="flex min-h-[96px] w-full items-center justify-center bg-landing-bg-card/60">
             <MonoKicker tone="faint">
-              #{cardIndexLabel} / {t.room.cardIndexUnknown}
+              #{cardIndexLabel} / {retroT.room.cardIndexUnknown}
             </MonoKicker>
             <span className="sr-only">
-              {REDACTED_CARD_PLACEHOLDER} {t.room.cardBackLabel}
+              {REDACTED_CARD_PLACEHOLDER} {retroT.room.cardBackLabel}
             </span>
           </CardFrame>
         </div>
@@ -150,7 +150,7 @@ const CardViewComponent = ({
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    aria-label={t.room.cancelEdit}
+                    aria-label={retroT.room.cancelEdit}
                     className="inline-flex h-6 w-6 items-center justify-center border border-landing-border-soft text-landing-fg-dim transition-colors hover:border-landing-accent/30 hover:text-landing-fg"
                   >
                     <X size={12} />
@@ -158,7 +158,7 @@ const CardViewComponent = ({
                   <button
                     type="button"
                     onClick={handleSaveEdit}
-                    aria-label={t.room.saveCard}
+                    aria-label={retroT.room.saveCard}
                     className="inline-flex h-6 w-6 items-center justify-center border border-landing-green/40 text-landing-green transition-colors hover:bg-landing-green/10"
                   >
                     <Check size={12} />
@@ -185,7 +185,7 @@ const CardViewComponent = ({
                     <button
                       type="button"
                       onClick={handleStartEdit}
-                      aria-label={t.room.editCard}
+                      aria-label={retroT.room.editCard}
                       className="inline-flex h-5 w-5 items-center justify-center border border-landing-border-soft text-landing-fg-faint opacity-0 transition-all hover:border-landing-accent/30 hover:text-landing-fg focus-visible:opacity-100 group-hover:opacity-100"
                     >
                       <Pencil size={10} />
@@ -195,7 +195,7 @@ const CardViewComponent = ({
                     <button
                       type="button"
                       onClick={handleDeleteClick}
-                      aria-label={t.room.deleteCard}
+                      aria-label={retroT.room.deleteCard}
                       className="inline-flex h-5 w-5 items-center justify-center border border-landing-border-soft text-landing-fg-faint opacity-0 transition-all hover:border-landing-red/40 hover:text-landing-red focus-visible:opacity-100 group-hover:opacity-100"
                     >
                       <X size={10} />

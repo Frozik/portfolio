@@ -57,7 +57,7 @@ describe('advanceAdaptiveQuality — downgrade on bad stats', () => {
     const next = advanceAdaptiveQuality(initial, badStats(), MIN_MS_BETWEEN_TIER_CHANGES);
     expect(next.currentTier).toBe('medium');
     expect(next.lastTierChangeAt).toBe(MIN_MS_BETWEEN_TIER_CHANGES);
-    expect(next.goodStateSince).toBeNull();
+    expect(next.goodStateSince).toBeUndefined();
   });
 
   it('holds the tier when bad but debounce has not elapsed', () => {
@@ -65,7 +65,7 @@ describe('advanceAdaptiveQuality — downgrade on bad stats', () => {
     const next = advanceAdaptiveQuality(initial, badStats(), ms(1_000));
     expect(next.currentTier).toBe('high');
     expect(next.lastTierChangeAt).toBe(0);
-    expect(next.goodStateSince).toBeNull();
+    expect(next.goodStateSince).toBeUndefined();
   });
 
   it('steps only one tier at a time across multiple bad polls', () => {
@@ -126,7 +126,7 @@ describe('advanceAdaptiveQuality — mediocre stats', () => {
     };
     const next = advanceAdaptiveQuality(initial, mediocreStats(), ms(5_000));
     expect(next.currentTier).toBe('medium');
-    expect(next.goodStateSince).toBeNull();
+    expect(next.goodStateSince).toBeUndefined();
   });
 
   it('prevents coasting through mediocre into an upgrade', () => {
@@ -145,16 +145,16 @@ describe('advanceAdaptiveQuality — mediocre stats', () => {
 });
 
 describe('advanceAdaptiveQuality — unknown stats', () => {
-  it('treats null rtt + null loss as good (quiet/healthy)', () => {
+  it('treats undefined rtt + undefined loss as good (quiet/healthy)', () => {
     const initial: IAdaptiveQualityState = {
       currentTier: 'low',
       lastTierChangeAt: ms(0),
       goodStateSince: ms(0),
     };
     const quietStats: IConnectionStats = {
-      rttMs: null,
-      packetLossFraction: null,
-      availableOutgoingBitrate: null,
+      rttMs: undefined,
+      packetLossFraction: undefined,
+      availableOutgoingBitrate: undefined,
     };
     const after = ms(Math.max(UPGRADE_COOLDOWN_MS, MIN_MS_BETWEEN_TIER_CHANGES) + 1_000);
     const next = advanceAdaptiveQuality(initial, quietStats, after);

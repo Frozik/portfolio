@@ -6,7 +6,7 @@ import { TIMER_TICK_MS } from '../../domain/constants';
 export function useTimerTick(store: RoomStore): void {
   useEffect(() => {
     const id = setInterval(() => {
-      store.tickTimer();
+      store.timer.tick();
     }, TIMER_TICK_MS);
     return () => clearInterval(id);
   }, [store]);

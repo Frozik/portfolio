@@ -5,15 +5,15 @@ import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';
 import type { RoomStore } from '../../application/RoomStore';
 import { PHASE_ORDER } from '../../domain/constants';
-import { ERetroPhase } from '../../domain/types';
-import { retroT as t } from '../translations';
+import type { RetroPhase } from '../../domain/types';
+import { retroT } from '../translations';
 
-const PHASE_LABELS: Record<ERetroPhase, string> = {
-  [ERetroPhase.Brainstorm]: t.phases.brainstorm,
-  [ERetroPhase.Group]: t.phases.group,
-  [ERetroPhase.Vote]: t.phases.vote,
-  [ERetroPhase.Discuss]: t.phases.discuss,
-  [ERetroPhase.Close]: t.phases.close,
+const PHASE_LABELS: Record<RetroPhase, string> = {
+  ['brainstorm']: retroT.phases.brainstorm,
+  ['group']: retroT.phases.group,
+  ['vote']: retroT.phases.vote,
+  ['discuss']: retroT.phases.discuss,
+  ['close']: retroT.phases.close,
 };
 
 type PhaseStatus = 'active' | 'past' | 'future';
@@ -30,11 +30,11 @@ const PHASE_LABEL_COLOR: Record<PhaseStatus, string> = {
   future: 'text-landing-fg-faint',
 };
 
-const STATIC_PHASE_HINTS: Record<Exclude<ERetroPhase, ERetroPhase.Vote>, string> = {
-  [ERetroPhase.Brainstorm]: t.phases.hintBrainstorm,
-  [ERetroPhase.Group]: t.phases.hintGroup,
-  [ERetroPhase.Discuss]: t.phases.hintDiscuss,
-  [ERetroPhase.Close]: t.phases.hintClose,
+const STATIC_PHASE_HINTS: Record<Exclude<RetroPhase, 'vote'>, string> = {
+  ['brainstorm']: retroT.phases.hintBrainstorm,
+  ['group']: retroT.phases.hintGroup,
+  ['discuss']: retroT.phases.hintDiscuss,
+  ['close']: retroT.phases.hintClose,
 };
 
 const PHASE_NUMBER_PAD_LENGTH = 2;
@@ -52,15 +52,15 @@ export const PhaseStepper = observer(({ store }: { readonly store: RoomStore }) 
   const activeIndex = PHASE_ORDER.indexOf(phase);
 
   const totalVotes = store.currentSnapshot?.meta.votesPerParticipant ?? 0;
-  const remainingVotes = Math.max(0, totalVotes - store.myVotesUsed);
+  const remainingVotes = Math.max(0, totalVotes - store.voting.myVotesUsed);
   const currentHint =
-    phase === ERetroPhase.Vote
-      ? t.phases.hintVote(remainingVotes, totalVotes)
+    phase === 'vote'
+      ? retroT.phases.hintVote(remainingVotes, totalVotes)
       : STATIC_PHASE_HINTS[phase];
 
   const handlePrev = useFunction(() => store.rewindPhase());
   const handleNext = useFunction(() => store.advancePhase());
-  const handleJumpToPhase = useFunction((target: ERetroPhase) => {
+  const handleJumpToPhase = useFunction((target: RetroPhase) => {
     store.setPhase(target);
   });
 
@@ -71,8 +71,8 @@ export const PhaseStepper = observer(({ store }: { readonly store: RoomStore }) 
           type="button"
           onClick={handlePrev}
           disabled={activeIndex <= 0}
-          aria-label={t.phases.prevPhase}
-          title={t.phases.prevPhase}
+          aria-label={retroT.phases.prevPhase}
+          title={retroT.phases.prevPhase}
           className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center border border-landing-border-soft text-landing-fg-dim transition-colors hover:border-landing-accent/30 hover:text-landing-fg disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-landing-border-soft disabled:hover:text-landing-fg-dim"
         >
           <ChevronLeft size={12} />
@@ -120,8 +120,8 @@ export const PhaseStepper = observer(({ store }: { readonly store: RoomStore }) 
           type="button"
           onClick={handleNext}
           disabled={activeIndex >= PHASE_ORDER.length - 1}
-          aria-label={t.phases.nextPhase}
-          title={t.phases.nextPhase}
+          aria-label={retroT.phases.nextPhase}
+          title={retroT.phases.nextPhase}
           className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center border border-landing-border-soft text-landing-fg-dim transition-colors hover:border-landing-accent/30 hover:text-landing-fg disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-landing-border-soft disabled:hover:text-landing-fg-dim"
         >
           <ChevronRight size={12} />
@@ -144,9 +144,9 @@ const PhaseButton = ({
   readonly phaseNumber: string;
   readonly isActive: boolean;
   readonly isPast: boolean;
-  readonly phase: ERetroPhase;
+  readonly phase: RetroPhase;
   readonly canNavigate: boolean;
-  readonly onNavigate: (phase: ERetroPhase) => void;
+  readonly onNavigate: (phase: RetroPhase) => void;
 }) => {
   const handleClick = useFunction(() => {
     if (!canNavigate) {

@@ -68,6 +68,8 @@ export const confRuTranslations: TranslationOf<typeof confEnTranslations> = {
     roomFullBack: 'К списку комнат',
     errorTitle: 'Не удалось установить звонок',
     errorDefault: 'Что-то пошло не так при установке звонка.',
+    turnRenewalFailed:
+      'Не удалось обновить учётные данные relay-сервера; звонок может оборваться, когда они истекут.',
     quality: {
       high: 'HD',
       highTooltip: 'Высокое качество — 30 FPS, полное разрешение',

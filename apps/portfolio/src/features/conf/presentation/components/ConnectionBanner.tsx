@@ -1,6 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import { isNil } from 'lodash-es';
 import { memo } from 'react';
+
 import type { TConfRoomConnectionState } from '../../application/ConfRoomStore';
 import { confT } from '../translations';
 
@@ -12,8 +14,9 @@ interface IBannerContent {
 function resolveBannerContent(
   state: TConfRoomConnectionState,
   hasRemotePeer: boolean,
-  errorMessage: string | null
-): IBannerContent | null {
+  errorMessage: string | undefined,
+  hasStaleTurnCredentials: boolean
+): IBannerContent | undefined {
   switch (state) {
     case 'idle':
     case 'acquiring-media':
@@ -23,7 +26,9 @@ function resolveBannerContent(
         ? { text: confT.room.connecting, tone: 'info' }
         : { text: confT.room.waitingForPeer, tone: 'info' };
     case 'connected':
-      return null;
+      return hasStaleTurnCredentials
+        ? { text: confT.room.turnRenewalFailed, tone: 'warn' }
+        : undefined;
     case 'peer-disconnected':
       return { text: confT.room.peerDisconnected, tone: 'warn' };
     case 'room-full':
@@ -31,11 +36,11 @@ function resolveBannerContent(
     case 'error':
       return {
         text:
-          errorMessage !== null && errorMessage.length > 0 ? errorMessage : confT.room.errorDefault,
+          isNil(errorMessage) || errorMessage.length === 0 ? confT.room.errorDefault : errorMessage,
         tone: 'error',
       };
     default:
-      assertNever(state);
+      return assertNever(state);
   }
 }
 
@@ -49,13 +54,15 @@ const ConnectionBannerComponent = ({
   state,
   hasRemotePeer,
   errorMessage,
+  hasStaleTurnCredentials,
 }: {
   readonly state: TConfRoomConnectionState;
   readonly hasRemotePeer: boolean;
-  readonly errorMessage: string | null;
+  readonly errorMessage: string | undefined;
+  readonly hasStaleTurnCredentials: boolean;
 }) => {
-  const content = resolveBannerContent(state, hasRemotePeer, errorMessage);
-  if (content === null) {
+  const content = resolveBannerContent(state, hasRemotePeer, errorMessage, hasStaleTurnCredentials);
+  if (isNil(content)) {
     return null;
   }
   return (

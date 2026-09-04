@@ -8,14 +8,13 @@ import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { SOFT_ACTION_ITEM_LIMIT } from '../../domain/constants';
 import type { ActionItemId } from '../../domain/types';
-import { ERetroPhase } from '../../domain/types';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 export const ActionItemsList = observer(({ store }: { readonly store: RoomStore }) => {
   const phase = store.phase;
   const items = store.currentSnapshot?.actionItems ?? [];
 
-  const canEdit = phase === ERetroPhase.Discuss || phase === ERetroPhase.Close;
+  const canEdit = phase === 'discuss' || phase === 'close';
   const showSoftLimitTip = items.length >= SOFT_ACTION_ITEM_LIMIT;
 
   if (!canEdit && items.length === 0) {
@@ -26,9 +25,11 @@ export const ActionItemsList = observer(({ store }: { readonly store: RoomStore 
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3.5">
         <MonoKicker tone="accent" className="text-[11px]">
-          {t.discuss.actionItemsKicker} · {items.length}
+          {retroT.discuss.actionItemsKicker} · {items.length}
         </MonoKicker>
-        {showSoftLimitTip && <MonoKicker tone="faint">{t.discuss.actionItemsTipKicker}</MonoKicker>}
+        {showSoftLimitTip && (
+          <MonoKicker tone="faint">{retroT.discuss.actionItemsTipKicker}</MonoKicker>
+        )}
         <span className="section-rule" />
       </div>
 
@@ -80,8 +81,8 @@ const ActionItemRow = observer(
           <button
             type="button"
             onClick={handleDelete}
-            aria-label={t.discuss.deleteActionItem}
-            title={t.discuss.deleteActionItem}
+            aria-label={retroT.discuss.deleteActionItem}
+            title={retroT.discuss.deleteActionItem}
             className="inline-flex h-5 w-5 shrink-0 items-center justify-center border border-landing-border-soft text-landing-fg-faint opacity-0 transition-all hover:border-landing-red/40 hover:text-landing-red focus-visible:opacity-100 group-hover:opacity-100"
           >
             <Trash2 size={10} />
@@ -123,8 +124,8 @@ const ActionItemComposer = observer(
           type="text"
           value={draft}
           onChange={handleChange}
-          placeholder={t.discuss.actionItemPlaceholder}
-          aria-label={t.discuss.actionItemsTitle}
+          placeholder={retroT.discuss.actionItemPlaceholder}
+          aria-label={retroT.discuss.actionItemsTitle}
           className={cn(
             'flex-1 border-0 border-b border-dashed border-landing-border-soft bg-transparent px-0 py-1 text-[13px] leading-[1.5] text-landing-fg placeholder:text-landing-fg-faint',
             'focus:border-landing-accent focus:outline-none'
@@ -133,8 +134,8 @@ const ActionItemComposer = observer(
         <button
           type="submit"
           disabled={isSubmitDisabled}
-          aria-label={t.discuss.addActionItem}
-          title={t.discuss.addActionItem}
+          aria-label={retroT.discuss.addActionItem}
+          title={retroT.discuss.addActionItem}
           className={cn(
             'inline-flex h-6 w-6 shrink-0 items-center justify-center border transition-colors',
             isSubmitDisabled

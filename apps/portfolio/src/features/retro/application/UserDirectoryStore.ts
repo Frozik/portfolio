@@ -38,8 +38,8 @@ export class UserDirectoryStore {
     });
   }
 
-  get(clientId: ClientId): IUserProfile | null {
-    return this.profiles.get(clientId) ?? null;
+  get(clientId: ClientId): IUserProfile | undefined {
+    return this.profiles.get(clientId);
   }
 
   getName(clientId: ClientId): string {

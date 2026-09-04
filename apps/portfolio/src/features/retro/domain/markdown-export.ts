@@ -68,7 +68,7 @@ export function renderSnapshotToMarkdown(
       continue;
     }
 
-    appendColumnBody(lines, cardsInColumn, groupsInColumn, snapshot.votes, labels);
+    lines.push(...renderColumnBody(cardsInColumn, groupsInColumn, snapshot.votes, labels));
     lines.push('');
   }
 
@@ -86,13 +86,13 @@ export function renderSnapshotToMarkdown(
   return `${lines.join('\n').trimEnd()}\n`;
 }
 
-function appendColumnBody(
-  lines: string[],
+function renderColumnBody(
   cardsInColumn: readonly IRetroCard[],
   groupsInColumn: readonly IRetroGroup[],
   votes: VotesByTarget,
   labels: MarkdownExportLabels
-): void {
+): readonly string[] {
+  const lines: string[] = [];
   const groupedCardIds = new Set<CardId>();
   groupsInColumn.forEach(group => group.cardIds.forEach(cardId => groupedCardIds.add(cardId)));
   const cardById = new Map<CardId, IRetroCard>(cardsInColumn.map(card => [card.id, card]));
@@ -138,6 +138,7 @@ function appendColumnBody(
     const voteTag = totalVotes > 0 ? ` _(${labels.votesCount(totalVotes)})_` : '';
     lines.push(`- ${escapeMarkdown(card.text)}${voteTag}`);
   }
+  return lines;
 }
 
 function renderActionItem(

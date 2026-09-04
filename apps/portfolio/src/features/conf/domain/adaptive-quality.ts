@@ -37,12 +37,12 @@ export const QUALITY_TIER_ORDER: readonly TQualityTier[] = ['high', 'medium', 'l
  * so this domain-level function stays pure.
  */
 export interface IConnectionStats {
-  /** Round-trip time to the remote peer in ms; `null` when unknown. */
-  readonly rttMs: number | null;
-  /** Packet loss as a 0..1 fraction over the last poll window; `null` if insufficient traffic. */
-  readonly packetLossFraction: number | null;
-  /** Browser-estimated outgoing bitrate in bits/sec (Chrome-only field); `null` elsewhere. */
-  readonly availableOutgoingBitrate: number | null;
+  /** Round-trip time to the remote peer in ms; `undefined` when unknown. */
+  readonly rttMs: number | undefined;
+  /** Packet loss as a 0..1 fraction over the last poll window; `undefined` if insufficient traffic. */
+  readonly packetLossFraction: number | undefined;
+  /** Browser-estimated outgoing bitrate in bits/sec (Chrome-only field); `undefined` elsewhere. */
+  readonly availableOutgoingBitrate: number | undefined;
 }
 
 /**
@@ -52,8 +52,8 @@ export interface IConnectionStats {
 export interface IAdaptiveQualityState {
   readonly currentTier: TQualityTier;
   readonly lastTierChangeAt: Milliseconds;
-  /** When the stats were last classified as "good"; `null` if the current window is not good. */
-  readonly goodStateSince: Milliseconds | null;
+  /** When the stats were last classified as "good"; `undefined` if the current window is not good. */
+  readonly goodStateSince: Milliseconds | undefined;
 }
 
 /** Debounce: minimum time between any two tier changes, in either direction. */
@@ -79,14 +79,14 @@ function classifyStats(stats: IConnectionStats): TClassification {
   const rtt = stats.rttMs;
   const loss = stats.packetLossFraction;
 
-  const rttIsBad = rtt !== null && rtt >= RTT_BAD_MIN_MS;
-  const lossIsBad = loss !== null && loss >= LOSS_BAD_MIN_FRACTION;
+  const rttIsBad = rtt !== undefined && rtt >= RTT_BAD_MIN_MS;
+  const lossIsBad = loss !== undefined && loss >= LOSS_BAD_MIN_FRACTION;
   if (rttIsBad || lossIsBad) {
     return 'bad';
   }
 
-  const rttIsGood = rtt === null ? true : rtt < RTT_GOOD_MAX_MS;
-  const lossIsGood = loss === null ? true : loss < LOSS_GOOD_MAX_FRACTION;
+  const rttIsGood = rtt === undefined ? true : rtt < RTT_GOOD_MAX_MS;
+  const lossIsGood = loss === undefined ? true : loss < LOSS_GOOD_MAX_FRACTION;
   if (rttIsGood && lossIsGood) {
     return 'good';
   }
@@ -131,7 +131,7 @@ function nextTierUp(current: TQualityTier): TQualityTier {
  *     dropping slowly.
  *  3. `mediocre` stats hold the current tier and reset the good-since
  *     timer (so you cannot coast through a bad patch into an upgrade).
- *  4. Unknown stats (rtt/loss both null) classify as `good` because
+ *  4. Unknown stats (rtt/loss both undefined) classify as `good` because
  *     lack of feedback usually means low traffic + healthy path.
  *
  * The function never changes the tier more than one step per call —
@@ -150,13 +150,13 @@ export function advanceAdaptiveQuality(
     const canChange = msSinceChange >= MIN_MS_BETWEEN_TIER_CHANGES;
     const nextTier = nextTierDown(state.currentTier);
     if (!canChange || nextTier === state.currentTier) {
-      return { ...state, goodStateSince: null };
+      return { ...state, goodStateSince: undefined };
     }
-    return { currentTier: nextTier, lastTierChangeAt: nowMs, goodStateSince: null };
+    return { currentTier: nextTier, lastTierChangeAt: nowMs, goodStateSince: undefined };
   }
 
   if (classification === 'mediocre') {
-    return { ...state, goodStateSince: null };
+    return { ...state, goodStateSince: undefined };
   }
 
   // classification === 'good'

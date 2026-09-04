@@ -13,20 +13,20 @@ describe('parseConfDataChannelMessage', () => {
   });
 
   it('rejects unknown kinds', () => {
-    expect(parseConfDataChannelMessage({ kind: 'typing', value: true })).toBeNull();
-    expect(parseConfDataChannelMessage({ kind: '', value: 'happy' })).toBeNull();
+    expect(parseConfDataChannelMessage({ kind: 'typing', value: true })).toBeUndefined();
+    expect(parseConfDataChannelMessage({ kind: '', value: 'happy' })).toBeUndefined();
   });
 
   it('rejects unknown emotion values', () => {
-    expect(parseConfDataChannelMessage({ kind: 'emotion', value: 'ecstatic' })).toBeNull();
-    expect(parseConfDataChannelMessage({ kind: 'emotion', value: 42 })).toBeNull();
-    expect(parseConfDataChannelMessage({ kind: 'emotion' })).toBeNull();
+    expect(parseConfDataChannelMessage({ kind: 'emotion', value: 'ecstatic' })).toBeUndefined();
+    expect(parseConfDataChannelMessage({ kind: 'emotion', value: 42 })).toBeUndefined();
+    expect(parseConfDataChannelMessage({ kind: 'emotion' })).toBeUndefined();
   });
 
   it('rejects non-record payloads', () => {
-    expect(parseConfDataChannelMessage(null)).toBeNull();
-    expect(parseConfDataChannelMessage(undefined)).toBeNull();
-    expect(parseConfDataChannelMessage('happy')).toBeNull();
-    expect(parseConfDataChannelMessage(['emotion', 'happy'])).toBeNull();
+    expect(parseConfDataChannelMessage(undefined)).toBeUndefined();
+    expect(parseConfDataChannelMessage(undefined)).toBeUndefined();
+    expect(parseConfDataChannelMessage('happy')).toBeUndefined();
+    expect(parseConfDataChannelMessage(['emotion', 'happy'])).toBeUndefined();
   });
 });

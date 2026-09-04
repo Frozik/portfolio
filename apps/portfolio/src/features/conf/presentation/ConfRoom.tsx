@@ -1,6 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
 import { Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
@@ -22,6 +23,7 @@ import { LeaveButton } from './components/LeaveButton';
 import { MuteControls } from './components/MuteControls';
 import { QualityBadge } from './components/QualityBadge';
 import { VideoTile } from './components/VideoTile';
+import { GLASSES_ASSET_URLS } from './glasses-assets';
 import { confT } from './translations';
 
 const SHARE_ICON_SIZE = 18;
@@ -66,7 +68,7 @@ const ConfRoomBody = observer(
     readonly typedRoomId: RoomId;
     readonly client: ICommunicationClient;
   }) => {
-    const roomStore = useConfRoomStore(typedRoomId, client);
+    const roomStore = useConfRoomStore(typedRoomId, client, GLASSES_ASSET_URLS);
     const lobbyStore = useConfLobbyStore();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -112,8 +114,9 @@ const ConfRoomBody = observer(
           <div className="min-w-0 flex-1">
             <ConnectionBanner
               state={roomStore.connectionState}
-              hasRemotePeer={roomStore.remoteStream !== null}
+              hasRemotePeer={!isNil(roomStore.remoteStream)}
               errorMessage={roomStore.errorMessage}
+              hasStaleTurnCredentials={roomStore.hasStaleTurnCredentials}
             />
           </div>
         </div>

@@ -11,19 +11,10 @@ import {
   createInitialAdaptiveQualityState,
   QUALITY_TIER_PARAMS,
 } from '../domain/adaptive-quality';
-
-export interface IAdaptiveQualityController {
-  readonly currentTier: TQualityTier;
-  onTierChange(listener: (tier: TQualityTier) => void): () => void;
-  onStatsSample(listener: (stats: IConnectionStats) => void): () => void;
-  dispose(): void;
-}
-
-export interface IAdaptiveQualityControllerParams {
-  readonly peerConnection: RTCPeerConnection;
-  readonly videoSender: RTCRtpSender;
-  readonly pollIntervalMs?: Milliseconds;
-}
+import type {
+  IAdaptiveQualityController,
+  IAdaptiveQualityControllerParams,
+} from '../domain/ports/adaptive-quality-controller';
 
 const DEFAULT_POLL_INTERVAL_MS = 2_500 as Milliseconds;
 const SECONDS_TO_MS = 1_000;
@@ -34,10 +25,10 @@ interface IPreviousOutboundCounters {
 }
 
 interface IRawPollInputs {
-  readonly outboundPacketsSent: number | null;
-  readonly remoteInboundPacketsLost: number | null;
-  readonly rttSeconds: number | null;
-  readonly availableOutgoingBitrate: number | null;
+  readonly outboundPacketsSent: number | undefined;
+  readonly remoteInboundPacketsLost: number | undefined;
+  readonly rttSeconds: number | undefined;
+  readonly availableOutgoingBitrate: number | undefined;
 }
 
 interface IStatsEntry {
@@ -53,10 +44,10 @@ interface IStatsEntry {
 }
 
 function extractPollInputs(report: RTCStatsReport): IRawPollInputs {
-  let outboundPacketsSent: number | null = null;
-  let remoteInboundPacketsLost: number | null = null;
-  let rttSeconds: number | null = null;
-  let availableOutgoingBitrate: number | null = null;
+  let outboundPacketsSent: number | undefined;
+  let remoteInboundPacketsLost: number | undefined;
+  let rttSeconds: number | undefined;
+  let availableOutgoingBitrate: number | undefined;
 
   report.forEach(rawEntry => {
     const entry = rawEntry as IStatsEntry;
@@ -102,19 +93,19 @@ function extractPollInputs(report: RTCStatsReport): IRawPollInputs {
 
 function computeLossFraction(
   current: IRawPollInputs,
-  previous: IPreviousOutboundCounters | null
-): number | null {
+  previous: IPreviousOutboundCounters | undefined
+): number | undefined {
   if (
-    previous === null ||
-    current.outboundPacketsSent === null ||
-    current.remoteInboundPacketsLost === null
+    previous === undefined ||
+    current.outboundPacketsSent === undefined ||
+    current.remoteInboundPacketsLost === undefined
   ) {
-    return null;
+    return undefined;
   }
   const deltaSent = current.outboundPacketsSent - previous.packetsSent;
   const deltaLost = current.remoteInboundPacketsLost - previous.packetsLost;
   if (deltaSent <= 0) {
-    return null;
+    return undefined;
   }
   const total = deltaSent + Math.max(0, deltaLost);
   if (total <= 0) {
@@ -159,7 +150,7 @@ async function applyTier(sender: RTCRtpSender, tier: TQualityTier): Promise<void
  *    `availableOutgoingBitrate` bandwidth estimate.
  *
  * Packet loss is a fraction over the last poll window, derived from
- * deltas of cumulative counters; the first poll always yields `null`
+ * deltas of cumulative counters; the first poll always yields `undefined`
  * loss (no baseline) which the domain layer treats as "good" (healthy
  * quiet path).
  */
@@ -174,15 +165,12 @@ export function createAdaptiveQualityController(
   let state: IAdaptiveQualityState = createInitialAdaptiveQualityState(
     performance.now() as Milliseconds
   );
-  let previousCounters: IPreviousOutboundCounters | null = null;
-  let pollHandle: ReturnType<typeof setTimeout> | null = null;
+  let previousCounters: IPreviousOutboundCounters | undefined;
+  let pollHandle: ReturnType<typeof setTimeout> | undefined;
   let isDisposed = false;
 
-  // Apply the initial tier up front so the encoder respects our cap
-  // from the first frame, even before the first poll arrives.
-  void applyTier(videoSender, state.currentTier).catch(() => {
-    // Pre-negotiation senders reject setParameters; the next poll retries.
-  });
+  // A sender rejects `setParameters` before negotiation completes; the first poll reapplies the tier.
+  void applyTier(videoSender, state.currentTier).catch(() => undefined);
 
   function notifyTier(tier: TQualityTier): void {
     tierListeners.forEach(listener => listener(tier));
@@ -196,24 +184,19 @@ export function createAdaptiveQualityController(
     if (isDisposed) {
       return;
     }
-    let report: RTCStatsReport;
-    try {
-      report = await peerConnection.getStats(videoSender.track);
-    } catch {
-      // The peer may have closed between scheduling and running; bail.
-      return;
-    }
-    if (isDisposed) {
+    // `getStats` rejects once the peer closed between scheduling and running.
+    const report = await peerConnection.getStats(videoSender.track).catch(() => undefined);
+    if (isNil(report) || isDisposed) {
       return;
     }
     const raw = extractPollInputs(report);
     const packetLossFraction = computeLossFraction(raw, previousCounters);
     const stats: IConnectionStats = {
-      rttMs: raw.rttSeconds === null ? null : raw.rttSeconds * SECONDS_TO_MS,
+      rttMs: raw.rttSeconds === undefined ? undefined : raw.rttSeconds * SECONDS_TO_MS,
       packetLossFraction,
       availableOutgoingBitrate: raw.availableOutgoingBitrate,
     };
-    if (raw.outboundPacketsSent !== null && raw.remoteInboundPacketsLost !== null) {
+    if (raw.outboundPacketsSent !== undefined && raw.remoteInboundPacketsLost !== undefined) {
       previousCounters = {
         packetsSent: raw.outboundPacketsSent,
         packetsLost: raw.remoteInboundPacketsLost,
@@ -222,14 +205,12 @@ export function createAdaptiveQualityController(
     notifyStats(stats);
     const nextState = advanceAdaptiveQuality(state, stats, performance.now() as Milliseconds);
     if (nextState.currentTier !== state.currentTier) {
-      try {
-        await applyTier(videoSender, nextState.currentTier);
-      } catch {
-        // If the sender rejects (renegotiation in flight, peer closing),
-        // skip this transition — the next poll reattempts.
-        return;
-      }
-      if (isDisposed) {
+      // A rejected `setParameters` (renegotiation in flight, peer closing) keeps the old tier; the next poll retries.
+      const applied = await applyTier(videoSender, nextState.currentTier).then(
+        () => true,
+        () => false
+      );
+      if (!applied || isDisposed) {
         return;
       }
       state = nextState;
@@ -244,7 +225,7 @@ export function createAdaptiveQualityController(
       return;
     }
     pollHandle = setTimeout(() => {
-      pollHandle = null;
+      pollHandle = undefined;
       void pollOnce().finally(schedulePoll);
     }, pollIntervalMs);
   }
@@ -256,9 +237,9 @@ export function createAdaptiveQualityController(
       return;
     }
     isDisposed = true;
-    if (pollHandle !== null) {
+    if (!isNil(pollHandle)) {
       clearTimeout(pollHandle);
-      pollHandle = null;
+      pollHandle = undefined;
     }
     tierListeners.clear();
     statsListeners.clear();

@@ -4,6 +4,7 @@ import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
+import type { IConfRoomIndexRepo } from '../domain/ports/room-index-repo';
 import type { IConfRoomIndexEntry, ParticipantId, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'frozik-conf';
@@ -38,34 +39,10 @@ interface IConfRoomsDB extends DBSchema {
   };
 }
 
-/**
- * Repository contract the application layer depends on. Uses plain
- * `Promise`-returning methods because the recent-rooms list is read on
- * mount and refreshed imperatively — there is no reactive cross-tab
- * subscription requirement for this data.
- */
-export interface IConfRoomIndexRepo {
-  list(): Promise<readonly IConfRoomIndexEntry[]>;
-  add(roomId: RoomId, createdAt: ISO, ownerParticipantId: ParticipantId): Promise<void>;
-  /**
-   * Upsert a visit marker. If a row for `roomId` already exists, only
-   * `lastVisitedAt` is updated — `createdAt` and `ownerParticipantId` are
-   * preserved so the creator label stays stable across visits. If the row
-   * is missing (first time joining a room by link), a fresh row is
-   * inserted with `ownerParticipantId = null`.
-   */
-  touchVisited(roomId: RoomId): Promise<void>;
-  remove(roomId: RoomId): Promise<void>;
-}
-
 export async function createConfRoomIndexRepo(
   onDatabaseError?: TDatabaseErrorCallback
 ): Promise<IConfRoomIndexRepo> {
-  const errorCallback: TDatabaseErrorCallback =
-    onDatabaseError ??
-    (async () => {
-      /* no-op */
-    });
+  const errorCallback: TDatabaseErrorCallback = onDatabaseError ?? (async () => undefined);
 
   const database = await openConfRoomIndexDatabase(errorCallback);
 
@@ -136,6 +113,6 @@ function toDomainEntry(row: IDBConfRoomEntry): IConfRoomIndexEntry {
     roomId: row.roomId,
     createdAt: row.createdAt,
     lastVisitedAt: row.lastVisitedAt,
-    ownerParticipantId: row.ownerParticipantId ?? null,
+    ownerParticipantId: row.ownerParticipantId ?? undefined,
   };
 }

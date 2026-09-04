@@ -4,13 +4,13 @@ import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import { isNil } from 'lodash-es';
 import { Crown, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AccountChip } from '../../../shared/communication/AccountChip';
 import { initialsOf, UNKNOWN_PARTICIPANT_INITIAL } from '../../../shared/lib/initialsOf';
+import { AvatarImage } from '../../../shared/ui/AvatarImage';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';
@@ -25,9 +25,9 @@ import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useUserDirectoryStore } from '../application/useUserDirectoryStore';
 import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
-import { ERetroPhase } from '../domain/types';
+import { AvatarInitials } from './components/AvatarInitials';
 import { CreateRetroDialog } from './components/CreateRetroDialog';
-import { retroT as t } from './translations';
+import { retroT } from './translations';
 
 const ROOM_ID_FROM_URL_PATTERN = /\/retro\/([^/?#]+)/;
 const MAX_VISIBLE_AVATARS = 3;
@@ -37,7 +37,6 @@ const MAX_VISIBLE_AVATARS = 3;
  * with no avatar set, or peers we haven't yet seen via awareness).
  * Per-user colors are gone — identity is derived entirely from OIDC.
  */
-const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
 
 const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
   const directory = useUserDirectoryStore();
@@ -45,17 +44,18 @@ const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
   const myClientId = identityStore.identity.clientId as ClientId;
   const ownerClientId = room.ownerClientId;
   const nonOwnerIds =
-    ownerClientId !== null
+    ownerClientId !== undefined
       ? room.knownParticipantIds.filter(id => id !== ownerClientId)
       : room.knownParticipantIds;
 
   // Slot budget: 1 for the owner (when known) + the rest for participants.
   // Take the tail of the list so the most-recently-seen appear.
-  const nonOwnerSlotBudget = ownerClientId !== null ? MAX_VISIBLE_AVATARS - 1 : MAX_VISIBLE_AVATARS;
+  const nonOwnerSlotBudget =
+    ownerClientId !== undefined ? MAX_VISIBLE_AVATARS - 1 : MAX_VISIBLE_AVATARS;
   const visibleNonOwners = nonOwnerIds.slice(-nonOwnerSlotBudget);
 
-  const totalParticipants = (ownerClientId !== null ? 1 : 0) + nonOwnerIds.length;
-  const visibleCount = (ownerClientId !== null ? 1 : 0) + visibleNonOwners.length;
+  const totalParticipants = (ownerClientId !== undefined ? 1 : 0) + nonOwnerIds.length;
+  const visibleCount = (ownerClientId !== undefined ? 1 : 0) + visibleNonOwners.length;
   const overflow = Math.max(0, totalParticipants - visibleCount);
 
   if (totalParticipants === 0) {
@@ -71,7 +71,7 @@ const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
     title: string;
   }[] = [];
 
-  if (ownerClientId !== null) {
+  if (ownerClientId !== undefined) {
     const ownerProfile = directory.get(ownerClientId);
     const ownerName = ownerProfile?.name ?? '';
     slots.push({
@@ -89,7 +89,7 @@ const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
     slots.push({
       key: `p-${clientId}`,
       pictureUrl: profile?.pictureUrl,
-      initials: profile !== null ? initialsOf(profile.name) : UNKNOWN_PARTICIPANT_INITIAL,
+      initials: profile !== undefined ? initialsOf(profile.name) : UNKNOWN_PARTICIPANT_INITIAL,
       isOwner: false,
       isMe: clientId === myClientId,
       title: profile?.name ?? '',
@@ -106,26 +106,25 @@ const RoomAvatars = observer(({ room }: { readonly room: IRoomIndexEntry }) => {
             slotIndex > 0 && '-ml-2',
             slot.isMe && 'z-10 ring-1 ring-landing-accent/60'
           )}
-          style={isNil(slot.pictureUrl) ? { backgroundColor: FALLBACK_AVATAR_BG } : undefined}
           title={slot.title}
         >
-          {isNil(slot.pictureUrl) ? (
-            slot.initials
-          ) : (
-            <img src={slot.pictureUrl} alt={slot.title} className="h-full w-full object-cover" />
-          )}
+          <AvatarImage
+            src={slot.pictureUrl}
+            alt={slot.title}
+            fallback={<AvatarInitials>{slot.initials}</AvatarInitials>}
+          />
           {slot.isOwner && (
             <Crown
               size={10}
               className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-landing-yellow"
-              aria-label={t.lobby.ownerBadgeTitle}
+              aria-label={retroT.lobby.ownerBadgeTitle}
             />
           )}
         </span>
       ))}
       {overflow > 0 && (
         <span className="-ml-2 inline-flex h-[26px] items-center justify-center rounded-full border-2 border-landing-bg bg-landing-bg-elev px-2 font-mono text-[10px] text-landing-fg-dim">
-          {t.lobby.membersOverflow.replace('{count}', String(overflow))}
+          {retroT.lobby.membersOverflow.replace('{count}', String(overflow))}
         </span>
       )}
     </div>
@@ -158,24 +157,28 @@ const RoomRow = memo(
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <MonoKicker tone="faint">{t.lobby.roomKicker}</MonoKicker>
+              <MonoKicker tone="faint">{retroT.lobby.roomKicker}</MonoKicker>
               <span aria-hidden="true" className="font-mono text-[10px] text-landing-fg-faint">
                 ·
               </span>
               <MonoKicker tone="faint">{formatLocalDateTime(room.createdAt)}</MonoKicker>
-              {room.phase === ERetroPhase.Close && (
+              {room.phase === 'close' && (
                 <span className="border border-landing-purple/40 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.08em] text-landing-purple">
-                  {t.lobby.completedLabel}
+                  {retroT.lobby.completedLabel}
                 </span>
               )}
             </div>
             <div className="mt-1 truncate text-base font-medium text-landing-fg">{room.name}</div>
             <div className="mt-1 font-mono text-[11px] text-landing-fg-faint">
-              {t.lobby.hostedBy}{' '}
+              {retroT.lobby.hostedBy}{' '}
               <span className="text-landing-fg-dim">
-                {isMine ? t.lobby.youLabel : ownerDisplayName.length > 0 ? ownerDisplayName : '—'}
+                {isMine
+                  ? retroT.lobby.youLabel
+                  : ownerDisplayName.length > 0
+                    ? ownerDisplayName
+                    : '—'}
               </span>{' '}
-              · {room.participantCount} {t.lobby.membersLabel}
+              · {room.participantCount} {retroT.lobby.membersLabel}
             </div>
           </div>
           <RoomAvatars room={room} />
@@ -183,7 +186,7 @@ const RoomRow = memo(
         <button
           type="button"
           onClick={handleDelete}
-          aria-label={t.lobby.deleteButton}
+          aria-label={retroT.lobby.deleteButton}
           className="absolute top-2.5 right-2.5 flex h-6 w-6 items-center justify-center text-landing-fg-faint transition-colors hover:text-landing-red"
         >
           <X size={14} />
@@ -200,7 +203,7 @@ export const Lobby = observer(() => {
   const navigate = useNavigate();
   const myClientId = identityStore.identity.clientId as ClientId;
   const [joinInput, setJoinInput] = useState('');
-  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<RoomId | null>(null);
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<RoomId | undefined>(undefined);
 
   useEffect(() => {
     void lobbyStore.loadRooms();
@@ -227,7 +230,7 @@ export const Lobby = observer(() => {
   const handleJoinSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const roomId = extractRoomIdFromInput(joinInput, ROOM_ID_FROM_URL_PATTERN);
-    if (roomId === null) {
+    if (roomId === undefined) {
       return;
     }
     void navigate(`/retro/${roomId}`);
@@ -238,15 +241,15 @@ export const Lobby = observer(() => {
   });
 
   const handleCancelDelete = useFunction(() => {
-    setPendingDeleteRoomId(null);
+    setPendingDeleteRoomId(undefined);
   });
 
   const handleConfirmDelete = useFunction(() => {
-    if (pendingDeleteRoomId === null) {
+    if (pendingDeleteRoomId === undefined) {
       return;
     }
     void lobbyStore.deleteRoom(pendingDeleteRoomId);
-    setPendingDeleteRoomId(null);
+    setPendingDeleteRoomId(undefined);
   });
 
   const getRoomKey = useFunction((room: IRoomIndexEntry) => room.roomId);
@@ -254,9 +257,9 @@ export const Lobby = observer(() => {
   const renderRoom = useFunction((room: IRoomIndexEntry) => {
     const isMine = room.ownerClientId === myClientId;
     const ownerClientId = room.ownerClientId;
-    const ownerProfile = ownerClientId !== null ? directory.get(ownerClientId) : null;
+    const ownerProfile = ownerClientId !== undefined ? directory.get(ownerClientId) : undefined;
     const ownerDisplayName =
-      ownerProfile !== null && ownerProfile.name.trim().length > 0 ? ownerProfile.name : '';
+      ownerProfile !== undefined && ownerProfile.name.trim().length > 0 ? ownerProfile.name : '';
     return (
       <RoomRow
         room={room}
@@ -274,43 +277,43 @@ export const Lobby = observer(() => {
   const activeRoomCount = roomList.length;
 
   const pendingDeleteRoomName =
-    pendingDeleteRoomId !== null
+    pendingDeleteRoomId !== undefined
       ? (roomList.find(room => room.roomId === pendingDeleteRoomId)?.name ?? '')
       : '';
-  const deleteDialogTitle = t.lobby.deleteDialogTitle.replace('{name}', pendingDeleteRoomName);
+  const deleteDialogTitle = retroT.lobby.deleteDialogTitle.replace('{name}', pendingDeleteRoomName);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="mx-auto flex w-full max-w-[var(--container-narrow)] flex-col gap-12 px-6 pt-12 pb-20 sm:px-8">
         <LobbyHero
-          headlinePrimary={t.lobby.headlinePrimary}
-          headlineAccent={t.lobby.headlineAccent}
-          heroSubtitle={t.lobby.heroSubtitle}
-          totalRoomsLabel={t.lobby.totalRoomsLabel}
+          headlinePrimary={retroT.lobby.headlinePrimary}
+          headlineAccent={retroT.lobby.headlineAccent}
+          heroSubtitle={retroT.lobby.heroSubtitle}
+          totalRoomsLabel={retroT.lobby.totalRoomsLabel}
           roomCount={activeRoomCount}
           accessory={<AccountChip />}
         />
 
         <RoomListSection
           sectionNumber="01"
-          sectionLabel={t.lobby.activeRoomsSectionLabel}
+          sectionLabel={retroT.lobby.activeRoomsSectionLabel}
           isLoading={isLoading}
           isError={isError}
-          errorMessage={t.errors.loadRoomsFailed}
-          emptyMessage={t.lobby.noRoomsYet}
+          errorMessage={retroT.errors.loadRoomsFailed}
+          emptyMessage={retroT.lobby.noRoomsYet}
           rooms={roomList}
           getKey={getRoomKey}
           renderRoom={renderRoom}
         />
 
         <section className="flex flex-col gap-5">
-          <SectionNumber number="02" label={t.lobby.createOrJoinSectionLabel} />
+          <SectionNumber number="02" label={retroT.lobby.createOrJoinSectionLabel} />
 
           <CreateRoomCard
-            kicker={t.lobby.newRetroCardKicker}
-            title={t.lobby.startNewTitle}
-            subtitle={t.lobby.startNewSubtitle}
-            buttonLabel={t.lobby.createSubmit}
+            kicker={retroT.lobby.newRetroCardKicker}
+            title={retroT.lobby.startNewTitle}
+            subtitle={retroT.lobby.startNewSubtitle}
+            buttonLabel={retroT.lobby.createSubmit}
             onAction={handleOpenCreateDialog}
           />
 
@@ -319,10 +322,10 @@ export const Lobby = observer(() => {
             value={joinInput}
             onChange={handleJoinInputChange}
             onSubmit={handleJoinSubmit}
-            kicker={t.lobby.joinByLinkCardKicker}
-            pasteHint={t.lobby.pasteLinkKicker}
-            placeholder={t.lobby.joinByLinkPlaceholder}
-            submitLabel={t.lobby.joinSubmitShort}
+            kicker={retroT.lobby.joinByLinkCardKicker}
+            pasteHint={retroT.lobby.pasteLinkKicker}
+            placeholder={retroT.lobby.joinByLinkPlaceholder}
+            submitLabel={retroT.lobby.joinSubmitShort}
           />
         </section>
       </div>
@@ -334,12 +337,12 @@ export const Lobby = observer(() => {
       />
 
       <ConfirmDialog
-        open={pendingDeleteRoomId !== null}
-        kicker={t.confirm.kicker}
+        open={pendingDeleteRoomId !== undefined}
+        kicker={retroT.confirm.kicker}
         title={deleteDialogTitle}
-        description={t.lobby.deleteDialogDescription}
-        confirmLabel={t.lobby.deleteButton}
-        cancelLabel={t.lobby.deleteCancel}
+        description={retroT.lobby.deleteDialogDescription}
+        confirmLabel={retroT.lobby.deleteButton}
+        cancelLabel={retroT.lobby.deleteCancel}
         tone="danger"
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}

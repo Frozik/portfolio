@@ -48,7 +48,7 @@ const RAD_TO_DEG = 180 / Math.PI;
  *
  * Pipeline (documented here so implementation cannot silently drift):
  *  1. Require `landmarks.length >= MIN_LANDMARKS_FOR_GLASSES` — return
- *     `null` otherwise so the caller can hide the overlay.
+ *     `undefined` otherwise so the caller can hide the overlay.
  *  2. Translation = midpoint of the inner eye corners (indices 133 and
  *     362), scaled from normalized coordinates into CSS pixels using
  *     the `<video>` element's rendered size.
@@ -64,12 +64,12 @@ const RAD_TO_DEG = 180 / Math.PI;
 export function computeGlassesTransform(
   landmarks: readonly IFaceLandmark[],
   videoSize: IVideoSize
-): IGlassesTransform | null {
+): IGlassesTransform | undefined {
   if (landmarks.length < MIN_LANDMARKS_FOR_GLASSES) {
-    return null;
+    return undefined;
   }
   if (videoSize.width <= 0 || videoSize.height <= 0) {
-    return null;
+    return undefined;
   }
 
   const leftOuter = landmarks[LANDMARK_INDEX_LEFT_EYE_OUTER];

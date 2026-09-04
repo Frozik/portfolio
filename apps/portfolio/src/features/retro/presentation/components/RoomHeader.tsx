@@ -1,13 +1,12 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isNil } from 'lodash-es';
 import { Eye, Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
-import type { ClientId } from '../../domain/types';
-import { ERetroPhase } from '../../domain/types';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 import { PhaseStepper } from './PhaseStepper';
 import { PresencePanel } from './PresencePanel';
 import { Timer } from './Timer';
@@ -25,17 +24,18 @@ const ICON_BUTTON_CLASSES =
 export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) => {
   const directory = useUserDirectoryStore();
   const snapshot = store.currentSnapshot;
-  const name = snapshot?.meta.name ?? t.lobby.title;
+  const name = snapshot?.meta.name ?? retroT.lobby.title;
 
-  const facilitatorClientId = snapshot?.meta.facilitatorClientId ?? null;
-  const facilitatorProfile =
-    facilitatorClientId !== null ? directory.get(facilitatorClientId as ClientId) : null;
+  const facilitatorClientId = snapshot?.meta.facilitatorClientId;
+  const facilitatorProfile = isNil(facilitatorClientId)
+    ? undefined
+    : directory.get(facilitatorClientId);
   const facilitatorDisplayName =
     (facilitatorProfile?.name ?? '').trim() !== ''
       ? (facilitatorProfile?.name ?? '')
       : (snapshot?.meta.facilitatorName.trim() ?? '');
-  const handleOpenShareDialog = useFunction(() => store.openShareDialog());
-  const handleOpenResults = useFunction(() => store.openExportDialog());
+  const handleOpenShareDialog = useFunction(() => store.showDialog('share'));
+  const handleOpenResults = useFunction(() => store.showDialog('export'));
 
   return (
     <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-landing-border-soft bg-landing-bg/70 px-4 py-3.5 backdrop-blur-md sm:px-6">
@@ -57,7 +57,7 @@ export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) =>
         <div className="flex min-w-0 flex-1 flex-wrap items-start gap-4">
           <div className="flex min-h-9 min-w-0 grow-0 items-center gap-3.5">
             <MonoKicker tone="faint" className="shrink-0">
-              {t.lobby.roomKicker}
+              {retroT.lobby.roomKicker}
             </MonoKicker>
             <div className="flex min-w-0 flex-col gap-0.5">
               <h1 className="truncate text-[15px] leading-tight font-medium text-landing-fg">
@@ -66,7 +66,7 @@ export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) =>
               {facilitatorDisplayName.length > 0 && (
                 <span className="flex items-center gap-1.5 font-mono text-[10px] text-landing-fg-faint">
                   <span className="truncate">
-                    {t.lobby.hostedBy}{' '}
+                    {retroT.lobby.hostedBy}{' '}
                     <span className="text-landing-fg-dim">{facilitatorDisplayName}</span>
                   </span>
                 </span>
@@ -75,18 +75,18 @@ export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) =>
             <button
               type="button"
               onClick={handleOpenShareDialog}
-              aria-label={t.room.shareLinkTitle}
-              title={t.room.shareLinkTitle}
+              aria-label={retroT.room.shareLinkTitle}
+              title={retroT.room.shareLinkTitle}
               className={cn(ICON_BUTTON_CLASSES, 'shrink-0')}
             >
               <Share2 size={12} />
             </button>
-            {store.phase === ERetroPhase.Close && (
+            {store.phase === 'close' && (
               <button
                 type="button"
                 onClick={handleOpenResults}
-                aria-label={t.room.viewResultsTitle}
-                title={t.room.viewResultsTitle}
+                aria-label={retroT.room.viewResultsTitle}
+                title={retroT.room.viewResultsTitle}
                 className={cn(ICON_BUTTON_CLASSES, 'shrink-0')}
               >
                 <Eye size={12} />

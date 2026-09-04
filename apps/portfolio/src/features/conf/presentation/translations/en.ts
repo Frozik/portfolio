@@ -65,6 +65,8 @@ export const confEnTranslations = {
     roomFullBack: 'Back to lobby',
     errorTitle: 'Call failed',
     errorDefault: 'Something went wrong while setting up the call.',
+    turnRenewalFailed:
+      'Could not refresh the relay credentials; the call may drop when they expire.',
     quality: {
       high: 'HD',
       highTooltip: 'High quality — 30 FPS, full resolution',

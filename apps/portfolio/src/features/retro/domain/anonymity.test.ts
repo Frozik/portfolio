@@ -8,7 +8,6 @@ import {
 } from './anonymity';
 import { REDACTED_CARD_PLACEHOLDER } from './constants';
 import type { CardId, ClientId, ColumnId, IRetroCard } from './types';
-import { ERetroPhase } from './types';
 
 const ALICE = 1 as ClientId;
 const BOB = 2 as ClientId;
@@ -22,7 +21,7 @@ function makeCard(overrides: Partial<IRetroCard> = {}): IRetroCard {
     columnId: COLUMN_WENT_WELL,
     text: 'Shipped the feature on time',
     createdAt: '2026-04-18T10:00:00Z' as ISO,
-    groupId: null,
+    groupId: undefined,
     ...overrides,
   };
 }
@@ -31,22 +30,22 @@ describe('shouldRedactCard', () => {
   it('redacts others cards during brainstorm', () => {
     const card = makeCard();
 
-    expect(shouldRedactCard(card, ERetroPhase.Brainstorm, BOB)).toBe(true);
+    expect(shouldRedactCard(card, 'brainstorm', BOB)).toBe(true);
   });
 
   it('does not redact the viewer own card in brainstorm', () => {
     const card = makeCard();
 
-    expect(shouldRedactCard(card, ERetroPhase.Brainstorm, ALICE)).toBe(false);
+    expect(shouldRedactCard(card, 'brainstorm', ALICE)).toBe(false);
   });
 
   it('does not redact anyone past brainstorm', () => {
     const card = makeCard();
 
-    expect(shouldRedactCard(card, ERetroPhase.Group, BOB)).toBe(false);
-    expect(shouldRedactCard(card, ERetroPhase.Vote, BOB)).toBe(false);
-    expect(shouldRedactCard(card, ERetroPhase.Discuss, BOB)).toBe(false);
-    expect(shouldRedactCard(card, ERetroPhase.Close, BOB)).toBe(false);
+    expect(shouldRedactCard(card, 'group', BOB)).toBe(false);
+    expect(shouldRedactCard(card, 'vote', BOB)).toBe(false);
+    expect(shouldRedactCard(card, 'discuss', BOB)).toBe(false);
+    expect(shouldRedactCard(card, 'close', BOB)).toBe(false);
   });
 });
 
@@ -54,19 +53,19 @@ describe('visibleCardText', () => {
   it('returns placeholder for redacted cards', () => {
     const card = makeCard({ text: 'secret wisdom' });
 
-    expect(visibleCardText(card, ERetroPhase.Brainstorm, BOB)).toBe(REDACTED_CARD_PLACEHOLDER);
+    expect(visibleCardText(card, 'brainstorm', BOB)).toBe(REDACTED_CARD_PLACEHOLDER);
   });
 
   it('returns real text when viewer is the author', () => {
     const card = makeCard({ text: 'my own note' });
 
-    expect(visibleCardText(card, ERetroPhase.Brainstorm, ALICE)).toBe('my own note');
+    expect(visibleCardText(card, 'brainstorm', ALICE)).toBe('my own note');
   });
 
   it('returns real text for everyone post-reveal', () => {
     const card = makeCard({ text: 'visible to all' });
 
-    expect(visibleCardText(card, ERetroPhase.Group, BOB)).toBe('visible to all');
+    expect(visibleCardText(card, 'group', BOB)).toBe('visible to all');
   });
 });
 
@@ -103,7 +102,7 @@ describe('countPeersTypingInColumn', () => {
   });
 
   it('returns 0 when no peer is typing', () => {
-    const participants = [{ clientId: BOB, typingInColumnId: null }];
+    const participants = [{ clientId: BOB, typingInColumnId: undefined }];
 
     expect(countPeersTypingInColumn(participants, COLUMN_WENT_WELL, ALICE)).toBe(0);
   });

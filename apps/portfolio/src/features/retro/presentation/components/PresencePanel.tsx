@@ -1,13 +1,14 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { isNil } from 'lodash-es';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { initialsOf } from '../../../../shared/lib/initialsOf';
+import { AvatarImage } from '../../../../shared/ui/AvatarImage';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { RoomStore } from '../../application/RoomStore';
 import type { ClientId, IParticipant } from '../../domain/types';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
+import { AvatarInitials } from './AvatarInitials';
 
 const MAX_VISIBLE_AVATARS = 3;
 
@@ -17,7 +18,6 @@ const MAX_VISIBLE_AVATARS = 3;
  * received via awareness yet). Per-user colors are gone — identity
  * is derived entirely from OIDC.
  */
-const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
 
 /**
  * Compact presence strip for the Room top bar. Shows up to three stacked
@@ -29,13 +29,13 @@ const FALLBACK_AVATAR_BG = 'var(--color-landing-accent)';
 export const PresencePanel = observer(({ store }: { readonly store: RoomStore }) => {
   const users = store.presentUsers;
   const myClientId = store.identity.clientId as ClientId;
-  const facilitatorId = store.currentSnapshot?.meta.facilitatorClientId ?? null;
+  const facilitatorId = store.currentSnapshot?.meta.facilitatorClientId ?? undefined;
   const isFacilitatorOnline =
-    facilitatorId !== null && users.some(user => user.clientId === facilitatorId);
+    facilitatorId !== undefined && users.some(user => user.clientId === facilitatorId);
 
   const handleTakeOver = useFunction(() => store.claimFacilitator());
 
-  if (store.currentSnapshot === null) {
+  if (store.currentSnapshot === undefined) {
     return null;
   }
 
@@ -43,7 +43,7 @@ export const PresencePanel = observer(({ store }: { readonly store: RoomStore })
   // the crowned avatar anchored to the leftmost slot even when that user
   // joined later than the rest.
   const orderedUsers = [...users].sort((left, right) => {
-    if (facilitatorId === null) {
+    if (facilitatorId === undefined) {
       return 0;
     }
     if (left.clientId === facilitatorId) {
@@ -65,10 +65,10 @@ export const PresencePanel = observer(({ store }: { readonly store: RoomStore })
         <button
           type="button"
           onClick={handleTakeOver}
-          title={t.room.takeOverHint}
+          title={retroT.room.takeOverHint}
           className="border border-landing-yellow/40 bg-landing-yellow/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] text-landing-yellow uppercase transition-colors hover:bg-landing-yellow/20"
         >
-          {t.room.takeOver}
+          {retroT.room.takeOver}
         </button>
       )}
 
@@ -84,7 +84,7 @@ export const PresencePanel = observer(({ store }: { readonly store: RoomStore })
         ))}
         {overflowCount > 0 && (
           <span className="-ml-2 inline-flex h-[26px] items-center justify-center rounded-full border-2 border-landing-bg bg-landing-bg-elev px-2 font-mono text-[10px] text-landing-fg-dim">
-            {t.room.membersOverflow.replace('{count}', String(overflowCount))}
+            {retroT.room.membersOverflow.replace('{count}', String(overflowCount))}
           </span>
         )}
       </div>
@@ -103,8 +103,8 @@ const Avatar = ({
   readonly isMe: boolean;
   readonly stackOffset: boolean;
 }) => {
-  const tooltipParts = [user.name, isFacilitator ? t.room.facilitatorBadge : null].filter(
-    (part): part is string => part !== null
+  const tooltipParts = [user.name, isFacilitator ? retroT.room.facilitatorBadge : undefined].filter(
+    (part): part is string => part !== undefined
   );
 
   const avatarClassName = cn(
@@ -115,15 +115,12 @@ const Avatar = ({
 
   return (
     <Tooltip title={tooltipParts.join(' · ')} placement="bottom">
-      <div
-        className={avatarClassName}
-        style={isNil(user.pictureUrl) ? { backgroundColor: FALLBACK_AVATAR_BG } : undefined}
-      >
-        {isNil(user.pictureUrl) ? (
-          initialsOf(user.name)
-        ) : (
-          <img src={user.pictureUrl} alt={user.name} className="h-full w-full object-cover" />
-        )}
+      <div className={avatarClassName}>
+        <AvatarImage
+          src={user.pictureUrl}
+          alt={user.name}
+          fallback={<AvatarInitials>{initialsOf(user.name)}</AvatarInitials>}
+        />
         <span
           aria-hidden="true"
           className="absolute right-0 bottom-0 h-1.5 w-1.5 animate-status-pulse rounded-full border border-landing-bg bg-landing-green"
@@ -132,7 +129,7 @@ const Avatar = ({
           <Crown
             size={10}
             strokeWidth={1.6}
-            aria-label={t.room.facilitatorBadge}
+            aria-label={retroT.room.facilitatorBadge}
             className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-landing-yellow"
           />
         )}

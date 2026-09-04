@@ -1,4 +1,4 @@
-import type { ISO } from '@frozik/utils/date/types';
+import type { ISO, Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
@@ -10,7 +10,6 @@ import type {
   CardId,
   ClientId,
   ColumnId,
-  ERetroPhase,
   GroupId,
   IActionItem,
   IColumnConfig,
@@ -19,9 +18,15 @@ import type {
   IRetroMeta,
   IRetroSnapshot,
   ITimerState,
+  RetroPhase,
   VotesByTarget,
 } from '../domain/types';
-import type { IInitRetroDocInput, IRetroDocHandles } from '../domain/yjs-schema';
+import type {
+  IInitRetroDocInput,
+  IRetroDocHandles,
+  IYjsCardRecord,
+  IYjsTimerRecord,
+} from './yjs-schema';
 import {
   getRetroHandles,
   initRetroDoc,
@@ -37,12 +42,13 @@ import {
   YJS_META_FIELD_TEMPLATE,
   YJS_META_FIELD_TIMER,
   YJS_META_FIELD_VOTES_PER_PARTICIPANT,
-} from '../domain/yjs-schema';
+} from './yjs-schema';
 
 interface ICardLocation {
   readonly columnId: ColumnId;
   readonly index: number;
-  readonly record: IRetroCard;
+  /** The stored record: absence is `null` on the wire and `undefined` in the domain. */
+  readonly record: IYjsCardRecord;
 }
 
 /**
@@ -76,15 +82,14 @@ export class RetroDocGateway {
     initRetroDoc(this.handles, input);
   }
 
-  buildSnapshot(): IRetroSnapshot | null {
+  buildSnapshot(): IRetroSnapshot | undefined {
     if (!this.handles.meta.has(YJS_META_FIELD_CREATED_AT)) {
-      return null;
+      return undefined;
     }
 
     const meta = this.readMeta();
-
-    if (meta === null) {
-      return null;
+    if (isNil(meta)) {
+      return undefined;
     }
 
     const columns = this.handles.columns.toArray() as readonly IColumnConfig[];
@@ -132,7 +137,7 @@ export class RetroDocGateway {
   deleteCard(cardId: CardId): void {
     this.doc.transact(() => {
       const location = this.findCardLocation(cardId);
-      if (location === null) {
+      if (isNil(location)) {
         return;
       }
       if (location.record.groupId !== null) {
@@ -181,7 +186,7 @@ export class RetroDocGateway {
   }): void {
     this.doc.transact(() => {
       const location = this.findCardLocation(input.cardId);
-      if (location === null) {
+      if (isNil(location)) {
         return;
       }
       if (location.record.groupId !== null) {
@@ -215,7 +220,7 @@ export class RetroDocGateway {
     this.doc.transact(() => {
       const target = this.findCardLocation(targetId);
       const dragged = this.findCardLocation(draggedId);
-      if (target === null || dragged === null) {
+      if (isNil(target) || isNil(dragged)) {
         return;
       }
 
@@ -246,7 +251,7 @@ export class RetroDocGateway {
       // the card record (when the previous group dissolved into a singleton
       // it flipped the sibling's groupId, not the dragged card's).
       const draggedAfter = this.findCardLocation(draggedId);
-      if (draggedAfter === null) {
+      if (isNil(draggedAfter)) {
         return;
       }
 
@@ -274,21 +279,21 @@ export class RetroDocGateway {
     readonly cardId: CardId;
     readonly targetColumnId: ColumnId;
     readonly targetIndex: number;
-    readonly targetGroupId: GroupId | null;
+    readonly targetGroupId: GroupId | undefined;
   }): void {
     this.doc.transact(() => {
       const location = this.findCardLocation(input.cardId);
-      if (location === null) {
+      if (isNil(location)) {
         return;
       }
 
-      const previousGroupId = location.record.groupId;
-      if (previousGroupId !== null && previousGroupId !== input.targetGroupId) {
+      const previousGroupId = location.record.groupId ?? undefined;
+      if (!isNil(previousGroupId) && previousGroupId !== input.targetGroupId) {
         this.removeCardFromGroup(input.cardId, previousGroupId as GroupId);
       }
 
       const latestLocation = this.findCardLocation(input.cardId);
-      if (latestLocation === null) {
+      if (isNil(latestLocation)) {
         return;
       }
 
@@ -313,11 +318,11 @@ export class RetroDocGateway {
         {
           ...latestLocation.record,
           columnId: input.targetColumnId,
-          groupId: input.targetGroupId,
+          groupId: input.targetGroupId ?? null,
         },
       ]);
 
-      if (input.targetGroupId !== null && previousGroupId !== input.targetGroupId) {
+      if (!isNil(input.targetGroupId) && previousGroupId !== input.targetGroupId) {
         const groupMap = this.handles.groups.get(input.targetGroupId);
         if (groupMap !== undefined) {
           const cardIds = this.readGroupCardIds(groupMap);
@@ -330,15 +335,20 @@ export class RetroDocGateway {
     });
   }
 
-  setPhase(phase: ERetroPhase): void {
+  setPhase(phase: RetroPhase): void {
     this.doc.transact(() => {
       this.handles.meta.set(YJS_META_FIELD_PHASE, phase);
     });
   }
 
   setTimer(timer: ITimerState): void {
+    const record: IYjsTimerRecord = {
+      durationMs: timer.durationMs,
+      startedAt: timer.startedAt ?? null,
+      pausedRemainingMs: timer.pausedRemainingMs ?? null,
+    };
     this.doc.transact(() => {
-      this.handles.meta.set(YJS_META_FIELD_TIMER, timer);
+      this.handles.meta.set(YJS_META_FIELD_TIMER, record);
     });
   }
 
@@ -384,7 +394,7 @@ export class RetroDocGateway {
     });
   }
 
-  addActionItem(text: string, sourceGroupId: GroupId | null): void {
+  addActionItem(text: string, sourceGroupId: GroupId | undefined): void {
     const trimmed = text.trim();
     if (trimmed.length === 0) {
       return;
@@ -394,7 +404,7 @@ export class RetroDocGateway {
         {
           id: crypto.randomUUID() as ActionItemId,
           text: trimmed,
-          sourceGroupId,
+          sourceGroupId: sourceGroupId ?? null,
           ownerClientId: null,
           createdAt: Temporal.Now.instant().toString() as ISO,
         },
@@ -414,20 +424,16 @@ export class RetroDocGateway {
     });
   }
 
-  private findCardLocation(cardId: CardId): ICardLocation | null {
-    let result: ICardLocation | null = null;
+  private findCardLocation(cardId: CardId): ICardLocation | undefined {
+    let result: ICardLocation | undefined;
     this.handles.cards.forEach((list, columnId) => {
-      if (result !== null) {
+      if (!isNil(result)) {
         return;
       }
       for (let index = 0; index < list.length; index++) {
         const record = list.get(index);
         if (record.id === cardId) {
-          result = {
-            columnId: columnId as ColumnId,
-            index,
-            record: record as IRetroCard,
-          };
+          result = { columnId: columnId as ColumnId, index, record };
           return;
         }
       }
@@ -450,7 +456,7 @@ export class RetroDocGateway {
     const list = this.handles.cards.get(location.columnId);
     if (list !== undefined) {
       list.delete(location.index, 1);
-      list.insert(location.index, [{ ...location.record, groupId: groupId as GroupId }]);
+      list.insert(location.index, [{ ...location.record, groupId }]);
     }
     return groupId;
   }
@@ -474,7 +480,7 @@ export class RetroDocGateway {
     // Dissolve group: clear sibling's groupId (if any) and drop the map.
     if (nextCardIds.length === 1) {
       const lastLocation = this.findCardLocation(nextCardIds[0] as CardId);
-      if (lastLocation !== null) {
+      if (!isNil(lastLocation)) {
         const list = this.handles.cards.get(lastLocation.columnId);
         if (list !== undefined) {
           list.delete(lastLocation.index, 1);
@@ -494,7 +500,7 @@ export class RetroDocGateway {
     return raw.filter((value): value is string => typeof value === 'string');
   }
 
-  private readMeta(): IRetroMeta | null {
+  private readMeta(): IRetroMeta | undefined {
     const name = this.handles.meta.get(YJS_META_FIELD_NAME);
     const createdAt = this.handles.meta.get(YJS_META_FIELD_CREATED_AT);
     const templateId = this.handles.meta.get(YJS_META_FIELD_TEMPLATE);
@@ -512,8 +518,9 @@ export class RetroDocGateway {
       typeof votesPerParticipant !== 'number' ||
       isNil(timer)
     ) {
-      return null;
+      return undefined;
     }
+    const timerRecord = timer as IYjsTimerRecord;
 
     // Resolve templateId to a known template. Unknown ids (legacy templates
     // that were renamed or removed) fall back to the first configured
@@ -526,10 +533,14 @@ export class RetroDocGateway {
       template: template.id as IRetroMeta['template'],
       phase: phase as IRetroMeta['phase'],
       facilitatorClientId:
-        typeof facilitatorClientId === 'number' ? (facilitatorClientId as ClientId) : null,
+        typeof facilitatorClientId === 'number' ? (facilitatorClientId as ClientId) : undefined,
       facilitatorName: typeof facilitatorName === 'string' ? facilitatorName : '',
       votesPerParticipant,
-      timer: timer as IRetroMeta['timer'],
+      timer: {
+        durationMs: timerRecord.durationMs as Milliseconds,
+        startedAt: (timerRecord.startedAt ?? undefined) as Milliseconds | undefined,
+        pausedRemainingMs: (timerRecord.pausedRemainingMs ?? undefined) as Milliseconds | undefined,
+      },
     };
   }
 
@@ -550,7 +561,7 @@ export class RetroDocGateway {
           columnId: record.columnId,
           text: record.text,
           createdAt: record.createdAt as IRetroCard['createdAt'],
-          groupId: record.groupId === null ? null : (record.groupId as GroupId),
+          groupId: (record.groupId ?? undefined) as GroupId | undefined,
         });
       });
     });
@@ -593,8 +604,8 @@ export class RetroDocGateway {
     return this.handles.actionItems.toArray().map(record => ({
       id: record.id as IActionItem['id'],
       text: record.text,
-      sourceGroupId: record.sourceGroupId === null ? null : (record.sourceGroupId as GroupId),
-      ownerClientId: record.ownerClientId === null ? null : (record.ownerClientId as ClientId),
+      sourceGroupId: (record.sourceGroupId ?? undefined) as GroupId | undefined,
+      ownerClientId: (record.ownerClientId ?? undefined) as ClientId | undefined,
       createdAt: record.createdAt as IActionItem['createdAt'],
     }));
   }

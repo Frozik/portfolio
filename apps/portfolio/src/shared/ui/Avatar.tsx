@@ -1,9 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
-import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+
+import { AvatarImage } from './AvatarImage';
 
 const avatarVariants = cva(
   'inline-flex items-center justify-center overflow-hidden rounded-full bg-surface-overlay text-text font-medium',
@@ -30,6 +31,6 @@ type AvatarProps = VariantProps<typeof avatarVariants> & {
 
 export const Avatar = memo(({ src, alt = '', size, children, className }: AvatarProps) => (
   <span className={cn(avatarVariants({ size }), className)}>
-    {!isNil(src) ? <img src={src} alt={alt} className="h-full w-full object-cover" /> : children}
+    <AvatarImage src={src} alt={alt} fallback={children} />
   </span>
 ));

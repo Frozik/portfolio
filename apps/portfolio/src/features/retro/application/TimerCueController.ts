@@ -4,7 +4,6 @@ import { isNil } from 'lodash-es';
 import { computeRemainingMs } from '../domain/timer';
 import type { ITimerState } from '../domain/types';
 import type { ISoundPlayer } from '../infrastructure/sound';
-import { ERetroSoundCue } from '../infrastructure/sound';
 
 const MS_IN_SECOND = 1_000;
 const EXPIRED_SECONDS = 0;
@@ -13,20 +12,13 @@ const COUNTDOWN_CUE_FROM_SECONDS = 5;
 const COUNTDOWN_CUE_TO_SECONDS = 1;
 
 /**
- * Second-accurate timer audio cues:
- *   10s left  → single warning beep
- *   5..1s left → short countdown tick on each crossed second
- *   0s left   → triple expired beep, plus an `onExpired` notification
- *
- * Detection is based on crossing a whole-second boundary downwards, so each
- * sound fires exactly once even though the room ticks twice per second.
+ * Second-accurate timer audio cues: a warning beep at 10 s, a tick on each of
+ * the last five seconds and a triple beep plus `onExpired` at zero. Cues fire
+ * on a downward whole-second crossing, so each sounds once per second even
+ * though the room ticks twice a second.
  */
 export class TimerCueController {
-  /**
-   * Last observed "whole seconds remaining" value. Used to detect second
-   * boundaries and fire countdown cues exactly once per crossed second.
-   */
-  private lastRemainingSec: number | null = null;
+  private lastRemainingSec: number | undefined;
 
   constructor(
     private readonly soundPlayer: ISoundPlayer,
@@ -35,7 +27,7 @@ export class TimerCueController {
 
   handleTick(timer: ITimerState | undefined, nowMs: Milliseconds): void {
     if (isNil(timer) || isNil(timer.startedAt)) {
-      this.lastRemainingSec = null;
+      this.lastRemainingSec = undefined;
       return;
     }
 
@@ -44,30 +36,25 @@ export class TimerCueController {
     const previousSec = this.lastRemainingSec;
     this.lastRemainingSec = remainingSec;
 
-    if (previousSec === null || previousSec <= remainingSec) {
+    if (isNil(previousSec) || previousSec <= remainingSec) {
       return;
     }
-
     if (remainingSec === EXPIRED_SECONDS) {
-      this.soundPlayer.play(ERetroSoundCue.TimerExpired);
+      this.soundPlayer.play('timerExpired');
       this.onExpired();
       return;
     }
     if (remainingSec === WARNING_CUE_SECONDS) {
-      this.soundPlayer.play(ERetroSoundCue.TimerWarning);
+      this.soundPlayer.play('timerWarning');
       return;
     }
     if (remainingSec >= COUNTDOWN_CUE_TO_SECONDS && remainingSec <= COUNTDOWN_CUE_FROM_SECONDS) {
-      this.soundPlayer.play(ERetroSoundCue.TimerCountdown);
+      this.soundPlayer.play('timerCountdown');
     }
   }
 
-  unlock(): void {
-    this.soundPlayer.unlock();
-  }
-
   dispose(): void {
-    this.lastRemainingSec = null;
+    this.lastRemainingSec = undefined;
     this.soundPlayer.dispose();
   }
 }

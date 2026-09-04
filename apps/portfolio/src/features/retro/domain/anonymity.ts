@@ -1,6 +1,5 @@
 import { REDACTED_CARD_PLACEHOLDER } from './constants';
-import type { ClientId, IRetroCard } from './types';
-import { ERetroPhase } from './types';
+import type { ClientId, IRetroCard, RetroPhase } from './types';
 
 /**
  * Returns true when the card text must be hidden from the viewer.
@@ -11,10 +10,10 @@ import { ERetroPhase } from './types';
  */
 export function shouldRedactCard(
   card: IRetroCard,
-  phase: ERetroPhase,
+  phase: RetroPhase,
   viewerClientId: ClientId
 ): boolean {
-  if (phase !== ERetroPhase.Brainstorm) {
+  if (phase !== 'brainstorm') {
     return false;
   }
 
@@ -27,7 +26,7 @@ export function shouldRedactCard(
  */
 export function visibleCardText(
   card: IRetroCard,
-  phase: ERetroPhase,
+  phase: RetroPhase,
   viewerClientId: ClientId
 ): string {
   return shouldRedactCard(card, phase, viewerClientId) ? REDACTED_CARD_PLACEHOLDER : card.text;
@@ -47,7 +46,7 @@ export function canMutateCard(card: IRetroCard, viewerClientId: ClientId): boole
  * Used for "N people are writing..." placeholder in Brainstorm.
  */
 export function countPeersTypingInColumn<TColumnId>(
-  participants: readonly { clientId: ClientId; typingInColumnId: TColumnId | null }[],
+  participants: readonly { clientId: ClientId; typingInColumnId: TColumnId | undefined }[],
   columnId: TColumnId,
   viewerClientId: ClientId
 ): number {

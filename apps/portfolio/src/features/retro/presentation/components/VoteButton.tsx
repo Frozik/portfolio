@@ -4,16 +4,15 @@ import { Minus, Plus, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, GroupId } from '../../domain/types';
-import { ERetroPhase } from '../../domain/types';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 export const VoteButton = observer(
   ({ store, targetId }: { readonly store: RoomStore; readonly targetId: CardId | GroupId }) => {
-    const handleAdd = useFunction(() => store.addVote(targetId));
-    const handleRemove = useFunction(() => store.removeVote(targetId));
+    const handleAdd = useFunction(() => store.voting.add(targetId));
+    const handleRemove = useFunction(() => store.voting.remove(targetId));
 
     const phase = store.phase;
-    if (phase !== ERetroPhase.Vote && phase !== ERetroPhase.Discuss) {
+    if (phase !== 'vote' && phase !== 'discuss') {
       return null;
     }
 
@@ -21,7 +20,7 @@ export const VoteButton = observer(
     const perClient = store.currentSnapshot?.votes.get(targetId);
     const myVotes = perClient?.get(myClientId) ?? 0;
 
-    if (phase === ERetroPhase.Discuss) {
+    if (phase === 'discuss') {
       let total = 0;
       perClient?.forEach(count => {
         total += count;
@@ -41,7 +40,7 @@ export const VoteButton = observer(
       );
     }
 
-    const canAdd = store.canAddVoteTo(targetId);
+    const canAdd = store.voting.canAddVoteTo(targetId);
     const isVoted = myVotes > 0;
 
     return (
@@ -57,7 +56,7 @@ export const VoteButton = observer(
           type="button"
           onClick={handleRemove}
           disabled={myVotes === 0}
-          aria-label={t.voting.removeVote}
+          aria-label={retroT.voting.removeVote}
           className="inline-flex h-5 w-5 items-center justify-center transition-colors hover:text-landing-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-current"
         >
           <Minus size={9} strokeWidth={2} />
@@ -74,7 +73,7 @@ export const VoteButton = observer(
           type="button"
           onClick={handleAdd}
           disabled={!canAdd}
-          aria-label={t.voting.addVote}
+          aria-label={retroT.voting.addVote}
           className="inline-flex h-5 w-5 items-center justify-center transition-colors hover:text-landing-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-current"
         >
           <Plus size={9} strokeWidth={2} />

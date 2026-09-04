@@ -6,9 +6,7 @@ import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { TGlassesStyle } from '../../domain/glasses-style';
 import { GLASSES_STYLES } from '../../domain/glasses-style';
-import roundGlassesUrl from '../../infrastructure/assets/glasses.svg?url';
-import hippieGlassesUrl from '../../infrastructure/assets/hippie-glasses.svg?url';
-import teacherGlassesUrl from '../../infrastructure/assets/teacher-glasses.svg?url';
+import { GLASSES_ASSET_URLS } from '../glasses-assets';
 import { confT } from '../translations';
 
 const TRIGGER_ICON_SIZE = 18;
@@ -17,16 +15,6 @@ const triggerBaseClass =
   'flex h-10 w-10 items-center justify-center rounded-full border border-border ' +
   'text-text transition-colors focus-visible:outline-none focus-visible:ring-2 ' +
   'focus-visible:ring-brand-500';
-
-/**
- * SVG asset URL per non-`'none'` style. Reused by the trigger button
- * (when a style is active) and by each menu item's preview thumbnail.
- */
-const GLASSES_PREVIEW_URL: Record<Exclude<TGlassesStyle, 'none'>, string> = {
-  round: roundGlassesUrl,
-  hippie: hippieGlassesUrl,
-  teacher: teacherGlassesUrl,
-};
 
 const GLASSES_LABEL: Record<TGlassesStyle, string> = {
   none: confT.room.glassesStyleNone,
@@ -44,7 +32,7 @@ const GlassesIcon = memo(({ style }: { readonly style: TGlassesStyle }) => {
   if (style === 'none') {
     return <EyeOff className="h-6 w-6" aria-hidden="true" />;
   }
-  return <img src={GLASSES_PREVIEW_URL[style]} alt="" aria-hidden="true" className="h-6 w-auto" />;
+  return <img src={GLASSES_ASSET_URLS[style]} alt="" aria-hidden="true" className="h-6 w-auto" />;
 });
 
 const GlassesPickerItem = memo(

@@ -5,7 +5,6 @@ import * as Y from 'yjs';
 
 import { getTemplateById } from '../domain/templates';
 import type { CardId, ClientId, ColumnId, GroupId, IRetroSnapshot } from '../domain/types';
-import { ERetroPhase } from '../domain/types';
 import { RetroDocGateway } from './RetroDocGateway';
 
 const FACILITATOR = 1 as ClientId;
@@ -43,10 +42,10 @@ function addCardAndGetId(gateway: RetroDocGateway, columnId: ColumnId, text: str
 }
 
 describe('RetroDocGateway.buildSnapshot', () => {
-  it('returns null for a doc that was never initialized', () => {
+  it('returns undefined for a doc that was never initialized', () => {
     const gateway = new RetroDocGateway(new Y.Doc());
 
-    expect(gateway.buildSnapshot()).toBeNull();
+    expect(gateway.buildSnapshot()).toBeUndefined();
   });
 
   it('projects meta and columns after initialization', () => {
@@ -54,7 +53,7 @@ describe('RetroDocGateway.buildSnapshot', () => {
 
     expect(snapshot.meta.name).toBe('Sprint 42');
     expect(snapshot.meta.template).toBe('scrum-en');
-    expect(snapshot.meta.phase).toBe(ERetroPhase.Brainstorm);
+    expect(snapshot.meta.phase).toBe('brainstorm');
     expect(snapshot.meta.facilitatorClientId).toBe(FACILITATOR);
     expect(snapshot.meta.facilitatorName).toBe('Ada');
     expect(snapshot.meta.votesPerParticipant).toBe(VOTES_PER_PARTICIPANT);
@@ -108,7 +107,7 @@ describe('RetroDocGateway cards', () => {
     expect(card.text).toBe('pairing');
     expect(card.authorClientId).toBe(MEMBER);
     expect(card.columnId).toBe(WENT_WELL);
-    expect(card.groupId).toBeNull();
+    expect(card.groupId).toBeUndefined();
   });
 
   it('ignores blank text and unknown columns', () => {
@@ -159,7 +158,7 @@ describe('RetroDocGateway cards', () => {
       cardId: first,
       targetColumnId: WENT_WELL,
       targetIndex: 3,
-      targetGroupId: null,
+      targetGroupId: undefined,
     });
 
     expect(readSnapshot(gateway).cards.map(card => card.text)).toEqual([
@@ -198,12 +197,12 @@ describe('RetroDocGateway groups', () => {
       cardId: dragged,
       targetColumnId: TO_IMPROVE,
       targetIndex: 0,
-      targetGroupId: null,
+      targetGroupId: undefined,
     });
 
     const snapshot = readSnapshot(gateway);
     expect(snapshot.groups).toEqual([]);
-    expect(snapshot.cards.every(card => card.groupId === null)).toBe(true);
+    expect(snapshot.cards.every(card => card.groupId === undefined)).toBe(true);
   });
 
   it('ignores grouping a card with itself', () => {
@@ -249,14 +248,14 @@ describe('RetroDocGateway action items', () => {
     const gateway = createGateway();
     const sourceGroupId = 'group-1' as GroupId;
 
-    gateway.addActionItem('   ', null);
+    gateway.addActionItem('   ', undefined);
     gateway.addActionItem('  write the ADR  ', sourceGroupId);
 
     const [item] = readSnapshot(gateway).actionItems;
     assert(!isNil(item), 'expected the action item to be stored');
     expect(item.text).toBe('write the ADR');
     expect(item.sourceGroupId).toBe(sourceGroupId);
-    expect(item.ownerClientId).toBeNull();
+    expect(item.ownerClientId).toBeUndefined();
 
     gateway.deleteActionItem(item.id);
     expect(readSnapshot(gateway).actionItems).toEqual([]);
@@ -267,17 +266,21 @@ describe('RetroDocGateway meta writes', () => {
   it('round-trips phase, timer and facilitator through the snapshot', () => {
     const gateway = createGateway();
 
-    gateway.setPhase(ERetroPhase.Vote);
+    gateway.setPhase('vote');
     gateway.setTimer({
       durationMs: 60_000 as Milliseconds,
       startedAt: 1_000 as Milliseconds,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     });
     gateway.setFacilitator(MEMBER, 'Grace');
 
     const { meta } = readSnapshot(gateway);
-    expect(meta.phase).toBe(ERetroPhase.Vote);
-    expect(meta.timer).toEqual({ durationMs: 60_000, startedAt: 1_000, pausedRemainingMs: null });
+    expect(meta.phase).toBe('vote');
+    expect(meta.timer).toEqual({
+      durationMs: 60_000,
+      startedAt: 1_000,
+      pausedRemainingMs: undefined,
+    });
     expect(meta.facilitatorClientId).toBe(MEMBER);
     expect(meta.facilitatorName).toBe('Grace');
 

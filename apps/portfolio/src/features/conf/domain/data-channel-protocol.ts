@@ -1,3 +1,4 @@
+import { isNil } from 'lodash-es';
 import type { TEmotion } from './emotion';
 
 /**
@@ -19,7 +20,7 @@ type TDataChannelMessageKind = (typeof DATA_CHANNEL_MESSAGE_KINDS)[number];
 const EMOTION_VALUES = ['happy', 'surprised', 'sad', 'angry', 'neutral'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return !isNil(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function isDataChannelKind(value: unknown): value is TDataChannelMessageKind {
@@ -35,21 +36,21 @@ function isEmotionValue(value: unknown): value is TEmotion {
 
 /**
  * Validate and narrow an incoming JSON-decoded data-channel payload.
- * Returns `null` on anything that does not match the wire schema —
- * callers should drop null results silently so a buggy or malicious
+ * Returns `undefined` on anything that does not match the wire schema —
+ * callers should drop undefined results silently so a buggy or malicious
  * peer cannot crash the room.
  */
-export function parseConfDataChannelMessage(value: unknown): TConfDataChannelMessage | null {
+export function parseConfDataChannelMessage(value: unknown): TConfDataChannelMessage | undefined {
   if (!isRecord(value)) {
-    return null;
+    return undefined;
   }
   if (!isDataChannelKind(value.kind)) {
-    return null;
+    return undefined;
   }
   switch (value.kind) {
     case 'emotion': {
       if (!isEmotionValue(value.value)) {
-        return null;
+        return undefined;
       }
       return { kind: 'emotion', value: value.value };
     }

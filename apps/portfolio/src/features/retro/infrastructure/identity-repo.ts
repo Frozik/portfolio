@@ -1,11 +1,12 @@
+import { parseJson } from '@frozik/utils/parseJson';
+import { isNil } from 'lodash-es';
+
 import { getOrCreatePersistentId } from '../../../shared/lib/getOrCreatePersistentId';
 
 /**
- * Runtime identity surfaced to retro UI. `clientId` is the only piece
- * we persist locally — it must stay stable across reloads so awareness
- * events can be attributed to the same "user" on the same device. The
- * display name and avatar are derived from the OIDC session and never
- * touch localStorage.
+ * Runtime identity surfaced to the retro UI. Only `clientId` is persisted, so
+ * awareness events stay attributable to the same person on the same device;
+ * name and avatar come from the OIDC session.
  */
 export interface IRetroIdentity {
   readonly clientId: number;
@@ -14,20 +15,11 @@ export interface IRetroIdentity {
 }
 
 const STORAGE_KEY = 'retro:identity';
-
-/**
- * Safe upper bound for a 32-bit signed integer — matches the numeric
- * range of Yjs awareness client ids, keeping interop predictable.
- */
+/** Matches the 32-bit range of Yjs awareness client ids. */
 const MAX_RANDOM_CLIENT_ID = 2_147_483_647;
 
 export interface IIdentityRepo {
-  /**
-   * Reads the persisted `clientId`, generating + storing a fresh one
-   * on first visit. Old localStorage entries (which used to carry a
-   * `{ clientId, name, color }` envelope) are migrated transparently
-   * by extracting just the `clientId` field.
-   */
+  /** The persisted `clientId`, minted and stored on the first visit. */
   getOrCreateClientId(): number;
   clear(): void;
 }
@@ -43,28 +35,21 @@ export function createIdentityRepo(storage: Storage = localStorage): IIdentityRe
         storage,
       });
     },
-
     clear(): void {
       storage.removeItem(STORAGE_KEY);
     },
   };
 }
 
-function readClientId(raw: string): number | null {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      typeof (parsed as { clientId?: unknown }).clientId === 'number' &&
-      Number.isFinite((parsed as { clientId: number }).clientId)
-    ) {
-      return (parsed as { clientId: number }).clientId;
-    }
-  } catch {
-    // Fall through to null — malformed entry forces a fresh id.
+/** Older entries carried a `{ clientId, name, color }` envelope; only the id is read. */
+function readClientId(raw: string): number | undefined {
+  const parsed = parseJson<unknown>(raw);
+  if (isNil(parsed) || typeof parsed !== 'object' || !('clientId' in parsed)) {
+    return undefined;
   }
-  return null;
+  return typeof parsed.clientId === 'number' && Number.isFinite(parsed.clientId)
+    ? parsed.clientId
+    : undefined;
 }
 
 function generateClientId(): number {

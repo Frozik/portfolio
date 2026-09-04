@@ -40,8 +40,8 @@ describe('computeGlassesTransform', () => {
     // Outer corners span 0.25 wide around the centerline, at half height.
     const landmarks = makeHorizontalFace(0.375, 0.625, 0.5, 0.08);
     const transform = computeGlassesTransform(landmarks, VIDEO_SIZE);
-    expect(transform).not.toBeNull();
-    if (transform === null) {
+    expect(transform).not.toBeUndefined();
+    if (transform === undefined) {
       return;
     }
     // Midpoint of the two inner corners sits exactly at the center.
@@ -64,8 +64,8 @@ describe('computeGlassesTransform', () => {
       [LANDMARK_INDEX_RIGHT_EYE_OUTER]: { x: 0.7, y: 0.55, z: 0 },
     });
     const transform = computeGlassesTransform(landmarks, VIDEO_SIZE);
-    expect(transform).not.toBeNull();
-    if (transform === null) {
+    expect(transform).not.toBeUndefined();
+    if (transform === undefined) {
       return;
     }
     const dxPx = (0.7 - 0.3) * VIDEO_SIZE.width;
@@ -78,27 +78,27 @@ describe('computeGlassesTransform', () => {
   it('scales down for a small face further from the camera', () => {
     const small = computeGlassesTransform(makeHorizontalFace(0.45, 0.55, 0.5, 0.04), VIDEO_SIZE);
     const large = computeGlassesTransform(makeHorizontalFace(0.3, 0.7, 0.5, 0.08), VIDEO_SIZE);
-    expect(small).not.toBeNull();
-    expect(large).not.toBeNull();
-    if (small === null || large === null) {
+    expect(small).not.toBeUndefined();
+    expect(large).not.toBeUndefined();
+    if (small === undefined || large === undefined) {
       return;
     }
     expect(small.scaleX).toBeLessThan(large.scaleX);
     expect(small.scaleX).toBeGreaterThan(0);
   });
 
-  it('returns null when the landmark array is too short', () => {
+  it('returns undefined when the landmark array is too short', () => {
     const shortList: IFaceLandmark[] = [
       { x: 0.1, y: 0.2, z: 0 },
       { x: 0.2, y: 0.3, z: 0 },
     ];
-    expect(computeGlassesTransform(shortList, VIDEO_SIZE)).toBeNull();
+    expect(computeGlassesTransform(shortList, VIDEO_SIZE)).toBeUndefined();
   });
 
-  it('returns null when the video element has zero size', () => {
+  it('returns undefined when the video element has zero size', () => {
     const landmarks = makeHorizontalFace(0.375, 0.625, 0.5, 0.08);
-    expect(computeGlassesTransform(landmarks, { width: 0, height: 480 })).toBeNull();
-    expect(computeGlassesTransform(landmarks, { width: 640, height: 0 })).toBeNull();
+    expect(computeGlassesTransform(landmarks, { width: 0, height: 480 })).toBeUndefined();
+    expect(computeGlassesTransform(landmarks, { width: 640, height: 0 })).toBeUndefined();
   });
 
   it('computes -90deg rotation when head rolls so right eye is above left', () => {
@@ -110,8 +110,8 @@ describe('computeGlassesTransform', () => {
       [LANDMARK_INDEX_RIGHT_EYE_OUTER]: { x: 0.5, y: 0.25, z: 0 },
     });
     const transform = computeGlassesTransform(landmarks, VIDEO_SIZE);
-    expect(transform).not.toBeNull();
-    if (transform === null) {
+    expect(transform).not.toBeUndefined();
+    if (transform === undefined) {
       return;
     }
     // atan2(-0.5 * height, 0) = -PI/2 -> -90 degrees.
@@ -121,8 +121,8 @@ describe('computeGlassesTransform', () => {
   it('produces a uniform scale along both axes', () => {
     const landmarks = makeHorizontalFace(0.3, 0.7, 0.5, 0.1);
     const transform = computeGlassesTransform(landmarks, VIDEO_SIZE);
-    expect(transform).not.toBeNull();
-    if (transform === null) {
+    expect(transform).not.toBeUndefined();
+    if (transform === undefined) {
       return;
     }
     expect(Math.abs(transform.scaleX - transform.scaleY)).toBeLessThan(FLOAT_TOLERANCE);

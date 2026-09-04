@@ -12,7 +12,7 @@ import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
 export interface IUseRoomStoreParams {
   readonly roomId: RoomId;
   readonly identity: IRetroIdentity;
-  readonly createIfMissing: IRoomCreateParams | null;
+  readonly createIfMissing: IRoomCreateParams | undefined;
   readonly client: ICommunicationClient;
 }
 

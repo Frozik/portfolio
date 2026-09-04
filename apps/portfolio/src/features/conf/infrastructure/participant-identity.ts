@@ -12,7 +12,7 @@ export function getOrCreateParticipantId(): ParticipantId {
   return getOrCreatePersistentId<ParticipantId>({
     key: LOCAL_STORAGE_KEY,
     generate: () => crypto.randomUUID() as ParticipantId,
-    parse: raw => (raw.length > 0 ? (raw as ParticipantId) : null),
+    parse: raw => (raw.length > 0 ? (raw as ParticipantId) : undefined),
     serialize: id => id,
   });
 }

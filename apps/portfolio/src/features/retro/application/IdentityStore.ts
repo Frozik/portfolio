@@ -20,7 +20,7 @@ const GUEST_DISPLAY_NAME = 'Guest';
  */
 export class IdentityStore {
   private readonly clientId: number;
-  private disposeProfileReaction: (() => void) | null = null;
+  private readonly disposeProfileReaction: VoidFunction;
 
   constructor(
     private readonly repo: IIdentityRepo,
@@ -64,9 +64,6 @@ export class IdentityStore {
   }
 
   dispose(): void {
-    if (this.disposeProfileReaction !== null) {
-      this.disposeProfileReaction();
-      this.disposeProfileReaction = null;
-    }
+    this.disposeProfileReaction();
   }
 }

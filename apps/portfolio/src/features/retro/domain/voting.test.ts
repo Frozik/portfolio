@@ -1,5 +1,4 @@
 import type { CardId, ClientId, GroupId, VotesByTarget } from './types';
-import { ERetroPhase } from './types';
 import {
   canPlaceVote,
   canRetractVote,
@@ -95,7 +94,7 @@ describe('getPerTargetVoteLimit', () => {
 describe('canPlaceVote', () => {
   it('rejects when not in vote phase', () => {
     const result = canPlaceVote({
-      phase: ERetroPhase.Brainstorm,
+      phase: 'brainstorm',
       votes: makeVotes([]),
       targetId: CARD_A,
       clientId: ALICE,
@@ -112,7 +111,7 @@ describe('canPlaceVote', () => {
     const votes = makeVotes([[CARD_A, [[ALICE, 5]]]]);
 
     const result = canPlaceVote({
-      phase: ERetroPhase.Vote,
+      phase: 'vote',
       votes,
       targetId: CARD_B,
       clientId: ALICE,
@@ -130,7 +129,7 @@ describe('canPlaceVote', () => {
     const votes = makeVotes([[CARD_A, [[ALICE, 3]]]]);
 
     const result = canPlaceVote({
-      phase: ERetroPhase.Vote,
+      phase: 'vote',
       votes,
       targetId: CARD_A,
       clientId: ALICE,
@@ -147,7 +146,7 @@ describe('canPlaceVote', () => {
     const votes = makeVotes([[CARD_A, [[ALICE, 1]]]]);
 
     const result = canPlaceVote({
-      phase: ERetroPhase.Vote,
+      phase: 'vote',
       votes,
       targetId: CARD_A,
       clientId: ALICE,
@@ -162,19 +161,19 @@ describe('canRetractVote', () => {
   it('returns true when a client has at least one vote on the target during Vote phase', () => {
     const votes = makeVotes([[CARD_A, [[ALICE, 1]]]]);
 
-    expect(canRetractVote(ERetroPhase.Vote, votes, CARD_A, ALICE)).toBe(true);
+    expect(canRetractVote('vote', votes, CARD_A, ALICE)).toBe(true);
   });
 
   it('returns false when the client has no votes on the target', () => {
     const votes = makeVotes([]);
 
-    expect(canRetractVote(ERetroPhase.Vote, votes, CARD_A, ALICE)).toBe(false);
+    expect(canRetractVote('vote', votes, CARD_A, ALICE)).toBe(false);
   });
 
   it('returns false outside of Vote phase', () => {
     const votes = makeVotes([[CARD_A, [[ALICE, 1]]]]);
 
-    expect(canRetractVote(ERetroPhase.Discuss, votes, CARD_A, ALICE)).toBe(false);
+    expect(canRetractVote('discuss', votes, CARD_A, ALICE)).toBe(false);
   });
 });
 

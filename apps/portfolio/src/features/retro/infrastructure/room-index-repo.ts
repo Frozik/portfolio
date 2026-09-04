@@ -3,7 +3,7 @@ import { openVersionedDatabase } from '@frozik/utils/database';
 import type { ISO } from '@frozik/utils/date/types';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy } from 'lodash-es';
-import type { ClientId, ERetroPhase, IRoomIndexEntry, RoomId } from '../domain/types';
+import type { ClientId, IRoomIndexEntry, RetroPhase, RoomId } from '../domain/types';
 
 const DATABASE_NAME = 'retro-room-index';
 const CURRENT_DATABASE_VERSION = 1;
@@ -23,7 +23,7 @@ interface IDBRoomEntry {
   readonly lastVisitedAt: ISO;
   readonly participantCount: number;
   readonly ownerClientId?: ClientId | null;
-  readonly phase?: ERetroPhase | null;
+  readonly phase?: RetroPhase | null;
   readonly knownParticipantIds?: readonly ClientId[];
 }
 
@@ -46,10 +46,10 @@ interface IRetroRoomsDB extends DBSchema {
 export interface IRoomIndexRepo {
   listRecent(limit: number): Promise<IRoomIndexEntry[]>;
   /**
-   * Read a single room entry by id, or `null` when no row exists. A keyed
+   * Read a single room entry by id, or `undefined` when no row exists. A keyed
    * lookup so callers that only need one room avoid scanning the whole store.
    */
-  get(roomId: RoomId): Promise<IRoomIndexEntry | null>;
+  get(roomId: RoomId): Promise<IRoomIndexEntry | undefined>;
   upsert(entry: IRoomIndexEntry): Promise<void>;
   remove(roomId: RoomId): Promise<void>;
 }
@@ -74,9 +74,9 @@ export async function createRoomIndexRepo(
       return orderBy(rows, ROOM_CREATED_AT_FIELD, 'desc').slice(0, limit).map(toRoomIndexEntry);
     },
 
-    async get(roomId: RoomId): Promise<IRoomIndexEntry | null> {
+    async get(roomId: RoomId): Promise<IRoomIndexEntry | undefined> {
       const row = await database.get(ROOMS_TABLE_NAME, roomId);
-      return isNil(row) ? null : toRoomIndexEntry(row);
+      return isNil(row) ? undefined : toRoomIndexEntry(row);
     },
 
     async upsert(entry: IRoomIndexEntry): Promise<void> {
@@ -115,8 +115,8 @@ function toRoomIndexEntry(row: IDBRoomEntry): IRoomIndexEntry {
     createdAt: row.createdAt,
     lastVisitedAt: row.lastVisitedAt,
     participantCount: row.participantCount,
-    ownerClientId: row.ownerClientId ?? null,
-    phase: row.phase ?? null,
+    ownerClientId: row.ownerClientId ?? undefined,
+    phase: row.phase ?? undefined,
     knownParticipantIds: row.knownParticipantIds ?? [],
   };
 }

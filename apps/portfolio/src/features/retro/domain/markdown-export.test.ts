@@ -14,7 +14,6 @@ import type {
   IRetroSnapshot,
   VotesByTarget,
 } from './types';
-import { ERetroPhase } from './types';
 
 const ALICE = 1 as ClientId;
 const BOB = 2 as ClientId;
@@ -58,7 +57,7 @@ function makeCard(id: CardId, columnId: ColumnId, text: string, author: ClientId
     columnId,
     text,
     createdAt: ISO_CARD_CREATED_AT,
-    groupId: null,
+    groupId: undefined,
   };
 }
 
@@ -85,14 +84,14 @@ function makeSnapshot(overrides: {
       name: 'Sprint 42 Retro',
       createdAt: ISO_CREATED_AT,
       template: 'scrum-en',
-      phase: ERetroPhase.Close,
+      phase: 'close',
       facilitatorClientId: ALICE,
       facilitatorName: 'Alice',
       votesPerParticipant: 5,
       timer: {
         durationMs: 0 as Milliseconds,
-        startedAt: null,
-        pausedRemainingMs: null,
+        startedAt: undefined,
+        pausedRemainingMs: undefined,
       },
     },
     columns: COLUMNS,
@@ -160,8 +159,8 @@ describe('renderSnapshotToMarkdown', () => {
     const actionItem: IActionItem = {
       id: ACTION_ITEM_ONE,
       text: 'Ship markdown export',
-      sourceGroupId: null,
-      ownerClientId: null,
+      sourceGroupId: undefined,
+      ownerClientId: undefined,
       createdAt: ISO_CREATED_AT,
     };
 

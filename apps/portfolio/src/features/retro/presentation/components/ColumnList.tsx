@@ -9,16 +9,16 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
 
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, ColumnId, IRetroCard } from '../../domain/types';
-import { ERetroPhase } from '../../domain/types';
 
 import { CardDragPreview } from './CardDragPreview';
-import type { IGapDropData } from './Column';
 import { Column } from './Column';
+import type { IGapDropData } from './GapDropZone';
 
 const ColumnListComponent = ({ store }: { store: RoomStore }) => {
   const snapshot = store.currentSnapshot;
@@ -31,7 +31,7 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
-  const [activeCardId, setActiveCardId] = useState<CardId | null>(null);
+  const [activeCardId, setActiveCardId] = useState<CardId | undefined>(undefined);
 
   const handleAddCard = useFunction((columnId: ColumnId, text: string) => {
     store.addCard(columnId, text);
@@ -50,11 +50,11 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
   });
 
   const handleDragCancel = useFunction(() => {
-    setActiveCardId(null);
+    setActiveCardId(undefined);
   });
 
   const handleDragEnd = useFunction((event: DragEndEvent) => {
-    setActiveCardId(null);
+    setActiveCardId(undefined);
     const over = event.over;
     if (over === null) {
       return;
@@ -91,7 +91,7 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
 
   const cardsByColumn = useMemo(() => {
     const grouped = new Map<ColumnId, IRetroCard[]>();
-    if (snapshot === null) {
+    if (isNil(snapshot)) {
       return grouped;
     }
     snapshot.cards.forEach(card => {
@@ -107,18 +107,17 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
 
   const activeCard = useMemo(
     () =>
-      activeCardId === null
-        ? null
-        : (snapshot?.cards.find(candidate => candidate.id === activeCardId) ?? null),
+      isNil(activeCardId)
+        ? undefined
+        : snapshot?.cards.find(candidate => candidate.id === activeCardId),
     [activeCardId, snapshot]
   );
 
-  if (snapshot === null) {
+  if (isNil(snapshot)) {
     return null;
   }
 
-  const dndEnabled =
-    snapshot.meta.phase === ERetroPhase.Group || snapshot.meta.phase === ERetroPhase.Brainstorm;
+  const dndEnabled = snapshot.meta.phase === 'group' || snapshot.meta.phase === 'brainstorm';
 
   return (
     <DndContext
@@ -146,7 +145,7 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
         ))}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeCard === null ? null : <CardDragPreview card={activeCard} />}
+        {isNil(activeCard) ? null : <CardDragPreview card={activeCard} />}
       </DragOverlay>
     </DndContext>
   );

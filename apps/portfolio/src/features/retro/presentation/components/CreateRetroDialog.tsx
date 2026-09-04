@@ -9,7 +9,7 @@ import { Slider } from '../../../../shared/ui/Slider';
 import type { ICreateRoomParams } from '../../application/RetroLobbyStore';
 import { RETRO_TEMPLATES } from '../../domain/templates';
 import type { ITemplateConfig } from '../../domain/types';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 const MIN_VOTES = 1;
 const MAX_VOTES = 10;
@@ -101,7 +101,7 @@ const CreateRetroDialogComponent = ({
   const handleSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedName = name.trim();
-    const finalName = trimmedName.length > 0 ? trimmedName : t.create.namePlaceholderFallback;
+    const finalName = trimmedName.length > 0 ? trimmedName : retroT.create.namePlaceholderFallback;
 
     onCreate({ name: finalName, template, votesPerParticipant });
     onClose();
@@ -117,7 +117,7 @@ const CreateRetroDialogComponent = ({
           'text-landing-fg-dim hover:text-landing-fg'
         )}
       >
-        {t.create.cancel}
+        {retroT.create.cancel}
       </button>
       <button
         type="submit"
@@ -127,7 +127,7 @@ const CreateRetroDialogComponent = ({
           'border-0 bg-landing-accent text-landing-bg hover:bg-landing-accent/90'
         )}
       >
-        {t.create.submit}
+        {retroT.create.submit}
       </button>
     </>
   );
@@ -136,23 +136,23 @@ const CreateRetroDialogComponent = ({
     <DialogShell
       open={open}
       onClose={onClose}
-      kicker={t.create.kicker}
-      title={t.create.dialogTitle}
-      description={t.create.dialogDescription}
-      closeLabel={t.create.cancel}
+      kicker={retroT.create.kicker}
+      title={retroT.create.dialogTitle}
+      description={retroT.create.dialogDescription}
+      closeLabel={retroT.create.cancel}
       footer={footer}
     >
       <form id="retro-create-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-2">
           <label className="block" htmlFor="retro-name-input">
-            <MonoKicker tone="faint">{t.create.nameLabel}</MonoKicker>
+            <MonoKicker tone="faint">{retroT.create.nameLabel}</MonoKicker>
           </label>
           <input
             id="retro-name-input"
             type="text"
             value={name}
             onChange={handleNameChange}
-            placeholder={t.create.namePlaceholderFallback}
+            placeholder={retroT.create.namePlaceholderFallback}
             className={cn(
               'w-full border-0 border-b border-dashed border-landing-border-soft bg-transparent',
               'px-0 py-1 text-[14px] leading-[1.5] text-landing-fg',
@@ -163,7 +163,7 @@ const CreateRetroDialogComponent = ({
         </div>
 
         <div className="flex flex-col gap-2">
-          <MonoKicker tone="faint">{t.create.templateLabel}</MonoKicker>
+          <MonoKicker tone="faint">{retroT.create.templateLabel}</MonoKicker>
           <div className="flex flex-col gap-2">
             {RETRO_TEMPLATES.map(templateConfig => (
               <TemplateCard
@@ -178,7 +178,7 @@ const CreateRetroDialogComponent = ({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <MonoKicker tone="faint">{t.create.votesLabel}</MonoKicker>
+            <MonoKicker tone="faint">{retroT.create.votesLabel}</MonoKicker>
             <span className="font-mono text-[12px] text-landing-fg">{votesPerParticipant}</span>
           </div>
           <Slider

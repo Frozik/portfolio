@@ -16,7 +16,7 @@ const FACE_LANDMARKER_MODEL_URL =
 const NUM_FACES = 1;
 
 /**
- * Per-frame detection payload. `null` when:
+ * Per-frame detection payload. `undefined` when:
  *   - another detection was still in flight (frame dropped), or
  *   - the detector ran but did not find a face, or
  *   - the detector reported an init/detect error (surfaced via `onError`).
@@ -33,7 +33,7 @@ export interface IFaceLandmarkerDetection {
   readonly blendshapes: ReadonlyMap<string, number>;
 }
 
-export type TFaceLandmarkerDetectResult = IFaceLandmarkerDetection | null;
+export type TFaceLandmarkerDetectResult = IFaceLandmarkerDetection | undefined;
 
 export interface IFaceLandmarkerClient {
   init(): Promise<void>;
@@ -52,7 +52,7 @@ export interface IFaceLandmarkerClient {
 export interface IFaceLandmarkerClientParams {
   /**
    * Optional observer for init / detect errors. The client already
-   * returns `null` from `detect()` on errors — this hook exists so the
+   * returns `undefined` from `detect()` on errors — this hook exists so the
    * application layer can surface a toast / disable AR.
    */
   readonly onError?: (message: string) => void;
@@ -84,6 +84,8 @@ async function createLandmarker(delegate: 'GPU' | 'CPU'): Promise<FaceLandmarker
  * A UA sniff is the right granularity here: GPU init "succeeds" on
  * Android — the failure shows up only at the first detect call — so a
  * try/catch fallback is too late (the landmarker is already wedged).
+ * Recorded under "Known Architectural Debt" in CLAUDE.md; drop the sniff once
+ * MediaPipe's GPU path works on Android.
  */
 function shouldForceCpuDelegate(): boolean {
   if (typeof navigator === 'undefined') {
@@ -92,14 +94,14 @@ function shouldForceCpuDelegate(): boolean {
   return /Android/i.test(navigator.userAgent);
 }
 
-function pickDetection(result: FaceLandmarkerResult): IFaceLandmarkerDetection | null {
+function pickDetection(result: FaceLandmarkerResult): IFaceLandmarkerDetection | undefined {
   const faces = result.faceLandmarks;
   if (faces.length === 0) {
-    return null;
+    return undefined;
   }
   const firstFace = faces[0];
   if (isNil(firstFace) || firstFace.length === 0) {
-    return null;
+    return undefined;
   }
   const blendshapeMap = new Map<string, number>();
   const firstBlendshapes = result.faceBlendshapes[0]?.categories ?? [];
@@ -123,30 +125,24 @@ function pickDetection(result: FaceLandmarkerResult): IFaceLandmarkerDetection |
  *
  * The wrapper enforces a single in-flight detection per client: a
  * `detect()` call made while another is still in flight resolves with
- * `null` immediately. The caller owns the `ImageBitmap` lifecycle on
+ * `undefined` immediately. The caller owns the `ImageBitmap` lifecycle on
  * every code path — see `IFaceLandmarkerClient.detect`.
  */
 export function createFaceLandmarkerClient(
   params: IFaceLandmarkerClientParams = {}
 ): IFaceLandmarkerClient {
-  let landmarker: FaceLandmarker | null = null;
+  let landmarker: FaceLandmarker | undefined;
   let isDisposed = false;
   let isProcessing = false;
 
   async function init(): Promise<void> {
-    if (landmarker !== null || isDisposed) {
+    if (!isNil(landmarker) || isDisposed) {
       return;
     }
-    if (!shouldForceCpuDelegate()) {
-      try {
-        landmarker = await createLandmarker('GPU');
-        return;
-      } catch {
-        // GPU delegate is unavailable on some devices; fall back to WASM.
-      }
-    }
     try {
-      landmarker = await createLandmarker('CPU');
+      landmarker = shouldForceCpuDelegate()
+        ? await createLandmarker('CPU')
+        : await createLandmarker('GPU').catch(() => createLandmarker('CPU'));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'face-landmarker init failed';
       params.onError?.(message);
@@ -158,11 +154,11 @@ export function createFaceLandmarkerClient(
     bitmap: ImageBitmap,
     timestamp: number
   ): Promise<TFaceLandmarkerDetectResult> {
-    if (isDisposed || isProcessing || landmarker === null) {
-      return null;
+    if (isDisposed || isProcessing || isNil(landmarker)) {
+      return undefined;
     }
     if (bitmap.width <= 0 || bitmap.height <= 0) {
-      return null;
+      return undefined;
     }
     isProcessing = true;
     try {
@@ -171,7 +167,7 @@ export function createFaceLandmarkerClient(
     } catch (error) {
       const message = error instanceof Error ? error.message : 'detect failed';
       params.onError?.(message);
-      return null;
+      return undefined;
     } finally {
       isProcessing = false;
     }
@@ -182,14 +178,8 @@ export function createFaceLandmarkerClient(
       return;
     }
     isDisposed = true;
-    if (landmarker !== null) {
-      try {
-        landmarker.close();
-      } catch {
-        // Already-closed landmarkers throw; safe to ignore during teardown.
-      }
-      landmarker = null;
-    }
+    landmarker?.close();
+    landmarker = undefined;
   }
 
   return {

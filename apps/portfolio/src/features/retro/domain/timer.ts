@@ -4,12 +4,7 @@ import { isNil } from 'lodash-es';
 import { DEFAULT_BRAINSTORM_DURATION_MS, TIMER_WARNING_THRESHOLD_MS } from './constants';
 import type { ITimerState } from './types';
 
-export enum ETimerStatus {
-  Idle = 'idle',
-  Running = 'running',
-  Paused = 'paused',
-  Expired = 'expired',
-}
+export type TimerStatus = 'idle' | 'running' | 'paused' | 'expired';
 
 /**
  * Compute remaining milliseconds in the timer given the current wall-clock
@@ -26,18 +21,18 @@ export function computeRemainingMs(timer: ITimerState, nowMs: Milliseconds): Mil
   return Math.max(0, remaining) as Milliseconds;
 }
 
-export function getTimerStatus(timer: ITimerState, nowMs: Milliseconds): ETimerStatus {
+export function getTimerStatus(timer: ITimerState, nowMs: Milliseconds): TimerStatus {
   if (isNil(timer.startedAt)) {
-    return isNil(timer.pausedRemainingMs) ? ETimerStatus.Idle : ETimerStatus.Paused;
+    return isNil(timer.pausedRemainingMs) ? 'idle' : 'paused';
   }
 
-  return computeRemainingMs(timer, nowMs) === 0 ? ETimerStatus.Expired : ETimerStatus.Running;
+  return computeRemainingMs(timer, nowMs) === 0 ? 'expired' : 'running';
 }
 
 export function isTimerInWarningZone(timer: ITimerState, nowMs: Milliseconds): boolean {
   const status = getTimerStatus(timer, nowMs);
 
-  if (status !== ETimerStatus.Running) {
+  if (status !== 'running') {
     return false;
   }
 
@@ -51,8 +46,8 @@ export function createIdleTimer(
 ): ITimerState {
   return {
     durationMs,
-    startedAt: null,
-    pausedRemainingMs: null,
+    startedAt: undefined,
+    pausedRemainingMs: undefined,
   };
 }
 
@@ -69,7 +64,7 @@ export function startTimer(timer: ITimerState, nowMs: Milliseconds): ITimerState
   return {
     durationMs: timer.durationMs,
     startedAt: (nowMs - elapsedOffset) as Milliseconds,
-    pausedRemainingMs: null,
+    pausedRemainingMs: undefined,
   };
 }
 
@@ -82,7 +77,7 @@ export function pauseTimer(timer: ITimerState, nowMs: Milliseconds): ITimerState
 
   return {
     durationMs: timer.durationMs,
-    startedAt: null,
+    startedAt: undefined,
     pausedRemainingMs: remaining,
   };
 }
@@ -96,7 +91,7 @@ export function pauseTimer(timer: ITimerState, nowMs: Milliseconds): ITimerState
 export function extendTimer(timer: ITimerState, extraMs: Milliseconds): ITimerState {
   const extendedDuration = (timer.durationMs + extraMs) as Milliseconds;
   const extendedPaused = isNil(timer.pausedRemainingMs)
-    ? null
+    ? undefined
     : ((timer.pausedRemainingMs + extraMs) as Milliseconds);
 
   return {

@@ -2,9 +2,8 @@ import type { ISO } from '@frozik/utils/date/types';
 import { Temporal } from 'temporal-polyfill';
 import * as Y from 'yjs';
 
-import { DEFAULT_BRAINSTORM_DURATION_MS } from './constants';
-import type { ClientId, ColumnId, IColumnConfig, ITemplateConfig } from './types';
-import { ERetroPhase } from './types';
+import { DEFAULT_BRAINSTORM_DURATION_MS } from '../domain/constants';
+import type { ClientId, ColumnId, IColumnConfig, ITemplateConfig } from '../domain/types';
 
 /**
  * Top-level Y.Doc key layout for a single retro room.
@@ -137,7 +136,7 @@ export function initRetroDoc(handles: IRetroDocHandles, init: IInitRetroDocInput
     handles.meta.set(YJS_META_FIELD_NAME, init.name);
     handles.meta.set(YJS_META_FIELD_CREATED_AT, createdAtIso);
     handles.meta.set(YJS_META_FIELD_TEMPLATE, init.template.id);
-    handles.meta.set(YJS_META_FIELD_PHASE, ERetroPhase.Brainstorm);
+    handles.meta.set(YJS_META_FIELD_PHASE, 'brainstorm');
     handles.meta.set(YJS_META_FIELD_FACILITATOR_CLIENT_ID, init.facilitatorClientId);
     handles.meta.set(YJS_META_FIELD_FACILITATOR_NAME, init.facilitatorName);
     handles.meta.set(YJS_META_FIELD_VOTES_PER_PARTICIPANT, init.votesPerParticipant);

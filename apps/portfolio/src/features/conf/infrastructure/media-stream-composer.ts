@@ -4,48 +4,15 @@ import { isNil } from 'lodash-es';
 import { GLASSES_BASE_WIDTH_PX } from '../domain/constants';
 import type { TEmotion } from '../domain/emotion';
 import { classifyEmotion } from '../domain/emotion';
-import type { TGlassesStyle } from '../domain/glasses-style';
+import type { GlassesAssetUrls, TGlassesStyle } from '../domain/glasses-style';
 import { DEFAULT_GLASSES_STYLE } from '../domain/glasses-style';
 import { computeGlassesTransform } from '../domain/glasses-transform';
-import roundGlassesAssetUrl from './assets/glasses.svg?url';
-import hippieGlassesAssetUrl from './assets/hippie-glasses.svg?url';
-import teacherGlassesAssetUrl from './assets/teacher-glasses.svg?url';
-import type { IFaceLandmarkerClient, TFaceLandmarkerDetectResult } from './face-landmarker-client';
+import type {
+  IMediaStreamComposer,
+  IMediaStreamComposerParams,
+} from '../domain/ports/media-composer';
+import type { IFaceLandmarkerClient } from './face-landmarker-client';
 import { createFaceLandmarkerClient } from './face-landmarker-client';
-
-/**
- * Maps the non-`'none'` glasses styles to their bundled SVG asset
- * URLs. Each asset shares the same viewBox + lens-center convention,
- * so `computeGlassesTransform` is style-agnostic and the runtime
- * paint loop just dispatches by style.
- */
-const GLASSES_ASSET_BY_STYLE: Record<Exclude<TGlassesStyle, 'none'>, string> = {
-  round: roundGlassesAssetUrl,
-  hippie: hippieGlassesAssetUrl,
-  teacher: teacherGlassesAssetUrl,
-};
-
-export interface IMediaStreamComposer {
-  readonly stream: MediaStream;
-  readonly isAudioMuted: boolean;
-  readonly isVideoMuted: boolean;
-  readonly glassesStyle: TGlassesStyle;
-  /** Convenience flag derived from `glassesStyle`. `false` iff style is `'none'`. */
-  readonly isArEnabled: boolean;
-  readonly currentEmotion: TEmotion;
-  onMuteStateChange(listener: () => void): () => void;
-  onGlassesStyleChange(listener: () => void): () => void;
-  onEmotionChange(listener: (emotion: TEmotion) => void): () => void;
-  setAudioMuted(muted: boolean): void;
-  setVideoMuted(muted: boolean): void;
-  setGlassesStyle(style: TGlassesStyle): void;
-  dispose(): void;
-}
-
-export interface IMediaStreamComposerParams {
-  readonly constraints?: MediaStreamConstraints;
-  readonly targetFps?: number;
-}
 
 const DEFAULT_CONSTRAINTS: MediaStreamConstraints = {
   audio: true,
@@ -101,9 +68,22 @@ function attachOffscreen(element: HTMLElement): void {
 }
 
 function detachOffscreen(element: HTMLElement): void {
-  if (element.parentNode !== null) {
-    element.parentNode.removeChild(element);
-  }
+  element.remove();
+}
+
+function loadGlassesImages(
+  assetUrls: GlassesAssetUrls
+): Readonly<Record<Exclude<TGlassesStyle, 'none'>, HTMLImageElement>> {
+  const load = (url: string): HTMLImageElement => {
+    const image = new Image();
+    image.src = url;
+    return image;
+  };
+  return {
+    round: load(assetUrls.round),
+    hippie: load(assetUrls.hippie),
+    teacher: load(assetUrls.teacher),
+  };
 }
 
 interface IRvfcCapableVideoElement extends HTMLVideoElement {
@@ -124,12 +104,12 @@ async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
     return;
   }
   await new Promise<void>(resolve => {
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const settle = (): void => {
       video.removeEventListener('loadeddata', settle);
-      if (timeoutHandle !== null) {
+      if (!isNil(timeoutHandle)) {
         clearTimeout(timeoutHandle);
-        timeoutHandle = null;
+        timeoutHandle = undefined;
       }
       resolve();
     };
@@ -177,15 +157,15 @@ async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
  * frames on the wire without requiring SDP renegotiation.
  */
 export async function createMediaStreamComposer(
-  params: IMediaStreamComposerParams = {}
+  params: IMediaStreamComposerParams
 ): Promise<IMediaStreamComposer> {
   const constraints = params.constraints ?? DEFAULT_CONSTRAINTS;
   const targetFps = params.targetFps ?? DEFAULT_CAPTURE_FPS;
 
   const rawStream = await navigator.mediaDevices.getUserMedia(constraints);
-  const rawAudioTrack = rawStream.getAudioTracks()[0] ?? null;
-  const rawVideoTrack = rawStream.getVideoTracks()[0] ?? null;
-  assert(rawVideoTrack !== null, 'composer requires a video track from getUserMedia');
+  const rawAudioTrack: MediaStreamTrack | undefined = rawStream.getAudioTracks()[0];
+  const rawVideoTrack: MediaStreamTrack | undefined = rawStream.getVideoTracks()[0];
+  assert(!isNil(rawVideoTrack), 'composer requires a video track from getUserMedia');
 
   const sourceVideo = document.createElement('video');
   sourceVideo.srcObject = rawStream;
@@ -206,32 +186,23 @@ export async function createMediaStreamComposer(
   canvas.height = canvasHeight;
   attachOffscreen(canvas);
   const rawContext = canvas.getContext('2d', { alpha: false });
-  assert(rawContext !== null, '2D canvas context unavailable');
+  assert(!isNil(rawContext), '2D canvas context unavailable');
   const context: CanvasRenderingContext2D = rawContext;
 
   // Load every non-`none` style's SVG up-front so flipping the picker
   // is a no-op in the paint loop. `decode()` failures are non-fatal —
   // `drawImage` still works against a loaded (but undecoded) image as
   // long as the root SVG declares explicit width/height.
-  const glassesImages: Record<Exclude<TGlassesStyle, 'none'>, HTMLImageElement> = {
-    round: new Image(),
-    hippie: new Image(),
-    teacher: new Image(),
-  };
-  for (const styleKey of Object.keys(glassesImages) as Exclude<TGlassesStyle, 'none'>[]) {
-    glassesImages[styleKey].src = GLASSES_ASSET_BY_STYLE[styleKey];
-  }
+  const glassesImages = loadGlassesImages(params.glassesAssetUrls);
   await Promise.all(
-    (Object.values(glassesImages) as HTMLImageElement[]).map(image =>
-      image.decode().catch(() => undefined)
-    )
+    Object.values(glassesImages).map(image => image.decode().catch(() => undefined))
   );
 
   const compositedStream = canvas.captureStream(targetFps);
   if (!isNil(rawAudioTrack)) {
     compositedStream.addTrack(rawAudioTrack);
   }
-  const outputVideoTrack = compositedStream.getVideoTracks()[0] ?? null;
+  const outputVideoTrack: MediaStreamTrack | undefined = compositedStream.getVideoTracks()[0];
 
   const muteListeners = new Set<() => void>();
   const glassesStyleListeners = new Set<() => void>();
@@ -242,20 +213,20 @@ export async function createMediaStreamComposer(
   let isDisposed = false;
 
   let isProcessing = false;
-  let pendingBitmap: ImageBitmap | null = null;
+  let pendingBitmap: ImageBitmap | undefined;
   let pendingBitmapTimestamp = 0;
-  let pendingFrameHandle: number | null = null;
+  let pendingFrameHandle: number | undefined;
 
   let committedEmotion: TEmotion = 'neutral';
-  let candidateEmotion: TEmotion | null = null;
+  let candidateEmotion: TEmotion | undefined;
   let candidateEmotionCount = 0;
 
   function releasePendingBitmap(): void {
-    if (pendingBitmap === null) {
+    if (isNil(pendingBitmap)) {
       return;
     }
     pendingBitmap.close();
-    pendingBitmap = null;
+    pendingBitmap = undefined;
     pendingBitmapTimestamp = 0;
   }
 
@@ -265,7 +236,7 @@ export async function createMediaStreamComposer(
 
   function observeEmotion(nextEmotion: TEmotion): void {
     if (nextEmotion === committedEmotion) {
-      candidateEmotion = null;
+      candidateEmotion = undefined;
       candidateEmotionCount = 0;
       return;
     }
@@ -277,19 +248,14 @@ export async function createMediaStreamComposer(
     }
     if (candidateEmotionCount >= EMOTION_COMMIT_THRESHOLD) {
       committedEmotion = nextEmotion;
-      candidateEmotion = null;
+      candidateEmotion = undefined;
       candidateEmotionCount = 0;
       notifyEmotion(committedEmotion);
     }
   }
 
-  const landmarker: IFaceLandmarkerClient = createFaceLandmarkerClient({
-    onError: () => {
-      // Errors surface through detect() returning null; nothing to do
-      // here at the composer layer beyond letting the pipeline skip
-      // glasses for the affected frame.
-    },
-  });
+  /** Detector failures leave the frame without glasses; `detect()` reports them as no detection. */
+  const landmarker: IFaceLandmarkerClient = createFaceLandmarkerClient();
 
   function notifyMute(): void {
     muteListeners.forEach(listener => listener());
@@ -298,11 +264,10 @@ export async function createMediaStreamComposer(
     glassesStyleListeners.forEach(listener => listener());
   }
 
-  function applyOutputTrackEnabled(track: MediaStreamTrack | null, enabled: boolean): void {
-    if (track === null) {
-      return;
+  function applyOutputTrackEnabled(track: MediaStreamTrack | undefined, enabled: boolean): void {
+    if (!isNil(track)) {
+      track.enabled = enabled;
     }
-    track.enabled = enabled;
   }
 
   function paintPassthrough(): void {
@@ -315,17 +280,12 @@ export async function createMediaStreamComposer(
   async function processBitmap(bitmap: ImageBitmap, timestamp: number): Promise<void> {
     isProcessing = true;
     try {
-      let detection: TFaceLandmarkerDetectResult = null;
-      try {
-        detection = await landmarker.detect(bitmap, timestamp);
-      } catch {
-        // landmarker reports errors via onError; fall through with null.
-      }
+      const detection = await landmarker.detect(bitmap, timestamp);
       if (isDisposed || glassesStyle === 'none') {
         return;
       }
       context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      if (detection === null) {
+      if (isNil(detection)) {
         observeEmotion('neutral');
         return;
       }
@@ -334,7 +294,7 @@ export async function createMediaStreamComposer(
         width: canvas.width,
         height: canvas.height,
       });
-      if (transform === null) {
+      if (isNil(transform)) {
         return;
       }
       // Each style's SVG declares its own intrinsic aspect: round and
@@ -367,10 +327,10 @@ export async function createMediaStreamComposer(
       // pipeline immediately — that is what keeps the output as fresh
       // as the detector allows. If AR was switched off mid-flight the
       // fast path is already in charge, so drop the pending snapshot.
-      if (pendingBitmap !== null && !isDisposed && glassesStyle !== 'none') {
+      if (!isNil(pendingBitmap) && !isDisposed && glassesStyle !== 'none') {
         const nextBitmap = pendingBitmap;
         const nextTimestamp = pendingBitmapTimestamp;
-        pendingBitmap = null;
+        pendingBitmap = undefined;
         pendingBitmapTimestamp = 0;
         void processBitmap(nextBitmap, nextTimestamp);
       } else {
@@ -380,10 +340,9 @@ export async function createMediaStreamComposer(
   }
 
   async function captureAndQueue(timestamp: number): Promise<void> {
-    let bitmap: ImageBitmap;
-    try {
-      bitmap = await createImageBitmap(sourceVideo);
-    } catch {
+    // `createImageBitmap` rejects while the source has no decoded frame yet; the next tick retries.
+    const bitmap = await createImageBitmap(sourceVideo).catch(() => undefined);
+    if (isNil(bitmap)) {
       return;
     }
     if (isDisposed || glassesStyle === 'none') {
@@ -402,7 +361,7 @@ export async function createMediaStreamComposer(
   }
 
   function onVideoFrame(timestamp: number): void {
-    pendingFrameHandle = null;
+    pendingFrameHandle = undefined;
     if (isDisposed) {
       return;
     }
@@ -442,25 +401,24 @@ export async function createMediaStreamComposer(
   }
 
   function cancelScheduledFrame(): void {
-    if (pendingFrameHandle === null) {
+    if (isNil(pendingFrameHandle)) {
       return;
     }
     if (supportsRvfc(sourceVideo)) {
-      try {
-        sourceVideo.cancelVideoFrameCallback(pendingFrameHandle);
-      } catch {
-        // Some browsers throw when the handle is already fired; ignore.
-      }
+      sourceVideo.cancelVideoFrameCallback(pendingFrameHandle);
     } else {
       window.cancelAnimationFrame(pendingFrameHandle);
     }
-    pendingFrameHandle = null;
+    pendingFrameHandle = undefined;
   }
 
-  try {
-    await landmarker.init();
-  } catch {
-    // AR overlay will not run; the call continues with a plain video track.
+  // Without a detector the call still runs, on a plain passthrough video track.
+  const isArAvailable = await landmarker.init().then(
+    () => true,
+    () => false
+  );
+  if (!isArAvailable) {
+    glassesStyle = 'none';
   }
   scheduleNextFrame();
 
@@ -483,7 +441,7 @@ export async function createMediaStreamComposer(
   }
 
   function setGlassesStyle(nextStyle: TGlassesStyle): void {
-    if (isDisposed || glassesStyle === nextStyle) {
+    if (isDisposed || !isArAvailable || glassesStyle === nextStyle) {
       return;
     }
     const wasEnabled = glassesStyle !== 'none';
@@ -504,28 +462,13 @@ export async function createMediaStreamComposer(
     cancelScheduledFrame();
     releasePendingBitmap();
     landmarker.dispose();
-    try {
-      sourceVideo.pause();
-    } catch {
-      // Pausing a never-played element throws; safe to ignore.
-    }
+    sourceVideo.pause();
     sourceVideo.srcObject = null;
     detachOffscreen(sourceVideo);
     detachOffscreen(canvas);
-    rawStream.getTracks().forEach(track => {
-      try {
-        track.stop();
-      } catch {
-        // Tracks already ended are safe to ignore.
-      }
-    });
-    compositedStream.getTracks().forEach(track => {
-      try {
-        track.stop();
-      } catch {
-        // Same as above.
-      }
-    });
+    for (const track of [...rawStream.getTracks(), ...compositedStream.getTracks()]) {
+      track.stop();
+    }
     muteListeners.clear();
     glassesStyleListeners.clear();
     emotionListeners.clear();
@@ -541,9 +484,6 @@ export async function createMediaStreamComposer(
     },
     get glassesStyle() {
       return glassesStyle;
-    },
-    get isArEnabled() {
-      return glassesStyle !== 'none';
     },
     get currentEmotion() {
       return committedEmotion;

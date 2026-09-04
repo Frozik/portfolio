@@ -1,7 +1,6 @@
 import { isNil } from 'lodash-es';
 
-import type { CardId, ClientId, GroupId, VotesByTarget } from './types';
-import { ERetroPhase } from './types';
+import type { CardId, ClientId, GroupId, RetroPhase, VotesByTarget } from './types';
 
 /**
  * Total votes this client has cast across all targets.
@@ -73,7 +72,7 @@ export type VoteAttemptResult =
  * the current phase and allowance configuration.
  */
 export function canPlaceVote(params: {
-  phase: ERetroPhase;
+  phase: RetroPhase;
   votes: VotesByTarget;
   targetId: CardId | GroupId;
   clientId: ClientId;
@@ -81,7 +80,7 @@ export function canPlaceVote(params: {
 }): VoteAttemptResult {
   const { phase, votes, targetId, clientId, votesPerParticipant } = params;
 
-  if (phase !== ERetroPhase.Vote) {
+  if (phase !== 'vote') {
     return { allowed: false, reason: EVoteRejectionReason.NotInVotePhase };
   }
 
@@ -104,12 +103,12 @@ export function canPlaceVote(params: {
  * in Vote phase only; no-op otherwise.
  */
 export function canRetractVote(
-  phase: ERetroPhase,
+  phase: RetroPhase,
   votes: VotesByTarget,
   targetId: CardId | GroupId,
   clientId: ClientId
 ): boolean {
-  if (phase !== ERetroPhase.Vote) {
+  if (phase !== 'vote') {
     return false;
   }
 

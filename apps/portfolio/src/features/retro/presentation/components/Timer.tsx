@@ -5,7 +5,8 @@ import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 import { Minus, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
-import type { RoomStore, TimerSeverity } from '../../application/RoomStore';
+import type { RoomStore } from '../../application/RoomStore';
+import type { TimerSeverity } from '../../application/TimerModel';
 import {
   DEFAULT_BRAINSTORM_DURATION_MS,
   MAX_TIMER_DURATION_MS,
@@ -13,7 +14,7 @@ import {
   TIMER_ADJUST_STEP_COARSE_MS,
   TIMER_ADJUST_STEP_FINE_MS,
 } from '../../domain/constants';
-import { retroT as t } from '../translations';
+import { retroT } from '../translations';
 
 const MS_PER_SECOND = 1_000;
 const SECONDS_PER_MINUTE = 60;
@@ -58,20 +59,21 @@ const ICON_BUTTON_CLASSES =
  * (expired) based on `store.timerSeverity`.
  */
 export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
-  const { isFacilitator, timerSeverity, remainingTimerMs } = store;
+  const { isFacilitator } = store;
+  const { severity: timerSeverity, remainingMs: remainingTimerMs } = store.timer;
   const timer = store.currentSnapshot?.meta.timer;
 
-  const handleStart = useFunction(() => store.startTimer());
-  const handlePause = useFunction(() => store.pauseTimer());
-  const handleReset = useFunction(() => store.resetTimer(DEFAULT_BRAINSTORM_DURATION_MS));
+  const handleStart = useFunction(() => store.timer.start());
+  const handlePause = useFunction(() => store.timer.pause());
+  const handleReset = useFunction(() => store.timer.reset(DEFAULT_BRAINSTORM_DURATION_MS));
   const handleDecrease = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
-    store.addTimerMilliseconds(-pickStep(event) as Milliseconds);
+    store.timer.addMilliseconds(-pickStep(event) as Milliseconds);
   });
   const handleIncrease = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
-    store.addTimerMilliseconds(pickStep(event));
+    store.timer.addMilliseconds(pickStep(event));
   });
 
-  const isRunning = timer?.startedAt !== null && timer?.startedAt !== undefined;
+  const isRunning = !isNil(timer?.startedAt);
   const canDecrease = remainingTimerMs > MIN_TIMER_DURATION_MS;
   const canIncrease = remainingTimerMs < MAX_TIMER_DURATION_MS;
 
@@ -125,8 +127,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
         type="button"
         onClick={handleDecrease}
         disabled={!canDecrease}
-        aria-label={t.timer.decrease}
-        title={t.timer.adjustHint}
+        aria-label={retroT.timer.decrease}
+        title={retroT.timer.adjustHint}
         className={ICON_BUTTON_CLASSES}
       >
         <Minus size={12} />
@@ -136,8 +138,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
         type="button"
         onClick={handleIncrease}
         disabled={!canIncrease}
-        aria-label={t.timer.increase}
-        title={t.timer.adjustHint}
+        aria-label={retroT.timer.increase}
+        title={retroT.timer.adjustHint}
         className={ICON_BUTTON_CLASSES}
       >
         <Plus size={12} />
@@ -147,8 +149,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
         <button
           type="button"
           onClick={handlePause}
-          aria-label={t.timer.pause}
-          title={t.timer.pause}
+          aria-label={retroT.timer.pause}
+          title={retroT.timer.pause}
           className={cn(ICON_BUTTON_CLASSES, 'text-landing-yellow hover:text-landing-yellow')}
         >
           <Pause size={12} />
@@ -157,8 +159,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
         <button
           type="button"
           onClick={handleStart}
-          aria-label={!isNil(timer?.pausedRemainingMs) ? t.timer.resume : t.timer.start}
-          title={!isNil(timer?.pausedRemainingMs) ? t.timer.resume : t.timer.start}
+          aria-label={!isNil(timer?.pausedRemainingMs) ? retroT.timer.resume : retroT.timer.start}
+          title={!isNil(timer?.pausedRemainingMs) ? retroT.timer.resume : retroT.timer.start}
           className={cn(ICON_BUTTON_CLASSES, 'text-landing-green hover:text-landing-green')}
         >
           <Play size={12} />
@@ -167,8 +169,8 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
       <button
         type="button"
         onClick={handleReset}
-        aria-label={t.timer.reset}
-        title={t.timer.reset}
+        aria-label={retroT.timer.reset}
+        title={retroT.timer.reset}
         className={ICON_BUTTON_CLASSES}
       >
         <RotateCcw size={12} />

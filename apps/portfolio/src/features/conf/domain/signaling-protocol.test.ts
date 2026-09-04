@@ -15,8 +15,8 @@ describe('parseConfSignalMessage', () => {
   });
 
   it('rejects hello missing the session field', () => {
-    expect(parseConfSignalMessage({ type: 'hello', from: ALICE })).toBeNull();
-    expect(parseConfSignalMessage({ type: 'hello', from: ALICE, session: '' })).toBeNull();
+    expect(parseConfSignalMessage({ type: 'hello', from: ALICE })).toBeUndefined();
+    expect(parseConfSignalMessage({ type: 'hello', from: ALICE, session: '' })).toBeUndefined();
   });
 
   it('parses offer and answer messages with sdp', () => {
@@ -28,8 +28,8 @@ describe('parseConfSignalMessage', () => {
   });
 
   it('rejects offer or answer missing the sdp field', () => {
-    expect(parseConfSignalMessage({ type: 'offer', from: ALICE })).toBeNull();
-    expect(parseConfSignalMessage({ type: 'answer', from: ALICE, sdp: '' })).toBeNull();
+    expect(parseConfSignalMessage({ type: 'offer', from: ALICE })).toBeUndefined();
+    expect(parseConfSignalMessage({ type: 'answer', from: ALICE, sdp: '' })).toBeUndefined();
   });
 
   it('parses ice messages with a full candidate init', () => {
@@ -57,14 +57,14 @@ describe('parseConfSignalMessage', () => {
   it('rejects ice messages whose candidate has wrong field types', () => {
     expect(
       parseConfSignalMessage({ type: 'ice', from: ALICE, candidate: { candidate: 42 } })
-    ).toBeNull();
+    ).toBeUndefined();
     expect(
       parseConfSignalMessage({
         type: 'ice',
         from: ALICE,
         candidate: { sdpMLineIndex: 'zero' },
       })
-    ).toBeNull();
+    ).toBeUndefined();
   });
 
   it('parses bye messages with and without a reason', () => {
@@ -102,23 +102,23 @@ describe('parseConfSignalMessage', () => {
   });
 
   it('rejects bye with an unknown reason', () => {
-    expect(parseConfSignalMessage({ type: 'bye', from: ALICE, reason: 'other' })).toBeNull();
+    expect(parseConfSignalMessage({ type: 'bye', from: ALICE, reason: 'other' })).toBeUndefined();
   });
 
   it('rejects messages with missing or empty from', () => {
-    expect(parseConfSignalMessage({ type: 'hello', from: '' })).toBeNull();
-    expect(parseConfSignalMessage({ type: 'hello' })).toBeNull();
+    expect(parseConfSignalMessage({ type: 'hello', from: '' })).toBeUndefined();
+    expect(parseConfSignalMessage({ type: 'hello' })).toBeUndefined();
   });
 
   it('rejects messages with unknown type', () => {
-    expect(parseConfSignalMessage({ type: 'ping', from: ALICE })).toBeNull();
+    expect(parseConfSignalMessage({ type: 'ping', from: ALICE })).toBeUndefined();
   });
 
   it('rejects non-record inputs', () => {
-    expect(parseConfSignalMessage(null)).toBeNull();
-    expect(parseConfSignalMessage(undefined)).toBeNull();
-    expect(parseConfSignalMessage('hello')).toBeNull();
-    expect(parseConfSignalMessage(42)).toBeNull();
-    expect(parseConfSignalMessage(['hello'])).toBeNull();
+    expect(parseConfSignalMessage(undefined)).toBeUndefined();
+    expect(parseConfSignalMessage(undefined)).toBeUndefined();
+    expect(parseConfSignalMessage('hello')).toBeUndefined();
+    expect(parseConfSignalMessage(42)).toBeUndefined();
+    expect(parseConfSignalMessage(['hello'])).toBeUndefined();
   });
 });

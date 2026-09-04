@@ -6,12 +6,13 @@ import {
   createUnsyncedValueDescriptor,
   EMPTY_VD,
 } from '@frozik/utils/value-descriptors/utils';
+import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 
-import type { ClientId, IRoomIndexEntry, RoomId } from '../domain/types';
-import { ERetroPhase } from '../domain/types';
+import type { ClientId, IRoomIndexEntry, RetroPhase, RoomId } from '../domain/types';
 import type { IRoomIndexRepo } from '../infrastructure/room-index-repo';
+import { primeRetroAudio } from '../infrastructure/sound';
 import { deleteYjsRoomPersistence } from '../infrastructure/yjs-providers';
 import type { UserDirectoryStore } from './UserDirectoryStore';
 
@@ -33,10 +34,10 @@ export interface IJoinedRoomSnapshot {
   readonly name: string;
   readonly template: string;
   readonly createdAt: ISO;
-  readonly facilitatorClientId: ClientId | null;
+  readonly facilitatorClientId: ClientId | undefined;
   readonly facilitatorName: string;
   readonly participantCount: number;
-  readonly phase: ERetroPhase;
+  readonly phase: RetroPhase;
   /** clientIds currently visible via awareness, passed for merge into persisted list. */
   readonly presentParticipantIds: readonly ClientId[];
 }
@@ -114,7 +115,7 @@ export class RetroLobbyStore {
       lastVisitedAt: nowIso,
       participantCount: INITIAL_PARTICIPANT_COUNT,
       ownerClientId: context.ownerClientId,
-      phase: ERetroPhase.Brainstorm,
+      phase: 'brainstorm',
       knownParticipantIds: [context.ownerClientId],
     };
 
@@ -138,7 +139,7 @@ export class RetroLobbyStore {
 
     const ownerClientId = existing?.ownerClientId ?? snapshot.facilitatorClientId;
 
-    if (snapshot.facilitatorClientId !== null && snapshot.facilitatorName.trim().length > 0) {
+    if (!isNil(snapshot.facilitatorClientId) && snapshot.facilitatorName.trim().length > 0) {
       void this.directory.seedIfMissing({
         clientId: snapshot.facilitatorClientId,
         name: snapshot.facilitatorName,
@@ -166,7 +167,7 @@ export class RetroLobbyStore {
     await repo.upsert(entry);
 
     if (
-      existing !== null &&
+      !isNil(existing) &&
       existing.name === entry.name &&
       existing.template === entry.template &&
       existing.createdAt === entry.createdAt &&
@@ -190,8 +191,13 @@ export class RetroLobbyStore {
    * params — `initRetroDoc` on the consumer side is idempotent, so repeated
    * reads are safe. Entries live until page reload.
    */
-  getPendingCreate(roomId: RoomId): ICreateRoomParams | null {
-    return this.pendingCreate.get(roomId) ?? null;
+  getPendingCreate(roomId: RoomId): ICreateRoomParams | undefined {
+    return this.pendingCreate.get(roomId);
+  }
+
+  /** Unlocks the shared audio context; must run inside a user gesture. */
+  primeAudio(): void {
+    primeRetroAudio();
   }
 
   dispose(): void {}
@@ -212,7 +218,7 @@ export class RetroLobbyStore {
 function mergeParticipantIds(
   existing: readonly ClientId[],
   incoming: readonly ClientId[],
-  ownerClientId: ClientId | null
+  ownerClientId: ClientId | undefined
 ): readonly ClientId[] {
   const seen = new Set<ClientId>();
   const result: ClientId[] = [];
@@ -223,7 +229,7 @@ function mergeParticipantIds(
     seen.add(clientId);
     result.push(clientId);
   };
-  if (ownerClientId !== null) {
+  if (!isNil(ownerClientId)) {
     push(ownerClientId);
   }
   existing.forEach(push);

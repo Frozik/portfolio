@@ -4,7 +4,6 @@ import { DEFAULT_BRAINSTORM_DURATION_MS, TIMER_WARNING_THRESHOLD_MS } from './co
 import {
   computeRemainingMs,
   createIdleTimer,
-  ETimerStatus,
   extendTimer,
   getTimerStatus,
   isTimerInWarningZone,
@@ -26,8 +25,8 @@ describe('createIdleTimer', () => {
     const timer = createIdleTimer();
 
     expect(timer.durationMs).toBe(DEFAULT_BRAINSTORM_DURATION_MS);
-    expect(timer.startedAt).toBeNull();
-    expect(timer.pausedRemainingMs).toBeNull();
+    expect(timer.startedAt).toBeUndefined();
+    expect(timer.pausedRemainingMs).toBeUndefined();
   });
 
   it('accepts a custom duration', () => {
@@ -47,7 +46,7 @@ describe('computeRemainingMs', () => {
   it('returns pausedRemainingMs when paused', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
-      startedAt: null,
+      startedAt: undefined,
       pausedRemainingMs: ms(3 * MINUTE),
     };
 
@@ -58,7 +57,7 @@ describe('computeRemainingMs', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     expect(computeRemainingMs(timer, (BASE_NOW + 4 * MINUTE) as Milliseconds)).toBe(6 * MINUTE);
@@ -68,7 +67,7 @@ describe('computeRemainingMs', () => {
     const timer: ITimerState = {
       durationMs: ms(MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     expect(computeRemainingMs(timer, (BASE_NOW + 10 * MINUTE) as Milliseconds)).toBe(0);
@@ -77,41 +76,37 @@ describe('computeRemainingMs', () => {
 
 describe('getTimerStatus', () => {
   it('returns Idle for a fresh timer', () => {
-    expect(getTimerStatus(createIdleTimer(), BASE_NOW)).toBe(ETimerStatus.Idle);
+    expect(getTimerStatus(createIdleTimer(), BASE_NOW)).toBe('idle');
   });
 
   it('returns Paused when paused', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
-      startedAt: null,
+      startedAt: undefined,
       pausedRemainingMs: ms(2 * MINUTE),
     };
 
-    expect(getTimerStatus(timer, BASE_NOW)).toBe(ETimerStatus.Paused);
+    expect(getTimerStatus(timer, BASE_NOW)).toBe('paused');
   });
 
   it('returns Running while still ticking', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
-    expect(getTimerStatus(timer, (BASE_NOW + 3 * MINUTE) as Milliseconds)).toBe(
-      ETimerStatus.Running
-    );
+    expect(getTimerStatus(timer, (BASE_NOW + 3 * MINUTE) as Milliseconds)).toBe('running');
   });
 
   it('returns Expired once remaining hits zero', () => {
     const timer: ITimerState = {
       durationMs: ms(MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
-    expect(getTimerStatus(timer, (BASE_NOW + 5 * MINUTE) as Milliseconds)).toBe(
-      ETimerStatus.Expired
-    );
+    expect(getTimerStatus(timer, (BASE_NOW + 5 * MINUTE) as Milliseconds)).toBe('expired');
   });
 });
 
@@ -120,7 +115,7 @@ describe('isTimerInWarningZone', () => {
     const timer: ITimerState = {
       durationMs: ms(2 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     const now = (BASE_NOW + MINUTE + MINUTE / 2) as Milliseconds;
@@ -132,7 +127,7 @@ describe('isTimerInWarningZone', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     expect(isTimerInWarningZone(timer, BASE_NOW)).toBe(false);
@@ -142,7 +137,7 @@ describe('isTimerInWarningZone', () => {
     const timer: ITimerState = {
       durationMs: ms(MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     expect(isTimerInWarningZone(timer, (BASE_NOW + 5 * MINUTE) as Milliseconds)).toBe(false);
@@ -151,7 +146,7 @@ describe('isTimerInWarningZone', () => {
   it('is false when paused even if remaining is tiny', () => {
     const timer: ITimerState = {
       durationMs: ms(10 * MINUTE),
-      startedAt: null,
+      startedAt: undefined,
       pausedRemainingMs: ms(TIMER_WARNING_THRESHOLD_MS - 1000),
     };
 
@@ -165,14 +160,14 @@ describe('startTimer', () => {
     const started = startTimer(timer, BASE_NOW);
 
     expect(started.startedAt).toBe(BASE_NOW);
-    expect(started.pausedRemainingMs).toBeNull();
+    expect(started.pausedRemainingMs).toBeUndefined();
     expect(computeRemainingMs(started, BASE_NOW)).toBe(10 * MINUTE);
   });
 
   it('resumes a paused timer so that remaining matches pausedRemainingMs', () => {
     const paused: ITimerState = {
       durationMs: ms(10 * MINUTE),
-      startedAt: null,
+      startedAt: undefined,
       pausedRemainingMs: ms(3 * MINUTE),
     };
 
@@ -190,12 +185,12 @@ describe('pauseTimer', () => {
     const running: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     const paused = pauseTimer(running, (BASE_NOW + 4 * MINUTE) as Milliseconds);
 
-    expect(paused.startedAt).toBeNull();
+    expect(paused.startedAt).toBeUndefined();
     expect(paused.pausedRemainingMs).toBe(6 * MINUTE);
   });
 
@@ -208,7 +203,7 @@ describe('pauseTimer', () => {
     const running: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     const paused = pauseTimer(running, (BASE_NOW + 4 * MINUTE) as Milliseconds);
@@ -227,7 +222,7 @@ describe('extendTimer', () => {
     const running: ITimerState = {
       durationMs: ms(10 * MINUTE),
       startedAt: BASE_NOW,
-      pausedRemainingMs: null,
+      pausedRemainingMs: undefined,
     };
 
     const extended = extendTimer(running, (2 * MINUTE) as Milliseconds);
@@ -239,13 +234,13 @@ describe('extendTimer', () => {
   it('adds time to a paused timer without starting it', () => {
     const paused: ITimerState = {
       durationMs: ms(10 * MINUTE),
-      startedAt: null,
+      startedAt: undefined,
       pausedRemainingMs: ms(3 * MINUTE),
     };
 
     const extended = extendTimer(paused, (2 * MINUTE) as Milliseconds);
 
-    expect(extended.startedAt).toBeNull();
+    expect(extended.startedAt).toBeUndefined();
     expect(extended.pausedRemainingMs).toBe(5 * MINUTE);
     expect(extended.durationMs).toBe(12 * MINUTE);
   });
@@ -256,7 +251,7 @@ describe('resetTimer', () => {
     const timer = resetTimer(ms(5 * MINUTE));
 
     expect(timer.durationMs).toBe(5 * MINUTE);
-    expect(timer.startedAt).toBeNull();
-    expect(timer.pausedRemainingMs).toBeNull();
+    expect(timer.startedAt).toBeUndefined();
+    expect(timer.pausedRemainingMs).toBeUndefined();
   });
 });

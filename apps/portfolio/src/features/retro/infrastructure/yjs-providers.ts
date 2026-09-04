@@ -9,19 +9,20 @@ import {
   installCommunicationWebSocketShim,
   registerCommunicationSignaling,
 } from '../../../shared/communication/YWebrtcSignalingConnAdapter';
+import type { IRoomAwareness } from '../domain/ports/room-awareness';
 import type { RoomId } from '../domain/types';
 import { getSignalingConfig } from './signaling-config';
 
 /**
- * The bundle of Yjs objects that back a single live retro room. The
- * application layer receives this handle and should call `destroy()` when
- * the user leaves the room — otherwise the persistence and network
- * providers will leak subscriptions and WebRTC sockets.
+ * Accepted debt: the WebRTC provider rides on the global WebSocket shim
+ * (see "Known Architectural Debt" in CLAUDE.md). Nothing new should depend on
+ * it; the way out is a direct signaling client like the conf feature's.
  */
+
+/** Everything the room store needs from the live Yjs session; `destroy()` on leave. */
 export interface IYjsRoomProviders {
   readonly doc: Y.Doc;
-  readonly persistence: IndexeddbPersistence;
-  readonly webrtc: WebrtcProvider;
+  readonly awareness: IRoomAwareness;
   whenSynced(): Promise<void>;
   destroy(): void;
 }
@@ -111,7 +112,7 @@ export function createYjsRoomProviders(params: ICreateYjsRoomProvidersParams): I
       // Swallow — see comment above.
     });
 
-  let syncedResolve: (() => void) | null = null;
+  let syncedResolve: VoidFunction | undefined;
   const syncedPromise = new Promise<void>(resolve => {
     syncedResolve = resolve;
   });
@@ -122,8 +123,7 @@ export function createYjsRoomProviders(params: ICreateYjsRoomProvidersParams): I
 
   return {
     doc,
-    persistence,
-    webrtc,
+    awareness: webrtc.awareness,
     whenSynced(): Promise<void> {
       return syncedPromise;
     },
