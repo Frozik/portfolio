@@ -1,8 +1,8 @@
 import { memo } from 'react';
 
-import { formatDateMonthYear, measureDuration } from '../../../utils';
-import type { IExperienceTranslation } from '../../translations';
+import { formatDateMonthYear, measureDuration } from '../../experience-format';
 import { welcomeT } from '../../translations';
+import type { IExperienceTranslation } from '../../translations/en';
 
 const ExperienceItemComponent = ({ entry }: { readonly entry: IExperienceTranslation }) => {
   const startLabel = formatDateMonthYear(entry.start);

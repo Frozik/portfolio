@@ -4,10 +4,6 @@ import { EChartType, ETimeScale } from './types';
 
 function createBlockEntry(overrides: Partial<IBlockEntry> = {}): IBlockEntry {
   return {
-    minX: 0,
-    maxX: 0,
-    minY: 0,
-    maxY: 0,
     timeStart: 0,
     timeEnd: 3600,
     scale: ETimeScale.Hour1,

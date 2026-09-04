@@ -1,152 +1,149 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
-
 import type { IFxDrawContext } from '../types';
 
-export function drawRotate({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
-  const cx = width / 2;
-  const cy = height * 0.55;
-  const scale = Math.min(width, height) * 0.3;
-  const baseRadius = 1;
-  const apexHeight = 1.55;
+const CENTER_Y_RATIO = 0.55;
+const SCALE_RATIO = 0.3;
+const BASE_RADIUS = 1;
+const APEX_HEIGHT = 1.55;
+const BASE_SIDES = 5;
+const SPIN_SPEED = 0.35;
+const TILT_X = -0.38;
+const CAMERA_Z = 4;
+const GROUND_ALPHA = 0.12;
+const GROUND_Y_RATIO = 0.55;
+const EDGE_LINE_WIDTH_PX = 1.4;
+const HIDDEN_EDGE_ALPHA = 0.28;
+const HIDDEN_EDGE_DASH_PX = [3, 4] as const;
+const VISIBLE_EDGE_ALPHA = 0.9;
+const CONSTRUCTION_SPEED = 0.3;
+const CONSTRUCTION_LEAD = 1.4;
+const CONSTRUCTION_LINE_WIDTH_PX = 1.6;
+const SECTION_ALPHA = 0.75;
+const SECTION_DASH_PX = [5, 4] as const;
+const CONSTRUCTION_TIP_RADIUS_PX = 2.5;
+const SECTION_TIP_RADIUS_PX = 2.2;
+const VERTEX_ALPHA = 0.95;
+const VERTEX_RADIUS_PX = 2.8;
+const SECTION_EDGE_START = 2;
+const SECTION_EDGE_END = 3;
+const SECTION_APEX_EDGE_LEFT = 1;
+const SECTION_APEX_EDGE_RIGHT = 4;
 
-  const base3: Array<[number, number, number]> = [];
-  for (let vertexIndex = 0; vertexIndex < 5; vertexIndex++) {
-    const angle = (vertexIndex / 5) * Math.PI * 2 - Math.PI / 2;
-    base3.push([Math.cos(angle) * baseRadius, 0, Math.sin(angle) * baseRadius]);
-  }
-  const apex3: [number, number, number] = [0, -apexHeight, 0];
+type Point3 = readonly [number, number, number];
 
-  const spin = time * speed * 0.35;
-  const tiltX = -0.38;
-  const sinY = Math.sin(spin);
-  const cosY = Math.cos(spin);
-  const sinX = Math.sin(tiltX);
-  const cosX = Math.cos(tiltX);
+interface IPoint2 {
+  readonly x: number;
+  readonly y: number;
+}
 
-  const rotate = (v: [number, number, number]): [number, number, number] => {
-    const [x, y, z] = v;
-    const x1 = x * cosY + z * sinY;
-    const z1 = -x * sinY + z * cosY;
-    const y2 = y * cosX - z1 * sinX;
-    const z2 = y * sinX + z1 * cosX;
-    return [x1, y2, z2];
+function midpoint(first: Point3, second: Point3): Point3 {
+  return [(first[0] + second[0]) / 2, (first[1] + second[1]) / 2, (first[2] + second[2]) / 2];
+}
+
+/** A pentagonal pyramid turning in 3D while construction lines are drawn across it. */
+export function drawRotate({
+  ctx,
+  width,
+  height,
+  time,
+  accent,
+  devicePixelRatio,
+}: IFxDrawContext): void {
+  const centerX = width / 2;
+  const centerY = height * CENTER_Y_RATIO;
+  const scale = Math.min(width, height) * SCALE_RATIO;
+
+  const base: readonly Point3[] = Array.from({ length: BASE_SIDES }, (_, vertexIndex) => {
+    const angle = (vertexIndex / BASE_SIDES) * Math.PI * 2 - Math.PI / 2;
+    return [Math.cos(angle) * BASE_RADIUS, 0, Math.sin(angle) * BASE_RADIUS];
+  });
+  const apex: Point3 = [0, -APEX_HEIGHT, 0];
+  const vertexAt = (index: number): Point3 => base[index] ?? apex;
+
+  const spin = time * SPIN_SPEED;
+  const sinSpin = Math.sin(spin);
+  const cosSpin = Math.cos(spin);
+  const sinTilt = Math.sin(TILT_X);
+  const cosTilt = Math.cos(TILT_X);
+
+  const rotate = ([x, y, z]: Point3): Point3 => {
+    const spunX = x * cosSpin + z * sinSpin;
+    const spunZ = -x * sinSpin + z * cosSpin;
+    return [spunX, y * cosTilt - spunZ * sinTilt, y * sinTilt + spunZ * cosTilt];
+  };
+  const project = (point: Point3): IPoint2 => {
+    const [x, y, z] = rotate(point);
+    const perspective = CAMERA_Z / (CAMERA_Z - z);
+    return { x: centerX + x * scale * perspective, y: centerY + y * scale * perspective };
   };
 
-  const camZ = 4;
-  const project = (v: [number, number, number]) => {
-    const [x, y, z] = rotate(v);
-    const k = camZ / (camZ - z);
-    return { x: cx + x * scale * k, y: cy + y * scale * k, depth: z };
-  };
-
-  const base2 = base3.map(project);
-  const apex2 = project(apex3);
-
-  ctx.strokeStyle = accent(0.12);
-  ctx.lineWidth = dpr;
+  ctx.strokeStyle = accent(GROUND_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
   ctx.beginPath();
-  ctx.moveTo(0, cy + scale * 0.55);
-  ctx.lineTo(width, cy + scale * 0.55);
+  ctx.moveTo(0, centerY + scale * GROUND_Y_RATIO);
+  ctx.lineTo(width, centerY + scale * GROUND_Y_RATIO);
   ctx.stroke();
 
-  const drawEdge = (aIdx: number | 'apex', bIdx: number | 'apex') => {
-    const a = aIdx === 'apex' ? apex2 : base2[aIdx];
-    const b = bIdx === 'apex' ? apex2 : base2[bIdx];
-    const aB = aIdx === 'apex' ? apex3 : base3[aIdx];
-    const bB = bIdx === 'apex' ? apex3 : base3[bIdx];
-    const mid: [number, number, number] = [
-      (aB[0] + bB[0]) / 2,
-      (aB[1] + bB[1]) / 2,
-      (aB[2] + bB[2]) / 2,
-    ];
-    const hidden = rotate(mid)[2] < 0;
+  const drawEdge = (from: Point3, to: Point3): void => {
+    const isHidden = rotate(midpoint(from, to))[2] < 0;
+    const start = project(from);
+    const end = project(to);
     ctx.save();
-    ctx.lineWidth = 1.4 * dpr;
-    if (hidden) {
-      ctx.strokeStyle = accent(0.28);
-      ctx.setLineDash([3 * dpr, 4 * dpr]);
-    } else {
-      ctx.strokeStyle = accent(0.9);
-      ctx.setLineDash([]);
-    }
+    ctx.lineWidth = EDGE_LINE_WIDTH_PX * devicePixelRatio;
+    ctx.strokeStyle = accent(isHidden ? HIDDEN_EDGE_ALPHA : VISIBLE_EDGE_ALPHA);
+    ctx.setLineDash(isHidden ? HIDDEN_EDGE_DASH_PX.map(dash => dash * devicePixelRatio) : []);
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
     ctx.stroke();
     ctx.restore();
   };
+  base.forEach((vertex, vertexIndex) => {
+    drawEdge(vertex, vertexAt((vertexIndex + 1) % BASE_SIDES));
+    drawEdge(vertex, apex);
+  });
 
-  for (let i = 0; i < 5; i++) {
-    drawEdge(i, (i + 1) % 5);
-  }
-  for (let i = 0; i < 5; i++) {
-    drawEdge(i, 'apex');
-  }
-
-  const aVert3 = base3[0];
-  const mEdgeA = base3[2];
-  const mEdgeB = base3[3];
-  const mMid3: [number, number, number] = [
-    (mEdgeA[0] + mEdgeB[0]) / 2,
-    0,
-    (mEdgeA[2] + mEdgeB[2]) / 2,
-  ];
-  const aVert2 = project(aVert3);
-  const mMid2 = project(mMid3);
-
-  const m1 = project([
-    (base3[1][0] + apex3[0]) / 2,
-    (base3[1][1] + apex3[1]) / 2,
-    (base3[1][2] + apex3[2]) / 2,
-  ]);
-  const m2 = project([
-    (base3[4][0] + apex3[0]) / 2,
-    (base3[4][1] + apex3[1]) / 2,
-    (base3[4][2] + apex3[2]) / 2,
-  ]);
-
-  const pulse = (time * speed * 0.3) % 1;
-  const draw01 = Math.min(1, pulse * 1.4);
-
+  const progress = Math.min(1, ((time * CONSTRUCTION_SPEED) % 1) * CONSTRUCTION_LEAD);
   const drawProgressive = (
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    progress: number,
-    color: string,
-    dash?: readonly number[]
-  ) => {
-    const ex = p1.x + (p2.x - p1.x) * progress;
-    const ey = p1.y + (p2.y - p1.y) * progress;
+    from: IPoint2,
+    to: IPoint2,
+    alpha: number,
+    dash: readonly number[]
+  ): IPoint2 => {
+    const tip = { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress };
     ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.6 * dpr;
-    if (dash) {
-      ctx.setLineDash([...dash]);
-    }
+    ctx.strokeStyle = accent(alpha);
+    ctx.lineWidth = CONSTRUCTION_LINE_WIDTH_PX * devicePixelRatio;
+    ctx.setLineDash(dash.map(segment => segment * devicePixelRatio));
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(ex, ey);
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(tip.x, tip.y);
     ctx.stroke();
     ctx.restore();
-    return { x: ex, y: ey };
+    return tip;
   };
 
-  const endAM = drawProgressive(aVert2, mMid2, draw01, accent(1));
-  const endM1M2 = drawProgressive(m1, m2, draw01, accent(0.75), [5 * dpr, 4 * dpr]);
+  const oppositeEdgeMidpoint = midpoint(vertexAt(SECTION_EDGE_START), vertexAt(SECTION_EDGE_END));
+  const medianTip = drawProgressive(project(vertexAt(0)), project(oppositeEdgeMidpoint), 1, []);
+  const sectionTip = drawProgressive(
+    project(midpoint(vertexAt(SECTION_APEX_EDGE_LEFT), apex)),
+    project(midpoint(vertexAt(SECTION_APEX_EDGE_RIGHT), apex)),
+    SECTION_ALPHA,
+    SECTION_DASH_PX
+  );
 
   ctx.fillStyle = accent(1);
   ctx.beginPath();
-  ctx.arc(endAM.x, endAM.y, 2.5 * dpr, 0, Math.PI * 2);
+  ctx.arc(medianTip.x, medianTip.y, CONSTRUCTION_TIP_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(endM1M2.x, endM1M2.y, 2.2 * dpr, 0, Math.PI * 2);
+  ctx.arc(sectionTip.x, sectionTip.y, SECTION_TIP_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
   ctx.fill();
 
-  const vertices = [...base2, apex2];
-  for (const v of vertices) {
-    ctx.fillStyle = accent(0.95);
+  for (const vertex of [...base, apex]) {
+    const point = project(vertex);
+    ctx.fillStyle = accent(VERTEX_ALPHA);
     ctx.beginPath();
-    ctx.arc(v.x, v.y, 2.8 * dpr, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, VERTEX_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
     ctx.fill();
   }
 }

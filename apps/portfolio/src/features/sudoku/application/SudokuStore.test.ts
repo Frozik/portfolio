@@ -1,8 +1,13 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { EMPTY_VD, isSyncedValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 
-import { EToolType } from '../domain/types';
 import { SudokuStore } from './SudokuStore';
+
+const NO_GENERATOR = {
+  generate(): string {
+    return VALID_PUZZLE;
+  },
+};
 
 // A valid 9x9 sudoku puzzle string (81 chars)
 const VALID_PUZZLE =
@@ -12,7 +17,7 @@ describe('SudokuStore', () => {
   let store: SudokuStore;
 
   beforeEach(() => {
-    store = new SudokuStore();
+    store = new SudokuStore(NO_GENERATOR);
   });
 
   describe('initial state', () => {
@@ -34,7 +39,7 @@ describe('SudokuStore', () => {
 
     it('clears history on load', () => {
       store.loadPuzzle(VALID_PUZZLE);
-      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.setToolValue(4);
       store.applyTool(0, 2);
 
       expect(store.hasHistory).toBe(true);
@@ -47,7 +52,7 @@ describe('SudokuStore', () => {
   describe('applyTool', () => {
     it('modifies field when applying pen tool', () => {
       store.loadPuzzle(VALID_PUZZLE);
-      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.setToolValue(4);
 
       const fieldBefore = store.field;
       store.applyTool(0, 2);
@@ -60,9 +65,8 @@ describe('SudokuStore', () => {
       expect(store.field.value.cells[2].value).toBe(4);
     });
 
-    it('does nothing when tool is None', () => {
+    it('does nothing while no number is selected', () => {
       store.loadPuzzle(VALID_PUZZLE);
-      store.setTool({ type: EToolType.None, value: undefined });
 
       const fieldBefore = store.field;
       store.applyTool(0, 2);
@@ -76,7 +80,7 @@ describe('SudokuStore', () => {
       store.loadPuzzle(VALID_PUZZLE);
       expect(store.hasHistory).toBe(false);
 
-      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.setToolValue(4);
       store.applyTool(0, 2);
 
       expect(store.hasHistory).toBe(true);
@@ -88,7 +92,7 @@ describe('SudokuStore', () => {
       store.loadPuzzle(VALID_PUZZLE);
       const originalField = store.field;
 
-      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.setToolValue(4);
       store.applyTool(0, 2);
 
       expect(store.hasHistory).toBe(true);
@@ -106,10 +110,11 @@ describe('SudokuStore', () => {
     it('keeps every snapshot independent from the moves made after it', () => {
       store.loadPuzzle(VALID_PUZZLE);
 
-      store.setTool({ type: EToolType.Pen, value: 4 });
+      store.setToolValue(4);
       store.applyTool(0, 2);
 
-      store.setTool({ type: EToolType.Notes, value: 7 });
+      store.setToolMode('notes');
+      store.setToolValue(7);
       store.applyTool(0, 3);
 
       store.restorePreviousState();

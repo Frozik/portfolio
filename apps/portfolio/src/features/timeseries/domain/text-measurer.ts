@@ -4,12 +4,8 @@ export interface IGlyphMetrics {
   readonly centerOffset: number;
 }
 
-/**
- * Domain port for Canvas 2D text metrics. Implemented by the
- * infrastructure `TextMeasureCache`, which memoises `measureText` calls
- * per font — the axis painter only needs the pure measurement surface.
- */
+/** Text metrics for a CSS font string; the infrastructure measures with a canvas, the domain never sees it. */
 export interface ITextMeasurer {
-  measureWidth(ctx: CanvasRenderingContext2D, text: string): number;
-  getGlyphMetrics(ctx: CanvasRenderingContext2D): IGlyphMetrics;
+  measureWidth(text: string, font: string): number;
+  getGlyphMetrics(font: string): IGlyphMetrics;
 }

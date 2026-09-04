@@ -1,43 +1,68 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
-
 import type { IFxDrawContext } from '../types';
 
-export function drawFlare({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
-  const cx = width / 2;
-  const cy = height / 2;
-  const radius = Math.min(width, height) * 0.42;
-  const rayCount = 36;
+const RADIUS_RATIO = 0.42;
+const RAY_COUNT = 36;
+const RAY_ROTATION_SPEED = 0.15;
+const RAY_LENGTH_BASE = 0.95;
+const RAY_LENGTH_FLICKER = 0.1;
+const RAY_FLICKER_SPEED = 2;
+const RAY_OUTER_RATIO = 1.15;
+const RAY_ALPHA = 0.5;
+const RAY_LINE_WIDTH_PX = 1.2;
+const SWEEP_SPEED = 0.6;
+const SWEEP_RADIUS_RATIO = 1.02;
+const SWEEP_ARC_RADIANS = 0.8;
+const SWEEP_ALPHA = 0.7;
+const SWEEP_LINE_WIDTH_PX = 1.5;
+const HALO_RADIUS_RATIO = 1.08;
+const HALO_ALPHA = 0.25;
+const HALO_DASH_PX = [4, 6] as const;
 
-  for (let rayIndex = 0; rayIndex < rayCount; rayIndex++) {
-    const angle = (rayIndex / rayCount) * Math.PI * 2 + time * speed * 0.15;
-    const length = radius * (0.95 + 0.1 * Math.sin(time * speed * 2 + rayIndex));
-    const x1 = cx + Math.cos(angle) * radius * 0.95;
-    const y1 = cy + Math.sin(angle) * radius * 0.95;
-    const x2 = cx + Math.cos(angle) * length * 1.15;
-    const y2 = cy + Math.sin(angle) * length * 1.15;
-    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-    gradient.addColorStop(0, accent(0.5));
+/** A sun with flickering rays, a sweeping arc and a dashed halo. */
+export function drawFlare({
+  ctx,
+  width,
+  height,
+  time,
+  accent,
+  devicePixelRatio,
+}: IFxDrawContext): void {
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * RADIUS_RATIO;
+
+  for (let rayIndex = 0; rayIndex < RAY_COUNT; rayIndex++) {
+    const angle = (rayIndex / RAY_COUNT) * Math.PI * 2 + time * RAY_ROTATION_SPEED;
+    const length =
+      radius *
+      (RAY_LENGTH_BASE + RAY_LENGTH_FLICKER * Math.sin(time * RAY_FLICKER_SPEED + rayIndex));
+    const innerX = centerX + Math.cos(angle) * radius * RAY_LENGTH_BASE;
+    const innerY = centerY + Math.sin(angle) * radius * RAY_LENGTH_BASE;
+    const outerX = centerX + Math.cos(angle) * length * RAY_OUTER_RATIO;
+    const outerY = centerY + Math.sin(angle) * length * RAY_OUTER_RATIO;
+    const gradient = ctx.createLinearGradient(innerX, innerY, outerX, outerY);
+    gradient.addColorStop(0, accent(RAY_ALPHA));
     gradient.addColorStop(1, accent(0));
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1.2 * dpr;
+    ctx.lineWidth = RAY_LINE_WIDTH_PX * devicePixelRatio;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(innerX, innerY);
+    ctx.lineTo(outerX, outerY);
     ctx.stroke();
   }
 
-  const sweep = (time * speed * 0.6) % (Math.PI * 2);
-  ctx.strokeStyle = accent(0.7);
-  ctx.lineWidth = 1.5 * dpr;
+  const sweep = (time * SWEEP_SPEED) % (Math.PI * 2);
+  ctx.strokeStyle = accent(SWEEP_ALPHA);
+  ctx.lineWidth = SWEEP_LINE_WIDTH_PX * devicePixelRatio;
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 1.02, sweep, sweep + 0.8);
+  ctx.arc(centerX, centerY, radius * SWEEP_RADIUS_RATIO, sweep, sweep + SWEEP_ARC_RADIANS);
   ctx.stroke();
 
-  ctx.strokeStyle = accent(0.25);
-  ctx.lineWidth = dpr;
-  ctx.setLineDash([4 * dpr, 6 * dpr]);
+  ctx.strokeStyle = accent(HALO_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
+  ctx.setLineDash(HALO_DASH_PX.map(dash => dash * devicePixelRatio));
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 1.08, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, radius * HALO_RADIUS_RATIO, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
 }

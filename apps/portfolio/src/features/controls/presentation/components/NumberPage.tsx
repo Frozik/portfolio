@@ -1,4 +1,5 @@
 import { NumericEditor } from '@frozik/components/components/RichEditor/NumericEditor';
+import { sortBy } from 'lodash-es';
 import { memo, useState } from 'react';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
@@ -17,14 +18,14 @@ const DECIMALS_MAX = 10;
 const DECIMALS_STEP = 1;
 
 export const NumberPage = memo(() => {
-  const [value, setValue] = useState([2, 4]);
+  const [range, setRange] = useState<readonly [number, number]>([2, 4]);
   const [decimals, setDecimals] = useState(6);
   const [numericValue, setNumericValue] = useState<number | undefined>(undefined);
 
-  const [pipStart, pipSize] =
-    value[0] === value[1]
-      ? [undefined, undefined]
-      : [Math.min(value[0], value[1]), Math.max(value[0], value[1]) - Math.min(value[0], value[1])];
+  const [rangeStart, rangeEnd] = sortBy(range);
+  const hasPipRange = rangeStart !== rangeEnd;
+  const pipStart = hasPipRange ? rangeStart : undefined;
+  const pipSize = hasPipRange ? rangeEnd - rangeStart : undefined;
 
   return (
     <section className="flex flex-col gap-5">
@@ -55,8 +56,8 @@ export const NumberPage = memo(() => {
             min={PIP_RANGE_MIN}
             max={PIP_RANGE_MAX}
             step={PIP_RANGE_STEP}
-            value={value}
-            onChange={setValue}
+            value={range}
+            onChange={setRange}
             showTooltip
           />
         </div>

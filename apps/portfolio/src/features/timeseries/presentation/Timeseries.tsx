@@ -1,6 +1,7 @@
 import { packColor, unpackColor } from '@frozik/utils/webgpu/colorPacking';
 import { memo } from 'react';
 
+import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { WebGpuUnsupportedNotice } from '../../../shared/components/WebGpuUnsupportedNotice';
 import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
@@ -105,15 +106,22 @@ const CHART_SERIES_CONFIGS: readonly (readonly ISeriesConfig[])[] = [
 ];
 
 const TimeseriesContent = memo(() => {
-  const { status, renderer } = useSharedRendererState();
+  const rendererState = useSharedRendererState();
 
-  if (status === 'unsupported') {
-    return <WebGpuUnsupportedNotice className="h-full w-full" />;
+  if (rendererState.status === 'unsupported') {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4">
+        <WebGpuUnsupportedNotice />
+        <ValueDescriptorFail fail={rendererState.fail} />
+      </div>
+    );
   }
 
   return (
     <div className="h-full w-full relative grid grid-cols-2 grid-rows-2">
-      <DebugOverlay renderer={renderer} />
+      <DebugOverlay
+        renderer={rendererState.status === 'ready' ? rendererState.renderer : undefined}
+      />
       {CHART_ZOOM_LEVELS.map((level, index) => (
         <TimeseriesChart
           key={`${level[0]}-${level[1]}`}

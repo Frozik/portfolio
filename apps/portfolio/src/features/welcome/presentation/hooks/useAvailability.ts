@@ -1,43 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import {
-  AWAKE_END_HOUR,
-  AWAKE_START_HOUR,
-  MY_TIMEZONE,
-  STATUS_CHECK_INTERVAL_MS,
-} from '../../constants';
+import type { IAvailability } from '../../domain/availability';
+import { resolveAvailability } from '../../domain/availability';
+import { AWAKE_WINDOW, MY_TIMEZONE, STATUS_CHECK_INTERVAL_MS } from '../availability-constants';
 
-export type TAvailabilityStatus = 'online' | 'away' | 'weekend';
+export type { IAvailability, TAvailabilityStatus } from '../../domain/availability';
 
-export interface IAvailability {
-  readonly status: TAvailabilityStatus;
-  readonly isAwake: boolean;
-}
-
-const SATURDAY = 6;
-const SUNDAY = 7;
-
-function resolveAvailability(): IAvailability {
-  const now = Temporal.Now.zonedDateTimeISO(MY_TIMEZONE);
-  const isAwake = now.hour >= AWAKE_START_HOUR && now.hour < AWAKE_END_HOUR;
-  const isWeekend = now.dayOfWeek === SATURDAY || now.dayOfWeek === SUNDAY;
-
-  if (isWeekend) {
-    return { status: 'weekend', isAwake };
-  }
-
-  return { status: isAwake ? 'online' : 'away', isAwake };
+function resolveNow(): IAvailability {
+  return resolveAvailability(Temporal.Now.zonedDateTimeISO(MY_TIMEZONE), AWAKE_WINDOW);
 }
 
 export function useAvailability(): IAvailability {
-  const [availability, setAvailability] = useState(resolveAvailability);
+  const [availability, setAvailability] = useState(resolveNow);
 
   useEffect(() => {
-    const intervalId = setInterval(
-      () => setAvailability(resolveAvailability()),
-      STATUS_CHECK_INTERVAL_MS
-    );
+    const intervalId = setInterval(() => setAvailability(resolveNow()), STATUS_CHECK_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, []);
 

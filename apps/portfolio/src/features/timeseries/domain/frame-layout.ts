@@ -30,19 +30,19 @@ export interface IChartFrameLayout {
  */
 export class FrameLayoutCache {
   private readonly tickCache = new TickCache();
-  private layout: IChartFrameLayout | null = null;
+  private layout: IChartFrameLayout | undefined;
 
   getLayout(
     viewport: IChartViewport,
     canvasWidth: number,
     canvasHeight: number,
     devicePixelRatio: number
-  ): IChartFrameLayout | null {
+  ): IChartFrameLayout | undefined {
     const { viewTimeStart, viewTimeEnd, viewValueMin, viewValueMax } = viewport;
     const cached = this.layout;
 
     if (
-      cached !== null &&
+      cached !== undefined &&
       cached.timeStart === viewTimeStart &&
       cached.timeEnd === viewTimeEnd &&
       cached.valueMin === viewValueMin &&
@@ -61,8 +61,8 @@ export class FrameLayoutCache {
     } = computePlotGeometry(canvasWidth, canvasHeight, devicePixelRatio);
 
     if (plotWidth <= 0 || plotHeight <= 0) {
-      this.layout = null;
-      return null;
+      this.layout = undefined;
+      return undefined;
     }
 
     const scale = scaleFromTimeRange(viewTimeStart, viewTimeEnd);

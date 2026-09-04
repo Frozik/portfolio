@@ -1,9 +1,8 @@
 import { SCENE_BACKGROUND_HEX } from '@frozik/utils/webgpu/backgroundColor';
 
-import { GRID_LINE_COLOR } from '../constants';
-import type { IChartFrameLayout } from '../frame-layout';
-
-import { timeToPixelX, valueToPixelY } from './shared';
+import { GRID_LINE_COLOR } from '../../domain/constants';
+import type { IChartFrameLayout } from '../../domain/frame-layout';
+import { timeToPixelX, valueToPixelY } from '../../domain/plot-mapping';
 
 const GRID_LINE_WIDTH_RATIO = 0.5;
 const GRID_DASH_LENGTH = 10;

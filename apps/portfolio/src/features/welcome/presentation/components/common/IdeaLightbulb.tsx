@@ -46,11 +46,10 @@ const IdeaLightbulbComponent = ({ className }: { className?: string }) => {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute inset-0 flex justify-end transition-opacity print:hidden',
+        'pointer-events-none absolute inset-0 flex justify-end transition-opacity duration-[400ms] print:hidden',
         visible ? 'opacity-100' : 'opacity-0',
         className
       )}
-      style={{ transitionDuration: `${FADE_DURATION_MS}ms` }}
     >
       <svg
         viewBox="0 0 80 120"

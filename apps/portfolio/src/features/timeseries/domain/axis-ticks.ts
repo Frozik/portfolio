@@ -136,9 +136,9 @@ function generateHourlyTicks(timeStart: number, timeEnd: number): IAxisTick[] {
   const startHour = Math.ceil(timeStart / SECONDS_PER_HOUR);
   const endHour = Math.floor(timeEnd / SECONDS_PER_HOUR);
 
-  for (let h = startHour; h <= endHour; h++) {
-    const epochSec = h * SECONDS_PER_HOUR;
-    const hourOfDay = ((h % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
+  for (let hourIndex = startHour; hourIndex <= endHour; hourIndex++) {
+    const epochSec = hourIndex * SECONDS_PER_HOUR;
+    const hourOfDay = ((hourIndex % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
     ticks.push({
       position: epochSec,
       label: formatHourMinute(hourOfDay, 0),
@@ -156,8 +156,8 @@ function generateMinuteTicks(timeStart: number, timeEnd: number): IAxisTick[] {
   const startSlot = Math.ceil(timeStart / SECONDS_PER_MINUTE);
   const endSlot = Math.floor(timeEnd / SECONDS_PER_MINUTE);
 
-  for (let s = startSlot; s <= endSlot; s++) {
-    const epochSec = s * SECONDS_PER_MINUTE;
+  for (let minuteIndex = startSlot; minuteIndex <= endSlot; minuteIndex++) {
+    const epochSec = minuteIndex * SECONDS_PER_MINUTE;
     const minuteOfDay = Math.floor((epochSec % SECONDS_PER_DAY) / SECONDS_PER_MINUTE);
     const hour = Math.floor(minuteOfDay / MINUTES_PER_HOUR);
     const minute = minuteOfDay % MINUTES_PER_HOUR;
@@ -242,12 +242,9 @@ export function computeYTicks(
   const ticks: IAxisTick[] = [];
   const start = Math.ceil(valueMin / step) * step;
 
-  for (let v = start; v <= valueMax + step * 0.01; v += step) {
-    if (v >= valueMin && v <= valueMax) {
-      ticks.push({
-        position: v,
-        label: formatYLabel(v, decimals),
-      });
+  for (let value = start; value <= valueMax + step * 0.01; value += step) {
+    if (value >= valueMin && value <= valueMax) {
+      ticks.push({ position: value, label: formatYLabel(value, decimals) });
     }
   }
 

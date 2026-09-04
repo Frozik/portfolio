@@ -20,9 +20,9 @@ export function encodePoints(
   const f32 = new Float32Array(buffer);
   const u32 = new Uint32Array(buffer);
 
-  for (let i = 0; i < points.length; i++) {
-    const offset = i * FLOATS_PER_POINT;
-    const point = points[i];
+  for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+    const offset = pointIndex * FLOATS_PER_POINT;
+    const point = points[pointIndex];
     f32[offset] = point.time - baseTime;
     f32[offset + 1] = point.value - baseValue;
     f32[offset + 2] = point.size;

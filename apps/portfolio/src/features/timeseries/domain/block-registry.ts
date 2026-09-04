@@ -3,30 +3,36 @@ import RBush from 'rbush';
 import { SLOTS_PER_ROW } from './constants';
 import type { EChartType, ETimeScale, IBlockEntry, ITextureSlot } from './types';
 
-/**
- * Compute a unique numeric key for a texture slot.
- * Used for O(1) lookup when evicting by slot reference.
- */
 function slotKey(slot: ITextureSlot): number {
   return slot.row * SLOTS_PER_ROW + slot.slotIndex;
 }
 
-/**
- * Wraps RBush for spatial queries of block entries.
- *
- * Blocks are indexed by time range (X axis) and scale ordinal (Y axis).
- * A secondary Map keyed by slot index provides O(1) lookup for eviction.
- */
+/** Blocks are indexed by time range (X) and scale (Y) straight from their own fields. */
+class BlockTree extends RBush<IBlockEntry> {
+  toBBox(entry: IBlockEntry): {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  } {
+    return { minX: entry.timeStart, maxX: entry.timeEnd, minY: entry.scale, maxY: entry.scale };
+  }
+
+  compareMinX(left: IBlockEntry, right: IBlockEntry): number {
+    return left.timeStart - right.timeStart;
+  }
+
+  compareMinY(left: IBlockEntry, right: IBlockEntry): number {
+    return left.scale - right.scale;
+  }
+}
+
+/** Spatial index over the loaded blocks with O(1) lookup by texture slot for eviction. */
 export class BlockRegistry {
-  private readonly tree = new RBush<IBlockEntry>();
+  private readonly tree = new BlockTree();
   private readonly slotMap = new Map<number, IBlockEntry>();
 
   insert(entry: IBlockEntry): void {
-    entry.minX = entry.timeStart;
-    entry.maxX = entry.timeEnd;
-    entry.minY = entry.scale;
-    entry.maxY = entry.scale;
-
     this.tree.insert(entry);
     this.slotMap.set(slotKey(entry.slot), entry);
   }
@@ -38,12 +44,9 @@ export class BlockRegistry {
 
   removeBySlot(slot: ITextureSlot): void {
     const entry = this.slotMap.get(slotKey(slot));
-
-    if (entry === undefined) {
-      return;
+    if (entry !== undefined) {
+      this.remove(entry);
     }
-
-    this.remove(entry);
   }
 
   queryVisible(
@@ -51,19 +54,11 @@ export class BlockRegistry {
     timeStart: number,
     timeEnd: number,
     chartType?: EChartType
-  ): IBlockEntry[] {
-    const results = this.tree.search({
-      minX: timeStart,
-      maxX: timeEnd,
-      minY: scale,
-      maxY: scale,
-    });
-
-    if (chartType === undefined) {
-      return results;
-    }
-
-    return results.filter(entry => entry.chartType === chartType);
+  ): readonly IBlockEntry[] {
+    const results = this.tree.search({ minX: timeStart, maxX: timeEnd, minY: scale, maxY: scale });
+    return chartType === undefined
+      ? results
+      : results.filter(entry => entry.chartType === chartType);
   }
 
   findCovering(
@@ -72,19 +67,14 @@ export class BlockRegistry {
     periodEnd: number,
     chartType: EChartType
   ): IBlockEntry | undefined {
-    const candidates = this.tree.search({
-      minX: periodStart,
-      maxX: periodEnd,
-      minY: scale,
-      maxY: scale,
-    });
-
-    return candidates.find(
-      entry =>
-        entry.chartType === chartType &&
-        entry.timeStart <= periodStart &&
-        entry.timeEnd >= periodEnd
-    );
+    return this.tree
+      .search({ minX: periodStart, maxX: periodEnd, minY: scale, maxY: scale })
+      .find(
+        entry =>
+          entry.chartType === chartType &&
+          entry.timeStart <= periodStart &&
+          entry.timeEnd >= periodEnd
+      );
   }
 
   clear(): void {
@@ -92,7 +82,6 @@ export class BlockRegistry {
     this.slotMap.clear();
   }
 
-  /** Returns the total number of entries in the registry. */
   getEntryCount(): number {
     return this.slotMap.size;
   }

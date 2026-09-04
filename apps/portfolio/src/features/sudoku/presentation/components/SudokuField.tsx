@@ -5,7 +5,7 @@ import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { useResizeObserver } from 'usehooks-ts';
 import { puzzleSolved } from '../../domain/services';
-import type { IField, TTool } from '../../domain/types';
+import type { IField, ITool, ToolMode } from '../../domain/types';
 import { FIELD_CONTROLS_MARGIN_PX, FIELD_GAP_PX, FIELD_GROUP_GAP_PX } from '../layout-constants';
 import { FieldControls } from './FieldControls';
 import { FieldGroups } from './FieldGroups';
@@ -19,20 +19,22 @@ export const SudokuField = observer(
     hasHistory,
     onRestorePreviousState,
     onClickCell,
-    onChangeTool,
+    onSelectToolValue,
+    onSelectToolMode,
     onMarkField,
     onExitGame,
     onRestartGame,
   }: {
-    field: IField;
-    tool: TTool;
-    hasHistory: boolean;
-    onRestorePreviousState: VoidFunction;
-    onClickCell: (row: number, column: number) => void;
-    onChangeTool: (tool: TTool) => void;
-    onMarkField: VoidFunction;
-    onExitGame: VoidFunction;
-    onRestartGame: VoidFunction;
+    readonly field: IField;
+    readonly tool: ITool;
+    readonly hasHistory: boolean;
+    readonly onRestorePreviousState: VoidFunction;
+    readonly onClickCell: (row: number, column: number) => void;
+    readonly onSelectToolValue: (value: number) => void;
+    readonly onSelectToolMode: (mode: ToolMode) => void;
+    readonly onMarkField: VoidFunction;
+    readonly onExitGame: VoidFunction;
+    readonly onRestartGame: VoidFunction;
   }) => {
     const ref = useRef<HTMLDivElement>(null);
     const { width = 0, height = 0 } = useResizeObserver({
@@ -47,9 +49,7 @@ export const SudokuField = observer(
     const cellWidth = width - totalGap;
     const cellHeight = height - totalGap - controlsGap;
 
-    // Clamp to ≥0: before the ResizeObserver reports a real size the container
-    // can measure 0, making `cellWidth`/`cellHeight` negative — which propagated
-    // negative `width`/`height` into the control icons (`<svg>` rejects them).
+    // Before the first ResizeObserver report the container measures 0; `<svg>` rejects negative sizes.
     const cellSize = Math.max(
       0,
       Math.floor(
@@ -114,7 +114,8 @@ export const SudokuField = observer(
           tool={tool}
           hasHistory={hasHistory}
           onRestorePreviousState={onRestorePreviousState}
-          onChangeTool={onChangeTool}
+          onSelectToolValue={onSelectToolValue}
+          onSelectToolMode={onSelectToolMode}
           onMarkField={onMarkField}
           onExitGame={onExitGame}
           onRestartGame={onRestartGame}

@@ -1,3 +1,4 @@
+import { isNil } from 'lodash-es';
 import type { BlockRegistry } from './block-registry';
 import { POINTS_PER_SLOT } from './constants';
 import { generateTimeseriesData } from './data-generator';
@@ -147,7 +148,7 @@ export class BlockDataPipeline {
 
     if (points.length <= POINTS_PER_SLOT) {
       const entry = this.createBlock(points, periodStart, periodEnd, scale);
-      if (entry !== null) {
+      if (!isNil(entry)) {
         entries.push(entry);
       }
     } else {
@@ -162,7 +163,7 @@ export class BlockDataPipeline {
         const chunkTimeEnd = chunk[chunk.length - 1].time;
 
         const entry = this.createBlock(chunk, chunkTimeStart, chunkTimeEnd, scale);
-        if (entry !== null) {
+        if (!isNil(entry)) {
           entries.push(entry);
         }
       }
@@ -176,11 +177,10 @@ export class BlockDataPipeline {
     timeStart: number,
     timeEnd: number,
     scale: ETimeScale
-  ): IBlockEntry | null {
+  ): IBlockEntry | undefined {
     const slot = this.allocator.allocateSlot();
-
-    if (slot === null) {
-      return null;
+    if (isNil(slot)) {
+      return undefined;
     }
 
     const baseTime = points[0].time;
@@ -198,10 +198,6 @@ export class BlockDataPipeline {
     }
 
     const entry: IBlockEntry = {
-      minX: 0,
-      maxX: 0,
-      minY: 0,
-      maxY: 0,
       timeStart,
       timeEnd,
       scale,

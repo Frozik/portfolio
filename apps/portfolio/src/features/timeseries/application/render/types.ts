@@ -1,34 +1,34 @@
-import type { IFpsController, ILoadingRegion, IPlotArea } from '../../domain/types';
-import type { ISeriesLayerManager } from '../../infrastructure/layers/types';
+import type { IPlotArea } from '../../domain/types';
+import type { ISharedGpuResources } from '../../infrastructure/shared-gpu-resources';
 
+/** What the shared frame loop needs from one chart of the grid. */
 export interface ITimeseriesChart {
-  readonly targetCanvas: HTMLCanvasElement;
-  readonly target2dContext: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
-  readonly fpsController: IFpsController;
-  readonly seriesManager: ISeriesLayerManager;
-  syncCanvasSize(): boolean;
+  readonly frameIntervalMs: number;
+  tickFps(): void;
   update(): void;
-  prepareDrawCommands(): IPlotArea | null;
-  getLoadingRegions(): ILoadingRegion[];
-  getViewport(): { timeStart: number; timeEnd: number };
-  renderCanvasGrid(): void;
-  renderCanvasAxes(): void;
+  /** `undefined` when there is nothing to draw and nothing loading. */
+  prepareFrame(): IPlotArea | undefined;
+  recordDrawCalls(
+    pass: GPURenderPassEncoder,
+    plotArea: IPlotArea,
+    debugPipeline: GPURenderPipeline | undefined
+  ): void;
+  /** Paints the frame's GPU image between the grid below and the axes above it. */
+  presentFrame(image: ImageBitmap): void;
   dispose(): void;
 }
 
 export interface ISharedTimeseriesRenderer {
   readonly device: GPUDevice;
   readonly format: GPUTextureFormat;
-  readonly bindGroupLayout: GPUBindGroupLayout;
-  readonly linePipeline: GPURenderPipeline;
-  readonly candlestickPipeline: GPURenderPipeline;
-  readonly rhombusPipeline: GPURenderPipeline;
-  readonly debugPipeline: GPURenderPipeline;
-  debugMode: boolean;
-  instantLoad: boolean;
+  readonly resources: ISharedGpuResources;
+  readonly debugMode: boolean;
+  readonly instantLoad: boolean;
   readonly renderFps: number;
+  setDebugMode(enabled: boolean): void;
+  setInstantLoad(enabled: boolean): void;
   registerChart(chart: ITimeseriesChart): VoidFunction;
   destroy(): void;
 }

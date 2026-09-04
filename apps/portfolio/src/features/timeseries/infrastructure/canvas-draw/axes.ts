@@ -1,3 +1,5 @@
+import { isNil } from 'lodash-es';
+
 import {
   AXIS_FONT_FAMILY,
   AXIS_FONT_SIZE,
@@ -9,12 +11,11 @@ import {
   TICK_LENGTH,
   X_LABEL_Y_AXIS_CLEARANCE,
   Y_LABEL_X_AXIS_CLEARANCE,
-} from '../constants';
-import type { IChartFrameLayout } from '../frame-layout';
-import type { ITextMeasurer } from '../text-measurer';
-import type { IAxisTick } from '../types';
-
-import { timeToPixelX, valueToPixelY } from './shared';
+} from '../../domain/constants';
+import type { IChartFrameLayout } from '../../domain/frame-layout';
+import { timeToPixelX, valueToPixelY } from '../../domain/plot-mapping';
+import type { ITextMeasurer } from '../../domain/text-measurer';
+import type { IAxisTick } from '../../domain/types';
 
 const LABEL_BG_RADIUS = 2;
 const X_LABEL_GAP = 3;
@@ -44,8 +45,8 @@ interface IAxisTickGeometry {
   toPixel(tickPosition: number): number;
   isVisible(pixel: number): boolean;
   strokeTickMark(ctx: CanvasRenderingContext2D, pixel: number): void;
-  /** `null` when the label would collide with the perpendicular axis. */
-  placeLabel(pixel: number, textWidth: number): ILabelPlacement | null;
+  /** `undefined` when the label would collide with the perpendicular axis. */
+  placeLabel(pixel: number, textWidth: number): ILabelPlacement | undefined;
 }
 
 function createXAxisGeometry(layout: IChartFrameLayout, style: IAxisLabelStyle): IAxisTickGeometry {
@@ -65,7 +66,7 @@ function createXAxisGeometry(layout: IChartFrameLayout, style: IAxisLabelStyle):
       const boxLeft = pixel - textWidth / 2 - style.bgPaddingX;
 
       if (boxLeft < plotLeft + clearance) {
-        return null;
+        return undefined;
       }
 
       return {
@@ -93,7 +94,7 @@ function createYAxisGeometry(layout: IChartFrameLayout, style: IAxisLabelStyle):
     },
     placeLabel: pixel => {
       if (pixel + style.boxHeight / 2 > plotBottom - clearance) {
-        return null;
+        return undefined;
       }
 
       return {
@@ -110,7 +111,8 @@ function drawAxisTicks(
   ctx: CanvasRenderingContext2D,
   geometry: IAxisTickGeometry,
   style: IAxisLabelStyle,
-  textMeasurer: ITextMeasurer
+  textMeasurer: ITextMeasurer,
+  font: string
 ): void {
   for (const tick of geometry.ticks) {
     const pixel = geometry.toPixel(tick.position);
@@ -125,10 +127,10 @@ function drawAxisTicks(
     geometry.strokeTickMark(ctx, pixel);
     ctx.stroke();
 
-    const textWidth = textMeasurer.measureWidth(ctx, tick.label);
+    const textWidth = textMeasurer.measureWidth(tick.label, font);
     const placement = geometry.placeLabel(pixel, textWidth);
 
-    if (placement === null) {
+    if (isNil(placement)) {
       continue;
     }
 
@@ -170,13 +172,10 @@ export function drawChartAxes(
   ctx.lineTo(plotRight, plotBottom);
   ctx.stroke();
 
-  ctx.font = `${fontSize}px ${AXIS_FONT_FAMILY}`;
+  const font = `${fontSize}px ${AXIS_FONT_FAMILY}`;
+  ctx.font = font;
   ctx.textBaseline = 'alphabetic';
-
-  // Glyph metrics cached per font size — avoids measureText('0') every frame.
-  // Uses 'alphabetic' baseline + measured centerOffset for true visual centering
-  // (Canvas 'middle' baseline sits too high for digit-only labels).
-  const { centerOffset } = textMeasurer.getGlyphMetrics(ctx);
+  const { centerOffset } = textMeasurer.getGlyphMetrics(font);
 
   const style: IAxisLabelStyle = {
     fontSize,
@@ -188,6 +187,6 @@ export function drawChartAxes(
     glyphCenterOffset: centerOffset,
   };
 
-  drawAxisTicks(ctx, createXAxisGeometry(layout, style), style, textMeasurer);
-  drawAxisTicks(ctx, createYAxisGeometry(layout, style), style, textMeasurer);
+  drawAxisTicks(ctx, createXAxisGeometry(layout, style), style, textMeasurer, font);
+  drawAxisTicks(ctx, createYAxisGeometry(layout, style), style, textMeasurer, font);
 }

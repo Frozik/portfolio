@@ -4,12 +4,11 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSudoku } from 'sudoku-gen';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { useSudokuStore } from '../application/useSudokuStore';
-import type { TTool } from '../domain/types';
-import type { DifficultyOption, SudokuDifficulty } from './components/DifficultyPicker';
+import type { SudokuDifficulty, ToolMode } from '../domain/types';
+import type { DifficultyOption } from './components/DifficultyPicker';
 import { DifficultyPicker } from './components/DifficultyPicker';
 import { SudokuField } from './components/SudokuField';
 import { sudokuT } from './translations';
@@ -39,14 +38,14 @@ export const Sudoku = observer(() => {
     store.applyTool(row, column)
   );
 
-  const handleToolSelect = useFunction((tool: TTool) => store.setTool(tool));
+  const handleSelectToolValue = useFunction((value: number) => store.setToolValue(value));
+
+  const handleSelectToolMode = useFunction((mode: ToolMode) => store.setToolMode(mode));
 
   const handleMarkField = useFunction(() => store.markField());
 
-  const handleSelectPuzzleDifficulty = useFunction((value: SudokuDifficulty) => {
-    const puzzle = getSudoku(value).puzzle.replace(/-/g, '0');
-
-    navigate(`/sudoku/${puzzle}`);
+  const handleSelectPuzzleDifficulty = useFunction((difficulty: SudokuDifficulty) => {
+    navigate(`/sudoku/${store.createPuzzle(difficulty)}`);
   });
 
   const handleRestartGame = useFunction(() => navigate('/sudoku'));
@@ -68,7 +67,8 @@ export const Sudoku = observer(() => {
             hasHistory={store.hasHistory}
             onRestorePreviousState={handleRestorePreviousState}
             onClickCell={handleClickCell}
-            onChangeTool={handleToolSelect}
+            onSelectToolValue={handleSelectToolValue}
+            onSelectToolMode={handleSelectToolMode}
             onMarkField={handleMarkField}
             onExitGame={handleRestartGame}
             onRestartGame={handleRestartPuzzle}

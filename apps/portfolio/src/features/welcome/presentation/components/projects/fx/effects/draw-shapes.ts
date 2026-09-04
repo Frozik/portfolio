@@ -1,54 +1,74 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
+import { random } from 'lodash-es';
 
 import type { IFxDrawContext } from '../types';
 
+const SHAPE_COUNT = 14;
+const SIZE_MIN = 0.03;
+const SIZE_RANGE = 0.05;
+const SIDES_MIN = 3;
+const SIDES_MAX = 7;
+const DRIFT_SPEED = 0.08;
+const SPIN_SPEED = 1.2;
+const RANDOM_CENTER = 0.5;
+const FILL_ALPHA = 0.35;
+const STROKE_ALPHA = 0.8;
+const LINE_WIDTH_PX = 1.2;
+
+/** Position and size are fractions of the canvas, so shapes survive a resize. */
 export interface IFloatingShape {
-  x: number;
-  y: number;
-  size: number;
-  sides: number;
-  rotation: number;
-  vx: number;
-  vy: number;
-  vr: number;
-  filled: boolean;
+  readonly x: number;
+  readonly y: number;
+  readonly size: number;
+  readonly sides: number;
+  readonly rotation: number;
+  readonly velocityX: number;
+  readonly velocityY: number;
+  readonly angularVelocity: number;
+  readonly filled: boolean;
 }
 
-export function createShapesState(): IFloatingShape[] {
-  return Array.from({ length: 14 }, () => ({
-    x: Math.random(),
-    y: Math.random(),
-    size: 0.03 + Math.random() * 0.05,
-    sides: 3 + Math.floor(Math.random() * 5),
-    rotation: Math.random() * Math.PI * 2,
-    vx: (Math.random() - 0.5) * 0.08,
-    vy: (Math.random() - 0.5) * 0.08,
-    vr: (Math.random() - 0.5) * 1.2,
-    filled: Math.random() > 0.5,
-  }));
+export type FloatingShapesState = { shapes: readonly IFloatingShape[] };
+
+export function createShapesState(): FloatingShapesState {
+  return {
+    shapes: Array.from({ length: SHAPE_COUNT }, () => ({
+      x: random(0, 1, true),
+      y: random(0, 1, true),
+      size: SIZE_MIN + random(0, 1, true) * SIZE_RANGE,
+      sides: random(SIDES_MIN, SIDES_MAX),
+      rotation: random(0, Math.PI * 2, true),
+      velocityX: (random(0, 1, true) - RANDOM_CENTER) * DRIFT_SPEED,
+      velocityY: (random(0, 1, true) - RANDOM_CENTER) * DRIFT_SPEED,
+      angularVelocity: (random(0, 1, true) - RANDOM_CENTER) * SPIN_SPEED,
+      filled: random(0, 1, true) > RANDOM_CENTER,
+    })),
+  };
+}
+
+/** One frame of drift; a shape leaving the canvas bounces back. */
+function advanceShape(shape: IFloatingShape, deltaTime: number): IFloatingShape {
+  const x = shape.x + shape.velocityX * deltaTime;
+  const y = shape.y + shape.velocityY * deltaTime;
+  return {
+    ...shape,
+    x,
+    y,
+    rotation: shape.rotation + shape.angularVelocity * deltaTime,
+    velocityX: x < 0 || x > 1 ? -shape.velocityX : shape.velocityX,
+    velocityY: y < 0 || y > 1 ? -shape.velocityY : shape.velocityY,
+  };
 }
 
 export function drawShapes(
-  { ctx, width, height, speed, accent, dpr }: IFxDrawContext,
-  shapes: IFloatingShape[]
+  { ctx, width, height, deltaTime, accent, devicePixelRatio }: IFxDrawContext,
+  state: FloatingShapesState
 ): void {
-  const deltaTime = 0.016 * speed;
+  state.shapes = state.shapes.map(shape => advanceShape(shape, deltaTime));
 
-  for (const shape of shapes) {
-    shape.x += shape.vx * deltaTime;
-    shape.y += shape.vy * deltaTime;
-    shape.rotation += shape.vr * deltaTime;
-    if (shape.x < 0 || shape.x > 1) {
-      shape.vx *= -1;
-    }
-    if (shape.y < 0 || shape.y > 1) {
-      shape.vy *= -1;
-    }
-    const cx = shape.x * width;
-    const cy = shape.y * height;
+  for (const shape of state.shapes) {
     const radius = shape.size * Math.min(width, height);
     ctx.save();
-    ctx.translate(cx, cy);
+    ctx.translate(shape.x * width, shape.y * height);
     ctx.rotate(shape.rotation);
     ctx.beginPath();
     for (let vertexIndex = 0; vertexIndex <= shape.sides; vertexIndex++) {
@@ -62,11 +82,11 @@ export function drawShapes(
       }
     }
     if (shape.filled) {
-      ctx.fillStyle = accent(0.35);
+      ctx.fillStyle = accent(FILL_ALPHA);
       ctx.fill();
     }
-    ctx.strokeStyle = accent(0.8);
-    ctx.lineWidth = 1.2 * dpr;
+    ctx.strokeStyle = accent(STROKE_ALPHA);
+    ctx.lineWidth = LINE_WIDTH_PX * devicePixelRatio;
     ctx.stroke();
     ctx.restore();
   }

@@ -19,10 +19,12 @@ export interface IFxDrawContext {
   readonly ctx: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
+  /** Animation seconds: advances faster while the card is hovered, never jumps. */
   readonly time: number;
-  readonly speed: number;
+  /** Animation seconds elapsed since the previous frame. */
+  readonly deltaTime: number;
   readonly accent: TAccentAlpha;
-  readonly dpr: number;
+  readonly devicePixelRatio: number;
 }
 
 /** Draw function of a stateful effect — receives its own typed state bag. */

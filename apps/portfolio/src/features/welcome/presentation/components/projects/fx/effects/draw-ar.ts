@@ -1,97 +1,172 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
-
 import { MONO_FONT_STACK } from '../../../../canvasTheme';
 import type { IFxDrawContext } from '../types';
 
-export function drawAR({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
-  const cx = width / 2;
-  const cy = height * 0.54;
-  const faceW = Math.min(width, height) * 0.44;
-  const faceH = faceW * 1.3;
+const FACE_CENTER_Y_RATIO = 0.54;
+const FACE_WIDTH_RATIO = 0.44;
+const FACE_ASPECT = 1.3;
+const FACE_OFFSET_RATIO = 0.02;
+const GLOW_RADIUS_RATIO = 0.7;
+const GLOW_ALPHA = 0.06;
+const FACE_OUTLINE_ALPHA = 0.18;
+const FACE_DASH_PX = [3, 4] as const;
+const FRAME_PADDING_PX = 10;
+const CORNER_LENGTH_PX = 18;
+const CORNER_PULSE_BASE = 0.55;
+const CORNER_PULSE_RANGE = 0.45;
+const CORNER_PULSE_SPEED = 2;
+const CORNER_ALPHA = 0.55;
+const CORNER_LINE_WIDTH_PX = 1.5;
+const EYE_Y_RATIO = 0.12;
+const EYE_SPACING_RATIO = 0.2;
+const LENS_WIDTH_RATIO = 0.3;
+const LENS_HEIGHT_RATIO = 0.14;
+const LENS_GLOW_RADIUS_RATIO = 0.9;
+const LENS_GLOW_ALPHA = 0.32;
+const LENS_ALPHA = 0.98;
+const LENS_LINE_WIDTH_PX = 1.8;
+const TEMPLE_LENGTH_RATIO = 0.18;
+const TEMPLE_RISE_RATIO = 0.2;
+const SCAN_SPEED_PX = 45;
+const SCAN_OVERSHOOT_PX = 20;
+const SCAN_PEAK_ALPHA = 0.8;
+const SCAN_LINE_HEIGHT_PX = 2;
+const TAG_ALPHA = 0.75;
+const TAG_FONT_PX = 9;
+const TAG_MARGIN_PX = 10;
 
-  const baseGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.7);
-  baseGrad.addColorStop(0, accent(0.06));
-  baseGrad.addColorStop(1, accent(0));
-  ctx.fillStyle = baseGrad;
+/** A face outline in a scanning AR frame with the glasses overlay drawn on. */
+export function drawAR({
+  ctx,
+  width,
+  height,
+  time,
+  accent,
+  devicePixelRatio,
+}: IFxDrawContext): void {
+  const centerX = width / 2;
+  const centerY = height * FACE_CENTER_Y_RATIO;
+  const faceWidth = Math.min(width, height) * FACE_WIDTH_RATIO;
+  const faceHeight = faceWidth * FACE_ASPECT;
+
+  const glow = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    0,
+    centerX,
+    centerY,
+    Math.max(width, height) * GLOW_RADIUS_RATIO
+  );
+  glow.addColorStop(0, accent(GLOW_ALPHA));
+  glow.addColorStop(1, accent(0));
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 
   ctx.save();
-  ctx.strokeStyle = accent(0.18);
-  ctx.lineWidth = dpr;
-  ctx.setLineDash([3 * dpr, 4 * dpr]);
+  ctx.strokeStyle = accent(FACE_OUTLINE_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
+  ctx.setLineDash(FACE_DASH_PX.map(dash => dash * devicePixelRatio));
   ctx.beginPath();
-  ctx.ellipse(cx, cy + faceH * 0.02, faceW / 2, faceH / 2, 0, 0, Math.PI * 2);
+  ctx.ellipse(
+    centerX,
+    centerY + faceHeight * FACE_OFFSET_RATIO,
+    faceWidth / 2,
+    faceHeight / 2,
+    0,
+    0,
+    Math.PI * 2
+  );
   ctx.stroke();
   ctx.restore();
 
-  const bx = cx - faceW / 2 - 10 * dpr;
-  const by = cy - faceH / 2 - 10 * dpr;
-  const bw = faceW + 20 * dpr;
-  const bhh = faceH + 20 * dpr;
-  const cornerLen = 18 * dpr;
-  const cornerPulse = 0.55 + 0.45 * Math.sin(time * speed * 2);
+  const padding = FRAME_PADDING_PX * devicePixelRatio;
+  const frameLeft = centerX - faceWidth / 2 - padding;
+  const frameTop = centerY - faceHeight / 2 - padding;
+  const frameWidth = faceWidth + padding * 2;
+  const frameHeight = faceHeight + padding * 2;
+  const cornerLength = CORNER_LENGTH_PX * devicePixelRatio;
+  const cornerPulse = CORNER_PULSE_BASE + CORNER_PULSE_RANGE * Math.sin(time * CORNER_PULSE_SPEED);
 
-  ctx.strokeStyle = accent(0.55);
-  ctx.lineWidth = 1.5 * dpr;
-  ctx.globalAlpha = 0.55 + cornerPulse * 0.45;
-  const corners: Array<[number, number, number, number]> = [
-    [bx, by, 1, 1],
-    [bx + bw, by, -1, 1],
-    [bx, by + bhh, 1, -1],
-    [bx + bw, by + bhh, -1, -1],
+  ctx.strokeStyle = accent(CORNER_ALPHA);
+  ctx.lineWidth = CORNER_LINE_WIDTH_PX * devicePixelRatio;
+  ctx.globalAlpha = CORNER_ALPHA + cornerPulse * CORNER_PULSE_RANGE;
+  const corners: readonly (readonly [number, number, number, number])[] = [
+    [frameLeft, frameTop, 1, 1],
+    [frameLeft + frameWidth, frameTop, -1, 1],
+    [frameLeft, frameTop + frameHeight, 1, -1],
+    [frameLeft + frameWidth, frameTop + frameHeight, -1, -1],
   ];
-  for (const [x, y, sx, sy] of corners) {
+  for (const [x, y, directionX, directionY] of corners) {
     ctx.beginPath();
-    ctx.moveTo(x, y + cornerLen * sy);
+    ctx.moveTo(x, y + cornerLength * directionY);
     ctx.lineTo(x, y);
-    ctx.lineTo(x + cornerLen * sx, y);
+    ctx.lineTo(x + cornerLength * directionX, y);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  const eyeY = cy - faceH * 0.12;
-  const eyeDx = faceW * 0.2;
-  const leftEye = { x: cx - eyeDx, y: eyeY };
-  const rightEye = { x: cx + eyeDx, y: eyeY };
+  const eyeY = centerY - faceHeight * EYE_Y_RATIO;
+  const eyeSpacing = faceWidth * EYE_SPACING_RATIO;
+  const eyes = [
+    { x: centerX - eyeSpacing, y: eyeY },
+    { x: centerX + eyeSpacing, y: eyeY },
+  ] as const;
+  const [leftEye, rightEye] = eyes;
+  const lensWidth = faceWidth * LENS_WIDTH_RATIO;
+  const lensHeight = faceHeight * LENS_HEIGHT_RATIO;
 
-  const lensW = faceW * 0.3;
-  const lensH = faceH * 0.14;
-
-  for (const eye of [leftEye, rightEye]) {
-    const grad = ctx.createRadialGradient(eye.x, eye.y, 0, eye.x, eye.y, lensW * 0.9);
-    grad.addColorStop(0, accent(0.32));
-    grad.addColorStop(1, accent(0));
-    ctx.fillStyle = grad;
-    ctx.fillRect(eye.x - lensW, eye.y - lensH, lensW * 2, lensH * 2);
+  for (const eye of eyes) {
+    const lensGlow = ctx.createRadialGradient(
+      eye.x,
+      eye.y,
+      0,
+      eye.x,
+      eye.y,
+      lensWidth * LENS_GLOW_RADIUS_RATIO
+    );
+    lensGlow.addColorStop(0, accent(LENS_GLOW_ALPHA));
+    lensGlow.addColorStop(1, accent(0));
+    ctx.fillStyle = lensGlow;
+    ctx.fillRect(eye.x - lensWidth, eye.y - lensHeight, lensWidth * 2, lensHeight * 2);
   }
 
-  ctx.strokeStyle = accent(0.98);
-  ctx.lineWidth = 1.8 * dpr;
-  for (const eye of [leftEye, rightEye]) {
-    ctx.strokeRect(eye.x - lensW / 2, eye.y - lensH / 2, lensW, lensH);
+  ctx.strokeStyle = accent(LENS_ALPHA);
+  ctx.lineWidth = LENS_LINE_WIDTH_PX * devicePixelRatio;
+  for (const eye of eyes) {
+    ctx.strokeRect(eye.x - lensWidth / 2, eye.y - lensHeight / 2, lensWidth, lensHeight);
   }
 
+  const templeLength = faceWidth * TEMPLE_LENGTH_RATIO;
+  const templeRise = lensHeight * TEMPLE_RISE_RATIO;
   ctx.beginPath();
-  ctx.moveTo(leftEye.x + lensW / 2, eyeY);
-  ctx.lineTo(rightEye.x - lensW / 2, eyeY);
-  ctx.moveTo(leftEye.x - lensW / 2, eyeY);
-  ctx.lineTo(leftEye.x - lensW / 2 - faceW * 0.18, eyeY - lensH * 0.2);
-  ctx.moveTo(rightEye.x + lensW / 2, eyeY);
-  ctx.lineTo(rightEye.x + lensW / 2 + faceW * 0.18, eyeY - lensH * 0.2);
+  ctx.moveTo(leftEye.x + lensWidth / 2, eyeY);
+  ctx.lineTo(rightEye.x - lensWidth / 2, eyeY);
+  ctx.moveTo(leftEye.x - lensWidth / 2, eyeY);
+  ctx.lineTo(leftEye.x - lensWidth / 2 - templeLength, eyeY - templeRise);
+  ctx.moveTo(rightEye.x + lensWidth / 2, eyeY);
+  ctx.lineTo(rightEye.x + lensWidth / 2 + templeLength, eyeY - templeRise);
   ctx.stroke();
 
-  const scanLineY = by + ((time * speed * 45) % (bhh + 20));
-  if (scanLineY < by + bhh) {
-    const scanGrad = ctx.createLinearGradient(bx, scanLineY, bx + bw, scanLineY);
-    scanGrad.addColorStop(0, accent(0));
-    scanGrad.addColorStop(0.5, accent(0.8));
-    scanGrad.addColorStop(1, accent(0));
-    ctx.fillStyle = scanGrad;
-    ctx.fillRect(bx, scanLineY - dpr, bw, 2 * dpr);
+  const scanLineY = frameTop + ((time * SCAN_SPEED_PX) % (frameHeight + SCAN_OVERSHOOT_PX));
+  if (scanLineY < frameTop + frameHeight) {
+    const scan = ctx.createLinearGradient(frameLeft, scanLineY, frameLeft + frameWidth, scanLineY);
+    scan.addColorStop(0, accent(0));
+    scan.addColorStop(0.5, accent(SCAN_PEAK_ALPHA));
+    scan.addColorStop(1, accent(0));
+    ctx.fillStyle = scan;
+    ctx.fillRect(
+      frameLeft,
+      scanLineY - devicePixelRatio,
+      frameWidth,
+      SCAN_LINE_HEIGHT_PX * devicePixelRatio
+    );
   }
 
-  ctx.fillStyle = accent(0.75);
-  ctx.font = `${9 * dpr}px ${MONO_FONT_STACK}`;
+  ctx.fillStyle = accent(TAG_ALPHA);
+  ctx.font = `${TAG_FONT_PX * devicePixelRatio}px ${MONO_FONT_STACK}`;
   ctx.textAlign = 'left';
-  ctx.fillText('AR · LIVE', 10 * dpr, height - 10 * dpr);
+  ctx.fillText(
+    'AR · LIVE',
+    TAG_MARGIN_PX * devicePixelRatio,
+    height - TAG_MARGIN_PX * devicePixelRatio
+  );
 }

@@ -9,6 +9,7 @@ import type { ISeriesConfig } from '../../domain/types';
 import { EChartType } from '../../domain/types';
 import { SeriesLayer } from '../../infrastructure/layers/series-layer';
 import { SeriesLayerManager } from '../../infrastructure/layers/series-layer-manager';
+import type { ISharedGpuResources } from '../../infrastructure/shared-gpu-resources';
 import type { SlotAllocator } from '../../infrastructure/slot-allocator';
 
 import type { ISharedTimeseriesRenderer } from './types';
@@ -34,25 +35,18 @@ function getNeedsStitching(chartType: EChartType): boolean {
   }
 }
 
-function getGpuPipeline(
-  chartType: EChartType,
-  renderer: ISharedTimeseriesRenderer
-): GPURenderPipeline {
+function getGpuPipeline(chartType: EChartType, resources: ISharedGpuResources): GPURenderPipeline {
   switch (chartType) {
     case EChartType.Line:
-      return renderer.linePipeline;
+      return resources.linePipeline;
     case EChartType.Candlestick:
-      return renderer.candlestickPipeline;
+      return resources.candlestickPipeline;
     case EChartType.Rhombus:
-      return renderer.rhombusPipeline;
+      return resources.rhombusPipeline;
   }
 }
 
-/**
- * Build one data pipeline + GPU layer per series config, all sharing the
- * chart's single slot allocator (one texture) and block registry (one RTree).
- * The returned manager is already initialised and bound to the allocator view.
- */
+/** One data pipeline and GPU layer per series, sharing the chart's texture slots and block index. */
 export function createSeries({
   renderer,
   seriesConfigs,
@@ -83,13 +77,15 @@ export function createSeries({
     );
 
     const layer = new SeriesLayer(
+      renderer.device,
+      renderer.resources.bindGroupLayout,
+      allocator,
       getVerticesPerInstance(config.chartType),
       getNeedsStitching(config.chartType)
     );
-    seriesManager.addSeries(layer, getGpuPipeline(config.chartType, renderer));
+    seriesManager.addSeries(layer, getGpuPipeline(config.chartType, renderer.resources));
   }
 
-  seriesManager.initAll(renderer.device, renderer.bindGroupLayout, allocator);
   seriesManager.updateBindGroups(allocator.createView());
 
   return { dataPipelines, seriesManager };

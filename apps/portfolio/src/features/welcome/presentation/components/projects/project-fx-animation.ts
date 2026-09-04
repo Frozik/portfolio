@@ -29,17 +29,14 @@ export interface IProjectFxAnimation extends IAmbientCanvasAnimation {
 }
 
 export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimation {
-  // The effect instance owns its state bag (shapes drift, typing progression, …),
-  // which persists across frames; the card never changes `kind`, so it never
-  // needs resetting.
   const render = createFxRender(kind);
   let accent: TAccentAlpha = buildAccentFn(readAccentRgb());
   let hovered = false;
+  let animationTime = 0;
 
   return {
+    /** Effects draw in backing-store pixels, so the context stays at identity. */
     onResize(): void {
-      // The effects draw in backing-store pixels (manual `* dpr`), so the context
-      // stays at identity. The accent was read every frame — cache it here instead.
       accent = buildAccentFn(readAccentRgb());
     },
 
@@ -49,14 +46,17 @@ export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimat
         return;
       }
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      // Hover changes the pace, not the phase: time is integrated so nothing jumps.
+      const deltaTime = (frame.deltaMs / MS_PER_SECOND) * (hovered ? HOVERED_SPEED : IDLE_SPEED);
+      animationTime += deltaTime;
       render({
         ctx,
         width: ctx.canvas.width,
         height: ctx.canvas.height,
-        time: frame.elapsedMs / MS_PER_SECOND,
-        speed: hovered ? HOVERED_SPEED : IDLE_SPEED,
+        time: animationTime,
+        deltaTime,
         accent,
-        dpr: frame.dpr,
+        devicePixelRatio: frame.dpr,
       });
     },
 

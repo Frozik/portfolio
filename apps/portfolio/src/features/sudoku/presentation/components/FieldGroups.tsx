@@ -1,7 +1,8 @@
 import { observer } from 'mobx-react-lite';
 import type { CSSProperties } from 'react';
+
 import { getPairs } from '../../domain/services';
-import type { IField, TTool } from '../../domain/types';
+import type { IField, ITool } from '../../domain/types';
 import { FieldCell } from './FieldCell';
 
 export const FieldGroups = observer(
@@ -14,23 +15,19 @@ export const FieldGroups = observer(
     onOverCell,
     onClickCell,
   }: {
-    field: IField;
-    groupGridStyle: CSSProperties;
-    cellSize: number;
-    selectedCell: { row: number; column: number } | undefined;
-    tool: TTool;
-    onOverCell: (row: number, column: number) => void;
-    onClickCell: (row: number, column: number) => void;
-  }) => {
-    return getPairs(field.size).map(([groupRow, groupColumn]) => (
+    readonly field: IField;
+    readonly groupGridStyle: CSSProperties;
+    readonly cellSize: number;
+    readonly selectedCell: { readonly row: number; readonly column: number } | undefined;
+    readonly tool: ITool;
+    readonly onOverCell: (row: number, column: number) => void;
+    readonly onClickCell: (row: number, column: number) => void;
+  }) =>
+    getPairs(field.size).map(([groupRow, groupColumn]) => (
       <div
         key={`${groupRow}:${groupColumn}`}
         className="grid gap-px"
-        style={{
-          ...groupGridStyle,
-          gridColumn: groupColumn + 1,
-          gridRow: groupRow + 1,
-        }}
+        style={{ ...groupGridStyle, gridColumn: groupColumn + 1, gridRow: groupRow + 1 }}
       >
         {getPairs(field.size).map(([cellRow, cellColumn]) => (
           <FieldCell
@@ -48,6 +45,5 @@ export const FieldGroups = observer(
           />
         ))}
       </div>
-    ));
-  }
+    ))
 );

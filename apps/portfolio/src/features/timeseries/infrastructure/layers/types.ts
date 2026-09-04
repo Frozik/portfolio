@@ -1,18 +1,17 @@
 import type { IBlockEntry, IPlotArea } from '../../domain/types';
-import type { SlotAllocator } from '../slot-allocator';
+
+export interface ISeriesUniforms {
+  readonly canvasWidth: number;
+  readonly canvasHeight: number;
+  readonly viewTimeStart: number;
+  readonly viewTimeEnd: number;
+  readonly viewValueMin: number;
+  readonly viewValueMax: number;
+}
 
 export interface ISeriesLayer {
-  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: SlotAllocator): void;
   updateBindGroup(dataTextureView: GPUTextureView): void;
-  writeUniforms(
-    blocks: ReadonlyArray<IBlockEntry>,
-    canvasWidth: number,
-    canvasHeight: number,
-    viewTimeStart: number,
-    viewTimeEnd: number,
-    viewValueMin: number,
-    viewValueMax: number
-  ): void;
+  writeUniforms(blocks: readonly IBlockEntry[], uniforms: ISeriesUniforms): void;
   render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void;
   renderDebug(
     pass: GPURenderPassEncoder,
@@ -20,11 +19,12 @@ export interface ISeriesLayer {
     plotArea: IPlotArea
   ): void;
   readonly instanceCount: number;
-  readonly bindGroup: GPUBindGroup | null;
   dispose(): void;
 }
 
 export interface ISeriesLayerManager {
+  updateBindGroups(dataTextureView: GPUTextureView): void;
+  writeAllUniforms(blockSets: readonly (readonly IBlockEntry[])[], uniforms: ISeriesUniforms): void;
   renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void;
   renderDebug(
     pass: GPURenderPassEncoder,

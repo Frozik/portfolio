@@ -4,8 +4,10 @@ import {
   EMPTY_VD,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import { isNil } from 'lodash-es';
+import { isNil, last } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
+
+import type { IPuzzleGenerator } from '../domain/ports/puzzle-generator';
 import {
   addFieldMarks,
   applyToolToFieldReducer,
@@ -14,20 +16,27 @@ import {
   loadField,
   removeFieldMarks,
 } from '../domain/services';
-import type { IField, TTool } from '../domain/types';
-import { EToolType } from '../domain/types';
+import type { IField, ITool, SudokuDifficulty, ToolMode } from '../domain/types';
 
 export class SudokuStore {
   field: ValueDescriptor<IField> = EMPTY_VD;
-  tool: TTool = { type: EToolType.None, value: undefined };
-  history: IField[] = [];
+  tool: ITool = { mode: 'pen', value: undefined };
+  history: readonly IField[] = [];
 
-  constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
+  constructor(private readonly puzzleGenerator: IPuzzleGenerator) {
+    makeAutoObservable<SudokuStore, 'puzzleGenerator'>(
+      this,
+      { puzzleGenerator: false },
+      { autoBind: true }
+    );
   }
 
   get hasHistory(): boolean {
     return this.history.length > 0;
+  }
+
+  createPuzzle(difficulty: SudokuDifficulty): string {
+    return this.puzzleGenerator.generate(difficulty);
   }
 
   resetPuzzle(): void {
@@ -36,12 +45,10 @@ export class SudokuStore {
   }
 
   restartPuzzle(): void {
-    if (!isSyncedValueDescriptor(this.field)) {
-      return;
+    if (isSyncedValueDescriptor(this.field)) {
+      this.field = createSyncedValueDescriptor(cleanPuzzle(this.field.value));
+      this.history = [];
     }
-
-    this.field = createSyncedValueDescriptor(cleanPuzzle(this.field.value));
-    this.history = [];
   }
 
   loadPuzzle(puzzle: string): void {
@@ -49,56 +56,47 @@ export class SudokuStore {
     this.history = [];
   }
 
-  setTool(tool: TTool): void {
-    if (!isNil(this.tool.value) && this.tool.value === tool.value && this.tool.type === tool.type) {
-      this.tool = { type: EToolType.None, value: undefined };
-      return;
-    }
+  /** Selecting the active number again deselects it; the mode stays. */
+  setToolValue(value: number): void {
+    this.tool = { ...this.tool, value: this.tool.value === value ? undefined : value };
+  }
 
-    this.tool = tool;
+  setToolMode(mode: ToolMode): void {
+    this.tool = { ...this.tool, mode };
   }
 
   applyTool(row: number, column: number): void {
-    if (
-      !isSyncedValueDescriptor(this.field) ||
-      this.field.value.size === 0 ||
-      this.tool.type === EToolType.None
-    ) {
+    if (!isSyncedValueDescriptor(this.field) || isNil(this.tool.value)) {
       return;
     }
-
     const previousField = this.field.value;
-    const newField = applyToolToFieldReducer(previousField, this.tool, row, column);
-
-    if (previousField !== newField) {
+    const nextField = applyToolToFieldReducer(previousField, this.tool, row, column);
+    if (previousField !== nextField) {
       this.history = [...this.history, previousField];
     }
-
-    this.field = createSyncedValueDescriptor(newField);
+    this.field = createSyncedValueDescriptor(nextField);
   }
 
+  /** Toggles candidate notes: fills them when none exist, clears them otherwise. */
   markField(): void {
-    if (!isSyncedValueDescriptor(this.field) || this.field.value.size === 0) {
+    if (!isSyncedValueDescriptor(this.field)) {
       return;
     }
-
-    this.history = [...this.history, this.field.value];
-
-    if (hasMarks(this.field.value)) {
-      this.field = createSyncedValueDescriptor(removeFieldMarks(this.field.value));
-    } else {
-      this.field = createSyncedValueDescriptor(addFieldMarks(this.field.value));
-    }
+    const field = this.field.value;
+    this.history = [...this.history, field];
+    this.field = createSyncedValueDescriptor(
+      hasMarks(field) ? removeFieldMarks(field) : addFieldMarks(field)
+    );
   }
 
   restorePreviousState(): void {
-    if (this.history.length === 0) {
+    const previousState = last(this.history);
+    if (isNil(previousState)) {
       return;
     }
-
-    const previousState = this.history[this.history.length - 1];
     this.history = this.history.slice(0, -1);
-
     this.field = createSyncedValueDescriptor(previousState);
   }
+
+  dispose(): void {}
 }

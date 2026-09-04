@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import { MY_TIMEZONE } from '../../constants';
+import { MY_TIMEZONE } from '../availability-constants';
 
 const DEFAULT_TICK_MS = 1000;
 

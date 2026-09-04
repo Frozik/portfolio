@@ -1,12 +1,6 @@
 /**
- * Registry of the canvas effects behind project-card FX overlays.
- * Ported from `redesign/scripts/project-fx.js`. Each effect lives in its own
- * `./effects/*` module and receives the current draw context; stateful effects
- * additionally get their own typed state bag (shapes drift, typing
- * progression, …), created once per card by the factory below. Drawing
- * functions must not allocate per-frame when avoidable; all tuning numbers are
- * intentionally inline to preserve the visual fidelity of the ported design
- * reference.
+ * The canvas effects behind project-card FX overlays, one module per effect.
+ * Stateful effects get a typed state bag created once per card.
  */
 
 import { drawAR } from './effects/draw-ar';

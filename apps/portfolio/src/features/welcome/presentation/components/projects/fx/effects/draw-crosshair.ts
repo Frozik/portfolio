@@ -1,137 +1,191 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
+import { isNil } from 'lodash-es';
 
 import type { IFxDrawContext } from '../types';
 import { pseudoRandom } from '../utils';
 
+const MIN_CANDLE_WIDTH_PX = 5;
+const CANDLE_WIDTH_DIVISOR = 32;
+const CANDLE_GAP_RATIO = 0.25;
+const EXTRA_VISIBLE_CANDLES = 4;
+const SCROLL_SPEED = 0.6;
+const WARMUP_CANDLES = 50;
+const VERTICAL_PADDING_PX = 18;
+const START_PRICE = 100;
+const DRIFT_RANGE = 6;
+const WICK_RANGE = 3;
+const RANDOM_CENTER = 0.5;
+const SEED_DRIFT = 1;
+const SEED_HIGH = 2;
+const SEED_LOW = 3;
+const VALUE_PADDING_RATIO = 0.08;
+const GRID_ROWS = 5;
+const GRID_ALPHA = 0.06;
+const BULLISH_ALPHA = 0.85;
+const BEARISH_ALPHA = 0.35;
+const BEARISH_FILL_ALPHA = 0.12;
+const CRISP_INSET_PX = 0.5;
+const LAST_PRICE_ALPHA = 0.5;
+const LAST_PRICE_DASH_PX = [2, 3] as const;
+const CROSSHAIR_X_BASE = 0.35;
+const CROSSHAIR_X_RANGE = 0.3;
+const CROSSHAIR_X_SPEED = 0.6;
+const CROSSHAIR_Y_BASE = 0.38;
+const CROSSHAIR_Y_RANGE = 0.22;
+const CROSSHAIR_Y_SPEED = 0.9;
+const CROSSHAIR_Y_PHASE = 1;
+const CROSSHAIR_ALPHA = 0.55;
+const CROSSHAIR_DASH_PX = [3, 4] as const;
+const CROSSHAIR_DOT_RADIUS_PX = 3;
+const CROSSHAIR_RING_RADIUS_PX = 8;
+const CROSSHAIR_RING_ALPHA = 0.4;
+
+interface ICandle {
+  readonly open: number;
+  readonly close: number;
+  readonly high: number;
+  readonly low: number;
+}
+
+function generateCandles(firstIndex: number, count: number): readonly ICandle[] {
+  const candles: ICandle[] = [];
+  let price = START_PRICE;
+  // Earlier candles are walked so the visible ones start at a settled price.
+  for (
+    let candleIndex = firstIndex - WARMUP_CANDLES;
+    candleIndex <= firstIndex + count;
+    candleIndex++
+  ) {
+    const drift = (pseudoRandom(candleIndex, SEED_DRIFT) - RANDOM_CENTER) * DRIFT_RANGE;
+    const open = price;
+    const close = price + drift;
+    if (candleIndex >= firstIndex) {
+      candles.push({
+        open,
+        close,
+        high: Math.max(open, close) + pseudoRandom(candleIndex, SEED_HIGH) * WICK_RANGE,
+        low: Math.min(open, close) - pseudoRandom(candleIndex, SEED_LOW) * WICK_RANGE,
+      });
+    }
+    price = close;
+  }
+  return candles;
+}
+
+/** A scrolling candlestick chart with a wandering crosshair. */
 export function drawCrosshair({
   ctx,
   width,
   height,
   time,
-  speed,
   accent,
-  dpr,
+  devicePixelRatio,
 }: IFxDrawContext): void {
-  const candleW = Math.max(5 * dpr, width / 32);
-  const gap = Math.max(dpr, candleW * 0.25);
-  const pitch = candleW + gap;
-  const visibleCandleCount = Math.ceil(width / pitch) + 4;
-  const scroll = (time * speed * 0.6) % 1;
-  const offsetX = -scroll * pitch;
-  const startIdx = Math.floor(time * speed * 0.6);
-  const vertPad = 18 * dpr;
-  const chartTop = vertPad;
-  const chartBottom = height - vertPad;
-  const chartH = chartBottom - chartTop;
+  const candleWidth = Math.max(
+    MIN_CANDLE_WIDTH_PX * devicePixelRatio,
+    width / CANDLE_WIDTH_DIVISOR
+  );
+  const pitch = candleWidth + Math.max(devicePixelRatio, candleWidth * CANDLE_GAP_RATIO);
+  const visibleCandleCount = Math.ceil(width / pitch) + EXTRA_VISIBLE_CANDLES;
+  const scrollPosition = time * SCROLL_SPEED;
+  const offsetX = -(scrollPosition % 1) * pitch;
+  const chartTop = VERTICAL_PADDING_PX * devicePixelRatio;
+  const chartBottom = height - chartTop;
+  const chartHeight = chartBottom - chartTop;
 
-  const series: Array<{ open: number; close: number; high: number; low: number; index: number }> =
-    [];
-  let price = 100;
-  for (
-    let candleIndex = startIdx - 50;
-    candleIndex <= startIdx + visibleCandleCount;
-    candleIndex++
-  ) {
-    const drift = (pseudoRandom(candleIndex, 1) - 0.5) * 6;
-    const open = price;
-    const close = price + drift;
-    const high = Math.max(open, close) + pseudoRandom(candleIndex, 2) * 3;
-    const low = Math.min(open, close) - pseudoRandom(candleIndex, 3) * 3;
-    if (candleIndex >= startIdx) {
-      series.push({ open, close, high, low, index: candleIndex });
-    }
-    price = close;
-  }
+  const candles = generateCandles(Math.floor(scrollPosition), visibleCandleCount);
+  const lowest = Math.min(...candles.map(candle => candle.low));
+  const highest = Math.max(...candles.map(candle => candle.high));
+  const valuePadding = (highest - lowest) * VALUE_PADDING_RATIO;
+  const valueMin = lowest - valuePadding;
+  const valueMax = highest + valuePadding;
+  const priceToY = (priceValue: number): number =>
+    chartBottom - ((priceValue - valueMin) / (valueMax - valueMin)) * chartHeight;
 
-  let valueMin = Number.POSITIVE_INFINITY;
-  let valueMax = Number.NEGATIVE_INFINITY;
-  for (const candle of series) {
-    if (candle.low < valueMin) {
-      valueMin = candle.low;
-    }
-    if (candle.high > valueMax) {
-      valueMax = candle.high;
-    }
-  }
-  const valuePadding = (valueMax - valueMin) * 0.08;
-  valueMin -= valuePadding;
-  valueMax += valuePadding;
-  const priceToY = (priceValue: number) =>
-    chartBottom - ((priceValue - valueMin) / (valueMax - valueMin)) * chartH;
-
-  ctx.strokeStyle = accent(0.06);
-  ctx.lineWidth = dpr;
-  for (let gridLineIndex = 1; gridLineIndex < 5; gridLineIndex++) {
-    const y = chartTop + (chartH * gridLineIndex) / 5;
+  ctx.strokeStyle = accent(GRID_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
+  for (let gridLineIndex = 1; gridLineIndex < GRID_ROWS; gridLineIndex++) {
+    const y = chartTop + (chartHeight * gridLineIndex) / GRID_ROWS;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
   }
 
-  for (let candleIndex = 0; candleIndex < series.length; candleIndex++) {
-    const candle = series[candleIndex];
+  candles.forEach((candle, candleIndex) => {
     const x = offsetX + candleIndex * pitch;
-    const xMid = x + candleW / 2;
+    const middleX = x + candleWidth / 2;
     const bullish = candle.close >= candle.open;
     const bodyTop = priceToY(Math.max(candle.open, candle.close));
-    const bodyBot = priceToY(Math.min(candle.open, candle.close));
-    const yHi = priceToY(candle.high);
-    const yLo = priceToY(candle.low);
-    const color = bullish ? accent(0.85) : accent(0.35);
+    const bodyHeight = Math.max(
+      devicePixelRatio,
+      priceToY(Math.min(candle.open, candle.close)) - bodyTop
+    );
+    const color = bullish ? accent(BULLISH_ALPHA) : accent(BEARISH_ALPHA);
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, dpr);
+    ctx.lineWidth = Math.max(1, devicePixelRatio);
     ctx.beginPath();
-    ctx.moveTo(xMid, yHi);
-    ctx.lineTo(xMid, yLo);
+    ctx.moveTo(middleX, priceToY(candle.high));
+    ctx.lineTo(middleX, priceToY(candle.low));
     ctx.stroke();
     if (bullish) {
       ctx.fillStyle = color;
-      ctx.fillRect(x, bodyTop, candleW, Math.max(dpr, bodyBot - bodyTop));
+      ctx.fillRect(x, bodyTop, candleWidth, bodyHeight);
     } else {
-      ctx.fillStyle = accent(0.12);
-      ctx.fillRect(x, bodyTop, candleW, Math.max(dpr, bodyBot - bodyTop));
+      ctx.fillStyle = accent(BEARISH_FILL_ALPHA);
+      ctx.fillRect(x, bodyTop, candleWidth, bodyHeight);
       ctx.strokeStyle = color;
-      ctx.strokeRect(x + 0.5, bodyTop + 0.5, candleW - 1, Math.max(dpr, bodyBot - bodyTop) - 1);
+      ctx.strokeRect(
+        x + CRISP_INSET_PX,
+        bodyTop + CRISP_INSET_PX,
+        candleWidth - CRISP_INSET_PX * 2,
+        bodyHeight - CRISP_INSET_PX * 2
+      );
     }
-  }
+  });
 
-  const last = series[series.length - 1];
-  if (last) {
-    const py = priceToY(last.close);
-    ctx.strokeStyle = accent(0.5);
-    ctx.lineWidth = dpr;
-    ctx.setLineDash([2 * dpr, 3 * dpr]);
+  const lastCandle = candles.at(-1);
+  if (!isNil(lastCandle)) {
+    const lastPriceY = priceToY(lastCandle.close);
+    ctx.strokeStyle = accent(LAST_PRICE_ALPHA);
+    ctx.lineWidth = devicePixelRatio;
+    ctx.setLineDash(LAST_PRICE_DASH_PX.map(dash => dash * devicePixelRatio));
     ctx.beginPath();
-    ctx.moveTo(0, py);
-    ctx.lineTo(width, py);
+    ctx.moveTo(0, lastPriceY);
+    ctx.lineTo(width, lastPriceY);
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  const cx = width * (0.35 + 0.3 * (0.5 + 0.5 * Math.sin(time * speed * 0.6)));
-  const cy = height * (0.38 + 0.22 * (0.5 + 0.5 * Math.sin(time * speed * 0.9 + 1)));
+  const crosshairX =
+    width *
+    (CROSSHAIR_X_BASE +
+      CROSSHAIR_X_RANGE * (RANDOM_CENTER + RANDOM_CENTER * Math.sin(time * CROSSHAIR_X_SPEED)));
+  const crosshairY =
+    height *
+    (CROSSHAIR_Y_BASE +
+      CROSSHAIR_Y_RANGE *
+        (RANDOM_CENTER + RANDOM_CENTER * Math.sin(time * CROSSHAIR_Y_SPEED + CROSSHAIR_Y_PHASE)));
 
-  ctx.strokeStyle = accent(0.55);
-  ctx.lineWidth = dpr;
-  ctx.setLineDash([3 * dpr, 4 * dpr]);
+  ctx.strokeStyle = accent(CROSSHAIR_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
+  ctx.setLineDash(CROSSHAIR_DASH_PX.map(dash => dash * devicePixelRatio));
   ctx.beginPath();
-  ctx.moveTo(cx, 0);
-  ctx.lineTo(cx, height);
+  ctx.moveTo(crosshairX, 0);
+  ctx.lineTo(crosshairX, height);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(0, cy);
-  ctx.lineTo(width, cy);
+  ctx.moveTo(0, crosshairY);
+  ctx.lineTo(width, crosshairY);
   ctx.stroke();
   ctx.setLineDash([]);
 
   ctx.fillStyle = accent(1);
   ctx.beginPath();
-  ctx.arc(cx, cy, 3 * dpr, 0, Math.PI * 2);
+  ctx.arc(crosshairX, crosshairY, CROSSHAIR_DOT_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = accent(0.4);
-  ctx.lineWidth = dpr;
+  ctx.strokeStyle = accent(CROSSHAIR_RING_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
   ctx.beginPath();
-  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.arc(crosshairX, crosshairY, CROSSHAIR_RING_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
   ctx.stroke();
 }

@@ -1,54 +1,91 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
-
 import type { IFxDrawContext } from '../types';
 
-export function drawNeural({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
-  const layers = [3, 5, 5, 1];
-  const padX = width * 0.18;
-  const padY = height * 0.18;
-  const layerWidth = (width - padX * 2) / (layers.length - 1);
-  const points: Array<Array<[number, number]>> = layers.map((count, layerIndex) => {
-    const x = padX + layerIndex * layerWidth;
-    const nodes: Array<[number, number]> = [];
-    for (let nodeIndex = 0; nodeIndex < count; nodeIndex++) {
-      const y = padY + (height - padY * 2) * (count === 1 ? 0.5 : nodeIndex / (count - 1));
-      nodes.push([x, y]);
-    }
-    return nodes;
-  });
+const LAYER_SIZES = [3, 5, 5, 1] as const;
+const PADDING_RATIO = 0.18;
+const SIGNAL_SPEED = 0.8;
+const SIGNAL_POSITION_PHASE = 0.003;
+const EDGE_ALPHA = 0.08;
+const EDGE_LINE_WIDTH_PX = 0.8;
+const SIGNAL_ALPHA = 0.9;
+const SIGNAL_RADIUS_PX = 1.6;
+const NODE_PULSE_SPEED = 2;
+const NODE_MIN_ALPHA = 0.25;
+const NODE_ALPHA_RANGE = 0.4;
+const NODE_RADIUS_PX = 3;
+const NODE_PULSE_RADIUS_PX = 1.5;
+const NODE_RING_ALPHA = 0.9;
+const RANDOM_CENTER = 0.5;
 
-  for (let layerIndex = 0; layerIndex < points.length - 1; layerIndex++) {
-    for (const fromNode of points[layerIndex]) {
-      for (const toNode of points[layerIndex + 1]) {
-        const phase = (time * speed * 0.8 + (fromNode[0] + fromNode[1]) * 0.003) % 1;
-        ctx.strokeStyle = accent(0.08);
-        ctx.lineWidth = 0.8 * dpr;
+interface IPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+function layoutLayers(width: number, height: number): readonly (readonly IPoint[])[] {
+  const paddingX = width * PADDING_RATIO;
+  const paddingY = height * PADDING_RATIO;
+  const layerSpacing = (width - paddingX * 2) / (LAYER_SIZES.length - 1);
+  return LAYER_SIZES.map((count, layerIndex) =>
+    Array.from({ length: count }, (_, nodeIndex) => ({
+      x: paddingX + layerIndex * layerSpacing,
+      y:
+        paddingY +
+        (height - paddingY * 2) * (count === 1 ? RANDOM_CENTER : nodeIndex / (count - 1)),
+    }))
+  );
+}
+
+/** A small feed-forward network with signals travelling along the edges. */
+export function drawNeural({
+  ctx,
+  width,
+  height,
+  time,
+  accent,
+  devicePixelRatio,
+}: IFxDrawContext): void {
+  const layers = layoutLayers(width, height);
+
+  for (let layerIndex = 0; layerIndex < layers.length - 1; layerIndex++) {
+    for (const fromNode of layers[layerIndex] ?? []) {
+      for (const toNode of layers[layerIndex + 1] ?? []) {
+        const phase = (time * SIGNAL_SPEED + (fromNode.x + fromNode.y) * SIGNAL_POSITION_PHASE) % 1;
+        ctx.strokeStyle = accent(EDGE_ALPHA);
+        ctx.lineWidth = EDGE_LINE_WIDTH_PX * devicePixelRatio;
         ctx.beginPath();
-        ctx.moveTo(fromNode[0], fromNode[1]);
-        ctx.lineTo(toNode[0], toNode[1]);
+        ctx.moveTo(fromNode.x, fromNode.y);
+        ctx.lineTo(toNode.x, toNode.y);
         ctx.stroke();
-        const particleX = fromNode[0] + (toNode[0] - fromNode[0]) * phase;
-        const particleY = fromNode[1] + (toNode[1] - fromNode[1]) * phase;
-        ctx.fillStyle = accent(0.9 * (1 - phase));
+        ctx.fillStyle = accent(SIGNAL_ALPHA * (1 - phase));
         ctx.beginPath();
-        ctx.arc(particleX, particleY, 1.6 * dpr, 0, Math.PI * 2);
+        ctx.arc(
+          fromNode.x + (toNode.x - fromNode.x) * phase,
+          fromNode.y + (toNode.y - fromNode.y) * phase,
+          SIGNAL_RADIUS_PX * devicePixelRatio,
+          0,
+          Math.PI * 2
+        );
         ctx.fill();
       }
     }
   }
 
-  const allNodes = points.flat();
-  for (let nodeIndex = 0; nodeIndex < allNodes.length; nodeIndex++) {
-    const [x, y] = allNodes[nodeIndex];
-    const pulse = 0.5 + 0.5 * Math.sin(time * speed * 2 + nodeIndex);
-    ctx.fillStyle = accent(0.25 + pulse * 0.4);
+  layers.flat().forEach((node, nodeIndex) => {
+    const pulse = RANDOM_CENTER + RANDOM_CENTER * Math.sin(time * NODE_PULSE_SPEED + nodeIndex);
+    ctx.fillStyle = accent(NODE_MIN_ALPHA + pulse * NODE_ALPHA_RANGE);
     ctx.beginPath();
-    ctx.arc(x, y, (3 + pulse * 1.5) * dpr, 0, Math.PI * 2);
+    ctx.arc(
+      node.x,
+      node.y,
+      (NODE_RADIUS_PX + pulse * NODE_PULSE_RADIUS_PX) * devicePixelRatio,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
-    ctx.strokeStyle = accent(0.9);
-    ctx.lineWidth = dpr;
+    ctx.strokeStyle = accent(NODE_RING_ALPHA);
+    ctx.lineWidth = devicePixelRatio;
     ctx.beginPath();
-    ctx.arc(x, y, 3 * dpr, 0, Math.PI * 2);
+    ctx.arc(node.x, node.y, NODE_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
     ctx.stroke();
-  }
+  });
 }

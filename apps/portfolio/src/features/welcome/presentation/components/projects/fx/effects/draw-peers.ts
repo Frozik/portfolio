@@ -1,53 +1,82 @@
-/** Ported design reference — tuning numbers are intentionally inline (see `../effect-registry`). */
-
 import { DARK_SURFACE_HEX, MONO_FONT_STACK } from '../../../../canvasTheme';
 import type { IFxDrawContext } from '../types';
 
-export function drawPeers({ ctx, width, height, time, speed, accent, dpr }: IFxDrawContext): void {
-  const peerCount = 5;
-  const cx = width / 2;
-  const cy = height / 2;
-  const radius = Math.min(width, height) * 0.32;
-  const points: Array<[number, number]> = [];
-  for (let i = 0; i < peerCount; i++) {
-    const angle = (i / peerCount) * Math.PI * 2 + time * speed * 0.1;
-    points.push([cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius]);
-  }
+const PEER_COUNT = 5;
+const RING_RADIUS_RATIO = 0.32;
+const RING_ROTATION_SPEED = 0.1;
+const LINK_ALPHA = 0.15;
+const PACKET_SPEED = 0.6;
+const PACKET_PHASE_PER_FROM = 0.2;
+const PACKET_PHASE_PER_TO = 0.13;
+const PACKET_ALPHA = 0.9;
+const PACKET_RADIUS_PX = 2;
+const PEER_HALO_ALPHA = 0.2;
+const PEER_HALO_RADIUS_PX = 12;
+const PEER_RADIUS_PX = 7;
+const PEER_LABEL_FONT_PX = 8;
 
-  ctx.strokeStyle = accent(0.15);
-  ctx.lineWidth = dpr;
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
+interface IPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Peers on a slowly turning ring, exchanging packets over a full mesh. */
+export function drawPeers({
+  ctx,
+  width,
+  height,
+  time,
+  accent,
+  devicePixelRatio,
+}: IFxDrawContext): void {
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * RING_RADIUS_RATIO;
+  const peers: readonly IPoint[] = Array.from({ length: PEER_COUNT }, (_, peerIndex) => {
+    const angle = (peerIndex / PEER_COUNT) * Math.PI * 2 + time * RING_ROTATION_SPEED;
+    return { x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius };
+  });
+
+  ctx.strokeStyle = accent(LINK_ALPHA);
+  ctx.lineWidth = devicePixelRatio;
+  peers.forEach((from, fromIndex) => {
+    peers.slice(fromIndex + 1).forEach((to, offset) => {
+      const toIndex = fromIndex + 1 + offset;
       ctx.beginPath();
-      ctx.moveTo(points[i][0], points[i][1]);
-      ctx.lineTo(points[j][0], points[j][1]);
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
       ctx.stroke();
-      const phase = (time * speed * 0.6 + (i * 0.2 + j * 0.13)) % 1;
-      const px = points[i][0] + (points[j][0] - points[i][0]) * phase;
-      const py = points[i][1] + (points[j][1] - points[i][1]) * phase;
-      ctx.fillStyle = accent(0.9);
+      const phase =
+        (time * PACKET_SPEED + fromIndex * PACKET_PHASE_PER_FROM + toIndex * PACKET_PHASE_PER_TO) %
+        1;
+      ctx.fillStyle = accent(PACKET_ALPHA);
       ctx.beginPath();
-      ctx.arc(px, py, 2 * dpr, 0, Math.PI * 2);
+      ctx.arc(
+        from.x + (to.x - from.x) * phase,
+        from.y + (to.y - from.y) * phase,
+        PACKET_RADIUS_PX * devicePixelRatio,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
-    }
-  }
+    });
+  });
 
-  for (let i = 0; i < points.length; i++) {
-    const [x, y] = points[i];
-    ctx.fillStyle = accent(0.2);
+  peers.forEach((peer, peerIndex) => {
+    ctx.fillStyle = accent(PEER_HALO_ALPHA);
     ctx.beginPath();
-    ctx.arc(x, y, 12 * dpr, 0, Math.PI * 2);
+    ctx.arc(peer.x, peer.y, PEER_HALO_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = accent(1);
     ctx.beginPath();
-    ctx.arc(x, y, 7 * dpr, 0, Math.PI * 2);
+    ctx.arc(peer.x, peer.y, PEER_RADIUS_PX * devicePixelRatio, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = DARK_SURFACE_HEX;
-    ctx.font = `${8 * dpr}px ${MONO_FONT_STACK}`;
+    ctx.font = `${PEER_LABEL_FONT_PX * devicePixelRatio}px ${MONO_FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`P${i + 1}`, x, y);
-  }
+    ctx.fillText(`P${peerIndex + 1}`, peer.x, peer.y);
+  });
   ctx.textAlign = 'start';
   ctx.textBaseline = 'alphabetic';
 }

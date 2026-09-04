@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 import { memo, useEffect, useRef } from 'react';
 
-import { TimeseriesChartState } from '../application/render/chart-state';
+import { createTimeseriesChart } from '../application/render/create-chart';
 import type { ISeriesConfig } from '../domain/types';
 import { useSharedRendererState } from './SharedRendererContext';
 
@@ -12,29 +12,29 @@ export const TimeseriesChart = memo(
     chartSeed,
     seriesConfigs,
   }: {
-    initialTimeStart: number;
-    initialTimeEnd: number;
-    chartSeed: string;
-    seriesConfigs: readonly ISeriesConfig[];
+    readonly initialTimeStart: number;
+    readonly initialTimeEnd: number;
+    readonly chartSeed: string;
+    readonly seriesConfigs: readonly ISeriesConfig[];
   }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { renderer } = useSharedRendererState();
+    const rendererState = useSharedRendererState();
+    const renderer = rendererState.status === 'ready' ? rendererState.renderer : undefined;
 
     useEffect(() => {
-      if (isNil(renderer) || isNil(canvasRef.current)) {
+      const targetCanvas = canvasRef.current;
+      if (isNil(renderer) || isNil(targetCanvas)) {
         return;
       }
-
-      const chartState = new TimeseriesChartState(
+      const chart = createTimeseriesChart({
         renderer,
         seriesConfigs,
-        canvasRef.current,
+        targetCanvas,
         initialTimeStart,
         initialTimeEnd,
-        chartSeed
-      );
-
-      return renderer.registerChart(chartState);
+        seed: chartSeed,
+      });
+      return renderer.registerChart(chart);
     }, [renderer, initialTimeStart, initialTimeEnd, chartSeed, seriesConfigs]);
 
     return (

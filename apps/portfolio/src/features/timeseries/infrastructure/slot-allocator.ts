@@ -67,10 +67,9 @@ export class SlotAllocator implements ISlotAllocator {
     });
   }
 
-  allocateSlot(): ITextureSlot | null {
+  allocateSlot(): ITextureSlot | undefined {
     const flatIndex = this.pool.acquire();
-
-    return flatIndex === undefined ? null : this.unflattenSlot(flatIndex);
+    return flatIndex === undefined ? undefined : this.unflattenSlot(flatIndex);
   }
 
   writeSlotData(slot: ITextureSlot, encoded: Float32Array, pointCount: number): void {

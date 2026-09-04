@@ -1,16 +1,12 @@
 import { Document, Image, Link, Page, Text, View } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
-
+import { Temporal } from 'temporal-polyfill';
 import avatarPngUrl from '../../../../assets/avatar.png';
-import {
-  findEarliestStart,
-  formatDateMonthYear,
-  getYearsOfExperience,
-  measureDuration,
-} from '../../utils';
+import { findEarliestStart, getYearsOfExperience } from '../../domain/career';
 import { CONTACT_LINKS } from '../contentData';
-import type { IExperienceTranslation } from '../translations';
+import { formatDateMonthYear, measureDuration } from '../experience-format';
 import { welcomeT } from '../translations';
+import type { IExperienceTranslation } from '../translations/en';
 import { renderInlineNode, renderRichBlocks } from './nodeToPdf';
 import { ensurePdfFontsRegistered } from './pdfFonts';
 import { pdfStyles } from './pdfStyles';
@@ -46,7 +42,7 @@ function getCareerStartYears(): number {
   if (entries.length === 0) {
     return 0;
   }
-  return getYearsOfExperience(findEarliestStart(entries));
+  return getYearsOfExperience(findEarliestStart(entries), Temporal.Now.plainDateISO());
 }
 
 function ExperienceEntryView({

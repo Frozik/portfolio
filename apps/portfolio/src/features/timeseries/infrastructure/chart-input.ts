@@ -1,6 +1,9 @@
+import { assert } from '@frozik/utils/assert/assert';
 import type { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
 import { isNil } from 'lodash-es';
+
+import type { ViewportState } from '../application/render/viewport-state';
 import {
   FPS_INTERACTION,
   PAN_INERTIA_DAMPING,
@@ -9,221 +12,68 @@ import {
   ZOOM_FACTOR_MAX,
   ZOOM_FACTOR_MIN,
 } from '../domain/constants';
-import type { IChartViewport } from '../domain/types';
 import { clampViewport, panViewport, zoomViewport } from '../domain/viewport';
 
 interface IVelocitySample {
-  readonly dx: number;
+  readonly deltaX: number;
   readonly timestamp: number;
 }
 
+interface IPointerPosition {
+  readonly clientX: number;
+  readonly clientY: number;
+}
+
+const MIN_VELOCITY_SAMPLES = 2;
+
 /**
- * Chart viewport controller using Pointer Events for unified mouse/touch/pen handling.
- * Single-pointer drag pans the viewport, two-pointer pinch zooms, wheel zooms.
- * Pan has inertia: after releasing the pointer the chart continues scrolling with decay.
+ * Pointer events on the chart canvas: one pointer pans, two pinch-zoom, the
+ * wheel zooms. A released pan keeps scrolling with decaying inertia.
  */
 export class ChartInputController {
-  private readonly activePointers = new Map<number, { clientX: number; clientY: number }>();
-  private lastPinchDistance = 0;
-
-  /** Recent pointer-move deltas used to estimate release velocity. */
+  private readonly activePointers = new Map<number, IPointerPosition>();
   private readonly velocitySamples: IVelocitySample[] = [];
-
-  /** Current inertia velocity in pixels per millisecond (0 = no inertia). */
+  private lastPinchDistance = 0;
+  /** Pixels per millisecond; `0` when at rest. */
   private inertiaVelocity = 0;
-
-  /** Timestamp of the last inertia tick, used to compute per-frame delta. */
   private lastInertiaTimestamp = 0;
 
-  private readonly handlePointerDown: (event: PointerEvent) => void;
-  private readonly handlePointerMove: (event: PointerEvent) => void;
-  private readonly handlePointerUp: (event: PointerEvent) => void;
-  private readonly handlePointerCancel: (event: PointerEvent) => void;
-  private readonly handleWheel: (event: WheelEvent) => void;
-
   constructor(
-    private readonly viewport: IChartViewport,
+    private readonly viewport: ViewportState,
     private readonly canvas: HTMLCanvasElement,
     private readonly dataMinTime: number,
     private readonly dataMaxTime: number,
     private readonly fpsController: FpsController
-  ) {
-    this.handlePointerDown = (event: PointerEvent): void => {
-      // Capture the pointer so move/up keep firing on the canvas even after the
-      // pointer leaves its bounds mid-drag — otherwise a pan would be aborted.
-      this.canvas.setPointerCapture(event.pointerId);
-
-      this.activePointers.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-      this.fpsController.raise(FPS_INTERACTION);
-
-      // Stop any ongoing inertia when the user grabs the chart again
-      this.inertiaVelocity = 0;
-      this.velocitySamples.length = 0;
-
-      if (this.activePointers.size === 1) {
-        this.canvas.style.cursor = 'grabbing';
-      } else if (this.activePointers.size === 2) {
-        this.lastPinchDistance = this.getPointerDistance();
-      }
-    };
-
-    this.handlePointerMove = (event: PointerEvent): void => {
-      const previous = this.activePointers.get(event.pointerId);
-      if (previous === undefined) {
-        return;
-      }
-
-      this.activePointers.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-      this.fpsController.raise(FPS_INTERACTION);
-
-      // Two-pointer pinch zoom
-      if (this.activePointers.size === 2) {
-        const currentDistance = this.getPointerDistance();
-        const scale = computePinchScale(this.lastPinchDistance, currentDistance);
-        if (isNil(scale)) {
-          return;
-        }
-        const centerNormalized = this.getPointerCenter();
-
-        const [newStart, newEnd] = clampViewport(
-          ...zoomViewport(
-            this.viewport.targetTimeStart,
-            this.viewport.targetTimeEnd,
-            scale,
-            centerNormalized
-          ),
-          this.dataMinTime,
-          this.dataMaxTime
-        );
-        this.viewport.targetTimeStart = newStart;
-        this.viewport.targetTimeEnd = newEnd;
-        this.lastPinchDistance = currentDistance;
-        return;
-      }
-
-      // Single-pointer pan
-      if (this.activePointers.size !== 1) {
-        return;
-      }
-
-      const dx = event.clientX - previous.clientX;
-
-      this.recordVelocitySample(dx, event.timeStamp);
-
-      const [newStart, newEnd] = clampViewport(
-        ...panViewport(
-          this.viewport.viewTimeStart,
-          this.viewport.viewTimeEnd,
-          dx,
-          this.canvas.clientWidth
-        ),
-        this.dataMinTime,
-        this.dataMaxTime
-      );
-      this.viewport.viewTimeStart = newStart;
-      this.viewport.viewTimeEnd = newEnd;
-      this.viewport.targetTimeStart = newStart;
-      this.viewport.targetTimeEnd = newEnd;
-    };
-
-    this.handlePointerUp = (event: PointerEvent): void => {
-      if (this.canvas.hasPointerCapture(event.pointerId)) {
-        this.canvas.releasePointerCapture(event.pointerId);
-      }
-
-      this.activePointers.delete(event.pointerId);
-
-      if (this.activePointers.size === 0) {
-        this.canvas.style.cursor = 'grab';
-        this.startInertia();
-      }
-    };
-
-    this.handlePointerCancel = (event: PointerEvent): void => {
-      this.activePointers.delete(event.pointerId);
-
-      if (this.activePointers.size === 0) {
-        this.canvas.style.cursor = 'grab';
-      }
-    };
-
-    this.handleWheel = (event: WheelEvent): void => {
-      event.preventDefault();
-
-      const rect = this.canvas.getBoundingClientRect();
-      const centerNormalized = (event.clientX - rect.left) / rect.width;
-      const factor = event.deltaY > 0 ? ZOOM_FACTOR_MAX : ZOOM_FACTOR_MIN;
-
-      const [newStart, newEnd] = clampViewport(
-        ...zoomViewport(
-          this.viewport.targetTimeStart,
-          this.viewport.targetTimeEnd,
-          factor,
-          centerNormalized
-        ),
-        this.dataMinTime,
-        this.dataMaxTime
-      );
-      this.viewport.targetTimeStart = newStart;
-      this.viewport.targetTimeEnd = newEnd;
-      this.fpsController.raise(FPS_INTERACTION);
-    };
-  }
+  ) {}
 
   get isInteracting(): boolean {
     return this.activePointers.size > 0;
   }
 
-  /**
-   * Apply pan inertia decay. Must be called every frame from the chart's update loop.
-   * Returns true if inertia is still active (chart should keep rendering).
-   */
+  /** One frame of pan inertia; `true` while the chart still moves. */
   applyInertia(): boolean {
     if (Math.abs(this.inertiaVelocity) < PAN_INERTIA_MIN_VELOCITY) {
       this.inertiaVelocity = 0;
       return false;
     }
-
     const now = performance.now();
-    const deltaMs = now - this.lastInertiaTimestamp;
+    const deltaPixels = this.inertiaVelocity * (now - this.lastInertiaTimestamp);
     this.lastInertiaTimestamp = now;
 
-    const deltaPixels = this.inertiaVelocity * deltaMs;
-
-    const [newStart, newEnd] = clampViewport(
-      ...panViewport(
-        this.viewport.viewTimeStart,
-        this.viewport.viewTimeEnd,
-        deltaPixels,
-        this.canvas.clientWidth
-      ),
-      this.dataMinTime,
-      this.dataMaxTime
-    );
-
-    // Stop inertia if viewport didn't change (hit data boundary)
-    if (newStart === this.viewport.viewTimeStart && newEnd === this.viewport.viewTimeEnd) {
+    const { viewTimeStart, viewTimeEnd, targetTimeStart, targetTimeEnd } = this.viewport.current;
+    const [nextStart, nextEnd] = this.clampedPan(deltaPixels);
+    if (nextStart === viewTimeStart && nextEnd === viewTimeEnd) {
       this.inertiaVelocity = 0;
       return false;
     }
-
-    // Shift both view and target by the same delta so zoom lerp gap is preserved
-    const deltaStart = newStart - this.viewport.viewTimeStart;
-    const deltaEnd = newEnd - this.viewport.viewTimeEnd;
-
-    this.viewport.viewTimeStart = newStart;
-    this.viewport.viewTimeEnd = newEnd;
-    this.viewport.targetTimeStart += deltaStart;
-    this.viewport.targetTimeEnd += deltaEnd;
-
+    // View and target move together so a zoom animation in flight keeps its gap.
+    this.viewport.update({
+      viewTimeStart: nextStart,
+      viewTimeEnd: nextEnd,
+      targetTimeStart: targetTimeStart + (nextStart - viewTimeStart),
+      targetTimeEnd: targetTimeEnd + (nextEnd - viewTimeEnd),
+    });
     this.inertiaVelocity *= PAN_INERTIA_DAMPING;
-
     return true;
   }
 
@@ -244,53 +94,139 @@ export class ChartInputController {
     this.canvas.removeEventListener('wheel', this.handleWheel);
   }
 
-  private recordVelocitySample(dx: number, timestamp: number): void {
-    this.velocitySamples.push({ dx, timestamp });
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    // Captured so a drag that leaves the canvas keeps panning instead of aborting.
+    this.canvas.setPointerCapture(event.pointerId);
+    this.activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+    this.fpsController.raise(FPS_INTERACTION);
+    this.inertiaVelocity = 0;
+    this.velocitySamples.length = 0;
 
+    if (this.activePointers.size === 1) {
+      this.canvas.style.cursor = 'grabbing';
+    } else if (this.activePointers.size === 2) {
+      this.lastPinchDistance = this.getPointerDistance();
+    }
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent): void => {
+    const previous = this.activePointers.get(event.pointerId);
+    if (isNil(previous)) {
+      return;
+    }
+    this.activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+    this.fpsController.raise(FPS_INTERACTION);
+
+    if (this.activePointers.size === 2) {
+      this.pinch();
+      return;
+    }
+    if (this.activePointers.size !== 1) {
+      return;
+    }
+    const deltaX = event.clientX - previous.clientX;
+    this.recordVelocitySample(deltaX, event.timeStamp);
+    const [nextStart, nextEnd] = this.clampedPan(deltaX);
+    this.viewport.update({
+      viewTimeStart: nextStart,
+      viewTimeEnd: nextEnd,
+      targetTimeStart: nextStart,
+      targetTimeEnd: nextEnd,
+    });
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    if (this.canvas.hasPointerCapture(event.pointerId)) {
+      this.canvas.releasePointerCapture(event.pointerId);
+    }
+    this.activePointers.delete(event.pointerId);
+    if (this.activePointers.size === 0) {
+      this.canvas.style.cursor = 'grab';
+      this.startInertia();
+    }
+  };
+
+  private readonly handlePointerCancel = (event: PointerEvent): void => {
+    this.activePointers.delete(event.pointerId);
+    if (this.activePointers.size === 0) {
+      this.canvas.style.cursor = 'grab';
+    }
+  };
+
+  private readonly handleWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    const rect = this.canvas.getBoundingClientRect();
+    const centerNormalized = (event.clientX - rect.left) / rect.width;
+    this.zoomTarget(event.deltaY > 0 ? ZOOM_FACTOR_MAX : ZOOM_FACTOR_MIN, centerNormalized);
+    this.fpsController.raise(FPS_INTERACTION);
+  };
+
+  private pinch(): void {
+    const currentDistance = this.getPointerDistance();
+    const scale = computePinchScale(this.lastPinchDistance, currentDistance);
+    if (isNil(scale)) {
+      return;
+    }
+    this.zoomTarget(scale, this.getPointerCenterNormalized());
+    this.lastPinchDistance = currentDistance;
+  }
+
+  private zoomTarget(factor: number, centerNormalized: number): void {
+    const { targetTimeStart, targetTimeEnd } = this.viewport.current;
+    const [nextStart, nextEnd] = clampViewport(
+      ...zoomViewport(targetTimeStart, targetTimeEnd, factor, centerNormalized),
+      this.dataMinTime,
+      this.dataMaxTime
+    );
+    this.viewport.update({ targetTimeStart: nextStart, targetTimeEnd: nextEnd });
+  }
+
+  private clampedPan(deltaPixels: number): readonly [number, number] {
+    const { viewTimeStart, viewTimeEnd } = this.viewport.current;
+    return clampViewport(
+      ...panViewport(viewTimeStart, viewTimeEnd, deltaPixels, this.canvas.clientWidth),
+      this.dataMinTime,
+      this.dataMaxTime
+    );
+  }
+
+  private recordVelocitySample(deltaX: number, timestamp: number): void {
+    this.velocitySamples.push({ deltaX, timestamp });
     if (this.velocitySamples.length > PAN_VELOCITY_SAMPLE_COUNT) {
       this.velocitySamples.shift();
     }
   }
 
   private startInertia(): void {
-    if (this.velocitySamples.length < 2) {
-      this.velocitySamples.length = 0;
-      return;
-    }
-
     const first = this.velocitySamples[0];
     const last = this.velocitySamples[this.velocitySamples.length - 1];
-    const totalTime = last.timestamp - first.timestamp;
-
-    if (totalTime <= 0) {
-      this.velocitySamples.length = 0;
+    const samples = this.velocitySamples.splice(0);
+    if (samples.length < MIN_VELOCITY_SAMPLES || isNil(first) || isNil(last)) {
       return;
     }
-
-    let totalDx = 0;
-    for (const sample of this.velocitySamples) {
-      totalDx += sample.dx;
+    const totalTime = last.timestamp - first.timestamp;
+    if (totalTime <= 0) {
+      return;
     }
-
-    this.inertiaVelocity = totalDx / totalTime;
+    const totalDeltaX = samples.reduce((sum, sample) => sum + sample.deltaX, 0);
+    this.inertiaVelocity = totalDeltaX / totalTime;
     this.lastInertiaTimestamp = performance.now();
-    this.velocitySamples.length = 0;
+  }
+
+  private getTwoPointers(): readonly [IPointerPosition, IPointerPosition] {
+    const [first, second] = this.activePointers.values();
+    assert(!isNil(first) && !isNil(second), 'pinch needs two active pointers');
+    return [first, second];
   }
 
   private getPointerDistance(): number {
-    const pointers = [...this.activePointers.values()];
-    return pointerDistance(
-      pointers[0].clientX,
-      pointers[0].clientY,
-      pointers[1].clientX,
-      pointers[1].clientY
-    );
+    const [first, second] = this.getTwoPointers();
+    return pointerDistance(first.clientX, first.clientY, second.clientX, second.clientY);
   }
 
-  private getPointerCenter(): number {
-    const pointers = [...this.activePointers.values()];
+  private getPointerCenterNormalized(): number {
+    const [first, second] = this.getTwoPointers();
     const rect = this.canvas.getBoundingClientRect();
-    const cx = (pointers[0].clientX + pointers[1].clientX) / 2;
-    return (cx - rect.left) / rect.width;
+    return ((first.clientX + second.clientX) / 2 - rect.left) / rect.width;
   }
 }

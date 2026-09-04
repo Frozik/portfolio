@@ -9,23 +9,24 @@ export enum ECellStatus {
 }
 
 export interface IFieldCell {
-  type: EFieldType;
-  value: number | undefined;
-  notes: number[];
-  status: ECellStatus;
+  readonly type: EFieldType;
+  readonly value: number | undefined;
+  readonly notes: readonly number[];
+  readonly status: ECellStatus;
 }
 
+/** A `size`×`size` grid of `size`×`size` groups; `cells` is row-major over `size²` rows. */
 export interface IField {
-  size: number;
-  cells: IFieldCell[];
+  readonly size: number;
+  readonly cells: readonly IFieldCell[];
 }
 
-export enum EToolType {
-  None = 'none',
-  Pen = 'pen',
-  Notes = 'notes',
+export type ToolMode = 'pen' | 'notes';
+
+/** The active number, if any, and how a click applies it. The mode outlives the number. */
+export interface ITool {
+  readonly mode: ToolMode;
+  readonly value: number | undefined;
 }
 
-export type TTool =
-  | { type: EToolType.None; value: undefined }
-  | { type: EToolType.Pen | EToolType.Notes; value: number };
+export type SudokuDifficulty = 'easy' | 'medium' | 'hard' | 'expert';

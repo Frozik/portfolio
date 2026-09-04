@@ -38,24 +38,15 @@ export interface ITextureSlot {
   readonly slotIndex: number;
 }
 
-/**
- * Domain port for slot-based texture storage. Implemented by the
- * infrastructure SlotAllocator. Exposes only the pure, GPU-free surface
- * the domain block pipeline depends on (allocate, write, touch), keeping
- * the domain layer free of GPU types.
- */
+/** Slot-based texture storage as the block pipeline sees it: no GPU types cross this port. */
 export interface ISlotAllocator {
-  allocateSlot(): ITextureSlot | null;
+  /** `undefined` when the texture is full and nothing can be evicted. */
+  allocateSlot(): ITextureSlot | undefined;
   writeSlotData(slot: ITextureSlot, encoded: Float32Array, pointCount: number): void;
   touch(slot: ITextureSlot): void;
 }
 
 export interface IBlockEntry {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-
   readonly timeStart: number;
   readonly timeEnd: number;
   readonly scale: ETimeScale;
@@ -69,31 +60,32 @@ export interface IBlockEntry {
 }
 
 export interface IAxisTick {
-  position: number;
-  label: string;
+  readonly position: number;
+  readonly label: string;
 }
 
 export interface IDataPoint {
-  time: number;
-  value: number;
-  size: number;
-  color: number;
+  readonly time: number;
+  readonly value: number;
+  readonly size: number;
+  readonly color: number;
 }
 
+/** `view*` is what is drawn; `target*` is where a zoom animation is heading. */
 export interface IChartViewport {
-  viewTimeStart: number;
-  viewTimeEnd: number;
-  targetTimeStart: number;
-  targetTimeEnd: number;
-  viewValueMin: number;
-  viewValueMax: number;
+  readonly viewTimeStart: number;
+  readonly viewTimeEnd: number;
+  readonly targetTimeStart: number;
+  readonly targetTimeEnd: number;
+  readonly viewValueMin: number;
+  readonly viewValueMax: number;
 }
 
 export interface IPlotArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface IFpsController {

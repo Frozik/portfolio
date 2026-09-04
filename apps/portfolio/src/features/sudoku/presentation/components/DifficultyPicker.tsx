@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
 
-export type SudokuDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+import type { SudokuDifficulty } from '../../domain/types';
 
 export interface DifficultyOption {
   readonly value: SudokuDifficulty;
@@ -33,8 +33,8 @@ const DifficultyCard = memo(
     option,
     onSelect,
   }: {
-    option: DifficultyOption;
-    onSelect: (value: SudokuDifficulty) => void;
+    readonly option: DifficultyOption;
+    readonly onSelect: (value: SudokuDifficulty) => void;
   }) => {
     const handleClick = useFunction(() => onSelect(option.value));
 

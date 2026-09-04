@@ -1,8 +1,10 @@
 import { memo, useMemo } from 'react';
 
-import { findEarliestStart, getYearsOfExperience } from '../../../utils';
-import type { IHeroStatTranslation } from '../../translations';
+import { Temporal } from 'temporal-polyfill';
+
+import { findEarliestStart, getYearsOfExperience } from '../../../domain/career';
 import { welcomeT } from '../../translations';
+import type { IHeroStatTranslation } from '../../translations/en';
 import { HeroMetaBar } from './HeroMetaBar';
 import { HeroOrderbook } from './HeroOrderbook';
 import { HeroStats } from './HeroStats';
@@ -10,7 +12,7 @@ import { HeroStats } from './HeroStats';
 const HeroComponent = () => {
   const { yearsOfExperience, stats } = useMemo(() => {
     const earliestStart = findEarliestStart(welcomeT.experience.entries);
-    const years = getYearsOfExperience(earliestStart);
+    const years = getYearsOfExperience(earliestStart, Temporal.Now.plainDateISO());
     const composedStats: readonly IHeroStatTranslation[] = [
       { value: String(years), unit: '+', label: welcomeT.hero.yearsOfExperienceLabel },
       ...welcomeT.hero.stats,

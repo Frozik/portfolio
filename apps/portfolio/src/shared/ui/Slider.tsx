@@ -1,7 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { assert } from '@frozik/utils/assert/assert';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo, useMemo, useState } from 'react';
 
@@ -169,43 +171,50 @@ export const RangeSlider = memo(
     showTooltip = false,
     formatTooltip = String,
   }: {
-    min: number;
-    max: number;
-    step?: number;
-    value: number[];
-    onChange: (value: number[]) => void;
-    disabled?: boolean;
-    className?: string;
-    showTooltip?: boolean;
-    formatTooltip?: (value: number) => ReactNode;
-  }) => (
-    <SliderPrimitive.Root
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onValueChange={onChange}
-      disabled={disabled}
-      className={cn(
-        'relative flex w-full touch-none select-none items-center',
-        disabled && 'opacity-50',
-        className
-      )}
-    >
-      <SliderPrimitive.Track className="relative h-1.5 w-full grow rounded-full bg-surface-overlay">
-        <SliderPrimitive.Range className="absolute h-full rounded-full bg-brand-500" />
-      </SliderPrimitive.Track>
-      {value.map((thumbValue, index) => (
-        <SliderThumbWithTooltip
-          // biome-ignore lint/suspicious/noArrayIndexKey: Radix Slider thumbs are positional — count and order are stable, and values can duplicate
-          key={index}
-          disabled={disabled}
-          showTooltip={showTooltip}
-          formatTooltip={formatTooltip}
-          tooltipSide="top"
-          value={thumbValue}
-        />
-      ))}
-    </SliderPrimitive.Root>
-  )
+    readonly min: number;
+    readonly max: number;
+    readonly step?: number;
+    readonly value: readonly [number, number];
+    readonly onChange: (value: readonly [number, number]) => void;
+    readonly disabled?: boolean;
+    readonly className?: string;
+    readonly showTooltip?: boolean;
+    readonly formatTooltip?: (value: number) => ReactNode;
+  }) => {
+    const handleValueChange = useFunction((values: number[]) => {
+      const [start, end] = values;
+      assert(!isNil(start) && !isNil(end), 'range slider reports both thumbs');
+      onChange([start, end]);
+    });
+    return (
+      <SliderPrimitive.Root
+        min={min}
+        max={max}
+        step={step}
+        value={[...value]}
+        onValueChange={handleValueChange}
+        disabled={disabled}
+        className={cn(
+          'relative flex w-full touch-none select-none items-center',
+          disabled && 'opacity-50',
+          className
+        )}
+      >
+        <SliderPrimitive.Track className="relative h-1.5 w-full grow rounded-full bg-surface-overlay">
+          <SliderPrimitive.Range className="absolute h-full rounded-full bg-brand-500" />
+        </SliderPrimitive.Track>
+        {value.map((thumbValue, index) => (
+          <SliderThumbWithTooltip
+            // biome-ignore lint/suspicious/noArrayIndexKey: Radix Slider thumbs are positional — count and order are stable, and values can duplicate
+            key={index}
+            disabled={disabled}
+            showTooltip={showTooltip}
+            formatTooltip={formatTooltip}
+            tooltipSide="top"
+            value={thumbValue}
+          />
+        ))}
+      </SliderPrimitive.Root>
+    );
+  }
 );

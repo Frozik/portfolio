@@ -1,3 +1,5 @@
+import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
 import { LRUCache } from 'lru-cache';
 
 import type { IGlyphMetrics, ITextMeasurer } from '../domain/text-measurer';
@@ -5,66 +7,55 @@ import type { IGlyphMetrics, ITextMeasurer } from '../domain/text-measurer';
 const DEFAULT_MAX_SIZE = 500;
 
 /**
- * LRU cache for Canvas 2D text measurements.
- *
- * Caches `measureText().width` per label string and glyph vertical metrics
- * (ascent/descent/centerOffset) per font configuration. Invalidates
- * automatically when font changes (e.g. DPR change triggers font size change).
- *
- * At 60fps with ~20 axis labels per chart, this avoids ~1200 measureText()
- * calls per second per chart — each is a synchronous browser layout query.
+ * Memoises `measureText` per label and the glyph metrics per font on a
+ * private measuring context, invalidating when the font changes (a DPR
+ * change changes the font size). Saves ~1200 synchronous layout queries per
+ * second per chart at 60 fps.
  */
 export class TextMeasureCache implements ITextMeasurer {
-  private widthCache: LRUCache<string, number>;
+  private readonly context: CanvasRenderingContext2D;
+  private readonly widthCache: LRUCache<string, number>;
   private currentFont = '';
-  private glyphMetrics: IGlyphMetrics | null = null;
+  private glyphMetrics: IGlyphMetrics | undefined;
 
   constructor(maxSize: number = DEFAULT_MAX_SIZE) {
+    const context = document.createElement('canvas').getContext('2d');
+    assert(!isNil(context), '2D canvas context unavailable for text measuring');
+    this.context = context;
     this.widthCache = new LRUCache({ max: maxSize });
   }
 
-  measureWidth(ctx: CanvasRenderingContext2D, text: string): number {
-    this.ensureFont(ctx);
-
+  measureWidth(text: string, font: string): number {
+    this.ensureFont(font);
     const cached = this.widthCache.get(text);
-
-    if (cached !== undefined) {
+    if (!isNil(cached)) {
       return cached;
     }
-
-    const width = ctx.measureText(text).width;
+    const width = this.context.measureText(text).width;
     this.widthCache.set(text, width);
-
     return width;
   }
 
-  getGlyphMetrics(ctx: CanvasRenderingContext2D): IGlyphMetrics {
-    this.ensureFont(ctx);
-
-    if (this.glyphMetrics !== null) {
+  /** Alphabetic baseline plus this offset centres digit-only labels; the `middle` baseline sits too high. */
+  getGlyphMetrics(font: string): IGlyphMetrics {
+    this.ensureFont(font);
+    if (!isNil(this.glyphMetrics)) {
       return this.glyphMetrics;
     }
-
-    const metrics = ctx.measureText('0');
+    const metrics = this.context.measureText('0');
     const ascent = metrics.actualBoundingBoxAscent;
     const descent = metrics.actualBoundingBoxDescent;
-
-    this.glyphMetrics = {
-      ascent,
-      descent,
-      centerOffset: (ascent - descent) / 2,
-    };
-
+    this.glyphMetrics = { ascent, descent, centerOffset: (ascent - descent) / 2 };
     return this.glyphMetrics;
   }
 
-  private ensureFont(ctx: CanvasRenderingContext2D): void {
-    if (ctx.font === this.currentFont) {
+  private ensureFont(font: string): void {
+    if (font === this.currentFont) {
       return;
     }
-
-    this.currentFont = ctx.font;
+    this.currentFont = font;
+    this.context.font = font;
     this.widthCache.clear();
-    this.glyphMetrics = null;
+    this.glyphMetrics = undefined;
   }
 }

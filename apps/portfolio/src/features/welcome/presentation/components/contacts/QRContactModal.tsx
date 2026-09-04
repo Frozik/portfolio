@@ -1,14 +1,14 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { appT } from '../../../../../app/translations';
+import { useCopyToClipboard } from '../../../../../shared/hooks/useCopyToClipboard';
 import { DialogShell } from '../../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../../shared/ui/QRCode';
 import { welcomeT } from '../../translations';
 
 const QR_PIXEL_SIZE_PX = 216;
-const COPY_RESET_DELAY_MS = 1800;
 const ICON_SIZE_PX = 12;
 
 const QRContactModalComponent = ({
@@ -22,16 +22,9 @@ const QRContactModalComponent = ({
   readonly title: string;
   readonly onClose: () => void;
 }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useFunction(async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), COPY_RESET_DELAY_MS);
-    } catch {
-      // Silently ignore clipboard failures — older browsers, cross-origin iframes, etc.
-    }
+  const { status, copy } = useCopyToClipboard();
+  const handleCopy = useFunction(() => {
+    void copy(value);
   });
 
   return (
@@ -59,7 +52,7 @@ const QRContactModalComponent = ({
           'hover:border-landing-accent hover:bg-landing-accent/10'
         )}
       >
-        {copied ? (
+        {status === 'copied' ? (
           <>
             <Check size={ICON_SIZE_PX} /> {welcomeT.contacts.copied}
           </>

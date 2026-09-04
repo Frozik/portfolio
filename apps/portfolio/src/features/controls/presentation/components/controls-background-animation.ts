@@ -1,18 +1,11 @@
-import { assert } from '@frozik/utils/assert/assert';
+import { assertNever } from '@frozik/utils/assert/assertNever';
+import { random } from 'lodash-es';
+
 import type {
   IAmbientCanvasAnimation,
   IAmbientCanvasFrame,
   IAmbientCanvasResize,
 } from '../../../../shared/hooks/useAmbientCanvas';
-
-/**
- * Ambient canvas for the Controls lobby — simulates lines of code being typed
- * in monospace columns, with a blinking caret at the currently-active line.
- * Each line types to a random character budget at a steady speed, then fades
- * out before respawning at a new vertical position. Paints a single static
- * frame when `prefers-reduced-motion` is set. Pure animation logic; the React
- * shell lives in `ControlsBackground.tsx`.
- */
 
 const DEFAULT_OPACITY = 0.55;
 const MS_PER_SECOND = 1000;
@@ -43,7 +36,8 @@ const ALPHA_TYPED = 0.14;
 const ALPHA_TAIL_FADE_DURATION_MS = 900;
 const ALPHA_CARET = 0.55;
 
-const RNG_SEED_BITS = 2654435761;
+const MAX_SEED = 0xffffffff;
+const SEED_HASH_MULTIPLIER = 2654435761;
 
 const VAR_ACCENT = '--color-landing-accent';
 const FALLBACK_COLOR = '#60a5fa';
@@ -52,43 +46,34 @@ const VOCABULARY = 'abcdefghijklmnopqrstuvwxyz0123456789 =>{}()[]<>.,;:/_-+*!?"\
 
 const REDUCED_MOTION_TYPED_RATIO = 0.5;
 
-interface ITypingLine {
-  y: number;
-  startMs: number;
-  charBudget: number;
-  seed: number;
-  finishedAtMs: number | null;
+/** A line's placement and the seed its characters are derived from. */
+interface ILineLayout {
+  readonly y: number;
+  readonly charBudget: number;
+  readonly seed: number;
 }
 
-function randomRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
+/** A line is typed from `startMs`, then fades from `finishedAtMs` and respawns. */
+type TypingLine =
+  | (ILineLayout & { readonly phase: 'typing'; readonly startMs: number })
+  | (ILineLayout & {
+      readonly phase: 'fading';
+      readonly startMs: number;
+      readonly finishedAtMs: number;
+    });
 
-function randomGapMs(): number {
-  return randomRange(LINE_GAP_MIN_MS, LINE_GAP_MAX_MS);
-}
-
-function randomCharBudget(): number {
-  return Math.floor(randomRange(LINE_MIN_CHARS, LINE_MAX_CHARS + 1));
-}
-
-function randomSeed(): number {
-  // Integer seed used to pick vocabulary characters deterministically per line.
-  return Math.floor(Math.random() * 0xffffffff);
-}
-
-function randomLineY(height: number): number {
-  return (LINE_Y_MIN_RATIO + Math.random() * LINE_Y_SPREAD_RATIO) * height;
-}
-
-function createLine(height: number, nowMs: number, stagger: boolean): ITypingLine {
+function spawnLine(height: number, startMs: number): TypingLine {
   return {
-    y: randomLineY(height),
-    startMs: stagger ? nowMs + randomGapMs() : nowMs,
-    charBudget: randomCharBudget(),
-    seed: randomSeed(),
-    finishedAtMs: null,
+    phase: 'typing',
+    y: random(LINE_Y_MIN_RATIO, LINE_Y_MIN_RATIO + LINE_Y_SPREAD_RATIO, true) * height,
+    startMs,
+    charBudget: random(LINE_MIN_CHARS, LINE_MAX_CHARS),
+    seed: random(0, MAX_SEED),
   };
+}
+
+function spawnLineAfterGap(height: number, nowMs: number): TypingLine {
+  return spawnLine(height, nowMs + random(LINE_GAP_MIN_MS, LINE_GAP_MAX_MS, true));
 }
 
 function resolveLineCount(width: number): number {
@@ -96,177 +81,167 @@ function resolveLineCount(width: number): number {
 }
 
 function readCssColor(variable: string, fallback: string): string {
-  const root = document.documentElement;
-  const value = getComputedStyle(root).getPropertyValue(variable).trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
   return value.length > 0 ? value : fallback;
 }
 
 function charAtIndex(seed: number, index: number): string {
-  const hashed = (seed ^ (index * RNG_SEED_BITS)) >>> 0;
+  const hashed = (seed ^ (index * SEED_HASH_MULTIPLIER)) >>> 0;
   return VOCABULARY.charAt(hashed % VOCABULARY.length);
 }
 
-function computeTypedChars(line: ITypingLine, nowMs: number): number {
+function computeTypedChars(line: TypingLine, nowMs: number): number {
   const elapsedMs = nowMs - line.startMs;
   if (elapsedMs <= 0) {
     return 0;
   }
-  const capped = Math.floor((elapsedMs * CHARS_PER_SECOND) / MS_PER_SECOND);
-  return Math.min(line.charBudget, capped);
+  return Math.min(line.charBudget, Math.floor((elapsedMs * CHARS_PER_SECOND) / MS_PER_SECOND));
 }
 
-function computeLineAlpha(line: ITypingLine, nowMs: number): number {
-  if (line.finishedAtMs === null) {
-    return ALPHA_TYPED;
+function computeLineAlpha(line: TypingLine, nowMs: number): number {
+  switch (line.phase) {
+    case 'typing':
+      return ALPHA_TYPED;
+    case 'fading': {
+      const tailMs = nowMs - line.finishedAtMs;
+      return tailMs >= ALPHA_TAIL_FADE_DURATION_MS
+        ? 0
+        : ALPHA_TYPED * (1 - tailMs / ALPHA_TAIL_FADE_DURATION_MS);
+    }
+    default:
+      return assertNever(line);
   }
-  const tailMs = nowMs - line.finishedAtMs;
-  if (tailMs >= ALPHA_TAIL_FADE_DURATION_MS) {
-    return 0;
+}
+
+/** One simulation step: a fully typed line starts fading, a faded-out line respawns. */
+function advanceLine(line: TypingLine, nowMs: number, height: number): TypingLine {
+  switch (line.phase) {
+    case 'typing':
+      return computeTypedChars(line, nowMs) >= line.charBudget
+        ? { ...line, phase: 'fading', finishedAtMs: nowMs }
+        : line;
+    case 'fading':
+      return computeLineAlpha(line, nowMs) <= 0 ? spawnLineAfterGap(height, nowMs) : line;
+    default:
+      return assertNever(line);
   }
-  return ALPHA_TYPED * (1 - tailMs / ALPHA_TAIL_FADE_DURATION_MS);
 }
 
-function respawnLine(line: ITypingLine, height: number, nowMs: number): void {
-  line.y = randomLineY(height);
-  line.startMs = nowMs + randomGapMs();
-  line.charBudget = randomCharBudget();
-  line.seed = randomSeed();
-  line.finishedAtMs = null;
+export function advanceLines(
+  lines: readonly TypingLine[],
+  nowMs: number,
+  height: number
+): readonly TypingLine[] {
+  return lines.map(line => advanceLine(line, nowMs, height));
 }
 
-function drawLineChars(
+/** The line typed most recently that is still being typed; it carries the caret. */
+function findCaretLine(lines: readonly TypingLine[], nowMs: number): TypingLine | undefined {
+  let caretLine: TypingLine | undefined;
+  for (const line of lines) {
+    const isBeingTyped = line.phase === 'typing' && line.startMs <= nowMs;
+    if (isBeingTyped && (caretLine === undefined || line.startMs > caretLine.startMs)) {
+      caretLine = line;
+    }
+  }
+  return caretLine;
+}
+
+function paintLineChars(
   ctx: CanvasRenderingContext2D,
-  line: ITypingLine,
+  line: TypingLine,
   typedChars: number,
   alpha: number,
   color: string
 ): void {
   ctx.fillStyle = color;
   ctx.globalAlpha = alpha;
-  for (let index = 0; index < typedChars; index += 1) {
-    const glyph = charAtIndex(line.seed, index);
-    ctx.fillText(glyph, LEFT_PADDING_PX + index * CHAR_SPACING_PX, line.y);
+  for (let charIndex = 0; charIndex < typedChars; charIndex += 1) {
+    ctx.fillText(
+      charAtIndex(line.seed, charIndex),
+      LEFT_PADDING_PX + charIndex * CHAR_SPACING_PX,
+      line.y
+    );
   }
 }
 
-function findCurrentLineIndex(lines: readonly ITypingLine[], nowMs: number): number {
-  let bestIndex = -1;
-  let bestStart = Number.NEGATIVE_INFINITY;
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    assert(line !== undefined, 'line index must be in range');
-    if (line.finishedAtMs !== null || line.startMs > nowMs) {
-      continue;
-    }
-    if (line.startMs > bestStart) {
-      bestStart = line.startMs;
-      bestIndex = index;
-    }
-  }
-  return bestIndex;
-}
-
-function drawCaret(
+function paintCaret(
   ctx: CanvasRenderingContext2D,
-  line: ITypingLine,
+  line: TypingLine,
   typedChars: number,
   nowMs: number,
   color: string
 ): void {
-  const blinkOn = nowMs % CARET_BLINK_PERIOD_MS < CARET_BLINK_HALF_MS;
-  if (!blinkOn) {
+  if (nowMs % CARET_BLINK_PERIOD_MS >= CARET_BLINK_HALF_MS) {
     return;
   }
-  const caretX = LEFT_PADDING_PX + typedChars * CHAR_SPACING_PX;
   ctx.fillStyle = color;
   ctx.globalAlpha = ALPHA_CARET;
+  const caretX = LEFT_PADDING_PX + typedChars * CHAR_SPACING_PX;
   ctx.fillRect(caretX, line.y - CARET_OFFSET_Y_PX, CARET_WIDTH_PX, CARET_HEIGHT_PX);
 }
 
-interface IDrawParams {
-  readonly ctx: CanvasRenderingContext2D;
-  readonly width: number;
-  readonly height: number;
-  readonly lines: ITypingLine[];
-  readonly nowMs: number;
-  readonly color: string;
-  readonly drawCaretEnabled: boolean;
-}
-
-function drawFrame(params: IDrawParams): void {
-  const { ctx, width, height, lines, nowMs, color, drawCaretEnabled } = params;
+function beginPaint(ctx: CanvasRenderingContext2D, width: number, height: number): void {
   ctx.clearRect(0, 0, width, height);
   ctx.font = TEXT_FONT;
   ctx.textBaseline = 'alphabetic';
+}
 
+function paintLines(params: {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly width: number;
+  readonly height: number;
+  readonly lines: readonly TypingLine[];
+  readonly nowMs: number;
+  readonly color: string;
+}): void {
+  const { ctx, width, height, lines, nowMs, color } = params;
+  beginPaint(ctx, width, height);
   for (const line of lines) {
     if (nowMs < line.startMs) {
       continue;
     }
-    const typedChars = computeTypedChars(line, nowMs);
-    if (typedChars >= line.charBudget && line.finishedAtMs === null) {
-      line.finishedAtMs = nowMs;
-    }
     const alpha = computeLineAlpha(line, nowMs);
-    if (alpha <= 0) {
-      respawnLine(line, height, nowMs);
-      continue;
+    if (alpha > 0) {
+      paintLineChars(ctx, line, computeTypedChars(line, nowMs), alpha, color);
     }
-    drawLineChars(ctx, line, typedChars, alpha, color);
   }
-
-  if (!drawCaretEnabled) {
-    ctx.globalAlpha = 1;
-    return;
+  const caretLine = findCaretLine(lines, nowMs);
+  if (caretLine !== undefined) {
+    paintCaret(ctx, caretLine, computeTypedChars(caretLine, nowMs), nowMs, color);
   }
-
-  const activeIndex = findCurrentLineIndex(lines, nowMs);
-  if (activeIndex !== -1) {
-    const activeLine = lines[activeIndex];
-    assert(activeLine !== undefined, 'active line must exist when index is valid');
-    const typedChars = computeTypedChars(activeLine, nowMs);
-    drawCaret(ctx, activeLine, typedChars, nowMs, color);
-  }
-
   ctx.globalAlpha = 1;
-}
-
-function createLines(width: number, height: number, nowMs: number): ITypingLine[] {
-  const count = resolveLineCount(width);
-  const lines: ITypingLine[] = [];
-  for (let index = 0; index < count; index += 1) {
-    lines.push(createLine(height, nowMs, index > 0));
-  }
-  return lines;
 }
 
 function paintReducedMotionFrame(params: {
   readonly ctx: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
-  readonly lines: ITypingLine[];
+  readonly lines: readonly TypingLine[];
   readonly color: string;
 }): void {
   const { ctx, width, height, lines, color } = params;
-  ctx.clearRect(0, 0, width, height);
-  ctx.font = TEXT_FONT;
-  ctx.textBaseline = 'alphabetic';
+  beginPaint(ctx, width, height);
   for (const line of lines) {
     const typedChars = Math.max(1, Math.floor(line.charBudget * REDUCED_MOTION_TYPED_RATIO));
-    drawLineChars(ctx, line, typedChars, ALPHA_TYPED, color);
+    paintLineChars(ctx, line, typedChars, ALPHA_TYPED, color);
   }
   ctx.globalAlpha = 1;
 }
 
+function createLines(width: number, height: number, nowMs: number): readonly TypingLine[] {
+  return Array.from({ length: resolveLineCount(width) }, (_, index) =>
+    index === 0 ? spawnLine(height, nowMs) : spawnLineAfterGap(height, nowMs)
+  );
+}
+
+/** Lines of code typed in monospace with a blinking caret; a static frame under reduced motion. */
 export function createControlsBackgroundAnimation(): IAmbientCanvasAnimation {
-  let lines: ITypingLine[] = [];
+  let lines: readonly TypingLine[] = [];
   let color = FALLBACK_COLOR;
 
   return {
     onResize({ ctx, cssWidth, cssHeight, dpr }: IAmbientCanvasResize): void {
-      // Sizing the canvas reset the 2D context — re-apply the DPR transform so the
-      // draw works in CSS pixels. Theme colour + line layout depend on size, so
-      // (re)read them here rather than per frame.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       color = readCssColor(VAR_ACCENT, FALLBACK_COLOR);
       lines = createLines(cssWidth, cssHeight, performance.now());
@@ -275,27 +250,13 @@ export function createControlsBackgroundAnimation(): IAmbientCanvasAnimation {
     draw(frame: IAmbientCanvasFrame): void {
       const { ctx, cssWidth, cssHeight, timestamp, elapsedMs, isStatic } = frame;
       if (isStatic) {
-        paintReducedMotionFrame({
-          ctx,
-          width: cssWidth,
-          height: cssHeight,
-          lines,
-          color,
-        });
+        paintReducedMotionFrame({ ctx, width: cssWidth, height: cssHeight, lines, color });
         ctx.canvas.style.opacity = String(DEFAULT_OPACITY);
         return;
       }
-      drawFrame({
-        ctx,
-        width: cssWidth,
-        height: cssHeight,
-        lines,
-        nowMs: timestamp,
-        color,
-        drawCaretEnabled: true,
-      });
-      const elapsedSec = elapsedMs / MS_PER_SECOND;
-      const fadeIn = Math.min(1, elapsedSec / FADE_IN_DURATION_SEC);
+      lines = advanceLines(lines, timestamp, cssHeight);
+      paintLines({ ctx, width: cssWidth, height: cssHeight, lines, nowMs: timestamp, color });
+      const fadeIn = Math.min(1, elapsedMs / MS_PER_SECOND / FADE_IN_DURATION_SEC);
       ctx.canvas.style.opacity = `${fadeIn * DEFAULT_OPACITY}`;
     },
   };

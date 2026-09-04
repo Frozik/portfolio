@@ -61,7 +61,7 @@ describe('SlotAllocator', () => {
 
       const slot = allocator.allocateSlot();
 
-      expect(slot).not.toBeNull();
+      expect(slot).toBeDefined();
       expect(slot?.row).toBe(0);
       expect(slot?.slotIndex).toBe(0);
       expect(allocator.getAllocatedSlotCount()).toBe(1);
@@ -80,7 +80,7 @@ describe('SlotAllocator', () => {
       const slots: ITextureSlot[] = [];
       for (let index = 0; index < SLOTS_PER_ROW; index++) {
         const slot = allocator.allocateSlot();
-        expect(slot).not.toBeNull();
+        expect(slot).toBeDefined();
         slots.push(slot as ITextureSlot);
       }
 
@@ -92,7 +92,7 @@ describe('SlotAllocator', () => {
 
       // Next slot should be in row 1
       const nextSlot = allocator.allocateSlot();
-      expect(nextSlot).not.toBeNull();
+      expect(nextSlot).toBeDefined();
       expect(nextSlot?.row).toBe(1);
       expect(nextSlot?.slotIndex).toBe(0);
 
@@ -138,7 +138,7 @@ describe('SlotAllocator', () => {
 
       // This allocation triggers growth
       const slot = allocator.allocateSlot();
-      expect(slot).not.toBeNull();
+      expect(slot).toBeDefined();
       expect(allocator.getCapacity()).toBe(TEST_INITIAL_ROWS * 2);
 
       allocator.dispose();
@@ -182,7 +182,7 @@ describe('SlotAllocator', () => {
 
       // Next allocation should reuse the released slot
       const reusedSlot = allocator.allocateSlot();
-      expect(reusedSlot).not.toBeNull();
+      expect(reusedSlot).toBeDefined();
       expect(reusedSlot?.row).toBe(slot1.row);
       expect(reusedSlot?.slotIndex).toBe(slot1.slotIndex);
 
@@ -238,7 +238,7 @@ describe('SlotAllocator', () => {
 
       // All slots full. Next allocation should evict oldest (first allocated).
       const newSlot = allocator.allocateSlot();
-      expect(newSlot).not.toBeNull();
+      expect(newSlot).toBeDefined();
       expect(newSlot?.row).toBe(0);
       expect(newSlot?.slotIndex).toBe(0);
       expect(evictedSlots).toHaveLength(1);
@@ -271,7 +271,7 @@ describe('SlotAllocator', () => {
 
       // Next allocation should evict slot[1] (oldest untouched), not slot[0]
       const newSlot = allocator.allocateSlot();
-      expect(newSlot).not.toBeNull();
+      expect(newSlot).toBeDefined();
       expect(evictedSlots).toHaveLength(1);
       expect(evictedSlots[0].row).toBe(slots[1].row);
       expect(evictedSlots[0].slotIndex).toBe(slots[1].slotIndex);

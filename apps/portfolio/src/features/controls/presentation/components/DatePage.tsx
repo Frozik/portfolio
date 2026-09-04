@@ -18,19 +18,23 @@ import { Kbd } from './Kbd';
 
 const TIME_ZONE = Temporal.Now.timeZoneId();
 const WEEKEND_DAYS = new Set([EDayOfWeek.Saturday, EDayOfWeek.Sunday]);
-const NEAREST_VALUE = 'nearest';
 
 const DEFAULT_TOKEN_SEPARATOR = ' ';
 
 type FormatToken = { readonly text: string; readonly after?: string };
 
 type FormatCategory = {
+  readonly id: string;
   readonly label: ReactNode;
   readonly tokens: ReadonlyArray<FormatToken>;
 };
 
+/** Whether an ambiguous input like "mon" resolves forward only or to the closest date. */
+type ParseDirection = 'future' | 'nearest';
+
 const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
   {
+    id: 'keywords',
     label: controlsT.datePage.categories.keywords,
     tokens: [
       { text: 'today' },
@@ -44,6 +48,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'boundaries',
     label: controlsT.datePage.categories.boundaries,
     tokens: [
       { text: 'eom' },
@@ -56,6 +61,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'weekdays',
     label: controlsT.datePage.categories.weekdays,
     tokens: [
       { text: 'mon', after: '–' },
@@ -67,6 +73,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'offsets',
     label: controlsT.datePage.categories.offsets,
     tokens: [
       { text: '+3d' },
@@ -78,6 +85,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'dates',
     label: controlsT.datePage.categories.dates,
     tokens: [
       { text: '2025-01-15' },
@@ -92,6 +100,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'months',
     label: controlsT.datePage.categories.months,
     tokens: [
       { text: 'jan' },
@@ -104,6 +113,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'quarters',
     label: controlsT.datePage.categories.quarters,
     tokens: [
       { text: 'Q1' },
@@ -114,10 +124,12 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'ordinals',
     label: controlsT.datePage.categories.ordinals,
     tokens: [{ text: '15th' }, { text: 'the 1st' }, { text: '22nd' }],
   },
   {
+    id: 'time',
     label: controlsT.datePage.categories.time,
     tokens: [
       { text: '13:00' },
@@ -130,6 +142,7 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     ],
   },
   {
+    id: 'dateTime',
     label: controlsT.datePage.categories.dateTime,
     tokens: [
       { text: 'tom 13:00' },
@@ -143,9 +156,9 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
   },
 ];
 
-const NEAREST_OPTIONS = [
+const DIRECTION_OPTIONS: readonly { readonly label: string; readonly value: ParseDirection }[] = [
   { label: controlsT.datePage.futureOnly, value: 'future' },
-  { label: controlsT.datePage.nearest, value: NEAREST_VALUE },
+  { label: controlsT.datePage.nearest, value: 'nearest' },
 ];
 
 const STEP_OPTIONS = [
@@ -174,26 +187,14 @@ export const DatePage = memo(() => {
   const [value, setValue] = useState<Temporal.ZonedDateTime | undefined>(undefined);
   const [step, setStep] = useState<EDateTimeStep>(EDateTimeStep.Day);
   const [timeResolution, setTimeResolution] = useState<ETimeResolution>(ETimeResolution.Minutes);
-  const [nearest, setNearest] = useState(false);
+  const [direction, setDirection] = useState<ParseDirection>('future');
 
   const parseInput = useFunction((input: string) =>
     parseFuzzyDate(input, {
       now: Temporal.Now.zonedDateTimeISO(TIME_ZONE),
-      nearest,
+      nearest: direction === 'nearest',
     })
   );
-
-  const handleStepChange = useFunction((next: string) => {
-    setStep(next as EDateTimeStep);
-  });
-
-  const handleResolutionChange = useFunction((next: string) => {
-    setTimeResolution(next as ETimeResolution);
-  });
-
-  const handleNearestChange = useFunction((next: string) => {
-    setNearest(next === NEAREST_VALUE);
-  });
 
   return (
     <section className="flex flex-col gap-5">
@@ -206,7 +207,7 @@ export const DatePage = memo(() => {
       <ul className="flex flex-col gap-1.5">
         {FORMAT_CATEGORIES.map(category => (
           <li
-            key={String(category.label)}
+            key={category.id}
             className="flex flex-wrap items-baseline gap-1.5 text-[13px] leading-[1.6] text-landing-fg-dim"
           >
             <MonoKicker tone="faint" className="mr-1">
@@ -242,12 +243,7 @@ export const DatePage = memo(() => {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <MonoKicker tone="faint">{controlsT.datePage.arrowKeyStep}</MonoKicker>
-          <RadioGroup
-            options={STEP_OPTIONS}
-            value={step}
-            onChange={handleStepChange}
-            optionType="button"
-          />
+          <RadioGroup options={STEP_OPTIONS} value={step} onChange={setStep} optionType="button" />
         </div>
 
         <div className="flex flex-col gap-3">
@@ -255,7 +251,7 @@ export const DatePage = memo(() => {
           <RadioGroup
             options={TIME_RESOLUTION_OPTIONS}
             value={timeResolution}
-            onChange={handleResolutionChange}
+            onChange={setTimeResolution}
             optionType="button"
           />
         </div>
@@ -263,13 +259,15 @@ export const DatePage = memo(() => {
         <div className="flex flex-col gap-3">
           <MonoKicker tone="faint">{controlsT.datePage.parseDirection}</MonoKicker>
           <RadioGroup
-            options={NEAREST_OPTIONS}
-            value={nearest ? NEAREST_VALUE : 'future'}
-            onChange={handleNearestChange}
+            options={DIRECTION_OPTIONS}
+            value={direction}
+            onChange={setDirection}
             optionType="button"
           />
           <p className="text-xs text-landing-fg-faint">
-            {nearest ? controlsT.datePage.nearestHint : controlsT.datePage.futureHint}
+            {direction === 'nearest'
+              ? controlsT.datePage.nearestHint
+              : controlsT.datePage.futureHint}
           </p>
         </div>
 

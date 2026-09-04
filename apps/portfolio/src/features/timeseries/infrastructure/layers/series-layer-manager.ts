@@ -1,6 +1,5 @@
 import type { IBlockEntry, IPlotArea } from '../../domain/types';
-import type { SlotAllocator } from '../slot-allocator';
-import type { ISeriesLayer, ISeriesLayerManager } from './types';
+import type { ISeriesLayer, ISeriesLayerManager, ISeriesUniforms } from './types';
 
 interface ISeriesLayerEntry {
   readonly layer: ISeriesLayer;
@@ -14,45 +13,20 @@ export class SeriesLayerManager implements ISeriesLayerManager {
     this.entries.push({ layer, pipeline });
   }
 
-  initAll(
-    device: GPUDevice,
-    bindGroupLayout: GPUBindGroupLayout,
-    slotAllocator: SlotAllocator
-  ): void {
-    for (const entry of this.entries) {
-      entry.layer.init(device, bindGroupLayout, slotAllocator);
-    }
-  }
-
   updateBindGroups(dataTextureView: GPUTextureView): void {
     for (const entry of this.entries) {
       entry.layer.updateBindGroup(dataTextureView);
     }
   }
 
+  /** `blockSets[index]` belongs to the series added at `index`. */
   writeAllUniforms(
-    blockSets: ReadonlyArray<ReadonlyArray<IBlockEntry>>,
-    canvasWidth: number,
-    canvasHeight: number,
-    viewTimeStart: number,
-    viewTimeEnd: number,
-    viewValueMin: number,
-    viewValueMax: number
+    blockSets: readonly (readonly IBlockEntry[])[],
+    uniforms: ISeriesUniforms
   ): void {
-    for (let index = 0; index < this.entries.length; index++) {
-      const entry = this.entries[index];
-      const blocks = blockSets[index] ?? [];
-
-      entry.layer.writeUniforms(
-        blocks,
-        canvasWidth,
-        canvasHeight,
-        viewTimeStart,
-        viewTimeEnd,
-        viewValueMin,
-        viewValueMax
-      );
-    }
+    this.entries.forEach((entry, index) => {
+      entry.layer.writeUniforms(blockSets[index] ?? [], uniforms);
+    });
   }
 
   renderAll(pass: GPURenderPassEncoder, plotArea: IPlotArea): void {
@@ -61,12 +35,12 @@ export class SeriesLayerManager implements ISeriesLayerManager {
     }
   }
 
+  /** Every layer draws its block outlines with the shared debug pipeline over its own bind group. */
   renderDebug(
     pass: GPURenderPassEncoder,
     debugPipeline: GPURenderPipeline,
     plotArea: IPlotArea
   ): void {
-    // Draw debug lines using each layer's bind group (which has the block descriptors)
     for (const entry of this.entries) {
       entry.layer.renderDebug(pass, debugPipeline, plotArea);
     }

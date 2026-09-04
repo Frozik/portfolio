@@ -1,4 +1,4 @@
-import type { IChartFrameLayout } from '../frame-layout';
+import type { IChartFrameLayout } from './frame-layout';
 
 /** Project a tick time onto its device-pixel X coordinate inside the plot rect. */
 export function timeToPixelX(layout: IChartFrameLayout, time: number): number {

@@ -9,8 +9,8 @@ import {
   loadField,
   puzzleSolved,
 } from './services';
-import type { IField, TTool } from './types';
-import { EFieldType, EToolType } from './types';
+import type { IField, ITool } from './types';
+import { EFieldType } from './types';
 
 // A valid 9x9 sudoku puzzle string (81 chars, size=3)
 // '0' represents empty cells
@@ -114,7 +114,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('pen mode writes value to a guess cell', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Pen, value: 4 };
+    const tool: ITool = { mode: 'pen', value: 4 };
 
     // Cell at row=0, col=2 should be a guess cell (the '.' in position 2)
     const result = applyToolToFieldReducer(field, tool, 0, 2);
@@ -125,7 +125,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('pen mode does not modify fixed cells', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Pen, value: 9 };
+    const tool: ITool = { mode: 'pen', value: 9 };
 
     // Cell at row=0, col=0 is '5' (fixed)
     const result = applyToolToFieldReducer(field, tool, 0, 0);
@@ -136,7 +136,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('pen mode clears value when same value applied', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Pen, value: 4 };
+    const tool: ITool = { mode: 'pen', value: 4 };
 
     const afterWrite = applyToolToFieldReducer(field, tool, 0, 2);
     const afterClear = applyToolToFieldReducer(afterWrite, tool, 0, 2);
@@ -147,7 +147,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('notes mode toggles candidate on', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Notes, value: 4 };
+    const tool: ITool = { mode: 'notes', value: 4 };
 
     const result = applyToolToFieldReducer(field, tool, 0, 2);
 
@@ -158,7 +158,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('notes mode toggles candidate off', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Notes, value: 4 };
+    const tool: ITool = { mode: 'notes', value: 4 };
 
     const afterAdd = applyToolToFieldReducer(field, tool, 0, 2);
     const afterRemove = applyToolToFieldReducer(afterAdd, tool, 0, 2);
@@ -169,7 +169,7 @@ describe('applyToolToFieldReducer', () => {
 
   it('none tool returns field unchanged', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.None, value: undefined };
+    const tool: ITool = { mode: 'pen', value: undefined };
 
     const result = applyToolToFieldReducer(field, tool, 0, 2);
     expect(result).toBe(field);
@@ -182,15 +182,15 @@ describe('applyToolToFieldReducer', () => {
     const field = freezeField(addFieldMarks(getLoadedField(VALID_PUZZLE)));
     const snapshot = structuredClone(field);
 
-    applyToolToFieldReducer(field, { type: EToolType.Pen, value: 4 }, 0, 2);
-    applyToolToFieldReducer(field, { type: EToolType.Notes, value: 7 }, 0, 2);
+    applyToolToFieldReducer(field, { mode: 'pen', value: 4 }, 0, 2);
+    applyToolToFieldReducer(field, { mode: 'notes', value: 7 }, 0, 2);
 
     expect(field).toEqual(snapshot);
   });
 
   it('reuses cells that the tool does not affect', () => {
     const field = getLoadedField(VALID_PUZZLE);
-    const tool: TTool = { type: EToolType.Pen, value: 4 };
+    const tool: ITool = { mode: 'pen', value: 4 };
 
     const result = applyToolToFieldReducer(field, tool, 0, 2);
 

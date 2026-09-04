@@ -1,3 +1,4 @@
+import { isNil } from 'lodash-es';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 
@@ -6,38 +7,36 @@ import type { IBlockEntry, IPlotArea } from '../../domain/types';
 import { BlockDescriptorBuffer } from '../block-descriptor-buffer';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import type { SlotAllocator } from '../slot-allocator';
-import type { ISeriesLayer } from './types';
+import type { ISeriesLayer, ISeriesUniforms } from './types';
 
 const DEBUG_LINE_VERTICES = 6;
 
 export class SeriesLayer implements ISeriesLayer {
-  private device!: GPUDevice;
-  private bindGroupLayout!: GPUBindGroupLayout;
-  private uniformBuffer!: GPUBuffer;
-  private uniformView!: StructuredView;
-  private descriptorBuffer!: BlockDescriptorBuffer;
-  private currentBindGroup: GPUBindGroup | null = null;
+  private readonly device: GPUDevice;
+  private readonly bindGroupLayout: GPUBindGroupLayout;
+  private readonly uniformBuffer: GPUBuffer;
+  private readonly uniformView: StructuredView;
+  private readonly descriptorBuffer: BlockDescriptorBuffer;
+  private currentBindGroup: GPUBindGroup | undefined;
   private currentInstanceCount = 0;
   private currentBlockCount = 0;
 
   constructor(
+    device: GPUDevice,
+    bindGroupLayout: GPUBindGroupLayout,
+    slotAllocator: SlotAllocator,
     private readonly verticesPerInstance: number,
     private readonly needsStitching: boolean
-  ) {}
-
-  init(gpuDevice: GPUDevice, layout: GPUBindGroupLayout, slotAllocator: SlotAllocator): void {
-    this.device = gpuDevice;
-    this.bindGroupLayout = layout;
-
+  ) {
+    this.device = device;
+    this.bindGroupLayout = bindGroupLayout;
     const definitions = makeShaderDataDefinitions(commonShaderSource);
     this.uniformView = makeStructuredView(definitions.uniforms.U);
-
-    this.uniformBuffer = this.device.createBuffer({
+    this.uniformBuffer = device.createBuffer({
       size: this.uniformView.arrayBuffer.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-
-    this.descriptorBuffer = new BlockDescriptorBuffer(gpuDevice, slotAllocator);
+    this.descriptorBuffer = new BlockDescriptorBuffer(device, slotAllocator);
   }
 
   updateBindGroup(dataTextureView: GPUTextureView): void {
@@ -51,15 +50,7 @@ export class SeriesLayer implements ISeriesLayer {
     });
   }
 
-  writeUniforms(
-    blocks: ReadonlyArray<IBlockEntry>,
-    canvasWidth: number,
-    canvasHeight: number,
-    viewTimeStart: number,
-    viewTimeEnd: number,
-    viewValueMin: number,
-    viewValueMax: number
-  ): void {
+  writeUniforms(blocks: readonly IBlockEntry[], uniforms: ISeriesUniforms): void {
     if (blocks.length === 0) {
       this.currentInstanceCount = 0;
       this.currentBlockCount = 0;
@@ -74,11 +65,11 @@ export class SeriesLayer implements ISeriesLayer {
     this.currentInstanceCount = totalInstances;
 
     this.uniformView.set({
-      viewport: [canvasWidth, canvasHeight],
-      timeRangeMin: viewTimeStart - globalBaseTime,
-      timeRangeMax: viewTimeEnd - globalBaseTime,
-      valueRangeMin: viewValueMin - globalBaseValue,
-      valueRangeMax: viewValueMax - globalBaseValue,
+      viewport: [uniforms.canvasWidth, uniforms.canvasHeight],
+      timeRangeMin: uniforms.viewTimeStart - globalBaseTime,
+      timeRangeMax: uniforms.viewTimeEnd - globalBaseTime,
+      valueRangeMin: uniforms.viewValueMin - globalBaseValue,
+      valueRangeMax: uniforms.viewValueMax - globalBaseValue,
       textureWidth: TEXTURE_WIDTH,
       lineWidth: Math.max(1, window.devicePixelRatio),
       blockCount: blocks.length,
@@ -88,7 +79,7 @@ export class SeriesLayer implements ISeriesLayer {
   }
 
   render(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, plotArea: IPlotArea): void {
-    if (this.currentBindGroup === null || this.currentInstanceCount <= 0) {
+    if (isNil(this.currentBindGroup) || this.currentInstanceCount <= 0) {
       return;
     }
 
@@ -103,7 +94,7 @@ export class SeriesLayer implements ISeriesLayer {
     debugPipeline: GPURenderPipeline,
     plotArea: IPlotArea
   ): void {
-    if (this.currentBindGroup === null || this.currentBlockCount <= 0) {
+    if (isNil(this.currentBindGroup) || this.currentBlockCount <= 0) {
       return;
     }
 
@@ -117,13 +108,9 @@ export class SeriesLayer implements ISeriesLayer {
     return this.currentInstanceCount;
   }
 
-  get bindGroup(): GPUBindGroup | null {
-    return this.currentBindGroup;
-  }
-
   dispose(): void {
     this.uniformBuffer.destroy();
     this.descriptorBuffer.dispose();
-    this.currentBindGroup = null;
+    this.currentBindGroup = undefined;
   }
 }
