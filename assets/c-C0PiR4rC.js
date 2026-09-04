@@ -1,0 +1,1 @@
+function e(e){return{init(){},update:e,render(){},dispose(){}}}export{e as t};

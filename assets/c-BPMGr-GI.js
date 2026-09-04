@@ -1,0 +1,1 @@
+import{ct as e}from"./e-BtwYBLlY.js";function t(e){return typeof e==`object`&&!!e}var n=`[object Symbol]`;function r(r){return typeof r==`symbol`||t(r)&&e(r)==n}export{t as n,r as t};
