@@ -17,7 +17,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: builder
 # -----------------------------------------------------------------------------
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
@@ -51,7 +51,7 @@ RUN pnpm --filter @frozik/communication deploy --legacy --prod /out
 # -----------------------------------------------------------------------------
 # Stage 2: runtime
 # -----------------------------------------------------------------------------
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 RUN addgroup -g 1001 -S communication \
  && adduser  -u 1001 -S -G communication -h /app -s /sbin/nologin communication
