@@ -1,6 +1,12 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
+import type { Opaque } from '@frozik/utils/types/base';
 
-export type PlayerId = number;
+export type PlayerId = Opaque<'ScorchedPlayerId', number>;
+
+/** Roster slots are numbered from zero; once it is an id the number means nothing else. */
+export function toPlayerId(slot: number): PlayerId {
+  return slot as PlayerId;
+}
 
 export type TurretFacing = 'left' | 'right';
 

@@ -5,7 +5,7 @@ import type { ChangeEvent } from 'react';
 
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { PLASMA_MAX_BATTERIES, PLASMA_MIN_BATTERIES } from '../../domain/constants';
-import { canFitGuidance } from '../../domain/items';
+import { canFitGuidance } from '../../domain/items/behaviors';
 import type { GuidanceKind, ItemId } from '../../domain/types';
 import { getWeapon } from '../../domain/weapons/catalog';
 import { scorchedT } from '../translations';
@@ -36,28 +36,29 @@ function isGuidanceKind(value: string): value is GuidanceKind {
  */
 export const ShotSetupBar = observer(() => {
   const store = useScorchedStore();
-  const { activePlayerId, selectedWeaponId, shotSetup } = store;
+  const { activePlayerId } = store.world;
+  const { selectedWeaponId, shotSetup } = store.aim;
   const weapon = getWeapon(selectedWeaponId);
   const isGuidanceAllowed = canFitGuidance(weapon);
   const isPlasma = weapon.family === 'plasma';
 
   const countOf = (itemId: ItemId): number =>
-    activePlayerId === undefined ? 0 : store.getItemCount(activePlayerId, itemId);
+    activePlayerId === undefined ? 0 : store.world.getItemCount(activePlayerId, itemId);
 
   const triggerCount = countOf('contact-trigger');
 
   const handleGuidanceChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
     const { value } = event.target;
 
-    store.setGuidance(isGuidanceKind(value) ? value : undefined);
+    store.aim.setGuidance(isGuidanceKind(value) ? value : undefined);
   });
 
   const handleTriggerChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
-    store.setContactTriggerArmed(event.target.checked);
+    store.aim.setContactTriggerArmed(event.target.checked);
   });
 
   const handleBatteriesChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
-    store.setPlasmaBatteries(Number(event.target.value));
+    store.aim.setPlasmaBatteries(Number(event.target.value));
   });
 
   const availableGuidance = GUIDANCE_ITEMS.filter(guidance => countOf(guidance) > 0);

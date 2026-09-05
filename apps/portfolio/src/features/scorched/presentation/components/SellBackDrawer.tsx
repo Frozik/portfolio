@@ -78,7 +78,7 @@ export const SellBackDrawer = observer(
               <SellRow
                 key={`${sellable.entry.kind}:${sellable.name}`}
                 sellable={sellable}
-                unitPrice={quoteShopSellBack(sellable.entry, store.roundsRemaining, ONE_UNIT)}
+                unitPrice={quoteShopSellBack(sellable.entry, store.world.roundsRemaining, ONE_UNIT)}
                 onSell={handleSell}
               />
             ))}

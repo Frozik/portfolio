@@ -3,6 +3,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp, random } from 'lodash-es';
 
 import {
+  COLUMN_CENTER_OFFSET_WU,
   FUNKY_BOMB_BURST_RADIUS_WU,
   FUNKY_BOMB_MAX_BURSTS,
   FUNKY_BOMB_MIN_BURSTS,
@@ -134,7 +135,10 @@ function scatterFunkyBursts(context: ImpactContext, scatterRadiusWu: number): Im
 
     return {
       kind: 'explosion' as const,
-      center: { x: columnIndex + 0.5, y: getSurfaceHeight(context.field, columnIndex) },
+      center: {
+        x: columnIndex + COLUMN_CENTER_OFFSET_WU,
+        y: getSurfaceHeight(context.field, columnIndex),
+      },
       radiusWu: FUNKY_BOMB_BURST_RADIUS_WU,
     };
   });
@@ -226,7 +230,7 @@ export function computeLaserHits(
   const hits: LaserHit[] = [];
 
   for (const tank of tanks) {
-    const offsetX = tank.columnIndex + 0.5 - origin.x;
+    const offsetX = tank.columnIndex + COLUMN_CENTER_OFFSET_WU - origin.x;
     const offsetY = tank.positionY + TANK_CENTER_OFFSET_WU - origin.y;
     const alongBeam = offsetX * beam.x + offsetY * beam.y;
 

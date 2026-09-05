@@ -8,10 +8,10 @@ import { useScorchedStore } from '../../application/useScorchedStore';
 import { MAX_TANK_HEALTH } from '../../domain/constants';
 import { HUD_ICON_SIZE_PX } from '../constants';
 import { formatAimValue, formatCash, toHealthPercent } from '../hud-format';
-import { getPlayerColor } from '../player-colors';
 import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
 import { getWeaponName } from '../weapon-names';
+import { PlayerSwatch } from './PlayerSwatch';
 
 const CALM_WIND = 0;
 
@@ -24,22 +24,16 @@ const readoutLabelClass = 'text-[0.625rem] uppercase tracking-widest text-text-m
  */
 export const ScorchedHud = observer(() => {
   const store = useScorchedStore();
-  const {
-    activePlayerId,
-    activePlayer,
-    windUnits,
-    aimElevationDegrees,
-    aimPower,
-    aiThinkingPlayerId,
-  } = store;
-  const color = isNil(activePlayerId) ? undefined : getPlayerColor(activePlayerId);
+  const { activePlayer, windUnits } = store.world;
+  const { thinkingPlayerId: aiThinkingPlayerId } = store.ai;
+  const { elevationDegrees: aimElevationDegrees, power: aimPower } = store.aim;
 
   const handleToggleMute = useFunction(() => {
     store.toggleMute();
   });
 
   const handleOpenWeapons = useFunction(() => {
-    store.setWeaponCarouselOpen(true);
+    store.aim.setCarouselOpen(true);
   });
 
   return (
@@ -50,19 +44,15 @@ export const ScorchedHud = observer(() => {
       }
     >
       <span className={readoutLabelClass}>
-        {scorchedT.hud.round(store.roundNumber, store.roundCount)}
+        {scorchedT.hud.round(store.world.roundNumber, store.world.roundCount)}
       </span>
 
       <section aria-label={scorchedT.hud.turn} className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="size-3 rounded-full"
-          style={{ backgroundColor: color?.hex }}
-        />
+        <PlayerSwatch playerId={activePlayer?.id} className="size-3" />
         <span className="text-sm font-medium">
           {isNil(activePlayer) ? scorchedT.round.over : getPlayerDisplayName(activePlayer)}
         </span>
-        {aiThinkingPlayerId === activePlayerId && !isNil(aiThinkingPlayerId) ? (
+        {!isNil(aiThinkingPlayerId) && aiThinkingPlayerId === activePlayer?.id ? (
           <span className="text-xs text-text-muted">{scorchedT.hud.thinking}</span>
         ) : null}
       </section>
@@ -123,7 +113,7 @@ export const ScorchedHud = observer(() => {
         aria-label={scorchedT.touch.weapons}
         className="ml-auto rounded-full"
       >
-        {getWeaponName(store.selectedWeaponId)}
+        {getWeaponName(store.aim.selectedWeaponId)}
       </Button>
 
       <Button

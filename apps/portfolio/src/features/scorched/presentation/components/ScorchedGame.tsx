@@ -6,6 +6,7 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { WebGpuUnsupportedNotice } from '../../../../shared/components/WebGpuUnsupportedNotice';
 import { AimGhost } from '../../application/aim-ghost';
 import { PointerAimSource } from '../../application/pointer-aim-source';
 import type { IScorchedSimulationHost } from '../../application/render/scorched-draw';
@@ -17,6 +18,7 @@ import { mergeScorchedInputs } from '../../domain/scorched-input';
 import { pickRandomSkyPreset } from '../../domain/sky-presets';
 import { useDragAim } from '../hooks/useDragAim';
 import { useFieldTransform } from '../hooks/useFieldTransform';
+import { scorchedT } from '../translations';
 import { FieldOverlays } from './FieldOverlays';
 import { HandoverOverlay } from './HandoverOverlay';
 import { MatchResultOverlay } from './MatchResultOverlay';
@@ -47,7 +49,7 @@ export const ScorchedGame = observer(
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const audioControllerRef = useRef<ScorchedAudioController | undefined>(undefined);
     const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
-    const { status, isTicking, fps } = store;
+    const { status, isTicking, fps, rendererFailure } = store;
     const skyPreset = useMemo(() => pickRandomSkyPreset(), []);
     const aimGhost = useMemo(() => new AimGhost(), []);
     const pointerSource = useMemo(() => new PointerAimSource(), []);
@@ -92,6 +94,7 @@ export const ScorchedGame = observer(
         aimGhost,
         onEvents: events => audioController.onFrame(events, readDescentSpeed()),
         onFpsUpdate: IS_HOSTED ? undefined : store.setFps,
+        onInitError: store.failRenderer,
       });
 
       return () => {
@@ -120,11 +123,11 @@ export const ScorchedGame = observer(
       pointerInput: pointerSource,
       aimGhost,
       getOrigin: () => {
-        const playerId = store.activePlayerId;
+        const playerId = store.world.activePlayerId;
 
         return isNil(playerId) ? undefined : store.roundRef.current.getTank(playerId);
       },
-      getMaxPower: () => store.maxPower,
+      getMaxPower: () => store.aim.maxPower,
       isEnabled: store.isAiming && !store.isAiTurn,
     });
 
@@ -143,11 +146,21 @@ export const ScorchedGame = observer(
 
     const isPlaying = status === 'playing';
 
+    if (!isNil(rendererFailure)) {
+      return (
+        <div className="flex h-full w-full flex-col items-center gap-4 overflow-y-auto py-6">
+          <WebGpuUnsupportedNotice />
+          <p className="font-mono text-xs text-text-muted">
+            {scorchedT.rendererFailed}: {rendererFailure}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full w-full flex-col">
         <ScorchedHud />
 
-        {/* overflow-hidden: an overlay past the edge would scrollbar the main and resize the canvas */}
         <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
           <canvas
             ref={canvasRef}
@@ -163,7 +176,7 @@ export const ScorchedGame = observer(
           {isPlaying ? <ShotSetupBar /> : null}
           {isPlaying ? <TurnActionsBar /> : null}
           {isPlaying && isCoarsePointer ? <TouchControls pointerInput={pointerSource} /> : null}
-          {isPlaying && store.isWeaponCarouselOpen ? <WeaponCarousel /> : null}
+          {isPlaying && store.aim.isWeaponCarouselOpen ? <WeaponCarousel /> : null}
 
           {status === 'setup' ? <RosterScreen /> : null}
           {status === 'handover' ? <HandoverOverlay /> : null}

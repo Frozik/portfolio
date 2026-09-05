@@ -17,7 +17,7 @@ export interface IDamagePopup {
   readonly kind: HealthPopupKind;
   readonly amount: number;
   readonly position: Vector2;
-  remainingSeconds: number;
+  readonly remainingSeconds: number;
 }
 
 /** A taunt bubble over a tank; the text itself is resolved from the translations. */
@@ -25,7 +25,7 @@ export interface ITauntBubble {
   readonly playerId: PlayerId;
   readonly kind: TauntKind;
   readonly lineIndex: number;
-  remainingSeconds: number;
+  readonly remainingSeconds: number;
 }
 
 export interface IOverlayStoreParams {
@@ -119,5 +119,9 @@ export class OverlayStore {
   clear(): void {
     this.damagePopups = [];
     this.taunts = [];
+  }
+
+  dispose(): void {
+    this.clear();
   }
 }

@@ -8,6 +8,7 @@ import type { AiPersonality, ItemId, WallMode, WeaponFamily, WeaponId } from '..
 export const scorchedTranslationsEn = {
   title: 'Ashfall',
   subtitle: 'Scorched Earth, rebuilt on WebGPU',
+  rendererFailed: 'The WebGPU renderer could not start',
   start: 'Start match',
   playAgain: 'New match',
   continue: 'Continue',

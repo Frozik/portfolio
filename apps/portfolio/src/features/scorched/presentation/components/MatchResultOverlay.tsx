@@ -6,17 +6,17 @@ import { observer } from 'mobx-react-lite';
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { GLASS_PANEL_CLASS } from '../constants';
-import { getPlayerColor } from '../player-colors';
 import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
+import { PlayerSwatch } from './PlayerSwatch';
 
 const NO_KILLS = 0;
 
 /** The final table: aggregate kills take the match, points break the tie [WIKI §8]. */
 export const MatchResultOverlay = observer(() => {
   const store = useScorchedStore();
-  const [champion] = store.standings;
-  const championPlayer = store.players.find(player => player.id === champion?.playerId);
+  const [champion] = store.world.standings;
+  const championPlayer = store.world.players.find(player => player.id === champion?.playerId);
   const hasWinner = !isNil(champion) && champion.kills > NO_KILLS;
 
   const handlePlayAgain = useFunction(() => {
@@ -44,16 +44,12 @@ export const MatchResultOverlay = observer(() => {
           <span className="w-16 text-right">{scorchedT.match.points}</span>
         </li>
 
-        {store.standings.map(standing => {
-          const player = store.players.find(candidate => candidate.id === standing.playerId);
+        {store.world.standings.map(standing => {
+          const player = store.world.players.find(candidate => candidate.id === standing.playerId);
 
           return (
             <li key={standing.playerId} className="flex items-center gap-3 text-sm">
-              <span
-                aria-hidden="true"
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: getPlayerColor(standing.playerId).hex }}
-              />
+              <PlayerSwatch playerId={standing.playerId} className="size-2.5 shrink-0" />
               <span className="flex-1 truncate text-left text-text">
                 {isNil(player) ? '' : getPlayerDisplayName(player)}
               </span>

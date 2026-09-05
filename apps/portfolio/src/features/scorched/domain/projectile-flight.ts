@@ -3,6 +3,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { BallisticsEnvironment } from './ballistics';
 import { hasCrossedApex, stepProjectile, traceTerrainImpact } from './ballistics';
 import {
+  COLUMN_CENTER_OFFSET_WU,
   DEFAULT_ROLLER_SPEED_WU_PER_TICK,
   LIQUID_DIRT_MAX_HALF_SPAN_COLUMNS,
   LIQUID_DIRT_POUR_INTERVAL_TICKS,
@@ -14,13 +15,13 @@ import {
   ROLLER_SPEED_WU_PER_TICK,
   TANK_HALF_WIDTH_WU,
 } from './constants';
-import type { ShieldAbsorption } from './items';
+import type { ShieldAbsorption } from './items/behaviors';
 import {
   absorbWithShield,
   applyGuidance,
   applyMagDeflection,
   resolveShieldInteraction,
-} from './items';
+} from './items/behaviors';
 import { getTankCenter, isInsideTankBox } from './tank-geometry';
 import type { Heightfield } from './terrain/heightfield';
 import {
@@ -173,11 +174,10 @@ function beginRolling(
   const direction = Math.sign(projectile.state.velocity.x) || getDownhillStep(field, columnIndex);
 
   projectile.state = {
-    position: { x: columnIndex + 0.5, y: getSurfaceHeight(field, columnIndex) },
+    position: { x: columnIndex + COLUMN_CENTER_OFFSET_WU, y: getSurfaceHeight(field, columnIndex) },
     velocity: { x: 0, y: 0 },
   };
 
-  // A shell that fell dead straight onto flat ground has nowhere to roll.
   if (direction === 0) {
     context.detonate(projectile, projectile.state.position, false);
 
@@ -222,7 +222,7 @@ function rollProjectile(
 
     rolling.travelledColumns++;
     projectile.state = {
-      position: { x: nextColumn + 0.5, y: getSurfaceHeight(field, nextColumn) },
+      position: { x: nextColumn + COLUMN_CENTER_OFFSET_WU, y: getSurfaceHeight(field, nextColumn) },
       velocity: { x: rolling.direction * speed, y: 0 },
     };
 
@@ -244,7 +244,7 @@ function detonateRollerOnContact(
       continue;
     }
 
-    const gapWu = Math.abs(rollX - (tank.columnIndex + 0.5));
+    const gapWu = Math.abs(rollX - (tank.columnIndex + COLUMN_CENTER_OFFSET_WU));
 
     if (tank.shield !== undefined && gapWu <= TANK_HALF_WIDTH_WU + ROLLER_SHIELD_STANDOFF_WU) {
       context.detonate(projectile, projectile.state.position, false);

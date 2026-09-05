@@ -5,7 +5,7 @@ import {
   AI_SHIELD_STOCK_TARGET,
   AI_SHOPPING_BUDGET_FRACTION,
 } from '../constants';
-import { getItemPricing, getItemsForArmsLevel, SHIELD_ITEM_PREFERENCE } from '../items';
+import { getItemPricing, getItemsForArmsLevel, SHIELD_ITEM_PREFERENCE } from '../items/catalog';
 import type { ItemId, WeaponId } from '../types';
 import type { WeaponDefinition } from '../weapons/catalog';
 import { getWeaponsForArmsLevel } from '../weapons/catalog';

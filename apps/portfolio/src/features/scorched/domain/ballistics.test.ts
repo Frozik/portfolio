@@ -7,8 +7,6 @@ import {
   getLaunchVelocity,
   getMaxPower,
   hasCrossedApex,
-  isPerShotWallMode,
-  resolveWallMode,
   rollWind,
   simulateTrajectory,
   stepProjectile,
@@ -30,6 +28,7 @@ import {
 } from './constants';
 import { createFlatHeightfield } from './terrain/heightfield';
 import type { ProjectileState, ResolvedWallMode } from './types';
+import { isPerShotWallMode, resolveWallMode } from './walls';
 
 vi.mock('lodash-es', async importOriginal => {
   const actual = await importOriginal<typeof import('lodash-es')>();

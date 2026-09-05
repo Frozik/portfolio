@@ -10,10 +10,11 @@ import {
   MAX_TANK_HEALTH,
   TERRAIN_COLUMN_COUNT,
 } from './constants';
-import { getItem } from './items';
+import { getItem } from './items/catalog';
 import { getSpawnColumns, ScorchedMatch } from './match';
 import { createFlatHeightfield } from './terrain/heightfield';
 import type { MatchOptions, PlayerSetup } from './types';
+import { toPlayerId } from './types';
 import { getWeapon } from './weapons/catalog';
 
 vi.mock('lodash-es', async importOriginal => {
@@ -29,8 +30,8 @@ const STARTING_CASH = 50000;
 const MISSILE = getWeapon('missile');
 
 const PLAYERS: readonly PlayerSetup[] = [
-  { id: 1, name: 'One', controller: { kind: 'human' } },
-  { id: 2, name: 'Two', controller: { kind: 'ai', personality: 'moron' } },
+  { id: toPlayerId(1), name: 'One', controller: { kind: 'human' } },
+  { id: toPlayerId(2), name: 'Two', controller: { kind: 'ai', personality: 'moron' } },
 ];
 
 function createMatch(overrides: Partial<MatchOptions> = {}): ScorchedMatch {
@@ -103,7 +104,7 @@ describe('shop phase gate', () => {
   it('sells a bundle while the shop is open', () => {
     const match = createMatch();
 
-    expect(match.buyWeapon(1, 'missile')).toBe(true);
+    expect(match.buyWeapon(toPlayerId(1), 'missile')).toBe(true);
     expect(match.players[0].weapons.missile).toBe(MISSILE.bundleSize);
     expect(match.players[0].cash).toBe(STARTING_CASH - MISSILE.cost);
   });
@@ -113,42 +114,42 @@ describe('shop phase gate', () => {
 
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
 
-    expect(match.buyWeapon(1, 'missile')).toBe(false);
+    expect(match.buyWeapon(toPlayerId(1), 'missile')).toBe(false);
   });
 
   it('refuses a weapon above the match arms level', () => {
     const match = createMatch({ armsLevel: 0 });
 
-    expect(match.buyWeapon(1, 'funky-bomb')).toBe(false);
-    expect(match.buyWeapon(1, 'missile')).toBe(true);
+    expect(match.buyWeapon(toPlayerId(1), 'funky-bomb')).toBe(false);
+    expect(match.buyWeapon(toPlayerId(1), 'missile')).toBe(true);
   });
 
   it('refuses an accessory above the match arms level', () => {
     const match = createMatch({ armsLevel: 0 });
 
-    expect(match.buyItem(1, 'super-mag')).toBe(false);
-    expect(match.buyItem(1, 'battery')).toBe(true);
+    expect(match.buyItem(toPlayerId(1), 'super-mag')).toBe(false);
+    expect(match.buyItem(toPlayerId(1), 'battery')).toBe(true);
   });
 
   it('refuses a bundle the player cannot afford', () => {
     const match = createMatch({ startingCash: 100 });
 
-    expect(match.buyWeapon(1, 'missile')).toBe(false);
+    expect(match.buyWeapon(toPlayerId(1), 'missile')).toBe(false);
     expect(match.players[0].cash).toBe(100);
   });
 
   it('buys back shells at the quoted price', () => {
     const match = createMatch();
 
-    match.buyWeapon(1, 'missile');
+    match.buyWeapon(toPlayerId(1), 'missile');
 
-    expect(match.sellWeapon(1, 'missile', 2)).toBe(true);
+    expect(match.sellWeapon(toPlayerId(1), 'missile', 2)).toBe(true);
     expect(match.players[0].weapons.missile).toBe(MISSILE.bundleSize - 2);
     expect(match.players[0].cash).toBe(STARTING_CASH - MISSILE.cost + 600);
   });
 
   it('refuses to sell what the player does not have', () => {
-    expect(createMatch().sellWeapon(1, 'nuke', 1)).toBe(false);
+    expect(createMatch().sellWeapon(toPlayerId(1), 'nuke', 1)).toBe(false);
   });
 });
 
@@ -183,10 +184,10 @@ describe('rounds', () => {
   it('hands the round the weapons the shop sold', () => {
     const match = createMatch();
 
-    match.buyWeapon(1, 'missile');
+    match.buyWeapon(toPlayerId(1), 'missile');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
 
-    expect(match.round?.getAmmoCount(1, 'missile')).toBe(MISSILE.bundleSize);
+    expect(match.round?.getAmmoCount(toPlayerId(1), 'missile')).toBe(MISSILE.bundleSize);
   });
 });
 
@@ -194,7 +195,7 @@ describe('banking between rounds', () => {
   it('adds the round winnings and pays interest on the bank', () => {
     const match = createMatch();
 
-    match.buyWeapon(1, 'nuke');
+    match.buyWeapon(toPlayerId(1), 'nuke');
 
     const cashAfterShopping = match.players[0].cash;
 
@@ -211,16 +212,16 @@ describe('banking between rounds', () => {
   it('sells a permanent device once and refuses a second unit', () => {
     const match = createMatch();
 
-    expect(match.buyItem(1, 'vertical-guidance')).toBe(true);
-    expect(match.buyItem(1, 'vertical-guidance')).toBe(false);
+    expect(match.buyItem(toPlayerId(1), 'vertical-guidance')).toBe(true);
+    expect(match.buyItem(toPlayerId(1), 'vertical-guidance')).toBe(false);
     expect(match.players[0].items['vertical-guidance']).toBe(1);
   });
 
   it('announces the Auto Defense bubble as the round opens', () => {
     const match = createMatch();
 
-    match.buyItem(1, 'auto-defense');
-    match.buyItem(1, 'shield');
+    match.buyItem(toPlayerId(1), 'auto-defense');
+    match.buyItem(toPlayerId(1), 'shield');
 
     const events = match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
 
@@ -230,7 +231,7 @@ describe('banking between rounds', () => {
   it('keeps the ammo the round spent out of the next round', () => {
     const match = createMatch();
 
-    match.buyWeapon(1, 'nuke');
+    match.buyWeapon(toPlayerId(1), 'nuke');
 
     const boughtNukes = match.players[0].weapons.nuke ?? 0;
 
@@ -244,7 +245,7 @@ describe('banking between rounds', () => {
   it('re-opens the shop after a round and moves on to the next one', () => {
     const match = createMatch();
 
-    match.buyWeapon(1, 'nuke');
+    match.buyWeapon(toPlayerId(1), 'nuke');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
     playRoundToEnd(match);
     match.completeRound();
@@ -257,7 +258,7 @@ describe('banking between rounds', () => {
   it('finishes the match after the last round', () => {
     const match = createMatch({ roundCount: 1 });
 
-    match.buyWeapon(1, 'nuke');
+    match.buyWeapon(toPlayerId(1), 'nuke');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
     playRoundToEnd(match);
     match.completeRound();
@@ -271,7 +272,7 @@ describe('standings', () => {
   it('ranks the roster on aggregate kills', () => {
     const match = createMatch({ roundCount: 1 });
 
-    match.buyWeapon(1, 'nuke');
+    match.buyWeapon(toPlayerId(1), 'nuke');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
     playRoundToEnd(match);
     match.completeRound();
@@ -286,8 +287,8 @@ describe('auto defense', () => {
   it('arms the best bubble the tank owns as the round opens', () => {
     const match = createMatch();
 
-    match.buyItem(1, 'auto-defense');
-    match.buyItem(1, 'heavy-shield');
+    match.buyItem(toPlayerId(1), 'auto-defense');
+    match.buyItem(toPlayerId(1), 'heavy-shield');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
 
     expect(match.round?.tanks[0].shield?.tier).toBe('heavy');
@@ -297,7 +298,7 @@ describe('auto defense', () => {
   it('arms nothing without the Auto Defense unit', () => {
     const match = createMatch();
 
-    match.buyItem(1, 'heavy-shield');
+    match.buyItem(toPlayerId(1), 'heavy-shield');
     match.startRound(createFlatHeightfield(GROUND_HEIGHT_WU));
 
     expect(match.round?.tanks[0].shield).toBeUndefined();

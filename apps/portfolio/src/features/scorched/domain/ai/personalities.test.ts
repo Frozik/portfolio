@@ -7,6 +7,7 @@ import { DEFAULT_PHYSICS_OPTIONS, MAX_POWER, MAX_VISCOSITY } from '../constants'
 import type { Heightfield } from '../terrain/heightfield';
 import { createFlatHeightfield, createHeightfield } from '../terrain/heightfield';
 import type { AimState, ResolvedWallMode } from '../types';
+import { toPlayerId } from '../types';
 import { isOnTarget, measureShot } from './aim-solver';
 import type { AiContext, AiTankView } from './personalities';
 import {
@@ -29,19 +30,19 @@ const FIELD_WIDTH = 800;
 const FIELD_HEIGHT = 500;
 const GROUND_HEIGHT_WU = 100;
 const SELF: AiTankView = {
-  playerId: 1,
+  playerId: toPlayerId(1),
   position: { x: 100, y: GROUND_HEIGHT_WU },
   health: 100,
   kills: 0,
 };
 const NEAR_OPPONENT: AiTankView = {
-  playerId: 2,
+  playerId: toPlayerId(2),
   position: { x: 500, y: GROUND_HEIGHT_WU },
   health: 100,
   kills: 0,
 };
 const FAR_OPPONENT: AiTankView = {
-  playerId: 3,
+  playerId: toPlayerId(3),
   position: { x: 700, y: GROUND_HEIGHT_WU },
   health: 40,
   kills: 4,
@@ -202,7 +203,11 @@ describe('Tosser', () => {
   it('walks its next shot towards the target after falling short', () => {
     const previousAim: AimState = { facing: 'right', elevationDegrees: 45, power: 400 };
     const context = createContext({
-      previousShot: { aim: previousAim, impact: { x: 300, y: GROUND_HEIGHT_WU }, targetId: 2 },
+      previousShot: {
+        aim: previousAim,
+        impact: { x: 300, y: GROUND_HEIGHT_WU },
+        targetId: toPlayerId(2),
+      },
     });
 
     expect(decideAim('tosser', context).power).toBeGreaterThan(previousAim.power);
@@ -215,7 +220,7 @@ describe('Tosser', () => {
       previousShot: {
         aim: { facing: 'right', elevationDegrees: 45, power: 400 },
         impact: { x: 300, y: GROUND_HEIGHT_WU },
-        targetId: 99,
+        targetId: toPlayerId(99),
       },
     });
 
@@ -235,7 +240,11 @@ describe('Chooser', () => {
     const context = createContext({
       field: createBlockedField(),
       environment: createTestEnvironment('concrete'),
-      previousShot: { aim: previousAim, impact: { x: 300, y: GROUND_HEIGHT_WU }, targetId: 2 },
+      previousShot: {
+        aim: previousAim,
+        impact: { x: 300, y: GROUND_HEIGHT_WU },
+        targetId: toPlayerId(2),
+      },
     });
 
     expect(decideAim('chooser', context).power).toBeGreaterThan(previousAim.power);

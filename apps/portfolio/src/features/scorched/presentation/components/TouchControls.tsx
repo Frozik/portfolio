@@ -132,13 +132,13 @@ const Stepper = memo(
 export const TouchControls = observer(
   ({ pointerInput }: { readonly pointerInput: IPointerAimInput }) => {
     const store = useScorchedStore();
-    const { selectedWeaponId } = store;
+    const { selectedWeaponId } = store.aim;
     const firePointerIdRef = useRef<number | undefined>(undefined);
     const [isFireActive, setIsFireActive] = useState(false);
     // The badge carries what the fire button is about to send: family glyph, name and how
     // many are left — infinite for the baby missile, which is the whole point of it.
     const selectedCount =
-      store.availableWeapons.find(entry => entry.weaponId === selectedWeaponId)?.count ??
+      store.aim.availableWeapons.find(entry => entry.weaponId === selectedWeaponId)?.count ??
       NO_AMMUNITION;
 
     useEffect(() => () => pointerInput.release(), [pointerInput]);
@@ -179,7 +179,7 @@ export const TouchControls = observer(
     });
 
     const handleBadgeClick = useFunction(() => {
-      store.setWeaponCarouselOpen(true);
+      store.aim.setCarouselOpen(true);
     });
 
     return (

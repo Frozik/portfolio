@@ -7,7 +7,10 @@ import {
   MAG_DEFLECTOR_RADIUS_WU,
   MAX_TANK_HEALTH,
   SHIELD_CAPACITY_BY_TIER,
-} from './constants';
+} from '../constants';
+import { createFlatHeightfield, createHeightfield } from '../terrain/heightfield';
+import { toPlayerId } from '../types';
+import { getWeapon } from '../weapons/catalog';
 import {
   absorbWithShield,
   applyBatteries,
@@ -23,13 +26,11 @@ import {
   resolveShieldInteraction,
   selectAutoDefenseItem,
   shouldArmContactTrigger,
-} from './items';
-import { createFlatHeightfield, createHeightfield } from './terrain/heightfield';
-import { getWeapon } from './weapons/catalog';
+} from './behaviors';
 
 const COLUMN_COUNT = 60;
 const GROUND_HEIGHT_WU = 100;
-const OWNER_ID = 1;
+const OWNER_ID = toPlayerId(1);
 /** The peak damage of a heavy warhead — what a force-tier deflection now costs the bubble. */
 const DEFLECTED_BLAST_DAMAGE = 120;
 

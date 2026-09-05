@@ -77,45 +77,46 @@ const ShieldButton = memo(
  */
 export const TurnActionsBar = observer(() => {
   const store = useScorchedStore();
-  const { activePlayerId, activePlayer, isFuelMoveMode } = store;
+  const { activePlayerId, activePlayer } = store.world;
+  const { isFuelMoveMode } = store.turnActions;
 
   const handleSpendBattery = useFunction(() => {
-    store.spendBattery();
+    store.turnActions.spendBattery();
   });
 
   const handleToggleFuelMove = useFunction(() => {
-    store.setFuelMoveMode(!store.isFuelMoveMode);
+    store.turnActions.setFuelMoveMode(!store.turnActions.isFuelMoveMode);
   });
 
   const handleDriveLeft = useFunction(() => {
-    store.driveTank(DRIVE_LEFT);
+    store.turnActions.driveTank(DRIVE_LEFT);
   });
 
   const handleDriveRight = useFunction(() => {
-    store.driveTank(DRIVE_RIGHT);
+    store.turnActions.driveTank(DRIVE_RIGHT);
   });
 
   const handleRetreat = useFunction(() => {
-    store.retreat();
+    store.turnActions.retreat();
   });
 
   const handleRaiseShield = useFunction((itemId: ItemId) => {
-    store.raiseShield(itemId);
+    store.turnActions.raiseShield(itemId);
   });
 
   if (isNil(activePlayerId) || store.isAiTurn) {
     return null;
   }
 
-  const batteryCount = store.turnItemCounts.battery ?? NO_STOCK;
-  const fuelCount = store.turnItemCounts.fuel ?? NO_STOCK;
+  const batteryCount = store.turnActions.itemCounts.battery ?? NO_STOCK;
+  const fuelCount = store.turnActions.itemCounts.fuel ?? NO_STOCK;
   const isWhole = (activePlayer?.health ?? MAX_TANK_HEALTH) >= MAX_TANK_HEALTH;
   // Turn actions only land during your own aiming phase; while a shot flies or the ground
   // settles, the domain would refuse them silently — grey the buttons out instead.
   const isTurnLocked = !store.isAiming;
   const ownedShields = SHIELD_ITEM_IDS.map(itemId => ({
     itemId,
-    count: store.turnItemCounts[itemId] ?? NO_STOCK,
+    count: store.turnActions.itemCounts[itemId] ?? NO_STOCK,
   })).filter(shield => shield.count > NO_STOCK);
 
   return (

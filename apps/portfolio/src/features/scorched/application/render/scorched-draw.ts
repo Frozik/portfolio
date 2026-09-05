@@ -1,7 +1,10 @@
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
-import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
+import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
+import type { GpuAppSession } from '@frozik/utils/webgpu/runGpuApp';
+import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
+import { createUpdateOnlyLayer } from '@frozik/utils/webgpu/updateOnlyLayer';
 import { isNil } from 'lodash-es';
 
 import { TICKS_PER_SECOND } from '../../domain/constants';
@@ -71,6 +74,7 @@ export interface IScorchedRenderOptions {
   readonly onEvents?: (events: readonly WorldEvent[]) => void;
   /** Dev-only FPS readout; omitted on hosted builds so no meter is created at all. */
   readonly onFpsUpdate?: (fps: number) => void;
+  readonly onInitError: (error: unknown) => void;
 }
 
 interface SimulationDriverParams {
@@ -87,14 +91,14 @@ interface SimulationDriverParams {
 /**
  * Fixed-timestep driver: rendering runs at whatever rate the display offers, the simulation
  * advances in whole 1/60 s ticks and only while a shell is flying. Aiming is polled every frame
- * instead — an aiming turn produces no ticks at all. Runs first in the layer list so the drawing
- * layers read a freshly stepped world; it never draws anything itself.
+ * instead — an aiming turn produces no ticks at all. Runs first in the layer list (as an
+ * update-only layer) so the drawing layers read a freshly stepped world.
  *
  * It is also the single funnel every world event passes through: the terrain stamps, the cosmetic
  * particles, the laser beams, the retreat helicopters, the screen shake and the audio all read the
  * same array, once.
  */
-class SimulationDriver implements RenderLayer {
+class SimulationDriver {
   private accumulatedSeconds = 0;
   private flameWaveSeconds = 0;
   private blazeRemainingSeconds = 0;
@@ -106,8 +110,6 @@ class SimulationDriver implements RenderLayer {
   constructor(private readonly params: SimulationDriverParams) {
     this.syncedRoundVersion = params.roundRef.version;
   }
-
-  init(): void {}
 
   update(state: FrameState): void {
     const previousTimeSeconds = this.previousTimeSeconds;
@@ -144,10 +146,6 @@ class SimulationDriver implements RenderLayer {
       this.accumulatedSeconds -= SECONDS_PER_TICK;
     }
   }
-
-  render(): void {}
-
-  dispose(): void {}
 
   /** The strike stays alight with overlapping flame waves, then dies down on schedule. */
   private keepNapalmBurning(elapsedSeconds: number): void {
@@ -209,35 +207,15 @@ class SimulationDriver implements RenderLayer {
   }
 }
 
-/**
- * Sync wrapper over the async GPU bring-up: returns the teardown immediately, and discards
- * the renderer if the caller tore down while the device was still coming up.
- */
 export function runScorched(options: IScorchedRenderOptions): VoidFunction {
-  let destroyed = false;
-  let gpuCleanup: VoidFunction | undefined;
-
-  void initScorched(options).then(
-    cleanup => {
-      if (destroyed) {
-        cleanup();
-      } else {
-        gpuCleanup = cleanup;
-      }
-    },
-    (error: unknown) => {
-      // oxlint-disable-next-line no-console -- surfaces WebGPU scorched renderer init failure
-      console.error('Failed to initialize scorched renderer', error);
-    }
-  );
-
-  return () => {
-    destroyed = true;
-    gpuCleanup?.();
-  };
+  return runGpuApp({
+    init: () => initScorched(options),
+    initErrorMessage: 'Failed to initialize scorched renderer',
+    onInitError: options.onInitError,
+  });
 }
 
-async function initScorched(options: IScorchedRenderOptions): Promise<VoidFunction> {
+async function initScorched(options: IScorchedRenderOptions): Promise<GpuAppSession> {
   const { canvas, roundRef, host, skyPreset, aimGhost, onEvents, onFpsUpdate } = options;
   const context = await createGpuContext(canvas);
   const { device } = context;
@@ -263,17 +241,18 @@ async function initScorched(options: IScorchedRenderOptions): Promise<VoidFuncti
 
     // Draw order is the scene from back to front: sky, the dirt the compute passes just settled,
     // the tanks standing on it, the shells crossing in front, and the cosmetic layers on top.
+    const driver = new SimulationDriver({
+      host,
+      roundRef,
+      opQueue,
+      particles,
+      beams,
+      retreats,
+      shake,
+      onEvents,
+    });
     const layerManager = new RenderLayerManager([
-      new SimulationDriver({
-        host,
-        roundRef,
-        opQueue,
-        particles,
-        beams,
-        retreats,
-        shake,
-        onEvents,
-      }),
+      createUpdateOnlyLayer(state => driver.update(state)),
       createUniformUpdateLayer(uniforms, shake),
       new TerrainComputeLayer(roundRef, textures, compute, opQueue),
       new SkyLayer(uniforms.buffer, skyPreset),
@@ -288,15 +267,17 @@ async function initScorched(options: IScorchedRenderOptions): Promise<VoidFuncti
 
     const stopRenderLoop = startRenderLoop({ canvas, context, layerManager, onFpsUpdate });
 
-    return () => {
-      stopRenderLoop();
-      layerManager.dispose();
-      reducedMotion.dispose();
-      particles.dispose();
-      compute.dispose();
-      textures.dispose();
-      uniforms.dispose();
-      device.destroy();
+    return {
+      cleanup: () => {
+        stopRenderLoop();
+        layerManager.dispose();
+        reducedMotion.dispose();
+        particles.dispose();
+        compute.dispose();
+        textures.dispose();
+        uniforms.dispose();
+        device.destroy();
+      },
     };
   } catch (error) {
     device.destroy();

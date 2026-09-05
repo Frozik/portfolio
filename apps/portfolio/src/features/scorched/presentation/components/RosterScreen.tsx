@@ -10,10 +10,10 @@ import { useScorchedStore } from '../../application/useScorchedStore';
 import { MAX_PLAYER_COUNT, MIN_PLAYER_COUNT } from '../../domain/constants';
 import type { AiPersonality, PlayerController, PlayerId, PlayerSetup } from '../../domain/types';
 import { GLASS_PANEL_CLASS, OVERLAY_SURFACE_CLASS } from '../constants';
-import { getPlayerColor } from '../player-colors';
 import { scorchedT } from '../translations';
 import { AdvancedOptionsPanel } from './AdvancedOptionsPanel';
 import { CuratedOptionsRow } from './CuratedOptionsRow';
+import { PlayerSwatch } from './PlayerSwatch';
 
 const AI_PERSONALITIES: readonly AiPersonality[] = [
   'moron',
@@ -54,7 +54,6 @@ const PlayerCard = memo(
     readonly onNameChange: (playerId: PlayerId, name: string) => void;
     readonly onControllerChange: (playerId: PlayerId, controller: PlayerController) => void;
   }) => {
-    const color = getPlayerColor(player.id);
     const controllerValue = toControllerValue(player.controller);
 
     const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
@@ -68,11 +67,7 @@ const PlayerCard = memo(
     return (
       <li className={cn(GLASS_PANEL_CLASS, 'flex flex-col gap-2 text-left')}>
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="size-3.5 shrink-0 rounded-full"
-            style={{ backgroundColor: color.hex }}
-          />
+          <PlayerSwatch playerId={player.id} className="size-3.5 shrink-0" />
           <input
             value={player.name}
             onChange={handleNameChange}
@@ -116,19 +111,19 @@ export const RosterScreen = observer(() => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const handlePlayerCountChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
-    store.setRosterSize(Number(event.target.value));
+    store.roster.setSize(Number(event.target.value));
   });
 
   const handleNameChange = useFunction((playerId: PlayerId, name: string) => {
-    store.setPlayerName(playerId, name);
+    store.roster.setName(playerId, name);
   });
 
   const handleControllerChange = useFunction((playerId: PlayerId, controller: PlayerController) => {
-    store.setPlayerController(playerId, controller);
+    store.roster.setController(playerId, controller);
   });
 
   const handleSetupChange = useFunction((setup: ScorchedSetupOptions) => {
-    store.setSetupOptions(setup);
+    store.roster.setOptions(setup);
   });
 
   const handleToggleAdvanced = useFunction(() => {
@@ -152,7 +147,7 @@ export const RosterScreen = observer(() => {
         <label className="flex items-center justify-center gap-2 text-sm text-text-secondary">
           {scorchedT.roster.playerCount}
           <select
-            value={store.roster.length}
+            value={store.roster.players.length}
             onChange={handlePlayerCountChange}
             className={cn(selectClass, 'w-20')}
           >
@@ -168,7 +163,7 @@ export const RosterScreen = observer(() => {
         </label>
 
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {store.roster.map(player => (
+          {store.roster.players.map(player => (
             <PlayerCard
               key={player.id}
               player={player}
@@ -178,7 +173,7 @@ export const RosterScreen = observer(() => {
           ))}
         </ul>
 
-        <CuratedOptionsRow setup={store.setup} onChange={handleSetupChange} />
+        <CuratedOptionsRow setup={store.roster.setup} onChange={handleSetupChange} />
 
         <div className={cn(GLASS_PANEL_CLASS, 'p-0')}>
           <button
@@ -192,7 +187,7 @@ export const RosterScreen = observer(() => {
           </button>
 
           {isAdvancedOpen ? (
-            <AdvancedOptionsPanel setup={store.setup} onChange={handleSetupChange} />
+            <AdvancedOptionsPanel setup={store.roster.setup} onChange={handleSetupChange} />
           ) : null}
         </div>
 

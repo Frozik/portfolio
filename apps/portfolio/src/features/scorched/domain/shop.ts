@@ -1,6 +1,6 @@
 import type { BundlePricing, BundleQuote } from './economy';
 import { canAfford, quoteBundle, quoteSellBack } from './economy';
-import { getItem, getItemPricing, isPermanentItem } from './items';
+import { getItem, getItemPricing, isPermanentItem } from './items/catalog';
 import type { ItemId, WeaponId } from './types';
 import { getWeapon } from './weapons/catalog';
 

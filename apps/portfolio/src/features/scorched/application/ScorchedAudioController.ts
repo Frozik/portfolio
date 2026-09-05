@@ -33,7 +33,7 @@ export class ScorchedAudioController {
     this.store = store;
     this.engine = engine;
     this.engine.setMuted(store.isMuted);
-    this.engine.setWind(store.windUnits);
+    this.engine.setWind(store.world.windUnits);
 
     this.disposers.push(
       reaction(
@@ -44,7 +44,7 @@ export class ScorchedAudioController {
         }
       ),
       reaction(
-        () => store.windUnits,
+        () => store.world.windUnits,
         windUnits => this.engine.setWind(windUnits)
       ),
       // The wind is only audible while somebody is deciding what to do about it.
@@ -57,7 +57,7 @@ export class ScorchedAudioController {
         status => this.handleStatusChange(status)
       ),
       reaction(
-        () => store.roundNumber,
+        () => store.world.roundNumber,
         () => this.playRoundStart()
       )
     );

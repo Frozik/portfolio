@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BLAST_DAMAGE_PER_RADIUS_WU } from '../constants';
 import { createFlatHeightfield, getSurfaceHeight } from '../terrain/heightfield';
+import { toPlayerId } from '../types';
 import {
   applyBlastToTerrain,
   computeBlastDamage,
@@ -35,9 +36,9 @@ describe('getBlastDamageAt', () => {
 describe('computeBlastDamage', () => {
   it('hurts everyone inside the radius and no one outside it', () => {
     const damages = computeBlastDamage({ x: 100, y: 100 }, RADIUS_WU, [
-      { playerId: 1, position: { x: 100, y: 100 } },
-      { playerId: 2, position: { x: 120, y: 100 } },
-      { playerId: 3, position: { x: 200, y: 100 } },
+      { playerId: toPlayerId(1), position: { x: 100, y: 100 } },
+      { playerId: toPlayerId(2), position: { x: 120, y: 100 } },
+      { playerId: toPlayerId(3), position: { x: 200, y: 100 } },
     ]);
 
     expect(damages.map(damage => damage.playerId)).toEqual([1, 2]);
@@ -47,7 +48,7 @@ describe('computeBlastDamage', () => {
 
   it('measures distance in two dimensions', () => {
     const [damage] = computeBlastDamage({ x: 100, y: 100 }, RADIUS_WU, [
-      { playerId: 1, position: { x: 103, y: 104 } },
+      { playerId: toPlayerId(1), position: { x: 103, y: 104 } },
     ]);
 
     expect(damage.distanceWu).toBeCloseTo(5);

@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_TANK_HEALTH } from '../domain/constants';
 import type { ScorchedInput } from '../domain/scorched-input';
 import { EMPTY_INPUT } from '../domain/scorched-input';
+import type { PlayerId } from '../domain/types';
+import { toPlayerId } from '../domain/types';
 import { DEFAULT_ADVANCED_OPTIONS, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
 import { ScorchedStore } from './ScorchedStore';
 
@@ -44,7 +46,7 @@ function createStore(): ScorchedStore {
 function createPlayingStore(): ScorchedStore {
   const store = createStore();
 
-  store.setPlayerController(1, { kind: 'human' });
+  store.roster.setController(toPlayerId(1), { kind: 'human' });
   store.startMatch();
 
   return store;
@@ -66,8 +68,8 @@ const AI_FRAME_SECONDS = 0.1;
 
 /** Plays through the match-start shop and round 1 into the shop that follows it. */
 function reachFirstShop(store: ScorchedStore): void {
-  store.setPlayerController(1, { kind: 'human' });
-  store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
+  store.roster.setController(toPlayerId(1), { kind: 'human' });
+  store.roster.setOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
   store.startMatch();
   store.leaveShop();
   store.leaveShop();
@@ -75,7 +77,7 @@ function reachFirstShop(store: ScorchedStore): void {
   store.applyInput(createInput({ powerDelta: 400 }));
   fireAndSettle(store);
   store.confirmHandover();
-  store.retreat();
+  store.turnActions.retreat();
   store.continueAfterRound();
 }
 
@@ -89,8 +91,8 @@ function playUntilRoundOver(store: ScorchedStore): void {
   }
 }
 
-function countWeapons(store: ScorchedStore, playerId: number): number {
-  return Object.values(store.getMatchPlayer(playerId)?.weapons ?? {}).reduce(
+function countWeapons(store: ScorchedStore, playerId: PlayerId): number {
+  return Object.values(store.world.getMatchPlayer(playerId)?.weapons ?? {}).reduce(
     (total, count) => total + count,
     0
   );
@@ -106,8 +108,8 @@ describe('ScorchedStore', () => {
     const store = createStore();
 
     expect(store.status).toBe('setup');
-    expect(store.phase).toBe('aiming');
-    expect(store.roster).toHaveLength(2);
+    expect(store.world.phase).toBe('aiming');
+    expect(store.roster.players).toHaveLength(2);
     expect(store.roundRef.current.field.length).toBeGreaterThan(0);
   });
 
@@ -116,15 +118,15 @@ describe('ScorchedStore', () => {
 
     expect(store.status).toBe('playing');
     expect(store.isAiming).toBe(true);
-    expect(store.activePlayerId).toBe(0);
-    expect(store.activePlayer?.health).toBe(MAX_TANK_HEALTH);
+    expect(store.world.activePlayerId).toBe(0);
+    expect(store.world.activePlayer?.health).toBe(MAX_TANK_HEALTH);
   });
 
   it('keeps the fired weapon selected next turn and falls back once it runs out', () => {
     const store = createStore();
 
-    store.setPlayerController(1, { kind: 'human' });
-    store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
+    store.roster.setController(toPlayerId(1), { kind: 'human' });
+    store.roster.setOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
     store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
     store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
@@ -132,7 +134,7 @@ describe('ScorchedStore', () => {
     store.leaveShop();
     store.confirmHandover();
 
-    store.selectWeapon('nuke');
+    store.aim.selectWeapon('nuke');
     store.applyInput(createInput({ powerDelta: 400 }));
     fireAndSettle(store);
     store.confirmHandover();
@@ -140,16 +142,16 @@ describe('ScorchedStore', () => {
     fireAndSettle(store);
     store.confirmHandover();
 
-    expect(store.activePlayerId).toBe(0);
-    expect(store.selectedWeaponId).toBe('nuke');
+    expect(store.world.activePlayerId).toBe(0);
+    expect(store.aim.selectedWeaponId).toBe('nuke');
 
     fireAndSettle(store);
     store.confirmHandover();
     fireAndSettle(store);
     store.confirmHandover();
 
-    expect(store.activePlayerId).toBe(0);
-    expect(store.selectedWeaponId).toBe('baby-missile');
+    expect(store.world.activePlayerId).toBe(0);
+    expect(store.aim.selectedWeaponId).toBe('baby-missile');
   });
 
   it('refuses to open the weapon carousel while the shot of another player is in the air', () => {
@@ -160,38 +162,38 @@ describe('ScorchedStore', () => {
 
     expect(store.isTicking).toBe(true);
 
-    store.setWeaponCarouselOpen(true);
+    store.aim.setCarouselOpen(true);
 
-    expect(store.isWeaponCarouselOpen).toBe(false);
+    expect(store.aim.isWeaponCarouselOpen).toBe(false);
 
     while (store.isTicking) {
       store.tick();
     }
 
     store.confirmHandover();
-    store.setWeaponCarouselOpen(true);
+    store.aim.setCarouselOpen(true);
 
-    expect(store.isWeaponCarouselOpen).toBe(true);
+    expect(store.aim.isWeaponCarouselOpen).toBe(true);
   });
 
   it('ignores input before the match has been started', () => {
     const store = createStore();
-    const powerBefore = store.aimPower;
+    const powerBefore = store.aim.power;
 
     store.applyInput(createInput({ powerDelta: 50 }));
 
-    expect(store.aimPower).toBe(powerBefore);
+    expect(store.aim.power).toBe(powerBefore);
   });
 
   it('turns the barrel and trims the power from one frame of input', () => {
     const store = createPlayingStore();
-    const elevationBefore = store.aimElevationDegrees;
+    const elevationBefore = store.aim.elevationDegrees;
 
     store.applyInput(createInput({ dialDelta: 5, powerDelta: 120 }));
 
-    expect(store.aimElevationDegrees).toBe(elevationBefore + 5);
-    expect(store.aimPower).toBe(120);
-    expect(store.aimFacing).toBe('right');
+    expect(store.aim.elevationDegrees).toBe(elevationBefore + 5);
+    expect(store.aim.power).toBe(120);
+    expect(store.aim.facing).toBe('right');
   });
 
   it('takes a drag gesture as an absolute aim rather than a nudge', () => {
@@ -200,9 +202,9 @@ describe('ScorchedStore', () => {
     store.applyInput(createInput({ powerDelta: 300 }));
     store.applyInput(createInput({ aimOverride: { dialDegrees: 120, power: 500 } }));
 
-    expect(store.aimFacing).toBe('left');
-    expect(store.aimElevationDegrees).toBe(60);
-    expect(store.aimPower).toBe(500);
+    expect(store.aim.facing).toBe('left');
+    expect(store.aim.elevationDegrees).toBe(60);
+    expect(store.aim.power).toBe(500);
   });
 
   it('caps the power at ten times the health the domain reports', () => {
@@ -210,7 +212,7 @@ describe('ScorchedStore', () => {
 
     store.applyInput(createInput({ powerDelta: 5000 }));
 
-    expect(store.aimPower).toBe(store.maxPower);
+    expect(store.aim.power).toBe(store.aim.maxPower);
   });
 
   it('puts a shell in the air on fire and ticks only while it flies', () => {
@@ -221,7 +223,7 @@ describe('ScorchedStore', () => {
     store.applyInput(createInput({ powerDelta: 400 }));
     store.applyInput(createInput({ isFireRequested: true }));
 
-    expect(store.phase).toBe('flight');
+    expect(store.world.phase).toBe('flight');
     expect(store.isTicking).toBe(true);
     expect(store.roundRef.current.projectiles).toHaveLength(1);
   });
@@ -233,7 +235,7 @@ describe('ScorchedStore', () => {
     fireAndSettle(store);
 
     expect(store.status).toBe('handover');
-    expect(store.activePlayerId).toBe(1);
+    expect(store.world.activePlayerId).toBe(1);
 
     store.confirmHandover();
 
@@ -243,7 +245,7 @@ describe('ScorchedStore', () => {
   it('skips the handover entirely when only one human is playing', () => {
     const store = createStore();
 
-    store.setPlayerController(1, { kind: 'ai', personality: 'moron' });
+    store.roster.setController(toPlayerId(1), { kind: 'ai', personality: 'moron' });
     store.startMatch();
     store.applyInput(createInput({ powerDelta: 400 }));
     fireAndSettle(store);
@@ -255,21 +257,21 @@ describe('ScorchedStore', () => {
   it('lets an AI take its own turn after a thinking beat', () => {
     const store = createStore();
 
-    store.setPlayerController(1, { kind: 'ai', personality: 'shooter' });
+    store.roster.setController(toPlayerId(1), { kind: 'ai', personality: 'shooter' });
     store.startMatch();
     store.applyInput(createInput({ powerDelta: 400 }));
     fireAndSettle(store);
 
     expect(store.advanceFrame(0.1)).toHaveLength(0);
-    expect(store.aiThinkingPlayerId).toBe(1);
+    expect(store.ai.thinkingPlayerId).toBe(1);
 
     // Long enough for the thinking beat and the dial-in to finish, then the shell flies.
-    for (let frame = 0; frame < 200 && store.phase === 'aiming'; frame++) {
+    for (let frame = 0; frame < 200 && store.world.phase === 'aiming'; frame++) {
       store.advanceFrame(0.1);
     }
 
-    expect(store.aiThinkingPlayerId).toBeUndefined();
-    expect(store.phase).toBe('flight');
+    expect(store.ai.thinkingPlayerId).toBeUndefined();
+    expect(store.world.phase).toBe('flight');
   });
 
   it('keeps the baby missile selected while nothing else is owned', () => {
@@ -277,7 +279,7 @@ describe('ScorchedStore', () => {
 
     store.applyInput(createInput({ isWeaponCycleRequested: true }));
 
-    expect(store.selectedWeaponId).toBe('baby-missile');
+    expect(store.aim.selectedWeaponId).toBe('baby-missile');
   });
 
   it('ages the floating overlays off the field on the frame clock', () => {
@@ -315,7 +317,7 @@ describe('ScorchedStore', () => {
     expect(store.roundRef.current).not.toBe(firstRound);
     expect(store.roundRef.version).toBeGreaterThan(firstVersion);
     expect(store.status).toBe('playing');
-    expect(store.players.every(player => player.health === MAX_TANK_HEALTH)).toBe(true);
+    expect(store.world.players.every(player => player.health === MAX_TANK_HEALTH)).toBe(true);
   });
 });
 
@@ -324,7 +326,7 @@ describe('ScorchedStore turn actions', () => {
   function createStockedStore(): ScorchedStore {
     const store = createStore();
 
-    store.setPlayerController(1, { kind: 'ai', personality: 'moron' });
+    store.roster.setController(toPlayerId(1), { kind: 'ai', personality: 'moron' });
     store.startMatch();
 
     return store;
@@ -333,7 +335,7 @@ describe('ScorchedStore turn actions', () => {
   it('hands the events of a HUD action to the renderer on the next frame', () => {
     const store = createStockedStore();
 
-    store.retreat();
+    store.turnActions.retreat();
 
     const events = store.advanceFrame(FRAME_SECONDS);
 
@@ -343,7 +345,7 @@ describe('ScorchedStore turn actions', () => {
   it('drains the queue only once, so nothing is routed twice', () => {
     const store = createStockedStore();
 
-    store.retreat();
+    store.turnActions.retreat();
     store.advanceFrame(FRAME_SECONDS);
 
     expect(store.advanceFrame(FRAME_SECONDS).some(event => event.type === 'tank-retreated')).toBe(
@@ -354,9 +356,9 @@ describe('ScorchedStore turn actions', () => {
   it('takes the retreating tank out of the round', () => {
     const store = createStockedStore();
 
-    store.retreat();
+    store.turnActions.retreat();
 
-    expect(store.players[0].isAlive).toBe(false);
+    expect(store.world.players[0].isAlive).toBe(false);
   });
 
   it('refuses a turn action while a shell is in the air', () => {
@@ -364,29 +366,29 @@ describe('ScorchedStore turn actions', () => {
 
     store.applyInput(createInput({ powerDelta: 400 }));
     store.applyInput(createInput({ isFireRequested: true }));
-    store.retreat();
+    store.turnActions.retreat();
 
-    expect(store.players[0].isAlive).toBe(true);
+    expect(store.world.players[0].isAlive).toBe(true);
   });
 
   it('drops the fuel drive mode when the turn changes hands', () => {
     const store = createStockedStore();
 
-    store.setFuelMoveMode(true);
+    store.turnActions.setFuelMoveMode(true);
     store.applyInput(createInput({ powerDelta: 400 }));
     fireAndSettle(store);
 
-    expect(store.isFuelMoveMode).toBe(false);
+    expect(store.turnActions.isFuelMoveMode).toBe(false);
   });
 
   it('drives instead of aiming while the fuel mode is on', () => {
     const store = createStockedStore();
-    const elevationBefore = store.aimElevationDegrees;
+    const elevationBefore = store.aim.elevationDegrees;
 
-    store.setFuelMoveMode(true);
+    store.turnActions.setFuelMoveMode(true);
     store.applyInput(createInput({ dialDelta: 5 }));
 
-    expect(store.aimElevationDegrees).toBe(elevationBefore);
+    expect(store.aim.elevationDegrees).toBe(elevationBefore);
   });
 });
 
@@ -398,28 +400,28 @@ describe('ScorchedStore round boundaries', () => {
     store.leaveShop();
 
     expect(store.status).toBe('handover');
-    expect(store.activePlayerId).toBe(0);
+    expect(store.world.activePlayerId).toBe(0);
   });
 
   it('moves the round number on when the next round opens', () => {
     const store = createStore();
 
-    expect(store.roundNumber).toBe(1);
+    expect(store.world.roundNumber).toBe(1);
 
     reachFirstShop(store);
     store.leaveShop();
 
-    expect(store.roundNumber).toBe(2);
+    expect(store.world.roundNumber).toBe(2);
   });
 
   it('drops the fuel drive mode when the next round opens', () => {
     const store = createStore();
 
     reachFirstShop(store);
-    store.setFuelMoveMode(true);
+    store.turnActions.setFuelMoveMode(true);
     store.leaveShop();
 
-    expect(store.isFuelMoveMode).toBe(false);
+    expect(store.turnActions.isFuelMoveMode).toBe(false);
   });
 
   it('restocks the AIs that survived the round and leaves the dead ones alone', () => {
@@ -430,9 +432,9 @@ describe('ScorchedStore round boundaries', () => {
     randomMock.mockImplementation((lower?: unknown, upper?: unknown) =>
       lower === 0 && upper === 90 ? 90 : 0
     );
-    store.setPlayerController(0, { kind: 'ai', personality: 'moron' });
-    store.setPlayerController(1, { kind: 'ai', personality: 'moron' });
-    store.setSetupOptions({
+    store.roster.setController(toPlayerId(0), { kind: 'ai', personality: 'moron' });
+    store.roster.setController(toPlayerId(1), { kind: 'ai', personality: 'moron' });
+    store.roster.setOptions({
       ...DEFAULT_SETUP_OPTIONS,
       // Enough for a weapon but not for the defence run — a self-shelling Moron with a shield
       // up would outlive the round's frame budget.
@@ -445,13 +447,13 @@ describe('ScorchedStore round boundaries', () => {
     expect(store.status).toBe('round-over');
     expect(store.survivorIds).toEqual([1]);
 
-    const deadWeaponsBefore = countWeapons(store, 0);
+    const deadWeaponsBefore = countWeapons(store, toPlayerId(0));
 
     store.continueAfterRound();
 
-    expect(countWeapons(store, 1)).toBeGreaterThan(0);
+    expect(countWeapons(store, toPlayerId(1))).toBeGreaterThan(0);
     // The dead player's locker may shrink by what they fired, but a restock would grow it.
-    expect(countWeapons(store, 0)).toBeLessThanOrEqual(deadWeaponsBefore);
+    expect(countWeapons(store, toPlayerId(0))).toBeLessThanOrEqual(deadWeaponsBefore);
   });
 });
 
@@ -459,7 +461,7 @@ describe('ScorchedStore between-round shop', () => {
   it('shows an accessory bought between rounds from the very first turn of the next round', () => {
     const store = createStore();
 
-    store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
+    store.roster.setOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
     store.shop.buy({ kind: 'weapon', weaponId: 'nuke' });
     store.leaveShop();
@@ -467,7 +469,7 @@ describe('ScorchedStore between-round shop', () => {
 
     // A direct nuke hit across the flat 400 wu spawn gap ends round 1 with the AI dead.
     store.roundRef.current.setAim({ facing: 'right', elevationDegrees: 45, power: 686.8 });
-    store.selectWeapon('nuke');
+    store.aim.selectWeapon('nuke');
     fireAndSettle(store);
 
     expect(store.status).toBe('round-over');
@@ -480,7 +482,7 @@ describe('ScorchedStore between-round shop', () => {
     store.confirmHandover();
 
     expect(store.status).toBe('playing');
-    expect(store.turnItemCounts.shield).toBeGreaterThan(0);
+    expect(store.turnActions.itemCounts.shield).toBeGreaterThan(0);
   });
 });
 
@@ -488,7 +490,7 @@ describe('ScorchedStore match-start shop', () => {
   it('opens the shop before round 1 when starting cash is set', () => {
     const store = createStore();
 
-    store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
+    store.roster.setOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
 
     expect(store.status).toBe('shop');
@@ -503,14 +505,14 @@ describe('ScorchedStore match-start shop', () => {
   it('starts round 1 once every shopper has left the match-start shop', () => {
     const store = createStore();
 
-    store.setPlayerController(1, { kind: 'human' });
-    store.setSetupOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
+    store.roster.setController(toPlayerId(1), { kind: 'human' });
+    store.roster.setOptions({ ...DEFAULT_SETUP_OPTIONS, startingCash: SHOPPING_CASH });
     store.startMatch();
     store.leaveShop();
     store.leaveShop();
 
     expect(store.status).toBe('handover');
-    expect(store.roundNumber).toBe(1);
+    expect(store.world.roundNumber).toBe(1);
   });
 });
 
@@ -521,14 +523,14 @@ describe('ScorchedStore shields', () => {
     reachFirstShop(store);
     store.shop.buy({ kind: 'item', itemId: 'shield' });
 
-    const bought = store.shop.getOwnedCount(0, { kind: 'item', itemId: 'shield' });
+    const bought = store.shop.getOwnedCount(toPlayerId(0), { kind: 'item', itemId: 'shield' });
 
     store.leaveShop();
     store.confirmHandover();
-    store.raiseShield('shield');
+    store.turnActions.raiseShield('shield');
 
-    expect(store.roundRef.current.getTank(0)?.shield?.tier).toBe('shield');
-    expect(store.getItemCount(0, 'shield')).toBe(bought - 1);
+    expect(store.roundRef.current.getTank(toPlayerId(0))?.shield?.tier).toBe('shield');
+    expect(store.world.getItemCount(toPlayerId(0), 'shield')).toBe(bought - 1);
   });
 
   it('refuses to raise one once the shell is already in the air', () => {
@@ -539,12 +541,12 @@ describe('ScorchedStore shields', () => {
     store.leaveShop();
     store.confirmHandover();
 
-    const bought = store.getItemCount(0, 'shield');
+    const bought = store.world.getItemCount(toPlayerId(0), 'shield');
 
     store.applyInput(createInput({ isFireRequested: true }));
-    store.raiseShield('shield');
+    store.turnActions.raiseShield('shield');
 
-    expect(store.roundRef.current.getTank(0)?.shield).toBeUndefined();
-    expect(store.getItemCount(0, 'shield')).toBe(bought);
+    expect(store.roundRef.current.getTank(toPlayerId(0))?.shield).toBeUndefined();
+    expect(store.world.getItemCount(toPlayerId(0), 'shield')).toBe(bought);
   });
 });

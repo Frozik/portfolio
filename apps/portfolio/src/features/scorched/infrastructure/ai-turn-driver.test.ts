@@ -4,6 +4,7 @@ import { AI_THINKING_SECONDS, DEFAULT_PHYSICS_OPTIONS, MAX_TANK_HEALTH } from '.
 import { ScorchedRound } from '../domain/round';
 import { createFlatHeightfield } from '../domain/terrain/heightfield';
 import type { AimState, PlayerId, PlayerInventory } from '../domain/types';
+import { toPlayerId } from '../domain/types';
 import { AiTurnDriver, hasReachedAim, stepAimTowards } from './ai-turn-driver';
 
 const GROUND_WU = 60;
@@ -16,13 +17,13 @@ function createRound(activeInventory: PlayerInventory = { weapons: {}, items: {}
     roundNumber: 1,
     players: [
       {
-        id: 0,
+        id: toPlayerId(0),
         columnIndex: 60,
         health: MAX_TANK_HEALTH,
         inventory: activeInventory,
       },
       {
-        id: 1,
+        id: toPlayerId(1),
         columnIndex: 320,
         health: MAX_TANK_HEALTH,
         inventory: { weapons: {}, items: {} },

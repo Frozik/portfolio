@@ -11,10 +11,13 @@ import {
   SHIELD_CAPACITY_BY_TIER,
   TANK_HALF_WIDTH_WU,
 } from './constants';
-import type { FireOptions, RoundOptions, RoundPlayerSetup } from './round';
 import { ScorchedRound } from './round';
+import type { FireOptions } from './simulation/firing';
+import type { RoundOptions, RoundPlayerSetup } from './simulation/round-state';
 import { createFlatHeightfield, getSurfaceHeight } from './terrain/heightfield';
 import type { PhysicsOptions, PlayerInventory, WorldEvent } from './types';
+import type { PlayerId } from './types';
+import { toPlayerId } from './types';
 import { getWeapon } from './weapons/catalog';
 import { getBlastPeakDamage } from './weapons/explosions';
 
@@ -34,7 +37,7 @@ const EMPTY_INVENTORY: PlayerInventory = { weapons: {}, items: {} };
 const BABY_MISSILE_BLAST_RADIUS_WU = getWeapon('baby-missile').blastRadiusWu;
 
 function createPlayer(
-  id: number,
+  id: PlayerId,
   columnIndex: number,
   overrides: Partial<RoundPlayerSetup> = {}
 ): RoundPlayerSetup {
@@ -53,7 +56,10 @@ function createRound(
 ): ScorchedRound {
   const round = new ScorchedRound({
     roundNumber: 1,
-    players: [createPlayer(1, FIRST_COLUMN), createPlayer(2, SECOND_COLUMN)],
+    players: [
+      createPlayer(toPlayerId(1), FIRST_COLUMN),
+      createPlayer(toPlayerId(2), SECOND_COLUMN),
+    ],
     field: createFlatHeightfield(GROUND_HEIGHT_WU, COLUMN_COUNT),
     physics: { ...DEFAULT_PHYSICS_OPTIONS, maxWind: 0, ...physicsOverrides },
     playOrder: 'sequential',
@@ -94,7 +100,10 @@ describe('round setup', () => {
   it('opens with the round and the first turn', () => {
     const round = new ScorchedRound({
       roundNumber: 3,
-      players: [createPlayer(1, FIRST_COLUMN), createPlayer(2, SECOND_COLUMN)],
+      players: [
+        createPlayer(toPlayerId(1), FIRST_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
+      ],
       field: createFlatHeightfield(GROUND_HEIGHT_WU, COLUMN_COUNT),
       physics: { ...DEFAULT_PHYSICS_OPTIONS, maxWind: 0 },
       playOrder: 'sequential',
@@ -116,7 +125,7 @@ describe('round setup', () => {
   it('ends immediately when only one tank turns up', () => {
     const round = new ScorchedRound({
       roundNumber: 1,
-      players: [createPlayer(1, FIRST_COLUMN)],
+      players: [createPlayer(toPlayerId(1), FIRST_COLUMN)],
       field: createFlatHeightfield(GROUND_HEIGHT_WU, COLUMN_COUNT),
       physics: DEFAULT_PHYSICS_OPTIONS,
       playOrder: 'sequential',
@@ -131,7 +140,10 @@ describe('round setup', () => {
 describe('aiming', () => {
   it('caps the power at ten times the damaged tank health', () => {
     const round = createRound({
-      players: [createPlayer(1, FIRST_COLUMN, { health: 40 }), createPlayer(2, SECOND_COLUMN)],
+      players: [
+        createPlayer(toPlayerId(1), FIRST_COLUMN, { health: 40 }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
+      ],
     });
 
     round.setAim({ facing: 'right', elevationDegrees: 45, power: 1000 });
@@ -169,14 +181,16 @@ describe('firing', () => {
   it('spends a shell from the locker', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { nuke: 2 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { nuke: 2 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
     round.fire({ weaponId: 'nuke' });
 
-    expect(round.getAmmoCount(1, 'nuke')).toBe(1);
+    expect(round.getAmmoCount(toPlayerId(1), 'nuke')).toBe(1);
   });
 });
 
@@ -243,8 +257,10 @@ describe('flight and impact', () => {
   it('records the damage and the kill for the shooter', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { nuke: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN, { health: 20 }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { nuke: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, { health: 20 }),
       ],
     });
 
@@ -260,10 +276,10 @@ describe('contact triggers', () => {
   it('covers every warhead of the shot it armed', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           inventory: { weapons: { mirv: 1 }, items: { 'contact-trigger': 25 } },
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -276,7 +292,7 @@ describe('contact triggers', () => {
 
     expect(round.projectiles.length).toBeGreaterThan(1);
     expect(round.projectiles.every(projectile => projectile.hasContactTrigger)).toBe(true);
-    expect(round.getItemCount(1, 'contact-trigger')).toBe(24);
+    expect(round.getItemCount(toPlayerId(1), 'contact-trigger')).toBe(24);
   });
 
   it('cannot arm a trigger it does not own', () => {
@@ -293,8 +309,10 @@ describe('MIRV', () => {
   it('splits at apex into five warheads sharing one shot', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { mirv: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { mirv: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -314,8 +332,8 @@ describe('shields', () => {
   it('eats an enemy direct hit instead of letting it detonate', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN),
-        createPlayer(2, SECOND_COLUMN, { armedShieldItemId: 'heavy-shield' }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, { armedShieldItemId: 'heavy-shield' }),
       ],
     });
 
@@ -331,8 +349,8 @@ describe('shields', () => {
   it('deflects an enemy shell at the force tier', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN),
-        createPlayer(2, SECOND_COLUMN, { armedShieldItemId: 'force-shield' }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, { armedShieldItemId: 'force-shield' }),
       ],
     });
 
@@ -347,8 +365,8 @@ describe('shields', () => {
   it('charges the force tier for every shell it turns around', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN),
-        createPlayer(2, SECOND_COLUMN, { armedShieldItemId: 'force-shield' }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, { armedShieldItemId: 'force-shield' }),
       ],
     });
 
@@ -365,8 +383,10 @@ describe('shields', () => {
   it('re-arms the next bubble the moment the first collapses, when Auto Defense is installed', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { nuke: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { nuke: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, {
           armedShieldItemId: 'shield',
           inventory: { weapons: {}, items: { 'auto-defense': 1, 'force-shield': 1 } },
         }),
@@ -380,14 +400,16 @@ describe('shields', () => {
     expect(events.some(event => event.type === 'shield-collapsed')).toBe(true);
     expect(events.some(event => event.type === 'shield-raised')).toBe(true);
     expect(round.tanks[1].shield?.tier).toBe('force');
-    expect(round.getItemCount(2, 'force-shield')).toBe(0);
+    expect(round.getItemCount(toPlayerId(2), 'force-shield')).toBe(0);
   });
 
   it('leaves a collapsed bubble down without Auto Defense, spare shields or not', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { nuke: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { nuke: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, {
           armedShieldItemId: 'shield',
           inventory: { weapons: {}, items: { 'force-shield': 1 } },
         }),
@@ -398,17 +420,17 @@ describe('shields', () => {
     fireAndFly(round, { weaponId: 'nuke' });
 
     expect(round.tanks[1].shield).toBeUndefined();
-    expect(round.getItemCount(2, 'force-shield')).toBe(1);
+    expect(round.getItemCount(toPlayerId(2), 'force-shield')).toBe(1);
   });
 
   it("lets the owner's own descending shell through, soaking only the splash", () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           inventory: { weapons: { nuke: 1 }, items: {} },
           armedShieldItemId: 'shield',
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -424,8 +446,8 @@ describe('shields', () => {
   it('soaks a small self-inflicted splash entirely', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { armedShieldItemId: 'shield' }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, { armedShieldItemId: 'shield' }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -443,10 +465,10 @@ describe('raising a shield in the field', () => {
   function createShieldedRound(): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           inventory: { weapons: {}, items: { shield: 2, 'heavy-shield': 1 } },
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
   }
@@ -457,7 +479,7 @@ describe('raising a shield in the field', () => {
 
     expect(events).toEqual([{ type: 'shield-raised', playerId: 1, tier: 'shield' }]);
     expect(round.tanks[0].shield?.remaining).toBe(SHIELD_CAPACITY_BY_TIER.shield);
-    expect(round.getItemCount(1, 'shield')).toBe(1);
+    expect(round.getItemCount(toPlayerId(1), 'shield')).toBe(1);
   });
 
   it('replaces whatever is standing rather than stacking with it', () => {
@@ -468,7 +490,7 @@ describe('raising a shield in the field', () => {
 
     expect(round.tanks[0].shield?.tier).toBe('heavy');
     expect(round.tanks[0].shield?.remaining).toBe(SHIELD_CAPACITY_BY_TIER.heavy);
-    expect(round.getItemCount(1, 'heavy-shield')).toBe(0);
+    expect(round.getItemCount(toPlayerId(1), 'heavy-shield')).toBe(0);
   });
 
   it('refuses a bubble the tank does not own, and anything that is not one', () => {
@@ -485,7 +507,7 @@ describe('raising a shield in the field', () => {
     round.fire({ weaponId: 'baby-missile' });
 
     expect(round.raiseShield('shield')).toEqual([]);
-    expect(round.getItemCount(1, 'shield')).toBe(2);
+    expect(round.getItemCount(toPlayerId(1), 'shield')).toBe(2);
   });
 });
 
@@ -493,10 +515,10 @@ describe('self-centered weapons', () => {
   it('digs the riot charge wedge over the firing tank and ends the turn', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           inventory: { weapons: { 'riot-charge': 1 }, items: {} },
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
     const events = round.fire({ weaponId: 'riot-charge' });
@@ -510,17 +532,17 @@ describe('self-centered weapons', () => {
   it('sizes the plasma blast by the batteries it burns', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           inventory: { weapons: { 'plasma-blast': 1 }, items: { battery: 10 } },
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
     const events = round.fire({ weaponId: 'plasma-blast', plasmaBatteries: 10 });
     const explosion = events.find(event => event.type === 'explosion');
 
     expect(explosion).toEqual(expect.objectContaining({ radiusWu: 75 }));
-    expect(round.getItemCount(1, 'battery')).toBe(0);
+    expect(round.getItemCount(toPlayerId(1), 'battery')).toBe(0);
   });
 });
 
@@ -528,8 +550,10 @@ describe('laser', () => {
   it('cuts straight through to a tank on the beam line', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { laser: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { laser: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -545,8 +569,10 @@ describe('laser', () => {
   it('cannot touch a Super Mag', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { laser: 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN, { armedShieldItemId: 'super-mag' }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { laser: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, { armedShieldItemId: 'super-mag' }),
       ],
     });
 
@@ -562,8 +588,10 @@ describe('tank falls', () => {
   it('drops a tank whose ground was blown away without hurting it', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { 'riot-bomb': 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { 'riot-bomb': 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
       field: createFlatHeightfield(400, COLUMN_COUNT),
     });
@@ -580,8 +608,10 @@ describe('tank falls', () => {
     const round = createRound(
       {
         players: [
-          createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { nuke: 1 }, items: {} } }),
-          createPlayer(2, SECOND_COLUMN),
+          createPlayer(toPlayerId(1), FIRST_COLUMN, {
+            inventory: { weapons: { nuke: 1 }, items: {} },
+          }),
+          createPlayer(toPlayerId(2), SECOND_COLUMN),
         ],
         field: createFlatHeightfield(400, COLUMN_COUNT),
       },
@@ -598,7 +628,11 @@ describe('tank falls', () => {
 describe('turn order', () => {
   it('cycles through the living tanks in sequence', () => {
     const round = createRound({
-      players: [createPlayer(1, 100), createPlayer(2, 400), createPlayer(3, 700)],
+      players: [
+        createPlayer(toPlayerId(1), 100),
+        createPlayer(toPlayerId(2), 400),
+        createPlayer(toPlayerId(3), 700),
+      ],
     });
 
     expect(round.activePlayerId).toBe(1);
@@ -653,8 +687,10 @@ describe('dirt weapons', () => {
   it('buries the target column under a ton of dirt', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { 'ton-of-dirt': 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { 'ton-of-dirt': 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -667,8 +703,10 @@ describe('dirt weapons', () => {
   it('piles the dirt charge wedge over the firing tank itself', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { 'dirt-charge': 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { 'dirt-charge': 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -682,8 +720,10 @@ describe('dirt weapons', () => {
   it('pours liquid dirt in portions and freezes it once the load runs out', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { 'liquid-dirt': 1 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { 'liquid-dirt': 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
 
@@ -720,8 +760,8 @@ describe('guidance', () => {
   function createGuidedRound(items: PlayerInventory['items']): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: {}, items } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, { inventory: { weapons: {}, items } }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
   }
@@ -735,7 +775,7 @@ describe('guidance', () => {
       guidanceTarget: { x: SECOND_COLUMN, y: GROUND_HEIGHT_WU },
     });
 
-    expect(round.getItemCount(1, 'heat-guidance')).toBe(1);
+    expect(round.getItemCount(toPlayerId(1), 'heat-guidance')).toBe(1);
     expect(round.projectiles[0].guidance).toBe('heat-guidance');
   });
 
@@ -761,12 +801,12 @@ describe('guidance', () => {
       guidanceTarget: { x: SECOND_COLUMN + 0.5, y: GROUND_HEIGHT_WU + 4 },
     });
 
-    const tank = round.getTank(1);
+    const tank = round.getTank(toPlayerId(1));
 
     expect(tank?.aim.facing).toBe('right');
     expect(tank?.aim.power).toBeGreaterThan(0);
     expect(round.projectiles[0].guidance).toBeUndefined();
-    expect(round.getItemCount(1, 'lazy-boy')).toBe(1);
+    expect(round.getItemCount(toPlayerId(1), 'lazy-boy')).toBe(1);
   });
 });
 
@@ -777,8 +817,10 @@ describe('napalm burn', () => {
   function createNapalmRound(): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { napalm: 4 }, items: {} } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { napalm: 4 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
   }
@@ -838,11 +880,11 @@ describe('batteries in the field', () => {
   function createDamagedRound(health: number, batteries: number): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
           health,
           inventory: { weapons: {}, items: { battery: batteries } },
         }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
   }
@@ -852,7 +894,7 @@ describe('batteries in the field', () => {
     const events = round.spendBattery();
 
     expect(round.tanks[0].health).toBe(50 + BATTERY_HEALTH_BONUS);
-    expect(round.getItemCount(1, 'battery')).toBe(2);
+    expect(round.getItemCount(toPlayerId(1), 'battery')).toBe(2);
     expect(events[0]).toEqual({
       type: 'tank-repaired',
       playerId: 1,
@@ -865,7 +907,7 @@ describe('batteries in the field', () => {
     const round = createDamagedRound(MAX_TANK_HEALTH, 3);
 
     expect(round.spendBattery()).toEqual([]);
-    expect(round.getItemCount(1, 'battery')).toBe(3);
+    expect(round.getItemCount(toPlayerId(1), 'battery')).toBe(3);
   });
 
   it('does nothing without a battery in the locker', () => {
@@ -888,8 +930,8 @@ describe('driving on fuel', () => {
   function createFuelledRound(fuel: number): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: {}, items: { fuel } } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, { inventory: { weapons: {}, items: { fuel } } }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
     });
   }
@@ -899,7 +941,7 @@ describe('driving on fuel', () => {
     const events = round.moveWithFuelUnits(1);
 
     expect(round.tanks[0].columnIndex).toBe(FIRST_COLUMN + 1);
-    expect(round.getItemCount(1, 'fuel')).toBe(10 - FUEL_COST_PER_WU);
+    expect(round.getItemCount(toPlayerId(1), 'fuel')).toBe(10 - FUEL_COST_PER_WU);
     expect(events[0]).toEqual({
       type: 'tank-moved',
       playerId: 1,
@@ -941,8 +983,10 @@ describe('driving on fuel', () => {
     );
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: {}, items: { fuel: 10 } } }),
-        createPlayer(2, SECOND_COLUMN),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: {}, items: { fuel: 10 } },
+        }),
+        createPlayer(toPlayerId(2), SECOND_COLUMN),
       ],
       field: field.map(height => ({
         surfaceHeight: height,
@@ -957,7 +1001,7 @@ describe('driving on fuel', () => {
     }
 
     expect(round.tanks[0].columnIndex).toBe(FIRST_COLUMN + 4);
-    expect(round.getItemCount(1, 'fuel')).toBe(10 - 6);
+    expect(round.getItemCount(toPlayerId(1), 'fuel')).toBe(10 - 6);
   });
 });
 
@@ -967,8 +1011,10 @@ describe('rolling shells', () => {
   function createRollerRound(targetShieldItemId?: 'shield'): ScorchedRound {
     return createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN, { inventory: { weapons: { roller: 1 }, items: {} } }),
-        createPlayer(2, TARGET_COLUMN, { armedShieldItemId: targetShieldItemId }),
+        createPlayer(toPlayerId(1), FIRST_COLUMN, {
+          inventory: { weapons: { roller: 1 }, items: {} },
+        }),
+        createPlayer(toPlayerId(2), TARGET_COLUMN, { armedShieldItemId: targetShieldItemId }),
       ],
     });
   }
@@ -1013,8 +1059,8 @@ describe('mag deflectors', () => {
   it('announces the tick a deflector takes hold, and only that tick', () => {
     const round = createRound({
       players: [
-        createPlayer(1, FIRST_COLUMN),
-        createPlayer(2, SECOND_COLUMN, {
+        createPlayer(toPlayerId(1), FIRST_COLUMN),
+        createPlayer(toPlayerId(2), SECOND_COLUMN, {
           inventory: { weapons: {}, items: { 'mag-deflector': 1 } },
         }),
       ],

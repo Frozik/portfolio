@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
-import { FIELD_HEIGHT_WU, TERRAIN_COLUMN_COUNT } from '../constants';
+import { COLUMN_CENTER_OFFSET_WU, FIELD_HEIGHT_WU, TERRAIN_COLUMN_COUNT } from '../constants';
 import type { HeightSpan, PlayerId } from '../types';
 
 /** One terrain column: dirt fills `[0, surfaceHeight)`. Gravity is absolute — a carve below the
@@ -151,7 +151,10 @@ function getCircleHalfChord(radiusWu: number, offsetFromCenter: number): number 
 
 export function carveCircle(field: Heightfield, center: Vector2, radiusWu: number): CarveResult {
   return applyPerColumn(field, center.x - radiusWu, center.x + radiusWu, (column, columnIndex) => {
-    const halfChord = getCircleHalfChord(radiusWu, columnIndex + 0.5 - center.x);
+    const halfChord = getCircleHalfChord(
+      radiusWu,
+      columnIndex + COLUMN_CENTER_OFFSET_WU - center.x
+    );
 
     return carveColumn(column, { bottom: center.y - halfChord, top: center.y + halfChord });
   });
@@ -163,7 +166,7 @@ export function carveCircle(field: Heightfield, center: Vector2, radiusWu: numbe
  */
 export function carveWedge(field: Heightfield, apex: Vector2, radiusWu: number): CarveResult {
   return applyPerColumn(field, apex.x - radiusWu, apex.x + radiusWu, (column, columnIndex) => {
-    const wedgeHeight = radiusWu - Math.abs(columnIndex + 0.5 - apex.x);
+    const wedgeHeight = radiusWu - Math.abs(columnIndex + COLUMN_CENTER_OFFSET_WU - apex.x);
 
     return carveColumn(column, { bottom: apex.y, top: apex.y + wedgeHeight });
   });
@@ -175,13 +178,16 @@ export function carveWedge(field: Heightfield, apex: Vector2, radiusWu: number):
  */
 export function depositCircle(field: Heightfield, center: Vector2, radiusWu: number): CarveResult {
   return applyPerColumn(field, center.x - radiusWu, center.x + radiusWu, (column, columnIndex) =>
-    depositOnColumn(column, 2 * getCircleHalfChord(radiusWu, columnIndex + 0.5 - center.x))
+    depositOnColumn(
+      column,
+      2 * getCircleHalfChord(radiusWu, columnIndex + COLUMN_CENTER_OFFSET_WU - center.x)
+    )
   );
 }
 
 export function depositWedge(field: Heightfield, apex: Vector2, radiusWu: number): CarveResult {
   return applyPerColumn(field, apex.x - radiusWu, apex.x + radiusWu, (column, columnIndex) =>
-    depositOnColumn(column, radiusWu - Math.abs(columnIndex + 0.5 - apex.x))
+    depositOnColumn(column, radiusWu - Math.abs(columnIndex + COLUMN_CENTER_OFFSET_WU - apex.x))
   );
 }
 

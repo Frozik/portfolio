@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
 import { planAiItemPurchases, planAiPurchases } from '../domain/ai/shopping';
-import { getItem } from '../domain/items';
+import { getItem } from '../domain/items/catalog';
 import type { MatchPlayerState, ScorchedMatch } from '../domain/match';
 import type { CartLine, ShopEntryRef } from '../domain/shop';
 import {
@@ -32,7 +32,7 @@ export class ShopStore {
   playerId: PlayerId | undefined;
   cart: readonly CartLine[] = [];
 
-  private queue: PlayerId[] = [];
+  private queue: readonly PlayerId[] = [];
   private readonly getMatch: () => ScorchedMatch;
   private readonly isCounterOpen: () => boolean;
   private readonly onMatchChanged: VoidFunction;
@@ -143,12 +143,13 @@ export class ShopStore {
 
   /** Hands the counter to the next queued shopper; false once there is nobody left to serve. */
   openNext(): boolean {
-    const nextPlayerId = this.queue.shift();
+    const [nextPlayerId, ...rest] = this.queue;
 
     if (isNil(nextPlayerId)) {
       return false;
     }
 
+    this.queue = rest;
     this.playerId = nextPlayerId;
     this.cart = [];
 
@@ -159,6 +160,11 @@ export class ShopStore {
   close(): void {
     this.playerId = undefined;
     this.cart = [];
+  }
+
+  dispose(): void {
+    this.queue = [];
+    this.close();
   }
 
   /**

@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { applyInterest } from '../../domain/economy';
-import { ITEMS } from '../../domain/items';
+import { ITEMS } from '../../domain/items/catalog';
 import type { ShopEntryRef } from '../../domain/shop';
 import { getCartTotal, quoteShopPurchase } from '../../domain/shop';
 import type { WeaponFamily } from '../../domain/types';
@@ -39,7 +39,7 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
   const [isSellOpen, setIsSellOpen] = useState(false);
   const shopper = store.shopPlayer;
   const cash = shopper?.cash ?? 0;
-  const { roundsRemaining } = store;
+  const { roundsRemaining } = store.world;
 
   const weaponsByFamily = useMemo(
     () =>
@@ -244,8 +244,8 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
 
             <p className="pt-2 text-[0.6875rem] leading-relaxed text-text-muted">
               {scorchedT.shop.bankPreview(
-                formatCash(applyInterest(cash, store.interestPercent)),
-                store.interestPercent
+                formatCash(applyInterest(cash, store.world.interestPercent)),
+                store.world.interestPercent
               )}
             </p>
           </aside>

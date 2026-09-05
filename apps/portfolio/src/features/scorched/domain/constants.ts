@@ -18,6 +18,8 @@ export const TANK_HEIGHT_WU = 8;
 export const TANK_HALF_WIDTH_WU = TANK_WIDTH_WU / 2;
 /** Height above the ground at which a shell leaves the barrel and a blast is centred. */
 export const TANK_CENTER_OFFSET_WU = TANK_HEIGHT_WU / 2;
+/** A column is one wu wide; anything standing on it stands on its middle. */
+export const COLUMN_CENTER_OFFSET_WU = 0.5;
 
 /** Where the visual gun pivots and how far its muzzle reaches — shells spawn at the muzzle. */
 export const GUN_PIVOT_ABOVE_BASE_WU = 8;

@@ -69,7 +69,7 @@ const WeaponChip = memo(
  */
 export const WeaponCarousel = observer(() => {
   const store = useScorchedStore();
-  const { availableWeapons } = store;
+  const { availableWeapons } = store.aim;
 
   const groups = useMemo(
     () => groupBy(availableWeapons, entry => getWeapon(entry.weaponId).family),
@@ -77,11 +77,11 @@ export const WeaponCarousel = observer(() => {
   );
 
   const handleSelect = useFunction((weaponId: WeaponId) => {
-    store.selectWeapon(weaponId);
+    store.aim.selectWeapon(weaponId);
   });
 
   const handleClose = useFunction(() => {
-    store.setWeaponCarouselOpen(false);
+    store.aim.setCarouselOpen(false);
   });
 
   return (
@@ -111,7 +111,7 @@ export const WeaponCarousel = observer(() => {
                   key={entry.weaponId}
                   weaponId={entry.weaponId}
                   count={entry.count}
-                  isSelected={entry.weaponId === store.selectedWeaponId}
+                  isSelected={entry.weaponId === store.aim.selectedWeaponId}
                   onSelect={handleSelect}
                 />
               ))}

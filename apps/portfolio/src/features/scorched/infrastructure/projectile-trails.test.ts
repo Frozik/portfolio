@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Projectile } from '../domain/types';
+import { toPlayerId } from '../domain/types';
 import { ProjectileTrails } from './projectile-trails';
 import {
   TRACE_DOT_SPACING_WU,
@@ -11,7 +12,7 @@ import {
 function createProjectile(id: number, positionX: number, positionY: number): Projectile {
   return {
     id,
-    ownerId: 0,
+    ownerId: toPlayerId(0),
     weaponId: 'baby-missile',
     shotId: 1,
     hasContactTrigger: false,

@@ -6,7 +6,7 @@ import {
   TRUNCATED_BUNDLE_MARKUP,
 } from './constants';
 import { getUnitPrice } from './economy';
-import { getItem } from './items';
+import { getItem } from './items/catalog';
 import type { ShopEntryRef } from './shop';
 import {
   addCartPurchase,

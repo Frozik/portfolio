@@ -1,9 +1,7 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp, random } from 'lodash-es';
 
 import {
-  BORDERS_EXTEND_MARGIN_WU,
   FIELD_HEIGHT_WU,
   FIELD_WIDTH_WU,
   GRAVITY_UNIT_TO_WU_PER_TICK_SQUARED,
@@ -14,43 +12,22 @@ import {
   MAX_FLIGHT_TICKS,
   MIN_ELEVATION_DEGREES,
   MIN_POWER,
-  PADDED_WALL_RESTITUTION,
   POWER_PER_HEALTH_POINT,
   POWER_TO_SPEED_WU_PER_TICK,
   PROJECTILE_TUNNEL_DEPTH_WU,
-  RESOLVABLE_WALL_MODES,
-  RUBBER_WALL_RESTITUTION,
-  SPRING_WALL_RESTITUTION,
   VISCOSITY_DAMPING_PER_UNIT,
   WIND_UNIT_TO_WU_PER_TICK_SQUARED,
 } from './constants';
 import type { Heightfield } from './terrain/heightfield';
 import { isSolidAt } from './terrain/heightfield';
-import type {
-  AimState,
-  PhysicsOptions,
-  ProjectileState,
-  ResolvedWallMode,
-  WallMode,
-  WallSide,
-} from './types';
+import type { AimState, PhysicsOptions, ProjectileState, ResolvedWallMode } from './types';
+import type { ProjectileStepResult, WallEnvironment } from './walls';
+import { resolveWalls } from './walls';
 
-export interface BallisticsEnvironment {
+export interface BallisticsEnvironment extends WallEnvironment {
   readonly gravityWuPerTickSquared: number;
   readonly windAccelerationWuPerTickSquared: number;
   readonly viscosity: number;
-  readonly wallMode: ResolvedWallMode;
-  readonly isBordersExtendEnabled: boolean;
-  readonly fieldWidthWu: number;
-  readonly fieldHeightWu: number;
-}
-
-type FlightOutcome = 'flying' | 'absorbed' | 'lost';
-
-export interface ProjectileStepResult {
-  readonly state: ProjectileState;
-  readonly outcome: FlightOutcome;
-  readonly bounceSide: WallSide | undefined;
 }
 
 type TrajectoryOutcome = 'impact' | 'absorbed' | 'lost' | 'expired';
@@ -77,21 +54,6 @@ function getGravityAcceleration(gravity: number): number {
 
 function getWindAcceleration(windUnits: number): number {
   return windUnits * WIND_UNIT_TO_WU_PER_TICK_SQUARED;
-}
-
-/** [MANUAL §5] RANDOM re-rolls once per round, ERRATIC once per shot; both use this draw. */
-export function resolveWallMode(wallMode: WallMode): ResolvedWallMode {
-  switch (wallMode) {
-    case 'random':
-    case 'erratic':
-      return RESOLVABLE_WALL_MODES[random(RESOLVABLE_WALL_MODES.length - 1)];
-    default:
-      return wallMode;
-  }
-}
-
-export function isPerShotWallMode(wallMode: WallMode): boolean {
-  return wallMode === 'erratic';
 }
 
 /** [MANUAL §5] One global wind vector per round, drawn within the configured magnitude. */
@@ -154,157 +116,6 @@ export function getLaunchOrigin(
     x: centerX + horizontalSign * (GUN_MOUNT_OFFSET_WU + Math.cos(radians) * GUN_BARREL_LENGTH_WU),
     y: basePositionY + GUN_PIVOT_ABOVE_BASE_WU + Math.sin(radians) * GUN_BARREL_LENGTH_WU,
   };
-}
-
-function getWallRestitution(wallMode: ResolvedWallMode): number {
-  switch (wallMode) {
-    case 'padded':
-      return PADDED_WALL_RESTITUTION;
-    case 'rubber':
-      return RUBBER_WALL_RESTITUTION;
-    case 'spring':
-      return SPRING_WALL_RESTITUTION;
-    case 'none':
-    case 'concrete':
-    case 'wrap':
-      return 0;
-    default:
-      return assertNever(wallMode);
-  }
-}
-
-function getTrackingMargin(environment: BallisticsEnvironment): number {
-  return environment.isBordersExtendEnabled ? BORDERS_EXTEND_MARGIN_WU : 0;
-}
-
-/**
- * Modes with no walls of their own: the shot is tracked until it leaves the field plus the
- * Borders Extend margin. WRAP shares this ceiling because wrapping the top onto the ground has
- * no sensible counterpart — its left and right edges are what wrap.
- */
-function resolveOpenBoundary(
-  state: ProjectileState,
-  environment: BallisticsEnvironment,
-  isHorizontalOpen: boolean
-): ProjectileStepResult {
-  const margin = getTrackingMargin(environment);
-  const isOutsideHorizontally =
-    isHorizontalOpen &&
-    (state.position.x < -margin || state.position.x > environment.fieldWidthWu + margin);
-  const isOutsideVertically =
-    state.position.y < 0 || state.position.y > environment.fieldHeightWu + margin;
-
-  return {
-    state,
-    outcome: isOutsideHorizontally || isOutsideVertically ? 'lost' : 'flying',
-    bounceSide: undefined,
-  };
-}
-
-function resolveConcreteWalls(
-  state: ProjectileState,
-  environment: BallisticsEnvironment
-): ProjectileStepResult {
-  if (state.position.y < 0) {
-    return { state, outcome: 'lost', bounceSide: undefined };
-  }
-
-  const isAbsorbed =
-    state.position.x <= 0 ||
-    state.position.x >= environment.fieldWidthWu ||
-    state.position.y >= environment.fieldHeightWu;
-
-  if (!isAbsorbed) {
-    return { state, outcome: 'flying', bounceSide: undefined };
-  }
-
-  return {
-    state: {
-      position: {
-        x: clamp(state.position.x, 0, environment.fieldWidthWu),
-        y: Math.min(state.position.y, environment.fieldHeightWu),
-      },
-      velocity: state.velocity,
-    },
-    outcome: 'absorbed',
-    bounceSide: undefined,
-  };
-}
-
-function resolveBouncyWalls(
-  state: ProjectileState,
-  environment: BallisticsEnvironment
-): ProjectileStepResult {
-  const restitution = getWallRestitution(environment.wallMode);
-  let { x, y } = state.position;
-  let velocityX = state.velocity.x;
-  let velocityY = state.velocity.y;
-  let bounceSide: WallSide | undefined;
-
-  if (x < 0) {
-    x = -x;
-    velocityX = -velocityX * restitution;
-    bounceSide = 'left';
-  } else if (x > environment.fieldWidthWu) {
-    x = 2 * environment.fieldWidthWu - x;
-    velocityX = -velocityX * restitution;
-    bounceSide = 'right';
-  }
-
-  if (y > environment.fieldHeightWu) {
-    y = 2 * environment.fieldHeightWu - y;
-    velocityY = -velocityY * restitution;
-    bounceSide = 'top';
-  }
-
-  return {
-    state: { position: { x, y }, velocity: { x: velocityX, y: velocityY } },
-    outcome: y < 0 ? 'lost' : 'flying',
-    bounceSide,
-  };
-}
-
-function resolveWrapWalls(
-  state: ProjectileState,
-  environment: BallisticsEnvironment
-): ProjectileStepResult {
-  const width = environment.fieldWidthWu;
-  let { x } = state.position;
-
-  while (x < 0) {
-    x += width;
-  }
-
-  while (x > width) {
-    x -= width;
-  }
-
-  const wrapped: ProjectileState = {
-    position: { x, y: state.position.y },
-    velocity: state.velocity,
-  };
-
-  return resolveOpenBoundary(wrapped, environment, false);
-}
-
-function resolveWalls(
-  state: ProjectileState,
-  environment: BallisticsEnvironment
-): ProjectileStepResult {
-  switch (environment.wallMode) {
-    case 'none':
-      return resolveOpenBoundary(state, environment, true);
-    case 'concrete':
-      return resolveConcreteWalls(state, environment);
-    case 'padded':
-    case 'rubber':
-    case 'spring':
-      return resolveBouncyWalls(state, environment);
-    case 'wrap':
-      return resolveWrapWalls(state, environment);
-    default:
-      return assertNever(environment.wallMode);
-  }
 }
 
 /** One 60 Hz integration step: accelerate, damp, advance, then let the walls have their say. */

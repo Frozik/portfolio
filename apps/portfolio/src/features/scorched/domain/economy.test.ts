@@ -15,7 +15,7 @@ import {
   quoteSellBack,
   sellUnits,
 } from './economy';
-import { getItem } from './items';
+import { getItem } from './items/catalog';
 import { getWeapon } from './weapons/catalog';
 
 /** $1 875 for five, so $375 a shell — the arithmetic every quote below is checked against. */

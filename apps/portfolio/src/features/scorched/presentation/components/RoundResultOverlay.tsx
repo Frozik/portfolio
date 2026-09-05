@@ -8,9 +8,9 @@ import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
 import type { RoundHighlight } from '../../domain/scoring';
 import { GLASS_PANEL_CLASS } from '../constants';
-import { getPlayerColor } from '../player-colors';
 import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
+import { PlayerSwatch } from './PlayerSwatch';
 
 /** One celebration stat: who did it, and how much of it they did. */
 const HighlightCard = memo(
@@ -26,11 +26,7 @@ const HighlightCard = memo(
     <li className={cn(GLASS_PANEL_CLASS, 'flex min-w-44 flex-col gap-1 text-left')}>
       <span className="text-[0.625rem] uppercase tracking-widest text-text-muted">{label}</span>
       <span className="flex items-center gap-2 text-sm font-medium text-text">
-        <span
-          aria-hidden="true"
-          className="size-2.5 rounded-full"
-          style={{ backgroundColor: getPlayerColor(highlight.playerId).hex }}
-        />
+        <PlayerSwatch playerId={highlight.playerId} className="size-2.5" />
         {name}
       </span>
       <span className="font-mono text-xs tabular-nums text-text-secondary">
@@ -44,15 +40,15 @@ const HighlightCard = memo(
 export const RoundResultOverlay = observer(() => {
   const store = useScorchedStore();
   const [winnerId] = store.survivorIds;
-  const winner = store.players.find(player => player.id === winnerId);
-  const { biggestHit, topDamage } = store.roundHighlights;
+  const winner = store.world.players.find(player => player.id === winnerId);
+  const { biggestHit, topDamage } = store.world.roundHighlights;
 
   const handleContinue = useFunction(() => {
     store.continueAfterRound();
   });
 
   const resolveName = (playerId: number): string => {
-    const player = store.players.find(candidate => candidate.id === playerId);
+    const player = store.world.players.find(candidate => candidate.id === playerId);
 
     return isNil(player) ? '' : getPlayerDisplayName(player);
   };
@@ -66,11 +62,7 @@ export const RoundResultOverlay = observer(() => {
           scorchedT.round.everyoneDied
         ) : (
           <>
-            <span
-              aria-hidden="true"
-              className="size-3 rounded-full"
-              style={{ backgroundColor: getPlayerColor(winner.id).hex }}
-            />
+            <PlayerSwatch playerId={winner.id} className="size-3" />
             {scorchedT.round.winner(getPlayerDisplayName(winner))}
           </>
         )}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { toPlayerId } from '../../domain/types';
 import { getPlayerColor } from '../../presentation/player-colors';
 import { SHAPES_PER_TANK } from '../render-constants';
 import type { ITankBlueprint, ITankPose } from './tank-blueprint';
@@ -31,7 +32,7 @@ function createPose(overrides: Partial<ITankPose> = {}): ITankPose {
     centerXWu: 100,
     baseYWu: 40,
     aim: { facing: 'right', elevationDegrees: 0 },
-    color: getPlayerColor(0),
+    color: getPlayerColor(toPlayerId(0)),
     ...overrides,
   };
 }

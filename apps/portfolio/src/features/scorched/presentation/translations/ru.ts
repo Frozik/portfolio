@@ -4,6 +4,7 @@ import type { scorchedTranslationsEn } from './en';
 export const scorchedTranslationsRu: TranslationOf<typeof scorchedTranslationsEn> = {
   title: 'Выжженная земля',
   subtitle: 'Scorched Earth на WebGPU',
+  rendererFailed: 'Не удалось запустить WebGPU-рендерер',
   start: 'Начать матч',
   playAgain: 'Новый матч',
   continue: 'Дальше',

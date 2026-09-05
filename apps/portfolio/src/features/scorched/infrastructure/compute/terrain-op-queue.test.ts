@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { WorldEvent } from '../../domain/types';
+import { toPlayerId } from '../../domain/types';
 import { FLOATS_PER_CARVE_OP } from '../render-constants';
 import {
   CARVE_OP_KIND,
@@ -55,7 +56,7 @@ describe('TerrainOpQueue', () => {
     const queue = new TerrainOpQueue();
 
     queue.consume([
-      { type: 'laser-fired', ownerId: 0, from: { x: 0, y: 0 }, to: { x: 800, y: 200 } },
+      { type: 'laser-fired', ownerId: toPlayerId(0), from: { x: 0, y: 0 }, to: { x: 800, y: 200 } },
     ]);
 
     expect(queue.takeOps(10)).toHaveLength(0);
@@ -101,7 +102,7 @@ describe('TerrainOpQueue', () => {
     const queue = new TerrainOpQueue();
 
     queue.consume([
-      { type: 'turn-started', playerId: 0 },
+      { type: 'turn-started', playerId: toPlayerId(0) },
       { type: 'dirt-settled', columns: [] },
     ]);
 

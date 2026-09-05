@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { toPlayerId } from '../types';
 import {
   carveCircle,
   carveWedge,
@@ -171,7 +172,7 @@ describe('computeTankFalls', () => {
   it('drops a tank whose column collapsed', () => {
     const { field } = carveCircle(createGround(), { x: 20.5, y: 50 }, 10);
     const [fall] = computeTankFalls(field, [
-      { playerId: 1, columnIndex: 20, positionY: GROUND_HEIGHT_WU },
+      { playerId: toPlayerId(1), columnIndex: 20, positionY: GROUND_HEIGHT_WU },
     ]);
 
     expect(fall.toY).toBeCloseTo(GROUND_HEIGHT_WU - 20);
@@ -182,7 +183,9 @@ describe('computeTankFalls', () => {
     const { field } = carveCircle(createGround(), { x: 20.5, y: 50 }, 5);
 
     expect(
-      computeTankFalls(field, [{ playerId: 1, columnIndex: 39, positionY: GROUND_HEIGHT_WU }])
+      computeTankFalls(field, [
+        { playerId: toPlayerId(1), columnIndex: 39, positionY: GROUND_HEIGHT_WU },
+      ])
     ).toEqual([]);
   });
 });

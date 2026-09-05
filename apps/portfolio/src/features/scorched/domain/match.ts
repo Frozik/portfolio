@@ -3,11 +3,12 @@ import { assert } from '@frozik/utils/assert/assert';
 import { MAX_TANK_HEALTH, TERRAIN_COLUMN_COUNT } from './constants';
 import type { BundlePricing } from './economy';
 import { applyInterest, purchaseBundle, sellUnits } from './economy';
-import { getItem, getItemPricing, isPermanentItem, selectAutoDefenseItem } from './items';
-import type { RoundPlayerSetup } from './round';
+import { selectAutoDefenseItem } from './items/behaviors';
+import { getItem, getItemPricing, isPermanentItem } from './items/catalog';
 import { ScorchedRound } from './round';
 import type { MatchStanding } from './scoring';
 import { countScoringKills, rankStandings, scoreRound } from './scoring';
+import type { RoundPlayerSetup } from './simulation/round-state';
 import type { Heightfield } from './terrain/heightfield';
 import { generateTerrain } from './terrain/terrain-generator';
 import type {

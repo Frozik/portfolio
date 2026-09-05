@@ -12,7 +12,7 @@ import {
   AI_THINKING_SECONDS,
   TANK_CENTER_OFFSET_WU,
 } from '../domain/constants';
-import { selectBestShieldItem } from '../domain/items';
+import { selectBestShieldItem } from '../domain/items/behaviors';
 import type { ScorchedRound } from '../domain/round';
 import type { AimState, AiPersonality, ItemId, PlayerId, WeaponId } from '../domain/types';
 

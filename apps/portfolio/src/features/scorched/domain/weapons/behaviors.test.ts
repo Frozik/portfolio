@@ -17,6 +17,7 @@ import {
 import type { Heightfield } from '../terrain/heightfield';
 import { createFlatHeightfield, createHeightfield, getSurfaceHeight } from '../terrain/heightfield';
 import type { WeaponId } from '../types';
+import { toPlayerId } from '../types';
 import type { ImpactContext, ImpactEffect } from './behaviors';
 import {
   computeLaserHits,
@@ -254,8 +255,8 @@ describe('napalm family', () => {
   it('burns a covered tank for the coating depth and spares one outside the fire', () => {
     const pools = [{ firstColumn: 50, surfaceHeights: Array.from({ length: 21 }, () => 30) }];
     const damages = computeNapalmDamage(pools, [
-      { playerId: 1, columnIndex: 60, positionY: 30, hasShield: false },
-      { playerId: 3, columnIndex: 90, positionY: 10, hasShield: false },
+      { playerId: toPlayerId(1), columnIndex: 60, positionY: 30, hasShield: false },
+      { playerId: toPlayerId(3), columnIndex: 90, positionY: 10, hasShield: false },
     ]);
 
     expect(damages).toEqual([
@@ -288,8 +289,8 @@ describe('plasma family', () => {
 describe('laser family', () => {
   it('hits everything on the beam line, nearest first', () => {
     const hits = computeLaserHits({ x: 0, y: TANK_CENTER_OFFSET_WU }, { x: 1, y: 0 }, [
-      { playerId: 1, columnIndex: 99, positionY: 0, hasShield: true },
-      { playerId: 2, columnIndex: 49, positionY: 0, hasShield: false },
+      { playerId: toPlayerId(1), columnIndex: 99, positionY: 0, hasShield: true },
+      { playerId: toPlayerId(2), columnIndex: 49, positionY: 0, hasShield: false },
     ]);
 
     expect(hits.map(hit => hit.playerId)).toEqual([2, 1]);
@@ -297,8 +298,13 @@ describe('laser family', () => {
 
   it('ignores tanks behind the muzzle and off the beam', () => {
     const hits = computeLaserHits({ x: 100, y: TANK_CENTER_OFFSET_WU }, { x: 1, y: 0 }, [
-      { playerId: 1, columnIndex: 49, positionY: 0, hasShield: false },
-      { playerId: 2, columnIndex: 149, positionY: LASER_BEAM_HALF_WIDTH_WU + 5, hasShield: false },
+      { playerId: toPlayerId(1), columnIndex: 49, positionY: 0, hasShield: false },
+      {
+        playerId: toPlayerId(2),
+        columnIndex: 149,
+        positionY: LASER_BEAM_HALF_WIDTH_WU + 5,
+        hasShield: false,
+      },
     ]);
 
     expect(hits).toEqual([]);
