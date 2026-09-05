@@ -1,0 +1,1 @@
+import{n as e,t}from"./c-C03sDfsA.js";import{p as n}from"./c-BwMhfffb.js";function r(r){return r<=0?function(){return n}:e(function(e,n){var i=0;e.subscribe(t(n,function(e){++i<=r&&(n.next(e),r<=i&&n.complete())}))})}export{r as t};

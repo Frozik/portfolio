@@ -1,0 +1,1 @@
+import{i as e}from"./c-Dd_uD5pT.js";import{V as t,it as n}from"./c-C8QCGV-W.js";import{i as r}from"./c-DP_47kS8.js";var i=e(r(),1),a=(0,i.createContext)(null),o=a.Provider;function s(){let e=(0,i.useContext)(a);return t(!n(e),`useRootStore must be used inside StoreProvider`),e}export{s as n,o as t};

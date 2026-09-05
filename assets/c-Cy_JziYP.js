@@ -1,0 +1,1 @@
+function e(){if(!(typeof window>`u`))return window.AudioContext??window.webkitAudioContext}export{e as t};

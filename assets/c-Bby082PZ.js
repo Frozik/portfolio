@@ -1,1 +1,0 @@
-import{at as e}from"./e-BtwYBLlY.js";var t=1;function n(n,r){let i,a;return{ensureView(o,s,c){let l=Math.max(t,s),u=Math.max(t,c);return!e(i)&&!e(a)&&i.width===l&&i.height===u?a:(i?.destroy(),i=o.createTexture({size:[l,u],format:r,sampleCount:n,usage:GPUTextureUsage.RENDER_ATTACHMENT}),a=i.createView(),a)},dispose(){i?.destroy(),i=void 0,a=void 0}}}export{n as t};

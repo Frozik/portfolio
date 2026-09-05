@@ -1,1 +1,0 @@
-function e(e){let t=e.storage??localStorage;try{let n=t.getItem(e.key);if(n!==null){let t=e.parse(n);if(t!==null)return t}let r=e.generate();return t.setItem(e.key,e.serialize(r)),r}catch{return e.generate()}}export{e as t};

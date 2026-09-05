@@ -1,0 +1,1 @@
+import{Et as e}from"./c-C8QCGV-W.js";var t=function(){try{var t=e(Object,`defineProperty`);return t({},``,{}),t}catch{}}();export{t};
