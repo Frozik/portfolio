@@ -1,288 +1,178 @@
 import { isNil } from 'lodash-es';
+
 import { createWorld } from './physics/createWorld';
-import { updateWorld } from './physics/updateWorld';
+import { DEFAULT_GRAVITY, setWorldGravity } from './physics/world-gravity';
+import type { IPlaygroundEntry, IPlaygroundState } from './playground-step';
+import {
+  advancePlayground,
+  applyCompetitionOutcome,
+  disposeOutcomePlayers,
+  EMPTY_PLAYGROUND_STATE,
+  findSettledCompetitions,
+  scoredMembersOf,
+} from './playground-step';
+import type { IFrameScheduler } from './ports/frame-scheduler';
 import type {
   ICompetition,
+  INextGenerationEntry,
   IPendulumOptions,
+  IPoint,
   IRenderer,
-  IScoredPlayer,
   ITicker,
-  IWorld,
   TPlayer,
 } from './types';
 
-interface IPlaygroundItem {
-  player: TPlayer;
-  world: IWorld;
-  pendulumOptions: IPendulumOptions;
-  active: boolean;
-  /**
-   * Whether the Playground may dispose this player. Externally-owned players
-   * (e.g. a store-held TensorflowPlayer) are `false` — disposing one would
-   * leave the owner holding a destroyed model.
-   */
-  owned: boolean;
-  competition?: ICompetition;
-  getScore?: (deltaTime: DOMHighResTimeStamp) => number;
-  score: number;
-}
+const DEFAULT_PENDULUM_OPTIONS: IPendulumOptions = { bobsCount: 1 };
 
-interface IPlaygroundCompetition {
-  competition: ICompetition;
-  timeStamp: DOMHighResTimeStamp;
-}
-
+/**
+ * The set of pendulum worlds advanced together by one ticker. Owns every
+ * player it holds and disposes them when they leave.
+ */
 export class Playground {
-  private gravity = 1;
-  private queueRenderFrameId: number | undefined;
-  private tickerStarted = false;
-  private playersWithWorlds: IPlaygroundItem[] = [];
-  private competitions: IPlaygroundCompetition[] = [];
-  private renderer?: IRenderer;
-  private additionalForcePosition?: { x: number; y: number };
+  private state: IPlaygroundState = EMPTY_PLAYGROUND_STATE;
+  private gravity = DEFAULT_GRAVITY;
+  private pointerForce: IPoint | undefined;
+  private renderer: IRenderer | undefined;
+  private cancelQueuedFrame: VoidFunction | undefined;
+  private unsubscribeTicker: VoidFunction | undefined;
 
   constructor(
     private readonly ticker: ITicker,
-    private readonly defaultPendulumOptions: IPendulumOptions = { bobsCount: 1 }
+    private readonly frames: IFrameScheduler,
+    private readonly defaultPendulumOptions: IPendulumOptions = DEFAULT_PENDULUM_OPTIONS
   ) {}
 
-  private async tick(deltaTime: DOMHighResTimeStamp): Promise<void> {
-    await Promise.all(
-      this.playersWithWorlds.map(async item => {
-        const { player, world, active, competition, getScore, score } = item;
+  addPlayer(player: TPlayer, pendulumOptions?: Partial<IPendulumOptions>): void {
+    const options = { ...this.defaultPendulumOptions, ...pendulumOptions };
 
-        if (!active) {
-          return;
-        }
+    this.state = {
+      ...this.state,
+      entries: [
+        ...this.state.entries,
+        {
+          player,
+          world: createWorld(options, this.gravity),
+          active: true,
+          membership: undefined,
+          score: 0,
+        },
+      ],
+    };
 
-        const action = await player.play(world, deltaTime);
-
-        updateWorld(world, deltaTime, action, this.additionalForcePosition);
-
-        if (!isNil(getScore)) {
-          item.score = score + getScore(deltaTime);
-        }
-
-        if (
-          !isNil(competition) &&
-          !isNil(competition.competitionForPlayerCompleted) &&
-          competition.competitionForPlayerCompleted(player, item.score)
-        ) {
-          item.active = false;
-          item.score = Number.NEGATIVE_INFINITY;
-        }
-      })
-    );
-
-    this.competitions.forEach(item => {
-      item.timeStamp += deltaTime;
-
-      if (item.competition.competitionCompleted(item.timeStamp, this.playersWithWorlds)) {
-        this.playersWithWorlds.forEach(item => (item.active = false));
-      }
-    });
-
-    const completedCompetitions = this.competitions.filter(({ competition }) =>
-      this.playersWithWorlds.every(
-        ({ competition: playerCompetition, active }) => playerCompetition !== competition || !active
-      )
-    );
-
-    for (const completedCompetition of completedCompetitions) {
-      const { competition } = completedCompetition;
-
-      const playersWithScore = this.playersWithWorlds
-        .filter(({ competition: playerCompetition }) => playerCompetition === competition)
-        .map(({ player, score }): IScoredPlayer => ({ player, score }));
-
-      const result = await competition.restartCompetition(
-        playersWithScore,
-        completedCompetition.timeStamp
-      );
-
-      completedCompetition.timeStamp = 0;
-
-      this.playersWithWorlds = this.playersWithWorlds.filter(
-        ({ competition: playerCompetition }) => playerCompetition !== competition
-      );
-
-      if (result !== false) {
-        playersWithScore.forEach(({ player }) => {
-          if (result.every(item => ('player' in item ? item.player !== player : item !== player))) {
-            player.dispose();
-          }
-        });
-
-        for (const item of result) {
-          const { player, pendulumOptions } =
-            'player' in item
-              ? {
-                  ...item,
-                  pendulumOptions: {
-                    ...this.defaultPendulumOptions,
-                    ...item.pendulumOptions,
-                  },
-                }
-              : { player: item, pendulumOptions: this.defaultPendulumOptions };
-
-          const world = createWorld(pendulumOptions);
-          world.engine.gravity.y = this.gravity;
-
-          this.playersWithWorlds.push({
-            player,
-            world,
-            pendulumOptions,
-            active: true,
-            owned: true,
-            competition,
-            getScore: competition.scoreCalculatorBuilder(world),
-            score: 0,
-          });
-        }
-      } else {
-        playersWithScore.forEach(({ player }) => player.dispose());
-        this.competitions = this.competitions.filter(
-          ({ competition: playerCompetition }) => playerCompetition !== competition
-        );
-        competition.dispose?.();
-      }
-    }
-
-    await this.render();
+    this.requestRender();
+    this.startTicking();
   }
 
-  private async render(): Promise<void> {
-    // Debounce: scheduling while a frame is already queued orphans the prior
-    // rAF callback (rAF does not auto-cancel) and renders multiple times per tick.
-    if (isNil(this.renderer) || !isNil(this.queueRenderFrameId)) {
-      return;
-    }
-
-    this.queueRenderFrameId = requestAnimationFrame(async () => {
-      this.queueRenderFrameId = undefined;
-
-      const renderer = this.renderer;
-
-      if (!isNil(renderer)) {
-        await renderer.renderStatic();
-
-        await renderer.render(
-          this.playersWithWorlds.map(({ world }) => world),
-          this.additionalForcePosition
-        );
-      }
-    });
-  }
-
-  private startTicker() {
-    if (!this.tickerStarted) {
-      this.ticker.subscribe(deltaTime => this.tick(deltaTime));
-      this.tickerStarted = true;
-    }
-  }
-
-  public async addPlayer(
-    player: TPlayer,
-    options?: { pendulumOptions?: Partial<IPendulumOptions>; owned?: boolean }
-  ): Promise<void> {
-    const pendulumOptions = { ...this.defaultPendulumOptions, ...options?.pendulumOptions };
-
-    const world = createWorld(pendulumOptions);
-    world.engine.gravity.y = this.gravity;
-
-    this.playersWithWorlds.push({
-      player,
-      world,
-      active: true,
-      score: 0,
-      owned: options?.owned ?? true,
-      pendulumOptions,
-    });
-
-    await this.render();
-
-    this.startTicker();
-  }
-
-  public async clear(): Promise<void> {
-    this.ticker.dispose();
-    this.tickerStarted = false;
-
-    this.competitions.forEach(({ competition }) => competition.dispose?.());
-    this.competitions = [];
-
-    this.playersWithWorlds.forEach(({ player, owned }) => {
-      if (owned) {
-        player.dispose();
-      }
-    });
-    this.playersWithWorlds = [];
-
-    await this.render();
-  }
-
-  public async addCompetition(
+  async addCompetition(
     competition: ICompetition,
     pendulumOptions?: Partial<IPendulumOptions>
   ): Promise<void> {
-    const options = { ...this.defaultPendulumOptions, ...pendulumOptions };
-
     const players = await competition.init();
 
-    for (const player of players) {
-      const world = createWorld(options);
-      world.engine.gravity.y = this.gravity;
+    this.state = {
+      entries: [
+        ...this.state.entries,
+        ...players.map(player => this.spawnEntry(competition, { player, pendulumOptions })),
+      ],
+      competitions: [...this.state.competitions, { competition, elapsed: 0 }],
+    };
 
-      this.playersWithWorlds.push({
-        player,
-        world,
-        pendulumOptions: options,
-        active: true,
-        owned: true,
-        competition,
-        getScore: competition.scoreCalculatorBuilder(world),
-        score: 0,
-      });
-    }
-
-    this.competitions.push({
-      competition,
-      timeStamp: 0,
-    });
-
-    await this.render();
-
-    this.startTicker();
+    this.requestRender();
+    this.startTicking();
   }
 
-  public async setRenderer(renderer: IRenderer | undefined): Promise<void> {
+  clear(): void {
+    this.unsubscribeTicker?.();
+    this.unsubscribeTicker = undefined;
+
+    for (const { player } of this.state.entries) {
+      player.dispose();
+    }
+    this.state = EMPTY_PLAYGROUND_STATE;
+
+    this.requestRender();
+  }
+
+  setRenderer(renderer: IRenderer | undefined): void {
     this.renderer = renderer;
-    await this.render();
+    this.requestRender();
   }
 
-  public setAdditionalForcePosition(additionalForcePosition?: { x: number; y: number }) {
-    this.additionalForcePosition = additionalForcePosition;
+  setPointerForce(pointerForce: IPoint | undefined): void {
+    this.pointerForce = pointerForce;
   }
 
-  public destroy() {
-    if (!isNil(this.queueRenderFrameId)) {
-      cancelAnimationFrame(this.queueRenderFrameId);
-      this.queueRenderFrameId = undefined;
+  setGravity(gravity: number): void {
+    this.gravity = gravity;
+    for (const { world } of this.state.entries) {
+      setWorldGravity(world, gravity);
+    }
+  }
+
+  destroy(): void {
+    this.renderer = undefined;
+    this.cancelQueuedFrame?.();
+    this.cancelQueuedFrame = undefined;
+    this.clear();
+  }
+
+  private async tick(deltaTime: DOMHighResTimeStamp): Promise<void> {
+    this.state = advancePlayground(this.state, deltaTime, this.pointerForce);
+
+    for (const settled of findSettledCompetitions(this.state)) {
+      const outcome = await settled.competition.restartCompetition(
+        scoredMembersOf(this.state, settled.competition),
+        settled.elapsed
+      );
+
+      // Breeding is slow; the playground may have been cleared meanwhile.
+      if (!this.state.competitions.includes(settled)) {
+        disposeOutcomePlayers(outcome);
+        return;
+      }
+
+      this.state = applyCompetitionOutcome(this.state, settled, outcome, this.spawnEntry);
     }
 
-    this.ticker.dispose();
-    this.playersWithWorlds.forEach(({ player, owned }) => {
-      if (owned) {
-        player.dispose();
-      }
-    });
-    this.competitions.forEach(({ competition }) => competition.dispose?.());
+    this.requestRender();
   }
 
-  setGravity(gravity: number) {
-    this.gravity = gravity;
-    this.playersWithWorlds.forEach(({ world }) => {
-      world.engine.gravity.y = gravity;
+  private readonly spawnEntry = (
+    competition: ICompetition,
+    { player, pendulumOptions }: INextGenerationEntry
+  ): IPlaygroundEntry => {
+    const world = createWorld({ ...this.defaultPendulumOptions, ...pendulumOptions }, this.gravity);
+
+    return {
+      player,
+      world,
+      active: true,
+      membership: { competition, scoreOf: competition.scoreCalculatorBuilder(world) },
+      score: 0,
+    };
+  };
+
+  private requestRender(): void {
+    // One frame per tick burst: the ticker may run many substeps per frame.
+    if (isNil(this.renderer) || !isNil(this.cancelQueuedFrame)) {
+      return;
+    }
+
+    this.cancelQueuedFrame = this.frames.requestFrame(() => {
+      this.cancelQueuedFrame = undefined;
+
+      if (isNil(this.renderer)) {
+        return;
+      }
+      this.renderer.renderStatic();
+      this.renderer.render(
+        this.state.entries.map(({ world }) => world),
+        this.pointerForce
+      );
     });
+  }
+
+  private startTicking(): void {
+    this.unsubscribeTicker ??= this.ticker.subscribe(deltaTime => this.tick(deltaTime));
   }
 }

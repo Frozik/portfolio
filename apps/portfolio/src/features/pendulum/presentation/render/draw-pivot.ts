@@ -1,6 +1,6 @@
 import type { Vector } from 'matter-js';
 
-import { ROD_HALF_LENGTH } from '../constants';
+import { ROD_HALF_LENGTH } from '../../domain/constants';
 import {
   LINE_THICKNESS,
   PIVOT_THICKNESS,
@@ -12,18 +12,17 @@ import {
   SPOKE_HALF_ANGLE,
   SPOKE_ROTATION,
   SPOKES_COUNT,
+  STROKE_COLOR,
 } from './constants';
-import { renderBobs } from './renderBobs';
+import { drawBobs } from './draw-bobs';
 
-export function renderPivot(context: CanvasRenderingContext2D, position: Vector) {
-  renderSuspension(context, position);
-
-  renderWheels(context, position);
-
-  renderBobs(context, position);
+export function drawPivot(context: CanvasRenderingContext2D, position: Vector): void {
+  drawSuspension(context, position);
+  drawWheels(context, position);
+  drawBobs(context, [position]);
 }
 
-function renderSuspension(context: CanvasRenderingContext2D, position: Vector) {
+function drawSuspension(context: CanvasRenderingContext2D, position: Vector): void {
   context.save();
 
   context.beginPath();
@@ -32,13 +31,13 @@ function renderSuspension(context: CanvasRenderingContext2D, position: Vector) {
   context.lineTo(position.x + ROD_HALF_LENGTH, position.y);
   context.lineWidth = PIVOT_THICKNESS;
   context.lineCap = 'round';
-  context.strokeStyle = 'white';
+  context.strokeStyle = STROKE_COLOR;
   context.stroke();
 
   context.restore();
 }
 
-function renderWheels(context: CanvasRenderingContext2D, position: Vector) {
+function drawWheels(context: CanvasRenderingContext2D, position: Vector): void {
   const leftEdge = position.x - ROD_HALF_LENGTH;
   const rightEdge = position.x + ROD_HALF_LENGTH;
 
@@ -54,29 +53,17 @@ function renderWheels(context: CanvasRenderingContext2D, position: Vector) {
   const topRotationAngle = position.x / (ROD_TOP_WHEEL_RADIUS + LINE_THICKNESS);
   const bottomRotationAngle = -position.x / (ROD_BOTTOM_WHEEL_RADIUS + LINE_THICKNESS);
 
-  renderWheel(
-    context,
-    topLeftWheelCenterX,
-    topWheelCenterY,
-    ROD_TOP_WHEEL_RADIUS,
-    topRotationAngle
-  );
-  renderWheel(
-    context,
-    topRightWheelCenterX,
-    topWheelCenterY,
-    ROD_TOP_WHEEL_RADIUS,
-    topRotationAngle
-  );
+  drawWheel(context, topLeftWheelCenterX, topWheelCenterY, ROD_TOP_WHEEL_RADIUS, topRotationAngle);
+  drawWheel(context, topRightWheelCenterX, topWheelCenterY, ROD_TOP_WHEEL_RADIUS, topRotationAngle);
 
-  renderWheel(
+  drawWheel(
     context,
     bottomLeftWheelCenterX,
     bottomWheelCenterY,
     ROD_BOTTOM_WHEEL_RADIUS,
     bottomRotationAngle
   );
-  renderWheel(
+  drawWheel(
     context,
     bottomRightWheelCenterX,
     bottomWheelCenterY,
@@ -88,7 +75,7 @@ function renderWheels(context: CanvasRenderingContext2D, position: Vector) {
 
   context.lineWidth = PIVOT_THICKNESS;
   context.lineCap = 'round';
-  context.strokeStyle = 'white';
+  context.strokeStyle = STROKE_COLOR;
 
   context.beginPath();
   context.moveTo(topLeftWheelCenterX, topWheelCenterY);
@@ -105,19 +92,19 @@ function renderWheels(context: CanvasRenderingContext2D, position: Vector) {
   context.restore();
 }
 
-function renderWheel(
+function drawWheel(
   context: CanvasRenderingContext2D,
   centerX: number,
   centerY: number,
   radius: number,
   rotation: number
-) {
+): void {
   context.save();
 
   context.beginPath();
   context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
   context.lineWidth = LINE_THICKNESS;
-  context.strokeStyle = 'white';
+  context.strokeStyle = STROKE_COLOR;
   context.stroke();
 
   context.restore();
@@ -127,17 +114,17 @@ function renderWheel(
     spokeIndex < SPOKES_COUNT;
     spokeIndex++, spokeRotation += SPOKE_ROTATION
   ) {
-    renderSpoke(context, centerX, centerY, radius - LINE_THICKNESS * 2, spokeRotation);
+    drawSpoke(context, centerX, centerY, radius - LINE_THICKNESS * 2, spokeRotation);
   }
 }
 
-function renderSpoke(
+function drawSpoke(
   context: CanvasRenderingContext2D,
   centerX: number,
   centerY: number,
   radius: number,
   rotation: number
-) {
+): void {
   context.save();
 
   context.beginPath();
@@ -149,7 +136,7 @@ function renderSpoke(
     rotation - SPOKE_HALF_ANGLE,
     rotation + SPOKE_HALF_ANGLE
   );
-  context.fillStyle = 'white';
+  context.fillStyle = STROKE_COLOR;
   context.fill();
 
   context.restore();

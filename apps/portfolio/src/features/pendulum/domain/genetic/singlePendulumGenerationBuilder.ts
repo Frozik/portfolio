@@ -3,8 +3,14 @@ import { clamp, isNil, orderBy, shuffle, sum } from 'lodash-es';
 
 import { RAILS_HALF_LENGTH } from '../constants';
 import { TensorflowPlayer } from '../players/TensorflowPlayer';
-import type { IPendulumOptions, IRobotPlayer, IScoredPlayer, TPlayer } from '../types';
-import { EPlayerType } from '../types';
+import type {
+  INextGenerationEntry,
+  IPendulumOptions,
+  IRobotPlayer,
+  IScoredPlayer,
+  TCompetitionOutcome,
+} from '../types';
+import { isScoredRobot } from '../types';
 import {
   HALT_PLAYER_SCORE_PER_MS,
   HIGH_SCORE_PER_MS,
@@ -18,6 +24,11 @@ enum EAction {
   Crossover = 'crossover',
   Pick = 'pick',
   New = 'new',
+}
+
+interface IRobotEntry extends INextGenerationEntry {
+  readonly player: IRobotPlayer;
+  readonly pendulumOptions?: Partial<IPendulumOptions>;
 }
 
 // Fraction of the population kept as elite survivors each generation (top 1/5th).
@@ -41,14 +52,12 @@ const NEW_PLAYER_PROBABILITY = 1;
 
 export function singlePendulumGenerationBuilder(populationSize: number, maxRuns: number) {
   return async (
-    playersWithScore: IScoredPlayer[],
+    playersWithScore: readonly IScoredPlayer[],
     timeStep: DOMHighResTimeStamp,
     runsPassed: number
-  ): Promise<
-    false | (TPlayer | { player: TPlayer; pendulumOptions: Partial<IPendulumOptions> })[]
-  > => {
+  ): Promise<TCompetitionOutcome> => {
     if (runsPassed >= maxRuns) {
-      return false;
+      return { kind: 'finished' };
     }
 
     const partSize = Math.trunc(
@@ -56,32 +65,28 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
     );
 
     const orderedPlayersWithScores = orderBy(playersWithScore, ({ score }) => score, 'desc').filter(
-      (playerWithScore: IScoredPlayer): playerWithScore is IScoredPlayer<IRobotPlayer> =>
-        playerWithScore.player.type === EPlayerType.Robot
+      isScoredRobot
     );
 
-    const newPopulation: (
-      | IRobotPlayer
-      | { player: IRobotPlayer; pendulumOptions: Partial<IPendulumOptions> }
-    )[] = [];
+    const newPopulation: IRobotEntry[] = [];
 
     for (const { player, score } of orderedPlayersWithScores.slice(0, partSize)) {
       if (score <= timeStep * HALT_PLAYER_SCORE_PER_MS) {
-        newPopulation.push(await player.mutate(HALT_PLAYER_MUTATION_RATE));
+        newPopulation.push({ player: await player.mutate(HALT_PLAYER_MUTATION_RATE) });
       } else if (score <= timeStep * LOW_PLAYER_SCORE_PER_MS) {
         for (const mutationRate of LOW_PLAYER_MUTATION_RATES) {
-          newPopulation.push(await player.mutate(mutationRate));
+          newPopulation.push({ player: await player.mutate(mutationRate) });
         }
       } else {
         newPopulation.push(putPlayerInRandomPosition(player, timeStep, score));
       }
     }
 
-    for (let index = 0; index < partSize; index++) {
-      const bestPlayer = newPopulation[index];
-      if (!('player' in bestPlayer) && !isNil(bestPlayer.mutate)) {
+    // Only survivors kept at the rail center seed the elite mutations.
+    for (const { player, pendulumOptions } of newPopulation.slice(0, partSize)) {
+      if (isNil(pendulumOptions)) {
         for (const mutationRate of ELITE_MUTATION_RATES) {
-          newPopulation.push(await bestPlayer.mutate(mutationRate));
+          newPopulation.push({ player: await player.mutate(mutationRate) });
         }
       }
     }
@@ -101,14 +106,14 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
         case EAction.Mutate: {
           const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
 
-          newPopulation.push(await randomPlayer.mutate(STANDARD_MUTATION_RATE));
+          newPopulation.push({ player: await randomPlayer.mutate(STANDARD_MUTATION_RATE) });
 
           break;
         }
         case EAction.AggressiveMutation: {
           const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
 
-          newPopulation.push(await randomPlayer.mutate(AGGRESSIVE_MUTATION_RATE));
+          newPopulation.push({ player: await randomPlayer.mutate(AGGRESSIVE_MUTATION_RATE) });
 
           break;
         }
@@ -117,29 +122,28 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
           const randomPlayer2 = pickRandomArrayElement(orderedPlayersWithScores).player;
 
           if (randomPlayer1 !== randomPlayer2) {
-            newPopulation.push(await randomPlayer1.crossoverModels(randomPlayer2));
+            newPopulation.push({ player: await randomPlayer1.crossoverModels(randomPlayer2) });
           }
 
           break;
         }
         case EAction.Pick: {
-          if (shuffledPlayers.length > 0) {
-            const { player } = shuffledPlayers.splice(0, 1)[0];
-
-            newPopulation.push(player);
+          const picked = shuffledPlayers.pop();
+          if (!isNil(picked)) {
+            newPopulation.push({ player: picked.player });
           }
 
           break;
         }
         case EAction.New: {
-          newPopulation.push(new TensorflowPlayer());
+          newPopulation.push({ player: new TensorflowPlayer() });
 
           break;
         }
       }
     }
 
-    return newPopulation;
+    return { kind: 'nextGeneration', entries: newPopulation };
   };
 }
 
@@ -147,33 +151,34 @@ function putPlayerInRandomPosition(
   player: IRobotPlayer,
   timeStep: DOMHighResTimeStamp,
   score: number
-): IRobotPlayer | { player: IRobotPlayer; pendulumOptions: Partial<IPendulumOptions> } {
+): IRobotEntry {
   if (score <= timeStep * MEDIUM_SCORE_PER_MS) {
-    return player;
+    return { player };
   }
 
   const positionMaxOffset = clamp(score / (timeStep * HIGH_SCORE_PER_MS), 0, RAILS_HALF_LENGTH);
 
   if (positionMaxOffset === 0) {
-    return player;
+    return { player };
   }
 
-  const pendulumOptions: Partial<IPendulumOptions> = {
-    pivotPosition: randomNumber(-positionMaxOffset, positionMaxOffset),
+  return {
+    player,
+    pendulumOptions: { pivotPosition: randomNumber(-positionMaxOffset, positionMaxOffset) },
   };
-
-  return { player, pendulumOptions };
 }
 
 function randomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
-function pickRandomArrayElement<T>(array: T[]): T {
+function pickRandomArrayElement<TElement>(array: readonly TElement[]): TElement {
   return array[Math.trunc(Math.random() * array.length)];
 }
 
-function actionRandom<TAction>(...actions: { action: TAction; probability: number }[]): TAction {
+function actionRandom<TAction>(
+  ...actions: readonly { readonly action: TAction; readonly probability: number }[]
+): TAction {
   assert(actions.length > 0, 'Actions must not be empty');
 
   const probabilitySum = sum(actions.map(({ probability }) => probability));

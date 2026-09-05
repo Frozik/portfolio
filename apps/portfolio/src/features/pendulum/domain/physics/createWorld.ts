@@ -4,8 +4,9 @@ import { Bodies, Body, Constraint, Engine, World } from 'matter-js';
 
 import { BOB_RADIUS, RAILS_HALF_LENGTH, ROD_LENGTH } from '../constants';
 import type { IPendulumOptions, IWorld } from '../types';
+import { setWorldGravity } from './world-gravity';
 
-export function createWorld(options: IPendulumOptions): IWorld {
+export function createWorld(options: IPendulumOptions, gravity: number): IWorld {
   assert(options.bobsCount >= 1, 'Bobs count must be at least 1');
 
   const engine = Engine.create();
@@ -59,9 +60,8 @@ export function createWorld(options: IPendulumOptions): IWorld {
     });
   }
 
-  return {
-    engine,
-    pivot,
-    bobs,
-  };
+  const pendulumWorld: IWorld = { engine, pivot, bobs };
+  setWorldGravity(pendulumWorld, gravity);
+
+  return pendulumWorld;
 }

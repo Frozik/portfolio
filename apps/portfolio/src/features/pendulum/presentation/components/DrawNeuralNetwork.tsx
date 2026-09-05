@@ -16,8 +16,8 @@ import { ValueDescriptorFail } from '../../../../shared/components/ValueDescript
 import { Alert } from '../../../../shared/ui/Alert';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { buildNeuralNetworkLayout, findNeuronAtPoint } from '../../domain/neural-network/layout';
-import { renderNeuralNetwork } from '../../domain/renderers/renderNeuralNetwork';
 import { OVERLAY_MESSAGE_CONTAINER_CLASS, PLAYER_LABEL_CLASS } from '../constants';
+import { drawNeuralNetwork } from '../render/draw-neural-network';
 import { pendulumT } from '../translations';
 
 const ICON_SIZE = 16;
@@ -40,15 +40,15 @@ export const DrawNeuralNetwork = observer(() => {
   }, []);
 
   const store = usePendulumStore();
-  const robotVD = store.currentRobot;
+  const robot = store.selectedRobot;
 
   const layers = useMemo(
     () =>
-      matchValueDescriptor(robotVD, {
-        synced: ({ value: robot }) => robot.getModelDescription(),
+      matchValueDescriptor(robot, {
+        synced: ({ value }) => value.describeNetwork(),
         unsynced: () => undefined,
       }),
-    [robotVD]
+    [robot]
   );
 
   const layout = useMemo(() => buildNeuralNetworkLayout(layers ?? []), [layers]);
@@ -60,7 +60,7 @@ export const DrawNeuralNetwork = observer(() => {
       return;
     }
 
-    renderNeuralNetwork(context, {
+    drawNeuralNetwork(context, {
       layout,
       canvasWidth: width,
       canvasHeight: height,
@@ -83,12 +83,12 @@ export const DrawNeuralNetwork = observer(() => {
         width={width}
         height={height}
       />
-      {matchValueDescriptor(robotVD, {
-        synced: ({ value: robot }) => (
+      {matchValueDescriptor(robot, {
+        synced: ({ value }) => (
           <div className={PLAYER_LABEL_CLASS}>
             <Bot size={ICON_SIZE} />
 
-            {robot.name}
+            {value.name}
           </div>
         ),
         unsynced: vd => {

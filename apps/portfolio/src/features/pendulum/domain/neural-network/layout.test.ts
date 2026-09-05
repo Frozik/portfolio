@@ -1,5 +1,3 @@
-import type { TLayerDescriptor } from '../players/types';
-import { ELayerType, ENeuronLayerType } from '../players/types';
 import {
   AXON_LENGTH,
   NEURON_DIAMETER,
@@ -9,6 +7,8 @@ import {
 } from './constants';
 import type { IAxonLayoutObject, INeuronLayoutObject } from './layout';
 import { buildNeuralNetworkLayout, findNeuronAtPoint, getNeuralNetworkOrigin } from './layout';
+import type { TLayerDescriptor } from './types';
+import { ELayerType, ENeuronLayerType } from './types';
 
 function createLayers(): TLayerDescriptor[] {
   return [

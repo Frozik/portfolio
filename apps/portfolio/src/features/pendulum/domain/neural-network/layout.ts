@@ -1,13 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
-import type {
-  ENeuronLayerType,
-  IAxonDescriptor,
-  INeuronDescriptor,
-  INeuronLayerDescriptor,
-  TLayerDescriptor,
-} from '../players/types';
-import { ELayerType } from '../players/types';
+import type { IPoint } from '../types';
 import {
   AXON_LENGTH,
   NEURON_DIAMETER,
@@ -15,40 +8,45 @@ import {
   NEURON_RADIUS,
   NEURON_SQUARE_RADIUS,
 } from './constants';
+import type {
+  ENeuronLayerType,
+  IAxonDescriptor,
+  INeuronDescriptor,
+  INeuronLayerDescriptor,
+  TLayerDescriptor,
+} from './types';
+import { ELayerType } from './types';
 
 export interface INeuronLayoutObject extends INeuronDescriptor {
-  type: ELayerType.Neuron;
-  layerType: ENeuronLayerType;
-  x: number;
-  y: number;
+  readonly type: ELayerType.Neuron;
+  readonly layerType: ENeuronLayerType;
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface IAxonLayoutObject extends IAxonDescriptor {
-  type: ELayerType.Axon;
-  fromX: number;
-  fromY: number;
-  toX: number;
-  toY: number;
-  neuronFromX: number;
-  neuronFromY: number;
-  neuronToX: number;
-  neuronToY: number;
+  readonly type: ELayerType.Axon;
+  readonly fromX: number;
+  readonly fromY: number;
+  readonly toX: number;
+  readonly toY: number;
+  readonly neuronFromX: number;
+  readonly neuronFromY: number;
+  readonly neuronToX: number;
+  readonly neuronToY: number;
 }
 
 export type TNeuralNetworkLayoutObject = INeuronLayoutObject | IAxonLayoutObject;
 
 export interface INeuralNetworkLayout {
-  objects: TNeuralNetworkLayoutObject[];
-  width: number;
-  height: number;
+  readonly objects: readonly TNeuralNetworkLayoutObject[];
+  readonly width: number;
+  readonly height: number;
 }
 
-export interface IPoint {
-  x: number;
-  y: number;
-}
-
-export function buildNeuralNetworkLayout(layers: TLayerDescriptor[]): INeuralNetworkLayout {
+export function buildNeuralNetworkLayout(
+  layers: readonly TLayerDescriptor[]
+): INeuralNetworkLayout {
   const neuronLayers = layers.filter(
     (layer): layer is INeuronLayerDescriptor => layer.type === ELayerType.Neuron
   );

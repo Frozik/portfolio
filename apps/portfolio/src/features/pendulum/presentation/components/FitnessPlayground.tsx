@@ -1,84 +1,37 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   isFailValueDescriptor,
   isLoadingValueDescriptor,
   matchValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
+
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { OVERLAY_MESSAGE_CONTAINER_CLASS } from '../constants';
-import { useCompetition } from '../hooks/useCompetition';
-import { useFrameTicker } from '../hooks/useFrameTicker';
-import { usePlayground } from '../hooks/usePlayground';
-import { useRenderer } from '../hooks/useRenderer';
-import { FrameTickerDriver } from './FrameTickerDriver';
 import { PendulumPlayground } from './PendulumPlayground';
 
 export const FitnessPlayground = observer(() => {
   const store = usePendulumStore();
 
-  const currentCompetition = store.currentCompetition;
-
-  const paused = store.paused;
-  const handlePausedChange = useFunction((next: boolean) => store.setPaused(next));
-
-  const competition = useCompetition();
-
-  const gravity = store.playgroundGravity;
-  const handleGravityChange = useFunction((g: number) => store.setPlaygroundGravity(g));
-
-  const [renderer, setContexts] = useRenderer();
-  const ticker = useFrameTicker(
-    useFunction((_, multiplier) =>
-      new Array(multiplier).fill(0).map(() => 8 + Math.round(Math.random() * 2400) / 100)
-    )
-  );
-  const playground = usePlayground(ticker, renderer, { gravity });
-
-  useEffect(
-    () =>
-      void playground
-        ?.clear()
-        .then(() => (isNil(competition) ? undefined : playground.addCompetition(competition))),
-    [playground, competition]
-  );
-
-  return (
-    <>
-      <FrameTickerDriver ticker={ticker} paused={paused} />
-      {matchValueDescriptor(currentCompetition, {
-        synced: () => (
-          <PendulumPlayground
-            paused={paused}
-            gravity={gravity}
-            pauseResumeKeyCode="Space"
-            onGravityChanged={handleGravityChange}
-            onPausedChanged={handlePausedChange}
-            onSetContexts={setContexts}
-          />
-        ),
-        unsynced: vd => {
-          if (isLoadingValueDescriptor(vd)) {
-            return (
-              <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
-                <OverlayLoader />
-              </div>
-            );
-          }
-          if (isFailValueDescriptor(vd)) {
-            return (
-              <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
-                <ValueDescriptorFail fail={vd.fail} />
-              </div>
-            );
-          }
-          return null;
-        },
-      })}
-    </>
-  );
+  return matchValueDescriptor(store.generations, {
+    synced: () => <PendulumPlayground session={store.fitness} pauseResumeKeyCode="Space" />,
+    unsynced: generations => {
+      if (isLoadingValueDescriptor(generations)) {
+        return (
+          <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
+            <OverlayLoader />
+          </div>
+        );
+      }
+      if (isFailValueDescriptor(generations)) {
+        return (
+          <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
+            <ValueDescriptorFail fail={generations.fail} />
+          </div>
+        );
+      }
+      return null;
+    },
+  });
 });

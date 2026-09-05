@@ -1,12 +1,12 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { NEURON_MARGIN, NEURON_RADIUS } from '../neural-network/constants';
+import { NEURON_MARGIN, NEURON_RADIUS } from '../../domain/neural-network/constants';
 import type {
   IAxonLayoutObject,
   INeuralNetworkLayout,
   INeuronLayoutObject,
-} from '../neural-network/layout';
-import { getNeuralNetworkOrigin } from '../neural-network/layout';
-import { ELayerType, ENeuronLayerType } from '../players/types';
+} from '../../domain/neural-network/layout';
+import { getNeuralNetworkOrigin } from '../../domain/neural-network/layout';
+import { ELayerType, ENeuronLayerType } from '../../domain/neural-network/types';
 
 const NEURON_FILL_COLORS: Record<ENeuronLayerType, string> = {
   [ENeuronLayerType.Input]: '#d4380d',
@@ -24,7 +24,7 @@ const LINE_THICKNESS_SELECTED = 4;
 const TEXT_MARGIN = 4;
 const WEIGHT_TEXT_FONT = '14px monospace';
 
-export function renderNeuralNetwork(
+export function drawNeuralNetwork(
   context: CanvasRenderingContext2D,
   {
     layout,
@@ -32,12 +32,12 @@ export function renderNeuralNetwork(
     canvasHeight,
     selectedNeuronId,
   }: {
-    layout: INeuralNetworkLayout;
-    canvasWidth: number;
-    canvasHeight: number;
-    selectedNeuronId: string | undefined;
+    readonly layout: INeuralNetworkLayout;
+    readonly canvasWidth: number;
+    readonly canvasHeight: number;
+    readonly selectedNeuronId: string | undefined;
   }
-) {
+): void {
   context.clearRect(0, 0, canvasWidth, canvasHeight);
 
   context.save();
@@ -90,7 +90,7 @@ function drawNeuron(
   context: CanvasRenderingContext2D,
   neuron: INeuronLayoutObject,
   selectedNeuronId: string | undefined
-) {
+): void {
   const isSelected = selectedNeuronId === neuron.id;
 
   context.beginPath();
@@ -106,7 +106,7 @@ function drawAxon(
   context: CanvasRenderingContext2D,
   axon: IAxonLayoutObject,
   selectedNeuronId: string | undefined
-) {
+): void {
   const isSelected = selectedNeuronId === axon.from || selectedNeuronId === axon.to;
 
   context.beginPath();
@@ -121,7 +121,7 @@ function drawNeuronBias(
   context: CanvasRenderingContext2D,
   neuron: INeuronLayoutObject,
   selectedNeuronId: string | undefined
-) {
+): void {
   if (selectedNeuronId !== neuron.id || neuron.layerType === ENeuronLayerType.Input) {
     return;
   }
@@ -145,7 +145,7 @@ function drawAxonWeight(
   context: CanvasRenderingContext2D,
   axon: IAxonLayoutObject,
   selectedNeuronId: string | undefined
-) {
+): void {
   if (selectedNeuronId !== axon.from && selectedNeuronId !== axon.to) {
     return;
   }
@@ -195,14 +195,14 @@ function drawLabel(
     width,
     height,
   }: {
-    rectX: number;
-    rectY: number;
-    textX: number;
-    textY: number;
-    width: number;
-    height: number;
+    readonly rectX: number;
+    readonly rectY: number;
+    readonly textX: number;
+    readonly textY: number;
+    readonly width: number;
+    readonly height: number;
   }
-) {
+): void {
   context.fillStyle = LABEL_BACKGROUND_COLOR;
   context.fillRect(rectX, rectY, width + 2 * TEXT_MARGIN, height + 2 * TEXT_MARGIN);
 

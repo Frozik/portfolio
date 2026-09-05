@@ -1,3 +1,8 @@
+export const STROKE_COLOR = 'white';
+export const BOB_FILL_COLOR = '#FF5733';
+export const RAILS_COLOR = '#999999';
+export const FORCE_COLOR = '#4096ff';
+
 export const LINE_THICKNESS = 2;
 
 export const RAILS_THICKNESS = 12;

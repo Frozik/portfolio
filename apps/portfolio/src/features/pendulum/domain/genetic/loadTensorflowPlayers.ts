@@ -1,8 +1,8 @@
 import { TensorflowPlayer } from '../players/TensorflowPlayer';
-import type { IRobotPlayer } from '../types';
+import type { IRobotPlayer, RobotModelUrl } from '../types';
 
-export async function loadTensorflowPlayers(
-  players: { name: string; modelUrl: string }[]
-): Promise<IRobotPlayer[]> {
+export function loadTensorflowPlayers(
+  players: readonly { readonly name: string; readonly modelUrl: RobotModelUrl }[]
+): Promise<readonly IRobotPlayer[]> {
   return Promise.all(players.map(({ name, modelUrl }) => TensorflowPlayer.load(name, modelUrl)));
 }

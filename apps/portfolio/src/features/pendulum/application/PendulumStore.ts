@@ -1,12 +1,15 @@
+import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
-import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
+import { ValueDescriptorError } from '@frozik/utils/value-descriptors/fails/error';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
   createUnsyncedValueDescriptor,
   EMPTY_VD,
+  isFailValueDescriptor,
+  isLoadingValueDescriptor,
   isSyncedValueDescriptor,
   REQUESTING_VD,
   WAITING_VD,
@@ -14,195 +17,181 @@ import {
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
 
-import type { IGeneration } from '../domain/defs';
-import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
-import type { ICompetition } from '../domain/types';
-import type { TModuleIndexDBGenerations } from '../infrastructure/IndexedDBGenerationsRepository';
-import { createIndexDBGenerationsModule } from '../infrastructure/IndexedDBGenerationsRepository';
+import type { IGeneration } from '../domain/generation';
+import { maxPopulationSize, mergeSnapshotWithOptimisticTail } from '../domain/generation';
+import { HumanPlayer } from '../domain/players/HumanPlayer';
+import type { IFrameScheduler } from '../domain/ports/frame-scheduler';
+import type { IGenerationsRepository, IRobotRecord } from '../domain/ports/generations-repository';
+import type { IKeyStateSource } from '../domain/ports/key-state-source';
+import { randomizedSubsteps, realTimeStep } from '../domain/simulation-speed';
+import type { ICompetition, IRobotPlayer } from '../domain/types';
 import { createFitnessCompetition } from './createFitnessCompetition';
+import { PlaygroundSession } from './PlaygroundSession';
 
-const DEFAULT_GRAVITY = 1;
+interface IPendulumStoreDependencies {
+  readonly repository: IGenerationsRepository;
+  readonly frames: IFrameScheduler;
+  readonly createKeyStateSource: () => IKeyStateSource;
+  readonly loadRobot: (record: IRobotRecord) => Promise<IRobotPlayer>;
+}
 
 export class PendulumStore {
-  playgroundGravity: number = DEFAULT_GRAVITY;
-  gravity: number = DEFAULT_GRAVITY;
-  paused: boolean = true;
-  competitionsList: ValueDescriptor<ISO[]> = WAITING_VD;
-  currentCompetition: ValueDescriptor<{
-    competitionStart: ISO;
-    generations: IGeneration[];
-  }> = WAITING_VD;
-  currentRobotId: string | undefined = undefined;
-  currentRobot: ValueDescriptor<TensorflowPlayer> = WAITING_VD;
-  isNeuralNetworkDialogOpen: boolean = false;
+  competitionsList: ValueDescriptor<readonly ISO[]> = WAITING_VD;
+  /** Generations of the open competition; WAITING while none is open. */
+  generations: ValueDescriptor<readonly IGeneration[]> = WAITING_VD;
+  /** The running orchestrator of the open competition, created once its generations are known. */
   competition: ICompetition | undefined = undefined;
+  /** The robot picked from the generations table; WAITING when a human plays instead. */
+  selectedRobot: ValueDescriptor<IRobotPlayer> = WAITING_VD;
+  isNeuralNetworkDialogOpen = false;
 
-  dbModule: TModuleIndexDBGenerations | undefined = undefined;
+  readonly fitness: PlaygroundSession;
+  readonly test: PlaygroundSession;
 
-  private readonly disposers: (() => void)[] = [];
-  private loadCompetitionSub?: () => void;
-  private loadRobotSub?: () => void;
+  private readonly disposers: VoidFunction[] = [];
+  private unwatchGenerations: VoidFunction | undefined;
+  private robotLoadToken = 0;
 
-  constructor() {
-    makeAutoObservable<PendulumStore, 'disposers' | 'loadCompetitionSub' | 'loadRobotSub'>(
+  constructor(private readonly dependencies: IPendulumStoreDependencies) {
+    this.fitness = new PlaygroundSession(dependencies.frames, (_, multiplier) =>
+      randomizedSubsteps(multiplier)
+    );
+    this.test = new PlaygroundSession(dependencies.frames, realTimeStep);
+
+    makeAutoObservable<
+      PendulumStore,
+      'dependencies' | 'disposers' | 'unwatchGenerations' | 'robotLoadToken'
+    >(
       this,
       {
+        dependencies: false,
         disposers: false,
-        loadCompetitionSub: false,
-        loadRobotSub: false,
-        // The competition is a stateful orchestrator, not a data bag: deep
-        // observability would turn its `generationsCount` getter into a cached
-        // computed over a plain closure counter and never invalidate it.
+        unwatchGenerations: false,
+        robotLoadToken: false,
+        fitness: false,
+        test: false,
         competition: observableRef,
+        selectedRobot: observableRef,
       },
       { autoBind: true }
     );
 
-    // Initialize IndexedDB module immediately in constructor.
-    // Runs once per store instance; subscriptions are torn down in dispose().
-    this.initGenerationsSync();
-
-    // Keyed on the competition start alone — appending a generation must not
-    // rebuild the running competition (that would restart the playground).
     this.disposers.push(
-      reaction(
-        () =>
-          isSyncedValueDescriptor(this.currentCompetition)
-            ? this.currentCompetition.value.competitionStart
-            : undefined,
-        this.syncCompetition,
-        { fireImmediately: true }
-      )
+      dependencies.repository.watchCompetitionStarts({
+        next: starts => {
+          runInAction(() => {
+            this.competitionsList =
+              starts.length > 0 ? createSyncedValueDescriptor(starts) : EMPTY_VD;
+          });
+        },
+        error: error => {
+          runInAction(() => {
+            this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
+          });
+        },
+      }),
+      reaction(() => this.competition, this.runCompetition),
+      reaction(() => this.selectedRobot, this.runTestPlayer, { fireImmediately: true })
     );
   }
 
-  setPlaygroundGravity(g: number): void {
-    this.playgroundGravity = g;
-  }
-
-  setGravity(g: number): void {
-    this.gravity = g;
-  }
-
-  setPaused(paused: boolean): void {
-    this.paused = paused;
-  }
-
-  setCompetitionsList(vd: ValueDescriptor<ISO[]>): void {
-    this.competitionsList = vd;
-  }
-
-  setCurrentCompetition(
-    vd: ValueDescriptor<{ competitionStart: ISO; generations: IGeneration[] }>
-  ): void {
-    this.currentCompetition = vd;
-  }
-
-  get generations(): IGeneration[] {
-    if (isSyncedValueDescriptor(this.currentCompetition)) {
-      return this.currentCompetition.value.generations;
-    }
-    return [];
-  }
-
   get maxPopulationSize(): number {
-    return this.generations.reduce((acc, { players: { length } }) => Math.max(acc, length), 0);
+    return maxPopulationSize(this.syncedGenerations);
   }
 
-  addCompetitionRun(data: { competitionStart: ISO; generation: IGeneration }): void {
-    if (isSyncedValueDescriptor(this.currentCompetition)) {
-      this.currentCompetition = createSyncedValueDescriptor({
-        ...this.currentCompetition.value,
-        generations: [...this.currentCompetition.value.generations, data.generation],
-      });
-    }
+  private get syncedGenerations(): readonly IGeneration[] {
+    return isSyncedValueDescriptor(this.generations) ? this.generations.value : [];
+  }
 
-    if (!isNil(this.dbModule)) {
-      this.dbModule
-        .addGeneration$(data.competitionStart, data.generation)
-        .catch((error: unknown) => {
-          runInAction(() => {
-            this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
-          });
+  createCompetition(): void {
+    const competitionStart = getNowISO8601();
+
+    this.closeCompetition();
+    this.generations = createSyncedValueDescriptor([]);
+    this.competition = this.buildCompetition(competitionStart);
+    this.fitness.setPaused(false);
+  }
+
+  loadCompetition(competitionStart: ISO): void {
+    this.closeCompetition();
+    this.generations = REQUESTING_VD;
+
+    this.unwatchGenerations = this.dependencies.repository.watchGenerations(competitionStart, {
+      next: snapshot => {
+        runInAction(() => {
+          this.generations = createSyncedValueDescriptor(
+            mergeSnapshotWithOptimisticTail(snapshot, this.syncedGenerations)
+          );
+          this.competition ??= this.buildCompetition(competitionStart);
         });
-    }
+      },
+      error: error => {
+        runInAction(() => {
+          this.generations = createUnsyncedValueDescriptor(toFail(error));
+        });
+      },
+    });
+    this.fitness.setPaused(false);
   }
 
-  deleteCompetition(start: ISO): void {
-    if (isNil(this.dbModule)) {
-      return;
+  deleteCompetition(competitionStart: ISO): void {
+    if (this.competition?.start === competitionStart) {
+      this.closeCompetition();
+      this.fitness.setPaused(true);
     }
 
-    const isCurrent =
-      isSyncedValueDescriptor(this.currentCompetition) &&
-      this.currentCompetition.value.competitionStart === start;
-
-    this.dbModule.deleteCompetition$(start).catch((error: unknown) => {
+    this.dependencies.repository.deleteCompetition(competitionStart).catch((error: unknown) => {
       runInAction(() => {
-        this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
+        this.generations = createUnsyncedValueDescriptor(toFail(error));
       });
     });
-
-    if (isCurrent) {
-      this.loadCompetitionSub?.();
-      this.loadCompetitionSub = undefined;
-      this.currentCompetition = EMPTY_VD;
-    }
   }
 
-  loadCompetition(start: ISO): void {
-    if (isNil(this.dbModule)) {
+  selectRobot(robotName: string | undefined): void {
+    const token = ++this.robotLoadToken;
+
+    if (isNil(robotName)) {
+      this.selectedRobot = WAITING_VD;
       return;
     }
 
-    this.loadCompetitionSub?.();
+    this.selectedRobot = REQUESTING_VD;
 
-    this.currentCompetition = REQUESTING_VD;
-
-    const obs$ = this.dbModule.getGenerations$(start);
-
-    const sub = obs$.subscribe({
-      next: (generations: IGeneration[]) => {
-        runInAction(() => {
-          // The DB snapshot may lag behind optimistic appends from
-          // addCompetitionRun (persistence is fire-and-forget and slow while
-          // TF training saturates the main thread). Replacing the list
-          // wholesale would briefly drop freshly computed generations — keep
-          // the optimistic tail that the snapshot does not know about yet.
-          const snapshotMaxId =
-            generations.length > 0
-              ? generations[generations.length - 1].id
-              : Number.NEGATIVE_INFINITY;
-          const optimisticTail =
-            isSyncedValueDescriptor(this.currentCompetition) &&
-            this.currentCompetition.value.competitionStart === start
-              ? this.currentCompetition.value.generations.filter(
-                  generation => generation.id > snapshotMaxId
-                )
-              : [];
-
-          this.currentCompetition = createSyncedValueDescriptor({
-            competitionStart: start,
-            generations: [...generations, ...optimisticTail],
+    this.dependencies.repository
+      .findRobot(robotName)
+      .then(record => {
+        if (isNil(record)) {
+          throw new ValueDescriptorError(
+            'Robot not found',
+            EValueDescriptorErrorCode.NOT_FOUND,
+            `Robot "${robotName}" not found in database`
+          );
+        }
+        return this.dependencies.loadRobot(record);
+      })
+      .then(
+        player => {
+          if (token !== this.robotLoadToken) {
+            player.dispose();
+            return;
+          }
+          runInAction(() => {
+            this.selectedRobot = createSyncedValueDescriptor(player);
           });
-        });
-      },
-      error: (error: unknown) => {
-        runInAction(() => {
-          this.currentCompetition = createUnsyncedValueDescriptor(toFail(error));
-        });
-      },
-    });
-
-    this.loadCompetitionSub = () => sub.unsubscribe();
+        },
+        (error: unknown) => {
+          if (token !== this.robotLoadToken) {
+            return;
+          }
+          runInAction(() => {
+            this.selectedRobot = createUnsyncedValueDescriptor(toFail(error));
+          });
+        }
+      );
   }
 
-  setSelectedRobotId(robotId: string | undefined): void {
-    this.loadRobot(robotId);
-  }
-
-  openNeuralNetworkDialog(robotId: string): void {
-    this.loadRobot(robotId);
+  openNeuralNetworkDialog(robotName: string): void {
+    this.selectRobot(robotName);
     this.isNeuralNetworkDialogOpen = true;
   }
 
@@ -210,113 +199,65 @@ export class PendulumStore {
     this.isNeuralNetworkDialogOpen = false;
   }
 
-  loadRobot(robotId: string | undefined): void {
-    this.loadRobotSub?.();
-    this.loadRobotSub = undefined;
-
-    this.currentRobotId = robotId;
-
-    if (isNil(robotId) || isNil(this.dbModule)) {
-      this.currentRobot = WAITING_VD;
-      return;
-    }
-
-    this.currentRobot = REQUESTING_VD;
-
-    const sub = this.dbModule.getRobot$(robotId).subscribe({
-      next: robot => {
-        if (isNil(robot)) {
-          runInAction(() => {
-            this.currentRobot = createUnsyncedValueDescriptor(
-              Fail(EValueDescriptorErrorCode.NOT_FOUND, {
-                message: 'Robot not found',
-                description: `Robot "${robotId}" not found in database`,
-              })
-            );
-          });
-          return;
-        }
-
-        void TensorflowPlayer.load(robot.name, robot.modelUrl).then(
-          player => {
-            runInAction(() => {
-              this.currentRobot = createSyncedValueDescriptor(player);
-            });
-          },
-          error => {
-            runInAction(() => {
-              this.currentRobot = createUnsyncedValueDescriptor(toFail(error));
-            });
-          }
-        );
-      },
-      error: error => {
-        runInAction(() => {
-          this.currentRobot = createUnsyncedValueDescriptor(toFail(error));
-        });
-      },
-    });
-
-    this.loadRobotSub = () => sub.unsubscribe();
-  }
-
   dispose(): void {
-    this.loadRobotSub?.();
-    this.loadRobotSub = undefined;
-    this.loadCompetitionSub?.();
-    this.loadCompetitionSub = undefined;
-
+    this.robotLoadToken++;
+    this.closeCompetition();
     for (const disposer of this.disposers) {
       disposer();
     }
     this.disposers.length = 0;
+    this.fitness.dispose();
+    this.test.dispose();
   }
 
-  private syncCompetition(competitionStart: ISO | undefined): void {
-    if (isNil(competitionStart)) {
-      this.competition = undefined;
-      return;
-    }
+  private closeCompetition(): void {
+    this.unwatchGenerations?.();
+    this.unwatchGenerations = undefined;
+    this.competition = undefined;
+    this.generations = WAITING_VD;
+  }
 
-    this.competition = createFitnessCompetition({
+  private buildCompetition(competitionStart: ISO): ICompetition {
+    return createFitnessCompetition({
       competitionStart,
-      getGenerations: () => this.generations,
-      onGenerationCompleted: generation => this.addCompetitionRun({ competitionStart, generation }),
+      getGenerations: () => this.syncedGenerations,
+      onGenerationCompleted: generation => this.appendGeneration(competitionStart, generation),
+      saveRobotModel: (start, robot) => this.dependencies.repository.saveRobotModel(start, robot),
     });
   }
 
-  private initGenerationsSync(): void {
-    void createIndexDBGenerationsModule()
-      .then(dbModule => {
-        runInAction(() => {
-          this.dbModule = dbModule;
+  private appendGeneration(competitionStart: ISO, generation: IGeneration): void {
+    this.generations = createSyncedValueDescriptor([...this.syncedGenerations, generation]);
 
-          // If robotId was set before dbModule was ready, retry loading
-          if (!isNil(this.currentRobotId)) {
-            this.loadRobot(this.currentRobotId);
-          }
-        });
-
-        const sub = dbModule.getCompetitionsStarts$().subscribe({
-          next: (starts: ISO[]) => {
-            runInAction(() => {
-              this.competitionsList =
-                starts.length > 0 ? createSyncedValueDescriptor(starts) : EMPTY_VD;
-            });
-          },
-          error: (error: unknown) => {
-            runInAction(() => {
-              this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
-            });
-          },
-        });
-
-        this.disposers.push(() => sub.unsubscribe());
-      })
+    this.dependencies.repository
+      .addGeneration(competitionStart, generation)
       .catch((error: unknown) => {
         runInAction(() => {
-          this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
+          this.generations = createUnsyncedValueDescriptor(toFail(error));
         });
       });
+  }
+
+  private runCompetition(competition: ICompetition | undefined): void {
+    this.fitness.playground.clear();
+    if (isNil(competition)) {
+      return;
+    }
+
+    this.fitness.playground.addCompetition(competition).catch((error: unknown) => {
+      runInAction(() => {
+        this.generations = createUnsyncedValueDescriptor(toFail(error));
+      });
+    });
+  }
+
+  private runTestPlayer(robot: ValueDescriptor<IRobotPlayer>): void {
+    this.test.playground.clear();
+
+    if (isSyncedValueDescriptor(robot)) {
+      this.test.playground.addPlayer(robot.value);
+    } else if (!isLoadingValueDescriptor(robot) && !isFailValueDescriptor(robot)) {
+      this.test.playground.addPlayer(new HumanPlayer(this.dependencies.createKeyStateSource()));
+    }
   }
 }

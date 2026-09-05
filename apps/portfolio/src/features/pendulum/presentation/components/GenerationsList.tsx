@@ -1,8 +1,6 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
-import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import {
-  createSyncedValueDescriptor,
   isEmptyValueDescriptor,
   isFailValueDescriptor,
   isLoadingValueDescriptor,
@@ -27,7 +25,7 @@ import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { usePendulumStore } from '../../application/usePendulumStore';
-import type { IGeneration } from '../../domain/defs';
+import type { IGeneration, IGenerationPlayer } from '../../domain/generation';
 import { POPULATION_SIZE } from '../../domain/genetic/constants';
 import { OVERLAY_MESSAGE_CONTAINER_CLASS } from '../constants';
 import { pendulumT } from '../translations';
@@ -35,14 +33,6 @@ import { pendulumT } from '../translations';
 function getDateLocale(): string {
   return getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
 }
-
-type TGenerationPlayer = IGeneration['players'][number];
-
-type TGenerationRow = {
-  id: number;
-  maxScore: number;
-  players: TGenerationPlayer[];
-};
 
 function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
   if (score > 0) {
@@ -54,16 +44,16 @@ function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
   return 'blue';
 }
 
-const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
+const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, IGeneration, unknown>) => {
   const maxScore = getValue<number>();
   return <Tag color={scoreTagColor(maxScore)}>{maxScore}</Tag>;
 };
 
 const PLAYER_ACTION_ICON_SIZE = 14;
 
-const PlayerCellContent = memo(({ player }: { player: TGenerationPlayer }) => {
+const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer }) => {
   const store = usePendulumStore();
-  const handleSelectForTest = useFunction(() => store.setSelectedRobotId(player.name));
+  const handleSelectForTest = useFunction(() => store.selectRobot(player.name));
   const handleOpenNeuralNetwork = useFunction(() => store.openNeuralNetworkDialog(player.name));
 
   return (
@@ -95,8 +85,8 @@ const PlayerCellContent = memo(({ player }: { player: TGenerationPlayer }) => {
   );
 });
 
-const PlayerCell = ({ getValue }: CellContext<TDataTableFeatures, TGenerationRow, unknown>) => {
-  const player = getValue<TGenerationPlayer | undefined>();
+const PlayerCell = ({ getValue }: CellContext<TDataTableFeatures, IGeneration, unknown>) => {
+  const player = getValue<IGenerationPlayer | undefined>();
   if (isNil(player)) {
     return null;
   }
@@ -117,9 +107,9 @@ const CompetitionListItem = memo(
     onContinue,
     onDelete,
   }: {
-    startDate: 'new' | ISO;
-    onContinue: (competitionStart: ISO | undefined) => void;
-    onDelete: (competitionStart: ISO) => void;
+    readonly startDate: 'new' | ISO;
+    readonly onContinue: (competitionStart: ISO | undefined) => void;
+    readonly onDelete: (competitionStart: ISO) => void;
   }) => {
     const handleContinueClick = useFunction(() =>
       onContinue(startDate === 'new' ? undefined : startDate)
@@ -158,7 +148,7 @@ const CompetitionListItem = memo(
   }
 );
 
-const StartCompetitionPrompt = memo(({ onStart }: { onStart: VoidFunction }) => (
+const StartCompetitionPrompt = memo(({ onStart }: { readonly onStart: VoidFunction }) => (
   <div className="absolute inset-0 flex items-center justify-center">
     <Tooltip
       open
@@ -182,7 +172,7 @@ const StartCompetitionPrompt = memo(({ onStart }: { onStart: VoidFunction }) => 
   </div>
 ));
 
-const generationColumns: ColumnDef<TDataTableFeatures, TGenerationRow, unknown>[] = [
+const generationColumns: ColumnDef<TDataTableFeatures, IGeneration, unknown>[] = [
   {
     accessorKey: 'id',
     header: pendulumT.generationsList.columnId,
@@ -197,7 +187,7 @@ const generationColumns: ColumnDef<TDataTableFeatures, TGenerationRow, unknown>[
   },
   ...Array.from({ length: POPULATION_SIZE }, (_, playerIndex) => ({
     id: `player-${playerIndex}`,
-    accessorFn: ({ players }: TGenerationRow) => players[playerIndex],
+    accessorFn: ({ players }: IGeneration) => players[playerIndex],
     header: pendulumT.generationsList.columnPlayer(playerIndex + 1),
     size: 340,
     cell: PlayerCell,
@@ -208,29 +198,20 @@ export const GenerationsList = observer(() => {
   const store = usePendulumStore();
 
   const competitionsList = store.competitionsList;
-  const currentCompetition = store.currentCompetition;
-  const generations = store.generations;
+  const currentCompetition = store.generations;
   const maxPopulationSize = store.maxPopulationSize;
 
   const handleContinueCompetition = useFunction((competitionStart: ISO | undefined) => {
     if (isNil(competitionStart)) {
-      store.setCurrentCompetition(
-        createSyncedValueDescriptor({
-          competitionStart: getNowISO8601(),
-          generations: [],
-        })
-      );
+      store.createCompetition();
     } else {
       store.loadCompetition(competitionStart);
     }
-    store.setPaused(false);
   });
 
   const handleDeleteCompetition = useFunction((competitionStart: ISO) => {
     store.deleteCompetition(competitionStart);
   });
-
-  const handleCreateNewCompetition = useFunction(() => handleContinueCompetition(undefined));
 
   const renderCompetitionItem = useFunction((startDate: 'new' | ISO) => (
     <CompetitionListItem
@@ -258,7 +239,10 @@ export const GenerationsList = observer(() => {
     columnVisibility[`player-${playerIndex}`] = playerIndex < maxPopulationSize;
   }
 
-  const generationRows: TGenerationRow[] = generations;
+  const generationRows = matchValueDescriptor(currentCompetition, {
+    synced: ({ value }) => [...value],
+    unsynced: () => [],
+  });
 
   const failedDescriptor = [competitionsList, currentCompetition].find(isFailValueDescriptor);
 
@@ -280,7 +264,7 @@ export const GenerationsList = observer(() => {
 
       {isCompetitionPending &&
         (showsStartPrompt ? (
-          <StartCompetitionPrompt onStart={handleCreateNewCompetition} />
+          <StartCompetitionPrompt onStart={store.createCompetition} />
         ) : (
           <List
             className="absolute inset-0 overflow-auto p-3"

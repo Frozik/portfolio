@@ -10,26 +10,26 @@ export enum ENeuronLayerType {
 }
 
 export interface INeuronDescriptor {
-  id: string;
-  bias: number;
+  readonly id: string;
+  readonly bias: number;
 }
 
 export interface IAxonDescriptor {
-  id: string;
-  from: string;
-  to: string;
-  weight: number;
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly weight: number;
 }
 
 export interface INeuronLayerDescriptor {
-  type: ELayerType.Neuron;
-  neuronLayerType: ENeuronLayerType;
-  neurons: INeuronDescriptor[];
+  readonly type: ELayerType.Neuron;
+  readonly neuronLayerType: ENeuronLayerType;
+  readonly neurons: readonly INeuronDescriptor[];
 }
 
 export interface IAxonLayerDescriptor {
-  type: ELayerType.Axon;
-  axons: IAxonDescriptor[];
+  readonly type: ELayerType.Axon;
+  readonly axons: readonly IAxonDescriptor[];
 }
 
 export type TLayerDescriptor = INeuronLayerDescriptor | IAxonLayerDescriptor;

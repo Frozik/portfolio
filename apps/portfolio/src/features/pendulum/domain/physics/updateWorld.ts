@@ -2,7 +2,7 @@ import { clamp, isNil } from 'lodash-es';
 import { Body, Engine, Vector } from 'matter-js';
 
 import { RAILS_HALF_LENGTH } from '../constants';
-import type { IAction, IWorld } from '../types';
+import type { IAction, IPoint, IWorld } from '../types';
 
 const MAX_FORCE_DISTANCE = 500;
 const MAX_FORCE = 0.0005;
@@ -11,8 +11,8 @@ export function updateWorld(
   world: IWorld,
   deltaTime: DOMHighResTimeStamp,
   action: IAction,
-  additionalForcePosition?: { x: number; y: number }
-) {
+  pointerForce: IPoint | undefined
+): void {
   if (deltaTime === 0) {
     return;
   }
@@ -29,11 +29,9 @@ export function updateWorld(
     y: 0,
   });
 
-  if (!isNil(additionalForcePosition)) {
-    const forcePosition = additionalForcePosition;
-
+  if (!isNil(pointerForce)) {
     world.bobs.forEach(bob => {
-      const vectorToBob = Vector.sub(bob.position, forcePosition);
+      const vectorToBob = Vector.sub(bob.position, pointerForce);
       const magnitude = Vector.magnitude(vectorToBob);
 
       if (magnitude > MAX_FORCE_DISTANCE) {

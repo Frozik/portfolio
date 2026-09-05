@@ -1,11 +1,6 @@
-import type { IKeyStateSource } from '../../domain/players/IKeyStateSource';
+import type { IKeyStateSource } from '../domain/ports/key-state-source';
 
-/**
- * DOM-backed {@link IKeyStateSource}: tracks pressed key codes via `window`
- * keyboard listeners. Lives in presentation (keyboard input is a UI concern),
- * so the pendulum domain stays free of browser globals. Inject into
- * {@link HumanPlayer}; call {@link dispose} to detach the listeners.
- */
+/** Tracks held key codes through `window` keyboard listeners. */
 export class WindowKeyStateSource implements IKeyStateSource {
   private readonly pressedKeys = new Set<string>();
 
@@ -14,11 +9,11 @@ export class WindowKeyStateSource implements IKeyStateSource {
     window.addEventListener('keyup', this.handleKeyUp);
   }
 
-  public isPressed(code: string): boolean {
+  isPressed(code: string): boolean {
     return this.pressedKeys.has(code);
   }
 
-  public dispose(): void {
+  dispose(): void {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
   }

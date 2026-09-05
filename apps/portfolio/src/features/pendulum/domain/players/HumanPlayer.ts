@@ -1,17 +1,19 @@
+import type { IKeyStateSource } from '../ports/key-state-source';
 import type { IAction, IHumanPlayer } from '../types';
 import { EPlayerType } from '../types';
-import type { IKeyStateSource } from './IKeyStateSource';
 
-export const VELOCITY_COEFFICIENT = 0.2;
+export const HUMAN_PLAYER_NAME = 'Human';
+
+const VELOCITY_COEFFICIENT = 0.2;
 const SHIFT_SPEED_MULTIPLIER = 5;
 
 export class HumanPlayer implements IHumanPlayer {
   readonly type = EPlayerType.Human;
-  readonly name = 'Human';
+  readonly name = HUMAN_PLAYER_NAME;
 
   constructor(private readonly keyState: IKeyStateSource) {}
 
-  public play(): IAction {
+  play(): IAction {
     let carVelocity = 0;
 
     if (this.keyState.isPressed('ArrowLeft')) {
@@ -28,7 +30,7 @@ export class HumanPlayer implements IHumanPlayer {
     return { pivotVelocity: carVelocity * VELOCITY_COEFFICIENT };
   }
 
-  public dispose(): void {
+  dispose(): void {
     this.keyState.dispose();
   }
 }

@@ -1,5 +1,6 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { createDB, getDatabaseVersion } from '@frozik/utils/database';
-import type { ISO } from '@frozik/utils/date/types';
+import type { ISO, Milliseconds } from '@frozik/utils/date/types';
 import type { TDatabaseErrorCallback } from '@frozik/utils/rx/database';
 import {
   createDatabase$,
@@ -11,10 +12,15 @@ import type { DBSchema, IDBPDatabase } from 'idb';
 import { isNil, orderBy, sortBy } from 'lodash-es';
 import type { Observable } from 'rxjs';
 import { firstValueFrom, from, merge, of, Subject } from 'rxjs';
-import { map, switchMap, take, tap } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 
-import { SHARE_RESET_DELAY } from '../../../app/constants';
-import type { IGeneration } from '../domain/defs';
+import type { IGeneration } from '../domain/generation';
+import type {
+  IGenerationsRepository,
+  IRepositoryObserver,
+  IRobotRecord,
+} from '../domain/ports/generations-repository';
+import type { IRobotPlayer, RobotModelUrl } from '../domain/types';
 
 enum ERobotType {
   TensorFlow = 'TensorFlow',
@@ -23,7 +29,7 @@ enum ERobotType {
 interface IDBRobot {
   readonly type: ERobotType.TensorFlow;
   readonly name: string;
-  readonly modelUrl: string;
+  readonly modelUrl: RobotModelUrl;
   readonly score: number;
 }
 
@@ -31,7 +37,7 @@ interface IDBGeneration {
   readonly competitionStart: ISO;
   readonly id: number;
   readonly maxScore: number;
-  robotNames: string[];
+  readonly robotNames: readonly string[];
 }
 
 const CURRENT_DATABASE_VERSION = 2;
@@ -52,16 +58,14 @@ const ROBOT_SCORE_FIELD: keyof IDBRobot = 'score';
 
 const REMOVE_REDUNDANT_NAME_INDEX_VERSION = 2;
 
+const DATABASE_SHARE_RESET_DELAY = 30_000 as Milliseconds;
+
+// tf.js resolves this scheme to its own IndexedDB store; the robot record keeps
+// the very same URL so the model is reloaded from where it was saved.
 const ROBOT_MODEL_URL_SCHEME = 'indexeddb://';
 
-/**
- * Address under which a robot's tf.js model is persisted. The scheme and the
- * naming convention are storage knowledge: a model saved here is later read
- * back by `TensorflowPlayer.load` through the very same URL stored on the
- * robot record.
- */
-export function buildRobotModelUrl(competitionStart: ISO, robotName: string): string {
-  return `${ROBOT_MODEL_URL_SCHEME}${competitionStart}-player-${robotName}`;
+function buildRobotModelUrl(competitionStart: ISO, robotName: string): RobotModelUrl {
+  return `${ROBOT_MODEL_URL_SCHEME}${competitionStart}-player-${robotName}` as RobotModelUrl;
 }
 
 interface IDBCompetitions extends DBSchema {
@@ -82,7 +86,7 @@ interface IDBCompetitions extends DBSchema {
   };
 }
 
-export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGenerations> {
+export function createIndexedDbGenerationsRepository(): IGenerationsRepository {
   // Two independent invalidation signals, deliberately NOT merged:
   // - `competitionsChanged$` refreshes the competitions LIST (a brand-new
   //   competition's first generation must make its start appear; a delete must
@@ -100,79 +104,61 @@ export async function createIndexDBGenerationsModule(): Promise<TModuleIndexDBGe
 
   const database$ = createDatabase$<IDBCompetitions>(createGenerationDB).pipe(
     databaseReconnect(),
-    shareReplayWithDelayedReset(SHARE_RESET_DELAY)
+    shareReplayWithDelayedReset(DATABASE_SHARE_RESET_DELAY)
   );
 
+  const withDatabase = <TResult>(
+    read: (database: IDBPDatabase<IDBCompetitions>) => Promise<TResult>
+  ): Promise<TResult> => firstValueFrom(database$.pipe(switchMap(read)));
+
+  const watch = <TValue>(
+    changed$: Observable<void>,
+    read: (database: IDBPDatabase<IDBCompetitions>) => Promise<TValue>,
+    observer: IRepositoryObserver<TValue>
+  ): VoidFunction => {
+    const subscription = database$
+      .pipe(
+        switchMap(database => merge(of(database), changed$.pipe(map(() => database)))),
+        switchMap(database => from(read(database)))
+      )
+      .subscribe(observer);
+    return () => subscription.unsubscribe();
+  };
+
   return {
-    getCompetitionsStarts$(): Observable<ISO[]> {
-      return database$.pipe(
-        switchMap(database => merge(of(database), competitionsChanged$.pipe(map(() => database)))),
-        switchMap(database => {
-          return from(getCompetitions(database));
-        })
+    watchCompetitionStarts(observer) {
+      return watch(competitionsChanged$, getCompetitions, observer);
+    },
+    watchGenerations(competitionStart, observer) {
+      return watch(
+        generationsChanged$,
+        database => getGenerations(database, competitionStart),
+        observer
       );
     },
-    getGenerations$(competitionStart: ISO): Observable<IGeneration[]> {
-      return database$.pipe(
-        switchMap(database => merge(of(database), generationsChanged$.pipe(map(() => database)))),
-        switchMap(database => {
-          return from(getGenerations(database, competitionStart));
-        })
-      );
+    async addGeneration(competitionStart, generation) {
+      await withDatabase(database => addGeneration(database, competitionStart, generation));
+      // Only the list needs to react: the open competition's generations are
+      // kept current optimistically by the caller.
+      competitionsChanged$.next();
     },
-    addGeneration$(competitionStart: ISO, generation: IGeneration): Promise<void> {
-      return firstValueFrom(
-        database$.pipe(
-          switchMap(database => {
-            return addGeneration(database, competitionStart, generation);
-          }),
-          tap(() => {
-            // Only the list needs to react — the open competition's generations
-            // are kept current optimistically by the caller.
-            competitionsChanged$.next();
-          })
-        )
-      );
+    async deleteCompetition(competitionStart) {
+      await withDatabase(database => deleteCompetition(database, competitionStart));
+      competitionsChanged$.next();
+      generationsChanged$.next();
     },
-    deleteCompetition$(competitionStart: ISO): Promise<void> {
-      return firstValueFrom(
-        database$.pipe(
-          switchMap(database => {
-            return deleteCompetition(database, competitionStart);
-          }),
-          tap(() => {
-            // A delete affects both the list (start removed) and any open
-            // generations view of the deleted competition.
-            competitionsChanged$.next();
-            generationsChanged$.next();
-          })
-        )
-      );
+    findRobot(robotName) {
+      return withDatabase(database => getRobot(database, robotName));
     },
-    getRobot$(robotName: string) {
-      return database$.pipe(
-        switchMap(database => {
-          return from(getRobot(database, robotName));
-        }),
-        take(1)
-      );
+    async saveRobotModel(competitionStart, robot: IRobotPlayer) {
+      const modelUrl = buildRobotModelUrl(competitionStart, robot.name);
+      await robot.save(modelUrl);
+      return modelUrl;
     },
   };
 }
 
-export interface TModuleIndexDBGenerations {
-  getCompetitionsStarts$(): Observable<ISO[]>;
-  getGenerations$(competitionStart: ISO): Observable<IGeneration[]>;
-  addGeneration$(competitionStart: ISO, generation: IGeneration): Promise<void>;
-  deleteCompetition$(competitionStart: ISO): Promise<void>;
-  getRobot$(
-    robotName: string
-  ): Observable<
-    { readonly name: string; readonly modelUrl: string; readonly score: number } | undefined
-  >;
-}
-
-export async function createGenerationDB(
+async function createGenerationDB(
   dbCallback: TDatabaseErrorCallback
 ): Promise<IDBPDatabase<IDBCompetitions>> {
   const currentVersion = (await getDatabaseVersion(DATABASE_NAME)) ?? 0;
@@ -221,7 +207,7 @@ export async function createGenerationDB(
   });
 }
 
-async function getCompetitions(database: IDBPDatabase<IDBCompetitions>): Promise<ISO[]> {
+async function getCompetitions(database: IDBPDatabase<IDBCompetitions>): Promise<readonly ISO[]> {
   const transaction = database.transaction(GENERATIONS_TABLE_NAME, 'readonly');
   const competitionIdIndex = transaction
     .objectStore(GENERATIONS_TABLE_NAME)
@@ -247,7 +233,7 @@ async function getCompetitions(database: IDBPDatabase<IDBCompetitions>): Promise
 async function getGenerations(
   database: IDBPDatabase<IDBCompetitions>,
   competitionStart: ISO
-): Promise<IGeneration[]> {
+): Promise<readonly IGeneration[]> {
   // Single readonly transaction over both stores — generations and their
   // robots come from one consistent snapshot (two separate transactions could
   // straddle a concurrent write/delete and observe a generation without its
@@ -275,45 +261,39 @@ async function getGenerations(
 
   const robotsMap = new Map<string, IDBRobot>();
 
-  for (let index = 0; index < robotNames.length; index += 1) {
-    const robotName = robotNames[index];
+  robotNames.forEach((robotName, index) => {
     const robot = robotRecords[index];
-
     if (isNil(robot)) {
       throw new Error(`Robot "${robotName}" is not found`);
     }
-
     robotsMap.set(robotName, robot);
-  }
+  });
+
+  const readRobot = (robotName: string): IRobotRecord => {
+    const robot = robotsMap.get(robotName);
+    assert(!isNil(robot), `Robot "${robotName}" was loaded with its generation`);
+    return { name: robot.name, modelUrl: robot.modelUrl, score: robot.score };
+  };
 
   return orderedGenerations.map(({ robotNames, id, maxScore }) => ({
     id,
     maxScore,
-    players: sortBy(
-      robotNames.map(robotName => {
-        const robot = robotsMap.get(robotName) as IDBRobot;
-
-        return {
-          name: robot.name,
-          modelUrl: robot.modelUrl,
-          score: robot.score,
-        };
-      }),
-      ({ score }) => -score
-    ),
+    players: sortBy(robotNames.map(readRobot), ({ score }) => -score),
   }));
 }
 
-function getRobot(
+async function getRobot(
   database: IDBPDatabase<IDBCompetitions>,
   robotName: string
-): Promise<
-  { readonly name: string; readonly modelUrl: string; readonly score: number } | undefined
-> {
-  return database
+): Promise<IRobotRecord | undefined> {
+  const robot = await database
     .transaction(ROBOTS_TABLE_NAME, 'readonly')
     .objectStore(ROBOTS_TABLE_NAME)
     .get(robotName);
+
+  return isNil(robot)
+    ? undefined
+    : { name: robot.name, modelUrl: robot.modelUrl, score: robot.score };
 }
 
 async function deleteCompetition(
