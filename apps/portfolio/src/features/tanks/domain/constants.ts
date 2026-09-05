@@ -52,7 +52,7 @@ export const ENEMIES_PER_STAGE = 20;
 export const MAX_ENEMIES_ON_FIELD = 4;
 /** Spawn-order positions that flash and drop a power-up — a rule, not level data. */
 export const POWER_UP_CARRIER_SPAWN_INDICES: readonly number[] = [3, 10, 17];
-/** Exactly the twinkle's length — the enemy turns collidable the tick the last star leaves (§11.5). */
+/** Exactly the twinkle's length — the enemy turns collidable the tick the last star leaves. */
 export const ENEMY_SPAWN_TWINKLE_TICKS = 56;
 
 /** Spawn interval `I = 190 − 4 × stage` ticks. */

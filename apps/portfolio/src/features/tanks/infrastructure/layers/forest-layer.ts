@@ -6,7 +6,7 @@ import type { TerrainInstanceCache } from '../terrain-instance-cache';
 
 const NO_UPLOAD = -1;
 
-/** Drawn after the sprites, so tanks driving through the trees are concealed (§11.3). */
+/** Drawn after the sprites, so tanks driving through the trees are concealed. */
 export class ForestLayer implements RenderLayer {
   private readonly batch: QuadBatch;
   private uploadedBuildId = NO_UPLOAD;

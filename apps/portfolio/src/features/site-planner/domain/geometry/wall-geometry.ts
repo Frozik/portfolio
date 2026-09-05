@@ -95,7 +95,7 @@ export function buildWallBodies(walls: readonly Wall[]): MultiPolygon {
  * The outline a storey's walls enclose: the wall-body union with its holes
  * filled — a closed ring of walls contributes everything inside it, which is
  * how an upper storey's footprint derives from its own walls
- * (`building-editor.md` §5, R3/R22).
+ *.
  */
 export function buildWallHull(wallBodies: MultiPolygon): MultiPolygon {
   return wallBodies.map(polygon => ({ outer: polygon.outer, holes: [] }));

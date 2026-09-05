@@ -81,7 +81,7 @@ export function purchaseBundle(
 }
 
 /**
- * [MANUAL §8] The computer quotes a sale price rather than a full refund. §15: 80% keeps the
+ * [MANUAL §8] The computer quotes a sale price rather than a full refund. 80% keeps the
  * shop honest — a full refund would let a player liquidate every round just to bank interest.
  */
 export function quoteSellBack(pricing: BundlePricing, units: number): number {

@@ -20,7 +20,7 @@ interface WallRun {
 
 /**
  * The wire from one anchor to the other, laid the way ПУЭ lays it
- * (`building-editor.md` §8): ALONG the walls wherever they connect — the run
+ *: ALONG the walls wherever they connect — the run
  * walks the wall graph from the device's wall to the panel's, junction by
  * junction — and an orthogonal L only where no walls carry it (a ceiling
  * light, or walls that never meet). Junctions are shared endpoints;

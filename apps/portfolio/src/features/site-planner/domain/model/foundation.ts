@@ -4,7 +4,7 @@ import type { Opaque } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
-/** See `building-editor.md` §3 — slab, stem walls on footings, or piers. */
+/** Slab, stem walls on footings, or piers. */
 export type FoundationKind = 'slab' | 'stem-wall' | 'pier';
 
 /** Every foundation kind, in the order the panel offers them. */
@@ -14,7 +14,7 @@ export const FOUNDATION_KINDS: readonly FoundationKind[] = ['slab', 'stem-wall',
 
 /**
  * A building's foundation, chosen rather than drawn: the geometry derives from
- * the footprint and the terrain (`building-editor.md` §3, the Chief Architect
+ * the footprint and the terrain (the Chief Architect
  * generate-then-tweak model minus the tweak).
  */
 export interface Foundation {
@@ -87,7 +87,7 @@ export interface UtilityEntry {
 
 /**
  * Until the frost-depth site setting ships with the routing stage
- * (`building-editor.md` §8, R17), entry depths default against this — the
+ *, entry depths default against this — the
  * user-decided default the setting itself will start at.
  */
 export const DEFAULT_FROST_DEPTH_METERS: Meters = 1.5;

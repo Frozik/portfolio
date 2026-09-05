@@ -36,7 +36,7 @@ import type { ScorchedSetupOptions } from './scorched-setup';
 import { createMatchOptions, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
 import { ShopStore } from './ShopStore';
 
-/** The whole player-facing flow of §13, from the roster screen to the final standings. */
+/** The whole player-facing flow, from the roster screen to the final standings. */
 export type ScorchedGameStatus =
   | 'setup'
   | 'handover'
@@ -67,7 +67,7 @@ interface OpenedRound {
   readonly events: readonly WorldEvent[];
 }
 
-/** [§12.2] Everything armed for the next trigger pull; all of it is spent by the shot. */
+/** Everything armed for the next trigger pull; all of it is spent by the shot. */
 export interface IShotSetup {
   readonly guidance: GuidanceKind | undefined;
   readonly hasContactTrigger: boolean;
@@ -88,7 +88,7 @@ const TURN_ITEM_IDS: readonly ItemId[] = [
 ];
 const NO_HIGHLIGHTS: IRoundHighlights = { biggestHit: undefined, topDamage: undefined };
 const FIRST_PLAYER_NUMBER = 1;
-/** §12.3: whether the player silenced the game is remembered across visits. */
+/** Whether the player silenced the game is remembered across visits. */
 const MUTED_STORAGE_KEY = 'scorched:muted';
 
 function createDefaultRoster(): PlayerSetup[] {
@@ -103,7 +103,7 @@ function createDefaultRoster(): PlayerSetup[] {
 }
 
 /**
- * Data and data methods only (§12, the lesson tanks learnt the hard way): the roster, the match,
+ * Data and data methods only (the lesson tanks learnt the hard way): the roster, the match,
  * the figures the HUD and the shop show, and the aim the player is turning. The renderer and the
  * audio controller are owned by the shell component — they drive `advanceFrame`, `applyInput` and
  * `tick` and read the events those return.
@@ -156,9 +156,9 @@ export class ScorchedStore {
 
   /** The live round handle the renderer reads through, across rounds and rematches. */
   readonly roundRef: ScorchedRoundRef;
-  /** [§13] The between-rounds counter, with its own observable state. */
+  /** The between-rounds counter, with its own observable state. */
   readonly shop: ShopStore;
-  /** [§12, §13] The floating health numbers and taunt bubbles drawn over the field. */
+  /** The floating health numbers and taunt bubbles drawn over the field. */
   readonly overlays: OverlayStore;
 
   private readonly mutedStorage: IMutedStorage;
@@ -338,12 +338,12 @@ export class ScorchedStore {
     this.status = 'playing';
   }
 
-  /** [§13] Back to the roster screen with the line-up intact, so it can be edited and re-run. */
+  /** Back to the roster screen with the line-up intact, so it can be edited and re-run. */
   returnToSetup(): void {
     this.status = 'setup';
   }
 
-  /** [§12.2] The pass-the-device card is dismissed and the next player takes the controls. */
+  /** The pass-the-device card is dismissed and the next player takes the controls. */
   confirmHandover(): void {
     if (this.status === 'handover') {
       this.status = 'playing';
@@ -452,7 +452,7 @@ export class ScorchedStore {
 
   /**
    * One frame of wall-clock time. Everything that ages rather than ticks lives here: the floating
-   * damage numbers, the taunt bubbles and the AI winding its barrel across (§9, §13).
+   * damage numbers, the taunt bubbles and the AI winding its barrel across.
    */
   advanceFrame(elapsedSeconds: number): readonly WorldEvent[] {
     this.overlays.age(elapsedSeconds);
@@ -773,7 +773,7 @@ export class ScorchedStore {
   }
 
   /**
-   * [§12.2] The pass-the-device card only makes sense between two people in the same room, so it
+   * The pass-the-device card only makes sense between two people in the same room, so it
    * is skipped entirely in a one-human game and never shown when an AI is up next.
    */
   private beginTurn(playerId: PlayerId): void {
@@ -865,7 +865,7 @@ export class ScorchedStore {
     this.syncAim();
   }
 
-  /** [§12.2] A drag names the aim outright rather than nudging whatever was there before. */
+  /** A drag names the aim outright rather than nudging whatever was there before. */
   private setAimFromDial(dialDegrees: number, power: number): void {
     const round = this.roundRef.current;
 
@@ -877,7 +877,7 @@ export class ScorchedStore {
     this.syncAim();
   }
 
-  /** [§12] Tab walks the arsenal: the free baby missile plus whatever the tank still owns. */
+  /** Tab walks the arsenal: the free baby missile plus whatever the tank still owns. */
   private cycleWeapon(): void {
     const available = this.availableWeapons.map(entry => entry.weaponId);
 

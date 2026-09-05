@@ -12,7 +12,7 @@ export interface LaserBeam {
 }
 
 /**
- * [§6] The laser is instant: the domain resolves the whole beam inside one call and never emits a
+ * The laser is instant: the domain resolves the whole beam inside one call and never emits a
  * projectile. So that the shot is visible at all, the beam it reports is kept here for a few
  * frames and faded out — the only piece of the renderer that outlives the event that made it.
  */

@@ -1,4 +1,4 @@
-// The falling-sand animation (§11.1): one thread per terrain column, gravity-accelerated.
+// The falling-sand animation: one thread per terrain column, gravity-accelerated.
 //
 // The domain resolves a collapse instantly by deleting the void and sliding everything above it
 // down, so the animation is the same operation spread over time: each tick the lowest void in a

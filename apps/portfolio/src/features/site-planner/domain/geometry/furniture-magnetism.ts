@@ -14,7 +14,7 @@ interface WallCatch {
 }
 
 /**
- * The Sweet Home 3D magnet (`building-editor.md` §6): a piece released near a
+ * The Sweet Home 3D magnet: a piece released near a
  * wall turns its back to it and snaps flush against the face. Answers the
  * pose the magnet would give, or nothing while no wall is within reach —
  * the caller falls back to the grid.

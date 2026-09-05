@@ -74,7 +74,7 @@ const FALL_GRAVITY_WU_PER_SECOND_SQUARED =
 const FALL_TERMINAL_SPEED_WU_PER_SECOND = 120;
 
 /**
- * [§11.3] The tanks, drawn from generated blueprints: a tracked chassis, a turret that turns
+ * The tanks, drawn from generated blueprints: a tracked chassis, a turret that turns
  * with the aim and a gun that tilts against it. Every player keeps their machine for the whole
  * session. The domain moves tanks a whole column at a time; the drawn tank chases it at a
  * steady speed, which is what fills the in-between frames without any easing kinks.

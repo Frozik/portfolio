@@ -21,7 +21,7 @@ interface TrenchStation {
 }
 
 /**
- * The trench resolved against the terrain (`building-editor.md` §8): the pipe
+ * The trench resolved against the terrain: the pipe
  * line under the ground line, the depths the digging must reach, and what the
  * digging displaces.
  */

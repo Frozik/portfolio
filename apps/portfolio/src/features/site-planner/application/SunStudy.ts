@@ -21,7 +21,7 @@ const SUN_ANIMATION_STEP_MINUTES = 3;
 
 /**
  * The sun study: the date and time of day the 3D view is lit at, and whether
- * the day is playing (`main-context.md` §sun).
+ * the day is playing .
  *
  * Its own object rather than eight more members of the plan store, because it
  * is a self-contained concern with STATE OF ITS OWN and a lifetime to manage —

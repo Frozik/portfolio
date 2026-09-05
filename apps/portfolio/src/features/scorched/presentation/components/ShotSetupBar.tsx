@@ -30,7 +30,7 @@ function isGuidanceKind(value: string): value is GuidanceKind {
 }
 
 /**
- * [§12.2] The per-shot arming strip: the installed guidance device, the contact trigger and —
+ * The per-shot arming strip: the installed guidance device, the contact trigger and —
  * only when a plasma blast is selected — how many batteries to burn on it. The selection resets
  * after every shot; the guidance device itself stays installed for the match.
  */

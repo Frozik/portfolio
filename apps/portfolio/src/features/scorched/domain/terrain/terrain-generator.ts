@@ -18,7 +18,7 @@ import type { Heightfield } from './heightfield';
 import { createHeightfield } from './heightfield';
 
 /**
- * The original never documented its generator, only the three knobs, so §10 picks midpoint
+ * The original never documented its generator, only the three knobs, so we pick midpoint
  * displacement and maps the knobs onto it: Bumpiness is the displacement amplitude, Slope is a
  * low-frequency tilt applied to the endpoints, and Flatten Peaks is a slope clamp.
  */

@@ -31,7 +31,7 @@ const TAU = Math.PI * 2;
 const RETREAT_MAST_HALF_WIDTH_WU = 1;
 
 /**
- * [§12.2, §6, §8] The things drawn over the field that are not simulation state: the dotted aim
+ * The things drawn over the field that are not simulation state: the dotted aim
  * ghost the player is dragging out, the laser beam of a shot that has already resolved, and the
  * helicopter carrying a retreating tank off the top of the screen.
  */

@@ -15,7 +15,7 @@ interface TrailState {
 }
 
 /**
- * The dotted path a shell leaves behind it (the Trace Paths option of §11.2). Dots are dropped
+ * The dotted path a shell leaves behind it (the Trace Paths option). Dots are dropped
  * every `TRACE_DOT_SPACING_WU` of distance flown — interpolated inside a tick's step — so the
  * dotting stays even along the curve instead of bunching where the shell flies slowly.
  */

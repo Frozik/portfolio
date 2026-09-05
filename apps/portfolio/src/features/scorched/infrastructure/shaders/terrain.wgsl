@@ -1,4 +1,4 @@
-// [§11.1] The terrain texture, sampled nearest onto the field quad. Red is dirt presence, green
+// The terrain texture, sampled nearest onto the field quad. Red is dirt presence, green
 // the palette variation that rides along as dirt falls, blue the scorch a blast burnt into it.
 
 @group(0) @binding(1) var terrainTexture: texture_2d<f32>;

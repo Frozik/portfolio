@@ -2,16 +2,18 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { IMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { createMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { isNil } from 'lodash-es';
-import { makeAutoObservable } from 'mobx';
+import { createAtom, makeAutoObservable } from 'mobx';
 
-import { ENEMIES_PER_STAGE, INITIAL_LIVES, TICKS_PER_SECOND } from '../domain/constants';
+import { TICKS_PER_SECOND } from '../domain/constants';
+import type { IBestScoreStorage } from '../domain/ports/best-score-storage';
 import type { IInputSource } from '../domain/ports/input-source';
+import type { ITouchControlInput } from '../domain/ports/touch-control-input';
+import type { IVisibilitySource } from '../domain/ports/visibility-source';
 import type { WorldEvent } from '../domain/types';
 import { TanksWorld } from '../domain/world';
-import type { IBestScoreStorage } from '../infrastructure/best-score-storage';
 import { createBestScoreStorage } from '../infrastructure/best-score-storage';
+import { createDocumentVisibilitySource } from '../infrastructure/document-visibility-source';
 import { TanksWorldRef } from '../infrastructure/tanks-world-ref';
-import type { ITouchControlInput } from '../infrastructure/touch-control-source';
 import { TouchControlSource } from '../infrastructure/touch-control-source';
 
 export type TanksGameStatus =
@@ -32,7 +34,7 @@ const STAGE_INTRO_DURATION_MS = 2000;
 const STAGE_CLEAR_DURATION_MS = 2500;
 
 const MS_PER_TICK = 1000 / TICKS_PER_SECOND;
-/** §11.5: "GAME OVER" climbs the field for 128 ticks, then holds for 144. */
+/** "GAME OVER" climbs the field for 128 ticks, then holds for 144. */
 const GAME_OVER_RISE_TICKS = 128;
 const GAME_OVER_HOLD_TICKS = 144;
 const GAME_OVER_DURATION_MS = (GAME_OVER_RISE_TICKS + GAME_OVER_HOLD_TICKS) * MS_PER_TICK;
@@ -40,68 +42,91 @@ const GAME_OVER_DURATION_MS = (GAME_OVER_RISE_TICKS + GAME_OVER_HOLD_TICKS) * MS
 const MUTED_STORAGE_KEY = 'tanks:muted';
 
 const NO_SCORE = 0;
-const FIRST_STAGE_NUMBER = 1;
 
 export class TanksStore {
   gameStatus: TanksGameStatus = 'menu';
-  stageNumber = FIRST_STAGE_NUMBER;
+  /** The tally the world last reported — the HUD follows the event stream, not the world object. */
   score = NO_SCORE;
-  bestScore: number;
-  lives = INITIAL_LIVES;
-  enemiesRemaining = ENEMIES_PER_STAGE;
   stageSummary: IStageSummary | undefined;
   isMuted: boolean;
   fps = 0;
+  rendererFailure: string | undefined;
 
   readonly worldRef = new TanksWorldRef(new TanksWorld());
 
+  /**
+   * The world runs 60 times a second outside MobX and is read through this atom instead:
+   * it is reported changed after every tick and every swap, so the HUD computeds follow it.
+   */
+  private readonly worldAtom = createAtom('TanksWorld');
   private readonly bestScoreStorage: IBestScoreStorage;
   private readonly mutedStorage: IMutedStorage;
   private readonly touchSource = new TouchControlSource();
+  private readonly stopWatchingVisibility: VoidFunction;
+  private recordScore: number;
   private flowTimeoutId: number | undefined;
-  private persistedBestScore: number;
   private stageEnemiesDestroyed = 0;
   private stagePoints = 0;
 
   constructor(
     bestScoreStorage: IBestScoreStorage = createBestScoreStorage(),
-    mutedStorage: IMutedStorage = createMutedStorage(MUTED_STORAGE_KEY)
+    mutedStorage: IMutedStorage = createMutedStorage(MUTED_STORAGE_KEY),
+    visibilitySource: IVisibilitySource = createDocumentVisibilitySource()
   ) {
     this.bestScoreStorage = bestScoreStorage;
-    this.bestScore = bestScoreStorage.read();
-    this.persistedBestScore = this.bestScore;
+    this.recordScore = bestScoreStorage.read();
     this.mutedStorage = mutedStorage;
     this.isMuted = mutedStorage.read();
 
     makeAutoObservable<
       TanksStore,
+      | 'worldAtom'
       | 'bestScoreStorage'
       | 'mutedStorage'
       | 'touchSource'
+      | 'stopWatchingVisibility'
       | 'flowTimeoutId'
-      | 'persistedBestScore'
       | 'stageEnemiesDestroyed'
       | 'stagePoints'
+      | 'world'
     >(
       this,
       {
         worldRef: false,
+        worldAtom: false,
         bestScoreStorage: false,
         mutedStorage: false,
         touchSource: false,
+        stopWatchingVisibility: false,
         flowTimeoutId: false,
-        persistedBestScore: false,
         stageEnemiesDestroyed: false,
         stagePoints: false,
+        world: false,
       },
       { autoBind: true }
     );
 
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    this.stopWatchingVisibility = visibilitySource.onHidden(this.pauseWhileHidden);
   }
 
   get isPlaying(): boolean {
     return this.gameStatus === 'playing';
+  }
+
+  get stageNumber(): number {
+    return this.world.stageNumber;
+  }
+
+  get lives(): number {
+    return this.world.lives;
+  }
+
+  get enemiesRemaining(): number {
+    return this.world.enemiesRemaining;
+  }
+
+  get bestScore(): number {
+    return Math.max(this.recordScore, this.score);
   }
 
   get touchControls(): ITouchControlInput {
@@ -162,19 +187,18 @@ export class TanksStore {
   applyWorldEvents(events: readonly WorldEvent[]): void {
     let isGameOver = false;
     let isStageCleared = false;
-    let latestTotalScore: number | undefined;
 
     for (const event of events) {
       switch (event.type) {
         case 'enemy-destroyed':
-          // Grenade kills come with points: 0 and stay out of the stage tally (§11.5).
+          // Grenade kills come with points: 0 and stay out of the stage tally.
           if (event.points > 0) {
             this.stageEnemiesDestroyed++;
           }
           break;
         case 'score-awarded':
           this.stagePoints += event.points;
-          latestTotalScore = event.totalScore;
+          this.score = event.totalScore;
           break;
         case 'stage-cleared':
           isStageCleared = true;
@@ -182,12 +206,23 @@ export class TanksStore {
         case 'game-over':
           isGameOver = true;
           break;
-        default:
+        case 'stage-started':
+        case 'enemy-spawned':
+        case 'player-destroyed':
+        case 'bullet-fired':
+        case 'bullet-ended':
+        case 'power-up-spawned':
+        case 'power-up-taken':
+        case 'player-ice-slide-started':
+        case 'extra-life-awarded':
+        case 'base-destroyed':
           break;
+        default:
+          assertNever(event);
       }
     }
 
-    this.syncHudFromWorld(latestTotalScore);
+    this.worldAtom.reportChanged();
 
     if (isGameOver) {
       this.endRun();
@@ -204,33 +239,37 @@ export class TanksStore {
     this.fps = fps;
   }
 
-  /** A hidden tab must never lose the game — the render loop's delta clamp alone would still advance it. */
-  handleVisibilityChange(): void {
-    if (!document.hidden) {
-      return;
-    }
-
-    if (this.gameStatus === 'playing') {
-      this.gameStatus = 'paused';
-    }
+  failRenderer(error: unknown): void {
+    this.rendererFailure = error instanceof Error ? error.message : String(error);
   }
 
   dispose(): void {
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    this.stopWatchingVisibility();
     this.clearFlowTimeout();
     this.persistBestScore();
     this.touchSource.dispose();
   }
 
+  private get world(): TanksWorld {
+    this.worldAtom.reportObserved();
+
+    return this.worldRef.current;
+  }
+
+  /** A hidden tab must never lose the game — the render loop's delta clamp alone would still advance it. */
+  private pauseWhileHidden(): void {
+    if (this.gameStatus === 'playing') {
+      this.gameStatus = 'paused';
+    }
+  }
+
   private resetRun(): void {
     this.worldRef.replace(new TanksWorld());
+    this.worldAtom.reportChanged();
     this.touchSource.release();
     this.stageEnemiesDestroyed = 0;
     this.stagePoints = 0;
-    this.stageNumber = FIRST_STAGE_NUMBER;
     this.score = NO_SCORE;
-    this.lives = INITIAL_LIVES;
-    this.enemiesRemaining = ENEMIES_PER_STAGE;
     this.stageSummary = undefined;
   }
 
@@ -259,10 +298,10 @@ export class TanksStore {
       world.advanceToNextStage();
     }
 
+    this.worldAtom.reportChanged();
     this.stageEnemiesDestroyed = 0;
     this.stagePoints = 0;
     this.stageSummary = undefined;
-    this.syncHudFromWorld();
     this.beginStageIntro();
   }
 
@@ -273,26 +312,13 @@ export class TanksStore {
     this.scheduleFlowStep(GAME_OVER_DURATION_MS, this.returnToMenu);
   }
 
-  private syncHudFromWorld(latestTotalScore?: number): void {
-    const world = this.worldRef.current;
-
-    if (!isNil(latestTotalScore)) {
-      this.score = latestTotalScore;
-      this.bestScore = Math.max(this.bestScore, latestTotalScore);
-    }
-
-    this.stageNumber = world.stageNumber;
-    this.lives = world.lives;
-    this.enemiesRemaining = world.enemiesRemaining;
-  }
-
   private persistBestScore(): void {
-    if (this.bestScore <= this.persistedBestScore) {
+    if (this.bestScore <= this.recordScore) {
       return;
     }
 
-    this.persistedBestScore = this.bestScore;
-    this.bestScoreStorage.write(this.bestScore);
+    this.recordScore = this.bestScore;
+    this.bestScoreStorage.write(this.recordScore);
   }
 
   private scheduleFlowStep(delayMs: number, step: VoidFunction): void {

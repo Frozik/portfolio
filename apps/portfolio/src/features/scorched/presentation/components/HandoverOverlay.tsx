@@ -9,7 +9,7 @@ import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
 
 /**
- * [§12.2] The hot-seat handover card: it names the player taking over, stops the previous one from
+ * The hot-seat handover card: it names the player taking over, stops the previous one from
  * firing by accident, and doubles as the pacing beat between two humans.
  */
 export const HandoverOverlay = observer(() => {

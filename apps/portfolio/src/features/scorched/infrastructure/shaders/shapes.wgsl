@@ -1,4 +1,4 @@
-// Tanks and shells are drawn as oriented coloured quads (§11.3): a rectangle for a hull or a
+// Tanks and shells are drawn as oriented coloured quads: a rectangle for a hull or a
 // barrel, an ellipse for a turret dome or a shell, a ring for a raised shield. One pipeline,
 // one instance buffer per layer.
 

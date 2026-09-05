@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-/** `fire` is a level signal; the world fires on its rising edge (§12.1). */
+/** `fire` is a level signal; the world fires on its rising edge. */
 export interface PlayerInputs {
   readonly direction: Direction | undefined;
   readonly fire: boolean;
@@ -39,12 +39,17 @@ export interface TankRef {
   readonly slot: number;
 }
 
-/** Bullet property bits of the original: bit0 = fast, bit1 = piercing (§9.1). */
+/** Bullet property bits of the original: bit0 = fast, bit1 = piercing. */
 export interface IBulletTraits {
   readonly fast: boolean;
   readonly piercing: boolean;
 }
 
+/**
+ * Tanks and bullets are the one mutable corner of the domain: the 60 Hz tick advances them in
+ * place (`movement.ts`, `bullets.ts`) rather than rebuilding the roster sixty times a second, and
+ * the render layers read the same objects between ticks. Identity-carrying fields stay readonly.
+ */
 export interface Bullet {
   readonly id: number;
   readonly owner: TankRef;

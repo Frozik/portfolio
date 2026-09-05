@@ -14,7 +14,7 @@ export type SupportProfile = 'round' | 'square';
 export const SUPPORT_PROFILES: readonly SupportProfile[] = ['round', 'square'];
 
 /**
- * One post under an overhang or a canopy (plan §6.2). Only the intent is
+ * One post under an overhang or a canopy . Only the intent is
  * stored; both ends DERIVE (O-S1 / I2-4): the base sits on the storey's floor
  * inside the storey's footprint and on the TERRAIN outside it (each post its
  * own length on a slope), the top reaches the storey's ceiling datum — one

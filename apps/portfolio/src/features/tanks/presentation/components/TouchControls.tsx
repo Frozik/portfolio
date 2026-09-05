@@ -44,7 +44,7 @@ const CONTAINER_BASE_CLASS =
 
 const DPAD_VIEWBOX = `0 0 ${TOUCH_DPAD_VIEWBOX_SIZE} ${TOUCH_DPAD_VIEWBOX_SIZE}`;
 
-/** Lives outside the WebGPU canvas — costs nothing per frame and cannot desync from it (§12.2). */
+/** Lives outside the WebGPU canvas — costs nothing per frame and cannot desync from it. */
 export const TouchControls = memo(() => {
   const store = useTanksStore();
   const dpadPointerIdRef = useRef<number | undefined>(undefined);

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { SfxId } from './sfx-recipes';
 import { SFX_PATCHES } from './sfx-recipes';
 
-/** Everything §12.3 asks the synth to be able to say. */
+/** Everything the synth must be able to say. */
 const EXPECTED_SFX_IDS: readonly SfxId[] = [
   'shot',
   'brick-crumble',

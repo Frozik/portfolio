@@ -132,7 +132,7 @@ const RoomRow = observer(
 );
 
 /**
- * The building editor's derived rooms (`building-editor.md` §4): never drawn
+ * The building editor's derived rooms: never drawn
  * by hand — the walls cut the footprint, this panel names what they cut out.
  */
 export const RoomsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {

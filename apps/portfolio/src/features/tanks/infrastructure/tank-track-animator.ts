@@ -12,7 +12,7 @@ interface TrackState {
 }
 
 /**
- * Tracks advance per world unit travelled, not on a timer (§11.5). The domain never says
+ * Tracks advance per world unit travelled, not on a timer. The domain never says
  * "I moved" — axis-aligned whole-unit steps make the Manhattan position delta the distance.
  */
 export class TankTrackAnimator {

@@ -1,4 +1,4 @@
-// [§11.3] The backdrop: a vertical gradient with an optional starfield, both ours.
+// The backdrop: a vertical gradient with an optional starfield, both ours.
 
 struct SkyParams {
     topColor: vec4<f32>,

@@ -1,6 +1,6 @@
 /**
  * Holding re-raises the domain's rising edge every `FIRE_REPEAT_TICKS`. The repeat lives in the
- * input sources, not the domain — domain tests keep pure edge semantics (§12.1).
+ * input sources, not the domain — domain tests keep pure edge semantics.
  */
 export const FIRE_REPEAT_TICKS = 8;
 

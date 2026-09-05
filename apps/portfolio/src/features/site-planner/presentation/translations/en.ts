@@ -512,7 +512,7 @@ export const sitePlannerTranslationsEn = {
       glazing: 'Glazing',
     },
     thickness: 'Thickness',
-    /** Which line the drawn polyline pins — see building-editor.md §4. */
+    /** Which line the drawn polyline pins. */
     referenceLine: 'Reference line',
     referenceLines: {
       'outer-face': 'Outer face',

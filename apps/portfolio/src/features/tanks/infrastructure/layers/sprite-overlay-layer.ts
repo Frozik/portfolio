@@ -27,7 +27,7 @@ import {
 } from '../sprites/sprite-ids';
 import type { ITanksWorldView } from '../tanks-world-view';
 
-/** Ping-pongs large → small → large so a spawn reads as materialising, not spinning (§11.5). */
+/** Ping-pongs large → small → large so a spawn reads as materialising, not spinning. */
 const SPAWN_TWINKLE_FRAME_SEQUENCE: readonly number[] = [
   ...range(SPAWN_TWINKLE_FRAME_COUNT - 1, -1, -1),
   ...range(1, SPAWN_TWINKLE_FRAME_COUNT),
@@ -39,7 +39,7 @@ const GLYPH_GAP_WU = SCORE_POPUP_DIGIT_ADVANCE_WU - DIGIT_WIDTH_WU;
 
 const SHIELD_CENTER_OFFSET_WU = (SHIELD_SIZE_WU - TANK_SIZE_WU) / 2;
 
-/** Drawn after the forest: bonuses and state indicators must never hide behind the canopy (§11.3). */
+/** Drawn after the forest: bonuses and state indicators must never hide behind the canopy. */
 export class SpriteOverlayLayer implements RenderLayer {
   private readonly batch: QuadBatch;
   private readonly instances = new QuadInstanceList(MAX_OVERLAY_SPRITE_INSTANCES);
@@ -132,7 +132,7 @@ export class SpriteOverlayLayer implements RenderLayer {
     });
   }
 
-  /** Snapped to whole world units — a half-unit offset would blur the 3 × 5 glyphs (§11.1). */
+  /** Snapped to whole world units — a half-unit offset would blur the 3 × 5 glyphs. */
   private pushScorePopup(popup: ScorePopup): void {
     const rowWidthWu = popup.digits.length * SCORE_POPUP_DIGIT_ADVANCE_WU - GLYPH_GAP_WU;
     const firstDigitXWu = Math.round(popup.centerXWu - rowWidthWu / 2);

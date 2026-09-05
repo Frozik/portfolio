@@ -371,7 +371,7 @@ export class UtilityNetworkModel {
   /**
    * The nearest entry of one system within reach — what a trench click snaps
    * onto and a dragged bend lands on, so the site run and the indoor run
-   * actually meet at the seam the entry is (`building-editor.md` §3).
+   * actually meet at the seam the entry is.
    */
   nearestEntryPoint(
     planPoint: Vector2,

@@ -1,7 +1,7 @@
 import { MAX_PLAYER_COUNT, TICKS_PER_SECOND } from '../domain/constants';
 import type { ShieldTier } from '../domain/types';
 
-/** [§11.1] One texel per world unit, so the terrain texture mirrors the field exactly. */
+/** One texel per world unit, so the terrain texture mirrors the field exactly. */
 export const TERRAIN_TEXTURE_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
 export const SUPPORTED_TEXEL_ALPHA = 255;
@@ -23,7 +23,7 @@ export const FLOATS_PER_CARVE_OP = 4;
 /** A funky bomb scatters ten bursts at once; the queue keeps whatever does not fit for later. */
 export const MAX_CARVE_OPS_PER_DISPATCH = 32;
 
-/** [§11.1] How far the burn mark reaches past the edge of a removal. */
+/** How far the burn mark reaches past the edge of a removal. */
 export const SCORCH_RING_WU = 7;
 
 /** A slow display must not replay a long stall as one huge jump of dirt. */
@@ -62,14 +62,14 @@ const MAX_SHELLS_IN_FLIGHT = 12;
 /** Every shell draws its contrail segments plus its own capsule shapes. */
 export const MAX_PROJECTILE_SHAPE_INSTANCES = MAX_SHELLS_IN_FLIGHT * (TRACE_PATH_LENGTH + 6);
 
-/** [§12.2] The aim ghost's dots, plus the laser beams still glowing on the field. */
+/** The aim ghost's dots, plus the laser beams still glowing on the field. */
 export const GHOST_DOT_RADIUS_WU = 1.6;
 const MAX_GHOST_SHAPE_INSTANCES = 64;
 export const LASER_BEAM_FADE_SECONDS = 0.45;
 export const MAX_LASER_BEAMS = MAX_PLAYER_COUNT;
 
 /**
- * [§13 "Feel"] Screen shake. The amplitude is deliberately tiny — a nuke moves the field by six
+ * Screen shake. The amplitude is deliberately tiny — a nuke moves the field by six
  * world units out of eight hundred, under one percent of the width — because the shake is meant to
  * register in the gut rather than in the eye, and because anything larger would drag the letterbox
  * edge into view. It is scaled by blast radius so a baby missile taps and a Death's Head slams.
@@ -87,13 +87,13 @@ export const SHAKE_PHASE_PER_WU = 0.37;
 export const MAX_SHAKE_IMPULSES = 6;
 
 /**
- * [§13 "Feel"] Hit-stop: the world freezes for a few frames when a shell strikes a tank squarely,
+ * Hit-stop: the world freezes for a few frames when a shell strikes a tank squarely,
  * which is what makes a direct hit feel like a hit rather than like another explosion. Only the
  * fixed-timestep simulation stops — rendering, particles and the shake keep running.
  */
 export const HIT_STOP_SECONDS = 5 / TICKS_PER_SECOND;
 
-/** [§8] The retreat helicopter: a simple shape rising off the field and fading as it climbs. */
+/** The retreat helicopter: a simple shape rising off the field and fading as it climbs. */
 export const RETREAT_FLIGHT_SECONDS = 1.6;
 export const RETREAT_CLIMB_WU = 220;
 export const RETREAT_BODY_HALF_WIDTH_WU = 7;
@@ -112,7 +112,7 @@ export const MAX_OVERLAY_SHAPE_INSTANCES =
   MAX_GHOST_SHAPE_INSTANCES + MAX_LASER_BEAMS + MAX_RETREAT_FLIGHTS * SHAPES_PER_RETREAT_FLIGHT;
 
 /**
- * [§11.2] The particle pool. `Particle` in `particles.wgsl` is three `vec4<f32>`: position and
+ * The particle pool. `Particle` in `particles.wgsl` is three `vec4<f32>`: position and
  * velocity, then age/lifespan/size/kind, then colour. Spawns overwrite the pool as a ring — the
  * oldest particle is always the one a new burst is allowed to take.
  */

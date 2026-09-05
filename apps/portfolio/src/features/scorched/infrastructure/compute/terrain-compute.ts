@@ -66,7 +66,7 @@ function createPassBindGroupLayout(
 }
 
 /**
- * The two compute passes that own the terrain texture between uploads (§11.1). Both read the
+ * The two compute passes that own the terrain texture between uploads. Both read the
  * current texture and write the other one, then make that one current — so the render pass always
  * samples whatever came out of the last pass, and neither pass ever reads what it is writing.
  */

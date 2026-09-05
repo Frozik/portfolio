@@ -8,7 +8,7 @@ export type OpeningId = Opaque<'OpeningId', string>;
 export type OpeningKind = 'door' | 'window';
 
 /**
- * A door or a window, hosted by a wall (`building-editor.md` §4, the Revit
+ * A door or a window, hosted by a wall (the Revit
  * convention): it lives only on its wall, slides along it, and cuts its
  * opening in every view automatically. Position is one number — the offset
  * along the wall's drawn polyline — never a free point.

@@ -64,7 +64,7 @@ const WeaponChip = memo(
 );
 
 /**
- * [§12.2] The weapon carousel: one horizontal strip of large targets grouped by family, opened
+ * The weapon carousel: one horizontal strip of large targets grouped by family, opened
  * from the fire button's weapon badge (or the HUD badge on desktop) and closing on selection.
  */
 export const WeaponCarousel = observer(() => {

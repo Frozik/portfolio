@@ -114,7 +114,7 @@ const ToggleRow = memo(
 );
 
 /**
- * [§2] The one collapsed Advanced panel: every purist knob the curated row deliberately hides,
+ * The one collapsed Advanced panel: every purist knob the curated row deliberately hides,
  * grouped in a single place and opening at the manual's own defaults.
  */
 export const AdvancedOptionsPanel = memo(

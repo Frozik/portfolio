@@ -1,4 +1,4 @@
-// Draws the compute-simulated particle pool (§11.2) as soft instanced discs. The pool is read
+// Draws the compute-simulated particle pool as soft instanced discs. The pool is read
 // straight out of the same storage buffer the compute pass writes, so nothing is copied per frame.
 
 struct Particle {

@@ -12,7 +12,7 @@ export interface IPointerAimInput {
 }
 
 /**
- * Touch and mouse aiming (§12.2): a plain state holder the React overlay writes into and the draw
+ * Touch and mouse aiming: a plain state holder the React overlay writes into and the draw
  * orchestrator polls once a frame, exactly like the tanks touch source. Releasing the drag never
  * fires — aiming and firing are separate acts, so a slip can never cost a turn.
  */

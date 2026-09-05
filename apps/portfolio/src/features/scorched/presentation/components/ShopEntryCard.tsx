@@ -12,7 +12,7 @@ import type { ShopGlyphId } from './ShopGlyph';
 import { ShopGlyph } from './ShopGlyph';
 
 /**
- * [§13] One shop card: our glyph, the name, a one-line description of what the thing actually
+ * One shop card: our glyph, the name, a one-line description of what the thing actually
  * does, and the price honestly annotated — bundle size, owned count and the 99-cap surcharge are
  * all on the face of the card rather than buried in a table.
  */

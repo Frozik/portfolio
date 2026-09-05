@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Opaque } from '@frozik/utils/types/base';
 
 /**
- * What a room is for (`building-editor.md` §4, R15/R20). A catalog row, not
+ * What a room is for. A catalog row, not
  * behaviour: the type makes the plan legible, and `isWet` carries the
  * wet-floor concept that later feeds GFCI-розетки and floor-drain rules.
  */
@@ -54,7 +54,7 @@ export type RoomLabelId = Opaque<'RoomLabelId', string>;
 /**
  * The stored half of a room: rooms themselves derive from the wall loops and
  * are never persisted, so a type is pinned to a SEED POINT — whichever derived
- * region contains the point wears the type (`building-editor.md` §4).
+ * region contains the point wears the type.
  */
 export interface RoomLabel {
   readonly id: RoomLabelId;

@@ -257,7 +257,7 @@ export class BuildingModel {
 
   /**
    * Assigns — or clears — a derived room's type by pinning a label to a seed
-   * point inside the region (`building-editor.md` §4): the room itself is
+   * point inside the region: the room itself is
    * never stored, so whichever region holds the point wears the type.
    */
   setRoomType(
@@ -433,7 +433,7 @@ export class BuildingModel {
   /**
    * Raises one more storey over the edited building — empty, or starting from
    * a copy of the storey below's walls (new identities, openings left behind)
-   * — and aims the editor at it (`building-editor.md` §5).
+   * — and aims the editor at it.
    */
   addStoreyToEditedBuilding({
     copyWalls,

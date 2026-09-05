@@ -51,7 +51,7 @@ const StoreyButton = memo(
 );
 
 /**
- * The first `MODE_BAR_EXTRAS` occupant (`building-editor.md` §5): one button
+ * The first `MODE_BAR_EXTRAS` occupant: one button
  * per storey, a way to raise the next one — empty, or from a copy of the walls
  * below — the reference-display eye, and a way to take an upper storey down.
  */

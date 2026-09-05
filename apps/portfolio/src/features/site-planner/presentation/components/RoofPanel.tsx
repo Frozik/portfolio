@@ -205,7 +205,7 @@ const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerSto
 });
 
 /**
- * The active storey's exposed ceiling, zoned (`building-editor.md` §5): what
+ * The active storey's exposed ceiling, zoned: what
  * the storey above leaves uncovered — the top storey's whole roof included —
  * each region wearing a cover: membrane, terrace, or the green roof.
  */

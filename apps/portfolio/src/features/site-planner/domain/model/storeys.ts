@@ -18,8 +18,8 @@ import type { Wall } from './walls';
 export type StoreyId = Opaque<'StoreyId', string>;
 
 /**
- * What an exposed stretch of ceiling is covered with (`building-editor.md`
- * §5, R2/R22): the plain membrane, a walkable terrace, or planting — the
+ * What an exposed stretch of ceiling is covered with:
+ * the plain membrane, a walkable terrace, or planting — the
  * green roof. The path-segment «покрытие» pattern lifted to areas.
  */
 export type RoofCover = 'membrane' | 'terrace' | 'green';
@@ -54,7 +54,7 @@ export function createRoofZoneLabel({
 }
 
 /**
- * One storey of a building (`building-editor.md` §5): its own walls, openings
+ * One storey of a building: its own walls, openings
  * and room labels, stacked by list order — index 0 stands on the foundation.
  * The GROUND storey's footprint is the building's composition (the site
  * editor's domain); an upper storey's footprint DERIVES from its walls — the

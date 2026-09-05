@@ -65,7 +65,7 @@ const PlacedRow = memo(
 
 /**
  * The furniture catalogue and the active storey's placed pieces
- * (`building-editor.md` §6): a tile arms the piece, the canvas places it.
+ *: a tile arms the piece, the canvas places it.
  */
 export const FurniturePanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);

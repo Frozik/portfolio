@@ -23,7 +23,7 @@ import {
 import { TankTrackAnimator } from '../tank-track-animator';
 import type { ITanksWorldView } from '../tanks-world-view';
 
-/** Drawn between ground and forest, so trees conceal whatever drives under them (§11.3). */
+/** Drawn between ground and forest, so trees conceal whatever drives under them. */
 export class SpriteLayer implements RenderLayer {
   private readonly batch: QuadBatch;
   private readonly instances = new QuadInstanceList(MAX_SPRITE_INSTANCES);

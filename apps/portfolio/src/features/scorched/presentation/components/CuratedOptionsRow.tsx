@@ -14,7 +14,7 @@ import { GLASS_PANEL_CLASS } from '../constants';
 import { formatCash } from '../hud-format';
 import { scorchedT } from '../translations';
 
-/** [§2] The curated row: rounds, wind, walls, starting cash. Everything else is Advanced. */
+/** The curated row: rounds, wind, walls, starting cash. Everything else is Advanced. */
 const ROUND_CHOICES: readonly number[] = [1, 3, 5, 10, 20].filter(
   count => count >= MIN_ROUND_COUNT && count <= MAX_ROUND_COUNT
 );

@@ -32,7 +32,7 @@ const MIN_HABITABLE_STOREY_HEIGHT_METERS: Meters = 2.2;
 
 /**
  * One advisory finding about a building. Advisory by design, like the trench
- * norms (`building-editor.md` §2): the editor names the rule it would have
+ * norms: the editor names the rule it would have
  * followed and highlights what it is about — the plan stays the user's.
  *
  * Every finding carries the storey it belongs to and a point to travel to, so

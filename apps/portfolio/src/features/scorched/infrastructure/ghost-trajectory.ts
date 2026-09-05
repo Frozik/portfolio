@@ -27,7 +27,7 @@ const GHOST_MAX_TICKS = Math.round(GHOST_TRAJECTORY_SECONDS * TICKS_PER_SECOND);
 const FIRST_SAMPLE_ALPHA = 1;
 
 /**
- * [§12.2] The dotted ghost that follows a drag: the first ~1.5 s of the shot the player is
+ * The dotted ghost that follows a drag: the first ~1.5 s of the shot the player is
  * currently dialling, under the wind they actually have. It fades out along its length on purpose
  * — the ghost is an aid, not an oracle, and a long shot still has to be earned.
  */

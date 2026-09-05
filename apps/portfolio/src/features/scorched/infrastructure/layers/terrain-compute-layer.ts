@@ -16,7 +16,7 @@ const NO_TICKS = 0;
 const MAX_ACCUMULATED_SECONDS = MAX_COLLAPSE_STEPS_PER_FRAME * COLLAPSE_SECONDS_PER_STEP;
 
 /**
- * Drives the terrain's GPU work (§11.1): a fresh upload when the round underneath it changes, the
+ * Drives the terrain's GPU work: a fresh upload when the round underneath it changes, the
  * queued stamps, and the falling-sand animation for as many 60 Hz steps as real time allows. The
  * animation is stepped on its own clock rather than the display's, so dirt falls at the same
  * speed on a 60 Hz laptop and a 144 Hz monitor, and it only runs while something is still moving.

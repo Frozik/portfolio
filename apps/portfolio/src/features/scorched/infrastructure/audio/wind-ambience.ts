@@ -3,7 +3,7 @@ import { random } from 'lodash-es';
 import { MAX_WIND } from '../../domain/constants';
 
 /**
- * [§12.2] The wind the player is about to fight, made audible while they aim: filtered noise whose
+ * The wind the player is about to fight, made audible while they aim: filtered noise whose
  * brightness and loudness track the round's wind magnitude. It replaces the tanks engine hum in
  * this feature's stack — a turn-based game has no engine, but it does have weather.
  */

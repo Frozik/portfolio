@@ -107,7 +107,7 @@ export function splitAtApex(
 }
 
 /**
- * §15.3 default hop geometry: the shell skips forward off the impact, keeping its horizontal
+ * Our default hop geometry: the shell skips forward off the impact, keeping its horizontal
  * run and flipping the vertical component, both damped.
  */
 function createLeapfrogHop(context: ImpactContext, radiusWu: number): WarheadSpawn {
@@ -124,7 +124,7 @@ function createLeapfrogHop(context: ImpactContext, radiusWu: number): WarheadSpa
   };
 }
 
-/** §15.4 default: 6–10 secondary bursts land on the ground around the impact point. */
+/** Our default: 6–10 secondary bursts land on the ground around the impact point. */
 function scatterFunkyBursts(context: ImpactContext, scatterRadiusWu: number): ImpactEffect[] {
   const burstCount = random(FUNKY_BOMB_MIN_BURSTS, FUNKY_BOMB_MAX_BURSTS);
 
@@ -141,7 +141,7 @@ function scatterFunkyBursts(context: ImpactContext, scatterRadiusWu: number): Im
 }
 
 /**
- * [§15.5] Napalm spreads out from the impact along the surface itself: both fronts advance at
+ * Napalm spreads out from the impact along the surface itself: both fronts advance at
  * once, the liquid feeds whichever front sits lower and climbs only when it must, and a wall too
  * steep to climb stops that side for good. The covered run hugs the terrain profile.
  */

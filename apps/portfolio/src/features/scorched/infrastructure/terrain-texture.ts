@@ -31,7 +31,7 @@ function createPaletteNoiseTile(): Uint8Array {
 }
 
 /**
- * The pair of terrain textures the compute passes ping-pong between (§11.1). One texel is one
+ * The pair of terrain textures the compute passes ping-pong between. One texel is one
  * world unit: red carries dirt presence, green a palette variation that travels with the dirt as
  * it falls, blue the scorch left by a blast.
  *

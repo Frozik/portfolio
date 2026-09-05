@@ -258,7 +258,7 @@ function createPoolFlames(pool: NapalmPool): ParticleInstance[] {
 }
 
 /**
- * [§11.2] Turns the round's events into the cosmetic burst that goes with them: dirt spray where
+ * Turns the round's events into the cosmetic burst that goes with them: dirt spray where
  * the ground was moved, smoke over an explosion, fire above a napalm pool. Nothing here touches
  * gameplay — the damage was already resolved in the domain before the event was emitted.
  */

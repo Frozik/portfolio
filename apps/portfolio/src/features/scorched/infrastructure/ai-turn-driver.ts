@@ -18,7 +18,7 @@ import type { AimState, AiPersonality, ItemId, PlayerId, WeaponId } from '../dom
 
 /** What the store should do with the AI's turn this frame. */
 export interface AiTurnStep {
-  /** True during the pause before the barrel starts moving — the §13 "thinking" beat. */
+  /** True during the pause before the barrel starts moving — the "thinking" beat. */
   readonly isThinking: boolean;
   readonly aim: AimState | undefined;
   readonly weaponId: WeaponId | undefined;
@@ -80,7 +80,7 @@ export function hasReachedAim(current: AimState, target: AimState): boolean {
 }
 
 /**
- * Plays an AI's turn on the frame clock (§9, §13): it thinks for a beat, dials the barrel across
+ * Plays an AI's turn on the frame clock: it thinks for a beat, dials the barrel across
  * where the player can watch it happen, and only then pulls the trigger. The decision itself is
  * the domain's — this only paces it and remembers the two things the manual's personalities need
  * across shots: where their last shell landed, and who last hurt them.

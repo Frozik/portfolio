@@ -1,6 +1,6 @@
 import type { SpriteBitmap } from './sprite-types';
 
-/** Our own 3 × 5 numeral set, drawn in the era's style (§1.4). */
+/** Our own 3 × 5 numeral set, drawn in the era's style. */
 export const DIGIT_BITMAPS: readonly SpriteBitmap[] = [
   ['111', '1.1', '1.1', '1.1', '111'],
   ['.1.', '11.', '.1.', '.1.', '111'],

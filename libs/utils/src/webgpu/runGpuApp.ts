@@ -10,6 +10,8 @@ export interface GpuAppOptions<TSession extends GpuAppSession> {
   readonly onReady?: (session: TSession) => void;
   /** Logged together with the rejection reason when initialization fails. */
   readonly initErrorMessage: string;
+  /** Takes over from the log when the app owns its failure state (a notice instead of a blank canvas). */
+  readonly onInitError?: (error: unknown) => void;
 }
 
 /**
@@ -23,7 +25,7 @@ export interface GpuAppOptions<TSession extends GpuAppSession> {
 export function runGpuApp<TSession extends GpuAppSession>(
   options: GpuAppOptions<TSession>
 ): VoidFunction {
-  const { init, onReady, initErrorMessage } = options;
+  const { init, onReady, initErrorMessage, onInitError } = options;
 
   let destroyed = false;
   let gpuCleanup: VoidFunction | undefined;
@@ -39,6 +41,12 @@ export function runGpuApp<TSession extends GpuAppSession>(
       onReady?.(session);
     },
     (error: unknown) => {
+      if (onInitError) {
+        onInitError(error);
+
+        return;
+      }
+
       // oxlint-disable-next-line no-console -- surfaces WebGPU app init failure
       console.error(initErrorMessage, error);
     }

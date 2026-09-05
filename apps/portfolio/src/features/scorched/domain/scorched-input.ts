@@ -1,10 +1,10 @@
-/** An absolute aim produced by a drag gesture, in the dial space of `aim-dial.ts` (§12.2). */
+/** An absolute aim produced by a drag gesture, in the dial space of `aim-dial.ts`. */
 export interface DragAim {
   readonly dialDegrees: number;
   readonly power: number;
 }
 
-/** One frame's worth of aiming intent, whatever device produced it (§12). */
+/** One frame's worth of aiming intent, whatever device produced it. */
 export interface ScorchedInput {
   /** Degrees to turn the barrel dial by; positive swings it towards the left. */
   readonly dialDelta: number;

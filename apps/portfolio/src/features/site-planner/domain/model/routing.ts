@@ -11,7 +11,7 @@ export type UtilityRouteId = Opaque<'UtilityRouteId', string>;
 /**
  * One site trench — the outdoor half of a utility system, drawn on the plot
  * from a building's entry towards the source or the septic
- * (`building-editor.md` §8). The polyline is what the user draws; everything
+ *. The polyline is what the user draws; everything
  * below grade — depth, slope, volume — DERIVES from the system's norms
  * against the terrain (`terrain/trench-profile.ts`).
  */

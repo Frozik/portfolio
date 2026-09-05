@@ -1,7 +1,7 @@
 import type { Meters } from '../units';
 
 /**
- * The shape of a pitched roof (`building-editor.md` §5, R33). Three kinds
+ * The shape of a pitched roof. Three kinds
  * cover what a загородный дом is actually built with: двускатная (gable),
  * вальмовая (hip) and односкатная (shed). Anything more — mansard, multi-gable
  * — is a composition of these over separate storeys rather than a fourth kind.

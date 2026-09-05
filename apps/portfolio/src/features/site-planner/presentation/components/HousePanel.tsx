@@ -185,7 +185,7 @@ const FoundationKindItem = memo(
 );
 
 /**
- * The foundation as `building-editor.md` §3 designs it: chosen, never drawn —
+ * The foundation: chosen, never drawn —
  * kind plus two numbers, with the geometry derived from the footprint.
  */
 const FoundationBlock = observer(

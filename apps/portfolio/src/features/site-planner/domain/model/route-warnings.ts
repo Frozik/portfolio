@@ -17,7 +17,7 @@ const DEPTH_TOLERANCE_METERS: Meters = 0.05;
 const PARALLEL_ANGLE_LIMIT_DEGREES = 30;
 
 /**
- * One advisory finding of the norm pass (`building-editor.md` §8). Advisory by
+ * One advisory finding of the norm pass. Advisory by
  * design: the editor flags the rule, the user decides — nothing blocks.
  */
 export type RouteWarning =

@@ -42,7 +42,7 @@ export const MIN_GRAVITY = 0.05;
 export const MAX_GRAVITY = 10;
 export const DEFAULT_GRAVITY = 0.2;
 /**
- * §15.2, resolved at M4. The pair below is calibrated together against one target: **a full-power
+ * Resolved at M4. The pair below is calibrated together against one target: **a full-power
  * 45° shot spans the whole 800 wu field**, so the two extreme tanks of a wide roster can just
  * barely reach each other and every shorter shot is a fraction of the dial the player can feel.
  *
@@ -52,7 +52,7 @@ export const DEFAULT_GRAVITY = 0.2;
  * hang time, long enough to watch the wind work on the shell. `ballistics.test.ts` pins the span.
  *
  * (No reference footage was available; the numbers are calibrated to the documented target of
- * §5 — "a max-power 45° shot spans ≈ the field" — rather than measured off the original.)
+ * "a max-power 45° shot spans ≈ the field" rather than measured off the original.)
  */
 export const GRAVITY_UNIT_TO_WU_PER_TICK_SQUARED = 0.4;
 export const POWER_TO_SPEED_WU_PER_TICK = 0.008;
@@ -64,20 +64,20 @@ export const CALIBRATION_SPAN_TOLERANCE_WU = 40;
 export const MIN_WIND = 0;
 export const MAX_WIND = 500;
 export const DEFAULT_MAX_WIND = 200;
-/** §15.2 calibration: a 200-unit wind deflects a full-power 45° shot by about 100 wu. */
+/** Calibration: a 200-unit wind deflects a full-power 45° shot by about 100 wu. */
 export const WIND_UNIT_TO_WU_PER_TICK_SQUARED = 0.00005;
 
 /** [MANUAL §5] Air viscosity option range; 0 (off) is the default. */
 export const MIN_VISCOSITY = 0;
 export const MAX_VISCOSITY = 20;
 export const DEFAULT_VISCOSITY = 0;
-/** §15 default: each viscosity unit removes this fraction of the velocity every tick. */
+/** Our default: each viscosity unit removes this fraction of the velocity every tick. */
 export const VISCOSITY_DAMPING_PER_UNIT = 0.001;
 
 /** [MANUAL §5] Shots leaving the field stay tracked for this margin before scoring a miss. */
 export const BORDERS_EXTEND_MARGIN_WU = 75;
 
-/** §15 default: how deep a tunnelling-enabled shell burrows before detonating. */
+/** Our default: how deep a tunnelling-enabled shell burrows before detonating. */
 export const PROJECTILE_TUNNEL_DEPTH_WU = 6;
 
 /** [MANUAL §5] Energy kept by a bounce, per wall material. */
@@ -101,7 +101,7 @@ export const RESOLVABLE_WALL_MODES: readonly ResolvedWallMode[] = [
 /** [MANUAL §7] Fuel buys 1 wu of level travel; climbing costs extra per wu of ascent. */
 export const FUEL_COST_PER_WU = 1;
 export const FUEL_EXTRA_COST_PER_WU_CLIMBED = 1;
-/** §15 default: a tank cannot hold a slope steeper than this and slides down instead. */
+/** Our default: a tank cannot hold a slope steeper than this and slides down instead. */
 export const MAX_CLIMB_SLOPE_WU_PER_COLUMN = 1.5;
 
 export const MIN_TERRAIN_HEIGHT_WU = 10;
@@ -122,7 +122,7 @@ export const MAX_SLOPE_TILT_WU = 300;
 export const UNFLATTENED_MAX_STEP_WU_PER_COLUMN = 30;
 export const FULLY_FLATTENED_MAX_STEP_WU_PER_COLUMN = 0.4;
 
-/** §15.1 default: damage falls off linearly to zero at the blast radius. */
+/** Our default: damage falls off linearly to zero at the blast radius. */
 export const BLAST_DAMAGE_PER_RADIUS_WU = 1.5;
 
 /** [MANUAL §8] Cash starts at zero and banks between rounds at 5% by default. */
@@ -136,7 +136,7 @@ export const PERCENT_SCALE = 100;
 export const MAX_ITEM_COUNT = 99;
 export const TRUNCATED_BUNDLE_MARKUP = 0.2;
 /**
- * §15 default: selling returns 80% of the unit price. A full refund would let a player dump
+ * Our default: selling returns 80% of the unit price. A full refund would let a player dump
  * their arsenal every round purely to earn bank interest on the proceeds and re-buy after.
  */
 export const SELL_BACK_FRACTION = 0.8;
@@ -161,7 +161,7 @@ export const MIN_TANKS_ALIVE_TO_CONTINUE = 2;
 /** [MANUAL §7] Each battery restores 10 health, never past the 100 cap. */
 export const BATTERY_HEALTH_BONUS = 10;
 
-/** §15 default: how much damage each shield tier soaks before it collapses. */
+/** Our default: how much damage each shield tier soaks before it collapses. */
 export const SHIELD_CAPACITY_BY_TIER: Readonly<Record<ShieldTier, number>> = {
   shield: 100,
   force: 200,
@@ -169,7 +169,7 @@ export const SHIELD_CAPACITY_BY_TIER: Readonly<Record<ShieldTier, number>> = {
 };
 
 /**
- * §15.6, resolved at M4: a constant upward shove inside the radius, drawn from a per-round budget
+ * Resolved at M4: a constant upward shove inside the radius, drawn from a per-round budget
  * counted in **tick-pushes** — one unit is spent for every tick a shell spends in the field.
  *
  * The acceleration is sized so one pass is decisive: a shell crossing the 60 wu bubble takes
@@ -186,7 +186,7 @@ export const SUPER_MAG_RADIUS_WU = 90;
 export const SUPER_MAG_ACCELERATION_WU_PER_TICK_SQUARED = 0.4;
 export const SUPER_MAG_CAPACITY = 60;
 
-/** §15 default: heat guidance may bend the shell by this much every tick. */
+/** Our default: heat guidance may bend the shell by this much every tick. */
 export const HEAT_GUIDANCE_TURN_RATE_DEGREES_PER_TICK = 2;
 
 /** [MANUAL §7] Contact Triggers are sold in bundles of 25 for $1 000. */
@@ -194,7 +194,7 @@ export const CONTACT_TRIGGER_COST = 1000;
 export const CONTACT_TRIGGER_BUNDLE_SIZE = 25;
 
 /**
- * §15.3, resolved at M4: three hops continuing along the impact trajectory with damped energy.
+ * Resolved at M4: three hops continuing along the impact trajectory with damped energy.
  *
  * A hop's range scales with the square of the damping, so the number is chosen from the distance
  * it produces rather than from how "lossy" it looks: at 0.35 a typical mid-power arrival hops
@@ -209,11 +209,11 @@ export const LEAPFROG_HOP_ENERGY_DAMPING = 0.35;
 /** [MANUAL §6] MIRV-family warhead counts. */
 export const MIRV_WARHEAD_COUNT = 5;
 export const DEATHS_HEAD_WARHEAD_COUNT = 9;
-/** §15 default: warheads fan out around the parent's velocity at apex. */
+/** Our default: warheads fan out around the parent's velocity at apex. */
 export const MIRV_WARHEAD_SPREAD_WU_PER_TICK = 0.6;
 
 /**
- * §15.4, resolved at M4: 6–10 secondary bursts scattered along the ground around the impact.
+ * Resolved at M4: 6–10 secondary bursts scattered along the ground around the impact.
  *
  * The scatter span is deliberately its own number rather than the weapon's [MANUAL] blast radius
  * the two happened to share at M3 — one describes how far the bomblets are thrown, the other how
@@ -226,7 +226,7 @@ export const FUNKY_BOMB_MAX_BURSTS = 10;
 export const FUNKY_BOMB_BURST_RADIUS_WU = 20;
 export const FUNKY_BOMB_SCATTER_HALF_SPAN_WU = 80;
 
-/** §15 default: how wide a Dirt Charge throws its wedge of airborne dirt. */
+/** Our default: how wide a Dirt Charge throws its wedge of airborne dirt. */
 export const DIRT_CHARGE_WEDGE_RADIUS_WU = 60;
 
 /** A roller gives up after crossing this many columns without finding a resting place. */
@@ -240,7 +240,7 @@ export const ROLLER_SPEED_WU_PER_TICK: Readonly<Partial<Record<WeaponId, number>
 export const DEFAULT_ROLLER_SPEED_WU_PER_TICK = 1.5;
 
 /**
- * The falling-sand settle's gravity, in wu per tick². Not the §5 shell gravity: this paces both
+ * The falling-sand settle's gravity, in wu per tick². Not the shell gravity: this paces both
  * the GPU descent animation and the round's own settling wait — nobody may fire while the ground
  * is still coming down, so the animation and the turn gate must count the same ticks.
  */
@@ -252,13 +252,13 @@ export const ROLLER_MAX_CLIMB_WU_PER_COLUMN = 3;
 /** A shield stops the roller at arm's length: it detonates this far outside the tank's box. */
 export const ROLLER_SHIELD_STANDOFF_WU = 3;
 
-/** §15.5 defaults for napalm spread; the coating depth drives the per-turn burn damage. */
+/** Our defaults for napalm spread; the coating depth drives the per-turn burn damage. */
 export const NAPALM_DAMAGE_PER_DEPTH_WU = 2;
 export const NAPALM_MAX_POOL_HALF_SPAN_COLUMNS = 60;
 export const NAPALM_SURFACE_DEPTH_WU = 4;
 export const NAPALM_MAX_CLIMB_WU_PER_COLUMN = 3;
 
-/** §15 default: how far liquid dirt spreads while looking for hollows to fill. */
+/** Our default: how far liquid dirt spreads while looking for hollows to fill. */
 export const LIQUID_DIRT_MAX_HALF_SPAN_COLUMNS = 80;
 
 export const LIQUID_DIRT_POUR_PORTIONS = 14;
@@ -272,7 +272,7 @@ export const PLASMA_MAX_RADIUS_WU = 75;
 export const PLASMA_MIN_BATTERIES = 1;
 export const PLASMA_MAX_BATTERIES = 10;
 
-/** §15 default: the laser cuts a thin line and ignores both terrain and shields. */
+/** Our default: the laser cuts a thin line and ignores both terrain and shields. */
 export const LASER_DAMAGE = 30;
 export const LASER_BEAM_HALF_WIDTH_WU = 3;
 
@@ -281,7 +281,7 @@ export const STANDARD_POINTS_PER_DAMAGE = 1;
 export const STANDARD_KILL_POINTS = 100;
 /** Self and team damage is subtracted rather than ignored. */
 export const SELF_DAMAGE_POINTS_MULTIPLIER = -1;
-/** §15 default: round winnings are the round's points at this rate. */
+/** Our default: round winnings are the round's points at this rate. */
 export const CASH_PER_POINT = 100;
 
 /** How many wind/gravity refinement passes the solver runs before accepting its answer. */
@@ -292,7 +292,7 @@ export const AIM_SOLVER_SCAN_STEP_DEGREES = 5;
 export const AIM_HIT_TOLERANCE_WU = 12;
 /** Mirror images considered per side when Poolshark looks for a bank shot. */
 export const BANK_SHOT_MIRROR_COUNT = 2;
-/** §15 default: Tosser moves this fraction of the way towards closing its previous miss. */
+/** Our default: Tosser moves this fraction of the way towards closing its previous miss. */
 export const TOSSER_REFINEMENT_GAIN = 0.5;
 
 /** [MANUAL §12] Talking tanks: the per-shot chance of a taunt, off by default. */
@@ -301,7 +301,7 @@ export const MAX_TALK_PROBABILITY_PERCENT = 100;
 export const DEFAULT_TALK_PROBABILITY_PERCENT = 0;
 
 /**
- * §13 "feel": an AI must not snap onto its answer. It pauses as if considering the shot, then
+ * An AI must not snap onto its answer. It pauses as if considering the shot, then
  * winds the dial and the throttle across at a human-ish rate before pulling the trigger.
  */
 /**
@@ -312,7 +312,7 @@ export const DEFAULT_TALK_PROBABILITY_PERCENT = 0;
 export const TAUNT_LINE_COUNT = 10;
 /** How long a speech bubble stays over a tank before it fades. */
 export const TAUNT_VISIBLE_SECONDS = 2.6;
-/** How long a floating damage number stays at the point of impact (§13). */
+/** How long a floating damage number stays at the point of impact. */
 export const DAMAGE_POPUP_SECONDS = 1.4;
 
 export const AI_THINKING_SECONDS = 0.7;
@@ -321,7 +321,7 @@ export const AI_POWER_UNITS_PER_SECOND = 1100;
 /** Below this the dial has arrived; anything finer would never converge in floating point. */
 export const AI_AIM_EPSILON = 0.001;
 
-/** §15 default: the AI spends at most this share of its bank in one shop visit. */
+/** Our default: the AI spends at most this share of its bank in one shop visit. */
 export const AI_SHOPPING_BUDGET_FRACTION = 0.8;
 export const AI_MAX_SHOP_PURCHASES = 12;
 /** Spent on defence before the weapon rack gets the rest. */
@@ -330,7 +330,7 @@ export const AI_DEFENSE_BUDGET_FRACTION = 0.4;
 export const AI_MIN_ROUNDS_FOR_AUTO_DEFENSE = 2;
 export const AI_SHIELD_STOCK_TARGET = 3;
 
-/** §12.2: the ghost shows the first 1.5 s of flight, sampled every few ticks. */
+/** The ghost shows the first 1.5 s of flight, sampled every few ticks. */
 export const GHOST_TRAJECTORY_SECONDS = 1.5;
 export const GHOST_TRAJECTORY_SAMPLE_STRIDE_TICKS = 3;
 

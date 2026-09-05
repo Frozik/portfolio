@@ -64,7 +64,7 @@ export function writeCarveOps(target: Float32Array, ops: readonly CarveOp[]): vo
 }
 
 /**
- * Turns the round's terrain events into GPU work (§11.1). The domain has already resolved the
+ * Turns the round's terrain events into GPU work. The domain has already resolved the
  * terrain by the time an event is emitted; this only decides what the compute passes have to
  * draw and how long the falling-sand animation must keep running.
  */

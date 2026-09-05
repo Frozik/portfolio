@@ -10,13 +10,13 @@ import type { ScorchedGameStatus, ScorchedStore } from './ScorchedStore';
 
 const NOT_DESCENDING = 0;
 /**
- * The muzzle speed of a full-power shot (§15.2). A shell crossing its apex near this is a flat,
+ * The muzzle speed of a full-power shot. A shell crossing its apex near this is a flat,
  * fast round and gets the top of the whistle's pitch range.
  */
 const WHISTLE_REFERENCE_SPEED_WU_PER_TICK = MAX_POWER * POWER_TO_SPEED_WU_PER_TICK;
 
 /**
- * Every audio side-effect of the game, kept out of the store (§12/§12.2): the store holds data,
+ * Every audio side-effect of the game, kept out of the store: the store holds data,
  * this controller listens to it. Owned by `ScorchedGame` alongside the renderer.
  *
  * MobX reactions run synchronously as the triggering action commits, so a jingle fired by a status
@@ -47,7 +47,7 @@ export class ScorchedAudioController {
         () => store.windUnits,
         windUnits => this.engine.setWind(windUnits)
       ),
-      // [§12.2] The wind is only audible while somebody is deciding what to do about it.
+      // The wind is only audible while somebody is deciding what to do about it.
       reaction(
         () => store.isAiming,
         isAiming => this.engine.setWindAudible(isAiming)
@@ -67,7 +67,7 @@ export class ScorchedAudioController {
 
   /**
    * Browsers only let an `AudioContext` start from a user gesture, so every entry point a player
-   * can reach with a click, a key or a tap primes the engine (§12.2). Idempotent and cheap.
+   * can reach with a click, a key or a tap primes the engine. Idempotent and cheap.
    */
   unlock(): void {
     this.engine.unlock();
@@ -76,7 +76,7 @@ export class ScorchedAudioController {
   /**
    * One frame's audio. The whistle is a state rather than an event — no single tick is "the shell
    * started falling" — so the shell reports how fast it is coming down and the cue fires on the
-   * transition, pitched by the speed it tipped over at (§16.4). A lobbed shot sighs, a flat
+   * transition, pitched by the speed it tipped over at. A lobbed shot sighs, a flat
    * full-power one screams.
    */
   onFrame(events: readonly WorldEvent[], descentSpeedWuPerTick: number): void {
@@ -89,7 +89,7 @@ export class ScorchedAudioController {
     this.descentSpeedWuPerTick = descentSpeedWuPerTick;
   }
 
-  /** [§13] The shop's till, rung by the screen that spends the money. */
+  /** The shop's till, rung by the screen that spends the money. */
   playPurchase(): void {
     this.engine.unlock();
     this.engine.play('cash-register');

@@ -5,7 +5,7 @@ import { Button } from '../../../../shared/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
 import { tanksT } from '../translations';
 
-/** §10's start menu: the feature title, the best score so far and a single Start action. */
+/** The start menu: the feature title, the best score so far and a single Start action. */
 export const StartMenuOverlay = observer(() => {
   const store = useTanksStore();
   const { bestScore } = store;

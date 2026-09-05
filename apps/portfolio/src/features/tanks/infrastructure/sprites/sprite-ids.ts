@@ -1,6 +1,6 @@
 import type { EnemyType, PowerUpType, QuadrantSelection } from '../../domain/types';
 
-/** Every variant differing in art or palette is a separate atlas entry (§11.4). */
+/** Every variant differing in art or palette is a separate atlas entry. */
 export const FIELD_BACKGROUND_SPRITE_ID = 'field-background';
 export const STEEL_SPRITE_ID = 'terrain-steel';
 export const WATER_SPRITE_ID = 'terrain-water';

@@ -1,12 +1,12 @@
 import type { IMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENEMIES_PER_STAGE, INITIAL_LIVES } from '../domain/constants';
-import type { IBestScoreStorage } from '../infrastructure/best-score-storage';
+import type { IBestScoreStorage } from '../domain/ports/best-score-storage';
 import { TanksStore } from './TanksStore';
 
 const STAGE_INTRO_DURATION_MS = 2000;
 const STAGE_CLEAR_DURATION_MS = 2500;
-/** The rise (128 ticks) plus the hold (144 ticks) of §11.5. */
+/** The rise (128 ticks) plus the hold (144 ticks). */
 const GAME_OVER_DURATION_MS = ((128 + 144) * 1000) / 60;
 
 function setDocumentHidden(isHidden: boolean): void {

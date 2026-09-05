@@ -11,7 +11,7 @@ import type { RotatedFrame } from './polygonize-shape';
 import { planToRectangleLocal, rectangleLocalToPlan } from './polygonize-shape';
 
 /**
- * A pitched roof, derived (`building-editor.md` §5, R33).
+ * A pitched roof, derived.
  *
  * The whole surface is one HEIGHT FUNCTION over the plan, measured up from the
  * eaves, and it is piecewise linear: every slope is a plane, so the roof is cut

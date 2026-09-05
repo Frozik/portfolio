@@ -90,7 +90,7 @@ function clampToMaxAmplitude(value: number): number {
 }
 
 /**
- * [§13 "Feel"] The juice the renderer applies to the camera: a shake scaled to the blast that
+ * The juice the renderer applies to the camera: a shake scaled to the blast that
  * caused it, and a few frames of hit-stop when a shell strikes a tank squarely.
  *
  * Both live here rather than in the domain — the simulation is deterministic and knows nothing

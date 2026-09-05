@@ -16,7 +16,7 @@ const FIELD_QUAD_CORNERS = array<vec2<f32>, 6>(
     vec2<f32>(0.0, 1.0),
 );
 
-// [§13 "Feel"] The screen shake slides the whole world transform, which would otherwise drag the
+// The screen shake slides the whole world transform, which would otherwise drag the
 // letterbox background into view along the edge it moves away from. The two background layers are
 // therefore drawn a shake's worth larger than the field on every side. Both samplers clamp to the
 // edge, so the extra band is the terrain's own outermost row (dirt below, sky above) rather than a

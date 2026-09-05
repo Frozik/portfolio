@@ -119,7 +119,7 @@ export function selectAggressiveDirection(enemy: EnemyTank, context: IEnemyAiCon
   }
 }
 
-/** An aligned enemy re-picks direction with p = 1/16 and fires with p = 1/32 (§8). */
+/** An aligned enemy re-picks direction with p = 1/16 and fires with p = 1/32. */
 export function decideEnemyAction(
   enemy: EnemyTank,
   context: IEnemyAiContext,
@@ -134,7 +134,7 @@ export function decideEnemyAction(
   return { direction, fire };
 }
 
-/** 3 draws of 4 brake and keep pushing — the original's bumping stutter; the fourth reverses (§8). */
+/** 3 draws of 4 brake and keep pushing — the original's bumping stutter; the fourth reverses. */
 export function decideBlockedReaction(enemy: EnemyTank, context: IEnemyAiContext): BlockedReaction {
   const draw = random(ENEMY_BLOCKED_REACTION_DENOMINATOR - 1);
 

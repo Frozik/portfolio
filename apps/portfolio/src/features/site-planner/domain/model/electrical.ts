@@ -12,7 +12,7 @@ export function createDeviceId(): DeviceId {
 type CircuitGroupId = Opaque<'CircuitGroupId', string>;
 
 /**
- * The electrical device kinds (`building-editor.md` §7, R11): the щиток is a
+ * The electrical device kinds: the щиток is a
  * first-class kind — groups root at it — next to what it feeds.
  */
 export type DeviceKind = 'panel' | 'outlet' | 'switch' | 'light';
@@ -47,7 +47,7 @@ export interface ElectricalDevice {
 }
 
 /**
- * The conventional mounting heights (`building-editor.md` §8, the ПУЭ-era
+ * The conventional mounting heights (the ПУЭ-era
  * practice): sockets low, switches at the hand, the щиток at the eye. A
  * placed device starts here and stays editable.
  */
@@ -89,7 +89,7 @@ export function createCeilingLight(position: Vector2): ElectricalDevice {
 }
 
 /**
- * One группа rooted at a panel (`building-editor.md` §7): the consumers it
+ * One группа rooted at a panel: the consumers it
  * feeds. Switch→light links live beside the groups — a link is wiring
  * geometry, membership is circuit bookkeeping, and the two are edited by the
  * same connect tool.

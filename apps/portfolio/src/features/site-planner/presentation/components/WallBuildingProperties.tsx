@@ -38,7 +38,7 @@ const REFERENCE_LINE_OPTIONS = WALL_REFERENCE_LINES.map(line => ({
 /**
  * A wall opened inside the building editor: its construction is data — the
  * material and reference line switch, the thickness types, and the body
- * re-derives (`building-editor.md` §4).
+ * re-derives.
  */
 export const SelectedWallProperties = observer(
   ({ store, wall }: { readonly store: SitePlannerStore; readonly wall: Wall }) => {

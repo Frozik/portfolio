@@ -13,7 +13,7 @@ const CLIP_SPACE_SPAN = 2;
 
 export interface ScorchedUniforms {
   readonly buffer: GPUBuffer;
-  /** `cameraOffsetWu` is the §13 screen shake; it slides the world, never the simulation. */
+  /** `cameraOffsetWu` is the screen shake; it slides the world, never the simulation. */
   write(state: FrameState, cameraOffsetWu: Vector2): void;
   dispose(): void;
 }

@@ -18,7 +18,7 @@ const STAR_DENSITY_OFFSET = 8;
 const OPAQUE = 1;
 
 /**
- * [§11.3] The backdrop, drawn over the whole field. First layer of the frame, so it also clears
+ * The backdrop, drawn over the whole field. First layer of the frame, so it also clears
  * the letterbox around the field to the shared scene background.
  */
 export class SkyLayer implements RenderLayer {

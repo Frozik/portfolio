@@ -10,7 +10,7 @@ import type { PlayerId } from '../domain/types';
 /** A floating number is either a wound or a repair; the overlay colours and signs it either way. */
 export type HealthPopupKind = 'damage' | 'repair';
 
-/** [§13] A health number floating away from the tank it happened to. */
+/** A health number floating away from the tank it happened to. */
 export interface IDamagePopup {
   readonly id: number;
   readonly playerId: PlayerId;
@@ -20,7 +20,7 @@ export interface IDamagePopup {
   remainingSeconds: number;
 }
 
-/** [§12] A taunt bubble over a tank; the text itself is resolved from the translations. */
+/** A taunt bubble over a tank; the text itself is resolved from the translations. */
 export interface ITauntBubble {
   readonly playerId: PlayerId;
   readonly kind: TauntKind;
@@ -31,12 +31,12 @@ export interface ITauntBubble {
 export interface IOverlayStoreParams {
   /** Where the popup starts its drift from; undefined once the tank is off the field. */
   readonly getTankCenter: (playerId: PlayerId) => Vector2 | undefined;
-  /** [§12] How chatty the roster is, straight off the advanced options. */
+  /** How chatty the roster is, straight off the advanced options. */
   readonly getTalkProbabilityPercent: () => number;
 }
 
 /**
- * [§12, §13] The two overlays that live on wall-clock time rather than on the round: the floating
+ * The two overlays that live on wall-clock time rather than on the round: the floating
  * health numbers and the taunt bubbles. Nothing here feeds back into the world — they are pushed
  * by the events the round emits and aged off the field frame by frame.
  */

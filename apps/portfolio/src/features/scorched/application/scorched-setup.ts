@@ -18,13 +18,13 @@ import type {
   WallMode,
 } from '../domain/types';
 
-/** [§2] The three wind choices the curated options row offers instead of a magnitude slider. */
+/** The three wind choices the curated options row offers instead of a magnitude slider. */
 export type WindPreset = 'off' | 'steady' | 'changing';
 
-/** [§2] The three walls choices; the remaining [MANUAL §5] modes stay out of the curated row. */
+/** The three walls choices; the remaining [MANUAL §5] modes stay out of the curated row. */
 export type WallsPreset = 'none' | 'bouncy' | 'wrap';
 
-/** [§2] Everything behind the single collapsed Advanced panel, at the manual's own defaults. */
+/** Everything behind the single collapsed Advanced panel, at the manual's own defaults. */
 export interface ScorchedAdvancedOptions {
   readonly gravity: number;
   readonly viscosity: number;

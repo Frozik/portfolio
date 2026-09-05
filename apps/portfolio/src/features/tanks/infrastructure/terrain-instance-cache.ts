@@ -32,7 +32,7 @@ function getCellQuadrantUvRect(tileRect: AtlasUvRect, cellX: number, cellY: numb
 
 /**
  * Rebuilt only when the terrain revision moves — or when the eagle blows up, which swaps its
- * art without touching a cell (§11.3).
+ * art without touching a cell.
  */
 export class TerrainInstanceCache {
   private groundInstancesValue = new QuadInstanceList(0);

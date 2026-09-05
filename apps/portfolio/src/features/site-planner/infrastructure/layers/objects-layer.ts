@@ -77,7 +77,7 @@ const CAR_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
 interface ObjectsInput {
   readonly house: LitMesh | undefined;
   /**
-   * The storeys the editor is not aimed at, drawn faintly (plan §6.4). Empty
+   * The storeys the editor is not aimed at, drawn faintly . Empty
    * outside the building editor, where the whole house is solid.
    */
   readonly houseGhost: LitMesh | undefined;

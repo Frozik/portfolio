@@ -1,4 +1,4 @@
-/** The NES (2C02 PPU) hardware palette — a fact about the console, not a creative work (§1.4). */
+/** The NES (2C02 PPU) hardware palette — a fact about the console, not a creative work. */
 export const NES_BLACK = '#000000';
 export const NES_WHITE = '#FCFCFC';
 export const NES_LIGHT_GRAY = '#BCBCBC';

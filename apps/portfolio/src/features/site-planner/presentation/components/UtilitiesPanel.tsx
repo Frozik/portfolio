@@ -101,7 +101,7 @@ function describeWarning(warning: RouteWarning, routes: readonly UtilityRoute[])
 }
 
 /**
- * The site's utilities (`building-editor.md` §8): every drawn trench with its
+ * The site's utilities: every drawn trench with its
  * derived length, the advisory findings of the norm pass, what the digging
  * displaces — and the СП 62 disclaimer whenever gas is on the plan.
  */

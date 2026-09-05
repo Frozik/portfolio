@@ -7,7 +7,7 @@ import type { ScreenShake } from '../screen-shake';
 
 /**
  * Writes the shared uniform buffer once per frame, before any layer draws with it — including the
- * §13 camera shake, which is folded into the world transform here and nowhere else.
+ * camera shake, which is folded into the world transform here and nowhere else.
  */
 export function createUniformUpdateLayer(
   uniforms: ScorchedUniforms,

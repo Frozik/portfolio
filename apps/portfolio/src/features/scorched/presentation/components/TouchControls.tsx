@@ -35,7 +35,7 @@ const CONTAINER_BASE_CLASS =
   'pointer-events-auto absolute select-none rounded-2xl border border-white/15 ' +
   'backdrop-blur-sm [touch-action:none]';
 
-/** [§12.2] A fine-tune stepper: one step on press, then a burst after a short delay. */
+/** A fine-tune stepper: one step on press, then a burst after a short delay. */
 const Stepper = memo(
   ({
     label,
@@ -125,7 +125,7 @@ const Stepper = memo(
 );
 
 /**
- * [§12.2] The mobile control chrome: two fine-tune stepper columns in the bottom corners and a
+ * The mobile control chrome: two fine-tune stepper columns in the bottom corners and a
  * prominent fire button in the middle carrying the selected weapon's badge. Coarse aiming is the
  * drag gesture on the field itself, which the canvas owns — these are the last degree of precision.
  */
@@ -135,7 +135,7 @@ export const TouchControls = observer(
     const { selectedWeaponId } = store;
     const firePointerIdRef = useRef<number | undefined>(undefined);
     const [isFireActive, setIsFireActive] = useState(false);
-    // [§12.2] The badge carries what the fire button is about to send: family glyph, name and how
+    // The badge carries what the fire button is about to send: family glyph, name and how
     // many are left — infinite for the baby missile, which is the whole point of it.
     const selectedCount =
       store.availableWeapons.find(entry => entry.weaponId === selectedWeaponId)?.count ??

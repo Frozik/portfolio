@@ -275,7 +275,7 @@ export function getSolidVolume(field: Heightfield): number {
   return field.reduce((total, column) => total + column.surfaceHeight, 0);
 }
 
-/** Tanks ride the surface of their column; a collapse under one drops it and hurts it (§5). */
+/** Tanks ride the surface of their column; a collapse under one drops it and hurts it. */
 export function computeTankFalls(
   field: Heightfield,
   tanks: readonly TankFootprint[]

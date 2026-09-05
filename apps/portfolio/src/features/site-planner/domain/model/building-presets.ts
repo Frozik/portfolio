@@ -3,8 +3,8 @@ import type { FoundationKind, UtilityEntry, UtilitySystem } from './foundation';
 import { createUtilityEntry, ENTRY_SPACING_METERS } from './foundation';
 
 /**
- * The kinds of structure «Добавить строение» offers (`building-editor.md` §5,
- * R19): presets, never editor variants — every building runs the same editor,
+ * The kinds of structure «Добавить строение» offers:
+ * presets, never editor variants — every building runs the same editor,
  * a preset only seeds the data, and everything stays editable afterwards.
  */
 export type BuildingPresetId = 'house' | 'shed' | 'carport';

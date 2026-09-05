@@ -72,7 +72,7 @@ export type WeaponId =
   | 'plasma-blast'
   | 'laser';
 
-/** Weapons sharing a family share their flight and impact behaviour (§6). */
+/** Weapons sharing a family share their flight and impact behaviour. */
 export type WeaponFamily =
   | 'ballistic'
   | 'leapfrog'

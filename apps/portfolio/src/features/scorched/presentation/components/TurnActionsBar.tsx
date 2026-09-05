@@ -70,7 +70,7 @@ const ShieldButton = memo(
 );
 
 /**
- * [§7, §8] What a tank can do with its turn other than shoot: put a battery in, raise a bubble,
+ * What a tank can do with its turn other than shoot: put a battery in, raise a bubble,
  * drive out of the crater it is sitting in, and call the helicopter. The inventory ones only show
  * what the active tank actually owns; retreat is always there, because a tank with an empty locker
  * is exactly the one that needs the helicopter.

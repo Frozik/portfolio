@@ -12,7 +12,7 @@ export function createFurnitureId(): FurnitureId {
 }
 
 /**
- * Everything the furniture catalogue offers (`building-editor.md` §6):
+ * Everything the furniture catalogue offers:
  * household pieces and the plumbing fixtures — the fixtures carry the system
  * an indoor route will one day terminate at.
  */
@@ -257,7 +257,7 @@ export function findFurnitureEntry(id: FurnitureCatalogId): FurnitureCatalogEntr
 export const DEFAULT_FURNITURE_CATALOG_ID: FurnitureCatalogId = 'bed-double';
 
 /**
- * One placed piece. Elevation is first-class (`building-editor.md` §6, the
+ * One placed piece. Elevation is first-class (the
  * Sweet Home 3D lesson): height above the storey's floor is what hangs a
  * boiler on a wall or stands a radiator under a window.
  */

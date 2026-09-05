@@ -20,7 +20,7 @@ function formatRelativeLevel(value: Meters, meterUnit: string): string {
 }
 
 /**
- * The active storey's own numbers (`building-editor.md` §5, plan §6.6): its
+ * The active storey's own numbers: its
  * editable height, and the derived floor levels — relative to the ground
  * floor's ±0.000 and absolute over the site datum. Lives in the properties
  * panels, deliberately NOT in the mode bar.

@@ -14,7 +14,7 @@ export function toScreenPosition(
   };
 }
 
-/** The inverse: where a finger or a mouse landed, in world units (§12.2 drag-to-aim). */
+/** The inverse: where a finger or a mouse landed, in world units (drag-to-aim). */
 export function toWorldPosition(
   transform: LetterboxTransform,
   screenX: number,
@@ -28,7 +28,7 @@ export function toWorldPosition(
 }
 
 /**
- * Where the 800 × 500 field lands on the canvas (§11.1). Unlike the tanks field this is not tile
+ * Where the 800 × 500 field lands on the canvas. Unlike the tanks field this is not tile
  * art, so the scale is left fractional — snapping it to whole pixels would waste up to half a
  * screen on a laptop display.
  */

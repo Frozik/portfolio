@@ -4,7 +4,7 @@ import { uniq } from 'lodash-es';
 import type { DamageCause, WorldEvent } from '../../domain/types';
 import type { ScorchedSfxId } from './sfx-recipes';
 
-/** [§12.2] Explosions are voiced by size, so a baby missile never sounds like a nuke. */
+/** Explosions are voiced by size, so a baby missile never sounds like a nuke. */
 const MEDIUM_EXPLOSION_RADIUS_WU = 25;
 const LARGE_EXPLOSION_RADIUS_WU = 50;
 

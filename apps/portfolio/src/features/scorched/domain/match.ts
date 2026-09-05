@@ -51,7 +51,7 @@ export function getSpawnColumns(
 
 /**
  * The match: a sequence of rounds with the shop in between, banking each round's winnings at
- * interest and ranking the roster on aggregate kills at the end (§8).
+ * interest and ranking the roster on aggregate kills at the end.
  */
 export class ScorchedMatch {
   private readonly options: MatchOptions;

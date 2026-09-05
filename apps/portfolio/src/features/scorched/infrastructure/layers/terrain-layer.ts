@@ -12,7 +12,7 @@ const terrainSource = commonShaderSource + fieldQuadShaderSource + terrainShader
 const PING_PONG_PARITIES = [0, 1] as const;
 
 /**
- * [§11.1] The terrain: one quad over the field sampling whichever of the ping-ponged textures
+ * The terrain: one quad over the field sampling whichever of the ping-ponged textures
  * the compute passes left current. Nearest sampling keeps the dirt chunky as the field is scaled
  * up; the fractional upscale is deliberate, this is not tile art.
  */

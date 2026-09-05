@@ -43,7 +43,7 @@ const MINE_CAP_COLOR: RgbColor = { red: 0.95, green: 0.12, blue: 0.1 };
 const MINE_CAP_RING_COLOR: RgbColor = { red: 0.45, green: 0.03, blue: 0.05 };
 
 /**
- * [§11.2] Shells and the contrail they leave behind — a light white streak dispersing with age,
+ * Shells and the contrail they leave behind — a light white streak dispersing with age,
  * the way an aircraft's does. Positions come straight from the domain — the renderer never
  * integrates a trajectory of its own.
  */

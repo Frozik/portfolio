@@ -1,11 +1,10 @@
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
-import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
 import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
-import { isNil } from 'lodash-es';
+import type { GpuAppSession } from '@frozik/utils/webgpu/runGpuApp';
+import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
+import { createUpdateOnlyLayer } from '@frozik/utils/webgpu/updateOnlyLayer';
 
-import { TICKS_PER_SECOND } from '../../domain/constants';
-import type { PlayerInputs, WorldEvent } from '../../domain/types';
 import { EffectList } from '../../infrastructure/effect-list';
 import { ForestLayer } from '../../infrastructure/layers/forest-layer';
 import { SpriteLayer } from '../../infrastructure/layers/sprite-layer';
@@ -19,108 +18,53 @@ import { createSpriteCatalog } from '../../infrastructure/sprites/sprite-catalog
 import { createTanksUniforms } from '../../infrastructure/tanks-uniforms';
 import type { TanksWorldRef } from '../../infrastructure/tanks-world-ref';
 import { TerrainInstanceCache } from '../../infrastructure/terrain-instance-cache';
-
-const SECONDS_PER_TICK = 1 / TICKS_PER_SECOND;
-/** Tab-switch stalls must not be replayed (§5). */
-const MAX_TICKS_PER_FRAME = 4;
-const MAX_ACCUMULATED_SECONDS = MAX_TICKS_PER_FRAME * SECONDS_PER_TICK;
-
-export interface ITanksSimulationHost {
-  isSimulating(): boolean;
-  /** A pause freezes effects too; the stage-clear interlude lets the last explosion play out. */
-  areEffectsRunning(): boolean;
-  readInputs(): PlayerInputs;
-  /** The world reuses its event array between ticks — read synchronously, never store the array. */
-  onTick(inputs: PlayerInputs, events: readonly WorldEvent[]): void;
-}
+import { createFixedStepSimulation } from '../fixed-step-simulation';
+import type { ITanksSimulationHost } from '../tanks-session';
 
 export interface ITanksRenderOptions {
   readonly canvas: HTMLCanvasElement;
   readonly worldRef: TanksWorldRef;
   readonly host: ITanksSimulationHost;
   readonly onFpsUpdate?: (fps: number) => void;
+  readonly onInitError: (error: unknown) => void;
+}
+
+export function runTanks(options: ITanksRenderOptions): VoidFunction {
+  return runGpuApp({
+    init: () => initTanks(options),
+    initErrorMessage: 'Failed to initialize tanks renderer',
+    onInitError: options.onInitError,
+  });
 }
 
 /** Runs first in the layer list so the other layers read a freshly stepped world. */
-class SimulationDriver implements RenderLayer {
-  private accumulatedSeconds = 0;
-  private previousTimeSeconds: number | undefined;
+function createSimulationLayer(
+  worldRef: TanksWorldRef,
+  effects: EffectList,
+  scorePopups: ScorePopupList,
+  host: ITanksSimulationHost
+) {
+  const simulation = createFixedStepSimulation({
+    isRunning: () => host.isSimulating() || host.areEffectsRunning(),
+    step: () => {
+      if (host.isSimulating()) {
+        const inputs = host.readInputs();
+        const events = worldRef.current.tick(inputs);
 
-  constructor(
-    private readonly worldRef: TanksWorldRef,
-    private readonly effects: EffectList,
-    private readonly scorePopups: ScorePopupList,
-    private readonly host: ITanksSimulationHost
-  ) {}
-
-  init(): void {}
-
-  update(state: FrameState): void {
-    const previousTimeSeconds = this.previousTimeSeconds;
-    this.previousTimeSeconds = state.time;
-
-    const isSimulating = this.host.isSimulating();
-    const isAnimating = isSimulating || this.host.areEffectsRunning();
-
-    if (isNil(previousTimeSeconds) || !isAnimating) {
-      this.accumulatedSeconds = 0;
-
-      return;
-    }
-
-    this.accumulatedSeconds = Math.min(
-      this.accumulatedSeconds + (state.time - previousTimeSeconds),
-      MAX_ACCUMULATED_SECONDS
-    );
-
-    while (this.accumulatedSeconds >= SECONDS_PER_TICK) {
-      if (isSimulating) {
-        const inputs = this.host.readInputs();
-        const events = this.worldRef.current.tick(inputs);
-
-        this.effects.consume(events);
-        this.scorePopups.consume(events);
-        this.host.onTick(inputs, events);
+        effects.consume(events);
+        scorePopups.consume(events);
+        host.onTick(inputs, events);
       }
 
-      this.effects.advance();
-      this.scorePopups.advance();
-
-      this.accumulatedSeconds -= SECONDS_PER_TICK;
-    }
-  }
-
-  render(): void {}
-
-  dispose(): void {}
-}
-
-/** Discards the renderer if the caller tore down while the device was still coming up. */
-export function runTanks(options: ITanksRenderOptions): VoidFunction {
-  let destroyed = false;
-  let gpuCleanup: VoidFunction | undefined;
-
-  void initTanks(options).then(
-    cleanup => {
-      if (destroyed) {
-        cleanup();
-      } else {
-        gpuCleanup = cleanup;
-      }
+      effects.advance();
+      scorePopups.advance();
     },
-    (error: unknown) => {
-      // oxlint-disable-next-line no-console -- surfaces WebGPU tanks renderer init failure
-      console.error('Failed to initialize tanks renderer', error);
-    }
-  );
+  });
 
-  return () => {
-    destroyed = true;
-    gpuCleanup?.();
-  };
+  return createUpdateOnlyLayer(state => simulation.advance(state.time));
 }
 
-async function initTanks(options: ITanksRenderOptions): Promise<VoidFunction> {
+async function initTanks(options: ITanksRenderOptions): Promise<GpuAppSession> {
   const { canvas, worldRef, host, onFpsUpdate } = options;
   const context = await createGpuContext(canvas);
   const { device } = context;
@@ -139,9 +83,9 @@ async function initTanks(options: ITanksRenderOptions): Promise<VoidFunction> {
     const effects = new EffectList();
     const scorePopups = new ScorePopupList();
 
-    // Draw order is the concealment model (§11.3): ground, bodies, canopy, indicators.
+    // Draw order is the concealment model: ground, bodies, canopy, indicators.
     const layerManager = new RenderLayerManager([
-      new SimulationDriver(worldRef, effects, scorePopups, host),
+      createSimulationLayer(worldRef, effects, scorePopups, host),
       createUniformUpdateLayer(uniforms),
       new TerrainLayer(quadPipeline, terrainCache),
       new SpriteLayer(quadPipeline, atlas, worldRef, effects),
@@ -153,12 +97,14 @@ async function initTanks(options: ITanksRenderOptions): Promise<VoidFunction> {
 
     const stopRenderLoop = startRenderLoop({ canvas, context, layerManager, onFpsUpdate });
 
-    return () => {
-      stopRenderLoop();
-      layerManager.dispose();
-      uniforms.dispose();
-      atlas.dispose();
-      device.destroy();
+    return {
+      cleanup: () => {
+        stopRenderLoop();
+        layerManager.dispose();
+        uniforms.dispose();
+        atlas.dispose();
+        device.destroy();
+      },
     };
   } catch (error) {
     device.destroy();

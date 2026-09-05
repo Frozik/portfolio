@@ -67,7 +67,7 @@ const DeviceRow = memo(
 );
 
 /**
- * The active storey's electrics (`building-editor.md` §7): the kind tiles arm
+ * The active storey's electrics: the kind tiles arm
  * the placing tool, the list reads back what stands where, and the summary
  * counts every группа and switch link the connect tool has wired.
  */

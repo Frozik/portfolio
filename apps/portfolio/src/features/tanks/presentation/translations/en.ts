@@ -14,6 +14,7 @@ export const tanksTranslationsEn = {
   finalScore: 'Final score',
   playAgain: 'Play again',
   pause: 'Pause',
+  rendererFailed: 'The WebGPU renderer could not start',
   hud: {
     enemiesLeft: 'Enemies left',
     lives: 'Lives',

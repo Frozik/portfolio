@@ -1,6 +1,6 @@
 import type { SpriteBitmap } from './sprite-types';
 
-/** Every tank is authored facing up — the renderer rotates the quad; tracks are generated (§11.3). */
+/** Every tank is authored facing up — the renderer rotates the quad; tracks are generated. */
 const BARREL_ROW_COUNT = 3;
 const TRACK_EMPTY_ROW = '....';
 const TRACK_LIGHT_ROW = '1331';

@@ -52,7 +52,7 @@ export const ICE_BITMAP: SpriteBitmap = [
   '11122111',
 ];
 
-/** ~A third of the tile is transparent so a tank under the canopy stays half-visible (§11.3). */
+/** ~A third of the tile is transparent so a tank under the canopy stays half-visible. */
 export const TREES_BITMAP: SpriteBitmap = [
   '.11.311.',
   '1221.221',

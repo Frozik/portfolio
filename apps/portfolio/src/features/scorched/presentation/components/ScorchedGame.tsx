@@ -33,10 +33,10 @@ const IS_HOSTED = getIsHosted();
 const NO_DESCENT_SPEED = 0;
 
 /**
- * The route's playable shell: the WebGPU canvas, the HUD strip of §13, the flow overlays and the
- * virtual controls of §12.2.
+ * The route's playable shell: the WebGPU canvas, the HUD strip, the flow overlays and the
+ * virtual controls.
  *
- * This component owns the renderer, the input sources and the audio controller (§12): the store
+ * This component owns the renderer, the input sources and the audio controller: the store
  * holds data only, so the side-effectful pieces live and die with the canvas element. Strict-mode
  * double-mount is safe — `runScorched` tolerates teardown before its async GPU init lands, and
  * everything created here is disposed in the effect cleanup.
@@ -64,8 +64,8 @@ export const ScorchedGame = observer(
       const audioController = new ScorchedAudioController(store);
       const keyAimSource = createKeyAimSource();
       /**
-       * How fast the fastest descending shell is travelling, so the whistle can be pitched by it
-       * (§16.4). Zero while nothing is on its way down, which is what the cue triggers on.
+       * How fast the fastest descending shell is travelling, so the whistle can be pitched by it.
+       * Zero while nothing is on its way down, which is what the cue triggers on.
        */
       const readDescentSpeed = (): number =>
         store.roundRef.current.projectiles.reduce((fastest, projectile) => {
@@ -136,7 +136,7 @@ export const ScorchedGame = observer(
       }
     );
 
-    /** [§13] The till rings from the screen that spends the money; the controller lives here. */
+    /** The till rings from the screen that spends the money; the controller lives here. */
     const handlePurchase = useFunction(() => {
       audioControllerRef.current?.playPurchase();
     });

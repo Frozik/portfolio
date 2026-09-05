@@ -1,5 +1,5 @@
 // Terrain tiles, sprites and trees are all axis-aligned textured quads over the same atlas —
-// they differ only in the instance buffer they read and in the order they are drawn (§11.3).
+// they differ only in the instance buffer they read and in the order they are drawn.
 
 struct QuadInstance {
     // xy = top-left position in world units, zw = size in world units.

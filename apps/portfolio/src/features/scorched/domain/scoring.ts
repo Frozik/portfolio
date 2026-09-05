@@ -91,7 +91,7 @@ export function countScoringKills(outcome: RoundOutcome, playerId: PlayerId): nu
   ).length;
 }
 
-/** What the §13 result screen celebrates: the round's single hardest hit and its top gun. */
+/** What the result screen celebrates: the round's single hardest hit and its top gun. */
 export interface RoundHighlight {
   readonly playerId: PlayerId;
   readonly amount: number;

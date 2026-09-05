@@ -18,7 +18,7 @@ const CALM_WIND = 0;
 const readoutLabelClass = 'text-[0.625rem] uppercase tracking-widest text-text-muted';
 
 /**
- * [§13] The minimal in-game strip: whose turn it is and in what colour, their health and cash, the
+ * The minimal in-game strip: whose turn it is and in what colour, their health and cash, the
  * aim they are dialling in, the wind they have to fight and the weapon on the rail. Everything
  * else the original crammed into its status bar appears contextually instead.
  */

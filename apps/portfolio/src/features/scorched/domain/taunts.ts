@@ -7,7 +7,7 @@ export type TauntKind = 'attack' | 'death';
 
 export interface TauntPick {
   readonly kind: TauntKind;
-  /** Index into the caller's line list — the lines themselves are translated text (§1.3). */
+  /** Index into the caller's line list — the lines themselves are translated text. */
   readonly lineIndex: number;
 }
 

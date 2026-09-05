@@ -4,7 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { useTanksStore } from '../../application/useTanksStore';
 import { tanksT } from '../translations';
 
-/** The compact stand-in for the original's per-type tally screen (§10, v1 scope). */
+/** The compact stand-in for the original's per-type tally screen (v1 scope). */
 export const StageClearOverlay = observer(() => {
   const store = useTanksStore();
   const { stageSummary } = store;

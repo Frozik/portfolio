@@ -12,7 +12,7 @@ import { scorchedT } from '../translations';
 
 const NO_KILLS = 0;
 
-/** [§13] The final table: aggregate kills take the match, points break the tie [WIKI §8]. */
+/** The final table: aggregate kills take the match, points break the tie [WIKI §8]. */
 export const MatchResultOverlay = observer(() => {
   const store = useScorchedStore();
   const [champion] = store.standings;

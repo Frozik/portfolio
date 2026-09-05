@@ -12,7 +12,7 @@ export interface SupportSpan {
 }
 
 /**
- * Both ends of a post (plan §6.2, O-S1 + the surveyor's round-2 note).
+ * Both ends of a post .
  *
  * The TOP is a single shared datum — the storey's ceiling — never a per-post
  * length: posts under one canopy must line up so the plate laid over them

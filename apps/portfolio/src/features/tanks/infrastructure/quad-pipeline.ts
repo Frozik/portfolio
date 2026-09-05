@@ -10,7 +10,7 @@ export interface QuadPipeline {
   createBindGroup(instanceBuffer: GPUBuffer): GPUBindGroup;
 }
 
-/** No MSAA and a nearest sampler keep the pixel art crisp (§11.1). */
+/** No MSAA and a nearest sampler keep the pixel art crisp. */
 export function createQuadPipeline(params: {
   readonly device: GPUDevice;
   readonly format: GPUTextureFormat;

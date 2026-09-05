@@ -136,7 +136,7 @@ function rasterizeSprite(
   });
 }
 
-/** No image files and no `copyExternalImageToTexture` — the art is TypeScript data (§11.4). */
+/** No image files and no `copyExternalImageToTexture` — the art is TypeScript data. */
 export function createSpriteAtlas(device: GPUDevice, catalog: SpriteCatalog): SpriteAtlas {
   const { placements, height } = packSprites(catalog);
   const pixels = new Uint8Array(ATLAS_WIDTH_PX * height * BYTES_PER_TEXEL);

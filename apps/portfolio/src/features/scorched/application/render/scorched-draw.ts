@@ -35,7 +35,7 @@ import { TerrainTextureSet } from '../../infrastructure/terrain-texture';
 import type { AimGhost } from '../aim-ghost';
 
 const SECONDS_PER_TICK = 1 / TICKS_PER_SECOND;
-/** Tab-switch stalls must not be replayed: at most four ticks are caught up per frame (§4). */
+/** Tab-switch stalls must not be replayed: at most four ticks are caught up per frame. */
 const MAX_TICKS_PER_FRAME = 4;
 const MAX_ACCUMULATED_SECONDS = MAX_TICKS_PER_FRAME * SECONDS_PER_TICK;
 /** Half a flame lifetime: successive waves overlap into one continuous blaze. */
@@ -46,11 +46,11 @@ const NO_ELAPSED_SECONDS = 0;
 
 /** What the renderer needs from the application layer, without importing the MobX store. */
 export interface IScorchedSimulationHost {
-  /** True only while a shot is in the air — the turn stands still the rest of the time (§4). */
+  /** True only while a shot is in the air — the turn stands still the rest of the time. */
   isTicking(): boolean;
   /** Polled once a frame; the source owns its own repeat timing. */
   readInput(): ScorchedInput;
-  /** Wall-clock frame: ages the floating overlays and lets an AI wind its barrel across (§9). */
+  /** Wall-clock frame: ages the floating overlays and lets an AI wind its barrel across. */
   advanceFrame(elapsedSeconds: number): readonly WorldEvent[];
   /** Applies a frame of aiming, returning the events a shot going off produced. */
   applyInput(input: ScorchedInput): readonly WorldEvent[];
@@ -133,7 +133,7 @@ class SimulationDriver implements RenderLayer {
       MAX_ACCUMULATED_SECONDS
     );
 
-    // [§13 "Feel"] Hit-stop withholds ticks rather than dropping them: the accumulator keeps
+    // Hit-stop withholds ticks rather than dropping them: the accumulator keeps
     // filling to its cap, so the shell resumes from exactly where the impact froze it.
     while (
       this.accumulatedSeconds >= SECONDS_PER_TICK &&
@@ -210,7 +210,7 @@ class SimulationDriver implements RenderLayer {
 }
 
 /**
- * Sync wrapper over the async GPU bring-up (§11): returns the teardown immediately, and discards
+ * Sync wrapper over the async GPU bring-up: returns the teardown immediately, and discards
  * the renderer if the caller tore down while the device was still coming up.
  */
 export function runScorched(options: IScorchedRenderOptions): VoidFunction {

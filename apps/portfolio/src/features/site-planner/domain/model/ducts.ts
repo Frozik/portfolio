@@ -10,7 +10,7 @@ export function createDuctId(): DuctId {
 }
 
 /**
- * What rises through a house vertically (`building-editor.md` §9, R34/R35): a
+ * What rises through a house vertically: a
  * flue carrying smoke away from a fireplace, or a ventilation shaft carrying
  * stale air out of a room. They are one object because they are one problem —
  * a shaft that starts on a storey, passes through every storey above it and

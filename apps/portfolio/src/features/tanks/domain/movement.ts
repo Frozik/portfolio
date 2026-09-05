@@ -71,7 +71,7 @@ export function snapCoordinateOnTurn(coordinate: number): number {
   return Math.round(coordinate / CELL_SIZE_WU) * CELL_SIZE_WU;
 }
 
-/** Sub-unit accumulator (§5.1): whole wu leave the accumulator, the fraction stays. */
+/** Sub-unit accumulator: whole wu leave the accumulator, the fraction stays. */
 export function accumulateMovementSteps(
   remainder: number,
   speedWuPerSecond: number
@@ -196,7 +196,7 @@ function coastOnIce(player: PlayerTank, context: IMovementContext): void {
   }
 }
 
-/** Ice keeps re-arming a 28-wu coast budget; new input only takes hold after the first 13 wu (§5.1). */
+/** Ice keeps re-arming a 28-wu coast budget; new input only takes hold after the first 13 wu. */
 export function updatePlayerMovement(
   player: PlayerTank,
   inputs: PlayerInputs,

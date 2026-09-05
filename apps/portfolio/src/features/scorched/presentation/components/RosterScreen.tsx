@@ -107,7 +107,7 @@ const PlayerCard = memo(
 );
 
 /**
- * [§13] The single pre-match screen: a roster builder, the handful of options that actually change
+ * The single pre-match screen: a roster builder, the handful of options that actually change
  * the fun, one collapsed Advanced panel for the purists, and a prominent Start. No nested menus —
  * a player must get from here to their first shot without reading anything.
  */

@@ -9,14 +9,14 @@ import { rectangleLocalToPlan } from './polygonize-shape';
 import { distanceToSegment } from './segment-distance';
 
 /**
- * The comfort targets the run derives toward (plan §6.1 / O-A1): riser ≈ 17 cm,
+ * The comfort targets the run derives toward : riser ≈ 17 cm,
  * tread from the 2h+d ≈ 63 cm stride formula. The stair stretches itself to
  * the storey height — the footprint is an OUTPUT of the model, never an input.
  */
 const TARGET_RISER_METERS: Meters = 0.17;
 const STRIDE_FORMULA_METERS: Meters = 0.63;
 
-/** The advisory bands (§6.5 п.4): outside these the warning layer lights up. */
+/** The advisory bands : outside these the warning layer lights up. */
 const RISER_COMFORT_RANGE_METERS = { min: 0.15, max: 0.19 } as const;
 const TREAD_COMFORT_RANGE_METERS = { min: 0.25, max: 0.3 } as const;
 
@@ -75,7 +75,7 @@ export function deriveStairRun(storeyHeightMeters: Meters): StairRun {
 }
 
 /**
- * Whether the run is comfortable underfoot — the §6.5 п.4 advisory.
+ * Whether the run is comfortable underfoot — the comfort advisory.
  *
  * A spiral must be judged by its OWN going, measured on the walking line, and
  * by the narrow end of its winders. Reading the straight-flight `treadMeters`
@@ -345,7 +345,7 @@ function spiralLocalRing(radius: number): Ring {
 /**
  * The stair's plan footprint in world metres — one polygon per flight/landing
  * (they overlap at the joints, which every consumer treats as material). The
- * ceiling cutout of the storey above IS this footprint (§6.6: the conscious
+ * ceiling cutout of the storey above IS this footprint (the conscious
  * v1 cut — full contour, not the headroom subset).
  */
 export function stairFootprint(stair: StairInstance, storeyHeightMeters: Meters): MultiPolygon {

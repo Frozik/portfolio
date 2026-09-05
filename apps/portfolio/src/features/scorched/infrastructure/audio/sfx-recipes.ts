@@ -3,7 +3,7 @@ import type { SoundPatch } from '@frozik/utils/audio/synth';
 import { clamp } from 'lodash-es';
 
 /**
- * The sound inventory of §12.2. Every entry is declarative data the shared synth renders, so the
+ * The sound inventory. Every entry is declarative data the shared synth renders, so the
  * whole palette can be re-voiced by editing numbers and validated without an audio device.
  * Nothing here is sampled or transcribed — artillery is noise and sine sweeps, which is exactly
  * what a synthesiser is good at.
@@ -56,7 +56,7 @@ const RETREAT_HELICOPTER_PATCH: SoundPatch = Array.from(
 /**
  * The falling shell's whistle, pitched by how fast the shell is going when it tips over the top of
  * its arc: a lobbed baby missile sighs down, a flat full-power nuke screams. One multiplier on an
- * otherwise fixed recipe — the cheap version of §16.4's "whistle pitch follows fall speed".
+ * otherwise fixed recipe — the cheap version of "whistle pitch follows fall speed".
  */
 const WHISTLE_START_HZ = 1500;
 const WHISTLE_END_HZ = 380;

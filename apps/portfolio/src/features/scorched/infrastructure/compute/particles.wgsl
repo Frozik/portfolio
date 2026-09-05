@@ -1,4 +1,4 @@
-// Integrates the cosmetic particle pool (§11.2): one thread per slot, thousands of debris chips,
+// Integrates the cosmetic particle pool: one thread per slot, thousands of debris chips,
 // smoke puffs and napalm flames advanced in a single dispatch. Nothing here can affect gameplay —
 // the domain resolved the damage before the burst that spawned these was ever queued.
 

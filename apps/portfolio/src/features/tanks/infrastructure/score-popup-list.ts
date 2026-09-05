@@ -8,7 +8,7 @@ import {
   SCORE_POPUP_PICKUP_TICKS,
 } from './render-constants';
 
-/** A floating point value drawn in tiny numerals over the spot that earned it (§11.5). */
+/** A floating point value drawn in tiny numerals over the spot that earned it. */
 export interface ScorePopup {
   readonly digits: readonly number[];
   readonly centerXWu: number;
@@ -34,7 +34,7 @@ export function toScoreDigits(points: number): readonly number[] {
 
 /**
  * Not MobX for the same reason as `EffectList`. Grenade kills arrive as
- * `enemy-destroyed` with `points: 0` (they explode but award nothing — §11.5),
+ * `enemy-destroyed` with `points: 0` (they explode but award nothing),
  * so zero-point kills are skipped here.
  */
 export class ScorePopupList {

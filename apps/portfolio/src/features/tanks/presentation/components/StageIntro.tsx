@@ -16,7 +16,7 @@ const CURTAIN_LABEL_CLASS =
   'absolute inset-x-0 font-mono text-3xl font-semibold uppercase tracking-[0.3em] ' +
   'text-neutral-900';
 
-/** A button so tap, click and keyboard all skip through the same path; inert while opening (§10). */
+/** A button so tap, click and keyboard all skip through the same path; inert while opening. */
 export const StageIntro = observer(({ isOpening }: { readonly isOpening: boolean }) => {
   const store = useTanksStore();
   const { stageNumber } = store;

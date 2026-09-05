@@ -23,7 +23,7 @@ export interface DragAimOrigin {
 }
 
 /**
- * [§12.2] Drag-to-aim on the field, shared by touch and mouse: the vector from the active tank to
+ * Drag-to-aim on the field, shared by touch and mouse: the vector from the active tank to
  * the pointer sets angle and power together while the dotted ghost shows the arc. Releasing ends
  * the gesture and nothing else — firing is a separate, deliberate act.
  */

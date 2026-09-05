@@ -1,13 +1,13 @@
 struct Uniforms {
     // World unit -> clip space: clip = worldOffset + worldPosition * worldScale. World y points
-    // up, matching the domain's bottom-left origin (§4).
+    // up, matching the domain's bottom-left origin.
     worldScale: vec2<f32>,
     worldOffset: vec2<f32>,
     fieldSize: vec2<f32>,
     // Seconds since the renderer started; drives the sky twinkle.
     timeSeconds: f32,
     // How far past the field the sky and terrain quads reach, so a screen shake can slide the
-    // world without exposing the letterbox behind it (§13 "Feel").
+    // world without exposing the letterbox behind it.
     shakeOverscanWu: f32,
 };
 

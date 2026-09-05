@@ -23,7 +23,7 @@ import type { PlanSlopeArrow } from './render/plan-draw/draw-pitched-roof';
 import type { StoreyScene } from './storey-scenes';
 
 /**
- * The building's roof, resolved (`building-editor.md` §5, R33). It crowns the
+ * The building's roof, resolved. It crowns the
  * TOP storey — its outline is what the slopes are cut to and its ceiling is
  * where they start, so raising another floor re-cuts the roof onto it rather
  * than leaving it hanging over the storey it was drawn for.

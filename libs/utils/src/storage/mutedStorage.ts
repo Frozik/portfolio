@@ -1,41 +1,24 @@
-import { isNil } from 'lodash-es';
+import type { IValueCodec, IValueStorage } from './valueStorage';
+import { createValueStorage } from './valueStorage';
 
-const MUTED_VALUE = 'true';
-const UNMUTED_VALUE = 'false';
+const IS_MUTED_BY_STORED_VALUE: Readonly<Record<string, boolean | undefined>> = {
+  true: true,
+  false: false,
+};
+
 /** A first visit — or anything unreadable — plays with sound on. */
-const DEFAULT_IS_MUTED = false;
+const MUTED_CODEC: IValueCodec<boolean> = {
+  fallback: false,
+  parse: raw => IS_MUTED_BY_STORED_VALUE[raw],
+  serialize: String,
+};
 
-export interface IMutedStorage {
-  read(): boolean;
-  write(isMuted: boolean): void;
-}
+export type IMutedStorage = IValueStorage<boolean>;
 
-/**
- * Mute persistence, keyed per game so two features on the same origin never share a preference.
- * Every failure degrades to the default instead of propagating: web storage throws in hardened
- * profiles and private-mode Safari, and a silenced game is never worth taking the page down for.
- */
+/** Mute persistence, keyed per game so two features on the same origin never share a preference. */
 export function createMutedStorage(
   storageKey: string,
   storage: Storage = localStorage
 ): IMutedStorage {
-  return {
-    read(): boolean {
-      try {
-        const raw = storage.getItem(storageKey);
-
-        return isNil(raw) ? DEFAULT_IS_MUTED : raw === MUTED_VALUE;
-      } catch {
-        return DEFAULT_IS_MUTED;
-      }
-    },
-
-    write(isMuted: boolean): void {
-      try {
-        storage.setItem(storageKey, isMuted ? MUTED_VALUE : UNMUTED_VALUE);
-      } catch {
-        // A preference that cannot be stored is not worth interrupting the game for.
-      }
-    },
-  };
+  return createValueStorage(storageKey, MUTED_CODEC, storage);
 }

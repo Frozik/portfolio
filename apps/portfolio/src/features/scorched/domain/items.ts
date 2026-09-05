@@ -67,8 +67,8 @@ export interface FuelMove {
 }
 
 /**
- * One row of the §7 accessories table. The Contact Trigger row ($1 000 × 25) is a [MANUAL]
- * fact; the remaining prices are the researched table and are re-checked at M4 (§15).
+ * One row of the accessories table. The Contact Trigger row ($1 000 × 25) is a [MANUAL]
+ * fact; the remaining prices are the researched table and are re-checked at M4.
  * Auto Defense carries no fixed price — `getAutoDefensePrice` scales it by the rounds left.
  */
 export interface ItemDefinition {
@@ -238,7 +238,7 @@ export function createMagDeflector(itemId: ItemId, ownerId: PlayerId, position: 
 }
 
 /**
- * §15.6 default model: a constant upward shove on anything inside the radius, drawn from a
+ * Our default model: a constant upward shove on anything inside the radius, drawn from a
  * per-round capacity budget so a deflector cannot hold off an entire barrage on its own.
  */
 export function applyMagDeflection(

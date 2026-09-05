@@ -8,12 +8,12 @@ import { Pause } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef } from 'react';
 
+import { WebGpuUnsupportedNotice } from '../../../../shared/components/WebGpuUnsupportedNotice';
 import { Button } from '../../../../shared/ui/Button';
-import type { ITanksSimulationHost } from '../../application/render/tanks-draw';
 import { runTanks } from '../../application/render/tanks-draw';
+import { createTanksSession } from '../../application/tanks-session';
 import { TanksAudioController } from '../../application/TanksAudioController';
 import { useTanksStore } from '../../application/useTanksStore';
-import { mergePlayerInputs } from '../../domain/merge-player-inputs';
 import type { IInputSource } from '../../domain/ports/input-source';
 import { HUD_ICON_SIZE_PX } from '../constants';
 import { useStageCurtain } from '../hooks/useStageCurtain';
@@ -29,7 +29,7 @@ import { TouchControls } from './TouchControls';
 const IS_HOSTED = getIsHosted();
 
 /**
- * Owns the renderer and the audio controller — the store holds data only (§12). Strict-mode
+ * Owns the renderer and the audio controller — the store holds data only. Strict-mode
  * double-mount is safe: every piece created here is disposed in the effect cleanup.
  */
 export const TanksGame = observer(
@@ -38,7 +38,7 @@ export const TanksGame = observer(
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const audioControllerRef = useRef<TanksAudioController | undefined>(undefined);
     const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
-    const { gameStatus, isPlaying, fps } = store;
+    const { gameStatus, isPlaying, fps, rendererFailure } = store;
     const isCoarsePointer = useIsCoarsePointer();
     const stageCurtain = useStageCurtain(gameStatus === 'stage-intro');
 
@@ -51,22 +51,14 @@ export const TanksGame = observer(
 
       const audioController = new TanksAudioController(store);
       const keyboardSource = createKeyboardSource();
-      const host: ITanksSimulationHost = {
-        isSimulating: () => store.isPlaying,
-        areEffectsRunning: () => store.gameStatus === 'stage-clear',
-        readInputs: () => mergePlayerInputs(keyboardSource.read(), store.touchInput.read()),
-        onTick: (inputs, events) => {
-          store.applyWorldEvents(events);
-          audioController.onTick(inputs, events);
-        },
-      };
 
       audioControllerRef.current = audioController;
       const stopRenderer = runTanks({
         canvas,
         worldRef: store.worldRef,
-        host,
+        host: createTanksSession({ store, audio: audioController, keyboard: keyboardSource }),
         onFpsUpdate: IS_HOSTED ? undefined : store.setFps,
+        onInitError: store.failRenderer,
       });
 
       return () => {
@@ -123,10 +115,20 @@ export const TanksGame = observer(
     useKeyboardAction('Escape', handleFlowKey);
     useKeyboardAction('Space', handleFireKey);
 
+    if (!isNil(rendererFailure)) {
+      return (
+        <div className="flex h-full w-full flex-col items-center gap-4 overflow-y-auto py-6">
+          <WebGpuUnsupportedNotice />
+          <p className="font-mono text-xs text-text-muted">
+            {tanksT.rendererFailed}: {rendererFailure}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full w-full flex-col landscape:flex-row">
         <TanksHud />
-        {/* overflow-hidden: an overlay past the edge would scrollbar the main and resize the canvas */}
         <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
           <canvas
             ref={canvasRef}

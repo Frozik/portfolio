@@ -27,7 +27,7 @@ const MAX_STEPS_PER_FRAME = 4;
 const MAX_ACCUMULATED_SECONDS = MAX_STEPS_PER_FRAME * SECONDS_PER_TICK;
 
 /**
- * [§11.2] The cosmetic particle system: one compute dispatch integrates the whole pool, one
+ * The cosmetic particle system: one compute dispatch integrates the whole pool, one
  * instanced draw paints it. Both bind the same storage buffer the CPU spawns into, so a burst
  * costs one buffer write and nothing per frame afterwards.
  *

@@ -462,7 +462,7 @@ export class ScorchedRound {
       advanceProjectile(this.worldContext, projectile);
     }
 
-    // [§5] Nobody may fire over ground that is still coming down: the turn stays in flight
+    // Nobody may fire over ground that is still coming down: the turn stays in flight
     // until the sand has settled and every falling tank has landed.
     if (this.projectileList.length === 0) {
       if (this.settleTicksRemaining > 0) {

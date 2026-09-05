@@ -2,7 +2,7 @@ import { clamp } from 'lodash-es';
 
 import { PERCENT_SCALE } from '../domain/constants';
 
-/** Aim readouts carry a decimal only while a fine step has actually put one there (§12). */
+/** Aim readouts carry a decimal only while a fine step has actually put one there. */
 const FINE_STEP_DECIMALS = 1;
 
 export function formatAimValue(value: number): string {

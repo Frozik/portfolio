@@ -1,11 +1,11 @@
 import type { IMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IBestScoreStorage } from '../domain/ports/best-score-storage';
 import type { PlayerInputs } from '../domain/types';
 import type { EngineHumState } from '../infrastructure/audio/engine-hum';
 import type { JingleId } from '../infrastructure/audio/jingles';
 import type { SfxId } from '../infrastructure/audio/sfx-recipes';
 import type { ITanksSoundEngine } from '../infrastructure/audio/sound-engine';
-import type { IBestScoreStorage } from '../infrastructure/best-score-storage';
 import { TanksAudioController } from './TanksAudioController';
 import { TanksStore } from './TanksStore';
 

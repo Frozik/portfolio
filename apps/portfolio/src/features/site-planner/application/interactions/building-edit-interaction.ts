@@ -60,7 +60,7 @@ const DEVICE_PICK_RADIUS_PX = 10;
 const ENTRY_OUTLINE_STICK_RADIUS_PX = 14;
 
 /**
- * The building editor's canvas behaviour (`building-editor.md` §4, stage 2):
+ * The building editor's canvas behaviour:
  * the wall tool clicks out reference polylines, the select tool takes hold of
  * a wall or one of its drawn points. Openings and rooms join here with the
  * next slice of the stage.
@@ -85,7 +85,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     this.objects = new ObjectDragGestures(context);
     // Everything on a storey is drawn against walls that are already standing,
     // so the object snap is live without a modifier here — the OSNAP habit the
-    // wall tool already follows (`building-editor.md` §2). A slab is caught by
+    // wall tool already follows. A slab is caught by
     // the corners and side middles of the storey BELOW as well as by its own
     // storey's, which is what makes «flush with the room downstairs» a gesture
     // rather than four typed numbers.
@@ -395,7 +395,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   }
 
   /**
-   * The break UI of the selected wall junction (`building-editor.md` §4, the
+   * The break UI of the selected wall junction (the
    * approved AutoCAD-style keys): while a junction is selected, a digit
    * removes that numbered edge, `D`+digit tears it off the junction and hands
    * its end to the pointer, `S` cuts the wall in two right here, Escape backs

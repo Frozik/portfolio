@@ -19,7 +19,7 @@ import type { PitchedRoofScene } from './roof-scenes';
 import type { StoreyScene } from './storey-scenes';
 
 /**
- * One shaft over its whole run (`building-editor.md` §9, R34/R35): where it
+ * One shaft over its whole run: where it
  * starts, where it must come out, and whether it comes out through the roof at
  * all. The run is the thing the 3D view draws and the thing the advisory reads,
  * so both answer the same derivation rather than two similar ones.

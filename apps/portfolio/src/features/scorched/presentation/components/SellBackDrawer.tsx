@@ -47,7 +47,7 @@ const SellRow = memo(
 );
 
 /**
- * [§13] The sell-back drawer: everything the shopper owns, at the computer's quoted price. Selling
+ * The sell-back drawer: everything the shopper owns, at the computer's quoted price. Selling
  * one unit at a time is deliberate — a "sell all" button next to a nuke is a trap, not a feature.
  */
 export const SellBackDrawer = observer(

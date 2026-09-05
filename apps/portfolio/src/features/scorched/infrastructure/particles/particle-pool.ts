@@ -26,7 +26,7 @@ function writeParticles(
 }
 
 /**
- * The GPU storage buffer the particle passes share (§11.2). Spawns are written straight into it as
+ * The GPU storage buffer the particle passes share. Spawns are written straight into it as
  * a ring: a burst that runs off the end wraps around and takes the oldest slots, so a nuke can
  * never allocate and the pool's cost is fixed for the whole session.
  */

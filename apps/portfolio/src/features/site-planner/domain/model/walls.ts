@@ -6,8 +6,8 @@ import type { Meters } from '../units';
 export type WallId = Opaque<'WallId', string>;
 
 /**
- * What a wall is built of — the user-named set plus glazing (`building-editor.md`
- * §4, R5/R21). A catalog of data, not of behaviour: the material only carries a
+ * What a wall is built of — the user-named set plus glazing.
+ * A catalog of data, not of behaviour: the material only carries a
  * default thickness and a look; every wall stays editable past its preset.
  */
 export type WallMaterial =
@@ -44,7 +44,7 @@ export const WALL_MATERIAL_DEFAULT_THICKNESS: Readonly<Record<WallMaterial, Mete
 };
 
 /**
- * Which line of the wall the drawn polyline pins (`building-editor.md` §4, the
+ * Which line of the wall the drawn polyline pins (the
  * ArchiCAD/Revit convention): the outer face for exterior walls — the facade
  * stays put while thickness grows inward — or the centreline for partitions.
  */
@@ -91,7 +91,7 @@ const DEFAULT_WALL_MATERIAL: WallMaterial = 'brick';
  * The default a drawn wall starts on. Centreline rather than the exterior
  * convention: a single tool cannot know which role a wall will play, and a
  * centred body is the predictable one — the reference line flips in the
- * properties panel (`building-editor.md` §4).
+ * properties panel.
  */
 const DEFAULT_WALL_REFERENCE_LINE: WallReferenceLine = 'centerline';
 

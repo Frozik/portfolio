@@ -12,7 +12,7 @@ import type { RoofZoneLabel, RoofZoneLabelId, Storey, StoreyId } from './storeys
 /**
  * The building with its storeys materialized: the synthesized ground storey
  * becomes real data and the legacy per-building fields stop being written —
- * the lazy half of the storeys migration (`building-editor.md` §5).
+ * the lazy half of the storeys migration.
  */
 function materializeStoreys(building: Building): Building {
   if (building.storeys !== undefined && building.storeys.length > 0) {

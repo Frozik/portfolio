@@ -12,7 +12,7 @@ export function createFireplaceId(): FireplaceId {
 }
 
 /**
- * What burns wood in the house (`building-editor.md` §9, R34): an open
+ * What burns wood in the house: an open
  * fireplace, a heating stove, or the stove of a sauna. They differ in size and
  * in what they are for; what they share — and what makes them a first-class
  * object rather than another piece of furniture — is that each one needs a

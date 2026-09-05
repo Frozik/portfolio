@@ -1,4 +1,4 @@
-// Stamps the round's explosions into the terrain texture (§11.1). The domain has already
+// Stamps the round's explosions into the terrain texture. The domain has already
 // resolved the terrain by the time an op reaches this pass — the stamp is what the player sees
 // happen, not what decides the game.
 

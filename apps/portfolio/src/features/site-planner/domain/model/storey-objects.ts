@@ -17,7 +17,7 @@ import {
 import type { SupportPost } from './supports';
 
 /**
- * The things that STAND ON A STOREY (`building-editor.md` §5): furniture, a
+ * The things that STAND ON A STOREY: furniture, a
  * stair, a post, a floor slab, a fireplace, a shaft, an electrical device.
  * They differ in what they mean and in how they are drawn, and in nothing else:
  * each is a list on the storey, addressed by id, added, changed and removed the

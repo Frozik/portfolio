@@ -226,7 +226,7 @@ export class Terrain {
     );
   }
 
-  /** The strip is 4 wu deep for normal bullets and a whole 8-wu cell for piercing ones (§7). */
+  /** The strip is 4 wu deep for normal bullets and a whole 8-wu cell for piercing ones. */
   applyBulletImpact(impact: BulletImpact): BulletImpactResult {
     const { direction, leadingEdgeWu, perpendicularCenterWu, piercing } = impact;
 

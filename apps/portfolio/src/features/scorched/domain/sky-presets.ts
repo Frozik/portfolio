@@ -1,6 +1,6 @@
 import { random } from 'lodash-es';
 
-/** [§11.3] The backdrops the round can open on — our own gradients, one picked at random. */
+/** The backdrops the round can open on — our own gradients, one picked at random. */
 type SkyPresetId = 'plain' | 'stars' | 'shaded' | 'sunset' | 'cavern' | 'black';
 
 export interface SkyPreset {

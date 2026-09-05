@@ -12,7 +12,7 @@ import { getPlayerColor } from '../player-colors';
 import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
 
-/** [§13] One celebration stat: who did it, and how much of it they did. */
+/** One celebration stat: who did it, and how much of it they did. */
 const HighlightCard = memo(
   ({
     label,

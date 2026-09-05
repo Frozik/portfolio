@@ -22,7 +22,7 @@ export function getBlastPeakDamage(radiusWu: number): number {
 }
 
 /**
- * §15.1 default: the manual never printed a falloff curve, so v1 uses a straight line from the
+ * The manual never printed a falloff curve, so v1 uses a straight line from the
  * peak at the centre down to zero exactly at the radius.
  */
 export function getBlastDamageAt(radiusWu: number, distanceWu: number): number {

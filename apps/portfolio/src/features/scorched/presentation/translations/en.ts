@@ -1,7 +1,7 @@
 import type { AiPersonality, ItemId, WallMode, WeaponFamily, WeaponId } from '../../domain/types';
 
 /**
- * [§1.3] Every line here is our own writing, including the taunts — the original's taunt files
+ * Every line here is our own writing, including the taunts — the original's taunt files
  * are its author's creative text and are never reproduced. Weapon names stay as they are: they
  * are short functional identifiers of record.
  */

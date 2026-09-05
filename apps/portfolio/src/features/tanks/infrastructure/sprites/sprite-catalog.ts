@@ -177,7 +177,7 @@ function addEffectSprites(catalog: Map<string, SpriteDefinition>): void {
   });
 }
 
-/** The complete sprite inventory of §11.4, assembled from our own pixel-art bitmaps. */
+/** The complete sprite inventory, assembled from our own pixel-art bitmaps. */
 export function createSpriteCatalog(): SpriteCatalog {
   const catalog = new Map<string, SpriteDefinition>();
 

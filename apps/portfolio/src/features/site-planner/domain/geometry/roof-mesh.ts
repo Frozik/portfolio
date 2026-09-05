@@ -24,7 +24,7 @@ interface MeshBuilder {
 }
 
 /**
- * The roof as a solid (`building-editor.md` §5, R33): every slope lifted onto
+ * The roof as a solid: every slope lifted onto
  * its own plane, the same slopes again a thickness below as the soffit, a
  * fascia band around the eaves, and — for a gable or a shed — the wall triangle
  * that closes each end above the storey's own walls.

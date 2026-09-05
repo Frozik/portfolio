@@ -202,8 +202,8 @@ type HouseDoorAction =
 
 /**
  * The building's door: the same site editor, opened aimed at the house group.
- * Its corner triangle carries the door's menu («catalogs beat tools»,
- * `object-editors.md` §2): the stock-house catalogue opens from here rather
+ * Its corner triangle carries the door's menu («catalogs beat tools»):
+ * the stock-house catalogue opens from here rather
  * than standing on the rail as a tool of its own.
  */
 const HouseEditorButton = observer(

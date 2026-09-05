@@ -24,7 +24,7 @@ export interface IShopStoreParams {
 }
 
 /**
- * [§13] The counter itself: who is at it, who is queued behind them, the receipt of this visit and
+ * The counter itself: who is at it, who is queued behind them, the receipt of this visit and
  * every purchase or sell-back made against the match's bank. Which screen is on show and when the
  * queue is filled stay with `ScorchedStore` — the shop only knows about shopping.
  */
@@ -162,7 +162,7 @@ export class ShopStore {
   }
 
   /**
-   * [§9, §8] The AIs restock between rounds so a long match does not become a baby-missile duel —
+   * The AIs restock between rounds so a long match does not become a baby-missile duel —
    * but the shop is for survivors, exactly as it is for the humans queued ahead of them.
    */
   runAiShopping(playerIds: readonly PlayerId[]): void {

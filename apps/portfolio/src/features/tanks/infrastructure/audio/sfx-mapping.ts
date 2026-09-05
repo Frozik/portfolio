@@ -4,7 +4,7 @@ import { uniq } from 'lodash-es';
 import type { BulletEndReason, WorldEvent } from '../../domain/types';
 import type { SfxId } from './sfx-recipes';
 
-/** A tank hit is silent — the kill plays its own explosion; bullet-on-bullet is silent (§7). */
+/** A tank hit is silent — the kill plays its own explosion; bullet-on-bullet is silent. */
 function mapBulletEnd(reason: BulletEndReason): SfxId | undefined {
   switch (reason) {
     case 'terrain':
@@ -54,7 +54,7 @@ function mapWorldEvent(event: WorldEvent): SfxId | undefined {
   }
 }
 
-/** Each sound at most once per tick — four brick crumbles on one instant read as one crunch (§12.3). */
+/** Each sound at most once per tick — four brick crumbles on one instant read as one crunch. */
 export function mapWorldEventsToSfx(events: readonly WorldEvent[]): readonly SfxId[] {
   const sounds: SfxId[] = [];
 

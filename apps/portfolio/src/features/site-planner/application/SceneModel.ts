@@ -187,7 +187,7 @@ export class SceneModel {
   }
 
   /**
-   * Every advisory the open building earns (§6.5): furniture and walls over a
+   * Every advisory the open building earns: furniture and walls over a
    * stairwell, stairs outside the comfort bands, an unsupported overhang, a
    * storey too low to live on. One list, because to the person holding the
    * mouse they are all «something to look at here».
@@ -289,7 +289,7 @@ export class SceneModel {
   }
 
   /**
-   * The storeys the editor is NOT aimed at while a building is open (§6.4):
+   * The storeys the editor is NOT aimed at while a building is open :
    * the same geometry, handed to the blended pipeline so the active storey
    * reads through them. Nothing outside the building editor — a house being
    * looked at rather than edited is solid all the way up.

@@ -2,11 +2,13 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { reaction } from 'mobx';
 
+import type { IVisibilitySource } from '../domain/ports/visibility-source';
 import type { PlayerInputs, WorldEvent } from '../domain/types';
 import type { EngineHumState } from '../infrastructure/audio/engine-hum';
 import { mapWorldEventsToSfx } from '../infrastructure/audio/sfx-mapping';
 import type { ITanksSoundEngine } from '../infrastructure/audio/sound-engine';
 import { createTanksSoundEngine } from '../infrastructure/audio/sound-engine';
+import { createDocumentVisibilitySource } from '../infrastructure/document-visibility-source';
 import type { TanksGameStatus, TanksStore } from './TanksStore';
 
 /**
@@ -18,7 +20,11 @@ export class TanksAudioController {
   private readonly engine: ITanksSoundEngine;
   private readonly disposers: VoidFunction[] = [];
 
-  constructor(store: TanksStore, engine: ITanksSoundEngine = createTanksSoundEngine()) {
+  constructor(
+    store: TanksStore,
+    engine: ITanksSoundEngine = createTanksSoundEngine(),
+    visibilitySource: IVisibilitySource = createDocumentVisibilitySource()
+  ) {
     this.store = store;
     this.engine = engine;
     this.engine.setMuted(store.isMuted);
@@ -36,10 +42,9 @@ export class TanksAudioController {
         (status, previousStatus) => {
           this.handleStatusChange(status, previousStatus);
         }
-      )
+      ),
+      visibilitySource.onHidden(this.suspendWhileHidden)
     );
-
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   unlock(): void {
@@ -52,7 +57,6 @@ export class TanksAudioController {
   }
 
   dispose(): void {
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     for (const dispose of this.disposers) {
       dispose();
     }
@@ -96,11 +100,7 @@ export class TanksAudioController {
     }
   }
 
-  private readonly handleVisibilityChange = (): void => {
-    if (!document.hidden) {
-      return;
-    }
-
+  private readonly suspendWhileHidden = (): void => {
     this.engine.setEngineHum('off');
     this.engine.suspend();
   };

@@ -4,7 +4,7 @@ import type { ItemId, WeaponFamily } from '../../domain/types';
 import { SHOP_ICON_SIZE_PX } from '../constants';
 
 /**
- * [§13] Our own iconography for the shop: one stroked glyph per weapon family and per accessory,
+ * Our own iconography for the shop: one stroked glyph per weapon family and per accessory,
  * drawn in a 24 × 24 box. Vector rather than emoji on purpose — emoji render differently on every
  * platform, and the shop is the screen the design language is judged on.
  */

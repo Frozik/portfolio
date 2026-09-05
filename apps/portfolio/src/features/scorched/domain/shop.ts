@@ -19,7 +19,7 @@ export interface CartLine {
   readonly bundleCount: number;
   readonly units: number;
   readonly spent: number;
-  /** True once the 99 cap truncated a bundle and the shop charged the §8 surcharge. */
+  /** True once the 99 cap truncated a bundle and the shop charged the surcharge. */
   readonly hasMarkup: boolean;
 }
 

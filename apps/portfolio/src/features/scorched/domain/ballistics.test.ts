@@ -386,7 +386,7 @@ describe('simulateTrajectory', () => {
 });
 
 /**
- * §15.2, resolved at M4. The whole point of the power/gravity pair is that the dial spans the
+ * Resolved at M4. The whole point of the power/gravity pair is that the dial spans the
  * field: these pin the calibration so a later tweak to either constant has to be deliberate.
  */
 describe('power and gravity calibration', () => {

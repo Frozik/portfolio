@@ -21,7 +21,7 @@ const POPUP_DRIFT_PX = 28;
 const REPAIR_COLOR = 'var(--color-emerald-400)';
 
 /**
- * [§13] The two contextual overlays drawn over the field in React rather than on the GPU: damage
+ * The two contextual overlays drawn over the field in React rather than on the GPU: damage
  * numbers floating away from the point of impact and taunt bubbles above the tanks. Both are text,
  * both are short-lived, and both are far cheaper as DOM than as a glyph atlas in a shape batch.
  */

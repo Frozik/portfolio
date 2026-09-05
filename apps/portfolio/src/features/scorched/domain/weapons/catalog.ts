@@ -9,7 +9,7 @@ import {
 import type { WeaponFamily, WeaponId } from '../types';
 
 /**
- * One row of the §6 table. Costs, bundles, radii and arms levels are [MANUAL] facts; the
+ * One row of the weapons table. Costs, bundles, radii and arms levels are [MANUAL] facts; the
  * tunnel lengths and flow volumes fill in the rows the manual prints as "—".
  */
 export interface WeaponDefinition {

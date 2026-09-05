@@ -17,6 +17,7 @@ export const tanksTranslationsRu: TranslationOf<typeof tanksTranslationsEn> = {
   finalScore: 'Итоговый счёт',
   playAgain: 'Играть снова',
   pause: 'Пауза',
+  rendererFailed: 'Не удалось запустить WebGPU-рендерер',
   hud: {
     enemiesLeft: 'Осталось врагов',
     lives: 'Жизни',

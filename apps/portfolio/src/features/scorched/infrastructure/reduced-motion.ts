@@ -1,4 +1,4 @@
-/** [§13] The opt-out the shake and the hit-stop both honour. */
+/** The opt-out the shake and the hit-stop both honour. */
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 export interface IReducedMotionWatcher {

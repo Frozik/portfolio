@@ -9,11 +9,11 @@ type AdjustmentAxis = 'dial' | 'power';
 interface KeyAdjustment {
   readonly axis: AdjustmentAxis;
   readonly step: number;
-  /** [§12] Shift trims the step for the last degree of aim; the coarse keys ignore it. */
+  /** Shift trims the step for the last degree of aim; the coarse keys ignore it. */
   readonly isFineable: boolean;
 }
 
-/** [§12] Arrows move by one unit, Page Up/Down by ten, Shift cuts a step to a tenth. */
+/** Arrows move by one unit, Page Up/Down by ten, Shift cuts a step to a tenth. */
 const COARSE_POWER_STEP = 10;
 const FINE_STEP_FRACTION = 0.1;
 
@@ -50,7 +50,7 @@ function countDueSteps(heldSeconds: number): number {
 }
 
 /**
- * Keyboard aiming (§12): arrows turn the barrel and trim the power, Page Up/Down jump it in
+ * Keyboard aiming: arrows turn the barrel and trim the power, Page Up/Down jump it in
  * tens, Shift makes any arrow step fine, Tab cycles the weapon and Space fires.
  *
  * Aiming has no simulation ticks to hang repeats off — the turn stands still until the player

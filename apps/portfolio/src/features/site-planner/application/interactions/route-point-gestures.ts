@@ -10,7 +10,7 @@ export const ENTRY_SNAP_RADIUS_PX = 14;
 /**
  * The trench instantiation of the shared polyline point gestures: bends are
  * bare plan points, edits go through the route actions, and a bend dragged
- * near its system's entry lands exactly on it — the §3 seam holds while the
+ * near its system's entry lands exactly on it — the entry seam holds while the
  * line is reshaped, not only while it is drawn.
  */
 export class RoutePointGestures extends PolylinePointGestures<UtilityRoute> {

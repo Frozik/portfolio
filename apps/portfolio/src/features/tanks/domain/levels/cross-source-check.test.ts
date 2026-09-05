@@ -4,7 +4,7 @@ import type { EnemyType, TerrainKind } from '../types';
 import { getStageByNumber } from './registry';
 
 /**
- * §1.2 asks for the vendored level data to be cross-checked against a second, independently
+ * The vendored level data is cross-checked against a second, independently
  * transcribed MIT source: `dogballs/cattle-bity`, `data/maps/original/NN.json`. That source is
  * *not* vendored here — it was fetched once while this test was written, converted, and diffed
  * against our generated stages; the numbers below are the result, frozen as expectations.

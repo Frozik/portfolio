@@ -84,7 +84,7 @@ function createPowerUpAxis(
   );
 }
 
-/** The ROM's 4 × 4 spot grid (§9), scaled to the stage's size and snapped onto the 8-wu grid. */
+/** The ROM's 4 × 4 spot grid, scaled to the stage's size and snapped onto the 8-wu grid. */
 export function createPowerUpGrid(geometry: FieldGeometry): PowerUpGrid {
   return {
     columnsWu: createPowerUpAxis(

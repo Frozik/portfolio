@@ -96,7 +96,7 @@ const TIMELINE_BY_KIND: Readonly<Record<EffectKind, EffectTimeline>> = {
   'bullet-clang': BULLET_CLANG_TIMELINE,
 };
 
-/** `tank` is deliberately absent — a shield swallowing a bullet must not clang (§7). */
+/** `tank` is deliberately absent — a shield swallowing a bullet must not clang. */
 const CLANGING_BULLET_REASONS: readonly BulletEndReason[] = ['terrain', 'steel', 'border'];
 
 export function getEffectFrame(effect: ActiveEffect): EffectFrame {

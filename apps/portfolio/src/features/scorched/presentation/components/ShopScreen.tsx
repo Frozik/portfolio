@@ -22,11 +22,11 @@ import { SellBackDrawer } from './SellBackDrawer';
 import { ShopEntryCard } from './ShopEntryCard';
 
 const sectionTitleClass = 'text-[0.625rem] uppercase tracking-widest text-text-muted';
-/** [§8] Cash starts at zero, so the first visit to the shop is usually a window-shopping trip. */
+/** Cash starts at zero, so the first visit to the shop is usually a window-shopping trip. */
 const NO_CASH = 0;
 
 /**
- * [§13] The between-rounds screen, the emotional core of the original and the design centrepiece
+ * The between-rounds screen, the emotional core of the original and the design centrepiece
  * here: weapon cards grouped by family with our own iconography, honest price/bundle/owned/markup
  * badges, a running receipt with the bank-and-interest preview, and a sell-back drawer.
  *

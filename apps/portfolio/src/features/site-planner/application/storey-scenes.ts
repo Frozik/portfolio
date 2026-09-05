@@ -158,7 +158,7 @@ export interface StoreyScene {
   readonly roofZones: readonly RoofZoneScene[];
   readonly furniture: readonly FurnitureInstance[];
   readonly devices: readonly PlanDevice[];
-  /** The wiring, derived per §8: along the walls wherever they connect. */
+  /** The wiring, derived: along the walls wherever they connect. */
   readonly wires: readonly PlanWire[];
   /** This storey's own stairs, with their derived steps and cutout. */
   readonly stairs: readonly StairScene[];
@@ -218,7 +218,7 @@ export interface StairScene {
   readonly steps: readonly StairStep[];
   readonly footprint: MultiPolygon;
   readonly exitPoint: Vector2;
-  /** Whether the derived run is comfortable underfoot — the §6.5 advisory. */
+  /** Whether the derived run is comfortable underfoot — the comfort advisory. */
   readonly isComfortable: boolean;
   /** Where the turn grip sits: drawn on the plan and hit-tested by the same value. */
   readonly rotationGrip: Vector2;
@@ -270,7 +270,7 @@ const NO_ROOMS: readonly BuildingRoom[] = [];
 const NO_STOREY_SCENES: readonly StoreyScene[] = [];
 
 /**
- * Every storey resolved bottom-up (`building-editor.md` §5): the ground
+ * Every storey resolved bottom-up: the ground
  * storey stands on the building's composition, an upper one on the hull its
  * own walls enclose — which is what makes a smaller second floor a надстройка
  * and leaves the rest of the floor below as exposed ceiling. Each storey's
@@ -557,7 +557,7 @@ function deviceAnchor(device: ElectricalDevice): WireAnchor | undefined {
 }
 
 /**
- * The wiring the circuits imply (`building-editor.md` §7/§8): one run from
+ * The wiring the circuits imply: one run from
  * the panel to every consumer of its группа, walked along the walls, and a
  * dashed link from every switch to the light it commands.
  */

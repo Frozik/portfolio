@@ -163,7 +163,7 @@ const EntryRow = observer(
 );
 
 /**
- * Where each system enters the building (`building-editor.md` §3): the seam a
+ * Where each system enters the building: the seam a
  * site trench and an indoor route will meet at. The list twin of the plan's
  * own badges: a row click selects the badge, the badge drags along the
  * outline, and either way the same entry answers.
