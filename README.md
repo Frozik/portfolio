@@ -49,9 +49,10 @@ representative):
   hidden canvases, and allocates below-the-fold canvases only when they
   first scroll into view. The full-screen glow is painted at 1/8 resolution
   and upscaled.
-- **Service worker precaches the app shell only** (`index.html`, its
-  scripts and CSS, icons); hashed feature chunks are cached on first use
-  with a cache-first strategy. A first-time install never reloads the page —
+- **Service worker precaches the app shell** (`index.html`, its scripts and
+  CSS, icons) **plus the CV download** (the react-pdf chunk and its fonts, the
+  one lazy asset most visitors click); other hashed feature chunks are cached
+  on first use with a cache-first strategy. A first-time install never reloads the page —
   only a real update of an already-controlled page does.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
   Performance ≥ 95 on mobile, the other categories at 100, and transfer-size

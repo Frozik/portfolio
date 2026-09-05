@@ -26,23 +26,34 @@ const DAY_SECONDS = 24 * 60 * 60;
 const RUNTIME_ASSET_CACHE_MAX_ENTRIES = 200;
 const RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS = 30 * DAY_SECONDS;
 
+/** The CV renderer chunk (`generateCvPdf`) and the TTF fonts it embeds — see `chunkFileNames`. */
+const CV_DOWNLOAD_ASSET = /^assets\/(cv-[^/]+\.js|[^/]+\.ttf)$/;
+
 /**
- * Precache only the app shell — `index.html`, everything it references
- * (entry, modulepreloads, CSS) and the PWA icons. Every other hashed asset is
- * cached on first use instead (see `runtimeCaching`): precaching all feature
- * chunks pulled ~6 MB (TensorFlow, react-pdf, …) right after the landing page
- * opened, competing with the user's first navigation on mobile data.
+ * Precache the app shell — `index.html`, everything it references (entry,
+ * modulepreloads, CSS) and the PWA icons — plus the CV download, which most
+ * visitors click and which would otherwise wait for 1.2 MB on first use.
+ * Every other hashed asset is cached on first use instead (see
+ * `runtimeCaching`): precaching all feature chunks pulled ~6 MB (TensorFlow,
+ * 3D assets, …) right after the landing page opened, competing with the user's
+ * first navigation on mobile data.
  */
-const precacheAppShellOnly: ManifestTransform = manifestEntries => {
+const precacheAppShellAndCv: ManifestTransform = manifestEntries => {
   const indexHtml = readFileSync(resolve(import.meta.dirname, OUT_DIR, 'index.html'), 'utf8');
   const referencedAssets = new Set(
     [...indexHtml.matchAll(/assets\/[^"']+/g)].map(match => match[0])
   );
   const manifest = manifestEntries.filter(
-    entry => !entry.url.startsWith('assets/') || referencedAssets.has(entry.url)
+    entry =>
+      !entry.url.startsWith('assets/') ||
+      referencedAssets.has(entry.url) ||
+      CV_DOWNLOAD_ASSET.test(entry.url)
   );
   return { manifest };
 };
+
+/** Both halves of the lazy CV download: the feature's own modules and the react-pdf stack. */
+const CV_PDF_MODULE = /\/(features\/welcome\/presentation\/pdf\/|node_modules\/@react-pdf\/)/;
 
 export default defineConfig({
   base: BASE,
@@ -55,8 +66,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'inline',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        manifestTransforms: [precacheAppShellOnly],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
+        manifestTransforms: [precacheAppShellAndCv],
         runtimeCaching: [
           {
             urlPattern: new RegExp(`${BASE}/assets/`),
@@ -129,7 +140,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         entryFileNames: `assets/e-[hash].js`,
-        chunkFileNames: `assets/c-[hash].js`,
+        // The CV renderer keeps a recognisable name so the service worker can precache it.
+        chunkFileNames: chunk =>
+          chunk.moduleIds.some(moduleId => CV_PDF_MODULE.test(moduleId))
+            ? `assets/cv-[hash].js`
+            : `assets/c-[hash].js`,
         assetFileNames: `assets/a-[hash].[ext]`,
         codeSplitting: {
           groups: [
