@@ -1,0 +1,1 @@
+function e(e){let{init:t,onReady:n,initErrorMessage:r,onInitError:i}=e,a=!1,o;return t().then(e=>{if(a){e.cleanup();return}o=e.cleanup,n?.(e)},e=>{if(i){i(e);return}console.error(r,e)}),()=>{a=!0,o?.()}}export{e as t};
