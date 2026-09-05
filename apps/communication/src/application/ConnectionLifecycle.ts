@@ -4,12 +4,12 @@ import type { IHandshakeAuth } from '@frozik/communication-protocol/messages';
 import type { AuthErrorCode, Identity, TokenClaims } from '../domain/Identity';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
 import { parseHandshakeAuth } from '../domain/protocol-validators';
+import type { Result } from '../domain/Result';
+import { err, ok } from '../domain/Result';
 import type { DisplayName, SocketId, UserId } from '../domain/types';
 import { assertDisplayName } from '../domain/types';
 import type { IAuditLogger } from './ports/IAuditLogger';
 import type { IServerLogger } from './ports/IServerLogger';
-import type { Result } from './Result';
-import { err, ok } from './Result';
 
 const ANONYMOUS_DISPLAY_NAME = assertDisplayName('Guest');
 

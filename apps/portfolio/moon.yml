@@ -51,6 +51,7 @@ tasks:
       - 'tsconfig.app.json'
     outputs:
       - 'bundle-stats.html'
+      - 'bundle-stats.json'
 
   lighthouse:
     command: 'pnpm run lighthouse'

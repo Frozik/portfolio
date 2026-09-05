@@ -2,12 +2,12 @@ import type { TIdentityProvider } from '@frozik/communication-protocol/identity'
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
+import type { Result } from '../domain/Result';
+import { err, ok } from '../domain/Result';
 import type { Milliseconds, UserId } from '../domain/types';
 import { ConnectionLifecycle } from './ConnectionLifecycle';
 import type { IAuditLogger } from './ports/IAuditLogger';
 import type { IServerLogger } from './ports/IServerLogger';
-import type { Result } from './Result';
-import { err, ok } from './Result';
 
 const VALID_ROOM_ID = '11111111-2222-4333-8444-555555555555';
 const USER_ID = 'google:aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' as UserId;

@@ -20,7 +20,8 @@
       "!!.moon",
       "!!.claude",
       "!!.nx",
-      "!!pnpm-lock.yaml"
+      "!!pnpm-lock.yaml",
+      "!!.dependency-cruiser-known-violations.json"
     ]
   },
   "formatter": {

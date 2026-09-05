@@ -18,11 +18,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// `socket.io-parser` and `engine.io-client` are deliberately absent: the
+// browser `socket.io-client` depends on both, so they belong in the bundle.
 const FORBIDDEN_MODULES = [
   'fastify',
   'socket.io',
   'engine.io',
-  'socket.io-parser',
   'jose',
   'config',
   'toml',

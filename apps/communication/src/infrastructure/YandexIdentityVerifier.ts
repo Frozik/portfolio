@@ -1,10 +1,10 @@
 import { errors as joseErrors, jwtVerify } from 'jose';
 import { Temporal } from 'temporal-polyfill';
 import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
-import type { Result } from '../application/Result';
-import { err, ok } from '../application/Result';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
+import type { Result } from '../domain/Result';
+import { err, ok } from '../domain/Result';
 import type { Milliseconds, UserId } from '../domain/types';
 import type { IVerifierFactory } from './IVerifierFactory';
 

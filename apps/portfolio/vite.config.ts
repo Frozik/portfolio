@@ -16,6 +16,8 @@ type ManifestTransform = NonNullable<
 >[number];
 
 const ENABLE_BUNDLE_STATS = process.env.ANALYZE === 'true';
+/** `ANALYZE_OPEN=false` keeps the treemap from opening a browser tab (scripted runs). */
+const OPEN_BUNDLE_STATS = process.env.ANALYZE_OPEN !== 'false';
 const ENABLE_HTTPS = process.env.HTTPS === 'true';
 
 const BASE = '/portfolio';
@@ -107,7 +109,15 @@ export default defineConfig({
         template: 'treemap',
         gzipSize: true,
         brotliSize: true,
-        open: true,
+        open: OPEN_BUNDLE_STATS,
+      }),
+    // Machine-readable twin of the treemap, read by `.claude/skills/perf-audit`.
+    ENABLE_BUNDLE_STATS &&
+      visualizer({
+        filename: 'bundle-stats.json',
+        template: 'raw-data',
+        gzipSize: true,
+        open: false,
       }),
     ENABLE_HTTPS && basicSsl(),
   ],
