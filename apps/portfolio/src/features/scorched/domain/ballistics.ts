@@ -45,7 +45,7 @@ export interface BallisticsEnvironment {
   readonly fieldHeightWu: number;
 }
 
-export type FlightOutcome = 'flying' | 'absorbed' | 'lost';
+type FlightOutcome = 'flying' | 'absorbed' | 'lost';
 
 export interface ProjectileStepResult {
   readonly state: ProjectileState;
@@ -53,7 +53,7 @@ export interface ProjectileStepResult {
   readonly bounceSide: WallSide | undefined;
 }
 
-export type TrajectoryOutcome = 'impact' | 'absorbed' | 'lost' | 'expired';
+type TrajectoryOutcome = 'impact' | 'absorbed' | 'lost' | 'expired';
 
 export interface TrajectoryResult {
   readonly path: readonly Vector2[];
@@ -71,11 +71,11 @@ const DEGREES_TO_RADIANS = Math.PI / 180;
 /** Terrain probe spacing along a tick's flight segment; one wu is one terrain column. */
 const IMPACT_TRACE_STEP_WU = 1;
 
-export function getGravityAcceleration(gravity: number): number {
+function getGravityAcceleration(gravity: number): number {
   return gravity * GRAVITY_UNIT_TO_WU_PER_TICK_SQUARED;
 }
 
-export function getWindAcceleration(windUnits: number): number {
+function getWindAcceleration(windUnits: number): number {
   return windUnits * WIND_UNIT_TO_WU_PER_TICK_SQUARED;
 }
 

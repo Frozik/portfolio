@@ -9,5 +9,3 @@ export const AdminSectionSchema = z.object({
   token: z.string(),
   port: z.number().int().min(PORT_MIN).max(PORT_MAX),
 });
-
-export type AdminSection = z.infer<typeof AdminSectionSchema>;

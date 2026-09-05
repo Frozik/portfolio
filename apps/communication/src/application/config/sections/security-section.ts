@@ -5,5 +5,3 @@ export const SecuritySectionSchema = z.object({
   failed_handshake_block_threshold: z.number().int().min(1),
   failed_handshake_block_seconds: z.number().int().min(1),
 });
-
-export type SecuritySection = z.infer<typeof SecuritySectionSchema>;

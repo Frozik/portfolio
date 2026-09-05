@@ -16,5 +16,3 @@ export const ServerSectionSchema = z.object({
   }),
   shutdown_grace_ms: z.number().int().min(SHUTDOWN_GRACE_MIN_MS).max(SHUTDOWN_GRACE_MAX_MS),
 });
-
-export type ServerSection = z.infer<typeof ServerSectionSchema>;

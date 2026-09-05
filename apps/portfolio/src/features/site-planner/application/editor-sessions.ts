@@ -24,7 +24,7 @@ import type { StoreyId } from '../domain/model/storeys';
  * session, so panels keep one access point while the state's lifetime is the
  * editor visit, not the store.
  */
-export class SiteEditSession {
+class SiteEditSession {
   readonly kind = 'site';
 
   constructor() {
@@ -35,7 +35,7 @@ export class SiteEditSession {
   dispose(): void {}
 }
 
-export class PathEditSession {
+class PathEditSession {
   readonly kind = 'path';
   /** The point being edited inside path editing. */
   selectedPointIndex: number | undefined = undefined;
@@ -60,7 +60,7 @@ export class PathEditSession {
   dispose(): void {}
 }
 
-export class RouteEditSession {
+class RouteEditSession {
   readonly kind = 'utilityRoute';
 
   constructor() {
@@ -71,7 +71,7 @@ export class RouteEditSession {
   dispose(): void {}
 }
 
-export class BuildingEditSession {
+class BuildingEditSession {
   readonly kind = 'building';
   readonly buildingId: BuildingId;
   /** The polyline of the wall being clicked out; empty while none is. */

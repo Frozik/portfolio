@@ -5,7 +5,6 @@ import type { Milliseconds } from '@frozik/utils/date/types';
  * Enforced client-side: once two peers are in a room any additional
  * `hello` is answered with a `bye{full}` payload.
  */
-export const MAX_PARTICIPANTS = 2;
 
 /**
  * Indices into the 478-landmark output of MediaPipe's `FaceLandmarker`.
@@ -33,11 +32,8 @@ export const MIN_LANDMARKS_FOR_GLASSES = LANDMARK_INDEX_RIGHT_EYE_INNER + 1;
 export const GLASSES_BASE_WIDTH_PX = 240;
 
 /** Signaling WebSocket reconnect backoff bounds. */
-export const SIGNALING_RECONNECT_MIN_MS = 500 as Milliseconds;
-export const SIGNALING_RECONNECT_MAX_MS = 8_000 as Milliseconds;
 
 /** Application-level ping cadence, matches the signaling server's timeout minus a safety margin. */
-export const SIGNALING_HEARTBEAT_MS = 25_000 as Milliseconds;
 
 /**
  * Grace period after `RTCPeerConnection.iceConnectionState` first hits

@@ -11,7 +11,7 @@ import type { ICommunicationClient } from './CommunicationClient';
  * routes the connection through the registered communication
  * client instead of opening a network socket.
  */
-export const COMMUNICATION_SIGNALING_SCHEME = 'comm+ws://';
+const COMMUNICATION_SIGNALING_SCHEME = 'comm+ws://';
 
 const MOCK_OPEN = 1;
 const MOCK_CLOSED = 3;

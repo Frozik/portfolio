@@ -23,10 +23,6 @@ export type FireplaceKind = 'fireplace' | 'stove' | 'saunaStove';
 
 export const FIREPLACE_KINDS: readonly FireplaceKind[] = ['fireplace', 'stove', 'saunaStove'];
 
-export function parseFireplaceKind(value: string): FireplaceKind | undefined {
-  return FIREPLACE_KINDS.find(kind => kind === value);
-}
-
 /** What one kind is, in metres — the body, and the flue it needs. */
 export interface FireplaceSpec {
   readonly widthMeters: Meters;

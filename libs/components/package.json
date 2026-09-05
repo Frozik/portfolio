@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "license": "MIT",
   "sideEffects": [
-    "**/*.css",
-    "**/*.scss"
+    "**/*.css"
   ],
   "exports": {
     "./styles/": "./src/styles/",
@@ -26,18 +25,23 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@frozik/utils": "workspace:*"
+    "@frozik/utils": "workspace:*",
+    "tabbable": "catalog:"
   },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/lodash-es": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
   },
   "peerDependencies": {
-    "@radix-ui/react-popover": "^1.1.16",
-    "clsx": "^2.1.1",
-    "lodash-es": "^4.18.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "tailwind-merge": "^3.6.0",
-    "temporal-polyfill": "^0.3.2"
+    "@radix-ui/react-popover": "catalog:",
+    "clsx": "catalog:",
+    "lodash-es": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwind-merge": "catalog:",
+    "temporal-polyfill": "catalog:"
   }
 }

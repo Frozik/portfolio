@@ -1,28 +1,34 @@
 /* RichEditor + DateTimePicker calendar popup. Colors read the host's
    `--color-landing-*` variables; each fallback follows the OS color scheme so
-   the components render on their own. Baseline: Chrome 111, Safari 16.4,
-   Firefox 128 (native nesting, color-mix, light-dark). */
+   the components render on their own. Baseline: Chrome 120, Safari 17.2,
+   Firefox 128 (native nesting, color-mix, light-dark). Plain CSS module: the
+   component roots below declare the palette once as custom properties. */
 
-$bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
-$bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
-$border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
-$border-soft: var(--color-landing-border-soft, light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04)));
-$fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
-$fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
-$fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
-$accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
-$red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
-$mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+.editor,
+.field,
+.popover-content,
+.error-tooltip {
+  --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
+  --re-bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
+  --re-border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
+  --re-border-soft: var(--color-landing-border-soft, light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04)));
+  --re-fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
+  --re-fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
+  --re-fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
+  --re-accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
+  --re-red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
+  --re-mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+}
 
 .editor {
   color-scheme: light dark;
-  background: $bg-card;
-  border: 1px solid $border;
+  background: var(--re-bg-card);
+  border: 1px solid var(--re-border);
   box-sizing: border-box;
   margin: 0;
   padding: 6px 11px;
-  color: $fg;
-  font-family: $mono;
+  color: var(--re-fg);
+  font-family: var(--re-mono);
   font-size: 13px;
   line-height: 20px;
   list-style: none;
@@ -34,14 +40,14 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    border-color: $accent;
+    border-color: var(--re-accent);
   }
 
   &:focus-visible,
   &:focus-within {
-    border-color: $accent;
+    border-color: var(--re-accent);
     outline: 0;
-    background-color: $bg-elevated;
+    background-color: var(--re-bg-elevated);
   }
 }
 
@@ -55,7 +61,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 
   &:empty::before {
     content: attr(data-placeholder);
-    color: $fg-faint;
+    color: var(--re-fg-faint);
     pointer-events: none;
   }
 }
@@ -70,7 +76,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 
 .pip {
   font-weight: 600;
-  color: $accent;
+  color: var(--re-accent);
 }
 
 .field {
@@ -105,24 +111,24 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   width: 100%;
   border: none;
   background: transparent;
-  color: $fg-dim;
+  color: var(--re-fg-dim);
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
   touch-action: manipulation;
 
   &:hover {
-    color: $fg;
+    color: var(--re-fg);
   }
 }
 
 .editor-error {
-  border-color: $red;
+  border-color: var(--re-red);
 
   &:hover,
   &:focus-visible,
   &:focus-within {
-    border-color: $red;
+    border-color: var(--re-red);
   }
 }
 
@@ -134,14 +140,14 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 
 .popover-content {
   color-scheme: light dark;
-  background-color: $bg-card;
-  border: 1px solid $border;
+  background-color: var(--re-bg-card);
+  border: 1px solid var(--re-border);
   border-radius: 0;
   padding: 10px;
   box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
   outline: none;
-  font-family: $mono;
-  color: $fg;
+  font-family: var(--re-mono);
+  color: var(--re-fg);
   min-width: var(--radix-popover-trigger-width);
 }
 
@@ -153,7 +159,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   border: none;
   margin: 0;
   min-width: 0;
-  color: $fg;
+  color: var(--re-fg);
   font-size: 14px;
   font-weight: 500;
   user-select: none;
@@ -163,7 +169,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
-  color: $fg-dim;
+  color: var(--re-fg-dim);
   cursor: pointer;
   padding: 4px 10px;
   font-size: 16px;
@@ -171,19 +177,19 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    background-color: $bg-elevated;
-    border-color: $border;
-    color: $fg;
+    background-color: var(--re-bg-elevated);
+    border-color: var(--re-border);
+    color: var(--re-fg);
   }
 }
 
 .month-navigator-label {
   font-weight: 500;
-  font-family: $mono;
+  font-family: var(--re-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 12px;
-  color: $fg;
+  color: var(--re-fg);
 }
 
 .calendar-grid {
@@ -200,13 +206,13 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   height: 28px;
   align-items: center;
   justify-content: center;
-  font-family: $mono;
+  font-family: var(--re-mono);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  color: $fg-faint;
+  color: var(--re-fg-faint);
   pointer-events: none;
 }
 
@@ -221,48 +227,48 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  font-family: $mono;
+  font-family: var(--re-mono);
   font-size: 13px;
-  color: $fg-dim;
+  color: var(--re-fg-dim);
   transition: color 0.15s ease, border-color 0.15s ease;
 
   &:hover,
   &:focus-visible {
-    border-color: $accent;
-    color: $fg;
+    border-color: var(--re-accent);
+    color: var(--re-fg);
     outline: none;
   }
 
   &[data-today] {
-    background: color-mix(in oklab, $accent 15%, transparent);
+    background: color-mix(in oklab, var(--re-accent) 15%, transparent);
     font-weight: 600;
-    color: $fg;
+    color: var(--re-fg);
   }
 
   &[data-weekend] {
-    background: color-mix(in oklab, $red 12%, transparent);
+    background: color-mix(in oklab, var(--re-red) 12%, transparent);
   }
 
   &[data-weekend][data-today] {
-    background: color-mix(in oklab, $red 20%, transparent);
+    background: color-mix(in oklab, var(--re-red) 20%, transparent);
   }
 
   &[data-selected] {
-    background: color-mix(in oklab, $accent 55%, transparent);
-    color: $fg;
+    background: color-mix(in oklab, var(--re-accent) 55%, transparent);
+    color: var(--re-fg);
   }
 
   &[data-weekend][data-selected] {
-    background: color-mix(in oklab, $red 40%, transparent);
+    background: color-mix(in oklab, var(--re-red) 40%, transparent);
   }
 
   &:disabled {
     cursor: default;
-    color: $fg-faint;
+    color: var(--re-fg-faint);
 
     &[data-today],
     &[data-selected] {
-      color: $fg-dim;
+      color: var(--re-fg-dim);
     }
 
     &:hover {
@@ -272,10 +278,10 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 }
 
 .error-tooltip {
-  color: $red;
+  color: var(--re-red);
   font-size: 12px;
   padding: 2px 0;
-  font-family: $mono;
+  font-family: var(--re-mono);
 }
 
 .time-picker {
@@ -285,13 +291,13 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   gap: 2px;
   padding: 10px 4px 4px;
   border: none;
-  border-top: 1px solid $border-soft;
+  border-top: 1px solid var(--re-border-soft);
   margin: 6px 0 0;
   min-width: 0;
 }
 
 .time-picker-separator {
-  color: $fg-faint;
+  color: var(--re-fg-faint);
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -322,7 +328,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
-  color: $fg-faint;
+  color: var(--re-fg-faint);
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
@@ -333,16 +339,16 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    color: $fg;
-    background-color: $bg-elevated;
-    border-color: $border;
+    color: var(--re-fg);
+    background-color: var(--re-bg-elevated);
+    border-color: var(--re-border);
   }
 }
 
 .time-picker-value {
-  color: $fg;
+  color: var(--re-fg);
   font-size: 14px;
-  font-family: $mono;
+  font-family: var(--re-mono);
   font-weight: 500;
   line-height: 1;
   padding: 2px 4px;
@@ -350,7 +356,7 @@ $mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
   user-select: none;
 
   &:focus-visible {
-    border-color: $accent;
+    border-color: var(--re-accent);
     outline: none;
   }
 }

@@ -2,7 +2,6 @@ import { assert } from '@frozik/utils/assert/assert';
 
 import {
   CELL_ALPHA_LOW,
-  FLOATS_PER_TEXEL,
   MSAA_SAMPLE_COUNT,
   SNAPSHOT_SLOTS,
   STRIPE_DARK_FACTOR,
@@ -10,8 +9,8 @@ import {
 } from '../../domain/constants';
 import type { IBlockMeta, ITextureLayoutConfig } from '../../domain/types';
 
-export const HEATMAP_UNIFORMS_BYTES = 64;
-export const BLOCK_DESCRIPTOR_BYTES = 16;
+const HEATMAP_UNIFORMS_BYTES = 64;
+const BLOCK_DESCRIPTOR_BYTES = 16;
 
 export interface IHeatmapLayerResources {
   readonly uniformsBuffer: GPUBuffer;
@@ -219,7 +218,3 @@ export function writeBlockDescriptors(
 }
 
 export const HEATMAP_VERTEX_COUNT_PER_INSTANCE = 6;
-
-export function floatsPerBlockData(layoutConfig: ITextureLayoutConfig): number {
-  return layoutConfig.textureWidth * layoutConfig.rowsPerBlock * FLOATS_PER_TEXEL;
-}

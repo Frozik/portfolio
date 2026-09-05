@@ -12,7 +12,7 @@ import type { ICandleBlockRecord } from '../domain/candle-types';
 import type { ITradeBlockRecord, ITradeBucketRawRecord } from '../domain/trades-types';
 import type { UnixTimeMs } from '../domain/types';
 
-export const DEFAULT_DB_NAME = 'binance-orderbook';
+const DEFAULT_DB_NAME = 'binance-orderbook';
 /**
  * Schema history: v1 orderbook only; v2 `avg-price-blocks`; v3 renamed it to
  * `mid-price-blocks`; v4 added the two trade stores; v5 replaced the
@@ -22,8 +22,8 @@ export const DEFAULT_DB_NAME = 'binance-orderbook';
 export const DEFAULT_DB_VERSION = 5;
 export const ORDERBOOK_BLOCKS_STORE = 'orderbook-blocks';
 export const CANDLE_BLOCKS_STORE = 'candle-blocks';
-export const TRADE_BLOCKS_STORE = 'trade-blocks';
-export const TRADE_BUCKETS_RAW_STORE = 'trade-buckets-raw';
+const TRADE_BLOCKS_STORE = 'trade-blocks';
+const TRADE_BUCKETS_RAW_STORE = 'trade-buckets-raw';
 /**
  * Store names of earlier schema versions, dropped on upgrade. The schema type
  * only describes current stores, so the legacy names are widened to `StoreNames`.

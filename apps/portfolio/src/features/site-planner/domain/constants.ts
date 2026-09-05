@@ -49,7 +49,6 @@ export const DEFAULT_CAR_ROTATION_DEGREES = 0;
 
 /** A garden path wide enough for one person; changed per path in the panel. */
 export const DEFAULT_PATH_WIDTH_METERS: Meters = 1;
-export const MIN_PATH_WIDTH_METERS: Meters = 0.1;
 
 /**
  * How far a path ribbon floats over the ground it is draped on. It matches the

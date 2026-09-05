@@ -170,7 +170,7 @@ export const MOVING_AVERAGE_LONG_PERIOD = 10;
 
 /** Band under the price area: volume bars on top, time-axis labels along the bottom. CSS pixels. */
 export const VOLUME_PANEL_CSS_PX = 96;
-export const TIME_AXIS_LABELS_CSS_PX = 24;
+const TIME_AXIS_LABELS_CSS_PX = 24;
 export const VOLUME_BARS_CSS_PX = VOLUME_PANEL_CSS_PX - TIME_AXIS_LABELS_CSS_PX;
 /** Volume bar width as a fraction of the one-second slot. */
 export const VOLUME_BAR_WIDTH_RATIO = 0.8;

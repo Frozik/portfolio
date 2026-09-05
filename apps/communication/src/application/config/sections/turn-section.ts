@@ -23,5 +23,3 @@ export const TurnSectionSchema = z.object({
   urls: z.array(z.string()),
   credential_requests_per_minute_per_socket: z.number().int().min(1),
 });
-
-export type TurnSection = z.infer<typeof TurnSectionSchema>;

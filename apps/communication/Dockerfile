@@ -17,7 +17,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: builder
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
@@ -25,7 +25,7 @@ ENV PNPM_HOME=/root/.local/share/pnpm \
 
 RUN apk add --no-cache git \
  && corepack enable \
- && corepack prepare pnpm@10.14.0 --activate
+ && corepack prepare pnpm@11.25.0 --activate
 
 WORKDIR /workspace
 
@@ -34,27 +34,24 @@ WORKDIR /workspace
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/communication/package.json apps/communication/package.json
 COPY libs/utils/package.json libs/utils/package.json
-COPY libs/components/package.json libs/components/package.json
 COPY libs/typescript-config/package.json libs/typescript-config/package.json
 
 RUN pnpm install --frozen-lockfile --filter '@frozik/communication...'
 
 # Copy only the workspace sources required to build communication.
-COPY tsconfig.base.json ./
 COPY libs/utils libs/utils
-COPY libs/components libs/components
 COPY libs/typescript-config libs/typescript-config
 COPY apps/communication apps/communication
 
 RUN pnpm --filter @frozik/communication build
 
 # Produce a minimal prod node_modules tree for the runtime stage.
-RUN pnpm --filter @frozik/communication deploy --prod /out
+RUN pnpm --filter @frozik/communication deploy --legacy --prod /out
 
 # -----------------------------------------------------------------------------
 # Stage 2: runtime
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 RUN addgroup -g 1001 -S communication \
  && adduser  -u 1001 -S -G communication -h /app -s /sbin/nologin communication

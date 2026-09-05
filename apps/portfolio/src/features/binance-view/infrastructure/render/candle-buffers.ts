@@ -12,8 +12,8 @@ import {
   MSAA_SAMPLE_COUNT,
 } from '../../domain/constants';
 
-export const CANDLE_UNIFORMS_BYTES = 64;
-export const CANDLE_BLOCK_DESCRIPTOR_BYTES = 16;
+const CANDLE_UNIFORMS_BYTES = 64;
+const CANDLE_BLOCK_DESCRIPTOR_BYTES = 16;
 export const CANDLE_VERTEX_COUNT_PER_INSTANCE = 6;
 
 export interface ICandleLayerResources {

@@ -10,8 +10,12 @@ import { visibleCardText } from '../../domain/anonymity';
 import { REDACTED_CARD_PLACEHOLDER } from '../../domain/constants';
 import type { ClientId, IRetroCard, RetroPhase } from '../../domain/types';
 import { useCardFlipState } from '../hooks/useCardFlipState';
-import styles from '../styles.module.scss';
 import { retroT } from '../translations';
+
+// The two faces share one 3D stage. Firefox does not reliably honour
+// `backface-visibility: hidden` for siblings on the same z-plane, so each face
+// gets its own translateZ (see the classes at the call sites) and the front stays in front.
+const CARD_SIDE_CLASS = 'absolute inset-0 h-full w-full [backface-visibility:hidden]';
 
 const STAGGER_STEP_MS = 60;
 const CARD_INDEX_PAD_LENGTH = 3;
@@ -108,16 +112,18 @@ const CardViewComponent = ({
   const displayText = visibleCardText(card, phase, myClientId);
 
   return (
-    <div className={cn(styles.cardFlipContainer, 'relative min-h-[96px] w-full')}>
+    <div className="relative min-h-[96px] w-full overflow-hidden [perspective:1000px]">
       <div
         className={cn(
-          styles.cardFlipInner,
-          'relative min-h-[96px] w-full',
-          isHidden && styles.cardFlipInnerHidden
+          'relative min-h-[96px] w-full transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform [transform-style:preserve-3d]',
+          isHidden && '[transform:rotateY(180deg)]'
         )}
         style={flipDelayStyle}
       >
-        <div className={cn(styles.cardBack, 'w-full')} aria-hidden="true">
+        <div
+          className={cn(CARD_SIDE_CLASS, '[transform:rotateY(180deg)_translateZ(1px)]')}
+          aria-hidden="true"
+        >
           <CardFrame className="flex min-h-[96px] w-full items-center justify-center bg-landing-bg-card/60">
             <MonoKicker tone="faint">
               #{cardIndexLabel} / {retroT.room.cardIndexUnknown}
@@ -128,7 +134,7 @@ const CardViewComponent = ({
           </CardFrame>
         </div>
 
-        <div className={cn(styles.cardFace, 'w-full')}>
+        <div className={cn(CARD_SIDE_CLASS, '[transform:translateZ(1px)]')}>
           <CardFrame
             hoverable={!isEditing}
             accentColor={accentColor}

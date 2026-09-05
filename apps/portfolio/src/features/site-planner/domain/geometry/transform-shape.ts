@@ -64,7 +64,7 @@ export function resizeBox<T extends BoxedShape>(
  * flips the rectangle over it instead of jamming, and the rotation is preserved
  * because the whole computation happens in the rectangle's own frame.
  */
-export function resizeRotatedRectangle(
+function resizeRotatedRectangle(
   rectangle: RotatedRectangle,
   factors: RectangleHandleFactors,
   cornerPoint: Vector2

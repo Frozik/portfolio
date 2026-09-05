@@ -12,7 +12,7 @@ import type {
   TPlayer,
 } from './types';
 
-export interface ICompetitionMembership {
+interface ICompetitionMembership {
   readonly competition: ICompetition;
   readonly scoreOf: (deltaTime: DOMHighResTimeStamp) => number;
 }

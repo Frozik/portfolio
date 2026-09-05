@@ -7,7 +7,7 @@ import { DEGREES_TO_RADIANS } from '../units';
  * reference editor shares (AutoCAD ORTHO, SketchUp inference lock, Figma
  * Shift): 0/90 for square rooms, 45 for a corner cut, 15 for everything else.
  */
-export const ANGLE_LOCK_STEP_DEGREES = 15;
+const ANGLE_LOCK_STEP_DEGREES = 15;
 
 const FULL_TURN_DEGREES = 360;
 

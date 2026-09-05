@@ -12,6 +12,3 @@ tasks:
       - 'tsconfig.json'
     options:
       runInCI: true
-
-  madge:
-    command: 'madge src --circular --extensions ts ./src'

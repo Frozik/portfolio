@@ -129,14 +129,6 @@ export function useCommunicationBaseUrl(): string {
   return useCommunicationContext().baseUrl;
 }
 
-export function useGoogleClientId(): string {
-  return useCommunicationContext().googleClientId;
-}
-
-export function useYandexClientId(): string {
-  return useCommunicationContext().yandexClientId;
-}
-
 export function useOidcProviders(): ReadonlyMap<TIdentityProvider, IOidcProvider> {
   return useCommunicationContext().providers;
 }

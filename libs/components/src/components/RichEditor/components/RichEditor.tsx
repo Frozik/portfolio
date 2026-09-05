@@ -21,7 +21,7 @@ import type {
 } from '../defs';
 import { findNextTabStop } from '../focus-navigation';
 import { getElementSelection, rangeToSelection, setElementSelection } from '../selection';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 import { applyTextEdit, readInputData, textEditFromInput, toSingleLine } from '../text-edit';
 
 const acceptInput: TInputNormalizer = (value, selection) => ({ value, selection });

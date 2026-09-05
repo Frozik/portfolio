@@ -23,13 +23,13 @@ import { SELECTION_NONE } from '../domain/topology-types';
 import type { PuzzleDefinition } from '../domain/types';
 
 /** Endpoints of the in-flight drag preview, as resolved by the renderer. */
-export interface PreviewLine {
+interface PreviewLine {
   readonly pointA: Vec3Array;
   readonly pointB: Vec3Array;
 }
 
 /** The renderer end of the scene state: it receives every rebuilt representation. */
-export interface SceneRepresentationSink {
+interface SceneRepresentationSink {
   applySceneState(representation: SceneRepresentation): void;
 }
 

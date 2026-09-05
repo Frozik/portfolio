@@ -544,5 +544,3 @@ function pruneStaleHandshakeWindows(
     }
   }
 }
-
-export type { SocketWithData };

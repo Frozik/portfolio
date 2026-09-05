@@ -27,7 +27,7 @@ export interface INeuronLayerDescriptor {
   readonly neurons: readonly INeuronDescriptor[];
 }
 
-export interface IAxonLayerDescriptor {
+interface IAxonLayerDescriptor {
   readonly type: ELayerType.Axon;
   readonly axons: readonly IAxonDescriptor[];
 }

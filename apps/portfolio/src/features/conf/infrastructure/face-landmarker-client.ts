@@ -23,7 +23,7 @@ const NUM_FACES = 1;
  * Callers treat all three uniformly by hiding the glasses overlay and
  * resetting the emotion to neutral.
  */
-export interface IFaceLandmarkerDetection {
+interface IFaceLandmarkerDetection {
   readonly landmarks: readonly NormalizedLandmark[];
   /**
    * 52 ARKit-style blendshape scores keyed by categoryName
@@ -33,7 +33,7 @@ export interface IFaceLandmarkerDetection {
   readonly blendshapes: ReadonlyMap<string, number>;
 }
 
-export type TFaceLandmarkerDetectResult = IFaceLandmarkerDetection | undefined;
+type TFaceLandmarkerDetectResult = IFaceLandmarkerDetection | undefined;
 
 export interface IFaceLandmarkerClient {
   init(): Promise<void>;

@@ -1,7 +1,7 @@
 import { clamp, isEmpty, isNil } from 'lodash-es';
 
 import type { INormalizedInput, ISelection, THtmlRenderer, TInputNormalizer } from './defs';
-import styles from './styles.module.scss';
+import styles from './styles.module.css';
 
 const MAX_DIGITS = 50;
 const MAX_SIGNIFICANT_DIGITS = 15;

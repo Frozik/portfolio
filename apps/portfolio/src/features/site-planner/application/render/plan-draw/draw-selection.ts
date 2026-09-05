@@ -21,7 +21,7 @@ import { buildRingPath, PLAN_COLORS } from './shared';
  * end of its length, `right` the far end of its width. A rotated rectangle keeps
  * the same handle names, which is what lets a resize gesture stay parametric.
  */
-export type RectangleHandleKind =
+type RectangleHandleKind =
   | 'top-left'
   | 'top'
   | 'top-right'
@@ -177,7 +177,7 @@ export function drawHandles(
  * north — shared by drawn shapes and by floor slabs, so both are manipulated by
  * the very same grips in the very same places.
  */
-export function computeRotatedRectangleHandles(
+function computeRotatedRectangleHandles(
   rectangle: RotatedRectangle,
   viewport: PlanViewport
 ): readonly ShapeHandle[] {

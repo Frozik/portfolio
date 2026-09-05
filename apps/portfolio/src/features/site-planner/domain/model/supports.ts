@@ -27,7 +27,7 @@ export interface SupportPost {
   readonly sizeMeters: Meters;
 }
 
-export const DEFAULT_SUPPORT_SIZE_METERS: Meters = 0.15;
+const DEFAULT_SUPPORT_SIZE_METERS: Meters = 0.15;
 
 export function createSupport({
   position,

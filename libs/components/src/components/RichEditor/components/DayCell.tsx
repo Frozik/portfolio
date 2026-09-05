@@ -3,7 +3,7 @@ import { memo } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 
 export const DayCell = memo(
   ({

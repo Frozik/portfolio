@@ -6,5 +6,3 @@ export const retroT = resolveTranslation({
   en: retroEnTranslations,
   ru: retroRuTranslations,
 });
-
-export type RetroTranslations = typeof retroEnTranslations;

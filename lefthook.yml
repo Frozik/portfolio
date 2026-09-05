@@ -1,0 +1,25 @@
+# Git hooks (lefthook). Commit stays fast: only staged files are linted and the
+# affected type-checks run. The full gate (`moon check --all`) runs before push and in CI.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome (staged files)
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css}'
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    - name: package.json order
+      glob: '{package.json,apps/*/package.json,libs/*/package.json}'
+      run: pnpm exec sort-package-json {staged_files}
+      stage_fixed: true
+    - name: source conventions
+      glob: '{apps,libs}/**/*.{ts,tsx}'
+      run: node scripts/check-source-conventions.mjs
+    - name: type-check (affected)
+      glob: '{apps,libs}/**/*.{ts,tsx}'
+      run: pnpm exec moon run :type-check --affected
+
+pre-push:
+  jobs:
+    - name: full gate
+      run: pnpm exec moon check --all

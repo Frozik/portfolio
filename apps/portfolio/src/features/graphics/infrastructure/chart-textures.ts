@@ -1,6 +1,6 @@
 import { isNil } from 'lodash-es';
 
-export interface OffscreenTargets {
+interface OffscreenTargets {
   readonly msaaView: GPUTextureView;
   readonly resolveView: GPUTextureView;
   /** Composite bind group sampling `resolveView`; rebuilt with the textures. */

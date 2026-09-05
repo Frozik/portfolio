@@ -15,7 +15,7 @@ import { planToRectangleLocal, rectangleLocalToPlan } from './polygonize-shape';
  */
 const CENTER_ANCHOR: Vector2 = { x: 0, y: 0 };
 
-export function anchorFactorsOf(shape: Shape): Vector2 {
+function anchorFactorsOf(shape: Shape): Vector2 {
   return shape.anchorFactors ?? CENTER_ANCHOR;
 }
 
@@ -128,7 +128,7 @@ export function rotateRectangleAroundAnchor<T extends BoxedShape>(
  * points — a rectangle's corners, the middles of its sides and its centre; a
  * circle's centre and the four points its axes cross the rim at.
  */
-export function anchorSnapPoints(shape: Shape): readonly Vector2[] {
+function anchorSnapPoints(shape: Shape): readonly Vector2[] {
   switch (shape.kind) {
     // An ellipse offers the same nine: its bounding box's corners and sides
     // are what a drawing is aligned to, exactly as a rectangle's are.

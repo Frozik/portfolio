@@ -18,5 +18,3 @@ export const RedisSectionSchema = z.object({
   url: z.string().min(1),
   key_prefix: z.string().min(1),
 });
-
-export type RedisSection = z.infer<typeof RedisSectionSchema>;

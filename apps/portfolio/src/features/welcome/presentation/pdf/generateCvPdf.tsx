@@ -1,4 +1,3 @@
-// biome-ignore lint/style/useNodejsImportProtocol: the npm `buffer` polyfill for the browser, not the Node builtin (see CLAUDE.md, Known Architectural Debt)
 import { Buffer } from 'buffer';
 
 import { downloadBlob } from '../../../../shared/lib/downloadFile';

@@ -13,7 +13,7 @@ export const TERRAIN_COLUMN_COUNT = FIELD_WIDTH_WU;
 
 export const TICKS_PER_SECOND = 60;
 
-export const TANK_WIDTH_WU = 14;
+const TANK_WIDTH_WU = 14;
 export const TANK_HEIGHT_WU = 8;
 export const TANK_HALF_WIDTH_WU = TANK_WIDTH_WU / 2;
 /** Height above the ground at which a shell leaves the barrel and a blast is centred. */
@@ -110,16 +110,13 @@ export const TERRAIN_BASE_HEIGHT_WU = 150;
 /** 2^10 + 1 = 1025 midpoint samples, resampled down onto the 800 columns. */
 export const MIDPOINT_DISPLACEMENT_LEVELS = 10;
 export const TERRAIN_ROUGHNESS_DECAY = 0.55;
-
-export const MIN_TERRAIN_KNOB = 0;
 export const MAX_TERRAIN_KNOB = 100;
-export const DEFAULT_BUMPINESS = 50;
-export const DEFAULT_SLOPE = 0;
-export const DEFAULT_FLATTEN_PEAKS = 0;
+const DEFAULT_BUMPINESS = 50;
+const DEFAULT_SLOPE = 0;
+const DEFAULT_FLATTEN_PEAKS = 0;
 /** [MANUAL §10] Bumpiness drives the midpoint displacement amplitude. */
 export const MAX_BUMPINESS_AMPLITUDE_WU = 220;
 /** [MANUAL §10] Slope tilts the field; the knob is signed, negative tilts to the left. */
-export const MIN_TERRAIN_SLOPE_KNOB = -MAX_TERRAIN_KNOB;
 export const MAX_SLOPE_TILT_WU = 300;
 /** [MANUAL §10] Flatten Peaks clamps the per-column step between these two limits. */
 export const UNFLATTENED_MAX_STEP_WU_PER_COLUMN = 30;

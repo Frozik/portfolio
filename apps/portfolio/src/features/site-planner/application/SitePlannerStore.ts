@@ -14,13 +14,8 @@ import type { MultiPolygon } from '../domain/geometry/polygon-types';
 // re-exports them so every consumer keeps the import path it already uses.
 export type {
   BuildingRoom,
-  PlanDevice,
-  PlanOpeningShape,
-  PlanWire,
   RoofZoneScene,
-  StairScene,
   StoreyScene,
-  SupportScene,
 } from './storey-scenes';
 
 import type { BuildingWarning } from '../domain/model/building-warnings';

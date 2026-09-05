@@ -4,8 +4,8 @@ import { hexToLinearRgb } from '../../domain/color-utils';
 import { MSAA_SAMPLE_COUNT } from '../../domain/constants';
 import { COLOR_BUY, COLOR_SELL, VOLUME_BAR_HOVER_MIX } from '../../domain/trades-constants';
 
-export const TRADES_UNIFORMS_BYTES = 64;
-export const VOLUME_BAR_DESCRIPTOR_BYTES = 16;
+const TRADES_UNIFORMS_BYTES = 64;
+const VOLUME_BAR_DESCRIPTOR_BYTES = 16;
 const VOLUME_BAR_DESCRIPTOR_FLOATS = VOLUME_BAR_DESCRIPTOR_BYTES / 4;
 /** Two stacked rectangles (buy, sell) per bucket. */
 export const VOLUME_BAR_VERTEX_COUNT_PER_INSTANCE = 12;

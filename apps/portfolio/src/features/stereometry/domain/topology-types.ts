@@ -6,10 +6,10 @@ export type Vec3Array = readonly [number, number, number];
 // - 'edge-extended': infinite line created by extending an edge (shares lineId with the edge)
 // - 'segment-extended': infinite line created by extending a segment (shares lineId with the segment)
 // - 'line': infinite construction line drawn by the user
-export type LineKind = 'edge' | 'segment' | 'edge-extended' | 'segment-extended' | 'line';
+type LineKind = 'edge' | 'segment' | 'edge-extended' | 'segment-extended' | 'line';
 
 // Vertex kind discriminant
-export type VertexKind = 'figure' | 'input' | 'intersection';
+type VertexKind = 'figure' | 'input' | 'intersection';
 
 // A line, segment, or edge in the topology
 export interface TopologyLine {

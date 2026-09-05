@@ -9,7 +9,7 @@
  * Width of the trades data-texture in texels. Equals the per-block
  * bucket cap, so one row of the texture holds exactly one block.
  */
-export const TEXTURE_WIDTH_TEXELS = 256;
+const TEXTURE_WIDTH_TEXELS = 256;
 
 /** Floats per bucket inside the data-texture (rgba32float). */
 export const FLOATS_PER_BUCKET = 4;

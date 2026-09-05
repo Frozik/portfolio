@@ -49,7 +49,9 @@ export function computeSunPosition({
  * discipline on our side changes a third-party signature. Confining the crossing
  * to this module keeps `Date` out of the domain, the store and the UI — every
  * other module speaks `Temporal.ZonedDateTime` — and leaves one place to change
- * if the library ever grows a Temporal-aware entry point.
+ * if the library ever grows a Temporal-aware entry point. Biome's
+ * `noRestrictedGlobals` ban on `Date` is lifted for this module and
+ * `day-window.ts` only (see `biome.json` overrides).
  */
 export function toSunCalcDate(moment: Temporal.ZonedDateTime): Date {
   return new Date(moment.epochMilliseconds);

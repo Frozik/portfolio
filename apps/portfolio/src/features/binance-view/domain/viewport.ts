@@ -32,7 +32,7 @@ export function createInitialViewport(nowMs: UnixTimeMs): IHeatmapViewport {
  * disagree about where the right edge of data lives, producing
  * sub-second offsets between the cursor and the X-axis label.
  */
-export function viewDurationMsForPlotWidth(plotWidthCssPx: number): number {
+function viewDurationMsForPlotWidth(plotWidthCssPx: number): number {
   return plotWidthCssPx / PIXELS_PER_MILLISECOND;
 }
 

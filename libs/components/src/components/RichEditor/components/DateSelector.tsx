@@ -9,7 +9,7 @@ import { Temporal } from 'temporal-polyfill';
 import { useFunction } from '../../../hooks/useFunction';
 import { clampDate, moveActiveDate } from '../calendar-keys';
 import type { TLeaveDirection } from '../defs';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 import { DayCell } from './DayCell';
 import { defaultStartOfWeek } from './week-info';
 

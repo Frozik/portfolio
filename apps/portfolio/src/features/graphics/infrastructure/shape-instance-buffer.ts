@@ -6,7 +6,7 @@ import { SHAPE_TYPES } from '../domain/chart-shapes';
  *   (x, y, halfSize, spawnTime), (r, g, b, holdDuration), (shapeType, fillMode, maxOpacity, 0).
  */
 export const SHAPE_INSTANCE_BYTES = 48;
-export const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
+const FLOATS_PER_SHAPE = SHAPE_INSTANCE_BYTES / Float32Array.BYTES_PER_ELEMENT;
 
 const FLOATS_PER_VEC4 = 4;
 const COLOR_OFFSET = FLOATS_PER_VEC4;

@@ -6,7 +6,7 @@ export const SIN_PEN_MAX = 20.0;
 
 export const BORDER_MARGIN = 20;
 
-export const SIN_SEGMENTS_DIVISOR = 4;
+const SIN_SEGMENTS_DIVISOR = 4;
 
 export const MSAA_SAMPLE_COUNT = 4;
 export const SIN_Y_LAYER_OPACITY = 0.7;

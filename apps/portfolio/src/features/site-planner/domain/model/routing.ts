@@ -91,12 +91,10 @@ export interface SewerSlopeRule {
  * СП 30.13330 slope per pipe bore, as fall per metre of run. Steeper than the
  * maximum silts the pipe — water outruns the solids — so the cap is shared.
  */
-export const SEWER_SLOPE_RULES: readonly SewerSlopeRule[] = [
+const SEWER_SLOPE_RULES: readonly SewerSlopeRule[] = [
   { diameterMeters: 0.05, min: 0.02, recommended: 0.03 },
   { diameterMeters: 0.11, min: 0.012, recommended: 0.02 },
 ];
-
-export const MAX_SEWER_SLOPE = 0.15;
 
 /** The slope rule for a bore: the largest tabled pipe that fits inside it. */
 export function sewerSlopeFor(diameterMeters: Meters): SewerSlopeRule {

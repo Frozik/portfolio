@@ -14,12 +14,21 @@ WebGPU, WebRTC, Yjs, Socket.IO, TensorFlow.js, MediaPipe, Matter.js.
 ## Getting Started
 
 ```bash
-pnpm install    # Install dependencies
+pnpm install    # Install dependencies (pnpm 11, Node 24)
 pnpm dev        # Start dev server
-pnpm check-all  # Run full validation (lint + types + tests + format)
+pnpm check-all  # Full gate: lint, format, types, layer boundaries, dead code, conventions, tests
 pnpm lighthouse # Production build + Lighthouse CI against the landing page
 pnpm analyze    # Production build + bundle treemap (bundle-stats.html)
 ```
+
+## Engineering
+
+Every check is a Moon task (`moon.yml`, `apps/*/moon.yml`): Biome for lint and
+format, TypeScript 7, dependency-cruiser for layer boundaries and cycles
+(`.dependency-cruiser.cjs`), knip for dead code, Vitest projects, Playwright
+smoke tests (`apps/portfolio/e2e`). Dependency versions live once in
+`pnpm-workspace.yaml` (`catalog:`); git hooks are `lefthook.yml`; CI runs
+`moon ci` and deploys to GitHub Pages from `main`.
 
 ## Performance & PWA
 

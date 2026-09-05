@@ -21,7 +21,7 @@ module.exports = {
       severity: 'error',
       from: { path: '/domain/' },
       to: {
-        path: '^node_modules/(react|react-dom|mobx|mobx-react-lite|rxjs|idb|socket\\.io-client|yjs|y-webrtc|y-indexeddb)(/|$)',
+        path: '/node_modules/(react|react-dom|mobx|mobx-react-lite|rxjs|idb|socket\\.io-client|yjs|y-webrtc|y-indexeddb)(/|$)',
       },
     },
     {
@@ -60,10 +60,28 @@ module.exports = {
       from: { path: '^apps/portfolio/' },
       to: { path: '^apps/communication/' },
     },
+    {
+      name: 'browser-does-not-import-server-only-packages',
+      comment:
+        'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
+      severity: 'error',
+      from: { path: '^(apps/portfolio|libs/(utils|components|communication-protocol))/' },
+      to: {
+        path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
+      },
+    },
+    {
+      name: 'no-circular',
+      comment: 'Circular imports hide initialisation-order bugs and make modules impossible to test in isolation.',
+      severity: 'error',
+      from: {},
+      to: { circular: true },
+    },
   ],
   options: {
+    // node_modules edges stay in the graph (the package rules above match on them) but are not followed.
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: ['\\.test\\.tsx?$', '/dist/', '/node_modules/\\.pnpm/'] },
+    exclude: { path: ['\\.test\\.tsx?$', '^(apps|libs)/[^/]+/dist/'] },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       exportsFields: ['exports'],

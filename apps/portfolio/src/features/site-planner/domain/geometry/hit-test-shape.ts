@@ -41,14 +41,14 @@ export function rotatedBoxRing(box: RotatedBox): readonly Vector2[] {
 }
 
 /** Whether the point falls inside the box, after one inverse rotation. */
-export function isPointInsideRotatedBox(box: RotatedBox, point: Vector2): boolean {
+function isPointInsideRotatedBox(box: RotatedBox, point: Vector2): boolean {
   const local = planToRectangleLocal(box, point);
 
   return Math.abs(local.x) <= box.extentX * HALF && Math.abs(local.y) <= box.extentY * HALF;
 }
 
 /** Unsigned distance from the point to the box outline, in metres. */
-export function distanceToRotatedBoxOutline(box: RotatedBox, point: Vector2): Meters {
+function distanceToRotatedBoxOutline(box: RotatedBox, point: Vector2): Meters {
   const local = planToRectangleLocal(box, point);
   const overshootX = Math.abs(local.x) - box.extentX * HALF;
   const overshootY = Math.abs(local.y) - box.extentY * HALF;

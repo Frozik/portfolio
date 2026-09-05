@@ -16,7 +16,7 @@ export const VERTEX_MATCH_EPSILON_SQ = 1e-10;
 export const POINT_ON_LINE_EPSILON_SQ = 1e-8;
 
 /** Endpoint tolerance for isPointOnSegment — looser than parametric epsilon to catch boundary points */
-export const SEGMENT_ENDPOINT_TOLERANCE = 0.001;
+const SEGMENT_ENDPOINT_TOLERANCE = 0.001;
 
 export function positionsMatch(
   positionA: Vec3Array,

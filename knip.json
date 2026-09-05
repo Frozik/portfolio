@@ -1,0 +1,60 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreWorkspaces": ["libs/typescript-config"],
+  "workspaces": {
+    ".": {
+      "entry": ["vitest.config.ts", ".dependency-cruiser.cjs", "scripts/*.mjs"],
+      "ignoreDependencies": [
+        "@lhci/cli",
+        "lighthouse",
+        "@swc/core",
+        "gh-pages",
+        "lefthook"
+      ]
+    },
+    "apps/portfolio": {
+      "entry": [
+        "src/main.tsx",
+        "vite.config.ts",
+        "lighthouserc.json",
+        "playwright.config.ts",
+        "e2e/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "vite.config.ts",
+        "e2e/**/*.ts",
+        "playwright.config.ts"
+      ],
+      "ignoreDependencies": ["tailwindcss", "buffer"]
+    },
+    "apps/communication": {
+      "entry": ["src/main.ts", "scripts/**/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": ["pino-pretty", "toml", "tsx"]
+    },
+    "libs/utils": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
+    "libs/components": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "libs/communication-protocol": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    }
+  },
+  "rules": {
+    "duplicates": "off",
+    "exports": "error",
+    "types": "error",
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "unlisted": "error",
+    "unresolved": "error",
+    "enumMembers": "off"
+  }
+}

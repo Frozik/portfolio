@@ -7,7 +7,7 @@ import { Temporal } from 'temporal-polyfill';
 import { useFunction } from '../../../hooks/useFunction';
 import { clampDate } from '../calendar-keys';
 import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 import { DateSelector } from './DateSelector';
 import { MonthNavigator } from './MonthNavigator';
 import { TimePicker } from './TimePicker';

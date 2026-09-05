@@ -4,13 +4,13 @@ import type { Vec3Array } from './topology-types';
 export type RgbFloat = readonly [number, number, number];
 
 // Style types
-export type LineStyle =
+type LineStyle =
   | { readonly type: 'solid' }
   /** dash/gap are world units along the segment — the pattern is anchored to
    *  the geometry (both endpoints end in a dash) and stable under camera motion */
   | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
 
-export type MarkerType = 'solid' | 'circle';
+type MarkerType = 'solid' | 'circle';
 
 /**
  * Modifiers a scene element can carry. They select the `element:modifier[:…]`
@@ -92,12 +92,6 @@ export interface MarkerInstanceStyle {
 }
 
 // A visual vertex marker for GPU rendering
-export interface RenderMarker {
-  readonly position: Vec3Array;
-  readonly vertexId: number;
-  readonly modifiers: readonly StyleModifier[];
-  readonly vertexIndex: number;
-}
 
 // A fully styled vertex marker ready for GPU upload
 export interface StyledMarker {

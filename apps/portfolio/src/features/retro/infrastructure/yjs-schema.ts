@@ -14,14 +14,14 @@ import type { ClientId, ColumnId, IColumnConfig, ITemplateConfig } from '../doma
  * single idempotent initializer.
  */
 
-export const YJS_KEY_META = 'meta';
-export const YJS_KEY_COLUMNS = 'columns';
+const YJS_KEY_META = 'meta';
+const YJS_KEY_COLUMNS = 'columns';
 /** Map<ColumnId, Y.Array<CardRecord>> — cards grouped by column. */
-export const YJS_KEY_CARDS = 'cards';
-export const YJS_KEY_GROUPS = 'groups';
-export const YJS_KEY_ACTION_ITEMS = 'actionItems';
+const YJS_KEY_CARDS = 'cards';
+const YJS_KEY_GROUPS = 'groups';
+const YJS_KEY_ACTION_ITEMS = 'actionItems';
 /** Map<CardId | GroupId, Y.Map<ClientId, number>> — per-target per-client vote counts. */
-export const YJS_KEY_VOTES = 'votes';
+const YJS_KEY_VOTES = 'votes';
 
 export const YJS_META_FIELD_NAME = 'name';
 export const YJS_META_FIELD_CREATED_AT = 'createdAt';
@@ -57,14 +57,7 @@ export interface IYjsCardRecord {
   groupId: string | null;
 }
 
-export interface IYjsGroupRecord {
-  id: string;
-  columnId: ColumnId;
-  title: string;
-  cardIds: string[];
-}
-
-export interface IYjsActionItemRecord {
+interface IYjsActionItemRecord {
   id: string;
   text: string;
   sourceGroupId: string | null;

@@ -441,3 +441,21 @@
     background: oklch(0.40 0.01 250);
   }
 }
+
+/* Global document chrome (formerly main.scss). */
+body {
+  background: #000;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}
+
+/* Disable the rubber-band bounce on mobile Safari (the only engine with -webkit-touch-callout). */
+@supports (-webkit-touch-callout: none) {
+  html {
+    overscroll-behavior-y: none;
+  }
+}

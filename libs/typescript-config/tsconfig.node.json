@@ -5,17 +5,17 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
-
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
     "resolveJsonModule": true,
-
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   }
 }

@@ -12,7 +12,7 @@ import { planToWorld } from '../domain/view/world-frame';
  * feature's own accuracy target. Cascades solve a problem this scene does not
  * have.
  */
-export const SHADOW_MAP_SIZE = 2048;
+const SHADOW_MAP_SIZE = 2048;
 
 /** Comparison sampling needs a filterable depth format; this is the portable one. */
 export const SHADOW_FORMAT: GPUTextureFormat = 'depth32float';

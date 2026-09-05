@@ -15,7 +15,7 @@ const STROKE_ALPHA = 0.8;
 const LINE_WIDTH_PX = 1.2;
 
 /** Position and size are fractions of the canvas, so shapes survive a resize. */
-export interface IFloatingShape {
+interface IFloatingShape {
   readonly x: number;
   readonly y: number;
   readonly size: number;

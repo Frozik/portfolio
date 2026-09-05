@@ -127,7 +127,7 @@ function advanceLine(line: TypingLine, nowMs: number, height: number): TypingLin
   }
 }
 
-export function advanceLines(
+function advanceLines(
   lines: readonly TypingLine[],
   nowMs: number,
   height: number

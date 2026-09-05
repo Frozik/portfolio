@@ -69,17 +69,13 @@ export function getColumnIndexAt(field: Heightfield, positionX: number): number 
   return clamp(Math.floor(positionX), 0, getColumnCount(field) - 1);
 }
 
-export function isColumnInside(field: Heightfield, columnIndex: number): boolean {
+function isColumnInside(field: Heightfield, columnIndex: number): boolean {
   return columnIndex >= 0 && columnIndex < getColumnCount(field);
 }
 
 /** Ground level of a column; columns outside the field read as the field floor. */
 export function getSurfaceHeight(field: Heightfield, columnIndex: number): number {
   return field[clamp(columnIndex, 0, getColumnCount(field) - 1)]?.surfaceHeight ?? 0;
-}
-
-export function getSurfaceHeightAt(field: Heightfield, positionX: number): number {
-  return getSurfaceHeight(field, getColumnIndexAt(field, positionX));
 }
 
 export function isSolidAt(field: Heightfield, positionX: number, positionY: number): boolean {

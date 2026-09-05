@@ -10,7 +10,7 @@ import type { FigureTopology, Vec3Array } from './topology-types';
  *   faces: [[0,1,2], [0,1,3], [1,2,3], [0,2,3]] }
  * ```
  */
-export interface PuzzleFigure {
+interface PuzzleFigure {
   /** Vertex positions in 3D space [x, y, z] */
   readonly vertices: readonly Vec3Array[];
   /**
@@ -84,7 +84,7 @@ export interface PuzzleExpectedResult {
 }
 
 /** Camera viewing angles */
-export interface PuzzleCameraAngle {
+interface PuzzleCameraAngle {
   /** Elevation angle in radians (angle from horizontal) */
   readonly elevation: number;
   /** Azimuth angle in radians (horizontal rotation) */
@@ -92,7 +92,7 @@ export interface PuzzleCameraAngle {
 }
 
 /** Camera distance (zoom) limits */
-export interface PuzzleCameraDistance {
+interface PuzzleCameraDistance {
   readonly min: number;
   readonly max: number;
   readonly initial: number;

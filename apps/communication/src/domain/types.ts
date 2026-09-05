@@ -11,8 +11,6 @@ export type DisplayName = Opaque<'DisplayName', string>;
 // Plain `string` aliases (per plan m12 — not branded).
 export type SocketId = string;
 export type CorrelationId = string;
-export type CommandName = string;
-export type IsoDateTime = string;
 
 // Re-export `Milliseconds` so callers can import from the local domain
 // barrel-equivalent path without reaching into `@frozik/utils/date/types`
@@ -24,13 +22,6 @@ export function assertRoomId(raw: string): RoomId {
     throw new InvalidPayloadError('roomId must be a UUID v4');
   }
   return raw as RoomId;
-}
-
-export function assertUserId(raw: string): UserId {
-  if (!UUID_V4_REGEX.test(raw)) {
-    throw new InvalidPayloadError('userId must be a UUID v4');
-  }
-  return raw as UserId;
 }
 
 export function assertDisplayName(raw: string): DisplayName {

@@ -5,5 +5,3 @@ export const BuildSectionSchema = z.object({
   commit: z.string().min(1),
   version: z.string().min(1),
 });
-
-export type BuildSection = z.infer<typeof BuildSectionSchema>;

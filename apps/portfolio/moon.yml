@@ -40,9 +40,6 @@ tasks:
     options:
       runInCI: true
 
-  madge:
-    command: 'madge src --circular --extensions ts,tsx ./src'
-
   analyze:
     command: 'pnpm run analyze'
     inputs:
@@ -52,6 +49,17 @@ tasks:
     outputs:
       - 'bundle-stats.html'
       - 'bundle-stats.json'
+
+  e2e:
+    command: 'pnpm exec playwright test'
+    deps:
+      - 'build'
+    inputs:
+      - '@group(vite)'
+      - 'e2e/**/*'
+      - 'playwright.config.ts'
+    options:
+      runInCI: true
 
   lighthouse:
     command: 'pnpm run lighthouse'

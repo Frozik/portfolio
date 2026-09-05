@@ -58,13 +58,13 @@ export const TRACE_TELEPORT_DISTANCE_WU = 40;
 export const CONTRAIL_YOUNG_HALF_WIDTH_WU = 0.7;
 export const CONTRAIL_OLD_HALF_WIDTH_WU = 2.4;
 /** A Death's Head splits into nine warheads; nothing in the catalog puts more shells in the air. */
-export const MAX_SHELLS_IN_FLIGHT = 12;
+const MAX_SHELLS_IN_FLIGHT = 12;
 /** Every shell draws its contrail segments plus its own capsule shapes. */
 export const MAX_PROJECTILE_SHAPE_INSTANCES = MAX_SHELLS_IN_FLIGHT * (TRACE_PATH_LENGTH + 6);
 
 /** [§12.2] The aim ghost's dots, plus the laser beams still glowing on the field. */
 export const GHOST_DOT_RADIUS_WU = 1.6;
-export const MAX_GHOST_SHAPE_INSTANCES = 64;
+const MAX_GHOST_SHAPE_INSTANCES = 64;
 export const LASER_BEAM_FADE_SECONDS = 0.45;
 export const MAX_LASER_BEAMS = MAX_PLAYER_COUNT;
 
@@ -104,7 +104,7 @@ export const RETREAT_ROTOR_OFFSET_WU = 6;
 /** The rotor is drawn as a bar whose width oscillates — the cheapest possible spin. */
 export const RETREAT_ROTOR_SPIN_HZ = 9;
 /** Body, rotor and mast per departing tank; every tank may retreat once. */
-export const SHAPES_PER_RETREAT_FLIGHT = 3;
+const SHAPES_PER_RETREAT_FLIGHT = 3;
 export const MAX_RETREAT_FLIGHTS = MAX_PLAYER_COUNT;
 
 /** Everything the overlay layer may draw at once: the aim ghost, the beams and the helicopters. */

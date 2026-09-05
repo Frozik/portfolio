@@ -1,7 +1,6 @@
 /** The NES (2C02 PPU) hardware palette — a fact about the console, not a creative work (§1.4). */
 export const NES_BLACK = '#000000';
 export const NES_WHITE = '#FCFCFC';
-export const NES_OFF_WHITE = '#F8F8F8';
 export const NES_LIGHT_GRAY = '#BCBCBC';
 export const NES_GRAY = '#7C7C7C';
 
@@ -14,7 +13,6 @@ export const NES_TAN = '#FCA044';
 
 export const NES_YELLOW = '#F8B800';
 export const NES_DARK_YELLOW = '#AC7C00';
-export const NES_LIGHT_YELLOW = '#F8D878';
 export const NES_PALE_YELLOW = '#FCE0A8';
 
 export const NES_GREEN = '#00A800';
@@ -29,5 +27,3 @@ export const NES_PALE_BLUE = '#A4E4FC';
 
 export const NES_LAVENDER = '#B8B8F8';
 export const NES_PINK = '#F8A4C0';
-export const NES_MAGENTA = '#D800CC';
-export const NES_CYAN = '#00E8D8';

@@ -10,113 +10,76 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-
-  type-check:
-    name: Type Check
+  check:
+    name: Checks (moon ci)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: moonrepo/setup-toolchain@v0
         with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm types
+          auto-install: true
+      - uses: actions/cache@v4
+        with:
+          path: .moon/cache
+          key: moon-${{ runner.os }}-${{ github.sha }}
+          restore-keys: moon-${{ runner.os }}-
+      - name: Affected checks, tests and builds
+        run: moon ci --color
+      - uses: moonrepo/run-report-action@v1
+        if: success() || failure()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+        continue-on-error: true
+      - name: Keep the portfolio build for the Lighthouse job
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: portfolio-dist
+          path: apps/portfolio/dist
+          if-no-files-found: ignore
+          retention-days: 3
 
-  test:
-    name: Test
+  lighthouse:
+    name: Lighthouse budgets
     runs-on: ubuntu-latest
+    needs: check
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: moonrepo/setup-toolchain@v0
         with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+          auto-install: true
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: portfolio-dist
+          path: apps/portfolio/dist
+      - name: Rebuild if the affected run skipped the portfolio build
+        run: test -f apps/portfolio/dist/index.html || moon run portfolio:build
+      - name: Lighthouse CI against the production build
+        working-directory: apps/portfolio
+        run: pnpm exec lhci autorun
 
-  madge:
-    name: Circular Dependencies
+  server-image:
+    name: Server image builds
     runs-on: ubuntu-latest
+    needs: check
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
         with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm madge
-
-  layers:
-    name: Layer Boundaries
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm layers
-
-  format-check:
-    name: Format Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format-check
-
-  sort-check:
-    name: Package JSON Sort
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm sort-package-json-check
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+          context: .
+          file: apps/communication/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

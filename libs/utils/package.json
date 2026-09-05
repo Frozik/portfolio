@@ -14,8 +14,18 @@
   "scripts": {
     "types": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "idb": "catalog:",
+    "lodash-es": "catalog:",
+    "lru-cache": "catalog:",
+    "rxjs": "catalog:",
+    "temporal-polyfill": "catalog:"
+  },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "@webgpu/types": "catalog:",
+    "fake-indexeddb": "catalog:"
   }
 }

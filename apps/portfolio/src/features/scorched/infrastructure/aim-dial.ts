@@ -9,7 +9,7 @@ import type { AimState, TurretFacing } from '../domain/types';
  * right, 90° straight up, 180° straight left, and the facing flip at the top is invisible to them.
  */
 export const MIN_DIAL_DEGREES = 0;
-export const STRAIGHT_UP_DIAL_DEGREES = 90;
+const STRAIGHT_UP_DIAL_DEGREES = 90;
 export const MAX_DIAL_DEGREES = 180;
 
 export interface DialAim {

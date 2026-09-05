@@ -38,7 +38,7 @@ import { findHandleAt } from './plan-picking';
  * {@link MIN_SHAPE_EXTENT_METERS} on purpose: a stray click snaps down to that
  * floor, and only a deliberate drag clears this bar.
  */
-export const MIN_DRAWN_EXTENT_METERS: Meters = 0.2;
+const MIN_DRAWN_EXTENT_METERS: Meters = 0.2;
 /** Grab radius of the anchor mark, generous around the drawn ring. */
 const ANCHOR_PICK_RADIUS_PX = 12;
 /** How near a shape's own special point pulls the dragged anchor in. */
@@ -466,7 +466,7 @@ function toHandleGesture<TContext>(
   return isNil(factors) ? undefined : { kind: 'resize', context, startShape: shape, factors };
 }
 
-export function isLargeEnoughToKeep(shape: Shape): boolean {
+function isLargeEnoughToKeep(shape: Shape): boolean {
   switch (shape.kind) {
     case 'rectangle':
     case 'ellipse':

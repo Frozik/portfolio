@@ -9,10 +9,6 @@ export interface BoundingBox {
   readonly maxY: Meters;
 }
 
-export function computeRingBounds(ring: Ring): BoundingBox | undefined {
-  return computeBounds([ring]);
-}
-
 /** Holes lie inside their outer ring, so only outer rings can widen the bounds. */
 export function computeMultiPolygonBounds(polygons: MultiPolygon): BoundingBox | undefined {
   return computeBounds(polygons.map(polygon => polygon.outer));

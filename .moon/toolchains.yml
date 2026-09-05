@@ -8,8 +8,8 @@ javascript:
 # refresh of that index fails the build when offline (e.g. the pre-commit hook
 # with no network). Matches pnpm's exact pin below.
 node:
-  version: '22.22.2'
+  version: '24.20.0'
 
 pnpm:
-  version: '10.14.0'
+  version: '11.25.0'
   installArgs: ['--frozen-lockfile']

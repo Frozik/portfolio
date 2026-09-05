@@ -9,7 +9,7 @@ import type { MultiPolygon } from './polygon-types';
 import { pointAlongPolyline, polylineLength, subPolyline } from './wall-geometry';
 
 /** One stretch of a ribbon paved the same way: consecutive segments, one colour. */
-export interface PathRibbonPiece {
+interface PathRibbonPiece {
   readonly surface: PathSurface;
   readonly polygons: MultiPolygon;
 }
@@ -20,7 +20,7 @@ export interface PathRibbonPiece {
  * surface ahead. `start` and `end` are the centreline points its butt edges
  * cross — the gradient's axis, in plan coordinates.
  */
-export interface PathSeamBlend {
+interface PathSeamBlend {
   readonly polygons: MultiPolygon;
   readonly fromSurface: PathSurface;
   readonly toSurface: PathSurface;

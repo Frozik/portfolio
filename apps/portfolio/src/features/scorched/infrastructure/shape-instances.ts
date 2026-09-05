@@ -1,7 +1,7 @@
 import { assert } from '@frozik/utils/assert/assert';
 
 /** `ShapeInstance` in `shapes.wgsl`: three `vec4<f32>` — rect, colour and params. */
-export const FLOATS_PER_SHAPE_INSTANCE = 12;
+const FLOATS_PER_SHAPE_INSTANCE = 12;
 export const SHAPE_INSTANCE_BYTES = FLOATS_PER_SHAPE_INSTANCE * Float32Array.BYTES_PER_ELEMENT;
 /** Two triangles, drawn without a vertex buffer. */
 export const SHAPE_VERTEX_COUNT = 6;
@@ -12,7 +12,7 @@ export const SHAPE_KIND = {
   ring: 2,
 } as const;
 
-export type ShapeKind = (typeof SHAPE_KIND)[keyof typeof SHAPE_KIND];
+type ShapeKind = (typeof SHAPE_KIND)[keyof typeof SHAPE_KIND];
 
 const NO_ROTATION = 0;
 const OPAQUE = 1;

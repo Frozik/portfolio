@@ -27,7 +27,7 @@ export interface AiTankView {
   readonly kills: number;
 }
 
-export interface PreviousShotMemory {
+interface PreviousShotMemory {
   readonly aim: AimState;
   readonly impact: Vector2;
   readonly targetId: PlayerId;

@@ -9,7 +9,7 @@ import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { SiteLocationChanges } from '../../domain/model/settings-edits';
 import { COORDINATE_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
-import styles from './LocationMapDialog.module.scss';
+import styles from './LocationMapDialog.module.css';
 
 /** A village and its fields — close enough to recognise a plot, wide enough to pan from. */
 const INITIAL_ZOOM = 13;

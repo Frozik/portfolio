@@ -21,10 +21,6 @@ export type DuctKind = 'flue' | 'vent';
 
 export const DUCT_KINDS: readonly DuctKind[] = ['flue', 'vent'];
 
-export function parseDuctKind(value: string): DuctKind | undefined {
-  return DUCT_KINDS.find(kind => kind === value);
-}
-
 /**
  * A vertical shaft, standing on the storey it is placed on. Only its plan
  * position and section are stored: where it stops is DERIVED from the roof
@@ -48,8 +44,8 @@ export const DEFAULT_FLUE_WIDTH_METERS: Meters = 0.51;
 export const DEFAULT_FLUE_DEPTH_METERS: Meters = 0.38;
 
 /** A ventilation shaft of two 140 × 140 channels in a plastered block. */
-export const DEFAULT_VENT_WIDTH_METERS: Meters = 0.4;
-export const DEFAULT_VENT_DEPTH_METERS: Meters = 0.25;
+const DEFAULT_VENT_WIDTH_METERS: Meters = 0.4;
+const DEFAULT_VENT_DEPTH_METERS: Meters = 0.25;
 
 /**
  * How far a shaft must stand above the roof around it — СП 7.13130 §5.10: half

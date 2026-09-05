@@ -65,7 +65,7 @@ export interface StoreyObjectSelector {
     | undefined;
 }
 
-export interface DuplicatedStoreyObject {
+interface DuplicatedStoreyObject {
   readonly buildings: readonly Building[];
   readonly selection: Selection;
 }

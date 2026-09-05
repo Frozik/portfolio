@@ -9,7 +9,7 @@ import type { PitchedRoofScene } from './roof-scenes';
 import type { StoreyScene } from './storey-scenes';
 
 /** One utility entry resolved onto the plan — where its system enters the house. */
-export interface PlanUtilityEntry {
+interface PlanUtilityEntry {
   readonly id: UtilityEntryId;
   readonly system: UtilitySystem;
   readonly position: Vector2;

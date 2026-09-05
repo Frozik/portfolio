@@ -10,7 +10,7 @@ export interface IOrderBookUpdate {
   asks: [Price, Volume][];
 }
 
-export interface IOrderBookStateSnapshot {
+interface IOrderBookStateSnapshot {
   status: 'snapshot';
   instrument: string;
   lastUpdateId: number;

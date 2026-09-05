@@ -16,7 +16,7 @@ const TEXTURE_COUNT = 2;
 const FIRST_TEXTURE_INDEX = 0;
 
 /** Row 0 is the top of the field, so a texel row counts down from the field ceiling. */
-export function toWorldY(row: number, heightWu: number): number {
+function toWorldY(row: number, heightWu: number): number {
   return heightWu - row - 0.5;
 }
 

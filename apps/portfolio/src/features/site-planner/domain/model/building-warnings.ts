@@ -24,11 +24,11 @@ import type { WallId } from './walls';
  * 0.6 m; past 1.5 m nothing bears without an engineer, so the advisory says so
  * in different words rather than staying the same shade of amber.
  */
-export const CANTILEVER_ADVISORY_METERS: Meters = 0.6;
-export const CANTILEVER_ENGINEERED_METERS: Meters = 1.5;
+const CANTILEVER_ADVISORY_METERS: Meters = 0.6;
+const CANTILEVER_ENGINEERED_METERS: Meters = 1.5;
 
 /** Below this a storey is not habitable — СП 55.13330 for a living room. */
-export const MIN_HABITABLE_STOREY_HEIGHT_METERS: Meters = 2.2;
+const MIN_HABITABLE_STOREY_HEIGHT_METERS: Meters = 2.2;
 
 /**
  * One advisory finding about a building. Advisory by design, like the trench

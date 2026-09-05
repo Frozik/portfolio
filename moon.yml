@@ -1,25 +1,58 @@
 id: root
 language: typescript
 
+# Repository-wide tasks. Everything a developer or CI runs goes through Moon:
+# `moon check --all` is the full gate, `moon ci` runs only affected tasks in CI,
+# and every task declares its inputs so unchanged work is served from the cache.
+
+fileGroups:
+  sources:
+    - 'apps/*/src/**/*'
+    - 'libs/*/src/**/*'
+    - 'apps/*/vite.config.ts'
+    - 'vitest.config.ts'
+  manifests:
+    - 'package.json'
+    - 'apps/*/package.json'
+    - 'libs/*/package.json'
+    - 'pnpm-workspace.yaml'
+
 tasks:
   lint:
     command: 'biome check .'
+    inputs:
+      - '@group(sources)'
+      - '@group(manifests)'
+      - 'biome.json'
+      - '*.{ts,js,json}'
     options:
       runInCI: true
 
   lint-fix:
     command: 'biome check --write .'
+    options:
+      cache: false
 
   format:
     command: 'biome format --write .'
+    options:
+      cache: false
 
   format-check:
     command: 'biome format .'
+    inputs:
+      - '@group(sources)'
+      - '@group(manifests)'
+      - 'biome.json'
+      - '*.{ts,js,json}'
     options:
       runInCI: true
 
   test:
     command: 'vitest run'
+    inputs:
+      - '@group(sources)'
+      - 'vitest.config.ts'
     options:
       runInCI: true
 
@@ -30,6 +63,61 @@ tasks:
 
   test-coverage:
     command: 'vitest run --coverage'
+    outputs:
+      - 'coverage'
 
-  deploy:
+  layers:
+    command: 'depcruise --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src'
+    inputs:
+      - '@group(sources)'
+      - '.dependency-cruiser.cjs'
+      - '.dependency-cruiser-known-violations.json'
+    options:
+      runInCI: true
+
+  layers-baseline:
+    command: 'depcruise --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src'
+    options:
+      cache: false
+
+  knip:
+    command: 'knip --no-progress'
+    inputs:
+      - '@group(sources)'
+      - '@group(manifests)'
+      - 'knip.json'
+    options:
+      runInCI: true
+
+  conventions:
+    command: 'node scripts/check-source-conventions.mjs'
+    inputs:
+      - '@group(sources)'
+      - 'scripts/check-source-conventions.mjs'
+      - '.file-size-baseline.json'
+    options:
+      runInCI: true
+
+  conventions-baseline:
+    command: 'node scripts/check-source-conventions.mjs --update-baseline'
+    options:
+      cache: false
+
+  sort-check:
+    command: "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json' --check"
+    inputs:
+      - '@group(manifests)'
+    options:
+      runInCI: true
+
+  sort-fix:
+    command: "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json'"
+    options:
+      cache: false
+
+  deploy-pages:
     command: 'gh-pages -d apps/portfolio/dist'
+    deps:
+      - 'portfolio:build'
+    options:
+      cache: false

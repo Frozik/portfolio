@@ -52,5 +52,3 @@ const ButtonComponent = forwardRef<HTMLButtonElement, ButtonProps>(
 ButtonComponent.displayName = 'Button';
 
 export const Button = memo(ButtonComponent);
-
-export { buttonVariants };

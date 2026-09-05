@@ -85,7 +85,7 @@ export const MIN_WALL_POINTS = 2;
 /** A ring needs a triangle's worth of corners; two points close into nothing. */
 export const MIN_CLOSED_WALL_POINTS = 3;
 
-export const DEFAULT_WALL_MATERIAL: WallMaterial = 'brick';
+const DEFAULT_WALL_MATERIAL: WallMaterial = 'brick';
 
 /**
  * The default a drawn wall starts on. Centreline rather than the exterior
@@ -93,7 +93,7 @@ export const DEFAULT_WALL_MATERIAL: WallMaterial = 'brick';
  * centred body is the predictable one — the reference line flips in the
  * properties panel (`building-editor.md` §4).
  */
-export const DEFAULT_WALL_REFERENCE_LINE: WallReferenceLine = 'centerline';
+const DEFAULT_WALL_REFERENCE_LINE: WallReferenceLine = 'centerline';
 
 /** Mints a wall of the given material at that material's typical thickness. */
 export function createWall({

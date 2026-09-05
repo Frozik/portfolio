@@ -26,7 +26,7 @@ const ACK_TIMEOUT_MS = 10_000;
 
 export type TConnectionState = 'idle' | 'connecting' | 'open' | 'closed';
 
-export interface IAuthCredentials {
+interface IAuthCredentials {
   readonly provider: TIdentityProvider;
   readonly token: string;
 }
@@ -57,7 +57,7 @@ export interface ICommunicationClientParams {
   readonly onTokenRefreshNeeded?: () => Promise<string | null>;
 }
 
-export type TTurnAck =
+type TTurnAck =
   | (ITurnCredentialsAck & { readonly ok?: true })
   | { readonly ok: false; readonly error: string };
 

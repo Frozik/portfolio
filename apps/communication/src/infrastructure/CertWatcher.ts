@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 const RETRY_DELAY_MS = 100;
 const RETRY_MAX_ATTEMPTS = 20;
 
-export type CertReloadCallback = (next: { cert: Buffer; key: Buffer }) => void;
+type CertReloadCallback = (next: { cert: Buffer; key: Buffer }) => void;
 
 export type CertWatcherParams = {
   certPath: string;

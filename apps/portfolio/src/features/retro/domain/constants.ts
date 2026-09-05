@@ -15,7 +15,6 @@ export const PHASE_ORDER: readonly RetroPhase[] = [
 ];
 
 export const DEFAULT_BRAINSTORM_DURATION_MS = 600_000 as Milliseconds; // 10 min
-export const DEFAULT_VOTES_PER_PARTICIPANT = 5;
 export const SOFT_ACTION_ITEM_LIMIT = 3;
 
 /** Warning threshold before timer expires — switches UI to a softer alert. */

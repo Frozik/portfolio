@@ -13,12 +13,12 @@ import { distanceToSegment } from './segment-distance';
  * tread from the 2h+d ≈ 63 cm stride formula. The stair stretches itself to
  * the storey height — the footprint is an OUTPUT of the model, never an input.
  */
-export const TARGET_RISER_METERS: Meters = 0.17;
-export const STRIDE_FORMULA_METERS: Meters = 0.63;
+const TARGET_RISER_METERS: Meters = 0.17;
+const STRIDE_FORMULA_METERS: Meters = 0.63;
 
 /** The advisory bands (§6.5 п.4): outside these the warning layer lights up. */
-export const RISER_COMFORT_RANGE_METERS = { min: 0.15, max: 0.19 } as const;
-export const TREAD_COMFORT_RANGE_METERS = { min: 0.25, max: 0.3 } as const;
+const RISER_COMFORT_RANGE_METERS = { min: 0.15, max: 0.19 } as const;
+const TREAD_COMFORT_RANGE_METERS = { min: 0.25, max: 0.3 } as const;
 
 /** No stair is a single step; two risers is the degenerate floor. */
 const MIN_RISER_COUNT = 2;
@@ -111,7 +111,7 @@ export function isStairRunComfortable(
  * runs along +y, `start` is the stretch's low end on the centreline. Landings
  * carry no risers but occupy plan area.
  */
-export interface StairFlight {
+interface StairFlight {
   readonly start: Vector2;
   /** Unit direction of climb in the local frame. */
   readonly direction: Vector2;
@@ -390,7 +390,7 @@ export function mirrorOf(stair: StairInstance): (point: Vector2) => Vector2 {
  * cutout exists at all. Below this the ceiling has to be opened; beyond it the
  * floor above can stay.
  */
-export const STAIR_HEADROOM_METERS: Meters = 2.0;
+const STAIR_HEADROOM_METERS: Meters = 2.0;
 
 /**
  * The part of the footprint that must actually be cut out of the floor above

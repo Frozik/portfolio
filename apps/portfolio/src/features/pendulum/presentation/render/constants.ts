@@ -18,7 +18,7 @@ export const ROD_TOP_WHEEL_OFFSET = 12;
 export const ROD_BOTTOM_WHEEL_RADIUS = 15;
 export const ROD_BOTTOM_WHEEL_OFFSET = -15;
 
-export const SPOKE_ANGLE = Math.PI / 8;
+const SPOKE_ANGLE = Math.PI / 8;
 export const SPOKE_HALF_ANGLE = SPOKE_ANGLE / 2;
 export const SPOKES_COUNT = 5;
 

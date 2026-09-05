@@ -1,11 +1,11 @@
 import { clamp } from 'lodash-es';
 
-export const PRICE_BASE = 77600;
+const PRICE_BASE = 77600;
 const PRICE_RANGE = 80;
 export const DEPTH_LEVELS = 48;
 export const DEPTH_COLUMNS = 180;
 const COLUMN_INTERVAL_MS = 220;
-export const TAPE_MAX_ROWS = 20;
+const TAPE_MAX_ROWS = 20;
 const PRICE_STEP_PER_MS = 0.6;
 const PRICE_REVERSION = 0.0008;
 const PRICE_DECAY_BASE = 0.92;
@@ -21,14 +21,14 @@ const TAPE_BUY_PROBABILITY = 0.5;
 const TAPE_PRICE_JITTER = 4;
 const RANDOM_CENTER = 0.5;
 
-export type TradeSide = 'buy' | 'sell';
+type TradeSide = 'buy' | 'sell';
 
-export interface IDepthCell {
+interface IDepthCell {
   readonly bid: number;
   readonly ask: number;
 }
 
-export interface ITapeEntry {
+interface ITapeEntry {
   readonly price: number;
   readonly side: TradeSide;
   readonly size: number;

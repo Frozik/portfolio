@@ -38,10 +38,6 @@ export interface RoofOverlayGeometry {
 }
 
 /** The placed pieces as the 3D view stands them, split by category. */
-export interface FurnitureGeometry {
-  readonly furniture: LitMesh | undefined;
-  readonly plumbing: LitMesh | undefined;
-}
 
 /**
  * One mesh out of many: vertices concatenated, indices rebased. The buildings

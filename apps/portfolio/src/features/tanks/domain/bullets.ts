@@ -86,7 +86,7 @@ export function countAliveBullets(bullets: readonly Bullet[], owner: TankRef): n
   ).length;
 }
 
-export function getBulletCenter(bullet: Bullet): Vector2 {
+function getBulletCenter(bullet: Bullet): Vector2 {
   return {
     x: bullet.positionX + BULLET_SIZE_WU / 2,
     y: bullet.positionY + BULLET_SIZE_WU / 2,

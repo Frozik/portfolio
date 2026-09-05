@@ -21,7 +21,7 @@ import {
   toNativeInputBound,
   toNativeInputValue,
 } from './native-picker';
-import styles from './styles.module.scss';
+import styles from './styles.module.css';
 import { getCalendarAriaLabels } from './translations/translations';
 
 const DEFAULT_TIME_ZONE = 'UTC';

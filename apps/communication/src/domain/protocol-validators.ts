@@ -45,7 +45,7 @@ export const HandshakeAuthSchema = z.object({
 // a ×~1500 traffic amplifier inside the room.
 const COMMAND_MAX_LENGTH = 128;
 const CORRELATION_ID_MAX_LENGTH = 128;
-export const MAX_INITIATE_PAYLOAD_BYTES = 65_536;
+const MAX_INITIATE_PAYLOAD_BYTES = 65_536;
 
 export const InitiatePayloadSchema = z.object({
   command: z.string().min(1, 'command must not be empty').max(COMMAND_MAX_LENGTH),
@@ -164,8 +164,6 @@ export const TurnCredentialsAckSchema = z.object({
 
 export const ServerDrainingEventSchema = z.object({}).strict();
 
-export const TurnCredentialsRenewedEventSchema = z.object({}).strict();
-
 export function parseHandshakeAuth(raw: unknown): z.infer<typeof HandshakeAuthSchema> {
   return runParse(HandshakeAuthSchema, raw);
 }
@@ -235,11 +233,6 @@ export function parseTurnCredentialsAck(raw: unknown): z.infer<typeof TurnCreden
 }
 export function parseServerDrainingEvent(raw: unknown): z.infer<typeof ServerDrainingEventSchema> {
   return runParse(ServerDrainingEventSchema, raw);
-}
-export function parseTurnCredentialsRenewedEvent(
-  raw: unknown
-): z.infer<typeof TurnCredentialsRenewedEventSchema> {
-  return runParse(TurnCredentialsRenewedEventSchema, raw);
 }
 
 // Export the marker messages so tests can reason about which branch of the

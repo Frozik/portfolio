@@ -12,7 +12,7 @@ import type { Meters } from '../units';
 const STATION_STEP_METERS = 1;
 
 /** One reading along the trench: where the ground is and where the pipe is. */
-export interface TrenchStation {
+interface TrenchStation {
   readonly position: Vector2;
   /** Distance from the route's first point, along the drawn line. */
   readonly offsetMeters: Meters;

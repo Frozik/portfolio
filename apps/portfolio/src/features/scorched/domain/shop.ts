@@ -29,7 +29,7 @@ export interface ShopQuote extends BundleQuote {
   readonly isAvailable: boolean;
 }
 
-export function getShopEntryId(entry: ShopEntryRef): WeaponId | ItemId {
+function getShopEntryId(entry: ShopEntryRef): WeaponId | ItemId {
   return entry.kind === 'weapon' ? entry.weaponId : entry.itemId;
 }
 

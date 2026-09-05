@@ -43,8 +43,8 @@ export type DoorHingeSide = 'start' | 'end';
 /** Which side of the wall the leaf opens towards. */
 export type DoorSwing = 'inward' | 'outward';
 
-export const DEFAULT_DOOR_HINGE_SIDE: DoorHingeSide = 'start';
-export const DEFAULT_DOOR_SWING: DoorSwing = 'inward';
+const DEFAULT_DOOR_HINGE_SIDE: DoorHingeSide = 'start';
+const DEFAULT_DOOR_SWING: DoorSwing = 'inward';
 
 /** How a door opens, defaulted for doors that predate the fields. */
 export function doorSwingOf(opening: Opening): {
@@ -58,14 +58,8 @@ export function doorSwingOf(opening: Opening): {
 }
 
 /** Flips the leaf to the other jamb — the two-click convention of the market. */
-export function flipHingeSide(hingeSide: DoorHingeSide): DoorHingeSide {
-  return hingeSide === 'start' ? 'end' : 'start';
-}
 
 /** Flips which way the door opens. */
-export function flipSwing(swing: DoorSwing): DoorSwing {
-  return swing === 'inward' ? 'outward' : 'inward';
-}
 
 /**
  * What the opening tool is armed with. «Окно в пол» (R21) is not a third

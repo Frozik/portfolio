@@ -15,13 +15,11 @@
       "!!**/dev-dist",
       "!!**/build",
       "!!**/coverage",
-      "!!**/storybook-static",
-      "!!apps/retro",
       "!!.moon",
       "!!.claude",
-      "!!.nx",
       "!!pnpm-lock.yaml",
-      "!!.dependency-cruiser-known-violations.json"
+      "!!.dependency-cruiser-known-violations.json",
+      "!!.file-size-baseline.json"
     ]
   },
   "formatter": {
@@ -77,19 +75,18 @@
         "useSelfClosingElements": "warn",
         "useFilenamingConvention": "off",
         "useNamingConvention": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "Date": "Use the Temporal API (temporal-polyfill); date helpers live in libs/utils/src/date/."
+            }
+          }
+        },
         "noRestrictedImports": {
           "level": "error",
           "options": {
             "patterns": [
-              {
-                "group": [
-                  "**/features/*/components/**",
-                  "**/features/*/hooks/**",
-                  "**/features/*/sagas/**",
-                  "**/features/*/modules/**"
-                ],
-                "message": "Import from the feature public API (features/*/FeatureName.tsx) instead of reaching into feature internals."
-              },
               {
                 "group": [
                   "**/index",
@@ -123,7 +120,12 @@
       "complexity": {
         "noForEach": "off",
         "noStaticOnlyClass": "off",
-        "useLiteralKeys": "off"
+        "useLiteralKeys": "off",
+        "noExcessiveCognitiveComplexity": "off"
+      },
+      "nursery": {
+        "useExhaustiveSwitchCases": "warn",
+        "noFloatingPromises": "off"
       },
       "a11y": {
         "noSvgWithoutTitle": "off",
@@ -153,6 +155,22 @@
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
+          },
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/portfolio/src/features/site-planner/domain/sun/sun-position.ts",
+        "apps/portfolio/src/features/site-planner/domain/sun/day-window.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": "off"
           }
         }
       }
@@ -164,7 +182,11 @@
       }
     },
     {
-      "includes": ["**/vite.config.ts", "**/vitest.config.ts"],
+      "includes": [
+        "**/vite.config.ts",
+        "**/vitest.config.ts",
+        "**/playwright.config.ts"
+      ],
       "linter": {
         "rules": {
           "style": {

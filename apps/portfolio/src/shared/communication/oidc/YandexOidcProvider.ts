@@ -97,7 +97,7 @@ const DEFAULT_CALLBACK_PATH = '/portfolio/oauth/yandex/callback';
  * interaction. When the access token expires the call returns `null`
  * and the gate falls back to the explicit sign-in button.
  */
-export class YandexOidcProvider implements IOidcProvider {
+class YandexOidcProvider implements IOidcProvider {
   public readonly id = 'yandex' as const;
   public readonly displayName = 'Яндекс';
 
@@ -310,8 +310,6 @@ function computePopupFeatures(): string {
   const top = Math.max(0, Math.floor(window.screenY + (window.outerHeight - POPUP_HEIGHT) / 2));
   return `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
 }
-
-export const YANDEX_OAUTH_CALLBACK_PATH = DEFAULT_CALLBACK_PATH;
 export const YANDEX_OAUTH_MESSAGE = YANDEX_OAUTH_MESSAGE_TYPE;
 
 /**

@@ -4,13 +4,13 @@ import { TICKS_PER_SECOND } from '../../domain/constants';
 import type { NapalmPool, WorldEvent } from '../../domain/types';
 
 /** Matches the `kind` the particle compute pass switches its integration on. */
-export const PARTICLE_KIND = {
+const PARTICLE_KIND = {
   debris: 0,
   smoke: 1,
   flame: 2,
 } as const;
 
-export type ParticleKind = (typeof PARTICLE_KIND)[keyof typeof PARTICLE_KIND];
+type ParticleKind = (typeof PARTICLE_KIND)[keyof typeof PARTICLE_KIND];
 
 export interface ParticleInstance {
   readonly x: number;

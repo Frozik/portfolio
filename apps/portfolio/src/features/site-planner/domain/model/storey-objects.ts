@@ -1,5 +1,3 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
-
 import type { VerticalDuct } from './ducts';
 import type { ElectricalDevice } from './electrical';
 import type { Fireplace } from './fireplaces';
@@ -111,6 +109,3 @@ export const DEVICE_OBJECTS = defineKind<ElectricalDevice>({
  * whose position is its shape's centre, and a device, which hangs on a host.
  * Used by the gestures and the copy, both of which speak in offsets.
  */
-export interface PlacedStoreyObject extends StoreyObject {
-  readonly position: Vector2;
-}

@@ -87,9 +87,3 @@ export interface IPlotArea {
   readonly width: number;
   readonly height: number;
 }
-
-export interface IFpsController {
-  tick(): void;
-  getFrameIntervalMs(): number;
-  getCurrentFps(): number;
-}

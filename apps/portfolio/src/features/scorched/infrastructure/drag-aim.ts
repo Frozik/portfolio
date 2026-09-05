@@ -11,7 +11,7 @@ const RADIANS_TO_DEGREES = 180 / Math.PI;
  * [§12.2] How far the finger has to travel from the tank for the throttle to reach the wall. Sized
  * against the 800 × 500 field rather than the screen so the gesture feels the same on every device.
  */
-export const DRAG_FULL_POWER_DISTANCE_WU = 260;
+const DRAG_FULL_POWER_DISTANCE_WU = 260;
 
 /**
  * [§12.2] Drag-to-aim: the vector from the active tank to the finger sets the barrel and the

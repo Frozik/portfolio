@@ -28,13 +28,3 @@ tasks:
       - 'tsconfig.json'
     options:
       runInCI: true
-
-  test:
-    command: 'pnpm run test'
-    inputs:
-      - '@group(sources)'
-    options:
-      runInCI: true
-
-  madge:
-    command: 'madge src --circular --extensions ts ./src'

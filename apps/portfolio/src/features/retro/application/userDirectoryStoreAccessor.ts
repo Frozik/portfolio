@@ -8,7 +8,7 @@ import { UserDirectoryStore } from './UserDirectoryStore';
  * SAME `UserDirectoryStore` instance off the root store via this key, so
  * a rename performed once propagates everywhere.
  */
-export const USER_DIRECTORY_STORE_KEY = 'retro-user-directory';
+const USER_DIRECTORY_STORE_KEY = 'retro-user-directory';
 
 /**
  * Acquire the shared `UserDirectoryStore`, creating it on first use and

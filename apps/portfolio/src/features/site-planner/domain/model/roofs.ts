@@ -31,8 +31,8 @@ export interface PitchedRoof {
   readonly ridgeDegrees: number;
 }
 
-export const DEFAULT_ROOF_PITCH_DEGREES = 30;
-export const DEFAULT_ROOF_OVERHANG_METERS: Meters = 0.5;
+const DEFAULT_ROOF_PITCH_DEGREES = 30;
+const DEFAULT_ROOF_OVERHANG_METERS: Meters = 0.5;
 /**
  * Below this a roof stops shedding: snow sits on it and most coverings are not
  * rated for it (SP 17.13330 puts the floor of ordinary tile and metal sheet at

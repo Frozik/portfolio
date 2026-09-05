@@ -79,7 +79,7 @@ export function liveTrades$(params: ILiveTradesParams): Observable<ReadonlyArray
  *
  * Exported for unit tests.
  */
-export function mapRawAggTradeToITrade(raw: IRawAggTrade): ITrade | undefined {
+function mapRawAggTradeToITrade(raw: IRawAggTrade): ITrade | undefined {
   const price = Number.parseFloat(raw.p);
   // Strictly positive — the bucket accumulator's `closeBucket` asserts
   // `volumeTotal > 0` / `notionalSum > 0`, so a zero or negative leg

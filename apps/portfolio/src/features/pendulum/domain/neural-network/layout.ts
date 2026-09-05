@@ -36,7 +36,7 @@ export interface IAxonLayoutObject extends IAxonDescriptor {
   readonly neuronToY: number;
 }
 
-export type TNeuralNetworkLayoutObject = INeuronLayoutObject | IAxonLayoutObject;
+type TNeuralNetworkLayoutObject = INeuronLayoutObject | IAxonLayoutObject;
 
 export interface INeuralNetworkLayout {
   readonly objects: readonly TNeuralNetworkLayoutObject[];

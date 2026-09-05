@@ -4,14 +4,14 @@
  * instead of establishing direct connections, which keeps
  * bandwidth use bounded.
  */
-export const MAX_PEERS_PER_ROOM = 20;
+const MAX_PEERS_PER_ROOM = 20;
 
 /**
  * Prefix added to every Yjs room id before it is used on the
  * wire. Keeps retro rooms isolated from other features that share
  * the same `apps/communication` deployment.
  */
-export const ROOM_ID_NETWORK_PREFIX = 'frozik-retro-';
+const ROOM_ID_NETWORK_PREFIX = 'frozik-retro-';
 
 /**
  * Vite-injected env var pointing at the `apps/communication` server

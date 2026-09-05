@@ -11,7 +11,7 @@ import type { ShadowProjection } from './shadow-map';
 const AMBIENT_STRENGTH = 0.35;
 const SUN_INTENSITY = 0.75;
 
-export interface SceneFrame {
+interface SceneFrame {
   /** World → clip, as the camera sees it this frame. */
   readonly viewProjection: Float32Array;
   readonly cameraPosition: WorldPoint;

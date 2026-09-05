@@ -26,7 +26,7 @@ export const SHAPE_TYPES = [
   'triangleRight',
 ] as const;
 
-export type ShapeType = (typeof SHAPE_TYPES)[number];
+type ShapeType = (typeof SHAPE_TYPES)[number];
 export type ShapeFillMode = 'solid' | 'outline';
 
 export interface RgbColor {

@@ -9,7 +9,7 @@ export type DeviceId = Opaque<'DeviceId', string>;
 export function createDeviceId(): DeviceId {
   return crypto.randomUUID() as DeviceId;
 }
-export type CircuitGroupId = Opaque<'CircuitGroupId', string>;
+type CircuitGroupId = Opaque<'CircuitGroupId', string>;
 
 /**
  * The electrical device kinds (`building-editor.md` §7, R11): the щиток is a
@@ -31,7 +31,7 @@ export const DEFAULT_DEVICE_KIND: DeviceKind = 'outlet';
  * plus the mounting height, the way an opening is hosted — or on the ceiling,
  * where only a light goes.
  */
-export type DeviceHost =
+type DeviceHost =
   | {
       readonly kind: 'wall';
       readonly wallId: WallId;
@@ -51,18 +51,13 @@ export interface ElectricalDevice {
  * practice): sockets low, switches at the hand, the щиток at the eye. A
  * placed device starts here and stays editable.
  */
-export const DEVICE_STANDARD_HEIGHTS_METERS: Readonly<
-  Record<Exclude<DeviceKind, 'light'>, Meters>
-> = {
+const DEVICE_STANDARD_HEIGHTS_METERS: Readonly<Record<Exclude<DeviceKind, 'light'>, Meters>> = {
   panel: 1.5,
   outlet: 0.3,
   switch: 0.9,
 };
 
 /** Whether the kind hangs on a wall; a light is the one that does not. */
-export function isWallMountedKind(kind: DeviceKind): boolean {
-  return kind !== 'light';
-}
 
 export function createWallDevice({
   kind,

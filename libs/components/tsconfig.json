@@ -2,14 +2,6 @@
   "extends": "@frozik/typescript-config/lib",
   "include": ["src", "types"],
   "compilerOptions": {
-    "types": ["vitest/globals"],
-    "plugins": [
-      {
-        "name": "typescript-plugin-css-modules",
-        "options": {
-          "classnameTransform": "camelCaseOnly"
-        }
-      }
-    ]
+    "types": ["vitest/globals"]
   }
 }

@@ -29,7 +29,7 @@ function toPlayerColor(hex: string): PlayerColor {
  * [MANUAL-structural] Every player is colour-coded across their name, tank and shells. The hues
  * are ours: ten that stay apart from each other and readable against both sky and dirt.
  */
-export const PLAYER_COLORS: readonly PlayerColor[] = [
+const PLAYER_COLORS: readonly PlayerColor[] = [
   '#ef4444',
   '#f59e0b',
   '#a3e635',

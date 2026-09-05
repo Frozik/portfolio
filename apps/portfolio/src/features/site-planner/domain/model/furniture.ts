@@ -254,10 +254,6 @@ export function findFurnitureEntry(id: FurnitureCatalogId): FurnitureCatalogEntr
   return FURNITURE_CATALOG.find(entry => entry.id === id);
 }
 
-export function parseFurnitureCatalogId(value: string): FurnitureCatalogId | undefined {
-  return FURNITURE_CATALOG.find(entry => entry.id === value)?.id;
-}
-
 export const DEFAULT_FURNITURE_CATALOG_ID: FurnitureCatalogId = 'bed-double';
 
 /**

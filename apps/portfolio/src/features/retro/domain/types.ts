@@ -8,7 +8,7 @@ export type ActionItemId = Opaque<'ActionItemId', string>;
 export type ColumnId = Opaque<'ColumnId', string>;
 export type ClientId = Opaque<'ClientId', number>;
 
-export const RETRO_PHASES = ['brainstorm', 'group', 'vote', 'discuss', 'close'] as const;
+const RETRO_PHASES = ['brainstorm', 'group', 'vote', 'discuss', 'close'] as const;
 export type RetroPhase = (typeof RETRO_PHASES)[number];
 
 export interface IColumnConfig {

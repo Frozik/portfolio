@@ -29,10 +29,10 @@ export const BLENDSHAPE_NOSE_SNEER_LEFT = 'noseSneerLeft';
  * multiple trigger simultaneously the classifier picks the one with
  * the largest excess over its threshold.
  */
-export const EMOTION_HAPPY_THRESHOLD = 0.6;
-export const EMOTION_SURPRISED_THRESHOLD = 1.5;
-export const EMOTION_SAD_THRESHOLD = 1.2;
-export const EMOTION_ANGRY_THRESHOLD = 1.2;
+const EMOTION_HAPPY_THRESHOLD = 0.6;
+const EMOTION_SURPRISED_THRESHOLD = 1.5;
+const EMOTION_SAD_THRESHOLD = 1.2;
+const EMOTION_ANGRY_THRESHOLD = 1.2;
 
 const EYE_WIDE_AVERAGE_DIVISOR = 2;
 

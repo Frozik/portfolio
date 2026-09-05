@@ -28,7 +28,6 @@ export const QUALITY_TIER_PARAMS: Readonly<Record<TQualityTier, IQualityTierPara
 };
 
 /** Ordered from best to worst for step-wise tier transitions. */
-export const QUALITY_TIER_ORDER: readonly TQualityTier[] = ['high', 'medium', 'low'];
 
 /**
  * A single poll sample from `RTCPeerConnection.getStats()` normalised

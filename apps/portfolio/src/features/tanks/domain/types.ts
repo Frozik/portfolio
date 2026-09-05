@@ -19,7 +19,7 @@ export type TerrainKind =
   | 'eagle'
   | 'border';
 
-export type QuadrantKey = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+type QuadrantKey = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
 
 export type QuadrantSelection = Readonly<Record<QuadrantKey, boolean>>;
 
@@ -32,7 +32,7 @@ export type EnemyType = 'basic' | 'fast' | 'power' | 'armor';
 
 export type PowerUpType = 'helmet' | 'clock' | 'shovel' | 'star' | 'grenade' | 'tank';
 
-export type TankSide = 'player' | 'enemy';
+type TankSide = 'player' | 'enemy';
 
 export interface TankRef {
   readonly side: TankSide;

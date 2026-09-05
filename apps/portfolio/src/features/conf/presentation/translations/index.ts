@@ -6,5 +6,3 @@ export const confT = resolveTranslation({
   en: confEnTranslations,
   ru: confRuTranslations,
 });
-
-export type ConfTranslations = typeof confEnTranslations;

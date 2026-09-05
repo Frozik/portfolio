@@ -2,7 +2,7 @@ import { FLOATS_PER_PARTICLE, MAX_PARTICLES, PARTICLE_BYTES } from '../render-co
 import type { ParticleInstance } from './particle-spawn';
 
 /** Packs instances into the flat layout `particles.wgsl` reads, twelve floats per particle. */
-export function writeParticles(
+function writeParticles(
   target: Float32Array,
   particles: readonly ParticleInstance[],
   firstIndex = 0

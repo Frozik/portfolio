@@ -7,5 +7,3 @@ export const SignalSectionSchema = z.object({
   max_publish_burst: z.number().int().min(1),
   max_payload_bytes: z.number().int().min(1).max(SIGNAL_PAYLOAD_BYTES_MAX),
 });
-
-export type SignalSection = z.infer<typeof SignalSectionSchema>;

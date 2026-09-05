@@ -19,8 +19,8 @@ import { createRectangle } from './shapes';
  */
 export type Slab = Shape;
 
-export const DEFAULT_SLAB_WIDTH_METERS: Meters = 6;
-export const DEFAULT_SLAB_LENGTH_METERS: Meters = 4;
+const DEFAULT_SLAB_WIDTH_METERS: Meters = 6;
+const DEFAULT_SLAB_LENGTH_METERS: Meters = 4;
 
 /** The plate a plain click lays down, before it is dragged or typed to size. */
 export function createSlab(center: Vector2): Slab {

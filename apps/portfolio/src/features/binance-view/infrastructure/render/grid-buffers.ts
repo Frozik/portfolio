@@ -4,8 +4,8 @@ import { hexToLinearRgb } from '../../domain/color-utils';
 import { GRID_LINE_COLOR, MSAA_SAMPLE_COUNT } from '../../domain/constants';
 import type { IGridRect } from '../../domain/grid-lines';
 
-export const GRID_UNIFORMS_BYTES = 16;
-export const GRID_RECT_BYTES = 16;
+const GRID_UNIFORMS_BYTES = 16;
+const GRID_RECT_BYTES = 16;
 const GRID_RECT_FLOATS = GRID_RECT_BYTES / Float32Array.BYTES_PER_ELEMENT;
 export const GRID_VERTEX_COUNT_PER_INSTANCE = 6;
 

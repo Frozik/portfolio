@@ -8,7 +8,7 @@ import type { UnixTimeMs } from './types';
  * Time is relative to the block's first bucket, prices to its `basePrice`.
  */
 export const TEXELS_PER_CANDLE = 2;
-export const FLOATS_PER_TEXEL = 4;
+const FLOATS_PER_TEXEL = 4;
 export const FLOATS_PER_CANDLE = TEXELS_PER_CANDLE * FLOATS_PER_TEXEL;
 
 export function encodeCandle(

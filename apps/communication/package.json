@@ -7,16 +7,35 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "NODE_CONFIG_DIR=./config NODE_CONFIG_ENV=development node --watch --experimental-strip-types src/main.ts",
+    "dev": "NODE_CONFIG_DIR=./config NODE_CONFIG_ENV=development tsx watch src/main.ts",
     "start": "NODE_CONFIG_DIR=./config NODE_CONFIG_ENV=production node dist/main.js",
     "test": "vitest run --root ../.. apps/communication",
     "types": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@fastify/rate-limit": "catalog:",
     "@frozik/communication-protocol": "workspace:*",
-    "@frozik/utils": "workspace:*"
+    "@frozik/utils": "workspace:*",
+    "@prometheus-io/client": "catalog:",
+    "@socket.io/redis-adapter": "catalog:",
+    "config": "catalog:",
+    "fastify": "catalog:",
+    "jose": "catalog:",
+    "lodash-es": "catalog:",
+    "p-retry": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "redis": "catalog:",
+    "socket.io": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "toml": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "socket.io-client": "catalog:",
+    "tsx": "catalog:"
   }
 }

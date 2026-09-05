@@ -7,7 +7,7 @@ import {
   roundNumericText,
   settleNumericText,
 } from './numeric-input';
-import styles from './styles.module.scss';
+import styles from './styles.module.css';
 
 const caretAt = (offset: number): ISelection => ({ start: offset, end: offset });
 

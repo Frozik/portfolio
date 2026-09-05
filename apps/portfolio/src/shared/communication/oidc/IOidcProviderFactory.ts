@@ -6,7 +6,7 @@ import type { IOidcProvider } from './IOidcProvider';
  * tiny so a new provider just claims its own field — the registry
  * never has to know per-provider config shapes.
  */
-export interface IOidcEnv {
+interface IOidcEnv {
   readonly googleClientId: string;
   readonly yandexClientId: string;
 }

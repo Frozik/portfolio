@@ -8,7 +8,7 @@ import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
  * room store resolve the SAME `RetroLobbyStore` through this key, so the
  * recent-rooms index a room writes into is the one the lobby renders.
  */
-export const RETRO_LOBBY_STORE_KEY = 'retro-lobby';
+const RETRO_LOBBY_STORE_KEY = 'retro-lobby';
 
 /**
  * Acquire the shared `RetroLobbyStore`, creating it on first use and

@@ -4,11 +4,11 @@ import { defer, filter, merge, ReplaySubject, throwError, timeout } from 'rxjs';
 import type { WebSocketSubjectConfig } from 'rxjs/webSocket';
 import { webSocket } from 'rxjs/webSocket';
 
-export const DEFAULT_WS_OPEN_TIMEOUT_MS = 10_000;
+const DEFAULT_WS_OPEN_TIMEOUT_MS = 10_000;
 
 const OPEN_SENTINEL = Symbol('ws-open');
 
-export class WsOpenTimeoutError extends Error {
+class WsOpenTimeoutError extends Error {
   readonly url: string;
   readonly timeoutMs: number;
 

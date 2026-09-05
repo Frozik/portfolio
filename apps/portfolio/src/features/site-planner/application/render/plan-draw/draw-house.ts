@@ -109,7 +109,7 @@ export function drawBuildingSelection(
 }
 
 /** One utility entry as the drawing needs it: which system, and where it enters. */
-export interface PlanBuildingEntry {
+interface PlanBuildingEntry {
   readonly id: string;
   readonly system: UtilitySystem;
   readonly position: Vector2;

@@ -16,7 +16,7 @@ export interface RecordedCall {
 const MEASURED_CHAR_WIDTH_PX = 6;
 
 /** Marks a property assignment in the recording: `set:fillStyle`, `set:font`… */
-export const SET_PREFIX = 'set:';
+const SET_PREFIX = 'set:';
 
 function createRecorder(target: string, calls: RecordedCall[]): object {
   const state: Record<string, unknown> = {};

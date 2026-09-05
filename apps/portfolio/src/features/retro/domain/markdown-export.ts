@@ -21,7 +21,7 @@ export interface MarkdownExportLabels {
   readonly fromLabel: string;
 }
 
-export const DEFAULT_MARKDOWN_EXPORT_LABELS: MarkdownExportLabels = {
+const DEFAULT_MARKDOWN_EXPORT_LABELS: MarkdownExportLabels = {
   cardsCount: count => `${count} ${count === 1 ? 'card' : 'cards'}`,
   votesCount: count => `${count} ${count === 1 ? 'vote' : 'votes'}`,
   actionItemsTitle: 'Action items (outcomes)',

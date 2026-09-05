@@ -14,7 +14,7 @@ import type { RoofZoneLabel, RoofZoneLabelId, Storey, StoreyId } from './storeys
  * becomes real data and the legacy per-building fields stop being written —
  * the lazy half of the storeys migration (`building-editor.md` §5).
  */
-export function materializeStoreys(building: Building): Building {
+function materializeStoreys(building: Building): Building {
   if (building.storeys !== undefined && building.storeys.length > 0) {
     return building;
   }

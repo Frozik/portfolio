@@ -11,9 +11,6 @@ export type FoundationKind = 'slab' | 'stem-wall' | 'pier';
 export const FOUNDATION_KINDS: readonly FoundationKind[] = ['slab', 'stem-wall', 'pier'];
 
 /** Narrows the string a dropdown reports back to the kind it stands for. */
-export function parseFoundationKind(value: string): FoundationKind | undefined {
-  return FOUNDATION_KINDS.find(kind => kind === value);
-}
 
 /**
  * A building's foundation, chosen rather than drawn: the geometry derives from

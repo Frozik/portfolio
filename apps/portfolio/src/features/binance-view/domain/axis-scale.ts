@@ -71,7 +71,7 @@ export function priceToY(
   return rect.bottom - normalized * heightPx;
 }
 
-export const PRICE_DEFAULT_FRACTION_DIGITS = 2;
+const PRICE_DEFAULT_FRACTION_DIGITS = 2;
 const MAX_FRACTION_DIGITS = 8;
 
 export function fractionDigitsFor(step: number): number {

@@ -1,5 +1,4 @@
 import './styles/tailwind.css';
-import './main.scss';
 
 import { isNil } from 'lodash-es';
 import { StrictMode } from 'react';

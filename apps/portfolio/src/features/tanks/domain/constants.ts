@@ -118,7 +118,7 @@ export const POWER_UP_POSITION_ROLL_ATTEMPTS = 32;
 
 export const HELMET_DURATION_TICKS = 640;
 export const CLOCK_FREEZE_DURATION_TICKS = 640;
-export const SHOVEL_SOLID_TICKS = 1024;
+const SHOVEL_SOLID_TICKS = 1024;
 /** Warning phase: the walls blink between steel and brick before reverting. */
 export const SHOVEL_FLASHING_TICKS = 256;
 export const SHOVEL_FLASH_TOGGLE_TICKS = 16;

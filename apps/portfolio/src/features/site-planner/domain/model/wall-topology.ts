@@ -18,7 +18,7 @@ import { createWall, isWallClosed, MIN_WALL_POINTS } from './walls';
  * graph would have allowed. The invariant that crossings carry vertices is
  * kept by {@link normalizeWallCrossings}, run after every finished edit.
  */
-export const WELD_EPSILON_METERS = 0.001;
+const WELD_EPSILON_METERS = 0.001;
 
 /** One drawn vertex of one wall — the unit a junction is made of. */
 export interface WallVertexRef {

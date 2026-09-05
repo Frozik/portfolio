@@ -20,10 +20,6 @@ export const STAIR_KINDS: readonly StairKind[] = ['straight', 'l-shaped', 'u-sha
 /** What the stair flyout starts armed with — the commonest stair in a house. */
 export const DEFAULT_STAIR_KIND: StairKind = 'straight';
 
-export function parseStairKind(value: string): StairKind | undefined {
-  return STAIR_KINDS.find(kind => kind === value);
-}
-
 /**
  * One stair on a storey, climbing toward the storey above. Only the intent is
  * stored — kind, place, turn and width; the run geometry (step count, riser,
@@ -50,17 +46,11 @@ export interface StairInstance {
 }
 
 /** Catalog defaults per the norms (plan §6.1 / I3-2): comfort width, spiral ⌀. */
-export const DEFAULT_STAIR_WIDTH_METERS: Meters = 1.0;
-export const DEFAULT_SPIRAL_DIAMETER_METERS: Meters = 1.6;
-export const MIN_STAIR_WIDTH_METERS: Meters = 0.9;
-export const MIN_SPIRAL_DIAMETER_METERS: Meters = 1.4;
+const DEFAULT_STAIR_WIDTH_METERS: Meters = 1.0;
+const DEFAULT_SPIRAL_DIAMETER_METERS: Meters = 1.6;
 
-export function defaultStairWidth(kind: StairKind): Meters {
+function defaultStairWidth(kind: StairKind): Meters {
   return kind === 'spiral' ? DEFAULT_SPIRAL_DIAMETER_METERS : DEFAULT_STAIR_WIDTH_METERS;
-}
-
-export function minStairWidth(kind: StairKind): Meters {
-  return kind === 'spiral' ? MIN_SPIRAL_DIAMETER_METERS : MIN_STAIR_WIDTH_METERS;
 }
 
 export function createStair({

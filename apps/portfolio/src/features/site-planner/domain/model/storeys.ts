@@ -27,10 +27,6 @@ export type RoofCover = 'membrane' | 'terrace' | 'green';
 /** Every cover, in the order the panel offers them. */
 export const ROOF_COVERS: readonly RoofCover[] = ['membrane', 'terrace', 'green'];
 
-export function parseRoofCover(value: string): RoofCover | undefined {
-  return ROOF_COVERS.find(cover => cover === value);
-}
-
 /** The default an unlabelled stretch of exposed ceiling wears. */
 export const DEFAULT_ROOF_COVER: RoofCover = 'membrane';
 
@@ -150,9 +146,8 @@ const NO_SUPPORTS: readonly SupportPost[] = [];
 const NO_SLABS: readonly Slab[] = [];
 
 /** A typical residential upper storey; the ground one inherits `wallHeight`. */
-export const DEFAULT_UPPER_STOREY_HEIGHT_METERS: Meters = 2.7;
 
-export function createStoreyId(): StoreyId {
+function createStoreyId(): StoreyId {
   return crypto.randomUUID() as StoreyId;
 }
 

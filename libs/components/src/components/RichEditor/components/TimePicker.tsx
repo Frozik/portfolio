@@ -7,7 +7,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
 import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 
 type TTimeUnit = 'hour' | 'minute' | 'second' | 'millisecond';
 

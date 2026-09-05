@@ -92,7 +92,7 @@ const STAIR_ROTATION_GRIP_METERS: Meters = 0.8;
  * it.
  */
 /** One opening resolved for the plan: its cut body, named and kinded. */
-export interface PlanOpeningShape {
+interface PlanOpeningShape {
   readonly id: OpeningId;
   readonly kind: 'door' | 'window';
   readonly polygons: MultiPolygon;
@@ -122,14 +122,14 @@ export interface RoofZoneScene {
 }
 
 /** One device resolved onto the plan, its symbol point placed. */
-export interface PlanDevice {
+interface PlanDevice {
   readonly id: DeviceId;
   readonly kind: DeviceKind;
   readonly position: Vector2;
 }
 
 /** One derived wire run, panel→consumer or switch→light. */
-export interface PlanWire {
+interface PlanWire {
   readonly points: readonly Vector2[];
   /** A switch→light link draws dashed; a circuit run draws solid. */
   readonly isSwitchLink: boolean;
@@ -183,7 +183,7 @@ export interface StoreyScene {
 }
 
 /** One fireplace resolved for drawing: its body, and where its flue rises. */
-export interface FireplaceScene {
+interface FireplaceScene {
   readonly fireplace: Fireplace;
   readonly footprint: PolygonWithHoles;
   readonly fluePosition: Vector2;
@@ -192,7 +192,7 @@ export interface FireplaceScene {
 }
 
 /** One shaft as it crosses one storey. */
-export interface DuctSection {
+interface DuctSection {
   readonly duct: VerticalDuct;
   readonly footprint: PolygonWithHoles;
   /** Whether it starts on this storey rather than passing through it. */
@@ -202,7 +202,7 @@ export interface DuctSection {
 }
 
 /** One post resolved for drawing: its section, and what it actually spans. */
-export interface SupportScene {
+interface SupportScene {
   readonly post: SupportPost;
   readonly footprint: PolygonWithHoles;
   readonly baseElevation: Meters | undefined;
@@ -267,7 +267,7 @@ function storeyFootprint({
 }
 
 const NO_ROOMS: readonly BuildingRoom[] = [];
-export const NO_STOREY_SCENES: readonly StoreyScene[] = [];
+const NO_STOREY_SCENES: readonly StoreyScene[] = [];
 
 /**
  * Every storey resolved bottom-up (`building-editor.md` §5): the ground
@@ -527,7 +527,7 @@ export function buildSupportSolids(storeyScene: StoreyScene): readonly LitMesh[]
 }
 
 /** Where a device's symbol stands on the plan, its wall host resolved. */
-export function devicePlanPosition(storey: Storey, device: ElectricalDevice): Vector2 | undefined {
+function devicePlanPosition(storey: Storey, device: ElectricalDevice): Vector2 | undefined {
   const { host } = device;
 
   if (host.kind === 'ceiling') {
@@ -561,7 +561,7 @@ function deviceAnchor(device: ElectricalDevice): WireAnchor | undefined {
  * the panel to every consumer of its группа, walked along the walls, and a
  * dashed link from every switch to the light it commands.
  */
-export function deriveWires(storey: Storey): readonly PlanWire[] {
+function deriveWires(storey: Storey): readonly PlanWire[] {
   const devices = devicesOf(storey);
   const byId = new Map(devices.map(device => [device.id, device]));
   const wires: PlanWire[] = [];
@@ -611,7 +611,7 @@ export function deriveWires(storey: Storey): readonly PlanWire[] {
  * each remaining region one room, its type looked up by which region holds a
  * stored label's seed point.
  */
-export function deriveRooms(
+function deriveRooms(
   storey: Storey,
   footprint: MultiPolygon,
   wallBodies: MultiPolygon
@@ -666,7 +666,7 @@ export function deriveRooms(
 }
 
 /** The roof-zone counterpart of {@link deriveRooms}, over the exposed ceiling. */
-export function deriveRoofZones(storey: Storey, exposed: MultiPolygon): readonly RoofZoneScene[] {
+function deriveRoofZones(storey: Storey, exposed: MultiPolygon): readonly RoofZoneScene[] {
   return exposed.map(region => {
     const polygons = [region];
     const label = storey.roofZoneLabels.find(candidate =>

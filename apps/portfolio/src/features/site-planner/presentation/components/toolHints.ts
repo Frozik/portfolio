@@ -9,7 +9,7 @@ import { EDITOR_TOOL_PRESENTATIONS } from './editorTools';
  * empty properties panel. Typed against {@link PlanTool}, so a tool added to the
  * palette without a hint fails to compile rather than showing nothing.
  */
-export const TOOL_HINTS: Record<PlanTool, string> = sitePlannerT.status.hints;
+const TOOL_HINTS: Record<PlanTool, string> = sitePlannerT.status.hints;
 
 /** The hint for whatever is in hand — a shared tool's or a contributed one's. */
 export function toolHint(tool: ActiveTool): string {

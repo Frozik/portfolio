@@ -53,9 +53,6 @@ export const PAD_ELEVATION_MODES: readonly PadElevationMode[] = [
 ];
 
 /** Narrows the string a radio group reports back to the mode it stands for. */
-export function parsePadElevationMode(value: string): PadElevationMode | undefined {
-  return PAD_ELEVATION_MODES.find(mode => mode === value);
-}
 
 /**
  * One structure on the plot — a house, a shed, a carport — named by the user
@@ -122,7 +119,7 @@ export function entriesOf(building: Building): readonly UtilityEntry[] {
  * The synthesized ground storey's identity for a building whose storeys have
  * not been materialized yet: stable across calls, derived from the building.
  */
-export function groundStoreyId(buildingId: BuildingId): StoreyId {
+function groundStoreyId(buildingId: BuildingId): StoreyId {
   return `${buildingId}:ground` as StoreyId;
 }
 
@@ -159,9 +156,6 @@ export function openingsOf(building: Building): readonly Opening[] {
 }
 
 /** The ground storey's room labels. */
-export function roomLabelsOf(building: Building): readonly RoomLabel[] {
-  return storeysOf(building)[0].roomLabels;
-}
 
 const NO_ENTRIES: readonly UtilityEntry[] = [];
 const NO_WALLS: readonly Wall[] = [];
@@ -246,15 +240,12 @@ export type PathSurface = 'dirt' | 'asphalt';
 export const PATH_SURFACES: readonly PathSurface[] = ['dirt', 'asphalt'];
 
 /** Narrows the string a dropdown reports back to the surface it stands for. */
-export function parsePathSurface(value: string): PathSurface | undefined {
-  return PATH_SURFACES.find(surface => surface === value);
-}
 
 /**
  * Paths predate the surface, so its absence stays a valid document and reads
  * as the asphalt every existing ribbon was drawn as.
  */
-export const DEFAULT_PATH_SURFACE: PathSurface = 'asphalt';
+const DEFAULT_PATH_SURFACE: PathSurface = 'asphalt';
 
 /**
  * One bend of a path, carrying the ribbon's full width where it passes through

@@ -3,7 +3,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
 import type { ICalendarAriaLabels } from '../defs';
-import styles from '../styles.module.scss';
+import styles from '../styles.module.css';
 
 export const MonthNavigator = memo(
   ({

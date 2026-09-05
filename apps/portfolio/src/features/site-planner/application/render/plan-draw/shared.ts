@@ -61,7 +61,7 @@ export const PLAN_COLORS = {
 } as const;
 
 /** Mirrors `--font-mono`: readouts line up digit for digit while dragging. */
-export const PLAN_MONO_FONT_FAMILY =
+const PLAN_MONO_FONT_FAMILY =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
 export const PLAN_LABEL_FONT_SIZE_PX = 11;

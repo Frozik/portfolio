@@ -7,7 +7,6 @@ tags:
 workspace:
   inheritedTasks:
     exclude:
-      - madge
       - type-check
       - dev
       - build

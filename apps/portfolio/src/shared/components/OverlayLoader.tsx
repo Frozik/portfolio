@@ -1,9 +1,8 @@
 import { memo } from 'react';
 import { Spinner } from '../ui/Spinner';
-import styles from './styles.module.scss';
 
 export const OverlayLoader = memo(() => (
-  <div className={styles.container}>
+  <div className="flex h-dvh w-dvw items-center justify-center overflow-hidden">
     <Spinner size="lg" />
   </div>
 ));

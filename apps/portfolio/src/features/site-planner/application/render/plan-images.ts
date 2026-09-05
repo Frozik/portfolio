@@ -3,11 +3,6 @@ import { isNil } from 'lodash-es';
 import type { AnalysisRaster } from '../../domain/terrain/analysis-raster';
 
 /** A data URL needs no element to decode through — a blob is all `createImageBitmap` wants. */
-export async function decodeImageDataUrl(dataUrl: string): Promise<ImageBitmap> {
-  const response = await fetch(dataUrl);
-
-  return createImageBitmap(await response.blob());
-}
 
 /**
  * The raster's pixels on a canvas of its own, at one texel per pixel. The frame

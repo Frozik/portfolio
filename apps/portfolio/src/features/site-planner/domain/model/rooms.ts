@@ -45,10 +45,6 @@ export const ROOM_TYPES: readonly RoomType[] = [
   { id: 'veranda', isWet: false },
 ];
 
-export function parseRoomType(value: string): RoomTypeId | undefined {
-  return ROOM_TYPES.find(type => type.id === value)?.id;
-}
-
 export function isWetRoomType(roomTypeId: RoomTypeId): boolean {
   return ROOM_TYPES.find(type => type.id === roomTypeId)?.isWet ?? false;
 }

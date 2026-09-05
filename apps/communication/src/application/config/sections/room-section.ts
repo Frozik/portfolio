@@ -22,5 +22,3 @@ export const RoomSectionSchema = z.object({
     .min(1)
     .max(MAX_INFLIGHT_DISPATCHES_PER_SOCKET_MAX),
 });
-
-export type RoomSection = z.infer<typeof RoomSectionSchema>;
