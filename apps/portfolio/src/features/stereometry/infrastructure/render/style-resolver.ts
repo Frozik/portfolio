@@ -1,4 +1,36 @@
-import type { PartialElementStyle, ResolvedElementStyle, RgbFloat } from './render-types';
+/** GPU-ready RGB float triple (0..1 range). */
+export type RgbFloat = readonly [number, number, number];
+
+type LineStyle =
+  | { readonly type: 'solid' }
+  /** dash/gap are world units along the segment — the pattern is anchored to
+   *  the geometry (both endpoints end in a dash) and stable under camera motion */
+  | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
+
+type MarkerType = 'solid' | 'circle';
+
+/** One entry of the style map; every field falls back to the less specific entry. */
+export interface PartialElementStyle {
+  readonly color?: string;
+  readonly width?: number;
+  readonly size?: number;
+  readonly alpha?: number;
+  readonly line?: LineStyle;
+  readonly markerType?: MarkerType;
+  readonly strokeColor?: string;
+  readonly strokeWidth?: number;
+}
+
+export interface ResolvedElementStyle {
+  readonly color: string;
+  readonly width: number;
+  readonly size: number;
+  readonly alpha: number;
+  readonly line: LineStyle;
+  readonly markerType: MarkerType;
+  readonly strokeColor: string;
+  readonly strokeWidth: number;
+}
 
 const DEFAULT_ELEMENT_STYLE: ResolvedElementStyle = {
   color: '#FFFFFF',

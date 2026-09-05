@@ -372,7 +372,7 @@ describe('buildRepresentation', () => {
         expect(lineSegments.length).toBeGreaterThanOrEqual(3);
       });
 
-      it('middle sub-segment inherits the visual style of the original edge', () => {
+      it('middle sub-segment keeps the edge classification of the original edge', () => {
         const topology = getTetrahedronTopology();
         const edgeIndex = 0;
         const [vertexAIndex, vertexBIndex] = topology.edges[edgeIndex];
@@ -399,12 +399,8 @@ describe('buildRepresentation', () => {
         );
         expect(extendedMiddleSegment).toBeDefined();
 
-        expect(extendedMiddleSegment?.visibleStyle.width).toBe(
-          baselineEdgeSegment?.visibleStyle.width
-        );
-        expect(extendedMiddleSegment?.visibleStyle.color).toEqual(
-          baselineEdgeSegment?.visibleStyle.color
-        );
+        expect(extendedMiddleSegment?.modifiers).toContain('edge');
+        expect(extendedMiddleSegment?.modifiers).toContain('segment');
       });
 
       it('does not mark extension sub-segments as edges', () => {
@@ -433,11 +429,10 @@ describe('buildRepresentation', () => {
           .filter(segment => !segmentMatchesRange(segment, edgeStart, edgeEnd));
 
         expect(extensionSegments.length).toBeGreaterThan(0);
-        // Extensions are thinner construction-line style, not edge-thick
+        // Extensions are construction-line pieces, not edge-thick
         for (const extension of extensionSegments) {
-          expect(extension.visibleStyle.width).toBeLessThan(
-            baselineEdgeSegment?.visibleStyle.width ?? Number.POSITIVE_INFINITY
-          );
+          expect(extension.modifiers).not.toContain('edge');
+          expect(extension.modifiers).not.toContain('segment');
         }
       });
     });
@@ -453,17 +448,14 @@ describe('buildRepresentation', () => {
       expect(result.markers).toHaveLength(topology.vertices.length);
     });
 
-    it('markers have both visible and hidden styles', () => {
+    it('classifies figure vertices as inner markers', () => {
       const topology = getTetrahedronTopology();
       const vertices = createVertices(topology);
 
       const result = buildRepresentation(topology, [], vertices, SELECTION_NONE);
 
       for (const marker of result.markers) {
-        expect(marker.visibleStyle).toBeDefined();
-        expect(marker.hiddenStyle).toBeDefined();
-        expect(marker.visibleStyle.size).toBeGreaterThan(0);
-        expect(marker.hiddenStyle.size).toBeGreaterThan(0);
+        expect(marker.modifiers).toContain('inner');
       }
     });
 
@@ -478,22 +470,13 @@ describe('buildRepresentation', () => {
       }
     });
 
-    it('produces markers with valid color values', () => {
+    it('numbers markers by their position in the vertex list', () => {
       const topology = getTetrahedronTopology();
       const vertices = createVertices(topology);
 
       const result = buildRepresentation(topology, [], vertices, SELECTION_NONE);
 
-      for (const marker of result.markers) {
-        for (const channel of marker.visibleStyle.color) {
-          expect(channel).toBeGreaterThanOrEqual(0);
-          expect(channel).toBeLessThanOrEqual(1);
-        }
-        for (const channel of marker.hiddenStyle.color) {
-          expect(channel).toBeGreaterThanOrEqual(0);
-          expect(channel).toBeLessThanOrEqual(1);
-        }
-      }
+      expect(result.markers.map(marker => marker.vertexIndex)).toEqual([0, 1, 2, 3]);
     });
   });
 
@@ -508,33 +491,21 @@ describe('buildRepresentation', () => {
       expect(result.markers.length).toBeGreaterThan(0);
     });
 
-    it('styled segments have both visible and hidden styles', () => {
+    it('marks every figure edge as an edge segment', () => {
       const topology = getTetrahedronTopology();
       const vertices = createVertices(topology);
 
       const result = buildRepresentation(topology, [], vertices, SELECTION_NONE);
 
       for (const segment of result.segments) {
-        expect(segment.visibleStyle).toBeDefined();
-        expect(segment.hiddenStyle).toBeDefined();
-        expect(segment.visibleStyle.width).toBeGreaterThan(0);
+        expect(segment.modifiers).toContain('edge');
       }
     });
   });
 
   describe('solution styling', () => {
-    // Solution style color: #EFBF04 → (0xEF/255, 0xBF/255, 0x04/255)
-    const SOLUTION_R = 0xef / 0xff;
-    const SOLUTION_G = 0xbf / 0xff;
-    const SOLUTION_B = 0x04 / 0xff;
-    const COLOR_EPSILON = 0.001;
-
-    function hasSolutionColor(color: readonly number[]): boolean {
-      return (
-        Math.abs(color[0] - SOLUTION_R) < COLOR_EPSILON &&
-        Math.abs(color[1] - SOLUTION_G) < COLOR_EPSILON &&
-        Math.abs(color[2] - SOLUTION_B) < COLOR_EPSILON
-      );
+    function hasSolutionModifier(segment: { readonly modifiers: readonly string[] }): boolean {
+      return segment.modifiers.includes('solution');
     }
 
     it('does not apply solution style when solutionStatus is undefined', () => {
@@ -543,11 +514,11 @@ describe('buildRepresentation', () => {
       const result = buildRepresentation(topology, [], vertices, SELECTION_NONE);
 
       for (const segment of result.segments) {
-        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(false);
+        expect(hasSolutionModifier(segment)).toBe(false);
       }
     });
 
-    it('applies solution color to edge segments that match a solution range', () => {
+    it('marks edge segments inside a solution range as solution', () => {
       const topology = getTetrahedronTopology();
       const vertices = createVertices(topology);
       const edgeStart = topology.vertices[0];
@@ -570,13 +541,11 @@ describe('buildRepresentation', () => {
         solutionStatus
       );
 
-      const solutionSegments = result.segments.filter(segment =>
-        hasSolutionColor(segment.visibleStyle.color)
-      );
+      const solutionSegments = result.segments.filter(segment => hasSolutionModifier(segment));
       expect(solutionSegments.length).toBeGreaterThan(0);
     });
 
-    it('does not apply solution color when isSolved is false', () => {
+    it('does not mark anything as solution while the puzzle is unsolved', () => {
       const topology = getTetrahedronTopology();
       const vertices = createVertices(topology);
       const edgeStart = topology.vertices[0];
@@ -600,7 +569,7 @@ describe('buildRepresentation', () => {
       );
 
       for (const segment of result.segments) {
-        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(false);
+        expect(hasSolutionModifier(segment)).toBe(false);
       }
     });
 
@@ -637,10 +606,10 @@ describe('buildRepresentation', () => {
         solutionStatus
       );
 
-      // Triangle = 1 triangle × 3 vertices = 3 vertices, 7 floats each
+      // Triangle = 1 triangle × 3 vertices = 3 vertices, 3 floats each
       expect(result.solutionFace).toBeDefined();
       expect(result.solutionFace?.vertexCount).toBe(3);
-      expect(result.solutionFace?.vertices.length).toBe(3 * 7);
+      expect(result.solutionFace?.positions.length).toBe(3 * 3);
     });
 
     it('builds a 3-triangle fan for a pentagon', () => {
@@ -713,7 +682,7 @@ describe('buildRepresentation', () => {
       const lineSubSegments = result.segments.filter(segment => segment.lineId === 1);
       expect(lineSubSegments.length).toBeGreaterThan(0);
       for (const segment of lineSubSegments) {
-        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(true);
+        expect(hasSolutionModifier(segment)).toBe(true);
       }
     });
 
@@ -758,7 +727,7 @@ describe('buildRepresentation', () => {
       const lineSubSegments = result.segments.filter(segment => segment.lineId === 1);
       expect(lineSubSegments.length).toBeGreaterThan(0);
       for (const segment of lineSubSegments) {
-        expect(hasSolutionColor(segment.visibleStyle.color)).toBe(false);
+        expect(hasSolutionModifier(segment)).toBe(false);
       }
     });
   });

@@ -269,7 +269,6 @@ function projectSegmentToScreen(
     mvpMatrix
   );
 
-  // Both behind camera — no visible segment
   if (clipA[3] <= 0 && clipB[3] <= 0) {
     return {
       start: {
@@ -287,7 +286,6 @@ function projectSegmentToScreen(
     };
   }
 
-  // Clamp endpoints to near plane if behind camera
   const clampedA = clipA[3] < NEAR_CLIP_W ? clampToNearPlane(clipA, clipB) : clipA;
   const clampedB = clipB[3] < NEAR_CLIP_W ? clampToNearPlane(clipB, clipA) : clipB;
 

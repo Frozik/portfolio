@@ -9,13 +9,15 @@ export interface DepthTextureManager {
 }
 
 /**
- * One depth attachment kept in step with the canvas size, shaped after
+ * One attachment kept in step with the canvas size, shaped after
  * `createMsaaTextureManager`. Owned by the scene rather than by a layer so
- * passes drawn separately can still occlude each other through it.
+ * passes drawn separately can still occlude each other through it. With a
+ * `TEXTURE_BINDING` usage it doubles as the texture a later pass samples.
  */
 export function createDepthTextureManager(
   sampleCount: number,
-  format: GPUTextureFormat
+  format: GPUTextureFormat,
+  usage: GPUTextureUsageFlags = GPUTextureUsage.RENDER_ATTACHMENT
 ): DepthTextureManager {
   let depthTexture: GPUTexture | undefined;
   let depthView: GPUTextureView | undefined;
@@ -38,7 +40,7 @@ export function createDepthTextureManager(
         size: [textureWidth, textureHeight],
         format,
         sampleCount,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        usage,
       });
       depthView = depthTexture.createView();
       return depthView;

@@ -1,21 +1,9 @@
 import type { Vec3Array } from './topology-types';
 
-// GPU-ready RGB float triple (0..1 range)
-export type RgbFloat = readonly [number, number, number];
-
-// Style types
-type LineStyle =
-  | { readonly type: 'solid' }
-  /** dash/gap are world units along the segment — the pattern is anchored to
-   *  the geometry (both endpoints end in a dash) and stable under camera motion */
-  | { readonly type: 'dashed'; readonly dash: number; readonly gap: number };
-
-type MarkerType = 'solid' | 'circle';
-
 /**
- * Modifiers a scene element can carry. They select the `element:modifier[:…]`
- * entries of the style map (see `STEREOMETRY_STYLES`) and also group segments
- * for deduplication and collinear merging.
+ * Modifiers a scene element can carry. They classify the element for the
+ * renderer's style map and also group segments for deduplication and
+ * collinear merging.
  */
 export type StyleModifier =
   | 'edge'
@@ -27,31 +15,7 @@ export type StyleModifier =
   | 'selected'
   | 'solution';
 
-// Partial style for cascade resolution
-export type PartialElementStyle = {
-  readonly color?: string;
-  readonly width?: number;
-  readonly size?: number;
-  readonly alpha?: number;
-  readonly line?: LineStyle;
-  readonly markerType?: MarkerType;
-  readonly strokeColor?: string;
-  readonly strokeWidth?: number;
-};
-
-// Fully resolved style
-export type ResolvedElementStyle = {
-  readonly color: string;
-  readonly width: number;
-  readonly size: number;
-  readonly alpha: number;
-  readonly line: LineStyle;
-  readonly markerType: MarkerType;
-  readonly strokeColor: string;
-  readonly strokeWidth: number;
-};
-
-// A visual segment piece for GPU rendering
+/** A visual piece of a line between two split points. */
 export interface RenderSegment {
   readonly startPosition: Vec3Array;
   readonly endPosition: Vec3Array;
@@ -61,59 +25,21 @@ export interface RenderSegment {
   readonly endVertexIndex: number;
 }
 
-// Per-instance line style for GPU
-export interface LineInstanceStyle {
-  readonly width: number;
-  readonly color: RgbFloat;
-  readonly alpha: number;
-  readonly lineType: number;
-  readonly dash: number;
-  readonly gap: number;
-}
-
-// A fully styled segment ready for GPU upload
-export interface StyledSegment {
-  readonly startPosition: Vec3Array;
-  readonly endPosition: Vec3Array;
-  readonly visibleStyle: LineInstanceStyle;
-  readonly hiddenStyle: LineInstanceStyle;
-  readonly lineId: number;
-  readonly startVertexIndex: number;
-  readonly endVertexIndex: number;
-}
-
-// Per-marker style for a single visibility pass
-export interface MarkerInstanceStyle {
-  readonly size: number;
-  readonly color: RgbFloat;
-  readonly alpha: number;
-  readonly strokeColor: RgbFloat;
-  readonly strokeWidth: number;
-}
-
-// A visual vertex marker for GPU rendering
-
-// A fully styled vertex marker ready for GPU upload
-export interface StyledMarker {
+/** A scene vertex as the renderer sees it: where it is and what it is. */
+export interface SceneMarker {
   readonly position: Vec3Array;
-  readonly markerType: number;
-  readonly visibleStyle: MarkerInstanceStyle;
-  readonly hiddenStyle: MarkerInstanceStyle;
+  readonly modifiers: readonly StyleModifier[];
   readonly vertexIndex: number;
 }
 
-/**
- * Triangulated solution face data ready for GPU upload.
- * Each vertex is 7 floats: position(3) + rgba(4).
- */
-export interface SolutionFaceRenderData {
-  readonly vertices: Float32Array;
+/** Fan-triangulated solution polygons: three floats (a position) per vertex. */
+export interface SolutionFaceGeometry {
+  readonly positions: Float32Array;
   readonly vertexCount: number;
 }
 
-// Output of the representation builder
 export interface SceneRepresentation {
-  readonly segments: readonly StyledSegment[];
-  readonly markers: readonly StyledMarker[];
-  readonly solutionFace?: SolutionFaceRenderData;
+  readonly segments: readonly RenderSegment[];
+  readonly markers: readonly SceneMarker[];
+  readonly solutionFace?: SolutionFaceGeometry;
 }

@@ -44,7 +44,7 @@ export interface DragToConnectCallbacks {
   /** True when this specific line is the currently selected one. Gates the
    *  drag-to-parallel gesture so unselected lines only accept tap/double-tap. */
   readonly isLineSelected: (lineId: number) => boolean;
-  readonly onDragStart: () => void;
+  readonly onDragStart?: () => void;
   readonly onDragUpdate: (preview: DragPreviewState | undefined) => void;
   readonly onVertexTap: (position: Vec3Array) => void;
   readonly onLineTap: (lineId: number) => void;
@@ -169,7 +169,7 @@ export function createDragToConnectController(
     pendingHit = undefined;
     pendingAllowsDrag = false;
     activeHit = hit;
-    callbacks.onDragStart();
+    callbacks.onDragStart?.();
     callbacks.onDragUpdate(buildPreview(hit, screenX, screenY, snapPosition));
   }
 
@@ -226,7 +226,7 @@ export function createDragToConnectController(
     if (hit.kind === 'vertex') {
       // Vertex drag starts immediately — no hold required.
       activeHit = hit;
-      callbacks.onDragStart();
+      callbacks.onDragStart?.();
       callbacks.onDragUpdate(buildPreview(hit, screenX, screenY, undefined));
     } else {
       // Line hit waits out the hold delay before activating drag; a quick

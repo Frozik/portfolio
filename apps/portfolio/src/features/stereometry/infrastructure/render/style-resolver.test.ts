@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { PartialElementStyle } from './render-types';
-import { hexToRgb, resolveStyle } from './styles-processor';
+import type { PartialElementStyle } from './style-resolver';
+import { hexToRgb, resolveStyle } from './style-resolver';
 
 describe('hexToRgb', () => {
   it('converts white', () => {

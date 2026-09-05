@@ -2,26 +2,23 @@ import { useRootStore } from '../../../app/stores/StoreContext';
 import { useRefcountedFeatureStore } from '../../../app/stores/useRefcountedFeatureStore';
 import { StereometryStore } from './StereometryStore';
 
-/**
- * Keyed per puzzle so switching puzzles starts from a clean toolbar state
- * instead of inheriting the previous scene's undo/redo flags.
- */
-function getStereometryStoreKey(puzzleId: string): string {
-  return `stereometry:${puzzleId}`;
-}
+const STEREOMETRY_STORE_KEY = 'stereometry';
 
 /**
- * Acquire the `StereometryStore` for one puzzle. Refcounted so React
- * strict-mode's mount → cleanup → mount cycle reuses the same store instead of
- * disposing the one the canvas effect has just bound its controls to.
+ * One store for the route: the toolbar mode survives switching puzzles, while
+ * undo/redo availability comes from the session each canvas mount attaches.
+ * Refcounted so React strict-mode's mount → cleanup → mount cycle reuses the
+ * store the canvas effect has just bound its session to.
  */
-export function useStereometryStore(puzzleId: string): StereometryStore {
+export function useStereometryStore(): StereometryStore {
   const rootStore = useRootStore();
-  const storeKey = getStereometryStoreKey(puzzleId);
 
-  const store = rootStore.getOrCreateFeatureStore(storeKey, () => new StereometryStore());
+  const store = rootStore.getOrCreateFeatureStore(
+    STEREOMETRY_STORE_KEY,
+    () => new StereometryStore()
+  );
 
-  useRefcountedFeatureStore(rootStore, storeKey);
+  useRefcountedFeatureStore(rootStore, STEREOMETRY_STORE_KEY);
 
   return store;
 }

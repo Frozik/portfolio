@@ -19,9 +19,9 @@ import { ToolbarButton } from './ToolbarButton';
 
 const IS_HOSTED = getIsHosted();
 
-export const StereometrySolver = observer(({ puzzle }: { puzzle: PuzzleDefinition }) => {
+export const StereometrySolver = observer(({ puzzle }: { readonly puzzle: PuzzleDefinition }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const store = useStereometryStore(puzzle.id);
+  const store = useStereometryStore();
   const navigate = useNavigate();
 
   const handleBackToPuzzles = useFunction(() => {
@@ -42,7 +42,7 @@ export const StereometrySolver = observer(({ puzzle }: { puzzle: PuzzleDefinitio
     const controls = runStereometry({
       canvas,
       puzzle,
-      onHistoryChange: store.setHistoryAvailability,
+      getInteractionMode: () => store.interactionMode,
       onFpsUpdate: store.setFps,
     });
 

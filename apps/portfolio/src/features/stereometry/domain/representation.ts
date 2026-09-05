@@ -1,37 +1,21 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { vec3 } from 'wgpu-matrix';
-import { NO_CONNECTED_VERTEX_INDEX, STEREOMETRY_STYLES } from './constants';
+
+import { buildTopologyEdgeSegments } from './edge-segments';
+import { FigureInnerPointCache } from './figure-inner-points';
 import {
+  edgeEndpointsMatch,
+  getEdgeEndpoints,
   isCollinearWithLine,
-  POINT_ON_LINE_EPSILON_SQ,
   positionsMatch,
   projectPointOntoLine,
-  VERTEX_MATCH_EPSILON_SQ,
 } from './geometry-utils';
-import { extendLine, isNearAnyPoint, isPointInsideOrOnSurface, rayTriangleIntersect } from './math';
-import {
-  deduplicateParameters,
-  isDuplicateParameter,
-  isInAnyInterval,
-  isRangeInAnyInterval,
-  mergeIntervals,
-  POSITION_EPSILON,
-} from './parametric-utils';
-import type {
-  LineInstanceStyle,
-  MarkerInstanceStyle,
-  RenderSegment,
-  ResolvedElementStyle,
-  SceneRepresentation,
-  SolutionFaceRenderData,
-  StyledMarker,
-  StyledSegment,
-  StyleModifier,
-} from './render-types';
+import { buildLineSegments } from './line-segments';
+import type { RenderSegment, SceneRepresentation } from './render-types';
+import { buildMarkers } from './scene-markers';
 import { mergeCollinearSegments } from './segment-merge';
 import type { SolutionStatus } from './solution-check';
 import { isSubSegmentInSolutionRange, lineCoversSegment } from './solution-check';
-import { hexToRgb, resolveStyle } from './styles-processor';
+import { buildSolutionFace } from './solution-face';
 import type {
   FigureTopology,
   SelectionState,
@@ -41,44 +25,6 @@ import type {
 } from './topology-types';
 import { NO_VERTEX_ID } from './topology-types';
 
-const COPLANAR_DISTANCE_THRESHOLD = 1e-4;
-
-/**
- * Per-figure memo of the "point lies inside or on any figure face" predicate.
- *
- * `isPointInsideOrOnSurface` is a winding-number scan over every figure triangle
- * and runs once per scene vertex (markers) and per construction sub-segment
- * midpoint on every rebuild — i.e. on every pointermove during a drag. The
- * predicate depends only on the point and the immutable `figureTopology`, so the
- * result is cached on the point's array identity within that figure's scope.
- *
- * Position arrays in `SceneTopology` are immutable for a given topology version
- * (only preview line / selection change during a drag — not the vertex array),
- * so the same array reference recurs across rebuilds and hits the cache. Keying
- * on identity (not a rounded string) is exact: no precision collisions, and a
- * shared value implies a shared reference here.
- */
-const figureInnerPointCaches = new WeakMap<FigureTopology, WeakMap<Vec3Array, boolean>>();
-
-function isPointInAnyFigureFace(figureTopology: FigureTopology, point: Vec3Array): boolean {
-  let pointCache = figureInnerPointCaches.get(figureTopology);
-  if (pointCache === undefined) {
-    pointCache = new WeakMap();
-    figureInnerPointCaches.set(figureTopology, pointCache);
-  }
-
-  const cached = pointCache.get(point);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const isInside = figureTopology.figureFaceTriangles.some(figureTriangles =>
-    isPointInsideOrOnSurface(point, figureTriangles, figureTopology.vertices)
-  );
-  pointCache.set(point, isInside);
-  return isInside;
-}
-
 /** Builds a complete scene representation from topology data. */
 export function buildRepresentation(
   figureTopology: FigureTopology,
@@ -86,215 +32,24 @@ export function buildRepresentation(
   vertices: readonly TopologyVertex[],
   selection: SelectionState,
   previewLine?: { readonly pointA: Vec3Array; readonly pointB: Vec3Array },
-  solutionStatus?: SolutionStatus
+  solutionStatus?: SolutionStatus,
+  innerPoints: FigureInnerPointCache = new FigureInnerPointCache()
 ): SceneRepresentation {
-  const markers = buildMarkers(figureTopology, vertices, selection, solutionStatus);
+  const markers = buildMarkers(figureTopology, vertices, selection, solutionStatus, innerPoints);
 
-  const renderSegments = buildSegments(
+  const segments = buildSegments(
     figureTopology,
     lines,
     vertices,
     selection,
     previewLine,
-    solutionStatus
+    solutionStatus,
+    innerPoints
   );
-  const segments = renderSegments.map(segment => toStyledSegment(segment));
 
   const solutionFace = buildSolutionFace(solutionStatus);
 
   return { segments, markers, solutionFace };
-}
-
-/** Floats per solution-face vertex: position(3) + rgba(4) */
-const SOLUTION_FACE_VERTEX_FLOATS = 7;
-
-/**
- * Triangulates solution face polygons using fan triangulation from the first vertex.
- * Works for convex polygons (cross-section polygons are always convex).
- * Returns undefined when there are no faces to render.
- */
-function buildSolutionFace(
-  solutionStatus: SolutionStatus | undefined
-): SolutionFaceRenderData | undefined {
-  if (!solutionStatus?.isSolved) {
-    return undefined;
-  }
-  const faces = solutionStatus.solutionFaces ?? [];
-  if (faces.length === 0) {
-    return undefined;
-  }
-
-  const solutionModifiers: readonly StyleModifier[] = ['solution'];
-  const resolved = resolveStyle(STEREOMETRY_STYLES, 'face', solutionModifiers);
-  const [red, green, blue] = hexToRgb(resolved.color);
-  const alpha = resolved.alpha;
-
-  let totalTriangles = 0;
-  for (const face of faces) {
-    if (face.length >= 3) {
-      totalTriangles += face.length - 2;
-    }
-  }
-
-  if (totalTriangles === 0) {
-    return undefined;
-  }
-
-  const vertexCount = totalTriangles * 3;
-  const vertices = new Float32Array(vertexCount * SOLUTION_FACE_VERTEX_FLOATS);
-  let writeOffset = 0;
-
-  const writeVertex = (position: Vec3Array): void => {
-    vertices[writeOffset] = position[0];
-    vertices[writeOffset + 1] = position[1];
-    vertices[writeOffset + 2] = position[2];
-    vertices[writeOffset + 3] = red;
-    vertices[writeOffset + 4] = green;
-    vertices[writeOffset + 5] = blue;
-    vertices[writeOffset + 6] = alpha;
-    writeOffset += SOLUTION_FACE_VERTEX_FLOATS;
-  };
-
-  for (const face of faces) {
-    if (face.length < 3) {
-      continue;
-    }
-    const anchor = face[0];
-    for (let index = 1; index < face.length - 1; index++) {
-      writeVertex(anchor);
-      writeVertex(face[index]);
-      writeVertex(face[index + 1]);
-    }
-  }
-
-  return { vertices, vertexCount };
-}
-
-function getEdgeEndpoints(
-  figureTopology: FigureTopology,
-  edgeIndex: number
-): [Vec3Array, Vec3Array] {
-  const [vertexA, vertexB] = figureTopology.edges[edgeIndex];
-  return [figureTopology.vertices[vertexA], figureTopology.vertices[vertexB]];
-}
-
-function createRenderSegment(
-  startPosition: Vec3Array,
-  endPosition: Vec3Array,
-  modifiers: readonly StyleModifier[],
-  lineId: number,
-  startVertexIndex: number,
-  endVertexIndex: number
-): RenderSegment {
-  return {
-    startPosition,
-    endPosition,
-    modifiers,
-    lineId,
-    startVertexIndex,
-    endVertexIndex,
-  };
-}
-
-function resolvedToLineInstanceStyle(resolved: ResolvedElementStyle): LineInstanceStyle {
-  const [red, green, blue] = hexToRgb(resolved.color);
-  return {
-    width: resolved.width,
-    color: [red, green, blue],
-    alpha: resolved.alpha,
-    lineType: resolved.line.type === 'dashed' ? 1 : 0,
-    dash: resolved.line.type === 'dashed' ? resolved.line.dash : 0,
-    gap: resolved.line.type === 'dashed' ? resolved.line.gap : 0,
-  };
-}
-
-function toStyledSegment(segment: RenderSegment): StyledSegment {
-  const hiddenModifiers: readonly StyleModifier[] = ['hidden', ...segment.modifiers];
-  const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'line', segment.modifiers);
-  const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'line', hiddenModifiers);
-
-  return {
-    startPosition: segment.startPosition,
-    endPosition: segment.endPosition,
-    visibleStyle: resolvedToLineInstanceStyle(visibleResolved),
-    hiddenStyle: resolvedToLineInstanceStyle(hiddenResolved),
-    lineId: segment.lineId,
-    startVertexIndex: segment.startVertexIndex,
-    endVertexIndex: segment.endVertexIndex,
-  };
-}
-
-function resolvedToMarkerStyle(resolved: {
-  size: number;
-  color: string;
-  alpha: number;
-  strokeColor: string;
-  strokeWidth: number;
-}): MarkerInstanceStyle {
-  const [red, green, blue] = hexToRgb(resolved.color);
-  const [strokeR, strokeG, strokeB] = hexToRgb(resolved.strokeColor);
-  return {
-    size: resolved.size,
-    color: [red, green, blue],
-    alpha: resolved.alpha,
-    strokeColor: [strokeR, strokeG, strokeB],
-    strokeWidth: resolved.strokeWidth,
-  };
-}
-
-function buildMarkers(
-  figureTopology: FigureTopology,
-  sceneVertices: readonly TopologyVertex[],
-  selection: SelectionState,
-  solutionStatus: SolutionStatus | undefined
-): readonly StyledMarker[] {
-  const markers: StyledMarker[] = [];
-
-  for (let markerIndex = 0; markerIndex < sceneVertices.length; markerIndex++) {
-    const vertex = sceneVertices[markerIndex];
-    const position = vertex.position;
-    const modifiers: StyleModifier[] = [];
-
-    if (vertex.kind === 'input') {
-      modifiers.push('input');
-    }
-
-    const isTopologyVertex = isNearAnyPoint(
-      position,
-      figureTopology.vertices,
-      VERTEX_MATCH_EPSILON_SQ
-    );
-    if (isTopologyVertex || isPointInAnyFigureFace(figureTopology, position)) {
-      modifiers.push('inner');
-    }
-
-    if (isVertexOnSelectedElement(vertex, selection)) {
-      modifiers.push('selected');
-    }
-
-    if (
-      solutionStatus?.isSolved &&
-      solutionStatus.solutionVertexPositions.some(solutionPosition =>
-        isNearAnyPoint(position, [solutionPosition], VERTEX_MATCH_EPSILON_SQ)
-      )
-    ) {
-      modifiers.push('solution');
-    }
-
-    const hiddenModifiers: readonly StyleModifier[] = ['hidden', ...modifiers];
-    const visibleResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', modifiers);
-    const hiddenResolved = resolveStyle(STEREOMETRY_STYLES, 'vertex', hiddenModifiers);
-
-    markers.push({
-      position,
-      markerType: visibleResolved.markerType === 'circle' ? 1 : 0,
-      visibleStyle: resolvedToMarkerStyle(visibleResolved),
-      hiddenStyle: resolvedToMarkerStyle(hiddenResolved),
-      vertexIndex: markerIndex,
-    });
-  }
-
-  return markers;
 }
 
 /** Sentinel lineId for the preview line (not associated with any topology line) */
@@ -306,7 +61,8 @@ function buildSegments(
   vertices: readonly TopologyVertex[],
   selection: SelectionState,
   previewLine: { readonly pointA: Vec3Array; readonly pointB: Vec3Array } | undefined,
-  solutionStatus: SolutionStatus | undefined
+  solutionStatus: SolutionStatus | undefined,
+  innerPoints: FigureInnerPointCache
 ): readonly RenderSegment[] {
   const selectedLineId = getSelectedLineId(selection);
   const selectedEdgeIndices = findSelectedEdgeIndices(selection, lines, figureTopology);
@@ -314,12 +70,11 @@ function buildSegments(
   const lineSegments: RenderSegment[] = [];
 
   for (const line of lines) {
-    // Skip edges -- they are rendered by buildTopologyEdgeSegments
     if (line.kind === 'edge') {
       continue;
     }
 
-    const segments = processLine(line, figureTopology, vertices);
+    const segments = buildLineSegments(line, figureTopology, vertices, innerPoints);
     const isSelected = selectedLineId !== undefined && line.lineId === selectedLineId;
     const isInfiniteLine =
       line.kind === 'line' || line.kind === 'edge-extended' || line.kind === 'segment-extended';
@@ -336,7 +91,7 @@ function buildSegments(
       );
 
     for (const segment of segments) {
-      // For infinite lines, sub-segments coincident with a collinear figure edge are marked 'segment' by processLine.
+      // For infinite lines, sub-segments coincident with a collinear figure edge are marked 'segment' by buildLineSegments.
       // - 'edge-extended': this coincident portion IS the original edge — keep it and promote to 'edge' styling
       //   (buildTopologyEdgeSegments skips the extended edge to avoid duplicate render).
       // - 'line' and 'segment-extended': drop the coincident portion to avoid overlap with the finite element.
@@ -388,7 +143,7 @@ function buildSegments(
       startVertexId: NO_VERTEX_ID,
       endVertexId: NO_VERTEX_ID,
     };
-    const segments = processLine(previewTopologyLine, figureTopology, vertices);
+    const segments = buildLineSegments(previewTopologyLine, figureTopology, vertices, innerPoints);
 
     for (const segment of segments) {
       if (segment.modifiers.includes('segment')) {
@@ -501,18 +256,6 @@ function findSelectedEdgeIndices(
   return indices;
 }
 
-function edgeEndpointsMatch(
-  startA: Vec3Array,
-  endA: Vec3Array,
-  startB: Vec3Array,
-  endB: Vec3Array
-): boolean {
-  return (
-    (positionsMatch(startA, startB) && positionsMatch(endA, endB)) ||
-    (positionsMatch(startA, endB) && positionsMatch(endA, startB))
-  );
-}
-
 /**
  * Checks if a render sub-segment's midpoint falls within the original segment range [pointA, pointB].
  * Used to determine if a sub-segment of an extended line is in the "original" part or the "extension" part.
@@ -537,536 +280,4 @@ function isSubSegmentWithinRange(
   return (
     projection.parameter >= -ENDPOINT_TOLERANCE && projection.parameter <= 1 + ENDPOINT_TOLERANCE
   );
-}
-
-function isVertexOnSelectedElement(vertex: TopologyVertex, selection: SelectionState): boolean {
-  switch (selection.type) {
-    case 'none':
-      return false;
-    case 'line': {
-      return vertex.crossLineIds.includes(selection.lineId);
-    }
-    default:
-      assertNever(selection);
-  }
-}
-
-/** Sentinel lineId for topology edge segments rendered by buildTopologyEdgeSegments */
-const TOPOLOGY_EDGE_SEGMENT_LINE_ID = -1;
-
-function buildTopologyEdgeSegments(
-  figureTopology: FigureTopology,
-  lines: readonly TopologyLine[],
-  vertices: readonly TopologyVertex[],
-  selectedEdgeIndices: ReadonlySet<number>,
-  solutionStatus: SolutionStatus | undefined
-): readonly RenderSegment[] {
-  const results: RenderSegment[] = [];
-
-  // Build a map from lineId to TopologyLine for edge lookup
-  const edgeLineByIndex = findEdgeLines(figureTopology, lines);
-
-  // Build vertexId → marker buffer index map for GPU vertex indices
-  const vertexIdToMarkerIndex = new Map<number, number>();
-  for (let markerIndex = 0; markerIndex < vertices.length; markerIndex++) {
-    vertexIdToMarkerIndex.set(vertices[markerIndex].vertexId, markerIndex);
-  }
-
-  const pushEdgeSubSegment = (
-    startPosition: Vec3Array,
-    endPosition: Vec3Array,
-    baseModifiers: readonly StyleModifier[],
-    startMarkerIndex: number,
-    endMarkerIndex: number
-  ): void => {
-    const modifiers = [...baseModifiers];
-    if (
-      solutionStatus?.isSolved &&
-      solutionStatus.solutionLineRanges.some(([rangeStart, rangeEnd]) =>
-        isSubSegmentInSolutionRange(startPosition, endPosition, rangeStart, rangeEnd)
-      )
-    ) {
-      modifiers.push('solution');
-    }
-    results.push(
-      createRenderSegment(
-        startPosition,
-        endPosition,
-        modifiers,
-        TOPOLOGY_EDGE_SEGMENT_LINE_ID,
-        startMarkerIndex,
-        endMarkerIndex
-      )
-    );
-  };
-
-  for (let edgeIndex = 0; edgeIndex < figureTopology.edges.length; edgeIndex++) {
-    const [figureVertexA, figureVertexB] = figureTopology.edges[edgeIndex];
-    const edgeStart = figureTopology.vertices[figureVertexA];
-    const edgeEnd = figureTopology.vertices[figureVertexB];
-
-    const edgeLine = edgeLineByIndex.get(edgeIndex);
-
-    // Skip extended edges — the line path in buildSegments renders the original edge portion
-    // with an 'edge' modifier promotion. Rendering here would duplicate it.
-    if (edgeLine?.kind === 'edge-extended') {
-      continue;
-    }
-
-    const modifiers: StyleModifier[] = ['edge', 'segment'];
-    if (selectedEdgeIndices.has(edgeIndex)) {
-      modifiers.push('selected');
-    }
-
-    // Map figure vertex indices to marker buffer indices for GPU
-    const startMarkerIndex =
-      edgeLine !== undefined
-        ? (vertexIdToMarkerIndex.get(edgeLine.startVertexId) ?? NO_CONNECTED_VERTEX_INDEX)
-        : NO_CONNECTED_VERTEX_INDEX;
-    const endMarkerIndex =
-      edgeLine !== undefined
-        ? (vertexIdToMarkerIndex.get(edgeLine.endVertexId) ?? NO_CONNECTED_VERTEX_INDEX)
-        : NO_CONNECTED_VERTEX_INDEX;
-
-    const edgeDir = vec3.sub(edgeEnd, edgeStart);
-    const edgeLengthSq = vec3.dot(edgeDir, edgeDir);
-
-    if (edgeLengthSq < POSITION_EPSILON || edgeLine === undefined) {
-      pushEdgeSubSegment(edgeStart, edgeEnd, modifiers, startMarkerIndex, endMarkerIndex);
-      continue;
-    }
-
-    // Find interior split vertices: vertices whose crossLineIds contains this edge's lineId
-    // but are NOT the edge's start/end vertices
-    const splitPoints: { parameter: number; markerIndex: number }[] = [];
-
-    for (let markerIndex = 0; markerIndex < vertices.length; markerIndex++) {
-      const vertex = vertices[markerIndex];
-
-      if (vertex.vertexId === edgeLine.startVertexId || vertex.vertexId === edgeLine.endVertexId) {
-        continue;
-      }
-
-      if (!vertex.crossLineIds.includes(edgeLine.lineId)) {
-        continue;
-      }
-
-      // Compute parametric position along the edge for ordering
-      const toVertex = vec3.sub(vertex.position, edgeStart);
-      const parameter = vec3.dot(toVertex, edgeDir) / edgeLengthSq;
-
-      if (parameter <= POSITION_EPSILON || parameter >= 1 - POSITION_EPSILON) {
-        continue;
-      }
-
-      splitPoints.push({ parameter, markerIndex });
-    }
-
-    if (splitPoints.length === 0) {
-      pushEdgeSubSegment(edgeStart, edgeEnd, modifiers, startMarkerIndex, endMarkerIndex);
-      continue;
-    }
-
-    splitPoints.sort((pointA, pointB) => pointA.parameter - pointB.parameter);
-
-    let currentPosition = edgeStart;
-    let currentMarkerIndex = startMarkerIndex;
-
-    for (const split of splitPoints) {
-      const splitPosition = vec3.addScaled(edgeStart, edgeDir, split.parameter) as Vec3Array;
-
-      pushEdgeSubSegment(
-        currentPosition,
-        splitPosition,
-        modifiers,
-        currentMarkerIndex,
-        split.markerIndex
-      );
-
-      currentPosition = splitPosition;
-      currentMarkerIndex = split.markerIndex;
-    }
-
-    pushEdgeSubSegment(currentPosition, edgeEnd, modifiers, currentMarkerIndex, endMarkerIndex);
-  }
-
-  return results;
-}
-
-/**
- * Finds the TopologyLine for each figure edge by matching endpoints.
- * Returns a map from edge index to the corresponding TopologyLine.
- */
-function findEdgeLines(
-  figureTopology: FigureTopology,
-  lines: readonly TopologyLine[]
-): ReadonlyMap<number, TopologyLine> {
-  const result = new Map<number, TopologyLine>();
-  const edgeLines = lines.filter(line => line.kind === 'edge' || line.kind === 'edge-extended');
-
-  for (let edgeIndex = 0; edgeIndex < figureTopology.edges.length; edgeIndex++) {
-    const [figureVertexA, figureVertexB] = figureTopology.edges[edgeIndex];
-    const edgeStart = figureTopology.vertices[figureVertexA];
-    const edgeEnd = figureTopology.vertices[figureVertexB];
-
-    for (const line of edgeLines) {
-      if (edgeEndpointsMatch(edgeStart, edgeEnd, line.pointA, line.pointB)) {
-        result.set(edgeIndex, line);
-        break;
-      }
-    }
-  }
-
-  return result;
-}
-
-function processLine(
-  line: TopologyLine,
-  figureTopology: FigureTopology,
-  vertices: readonly TopologyVertex[]
-): readonly RenderSegment[] {
-  const isFiniteSegment = line.kind === 'segment' || line.kind === 'edge';
-  const [farStart, farEnd] = isFiniteSegment
-    ? [line.pointA, line.pointB]
-    : extendLine(line.pointA, line.pointB);
-  const lineDirection = vec3.sub(farEnd, farStart);
-  const lineLength = vec3.len(lineDirection);
-
-  if (lineLength === 0) {
-    return [];
-  }
-
-  const normalizedDirection = vec3.normalize(lineDirection) as Vec3Array;
-
-  const collinearEdges = findCollinearEdges(line, figureTopology);
-
-  const faceIntersectionParams = findFaceIntersectionParams(
-    farStart,
-    normalizedDirection,
-    lineLength,
-    figureTopology
-  );
-
-  const coplanarIntervals = findCoplanarFaceIntervals(
-    farStart,
-    normalizedDirection,
-    lineLength,
-    figureTopology
-  );
-
-  const segmentIntervals = collinearEdges.map(edgeIndex => {
-    const [edgeStart, edgeEnd] = getEdgeEndpoints(figureTopology, edgeIndex);
-    const paramA = projectOntoLine(edgeStart, farStart, normalizedDirection, lineLength);
-    const paramB = projectOntoLine(edgeEnd, farStart, normalizedDirection, lineLength);
-    return {
-      start: Math.min(paramA, paramB),
-      end: Math.max(paramA, paramB),
-    };
-  });
-
-  const pointAParam = projectOntoLine(line.pointA, farStart, normalizedDirection, lineLength);
-  const pointBParam = projectOntoLine(line.pointB, farStart, normalizedDirection, lineLength);
-
-  const splitParams = new Set<number>();
-  splitParams.add(0);
-  splitParams.add(1);
-  splitParams.add(pointAParam);
-  splitParams.add(pointBParam);
-
-  for (const parameter of faceIntersectionParams) {
-    splitParams.add(parameter);
-  }
-  for (const interval of coplanarIntervals) {
-    splitParams.add(interval.start);
-    splitParams.add(interval.end);
-  }
-  for (const interval of segmentIntervals) {
-    splitParams.add(interval.start);
-    splitParams.add(interval.end);
-  }
-
-  // Split at scene vertex positions that lie on this line and
-  // build parameter -> vertex index mapping for topology-based occlusion
-  const vertexIndexByParam = new Map<number, number>();
-
-  for (let vertexIndex = 0; vertexIndex < vertices.length; vertexIndex++) {
-    const vertexPosition = vertices[vertexIndex].position;
-    const vertexParam = projectOntoLine(vertexPosition, farStart, normalizedDirection, lineLength);
-    const projectedPosition = paramToPosition(
-      vertexParam,
-      farStart,
-      normalizedDirection,
-      lineLength
-    );
-
-    if (vec3.distSq(vertexPosition, projectedPosition) < POINT_ON_LINE_EPSILON_SQ) {
-      vertexIndexByParam.set(vertexParam, vertexIndex);
-
-      if (vertexParam > POSITION_EPSILON && vertexParam < 1 - POSITION_EPSILON) {
-        splitParams.add(vertexParam);
-      }
-    }
-  }
-
-  const sortedParams = [...splitParams].sort((paramA, paramB) => paramA - paramB);
-  const dedupedParams = deduplicateParameters(sortedParams);
-
-  const mergedCoplanarIntervals = mergeIntervals(coplanarIntervals);
-
-  const results: RenderSegment[] = [];
-
-  for (let index = 0; index < dedupedParams.length - 1; index++) {
-    const startParam = dedupedParams[index];
-    const endParam = dedupedParams[index + 1];
-
-    if (endParam - startParam < POSITION_EPSILON) {
-      continue;
-    }
-
-    const midParam = (startParam + endParam) / 2;
-
-    const startPosition = paramToPosition(startParam, farStart, normalizedDirection, lineLength);
-    const endPosition = paramToPosition(endParam, farStart, normalizedDirection, lineLength);
-
-    const startVertexIndex = findVertexIndexForParam(startParam, vertexIndexByParam);
-    const endVertexIndex = findVertexIndexForParam(endParam, vertexIndexByParam);
-
-    if (isRangeInAnyInterval(startParam, endParam, segmentIntervals)) {
-      results.push(
-        createRenderSegment(
-          startPosition,
-          endPosition,
-          ['segment'],
-          line.lineId,
-          startVertexIndex,
-          endVertexIndex
-        )
-      );
-      continue;
-    }
-
-    if (isInAnyInterval(midParam, mergedCoplanarIntervals)) {
-      results.push(
-        createRenderSegment(
-          startPosition,
-          endPosition,
-          ['inner'],
-          line.lineId,
-          startVertexIndex,
-          endVertexIndex
-        )
-      );
-      continue;
-    }
-
-    const midpoint = paramToPosition(midParam, farStart, normalizedDirection, lineLength);
-    const isInner = isPointInAnyFigureFace(figureTopology, midpoint);
-    results.push(
-      createRenderSegment(
-        startPosition,
-        endPosition,
-        isInner ? ['inner'] : [],
-        line.lineId,
-        startVertexIndex,
-        endVertexIndex
-      )
-    );
-  }
-
-  return results;
-}
-
-function projectOntoLine(
-  point: Vec3Array,
-  farStart: Vec3Array,
-  normalizedDirection: Vec3Array,
-  lineLength: number
-): number {
-  return vec3.dot(vec3.sub(point, farStart), normalizedDirection) / lineLength;
-}
-
-function paramToPosition(
-  parameter: number,
-  farStart: Vec3Array,
-  normalizedDirection: Vec3Array,
-  lineLength: number
-): Vec3Array {
-  return vec3.addScaled(farStart, normalizedDirection, parameter * lineLength) as Vec3Array;
-}
-
-function findCollinearEdges(line: TopologyLine, figureTopology: FigureTopology): readonly number[] {
-  const collinearEdges: number[] = [];
-
-  for (let edgeIndex = 0; edgeIndex < figureTopology.edges.length; edgeIndex++) {
-    const [edgeStart, edgeEnd] = getEdgeEndpoints(figureTopology, edgeIndex);
-
-    if (isCollinearWithLine(edgeStart, edgeEnd, line.pointA, line.pointB)) {
-      collinearEdges.push(edgeIndex);
-    }
-  }
-
-  return collinearEdges;
-}
-
-function findFaceIntersectionParams(
-  farStart: Vec3Array,
-  normalizedDirection: Vec3Array,
-  lineLength: number,
-  figureTopology: FigureTopology
-): readonly number[] {
-  const parameters: number[] = [];
-
-  for (const triangleIndices of figureTopology.faceTriangles) {
-    const vertexA = figureTopology.vertices[triangleIndices[0]];
-    const vertexB = figureTopology.vertices[triangleIndices[1]];
-    const vertexC = figureTopology.vertices[triangleIndices[2]];
-
-    const parameterT = rayTriangleIntersect(
-      farStart,
-      normalizedDirection,
-      vertexA,
-      vertexB,
-      vertexC
-    );
-
-    if (parameterT !== undefined && parameterT > 0) {
-      const normalizedParameter = parameterT / lineLength;
-      if (
-        normalizedParameter > POSITION_EPSILON &&
-        normalizedParameter < 1 - POSITION_EPSILON &&
-        !isDuplicateParameter(normalizedParameter, parameters)
-      ) {
-        parameters.push(normalizedParameter);
-      }
-    }
-  }
-
-  return parameters;
-}
-
-function findCoplanarFaceIntervals(
-  farStart: Vec3Array,
-  normalizedDirection: Vec3Array,
-  lineLength: number,
-  figureTopology: FigureTopology
-): readonly { start: number; end: number }[] {
-  const intervals: { start: number; end: number }[] = [];
-
-  for (let faceIndex = 0; faceIndex < figureTopology.faces.length; faceIndex++) {
-    const faceVertexIndices = figureTopology.faces[faceIndex];
-    if (faceVertexIndices.length < 3) {
-      continue;
-    }
-
-    const faceVertices = faceVertexIndices.map(index => figureTopology.vertices[index]);
-
-    const edgeAB = vec3.sub(faceVertices[1], faceVertices[0]);
-    const edgeAC = vec3.sub(faceVertices[2], faceVertices[0]);
-    const faceNormal = vec3.cross(edgeAB, edgeAC);
-    const normalLength = vec3.len(faceNormal);
-
-    if (normalLength < POSITION_EPSILON) {
-      continue;
-    }
-
-    const unitNormal = vec3.normalize(faceNormal) as Vec3Array;
-
-    if (Math.abs(vec3.dot(normalizedDirection, unitNormal)) > COPLANAR_DISTANCE_THRESHOLD) {
-      continue;
-    }
-
-    const distanceToPlane = vec3.dot(vec3.sub(farStart, faceVertices[0]), unitNormal);
-    if (Math.abs(distanceToPlane) > COPLANAR_DISTANCE_THRESHOLD) {
-      continue;
-    }
-
-    const interval = clipLineToConvexPolygon(
-      farStart,
-      normalizedDirection,
-      lineLength,
-      faceVertices
-    );
-
-    if (interval !== undefined) {
-      intervals.push(interval);
-    }
-  }
-
-  return intervals;
-}
-
-function clipLineToConvexPolygon(
-  farStart: Vec3Array,
-  normalizedDirection: Vec3Array,
-  lineLength: number,
-  polygonVertices: readonly Vec3Array[]
-): { start: number; end: number } | undefined {
-  let tMin = 0;
-  let tMax = 1;
-
-  const faceEdgeAB = vec3.sub(polygonVertices[1], polygonVertices[0]);
-  const faceEdgeAC = vec3.sub(polygonVertices[2], polygonVertices[0]);
-  const faceNormal = vec3.cross(faceEdgeAB, faceEdgeAC);
-
-  for (let index = 0; index < polygonVertices.length; index++) {
-    const nextIndex = (index + 1) % polygonVertices.length;
-    const edgeStart = polygonVertices[index];
-    const edgeEnd = polygonVertices[nextIndex];
-    const edgeDir = vec3.sub(edgeEnd, edgeStart);
-
-    const inwardNormal = vec3.cross(faceNormal, edgeDir);
-    const inwardLength = vec3.len(inwardNormal);
-
-    if (inwardLength < POSITION_EPSILON) {
-      continue;
-    }
-
-    const unitInward = vec3.normalize(inwardNormal) as Vec3Array;
-
-    const startOffset = vec3.dot(vec3.sub(farStart, edgeStart), unitInward);
-    const directionDot = vec3.dot(normalizedDirection, unitInward) * lineLength;
-
-    if (Math.abs(directionDot) < POSITION_EPSILON) {
-      if (startOffset < -POSITION_EPSILON) {
-        return undefined;
-      }
-      continue;
-    }
-
-    const tEdge = -startOffset / directionDot;
-
-    if (directionDot < 0) {
-      tMax = Math.min(tMax, tEdge);
-    } else {
-      tMin = Math.max(tMin, tEdge);
-    }
-
-    if (tMin > tMax) {
-      return undefined;
-    }
-  }
-
-  if (tMax - tMin < POSITION_EPSILON) {
-    return undefined;
-  }
-
-  return { start: tMin, end: tMax };
-}
-
-function findVertexIndexForParam(
-  parameter: number,
-  vertexIndexByParam: ReadonlyMap<number, number>
-): number {
-  const exactMatch = vertexIndexByParam.get(parameter);
-  if (exactMatch !== undefined) {
-    return exactMatch;
-  }
-
-  for (const [storedParam, vertexIndex] of vertexIndexByParam) {
-    if (Math.abs(parameter - storedParam) < POSITION_EPSILON) {
-      return vertexIndex;
-    }
-  }
-
-  return NO_CONNECTED_VERTEX_INDEX;
 }

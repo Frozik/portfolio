@@ -9,12 +9,9 @@ import type { InitialDragHit } from '../infrastructure/drag-connector';
 const SNAP_ALLOWED_TYPES: AllowedHitTypes = ['vertex'];
 
 export interface ISceneHitTesterParams {
-  readonly canvas: HTMLCanvasElement;
-  /**
-   * Current model-view-projection matrix, or `undefined` while no renderer is
-   * attached — every hit test then misses instead of picking against a stale camera.
-   */
-  readonly getMvpMatrix: () => Float32Array | undefined;
+  readonly canvas: Pick<HTMLCanvasElement, 'clientWidth' | 'clientHeight'>;
+  /** The same model-view-projection the renderer draws with, derived from the camera. */
+  readonly getMvpMatrix: () => Float32Array;
   readonly getTopology: () => SceneTopology;
 }
 
@@ -36,11 +33,6 @@ export function createSceneHitTester(params: ISceneHitTesterParams): SceneHitTes
     screenY: number,
     allowedTypes?: AllowedHitTypes
   ): SceneHit | undefined {
-    const mvpMatrix = getMvpMatrix();
-    if (mvpMatrix === undefined) {
-      return undefined;
-    }
-
     const topology = getTopology();
 
     return hitTestScene(
@@ -49,7 +41,7 @@ export function createSceneHitTester(params: ISceneHitTesterParams): SceneHitTes
       canvas.clientWidth,
       canvas.clientHeight,
       Math.max(1, window.devicePixelRatio),
-      mvpMatrix,
+      getMvpMatrix(),
       topology.lines,
       topology.vertices.map(vertex => vertex.position),
       allowedTypes

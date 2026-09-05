@@ -24,7 +24,6 @@ export interface OrbitalCameraController {
   getViewMatrix(): Float32Array;
   getEyePosition(): Vec3Array;
   getDistance(): number;
-  setInteractionMode(mode: CameraInteractionMode): void;
   /** Adds a pointer the controller didn't receive via its own pointerdown listener
    *  (e.g. a capture-phase handler stopped propagation). Used by the drag-connector
    *  to hand off the first finger when a second arrives so pinch-zoom still works. */
@@ -43,7 +42,8 @@ export interface OrbitalCameraController {
  */
 export function createOrbitalCameraController(
   canvas: HTMLCanvasElement,
-  puzzleCamera?: PuzzleCamera
+  puzzleCamera: PuzzleCamera | undefined,
+  getInteractionMode: () => CameraInteractionMode
 ): OrbitalCameraController {
   const minDistance = puzzleCamera?.distance?.min ?? MIN_CAMERA_DISTANCE;
   const maxDistance = puzzleCamera?.distance?.max ?? MAX_CAMERA_DISTANCE;
@@ -61,8 +61,6 @@ export function createOrbitalCameraController(
     rotationCenter[1],
     rotationCenter[2],
   ];
-
-  let interactionMode: CameraInteractionMode = 'rotate';
 
   let azimuthVelocity = 0;
   let panVelocityX = 0;
@@ -109,7 +107,6 @@ export function createOrbitalCameraController(
     const panScale = MOUSE_PAN_SENSITIVITY * distance;
     const right = computeRightVector();
 
-    // Horizontal drag moves in the XZ plane, vertical drag moves along world Y axis
     target[0] -= right[0] * deltaX * panScale;
     target[1] += deltaY * panScale;
     target[2] -= right[2] * deltaX * panScale;
@@ -135,7 +132,7 @@ export function createOrbitalCameraController(
   function handleDrag(deltaX: number, deltaY: number): void {
     lastDragMoveTime = performance.now();
 
-    const shouldPan = isShiftHeld || interactionMode === 'pan';
+    const shouldPan = isShiftHeld || getInteractionMode() === 'pan';
 
     if (shouldPan) {
       panVelocityX = deltaX;
@@ -236,11 +233,6 @@ export function createOrbitalCameraController(
 
     getDistance(): number {
       return distance;
-    },
-
-    setInteractionMode(mode: CameraInteractionMode): void {
-      interactionMode = mode;
-      resetVelocity();
     },
 
     registerExternalPointer(pointerId: number, clientX: number, clientY: number): void {

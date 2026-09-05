@@ -1,5 +1,5 @@
 import { vec3 } from 'wgpu-matrix';
-import type { Vec3Array } from './topology-types';
+import type { FigureTopology, Vec3Array } from './topology-types';
 
 /**
  * Perpendicular distance tolerance for collinearity check.
@@ -107,4 +107,24 @@ export function isCollinearWithLine(
 
   const toB = vec3.sub(pointB, lineStart);
   return vec3.len(vec3.cross(normalizedLineDir, toB)) <= COLLINEAR_THRESHOLD;
+}
+
+export function getEdgeEndpoints(
+  figureTopology: FigureTopology,
+  edgeIndex: number
+): [Vec3Array, Vec3Array] {
+  const [vertexA, vertexB] = figureTopology.edges[edgeIndex];
+  return [figureTopology.vertices[vertexA], figureTopology.vertices[vertexB]];
+}
+
+export function edgeEndpointsMatch(
+  startA: Vec3Array,
+  endA: Vec3Array,
+  startB: Vec3Array,
+  endB: Vec3Array
+): boolean {
+  return (
+    (positionsMatch(startA, startB) && positionsMatch(endA, endB)) ||
+    (positionsMatch(startA, endB) && positionsMatch(endA, startB))
+  );
 }

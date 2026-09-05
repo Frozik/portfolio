@@ -1,43 +1,39 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, observableRef } from 'mobx';
 
 import type { CameraInteractionMode } from '../domain/types';
 import type { StereometryControls } from './render/draw';
 
 /**
- * UI-facing mirror of a stereometry session: which toolbar buttons are live and
- * what the renderer reports. Frame-level scene state deliberately stays out of
- * MobX — it lives in the render loop and the scene state controller, which the
- * store reaches only through the imperative {@link StereometryControls}.
+ * Toolbar state of the stereometry route. The interaction mode is owned here
+ * and read by the camera through a getter; undo/redo availability is owned by
+ * the scene state controller and only read through the attached session.
+ * Frame-level scene state stays out of MobX on purpose: it changes per frame.
  */
 export class StereometryStore {
-  canUndo = false;
-  canRedo = false;
   fps = 0;
   interactionMode: CameraInteractionMode = 'rotate';
-
-  private controls: StereometryControls | undefined;
+  session: StereometryControls | undefined = undefined;
 
   constructor() {
-    makeAutoObservable<StereometryStore, 'controls'>(this, { controls: false }, { autoBind: true });
+    makeAutoObservable(this, { session: observableRef }, { autoBind: true });
   }
 
-  /** Binds a freshly started session; its history is empty and its camera adopts the current mode. */
-  attach(controls: StereometryControls): void {
-    this.controls = controls;
-    this.canUndo = false;
-    this.canRedo = false;
+  get canUndo(): boolean {
+    return this.session?.history.canUndo ?? false;
+  }
+
+  get canRedo(): boolean {
+    return this.session?.history.canRedo ?? false;
+  }
+
+  attach(session: StereometryControls): void {
+    this.session = session;
     this.fps = 0;
-    controls.camera.setInteractionMode(this.interactionMode);
   }
 
-  /** Drops the session reference so toolbar actions can't reach a destroyed renderer. */
+  /** Drops the session so toolbar actions can't reach a destroyed renderer. */
   detach(): void {
-    this.controls = undefined;
-  }
-
-  setHistoryAvailability(canUndo: boolean, canRedo: boolean): void {
-    this.canUndo = canUndo;
-    this.canRedo = canRedo;
+    this.session = undefined;
   }
 
   setFps(fps: number): void {
@@ -46,15 +42,14 @@ export class StereometryStore {
 
   setInteractionMode(mode: CameraInteractionMode): void {
     this.interactionMode = mode;
-    this.controls?.camera.setInteractionMode(mode);
   }
 
   undo(): void {
-    this.controls?.undo();
+    this.session?.undo();
   }
 
   redo(): void {
-    this.controls?.redo();
+    this.session?.redo();
   }
 
   dispose(): void {

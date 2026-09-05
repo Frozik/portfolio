@@ -44,7 +44,6 @@ export function createTopologyFromPuzzle(
 
   let lineIdCounter = 0;
 
-  // Topology edges become segments with kind='edge'
   const edgeLines: TopologyLine[] = figureTopology.edges.map(([vertexA, vertexB]) => ({
     lineId: lineIdCounter++,
     pointA: figureTopology.vertices[vertexA],
@@ -245,7 +244,6 @@ function finalizeTopology(
     ? cache.compute(topology.lines, figureTopology)
     : computeAllIntersections(topology.lines, figureTopology);
 
-  // Phase 1: Build vertices with IDs but without crossLineIds
   const { vertices: bareVertices, nextVertexId } = buildBareVertices(
     figureTopology,
     inputVertexPositions,
@@ -253,10 +251,8 @@ function finalizeTopology(
     topology.nextVertexId
   );
 
-  // Phase 2: Assign vertex IDs to line endpoints using position matching
   const lines = assignVertexIdsToLines(topology.lines, bareVertices);
 
-  // Phase 3: Compute crossLineIds using ID-based lookups
   const vertices = assignCrossLineIds(bareVertices, lines, intersections);
 
   return {
@@ -363,7 +359,6 @@ function assignCrossLineIds(
 
     switch (vertex.kind) {
       case 'intersection': {
-        // Use sourceLineIds from the matching IntersectionEntity
         const key = positionKey(vertex.position);
         crossLineIds = intersectionLineIdsByPosition.get(key) ?? [];
         break;
@@ -427,7 +422,6 @@ function findCollinearExistingLine(
   startPosition: Vec3Array,
   endPosition: Vec3Array
 ): TopologyLine | undefined {
-  // Check both endpoints — either vertex may be on an existing line
   for (const position of [startPosition, endPosition]) {
     const vertex = topology.vertices.find(candidate =>
       positionsMatch(candidate.position, position)

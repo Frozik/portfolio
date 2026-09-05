@@ -1,6 +1,8 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import { action, observable } from 'mobx';
 import { vec3 } from 'wgpu-matrix';
 
+import { FigureInnerPointCache } from '../domain/figure-inner-points';
 import { createSceneHistory } from '../domain/history';
 import { IntersectionCache } from '../domain/intersection';
 import type { SceneRepresentation } from '../domain/render-types';
@@ -36,8 +38,12 @@ interface SceneRepresentationSink {
 export interface ISceneStateControllerParams {
   readonly puzzle: PuzzleDefinition;
   readonly figureTopology: FigureTopology;
-  /** Fires whenever the undo/redo stacks change depth. */
-  readonly onHistoryChange: (canUndo: boolean, canRedo: boolean) => void;
+}
+
+/** Observable depth of the undo/redo stacks; the toolbar reads it, nothing else writes it. */
+export interface SceneHistoryState {
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
 }
 
 /**
@@ -47,6 +53,7 @@ export interface ISceneStateControllerParams {
  * never touch the render pipeline themselves.
  */
 export interface SceneStateController {
+  readonly history: SceneHistoryState;
   getTopology(): SceneTopology;
   hasSelection(): boolean;
   isLineSelected(lineId: number): boolean;
@@ -67,10 +74,12 @@ export interface SceneStateController {
 export function createSceneStateController(
   params: ISceneStateControllerParams
 ): SceneStateController {
-  const { puzzle, figureTopology, onHistoryChange } = params;
+  const { puzzle, figureTopology } = params;
 
   const intersectionCache = new IntersectionCache();
+  const innerPoints = new FigureInnerPointCache();
   const history = createSceneHistory();
+  const historyState = observable({ canUndo: false, canRedo: false });
 
   let renderer: SceneRepresentationSink | undefined;
   let sceneTopology = createTopologyFromPuzzle(figureTopology, puzzle.input, intersectionCache);
@@ -85,15 +94,17 @@ export function createSceneStateController(
       sceneTopology.vertices,
       selection,
       previewLine,
-      solutionStatus
+      solutionStatus,
+      innerPoints
     );
 
     renderer?.applySceneState(representation);
   }
 
-  function notifyHistoryChange(): void {
-    onHistoryChange(history.canUndo(), history.canRedo());
-  }
+  const notifyHistoryChange = action((): void => {
+    historyState.canUndo = history.canUndo();
+    historyState.canRedo = history.canRedo();
+  });
 
   /** Applies a new topology state, saving the previous one to history. */
   function applyTopologyChange(nextTopology: SceneTopology): void {
@@ -117,7 +128,6 @@ export function createSceneStateController(
 
   function setSelection(nextSelection: SelectionState): void {
     selection = nextSelection;
-    // Re-apply to rebuild StyledSegments with updated selection
     render();
   }
 
@@ -219,6 +229,7 @@ export function createSceneStateController(
   }
 
   return {
+    history: historyState,
     getTopology,
     hasSelection,
     isLineSelected,

@@ -19,7 +19,7 @@ import {
 export function createClickDetector(
   canvas: HTMLCanvasElement,
   onClick: (screenX: number, screenY: number) => void,
-  onDoubleClick: (screenX: number, screenY: number) => void
+  onDoubleClick?: (screenX: number, screenY: number) => void
 ): VoidFunction {
   let pointerDownX = 0;
   let pointerDownY = 0;
@@ -50,6 +50,7 @@ export function createClickDetector(
     );
 
     if (
+      onDoubleClick !== undefined &&
       timeSinceLastClick < DOUBLE_CLICK_TIME_THRESHOLD_MS &&
       distanceFromLastClick < DOUBLE_CLICK_DISTANCE_THRESHOLD
     ) {
