@@ -3,7 +3,8 @@ import { SCENE_BACKGROUND_HEX } from '@frozik/utils/webgpu/backgroundColor';
 import type { PartialElementStyle } from './style-resolver';
 
 /**
- * Visual styles for stereometry scene elements.
+ * Visual styles for stereometry scene elements, shared by the WebGPU scene
+ * (`styled-scene.ts`) and the SVG solution previews (`SolutionPreview.tsx`).
  *
  * Keys follow the format 'element:modifier1:modifier2' where modifiers
  * are sorted alphabetically. The resolver cascades from general to specific.

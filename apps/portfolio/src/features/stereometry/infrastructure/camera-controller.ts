@@ -1,20 +1,21 @@
 import { createPointerGestureTracker } from '@frozik/utils/webgpu/pointerGestureTracker';
-import { mat4, vec3 } from 'wgpu-matrix';
 import {
   INERTIA_DAMPING,
   INERTIA_MIN_VELOCITY,
   INERTIA_RELEASE_TIMEOUT_MS,
-  INITIAL_AZIMUTH,
-  INITIAL_CAMERA_DISTANCE,
-  INITIAL_ELEVATION,
-  MAX_CAMERA_DISTANCE,
-  MIN_CAMERA_DISTANCE,
   MOUSE_PAN_SENSITIVITY,
   MOUSE_ROTATE_SENSITIVITY,
   WHEEL_ZOOM_SENSITIVITY,
   ZOOM_SMOOTHING_FACTOR,
   ZOOM_SNAP_THRESHOLD,
 } from '../domain/constants';
+import {
+  computeEyePosition,
+  computeRightVector,
+  computeUpVector,
+  computeViewMatrix,
+  resolveCameraSettings,
+} from '../domain/orbit-camera';
 import type { Vec3Array } from '../domain/topology-types';
 import type { CameraInteractionMode, PuzzleCamera } from '../domain/types';
 
@@ -45,16 +46,13 @@ export function createOrbitalCameraController(
   puzzleCamera: PuzzleCamera | undefined,
   getInteractionMode: () => CameraInteractionMode
 ): OrbitalCameraController {
-  const minDistance = puzzleCamera?.distance?.min ?? MIN_CAMERA_DISTANCE;
-  const maxDistance = puzzleCamera?.distance?.max ?? MAX_CAMERA_DISTANCE;
-  const initialDistance = puzzleCamera?.distance?.initial ?? INITIAL_CAMERA_DISTANCE;
-  const rotationCenter = puzzleCamera?.center ?? [0, 0, 0];
+  const settings = resolveCameraSettings(puzzleCamera);
+  const { minDistance, maxDistance, elevation } = settings;
+  const rotationCenter = settings.center;
 
-  let azimuth = puzzleCamera?.angle?.azimuth ?? INITIAL_AZIMUTH;
-  const elevation = puzzleCamera?.angle?.elevation ?? INITIAL_ELEVATION;
-
-  let distance = initialDistance;
-  let targetDistance = initialDistance;
+  let azimuth = settings.azimuth;
+  let distance = settings.initialDistance;
+  let targetDistance = settings.initialDistance;
 
   const target: [number, number, number] = [
     rotationCenter[0],
@@ -65,28 +63,6 @@ export function createOrbitalCameraController(
   let azimuthVelocity = 0;
   let panVelocityX = 0;
   let panVelocityY = 0;
-
-  function computeEyePosition(): Vec3Array {
-    return [
-      target[0] + Math.sin(elevation) * Math.sin(azimuth) * distance,
-      target[1] + Math.cos(elevation) * distance,
-      target[2] + Math.sin(elevation) * Math.cos(azimuth) * distance,
-    ];
-  }
-
-  /** Screen-plane up vector derived from azimuth and elevation */
-  function computeUpVector(): Vec3Array {
-    return [
-      -Math.cos(elevation) * Math.sin(azimuth),
-      Math.sin(elevation),
-      -Math.cos(elevation) * Math.cos(azimuth),
-    ];
-  }
-
-  /** Screen-plane right vector (always horizontal) */
-  function computeRightVector(): Vec3Array {
-    return [Math.cos(azimuth), 0, -Math.sin(azimuth)];
-  }
 
   function applyRotation(deltaX: number): void {
     const deltaAzimuth = -deltaX * MOUSE_ROTATE_SENSITIVITY;
@@ -105,7 +81,7 @@ export function createOrbitalCameraController(
 
   function applyPan(deltaX: number, deltaY: number): void {
     const panScale = MOUSE_PAN_SENSITIVITY * distance;
-    const right = computeRightVector();
+    const right = computeRightVector(azimuth);
 
     target[0] -= right[0] * deltaX * panScale;
     target[1] += deltaY * panScale;
@@ -217,18 +193,15 @@ export function createOrbitalCameraController(
     },
 
     getViewMatrix(): Float32Array {
-      const eye = computeEyePosition();
-      const up = computeUpVector();
-
-      return mat4.lookAt(
-        vec3.fromValues(eye[0], eye[1], eye[2]),
-        vec3.fromValues(target[0], target[1], target[2]),
-        vec3.fromValues(up[0], up[1], up[2])
-      ) as Float32Array;
+      return computeViewMatrix(
+        computeEyePosition(target, azimuth, elevation, distance),
+        target,
+        computeUpVector(azimuth, elevation)
+      );
     },
 
     getEyePosition(): Vec3Array {
-      return computeEyePosition();
+      return computeEyePosition(target, azimuth, elevation, distance);
     },
 
     getDistance(): number {

@@ -1,5 +1,8 @@
 /**
  * Per-instance marker with visible and hidden styles.
+ *
+ * The SVG solution previews (presentation/components/SolutionPreview.tsx) reproduce the
+ * visible/hidden split and the marker look on the CPU; a change here needs a matching one there.
  * GPU depth texture sampling determines which style to use.
  * Line ID texture sampling determines topology-based occlusion.
  *

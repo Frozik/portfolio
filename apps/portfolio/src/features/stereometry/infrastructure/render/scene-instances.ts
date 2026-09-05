@@ -1,5 +1,3 @@
-import { FACE_POSITION_FLOATS } from '../../domain/constants';
-import type { Vec3Array } from '../../domain/topology-types';
 import type {
   LineInstanceStyle,
   MarkerInstanceStyle,
@@ -7,8 +5,10 @@ import type {
   PreviewMarkerStyle,
   StyledMarker,
   StyledSegment,
-} from './styled-scene';
-import { SOLUTION_FACE_VERTEX_FLOATS } from './styled-scene';
+} from '../../application/render/styled-scene';
+import { SOLUTION_FACE_VERTEX_FLOATS } from '../../application/render/styled-scene';
+import { FACE_POSITION_FLOATS } from '../../domain/constants';
+import type { Vec3Array } from '../../domain/topology-types';
 
 const FLOAT32_BYTES = 4;
 

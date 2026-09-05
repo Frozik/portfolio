@@ -122,8 +122,6 @@ export interface PuzzleDefinition {
   readonly expected: PuzzleExpectedResult;
   /** Camera configuration. Falls back to global defaults if omitted. */
   readonly camera?: PuzzleCamera;
-  /** URL of an image illustrating the solution (imported via Vite). */
-  readonly solutionImage?: string;
 }
 
 /** Result of preparePuzzle -- everything the renderer and scene need */

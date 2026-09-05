@@ -1,3 +1,7 @@
+import {
+  resolvePreviewLineStyle,
+  resolvePreviewMarkerStyle,
+} from '../../application/render/styled-scene';
 import type { Vec3Array } from '../../domain/topology-types';
 import type { PreviewLine } from './drag-preview';
 import {
@@ -8,7 +12,6 @@ import {
   packPreviewMarker,
   STYLED_LINE_STRIDE,
 } from './scene-instances';
-import { resolvePreviewLineStyle, resolvePreviewMarkerStyle } from './styled-scene';
 
 const VERTEX_BUFFER_USAGE = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST;
 

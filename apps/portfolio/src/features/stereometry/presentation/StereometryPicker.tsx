@@ -24,10 +24,9 @@ const StereometryPickerComponent = () => {
           return (
             <PuzzleCard
               key={puzzle.id}
-              puzzleId={puzzle.id}
+              puzzle={puzzle}
               shortName={translation.shortName}
-              solutionImage={puzzle.solutionImage}
-              imageAlt={stereometryT.solutionImageAlt}
+              previewLabel={stereometryT.solutionImageAlt}
             />
           );
         })}

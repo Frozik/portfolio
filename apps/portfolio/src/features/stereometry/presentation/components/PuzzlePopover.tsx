@@ -6,8 +6,9 @@ import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { PuzzleDefinition } from '../../domain/types';
 import { CLOSE_ICON_SIZE, TOOLBAR_ICON_SIZE, TOOLBAR_TOOLTIP_DELAY_MS } from '../constants';
 import { stereometryT } from '../translations';
+import { SolutionPreview } from './SolutionPreview';
 
-export const PuzzlePopover = memo(({ puzzle }: { puzzle: PuzzleDefinition }) => {
+export const PuzzlePopover = memo(({ puzzle }: { readonly puzzle: PuzzleDefinition }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const puzzleTranslations: Record<string, { name: string; description: string }> =
@@ -59,13 +60,11 @@ export const PuzzlePopover = memo(({ puzzle }: { puzzle: PuzzleDefinition }) => 
               <X size={CLOSE_ICON_SIZE} />
             </Popover.Close>
           </div>
-          {puzzle.solutionImage !== undefined && (
-            <img
-              src={puzzle.solutionImage}
-              alt={stereometryT.solutionImageAlt}
-              className="mb-3 w-full rounded-md border border-neutral-700 object-cover"
-            />
-          )}
+          <SolutionPreview
+            puzzle={puzzle}
+            label={stereometryT.solutionImageAlt}
+            className="mb-3 w-full rounded-md border border-neutral-700"
+          />
           <p className="text-neutral-300">{translation.description}</p>
           <Popover.Arrow className="fill-neutral-900" />
         </Popover.Content>

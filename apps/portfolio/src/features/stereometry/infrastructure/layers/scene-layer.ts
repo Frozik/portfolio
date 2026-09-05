@@ -5,6 +5,12 @@ import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 import { mat4 } from 'wgpu-matrix';
 
+import type {
+  SolutionFaceRenderData,
+  StyledMarker,
+  StyledSegment,
+} from '../../application/render/styled-scene';
+import { resolveBackgroundColor, styleScene } from '../../application/render/styled-scene';
 import {
   computeMvpMatrix,
   computeProjectionMatrix,
@@ -42,8 +48,6 @@ import { createScenePipelines } from '../render/scene-pipelines';
 import type { SceneTargetViews } from '../render/scene-targets';
 import { SceneTargets } from '../render/scene-targets';
 import { SceneUniforms } from '../render/scene-uniforms';
-import type { SolutionFaceRenderData, StyledMarker, StyledSegment } from '../render/styled-scene';
-import { resolveBackgroundColor, styleScene } from '../render/styled-scene';
 
 const VERTICES_PER_MARKER_QUAD = 6;
 const LINE_ID_SENTINEL_CLEAR: GPUColor = { r: -1, g: -1, b: 0, a: 0 };

@@ -1,4 +1,3 @@
-import solutionImage from '../../../../assets/puzzle_2.avif';
 import type { PuzzleDefinition } from '../types';
 
 /**
@@ -17,7 +16,6 @@ const PRISM_HALF_HEIGHT = 0.75;
 
 export const PUZZLE_2: PuzzleDefinition = {
   id: 'puzzle_2',
-  solutionImage,
   camera: {
     center: [0, 0, 0],
     distance: { min: 3, max: 10, initial: 5.5 },

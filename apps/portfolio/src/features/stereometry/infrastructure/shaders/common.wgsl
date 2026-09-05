@@ -44,7 +44,9 @@ fn cssToGpuPixels(cssSize: f32) -> f32 {
 }
 
 /** Depth fade factor from a forward distance along the camera axis (camera-target space).
- *  Only fades objects behind the target (further from camera), not in front of it. */
+ *  Only fades objects behind the target (further from camera), not in front of it.
+ *  Mirrored on the CPU by `depthFadeAt` in domain/solution-preview.ts for the SVG previews:
+ *  change both together. */
 fn depthFadeFromForwardDistance(forwardDistance: f32) -> f32 {
     let normalizedDepth = forwardDistance / uniforms.cameraDistance;
     return clamp(1.0 - normalizedDepth * uniforms.depthFadeRate, uniforms.depthFadeMin, 1.0);

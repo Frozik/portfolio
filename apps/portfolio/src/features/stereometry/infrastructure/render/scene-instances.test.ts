@@ -1,3 +1,4 @@
+import type { StyledMarker, StyledSegment } from '../../application/render/styled-scene';
 import {
   FLOATS_PER_STYLED_LINE,
   MARKER_INSTANCE_FLOATS,
@@ -6,7 +7,6 @@ import {
   packStyledMarkers,
   packStyledSegments,
 } from './scene-instances';
-import type { StyledMarker, StyledSegment } from './styled-scene';
 
 const SEGMENT: StyledSegment = {
   startPosition: [1, 2, 3],

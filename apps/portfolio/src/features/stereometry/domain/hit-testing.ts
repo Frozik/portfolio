@@ -1,5 +1,3 @@
-import { vec4 } from 'wgpu-matrix';
-
 import {
   EDGE_HIT_RADIUS_PIXELS,
   HIT_DEPTH_WEIGHT,
@@ -7,10 +5,10 @@ import {
   HIT_PROXIMITY_WEIGHT,
   HIT_SEGMENT_TYPE_BONUS,
   HIT_VERTEX_TYPE_BONUS,
-  HOMOGENEOUS_W,
   VERTEX_HIT_RADIUS_PIXELS,
 } from './constants';
 import { extendLine } from './math';
+import { projectPoint, projectSegment } from './screen-projection';
 import type { TopologyLine, Vec3Array } from './topology-types';
 
 /** A unified hit result. A vertex hit carries a world-space position; a line hit carries the topology lineId. */
@@ -87,19 +85,6 @@ export function hitTestScene(
   return pickBestCandidate(candidates);
 }
 
-interface ProjectedVertex {
-  readonly screenX: number;
-  readonly screenY: number;
-  readonly behindCamera: boolean;
-  /** View-space distance from camera (clip.w). Smaller = closer to viewer. */
-  readonly depth: number;
-}
-
-interface ProjectedSegment {
-  readonly start: ProjectedVertex;
-  readonly end: ProjectedVertex;
-}
-
 interface HitCandidate {
   readonly hit: SceneHit;
   /** 0.0 directly under the cursor, 1.0 at the hit threshold edge. */
@@ -109,9 +94,6 @@ interface HitCandidate {
   /** Additive score bonus for this candidate's type. */
   readonly typeBonus: number;
 }
-
-/** Minimum w for near-plane clipping (matches NEAR_CLIP_W in common.wgsl) */
-const NEAR_CLIP_W = 0.01;
 
 function collectVertexCandidates(
   mvpMatrix: Float32Array,
@@ -125,7 +107,7 @@ function collectVertexCandidates(
   candidates: HitCandidate[]
 ): void {
   for (let index = 0; index < vertexPositions.length; index++) {
-    const projected = projectVertexToScreen(
+    const projected = projectPoint(
       mvpMatrix,
       vertexPositions[index],
       gpuCanvasWidth,
@@ -168,13 +150,7 @@ function collectLineCandidates(
     const [start, end] = isFiniteSegment
       ? [line.pointA, line.pointB]
       : extendLine(line.pointA, line.pointB);
-    const projected = projectSegmentToScreen(
-      mvpMatrix,
-      start,
-      end,
-      gpuCanvasWidth,
-      gpuCanvasHeight
-    );
+    const projected = projectSegment(mvpMatrix, start, end, gpuCanvasWidth, gpuCanvasHeight);
 
     if (projected.start.behindCamera || projected.end.behindCamera) {
       continue;
@@ -215,104 +191,6 @@ function collectLineCandidates(
       typeBonus,
     });
   }
-}
-
-function projectVertexToScreen(
-  mvpMatrix: Float32Array,
-  vertex: Vec3Array,
-  gpuCanvasWidth: number,
-  gpuCanvasHeight: number
-): ProjectedVertex {
-  const clipSpace = vec4.transformMat4(
-    vec4.fromValues(vertex[0], vertex[1], vertex[2], HOMOGENEOUS_W),
-    mvpMatrix
-  );
-
-  if (clipSpace[3] <= 0) {
-    return {
-      screenX: 0,
-      screenY: 0,
-      behindCamera: true,
-      depth: Number.POSITIVE_INFINITY,
-    };
-  }
-
-  const ndcX = clipSpace[0] / clipSpace[3];
-  const ndcY = clipSpace[1] / clipSpace[3];
-
-  return {
-    screenX: (ndcX + 1) * 0.5 * gpuCanvasWidth,
-    screenY: (1 - ndcY) * 0.5 * gpuCanvasHeight,
-    behindCamera: false,
-    depth: clipSpace[3],
-  };
-}
-
-/**
- * Projects two endpoints with near-plane clipping.
- * If one endpoint is behind the camera, interpolates it to the near plane
- * instead of discarding the entire segment.
- */
-function projectSegmentToScreen(
-  mvpMatrix: Float32Array,
-  pointA: Vec3Array,
-  pointB: Vec3Array,
-  gpuCanvasWidth: number,
-  gpuCanvasHeight: number
-): ProjectedSegment {
-  const clipA = vec4.transformMat4(
-    vec4.fromValues(pointA[0], pointA[1], pointA[2], HOMOGENEOUS_W),
-    mvpMatrix
-  );
-  const clipB = vec4.transformMat4(
-    vec4.fromValues(pointB[0], pointB[1], pointB[2], HOMOGENEOUS_W),
-    mvpMatrix
-  );
-
-  if (clipA[3] <= 0 && clipB[3] <= 0) {
-    return {
-      start: {
-        screenX: 0,
-        screenY: 0,
-        behindCamera: true,
-        depth: Number.POSITIVE_INFINITY,
-      },
-      end: {
-        screenX: 0,
-        screenY: 0,
-        behindCamera: true,
-        depth: Number.POSITIVE_INFINITY,
-      },
-    };
-  }
-
-  const clampedA = clipA[3] < NEAR_CLIP_W ? clampToNearPlane(clipA, clipB) : clipA;
-  const clampedB = clipB[3] < NEAR_CLIP_W ? clampToNearPlane(clipB, clipA) : clipB;
-
-  return {
-    start: clipToScreen(clampedA, gpuCanvasWidth, gpuCanvasHeight),
-    end: clipToScreen(clampedB, gpuCanvasWidth, gpuCanvasHeight),
-  };
-}
-
-function clampToNearPlane(point: Float32Array, other: Float32Array): Float32Array {
-  const parametricT = (NEAR_CLIP_W - point[3]) / (other[3] - point[3]);
-  return vec4.lerp(point, other, parametricT) as Float32Array;
-}
-
-function clipToScreen(
-  clipSpace: Float32Array,
-  gpuCanvasWidth: number,
-  gpuCanvasHeight: number
-): ProjectedVertex {
-  const ndcX = clipSpace[0] / clipSpace[3];
-  const ndcY = clipSpace[1] / clipSpace[3];
-  return {
-    screenX: (ndcX + 1) * 0.5 * gpuCanvasWidth,
-    screenY: (1 - ndcY) * 0.5 * gpuCanvasHeight,
-    behindCamera: false,
-    depth: clipSpace[3],
-  };
 }
 
 interface PointSegmentDistance {
