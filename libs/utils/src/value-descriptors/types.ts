@@ -10,7 +10,7 @@ export enum EValueDescriptorState {
   Unsynced = 'Unsynced',
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: wildcard type alias requires any
+// oxlint-disable-next-line typescript/no-explicit-any -- wildcard type alias requires any
 export type AnyValueDescriptor = ValueDescriptor<any, any>;
 
 export type SyncedValueDescriptor<P> = {

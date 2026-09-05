@@ -21,8 +21,8 @@ import type {
 } from '../defs';
 import { findNextTabStop } from '../focus-navigation';
 import { getElementSelection, rangeToSelection, setElementSelection } from '../selection';
-import styles from '../styles.module.css';
 import { applyTextEdit, readInputData, textEditFromInput, toSingleLine } from '../text-edit';
+import styles from '../styles.module.css';
 
 const acceptInput: TInputNormalizer = (value, selection) => ({ value, selection });
 const plainHtml: THtmlRenderer = text => text;
@@ -195,7 +195,6 @@ export const RichEditor = memo(
       }
     }, [value]);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: React rewrites the DOM whenever `html` changes, and the selection has to be re-applied after every rewrite
     useLayoutEffect(() => {
       const element = elementRef.current;
       if (isNil(element) || !focused || composingRef.current) {
@@ -276,7 +275,6 @@ export const RichEditor = memo(
     });
 
     return (
-      // biome-ignore lint/a11y/useSemanticElements: the field renders formatted HTML, which no <input> can show
       <div
         ref={elementRef}
         className={cn(styles.contentEditable, className)}
@@ -295,7 +293,7 @@ export const RichEditor = memo(
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: the HTML is rendered from `value` by `toHtml`, never from user markup
+        // oxlint-disable-next-line react/no-danger -- the HTML is rendered from `value` by `toHtml`, never from user markup
         dangerouslySetInnerHTML={{ __html: html }}
         onFocus={handleFocus}
         onBlur={handleBlur}

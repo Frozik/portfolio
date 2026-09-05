@@ -28,7 +28,7 @@ class ErrorBoundaryInner extends Component<IErrorBoundaryProps, IErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    // biome-ignore lint/suspicious/noConsole: surface unhandled render errors to the browser console for diagnosis
+    // oxlint-disable-next-line no-console -- surface unhandled render errors to the browser console for diagnosis
     console.error('Uncaught render error:', error, info);
   }
 

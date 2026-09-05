@@ -19,31 +19,31 @@ fileGroups:
 
 tasks:
   lint:
-    command: 'biome check .'
+    command: 'oxlint .'
     inputs:
       - '@group(sources)'
       - '@group(manifests)'
-      - 'biome.json'
+      - '.oxlintrc.json'
       - '*.{ts,js,json}'
     options:
       runInCI: true
 
   lint-fix:
-    command: 'biome check --write .'
+    command: 'oxlint --fix .'
     options:
       cache: false
 
   format:
-    command: 'biome format --write .'
+    command: 'oxfmt'
     options:
       cache: false
 
   format-check:
-    command: 'biome format .'
+    command: 'oxfmt --check'
     inputs:
       - '@group(sources)'
       - '@group(manifests)'
-      - 'biome.json'
+      - '.oxfmtrc.json'
       - '*.{ts,js,json}'
     options:
       runInCI: true
@@ -100,18 +100,6 @@ tasks:
 
   conventions-baseline:
     command: 'node scripts/check-source-conventions.mjs --update-baseline'
-    options:
-      cache: false
-
-  sort-check:
-    command: "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json' --check"
-    inputs:
-      - '@group(manifests)'
-    options:
-      runInCI: true
-
-  sort-fix:
-    command: "sort-package-json package.json 'apps/*/package.json' 'libs/*/package.json'"
     options:
       cache: false
 

@@ -12,11 +12,7 @@ import type { MultiPolygon } from '../domain/geometry/polygon-types';
 
 // The scene types live with the derivation that produces them; the store
 // re-exports them so every consumer keeps the import path it already uses.
-export type {
-  BuildingRoom,
-  RoofZoneScene,
-  StoreyScene,
-} from './storey-scenes';
+export type { BuildingRoom, RoofZoneScene, StoreyScene } from './storey-scenes';
 
 import type { BuildingWarning } from '../domain/model/building-warnings';
 import type {

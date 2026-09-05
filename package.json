@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "moon run portfolio:analyze",
     "build": "moon run :build",
-    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :sort-check :test",
+    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :test",
     "conventions": "moon run root:conventions",
     "conventions:baseline": "moon run root:conventions-baseline",
     "coverage": "moon run root:test-coverage",
@@ -22,14 +22,11 @@
     "lint-fix": "moon run root:lint-fix",
     "prepare": "lefthook install",
     "setup": "moon setup",
-    "sort-package-json": "moon run root:sort-fix",
-    "sort-package-json-check": "moon run root:sort-check",
     "test": "moon run root:test",
     "test:watch": "moon run root:test-watch",
     "types": "moon run :type-check"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
     "@lhci/cli": "catalog:",
     "@moonrepo/cli": "catalog:",
     "@swc/core": "catalog:",
@@ -41,12 +38,13 @@
     "knip": "catalog:",
     "lefthook": "catalog:",
     "lighthouse": "catalog:",
-    "sort-package-json": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@11.25.0",
   "engines": {
     "node": ">=24"
-  }
+  },
+  "packageManager": "pnpm@11.25.0"
 }

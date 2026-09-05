@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_TANK_HEALTH } from '../domain/constants';
 import type { ScorchedInput } from '../infrastructure/scorched-input';
 import { EMPTY_INPUT } from '../infrastructure/scorched-input';
-import { ScorchedStore } from './ScorchedStore';
 import { DEFAULT_ADVANCED_OPTIONS, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
+import { ScorchedStore } from './ScorchedStore';
 
 // Terrain, wind and the Moron's aim are all one `random` call away from being unrepeatable, and
 // the flows below span whole rounds. Pinned to zero they give a flat field, a dead calm and an

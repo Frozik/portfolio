@@ -148,7 +148,7 @@ export const RoomsPanel = observer(({ store }: { readonly store: SitePlannerStor
       {scene.rooms.map((room, index) => (
         <RoomRow
           // Regions are positional by nature: a room IS its place in the derivation.
-          // biome-ignore lint/suspicious/noArrayIndexKey: derived regions have no identity beyond their order
+          // oxlint-disable-next-line react/no-array-index-key -- derived regions have no identity beyond their order
           key={index}
           store={store}
           buildingId={buildingId}

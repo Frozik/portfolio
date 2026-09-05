@@ -21,8 +21,8 @@ import {
   toNativeInputBound,
   toNativeInputValue,
 } from './native-picker';
-import styles from './styles.module.css';
 import { getCalendarAriaLabels } from './translations/translations';
+import styles from './styles.module.css';
 
 const DEFAULT_TIME_ZONE = 'UTC';
 const MIDNIGHT = new Temporal.PlainTime(0);

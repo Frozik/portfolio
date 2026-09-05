@@ -36,8 +36,8 @@ import {
   createShadowMap,
   EMPTY_SHADOW_PROJECTION,
 } from '../../infrastructure/shadow-map';
-import type { SitePlannerStore } from '../SitePlannerStore';
 import type { SceneObjects, SceneSink, SceneTerrain } from '../scene-sink';
+import type { SitePlannerStore } from '../SitePlannerStore';
 
 /**
  * Where the light comes from in the moment between the device coming up and the

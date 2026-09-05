@@ -11,7 +11,10 @@
   --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
   --re-bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
   --re-border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
-  --re-border-soft: var(--color-landing-border-soft, light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04)));
+  --re-border-soft: var(
+    --color-landing-border-soft,
+    light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04))
+  );
   --re-fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
   --re-fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
   --re-fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
@@ -37,7 +40,9 @@
   width: 100%;
   min-width: 0;
   border-radius: 0;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 
   &:hover {
     border-color: var(--re-accent);
@@ -174,7 +179,10 @@
   padding: 4px 10px;
   font-size: 16px;
   line-height: 1;
-  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
 
   &:hover {
     background-color: var(--re-bg-elevated);
@@ -230,7 +238,9 @@
   font-family: var(--re-mono);
   font-size: 13px;
   color: var(--re-fg-dim);
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover,
   &:focus-visible {
@@ -336,7 +346,10 @@
   width: 100%;
   touch-action: manipulation;
   user-select: none;
-  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
 
   &:hover {
     color: var(--re-fg);

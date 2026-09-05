@@ -205,7 +205,7 @@ export const RangeSlider = memo(
         </SliderPrimitive.Track>
         {value.map((thumbValue, index) => (
           <SliderThumbWithTooltip
-            // biome-ignore lint/suspicious/noArrayIndexKey: Radix Slider thumbs are positional — count and order are stable, and values can duplicate
+            // oxlint-disable-next-line react/no-array-index-key -- Radix Slider thumbs are positional — count and order are stable, and values can duplicate
             key={index}
             disabled={disabled}
             showTooltip={showTooltip}

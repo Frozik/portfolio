@@ -14,8 +14,8 @@ import {
   roundNumericText,
   settleNumericText,
 } from './numeric-input';
-import styles from './styles.module.css';
 import { getCalendarAriaLabels } from './translations/translations';
+import styles from './styles.module.css';
 
 const DEFAULT_PIP_SIZE = 2;
 

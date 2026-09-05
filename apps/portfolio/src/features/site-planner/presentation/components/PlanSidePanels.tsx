@@ -123,7 +123,7 @@ export const PlanSidePanels = observer(({ store }: { readonly store: SitePlanner
           >
             {section.panels.map((Panel, index) => (
               // The list is a fixed table row: panels have no identity beyond their place.
-              // biome-ignore lint/suspicious/noArrayIndexKey: static per-mode panel order
+              // oxlint-disable-next-line react/no-array-index-key -- static per-mode panel order
               <Panel key={index} store={store} />
             ))}
           </PanelGroup>

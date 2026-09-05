@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { Identity } from '../domain/Identity';
 import { Room } from '../domain/Room';
 import type { DisplayName, RoomId, UserId } from '../domain/types';
-import { PresenceBroadcaster } from './PresenceBroadcaster';
 import type { IPresenceTransport } from './ports/IPresenceTransport';
+import { PresenceBroadcaster } from './PresenceBroadcaster';
 
 const ROOM_ID = '11111111-2222-4333-8444-555555555555' as RoomId;
 

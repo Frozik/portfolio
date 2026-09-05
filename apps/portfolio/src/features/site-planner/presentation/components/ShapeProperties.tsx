@@ -25,9 +25,9 @@ import {
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlacedObjectIcon } from './PlacedObjectIcon';
+import { describePlacedObject } from './placedObjectLabel';
 import { PropertyField } from './PropertyField';
 import { PropertyRow, PropertyValue } from './PropertyRow';
-import { describePlacedObject } from './placedObjectLabel';
 import { toolHint } from './toolHints';
 
 /** Which of the shape's numbers an edit came from — the history groups by it. */

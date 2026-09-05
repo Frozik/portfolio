@@ -10,7 +10,7 @@ function reportGpuDiagnostic(message: string, detail?: unknown): void {
   if (getIsHosted()) {
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: the single developer-only WebGPU diagnostics sink
+  // oxlint-disable-next-line no-console -- the single developer-only WebGPU diagnostics sink
   console.warn(`binance-view: ${message}`, detail);
 }
 

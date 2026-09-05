@@ -39,7 +39,7 @@ export function runGpuApp<TSession extends GpuAppSession>(
       onReady?.(session);
     },
     (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU app init failure
+      // oxlint-disable-next-line no-console -- surfaces WebGPU app init failure
       console.error(initErrorMessage, error);
     }
   );

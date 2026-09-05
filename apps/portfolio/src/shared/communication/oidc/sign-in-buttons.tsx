@@ -114,20 +114,18 @@ export const SIGN_IN_BUTTONS: Readonly<
  * need a network round-trip to render its sign-in button — matches the
  * GIS button's instant-paint behaviour.
  */
-const YandexLogo = memo(
-  (): ReactElement => (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M14.5 5h-3.4c-2.4 0-4.1 1.8-4.1 4.4 0 2.3 1.1 3.5 3.1 4.6L7.6 19h2.6l3.1-6.4h-1.1c-1.5 0-2.4-.7-2.4-2.5 0-1.6.9-2.4 2.2-2.4h2.5V19h2.5V5h-2.5z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-);
+const YandexLogo = memo((): ReactElement => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path
+      d="M14.5 5h-3.4c-2.4 0-4.1 1.8-4.1 4.4 0 2.3 1.1 3.5 3.1 4.6L7.6 19h2.6l3.1-6.4h-1.1c-1.5 0-2.4-.7-2.4-2.5 0-1.6.9-2.4 2.2-2.4h2.5V19h2.5V5h-2.5z"
+      fill="currentColor"
+    />
+  </svg>
+));

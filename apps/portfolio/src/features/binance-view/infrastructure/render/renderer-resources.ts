@@ -9,13 +9,13 @@ import { TEXTURE_WIDTH_FALLBACK, TEXTURE_WIDTH_PREFERRED } from '../../domain/co
 import { getTextureLayoutConfig } from '../../domain/math';
 import type { IChartCanvases } from '../../domain/ports/chart-renderer';
 import type { ITextureLayoutConfig } from '../../domain/types';
-import candleWgsl from '../shaders/candle.wgsl?raw';
 import candleCommonWgsl from '../shaders/candle-common.wgsl?raw';
+import candleWgsl from '../shaders/candle.wgsl?raw';
 import commonWgsl from '../shaders/common.wgsl?raw';
 import gridWgsl from '../shaders/grid.wgsl?raw';
 import heatmapWgsl from '../shaders/heatmap.wgsl?raw';
-import tradesWgsl from '../shaders/trades.wgsl?raw';
 import tradesCommonWgsl from '../shaders/trades-common.wgsl?raw';
+import tradesWgsl from '../shaders/trades.wgsl?raw';
 import {
   createCandleBindGroupLayout,
   getCandlePipelineDescriptor,

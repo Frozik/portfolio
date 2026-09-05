@@ -1,0 +1,185 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "oxc",
+    "unicorn",
+    "import",
+    "react",
+    "jsx-a11y",
+    "vitest"
+  ],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "settings": {
+    "react": {
+      "version": "19"
+    }
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "separate-type-imports",
+        "disallowTypeAnnotations": false
+      }
+    ],
+    "oxc/approx-constant": "error",
+    "oxc/no-accumulating-spread": "warn",
+    "oxc/no-barrel-file": "error",
+    "no-console": [
+      "warn",
+      {
+        "allow": ["assert", "time", "timeEnd"]
+      }
+    ],
+    "vitest/no-focused-tests": "error",
+    "vitest/no-disabled-tests": "warn",
+    "unicorn/error-message": "error",
+    "unicorn/throw-new-error": "warn",
+    "unicorn/new-for-builtins": "warn",
+    "unicorn/prefer-number-properties": "warn",
+    "unicorn/no-array-for-each": "off",
+    "no-shadow-restricted-names": "warn",
+    "react/no-array-index-key": "warn",
+    "react/no-danger": "warn",
+    "react/self-closing-comp": "warn",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/button-has-type": "off",
+    "import/no-default-export": "error",
+    "import/no-cycle": "off",
+    "curly": ["error", "all"],
+    "no-else-return": "warn",
+    "no-unused-vars": [
+      "error",
+      {
+        "args": "after-used",
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "Date",
+        "message": "Use the Temporal API (temporal-polyfill); date helpers live in libs/utils/src/date/."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/index",
+              "**/index.ts",
+              "**/index.tsx",
+              "**/index.js",
+              "**/index.jsx"
+            ],
+            "message": "Do not import from a barrel/index file. Import the specific file instead (e.g. '../shared/ui/Button' not '../shared/ui')."
+          }
+        ]
+      }
+    ],
+    "jsx-a11y/no-static-element-interactions": "off",
+    "jsx-a11y/click-events-have-key-events": "off",
+    "jsx-a11y/mouse-events-have-key-events": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/set-state-in-effect": "off",
+    "react/refs": "off",
+    "react/immutability": "off",
+    "react/use-memo": "off",
+    "react/incompatible-library": "off",
+    "react/static-components": "off",
+    "react/hooks": "off",
+    "react/exhaustive-effect-dependencies": "off",
+    "react/no-did-update-set-state": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/no-conditional-expect": "off",
+    "vitest/require-to-throw-message": "off",
+    "vitest/expect-expect": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-new-array": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/prefer-set-has": "off",
+    "unicorn/prefer-array-find": "off",
+    "unicorn/no-useless-spread": "off",
+    "oxc/no-map-spread": "off",
+    "no-await-in-loop": "off",
+    "no-shadow": "off",
+    "no-unmodified-loop-condition": "off",
+    "no-new": "off",
+    "import/no-unassigned-import": "off",
+    "typescript/no-extraneous-class": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/no-noninteractive-element-interactions": "off",
+    "jsx-a11y/control-has-associated-label": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    "jsx-a11y/media-has-caption": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": [
+        "apps/portfolio/src/features/site-planner/domain/sun/sun-position.ts",
+        "apps/portfolio/src/features/site-planner/domain/sun/day-window.ts"
+      ],
+      "rules": {
+        "no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": [
+        "**/vite.config.ts",
+        "**/vitest.config.ts",
+        "**/playwright.config.ts",
+        "**/*.d.ts"
+      ],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    },
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/dev-dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    ".moon/**",
+    ".claude/**"
+  ]
+}

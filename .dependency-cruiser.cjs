@@ -13,7 +13,10 @@ module.exports = {
         'A feature never imports from another feature; move shared code to src/shared or libs/*.',
       severity: 'error',
       from: { path: FEATURE },
-      to: { path: '^apps/portfolio/src/features/([^/]+)/', pathNot: '^apps/portfolio/src/features/$1/' },
+      to: {
+        path: '^apps/portfolio/src/features/([^/]+)/',
+        pathNot: '^apps/portfolio/src/features/$1/',
+      },
     },
     {
       name: 'domain-is-framework-free',
@@ -44,7 +47,10 @@ module.exports = {
       severity: 'error',
       from: {
         path: '/presentation/',
-        pathNot: ['/presentation/[A-Z][A-Za-z0-9]*\\.tsx$', '^apps/communication/src/presentation/bootstrap\\.ts$'],
+        pathNot: [
+          '/presentation/[A-Z][A-Za-z0-9]*\\.tsx$',
+          '^apps/communication/src/presentation/bootstrap\\.ts$',
+        ],
       },
       to: { path: '/infrastructure/' },
     },
@@ -72,7 +78,8 @@ module.exports = {
     },
     {
       name: 'no-circular',
-      comment: 'Circular imports hide initialisation-order bugs and make modules impossible to test in isolation.',
+      comment:
+        'Circular imports hide initialisation-order bugs and make modules impossible to test in isolation.',
       severity: 'error',
       from: {},
       to: { circular: true },

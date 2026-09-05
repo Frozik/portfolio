@@ -357,12 +357,10 @@ export function stairFootprint(stair: StairInstance, storeyHeightMeters: Meters)
       ? [spiralLocalRing(stair.widthMeters / 2)]
       : layout.flights.map(flightLocalRing);
 
-  return rings.map(
-    (ring): PolygonWithHoles => ({
-      outer: ring.map(point => rectangleLocalToPlan(frame, mirror(point))),
-      holes: [],
-    })
-  );
+  return rings.map((ring): PolygonWithHoles => ({
+    outer: ring.map(point => rectangleLocalToPlan(frame, mirror(point))),
+    holes: [],
+  }));
 }
 
 /** Where the climb tops out in world metres — what the O-A2 rule projects. */

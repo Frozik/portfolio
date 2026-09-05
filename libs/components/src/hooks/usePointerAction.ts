@@ -10,7 +10,6 @@ export function usePointerAction(
     y: number;
     button: number;
     buttons: number;
-    // biome-ignore lint/suspicious/noConfusingVoidType: void needed for callbacks with no return
   }) => boolean | undefined | void,
   ref: RefObject<HTMLElement | null> | undefined
 ) {

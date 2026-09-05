@@ -89,7 +89,6 @@ export function stubRecordingPath2D(calls: RecordedCall[]): void {
         counter += 1;
 
         // A Proxy IS the constructed object — the class only names the global.
-        // biome-ignore lint/correctness/noConstructorReturn: the recorder must impersonate Path2D wholesale
         return createRecorder(`path#${counter}`, calls);
       }
     }

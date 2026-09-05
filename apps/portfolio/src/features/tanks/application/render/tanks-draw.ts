@@ -109,7 +109,7 @@ export function runTanks(options: ITanksRenderOptions): VoidFunction {
       }
     },
     (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU tanks renderer init failure
+      // oxlint-disable-next-line no-console -- surfaces WebGPU tanks renderer init failure
       console.error('Failed to initialize tanks renderer', error);
     }
   );

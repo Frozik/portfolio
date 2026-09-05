@@ -27,8 +27,8 @@ import type { OrbitalCameraController } from '../camera-controller';
 import type { DragPreviewState } from '../drag-connector';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import depthFacesSpecificSource from '../shaders/depth-faces.wgsl?raw';
-import lineSpecificSource from '../shaders/line.wgsl?raw';
 import lineIdSpecificSource from '../shaders/line-id.wgsl?raw';
+import lineSpecificSource from '../shaders/line.wgsl?raw';
 import solutionFaceSpecificSource from '../shaders/solution-face.wgsl?raw';
 import vertexMarkerSpecificSource from '../shaders/vertex-marker.wgsl?raw';
 

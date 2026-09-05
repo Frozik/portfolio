@@ -109,7 +109,7 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
           'max-h-[50vh] overflow-auto rounded-sm border border-landing-border-soft bg-landing-bg-elev px-5 py-4',
           PROSE_CLASSES
         )}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: markdown is produced internally by renderSnapshotToMarkdown and the HTML is sanitized via DOMPurify before injection
+        // oxlint-disable-next-line react/no-danger -- markdown is produced internally by renderSnapshotToMarkdown and the HTML is sanitized via DOMPurify before injection
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     </DialogShell>

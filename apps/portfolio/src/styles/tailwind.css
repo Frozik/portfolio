@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Scan shared library sources for utility classes */
 @source "../../../../libs/components/src";
@@ -11,10 +11,10 @@
   --color-brand-50: oklch(0.97 0.01 250);
   --color-brand-100: oklch(0.93 0.03 250);
   --color-brand-200: oklch(0.86 0.06 250);
-  --color-brand-300: oklch(0.76 0.10 250);
+  --color-brand-300: oklch(0.76 0.1 250);
   --color-brand-400: oklch(0.66 0.16 250);
   --color-brand-500: oklch(0.55 0.22 250);
-  --color-brand-600: oklch(0.47 0.20 250);
+  --color-brand-600: oklch(0.47 0.2 250);
   --color-brand-700: oklch(0.39 0.16 250);
   --color-brand-800: oklch(0.32 0.12 250);
   --color-brand-900: oklch(0.25 0.08 250);
@@ -22,14 +22,14 @@
   /* Semantic colors */
   --color-success: oklch(0.65 0.18 145);
   --color-warning: oklch(0.75 0.15 75);
-  --color-error: oklch(0.60 0.22 25);
-  --color-info: oklch(0.60 0.18 250);
+  --color-error: oklch(0.6 0.22 25);
+  --color-info: oklch(0.6 0.18 250);
 
   /* Surface colors (dark theme default) */
   --color-surface: oklch(0.14 0.005 250);
   --color-surface-elevated: oklch(0.18 0.005 250);
   --color-surface-overlay: oklch(0.22 0.005 250);
-  --color-border: oklch(0.30 0.01 250);
+  --color-border: oklch(0.3 0.01 250);
   --color-text: oklch(0.93 0.005 250);
   --color-text-secondary: oklch(0.65 0.01 250);
   --color-text-muted: oklch(0.45 0.01 250);
@@ -56,11 +56,13 @@
   --container-narrow: 1080px;
 
   /* Typography */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   /* Serif used only in the Hero ampersand. System fallback stack — we do not
      ship Source Serif Pro to avoid a 40 KB font request for a single glyph. */
-  --font-serif: "Iowan Old Style", "Palatino Linotype", ui-serif, Georgia, serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', ui-serif, Georgia, serif;
 
   /* Border radius */
   --radius-sm: 0.25rem;
@@ -98,115 +100,274 @@
   --animate-exp-expand: exp-expand 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
   @keyframes fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
   }
   @keyframes slide-in-top {
-    from { transform: translateY(-100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
   @keyframes slide-out-top {
-    from { transform: translateY(0); }
-    to { transform: translateY(-100%); }
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-100%);
+    }
   }
   @keyframes slide-in-left {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(0); }
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
   @keyframes slide-out-left {
-    from { transform: translateX(0); }
-    to { transform: translateX(-100%); }
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
   }
   @keyframes slide-in-right {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
   @keyframes slide-out-right {
-    from { transform: translateX(0); }
-    to { transform: translateX(100%); }
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
   }
   @keyframes slide-in-bottom {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
   @keyframes slide-out-bottom {
-    from { transform: translateY(0); }
-    to { transform: translateY(100%); }
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
   }
   @keyframes zzz-float {
-    0%, 100% { opacity: 0.3; transform: translateY(0); }
-    50% { opacity: 1; transform: translateY(-6px); }
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-6px);
+    }
   }
   @keyframes bulb-swing {
-    0%, 100% { transform: rotate(0deg); }
-    20% { transform: rotate(12deg); }
-    40% { transform: rotate(-10deg); }
-    60% { transform: rotate(6deg); }
-    80% { transform: rotate(-4deg); }
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    20% {
+      transform: rotate(12deg);
+    }
+    40% {
+      transform: rotate(-10deg);
+    }
+    60% {
+      transform: rotate(6deg);
+    }
+    80% {
+      transform: rotate(-4deg);
+    }
   }
   @keyframes bulb-glow {
-    0%, 100% { r: 24; opacity: 0.15; }
-    50% { r: 32; opacity: 0.35; }
+    0%,
+    100% {
+      r: 24;
+      opacity: 0.15;
+    }
+    50% {
+      r: 32;
+      opacity: 0.35;
+    }
   }
   @keyframes bulb-rays {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.8; }
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.8;
+    }
   }
   @keyframes status-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.25); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.25);
+    }
   }
   @keyframes attention-glow {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.22 250 / 0); }
-    50% { box-shadow: 0 0 20px 8px oklch(0.55 0.22 250 / 0.5); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.55 0.22 250 / 0);
+    }
+    50% {
+      box-shadow: 0 0 20px 8px oklch(0.55 0.22 250 / 0.5);
+    }
   }
   @keyframes glitch {
-    0% { transform: translate(0); filter: hue-rotate(0deg); }
-    10% { transform: translate(-5px, 3px); filter: hue-rotate(90deg); }
-    20% { transform: translate(3px, -2px); filter: hue-rotate(180deg); }
-    30% { transform: translate(-3px, -5px); filter: hue-rotate(270deg); }
-    40% { transform: translate(5px, 2px); filter: hue-rotate(360deg); }
-    50% { transform: translate(-2px, 4px); filter: hue-rotate(90deg); }
-    60% { transform: translate(4px, -3px); }
-    70% { transform: translate(-4px, 1px); }
-    80% { transform: translate(2px, -4px); }
-    90% { transform: translate(-1px, 3px); }
-    100% { transform: translate(0); filter: hue-rotate(0deg); }
+    0% {
+      transform: translate(0);
+      filter: hue-rotate(0deg);
+    }
+    10% {
+      transform: translate(-5px, 3px);
+      filter: hue-rotate(90deg);
+    }
+    20% {
+      transform: translate(3px, -2px);
+      filter: hue-rotate(180deg);
+    }
+    30% {
+      transform: translate(-3px, -5px);
+      filter: hue-rotate(270deg);
+    }
+    40% {
+      transform: translate(5px, 2px);
+      filter: hue-rotate(360deg);
+    }
+    50% {
+      transform: translate(-2px, 4px);
+      filter: hue-rotate(90deg);
+    }
+    60% {
+      transform: translate(4px, -3px);
+    }
+    70% {
+      transform: translate(-4px, 1px);
+    }
+    80% {
+      transform: translate(2px, -4px);
+    }
+    90% {
+      transform: translate(-1px, 3px);
+    }
+    100% {
+      transform: translate(0);
+      filter: hue-rotate(0deg);
+    }
   }
   @keyframes error-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-12px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
   }
   @keyframes twinkle {
-    0%, 100% { opacity: 0.2; transform: scale(0.8); }
-    50% { opacity: 1; transform: scale(1.2); }
+    0%,
+    100% {
+      opacity: 0.2;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
   }
   @keyframes steam-rise {
-    0% { opacity: 0.8; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-40px) scale(1.5); }
+    0% {
+      opacity: 0.8;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-40px) scale(1.5);
+    }
   }
   @keyframes teapot-wiggle {
-    0%, 100% { transform: rotate(0deg); }
-    20% { transform: rotate(-8deg); }
-    40% { transform: rotate(8deg); }
-    60% { transform: rotate(-5deg); }
-    80% { transform: rotate(5deg); }
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    20% {
+      transform: rotate(-8deg);
+    }
+    40% {
+      transform: rotate(8deg);
+    }
+    60% {
+      transform: rotate(-5deg);
+    }
+    80% {
+      transform: rotate(5deg);
+    }
   }
   @keyframes scroll-line {
-    0%, 100% { transform: translateX(0); opacity: 1; }
-    50% { transform: translateX(10px); opacity: 0.3; }
+    0%,
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    50% {
+      transform: translateX(10px);
+      opacity: 0.3;
+    }
   }
   @keyframes hero-reveal {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes exp-expand {
-    from { grid-template-rows: 0fr; opacity: 0; }
-    to   { grid-template-rows: 1fr; opacity: 1; }
+    from {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+    to {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
   }
 }
 
@@ -336,14 +497,22 @@
 /* Corner brackets around project-card thumbnails — 8 orthogonal 12×1 line segments. */
 @utility thumb-corners {
   background:
-    linear-gradient(90deg,  var(--color-landing-accent) 0 12px, transparent 12px) top left    / 12px 1px no-repeat,
-    linear-gradient(180deg, var(--color-landing-accent) 0 12px, transparent 12px) top left    / 1px 12px no-repeat,
-    linear-gradient(270deg, var(--color-landing-accent) 0 12px, transparent 12px) top right   / 12px 1px no-repeat,
-    linear-gradient(180deg, var(--color-landing-accent) 0 12px, transparent 12px) top right   / 1px 12px no-repeat,
-    linear-gradient(90deg,  var(--color-landing-accent) 0 12px, transparent 12px) bottom left / 12px 1px no-repeat,
-    linear-gradient(0deg,   var(--color-landing-accent) 0 12px, transparent 12px) bottom left / 1px 12px no-repeat,
-    linear-gradient(270deg, var(--color-landing-accent) 0 12px, transparent 12px) bottom right / 12px 1px no-repeat,
-    linear-gradient(0deg,   var(--color-landing-accent) 0 12px, transparent 12px) bottom right / 1px 12px no-repeat;
+    linear-gradient(90deg, var(--color-landing-accent) 0 12px, transparent 12px) top left / 12px 1px
+      no-repeat,
+    linear-gradient(180deg, var(--color-landing-accent) 0 12px, transparent 12px) top left / 1px
+      12px no-repeat,
+    linear-gradient(270deg, var(--color-landing-accent) 0 12px, transparent 12px) top right / 12px
+      1px no-repeat,
+    linear-gradient(180deg, var(--color-landing-accent) 0 12px, transparent 12px) top right / 1px
+      12px no-repeat,
+    linear-gradient(90deg, var(--color-landing-accent) 0 12px, transparent 12px) bottom left / 12px
+      1px no-repeat,
+    linear-gradient(0deg, var(--color-landing-accent) 0 12px, transparent 12px) bottom left / 1px
+      12px no-repeat,
+    linear-gradient(270deg, var(--color-landing-accent) 0 12px, transparent 12px) bottom right /
+      12px 1px no-repeat,
+    linear-gradient(0deg, var(--color-landing-accent) 0 12px, transparent 12px) bottom right / 1px
+      12px no-repeat;
 }
 
 @layer base {
@@ -420,7 +589,7 @@
   /* Custom scrollbar — thin & dark */
   * {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.30 0.01 250) transparent;
+    scrollbar-color: oklch(0.3 0.01 250) transparent;
   }
 
   *::-webkit-scrollbar {
@@ -433,12 +602,12 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background: oklch(0.30 0.01 250);
+    background: oklch(0.3 0.01 250);
     border-radius: 9999px;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.40 0.01 250);
+    background: oklch(0.4 0.01 250);
   }
 }
 

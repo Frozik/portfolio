@@ -9,9 +9,9 @@ import { Temporal } from 'temporal-polyfill';
 import { useFunction } from '../../../hooks/useFunction';
 import { clampDate, moveActiveDate } from '../calendar-keys';
 import type { TLeaveDirection } from '../defs';
-import styles from '../styles.module.css';
 import { DayCell } from './DayCell';
 import { defaultStartOfWeek } from './week-info';
+import styles from '../styles.module.css';
 
 interface IGridDay {
   readonly date: Temporal.PlainDate;
@@ -156,7 +156,6 @@ export const DateSelector = memo(
     });
 
     return (
-      // biome-ignore lint/a11y/useSemanticElements: the grid is a group of day buttons with one roving tab stop, not a data table
       <div
         role="group"
         aria-label={label}

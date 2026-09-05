@@ -2,14 +2,14 @@
   "name": "@frozik/communication-protocol",
   "version": "0.1.0",
   "license": "MIT",
-  "sideEffects": false,
-  "type": "module",
-  "exports": {
-    "./*": "./src/*.ts"
-  },
   "files": [
     "src"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
   "scripts": {
     "types": "tsc --noEmit"
   },

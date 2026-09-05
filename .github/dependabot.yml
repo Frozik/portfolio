@@ -16,7 +16,7 @@ updates:
       radix:
         patterns: ['@radix-ui/*']
       tooling:
-        patterns: ['@biomejs/*', '@moonrepo/*', 'vitest', '@vitest/*', 'vite', 'vite-plugin-pwa', 'typescript', 'knip', 'dependency-cruiser', 'lefthook']
+        patterns: ['oxlint', 'oxfmt', '@moonrepo/*', 'vitest', '@vitest/*', 'vite', 'vite-plugin-pwa', 'typescript', 'knip', 'dependency-cruiser', 'lefthook']
     ignore:
       # Major bumps are reviewed by hand: the stack is at the edge already.
       - dependency-name: '*'

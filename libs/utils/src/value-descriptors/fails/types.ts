@@ -25,5 +25,5 @@ export type FailConstructor<P extends string = ''> = {
   ): FailStruct<P extends '' ? C : `[${P}]: ${C}`, M>;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: wildcard type alias requires any
+// oxlint-disable-next-line typescript/no-explicit-any -- wildcard type alias requires any
 export type AnyFail = FailStruct<any, any>;

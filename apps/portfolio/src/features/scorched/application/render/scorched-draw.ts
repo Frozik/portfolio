@@ -226,7 +226,7 @@ export function runScorched(options: IScorchedRenderOptions): VoidFunction {
       }
     },
     (error: unknown) => {
-      // biome-ignore lint/suspicious/noConsole: surfaces WebGPU scorched renderer init failure
+      // oxlint-disable-next-line no-console -- surfaces WebGPU scorched renderer init failure
       console.error('Failed to initialize scorched renderer', error);
     }
   );

@@ -62,7 +62,6 @@ const DifficultyMeter = memo(({ level }: { level: number }) => (
   <div className="flex items-center gap-1">
     {Array.from({ length: TOTAL_METER_SEGMENTS }, (_, index) => (
       <span
-        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative segments
         key={index}
         className={cn(
           'h-2.5 w-4 rounded-sm border border-current',

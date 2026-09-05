@@ -30,7 +30,7 @@ export const WebGpuUnsupportedNotice = memo(({ className }: { className?: string
         <h3 className="text-sm font-semibold text-text">{t.safariIOSTitle}</h3>
         <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
           {t.safariIOSSteps.map((step, stepIndex) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static translation array, order never changes
+            // oxlint-disable-next-line react/no-array-index-key -- static translation array, order never changes
             <li key={stepIndex}>{step}</li>
           ))}
         </ol>
@@ -40,7 +40,7 @@ export const WebGpuUnsupportedNotice = memo(({ className }: { className?: string
         <h3 className="text-sm font-semibold text-text">{t.safariMacOSTitle}</h3>
         <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-text-secondary">
           {t.safariMacOSSteps.map((step, stepIndex) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static translation array, order never changes
+            // oxlint-disable-next-line react/no-array-index-key -- static translation array, order never changes
             <li key={stepIndex}>{step}</li>
           ))}
         </ol>

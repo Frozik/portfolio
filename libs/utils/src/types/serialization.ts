@@ -32,5 +32,4 @@ export interface IIsStructurallyCloneableError {
 }
 
 export interface IStructurallyCloneableErrorClass<T = Error>
-  extends IFromStructurallyCloneableError<T>,
-    IIsStructurallyCloneableError {}
+  extends IFromStructurallyCloneableError<T>, IIsStructurallyCloneableError {}

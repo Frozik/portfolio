@@ -162,7 +162,7 @@ export const PathSegmentsPanel = observer(({ store }: { readonly store: SitePlan
       {path.points.slice(0, -1).map((_, index) => (
         <SegmentBlock
           // The list is positional by nature: a segment IS its place in the run.
-          // biome-ignore lint/suspicious/noArrayIndexKey: segments have no identity beyond their index
+          // oxlint-disable-next-line react/no-array-index-key -- segments have no identity beyond their index
           key={index}
           store={store}
           path={path}

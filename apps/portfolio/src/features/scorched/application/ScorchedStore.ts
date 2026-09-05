@@ -32,9 +32,9 @@ import { fromDialDegrees, turnDial } from '../infrastructure/aim-dial';
 import type { ScorchedInput } from '../infrastructure/scorched-input';
 import { ScorchedRoundRef } from '../infrastructure/scorched-round-ref';
 import { OverlayStore } from './OverlayStore';
-import { ShopStore } from './ShopStore';
 import type { ScorchedSetupOptions } from './scorched-setup';
 import { createMatchOptions, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
+import { ShopStore } from './ShopStore';
 
 /** The whole player-facing flow of §13, from the roster screen to the final standings. */
 export type ScorchedGameStatus =

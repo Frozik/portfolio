@@ -35,6 +35,7 @@ const VideoTileComponent = observer(
 
     return (
       <div className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-black">
+        {/* oxlint-disable-next-line jsx-a11y/media-has-caption -- a live WebRTC stream has no caption track */}
         <video
           ref={videoRef}
           autoPlay

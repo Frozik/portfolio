@@ -1,15 +1,15 @@
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
-import { FrameTicker } from '../domain/FrameTicker';
 import {
   INITIAL_FRAME_DELTA,
   quantizedFps,
   smoothFrameDelta,
   startFrameLoop,
 } from '../domain/frame-loop';
-import { Playground } from '../domain/Playground';
+import { FrameTicker } from '../domain/FrameTicker';
 import { DEFAULT_GRAVITY } from '../domain/physics/world-gravity';
+import { Playground } from '../domain/Playground';
 import type { IFrameScheduler } from '../domain/ports/frame-scheduler';
 import type { TSubstepPolicy } from '../domain/simulation-speed';
 import type { IPoint, IRenderer } from '../domain/types';

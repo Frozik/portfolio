@@ -4,13 +4,13 @@
 pre-commit:
   parallel: true
   jobs:
-    - name: biome (staged files)
-      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css}'
-      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+    - name: oxlint (staged files)
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    - name: package.json order
-      glob: '{package.json,apps/*/package.json,libs/*/package.json}'
-      run: pnpm exec sort-package-json {staged_files}
+    - name: oxfmt (staged files)
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css,scss}'
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: source conventions
       glob: '{apps,libs}/**/*.{ts,tsx}'

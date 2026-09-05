@@ -23,7 +23,7 @@ pnpm analyze    # Production build + bundle treemap (bundle-stats.html)
 
 ## Engineering
 
-Every check is a Moon task (`moon.yml`, `apps/*/moon.yml`): Biome for lint and
+Every check is a Moon task (`moon.yml`, `apps/*/moon.yml`): oxlint and oxfmt for lint and
 format, TypeScript 7, dependency-cruiser for layer boundaries and cycles
 (`.dependency-cruiser.cjs`), knip for dead code, Vitest projects, Playwright
 smoke tests (`apps/portfolio/e2e`). Dependency versions live once in

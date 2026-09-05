@@ -17,13 +17,13 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
     async (type: WakeLockType = 'screen') => {
       const isWakeLockAlreadyDefined = wakeLock.current != null;
       if (!isSupported) {
-        // biome-ignore lint/suspicious/noConsole: intentional user-facing warning
+        // oxlint-disable-next-line no-console -- intentional user-facing warning
         return console.warn(
           "Calling the `request` function has no effect, Wake Lock Screen API isn't supported"
         );
       }
       if (isWakeLockAlreadyDefined) {
-        // biome-ignore lint/suspicious/noConsole: intentional user-facing warning
+        // oxlint-disable-next-line no-console -- intentional user-facing warning
         return console.warn('Calling `request` multiple times without `release` has no effect');
       }
 
@@ -49,14 +49,14 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
   const release = useCallback(async () => {
     const isWakeLockUndefined = wakeLock.current == null;
     if (!isSupported) {
-      // biome-ignore lint/suspicious/noConsole: intentional user-facing warning
+      // oxlint-disable-next-line no-console -- intentional user-facing warning
       return console.warn(
         "Calling the `release` function has no effect, Wake Lock Screen API isn't supported"
       );
     }
 
     if (isWakeLockUndefined) {
-      // biome-ignore lint/suspicious/noConsole: intentional user-facing warning
+      // oxlint-disable-next-line no-console -- intentional user-facing warning
       return console.warn('Calling `release` before `request` has no effect.');
     }
 

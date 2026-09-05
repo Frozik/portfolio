@@ -4,9 +4,9 @@ import type { ICommunicationClient } from '../../../shared/communication/Communi
 import type { RoomId } from '../domain/types';
 import type { IRetroIdentity } from '../infrastructure/identity-repo';
 import { createYjsRoomProviders } from '../infrastructure/yjs-providers';
+import { getRetroLobbyStore } from './retroLobbyStoreAccessor';
 import type { IRoomCreateParams } from './RoomStore';
 import { RoomStore } from './RoomStore';
-import { getRetroLobbyStore } from './retroLobbyStoreAccessor';
 import { getUserDirectoryStore } from './userDirectoryStoreAccessor';
 
 export interface IUseRoomStoreParams {

@@ -13,7 +13,13 @@ import { join, relative } from 'node:path';
 
 const MAX_LINES = 400;
 const BASELINE_PATH = '.file-size-baseline.json';
-const ROOTS = ['apps/portfolio/src', 'apps/communication/src', 'libs/utils/src', 'libs/components/src', 'libs/communication-protocol/src'];
+const ROOTS = [
+  'apps/portfolio/src',
+  'apps/communication/src',
+  'libs/utils/src',
+  'libs/components/src',
+  'libs/communication-protocol/src',
+];
 const SOURCE_FILE = /\.(ts|tsx)$/;
 const TEST_FILE = /\.test\.tsx?$/;
 const SEPARATOR_COMMENT = /^\s*\/\/\s*(?:[─═━\-=*#]{5,}|[─═━]+\s.*\s[─═━]+)\s*$/;
@@ -58,9 +64,13 @@ for (const root of ROOTS) {
     oversized[file] = length;
     const allowed = baseline[file];
     if (allowed === undefined) {
-      problems.push(`${file}: ${length} lines — new files stay under ${MAX_LINES} lines (one responsibility per module)`);
+      problems.push(
+        `${file}: ${length} lines — new files stay under ${MAX_LINES} lines (one responsibility per module)`
+      );
     } else if (length > allowed) {
-      problems.push(`${file}: grew from ${allowed} to ${length} lines — oversized files may only shrink`);
+      problems.push(
+        `${file}: grew from ${allowed} to ${length} lines — oversized files may only shrink`
+      );
     }
   }
 }
@@ -72,9 +82,13 @@ if (updateBaseline) {
   process.exit(0);
 }
 
-const shrunk = Object.entries(baseline).filter(([file, allowed]) => (oversized[file] ?? 0) < allowed);
+const shrunk = Object.entries(baseline).filter(
+  ([file, allowed]) => (oversized[file] ?? 0) < allowed
+);
 if (shrunk.length > 0) {
-  console.log(`${shrunk.length} baselined file(s) shrank — run with --update-baseline to lock in the gain:`);
+  console.log(
+    `${shrunk.length} baselined file(s) shrank — run with --update-baseline to lock in the gain:`
+  );
   for (const [file, allowed] of shrunk) {
     console.log(`  ${file}: ${allowed} → ${oversized[file] ?? '≤ ' + MAX_LINES}`);
   }

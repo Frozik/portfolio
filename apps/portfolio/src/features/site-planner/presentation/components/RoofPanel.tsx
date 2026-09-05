@@ -223,7 +223,7 @@ export const RoofPanel = observer(({ store }: { readonly store: SitePlannerStore
       {scene.roofZones.map((zone, index) => (
         <ZoneRow
           // Regions are positional by nature: a zone IS its place in the derivation.
-          // biome-ignore lint/suspicious/noArrayIndexKey: derived regions have no identity beyond their order
+          // oxlint-disable-next-line react/no-array-index-key -- derived regions have no identity beyond their order
           key={index}
           store={store}
           buildingId={buildingId}

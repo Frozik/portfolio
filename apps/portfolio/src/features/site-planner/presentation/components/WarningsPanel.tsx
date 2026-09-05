@@ -92,7 +92,7 @@ export const WarningsPanel = observer(({ store }: { readonly store: SitePlannerS
       {warnings.map((warning, index) => (
         <WarningRow
           // A finding has no identity of its own: it IS its place in the pass.
-          // biome-ignore lint/suspicious/noArrayIndexKey: derived findings are positional
+          // oxlint-disable-next-line react/no-array-index-key -- derived findings are positional
           key={index}
           store={store}
           warning={warning}

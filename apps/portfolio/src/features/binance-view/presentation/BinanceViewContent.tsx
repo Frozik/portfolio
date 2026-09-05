@@ -17,11 +17,11 @@ import {
 
 import { BinanceStatusBadge } from './BinanceStatusBadge';
 import { buildTradeHitTestPointer } from './build-trade-hit-test-pointer';
-import { HoverInfoPopup } from './HoverInfoPopup';
 import { useHoverAnchor } from './hooks/useHoverAnchor';
 import { useHoverHitTestLoop } from './hooks/useHoverHitTestLoop';
-import { InstrumentSelector } from './InstrumentSelector';
+import { HoverInfoPopup } from './HoverInfoPopup';
 import { instrumentRoute } from './instrument-route';
+import { InstrumentSelector } from './InstrumentSelector';
 import { TradeBucketPopup } from './TradeBucketPopup';
 
 interface IPointerStart {

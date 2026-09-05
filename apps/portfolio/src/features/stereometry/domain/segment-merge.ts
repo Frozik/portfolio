@@ -70,13 +70,18 @@ function extendChainForward(
   touchingSegmentIndexes: ReadonlyMap<string, readonly number[]>,
   consumed: boolean[]
 ): RenderSegment {
-  let currentChain = chain;
+  const chainEndingAt = (last: RenderSegment): RenderSegment =>
+    last === chain
+      ? chain
+      : { ...chain, endPosition: last.endPosition, endVertexIndex: last.endVertexIndex };
+
+  let last = chain;
   let guard = group.length;
 
   while (guard > 0) {
     guard -= 1;
 
-    const junctionKey = pointKey(currentChain.endPosition);
+    const junctionKey = pointKey(last.endPosition);
     const touching = touchingSegmentIndexes.get(junctionKey) ?? [];
     if (touching.length !== 2) {
       break;
@@ -92,19 +97,15 @@ function extendChainForward(
       next = flipSegment(next);
     }
 
-    if (!areChainable(currentChain, next)) {
+    if (!areChainable(chainEndingAt(last), next)) {
       break;
     }
 
     consumed[nextIndex] = true;
-    currentChain = {
-      ...currentChain,
-      endPosition: next.endPosition,
-      endVertexIndex: next.endVertexIndex,
-    };
+    last = next;
   }
 
-  return currentChain;
+  return chainEndingAt(last);
 }
 
 function mergeGroup(group: readonly RenderSegment[]): readonly RenderSegment[] {
