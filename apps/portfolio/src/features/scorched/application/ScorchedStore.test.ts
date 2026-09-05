@@ -3,8 +3,8 @@ import { random } from 'lodash-es';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MAX_TANK_HEALTH } from '../domain/constants';
-import type { ScorchedInput } from '../infrastructure/scorched-input';
-import { EMPTY_INPUT } from '../infrastructure/scorched-input';
+import type { ScorchedInput } from '../domain/scorched-input';
+import { EMPTY_INPUT } from '../domain/scorched-input';
 import { DEFAULT_ADVANCED_OPTIONS, DEFAULT_SETUP_OPTIONS } from './scorched-setup';
 import { ScorchedStore } from './ScorchedStore';
 

@@ -5,9 +5,9 @@ import { observer } from 'mobx-react-lite';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 
+import type { IPointerAimInput } from '../../application/pointer-aim-source';
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { getWeapon } from '../../domain/weapons/catalog';
-import type { IPointerAimInput } from '../../infrastructure/pointer-aim-source';
 import {
   HUD_ICON_SIZE_PX,
   STEPPER_INITIAL_REPEAT_MS,

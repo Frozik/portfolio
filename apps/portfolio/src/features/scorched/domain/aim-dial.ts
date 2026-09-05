@@ -1,7 +1,7 @@
 import { clamp } from 'lodash-es';
 
-import { MAX_ELEVATION_DEGREES, MIN_ELEVATION_DEGREES } from '../domain/constants';
-import type { AimState, TurretFacing } from '../domain/types';
+import { MAX_ELEVATION_DEGREES, MIN_ELEVATION_DEGREES } from './constants';
+import type { AimState, TurretFacing } from './types';
 
 /**
  * The domain models aim as a facing side plus a 0–90° elevation [MANUAL §5], but a player sweeps

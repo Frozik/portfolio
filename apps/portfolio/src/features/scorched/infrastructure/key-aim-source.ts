@@ -2,7 +2,7 @@ import { MS_PER_SECOND } from '@frozik/utils/date/constants';
 import { isNil } from 'lodash-es';
 
 import { isEditableEventTarget } from '../../../shared/lib/isEditableEventTarget';
-import type { IScorchedInputSource, ScorchedInput } from './scorched-input';
+import type { IScorchedInputSource, ScorchedInput } from '../domain/scorched-input';
 
 type AdjustmentAxis = 'dial' | 'power';
 

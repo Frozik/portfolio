@@ -5,11 +5,11 @@ import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
 import { ENEMIES_PER_STAGE, INITIAL_LIVES, TICKS_PER_SECOND } from '../domain/constants';
+import type { IInputSource } from '../domain/ports/input-source';
 import type { WorldEvent } from '../domain/types';
 import { TanksWorld } from '../domain/world';
 import type { IBestScoreStorage } from '../infrastructure/best-score-storage';
 import { createBestScoreStorage } from '../infrastructure/best-score-storage';
-import type { IInputSource } from '../infrastructure/key-state-source';
 import { TanksWorldRef } from '../infrastructure/tanks-world-ref';
 import type { ITouchControlInput } from '../infrastructure/touch-control-source';
 import { TouchControlSource } from '../infrastructure/touch-control-source';

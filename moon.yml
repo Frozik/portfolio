@@ -67,18 +67,12 @@ tasks:
       - 'coverage'
 
   layers:
-    command: 'depcruise --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src'
+    command: 'depcruise --config .dependency-cruiser.cjs apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src'
     inputs:
       - '@group(sources)'
       - '.dependency-cruiser.cjs'
-      - '.dependency-cruiser-known-violations.json'
     options:
       runInCI: true
-
-  layers-baseline:
-    command: 'depcruise --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src'
-    options:
-      cache: false
 
   knip:
     command: 'knip --no-progress'

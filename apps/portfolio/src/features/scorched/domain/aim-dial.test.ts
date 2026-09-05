@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AimState } from '../domain/types';
 import { fromDialDegrees, toDialDegrees, turnDial } from './aim-dial';
+import type { AimState } from './types';
 
 describe('aim dial', () => {
   it('maps a right-facing elevation onto the lower half of the dial', () => {

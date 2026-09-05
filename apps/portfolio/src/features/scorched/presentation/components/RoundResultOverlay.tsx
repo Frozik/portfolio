@@ -7,8 +7,8 @@ import { memo } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
 import type { RoundHighlight } from '../../domain/scoring';
-import { getPlayerColor } from '../../infrastructure/player-colors';
 import { GLASS_PANEL_CLASS } from '../constants';
+import { getPlayerColor } from '../player-colors';
 import { getPlayerDisplayName } from '../player-name';
 import { scorchedT } from '../translations';
 

@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 
 import type { Projectile } from '../../domain/types';
-import { getPlayerColor } from '../player-colors';
+import { getPlayerColor } from '../../presentation/player-colors';
 import type { ProjectileTrails } from '../projectile-trails';
 import {
   CONTRAIL_OLD_HALF_WIDTH_WU,

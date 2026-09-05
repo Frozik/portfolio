@@ -10,7 +10,7 @@ import {
   TICKS_PER_SECOND,
 } from '../../domain/constants';
 import type { PlayerId, ShieldState, TankState } from '../../domain/types';
-import { getPlayerColor } from '../player-colors';
+import { getPlayerColor } from '../../presentation/player-colors';
 import {
   HEALTH_BAR_GAP_WU,
   HEALTH_BAR_HEIGHT_WU,

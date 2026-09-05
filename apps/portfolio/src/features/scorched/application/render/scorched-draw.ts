@@ -5,8 +5,9 @@ import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
 import { isNil } from 'lodash-es';
 
 import { TICKS_PER_SECOND } from '../../domain/constants';
+import type { ScorchedInput } from '../../domain/scorched-input';
+import type { SkyPreset } from '../../domain/sky-presets';
 import type { NapalmPool, WorldEvent } from '../../domain/types';
-import type { AimGhost } from '../../infrastructure/aim-ghost';
 import { createTerrainCompute } from '../../infrastructure/compute/terrain-compute';
 import { TerrainOpQueue } from '../../infrastructure/compute/terrain-op-queue';
 import { LaserBeamList } from '../../infrastructure/laser-beams';
@@ -26,13 +27,12 @@ import {
 import { ProjectileTrails } from '../../infrastructure/projectile-trails';
 import { createReducedMotionWatcher } from '../../infrastructure/reduced-motion';
 import { RetreatFlightList } from '../../infrastructure/retreat-flights';
-import type { ScorchedInput } from '../../infrastructure/scorched-input';
 import type { ScorchedRoundRef } from '../../infrastructure/scorched-round-ref';
 import { createScorchedUniforms } from '../../infrastructure/scorched-uniforms';
 import { ScreenShake } from '../../infrastructure/screen-shake';
 import { createShapePipeline } from '../../infrastructure/shape-pipeline';
-import type { SkyPreset } from '../../infrastructure/sky-presets';
 import { TerrainTextureSet } from '../../infrastructure/terrain-texture';
+import type { AimGhost } from '../aim-ghost';
 
 const SECONDS_PER_TICK = 1 / TICKS_PER_SECOND;
 /** Tab-switch stalls must not be replayed: at most four ticks are caught up per frame (§4). */

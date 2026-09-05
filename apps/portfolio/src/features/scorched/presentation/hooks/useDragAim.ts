@@ -4,11 +4,11 @@ import { isNil } from 'lodash-es';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
 
+import type { AimGhost } from '../../application/aim-ghost';
+import type { IPointerAimInput } from '../../application/pointer-aim-source';
 import { FIELD_HEIGHT_WU, TANK_CENTER_OFFSET_WU } from '../../domain/constants';
-import type { AimGhost } from '../../infrastructure/aim-ghost';
-import { resolveDragAim } from '../../infrastructure/drag-aim';
-import type { IPointerAimInput } from '../../infrastructure/pointer-aim-source';
-import { toWorldPosition } from '../../infrastructure/view-transform';
+import { resolveDragAim } from '../../domain/drag-aim';
+import { toWorldPosition } from '../../domain/view-transform';
 
 export interface DragAimHandlers {
   onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>): void;

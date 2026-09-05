@@ -2,11 +2,11 @@ import { SCENE_BACKGROUND_COLOR } from '@frozik/utils/webgpu/backgroundColor';
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 
+import type { SkyPreset } from '../../domain/sky-presets';
 import { FIELD_QUAD_VERTEX_COUNT } from '../render-constants';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import fieldQuadShaderSource from '../shaders/field-quad.wgsl?raw';
 import skyShaderSource from '../shaders/sky.wgsl?raw';
-import type { SkyPreset } from '../sky-presets';
 
 const skySource = commonShaderSource + fieldQuadShaderSource + skyShaderSource;
 

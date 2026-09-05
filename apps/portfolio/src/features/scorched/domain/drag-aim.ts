@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
-import { MIN_POWER } from '../domain/constants';
 import { MAX_DIAL_DEGREES, MIN_DIAL_DEGREES } from './aim-dial';
+import { MIN_POWER } from './constants';
 import type { DragAim } from './scorched-input';
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;

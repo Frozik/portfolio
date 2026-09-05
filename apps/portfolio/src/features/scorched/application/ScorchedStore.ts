@@ -5,11 +5,13 @@ import { createMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
+import { fromDialDegrees, turnDial } from '../domain/aim-dial';
 import { getMaxPower } from '../domain/ballistics';
 import { MAX_POWER, MIN_PLAYER_COUNT, PLASMA_MIN_BATTERIES } from '../domain/constants';
 import type { MatchPlayerState } from '../domain/match';
 import { ScorchedMatch } from '../domain/match';
 import type { ScorchedRound } from '../domain/round';
+import type { ScorchedInput } from '../domain/scorched-input';
 import type { MatchStanding, RoundHighlight } from '../domain/scoring';
 import { findBiggestHit, findTopDamageDealer } from '../domain/scoring';
 import { getTankCenter } from '../domain/tank-geometry';
@@ -28,8 +30,6 @@ import type {
 } from '../domain/types';
 import { getFallbackWeaponId, getWeapon, WEAPONS } from '../domain/weapons/catalog';
 import { AiTurnDriver } from '../infrastructure/ai-turn-driver';
-import { fromDialDegrees, turnDial } from '../infrastructure/aim-dial';
-import type { ScorchedInput } from '../infrastructure/scorched-input';
 import { ScorchedRoundRef } from '../infrastructure/scorched-round-ref';
 import { OverlayStore } from './OverlayStore';
 import type { ScorchedSetupOptions } from './scorched-setup';

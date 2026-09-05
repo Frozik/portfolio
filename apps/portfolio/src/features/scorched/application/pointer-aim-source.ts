@@ -1,4 +1,4 @@
-import type { DragAim, IScorchedInputSource, ScorchedInput } from './scorched-input';
+import type { DragAim, IScorchedInputSource, ScorchedInput } from '../domain/scorched-input';
 
 /** The write end the touch overlay and the canvas drag handler push into. */
 export interface IPointerAimInput {

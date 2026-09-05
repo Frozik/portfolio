@@ -1,6 +1,6 @@
-import type { DialAim } from '../aim-dial';
-import { toDialDegrees } from '../aim-dial';
-import type { PlayerColor } from '../player-colors';
+import type { DialAim } from '../../domain/aim-dial';
+import { toDialDegrees } from '../../domain/aim-dial';
+import type { PlayerColor } from '../../presentation/player-colors';
 import type { ShapeInstance } from '../shape-instances';
 import { SHAPE_KIND } from '../shape-instances';
 

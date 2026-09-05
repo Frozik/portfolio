@@ -1,14 +1,9 @@
 import { isNil } from 'lodash-es';
 
 import { isEditableEventTarget } from '../../../shared/lib/isEditableEventTarget';
+import type { IInputSource } from '../domain/ports/input-source';
 import type { Direction, PlayerInputs } from '../domain/types';
 import { FireRepeater } from './fire-repeat';
-
-/** Polled exactly once per simulated tick (§12.1). */
-export interface IInputSource {
-  read(): PlayerInputs;
-  dispose(): void;
-}
 
 const DIRECTION_BY_KEY_CODE: Readonly<Record<string, Direction>> = {
   ArrowUp: 'up',

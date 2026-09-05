@@ -4,9 +4,9 @@ import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 
 import { FIELD_HEIGHT_WU, FIELD_WIDTH_WU } from '../domain/constants';
+import { computeViewTransform } from '../domain/view-transform';
 import { MAX_SHAKE_AMPLITUDE_WU } from './render-constants';
 import commonShaderSource from './shaders/common.wgsl?raw';
-import { computeViewTransform } from './view-transform';
 
 /** Clip space spans -1..1, so a canvas maps onto two clip units per axis. */
 const CLIP_SPACE_SPAN = 2;

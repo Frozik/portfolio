@@ -12,6 +12,7 @@ import { Button } from '../../../shared/ui/Button';
 import { Drawer } from '../../../shared/ui/Drawer';
 import type { SitePlannerStore } from '../application/SitePlannerStore';
 import { useSitePlannerStore } from '../application/useSitePlannerStore';
+import { attachPlanPointerInput } from '../infrastructure/plan-pointer-input';
 import { ClearSiteButton } from './components/ClearSiteButton';
 import { ExportMenu } from './components/ExportMenu';
 import { HistoryControls } from './components/HistoryControls';
@@ -51,7 +52,7 @@ const PlanWorkspace = memo(
     <>
       <div className={cn('flex min-h-0 flex-1 gap-3', isCompact && 'flex-col')}>
         <ToolPalette store={store} orientation={isCompact ? 'horizontal' : 'vertical'} />
-        <PlanCanvas store={store} />
+        <PlanCanvas store={store} attachPointerInput={attachPlanPointerInput} />
         {isCompact ? undefined : (
           <aside className="flex w-66 shrink-0 flex-col gap-2.5 overflow-y-auto">
             <PlanSidePanels store={store} />

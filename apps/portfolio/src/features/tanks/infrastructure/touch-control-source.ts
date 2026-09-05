@@ -1,6 +1,6 @@
+import type { IInputSource } from '../domain/ports/input-source';
 import type { Direction, PlayerInputs } from '../domain/types';
 import { FireRepeater } from './fire-repeat';
-import type { IInputSource } from './key-state-source';
 
 /** What the `TouchControls` overlay writes into; the source itself never touches the DOM. */
 export interface ITouchControlInput {

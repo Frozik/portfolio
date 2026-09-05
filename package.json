@@ -16,7 +16,6 @@
     "format-check": "moon run root:format-check",
     "knip": "moon run root:knip",
     "layers": "moon run root:layers",
-    "layers:baseline": "moon run root:layers-baseline",
     "lighthouse": "moon run portfolio:lighthouse",
     "lint": "moon run root:lint",
     "lint-fix": "moon run root:lint-fix",

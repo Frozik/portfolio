@@ -9,8 +9,8 @@ import {
   TANK_HEIGHT_WU,
   TAUNT_VISIBLE_SECONDS,
 } from '../../domain/constants';
-import { getPlayerColor } from '../../infrastructure/player-colors';
-import { toScreenPosition } from '../../infrastructure/view-transform';
+import { toScreenPosition } from '../../domain/view-transform';
+import { getPlayerColor } from '../player-colors';
 import { scorchedT } from '../translations';
 
 /** How far above a tank its speech bubble floats, in world units. */

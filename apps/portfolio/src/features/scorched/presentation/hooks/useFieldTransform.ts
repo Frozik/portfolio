@@ -4,7 +4,7 @@ import type { RefObject } from 'react';
 import { useEffect, useState } from 'react';
 
 import { FIELD_HEIGHT_WU, FIELD_WIDTH_WU } from '../../domain/constants';
-import { computeViewTransform } from '../../infrastructure/view-transform';
+import { computeViewTransform } from '../../domain/view-transform';
 
 const NO_TRANSFORM: LetterboxTransform = { scale: 0, originX: 0, originY: 0 };
 

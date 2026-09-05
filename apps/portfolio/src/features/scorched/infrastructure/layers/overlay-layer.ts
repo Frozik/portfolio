@@ -1,12 +1,12 @@
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
+import type { AimGhost } from '../../application/aim-ghost';
 import { createEnvironment, getLaunchOrigin } from '../../domain/ballistics';
 import { LASER_BEAM_HALF_WIDTH_WU } from '../../domain/constants';
-import type { AimGhost } from '../aim-ghost';
+import { getPlayerColor } from '../../presentation/player-colors';
 import { sampleGhostTrajectory } from '../ghost-trajectory';
 import type { LaserBeamList } from '../laser-beams';
-import { getPlayerColor } from '../player-colors';
 import {
   GHOST_DOT_RADIUS_WU,
   MAX_OVERLAY_SHAPE_INSTANCES,

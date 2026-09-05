@@ -3,6 +3,7 @@ import { clamp } from 'lodash-es';
 import { selectAiWeapon } from '../domain/ai/loadout';
 import type { AiContext, AiTankView, DisclosedPersonality } from '../domain/ai/personalities';
 import { decideAim, resolveUnknownPersonality, selectTarget } from '../domain/ai/personalities';
+import { fromDialDegrees, toDialDegrees } from '../domain/aim-dial';
 import { createEnvironment, getMaxPower } from '../domain/ballistics';
 import {
   AI_AIM_EPSILON,
@@ -14,7 +15,6 @@ import {
 import { selectBestShieldItem } from '../domain/items';
 import type { ScorchedRound } from '../domain/round';
 import type { AimState, AiPersonality, ItemId, PlayerId, WeaponId } from '../domain/types';
-import { fromDialDegrees, toDialDegrees } from './aim-dial';
 
 /** What the store should do with the AI's turn this frame. */
 export interface AiTurnStep {

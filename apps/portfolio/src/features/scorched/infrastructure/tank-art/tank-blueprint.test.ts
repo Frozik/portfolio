@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getPlayerColor } from '../player-colors';
+import { getPlayerColor } from '../../presentation/player-colors';
 import { SHAPES_PER_TANK } from '../render-constants';
 import type { ITankBlueprint, ITankPose } from './tank-blueprint';
 import { buildTankShapes } from './tank-blueprint';

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { mergePlayerInputs } from '../domain/merge-player-inputs';
 import { FIRE_REPEAT_TICKS } from './fire-repeat';
-import { mergePlayerInputs } from './merge-player-inputs';
 import { TouchControlSource } from './touch-control-source';
 
 describe('TouchControlSource', () => {
