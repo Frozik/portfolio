@@ -1,134 +1,190 @@
 import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from '@frozik/utils/date/boundaries';
 import type { EDayType } from '@frozik/utils/date/constants';
 import { DAYS_IN_WEEK, EDayType as DayType, EDayOfWeek } from '@frozik/utils/date/constants';
-import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
-import { EMPTY_VD, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import type { ReactNode } from 'react';
-import { memo, useMemo } from 'react';
+import type { KeyboardEvent } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { Temporal } from 'temporal-polyfill';
-import { cn } from '../../cn';
 
-import { getCalendarAriaLabels } from '../translations/translations';
+import { useFunction } from '../../../hooks/useFunction';
+import { clampDate, moveActiveDate } from '../calendar-keys';
+import type { TLeaveDirection } from '../defs';
+import styles from '../styles.module.scss';
 import { DayCell } from './DayCell';
+import { defaultStartOfWeek } from './week-info';
+
+interface IGridDay {
+  readonly date: Temporal.PlainDate;
+  readonly weekend: boolean;
+  readonly overflow: boolean;
+}
 
 function defaultGetDayInfo(date: Temporal.PlainDate): EDayType {
-  if (date.dayOfWeek === EDayOfWeek.Saturday || date.dayOfWeek === EDayOfWeek.Sunday) {
-    return DayType.Weekend;
-  }
-  return DayType.Business;
+  return date.dayOfWeek === EDayOfWeek.Saturday || date.dayOfWeek === EDayOfWeek.Sunday
+    ? DayType.Weekend
+    : DayType.Business;
+}
+
+function isSameDate(left: Temporal.PlainDate, right: Temporal.PlainDate | undefined): boolean {
+  return !isNil(right) && Temporal.PlainDate.compare(left, right) === 0;
 }
 
 export const DateSelector = memo(
   ({
     yearMonth,
-    today = EMPTY_VD,
+    today,
     getDayInfo = defaultGetDayInfo,
-    startOfWeek = EDayOfWeek.Monday,
+    startOfWeek,
     selectedDate,
+    activeDate,
+    focusRequest,
     minDate,
     maxDate,
     onSelectCalendarDate,
-    language,
+    onActiveDateChange,
+    onLeave,
+    onReturnToField,
+    locale,
+    label,
   }: {
-    yearMonth: Temporal.PlainYearMonth;
-    selectedDate?: Temporal.PlainDate;
-    today?: ValueDescriptor<Temporal.PlainDate>;
-    getDayInfo?: (date: Temporal.PlainDate) => EDayType;
-    startOfWeek?: EDayOfWeek;
-    minDate?: Temporal.PlainDate;
-    maxDate?: Temporal.PlainDate;
-    onSelectCalendarDate?: (date: Temporal.PlainDate) => void;
-    language: string;
+    readonly yearMonth: Temporal.PlainYearMonth;
+    readonly today: Temporal.PlainDate;
+    readonly getDayInfo?: (date: Temporal.PlainDate) => EDayType;
+    readonly startOfWeek?: EDayOfWeek;
+    readonly selectedDate?: Temporal.PlainDate;
+    /** The cell the keyboard lands on; always inside the shown month and range. */
+    readonly activeDate: Temporal.PlainDate;
+    /** Bumped by the owner to move the keyboard into the grid. */
+    readonly focusRequest: number;
+    readonly minDate?: Temporal.PlainDate;
+    readonly maxDate?: Temporal.PlainDate;
+    readonly onSelectCalendarDate: (date: Temporal.PlainDate) => void;
+    readonly onActiveDateChange: (date: Temporal.PlainDate) => void;
+    readonly onLeave: (direction: TLeaveDirection) => void;
+    readonly onReturnToField: () => void;
+    readonly locale: string;
+    readonly label: string;
   }) => {
-    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
+    const firstDayOfWeek = startOfWeek ?? defaultStartOfWeek(locale);
+    const activeCellRef = useRef<HTMLButtonElement>(null);
+    const followActiveCellRef = useRef(false);
 
-    const dateGrid = useMemo(() => {
-      const startOfMonth = getStartOfMonth(yearMonth);
+    const firstVisibleDate = useMemo(
+      () => getStartOfWeek(getStartOfMonth(yearMonth), firstDayOfWeek),
+      [yearMonth, firstDayOfWeek]
+    );
+
+    // Day types and range bounds change rarely; selection and today are cheap per-cell checks.
+    const days = useMemo((): readonly IGridDay[] => {
       const endOfMonth = getEndOfMonth(yearMonth);
-      const startOfViewPort = getStartOfWeek(startOfMonth, startOfWeek);
+      const grid: IGridDay[] = [];
 
-      const dateGrid: {
-        date: Temporal.PlainDate;
-        weekend: boolean;
-        today: boolean;
-        selected: boolean;
-        overflow: boolean;
-      }[][] = [];
-
-      let currentDate = startOfViewPort;
-
-      while (Temporal.PlainDate.compare(currentDate, endOfMonth) <= 0) {
-        const dateGridRow: Temporal.PlainDate[] = [];
-
-        for (let index = 0; index < DAYS_IN_WEEK; index++) {
-          dateGridRow.push(currentDate.add({ days: index }));
-        }
-
-        currentDate = currentDate.add({ days: DAYS_IN_WEEK });
-
-        dateGrid.push(
-          dateGridRow.map(date => {
-            const dayType = getDayInfo(date);
-
-            return {
-              date,
-              weekend: dayType === DayType.Weekend || dayType === DayType.Holiday,
-              today: matchValueDescriptor(today, {
-                synced: ({ value }) => Temporal.PlainDate.compare(date, value) === 0,
-                unsynced: () => false,
-              }),
-              selected:
-                !isNil(selectedDate) && Temporal.PlainDate.compare(date, selectedDate) === 0,
-              overflow:
-                Temporal.PlainYearMonth.compare(date, yearMonth) !== 0 ||
-                (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) ||
-                (!isNil(maxDate) && Temporal.PlainDate.compare(date, maxDate) > 0),
-            };
-          })
-        );
+      for (
+        let date = firstVisibleDate;
+        Temporal.PlainDate.compare(date, endOfMonth) <= 0;
+        date = date.add({ days: 1 })
+      ) {
+        const dayType = getDayInfo(date);
+        grid.push({
+          date,
+          weekend: dayType === DayType.Weekend || dayType === DayType.Holiday,
+          overflow:
+            Temporal.PlainYearMonth.compare(date, yearMonth) !== 0 ||
+            (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) ||
+            (!isNil(maxDate) && Temporal.PlainDate.compare(date, maxDate) > 0),
+        });
       }
 
-      return dateGrid;
-    }, [yearMonth, startOfWeek, getDayInfo, today, selectedDate, minDate, maxDate]);
+      return grid;
+    }, [yearMonth, firstVisibleDate, getDayInfo, minDate, maxDate]);
 
-    const header = useMemo(() => {
-      const header: ReactNode[] = [];
+    const weekdays = useMemo(
+      () =>
+        Array.from({ length: DAYS_IN_WEEK }, (_, index) => {
+          const date = firstVisibleDate.add({ days: index });
+          return {
+            key: date.dayOfWeek,
+            short: date.toLocaleString(locale, { weekday: 'short' }),
+            long: date.toLocaleString(locale, { weekday: 'long' }),
+          };
+        }),
+      [firstVisibleDate, locale]
+    );
 
-      for (let index = 0; index < DAYS_IN_WEEK; index++) {
-        const dayIndex = (startOfWeek - 1 + index) % DAYS_IN_WEEK;
-        header.push(
-          <abbr
-            key={index}
-            className={cn(
-              'flex size-7 items-center justify-center font-mono text-[10px] font-semibold tracking-[0.08em] text-[var(--color-landing-fg-faint,#76819a)] uppercase',
-              'pointer-events-none no-underline'
-            )}
-            title={ariaLabels.dayNames[dayIndex]}
-          >
-            {ariaLabels.dayNamesShort[dayIndex]}
-          </abbr>
-        );
+    useEffect(() => {
+      if (focusRequest > 0) {
+        activeCellRef.current?.focus();
+      }
+    }, [focusRequest]);
+
+    // A key moved the active cell; the keyboard follows it once it is rendered.
+    useEffect(() => {
+      if (followActiveCellRef.current) {
+        followActiveCellRef.current = false;
+        activeCellRef.current?.focus();
+      }
+    });
+
+    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        onLeave(event.shiftKey ? 'backward' : 'forward');
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onReturnToField();
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelectCalendarDate(activeDate);
+        onReturnToField();
+        return;
       }
 
-      return header;
-    }, [startOfWeek, ariaLabels]);
+      const moved = moveActiveDate(activeDate, event.key, event.shiftKey, firstDayOfWeek);
+      if (isNil(moved)) {
+        return;
+      }
+      event.preventDefault();
+      const next = clampDate(moved, minDate, maxDate);
+      if (!isSameDate(next, activeDate)) {
+        followActiveCellRef.current = true;
+        onActiveDateChange(next);
+      }
+    });
 
     return (
-      <div className="grid grid-cols-7 gap-1 p-1 justify-items-center">
-        {header}
-        {dateGrid.map((row, rowIndex) =>
-          row.map((cell, colIndex) => (
+      // biome-ignore lint/a11y/useSemanticElements: the grid is a group of day buttons with one roving tab stop, not a data table
+      <div
+        role="group"
+        aria-label={label}
+        className={styles.calendarGrid}
+        onKeyDown={handleKeyDown}
+      >
+        {weekdays.map(weekday => (
+          <abbr key={weekday.key} className={styles.weekday} title={weekday.long}>
+            {weekday.short}
+          </abbr>
+        ))}
+        {days.map(day => {
+          const active = isSameDate(day.date, activeDate);
+          return (
             <DayCell
-              key={cell.date.toString()}
-              cell={cell}
-              gridColumn={colIndex + 1}
-              gridRow={rowIndex + 2}
-              onSelectCalendarDate={onSelectCalendarDate}
-              monthNames={ariaLabels.monthNames}
+              key={day.date.toString()}
+              ref={active ? activeCellRef : undefined}
+              date={day.date}
+              weekend={day.weekend}
+              overflow={day.overflow}
+              today={isSameDate(day.date, today)}
+              selected={isSameDate(day.date, selectedDate)}
+              active={active}
+              onSelect={onSelectCalendarDate}
+              locale={locale}
             />
-          ))
-        )}
+          );
+        })}
       </div>
     );
   }

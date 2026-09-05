@@ -2,11 +2,16 @@ import { memo, useRef, useState } from 'react';
 import { useAmbientCanvas } from '../../../../../shared/hooks/useAmbientCanvas';
 import { createHeroOrderbookAnimation } from './hero-orderbook-animation';
 
+/** Enough density for the 10 px tape text to stay crisp; the heatmap cells need none. */
+const MAX_DPR = 1.5;
+/** The book scrolls one column every 220 ms — 30 fps is already smooth for it. */
+const TARGET_FPS = 30;
+
 export const HeroOrderbook = memo(() => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [animation] = useState(createHeroOrderbookAnimation);
 
-  useAmbientCanvas(canvasRef, animation);
+  useAmbientCanvas(canvasRef, { ...animation, maxDpr: MAX_DPR, targetFps: TARGET_FPS });
 
   return (
     <canvas

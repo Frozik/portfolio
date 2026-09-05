@@ -11,6 +11,10 @@ import { SleepingZzz } from '../common/SleepingZzz';
 import { ContactList } from '../contacts/ContactList';
 import { DownloadCvButton } from './DownloadCvButton';
 
+/** Intrinsic size of `assets/avatar.*`; the square container scales it, the attributes only fix the aspect ratio. */
+const AVATAR_SOURCE_WIDTH_PX = 520;
+const AVATAR_SOURCE_HEIGHT_PX = 518;
+
 const AboutComponent = () => {
   const { isAwake } = useAvailability();
 
@@ -41,6 +45,10 @@ const AboutComponent = () => {
                 <img
                   src={avatarPngUrl}
                   alt={welcomeT.hero.name}
+                  width={AVATAR_SOURCE_WIDTH_PX}
+                  height={AVATAR_SOURCE_HEIGHT_PX}
+                  loading="lazy"
+                  decoding="async"
                   className="block h-full w-full object-cover"
                 />
               </picture>

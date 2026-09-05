@@ -1,7 +1,12 @@
+import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
 import type {
   IAmbientCanvasAnimation,
   IAmbientCanvasFrame,
+  IAmbientCanvasResize,
 } from '../../shared/hooks/useAmbientCanvas';
+import type { TRgb } from '../../shared/lib/cssRgbToken';
+import { readCssRgbToken } from '../../shared/lib/cssRgbToken';
 
 /**
  * App-wide ambient backdrop — two drifting radial gradients (one tracking the
@@ -15,9 +20,14 @@ const GRID_DRIFT_PX_PER_SEC = 4;
 const RADIAL_1_ALPHA = 0.18;
 const RADIAL_2_ALPHA = 0.12;
 const GRID_ALPHA = 0.035;
-const DEFAULT_ACCENT_RGB: readonly [number, number, number] = [96, 165, 250];
-const HEX_COLOR_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-const HEX_RADIX = 16;
+/**
+ * The two full-screen gradient fills were most of the frame cost. They are
+ * smooth by nature, so they are painted into a layer this many times smaller
+ * per side and scaled up by `drawImage` — indistinguishable on screen.
+ */
+const GLOW_LAYER_DOWNSCALE = 8;
+const ACCENT_TOKEN = '--color-landing-accent';
+const DEFAULT_ACCENT_RGB: TRgb = [96, 165, 250];
 const MOUSE_DEFAULT = { x: 0.5, y: 0.5 };
 const CENTER = 0.5;
 const RADIAL_1_CENTER_X_BASE = 0.3;
@@ -73,26 +83,6 @@ export interface IBackgroundCanvasAnimation extends IAmbientCanvasAnimation {
   readonly setPointer: (xNorm: number, yNorm: number) => void;
 }
 
-function parseAccent(raw: string): readonly [number, number, number] {
-  const match = raw.trim().match(HEX_COLOR_PATTERN);
-  if (!match) {
-    return DEFAULT_ACCENT_RGB;
-  }
-  return [
-    Number.parseInt(match[1], HEX_RADIX),
-    Number.parseInt(match[2], HEX_RADIX),
-    Number.parseInt(match[3], HEX_RADIX),
-  ];
-}
-
-function readAccentRgb(): readonly [number, number, number] {
-  if (typeof window === 'undefined') {
-    return DEFAULT_ACCENT_RGB;
-  }
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--color-landing-accent');
-  return parseAccent(raw);
-}
-
 function createParticles(): IParticle[] {
   return Array.from({ length: PARTICLE_COUNT }, () => ({
     x: Math.random(),
@@ -104,19 +94,27 @@ function createParticles(): IParticle[] {
   }));
 }
 
-interface IDrawParams {
+interface IGlowLayer {
+  readonly canvas: HTMLCanvasElement;
   readonly context: CanvasRenderingContext2D;
-  readonly width: number;
-  readonly height: number;
-  readonly dpr: number;
-  readonly elapsedSeconds: number;
-  readonly accent: readonly [number, number, number];
-  readonly mouse: IMousePosition;
-  readonly particles: IParticle[];
 }
 
-function drawFrame(params: IDrawParams): void {
-  const { context, width, height, dpr, elapsedSeconds, accent, mouse, particles } = params;
+function createGlowLayer(): IGlowLayer {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  assert(!isNil(context), 'background canvas: 2D context unavailable for the glow layer');
+  return { canvas, context };
+}
+
+/** Paints both drifting gradients into the (downscaled) glow layer, in layer pixels. */
+function paintGlow(
+  layer: IGlowLayer,
+  elapsedSeconds: number,
+  accent: TRgb,
+  mouse: IMousePosition
+): void {
+  const { context } = layer;
+  const { width, height } = layer.canvas;
   const [accentR, accentG, accentB] = accent;
 
   context.clearRect(0, 0, width, height);
@@ -150,23 +148,55 @@ function drawFrame(params: IDrawParams): void {
   g2.addColorStop(1, 'rgba(0,0,0,0)');
   context.fillStyle = g2;
   context.fillRect(0, 0, width, height);
+}
 
+function paintGrid(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  dpr: number,
+  elapsedSeconds: number,
+  accent: TRgb
+): void {
+  const [accentR, accentG, accentB] = accent;
   context.strokeStyle = `rgba(${accentR},${accentG},${accentB},${GRID_ALPHA})`;
   context.lineWidth = dpr;
   const gridSize = GRID_SIZE_PX * dpr;
   const gridOffset = (-elapsedSeconds * GRID_DRIFT_PX_PER_SEC) % gridSize;
+  context.beginPath();
   for (let x = gridOffset; x < width; x += gridSize) {
-    context.beginPath();
     context.moveTo(x, 0);
     context.lineTo(x, height);
-    context.stroke();
   }
   for (let y = gridOffset; y < height; y += gridSize) {
-    context.beginPath();
     context.moveTo(0, y);
     context.lineTo(width, y);
-    context.stroke();
   }
+  context.stroke();
+}
+
+interface IDrawParams {
+  readonly context: CanvasRenderingContext2D;
+  readonly glow: IGlowLayer;
+  readonly width: number;
+  readonly height: number;
+  readonly dpr: number;
+  readonly elapsedSeconds: number;
+  readonly accent: TRgb;
+  readonly mouse: IMousePosition;
+  readonly particles: IParticle[];
+}
+
+function drawFrame(params: IDrawParams): void {
+  const { context, glow, width, height, dpr, elapsedSeconds, accent, mouse, particles } = params;
+  const [accentR, accentG, accentB] = accent;
+
+  context.clearRect(0, 0, width, height);
+
+  paintGlow(glow, elapsedSeconds, accent, mouse);
+  context.drawImage(glow.canvas, 0, 0, width, height);
+
+  paintGrid(context, width, height, dpr, elapsedSeconds, accent);
 
   for (const particle of particles) {
     particle.y -= particle.vy * PARTICLE_DRIFT_SCALE;
@@ -192,23 +222,27 @@ function drawFrame(params: IDrawParams): void {
 
 export function createBackgroundCanvasAnimation(): IBackgroundCanvasAnimation {
   let particles: IParticle[] = [];
-  let accent: readonly [number, number, number] = DEFAULT_ACCENT_RGB;
+  let accent: TRgb = DEFAULT_ACCENT_RGB;
+  let glow: IGlowLayer | undefined;
   const mouse: IMousePosition = { ...MOUSE_DEFAULT };
 
   return {
-    onResize(): void {
-      // Particles draw in backing-store pixels (manual `* dpr`), so the context
-      // stays at identity. Accent is size-independent but was previously read
-      // every frame — cache it here instead. Particles are created once.
-      accent = readAccentRgb();
+    /** Particles draw in backing-store pixels (manual `* dpr`), so the context stays at identity. */
+    onResize({ cssWidth, cssHeight, dpr }: IAmbientCanvasResize): void {
+      accent = readCssRgbToken(ACCENT_TOKEN, DEFAULT_ACCENT_RGB);
       if (particles.length === 0) {
         particles = createParticles();
       }
+      glow ??= createGlowLayer();
+      glow.canvas.width = Math.max(1, Math.ceil((cssWidth * dpr) / GLOW_LAYER_DOWNSCALE));
+      glow.canvas.height = Math.max(1, Math.ceil((cssHeight * dpr) / GLOW_LAYER_DOWNSCALE));
     },
 
     draw(frame: IAmbientCanvasFrame): void {
+      assert(!isNil(glow), 'background canvas: onResize runs before the first draw');
       drawFrame({
         context: frame.ctx,
+        glow,
         width: frame.cssWidth * frame.dpr,
         height: frame.cssHeight * frame.dpr,
         dpr: frame.dpr,

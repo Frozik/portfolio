@@ -72,7 +72,7 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
           showTime={false}
           today={today}
           placeholder={sitePlannerT.sun.date}
-          language={getCurrentLanguage()}
+          locale={getCurrentLanguage()}
         />
       </fieldset>
 

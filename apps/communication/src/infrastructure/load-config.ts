@@ -1,4 +1,3 @@
-import config from 'config';
 import type { IServerConfig } from '../application/config/server-config-schema';
 import { ServerConfigSchema } from '../application/config/server-config-schema';
 
@@ -138,7 +137,10 @@ export function loadConfigFromObject(
 
 // Live config loader. The ONLY place in the codebase that reads from
 // `node-config`. Triggers M2 / M8 / M21 cross-section validation.
-export function loadConfig(): IServerConfig {
+// `node-config` scans `NODE_CONFIG_DIR` (or `./config`) the moment it is
+// imported, so it is loaded here rather than at module top — importing this
+// module for `loadConfigFromObject` (tests, tooling) must stay side-effect free.
+export async function loadConfig(): Promise<IServerConfig> {
   const nodeConfigEnv = process.env.NODE_CONFIG_ENV;
   const nodeEnv = process.env.NODE_ENV;
 
@@ -153,6 +155,7 @@ export function loadConfig(): IServerConfig {
     ]);
   }
 
+  const { default: config } = await import('config');
   const nodeConfig = config as unknown as NodeConfigShape;
   const raw = nodeConfig.util.toObject();
 

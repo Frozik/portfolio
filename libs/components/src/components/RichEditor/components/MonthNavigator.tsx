@@ -1,75 +1,63 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
-import { getCalendarAriaLabels } from '../translations/translations';
+import type { ICalendarAriaLabels } from '../defs';
+import styles from '../styles.module.scss';
 
 export const MonthNavigator = memo(
   ({
     yearMonth,
     onYearMonthChange,
-    className,
-    buttonClassName,
-    labelClassName,
-    language,
+    locale,
+    ariaLabels,
   }: {
-    yearMonth: Temporal.PlainYearMonth;
-    onYearMonthChange: (yearMonth: Temporal.PlainYearMonth) => void;
-    className: string;
-    buttonClassName: string;
-    labelClassName: string;
-    language: string;
+    readonly yearMonth: Temporal.PlainYearMonth;
+    readonly onYearMonthChange: (yearMonth: Temporal.PlainYearMonth) => void;
+    readonly locale: string;
+    readonly ariaLabels: ICalendarAriaLabels;
   }) => {
-    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
+    // Year-month formatting insists on a matching calendar; a date does not.
+    const label = yearMonth
+      .toPlainDate({ day: 1 })
+      .toLocaleString(locale, { month: 'long', year: 'numeric' });
 
-    const label = useMemo(
-      () => `${ariaLabels.monthNames[yearMonth.month - 1]} ${yearMonth.year}`,
-      [yearMonth, ariaLabels.monthNames]
+    const handlePreviousYear = useFunction(() =>
+      onYearMonthChange(yearMonth.subtract({ years: 1 }))
     );
-
-    const handlePrevMonth = useFunction(() => {
-      onYearMonthChange(yearMonth.subtract({ months: 1 }));
-    });
-
-    const handleNextMonth = useFunction(() => {
-      onYearMonthChange(yearMonth.add({ months: 1 }));
-    });
-
-    const handlePrevYear = useFunction(() => {
-      onYearMonthChange(yearMonth.subtract({ years: 1 }));
-    });
-
-    const handleNextYear = useFunction(() => {
-      onYearMonthChange(yearMonth.add({ years: 1 }));
-    });
+    const handlePreviousMonth = useFunction(() =>
+      onYearMonthChange(yearMonth.subtract({ months: 1 }))
+    );
+    const handleNextMonth = useFunction(() => onYearMonthChange(yearMonth.add({ months: 1 })));
+    const handleNextYear = useFunction(() => onYearMonthChange(yearMonth.add({ years: 1 })));
 
     return (
-      <fieldset className={className} aria-label={ariaLabels.monthNavigation}>
+      <fieldset className={styles.monthNavigator} aria-label={ariaLabels.monthNavigation}>
         <div>
           <button
             type="button"
-            className={buttonClassName}
-            onClick={handlePrevYear}
+            className={styles.monthNavigatorBtn}
+            onClick={handlePreviousYear}
             aria-label={ariaLabels.previousYear}
           >
             {'<<'}
           </button>
           <button
             type="button"
-            className={buttonClassName}
-            onClick={handlePrevMonth}
+            className={styles.monthNavigatorBtn}
+            onClick={handlePreviousMonth}
             aria-label={ariaLabels.previousMonth}
           >
             {'<'}
           </button>
         </div>
-        <span className={labelClassName} aria-live="polite" aria-atomic="true">
+        <span className={styles.monthNavigatorLabel} aria-live="polite" aria-atomic="true">
           {label}
         </span>
         <div>
           <button
             type="button"
-            className={buttonClassName}
+            className={styles.monthNavigatorBtn}
             onClick={handleNextMonth}
             aria-label={ariaLabels.nextMonth}
           >
@@ -77,7 +65,7 @@ export const MonthNavigator = memo(
           </button>
           <button
             type="button"
-            className={buttonClassName}
+            className={styles.monthNavigatorBtn}
             onClick={handleNextYear}
             aria-label={ariaLabels.nextYear}
           >

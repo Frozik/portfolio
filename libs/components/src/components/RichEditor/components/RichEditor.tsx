@@ -1,306 +1,308 @@
-import { isEmpty, isNil } from 'lodash-es';
-import type { FormEvent, KeyboardEvent } from 'react';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { isEqual, isNil } from 'lodash-es';
+import type { CompositionEvent, KeyboardEvent, PointerEvent, Ref } from 'react';
+import {
+  memo,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useFunction } from '../../../hooks/useFunction';
 import { cn } from '../../cn';
-import type { ISelection } from '../defs';
+import type {
+  INormalizedInput,
+  IRichEditorHandle,
+  ISelection,
+  THtmlRenderer,
+  TInputNormalizer,
+} from '../defs';
+import { findNextTabStop } from '../focus-navigation';
+import { getElementSelection, rangeToSelection, setElementSelection } from '../selection';
 import styles from '../styles.module.scss';
-import {
-  findNextTabStop,
-  getElementSelection,
-  inputElementSelectionWithValue,
-  inputTextToHtml,
-  isParentOf,
-  setElementSelection,
-} from '../utils';
+import { applyTextEdit, readInputData, textEditFromInput, toSingleLine } from '../text-edit';
 
-/**
- * Strip every tag from a contenteditable HTML fragment, returning the
- * plain text the user has typed / pasted. Replaces the previous
- * `sanitize-html` call with a native DOMParser — sanitize-html ships
- * `postcss` for style sanitisation, which in the browser pulls in
- * `path` / `fs` / `url` / `source-map-js` Node built-ins and fills
- * the dev console with "has been externalized for browser
- * compatibility" warnings on every page load.
- *
- * DOMParser runs in an inert document: script / event-handler side
- * effects do not fire at parse time. We still explicitly remove
- * `<script>`, `<style>`, `<noscript>` and `<iframe>` before reading
- * `textContent` so their character payloads don't leak into the
- * output — matching `sanitize-html({ allowedTags: [] })`.
- */
-function stripAllTags(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const element of doc.querySelectorAll('script, style, noscript, iframe')) {
-    element.remove();
-  }
-  return doc.body.textContent ?? '';
+const acceptInput: TInputNormalizer = (value, selection) => ({ value, selection });
+const plainHtml: THtmlRenderer = text => text;
+
+const PLAINTEXT_ONLY = 'plaintext-only';
+// Engines without `plaintext-only` treat the unknown value as `inherit`, which
+// would make the field read-only; `beforeinput` interception keeps the field
+// plain text either way.
+const PLAINTEXT_ONLY_SUPPORTED = (() => {
+  const probe = document.createElement('div');
+  probe.contentEditable = PLAINTEXT_ONLY;
+  return probe.contentEditable === PLAINTEXT_ONLY;
+})();
+
+function endOf(value: string): ISelection {
+  return { start: value.length, end: value.length };
 }
 
+/**
+ * Single-line, strictly controlled contentEditable. Every edit is intercepted
+ * in `beforeinput`, applied to `value` as a string operation and passed
+ * through `normalizeInput`; the DOM only ever shows what `toHtml` renders for
+ * the current `value`. IME composition is the one edit the browser must own:
+ * the field reads the composed text back on `compositionend`.
+ */
 export const RichEditor = memo(
   ({
+    ref,
     className,
     disabled = false,
     value = '',
     placeholder,
-    onValueChanged,
-    onGetElementSelectionWithValue = inputElementSelectionWithValue,
-    onTextToHtml = inputTextToHtml,
-    onFocusChanges,
+    inputMode,
+    enterKeyHint = 'next',
+    onValueChange,
+    normalizeInput = acceptInput,
+    toHtml = plainHtml,
+    onFocusChange,
     onFocusSelection,
+    onCancel,
     onKeyDown,
     'aria-label': ariaLabel,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
   }: {
-    className?: string;
-    disabled?: boolean;
-    value?: string;
-    placeholder?: string;
-    onValueChanged?: (value: string) => void;
-    onGetElementSelectionWithValue?: (props: {
-      oldValue: string;
-      newValue: string;
-      oldSelection: ISelection;
-      newSelection: ISelection;
-    }) => { value: string; selection: ISelection } | false;
-    onTextToHtml?: (text: string, editing: boolean) => string;
-    onFocusChanges?: (focused: boolean) => void;
-    onFocusSelection?: (value: string) => ISelection | undefined;
-    onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
-    'aria-label'?: string;
-    'aria-invalid'?: boolean;
-    'aria-describedby'?: string;
+    readonly ref?: Ref<IRichEditorHandle>;
+    readonly className?: string;
+    readonly disabled?: boolean;
+    readonly value?: string;
+    readonly placeholder?: string;
+    readonly inputMode?: 'text' | 'decimal' | 'numeric';
+    readonly enterKeyHint?: 'enter' | 'done' | 'next';
+    readonly onValueChange?: (value: string) => void;
+    readonly normalizeInput?: TInputNormalizer;
+    readonly toHtml?: THtmlRenderer;
+    readonly onFocusChange?: (focused: boolean) => void;
+    /** Selection to apply when the field gains focus; `undefined` keeps the caret where the browser put it. */
+    readonly onFocusSelection?: (value: string) => ISelection | undefined;
+    /** Escape: the owner reverts its own state before the field blurs. */
+    readonly onCancel?: () => void;
+    readonly onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+    readonly 'aria-label'?: string;
+    readonly 'aria-invalid'?: boolean;
+    readonly 'aria-describedby'?: string;
   }) => {
-    const contentEditableRef = useRef<HTMLDivElement>(null);
-    const selectionRangeRef = useRef<ISelection>(
-      useMemo(() => ({ start: value.length, end: value.length }), [value])
-    );
-    const valueBeforeEditRef = useRef(value);
-    const previousValueRef = useRef(value);
-    const valueFromInputRef = useRef(false);
-    // Focus selection applied after pointer/keyboard focus settles (ProseMirror pattern)
-    const pendingFocusSelectionRef = useRef<ISelection | null>(null);
-    const focusCleanupRef = useRef<(() => void) | null>(null);
-
+    const elementRef = useRef<HTMLDivElement>(null);
+    const selectionRef = useRef<ISelection>(endOf(value));
+    const emittedValueRef = useRef(value);
+    const composingRef = useRef(false);
     const [focused, setFocused] = useState(false);
 
-    const html = useMemo(() => onTextToHtml(value, focused), [onTextToHtml, value, focused]);
-
-    const handleContentChange = useFunction((evt: FormEvent<HTMLDivElement>) => {
-      pendingFocusSelectionRef.current = null;
-
-      const oldValue = value;
-      const newValue = stripAllTags(evt.currentTarget.innerHTML);
-
-      const oldSelection = selectionRangeRef.current;
-      const newSelection = getElementSelection(evt.currentTarget) ?? {
-        start: value.length,
-        end: value.length,
-      };
-
-      const result = onGetElementSelectionWithValue({
-        oldValue,
-        newValue,
-        oldSelection,
-        newSelection,
-      });
-
-      if (result === false) {
-        evt.currentTarget.innerHTML = html;
-        setElementSelection(evt.currentTarget, oldSelection);
+    const moveFocusOnward = useFunction(() => {
+      const element = elementRef.current;
+      if (isNil(element)) {
+        return;
+      }
+      const next = findNextTabStop(element);
+      if (isNil(next)) {
+        element.blur();
       } else {
-        selectionRangeRef.current = result.selection;
-        valueFromInputRef.current = true;
-        onValueChanged?.(result.value);
+        next.focus();
       }
     });
 
-    useLayoutEffect(() => {
-      if (isNil(contentEditableRef.current)) {
+    useImperativeHandle(
+      ref,
+      () => ({ focus: () => elementRef.current?.focus(), focusNext: moveFocusOnward }),
+      [moveFocusOnward]
+    );
+
+    const html = useMemo(() => toHtml(value, focused), [toHtml, value, focused]);
+
+    const restoreDom = useFunction(() => {
+      const element = elementRef.current;
+      if (isNil(element)) {
+        return;
+      }
+      element.innerHTML = html;
+      setElementSelection(element, selectionRef.current);
+    });
+
+    const commit = useFunction((result: INormalizedInput | undefined) => {
+      if (isNil(result)) {
+        restoreDom();
         return;
       }
 
-      if (focused && value !== previousValueRef.current && !valueFromInputRef.current) {
-        selectionRangeRef.current = { start: value.length, end: value.length };
+      selectionRef.current = result.selection;
+      if (result.value === value) {
+        restoreDom();
+        return;
       }
-      previousValueRef.current = value;
-      valueFromInputRef.current = false;
-      setElementSelection(contentEditableRef.current, selectionRangeRef.current);
+      emittedValueRef.current = result.value;
+      onValueChange?.(result.value);
     });
 
-    // Applies the pending focus selection and clears it.
-    // Called via setTimeout(0) to run after all synchronous event handlers
-    // (mouseup, click, selectionchange) in the current event have completed.
-    const applyPendingFocusSelection = useFunction(() => {
-      const selection = pendingFocusSelectionRef.current;
-      pendingFocusSelectionRef.current = null;
-      if (!isNil(selection) && !isNil(contentEditableRef.current)) {
-        selectionRangeRef.current = selection;
-        setElementSelection(contentEditableRef.current, selection);
-        // Restore selection visibility now that the correct selection is set
-        contentEditableRef.current.classList.remove(styles.selectionHidden);
+    const handleBeforeInput = useFunction((event: InputEvent) => {
+      const element = elementRef.current;
+      if (isNil(element) || event.isComposing || event.inputType === 'insertCompositionText') {
+        return;
       }
+
+      event.preventDefault();
+
+      const [targetRange] = event.getTargetRanges();
+      const edit = textEditFromInput({
+        inputType: event.inputType,
+        data: readInputData(event),
+        targetRange:
+          (isNil(targetRange) ? undefined : rangeToSelection(element, targetRange)) ??
+          getElementSelection(element) ??
+          selectionRef.current,
+      });
+      if (isNil(edit)) {
+        return;
+      }
+
+      const next = applyTextEdit(value, edit);
+      commit(normalizeInput(next.value, next.selection));
     });
 
-    const handleFocused = useFunction(() => {
-      valueBeforeEditRef.current = value;
+    const handleSelectionChange = useFunction(() => {
+      const element = elementRef.current;
+      if (isNil(element) || composingRef.current) {
+        return;
+      }
+      selectionRef.current = getElementSelection(element) ?? selectionRef.current;
+    });
+
+    // React's `onBeforeInput` is a synthetic approximation without `inputType`
+    // or target ranges; the native event is the one carrying the edit.
+    useEffect(() => {
+      const element = elementRef.current;
+      if (isNil(element)) {
+        return;
+      }
+
+      const controller = new AbortController();
+      const { signal } = controller;
+      element.addEventListener('beforeinput', handleBeforeInput, { signal });
+      document.addEventListener('selectionchange', handleSelectionChange, { signal });
+
+      return () => controller.abort();
+    }, [handleBeforeInput, handleSelectionChange]);
+
+    useLayoutEffect(() => {
+      if (value !== emittedValueRef.current) {
+        emittedValueRef.current = value;
+        selectionRef.current = endOf(value);
+      }
+    }, [value]);
+
+    // biome-ignore lint/correctness/useExhaustiveDependencies: React rewrites the DOM whenever `html` changes, and the selection has to be re-applied after every rewrite
+    useLayoutEffect(() => {
+      const element = elementRef.current;
+      if (isNil(element) || !focused || composingRef.current) {
+        return;
+      }
+      if (!isEqual(getElementSelection(element), selectionRef.current)) {
+        setElementSelection(element, selectionRef.current);
+      }
+    }, [html, focused]);
+
+    const handleCompositionStart = useFunction(() => {
+      composingRef.current = true;
+    });
+
+    const handleCompositionEnd = useFunction((event: CompositionEvent<HTMLDivElement>) => {
+      composingRef.current = false;
+
+      const element = event.currentTarget;
+      const composed = toSingleLine(element.textContent ?? '');
+      const selection = getElementSelection(element) ?? endOf(composed);
+      commit(normalizeInput(composed, selection));
+    });
+
+    const handlePointerDown = useFunction((event: PointerEvent<HTMLDivElement>) => {
+      const element = event.currentTarget;
+      if (disabled || element.contains(document.activeElement)) {
+        return;
+      }
+      if (isNil(onFocusSelection?.(value))) {
+        return;
+      }
+
+      // Focusing here, with the default prevented, means the browser never
+      // places its own caret and the focus selection is the first one shown.
+      event.preventDefault();
+      element.focus();
+    });
+
+    const handleFocus = useFunction(() => {
+      if (disabled) {
+        return;
+      }
+      selectionRef.current = onFocusSelection?.(value) ?? selectionRef.current;
       setFocused(true);
-      onFocusChanges?.(true);
-
-      if (onFocusSelection) {
-        const selection = onFocusSelection(value);
-        if (!isNil(selection)) {
-          selectionRangeRef.current = selection;
-          pendingFocusSelectionRef.current = selection;
-
-          // Hide browser's default selection highlight during focus transition
-          contentEditableRef.current?.classList.add(styles.selectionHidden);
-
-          // ProseMirror pattern: wait for pointerup (mouse focus) or use a
-          // fallback timeout (keyboard focus). pointerup fires after mouseup,
-          // guaranteeing all browser selection events have completed.
-          const apply = () => {
-            focusCleanupRef.current = null;
-            // RAF runs before the next paint, so the user never sees the browser's
-            // intermediate selection. Safe here because we schedule from pointerup
-            // or fallback setTimeout — both are separate macrotasks, so this RAF
-            // is guaranteed to land in the next frame (not the current one).
-            requestAnimationFrame(applyPendingFocusSelection);
-          };
-
-          const onPointerUp = () => {
-            clearTimeout(fallbackTimer);
-            apply();
-          };
-
-          document.addEventListener('pointerup', onPointerUp, { once: true });
-
-          // Fallback: keyboard focus (Tab) has no pointerup.
-          // 50ms is enough for any click to complete but fast enough for keyboard UX.
-          const KEYBOARD_FOCUS_FALLBACK_MS = 50;
-          const fallbackTimer = setTimeout(() => {
-            document.removeEventListener('pointerup', onPointerUp);
-            apply();
-          }, KEYBOARD_FOCUS_FALLBACK_MS);
-
-          focusCleanupRef.current = () => {
-            document.removeEventListener('pointerup', onPointerUp);
-            clearTimeout(fallbackTimer);
-          };
-        }
-      }
+      onFocusChange?.(true);
     });
 
     const handleBlur = useFunction(() => {
-      pendingFocusSelectionRef.current = null;
-      focusCleanupRef.current?.();
-      focusCleanupRef.current = null;
-      contentEditableRef.current?.classList.remove(styles.selectionHidden);
+      composingRef.current = false;
       setFocused(false);
-      onFocusChanges?.(false);
+      onFocusChange?.(false);
     });
 
     const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
-      onKeyDown?.(event);
+      if (event.nativeEvent.isComposing) {
+        return;
+      }
 
-      if (event.defaultPrevented) {
+      // Overlay layers (Radix) prevent Escape in the capture phase before the
+      // event reaches the field; only the owner's own veto skips the built-ins.
+      const preventedBefore = event.defaultPrevented;
+      onKeyDown?.(event);
+      if (event.defaultPrevented && !preventedBefore) {
         return;
       }
 
       if (event.key === 'Escape') {
         event.preventDefault();
-        onValueChanged?.(valueBeforeEditRef.current);
+        onCancel?.();
         event.currentTarget.blur();
         return;
       }
 
       if (event.key === 'Enter') {
         event.preventDefault();
-        const element = findNextTabStop(event.currentTarget);
-        if (isNil(element)) {
-          event.currentTarget.blur();
-        } else {
-          element.focus();
-        }
+        moveFocusOnward();
       }
     });
-
-    const handleSelectionChange = useFunction(() => {
-      if (isNil(contentEditableRef.current)) {
-        return;
-      }
-
-      // While focus selection is pending, ignore all browser-initiated selectionchange events.
-      // The selection will be applied after the pointer/keyboard event sequence completes.
-      if (!isNil(pendingFocusSelectionRef.current)) {
-        return;
-      }
-
-      const sel = getElementSelection(contentEditableRef.current);
-      selectionRangeRef.current = sel ?? selectionRangeRef.current;
-    });
-
-    useEffect(() => {
-      if (isNil(contentEditableRef.current) || !focused) {
-        return;
-      }
-
-      document.addEventListener('selectionchange', handleSelectionChange);
-
-      return () => document.removeEventListener('selectionchange', handleSelectionChange);
-    }, [handleSelectionChange, focused]);
-
-    // When the editor unmounts while focused, neither `handleBlur` nor the
-    // pointerup/fallback callbacks run, so the document `pointerup` listener and
-    // the pending fallback timer registered in `handleFocused` would leak. Run
-    // the stored focus cleanup on unmount to remove both in every teardown path.
-    useEffect(() => {
-      return () => {
-        focusCleanupRef.current?.();
-        focusCleanupRef.current = null;
-      };
-    }, []);
-
-    const updateFocused = useFunction((newFocused: boolean) => {
-      if (newFocused === focused) {
-        return;
-      }
-
-      setFocused(newFocused);
-      onFocusChanges?.(newFocused);
-    });
-
-    useEffect(() => {
-      if (isNil(contentEditableRef.current)) {
-        return;
-      }
-
-      updateFocused(isParentOf(document.activeElement, contentEditableRef.current));
-    }, [updateFocused]);
 
     return (
-      // biome-ignore lint/a11y/useSemanticElements: contentEditable div requires dangerouslySetInnerHTML for rich text, cannot use <input> or <textarea>
+      // biome-ignore lint/a11y/useSemanticElements: the field renders formatted HTML, which no <input> can show
       <div
-        ref={contentEditableRef}
+        ref={elementRef}
         className={cn(styles.contentEditable, className)}
         role="textbox"
-        tabIndex={disabled ? -1 : 0}
+        tabIndex={disabled ? undefined : 0}
         aria-multiline={false}
         aria-label={ariaLabel}
         aria-disabled={disabled || undefined}
         aria-invalid={ariaInvalid || undefined}
         aria-describedby={ariaDescribedBy}
-        contentEditable={!disabled}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: RichEditor requires innerHTML for contentEditable
-        dangerouslySetInnerHTML={{
-          __html: focused || !isEmpty(value) || isNil(placeholder) ? html : placeholder,
-        }}
-        onInput={handleContentChange}
-        onFocus={handleFocused}
+        aria-placeholder={placeholder}
+        data-placeholder={placeholder}
+        contentEditable={disabled ? false : PLAINTEXT_ONLY_SUPPORTED ? PLAINTEXT_ONLY : true}
+        inputMode={inputMode}
+        enterKeyHint={enterKeyHint}
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: the HTML is rendered from `value` by `toHtml`, never from user markup
+        dangerouslySetInnerHTML={{ __html: html }}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
+        onPointerDown={handlePointerDown}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
       />
     );
   }

@@ -1,93 +1,185 @@
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { ETimeResolution } from '@frozik/utils/date/constants';
 import { ETimeResolution as Resolution } from '@frozik/utils/date/constants';
-import type { MouseEvent } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Temporal } from 'temporal-polyfill';
+import type { KeyboardEvent, MouseEvent, Ref } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import type { Temporal } from 'temporal-polyfill';
 
 import { useFunction } from '../../../hooks/useFunction';
+import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
 import styles from '../styles.module.scss';
-import { getCalendarAriaLabels } from '../translations/translations';
 
-const HOURS_MAX = 23;
-const MINUTES_MAX = 59;
-const SECONDS_MAX = 59;
-const MILLISECONDS_MAX = 999;
+type TTimeUnit = 'hour' | 'minute' | 'second' | 'millisecond';
 
-const HOLD_REPEAT_INTERVAL_MS = 1000;
-const HOLD_REPEAT_STEP = 5;
+const UNIT_MAX: Readonly<Record<TTimeUnit, number>> = {
+  hour: 23,
+  minute: 59,
+  second: 59,
+  millisecond: 999,
+};
+const UNIT_WIDTH: Readonly<Record<TTimeUnit, number>> = {
+  hour: 2,
+  minute: 2,
+  second: 2,
+  millisecond: 3,
+};
+
+const HOLD_INITIAL_DELAY_MS = 400;
+const HOLD_REPEAT_INTERVAL_MS = 80;
+const SHIFT_STEP = 10;
+
+function wrap(value: number, max: number): number {
+  const size = max + 1;
+  return ((value % size) + size) % size;
+}
+
+/** Steps one unit without carrying into the next: each spinner is independent. */
+function stepUnit(time: Temporal.PlainTime, unit: TTimeUnit, diff: number): Temporal.PlainTime {
+  const wrapped = wrap(time[unit] + diff, UNIT_MAX[unit]);
+
+  switch (unit) {
+    case 'hour':
+      return time.with({ hour: wrapped });
+    case 'minute':
+      return time.with({ minute: wrapped });
+    case 'second':
+      return time.with({ second: wrapped });
+    case 'millisecond':
+      return time.with({ millisecond: wrapped });
+    default:
+      return assertNever(unit);
+  }
+}
+
+function unitsOf(resolution: ETimeResolution): readonly TTimeUnit[] {
+  switch (resolution) {
+    case Resolution.Milliseconds:
+      return ['hour', 'minute', 'second', 'millisecond'];
+    case Resolution.Seconds:
+      return ['hour', 'minute', 'second'];
+    case Resolution.Minutes:
+      return ['hour', 'minute'];
+    default:
+      return assertNever(resolution);
+  }
+}
+
+function labelsOf(
+  unit: TTimeUnit,
+  ariaLabels: ICalendarAriaLabels
+): { readonly label: string; readonly increase: string; readonly decrease: string } {
+  switch (unit) {
+    case 'hour':
+      return {
+        label: ariaLabels.hours,
+        increase: ariaLabels.increaseHours,
+        decrease: ariaLabels.decreaseHours,
+      };
+    case 'minute':
+      return {
+        label: ariaLabels.minutes,
+        increase: ariaLabels.increaseMinutes,
+        decrease: ariaLabels.decreaseMinutes,
+      };
+    case 'second':
+      return {
+        label: ariaLabels.seconds,
+        increase: ariaLabels.increaseSeconds,
+        decrease: ariaLabels.decreaseSeconds,
+      };
+    case 'millisecond':
+      return {
+        label: ariaLabels.milliseconds,
+        increase: ariaLabels.increaseMilliseconds,
+        decrease: ariaLabels.decreaseMilliseconds,
+      };
+    default:
+      return assertNever(unit);
+  }
+}
 
 export const TimePicker = memo(
   ({
     time,
     resolution = Resolution.Minutes,
+    focusRequest,
     onTimeChange,
-    language,
+    onLeave,
+    onReturnToField,
+    ariaLabels,
   }: {
-    time: Temporal.PlainTime;
-    resolution?: ETimeResolution;
-    onTimeChange: (time: Temporal.PlainTime) => void;
-    language: string;
+    readonly time: Temporal.PlainTime;
+    readonly resolution?: ETimeResolution;
+    /** Bumped by the owner to move the keyboard onto the active unit. */
+    readonly focusRequest: number;
+    readonly onTimeChange: (time: Temporal.PlainTime) => void;
+    readonly onLeave: (direction: TLeaveDirection) => void;
+    readonly onReturnToField: () => void;
+    readonly ariaLabels: ICalendarAriaLabels;
   }) => {
-    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
-    const showSeconds = resolution === Resolution.Seconds || resolution === Resolution.Milliseconds;
-    const showMilliseconds = resolution === Resolution.Milliseconds;
+    const units = unitsOf(resolution);
+    const [activeUnit, setActiveUnit] = useState<TTimeUnit>('hour');
+    const activeUnitRef = useRef<HTMLSpanElement>(null);
+    const followActiveUnitRef = useRef(false);
 
+    useEffect(() => {
+      if (focusRequest > 0) {
+        activeUnitRef.current?.focus();
+      }
+    }, [focusRequest]);
+
+    // An arrow moved the active unit; the keyboard follows it once it is rendered.
+    useEffect(() => {
+      if (followActiveUnitRef.current) {
+        followActiveUnitRef.current = false;
+        activeUnitRef.current?.focus();
+      }
+    });
+
+    // The field keeps focus (and the popover stays open) while the spinners are clicked.
     const handleMouseDown = useFunction((event: MouseEvent) => {
       event.preventDefault();
     });
 
-    function wrapValue(value: number, max: number): number {
-      return ((value % (max + 1)) + (max + 1)) % (max + 1);
-    }
-
-    const handleHourChange = useFunction((diff: number) => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          wrapValue(time.hour + diff, HOURS_MAX),
-          time.minute,
-          time.second,
-          time.millisecond
-        )
-      );
+    const handleStep = useFunction((unit: TTimeUnit, diff: number) => {
+      onTimeChange(stepUnit(time, unit, diff));
     });
 
-    const handleMinuteChange = useFunction((diff: number) => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          wrapValue(time.minute + diff, MINUTES_MAX),
-          time.second,
-          time.millisecond
-        )
-      );
-    });
+    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLSpanElement>, unit: TTimeUnit) => {
+      const index = units.indexOf(unit);
 
-    const handleSecondChange = useFunction((diff: number) => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          time.minute,
-          wrapValue(time.second + diff, SECONDS_MAX),
-          time.millisecond
-        )
-      );
+      switch (event.key) {
+        case 'ArrowUp':
+          event.preventDefault();
+          handleStep(unit, event.shiftKey ? SHIFT_STEP : 1);
+          return;
+        case 'ArrowDown':
+          event.preventDefault();
+          handleStep(unit, event.shiftKey ? -SHIFT_STEP : -1);
+          return;
+        case 'ArrowLeft':
+          event.preventDefault();
+          followActiveUnitRef.current = true;
+          setActiveUnit(units[Math.max(0, index - 1)]);
+          return;
+        case 'ArrowRight':
+          event.preventDefault();
+          followActiveUnitRef.current = true;
+          setActiveUnit(units[Math.min(units.length - 1, index + 1)]);
+          return;
+        case 'Tab':
+          event.preventDefault();
+          onLeave(event.shiftKey ? 'backward' : 'forward');
+          return;
+        case 'Enter':
+        case 'Escape':
+          event.preventDefault();
+          onReturnToField();
+          return;
+        default:
+          return;
+      }
     });
-
-    const handleMsChange = useFunction((diff: number) => {
-      onTimeChange(
-        new Temporal.PlainTime(
-          time.hour,
-          time.minute,
-          time.second,
-          wrapValue(time.millisecond + diff, MILLISECONDS_MAX)
-        )
-      );
-    });
-
-    const hourStr = useMemo(() => String(time.hour).padStart(2, '0'), [time.hour]);
-    const minuteStr = useMemo(() => String(time.minute).padStart(2, '0'), [time.minute]);
-    const secondStr = useMemo(() => String(time.second).padStart(2, '0'), [time.second]);
-    const msStr = useMemo(() => String(time.millisecond).padStart(3, '0'), [time.millisecond]);
 
     return (
       <fieldset
@@ -95,150 +187,147 @@ export const TimePicker = memo(
         onMouseDown={handleMouseDown}
         aria-label={ariaLabels.time}
       >
-        <TimeUnit
-          value={hourStr}
-          onChange={handleHourChange}
-          label={ariaLabels.hours}
-          increaseLabel={ariaLabels.increaseHours}
-          decreaseLabel={ariaLabels.decreaseHours}
-        />
-        <span className={styles.timePickerSeparator} aria-hidden="true">
-          :
-        </span>
-        <TimeUnit
-          value={minuteStr}
-          onChange={handleMinuteChange}
-          label={ariaLabels.minutes}
-          increaseLabel={ariaLabels.increaseMinutes}
-          decreaseLabel={ariaLabels.decreaseMinutes}
-        />
-        {showSeconds && (
-          <>
-            <span className={styles.timePickerSeparator} aria-hidden="true">
-              :
-            </span>
-            <TimeUnit
-              value={secondStr}
-              onChange={handleSecondChange}
-              label={ariaLabels.seconds}
-              increaseLabel={ariaLabels.increaseSeconds}
-              decreaseLabel={ariaLabels.decreaseSeconds}
-            />
-          </>
-        )}
-        {showMilliseconds && (
-          <>
-            <span className={styles.timePickerSeparator} aria-hidden="true">
-              .
-            </span>
-            <TimeUnit
-              value={msStr}
-              onChange={handleMsChange}
-              wide
-              label={ariaLabels.milliseconds}
-              increaseLabel={ariaLabels.increaseMilliseconds}
-              decreaseLabel={ariaLabels.decreaseMilliseconds}
-            />
-          </>
-        )}
+        {units.map((unit, index) => (
+          <TimeUnit
+            key={unit}
+            ref={unit === activeUnit ? activeUnitRef : undefined}
+            unit={unit}
+            time={time}
+            active={unit === activeUnit}
+            separator={index === 0 ? undefined : unit === 'millisecond' ? '.' : ':'}
+            onStep={handleStep}
+            onKeyDown={handleKeyDown}
+            {...labelsOf(unit, ariaLabels)}
+          />
+        ))}
       </fieldset>
     );
   }
 );
 
-function useHoldRepeat(
-  callback: (diff: number) => void,
-  diff: number
-): {
-  onClick: () => void;
-  onMouseDown: () => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
+/** Click steps once; holding the pointer repeats after a short delay. */
+function useHoldRepeat(onStep: () => void): {
+  readonly onClick: () => void;
+  readonly onPointerDown: () => void;
+  readonly onPointerUp: () => void;
+  readonly onPointerLeave: () => void;
+  readonly onPointerCancel: () => void;
 } {
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const firedRef = useRef(false);
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+  const delayRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const repeatedRef = useRef(false);
+  const step = useFunction(onStep);
 
-  const stop = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
+  const stop = useFunction(() => {
+    clearTimeout(delayRef.current);
+    clearInterval(intervalRef.current);
+    delayRef.current = undefined;
+    intervalRef.current = undefined;
+  });
 
-  const start = useCallback(() => {
+  const start = useFunction(() => {
     stop();
-    firedRef.current = false;
-    intervalRef.current = setInterval(() => {
-      firedRef.current = true;
-      callbackRef.current(diff * HOLD_REPEAT_STEP);
-    }, HOLD_REPEAT_INTERVAL_MS);
-  }, [stop, diff]);
+    repeatedRef.current = false;
+    delayRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(() => {
+        repeatedRef.current = true;
+        step();
+      }, HOLD_REPEAT_INTERVAL_MS);
+    }, HOLD_INITIAL_DELAY_MS);
+  });
 
-  const handleClick = useCallback(() => {
-    if (firedRef.current) {
-      firedRef.current = false;
+  // A click that ends a hold has already stepped through the repeat.
+  const handleClick = useFunction(() => {
+    if (repeatedRef.current) {
+      repeatedRef.current = false;
       return;
     }
-    callbackRef.current(diff);
-  }, [diff]);
+    step();
+  });
 
   useEffect(() => stop, [stop]);
 
-  return { onClick: handleClick, onMouseDown: start, onMouseUp: stop, onMouseLeave: stop };
+  return {
+    onClick: handleClick,
+    onPointerDown: start,
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+  };
 }
 
 const TimeUnit = memo(
   ({
-    value,
-    onChange,
-    wide = false,
+    ref,
+    unit,
+    time,
+    active,
+    separator,
+    onStep,
+    onKeyDown,
     label,
-    increaseLabel,
-    decreaseLabel,
+    increase,
+    decrease,
   }: {
-    value: string;
-    onChange: (diff: number) => void;
-    wide?: boolean;
-    label: string;
-    increaseLabel: string;
-    decreaseLabel: string;
+    readonly ref?: Ref<HTMLSpanElement>;
+    readonly unit: TTimeUnit;
+    readonly time: Temporal.PlainTime;
+    readonly active: boolean;
+    readonly separator: string | undefined;
+    readonly onStep: (unit: TTimeUnit, diff: number) => void;
+    readonly onKeyDown: (event: KeyboardEvent<HTMLSpanElement>, unit: TTimeUnit) => void;
+    readonly label: string;
+    readonly increase: string;
+    readonly decrease: string;
   }) => {
-    const holdUp = useHoldRepeat(onChange, 1);
-    const holdDown = useHoldRepeat(onChange, -1);
+    const holdUp = useHoldRepeat(() => onStep(unit, 1));
+    const holdDown = useHoldRepeat(() => onStep(unit, -1));
+    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLSpanElement>) =>
+      onKeyDown(event, unit)
+    );
+    const value = time[unit];
 
     return (
-      <fieldset
-        className={wide ? styles.timePickerUnitWide : styles.timePickerUnit}
-        aria-label={label}
-      >
-        <button
-          type="button"
-          className={styles.timePickerBtn}
-          aria-label={increaseLabel}
-          onClick={holdUp.onClick}
-          onMouseDown={holdUp.onMouseDown}
-          onMouseUp={holdUp.onMouseUp}
-          onMouseLeave={holdUp.onMouseLeave}
-        >
-          ▲
-        </button>
-        <span className={styles.timePickerValue} aria-live="polite" aria-atomic="true">
-          {value}
-        </span>
-        <button
-          type="button"
-          className={styles.timePickerBtn}
-          aria-label={decreaseLabel}
-          onClick={holdDown.onClick}
-          onMouseDown={holdDown.onMouseDown}
-          onMouseUp={holdDown.onMouseUp}
-          onMouseLeave={holdDown.onMouseLeave}
-        >
-          ▼
-        </button>
-      </fieldset>
+      <>
+        {separator !== undefined && (
+          <span className={styles.timePickerSeparator} aria-hidden="true">
+            {separator}
+          </span>
+        )}
+        <div className={unit === 'millisecond' ? styles.timePickerUnitWide : styles.timePickerUnit}>
+          <button
+            type="button"
+            tabIndex={-1}
+            className={styles.timePickerBtn}
+            aria-label={increase}
+            {...holdUp}
+          >
+            ▲
+          </button>
+          <span
+            ref={ref}
+            role="spinbutton"
+            tabIndex={active ? 0 : -1}
+            className={styles.timePickerValue}
+            aria-label={label}
+            aria-valuenow={value}
+            aria-valuemin={0}
+            aria-valuemax={UNIT_MAX[unit]}
+            onKeyDown={handleKeyDown}
+          >
+            {String(value).padStart(UNIT_WIDTH[unit], '0')}
+          </span>
+          <button
+            type="button"
+            tabIndex={-1}
+            className={styles.timePickerBtn}
+            aria-label={decrease}
+            {...holdDown}
+          >
+            ▼
+          </button>
+        </div>
+      </>
     );
   }
 );

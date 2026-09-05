@@ -45,7 +45,7 @@ export const NumberPage = memo(() => {
           pipSize={pipSize}
           allowNegative
           placeholder={controlsT.numberPage.placeholder}
-          language={getCurrentLanguage()}
+          locale={getCurrentLanguage()}
         />
       </CardFrame>
 

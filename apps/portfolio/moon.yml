@@ -51,3 +51,13 @@ tasks:
       - 'tsconfig.app.json'
     outputs:
       - 'bundle-stats.html'
+
+  lighthouse:
+    command: 'pnpm run lighthouse'
+    inputs:
+      - '@group(vite)'
+      - 'lighthouserc.json'
+    outputs:
+      - '.lighthouseci'
+    options:
+      cache: false

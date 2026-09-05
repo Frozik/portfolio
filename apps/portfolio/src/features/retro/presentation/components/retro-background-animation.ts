@@ -2,6 +2,8 @@ import type {
   IAmbientCanvasAnimation,
   IAmbientCanvasFrame,
 } from '../../../../shared/hooks/useAmbientCanvas';
+import type { TRgb } from '../../../../shared/lib/cssRgbToken';
+import { readCssRgbToken } from '../../../../shared/lib/cssRgbToken';
 
 /**
  * Port of `apps/retro/bg.js` — a "team-of-minds" ambient animation: a small
@@ -56,10 +58,9 @@ const DELTA_TIME_CLAMP_SEC = 0.05;
 const MS_PER_SECOND = 1000;
 const TAU = Math.PI * 2;
 
-const DEFAULT_ACCENT_RGB: readonly [number, number, number] = [96, 165, 250];
-const THOUGHT_ACCENT_RGB: readonly [number, number, number] = [167, 139, 250];
-const HEX_COLOR_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-const HEX_RADIX = 16;
+const ACCENT_TOKEN = '--color-landing-accent';
+const DEFAULT_ACCENT_RGB: TRgb = [96, 165, 250];
+const THOUGHT_ACCENT_RGB: TRgb = [167, 139, 250];
 
 interface INode {
   readonly x: number;
@@ -77,26 +78,6 @@ interface IThought {
   life: number;
   readonly ttl: number;
   readonly size: number;
-}
-
-function parseAccent(raw: string): readonly [number, number, number] {
-  const match = raw.trim().match(HEX_COLOR_PATTERN);
-  if (match === null) {
-    return DEFAULT_ACCENT_RGB;
-  }
-  return [
-    Number.parseInt(match[1], HEX_RADIX),
-    Number.parseInt(match[2], HEX_RADIX),
-    Number.parseInt(match[3], HEX_RADIX),
-  ];
-}
-
-function readAccentRgb(): readonly [number, number, number] {
-  if (typeof window === 'undefined') {
-    return DEFAULT_ACCENT_RGB;
-  }
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--color-landing-accent');
-  return parseAccent(raw);
 }
 
 function createNodes(): INode[] {
@@ -133,7 +114,7 @@ interface IDrawParams {
   readonly dpr: number;
   readonly nodes: INode[];
   readonly thoughts: IThought[];
-  readonly accent: readonly [number, number, number];
+  readonly accent: TRgb;
   readonly deltaSeconds: number;
   readonly nowSeconds: number;
 }
@@ -264,13 +245,13 @@ function drawFrame(params: IDrawParams): void {
 export function createRetroBackgroundAnimation(): IAmbientCanvasAnimation {
   let nodes: INode[] = [];
   const thoughts: IThought[] = [];
-  let accent: readonly [number, number, number] = DEFAULT_ACCENT_RGB;
+  let accent: TRgb = DEFAULT_ACCENT_RGB;
 
   return {
     onResize(): void {
       // Theme accent is size-independent but was previously read every frame —
       // cache it here (read once) instead. Nodes are created once on first sizing.
-      accent = readAccentRgb();
+      accent = readCssRgbToken(ACCENT_TOKEN, DEFAULT_ACCENT_RGB);
       if (nodes.length === 0) {
         nodes = createNodes();
       }

@@ -1,10 +1,13 @@
+import type { TRgb } from '../../../../../shared/lib/cssRgbToken';
+import { readCssRgbToken } from '../../../../../shared/lib/cssRgbToken';
 import {
+  ACCENT_TOKEN,
   DEFAULT_ACCENT_RGB,
   DEFAULT_GREEN_RGB,
   DEFAULT_RED_RGB,
-  HEX_COLOR_PATTERN,
-  HEX_RADIX,
+  GREEN_TOKEN,
   MONO_FONT_STACK,
+  RED_TOKEN,
 } from '../../canvasTheme';
 import type { IOrderbookSimulation } from './hero-orderbook-simulation';
 import { DEPTH_COLUMNS, DEPTH_LEVELS } from './hero-orderbook-simulation';
@@ -45,12 +48,10 @@ const TAPE_FONT_SIZE_PX = 10;
 const TAG_BOTTOM_OFFSET_PX = 12;
 const TAG_LEFT_OFFSET_PX = 10;
 
-type Rgb = readonly [number, number, number];
-
 export interface IOrderbookPalette {
-  readonly accent: Rgb;
-  readonly green: Rgb;
-  readonly red: Rgb;
+  readonly accent: TRgb;
+  readonly green: TRgb;
+  readonly red: TRgb;
 }
 
 /** Backing-store pixel geometry of the book and the tape beside it. */
@@ -66,37 +67,15 @@ export interface IOrderbookLayout {
   readonly tapeOriginX: number;
 }
 
-function parseHexColor(raw: string, fallback: Rgb): Rgb {
-  const match = raw.trim().match(HEX_COLOR_PATTERN);
-  if (!match) {
-    return fallback;
-  }
-  return [
-    Number.parseInt(match[1], HEX_RADIX),
-    Number.parseInt(match[2], HEX_RADIX),
-    Number.parseInt(match[3], HEX_RADIX),
-  ];
-}
-
-function readTokenRgb(token: string, fallback: Rgb): Rgb {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-  return parseHexColor(
-    getComputedStyle(document.documentElement).getPropertyValue(token),
-    fallback
-  );
-}
-
 export function readOrderbookPalette(): IOrderbookPalette {
   return {
-    accent: readTokenRgb('--color-landing-accent', DEFAULT_ACCENT_RGB),
-    green: readTokenRgb('--color-landing-green', DEFAULT_GREEN_RGB),
-    red: readTokenRgb('--color-landing-red', DEFAULT_RED_RGB),
+    accent: readCssRgbToken(ACCENT_TOKEN, DEFAULT_ACCENT_RGB),
+    green: readCssRgbToken(GREEN_TOKEN, DEFAULT_GREEN_RGB),
+    red: readCssRgbToken(RED_TOKEN, DEFAULT_RED_RGB),
   };
 }
 
-function rgba(color: Rgb, alpha: number): string {
+function rgba(color: TRgb, alpha: number): string {
   return `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
 }
 

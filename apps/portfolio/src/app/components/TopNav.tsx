@@ -1,26 +1,33 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
+import { useMountedOnce } from '@frozik/components/hooks/useMountedOnce';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { ArrowLeft, Home, Menu } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgQrCode } from '../../icons/SvgQrCode';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
-import { DialogShell } from '../../shared/ui/DialogShell';
-import { QRCode } from '../../shared/ui/QRCode';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
-import { MobileSectionMenu } from './MobileSectionMenu';
 import type { INavProject } from './navTypes';
 import { useTopNavBack } from './TopNavBackContext';
 import { useTopNavCenterHostSetter } from './TopNavCenterContext';
 
 const GITHUB_URL = 'https://github.com/frozik/portfolio';
-const QR_SIZE_PX = 216;
 const ICON_SIZE_PX = 16;
+
+// Both overlays pull the Radix Dialog family (and the QR one qrcode.react) —
+// none of it is needed before a click, so the chunks load on first open and
+// are warmed up when the pointer reaches the button.
+const loadQrDialog = () => import('./TopNavQrDialog');
+const loadMobileSectionMenu = () => import('./MobileSectionMenu');
+const TopNavQrDialog = lazy(() => loadQrDialog().then(m => ({ default: m.TopNavQrDialog })));
+const MobileSectionMenu = lazy(() =>
+  loadMobileSectionMenu().then(m => ({ default: m.MobileSectionMenu }))
+);
 
 const iconButtonClassName = cn(
   'group flex h-9 w-9 items-center justify-center rounded-sm',
@@ -38,18 +45,13 @@ function scrollToSection(sectionId: string): void {
   }
 }
 
-function getCurrentPageUrl(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  return window.location.href;
-}
-
 type TopNavVariant = 'landing' | 'inner';
 
 const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVariant }) => {
   const [qrOpen, setQrOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const qrMounted = useMountedOnce(qrOpen);
+  const menuMounted = useMountedOnce(menuOpen);
   const navigate = useNavigate();
   const fullscreen = useFullscreenLandscape();
   const { config: backConfig } = useTopNavBack();
@@ -123,8 +125,8 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
               className="flex cursor-pointer items-center gap-1.5 bg-transparent p-0 font-mono text-[13px] text-landing-fg"
             >
               <Home size={ICON_SIZE_PX} className="text-landing-fg-dim" aria-hidden="true" />
-              <span className="hidden min-[450px]:inline">{appT.nav.brandRoot}</span>
-              <span className="hidden text-landing-fg-faint min-[450px]:inline">
+              <span className="sr-only min-[450px]:not-sr-only">{appT.nav.brandRoot}</span>
+              <span className="sr-only text-landing-fg-faint min-[450px]:not-sr-only">
                 {appT.nav.brandPath}
               </span>
             </button>
@@ -153,6 +155,8 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
             <button
               type="button"
               onClick={handleQROpen}
+              onPointerEnter={loadQrDialog}
+              onFocus={loadQrDialog}
               className={iconButtonClassName}
               aria-label={appT.nav.showQR}
               title={appT.nav.openOnPhone}
@@ -174,6 +178,8 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
             <button
               type="button"
               onClick={handleMenuOpen}
+              onPointerEnter={loadMobileSectionMenu}
+              onFocus={loadMobileSectionMenu}
               className={iconButtonClassName}
               aria-label={appT.nav.openMenu}
             >
@@ -183,36 +189,25 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
         </div>
       </nav>
 
-      <DialogShell
-        compact
-        open={qrOpen}
-        onClose={handleQRClose}
-        title={appT.nav.openOnPhone}
-        description="URL"
-        closeLabel={appT.nav.closeQR}
-      >
-        <div className="mb-5 flex justify-center rounded-sm bg-white p-4">
-          <QRCode value={getCurrentPageUrl()} size={QR_SIZE_PX} className="bg-transparent p-0" />
-        </div>
-        <div className="break-all font-mono text-[12px] leading-[1.5] text-landing-fg-dim">
-          {getCurrentPageUrl()}
-        </div>
-      </DialogShell>
-
-      <MobileSectionMenu
-        open={menuOpen}
-        onClose={handleMenuClose}
-        sections={appT.nav.sections}
-        showSections={isLanding}
-        projects={projects}
-        title={appT.nav.menuTitle}
-        sectionsHeading={appT.nav.sectionsHeading}
-        projectsHeading={appT.nav.projectsHeading}
-        backToHomeLabel={appT.nav.backToHome}
-        onNavigateSection={handleSectionNavigate}
-        onNavigateProject={handleProjectNavigate}
-        onNavigateHome={handleBrandClick}
-      />
+      <Suspense fallback={null}>
+        {qrMounted && <TopNavQrDialog open={qrOpen} onClose={handleQRClose} />}
+        {menuMounted && (
+          <MobileSectionMenu
+            open={menuOpen}
+            onClose={handleMenuClose}
+            sections={appT.nav.sections}
+            showSections={isLanding}
+            projects={projects}
+            title={appT.nav.menuTitle}
+            sectionsHeading={appT.nav.sectionsHeading}
+            projectsHeading={appT.nav.projectsHeading}
+            backToHomeLabel={appT.nav.backToHome}
+            onNavigateSection={handleSectionNavigate}
+            onNavigateProject={handleProjectNavigate}
+            onNavigateHome={handleBrandClick}
+          />
+        )}
+      </Suspense>
     </>
   );
 };

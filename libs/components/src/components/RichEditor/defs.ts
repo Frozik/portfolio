@@ -3,6 +3,28 @@ export interface ISelection {
   readonly end: number;
 }
 
+export interface INormalizedInput {
+  readonly value: string;
+  readonly selection: ISelection;
+}
+
+/** Accepts, rewrites or rejects (`undefined`) the text an edit would produce. */
+export type TInputNormalizer = (
+  value: string,
+  selection: ISelection
+) => INormalizedInput | undefined;
+
+/** Renders the value as the HTML shown in the field; `editing` is true while it has focus. */
+export type THtmlRenderer = (text: string, editing: boolean) => string;
+
+export interface IRichEditorHandle {
+  focus(): void;
+  /** Moves the keyboard to the next tab stop after the field, or blurs when there is none. */
+  focusNext(): void;
+}
+
+export type TLeaveDirection = 'forward' | 'backward';
+
 export interface ICalendarAriaLabels {
   readonly dateInputLabel: string;
   readonly dateOnlyInputLabel: string;
@@ -26,7 +48,6 @@ export interface ICalendarAriaLabels {
   readonly decreaseSeconds: string;
   readonly increaseMilliseconds: string;
   readonly decreaseMilliseconds: string;
-  readonly monthNames: readonly string[];
-  readonly dayNames: readonly string[];
-  readonly dayNamesShort: readonly string[];
+  readonly calendarDays: string;
+  readonly openNativePicker: string;
 }

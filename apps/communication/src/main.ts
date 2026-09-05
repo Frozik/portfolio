@@ -9,7 +9,7 @@ process.on('unhandledRejection', reason => {
   console.error('[communication] unhandled rejection', reason);
 });
 
-const config = loadConfig();
+const config = await loadConfig();
 const { start, drain } = await bootstrap(config);
 
 await start();

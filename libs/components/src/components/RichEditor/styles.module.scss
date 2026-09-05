@@ -1,16 +1,28 @@
-/* RichEditor + DateTimePicker calendar popup — landing design language.
-   Colors read from `--color-landing-*` CSS variables (emitted by the host
-   app's tailwind @theme) but each carries a hard-coded fallback, so the
-   component renders correctly standalone without depending on the app theme. */
+/* RichEditor + DateTimePicker calendar popup. Colors read the host's
+   `--color-landing-*` variables; each fallback follows the OS color scheme so
+   the components render on their own. Baseline: Chrome 111, Safari 16.4,
+   Firefox 128 (native nesting, color-mix, light-dark). */
+
+$bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
+$bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
+$border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
+$border-soft: var(--color-landing-border-soft, light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04)));
+$fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
+$fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
+$fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
+$accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
+$red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
+$mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 
 .editor {
-  background: var(--color-landing-bg-card,#0f1320);
-  border: 1px solid var(--color-landing-border,rgb(255 255 255 / 0.08));
+  color-scheme: light dark;
+  background: $bg-card;
+  border: 1px solid $border;
   box-sizing: border-box;
   margin: 0;
   padding: 6px 11px;
-  color: var(--color-landing-fg,#e7ecf3);
-  font-family: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+  color: $fg;
+  font-family: $mono;
   font-size: 13px;
   line-height: 20px;
   list-style: none;
@@ -22,14 +34,14 @@
   transition: border-color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    border-color: var(--color-landing-accent,#60a5fa);
+    border-color: $accent;
   }
 
-  &:focus,
+  &:focus-visible,
   &:focus-within {
-    border-color: var(--color-landing-accent,#60a5fa);
+    border-color: $accent;
     outline: 0;
-    background-color: var(--color-landing-bg-elev,#0d1016);
+    background-color: $bg-elevated;
   }
 }
 
@@ -40,6 +52,12 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: clip;
+
+  &:empty::before {
+    content: attr(data-placeholder);
+    color: $fg-faint;
+    pointer-events: none;
+  }
 }
 
 .group-start {
@@ -52,47 +70,79 @@
 
 .pip {
   font-weight: 600;
-  color: var(--color-landing-accent,#60a5fa);
+  color: $accent;
 }
 
-.placeholder {
-  color: var(--color-landing-fg-faint,#76819a);
+.field {
+  position: relative;
+  display: block;
 }
 
-.selection-hidden {
-  &::selection,
-  & *::selection {
-    background: transparent;
+.editor-with-picker {
+  padding-right: 40px;
+}
+
+.native-picker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+}
+
+.native-picker-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.native-picker-button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: $fg-dim;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  touch-action: manipulation;
+
+  &:hover {
+    color: $fg;
   }
 }
 
 .editor-error {
-  border-color: var(--color-landing-red,#ff4f58);
+  border-color: $red;
 
-  &:hover {
-    border-color: var(--color-landing-red,#ff4f58);
-  }
-
-  &:focus,
+  &:hover,
+  &:focus-visible,
   &:focus-within {
-    border-color: var(--color-landing-red,#ff4f58);
+    border-color: $red;
   }
 }
 
-/* Popover content — fully opaque landing-card background with square
-   angular border, mono font, and a strong drop shadow so it reads as a
-   layer above the page canvas anim. */
+/* Radix renders the popover wrapper in normal stacking; hosts wrap their
+   content in `relative z-10` layers above a canvas background. */
+.popover-layer {
+  z-index: 100;
+}
+
 .popover-content {
-  background-color: var(--color-landing-bg-card,#0f1320);
-  border: 1px solid var(--color-landing-border,rgb(255 255 255 / 0.08));
+  color-scheme: light dark;
+  background-color: $bg-card;
+  border: 1px solid $border;
   border-radius: 0;
   padding: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
   outline: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
-  color: var(--color-landing-fg,#e7ecf3);
+  font-family: $mono;
+  color: $fg;
   min-width: var(--radix-popover-trigger-width);
-  z-index: 100;
 }
 
 .month-navigator {
@@ -103,7 +153,7 @@
   border: none;
   margin: 0;
   min-width: 0;
-  color: var(--color-landing-fg,#e7ecf3);
+  color: $fg;
   font-size: 14px;
   font-weight: 500;
   user-select: none;
@@ -113,7 +163,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
-  color: var(--color-landing-fg-dim,#a2adbd);
+  color: $fg-dim;
   cursor: pointer;
   padding: 4px 10px;
   font-size: 16px;
@@ -121,26 +171,111 @@
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    background-color: var(--color-landing-bg-elev,#0d1016);
-    border-color: var(--color-landing-border,rgb(255 255 255 / 0.08));
-    color: var(--color-landing-fg,#e7ecf3);
+    background-color: $bg-elevated;
+    border-color: $border;
+    color: $fg;
   }
 }
 
 .month-navigator-label {
   font-weight: 500;
-  font-family: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+  font-family: $mono;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-size: 12px;
-  color: var(--color-landing-fg,#e7ecf3);
+  color: $fg;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, auto);
+  gap: 4px;
+  padding: 4px;
+  justify-items: center;
+}
+
+.weekday {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  font-family: $mono;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: $fg-faint;
+  pointer-events: none;
+}
+
+/* Background priority (low → high): today → weekend → weekend+today → selected → weekend+selected. */
+.day-cell {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: $mono;
+  font-size: 13px;
+  color: $fg-dim;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $accent;
+    color: $fg;
+    outline: none;
+  }
+
+  &[data-today] {
+    background: color-mix(in oklab, $accent 15%, transparent);
+    font-weight: 600;
+    color: $fg;
+  }
+
+  &[data-weekend] {
+    background: color-mix(in oklab, $red 12%, transparent);
+  }
+
+  &[data-weekend][data-today] {
+    background: color-mix(in oklab, $red 20%, transparent);
+  }
+
+  &[data-selected] {
+    background: color-mix(in oklab, $accent 55%, transparent);
+    color: $fg;
+  }
+
+  &[data-weekend][data-selected] {
+    background: color-mix(in oklab, $red 40%, transparent);
+  }
+
+  &:disabled {
+    cursor: default;
+    color: $fg-faint;
+
+    &[data-today],
+    &[data-selected] {
+      color: $fg-dim;
+    }
+
+    &:hover {
+      border-color: transparent;
+    }
+  }
 }
 
 .error-tooltip {
-  color: var(--color-landing-red,#ff4f58);
+  color: $red;
   font-size: 12px;
   padding: 2px 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: $mono;
 }
 
 .time-picker {
@@ -150,13 +285,13 @@
   gap: 2px;
   padding: 10px 4px 4px;
   border: none;
-  border-top: 1px solid var(--color-landing-border-soft,rgb(255 255 255 / 0.04));
+  border-top: 1px solid $border-soft;
   margin: 6px 0 0;
   min-width: 0;
 }
 
 .time-picker-separator {
-  color: var(--color-landing-fg-faint,#76819a);
+  color: $fg-faint;
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -187,26 +322,35 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
-  color: var(--color-landing-fg-faint,#76819a);
+  color: $fg-faint;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
   padding: 4px;
   width: 100%;
+  touch-action: manipulation;
+  user-select: none;
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 
   &:hover {
-    color: var(--color-landing-fg,#e7ecf3);
-    background-color: var(--color-landing-bg-elev,#0d1016);
-    border-color: var(--color-landing-border,rgb(255 255 255 / 0.08));
+    color: $fg;
+    background-color: $bg-elevated;
+    border-color: $border;
   }
 }
 
 .time-picker-value {
-  color: var(--color-landing-fg,#e7ecf3);
+  color: $fg;
   font-size: 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: $mono;
   font-weight: 500;
   line-height: 1;
+  padding: 2px 4px;
+  border: 1px solid transparent;
   user-select: none;
+
+  &:focus-visible {
+    border-color: $accent;
+    outline: none;
+  }
 }

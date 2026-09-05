@@ -236,7 +236,7 @@ export const DatePage = memo(() => {
           timeResolution={timeResolution}
           placeholder={controlsT.datePage.placeholder}
           today={today}
-          language={getCurrentLanguage()}
+          locale={getCurrentLanguage()}
         />
       </CardFrame>
 

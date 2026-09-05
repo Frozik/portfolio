@@ -1,79 +1,73 @@
-import { trim } from '@frozik/utils/math/trim';
-import { isNil } from 'lodash-es';
+import { clamp, isNil } from 'lodash-es';
+import type { KeyboardEvent, Ref } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+
 import { useFunction } from '../../hooks/useFunction';
 import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
-import type { ISelection } from './defs';
+import type { IRichEditorHandle, ISelection } from './defs';
+import {
+  createNumericHtmlRenderer,
+  createNumericInputNormalizer,
+  formatNumericValue,
+  parseNumericText,
+  roundNumericText,
+  settleNumericText,
+} from './numeric-input';
 import styles from './styles.module.scss';
 import { getCalendarAriaLabels } from './translations/translations';
-import { numericElementSelectionWithValueBuilder, numericTextToHtmlBuilder } from './utils';
 
-/**
- * Convert a numeric editing buffer into the controlled `number` value.
- * Empty, partial (`"-"`, `"."`), or otherwise non-finite buffers map to
- * `undefined` — the editor has no committed value in those states.
- */
-function parseNumericText(text: string): number | undefined {
-  if (text.length === 0) {
-    return undefined;
-  }
-
-  const parsed = Number(text);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-/**
- * Render a controlled `number` value into the editing buffer. `undefined`
- * clears the buffer; a finite number is shown as its plain string form.
- */
-function formatNumericValue(value: number | undefined): string {
-  return isNil(value) ? '' : String(value);
-}
+const DEFAULT_PIP_SIZE = 2;
 
 export const NumericEditor = memo(
   ({
+    ref,
     className,
     value,
     onValueChange,
     decimal,
     pipStart,
-    pipSize = 2,
+    pipSize = DEFAULT_PIP_SIZE,
     allowNegative = false,
+    min,
+    max,
+    step,
     placeholder,
-    language = 'en',
+    disabled = false,
+    locale = 'en',
   }: {
-    className?: string;
-    value?: number;
-    onValueChange?: (value: number | undefined) => void;
-    decimal?: number;
-    pipStart?: number;
-    pipSize?: number;
-    allowNegative?: boolean;
-    placeholder?: string;
-    language?: string;
+    readonly ref?: Ref<IRichEditorHandle>;
+    readonly className?: string;
+    readonly value?: number;
+    readonly onValueChange?: (value: number | undefined) => void;
+    /** Fraction digits the value settles to on blur; unlimited when absent. */
+    readonly decimal?: number;
+    readonly pipStart?: number;
+    readonly pipSize?: number;
+    readonly allowNegative?: boolean;
+    readonly min?: number;
+    readonly max?: number;
+    /** Enables ArrowUp / ArrowDown stepping. */
+    readonly step?: number;
+    readonly placeholder?: string;
+    readonly disabled?: boolean;
+    readonly locale?: string;
   }) => {
-    const ariaLabels = useMemo(() => getCalendarAriaLabels(language), [language]);
-
-    const allowedDecimals = useMemo(
-      () => (isNil(decimal) ? decimal : Math.max(decimal, 0)),
-      [decimal]
-    );
+    const ariaLabels = useMemo(() => getCalendarAriaLabels(locale), [locale]);
+    const decimals = isNil(decimal) ? undefined : Math.max(decimal, 0);
+    const displayScale = Math.max(decimals ?? 0, isNil(pipStart) ? 0 : pipStart + pipSize);
 
     const [editingText, setEditingText] = useState(() => formatNumericValue(value));
     const [focused, setFocused] = useState(false);
     // Mirrors the last value emitted through `onValueChange` so prop changes that
     // merely echo our own commit don't fight the editing buffer.
     const lastEmittedValueRef = useRef(value);
+    const valueBeforeEditRef = useRef(value);
 
-    // Sync the controlled value into the editing buffer when it changes
-    // externally and the user is not mid-edit (DateTimePicker pattern).
     useEffect(() => {
       if (focused || value === lastEmittedValueRef.current) {
         return;
       }
-
       lastEmittedValueRef.current = value;
       setEditingText(formatNumericValue(value));
     }, [value, focused]);
@@ -82,26 +76,39 @@ export const NumericEditor = memo(
       setEditingText(nextText);
 
       const nextValue = parseNumericText(nextText);
-
       if (nextValue !== lastEmittedValueRef.current) {
         lastEmittedValueRef.current = nextValue;
         onValueChange?.(nextValue);
       }
     });
 
-    const handleElementSelectionWithValue = useMemo(
-      () => numericElementSelectionWithValueBuilder({ allowNegative }),
+    const settle = useFunction(() => {
+      const settled = settleNumericText(editingText, {
+        decimals: isNil(decimals) && isNil(pipStart) ? undefined : displayScale,
+        min,
+        max,
+      });
+      if (settled !== editingText) {
+        commitText(settled);
+      }
+    });
+
+    const wasFocusedRef = useRef(false);
+    useEffect(() => {
+      if (wasFocusedRef.current && !focused) {
+        settle();
+      }
+      wasFocusedRef.current = focused;
+    }, [focused, settle]);
+
+    const normalizeInput = useMemo(
+      () => createNumericInputNormalizer({ allowNegative }),
       [allowNegative]
     );
 
-    const handleTextToHtml = useMemo(
-      () =>
-        numericTextToHtmlBuilder({
-          decimal: allowedDecimals,
-          pipStart,
-          pipSize,
-        }),
-      [allowedDecimals, pipStart, pipSize]
+    const toHtml = useMemo(
+      () => createNumericHtmlRenderer({ decimal: decimals, pipStart, pipSize }),
+      [decimals, pipStart, pipSize]
     );
 
     const handleFocusSelection = useFunction((currentValue: string): ISelection | undefined => {
@@ -112,57 +119,58 @@ export const NumericEditor = memo(
       const decimalIndex = currentValue.indexOf('.');
       const integerLength = decimalIndex >= 0 ? decimalIndex : currentValue.length;
       const selectionStart = integerLength + pipStart;
-      const selectionEnd = selectionStart + pipSize;
-
       if (selectionStart > currentValue.length) {
         return undefined;
       }
 
       return {
-        start: Math.min(selectionStart, currentValue.length),
-        end: Math.min(selectionEnd, currentValue.length),
+        start: selectionStart,
+        end: Math.min(selectionStart + pipSize, currentValue.length),
       };
     });
 
-    const handleFocusChanges = useFunction((newFocused: boolean) => {
-      setFocused(newFocused);
+    const handleFocusChange = useFunction((nextFocused: boolean) => {
+      if (nextFocused) {
+        valueBeforeEditRef.current = value;
+      }
+      setFocused(nextFocused);
+    });
 
-      if (newFocused || !editingText.includes('.')) {
+    const handleCancel = useFunction(() => {
+      commitText(formatNumericValue(valueBeforeEditRef.current));
+    });
+
+    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+      if (isNil(step) || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) {
         return;
       }
 
-      if (!isNil(allowedDecimals) || !isNil(pipStart)) {
-        const trimmedText = trim(
-          editingText,
-          Math.max(allowedDecimals ?? 0, isNil(pipStart) ? 0 : pipStart + pipSize)
-        );
-
-        if (trimmedText !== editingText) {
-          commitText(trimmedText);
-        }
-      } else {
-        commitText(editingText.replace(/0+$/g, ''));
-      }
+      event.preventDefault();
+      const direction = event.key === 'ArrowUp' ? 1 : -1;
+      const stepped = clamp(
+        (parseNumericText(editingText) ?? 0) + direction * step,
+        min ?? Number.NEGATIVE_INFINITY,
+        max ?? Number.POSITIVE_INFINITY
+      );
+      const steppedText = formatNumericValue(stepped);
+      commitText(isNil(decimals) ? steppedText : roundNumericText(steppedText, decimals));
     });
-
-    useEffect(() => {
-      handleFocusChanges(focused);
-    }, [handleFocusChanges, focused]);
 
     return (
       <RichEditor
+        ref={ref}
         className={cn(styles.editor, className)}
-        onGetElementSelectionWithValue={handleElementSelectionWithValue}
-        onTextToHtml={handleTextToHtml}
+        disabled={disabled}
         value={editingText}
-        placeholder={
-          !isNil(placeholder)
-            ? `<span class="${styles.placeholder}">${placeholder}</span>`
-            : undefined
-        }
-        onValueChanged={commitText}
-        onFocusChanges={handleFocusChanges}
+        placeholder={placeholder}
+        inputMode={allowNegative || displayScale > 0 || isNil(decimals) ? 'decimal' : 'numeric'}
+        normalizeInput={normalizeInput}
+        toHtml={toHtml}
+        onValueChange={commitText}
+        onFocusChange={handleFocusChange}
         onFocusSelection={handleFocusSelection}
+        onCancel={handleCancel}
+        onKeyDown={handleKeyDown}
         aria-label={ariaLabels.numericInputLabel}
       />
     );

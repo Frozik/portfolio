@@ -17,7 +17,36 @@ WebGPU, WebRTC, Yjs, Socket.IO, TensorFlow.js, MediaPipe, Matter.js.
 pnpm install    # Install dependencies
 pnpm dev        # Start dev server
 pnpm check-all  # Run full validation (lint + types + tests + format)
+pnpm lighthouse # Production build + Lighthouse CI against the landing page
+pnpm analyze    # Production build + bundle treemap (bundle-stats.html)
 ```
+
+## Performance & PWA
+
+The landing page is tuned for Lighthouse on a throttled mobile profile
+(measure only against `vite build` + `vite preview` or the live site — the
+dev server serves unminified pre-bundled dependencies and is not
+representative):
+
+- **Critical path is one level deep.** The landing (`welcome`) is imported
+  statically, so its code ships in the entry; the React runtime and the
+  shared vendor code are separate `modulepreload`ed chunks that stay cached
+  across deploys. Everything else — every demo, the auth/signaling stack
+  (Google Identity, MobX session), the QR / menu / contact dialogs, the PDF
+  export — loads on navigation or on click.
+- **Ambient canvases have a CPU budget.** `useAmbientCanvas` sizes canvases
+  from `ResizeObserver` (no forced layout after React commits), caps the
+  device-pixel ratio and frame rate per surface, pauses off-screen and
+  hidden canvases, and allocates below-the-fold canvases only when they
+  first scroll into view. The full-screen glow is painted at 1/8 resolution
+  and upscaled.
+- **Service worker precaches the app shell only** (`index.html`, its
+  scripts and CSS, icons); hashed feature chunks are cached on first use
+  with a cache-first strategy. A first-time install never reloads the page —
+  only a real update of an already-controlled page does.
+- **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
+  Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
+  caps for scripts, CSS and third-party code.
 
 ## Features
 

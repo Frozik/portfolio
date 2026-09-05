@@ -3,6 +3,9 @@ import { useAmbientCanvas } from '../../shared/hooks/useAmbientCanvas';
 import { createBackgroundCanvasAnimation } from './background-canvas-animation';
 
 const DEFAULT_OPACITY = 0.75;
+/** Gradients, a faint grid and soft particles: full-screen fills at device density buy nothing visible. */
+const MAX_DPR = 1;
+const TARGET_FPS = 30;
 
 const BackgroundCanvasComponent = ({
   opacity = DEFAULT_OPACITY,
@@ -38,7 +41,7 @@ const BackgroundCanvasComponent = ({
     };
   }, [animation]);
 
-  useAmbientCanvas(canvasRef, animation);
+  useAmbientCanvas(canvasRef, { ...animation, maxDpr: MAX_DPR, targetFps: TARGET_FPS });
 
   return (
     <div className="print:hidden">

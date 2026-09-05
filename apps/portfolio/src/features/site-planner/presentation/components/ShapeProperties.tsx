@@ -1,3 +1,4 @@
+import type { IRichEditorHandle } from '@frozik/components/components/RichEditor/defs';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil, round } from 'lodash-es';
@@ -24,7 +25,7 @@ import {
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlacedObjectIcon } from './PlacedObjectIcon';
-import { focusPropertyField, PropertyField } from './PropertyField';
+import { PropertyField } from './PropertyField';
 import { PropertyRow, PropertyValue } from './PropertyRow';
 import { describePlacedObject } from './placedObjectLabel';
 import { toolHint } from './toolHints';
@@ -36,7 +37,7 @@ type ShapeField = 'center-x' | 'center-y' | 'width' | 'length' | 'rotation' | 'r
  * The field a freshly drawn shape hands the keyboard to: its first dimension,
  * which is the width of a rectangle and the radius of a circle.
  */
-type SizeFieldRef = RefObject<HTMLFieldSetElement | null>;
+type SizeFieldRef = RefObject<IRichEditorHandle | null>;
 
 type ShapeFieldChange = (shape: Shape, field: ShapeField) => void;
 
@@ -269,7 +270,7 @@ export const SelectedShapeProperties = observer(
   ({ store }: { readonly store: SitePlannerStore }) => {
     const shape = store.composition.selectedShape;
     const { isPropertiesFocusPending } = store;
-    const sizeFieldRef = useRef<HTMLFieldSetElement>(null);
+    const sizeFieldRef = useRef<IRichEditorHandle>(null);
     // Typing a number arrives one keystroke at a time; the field the keystrokes
     // belong to is what collapses them into a single step to undo.
     const handleChange = useFunction((nextShape: Shape, field: ShapeField) => {
@@ -286,7 +287,7 @@ export const SelectedShapeProperties = observer(
       }
 
       store.consumePropertiesFocus();
-      focusPropertyField(sizeFieldRef.current);
+      sizeFieldRef.current?.focus();
     }, [store, isPropertiesFocusPending]);
 
     if (isNil(shape)) {

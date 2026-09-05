@@ -1,3 +1,5 @@
+import type { TRgb } from '../../../shared/lib/cssRgbToken';
+
 /**
  * Shared canvas drawing theme for the welcome surfaces (hero orderbook +
  * project-card FX). Consolidates the color literals and mono-font stack that
@@ -14,9 +16,10 @@ export function darkSurface(alpha: number): string {
   return `rgba(${DARK_SURFACE_RGB[0]},${DARK_SURFACE_RGB[1]},${DARK_SURFACE_RGB[2]},${alpha})`;
 }
 
-export const DEFAULT_ACCENT_RGB: readonly [number, number, number] = [96, 165, 250];
-export const DEFAULT_GREEN_RGB: readonly [number, number, number] = [76, 217, 100];
-export const DEFAULT_RED_RGB: readonly [number, number, number] = [255, 79, 88];
+export const ACCENT_TOKEN = '--color-landing-accent';
+export const GREEN_TOKEN = '--color-landing-green';
+export const RED_TOKEN = '--color-landing-red';
 
-export const HEX_COLOR_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-export const HEX_RADIX = 16;
+export const DEFAULT_ACCENT_RGB: TRgb = [96, 165, 250];
+export const DEFAULT_GREEN_RGB: TRgb = [76, 217, 100];
+export const DEFAULT_RED_RGB: TRgb = [255, 79, 88];

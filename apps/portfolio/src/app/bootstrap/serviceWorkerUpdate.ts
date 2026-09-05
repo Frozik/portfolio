@@ -31,9 +31,13 @@ export function setupServiceWorkerUpdate(): void {
     return;
   }
 
+  // Workbox's `clientsClaim()` also fires `controllerchange` on the very first
+  // install, when there is nothing to update — reloading there would restart
+  // every first visit. Only a page that was already controlled is a real update.
+  const wasControlled = navigator.serviceWorker.controller !== null;
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) {
+    if (!wasControlled || reloading) {
       return;
     }
     reloading = true;

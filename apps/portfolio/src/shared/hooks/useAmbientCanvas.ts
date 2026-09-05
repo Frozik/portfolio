@@ -1,13 +1,15 @@
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 
-/** Device-pixel-ratio is clamped so a 3x phone doesn't quadruple the fill cost. */
-const MAX_DPR = 2;
+const DEFAULT_MAX_DPR = 2;
 /**
  * Clamp the per-frame delta so a tab that was backgrounded (or a slow frame)
  * doesn't make time-stepped simulations jump on the next frame.
  */
 const MAX_FRAME_DELTA_MS = 64;
+const MS_PER_SECOND = 1000;
+/** Lets a 30 fps target land on every second vsync of a 60 Hz display instead of every third. */
+const FRAME_INTERVAL_TOLERANCE_MS = 1;
 
 export interface IAmbientCanvasFrame {
   readonly ctx: CanvasRenderingContext2D;
@@ -48,6 +50,21 @@ export interface IUseAmbientCanvasOptions {
   readonly pauseWhenHidden?: boolean;
   /** Pause the rAF loop while the canvas is fully offscreen (default `true`). */
   readonly pauseWhenOffscreen?: boolean;
+  /**
+   * Upper bound for the backing-store density (default `2`). Soft content —
+   * gradients, glows, small decorative sprites — looks the same at `1` and
+   * costs a quarter of the fill.
+   */
+  readonly maxDpr?: number;
+  /** Cap on draws per second; animation frames in between are skipped. Default: every frame. */
+  readonly targetFps?: number;
+  /**
+   * Leave the backing store unallocated until the canvas first enters the
+   * viewport (default `false`; implies `pauseWhenOffscreen`). For a grid of
+   * below-the-fold canvases this avoids allocating and painting all of them
+   * on load.
+   */
+  readonly allocateWhenVisible?: boolean;
 }
 
 /**
@@ -63,26 +80,31 @@ export interface IAmbientCanvasAnimation {
 
 /**
  * Owns the boilerplate canvas lifecycle shared by every ambient/background
- * canvas: 2D context acquisition, DPR-aware backing-store sizing via a
+ * canvas: 2D context acquisition, DPR-aware backing-store sizing driven by a
  * `ResizeObserver`, a `requestAnimationFrame` loop (paused while the page is
- * hidden or the canvas is offscreen), `prefers-reduced-motion` handling (one
- * static frame, repainted on resize), and full teardown on unmount. Callers
- * provide only their per-frame `draw` and an optional `onResize`.
+ * hidden or the canvas is offscreen, optionally capped to `targetFps`),
+ * `prefers-reduced-motion` handling (one static frame, repainted on resize),
+ * and full teardown on unmount. Callers provide only their per-frame `draw`
+ * and an optional `onResize`.
  *
- * `draw`/`onResize` are read from refs, so passing fresh closures each render
+ * The size is never read from the element directly: the `ResizeObserver`
+ * delivers it (it always reports once after `observe()`), so no forced layout
+ * is triggered right after React's commit. Nothing is drawn before that first
+ * report.
+ *
+ * All options are read through a ref, so passing fresh closures each render
  * does not re-initialise the loop.
  */
 export function useAmbientCanvas(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   options: IUseAmbientCanvasOptions
 ): void {
-  const drawRef = useRef(options.draw);
-  drawRef.current = options.draw;
-  const onResizeRef = useRef(options.onResize);
-  onResizeRef.current = options.onResize;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const pauseWhenHidden = options.pauseWhenHidden ?? true;
-  const pauseWhenOffscreen = options.pauseWhenOffscreen ?? true;
+  const allocateWhenVisible = options.allocateWhenVisible ?? false;
+  const pauseWhenOffscreen = (options.pauseWhenOffscreen ?? true) || allocateWhenVisible;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -96,6 +118,9 @@ export function useAmbientCanvas(
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    let observedCssWidth: number | null = null;
+    let observedCssHeight: number | null = null;
+    let allocated = false;
     let cssWidth = 0;
     let cssHeight = 0;
     let dpr = 1;
@@ -104,39 +129,39 @@ export function useAmbientCanvas(
     let lastMs = 0;
     let timingStarted = false;
     let pageVisible = !document.hidden;
-    let onScreen = true;
+    let onScreen = !allocateWhenVisible;
 
-    const applySize = (force: boolean): boolean => {
-      const nextDpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
-      const nextCssWidth = canvas.clientWidth;
-      const nextCssHeight = canvas.clientHeight;
-      const nextWidth = Math.round(nextCssWidth * nextDpr);
-      const nextHeight = Math.round(nextCssHeight * nextDpr);
-      const backingChanged = nextWidth !== canvas.width || nextHeight !== canvas.height;
-      // Assigning canvas.width/height clears the backing store even when the value
-      // is unchanged, so skip no-op resizes — ResizeObserver fires spuriously and
-      // each needless clear flickers the canvas blank for a frame. The initial call
-      // must still run (`force`): on a re-run of this effect over an already-sized
-      // canvas (React StrictMode remounts the same element) the early return would
-      // leave dpr/cssWidth/cssHeight at their initial 1/0/0 and skip onResize,
-      // and every subsequent frame would draw with wrong metrics until a real
-      // resize happened to come through.
-      if (!backingChanged && !force) {
+    const applySize = (): boolean => {
+      if (observedCssWidth === null || observedCssHeight === null) {
         return false;
       }
+      if (allocateWhenVisible && !onScreen) {
+        return false;
+      }
+      const maxDpr = optionsRef.current.maxDpr ?? DEFAULT_MAX_DPR;
+      const nextDpr = Math.min(maxDpr, window.devicePixelRatio || 1);
+      const nextWidth = Math.round(observedCssWidth * nextDpr);
+      const nextHeight = Math.round(observedCssHeight * nextDpr);
+      const backingChanged = nextWidth !== canvas.width || nextHeight !== canvas.height;
+      if (allocated && !backingChanged) {
+        return false;
+      }
+      allocated = true;
       dpr = nextDpr;
-      cssWidth = nextCssWidth;
-      cssHeight = nextCssHeight;
+      cssWidth = observedCssWidth;
+      cssHeight = observedCssHeight;
+      // Assigning canvas.width/height clears the backing store even when the
+      // value is unchanged, so it is only written when it actually differs.
       if (backingChanged) {
         canvas.width = nextWidth;
         canvas.height = nextHeight;
       }
-      onResizeRef.current?.({ ctx, cssWidth, cssHeight, dpr });
-      return backingChanged;
+      optionsRef.current.onResize?.({ ctx, cssWidth, cssHeight, dpr });
+      return true;
     };
 
     const renderStatic = (): void => {
-      drawRef.current({
+      optionsRef.current.draw({
         ctx,
         cssWidth,
         cssHeight,
@@ -156,7 +181,7 @@ export function useAmbientCanvas(
       }
       const deltaMs = Math.min(MAX_FRAME_DELTA_MS, timestamp - lastMs);
       lastMs = timestamp;
-      drawRef.current({
+      optionsRef.current.draw({
         ctx,
         cssWidth,
         cssHeight,
@@ -168,13 +193,35 @@ export function useAmbientCanvas(
       });
     };
 
+    // The backing store was just (re)allocated, which cleared it. Repaint
+    // synchronously — ResizeObserver callbacks run before paint, so the canvas
+    // is never shown blank; the animated path repaints at the current time
+    // rather than jumping back to the t=0 frame.
+    const repaint = (): void => {
+      if (prefersReducedMotion) {
+        renderStatic();
+      } else {
+        renderFrame(performance.now());
+      }
+    };
+
+    const isFrameDue = (timestamp: DOMHighResTimeStamp): boolean => {
+      const targetFps = optionsRef.current.targetFps;
+      if (targetFps === undefined || !timingStarted) {
+        return true;
+      }
+      return timestamp - lastMs >= MS_PER_SECOND / targetFps - FRAME_INTERVAL_TOLERANCE_MS;
+    };
+
     const loop = (timestamp: DOMHighResTimeStamp): void => {
-      renderFrame(timestamp);
+      if (isFrameDue(timestamp)) {
+        renderFrame(timestamp);
+      }
       frameId = requestAnimationFrame(loop);
     };
 
     const shouldRun = (): boolean =>
-      (!pauseWhenHidden || pageVisible) && (!pauseWhenOffscreen || onScreen);
+      allocated && (!pauseWhenHidden || pageVisible) && (!pauseWhenOffscreen || onScreen);
 
     const start = (): void => {
       if (frameId === null && shouldRun()) {
@@ -202,27 +249,17 @@ export function useAmbientCanvas(
       }
     };
 
-    applySize(true);
-    if (prefersReducedMotion) {
-      renderStatic();
-    } else {
-      start();
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (!applySize(false)) {
+    const resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[entries.length - 1];
+      if (entry === undefined) {
         return;
       }
-      // The width/height assignment just cleared the backing store. Repaint
-      // synchronously here — ResizeObserver callbacks run before paint, so the
-      // canvas is never shown blank. Otherwise the next rAF leaves one empty
-      // frame, which reads as a flicker during continuous resize. The animated
-      // path repaints at the current time (no jump back to the t=0 frame).
-      if (prefersReducedMotion) {
-        renderStatic();
-      } else {
-        renderFrame(performance.now());
+      observedCssWidth = entry.contentRect.width;
+      observedCssHeight = entry.contentRect.height;
+      if (applySize()) {
+        repaint();
       }
+      syncRunning();
     });
     resizeObserver.observe(canvas);
 
@@ -238,6 +275,9 @@ export function useAmbientCanvas(
     if (pauseWhenOffscreen) {
       intersectionObserver = new IntersectionObserver(entries => {
         onScreen = entries.some(entry => entry.isIntersecting);
+        if (onScreen && applySize()) {
+          repaint();
+        }
         syncRunning();
       });
       intersectionObserver.observe(canvas);
@@ -254,14 +294,8 @@ export function useAmbientCanvas(
       dprMediaQuery.addEventListener('change', handleDprChange);
     };
     function handleDprChange(): void {
-      if (applySize(false)) {
-        // Same reasoning as the ResizeObserver path: the assignment cleared the
-        // backing store, so repaint immediately instead of showing a blank frame.
-        if (prefersReducedMotion) {
-          renderStatic();
-        } else {
-          renderFrame(performance.now());
-        }
+      if (applySize()) {
+        repaint();
       }
       watchDprChange();
     }
@@ -276,5 +310,5 @@ export function useAmbientCanvas(
         document.removeEventListener('visibilitychange', handleVisibility);
       }
     };
-  }, [canvasRef, pauseWhenHidden, pauseWhenOffscreen]);
+  }, [canvasRef, pauseWhenHidden, pauseWhenOffscreen, allocateWhenVisible]);
 }
