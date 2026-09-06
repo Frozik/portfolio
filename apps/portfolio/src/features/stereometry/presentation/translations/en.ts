@@ -39,7 +39,7 @@ export const stereometryTranslationsEn = {
       doubleClickLine: 'remove the line',
       dragVertex: 'draw a construction line between two points',
       selectEdgeTapVertex: 'draw a parallel line through that vertex',
-      holdDragLineVertex: 'preview and place a parallel line through the target vertex',
+      dragLineVertex: 'draw a parallel line through the vertex it is dropped on',
     },
     controlLabels: {
       drag: 'Drag',
@@ -50,7 +50,7 @@ export const stereometryTranslationsEn = {
       doubleClickLine: 'Double-click line',
       dragVertex: 'Drag vertex \u2192 vertex',
       selectEdgeTapVertex: 'Select edge/line + tap vertex',
-      holdDragLineVertex: 'Hold selected line \u2192 drag to vertex',
+      dragLineVertex: 'Drag line \u2192 vertex',
     },
     intersectionHint: 'Intersection points appear automatically where lines cross.',
   },

@@ -86,7 +86,6 @@ export function runStereometry(params: IStereometryRunParams): StereometryContro
     performInitialHitTest: hitTester.hitTestDragStart,
     performSnapHitTest: hitTester.hitTestSnapVertex,
     hasActiveSelection: sceneState.hasSelection,
-    isLineSelected: sceneState.isLineSelected,
     onDragUpdate: preview => {
       sceneLayerReference?.setDragPreview(preview);
       sceneState.setPreviewLine(sceneLayerReference?.getPreviewLine());

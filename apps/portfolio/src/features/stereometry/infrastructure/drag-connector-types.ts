@@ -36,9 +36,6 @@ export interface DragToConnectCallbacks {
   /** Hit-test during drag for snap targets. Ignores lines so they can't override a valid vertex snap. */
   readonly performSnapHitTest: (screenX: number, screenY: number) => Vec3Array | undefined;
   readonly hasActiveSelection: () => boolean;
-  /** True when this specific line is the currently selected one. Gates the
-   *  drag-to-parallel gesture so unselected lines only accept tap/double-tap. */
-  readonly isLineSelected: (lineId: number) => boolean;
   readonly onDragStart?: () => void;
   readonly onDragUpdate: (preview: DragPreviewState | undefined) => void;
   readonly onVertexTap: (position: Vec3Array) => void;

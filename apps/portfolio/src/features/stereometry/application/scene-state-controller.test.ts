@@ -125,15 +125,6 @@ describe('scene state controller', () => {
     expect(findLine(constructionLineId)).toBeUndefined();
   });
 
-  it('reports which line is selected', () => {
-    const { controller } = createController();
-
-    controller.setSelection({ type: 'line', lineId: 2 });
-
-    expect(controller.isLineSelected(2)).toBe(true);
-    expect(controller.isLineSelected(3)).toBe(false);
-  });
-
   it('a preview line shows up in the next frame and disappears when cleared', () => {
     const { controller, frames } = createController();
     const segmentsBefore = frames.at(-1)?.segments.length ?? 0;

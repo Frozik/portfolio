@@ -56,7 +56,6 @@ export interface SceneStateController {
   readonly history: SceneHistoryState;
   getTopology(): SceneTopology;
   hasSelection(): boolean;
-  isLineSelected(lineId: number): boolean;
   setSelection(selection: SelectionState): void;
   setPreviewLine(previewLine: PreviewLine | undefined): void;
   /** Connects two vertices with a new line and clears the selection. */
@@ -120,10 +119,6 @@ export function createSceneStateController(
 
   function hasSelection(): boolean {
     return selection.type !== 'none';
-  }
-
-  function isLineSelected(lineId: number): boolean {
-    return selection.type === 'line' && selection.lineId === lineId;
   }
 
   function setSelection(nextSelection: SelectionState): void {
@@ -232,7 +227,6 @@ export function createSceneStateController(
     history: historyState,
     getTopology,
     hasSelection,
-    isLineSelected,
     setSelection,
     setPreviewLine,
     connectVertices,
