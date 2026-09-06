@@ -52,6 +52,12 @@ tasks:
     options:
       runInCI: false
 
+  install-browsers:
+    command: 'playwright install --only-shell chromium'
+    options:
+      cache: false
+      runInCI: false
+
   e2e:
     command: 'pnpm exec playwright test'
     deps:

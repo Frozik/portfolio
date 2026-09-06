@@ -31,8 +31,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-${{ runner.os }}-
       - name: Install the Playwright browser for the e2e task
-        working-directory: apps/portfolio
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: moon run portfolio:install-browsers -- --with-deps
       - uses: actions/cache@v4
         with:
           path: .moon/cache
