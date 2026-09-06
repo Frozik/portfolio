@@ -9,7 +9,7 @@ USER_NAME="communication"
 TARGET_DIR="/opt/communication"
 
 info "Installing workspace dependencies"
-sudo -u "${USER_NAME}" -H bash -c "cd '${TARGET_DIR}' && pnpm install --frozen-lockfile"
+sudo -u "${USER_NAME}" -H bash -c "cd '${TARGET_DIR}' && CI=true LEFTHOOK=0 pnpm install --frozen-lockfile"
 
 # Pre-check: workspace project must actually exist. pnpm --filter
 # against a missing project exits 0 with "No projects matched the

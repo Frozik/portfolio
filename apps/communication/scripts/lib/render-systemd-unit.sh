@@ -37,8 +37,9 @@ Environment=NODE_CONFIG_ENV=production
 ${PUBLIC_ID_ENV_LINES}
 # Run source directly via tsx — handles TypeScript stripping AND
 # extensionless ESM imports that Node strict ESM rejects natively.
-# tsx is a runtime dep installed by 'pnpm install' in build-app.sh.
-ExecStart=/opt/communication/node_modules/.bin/tsx /opt/communication/apps/communication/src/main.ts
+# tsx is a dependency of apps/communication alone, so its bin lives in that
+# package's node_modules, not at the workspace root.
+ExecStart=/opt/communication/apps/communication/node_modules/.bin/tsx /opt/communication/apps/communication/src/main.ts
 Restart=always
 RestartSec=5s
 LimitNOFILE=65536

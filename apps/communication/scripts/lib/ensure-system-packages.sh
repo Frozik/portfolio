@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${SCRIPT_DIR}/common.sh"
 
-PNPM_VERSION="${PNPM_VERSION:-10.14.0}"
+PNPM_VERSION="${PNPM_VERSION:-11.25.0}"
 
 info "apt-get update"
 DEBIAN_FRONTEND=noninteractive apt-get update -qq
@@ -21,10 +21,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
   ufw \
   openssl
 
-# Node.js 22 — install via NodeSource if absent or older.
-if ! command -v node >/dev/null 2>&1 || [[ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt 22 ]]; then
-  info "Installing Node.js 22"
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# Node.js 24 — install via NodeSource if absent or older (the workspace declares engines.node >= 24).
+if ! command -v node >/dev/null 2>&1 || [[ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt 24 ]]; then
+  info "Installing Node.js 24"
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs
 fi
 ok "Node $(node --version)"
