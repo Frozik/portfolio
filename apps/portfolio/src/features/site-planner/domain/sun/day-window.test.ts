@@ -1,3 +1,4 @@
+import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from '@frozik/utils/date/constants';
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 
@@ -8,8 +9,7 @@ import {
   DEFAULT_TIME_ZONE_ID,
 } from '../constants';
 import type { SiteLocation } from '../model/site-plan';
-import { clampTimeToWindow, computeDayWindow } from './day-window';
-import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from './sun-study';
+import { clampTimeToWindow, computeDayWindow, resolveDayWindow } from './day-window';
 
 const SAINT_PETERSBURG: SiteLocation = {
   latitudeDegrees: DEFAULT_LATITUDE_DEGREES,
@@ -26,8 +26,14 @@ const SVALBARD: SiteLocation = {
   northOffsetDegrees: 0,
 };
 
-const SUMMER_SOLSTICE = Temporal.PlainDate.from('2026-06-21');
 const WINTER_SOLSTICE = Temporal.PlainDate.from('2026-12-21');
+
+const SUMMER_SOLSTICE = Temporal.PlainDate.from('2026-06-21');
+const FULL_DAY = { sunriseMinutes: 0, sunsetMinutes: MINUTES_PER_DAY - 1 };
+
+function at(time: string): Temporal.ZonedDateTime {
+  return Temporal.ZonedDateTime.from(`${time}[${DEFAULT_TIME_ZONE_ID}]`);
+}
 
 describe('computeDayWindow', () => {
   it('spans a summer solstice day in Saint Petersburg from early morning to late evening', () => {
@@ -51,17 +57,46 @@ describe('computeDayWindow', () => {
   });
 
   it('falls back to the whole day through a polar day', () => {
-    expect(computeDayWindow({ date: SUMMER_SOLSTICE, location: SVALBARD })).toEqual({
-      sunriseMinutes: 0,
-      sunsetMinutes: MINUTES_PER_DAY - 1,
-    });
+    expect(computeDayWindow({ date: SUMMER_SOLSTICE, location: SVALBARD })).toEqual(FULL_DAY);
   });
 
   it('falls back to the whole day through a polar night', () => {
-    expect(computeDayWindow({ date: WINTER_SOLSTICE, location: SVALBARD })).toEqual({
-      sunriseMinutes: 0,
-      sunsetMinutes: MINUTES_PER_DAY - 1,
-    });
+    expect(computeDayWindow({ date: WINTER_SOLSTICE, location: SVALBARD })).toEqual(FULL_DAY);
+  });
+});
+
+describe('resolveDayWindow', () => {
+  it('turns the sunrise and the sunset into minutes of the studied day', () => {
+    const window = resolveDayWindow(
+      { sunrise: at('2026-06-21T03:36:00'), sunset: at('2026-06-21T22:24:00') },
+      SUMMER_SOLSTICE
+    );
+
+    expect(window).toEqual({ sunriseMinutes: 216, sunsetMinutes: 1344 });
+  });
+
+  it('falls back to the whole day when the sun never crosses the horizon', () => {
+    expect(resolveDayWindow({ sunrise: undefined, sunset: undefined }, SUMMER_SOLSTICE)).toEqual(
+      FULL_DAY
+    );
+  });
+
+  it('falls back to the whole day when a sun time lands on a neighbouring local day', () => {
+    const window = resolveDayWindow(
+      { sunrise: at('2026-06-20T23:50:00'), sunset: at('2026-06-21T22:24:00') },
+      SUMMER_SOLSTICE
+    );
+
+    expect(window).toEqual(FULL_DAY);
+  });
+
+  it('falls back to the whole day when the window would close before it opens', () => {
+    const window = resolveDayWindow(
+      { sunrise: at('2026-06-21T22:00:00'), sunset: at('2026-06-21T04:00:00') },
+      SUMMER_SOLSTICE
+    );
+
+    expect(window).toEqual(FULL_DAY);
   });
 });
 

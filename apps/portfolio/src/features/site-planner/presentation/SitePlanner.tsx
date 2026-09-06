@@ -79,7 +79,7 @@ const ViewContent = observer(
 
 /** What went wrong with the last plan file; it stays until dismissed or retried. */
 const FileIssueAlert = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const { fileIssue } = store;
+  const { fileIssue } = store.persistence;
 
   if (isNil(fileIssue)) {
     return undefined;
@@ -91,7 +91,7 @@ const FileIssueAlert = observer(({ store }: { readonly store: SitePlannerStore }
       className="items-center py-2 text-xs"
       message={sitePlannerT.file.issues[fileIssue]}
       description={
-        <Button variant="ghost" size="sm" onClick={store.dismissFileIssue}>
+        <Button variant="ghost" size="sm" onClick={store.persistence.dismissFileIssue}>
           {sitePlannerT.file.dismissIssue}
         </Button>
       }

@@ -2,7 +2,6 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
-import { bearingDegreesTowards } from '../domain/geometry/transform-shape';
 import type { EditorMode, EditTarget } from '../domain/model/editor-mode';
 import {
   editorDoorFor,
@@ -10,6 +9,7 @@ import {
   isPlanTool,
   isToolAllowed,
 } from '../domain/model/editor-mode';
+import type { UtilityRoute } from '../domain/model/routing';
 import type { PlanTool } from '../domain/model/selection';
 import type { SiteObjectState } from '../domain/model/site-object';
 import {
@@ -18,31 +18,31 @@ import {
   siteObjectSelection,
   translateSiteObject,
 } from '../domain/model/site-object';
-import type { Building, CarInstance } from '../domain/model/site-plan';
-import { normalizeTurnDegrees } from '../domain/units';
+import type { SitePath } from '../domain/model/site-plan';
 import type { PlanInputTarget, PlanModifiers } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
 import { planToScreen } from '../domain/view/plan-viewport';
-import { rotationStepDegrees, snapLength } from '../domain/view/snapping';
 import { BuildingEditInteraction } from './interactions/building-edit-interaction';
 import type { EditorInteraction, InteractionContext } from './interactions/editor-interaction';
 import { DELETE_KEYS } from './interactions/editor-interaction';
-import { offsetBetween, snapPointToGrid } from './interactions/grid-snapping';
+import { snapPointToGrid } from './interactions/grid-snapping';
+import { ObjectDragGestures } from './interactions/object-drag-gestures';
 import { PathEditInteraction } from './interactions/path-edit-interaction';
-import { applyPathHandleHover, PathPointGestures } from './interactions/path-point-gestures';
+import { applyPathHandleHover, createPathPointGestures } from './interactions/path-point-gestures';
 import {
   findHandleAt,
-  pickCar,
   pickPath,
+  pickPlacedInstance,
   pickShape,
-  pickTree,
+  pickSiteObject,
   pickUtilityRoute,
 } from './interactions/plan-picking';
+import type { PolylinePointGestures } from './interactions/polyline-point-gestures';
 import { RouteEditInteraction } from './interactions/route-edit-interaction';
 import {
   applyRouteHandleHover,
+  createRoutePointGestures,
   ENTRY_SNAP_RADIUS_PX,
-  RoutePointGestures,
 } from './interactions/route-point-gestures';
 import { SiteEditInteraction } from './interactions/site-edit-interaction';
 import { computeCarHandles } from './render/plan-draw/draw-cars';
@@ -72,34 +72,6 @@ const ENTER_MODE_KEY = 'Enter';
 const COMMIT_KEY = 'Enter';
 
 /**
- * View mode's one whole-object drag, whatever the kind under the pointer — a
- * tree, a car, a building, a path (`SiteObjectState` is the unification). The
- * object as it stood at the grab is kept: every move re-translates it from
- * there, so no rounding accumulates, and an interrupted drag puts it back
- * whole through the same door it moved through.
- */
-interface ObjectDrag {
-  readonly startObject: SiteObjectState;
-  /** The object's own reference point at the grab — what the grid snap steers. */
-  readonly startReference: Vector2;
-  readonly grabOffset: Vector2;
-}
-
-/** Turning the selected car by the grip ahead of its nose. */
-interface CarTurn {
-  readonly startCar: CarInstance;
-  /** Where on the dial the grip was taken; the turn is the sweep from here. */
-  readonly grabBearingDegrees: number;
-}
-
-/** Turning the whole selected building by the grip over its footprint. */
-interface BuildingTurn {
-  readonly startBuilding: Building;
-  readonly pivot: Vector2;
-  readonly startBearingDegrees: number;
-}
-
-/**
  * Turns pointer and key input into plan edits. It owns no DOM and no rendering:
  * the input layer hands it plan-space points, it reads the active tool and the
  * selection from the store, and it writes back through the store's edit actions.
@@ -115,13 +87,17 @@ export class PlanInteractionController implements PlanInputTarget {
   private readonly store: SitePlannerStore;
   private readonly getViewport: () => PlanViewport;
   private readonly context: InteractionContext;
-  private objectDrag: ObjectDrag | undefined = undefined;
-  private carTurn: CarTurn | undefined = undefined;
-  private buildingTurn: BuildingTurn | undefined = undefined;
+  /**
+   * View mode's one whole-object gesture, whatever the kind under the pointer —
+   * a tree or a car slid, a building or a path slid whole, a car or a building
+   * turned by its grip. The object as it stood at the grab is what every move
+   * re-derives from, so no rounding accumulates and a cancel puts it back whole.
+   */
+  private readonly viewObjects: ObjectDragGestures;
   /** View mode's grip on the points of a selected path (squares only there). */
-  private readonly viewPathGestures: PathPointGestures;
+  private readonly viewPathGestures: PolylinePointGestures<SitePath>;
   /** The same grip on a selected trench's bends. */
-  private readonly viewRouteGestures: RoutePointGestures;
+  private readonly viewRouteGestures: PolylinePointGestures<UtilityRoute>;
   private editInteraction:
     | { readonly mode: EditorMode; readonly interaction: EditorInteraction }
     | undefined = undefined;
@@ -143,13 +119,14 @@ export class PlanInteractionController implements PlanInputTarget {
     this.store = store;
     this.getViewport = getViewport;
     this.context = { store, getViewport, hasPointerMoved: () => this.hasPointerMoved };
-    this.viewPathGestures = new PathPointGestures(this.context);
-    this.viewRouteGestures = new RoutePointGestures(this.context);
+    this.viewObjects = new ObjectDragGestures(this.context);
+    this.viewPathGestures = createPathPointGestures(this.context);
+    this.viewRouteGestures = createRoutePointGestures(this.context);
   }
 
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): void {
-    this.store.setCursorPlanPoint(planPoint);
-    this.store.setCursorModifiers(modifiers);
+    this.store.view.setCursorPlanPoint(planPoint);
+    this.store.view.setCursorModifiers(modifiers);
     this.hasPointerMoved = false;
 
     const interaction = this.currentEditInteraction();
@@ -208,10 +185,10 @@ export class PlanInteractionController implements PlanInputTarget {
   }
 
   onPointerMove(planPoint: Vector2, modifiers: PlanModifiers): void {
-    this.store.setCursorPlanPoint(planPoint);
+    this.store.view.setCursorPlanPoint(planPoint);
     // The draft previews read these, so the segment drawn is the segment a
     // click commits — Shift locking it square has to be visible to be honest.
-    this.store.setCursorModifiers(modifiers);
+    this.store.view.setCursorModifiers(modifiers);
     this.hasPointerMoved = true;
 
     const interaction = this.currentEditInteraction();
@@ -220,21 +197,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    if (!isNil(this.carTurn)) {
-      this.turnCarTo(this.carTurn, planPoint, modifiers);
-
-      return;
-    }
-
-    if (!isNil(this.buildingTurn)) {
-      this.turnBuildingTo(this.buildingTurn, planPoint, modifiers);
-
-      return;
-    }
-
-    if (!isNil(this.objectDrag)) {
-      this.dragObjectTo(this.objectDrag, planPoint, modifiers);
-
+    if (this.viewObjects.move(planPoint, modifiers)) {
       return;
     }
 
@@ -276,39 +239,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    const carTurn = this.carTurn;
-
-    if (!isNil(carTurn)) {
-      this.carTurn = undefined;
-
-      if (this.hasPointerMoved) {
-        this.turnCarTo(carTurn, planPoint, modifiers);
-      }
-
-      return;
-    }
-
-    const buildingTurn = this.buildingTurn;
-
-    if (!isNil(buildingTurn)) {
-      this.buildingTurn = undefined;
-
-      if (this.hasPointerMoved) {
-        this.turnBuildingTo(buildingTurn, planPoint, modifiers);
-      }
-
-      return;
-    }
-
-    const objectDrag = this.objectDrag;
-
-    if (!isNil(objectDrag)) {
-      this.objectDrag = undefined;
-
-      if (this.hasPointerMoved) {
-        this.dragObjectTo(objectDrag, planPoint, modifiers);
-      }
-
+    if (this.viewObjects.release(planPoint, modifiers)) {
       return;
     }
 
@@ -327,50 +258,14 @@ export class PlanInteractionController implements PlanInputTarget {
     this.store.setDraftMark(undefined);
     this.store.setActiveKeyPointSnap(undefined);
 
-    const carTurn = this.carTurn;
-
-    // The car followed the pointer as it turned, so an interrupted gesture has
-    // to put it back the way it stood.
-    if (!isNil(carTurn)) {
-      this.carTurn = undefined;
-
-      if (this.hasPointerMoved) {
-        this.store.siteObjects.updateCar(carTurn.startCar);
-      }
-    }
-
-    const buildingTurn = this.buildingTurn;
-
-    // The building followed the pointer whole, so an interrupted turn puts the
-    // whole of it back — a zero-degree turn from the start IS the restore.
-    if (!isNil(buildingTurn)) {
-      this.buildingTurn = undefined;
-
-      if (this.hasPointerMoved) {
-        this.store.building.turnWholeBuilding(buildingTurn.startBuilding, 0);
-      }
-    }
-
-    const objectDrag = this.objectDrag;
-
-    // The object followed the pointer as it moved, so an interrupted drag has
-    // to put it back whole where it was grabbed — and a drag that never moved
-    // has nothing to put back.
-    if (!isNil(objectDrag)) {
-      this.objectDrag = undefined;
-
-      if (this.hasPointerMoved) {
-        this.store.siteObjects.applySiteObject(objectDrag.startObject);
-      }
-    }
-
+    this.viewObjects.cancel();
     this.viewPathGestures.cancel();
     this.viewRouteGestures.cancel();
     this.store.setPathHandleHighlight(undefined);
   }
 
   onPointerLeave(): void {
-    this.store.setCursorPlanPoint(undefined);
+    this.store.view.setCursorPlanPoint(undefined);
     this.store.setPathHandleHighlight(undefined);
   }
 
@@ -487,8 +382,7 @@ export class PlanInteractionController implements PlanInputTarget {
 
     return (
       (!isNil(interaction) && interaction.hasTransientInteraction()) ||
-      !isNil(this.objectDrag) ||
-      !isNil(this.carTurn) ||
+      this.viewObjects.hasActive() ||
       this.viewPathGestures.hasActive() ||
       this.viewRouteGestures.hasActive() ||
       this.store.siteObjects.draftPathPoints.length > 0 ||
@@ -658,7 +552,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    const object = this.pickSiteObject(planPoint);
+    const object = pickSiteObject(this.store, this.getViewport(), planPoint);
 
     if (isNil(object)) {
       this.store.setSelection(undefined);
@@ -681,7 +575,7 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    const object = this.pickPlacedInstance(planPoint);
+    const object = pickPlacedInstance(this.store, this.getViewport(), planPoint);
 
     if (!isNil(object)) {
       this.beginObjectDrag(object, planPoint);
@@ -711,60 +605,24 @@ export class PlanInteractionController implements PlanInputTarget {
       return;
     }
 
-    // Recorded before the drag takes hold: everything until the pointer comes
-    // up is one step, and an announcement no move follows simply expires.
-    this.store.pushHistory();
-    this.objectDrag = {
-      startObject: object,
-      startReference,
-      grabOffset: offsetBetween(planPoint, startReference),
-    };
-  }
+    // Slides the object rigidly, its reference point snapped to the grid.
+    this.viewObjects.beginMove(
+      {
+        origin: startReference,
+        moveTo: (draggedPoint, modifiers) => {
+          const reference = snapPointToGrid(this.store, draggedPoint, modifiers);
 
-  /** Slides the grabbed object rigidly, its reference point snapped to the grid. */
-  private dragObjectTo(drag: ObjectDrag, planPoint: Vector2, modifiers: PlanModifiers): void {
-    const reference = snapPointToGrid(
-      this.store,
-      { x: planPoint.x + drag.grabOffset.x, y: planPoint.y + drag.grabOffset.y },
-      modifiers
+          this.store.siteObjects.applySiteObject(
+            translateSiteObject(object, {
+              x: reference.x - startReference.x,
+              y: reference.y - startReference.y,
+            })
+          );
+        },
+        restore: () => this.store.siteObjects.applySiteObject(object),
+      },
+      planPoint
     );
-
-    this.store.siteObjects.applySiteObject(
-      translateSiteObject(drag.startObject, {
-        x: reference.x - drag.startReference.x,
-        y: reference.y - drag.startReference.y,
-      })
-    );
-  }
-
-  /**
-   * The topmost view-mode object under the pointer, kinds in their stacking
-   * order: the placed objects standing on everything, then a building's
-   * footprint, then the paving of a path.
-   */
-  private pickSiteObject(planPoint: Vector2): SiteObjectState | undefined {
-    const placed = this.pickPlacedInstance(planPoint);
-
-    if (!isNil(placed)) {
-      return placed;
-    }
-
-    const building = this.pickBuilding(planPoint);
-
-    if (!isNil(building)) {
-      return { kind: 'building', building };
-    }
-
-    // A trench is a hairline over the ribbons, so it answers before the paving.
-    const route = pickUtilityRoute(this.store, this.getViewport(), planPoint);
-
-    if (!isNil(route)) {
-      return { kind: 'utilityRoute', route };
-    }
-
-    const path = pickPath(this.store, this.getViewport(), planPoint);
-
-    return isNil(path) ? undefined : { kind: 'path', path };
   }
 
   /**
@@ -782,40 +640,6 @@ export class PlanInteractionController implements PlanInputTarget {
     return entryPoint ?? snapPointToGrid(this.store, planPoint, modifiers);
   }
 
-  /** The catalogue's kinds only — what the placing tool may pick back up. */
-  private pickPlacedInstance(planPoint: Vector2): SiteObjectState | undefined {
-    const viewport = this.getViewport();
-    const car = pickCar(this.store, viewport, planPoint);
-
-    if (!isNil(car)) {
-      return { kind: 'car', car };
-    }
-
-    const tree = pickTree(this.store, viewport, planPoint);
-
-    return isNil(tree) ? undefined : { kind: 'tree', tree };
-  }
-
-  /** The building whose footprint stands under the pointer, topmost first. */
-  private pickBuilding(planPoint: Vector2): Building | undefined {
-    const picked = pickShape(this.store, this.getViewport(), planPoint);
-
-    if (isNil(picked) || picked.owner === 'boundary') {
-      return undefined;
-    }
-
-    const owner = picked.owner;
-
-    return this.store.buildings.find(candidate => candidate.id === owner);
-  }
-
-  /**
-   * The grip ahead of the selected car's nose turns it. Like the handles of a
-   * shape it wins over whatever lies beneath it: it stands off the body, so a
-   * click there means the grip and nothing else. Recorded before the gesture
-   * takes hold: everything until the pointer comes up is one step, and an
-   * announcement no move follows simply expires.
-   */
   /**
    * The grip over the selected building's footprint turns the WHOLE house —
    * storeys, furniture and the roof ridge together. View mode only: inside an
@@ -852,24 +676,17 @@ export class PlanInteractionController implements PlanInputTarget {
       y: (bounds.minY + bounds.maxY) / 2,
     };
 
-    this.store.pushHistory();
-    this.buildingTurn = {
-      startBuilding: building,
-      pivot,
-      startBearingDegrees: bearingDegreesTowards(pivot, planPoint),
-    };
-
-    return true;
-  }
-
-  /** The turn follows the grip: the bearing delta, snapped like every turn. */
-  private turnBuildingTo(turn: BuildingTurn, planPoint: Vector2, modifiers: PlanModifiers): void {
-    const delta = snapLength(
-      normalizeTurnDegrees(bearingDegreesTowards(turn.pivot, planPoint) - turn.startBearingDegrees),
-      rotationStepDegrees(modifiers)
+    // The turn is the sweep from the grab, applied to the building as it stood;
+    // a zero-degree turn from there IS the restore.
+    return this.viewObjects.beginRotate(
+      {
+        origin: pivot,
+        startRotationDegrees: 0,
+        turnTo: degrees => this.store.building.turnWholeBuilding(building, degrees),
+        restore: () => this.store.building.turnWholeBuilding(building, 0),
+      },
+      planPoint
     );
-
-    this.store.building.turnWholeBuilding(turn.startBuilding, delta);
   }
 
   private beginCarRotation(planPoint: Vector2): boolean {
@@ -889,33 +706,14 @@ export class PlanInteractionController implements PlanInputTarget {
       return false;
     }
 
-    this.store.pushHistory();
-    this.carTurn = {
-      startCar: car,
-      grabBearingDegrees: bearingDegreesTowards(car.position, planPoint),
-    };
-
-    return true;
-  }
-
-  /**
-   * Turning the car snaps the heading the way every other turn on the plan is
-   * snapped — a degree, 15° with Shift, free with Alt.
-   */
-  private turnCarTo(turn: CarTurn, planPoint: Vector2, modifiers: PlanModifiers): void {
-    const { startCar } = turn;
-    // A delta from the grab, not the pointer's absolute bearing: setting the
-    // heading to the bearing works only while the grip happens to sit dead
-    // ahead — grabbed anywhere else, the car would jump into line first.
-    const sweptDegrees = normalizeTurnDegrees(
-      bearingDegreesTowards(startCar.position, planPoint) - turn.grabBearingDegrees
+    return this.viewObjects.beginRotate(
+      {
+        origin: car.position,
+        startRotationDegrees: car.rotationDegrees,
+        turnTo: rotationDegrees => this.store.siteObjects.updateCar({ ...car, rotationDegrees }),
+        restore: () => this.store.siteObjects.updateCar(car),
+      },
+      planPoint
     );
-
-    this.store.siteObjects.updateCar({
-      ...startCar,
-      rotationDegrees: normalizeTurnDegrees(
-        startCar.rotationDegrees + snapLength(sweptDegrees, rotationStepDegrees(modifiers))
-      ),
-    });
   }
 }

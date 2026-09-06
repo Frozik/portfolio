@@ -302,12 +302,12 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
 
 const LayerRow = observer(
   ({ store, layer }: { readonly store: SitePlannerStore; readonly layer: PlanLayerKind }) => {
-    const handleToggle = useFunction(() => store.toggleLayerVisibility(layer));
+    const handleToggle = useFunction(() => store.view.toggleLayerVisibility(layer));
 
     return (
       <CheckboxRow
         label={sitePlannerT.settings.layers.kinds[layer]}
-        isChecked={store.visibleLayers.has(layer)}
+        isChecked={store.view.visibleLayers.has(layer)}
         onToggle={handleToggle}
       />
     );

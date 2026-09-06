@@ -1,19 +1,13 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { createHistory } from '@frozik/utils/history/createHistory';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isEqual, isNil } from 'lodash-es';
 import type { IReactionDisposer } from 'mobx';
-import { makeAutoObservable, observableRef, reaction, runInAction } from 'mobx';
+import { makeAutoObservable, observableRef, reaction } from 'mobx';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
 import { offsetPolygons } from '../domain/geometry/offset-polygon';
 import type { PathRibbon } from '../domain/geometry/path-ribbon';
 import { buildPathRibbons } from '../domain/geometry/path-ribbon';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
-
-// The scene types live with the derivation that produces them; the store
-// re-exports them so every consumer keeps the import path it already uses.
-export type { BuildingRoom, RoofZoneScene, StoreyScene } from './storey-scenes';
-
 import type { BuildingWarning } from '../domain/model/building-warnings';
 import type {
   ActiveTool,
@@ -53,19 +47,12 @@ import type {
 } from '../domain/model/site-plan';
 import { createDefaultSitePlan, utilityRoutesOf } from '../domain/model/site-plan';
 import type { Slab } from '../domain/model/slabs';
-import { parseSnapshot } from '../domain/model/snapshot';
 import { selectedStoreyObject } from '../domain/model/storey-object-selection';
 import type { StoreyId } from '../domain/model/storeys';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
 import type { Meters } from '../domain/units';
 import type { KeyPointSnap } from '../domain/view/object-snapping';
 import type { OverlayMode } from '../domain/view/overlay-mode';
-import type { PlanModifiers } from '../domain/view/plan-input';
-import { NO_MODIFIERS } from '../domain/view/plan-input';
-import type { PlanLayerKind } from '../domain/view/plan-layers';
-import { ALL_PLAN_LAYERS, togglePlanLayer } from '../domain/view/plan-layers';
-import type { PlanViewport } from '../domain/view/plan-viewport';
-import { createPlanViewport, DEFAULT_PIXELS_PER_METER } from '../domain/view/plan-viewport';
 import type { SitePlannerViewMode } from '../domain/view/view-mode';
 import { createIndexedDBSitePlanRepository } from '../infrastructure/IndexedDBSitePlanRepository';
 import { lookupTimeZoneId } from '../infrastructure/timezone-lookup';
@@ -74,6 +61,8 @@ import { CompositionModel } from './CompositionModel';
 import type { PlanEditorCore } from './editor-core';
 import type { EditorSession } from './editor-sessions';
 import { createEditorSession } from './editor-sessions';
+import { PlanHistory } from './PlanHistory';
+import { PlanPersistence } from './PlanPersistence';
 import type { PathHandleHighlight } from './render/plan-draw/draw-paths';
 import { SceneModel } from './SceneModel';
 import { SiteObjectsModel } from './SiteObjectsModel';
@@ -81,50 +70,11 @@ import { StoreyObjectsEditorModel } from './StoreyObjectsEditorModel';
 import { SunStudy } from './SunStudy';
 import { TerrainModel } from './TerrainModel';
 import { UtilityNetworkModel } from './UtilityNetworkModel';
+import { ViewportModel } from './ViewportModel';
 import { WallEditorModel } from './WallEditorModel';
-
-/**
- * How often the day animation advances, and by how much. Fifty milliseconds is
- * below what reads as a step, and three minutes of sun per tick sweeps a summer
- * day in about twenty seconds — long enough to watch a shadow travel, short
- * enough not to wait for it.
- */
-
-/** Which consumer of the site plan is on screen: the 2D plan editor or the 3D view. */
-
-/**
- * Which analysis is coloured over the ground, in both views at once. It is a
- * way of looking at the plan rather than part of it, so — like the sun study —
- * it stays out of the snapshot, out of storage and out of the undo stack.
- */
-
-/** Why the last exchange of the plan with a file did not happen; shown in the toolbar. */
-export type SitePlanFileIssue = 'import-failed' | 'export-failed';
-
-/** What the toolbar tells the user about the plan's copy in storage. */
-export type SitePlanSaveState = 'saved' | 'saving' | 'error';
-
-/**
- * How long a burst of edits to one field collapses into a single undo step.
- * Typing "12.50" into a width is one change to the user, not five.
- */
-const HISTORY_GROUP_WINDOW_MS = 1000;
-
-/**
- * Autosave debounce. Long enough that a drag, a slider sweep or a typed number
- * reaches storage once, short enough that a closed tab loses nothing worth
- * missing.
- */
-const AUTOSAVE_DELAY_MS = 500;
-
-/** Shared by every derived-geometry getter that has nothing to evaluate. */
 
 const NO_MEASURE_POINTS: readonly Vector2[] = [];
 const NO_SELECTIONS: readonly Selection[] = [];
-
-/** A calibration is exactly two points on the picture plus the span between them. */
-
-const PERCENT_SCALE = 100;
 
 export class SitePlannerStore implements PlanEditorCore {
   /**
@@ -180,14 +130,6 @@ export class SitePlannerStore implements PlanEditorCore {
   activeKeyPointSnap: KeyPointSnap | undefined = undefined;
 
   viewMode: SitePlannerViewMode = 'plan';
-  /** Pointer position in plan metres, for the status-bar readout. */
-  cursorPlanPoint: Vector2 | undefined = undefined;
-  /**
-   * Modifiers held at the last pointer move. The draft previews read them so
-   * the segment on screen is the segment a click would commit — Shift locking
-   * it square is only honest if the preview is locked too.
-   */
-  cursorModifiers: PlanModifiers = NO_MODIFIERS;
   /**
    * The polyline handle under or held by the pointer — a path's or a trench's,
    * whichever is selected — echoed back as its highlight.
@@ -206,26 +148,6 @@ export class SitePlannerStore implements PlanEditorCore {
    * can be typed straight after, and clears the flag once it has.
    */
   isPropertiesFocusPending = false;
-  /**
-   * Mirror of the render session's viewport. The session owns it; the store
-   * publishes it so the overlays React draws over the canvas — the inline
-   * elevation field — can follow a pan or a zoom.
-   */
-  viewport: PlanViewport = createPlanViewport(0, 0);
-  /**
-   * Mirror of the 3D camera's orbit angle, in degrees (`orbit-camera.ts`). The
-   * camera owns it; the session publishes it on the frames the view moved, so
-   * the compass React draws over the canvas can turn with the camera without a
-   * render loop of its own.
-   */
-  cameraYawDegrees = 0;
-  /**
-   * Which layers the plan is drawn with. A way of looking at the plan rather
-   * than part of it — hiding the grid before an export must not change the
-   * document — so it stays out of the snapshot, out of storage and out of undo.
-   */
-  visibleLayers: ReadonlySet<PlanLayerKind> = ALL_PLAN_LAYERS;
-  fileIssue: SitePlanFileIssue | undefined = undefined;
 
   /**
    * The sun study — its own object ({@link SunStudy}), because it is a concern
@@ -284,30 +206,18 @@ export class SitePlannerStore implements PlanEditorCore {
    */
   readonly walls: WallEditorModel;
 
-  saveState: SitePlanSaveState = 'saved';
-  /**
-   * Mirrors of the history's stacks. The history is a plain closure, so its
-   * depth is not observable by itself — the two flags are refreshed at the one
-   * place that touches it (precedent: `StereometryStore`).
-   */
-  canUndo = false;
-  canRedo = false;
+  /** How the plan is looked at ({@link ViewportModel}): viewport, camera heading, layers, cursor. */
+  readonly view = new ViewportModel();
 
-  private readonly repository: ISitePlanRepository;
-  private readonly history = createHistory<SitePlan>();
-  /** The plan as it was before an announced edit, held until that edit lands. */
-  private pendingHistoryPlan: SitePlan | undefined = undefined;
-  private lastRecordedGroupKey: string | undefined = undefined;
-  private lastRecordedAtMs = 0;
+  /** The undo stack and its announce-then-commit protocol ({@link PlanHistory}). */
+  readonly history = new PlanHistory();
+  /** Storage, autosave and file exchange ({@link PlanPersistence}). */
+  readonly persistence: PlanPersistence;
+
   private readonly disposeHistoryCommit: IReactionDisposer;
-  private disposeAutosave: IReactionDisposer | undefined = undefined;
-  private saveRequestId = 0;
-  private isDisposed = false;
-  /** True while one command is applying several edits — see `runBatched`. */
-  private isBatchingHistory = false;
 
   constructor(repository: ISitePlanRepository = createIndexedDBSitePlanRepository()) {
-    this.repository = repository;
+    this.persistence = new PlanPersistence(this, repository);
 
     const defaultPlan = createDefaultSitePlan();
 
@@ -329,30 +239,13 @@ export class SitePlannerStore implements PlanEditorCore {
     this.storeyObjects = new StoreyObjectsEditorModel(this, this.scene, this.building);
     this.walls = new WallEditorModel(this, this.scene, this.building, this.storeyObjects);
 
-    makeAutoObservable<
-      SitePlannerStore,
-      | 'repository'
-      | 'history'
-      | 'pendingHistoryPlan'
-      | 'lastRecordedGroupKey'
-      | 'lastRecordedAtMs'
-      | 'disposeHistoryCommit'
-      | 'disposeAutosave'
-      | 'saveRequestId'
-      | 'isDisposed'
-      | 'isBatchingHistory'
-    >(
+    makeAutoObservable<SitePlannerStore, 'disposeHistoryCommit'>(
       this,
       {
-        repository: false,
         history: false,
-        pendingHistoryPlan: false,
-        lastRecordedGroupKey: false,
-        lastRecordedAtMs: false,
+        persistence: false,
+        view: false,
         disposeHistoryCommit: false,
-        disposeAutosave: false,
-        saveRequestId: false,
-        isDisposed: false,
         boundary: observableRef,
         elevationMarks: observableRef,
         buildings: observableRef,
@@ -362,24 +255,20 @@ export class SitePlannerStore implements PlanEditorCore {
         utilityRoutes: observableRef,
         settings: observableRef,
         selections: observableRef,
-        isBatchingHistory: false,
         measurePoints: observableRef,
         draftShape: observableRef,
         draftMark: observableRef,
         activeKeyPointSnap: observableRef,
-        cursorPlanPoint: observableRef,
         pathHandleHighlight: observableRef,
         editorMode: observableRef,
         editorSession: observableRef,
-        viewport: observableRef,
-        visibleLayers: observableRef,
       },
       { autoBind: true }
     );
 
-    this.disposeHistoryCommit = reaction(() => this.snapshot, this.commitPendingHistory);
+    this.disposeHistoryCommit = reaction(() => this.snapshot, this.history.commit);
 
-    this.initialize().catch(this.reportSaveFailure);
+    void this.persistence.start();
   }
 
   get snapshot(): SitePlan {
@@ -415,11 +304,6 @@ export class SitePlannerStore implements PlanEditorCore {
     return this.pathRibbons.flatMap(ribbon => ribbon.polygons);
   }
 
-  /** 100 % is the zoom a freshly opened plan starts at. */
-  get zoomPercent(): number {
-    return Math.round((this.viewport.pixelsPerMeter / DEFAULT_PIXELS_PER_METER) * PERCENT_SCALE);
-  }
-
   /**
    * Edits the settings section. Fields typed digit by digit — a latitude, a
    * setback — pass their own `groupKey`, so a burst of keystrokes stays one step
@@ -441,11 +325,6 @@ export class SitePlannerStore implements PlanEditorCore {
     this.settings = updateSettingsWith(this.settings, { location: { northOffsetDegrees } });
   }
 
-  /** Shows or hides one layer of the plan; the 3D view keeps its own contents. */
-  toggleLayerVisibility(layer: PlanLayerKind): void {
-    this.visibleLayers = togglePlanLayer(this.visibleLayers, layer);
-  }
-
   /**
    * Adopts a whole plan read from a file, as one step to undo. Adopting a plan
    * discards whatever edit was announced before it, so the state this
@@ -455,33 +334,9 @@ export class SitePlannerStore implements PlanEditorCore {
     const previousPlan = this.snapshot;
 
     this.applySnapshot(plan);
-    this.pendingHistoryPlan = previousPlan;
+    this.history.armPending(previousPlan);
     this.selections = NO_SELECTIONS;
     this.clearGestureState();
-  }
-
-  /** Reads a picked JSON file into the plan; anything unreadable is reported. */
-  async importPlanFile(file: File): Promise<void> {
-    this.fileIssue = undefined;
-
-    try {
-      const text = await file.text();
-
-      runInAction(() => this.adoptSerializedPlan(text));
-    } catch {
-      runInAction(() => {
-        this.fileIssue = 'import-failed';
-      });
-    }
-  }
-
-  /** The export could not produce a file — an image the browser refused to encode. */
-  reportExportFailure(): void {
-    this.fileIssue = 'export-failed';
-  }
-
-  dismissFileIssue(): void {
-    this.fileIssue = undefined;
   }
 
   applySnapshot(plan: SitePlan): void {
@@ -496,43 +351,12 @@ export class SitePlannerStore implements PlanEditorCore {
 
     // A plan that arrives whole — restored, or read from storage — discards the
     // state an announced edit was going to be undone to.
-    this.pendingHistoryPlan = undefined;
-    this.lastRecordedGroupKey = undefined;
+    this.history.discardPending();
   }
 
-  /**
-   * Announces an edit: the plan as it is now becomes the state that edit will be
-   * undone to. It reaches the undo stack only once the plan actually changes, so
-   * a click that selects nothing and a gesture that puts everything back where
-   * it was leave no step behind.
-   *
-   * Callers that edit the plan once — adding a term, toggling an operation —
-   * announce it inside their own action. A gesture or a typed number arrives as
-   * a stream of edits instead and announces once, at the start: the interaction
-   * controller before it takes hold of a shape, a panel before it writes a
-   * field, passing that field as `groupKey` so a burst of keystrokes stays one
-   * step.
-   */
+  /** Announces an edit — see {@link PlanHistory.announce} for the protocol. */
   pushHistory(groupKey?: string): void {
-    // Inside a batch the first push already captured the state before the
-    // whole operation; the rest would each start a step of their own and one
-    // undo would take back only part of what one command did.
-    if (this.isBatchingHistory) {
-      return;
-    }
-
-    const nowMs = performance.now();
-    const isGroupedRepeat =
-      !isNil(groupKey) &&
-      groupKey === this.lastRecordedGroupKey &&
-      nowMs - this.lastRecordedAtMs < HISTORY_GROUP_WINDOW_MS;
-
-    this.lastRecordedGroupKey = groupKey;
-    this.lastRecordedAtMs = nowMs;
-
-    if (!isGroupedRepeat) {
-      this.pendingHistoryPlan = this.snapshot;
-    }
+    this.history.announce(this.snapshot, groupKey);
   }
 
   undo(): void {
@@ -576,7 +400,6 @@ export class SitePlannerStore implements PlanEditorCore {
     this.overlayMode = overlayMode;
   }
 
-  /** Switching tools abandons whatever the previous one had in flight. */
   /**
    * One-shot placement (R30): the moment an object lands, the tool hands it
    * over to the select tool with the object selected, so the very next click
@@ -765,23 +588,6 @@ export class SitePlannerStore implements PlanEditorCore {
     }
   }
 
-  setCursorModifiers(cursorModifiers: PlanModifiers): void {
-    this.cursorModifiers = cursorModifiers;
-  }
-
-  setCursorPlanPoint(cursorPlanPoint: Vector2 | undefined): void {
-    this.cursorPlanPoint = cursorPlanPoint;
-  }
-
-  setViewport(viewport: PlanViewport): void {
-    this.viewport = viewport;
-  }
-
-  /** Brings a point of the plan to the middle of the view — «take me there». */
-  centreOn(point: Vector2): void {
-    this.viewport = { ...this.viewport, centerMeters: point };
-  }
-
   /**
    * Answers a finding in the Замечания panel: aims the editor at the storey it
    * belongs to and brings its place into view. A list of findings is only
@@ -790,11 +596,7 @@ export class SitePlannerStore implements PlanEditorCore {
   revealWarning(warning: BuildingWarning): void {
     this.setViewMode('plan');
     this.building.setActiveStorey(warning.storeyId);
-    this.centreOn(warning.at);
-  }
-
-  setCameraYawDegrees(cameraYawDegrees: number): void {
-    this.cameraYawDegrees = cameraYawDegrees;
+    this.view.centreOn(warning.at);
   }
 
   /** Asks the properties panel for the keyboard, once the panel is on screen. */
@@ -830,13 +632,7 @@ export class SitePlannerStore implements PlanEditorCore {
 
   /** Runs a command whose several edits are one step of history. */
   runBatched(command: VoidFunction): void {
-    this.isBatchingHistory = true;
-
-    try {
-      command();
-    } finally {
-      this.isBatchingHistory = false;
-    }
+    this.history.runBatched(command);
   }
 
   /**
@@ -867,7 +663,6 @@ export class SitePlannerStore implements PlanEditorCore {
     }
   }
 
-  /** One object's copy, placed a step away; nothing for what cannot be copied. */
   /**
    * One object's copy, placed a step away; nothing for what cannot be copied.
    *
@@ -1000,90 +795,20 @@ export class SitePlannerStore implements PlanEditorCore {
 
   /** Teardown hook honoured by the refcounted feature-store lifecycle. */
   dispose(): void {
-    this.isDisposed = true;
     this.editorSession?.dispose();
     this.editorSession = undefined;
-    this.sun.stopAnimation();
     this.disposeHistoryCommit();
-    this.disposeAutosave?.();
-    this.disposeAutosave = undefined;
-  }
-
-  /**
-   * One tick of the day animation: the sun moves on, and the sunset sends it
-   * back to the sunrise so the day plays as a loop.
-   */
-
-  /**
-   * Turns the announced state into a step, now that the plan has moved off it.
-   * Driven by the plan itself rather than by the callers: a stream of edits —
-   * a drag, a burst of keystrokes — announces once and lands one step, and an
-   * announcement no edit followed simply expires.
-   */
-  private commitPendingHistory(): void {
-    const pendingPlan = this.pendingHistoryPlan;
-
-    if (isNil(pendingPlan)) {
-      return;
-    }
-
-    this.pendingHistoryPlan = undefined;
-    this.history.push(pendingPlan);
-    this.syncHistoryAvailability();
-  }
-
-  /**
-   * Reads the persisted plan and only then starts watching for changes: a plan
-   * loaded from storage is not an edit, and must not be written straight back.
-   */
-  private async initialize(): Promise<void> {
-    const plan = await this.repository.loadPlan();
-
-    // The route may already have been left while the read was in flight; a
-    // reaction started now would outlive the store that owns it.
-    if (this.isDisposed) {
-      return;
-    }
-
-    runInAction(() => {
-      if (!isNil(plan)) {
-        this.applySnapshot(plan);
-      }
-
-      this.disposeAutosave = reaction(
-        () => this.snapshot,
-        nextPlan => {
-          void this.persistPlan(nextPlan);
-        },
-        { delay: AUTOSAVE_DELAY_MS }
-      );
-    });
-  }
-
-  private async persistPlan(plan: SitePlan): Promise<void> {
-    this.saveRequestId += 1;
-
-    const requestId = this.saveRequestId;
-
-    this.saveState = 'saving';
-
-    try {
-      await this.repository.savePlan(plan);
-      this.settleSave(requestId, 'saved');
-    } catch {
-      this.settleSave(requestId, 'error');
-    }
-  }
-
-  /** A save another one has already overtaken must not report its own outcome. */
-  private settleSave(requestId: number, saveState: SitePlanSaveState): void {
-    if (requestId === this.saveRequestId) {
-      this.saveState = saveState;
-    }
-  }
-
-  private reportSaveFailure(): void {
-    this.saveState = 'error';
+    this.persistence.dispose();
+    this.view.dispose();
+    this.sun.dispose();
+    this.terrain.dispose();
+    this.scene.dispose();
+    this.utilities.dispose();
+    this.siteObjects.dispose();
+    this.composition.dispose();
+    this.building.dispose();
+    this.storeyObjects.dispose();
+    this.walls.dispose();
   }
 
   private restore(plan: SitePlan | undefined): void {
@@ -1096,7 +821,6 @@ export class SitePlannerStore implements PlanEditorCore {
     // it was typed for in the properties panel. A selection the restored plan no
     // longer holds resolves to nothing through `selectedShape` anyway.
     this.clearGestureState();
-    this.syncHistoryAvailability();
   }
 
   /** Drops every half-finished gesture; a plan that arrives whole invalidates them. */
@@ -1107,23 +831,5 @@ export class SitePlannerStore implements PlanEditorCore {
     this.siteObjects.cancelDraftPath();
     this.utilities.cancelDraftUtilityRoute();
     this.siteObjects.closeElevationInput();
-  }
-
-  /** A file that is not a plan of this build leaves the current one untouched. */
-  private adoptSerializedPlan(text: string): void {
-    const plan = parseSnapshot(text);
-
-    if (isNil(plan)) {
-      this.fileIssue = 'import-failed';
-
-      return;
-    }
-
-    this.replacePlan(plan);
-  }
-
-  private syncHistoryAvailability(): void {
-    this.canUndo = this.history.canUndo();
-    this.canRedo = this.history.canRedo();
   }
 }

@@ -1,14 +1,15 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { MIN_PATH_POINTS } from '../../domain/model/site-object-edits';
-import type { PathId } from '../../domain/model/site-plan';
+import type { PathId, SitePath } from '../../domain/model/site-plan';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
 import { computePathPointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { DELETE_KEYS } from './editor-interaction';
-import { applyPathHandleHover, PathPointGestures } from './path-point-gestures';
+import { applyPathHandleHover, createPathPointGestures } from './path-point-gestures';
 import { HANDLE_HIT_RADIUS_PX } from './plan-picking';
+import type { PolylinePointGestures } from './polyline-point-gestures';
 
 /**
  * Path editing's canvas behaviour: the full point kit on the one opened path —
@@ -19,12 +20,12 @@ import { HANDLE_HIT_RADIUS_PX } from './plan-picking';
 export class PathEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
   private readonly pathId: PathId;
-  private readonly gestures: PathPointGestures;
+  private readonly gestures: PolylinePointGestures<SitePath>;
 
   constructor(context: InteractionContext, pathId: PathId) {
     this.context = context;
     this.pathId = pathId;
-    this.gestures = new PathPointGestures(context);
+    this.gestures = createPathPointGestures(context);
   }
 
   onPointerDown(planPoint: Vector2, _modifiers: PlanModifiers): boolean {

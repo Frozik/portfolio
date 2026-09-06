@@ -1,10 +1,7 @@
+import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from '@frozik/utils/date/constants';
 import { Temporal } from 'temporal-polyfill';
 
 import type { SiteLocation } from '../model/site-plan';
-
-export const MINUTES_PER_HOUR = 60;
-const HOURS_PER_DAY = 24;
-export const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR;
 
 /** Two digits, so a clock readout does not jump about as the slider moves. */
 const CLOCK_DIGITS = 2;

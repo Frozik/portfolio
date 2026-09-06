@@ -15,61 +15,62 @@ import { applyPolylineHandleHover, PolylinePointGestures } from './polyline-poin
  * wall's dragged endpoint magnetizes onto its opposite end — the gesture that
  * closes the contour into a ring (the release seals it, `closeWallRing`).
  */
-export class WallPointGestures extends PolylinePointGestures<Wall> {
-  constructor(context: InteractionContext, buildingId: BuildingId) {
-    super(context, {
-      selected: () => context.store.walls.selectedWall,
-      positions: wall => wall.points,
-      isClosed: wall => isWallClosed(wall),
-      // Dragging a vertex drags its JUNCTION: every wall vertex standing on
-      // the same spot follows, so a T-стык stays a T-стык (wall topology is
-      // coincidence — `wall-topology.ts`). The junction is read off the LIVE
-      // wall each move: after the first apply all members already stand at
-      // the previous target, one lookup away. A ground-storey corner moved
-      // past the slab lands on its edge; an upper storey's is free (R24).
-      movePoint: (wall, pointIndex, position) => {
-        const from = liveVertexPosition(context, buildingId, wall.id, pointIndex);
+export function createWallPointGestures(
+  context: InteractionContext,
+  buildingId: BuildingId
+): PolylinePointGestures<Wall> {
+  return new PolylinePointGestures<Wall>(context, {
+    selected: () => context.store.walls.selectedWall,
+    positions: wall => wall.points,
+    isClosed: wall => isWallClosed(wall),
+    // Dragging a vertex drags its JUNCTION: every wall vertex standing on
+    // the same spot follows, so a T-стык stays a T-стык (wall topology is
+    // coincidence — `wall-topology.ts`). The junction is read off the LIVE
+    // wall each move: after the first apply all members already stand at
+    // the previous target, one lookup away. A ground-storey corner moved
+    // past the slab lands on its edge; an upper storey's is free (R24).
+    movePoint: (wall, pointIndex, position) => {
+      const from = liveVertexPosition(context, buildingId, wall.id, pointIndex);
 
-        if (!isNil(from)) {
-          context.store.walls.moveWallJunction(buildingId, from, position);
+      if (!isNil(from)) {
+        context.store.walls.moveWallJunction(buildingId, from, position);
+      }
+    },
+    insertPoint: (wall, segmentIndex, position) =>
+      context.store.walls.insertWallPoint(
+        buildingId,
+        wall.id,
+        segmentIndex,
+        context.store.walls.clampWallPoint(buildingId, position)
+      ),
+    restore: wall => context.store.walls.restoreWall(buildingId, wall),
+    // A junction drag edits the neighbours too, so the cancel snapshot is
+    // the storey's whole wall list, not the one grabbed wall.
+    captureRestore: () => {
+      const walls = activeStoreyWallsOf(context, buildingId);
+
+      return () => {
+        for (const wall of walls) {
+          context.store.walls.restoreWall(buildingId, wall);
         }
-      },
-      insertPoint: (wall, segmentIndex, position) =>
-        context.store.walls.insertWallPoint(
-          buildingId,
-          wall.id,
-          segmentIndex,
-          context.store.walls.clampWallPoint(buildingId, position)
-        ),
-      restore: wall => context.store.walls.restoreWall(buildingId, wall),
-      // A junction drag edits the neighbours too, so the cancel snapshot is
-      // the storey's whole wall list, not the one grabbed wall.
-      captureRestore: () => {
-        const walls = activeStoreyWallsOf(context, buildingId);
+      };
+    },
+    // A finished drag re-derives the crossings it may have made or broken;
+    // a plain CLICK on the vertex aims the break UI at its junction.
+    onReleased: (hasMoved, wall, pointIndex) => {
+      if (hasMoved) {
+        context.store.walls.normalizeCrossings(buildingId);
 
-        return () => {
-          for (const wall of walls) {
-            context.store.walls.restoreWall(buildingId, wall);
-          }
-        };
-      },
-      // A finished drag re-derives the crossings it may have made or broken;
-      // a plain CLICK on the vertex aims the break UI at its junction.
-      onReleased: (hasMoved, wall, pointIndex) => {
-        if (hasMoved) {
-          context.store.walls.normalizeCrossings(buildingId);
+        return;
+      }
 
-          return;
-        }
+      const position = liveVertexPosition(context, buildingId, wall.id, pointIndex);
 
-        const position = liveVertexPosition(context, buildingId, wall.id, pointIndex);
-
-        context.store.walls.selectJunction(position);
-      },
-      snapPoint: (wall, pointIndex, position) =>
-        oppositeEndWithinReach(context, wall, pointIndex, position),
-    });
-  }
+      context.store.walls.selectJunction(position);
+    },
+    snapPoint: (wall, pointIndex, position) =>
+      oppositeEndWithinReach(context, wall, pointIndex, position),
+  });
 }
 
 function activeStoreyWallsOf(context: InteractionContext, buildingId: BuildingId): readonly Wall[] {

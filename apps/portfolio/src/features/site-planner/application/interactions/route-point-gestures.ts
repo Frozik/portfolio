@@ -13,24 +13,24 @@ export const ENTRY_SNAP_RADIUS_PX = 14;
  * near its system's entry lands exactly on it — the entry seam holds while the
  * line is reshaped, not only while it is drawn.
  */
-export class RoutePointGestures extends PolylinePointGestures<UtilityRoute> {
-  constructor(context: InteractionContext) {
-    super(context, {
-      selected: () => context.store.utilities.selectedUtilityRoute,
-      positions: route => route.points,
-      movePoint: (route, pointIndex, position) =>
-        context.store.utilities.moveUtilityRoutePoint(route.id, pointIndex, position),
-      insertPoint: (route, segmentIndex, position) =>
-        context.store.utilities.insertUtilityRoutePoint(route.id, segmentIndex, position),
-      restore: route => context.store.utilities.updateUtilityRoute(route),
-      snapPoint: (route, _pointIndex, position) =>
-        context.store.utilities.nearestEntryPoint(
-          position,
-          ENTRY_SNAP_RADIUS_PX / context.getViewport().pixelsPerMeter,
-          route.system
-        ),
-    });
-  }
+export function createRoutePointGestures(
+  context: InteractionContext
+): PolylinePointGestures<UtilityRoute> {
+  return new PolylinePointGestures<UtilityRoute>(context, {
+    selected: () => context.store.utilities.selectedUtilityRoute,
+    positions: route => route.points,
+    movePoint: (route, pointIndex, position) =>
+      context.store.utilities.moveUtilityRoutePoint(route.id, pointIndex, position),
+    insertPoint: (route, segmentIndex, position) =>
+      context.store.utilities.insertUtilityRoutePoint(route.id, segmentIndex, position),
+    restore: route => context.store.utilities.updateUtilityRoute(route),
+    snapPoint: (route, _pointIndex, position) =>
+      context.store.utilities.nearestEntryPoint(
+        position,
+        ENTRY_SNAP_RADIUS_PX / context.getViewport().pixelsPerMeter,
+        route.system
+      ),
+  });
 }
 
 /** The hover half, over the selected trench's handles. */

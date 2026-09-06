@@ -12,7 +12,9 @@ import { hitTestShape } from '../../domain/geometry/hit-test-shape';
 import type { UtilityRoute } from '../../domain/model/routing';
 import type { ShapeOwner } from '../../domain/model/selection';
 import type { CsgOperand, CsgTerm, Shape } from '../../domain/model/shapes';
+import type { SiteObjectState } from '../../domain/model/site-object';
 import type {
+  Building,
   CarInstance,
   ElevationMark,
   SitePath,
@@ -96,7 +98,7 @@ export function pickMark(
 }
 
 /** The topmost tree whose crown covers the point; later trees lie over earlier ones. */
-export function pickTree(
+function pickTree(
   store: SitePlannerStore,
   viewport: PlanViewport,
   planPoint: Vector2
@@ -114,7 +116,7 @@ export function pickTree(
 }
 
 /** The topmost car the point falls on; later cars lie over earlier ones. */
-export function pickCar(
+function pickCar(
   store: SitePlannerStore,
   viewport: PlanViewport,
   planPoint: Vector2
@@ -207,4 +209,72 @@ function pickFromOperand(
     default:
       return assertNever(operand);
   }
+}
+
+/** The catalogue's kinds only — what the placing tool may pick back up. */
+export function pickPlacedInstance(
+  store: SitePlannerStore,
+  viewport: PlanViewport,
+  planPoint: Vector2
+): SiteObjectState | undefined {
+  const car = pickCar(store, viewport, planPoint);
+
+  if (!isNil(car)) {
+    return { kind: 'car', car };
+  }
+
+  const tree = pickTree(store, viewport, planPoint);
+
+  return isNil(tree) ? undefined : { kind: 'tree', tree };
+}
+
+/** The building whose footprint stands under the pointer, topmost first. */
+function pickBuilding(
+  store: SitePlannerStore,
+  viewport: PlanViewport,
+  planPoint: Vector2
+): Building | undefined {
+  const picked = pickShape(store, viewport, planPoint);
+
+  if (isNil(picked) || picked.owner === 'boundary') {
+    return undefined;
+  }
+
+  const owner = picked.owner;
+
+  return store.buildings.find(candidate => candidate.id === owner);
+}
+
+/**
+ * The topmost view-mode object under the pointer, kinds in their stacking
+ * order: the placed objects standing on everything, then a building's
+ * footprint, then a trench (a hairline over the ribbons), then the paving of a
+ * path.
+ */
+export function pickSiteObject(
+  store: SitePlannerStore,
+  viewport: PlanViewport,
+  planPoint: Vector2
+): SiteObjectState | undefined {
+  const placed = pickPlacedInstance(store, viewport, planPoint);
+
+  if (!isNil(placed)) {
+    return placed;
+  }
+
+  const building = pickBuilding(store, viewport, planPoint);
+
+  if (!isNil(building)) {
+    return { kind: 'building', building };
+  }
+
+  const route = pickUtilityRoute(store, viewport, planPoint);
+
+  if (!isNil(route)) {
+    return { kind: 'utilityRoute', route };
+  }
+
+  const path = pickPath(store, viewport, planPoint);
+
+  return isNil(path) ? undefined : { kind: 'path', path };
 }

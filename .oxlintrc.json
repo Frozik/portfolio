@@ -149,15 +149,6 @@
     },
     {
       "files": [
-        "apps/portfolio/src/features/site-planner/domain/sun/sun-position.ts",
-        "apps/portfolio/src/features/site-planner/domain/sun/day-window.ts"
-      ],
-      "rules": {
-        "no-restricted-globals": "off"
-      }
-    },
-    {
-      "files": [
         "**/vite.config.ts",
         "**/vitest.config.ts",
         "**/playwright.config.ts",

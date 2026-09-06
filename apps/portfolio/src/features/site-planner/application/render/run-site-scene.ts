@@ -100,7 +100,7 @@ export function runSiteScene({
    */
   const markViewMoved = (): void => {
     markDirty();
-    store.setCameraYawDegrees(camera.getYawDegrees());
+    store.view.setCameraYawDegrees(camera.getYawDegrees());
   };
 
   markViewMoved();
@@ -121,7 +121,14 @@ export function runSiteScene({
 
   const stopGpuApp = runGpuApp<SiteSceneGpuSession>({
     init: () =>
-      initSiteScene({ canvas, camera, fpsController, markDirty: markViewMoved, consumeDirty }),
+      initSiteScene({
+        canvas,
+        camera,
+        fpsController,
+        markDirty: markViewMoved,
+        consumeDirty,
+        reportAssetFailure: store.scene.reportAssetFailure,
+      }),
     onReady: ({ sink }) => {
       // reaction, not autorun: the sink runs untracked, so nothing it reaches —
       // the camera it re-frames today, whatever it drives tomorrow — can be
@@ -186,8 +193,10 @@ async function initSiteScene({
   fpsController,
   markDirty,
   consumeDirty,
+  reportAssetFailure,
 }: {
   readonly canvas: HTMLCanvasElement;
+  readonly reportAssetFailure: (error: unknown) => void;
   readonly camera: OrbitCamera;
   readonly fpsController: FpsController;
   readonly markDirty: VoidFunction;
@@ -208,7 +217,13 @@ async function initSiteScene({
     const depthManager = createDepthTextureManager(MSAA_SAMPLE_COUNT, DEPTH_FORMAT);
     const shadowMap = createShadowMap(device);
     const terrainLayer = new TerrainLayer(uniforms.buffer, msaaManager, depthManager, shadowMap);
-    const objectsLayer = new ObjectsLayer(uniforms.buffer, msaaManager, depthManager, shadowMap);
+    const objectsLayer = new ObjectsLayer(
+      uniforms.buffer,
+      msaaManager,
+      depthManager,
+      shadowMap,
+      reportAssetFailure
+    );
 
     /** The light's box follows the ground it covers and the sun that casts it. */
     const refreshShadowProjection = (): void => {

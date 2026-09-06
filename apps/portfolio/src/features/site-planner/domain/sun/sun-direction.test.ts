@@ -1,27 +1,17 @@
-import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_LATITUDE_DEGREES,
-  DEFAULT_LONGITUDE_DEGREES,
-  DEFAULT_NORTH_OFFSET_DEGREES,
-  DEFAULT_TIME_ZONE_ID,
-} from '../constants';
+import { DEFAULT_NORTH_OFFSET_DEGREES } from '../constants';
 import { computeSunDirection, computeSunlight } from './sun-direction';
 import type { SunPosition } from './sun-position';
-import { computeSunPosition } from './sun-position';
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;
 const DEGREES_TO_RADIANS = Math.PI / 180;
 
-/** Solar noon of the summer solstice at the default site (Saint Petersburg). */
-const SOLSTICE_NOON = Temporal.ZonedDateTime.from(`2026-06-21T13:00:00[${DEFAULT_TIME_ZONE_ID}]`);
-
-const SOLSTICE_NOON_POSITION: SunPosition = computeSunPosition({
-  moment: SOLSTICE_NOON,
-  latitudeDegrees: DEFAULT_LATITUDE_DEGREES,
-  longitudeDegrees: DEFAULT_LONGITUDE_DEGREES,
-});
+/**
+ * Solar noon of the summer solstice at the default site (Saint Petersburg): due
+ * south, 90° − 59.94° + 23.44° ≈ 53.5° over the horizon.
+ */
+const SOLSTICE_NOON_POSITION: SunPosition = positionOf(180, 53.5);
 
 function positionOf(azimuthDegrees: number, altitudeDegrees: number): SunPosition {
   return {

@@ -73,6 +73,9 @@ function withPitchedRoof(
  * Pure derivation over the document and the terrain — no state of its own.
  */
 export class SceneModel {
+  /** The bundled car model could not be uploaded; the sculpted stand-in is drawn instead. */
+  assetIssue: string | undefined = undefined;
+
   private readonly core: PlanEditorCore;
   private readonly terrain: TerrainModel;
 
@@ -395,4 +398,11 @@ export class SceneModel {
       }),
     };
   }
+
+  reportAssetFailure(error: unknown): void {
+    this.assetIssue = error instanceof Error ? error.message : String(error);
+  }
+
+  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
+  dispose(): void {}
 }

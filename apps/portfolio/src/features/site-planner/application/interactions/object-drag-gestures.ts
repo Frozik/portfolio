@@ -23,8 +23,8 @@ import { offsetBetween } from './grid-snapping';
 export interface DraggedObject {
   /** Where the object stood when the drag began; a turn is measured about it. */
   readonly origin: Vector2;
-  /** Puts the object at the dragged place. Snapping is the object's own habit. */
-  readonly moveTo: (draggedPoint: Vector2, modifiers: PlanModifiers) => void;
+  /** Puts the object at the dragged place; absent for a grip that only turns. Snapping is the object's own habit. */
+  readonly moveTo?: (draggedPoint: Vector2, modifiers: PlanModifiers) => void;
   /** Turns it; absent for what has no facing — a post, a shaft, a slab. */
   readonly turnTo?: (rotationDegrees: number) => void;
   /**
@@ -73,6 +73,10 @@ export class ObjectDragGestures {
    * announcement no move follows simply expires.
    */
   beginMove(object: DraggedObject, planPoint: Vector2): boolean {
+    if (isNil(object.moveTo)) {
+      return false;
+    }
+
     this.context.store.pushHistory();
     this.drag = {
       object,
@@ -159,7 +163,7 @@ export class ObjectDragGestures {
       return;
     }
 
-    drag.object.moveTo(
+    drag.object.moveTo?.(
       { x: planPoint.x + drag.grabOffset.x, y: planPoint.y + drag.grabOffset.y },
       modifiers
     );

@@ -184,7 +184,8 @@ function solveSpline(samples: readonly ElevationSample[]): Float64Array | undefi
  *
  * The saddle-point system a spline produces is symmetric but indefinite, so the
  * Cholesky factorisation that would otherwise be the obvious choice does not
- * apply; pivoting is what keeps the elimination stable on it.
+ * apply; pivoting is what keeps the elimination stable on it. Eliminates
+ * `matrix` and `rightHandSide` in place — the caller hands over scratch copies.
  */
 function solveLinearSystem(
   matrix: Float64Array[],

@@ -85,7 +85,7 @@ export class UtilityNetworkModel {
       return undefined;
     }
 
-    const cursor = this.core.cursorPlanPoint;
+    const cursor = this.core.view.cursorPlanPoint;
 
     return {
       system: this.nextUtilitySystem,
@@ -398,4 +398,7 @@ export class UtilityNetworkModel {
 
     return nearest;
   }
+
+  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
+  dispose(): void {}
 }

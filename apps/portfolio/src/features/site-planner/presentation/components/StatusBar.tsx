@@ -28,7 +28,7 @@ export const StatusBar = observer(
     readonly isCompact?: boolean;
   }) => {
     const { meterUnit } = sitePlannerT.plan;
-    const { cursorPlanPoint } = store;
+    const { cursorPlanPoint } = store.view;
     const activeStoreyOrdinal = store.building.activeStoreyOrdinal;
 
     return (
@@ -45,7 +45,7 @@ export const StatusBar = observer(
           </span>
         )}
         <span className="font-mono">
-          {sitePlannerT.status.zoom} {store.zoomPercent}
+          {sitePlannerT.status.zoom} {store.view.zoomPercent}
           {PERCENT_SUFFIX}
         </span>
         {isNil(activeStoreyOrdinal) ? undefined : (
@@ -53,6 +53,11 @@ export const StatusBar = observer(
           // identical, and the mode bar's 6 px chip is not where the eye is.
           <span className="font-mono text-brand-500">
             {sitePlannerT.storeys.storeyTitle} {activeStoreyOrdinal}
+          </span>
+        )}
+        {isNil(store.scene.assetIssue) ? undefined : (
+          <span className="truncate text-warning" title={store.scene.assetIssue}>
+            {sitePlannerT.status.carModelUnavailable}
           </span>
         )}
         {isCompact ? undefined : <span className="truncate">{toolHint(store.activeTool)}</span>}

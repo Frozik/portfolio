@@ -1,7 +1,8 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { observer } from 'mobx-react-lite';
 
-import type { SitePlannerStore, SitePlanSaveState } from '../../application/SitePlannerStore';
+import type { SitePlanSaveState } from '../../application/PlanPersistence';
+import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { sitePlannerT } from '../translations';
 
 const DOT_CLASS = 'size-1.5 shrink-0 rounded-full';
@@ -22,6 +23,8 @@ function describeSaveState(saveState: SitePlanSaveState): {
       };
     case 'error':
       return { caption: sitePlannerT.save.error, markerClass: `${DOT_CLASS} bg-error` };
+    case 'blocked':
+      return { caption: sitePlannerT.save.blocked, markerClass: `${DOT_CLASS} bg-warning` };
     default:
       return assertNever(saveState);
   }
@@ -29,7 +32,7 @@ function describeSaveState(saveState: SitePlanSaveState): {
 
 /** Whether the plan in storage is the plan on screen — the toolbar's last word. */
 export const SaveStatus = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const { caption, markerClass } = describeSaveState(store.saveState);
+  const { caption, markerClass } = describeSaveState(store.persistence.saveState);
 
   return (
     // `status` carries a polite live region, so a change is announced without

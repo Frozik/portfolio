@@ -165,7 +165,7 @@ export class WallEditorModel {
    */
   get draftWallCursor(): Vector2 | undefined {
     const points = this.draftWallPoints;
-    const cursor = this.core.cursorPlanPoint;
+    const cursor = this.core.view.cursorPlanPoint;
 
     if (points.length === 0 || isNil(cursor)) {
       return undefined;
@@ -177,11 +177,11 @@ export class WallEditorModel {
     // outranks ORTHO in every CAD: catching the corner of an existing wall is
     // the most specific intent a cursor can express. Alt suspends it with
     // every other snap.
-    if (!this.core.cursorModifiers.isAltPressed) {
+    if (!this.core.view.cursorModifiers.isAltPressed) {
       const caught = findNearestSnapPoint(
         this.wallSnapCandidates,
         cursor,
-        KEY_POINT_SNAP_RADIUS_PX / this.core.viewport.pixelsPerMeter
+        KEY_POINT_SNAP_RADIUS_PX / this.core.view.viewport.pixelsPerMeter
       );
 
       if (!isNil(caught)) {
@@ -194,14 +194,14 @@ export class WallEditorModel {
     // (angle lock) and a typed length state a direction of their own, so
     // either one outranks the rim; Alt suspends it with every other snap.
     if (
-      !this.core.cursorModifiers.isAltPressed &&
-      !this.core.cursorModifiers.isShiftPressed &&
+      !this.core.view.cursorModifiers.isAltPressed &&
+      !this.core.view.cursorModifiers.isShiftPressed &&
       isNil(this.typedLengthMeters)
     ) {
       const onRim = slideOntoCircleRim(
         this.baseShapes,
         cursor,
-        KEY_POINT_SNAP_RADIUS_PX / this.core.viewport.pixelsPerMeter
+        KEY_POINT_SNAP_RADIUS_PX / this.core.view.viewport.pixelsPerMeter
       );
 
       if (!isNil(onRim)) {
@@ -212,9 +212,9 @@ export class WallEditorModel {
     const { isSnapEnabled, gridStepMeters } = this.core.settings;
     const snapped = snapPoint(
       cursor,
-      isSnapEnabled && !this.core.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
+      isSnapEnabled && !this.core.view.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
     );
-    const locked = this.core.cursorModifiers.isShiftPressed
+    const locked = this.core.view.cursorModifiers.isShiftPressed
       ? constrainToAngleStep(last, snapped)
       : snapped;
 
@@ -291,9 +291,9 @@ export class WallEditorModel {
    * no previous point there is no direction to hold yet.
    */
   firstWallPointAt(planPoint: Vector2): Vector2 {
-    const withinMeters = KEY_POINT_SNAP_RADIUS_PX / this.core.viewport.pixelsPerMeter;
+    const withinMeters = KEY_POINT_SNAP_RADIUS_PX / this.core.view.viewport.pixelsPerMeter;
 
-    if (!this.core.cursorModifiers.isAltPressed) {
+    if (!this.core.view.cursorModifiers.isAltPressed) {
       const caught = findNearestSnapPoint(this.wallSnapCandidates, planPoint, withinMeters);
 
       if (!isNil(caught)) {
@@ -311,7 +311,7 @@ export class WallEditorModel {
 
     return snapPoint(
       planPoint,
-      isSnapEnabled && !this.core.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
+      isSnapEnabled && !this.core.view.cursorModifiers.isAltPressed ? gridStepMeters : NO_SNAP_STEP
     );
   }
 
@@ -671,4 +671,7 @@ export class WallEditorModel {
       this.core.selections = NO_SELECTIONS;
     }
   }
+
+  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
+  dispose(): void {}
 }

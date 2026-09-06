@@ -112,7 +112,7 @@ export function runPlanRenderer({
    * The viewport lives here; the store keeps a mirror of it so the status bar
    * and the overlays drawn over the canvas can follow a pan or a zoom.
    */
-  const publishViewport = (): void => store.setViewport(viewport);
+  const publishViewport = (): void => store.view.setViewport(viewport);
 
   const frameBoundaryOnce = (): void => {
     if (hasFramedBoundary || isNil(frame) || viewport.widthPx <= 0 || viewport.heightPx <= 0) {

@@ -124,6 +124,10 @@ export class SunStudy {
     this.isAnimating = false;
   }
 
+  dispose(): void {
+    this.stopAnimation();
+  }
+
   /** The played day: a step of sun, wrapping back to sunrise at dusk. */
   private advance(): void {
     const { dayWindow } = this;

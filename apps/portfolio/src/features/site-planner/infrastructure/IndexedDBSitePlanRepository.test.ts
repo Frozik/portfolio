@@ -56,10 +56,10 @@ function planWithTwoTerms(): SitePlan {
 }
 
 describe('IndexedDBSitePlanRepository', () => {
-  it('returns undefined when nothing has been saved yet', async () => {
+  it('reports an empty storage when nothing has been saved yet', async () => {
     const repository = createIndexedDBSitePlanRepository(uniqueDatabaseName());
 
-    expect(await repository.loadPlan()).toBeUndefined();
+    expect(await repository.loadPlan()).toEqual({ kind: 'empty' });
   });
 
   it('round-trips a saved plan', async () => {
@@ -68,7 +68,7 @@ describe('IndexedDBSitePlanRepository', () => {
 
     await repository.savePlan(plan);
 
-    expect(await repository.loadPlan()).toEqual(plan);
+    expect(await repository.loadPlan()).toEqual({ kind: 'loaded', plan });
   });
 
   it('keeps a single document: the latest save replaces the previous one', async () => {
@@ -84,7 +84,7 @@ describe('IndexedDBSitePlanRepository', () => {
     database.close();
 
     expect(recordCount).toBe(1);
-    expect((await repository.loadPlan())?.boundary.terms).toHaveLength(2);
+    expect(await repository.loadPlan()).toMatchObject({ plan: { boundary: { terms: [{}, {}] } } });
   });
 
   it('reads back a plan written by another instance of the repository', async () => {
@@ -93,20 +93,23 @@ describe('IndexedDBSitePlanRepository', () => {
 
     await createIndexedDBSitePlanRepository(databaseName).savePlan(plan);
 
-    expect(await createIndexedDBSitePlanRepository(databaseName).loadPlan()).toEqual(plan);
+    expect(await createIndexedDBSitePlanRepository(databaseName).loadPlan()).toEqual({
+      kind: 'loaded',
+      plan,
+    });
   });
 
-  it('yields undefined for a record that is not valid JSON', async () => {
+  it('refuses a record that is not valid JSON rather than passing it off as empty', async () => {
     const databaseName = uniqueDatabaseName();
 
     await seedRecord(databaseName, '{ this is not json');
 
-    await expect(
-      createIndexedDBSitePlanRepository(databaseName).loadPlan()
-    ).resolves.toBeUndefined();
+    await expect(createIndexedDBSitePlanRepository(databaseName).loadPlan()).resolves.toMatchObject(
+      { kind: 'unreadable' }
+    );
   });
 
-  it('yields undefined for a record whose plan fails validation', async () => {
+  it('refuses a record whose plan fails validation', async () => {
     const databaseName = uniqueDatabaseName();
 
     await seedRecord(
@@ -114,12 +117,12 @@ describe('IndexedDBSitePlanRepository', () => {
       JSON.stringify({ version: CURRENT_SNAPSHOT_VERSION, plan: { boundary: 'not a composition' } })
     );
 
-    await expect(
-      createIndexedDBSitePlanRepository(databaseName).loadPlan()
-    ).resolves.toBeUndefined();
+    await expect(createIndexedDBSitePlanRepository(databaseName).loadPlan()).resolves.toMatchObject(
+      { kind: 'unreadable' }
+    );
   });
 
-  it('yields undefined for a snapshot version this build does not know', async () => {
+  it('refuses a snapshot version this build does not know', async () => {
     const databaseName = uniqueDatabaseName();
     const fromTheFuture = serializeSitePlan(createDefaultSitePlan()).replace(
       `"version":${CURRENT_SNAPSHOT_VERSION}`,
@@ -128,9 +131,9 @@ describe('IndexedDBSitePlanRepository', () => {
 
     await seedRecord(databaseName, fromTheFuture);
 
-    await expect(
-      createIndexedDBSitePlanRepository(databaseName).loadPlan()
-    ).resolves.toBeUndefined();
+    await expect(createIndexedDBSitePlanRepository(databaseName).loadPlan()).resolves.toMatchObject(
+      { kind: 'unreadable' }
+    );
   });
 
   it('saves over a broken record instead of leaving it in place', async () => {
@@ -143,6 +146,6 @@ describe('IndexedDBSitePlanRepository', () => {
 
     await repository.savePlan(plan);
 
-    expect(await repository.loadPlan()).toEqual(plan);
+    expect(await repository.loadPlan()).toEqual({ kind: 'loaded', plan });
   });
 });

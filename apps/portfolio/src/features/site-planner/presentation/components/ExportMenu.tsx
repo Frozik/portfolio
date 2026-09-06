@@ -31,10 +31,10 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
     exportPlanPng({ store, labels: PLAN_LABELS })
       .then(hasExported => {
         if (!hasExported) {
-          store.reportExportFailure();
+          store.persistence.reportExportFailure();
         }
       })
-      .catch(() => store.reportExportFailure());
+      .catch(() => store.persistence.reportExportFailure());
   });
 
   const handlePickFile = useFunction(() => fileInputRef.current?.click());
@@ -47,7 +47,7 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
     event.target.value = '';
 
     if (!isNil(file)) {
-      void store.importPlanFile(file);
+      void store.persistence.importPlanFile(file);
     }
   });
 

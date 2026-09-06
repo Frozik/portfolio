@@ -779,8 +779,10 @@ export const sitePlannerTranslationsEn = {
     saved: 'saved',
     saving: 'saving…',
     error: 'not saved',
+    blocked: 'not saved — storage holds a plan this build cannot read',
   },
   status: {
+    carModelUnavailable: 'car model unavailable, a stand-in is drawn',
     grid: 'Grid',
     zoom: 'Zoom',
     /** Stands in for the cursor position while the pointer is off the canvas. */

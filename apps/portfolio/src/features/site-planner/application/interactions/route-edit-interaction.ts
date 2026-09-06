@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { UtilityRouteId } from '../../domain/model/routing';
+import type { UtilityRoute, UtilityRouteId } from '../../domain/model/routing';
 import { MIN_ROUTE_POINTS } from '../../domain/model/routing';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
@@ -9,7 +9,8 @@ import { computePolylinePointHandles, findPathPointHandleAt } from '../render/pl
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { DELETE_KEYS } from './editor-interaction';
 import { HANDLE_HIT_RADIUS_PX } from './plan-picking';
-import { applyRouteHandleHover, RoutePointGestures } from './route-point-gestures';
+import type { PolylinePointGestures } from './polyline-point-gestures';
+import { applyRouteHandleHover, createRoutePointGestures } from './route-point-gestures';
 
 /**
  * Trench editing's canvas behaviour — the path editor's point kit on the one
@@ -20,12 +21,12 @@ import { applyRouteHandleHover, RoutePointGestures } from './route-point-gesture
 export class RouteEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
   private readonly routeId: UtilityRouteId;
-  private readonly gestures: RoutePointGestures;
+  private readonly gestures: PolylinePointGestures<UtilityRoute>;
 
   constructor(context: InteractionContext, routeId: UtilityRouteId) {
     this.context = context;
     this.routeId = routeId;
-    this.gestures = new RoutePointGestures(context);
+    this.gestures = createRoutePointGestures(context);
   }
 
   onPointerDown(planPoint: Vector2, _modifiers: PlanModifiers): boolean {

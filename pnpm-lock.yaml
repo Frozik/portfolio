@@ -249,9 +249,6 @@ catalogs:
     sudoku-gen:
       specifier: ^1.0.2
       version: 1.0.2
-    suncalc:
-      specifier: ^2.0.1
-      version: 2.0.1
     tabbable:
       specifier: ^6.5.0
       version: 6.5.0
@@ -561,9 +558,6 @@ importers:
       sudoku-gen:
         specifier: 'catalog:'
         version: 1.0.2
-      suncalc:
-        specifier: 'catalog:'
-        version: 2.0.1
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.6.0
@@ -6567,9 +6561,6 @@ packages:
 
   sudoku-gen@1.0.2:
     resolution: {integrity: sha512-zQFQNbar9qGpbteAH7CQShGoR5lk7r4KYlt0Wsvts1eVMzLb2EZUovzc7gAmoHp+HmXGYadmqCyyXoY7QVEyhA==}
-
-  suncalc@2.0.1:
-    resolution: {integrity: sha512-wjujU+HpsP1TUvN3/9dFkVQQCsMZbk7PkdZsASRJR4jVPHCm9Qy0FVkFTqXfs70Ag2yheN7ZUavzCyOjhJDGxQ==}
 
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
@@ -13215,8 +13206,6 @@ snapshots:
     optional: true
 
   sudoku-gen@1.0.2: {}
-
-  suncalc@2.0.1: {}
 
   supports-color@5.5.0:
     dependencies:

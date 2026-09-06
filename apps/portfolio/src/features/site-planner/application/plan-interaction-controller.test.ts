@@ -20,7 +20,7 @@ import { SitePlannerStore } from './SitePlannerStore';
 
 /** Keeps the interaction under test off IndexedDB and out of every other test's way. */
 const NO_STORAGE: ISitePlanRepository = {
-  loadPlan: () => Promise.resolve(undefined),
+  loadPlan: () => Promise.resolve({ kind: 'empty' as const }),
   savePlan: () => Promise.resolve(),
 };
 
@@ -1075,7 +1075,7 @@ describe('PlanInteractionController', () => {
       controller.onUndo();
 
       expect(boundaryShapes()[0].center).toEqual(PLOT_CENTER);
-      expect(store.canUndo).toBe(false);
+      expect(store.history.canUndo).toBe(false);
     });
 
     it('leaves no step behind a click that only selects', () => {
@@ -1083,7 +1083,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerUp(PLOT_CENTER, NO_MODIFIERS);
 
       expect(store.selection).toBeDefined();
-      expect(store.canUndo).toBe(false);
+      expect(store.history.canUndo).toBe(false);
     });
 
     it('undoes a drawn shape and redoes it again', () => {
@@ -2083,10 +2083,10 @@ describe('PlanInteractionController', () => {
   describe('the cursor readout', () => {
     it('follows the pointer and clears when it leaves the canvas', () => {
       controller.onPointerMove({ x: 3, y: 4 }, NO_MODIFIERS);
-      expect(store.cursorPlanPoint).toEqual({ x: 3, y: 4 });
+      expect(store.view.cursorPlanPoint).toEqual({ x: 3, y: 4 });
 
       controller.onPointerLeave();
-      expect(store.cursorPlanPoint).toBeUndefined();
+      expect(store.view.cursorPlanPoint).toBeUndefined();
     });
   });
 

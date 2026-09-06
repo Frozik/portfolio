@@ -2,8 +2,8 @@ import { cn } from '@frozik/components/components/cn';
 import { observer } from 'mobx-react-lite';
 import { useRef } from 'react';
 
+import type { AttachPlanPointerInput } from '../../application/plan-session';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { AttachPlanPointerInput } from '../hooks/usePlanSession';
 import { usePlanSession } from '../hooks/usePlanSession';
 import { sitePlannerT } from '../translations';
 import { AnalysisPanel } from './AnalysisPanel';

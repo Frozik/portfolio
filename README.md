@@ -390,7 +390,7 @@ source of truth — every mesh, contour and overlay is a pure function of it.
   elevation (terrain centre / mean / minimum, or set by hand) and an apron
   down to the terrain, the way building pads work in CAD
 - Sun and shadows for a date and a time of day at the plot's coordinates
-  (St Petersburg by default), from `suncalc` — a single 2048² shadow map
+  (St Petersburg by default), from `@frozik/utils/astronomy`, a Temporal port of SunCalc's sun formulas — a single 2048² shadow map
   with PCF filtering, a slider running sunrise to sunset, and a play button
   that animates the day
 - Render-on-demand: a frame is encoded only once the camera or the plan

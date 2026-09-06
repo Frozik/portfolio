@@ -6,7 +6,8 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
-import type { BuildingRoom, SitePlannerStore } from '../../application/SitePlannerStore';
+import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingRoom } from '../../application/storey-scenes';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { RoomTypeId } from '../../domain/model/rooms';
 import { ROOM_TYPES } from '../../domain/model/rooms';

@@ -39,7 +39,12 @@ function createRepository(storedPlan?: SitePlan): RecordingRepository {
 
   return {
     savedPlans,
-    loadPlan: () => Promise.resolve(storedPlan),
+    loadPlan: () =>
+      Promise.resolve(
+        isNil(storedPlan)
+          ? { kind: 'empty' as const }
+          : { kind: 'loaded' as const, plan: storedPlan }
+      ),
     savePlan: (plan: SitePlan) => {
       savedPlans.push(plan);
 
@@ -50,7 +55,7 @@ function createRepository(storedPlan?: SitePlan): RecordingRepository {
 
 function createFailingRepository(): ISitePlanRepository {
   return {
-    loadPlan: () => Promise.resolve(undefined),
+    loadPlan: () => Promise.resolve({ kind: 'empty' as const }),
     savePlan: () => Promise.reject(new Error('quota exceeded')),
   };
 }
@@ -117,26 +122,26 @@ describe('SitePlannerStore history', () => {
   });
 
   it('starts with nothing to undo or redo', () => {
-    expect(store.canUndo).toBe(false);
-    expect(store.canRedo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
+    expect(store.history.canRedo).toBe(false);
   });
 
   it('undoes an added shape and redoes it again', () => {
     drawRectangle({ x: 5, y: 5 });
 
     expect(store.boundary.terms).toHaveLength(2);
-    expect(store.canUndo).toBe(true);
+    expect(store.history.canUndo).toBe(true);
 
     store.undo();
 
     expect(store.boundary.terms).toHaveLength(1);
-    expect(store.canUndo).toBe(false);
-    expect(store.canRedo).toBe(true);
+    expect(store.history.canUndo).toBe(false);
+    expect(store.history.canRedo).toBe(true);
 
     store.redo();
 
     expect(store.boundary.terms).toHaveLength(2);
-    expect(store.canRedo).toBe(false);
+    expect(store.history.canRedo).toBe(false);
   });
 
   it('undoes a removed shape', () => {
@@ -168,18 +173,18 @@ describe('SitePlannerStore history', () => {
     drawRectangle({ x: 1, y: 1 });
     store.undo();
 
-    expect(store.canRedo).toBe(true);
+    expect(store.history.canRedo).toBe(true);
 
     drawRectangle({ x: 2, y: 2 });
 
-    expect(store.canRedo).toBe(false);
+    expect(store.history.canRedo).toBe(false);
   });
 
   it('records nothing for an announced edit that never lands', () => {
     store.pushHistory();
     store.pushHistory();
 
-    expect(store.canUndo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
   });
 
   it('keeps an announcement that no edit followed out of the next step', () => {
@@ -188,7 +193,7 @@ describe('SitePlannerStore history', () => {
     store.undo();
 
     expect(store.boundary.terms).toHaveLength(1);
-    expect(store.canUndo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
   });
 
   it('keeps a burst of edits to one field as a single step', () => {
@@ -205,7 +210,7 @@ describe('SitePlannerStore history', () => {
     store.undo();
 
     expect(store.boundary.terms[0].operand).toEqual(rectangle);
-    expect(store.canUndo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
   });
 
   it('starts a new step once the grouping window has passed', () => {
@@ -260,7 +265,7 @@ describe('SitePlannerStore persistence', () => {
       kind: defaultTerm.operand.kind,
       center: leafShape(defaultTerm.operand).center,
     });
-    expect(store.canUndo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
 
     store.dispose();
   });
@@ -308,7 +313,7 @@ describe('SitePlannerStore persistence', () => {
 
       expect(repository.savedPlans).toHaveLength(1);
       expect(repository.savedPlans[0].boundary.terms).toHaveLength(3);
-      expect(store.saveState).toBe('saved');
+      expect(store.persistence.saveState).toBe('saved');
 
       store.dispose();
     } finally {
@@ -332,7 +337,7 @@ describe('SitePlannerStore persistence', () => {
 
       await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
 
-      expect(store.saveState).toBe('error');
+      expect(store.persistence.saveState).toBe('error');
 
       store.dispose();
     } finally {
@@ -518,7 +523,7 @@ describe('SitePlannerStore groups', () => {
   it('records no step for a drop that leaves the tree as it was', () => {
     store.composition.moveTerm('boundary', plotId(), undefined, 0);
 
-    expect(store.canUndo).toBe(false);
+    expect(store.history.canUndo).toBe(false);
   });
 
   it('records no step for a group dropped into itself', () => {
@@ -1307,7 +1312,7 @@ describe('SitePlannerStore wall drawing precision', () => {
   it('previews nothing until a first corner is planted', () => {
     const store = new SitePlannerStore(createRepository());
 
-    store.setCursorPlanPoint({ x: 3, y: 3 });
+    store.view.setCursorPlanPoint({ x: 3, y: 3 });
 
     expect(store.walls.draftWallCursor).toBeUndefined();
     expect(store.walls.draftWallReadout).toBeUndefined();
@@ -1319,7 +1324,7 @@ describe('SitePlannerStore wall drawing precision', () => {
     const store = new SitePlannerStore(createRepository());
 
     openWallTool(store);
-    store.setCursorPlanPoint({ x: 9, y: 5 });
+    store.view.setCursorPlanPoint({ x: 9, y: 5 });
 
     expect(store.walls.draftWallReadout?.lengthMeters).toBeCloseTo(4);
     expect(store.walls.draftWallReadout?.angleDegrees).toBeCloseTo(0);
@@ -1331,8 +1336,8 @@ describe('SitePlannerStore wall drawing precision', () => {
     const store = new SitePlannerStore(createRepository());
 
     openWallTool(store);
-    store.setCursorPlanPoint({ x: 9, y: 5.3 });
-    store.setCursorModifiers({ isAltPressed: false, isShiftPressed: true });
+    store.view.setCursorPlanPoint({ x: 9, y: 5.3 });
+    store.view.setCursorModifiers({ isAltPressed: false, isShiftPressed: true });
 
     expect(store.walls.draftWallCursor?.y).toBeCloseTo(5);
 
@@ -1343,7 +1348,7 @@ describe('SitePlannerStore wall drawing precision', () => {
     const store = new SitePlannerStore(createRepository());
 
     openWallTool(store);
-    store.setCursorPlanPoint({ x: 9.37, y: 5 });
+    store.view.setCursorPlanPoint({ x: 9.37, y: 5 });
     for (const key of ['4', '.', '2']) {
       store.walls.appendTypedLengthKey(key);
     }
@@ -1712,7 +1717,7 @@ describe('SitePlannerStore building warnings', () => {
 
     expect(store.viewMode).toBe('plan');
     expect(store.building.activeStoreyId).toBe(finding.storeyId);
-    expect(store.viewport.centerMeters).toEqual(finding.at);
+    expect(store.view.viewport.centerMeters).toEqual(finding.at);
 
     store.dispose();
   });
@@ -2012,7 +2017,7 @@ describe('walls on a round base', () => {
     store.walls.appendDraftWallPoint({ x: 15, y: 10 });
     // A cursor between facets, slightly inside the rim: it must land AT the
     // radius, not on the grid and not on a polygonization corner.
-    store.setCursorPlanPoint({ x: 10 + 4.9 * Math.cos(0.3), y: 10 + 4.9 * Math.sin(0.3) });
+    store.view.setCursorPlanPoint({ x: 10 + 4.9 * Math.cos(0.3), y: 10 + 4.9 * Math.sin(0.3) });
 
     const cursor = store.walls.draftWallCursor;
 

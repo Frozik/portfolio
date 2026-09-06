@@ -748,4 +748,7 @@ export class StoreyObjectsEditorModel {
       );
     });
   }
+
+  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
+  dispose(): void {}
 }

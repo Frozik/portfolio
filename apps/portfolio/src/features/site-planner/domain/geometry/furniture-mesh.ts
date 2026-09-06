@@ -908,10 +908,10 @@ function appendCubeShelving(
     });
   }
 
-  for (const y of [0, height - panelThickness]) {
+  for (const panelBottom of [0, height - panelThickness]) {
     appendBox(builder, {
-      minCorner: [-halfWidth, y, -halfDepth],
-      maxCorner: [halfWidth, y + panelThickness, halfDepth],
+      minCorner: [-halfWidth, panelBottom, -halfDepth],
+      maxCorner: [halfWidth, panelBottom + panelThickness, halfDepth],
       color: WOOD,
     });
   }

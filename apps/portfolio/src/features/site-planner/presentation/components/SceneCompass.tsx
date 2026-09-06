@@ -23,7 +23,7 @@ const LABEL_RADIUS = 17;
  */
 export const SceneCompass = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const angleDegrees = computeSceneNorthAngleDegrees({
-    cameraYawDegrees: store.cameraYawDegrees,
+    cameraYawDegrees: store.view.cameraYawDegrees,
     northOffsetDegrees: store.settings.location.northOffsetDegrees,
   });
   const needle = buildCompassNeedle({

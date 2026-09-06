@@ -156,7 +156,9 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     private readonly sceneUniformBuffer: GPUBuffer,
     private readonly msaaManager: MsaaTextureManager,
     private readonly depthManager: DepthTextureManager,
-    private readonly shadowMap: ShadowMap
+    private readonly shadowMap: ShadowMap,
+    /** The bundled car asset failed to load or upload; the sculpted car keeps standing in. */
+    private readonly onCarModelFailed: (error: unknown) => void
   ) {}
 
   init({ device, format }: GpuContext): void {
@@ -669,8 +671,8 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
         indexBuffer: createIndexBuffer(device, mesh.indices),
         indexCount: mesh.indices.length,
       };
-    } catch {
-      // The sculpted template keeps standing in.
+    } catch (error) {
+      this.onCarModelFailed(error);
     }
   }
 

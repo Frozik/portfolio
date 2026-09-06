@@ -4,7 +4,10 @@ import { isNil } from 'lodash-es';
 
 import type { SitePlan } from '../domain/model/site-plan';
 import { parseSnapshot, serializeSitePlan } from '../domain/model/snapshot';
-import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
+import type {
+  ISitePlanRepository,
+  PlanLoadResult,
+} from '../domain/persistence/ISitePlanRepository';
 
 const DATABASE_NAME = 'site-planner';
 const DATABASE_VERSION = 1;
@@ -26,6 +29,10 @@ interface SitePlannerDbSchema extends DBSchema {
  * document format and its validation, so a record written by another build is
  * rejected by the very same parser the rest of the app uses.
  */
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function createIndexedDBSitePlanRepository(
   databaseName: string = DATABASE_NAME
 ): ISitePlanRepository {
@@ -56,15 +63,26 @@ export function createIndexedDBSitePlanRepository(
   };
 
   return {
-    async loadPlan(): Promise<SitePlan | undefined> {
+    async loadPlan(): Promise<PlanLoadResult> {
+      let raw: string | undefined;
+
       try {
         const database = await openDatabase();
-        const raw = await database.get(PLANS_STORE, CURRENT_PLAN_KEY);
 
-        return isNil(raw) ? undefined : parseSnapshot(raw);
-      } catch {
-        return undefined;
+        raw = await database.get(PLANS_STORE, CURRENT_PLAN_KEY);
+      } catch (error) {
+        return { kind: 'unreadable', reason: describeError(error) };
       }
+
+      if (isNil(raw)) {
+        return { kind: 'empty' };
+      }
+
+      const plan = parseSnapshot(raw);
+
+      return isNil(plan)
+        ? { kind: 'unreadable', reason: 'the stored record is not a plan this build can read' }
+        : { kind: 'loaded', plan };
     },
 
     async savePlan(plan: SitePlan): Promise<void> {

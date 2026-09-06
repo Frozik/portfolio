@@ -250,9 +250,9 @@ function appendGableWalls(
 
     crossings.sort((left, right) => left - right);
 
-    return crossings.map(t => ({
-      x: from.x + (to.x - from.x) * t,
-      y: from.y + (to.y - from.y) * t,
+    return crossings.map(parameter => ({
+      x: from.x + (to.x - from.x) * parameter,
+      y: from.y + (to.y - from.y) * parameter,
     }));
   };
 

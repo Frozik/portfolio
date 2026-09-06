@@ -356,4 +356,7 @@ export class CompositionModel {
       composition: update(building.composition),
     });
   }
+
+  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
+  dispose(): void {}
 }

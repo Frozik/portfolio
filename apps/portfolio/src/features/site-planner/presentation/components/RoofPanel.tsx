@@ -9,7 +9,8 @@ import { Button } from '../../../../shared/ui/Button';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import { formatMeters } from '../../application/render/plan-draw/shared';
-import type { RoofZoneScene, SitePlannerStore } from '../../application/SitePlannerStore';
+import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { RoofZoneScene } from '../../application/storey-scenes';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import {
   MAX_ROOF_PITCH_DEGREES,

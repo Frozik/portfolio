@@ -1,15 +1,21 @@
+import { computeSolarEvents } from '@frozik/utils/astronomy/solarEvents';
+import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from '@frozik/utils/date/constants';
 import { isNil } from 'lodash-es';
-import { getTimes } from 'suncalc';
 import type { Temporal } from 'temporal-polyfill';
 
 import type { SiteLocation } from '../model/site-plan';
-import { fromSunCalcDate, toSunCalcDate } from './sun-position';
-import { clampTimeMinutes, MINUTES_PER_DAY, MINUTES_PER_HOUR, resolveMoment } from './sun-study';
+import { clampTimeMinutes, resolveMoment } from './sun-study';
 
 /** The lit part of one day at the site, in minutes since local midnight. */
 export interface DayWindow {
   readonly sunriseMinutes: number;
   readonly sunsetMinutes: number;
+}
+
+/** Sunrise and sunset as local instants; either is absent when the sun never crosses the horizon. */
+export interface SunTimes {
+  readonly sunrise: Temporal.ZonedDateTime | undefined;
+  readonly sunset: Temporal.ZonedDateTime | undefined;
 }
 
 /**
@@ -32,14 +38,25 @@ export function computeDayWindow({
   readonly date: Temporal.PlainDate;
   readonly location: SiteLocation;
 }): DayWindow {
-  const noon = resolveMoment({
-    date,
-    timeMinutes: NOON_MINUTES,
-    timeZoneId: location.timeZoneId,
-  });
-  const times = getTimes(toSunCalcDate(noon), location.latitudeDegrees, location.longitudeDegrees);
-  const sunriseMinutes = toLocalMinutes(times.sunrise, date, location.timeZoneId);
-  const sunsetMinutes = toLocalMinutes(times.sunset, date, location.timeZoneId);
+  const noon = resolveMoment({ date, timeMinutes: NOON_MINUTES, timeZoneId: location.timeZoneId });
+  const events = computeSolarEvents(
+    noon.toInstant(),
+    location.latitudeDegrees,
+    location.longitudeDegrees
+  );
+
+  return resolveDayWindow(
+    {
+      sunrise: events.sunrise?.toZonedDateTimeISO(location.timeZoneId),
+      sunset: events.sunset?.toZonedDateTimeISO(location.timeZoneId),
+    },
+    date
+  );
+}
+
+export function resolveDayWindow(times: SunTimes, date: Temporal.PlainDate): DayWindow {
+  const sunriseMinutes = toLocalMinutes(times.sunrise, date);
+  const sunsetMinutes = toLocalMinutes(times.sunset, date);
 
   // A window that does not open before it closes is no window: it means the
   // sunrise or the sunset landed on a neighbouring local day, which happens
@@ -59,24 +76,14 @@ export function clampTimeToWindow(timeMinutes: number, window: DayWindow): numbe
   );
 }
 
-/**
- * A sun time as minutes since local midnight of the day it was asked for.
- * Nothing comes back for an event that does not occur — SunCalc reports the
- * polar day and the polar night as `null`, and older releases as an unusable
- * date — nor for one that falls outside the day being studied.
- */
+/** A sun time as minutes since local midnight, or nothing when it falls outside the studied day. */
 function toLocalMinutes(
-  time: Date | null,
-  date: Temporal.PlainDate,
-  timeZoneId: string
+  time: Temporal.ZonedDateTime | undefined,
+  date: Temporal.PlainDate
 ): number | undefined {
-  if (isNil(time) || Number.isNaN(time.getTime())) {
+  if (isNil(time)) {
     return undefined;
   }
 
-  const local = fromSunCalcDate(time, timeZoneId);
-
-  return local.toPlainDate().equals(date)
-    ? local.hour * MINUTES_PER_HOUR + local.minute
-    : undefined;
+  return time.toPlainDate().equals(date) ? time.hour * MINUTES_PER_HOUR + time.minute : undefined;
 }

@@ -1,5 +1,3 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
-
 import type { PathRibbon } from '../domain/geometry/path-ribbon';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import type { ActiveTool, EditorMode, EditTarget } from '../domain/model/editor-mode';
@@ -18,10 +16,9 @@ import type {
 import type { Slab } from '../domain/model/slabs';
 import type { StoreyId } from '../domain/model/storeys';
 import type { OverlayMode } from '../domain/view/overlay-mode';
-import type { PlanModifiers } from '../domain/view/plan-input';
-import type { PlanViewport } from '../domain/view/plan-viewport';
 import type { SitePlannerViewMode } from '../domain/view/view-mode';
 import type { EditorSession } from './editor-sessions';
+import type { ViewportModel } from './ViewportModel';
 
 /**
  * The slice of the planner store its collaborator models read. Collaborators
@@ -43,9 +40,7 @@ export interface PlanEditorCore {
   utilityRoutes: readonly UtilityRoute[];
   selections: readonly Selection[];
   readonly selection: Selection | undefined;
-  readonly cursorPlanPoint: Vector2 | undefined;
-  readonly cursorModifiers: PlanModifiers;
-  readonly viewport: PlanViewport;
+  readonly view: ViewportModel;
   readonly pathRibbonPolygons: MultiPolygon;
   elevationMarks: readonly ElevationMark[];
   trees: readonly TreeInstance[];
@@ -66,6 +61,5 @@ export interface PlanEditorCore {
   readonly armedShapeTool: ShapeTool;
   setViewMode(viewMode: SitePlannerViewMode): void;
   setActiveTool(activeTool: ActiveTool): void;
-  centreOn(point: Vector2): void;
   runBatched(command: VoidFunction): void;
 }

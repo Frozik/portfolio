@@ -139,7 +139,7 @@ export const ElevationMarkInput = observer(({ store }: { readonly store: SitePla
     <ElevationField
       key={mark.id}
       mark={mark}
-      screenPoint={planToScreen(store.viewport, mark.position)}
+      screenPoint={planToScreen(store.view.viewport, mark.position)}
       onApply={handleApply}
       onCancel={store.siteObjects.closeElevationInput}
     />

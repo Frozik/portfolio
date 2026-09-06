@@ -8,7 +8,7 @@ import type { DraggedObject } from './object-drag-gestures';
 import { ObjectDragGestures } from './object-drag-gestures';
 
 const NO_STORAGE: ISitePlanRepository = {
-  loadPlan: () => Promise.resolve(undefined),
+  loadPlan: () => Promise.resolve({ kind: 'empty' as const }),
   savePlan: () => Promise.resolve(),
 };
 

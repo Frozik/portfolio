@@ -5,7 +5,8 @@ import type { MultiPolygon } from '../../domain/geometry/polygon-types';
 import { slabPolygon } from '../../domain/geometry/slab-geometry';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { BuildingScene } from '../building-scene';
-import type { SitePlannerStore, StoreyScene } from '../SitePlannerStore';
+import type { SitePlannerStore } from '../SitePlannerStore';
+import type { StoreyScene } from '../storey-scenes';
 import type { PlanBuilding } from './plan-draw/draw-house';
 import type { PlanContent, PlanEditorChrome } from './plan-draw/draw-plan';
 
@@ -143,7 +144,7 @@ export function readPlanContent(store: SitePlannerStore): PlanContent {
     utilityRoutes: store.utilityRoutes,
     gridStepMeters: store.settings.gridStepMeters,
     northOffsetDegrees: store.settings.location.northOffsetDegrees,
-    visibleLayers: store.visibleLayers,
+    visibleLayers: store.view.visibleLayers,
   };
 }
 

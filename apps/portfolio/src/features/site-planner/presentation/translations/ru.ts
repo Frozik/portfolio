@@ -695,8 +695,10 @@ export const sitePlannerTranslationsRu: TranslationOf<typeof sitePlannerTranslat
     saved: 'сохранено',
     saving: 'сохранение…',
     error: 'не сохранено',
+    blocked: 'не сохранено — в хранилище план, который эта сборка не читает',
   },
   status: {
+    carModelUnavailable: 'модель машины недоступна, рисуется заглушка',
     grid: 'Сетка',
     zoom: 'Зум',
     unknownValue: '—',

@@ -102,7 +102,6 @@ catalog:
   "socket.io": "^4.8.3"
   "socket.io-client": "^4.8.3"
   "sudoku-gen": "^1.0.2"
-  "suncalc": "^2.0.1"
   "tabbable": "^6.5.0"
   "tailwind-merge": "^3.6.0"
   "tailwindcss": "^4.3.3"

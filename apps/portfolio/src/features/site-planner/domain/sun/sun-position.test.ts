@@ -6,7 +6,7 @@ import {
   DEFAULT_LONGITUDE_DEGREES,
   DEFAULT_TIME_ZONE_ID,
 } from '../constants';
-import { computeSunPosition, fromSunCalcDate, toSunCalcDate } from './sun-position';
+import { computeSunPosition } from './sun-position';
 
 const RADIANS_TO_DEGREES = 180 / Math.PI;
 
@@ -51,16 +51,5 @@ describe('computeSunPosition', () => {
 
     expect(morningPosition.azimuthRadians).toBeLessThan(noonPosition.azimuthRadians);
     expect(morningPosition.altitudeRadians).toBeLessThan(noonPosition.altitudeRadians);
-  });
-});
-
-describe('the SunCalc date boundary', () => {
-  it('carries an instant across and back unchanged', () => {
-    const roundTripped = fromSunCalcDate(toSunCalcDate(SOLSTICE_NOON), DEFAULT_TIME_ZONE_ID);
-
-    expect(roundTripped.epochMilliseconds).toBe(SOLSTICE_NOON.epochMilliseconds);
-    expect(roundTripped.toPlainDateTime().toString()).toBe(
-      SOLSTICE_NOON.toPlainDateTime().toString()
-    );
   });
 });

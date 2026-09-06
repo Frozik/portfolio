@@ -13,6 +13,7 @@ export function lookupTimeZoneId(
   latitudeDegrees: number,
   longitudeDegrees: number
 ): string | undefined {
+  // `tz-lookup` throws for coordinates outside ±90°/±180° instead of answering.
   try {
     const timeZoneId = tzLookup(latitudeDegrees, longitudeDegrees);
 

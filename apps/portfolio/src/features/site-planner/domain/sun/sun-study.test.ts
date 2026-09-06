@@ -1,8 +1,10 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 
+import { MINUTES_PER_DAY } from '@frozik/utils/date/constants';
 import { DEFAULT_TIME_ZONE_ID } from '../constants';
-import { clampTimeMinutes, formatClockTime, MINUTES_PER_DAY, resolveMoment } from './sun-study';
+
+import { clampTimeMinutes, formatClockTime, resolveMoment } from './sun-study';
 
 const SOLSTICE = Temporal.PlainDate.from('2026-06-21');
 
