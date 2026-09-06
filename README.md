@@ -223,8 +223,9 @@ of solids.
   target vertex highlights when your line snaps to it
 - Double-click any edge to extend it into an infinite construction
   line that cuts across the figure
-- Select a line, then tap a vertex to drop a parallel line through
-  that point
+- Drag a line onto a vertex to drop a parallel line through that
+  point; a quick tap selects the line, and a tap on a vertex then drops
+  the parallel too
 - Double-click a line to delete it; duplicate lines are ignored
   automatically
 - Intersection points appear wherever two lines cross and become

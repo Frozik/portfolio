@@ -100,9 +100,9 @@ export const HelpPopover = memo(() => {
             </li>
             <li>
               <strong className="text-neutral-100">
-                {stereometryT.help.controlLabels.holdDragLineVertex}
+                {stereometryT.help.controlLabels.dragLineVertex}
               </strong>{' '}
-              — {stereometryT.help.controls.holdDragLineVertex}
+              — {stereometryT.help.controls.dragLineVertex}
             </li>
           </ul>
           <p className="mt-3 text-xs text-neutral-500">{stereometryT.help.intersectionHint}</p>

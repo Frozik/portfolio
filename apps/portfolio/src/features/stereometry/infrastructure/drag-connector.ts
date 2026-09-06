@@ -21,10 +21,16 @@ import type {
  * - Vertex press + drag to another vertex → `onDragComplete(start, end)`.
  * - Line quick tap → `onLineTap` (select).
  * - Line double-tap → `onLineDoubleTap` (extend/collapse).
- * - Line press-and-hold past `LINE_HOLD_DELAY_MS` (or sizable movement) →
- *   drag-to-parallel: preview appears; release on a snap vertex calls
- *   `onDragComplete(snap, snap+direction)`; release off-vertex falls back
- *   to `onLineTap` (select).
+ * - Line press + movement past `CLICK_MOVEMENT_THRESHOLD` (or a hold past
+ *   `LINE_HOLD_DELAY_MS`) → drag-to-parallel straight away, no prior
+ *   selection needed: the grabbed line is selected the moment the drag
+ *   opens, so the preview is drawn against a highlighted source; release on
+ *   a snap vertex calls `onDragComplete(snap, snap+direction)`, release
+ *   off-vertex just ends the drag with the line left selected.
+ *
+ * The hit test is what keeps this apart from the camera: only a line or
+ * vertex within its hit radius claims the pointer, a press anywhere else
+ * propagates and rotates the view.
  *
  * Uses Pointer Events for unified mouse/touch/pen handling.
  *
@@ -38,9 +44,6 @@ export function createDragToConnectController(
   let activeHit: InitialDragHit | undefined;
   // Line hits spend time in "pending" state (hold delay) before activating.
   let pendingHit: InitialDragHit | undefined;
-  // A pending line may drag only when it's the currently selected one.
-  // Unselected lines stay in pending forever → release = tap/double-tap.
-  let pendingAllowsDrag = false;
   let activePointerId: number | undefined;
   let pointerDownClientX = 0;
   let pointerDownClientY = 0;
@@ -122,8 +125,13 @@ export function createDragToConnectController(
     }
     clearHoldTimer();
     pendingHit = undefined;
-    pendingAllowsDrag = false;
     activeHit = hit;
+    if (hit.kind === 'line') {
+      // Selecting on grab is not a tap: it must not pair with the tap before
+      // it into a double tap, so the tap memory is cleared first.
+      lastLineTapLineId = undefined;
+      callbacks.onLineTap(hit.lineId);
+    }
     callbacks.onDragStart?.();
     callbacks.onDragUpdate(buildPreview(hit, screenX, screenY, snapPosition));
   }
@@ -185,14 +193,10 @@ export function createDragToConnectController(
       callbacks.onDragUpdate(buildPreview(hit, screenX, screenY, undefined));
     } else {
       // Line hit waits out the hold delay before activating drag; a quick
-      // release in this window is a tap (select / double-tap). The drag
-      // itself is only allowed when this line is the current selection —
-      // unselected lines never activate drag regardless of hold or movement.
+      // release in this window is a tap (select / double-tap), movement
+      // before the timer promotes it to a drag right away.
       pendingHit = hit;
-      pendingAllowsDrag = callbacks.isLineSelected(hit.lineId);
-      if (pendingAllowsDrag) {
-        holdTimerId = window.setTimeout(onHoldTimerFire, LINE_HOLD_DELAY_MS);
-      }
+      holdTimerId = window.setTimeout(onHoldTimerFire, LINE_HOLD_DELAY_MS);
     }
 
     return true;
@@ -204,9 +208,6 @@ export function createDragToConnectController(
     const { screenX, screenY } = getCanvasRelativeCoords(clientX, clientY);
 
     if (pendingHit !== undefined) {
-      if (!pendingAllowsDrag) {
-        return;
-      }
       // Still in hold phase — promote to active drag if the user has moved
       // enough to clearly express drag intent before the timer fires.
       const movement = Math.max(
@@ -234,7 +235,6 @@ export function createDragToConnectController(
       const pending = pendingHit;
       clearHoldTimer();
       pendingHit = undefined;
-      pendingAllowsDrag = false;
       activePointerId = undefined;
       if (pending.kind === 'line') {
         handleLineTap(pending.lineId, clientX, clientY);
@@ -263,23 +263,23 @@ export function createDragToConnectController(
       return;
     }
 
-    // Active line-drag release: snap vertex → parallel line; otherwise no-op
-    // (the line is already selected — it entered drag via hold — so we just
-    // abandon the drag without firing a tap that could trip double-tap logic).
-    if (snapPosition !== undefined) {
-      const endPosition: Vec3Array = [
-        snapPosition[0] + hit.direction[0],
-        snapPosition[1] + hit.direction[1],
-        snapPosition[2] + hit.direction[2],
-      ];
-      callbacks.onDragComplete(snapPosition, endPosition);
+    // Active line-drag release: snap vertex → parallel line; otherwise the
+    // drag just ends, and the line stays selected from the grab.
+    if (snapPosition === undefined) {
+      return;
     }
+
+    const endPosition: Vec3Array = [
+      snapPosition[0] + hit.direction[0],
+      snapPosition[1] + hit.direction[1],
+      snapPosition[2] + hit.direction[2],
+    ];
+    callbacks.onDragComplete(snapPosition, endPosition);
   }
 
   function cancelInteraction(): void {
     clearHoldTimer();
     pendingHit = undefined;
-    pendingAllowsDrag = false;
     activeHit = undefined;
     activePointerId = undefined;
     callbacks.onDragUpdate(undefined);
