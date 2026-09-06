@@ -1,1 +1,0 @@
-import{it as e}from"./c-C8QCGV-W.js";function t(t){let n=null,r=null,i=0,a=0;return{ensureView(o,s,c,l){return c===i&&l===a&&!e(r)?r:(n?.destroy(),c===0||l===0?(n=null,r=null,i=0,a=0,null):(n=o.createTexture({size:[c,l],format:s,sampleCount:t,usage:GPUTextureUsage.RENDER_ATTACHMENT}),r=n.createView(),i=c,a=l,r))},dispose(){n?.destroy(),n=null,r=null,i=0,a=0}}}export{t};

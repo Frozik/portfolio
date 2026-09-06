@@ -1,1 +1,0 @@
-import{it as e}from"./c-C8QCGV-W.js";function t(t){let n=t.storage??localStorage;try{let r=n.getItem(t.key),i=e(r)?void 0:t.parse(r);if(!e(i))return i;let a=t.generate();return n.setItem(t.key,t.serialize(a)),a}catch{return t.generate()}}export{t};

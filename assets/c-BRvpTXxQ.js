@@ -1,1 +1,0 @@
-import{i as e}from"./c-Dd_uD5pT.js";import{it as t}from"./c-C8QCGV-W.js";import{i as n}from"./c-DP_47kS8.js";var r=e(n(),1);function i(e){let n=(0,r.useRef)(null);return(0,r.useEffect)(()=>{let r=n.current;if(!t(r))return e(r)},[e]),n}export{i as t};

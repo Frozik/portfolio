@@ -1,0 +1,1 @@
+import{Dt as e,Mt as t}from"./c-DdXPcpX4.js";var n=Math.ceil,r=Math.max;function i(e,t,i,a){for(var o=-1,s=r(n((t-e)/(i||1)),0),c=Array(s);s--;)c[a?s:++o]=e,e+=i;return c}function a(n){return function(r,a,o){return o&&typeof o!=`number`&&e(r,a,o)&&(a=o=void 0),r=t(r),a===void 0?(a=r,r=0):a=t(a),o=o===void 0?r<a?1:-1:t(o),i(r,a,o,n)}}var o=a();export{o as t};

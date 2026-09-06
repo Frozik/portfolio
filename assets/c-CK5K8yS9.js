@@ -1,0 +1,1 @@
+import{kt as e}from"./c-DdXPcpX4.js";var t=function(){try{var t=e(Object,`defineProperty`);return t({},``,{}),t}catch{}}();export{t};
