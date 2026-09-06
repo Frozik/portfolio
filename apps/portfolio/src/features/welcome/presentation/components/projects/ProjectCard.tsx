@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { IProjectTranslation } from '../../translations/en';
+import type { IProjectTranslation } from '../../translations/types';
 import type { TProjectFxKind } from './fx/types';
 import { ProjectFx } from './ProjectFx';
 

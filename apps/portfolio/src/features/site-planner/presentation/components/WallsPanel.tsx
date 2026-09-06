@@ -5,8 +5,8 @@ import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingId } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';
-import type { BuildingId } from '../../domain/model/site-plan';
 import type { Wall } from '../../domain/model/walls';
 import { METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
@@ -79,7 +79,7 @@ const WallRow = observer(
 /** The building editor's wall inventory: select from the list, remove, or read. */
 export const WallsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

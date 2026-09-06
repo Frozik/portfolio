@@ -1,9 +1,13 @@
+import { isNil } from 'lodash-es';
 import {
   resolvePreviewLineStyle,
   resolvePreviewMarkerStyle,
 } from '../../application/render/styled-scene';
 import type { Vec3Array } from '../../domain/topology-types';
+
+import type { DragPreviewState } from '../drag-connector-types';
 import type { PreviewLine } from './drag-preview';
+import { computeDragPreviewLine } from './drag-preview';
 import {
   FLOATS_PER_STYLED_LINE,
   MARKER_INSTANCE_FLOATS,
@@ -24,6 +28,10 @@ export class PreviewBuffers {
   private readonly markerStaging = new Float32Array(MARKER_INSTANCE_FLOATS);
   private readonly lineStyle = resolvePreviewLineStyle();
   private readonly markerStyle = resolvePreviewMarkerStyle();
+  /** The line as last resolved; nothing while no drag is in flight. */
+  previewLine: PreviewLine | undefined = undefined;
+  hasStartMarker = false;
+  hasSnapTarget = false;
 
   constructor(private readonly device: GPUDevice) {
     this.line = device.createBuffer({ size: STYLED_LINE_STRIDE, usage: VERTEX_BUFFER_USAGE });
@@ -54,6 +62,33 @@ export class PreviewBuffers {
   private writeMarker(buffer: GPUBuffer, position: Vec3Array): void {
     packPreviewMarker(this.markerStaging, position, this.markerStyle);
     this.device.queue.writeBuffer(buffer, 0, this.markerStaging);
+  }
+
+  /** Resolves the drag preview against the given unprojection and uploads its line and markers. */
+  apply(
+    preview: DragPreviewState | undefined,
+    unproject: (screenX: number, screenY: number, reference: Vec3Array) => Vec3Array
+  ): void {
+    if (isNil(preview)) {
+      this.previewLine = undefined;
+      this.hasStartMarker = false;
+      this.hasSnapTarget = false;
+      return;
+    }
+
+    const previewLine = computeDragPreviewLine(preview, unproject);
+    this.previewLine = previewLine;
+    this.writeLine(previewLine);
+
+    this.hasStartMarker = preview.kind === 'vertex';
+    if (preview.kind === 'vertex') {
+      this.writeStartMarker(preview.startPosition);
+    }
+
+    this.hasSnapTarget = !isNil(preview.snapTargetPosition);
+    if (!isNil(preview.snapTargetPosition)) {
+      this.writeSnapMarker(preview.snapTargetPosition);
+    }
   }
 
   dispose(): void {

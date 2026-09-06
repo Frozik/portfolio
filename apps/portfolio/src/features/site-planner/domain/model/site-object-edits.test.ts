@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { CarInstance, SitePath, TreeInstance } from './plot-objects';
+import { createCar, createCarId, createPathId, createTreeId } from './plot-objects';
 import {
   addCar,
   addMark,
@@ -21,8 +23,8 @@ import {
   updatePathWidth,
   updateTree,
 } from './site-object-edits';
-import type { CarInstance, ElevationMark, SitePath, TreeInstance } from './site-plan';
-import { createCar, createCarId, createMarkId, createPathId, createTreeId } from './site-plan';
+import type { ElevationMark } from './site-plan';
+import { createMarkId } from './site-plan';
 
 function createTestMark(elevation: number): ElevationMark {
   return { id: createMarkId(), position: { x: 1, y: 2 }, elevation };

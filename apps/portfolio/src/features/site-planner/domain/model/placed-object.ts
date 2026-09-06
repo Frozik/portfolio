@@ -1,8 +1,8 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import { DEFAULT_TREE_SPECIES } from '../constants';
-import type { TreeSpecies } from './site-plan';
-import { TREE_SPECIES } from './site-plan';
+import type { TreeSpecies } from './plot-objects';
+import { TREE_SPECIES } from './plot-objects';
 
 /**
  * What the placing tool puts on the plan next. Editor state rather than part of

@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { CAR_LENGTH_METERS, CAR_WIDTH_METERS } from '../constants';
-import type { CarInstance } from '../model/site-plan';
+import type { CarInstance } from '../model/plot-objects';
 import type { RotatedBox } from './hit-test-shape';
 import { rectangleLocalToPlan } from './polygonize-shape';
 

@@ -1,7 +1,7 @@
 import type { PlanInputTarget } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
 import { PlanInteractionController } from './plan-interaction-controller';
-import type { PlanLabels } from './render/plan-draw/draw-plan';
+import type { PlanLabels } from './render/plan-draw/plan-content';
 import { runPlanRenderer } from './render/run-plan-renderer';
 import type { SitePlannerStore } from './SitePlannerStore';
 

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import type { IHeroStatTranslation } from '../../translations/en';
+import type { IHeroStatTranslation } from '../../translations/types';
 
 const HeroStatsComponent = ({ items }: { readonly items: readonly IHeroStatTranslation[] }) => (
   <div className="flex flex-wrap gap-6 border-t border-landing-border-soft pt-6 md:gap-12 md:pt-8">

@@ -25,7 +25,7 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleExportJson = useFunction(() => exportPlanJson(store.snapshot));
+  const handleExportJson = useFunction(() => exportPlanJson(store.document.snapshot));
 
   const handleExportPng = useFunction(() => {
     exportPlanPng({ store, labels: PLAN_LABELS })

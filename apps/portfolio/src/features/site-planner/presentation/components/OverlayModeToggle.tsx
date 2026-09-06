@@ -64,7 +64,7 @@ export const OverlayModeToggle = observer(({ store }: { readonly store: SitePlan
         key={option.value}
         option={option}
         isActive={option.value === store.overlayMode}
-        onSelect={store.setOverlayMode}
+        onSelect={store.tooling.setOverlayMode}
       />
     ))}
   </fieldset>

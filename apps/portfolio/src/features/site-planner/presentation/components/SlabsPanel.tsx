@@ -42,7 +42,7 @@ export const SlabsPanel = observer(({ store }: { readonly store: SitePlannerStor
       key: slab.id,
       label: `${index + 1}. ${labels.kinds[slab.kind]}`,
       note: `${multiPolygonArea([slabPolygon(slab)]).toFixed(METER_DECIMALS)} ${sitePlannerT.plan.squareMeterUnit}`,
-      isSelected: store.isSelected({ kind: 'slab', buildingId, slabId: slab.id }),
+      isSelected: store.selectionCommands.isSelected({ kind: 'slab', buildingId, slabId: slab.id }),
       onSelect: () => store.setSelection({ kind: 'slab', buildingId, slabId: slab.id }),
       actions: [
         ...turn,

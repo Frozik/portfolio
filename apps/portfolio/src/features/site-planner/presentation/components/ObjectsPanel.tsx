@@ -10,15 +10,17 @@ import { Button } from '../../../../shared/ui/Button';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import { storeysOf } from '../../domain/model/building';
+import type { Building } from '../../domain/model/building';
 import type { BuildingPresetId } from '../../domain/model/building-presets';
 import { BUILDING_PRESETS } from '../../domain/model/building-presets';
-import type { Building, CarInstance, SitePath, TreeInstance } from '../../domain/model/site-plan';
-import { storeysOf, uniformPathWidth } from '../../domain/model/site-plan';
+import type { CarInstance, SitePath, TreeInstance } from '../../domain/model/plot-objects';
+import { uniformPathWidth } from '../../domain/model/plot-objects';
 import { DEGREE_DECIMALS, METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';
-import { ACTION_BUTTON_CLASS } from './StructureTermTree';
+import { ACTION_BUTTON_CLASS } from './structure-term-styles';
 
 const ICON_SIZE_PX = 14;
 

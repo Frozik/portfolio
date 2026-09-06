@@ -1,9 +1,9 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { describe, expect, it } from 'vitest';
+import { createBuilding, openingsOf, storeysOf, wallsOf } from './building';
 import { addDevice } from './device-edits';
 import { createWallDevice } from './electrical';
 import { createOpening } from './openings';
-import { createBuilding, openingsOf, storeysOf, wallsOf } from './site-plan';
 import { devicesOf } from './storeys';
 import { addOpening, addWall, closeWallRing, cutWallAtPoint, removeWallPoint } from './wall-edits';
 import { createWall } from './walls';

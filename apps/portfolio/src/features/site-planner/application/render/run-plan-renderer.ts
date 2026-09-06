@@ -8,8 +8,8 @@ import type { PlanViewport } from '../../domain/view/plan-viewport';
 import { createPlanViewport, fitToBounds, resizeViewport } from '../../domain/view/plan-viewport';
 import type { SitePlannerStore } from '../SitePlannerStore';
 import { attachPlanNavigation } from './attach-plan-navigation';
-import type { PlanContent, PlanEditorChrome, PlanLabels } from './plan-draw/draw-plan';
 import { drawPlan } from './plan-draw/draw-plan';
+import type { PlanContent, PlanEditorChrome, PlanLabels } from './plan-draw/plan-content';
 import { createRasterImage } from './plan-images';
 import { readPlanChrome, readPlanContent } from './read-plan-content';
 

@@ -3,8 +3,8 @@ import { computeMultiPolygonBounds } from '../geometry/bounding-box';
 import { evaluateComposition } from '../geometry/evaluate-composition';
 import { polylineLength, wallCenterline } from '../geometry/wall-geometry';
 import { STOCK_HOUSE_TEMPLATES } from '../templates/stock-houses';
+import { storeysOf, wallsOf } from './building';
 import { instantiateBuildingTemplate, templateFacts } from './building-template';
-import { storeysOf, wallsOf } from './site-plan';
 import { parseStockBuilding } from './snapshot';
 
 const AT = { x: 40, y: 30 };

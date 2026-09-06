@@ -54,7 +54,7 @@ function describeWarning(warning: BuildingWarning): string {
  */
 const WarningRow = memo(
   ({ store, warning }: { readonly store: SitePlannerStore; readonly warning: BuildingWarning }) => {
-    const handleClick = useFunction(() => store.revealWarning(warning));
+    const handleClick = useFunction(() => store.storeys.revealWarning(warning));
 
     return (
       <button

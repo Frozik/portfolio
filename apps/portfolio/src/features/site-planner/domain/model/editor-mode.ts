@@ -1,9 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 
+import type { BuildingId } from './building';
+import type { Building } from './building';
+import type { PathId, SitePath } from './plot-objects';
 import type { UtilityRoute, UtilityRouteId } from './routing';
 import type { PlanTool, Selection, ShapeOwner } from './selection';
-import type { Building, BuildingId, PathId, SitePath } from './site-plan';
 
 /**
  * What the editor has opened for deep editing: the plot (with the footprints

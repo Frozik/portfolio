@@ -1,4 +1,3 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
@@ -88,13 +87,19 @@ export class AiTurnModel {
     return step.isFireRequested ? this.fire() : NO_EVENTS;
   }
 
-  /** [MANUAL §9] Cyborg holds a grudge, so every hit is remembered by its victim. */
-  recordAttack(playerId: PlayerId, attackerId: PlayerId | undefined): void {
-    this.driver.recordAttack(playerId, attackerId);
-  }
-
-  recordImpact(impact: Vector2): void {
-    this.driver.recordImpact(impact);
+  /**
+   * What the AIs learn from the round: [MANUAL §9] Cyborg holds a grudge, so
+   * every hit is remembered by its victim, and Tosser walks its shots in from
+   * where the last one landed.
+   */
+  applyEvents(events: readonly WorldEvent[]): void {
+    for (const event of events) {
+      if (event.type === 'tank-damaged') {
+        this.driver.recordAttack(event.playerId, event.sourceId);
+      } else if (event.type === 'projectile-ended') {
+        this.driver.recordImpact(event.position);
+      }
+    }
   }
 
   endRound(): void {

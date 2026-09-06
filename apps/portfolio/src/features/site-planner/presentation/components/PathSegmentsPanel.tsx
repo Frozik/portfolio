@@ -8,8 +8,8 @@ import { memo } from 'react';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { editedPathId } from '../../domain/model/editor-mode';
-import type { PathSurface, SitePath } from '../../domain/model/site-plan';
-import { PATH_SURFACES, pathSurfaceAt } from '../../domain/model/site-plan';
+import type { PathSurface, SitePath } from '../../domain/model/plot-objects';
+import { PATH_SURFACES, pathSurfaceAt } from '../../domain/model/plot-objects';
 import { METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
@@ -85,8 +85,10 @@ const SegmentBlock = observer(
         store.siteObjects.setPathSegmentSurface(path.id, segmentIndex, next);
       }
     });
-    const handlePointerEnter = useFunction(() => store.setHoveredPathSegmentIndex(segmentIndex));
-    const handlePointerLeave = useFunction(() => store.setHoveredPathSegmentIndex(undefined));
+    const handlePointerEnter = useFunction(() =>
+      store.modes.setHoveredPathSegmentIndex(segmentIndex)
+    );
+    const handlePointerLeave = useFunction(() => store.modes.setHoveredPathSegmentIndex(undefined));
 
     return (
       <div

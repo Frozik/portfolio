@@ -21,7 +21,7 @@ export const ClearSiteButton = observer(({ store }: { readonly store: SitePlanne
   const handleCancel = useFunction(() => setIsAsked(false));
   const handleConfirm = useFunction(() => {
     setIsAsked(false);
-    store.clearSite();
+    store.document.clearSite();
   });
 
   return (

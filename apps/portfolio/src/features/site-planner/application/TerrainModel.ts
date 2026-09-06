@@ -5,9 +5,9 @@ import { DEFAULT_SITE_LENGTH_METERS, DEFAULT_SITE_WIDTH_METERS } from '../domain
 import type { BoundingBox } from '../domain/geometry/bounding-box';
 import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
-import { padDropOf } from '../domain/model/site-plan';
+import { padDropOf } from '../domain/model/building';
 import { buildHeightfield } from '../domain/terrain/build-heightfield';
-import type { ContourPolyline } from '../domain/terrain/contours';
+import type { ContourPolyline } from '../domain/terrain/contour-types';
 import { buildContours } from '../domain/terrain/contours';
 import { computePadElevation } from '../domain/terrain/cut-fill';
 import type { GradedPad } from '../domain/terrain/design-grade';

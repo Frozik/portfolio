@@ -51,12 +51,12 @@ const TOOL_HOTKEY =
  */
 export const FurnitureToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedId = store.storeyObjects.armedFurnitureId;
+    const armedId = store.furniture.armedFurnitureId;
 
     const handleActivate = useFunction(() => store.setActiveTool('building:furniture'));
 
     const handleChoose = useFunction((catalogId: FurnitureCatalogId) => {
-      store.storeyObjects.setArmedFurnitureId(catalogId);
+      store.furniture.setArmedFurnitureId(catalogId);
       store.setActiveTool('building:furniture');
     });
 

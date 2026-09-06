@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { TreeId, TreeInstance } from '../../../domain/model/site-plan';
+import type { TreeId, TreeInstance } from '../../../domain/model/plot-objects';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
 import { PLAN_COLORS } from './shared';

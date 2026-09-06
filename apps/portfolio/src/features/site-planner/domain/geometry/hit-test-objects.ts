@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
+import type { CarInstance, SitePath, TreeInstance } from '../model/plot-objects';
 import type { UtilityRoute } from '../model/routing';
-import type { CarInstance, SitePath, TreeInstance } from '../model/site-plan';
 import type { Meters } from '../units';
 import { carRotatedBox } from './car-geometry';
 import { hitTestRotatedBox } from './hit-test-shape';

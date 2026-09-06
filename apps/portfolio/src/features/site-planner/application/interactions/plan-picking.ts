@@ -9,17 +9,13 @@ import {
   hitTestUtilityRoute,
 } from '../../domain/geometry/hit-test-objects';
 import { hitTestShape } from '../../domain/geometry/hit-test-shape';
+import type { Building } from '../../domain/model/building';
+import type { CarInstance, SitePath, TreeInstance } from '../../domain/model/plot-objects';
 import type { UtilityRoute } from '../../domain/model/routing';
 import type { ShapeOwner } from '../../domain/model/selection';
 import type { CsgOperand, CsgTerm, Shape } from '../../domain/model/shapes';
 import type { SiteObjectState } from '../../domain/model/site-object';
-import type {
-  Building,
-  CarInstance,
-  ElevationMark,
-  SitePath,
-  TreeInstance,
-} from '../../domain/model/site-plan';
+import type { ElevationMark } from '../../domain/model/site-plan';
 import type { Meters } from '../../domain/units';
 import type { PlanViewport } from '../../domain/view/plan-viewport';
 import type { ShapeHandle } from '../render/plan-draw/draw-selection';

@@ -12,13 +12,13 @@ export const HistoryControls = observer(({ store }: { readonly store: SitePlanne
       icon={Undo2}
       label={`${sitePlannerT.history.undo} (${sitePlannerT.history.undoHotkey})`}
       isEnabled={store.history.canUndo}
-      onActivate={store.undo}
+      onActivate={store.document.undo}
     />
     <ToolbarIconButton
       icon={Redo2}
       label={`${sitePlannerT.history.redo} (${sitePlannerT.history.redoHotkey})`}
       isEnabled={store.history.canRedo}
-      onActivate={store.redo}
+      onActivate={store.document.redo}
     />
   </div>
 ));

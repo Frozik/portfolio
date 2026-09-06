@@ -1,5 +1,4 @@
 import { assert } from '@frozik/utils/assert/assert';
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { IMutedStorage } from '@frozik/utils/storage/mutedStorage';
 import { createMutedStorage } from '@frozik/utils/storage/mutedStorage';
@@ -356,60 +355,18 @@ export class ScorchedStore {
   }
 
   private applyRoundEvents(events: readonly WorldEvent[]): void {
+    this.overlays.applyEvents(events);
+    this.ai.applyEvents(events);
+
     for (const event of events) {
-      this.applyRoundEvent(event);
+      if (event.type === 'turn-started') {
+        this.beginTurn(event.playerId);
+      } else if (event.type === 'round-ended') {
+        this.endRound(event.survivorIds);
+      }
     }
 
     this.world.markChanged();
-  }
-
-  private applyRoundEvent(event: WorldEvent): void {
-    switch (event.type) {
-      case 'tank-damaged':
-        this.overlays.pushHealthPopup(event.playerId, 'damage', event.amount);
-        this.ai.recordAttack(event.playerId, event.sourceId);
-        break;
-      case 'tank-repaired':
-        this.overlays.pushHealthPopup(event.playerId, 'repair', event.amount);
-        break;
-      case 'tank-destroyed':
-        this.overlays.pushTaunt(event.playerId, 'death');
-        break;
-      case 'projectile-ended':
-        this.ai.recordImpact(event.position);
-        break;
-      case 'turn-started':
-        this.beginTurn(event.playerId);
-        break;
-      case 'round-ended':
-        this.endRound(event.survivorIds);
-        break;
-      case 'round-started':
-      case 'turn-ended':
-      case 'wind-changed':
-      case 'roller-landed':
-      case 'plasma-fired':
-      case 'projectile-launched':
-      case 'projectile-bounced':
-      case 'explosion':
-      case 'terrain-carved':
-      case 'terrain-deposited':
-      case 'laser-fired':
-      case 'dirt-settled':
-      case 'dirt-poured':
-      case 'napalm-pooled':
-      case 'shield-absorbed':
-      case 'shield-raised':
-      case 'shield-collapsed':
-      case 'shield-deflected':
-      case 'mag-deflected':
-      case 'tank-moved':
-      case 'tank-fell':
-      case 'tank-retreated':
-        break;
-      default:
-        assertNever(event);
-    }
   }
 
   /**

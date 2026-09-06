@@ -1,5 +1,5 @@
 import { MIN_TREE_EXTENT_METERS } from '../constants';
-import type { TreeInstance, TreeSpecies } from '../model/site-plan';
+import type { TreeInstance, TreeSpecies } from '../model/plot-objects';
 import type { Meters } from '../units';
 import type { WorldPoint } from '../view/world-frame';
 import { planToWorld } from '../view/world-frame';

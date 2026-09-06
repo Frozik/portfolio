@@ -17,7 +17,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
   const labels = sitePlannerT.heating;
 
   if (isNil(buildingId) || isNil(scene)) {
@@ -25,7 +25,7 @@ export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerSt
   }
 
   const rows: readonly ObjectRow[] = scene.fireplaces.map(({ fireplace }) => {
-    const topElevation = store.storeyObjects.ductTopElevationOf(fireplace.id);
+    const topElevation = store.ducts.ductTopElevationOf(fireplace.id);
 
     return {
       key: fireplace.id,
@@ -33,7 +33,11 @@ export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerSt
       note: isNil(topElevation)
         ? undefined
         : formatMeters(topElevation, sitePlannerT.plan.meterUnit, METER_DECIMALS),
-      isSelected: store.isSelected({ kind: 'fireplace', buildingId, fireplaceId: fireplace.id }),
+      isSelected: store.selectionCommands.isSelected({
+        kind: 'fireplace',
+        buildingId,
+        fireplaceId: fireplace.id,
+      }),
       onSelect: () =>
         store.setSelection({ kind: 'fireplace', buildingId, fireplaceId: fireplace.id }),
       actions: [
@@ -41,13 +45,13 @@ export const HeatingPanel = observer(({ store }: { readonly store: SitePlannerSt
           key: 'rotate',
           label: labels.rotate,
           icon: RotateCw,
-          onClick: () => store.storeyObjects.rotateFireplaceByQuarter(buildingId, fireplace.id),
+          onClick: () => store.ducts.rotateFireplaceByQuarter(buildingId, fireplace.id),
         },
         {
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.storeyObjects.removeFireplaceFrom(buildingId, fireplace.id),
+          onClick: () => store.ducts.removeFireplaceFrom(buildingId, fireplace.id),
         },
       ],
     };

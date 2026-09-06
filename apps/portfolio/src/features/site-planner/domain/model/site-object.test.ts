@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { createBuilding } from './building';
+import { createCar, createSitePath, createTree } from './plot-objects';
 import { createRectangle, flattenShapes } from './shapes';
 import type { SiteObjectState } from './site-object';
 import {
@@ -8,7 +10,6 @@ import {
   siteObjectSelection,
   translateSiteObject,
 } from './site-object';
-import { createBuilding, createCar, createSitePath, createTree } from './site-plan';
 
 const OFFSET = { x: 3, y: -2 };
 

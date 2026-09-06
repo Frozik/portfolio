@@ -2,24 +2,20 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
 import { TYPED_LENGTH_KEY_PATTERN } from '../../domain/geometry/draw-constraints';
+import type { BuildingId } from '../../domain/model/building';
 import type { Selection } from '../../domain/model/selection';
-import type { BuildingId } from '../../domain/model/site-plan';
-import type { Slab } from '../../domain/model/slabs';
 import type { Wall } from '../../domain/model/walls';
-import { isWallClosed, MIN_CLOSED_WALL_POINTS } from '../../domain/model/walls';
 import type { PlanModifiers } from '../../domain/view/plan-input';
-import { planToScreen } from '../../domain/view/plan-viewport';
-import { computePolylinePointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
 import type { BuildingGrip, BuildingGrips } from './building-grips';
 import { createBuildingGrips } from './building-grips';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { snapPointToGrid } from './grid-snapping';
 import { ObjectDragGestures } from './object-drag-gestures';
-import { HANDLE_HIT_RADIUS_PX } from './plan-picking';
 import type { PolylinePointGestures } from './polyline-point-gestures';
-import { ShapeGestures } from './shape-gestures';
-import { pickSlab, pickWall } from './storey-object-picking';
+import { SlabGestures } from './slab-gestures';
+import { pickWall } from './storey-object-picking';
 import { connectDeviceAt, placeDeviceAt, placeOpeningAt } from './storey-object-placement';
+import { editWallCornerAt, sealRingIfEndsMeet } from './wall-corner-edits';
 import { WallJunctionDetach } from './wall-junction-detach';
 import { applyWallHandleHover, createWallPointGestures } from './wall-point-gestures';
 
@@ -33,7 +29,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
   private readonly buildingId: BuildingId;
   private readonly wallGestures: PolylinePointGestures<Wall>;
-  private readonly slabs: ShapeGestures<void>;
+  private readonly slabs: SlabGestures;
   private readonly objects: ObjectDragGestures;
   private readonly grips: BuildingGrips;
   private readonly junction: WallJunctionDetach;
@@ -45,21 +41,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     this.objects = new ObjectDragGestures(context);
     this.grips = createBuildingGrips(context, buildingId);
     this.junction = new WallJunctionDetach(context, buildingId);
-    // Everything on a storey is drawn against walls that are already standing,
-    // so the object snap is live without a modifier here — the OSNAP habit the
-    // wall tool already follows. A slab is caught by the corners and side
-    // middles of the storey BELOW as well as by its own storey's, which is what
-    // makes «flush with the room downstairs» a gesture rather than four typed
-    // numbers.
-    this.slabs = new ShapeGestures<void>(context, {
-      isSnapAlwaysLive: true,
-      update: slab => context.store.storeyObjects.updateSlab(buildingId, slab),
-      add: slab => {
-        context.store.storeyObjects.addSlab(slab);
-        context.store.finishPlacement();
-      },
-      snapPoints: excludedShapeId => context.store.storeyObjects.slabSnapPoints(excludedShapeId),
-    });
+    this.slabs = new SlabGestures(context, buildingId);
   }
 
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): boolean {
@@ -82,20 +64,20 @@ export class BuildingEditInteraction implements EditorInteraction {
         // slab lands on its edge; an upper storey may overhang (R24).
         // `draftWallCursor` is the previewed corner — angle lock and typed
         // length included — so what the rubber band showed is what lands.
-        store.walls.appendDraftWallPoint(
+        store.wallDraft.appendDraftWallPoint(
           store.walls.clampWallPoint(
             this.buildingId,
-            store.walls.draftWallCursor ?? store.walls.firstWallPointAt(planPoint)
+            store.wallDraft.draftWallCursor ?? store.wallDraft.firstWallPointAt(planPoint)
           )
         );
-        store.walls.setTypedLengthText(undefined);
+        store.wallDraft.setTypedLengthText(undefined);
 
         return true;
       case 'building:opening':
         // Nothing lands when the click missed every wall, and a tool that
         // placed nothing must stay in hand rather than quietly give up.
         if (placeOpeningAt(this.context, this.buildingId, planPoint)) {
-          store.finishPlacement();
+          store.tooling.finishPlacement();
         }
 
         return true;
@@ -103,29 +85,29 @@ export class BuildingEditInteraction implements EditorInteraction {
         // Drawn like any shape on the plot — the armed primitive, dragged out.
         // A click that never moved lays a plate of a sensible default size, so
         // the tool answers both ways of asking for a floor.
-        this.slabs.beginDraw(store.armedShapeTool, undefined, planPoint, modifiers);
+        this.slabs.beginDraw(planPoint, modifiers);
 
         return true;
       case 'building:fireplace':
-        store.storeyObjects.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
-        store.finishPlacement();
+        store.ducts.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
+        store.tooling.finishPlacement();
 
         return true;
       case 'building:duct':
-        store.storeyObjects.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
-        store.finishPlacement();
+        store.ducts.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
+        store.tooling.finishPlacement();
 
         return true;
       case 'building:support':
         store.storeyObjects.placeSupportAt(snapPointToGrid(store, planPoint, modifiers));
-        store.finishPlacement();
+        store.tooling.finishPlacement();
 
         return true;
       case 'building:stair':
         // A stair is placed, not drawn: its run comes from the storey height,
         // so the click only says where.
-        store.storeyObjects.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
-        store.finishPlacement();
+        store.stairs.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
+        store.tooling.finishPlacement();
 
         return true;
       // Furniture and electrics are STICKY: a room is furnished and a storey
@@ -133,7 +115,7 @@ export class BuildingEditInteraction implements EditorInteraction {
       // hand. The piece that lands is still selected, so its properties are
       // there to type — only the tool is not taken away.
       case 'building:furniture':
-        store.storeyObjects.placeFurnitureAt(
+        store.furniture.placeFurnitureAt(
           this.buildingId,
           snapPointToGrid(store, planPoint, modifiers)
         );
@@ -182,15 +164,6 @@ export class BuildingEditInteraction implements EditorInteraction {
     }
 
     if (this.slabs.release(planPoint, modifiers)) {
-      // A press and a release with nothing in between is the click that lays a
-      // default plate; the gesture itself has nothing to commit.
-      if (!this.context.hasPointerMoved() && this.context.store.activeTool === 'building:slab') {
-        this.context.store.storeyObjects.placeSlabAt(
-          snapPointToGrid(this.context.store, planPoint, modifiers)
-        );
-        this.context.store.finishPlacement();
-      }
-
       return true;
     }
 
@@ -200,7 +173,7 @@ export class BuildingEditInteraction implements EditorInteraction {
 
     // A dragged endpoint that landed on its opposite end has closed the
     // contour; the release is what seals the ring.
-    this.sealRingIfEndsMeet();
+    sealRingIfEndsMeet(this.context, this.buildingId);
     applyWallHandleHover(this.context, planPoint);
 
     return true;
@@ -221,13 +194,13 @@ export class BuildingEditInteraction implements EditorInteraction {
   onDoubleClick(planPoint: Vector2, modifiers: PlanModifiers): void {
     const { store } = this.context;
 
-    if (store.walls.draftWallPoints.length > 0) {
-      store.walls.commitDraftWall();
+    if (store.wallDraft.draftWallPoints.length > 0) {
+      store.wallDraft.commitDraftWall();
 
       return;
     }
 
-    if (this.editWallCornerAt(planPoint, modifiers)) {
+    if (editWallCornerAt(this.context, this.buildingId, this.wallGestures, planPoint, modifiers)) {
       return;
     }
 
@@ -243,13 +216,13 @@ export class BuildingEditInteraction implements EditorInteraction {
       return true;
     }
 
-    if (key === 'Enter' && store.walls.draftWallPoints.length > 0) {
-      store.walls.commitDraftWall();
+    if (key === 'Enter' && store.wallDraft.draftWallPoints.length > 0) {
+      store.wallDraft.commitDraftWall();
 
       return true;
     }
 
-    if (store.walls.draftWallPoints.length === 0) {
+    if (store.wallDraft.draftWallPoints.length === 0) {
       return false;
     }
 
@@ -257,16 +230,16 @@ export class BuildingEditInteraction implements EditorInteraction {
     // and one separator accumulate; Backspace peels the number back and, once
     // it is empty, takes the last corner with it.
     if (TYPED_LENGTH_KEY_PATTERN.test(key)) {
-      store.walls.appendTypedLengthKey(key);
+      store.wallDraft.appendTypedLengthKey(key);
 
       return true;
     }
 
     if (key === 'Backspace') {
-      if (isNil(store.walls.typedLengthText)) {
-        store.walls.dropLastDraftWallPoint();
+      if (isNil(store.wallDraft.typedLengthText)) {
+        store.wallDraft.dropLastDraftWallPoint();
       } else {
-        store.walls.setTypedLengthText(undefined);
+        store.wallDraft.setTypedLengthText(undefined);
       }
 
       return true;
@@ -285,15 +258,15 @@ export class BuildingEditInteraction implements EditorInteraction {
       this.objects.hasActive() ||
       this.slabs.hasActive() ||
       this.junction.hasActive() ||
-      !isNil(this.context.store.storeyObjects.pendingConnectDeviceId) ||
-      this.context.store.walls.draftWallPoints.length > 0
+      !isNil(this.context.store.electrics.pendingConnectDeviceId) ||
+      this.context.store.wallDraft.draftWallPoints.length > 0
     );
   }
 
   cancelTransients(): void {
     this.onPointerCancel();
-    this.context.store.walls.cancelDraftWall();
-    this.context.store.storeyObjects.setPendingConnectDeviceId(undefined);
+    this.context.store.wallDraft.cancelDraftWall();
+    this.context.store.electrics.setPendingConnectDeviceId(undefined);
   }
 
   /**
@@ -305,7 +278,7 @@ export class BuildingEditInteraction implements EditorInteraction {
    */
   private beginSelectGesture(planPoint: Vector2, modifiers: PlanModifiers): void {
     if (
-      this.beginSlabHandle(planPoint) ||
+      this.slabs.beginHandle(planPoint) ||
       this.grab(this.grips.overWalls, planPoint, modifiers) ||
       this.wallGestures.begin(planPoint, { allowInsert: true }) ||
       this.grab(this.grips.underWalls, planPoint, modifiers)
@@ -325,7 +298,11 @@ export class BuildingEditInteraction implements EditorInteraction {
       return;
     }
 
-    if (!this.beginSlabDrag(planPoint, modifiers)) {
+    if (
+      !this.slabs.beginDrag(planPoint, slab =>
+        this.select({ kind: 'slab', buildingId: this.buildingId, slabId: slab.id }, modifiers)
+      )
+    ) {
       this.context.store.setSelection(undefined);
     }
   }
@@ -353,62 +330,6 @@ export class BuildingEditInteraction implements EditorInteraction {
     return false;
   }
 
-  /** Closes the selected wall once its two ends stand on one point. */
-  private sealRingIfEndsMeet(): void {
-    const { store } = this.context;
-    const wall = store.walls.selectedWall;
-
-    if (isNil(wall) || isWallClosed(wall) || wall.points.length < MIN_CLOSED_WALL_POINTS + 1) {
-      return;
-    }
-
-    const [first] = wall.points;
-    const last = wall.points[wall.points.length - 1];
-
-    if (first.x === last.x && first.y === last.y) {
-      store.walls.closeWallRing(this.buildingId, wall.id);
-    }
-  }
-
-  /** The corner the double click landed on, removed — or cut with Alt held. */
-  private editWallCornerAt(planPoint: Vector2, modifiers: PlanModifiers): boolean {
-    const { store, getViewport } = this.context;
-    const wall = store.walls.selectedWall;
-
-    if (isNil(wall)) {
-      return false;
-    }
-
-    const viewport = getViewport();
-    const handle = findPathPointHandleAt(
-      computePolylinePointHandles(wall.points, viewport, {
-        includeMidpoints: true,
-        isClosed: isWallClosed(wall),
-      }),
-      planToScreen(viewport, planPoint),
-      HANDLE_HIT_RADIUS_PX
-    );
-
-    if (isNil(handle) || handle.kind !== 'vertex') {
-      return false;
-    }
-
-    // The double click's presses have already grabbed the point and announced
-    // a step; what the gesture turns out to have been is this edit.
-    this.wallGestures.drop();
-
-    if (modifiers.isAltPressed) {
-      store.walls.cutWallAtPoint(this.buildingId, wall.id, handle.index);
-    } else {
-      store.walls.removeWallPoint(this.buildingId, wall.id, handle.index);
-    }
-
-    // The gone point's highlight would light its successor by index.
-    store.setPathHandleHighlight(undefined);
-
-    return true;
-  }
-
   /**
    * Selects, or — with Shift — adds to what is already selected. One helper so
    * every body in this editor answers the modifier the same way.
@@ -417,42 +338,11 @@ export class BuildingEditInteraction implements EditorInteraction {
     const { store } = this.context;
 
     if (modifiers.isShiftPressed) {
-      store.toggleSelection(selection);
+      store.selectionCommands.toggleSelection(selection);
 
       return;
     }
 
     store.setSelection(selection);
-  }
-
-  /** The grips of the selected slab: turn, and the eight that resize it. */
-  private beginSlabHandle(planPoint: Vector2): boolean {
-    const slab = this.selectedSlab();
-
-    return !isNil(slab) && this.slabs.beginHandle(slab, undefined, planPoint);
-  }
-
-  /** Takes hold of the slab under the pointer — the floor itself, dragged whole. */
-  private beginSlabDrag(planPoint: Vector2, modifiers: PlanModifiers): boolean {
-    const slab = pickSlab(this.context, planPoint);
-
-    if (isNil(slab)) {
-      return false;
-    }
-
-    this.select({ kind: 'slab', buildingId: this.buildingId, slabId: slab.id }, modifiers);
-    this.slabs.beginMove(slab, undefined, planPoint);
-
-    return true;
-  }
-
-  /** The slab the selection names, resolved against the active storey. */
-  private selectedSlab(): Slab | undefined {
-    const { store } = this.context;
-    const selection = store.selection;
-
-    return selection?.kind === 'slab'
-      ? store.storeyObjects.activeStoreySlabs.find(candidate => candidate.id === selection.slabId)
-      : undefined;
   }
 }

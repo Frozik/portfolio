@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
+import type { BuildingId } from '../../domain/model/building';
 import type { Selection } from '../../domain/model/selection';
-import type { BuildingId } from '../../domain/model/site-plan';
 import {
   draggedDevice,
   draggedDuct,
@@ -115,7 +115,7 @@ export function createBuildingGrips(
       return undefined;
     }
 
-    const symbol = store.building.editedStoreyScene?.devices.find(
+    const symbol = store.storeys.editedStoreyScene?.devices.find(
       candidate => candidate.id === picked.id
     );
 

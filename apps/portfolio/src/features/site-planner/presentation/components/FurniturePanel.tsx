@@ -6,9 +6,9 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingId } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { FurnitureInstance } from '../../domain/model/furniture';
-import type { BuildingId } from '../../domain/model/site-plan';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';
@@ -30,7 +30,7 @@ const PlacedRow = memo(
       store.setSelection({ kind: 'furniture', buildingId, furnitureId: item.id });
     });
     const handleRemove = useFunction(() => {
-      store.storeyObjects.removeFurniture(buildingId, item.id);
+      store.furniture.removeFurniture(buildingId, item.id);
     });
 
     return (
@@ -69,7 +69,7 @@ const PlacedRow = memo(
  */
 export const FurniturePanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

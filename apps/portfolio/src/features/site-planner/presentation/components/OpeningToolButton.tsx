@@ -39,12 +39,12 @@ const TOOL_HOTKEY =
  */
 export const OpeningToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
-    const armedPreset = store.walls.armedOpeningPreset;
+    const armedPreset = store.openings.armedOpeningPreset;
 
     const handleActivate = useFunction(() => store.setActiveTool('building:opening'));
 
     const handleChoose = useFunction((preset: OpeningPreset) => {
-      store.walls.setArmedOpeningPreset(preset);
+      store.openings.setArmedOpeningPreset(preset);
       store.setActiveTool('building:opening');
     });
 

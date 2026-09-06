@@ -9,8 +9,9 @@ import { Button } from '../../../../shared/ui/Button';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import { formatMeters } from '../../application/render/plan-draw/shared';
+import type { RoofZoneScene } from '../../application/room-scenes';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { RoofZoneScene } from '../../application/storey-scenes';
+import type { BuildingId } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import {
   MAX_ROOF_PITCH_DEGREES,
@@ -18,7 +19,6 @@ import {
   PITCHED_ROOF_KINDS,
   parsePitchedRoofKind,
 } from '../../domain/model/roofs';
-import type { BuildingId } from '../../domain/model/site-plan';
 import type { RoofCover } from '../../domain/model/storeys';
 import { ROOF_COVERS } from '../../domain/model/storeys';
 import { normalizeTurnDegrees } from '../../domain/units';
@@ -77,7 +77,7 @@ const ZoneRow = observer(
     const caption = `${labels.zoneTitle} ${ordinal} · ${labels.covers[zone.cover]}`;
 
     const handleSelect = useFunction((cover: RoofCover) => {
-      store.building.setRoofCover(buildingId, zone, cover);
+      store.roof.setRoofCover(buildingId, zone, cover);
     });
 
     return (
@@ -132,32 +132,32 @@ const ROOF_KIND_OPTIONS = PITCHED_ROOF_KINDS.map(kind => ({
  */
 const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.roof;
-  const roof = store.building.editedPitchedRoof;
-  const scene = store.building.editedPitchedRoofScene;
+  const roof = store.roof.editedPitchedRoof;
+  const scene = store.roof.editedPitchedRoofScene;
 
-  const handleToggle = useFunction(() => store.building.togglePitchedRoof());
+  const handleToggle = useFunction(() => store.roof.togglePitchedRoof());
   const handleKindChange = useFunction((kind: string) => {
     const parsed = parsePitchedRoofKind(kind);
 
     if (!isNil(parsed)) {
-      store.building.updatePitchedRoof({ kind: parsed });
+      store.roof.updatePitchedRoof({ kind: parsed });
     }
   });
   const handlePitchChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.building.updatePitchedRoof({
+      store.roof.updatePitchedRoof({
         pitchDegrees: clamp(value, MIN_ROOF_PITCH_DEGREES, MAX_ROOF_PITCH_DEGREES),
       });
     }
   });
   const handleOverhangChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.building.updatePitchedRoof({ overhangMeters: Math.max(0, value) });
+      store.roof.updatePitchedRoof({ overhangMeters: Math.max(0, value) });
     }
   });
   const handleRidgeChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.building.updatePitchedRoof({ ridgeDegrees: normalizeTurnDegrees(value) });
+      store.roof.updatePitchedRoof({ ridgeDegrees: normalizeTurnDegrees(value) });
     }
   });
 
@@ -212,7 +212,7 @@ const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerSto
  */
 export const RoofPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

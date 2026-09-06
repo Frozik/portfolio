@@ -4,7 +4,6 @@ import { APRON_DEPTH_METERS } from '../../domain/constants';
 import { extrudeFootprint, extrudePrism } from '../../domain/geometry/extrude-footprint';
 import type { LitMesh, RoofOverlayGeometry } from '../../domain/geometry/lit-mesh';
 import { mergeLitMeshes } from '../../domain/geometry/lit-mesh';
-import { offsetPolygons } from '../../domain/geometry/offset-polygon';
 import {
   intersectPolygons,
   subtractPolygons,
@@ -15,7 +14,7 @@ import {
   buildRoofPlate,
   SLAB_THICKNESS_METERS,
 } from '../../domain/geometry/storey-plates';
-import type { BuildingId } from '../../domain/model/site-plan';
+import type { BuildingId } from '../../domain/model/building';
 import type { StoreyId } from '../../domain/model/storeys';
 import { computeFootprintElevations } from '../../domain/terrain/cut-fill';
 import type { Heightfield } from '../../domain/terrain/heightfield';
@@ -25,7 +24,7 @@ import { planToWorld } from '../../domain/view/world-frame';
 import type { BuildingScene } from '../building-scene';
 import { buildHeatingSolids } from '../duct-scenes';
 import { buildPitchedRoofSolid } from '../roof-scenes';
-import { buildSupportSolids } from '../storey-scenes';
+import { buildSupportSolids } from '../support-scenes';
 
 /**
  * Everything the 3D view is handed about the BUILDINGS: their shells, plates,
@@ -39,12 +38,6 @@ import { buildSupportSolids } from '../storey-scenes';
 
 /** How thick a terrace or a green cover lies over the roof slab it dresses. */
 const ROOF_COVER_THICKNESS_METERS: Meters = 0.12;
-
-/**
- * The foundation stands this much proud of the walls all round — the real
- * цоколь detail, and what keeps its faces off the walls' in the depth buffer.
- */
-const FOUNDATION_LEDGE_METERS = 0.05;
 
 /** Which storeys this pass draws: the one being edited, or all the others. */
 export interface GhostPass {
@@ -100,7 +93,7 @@ export function buildBuildingMeshes({
       });
 
       return [
-        ...buildSupportSolids(canopy),
+        ...buildSupportSolids(canopy.supports),
         ...(isNil(deck)
           ? []
           : [
@@ -252,7 +245,7 @@ export function buildBuildingMeshes({
         );
       });
 
-      const postSolids = buildSupportSolids(storeyScene);
+      const postSolids = buildSupportSolids(storeyScene.supports);
 
       return [shell, ...plates, ...stairSolids, ...postSolids, ...pieces];
     });
@@ -352,52 +345,4 @@ export function buildSceneFurniture(scenes: readonly BuildingScene[]): readonly 
   }
 
   return instances;
-}
-
-/**
- * The foundations as the 3D view pours them: one concrete solid per building
- * from below the pad up to the цоколь, its footprint a ledge proud of the
- * walls — the real detail that also keeps the two solids' faces from fighting
- * over the same pixels.
- */
-export function buildFoundationSolids({
-  scenes,
-  heightfield,
-}: {
-  readonly scenes: readonly BuildingScene[];
-  readonly heightfield: Heightfield;
-}): LitMesh | undefined {
-  const meshes = scenes.flatMap(scene => {
-    const { polygons, padElevation, foundation } = scene;
-    const height = foundation.depthMeters + foundation.heightAboveGroundMeters;
-
-    if (isNil(padElevation) || polygons.length === 0 || height <= 0) {
-      return [];
-    }
-
-    const outset = offsetPolygons(polygons, FOUNDATION_LEDGE_METERS);
-
-    if (outset.length === 0) {
-      return [];
-    }
-
-    const elevations = computeFootprintElevations(heightfield, outset);
-
-    if (isNil(elevations)) {
-      return [];
-    }
-
-    const baseElevation = padElevation - foundation.depthMeters;
-
-    return [
-      extrudeFootprint({
-        polygons: outset,
-        padElevation: baseElevation,
-        wallHeight: height,
-        apronBaseElevation: Math.min(elevations.minElevation, baseElevation) - APRON_DEPTH_METERS,
-      }),
-    ];
-  });
-
-  return mergeLitMeshes(meshes);
 }

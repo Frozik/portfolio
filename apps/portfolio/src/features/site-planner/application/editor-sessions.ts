@@ -2,6 +2,7 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { makeAutoObservable } from 'mobx';
 
+import type { BuildingId } from '../domain/model/building';
 import type { EditTarget } from '../domain/model/editor-mode';
 import type { DeviceId, DeviceKind } from '../domain/model/electrical';
 import { DEFAULT_DEVICE_KIND } from '../domain/model/electrical';
@@ -10,7 +11,6 @@ import type { FurnitureCatalogId } from '../domain/model/furniture';
 import { DEFAULT_FURNITURE_CATALOG_ID } from '../domain/model/furniture';
 import type { OpeningPreset } from '../domain/model/openings';
 import { DEFAULT_OPENING_PRESET } from '../domain/model/openings';
-import type { BuildingId } from '../domain/model/site-plan';
 import type { StairKind } from '../domain/model/stairs';
 import { DEFAULT_STAIR_KIND } from '../domain/model/stairs';
 import type { StoreyId } from '../domain/model/storeys';

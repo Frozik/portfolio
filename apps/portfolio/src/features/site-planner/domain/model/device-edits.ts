@@ -1,7 +1,8 @@
+import type { BuildingId } from './building';
+import { storeysOf } from './building';
+import type { Building } from './building';
 import type { CircuitGroup, DeviceId, ElectricalDevice } from './electrical';
 import { createCircuitGroup } from './electrical';
-import type { Building, BuildingId } from './site-plan';
-import { storeysOf } from './site-plan';
 import { mapStoreys } from './storey-edits';
 import type { StoreyId } from './storeys';
 import { devicesOf, groupsOf, switchLinksOf } from './storeys';

@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { ContourPolyline } from '../../../domain/terrain/contours';
-import { chooseContourLabels } from '../../../domain/terrain/contours';
+import { chooseContourLabels } from '../../../domain/terrain/contour-labels';
+import type { ContourPolyline } from '../../../domain/terrain/contour-types';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
 import { drawLabel, formatMeters, PLAN_COLORS } from './shared';

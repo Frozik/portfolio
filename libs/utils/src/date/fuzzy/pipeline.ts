@@ -1,33 +1,23 @@
 import { isNil } from 'lodash-es';
-import { Temporal } from 'temporal-polyfill';
+import type { Temporal } from 'temporal-polyfill';
 import {
-  COLON_TIME_PARTS_MIN,
-  COLON_TIME_PARTS_WITH_MS,
   HOURS_IN_DAY,
   MAX_TOKEN_COUNT,
   MIN_4_DIGIT_YEAR,
   MONTHS_IN_YEAR,
   NOON_HOUR,
 } from './constants';
+import { tryParseISODateTime } from './iso-datetime';
+import type { IPipelineResult } from './pipeline-result';
 import {
-  applyOffsetSlots,
-  resolveBoundaryKeywordToSlots,
-  resolveKeywordToDateSlots,
   resolveMonthNameToSlots,
-  resolveNextWeekdaySlots,
   resolveOrdinalDaySlots,
   resolvePartialDayMonthNumericSlots,
-  resolveQuarterFromToken,
-  resolveTimeKeywordToSlots,
 } from './resolvers';
-import {
-  applyContextRules,
-  applySeparatorContext,
-  buildSlotContext,
-  detectConflicts,
-  resolveSlots,
-  tagCandidates,
-} from './scoring';
+import { applyContextRules, tagCandidates } from './scoring';
+import { applySeparatorContext } from './separator-context';
+import { buildSlotContext, detectConflicts } from './slot-context';
+import { resolveSlots } from './slot-resolution';
 import {
   buildTimeSlots,
   normalizeYear,
@@ -35,17 +25,11 @@ import {
   slotsToPlainTime,
   tryBuildDateSlots,
 } from './slots';
+import { deriveTemporality } from './temporality';
+import { collectTokenBase } from './token-base';
 import { fsmTokenize, tokenize } from './tokenizer';
 import type { ISlotContext, IToken } from './types';
-import { EParseTemporality, ETokenKind } from './types';
-
-export interface IPipelineResult {
-  readonly value: Temporal.ZonedDateTime;
-  readonly temporality: EParseTemporality;
-}
-
-const ISO_DATE_LENGTH = 10; // "YYYY-MM-DD".length
-const ISO_YEAR_SEPARATOR_INDEX = 4; // position of first '-' in ISO date
+import { ETokenKind } from './types';
 
 export function parseFullPipeline(
   input: string,
@@ -67,31 +51,6 @@ export function parseFullPipeline(
 
   // FSM-based token pipeline - handles everything else
   return resolveWithFsmPipeline(trimmed, today, timeZone);
-}
-
-function tryParseISODateTime(input: string, timeZone: string): IPipelineResult | undefined {
-  // Quick check: ISO dates are at least 10 chars and have '-' at position 4
-  if (input.length < ISO_DATE_LENGTH || input[ISO_YEAR_SEPARATOR_INDEX] !== '-') {
-    return undefined;
-  }
-
-  try {
-    if (input.includes('T')) {
-      const zonedDateTime = Temporal.ZonedDateTime.from(`${input}[${timeZone}]`);
-      return { value: zonedDateTime, temporality: EParseTemporality.ExplicitDate };
-    }
-    // Try ISO date "YYYY-MM-DD" (exactly 10 chars)
-    if (input.length === ISO_DATE_LENGTH) {
-      const date = Temporal.PlainDate.from(input);
-      return {
-        value: date.toZonedDateTime(timeZone),
-        temporality: EParseTemporality.ExplicitDate,
-      };
-    }
-  } catch {
-    // Not valid ISO format, fall through to FSM
-  }
-  return undefined;
 }
 
 /**
@@ -131,78 +90,6 @@ function chooseBestTokenStream(fsmFiltered: IToken[], legacy: IToken[]): IToken[
   }
 
   return legacy;
-}
-
-function deriveTemporality(tokens: IToken[], hasResolvedYear: boolean): EParseTemporality {
-  for (const token of tokens) {
-    switch (token.kind) {
-      case ETokenKind.Keyword: {
-        const keyword = token.raw.toLowerCase();
-        if (keyword === 'yesterday') {
-          return EParseTemporality.PastDirected;
-        }
-        if (
-          keyword === 'tomorrow' ||
-          keyword === 'tom' ||
-          keyword === 'today' ||
-          keyword === 'now'
-        ) {
-          return EParseTemporality.FutureDirected;
-        }
-        // "next/last weekday" merged keyword
-        if (!isNil(token.extra) && token.extra.startsWith('weekday:')) {
-          return token.value === 1 ? EParseTemporality.Weekday : EParseTemporality.PastDirected;
-        }
-        break;
-      }
-      case ETokenKind.TimeKeyword:
-        return EParseTemporality.KeywordTime;
-      case ETokenKind.BoundaryKeyword:
-        return EParseTemporality.Boundary;
-      case ETokenKind.Offset: {
-        return token.value < 0 ? EParseTemporality.PastDirected : EParseTemporality.FutureDirected;
-      }
-      case ETokenKind.Duration:
-        return EParseTemporality.FutureDirected;
-      default:
-        break;
-    }
-  }
-
-  const hasWeekday = tokens.some(token => token.kind === ETokenKind.WeekdayName);
-  if (hasWeekday) {
-    return EParseTemporality.Weekday;
-  }
-
-  const hasMonthName = tokens.some(token => token.kind === ETokenKind.MonthName);
-  const hasOrdinal = tokens.some(token => token.kind === ETokenKind.Ordinal);
-  const hasNumber = tokens.some(token => token.kind === ETokenKind.Number);
-  const hasQuarter = tokens.some(token => token.kind === ETokenKind.Quarter);
-  const hasColonTime = tokens.some(token => token.kind === ETokenKind.ColonTime);
-
-  // Standalone time: only time-related tokens, no date components
-  if (hasColonTime && !hasMonthName && !hasOrdinal && !hasNumber && !hasQuarter && !hasWeekday) {
-    return EParseTemporality.TimeOnly;
-  }
-
-  if (hasQuarter && !hasResolvedYear) {
-    return EParseTemporality.Quarter;
-  }
-
-  if (hasMonthName && (hasOrdinal || hasNumber) && !hasResolvedYear) {
-    // Month + day without explicit year
-    return EParseTemporality.MonthDay;
-  }
-
-  if (hasOrdinal && !hasMonthName) {
-    return EParseTemporality.DayOfMonth;
-  }
-
-  if (hasMonthName && !hasOrdinal && !hasNumber) {
-    return EParseTemporality.MonthOnly;
-  }
-
-  return EParseTemporality.ExplicitDate;
 }
 
 function runTokenPipeline(
@@ -247,119 +134,10 @@ function runTokenPipeline(
     hasQuarter: tokens.some(token => token.kind === ETokenKind.Quarter),
   };
 
-  let baseDate: Temporal.PlainDate | undefined;
-  let baseTime: Temporal.PlainTime | undefined;
-  let knownMonth: number | undefined;
-  let knownDay: number | undefined;
+  const base = collectTokenBase(tokens, today);
+  const { baseDate, amPmValue } = base;
+  let { baseTime, knownMonth, knownDay } = base;
   let knownYear: number | undefined;
-  let amPmValue: number | undefined;
-
-  for (const token of tokens) {
-    switch (token.kind) {
-      case ETokenKind.Keyword: {
-        const keywordSlots = resolveKeywordToDateSlots(token, today);
-        if (!isNil(keywordSlots)) {
-          const keywordDate = slotsToPlainDate(keywordSlots);
-          if (!isNil(keywordDate)) {
-            baseDate = keywordDate;
-          }
-          const keywordTime = slotsToPlainTime(keywordSlots);
-          if (!isNil(keywordTime)) {
-            baseTime = keywordTime;
-          }
-        }
-        break;
-      }
-      case ETokenKind.TimeKeyword: {
-        const timeKeywordSlots = resolveTimeKeywordToSlots(token.raw.toLowerCase());
-        if (!isNil(timeKeywordSlots)) {
-          const timeKeywordTime = slotsToPlainTime(timeKeywordSlots);
-          if (!isNil(timeKeywordTime)) {
-            baseTime = timeKeywordTime;
-          }
-        }
-        break;
-      }
-      case ETokenKind.BoundaryKeyword: {
-        const boundarySlots = resolveBoundaryKeywordToSlots(token.raw.toLowerCase(), today);
-        if (!isNil(boundarySlots)) {
-          const boundaryDate = slotsToPlainDate(boundarySlots);
-          if (!isNil(boundaryDate)) {
-            baseDate = boundaryDate;
-          }
-        }
-        break;
-      }
-      case ETokenKind.MonthName:
-        knownMonth = token.value;
-        break;
-      case ETokenKind.ColonTime: {
-        const parts = splitOnColonAndDot(token.extra);
-        if (!isNil(parts) && parts.length >= COLON_TIME_PARTS_MIN) {
-          const colonTimeSlots = buildTimeSlots(
-            Number(parts[0]),
-            Number(parts[1]),
-            parts.length > 2 ? Number(parts[2]) : 0,
-            parts.length > COLON_TIME_PARTS_WITH_MS ? Number(parts[COLON_TIME_PARTS_WITH_MS]) : 0
-          );
-          if (!isNil(colonTimeSlots)) {
-            const colonTime = slotsToPlainTime(colonTimeSlots);
-            if (!isNil(colonTime)) {
-              baseTime = colonTime;
-            }
-          }
-        }
-        break;
-      }
-      case ETokenKind.Ordinal:
-        knownDay = token.value;
-        break;
-      case ETokenKind.AmPm:
-        amPmValue = token.value;
-        break;
-      case ETokenKind.Offset: {
-        const offsetUnit = token.extra ?? 'd';
-        const offsetDirection = token.value >= 0 ? 1 : -1;
-        const offsetSlots = applyOffsetSlots(
-          today,
-          Math.abs(token.value),
-          offsetUnit,
-          offsetDirection
-        );
-        const offsetDate = slotsToPlainDate(offsetSlots);
-        if (!isNil(offsetDate)) {
-          baseDate = offsetDate;
-        }
-        break;
-      }
-      case ETokenKind.Duration: {
-        const durationUnit = token.extra ?? 'd';
-        const durationSlots = applyOffsetSlots(today, token.value, durationUnit, 1);
-        const durationDate = slotsToPlainDate(durationSlots);
-        if (!isNil(durationDate)) {
-          baseDate = durationDate;
-        }
-        break;
-      }
-      case ETokenKind.WeekdayName: {
-        const weekdaySlots = resolveNextWeekdaySlots(token.raw.toLowerCase(), today);
-        const weekdayDate = isNil(weekdaySlots) ? undefined : slotsToPlainDate(weekdaySlots);
-        if (!isNil(weekdayDate)) {
-          baseDate = weekdayDate;
-        }
-        break;
-      }
-      case ETokenKind.Quarter: {
-        const result = resolveQuarterFromToken(token, tokens, today);
-        if (!isNil(result)) {
-          baseDate = result;
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
 
   const candidates = tagCandidates(tokens, context);
   applyContextRules(candidates, tokens, context);
@@ -511,25 +289,6 @@ function runTokenPipeline(
     value: resultDate.toZonedDateTime(timeZone),
     temporality,
   };
-}
-
-function splitOnColonAndDot(value: string | undefined): string[] | undefined {
-  if (isNil(value)) {
-    return undefined;
-  }
-  const result: string[] = [];
-  let current = '';
-  for (let index = 0; index < value.length; index++) {
-    const char = value[index];
-    if (char === ':' || char === '.') {
-      result.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
 }
 
 function getMonthNameFromTokens(tokens: IToken[]): string | undefined {

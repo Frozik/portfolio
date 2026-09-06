@@ -27,7 +27,7 @@ function formatRelativeLevel(value: Meters, meterUnit: string): string {
  */
 export const StoreyPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
   const buildingScene = store.scene.buildingScenes.find(
     candidate => candidate.building.id === buildingId
   );
@@ -36,7 +36,7 @@ export const StoreyPanel = observer(({ store }: { readonly store: SitePlannerSto
 
   const handleHeightChange = useFunction((heightMeters: number | undefined) => {
     if (!isNil(scene) && !isNil(heightMeters)) {
-      store.building.setStoreyHeightOnEdited(scene.storey.id, heightMeters as Meters);
+      store.storeys.setStoreyHeightOnEdited(scene.storey.id, heightMeters as Meters);
     }
   });
 

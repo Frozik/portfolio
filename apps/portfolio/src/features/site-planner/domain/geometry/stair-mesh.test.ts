@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { createStair } from '../model/stairs';
 import { createSupport } from '../model/supports';
-import { deriveStairRun, stairCutout } from './stair-footprint';
+import { stairCutout } from './stair-footprint';
 import { stairStepPolygons, supportFootprint } from './stair-mesh';
+import { deriveStairRun } from './stair-run';
 
 const STANDARD_HEIGHT = 2.7;
 

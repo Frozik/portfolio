@@ -11,6 +11,7 @@ import {
   projectOntoPolyline,
   wallCenterline,
 } from '../../domain/geometry/wall-geometry';
+import type { BuildingId } from '../../domain/model/building';
 import type { VerticalDuct } from '../../domain/model/ducts';
 import type { ElectricalDevice } from '../../domain/model/electrical';
 import type { Fireplace } from '../../domain/model/fireplaces';
@@ -19,7 +20,6 @@ import { canEnterThroughFloor } from '../../domain/model/foundation';
 import type { FurnitureInstance } from '../../domain/model/furniture';
 import { findFurnitureEntry } from '../../domain/model/furniture';
 import type { Opening } from '../../domain/model/openings';
-import type { BuildingId } from '../../domain/model/site-plan';
 import type { StairInstance } from '../../domain/model/stairs';
 import type { SupportPost } from '../../domain/model/supports';
 import type { Wall } from '../../domain/model/walls';
@@ -69,13 +69,13 @@ export function draggedOpening(
       const total = polylineLength(centerline);
       const snapped = snapAlong(store, projection.offsetMeters, modifiers);
 
-      store.walls.moveOpening(
+      store.openings.moveOpening(
         buildingId,
         opening.id,
         clamp(snapped, halfWidth, Math.max(halfWidth, total - halfWidth))
       );
     },
-    restore: () => store.walls.moveOpening(buildingId, opening.id, opening.offsetMeters),
+    restore: () => store.openings.moveOpening(buildingId, opening.id, opening.offsetMeters),
   };
 }
 
@@ -101,7 +101,7 @@ export function draggedDevice(
         const centerline = wallCenterline(wall);
         const projection = projectOntoPolyline(centerline, draggedPoint);
 
-        store.storeyObjects.moveDevice(buildingId, device.id, {
+        store.electrics.moveDevice(buildingId, device.id, {
           host: {
             ...device.host,
             offsetMeters: clamp(
@@ -116,12 +116,12 @@ export function draggedDevice(
       }
 
       if (device.host.kind === 'ceiling') {
-        store.storeyObjects.moveDevice(buildingId, device.id, {
+        store.electrics.moveDevice(buildingId, device.id, {
           host: { kind: 'ceiling', position: snapPointToGrid(store, draggedPoint, modifiers) },
         });
       }
     },
-    restore: () => store.storeyObjects.moveDevice(buildingId, device.id, { host: device.host }),
+    restore: () => store.electrics.moveDevice(buildingId, device.id, { host: device.host }),
   };
 }
 
@@ -184,13 +184,13 @@ export function draggedFireplace(
   return {
     origin: fireplace.position,
     moveTo: (draggedPoint, modifiers) =>
-      store.storeyObjects.moveFireplace(buildingId, fireplace.id, {
+      store.ducts.moveFireplace(buildingId, fireplace.id, {
         position: snapPointToGrid(store, draggedPoint, modifiers),
       }),
     turnTo: rotationDegrees =>
-      store.storeyObjects.moveFireplace(buildingId, fireplace.id, { rotationDegrees }),
+      store.ducts.moveFireplace(buildingId, fireplace.id, { rotationDegrees }),
     restore: () =>
-      store.storeyObjects.moveFireplace(buildingId, fireplace.id, {
+      store.ducts.moveFireplace(buildingId, fireplace.id, {
         position: fireplace.position,
         rotationDegrees: fireplace.rotationDegrees,
       }),
@@ -208,10 +208,10 @@ export function draggedDuct(
   return {
     origin: duct.position,
     moveTo: (draggedPoint, modifiers) =>
-      store.storeyObjects.moveDuct(buildingId, duct.id, {
+      store.ducts.moveDuct(buildingId, duct.id, {
         position: snapPointToGrid(store, draggedPoint, modifiers),
       }),
-    restore: () => store.storeyObjects.moveDuct(buildingId, duct.id, { position: duct.position }),
+    restore: () => store.ducts.moveDuct(buildingId, duct.id, { position: duct.position }),
   };
 }
 
@@ -246,13 +246,12 @@ export function draggedStair(
     origin: stair.position,
     startRotationDegrees: stair.rotationDegrees,
     moveTo: (draggedPoint, modifiers) =>
-      store.storeyObjects.moveStair(buildingId, stair.id, {
+      store.stairs.moveStair(buildingId, stair.id, {
         position: snapPointToGrid(store, draggedPoint, modifiers),
       }),
-    turnTo: rotationDegrees =>
-      store.storeyObjects.moveStair(buildingId, stair.id, { rotationDegrees }),
+    turnTo: rotationDegrees => store.stairs.moveStair(buildingId, stair.id, { rotationDegrees }),
     restore: () =>
-      store.storeyObjects.moveStair(buildingId, stair.id, {
+      store.stairs.moveStair(buildingId, stair.id, {
         position: stair.position,
         rotationDegrees: stair.rotationDegrees,
       }),
@@ -287,7 +286,7 @@ export function draggedFurniture(
               thresholdMeters: FURNITURE_MAGNET_RADIUS_METERS,
             });
 
-      store.storeyObjects.moveFurniture(
+      store.furniture.moveFurniture(
         buildingId,
         item.id,
         isNil(magnetized)
@@ -302,9 +301,9 @@ export function draggedFurniture(
       );
     },
     turnTo: rotationDegrees =>
-      store.storeyObjects.moveFurniture(buildingId, item.id, { rotationDegrees }),
+      store.furniture.moveFurniture(buildingId, item.id, { rotationDegrees }),
     restore: () =>
-      store.storeyObjects.moveFurniture(buildingId, item.id, {
+      store.furniture.moveFurniture(buildingId, item.id, {
         position: item.position,
         rotationDegrees: item.rotationDegrees,
       }),

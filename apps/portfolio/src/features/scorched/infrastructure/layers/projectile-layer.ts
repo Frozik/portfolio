@@ -15,7 +15,7 @@ import type { ScorchedRoundRef } from '../scorched-round-ref';
 import { ShapeBatch } from '../shape-batch';
 import { SHAPE_KIND, ShapeInstanceList } from '../shape-instances';
 import type { ShapePipeline } from '../shape-pipeline';
-import type { RgbColor } from '../tank-art/tank-blueprint';
+import type { RgbColor } from '../tank-art/tank-paint';
 
 /** The contrail is white and translucent, brightest right behind the shell. */
 const CONTRAIL_COLOR: RgbColor = { red: 1, green: 1, blue: 1 };

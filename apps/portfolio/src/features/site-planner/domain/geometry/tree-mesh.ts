@@ -1,6 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
-import type { TreeSpecies } from '../model/site-plan';
+import type { TreeSpecies } from '../model/plot-objects';
 import type { ColoredMesh } from './lit-mesh';
 import type { LocalPoint, MeshBuilder, Rgb } from './mesh-builder';
 import { appendQuad, appendTriangle, createMeshBuilder, finishColoredMesh } from './mesh-builder';

@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createElevationMark, createTree } from '../../../domain/model/site-plan';
+import { createTree } from '../../../domain/model/plot-objects';
+import { createElevationMark } from '../../../domain/model/site-plan';
 import type { PlanLayerKind } from '../../../domain/view/plan-layers';
 import { PLAN_LAYER_KINDS } from '../../../domain/view/plan-layers';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
-import type { PlanContent, PlanEditorChrome, PlanLabels } from './draw-plan';
 import { drawPlan } from './draw-plan';
+import type { PlanContent, PlanEditorChrome, PlanLabels } from './plan-content';
 import {
   callsOf,
   createRecordingContext,

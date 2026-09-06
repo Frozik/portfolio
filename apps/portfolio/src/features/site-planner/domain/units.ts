@@ -27,3 +27,6 @@ export const FULL_TURN_DEGREES = 360;
 export function normalizeTurnDegrees(degrees: number): number {
   return ((degrees % FULL_TURN_DEGREES) + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
 }
+
+/** A quarter turn: what the ⟳ button adds, staying on the compass points. */
+export const QUARTER_TURN_DEGREES = 90;

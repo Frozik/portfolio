@@ -8,7 +8,7 @@ import type { BuildingScene } from '../building-scene';
 import type { SitePlannerStore } from '../SitePlannerStore';
 import type { StoreyScene } from '../storey-scenes';
 import type { PlanBuilding } from './plan-draw/draw-house';
-import type { PlanContent, PlanEditorChrome } from './plan-draw/draw-plan';
+import type { PlanContent, PlanEditorChrome } from './plan-draw/plan-content';
 
 /**
  * One building as the plan shows it: the storey the editor is aimed at while
@@ -20,10 +20,10 @@ import type { PlanContent, PlanEditorChrome } from './plan-draw/draw-plan';
 function readPlanBuilding(store: SitePlannerStore, scene: BuildingScene): PlanBuilding {
   const isEdited = editedBuildingId(store.editorMode) === scene.building.id;
   const active = isEdited
-    ? scene.storeys.find(storeyScene => storeyScene.storey.id === store.building.activeStoreyId)
+    ? scene.storeys.find(storeyScene => storeyScene.storey.id === store.storeys.activeStoreyId)
     : undefined;
   const below =
-    isEdited && !isNil(active) && active.level > 0 && store.building.isReferenceStoreyVisible
+    isEdited && !isNil(active) && active.level > 0 && store.storeys.isReferenceStoreyVisible
       ? scene.storeys[active.level - 1]
       : undefined;
 
@@ -133,7 +133,7 @@ export function readPlanContent(store: SitePlannerStore): PlanContent {
   return {
     boundaryPolygons: store.boundaryPolygons,
     buildings: store.scene.buildingScenes.map(scene => readPlanBuilding(store, scene)),
-    setbackRings: store.setbackRings,
+    setbackRings: store.composition.setbackRings,
     contours: store.terrain.contours,
     analysisRaster: store.scene.analysisRaster,
     flowField: store.scene.flowField,
@@ -165,25 +165,25 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
     utilityDraft: store.utilities.draftUtilityPreview,
     selectedUtilityRoute: store.utilities.selectedUtilityRoute,
     selectedShape: store.composition.selectedShape,
-    selectedMarkId: store.siteObjects.selectedMark?.id,
+    selectedMarkId: store.marks.selectedMark?.id,
     selectedTreeId: store.siteObjects.selectedTree?.id,
     selectedCar: store.siteObjects.selectedCar,
     selectedBuildingId: store.building.selectedBuilding?.id,
     selectedPath: store.siteObjects.selectedPath,
     pathHandleHighlight: store.pathHandleHighlight,
     selectedPathPointIndex: store.selectedPathPointIndex,
-    hoveredPathSegmentIndex: store.hoveredPathSegmentIndex,
+    hoveredPathSegmentIndex: store.modes.hoveredPathSegmentIndex,
     editFocus: store.editorMode.kind === 'edit' ? store.editorMode.target : undefined,
     selectedWall: store.walls.selectedWall,
     selectedWallJunction: isNil(store.walls.selectedJunction)
       ? undefined
       : { position: store.walls.selectedJunction, edges: store.walls.selectedJunctionEdges },
-    wallDraftPoints: store.walls.draftWallPoints,
-    wallDraftCursor: store.walls.draftWallCursor,
-    wallDraftReadout: store.walls.draftWallReadout,
-    selectedOpeningId: store.walls.selectedOpening?.id,
-    selectedFurniture: store.storeyObjects.selectedFurniture,
-    selectedDeviceId: store.storeyObjects.selectedDevice?.id,
+    wallDraftPoints: store.wallDraft.draftWallPoints,
+    wallDraftCursor: store.wallDraft.draftWallCursor,
+    wallDraftReadout: store.wallDraft.draftWallReadout,
+    selectedOpeningId: store.openings.selectedOpening?.id,
+    selectedFurniture: store.furniture.selectedFurniture,
+    selectedDeviceId: store.electrics.selectedDevice?.id,
     selectedStairId: store.selection?.kind === 'stair' ? store.selection.stairId : undefined,
     selectedSupportId: store.selection?.kind === 'support' ? store.selection.supportId : undefined,
     selectedSlabId: store.selection?.kind === 'slab' ? store.selection.slabId : undefined,
@@ -191,9 +191,9 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
       store.selection?.kind === 'fireplace' ? store.selection.fireplaceId : undefined,
     selectedDuctId: store.selection?.kind === 'duct' ? store.selection.ductId : undefined,
     selectedEntryId: store.utilities.selectedUtilityEntry?.entry.id,
-    selectedStairGrip: store.storeyObjects.selectedStairScene?.rotationGrip,
-    pendingConnectDeviceId: store.storeyObjects.pendingConnectDeviceId,
-    hoveredRoomIndex: store.building.hoveredRoomIndex,
+    selectedStairGrip: store.stairs.selectedStairScene?.rotationGrip,
+    pendingConnectDeviceId: store.electrics.pendingConnectDeviceId,
+    hoveredRoomIndex: store.storeys.hoveredRoomIndex,
     draftShape: store.draftShape,
     draftMark: store.draftMark,
     measurePoints: store.measurePoints,

@@ -6,9 +6,9 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingId } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { ElectricalDevice } from '../../domain/model/electrical';
-import type { BuildingId } from '../../domain/model/site-plan';
 import { groupsOf, switchLinksOf } from '../../domain/model/storeys';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
@@ -33,7 +33,7 @@ const DeviceRow = memo(
       store.setSelection({ kind: 'device', buildingId, deviceId: device.id });
     });
     const handleRemove = useFunction(() => {
-      store.storeyObjects.removeDevice(buildingId, device.id);
+      store.electrics.removeDevice(buildingId, device.id);
     });
 
     return (
@@ -73,7 +73,7 @@ const DeviceRow = memo(
  */
 export const ElectricalPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { sitePlannerT } from '../translations';
+import { SelectedMarkProperties } from './MarkProperties';
 import {
   ElectricToolProperties,
   OpeningToolProperties,
@@ -11,14 +12,10 @@ import {
   SelectedOpeningProperties,
 } from './OpeningDeviceProperties';
 import { PanelHint } from './PanelHint';
+import { SelectedPathProperties } from './PathProperties';
 import { PlannerPanel } from './PlannerPanel';
 import { SelectedGroupProperties, SelectedShapeProperties } from './ShapeProperties';
-import {
-  SelectedCarProperties,
-  SelectedMarkProperties,
-  SelectedPathProperties,
-  SelectedTreeProperties,
-} from './SiteObjectProperties';
+import { SelectedCarProperties, SelectedTreeProperties } from './SiteObjectProperties';
 import { SelectedEntryProperties } from './UtilityEntriesBlock';
 import { SelectedUtilityRouteProperties, UtilityToolProperties } from './UtilityRouteProperties';
 import {
@@ -73,10 +70,13 @@ function toolOptionsFor(store: SitePlannerStore): ReactNode {
  */
 const SelectionProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const { selectedGroupTerm } = store.composition;
-  const { selectedMark, selectedTree, selectedCar, selectedPath } = store.siteObjects;
+  const { selectedTree, selectedCar, selectedPath } = store.siteObjects;
+  const { selectedMark } = store.marks;
   const { selectedBuilding } = store.building;
-  const { selectedWall, selectedOpening } = store.walls;
-  const { selectedFurniture, selectedDevice } = store.storeyObjects;
+  const { selectedWall } = store.walls;
+  const { selectedOpening } = store.openings;
+  const { selectedFurniture } = store.furniture;
+  const { selectedDevice } = store.electrics;
   const { selectedUtilityRoute } = store.utilities;
 
   if (!isNil(selectedDevice)) {

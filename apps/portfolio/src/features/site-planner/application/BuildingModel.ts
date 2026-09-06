@@ -1,10 +1,11 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { findLast, isNil } from 'lodash-es';
+import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
-import { DEFAULT_SITE_LENGTH_METERS, DEFAULT_SITE_WIDTH_METERS } from '../domain/constants';
 import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
-import { defaultRidgeDegrees } from '../domain/geometry/pitched-roof';
+import type { BuildingId, PadElevationMode } from '../domain/model/building';
+import { createBuilding, foundationOf } from '../domain/model/building';
+import type { Building } from '../domain/model/building';
 import {
   addBuilding as addBuildingIn,
   findBuilding as findBuildingIn,
@@ -14,73 +15,43 @@ import {
   updateBuilding as updateBuildingIn,
   updateFoundation as updateFoundationIn,
 } from '../domain/model/building-edits';
+import { findFreeBuildingSpot } from '../domain/model/building-placement';
 import type { BuildingPresetId } from '../domain/model/building-presets';
 import { findBuildingPreset, presetUtilityEntries } from '../domain/model/building-presets';
 import { instantiateBuildingTemplate } from '../domain/model/building-template';
 import { isSiteEditMode } from '../domain/model/editor-mode';
 import type { Foundation } from '../domain/model/foundation';
-import type { Opening } from '../domain/model/openings';
-import type { PitchedRoof } from '../domain/model/roofs';
-import { createPitchedRoof } from '../domain/model/roofs';
 import type { RoomTypeId } from '../domain/model/rooms';
 import { createRoomLabel } from '../domain/model/rooms';
 import type { Selection } from '../domain/model/selection';
-import { createShapeId } from '../domain/model/shapes';
-import type { Building, BuildingId, PadElevationMode } from '../domain/model/site-plan';
+import { frostDepthOf } from '../domain/model/site-plan';
 import {
-  createBuilding,
-  foundationOf,
-  frostDepthOf,
-  pitchedRoofOf,
-  storeysOf,
-} from '../domain/model/site-plan';
-import {
-  addStorey as addStoreyIn,
-  removeRoofZoneLabel as removeRoofZoneLabelFrom,
   removeRoomLabel as removeRoomLabelFrom,
-  removeStorey as removeStoreyFrom,
-  setPitchedRoof as setPitchedRoofIn,
-  updateStoreyHeight as updateStoreyHeightIn,
-  upsertRoofZoneLabel as upsertRoofZoneLabelIn,
   upsertRoomLabel as upsertRoomLabelIn,
 } from '../domain/model/storey-edits';
-import type { RoofCover, StoreyId } from '../domain/model/storeys';
-import {
-  createRoofZoneLabel,
-  createStorey,
-  DEFAULT_ROOF_COVER,
-  slabsOf,
-} from '../domain/model/storeys';
 import { normalizeBuildingWallCrossings } from '../domain/model/wall-topology';
-import type { Wall } from '../domain/model/walls';
 import { findStockHouseTemplate } from '../domain/templates/stock-houses';
 import type { Meters } from '../domain/units';
 import type { CompositionModel } from './CompositionModel';
 import type { PlanEditorCore } from './editor-core';
-import type { PitchedRoofScene } from './roof-scenes';
+import type { BuildingRoom } from './room-scenes';
 import type { SceneModel } from './SceneModel';
-import type { BuildingRoom, RoofZoneScene, StoreyScene } from './storey-scenes';
 import { seedPointOf } from './storey-scenes';
 
 /**
  * The buildings as buildings: their lifecycle on the plot, the pad and the
- * foundation they stand on, their storeys with the active one the editor is
- * aimed at, the pitched roof, the room labels. Commands write the document
+ * foundation they stand on, the room labels. Commands write the document
  * through the core; everything resolved against the terrain is read back from
- * the scene.
+ * the scene. The storey stack lives in {@link StoreysModel}, the roof in
+ * {@link RoofModel}.
  */
 /** History groups of the house fields, so a typed number stays one step to undo. */
 const MANUAL_PAD_HISTORY_GROUP = 'house:manual-pad';
 const PAD_DROP_HISTORY_GROUP = 'house:pad-drop';
 const WALL_HEIGHT_HISTORY_GROUP = 'house:wall-height';
 const FOUNDATION_HISTORY_GROUP = 'foundation';
-const PITCHED_ROOF_HISTORY_GROUP = 'building:roof';
-const STOREY_HEIGHT_HISTORY_GROUP = 'building:storey-height';
 
 const NO_SELECTIONS: readonly Selection[] = [];
-
-const FREE_SPOT_STEP_METERS = 3;
-const FREE_SPOT_ATTEMPTS = 8;
 
 export class BuildingModel {
   private readonly core: PlanEditorCore;
@@ -179,83 +150,6 @@ export class BuildingModel {
   }
 
   /**
-   * Crowns the edited building with a pitched roof, or takes it off. The ridge
-   * starts along the top storey's longer side — the way a roof is actually
-   * framed — so the default already looks like a house.
-   */
-  togglePitchedRoof(): void {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return;
-    }
-
-    const building = findBuildingIn(this.core.buildings, session.buildingId);
-
-    if (isNil(building)) {
-      return;
-    }
-
-    const scene = this.scene.buildingScenes.find(
-      candidate => candidate.building.id === session.buildingId
-    );
-    // The crowned storey: the highest one that exists as built mass — an empty
-    // freshly added level has no footprint for a ridge to be guessed from.
-    const crowned = findLast(scene?.storeys ?? [], storeyScene => storeyScene.footprint.length > 0);
-
-    this.core.pushHistory();
-    // The DOCUMENT decides which way this toggles. Asking the derived scene
-    // instead once made «Убрать» add a second roof: over an empty top storey
-    // the scene derives no roof even while the building carries one.
-    this.core.buildings = setPitchedRoofIn(
-      this.core.buildings,
-      session.buildingId,
-      isNil(pitchedRoofOf(building))
-        ? createPitchedRoof({
-            ridgeDegrees: isNil(crowned) ? 0 : defaultRidgeDegrees(crowned.footprint),
-          })
-        : undefined
-    );
-  }
-
-  /** Changes one property of the roof; a typed number stays one step to undo. */
-  updatePitchedRoof(changes: Partial<PitchedRoof>): void {
-    const session = this.core.editorSession;
-    const roof = this.editedPitchedRoof;
-
-    if (session?.kind !== 'building' || isNil(roof)) {
-      return;
-    }
-
-    this.core.pushHistory(PITCHED_ROOF_HISTORY_GROUP);
-    this.core.buildings = setPitchedRoofIn(this.core.buildings, session.buildingId, {
-      ...roof,
-      ...changes,
-    });
-  }
-
-  /** The edited building's roof, or nothing while its top is flat. */
-  get editedPitchedRoof(): PitchedRoof | undefined {
-    const session = this.core.editorSession;
-    const building =
-      session?.kind === 'building'
-        ? findBuildingIn(this.core.buildings, session.buildingId)
-        : undefined;
-
-    return isNil(building) ? undefined : pitchedRoofOf(building);
-  }
-
-  /** The edited building's roof as it was resolved — heights and all. */
-  get editedPitchedRoofScene(): PitchedRoofScene | undefined {
-    const session = this.core.editorSession;
-
-    return session?.kind !== 'building'
-      ? undefined
-      : this.scene.buildingScenes.find(candidate => candidate.building.id === session.buildingId)
-          ?.pitchedRoof;
-  }
-
-  /**
    * Assigns — or clears — a derived room's type by pinning a label to a seed
    * point inside the region: the room itself is
    * never stored, so whichever region holds the point wears the type.
@@ -288,249 +182,6 @@ export class BuildingModel {
     this.core.buildings = upsertRoomLabelIn(this.core.buildings, buildingId, room.storeyId, label);
   }
 
-  /**
-   * Pins — or clears — a roof zone's cover by its seed point, exactly the way
-   * a room's type is pinned. Membrane is the default, so choosing it back
-   * simply removes the label.
-   */
-  setRoofCover(buildingId: BuildingId, zone: RoofZoneScene, cover: RoofCover): void {
-    this.core.pushHistory();
-
-    if (cover === DEFAULT_ROOF_COVER) {
-      if (!isNil(zone.labelId)) {
-        this.core.buildings = removeRoofZoneLabelFrom(
-          this.core.buildings,
-          buildingId,
-          zone.labelId
-        );
-      }
-
-      return;
-    }
-
-    const position = seedPointOf(zone.polygons, zone.centroid);
-
-    if (isNil(position)) {
-      return;
-    }
-
-    const label = isNil(zone.labelId)
-      ? createRoofZoneLabel({ position, cover })
-      : { id: zone.labelId, position, cover };
-
-    this.core.buildings = upsertRoofZoneLabelIn(
-      this.core.buildings,
-      buildingId,
-      zone.storeyId,
-      label
-    );
-  }
-
-  /** The active storey, or the ground one while nothing narrower is aimed at. */
-  resolveActiveStoreyId(buildingId: BuildingId): StoreyId | undefined {
-    const building = findBuildingIn(this.core.buildings, buildingId);
-
-    return this.activeStoreyId ?? (isNil(building) ? undefined : storeysOf(building)[0].id);
-  }
-
-  /** The storey the building editor is aimed at; the ground one by default. */
-  /** The КОМНАТЫ row under the pointer, read through the store's one access point. */
-  get hoveredRoomIndex(): number | undefined {
-    return this.core.editorSession?.kind === 'building'
-      ? this.core.editorSession.hoveredRoomIndex
-      : undefined;
-  }
-
-  setHoveredRoomIndex(index: number | undefined): void {
-    if (this.core.editorSession?.kind === 'building') {
-      this.core.editorSession.setHoveredRoomIndex(index);
-    }
-  }
-
-  get activeStoreyId(): StoreyId | undefined {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return undefined;
-    }
-
-    if (!isNil(session.activeStoreyId)) {
-      return session.activeStoreyId;
-    }
-
-    const building = findBuildingIn(this.core.buildings, session.buildingId);
-
-    return isNil(building) ? undefined : storeysOf(building)[0].id;
-  }
-
-  setActiveStorey(storeyId: StoreyId): void {
-    if (this.core.editorSession?.kind === 'building') {
-      this.core.editorSession.setActiveStoreyId(storeyId);
-      this.core.setSelection(undefined);
-    }
-  }
-
-  /**
-   * Which storey the editor is aimed at, counting from one — what the status
-   * bar states so «where am I» is answered on the canvas, not only by a chip.
-   */
-  get activeStoreyOrdinal(): number | undefined {
-    const scene = this.editedStoreyScene;
-
-    return isNil(scene) ? undefined : scene.level + 1;
-  }
-
-  /** Steps the active storey up or down the stack — the PgUp/PgDn of the editor. */
-  stepActiveStorey(direction: 1 | -1): void {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return;
-    }
-
-    const building = findBuildingIn(this.core.buildings, session.buildingId);
-
-    if (isNil(building)) {
-      return;
-    }
-
-    const storeys = storeysOf(building);
-    const currentLevel = storeys.findIndex(storey => storey.id === this.activeStoreyId);
-    const nextLevel = currentLevel + direction;
-
-    if (nextLevel >= 0 && nextLevel < storeys.length) {
-      this.setActiveStorey(storeys[nextLevel].id);
-    }
-  }
-
-  /** The edited building's active storey, resolved against the scenes. */
-  get editedStoreyScene(): StoreyScene | undefined {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return undefined;
-    }
-
-    const scene = this.scene.buildingScenes.find(
-      candidate => candidate.building.id === session.buildingId
-    );
-
-    return scene?.storeys.find(storeyScene => storeyScene.storey.id === this.activeStoreyId);
-  }
-
-  get isReferenceStoreyVisible(): boolean {
-    return this.core.editorSession?.kind === 'building'
-      ? this.core.editorSession.isReferenceStoreyVisible
-      : false;
-  }
-
-  toggleReferenceStorey(): void {
-    if (this.core.editorSession?.kind === 'building') {
-      this.core.editorSession.toggleReferenceStorey();
-    }
-  }
-
-  /**
-   * Raises one more storey over the edited building — empty, or starting from
-   * a copy of the storey below's walls (new identities, openings left behind)
-   * — and aims the editor at it.
-   */
-  addStoreyToEditedBuilding({
-    copyWalls,
-    copyOpenings = true,
-  }: {
-    readonly copyWalls: boolean;
-    readonly copyOpenings?: boolean;
-  }): void {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return;
-    }
-
-    const building = findBuildingIn(this.core.buildings, session.buildingId);
-
-    if (isNil(building)) {
-      return;
-    }
-
-    const storeys = storeysOf(building);
-    // The ACTIVE storey is the one being copied, not whichever happens to be
-    // topmost: «add a floor like this one» is what a typical-floor building
-    // asks for, and the active storey is the one on screen.
-    const source = storeys.find(candidate => candidate.id === this.activeStoreyId) ?? storeys[0];
-    const copiedWalls = copyWalls
-      ? source.walls.map(wall => ({ ...wall, id: crypto.randomUUID() as Wall['id'] }))
-      : [];
-    // Openings ride along with the walls they are hosted on, remapped onto the
-    // new wall identities: an upper storey whose outer walls repeat the ones
-    // below almost always repeats their windows too, and cutting them again by
-    // hand is the click-tax every reference editor spares its users.
-    const wallIdByOrigin = new Map(
-      source.walls.map((wall, index) => [wall.id, copiedWalls[index]?.id])
-    );
-    const copiedOpenings =
-      copyWalls && copyOpenings
-        ? source.openings.flatMap(opening => {
-            const wallId = wallIdByOrigin.get(opening.wallId);
-
-            return isNil(wallId)
-              ? []
-              : [{ ...opening, id: crypto.randomUUID() as Opening['id'], wallId }];
-          })
-        : [];
-    // The floor comes along even with «empty storey»: a storey stands on the
-    // one below it, and a new floor with no plates would leave its walls
-    // nothing to be held to and nothing to be drawn on.
-    const copiedSlabs = slabsOf(source).map(slab => ({ ...slab, id: createShapeId() }));
-    const storey = createStorey({
-      heightMeters: source.heightMeters,
-      walls: copiedWalls,
-      openings: copiedOpenings,
-      slabs: copiedSlabs,
-    });
-
-    this.core.pushHistory();
-    this.core.buildings = addStoreyIn(this.core.buildings, session.buildingId, storey);
-    this.setActiveStorey(storey.id);
-  }
-
-  /** Takes an upper storey down; the ground one is refused by the domain edit. */
-  removeStoreyFromEdited(storeyId: StoreyId): void {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return;
-    }
-
-    this.core.pushHistory();
-    this.core.buildings = removeStoreyFrom(this.core.buildings, session.buildingId, storeyId);
-
-    const building = findBuildingIn(this.core.buildings, session.buildingId);
-
-    if (!isNil(building) && this.activeStoreyId === storeyId) {
-      this.setActiveStorey(storeysOf(building)[0].id);
-    }
-  }
-
-  /** Types one storey's height; a keystroke burst stays one undo step. */
-  setStoreyHeightOnEdited(storeyId: StoreyId, heightMeters: Meters): void {
-    const session = this.core.editorSession;
-
-    if (session?.kind !== 'building') {
-      return;
-    }
-
-    this.core.pushHistory(`${STOREY_HEIGHT_HISTORY_GROUP}:${storeyId}`);
-    this.core.buildings = updateStoreyHeightIn(
-      this.core.buildings,
-      session.buildingId,
-      storeyId,
-      heightMeters
-    );
-  }
-
-  /** Mints a named structure and aims the editor at it, ready to draw. */
   /**
    * Turns the whole selected building about its footprint centre — walls,
    * furnishings and the roof's ridge together. History-less: the grip gesture
@@ -573,7 +224,7 @@ export class BuildingModel {
    * a converter) the same way a stock house lands: reminted, centred, selected.
    */
   placeReadyBuilding(building: Building): Building {
-    const spot = this.freeSpotFor(building);
+    const spot = findFreeBuildingSpot(building, this.core.boundaryPolygons, this.core.buildings);
     const placed = instantiateBuildingTemplate({ id: 'imported', building }, spot);
 
     this.core.pushHistory();
@@ -586,44 +237,7 @@ export class BuildingModel {
     return placed;
   }
 
-  /**
-   * Where a new ready building lands: the plot centre, stepped rightward past
-   * whatever already stands there — never on top of an existing footprint.
-   */
-  private freeSpotFor(building: Building): Vector2 {
-    const templateBounds = computeMultiPolygonBounds(evaluateComposition(building.composition));
-    const widthMeters = isNil(templateBounds)
-      ? FREE_SPOT_STEP_METERS
-      : templateBounds.maxX - templateBounds.minX;
-    const plotBounds = computeMultiPolygonBounds(this.core.boundaryPolygons);
-    const start: Vector2 = isNil(plotBounds)
-      ? { x: DEFAULT_SITE_WIDTH_METERS / 2, y: DEFAULT_SITE_LENGTH_METERS / 2 }
-      : { x: (plotBounds.minX + plotBounds.maxX) / 2, y: (plotBounds.minY + plotBounds.maxY) / 2 };
-    const taken = this.core.buildings.map(existing =>
-      computeMultiPolygonBounds(evaluateComposition(existing.composition))
-    );
-
-    for (let attempt = 0; attempt < FREE_SPOT_ATTEMPTS; attempt += 1) {
-      const candidate: Vector2 = {
-        x: start.x + attempt * (widthMeters + FREE_SPOT_STEP_METERS),
-        y: start.y,
-      };
-      const overlaps = taken.some(
-        bounds =>
-          !isNil(bounds) &&
-          Math.abs(candidate.x - (bounds.minX + bounds.maxX) / 2) < widthMeters &&
-          Math.abs(candidate.y - (bounds.minY + bounds.maxY) / 2) <
-            (bounds.maxY - bounds.minY + FREE_SPOT_STEP_METERS) / 2 + widthMeters / 2
-      );
-
-      if (!overlaps) {
-        return candidate;
-      }
-    }
-
-    return start;
-  }
-
+  /** Mints a named structure and aims the editor at it, ready to draw. */
   addBuilding(name: string, presetId?: BuildingPresetId): Building {
     const preset = isNil(presetId) ? undefined : findBuildingPreset(presetId);
     const created = createBuilding({ name });

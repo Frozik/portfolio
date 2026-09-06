@@ -6,6 +6,8 @@ import type { RotatedBox } from '../../domain/geometry/hit-test-shape';
 import { hitTestRotatedBox, hitTestShape } from '../../domain/geometry/hit-test-shape';
 import { isPointOnStair } from '../../domain/geometry/stair-footprint';
 import { projectOntoPolyline, wallCenterline } from '../../domain/geometry/wall-geometry';
+import type { BuildingId } from '../../domain/model/building';
+import { entriesOf, storeysOf } from '../../domain/model/building';
 import { findBuilding } from '../../domain/model/building-edits';
 import type { VerticalDuct } from '../../domain/model/ducts';
 import type { ElectricalDevice } from '../../domain/model/electrical';
@@ -15,8 +17,6 @@ import type { UtilityEntry } from '../../domain/model/foundation';
 import type { FurnitureInstance } from '../../domain/model/furniture';
 import { furnitureBox } from '../../domain/model/furniture';
 import type { Opening } from '../../domain/model/openings';
-import type { BuildingId } from '../../domain/model/site-plan';
-import { entriesOf, storeysOf } from '../../domain/model/site-plan';
 import type { Slab } from '../../domain/model/slabs';
 import type { StairInstance } from '../../domain/model/stairs';
 import type { Storey } from '../../domain/model/storeys';
@@ -47,7 +47,7 @@ export function activeStoreyOf(
 
   const storeys = storeysOf(building);
 
-  return storeys.find(storey => storey.id === store.building.activeStoreyId) ?? storeys[0];
+  return storeys.find(storey => storey.id === store.storeys.activeStoreyId) ?? storeys[0];
 }
 
 function toleranceMeters(context: InteractionContext, pixels: number): number {
@@ -129,7 +129,7 @@ export function pickDevice(
   planPoint: Vector2
 ): ElectricalDevice | undefined {
   const storey = activeStoreyOf(context, buildingId);
-  const scene = context.store.building.editedStoreyScene;
+  const scene = context.store.storeys.editedStoreyScene;
 
   if (isNil(storey) || isNil(scene)) {
     return undefined;
@@ -209,7 +209,7 @@ export function pickHeating(
   | { readonly kind: 'fireplace'; readonly fireplace: Fireplace }
   | { readonly kind: 'duct'; readonly duct: VerticalDuct }
   | undefined {
-  const scene = context.store.building.editedStoreyScene;
+  const scene = context.store.storeys.editedStoreyScene;
 
   if (isNil(scene)) {
     return undefined;
@@ -245,7 +245,7 @@ export function pickSupport(
   context: InteractionContext,
   planPoint: Vector2
 ): SupportPost | undefined {
-  const scene = context.store.building.editedStoreyScene;
+  const scene = context.store.storeys.editedStoreyScene;
 
   if (isNil(scene)) {
     return undefined;
@@ -269,7 +269,7 @@ export function pickStair(
   context: InteractionContext,
   planPoint: Vector2
 ): StairInstance | undefined {
-  const scene = context.store.building.editedStoreyScene;
+  const scene = context.store.storeys.editedStoreyScene;
 
   if (isNil(scene)) {
     return undefined;
@@ -295,7 +295,7 @@ export function pickStairGrip(
 ): StairInstance | undefined {
   const { store } = context;
   const selection = store.selection;
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (selection?.kind !== 'stair' || isNil(scene)) {
     return undefined;
@@ -348,7 +348,7 @@ export function pickFurnitureGrip(
   planPoint: Vector2
 ): FurnitureInstance | undefined {
   const { store, getViewport } = context;
-  const furniture = store.storeyObjects.selectedFurniture;
+  const furniture = store.furniture.selectedFurniture;
 
   if (isNil(furniture)) {
     return undefined;

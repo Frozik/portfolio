@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 
 import { computeMultiPolygonCentroid } from '../geometry/polygon-centroid';
 import type { MultiPolygon } from '../geometry/polygon-types';
-import type { PadElevationMode } from '../model/site-plan';
+import type { PadElevationMode } from '../model/building';
 import type { Meters } from '../units';
 import type { Heightfield } from './heightfield';
 import { sampleHeight } from './heightfield';

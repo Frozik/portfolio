@@ -66,7 +66,7 @@ export class SiteEditInteraction implements EditorInteraction {
         // with it: the exact width is one typed number away, with no trip to
         // the mouse in between (R20).
         context.store.requestPropertiesFocus();
-        context.store.finishPlacement();
+        context.store.tooling.finishPlacement();
       },
       snapPoints: excludedShapeId =>
         shapesExcept(context.store.composition.allShapes, excludedShapeId).flatMap(
@@ -100,7 +100,7 @@ export class SiteEditInteraction implements EditorInteraction {
 
   onPointerMove(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     if (!isNil(this.markDrag)) {
-      this.context.store.setDraftMark(this.dragMarkTo(this.markDrag, planPoint, modifiers));
+      this.context.store.tooling.setDraftMark(this.dragMarkTo(this.markDrag, planPoint, modifiers));
 
       return true;
     }
@@ -116,7 +116,7 @@ export class SiteEditInteraction implements EditorInteraction {
       const movedMark = this.dragMarkTo(markDrag, planPoint, modifiers);
 
       this.markDrag = undefined;
-      store.setDraftMark(undefined);
+      store.tooling.setDraftMark(undefined);
 
       // A click that only selected the mark leaves it exactly where it was;
       // writing the same position back would rebuild the terrain for nothing.
@@ -124,7 +124,7 @@ export class SiteEditInteraction implements EditorInteraction {
         this.context.hasPointerMoved() &&
         !isEqual(movedMark.position, markDrag.startMark.position)
       ) {
-        store.siteObjects.moveElevationMark(movedMark.id, movedMark.position);
+        store.marks.moveElevationMark(movedMark.id, movedMark.position);
       }
 
       return true;
@@ -136,7 +136,7 @@ export class SiteEditInteraction implements EditorInteraction {
   onPointerCancel(): void {
     this.markDrag = undefined;
     this.shapes.cancel();
-    this.context.store.setDraftMark(undefined);
+    this.context.store.tooling.setDraftMark(undefined);
   }
 
   /** Emptiness — nothing pickable under the double click — closes the editor. */
@@ -166,13 +166,13 @@ export class SiteEditInteraction implements EditorInteraction {
     return (
       this.shapes.hasActive() ||
       !isNil(this.markDrag) ||
-      !isNil(this.context.store.siteObjects.elevationInputMarkId)
+      !isNil(this.context.store.marks.elevationInputMarkId)
     );
   }
 
   cancelTransients(): void {
     this.onPointerCancel();
-    this.context.store.siteObjects.closeElevationInput();
+    this.context.store.marks.closeElevationInput();
   }
 
   /**
@@ -251,7 +251,7 @@ export class SiteEditInteraction implements EditorInteraction {
 
     const { store } = this.context;
 
-    store.siteObjects.addElevationMark(snapPointToGrid(store, planPoint, modifiers));
+    store.marks.addElevationMark(snapPointToGrid(store, planPoint, modifiers));
   }
 
   /** Takes hold of the mark under the pointer, if any, and selects it. */
@@ -264,12 +264,12 @@ export class SiteEditInteraction implements EditorInteraction {
     }
 
     store.setSelection({ kind: 'mark', markId: mark.id });
-    store.siteObjects.closeElevationInput();
+    store.marks.closeElevationInput();
     // Recorded before the drag takes hold: everything until the pointer comes
     // up is one step, and an announcement no move follows simply expires.
     store.pushHistory();
     this.markDrag = { startMark: mark, grabOffset: offsetBetween(planPoint, mark.position) };
-    store.setDraftMark(mark);
+    store.tooling.setDraftMark(mark);
 
     return true;
   }

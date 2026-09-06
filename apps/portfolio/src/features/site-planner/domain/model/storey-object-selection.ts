@@ -3,6 +3,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
 import { moveShape } from '../geometry/transform-shape';
+import type { BuildingId } from './building';
+import type { Building } from './building';
 import { removeDevice } from './device-edits';
 import { createDuctId } from './ducts';
 import type { DeviceId } from './electrical';
@@ -11,7 +13,6 @@ import { createFireplaceId } from './fireplaces';
 import { createFurnitureId } from './furniture';
 import type { Selection } from './selection';
 import { createShapeId } from './shapes';
-import type { Building, BuildingId } from './site-plan';
 import { createStairId } from './stairs';
 import { addStoreyObject, findStoreyObject, removeStoreyObject } from './storey-edits';
 import type { StoreyObject, StoreyObjectKey, StoreyObjectKind } from './storey-objects';

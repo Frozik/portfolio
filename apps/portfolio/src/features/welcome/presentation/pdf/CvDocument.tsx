@@ -6,7 +6,7 @@ import { findEarliestStart, getYearsOfExperience } from '../../domain/career';
 import { CONTACT_LINKS } from '../contentData';
 import { formatDateMonthYear, measureDuration } from '../experience-format';
 import { welcomeT } from '../translations';
-import type { IExperienceTranslation } from '../translations/en';
+import type { IExperienceTranslation } from '../translations/types';
 import { renderInlineNode, renderRichBlocks } from './nodeToPdf';
 import { ensurePdfFontsRegistered } from './pdfFonts';
 import { pdfStyles } from './pdfStyles';

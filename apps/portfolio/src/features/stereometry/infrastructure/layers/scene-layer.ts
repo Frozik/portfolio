@@ -3,19 +3,8 @@ import type { FpsController } from '@frozik/utils/webgpu/fpsController';
 import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
-import { mat4 } from 'wgpu-matrix';
 
-import type {
-  SolutionFaceRenderData,
-  StyledMarker,
-  StyledSegment,
-} from '../../application/render/styled-scene';
 import { resolveBackgroundColor, styleScene } from '../../application/render/styled-scene';
-import {
-  computeMvpMatrix,
-  computeProjectionMatrix,
-  viewportAspect,
-} from '../../domain/camera-projection';
 import {
   DEPTH_FADE_MIN,
   DEPTH_FADE_RATE,
@@ -26,16 +15,15 @@ import { createWireframeFromTopology } from '../../domain/geometry';
 import type { SceneRepresentation } from '../../domain/render-types';
 import type { FigureTopology, Vec3Array } from '../../domain/topology-types';
 import type { CameraProjection } from '../../domain/types';
-import type { ScreenViewport } from '../../domain/unproject';
 import { unprojectToReferencePlane } from '../../domain/unproject';
 import type { OrbitalCameraController } from '../camera-controller';
-import type { DragPreviewState } from '../drag-connector';
+import type { DragPreviewState } from '../drag-connector-types';
 import type { PreviewLine } from '../render/drag-preview';
-import { computeDragPreviewLine } from '../render/drag-preview';
 import { InstanceBuffer } from '../render/instance-buffer';
 import { PreviewBuffers } from '../render/preview-buffers';
 import type { SceneBindGroups } from '../render/scene-bind-groups';
 import { createSceneBindGroups, isSameViews } from '../render/scene-bind-groups';
+import { SceneFrame } from '../render/scene-frame';
 import {
   MARKER_INSTANCE_STRIDE,
   packStyledMarkers,
@@ -83,16 +71,8 @@ export class SceneLayer implements RenderLayer {
   private markerCount = 0;
   private previewBuffers!: PreviewBuffers;
 
-  /** Set by scene/preview/camera/viewport changes; consumed by the render loop to skip idle frames. */
-  private dirty = true;
-  private readonly projectionScratch = mat4.create() as Float32Array;
-  private readonly mvpScratch = mat4.create() as Float32Array;
-  private readonly lastMvpMatrix = new Float32Array(16);
-  private lastViewport: ScreenViewport = { canvasWidth: 0, canvasHeight: 0, devicePixelRatio: 1 };
-
-  private previewLine: PreviewLine | undefined;
-  private hasStartMarker = false;
-  private hasSnapTarget = false;
+  /** Set dirty by scene/preview/camera/viewport changes; consumed by the render loop to skip idle frames. */
+  private readonly frame = new SceneFrame();
 
   private readonly backgroundClearColor = resolveBackgroundColor();
 
@@ -137,38 +117,12 @@ export class SceneLayer implements RenderLayer {
       this.fpsController.raise(FPS_ANIMATION);
     }
 
-    const viewMatrix = this.camera.getViewMatrix();
-    const cameraDistance = this.camera.getDistance();
-    const mvpMatrix = computeMvpMatrix(
-      computeProjectionMatrix(
-        this.projection,
-        viewportAspect(state.canvasWidth, state.canvasHeight),
-        cameraDistance,
-        this.projectionScratch
-      ),
-      viewMatrix,
-      this.mvpScratch
-    );
-
-    const viewportChanged =
-      state.canvasWidth !== this.lastViewport.canvasWidth ||
-      state.canvasHeight !== this.lastViewport.canvasHeight ||
-      state.devicePixelRatio !== this.lastViewport.devicePixelRatio;
-
-    if (isAnimating || viewportChanged || !matricesEqual(this.lastMvpMatrix, mvpMatrix)) {
-      this.dirty = true;
-    }
-    if (!this.dirty) {
+    const frame = this.frame.advance(state, this.camera, this.projection, isAnimating);
+    if (isNil(frame)) {
       return;
     }
 
-    this.lastMvpMatrix.set(mvpMatrix);
-    this.lastViewport = {
-      canvasWidth: state.canvasWidth,
-      canvasHeight: state.canvasHeight,
-      devicePixelRatio: state.devicePixelRatio,
-    };
-
+    const { mvpMatrix, viewMatrix, cameraDistance } = frame;
     this.uniforms.write({
       mvp: mvpMatrix,
       viewport: [state.canvasWidth, state.canvasHeight],
@@ -184,9 +138,7 @@ export class SceneLayer implements RenderLayer {
 
   /** Whether anything changed since the last consumed frame; resets the flag (render-on-demand). */
   consumeDirty(): boolean {
-    const wasDirty = this.dirty;
-    this.dirty = false;
-    return wasDirty;
+    return this.frame.consumeDirty();
   }
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
@@ -344,13 +296,13 @@ export class SceneLayer implements RenderLayer {
       this.markerCount
     );
 
-    if (!isNil(this.previewLine)) {
+    if (!isNil(this.previewBuffers.previewLine)) {
       this.drawLines(pass, this.pipelines.previewLine, this.previewBuffers.line, 1);
     }
-    if (this.hasStartMarker) {
+    if (this.previewBuffers.hasStartMarker) {
       this.drawMarkers(pass, this.pipelines.previewMarker, this.previewBuffers.startMarker, 1);
     }
-    if (this.hasSnapTarget) {
+    if (this.previewBuffers.hasSnapTarget) {
       this.drawMarkers(pass, this.pipelines.previewMarker, this.previewBuffers.snapMarker, 1);
     }
     pass.end();
@@ -387,64 +339,39 @@ export class SceneLayer implements RenderLayer {
   }
 
   getPreviewLine(): PreviewLine | undefined {
-    return this.previewLine;
+    return this.previewBuffers.previewLine;
   }
 
   /** Resolves the drag preview against the last drawn camera and uploads its line and markers. */
   setDragPreview(preview: DragPreviewState | undefined): void {
-    this.dirty = true;
-
-    if (isNil(preview)) {
-      this.previewLine = undefined;
-      this.hasStartMarker = false;
-      this.hasSnapTarget = false;
-      return;
-    }
-
-    const previewLine = computeDragPreviewLine(preview, (screenX, screenY, reference) =>
-      unprojectToReferencePlane(this.lastMvpMatrix, this.lastViewport, screenX, screenY, reference)
+    this.frame.markDirty();
+    this.previewBuffers.apply(preview, (screenX, screenY, reference) =>
+      unprojectToReferencePlane(
+        this.frame.mvpMatrix,
+        this.frame.viewport,
+        screenX,
+        screenY,
+        reference
+      )
     );
-    this.previewLine = previewLine;
-    this.previewBuffers.writeLine(previewLine);
-
-    this.hasStartMarker = preview.kind === 'vertex';
-    if (preview.kind === 'vertex') {
-      this.previewBuffers.writeStartMarker(preview.startPosition);
-    }
-
-    this.hasSnapTarget = !isNil(preview.snapTargetPosition);
-    if (!isNil(preview.snapTargetPosition)) {
-      this.previewBuffers.writeSnapMarker(preview.snapTargetPosition);
-    }
   }
 
   /** Styles the scene and uploads segments, markers and the solution face. */
   applySceneState(representation: SceneRepresentation): void {
-    const scene = styleScene(representation);
-    this.dirty = true;
-    this.applyMarkers(scene.markers);
-    this.applySegments(scene.segments);
-    this.applySolutionFace(scene.solutionFace);
-  }
+    const { markers, segments, solutionFace } = styleScene(representation);
+    this.frame.markDirty();
 
-  private applySolutionFace(solutionFace: SolutionFaceRenderData | undefined): void {
-    this.solutionFaceVertexCount = solutionFace?.vertexCount ?? 0;
-    if (!isNil(solutionFace) && solutionFace.vertexCount > 0) {
-      this.solutionFaceBuffer.write(solutionFace.vertices);
-    }
-  }
-
-  private applyMarkers(markers: readonly StyledMarker[]): void {
     this.markerCount = markers.length;
     if (markers.length > 0) {
       this.markerBuffer.write(packStyledMarkers(markers));
     }
-  }
-
-  private applySegments(segments: readonly StyledSegment[]): void {
     this.styledLineCount = segments.length;
     if (segments.length > 0) {
       this.styledLineBuffer.write(packStyledSegments(segments));
+    }
+    this.solutionFaceVertexCount = solutionFace?.vertexCount ?? 0;
+    if (!isNil(solutionFace) && solutionFace.vertexCount > 0) {
+      this.solutionFaceBuffer.write(solutionFace.vertices);
     }
   }
 
@@ -457,13 +384,4 @@ export class SceneLayer implements RenderLayer {
     this.previewBuffers.dispose();
     this.targets.dispose();
   }
-}
-
-function matricesEqual(matrixA: Float32Array, matrixB: Float32Array): boolean {
-  for (let index = 0; index < matrixA.length; index++) {
-    if (matrixA[index] !== matrixB[index]) {
-      return false;
-    }
-  }
-  return true;
 }

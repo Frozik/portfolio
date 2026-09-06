@@ -5,7 +5,7 @@ import {
   createTree,
   TREE_SPECIES,
   TREE_SPECIES_DEFAULT_SIZES,
-} from './site-plan';
+} from './plot-objects';
 
 describe('TREE_SPECIES_DEFAULT_SIZES', () => {
   it('gives every species a positive size of its own', () => {

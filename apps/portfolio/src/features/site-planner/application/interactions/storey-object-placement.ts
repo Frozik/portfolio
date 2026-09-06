@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
 import { projectOntoPolyline, wallCenterline } from '../../domain/geometry/wall-geometry';
-import type { BuildingId } from '../../domain/model/site-plan';
+import type { BuildingId } from '../../domain/model/building';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import type { InteractionContext } from './editor-interaction';
 import { snapPointToGrid } from './grid-snapping';
@@ -22,7 +22,7 @@ export function placeOpeningAt(
 
   const { offsetMeters } = projectOntoPolyline(wallCenterline(wall), planPoint);
 
-  context.store.walls.addOpeningAt(buildingId, wall.id, offsetMeters);
+  context.store.openings.addOpeningAt(buildingId, wall.id, offsetMeters);
 
   return true;
 }
@@ -35,10 +35,10 @@ export function placeDeviceAt(
   modifiers: PlanModifiers
 ): void {
   const { store } = context;
-  const kind = store.storeyObjects.armedDeviceKind;
+  const kind = store.electrics.armedDeviceKind;
 
   if (kind === 'light') {
-    store.storeyObjects.addCeilingLightAt(buildingId, snapPointToGrid(store, planPoint, modifiers));
+    store.electrics.addCeilingLightAt(buildingId, snapPointToGrid(store, planPoint, modifiers));
 
     return;
   }
@@ -51,7 +51,7 @@ export function placeDeviceAt(
 
   const { offsetMeters } = projectOntoPolyline(wallCenterline(wall), planPoint);
 
-  store.storeyObjects.addWallDeviceAt(buildingId, kind, wall.id, offsetMeters);
+  store.electrics.addWallDeviceAt(buildingId, kind, wall.id, offsetMeters);
 }
 
 /**
@@ -67,19 +67,19 @@ export function connectDeviceAt(
   const device = pickDevice(context, buildingId, planPoint);
 
   if (isNil(device)) {
-    store.storeyObjects.setPendingConnectDeviceId(undefined);
+    store.electrics.setPendingConnectDeviceId(undefined);
 
     return;
   }
 
-  const pending = store.storeyObjects.pendingConnectDeviceId;
+  const pending = store.electrics.pendingConnectDeviceId;
 
   if (isNil(pending)) {
-    store.storeyObjects.setPendingConnectDeviceId(device.id);
+    store.electrics.setPendingConnectDeviceId(device.id);
 
     return;
   }
 
-  store.storeyObjects.connectDevices(buildingId, pending, device.id);
-  store.storeyObjects.setPendingConnectDeviceId(undefined);
+  store.electrics.connectDevices(buildingId, pending, device.id);
+  store.electrics.setPendingConnectDeviceId(undefined);
 }

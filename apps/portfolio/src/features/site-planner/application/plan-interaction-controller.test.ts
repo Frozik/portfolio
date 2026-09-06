@@ -4,17 +4,18 @@ import { isNil } from 'lodash-es';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CAR_LENGTH_METERS } from '../domain/constants';
 import { anchorPlanPosition } from '../domain/geometry/shape-anchor';
+import { openingsOf, storeysOf, wallsOf } from '../domain/model/building';
 import { OBJECT_EDITOR_SPECS } from '../domain/model/editor-mode';
 import type { DeviceKind } from '../domain/model/electrical';
 import type { CsgOperand, Shape } from '../domain/model/shapes';
 import { createCircle, createRectangle, flattenShapes, isShapeGroup } from '../domain/model/shapes';
-import { openingsOf, storeysOf, wallsOf } from '../domain/model/site-plan';
 import { devicesOf, furnitureOf, groupsOf, switchLinksOf } from '../domain/model/storeys';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
 import type { PlanModifiers } from '../domain/view/plan-input';
 import { NO_MODIFIERS } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
-import { PlanInteractionController, TOOL_HOTKEYS } from './plan-interaction-controller';
+import { TOOL_HOTKEYS } from './interactions/plan-keyboard-commands';
+import { PlanInteractionController } from './plan-interaction-controller';
 import { ROTATION_HANDLE_GAP_PX } from './render/plan-draw/draw-selection';
 import { SitePlannerStore } from './SitePlannerStore';
 
@@ -386,7 +387,7 @@ describe('PlanInteractionController', () => {
       drag({ x: 5, y: 5 }, { x: 5, y: 5 });
 
       expect(boundaryShapes()).toHaveLength(1);
-      expect(store.isPropertiesFocusPending).toBe(false);
+      expect(store.tooling.isPropertiesFocusPending).toBe(false);
     });
 
     it('hands the properties panel the keyboard once a shape is drawn', () => {
@@ -394,11 +395,11 @@ describe('PlanInteractionController', () => {
 
       drag({ x: 1, y: 2 }, { x: 6, y: 8 });
 
-      expect(store.isPropertiesFocusPending).toBe(true);
+      expect(store.tooling.isPropertiesFocusPending).toBe(true);
 
-      store.consumePropertiesFocus();
+      store.tooling.consumePropertiesFocus();
 
-      expect(store.isPropertiesFocusPending).toBe(false);
+      expect(store.tooling.isPropertiesFocusPending).toBe(false);
     });
   });
 
@@ -944,7 +945,7 @@ describe('PlanInteractionController', () => {
       expect(mark.position).toEqual({ x: 10, y: 10 });
       expect(mark.elevation).toBe(0);
       expect(store.selection).toEqual({ kind: 'mark', markId: mark.id });
-      expect(store.siteObjects.elevationInputMarkId).toBe(mark.id);
+      expect(store.marks.elevationInputMarkId).toBe(mark.id);
     });
 
     it('undoes a placed mark', () => {
@@ -1393,7 +1394,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 6, y: 8 }, NO_MODIFIERS);
       controller.onPointerDown({ x: 14, y: 8 }, NO_MODIFIERS);
 
-      expect(store.walls.draftWallPoints).toHaveLength(2);
+      expect(store.wallDraft.draftWallPoints).toHaveLength(2);
       expect(controller.onKeyDown('Enter', NO_MODIFIERS)).toBe(true);
 
       const walls = wallsOf(store.buildings[0]);
@@ -1414,7 +1415,7 @@ describe('PlanInteractionController', () => {
       controller.onDoubleClick({ x: 14, y: 8 }, NO_MODIFIERS);
 
       expect(wallsOf(store.buildings[0])).toHaveLength(1);
-      expect(store.walls.draftWallPoints).toHaveLength(0);
+      expect(store.wallDraft.draftWallPoints).toHaveLength(0);
     });
 
     it('abandons the draft polyline on Escape', () => {
@@ -1423,7 +1424,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 6, y: 8 }, NO_MODIFIERS);
 
       expect(controller.onKeyDown('Escape', NO_MODIFIERS)).toBe(true);
-      expect(store.walls.draftWallPoints).toHaveLength(0);
+      expect(store.wallDraft.draftWallPoints).toHaveLength(0);
       expect(wallsOf(store.buildings[0])).toHaveLength(0);
     });
 
@@ -1588,7 +1589,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 6, y: 7 }, NO_MODIFIERS);
       controller.onKeyDown('Enter', NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.rooms).toHaveLength(1);
+      expect(store.storeys.editedStoreyScene?.rooms).toHaveLength(1);
     });
 
     it('still cuts rooms with edge-to-edge partitions when nothing encloses', () => {
@@ -1600,17 +1601,17 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 10, y: 14 }, NO_MODIFIERS);
       controller.onKeyDown('Enter', NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.rooms).toHaveLength(2);
+      expect(store.storeys.editedStoreyScene?.rooms).toHaveLength(2);
     });
 
     it('lights the room the КОМНАТЫ pointer rests on through the session', () => {
       openBuildingEditor();
 
-      store.building.setHoveredRoomIndex(1);
-      expect(store.building.hoveredRoomIndex).toBe(1);
+      store.storeys.setHoveredRoomIndex(1);
+      expect(store.storeys.hoveredRoomIndex).toBe(1);
 
       store.exitEditMode();
-      expect(store.building.hoveredRoomIndex).toBeUndefined();
+      expect(store.storeys.hoveredRoomIndex).toBeUndefined();
     });
 
     it('lands a wall click past the slab on the foundation edge', () => {
@@ -1642,8 +1643,8 @@ describe('PlanInteractionController', () => {
 
       const buildingId = store.buildings[0].id;
 
-      store.storeyObjects.placeFurnitureAt(buildingId, { x: 9, y: 10 });
-      store.storeyObjects.addCeilingLightAt(buildingId, { x: 11, y: 11 });
+      store.furniture.placeFurnitureAt(buildingId, { x: 9, y: 10 });
+      store.electrics.addCeilingLightAt(buildingId, { x: 11, y: 11 });
       store.exitEditMode();
       store.setSelection(undefined);
 
@@ -1730,7 +1731,7 @@ describe('PlanInteractionController', () => {
     it('places окно в пол once the panoramic preset is armed', () => {
       openWithWall();
       controller.onKeyDown('o', NO_MODIFIERS);
-      store.walls.setArmedOpeningPreset('panoramic');
+      store.openings.setArmedOpeningPreset('panoramic');
       controller.onPointerDown({ x: 12, y: 8 }, NO_MODIFIERS);
 
       const [opening] = openingsOf(store.buildings[0]);
@@ -1809,7 +1810,7 @@ describe('PlanInteractionController', () => {
       expect(controller.onKeyDown('f', NO_MODIFIERS)).toBe(true);
       expect(store.activeTool).toBe('building:furniture');
 
-      store.storeyObjects.setArmedFurnitureId('sofa');
+      store.furniture.setArmedFurnitureId('sofa');
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
 
       const [item] = activeFurniture();
@@ -1822,7 +1823,7 @@ describe('PlanInteractionController', () => {
     it('stays in hand so a room is furnished piece after piece (R32)', () => {
       openWithWall();
       controller.onKeyDown('f', NO_MODIFIERS);
-      store.storeyObjects.setArmedFurnitureId('sofa');
+      store.furniture.setArmedFurnitureId('sofa');
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
       controller.onPointerUp({ x: 10, y: 11 }, NO_MODIFIERS);
 
@@ -1836,7 +1837,7 @@ describe('PlanInteractionController', () => {
     it('snaps a dragged piece back-to-wall by the magnet', () => {
       openWithWall();
       controller.onKeyDown('f', NO_MODIFIERS);
-      store.storeyObjects.setArmedFurnitureId('sofa');
+      store.furniture.setArmedFurnitureId('sofa');
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
       controller.onKeyDown('v', NO_MODIFIERS);
 
@@ -1852,7 +1853,7 @@ describe('PlanInteractionController', () => {
     it('keeps the grid when Alt suspends the magnet', () => {
       openWithWall();
       controller.onKeyDown('f', NO_MODIFIERS);
-      store.storeyObjects.setArmedFurnitureId('sofa');
+      store.furniture.setArmedFurnitureId('sofa');
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
       controller.onKeyDown('v', NO_MODIFIERS);
 
@@ -1888,7 +1889,7 @@ describe('PlanInteractionController', () => {
 
     it('lands the piece on the ACTIVE storey', () => {
       openWithWall();
-      store.building.addStoreyToEditedBuilding({ copyWalls: false });
+      store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
       controller.onKeyDown('f', NO_MODIFIERS);
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
 
@@ -1912,8 +1913,8 @@ describe('PlanInteractionController', () => {
       );
       store.exitEditMode();
       store.enterEditMode({ kind: 'building', buildingId: building.id });
-      store.storeyObjects.setArmedFurnitureId('toilet');
-      store.storeyObjects.placeFurnitureAt(building.id, { x: 12, y: 9 });
+      store.furniture.setArmedFurnitureId('toilet');
+      store.furniture.placeFurnitureAt(building.id, { x: 12, y: 9 });
 
       const [piece] = store.scene.sceneFurniture;
 
@@ -1969,7 +1970,7 @@ describe('PlanInteractionController', () => {
     it('puts a light on the ceiling at the clicked point', () => {
       openWithWall();
       controller.onKeyDown('k', NO_MODIFIERS);
-      store.storeyObjects.setArmedDeviceKind('light');
+      store.electrics.setArmedDeviceKind('light');
       controller.onPointerDown({ x: 10, y: 11 }, NO_MODIFIERS);
 
       const [device] = groundDevices();
@@ -1998,7 +1999,7 @@ describe('PlanInteractionController', () => {
       controller.onKeyDown('k', NO_MODIFIERS);
 
       const placeDevice = (kind: DeviceKind, at: Vector2): void => {
-        store.storeyObjects.setArmedDeviceKind(kind);
+        store.electrics.setArmedDeviceKind(kind);
         controller.onPointerDown(at, NO_MODIFIERS);
       };
 
@@ -2035,9 +2036,9 @@ describe('PlanInteractionController', () => {
     it('takes the wiring with a removed panel', () => {
       openWithWall();
       controller.onKeyDown('k', NO_MODIFIERS);
-      store.storeyObjects.setArmedDeviceKind('panel');
+      store.electrics.setArmedDeviceKind('panel');
       controller.onPointerDown({ x: 7, y: 8 }, NO_MODIFIERS);
-      store.storeyObjects.setArmedDeviceKind('outlet');
+      store.electrics.setArmedDeviceKind('outlet');
       controller.onPointerDown({ x: 12, y: 8 }, NO_MODIFIERS);
 
       const [panel] = groundDevices();
@@ -2046,7 +2047,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 7, y: 8 }, NO_MODIFIERS);
       controller.onPointerDown({ x: 12, y: 8 }, NO_MODIFIERS);
 
-      store.storeyObjects.removeDevice(store.buildings[0].id, panel.id);
+      store.electrics.removeDevice(store.buildings[0].id, panel.id);
 
       const storey = storeysOf(store.buildings[0])[0];
 
@@ -2062,9 +2063,9 @@ describe('PlanInteractionController', () => {
       controller.onKeyDown('l', NO_MODIFIERS);
       controller.onPointerDown({ x: 10, y: 8 }, NO_MODIFIERS);
 
-      expect(store.storeyObjects.pendingConnectDeviceId).toBeDefined();
+      expect(store.electrics.pendingConnectDeviceId).toBeDefined();
       expect(controller.onKeyDown('Escape', NO_MODIFIERS)).toBe(true);
-      expect(store.storeyObjects.pendingConnectDeviceId).toBeUndefined();
+      expect(store.electrics.pendingConnectDeviceId).toBeUndefined();
     });
   });
 
@@ -2205,7 +2206,7 @@ describe('PlanInteractionController', () => {
         createRectangle({ center: { x: 10, y: 10 }, width: 8, length: 8, rotationDegrees: 0 }),
         'union'
       );
-      store.updateSettings({ frostDepthMeters: 2 });
+      store.document.updateSettings({ frostDepthMeters: 2 });
       store.utilities.addUtilityEntry(building.id, 'water');
 
       // СП 31: the water service line sits half a metre below the frost line.
@@ -2331,17 +2332,17 @@ describe('PlanInteractionController', () => {
     it('places a stair where the tool clicked', () => {
       openHouseWithStair();
 
-      expect(store.building.editedStoreyScene?.stairs).toHaveLength(1);
+      expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(1);
     });
 
     it('takes hold of a stair by its body and drags it', () => {
       openHouseWithStair();
 
-      const before = store.building.editedStoreyScene?.stairs[0].stair.position;
+      const before = store.storeys.editedStoreyScene?.stairs[0].stair.position;
 
       drag({ x: 10, y: 10 }, { x: 7, y: 7 });
 
-      const after = store.building.editedStoreyScene?.stairs[0].stair.position;
+      const after = store.storeys.editedStoreyScene?.stairs[0].stair.position;
 
       expect(store.selection?.kind).toBe('stair');
       expect(after).not.toEqual(before);
@@ -2366,13 +2367,13 @@ describe('PlanInteractionController', () => {
       openHouseWithStair();
 
       expect(store.activeTool).toBe('select');
-      expect(store.building.editedStoreyScene?.stairs).toHaveLength(1);
+      expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(1);
 
       // The very next click adjusts the stair rather than placing a second one.
       controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
       controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.stairs).toHaveLength(1);
+      expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(1);
       expect(store.selection?.kind).toBe('stair');
     });
 
@@ -2382,7 +2383,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);
       controller.onKeyDown('Delete', NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.stairs).toHaveLength(0);
+      expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(0);
     });
   });
 
@@ -2416,25 +2417,25 @@ describe('PlanInteractionController', () => {
 
       controller.onKeyDown('Delete', NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.supports).toHaveLength(0);
+      expect(store.storeys.editedStoreyScene?.supports).toHaveLength(0);
     });
 
     it('puts a dragged stair back where it was when the gesture is cancelled', () => {
       openHouse();
       placeWith('building:stair', { x: 10, y: 10 });
 
-      const before = store.building.editedStoreyScene?.stairs[0].stair.position;
+      const before = store.storeys.editedStoreyScene?.stairs[0].stair.position;
 
       controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
       controller.onPointerMove({ x: 6, y: 6 }, NO_MODIFIERS);
       controller.onPointerCancel();
 
-      expect(store.building.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
+      expect(store.storeys.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
 
       // And the gesture is over: moving the pointer again must not drag on.
       controller.onPointerMove({ x: 2, y: 2 }, NO_MODIFIERS);
 
-      expect(store.building.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
+      expect(store.storeys.editedStoreyScene?.stairs[0].stair.position).toEqual(before);
     });
 
     it('drops an editor-only selection when the building closes', () => {
@@ -2464,7 +2465,7 @@ describe('PlanInteractionController', () => {
         'union'
       );
       store.enterEditMode({ kind: 'building', buildingId: building.id });
-      store.building.addStoreyToEditedBuilding({ copyWalls: false });
+      store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     };
 
     const clickSlabAt = (at: Vector2): void => {
@@ -2489,7 +2490,7 @@ describe('PlanInteractionController', () => {
 
     it('draws the armed primitive out with a rubber band', () => {
       openUpperStorey();
-      store.setArmedShapeTool('ellipse');
+      store.tooling.setArmedShapeTool('ellipse');
       store.setActiveTool('building:slab');
       drag({ x: 6, y: 6 }, { x: 14, y: 12 });
 
@@ -2503,7 +2504,7 @@ describe('PlanInteractionController', () => {
 
     it('takes the storey outline from the slabs, whatever shape they are', () => {
       openUpperStorey();
-      store.setArmedShapeTool('circle');
+      store.tooling.setArmedShapeTool('circle');
       store.setActiveTool('building:slab');
       drag({ x: 10, y: 10 }, { x: 14, y: 10 });
 
@@ -2511,7 +2512,7 @@ describe('PlanInteractionController', () => {
 
       assert(slab.kind === 'circle', 'the circle tool draws a circle');
       expect(slab.radius).toBeCloseTo(4);
-      expect(store.building.editedStoreyScene?.footprint.length).toBe(1);
+      expect(store.storeys.editedStoreyScene?.footprint.length).toBe(1);
     });
 
     it('magnetises a dragged slab to the walls of the storey below', () => {
@@ -2524,10 +2525,10 @@ describe('PlanInteractionController', () => {
       );
       store.enterEditMode({ kind: 'building', buildingId: building.id });
       // A room downstairs whose corner stands at (5, 5).
-      store.walls.appendDraftWallPoint({ x: 5, y: 5 });
-      store.walls.appendDraftWallPoint({ x: 13, y: 5 });
-      store.walls.commitDraftWall();
-      store.building.addStoreyToEditedBuilding({ copyWalls: false });
+      store.wallDraft.appendDraftWallPoint({ x: 5, y: 5 });
+      store.wallDraft.appendDraftWallPoint({ x: 13, y: 5 });
+      store.wallDraft.commitDraftWall();
+      store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
       clickSlabAt({ x: 10, y: 10 });
 
       // The plate is 6 × 4 about (10, 10), so its lower-left corner sits at

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { CAR_LENGTH_METERS, CAR_WIDTH_METERS } from '../constants';
-import type { CarInstance, SitePath, TreeInstance } from '../model/site-plan';
-import { createCar, createSitePath, createTree } from '../model/site-plan';
+import type { CarInstance, SitePath, TreeInstance } from '../model/plot-objects';
+import { createCar, createSitePath, createTree } from '../model/plot-objects';
 import { distanceToPolyline, hitTestCar, hitTestPath, hitTestTree } from './hit-test-objects';
 
 const NO_TOLERANCE = 0;

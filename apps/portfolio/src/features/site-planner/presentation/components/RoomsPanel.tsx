@@ -6,12 +6,12 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import type { BuildingRoom } from '../../application/room-scenes';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { BuildingRoom } from '../../application/storey-scenes';
+import type { BuildingId } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { RoomTypeId } from '../../domain/model/rooms';
 import { ROOM_TYPES } from '../../domain/model/rooms';
-import type { BuildingId } from '../../domain/model/site-plan';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';
@@ -71,8 +71,8 @@ const RoomRow = observer(
     const handleSelect = useFunction((roomTypeId: RoomTypeId | undefined) => {
       store.building.setRoomType(buildingId, room, roomTypeId);
     });
-    const handlePointerEnter = useFunction(() => store.building.setHoveredRoomIndex(ordinal - 1));
-    const handlePointerLeave = useFunction(() => store.building.setHoveredRoomIndex(undefined));
+    const handlePointerEnter = useFunction(() => store.storeys.setHoveredRoomIndex(ordinal - 1));
+    const handlePointerLeave = useFunction(() => store.storeys.setHoveredRoomIndex(undefined));
 
     return (
       <div
@@ -138,7 +138,7 @@ const RoomRow = observer(
  */
 export const RoomsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
 
   if (isNil(buildingId) || isNil(scene)) {
     return null;

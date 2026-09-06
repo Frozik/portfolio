@@ -5,15 +5,14 @@ import { removeById, replaceById } from './edit-collections';
 import type {
   CarId,
   CarInstance,
-  ElevationMark,
-  MarkId,
   PathId,
   PathPoint,
   PathSurface,
   SitePath,
   TreeId,
   TreeInstance,
-} from './site-plan';
+} from './plot-objects';
+import type { ElevationMark, MarkId } from './site-plan';
 
 export function addMark(
   marks: readonly ElevationMark[],

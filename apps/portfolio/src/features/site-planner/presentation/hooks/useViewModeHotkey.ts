@@ -28,7 +28,7 @@ export function useViewModeHotkey(store: SitePlannerStore): void {
       // between floors — and, like Tab, from either view.
       if (event.key === STOREY_UP_HOTKEY || event.key === STOREY_DOWN_HOTKEY) {
         event.preventDefault();
-        store.building.stepActiveStorey(event.key === STOREY_UP_HOTKEY ? 1 : -1);
+        store.storeys.stepActiveStorey(event.key === STOREY_UP_HOTKEY ? 1 : -1);
 
         return;
       }
@@ -44,7 +44,7 @@ export function useViewModeHotkey(store: SitePlannerStore): void {
       }
 
       event.preventDefault();
-      store.toggleViewMode();
+      store.tooling.toggleViewMode();
     };
 
     window.addEventListener('keydown', handleKeyDown);

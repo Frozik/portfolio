@@ -4,10 +4,10 @@ import { isNil } from 'lodash-es';
 import { computeMultiPolygonBounds } from '../geometry/bounding-box';
 import { multiPolygonArea } from '../geometry/building-outline';
 import { evaluateComposition } from '../geometry/evaluate-composition';
+import { entriesOf, storeysOf } from './building';
+import type { Building } from './building';
 import { translateBuilding } from './building-edits';
 import type { UtilitySystem } from './foundation';
-import type { Building } from './site-plan';
-import { entriesOf, storeysOf } from './site-plan';
 
 /**
  * One stock house the catalogue offers: a complete {@link Building} — walls,

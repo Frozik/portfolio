@@ -4,7 +4,7 @@ import type { AllowedHitTypes, SceneHit } from '../domain/hit-testing';
 import { hitTestScene } from '../domain/hit-testing';
 import type { SceneTopology, SelectionState, Vec3Array } from '../domain/topology-types';
 import { SELECTION_NONE } from '../domain/topology-types';
-import type { InitialDragHit } from '../infrastructure/drag-connector';
+import type { InitialDragHit } from '../infrastructure/drag-connector-types';
 
 const SNAP_ALLOWED_TYPES: AllowedHitTypes = ['vertex'];
 

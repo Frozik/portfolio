@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import { computeMultiPolygonBounds } from '../../../domain/geometry/bounding-box';
 import { computeMultiPolygonCentroid } from '../../../domain/geometry/polygon-centroid';
 import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
+import type { BuildingId } from '../../../domain/model/building';
 import type { DuctId } from '../../../domain/model/ducts';
 import type { DeviceId } from '../../../domain/model/electrical';
 import type { FireplaceId } from '../../../domain/model/fireplaces';
@@ -11,7 +12,6 @@ import type { FurnitureId, FurnitureInstance } from '../../../domain/model/furni
 import type { OpeningId } from '../../../domain/model/openings';
 import type { RoomTypeId } from '../../../domain/model/rooms';
 import type { ShapeId } from '../../../domain/model/shapes';
-import type { BuildingId } from '../../../domain/model/site-plan';
 import type { StairId } from '../../../domain/model/stairs';
 import type { SupportId } from '../../../domain/model/supports';
 import type { WallId } from '../../../domain/model/walls';
@@ -23,23 +23,21 @@ import { drawElectrical } from './draw-electrical';
 import { drawFurniture } from './draw-furniture';
 import type { PlanDuct, PlanFireplace } from './draw-heating';
 import { drawHeating } from './draw-heating';
+import type { PlanOpening } from './draw-openings';
+import { drawOpenings } from './draw-openings';
 import type { PlanPitchedRoof } from './draw-pitched-roof';
 import { drawPitchedRoof } from './draw-pitched-roof';
+import type { PlanRoofZone, PlanRoom } from './draw-rooms';
+import { drawRoofZones, drawRooms } from './draw-rooms';
 import type { ShapeHandle } from './draw-selection';
 import { drawHandles, ROTATION_HANDLE_GAP_PX } from './draw-selection';
 import type { PlanSlab } from './draw-slabs';
 import { drawSlabs } from './draw-slabs';
 import type { PlanStair, PlanSupport } from './draw-stairs';
 import { drawStairs, drawSupports } from './draw-stairs';
-import type { PlanOpening, PlanRoofZone, PlanRoom, PlanWallBody } from './draw-walls';
-import {
-  drawOpenings,
-  drawOverhangFloor,
-  drawRoofZones,
-  drawRooms,
-  drawUpperFootprints,
-  drawWallBodies,
-} from './draw-walls';
+import { drawOverhangFloor, drawUpperFootprints } from './draw-storey-outlines';
+import type { PlanWallBody } from './draw-wall-bodies';
+import { drawWallBodies } from './draw-wall-bodies';
 import {
   buildMultiPolygonPath,
   drawLabel,

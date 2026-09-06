@@ -9,7 +9,6 @@ import {
   setAnchorPlanPosition,
 } from '../../domain/geometry/shape-anchor';
 import { getShapeKeyPoints } from '../../domain/geometry/shape-key-points';
-import type { RectangleHandleFactors } from '../../domain/geometry/transform-shape';
 import {
   fitBoxToDiagonal,
   MIN_SHAPE_EXTENT_METERS,
@@ -18,27 +17,21 @@ import {
   rotationDegreesTowards,
   setCircleRadius,
 } from '../../domain/geometry/transform-shape';
-import type { BoxedShape, CircleShape, Shape, ShapeId } from '../../domain/model/shapes';
-import { createEmptyShape, isBoxedShape } from '../../domain/model/shapes';
-import type { Meters } from '../../domain/units';
+import type { Shape, ShapeId } from '../../domain/model/shapes';
+import { createEmptyShape } from '../../domain/model/shapes';
 import { normalizeTurnDegrees } from '../../domain/units';
 import type { KeyPointSnap } from '../../domain/view/object-snapping';
 import { findKeyPointSnap, KEY_POINT_SNAP_RADIUS_PX } from '../../domain/view/object-snapping';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
 import { rotationStepDegrees, snapLength } from '../../domain/view/snapping';
-import type { ShapeHandle } from '../render/plan-draw/draw-selection';
-import { computeShapeHandles, rectangleHandleFactors } from '../render/plan-draw/draw-selection';
+import { computeShapeHandles } from '../render/plan-draw/draw-selection';
 import type { InteractionContext } from './editor-interaction';
 import { offsetBetween, snapPointToGrid, snapRadiusToGrid } from './grid-snapping';
 import { findHandleAt } from './plan-picking';
+import type { DrawGesture, MoveGesture, ShapeGesture } from './shape-gesture-kinds';
+import { isLargeEnoughToKeep, toHandleGesture } from './shape-gesture-kinds';
 
-/**
- * A drawing gesture smaller than this puts nothing on the plan. It sits above
- * {@link MIN_SHAPE_EXTENT_METERS} on purpose: a stray click snaps down to that
- * floor, and only a deliberate drag clears this bar.
- */
-const MIN_DRAWN_EXTENT_METERS: Meters = 0.2;
 /** Grab radius of the anchor mark, generous around the drawn ring. */
 const ANCHOR_PICK_RADIUS_PX = 12;
 /** How near a shape's own special point pulls the dragged anchor in. */
@@ -69,39 +62,6 @@ export interface ShapeGestureSink<TContext> {
    */
   readonly isSnapAlwaysLive: boolean;
 }
-
-/**
- * What the pointer is doing between press and release. Each variant carries the
- * shape as it was when the gesture began, so every move recomputes from that
- * origin instead of accumulating rounding through the snapped intermediates.
- */
-type ShapeGesture<TContext> = { readonly context: TContext } & (
-  | { readonly kind: 'move'; readonly startShape: Shape; readonly grabOffset: Vector2 }
-  | {
-      readonly kind: 'resize';
-      readonly startShape: BoxedShape;
-      readonly factors: RectangleHandleFactors;
-    }
-  | {
-      readonly kind: 'rotate';
-      readonly startShape: BoxedShape;
-      /**
-       * The pointer's bearing around the anchor at the moment of the grab. The
-       * gesture applies the DELTA from it — an absolute reading would snap the
-       * shape to wherever the handle happens to lie the instant it is taken,
-       * a ~90° jump whenever the anchor is off the centre.
-       */
-      readonly grabRotationDegrees: number;
-    }
-  | { readonly kind: 'anchor'; readonly startShape: Shape }
-  | { readonly kind: 'resize-radius'; readonly startShape: CircleShape }
-  | { readonly kind: 'draw-box'; readonly startShape: BoxedShape; readonly anchor: Vector2 }
-  | { readonly kind: 'draw-circle'; readonly startShape: CircleShape; readonly anchor: Vector2 }
-);
-
-type MoveGesture<TContext> = Extract<ShapeGesture<TContext>, { readonly kind: 'move' }>;
-/** The two rubber-band gestures; both are steered from an anchor laid down first. */
-type DrawGesture<TContext> = Extract<ShapeGesture<TContext>, { readonly anchor: Vector2 }>;
 
 /**
  * Every gesture a rotated shape answers: drawn out with a rubber band, dragged
@@ -207,7 +167,7 @@ export class ShapeGestures<TContext> {
       return false;
     }
 
-    this.context.store.setDraftShape(this.apply(gesture, planPoint, modifiers));
+    this.context.store.tooling.setDraftShape(this.apply(gesture, planPoint, modifiers));
 
     return true;
   }
@@ -222,7 +182,7 @@ export class ShapeGestures<TContext> {
     const { store } = this.context;
 
     this.gesture = undefined;
-    store.setDraftShape(undefined);
+    store.tooling.setDraftShape(undefined);
 
     if (!this.context.hasPointerMoved()) {
       return true;
@@ -230,7 +190,7 @@ export class ShapeGestures<TContext> {
 
     const shape = this.apply(gesture, planPoint, modifiers);
 
-    store.setActiveKeyPointSnap(undefined);
+    store.tooling.setActiveKeyPointSnap(undefined);
 
     switch (gesture.kind) {
       case 'move':
@@ -259,8 +219,8 @@ export class ShapeGestures<TContext> {
 
   cancel(): void {
     this.gesture = undefined;
-    this.context.store.setDraftShape(undefined);
-    this.context.store.setActiveKeyPointSnap(undefined);
+    this.context.store.tooling.setDraftShape(undefined);
+    this.context.store.tooling.setActiveKeyPointSnap(undefined);
   }
 
   /**
@@ -271,7 +231,7 @@ export class ShapeGestures<TContext> {
   private start(gesture: ShapeGesture<TContext>): void {
     this.context.store.pushHistory();
     this.gesture = gesture;
-    this.context.store.setDraftShape(gesture.startShape);
+    this.context.store.tooling.setDraftShape(gesture.startShape);
   }
 
   private apply(
@@ -362,7 +322,7 @@ export class ShapeGestures<TContext> {
       modifiers
     );
 
-    store.setActiveKeyPointSnap(snap);
+    store.tooling.setActiveKeyPointSnap(snap);
 
     return isNil(snap)
       ? moveShape(gesture.startShape, snapPointToGrid(store, draggedCenter, modifiers))
@@ -381,7 +341,7 @@ export class ShapeGestures<TContext> {
   private resolveDrawAnchor(gesture: DrawGesture<TContext>, modifiers: PlanModifiers): Vector2 {
     const snap = this.resolveKeyPointSnap([gesture.anchor], gesture.startShape.id, modifiers);
 
-    this.context.store.setActiveKeyPointSnap(snap);
+    this.context.store.tooling.setActiveKeyPointSnap(snap);
 
     return isNil(snap) ? gesture.anchor : snap.targetPoint;
   }
@@ -398,7 +358,7 @@ export class ShapeGestures<TContext> {
   ): Vector2 {
     const snap = this.resolveKeyPointSnap([planPoint], ownShapeId, modifiers);
 
-    this.context.store.setActiveKeyPointSnap(snap);
+    this.context.store.tooling.setActiveKeyPointSnap(snap);
 
     return isNil(snap)
       ? snapPointToGrid(this.context.store, planPoint, modifiers)
@@ -424,56 +384,5 @@ export class ShapeGestures<TContext> {
       this.sink.snapPoints(ownShapeId),
       KEY_POINT_SNAP_RADIUS_PX / this.context.getViewport().pixelsPerMeter
     );
-  }
-}
-
-function toHandleGesture<TContext>(
-  handle: ShapeHandle,
-  shape: Shape,
-  context: TContext,
-  planPoint: Vector2
-): ShapeGesture<TContext> | undefined {
-  if (handle.kind === 'center') {
-    return {
-      kind: 'move',
-      context,
-      startShape: shape,
-      grabOffset: offsetBetween(planPoint, shape.center),
-    };
-  }
-
-  if (handle.kind === 'radius') {
-    return shape.kind === 'circle'
-      ? { kind: 'resize-radius', context, startShape: shape }
-      : undefined;
-  }
-
-  if (!isBoxedShape(shape)) {
-    return undefined;
-  }
-
-  if (handle.kind === 'rotate') {
-    return {
-      kind: 'rotate',
-      context,
-      startShape: shape,
-      grabRotationDegrees: rotationDegreesTowards(anchorPlanPosition(shape), planPoint),
-    };
-  }
-
-  const factors = rectangleHandleFactors(handle.kind);
-
-  return isNil(factors) ? undefined : { kind: 'resize', context, startShape: shape, factors };
-}
-
-function isLargeEnoughToKeep(shape: Shape): boolean {
-  switch (shape.kind) {
-    case 'rectangle':
-    case 'ellipse':
-      return shape.width >= MIN_DRAWN_EXTENT_METERS && shape.length >= MIN_DRAWN_EXTENT_METERS;
-    case 'circle':
-      return shape.radius >= MIN_DRAWN_EXTENT_METERS;
-    default:
-      return assertNever(shape);
   }
 }

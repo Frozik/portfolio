@@ -1,7 +1,7 @@
 import { COLLAPSE_GRAVITY_WU_PER_TICK_SQUARED, COLLAPSE_SETTLE_MARGIN_TICKS } from '../constants';
 import type { ImpactResolutionContext } from '../impact-resolution';
 import { detonate } from '../impact-resolution';
-import type { ProjectileFlightContext } from '../projectile-flight';
+import type { ProjectileFlightContext } from '../projectile-flight-context';
 import type { Projectile } from '../types';
 import { applyDamage, applyShieldAbsorption } from './damage';
 import { createRoundEnvironment } from './environment';

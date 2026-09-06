@@ -17,7 +17,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const SupportsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
   const labels = sitePlannerT.supports;
   const { meterUnit } = sitePlannerT.plan;
 
@@ -34,7 +34,11 @@ export const SupportsPanel = observer(({ store }: { readonly store: SitePlannerS
       key: post.id,
       label: `${index + 1}. ${labels.toolLabel}`,
       note: isNil(lengthMeters) ? undefined : formatMeters(lengthMeters, meterUnit, METER_DECIMALS),
-      isSelected: store.isSelected({ kind: 'support', buildingId, supportId: post.id }),
+      isSelected: store.selectionCommands.isSelected({
+        kind: 'support',
+        buildingId,
+        supportId: post.id,
+      }),
       onSelect: () => store.setSelection({ kind: 'support', buildingId, supportId: post.id }),
       actions: [
         {

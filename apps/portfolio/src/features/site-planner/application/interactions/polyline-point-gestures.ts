@@ -135,7 +135,7 @@ export class PolylinePointGestures<T> {
     }
 
     // Whichever handle was pressed, what follows the pointer now is a point.
-    store.setPathHandleHighlight({
+    store.tooling.setPathHandleHighlight({
       kind: 'vertex',
       index: this.drag.pointIndex,
       state: 'drag',
@@ -239,7 +239,7 @@ export function applyPolylineHandleHover(
   const { store, getViewport } = context;
 
   if (store.activeTool !== 'select' || isNil(positions)) {
-    store.setPathHandleHighlight(undefined);
+    store.tooling.setPathHandleHighlight(undefined);
 
     return;
   }
@@ -251,7 +251,7 @@ export function applyPolylineHandleHover(
     HANDLE_HIT_RADIUS_PX
   );
 
-  store.setPathHandleHighlight(
+  store.tooling.setPathHandleHighlight(
     isNil(handle) ? undefined : { kind: handle.kind, index: handle.index, state: 'hover' }
   );
 }

@@ -23,9 +23,11 @@ import type { ScorchedRoundRef } from '../scorched-round-ref';
 import { ShapeBatch } from '../shape-batch';
 import { SHAPE_KIND, ShapeInstanceList } from '../shape-instances';
 import type { ShapePipeline } from '../shape-pipeline';
-import type { ITankBlueprint, RgbColor } from '../tank-art/tank-blueprint';
-import { buildTankShapes, mixColor } from '../tank-art/tank-blueprint';
+import type { ITankBlueprint } from '../tank-art/tank-blueprint';
 import { createTankBlueprint } from '../tank-art/tank-generator';
+import type { RgbColor } from '../tank-art/tank-paint';
+import { mixColor } from '../tank-art/tank-paint';
+import { buildTankShapes } from '../tank-art/tank-shapes';
 
 const HALF = 0.5;
 

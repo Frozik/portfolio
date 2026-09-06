@@ -92,7 +92,7 @@ export class RouteEditInteraction implements EditorInteraction {
       this.gestures.drop();
       store.utilities.removeUtilityRoutePoint(route.id, handle.index);
       // The removed point's highlight would light its successor by index.
-      store.setPathHandleHighlight(undefined);
+      store.tooling.setPathHandleHighlight(undefined);
     }
   }
 

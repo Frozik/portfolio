@@ -1,13 +1,15 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import type { BuildingId } from './building';
 import type { DuctId } from './ducts';
 import type { DeviceId } from './electrical';
 import type { FireplaceId } from './fireplaces';
 import type { UtilityEntryId } from './foundation';
 import type { FurnitureId } from './furniture';
 import type { OpeningId } from './openings';
+import type { CarId, PathId, TreeId } from './plot-objects';
 import type { UtilityRouteId } from './routing';
 import type { ShapeId } from './shapes';
-import type { BuildingId, CarId, MarkId, PathId, TreeId } from './site-plan';
+import type { MarkId } from './site-plan';
 
 import type { StairId } from './stairs';
 import type { SupportId } from './supports';

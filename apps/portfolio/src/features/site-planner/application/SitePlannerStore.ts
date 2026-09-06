@@ -1,76 +1,56 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { isEqual, isNil } from 'lodash-es';
+import { isNil } from 'lodash-es';
 import type { IReactionDisposer } from 'mobx';
 import { makeAutoObservable, observableRef, reaction } from 'mobx';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
-import { offsetPolygons } from '../domain/geometry/offset-polygon';
 import type { PathRibbon } from '../domain/geometry/path-ribbon';
 import { buildPathRibbons } from '../domain/geometry/path-ribbon';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
-import type { BuildingWarning } from '../domain/model/building-warnings';
-import type {
-  ActiveTool,
-  EditedObjectDescriptor,
-  EditorDoor,
-  EditorMode,
-  EditTarget,
-} from '../domain/model/editor-mode';
-import {
-  describeEditedObject,
-  editedTargetSelection,
-  isPlanTool,
-  isSiteEditMode,
-  isToolAllowed,
-  VIEW_MODE,
-} from '../domain/model/editor-mode';
+import type { BuildingId } from '../domain/model/building';
+import type { Building } from '../domain/model/building';
+import type { ActiveTool, EditorMode, EditTarget } from '../domain/model/editor-mode';
+import { VIEW_MODE } from '../domain/model/editor-mode';
+import type { CarInstance, SitePath, TreeInstance } from '../domain/model/plot-objects';
 import type { UtilityRoute } from '../domain/model/routing';
 import type { Selection, ShapeTool } from '../domain/model/selection';
-import {
-  DEFAULT_SHAPE_TOOL,
-  isSameSelection,
-  isShapeTool,
-  SELECTION_SCOPE,
-} from '../domain/model/selection';
-import type { SiteSettingsChanges } from '../domain/model/settings-edits';
-import { updateSettings as updateSettingsWith } from '../domain/model/settings-edits';
+import { DEFAULT_SHAPE_TOOL } from '../domain/model/selection';
 import type { Shape, ShapeComposition } from '../domain/model/shapes';
-import type {
-  Building,
-  BuildingId,
-  CarInstance,
-  ElevationMark,
-  SitePath,
-  SitePlan,
-  SiteSettings,
-  TreeInstance,
-} from '../domain/model/site-plan';
+import type { ElevationMark, SiteSettings } from '../domain/model/site-plan';
 import { createDefaultSitePlan, utilityRoutesOf } from '../domain/model/site-plan';
 import type { Slab } from '../domain/model/slabs';
-import { selectedStoreyObject } from '../domain/model/storey-object-selection';
 import type { StoreyId } from '../domain/model/storeys';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
-import type { Meters } from '../domain/units';
 import type { KeyPointSnap } from '../domain/view/object-snapping';
 import type { OverlayMode } from '../domain/view/overlay-mode';
 import type { SitePlannerViewMode } from '../domain/view/view-mode';
 import { createIndexedDBSitePlanRepository } from '../infrastructure/IndexedDBSitePlanRepository';
-import { lookupTimeZoneId } from '../infrastructure/timezone-lookup';
 import { BuildingModel } from './BuildingModel';
 import { CompositionModel } from './CompositionModel';
+import { DuctsModel } from './DuctsModel';
 import type { PlanEditorCore } from './editor-core';
 import type { EditorSession } from './editor-sessions';
-import { createEditorSession } from './editor-sessions';
+import { EditorModesModel } from './EditorModesModel';
+import { ElectricsModel } from './ElectricsModel';
+import { ElevationMarksModel } from './ElevationMarksModel';
+import { FurnitureModel } from './FurnitureModel';
+import { OpeningsModel } from './OpeningsModel';
+import { PlanDocumentModel } from './PlanDocumentModel';
 import { PlanHistory } from './PlanHistory';
 import { PlanPersistence } from './PlanPersistence';
 import type { PathHandleHighlight } from './render/plan-draw/draw-paths';
+import { RoofModel } from './RoofModel';
 import { SceneModel } from './SceneModel';
+import { SelectionCommands } from './SelectionCommands';
 import { SiteObjectsModel } from './SiteObjectsModel';
+import { StairsModel } from './StairsModel';
 import { StoreyObjectsEditorModel } from './StoreyObjectsEditorModel';
+import { StoreysModel } from './StoreysModel';
 import { SunStudy } from './SunStudy';
 import { TerrainModel } from './TerrainModel';
+import { ToolingModel } from './ToolingModel';
 import { UtilityNetworkModel } from './UtilityNetworkModel';
 import { ViewportModel } from './ViewportModel';
+import { WallDraftModel } from './WallDraftModel';
 import { WallEditorModel } from './WallEditorModel';
 
 const NO_MEASURE_POINTS: readonly Vector2[] = [];
@@ -142,83 +122,83 @@ export class SitePlannerStore implements PlanEditorCore {
    * exactly as long as the editor visit. Nothing while viewing.
    */
   editorSession: EditorSession | undefined = undefined;
-  /**
-   * Whether the properties panel is being handed the keyboard. A shape dragged
-   * onto the plan is sized by eye; the panel takes focus so the exact dimension
-   * can be typed straight after, and clears the flag once it has.
-   */
-  isPropertiesFocusPending = false;
-
-  /**
-   * The sun study — its own object ({@link SunStudy}), because it is a concern
-   * with state and a running timer of its own rather than eight more fields
-   * here. Ephemeral by design: a way of looking at the plan rather than part
-   * of it, so it stays out of the snapshot, storage and the undo stack.
-   */
+  /** The sun study — its own object ({@link SunStudy}). */
   readonly sun: SunStudy;
 
-  /**
-   * The terrain as derived from the document ({@link TerrainModel}): the
-   * interpolated survey, contours, pads and the graded ground. Stateless —
-   * every member is a computed over this store's own observables.
-   */
+  /** The terrain as derived from the document ({@link TerrainModel}). */
   readonly terrain: TerrainModel;
 
-  /**
-   * The 3D resolution of the plan ({@link SceneModel}): building scenes,
-   * meshes, analysis overlays, the advisory pass. Stateless like the terrain.
-   */
+  /** The 3D resolution of the plan ({@link SceneModel}). */
   readonly scene: SceneModel;
 
-  /**
-   * The utility networks ({@link UtilityNetworkModel}): trench drafting and
-   * editing, entries, the norm pass. Owns the draft state of the trench tool.
-   */
+  /** The utility networks ({@link UtilityNetworkModel}). */
   readonly utilities: UtilityNetworkModel;
 
-  /**
-   * What stands on the plot outside the buildings ({@link SiteObjectsModel}):
-   * marks, trees, cars, paths and the placement tool. Owns the path draft.
-   */
+  /** What stands on the plot outside the buildings ({@link SiteObjectsModel}). */
   readonly siteObjects: SiteObjectsModel;
 
-  /**
-   * The CSG side of the plan ({@link CompositionModel}): terms, groups and
-   * the active-group arming shared by the shape tools.
-   */
+  /** The surveyed elevation marks and the field floating by a flag ({@link ElevationMarksModel}). */
+  readonly marks: ElevationMarksModel;
+
+  /** The CSG side of the plan ({@link CompositionModel}). */
   readonly composition: CompositionModel;
 
-  /**
-   * The buildings as buildings ({@link BuildingModel}): lifecycle, pad and
-   * foundation, storeys and the active one, the roof, the room labels.
-   */
+  /** The buildings as buildings ({@link BuildingModel}). */
   readonly building: BuildingModel;
 
-  /**
-   * The open building's storey furnishings ({@link StoreyObjectsEditorModel}):
-   * stairs, supports, slabs, fireplaces, ducts, furniture and electrics.
-   */
+  /** The edited building's storey stack and the active level ({@link StoreysModel}). */
+  readonly storeys: StoreysModel;
+
+  /** The edited building's pitched roof and roof-zone covers ({@link RoofModel}). */
+  readonly roof: RoofModel;
+
+  /** The open building's storey furnishings ({@link StoreyObjectsEditorModel}). */
   readonly storeyObjects: StoreyObjectsEditorModel;
 
-  /**
-   * The open building's walls and openings ({@link WallEditorModel}), with
-   * the wall-draft polyline and its typed-length keyboard path.
-   */
+  /** The open building's stairs ({@link StairsModel}). */
+  readonly stairs: StairsModel;
+
+  /** The open building's fireplaces, flues and ventilation shafts ({@link DuctsModel}). */
+  readonly ducts: DuctsModel;
+
+  /** The open building's furniture ({@link FurnitureModel}). */
+  readonly furniture: FurnitureModel;
+
+  /** The open building's electrical devices and their wiring ({@link ElectricsModel}). */
+  readonly electrics: ElectricsModel;
+
+  /** The open building's committed walls and their junctions ({@link WallEditorModel}). */
   readonly walls: WallEditorModel;
+
+  /** The wall polyline in flight and its typed-length keyboard path ({@link WallDraftModel}). */
+  readonly wallDraft: WallDraftModel;
+
+  /** The doors and windows on their host walls ({@link OpeningsModel}). */
+  readonly openings: OpeningsModel;
+
+  /** Shift-click, Delete and Ctrl+D over everything selected ({@link SelectionCommands}). */
+  readonly selectionCommands: SelectionCommands;
 
   /** How the plan is looked at ({@link ViewportModel}): viewport, camera heading, layers, cursor. */
   readonly view = new ViewportModel();
 
   /** The undo stack and its announce-then-commit protocol ({@link PlanHistory}). */
   readonly history = new PlanHistory();
+
+  /** The tools in hand, the view and the overlay ({@link ToolingModel}). */
+  readonly tooling: ToolingModel;
+
+  /** The plan as one document: snapshot, settings, undo/redo, adopting a file ({@link PlanDocumentModel}). */
+  readonly document: PlanDocumentModel;
+
+  /** View or one opened editor, and its session ({@link EditorModesModel}). */
+  readonly modes: EditorModesModel;
   /** Storage, autosave and file exchange ({@link PlanPersistence}). */
   readonly persistence: PlanPersistence;
 
   private readonly disposeHistoryCommit: IReactionDisposer;
 
   constructor(repository: ISitePlanRepository = createIndexedDBSitePlanRepository()) {
-    this.persistence = new PlanPersistence(this, repository);
-
     const defaultPlan = createDefaultSitePlan();
 
     this.boundary = defaultPlan.boundary;
@@ -234,15 +214,35 @@ export class SitePlannerStore implements PlanEditorCore {
     this.scene = new SceneModel(this, this.terrain);
     this.utilities = new UtilityNetworkModel(this, this.terrain, this.scene);
     this.siteObjects = new SiteObjectsModel(this, this.utilities);
+    this.marks = new ElevationMarksModel(this);
     this.composition = new CompositionModel(this);
+    this.modes = new EditorModesModel(this, this.composition);
+    this.tooling = new ToolingModel(this, {
+      sun: this.sun,
+      marks: this.marks,
+      siteObjects: this.siteObjects,
+      utilities: this.utilities,
+    });
+    this.document = new PlanDocumentModel(this, this.history, this.tooling);
+    this.persistence = new PlanPersistence(this.document, repository);
     this.building = new BuildingModel(this, this.scene, this.composition);
-    this.storeyObjects = new StoreyObjectsEditorModel(this, this.scene, this.building);
-    this.walls = new WallEditorModel(this, this.scene, this.building, this.storeyObjects);
+    this.storeys = new StoreysModel(this, this.scene);
+    this.roof = new RoofModel(this, this.scene);
+    this.storeyObjects = new StoreyObjectsEditorModel(this, this.scene, this.storeys);
+    this.stairs = new StairsModel(this, this.storeys);
+    this.ducts = new DuctsModel(this, this.scene, this.storeys);
+    this.furniture = new FurnitureModel(this, this.storeys);
+    this.electrics = new ElectricsModel(this, this.storeys);
+    this.walls = new WallEditorModel(this, this.scene, this.storeys, this.storeyObjects);
+    this.wallDraft = new WallDraftModel(this, this.storeys, this.storeyObjects);
+    this.openings = new OpeningsModel(this);
+    this.selectionCommands = new SelectionCommands(this, this);
 
-    makeAutoObservable<SitePlannerStore, 'disposeHistoryCommit'>(
+    makeAutoObservable<SitePlannerStore, 'disposeHistoryCommit' | 'selectionCommands'>(
       this,
       {
         history: false,
+        selectionCommands: false,
         persistence: false,
         view: false,
         disposeHistoryCommit: false,
@@ -266,32 +266,14 @@ export class SitePlannerStore implements PlanEditorCore {
       { autoBind: true }
     );
 
-    this.disposeHistoryCommit = reaction(() => this.snapshot, this.history.commit);
+    this.disposeHistoryCommit = reaction(() => this.document.snapshot, this.history.commit);
 
     void this.persistence.start();
-  }
-
-  get snapshot(): SitePlan {
-    return {
-      boundary: this.boundary,
-      elevationMarks: this.elevationMarks,
-      buildings: this.buildings,
-      trees: this.trees,
-      cars: this.cars,
-      paths: this.paths,
-      utilityRoutes: this.utilityRoutes,
-      settings: this.settings,
-    };
   }
 
   /** The plot as the boolean fold leaves it: outer rings plus their holes. */
   get boundaryPolygons(): MultiPolygon {
     return evaluateComposition(this.boundary);
-  }
-
-  /** Inward offset of the plot by the setback distance — drawn as the dashed line. */
-  get setbackRings(): MultiPolygon {
-    return offsetPolygons(this.boundaryPolygons, -this.settings.setbackMeters);
   }
 
   /** One ribbon per path, in plan order, so a path keeps its identity downstream. */
@@ -304,145 +286,35 @@ export class SitePlannerStore implements PlanEditorCore {
     return this.pathRibbons.flatMap(ribbon => ribbon.polygons);
   }
 
-  /**
-   * Edits the settings section. Fields typed digit by digit — a latitude, a
-   * setback — pass their own `groupKey`, so a burst of keystrokes stays one step
-   * to undo, the way the properties panel writes a dimension.
-   */
-  updateSettings(changes: SiteSettingsChanges, groupKey?: string): void {
-    this.pushHistory(groupKey);
-    this.settings = updateSettingsWith(this.settings, changes);
-  }
-
-  /**
-   * Turns the plot's north (`domain/view/north-offset.ts`). Unlike every other
-   * settings edit it announces no history step of its own: north is set both by
-   * dragging the compass dial and by typing an azimuth, and each of those
-   * announces the step it belongs to — the dial once, when the pointer goes
-   * down, the way every other drag on the plan does.
-   */
-  setNorthOffsetDegrees(northOffsetDegrees: number): void {
-    this.settings = updateSettingsWith(this.settings, { location: { northOffsetDegrees } });
-  }
-
-  /**
-   * Adopts a whole plan read from a file, as one step to undo. Adopting a plan
-   * discards whatever edit was announced before it, so the state this
-   * replacement is undone to is armed afterwards rather than before.
-   */
-  replacePlan(plan: SitePlan): void {
-    const previousPlan = this.snapshot;
-
-    this.applySnapshot(plan);
-    this.history.armPending(previousPlan);
-    this.selections = NO_SELECTIONS;
-    this.clearGestureState();
-  }
-
-  applySnapshot(plan: SitePlan): void {
-    this.boundary = plan.boundary;
-    this.elevationMarks = plan.elevationMarks;
-    this.buildings = plan.buildings;
-    this.trees = plan.trees;
-    this.cars = plan.cars;
-    this.paths = plan.paths;
-    this.utilityRoutes = utilityRoutesOf(plan);
-    this.settings = plan.settings;
-
-    // A plan that arrives whole — restored, or read from storage — discards the
-    // state an announced edit was going to be undone to.
-    this.history.discardPending();
-  }
-
   /** Announces an edit — see {@link PlanHistory.announce} for the protocol. */
   pushHistory(groupKey?: string): void {
-    this.history.announce(this.snapshot, groupKey);
+    this.history.announce(this.document.snapshot, groupKey);
   }
 
-  undo(): void {
-    this.restore(this.history.undo(this.snapshot));
-  }
-
-  redo(): void {
-    this.restore(this.history.redo(this.snapshot));
-  }
-
+  /** {@link PlanEditorCore}: the tools live on {@link ToolingModel}. */
   setViewMode(viewMode: SitePlannerViewMode): void {
-    this.viewMode = viewMode;
-
-    // The two views are two windows onto one plan, so the editing session
-    // survives the switch: which building is open, which storey is active and
-    // what the tool is armed with are not 2D state. Dropping them here made
-    // Tab a silent way to lose your place — and made showing the active storey
-    // in 3D impossible, because arriving there always ended the session first.
-    // Canvas gestures are still the plan's; the 3D view stays a viewer.
-
-    // Nothing watches the sun outside the 3D view, and a timer left running
-    // would keep recomputing a light nobody is looking at.
-    if (viewMode !== 'scene') {
-      this.sun.stopAnimation();
-    }
-
-    // Cut/fill is an earthworks planning readout — it belongs to the plan, so
-    // the 3D view opens with no overlay rather than a meaningless colouring.
-    if (viewMode === 'scene' && this.overlayMode === 'cut-fill') {
-      this.overlayMode = 'none';
-    }
-  }
-
-  /** The Tab hotkey: the plan and the 3D view are two windows onto one plan. */
-  toggleViewMode(): void {
-    this.setViewMode(this.viewMode === 'plan' ? 'scene' : 'plan');
-  }
-
-  /** The overlay segment of the toolbar; it colours the plan and the 3D view alike. */
-  setOverlayMode(overlayMode: OverlayMode): void {
-    this.overlayMode = overlayMode;
-  }
-
-  /**
-   * One-shot placement (R30): the moment an object lands, the tool hands it
-   * over to the select tool with the object selected, so the very next click
-   * adjusts what was just placed instead of dropping a second one beside it —
-   * the direct-manipulation habit of Figma and Planner 5D. The tool's own key
-   * or its rail button re-arms it for the next one.
-   *
-   * Two kinds of tool stay in hand instead. Those that draw a RUN — walls,
-   * paths, trenches, elevation marks — because their gesture already says when
-   * it is finished. And furniture and electrics, because furnishing a room and
-   * wiring a storey ARE runs of placements: 💬 the sofa is followed by the
-   * table, the socket by the next socket.
-   */
-  finishPlacement(): void {
-    this.setActiveTool('select');
-  }
-
-  /**
-   * Arms a primitive without reaching for a tool. The plot's shape tool and the
-   * building's slab tool draw the SAME primitives, so they share the armed one:
-   * whichever was last picked is what both of them draw.
-   */
-  setArmedShapeTool(armedShapeTool: ShapeTool): void {
-    this.armedShapeTool = armedShapeTool;
+    this.tooling.setViewMode(viewMode);
   }
 
   setActiveTool(activeTool: ActiveTool): void {
-    if (!isToolAllowed(this.editorMode, activeTool)) {
-      return;
-    }
+    this.tooling.setActiveTool(activeTool);
+  }
 
-    this.activeTool = activeTool;
+  /** {@link PlanEditorCore}: the modes live on {@link EditorModesModel}. */
+  enterEditMode(target: EditTarget): void {
+    this.modes.enterEditMode(target);
+  }
 
-    if (isPlanTool(activeTool) && isShapeTool(activeTool)) {
-      this.armedShapeTool = activeTool;
-    }
+  exitEditMode(): void {
+    this.modes.exitEditMode();
+  }
 
-    this.draftShape = undefined;
-    this.draftMark = undefined;
-    this.activeKeyPointSnap = undefined;
-    this.siteObjects.closeElevationInput();
-    this.measurePoints = NO_MEASURE_POINTS;
-    this.siteObjects.cancelDraftPath();
+  get selectedPathPointIndex(): number | undefined {
+    return this.modes.selectedPathPointIndex;
+  }
+
+  setSelectedPathPointIndex(index: number | undefined): void {
+    this.modes.setSelectedPathPointIndex(index);
   }
 
   /** The last thing picked: what the properties panel and the gestures read. */
@@ -462,172 +334,9 @@ export class SitePlannerStore implements PlanEditorCore {
     }
   }
 
-  /**
-   * Shift-click: adds what was clicked to the selection, or takes it back out.
-   * The market's grammar — Figma, Blender, SketchUp all read Shift this way.
-   */
-  toggleSelection(selection: Selection): void {
-    const without = this.selections.filter(candidate => !isSameSelection(candidate, selection));
-
-    this.setSelections(
-      without.length === this.selections.length ? [...this.selections, selection] : without
-    );
-  }
-
-  /** Whether this exact thing is among the selected — what the plan draws lit. */
-  isSelected(selection: Selection): boolean {
-    return this.selections.some(candidate => isSameSelection(candidate, selection));
-  }
-
-  /**
-   * Opens one object for deep editing; see `modes.md`. The editor arrives with
-   * a fresh session for its transient state; the tool falls back to selection
-   * because whatever was armed may not exist in the new mode, and a path
-   * target arrives selected — it is the only thing left to point at.
-   */
-  enterEditMode(target: EditTarget): void {
-    this.editorSession?.dispose();
-    this.editorSession = createEditorSession(target);
-    this.editorMode = { kind: 'edit', target };
-    this.setSelection(editedTargetSelection(target));
-    this.setActiveTool('select');
-
-    // Site editing opens aimed at the plot root; «Строение» re-aims it after.
-    if (target.kind === 'site') {
-      this.composition.setActiveGroup('boundary');
-    }
-  }
-
-  /**
-   * Descends through a selected object's editor door (`editorDoorFor`): the
-   * one entry Enter, the double click and the panels' «edit» buttons share. A
-   * building door is site editing already aimed at that building.
-   */
-  openEditorDoor(door: EditorDoor): void {
-    this.enterEditMode(door.target);
-
-    if (!isNil(door.aimAt)) {
-      this.composition.setActiveGroup(door.aimAt);
-    }
-  }
-
-  /**
-   * Back to viewing. A shape or mark selection belongs to site editing and
-   * would name something the view cannot even pick, so it is dropped; a path,
-   * tree or car selection is a view-mode citizen and survives the exit.
-   */
-  exitEditMode(): void {
-    this.editorSession?.dispose();
-    this.editorSession = undefined;
-    this.editorMode = VIEW_MODE;
-
-    // Selections belonging to the closed editor go with it; the ones that
-    // live on the plan stay. Filtering the whole list — not just the last
-    // one picked — is what makes this right for a multiple selection.
-    this.setSelections(
-      this.selections.filter(candidate => SELECTION_SCOPE[candidate.kind] === 'view')
-    );
-  }
-
-  /** The path session's edited point, read through the store's one access point. */
-  get selectedPathPointIndex(): number | undefined {
-    return this.editorSession?.kind === 'path' ? this.editorSession.selectedPointIndex : undefined;
-  }
-
-  setSelectedPathPointIndex(index: number | undefined): void {
-    if (this.editorSession?.kind === 'path') {
-      this.editorSession.setSelectedPointIndex(index);
-    }
-  }
-
-  get hoveredPathSegmentIndex(): number | undefined {
-    return this.editorSession?.kind === 'path' ? this.editorSession.hoveredSegmentIndex : undefined;
-  }
-
-  setHoveredPathSegmentIndex(index: number | undefined): void {
-    if (this.editorSession?.kind === 'path') {
-      this.editorSession.setHoveredSegmentIndex(index);
-    }
-  }
-
-  /** Whether site editing is currently aimed at one of the buildings. */
-  get isEditingBuilding(): boolean {
-    return isSiteEditMode(this.editorMode) && this.composition.activeGroup.owner !== 'boundary';
-  }
-
-  /** What the mode bar names as being edited, or nothing while viewing. */
-  get editedObject(): EditedObjectDescriptor | undefined {
-    return describeEditedObject(this.editorMode, {
-      activeOwner: this.composition.activeGroup.owner,
-      buildings: this.buildings,
-      paths: this.paths,
-      utilityRoutes: this.utilityRoutes,
-    });
-  }
-
-  setMeasurePoints(measurePoints: readonly Vector2[]): void {
-    this.measurePoints = measurePoints;
-  }
-
-  setDraftShape(draftShape: Shape | undefined): void {
-    this.draftShape = draftShape;
-  }
-
-  setDraftMark(draftMark: ElevationMark | undefined): void {
-    this.draftMark = draftMark;
-  }
-
-  setActiveKeyPointSnap(activeKeyPointSnap: KeyPointSnap | undefined): void {
-    this.activeKeyPointSnap = activeKeyPointSnap;
-  }
-
-  /** Guarded against no-op writes: the pointer reports every move, the canvas need not redraw for each. */
-  setPathHandleHighlight(highlight: PathHandleHighlight | undefined): void {
-    if (!isEqual(this.pathHandleHighlight, highlight)) {
-      this.pathHandleHighlight = highlight;
-    }
-  }
-
-  /**
-   * Answers a finding in the Замечания panel: aims the editor at the storey it
-   * belongs to and brings its place into view. A list of findings is only
-   * useful if each row is a way to get to the thing it is about.
-   */
-  revealWarning(warning: BuildingWarning): void {
-    this.setViewMode('plan');
-    this.building.setActiveStorey(warning.storeyId);
-    this.view.centreOn(warning.at);
-  }
-
-  /** Asks the properties panel for the keyboard, once the panel is on screen. */
+  /** {@link PlanEditorCore}: the panel focus lives on {@link ToolingModel}. */
   requestPropertiesFocus(): void {
-    this.isPropertiesFocusPending = true;
-  }
-
-  consumePropertiesFocus(): void {
-    this.isPropertiesFocusPending = false;
-  }
-
-  /** The IANA zone a picked point keeps, or nothing where the table is silent. */
-  timeZoneIdAt(latitudeDegrees: number, longitudeDegrees: number): string | undefined {
-    return lookupTimeZoneId(latitudeDegrees, longitudeDegrees);
-  }
-
-  /** Deletes everything selected — one step to undo, however many things. */
-  removeSelected(): void {
-    const { selections } = this;
-
-    if (selections.length === 0) {
-      return;
-    }
-
-    this.pushHistory();
-    this.runBatched(() => {
-      for (const selection of selections) {
-        this.removeOneSelected(selection);
-      }
-    });
-    this.setSelections(NO_SELECTIONS);
+    this.tooling.requestPropertiesFocus();
   }
 
   /** Runs a command whose several edits are one step of history. */
@@ -635,134 +344,9 @@ export class SitePlannerStore implements PlanEditorCore {
     this.history.runBatched(command);
   }
 
-  /**
-   * Duplicates whatever is selected, offset by one grid step so the copies
-   * are visible and grabbable rather than hidden exactly under the originals.
-   * The copies become the selection, so a second Ctrl+D steps on again.
-   */
-  duplicateSelected(): void {
-    const { selections } = this;
-
-    if (selections.length === 0) {
-      return;
-    }
-
-    this.pushHistory();
-
-    const offset = this.settings.gridStepMeters;
-    const copies: Selection[] = [];
-
-    this.runBatched(() => {
-      for (const selection of selections) {
-        copies.push(...this.duplicateOne(selection, offset));
-      }
-    });
-
-    if (copies.length > 0) {
-      this.setSelections(copies);
-    }
-  }
-
-  /**
-   * One object's copy, placed a step away; nothing for what cannot be copied.
-   *
-   * Every storey object copies the same way — find it, mint an id, shift it,
-   * put it on the active storey, hand back its selection — so that dance
-   * lives once in {@link copyStoreyObject} and a kind contributes only what
-   * is different about it. Adding the next kind is three lines here.
-   */
-  private duplicateOne(selection: Selection, offsetMeters: Meters): readonly Selection[] {
-    const selected = selectedStoreyObject(selection);
-    const storeyId = this.building.activeStoreyId;
-
-    // Walls, openings, rooms and site shapes are not copied: each has a host or
-    // a place in a tree that a blind offset would misplace, so their kinds
-    // contribute no `duplicate` to the table.
-    if (isNil(selected) || isNil(storeyId) || isNil(selected.selector.duplicate)) {
-      return NO_SELECTIONS;
-    }
-
-    const copied = selected.selector.duplicate({
-      buildings: this.buildings,
-      buildingId: selected.buildingId,
-      storeyId,
-      id: selected.id,
-      offset: { x: offsetMeters, y: offsetMeters },
-    });
-
-    if (isNil(copied)) {
-      return NO_SELECTIONS;
-    }
-
-    this.buildings = copied.buildings;
-
-    return [copied.selection];
-  }
-
-  private removeOneSelected(selection: Selection): void {
-    switch (selection.kind) {
-      case 'shape':
-        this.composition.removeTerm(selection.owner, selection.shapeId);
-
-        return;
-      case 'group':
-        this.composition.removeTerm(selection.owner, selection.groupId);
-
-        return;
-      case 'mark':
-        this.siteObjects.removeElevationMark(selection.markId);
-
-        return;
-      case 'tree':
-        this.siteObjects.removeTree(selection.treeId);
-
-        return;
-      case 'car':
-        this.siteObjects.removeCar(selection.carId);
-
-        return;
-      case 'path':
-        this.siteObjects.removePath(selection.pathId);
-
-        return;
-      case 'utilityRoute':
-        this.utilities.removeUtilityRoute(selection.routeId);
-
-        return;
-      case 'building':
-        this.building.removeBuilding(selection.buildingId);
-
-        return;
-      case 'wall':
-        this.walls.removeWall(selection.buildingId, selection.wallId);
-
-        return;
-      case 'opening':
-        this.walls.removeOpening(selection.buildingId, selection.openingId);
-
-        return;
-      case 'furniture':
-      case 'device':
-      case 'stair':
-      case 'support':
-      case 'slab':
-      case 'fireplace':
-      case 'duct':
-        this.storeyObjects.removeSelectedStoreyObject(selection);
-
-        return;
-      case 'utilityEntry':
-        this.utilities.removeUtilityEntry(selection.buildingId, selection.entryId);
-
-        return;
-      default:
-        assertNever(selection);
-    }
-  }
-
   /** {@link PlanEditorCore}: the active storey lives on the building model. */
   get activeStoreyId(): StoreyId | undefined {
-    return this.building.activeStoreyId;
+    return this.storeys.activeStoreyId;
   }
 
   /** {@link PlanEditorCore}: the slabs live on the storey-objects editor. */
@@ -773,24 +357,6 @@ export class SitePlannerStore implements PlanEditorCore {
   /** {@link PlanEditorCore}: slab edits live on the storey-objects editor. */
   updateSlab(buildingId: BuildingId, slab: Slab): void {
     this.storeyObjects.updateSlab(buildingId, slab);
-  }
-
-  /**
-   * Sweeps the plot clean: every placed object — buildings, trees, cars,
-   * paths, trenches — gone in ONE undo step. The plot itself survives: its
-   * boundary, elevation marks and settings are the site, not objects on it.
-   */
-  clearSite(): void {
-    this.exitEditMode();
-    this.siteObjects.cancelDraftPath();
-    this.utilities.cancelDraftUtilityRoute();
-    this.pushHistory();
-    this.buildings = [];
-    this.trees = [];
-    this.cars = [];
-    this.paths = [];
-    this.utilityRoutes = [];
-    this.selections = NO_SELECTIONS;
   }
 
   /** Teardown hook honoured by the refcounted feature-store lifecycle. */
@@ -805,31 +371,21 @@ export class SitePlannerStore implements PlanEditorCore {
     this.scene.dispose();
     this.utilities.dispose();
     this.siteObjects.dispose();
+    this.marks.dispose();
     this.composition.dispose();
+    this.modes.dispose();
+    this.tooling.dispose();
+    this.document.dispose();
     this.building.dispose();
+    this.storeys.dispose();
+    this.roof.dispose();
     this.storeyObjects.dispose();
+    this.stairs.dispose();
+    this.ducts.dispose();
+    this.furniture.dispose();
+    this.electrics.dispose();
     this.walls.dispose();
-  }
-
-  private restore(plan: SitePlan | undefined): void {
-    if (isNil(plan)) {
-      return;
-    }
-
-    this.applySnapshot(plan);
-    // The selection survives — undoing a typed dimension must leave the shape
-    // it was typed for in the properties panel. A selection the restored plan no
-    // longer holds resolves to nothing through `selectedShape` anyway.
-    this.clearGestureState();
-  }
-
-  /** Drops every half-finished gesture; a plan that arrives whole invalidates them. */
-  private clearGestureState(): void {
-    this.draftShape = undefined;
-    this.draftMark = undefined;
-    this.activeKeyPointSnap = undefined;
-    this.siteObjects.cancelDraftPath();
-    this.utilities.cancelDraftUtilityRoute();
-    this.siteObjects.closeElevationInput();
+    this.wallDraft.dispose();
+    this.openings.dispose();
   }
 }

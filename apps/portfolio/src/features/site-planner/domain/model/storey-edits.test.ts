@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createBuilding, storeysOf } from './site-plan';
+import { createBuilding, storeysOf } from './building';
 import { addStorey, updateStoreyHeight } from './storey-edits';
 import { createStorey } from './storeys';
 

@@ -5,7 +5,9 @@ import { computeMultiPolygonBounds } from '../domain/geometry/bounding-box';
 import { multiPolygonArea } from '../domain/geometry/building-outline';
 import { subtractPolygons } from '../domain/geometry/polygon-booleans';
 import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
+import { entriesOf, foundationOf, pitchedRoofOf, storeysOf } from '../domain/model/building';
 import { DEFAULT_FOUNDATION } from '../domain/model/foundation';
+import { createPathId } from '../domain/model/plot-objects';
 import type {
   CsgOperand,
   RectangleShape,
@@ -15,14 +17,7 @@ import type {
 } from '../domain/model/shapes';
 import { createCircle, createRectangle, isShapeGroup } from '../domain/model/shapes';
 import type { SitePlan } from '../domain/model/site-plan';
-import {
-  createDefaultSitePlan,
-  createPathId,
-  entriesOf,
-  foundationOf,
-  pitchedRoofOf,
-  storeysOf,
-} from '../domain/model/site-plan';
+import { createDefaultSitePlan } from '../domain/model/site-plan';
 import type { ISitePlanRepository } from '../domain/persistence/ISitePlanRepository';
 import { STOCK_HOUSE_TEMPLATES } from '../domain/templates/stock-houses';
 import { SitePlannerStore } from './SitePlannerStore';
@@ -132,13 +127,13 @@ describe('SitePlannerStore history', () => {
     expect(store.boundary.terms).toHaveLength(2);
     expect(store.history.canUndo).toBe(true);
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms).toHaveLength(1);
     expect(store.history.canUndo).toBe(false);
     expect(store.history.canRedo).toBe(true);
 
-    store.redo();
+    store.document.redo();
 
     expect(store.boundary.terms).toHaveLength(2);
     expect(store.history.canRedo).toBe(false);
@@ -151,7 +146,7 @@ describe('SitePlannerStore history', () => {
 
     expect(store.boundary.terms).toHaveLength(0);
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms).toEqual([term]);
   });
@@ -160,18 +155,18 @@ describe('SitePlannerStore history', () => {
     drawRectangle({ x: 1, y: 1 });
     drawRectangle({ x: 2, y: 2 });
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms).toHaveLength(2);
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms).toHaveLength(1);
   });
 
   it('drops the redone future once a new edit lands', () => {
     drawRectangle({ x: 1, y: 1 });
-    store.undo();
+    store.document.undo();
 
     expect(store.history.canRedo).toBe(true);
 
@@ -190,7 +185,7 @@ describe('SitePlannerStore history', () => {
   it('keeps an announcement that no edit followed out of the next step', () => {
     store.pushHistory();
     drawRectangle({ x: 1, y: 1 });
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms).toHaveLength(1);
     expect(store.history.canUndo).toBe(false);
@@ -207,7 +202,7 @@ describe('SitePlannerStore history', () => {
       store.composition.updateSelectedShape({ ...rectangle, width });
     }
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms[0].operand).toEqual(rectangle);
     expect(store.history.canUndo).toBe(false);
@@ -230,7 +225,7 @@ describe('SitePlannerStore history', () => {
       store.pushHistory(`${rectangle.id}:width`);
       store.composition.updateSelectedShape({ ...rectangle, width: 12 });
 
-      store.undo();
+      store.document.undo();
 
       expect(store.composition.selectedShape).toEqual({ ...rectangle, width: 11 });
     } finally {
@@ -246,7 +241,7 @@ describe('SitePlannerStore persistence', () => {
 
     await settleInitialization();
 
-    expect(store.snapshot).toEqual(storedPlan);
+    expect(store.document.snapshot).toEqual(storedPlan);
 
     store.dispose();
   });
@@ -459,7 +454,7 @@ describe('SitePlannerStore groups', () => {
   });
 
   it('undoes a wrap and a subsequent ungroup', () => {
-    const before = store.snapshot;
+    const before = store.document.snapshot;
 
     store.composition.wrapTermInGroup('boundary', plotId());
 
@@ -469,13 +464,13 @@ describe('SitePlannerStore groups', () => {
 
     expect(store.boundary.terms[0].operand.kind).toBe('rectangle');
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms[0].operand.id).toBe(groupId);
 
-    store.undo();
+    store.document.undo();
 
-    expect(store.snapshot).toEqual(before);
+    expect(store.document.snapshot).toEqual(before);
   });
 
   it('deletes a selected group with everything nested under it', () => {
@@ -490,7 +485,7 @@ describe('SitePlannerStore groups', () => {
       groupId
     );
     store.setSelection({ kind: 'group', owner: 'boundary', groupId });
-    store.removeSelected();
+    store.selectionCommands.removeSelected();
 
     expect(store.boundary.terms).toHaveLength(0);
     expect(store.composition.allShapes).toHaveLength(0);
@@ -515,7 +510,7 @@ describe('SitePlannerStore groups', () => {
     expect(store.boundary.terms).toHaveLength(1);
     expect(rootGroup()?.terms.map(term => term.operand.id)).toEqual([wrappedId, pond.id]);
 
-    store.undo();
+    store.document.undo();
 
     expect(store.boundary.terms.map(term => term.operand.id)).toEqual([groupId, pond.id]);
   });
@@ -527,16 +522,16 @@ describe('SitePlannerStore groups', () => {
   });
 
   it('records no step for a group dropped into itself', () => {
-    const before = store.snapshot;
+    const before = store.document.snapshot;
 
     store.composition.wrapTermInGroup('boundary', plotId());
 
     const groupId = store.boundary.terms[0].operand.id;
 
     store.composition.moveTerm('boundary', groupId, groupId, 0);
-    store.undo();
+    store.document.undo();
 
-    expect(store.snapshot).toEqual(before);
+    expect(store.document.snapshot).toEqual(before);
   });
 
   it('falls back to the root once an undo takes the active group away', () => {
@@ -546,7 +541,7 @@ describe('SitePlannerStore groups', () => {
 
     expect(store.composition.resolvedActiveGroup.groupId).toBe(groupId);
 
-    store.undo();
+    store.document.undo();
 
     expect(store.composition.resolvedActiveGroup).toEqual({
       owner: 'boundary',
@@ -590,17 +585,17 @@ describe('SitePlannerStore gesture skeletons', () => {
   it('outlines every shape but the one being shaped', () => {
     const [plot] = store.boundary.terms.map(term => leafShape(term.operand));
 
-    store.setDraftShape(plot);
+    store.tooling.setDraftShape(plot);
 
     expect(store.composition.gestureSkeletonShapes).toEqual([houseShape]);
 
-    store.setDraftShape(houseShape);
+    store.tooling.setDraftShape(houseShape);
 
     expect(store.composition.gestureSkeletonShapes).toEqual([plot]);
   });
 
   it('outlines all of them while a shape that is not on the plan yet is drawn', () => {
-    store.setDraftShape(
+    store.tooling.setDraftShape(
       createRectangle({ center: { x: 0, y: 0 }, width: 1, length: 1, rotationDegrees: 0 })
     );
 
@@ -612,7 +607,7 @@ describe('SitePlannerStore overlay mode across views', () => {
   it('drops the plan-only cut/fill overlay when the 3D view opens', () => {
     const store = new SitePlannerStore(createRepository());
 
-    store.setOverlayMode('cut-fill');
+    store.tooling.setOverlayMode('cut-fill');
     store.setViewMode('scene');
 
     expect(store.overlayMode).toBe('none');
@@ -623,7 +618,7 @@ describe('SitePlannerStore overlay mode across views', () => {
   it('keeps the slope overlay across the toggle', () => {
     const store = new SitePlannerStore(createRepository());
 
-    store.setOverlayMode('slope');
+    store.tooling.setOverlayMode('slope');
     store.setViewMode('scene');
 
     expect(store.overlayMode).toBe('slope');
@@ -661,13 +656,13 @@ describe('SitePlannerStore armed shape tool', () => {
       owner: store.buildings[0].id,
       groupId: undefined,
     });
-    expect(store.isEditingBuilding).toBe(true);
+    expect(store.modes.isEditingBuilding).toBe(true);
     expect(store.buildings[0].name).toBe('Дом');
     expect(store.activeTool).toBe('rectangle');
 
     store.exitEditMode();
 
-    expect(store.isEditingBuilding).toBe(false);
+    expect(store.modes.isEditingBuilding).toBe(false);
 
     store.dispose();
   });
@@ -679,12 +674,12 @@ describe('SitePlannerStore armed shape tool', () => {
     store.building.enterBuildingEditing('Дом');
 
     expect(store.editorMode).toEqual({ kind: 'edit', target: { kind: 'site' } });
-    expect(store.isEditingBuilding).toBe(true);
+    expect(store.modes.isEditingBuilding).toBe(true);
 
     store.composition.setActiveGroup('boundary');
 
     expect(store.editorMode).toEqual({ kind: 'edit', target: { kind: 'site' } });
-    expect(store.isEditingBuilding).toBe(false);
+    expect(store.modes.isEditingBuilding).toBe(false);
 
     store.dispose();
   });
@@ -730,13 +725,13 @@ describe('SitePlannerStore armed shape tool', () => {
     const store = new SitePlannerStore(createRepository());
 
     store.enterEditMode({ kind: 'path', pathId: createPathId() });
-    store.setHoveredPathSegmentIndex(1);
+    store.modes.setHoveredPathSegmentIndex(1);
 
-    expect(store.hoveredPathSegmentIndex).toBe(1);
+    expect(store.modes.hoveredPathSegmentIndex).toBe(1);
 
     store.exitEditMode();
 
-    expect(store.hoveredPathSegmentIndex).toBeUndefined();
+    expect(store.modes.hoveredPathSegmentIndex).toBeUndefined();
 
     store.dispose();
   });
@@ -746,9 +741,9 @@ describe('SitePlannerStore armed shape tool', () => {
 
     // The hover lives in the path editor's session; without one it has nowhere
     // to land, and the plan must not light a segment no editor is showing.
-    store.setHoveredPathSegmentIndex(1);
+    store.modes.setHoveredPathSegmentIndex(1);
 
-    expect(store.hoveredPathSegmentIndex).toBeUndefined();
+    expect(store.modes.hoveredPathSegmentIndex).toBeUndefined();
 
     store.dispose();
   });
@@ -802,7 +797,7 @@ describe('SitePlannerStore foundations and utility entries', () => {
     });
 
     // Both edits share the building's foundation group — one step to undo.
-    store.undo();
+    store.document.undo();
 
     expect(foundationOf(store.buildings[0])).toEqual(DEFAULT_FOUNDATION);
 
@@ -889,9 +884,9 @@ describe('SitePlannerStore derived rooms', () => {
     store.exitEditMode();
     store.enterEditMode({ kind: 'building', buildingId: building.id });
     // A wall spanning the whole footprint, splitting it into two rooms.
-    store.walls.appendDraftWallPoint({ x: 5, y: 10 });
-    store.walls.appendDraftWallPoint({ x: 15, y: 10 });
-    store.walls.commitDraftWall();
+    store.wallDraft.appendDraftWallPoint({ x: 5, y: 10 });
+    store.wallDraft.appendDraftWallPoint({ x: 15, y: 10 });
+    store.wallDraft.commitDraftWall();
 
     return building;
   };
@@ -982,19 +977,19 @@ describe('SitePlannerStore storeys', () => {
 
   /** A closed ring of wall over part of the ground floor — the надстройка. */
   const drawUpperRing = (store: SitePlannerStore): void => {
-    store.walls.appendDraftWallPoint({ x: 7, y: 8 });
-    store.walls.appendDraftWallPoint({ x: 13, y: 8 });
-    store.walls.appendDraftWallPoint({ x: 13, y: 12 });
-    store.walls.appendDraftWallPoint({ x: 7, y: 12 });
-    store.walls.appendDraftWallPoint({ x: 7, y: 8 });
-    store.walls.commitDraftWall();
+    store.wallDraft.appendDraftWallPoint({ x: 7, y: 8 });
+    store.wallDraft.appendDraftWallPoint({ x: 13, y: 8 });
+    store.wallDraft.appendDraftWallPoint({ x: 13, y: 12 });
+    store.wallDraft.appendDraftWallPoint({ x: 7, y: 12 });
+    store.wallDraft.appendDraftWallPoint({ x: 7, y: 8 });
+    store.wallDraft.commitDraftWall();
   };
 
   it('lays a slab on the storey and takes its outline from the slabs', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     store.storeyObjects.placeSlabAt({ x: 10, y: 10 });
 
     const [scene] = store.scene.buildingScenes;
@@ -1012,7 +1007,7 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
     const building = layOutHouse(store);
 
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     // A slab hanging off the east side of the 10 × 8 ground floor: the
     // cantilever of R24, and the floor the balcony needs to be walked on.
     store.storeyObjects.placeSlabAt({ x: 16, y: 10 });
@@ -1032,7 +1027,7 @@ describe('SitePlannerStore storeys', () => {
 
     expect(store.walls.clampWallPoint(building.id, { x: 40, y: 10 }).x).toBeCloseTo(15);
 
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
     // Nothing to be held to yet, so the first wall of a bare storey can be
     // drawn anywhere — otherwise every corner would collapse onto one point.
@@ -1045,9 +1040,9 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     store.storeyObjects.placeSlabAt({ x: 10, y: 10 });
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
     const slabs = store.storeyObjects.activeStoreySlabs;
 
@@ -1062,7 +1057,7 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     const ground = store.scene.buildingScenes[0].pitchedRoof;
 
@@ -1072,7 +1067,7 @@ describe('SitePlannerStore storeys', () => {
 
     const groundRidge = ground?.ridgeElevation;
 
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     store.storeyObjects.placeSlabAt({ x: 10, y: 10 });
 
     const raised = store.scene.buildingScenes[0].pitchedRoof;
@@ -1081,7 +1076,7 @@ describe('SitePlannerStore storeys', () => {
     expect(raised?.ridgeElevation ?? 0).toBeGreaterThan(groundRidge ?? 0);
     expect(multiPolygonArea(raised?.footprint ?? [])).toBeCloseTo(24);
 
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     expect(store.scene.buildingScenes[0].pitchedRoof).toBeUndefined();
 
@@ -1094,14 +1089,14 @@ describe('SitePlannerStore storeys', () => {
       mesh?.positions.length ?? 0;
 
     layOutHouse(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: true });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: true });
     store.storeyObjects.placeSlabAt({ x: 10, y: 10 });
-    store.building.setActiveStorey(storeysOf(store.buildings[0])[0].id);
+    store.storeys.setActiveStorey(storeysOf(store.buildings[0])[0].id);
 
     const solidBefore = vertexCount(store.scene.buildingsGeometry);
     const ghostBefore = vertexCount(store.scene.buildingsGhostGeometry);
 
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     // The roof crowns the TOP storey, which is not the one being edited: it
     // belongs to the ghosted pass, and to that pass alone. Emitting it in both
@@ -1116,9 +1111,9 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.togglePitchedRoof();
-    store.storeyObjects.placeFireplaceAt({ x: 10, y: 10 });
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.roof.togglePitchedRoof();
+    store.ducts.placeFireplaceAt({ x: 10, y: 10 });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     store.storeyObjects.placeSlabAt({ x: 10, y: 10 });
 
     const [scene] = store.scene.buildingScenes;
@@ -1157,7 +1152,7 @@ describe('SitePlannerStore storeys', () => {
 
     expect(complaints()).toHaveLength(1);
 
-    store.storeyObjects.placeDuctAt({ x: 10, y: 10 });
+    store.ducts.placeDuctAt({ x: 10, y: 10 });
 
     expect(complaints()).toHaveLength(0);
 
@@ -1168,9 +1163,9 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
     const building = layOutHouse(store);
 
-    store.walls.appendDraftWallPoint({ x: 5, y: 10 });
-    store.walls.appendDraftWallPoint({ x: 15, y: 10 });
-    store.walls.commitDraftWall();
+    store.wallDraft.appendDraftWallPoint({ x: 5, y: 10 });
+    store.wallDraft.appendDraftWallPoint({ x: 15, y: 10 });
+    store.wallDraft.commitDraftWall();
 
     const storeys = storeysOf(store.buildings[0]);
 
@@ -1186,12 +1181,12 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
     const storeys = storeysOf(store.buildings[0]);
 
     expect(storeys).toHaveLength(2);
-    expect(store.building.activeStoreyId).toBe(storeys[1].id);
+    expect(store.storeys.activeStoreyId).toBe(storeys[1].id);
 
     drawUpperRing(store);
 
@@ -1207,7 +1202,7 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
     const building = layOutHouse(store);
 
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
     drawUpperRing(store);
 
     const [scene] = store.scene.buildingScenes;
@@ -1223,12 +1218,12 @@ describe('SitePlannerStore storeys', () => {
 
     expect(zone.cover).toBe('membrane');
 
-    store.building.setRoofCover(building.id, zone, 'terrace');
+    store.roof.setRoofCover(building.id, zone, 'terrace');
 
     expect(store.scene.buildingScenes[0].storeys[0].roofZones[0].cover).toBe('terrace');
 
     // Choosing the membrane back clears the label.
-    store.building.setRoofCover(
+    store.roof.setRoofCover(
       building.id,
       store.scene.buildingScenes[0].storeys[0].roofZones[0],
       'membrane'
@@ -1244,11 +1239,11 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.walls.appendDraftWallPoint({ x: 5, y: 10 });
-    store.walls.appendDraftWallPoint({ x: 15, y: 10 });
-    store.walls.commitDraftWall();
+    store.wallDraft.appendDraftWallPoint({ x: 5, y: 10 });
+    store.wallDraft.appendDraftWallPoint({ x: 15, y: 10 });
+    store.wallDraft.commitDraftWall();
 
-    store.building.addStoreyToEditedBuilding({ copyWalls: true });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: true });
 
     const [ground, upper] = storeysOf(store.buildings[0]);
 
@@ -1263,16 +1258,16 @@ describe('SitePlannerStore storeys', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutHouse(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
     const storeys = storeysOf(store.buildings[0]);
 
-    store.building.removeStoreyFromEdited(storeys[1].id);
+    store.storeys.removeStoreyFromEdited(storeys[1].id);
 
     expect(storeysOf(store.buildings[0])).toHaveLength(1);
-    expect(store.building.activeStoreyId).toBe(storeysOf(store.buildings[0])[0].id);
+    expect(store.storeys.activeStoreyId).toBe(storeysOf(store.buildings[0])[0].id);
 
-    store.building.removeStoreyFromEdited(storeysOf(store.buildings[0])[0].id);
+    store.storeys.removeStoreyFromEdited(storeysOf(store.buildings[0])[0].id);
 
     expect(storeysOf(store.buildings[0])).toHaveLength(1);
 
@@ -1304,7 +1299,7 @@ describe('SitePlannerStore wall drawing precision', () => {
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
     store.setActiveTool('building:wall');
-    store.walls.appendDraftWallPoint({ x: 5, y: 5 });
+    store.wallDraft.appendDraftWallPoint({ x: 5, y: 5 });
 
     return building;
   };
@@ -1314,8 +1309,8 @@ describe('SitePlannerStore wall drawing precision', () => {
 
     store.view.setCursorPlanPoint({ x: 3, y: 3 });
 
-    expect(store.walls.draftWallCursor).toBeUndefined();
-    expect(store.walls.draftWallReadout).toBeUndefined();
+    expect(store.wallDraft.draftWallCursor).toBeUndefined();
+    expect(store.wallDraft.draftWallReadout).toBeUndefined();
 
     store.dispose();
   });
@@ -1326,8 +1321,8 @@ describe('SitePlannerStore wall drawing precision', () => {
     openWallTool(store);
     store.view.setCursorPlanPoint({ x: 9, y: 5 });
 
-    expect(store.walls.draftWallReadout?.lengthMeters).toBeCloseTo(4);
-    expect(store.walls.draftWallReadout?.angleDegrees).toBeCloseTo(0);
+    expect(store.wallDraft.draftWallReadout?.lengthMeters).toBeCloseTo(4);
+    expect(store.wallDraft.draftWallReadout?.angleDegrees).toBeCloseTo(0);
 
     store.dispose();
   });
@@ -1339,7 +1334,7 @@ describe('SitePlannerStore wall drawing precision', () => {
     store.view.setCursorPlanPoint({ x: 9, y: 5.3 });
     store.view.setCursorModifiers({ isAltPressed: false, isShiftPressed: true });
 
-    expect(store.walls.draftWallCursor?.y).toBeCloseTo(5);
+    expect(store.wallDraft.draftWallCursor?.y).toBeCloseTo(5);
 
     store.dispose();
   });
@@ -1350,11 +1345,11 @@ describe('SitePlannerStore wall drawing precision', () => {
     openWallTool(store);
     store.view.setCursorPlanPoint({ x: 9.37, y: 5 });
     for (const key of ['4', '.', '2']) {
-      store.walls.appendTypedLengthKey(key);
+      store.wallDraft.appendTypedLengthKey(key);
     }
 
-    expect(store.walls.typedLengthMeters).toBeCloseTo(4.2);
-    expect(store.walls.draftWallCursor?.x).toBeCloseTo(9.2);
+    expect(store.wallDraft.typedLengthMeters).toBeCloseTo(4.2);
+    expect(store.wallDraft.draftWallCursor?.x).toBeCloseTo(9.2);
 
     store.dispose();
   });
@@ -1363,13 +1358,13 @@ describe('SitePlannerStore wall drawing precision', () => {
     const store = new SitePlannerStore(createRepository());
 
     openWallTool(store);
-    store.walls.appendDraftWallPoint({ x: 9, y: 5 });
+    store.wallDraft.appendDraftWallPoint({ x: 9, y: 5 });
 
-    expect(store.walls.draftWallPoints).toHaveLength(2);
+    expect(store.wallDraft.draftWallPoints).toHaveLength(2);
 
-    store.walls.dropLastDraftWallPoint();
+    store.wallDraft.dropLastDraftWallPoint();
 
-    expect(store.walls.draftWallPoints).toHaveLength(1);
+    expect(store.wallDraft.draftWallPoints).toHaveLength(1);
 
     store.dispose();
   });
@@ -1393,18 +1388,18 @@ describe('SitePlannerStore storey navigation', () => {
     const store = new SitePlannerStore(createRepository());
 
     openBuilding(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
-    const activeStoreyId = store.building.activeStoreyId;
+    const activeStoreyId = store.storeys.activeStoreyId;
 
     store.setViewMode('scene');
 
     expect(store.editorMode.kind).toBe('edit');
-    expect(store.building.activeStoreyId).toBe(activeStoreyId);
+    expect(store.storeys.activeStoreyId).toBe(activeStoreyId);
 
     store.setViewMode('plan');
 
-    expect(store.building.activeStoreyOrdinal).toBe(2);
+    expect(store.storeys.activeStoreyOrdinal).toBe(2);
 
     store.dispose();
   });
@@ -1413,17 +1408,17 @@ describe('SitePlannerStore storey navigation', () => {
     const store = new SitePlannerStore(createRepository());
 
     openBuilding(store);
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
-    expect(store.building.activeStoreyOrdinal).toBe(2);
+    expect(store.storeys.activeStoreyOrdinal).toBe(2);
 
-    store.building.stepActiveStorey(-1);
+    store.storeys.stepActiveStorey(-1);
 
-    expect(store.building.activeStoreyOrdinal).toBe(1);
+    expect(store.storeys.activeStoreyOrdinal).toBe(1);
 
-    store.building.stepActiveStorey(-1);
+    store.storeys.stepActiveStorey(-1);
 
-    expect(store.building.activeStoreyOrdinal).toBe(1);
+    expect(store.storeys.activeStoreyOrdinal).toBe(1);
 
     store.dispose();
   });
@@ -1449,8 +1444,8 @@ describe('SitePlannerStore stairs', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
-    store.building.stepActiveStorey(-1);
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.stepActiveStorey(-1);
 
     return building;
   };
@@ -1460,9 +1455,9 @@ describe('SitePlannerStore stairs', () => {
 
     openTwoStoreyBuilding(store);
     store.setActiveTool('building:stair');
-    store.storeyObjects.placeStairAt({ x: 6, y: 6 });
+    store.stairs.placeStairAt({ x: 6, y: 6 });
 
-    const scene = store.building.editedStoreyScene;
+    const scene = store.storeys.editedStoreyScene;
 
     expect(scene?.stairs).toHaveLength(1);
     expect(scene?.stairs[0].run.riserCount).toBeGreaterThan(10);
@@ -1475,10 +1470,10 @@ describe('SitePlannerStore stairs', () => {
     const store = new SitePlannerStore(createRepository());
 
     openTwoStoreyBuilding(store);
-    store.storeyObjects.placeStairAt({ x: 6, y: 6 });
-    store.building.stepActiveStorey(1);
+    store.stairs.placeStairAt({ x: 6, y: 6 });
+    store.storeys.stepActiveStorey(1);
 
-    const upper = store.building.editedStoreyScene;
+    const upper = store.storeys.editedStoreyScene;
 
     expect(upper?.stairCutouts.length).toBeGreaterThan(0);
     expect(upper?.ownStairCutouts).toHaveLength(0);
@@ -1490,15 +1485,15 @@ describe('SitePlannerStore stairs', () => {
     const store = new SitePlannerStore(createRepository());
 
     openTwoStoreyBuilding(store);
-    store.storeyObjects.placeStairAt({ x: 6, y: 6 });
+    store.stairs.placeStairAt({ x: 6, y: 6 });
 
-    const before = store.building.editedStoreyScene?.stairs[0].run.riserCount ?? 0;
-    const storeyId = store.building.activeStoreyId;
+    const before = store.storeys.editedStoreyScene?.stairs[0].run.riserCount ?? 0;
+    const storeyId = store.storeys.activeStoreyId;
 
     assert(storeyId !== undefined, 'expected an active storey');
-    store.building.setStoreyHeightOnEdited(storeyId, 3.4);
+    store.storeys.setStoreyHeightOnEdited(storeyId, 3.4);
 
-    expect(store.building.editedStoreyScene?.stairs[0].run.riserCount).toBeGreaterThan(before);
+    expect(store.storeys.editedStoreyScene?.stairs[0].run.riserCount).toBeGreaterThan(before);
 
     store.dispose();
   });
@@ -1507,15 +1502,15 @@ describe('SitePlannerStore stairs', () => {
     const store = new SitePlannerStore(createRepository());
 
     openTwoStoreyBuilding(store);
-    store.storeyObjects.placeStairAt({ x: 6, y: 6 });
-    store.building.stepActiveStorey(1);
+    store.stairs.placeStairAt({ x: 6, y: 6 });
+    store.storeys.stepActiveStorey(1);
 
-    const upperStoreyId = store.building.activeStoreyId;
+    const upperStoreyId = store.storeys.activeStoreyId;
 
     assert(upperStoreyId !== undefined, 'expected the upper storey to be active');
-    store.building.removeStoreyFromEdited(upperStoreyId);
+    store.storeys.removeStoreyFromEdited(upperStoreyId);
 
-    expect(store.building.editedStoreyScene?.stairs).toHaveLength(0);
+    expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(0);
 
     store.dispose();
   });
@@ -1533,9 +1528,9 @@ describe('SitePlannerStore external stairs', () => {
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
     // Well outside the 8×8 footprint centred on (10, 10).
-    store.storeyObjects.placeStairAt({ x: 18, y: 10 });
+    store.stairs.placeStairAt({ x: 18, y: 10 });
 
-    const porch = store.building.editedStoreyScene?.stairs[0];
+    const porch = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(porch !== undefined, 'expected the porch to be placed');
     expect(porch.isExternal).toBe(true);
@@ -1557,9 +1552,9 @@ describe('SitePlannerStore external stairs', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.storeyObjects.placeStairAt({ x: 10, y: 10 });
+    store.stairs.placeStairAt({ x: 10, y: 10 });
 
-    const inner = store.building.editedStoreyScene?.stairs[0];
+    const inner = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(inner !== undefined, 'expected the stair to be placed');
     expect(inner.isExternal).toBe(false);
@@ -1589,13 +1584,13 @@ describe('SitePlannerStore supports', () => {
     openCanopy(store);
     store.storeyObjects.placeSupportAt({ x: 10, y: 10 });
 
-    const post = store.building.editedStoreyScene?.supports[0];
+    const post = store.storeys.editedStoreyScene?.supports[0];
 
     assert(post !== undefined, 'expected the post to be placed');
     assert(post.baseElevation !== undefined && post.topElevation !== undefined, 'expected a span');
     expect(post.isFreeStanding).toBe(false);
     expect(post.topElevation - post.baseElevation).toBeCloseTo(
-      store.building.editedStoreyScene?.storey.heightMeters ?? 0
+      store.storeys.editedStoreyScene?.storey.heightMeters ?? 0
     );
 
     store.dispose();
@@ -1608,7 +1603,7 @@ describe('SitePlannerStore supports', () => {
     store.storeyObjects.placeSupportAt({ x: 10, y: 10 });
     store.storeyObjects.placeSupportAt({ x: 16, y: 10 });
 
-    const [inner, outer] = store.building.editedStoreyScene?.supports ?? [];
+    const [inner, outer] = store.storeys.editedStoreyScene?.supports ?? [];
 
     assert(inner?.topElevation !== undefined && outer?.topElevation !== undefined, 'spans');
     expect(outer.isFreeStanding).toBe(true);
@@ -1625,12 +1620,12 @@ describe('SitePlannerStore supports', () => {
 
     store.storeyObjects.placeSupportAt({ x: 10, y: 10 });
 
-    const post = store.building.editedStoreyScene?.supports[0];
+    const post = store.storeys.editedStoreyScene?.supports[0];
 
     assert(post !== undefined, 'expected the post');
     store.storeyObjects.removeSupportFrom(building.id, post.post.id);
 
-    expect(store.building.editedStoreyScene?.supports).toHaveLength(0);
+    expect(store.storeys.editedStoreyScene?.supports).toHaveLength(0);
 
     store.dispose();
   });
@@ -1665,16 +1660,16 @@ describe('SitePlannerStore building warnings', () => {
 
     openHouse(store);
 
-    const storeyId = store.building.activeStoreyId;
+    const storeyId = store.storeys.activeStoreyId;
 
     assert(storeyId !== undefined, 'expected an active storey');
-    store.building.setStoreyHeightOnEdited(storeyId, 1.9);
+    store.storeys.setStoreyHeightOnEdited(storeyId, 1.9);
 
     expect(store.scene.buildingWarnings.some(warning => warning.kind === 'storey-too-low')).toBe(
       true
     );
 
-    store.building.setStoreyHeightOnEdited(storeyId, 2.7);
+    store.storeys.setStoreyHeightOnEdited(storeyId, 2.7);
 
     expect(store.scene.buildingWarnings).toHaveLength(0);
 
@@ -1686,12 +1681,12 @@ describe('SitePlannerStore building warnings', () => {
 
     openHouse(store);
 
-    const storeyId = store.building.activeStoreyId;
+    const storeyId = store.storeys.activeStoreyId;
 
     assert(storeyId !== undefined, 'expected an active storey');
     // A very low storey makes any stair in it absurd.
-    store.building.setStoreyHeightOnEdited(storeyId, 0.4);
-    store.storeyObjects.placeStairAt({ x: 10, y: 10 });
+    store.storeys.setStoreyHeightOnEdited(storeyId, 0.4);
+    store.stairs.placeStairAt({ x: 10, y: 10 });
 
     expect(
       store.scene.buildingWarnings.some(warning => warning.kind === 'stair-uncomfortable')
@@ -1705,18 +1700,18 @@ describe('SitePlannerStore building warnings', () => {
 
     openHouse(store);
 
-    const storeyId = store.building.activeStoreyId;
+    const storeyId = store.storeys.activeStoreyId;
 
     assert(storeyId !== undefined, 'expected an active storey');
-    store.building.setStoreyHeightOnEdited(storeyId, 1.9);
+    store.storeys.setStoreyHeightOnEdited(storeyId, 1.9);
 
     const [finding] = store.scene.buildingWarnings;
 
     assert(finding !== undefined, 'expected a finding');
-    store.revealWarning(finding);
+    store.storeys.revealWarning(finding);
 
     expect(store.viewMode).toBe('plan');
-    expect(store.building.activeStoreyId).toBe(finding.storeyId);
+    expect(store.storeys.activeStoreyId).toBe(finding.storeyId);
     expect(store.view.viewport.centerMeters).toEqual(finding.at);
 
     store.dispose();
@@ -1733,9 +1728,9 @@ describe('SitePlannerStore stair as an object', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.storeyObjects.placeStairAt({ x: 10, y: 10 });
+    store.stairs.placeStairAt({ x: 10, y: 10 });
 
-    const stair = store.building.editedStoreyScene?.stairs[0];
+    const stair = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(stair !== undefined, 'expected the stair');
 
@@ -1745,13 +1740,13 @@ describe('SitePlannerStore stair as an object', () => {
   it('moves a stair, and its footprint follows', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
-    const before = store.building.editedStoreyScene?.stairs[0].footprint[0].outer[0];
+    const before = store.storeys.editedStoreyScene?.stairs[0].footprint[0].outer[0];
 
-    store.storeyObjects.moveStair(building.id, stairId, { position: { x: 6, y: 6 } });
+    store.stairs.moveStair(building.id, stairId, { position: { x: 6, y: 6 } });
 
-    const after = store.building.editedStoreyScene?.stairs[0].footprint[0].outer[0];
+    const after = store.storeys.editedStoreyScene?.stairs[0].footprint[0].outer[0];
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.position).toEqual({ x: 6, y: 6 });
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.position).toEqual({ x: 6, y: 6 });
     expect(after).not.toEqual(before);
 
     store.dispose();
@@ -1760,11 +1755,11 @@ describe('SitePlannerStore stair as an object', () => {
   it('turns a stair, and its exit turns with it', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
-    const before = store.building.editedStoreyScene?.stairs[0].exitPoint;
+    const before = store.storeys.editedStoreyScene?.stairs[0].exitPoint;
 
-    store.storeyObjects.moveStair(building.id, stairId, { rotationDegrees: 90 });
+    store.stairs.moveStair(building.id, stairId, { rotationDegrees: 90 });
 
-    expect(store.building.editedStoreyScene?.stairs[0].exitPoint).not.toEqual(before);
+    expect(store.storeys.editedStoreyScene?.stairs[0].exitPoint).not.toEqual(before);
 
     store.dispose();
   });
@@ -1773,13 +1768,13 @@ describe('SitePlannerStore stair as an object', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
 
-    store.storeyObjects.mirrorStair(building.id, stairId);
+    store.stairs.mirrorStair(building.id, stairId);
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.isMirrored).toBe(true);
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.isMirrored).toBe(true);
 
-    store.storeyObjects.mirrorStair(building.id, stairId);
+    store.stairs.mirrorStair(building.id, stairId);
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.isMirrored).toBe(false);
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.isMirrored).toBe(false);
 
     store.dispose();
   });
@@ -1794,18 +1789,18 @@ describe('SitePlannerStore stair as an object', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.storeyObjects.setArmedStairKind('l-shaped');
-    store.storeyObjects.placeStairAt({ x: 10, y: 10 });
+    store.stairs.setArmedStairKind('l-shaped');
+    store.stairs.placeStairAt({ x: 10, y: 10 });
 
-    const stair = store.building.editedStoreyScene?.stairs[0];
+    const stair = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(stair !== undefined, 'expected the stair');
 
     const before = stair.exitPoint.x;
 
-    store.storeyObjects.mirrorStair(building.id, stair.stair.id);
+    store.stairs.mirrorStair(building.id, stair.stair.id);
 
-    const after = store.building.editedStoreyScene?.stairs[0].exitPoint.x ?? before;
+    const after = store.storeys.editedStoreyScene?.stairs[0].exitPoint.x ?? before;
 
     // The quarter turn now goes the other way: the exit swaps sides of the
     // stair's own axis.
@@ -1825,10 +1820,10 @@ describe('SitePlannerStore multiple selection', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.storeyObjects.placeStairAt({ x: 6, y: 6 });
-    store.storeyObjects.placeStairAt({ x: 14, y: 14 });
+    store.stairs.placeStairAt({ x: 6, y: 6 });
+    store.stairs.placeStairAt({ x: 14, y: 14 });
 
-    const stairs = store.building.editedStoreyScene?.stairs ?? [];
+    const stairs = store.storeys.editedStoreyScene?.stairs ?? [];
 
     assert(stairs.length === 2, 'expected two stairs');
 
@@ -1844,17 +1839,17 @@ describe('SitePlannerStore multiple selection', () => {
     const { first, second } = openWithTwoStairs(store);
 
     store.setSelection(first);
-    store.toggleSelection(second);
+    store.selectionCommands.toggleSelection(second);
 
     expect(store.selections).toHaveLength(2);
-    expect(store.isSelected(first)).toBe(true);
+    expect(store.selectionCommands.isSelected(first)).toBe(true);
     // The last one picked is what the properties panel reads.
     expect(store.selection).toEqual(second);
 
-    store.toggleSelection(second);
+    store.selectionCommands.toggleSelection(second);
 
     expect(store.selections).toHaveLength(1);
-    expect(store.isSelected(second)).toBe(false);
+    expect(store.selectionCommands.isSelected(second)).toBe(false);
 
     store.dispose();
   });
@@ -1864,13 +1859,13 @@ describe('SitePlannerStore multiple selection', () => {
     const { first, second } = openWithTwoStairs(store);
 
     store.setSelections([first, second]);
-    store.removeSelected();
+    store.selectionCommands.removeSelected();
 
-    expect(store.building.editedStoreyScene?.stairs).toHaveLength(0);
+    expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(0);
 
-    store.undo();
+    store.document.undo();
 
-    expect(store.building.editedStoreyScene?.stairs).toHaveLength(2);
+    expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(2);
 
     store.dispose();
   });
@@ -1880,13 +1875,13 @@ describe('SitePlannerStore multiple selection', () => {
     const { first, second } = openWithTwoStairs(store);
 
     store.setSelections([first, second]);
-    store.duplicateSelected();
+    store.selectionCommands.duplicateSelected();
 
-    expect(store.building.editedStoreyScene?.stairs).toHaveLength(4);
+    expect(store.storeys.editedStoreyScene?.stairs).toHaveLength(4);
     expect(store.selections).toHaveLength(2);
-    expect(store.isSelected(first)).toBe(false);
+    expect(store.selectionCommands.isSelected(first)).toBe(false);
 
-    const positions = (store.building.editedStoreyScene?.stairs ?? []).map(
+    const positions = (store.storeys.editedStoreyScene?.stairs ?? []).map(
       stair => stair.stair.position
     );
 
@@ -1907,9 +1902,9 @@ describe('SitePlannerStore stair rotation', () => {
       'union'
     );
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.storeyObjects.placeStairAt({ x: 10, y: 10 });
+    store.stairs.placeStairAt({ x: 10, y: 10 });
 
-    const stair = store.building.editedStoreyScene?.stairs[0];
+    const stair = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(stair !== undefined, 'expected the stair');
 
@@ -1920,15 +1915,15 @@ describe('SitePlannerStore stair rotation', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
 
-    store.storeyObjects.rotateStairByQuarter(building.id, stairId);
+    store.stairs.rotateStairByQuarter(building.id, stairId);
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(90);
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(90);
 
     for (let turn = 0; turn < 3; turn += 1) {
-      store.storeyObjects.rotateStairByQuarter(building.id, stairId);
+      store.stairs.rotateStairByQuarter(building.id, stairId);
     }
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(0);
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(0);
 
     store.dispose();
   });
@@ -1936,16 +1931,16 @@ describe('SitePlannerStore stair rotation', () => {
   it('takes the exit and the turn grip round with the stair', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
-    const before = store.building.editedStoreyScene?.stairs[0];
+    const before = store.storeys.editedStoreyScene?.stairs[0];
 
     assert(before !== undefined, 'expected the stair');
 
     const exitBefore = before.exitPoint;
     const gripBefore = before.rotationGrip;
 
-    store.storeyObjects.rotateStairByQuarter(building.id, stairId);
+    store.stairs.rotateStairByQuarter(building.id, stairId);
 
-    const after = store.building.editedStoreyScene?.stairs[0];
+    const after = store.storeys.editedStoreyScene?.stairs[0];
 
     expect(after?.exitPoint).not.toEqual(exitBefore);
     expect(after?.rotationGrip).not.toEqual(gripBefore);
@@ -1962,10 +1957,10 @@ describe('SitePlannerStore stair rotation', () => {
     const store = new SitePlannerStore(createRepository());
     const { building, stairId } = placeStair(store);
 
-    store.storeyObjects.rotateStairByQuarter(building.id, stairId);
-    store.undo();
+    store.stairs.rotateStairByQuarter(building.id, stairId);
+    store.document.undo();
 
-    expect(store.building.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(0);
+    expect(store.storeys.editedStoreyScene?.stairs[0].stair.rotationDegrees).toBe(0);
 
     store.dispose();
   });
@@ -1992,7 +1987,7 @@ describe('walls on a round base', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutRoundHouse(store);
-    store.walls.traceBaseOutlineWalls();
+    store.wallDraft.traceBaseOutlineWalls();
 
     const [wall] = storeysOf(store.buildings[0])[0].walls;
 
@@ -2003,7 +1998,7 @@ describe('walls on a round base', () => {
     }
 
     // Pressing the button again must not stack a second ring on the first.
-    store.walls.traceBaseOutlineWalls();
+    store.wallDraft.traceBaseOutlineWalls();
 
     expect(storeysOf(store.buildings[0])[0].walls).toHaveLength(1);
 
@@ -2014,12 +2009,12 @@ describe('walls on a round base', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutRoundHouse(store);
-    store.walls.appendDraftWallPoint({ x: 15, y: 10 });
+    store.wallDraft.appendDraftWallPoint({ x: 15, y: 10 });
     // A cursor between facets, slightly inside the rim: it must land AT the
     // radius, not on the grid and not on a polygonization corner.
     store.view.setCursorPlanPoint({ x: 10 + 4.9 * Math.cos(0.3), y: 10 + 4.9 * Math.sin(0.3) });
 
-    const cursor = store.walls.draftWallCursor;
+    const cursor = store.wallDraft.draftWallCursor;
 
     expect(cursor).toBeDefined();
     expect(Math.hypot((cursor?.x ?? 0) - 10, (cursor?.y ?? 0) - 10)).toBeCloseTo(5);
@@ -2032,7 +2027,7 @@ describe('walls on a round base', () => {
 
     layOutRoundHouse(store);
 
-    expect(store.walls.firstWallPointAt({ x: 10.3, y: 15.2 })).toEqual({ x: 10, y: 15 });
+    expect(store.wallDraft.firstWallPointAt({ x: 10.3, y: 15.2 })).toEqual({ x: 10, y: 15 });
 
     store.dispose();
   });
@@ -2087,7 +2082,7 @@ describe('utility entries as editor objects', () => {
 
     expect(store.utilities.selectedUtilityEntry?.entry.id).toBe(entry.id);
 
-    store.removeSelected();
+    store.selectionCommands.removeSelected();
 
     expect(entriesOf(store.buildings[0]).map(candidate => candidate.id)).not.toContain(entry.id);
     expect(store.utilities.selectedUtilityEntry).toBeUndefined();
@@ -2193,7 +2188,7 @@ describe('a pitched roof over an unfinished top storey', () => {
     );
     store.exitEditMode();
     store.enterEditMode({ kind: 'building', buildingId: building.id });
-    store.building.addStoreyToEditedBuilding({ copyWalls: false });
+    store.storeys.addStoreyToEditedBuilding({ copyWalls: false });
 
     return building;
   };
@@ -2202,7 +2197,7 @@ describe('a pitched roof over an unfinished top storey', () => {
     const store = new SitePlannerStore(createRepository());
 
     layOutWithEmptyUpperStorey(store);
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     const scene = store.scene.buildingScenes[0];
 
@@ -2219,12 +2214,12 @@ describe('a pitched roof over an unfinished top storey', () => {
     const store = new SitePlannerStore(createRepository());
     const building = layOutWithEmptyUpperStorey(store);
 
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     expect(pitchedRoofOf(store.buildings[0])).toBeDefined();
     expect(building.id).toBe(store.buildings[0].id);
 
-    store.building.togglePitchedRoof();
+    store.roof.togglePitchedRoof();
 
     expect(pitchedRoofOf(store.buildings[0])).toBeUndefined();
 
@@ -2429,11 +2424,11 @@ describe('clearing the plot', () => {
     store.building.placeStockHouse('bath-6x4');
     store.siteObjects.plantTree({ x: 30, y: 5 }, 'pine');
     store.siteObjects.placeCar({ x: 32, y: 8 });
-    store.siteObjects.addElevationMark({ x: 3, y: 3 });
+    store.marks.addElevationMark({ x: 3, y: 3 });
 
     const markCount = store.elevationMarks.length;
 
-    store.clearSite();
+    store.document.clearSite();
 
     expect(store.buildings).toHaveLength(0);
     expect(store.trees).toHaveLength(0);
@@ -2444,7 +2439,7 @@ describe('clearing the plot', () => {
     expect(store.elevationMarks).toHaveLength(markCount);
     expect(store.selection).toBeUndefined();
 
-    store.undo();
+    store.document.undo();
 
     expect(store.buildings).toHaveLength(1);
     expect(store.trees).toHaveLength(1);

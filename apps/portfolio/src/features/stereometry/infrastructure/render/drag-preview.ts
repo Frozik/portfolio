@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 
 import type { Vec3Array } from '../../domain/topology-types';
-import type { DragPreviewState } from '../drag-connector';
+import type { DragPreviewState } from '../drag-connector-types';
 
 export interface PreviewLine {
   readonly pointA: Vec3Array;

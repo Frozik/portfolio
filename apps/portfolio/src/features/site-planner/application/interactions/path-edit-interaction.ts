@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
+import type { PathId, SitePath } from '../../domain/model/plot-objects';
 import { MIN_PATH_POINTS } from '../../domain/model/site-object-edits';
-import type { PathId, SitePath } from '../../domain/model/site-plan';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
 import { computePathPointHandles, findPathPointHandleAt } from '../render/plan-draw/draw-paths';
@@ -93,7 +93,7 @@ export class PathEditInteraction implements EditorInteraction {
       this.gestures.drop();
       store.siteObjects.removePathPoint(path.id, handle.index);
       // The removed point's highlight would light its successor by index.
-      store.setPathHandleHighlight(undefined);
+      store.tooling.setPathHandleHighlight(undefined);
     }
   }
 
@@ -108,7 +108,7 @@ export class PathEditInteraction implements EditorInteraction {
     if (!isNil(pointIndex)) {
       store.pushHistory();
       store.siteObjects.removePathPoint(this.pathId, pointIndex);
-      store.setPathHandleHighlight(undefined);
+      store.tooling.setPathHandleHighlight(undefined);
     }
 
     return true;

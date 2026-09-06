@@ -93,7 +93,7 @@ const CompassDial = observer(({ store }: { readonly store: SitePlannerStore }) =
       return;
     }
 
-    store.setNorthOffsetDegrees(
+    store.document.setNorthOffsetDegrees(
       snapLength(
         northOffsetTowards(offset),
         rotationStepDegrees({ isAltPressed: event.altKey, isShiftPressed: event.shiftKey })
@@ -194,13 +194,13 @@ export const CompassSettings = observer(({ store }: { readonly store: SitePlanne
     if (!isNil(value)) {
       // Typed one keystroke at a time, so the burst collapses into one step.
       store.pushHistory(NORTH_OFFSET_HISTORY_GROUP);
-      store.setNorthOffsetDegrees(value);
+      store.document.setNorthOffsetDegrees(value);
     }
   });
 
   const handleResetToNorthUp = useFunction(() => {
     store.pushHistory();
-    store.setNorthOffsetDegrees(NORTH_UP_DEGREES);
+    store.document.setNorthOffsetDegrees(NORTH_UP_DEGREES);
   });
 
   return (

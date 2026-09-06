@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPathId } from '../model/site-plan';
+import { createPathId } from '../model/plot-objects';
 import { multiPolygonArea } from './building-outline';
 import { buildPathRibbons } from './path-ribbon';
 import { intersectPolygons } from './polygon-booleans';

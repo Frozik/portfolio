@@ -5,7 +5,7 @@ import { makeAutoObservable } from 'mobx';
 import { DAMAGE_POPUP_SECONDS, TAUNT_LINE_COUNT, TAUNT_VISIBLE_SECONDS } from '../domain/constants';
 import type { TauntKind } from '../domain/taunts';
 import { pickTaunt } from '../domain/taunts';
-import type { PlayerId } from '../domain/types';
+import type { PlayerId, WorldEvent } from '../domain/types';
 
 /** A floating number is either a wound or a repair; the overlay colours and signs it either way. */
 export type HealthPopupKind = 'damage' | 'repair';
@@ -99,6 +99,25 @@ export class OverlayStore {
         remainingSeconds: TAUNT_VISIBLE_SECONDS,
       },
     ];
+  }
+
+  /** The events that put something on the field: wounds, repairs and the last words of the dead. */
+  applyEvents(events: readonly WorldEvent[]): void {
+    for (const event of events) {
+      switch (event.type) {
+        case 'tank-damaged':
+          this.pushHealthPopup(event.playerId, 'damage', event.amount);
+          break;
+        case 'tank-repaired':
+          this.pushHealthPopup(event.playerId, 'repair', event.amount);
+          break;
+        case 'tank-destroyed':
+          this.pushTaunt(event.playerId, 'death');
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   age(elapsedSeconds: number): void {

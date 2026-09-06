@@ -58,7 +58,7 @@ export const SelectedUtilityRouteProperties = observer(
       }
     });
     const handleEnterEditMode = useFunction(() =>
-      store.openEditorDoor({
+      store.modes.openEditorDoor({
         target: { kind: 'utilityRoute', routeId: route.id },
         aimAt: undefined,
       })

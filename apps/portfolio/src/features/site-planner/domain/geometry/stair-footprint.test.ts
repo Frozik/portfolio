@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { createStair } from '../model/stairs';
-import {
-  deriveStairRun,
-  isStairRunComfortable,
-  spiralGoingMeters,
-  stairExitPoint,
-  stairFootprint,
-  stairLayout,
-} from './stair-footprint';
+import { stairExitPoint, stairFootprint } from './stair-footprint';
+import { stairLayout } from './stair-layouts';
+import { deriveStairRun, isStairRunComfortable, spiralGoingMeters } from './stair-run';
 
 const STANDARD_HEIGHT = 2.7;
 

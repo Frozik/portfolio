@@ -8,7 +8,7 @@ import type { ChangeEvent } from 'react';
 import { Button } from '../../../../shared/ui/Button';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { Building } from '../../domain/model/site-plan';
+import type { Building } from '../../domain/model/building';
 import type { Wall } from '../../domain/model/walls';
 import {
   isWallClosed,
@@ -124,7 +124,7 @@ export const SelectedBuildingProperties = observer(
       store.building.renameBuilding(building.id, event.target.value);
     });
     const handleEdit = useFunction(() => {
-      store.openEditorDoor({
+      store.modes.openEditorDoor({
         target: { kind: 'building', buildingId: building.id },
         aimAt: undefined,
       });
@@ -161,7 +161,7 @@ export const SelectedBuildingProperties = observer(
  */
 export const WallToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.walls;
-  const handleTrace = useFunction(() => store.walls.traceBaseOutlineWalls());
+  const handleTrace = useFunction(() => store.wallDraft.traceBaseOutlineWalls());
 
   return (
     <div className="flex flex-col gap-2">

@@ -43,13 +43,14 @@ module.exports = {
     {
       name: 'presentation-does-not-import-infrastructure',
       comment:
-        'Only a composition root may construct infrastructure objects and hand them to the application layer: the feature shell component (presentation/<Feature>.tsx) in the browser app, presentation/bootstrap.ts on the server.',
+        'Only a composition root may construct infrastructure objects and hand them to the application layer: the feature shell component (presentation/<Feature>.tsx) in the browser app, presentation/bootstrap.ts and its presentation/bootstrap/ modules on the server.',
       severity: 'error',
       from: {
         path: '/presentation/',
         pathNot: [
           '/presentation/[A-Z][A-Za-z0-9]*\\.tsx$',
           '^apps/communication/src/presentation/bootstrap\\.ts$',
+          '^apps/communication/src/presentation/bootstrap/',
         ],
       },
       to: { path: '/infrastructure/' },

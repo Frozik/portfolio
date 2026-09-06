@@ -5,14 +5,12 @@ import { PATH_DRAPE_OFFSET_METERS } from '../domain/constants';
 import { foundationVolumeCubicMeters, pointOnOutline } from '../domain/geometry/building-outline';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
 import type { LitMesh, PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
-import { subtractPolygons } from '../domain/geometry/polygon-booleans';
-import { computeMultiPolygonCentroid } from '../domain/geometry/polygon-centroid';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
+import { entriesOf, foundationOf, padDropOf, pitchedRoofOf } from '../domain/model/building';
+import type { Building } from '../domain/model/building';
 import type { BuildingWarning } from '../domain/model/building-warnings';
-import { collectBuildingWarnings } from '../domain/model/building-warnings';
 import { editedBuildingId } from '../domain/model/editor-mode';
-import type { Building, PathSurface } from '../domain/model/site-plan';
-import { entriesOf, foundationOf, padDropOf, pitchedRoofOf } from '../domain/model/site-plan';
+import type { PathSurface } from '../domain/model/plot-objects';
 import type { AnalysisRaster } from '../domain/terrain/analysis-raster';
 import { buildCutFillRaster, buildSlopeRaster } from '../domain/terrain/analysis-raster';
 import type { CutFillReport } from '../domain/terrain/cut-fill';
@@ -28,21 +26,18 @@ import type { SceneFurniture } from '../domain/terrain/place-furniture';
 import type { SceneTree } from '../domain/terrain/place-trees';
 import { placeTreesOnTerrain } from '../domain/terrain/place-trees';
 import type { BuildingScene } from './building-scene';
+import { collectSceneWarnings } from './building-scene-warnings';
 import type { DuctRun } from './duct-scenes';
 import { deriveDuctRuns } from './duct-scenes';
 import type { PlanEditorCore } from './editor-core';
+import { buildFoundationSolids } from './render/foundation-meshes';
 import type { FlowField } from './render/plan-draw/draw-flow-arrows';
 import type { GhostPass } from './render/scene-meshes';
-import {
-  buildBuildingMeshes,
-  buildFoundationSolids,
-  buildRoofOverlays,
-  buildSceneFurniture,
-} from './render/scene-meshes';
+import { buildBuildingMeshes, buildRoofOverlays, buildSceneFurniture } from './render/scene-meshes';
 import type { PitchedRoofScene } from './roof-scenes';
 import { derivePitchedRoofScene } from './roof-scenes';
 import type { StoreyScene } from './storey-scenes';
-import { deriveStoreyScenes, maxOverhangMeters } from './storey-scenes';
+import { deriveStoreyScenes } from './storey-scenes';
 import type { TerrainModel } from './TerrainModel';
 
 const NO_BUILDING_WARNINGS: readonly BuildingWarning[] = [];
@@ -208,58 +203,7 @@ export class SceneModel {
       return NO_BUILDING_WARNINGS;
     }
 
-    return collectBuildingWarnings(
-      scene.storeys.map((storeyScene, level) => {
-        const below = scene.storeys[level - 1];
-        const overhang =
-          isNil(below) || storeyScene.footprint.length === 0
-            ? undefined
-            : subtractPolygons(storeyScene.footprint, below.footprint);
-        const overhangAt = isNil(overhang) ? undefined : computeMultiPolygonCentroid(overhang);
-
-        return {
-          storeyId: storeyScene.storey.id,
-          heightMeters: storeyScene.storey.heightMeters,
-          footprint: storeyScene.footprint,
-          stairwell: storeyScene.stairCutouts,
-          furniture: storeyScene.furniture.map(piece => ({
-            id: piece.id,
-            position: piece.position,
-          })),
-          walls: storeyScene.wallShapes.map(wall => ({ id: wall.id, body: wall.polygons })),
-          stairs: storeyScene.stairs.map(stairScene => ({
-            id: stairScene.stair.id,
-            position: stairScene.stair.position,
-            isComfortable: stairScene.isComfortable,
-          })),
-          supportPositions: storeyScene.supports.map(supportScene => supportScene.post.position),
-          // The roof's findings belong to the storey it crowns — the highest
-          // one with built mass — and that is where the panel travels to.
-          roofPitchDegrees:
-            storeyScene.storey.id === scene.pitchedRoof?.crownedStoreyId
-              ? scene.pitchedRoof.roof.pitchDegrees
-              : undefined,
-          rooms: storeyScene.rooms.map(room => ({
-            roomTypeId: room.roomTypeId,
-            polygons: room.polygons,
-            at: room.centroid,
-          })),
-          saunaStovePositions: storeyScene.fireplaces
-            .filter(fireplaceScene => fireplaceScene.fireplace.kind === 'saunaStove')
-            .map(fireplaceScene => fireplaceScene.fireplace.position),
-          ventPositions: storeyScene.ducts
-            .filter(section => section.duct.kind === 'vent')
-            .map(section => section.duct.position),
-          strandedDucts: scene.ducts
-            .filter(run => run.isOutsideRoof && run.storeyId === storeyScene.storey.id)
-            .map(run => ({ id: run.duct.id, at: run.duct.position })),
-          footprintBelow: below?.footprint,
-          overhang: overhang ?? [],
-          overhangMeters: isNil(overhang) ? 0 : maxOverhangMeters(overhang, below.footprint),
-          overhangAt,
-        };
-      })
-    );
+    return collectSceneWarnings(scene);
   }
 
   /** The earthworks of every building added up — what the overlay legend reports. */

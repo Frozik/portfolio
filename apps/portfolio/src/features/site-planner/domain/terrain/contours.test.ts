@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildContours, chooseContourLabels } from './contours';
+import { chooseContourLabels } from './contour-labels';
+import { buildContours } from './contours';
 import type { Heightfield } from './heightfield';
 
 const RESOLUTION = 9;

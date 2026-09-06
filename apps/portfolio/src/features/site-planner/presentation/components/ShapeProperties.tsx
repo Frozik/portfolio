@@ -269,7 +269,7 @@ export const SelectedGroupProperties = observer(
 export const SelectedShapeProperties = observer(
   ({ store }: { readonly store: SitePlannerStore }) => {
     const shape = store.composition.selectedShape;
-    const { isPropertiesFocusPending } = store;
+    const { isPropertiesFocusPending } = store.tooling;
     const sizeFieldRef = useRef<IRichEditorHandle>(null);
     // Typing a number arrives one keystroke at a time; the field the keystrokes
     // belong to is what collapses them into a single step to undo.
@@ -286,7 +286,7 @@ export const SelectedShapeProperties = observer(
         return;
       }
 
-      store.consumePropertiesFocus();
+      store.tooling.consumePropertiesFocus();
       sizeFieldRef.current?.focus();
     }, [store, isPropertiesFocusPending]);
 

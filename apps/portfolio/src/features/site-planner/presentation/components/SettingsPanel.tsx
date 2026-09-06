@@ -99,11 +99,11 @@ const GridSection = observer(({ store }: { readonly store: SitePlannerStore }) =
     const step = GRID_STEP_OPTIONS.find(candidate => String(candidate) === value);
 
     if (!isNil(step)) {
-      store.updateSettings({ gridStepMeters: step }, GRID_STEP_HISTORY_GROUP);
+      store.document.updateSettings({ gridStepMeters: step }, GRID_STEP_HISTORY_GROUP);
     }
   });
   const handleSnapToggle = useFunction(() =>
-    store.updateSettings({ isSnapEnabled: !store.settings.isSnapEnabled })
+    store.document.updateSettings({ isSnapEnabled: !store.settings.isSnapEnabled })
   );
 
   return (
@@ -128,17 +128,20 @@ const GridSection = observer(({ store }: { readonly store: SitePlannerStore }) =
 const TerrainSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const handleSetbackChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updateSettings({ setbackMeters: value }, SETBACK_HISTORY_GROUP);
+      store.document.updateSettings({ setbackMeters: value }, SETBACK_HISTORY_GROUP);
     }
   });
   const handleContourIntervalChange = useFunction((value: number | undefined) => {
     if (!isNil(value) && value > 0) {
-      store.updateSettings({ contourIntervalMeters: value }, CONTOUR_INTERVAL_HISTORY_GROUP);
+      store.document.updateSettings(
+        { contourIntervalMeters: value },
+        CONTOUR_INTERVAL_HISTORY_GROUP
+      );
     }
   });
   const handleFrostDepthChange = useFunction((value: number | undefined) => {
     if (!isNil(value) && value > 0) {
-      store.updateSettings({ frostDepthMeters: value }, FROST_DEPTH_HISTORY_GROUP);
+      store.document.updateSettings({ frostDepthMeters: value }, FROST_DEPTH_HISTORY_GROUP);
     }
   });
   const handleResolutionChange = useFunction((value: string) => {
@@ -147,7 +150,7 @@ const TerrainSection = observer(({ store }: { readonly store: SitePlannerStore }
     );
 
     if (!isNil(resolution)) {
-      store.updateSettings({ heightfieldTargetResolution: resolution });
+      store.document.updateSettings({ heightfieldTargetResolution: resolution });
     }
   });
 
@@ -199,7 +202,10 @@ const TimeZoneField = observer(({ store }: { readonly store: SitePlannerStore })
 
     if (isValidTimeZoneId(nextTimeZoneId)) {
       setRejectedDraft(undefined);
-      store.updateSettings({ location: { timeZoneId: nextTimeZoneId } }, TIME_ZONE_HISTORY_GROUP);
+      store.document.updateSettings(
+        { location: { timeZoneId: nextTimeZoneId } },
+        TIME_ZONE_HISTORY_GROUP
+      );
 
       return;
     }
@@ -244,12 +250,18 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
 
   const handleLatitudeChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updateSettings({ location: { latitudeDegrees: value } }, LATITUDE_HISTORY_GROUP);
+      store.document.updateSettings(
+        { location: { latitudeDegrees: value } },
+        LATITUDE_HISTORY_GROUP
+      );
     }
   });
   const handleLongitudeChange = useFunction((value: number | undefined) => {
     if (!isNil(value)) {
-      store.updateSettings({ location: { longitudeDegrees: value } }, LONGITUDE_HISTORY_GROUP);
+      store.document.updateSettings(
+        { location: { longitudeDegrees: value } },
+        LONGITUDE_HISTORY_GROUP
+      );
     }
   });
   const handleMapOpen = useFunction(() => setIsMapOpen(true));
@@ -260,7 +272,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
    * and the time zone that came with them are a single step to undo.
    */
   const handleMapApply = useFunction((picked: SiteLocationChanges) => {
-    store.updateSettings({ location: picked }, LOCATION_MAP_HISTORY_GROUP);
+    store.document.updateSettings({ location: picked }, LOCATION_MAP_HISTORY_GROUP);
   });
 
   return (
@@ -290,7 +302,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
           <LocationMapDialog
             initialLatitudeDegrees={location.latitudeDegrees}
             initialLongitudeDegrees={location.longitudeDegrees}
-            resolveTimeZoneId={store.timeZoneIdAt}
+            resolveTimeZoneId={store.document.timeZoneIdAt}
             onApply={handleMapApply}
             onClose={handleMapClose}
           />

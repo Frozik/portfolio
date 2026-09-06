@@ -4,8 +4,8 @@ import { toPlayerId } from '../../domain/types';
 import { getPlayerColor } from '../../presentation/player-colors';
 import { SHAPES_PER_TANK } from '../render-constants';
 import type { ITankBlueprint, ITankPose } from './tank-blueprint';
-import { buildTankShapes } from './tank-blueprint';
 import { createTankBlueprint } from './tank-generator';
+import { buildTankShapes } from './tank-shapes';
 
 vi.mock('lodash-es', async importOriginal => {
   const actual = await importOriginal<typeof import('lodash-es')>();

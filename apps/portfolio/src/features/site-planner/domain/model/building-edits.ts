@@ -2,13 +2,14 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS, normalizeTurnDegrees } from '../units';
+import type { BuildingId, PadElevationMode } from './building';
+import { entriesOf, foundationOf } from './building';
+import type { Building } from './building';
 import { removeById, replaceById } from './edit-collections';
 import type { Foundation, UtilityEntry, UtilityEntryId } from './foundation';
 import type { RoomLabel } from './rooms';
 import type { CsgTerm, Shape, ShapeComposition } from './shapes';
 import { isShapeGroup, translateComposition } from './shapes';
-import type { Building, BuildingId, PadElevationMode } from './site-plan';
-import { entriesOf, foundationOf } from './site-plan';
 import type { Wall } from './walls';
 
 /** Everything about a building except the shapes its footprint is folded from. */

@@ -1,7 +1,9 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 import { parseFuzzyDate } from './parseFuzzyDate';
-import { applyContextRules, detectConflicts, resolveSlots, tagCandidates } from './scoring';
+import { applyContextRules, tagCandidates } from './scoring';
+import { detectConflicts } from './slot-context';
+import { resolveSlots } from './slot-resolution';
 import { tokenize } from './tokenizer';
 import type { DateTimeParseResult, ISlotContext } from './types';
 import { ETokenKind } from './types';

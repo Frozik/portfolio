@@ -29,7 +29,7 @@ export const SlabToolButton = observer(
     const handleActivate = useFunction(() => store.setActiveTool('building:slab'));
 
     const handleChoose = useFunction((tool: ShapeTool) => {
-      store.setArmedShapeTool(tool);
+      store.tooling.setArmedShapeTool(tool);
       store.setActiveTool('building:slab');
     });
 

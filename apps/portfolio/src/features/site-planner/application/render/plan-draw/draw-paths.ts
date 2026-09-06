@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 
 import type { PathRibbon } from '../../../domain/geometry/path-ribbon';
 import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
-import type { PathId, PathSurface, SitePath } from '../../../domain/model/site-plan';
+import type { PathId, PathSurface, SitePath } from '../../../domain/model/plot-objects';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
 import type { SelectionStyle } from './draw-selection';

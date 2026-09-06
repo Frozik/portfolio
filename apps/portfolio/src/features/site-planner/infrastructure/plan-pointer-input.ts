@@ -1,32 +1,16 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
 import { isNil } from 'lodash-es';
 
-import { isEditableEventTarget } from '../../../shared/lib/isEditableEventTarget';
-import type { PlanInputTarget, PlanModifiers } from '../domain/view/plan-input';
+import type { PlanInputTarget } from '../domain/view/plan-input';
 import type { PlanViewport } from '../domain/view/plan-viewport';
-import { panByPixels, screenToPlan, zoomAroundPoint } from '../domain/view/plan-viewport';
+import { panByPixels, screenToPlan } from '../domain/view/plan-viewport';
+import { PinchGesture } from './pinch-gesture';
+import { attachPlanKeyboardInput } from './plan-keyboard-input';
+import { toModifiers } from './plan-modifiers';
 
 const PRIMARY_BUTTON = 0;
-/** Two fingers are the camera; one is whatever tool is in hand. */
-const PINCH_POINTER_COUNT = 2;
-const SPACE_KEY = ' ';
-const UNDO_KEY = 'z';
-/** The Windows redo chord; macOS spells the same thing Cmd+Shift+Z. */
-const REDO_KEY = 'y';
-const DUPLICATE_KEY = 'd';
-
-type HistoryAction = 'undo' | 'redo';
 /** Tailwind utility toggled on the canvas while the pan modifier is held. */
 const PAN_CURSOR_CLASS = 'cursor-grab';
-
-/**
- * Controls that answer Space themselves. Space is the pan modifier of the
- * canvas, but a focused toolbar button — a tool, the export menu — must still be
- * activated by it rather than have the keystroke taken for the camera.
- */
-const ACTIVATABLE_CONTROL_SELECTOR = 'button, [role="button"], a[href]';
 
 export interface PlanPointerInputParams {
   readonly canvas: HTMLCanvasElement;
@@ -62,11 +46,7 @@ export function attachPlanPointerInput({
   let isSpaceHeld = false;
   let pendingMoveEvent: PointerEvent | undefined;
   let moveFrameId: number | undefined;
-
-  /** Where every pointer on the canvas is, in client pixels; two of them pinch. */
-  const activePointers = new Map<number, Vector2>();
-  /** Separation of the pinching pair as of the last frame; nothing while none pinch. */
-  let pinchDistancePx: number | undefined;
+  const pinch = new PinchGesture();
 
   const toCanvasPoint = (clientPoint: Vector2): Vector2 => {
     const bounds = canvas.getBoundingClientRect();
@@ -140,24 +120,6 @@ export function attachPlanPointerInput({
     }
   };
 
-  const isPinching = (): boolean => !isNil(pinchDistancePx);
-
-  /** The pinching pair: the two pointers that were on the canvas first. */
-  const readPinchPair = (): readonly Vector2[] =>
-    [...activePointers.values()].slice(0, PINCH_POINTER_COUNT);
-
-  const measurePinchCenter = (): Vector2 => {
-    const [first, second] = readPinchPair();
-
-    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
-  };
-
-  const measurePinchDistance = (): number => {
-    const [first, second] = readPinchPair();
-
-    return pointerDistance(first.x, first.y, second.x, second.y);
-  };
-
   /** A second finger is the camera taking over from whatever the first was doing. */
   const beginPinch = (): void => {
     cancelPendingMove();
@@ -167,40 +129,17 @@ export function attachPlanPointerInput({
       endGesture();
       target.onPointerCancel();
     }
-
-    pinchDistancePx = measurePinchDistance();
-  };
-
-  const applyPinch = (previousCenter: Vector2): void => {
-    const distancePx = measurePinchDistance();
-    // `computePinchScale` is written for a camera distance, which fingers moving
-    // apart make shorter; a zoom moves the other way, so its factor is inverted.
-    const cameraScale = computePinchScale(pinchDistancePx ?? distancePx, distancePx);
-    const center = measurePinchCenter();
-
-    let viewport = getViewport();
-
-    if (!isNil(cameraScale) && cameraScale > 0) {
-      pinchDistancePx = distancePx;
-      viewport = zoomAroundPoint(viewport, toCanvasPoint(previousCenter), 1 / cameraScale);
-    }
-
-    setViewport(
-      panByPixels(viewport, { x: center.x - previousCenter.x, y: center.y - previousCenter.y })
-    );
   };
 
   const handlePointerDown = (event: PointerEvent): void => {
-    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-
-    if (activePointers.size === PINCH_POINTER_COUNT) {
+    if (pinch.trackPointerDown(event)) {
       beginPinch();
 
       return;
     }
 
     if (
-      isPinching() ||
+      pinch.isPinching() ||
       event.button !== PRIMARY_BUTTON ||
       !isNil(gesturePointerId) ||
       !isNil(panPointerId)
@@ -222,21 +161,16 @@ export function attachPlanPointerInput({
   };
 
   const handlePointerMove = (event: PointerEvent): void => {
-    const isTracked = activePointers.has(event.pointerId);
-    const previousCenter = isTracked && isPinching() ? measurePinchCenter() : undefined;
-
-    if (isTracked) {
-      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    }
+    const previousCenter = pinch.trackPointerMove(event);
 
     if (!isNil(previousCenter)) {
-      applyPinch(previousCenter);
+      setViewport(pinch.apply(getViewport(), previousCenter, toCanvasPoint));
 
       return;
     }
 
     // While two fingers hold the camera, nothing else may move the plan.
-    if (isPinching()) {
+    if (pinch.isPinching()) {
       return;
     }
 
@@ -247,22 +181,8 @@ export function attachPlanPointerInput({
     }
   };
 
-  const forgetAllPointers = (): void => {
-    activePointers.clear();
-    pinchDistancePx = undefined;
-  };
-
-  /** A pinch survives only as long as both of its fingers are down. */
-  const forgetPointer = (event: PointerEvent): void => {
-    activePointers.delete(event.pointerId);
-
-    if (activePointers.size < PINCH_POINTER_COUNT) {
-      pinchDistancePx = undefined;
-    }
-  };
-
   const handlePointerUp = (event: PointerEvent): void => {
-    forgetPointer(event);
+    pinch.forgetPointer(event);
 
     if (event.pointerId === panPointerId) {
       cancelPendingMove();
@@ -283,7 +203,7 @@ export function attachPlanPointerInput({
   };
 
   const handlePointerCancel = (event: PointerEvent): void => {
-    forgetPointer(event);
+    pinch.forgetPointer(event);
 
     if (event.pointerId === panPointerId) {
       cancelPendingMove();
@@ -318,66 +238,10 @@ export function attachPlanPointerInput({
     canvas.classList.toggle(PAN_CURSOR_CLASS, nextIsSpaceHeld);
   };
 
-  const handleKeyDown = (event: KeyboardEvent): void => {
-    // A hotkey must never fire while the user is typing exact dimensions into
-    // the properties panel — including undo, which there means the text editor's.
-    if (isEditableEventTarget(event.target)) {
-      return;
-    }
-
-    const historyAction = toHistoryAction(event);
-
-    if (!isNil(historyAction)) {
-      applyHistoryAction(target, historyAction);
-      event.preventDefault();
-
-      return;
-    }
-
-    // Duplicate rides the same chord as everywhere else. It is claimed here,
-    // beside undo, because the plain-key path below deliberately ignores
-    // chords — and because Alt is already «suspend snapping» in this editor,
-    // so the market's Alt+drag copy has no room.
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === DUPLICATE_KEY) {
-      target.duplicateSelected();
-      event.preventDefault();
-
-      return;
-    }
-
-    // Every other chord belongs to the browser and to the app shell.
-    if (event.ctrlKey || event.metaKey) {
-      return;
-    }
-
-    if (event.key === SPACE_KEY) {
-      if (isActivatableControl(event.target)) {
-        return;
-      }
-
-      setSpaceHeld(true);
-      event.preventDefault();
-
-      return;
-    }
-
-    if (target.onKeyDown(event.key, toModifiers(event))) {
-      event.preventDefault();
-    }
-  };
-
-  // Not guarded by the typing check: a keyup missed because focus moved into an
-  // input would leave the canvas stuck in pan mode.
-  const handleKeyUp = (event: KeyboardEvent): void => {
-    if (event.key === SPACE_KEY) {
-      setSpaceHeld(false);
-    }
-  };
-
   const handleWindowBlur = (): void => {
     setSpaceHeld(false);
     cancelPendingMove();
-    forgetAllPointers();
+    pinch.forgetAll();
 
     endPan();
 
@@ -393,9 +257,9 @@ export function attachPlanPointerInput({
   canvas.addEventListener('pointercancel', handlePointerCancel);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('dblclick', handleDoubleClick);
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
   window.addEventListener('blur', handleWindowBlur);
+
+  const detachKeyboard = attachPlanKeyboardInput({ target, setSpaceHeld });
 
   return () => {
     canvas.removeEventListener('pointerdown', handlePointerDown);
@@ -404,61 +268,13 @@ export function attachPlanPointerInput({
     canvas.removeEventListener('pointercancel', handlePointerCancel);
     canvas.removeEventListener('pointerleave', handlePointerLeave);
     canvas.removeEventListener('dblclick', handleDoubleClick);
-    window.removeEventListener('keydown', handleKeyDown);
-    window.removeEventListener('keyup', handleKeyUp);
     window.removeEventListener('blur', handleWindowBlur);
+    detachKeyboard();
 
     cancelPendingMove();
-    forgetAllPointers();
+    pinch.forgetAll();
     endPan();
     endGesture();
     canvas.classList.remove(PAN_CURSOR_CLASS);
   };
-}
-
-function toModifiers({
-  altKey,
-  shiftKey,
-}: {
-  readonly altKey: boolean;
-  readonly shiftKey: boolean;
-}): PlanModifiers {
-  return { isAltPressed: altKey, isShiftPressed: shiftKey };
-}
-
-function toHistoryAction(event: KeyboardEvent): HistoryAction | undefined {
-  if (!event.ctrlKey && !event.metaKey) {
-    return undefined;
-  }
-
-  const key = event.key.toLowerCase();
-
-  if (key === REDO_KEY) {
-    return 'redo';
-  }
-
-  if (key !== UNDO_KEY) {
-    return undefined;
-  }
-
-  return event.shiftKey ? 'redo' : 'undo';
-}
-
-function applyHistoryAction(target: PlanInputTarget, action: HistoryAction): void {
-  switch (action) {
-    case 'undo':
-      target.onUndo();
-
-      return;
-    case 'redo':
-      target.onRedo();
-
-      return;
-    default:
-      assertNever(action);
-  }
-}
-
-function isActivatableControl(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && !isNil(target.closest(ACTIVATABLE_CONTROL_SELECTOR));
 }

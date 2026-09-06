@@ -2,6 +2,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef } from 'mobx';
 import { dropRepeatedPoints } from '../domain/geometry/dedupe-polyline';
+import type { BuildingId } from '../domain/model/building';
+import { entriesOf } from '../domain/model/building';
 import {
   addUtilityEntry as addUtilityEntryIn,
   findBuilding as findBuildingIn,
@@ -23,25 +25,21 @@ import {
   updateUtilityRoute as updateUtilityRouteIn,
 } from '../domain/model/route-edits';
 import type { RouteWarning } from '../domain/model/route-warnings';
-import { collectRouteWarnings } from '../domain/model/route-warnings';
 import type { UtilityRoute, UtilityRouteId } from '../domain/model/routing';
 import {
   createUtilityRoute,
   DEFAULT_SEWER_DIAMETER_METERS,
   DEFAULT_TRENCH_SYSTEM,
-  trenchDepthMeters,
 } from '../domain/model/routing';
 import type { Selection } from '../domain/model/selection';
-import type { BuildingId } from '../domain/model/site-plan';
-import { entriesOf, frostDepthOf } from '../domain/model/site-plan';
-import { sampleHeight } from '../domain/terrain/heightfield';
+import { frostDepthOf } from '../domain/model/site-plan';
 import type { TrenchProfile } from '../domain/terrain/trench-profile';
-import { buildTrenchProfile } from '../domain/terrain/trench-profile';
 import type { Meters } from '../domain/units';
 import type { PlanEditorCore } from './editor-core';
 import type { UtilityRouteDraft } from './render/plan-draw/draw-utility-routes';
 import type { SceneModel } from './SceneModel';
 import type { TerrainModel } from './TerrainModel';
+import { buildTrenchProfiles, collectTrenchWarnings } from './trench-analysis';
 
 const NO_DRAFT_UTILITY_POINTS: readonly Vector2[] = [];
 const NO_SELECTIONS: readonly Selection[] = [];
@@ -104,40 +102,19 @@ export class UtilityNetworkModel {
    * warning pass and the report alike.
    */
   get trenchProfiles(): ReadonlyMap<UtilityRouteId, TrenchProfile> {
-    const { frostDepthMeters } = this;
-    const { heightfield } = this.terrain;
-    const profiles = new Map<UtilityRouteId, TrenchProfile>();
-
-    for (const route of this.core.utilityRoutes) {
-      const profile = buildTrenchProfile({
-        points: route.points,
-        system: route.system,
-        burialDepthMeters: trenchDepthMeters(route.system, frostDepthMeters),
-        diameterMeters: route.diameterMeters ?? DEFAULT_SEWER_DIAMETER_METERS,
-        sampleElevation: position => sampleHeight(heightfield, position.x, position.y),
-      });
-
-      if (!isNil(profile)) {
-        profiles.set(route.id, profile);
-      }
-    }
-
-    return profiles;
+    return buildTrenchProfiles(
+      this.core.utilityRoutes,
+      this.terrain.heightfield,
+      this.frostDepthMeters
+    );
   }
 
   /** The advisory findings of the norm pass, over every drawn trench. */
   get routeWarnings(): readonly RouteWarning[] {
-    const { frostDepthMeters } = this;
-
-    return collectRouteWarnings({
+    return collectTrenchWarnings({
       routes: this.core.utilityRoutes,
       profiles: this.trenchProfiles,
-      burialDepths: new Map(
-        this.core.utilityRoutes.map(route => [
-          route.id,
-          trenchDepthMeters(route.system, frostDepthMeters),
-        ])
-      ),
+      frostDepthMeters: this.frostDepthMeters,
       driveablePolygons: this.core.pathRibbonPolygons,
     });
   }

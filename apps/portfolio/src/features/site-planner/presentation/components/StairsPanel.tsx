@@ -18,7 +18,7 @@ import { ObjectListPanel } from './ObjectListPanel';
  */
 export const StairsPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const buildingId = editedBuildingId(store.editorMode);
-  const scene = store.building.editedStoreyScene;
+  const scene = store.storeys.editedStoreyScene;
   const labels = sitePlannerT.stairs;
   const { meterUnit } = sitePlannerT.plan;
 
@@ -34,26 +34,30 @@ export const StairsPanel = observer(({ store }: { readonly store: SitePlannerSto
       label: `${index + 1}. ${labels.kinds[stair.kind]}`,
       detail: `${run.riserCount} · ${labels.riser} ${formatMeters(run.riserMeters, meterUnit, METER_DECIMALS)} · ${labels.tread} ${formatMeters(run.treadMeters, meterUnit, METER_DECIMALS)}`,
       warning: stairScene.isComfortable ? undefined : labels.uncomfortable,
-      isSelected: store.isSelected({ kind: 'stair', buildingId, stairId: stair.id }),
+      isSelected: store.selectionCommands.isSelected({
+        kind: 'stair',
+        buildingId,
+        stairId: stair.id,
+      }),
       onSelect: () => store.setSelection({ kind: 'stair', buildingId, stairId: stair.id }),
       actions: [
         {
           key: 'rotate',
           label: labels.rotate,
           icon: RotateCw,
-          onClick: () => store.storeyObjects.rotateStairByQuarter(buildingId, stair.id),
+          onClick: () => store.stairs.rotateStairByQuarter(buildingId, stair.id),
         },
         {
           key: 'mirror',
           label: labels.mirror,
           icon: FlipHorizontal2,
-          onClick: () => store.storeyObjects.mirrorStair(buildingId, stair.id),
+          onClick: () => store.stairs.mirrorStair(buildingId, stair.id),
         },
         {
           key: 'remove',
           label: labels.remove,
           icon: Trash2,
-          onClick: () => store.storeyObjects.removeStairFrom(buildingId, stair.id),
+          onClick: () => store.stairs.removeStairFrom(buildingId, stair.id),
         },
       ],
     };

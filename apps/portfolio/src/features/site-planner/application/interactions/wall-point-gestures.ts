@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { BuildingId } from '../../domain/model/site-plan';
-import { storeysOf } from '../../domain/model/site-plan';
+import type { BuildingId } from '../../domain/model/building';
+import { storeysOf } from '../../domain/model/building';
 import type { Wall, WallId } from '../../domain/model/walls';
 import { isWallClosed } from '../../domain/model/walls';
 import type { InteractionContext } from './editor-interaction';
@@ -75,7 +75,7 @@ export function createWallPointGestures(
 
 function activeStoreyWallsOf(context: InteractionContext, buildingId: BuildingId): readonly Wall[] {
   const building = context.store.buildings.find(candidate => candidate.id === buildingId);
-  const storeyId = context.store.building.activeStoreyId;
+  const storeyId = context.store.storeys.activeStoreyId;
   const storeys = isNil(building) ? [] : storeysOf(building);
 
   return (storeys.find(storey => storey.id === storeyId) ?? storeys[0])?.walls ?? [];

@@ -3,7 +3,7 @@ import type { ReactNode, SVGProps } from 'react';
 import { memo } from 'react';
 
 import type { PlacedObject } from '../../domain/model/placed-object';
-import type { TreeSpecies } from '../../domain/model/site-plan';
+import type { TreeSpecies } from '../../domain/model/plot-objects';
 
 const VIEW_BOX = '0 0 24 24';
 

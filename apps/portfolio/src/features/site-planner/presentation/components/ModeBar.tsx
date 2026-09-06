@@ -35,7 +35,7 @@ function editedObjectName(edited: EditedObjectDescriptor): string {
  * none of that yet.
  */
 export const ModeBar = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const edited = store.editedObject;
+  const edited = store.modes.editedObject;
   const mode = store.editorMode;
 
   if (isNil(edited) || mode.kind !== 'edit') {

@@ -1,4 +1,4 @@
-import type { CarInstance } from '../model/site-plan';
+import type { CarInstance } from '../model/plot-objects';
 import type { WorldPoint } from '../view/world-frame';
 import { planToWorld } from '../view/world-frame';
 import type { Heightfield } from './heightfield';

@@ -1,6 +1,6 @@
 import { CAR_LENGTH_METERS, CAR_WIDTH_METERS } from '../../../domain/constants';
 import { carLocalToPlan } from '../../../domain/geometry/car-geometry';
-import type { CarId, CarInstance } from '../../../domain/model/site-plan';
+import type { CarId, CarInstance } from '../../../domain/model/plot-objects';
 import { DEGREES_TO_RADIANS } from '../../../domain/units';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';

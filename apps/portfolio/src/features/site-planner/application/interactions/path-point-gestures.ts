@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { SitePath } from '../../domain/model/site-plan';
+import type { SitePath } from '../../domain/model/plot-objects';
 import type { InteractionContext } from './editor-interaction';
 import { applyPolylineHandleHover, PolylinePointGestures } from './polyline-point-gestures';
 

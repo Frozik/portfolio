@@ -4,7 +4,7 @@ import { Temporal } from 'temporal-polyfill';
 
 import { findEarliestStart, getYearsOfExperience } from '../../../domain/career';
 import { welcomeT } from '../../translations';
-import type { IHeroStatTranslation } from '../../translations/en';
+import type { IHeroStatTranslation } from '../../translations/types';
 import { HeroMetaBar } from './HeroMetaBar';
 import { HeroOrderbook } from './HeroOrderbook';
 import { HeroStats } from './HeroStats';

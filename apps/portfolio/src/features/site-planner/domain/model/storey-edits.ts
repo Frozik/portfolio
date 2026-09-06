@@ -1,10 +1,11 @@
 import { isNil } from 'lodash-es';
 import type { Meters } from '../units';
+import type { BuildingId } from './building';
+import { storeysOf } from './building';
+import type { Building } from './building';
 import { replaceById } from './edit-collections';
 import type { PitchedRoof } from './roofs';
 import type { RoomLabel } from './rooms';
-import type { Building, BuildingId } from './site-plan';
-import { storeysOf } from './site-plan';
 import type { StoreyObject, StoreyObjectKind } from './storey-objects';
 import { STAIR_OBJECTS } from './storey-objects';
 import type { RoofZoneLabel, RoofZoneLabelId, Storey, StoreyId } from './storeys';

@@ -4,8 +4,8 @@ import { buildWallBody } from '../../../domain/geometry/wall-geometry';
 import type { WallId } from '../../../domain/model/walls';
 import { createWall } from '../../../domain/model/walls';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
-import type { PlanWallBody } from './draw-walls';
-import { drawWallBodies } from './draw-walls';
+import type { PlanWallBody } from './draw-wall-bodies';
+import { drawWallBodies } from './draw-wall-bodies';
 import {
   callsOf,
   createRecordingContext,

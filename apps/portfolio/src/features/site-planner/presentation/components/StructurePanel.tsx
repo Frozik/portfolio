@@ -1,7 +1,7 @@
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { Building } from '../../domain/model/site-plan';
+import type { Building } from '../../domain/model/building';
 import { sitePlannerT } from '../translations';
 import { PlannerPanel } from './PlannerPanel';
 import { GroupSection } from './StructureTermTree';

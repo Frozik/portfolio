@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { MultiPolygon } from '../domain/geometry/polygon-types';
+import type { Building } from '../domain/model/building';
 import type { Foundation, UtilityEntryId, UtilitySystem } from '../domain/model/foundation';
-import type { Building } from '../domain/model/site-plan';
 import type { CutFillReport } from '../domain/terrain/cut-fill';
 import type { Meters } from '../domain/units';
 import type { DuctRun } from './duct-scenes';

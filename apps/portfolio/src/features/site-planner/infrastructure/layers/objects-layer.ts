@@ -14,64 +14,30 @@ import type {
 import { buildTreeTemplate } from '../../domain/geometry/tree-mesh';
 import type { FurnitureCatalogId } from '../../domain/model/furniture';
 import { FURNITURE_CATALOG } from '../../domain/model/furniture';
-import type { TreeSpecies } from '../../domain/model/site-plan';
-import { TREE_SPECIES } from '../../domain/model/site-plan';
+import type { TreeSpecies } from '../../domain/model/plot-objects';
+import { TREE_SPECIES } from '../../domain/model/plot-objects';
 import type { SceneCar } from '../../domain/terrain/place-cars';
 import type { SceneFurniture } from '../../domain/terrain/place-furniture';
 import type { SceneTree } from '../../domain/terrain/place-trees';
-import type { WorldPoint } from '../../domain/view/world-frame';
-import carTextureUrl from '../assets/car-colormap.png?url';
-import carModelUrl from '../assets/car-suv.glb?url';
-import { fitCarMesh } from '../gltf/fit-car-mesh';
-import { parseGlb } from '../gltf/parse-glb';
-import { DEPTH_FORMAT, MSAA_SAMPLE_COUNT } from '../render-constants';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import objectsShaderSource from '../shaders/objects.wgsl?raw';
 import shadowShaderSource from '../shaders/shadow.wgsl?raw';
 import type { ShadowMap } from '../shadow-map';
-import { SHADOW_FORMAT } from '../shadow-map';
 import type { GpuMesh } from './gpu-mesh';
+import { bindGpuMesh, releaseGpuMesh, uploadColoredMesh, uploadLitMesh } from './gpu-mesh';
+import type { TemplateInstances } from './instanced-templates';
 import {
-  bindGpuMesh,
-  createIndexBuffer,
-  createVertexBuffer,
-  releaseGpuMesh,
-  uploadColoredMesh,
-  uploadLitMesh,
-} from './gpu-mesh';
+  buildTreeInstanceData,
+  buildTurnedInstanceData,
+  InstancedTemplates,
+  replaceInstances,
+} from './instanced-templates';
+import type { ObjectPipelines } from './object-pipelines';
+import { createObjectPipelines } from './object-pipelines';
 import type { ShadowCaster } from './shadow-caster';
+import { loadTexturedCar } from './textured-car';
 
 const objectsSource = commonShaderSource + shadowShaderSource + objectsShaderSource;
-
-const FLOAT32_BYTES = 4;
-const WORLD_FLOATS_PER_VERTEX = 3;
-const VERTEX_STRIDE = WORLD_FLOATS_PER_VERTEX * FLOAT32_BYTES;
-/** A tree instance: where its trunk stands, then its crown radius and its height. */
-const TREE_INSTANCE_FLOATS = 5;
-/** A car instance: where it stands, then the turn of its nose off plan east. */
-const CAR_INSTANCE_FLOATS = 4;
-/** Both layouts put the world position first, so the second attribute starts here. */
-const INSTANCE_TRANSFORM_OFFSET = WORLD_FLOATS_PER_VERTEX * FLOAT32_BYTES;
-
-/** Where a planted tree stands and how big it grew; one per instance. */
-const TREE_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
-  arrayStride: TREE_INSTANCE_FLOATS * FLOAT32_BYTES,
-  stepMode: 'instance',
-  attributes: [
-    { shaderLocation: 3, offset: 0, format: 'float32x3' },
-    { shaderLocation: 4, offset: INSTANCE_TRANSFORM_OFFSET, format: 'float32x2' },
-  ],
-};
-
-/** Where a parked car stands and which way it faces; one per instance. */
-const CAR_INSTANCE_LAYOUT: GPUVertexBufferLayout = {
-  arrayStride: CAR_INSTANCE_FLOATS * FLOAT32_BYTES,
-  stepMode: 'instance',
-  attributes: [
-    { shaderLocation: 3, offset: 0, format: 'float32x3' },
-    { shaderLocation: 4, offset: INSTANCE_TRANSFORM_OFFSET, format: 'float32' },
-  ],
-};
 
 /** What stands on the ground, as the layer takes it. */
 interface ObjectsInput {
@@ -87,12 +53,6 @@ interface ObjectsInput {
   readonly trees: readonly SceneTree[];
   readonly cars: readonly SceneCar[];
   readonly pathDrape: PathDrapeGeometry;
-}
-
-/** The instances drawn from one template, grown as the planting does. */
-interface TemplateInstances {
-  readonly buffer: GPUBuffer;
-  readonly count: number;
 }
 
 /**
@@ -113,19 +73,7 @@ interface TemplateInstances {
 export class ObjectsLayer implements RenderLayer, ShadowCaster {
   private device: GPUDevice | undefined;
   private format!: GPUTextureFormat;
-  private housePipeline!: GPURenderPipeline;
-  private houseGhostPipeline!: GPURenderPipeline;
-  private foundationPipeline!: GPURenderPipeline;
-  private greenRoofPipeline!: GPURenderPipeline;
-  private terracePipeline!: GPURenderPipeline;
-  private dirtPathPipeline!: GPURenderPipeline;
-  private asphaltPathPipeline!: GPURenderPipeline;
-  private blendPathPipeline!: GPURenderPipeline;
-  private treePipeline!: GPURenderPipeline;
-  private carPipeline!: GPURenderPipeline;
-  private meshShadowPipeline!: GPURenderPipeline;
-  private treeShadowPipeline!: GPURenderPipeline;
-  private carShadowPipeline!: GPURenderPipeline;
+  private pipelines!: ObjectPipelines;
   private bindGroup!: GPUBindGroup;
 
   private houseMesh: GpuMesh | undefined;
@@ -136,15 +84,12 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
   private dirtPathMesh: GpuMesh | undefined;
   private asphaltPathMesh: GpuMesh | undefined;
   private blendPathMesh: GpuMesh | undefined;
-  private readonly treeTemplates = new Map<TreeSpecies, GpuMesh>();
-  private readonly treeInstances = new Map<TreeSpecies, TemplateInstances>();
+  private readonly trees = new InstancedTemplates<TreeSpecies>();
   /** One sculpted template per catalogue row, instanced the way the cars are. */
-  private readonly furnitureTemplates = new Map<FurnitureCatalogId, GpuMesh>();
-  private readonly furnitureInstances = new Map<FurnitureCatalogId, TemplateInstances>();
+  private readonly furniture = new InstancedTemplates<FurnitureCatalogId>();
   private carTemplate: GpuMesh | undefined;
   private carInstances: TemplateInstances | undefined;
   /** The loaded, textured car; until it arrives the sculpted template stands in. */
-  private texturedCarPipeline: GPURenderPipeline | undefined;
   private texturedCarMesh: GpuMesh | undefined;
   private assetTexture: GPUTexture | undefined;
   private assetBindGroup: GPUBindGroup | undefined;
@@ -181,118 +126,30 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
       entries: [{ binding: 0, resource: { buffer: this.sceneUniformBuffer } }],
     });
 
-    // The camera passes read the shadow map through group 1; the shadow pass
-    // writes it, and so must be built without it — a texture cannot be an
-    // attachment and a bound resource of the same pass.
-    const layout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout, this.shadowMap.bindGroupLayout],
-    });
-    const shadowLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
-
-    this.housePipeline = this.createLitPipeline(device, shaderModule, layout, 'fsObject');
-    this.houseGhostPipeline = this.createLitPipeline(
-      device,
-      shaderModule,
-      layout,
-      'fsGhostObject',
-      {
-        isGhost: true,
-      }
-    );
-    this.foundationPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsFoundation');
-    this.greenRoofPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsGreenRoof');
-    this.terracePipeline = this.createLitPipeline(device, shaderModule, layout, 'fsTerrace');
-    this.dirtPathPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsPathDirt');
-    this.asphaltPathPipeline = this.createLitPipeline(
-      device,
-      shaderModule,
-      layout,
-      'fsPathAsphalt'
-    );
-    // The seam blends arrive painted per vertex, so their pipeline reads a
-    // colour buffer and shades through the same fsColored the trees use.
-    this.blendPathPipeline = this.createLitPipeline(device, shaderModule, layout, 'fsColored', {
-      vertexEntryPoint: 'vsColoredMesh',
-      buffers: [positionLayout(0), positionLayout(1), positionLayout(2)],
-    });
-    this.treePipeline = this.createInstancedPipeline(device, shaderModule, layout, {
-      vertexEntryPoint: 'vsTree',
-      instanceLayout: TREE_INSTANCE_LAYOUT,
-    });
-    this.carPipeline = this.createInstancedPipeline(device, shaderModule, layout, {
-      vertexEntryPoint: 'vsCar',
-      instanceLayout: CAR_INSTANCE_LAYOUT,
-    });
-
     const textureBindGroupLayout = device.createBindGroupLayout({
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
       ],
     });
-    const texturedLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout, this.shadowMap.bindGroupLayout, textureBindGroupLayout],
+    this.pipelines = createObjectPipelines(device, shaderModule, format, {
+      scene: bindGroupLayout,
+      shadow: this.shadowMap.bindGroupLayout,
+      texture: textureBindGroupLayout,
     });
-
-    this.texturedCarPipeline = device.createRenderPipeline({
-      layout: texturedLayout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: 'vsTexturedCar',
-        buffers: [positionLayout(0), positionLayout(1), uvLayout(2), CAR_INSTANCE_LAYOUT],
-      },
-      fragment: {
-        module: shaderModule,
-        entryPoint: 'fsTextured',
-        targets: [{ format: this.format }],
-      },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
-      multisample: { count: MSAA_SAMPLE_COUNT },
-    });
-    void this.loadTexturedCar(device, textureBindGroupLayout);
-    this.meshShadowPipeline = device.createRenderPipeline({
-      layout: shadowLayout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: 'vsObjectShadow',
-        buffers: [positionLayout(0)],
-      },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { format: SHADOW_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
-    });
-    this.treeShadowPipeline = this.createInstancedShadowPipeline(
-      device,
-      shaderModule,
-      shadowLayout,
-      {
-        vertexEntryPoint: 'vsTreeShadow',
-        instanceLayout: TREE_INSTANCE_LAYOUT,
-      }
-    );
-    this.carShadowPipeline = this.createInstancedShadowPipeline(
-      device,
-      shaderModule,
-      shadowLayout,
-      { vertexEntryPoint: 'vsCarShadow', instanceLayout: CAR_INSTANCE_LAYOUT }
-    );
+    void this.adoptTexturedCar(device, textureBindGroupLayout);
 
     for (const species of TREE_SPECIES) {
-      const template = uploadColoredMesh(device, buildTreeTemplate(species));
-
-      if (!isNil(template)) {
-        this.treeTemplates.set(species, template);
-      }
+      this.trees.setTemplate(species, uploadColoredMesh(device, buildTreeTemplate(species)));
     }
 
     this.carTemplate = uploadColoredMesh(device, buildCarTemplate());
 
     for (const entry of FURNITURE_CATALOG) {
-      const furnitureTemplate = uploadColoredMesh(device, buildFurnitureTemplate(entry));
-
-      if (!isNil(furnitureTemplate)) {
-        this.furnitureTemplates.set(entry.id, furnitureTemplate);
-      }
+      this.furniture.setTemplate(
+        entry.id,
+        uploadColoredMesh(device, buildFurnitureTemplate(entry))
+      );
     }
 
     this.uploadPendingObjects();
@@ -345,19 +202,19 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     pass.setBindGroup(0, this.bindGroup);
     pass.setBindGroup(1, this.shadowMap.bindGroup);
 
-    this.drawMesh(pass, this.dirtPathPipeline, this.dirtPathMesh);
-    this.drawMesh(pass, this.asphaltPathPipeline, this.asphaltPathMesh);
-    this.drawMesh(pass, this.blendPathPipeline, this.blendPathMesh);
-    this.drawMesh(pass, this.foundationPipeline, this.foundationsMesh);
-    this.drawMesh(pass, this.housePipeline, this.houseMesh);
-    this.drawMesh(pass, this.greenRoofPipeline, this.greenRoofMesh);
-    this.drawMesh(pass, this.terracePipeline, this.terraceMesh);
-    this.drawTrees(pass, this.treePipeline);
-    this.drawCars(pass, this.carPipeline);
+    this.drawMesh(pass, this.pipelines.dirtPath, this.dirtPathMesh);
+    this.drawMesh(pass, this.pipelines.asphaltPath, this.asphaltPathMesh);
+    this.drawMesh(pass, this.pipelines.blendPath, this.blendPathMesh);
+    this.drawMesh(pass, this.pipelines.foundation, this.foundationsMesh);
+    this.drawMesh(pass, this.pipelines.house, this.houseMesh);
+    this.drawMesh(pass, this.pipelines.greenRoof, this.greenRoofMesh);
+    this.drawMesh(pass, this.pipelines.terrace, this.terraceMesh);
+    this.trees.draw(pass, this.pipelines.tree);
+    this.drawCars(pass, this.pipelines.car);
     // Ghost storeys blend over the solid scene, so they come after it.
-    this.drawMesh(pass, this.houseGhostPipeline, this.houseGhostMesh);
+    this.drawMesh(pass, this.pipelines.houseGhost, this.houseGhostMesh);
     // Furniture rides the cars' pipeline: the same position-and-turn instancing.
-    this.drawFurniture(pass, this.carPipeline);
+    this.furniture.draw(pass, this.pipelines.car);
 
     pass.end();
   }
@@ -366,21 +223,21 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
   drawShadow(pass: GPURenderPassEncoder): void {
     pass.setBindGroup(0, this.bindGroup);
 
-    this.drawMesh(pass, this.meshShadowPipeline, this.dirtPathMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.asphaltPathMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.blendPathMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.foundationsMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.houseMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.dirtPathMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.asphaltPathMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.blendPathMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.foundationsMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.houseMesh);
     // Ghosted storeys cast their full shadow: dimming a storey is a reading
     // aid for the editor, not a change to the building, and a house that
     // stopped shading its own yard the moment its ground floor was opened
     // would answer the sun study for a plan nobody drew.
-    this.drawMesh(pass, this.meshShadowPipeline, this.houseGhostMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.greenRoofMesh);
-    this.drawMesh(pass, this.meshShadowPipeline, this.terraceMesh);
-    this.drawFurniture(pass, this.carShadowPipeline);
-    this.drawTrees(pass, this.treeShadowPipeline);
-    this.drawCars(pass, this.carShadowPipeline);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.houseGhostMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.greenRoofMesh);
+    this.drawMesh(pass, this.pipelines.meshShadow, this.terraceMesh);
+    this.furniture.draw(pass, this.pipelines.carShadow);
+    this.trees.draw(pass, this.pipelines.treeShadow);
+    this.drawCars(pass, this.pipelines.carShadow);
   }
 
   dispose(): void {
@@ -401,28 +258,14 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.asphaltPathMesh = undefined;
     this.blendPathMesh = undefined;
 
-    for (const template of this.treeTemplates.values()) {
-      releaseGpuMesh(template);
-    }
-
-    for (const instances of this.treeInstances.values()) {
-      instances.buffer.destroy();
-    }
+    this.trees.dispose();
+    this.furniture.dispose();
 
     releaseGpuMesh(this.carTemplate);
     this.carInstances?.buffer.destroy();
     this.carTemplate = undefined;
     this.carInstances = undefined;
 
-    this.treeTemplates.clear();
-    this.treeInstances.clear();
-
-    for (const instances of this.furnitureInstances.values()) {
-      instances.buffer.destroy();
-    }
-
-    this.furnitureTemplates.clear();
-    this.furnitureInstances.clear();
     releaseGpuMesh(this.texturedCarMesh);
     this.texturedCarMesh = undefined;
     this.assetTexture?.destroy();
@@ -430,121 +273,6 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.assetBindGroup = undefined;
     this.device = undefined;
     this.pendingObjects = undefined;
-  }
-
-  private createLitPipeline(
-    device: GPUDevice,
-    shaderModule: GPUShaderModule,
-    layout: GPUPipelineLayout,
-    fragmentEntryPoint: string,
-    {
-      vertexEntryPoint = 'vsObject',
-      buffers = [positionLayout(0), positionLayout(1)],
-      isGhost = false,
-    }: {
-      readonly vertexEntryPoint?: string;
-      readonly buffers?: readonly GPUVertexBufferLayout[];
-      /** A ghosted storey blends over the scene and keeps the depth it finds. */
-      readonly isGhost?: boolean;
-    } = {}
-  ): GPURenderPipeline {
-    return device.createRenderPipeline({
-      layout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: vertexEntryPoint,
-        buffers: [...buffers],
-      },
-      fragment: {
-        module: shaderModule,
-        entryPoint: fragmentEntryPoint,
-        targets: [
-          isGhost
-            ? {
-                format: this.format,
-                blend: {
-                  color: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                  },
-                  alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-                },
-              }
-            : { format: this.format },
-        ],
-      },
-      // The lighting comes from the supplied normals rather than from the facing,
-      // and the apron is a sheet with no inside to hide — so a camera dropped
-      // below the pad sees the skirt instead of seeing through the house.
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: {
-        format: DEPTH_FORMAT,
-        depthWriteEnabled: !isGhost,
-        depthCompare: 'less',
-      },
-      multisample: { count: MSAA_SAMPLE_COUNT },
-    });
-  }
-
-  /** One coloured template drawn once per instance: a species of tree, or the car. */
-  private createInstancedPipeline(
-    device: GPUDevice,
-    shaderModule: GPUShaderModule,
-    layout: GPUPipelineLayout,
-    {
-      vertexEntryPoint,
-      instanceLayout,
-    }: {
-      readonly vertexEntryPoint: string;
-      readonly instanceLayout: GPUVertexBufferLayout;
-    }
-  ): GPURenderPipeline {
-    return device.createRenderPipeline({
-      layout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: vertexEntryPoint,
-        buffers: [positionLayout(0), positionLayout(1), positionLayout(2), instanceLayout],
-      },
-      fragment: {
-        module: shaderModule,
-        entryPoint: 'fsColored',
-        targets: [{ format: this.format }],
-      },
-      // A crown is a closed volume, but the templates are thin enough at the
-      // apex that culling would blink facets away as the camera turns.
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
-      multisample: { count: MSAA_SAMPLE_COUNT },
-    });
-  }
-
-  /** The same instancing as the sun sees it: positions and nothing else. */
-  private createInstancedShadowPipeline(
-    device: GPUDevice,
-    shaderModule: GPUShaderModule,
-    layout: GPUPipelineLayout,
-    {
-      vertexEntryPoint,
-      instanceLayout,
-    }: {
-      readonly vertexEntryPoint: string;
-      readonly instanceLayout: GPUVertexBufferLayout;
-    }
-  ): GPURenderPipeline {
-    return device.createRenderPipeline({
-      layout,
-      vertex: {
-        module: shaderModule,
-        entryPoint: vertexEntryPoint,
-        // The normals and the colours of the template sit in the slots between,
-        // and the shadow map has no use for either.
-        buffers: [positionLayout(0), null, null, instanceLayout],
-      },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: { format: SHADOW_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
-    });
   }
 
   private drawMesh(
@@ -561,27 +289,6 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     pass.drawIndexed(mesh.indexCount);
   }
 
-  private drawTrees(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline): void {
-    let hasSetPipeline = false;
-
-    for (const [species, instances] of this.treeInstances) {
-      const template = this.treeTemplates.get(species);
-
-      if (isNil(template) || instances.count === 0) {
-        continue;
-      }
-
-      if (!hasSetPipeline) {
-        pass.setPipeline(pipeline);
-        hasSetPipeline = true;
-      }
-
-      bindGpuMesh(pass, template);
-      pass.setVertexBuffer(template.vertexBuffers.length, instances.buffer);
-      pass.drawIndexed(template.indexCount, instances.count);
-    }
-  }
-
   private drawCars(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline): void {
     const instances = this.carInstances;
 
@@ -591,20 +298,17 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
 
     // The loaded, textured asset takes over from the sculpted stand-in as soon
     // as it is ready; the shadow pass keeps its own pipeline either way.
-    const isColorPass = pipeline === this.carPipeline;
+    const isColorPass = pipeline === this.pipelines.car;
     const texturedReady =
-      isColorPass &&
-      !isNil(this.texturedCarPipeline) &&
-      !isNil(this.texturedCarMesh) &&
-      !isNil(this.assetBindGroup);
+      isColorPass && !isNil(this.texturedCarMesh) && !isNil(this.assetBindGroup);
     const template = texturedReady ? this.texturedCarMesh : this.carTemplate;
 
     if (isNil(template)) {
       return;
     }
 
-    if (texturedReady && !isNil(this.texturedCarPipeline) && !isNil(this.assetBindGroup)) {
-      pass.setPipeline(this.texturedCarPipeline);
+    if (texturedReady && !isNil(this.assetBindGroup)) {
+      pass.setPipeline(this.pipelines.texturedCar);
       pass.setBindGroup(2, this.assetBindGroup);
     } else {
       pass.setPipeline(pipeline);
@@ -615,62 +319,25 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     pass.drawIndexed(template.indexCount, instances.count);
   }
 
-  /**
-   * Fetches the bundled CC0 car asset (Kenney car kit) and its palette, and
-   * swaps it in once uploaded. Failures leave the sculpted car in place —
-   * the asset is bundled, so the fetch only fails in truly broken setups.
-   */
-  private async loadTexturedCar(
+  /** Swaps the loaded, textured car in for the sculpted stand-in once it is uploaded. */
+  private async adoptTexturedCar(
     device: GPUDevice,
     textureBindGroupLayout: GPUBindGroupLayout
   ): Promise<void> {
     try {
-      const [modelBuffer, imageBlob] = await Promise.all([
-        fetch(carModelUrl).then(response => response.arrayBuffer()),
-        fetch(carTextureUrl).then(response => response.blob()),
-      ]);
-      const mesh = fitCarMesh(parseGlb(modelBuffer));
-      const image = await createImageBitmap(imageBlob);
+      const asset = await loadTexturedCar(device, textureBindGroupLayout);
 
       // The device may have been torn down while the asset was in flight.
       if (this.device !== device) {
+        releaseGpuMesh(asset.mesh);
+        asset.texture.destroy();
+
         return;
       }
 
-      const texture = device.createTexture({
-        size: [image.width, image.height],
-        format: 'rgba8unorm',
-        usage:
-          GPUTextureUsage.TEXTURE_BINDING |
-          GPUTextureUsage.COPY_DST |
-          GPUTextureUsage.RENDER_ATTACHMENT,
-      });
-
-      device.queue.copyExternalImageToTexture({ source: image }, { texture }, [
-        image.width,
-        image.height,
-      ]);
-
-      this.assetTexture = texture;
-      this.assetBindGroup = device.createBindGroup({
-        layout: textureBindGroupLayout,
-        entries: [
-          {
-            binding: 0,
-            resource: device.createSampler({ magFilter: 'linear', minFilter: 'linear' }),
-          },
-          { binding: 1, resource: texture.createView() },
-        ],
-      });
-      this.texturedCarMesh = {
-        vertexBuffers: [
-          createVertexBuffer(device, mesh.positions),
-          createVertexBuffer(device, mesh.normals),
-          createVertexBuffer(device, mesh.uvs),
-        ],
-        indexBuffer: createIndexBuffer(device, mesh.indices),
-        indexCount: mesh.indices.length,
-      };
+      this.assetTexture = asset.texture;
+      this.assetBindGroup = asset.bindGroup;
+      this.texturedCarMesh = asset.mesh;
     } catch (error) {
       this.onCarModelFailed(error);
     }
@@ -699,11 +366,19 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.foundationsMesh = uploadLitMesh(device, objects.foundations);
     this.greenRoofMesh = uploadLitMesh(device, objects.roofOverlays.green);
     this.terraceMesh = uploadLitMesh(device, objects.roofOverlays.terrace);
-    this.uploadFurnitureInstances(device, objects.furniture);
+    for (const entry of FURNITURE_CATALOG) {
+      const pieces = objects.furniture.filter(piece => piece.catalogId === entry.id);
+
+      this.furniture.replace(device, entry.id, buildTurnedInstanceData(pieces), pieces.length);
+    }
     this.dirtPathMesh = uploadLitMesh(device, objects.pathDrape.dirt);
     this.asphaltPathMesh = uploadLitMesh(device, objects.pathDrape.asphalt);
     this.blendPathMesh = uploadColoredMesh(device, objects.pathDrape.blend);
-    this.uploadTreeInstances(device, objects.trees);
+    for (const species of TREE_SPECIES) {
+      const speciesTrees = objects.trees.filter(tree => tree.species === species);
+
+      this.trees.replace(device, species, buildTreeInstanceData(speciesTrees), speciesTrees.length);
+    }
     this.carInstances = replaceInstances(
       device,
       this.carInstances,
@@ -711,147 +386,4 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
       objects.cars.length
     );
   }
-
-  /** One instance buffer per catalogue row, each replaced whole. */
-  private uploadFurnitureInstances(device: GPUDevice, furniture: readonly SceneFurniture[]): void {
-    for (const entry of FURNITURE_CATALOG) {
-      const pieces = furniture.filter(piece => piece.catalogId === entry.id);
-      const instances = replaceInstances(
-        device,
-        this.furnitureInstances.get(entry.id),
-        buildTurnedInstanceData(pieces),
-        pieces.length
-      );
-
-      if (isNil(instances)) {
-        this.furnitureInstances.delete(entry.id);
-      } else {
-        this.furnitureInstances.set(entry.id, instances);
-      }
-    }
-  }
-
-  private drawFurniture(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline): void {
-    let hasSetPipeline = false;
-
-    for (const [catalogId, template] of this.furnitureTemplates) {
-      const instances = this.furnitureInstances.get(catalogId);
-
-      if (isNil(instances) || instances.count === 0) {
-        continue;
-      }
-
-      if (!hasSetPipeline) {
-        pass.setPipeline(pipeline);
-        hasSetPipeline = true;
-      }
-
-      bindGpuMesh(pass, template);
-      pass.setVertexBuffer(template.vertexBuffers.length, instances.buffer);
-      pass.drawIndexed(template.indexCount, instances.count);
-    }
-  }
-
-  /** One instance buffer per species, each replaced whole. */
-  private uploadTreeInstances(device: GPUDevice, trees: readonly SceneTree[]): void {
-    for (const species of TREE_SPECIES) {
-      const speciesTrees = trees.filter(tree => tree.species === species);
-      const instances = replaceInstances(
-        device,
-        this.treeInstances.get(species),
-        buildTreeInstanceData(speciesTrees),
-        speciesTrees.length
-      );
-
-      if (isNil(instances)) {
-        this.treeInstances.delete(species);
-      } else {
-        this.treeInstances.set(species, instances);
-      }
-    }
-  }
-}
-
-/**
- * Puts the instance data of one template into the buffer that held the previous
- * batch. The buffer is reused while it is large enough, so planting a tree next
- * to an existing one costs a write and no allocation; a batch that has emptied
- * gives its buffer back.
- */
-function replaceInstances(
-  device: GPUDevice,
-  existing: TemplateInstances | undefined,
-  data: Float32Array,
-  count: number
-): TemplateInstances | undefined {
-  if (count === 0) {
-    existing?.buffer.destroy();
-
-    return undefined;
-  }
-
-  const canReuseBuffer = !isNil(existing) && existing.buffer.size >= data.byteLength;
-
-  if (!canReuseBuffer) {
-    existing?.buffer.destroy();
-
-    return { buffer: createVertexBuffer(device, data), count };
-  }
-
-  device.queue.writeBuffer(existing.buffer, 0, data);
-
-  return { buffer: existing.buffer, count };
-}
-
-const UV_FLOATS_PER_VERTEX = 2;
-
-/** Texture coordinates: two floats per vertex where positions carry three. */
-function uvLayout(shaderLocation: number): GPUVertexBufferLayout {
-  return {
-    arrayStride: UV_FLOATS_PER_VERTEX * FLOAT32_BYTES,
-    attributes: [{ shaderLocation, offset: 0, format: 'float32x2' }],
-  };
-}
-
-function positionLayout(shaderLocation: number): GPUVertexBufferLayout {
-  return {
-    arrayStride: VERTEX_STRIDE,
-    attributes: [{ shaderLocation, offset: 0, format: 'float32x3' }],
-  };
-}
-
-function buildTreeInstanceData(trees: readonly SceneTree[]): Float32Array {
-  const data = new Float32Array(trees.length * TREE_INSTANCE_FLOATS);
-
-  trees.forEach((tree, index) => {
-    const offset = index * TREE_INSTANCE_FLOATS;
-    const [x, y, z] = tree.position;
-
-    data[offset] = x;
-    data[offset + 1] = y;
-    data[offset + 2] = z;
-    data[offset + 3] = tree.crownRadius;
-    data[offset + 4] = tree.height;
-  });
-
-  return data;
-}
-
-/** Cars and furniture share the layout: where it stands and how it is turned. */
-function buildTurnedInstanceData(
-  objects: readonly { readonly position: WorldPoint; readonly rotationDegrees: number }[]
-): Float32Array {
-  const data = new Float32Array(objects.length * CAR_INSTANCE_FLOATS);
-
-  objects.forEach((object, index) => {
-    const offset = index * CAR_INSTANCE_FLOATS;
-    const [x, y, z] = object.position;
-
-    data[offset] = x;
-    data[offset + 1] = y;
-    data[offset + 2] = z;
-    data[offset + 3] = object.rotationDegrees;
-  });
-
-  return data;
 }

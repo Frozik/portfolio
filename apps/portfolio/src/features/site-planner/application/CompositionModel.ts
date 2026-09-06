@@ -16,6 +16,10 @@ import {
   wrapTermInGroup as wrapTermInGroupIn,
 } from '../domain/model/composition-edits';
 
+import { offsetPolygons } from '../domain/geometry/offset-polygon';
+import type { MultiPolygon } from '../domain/geometry/polygon-types';
+import type { BuildingId } from '../domain/model/building';
+import type { Building } from '../domain/model/building';
 import type { ActiveGroup, Selection, ShapeOwner } from '../domain/model/selection';
 import type {
   CsgOperation,
@@ -33,7 +37,6 @@ import {
   flattenShapes,
   shapesExcept,
 } from '../domain/model/shapes';
-import type { Building, BuildingId } from '../domain/model/site-plan';
 import type { PlanEditorCore } from './editor-core';
 
 const NO_SHAPES: readonly Shape[] = [];
@@ -355,6 +358,11 @@ export class CompositionModel {
     this.core.buildings = updateBuildingIn(this.core.buildings, owner, {
       composition: update(building.composition),
     });
+  }
+
+  /** Inward offset of the plot by the setback distance — drawn as the dashed line. */
+  get setbackRings(): MultiPolygon {
+    return offsetPolygons(this.core.boundaryPolygons, -this.core.settings.setbackMeters);
   }
 
   /** Owns no timer or subscription; here so the store's teardown chain names every model. */

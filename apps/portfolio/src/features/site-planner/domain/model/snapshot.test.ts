@@ -1,20 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { createBuildingId } from './building';
 import { createUtilityEntry } from './foundation';
+import { createCar, createPathId, createTreeId } from './plot-objects';
 import { createUtilityRoute } from './routing';
 import type { CsgTerm } from './shapes';
 import { createCircle, createRectangle, createShapeId } from './shapes';
 import type { SitePlan } from './site-plan';
-import {
-  createBuildingId,
-  createCar,
-  createDefaultSitePlan,
-  createMarkId,
-  createPathId,
-  createTreeId,
-  frostDepthOf,
-  utilityRoutesOf,
-} from './site-plan';
-import { CURRENT_SNAPSHOT_VERSION, parseSnapshot, serializeSitePlan } from './snapshot';
+import { createDefaultSitePlan, createMarkId, frostDepthOf, utilityRoutesOf } from './site-plan';
+import { parseSnapshot, serializeSitePlan } from './snapshot';
+import { CURRENT_SNAPSHOT_VERSION } from './snapshot-migrations';
 import { createRoofZoneLabel, createStorey } from './storeys';
 import { createWall } from './walls';
 

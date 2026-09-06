@@ -3,12 +3,9 @@ import type { SupportPost } from '../model/supports';
 import type { Meters } from '../units';
 import type { PolygonWithHoles, Ring } from './polygon-types';
 import { rectangleLocalToPlan } from './polygonize-shape';
-import {
-  mirrorOf,
-  SPIRAL_DEGREES_PER_RISER,
-  SPIRAL_POLE_RADIUS_METERS,
-  stairLayout,
-} from './stair-footprint';
+import { mirrorOf } from './stair-footprint';
+import { stairLayout } from './stair-layouts';
+import { SPIRAL_DEGREES_PER_RISER, SPIRAL_POLE_RADIUS_METERS } from './stair-run';
 
 const DEGREES_TO_RADIANS = Math.PI / 180;
 

@@ -1,10 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
+import type { Building } from './building';
 import { translateBuilding } from './building-edits';
+import type { CarInstance, SitePath, TreeInstance } from './plot-objects';
 import type { UtilityRoute } from './routing';
 import type { Selection } from './selection';
 import { flattenShapes } from './shapes';
-import type { Building, CarInstance, SitePath, TreeInstance } from './site-plan';
 
 /**
  * One object of the plan as view mode holds it — the whole building, the whole

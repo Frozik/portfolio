@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { BuildingId } from '../../domain/model/site-plan';
+import type { BuildingId } from '../../domain/model/building';
 import type { JunctionEdge } from '../../domain/model/wall-topology';
 import { edgeJunctionVertexIndex } from '../../domain/model/wall-topology';
 import type { WallId } from '../../domain/model/walls';

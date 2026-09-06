@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 import { createOpening } from './openings';
 import { createStorey } from './storeys';
+import { removeWallEdge } from './wall-edge-removal';
 import {
   junctionEdgesAt,
   junctionVerticesAt,
   moveWallJunction,
   normalizeWallCrossings,
-  removeWallEdge,
 } from './wall-topology';
 import { createWall } from './walls';
 

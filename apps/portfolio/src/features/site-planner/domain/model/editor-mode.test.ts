@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { createBuilding } from './building';
 import {
   allowedPlanTools,
   describeEditedObject,
@@ -12,15 +13,9 @@ import {
   OBJECT_EDITOR_SPECS,
   VIEW_MODE,
 } from './editor-mode';
+import { createCarId, createPathId, createSitePath, createTreeId } from './plot-objects';
 import { createUtilityRoute } from './routing';
-import {
-  createBuilding,
-  createCarId,
-  createMarkId,
-  createPathId,
-  createSitePath,
-  createTreeId,
-} from './site-plan';
+import { createMarkId } from './site-plan';
 
 describe('allowedPlanTools', () => {
   it('offers the arranging tools in view mode and none of the drawing ones', () => {

@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { createRectangle } from '../domain/model/shapes';
 import type { SitePlan } from '../domain/model/site-plan';
 import { createDefaultSitePlan } from '../domain/model/site-plan';
-import { CURRENT_SNAPSHOT_VERSION, serializeSitePlan } from '../domain/model/snapshot';
+import { serializeSitePlan } from '../domain/model/snapshot';
+import { CURRENT_SNAPSHOT_VERSION } from '../domain/model/snapshot-migrations';
 import { createIndexedDBSitePlanRepository } from './IndexedDBSitePlanRepository';
 
 const PLANS_STORE = 'site-plans';

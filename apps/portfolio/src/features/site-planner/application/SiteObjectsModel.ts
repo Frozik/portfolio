@@ -6,51 +6,43 @@ import { DEFAULT_PATH_WIDTH_METERS } from '../domain/constants';
 import { dropRepeatedPoints } from '../domain/geometry/dedupe-polyline';
 import { buildPathRibbon } from '../domain/geometry/offset-polygon';
 import { replaceBuilding as replaceBuildingIn } from '../domain/model/building-edits';
-import type { ElevationMarkDraft } from '../domain/model/parse-elevation-csv';
 import type { PlacedObject } from '../domain/model/placed-object';
 import { CAR_PLACED_OBJECT, DEFAULT_PLACED_OBJECT } from '../domain/model/placed-object';
-import type { Selection } from '../domain/model/selection';
-import type { SiteObjectState } from '../domain/model/site-object';
-import {
-  addCar,
-  addMark,
-  addPath,
-  addTree,
-  insertPathPoint as insertPathPointIn,
-  moveMark,
-  movePathPoint as movePathPointIn,
-  removeCar as removeCarFrom,
-  removeMark,
-  removePath as removePathFrom,
-  removePathPoint as removePathPointIn,
-  removeTree as removeTreeFrom,
-  updateCar as replaceCarIn,
-  updateTree as replaceTreeIn,
-  setMarkElevation as setMarkElevationIn,
-  setPathPointWidth as setPathPointWidthIn,
-  setPathSegmentSurface as setPathSegmentSurfaceIn,
-  updatePath as updatePathIn,
-  updatePathWidth as updatePathWidthIn,
-} from '../domain/model/site-object-edits';
 import type {
   CarId,
   CarInstance,
-  ElevationMark,
-  MarkId,
   PathId,
   PathSurface,
   SitePath,
   TreeId,
   TreeInstance,
   TreeSpecies,
-} from '../domain/model/site-plan';
+} from '../domain/model/plot-objects';
 import {
   createCar,
-  createElevationMark,
   createSitePath,
   createTree,
   TREE_SPECIES_DEFAULT_SIZES,
-} from '../domain/model/site-plan';
+} from '../domain/model/plot-objects';
+import type { Selection } from '../domain/model/selection';
+import type { SiteObjectState } from '../domain/model/site-object';
+import {
+  addCar,
+  addPath,
+  addTree,
+  insertPathPoint as insertPathPointIn,
+  movePathPoint as movePathPointIn,
+  removeCar as removeCarFrom,
+  removePath as removePathFrom,
+  removePathPoint as removePathPointIn,
+  removeTree as removeTreeFrom,
+  updateCar as replaceCarIn,
+  updateTree as replaceTreeIn,
+  setPathPointWidth as setPathPointWidthIn,
+  setPathSegmentSurface as setPathSegmentSurfaceIn,
+  updatePath as updatePathIn,
+  updatePathWidth as updatePathWidthIn,
+} from '../domain/model/site-object-edits';
 import type { Meters } from '../domain/units';
 import type { PlanEditorCore } from './editor-core';
 import type { PathDraft } from './render/plan-draw/draw-paths';
@@ -60,18 +52,7 @@ const NO_DRAFT_PATH_POINTS: readonly Vector2[] = [];
 const NO_SELECTIONS: readonly Selection[] = [];
 const MIN_PATH_POINT_COUNT = 2;
 /** A mark starts level with the site datum. */
-const NEW_MARK_ELEVATION_METERS: Meters = 0;
 
-function findMark(marks: readonly ElevationMark[], markId: MarkId): ElevationMark | undefined {
-  return marks.find(mark => mark.id === markId);
-}
-
-/**
- * What stands on the plot outside the buildings: elevation marks, trees, cars
- * and paths, plus the placement tool that drops the armed object. Owns the
- * path draft and the placement arming; the committed objects live in the
- * document (the core).
- */
 export class SiteObjectsModel {
   /**
    * The polyline of the path being clicked out, before it reaches the plan. A
@@ -87,9 +68,6 @@ export class SiteObjectsModel {
    * click would be in the way of it.
    */
   nextPlacedObject: PlacedObject = DEFAULT_PLACED_OBJECT;
-  /** The mark whose elevation is being typed into the field floating by its flag. */
-  elevationInputMarkId: MarkId | undefined = undefined;
-
   private readonly core: PlanEditorCore;
   private readonly utilities: UtilityNetworkModel;
 
@@ -150,76 +128,6 @@ export class SiteObjectsModel {
     return isNil(selection) || selection.kind !== 'path'
       ? undefined
       : this.core.paths.find(path => path.id === selection.pathId);
-  }
-
-  get selectedMark(): ElevationMark | undefined {
-    const { selection } = this.core;
-
-    return isNil(selection) || selection.kind !== 'mark'
-      ? undefined
-      : findMark(this.core.elevationMarks, selection.markId);
-  }
-
-  /** The mark the floating elevation field belongs to, or nothing while it is closed. */
-  get elevationInputMark(): ElevationMark | undefined {
-    const { elevationInputMarkId } = this;
-
-    return isNil(elevationInputMarkId)
-      ? undefined
-      : findMark(this.core.elevationMarks, elevationInputMarkId);
-  }
-
-  /**
-   * Places a mark and hands it straight to the user: it becomes the selection,
-   * and the field by its flag opens so the surveyed elevation can be typed
-   * without a trip to the properties panel.
-   */
-  addElevationMark(position: Vector2): ElevationMark {
-    const mark = createElevationMark({ position, elevation: NEW_MARK_ELEVATION_METERS });
-
-    this.core.pushHistory();
-    this.core.elevationMarks = addMark(this.core.elevationMarks, mark);
-    this.core.selections = [{ kind: 'mark', markId: mark.id }];
-    this.elevationInputMarkId = mark.id;
-
-    return mark;
-  }
-
-  /** A pasted batch lands as one step: the paste is what the user would undo. */
-  addElevationMarks(drafts: readonly ElevationMarkDraft[]): void {
-    if (drafts.length === 0) {
-      return;
-    }
-
-    this.core.pushHistory();
-    this.core.elevationMarks = [...this.core.elevationMarks, ...drafts.map(createElevationMark)];
-  }
-
-  moveElevationMark(markId: MarkId, position: Vector2): void {
-    this.core.elevationMarks = moveMark(this.core.elevationMarks, markId, position);
-  }
-
-  setElevationMarkElevation(markId: MarkId, elevation: Meters): void {
-    this.core.elevationMarks = setMarkElevationIn(this.core.elevationMarks, markId, elevation);
-  }
-
-  removeElevationMark(markId: MarkId): void {
-    this.core.pushHistory();
-    this.core.elevationMarks = removeMark(this.core.elevationMarks, markId);
-
-    const { selection } = this.core;
-
-    if (!isNil(selection) && selection.kind === 'mark' && selection.markId === markId) {
-      this.core.selections = NO_SELECTIONS;
-    }
-
-    if (this.elevationInputMarkId === markId) {
-      this.elevationInputMarkId = undefined;
-    }
-  }
-
-  closeElevationInput(): void {
-    this.elevationInputMarkId = undefined;
   }
 
   /** The flyout's choice: what the next click of the placing tool puts down. */

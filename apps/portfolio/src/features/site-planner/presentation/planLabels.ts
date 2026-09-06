@@ -1,4 +1,4 @@
-import type { PlanLabels } from '../application/render/plan-draw/draw-plan';
+import type { PlanLabels } from '../application/render/plan-draw/plan-content';
 import { sitePlannerT } from './translations';
 
 /** The captions the plan is drawn with, on screen and on an exported sheet alike. */

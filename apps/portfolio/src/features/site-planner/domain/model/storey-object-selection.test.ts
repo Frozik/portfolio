@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import type { BuildingId } from './building';
+import { createBuilding, storeysOf } from './building';
+import type { Building } from './building';
 import { createDuct } from './ducts';
 import { createCeilingLight } from './electrical';
-import type { Building, BuildingId } from './site-plan';
-import { createBuilding, storeysOf } from './site-plan';
 import { createStair } from './stairs';
 import { addStoreyObject } from './storey-edits';
 import {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CAR_LENGTH_METERS } from '../../../domain/constants';
-import { createCar } from '../../../domain/model/site-plan';
+import { createCar } from '../../../domain/model/plot-objects';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { computeCarHandles } from './draw-cars';
 import { ROTATION_HANDLE_GAP_PX } from './draw-selection';
