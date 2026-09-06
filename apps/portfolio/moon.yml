@@ -54,9 +54,10 @@ tasks:
 
   install-browsers:
     command: 'playwright install --only-shell chromium'
+    # No inputs: never "affected", so `moon ci` skips it; the workflow runs it explicitly.
+    inputs: []
     options:
       cache: false
-      runInCI: false
 
   e2e:
     command: 'pnpm exec playwright test'
