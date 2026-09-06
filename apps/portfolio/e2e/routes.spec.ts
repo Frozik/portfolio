@@ -1,4 +1,8 @@
+import { resolve } from 'node:path';
+
+import type { ConsoleMessage } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import { loadEnv } from 'vite';
 
 import { ROUTE_METADATA } from '../src/app/routeMetadata';
 
@@ -12,8 +16,22 @@ const IGNORED_CONSOLE_PATTERNS = [
   /ERR_BLOCKED_BY_CLIENT/i,
   /WebGPU/i,
   /GPUDevice/i,
-  /localhost:4445/i, // signaling server is not running in CI
 ];
+
+// The signaling server is outside the smoke test: its health probe fails (refused or CORS)
+// and the retro / conf routes must still render.
+const COMMUNICATION_HOST = new URL(
+  loadEnv('production', resolve(import.meta.dirname, '..'), 'VITE_').VITE_COMMUNICATION_URL ??
+    'http://localhost:4445'
+).host;
+
+function isExpectedConsoleError(message: ConsoleMessage): boolean {
+  const source = `${message.text()} ${message.location().url}`;
+  return (
+    source.includes(COMMUNICATION_HOST) ||
+    IGNORED_CONSOLE_PATTERNS.some(pattern => pattern.test(source))
+  );
+}
 
 for (const segment of ROUTES) {
   test(`route /${segment} renders without errors`, async ({ page }) => {
@@ -25,11 +43,10 @@ for (const segment of ROUTES) {
       if (message.type() !== 'error') {
         return;
       }
-      const text = message.text();
-      if (IGNORED_CONSOLE_PATTERNS.some(pattern => pattern.test(text))) {
+      if (isExpectedConsoleError(message)) {
         return;
       }
-      problems.push(`console.error: ${text}`);
+      problems.push(`console.error: ${message.text()}`);
     });
 
     await page.goto(segment);

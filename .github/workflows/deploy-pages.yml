@@ -1,10 +1,12 @@
 name: Deploy portfolio to GitHub Pages
 
-# Requires the repository setting Pages → Source: "GitHub Actions". Until it is
-# switched, `pnpm deploy:pages` (gh-pages branch) keeps working as before.
+# Deploys the commit whose CI run just passed on main. Pages → Source must be
+# "GitHub Actions" (the gh-pages branch is no longer used).
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -19,10 +21,12 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
         with:
