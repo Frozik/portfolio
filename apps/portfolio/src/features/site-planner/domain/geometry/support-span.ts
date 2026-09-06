@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { SupportPost } from '../model/supports';
 import type { Meters } from '../units';
 import { isPointInMultiPolygon } from './polygon-booleans';
-import type { MultiPolygon } from './polygon-types';
 
 /** What a post actually spans once both of its ends are derived. */
 export interface SupportSpan {

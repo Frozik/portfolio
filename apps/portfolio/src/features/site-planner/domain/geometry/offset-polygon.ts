@@ -2,10 +2,10 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Paths64 } from 'clipper2-ts';
 import { EndType, inflatePaths, JoinType } from 'clipper2-ts';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
 import { assembleMultiPolygon } from './evaluate-composition';
 import { toClipperPath, toClipperUnits } from './frame';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 const MIN_RIBBON_POINT_COUNT = 2;
 

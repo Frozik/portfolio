@@ -1,9 +1,9 @@
 import { isNil } from 'lodash-es';
 
+import { extrudeFootprint } from '@frozik/utils/geometry/extrudeFootprint';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import { mergeLitMeshes } from '@frozik/utils/geometry/litMesh';
 import { APRON_DEPTH_METERS } from '../../domain/constants';
-import { extrudeFootprint } from '../../domain/geometry/extrude-footprint';
-import type { LitMesh } from '../../domain/geometry/lit-mesh';
-import { mergeLitMeshes } from '../../domain/geometry/lit-mesh';
 import { offsetPolygons } from '../../domain/geometry/offset-polygon';
 import { computeFootprintElevations } from '../../domain/terrain/cut-fill';
 import type { Heightfield } from '../../domain/terrain/heightfield';

@@ -1,5 +1,5 @@
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 /** Axis-aligned bounds in plan metres. */
 export interface BoundingBox {

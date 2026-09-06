@@ -13,7 +13,7 @@ source "${NAV_VARS}"
 BASE="https://${NAV_DOMAIN}"
 ORIGIN="https://frozik.github.io"
 # Zoom 13 tile holding Palace Square (59.939 N, 30.316 E).
-TILE_URL="${BASE}/tiles/${EXTRACT_NAME}/13/4785/2384.mvt"
+TILE_URL="${BASE}/tiles/${EXTRACT_NAME}/13/4785/2381.mvt"
 ROUTE_URL="${BASE}/route?point=59.9391,30.3158&point=59.9311,30.3609&profile=foot&locale=ru&points_encoded=false"
 
 for unit in pmtiles graphhopper haproxy; do

@@ -1,7 +1,7 @@
 import type { Path64 } from 'clipper2-ts';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import { SCALE_UNITS_PER_METER } from '../units';
-import type { Ring } from './polygon-types';
 
 /**
  * The only bridge between plan metres and the integer grid the polygon clipper

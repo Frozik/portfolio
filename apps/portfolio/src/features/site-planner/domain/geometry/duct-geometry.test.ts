@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { VerticalDuct } from '../model/ducts';
 import { createDuct } from '../model/ducts';
 import { createFireplace } from '../model/fireplaces';
@@ -14,7 +15,6 @@ import {
   fluePosition,
 } from './duct-geometry';
 import { roofCreases, roofFaces, roofFrameOf, roofPeakMeters, roofPlan } from './pitched-roof';
-import type { MultiPolygon } from './polygon-types';
 
 /** A 12 × 8 house with a 45° gable: eaves at 3 m, ridge 4 m above them. */
 const HOUSE: MultiPolygon = [

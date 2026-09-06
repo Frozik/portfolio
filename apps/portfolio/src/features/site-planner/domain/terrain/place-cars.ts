@@ -1,6 +1,6 @@
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import type { CarInstance } from '../model/plot-objects';
-import type { WorldPoint } from '../view/world-frame';
-import { planToWorld } from '../view/world-frame';
 import type { Heightfield } from './heightfield';
 import { sampleHeight } from './heightfield';
 

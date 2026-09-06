@@ -1,5 +1,5 @@
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
 import type { FurnitureCatalogId } from '../model/furniture';
-import type { WorldPoint } from '../view/world-frame';
 
 /**
  * One placed piece as the 3D view draws it: which template stands there, at

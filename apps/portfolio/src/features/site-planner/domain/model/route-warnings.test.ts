@@ -1,6 +1,6 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { describe, expect, it } from 'vitest';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import type { TrenchProfile } from '../terrain/trench-profile';
 import { buildTrenchProfile } from '../terrain/trench-profile';
 import { collectRouteWarnings } from './route-warnings';

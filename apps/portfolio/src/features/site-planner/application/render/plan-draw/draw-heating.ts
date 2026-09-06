@@ -1,5 +1,5 @@
+import type { PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { PolygonWithHoles } from '../../../domain/geometry/polygon-types';
 import type { DuctId, DuctKind } from '../../../domain/model/ducts';
 import type { FireplaceId } from '../../../domain/model/fireplaces';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';

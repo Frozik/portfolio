@@ -1,6 +1,6 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
 import { unionPolygons } from '../../../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { WallId, WallMaterial } from '../../../domain/model/walls';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { buildMultiPolygonPath, PLAN_COLORS } from './shared';

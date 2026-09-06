@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ColoredMesh } from './lit-mesh';
+import type { ColoredMesh } from '@frozik/utils/geometry/litMesh';
 import { buildTreeTemplate } from './tree-mesh';
 
 const COORDINATES_PER_VERTEX = 3;

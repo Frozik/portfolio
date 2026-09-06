@@ -1,10 +1,10 @@
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
 import { createPointerGestureTracker } from '@frozik/utils/webgpu/pointerGestureTracker';
 import { clamp } from 'lodash-es';
 import type { Mat4 } from 'wgpu-matrix';
 import { mat4 } from 'wgpu-matrix';
 import type { Meters } from '../domain/units';
 import { DEGREES_TO_RADIANS } from '../domain/units';
-import type { WorldPoint } from '../domain/view/world-frame';
 
 const UP_DIRECTION: WorldPoint = [0, 1, 0];
 

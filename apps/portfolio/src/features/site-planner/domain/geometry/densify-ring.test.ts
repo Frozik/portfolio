@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import { densifyRing } from './densify-ring';
-import type { Ring } from './polygon-types';
 
 const UNIT_SQUARE: Ring = [
   { x: 0, y: 0 },

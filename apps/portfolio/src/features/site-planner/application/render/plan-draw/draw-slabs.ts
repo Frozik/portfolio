@@ -1,4 +1,4 @@
-import type { PolygonWithHoles } from '../../../domain/geometry/polygon-types';
+import type { PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { ShapeId } from '../../../domain/model/shapes';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { buildMultiPolygonPath, PLAN_COLORS } from './shared';

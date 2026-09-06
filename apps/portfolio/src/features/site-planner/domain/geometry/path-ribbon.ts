@@ -1,11 +1,11 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { PathId, PathSurface, SitePath } from '../model/plot-objects';
 import { pathSurfaceAt } from '../model/plot-objects';
 import { buildButtRibbon, buildVariableWidthRibbon } from './offset-polygon';
 import { intersectPolygons, subtractPolygons } from './polygon-booleans';
-import type { MultiPolygon } from './polygon-types';
 import { pointAlongPolyline, polylineLength, subPolyline } from './wall-geometry';
 
 /** One stretch of a ribbon paved the same way: consecutive segments, one colour. */

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import { createCircle, createRectangle } from '../model/shapes';
 import { evaluateComposition } from './evaluate-composition';
 import { buildPathRibbon, buildVariableWidthRibbon, offsetPolygons } from './offset-polygon';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 function signedArea(ring: Ring): number {
   let doubledArea = 0;

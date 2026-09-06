@@ -11,10 +11,10 @@ import {
   union,
 } from 'clipper2-ts';
 
+import type { MultiPolygon, PolygonWithHoles, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { CsgOperand, CsgOperation, CsgTerm, ShapeComposition } from '../model/shapes';
 import { SCALE_UNITS_PER_METER } from '../units';
 import { fromClipperPath, toClipperPath } from './frame';
-import type { MultiPolygon, PolygonWithHoles, Ring } from './polygon-types';
 import { polygonizeShape } from './polygonize-shape';
 
 /** Rings below a square centimetre are clipper noise, never something the user drew. */

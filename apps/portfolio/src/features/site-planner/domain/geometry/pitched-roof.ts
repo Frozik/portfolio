@@ -1,12 +1,12 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { PitchedRoof, PitchedRoofKind } from '../model/roofs';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
 import { offsetPolygons } from './offset-polygon';
 import { intersectPolygons } from './polygon-booleans';
-import type { MultiPolygon, Ring } from './polygon-types';
 import type { RotatedFrame } from './polygonize-shape';
 import { planToRectangleLocal, rectangleLocalToPlan } from './polygonize-shape';
 

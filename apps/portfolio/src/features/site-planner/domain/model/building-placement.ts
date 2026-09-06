@@ -1,9 +1,9 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { DEFAULT_SITE_LENGTH_METERS, DEFAULT_SITE_WIDTH_METERS } from '../constants';
 import { computeMultiPolygonBounds } from '../geometry/bounding-box';
 import { evaluateComposition } from '../geometry/evaluate-composition';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import type { Building } from './building';
 
 const FREE_SPOT_STEP_METERS = 3;

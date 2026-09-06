@@ -1,9 +1,11 @@
 import { isNil } from 'lodash-es';
 
+import { extrudeFootprint, extrudePrism } from '@frozik/utils/geometry/extrudeFootprint';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import { mergeLitMeshes } from '@frozik/utils/geometry/litMesh';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import { APRON_DEPTH_METERS } from '../../domain/constants';
-import { extrudeFootprint, extrudePrism } from '../../domain/geometry/extrude-footprint';
-import type { LitMesh, RoofOverlayGeometry } from '../../domain/geometry/lit-mesh';
-import { mergeLitMeshes } from '../../domain/geometry/lit-mesh';
+import type { RoofOverlayGeometry } from '../../domain/geometry/lit-mesh';
 import {
   intersectPolygons,
   subtractPolygons,
@@ -20,7 +22,6 @@ import { computeFootprintElevations } from '../../domain/terrain/cut-fill';
 import type { Heightfield } from '../../domain/terrain/heightfield';
 import type { SceneFurniture } from '../../domain/terrain/place-furniture';
 import type { Meters } from '../../domain/units';
-import { planToWorld } from '../../domain/view/world-frame';
 import type { BuildingScene } from '../building-scene';
 import { buildHeatingSolids } from '../duct-scenes';
 import { buildPitchedRoofSolid } from '../roof-scenes';

@@ -1,6 +1,6 @@
+import type { MultiPolygon, PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { Slab } from '../model/slabs';
 import { unionPolygons } from './polygon-booleans';
-import type { MultiPolygon, PolygonWithHoles } from './polygon-types';
 import { polygonizeShape } from './polygonize-shape';
 
 /** One slab as a plan polygon: the ring of whatever primitive it was drawn as. */

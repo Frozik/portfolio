@@ -2,10 +2,10 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Paths64 } from 'clipper2-ts';
 import { difference, FillRule, intersect, union } from 'clipper2-ts';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
+import { triangulateMultiPolygon } from '@frozik/utils/geometry/triangulatePolygon';
 import { assembleMultiPolygon } from './evaluate-composition';
 import { toClipperPath } from './frame';
-import type { MultiPolygon } from './polygon-types';
-import { triangulateMultiPolygon } from './triangulate-polygon';
 
 function toPaths(polygons: MultiPolygon): Paths64 {
   const paths: Paths64 = [];

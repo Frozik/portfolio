@@ -1,5 +1,5 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { RoomTypeId } from '../../../domain/model/rooms';
 import type { RoofCover } from '../../../domain/model/storeys';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';

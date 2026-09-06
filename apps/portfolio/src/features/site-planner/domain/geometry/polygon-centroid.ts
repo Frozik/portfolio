@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { MultiPolygon, Ring } from './polygon-types';
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 
 /** Below this the shoelace sum is noise, not an area to weight a centroid by. */
 const MIN_SIGNED_AREA_SQUARE_METERS = 1e-9;

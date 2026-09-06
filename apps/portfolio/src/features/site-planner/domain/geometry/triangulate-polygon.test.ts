@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PolygonWithHoles, Ring, TriangleMesh } from '@frozik/utils/geometry/polygonTypes';
+import {
+  triangulateMultiPolygon,
+  triangulatePolygon,
+} from '@frozik/utils/geometry/triangulatePolygon';
 import { createCircle, createRectangle } from '../model/shapes';
 import { evaluateComposition } from './evaluate-composition';
-import type { PolygonWithHoles, Ring, TriangleMesh } from './polygon-types';
-import { triangulateMultiPolygon, triangulatePolygon } from './triangulate-polygon';
 
 const AREA_EPSILON = 1e-6;
 

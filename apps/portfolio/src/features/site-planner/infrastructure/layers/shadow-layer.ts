@@ -1,6 +1,6 @@
 import type { RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 
-import type { ShadowMap } from '../shadow-map';
+import type { ShadowMap } from '@frozik/utils/webgpu/shadowMap';
 import type { ShadowCaster } from './shadow-caster';
 
 /**

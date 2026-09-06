@@ -3,11 +3,11 @@ import type { RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { createUpdateOnlyLayer } from '@frozik/utils/webgpu/updateOnlyLayer';
 import { mat4 } from 'wgpu-matrix';
 
+import type { ShadowProjection } from '@frozik/utils/webgpu/shadowMap';
 import type { Sunlight } from '../../domain/sun/sun-direction';
 import type { OrbitCamera } from '../orbit-camera';
 import { FPS_ANIMATION } from '../render-constants';
 import type { SceneUniforms } from '../scene-uniforms';
-import type { ShadowProjection } from '../shadow-map';
 
 const MATRIX_FLOATS = 16;
 /** A canvas reported at zero height must not turn the aspect ratio into infinity. */

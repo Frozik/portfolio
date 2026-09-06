@@ -1,11 +1,11 @@
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import type { ShadowProjection } from '@frozik/utils/webgpu/shadowMap';
 import type { Sunlight } from '../domain/sun/sun-direction';
-import type { WorldPoint } from '../domain/view/world-frame';
 import { UNIFORM_ALIGNMENT_BYTES } from './render-constants';
 import commonShaderSource from './shaders/common.wgsl?raw';
-import type { ShadowProjection } from './shadow-map';
 
 /** Light the ground keeps where the sun does not reach it. */
 const AMBIENT_STRENGTH = 0.35;

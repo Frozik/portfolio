@@ -1,14 +1,14 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
+import type { ColoredMesh, LitMesh } from '@frozik/utils/geometry/litMesh';
+import { EMPTY_COLORED_MESH, EMPTY_LIT_MESH, mergeLitMeshes } from '@frozik/utils/geometry/litMesh';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
+import { triangulateMultiPolygon } from '@frozik/utils/geometry/triangulatePolygon';
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import { densifyRing } from '../geometry/densify-ring';
-import type { ColoredMesh, LitMesh } from '../geometry/lit-mesh';
-import { EMPTY_COLORED_MESH, EMPTY_LIT_MESH, mergeLitMeshes } from '../geometry/lit-mesh';
-import type { MultiPolygon } from '../geometry/polygon-types';
-import { triangulateMultiPolygon } from '../geometry/triangulate-polygon';
 import type { Meters } from '../units';
-import type { WorldPoint } from '../view/world-frame';
-import { planToWorld } from '../view/world-frame';
 import type { Heightfield } from './heightfield';
 import { sampleHeight } from './heightfield';
 

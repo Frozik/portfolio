@@ -1,11 +1,11 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import { densifyRing } from '../../domain/geometry/densify-ring';
-import type { MultiPolygon, Ring } from '../../domain/geometry/polygon-types';
 import type { Heightfield } from '../../domain/terrain/heightfield';
 import { sampleHeight } from '../../domain/terrain/heightfield';
 import type { Meters } from '../../domain/units';
-import { planToWorld } from '../../domain/view/world-frame';
 
 /** The ground as triangles: the index buffer of the sample grid and the boundary outline draped over it. */
 export const FLOAT32_BYTES = 4;

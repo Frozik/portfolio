@@ -1,9 +1,14 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
+import type { ColoredMesh } from '@frozik/utils/geometry/litMesh';
+import type { LocalPoint, MeshBuilder, Rgb } from '@frozik/utils/geometry/meshBuilder';
+import {
+  appendQuad,
+  appendTriangle,
+  createMeshBuilder,
+  finishColoredMesh,
+} from '@frozik/utils/geometry/meshBuilder';
 import type { TreeSpecies } from '../model/plot-objects';
-import type { ColoredMesh } from './lit-mesh';
-import type { LocalPoint, MeshBuilder, Rgb } from './mesh-builder';
-import { appendQuad, appendTriangle, createMeshBuilder, finishColoredMesh } from './mesh-builder';
 
 /** `#173420` — the near-black green of a spruce read against a lit sky. */
 const SPRUCE_CROWN_COLOR: Rgb = [0.0902, 0.2039, 0.1255];

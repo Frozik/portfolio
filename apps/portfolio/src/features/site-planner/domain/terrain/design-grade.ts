@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isPointInMultiPolygon } from '../geometry/polygon-booleans';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import { distanceToMultiPolygonEdge } from '../geometry/segment-distance';
 import type { Meters } from '../units';
 import type { Heightfield } from './heightfield';

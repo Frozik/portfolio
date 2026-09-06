@@ -1,8 +1,13 @@
+import type { ColoredMesh } from '@frozik/utils/geometry/litMesh';
+import type { LocalPoint, MeshBuilder, Rgb } from '@frozik/utils/geometry/meshBuilder';
+import {
+  appendBox,
+  appendQuad,
+  createMeshBuilder,
+  finishColoredMesh,
+} from '@frozik/utils/geometry/meshBuilder';
 import { CAR_HEIGHT_METERS, CAR_LENGTH_METERS, CAR_WIDTH_METERS } from '../constants';
 import type { Meters } from '../units';
-import type { ColoredMesh } from './lit-mesh';
-import type { LocalPoint, MeshBuilder, Rgb } from './mesh-builder';
-import { appendBox, appendQuad, createMeshBuilder, finishColoredMesh } from './mesh-builder';
 
 /** `#8fa3bd` — the neutral grey-blue the plan draws a car in, in three dimensions. */
 const BODY_COLOR: Rgb = [0.5608, 0.6392, 0.7412];

@@ -1,9 +1,9 @@
+import { extrudePrism } from '@frozik/utils/geometry/extrudeFootprint';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { MultiPolygon, PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-import { extrudePrism } from '../domain/geometry/extrude-footprint';
-import type { LitMesh } from '../domain/geometry/lit-mesh';
 import { isPointInMultiPolygon } from '../domain/geometry/polygon-booleans';
-import type { MultiPolygon, PolygonWithHoles } from '../domain/geometry/polygon-types';
 import { supportFootprint } from '../domain/geometry/stair-mesh';
 import { supportSpan } from '../domain/geometry/support-span';
 import type { Storey } from '../domain/model/storeys';

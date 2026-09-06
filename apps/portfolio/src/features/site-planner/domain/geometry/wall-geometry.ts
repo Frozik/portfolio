@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Paths64 } from 'clipper2-ts';
 import { EndType, inflatePaths, JoinType } from 'clipper2-ts';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Opening } from '../model/openings';
 import { doorSwingOf } from '../model/openings';
 import type { Wall } from '../model/walls';
@@ -9,7 +10,6 @@ import { isWallClosed, MIN_WALL_POINTS } from '../model/walls';
 import type { Meters } from '../units';
 import { assembleMultiPolygon } from './evaluate-composition';
 import { toClipperPath, toClipperUnits } from './frame';
-import type { MultiPolygon } from './polygon-types';
 
 /**
  * A mitre longer than this many half-thicknesses is clamped — the standard

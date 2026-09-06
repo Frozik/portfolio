@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MultiPolygon } from '../geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { StoreyWarningInput } from './building-warnings';
 import { collectBuildingWarnings } from './building-warnings';
 import type { DuctId } from './ducts';

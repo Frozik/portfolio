@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
-import type { Ring } from './polygon-types';
 
 /** A ring needs two points before an edge can be split at all. */
 const MIN_RING_VERTEX_COUNT = 2;

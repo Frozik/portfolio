@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { subtractPolygons } from '../../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../../domain/geometry/polygon-types';
 import { slabPolygon } from '../../domain/geometry/slab-geometry';
 import { editedBuildingId } from '../../domain/model/editor-mode';
 import type { BuildingScene } from '../building-scene';

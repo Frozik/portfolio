@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { PathRibbon } from '../../../domain/geometry/path-ribbon';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { PathId, PathSurface, SitePath } from '../../../domain/model/plot-objects';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';

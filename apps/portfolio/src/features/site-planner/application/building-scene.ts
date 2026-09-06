@@ -1,5 +1,5 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import type { Building } from '../domain/model/building';
 import type { Foundation, UtilityEntryId, UtilitySystem } from '../domain/model/foundation';
 import type { CutFillReport } from '../domain/terrain/cut-fill';

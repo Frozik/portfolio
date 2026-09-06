@@ -1,7 +1,7 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { isPointInMultiPolygon } from '../geometry/polygon-booleans';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import { distanceToSegment } from '../geometry/segment-distance';
 import type { TrenchProfile } from '../terrain/trench-profile';
 import type { Meters } from '../units';

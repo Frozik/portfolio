@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { LocalPoint, Rgb } from './mesh-builder';
-import { appendQuad, appendTriangle, createMeshBuilder, finishColoredMesh } from './mesh-builder';
+import type { LocalPoint, Rgb } from './meshBuilder';
+import { appendQuad, appendTriangle, createMeshBuilder, finishColoredMesh } from './meshBuilder';
 
 const COLOR: Rgb = [0.25, 0.5, 0.75];
 const COORDINATES_PER_VERTEX = 3;

@@ -1,13 +1,12 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { Meters } from '../units';
-import type { WorldPoint } from '../view/world-frame';
-import { planToWorld } from '../view/world-frame';
-import type { LitMesh } from './lit-mesh';
-import { EMPTY_LIT_MESH } from './lit-mesh';
-import type { MultiPolygon, Ring } from './polygon-types';
-import { triangulateMultiPolygon } from './triangulate-polygon';
+import type { Vector2 } from '../math/vector2';
+import type { LitMesh } from './litMesh';
+import { EMPTY_LIT_MESH } from './litMesh';
+import type { MultiPolygon, Ring } from './polygonTypes';
+import { triangulateMultiPolygon } from './triangulatePolygon';
+import type { WorldPoint } from './worldFrame';
+import { planToWorld } from './worldFrame';
 
 /** A unit direction in world space; it shares the tuple shape of a position. */
 type WorldNormal = WorldPoint;
@@ -16,7 +15,7 @@ const COORDINATES_PER_PLAN_VERTEX = 2;
 const WORLD_COORDINATES_PER_VERTEX = 3;
 const MIN_RING_VERTEX_COUNT = 3;
 /** An edge this short has no direction to take an outward normal from. */
-const MIN_EDGE_LENGTH_METERS: Meters = 1e-9;
+const MIN_EDGE_LENGTH_METERS = 1e-9;
 /** Upwards in world space — the facing of the roof slab. */
 const UP_NORMAL: WorldNormal = [0, 1, 0];
 
@@ -33,13 +32,14 @@ interface MeshBuilder {
  * The house does not follow the ground: the footprint is levelled onto a pad and
  * the walls rise from it, which is the convention every architectural tool
  * settles on (the terrain is what gets cut and filled to meet the pad instead).
- * That leaves a house on a slope hanging over the low side, so the walls are
+ * That leaves a house on a slope hanging over the low side, so the walls may be
  * carried on below the pad as an apron down to `apronBaseElevation` — buried on
- * the high side, closing the gap on the low one.
+ * the high side, closing the gap on the low one; a footprint on flat ground (a
+ * city block on a map) passes no apron and gets none.
  *
- * The result is three parts in one mesh: the roof slab at `padElevation +
- * wallHeight`, the walls between the pad and the roof, and the apron below the
- * pad. Their normals are what the shader tells them apart by, so every side quad
+ * The result is up to three parts in one mesh: the roof slab at `padElevation
+ * + wallHeight`, the walls between the pad and the roof, and the apron below
+ * the pad. All elevations are metres. Their normals are what the shader tells them apart by, so every side quad
  * carries the outward normal of its edge — which the ring winding gives for free:
  * outer rings run counter-clockwise and holes clockwise, so the same formula
  * points away from the material in both.
@@ -51,9 +51,9 @@ export function extrudeFootprint({
   apronBaseElevation,
 }: {
   readonly polygons: MultiPolygon;
-  readonly padElevation: Meters;
-  readonly wallHeight: Meters;
-  readonly apronBaseElevation: Meters;
+  readonly padElevation: number;
+  readonly wallHeight: number;
+  readonly apronBaseElevation?: number;
 }): LitMesh {
   const builder: MeshBuilder = { positions: [], normals: [], indices: [] };
   const roofElevation = padElevation + wallHeight;
@@ -91,8 +91,8 @@ export function extrudePrism({
   topElevation,
 }: {
   readonly polygons: MultiPolygon;
-  readonly baseElevation: Meters;
-  readonly topElevation: Meters;
+  readonly baseElevation: number;
+  readonly topElevation: number;
 }): LitMesh {
   if (topElevation <= baseElevation) {
     return EMPTY_LIT_MESH;
@@ -123,7 +123,7 @@ export function extrudePrism({
 }
 
 /** The underside of a prism: the same cap facing down, wound the other way. */
-function appendFloor(builder: MeshBuilder, polygons: MultiPolygon, floorElevation: Meters): void {
+function appendFloor(builder: MeshBuilder, polygons: MultiPolygon, floorElevation: number): void {
   const cap = triangulateMultiPolygon(polygons);
   const firstVertex = countVertices(builder);
   const DOWN_NORMAL: WorldNormal = [0, -1, 0];
@@ -151,7 +151,7 @@ function appendFloor(builder: MeshBuilder, polygons: MultiPolygon, floorElevatio
 }
 
 /** The flat top of the house: the triangulated footprint lifted to the roof. */
-function appendRoof(builder: MeshBuilder, polygons: MultiPolygon, roofElevation: Meters): void {
+function appendRoof(builder: MeshBuilder, polygons: MultiPolygon, roofElevation: number): void {
   const cap = triangulateMultiPolygon(polygons);
   const firstVertex = countVertices(builder);
 
@@ -182,9 +182,9 @@ function appendRingBands(
     roofElevation,
     apronBaseElevation,
   }: {
-    readonly padElevation: Meters;
-    readonly roofElevation: Meters;
-    readonly apronBaseElevation: Meters;
+    readonly padElevation: number;
+    readonly roofElevation: number;
+    readonly apronBaseElevation: number | undefined;
   }
 ): void {
   if (ring.length < MIN_RING_VERTEX_COUNT) {
@@ -192,15 +192,18 @@ function appendRingBands(
   }
 
   appendBand(builder, ring, padElevation, roofElevation);
-  appendBand(builder, ring, apronBaseElevation, padElevation);
+
+  if (!isNil(apronBaseElevation)) {
+    appendBand(builder, ring, apronBaseElevation, padElevation);
+  }
 }
 
 /** One vertical band along a ring, from `lowerElevation` up to `upperElevation`. */
 function appendBand(
   builder: MeshBuilder,
   ring: Ring,
-  lowerElevation: Meters,
-  upperElevation: Meters
+  lowerElevation: number,
+  upperElevation: number
 ): void {
   if (upperElevation <= lowerElevation) {
     return;
@@ -255,7 +258,7 @@ function computeOutwardNormal(start: Vector2, end: Vector2): WorldNormal | undef
 function appendVertex(
   builder: MeshBuilder,
   point: Vector2,
-  elevation: Meters,
+  elevation: number,
   normal: WorldNormal
 ): void {
   const [x, y, z] = planToWorld(point, elevation);

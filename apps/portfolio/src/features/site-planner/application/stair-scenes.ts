@@ -1,7 +1,7 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { isPointInMultiPolygon } from '../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import {
   stairCutout,
   stairExitPoint,

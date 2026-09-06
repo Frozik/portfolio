@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MultiPolygon } from './polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import {
   buildFloorPlate,
   buildRoofPlate,

@@ -1,4 +1,4 @@
-import type { Rgb } from './mesh-builder';
+import type { Rgb } from '@frozik/utils/geometry/meshBuilder';
 
 /**
  * The furniture palette, one hue per material the pieces are made of. Wood and

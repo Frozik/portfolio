@@ -1,7 +1,7 @@
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 import type { Meters } from '../units';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 /**
  * Point-to-geometry distances, kept apart from anything that knows what the

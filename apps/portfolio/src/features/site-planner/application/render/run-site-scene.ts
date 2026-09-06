@@ -9,12 +9,13 @@ import { isNil } from 'lodash-es';
 import type { IReactionDisposer } from 'mobx';
 import { reaction } from 'mobx';
 
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
+import { createShadowMap, EMPTY_SHADOW_PROJECTION } from '@frozik/utils/webgpu/shadowMap';
 import type { Sunlight } from '../../domain/sun/sun-direction';
 import type { AnalysisRaster } from '../../domain/terrain/analysis-raster';
 import type { Heightfield } from '../../domain/terrain/heightfield';
 import { computeElevationRange } from '../../domain/terrain/heightfield';
 import type { Meters } from '../../domain/units';
-import { planToWorld } from '../../domain/view/world-frame';
 import { ObjectsLayer } from '../../infrastructure/layers/objects-layer';
 import { createSceneUpdateLayer } from '../../infrastructure/layers/scene-update-layer';
 import { ShadowLayer } from '../../infrastructure/layers/shadow-layer';
@@ -32,10 +33,9 @@ import {
 } from '../../infrastructure/render-constants';
 import { createSceneUniforms } from '../../infrastructure/scene-uniforms';
 import {
-  computeShadowProjection,
-  createShadowMap,
-  EMPTY_SHADOW_PROJECTION,
-} from '../../infrastructure/shadow-map';
+  computeTerrainShadowProjection,
+  PLOT_SHADOW_MAP_SIZE,
+} from '../../infrastructure/terrain-shadow-projection';
 import type { SceneObjects, SceneSink, SceneTerrain } from '../scene-sink';
 import type { SitePlannerStore } from '../SitePlannerStore';
 
@@ -215,7 +215,7 @@ async function initSiteScene({
     const uniforms = createSceneUniforms(device);
     const msaaManager = createMsaaTextureManager(MSAA_SAMPLE_COUNT);
     const depthManager = createDepthTextureManager(MSAA_SAMPLE_COUNT, DEPTH_FORMAT);
-    const shadowMap = createShadowMap(device);
+    const shadowMap = createShadowMap(device, PLOT_SHADOW_MAP_SIZE);
     const terrainLayer = new TerrainLayer(uniforms.buffer, msaaManager, depthManager, shadowMap);
     const objectsLayer = new ObjectsLayer(
       uniforms.buffer,
@@ -228,7 +228,7 @@ async function initSiteScene({
     /** The light's box follows the ground it covers and the sun that casts it. */
     const refreshShadowProjection = (): void => {
       if (!isNil(terrainField)) {
-        shadowProjection = computeShadowProjection({
+        shadowProjection = computeTerrainShadowProjection({
           field: terrainField,
           sunDirection: sunlight.direction,
         });

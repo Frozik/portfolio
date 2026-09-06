@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import type { MultiPolygon, PolygonWithHoles } from '../../../domain/geometry/polygon-types';
+import type { MultiPolygon, PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { StairId } from '../../../domain/model/stairs';
 import type { SupportId } from '../../../domain/model/supports';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';

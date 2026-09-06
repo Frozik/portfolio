@@ -1,7 +1,7 @@
+import type { MeshBuilder, Rgb } from '@frozik/utils/geometry/meshBuilder';
+import { appendBox } from '@frozik/utils/geometry/meshBuilder';
 import type { PieceFrame } from './furniture-palette';
 import { WOOD, WOOD_DARK, LINEN, APPLIANCE_DARK, HALF } from './furniture-palette';
-import type { MeshBuilder, Rgb } from './mesh-builder';
-import { appendBox } from './mesh-builder';
 
 /** What things are kept in: cabinets, shelves, wardrobes and the TV stand. */
 /** A carcass with door faces standing a shade proud, split by a seam. */

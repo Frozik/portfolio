@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { MultiPolygon, Ring } from '../../../domain/geometry/polygon-types';
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../../../domain/units';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';

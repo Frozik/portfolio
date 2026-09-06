@@ -34,19 +34,23 @@ WORKDIR /workspace
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/communication/package.json apps/communication/package.json
 COPY libs/utils/package.json libs/utils/package.json
+COPY libs/communication-protocol/package.json libs/communication-protocol/package.json
 COPY libs/typescript-config/package.json libs/typescript-config/package.json
 
-RUN pnpm install --frozen-lockfile --filter '@frozik/communication...'
+# --ignore-scripts: the root `prepare` (lefthook install) needs a git checkout, and no
+# server dependency relies on an install script.
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter '@frozik/communication...'
 
 # Copy only the workspace sources required to build communication.
 COPY libs/utils libs/utils
+COPY libs/communication-protocol libs/communication-protocol
 COPY libs/typescript-config libs/typescript-config
 COPY apps/communication apps/communication
 
 RUN pnpm --filter @frozik/communication build
 
 # Produce a minimal prod node_modules tree for the runtime stage.
-RUN pnpm --filter @frozik/communication deploy --legacy --prod /out
+RUN pnpm --filter @frozik/communication deploy --legacy --prod --ignore-scripts /out
 
 # -----------------------------------------------------------------------------
 # Stage 2: runtime

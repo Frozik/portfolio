@@ -1,5 +1,5 @@
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
 import { DEGREES_TO_RADIANS } from '../units';
-import type { WorldPoint } from '../view/world-frame';
 import type { SunPosition } from './sun-position';
 
 /** Direct sunlight is switched off entirely once the sun is under the horizon. */

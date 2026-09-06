@@ -1,3 +1,5 @@
+import type { MeshBuilder } from '@frozik/utils/geometry/meshBuilder';
+import { appendBox } from '@frozik/utils/geometry/meshBuilder';
 import {
   appendVerticalCylinder,
   appendFrustum,
@@ -17,8 +19,6 @@ import {
   WATER,
   HALF,
 } from './furniture-palette';
-import type { MeshBuilder } from './mesh-builder';
-import { appendBox } from './mesh-builder';
 
 /** The pieces of the kitchen, bathroom and utility room: appliances, fixtures and the heating. */
 /** Cabinets under a darker worktop, a sink bowl let into one end. */

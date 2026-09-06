@@ -1,4 +1,4 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
+import type { Vector2 } from '../math/vector2';
 
 /**
  * A closed ring of plan-coordinate vertices, stored without repeating the first

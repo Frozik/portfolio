@@ -1,7 +1,7 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import { getShapeKeyPoints } from '../domain/geometry/shape-key-points';
 import { setRectangleRotation } from '../domain/geometry/transform-shape';
 import type { BuildingId } from '../domain/model/building';

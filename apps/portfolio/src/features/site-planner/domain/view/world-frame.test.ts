@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { planToWorld } from './world-frame';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 
 const SITE_DATUM = 0;
 

@@ -1,10 +1,10 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp, isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { offsetAlongOutline, pointOnOutline } from '../../domain/geometry/building-outline';
 import { magnetizeFurnitureToWall } from '../../domain/geometry/furniture-magnetism';
 import { clampPointToMultiPolygon } from '../../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../../domain/geometry/polygon-types';
 import {
   pointAlongPolyline,
   polylineLength,

@@ -1,6 +1,6 @@
 import { isNil } from 'lodash-es';
 
-import type { ColoredMesh, LitMesh } from '../../domain/geometry/lit-mesh';
+import type { ColoredMesh, LitMesh } from '@frozik/utils/geometry/litMesh';
 
 /**
  * One mesh as the GPU holds it: its vertex buffers in the order the pipeline

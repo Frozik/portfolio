@@ -1,8 +1,8 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { computeMultiPolygonCentroid } from '../geometry/polygon-centroid';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import type { PadElevationMode } from '../model/building';
 import type { Meters } from '../units';
 import type { Heightfield } from './heightfield';

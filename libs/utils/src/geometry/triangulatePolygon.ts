@@ -1,6 +1,6 @@
 import earcut from 'earcut';
 
-import type { MultiPolygon, PolygonWithHoles, Ring, TriangleMesh } from './polygon-types';
+import type { MultiPolygon, PolygonWithHoles, Ring, TriangleMesh } from './polygonTypes';
 
 const COORDINATES_PER_VERTEX = 2;
 const MIN_RING_VERTEX_COUNT = 3;

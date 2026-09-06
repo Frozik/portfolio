@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import {
   callsOf,

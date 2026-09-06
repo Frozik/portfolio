@@ -1,5 +1,7 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
+import type { ColoredMesh } from '@frozik/utils/geometry/litMesh';
+import { createMeshBuilder, finishColoredMesh } from '@frozik/utils/geometry/meshBuilder';
 import type { FurnitureCatalogEntry } from '../model/furniture';
 import type { PieceFrame } from './furniture-palette';
 import { WOOD, WOOD_DARK, HALF } from './furniture-palette';
@@ -33,8 +35,6 @@ import {
   appendTvStand,
   appendCubeShelving,
 } from './furniture-pieces-storage';
-import type { ColoredMesh } from './lit-mesh';
-import { createMeshBuilder, finishColoredMesh } from './mesh-builder';
 
 /**
  * The one model every placed piece of a catalogue row is drawn from: a

@@ -1,8 +1,8 @@
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import { MIN_TREE_EXTENT_METERS } from '../constants';
 import type { TreeInstance, TreeSpecies } from '../model/plot-objects';
 import type { Meters } from '../units';
-import type { WorldPoint } from '../view/world-frame';
-import { planToWorld } from '../view/world-frame';
 import type { Heightfield } from './heightfield';
 import { sampleHeight } from './heightfield';
 

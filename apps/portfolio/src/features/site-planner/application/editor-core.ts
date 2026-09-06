@@ -1,6 +1,6 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { PathRibbon } from '../domain/geometry/path-ribbon';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import type { BuildingId } from '../domain/model/building';
 import type { Building } from '../domain/model/building';
 import type { ActiveTool, EditorMode, EditTarget } from '../domain/model/editor-mode';

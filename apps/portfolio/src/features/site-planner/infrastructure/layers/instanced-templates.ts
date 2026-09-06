@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
 import type { SceneTree } from '../../domain/terrain/place-trees';
-import type { WorldPoint } from '../../domain/view/world-frame';
 import type { GpuMesh } from './gpu-mesh';
 import { bindGpuMesh, createVertexBuffer, releaseGpuMesh } from './gpu-mesh';
 import { CAR_INSTANCE_FLOATS, TREE_INSTANCE_FLOATS } from './vertex-layouts';

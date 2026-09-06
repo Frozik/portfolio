@@ -1,6 +1,6 @@
 import { isNil } from 'lodash-es';
 
-import type { ColoredMesh } from './lit-mesh';
+import type { ColoredMesh } from './litMesh';
 
 /** A point of a template, in whatever frame the template is authored in. */
 export type LocalPoint = readonly [number, number, number];

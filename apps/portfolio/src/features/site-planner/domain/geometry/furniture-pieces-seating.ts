@@ -1,3 +1,5 @@
+import type { MeshBuilder } from '@frozik/utils/geometry/meshBuilder';
+import { appendBox } from '@frozik/utils/geometry/meshBuilder';
 import { appendVerticalCylinder } from './furniture-mesh-primitives';
 import type { PieceFrame } from './furniture-palette';
 import {
@@ -11,8 +13,6 @@ import {
   METAL,
   HALF,
 } from './furniture-palette';
-import type { MeshBuilder } from './mesh-builder';
-import { appendBox } from './mesh-builder';
 
 /** What is sat on, slept in and eaten or worked at: beds, sofas, chairs and tables. */
 /** Frame + мatress + pillows at the back, a blanket over the front two thirds. */

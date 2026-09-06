@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { RoofCrease } from '../../../domain/geometry/pitched-roof';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
 import { buildMultiPolygonPath } from './shared';

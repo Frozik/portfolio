@@ -4,13 +4,11 @@ import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { ShadowMap } from '@frozik/utils/webgpu/shadowMap';
 import { buildCarTemplate } from '../../domain/geometry/car-mesh';
 import { buildFurnitureTemplate } from '../../domain/geometry/furniture-mesh';
-import type {
-  LitMesh,
-  PathDrapeGeometry,
-  RoofOverlayGeometry,
-} from '../../domain/geometry/lit-mesh';
+import type { PathDrapeGeometry, RoofOverlayGeometry } from '../../domain/geometry/lit-mesh';
 import { buildTreeTemplate } from '../../domain/geometry/tree-mesh';
 import type { FurnitureCatalogId } from '../../domain/model/furniture';
 import { FURNITURE_CATALOG } from '../../domain/model/furniture';
@@ -22,7 +20,6 @@ import type { SceneTree } from '../../domain/terrain/place-trees';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import objectsShaderSource from '../shaders/objects.wgsl?raw';
 import shadowShaderSource from '../shaders/shadow.wgsl?raw';
-import type { ShadowMap } from '../shadow-map';
 import type { GpuMesh } from './gpu-mesh';
 import { bindGpuMesh, releaseGpuMesh, uploadColoredMesh, uploadLitMesh } from './gpu-mesh';
 import type { TemplateInstances } from './instanced-templates';

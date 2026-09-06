@@ -1,6 +1,6 @@
+import type { LocalPoint, MeshBuilder, Rgb } from '@frozik/utils/geometry/meshBuilder';
+import { appendBox, appendQuad, appendTriangle } from '@frozik/utils/geometry/meshBuilder';
 import { CYLINDER_SEGMENT_COUNT, FULL_TURN_RADIANS } from './furniture-palette';
-import type { LocalPoint, MeshBuilder, Rgb } from './mesh-builder';
-import { appendBox, appendQuad, appendTriangle } from './mesh-builder';
 
 /** A closed vertical cylinder between two heights. */
 export function appendVerticalCylinder(

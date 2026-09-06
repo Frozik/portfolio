@@ -1,9 +1,9 @@
 import { area } from 'clipper2-ts';
 import { describe, expect, it } from 'vitest';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import { SCALE_UNITS_PER_METER } from '../units';
 import { fromClipperPath, toClipperPath, toClipperUnits } from './frame';
-import type { Ring } from './polygon-types';
 
 const PLOT_SIDE_METERS = 200;
 

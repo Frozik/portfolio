@@ -1,7 +1,7 @@
+import type { PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { ductFootprint, fireplaceFootprint, fluePosition } from '../domain/geometry/duct-geometry';
-import type { PolygonWithHoles } from '../domain/geometry/polygon-types';
 import type { VerticalDuct } from '../domain/model/ducts';
 import type { Fireplace, FireplaceId } from '../domain/model/fireplaces';
 import { FIREPLACE_SPECS, flueOf } from '../domain/model/fireplaces';

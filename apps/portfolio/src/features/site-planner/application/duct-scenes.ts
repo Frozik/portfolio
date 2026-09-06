@@ -1,5 +1,7 @@
 import { isNil } from 'lodash-es';
 
+import { extrudePrism } from '@frozik/utils/geometry/extrudeFootprint';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
 import type { DuctRoofContext } from '../domain/geometry/duct-geometry';
 import {
   crownHeadHeight,
@@ -7,8 +9,6 @@ import {
   ductFootprint,
   ductTopElevation,
 } from '../domain/geometry/duct-geometry';
-import { extrudePrism } from '../domain/geometry/extrude-footprint';
-import type { LitMesh } from '../domain/geometry/lit-mesh';
 import { isPointInMultiPolygon } from '../domain/geometry/polygon-booleans';
 import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
 import type { VerticalDuct } from '../domain/model/ducts';

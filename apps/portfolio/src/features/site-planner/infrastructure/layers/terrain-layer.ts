@@ -6,7 +6,8 @@ import { isNil } from 'lodash-es';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 
-import type { MultiPolygon } from '../../domain/geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
+import type { ShadowMap } from '@frozik/utils/webgpu/shadowMap';
 import type { AnalysisRaster } from '../../domain/terrain/analysis-raster';
 import type { Heightfield } from '../../domain/terrain/heightfield';
 import { computeElevationRange } from '../../domain/terrain/heightfield';
@@ -14,7 +15,6 @@ import type { Meters } from '../../domain/units';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import shadowShaderSource from '../shaders/shadow.wgsl?raw';
 import terrainShaderSource from '../shaders/terrain.wgsl?raw';
-import type { ShadowMap } from '../shadow-map';
 import type { ShadowCaster } from './shadow-caster';
 import { buildOutlinePositions, WORLD_FLOATS_PER_VERTEX } from './terrain-geometry';
 import { TerrainGrid } from './terrain-grid';

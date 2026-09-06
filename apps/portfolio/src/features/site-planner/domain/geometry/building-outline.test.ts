@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { DEFAULT_FOUNDATION } from '../model/foundation';
 import {
   foundationVolumeCubicMeters,
@@ -8,7 +9,6 @@ import {
   outlineLength,
   pointOnOutline,
 } from './building-outline';
-import type { MultiPolygon } from './polygon-types';
 
 /** A 10 × 6 rectangle with its corner at the origin, counter-clockwise. */
 const RECTANGLE: MultiPolygon = [

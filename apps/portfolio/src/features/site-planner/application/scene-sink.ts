@@ -1,5 +1,6 @@
-import type { LitMesh, PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
+import type { PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
 import type { Sunlight } from '../domain/sun/sun-direction';
 import type { AnalysisRaster } from '../domain/terrain/analysis-raster';
 import type { Heightfield } from '../domain/terrain/heightfield';

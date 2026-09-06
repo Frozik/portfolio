@@ -1,7 +1,7 @@
+import type { PolygonWithHoles, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { StairInstance } from '../model/stairs';
 import type { SupportPost } from '../model/supports';
 import type { Meters } from '../units';
-import type { PolygonWithHoles, Ring } from './polygon-types';
 import { rectangleLocalToPlan } from './polygonize-shape';
 import { mirrorOf } from './stair-footprint';
 import { stairLayout } from './stair-layouts';

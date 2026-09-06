@@ -1,10 +1,10 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon, PolygonWithHoles, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { StairInstance } from '../model/stairs';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
 import { isPointInMultiPolygon } from './polygon-booleans';
-import type { MultiPolygon, PolygonWithHoles, Ring } from './polygon-types';
 import { rectangleLocalToPlan } from './polygonize-shape';
 import { distanceToSegment } from './segment-distance';
 import { stairLayout, flightLocalRing, spiralLocalRing } from './stair-layouts';

@@ -1,3 +1,4 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { multiPolygonArea } from '../domain/geometry/building-outline';
@@ -7,7 +8,6 @@ import {
   subtractPolygons,
 } from '../domain/geometry/polygon-booleans';
 import { computeMultiPolygonCentroid } from '../domain/geometry/polygon-centroid';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import { buildWallHull } from '../domain/geometry/wall-geometry';
 import type { RoomLabelId, RoomTypeId } from '../domain/model/rooms';
 import { isWetRoomType } from '../domain/model/rooms';

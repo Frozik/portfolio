@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { createSupport } from '../model/supports';
-import type { MultiPolygon } from './polygon-types';
 import { supportSpan } from './support-span';
 
 /** A 10×10 storey footprint with its corner at the origin. */

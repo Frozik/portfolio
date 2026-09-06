@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type {
   CsgOperand,
   CsgOperation,
@@ -14,7 +15,6 @@ import {
   hasRingSelfIntersection,
   MIN_RING_AREA_SQUARE_METERS,
 } from './evaluate-composition';
-import type { MultiPolygon, Ring } from './polygon-types';
 import { CIRCLE_SAGITTA_METERS } from './polygonize-shape';
 
 function compose(...terms: readonly (readonly [CsgOperand, CsgOperation])[]): ShapeComposition {

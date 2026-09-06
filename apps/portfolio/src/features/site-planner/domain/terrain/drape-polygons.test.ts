@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MultiPolygon } from '../geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
 import { drapePolygons } from './drape-polygons';
 import type { Heightfield } from './heightfield';

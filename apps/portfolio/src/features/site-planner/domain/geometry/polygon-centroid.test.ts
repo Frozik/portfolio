@@ -1,6 +1,6 @@
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import { describe, expect, it } from 'vitest';
 import { computeMultiPolygonCentroid } from './polygon-centroid';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 /** Counter-clockwise, as the boolean fold leaves an outer ring. */
 function rectangle(minX: number, minY: number, maxX: number, maxY: number): Ring {

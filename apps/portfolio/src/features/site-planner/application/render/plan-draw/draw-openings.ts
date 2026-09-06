@@ -1,5 +1,5 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { DoorSwingGeometry } from '../../../domain/geometry/wall-geometry';
 import type { OpeningId, OpeningKind } from '../../../domain/model/openings';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';

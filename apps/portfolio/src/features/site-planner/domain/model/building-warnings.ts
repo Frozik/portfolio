@@ -2,12 +2,12 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { isNil } from 'lodash-es';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import {
   interiorPointOf,
   intersectPolygons,
   isPointInMultiPolygon,
 } from '../geometry/polygon-booleans';
-import type { MultiPolygon } from '../geometry/polygon-types';
 import type { Meters } from '../units';
 import type { DuctId } from './ducts';
 import type { FurnitureId } from './furniture';

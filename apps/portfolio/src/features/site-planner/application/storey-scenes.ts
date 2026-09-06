@@ -1,3 +1,4 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import {
@@ -5,7 +6,6 @@ import {
   isPointInMultiPolygon,
   subtractPolygons,
 } from '../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import { distanceToMultiPolygonEdge } from '../domain/geometry/segment-distance';
 import { slabsOutline } from '../domain/geometry/slab-geometry';
 import { floorToFloorMeters, SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';

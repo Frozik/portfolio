@@ -1,9 +1,9 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Foundation } from '../model/foundation';
 import type { Meters } from '../units';
-import type { MultiPolygon, Ring } from './polygon-types';
 
 /**
  * How wide a stem-wall run is taken to be when its volume is estimated. A

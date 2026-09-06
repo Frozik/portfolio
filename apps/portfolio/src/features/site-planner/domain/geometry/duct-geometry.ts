@@ -1,3 +1,4 @@
+import type { MultiPolygon, PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import type { VerticalDuct } from '../model/ducts';
@@ -14,7 +15,6 @@ import { rotatedBoxRing } from './hit-test-shape';
 import { offsetPolygons } from './offset-polygon';
 import type { RoofCrease, RoofFace, RoofFrame } from './pitched-roof';
 import { roofHeightAt } from './pitched-roof';
-import type { MultiPolygon, PolygonWithHoles } from './polygon-types';
 import { distanceToSegment } from './segment-distance';
 
 /** The body of a fireplace on the plan: its box, turned the way it faces. */

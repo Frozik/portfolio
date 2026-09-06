@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
-import type { MultiPolygon } from '../geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
 import type { Heightfield } from './heightfield';
 import { buildPlotCoverage } from './plot-coverage';

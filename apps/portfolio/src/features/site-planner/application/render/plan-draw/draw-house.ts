@@ -1,8 +1,8 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { computeMultiPolygonBounds } from '../../../domain/geometry/bounding-box';
 import { computeMultiPolygonCentroid } from '../../../domain/geometry/polygon-centroid';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { BuildingId } from '../../../domain/model/building';
 import type { DuctId } from '../../../domain/model/ducts';
 import type { DeviceId } from '../../../domain/model/electrical';

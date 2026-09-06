@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import { createCircle, createEllipse, createRectangle } from '../model/shapes';
-import type { Ring } from './polygon-types';
 import {
   CIRCLE_SAGITTA_METERS,
   countCircleSegments,

@@ -1,7 +1,7 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { SegmentReadout } from '../../../domain/geometry/draw-constraints';
 import type { PathRibbon } from '../../../domain/geometry/path-ribbon';
-import type { MultiPolygon } from '../../../domain/geometry/polygon-types';
 import type { BuildingId } from '../../../domain/model/building';
 import type { DuctId } from '../../../domain/model/ducts';
 import type { EditTarget } from '../../../domain/model/editor-mode';

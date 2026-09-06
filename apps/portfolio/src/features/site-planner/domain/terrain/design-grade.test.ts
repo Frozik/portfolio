@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MultiPolygon } from '../geometry/polygon-types';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { GradedPad } from './design-grade';
 import { groundElevationAt, PAD_BLEND_METERS } from './design-grade';
 import type { Heightfield } from './heightfield';

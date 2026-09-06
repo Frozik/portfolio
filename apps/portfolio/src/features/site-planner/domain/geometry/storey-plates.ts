@@ -1,6 +1,6 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
 import { subtractPolygons } from './polygon-booleans';
-import type { MultiPolygon } from './polygon-types';
 
 /**
  * A reinforced-concrete floor slab, the primitive the building model was

@@ -1,4 +1,4 @@
-import type { MultiPolygon, Ring } from '../geometry/polygon-types';
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { Meters } from '../units';
 import type { Heightfield } from './heightfield';
 

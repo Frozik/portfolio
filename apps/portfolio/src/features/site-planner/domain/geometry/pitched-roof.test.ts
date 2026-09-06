@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { createPitchedRoof } from '../model/roofs';
 import { multiPolygonArea } from './building-outline';
 import {
@@ -11,7 +12,6 @@ import {
   roofPeakMeters,
   roofPlan,
 } from './pitched-roof';
-import type { MultiPolygon } from './polygon-types';
 
 /** A 12 × 8 house about the origin — the shape a gable roof is explained on. */
 const HOUSE: MultiPolygon = [

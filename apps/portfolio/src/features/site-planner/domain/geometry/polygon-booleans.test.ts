@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { multiPolygonArea } from './building-outline';
 import { isPointInMultiPolygon, subtractPolygons } from './polygon-booleans';
-import type { MultiPolygon } from './polygon-types';
 
 const SQUARE: MultiPolygon = [
   {

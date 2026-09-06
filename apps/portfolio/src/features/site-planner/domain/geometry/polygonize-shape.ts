@@ -2,10 +2,10 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { clamp } from 'lodash-es';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { CircleShape, EllipseShape, RectangleShape, Shape } from '../model/shapes';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
-import type { Ring } from './polygon-types';
 
 /** Largest gap tolerated between the true arc and its chord. */
 export const CIRCLE_SAGITTA_METERS: Meters = 0.01;

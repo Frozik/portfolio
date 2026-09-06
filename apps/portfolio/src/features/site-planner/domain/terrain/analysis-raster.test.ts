@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MultiPolygon, Ring } from '../geometry/polygon-types';
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { AnalysisRaster, RampColor } from './analysis-raster';
 import {
   buildCutFillRaster,

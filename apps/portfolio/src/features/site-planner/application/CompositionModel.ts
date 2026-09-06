@@ -16,8 +16,8 @@ import {
   wrapTermInGroup as wrapTermInGroupIn,
 } from '../domain/model/composition-edits';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { offsetPolygons } from '../domain/geometry/offset-polygon';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import type { BuildingId } from '../domain/model/building';
 import type { Building } from '../domain/model/building';
 import type { ActiveGroup, Selection, ShapeOwner } from '../domain/model/selection';

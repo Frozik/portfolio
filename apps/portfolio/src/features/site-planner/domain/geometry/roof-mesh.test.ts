@@ -2,9 +2,9 @@ import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { describe, expect, it } from 'vitest';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { PitchedRoof } from '../model/roofs';
 import { roofFaces, roofFrameOf, roofPeakMeters, roofPlan } from './pitched-roof';
-import type { MultiPolygon } from './polygon-types';
 import { buildPitchedRoofMesh } from './roof-mesh';
 
 /** A 10 × 6 footprint, ridge along X: the gable ends stand at x = 0 and x = 10. */

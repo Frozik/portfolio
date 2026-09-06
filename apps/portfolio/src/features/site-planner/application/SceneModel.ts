@@ -1,11 +1,12 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 import { PATH_DRAPE_OFFSET_METERS } from '../domain/constants';
 import { foundationVolumeCubicMeters, pointOnOutline } from '../domain/geometry/building-outline';
 import { evaluateComposition } from '../domain/geometry/evaluate-composition';
-import type { LitMesh, PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
+import type { PathDrapeGeometry, RoofOverlayGeometry } from '../domain/geometry/lit-mesh';
 import { entriesOf, foundationOf, padDropOf, pitchedRoofOf } from '../domain/model/building';
 import type { Building } from '../domain/model/building';
 import type { BuildingWarning } from '../domain/model/building-warnings';

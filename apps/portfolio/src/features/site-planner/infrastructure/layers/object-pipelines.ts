@@ -1,5 +1,5 @@
+import { SHADOW_FORMAT } from '@frozik/utils/webgpu/shadowMap';
 import { DEPTH_FORMAT, MSAA_SAMPLE_COUNT } from '../render-constants';
-import { SHADOW_FORMAT } from '../shadow-map';
 import {
   CAR_INSTANCE_LAYOUT,
   positionLayout,

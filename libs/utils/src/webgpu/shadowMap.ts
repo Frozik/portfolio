@@ -1,35 +1,14 @@
 import type { Mat4 } from 'wgpu-matrix';
 import { mat4 } from 'wgpu-matrix';
-import type { Heightfield } from '../domain/terrain/heightfield';
-import { computeElevationRange } from '../domain/terrain/heightfield';
-import type { Meters } from '../domain/units';
-import type { WorldPoint } from '../domain/view/world-frame';
-import { planToWorld } from '../domain/view/world-frame';
 
-/**
- * One shadow map, no cascades: a plot is tens of metres across, so 2048² texels
- * over its bounding box land at about three centimetres each — finer than the
- * feature's own accuracy target. Cascades solve a problem this scene does not
- * have.
- */
-const SHADOW_MAP_SIZE = 2048;
+import type { WorldPoint } from '../geometry/worldFrame';
 
 /** Comparison sampling needs a filterable depth format; this is the portable one. */
 export const SHADOW_FORMAT: GPUTextureFormat = 'depth32float';
 
-const HALF = 0.5;
-
-/**
- * Head-room above the ground for whatever stands on it. The light's box is built
- * from the terrain, and a tree or a house rises out of it — losing the top of a
- * tree would lose the shadow it casts, so the box grows by the tallest thing the
- * catalogue can put on the plot.
- */
-const OBJECT_HEIGHT_ALLOWANCE_METERS: Meters = 15;
-
 /**
  * A sun straight overhead leaves `lookAt` without a usable up vector; past this
- * much of the direction being vertical, the box is oriented along plan south
+ * much of the direction being vertical, the box is oriented along world +Z
  * instead — the choice is arbitrary and only decides how the square box is
  * turned, which nothing downstream can see.
  */
@@ -43,24 +22,24 @@ export interface ShadowProjection {
   readonly lightViewProjection: Mat4;
   /**
    * Depth of the light's box in metres. The depth bias is authored in metres —
-   * centimetres of ground, not a fraction of whatever box the plot happens to
+   * centimetres of ground, not a fraction of whatever box the scene happens to
    * need — and this is what converts it into the [0, 1] the shader compares in.
    */
-  readonly depthRangeMeters: Meters;
+  readonly depthRangeMeters: number;
   /**
    * World size of one shadow texel. The normal offset that keeps a surface from
    * shadowing itself is authored in texels — the error it corrects is exactly
    * how much ground one texel has to speak for — so the box's own scale is what
    * turns it back into metres.
    */
-  readonly texelWorldSizeMeters: Meters;
+  readonly texelWorldSizeMeters: number;
 }
 
 /**
- * What the scene is lit by before a terrain has arrived: the identity transform
- * sends every metre of the plot far outside the light's clip volume, where the
- * lookup answers "nothing in the way" — the one honest answer for a map that has
- * had nothing rendered into it yet.
+ * What the scene is lit by before anything has arrived: the identity transform
+ * sends every metre far outside the light's clip volume, where the lookup
+ * answers "nothing in the way" — the one honest answer for a map that has had
+ * nothing rendered into it yet.
  */
 export const EMPTY_SHADOW_PROJECTION: ShadowProjection = {
   lightViewProjection: mat4.identity(),
@@ -71,6 +50,8 @@ export const EMPTY_SHADOW_PROJECTION: ShadowProjection = {
 
 /** The resources the shadow map is written to and read back from. */
 export interface ShadowMap {
+  /** Texels along one side of the square map. */
+  readonly size: number;
   /** Depth attachment of the shadow pass. */
   readonly depthView: GPUTextureView;
   /** Layout of group 1: the map and its comparison sampler, shared by every layer. */
@@ -79,9 +60,9 @@ export interface ShadowMap {
   dispose(): void;
 }
 
-export function createShadowMap(device: GPUDevice): ShadowMap {
+export function createShadowMap(device: GPUDevice, size: number): ShadowMap {
   const texture = device.createTexture({
-    size: [SHADOW_MAP_SIZE, SHADOW_MAP_SIZE],
+    size: [size, size],
     format: SHADOW_FORMAT,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
@@ -108,6 +89,7 @@ export function createShadowMap(device: GPUDevice): ShadowMap {
   const depthView = texture.createView();
 
   return {
+    size,
     depthView,
     bindGroupLayout,
     bindGroup: device.createBindGroup({
@@ -125,30 +107,26 @@ export function createShadowMap(device: GPUDevice): ShadowMap {
 }
 
 /**
- * The light's view of the plot: an orthographic box sitting over the terrain's
- * bounding sphere, looking down the sun direction. Orthographic because sunlight
- * is parallel, and sized to the plot rather than to the camera — the map is
- * re-rendered when the sun or the ground moves, not when the view does.
+ * The light's view of a scene: an orthographic box over the scene's bounding
+ * sphere, looking down the sun direction. Orthographic because sunlight is
+ * parallel; sized to the scene rather than to the camera, so the map is
+ * re-rendered when the sun or the scene moves, not when the view does.
  */
 export function computeShadowProjection({
-  field,
+  center,
+  radius,
   sunDirection,
+  mapSize,
 }: {
-  readonly field: Heightfield;
+  /** Centre of the bounding sphere, in world metres. */
+  readonly center: WorldPoint;
+  /** Radius of the bounding sphere, in metres. */
+  readonly radius: number;
   /** Unit vector towards the sun. */
   readonly sunDirection: WorldPoint;
+  /** Texels along one side of the shadow map the projection is rasterised into. */
+  readonly mapSize: number;
 }): ShadowProjection {
-  const extent: Meters = (field.resolution - 1) * field.cellSizeMeters;
-  const { minElevation, maxElevation } = computeElevationRange(field);
-  const center = planToWorld(
-    {
-      x: field.originMeters.x + extent * HALF,
-      y: field.originMeters.y + extent * HALF,
-    },
-    (minElevation + maxElevation) * HALF
-  );
-  const radius =
-    Math.hypot(extent, extent, maxElevation - minElevation) * HALF + OBJECT_HEIGHT_ALLOWANCE_METERS;
   const eyeDistance = radius * 2;
   const eye: WorldPoint = [
     center[0] + sunDirection[0] * eyeDistance,
@@ -166,6 +144,6 @@ export function computeShadowProjection({
       mat4.lookAt(eye, center, up)
     ),
     depthRangeMeters,
-    texelWorldSizeMeters: (radius * 2) / SHADOW_MAP_SIZE,
+    texelWorldSizeMeters: (radius * 2) / mapSize,
   };
 }

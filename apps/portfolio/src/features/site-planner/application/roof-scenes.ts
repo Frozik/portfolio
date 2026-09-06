@@ -1,7 +1,8 @@
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { findLast, isNil } from 'lodash-es';
-import type { LitMesh } from '../domain/geometry/lit-mesh';
 
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { RoofCrease, RoofFace, RoofFrame, RoofPlane } from '../domain/geometry/pitched-roof';
 import {
   roofCreases,
@@ -11,7 +12,6 @@ import {
   roofPlan,
 } from '../domain/geometry/pitched-roof';
 import { interiorPointOf, unionPolygons } from '../domain/geometry/polygon-booleans';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import { buildPitchedRoofMesh } from '../domain/geometry/roof-mesh';
 import { SLAB_THICKNESS_METERS } from '../domain/geometry/storey-plates';
 import type { PitchedRoof } from '../domain/model/roofs';

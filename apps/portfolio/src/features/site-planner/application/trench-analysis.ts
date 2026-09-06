@@ -1,5 +1,5 @@
+import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
-import type { MultiPolygon } from '../domain/geometry/polygon-types';
 import type { RouteWarning } from '../domain/model/route-warnings';
 import { collectRouteWarnings } from '../domain/model/route-warnings';
 import type { UtilityRoute, UtilityRouteId } from '../domain/model/routing';

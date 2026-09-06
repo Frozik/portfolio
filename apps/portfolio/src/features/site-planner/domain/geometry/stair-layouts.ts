@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { Ring } from '@frozik/utils/geometry/polygonTypes';
 import type { StairKind } from '../model/stairs';
 import type { Meters } from '../units';
 import { DEGREES_TO_RADIANS } from '../units';
-import type { Ring } from './polygon-types';
 import type { StairRun } from './stair-run';
 import { SPIRAL_DEGREES_PER_RISER, deriveStairRun } from './stair-run';
 

@@ -1,14 +1,14 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import { EMPTY_LIT_MESH } from '@frozik/utils/geometry/litMesh';
+import type { MultiPolygon, Ring } from '@frozik/utils/geometry/polygonTypes';
+import { triangulateMultiPolygon } from '@frozik/utils/geometry/triangulatePolygon';
+import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import { planToWorld } from '@frozik/utils/geometry/worldFrame';
 import type { Meters } from '../units';
-import type { WorldPoint } from '../view/world-frame';
-import { planToWorld } from '../view/world-frame';
-import type { LitMesh } from './lit-mesh';
-import { EMPTY_LIT_MESH } from './lit-mesh';
 import type { RoofFace, RoofFrame } from './pitched-roof';
 import { roofHeightAt } from './pitched-roof';
-import type { MultiPolygon, Ring } from './polygon-types';
-import { triangulateMultiPolygon } from './triangulate-polygon';
 
 const COORDINATES_PER_PLAN_VERTEX = 2;
 const WORLD_COORDINATES_PER_VERTEX = 3;

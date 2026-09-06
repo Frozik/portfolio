@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { extrudeFootprint } from './extrude-footprint';
-import type { LitMesh } from './lit-mesh';
-import type { MultiPolygon, Ring } from './polygon-types';
+import { extrudeFootprint } from './extrudeFootprint';
+import type { LitMesh } from './litMesh';
+import type { MultiPolygon, Ring } from './polygonTypes';
 
 const WORLD_COORDINATES_PER_VERTEX = 3;
 const INDICES_PER_TRIANGLE = 3;
