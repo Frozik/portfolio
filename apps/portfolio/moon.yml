@@ -49,6 +49,8 @@ tasks:
     outputs:
       - 'bundle-stats.html'
       - 'bundle-stats.json'
+    options:
+      runInCI: false
 
   e2e:
     command: 'pnpm exec playwright test'
@@ -70,3 +72,4 @@ tasks:
       - '.lighthouseci'
     options:
       cache: false
+      runInCI: false

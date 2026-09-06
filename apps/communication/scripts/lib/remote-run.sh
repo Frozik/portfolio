@@ -86,6 +86,8 @@ env_for_remote() {
     BUILD_VERSION
     REPO_URL
     REMOTE_TS
+    NAV_SKIP_BUILD
+    NAV_REFRESH_EXTRACT
   )
   for key in "${keys[@]}"; do
     local value="${!key:-}"

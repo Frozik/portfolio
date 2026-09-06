@@ -24,6 +24,15 @@ jobs:
       - uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - name: Install the Playwright browser for the e2e task
+        working-directory: apps/portfolio
+        run: pnpm exec playwright install --with-deps --only-shell chromium
       - uses: actions/cache@v4
         with:
           path: .moon/cache

@@ -386,6 +386,47 @@ removed the legacy server source tree.
 
 ---
 
+## Navigation stack (tiles + routing for the portfolio's navigator)
+
+The same host also serves the OSM navigator feature of the portfolio: vector
+tiles of Saint Petersburg and a routing engine, on their own hostname
+`nav-<IP>.sslip.io`. Everything is built and served on the box; no Docker,
+no third-party map keys.
+
+```bash
+bash apps/communication/scripts/install-navigation.sh --ssh-host root@<IP> [--skip-build] [--refresh-extract]
+```
+
+What it does (all scripts under `scripts/lib/nav-*.sh`, versions pinned in
+`nav-versions.sh`):
+
+1. `nav-install-runtime` — system user `navigation`, `/opt/navigation`
+   (Temurin JRE 21 tarball, `go-pmtiles`, the `planetiler-openmaptiles` and
+   `graphhopper-web` jars, checksum-verified) and `/srv/navigation/{osm,tiles,graphhopper}`.
+2. `nav-fetch-extract` — the BBBike Saint Petersburg `.osm.pbf` and a
+   `manifest.json` the client shows as the data date.
+3. `nav-build-tiles` — planetiler → `/srv/navigation/tiles/spb.pmtiles`
+   (OpenMapTiles schema, `ru`/`en` names, `render_height` for 3D).
+4. `nav-build-routing` — GraphHopper config with `car`, `foot` and `bike`
+   profiles (contraction hierarchies) and the graph import.
+5. `nav-render-units` — `pmtiles.service` (:8082) and `graphhopper.service`
+   (:8989, 1.2 GB heap, 1.8 GB cgroup cap), loopback only.
+6. `nav-expand-cert` — adds the navigation hostname to the Let's Encrypt
+   certificate (HTTP-01 through the port-80 hooks) and writes the combined
+   PEM HAProxy terminates TLS with; the renewal deploy hook keeps it fresh.
+7. `render-haproxy-cfg` — the navigation SNI goes to a local HTTPS frontend
+   that answers CORS for the portfolio origins and routes
+   `/tiles/spb/{z}/{x}/{y}.mvt` → pmtiles, `/route?…` → GraphHopper,
+   `/health` → 200. Signaling and TURN stay TCP/SNI passthrough.
+8. `nav-enable-services` — starts both units, reloads HAProxy and enforces
+   the memory gate: if less than 1 GB stays available, GraphHopper is
+   stopped and disabled again.
+9. `nav-smoke-test` — a tile over Palace Square, a foot route with Russian
+   instructions and a CORS preflight, through the public hostname.
+
+Refreshing the data is the same command with `--refresh-extract`; the
+builds take a few minutes on the 2-vCPU box and run at low priority.
+
 ## Operations
 
 - **Graceful upgrade**: `bash apps/communication/scripts/upgrade.sh

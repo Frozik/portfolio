@@ -26,6 +26,13 @@ cat > "${DEPLOY_HOOK_PATH}" <<'HOOK'
 # Reload TLS-bearing services after certbot renewal. v2: communication
 # auto-reloads its TLS context via fs.watch — no need to kill it.
 set -eu
+# The navigation host is terminated by HAProxy from a combined PEM, which
+# has to follow every renewal before haproxy reloads.
+if [ -f /etc/haproxy/certs/nav.pem ]; then
+  cat /etc/letsencrypt/live/communication/fullchain.pem /etc/letsencrypt/live/communication/privkey.pem > /etc/haproxy/certs/nav.pem.tmp
+  chmod 600 /etc/haproxy/certs/nav.pem.tmp
+  mv /etc/haproxy/certs/nav.pem.tmp /etc/haproxy/certs/nav.pem
+fi
 systemctl reload haproxy 2>/dev/null || systemctl restart haproxy
 systemctl reload coturn  2>/dev/null || systemctl restart coturn
 HOOK
