@@ -31,3 +31,6 @@ updates:
     directory: /apps/communication
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
