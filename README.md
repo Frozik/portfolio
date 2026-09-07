@@ -71,8 +71,8 @@ representative):
   with the same rules (`predict-version` from `libs/tooling`) before building,
   the build is stamped with it and the version is part of the build's cache
   hash, and the deploy publishes that very artifact instead of building
-  again; the GitHub button's tooltip shows it. Locally the stamp is
-  `git describe --tags`.
+  again; the GitHub button's tooltip shows it. A push that releases nothing
+  keeps the last version. Locally the stamp is `git describe --tags`.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
   Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
   caps for scripts, CSS and third-party code.

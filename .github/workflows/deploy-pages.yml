@@ -79,7 +79,9 @@ jobs:
           restore-keys: moon-${{ runner.os }}-
       - name: Rebuild
         if: hashFiles('apps/portfolio/dist/index.html') == ''
-        run: moon run portfolio:build
+        run: |
+          pnpm install --frozen-lockfile
+          PORTFOLIO_VERSION="$(pnpm exec predict-version)" moon run portfolio:build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/portfolio/dist

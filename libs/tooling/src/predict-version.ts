@@ -8,8 +8,11 @@ import { readFileSync } from 'node:fs';
 //
 //   predict-version [ref]   (default HEAD)
 //
-// Prints `vX.Y.Z` when the commits since the last release tag warrant a
-// release, otherwise `git describe --tags` for the ref.
+// Prints the version the ref will be released as: the next one when the
+// commits since the last release tag warrant a release, otherwise the last
+// tag itself — commits that release nothing (`ci`, `chore`, `docs`, …) do not
+// change the product, so the product keeps its version. Before the first tag
+// it falls back to `git describe`.
 import type { CommitAnalyzerConfig } from '@semantic-release/commit-analyzer';
 import { analyzeCommits } from '@semantic-release/commit-analyzer';
 
@@ -74,7 +77,7 @@ if (tag !== undefined) {
     logger: { log: () => {} },
   })) as ReleaseType | null;
   const next = nextVersion(versionOfTag(tag), releaseType);
-  version = next === undefined ? undefined : `v${next}`;
+  version = next === undefined ? tag : `v${next}`;
 }
 
 console.log(version ?? git('describe', '--tags', '--always', ref));
