@@ -66,6 +66,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'inline',
       workbox: {
+        // The plugin only defaults these for `injectRegister: 'auto'`; without them a
+        // new worker waits until every tab closes and `autoUpdate` never fires.
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
         manifestTransforms: [precacheAppShellAndCv],
         runtimeCaching: [
