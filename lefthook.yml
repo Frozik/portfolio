@@ -1,6 +1,6 @@
 # Git hooks (lefthook). Commit stays fast: only staged files are linted and the
 # affected type-checks run. The full gate (`pnpm check-all`) runs before push and in CI —
-# never `moon check --all`: it also runs deploy-pages, lighthouse and analyze.
+# never `moon check --all`: it also runs lighthouse and analyze.
 
 pre-commit:
   parallel: true

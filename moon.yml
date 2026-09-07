@@ -5,7 +5,7 @@ language: typescript
 # `moon check --all` is the full gate, `moon ci` runs only affected tasks in CI,
 # and every task declares its inputs so unchanged work is served from the cache.
 # Moon runs every task in CI unless it opts out, so developer-only tasks
-# (fixers, coverage, deploy) carry `runInCI: false`.
+# (fixers, coverage) carry `runInCI: false`.
 
 fileGroups:
   sources:
@@ -100,14 +100,6 @@ tasks:
 
   conventions-baseline:
     command: 'node scripts/check-source-conventions.mjs --update-baseline'
-    options:
-      cache: false
-      runInCI: false
-
-  deploy-pages:
-    command: 'gh-pages -d apps/portfolio/dist'
-    deps:
-      - 'portfolio:build'
     options:
       cache: false
       runInCI: false

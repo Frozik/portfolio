@@ -4,13 +4,7 @@
   "workspaces": {
     ".": {
       "entry": ["vitest.config.ts", ".dependency-cruiser.cjs", "scripts/*.mjs"],
-      "ignoreDependencies": [
-        "@lhci/cli",
-        "lighthouse",
-        "@swc/core",
-        "gh-pages",
-        "lefthook"
-      ]
+      "ignoreDependencies": ["@lhci/cli", "lighthouse", "@swc/core", "lefthook"]
     },
     "apps/portfolio": {
       "entry": [
