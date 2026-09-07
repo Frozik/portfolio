@@ -36,6 +36,8 @@ COPY apps/communication/package.json apps/communication/package.json
 COPY libs/utils/package.json libs/utils/package.json
 COPY libs/communication-protocol/package.json libs/communication-protocol/package.json
 COPY libs/typescript-config/package.json libs/typescript-config/package.json
+# The root manifest depends on it; `pnpm deploy` resolves the whole workspace.
+COPY libs/tooling/package.json libs/tooling/package.json
 
 # --ignore-scripts: the root `prepare` (lefthook install) needs a git checkout, and no
 # server dependency relies on an install script.

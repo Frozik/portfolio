@@ -54,3 +54,4 @@ bundle-stats.json
 test-results
 playwright-report
 IDEA.md
+*.tsbuildinfo

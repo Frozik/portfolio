@@ -66,6 +66,9 @@ jobs:
       - uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
+      # Nothing below goes through moon when the artifact is present, so moon never installs.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
