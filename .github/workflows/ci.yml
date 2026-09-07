@@ -37,6 +37,11 @@ jobs:
           path: .moon/cache
           key: moon-${{ runner.os }}-${{ github.sha }}
           restore-keys: moon-${{ runner.os }}-
+      # The version the release job will tag once this run is green, computed
+      # from the same commits and rules — so the build below is the one that
+      # gets deployed, and its cache hash changes with the version.
+      - name: Predict the release version
+        run: echo "PORTFOLIO_VERSION=$(pnpm exec predict-version)" >> "$GITHUB_ENV"
       - name: Affected checks, tests and builds
         run: moon ci --color
       - uses: moonrepo/run-report-action@v1
@@ -69,6 +74,11 @@ jobs:
       # Nothing below goes through moon when the artifact is present, so moon never installs.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: .moon/cache
+          key: moon-${{ runner.os }}-${{ github.sha }}
+          restore-keys: moon-${{ runner.os }}-
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with:

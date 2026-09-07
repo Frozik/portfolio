@@ -111,6 +111,9 @@ catalogs:
     '@types/react-dom':
       specifier: ^19.2.7
       version: 19.2.7
+    '@types/semver':
+      specifier: ^7.8.0
+      version: 7.8.0
     '@vitejs/plugin-basic-ssl':
       specifier: ^2.3.0
       version: 2.3.0
@@ -249,6 +252,9 @@ catalogs:
     semantic-release:
       specifier: ^25.0.9
       version: 25.0.9
+    semver:
+      specifier: ^7.8.5
+      version: 7.8.5
     simplex-noise:
       specifier: ^4.0.3
       version: 4.0.3
@@ -719,9 +725,21 @@ importers:
       '@frozik/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@semantic-release/commit-analyzer':
+        specifier: 'catalog:'
+        version: 13.0.1(semantic-release@25.0.9(supports-color@7.2.0)(typescript@7.0.2))(supports-color@7.2.0)
       '@types/node':
         specifier: 'catalog:'
         version: 26.4.1
+      '@types/semver':
+        specifier: 'catalog:'
+        version: 7.8.0
+      conventional-changelog-conventionalcommits:
+        specifier: 'catalog:'
+        version: 8.0.0
+      semver:
+        specifier: 'catalog:'
+        version: 7.8.5
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -3618,6 +3636,9 @@ packages:
 
   '@types/seedrandom@2.4.34':
     resolution: {integrity: sha512-ytDiArvrn/3Xk6/vtylys5tlY6eo7Ane0hvcx++TKo6RxQXuVfW0AF/oeWqAj9dN29SyhtawuXstgmPlwNcv/A==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -10798,6 +10819,8 @@ snapshots:
   '@types/resolve@1.20.2': {}
 
   '@types/seedrandom@2.4.34': {}
+
+  '@types/semver@7.8.0': {}
 
   '@types/trusted-types@2.0.7': {}
 

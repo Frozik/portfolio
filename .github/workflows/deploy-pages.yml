@@ -45,16 +45,41 @@ jobs:
   build:
     needs: release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          # Full history and tags: the build stamps the app with `git describe --tags`.
+          # Full history and tags: a rebuild stamps the app with `git describe --tags`.
           fetch-depth: 0
-      - uses: moonrepo/setup-toolchain@v0
+      # The CI run that triggered this deploy already built the portfolio with
+      # the predicted version, so its artifact is what goes live.
+      - name: Take the build from the CI run
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: portfolio-dist
+          path: apps/portfolio/dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Manual runs, or a CI run whose affected set skipped the portfolio build.
+      - name: Set up the toolchain for a rebuild
+        if: hashFiles('apps/portfolio/dist/index.html') == ''
+        uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
-      - run: moon run portfolio:build
+      - if: hashFiles('apps/portfolio/dist/index.html') == ''
+        uses: actions/cache@v4
+        with:
+          path: .moon/cache
+          key: moon-${{ runner.os }}-${{ github.sha }}
+          restore-keys: moon-${{ runner.os }}-
+      - name: Rebuild
+        if: hashFiles('apps/portfolio/dist/index.html') == ''
+        run: moon run portfolio:build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/portfolio/dist

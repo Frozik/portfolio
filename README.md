@@ -67,8 +67,12 @@ representative):
   reads the Conventional Commits since the last tag (`feat` → minor, `fix` /
   `perf` / `refactor` → patch, `!` → major), tags the commit and publishes a
   GitHub Release with the notes; other commit types release nothing. Nothing
-  is written back to the branch — the tag is the version, the build stamps
-  it in with `git describe` and the GitHub button's tooltip shows it.
+  is written back to the branch — the tag is the version. CI predicts it
+  with the same rules (`predict-version` from `libs/tooling`) before building,
+  the build is stamped with it and the version is part of the build's cache
+  hash, and the deploy publishes that very artifact instead of building
+  again; the GitHub button's tooltip shows it. Locally the stamp is
+  `git describe --tags`.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
   Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
   caps for scripts, CSS and third-party code.

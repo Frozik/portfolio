@@ -4,7 +4,8 @@
   "private": true,
   "description": "Repository-wide checks and build helpers, run straight from their TypeScript sources",
   "bin": {
-    "check-source-conventions": "./src/check-source-conventions.ts"
+    "check-source-conventions": "./src/check-source-conventions.ts",
+    "predict-version": "./src/predict-version.ts"
   },
   "type": "module",
   "scripts": {
@@ -12,7 +13,11 @@
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",
+    "@semantic-release/commit-analyzer": "catalog:",
     "@types/node": "catalog:",
+    "@types/semver": "catalog:",
+    "conventional-changelog-conventionalcommits": "catalog:",
+    "semver": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

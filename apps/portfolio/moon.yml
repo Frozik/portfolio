@@ -22,6 +22,8 @@ tasks:
       - 'tsconfig.json'
       - 'tsconfig.app.json'
       - 'vite-plugins/**/*'
+      # The version stamped into the bundle: a cached build must never carry an old one.
+      - '$PORTFOLIO_VERSION'
     outputs:
       - 'dist'
     options:

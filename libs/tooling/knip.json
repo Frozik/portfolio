@@ -51,7 +51,11 @@
       "project": ["src/**/*.ts"]
     },
     "libs/tooling": {
-      "entry": ["src/check-source-conventions.ts", "dependency-cruiser.cjs"],
+      "entry": [
+        "src/check-source-conventions.ts",
+        "src/predict-version.ts",
+        "dependency-cruiser.cjs"
+      ],
       "project": ["src/**/*.ts"]
     }
   },
