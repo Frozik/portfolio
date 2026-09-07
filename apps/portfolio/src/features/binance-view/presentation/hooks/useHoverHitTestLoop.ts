@@ -45,10 +45,9 @@ export function useHoverHitTestLoop({
       const canvas = canvasRef.current;
       if (!isNil(tradesStore) && !isNil(chartState) && !isNil(canvas)) {
         const rect = canvas.getBoundingClientRect();
-        const pointer = buildTradeHitTestPointerFromCss(rect, point.x, point.y, chartState);
-        if (!isNil(pointer)) {
-          tradesStore.setHoveredBucketAt(pointer);
-        }
+        tradesStore.setHoveredBucketAt(
+          buildTradeHitTestPointerFromCss(rect, point.x, point.y, chartState)
+        );
       }
     }
     rafIdRef.current = requestAnimationFrame(hoverLoop);

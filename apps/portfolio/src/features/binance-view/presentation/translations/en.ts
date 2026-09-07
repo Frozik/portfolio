@@ -7,6 +7,10 @@ export const binanceTranslationsEn = {
     error: 'Connection error',
     unsupported: 'WebGPU unavailable',
   },
+  legend: {
+    movingAverages: 'Moving averages',
+    movingAverage: (period: number): string => `MA${period}`,
+  },
   tooltip: {
     time: 'Time',
     price: 'Price',

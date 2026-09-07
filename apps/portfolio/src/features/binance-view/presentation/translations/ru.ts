@@ -10,6 +10,10 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     error: 'Ошибка подключения',
     unsupported: 'WebGPU недоступен',
   },
+  legend: {
+    movingAverages: 'Скользящие средние',
+    movingAverage: (period: number): string => `MA${period}`,
+  },
   tooltip: {
     time: 'Время',
     price: 'Цена',

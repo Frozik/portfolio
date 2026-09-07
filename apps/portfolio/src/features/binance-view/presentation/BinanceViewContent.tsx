@@ -22,6 +22,7 @@ import { useHoverHitTestLoop } from './hooks/useHoverHitTestLoop';
 import { HoverInfoPopup } from './HoverInfoPopup';
 import { instrumentRoute } from './instrument-route';
 import { InstrumentSelector } from './InstrumentSelector';
+import { MovingAverageLegend } from './MovingAverageLegend';
 import { TradeBucketPopup } from './TradeBucketPopup';
 
 interface IPointerStart {
@@ -85,10 +86,7 @@ export const BinanceViewContent = observer(() => {
     if (isNil(tradesStore) || isNil(chartState)) {
       return;
     }
-    const pointer = buildTradeHitTestPointer(event, chartState);
-    if (!isNil(pointer)) {
-      tradesStore.setHoveredBucketAt(pointer);
-    }
+    tradesStore.setHoveredBucketAt(buildTradeHitTestPointer(event, chartState));
   });
 
   const handleCanvasPointerDown = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -197,6 +195,7 @@ export const BinanceViewContent = observer(() => {
         ref={overlayCanvasRef}
         className="pointer-events-none absolute inset-0 h-full w-full"
       />
+      <MovingAverageLegend />
       <TopNavCenterPortal>
         <div className="flex items-center gap-2">
           <InstrumentSelector />

@@ -290,6 +290,23 @@ describe('TradesStreamStore', () => {
     store.dispose();
   });
 
+  it('hover ends as soon as the pointer leaves the volume panel', () => {
+    const { store, gate } = buildStore();
+    store.startStream();
+    gate.hasFirstOrderbookSnapshot = true;
+
+    emitTrade(SECOND_T_MS);
+    emitTrade((SECOND_T_MS + MS_PER_SECOND) as UnixTimeMs);
+
+    store.setHoveredBucketAt(FIRST_BUCKET_POINTER);
+    expect(store.hoveredBucketKey).toBe(SECOND_T_MS);
+
+    store.setHoveredBucketAt(undefined);
+    expect(store.hoveredBucketKey).toBeUndefined();
+
+    store.dispose();
+  });
+
   it('dispose() resets observable state and clears caches', () => {
     const { store, gate } = buildStore();
     store.startStream();

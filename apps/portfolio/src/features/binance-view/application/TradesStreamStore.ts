@@ -176,9 +176,14 @@ export class TradesStreamStore {
   /**
    * Sticky hover: the current bucket keeps the hover while the cursor stays
    * inside its hit-zone; otherwise the most recent candidate wins, matching
-   * the renderer's z-lift order.
+   * the renderer's z-lift order. `undefined` (pointer outside the volume
+   * panel) ends the hover.
    */
-  setHoveredBucketAt(pointer: ITradeHitTestPointer): void {
+  setHoveredBucketAt(pointer: ITradeHitTestPointer | undefined): void {
+    if (isNil(pointer)) {
+      this.clearHoveredBucket();
+      return;
+    }
     const candidates = this.findBucketsAt(pointer);
     const currentHover = this.hoveredBucketKey;
     if (
