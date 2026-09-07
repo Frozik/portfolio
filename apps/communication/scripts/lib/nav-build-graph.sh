@@ -13,14 +13,19 @@ source "${SCRIPT_DIR}/nav-versions.sh"
 source "${SCRIPT_DIR}/nav-regions.sh"
 
 TOOL_DIR="${NAV_REPO}/apps/navigation-tools"
+DEPLOY_USER="communication"
 HEAP_MB="${NAV_GRAPH_HEAP_MB:-1600}"
 BENCH_ROUTES="${NAV_BENCH_ROUTES:-100}"
+# The checkout is readable by its deploy user only, so the tool runs as that
+# user and writes into a scratch directory; root moves the results into the
+# navigation tree afterwards.
+SCRATCH="$(mktemp -d /tmp/nav-graph.XXXXXX)"
+chown "${DEPLOY_USER}:${DEPLOY_USER}" "${SCRATCH}"
+trap 'rm -rf "${SCRATCH}"' EXIT
 
 pack_cli() {
-  # The checkout belongs to the deploy user; the tool only reads it and
-  # writes to a scratch file the navigation user owns afterwards.
-  sudo -u "${NAV_USER}" -H nice -n 10 env HOME="${NAV_DATA}" \
-    node --max-old-space-size="${HEAP_MB}" "${TOOL_DIR}/node_modules/.bin/tsx" "${TOOL_DIR}/src/cli.ts" "$@"
+  sudo -u "${DEPLOY_USER}" -H nice -n 10 \
+    node --max-old-space-size="${HEAP_MB}" "${TOOL_DIR}/node_modules/tsx/dist/cli.mjs" "${TOOL_DIR}/src/cli.ts" "$@"
 }
 
 for region in $(nav_selected_regions); do
@@ -33,13 +38,14 @@ for region in $(nav_selected_regions); do
     continue
   fi
   info "${region}: building routing pack"
-  pack_cli build --pbf "${clip}" --out "${out}.part" > "${stats}.part"
-  mv -f "${out}.part" "${out}"
-  mv -f "${stats}.part" "${stats}"
-  chown "${NAV_USER}:${NAV_USER}" "${out}" "${stats}"
-  ok "${region}: pack $(du -h "${out}" | cut -f1)"
+  pack_cli build --pbf "${clip}" --out "${SCRATCH}/${region}.graph" > "${SCRATCH}/${region}.graph.json"
   info "${region}: ${BENCH_ROUTES} random routes"
-  pack_cli bench --pack "${out}" --count "${BENCH_ROUTES}" | tee "${NAV_DATA}/graphs/${region}.bench.json"
+  pack_cli bench --pack "${SCRATCH}/${region}.graph" --count "${BENCH_ROUTES}" | tee "${SCRATCH}/${region}.bench.json"
   info "${region}: building-height coverage (plan Q12)"
-  pack_cli stats --pbf "${clip}" | tee "${NAV_DATA}/graphs/${region}.buildings.json"
+  pack_cli stats --pbf "${clip}" | tee "${SCRATCH}/${region}.buildings.json"
+  for name in graph graph.json bench.json buildings.json; do
+    mv -f "${SCRATCH}/${region}.${name}" "${NAV_DATA}/graphs/${region}.${name}"
+    chown "${NAV_USER}:${NAV_USER}" "${NAV_DATA}/graphs/${region}.${name}"
+  done
+  ok "${region}: pack $(du -h "${out}" | cut -f1) — $(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['nodes'], 'nodes,', d['edges'], 'edges,', d['seconds'], 's')" "${stats}")"
 done

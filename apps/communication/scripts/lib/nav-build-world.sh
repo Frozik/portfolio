@@ -19,7 +19,21 @@ OUT="${NAV_DATA}/tiles/world.pmtiles"
 BUILDING="${NAV_DATA}/tiles/world-building.pmtiles"
 META="${NAV_DATA}/tiles/world.json"
 
+write_meta() {
+  cat > "${META}" <<JSON
+{
+  "version": "$(date -u -r "${OUT}" +%Y%m%d)",
+  "maxzoom": ${WORLD_MAXZOOM},
+  "builtAt": "$(date -u -r "${OUT}" +%Y-%m-%dT%H:%M:%SZ)",
+  "bytes": $(stat -c %s "${OUT}"),
+  "attribution": "© OpenStreetMap contributors, © OpenMapTiles, Natural Earth"
+}
+JSON
+  chown "${NAV_USER}:${NAV_USER}" "${META}"
+}
+
 if [[ -f "${OUT}" && "${NAV_REFRESH_WORLD:-false}" != "true" ]]; then
+  [[ -f "${META}" ]] || write_meta
   ok "World layer present ($(du -h "${OUT}" | cut -f1)); pass --refresh-world to rebuild"
   exit 0
 fi
@@ -41,15 +55,7 @@ sudo -u "${NAV_USER}" nice -n 10 bash -c "cd '${NAV_DATA}/planetiler-data' && '$
   --storage=mmap"
 mv -f "${BUILDING}" "${OUT}"
 chown "${NAV_USER}:${NAV_USER}" "${OUT}"
-cat > "${META}" <<JSON
-{
-  "version": "$(date -u +%Y%m%d)",
-  "maxzoom": ${WORLD_MAXZOOM},
-  "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "bytes": $(stat -c %s "${OUT}"),
-  "attribution": "© OpenStreetMap contributors, © OpenMapTiles, Natural Earth"
-}
-JSON
-chown "${NAV_USER}:${NAV_USER}" "${META}"
+write_meta
 ok "World layer ${OUT} ($(du -h "${OUT}" | cut -f1))"
-"${NAV_ROOT}/bin/pmtiles" show "${OUT}" | head -12
+# sed reads to the end, so pmtiles never sees a closed pipe (head would, and pipefail would fail the build).
+"${NAV_ROOT}/bin/pmtiles" show "${OUT}" | sed -n '1,12p'
