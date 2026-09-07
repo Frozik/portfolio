@@ -19,6 +19,8 @@ const ROOTS = [
   'libs/utils/src',
   'libs/components/src',
   'libs/communication-protocol/src',
+  'libs/navigation-pack/src',
+  'apps/navigation-tools/src',
 ];
 const SOURCE_FILE = /\.(ts|tsx)$/;
 const TEST_FILE = /\.test\.tsx?$/;

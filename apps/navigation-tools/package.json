@@ -1,0 +1,21 @@
+{
+  "name": "@frozik/navigation-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pack": "tsx src/cli.ts",
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frozik/navigation-pack": "workspace:*",
+    "lodash-es": "catalog:",
+    "pbf": "catalog:",
+    "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

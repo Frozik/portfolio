@@ -38,6 +38,14 @@
     "libs/communication-protocol": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]
+    },
+    "libs/navigation-pack": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/navigation-tools": {
+      "entry": ["src/cli.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

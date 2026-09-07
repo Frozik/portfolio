@@ -72,7 +72,9 @@ module.exports = {
       comment:
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
-      from: { path: '^(apps/portfolio|libs/(utils|components|communication-protocol))/' },
+      from: {
+        path: '^(apps/portfolio|libs/(utils|components|communication-protocol|navigation-pack))/',
+      },
       to: {
         path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
       },

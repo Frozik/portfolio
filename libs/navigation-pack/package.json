@@ -1,0 +1,25 @@
+{
+  "name": "@frozik/navigation-pack",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cheap-ruler": "catalog:",
+    "flatbush": "catalog:",
+    "lodash-es": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:"
+  }
+}

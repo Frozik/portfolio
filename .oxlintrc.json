@@ -159,7 +159,7 @@
       }
     },
     {
-      "files": ["scripts/**"],
+      "files": ["scripts/**", "apps/navigation-tools/src/cli.ts"],
       "rules": {
         "no-console": "off"
       }

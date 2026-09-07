@@ -1,0 +1,19 @@
+language: typescript
+layer: tool
+stack: backend
+
+tags:
+  - tool
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+
+tasks:
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    options:
+      runInCI: true

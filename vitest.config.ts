@@ -37,6 +37,17 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'navigation',
+          environment: 'node',
+          include: [
+            'libs/navigation-pack/src/**/*.{test,spec}.ts',
+            'apps/navigation-tools/src/**/*.{test,spec}.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'communication',
           environment: 'node',
           include: ['apps/communication/src/**/*.{test,spec}.ts'],
