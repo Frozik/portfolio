@@ -151,7 +151,7 @@ export interface ICandleUniformValues {
   readonly priceMin: number;
   readonly priceMax: number;
   readonly candleWidthPx: number;
-  readonly wickWidthPx: number;
+  readonly outlineWidthPx: number;
   readonly minBodyHeightPx: number;
   readonly lineWidthPx: number;
   readonly blockCount: number;
@@ -176,7 +176,7 @@ export function writeCandleUniforms(
   floats[5] = values.priceMin;
   floats[6] = values.priceMax;
   floats[7] = values.candleWidthPx;
-  floats[8] = values.wickWidthPx;
+  floats[8] = values.outlineWidthPx;
   floats[9] = values.minBodyHeightPx;
   floats[10] = values.lineWidthPx;
   uints[11] = values.blockCount;

@@ -179,8 +179,8 @@ export const HEATMAP_ALPHA_UNDER_CANDLES = 0.55;
 
 /** Candle body width as a fraction of the one-second slot. */
 export const CANDLE_BODY_WIDTH_RATIO = 0.7;
-/** Wick and body outline thickness in CSS pixels. */
-export const CANDLE_WICK_WIDTH_PX = 1.5;
+/** Body outline thickness in CSS pixels; the wick and its high / low ticks are twice as thick. */
+export const CANDLE_OUTLINE_WIDTH_PX = 1.5;
 /** Floor on the body height so a flat candle is still visible. */
 export const CANDLE_MIN_BODY_HEIGHT_PX = 1.5;
 /** Moving-average line thickness in CSS pixels. */

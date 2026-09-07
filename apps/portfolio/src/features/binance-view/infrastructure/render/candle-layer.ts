@@ -6,7 +6,7 @@ import type { ICandleBlockIndexItem, ICandleBlockRecord } from '../../domain/can
 import {
   CANDLE_BODY_WIDTH_RATIO,
   CANDLE_MIN_BODY_HEIGHT_PX,
-  CANDLE_WICK_WIDTH_PX,
+  CANDLE_OUTLINE_WIDTH_PX,
   MAX_CANDLE_HISTORY_BLOCKS,
   MOVING_AVERAGE_LINE_WIDTH_PX,
   PIXELS_PER_MILLISECOND,
@@ -187,7 +187,7 @@ export class CandleLayer implements IRenderLayer {
       ...frameState,
       candleWidthPx:
         CANDLE_DURATION_MS * PIXELS_PER_MILLISECOND * CANDLE_BODY_WIDTH_RATIO * devicePixelRatio,
-      wickWidthPx: CANDLE_WICK_WIDTH_PX * devicePixelRatio,
+      outlineWidthPx: CANDLE_OUTLINE_WIDTH_PX * devicePixelRatio,
       minBodyHeightPx: CANDLE_MIN_BODY_HEIGHT_PX * devicePixelRatio,
       lineWidthPx: MOVING_AVERAGE_LINE_WIDTH_PX * devicePixelRatio,
       blockCount: frameState.visibleBlocks.length,

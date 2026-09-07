@@ -18,6 +18,11 @@ override COLOR_OUTLINE_R: f32;
 override COLOR_OUTLINE_G: f32;
 override COLOR_OUTLINE_B: f32;
 
+// The wick and the ticks marking its high and low are twice the outline.
+const WICK_WIDTH_RATIO: f32 = 2.0;
+// The ticks reach this far out from the wick, as a share of the body width.
+const TICK_LENGTH_RATIO: f32 = 0.6;
+
 // The hovered candle: its body and wick lifted this far towards white.
 const HOVER_BRIGHTEN: f32 = 0.45;
 const WHITE: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
@@ -37,6 +42,8 @@ struct CandleVsOut {
     @location(2) bodyCenterOffsetPx: f32,   // body centre relative to the quad centre, device px
     @location(3) isUp: f32,                 // 1 when close >= open
     @location(4) isHovered: f32,            // 1 for the candle under the cursor
+    @location(5) wickEndsOffsetPx: vec2<f32>, // high and low relative to the quad centre, device px
+    @location(6) tickVisibility: vec2<f32>,  // 1 where a wick reaches past the body: upper, lower
 };
 
 @vertex
@@ -56,11 +63,12 @@ fn vsCandle(
     let bodyHalfExtent = max((bodyBottom - bodyTop) * 0.5, U.minBodyHeightPx * 0.5);
     let bodyCenterY = (bodyTop + bodyBottom) * 0.5;
 
-    let quadTop = min(highY, bodyCenterY - bodyHalfExtent) - U.wickWidthPx;
-    let quadBottom = max(lowY, bodyCenterY + bodyHalfExtent) + U.wickWidthPx;
+    let wickWidth = U.outlineWidthPx * WICK_WIDTH_RATIO;
+    let quadTop = min(highY, bodyCenterY - bodyHalfExtent) - wickWidth;
+    let quadBottom = max(lowY, bodyCenterY + bodyHalfExtent) + wickWidth;
     let quadHeight = quadBottom - quadTop;
     let quadCenterY = (quadTop + quadBottom) * 0.5;
-    let quadWidth = U.candleWidthPx + 2.0 * U.wickWidthPx;
+    let quadWidth = U.candleWidthPx + 2.0 * wickWidth;
 
     let unit = QUAD_UNITS[vid];
     let pixel = vec2<f32>(centerX, quadCenterY) + unit * vec2<f32>(quadWidth, quadHeight);
@@ -74,6 +82,15 @@ fn vsCandle(
     let isHovered = U.hasHoveredCandle == 1u
         && abs(candle.timeDeltaMs - U.hoveredTimeDeltaMs) < HOVER_TIME_TOLERANCE_MS;
     out.isHovered = select(0.0, 1.0, isHovered);
+    out.wickEndsOffsetPx = vec2<f32>(highY, lowY) - quadCenterY;
+    // A tick only marks a wick that clears the body; one on a flat candle
+    // would just be a dash across it.
+    let bodyTopY = bodyCenterY - bodyHalfExtent;
+    let bodyBottomY = bodyCenterY + bodyHalfExtent;
+    out.tickVisibility = vec2<f32>(
+        select(0.0, 1.0, highY + wickWidth <= bodyTopY),
+        select(0.0, 1.0, lowY - wickWidth >= bodyBottomY),
+    );
     return out;
 }
 
@@ -89,7 +106,7 @@ fn fsCandle(in: CandleVsOut) -> @location(0) vec4<f32> {
     let insideBody = abs(in.offsetPx.x) <= bodyHalfWidth && distanceFromBodyCenterY <= in.bodyHalfExtentPx;
     let outlineColor = vec3<f32>(COLOR_OUTLINE_R, COLOR_OUTLINE_G, COLOR_OUTLINE_B);
     if (insideBody) {
-        let outlineInset = U.wickWidthPx;
+        let outlineInset = U.outlineWidthPx;
         let onOutline = abs(in.offsetPx.x) > bodyHalfWidth - outlineInset
             || distanceFromBodyCenterY > in.bodyHalfExtentPx - outlineInset;
         if (onOutline) {
@@ -100,7 +117,22 @@ fn fsCandle(in: CandleVsOut) -> @location(0) vec4<f32> {
         }
         return lift(vec3<f32>(COLOR_DOWN_R, COLOR_DOWN_G, COLOR_DOWN_B), in.isHovered);
     }
-    if (abs(in.offsetPx.x) <= U.wickWidthPx * 0.5) {
+    let wickWidth = U.outlineWidthPx * WICK_WIDTH_RATIO;
+    let highOffset = in.wickEndsOffsetPx.x;
+    let lowOffset = in.wickEndsOffsetPx.y;
+    // The wick runs exactly from high to low; the ticks sit inside its ends, so
+    // the tick's outer edge is the very end of the wick rather than a cross on it.
+    let onWick = abs(in.offsetPx.x) <= wickWidth * 0.5
+        && in.offsetPx.y >= highOffset && in.offsetPx.y <= lowOffset;
+    let tickHalfLength = U.candleWidthPx * TICK_LENGTH_RATIO * 0.5;
+    let distanceBelowHigh = in.offsetPx.y - highOffset;
+    let distanceAboveLow = lowOffset - in.offsetPx.y;
+    let onUpperTick = in.tickVisibility.x > 0.5
+        && distanceBelowHigh >= 0.0 && distanceBelowHigh <= wickWidth;
+    let onLowerTick = in.tickVisibility.y > 0.5
+        && distanceAboveLow >= 0.0 && distanceAboveLow <= wickWidth;
+    let onTick = abs(in.offsetPx.x) <= tickHalfLength && (onUpperTick || onLowerTick);
+    if (onWick || onTick) {
         return lift(outlineColor, in.isHovered);
     }
     discard;

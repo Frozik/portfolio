@@ -13,7 +13,7 @@ struct CandleUniforms {
     priceMin: f32,                  // viewport lower bound (absolute price)
     priceMax: f32,                  // viewport upper bound (absolute price)
     candleWidthPx: f32,             // body width, device pixels
-    wickWidthPx: f32,               // wick / outline thickness, device pixels
+    outlineWidthPx: f32,            // body outline thickness, device pixels; the wick is twice it
     minBodyHeightPx: f32,           // floor on the body height, device pixels
     lineWidthPx: f32,               // moving-average line thickness, device pixels
     blockCount: u32,
