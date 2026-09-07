@@ -172,7 +172,9 @@ instrument selector, each with its own price-bin height.
 - Drag or swipe to pan into the past, scroll or pinch on the price
   axis to zoom in
 - Hover any cell for a tooltip with timestamp, price, volume, and
-  side (bid / ask)
+  side (bid / ask); over a candle the same popup adds its OHLC, the
+  change and range in basis points and the MA5 / MA10 values, and the
+  candle lights up
 - Auto-follow sticks to the latest data until you pan backward; scroll
   all the way forward to the live edge and the chart re-latches
 - Cells that arrive during a disconnect render with diagonal stripes

@@ -44,11 +44,20 @@ export function buildTradeHitTestPointerFromCss(
     return undefined;
   }
 
+  const worldTimeMs = worldTimeAtCssX(cssX, plotWidthCss, chartState);
+  return worldTimeMs === undefined ? undefined : { worldTimeMs, pointerPx: { x: cssX, y: cssY } };
+}
+
+/** The world time under a CSS x offset of the plot; `undefined` before the viewport has a span. */
+export function worldTimeAtCssX(
+  cssX: number,
+  plotWidthCss: number,
+  chartState: BinanceChartState
+): UnixTimeMs | undefined {
   const viewTimeStartMs = chartState.viewportController.viewTimeStartMsForPlotWidth(plotWidthCss);
   const timeRangeMs = chartState.viewport.viewTimeEndMs - viewTimeStartMs;
   if (timeRangeMs <= 0) {
     return undefined;
   }
-  const worldTimeMs = (viewTimeStartMs + (cssX / plotWidthCss) * timeRangeMs) as UnixTimeMs;
-  return { worldTimeMs, pointerPx: { x: cssX, y: cssY } };
+  return (viewTimeStartMs + (cssX / plotWidthCss) * timeRangeMs) as UnixTimeMs;
 }

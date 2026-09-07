@@ -53,6 +53,7 @@ interface ICandleFrameState {
   readonly priceMin: number;
   readonly priceMax: number;
   readonly devicePixelRatio: number;
+  readonly hoveredTimeDeltaMs: number | undefined;
 }
 
 /**
@@ -163,6 +164,9 @@ export class CandleLayer implements IRenderLayer {
       priceMin: frameInput.priceMin,
       priceMax: frameInput.priceMax,
       devicePixelRatio: context.devicePixelRatio,
+      hoveredTimeDeltaMs: isNil(frameInput.hoveredCandleKey)
+        ? undefined
+        : frameInput.hoveredCandleKey - globalBaseTimeMs,
     };
   }
 

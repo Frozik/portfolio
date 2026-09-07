@@ -257,6 +257,7 @@ export class BinanceViewStore {
       // The heatmap cell height is the aggregation bin, not the raw tick size.
       priceStep: aggregationQuoteStep,
       readHoveredBucketKey: () => tradesStoreRef?.hoveredBucketKey,
+      readHoveredCandleKey: () => candleStoreRef?.hoveredCandleKey,
       requestCandleBlocks: blockIds => candleStoreRef?.requestBlocks(blockIds),
       deps: this.deps,
     });

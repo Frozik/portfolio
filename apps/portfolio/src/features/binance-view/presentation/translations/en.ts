@@ -20,6 +20,15 @@ export const binanceTranslationsEn = {
     ask: 'Ask',
     loading: 'Loading…',
   },
+  candlePopup: {
+    open: 'Open',
+    high: 'High',
+    low: 'Low',
+    close: 'Close',
+    change: 'Change',
+    range: 'Range',
+    basisPoints: (value: string): string => `${value} bp`,
+  },
   tradePopup: {
     close: 'Close',
     empty: 'No trades cached',

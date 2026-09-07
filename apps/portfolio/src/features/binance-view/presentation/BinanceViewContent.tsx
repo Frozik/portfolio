@@ -16,6 +16,7 @@ import {
 } from '../domain/trades-constants';
 
 import { BinanceStatusBadge } from './BinanceStatusBadge';
+import { buildCandleHitTestPointer } from './build-candle-hit-test-pointer';
 import { buildTradeHitTestPointer } from './build-trade-hit-test-pointer';
 import { useHoverAnchor } from './hooks/useHoverAnchor';
 import { useHoverHitTestLoop } from './hooks/useHoverHitTestLoop';
@@ -81,12 +82,12 @@ export const BinanceViewContent = observer(() => {
     }
     lastHoverProbeRef.current = { x: event.clientX, y: event.clientY };
 
-    const tradesStore = store.tradesStore;
     const chartState = store.chartState;
-    if (isNil(tradesStore) || isNil(chartState)) {
+    if (isNil(chartState)) {
       return;
     }
-    tradesStore.setHoveredBucketAt(buildTradeHitTestPointer(event, chartState));
+    store.tradesStore?.setHoveredBucketAt(buildTradeHitTestPointer(event, chartState));
+    store.candleStore?.setHoveredCandleAt(buildCandleHitTestPointer(event, chartState));
   });
 
   const handleCanvasPointerDown = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -124,6 +125,7 @@ export const BinanceViewContent = observer(() => {
     stopHoverLoop();
     store.orderbookStore?.clearSelectedCell();
     store.tradesStore?.clearHoveredBucket();
+    store.candleStore?.clearHoveredCandle();
     clearHoverAnchor();
     lastHoverProbeRef.current = undefined;
   });
@@ -172,6 +174,7 @@ export const BinanceViewContent = observer(() => {
       clearHoverAnchor();
       store.orderbookStore?.clearSelectedCell();
       tradesStore?.clearHoveredBucket();
+      store.candleStore?.clearHoveredCandle();
       lastHoverProbeRef.current = undefined;
     }
   }, [isPopupPinned, store, tradesStore, clearHoverAnchor]);

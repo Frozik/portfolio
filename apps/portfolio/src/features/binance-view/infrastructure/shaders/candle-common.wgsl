@@ -19,8 +19,8 @@ struct CandleUniforms {
     blockCount: u32,
     textureWidth: u32,
     plotHeightPx: f32,              // device pixels of the price area (canvas - volume panel)
-    _pad1: u32,
-    _pad2: u32,
+    hoveredTimeDeltaMs: f32,        // hovered candle's bucket start, relative to globalBaseTime
+    hasHoveredCandle: u32,          // 1 while a candle is hovered, 0 otherwise
 };                                  // total = 64 bytes
 
 struct CandleBlockDescriptor {

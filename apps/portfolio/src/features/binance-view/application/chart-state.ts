@@ -37,6 +37,7 @@ export interface IBinanceChartStateParams {
   readonly priceStep: number;
   /** Trade bucket under the cursor, owned by the trades store and read once per frame. */
   readonly readHoveredBucketKey: () => UnixTimeMs | undefined;
+  readonly readHoveredCandleKey: () => UnixTimeMs | undefined;
   /** Candle blocks the renderer found evicted from the texture; the candle store reloads them. */
   readonly requestCandleBlocks: (blockIds: readonly UnixTimeMs[]) => void;
   readonly deps: IChartStateDeps;
@@ -72,6 +73,7 @@ export class BinanceChartState {
   private readonly updateSpeedMs: number;
   private readonly priceStep: number;
   private readonly readHoveredBucketKey: () => UnixTimeMs | undefined;
+  private readonly readHoveredCandleKey: () => UnixTimeMs | undefined;
   private readonly requestCandleBlocks: (blockIds: readonly UnixTimeMs[]) => void;
   private readonly deps: IChartStateDeps;
   private session: IChartSession | undefined = undefined;
@@ -83,6 +85,7 @@ export class BinanceChartState {
     this.updateSpeedMs = params.updateSpeedMs;
     this.priceStep = params.priceStep;
     this.readHoveredBucketKey = params.readHoveredBucketKey;
+    this.readHoveredCandleKey = params.readHoveredCandleKey;
     this.requestCandleBlocks = params.requestCandleBlocks;
     this.deps = params.deps;
   }
@@ -208,6 +211,7 @@ export class BinanceChartState {
       cursorCss: viewportController.getCursorCss(),
       lastSnapshot: viewportController.getLastResolvedSnapshot(),
       hoveredBucketKey: this.readHoveredBucketKey(),
+      hoveredCandleKey: this.readHoveredCandleKey(),
     };
   };
 }

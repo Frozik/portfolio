@@ -23,4 +23,6 @@ export interface IRenderFrameInput {
   readonly lastSnapshot: IOrderbookSnapshot | undefined;
   /** Trade bucket under the cursor, driving the hover scale animation. */
   readonly hoveredBucketKey: UnixTimeMs | undefined;
+  /** Candle under the cursor, drawn brighter than its neighbours. */
+  readonly hoveredCandleKey: UnixTimeMs | undefined;
 }

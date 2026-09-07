@@ -156,6 +156,8 @@ export interface ICandleUniformValues {
   readonly lineWidthPx: number;
   readonly blockCount: number;
   readonly plotHeightPx: number;
+  /** Hovered candle's bucket start relative to the global base time; none when nothing is hovered. */
+  readonly hoveredTimeDeltaMs: number | undefined;
 }
 
 export function writeCandleUniforms(
@@ -180,6 +182,8 @@ export function writeCandleUniforms(
   uints[11] = values.blockCount;
   uints[12] = CANDLE_TEXTURE_WIDTH;
   floats[13] = values.plotHeightPx;
+  floats[14] = values.hoveredTimeDeltaMs ?? 0;
+  uints[15] = values.hoveredTimeDeltaMs === undefined ? 0 : 1;
   device.queue.writeBuffer(buffer, 0, data);
 }
 

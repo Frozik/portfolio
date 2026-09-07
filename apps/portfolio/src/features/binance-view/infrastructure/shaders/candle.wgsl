@@ -18,6 +18,12 @@ override COLOR_OUTLINE_R: f32;
 override COLOR_OUTLINE_G: f32;
 override COLOR_OUTLINE_B: f32;
 
+// The hovered candle: its body and wick lifted this far towards white.
+const HOVER_BRIGHTEN: f32 = 0.45;
+const WHITE: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
+// Two candles a whole second apart never land within this of each other.
+const HOVER_TIME_TOLERANCE_MS: f32 = 0.5;
+
 // Explicit array type required for Safari/Metal (see trades.wgsl).
 const QUAD_UNITS: array<vec2<f32>, 6> = array<vec2<f32>, 6>(
     vec2<f32>(-0.5, -0.5), vec2<f32>(0.5, -0.5), vec2<f32>(-0.5, 0.5),
@@ -30,6 +36,7 @@ struct CandleVsOut {
     @location(1) bodyHalfExtentPx: f32,     // half of the body height, device px
     @location(2) bodyCenterOffsetPx: f32,   // body centre relative to the quad centre, device px
     @location(3) isUp: f32,                 // 1 when close >= open
+    @location(4) isHovered: f32,            // 1 for the candle under the cursor
 };
 
 @vertex
@@ -64,7 +71,15 @@ fn vsCandle(
     out.bodyHalfExtentPx = bodyHalfExtent;
     out.bodyCenterOffsetPx = bodyCenterY - quadCenterY;
     out.isUp = select(0.0, 1.0, candle.close >= candle.open);
+    let isHovered = U.hasHoveredCandle == 1u
+        && abs(candle.timeDeltaMs - U.hoveredTimeDeltaMs) < HOVER_TIME_TOLERANCE_MS;
+    out.isHovered = select(0.0, 1.0, isHovered);
     return out;
+}
+
+/** The candle's own colour, or the same colour lifted towards white when hovered. */
+fn lift(color: vec3<f32>, isHovered: f32) -> vec4<f32> {
+    return vec4<f32>(mix(color, WHITE, HOVER_BRIGHTEN * isHovered), 1.0);
 }
 
 @fragment
@@ -72,20 +87,21 @@ fn fsCandle(in: CandleVsOut) -> @location(0) vec4<f32> {
     let bodyHalfWidth = U.candleWidthPx * 0.5;
     let distanceFromBodyCenterY = abs(in.offsetPx.y - in.bodyCenterOffsetPx);
     let insideBody = abs(in.offsetPx.x) <= bodyHalfWidth && distanceFromBodyCenterY <= in.bodyHalfExtentPx;
+    let outlineColor = vec3<f32>(COLOR_OUTLINE_R, COLOR_OUTLINE_G, COLOR_OUTLINE_B);
     if (insideBody) {
         let outlineInset = U.wickWidthPx;
         let onOutline = abs(in.offsetPx.x) > bodyHalfWidth - outlineInset
             || distanceFromBodyCenterY > in.bodyHalfExtentPx - outlineInset;
         if (onOutline) {
-            return vec4<f32>(COLOR_OUTLINE_R, COLOR_OUTLINE_G, COLOR_OUTLINE_B, 1.0);
+            return lift(outlineColor, in.isHovered);
         }
         if (in.isUp > 0.5) {
-            return vec4<f32>(COLOR_UP_R, COLOR_UP_G, COLOR_UP_B, 1.0);
+            return lift(vec3<f32>(COLOR_UP_R, COLOR_UP_G, COLOR_UP_B), in.isHovered);
         }
-        return vec4<f32>(COLOR_DOWN_R, COLOR_DOWN_G, COLOR_DOWN_B, 1.0);
+        return lift(vec3<f32>(COLOR_DOWN_R, COLOR_DOWN_G, COLOR_DOWN_B), in.isHovered);
     }
     if (abs(in.offsetPx.x) <= U.wickWidthPx * 0.5) {
-        return vec4<f32>(COLOR_OUTLINE_R, COLOR_OUTLINE_G, COLOR_OUTLINE_B, 1.0);
+        return lift(outlineColor, in.isHovered);
     }
     discard;
     // Unreachable: WGSL still requires a return after `discard`.

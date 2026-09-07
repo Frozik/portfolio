@@ -23,6 +23,15 @@ export const binanceTranslationsRu: TranslationOf<typeof binanceTranslationsEn> 
     ask: 'Ask',
     loading: 'Загрузка…',
   },
+  candlePopup: {
+    open: 'Открытие',
+    high: 'Максимум',
+    low: 'Минимум',
+    close: 'Закрытие',
+    change: 'Изменение',
+    range: 'Размах',
+    basisPoints: (value: string): string => `${value} б.п.`,
+  },
   tradePopup: {
     close: 'Закрыть',
     empty: 'Сделки не кэшированы',

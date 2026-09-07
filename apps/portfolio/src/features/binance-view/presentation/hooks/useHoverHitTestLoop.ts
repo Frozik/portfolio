@@ -4,6 +4,7 @@ import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 
 import type { BinanceViewStore } from '../../application/BinanceViewStore';
+import { buildCandleHitTestPointerFromCss } from '../build-candle-hit-test-pointer';
 import { buildTradeHitTestPointerFromCss } from '../build-trade-hit-test-pointer';
 
 interface IPointerPosition {
@@ -40,13 +41,15 @@ export function useHoverHitTestLoop({
     if (!isNil(point)) {
       void store.orderbookStore?.resolveCellAt(point);
 
-      const tradesStore = store.tradesStore;
       const chartState = store.chartState;
       const canvas = canvasRef.current;
-      if (!isNil(tradesStore) && !isNil(chartState) && !isNil(canvas)) {
+      if (!isNil(chartState) && !isNil(canvas)) {
         const rect = canvas.getBoundingClientRect();
-        tradesStore.setHoveredBucketAt(
+        store.tradesStore?.setHoveredBucketAt(
           buildTradeHitTestPointerFromCss(rect, point.x, point.y, chartState)
+        );
+        store.candleStore?.setHoveredCandleAt(
+          buildCandleHitTestPointerFromCss(rect, point.x, point.y, chartState)
         );
       }
     }

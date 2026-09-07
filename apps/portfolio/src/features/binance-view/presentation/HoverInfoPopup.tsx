@@ -5,6 +5,8 @@ import type React from 'react';
 import { useLayoutEffect, useRef } from 'react';
 
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
+import { candleChangeBps, candleRangeBps } from '../domain/candle-stats';
+import type { ICandle } from '../domain/candle-types';
 import type { ITradeBucket } from '../domain/trades-types';
 import type { IHitTestResult } from '../domain/types';
 
@@ -18,6 +20,7 @@ const VWAP_FRACTION_DIGITS = 2;
 const BUY_FRACTION_PERCENT_DIGITS = 0;
 const PRICE_FRACTION_DIGITS = 2;
 const CELL_VOLUME_FRACTION_DIGITS = 6;
+const BPS_FRACTION_DIGITS = 1;
 const PERCENT_MULTIPLIER = 100;
 
 function formatNumber(value: number, fractionDigits: number): string {
@@ -59,6 +62,42 @@ function TradesSection({ bucket }: { readonly bucket: ITradeBucket }): React.Rea
   );
 }
 
+function formatSignedBps(value: number): string {
+  const sign = value > 0 ? '+' : '';
+  return binanceT.candlePopup.basisPoints(`${sign}${value.toFixed(BPS_FRACTION_DIGITS)}`);
+}
+
+function CandleSection({ candle }: { readonly candle: ICandle }): React.ReactElement {
+  const changeBps = candleChangeBps(candle);
+  const changeClass = changeBps > 0 ? 'text-success' : changeBps < 0 ? 'text-error' : 'text-text';
+  const ma5 = binanceT.legend.movingAverage(5);
+  const ma10 = binanceT.legend.movingAverage(10);
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 px-3 py-2 font-mono">
+      <dt className="text-text-muted">{binanceT.tooltip.time}</dt>
+      <dd className="text-text">{millisecondsToISO8601(candle.bucketStartMs)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.open}</dt>
+      <dd className="text-text">{formatNumber(candle.open, PRICE_FRACTION_DIGITS)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.high}</dt>
+      <dd className="text-text">{formatNumber(candle.high, PRICE_FRACTION_DIGITS)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.low}</dt>
+      <dd className="text-text">{formatNumber(candle.low, PRICE_FRACTION_DIGITS)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.close}</dt>
+      <dd className="text-text">{formatNumber(candle.close, PRICE_FRACTION_DIGITS)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.change}</dt>
+      <dd className={changeClass}>{formatSignedBps(changeBps)}</dd>
+      <dt className="text-text-muted">{binanceT.candlePopup.range}</dt>
+      <dd className="text-text">
+        {binanceT.candlePopup.basisPoints(candleRangeBps(candle).toFixed(BPS_FRACTION_DIGITS))}
+      </dd>
+      <dt className="text-text-muted">{ma5}</dt>
+      <dd className="text-text">{formatNumber(candle.movingAverage5, PRICE_FRACTION_DIGITS)}</dd>
+      <dt className="text-text-muted">{ma10}</dt>
+      <dd className="text-text">{formatNumber(candle.movingAverage10, PRICE_FRACTION_DIGITS)}</dd>
+    </dl>
+  );
+}
+
 function OrderbookSection({ cell }: { readonly cell: IHitTestResult }): React.ReactElement {
   const timeIso = millisecondsToISO8601(cell.timestampMs);
   return (
@@ -76,8 +115,8 @@ function OrderbookSection({ cell }: { readonly cell: IHitTestResult }): React.Re
 }
 
 /**
- * Hover popup merging the trades-bucket preview and the orderbook cell
- * tooltip at the cursor. Edge-aware: prefers bottom-right, flips to the
+ * Hover popup merging the candle, the trades-bucket preview and the
+ * orderbook cell tooltip at the cursor. Edge-aware: prefers bottom-right, flips to the
  * opposite quadrant near the parent edges, then clamps to the margin.
  */
 export const HoverInfoPopup = observer(function HoverInfoPopup({
@@ -88,11 +127,12 @@ export const HoverInfoPopup = observer(function HoverInfoPopup({
   const store = useBinanceViewStore();
   const cell = store.orderbookStore?.selectedCell;
   const bucket = store.tradesStore?.hoveredBucket;
+  const candle = store.candleStore?.hoveredCandle;
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const node = rootRef.current;
-    if (isNil(node) || (isNil(cell) && isNil(bucket))) {
+    if (isNil(node) || (isNil(cell) && isNil(bucket) && isNil(candle))) {
       return;
     }
     const parentRect = node.offsetParent?.getBoundingClientRect();
@@ -124,9 +164,9 @@ export const HoverInfoPopup = observer(function HoverInfoPopup({
     node.style.left = `${clampedLeft}px`;
     node.style.top = `${clampedTop}px`;
     node.style.visibility = 'visible';
-  }, [anchorPx, cell, bucket]);
+  }, [anchorPx, cell, bucket, candle]);
 
-  if (isNil(cell) && isNil(bucket)) {
+  if (isNil(cell) && isNil(bucket) && isNil(candle)) {
     return null;
   }
 
@@ -136,6 +176,8 @@ export const HoverInfoPopup = observer(function HoverInfoPopup({
       // Starts invisible so the layout effect can measure and place it before the first paint.
       className="pointer-events-none invisible absolute left-0 top-0 z-30 min-w-[180px] rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-lg backdrop-blur"
     >
+      {isNil(candle) ? null : <CandleSection candle={candle} />}
+      {!isNil(candle) && !isNil(cell) ? <hr className="border-t border-border" /> : null}
       {isNil(bucket) ? null : <TradesSection bucket={bucket} />}
       {!isNil(bucket) && !isNil(cell) ? <hr className="border-t border-border" /> : null}
       {isNil(cell) ? null : <OrderbookSection cell={cell} />}
