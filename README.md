@@ -54,10 +54,16 @@ representative):
   one lazy asset most visitors click); other hashed feature chunks are cached
   on first use with a cache-first strategy. A first-time install never reloads the page —
   only a real update of an already-controlled page does.
+- **The landing is prerendered at build time**: `vite build --ssr` renders
+  the route to static HTML in both languages, the client build puts both
+  fragments into `index.html`, an inline script picks the visitor's language
+  before the first paint, and React hydrates the survivor. The entry script
+  and its module preloads start only once the first paint is reported, so
+  the HTML and CSS never share bandwidth with JavaScript. Deep links served
+  through `404.html` or the service-worker fallback render from scratch.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
-  Performance ≥ 90 on mobile (the page scores 97–98 on a laptop; the floor
-  leaves room for the slower shared CI runners), the other categories at 100,
-  and transfer-size caps for scripts, CSS and third-party code.
+  Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
+  caps for scripts, CSS and third-party code.
 
 ## Features
 

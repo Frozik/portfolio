@@ -27,6 +27,9 @@ const STATUS_VISUALS: Record<TAvailabilityStatus, IStatusVisual> = {
   },
 };
 
+/** Sizes the badge while the real status is not known yet. */
+const PLACEHOLDER_STATUS: TAvailabilityStatus = 'online';
+
 const AvailabilityBadgeComponent = ({
   suffix,
   className,
@@ -34,7 +37,10 @@ const AvailabilityBadgeComponent = ({
   readonly suffix?: string;
   readonly className?: string;
 }) => {
-  const { status } = useAvailability();
+  const availability = useAvailability();
+  // Before hydration the status is unknown: the badge keeps its box (no layout
+  // shift when it fills in) but shows nothing.
+  const status = availability?.status ?? PLACEHOLDER_STATUS;
   const visual = STATUS_VISUALS[status];
   const Icon = visual.icon;
 
@@ -43,6 +49,7 @@ const AvailabilityBadgeComponent = ({
       className={cn(
         'inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wider md:text-[11px]',
         visual.tone,
+        availability === undefined && 'invisible',
         className
       )}
     >

@@ -1,32 +1,33 @@
 import './styles/tailwind.css';
 
-import { isNil } from 'lodash-es';
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 
+import { BASENAME } from './app/basename';
 import { setupCloudflareBeacon } from './app/bootstrap/cloudflareBeacon';
+import { selectRootContainer, shouldHydrate } from './app/bootstrap/root-container';
 import { setupServiceWorkerUpdate } from './app/bootstrap/serviceWorkerUpdate';
 import { Application } from './app/components/Application';
+import { getCurrentLanguage } from './shared/i18n/locale';
 
 setupCloudflareBeacon();
 setupServiceWorkerUpdate();
 
 function bootstrap() {
-  const container = document.getElementById('root');
-
-  if (isNil(container)) {
-    throw new Error(
-      "Root element with ID 'root' was not found in the document. Ensure there is a corresponding HTML element with the ID 'root' in your HTML file."
-    );
-  }
-
-  const root = createRoot(container);
-
-  root.render(
+  const container = selectRootContainer(document, getCurrentLanguage());
+  const application = (
     <StrictMode>
       <Application />
     </StrictMode>
   );
+
+  if (shouldHydrate(container, window.location.pathname, BASENAME)) {
+    hydrateRoot(container.element, application);
+    return;
+  }
+
+  container.element.replaceChildren();
+  createRoot(container.element).render(application);
 }
 
 bootstrap();

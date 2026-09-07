@@ -9,6 +9,8 @@
     "apps/portfolio": {
       "entry": [
         "src/main.tsx",
+        "src/app/prerender/render-landing.tsx",
+        "scripts/*.mjs",
         "vite.config.ts",
         "lighthouserc.json",
         "playwright.config.ts",

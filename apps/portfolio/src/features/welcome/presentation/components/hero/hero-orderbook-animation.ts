@@ -47,7 +47,9 @@ export function createHeroOrderbookAnimation(
   randomUnit: () => number = () => random(0, 1, true)
 ): IAmbientCanvasAnimation {
   let simulation: IOrderbookSimulation | undefined;
-  let palette: IOrderbookPalette = readOrderbookPalette();
+  // Read on resize, never at construction: the component is also rendered at
+  // build time, where there is no stylesheet to read the palette from.
+  let palette: IOrderbookPalette | undefined;
   let cssWidth = 0;
 
   return {
@@ -58,7 +60,10 @@ export function createHeroOrderbookAnimation(
     },
 
     draw(frame: IAmbientCanvasFrame): void {
-      assert(!isNil(simulation), 'HeroOrderbook: onResize runs before the first draw');
+      assert(
+        !isNil(simulation) && !isNil(palette),
+        'HeroOrderbook: onResize runs before the first draw'
+      );
       simulation = advanceOrderbook(simulation, frame.deltaMs, randomUnit);
       paintOrderbook(
         frame.ctx,

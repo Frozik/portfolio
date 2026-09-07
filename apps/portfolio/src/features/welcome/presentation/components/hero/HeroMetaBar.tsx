@@ -4,6 +4,9 @@ import { useLiveClock } from '../../hooks/useLiveClock';
 import { welcomeT } from '../../translations';
 import { StatusDot } from '../common/StatusDot';
 
+/** Same width as a time, so the clock filling in after hydration moves nothing. */
+const CLOCK_PLACEHOLDER = '--:--';
+
 const HeroMetaBarComponent = () => {
   const clock = useLiveClock();
 
@@ -13,7 +16,7 @@ const HeroMetaBarComponent = () => {
         <span className="text-landing-accent">◆</span> {welcomeT.hero.remote}
       </span>
       <span>
-        {welcomeT.hero.utc} · <span className="tabular-nums">{clock}</span>
+        {welcomeT.hero.utc} · <span className="tabular-nums">{clock ?? CLOCK_PLACEHOLDER}</span>
       </span>
       <span className="inline-flex items-center gap-2 text-landing-green">
         <StatusDot /> {welcomeT.hero.available}

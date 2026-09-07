@@ -1,3 +1,6 @@
+import { assert } from '@frozik/utils/assert/assert';
+import { isNil } from 'lodash-es';
+
 import type {
   IAmbientCanvasAnimation,
   IAmbientCanvasFrame,
@@ -30,7 +33,9 @@ export interface IProjectFxAnimation extends IAmbientCanvasAnimation {
 
 export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimation {
   const render = createFxRender(kind);
-  let accent: TAccentAlpha = buildAccentFn(readAccentRgb());
+  // Read on resize, never at construction: the card is also rendered at build
+  // time, where there is no stylesheet to read the accent from.
+  let accent: TAccentAlpha | undefined;
   let hovered = false;
   let animationTime = 0;
 
@@ -42,6 +47,7 @@ export function createProjectFxAnimation(kind: TProjectFxKind): IProjectFxAnimat
 
     draw(frame: IAmbientCanvasFrame): void {
       const { ctx } = frame;
+      assert(!isNil(accent), 'ProjectFx: onResize runs before the first draw');
       if (ctx.canvas.width === 0 || ctx.canvas.height === 0) {
         return;
       }

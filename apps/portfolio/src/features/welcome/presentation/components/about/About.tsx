@@ -16,7 +16,7 @@ const AVATAR_SOURCE_WIDTH_PX = 520;
 const AVATAR_SOURCE_HEIGHT_PX = 518;
 
 const AboutComponent = () => {
-  const { isAwake } = useAvailability();
+  const isAwake = useAvailability()?.isAwake ?? false;
 
   return (
     <section

@@ -1,7 +1,13 @@
 {
   "extends": "@frozik/typescript-config/node",
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "allowImportingTsExtensions": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "vite-plugins/**/*.ts",
+    "src/app/prerender/assemble-landing-html.ts",
+    "src/app/prerender/defer-entry-scripts.ts"
+  ]
 }

@@ -9,6 +9,8 @@ import type { VitePWAOptions } from 'vite-plugin-pwa';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
+import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
+
 // vite-plugin-pwa re-exports workbox-build's option types only through its own
 // options object, so the transform type is derived from there.
 type ManifestTransform = NonNullable<
@@ -22,6 +24,10 @@ const ENABLE_HTTPS = process.env.HTTPS === 'true';
 
 const BASE = '/portfolio';
 const OUT_DIR = 'dist';
+/** Where `vite build --ssr` leaves the landing renderer and the prerender script its fragments. */
+const PRERENDER_DIR = '.prerender';
+/** The SSR bundle needs a name the prerender script can find; the browser build hashes its entry. */
+const PRERENDER_ENTRY_FILE = 'render-landing.js';
 const DAY_SECONDS = 24 * 60 * 60;
 const RUNTIME_ASSET_CACHE_MAX_ENTRIES = 200;
 const RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS = 30 * DAY_SECONDS;
@@ -55,69 +61,75 @@ const precacheAppShellAndCv: ManifestTransform = manifestEntries => {
 /** Both halves of the lazy CV download: the feature's own modules and the react-pdf stack. */
 const CV_PDF_MODULE = /\/(features\/welcome\/presentation\/pdf\/|node_modules\/@react-pdf\/)/;
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild = false }) => ({
   base: BASE,
   // Low-poly 3D assets (CC0, Kenney car kit) ship as raw GLB binaries.
   assetsInclude: ['**/*.glb'],
   plugins: [
     tailwindcss(),
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'inline',
-      workbox: {
-        // The plugin only defaults these for `injectRegister: 'auto'`; without them a
-        // new worker waits until every tab closes and `autoUpdate` never fires.
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
-        manifestTransforms: [precacheAppShellAndCv],
-        runtimeCaching: [
-          {
-            urlPattern: new RegExp(`${BASE}/assets/`),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'hashed-assets',
-              expiration: {
-                maxEntries: RUNTIME_ASSET_CACHE_MAX_ENTRIES,
-                maxAgeSeconds: RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS,
+    !isSsrBuild &&
+      prerenderedLanding({
+        prerenderDir: resolve(import.meta.dirname, PRERENDER_DIR),
+        outDir: resolve(import.meta.dirname, OUT_DIR),
+      }),
+    !isSsrBuild &&
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'inline',
+        workbox: {
+          // The plugin only defaults these for `injectRegister: 'auto'`; without them a
+          // new worker waits until every tab closes and `autoUpdate` never fires.
+          skipWaiting: true,
+          clientsClaim: true,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
+          manifestTransforms: [precacheAppShellAndCv],
+          runtimeCaching: [
+            {
+              urlPattern: new RegExp(`${BASE}/assets/`),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'hashed-assets',
+                expiration: {
+                  maxEntries: RUNTIME_ASSET_CACHE_MAX_ENTRIES,
+                  maxAgeSeconds: RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS,
+                },
               },
             },
-          },
-        ],
-        navigateFallback: `${BASE}/index.html`,
-        navigateFallbackAllowlist: [new RegExp(`^${BASE}`)],
-        navigateFallbackDenylist: [/\.pdf$/],
-      },
-      manifest: {
-        name: 'Portfolio',
-        short_name: 'Portfolio',
-        description: 'Interactive demos: neural networks, WebGPU, physics simulations',
-        theme_color: '#1a1a2e',
-        background_color: '#1a1a2e',
-        display: 'standalone',
-        start_url: `${BASE}/`,
-        scope: `${BASE}/`,
-        icons: [
-          {
-            src: `${BASE}/pwa-192x192.png`,
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: `${BASE}/pwa-512x512.png`,
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: `${BASE}/pwa-512x512.png`,
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-    }),
+          ],
+          navigateFallback: `${BASE}/index.html`,
+          navigateFallbackAllowlist: [new RegExp(`^${BASE}`)],
+          navigateFallbackDenylist: [/\.pdf$/],
+        },
+        manifest: {
+          name: 'Portfolio',
+          short_name: 'Portfolio',
+          description: 'Interactive demos: neural networks, WebGPU, physics simulations',
+          theme_color: '#1a1a2e',
+          background_color: '#1a1a2e',
+          display: 'standalone',
+          start_url: `${BASE}/`,
+          scope: `${BASE}/`,
+          icons: [
+            {
+              src: `${BASE}/pwa-192x192.png`,
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: `${BASE}/pwa-512x512.png`,
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: `${BASE}/pwa-512x512.png`,
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+      }),
     ENABLE_BUNDLE_STATS &&
       visualizer({
         filename: 'bundle-stats.html',
@@ -140,28 +152,36 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
   },
+  // Workspace libraries export TypeScript sources, which Node cannot load from
+  // node_modules: the landing renderer bundles them and leaves npm packages external.
+  ssr: {
+    noExternal: [/^@frozik\//],
+  },
   build: {
     rollupOptions: {
-      output: {
-        entryFileNames: `assets/e-[hash].js`,
-        // The CV renderer keeps a recognisable name so the service worker can precache it.
-        chunkFileNames: chunk =>
-          chunk.moduleIds.some(moduleId => CV_PDF_MODULE.test(moduleId))
-            ? `assets/cv-[hash].js`
-            : `assets/c-[hash].js`,
-        assetFileNames: `assets/a-[hash].[ext]`,
-        codeSplitting: {
-          groups: [
-            // The React runtime changes only on upgrades: a chunk of its own stays
-            // cached across app deploys instead of being re-downloaded with the entry.
-            { name: 'react', test: /\/node_modules\/(react-dom|scheduler)\// },
-            // Everything else from node_modules and libs/* that the entry needs,
-            // in one chunk — otherwise each module shared with a lazy route
-            // becomes its own request (a dozen lodash-es files on the landing).
-            { name: 'vendor', test: /\/(node_modules|libs\/[^/]+\/src)\//, tags: ['$initial'] },
-          ],
-        },
-      },
+      output: isSsrBuild
+        ? // Same asset names as the browser build, so the markup rendered here points at files that exist in `dist`.
+          { entryFileNames: PRERENDER_ENTRY_FILE, assetFileNames: `assets/a-[hash].[ext]` }
+        : {
+            entryFileNames: `assets/e-[hash].js`,
+            // The CV renderer keeps a recognisable name so the service worker can precache it.
+            chunkFileNames: chunk =>
+              chunk.moduleIds.some(moduleId => CV_PDF_MODULE.test(moduleId))
+                ? `assets/cv-[hash].js`
+                : `assets/c-[hash].js`,
+            assetFileNames: `assets/a-[hash].[ext]`,
+            codeSplitting: {
+              groups: [
+                // The React runtime changes only on upgrades: a chunk of its own stays
+                // cached across app deploys instead of being re-downloaded with the entry.
+                { name: 'react', test: /\/node_modules\/(react-dom|scheduler)\// },
+                // Everything else from node_modules and libs/* that the entry needs,
+                // in one chunk — otherwise each module shared with a lazy route
+                // becomes its own request (a dozen lodash-es files on the landing).
+                { name: 'vendor', test: /\/(node_modules|libs\/[^/]+\/src)\//, tags: ['$initial'] },
+              ],
+            },
+          },
     },
   },
   css: {
@@ -172,4 +192,4 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
   },
-});
+}));
