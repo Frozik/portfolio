@@ -15,7 +15,7 @@ fi
 # shellcheck disable=SC1091
 source /etc/communication/deploy-vars
 
-# The navigation stack (tiles + routing) is optional: it exists only once
+# The navigation stack (tiles + packs) is optional: it exists only once
 # install-navigation.sh has written navigation-vars. HAProxy stays a TCP/SNI
 # passthrough for the signaling and TURN hosts, and terminates TLS itself
 # only for the navigation host, whose upstreams speak plain HTTP.
@@ -36,7 +36,7 @@ render_nav_sni_route() {
 
 # The navigation host: SNI passthrough hands the raw TLS stream to a local
 # HTTPS frontend that terminates it, answers CORS for the portfolio origins
-# and routes /tiles/ to pmtiles and /route to GraphHopper.
+# and routes /tiles/ to pmtiles and the pack files + catalogue to nginx.
 render_nav_frontend() {
   [[ "${NAV_ENABLED}" == "true" ]] || return 0
   cat <<NAV
@@ -56,11 +56,12 @@ frontend nav_https
   http-response set-header Access-Control-Allow-Origin %[var(txn.origin)] if { var(txn.origin) -m found }
   http-response set-header Vary Origin
   acl is_tiles path_beg /tiles/
-  acl is_route path /route
+  acl is_packs path_beg /packs/
+  acl is_catalogue path /regions.json
   acl is_health path /health
   http-request return status 200 content-type text/plain string ok if is_health
   use_backend pmtiles if is_tiles
-  use_backend graphhopper if is_route
+  use_backend nav_static if is_packs || is_catalogue
   default_backend nav_not_found
 
 backend pmtiles
@@ -72,11 +73,11 @@ backend pmtiles
   http-response set-header Cache-Control "public, max-age=86400"
   server pmtiles 127.0.0.1:${PMTILES_PORT}
 
-backend graphhopper
+backend nav_static
   mode http
-  timeout server 30s
-  http-response set-header Cache-Control "no-store"
-  server graphhopper 127.0.0.1:${GRAPHHOPPER_PORT}
+  # Pack downloads are large and resumable; nginx sets the cache headers.
+  timeout server 10m
+  server nav_static 127.0.0.1:${NAV_STATIC_PORT}
 
 backend nav_not_found
   mode http

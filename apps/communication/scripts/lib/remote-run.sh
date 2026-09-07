@@ -88,6 +88,8 @@ env_for_remote() {
     REMOTE_TS
     NAV_SKIP_BUILD
     NAV_REFRESH_EXTRACT
+    NAV_REFRESH_WORLD
+    NAV_REGION
   )
   for key in "${keys[@]}"; do
     local value="${!key:-}"

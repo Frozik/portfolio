@@ -386,46 +386,70 @@ removed the legacy server source tree.
 
 ---
 
-## Navigation stack (tiles + routing for the portfolio's navigator)
+## Navigation stack (world layer, region packs)
 
-The same host also serves the OSM navigator feature of the portfolio: vector
-tiles of Saint Petersburg and a routing engine, on their own hostname
-`nav-<IP>.sslip.io`. Everything is built and served on the box; no Docker,
-no third-party map keys.
+The same host serves the portfolio's navigator, an Organic-Maps-style app:
+a light world map streamed from here, regions downloaded as packs that work
+offline in the browser, routes computed on the device. Nothing is rendered
+or routed on the server: it preprocesses OpenStreetMap extracts and serves
+files, all under its own hostname `nav-<IP>.sslip.io`.
 
 ```bash
-bash apps/communication/scripts/install-navigation.sh --ssh-host root@<IP> [--skip-build] [--refresh-extract]
+bash apps/communication/scripts/install-navigation.sh --ssh-host root@<IP> \
+  [--skip-build] [--refresh-extract] [--refresh-world] [--region <id>]
 ```
 
-What it does (all scripts under `scripts/lib/nav-*.sh`, versions pinned in
-`nav-versions.sh`):
+Regions are declared in `scripts/lib/nav-regions.sh` (id, names, Geofabrik
+source, bounds, time zone); the first is Dubai. What the orchestrator does
+(scripts under `scripts/lib/nav-*.sh`, versions pinned in `nav-versions.sh`):
 
 1. `nav-install-runtime` — system user `navigation`, `/opt/navigation`
-   (Temurin JRE 21 tarball, `go-pmtiles`, the `planetiler-openmaptiles` and
-   `graphhopper-web` jars, checksum-verified) and `/srv/navigation/{osm,tiles,graphhopper}`.
-2. `nav-fetch-extract` — the BBBike Saint Petersburg `.osm.pbf` and a
-   `manifest.json` the client shows as the data date.
-3. `nav-build-tiles` — planetiler → `/srv/navigation/tiles/spb.pmtiles`
-   (OpenMapTiles schema, `ru`/`en` names, `render_height` for 3D).
-4. `nav-build-routing` — GraphHopper config with `car`, `foot` and `bike`
-   profiles (contraction hierarchies) and the graph import.
-5. `nav-render-units` — `pmtiles.service` (:8082) and `graphhopper.service`
-   (:8989, 1.2 GB heap, 1.8 GB cgroup cap), loopback only.
-6. `nav-expand-cert` — adds the navigation hostname to the Let's Encrypt
-   certificate (HTTP-01 through the port-80 hooks) and writes the combined
-   PEM HAProxy terminates TLS with; the renewal deploy hook keeps it fresh.
-7. `render-haproxy-cfg` — the navigation SNI goes to a local HTTPS frontend
-   that answers CORS for the portfolio origins and routes
-   `/tiles/spb/{z}/{x}/{y}.mvt` → pmtiles, `/route?…` → GraphHopper,
-   `/health` → 200. Signaling and TURN stay TCP/SNI passthrough.
-8. `nav-enable-services` — starts both units, reloads HAProxy and enforces
-   the memory gate: if less than 1 GB stays available, GraphHopper is
-   stopped and disabled again.
-9. `nav-smoke-test` — a tile over Palace Square, a foot route with Russian
-   instructions and a CORS preflight, through the public hostname.
+   (Temurin JRE 21 tarball, `go-pmtiles`, the `planetiler-openmaptiles` jar,
+   checksum-verified), `osmium-tool` and `nginx` from apt (the stock nginx
+   site on :80 is disabled), `/srv/navigation/{osm,tiles,graphs,public}`.
+2. `nav-retire-graphhopper` — removes the server-side router that an
+   earlier version ran; routing now happens in the browser.
+3. `nav-fetch-extract` — the Geofabrik source (cached by URL, refreshed
+   only when newer) clipped with `osmium extract --bbox` to each region.
+4. `nav-build-tiles` — planetiler → `/srv/navigation/tiles/<id>.pmtiles`
+   (OpenMapTiles schema, z7–14, `en`/`ru` names, `render_height` for 3D).
+5. `nav-build-world` — planetiler with `--bounds=planet --maxzoom=6` over
+   Natural Earth and the OSM water polygons it downloads itself →
+   `/srv/navigation/tiles/world.pmtiles`, the layer every visitor sees
+   before downloading anything.
+6. `nav-build-graph` — the routing pack of each region, built by
+   `apps/navigation-tools` from the deploy checkout (`/opt/communication`)
+   with Node 24: roads with per-profile access, oneways, turn
+   restrictions, street names; then 100 random routes are timed and the
+   building-height coverage is measured (`/srv/navigation/graphs/*.json`).
+7. `nav-publish-region` — `/srv/navigation/public/packs/<id>/<version>/`
+   with `region.pmtiles` (hard link), `region.graph` (+ `.gz` for
+   `gzip_static`) and `region.json` (sizes, SHA-256, data date, names);
+   older versions are removed.
+8. `nav-build-catalogue` — `/srv/navigation/public/regions.json`, the one
+   file the client fetches: world version, every region, URLs.
+9. `nav-render-units` — `pmtiles.service` (loopback :8082, serves every
+   archive in the tiles directory) and the nginx site `navigation-static`
+   (loopback :8083, range requests, immutable cache headers for packs,
+   `no-cache` for the catalogue).
+10. `nav-expand-cert` — adds the navigation hostname to the Let's Encrypt
+    certificate (HTTP-01 through the port-80 hooks) and writes the
+    combined PEM HAProxy terminates TLS with; the renewal hook keeps it
+    fresh.
+11. `render-haproxy-cfg` — the navigation SNI goes to a local HTTPS
+    frontend (loopback :8445) that answers CORS for the portfolio origins
+    and routes `/tiles/<name>/{z}/{x}/{y}.mvt` → pmtiles,
+    `/packs/…` and `/regions.json` → nginx, `/health` → 200. Signaling and
+    TURN stay TCP/SNI passthrough.
+12. `nav-enable-services` — starts pmtiles and nginx, reloads HAProxy,
+    checks that only the expected loopback ports listen and that at least
+    1 GB stays free.
+13. `nav-smoke-test` — the catalogue, a world tile and a region tile with
+    CORS, a `HEAD` and a ranged `GET` of the routing pack, a preflight.
 
-Refreshing the data is the same command with `--refresh-extract`; the
-builds take a few minutes on the 2-vCPU box and run at low priority.
+Refreshing data is the same command with `--refresh-extract` (regions) or
+`--refresh-world`; `--region <id>` limits a run. Builds run under `nice`
+with a 1.6 GB heap on the 2-vCPU box.
 
 ## Operations
 
