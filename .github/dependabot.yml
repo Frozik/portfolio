@@ -21,6 +21,12 @@ updates:
       # Major bumps are reviewed by hand: the stack is at the edge already.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Both live twice in the lockfile — our catalog entry and a copy pinned by a
+      # dependency (`@lhci/cli` → lighthouse 12, `@tensorflow/tfjs-core` →
+      # @webgpu/types 0.1.38). Dependabot mixes the two up: it fails on the pinned
+      # copy and once proposed downgrading the catalog. Bumped by hand instead.
+      - dependency-name: 'lighthouse'
+      - dependency-name: '@webgpu/types'
 
   - package-ecosystem: github-actions
     directory: /
