@@ -4,7 +4,17 @@
   "workspaces": {
     ".": {
       "entry": ["vitest.config.ts"],
-      "ignoreDependencies": ["@lhci/cli", "lighthouse", "@swc/core", "lefthook"]
+      "ignoreDependencies": [
+        "@lhci/cli",
+        "lighthouse",
+        "@swc/core",
+        "lefthook",
+        "semantic-release",
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        "@semantic-release/github",
+        "conventional-changelog-conventionalcommits"
+      ]
     },
     "apps/portfolio": {
       "entry": [

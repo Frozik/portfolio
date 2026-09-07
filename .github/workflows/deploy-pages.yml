@@ -20,13 +20,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  # Tags the commit and publishes a GitHub Release from its Conventional Commits
+  # (feat → minor, fix / perf / refactor → patch, `!` → major); commits of other
+  # types release nothing. Nothing is written back to the branch — the tag is the
+  # version, and the build below reads it with `git describe`.
+  release:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec semantic-release --extends ./libs/tooling/semantic-release.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # Full history and tags: the build stamps the app with `git describe --tags`.
           fetch-depth: 0
       - uses: moonrepo/setup-toolchain@v0
         with:

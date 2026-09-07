@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgQrCode } from '../../icons/SvgQrCode';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
+import { APP_VERSION } from '../app-version';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
@@ -170,7 +171,7 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
               rel="noopener noreferrer"
               className={iconButtonClassName}
               aria-label={appT.nav.sourceOnGitHub}
-              title={appT.nav.sourceOnGitHub}
+              title={appT.nav.sourceOnGitHubVersion(APP_VERSION)}
             >
               <SvgGitHub width={ICON_SIZE_PX} height={ICON_SIZE_PX} />
             </a>

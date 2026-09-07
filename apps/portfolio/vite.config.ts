@@ -9,6 +9,7 @@ import type { VitePWAOptions } from 'vite-plugin-pwa';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
+import { readAppVersion } from './vite-plugins/app-version.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 
 // vite-plugin-pwa re-exports workbox-build's option types only through its own
@@ -64,6 +65,9 @@ const CV_PDF_MODULE = /\/(features\/welcome\/presentation\/pdf\/|node_modules\/@
 
 export default defineConfig(({ isSsrBuild = false }) => ({
   base: BASE,
+  define: {
+    __APP_VERSION__: JSON.stringify(readAppVersion()),
+  },
   // Low-poly 3D assets (CC0, Kenney car kit) ship as raw GLB binaries.
   assetsInclude: ['**/*.glb'],
   plugins: [

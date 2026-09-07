@@ -15,6 +15,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     ],
     openOnPhone: 'Открыть на телефоне',
     sourceOnGitHub: 'Исходники на GitHub',
+    sourceOnGitHubVersion: (version: string): string => `Исходники на GitHub ${version}`,
     showQR: 'Показать QR-код этой страницы',
     openMenu: 'Открыть меню',
     menuTitle: 'Навигация',

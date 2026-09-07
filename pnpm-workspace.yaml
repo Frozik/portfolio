@@ -21,6 +21,11 @@ peerDependencyRules:
 
 # Single source of dependency versions; workspace packages reference them with "catalog:".
 catalog:
+  "conventional-changelog-conventionalcommits": "^10.4.0"
+  "@semantic-release/github": "^12.0.9"
+  "@semantic-release/release-notes-generator": "^14.1.1"
+  "@semantic-release/commit-analyzer": "^13.0.1"
+  "semantic-release": "^25.0.9"
   "@swc/core": "^1.16.2"
   "oxfmt": "^0.66.0"
   "oxlint": "^1.81.0"

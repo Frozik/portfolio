@@ -18,6 +18,7 @@ export const appTranslationsEn = {
     ] as readonly INavSectionTranslation[],
     openOnPhone: 'Open on phone',
     sourceOnGitHub: 'Source on GitHub',
+    sourceOnGitHubVersion: (version: string): string => `Source on GitHub ${version}`,
     showQR: 'Show QR code for this page',
     openMenu: 'Open menu',
     menuTitle: 'Navigation',

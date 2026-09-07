@@ -63,6 +63,12 @@ representative):
   and its module preloads start only once the first paint is reported, so
   the HTML and CSS never share bandwidth with JavaScript. Deep links served
   through `404.html` or the service-worker fallback render from scratch.
+- **Releases are automatic**: after a green CI run on `main`, semantic-release
+  reads the Conventional Commits since the last tag (`feat` → minor, `fix` /
+  `perf` / `refactor` → patch, `!` → major), tags the commit and publishes a
+  GitHub Release with the notes; other commit types release nothing. Nothing
+  is written back to the branch — the tag is the version, the build stamps
+  it in with `git describe` and the GitHub button's tooltip shows it.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
   Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
   caps for scripts, CSS and third-party code.
