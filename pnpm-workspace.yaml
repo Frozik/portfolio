@@ -84,7 +84,7 @@ catalog:
   "leaflet": "^1.9.4"
   "knip": "^6.34.0"
   "lefthook": "^2.1.12"
-  "lighthouse": "^13.4.1"
+  "lighthouse": "^12.8.2"
   "lodash-es": "^4.18.1"
   "lru-cache": "^11.5.2"
   "lucide-react": "^1.41.0"
