@@ -55,8 +55,9 @@ representative):
   on first use with a cache-first strategy. A first-time install never reloads the page —
   only a real update of an already-controlled page does.
 - **Budgets are enforced** by `pnpm lighthouse` (`apps/portfolio/lighthouserc.json`):
-  Performance ≥ 95 on mobile, the other categories at 100, and transfer-size
-  caps for scripts, CSS and third-party code.
+  Performance ≥ 90 on mobile (the page scores 97–98 on a laptop; the floor
+  leaves room for the slower shared CI runners), the other categories at 100,
+  and transfer-size caps for scripts, CSS and third-party code.
 
 ## Features
 
