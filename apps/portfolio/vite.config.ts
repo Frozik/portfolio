@@ -24,9 +24,10 @@ const ENABLE_HTTPS = process.env.HTTPS === 'true';
 
 const BASE = '/portfolio';
 const OUT_DIR = 'dist';
-/** Where `vite build --ssr` leaves the landing renderer and the prerender script its fragments. */
+/** The landing renderer the prerender plugin builds for Node, and where it puts the bundle. */
+const PRERENDER_RENDER_ENTRY = 'src/app/prerender/render-landing.tsx';
 const PRERENDER_DIR = '.prerender';
-/** The SSR bundle needs a name the prerender script can find; the browser build hashes its entry. */
+/** The SSR bundle needs a name the plugin can find; the browser build hashes its entry. */
 const PRERENDER_ENTRY_FILE = 'render-landing.js';
 const DAY_SECONDS = 24 * 60 * 60;
 const RUNTIME_ASSET_CACHE_MAX_ENTRIES = 200;
@@ -70,6 +71,8 @@ export default defineConfig(({ isSsrBuild = false }) => ({
     react(),
     !isSsrBuild &&
       prerenderedLanding({
+        renderEntry: PRERENDER_RENDER_ENTRY,
+        entryFileName: PRERENDER_ENTRY_FILE,
         prerenderDir: resolve(import.meta.dirname, PRERENDER_DIR),
         outDir: resolve(import.meta.dirname, OUT_DIR),
       }),

@@ -25,6 +25,7 @@
     "types": "moon run :type-check"
   },
   "devDependencies": {
+    "@frozik/tooling": "workspace:*",
     "@lhci/cli": "catalog:",
     "@moonrepo/cli": "catalog:",
     "@swc/core": "catalog:",

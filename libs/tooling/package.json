@@ -1,0 +1,19 @@
+{
+  "name": "@frozik/tooling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Repository-wide checks and build helpers, run straight from their TypeScript sources",
+  "bin": {
+    "check-source-conventions": "./src/check-source-conventions.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -3,14 +3,13 @@
   "ignoreWorkspaces": ["libs/typescript-config"],
   "workspaces": {
     ".": {
-      "entry": ["vitest.config.ts", ".dependency-cruiser.cjs", "scripts/*.mjs"],
+      "entry": ["vitest.config.ts"],
       "ignoreDependencies": ["@lhci/cli", "lighthouse", "@swc/core", "lefthook"]
     },
     "apps/portfolio": {
       "entry": [
         "src/main.tsx",
         "src/app/prerender/render-landing.tsx",
-        "scripts/*.mjs",
         "vite.config.ts",
         "lighthouserc.json",
         "playwright.config.ts",
@@ -39,6 +38,10 @@
     },
     "libs/communication-protocol": {
       "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
+    "libs/tooling": {
+      "entry": ["src/check-source-conventions.ts", "dependency-cruiser.cjs"],
       "project": ["src/**/*.ts"]
     }
   },

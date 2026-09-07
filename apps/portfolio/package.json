@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "analyze": "ANALYZE=true tsc -b && ANALYZE=true vite build",
-    "build": "tsc -b && pnpm run prerender && vite build",
-    "prerender": "vite build --ssr src/app/prerender/render-landing.tsx --outDir .prerender && node scripts/prerender-landing.mjs",
+    "build": "tsc -b && vite build",
     "e2e": "playwright test",
     "lighthouse": "pnpm run build && lhci autorun",
     "preview": "vite preview",

@@ -25,7 +25,7 @@ pnpm analyze    # Production build + bundle treemap (bundle-stats.html)
 
 Every check is a Moon task (`moon.yml`, `apps/*/moon.yml`): oxlint and oxfmt for lint and
 format, TypeScript 7, dependency-cruiser for layer boundaries and cycles
-(`.dependency-cruiser.cjs`), knip for dead code, Vitest projects, Playwright
+(`libs/tooling/dependency-cruiser.cjs`), knip for dead code, Vitest projects, Playwright
 smoke tests (`apps/portfolio/e2e`). Dependency versions live once in
 `pnpm-workspace.yaml` (`catalog:`); git hooks are `lefthook.yml`; CI runs
 `moon ci` and deploys to GitHub Pages from `main`.
@@ -54,10 +54,12 @@ representative):
   one lazy asset most visitors click); other hashed feature chunks are cached
   on first use with a cache-first strategy. A first-time install never reloads the page —
   only a real update of an already-controlled page does.
-- **The landing is prerendered at build time**: `vite build --ssr` renders
-  the route to static HTML in both languages, the client build puts both
-  fragments into `index.html`, an inline script picks the visitor's language
-  before the first paint, and React hydrates the survivor. The entry script
+- **The landing is prerendered at build time** by the `prerendered-landing`
+  Vite plugin (`apps/portfolio/vite-plugins/`): it runs an SSR build of the
+  render entry, renders the route to static HTML in a worker thread per
+  language, puts both fragments into `index.html` where an inline script
+  picks the visitor's language before the first paint, and React hydrates
+  the survivor. The entry script
   and its module preloads start only once the first paint is reported, so
   the HTML and CSS never share bandwidth with JavaScript. Deep links served
   through `404.html` or the service-worker fallback render from scratch.

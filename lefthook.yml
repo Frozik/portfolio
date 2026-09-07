@@ -15,7 +15,7 @@ pre-commit:
       stage_fixed: true
     - name: source conventions
       glob: '{apps,libs}/**/*.{ts,tsx}'
-      run: node scripts/check-source-conventions.mjs
+      run: pnpm exec check-source-conventions
     - name: type-check (affected)
       glob: '{apps,libs}/**/*.{ts,tsx}'
       run: pnpm exec moon run :type-check --affected

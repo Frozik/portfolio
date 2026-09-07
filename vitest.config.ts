@@ -42,6 +42,14 @@ export default defineConfig({
           include: ['apps/communication/src/**/*.{test,spec}.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'tooling',
+          environment: 'node',
+          include: ['libs/tooling/src/**/*.{test,spec}.ts'],
+        },
+      },
     ],
     coverage: {
       provider: 'v8',

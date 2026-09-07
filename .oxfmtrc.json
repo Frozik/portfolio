@@ -34,8 +34,7 @@
     "**/*.yml",
     "**/*.yaml",
     "pnpm-lock.yaml",
-    ".dependency-cruiser-known-violations.json",
-    ".file-size-baseline.json",
+    "libs/tooling/file-size-baseline.json",
     "apps/portfolio/bundle-stats.json"
   ]
 }
