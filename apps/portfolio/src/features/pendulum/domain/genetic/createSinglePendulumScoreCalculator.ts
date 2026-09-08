@@ -1,7 +1,8 @@
 import { clamp } from 'lodash-es';
-import { Vector } from 'matter-js';
 
+import { firstBobHeading } from '../bob-heading';
 import { RAILS_HALF_LENGTH } from '../constants';
+import { bobVelocities } from '../physics/kinematics';
 import type { IWorld } from '../types';
 import { zNormalization } from '../utils';
 
@@ -11,8 +12,8 @@ interface ITopContext {
   jitterDetector: number[];
 }
 
-// Upper bound on bob speed considered for the velocity bonus/penalty.
-const MAX_TRACKED_VELOCITY = 10;
+// Bob speed (px/ms) at which the velocity bonus is gone and the action bonus is full.
+const MAX_TRACKED_VELOCITY = 0.6;
 // Number of recent normalized positions kept to detect oscillation (jitter).
 const JITTER_WINDOW_SIZE = 50;
 // Normalized-position band around the rail center treated as "on target".
@@ -29,29 +30,28 @@ const MAX_STEADINESS_DIRECTION_CHANGES = 5;
 
 // Multipliers turning raw measures into score contributions.
 const CENTERING_BONUS_WEIGHT = 10;
-const VELOCITY_BONUS_WEIGHT = 10;
-const ACTION_BONUS_WEIGHT = 10;
+const VELOCITY_BONUS_WEIGHT = 100;
+const ACTION_BONUS_WEIGHT = 100;
 const OFF_CENTER_PENALTY_WEIGHT = 100;
 const JITTER_PENALTY_WEIGHT = 10;
 
-export function singlePendulumScoreCalculatorBuilder(world: IWorld) {
+export function createSinglePendulumScoreCalculator() {
   const context: ITopContext = {
     positiveTime: 0,
     negativeTime: 0,
     jitterDetector: [],
   };
 
-  return (deltaTime: DOMHighResTimeStamp): number => {
-    const {
-      pivot,
-      bobs: [bob],
-    } = world;
+  return (world: IWorld, deltaTime: DOMHighResTimeStamp): number => {
+    const [bobVelocity] = bobVelocities(world);
 
-    const angleVector = Vector.sub(bob.position, pivot.position);
-    const angle = Vector.angle(angleVector, { x: 0, y: 1 });
-    const isOnTop = angle > 0;
-    const velocity = clamp(Vector.magnitude(bob.velocity), 0, MAX_TRACKED_VELOCITY);
-    const position = Math.abs(zNormalization(pivot.position.x, RAILS_HALF_LENGTH));
+    const isOnTop = firstBobHeading(world) > 0;
+    const speedFraction = clamp(
+      Math.hypot(bobVelocity.x, bobVelocity.y) / MAX_TRACKED_VELOCITY,
+      0,
+      1
+    );
+    const position = Math.abs(zNormalization(world.pivotX, RAILS_HALF_LENGTH));
 
     context.jitterDetector.push(position);
     if (context.jitterDetector.length > JITTER_WINDOW_SIZE) {
@@ -105,8 +105,8 @@ export function singlePendulumScoreCalculatorBuilder(world: IWorld) {
       (context.positiveTime / STEADINESS_TIME_DIVISOR) *
         Math.max(0, MAX_STEADINESS_DIRECTION_CHANGES - directionChanges);
     const positionBonus = isOnTop ? zeroPosition * CENTERING_BONUS_WEIGHT : 0;
-    const velocityBonus = isOnTop ? (MAX_TRACKED_VELOCITY - velocity) * VELOCITY_BONUS_WEIGHT : 0;
-    const actionBonus = isOnTop ? 0 : velocity * ACTION_BONUS_WEIGHT;
+    const velocityBonus = isOnTop ? (1 - speedFraction) * VELOCITY_BONUS_WEIGHT : 0;
+    const actionBonus = isOnTop ? 0 : speedFraction * ACTION_BONUS_WEIGHT;
 
     const bonus = targetBonus + positionBonus + velocityBonus + actionBonus;
 

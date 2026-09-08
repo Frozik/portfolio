@@ -1,4 +1,4 @@
-import { quantizedFps, smoothFrameDelta, startFrameLoop } from './frame-loop';
+import { MAX_FRAME_DELTA, quantizedFps, smoothFrameDelta, startFrameLoop } from './frame-loop';
 import { createFakeFrameScheduler } from './ports/fake-frame-scheduler.test-helper';
 
 describe('startFrameLoop', () => {
@@ -14,6 +14,19 @@ describe('startFrameLoop', () => {
     frames.fire(133);
 
     expect(deltas).toEqual([16, 17]);
+  });
+
+  it('caps the delta of a frame arriving after a long pause', () => {
+    const frames = createFakeFrameScheduler();
+    const deltas: number[] = [];
+
+    startFrameLoop(frames, deltaTime => {
+      deltas.push(deltaTime);
+    });
+    frames.fire(100);
+    frames.fire(100 + 60_000);
+
+    expect(deltas).toEqual([MAX_FRAME_DELTA]);
   });
 
   it('stops requesting frames once stopped', () => {

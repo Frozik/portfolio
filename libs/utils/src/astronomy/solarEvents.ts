@@ -1,6 +1,7 @@
 import type { Temporal } from 'temporal-polyfill';
 
 import { SECONDS_PER_DAY } from '../date/constants';
+import { wrapToHalfTurn } from '../math/wrapToHalfTurn';
 import {
   altitudeRadians,
   ARCMINUTES_PER_DEGREE,
@@ -10,7 +11,6 @@ import {
   localSiderealTime,
   sunEquatorialCoordinates,
   toTerrestrialDays,
-  wrapToHalfTurn,
 } from './solarCoordinates';
 
 /** Whether the Sun crosses the rise/set horizon at all on that day. */

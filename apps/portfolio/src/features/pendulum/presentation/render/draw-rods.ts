@@ -1,8 +1,7 @@
-import type { Vector } from 'matter-js';
-
+import type { IPoint } from '../../domain/types';
 import { ROD_THICKNESS, STROKE_COLOR } from './constants';
 
-export function drawRods(context: CanvasRenderingContext2D, positions: readonly Vector[]): void {
+export function drawRods(context: CanvasRenderingContext2D, positions: readonly IPoint[]): void {
   const [first, ...rest] = positions;
   if (rest.length === 0) {
     return;

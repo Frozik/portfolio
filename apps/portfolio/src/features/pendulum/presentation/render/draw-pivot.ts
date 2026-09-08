@@ -1,6 +1,5 @@
-import type { Vector } from 'matter-js';
-
 import { ROD_HALF_LENGTH } from '../../domain/constants';
+import type { IPoint } from '../../domain/types';
 import {
   LINE_THICKNESS,
   PIVOT_THICKNESS,
@@ -16,13 +15,13 @@ import {
 } from './constants';
 import { drawBobs } from './draw-bobs';
 
-export function drawPivot(context: CanvasRenderingContext2D, position: Vector): void {
+export function drawPivot(context: CanvasRenderingContext2D, position: IPoint): void {
   drawSuspension(context, position);
   drawWheels(context, position);
   drawBobs(context, [position]);
 }
 
-function drawSuspension(context: CanvasRenderingContext2D, position: Vector): void {
+function drawSuspension(context: CanvasRenderingContext2D, position: IPoint): void {
   context.save();
 
   context.beginPath();
@@ -37,7 +36,7 @@ function drawSuspension(context: CanvasRenderingContext2D, position: Vector): vo
   context.restore();
 }
 
-function drawWheels(context: CanvasRenderingContext2D, position: Vector): void {
+function drawWheels(context: CanvasRenderingContext2D, position: IPoint): void {
   const leftEdge = position.x - ROD_HALF_LENGTH;
   const rightEdge = position.x + ROD_HALF_LENGTH;
 

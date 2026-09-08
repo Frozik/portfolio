@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 
 import { createWorld } from './physics/createWorld';
-import { DEFAULT_GRAVITY, setWorldGravity } from './physics/world-gravity';
+import { DEFAULT_GRAVITY } from './physics/gravity';
 import type { IPlaygroundEntry, IPlaygroundState } from './playground-step';
 import {
   advancePlayground,
@@ -31,7 +31,7 @@ const DEFAULT_PENDULUM_OPTIONS: IPendulumOptions = { bobsCount: 1 };
 export class Playground {
   private state: IPlaygroundState = EMPTY_PLAYGROUND_STATE;
   private gravity = DEFAULT_GRAVITY;
-  private pointerForce: IPoint | undefined;
+  private pointerPosition: IPoint | undefined;
   private renderer: IRenderer | undefined;
   private cancelQueuedFrame: VoidFunction | undefined;
   private unsubscribeTicker: VoidFunction | undefined;
@@ -51,7 +51,7 @@ export class Playground {
         ...this.state.entries,
         {
           player,
-          world: createWorld(options, this.gravity),
+          world: createWorld(options),
           active: true,
           membership: undefined,
           score: 0,
@@ -98,15 +98,12 @@ export class Playground {
     this.requestRender();
   }
 
-  setPointerForce(pointerForce: IPoint | undefined): void {
-    this.pointerForce = pointerForce;
+  setPointerPosition(pointerPosition: IPoint | undefined): void {
+    this.pointerPosition = pointerPosition;
   }
 
   setGravity(gravity: number): void {
     this.gravity = gravity;
-    for (const { world } of this.state.entries) {
-      setWorldGravity(world, gravity);
-    }
   }
 
   destroy(): void {
@@ -117,7 +114,10 @@ export class Playground {
   }
 
   private async tick(deltaTime: DOMHighResTimeStamp): Promise<void> {
-    this.state = advancePlayground(this.state, deltaTime, this.pointerForce);
+    this.state = advancePlayground(this.state, deltaTime, {
+      gravity: this.gravity,
+      pointerPosition: this.pointerPosition,
+    });
 
     for (const settled of findSettledCompetitions(this.state)) {
       const outcome = await settled.competition.restartCompetition(
@@ -141,13 +141,11 @@ export class Playground {
     competition: ICompetition,
     { player, pendulumOptions }: INextGenerationEntry
   ): IPlaygroundEntry => {
-    const world = createWorld({ ...this.defaultPendulumOptions, ...pendulumOptions }, this.gravity);
-
     return {
       player,
-      world,
+      world: createWorld({ ...this.defaultPendulumOptions, ...pendulumOptions }),
       active: true,
-      membership: { competition, scoreOf: competition.scoreCalculatorBuilder(world) },
+      membership: { competition, scoreOf: competition.createScoreCalculator() },
       score: 0,
     };
   };
@@ -167,7 +165,7 @@ export class Playground {
       this.renderer.renderStatic();
       this.renderer.render(
         this.state.entries.map(({ world }) => world),
-        this.pointerForce
+        this.pointerPosition
       );
     });
   }

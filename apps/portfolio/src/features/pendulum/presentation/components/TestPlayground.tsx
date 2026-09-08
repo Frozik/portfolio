@@ -34,7 +34,7 @@ export const TestPlayground = observer(() => {
   }
 
   return (
-    <PendulumPlayground session={store.test} pauseResumeKeyCode="Space" pointerForce>
+    <PendulumPlayground session={store.test} pauseResumeKeyCode="Space" pointerPush>
       {matchValueDescriptor(robot, {
         synced: ({ value }) => (
           <div className={PLAYER_LABEL_CLASS} onClick={handleRemoveRobot}>

@@ -63,12 +63,14 @@ function createRobot(name: string): IRobotPlayer & { readonly dispose: TDisposeS
   return robot;
 }
 
-type TRenderSpy = Mock<(worlds: readonly IWorld[], pointerForce: IPoint | undefined) => undefined>;
+type TRenderSpy = Mock<
+  (worlds: readonly IWorld[], pointerPosition: IPoint | undefined) => undefined
+>;
 
 function createRenderer(): IRenderer & { readonly render: TRenderSpy } {
   return {
     renderStatic: vi.fn(() => undefined),
-    render: vi.fn((_worlds: readonly IWorld[], _pointerForce: IPoint | undefined) => undefined),
+    render: vi.fn((_worlds: readonly IWorld[], _pointerPosition: IPoint | undefined) => undefined),
   };
 }
 
@@ -86,7 +88,7 @@ function createCompetition({
     start: '2026-01-01T00:00:00Z' as ICompetition['start'],
     restarts,
     init: async () => players,
-    scoreCalculatorBuilder: () => deltaTime => deltaTime,
+    createScoreCalculator: () => (_world, deltaTime) => deltaTime,
     competitionCompleted: elapsed => elapsed >= runLength,
     competitionForPlayerCompleted: () => false,
     async restartCompetition(scored) {

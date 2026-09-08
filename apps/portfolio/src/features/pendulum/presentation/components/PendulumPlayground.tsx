@@ -31,13 +31,13 @@ export const PendulumPlayground = observer(
   ({
     session,
     pauseResumeKeyCode,
-    pointerForce = false,
+    pointerPush = false,
     children,
   }: {
     readonly session: PlaygroundSession;
     readonly pauseResumeKeyCode?: string;
     /** Lets the primary pointer button push the bobs away. */
-    readonly pointerForce?: boolean;
+    readonly pointerPush?: boolean;
     readonly children?: ReactNode;
   }) => {
     const ref = useRef<HTMLDivElement>(null);
@@ -64,9 +64,9 @@ export const PendulumPlayground = observer(
     usePointerAction(
       useFunction(({ x, y, buttons }) => {
         const pressed = (buttons & PRIMARY_POINTER_BUTTON_MASK) !== 0;
-        session.setPointerForce(pressed ? { x: x - width / 2, y: y - height / 2 } : undefined);
+        session.setPointerPosition(pressed ? { x: x - width / 2, y: y - height / 2 } : undefined);
       }),
-      pointerForce ? ref : undefined
+      pointerPush ? ref : undefined
     );
 
     return (

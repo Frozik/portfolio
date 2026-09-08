@@ -8,8 +8,10 @@ const FPS_QUANTUM = 5;
 const FRAME_DELTA_SMOOTHING = 0.1;
 
 export const INITIAL_FRAME_DELTA = MS_PER_SECOND / 60;
+/** Frames stop while the tab is hidden; the first one back would otherwise carry the whole absence. */
+export const MAX_FRAME_DELTA = 250;
 
-/** Runs `onFrame` with the elapsed time on every frame until the returned function is called. */
+/** Runs `onFrame` with the elapsed time, capped at `MAX_FRAME_DELTA`, on every frame until the returned function is called. */
 export function startFrameLoop(
   frames: IFrameScheduler,
   onFrame: (deltaTime: DOMHighResTimeStamp) => void
@@ -18,7 +20,7 @@ export function startFrameLoop(
 
   const handleFrame = (time: DOMHighResTimeStamp): void => {
     if (!isNil(previousTime)) {
-      onFrame(time - previousTime);
+      onFrame(Math.min(time - previousTime, MAX_FRAME_DELTA));
     }
     previousTime = time;
     cancel = frames.requestFrame(handleFrame);

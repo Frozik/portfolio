@@ -1,8 +1,8 @@
 import type { LayersModel, Tensor } from '@tensorflow/tfjs';
 import { loadLayersModel, tensor2d, tidy } from '@tensorflow/tfjs';
 import { round } from 'lodash-es';
-import { Vector } from 'matter-js';
 
+import { firstBobHeading } from '../bob-heading';
 import { RAILS_HALF_LENGTH } from '../constants';
 import {
   crossoverModels,
@@ -11,6 +11,7 @@ import {
 } from '../genetic/model-operators';
 import { describeModel } from '../neural-network/describe-model';
 import type { TLayerDescriptor } from '../neural-network/types';
+import { bobVelocities } from '../physics/kinematics';
 import type { IAction, IRobotPlayer, IWorld, RobotModelUrl } from '../types';
 import { EPlayerType } from '../types';
 import { zNormalization } from '../utils';
@@ -18,7 +19,8 @@ import { createRobotName } from './robot-name';
 import { createInitialModel, ensureTensorflowBackend } from './tensorflow-model';
 
 const MAX_PIVOT_VELOCITY = 1;
-const MAX_BOB_VELOCITY = 50;
+/** px/ms; the 50 px per 60 fps frame the networks were trained against. */
+const MAX_BOB_VELOCITY = 3;
 const MAX_MUTATION_RATE = 0.2;
 const MUTATION_RATE_PRECISION = 4;
 
@@ -65,16 +67,12 @@ export class TensorflowPlayer implements IRobotPlayer {
   }
 
   play(world: IWorld): IAction {
-    const {
-      pivot,
-      bobs: [bob],
-    } = world;
+    const [bobVelocity] = bobVelocities(world);
 
-    const angleVector = Vector.sub(bob.position, pivot.position);
-    const angle = zNormalization(Vector.angle(angleVector, { x: 0, y: 1 }), Math.PI);
-    const velocityX = zNormalization(bob.velocity.x, MAX_BOB_VELOCITY);
-    const velocityY = zNormalization(bob.velocity.y, MAX_BOB_VELOCITY);
-    const position = zNormalization(pivot.position.x, RAILS_HALF_LENGTH);
+    const angle = zNormalization(firstBobHeading(world), Math.PI);
+    const velocityX = zNormalization(bobVelocity.x, MAX_BOB_VELOCITY);
+    const velocityY = zNormalization(bobVelocity.y, MAX_BOB_VELOCITY);
+    const position = zNormalization(world.pivotX, RAILS_HALF_LENGTH);
 
     const outputValue = tidy(() => {
       const outputTensor = this.model.predict(

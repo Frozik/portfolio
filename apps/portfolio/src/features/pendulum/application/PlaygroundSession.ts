@@ -8,7 +8,7 @@ import {
   startFrameLoop,
 } from '../domain/frame-loop';
 import { FrameTicker } from '../domain/FrameTicker';
-import { DEFAULT_GRAVITY } from '../domain/physics/world-gravity';
+import { DEFAULT_GRAVITY } from '../domain/physics/gravity';
 import { Playground } from '../domain/Playground';
 import type { IFrameScheduler } from '../domain/ports/frame-scheduler';
 import type { TSubstepPolicy } from '../domain/simulation-speed';
@@ -74,8 +74,8 @@ export class PlaygroundSession {
     this.setPaused(!this.paused);
   }
 
-  setPointerForce(pointerForce: IPoint | undefined): void {
-    this.playground.setPointerForce(pointerForce);
+  setPointerPosition(pointerPosition: IPoint | undefined): void {
+    this.playground.setPointerPosition(pointerPosition);
   }
 
   attachRenderer(renderer: IRenderer | undefined): void {

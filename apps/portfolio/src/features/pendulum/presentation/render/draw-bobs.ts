@@ -1,9 +1,8 @@
-import type { Vector } from 'matter-js';
-
 import { BOB_RADIUS } from '../../domain/constants';
+import type { IPoint } from '../../domain/types';
 import { BOB_FILL_COLOR, LINE_THICKNESS, STROKE_COLOR } from './constants';
 
-export function drawBobs(context: CanvasRenderingContext2D, positions: readonly Vector[]): void {
+export function drawBobs(context: CanvasRenderingContext2D, positions: readonly IPoint[]): void {
   context.save();
 
   for (const position of positions) {

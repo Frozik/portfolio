@@ -29,13 +29,13 @@ export function createCanvasRenderer({ staticContext, context }: IPlaygroundCanv
     renderStatic(): void {
       withCenteredOrigin(staticContext, drawRails);
     },
-    render(worlds: readonly IWorld[], pointerForce: IPoint | undefined): void {
+    render(worlds: readonly IWorld[], pointerPosition: IPoint | undefined): void {
       withCenteredOrigin(context, target => {
         for (const world of worlds) {
           drawPendulum(target, world);
         }
-        if (!isNil(pointerForce)) {
-          drawForce(target, pointerForce);
+        if (!isNil(pointerPosition)) {
+          drawForce(target, pointerPosition);
         }
       });
     },

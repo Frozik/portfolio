@@ -3,10 +3,10 @@ import { isNil, max, orderBy } from 'lodash-es';
 
 import type { IGeneration } from '../domain/generation';
 import { HALT_PLAYER_SCORE_PER_MS, POPULATION_SIZE } from '../domain/genetic/constants';
+import { createSinglePendulumScoreCalculator } from '../domain/genetic/createSinglePendulumScoreCalculator';
 import { createTensorflowPlayers } from '../domain/genetic/createTensorflowPlayers';
 import { loadTensorflowPlayers } from '../domain/genetic/loadTensorflowPlayers';
 import { singlePendulumGenerationBuilder } from '../domain/genetic/singlePendulumGenerationBuilder';
-import { singlePendulumScoreCalculatorBuilder } from '../domain/genetic/singlePendulumScoreCalculatorBuilder';
 import type { IGenerationsRepository } from '../domain/ports/generations-repository';
 import type { ICompetition, IScoredPlayer, TPlayer } from '../domain/types';
 import { isScoredRobot } from '../domain/types';
@@ -48,7 +48,7 @@ export function createFitnessCompetition({
         : loadTensorflowPlayers(savedPlayers);
     },
 
-    scoreCalculatorBuilder: singlePendulumScoreCalculatorBuilder,
+    createScoreCalculator: createSinglePendulumScoreCalculator,
 
     competitionForPlayerCompleted(_: TPlayer, score: number): boolean {
       return score < HALT_PLAYER_SCORE_PER_MS * FITNESS_RUN_INTERVAL;

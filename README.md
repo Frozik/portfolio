@@ -9,7 +9,7 @@ Portfolio monorepo — interactive demos showcasing React, WebGPU,
 TensorFlow.js, and physics simulations.
 
 **Tech stack**: React 19, TypeScript 7, MobX 7, Tailwind CSS v4, Radix UI, Vite 8,
-WebGPU, WebRTC, Yjs, Socket.IO, TensorFlow.js, MediaPipe, Matter.js.
+WebGPU, WebRTC, Yjs, Socket.IO, TensorFlow.js, MediaPipe.
 
 ## Getting Started
 
@@ -87,8 +87,12 @@ Available in PDF format for download.
 ### Pendulum
 
 Genetic algorithm evolves neural networks to balance an inverted pendulum.
-Uses TensorFlow.js for neural network inference and Matter.js for 2D physics
-simulation.
+Uses TensorFlow.js for neural network inference; the physics is the
+closed-form Lagrangian model of an N-link chain pendulum on a cart with a
+prescribed rail velocity (mass-matrix form, exact impulse when the cart's
+velocity changes, quadratic air drag, pointer push), integrated with RK4 at a
+substep capped to 4 ms — no physics engine, deterministic and effectively
+independent of the frame rate.
 
 **Fitness Playground** — simulation area for neural networks. The best
 candidates are selected using mutation and crossover. Simulation speed adapts

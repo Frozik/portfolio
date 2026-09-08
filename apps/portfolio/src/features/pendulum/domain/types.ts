@@ -1,6 +1,5 @@
 import type { ISO } from '@frozik/utils/date/types';
 import type { Opaque } from '@frozik/utils/types/base';
-import type { Body, Engine } from 'matter-js';
 
 import type { TLayerDescriptor } from './neural-network/types';
 
@@ -15,10 +14,23 @@ export interface IPoint {
   readonly y: number;
 }
 
+/**
+ * A pendulum on its rails as an immutable value: the pivot's rail position
+ * and velocity plus one angle (from the downward vertical, y pointing down)
+ * and angular velocity per rod. Cartesian bob data is derived by
+ * `physics/kinematics`. Lengths are px, time is ms.
+ */
 export interface IWorld {
-  readonly engine: Engine;
-  readonly pivot: Body;
-  readonly bobs: readonly Body[];
+  readonly pivotX: number;
+  readonly pivotVelocity: number;
+  readonly angles: readonly number[];
+  readonly angularVelocities: readonly number[];
+}
+
+/** What acts on every world of a playground besides its player: the gravity slider and the pointer push. */
+export interface IEnvironment {
+  readonly gravity: number;
+  readonly pointerPosition: IPoint | undefined;
 }
 
 export interface IPendulumOptions {
@@ -68,7 +80,7 @@ export interface ITicker {
 
 export interface IRenderer {
   renderStatic(): void;
-  render(worlds: readonly IWorld[], pointerForce: IPoint | undefined): void;
+  render(worlds: readonly IWorld[], pointerPosition: IPoint | undefined): void;
 }
 
 export interface IScoredPlayer<TScoredPlayer extends TPlayer = TPlayer> {
@@ -90,7 +102,8 @@ export interface ICompetition {
 
   init(): Promise<readonly TPlayer[]>;
 
-  scoreCalculatorBuilder(world: IWorld): (deltaTime: DOMHighResTimeStamp) => number;
+  /** A fresh, stateful scorer for one run; called with the world after every step. */
+  createScoreCalculator(): (world: IWorld, deltaTime: DOMHighResTimeStamp) => number;
 
   competitionCompleted(elapsed: DOMHighResTimeStamp): boolean;
 

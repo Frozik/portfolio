@@ -1,11 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 
-import { updateWorld } from './physics/updateWorld';
+import { advanceWorld } from './physics/advanceWorld';
 import type {
   ICompetition,
+  IEnvironment,
   INextGenerationEntry,
-  IPoint,
   IScoredPlayer,
   IWorld,
   TCompetitionOutcome,
@@ -14,7 +14,7 @@ import type {
 
 interface ICompetitionMembership {
   readonly competition: ICompetition;
-  readonly scoreOf: (deltaTime: DOMHighResTimeStamp) => number;
+  readonly scoreOf: (world: IWorld, deltaTime: DOMHighResTimeStamp) => number;
 }
 
 export interface IPlaygroundEntry {
@@ -46,7 +46,7 @@ export const EMPTY_PLAYGROUND_STATE: IPlaygroundState = { entries: [], competiti
 export function advancePlayground(
   state: IPlaygroundState,
   deltaTime: DOMHighResTimeStamp,
-  pointerForce: IPoint | undefined
+  environment: IEnvironment
 ): IPlaygroundState {
   const competitions = state.competitions.map(running => ({
     ...running,
@@ -59,7 +59,7 @@ export function advancePlayground(
   );
 
   const entries = state.entries
-    .map(entry => advanceEntry(entry, deltaTime, pointerForce))
+    .map(entry => advanceEntry(entry, deltaTime, environment))
     .map(entry =>
       !isNil(entry.membership) && timedOut.has(entry.membership.competition)
         ? { ...entry, active: false }
@@ -72,25 +72,25 @@ export function advancePlayground(
 function advanceEntry(
   entry: IPlaygroundEntry,
   deltaTime: DOMHighResTimeStamp,
-  pointerForce: IPoint | undefined
+  environment: IEnvironment
 ): IPlaygroundEntry {
   if (!entry.active) {
     return entry;
   }
 
   const action = entry.player.play(entry.world, deltaTime);
-  updateWorld(entry.world, deltaTime, action, pointerForce);
+  const world = advanceWorld(entry.world, deltaTime, action, environment);
 
   if (isNil(entry.membership)) {
-    return entry;
+    return { ...entry, world };
   }
 
-  const score = entry.score + entry.membership.scoreOf(deltaTime);
+  const score = entry.score + entry.membership.scoreOf(world, deltaTime);
   const halted = entry.membership.competition.competitionForPlayerCompleted(entry.player, score);
 
   return halted
-    ? { ...entry, active: false, score: Number.NEGATIVE_INFINITY }
-    : { ...entry, score };
+    ? { ...entry, world, active: false, score: Number.NEGATIVE_INFINITY }
+    : { ...entry, world, score };
 }
 
 /** Competitions none of whose members are still running. */
