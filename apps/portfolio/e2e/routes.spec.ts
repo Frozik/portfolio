@@ -60,7 +60,9 @@ for (const segment of ROUTES) {
 
 test('landing exposes the section navigation and the CV sections', async ({ page }) => {
   await page.goto('');
-  await expect(page.locator('h1')).toContainText(/Engineer|Инженер/);
+  // The prerendered page carries one root per language until the deferred
+  // bootstrap keeps the visitor's and names it `#root`.
+  await expect(page.locator('#root h1')).toContainText(/Engineer|Инженер/);
   for (const id of ['about', 'skills', 'work', 'projects', 'contact']) {
     await expect(page.locator(`#${id}`)).toHaveCount(1);
   }
