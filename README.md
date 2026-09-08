@@ -232,6 +232,29 @@ instrument selector, each with its own price-bin height.
 - Persistence: aggregates + raw trades in IndexedDB (cleared on
   `pagehide`), LRU-evicted at 32 / 8 blocks respectively
 
+### Space Golf
+
+A golf puzzle in space, after the iOS game Gravity Golfing: whichever
+horizontal or vertical wall the ball touches becomes the floor, 45° cuts
+only bounce it, and the cup must be reached by chaining walls. Rendered
+with WebGPU, physics written for the game (`features/space-golf/domain`).
+
+- Press anywhere and pull the rubber band; five dots from the ball show
+  the direction and the power, and returning to the anchor cancels the
+  stroke
+- Spike rows flip between extended and retracted with every stroke; an
+  extended spike destroys the ball, which reappears where it last rested
+- The board is open space: blocks at the edge run on past it, a ball can
+  fly off and bursts after three seconds out there; the cup is a real
+  rounded notch the ball has to roll into — a fast ball bounces off its rim
+- Thin elastic bars grow out of the blocks, and diamond, square and ring
+  pickups float in the open, counted in the HUD as the ball collects them
+- Levels are endless and procedural: each seed is laid out, then proven
+  playable by the game's own physics — the solver's stroke count is the
+  par shown in the HUD; the next level is generated in a worker while the
+  current one is played
+- Progress (level, total strokes, best per level) lives in IndexedDB
+
 ### Stereometry
 
 Interactive 3D construction tool for stereometry puzzles — a digital

@@ -171,7 +171,7 @@
       }
     },
     {
-      "files": ["**/*-worker.ts"],
+      "files": ["**/*-worker.ts", "**/Worker*.ts"],
       "rules": {
         "unicorn/require-post-message-target-origin": "off"
       }

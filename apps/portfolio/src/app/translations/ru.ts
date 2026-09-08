@@ -37,6 +37,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     timeseries: 'Таймсерии',
     binance: 'Стакан Binance',
     stereometry: 'Стереометрия',
+    spaceGolf: 'Космический гольф',
     sitePlanner: 'Планировщик участка',
     controls: 'Элементы управления',
     retro: 'Ретроспектива',
