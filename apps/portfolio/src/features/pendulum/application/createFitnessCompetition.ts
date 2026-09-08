@@ -2,13 +2,19 @@ import type { ISO } from '@frozik/utils/date/types';
 import { isNil, max, orderBy } from 'lodash-es';
 
 import type { IGeneration } from '../domain/generation';
-import { HALT_PLAYER_SCORE_PER_MS, POPULATION_SIZE } from '../domain/genetic/constants';
+import {
+  HOPELESS_AFTER,
+  HOPELESS_SCORE_PER_MS,
+  POPULATION_SIZE,
+} from '../domain/genetic/constants';
 import { createSinglePendulumScoreCalculator } from '../domain/genetic/createSinglePendulumScoreCalculator';
 import { createTensorflowPlayers } from '../domain/genetic/createTensorflowPlayers';
+import { episodesOf, sumScoresByPlayer } from '../domain/genetic/episodes';
 import { loadTensorflowPlayers } from '../domain/genetic/loadTensorflowPlayers';
 import { singlePendulumGenerationBuilder } from '../domain/genetic/singlePendulumGenerationBuilder';
+import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
 import type { IGenerationsRepository } from '../domain/ports/generations-repository';
-import type { ICompetition, IScoredPlayer, TPlayer } from '../domain/types';
+import type { ICompetition, INextGenerationEntry, IScoredPlayer, TPlayer } from '../domain/types';
 import { isScoredRobot } from '../domain/types';
 
 const MAX_RUNS = 10_000;
@@ -30,7 +36,11 @@ export function createFitnessCompetition({
   readonly onGenerationCompleted: (generation: IGeneration) => void;
   readonly saveRobotModel: IGenerationsRepository['saveRobotModel'];
 }): ICompetition {
-  const breedNextGeneration = singlePendulumGenerationBuilder(POPULATION_SIZE, MAX_RUNS);
+  const breedNextGeneration = singlePendulumGenerationBuilder(
+    POPULATION_SIZE,
+    MAX_RUNS,
+    () => new TensorflowPlayer()
+  );
 
   let completedGenerationsCount = getGenerations().length;
 
@@ -40,26 +50,29 @@ export function createFitnessCompetition({
     // Generations are read on init, not when the competition is built: the
     // competition outlives the playground, so a re-entered playground must
     // resume from the newest generation instead of a stale snapshot.
-    init(): Promise<readonly TPlayer[]> {
+    async init(): Promise<readonly INextGenerationEntry[]> {
       const savedPlayers = getGenerations().at(-1)?.players;
+      const players = isNil(savedPlayers)
+        ? await createTensorflowPlayers(POPULATION_SIZE)
+        : await loadTensorflowPlayers(savedPlayers);
 
-      return isNil(savedPlayers)
-        ? createTensorflowPlayers(POPULATION_SIZE)
-        : loadTensorflowPlayers(savedPlayers);
+      return players.flatMap(player => episodesOf(player));
     },
 
     createScoreCalculator: createSinglePendulumScoreCalculator,
 
-    competitionForPlayerCompleted(_: TPlayer, score: number): boolean {
-      return score < HALT_PLAYER_SCORE_PER_MS * FITNESS_RUN_INTERVAL;
+    competitionForPlayerCompleted(_: TPlayer, score: number, elapsed): boolean {
+      return elapsed >= HOPELESS_AFTER && score < HOPELESS_SCORE_PER_MS * elapsed;
     },
 
     competitionCompleted(elapsed: DOMHighResTimeStamp): boolean {
       return elapsed >= FITNESS_RUN_INTERVAL;
     },
 
-    async restartCompetition(playersWithScore: readonly IScoredPlayer[], elapsed) {
+    async restartCompetition(episodesWithScore: readonly IScoredPlayer[], elapsed) {
       completedGenerationsCount++;
+
+      const playersWithScore = sumScoresByPlayer(episodesWithScore);
 
       const players = await Promise.all(
         playersWithScore.filter(isScoredRobot).map(async ({ player, score }) => ({

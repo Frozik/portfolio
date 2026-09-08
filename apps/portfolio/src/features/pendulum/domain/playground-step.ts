@@ -58,8 +58,12 @@ export function advancePlayground(
       .map(({ competition }) => competition)
   );
 
+  const elapsedOf = new Map(
+    competitions.map(({ competition, elapsed }) => [competition, elapsed] as const)
+  );
+
   const entries = state.entries
-    .map(entry => advanceEntry(entry, deltaTime, environment))
+    .map(entry => advanceEntry(entry, deltaTime, environment, elapsedOf))
     .map(entry =>
       !isNil(entry.membership) && timedOut.has(entry.membership.competition)
         ? { ...entry, active: false }
@@ -72,7 +76,8 @@ export function advancePlayground(
 function advanceEntry(
   entry: IPlaygroundEntry,
   deltaTime: DOMHighResTimeStamp,
-  environment: IEnvironment
+  environment: IEnvironment,
+  elapsedOf: ReadonlyMap<ICompetition, DOMHighResTimeStamp>
 ): IPlaygroundEntry {
   if (!entry.active) {
     return entry;
@@ -85,12 +90,15 @@ function advanceEntry(
     return { ...entry, world };
   }
 
+  const { competition } = entry.membership;
   const score = entry.score + entry.membership.scoreOf(world, deltaTime);
-  const halted = entry.membership.competition.competitionForPlayerCompleted(entry.player, score);
+  const halted = competition.competitionForPlayerCompleted(
+    entry.player,
+    score,
+    elapsedOf.get(competition) ?? 0
+  );
 
-  return halted
-    ? { ...entry, world, active: false, score: Number.NEGATIVE_INFINITY }
-    : { ...entry, world, score };
+  return { ...entry, world, score, active: !halted };
 }
 
 /** Competitions none of whose members are still running. */

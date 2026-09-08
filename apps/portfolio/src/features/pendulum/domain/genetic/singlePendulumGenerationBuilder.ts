@@ -1,8 +1,7 @@
 import { assert } from '@frozik/utils/assert/assert';
-import { clamp, isNil, orderBy, shuffle, sum } from 'lodash-es';
+import { clamp, orderBy, sample, sampleSize, sum } from 'lodash-es';
 
 import { RAILS_HALF_LENGTH } from '../constants';
-import { TensorflowPlayer } from '../players/TensorflowPlayer';
 import type {
   INextGenerationEntry,
   IPendulumOptions,
@@ -11,18 +10,12 @@ import type {
   TCompetitionOutcome,
 } from '../types';
 import { isScoredRobot } from '../types';
-import {
-  HALT_PLAYER_SCORE_PER_MS,
-  HIGH_SCORE_PER_MS,
-  LOW_PLAYER_SCORE_PER_MS,
-  MEDIUM_SCORE_PER_MS,
-} from './constants';
+import { MAX_SCORE_PER_MS, SEASONED_SCORE_PER_MS } from './constants';
+import { episodesOf } from './episodes';
 
 enum EAction {
   Mutate = 'mutate',
-  AggressiveMutation = 'mutate-aggressive',
   Crossover = 'crossover',
-  Pick = 'pick',
   New = 'new',
 }
 
@@ -34,23 +27,31 @@ interface IRobotEntry extends INextGenerationEntry {
 // Fraction of the population kept as elite survivors each generation (top 1/5th).
 const ELITE_FRACTION_DIVISOR = 5;
 
-// Mutation rates (gaussian noise scale applied to network weights) by survivor tier.
-const HALT_PLAYER_MUTATION_RATE = 0.02;
-const LOW_PLAYER_MUTATION_RATES = [0.005, 0.05, 0.1] as const;
-const ELITE_MUTATION_RATES = [0.01, 0.05] as const;
+// Gaussian noise scales applied to network weights.
+const ELITE_MUTATION_RATES = [0.02, 0.1] as const;
+const MUTATION_RATES = [0.02, 0.05, 0.1, 0.2] as const;
 
-// Mutation rates used by the random-action breeding phase.
-const STANDARD_MUTATION_RATE = 0.1;
-const AGGRESSIVE_MUTATION_RATE = 0.2;
+// Parents are the best of this many robots drawn at random from the ranking.
+const TOURNAMENT_SIZE = 3;
 
 // Relative probabilities for breeding actions when filling the rest of the population.
-const MUTATE_PROBABILITY = 50;
-const AGGRESSIVE_MUTATION_PROBABILITY = 5;
-const CROSSOVER_PROBABILITY = 10;
-const PICK_PROBABILITY = 5;
-const NEW_PLAYER_PROBABILITY = 1;
+const MUTATE_PROBABILITY = 70;
+const CROSSOVER_PROBABILITY = 25;
+const NEW_PLAYER_PROBABILITY = 5;
 
-export function singlePendulumGenerationBuilder(populationSize: number, maxRuns: number) {
+/**
+ * Elitism plus tournament selection: the best fifth survives untouched (the
+ * seasoned ones from a random rail position, so they generalise), every
+ * survivor gets a near and a far mutant, and the rest of the population is
+ * bred from tournament-picked parents so the pressure stays on the top while
+ * the bottom still contributes genes. Scores arrive summed per robot; every
+ * robot goes out again with its episodes.
+ */
+export function singlePendulumGenerationBuilder(
+  populationSize: number,
+  maxRuns: number,
+  createRobot: () => IRobotPlayer
+) {
   return async (
     playersWithScore: readonly IScoredPlayer[],
     timeStep: DOMHighResTimeStamp,
@@ -60,120 +61,81 @@ export function singlePendulumGenerationBuilder(populationSize: number, maxRuns:
       return { kind: 'finished' };
     }
 
-    const partSize = Math.trunc(
-      Math.min(playersWithScore.length, populationSize) / ELITE_FRACTION_DIVISOR
+    const ranked = orderBy(playersWithScore.filter(isScoredRobot), ({ score }) => score, 'desc');
+    const eliteCount = Math.trunc(Math.min(ranked.length, populationSize) / ELITE_FRACTION_DIVISOR);
+    const elite = ranked.slice(0, eliteCount);
+
+    const newPopulation: IRobotEntry[] = elite.map(({ player, score }) =>
+      startSeasonedAnywhere(player, score / timeStep)
     );
 
-    const orderedPlayersWithScores = orderBy(playersWithScore, ({ score }) => score, 'desc').filter(
-      isScoredRobot
-    );
-
-    const newPopulation: IRobotEntry[] = [];
-
-    for (const { player, score } of orderedPlayersWithScores.slice(0, partSize)) {
-      if (score <= timeStep * HALT_PLAYER_SCORE_PER_MS) {
-        newPopulation.push({ player: await player.mutate(HALT_PLAYER_MUTATION_RATE) });
-      } else if (score <= timeStep * LOW_PLAYER_SCORE_PER_MS) {
-        for (const mutationRate of LOW_PLAYER_MUTATION_RATES) {
-          newPopulation.push({ player: await player.mutate(mutationRate) });
-        }
-      } else {
-        newPopulation.push(putPlayerInRandomPosition(player, timeStep, score));
+    for (const { player } of elite) {
+      for (const mutationRate of ELITE_MUTATION_RATES) {
+        newPopulation.push({ player: await player.mutate(mutationRate) });
       }
     }
-
-    // Only survivors kept at the rail center seed the elite mutations.
-    for (const { player, pendulumOptions } of newPopulation.slice(0, partSize)) {
-      if (isNil(pendulumOptions)) {
-        for (const mutationRate of ELITE_MUTATION_RATES) {
-          newPopulation.push({ player: await player.mutate(mutationRate) });
-        }
-      }
-    }
-
-    const shuffledPlayers = shuffle(orderedPlayersWithScores.slice(partSize));
 
     while (newPopulation.length < populationSize) {
       const action = actionRandom(
         { action: EAction.Mutate, probability: MUTATE_PROBABILITY },
-        { action: EAction.AggressiveMutation, probability: AGGRESSIVE_MUTATION_PROBABILITY },
         { action: EAction.Crossover, probability: CROSSOVER_PROBABILITY },
-        { action: EAction.Pick, probability: PICK_PROBABILITY },
         { action: EAction.New, probability: NEW_PLAYER_PROBABILITY }
       );
 
       switch (action) {
         case EAction.Mutate: {
-          const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
-
-          newPopulation.push({ player: await randomPlayer.mutate(STANDARD_MUTATION_RATE) });
-
-          break;
-        }
-        case EAction.AggressiveMutation: {
-          const randomPlayer = pickRandomArrayElement(orderedPlayersWithScores).player;
-
-          newPopulation.push({ player: await randomPlayer.mutate(AGGRESSIVE_MUTATION_RATE) });
-
+          const parent = tournamentWinner(ranked);
+          newPopulation.push({ player: await parent.mutate(sample(MUTATION_RATES)) });
           break;
         }
         case EAction.Crossover: {
-          const randomPlayer1 = pickRandomArrayElement(orderedPlayersWithScores).player;
-          const randomPlayer2 = pickRandomArrayElement(orderedPlayersWithScores).player;
-
-          if (randomPlayer1 !== randomPlayer2) {
-            newPopulation.push({ player: await randomPlayer1.crossoverModels(randomPlayer2) });
+          const father = tournamentWinner(ranked);
+          const mother = tournamentWinner(ranked);
+          if (father !== mother) {
+            newPopulation.push({ player: await father.crossoverModels(mother) });
           }
-
-          break;
-        }
-        case EAction.Pick: {
-          const picked = shuffledPlayers.pop();
-          if (!isNil(picked)) {
-            newPopulation.push({ player: picked.player });
-          }
-
           break;
         }
         case EAction.New: {
-          newPopulation.push({ player: new TensorflowPlayer() });
-
+          newPopulation.push({ player: createRobot() });
           break;
         }
       }
     }
 
-    return { kind: 'nextGeneration', entries: newPopulation };
+    return {
+      kind: 'nextGeneration',
+      entries: newPopulation.flatMap(({ player, pendulumOptions }) =>
+        episodesOf(player, pendulumOptions)
+      ),
+    };
   };
 }
 
-function putPlayerInRandomPosition(
-  player: IRobotPlayer,
-  timeStep: DOMHighResTimeStamp,
-  score: number
-): IRobotEntry {
-  if (score <= timeStep * MEDIUM_SCORE_PER_MS) {
+/** A robot that balances most of its run starts the next one away from the centre, the better the farther. */
+function startSeasonedAnywhere(player: IRobotPlayer, scorePerMs: number): IRobotEntry {
+  if (scorePerMs < SEASONED_SCORE_PER_MS) {
     return { player };
   }
 
-  const positionMaxOffset = clamp(score / (timeStep * HIGH_SCORE_PER_MS), 0, RAILS_HALF_LENGTH);
+  const reach =
+    clamp((scorePerMs - SEASONED_SCORE_PER_MS) / (MAX_SCORE_PER_MS - SEASONED_SCORE_PER_MS), 0, 1) *
+    RAILS_HALF_LENGTH;
 
-  if (positionMaxOffset === 0) {
-    return { player };
-  }
+  return { player, pendulumOptions: { pivotPosition: randomNumber(-reach, reach) } };
+}
 
-  return {
-    player,
-    pendulumOptions: { pivotPosition: randomNumber(-positionMaxOffset, positionMaxOffset) },
-  };
+/** The ranking is ordered best first, so the winner is the lowest index drawn. */
+function tournamentWinner(ranked: readonly IScoredPlayer<IRobotPlayer>[]): IRobotPlayer {
+  assert(ranked.length > 0, 'Cannot breed from an empty population');
+
+  const contestants = sampleSize(ranked, TOURNAMENT_SIZE);
+  return contestants.reduce((best, candidate) => (candidate.score > best.score ? candidate : best))
+    .player;
 }
 
 function randomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min) + min);
-}
-
-function pickRandomArrayElement<TElement>(array: readonly TElement[]): TElement {
-  return array[Math.trunc(Math.random() * array.length)];
 }
 
 function actionRandom<TAction>(

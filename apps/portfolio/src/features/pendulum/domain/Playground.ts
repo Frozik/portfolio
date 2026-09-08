@@ -63,16 +63,13 @@ export class Playground {
     this.startTicking();
   }
 
-  async addCompetition(
-    competition: ICompetition,
-    pendulumOptions?: Partial<IPendulumOptions>
-  ): Promise<void> {
-    const players = await competition.init();
+  async addCompetition(competition: ICompetition): Promise<void> {
+    const episodes = await competition.init();
 
     this.state = {
       entries: [
         ...this.state.entries,
-        ...players.map(player => this.spawnEntry(competition, { player, pendulumOptions })),
+        ...episodes.map(episode => this.spawnEntry(competition, episode)),
       ],
       competitions: [...this.state.competitions, { competition, elapsed: 0 }],
     };

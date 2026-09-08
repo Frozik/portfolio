@@ -2,8 +2,6 @@ import type { LayersModel, Tensor } from '@tensorflow/tfjs';
 import { loadLayersModel, tensor2d, tidy } from '@tensorflow/tfjs';
 import { round } from 'lodash-es';
 
-import { firstBobHeading } from '../bob-heading';
-import { RAILS_HALF_LENGTH } from '../constants';
 import {
   crossoverModels,
   IncompatibleModelTopologyError,
@@ -11,16 +9,17 @@ import {
 } from '../genetic/model-operators';
 import { describeModel } from '../neural-network/describe-model';
 import type { TLayerDescriptor } from '../neural-network/types';
-import { bobVelocities } from '../physics/kinematics';
 import type { IAction, IRobotPlayer, IWorld, RobotModelUrl } from '../types';
 import { EPlayerType } from '../types';
-import { zNormalization } from '../utils';
+import { observe } from './observation';
+import { accelerate } from './pivot-control';
 import { createRobotName } from './robot-name';
-import { createInitialModel, ensureTensorflowBackend } from './tensorflow-model';
+import {
+  acceptsObservation,
+  createInitialModel,
+  ensureTensorflowBackend,
+} from './tensorflow-model';
 
-const MAX_PIVOT_VELOCITY = 1;
-/** px/ms; the 50 px per 60 fps frame the networks were trained against. */
-const MAX_BOB_VELOCITY = 3;
 const MAX_MUTATION_RATE = 0.2;
 const MUTATION_RATE_PRECISION = 4;
 
@@ -39,7 +38,16 @@ export class TensorflowPlayer implements IRobotPlayer {
 
   static async load(name: string, modelUrl: RobotModelUrl): Promise<TensorflowPlayer> {
     await ensureTensorflowBackend();
-    return new TensorflowPlayer(await loadLayersModel(modelUrl), name);
+    const model = await loadLayersModel(modelUrl);
+
+    if (!acceptsObservation(model)) {
+      model.dispose();
+      throw new Error(
+        `Robot "${name}" was trained on an older observation and cannot drive this cart`
+      );
+    }
+
+    return new TensorflowPlayer(model, name);
   }
 
   describeNetwork(): readonly TLayerDescriptor[] {
@@ -66,23 +74,14 @@ export class TensorflowPlayer implements IRobotPlayer {
     }
   }
 
-  play(world: IWorld): IAction {
-    const [bobVelocity] = bobVelocities(world);
-
-    const angle = zNormalization(firstBobHeading(world), Math.PI);
-    const velocityX = zNormalization(bobVelocity.x, MAX_BOB_VELOCITY);
-    const velocityY = zNormalization(bobVelocity.y, MAX_BOB_VELOCITY);
-    const position = zNormalization(world.pivotX, RAILS_HALF_LENGTH);
-
-    const outputValue = tidy(() => {
-      const outputTensor = this.model.predict(
-        tensor2d([[velocityX, velocityY, angle, position]])
-      ) as Tensor;
+  play(world: IWorld, deltaTime: DOMHighResTimeStamp): IAction {
+    const command = tidy(() => {
+      const outputTensor = this.model.predict(tensor2d([[...observe(world)]])) as Tensor;
 
       return (outputTensor.arraySync() as number[][])[0][0];
     });
 
-    return { pivotVelocity: outputValue * MAX_PIVOT_VELOCITY };
+    return accelerate(world, command, deltaTime);
   }
 
   async save(modelUrl: RobotModelUrl): Promise<void> {

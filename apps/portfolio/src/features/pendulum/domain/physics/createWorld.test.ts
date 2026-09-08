@@ -18,6 +18,10 @@ describe('createWorld', () => {
     );
   });
 
+  it('tilts only the first rod when an initial angle is given', () => {
+    expect(createWorld({ bobsCount: 2, initialAngle: 3 }).angles).toEqual([3, 0]);
+  });
+
   it('refuses a chain without bobs', () => {
     expect(() => createWorld({ bobsCount: 0 })).toThrow();
   });

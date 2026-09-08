@@ -46,7 +46,7 @@ function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
 
 const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, IGeneration, unknown>) => {
   const maxScore = getValue<number>();
-  return <Tag color={scoreTagColor(maxScore)}>{maxScore}</Tag>;
+  return <Tag color={scoreTagColor(maxScore)}>{Math.round(maxScore)}</Tag>;
 };
 
 const PLAYER_ACTION_ICON_SIZE = 14;
@@ -59,7 +59,7 @@ const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer
   return (
     <div className="flex items-center gap-2">
       <Tag color={scoreTagColor(player.score)} className="shrink-0 whitespace-nowrap">
-        {player.score}
+        {Math.round(player.score)}
       </Tag>
       <Button
         variant="ghost"

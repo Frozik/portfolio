@@ -36,6 +36,8 @@ export interface IEnvironment {
 export interface IPendulumOptions {
   readonly bobsCount: number;
   readonly pivotPosition?: number;
+  /** The first rod's angle from the downward vertical; every rod below hangs straight. */
+  readonly initialAngle?: number;
 }
 
 export interface IAction {
@@ -100,14 +102,20 @@ export type TCompetitionOutcome =
 export interface ICompetition {
   readonly start: ISO;
 
-  init(): Promise<readonly TPlayer[]>;
+  /** The first generation's runs; a player may run several episodes, each its own entry. */
+  init(): Promise<readonly INextGenerationEntry[]>;
 
   /** A fresh, stateful scorer for one run; called with the world after every step. */
   createScoreCalculator(): (world: IWorld, deltaTime: DOMHighResTimeStamp) => number;
 
   competitionCompleted(elapsed: DOMHighResTimeStamp): boolean;
 
-  competitionForPlayerCompleted(player: TPlayer, score: number): boolean;
+  /** Whether a member's run is stopped early; its score so far still counts. */
+  competitionForPlayerCompleted(
+    player: TPlayer,
+    score: number,
+    elapsed: DOMHighResTimeStamp
+  ): boolean;
 
   restartCompetition(
     playersWithScore: readonly IScoredPlayer[],

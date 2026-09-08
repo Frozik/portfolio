@@ -94,9 +94,22 @@ velocity changes, quadratic air drag, pointer push), integrated with RK4 at a
 substep capped to 4 ms — no physics engine, deterministic and effectively
 independent of the frame rate.
 
-**Fitness Playground** — simulation area for neural networks. The best
-candidates are selected using mutation and crossover. Simulation speed adapts
-automatically to CPU performance without freezing the UI.
+**Fitness Playground** — simulation area for neural networks. Each robot is
+a `5 → 16 (tanh) → 1 (tanh)` network that sees the rod's angle from the
+upright as a sine/cosine pair, its angular velocity, and the cart's rail
+position and velocity, and commands the cart's acceleration. Fitness is a
+dense per-millisecond reward: the squared height of the bob, a bonus for
+holding it still inside a 15° cone around the upright, and mild penalties for
+drifting off-centre and for jerky accelerations. Every robot runs two
+episodes per generation, one from the hanging rest and one from a slightly
+tilted upright, and is scored on their sum: the upright start pays for the
+balancing skill directly, so the swing-up only has to end in a catch the
+robot already knows. The best fifth survives each generation (seasoned robots
+restart from random rail positions), and the rest is bred from
+tournament-picked parents by gaussian mutation and crossover; a robot that
+balances typically appears within the first ten generations.
+Simulation speed adapts automatically to CPU performance without freezing
+the UI.
 
 **Generations** — load saved generations or create new ones. Displays a table
 with generation numbers and all robots from that generation. Select any robot

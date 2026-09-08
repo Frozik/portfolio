@@ -87,7 +87,7 @@ function createCompetition({
   return {
     start: '2026-01-01T00:00:00Z' as ICompetition['start'],
     restarts,
-    init: async () => players,
+    init: async () => players.map(player => ({ player })),
     createScoreCalculator: () => (_world, deltaTime) => deltaTime,
     competitionCompleted: elapsed => elapsed >= runLength,
     competitionForPlayerCompleted: () => false,
@@ -287,7 +287,7 @@ describe('Playground competitions', () => {
     expect(competition.restarts).toHaveLength(1);
   });
 
-  it('halts a player the competition rules out and settles once every member halted', async () => {
+  it('halts a player the competition rules out, keeping its score, and settles once every member halted', async () => {
     const ticker = createManualTicker();
     const playground = new Playground(ticker, createFakeFrameScheduler());
     const robot = createRobot('a');
@@ -307,6 +307,6 @@ describe('Playground competitions', () => {
     await ticker.tick(10);
 
     expect(restart).toHaveBeenCalledTimes(1);
-    expect(restart.mock.calls[0][0][0].score).toBe(Number.NEGATIVE_INFINITY);
+    expect(restart.mock.calls[0][0][0].score).toBe(20);
   });
 });
