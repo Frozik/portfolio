@@ -46,6 +46,11 @@ const StereometryPicker = lazy(() =>
     default: m.StereometryPicker,
   }))
 );
+const SpaceGolf = lazy(() =>
+  import('../../features/space-golf/presentation/SpaceGolf').then(m => ({
+    default: m.SpaceGolf,
+  }))
+);
 const SitePlanner = lazy(() =>
   import('../../features/site-planner/presentation/SitePlanner').then(m => ({
     default: m.SitePlanner,
@@ -106,6 +111,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="binance/:instrument?" element={<BinanceView />} />
             <Route path="stereometry" element={<StereometryPicker />} />
             <Route path="stereometry/:puzzleId" element={<Stereometry />} />
+            <Route path="space-golf" element={<SpaceGolf />} />
             <Route path="site-planner" element={<SitePlanner />} />
             <Route path="controls" element={<Controls />} />
             <Route element={<CommunicationRoot />}>
