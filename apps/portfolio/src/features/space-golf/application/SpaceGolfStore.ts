@@ -7,7 +7,7 @@ import { createBall, respawn } from '../domain/ball';
 import { FIXED_STEP_SECONDS } from '../domain/constants';
 import type { Level } from '../domain/level';
 import type { Progress } from '../domain/progress';
-import { completeLevel, INITIAL_PROGRESS } from '../domain/progress';
+import { completeLevel, FIRST_LEVEL, INITIAL_PROGRESS } from '../domain/progress';
 import { aim, previewDots, shoot } from '../domain/shot';
 import { step } from '../domain/step';
 import type { LevelSource } from './ports/level-source';
@@ -18,7 +18,7 @@ export const BURST_SECONDS = 0.45;
 /** Frames longer than this (a background tab) advance the game by this much only. */
 const MAX_FRAME_SECONDS = 0.1;
 
-export type GameStatus = 'loading' | 'playing' | 'completed' | 'failed';
+export type GameStatus = 'loading' | 'playing' | 'completed';
 
 export interface Aim {
   readonly anchor: Vector2;
@@ -41,10 +41,6 @@ export class SpaceGolfStore {
   levelNumber = INITIAL_PROGRESS.levelNumber;
   totalStrokes = INITIAL_PROGRESS.totalStrokes;
   strokeCount = 0;
-  par = 0;
-  /** Pickups the ball has collected on this level, out of how many the level holds. */
-  collectedCount = 0;
-  pickupCount = 0;
   /** The band being pulled; nothing while no pointer is down. */
   aiming: Aim | undefined = undefined;
 
@@ -53,7 +49,6 @@ export class SpaceGolfStore {
   private burst: Burst | undefined = undefined;
   private progress: Progress = INITIAL_PROGRESS;
   private accumulatorSeconds = 0;
-  private readonly pendingLevels = new Map<number, Promise<Level>>();
   private started = false;
   private disposed = false;
 
@@ -68,7 +63,6 @@ export class SpaceGolfStore {
       | 'burst'
       | 'progress'
       | 'accumulatorSeconds'
-      | 'pendingLevels'
       | 'started'
       | 'disposed'
       | 'levelSource'
@@ -82,7 +76,6 @@ export class SpaceGolfStore {
         burst: false,
         progress: false,
         accumulatorSeconds: false,
-        pendingLevels: false,
         started: false,
         disposed: false,
         levelSource: false,
@@ -105,21 +98,17 @@ export class SpaceGolfStore {
   /** The five dots of the pending stroke, or nothing while the band is slack. */
   get preview(): readonly Vector2[] | undefined {
     const velocity = this.pendingVelocity();
-    if (isNil(velocity) || isNil(this.level) || isNil(this.ball)) {
+    if (isNil(velocity) || isNil(this.ball)) {
       return undefined;
     }
-    return previewDots(this.level, this.ball, velocity);
+    return previewDots(this.ball.position, velocity);
   }
 
-  /** Whether the spike rows are drawn for the stroke about to be played or the one in flight. */
-  get displayedStroke(): number {
-    if (isNil(this.ball)) {
-      return 0;
-    }
-    return this.ball.phase === 'aiming' ? this.ball.stroke + 1 : this.ball.stroke;
+  get hasPreviousLevel(): boolean {
+    return this.levelNumber > FIRST_LEVEL;
   }
 
-  /** Loads the progress and the level it points at; a second call is ignored. */
+  /** Loads the saved progress and builds the level it points at; a second call is ignored. */
   async start(): Promise<void> {
     if (this.started) {
       return;
@@ -131,10 +120,9 @@ export class SpaceGolfStore {
     }
     runInAction(() => {
       this.progress = saved ?? INITIAL_PROGRESS;
-      this.levelNumber = this.progress.levelNumber;
       this.totalStrokes = this.progress.totalStrokes;
+      this.loadLevel(this.progress.levelNumber);
     });
-    await this.loadLevel(this.progress.levelNumber);
   }
 
   beginAim(anchor: Vector2): void {
@@ -177,7 +165,7 @@ export class SpaceGolfStore {
     }
   }
 
-  /** Back to the tee with a clean count; the spike rows return to their opening state. */
+  /** Back to the tee with a clean count. */
   restart(): void {
     if (isNil(this.level)) {
       return;
@@ -186,23 +174,24 @@ export class SpaceGolfStore {
     this.burst = undefined;
     this.aiming = undefined;
     this.strokeCount = 0;
-    this.collectedCount = 0;
-    if (this.status === 'completed') {
-      this.status = 'playing';
-    }
+    this.status = 'playing';
   }
 
-  async nextLevel(): Promise<void> {
-    if (this.status !== 'completed') {
-      return;
+  /** The level after this one; after a hole-out it is the one the progress already points at. */
+  nextLevel(): void {
+    this.switchLevel(
+      this.status === 'completed' ? this.progress.levelNumber : this.levelNumber + 1
+    );
+  }
+
+  previousLevel(): void {
+    if (this.hasPreviousLevel) {
+      this.switchLevel(this.levelNumber - 1);
     }
-    await this.loadLevel(this.progress.levelNumber);
   }
 
   dispose(): void {
     this.disposed = true;
-    this.pendingLevels.clear();
-    this.levelSource.dispose();
   }
 
   private pendingVelocity(): Vector2 | undefined {
@@ -229,71 +218,41 @@ export class SpaceGolfStore {
     if (this.ball.phase !== 'flying') {
       return;
     }
-    const previous = this.ball;
-    const next = step(level, previous, FIXED_STEP_SECONDS);
-    this.ball = next;
-    if (next.collected !== previous.collected) {
-      this.collectedCount = next.collected.size;
-    }
-    if (next.phase === 'holed') {
-      this.completeCurrentLevel(next.stroke);
+    this.ball = step(level, this.ball, FIXED_STEP_SECONDS);
+    if (this.ball.phase === 'holed') {
+      this.completeCurrentLevel(this.ball.stroke);
     }
   }
 
   private completeCurrentLevel(strokes: number): void {
-    this.progress = completeLevel(this.progress, this.levelNumber, strokes);
+    this.progress = completeLevel({ ...this.progress, levelNumber: this.levelNumber }, strokes);
     this.totalStrokes = this.progress.totalStrokes;
     this.status = 'completed';
+    this.saveProgress();
+  }
+
+  private switchLevel(levelNumber: number): void {
+    if (this.status === 'loading') {
+      return;
+    }
+    this.loadLevel(levelNumber);
+    this.progress = { ...this.progress, levelNumber };
+    this.saveProgress();
+  }
+
+  private saveProgress(): void {
     void this.progressRepository.save(this.progress).catch(() => undefined);
-    this.prefetch(this.progress.levelNumber);
   }
 
-  private async loadLevel(levelNumber: number): Promise<void> {
-    this.status = 'loading';
-    let level: Level;
-    try {
-      level = await this.request(levelNumber);
-    } catch {
-      if (!this.disposed) {
-        runInAction(() => {
-          this.status = 'failed';
-        });
-      }
-      return;
-    }
-    if (this.disposed) {
-      return;
-    }
-    runInAction(() => {
-      this.pendingLevels.delete(levelNumber);
-      this.level = level;
-      this.ball = createBall(level);
-      this.burst = undefined;
-      this.aiming = undefined;
-      this.levelNumber = levelNumber;
-      this.strokeCount = 0;
-      this.collectedCount = 0;
-      this.pickupCount = level.pickups.length;
-      this.par = level.par;
-      this.accumulatorSeconds = 0;
-      this.status = 'playing';
-    });
-    this.prefetch(levelNumber + 1);
-  }
-
-  private request(levelNumber: number): Promise<Level> {
-    let pending = this.pendingLevels.get(levelNumber);
-    if (isNil(pending)) {
-      pending = this.levelSource.generate(levelNumber);
-      this.pendingLevels.set(levelNumber, pending);
-    }
-    return pending;
-  }
-
-  /** The next level is generated while this one is played, so the switch is instant. */
-  private prefetch(levelNumber: number): void {
-    this.request(levelNumber).catch(() => {
-      this.pendingLevels.delete(levelNumber);
-    });
+  private loadLevel(levelNumber: number): void {
+    const level = this.levelSource(levelNumber);
+    this.level = level;
+    this.ball = createBall(level);
+    this.burst = undefined;
+    this.aiming = undefined;
+    this.levelNumber = levelNumber;
+    this.strokeCount = 0;
+    this.accumulatorSeconds = 0;
+    this.status = 'playing';
   }
 }

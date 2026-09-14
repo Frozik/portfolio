@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { boardToPixel, fitBoard, pixelToBoard } from './board-viewport';
+import { boardPixelRect, boardToPixel, fitBoard, pixelToBoard } from './board-viewport';
 
 const BOARD = { width: 9, height: 16 };
 
@@ -18,5 +18,21 @@ describe('fitBoard', () => {
 
     expect(pixelToBoard(viewport, corner)).toEqual({ x: 0, y: 0 });
     expect(pixelToBoard(viewport, { x: corner.x, y: corner.y - viewport.scale }).y).toBeCloseTo(1);
+  });
+});
+
+describe('boardPixelRect', () => {
+  it('covers the board and nothing beyond it, in whole pixels inside the canvas', () => {
+    const canvas = { width: 1600, height: 800 };
+    const viewport = fitBoard(canvas, BOARD);
+
+    const rect = boardPixelRect(viewport, BOARD, canvas);
+
+    expect(rect.x).toBe(Math.floor(boardToPixel(viewport, { x: 0, y: 0 }).x));
+    expect(rect.y).toBe(Math.floor(boardToPixel(viewport, { x: 0, y: 16 }).y));
+    expect(rect.x + rect.width).toBe(Math.ceil(boardToPixel(viewport, { x: 9, y: 0 }).x));
+    expect(rect.y + rect.height).toBe(Math.ceil(boardToPixel(viewport, { x: 0, y: 0 }).y));
+    expect(rect.x + rect.width).toBeLessThanOrEqual(canvas.width);
+    expect(rect.y + rect.height).toBeLessThanOrEqual(canvas.height);
   });
 });

@@ -8,9 +8,7 @@ export interface SceneFrame {
   readonly level: Level;
   readonly ball: BallState;
   readonly burst: { readonly position: Vector2; readonly elapsedSeconds: number } | undefined;
-  /** Which stroke's spike states to draw: the coming one while aiming, the current one in flight. */
-  readonly displayedStroke: number;
   readonly preview: readonly Vector2[] | undefined;
-  /** Whether the band is held: a ring is drawn round the ball. */
+  /** Whether the band is stretched enough for a stroke: a ring is drawn round the ball. */
   readonly aimRing: boolean;
 }

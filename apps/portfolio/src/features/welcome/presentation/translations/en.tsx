@@ -187,6 +187,13 @@ export const welcomeTranslationsEn = {
           'A Scorched Earth remake on WebGPU — hot-seat artillery for up to ten tanks over destructible terrain, with the original manual\u2019s weapons catalog, wind, shields and eight AI personalities. Crater carving, falling dirt and explosion particles all run in compute shaders.',
         status: '33 weapons',
       },
+      'space-golf': {
+        meta: 'Games · WebGPU physics',
+        title: 'Space Golf',
+        description:
+          'A gravity-golf puzzle after Gravity Golfing: whichever wall the ball touches becomes the floor, 45° cuts only bounce it, and the cup is reached by chaining walls. Endless procedural islands on a half-metre grid, physics written for the game, Khokhloma-painted blocks, shimmering membranes and dripping goo — all drawn with WebGPU.',
+        status: 'endless levels',
+      },
       'site-planner': {
         meta: 'CAD · 2D plan + 3D terrain',
         title: 'Site Planner',

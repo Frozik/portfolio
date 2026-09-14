@@ -6,17 +6,17 @@ import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { runSpaceGolf } from '../application/render/run-space-golf';
 import { SpaceGolfStore } from '../application/SpaceGolfStore';
 import { useSpaceGolfStore } from '../application/useSpaceGolfStore';
+import { generateLevel } from '../domain/generator/generate-level';
 import { createIndexedDBProgressRepository } from '../infrastructure/IndexedDBProgressRepository';
-import { WorkerLevelSource } from '../infrastructure/WorkerLevelSource';
 import { Hud } from './components/Hud';
 import { LevelCompleteOverlay } from './components/LevelCompleteOverlay';
 import { spaceGolfT } from './translations';
 
 const RESTART_KEY = 'r';
 
-/** The composition root: the store gets its worker and its database here and nowhere else. */
+/** The composition root: the store gets its generator and its database here and nowhere else. */
 function createStore(): SpaceGolfStore {
-  return new SpaceGolfStore(new WorkerLevelSource(), createIndexedDBProgressRepository());
+  return new SpaceGolfStore(generateLevel, createIndexedDBProgressRepository());
 }
 
 export const SpaceGolf = observer(() => {
@@ -53,11 +53,6 @@ export const SpaceGolf = observer(() => {
         {store.status === 'loading' && (
           <p className="pointer-events-none absolute inset-x-0 bottom-6 text-center font-mono text-xs text-neutral-400">
             {spaceGolfT.status.loading}
-          </p>
-        )}
-        {store.status === 'failed' && (
-          <p className="absolute inset-x-0 bottom-6 px-6 text-center font-mono text-xs text-red-300">
-            {spaceGolfT.status.failed}
           </p>
         )}
         {store.status === 'playing' && store.levelNumber === 1 && store.strokeCount === 0 && (

@@ -31,7 +31,7 @@ export interface WallHit extends SegmentHit, EdgeRef {
  * offset outward by the radius, and a circle at each end. Only approaching
  * motion counts, so a ball already touching a face and moving away is free.
  * Written without allocations: it runs for every face of every wall on
- * every step, and the solver runs thousands of steps per level.
+ * every step, and the aim preview replays the steps on every pointer move.
  */
 export function sweepCircleAgainstSegment(
   from: Vector2,

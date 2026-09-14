@@ -5,6 +5,8 @@ struct BoardUniforms {
     viewport: vec2<f32>,   // device pixels
     origin: vec2<f32>,     // device-pixel position of the board's lower-left corner
     scale: f32,            // device pixels per metre
+    seed: f32,             // per-level shift of the pattern, metres; unused here
+    time: f32,             // seconds since the session started; unused here
     _pad: f32,
 };
 

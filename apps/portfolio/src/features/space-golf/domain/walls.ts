@@ -31,14 +31,13 @@ function signedDoubleArea(vertices: readonly Vector2[]): number {
 /**
  * Builds a wall from counter-clockwise vertices. The face kind is derived from
  * each edge's orientation — an axis-aligned edge is a floor, a diagonal one a
- * deflector — so a diagonal can never be a floor by mistake; `bounceEdges`
- * upgrades axis-aligned edges to the stronger rebound, and `cupEdges` are the
+ * deflector — so a diagonal can never be a floor by mistake; `kinds` names
+ * the exceptions by edge index: a surface on an axis-aligned edge, or the
  * segments of a hole's rim, the one place an edge may have any orientation.
  */
 export function createWall(
   vertices: readonly Vector2[],
-  bounceEdges: ReadonlySet<number> = new Set(),
-  cupEdges: ReadonlySet<number> = new Set()
+  kinds: ReadonlyMap<number, FaceKind> = new Map()
 ): Wall {
   if (vertices.length < MIN_VERTICES) {
     throw new Error(`createWall: a wall needs at least ${MIN_VERTICES} vertices`);
@@ -50,16 +49,14 @@ export function createWall(
     const to = vertices[(index + 1) % vertices.length];
     const direction = normalize(subtract(to, from));
     const orientation = orientationOf(direction);
-    if (orientation === undefined && !cupEdges.has(index)) {
+    const named = kinds.get(index);
+    if (orientation === undefined && named !== 'cup') {
       throw new Error(`createWall: edge ${index} is neither axis-aligned nor diagonal`);
     }
-    const kind: FaceKind = cupEdges.has(index)
-      ? 'cup'
-      : orientation === 'diagonal'
-        ? 'deflector'
-        : bounceEdges.has(index)
-          ? 'bounce'
-          : 'floor';
+    if (orientation === 'diagonal' && named !== undefined) {
+      throw new Error(`createWall: edge ${index} is diagonal and cannot be a ${named}`);
+    }
+    const kind: FaceKind = named ?? (orientation === 'diagonal' ? 'deflector' : 'floor');
     return {
       from,
       to,
@@ -74,11 +71,6 @@ export function createWall(
     max: { x: Math.max(...vertices.map(v => v.x)), y: Math.max(...vertices.map(v => v.y)) },
   };
   return { vertices, edges, bounds };
-}
-
-/** A triangular wall from any three points; the vertices are ordered counter-clockwise. */
-export function createTriangle(a: Vector2, b: Vector2, c: Vector2): Wall {
-  return signedDoubleArea([a, b, c]) > 0 ? createWall([a, b, c]) : createWall([a, c, b]);
 }
 
 /** An axis-aligned block from its lower-left corner and size. */

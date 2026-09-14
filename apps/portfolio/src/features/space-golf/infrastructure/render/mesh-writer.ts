@@ -78,6 +78,35 @@ export class MeshWriter {
     );
   }
 
+  /**
+   * A band `width` wide just inside a closed counter-clockwise outline, one
+   * quad per edge meeting its neighbours at mitred corners — a continuous
+   * stroke with no gap or overlap at any corner.
+   */
+  border(points: readonly Vector2[], width: number, color: Rgba): void {
+    const count = points.length;
+    const normals = points.map((from, index) => {
+      const to = points[(index + 1) % count];
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const size = Math.hypot(dx, dy);
+      return { x: dy / size, y: -dx / size };
+    });
+    const inner = points.map((point, index) => {
+      const before = normals[(index - 1 + count) % count];
+      const after = normals[index];
+      const miter = 1 + before.x * after.x + before.y * after.y;
+      return {
+        x: point.x - ((before.x + after.x) * width) / miter,
+        y: point.y - ((before.y + after.y) * width) / miter,
+      };
+    });
+    points.forEach((point, index) => {
+      const next = (index + 1) % count;
+      this.convexPolygon([point, points[next], inner[next], inner[index]], color);
+    });
+  }
+
   circle(center: Vector2, radius: number, color: Rgba): void {
     const ring: Vector2[] = [];
     for (let index = 0; index < CIRCLE_SEGMENTS; index += 1) {

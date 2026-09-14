@@ -6,13 +6,10 @@ import { BALL_RADIUS_METERS } from '../constants';
 import { edgeOf } from '../level';
 import { containsPoint } from '../walls';
 import { generateLevel } from './generate-level';
-import { replay, solve } from './solver';
 
 const SEEDS = [1, 2, 3];
 const LEVELS = new Map(SEEDS.map(seed => [seed, generateLevel(seed)]));
 const levelOf = (seed: number) => LEVELS.get(seed) ?? generateLevel(seed);
-/** Each seed runs the solver, which plays thousands of strokes. */
-const HEAVY_TEST_TIMEOUT_MS = 60_000;
 
 describe('generateLevel', () => {
   it('leaves the board open: nothing walls it in, and blocks at the edge run on past it', () => {
@@ -34,39 +31,51 @@ describe('generateLevel', () => {
     }
   });
 
-  it('floats the pickups in open space, clear of every wall', () => {
+  it('scatters a handful of islands with a gap between them, and not all of them are boxes', () => {
     for (const seed of SEEDS) {
       const level = levelOf(seed);
 
-      expect(level.pickups.length).toBeGreaterThan(0);
-      for (const pickup of level.pickups) {
-        expect(level.walls.some(wall => containsPoint(wall, pickup.position))).toBe(false);
-        expect(pickup.position.x).toBeGreaterThan(0);
-        expect(pickup.position.x).toBeLessThan(level.width);
+      expect(level.walls.length).toBeGreaterThanOrEqual(5);
+      expect(level.walls.some(wall => wall.vertices.length > 8)).toBe(true);
+      // Islands keep a metre between them; interlocking shapes may share a box,
+      // so the gap is read off the vertices, the corner cuts allowed for.
+      const MIN_GAP = 0.8;
+      for (const wall of level.walls) {
+        for (const other of level.walls) {
+          if (other === wall) {
+            continue;
+          }
+          for (const vertex of wall.vertices) {
+            for (const theirs of other.vertices) {
+              expect(Math.hypot(vertex.x - theirs.x, vertex.y - theirs.y)).toBeGreaterThanOrEqual(
+                MIN_GAP
+              );
+            }
+          }
+        }
       }
     }
   });
 
-  it('makes the thin bars elastic on every straight face', () => {
-    const bars = SEEDS.flatMap(seed =>
-      levelOf(seed).walls.filter(wall => wall.edges.some(edge => edge.kind === 'bounce'))
-    ).filter(wall => wall.edges.every(edge => edge.kind !== 'floor'));
+  it('cuts the cup into a horizontal or vertical face on the board, away from the tee', () => {
+    for (const seed of SEEDS) {
+      const level = levelOf(seed);
+      const face = edgeOf(level, level.cup);
+      const wall = level.walls[level.cup.wall];
 
-    expect(bars.length).toBeGreaterThan(0);
-    for (const bar of bars) {
-      const { min, max } = bar.bounds;
-      expect(Math.min(max.x - min.x, max.y - min.y)).toBeCloseTo(0.12, 5);
+      expect(face.kind).toBe('floor');
+      expect(face.normal.y).toBeGreaterThanOrEqual(0);
+      expect(wall.edges.filter(edge => edge.kind === 'cup')).toHaveLength(8);
+      expect(face.from.x).toBeGreaterThanOrEqual(0);
+      expect(face.from.x).toBeLessThanOrEqual(level.width);
+      expect(Math.hypot(face.from.x - level.tee.x, face.from.y - level.tee.y)).toBeGreaterThan(0.5);
     }
   });
 
-  it(
-    'is deterministic per seed',
-    () => {
-      expect(generateLevel(1)).toEqual(levelOf(1));
-      expect(levelOf(2)).not.toEqual(levelOf(1));
-    },
-    HEAVY_TEST_TIMEOUT_MS
-  );
+  it('is deterministic per seed', () => {
+    expect(generateLevel(1)).toEqual(levelOf(1));
+    expect(levelOf(2)).not.toEqual(levelOf(1));
+  });
 
   it('starts the ball resting on a floor with nothing overlapping it', () => {
     for (const seed of SEEDS) {
@@ -80,32 +89,6 @@ describe('generateLevel', () => {
       expect(support?.time).toBeLessThan(0.01);
     }
   });
-
-  it('cuts the cup into a horizontal or vertical face', () => {
-    for (const seed of SEEDS) {
-      const level = levelOf(seed);
-      const wall = level.walls[level.cup.wall];
-
-      expect(edgeOf(level, level.cup).kind).not.toBe('deflector');
-      expect(wall.edges.filter(edge => edge.kind === 'cup')).toHaveLength(8);
-    }
-  });
-
-  it(
-    'is playable by its own physics within par',
-    () => {
-      for (const seed of SEEDS) {
-        const level = levelOf(seed);
-        const solution = solve(level);
-
-        expect(level.par).toBeGreaterThanOrEqual(2);
-        expect(level.par).toBeLessThanOrEqual(6);
-        expect(solution).toBeDefined();
-        expect(solution && replay(level, solution)).toBe(true);
-      }
-    },
-    HEAVY_TEST_TIMEOUT_MS
-  );
 });
 
 describe('corners', () => {

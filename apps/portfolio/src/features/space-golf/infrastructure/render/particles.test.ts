@@ -11,16 +11,20 @@ const WIDTH = 9;
 const HEIGHT = 16;
 
 describe('particle field', () => {
-  it('turns its drift towards the new gravity over half a second, not at once', () => {
+  it('reverses its drift through a stop over a second — the fall dies out and the rise picks up, no swing to the side', () => {
     let field = createParticleField(1, WIDTH, HEIGHT);
     expect(field.drift).toEqual({ x: 0, y: -1 });
 
-    field = advanceParticles(field, { x: 1, y: 0 }, DRIFT_TURN_SECONDS / 4, WIDTH, HEIGHT);
-    expect(field.drift.x).toBeCloseTo(Math.SQRT1_2, 3);
-    expect(field.drift.y).toBeCloseTo(-Math.SQRT1_2, 3);
+    field = advanceParticles(field, { x: 0, y: 1 }, DRIFT_TURN_SECONDS / 2, WIDTH, HEIGHT);
+    expect(field.drift.x).toBe(0);
+    expect(field.drift.y).toBeCloseTo(0, 6);
 
-    field = advanceParticles(field, { x: 1, y: 0 }, DRIFT_TURN_SECONDS, WIDTH, HEIGHT);
-    expect(field.drift.x).toBeCloseTo(1, 6);
+    field = advanceParticles(field, { x: 0, y: 1 }, DRIFT_TURN_SECONDS / 4, WIDTH, HEIGHT);
+    expect(field.drift.x).toBe(0);
+    expect(field.drift.y).toBeCloseTo(0.5, 6);
+
+    field = advanceParticles(field, { x: 0, y: 1 }, DRIFT_TURN_SECONDS, WIDTH, HEIGHT);
+    expect(field.drift).toEqual({ x: 0, y: 1 });
   });
 
   it('carries every particle along the drift and wraps it around the board', () => {

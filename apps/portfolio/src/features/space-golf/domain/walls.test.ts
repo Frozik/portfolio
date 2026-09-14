@@ -32,12 +32,6 @@ describe('createWall', () => {
     ]);
   });
 
-  it('upgrades a named axis-aligned edge to a bounce face', () => {
-    const block = createWall(createBlock(0, 0, 1, 1).vertices, new Set([2]));
-
-    expect(block.edges[2].kind).toBe('bounce');
-  });
-
   it('refuses clockwise vertices and slanted edges', () => {
     expect(() =>
       createWall([

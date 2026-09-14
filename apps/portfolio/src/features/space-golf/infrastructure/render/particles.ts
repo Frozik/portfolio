@@ -10,7 +10,11 @@ interface Particle {
 
 export interface ParticleField {
   readonly particles: readonly Particle[];
-  /** The direction the dust drifts in; it eases towards gravity rather than snapping. */
+  /**
+   * The dust's velocity as a share of its full speed, at most a unit vector.
+   * It eases towards gravity along a straight line: after a reversal the
+   * fall slows to a stop and picks up the other way, never swings round.
+   */
   readonly drift: Vector2;
 }
 
@@ -20,9 +24,10 @@ const MAX_RADIUS_METERS = 0.04;
 /** Dust spills this far past the board on every side and wraps around there. */
 const PARTICLE_MARGIN_METERS = 2;
 const DRIFT_SPEED_METERS_PER_SECOND = 0.35;
-/** The dust takes about this long to turn towards a new gravity — the lag seen in the original. */
-export const DRIFT_TURN_SECONDS = 0.5;
-const HALF_TURN = Math.PI;
+/** The dust takes this long to go from full speed one way to full speed the other — the lag seen in the original. */
+export const DRIFT_TURN_SECONDS = 1;
+/** Distance between two opposite unit drifts. */
+const FULL_REVERSAL = 2;
 
 export function createParticleField(seed: number, width: number, height: number): ParticleField {
   const random = createRandom(seed);
@@ -40,8 +45,8 @@ export function createParticleField(seed: number, width: number, height: number)
 }
 
 /**
- * Moves the dust for `dt` seconds: the drift direction turns towards `down`
- * at the pace of a half turn per {@link DRIFT_TURN_SECONDS}, and every
+ * Moves the dust for `dt` seconds: the drift moves straight towards `down`
+ * at the pace of a full reversal per {@link DRIFT_TURN_SECONDS}, and every
  * particle slides along it, wrapping around the margin box.
  */
 export function advanceParticles(
@@ -51,7 +56,7 @@ export function advanceParticles(
   width: number,
   height: number
 ): ParticleField {
-  const drift = turnTowards(field.drift, down, (HALF_TURN / DRIFT_TURN_SECONDS) * dt);
+  const drift = moveTowards(field.drift, down, (FULL_REVERSAL / DRIFT_TURN_SECONDS) * dt);
   const minX = -PARTICLE_MARGIN_METERS;
   const minY = -PARTICLE_MARGIN_METERS;
   const spanX = width + 2 * PARTICLE_MARGIN_METERS;
@@ -70,18 +75,14 @@ function wrap(value: number, min: number, span: number): number {
   return min + ((((value - min) % span) + span) % span);
 }
 
-/** Rotates the unit vector `from` towards `to` by at most `maxRadians`. */
-function turnTowards(from: Vector2, to: Vector2, maxRadians: number): Vector2 {
-  const current = Math.atan2(from.y, from.x);
-  const target = Math.atan2(to.y, to.x);
-  let delta = target - current;
-  while (delta > Math.PI) {
-    delta -= 2 * Math.PI;
+/** The vector `from` moved straight towards `to` by at most `maxDistance`. */
+function moveTowards(from: Vector2, to: Vector2, maxDistance: number): Vector2 {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const gap = Math.hypot(dx, dy);
+  if (gap <= maxDistance) {
+    return to;
   }
-  while (delta < -Math.PI) {
-    delta += 2 * Math.PI;
-  }
-  const step = Math.max(-maxRadians, Math.min(maxRadians, delta));
-  const angle = current + step;
-  return { x: Math.cos(angle), y: Math.sin(angle) };
+  const share = maxDistance / gap;
+  return { x: from.x + dx * share, y: from.y + dy * share };
 }

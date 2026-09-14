@@ -9,6 +9,7 @@ import { drawContours } from './effects/draw-contours';
 import { drawCrosshair } from './effects/draw-crosshair';
 import { drawCursor } from './effects/draw-cursor';
 import { drawFlare } from './effects/draw-flare';
+import { drawGravity } from './effects/draw-gravity';
 import { drawNeural } from './effects/draw-neural';
 import { drawPeers } from './effects/draw-peers';
 import { drawRotate } from './effects/draw-rotate';
@@ -46,6 +47,7 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   tanks: createStatelessFxEffect(drawTanks),
   artillery: createStatelessFxEffect(drawArtillery),
   contours: createStatelessFxEffect(drawContours),
+  gravity: createStatelessFxEffect(drawGravity),
 };
 
 export function createFxRender(kind: TProjectFxKind): TFxRender {

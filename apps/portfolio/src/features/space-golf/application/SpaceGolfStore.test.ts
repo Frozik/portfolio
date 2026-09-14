@@ -2,23 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { BAND_SPEED_PER_METER, FIXED_STEP_SECONDS } from '../domain/constants';
 import { generateLevel } from '../domain/generator/generate-level';
-import { solve } from '../domain/generator/solver';
-import type { Level } from '../domain/level';
 import type { Progress } from '../domain/progress';
 import { createTestLevel } from '../domain/test-level';
 import type { LevelSource } from './ports/level-source';
 import type { ProgressRepository } from './ports/progress-repository';
 import { BURST_SECONDS, SpaceGolfStore } from './SpaceGolfStore';
 
-const SEED = 1;
 const FRAME = 1 / 60;
 
-function createStore(saved?: Progress, generate: (seed: number) => Level = generateLevel) {
+function createStore(saved?: Progress, source: LevelSource = generateLevel) {
   const saves: Progress[] = [];
-  const source: LevelSource = {
-    generate: seed => Promise.resolve(generate(seed)),
-    dispose: () => {},
-  };
   const repository: ProgressRepository = {
     load: () => Promise.resolve(saved),
     save: progress => {
@@ -29,28 +22,17 @@ function createStore(saved?: Progress, generate: (seed: number) => Level = gener
   return { store: new SpaceGolfStore(source, repository), saves };
 }
 
-/** Runs frames until the ball is at rest again, holed, or the time is up. */
-function settle(store: SpaceGolfStore, maxSeconds = 8): void {
-  for (let elapsed = 0; elapsed < maxSeconds; elapsed += FRAME) {
-    store.advance(FRAME);
-    const phase = store.scene?.ball.phase;
-    if (store.status === 'completed' || (phase === 'aiming' && store.scene?.burst === undefined)) {
-      return;
-    }
-  }
-}
-
 describe('SpaceGolfStore', () => {
   it('loads the saved level and starts the ball on its tee', async () => {
-    const { store } = createStore({ levelNumber: 3, totalStrokes: 11, bestByLevel: {} });
+    const { store } = createStore({ levelNumber: 3, totalStrokes: 11 });
 
     await store.start();
 
     expect(store.status).toBe('playing');
     expect(store.levelNumber).toBe(3);
     expect(store.totalStrokes).toBe(11);
+    expect(store.scene?.level.seed).toBe(3);
     expect(store.scene?.ball.position).toEqual(store.scene?.level.tee);
-    expect(store.par).toBeGreaterThanOrEqual(2);
   });
 
   it('shoots on release when the band is stretched and does nothing when it is slack', async () => {
@@ -95,58 +77,55 @@ describe('SpaceGolfStore', () => {
     expect(store.scene?.ball.position).toEqual(scene.level.tee);
   });
 
-  it(
-    'completes the level along the solver strokes, saves the progress and serves the next level',
-    { timeout: 60_000 },
-    async () => {
-      const { store, saves } = createStore();
-      await store.start();
-      const level = generateLevel(SEED);
-      const solution = solve(level);
-      if (solution === undefined) {
-        throw new Error('level 1 must be solvable');
-      }
-
-      for (const velocity of solution.strokes) {
-        store.beginAim({ x: 0, y: 0 });
-        store.updateAim({
-          x: -velocity.x / BAND_SPEED_PER_METER,
-          y: -velocity.y / BAND_SPEED_PER_METER,
-        });
-        store.release();
-        settle(store);
-      }
-
-      expect(store.status).toBe('completed');
-      expect(saves).toHaveLength(1);
-      expect(saves[0].levelNumber).toBe(2);
-      expect(store.totalStrokes).toBe(solution.strokes.length);
-
-      await store.nextLevel();
-
-      expect(store.levelNumber).toBe(2);
-      expect(store.status).toBe('playing');
-      expect(store.strokeCount).toBe(0);
-    }
-  );
-
-  it('counts the pickups the ball collects and forgets them on a restart', async () => {
-    const arena = createTestLevel();
-    const withPickup: Level = {
-      ...arena,
-      pickups: [{ position: { x: 2, y: arena.tee.y + 0.1 }, shape: 'ring' }],
-    };
-    const { store } = createStore(undefined, () => withPickup);
+  it('walks the levels in both directions, saves where it is and never goes below the first', async () => {
+    const { store, saves } = createStore();
     await store.start();
-    expect(store.pickupCount).toBe(1);
+    expect(store.hasPreviousLevel).toBe(false);
+
+    store.previousLevel();
+    expect(store.levelNumber).toBe(1);
+    expect(saves).toHaveLength(0);
 
     store.beginAim({ x: 4, y: 4 });
-    store.updateAim({ x: 4 - 2 / BAND_SPEED_PER_METER, y: 4 });
+    store.updateAim({ x: 4, y: 2 });
     store.release();
-    settle(store);
+    store.nextLevel();
 
-    expect(store.collectedCount).toBe(1);
-    store.restart();
-    expect(store.collectedCount).toBe(0);
+    expect(store.levelNumber).toBe(2);
+    expect(store.scene?.level.seed).toBe(2);
+    expect(store.strokeCount).toBe(0);
+    expect(store.scene?.ball.phase).toBe('aiming');
+    expect(saves).toEqual([{ levelNumber: 2, totalStrokes: 0 }]);
+
+    store.previousLevel();
+    expect(store.levelNumber).toBe(1);
+    expect(saves).toEqual([
+      { levelNumber: 2, totalStrokes: 0 },
+      { levelNumber: 1, totalStrokes: 0 },
+    ]);
+  });
+
+  it('completes the level when the ball holes out, adds the strokes to the total and serves the next level', async () => {
+    const { store, saves } = createStore(undefined, () => createTestLevel());
+    await store.start();
+
+    // The tee is at x = 1 on the floor, the cup at x = 4.5: a roll of about four metres.
+    store.beginAim({ x: 0, y: 0 });
+    store.updateAim({ x: -4.2 / BAND_SPEED_PER_METER, y: 0 });
+    store.release();
+    for (let elapsed = 0; elapsed < 10 && store.status !== 'completed'; elapsed += FRAME) {
+      store.advance(FRAME);
+    }
+
+    expect(store.status).toBe('completed');
+    expect(store.strokeCount).toBe(1);
+    expect(store.totalStrokes).toBe(1);
+    expect(saves.at(-1)).toEqual({ levelNumber: 2, totalStrokes: 1 });
+
+    store.nextLevel();
+
+    expect(store.status).toBe('playing');
+    expect(store.levelNumber).toBe(2);
+    expect(store.strokeCount).toBe(0);
   });
 });

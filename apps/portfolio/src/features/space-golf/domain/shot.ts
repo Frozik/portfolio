@@ -4,14 +4,11 @@ import type { BallState } from './ball';
 import {
   AIM_DEAD_ZONE_METERS,
   BAND_SPEED_PER_METER,
-  FIXED_STEP_SECONDS,
   MAX_SPEED_METERS_PER_SECOND,
   PREVIEW_DOT_COUNT,
   PREVIEW_INTERVAL_SECONDS,
 } from './constants';
-import type { Level } from './level';
-import { step } from './step';
-import { clampLength, distance, scale, subtract } from './vector';
+import { add, clampLength, distance, scale, subtract } from './vector';
 
 /**
  * The launch velocity of a rubber band pulled from `anchor` (where the
@@ -30,7 +27,7 @@ export function aim(anchor: Vector2, pull: Vector2): Vector2 | undefined {
   );
 }
 
-/** The ball launched: the stroke counts from here, so the spike rows flip before the flight. */
+/** The ball launched: the stroke counts from here. */
 export function shoot(ball: BallState, velocity: Vector2): BallState {
   return {
     ...ball,
@@ -43,24 +40,19 @@ export function shoot(ball: BallState, velocity: Vector2): BallState {
 }
 
 /**
- * Five positions of the coming flight at fixed intervals, drawn from the
- * ball: because the intervals are in time, the spacing is the speed — a
- * gentle pull packs the dots, a strong one spreads them, and past the cap the
- * spacing stops growing. Computed with the same `step` as the flight, so the
- * dots bend under gravity and stop where the ball would be destroyed.
+ * Five dots from the ball along the launch velocity, one per fixed
+ * interval of it: the impulse the stroke gives, not the flight. The spacing
+ * is the speed — a gentle pull packs the dots, a strong one spreads them,
+ * past the cap the spacing stops growing. Gravity and walls are left out on
+ * purpose: reading how the shot will bend is the player's job.
  */
-export function previewDots(level: Level, ball: BallState, velocity: Vector2): readonly Vector2[] {
-  const stepsPerDot = Math.round(PREVIEW_INTERVAL_SECONDS / FIXED_STEP_SECONDS);
+export function previewDots(from: Vector2, velocity: Vector2): readonly Vector2[] {
+  const stride = scale(velocity, PREVIEW_INTERVAL_SECONDS);
   const dots: Vector2[] = [];
-  let flight = shoot(ball, velocity);
-  for (let dot = 0; dot < PREVIEW_DOT_COUNT; dot += 1) {
-    for (let tick = 0; tick < stepsPerDot; tick += 1) {
-      flight = step(level, flight, FIXED_STEP_SECONDS);
-    }
-    dots.push(flight.position);
-    if (flight.phase !== 'flying') {
-      break;
-    }
+  let dot = from;
+  for (let index = 0; index < PREVIEW_DOT_COUNT; index += 1) {
+    dot = add(dot, stride);
+    dots.push(dot);
   }
   return dots;
 }

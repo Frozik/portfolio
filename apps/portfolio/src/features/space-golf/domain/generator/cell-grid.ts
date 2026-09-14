@@ -1,5 +1,3 @@
-import type { Random } from './random';
-
 /** A boolean grid of one-metre cells: `true` is solid. Row 0 is the bottom. */
 export interface CellGrid {
   readonly width: number;
@@ -27,12 +25,8 @@ export function isBlock(grid: CellGrid, x: number, y: number): boolean {
   return !isOutside(grid, x, y) && grid.solid[y * grid.width + x];
 }
 
-export function isOutside(grid: CellGrid, x: number, y: number): boolean {
+function isOutside(grid: CellGrid, x: number, y: number): boolean {
   return x < 0 || y < 0 || x >= grid.width || y >= grid.height;
-}
-
-export function cellKey(grid: CellGrid, cell: Cell): number {
-  return cell.y * grid.width + cell.x;
 }
 
 export function createEmptyGrid(width: number, height: number): CellGrid {
@@ -112,72 +106,4 @@ export function hasDiagonalOnlyContact(grid: CellGrid): boolean {
     }
   }
   return false;
-}
-
-/**
- * Maximal axis-aligned rectangles covering the solid cells: horizontal runs
- * per row, merged upwards while the run above is identical. Every solid cell
- * belongs to exactly one rectangle.
- */
-export function solidRectangles(grid: CellGrid): readonly CellRect[] {
-  const claimed = new Array<boolean>(grid.width * grid.height).fill(false);
-  const rects: CellRect[] = [];
-  for (let y = 0; y < grid.height; y += 1) {
-    for (let x = 0; x < grid.width; x += 1) {
-      if (!isSolid(grid, x, y) || claimed[y * grid.width + x]) {
-        continue;
-      }
-      let width = 0;
-      while (
-        x + width < grid.width &&
-        isSolid(grid, x + width, y) &&
-        !claimed[y * grid.width + x + width]
-      ) {
-        width += 1;
-      }
-      let height = 1;
-      while (y + height < grid.height && rowRunIsSolid(grid, claimed, x, y + height, width)) {
-        height += 1;
-      }
-      for (let row = y; row < y + height; row += 1) {
-        for (let column = x; column < x + width; column += 1) {
-          claimed[row * grid.width + column] = true;
-        }
-      }
-      rects.push({ x, y, width, height });
-    }
-  }
-  return rects;
-}
-
-function rowRunIsSolid(
-  grid: CellGrid,
-  claimed: readonly boolean[],
-  x: number,
-  y: number,
-  width: number
-): boolean {
-  for (let column = x; column < x + width; column += 1) {
-    if (!isSolid(grid, column, y) || claimed[y * grid.width + column]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/** A random rectangle fully inside the grid. */
-export function randomRect(
-  random: Random,
-  grid: CellGrid,
-  maxWidth: number,
-  maxHeight: number
-): CellRect {
-  const width = random.int(1, maxWidth);
-  const height = random.int(1, maxHeight);
-  return {
-    x: random.int(0, grid.width - width),
-    y: random.int(0, grid.height - height),
-    width,
-    height,
-  };
 }

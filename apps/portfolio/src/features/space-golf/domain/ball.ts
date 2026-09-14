@@ -18,7 +18,7 @@ export interface BallState {
   /** Unit vector: which way gravity pulls right now. */
   readonly down: Vector2;
   readonly phase: BallPhase;
-  /** Strokes played on this level so far; spike rows read their state from its parity. */
+  /** Strokes played on this level so far. */
   readonly stroke: number;
   readonly rest: RestPoint;
   /** The floor face the ball is in contact with, if any. */
@@ -29,8 +29,6 @@ export interface BallState {
   readonly cupSeconds: number;
   /** How long the ball has been outside the board; it bursts after a few seconds. */
   readonly offscreenSeconds: number;
-  /** Indices into the level's pickups the ball has collected. */
-  readonly collected: ReadonlySet<number>;
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -47,7 +45,6 @@ export function createBall(level: Level): BallState {
     settlingSeconds: 0,
     cupSeconds: 0,
     offscreenSeconds: 0,
-    collected: new Set(),
   };
 }
 

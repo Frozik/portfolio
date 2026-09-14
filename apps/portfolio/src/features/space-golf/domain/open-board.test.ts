@@ -9,26 +9,23 @@ import {
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
 } from './constants';
-import type { Level, Pickup, Wall } from './level';
+import type { Level, Wall } from './level';
 import { shoot } from './shot';
 import { step } from './step';
-import { createBlock, createWall } from './walls';
+import { createBlock } from './walls';
 
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const FLOOR_TOP = 1;
 
 /** A floor slab and nothing else: the board is open on every other side. */
-function openLevel(floor: Wall, pickups: readonly Pickup[] = []): Level {
+function openLevel(floor: Wall): Level {
   return {
     seed: 0,
     width: BOARD_WIDTH_METERS,
     height: BOARD_HEIGHT_METERS,
     walls: [floor],
-    spikes: [],
-    pickups,
-    tee: { x: 4.5, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
+    tee: { x: 4.5, y: floor.bounds.max.y + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     cup: { wall: 0, edge: 2, at: 0.5, radius: 0.2 },
-    par: 1,
   };
 }
 
@@ -43,17 +40,28 @@ function fly(level: Level, ball: BallState, seconds: number): BallState {
 describe('the open board', () => {
   const level = openLevel(createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP));
 
-  it('lets the ball fly off the board and bursts it after three seconds out there', () => {
+  it('bursts the ball the moment it leaves the board when gravity will not bring it back', () => {
     const launched = shoot(createBall(level), { x: 10, y: 0 });
 
-    const away = fly(level, launched, 2);
-    expect(away.phase).toBe('flying');
-    expect(away.position.x).toBeGreaterThan(BOARD_WIDTH_METERS);
-    expect(away.offscreenSeconds).toBeGreaterThan(0);
+    const gone = fly(level, launched, 2);
 
-    const gone = fly(level, launched, 5);
     expect(gone.phase).toBe('destroyed');
+    expect(gone.position.x).toBeGreaterThan(BOARD_WIDTH_METERS + BALL_RADIUS_METERS);
+    expect(gone.position.x).toBeLessThan(BOARD_WIDTH_METERS + 1);
     expect(respawn(gone).position).toEqual(level.tee);
+  });
+
+  it('lets a ball that gravity brings back fly on beyond the edge and land again', () => {
+    const high = openLevel(createBlock(0, 0, BOARD_WIDTH_METERS, 12));
+    const launched = shoot(createBall(high), { x: 0, y: 10 });
+
+    const above = fly(high, launched, 0.9);
+    expect(above.phase).toBe('flying');
+    expect(above.position.y).toBeGreaterThan(BOARD_HEIGHT_METERS + BALL_RADIUS_METERS);
+
+    const landed = fly(high, launched, 6);
+    expect(landed.phase).toBe('aiming');
+    expect(landed.position.y).toBeCloseTo(high.tee.y, 2);
   });
 
   it('bursts a ball that would come to rest beyond the edge instead of leaving it there', () => {
@@ -64,34 +72,5 @@ describe('the open board', () => {
 
     expect(state.phase).toBe('destroyed');
     expect(state.position.x).toBeGreaterThan(BOARD_WIDTH_METERS);
-  });
-
-  it('collects a pickup the ball rolls through and keeps it through a burst', () => {
-    const pickup: Pickup = { position: { x: 6, y: FLOOR_TOP + 0.2 }, shape: 'diamond' };
-    const withPickup = openLevel(createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP), [pickup]);
-
-    const rolled = fly(withPickup, shoot(createBall(withPickup), { x: 3, y: 0 }), 1);
-    expect([...rolled.collected]).toEqual([0]);
-
-    const reborn = respawn({ ...rolled, phase: 'destroyed' });
-    expect([...reborn.collected]).toEqual([0]);
-  });
-
-  it('lets the ball settle on an elastic bar after a few ever smaller hops', () => {
-    const slab = createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP);
-    const elastic = openLevel(
-      createWall(slab.vertices, new Set(slab.edges.map((_, index) => index)))
-    );
-    const dropped: BallState = {
-      ...createBall(elastic),
-      phase: 'flying',
-      position: { x: 4.5, y: FLOOR_TOP + 0.5 },
-    };
-
-    const state = fly(elastic, dropped, 6);
-
-    expect(state.phase).toBe('aiming');
-    expect(state.down).toEqual({ x: 0, y: -1 });
-    expect(state.position.y).toBeCloseTo(elastic.tee.y, 2);
   });
 });

@@ -2,11 +2,15 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 /**
  * `floor`: a horizontal or vertical face — touching it turns gravity into it.
+ * `bounce`: a stretch of floor that springs the ball back hard; the floor rule still applies.
+ * `sticky`: a stretch of floor that swallows the impact and holds the ball; the floor rule still applies.
  * `deflector`: a 45° face — reflects only, gravity is untouched.
- * `bounce`: a horizontal or vertical face with a stronger rebound; the floor rule still applies.
- * `cup`: one segment of the hole's rounded rim — an ordinary wall the ball can rest on, gravity untouched.
+ * `cup`: one segment of the hole's rounded rim — touching it turns gravity into the face the hole is cut into.
  */
-export type FaceKind = 'floor' | 'deflector' | 'bounce' | 'cup';
+export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup';
+
+/** The face kinds a stretch of a long, deep face may be given, each with its own look. */
+export type SurfaceKind = 'bounce' | 'sticky';
 
 /** One face of a wall, with everything the sweep needs precomputed. */
 export interface Edge {
@@ -25,7 +29,7 @@ interface Bounds {
   readonly max: Vector2;
 }
 
-/** A polygon with counter-clockwise vertices; every edge is horizontal, vertical, diagonal or part of the cup's rim. */
+/** A simple polygon with counter-clockwise vertices — one island; every edge is horizontal, vertical or diagonal. */
 export interface Wall {
   readonly vertices: readonly Vector2[];
   readonly edges: readonly Edge[];
@@ -36,15 +40,6 @@ export interface Wall {
 export interface EdgeRef {
   readonly wall: number;
   readonly edge: number;
-}
-
-/** A row of spikes standing on part of a floor edge; its state flips with every stroke. */
-export interface SpikeRow extends EdgeRef {
-  /** Start of the row along the edge, metres from the edge's first vertex. */
-  readonly from: number;
-  readonly length: number;
-  /** State during stroke 1; it flips with every stroke after that. */
-  readonly extendedOnOddStrokes: boolean;
 }
 
 /**
@@ -58,26 +53,14 @@ export interface Cup extends EdgeRef {
   readonly radius: number;
 }
 
-export type PickupShape = 'diamond' | 'square' | 'ring';
-
-/** A collectible floating in open space; it is gone once the ball has touched it. */
-export interface Pickup {
-  readonly position: Vector2;
-  readonly shape: PickupShape;
-}
-
 export interface Level {
   readonly seed: number;
   readonly width: number;
   readonly height: number;
   readonly walls: readonly Wall[];
-  readonly spikes: readonly SpikeRow[];
-  readonly pickups: readonly Pickup[];
   /** Where the ball starts, resting on a floor with gravity pointing down. */
   readonly tee: Vector2;
   readonly cup: Cup;
-  /** Strokes the generator's own solution took. */
-  readonly par: number;
 }
 
 /** Whether a ball centred at `point` is wholly outside the board — the board has no walls around it. */

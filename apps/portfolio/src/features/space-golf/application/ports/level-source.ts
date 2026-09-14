@@ -1,7 +1,4 @@
 import type { Level } from '../../domain/level';
 
-/** Where levels come from: a worker in the browser, the generator itself in tests. */
-export interface LevelSource {
-  generate(seed: number): Promise<Level>;
-  dispose(): void;
-}
+/** Where levels come from: the generator in the app, a hand-built arena in tests. */
+export type LevelSource = (seed: number) => Level;

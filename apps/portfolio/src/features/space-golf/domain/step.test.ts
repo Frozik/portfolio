@@ -22,8 +22,8 @@ function fly(ball: BallState, seconds: number): BallState {
   return state;
 }
 
-function ballAt(position: Vector2, stroke = 0): BallState {
-  return { ...createBall(level), position, rest: { position, down: { x: 0, y: -1 } }, stroke };
+function ballAt(position: Vector2): BallState {
+  return { ...createBall(level), position, rest: { position, down: { x: 0, y: -1 } } };
 }
 
 describe('step', () => {
@@ -65,17 +65,17 @@ describe('step', () => {
     const state = fly(shoot(ballAt({ x: 2, y: 2 }), { x: 0.5, y: 0 }), 3);
 
     expect(state.phase).toBe('aiming');
-    expect(state.position.y).toBeCloseTo(BALL_RADIUS_METERS, 2);
+    expect(state.position.y).toBeCloseTo(level.tee.y, 2);
     expect(state.rest.position).toEqual(state.position);
   });
 
   it('lets a slow ball roll into the cup and holes out only after a second in it', () => {
-    const early = fly(shoot(ballAt({ x: 3.5, y: level.tee.y }), { x: 1.5, y: 0 }), 1.5);
-    const settled = fly(shoot(ballAt({ x: 3.5, y: level.tee.y }), { x: 1.5, y: 0 }), 6);
+    const early = fly(shoot(ballAt({ x: 4, y: level.tee.y }), { x: 1.5, y: 0 }), 1.5);
+    const settled = fly(shoot(ballAt({ x: 4, y: level.tee.y }), { x: 1.5, y: 0 }), 6);
 
     expect(early.phase).toBe('flying');
     expect(early.cupSeconds).toBeGreaterThan(0);
-    expect(early.position.y).toBeLessThan(0);
+    expect(early.position.y).toBeLessThan(level.tee.y - BALL_RADIUS_METERS);
     expect(settled.phase).toBe('holed');
   });
 
@@ -85,15 +85,5 @@ describe('step', () => {
     expect(fast.phase).toBe('flying');
     expect(fast.cupSeconds).toBe(0);
     expect(fast.velocity.y).toBeGreaterThan(0);
-  });
-
-  it('destroys the ball on an extended spike row and spares it when the row is retracted', () => {
-    const onOddStroke = fly(shoot(ballAt({ x: 8.5, y: 3 }), { x: 0, y: -1 }), 4);
-    const onEvenStroke = fly(shoot(ballAt({ x: 8.5, y: 3 }, 1), { x: 0, y: -1 }), 4);
-
-    expect(onOddStroke.phase).toBe('destroyed');
-    expect(onOddStroke.stroke).toBe(1);
-    expect(onEvenStroke.phase).toBe('aiming');
-    expect(onEvenStroke.position.y).toBeCloseTo(BALL_RADIUS_METERS, 2);
   });
 });
