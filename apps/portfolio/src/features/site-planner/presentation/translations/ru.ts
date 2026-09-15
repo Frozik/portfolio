@@ -271,6 +271,7 @@ export const sitePlannerTranslationsRu: TranslationOf<typeof sitePlannerTranslat
         marks: 'Отметки высот',
         trees: 'Деревья',
         paths: 'Дорожки',
+        ...sitePlannerHouseTranslationsRu.layers.names,
       },
     },
   },

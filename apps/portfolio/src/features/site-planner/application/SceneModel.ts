@@ -42,6 +42,7 @@ import { deriveStoreyScenes } from './storey-scenes';
 import type { TerrainModel } from './TerrainModel';
 
 const NO_BUILDING_WARNINGS: readonly BuildingWarning[] = [];
+const NO_SCENES: readonly BuildingScene[] = [];
 
 /**
  * The storeys with the roof that crowns them. Free function rather than an
@@ -260,6 +261,7 @@ export class SceneModel {
       ghosted: false,
       editedBuildingId: session?.kind === 'building' ? session.buildingId : undefined,
       activeStoreyId: this.core.activeStoreyId,
+      visibleLayers: this.core.view.visibleLayers,
     };
   }
 
@@ -268,7 +270,9 @@ export class SceneModel {
    * slab each — the plain membrane stays the roof the extrusion already has.
    */
   get roofOverlaysGeometry(): RoofOverlayGeometry {
-    return buildRoofOverlays(this.buildingScenes);
+    return buildRoofOverlays(
+      this.core.view.visibleLayers.has('structure') ? this.buildingScenes : NO_SCENES
+    );
   }
 
   /**
@@ -281,7 +285,9 @@ export class SceneModel {
    * turn carried as-is (the car's convention, which the shader shares).
    */
   get sceneFurniture(): readonly SceneFurniture[] {
-    return buildSceneFurniture(this.buildingScenes);
+    return buildSceneFurniture(
+      this.core.view.visibleLayers.has('furniture') ? this.buildingScenes : NO_SCENES
+    );
   }
 
   /**
@@ -292,7 +298,7 @@ export class SceneModel {
    */
   get foundationsGeometry(): LitMesh | undefined {
     return buildFoundationSolids({
-      scenes: this.buildingScenes,
+      scenes: this.core.view.visibleLayers.has('structure') ? this.buildingScenes : NO_SCENES,
       heightfield: this.terrain.heightfield,
     });
   }

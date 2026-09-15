@@ -6,11 +6,11 @@ import { isWallClosed } from '../../../domain/model/walls';
 import type { PlanLayerKind } from '../../../domain/view/plan-layers';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
+import { drawBuildingSelection } from './draw-building-selection';
 import { drawCarSelection } from './draw-cars';
 import { drawDimensions } from './draw-dimensions';
 import { computeFurnitureHandles } from './draw-furniture';
 import type { PlanBuilding } from './draw-house';
-import { drawBuildingSelection } from './draw-house';
 import { drawMeasure } from './draw-measure';
 import {
   computePathPointHandles,

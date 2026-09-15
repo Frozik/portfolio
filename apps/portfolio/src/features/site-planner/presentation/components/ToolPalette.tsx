@@ -1,6 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
 import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import { isNil } from 'lodash-es';
 import type { LucideIcon } from 'lucide-react';
 import { Flag, Hand, MousePointer2, Route, Ruler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -8,11 +9,11 @@ import { memo } from 'react';
 
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
-import type { EditorMode, EditorToolSpec } from '../../domain/model/editor-mode';
 import {
   allowedPlanTools,
+  editedBuildingId,
+  editorOwnTools,
   isSiteEditMode,
-  OBJECT_EDITOR_SPECS,
 } from '../../domain/model/editor-mode';
 import type { PlanTool, ShapeTool } from '../../domain/model/selection';
 import type { PLACED_OBJECT_TOOL } from '../constants';
@@ -20,6 +21,7 @@ import { TOOL_ICON_SIZE_PX } from '../constants';
 import { sitePlannerT } from '../translations';
 import { SiteEditorButton, HouseEditorButton, EditorToolButton } from './EditorDoorButtons';
 import type { FlyoutSide } from './FlyoutToolButton';
+import { LayerToolButton } from './LayerToolButton';
 import { PlacedObjectToolButton } from './PlacedObjectToolButton';
 import { ShapeToolButton } from './ShapeToolButton';
 import { TOOL_HOTKEYS } from './toolHotkeys';
@@ -46,7 +48,8 @@ type PaletteEntry =
   | { readonly kind: 'placed-object-flyout' }
   | { readonly kind: 'utility-flyout' }
   | { readonly kind: 'site-editor' }
-  | { readonly kind: 'house-editor' };
+  | { readonly kind: 'house-editor' }
+  | { readonly kind: 'layer-flyout' };
 
 const PALETTE: readonly PaletteEntry[] = [
   {
@@ -54,6 +57,7 @@ const PALETTE: readonly PaletteEntry[] = [
     descriptor: { tool: 'select', icon: MousePointer2, label: sitePlannerT.tools.select },
   },
   { kind: 'tool', descriptor: { tool: 'pan', icon: Hand, label: sitePlannerT.tools.pan } },
+  { kind: 'layer-flyout' },
   { kind: 'site-editor' },
   { kind: 'house-editor' },
   { kind: 'shape-flyout' },
@@ -135,16 +139,13 @@ const PaletteButton = observer(
         return <SiteEditorButton store={store} side={side} />;
       case 'house-editor':
         return <HouseEditorButton store={store} side={side} />;
+      case 'layer-flyout':
+        return <LayerToolButton store={store} side={side} />;
       default:
         return assertNever(entry);
     }
   }
 );
-
-/** The tools the open editor contributes to the rail, after the shared ones. */
-function editorOwnTools(mode: EditorMode): readonly EditorToolSpec[] {
-  return mode.kind === 'edit' ? OBJECT_EDITOR_SPECS[mode.target.kind].ownTools : [];
-}
 
 /** Names an entry for React, since only the plain tools carry a tool name. */
 function paletteEntryKey(entry: PaletteEntry): string {
@@ -162,7 +163,8 @@ function paletteEntryKey(entry: PaletteEntry): string {
 function isEntryVisible(
   entry: PaletteEntry,
   allowedTools: readonly PlanTool[],
-  isPlotFocused: boolean
+  isPlotFocused: boolean,
+  isBuildingOpen: boolean
 ): boolean {
   switch (entry.kind) {
     case 'tool':
@@ -177,6 +179,8 @@ function isEntryVisible(
       return true;
     case 'house-editor':
       return !isPlotFocused;
+    case 'layer-flyout':
+      return isBuildingOpen;
     default:
       return assertNever(entry);
   }
@@ -199,6 +203,7 @@ export const ToolPalette = observer(
     const isHorizontal = orientation === 'horizontal';
     const allowedTools = allowedPlanTools(store.editorMode);
     const isPlotFocused = isSiteEditMode(store.editorMode) && !store.modes.isEditingBuilding;
+    const isBuildingOpen = !isNil(editedBuildingId(store.editorMode));
 
     return (
       <nav
@@ -208,7 +213,9 @@ export const ToolPalette = observer(
           isHorizontal ? 'flex-row overflow-x-auto' : 'flex-col'
         )}
       >
-        {PALETTE.filter(entry => isEntryVisible(entry, allowedTools, isPlotFocused)).map(entry => (
+        {PALETTE.filter(entry =>
+          isEntryVisible(entry, allowedTools, isPlotFocused, isBuildingOpen)
+        ).map(entry => (
           <PaletteButton
             key={paletteEntryKey(entry)}
             entry={entry}
@@ -216,7 +223,7 @@ export const ToolPalette = observer(
             side={isHorizontal ? 'bottom' : 'right'}
           />
         ))}
-        {editorOwnTools(store.editorMode).map(spec => (
+        {editorOwnTools(store.editorMode, store.layers.activeLayer).map(spec => (
           <EditorToolButton
             key={spec.id}
             spec={spec}

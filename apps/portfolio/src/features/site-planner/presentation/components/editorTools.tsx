@@ -7,6 +7,7 @@ import {
   DoorOpen,
   Flame,
   Footprints,
+  Layers2,
   Square,
   Wind,
   Zap,
@@ -14,6 +15,7 @@ import {
 import type { ComponentType } from 'react';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingLayerId } from '../../domain/model/building-layers';
 import type { EditorToolId, EditTargetKind } from '../../domain/model/editor-mode';
 import { sitePlannerT } from '../translations';
 import { ElectricToolButton } from './ElectricToolButton';
@@ -104,6 +106,20 @@ export const EDITOR_TOOL_PRESENTATIONS: Partial<Record<EditorToolId, EditorToolP
     label: sitePlannerT.electrical.connectLabel,
     hint: sitePlannerT.electrical.connectHint,
   },
+};
+
+/**
+ * How each building layer looks and reads (`layers.md` §8.2). A layer wears
+ * the glyph of its main tool, so it is recognised by the sign already learnt.
+ */
+export const LAYER_PRESENTATIONS: Readonly<
+  Record<BuildingLayerId, { readonly icon: LucideIcon; readonly label: string }>
+> = {
+  structure: { icon: Layers2, label: sitePlannerT.layers.names.structure },
+  walls: { icon: BrickWall, label: sitePlannerT.layers.names.walls },
+  furniture: { icon: Armchair, label: sitePlannerT.layers.names.furniture },
+  electrical: { icon: Zap, label: sitePlannerT.layers.names.electrical },
+  services: { icon: Wind, label: sitePlannerT.layers.names.services },
 };
 
 /**

@@ -16,6 +16,12 @@ import { planToScreen } from '../../../domain/view/plan-viewport';
  * present as context, visibly out of reach (see modes.md).
  */
 export const EDIT_DIM_ALPHA = 0.35;
+/**
+ * The opacity of a building layer that is shown but not active (`layers.md`
+ * §6.3): lighter than the dim of what lies outside the editor, because the
+ * walls are what the furniture is being placed against and must stay legible.
+ */
+export const CONTEXT_LAYER_ALPHA = 0.55;
 
 export const PLAN_COLORS = {
   background: '#07090c',

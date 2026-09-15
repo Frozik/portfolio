@@ -263,9 +263,14 @@ pickups and the solvability guarantee are on the way one at a time.
   from the ball show the direction and the power of the impulse, not the
   flight — the bend under gravity is for the player to judge; returning to
   the anchor cancels the stroke
+- Gravity does not flip at the hit: the pull travels from where it was to
+  the new floor in half a second whatever the angle, so a reversal passes
+  through weightlessness and a ball that touched a ceiling sags off it
+  before it is drawn back up; the dust drifts along the very same pull, so
+  the field shows the turn as it happens
 - The board is open space: blocks at the edge run on past it, a ball can
   fly off — it bursts the moment it leaves unless gravity brings it back
-  within three seconds, and reappears where it last rested; the cup is a real rounded notch the ball has to roll into —
+  within three seconds, and reappears where it last rested; the cup is a real rounded notch, two ball widths across, that the ball has to roll into —
   a fast ball bounces off its rim — and holing out adds the strokes to a
   running total kept with the level in IndexedDB
 - Long, deep faces carry a stretch of elastic or viscous surface, drawn
@@ -485,6 +490,20 @@ source of truth — every mesh, contour and overlay is a pure function of it.
   button, and the contour seals with a mitred seam; Alt+double click cuts a
   ring back open at any corner, or splits an open wall in two, doors and
   sockets staying exactly where they hung
+- **Layers** split the building editor into the разделы of a house project —
+  structure, walls, furniture, electrical, services — and exactly one is in
+  hand at a time. The rail carries the shared tools plus the active layer's
+  own, the side column shows that layer's panels, and a click only reaches
+  that layer's objects: the other layers stay on the plan as legible context
+  (lighter, still what furniture magnetises to and sockets hang on), so a
+  sofa is never mistaken for the wall behind it. A layer's object belongs to
+  it by what it is — nothing is stored on the object and nothing migrates.
+  The layer button on the rail lists them with an eye each; a hidden layer
+  leaves the plan, the 3D view and the exported sheet alike, which is how a
+  plan of the electrics alone is printed. Q steps to the next layer, Shift+Q
+  back, a double click on another layer's object steps into that layer with
+  it selected, and a finding in the list opens on the layer where it is fixed.
+  Storeys are the other axis: the layer state is one for every floor
 - **Storeys stack** with a switcher right in the mode bar. Each one has a
   geometry of its own: its **floor slabs** are objects, and a slab is simply a
   shape — the same rectangle, circle or ellipse the plot is drawn with, rubber

@@ -4,6 +4,8 @@ import type { ComponentType } from 'react';
 import { useState } from 'react';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import type { BuildingLayerId } from '../../domain/model/building-layers';
+import { DEFAULT_BUILDING_LAYER } from '../../domain/model/building-layers';
 import type { EditTargetKind } from '../../domain/model/editor-mode';
 import { sitePlannerT } from '../translations';
 import { ElectricalPanel } from './ElectricalPanel';
@@ -12,6 +14,7 @@ import { EntriesPanel } from './EntriesPanel';
 import { FurniturePanel } from './FurniturePanel';
 import { HeatingPanel } from './HeatingPanel';
 import { BuildingsPanel } from './HousePanel';
+import { LayersPanel } from './LayersPanel';
 import { ObjectsPanel } from './ObjectsPanel';
 import { PanelGroup } from './PanelGroup';
 import { PathSegmentsPanel } from './PathSegmentsPanel';
@@ -43,6 +46,16 @@ interface PanelSection {
   readonly isVisible?: (store: SitePlannerStore) => boolean;
 }
 
+const TOOL_SECTION: PanelSection = {
+  title: sitePlannerT.panelGroups.tool,
+  panels: [ToolOptionsPanel],
+  isVisible: hasToolOptions,
+};
+const PROPERTIES_SECTION: PanelSection = {
+  title: sitePlannerT.panelGroups.properties,
+  panels: [PropertiesPanel],
+};
+
 /**
  * Which panels each mode shows, in reading order — the panel half of the
  * object-editor registry (`object-editors.md`): a future editor contributes
@@ -54,43 +67,66 @@ interface PanelSection {
  * one being worked in was usually below the fold.
  */
 const VIEW_SECTIONS: readonly PanelSection[] = [
-  { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
+  TOOL_SECTION,
   { title: sitePlannerT.panelGroups.plot, panels: [ObjectsPanel, SiteCard, UtilitiesPanel] },
-  { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
+  PROPERTIES_SECTION,
 ];
 
-const EDITOR_SECTIONS: Readonly<Record<EditTargetKind, readonly PanelSection[]>> = {
-  site: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
+/**
+ * The building editor's column follows its active layer (`layers.md` §6.6):
+ * the layers card, the storey, the findings and the properties stand
+ * whatever the layer, and between them come the panels of the layer alone —
+ * the walls' column has no furniture list to scroll past.
+ */
+const LAYER_SECTIONS: Readonly<Record<BuildingLayerId, PanelSection>> = {
+  structure: {
+    title: sitePlannerT.layers.names.structure,
+    panels: [SlabsPanel, SupportsPanel, RoofPanel],
+  },
+  walls: {
+    title: sitePlannerT.layers.names.walls,
+    panels: [WallsPanel, RoomsPanel, StairsPanel],
+  },
+  furniture: { title: sitePlannerT.layers.names.furniture, panels: [FurniturePanel] },
+  electrical: { title: sitePlannerT.layers.names.electrical, panels: [ElectricalPanel] },
+  services: {
+    title: sitePlannerT.layers.names.services,
+    panels: [EntriesPanel, HeatingPanel, VentilationPanel],
+  },
+};
+
+function buildingSections(activeLayer: BuildingLayerId): readonly PanelSection[] {
+  return [
+    TOOL_SECTION,
+    { title: sitePlannerT.layers.panelTitle, panels: [LayersPanel] },
+    { title: sitePlannerT.storeys.panelTitle, panels: [StoreyPanel] },
+    { title: sitePlannerT.panelGroups.findings, panels: [WarningsPanel] },
+    LAYER_SECTIONS[activeLayer],
+    PROPERTIES_SECTION,
+  ];
+}
+
+const EDITOR_SECTIONS: Readonly<
+  Record<EditTargetKind, (store: SitePlannerStore) => readonly PanelSection[]>
+> = {
+  site: () => [
+    TOOL_SECTION,
     {
       title: sitePlannerT.panelGroups.plot,
       panels: [StructurePanel, BuildingsPanel, ElevationMarksPanel],
     },
-    { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
+    PROPERTIES_SECTION,
   ],
-  path: [
+  path: () => [
     { title: sitePlannerT.panelGroups.properties, panels: [PathSegmentsPanel, PropertiesPanel] },
   ],
   // Trench editing is when norm findings get fixed, so they stay in view.
-  utilityRoute: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
+  utilityRoute: () => [
+    TOOL_SECTION,
     { title: sitePlannerT.panelGroups.services, panels: [UtilitiesPanel] },
-    { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
+    PROPERTIES_SECTION,
   ],
-  building: [
-    { title: sitePlannerT.panelGroups.tool, panels: [ToolOptionsPanel], isVisible: hasToolOptions },
-    { title: sitePlannerT.panelGroups.findings, panels: [WarningsPanel] },
-    {
-      title: sitePlannerT.panelGroups.structure,
-      panels: [StoreyPanel, SlabsPanel, WallsPanel, StairsPanel, SupportsPanel, RoofPanel],
-    },
-    { title: sitePlannerT.panelGroups.interior, panels: [FurniturePanel, RoomsPanel] },
-    {
-      title: sitePlannerT.panelGroups.services,
-      panels: [EntriesPanel, HeatingPanel, VentilationPanel, ElectricalPanel],
-    },
-    { title: sitePlannerT.panelGroups.properties, panels: [PropertiesPanel] },
-  ],
+  building: store => buildingSections(store.layers.activeLayer ?? DEFAULT_BUILDING_LAYER),
 };
 
 /**
@@ -99,7 +135,7 @@ const EDITOR_SECTIONS: Readonly<Record<EditTargetKind, readonly PanelSection[]>>
  */
 export const PlanSidePanels = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const mode = store.editorMode;
-  const sections = mode.kind === 'edit' ? EDITOR_SECTIONS[mode.target.kind] : VIEW_SECTIONS;
+  const sections = mode.kind === 'edit' ? EDITOR_SECTIONS[mode.target.kind](store) : VIEW_SECTIONS;
   const [closedTitles, setClosedTitles] = useState<readonly string[]>([]);
 
   const handleToggle = useFunction((title: string) => {

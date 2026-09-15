@@ -141,6 +141,7 @@ export function drawPlan(
       meterUnit,
       entryLetters: labels.entryLetters,
       focusBuildingId: editFocus?.kind === 'building' ? editFocus.buildingId : undefined,
+      activeLayer: chrome?.activeLayer,
       selectedWallId: chrome?.selectedWall?.id,
       selectedOpeningId: chrome?.selectedOpeningId,
       selectedFurnitureId: chrome?.selectedFurniture?.id,

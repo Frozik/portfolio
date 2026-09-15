@@ -6,9 +6,11 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
+import { layerOfWarning } from '../../domain/model/building-layers';
 import type { BuildingWarning } from '../../domain/model/building-warnings';
 import { METER_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';
+import { LAYER_PRESENTATIONS } from './editorTools';
 import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';
 
@@ -73,6 +75,9 @@ const WarningRow = memo(
         />
         <span className="min-w-0 flex-1 text-[11px] leading-snug text-text">
           {describeWarning(warning)}
+        </span>
+        <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-text-muted">
+          {LAYER_PRESENTATIONS[layerOfWarning(warning)].label}
         </span>
       </button>
     );

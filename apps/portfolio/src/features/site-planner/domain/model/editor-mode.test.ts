@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createBuilding } from './building';
+import type { EditorMode } from './editor-mode';
 import {
   allowedPlanTools,
   describeEditedObject,
@@ -51,12 +52,20 @@ describe('allowedPlanTools', () => {
 
 describe('isToolAllowed', () => {
   it('answers from the same table the rail renders from', () => {
-    expect(isToolAllowed(VIEW_MODE, 'measure')).toBe(true);
-    expect(isToolAllowed(VIEW_MODE, 'circle')).toBe(false);
+    expect(isToolAllowed(VIEW_MODE, undefined, 'measure')).toBe(true);
+    expect(isToolAllowed(VIEW_MODE, undefined, 'circle')).toBe(false);
   });
 
   it('refuses an editor tool outside its own editor', () => {
-    expect(isToolAllowed(VIEW_MODE, 'site:imaginary')).toBe(false);
+    expect(isToolAllowed(VIEW_MODE, undefined, 'site:imaginary')).toBe(false);
+  });
+
+  it('refuses a building tool while another layer is active', () => {
+    const mode = buildingMode();
+
+    expect(isToolAllowed(mode, 'walls', 'building:wall')).toBe(true);
+    expect(isToolAllowed(mode, 'furniture', 'building:wall')).toBe(false);
+    expect(isToolAllowed(mode, 'furniture', 'select')).toBe(true);
   });
 });
 
@@ -64,17 +73,42 @@ describe('editorToolbar', () => {
   it('lays out the shared tools followed by the editor its own', () => {
     const pathId = createPathId();
 
-    expect(editorToolbar(VIEW_MODE)).toEqual(allowedPlanTools(VIEW_MODE));
-    expect(editorToolbar({ kind: 'edit', target: { kind: 'site' } })).toEqual([
+    expect(editorToolbar(VIEW_MODE, undefined)).toEqual(allowedPlanTools(VIEW_MODE));
+    expect(editorToolbar({ kind: 'edit', target: { kind: 'site' } }, undefined)).toEqual([
       ...allowedPlanTools({ kind: 'edit', target: { kind: 'site' } }),
       ...OBJECT_EDITOR_SPECS.site.ownTools.map(tool => tool.id),
     ]);
-    expect(editorToolbar({ kind: 'edit', target: { kind: 'path', pathId } })).toEqual([
+    expect(editorToolbar({ kind: 'edit', target: { kind: 'path', pathId } }, undefined)).toEqual([
       ...allowedPlanTools({ kind: 'edit', target: { kind: 'path', pathId } }),
       ...OBJECT_EDITOR_SPECS.path.ownTools.map(tool => tool.id),
     ]);
   });
+
+  it('narrows the building tools to the active layer', () => {
+    const mode = buildingMode();
+
+    expect(editorToolbar(mode, 'electrical')).toEqual([
+      ...allowedPlanTools(mode),
+      'building:electric',
+      'building:connect',
+    ]);
+  });
 });
+
+describe('OBJECT_EDITOR_SPECS.building', () => {
+  it('places every one of its tools on a layer', () => {
+    const unplaced = OBJECT_EDITOR_SPECS.building.ownTools.filter(tool => tool.layer === undefined);
+
+    expect(unplaced).toEqual([]);
+  });
+});
+
+function buildingMode(): EditorMode {
+  return {
+    kind: 'edit',
+    target: { kind: 'building', buildingId: createBuilding({ name: 'Дом' }).id },
+  };
+}
 
 describe('isPlanTool', () => {
   it('tells the shared tools from the namespaced editor ones', () => {
@@ -85,8 +119,15 @@ describe('isPlanTool', () => {
 
 describe('editorToolForHotkey', () => {
   it('arms nothing while viewing and nothing an editor did not contribute', () => {
-    expect(editorToolForHotkey(VIEW_MODE, 'w')).toBeUndefined();
-    expect(editorToolForHotkey({ kind: 'edit', target: { kind: 'site' } }, 'w')).toBeUndefined();
+    expect(editorToolForHotkey(VIEW_MODE, undefined, 'w')).toBeUndefined();
+    expect(
+      editorToolForHotkey({ kind: 'edit', target: { kind: 'site' } }, undefined, 'w')
+    ).toBeUndefined();
+  });
+
+  it('answers a key only on the layer that owns its tool', () => {
+    expect(editorToolForHotkey(buildingMode(), 'walls', 'w')).toBe('building:wall');
+    expect(editorToolForHotkey(buildingMode(), 'furniture', 'w')).toBeUndefined();
   });
 });
 

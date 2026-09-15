@@ -223,6 +223,7 @@ describe('the whole-building turn grip', () => {
       selectedPath: undefined,
       selectedBuildingId: undefined,
       pathHandleHighlight: undefined,
+      activeLayer: undefined,
       selectedPathPointIndex: undefined,
       hoveredPathSegmentIndex: undefined,
       editFocus: undefined,

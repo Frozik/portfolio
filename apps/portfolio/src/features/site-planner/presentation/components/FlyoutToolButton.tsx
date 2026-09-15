@@ -15,6 +15,11 @@ export interface FlyoutVariant<Value> {
   /** The letter that reaches this variant directly, where it has one. */
   readonly hotkey?: string;
   readonly value: Value;
+  /**
+   * A control standing beside the row rather than inside it — a layer's eye —
+   * whose click is its own and neither chooses the variant nor closes the menu.
+   */
+  readonly trailing?: ReactNode;
 }
 
 export interface FlyoutVariantGroup<Value> {
@@ -42,25 +47,28 @@ function FlyoutVariantRow<Value>({
   const handleClick = useFunction(() => onChoose(variant.value));
 
   return (
-    <button
-      type="button"
-      aria-pressed={isArmed}
-      onClick={handleClick}
-      className={cn(
-        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
-        'transition-colors duration-150',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-        isArmed
-          ? 'bg-brand-500/20 text-text'
-          : 'text-text-secondary hover:bg-white/10 hover:text-text'
-      )}
-    >
-      <span className="flex shrink-0 items-center justify-center">{variant.icon}</span>
-      <span className="min-w-0 flex-1 truncate">{variant.label}</span>
-      {!isNil(variant.hotkey) && (
-        <span className="shrink-0 font-mono text-[10px] text-text-muted">{variant.hotkey}</span>
-      )}
-    </button>
+    <div className="flex items-center gap-0.5">
+      <button
+        type="button"
+        aria-pressed={isArmed}
+        onClick={handleClick}
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
+          'transition-colors duration-150',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          isArmed
+            ? 'bg-brand-500/20 text-text'
+            : 'text-text-secondary hover:bg-white/10 hover:text-text'
+        )}
+      >
+        <span className="flex shrink-0 items-center justify-center">{variant.icon}</span>
+        <span className="min-w-0 flex-1 truncate">{variant.label}</span>
+        {!isNil(variant.hotkey) && (
+          <span className="shrink-0 font-mono text-[10px] text-text-muted">{variant.hotkey}</span>
+        )}
+      </button>
+      {variant.trailing}
+    </div>
   );
 }
 
@@ -89,7 +97,8 @@ export function FlyoutToolButton<Value>({
   readonly side: FlyoutSide;
   readonly armedKey: string;
   readonly groups: readonly FlyoutVariantGroup<Value>[];
-  readonly onActivate: () => void;
+  /** Left out, the body opens the list itself — for a button that IS its menu. */
+  readonly onActivate?: () => void;
   readonly onChoose: (value: Value) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -98,6 +107,7 @@ export function FlyoutToolButton<Value>({
     event.preventDefault();
     setIsOpen(true);
   });
+  const handleOpen = useFunction(() => setIsOpen(true));
 
   const handleChoose = useFunction((value: Value) => {
     setIsOpen(false);
@@ -113,7 +123,7 @@ export function FlyoutToolButton<Value>({
               type="button"
               aria-label={title}
               aria-pressed={isActive}
-              onClick={onActivate}
+              onClick={onActivate ?? handleOpen}
               onContextMenu={handleContextMenu}
               className={cn(
                 'flex size-9 items-center justify-center rounded-lg transition-colors duration-150',

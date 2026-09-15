@@ -22,6 +22,7 @@ import { computeFootprintElevations } from '../../domain/terrain/cut-fill';
 import type { Heightfield } from '../../domain/terrain/heightfield';
 import type { SceneFurniture } from '../../domain/terrain/place-furniture';
 import type { Meters } from '../../domain/units';
+import type { PlanLayerKind } from '../../domain/view/plan-layers';
 import type { BuildingScene } from '../building-scene';
 import { buildHeatingSolids } from '../duct-scenes';
 import { buildPitchedRoofSolid } from '../roof-scenes';
@@ -47,6 +48,12 @@ export interface GhostPass {
   /** The building whose editor is open; nothing means none is. */
   readonly editedBuildingId: BuildingId | undefined;
   readonly activeStoreyId: StoreyId | undefined;
+  /**
+   * A hidden building layer leaves the scene altogether — not ghosted, absent,
+   * shadow and all (`layers.md` §6.4). The geometry it stood on is still
+   * derived: a stairwell stays cut whether or not the stair is shown.
+   */
+  readonly visibleLayers: ReadonlySet<PlanLayerKind>;
 }
 
 export function buildBuildingMeshes({
@@ -58,7 +65,8 @@ export function buildBuildingMeshes({
   readonly heightfield: Heightfield;
   readonly pass: GhostPass;
 }): LitMesh | undefined {
-  const { ghosted } = pass;
+  const { ghosted, visibleLayers } = pass;
+  const isShown = (layer: PlanLayerKind): boolean => visibleLayers.has(layer);
   const meshes = scenes.flatMap(scene => {
     const { building, polygons, padElevation, storeys } = scene;
 
@@ -93,6 +101,10 @@ export function buildBuildingMeshes({
         ceilingElevation: canopy.baseElevation + canopy.storey.heightMeters,
       });
 
+      if (!isShown('structure')) {
+        return [];
+      }
+
       return [
         ...buildSupportSolids(canopy.supports),
         ...(isNil(deck)
@@ -109,7 +121,7 @@ export function buildBuildingMeshes({
 
     // A building drawn only as a footprint keeps the classic massing block.
     if (!hasAnyWalls) {
-      if (ghosted) {
+      if (ghosted || !isShown('walls')) {
         return [];
       }
 
@@ -159,17 +171,19 @@ export function buildBuildingMeshes({
         cutouts: [...storeyScene.ownStairCutouts, ...storeyScene.ownDuctCutouts],
         ceilingElevation: baseElevation + storey.heightMeters,
       });
-      const plates = [floorPlate, roofPlate].flatMap(plate =>
-        isNil(plate)
-          ? []
-          : [
-              extrudePrism({
-                polygons: plate.polygons,
-                baseElevation: plate.baseElevation,
-                topElevation: plate.topElevation,
-              }),
-            ]
-      );
+      const plates = isShown('structure')
+        ? [floorPlate, roofPlate].flatMap(plate =>
+            isNil(plate)
+              ? []
+              : [
+                  extrudePrism({
+                    polygons: plate.polygons,
+                    baseElevation: plate.baseElevation,
+                    topElevation: plate.topElevation,
+                  }),
+                ]
+          )
+        : [];
 
       // Openings cut full-height slots; the masonry under each sill and the
       // lintel over each head come back as closed prisms.
@@ -246,9 +260,13 @@ export function buildBuildingMeshes({
         );
       });
 
-      const postSolids = buildSupportSolids(storeyScene.supports);
+      const postSolids = isShown('structure') ? buildSupportSolids(storeyScene.supports) : [];
 
-      return [shell, ...plates, ...stairSolids, ...postSolids, ...pieces];
+      return [
+        ...(isShown('walls') ? [shell, ...stairSolids, ...pieces] : []),
+        ...plates,
+        ...postSolids,
+      ];
     });
   });
   // A roof belongs to the storey it crowns and a shaft to the storey it rises
@@ -258,15 +276,18 @@ export function buildBuildingMeshes({
   const crowns = scenes.flatMap(scene => {
     const crownedStoreyId = scene.pitchedRoof?.crownedStoreyId;
     const roof =
-      isNil(crownedStoreyId) || isGhosted(scene, crownedStoreyId, pass) !== ghosted
+      isNil(crownedStoreyId) ||
+      !isShown('structure') ||
+      isGhosted(scene, crownedStoreyId, pass) !== ghosted
         ? undefined
         : buildPitchedRoofSolid(scene.pitchedRoof);
     const storeys = scene.storeys.filter(
       storeyScene => isGhosted(scene, storeyScene.storey.id, pass) === ghosted
     );
     const runs = scene.ducts.filter(run => isGhosted(scene, run.storeyId, pass) === ghosted);
+    const heating = isShown('services') ? buildHeatingSolids(storeys, runs) : [];
 
-    return [...(isNil(roof) ? [] : [roof]), ...buildHeatingSolids(storeys, runs)];
+    return [...(isNil(roof) ? [] : [roof]), ...heating];
   });
 
   return mergeLitMeshes([...meshes, ...crowns]);

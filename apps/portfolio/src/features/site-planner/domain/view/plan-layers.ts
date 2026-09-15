@@ -1,3 +1,6 @@
+import type { BuildingLayerId } from '../model/building-layers';
+import { BUILDING_LAYER_IDS } from '../model/building-layers';
+
 /**
  * Which parts of the plan a sheet shows. This is a way of looking at the plan
  * rather than part of it — hiding the grid before an export must not change the
@@ -6,6 +9,10 @@
  * One layer composes with a control the plan already has: `analysis` filters
  * whatever the overlay segment is colouring — the toolbar decides *which*
  * analysis exists at all, this set decides whether the sheet shows it.
+ *
+ * The building layers (`layers.md`) are members too: their visibility is the
+ * same kind of fact, read by the plan, the 3D view and the export alike; only
+ * their ACTIVITY is the building editor's own.
  */
 export type PlanLayerKind =
   | 'grid'
@@ -15,7 +22,8 @@ export type PlanLayerKind =
   | 'setback'
   | 'analysis'
   | 'trees'
-  | 'paths';
+  | 'paths'
+  | BuildingLayerId;
 
 /** Every layer, in the order the settings panel lists them. */
 export const PLAN_LAYER_KINDS: readonly PlanLayerKind[] = [
@@ -27,6 +35,7 @@ export const PLAN_LAYER_KINDS: readonly PlanLayerKind[] = [
   'marks',
   'trees',
   'paths',
+  ...BUILDING_LAYER_IDS,
 ];
 
 /** A plan opens showing everything it has. */

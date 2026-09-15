@@ -319,6 +319,7 @@ export const sitePlannerTranslationsEn = {
         marks: 'Elevation marks',
         trees: 'Trees',
         paths: 'Paths',
+        ...sitePlannerHouseTranslationsEn.layers.names,
       },
     },
   },

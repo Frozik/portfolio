@@ -30,6 +30,9 @@ const ENTER_MODE_KEY = 'Enter';
 /** Finishes the polyline of a path, as the double click does. */
 const COMMIT_KEY = 'Enter';
 
+/** Steps the building editor's active layer: Q forward, Shift+Q back (`layers.md`). */
+const LAYER_CYCLE_KEY = 'q';
+
 /** What the keyboard needs from the controller: the open editor, and the gestures in flight. */
 export interface KeyboardCommandHost {
   currentEditInteraction(): EditorInteraction | undefined;
@@ -66,7 +69,7 @@ export class PlanKeyboardCommands {
     const tool = TOOL_HOTKEYS[key.toLowerCase()];
 
     if (!isNil(tool)) {
-      if (!isToolAllowed(this.store.editorMode, tool)) {
+      if (!isToolAllowed(this.store.editorMode, this.store.layers.activeLayer, tool)) {
         return false;
       }
 
@@ -76,7 +79,11 @@ export class PlanKeyboardCommands {
       return true;
     }
 
-    const editorTool = editorToolForHotkey(this.store.editorMode, key.toLowerCase());
+    const editorTool = editorToolForHotkey(
+      this.store.editorMode,
+      this.store.layers.activeLayer,
+      key.toLowerCase()
+    );
 
     if (!isNil(editorTool)) {
       this.host.onPointerCancel();
@@ -106,6 +113,15 @@ export class PlanKeyboardCommands {
     const interaction = this.host.currentEditInteraction();
 
     if (!isNil(interaction) && interaction.onKeyDown(key, modifiers)) {
+      return true;
+    }
+
+    // After the editor's own keys, so a digit typed into a wall's length or a
+    // junction's edge number is never mistaken for anything else.
+    if (key.toLowerCase() === LAYER_CYCLE_KEY && !isNil(this.store.layers.activeLayer)) {
+      this.host.onPointerCancel();
+      this.store.layers.cycleActiveLayer(modifiers.isShiftPressed ? -1 : 1);
+
       return true;
     }
 

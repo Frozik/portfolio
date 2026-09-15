@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 
 import type { BuildingId } from './building';
 import type { Building } from './building';
+import type { BuildingLayerId } from './building-layers';
 import type { PathId, SitePath } from './plot-objects';
 import type { UtilityRoute, UtilityRouteId } from './routing';
 import type { PlanTool, Selection, ShapeOwner } from './selection';
@@ -67,6 +68,12 @@ export interface EditorToolSpec {
   readonly id: EditorToolId;
   /** Active only inside the owning editor; must not shadow a shared hotkey. */
   readonly hotkey: string | undefined;
+  /**
+   * The layer the tool draws on (`layers.md`): it stands on the rail and
+   * answers its key only while that layer is active. A tool of an editor
+   * without layers carries none.
+   */
+  readonly layer?: BuildingLayerId;
 }
 
 /**
@@ -87,33 +94,57 @@ export const OBJECT_EDITOR_SPECS: Readonly<Record<EditTargetKind, ObjectEditorSp
   building: {
     sharedTools: BUILDING_EDIT_TOOLS,
     ownTools: [
-      { id: 'building:slab', hotkey: 'b' },
-      { id: 'building:wall', hotkey: 'w' },
-      { id: 'building:opening', hotkey: 'o' },
-      { id: 'building:furniture', hotkey: 'f' },
-      { id: 'building:stair', hotkey: 's' },
-      { id: 'building:support', hotkey: 'g' },
-      { id: 'building:fireplace', hotkey: 'j' },
-      { id: 'building:duct', hotkey: 'd' },
-      { id: 'building:electric', hotkey: 'k' },
-      { id: 'building:connect', hotkey: 'l' },
+      { id: 'building:slab', hotkey: 'b', layer: 'structure' },
+      { id: 'building:support', hotkey: 'g', layer: 'structure' },
+      { id: 'building:wall', hotkey: 'w', layer: 'walls' },
+      { id: 'building:opening', hotkey: 'o', layer: 'walls' },
+      { id: 'building:stair', hotkey: 's', layer: 'walls' },
+      { id: 'building:furniture', hotkey: 'f', layer: 'furniture' },
+      { id: 'building:electric', hotkey: 'k', layer: 'electrical' },
+      { id: 'building:connect', hotkey: 'l', layer: 'electrical' },
+      { id: 'building:fireplace', hotkey: 'j', layer: 'services' },
+      { id: 'building:duct', hotkey: 'd', layer: 'services' },
     ],
   },
 };
 
 /**
+ * The tools the open editor contributes right now: its own tools, narrowed to
+ * the active layer where the editor has layers. Nothing while viewing.
+ */
+export function editorOwnTools(
+  mode: EditorMode,
+  activeLayer: BuildingLayerId | undefined
+): readonly EditorToolSpec[] {
+  if (mode.kind === 'view') {
+    return NO_OWN_TOOLS;
+  }
+
+  return OBJECT_EDITOR_SPECS[mode.target.kind].ownTools.filter(
+    tool => isNil(tool.layer) || tool.layer === activeLayer
+  );
+}
+
+const NO_OWN_TOOLS: readonly EditorToolSpec[] = [];
+
+/**
  * The full toolbar of a mode, in the order the rail shows it. The toolbar, the
  * hotkeys and the interaction controller all read this one table, so a tool
- * can never be reachable by key in a mode whose rail does not carry it.
+ * can never be reachable by key in a mode whose rail does not carry it — nor
+ * on a layer that does not own it.
  */
-export function editorToolbar(mode: EditorMode): readonly ActiveTool[] {
+export function editorToolbar(
+  mode: EditorMode,
+  activeLayer: BuildingLayerId | undefined
+): readonly ActiveTool[] {
   if (mode.kind === 'view') {
     return VIEW_TOOLS;
   }
 
-  const spec = OBJECT_EDITOR_SPECS[mode.target.kind];
-
-  return [...spec.sharedTools, ...spec.ownTools.map(tool => tool.id)];
+  return [
+    ...OBJECT_EDITOR_SPECS[mode.target.kind].sharedTools,
+    ...editorOwnTools(mode, activeLayer).map(tool => tool.id),
+  ];
 }
 
 /** The shared half of {@link editorToolbar}, for consumers that speak PlanTool. */
@@ -121,17 +152,21 @@ export function allowedPlanTools(mode: EditorMode): readonly PlanTool[] {
   return mode.kind === 'view' ? VIEW_TOOLS : OBJECT_EDITOR_SPECS[mode.target.kind].sharedTools;
 }
 
-export function isToolAllowed(mode: EditorMode, tool: ActiveTool): boolean {
-  return editorToolbar(mode).includes(tool);
+export function isToolAllowed(
+  mode: EditorMode,
+  activeLayer: BuildingLayerId | undefined,
+  tool: ActiveTool
+): boolean {
+  return editorToolbar(mode, activeLayer).includes(tool);
 }
 
-/** The open editor's own tool armed by this key, if it contributed one. */
-export function editorToolForHotkey(mode: EditorMode, key: string): EditorToolId | undefined {
-  if (mode.kind !== 'edit') {
-    return undefined;
-  }
-
-  return OBJECT_EDITOR_SPECS[mode.target.kind].ownTools.find(tool => tool.hotkey === key)?.id;
+/** The open editor's own tool armed by this key, if the active layer carries one. */
+export function editorToolForHotkey(
+  mode: EditorMode,
+  activeLayer: BuildingLayerId | undefined,
+  key: string
+): EditorToolId | undefined {
+  return editorOwnTools(mode, activeLayer).find(tool => tool.hotkey === key)?.id;
 }
 
 /**

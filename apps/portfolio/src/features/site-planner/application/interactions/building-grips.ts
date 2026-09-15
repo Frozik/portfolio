@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
 import type { BuildingId } from '../../domain/model/building';
+import { layerOfSelection } from '../../domain/model/building-layers';
 import type { Selection } from '../../domain/model/selection';
 import {
   draggedDevice,
@@ -22,9 +23,11 @@ import {
   pickFurnitureGrip,
   pickHeating,
   pickOpening,
+  pickSlab,
   pickStair,
   pickStairGrip,
   pickSupport,
+  pickWall,
 } from './storey-object-picking';
 
 /** What a press on a storey object takes hold of: the thing to select, and how it moves. */
@@ -174,4 +177,29 @@ export function createBuildingGrips(
     overWalls: [stairGrip, heating, furnitureGrip],
     underWalls: [entry, device, opening, support, stair, furniture],
   };
+}
+
+/**
+ * What stands under the pointer on ANY shown layer, in the select tool's own
+ * order — the question a double click asks (`layers.md` §7 п.6) that a press,
+ * which only the active layer answers, does not.
+ */
+export function pickAcrossLayers(
+  context: InteractionContext,
+  buildingId: BuildingId,
+  grips: BuildingGrips,
+  planPoint: Vector2
+): Selection | undefined {
+  const grabbed = [...grips.overWalls, ...grips.underWalls]
+    .map(grip => grip(planPoint)?.selection)
+    .find(selection => !isNil(selection));
+  const wall = pickWall(context, buildingId, planPoint);
+  const slab = pickSlab(context, planPoint);
+  const picked =
+    grabbed ??
+    (isNil(wall) ? undefined : { kind: 'wall' as const, buildingId, wallId: wall.id }) ??
+    (isNil(slab) ? undefined : { kind: 'slab' as const, buildingId, slabId: slab.id });
+  const layer = isNil(picked) ? undefined : layerOfSelection(picked);
+
+  return isNil(layer) || context.store.layers.isLayerVisible(layer) ? picked : undefined;
 }

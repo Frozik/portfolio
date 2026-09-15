@@ -33,6 +33,7 @@ import { EditorModesModel } from './EditorModesModel';
 import { ElectricsModel } from './ElectricsModel';
 import { ElevationMarksModel } from './ElevationMarksModel';
 import { FurnitureModel } from './FurnitureModel';
+import { LayersModel } from './LayersModel';
 import { OpeningsModel } from './OpeningsModel';
 import { PlanDocumentModel } from './PlanDocumentModel';
 import { PlanHistory } from './PlanHistory';
@@ -149,6 +150,9 @@ export class SitePlannerStore implements PlanEditorCore {
   /** The edited building's storey stack and the active level ({@link StoreysModel}). */
   readonly storeys: StoreysModel;
 
+  /** The edited building's layers: the active one and the visible ones ({@link LayersModel}). */
+  readonly layers: LayersModel;
+
   /** The edited building's pitched roof and roof-zone covers ({@link RoofModel}). */
   readonly roof: RoofModel;
 
@@ -217,16 +221,18 @@ export class SitePlannerStore implements PlanEditorCore {
     this.marks = new ElevationMarksModel(this);
     this.composition = new CompositionModel(this);
     this.modes = new EditorModesModel(this, this.composition);
+    this.layers = new LayersModel(this);
     this.tooling = new ToolingModel(this, {
       sun: this.sun,
       marks: this.marks,
       siteObjects: this.siteObjects,
       utilities: this.utilities,
+      layers: this.layers,
     });
     this.document = new PlanDocumentModel(this, this.history, this.tooling);
     this.persistence = new PlanPersistence(this.document, repository);
     this.building = new BuildingModel(this, this.scene, this.composition);
-    this.storeys = new StoreysModel(this, this.scene);
+    this.storeys = new StoreysModel(this, this.scene, this.layers);
     this.roof = new RoofModel(this, this.scene);
     this.storeyObjects = new StoreyObjectsEditorModel(this, this.scene, this.storeys);
     this.stairs = new StairsModel(this, this.storeys);
@@ -364,6 +370,7 @@ export class SitePlannerStore implements PlanEditorCore {
     this.editorSession?.dispose();
     this.editorSession = undefined;
     this.disposeHistoryCommit();
+
     this.persistence.dispose();
     this.view.dispose();
     this.sun.dispose();
@@ -378,6 +385,7 @@ export class SitePlannerStore implements PlanEditorCore {
     this.document.dispose();
     this.building.dispose();
     this.storeys.dispose();
+    this.layers.dispose();
     this.roof.dispose();
     this.storeyObjects.dispose();
     this.stairs.dispose();

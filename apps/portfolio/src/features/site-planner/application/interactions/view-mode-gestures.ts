@@ -12,8 +12,8 @@ import {
 } from '../../domain/model/site-object';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import { planToScreen } from '../../domain/view/plan-viewport';
+import { computeBuildingHandles } from '../render/plan-draw/draw-building-selection';
 import { computeCarHandles } from '../render/plan-draw/draw-cars';
-import { computeBuildingHandles } from '../render/plan-draw/draw-house';
 import type { InteractionContext } from './editor-interaction';
 import { snapPointToGrid } from './grid-snapping';
 import { ObjectDragGestures } from './object-drag-gestures';

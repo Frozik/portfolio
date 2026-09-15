@@ -76,16 +76,27 @@ const CheckboxRow = memo(
   ({
     label,
     isChecked,
+    isDisabled = false,
+    title,
     onToggle,
   }: {
     readonly label: string;
     readonly isChecked: boolean;
+    readonly isDisabled?: boolean;
+    readonly title?: string;
     readonly onToggle: VoidFunction;
   }) => (
-    <label className="flex cursor-pointer items-center gap-2 text-[11px] text-text-secondary">
+    <label
+      title={title}
+      className={cn(
+        'flex items-center gap-2 text-[11px] text-text-secondary',
+        isDisabled ? 'cursor-default opacity-60' : 'cursor-pointer'
+      )}
+    >
       <input
         type="checkbox"
         checked={isChecked}
+        disabled={isDisabled}
         onChange={onToggle}
         className="size-4 accent-brand-500"
       />
@@ -314,12 +325,15 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
 
 const LayerRow = observer(
   ({ store, layer }: { readonly store: SitePlannerStore; readonly layer: PlanLayerKind }) => {
-    const handleToggle = useFunction(() => store.view.toggleLayerVisibility(layer));
+    const handleToggle = useFunction(() => store.layers.toggleLayerVisibility(layer));
+    const canToggle = store.layers.canToggleLayerVisibility(layer);
 
     return (
       <CheckboxRow
         label={sitePlannerT.settings.layers.kinds[layer]}
-        isChecked={store.view.visibleLayers.has(layer)}
+        isChecked={store.layers.isLayerVisible(layer)}
+        isDisabled={!canToggle}
+        title={canToggle ? undefined : sitePlannerT.layers.activeAlwaysVisible}
         onToggle={handleToggle}
       />
     );

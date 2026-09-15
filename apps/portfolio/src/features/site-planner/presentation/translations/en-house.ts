@@ -1,4 +1,26 @@
 export const sitePlannerHouseTranslationsEn = {
+  /** The building editor's layers (`layers.md`): the rail button and its menu. */
+  layers: {
+    panelTitle: 'Layers',
+    /** The rail button: what is in hand, and the way to the list. */
+    toolTitle: 'Layer',
+    menu: 'Choose the layer',
+    names: {
+      structure: 'Structure',
+      walls: 'Walls',
+      furniture: 'Furniture',
+      electrical: 'Electrical',
+      services: 'Services',
+    },
+    show: 'Show the layer',
+    hide: 'Hide the layer',
+    activeAlwaysVisible: 'The active layer is always shown',
+    hideOthers: 'Hide the other layers',
+    showAll: 'Show every layer',
+    cycleHint: 'Q — next layer · Shift+Q — previous',
+    /** Status-bar warning: nothing hosts an opening or a device while the walls are off. */
+    wallsHidden: 'Walls are hidden — openings and devices will find no wall',
+  },
   storeys: {
     /** «Этаж N» caption of one storey button in the mode bar. */
     storeyTitle: 'Storey',

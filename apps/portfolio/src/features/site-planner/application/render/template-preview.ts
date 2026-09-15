@@ -7,6 +7,7 @@ import { entriesOf, foundationOf, pitchedRoofOf } from '../../domain/model/build
 import type { Building } from '../../domain/model/building';
 import type { Meters } from '../../domain/units';
 import type { PlanLayerKind } from '../../domain/view/plan-layers';
+import { ALL_PLAN_LAYERS } from '../../domain/view/plan-layers';
 import type { PlanViewport } from '../../domain/view/plan-viewport';
 import type { BuildingScene } from '../building-scene';
 import { deriveDuctRuns } from '../duct-scenes';
@@ -81,7 +82,14 @@ export function buildTemplatePreview(
     viewport,
     content: {
       boundaryPolygons: [],
-      buildings: [planBuildingOf(scene, { isEdited: true, active: storeys[0], below: undefined })],
+      buildings: [
+        planBuildingOf(scene, {
+          isEdited: true,
+          active: storeys[0],
+          below: undefined,
+          visibleLayers: ALL_PLAN_LAYERS,
+        }),
+      ],
       setbackRings: [],
       contours: [],
       analysisRaster: undefined,

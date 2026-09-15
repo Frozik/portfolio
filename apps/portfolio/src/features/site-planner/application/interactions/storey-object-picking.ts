@@ -54,7 +54,11 @@ function toleranceMeters(context: InteractionContext, pixels: number): number {
   return pixels / context.getViewport().pixelsPerMeter;
 }
 
-/** The topmost wall whose body covers the point; later walls lie over earlier. */
+/**
+ * The topmost wall whose body covers the point; later walls lie over earlier.
+ * Hidden walls answer nothing — not to the select tool, and not as a host for
+ * an opening or a device (`layers.md` §6.4): what is off the sheet is off.
+ */
 export function pickWall(
   context: InteractionContext,
   buildingId: BuildingId,
@@ -62,7 +66,7 @@ export function pickWall(
 ): Wall | undefined {
   const storey = activeStoreyOf(context, buildingId);
 
-  if (isNil(storey)) {
+  if (isNil(storey) || !context.store.layers.isLayerVisible('walls')) {
     return undefined;
   }
 

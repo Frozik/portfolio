@@ -1,9 +1,9 @@
 import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
-import { computeMultiPolygonBounds } from '../../../domain/geometry/bounding-box';
 import { computeMultiPolygonCentroid } from '../../../domain/geometry/polygon-centroid';
 import type { BuildingId } from '../../../domain/model/building';
+import type { BuildingLayerId } from '../../../domain/model/building-layers';
 import type { DuctId } from '../../../domain/model/ducts';
 import type { DeviceId } from '../../../domain/model/electrical';
 import type { FireplaceId } from '../../../domain/model/fireplaces';
@@ -29,8 +29,6 @@ import type { PlanPitchedRoof } from './draw-pitched-roof';
 import { drawPitchedRoof } from './draw-pitched-roof';
 import type { PlanRoofZone, PlanRoom } from './draw-rooms';
 import { drawRoofZones, drawRooms } from './draw-rooms';
-import type { ShapeHandle } from './draw-selection';
-import { drawHandles, ROTATION_HANDLE_GAP_PX } from './draw-selection';
 import type { PlanSlab } from './draw-slabs';
 import { drawSlabs } from './draw-slabs';
 import type { PlanStair, PlanSupport } from './draw-stairs';
@@ -40,6 +38,7 @@ import type { PlanWallBody } from './draw-wall-bodies';
 import { drawWallBodies } from './draw-wall-bodies';
 import {
   buildMultiPolygonPath,
+  CONTEXT_LAYER_ALPHA,
   drawLabel,
   EDIT_DIM_ALPHA,
   formatMeters,
@@ -69,42 +68,6 @@ export const UTILITY_SYSTEM_COLORS: Readonly<Record<UtilitySystem, string>> = {
   ventilation: '#5eead4',
   gas: '#facc15',
 };
-
-/**
- * The turn grip of a selected building: hanging over the footprint's top edge
- * the way the car's hangs past its nose, so a whole house can be turned in
- * view mode — contents, roof ridge and all.
- */
-export function computeBuildingHandles(
-  polygons: MultiPolygon,
-  viewport: PlanViewport
-): readonly ShapeHandle[] {
-  const bounds = computeMultiPolygonBounds(polygons);
-
-  if (isNil(bounds)) {
-    return [];
-  }
-
-  const topCentre = planToScreen(viewport, {
-    x: (bounds.minX + bounds.maxX) / 2,
-    y: bounds.maxY,
-  });
-
-  return [
-    {
-      kind: 'rotate',
-      screenPoint: { x: topCentre.x, y: topCentre.y - ROTATION_HANDLE_GAP_PX },
-    },
-  ];
-}
-
-export function drawBuildingSelection(
-  ctx: CanvasRenderingContext2D,
-  viewport: PlanViewport,
-  polygons: MultiPolygon
-): void {
-  drawHandles(ctx, computeBuildingHandles(polygons, viewport));
-}
 
 /** One utility entry as the drawing needs it: which system, and where it enters. */
 interface PlanBuildingEntry {
@@ -185,6 +148,7 @@ export function drawBuildings(
     meterUnit,
     entryLetters,
     focusBuildingId,
+    activeLayer,
     selectedWallId,
     selectedEntryId,
     selectedOpeningId,
@@ -208,6 +172,8 @@ export function drawBuildings(
     readonly entryLetters: Readonly<Record<UtilitySystem, string>>;
     /** The building whose editor is open; every other one steps back dimmed. */
     readonly focusBuildingId?: BuildingId;
+    /** The layer in hand inside that building; its other layers draw as context. */
+    readonly activeLayer?: BuildingLayerId;
     readonly selectedWallId?: WallId;
     readonly selectedOpeningId?: OpeningId;
     readonly selectedFurnitureId?: FurnitureId;
@@ -243,6 +209,24 @@ export function drawBuildings(
 
     const isSelected = building.id === selectedBuildingId;
     const path = buildMultiPolygonPath(building.polygons, viewport);
+    // A layer other than the active one is context: present, legible, out
+    // of reach — the same contract as the dim outside the editor, one shade
+    // lighter (`layers.md` §6.3).
+    const onLayer = (layer: BuildingLayerId, draw: () => void): void => {
+      const isContext =
+        building.id === focusBuildingId && !isNil(activeLayer) && layer !== activeLayer;
+
+      if (!isContext) {
+        draw();
+
+        return;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = CONTEXT_LAYER_ALPHA;
+      draw();
+      ctx.restore();
+    };
 
     ctx.fillStyle = style.fillColor;
     ctx.fill(path, 'nonzero');
@@ -251,45 +235,59 @@ export function drawBuildings(
     ctx.lineJoin = 'round';
     ctx.stroke(path);
 
-    drawRoofZones(ctx, viewport, building.roofZones);
+    onLayer('structure', () => drawRoofZones(ctx, viewport, building.roofZones));
 
     if (building.id === focusBuildingId) {
-      drawRooms(ctx, viewport, building.rooms, {
-        roomTypeNames,
-        squareMeterUnit,
-        hoveredRoomIndex,
-      });
+      onLayer('walls', () => {
+        drawRooms(ctx, viewport, building.rooms, {
+          roomTypeNames,
+          squareMeterUnit,
+          hoveredRoomIndex,
+        });
 
-      if (building.referenceWalls.length > 0) {
-        ctx.save();
-        ctx.globalAlpha = EDIT_DIM_ALPHA;
-        drawWallBodies(ctx, viewport, building.referenceWalls);
-        ctx.restore();
-      }
+        if (building.referenceWalls.length > 0) {
+          ctx.save();
+          ctx.globalAlpha = EDIT_DIM_ALPHA;
+          drawWallBodies(ctx, viewport, building.referenceWalls);
+          ctx.restore();
+        }
+      });
     }
 
     // The floor comes before what stands on it.
-    drawSlabs(ctx, viewport, building.slabs, { selectedSlabId });
+    onLayer('structure', () => drawSlabs(ctx, viewport, building.slabs, { selectedSlabId }));
     drawOverhangFloor(ctx, viewport, building.overhangFloor);
-    drawWallBodies(ctx, viewport, building.walls, selectedWallId);
-    drawOpenings(ctx, viewport, building.openings, selectedOpeningId);
-    drawFurniture(ctx, viewport, building.furniture, selectedFurnitureId);
-    drawStairs(ctx, viewport, building.stairs, { upLabel: stairUpLabel, selectedStairId });
-    drawSupports(ctx, viewport, building.supports, { selectedSupportId });
-    drawHeating(ctx, viewport, {
-      fireplaces: building.fireplaces,
-      ducts: building.ducts,
-      selectedFireplaceId,
-      selectedDuctId,
+    onLayer('walls', () => {
+      drawWallBodies(ctx, viewport, building.walls, selectedWallId);
+      drawOpenings(ctx, viewport, building.openings, selectedOpeningId);
     });
-    drawElectrical(ctx, viewport, {
-      devices: building.devices,
-      wires: building.wires,
-      selectedDeviceId,
-      pendingConnectDeviceId,
-    });
+    onLayer('furniture', () =>
+      drawFurniture(ctx, viewport, building.furniture, selectedFurnitureId)
+    );
+    onLayer('walls', () =>
+      drawStairs(ctx, viewport, building.stairs, { upLabel: stairUpLabel, selectedStairId })
+    );
+    onLayer('structure', () =>
+      drawSupports(ctx, viewport, building.supports, { selectedSupportId })
+    );
+    onLayer('services', () =>
+      drawHeating(ctx, viewport, {
+        fireplaces: building.fireplaces,
+        ducts: building.ducts,
+        selectedFireplaceId,
+        selectedDuctId,
+      })
+    );
+    onLayer('electrical', () =>
+      drawElectrical(ctx, viewport, {
+        devices: building.devices,
+        wires: building.wires,
+        selectedDeviceId,
+        pendingConnectDeviceId,
+      })
+    );
     drawUpperFootprints(ctx, viewport, building.upperFootprints);
-    drawPitchedRoof(ctx, viewport, building.pitchedRoof);
+    onLayer('structure', () => drawPitchedRoof(ctx, viewport, building.pitchedRoof));
 
     const centroid = computeMultiPolygonCentroid(building.polygons);
 
@@ -309,9 +307,17 @@ export function drawBuildings(
   }
 
   for (const building of buildings) {
-    if (focusBuildingId === undefined || building.id === focusBuildingId) {
-      drawUtilityEntries(ctx, viewport, building.entries, entryLetters, selectedEntryId);
+    if (focusBuildingId !== undefined && building.id !== focusBuildingId) {
+      continue;
     }
+
+    const isContext =
+      building.id === focusBuildingId && !isNil(activeLayer) && activeLayer !== 'services';
+
+    ctx.save();
+    ctx.globalAlpha = isContext ? CONTEXT_LAYER_ALPHA : 1;
+    drawUtilityEntries(ctx, viewport, building.entries, entryLetters, selectedEntryId);
+    ctx.restore();
   }
 }
 

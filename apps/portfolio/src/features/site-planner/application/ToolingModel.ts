@@ -12,6 +12,7 @@ import type { OverlayMode } from '../domain/view/overlay-mode';
 import type { SitePlannerViewMode } from '../domain/view/view-mode';
 import type { PlanEditorCore } from './editor-core';
 import type { ElevationMarksModel } from './ElevationMarksModel';
+import type { LayersModel } from './LayersModel';
 import type { PathHandleHighlight } from './render/plan-draw/draw-paths';
 import type { SiteObjectsModel } from './SiteObjectsModel';
 import type { SunStudy } from './SunStudy';
@@ -19,12 +20,13 @@ import type { UtilityNetworkModel } from './UtilityNetworkModel';
 
 const NO_MEASURE_POINTS: readonly Vector2[] = [];
 
-/** The models whose drafts a tool change or a restored plan must drop. */
+/** The models whose drafts a tool change or a restored plan must drop, and the layer that gates the tools. */
 export interface DraftOwners {
   readonly sun: SunStudy;
   readonly marks: ElevationMarksModel;
   readonly siteObjects: SiteObjectsModel;
   readonly utilities: UtilityNetworkModel;
+  readonly layers: LayersModel;
 }
 
 /**
@@ -43,17 +45,29 @@ export class ToolingModel {
   private readonly marks: ElevationMarksModel;
   private readonly siteObjects: SiteObjectsModel;
   private readonly utilities: UtilityNetworkModel;
+  private readonly layers: LayersModel;
 
-  constructor(core: PlanEditorCore, { sun, marks, siteObjects, utilities }: DraftOwners) {
+  constructor(core: PlanEditorCore, { sun, marks, siteObjects, utilities, layers }: DraftOwners) {
     this.core = core;
     this.sun = sun;
     this.marks = marks;
     this.siteObjects = siteObjects;
     this.utilities = utilities;
+    this.layers = layers;
 
-    makeAutoObservable<ToolingModel, 'core' | 'sun' | 'marks' | 'siteObjects' | 'utilities'>(
+    makeAutoObservable<
+      ToolingModel,
+      'core' | 'sun' | 'marks' | 'siteObjects' | 'utilities' | 'layers'
+    >(
       this,
-      { core: false, sun: false, marks: false, siteObjects: false, utilities: false },
+      {
+        core: false,
+        sun: false,
+        marks: false,
+        siteObjects: false,
+        utilities: false,
+        layers: false,
+      },
       { autoBind: true }
     );
   }
@@ -118,7 +132,7 @@ export class ToolingModel {
   }
 
   setActiveTool(activeTool: ActiveTool): void {
-    if (!isToolAllowed(this.core.editorMode, activeTool)) {
+    if (!isToolAllowed(this.core.editorMode, this.layers.activeLayer, activeTool)) {
       return;
     }
 

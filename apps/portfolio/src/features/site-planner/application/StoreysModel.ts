@@ -3,6 +3,7 @@ import { makeAutoObservable } from 'mobx';
 import type { BuildingId } from '../domain/model/building';
 import { storeysOf } from '../domain/model/building';
 import { findBuilding as findBuildingIn } from '../domain/model/building-edits';
+import { layerOfWarning } from '../domain/model/building-layers';
 import type { BuildingWarning } from '../domain/model/building-warnings';
 import type { Opening } from '../domain/model/openings';
 import { createShapeId } from '../domain/model/shapes';
@@ -16,6 +17,7 @@ import { createStorey, slabsOf } from '../domain/model/storeys';
 import type { Wall } from '../domain/model/walls';
 import type { Meters } from '../domain/units';
 import type { PlanEditorCore } from './editor-core';
+import type { LayersModel } from './LayersModel';
 import type { SceneModel } from './SceneModel';
 import type { StoreyScene } from './storey-scenes';
 
@@ -29,14 +31,16 @@ const STOREY_HEIGHT_HISTORY_GROUP = 'building:storey-height';
 export class StoreysModel {
   private readonly core: PlanEditorCore;
   private readonly scene: SceneModel;
+  private readonly layers: LayersModel;
 
-  constructor(core: PlanEditorCore, scene: SceneModel) {
+  constructor(core: PlanEditorCore, scene: SceneModel, layers: LayersModel) {
     this.core = core;
     this.scene = scene;
+    this.layers = layers;
 
-    makeAutoObservable<StoreysModel, 'core' | 'scene'>(
+    makeAutoObservable<StoreysModel, 'core' | 'scene' | 'layers'>(
       this,
-      { core: false, scene: false },
+      { core: false, scene: false, layers: false },
       { autoBind: true }
     );
   }
@@ -246,13 +250,15 @@ export class StoreysModel {
   }
 
   /**
-   * Answers a finding in the Замечания panel: aims the editor at the storey it
-   * belongs to and brings its place into view. A list of findings is only
-   * useful if each row is a way to get to the thing it is about.
+   * Answers a finding in the Замечания panel: aims the editor at the storey
+   * and the layer it belongs to and brings its place into view. A list of
+   * findings is only useful if each row is a way to get to the thing it is
+   * about — and to the tools that fix it (`layers.md` §7 п.8).
    */
   revealWarning(warning: BuildingWarning): void {
     this.core.setViewMode('plan');
     this.setActiveStorey(warning.storeyId);
+    this.layers.setActiveLayer(layerOfWarning(warning));
     this.core.view.centreOn(warning.at);
   }
 

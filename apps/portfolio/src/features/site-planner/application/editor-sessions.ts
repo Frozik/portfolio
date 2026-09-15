@@ -3,6 +3,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { makeAutoObservable } from 'mobx';
 
 import type { BuildingId } from '../domain/model/building';
+import type { BuildingLayerId } from '../domain/model/building-layers';
+import { DEFAULT_BUILDING_LAYER } from '../domain/model/building-layers';
 import type { EditTarget } from '../domain/model/editor-mode';
 import type { DeviceId, DeviceKind } from '../domain/model/electrical';
 import { DEFAULT_DEVICE_KIND } from '../domain/model/electrical';
@@ -90,6 +92,8 @@ class BuildingEditSession {
   activeStoreyId: StoreyId | undefined = undefined;
   /** Chief Architect's reference display: the storey below ghosts through. */
   isReferenceStoreyVisible = true;
+  /** The layer being worked in — exactly one, as with the storey (`layers.md`). */
+  activeLayer: BuildingLayerId = DEFAULT_BUILDING_LAYER;
 
   constructor(buildingId: BuildingId) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -152,6 +156,10 @@ class BuildingEditSession {
 
   toggleReferenceStorey(): void {
     this.isReferenceStoreyVisible = !this.isReferenceStoreyVisible;
+  }
+
+  setActiveLayer(layer: BuildingLayerId): void {
+    this.activeLayer = layer;
   }
 
   dispose(): void {}

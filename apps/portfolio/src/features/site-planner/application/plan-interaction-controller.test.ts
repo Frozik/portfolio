@@ -1797,6 +1797,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 14, y: 8 }, NO_MODIFIERS);
       controller.onKeyDown('Enter', NO_MODIFIERS);
       store.setSelection(undefined);
+      store.layers.setActiveLayer('furniture');
 
       return building;
     };
@@ -1945,6 +1946,7 @@ describe('PlanInteractionController', () => {
       controller.onPointerDown({ x: 14, y: 8 }, NO_MODIFIERS);
       controller.onKeyDown('Enter', NO_MODIFIERS);
       store.setSelection(undefined);
+      store.layers.setActiveLayer('electrical');
 
       return building;
     };
@@ -2400,6 +2402,7 @@ describe('PlanInteractionController', () => {
     };
 
     const placeWith = (tool: 'building:stair' | 'building:support', at: Vector2): void => {
+      store.layers.setActiveLayer(tool === 'building:stair' ? 'walls' : 'structure');
       store.setActiveTool(tool);
       controller.onPointerDown(at, NO_MODIFIERS);
       controller.onPointerUp(at, NO_MODIFIERS);
@@ -2469,6 +2472,7 @@ describe('PlanInteractionController', () => {
     };
 
     const clickSlabAt = (at: Vector2): void => {
+      store.layers.setActiveLayer('structure');
       store.setActiveTool('building:slab');
       controller.onPointerDown(at, NO_MODIFIERS);
       controller.onPointerUp(at, NO_MODIFIERS);
@@ -2490,6 +2494,7 @@ describe('PlanInteractionController', () => {
 
     it('draws the armed primitive out with a rubber band', () => {
       openUpperStorey();
+      store.layers.setActiveLayer('structure');
       store.tooling.setArmedShapeTool('ellipse');
       store.setActiveTool('building:slab');
       drag({ x: 6, y: 6 }, { x: 14, y: 12 });
@@ -2504,6 +2509,7 @@ describe('PlanInteractionController', () => {
 
     it('takes the storey outline from the slabs, whatever shape they are', () => {
       openUpperStorey();
+      store.layers.setActiveLayer('structure');
       store.tooling.setArmedShapeTool('circle');
       store.setActiveTool('building:slab');
       drag({ x: 10, y: 10 }, { x: 14, y: 10 });
@@ -2608,6 +2614,84 @@ describe('PlanInteractionController', () => {
     });
   });
 
+  describe('the layers of the building editor', () => {
+    const openWithWall = (): void => {
+      const building = store.building.addBuilding('Дом');
+
+      store.composition.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      controller.onKeyDown('w', NO_MODIFIERS);
+      controller.onPointerDown({ x: 6, y: 8 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 14, y: 8 }, NO_MODIFIERS);
+      controller.onKeyDown('Enter', NO_MODIFIERS);
+      store.setSelection(undefined);
+    };
+
+    it('steps the layer with Q and back with Shift+Q', () => {
+      openWithWall();
+
+      expect(controller.onKeyDown('q', NO_MODIFIERS)).toBe(true);
+      expect(store.layers.activeLayer).toBe('furniture');
+
+      controller.onKeyDown('Q', { ...NO_MODIFIERS, isShiftPressed: true });
+
+      expect(store.layers.activeLayer).toBe('walls');
+    });
+
+    it("lets the key of another layer's tool fall through", () => {
+      openWithWall();
+      store.layers.setActiveLayer('furniture');
+
+      expect(controller.onKeyDown('w', NO_MODIFIERS)).toBe(false);
+      expect(store.activeTool).toBe('select');
+    });
+
+    it('lets a press pass through a wall while furniture is the layer in hand', () => {
+      openWithWall();
+      store.layers.setActiveLayer('furniture');
+
+      controller.onPointerDown({ x: 10, y: 8 }, NO_MODIFIERS);
+      controller.onPointerUp({ x: 10, y: 8 }, NO_MODIFIERS);
+
+      expect(store.selection).toBeUndefined();
+    });
+
+    it("steps into the wall's layer on a double click from another layer", () => {
+      openWithWall();
+      store.layers.setActiveLayer('furniture');
+
+      controller.onDoubleClick({ x: 10, y: 8 }, NO_MODIFIERS);
+
+      expect(store.editorMode.kind).toBe('edit');
+      expect(store.layers.activeLayer).toBe('walls');
+      expect(store.selection?.kind).toBe('wall');
+    });
+
+    it('still leaves the editor on a double click over emptiness', () => {
+      openWithWall();
+      store.layers.setActiveLayer('furniture');
+
+      controller.onDoubleClick({ x: 10, y: 14 }, NO_MODIFIERS);
+
+      expect(store.editorMode.kind).toBe('view');
+    });
+
+    it('hangs no device on a hidden wall', () => {
+      openWithWall();
+      store.layers.setActiveLayer('electrical');
+      store.layers.toggleLayerVisibility('walls');
+      store.electrics.setArmedDeviceKind('outlet');
+      controller.onKeyDown('k', NO_MODIFIERS);
+      controller.onPointerDown({ x: 10, y: 8 }, NO_MODIFIERS);
+
+      expect(devicesOf(storeysOf(store.buildings[0])[0])).toHaveLength(0);
+    });
+  });
+
   describe('regression: selecting things in the building editor', () => {
     const openHouse = (): void => {
       const building = store.building.addBuilding('Дом');
@@ -2622,6 +2706,7 @@ describe('PlanInteractionController', () => {
 
     it('selects a piece of furniture by clicking it', () => {
       openHouse();
+      store.layers.setActiveLayer('furniture');
       store.setActiveTool('building:furniture');
       controller.onPointerDown({ x: 10, y: 10 }, NO_MODIFIERS);
       controller.onPointerUp({ x: 10, y: 10 }, NO_MODIFIERS);

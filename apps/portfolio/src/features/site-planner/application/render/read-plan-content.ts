@@ -4,6 +4,7 @@ import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { subtractPolygons } from '../../domain/geometry/polygon-booleans';
 import { slabPolygon } from '../../domain/geometry/slab-geometry';
 import { editedBuildingId } from '../../domain/model/editor-mode';
+import type { PlanLayerKind } from '../../domain/view/plan-layers';
 import type { BuildingScene } from '../building-scene';
 import type { SitePlannerStore } from '../SitePlannerStore';
 import type { StoreyScene } from '../storey-scenes';
@@ -27,7 +28,23 @@ function readPlanBuilding(store: SitePlannerStore, scene: BuildingScene): PlanBu
       ? scene.storeys[active.level - 1]
       : undefined;
 
-  return planBuildingOf(scene, { isEdited, active, below });
+  return planBuildingOf(scene, {
+    isEdited,
+    active,
+    below,
+    visibleLayers: store.view.visibleLayers,
+  });
+}
+
+const NOTHING: readonly never[] = [];
+
+/** The list itself while its layer is shown, nothing while it is hidden. */
+function onLayer<T>(
+  visibleLayers: ReadonlySet<PlanLayerKind>,
+  layer: PlanLayerKind,
+  items: readonly T[]
+): readonly T[] {
+  return visibleLayers.has(layer) ? items : NOTHING;
 }
 
 /**
@@ -41,29 +58,37 @@ export function planBuildingOf(
     isEdited,
     active,
     below,
+    visibleLayers,
   }: {
     readonly isEdited: boolean;
     readonly active: StoreyScene | undefined;
     readonly below: StoreyScene | undefined;
+    /** A hidden layer's objects are left off the sheet (`layers.md` §6.4). */
+    readonly visibleLayers: ReadonlySet<PlanLayerKind>;
   }
 ): PlanBuilding {
   const displayed = active ?? scene.storeys[0];
+  const shown = <T>(layer: PlanLayerKind, items: readonly T[]): readonly T[] =>
+    onLayer(visibleLayers, layer, items);
 
   return {
     id: scene.building.id,
     name: scene.building.name,
     polygons: scene.polygons,
     padElevation: scene.padElevation,
-    entries: scene.entryPoints,
-    walls: displayed?.wallShapes ?? [],
-    openings: displayed?.openingShapes ?? [],
-    rooms: displayed?.rooms ?? [],
-    referenceWalls: below?.wallShapes ?? [],
+    entries: shown('services', scene.entryPoints),
+    walls: shown('walls', displayed?.wallShapes ?? []),
+    openings: shown('walls', displayed?.openingShapes ?? []),
+    rooms: shown('walls', displayed?.rooms ?? []),
+    referenceWalls: shown('walls', below?.wallShapes ?? []),
     upperFootprints: scene.storeys
       .filter(storeyScene => storeyScene.level > 0)
       .flatMap(storeyScene => storeyScene.footprint),
-    roofZones: scene.storeys.flatMap(storeyScene =>
-      storeyScene.roofZones.filter(zone => zone.cover !== 'membrane')
+    roofZones: shown(
+      'structure',
+      scene.storeys.flatMap(storeyScene =>
+        storeyScene.roofZones.filter(zone => zone.cover !== 'membrane')
+      )
     ),
     // While a storey is open, its own overhang is the one that matters; with
     // no editor open the house is looked at whole, so every storey's overhang
@@ -76,50 +101,67 @@ export function planBuildingOf(
     // the one on screen — and always in view mode, where the house is looked
     // at whole and its roof is the first thing seen from above.
     pitchedRoof:
-      isNil(scene.pitchedRoof) || (isEdited && active?.level !== scene.storeys.length - 1)
+      isNil(scene.pitchedRoof) ||
+      !visibleLayers.has('structure') ||
+      (isEdited && active?.level !== scene.storeys.length - 1)
         ? undefined
         : {
             outline: scene.pitchedRoof.plan,
             creases: scene.pitchedRoof.creases,
             slopeArrows: scene.pitchedRoof.slopeArrows,
           },
-    fireplaces: (displayed?.fireplaces ?? []).map(fireplaceScene => ({
-      id: fireplaceScene.fireplace.id,
-      footprint: fireplaceScene.footprint,
-      firePoint: fireplaceScene.fireplace.position,
-      fluePosition: fireplaceScene.fluePosition,
-    })),
-    ducts: (displayed?.ducts ?? []).map(section => ({
-      id: section.duct.id,
-      kind: section.duct.kind,
-      footprint: section.footprint,
-      isPassingThrough: !section.startsHere,
-    })),
-    slabs: (displayed?.slabs ?? []).map(slab => ({
-      id: slab.id,
-      footprint: slabPolygon(slab),
-    })),
-    supports: (displayed?.supports ?? []).map(supportScene => ({
-      id: supportScene.post.id,
-      footprint: supportScene.footprint,
-      isFreeStanding: supportScene.isFreeStanding,
-    })),
-    furniture: displayed?.furniture ?? [],
+    fireplaces: shown(
+      'services',
+      (displayed?.fireplaces ?? []).map(fireplaceScene => ({
+        id: fireplaceScene.fireplace.id,
+        footprint: fireplaceScene.footprint,
+        firePoint: fireplaceScene.fireplace.position,
+        fluePosition: fireplaceScene.fluePosition,
+      }))
+    ),
+    ducts: shown(
+      'services',
+      (displayed?.ducts ?? []).map(section => ({
+        id: section.duct.id,
+        kind: section.duct.kind,
+        footprint: section.footprint,
+        isPassingThrough: !section.startsHere,
+      }))
+    ),
+    slabs: shown(
+      'structure',
+      (displayed?.slabs ?? []).map(slab => ({
+        id: slab.id,
+        footprint: slabPolygon(slab),
+      }))
+    ),
+    supports: shown(
+      'structure',
+      (displayed?.supports ?? []).map(supportScene => ({
+        id: supportScene.post.id,
+        footprint: supportScene.footprint,
+        isFreeStanding: supportScene.isFreeStanding,
+      }))
+    ),
+    furniture: shown('furniture', displayed?.furniture ?? []),
     // A stair belongs to the storey it stands on, so the plan of the storey
     // ABOVE shows the opening it left rather than the stair itself.
-    stairs: (displayed?.stairs ?? []).map(stairScene => ({
-      id: stairScene.stair.id,
-      stepPolygons: stairScene.steps.map(step => step.polygon),
-      footprint: stairScene.footprint,
-      fromPoint: stairScene.stair.position,
-      exitPoint: stairScene.exitPoint,
-      riserCount: stairScene.run.riserCount,
-      cutout: stairScene.cutout,
-      isComfortable: stairScene.isComfortable,
-      rotationGrip: stairScene.rotationGrip,
-    })),
-    devices: displayed?.devices ?? [],
-    wires: displayed?.wires ?? [],
+    stairs: shown(
+      'walls',
+      (displayed?.stairs ?? []).map(stairScene => ({
+        id: stairScene.stair.id,
+        stepPolygons: stairScene.steps.map(step => step.polygon),
+        footprint: stairScene.footprint,
+        fromPoint: stairScene.stair.position,
+        exitPoint: stairScene.exitPoint,
+        riserCount: stairScene.run.riserCount,
+        cutout: stairScene.cutout,
+        isComfortable: stairScene.isComfortable,
+        rotationGrip: stairScene.rotationGrip,
+      }))
+    ),
+    devices: shown('electrical', displayed?.devices ?? []),
+    wires: shown('electrical', displayed?.wires ?? []),
   };
 }
 
@@ -174,6 +216,7 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
     selectedPathPointIndex: store.selectedPathPointIndex,
     hoveredPathSegmentIndex: store.modes.hoveredPathSegmentIndex,
     editFocus: store.editorMode.kind === 'edit' ? store.editorMode.target : undefined,
+    activeLayer: store.layers.activeLayer,
     selectedWall: store.walls.selectedWall,
     selectedWallJunction: isNil(store.walls.selectedJunction)
       ? undefined

@@ -3,6 +3,25 @@ import type { sitePlannerHouseTranslationsEn } from './en-house';
 
 export const sitePlannerHouseTranslationsRu: TranslationOf<typeof sitePlannerHouseTranslationsEn> =
   {
+    layers: {
+      panelTitle: 'Слои',
+      toolTitle: 'Слой',
+      menu: 'Выбрать слой',
+      names: {
+        structure: 'Конструктив',
+        walls: 'Стены',
+        furniture: 'Мебель',
+        electrical: 'Электрика',
+        services: 'Инженерные сети',
+      },
+      show: 'Показать слой',
+      hide: 'Скрыть слой',
+      activeAlwaysVisible: 'Активный слой всегда виден',
+      hideOthers: 'Скрыть остальные слои',
+      showAll: 'Показать все слои',
+      cycleHint: 'Q — следующий слой · Shift+Q — предыдущий',
+      wallsHidden: 'Стены скрыты — проёмы и приборы не найдут стену',
+    },
     storeys: {
       storeyTitle: 'Этаж',
       add: 'Добавить этаж',

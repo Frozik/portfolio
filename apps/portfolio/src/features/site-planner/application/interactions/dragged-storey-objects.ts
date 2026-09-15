@@ -277,7 +277,10 @@ export function draggedFurniture(
       const storey = activeStoreyOf(context, buildingId);
       const entry = findFurnitureEntry(item.catalogId);
       const magnetized =
-        modifiers.isAltPressed || isNil(storey) || isNil(entry)
+        modifiers.isAltPressed ||
+        isNil(storey) ||
+        isNil(entry) ||
+        !store.layers.isLayerVisible('walls')
           ? undefined
           : magnetizeFurnitureToWall({
               position: draggedPoint,

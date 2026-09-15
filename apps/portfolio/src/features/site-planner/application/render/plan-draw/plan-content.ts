@@ -3,6 +3,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { SegmentReadout } from '../../../domain/geometry/draw-constraints';
 import type { PathRibbon } from '../../../domain/geometry/path-ribbon';
 import type { BuildingId } from '../../../domain/model/building';
+import type { BuildingLayerId } from '../../../domain/model/building-layers';
 import type { DuctId } from '../../../domain/model/ducts';
 import type { EditTarget } from '../../../domain/model/editor-mode';
 import type { DeviceId } from '../../../domain/model/electrical';
@@ -94,6 +95,8 @@ export interface PlanEditorChrome {
   readonly hoveredPathSegmentIndex: number | undefined;
   /** What an open editor is focused on; everything else dims (see modes.md). */
   readonly editFocus: EditTarget | undefined;
+  /** The building editor's active layer; the other layers of its building dim (`layers.md`). */
+  readonly activeLayer: BuildingLayerId | undefined;
   /** The selected wall inside the building editor, with the draft polyline. */
   readonly selectedWall: Wall | undefined;
   /** The junction the break UI is aimed at, with its numbered edges. */

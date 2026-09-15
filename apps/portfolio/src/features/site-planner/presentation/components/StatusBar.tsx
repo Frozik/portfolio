@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { sitePlannerT } from '../translations';
+import { LAYER_PRESENTATIONS } from './editorTools';
 import { StatusBarShell } from './StatusBarShell';
 import { toolHint } from './toolHints';
 
@@ -30,6 +31,8 @@ export const StatusBar = observer(
     const { meterUnit } = sitePlannerT.plan;
     const { cursorPlanPoint } = store.view;
     const activeStoreyOrdinal = store.storeys.activeStoreyOrdinal;
+    const activeLayer = store.layers.activeLayer;
+    const areWallsHidden = !isNil(activeLayer) && !store.layers.isLayerVisible('walls');
 
     return (
       <StatusBarShell>
@@ -53,8 +56,12 @@ export const StatusBar = observer(
           // identical, and the mode bar's 6 px chip is not where the eye is.
           <span className="font-mono text-brand-500">
             {sitePlannerT.storeys.storeyTitle} {activeStoreyOrdinal}
+            {isNil(activeLayer) ? undefined : ` · ${LAYER_PRESENTATIONS[activeLayer].label}`}
           </span>
         )}
+        {areWallsHidden ? (
+          <span className="truncate text-warning">{sitePlannerT.layers.wallsHidden}</span>
+        ) : undefined}
         {isNil(store.scene.assetIssue) ? undefined : (
           <span className="truncate text-warning" title={store.scene.assetIssue}>
             {sitePlannerT.status.carModelUnavailable}

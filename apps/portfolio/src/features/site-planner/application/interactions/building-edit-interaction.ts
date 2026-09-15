@@ -3,11 +3,13 @@ import { isNil } from 'lodash-es';
 
 import { TYPED_LENGTH_KEY_PATTERN } from '../../domain/geometry/draw-constraints';
 import type { BuildingId } from '../../domain/model/building';
+import type { BuildingLayerId } from '../../domain/model/building-layers';
+import { isSelectionOnLayer, layerOfSelection } from '../../domain/model/building-layers';
 import type { Selection } from '../../domain/model/selection';
 import type { Wall } from '../../domain/model/walls';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import type { BuildingGrip, BuildingGrips } from './building-grips';
-import { createBuildingGrips } from './building-grips';
+import { createBuildingGrips, pickAcrossLayers } from './building-grips';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
 import { snapPointToGrid } from './grid-snapping';
 import { ObjectDragGestures } from './object-drag-gestures';
@@ -24,6 +26,10 @@ import { applyWallHandleHover, createWallPointGestures } from './wall-point-gest
  * select tool takes hold of whatever stands on the storey — walls and their
  * corners, the objects on the floor (`building-grips.ts`), the slabs — and the
  * keyboard edits the selected wall junction (`wall-junction-detach.ts`).
+ *
+ * Only the ACTIVE layer answers the select tool (`layers.md` §6.7): a press
+ * passes through whatever the other layers show, so the walls under a sofa
+ * are context while the furniture is being arranged, not a competing target.
  */
 export class BuildingEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
@@ -47,7 +53,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   onPointerDown(planPoint: Vector2, modifiers: PlanModifiers): boolean {
     const { store } = this.context;
 
-    if (this.junction.plant(planPoint, modifiers)) {
+    if (this.isLayerActive('walls') && this.junction.plant(planPoint, modifiers)) {
       return true;
     }
 
@@ -147,6 +153,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     // With the select tool idle over the selected wall, the handles announce
     // themselves — and the event is spent, or the shell would clear the hover.
     if (
+      this.isLayerActive('walls') &&
       this.context.store.activeTool === 'select' &&
       !isNil(this.context.store.walls.selectedWall)
     ) {
@@ -189,7 +196,10 @@ export class BuildingEditInteraction implements EditorInteraction {
   /**
    * Commits the polyline being clicked out; on a corner of the selected wall
    * it edits the contour — plain removes the corner, Alt CUTS there (a ring
-   * opens, an open wall splits in two); over emptiness it closes the editor.
+   * opens, an open wall splits in two); on an object of another layer it
+   * steps into that layer with the object selected (`layers.md` §7 п.6 — the
+   * Illustrator isolation habit, «double-click means deeper»); over emptiness
+   * it closes the editor.
    */
   onDoubleClick(planPoint: Vector2, modifiers: PlanModifiers): void {
     const { store } = this.context;
@@ -200,19 +210,33 @@ export class BuildingEditInteraction implements EditorInteraction {
       return;
     }
 
-    if (editWallCornerAt(this.context, this.buildingId, this.wallGestures, planPoint, modifiers)) {
+    if (
+      this.isLayerActive('walls') &&
+      editWallCornerAt(this.context, this.buildingId, this.wallGestures, planPoint, modifiers)
+    ) {
       return;
     }
 
-    if (isNil(pickWall(this.context, this.buildingId, planPoint))) {
+    const underPointer = pickAcrossLayers(this.context, this.buildingId, this.grips, planPoint);
+
+    if (isNil(underPointer)) {
       store.exitEditMode();
+
+      return;
+    }
+
+    const layer = layerOfSelection(underPointer);
+
+    if (!isNil(layer) && layer !== store.layers.activeLayer) {
+      store.layers.setActiveLayer(layer);
+      store.setSelection(underPointer);
     }
   }
 
   onKeyDown(key: string, _modifiers: PlanModifiers): boolean {
     const { store } = this.context;
 
-    if (this.junction.onKey(key)) {
+    if (this.isLayerActive('walls') && this.junction.onKey(key)) {
       return true;
     }
 
@@ -277,16 +301,19 @@ export class BuildingEditInteraction implements EditorInteraction {
    * answered first would swallow every click meant for empty floor.
    */
   private beginSelectGesture(planPoint: Vector2, modifiers: PlanModifiers): void {
+    const isWallsLayer = this.isLayerActive('walls');
+    const isStructureLayer = this.isLayerActive('structure');
+
     if (
-      this.slabs.beginHandle(planPoint) ||
+      (isStructureLayer && this.slabs.beginHandle(planPoint)) ||
       this.grab(this.grips.overWalls, planPoint, modifiers) ||
-      this.wallGestures.begin(planPoint, { allowInsert: true }) ||
+      (isWallsLayer && this.wallGestures.begin(planPoint, { allowInsert: true })) ||
       this.grab(this.grips.underWalls, planPoint, modifiers)
     ) {
       return;
     }
 
-    const wall = pickWall(this.context, this.buildingId, planPoint);
+    const wall = isWallsLayer ? pickWall(this.context, this.buildingId, planPoint) : undefined;
 
     if (!isNil(wall)) {
       this.context.store.setSelection({
@@ -299,6 +326,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     }
 
     if (
+      !isStructureLayer ||
       !this.slabs.beginDrag(planPoint, slab =>
         this.select({ kind: 'slab', buildingId: this.buildingId, slabId: slab.id }, modifiers)
       )
@@ -307,16 +335,29 @@ export class BuildingEditInteraction implements EditorInteraction {
     }
   }
 
-  /** The first grip that answers the press takes hold: selects, then starts its gesture. */
+  private isLayerActive(layer: BuildingLayerId): boolean {
+    return this.context.store.layers.activeLayer === layer;
+  }
+
+  /**
+   * The first grip that answers the press takes hold: selects, then starts its
+   * gesture. A grip of another layer is passed over, so the press reaches what
+   * the active layer has underneath.
+   */
   private grab(
     grips: readonly BuildingGrip[],
     planPoint: Vector2,
     modifiers: PlanModifiers
   ): boolean {
+    const activeLayer = this.context.store.layers.activeLayer;
+
     for (const grip of grips) {
       const grab = grip(planPoint);
 
-      if (isNil(grab)) {
+      if (
+        isNil(grab) ||
+        (!isNil(activeLayer) && !isSelectionOnLayer(grab.selection, activeLayer))
+      ) {
         continue;
       }
 
