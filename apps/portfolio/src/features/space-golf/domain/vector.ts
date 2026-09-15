@@ -43,3 +43,7 @@ export function clampLength(v: Vector2, maxLength: number): Vector2 {
   const size = length(v);
   return size > maxLength ? scale(v, maxLength / size) : v;
 }
+
+export function lerp(a: Vector2, b: Vector2, share: number): Vector2 {
+  return { x: a.x + (b.x - a.x) * share, y: a.y + (b.y - a.y) * share };
+}

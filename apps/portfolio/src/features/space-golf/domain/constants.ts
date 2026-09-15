@@ -11,6 +11,7 @@ export const CELL_METERS = 0.5;
  */
 export const BALL_RADIUS_METERS = 0.07;
 export const GRAVITY_METERS_PER_SECOND_SQUARED = 7;
+export const GRAVITY_TURN_SECONDS = 0.3;
 /** Two sub-steps per 60 Hz frame; the preview and the flight run the very same steps. */
 export const FIXED_STEP_SECONDS = 1 / 120;
 /** How many contacts one step may resolve before the remainder is dropped. */
@@ -52,7 +53,8 @@ export const REST_SETTLE_SECONDS = 0.3;
 
 /** The ball must sit in the cup this long before the hole counts. */
 export const CUP_HOLD_SECONDS = 1;
-export const CUP_RADIUS_METERS = 0.2;
+const CUP_TO_BALL_DIAMETER_RATIO = 2;
+export const CUP_RADIUS_METERS = CUP_TO_BALL_DIAMETER_RATIO * BALL_RADIUS_METERS;
 
 /**
  * The board is open: a ball that leaves it and would not be back within this

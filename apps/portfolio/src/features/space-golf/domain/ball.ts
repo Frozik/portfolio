@@ -1,9 +1,15 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import { GRAVITY_TURN_SECONDS } from './constants';
 import type { EdgeRef, Level } from './level';
-import { ZERO } from './vector';
+import { lerp, ZERO } from './vector';
 
 type BallPhase = 'aiming' | 'flying' | 'destroyed' | 'holed';
+
+interface GravityTurn {
+  readonly from: Vector2;
+  readonly elapsedSeconds: number;
+}
 
 /** Where and under which gravity the ball last came to rest — the respawn point. */
 interface RestPoint {
@@ -15,8 +21,9 @@ interface RestPoint {
 export interface BallState {
   readonly position: Vector2;
   readonly velocity: Vector2;
-  /** Unit vector: which way gravity pulls right now. */
+  /** Unit vector: the floor's direction. */
   readonly down: Vector2;
+  readonly turn: GravityTurn;
   readonly phase: BallPhase;
   /** Strokes played on this level so far. */
   readonly stroke: number;
@@ -38,6 +45,7 @@ export function createBall(level: Level): BallState {
     position: level.tee,
     velocity: ZERO,
     down: DOWN,
+    turn: settledTurn(DOWN),
     phase: 'aiming',
     stroke: 0,
     rest: { position: level.tee, down: DOWN },
@@ -48,13 +56,34 @@ export function createBall(level: Level): BallState {
   };
 }
 
+export function currentGravity(ball: BallState): Vector2 {
+  const time = Math.min(ball.turn.elapsedSeconds / GRAVITY_TURN_SECONDS, 1);
+  return lerp(ball.turn.from, ball.down, easeOut(time));
+}
+
+function easeOut(time: number): number {
+  return 1 - (1 - time) ** 2;
+}
+
+function settledTurn(down: Vector2): GravityTurn {
+  return { from: down, elapsedSeconds: GRAVITY_TURN_SECONDS };
+}
+
+export function turnTo(ball: BallState, down: Vector2): BallState {
+  return { ...ball, down, turn: { from: currentGravity(ball), elapsedSeconds: 0 } };
+}
+
+export function advanceTurn(ball: BallState, dt: number): BallState {
+  const elapsedSeconds = Math.min(ball.turn.elapsedSeconds + dt, GRAVITY_TURN_SECONDS);
+  return { ...ball, turn: { ...ball.turn, elapsedSeconds } };
+}
+
 /** A destroyed ball back at its last resting point, ready to be shot again; the stroke stays counted. */
 export function respawn(ball: BallState): BallState {
   return {
-    ...ball,
+    ...turnTo(ball, ball.rest.down),
     position: ball.rest.position,
     velocity: ZERO,
-    down: ball.rest.down,
     phase: 'aiming',
     contact: undefined,
     settlingSeconds: 0,

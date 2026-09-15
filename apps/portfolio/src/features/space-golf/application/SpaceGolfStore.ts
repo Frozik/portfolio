@@ -198,10 +198,12 @@ export class SpaceGolfStore {
     return isNil(this.aiming) ? undefined : aim(this.aiming.anchor, this.aiming.pull);
   }
 
+  // A holed ball is final: the frame's remaining steps must not count the hole-out again.
   private tick(level: Level): void {
-    if (isNil(this.ball)) {
+    if (isNil(this.ball) || this.ball.phase === 'holed') {
       return;
     }
+    this.ball = step(level, this.ball, FIXED_STEP_SECONDS);
     if (!isNil(this.burst)) {
       const elapsedSeconds = this.burst.elapsedSeconds + FIXED_STEP_SECONDS;
       this.burst = { ...this.burst, elapsedSeconds };
@@ -213,13 +215,7 @@ export class SpaceGolfStore {
     }
     if (this.ball.phase === 'destroyed') {
       this.burst = { position: this.ball.position, elapsedSeconds: 0 };
-      return;
-    }
-    if (this.ball.phase !== 'flying') {
-      return;
-    }
-    this.ball = step(level, this.ball, FIXED_STEP_SECONDS);
-    if (this.ball.phase === 'holed') {
+    } else if (this.ball.phase === 'holed') {
       this.completeCurrentLevel(this.ball.stroke);
     }
   }

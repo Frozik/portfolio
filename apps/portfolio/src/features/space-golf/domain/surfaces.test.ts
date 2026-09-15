@@ -8,6 +8,7 @@ import {
   BOARD_WIDTH_METERS,
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
+  CUP_RADIUS_METERS,
 } from './constants';
 import type { Level } from './level';
 import { shoot } from './shot';
@@ -28,7 +29,7 @@ function slabLevel(kind: 'bounce' | 'sticky'): Level {
     height: BOARD_HEIGHT_METERS,
     walls: [floor],
     tee: { x: 4.5, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
-    cup: { wall: 0, edge: 2, at: 0.5, radius: 0.2 },
+    cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
   };
 }
 

@@ -3,6 +3,7 @@ import type { MsaaTextureManager } from '@frozik/utils/webgpu/msaaTextureManager
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
+import { currentGravity } from '../../domain/ball';
 import {
   AIM_RING_RADIUS_METERS,
   BALL_RADIUS_METERS,
@@ -165,7 +166,7 @@ export class BoardLayer implements RenderLayer {
     if (!isNil(this.dust)) {
       this.dust = advanceParticles(
         this.dust,
-        scene.ball.down,
+        currentGravity(scene.ball),
         elapsed,
         scene.level.width,
         scene.level.height
@@ -326,7 +327,7 @@ export class BoardLayer implements RenderLayer {
   /** The drifting dust, rewritten every frame into the buffer drawn first. */
   private writeDust(): void {
     const writer = new MeshWriter();
-    for (const particle of this.dust?.particles ?? []) {
+    for (const particle of this.dust ?? []) {
       const { x, y } = particle.position;
       const r = particle.radius * 2 * QUAD_HALF;
       writer.convexPolygon(

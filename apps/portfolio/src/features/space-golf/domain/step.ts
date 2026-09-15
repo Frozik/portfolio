@@ -1,6 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BallState } from './ball';
+import { advanceTurn, currentGravity, turnTo } from './ball';
 import type { WallHit } from './collision';
 import { contactPosition, sweepCircleAgainstWalls } from './collision';
 import {
@@ -35,19 +36,23 @@ import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
  * swept against every face; each contact is resolved in turn and the
  * remaining motion continues from it. The face rule lives here: a
  * horizontal or vertical face the ball touches becomes its floor, a diagonal
- * one only reflects, the hole's rim turns gravity into the face it is cut into. The
- * board is open: a ball that leaves it bursts the moment it does unless
- * gravity brings it back within a few seconds — the flight is deterministic,
- * so that is read off the flight itself.
+ * one only reflects, the hole's rim turns the floor into the face it is cut
+ * into. The board is open: a ball that leaves it bursts the moment it does
+ * unless gravity brings it back within a few seconds — the flight is
+ * deterministic, so that is read off the flight itself.
  */
 export function step(level: Level, ball: BallState, dt: number): BallState {
+  const turned = advanceTurn(ball, dt);
   if (ball.phase !== 'flying') {
-    return ball;
+    return turned;
   }
 
-  let velocity = add(ball.velocity, scale(ball.down, GRAVITY_METERS_PER_SECOND_SQUARED * dt));
+  let velocity = add(
+    ball.velocity,
+    scale(currentGravity(turned), GRAVITY_METERS_PER_SECOND_SQUARED * dt)
+  );
   let position = ball.position;
-  let down = ball.down;
+  let floored = turned;
   let contact = ball.contact;
   let remaining = dt;
 
@@ -67,7 +72,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       // The rim counts as the face the hole is cut into: gravity turns into
       // that face, so the ball settles on the bottom of the notch.
       const floorNormal = wallHit.kind === 'cup' ? edgeOf(level, level.cup).normal : wallHit.normal;
-      down = scale(floorNormal, -1);
+      floored = floorTo(floored, scale(floorNormal, -1));
     }
     contact = response.resting ? { wall: wallHit.wall, edge: wallHit.edge } : undefined;
     remaining *= 1 - wallHit.time;
@@ -86,10 +91,9 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   const slow = contact !== undefined && length(velocity) < REST_SPEED_METERS_PER_SECOND;
   const settlingSeconds = slow ? ball.settlingSeconds + dt : 0;
   const next: BallState = {
-    ...ball,
+    ...floored,
     position,
     velocity,
-    down,
     contact,
     settlingSeconds,
     offscreenSeconds,
@@ -119,10 +123,15 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       velocity: ZERO,
       phase: 'aiming',
       settlingSeconds: 0,
-      rest: { position, down },
+      rest: { position, down: next.down },
     };
   }
   return next;
+}
+
+// The floor the ball rolls along touches it every step: only a new floor restarts the turn.
+function floorTo(ball: BallState, down: Vector2): BallState {
+  return ball.down.x === down.x && ball.down.y === down.y ? ball : turnTo(ball, down);
 }
 
 /** The velocity shortened by `amount`, down to a full stop. */

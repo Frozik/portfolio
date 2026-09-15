@@ -8,6 +8,7 @@ import {
   BOARD_WIDTH_METERS,
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
+  CUP_RADIUS_METERS,
 } from './constants';
 import type { Level, Wall } from './level';
 import { shoot } from './shot';
@@ -25,7 +26,7 @@ function openLevel(floor: Wall): Level {
     height: BOARD_HEIGHT_METERS,
     walls: [floor],
     tee: { x: 4.5, y: floor.bounds.max.y + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
-    cup: { wall: 0, edge: 2, at: 0.5, radius: 0.2 },
+    cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
   };
 }
 
