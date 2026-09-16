@@ -1,25 +1,30 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 
-import { TYPED_LENGTH_KEY_PATTERN } from '../../domain/geometry/draw-constraints';
 import type { BuildingId } from '../../domain/model/building';
 import type { BuildingLayerId } from '../../domain/model/building-layers';
 import { isSelectionOnLayer, layerOfSelection } from '../../domain/model/building-layers';
 import type { Selection } from '../../domain/model/selection';
 import type { Wall } from '../../domain/model/walls';
+import type { WiringRoute } from '../../domain/model/wiring-routes';
 import type { PlanModifiers } from '../../domain/view/plan-input';
+import { handleDraftKey } from './building-draft-keys';
 import type { BuildingGrip, BuildingGrips } from './building-grips';
 import { createBuildingGrips, pickAcrossLayers } from './building-grips';
+import { placeWithBuildingTool } from './building-tool-placement';
 import type { EditorInteraction, InteractionContext } from './editor-interaction';
-import { snapPointToGrid } from './grid-snapping';
 import { ObjectDragGestures } from './object-drag-gestures';
 import type { PolylinePointGestures } from './polyline-point-gestures';
 import { SlabGestures } from './slab-gestures';
 import { pickWall } from './storey-object-picking';
-import { connectDeviceAt, placeDeviceAt, placeOpeningAt } from './storey-object-placement';
 import { editWallCornerAt, sealRingIfEndsMeet } from './wall-corner-edits';
 import { WallJunctionDetach } from './wall-junction-detach';
 import { applyWallHandleHover, createWallPointGestures } from './wall-point-gestures';
+import {
+  applyWiringRouteHandleHover,
+  createWiringRoutePointGestures,
+  removeRoutePointAt,
+} from './wiring-route-point-gestures';
 
 /**
  * The building editor's canvas behaviour: the tools place what they place, the
@@ -35,6 +40,7 @@ export class BuildingEditInteraction implements EditorInteraction {
   private readonly context: InteractionContext;
   private readonly buildingId: BuildingId;
   private readonly wallGestures: PolylinePointGestures<Wall>;
+  private readonly routeGestures: PolylinePointGestures<WiringRoute>;
   private readonly slabs: SlabGestures;
   private readonly objects: ObjectDragGestures;
   private readonly grips: BuildingGrips;
@@ -44,6 +50,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     this.context = context;
     this.buildingId = buildingId;
     this.wallGestures = createWallPointGestures(context, buildingId);
+    this.routeGestures = createWiringRoutePointGestures(context);
     this.objects = new ObjectDragGestures(context);
     this.grips = createBuildingGrips(context, buildingId);
     this.junction = new WallJunctionDetach(context, buildingId);
@@ -65,78 +72,14 @@ export class BuildingEditInteraction implements EditorInteraction {
         this.beginSelectGesture(planPoint, modifiers);
 
         return true;
-      case 'building:wall':
-        // The ground storey stands on the foundation, so a click past the
-        // slab lands on its edge; an upper storey may overhang (R24).
-        // `draftWallCursor` is the previewed corner — angle lock and typed
-        // length included — so what the rubber band showed is what lands.
-        store.wallDraft.appendDraftWallPoint(
-          store.walls.clampWallPoint(
-            this.buildingId,
-            store.wallDraft.draftWallCursor ?? store.wallDraft.firstWallPointAt(planPoint)
-          )
-        );
-        store.wallDraft.setTypedLengthText(undefined);
-
-        return true;
-      case 'building:opening':
-        // Nothing lands when the click missed every wall, and a tool that
-        // placed nothing must stay in hand rather than quietly give up.
-        if (placeOpeningAt(this.context, this.buildingId, planPoint)) {
-          store.tooling.finishPlacement();
-        }
-
-        return true;
-      case 'building:slab':
-        // Drawn like any shape on the plot — the armed primitive, dragged out.
-        // A click that never moved lays a plate of a sensible default size, so
-        // the tool answers both ways of asking for a floor.
-        this.slabs.beginDraw(planPoint, modifiers);
-
-        return true;
-      case 'building:fireplace':
-        store.ducts.placeFireplaceAt(snapPointToGrid(store, planPoint, modifiers));
-        store.tooling.finishPlacement();
-
-        return true;
-      case 'building:duct':
-        store.ducts.placeDuctAt(snapPointToGrid(store, planPoint, modifiers));
-        store.tooling.finishPlacement();
-
-        return true;
-      case 'building:support':
-        store.storeyObjects.placeSupportAt(snapPointToGrid(store, planPoint, modifiers));
-        store.tooling.finishPlacement();
-
-        return true;
-      case 'building:stair':
-        // A stair is placed, not drawn: its run comes from the storey height,
-        // so the click only says where.
-        store.stairs.placeStairAt(snapPointToGrid(store, planPoint, modifiers));
-        store.tooling.finishPlacement();
-
-        return true;
-      // Furniture and electrics are STICKY: a room is furnished and a storey
-      // wired by placing one piece after another, so these two tools stay in
-      // hand. The piece that lands is still selected, so its properties are
-      // there to type — only the tool is not taken away.
-      case 'building:furniture':
-        store.furniture.placeFurnitureAt(
-          this.buildingId,
-          snapPointToGrid(store, planPoint, modifiers)
-        );
-
-        return true;
-      case 'building:electric':
-        placeDeviceAt(this.context, this.buildingId, planPoint, modifiers);
-
-        return true;
-      case 'building:connect':
-        connectDeviceAt(this.context, this.buildingId, planPoint);
-
-        return true;
       default:
-        return false;
+        return placeWithBuildingTool(
+          this.context,
+          this.buildingId,
+          this.slabs,
+          planPoint,
+          modifiers
+        );
     }
   }
 
@@ -145,8 +88,19 @@ export class BuildingEditInteraction implements EditorInteraction {
       this.junction.move(planPoint, modifiers) ||
       this.objects.move(planPoint, modifiers) ||
       this.slabs.move(planPoint, modifiers) ||
-      this.wallGestures.move(planPoint, modifiers)
+      this.wallGestures.move(planPoint, modifiers) ||
+      this.routeGestures.move(planPoint, modifiers)
     ) {
+      return true;
+    }
+
+    if (
+      this.isLayerActive('electrical') &&
+      this.context.store.activeTool === 'select' &&
+      !isNil(this.context.store.electrics.wiring.selectedRoute)
+    ) {
+      applyWiringRouteHandleHover(this.context, planPoint);
+
       return true;
     }
 
@@ -174,6 +128,12 @@ export class BuildingEditInteraction implements EditorInteraction {
       return true;
     }
 
+    if (this.routeGestures.release(planPoint, modifiers)) {
+      applyWiringRouteHandleHover(this.context, planPoint);
+
+      return true;
+    }
+
     if (!this.wallGestures.release(planPoint, modifiers)) {
       return false;
     }
@@ -191,6 +151,7 @@ export class BuildingEditInteraction implements EditorInteraction {
     this.objects.cancel();
     this.slabs.cancel();
     this.wallGestures.cancel();
+    this.routeGestures.cancel();
   }
 
   /**
@@ -210,9 +171,22 @@ export class BuildingEditInteraction implements EditorInteraction {
       return;
     }
 
+    if (store.electrics.wiring.draftRoutePoints.length > 0) {
+      store.electrics.wiring.commitDraftRoute();
+
+      return;
+    }
+
     if (
       this.isLayerActive('walls') &&
       editWallCornerAt(this.context, this.buildingId, this.wallGestures, planPoint, modifiers)
+    ) {
+      return;
+    }
+
+    if (
+      this.isLayerActive('electrical') &&
+      removeRoutePointAt(this.context, this.routeGestures, planPoint, modifiers)
     ) {
       return;
     }
@@ -240,36 +214,7 @@ export class BuildingEditInteraction implements EditorInteraction {
       return true;
     }
 
-    if (key === 'Enter' && store.wallDraft.draftWallPoints.length > 0) {
-      store.wallDraft.commitDraftWall();
-
-      return true;
-    }
-
-    if (store.wallDraft.draftWallPoints.length === 0) {
-      return false;
-    }
-
-    // The CAD value-control box: aim roughly, then state the length. Digits
-    // and one separator accumulate; Backspace peels the number back and, once
-    // it is empty, takes the last corner with it.
-    if (TYPED_LENGTH_KEY_PATTERN.test(key)) {
-      store.wallDraft.appendTypedLengthKey(key);
-
-      return true;
-    }
-
-    if (key === 'Backspace') {
-      if (isNil(store.wallDraft.typedLengthText)) {
-        store.wallDraft.dropLastDraftWallPoint();
-      } else {
-        store.wallDraft.setTypedLengthText(undefined);
-      }
-
-      return true;
-    }
-
-    return false;
+    return handleDraftKey(store, key);
   }
 
   onEscapeStep(): boolean {
@@ -279,17 +224,20 @@ export class BuildingEditInteraction implements EditorInteraction {
   hasTransientInteraction(): boolean {
     return (
       this.wallGestures.hasActive() ||
+      this.routeGestures.hasActive() ||
       this.objects.hasActive() ||
       this.slabs.hasActive() ||
       this.junction.hasActive() ||
       !isNil(this.context.store.electrics.pendingConnectDeviceId) ||
-      this.context.store.wallDraft.draftWallPoints.length > 0
+      this.context.store.wallDraft.draftWallPoints.length > 0 ||
+      this.context.store.electrics.wiring.draftRoutePoints.length > 0
     );
   }
 
   cancelTransients(): void {
     this.onPointerCancel();
     this.context.store.wallDraft.cancelDraftWall();
+    this.context.store.electrics.wiring.cancelDraftRoute();
     this.context.store.electrics.setPendingConnectDeviceId(undefined);
   }
 
@@ -303,9 +251,11 @@ export class BuildingEditInteraction implements EditorInteraction {
   private beginSelectGesture(planPoint: Vector2, modifiers: PlanModifiers): void {
     const isWallsLayer = this.isLayerActive('walls');
     const isStructureLayer = this.isLayerActive('structure');
+    const isElectricalLayer = this.isLayerActive('electrical');
 
     if (
       (isStructureLayer && this.slabs.beginHandle(planPoint)) ||
+      (isElectricalLayer && this.routeGestures.begin(planPoint, { allowInsert: true })) ||
       this.grab(this.grips.overWalls, planPoint, modifiers) ||
       (isWallsLayer && this.wallGestures.begin(planPoint, { allowInsert: true })) ||
       this.grab(this.grips.underWalls, planPoint, modifiers)

@@ -21,6 +21,78 @@ export const sitePlannerHouseTranslationsEn = {
     /** Status-bar warning: nothing hosts an opening or a device while the walls are off. */
     wallsHidden: 'Walls are hidden — openings and devices will find no wall',
   },
+  /** Cable routes, cables and the journal (`wiring.md`). */
+  wiring: {
+    routesPanelTitle: 'Cable routes',
+    materialsPanelTitle: 'Cable journal',
+    toolLabel: 'Cable route',
+    toolHint:
+      'Click out the route along walls and ceilings · Enter or double click lays it · Backspace drops the last bend · Esc cancels.',
+    menu: 'Choose how the cable is laid',
+    routeTitle: 'Route',
+    segmentTitle: 'Stretch',
+    installationLabel: 'Laid in',
+    levelLabel: 'Runs',
+    levels: {
+      ceiling: 'under the ceiling',
+      floor: 'along the floor',
+    },
+    installations: {
+      'conduit-16': 'Conduit Ø16',
+      'conduit-20': 'Conduit Ø20',
+      'conduit-25': 'Conduit Ø25',
+      'conduit-32': 'Conduit Ø32',
+      chase: 'Chase',
+      trunking: 'Trunking',
+      tray: 'Cable tray',
+      pipe: 'Pipe Ø20',
+      open: 'Open',
+    },
+    cables: {
+      'vvg-3x1.5': 'ВВГнг(А)-LS 3×1.5',
+      'vvg-3x2.5': 'ВВГнг(А)-LS 3×2.5',
+      'vvg-3x4': 'ВВГнг(А)-LS 3×4',
+      'vvg-3x6': 'ВВГнг(А)-LS 3×6',
+    },
+    cableDefault: 'as the consumers ask',
+    groupTitle: 'Group',
+    consumers: (count: number) => `${count} consumer${count === 1 ? '' : 's'}`,
+    cableLabel: 'Cable',
+    cablesTotal: 'Cable, with 10 % reserve',
+    installationsTotal: 'Laid',
+    pointsTotal: 'Points',
+    remove: 'Remove the route',
+    routesEmptyHint:
+      'No routes drawn: the runs follow the walls. Draw one to say where the cable really goes.',
+    routeHint: 'Drag the route whole; each stretch is laid its own way below.',
+    journalEmptyHint: 'Wire a panel to its consumers and the journal fills itself.',
+    assemblyPanelTitle: 'Panel assembly',
+    assemblyTitle: (ordinal: number) => `Panel ${ordinal}`,
+    enclosure: (used: number, size: number) => `${used} of ${size} modules`,
+    moduleKinds: {
+      incomer: 'Incomer',
+      breaker: 'Breaker',
+      rcbo: 'RCBO 30 mA',
+    },
+    purposes: {
+      lighting: 'Lighting',
+      sockets: 'Sockets',
+      mixed: 'Sockets and lighting',
+    },
+    assemblyEmptyHint:
+      'Hang a panel and wire groups to it: each group becomes a breaker, a wet room an RCBO.',
+    elevationPanelTitle: 'Wall elevation',
+    elevationWallLabel: 'Wall',
+    /** One letter per device on the unfolded wall. */
+    deviceLetters: {
+      panel: 'P',
+      outlet: 'S',
+      switch: 'W',
+      light: 'L',
+    },
+    elevationEmptyHint:
+      'Draw walls to unfold one: its openings, points at their heights and the drops.',
+  },
   storeys: {
     /** «Этаж N» caption of one storey button in the mode bar. */
     storeyTitle: 'Storey',

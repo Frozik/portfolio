@@ -17,6 +17,7 @@ import { isWetRoomType } from './rooms';
 import type { StairId } from './stairs';
 import type { StoreyId } from './storeys';
 import type { WallId } from './walls';
+import type { WiringRouteId } from './wiring-routes';
 
 /**
  * How far an upper storey may reach past the one below before the editor asks
@@ -56,6 +57,12 @@ export type BuildingWarning = {
   | { readonly kind: 'room-without-exhaust'; readonly roomTypeId: RoomTypeId }
   | { readonly kind: 'sauna-without-stove' }
   | { readonly kind: 'duct-outside-roof'; readonly ductId: DuctId }
+  | {
+      readonly kind: 'conduit-overfilled';
+      readonly routeId: WiringRouteId;
+      readonly segmentIndex: number;
+      readonly fillRatio: number;
+    }
 );
 
 /** What one storey contributes to the pass, already derived by the scenes. */
@@ -96,6 +103,13 @@ export interface StoreyWarningInput {
   readonly saunaStovePositions: readonly Vector2[];
   /** Shafts of this storey that miss the roof entirely — they exit nowhere. */
   readonly strandedDucts: readonly { readonly id: DuctId; readonly at: Vector2 }[];
+  /** Drawn stretches whose conduit the cables overfill (`wiring.md` §3.4). */
+  readonly overfilledStretches: readonly {
+    readonly routeId: WiringRouteId;
+    readonly segmentIndex: number;
+    readonly fillRatio: number;
+    readonly at: Vector2;
+  }[];
 }
 
 /**
@@ -117,7 +131,24 @@ export function collectBuildingWarnings(
     ...roomsWithoutExhaust(storey),
     ...saunasWithoutStove(storey),
     ...strandedDucts(storey),
+    ...overfilledConduits(storey),
   ]);
+}
+
+/**
+ * A conduit fuller than the trade lays it (35 % of the bore): the cables will
+ * not pull through, and the sheath chafes on what does. The fix is a wider
+ * conduit or a second one, so the finding names the stretch.
+ */
+function overfilledConduits(storey: StoreyWarningInput): readonly BuildingWarning[] {
+  return storey.overfilledStretches.map(stretch => ({
+    kind: 'conduit-overfilled' as const,
+    storeyId: storey.storeyId,
+    at: stretch.at,
+    routeId: stretch.routeId,
+    segmentIndex: stretch.segmentIndex,
+    fillRatio: stretch.fillRatio,
+  }));
 }
 
 /**

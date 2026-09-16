@@ -24,9 +24,11 @@ import {
   SLAB_OBJECTS,
   STAIR_OBJECTS,
   SUPPORT_OBJECTS,
+  WIRING_ROUTE_OBJECTS,
 } from './storey-objects';
 import type { StoreyId } from './storeys';
 import { createSupportId } from './supports';
+import { createWiringRouteId, translateWiringRoute } from './wiring-routes';
 
 /**
  * The bridge between a selection and the object it names — the one place that
@@ -189,6 +191,14 @@ export const STOREY_OBJECT_SELECTORS: readonly StoreyObjectSelector[] = [
     // Removing a device unwires it: its group loses a consumer, a panel loses
     // its group, a switch loses the light it was linked to.
     remove: (buildings, buildingId, id) => removeDevice(buildings, buildingId, id as DeviceId),
+  }),
+  defineSelector({
+    objects: WIRING_ROUTE_OBJECTS,
+    idOf: selection => (selection.kind === 'wiringRoute' ? selection.routeId : undefined),
+    buildingOf: selection => (selection.kind === 'wiringRoute' ? selection.buildingId : undefined),
+    select: (buildingId, routeId) => ({ kind: 'wiringRoute', buildingId, routeId }),
+    translate: translateWiringRoute,
+    mintId: createWiringRouteId,
   }),
 ];
 

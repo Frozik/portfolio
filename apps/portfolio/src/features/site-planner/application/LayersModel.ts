@@ -60,6 +60,7 @@ export class LayersModel {
 
     session.setActiveLayer(layer);
     session.clearDraftWall();
+    session.clearDraftRoute();
     session.setPendingConnectDeviceId(undefined);
 
     if (!this.core.view.visibleLayers.has(layer)) {

@@ -255,7 +255,7 @@ export function buildOpeningBody(wall: Wall, opening: Opening): MultiPolygon {
  * closed ring the segments wrap, so the seam point mitres between the last
  * segment and the first instead of keeping an endpoint's single normal.
  */
-function offsetPolyline(
+export function offsetPolyline(
   points: readonly Vector2[],
   delta: number,
   { isClosed = false }: { readonly isClosed?: boolean } = {}

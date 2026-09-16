@@ -46,6 +46,8 @@ interface ObjectsInput {
   readonly houseGhost: LitMesh | undefined;
   readonly foundations: LitMesh | undefined;
   readonly roofOverlays: RoofOverlayGeometry;
+  /** The cable runs as tubes; nothing while the electrical layer is hidden. */
+  readonly wiring: LitMesh | undefined;
   readonly furniture: readonly SceneFurniture[];
   readonly trees: readonly SceneTree[];
   readonly cars: readonly SceneCar[];
@@ -78,6 +80,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
   private foundationsMesh: GpuMesh | undefined;
   private greenRoofMesh: GpuMesh | undefined;
   private terraceMesh: GpuMesh | undefined;
+  private wiringMesh: GpuMesh | undefined;
   private dirtPathMesh: GpuMesh | undefined;
   private asphaltPathMesh: GpuMesh | undefined;
   private blendPathMesh: GpuMesh | undefined;
@@ -206,6 +209,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.drawMesh(pass, this.pipelines.house, this.houseMesh);
     this.drawMesh(pass, this.pipelines.greenRoof, this.greenRoofMesh);
     this.drawMesh(pass, this.pipelines.terrace, this.terraceMesh);
+    this.drawMesh(pass, this.pipelines.wiring, this.wiringMesh);
     this.trees.draw(pass, this.pipelines.tree);
     this.drawCars(pass, this.pipelines.car);
     // Ghost storeys blend over the solid scene, so they come after it.
@@ -243,6 +247,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     releaseGpuMesh(this.foundationsMesh);
     releaseGpuMesh(this.greenRoofMesh);
     releaseGpuMesh(this.terraceMesh);
+    releaseGpuMesh(this.wiringMesh);
     releaseGpuMesh(this.dirtPathMesh);
     releaseGpuMesh(this.asphaltPathMesh);
     releaseGpuMesh(this.blendPathMesh);
@@ -251,6 +256,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.foundationsMesh = undefined;
     this.greenRoofMesh = undefined;
     this.terraceMesh = undefined;
+    this.wiringMesh = undefined;
     this.dirtPathMesh = undefined;
     this.asphaltPathMesh = undefined;
     this.blendPathMesh = undefined;
@@ -355,6 +361,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     releaseGpuMesh(this.foundationsMesh);
     releaseGpuMesh(this.greenRoofMesh);
     releaseGpuMesh(this.terraceMesh);
+    releaseGpuMesh(this.wiringMesh);
     releaseGpuMesh(this.dirtPathMesh);
     releaseGpuMesh(this.asphaltPathMesh);
     releaseGpuMesh(this.blendPathMesh);
@@ -363,6 +370,7 @@ export class ObjectsLayer implements RenderLayer, ShadowCaster {
     this.foundationsMesh = uploadLitMesh(device, objects.foundations);
     this.greenRoofMesh = uploadLitMesh(device, objects.roofOverlays.green);
     this.terraceMesh = uploadLitMesh(device, objects.roofOverlays.terrace);
+    this.wiringMesh = uploadLitMesh(device, objects.wiring);
     for (const entry of FURNITURE_CATALOG) {
       const pieces = objects.furniture.filter(piece => piece.catalogId === entry.id);
 

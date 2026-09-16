@@ -14,6 +14,7 @@ import type { Slab } from './slabs';
 import type { StairInstance } from './stairs';
 import type { SupportPost } from './supports';
 import type { Wall } from './walls';
+import type { WiringRoute } from './wiring-routes';
 
 export type StoreyId = Opaque<'StoreyId', string>;
 
@@ -90,6 +91,8 @@ export interface Storey {
    * read via {@link slabsOf}.
    */
   readonly slabs?: readonly Slab[];
+  /** Hand-drawn cable routes (`wiring.md` §3.3) — read via {@link wiringRoutesOf}. */
+  readonly wiringRoutes?: readonly WiringRoute[];
 }
 
 /** The storey's furniture, empty for storeys that predate the field. */
@@ -137,6 +140,11 @@ export function supportsOf(storey: Storey): readonly SupportPost[] {
   return storey.supports ?? NO_SUPPORTS;
 }
 
+/** The storey's drawn cable routes, empty for storeys that predate the field. */
+export function wiringRoutesOf(storey: Storey): readonly WiringRoute[] {
+  return storey.wiringRoutes ?? NO_WIRING_ROUTES;
+}
+
 const NO_FURNITURE: readonly FurnitureInstance[] = [];
 const NO_DEVICES: readonly ElectricalDevice[] = [];
 const NO_GROUPS: readonly CircuitGroup[] = [];
@@ -144,6 +152,7 @@ const NO_SWITCH_LINKS: readonly SwitchLink[] = [];
 const NO_STAIRS: readonly StairInstance[] = [];
 const NO_SUPPORTS: readonly SupportPost[] = [];
 const NO_SLABS: readonly Slab[] = [];
+const NO_WIRING_ROUTES: readonly WiringRoute[] = [];
 
 /** A typical residential upper storey; the ground one inherits `wallHeight`. */
 

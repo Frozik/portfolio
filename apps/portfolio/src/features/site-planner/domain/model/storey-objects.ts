@@ -13,8 +13,10 @@ import {
   slabsOf,
   stairsOf,
   supportsOf,
+  wiringRoutesOf,
 } from './storeys';
 import type { SupportPost } from './supports';
+import type { WiringRoute } from './wiring-routes';
 
 /**
  * The things that STAND ON A STOREY: furniture, a
@@ -38,7 +40,8 @@ export type StoreyObjectKey =
   | 'slab'
   | 'fireplace'
   | 'duct'
-  | 'device';
+  | 'device'
+  | 'wiringRoute';
 
 /** Anything a storey holds a list of: identified, and somewhere on the plan. */
 export interface StoreyObject {
@@ -102,6 +105,12 @@ export const DEVICE_OBJECTS = defineKind<ElectricalDevice>({
   key: 'device',
   read: devicesOf,
   write: (storey, devices) => ({ ...storey, devices }),
+});
+
+export const WIRING_ROUTE_OBJECTS = defineKind<WiringRoute>({
+  key: 'wiringRoute',
+  read: wiringRoutesOf,
+  write: (storey, wiringRoutes) => ({ ...storey, wiringRoutes }),
 });
 
 /**

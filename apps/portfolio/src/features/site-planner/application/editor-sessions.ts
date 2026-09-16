@@ -11,6 +11,8 @@ import { DEFAULT_DEVICE_KIND } from '../domain/model/electrical';
 import type { FireplaceKind } from '../domain/model/fireplaces';
 import type { FurnitureCatalogId } from '../domain/model/furniture';
 import { DEFAULT_FURNITURE_CATALOG_ID } from '../domain/model/furniture';
+import type { InstallationPresetId } from '../domain/model/installation';
+import { DEFAULT_INSTALLATION_PRESET } from '../domain/model/installation';
 import type { OpeningPreset } from '../domain/model/openings';
 import { DEFAULT_OPENING_PRESET } from '../domain/model/openings';
 import type { StairKind } from '../domain/model/stairs';
@@ -94,6 +96,10 @@ class BuildingEditSession {
   isReferenceStoreyVisible = true;
   /** The layer being worked in — exactly one, as with the storey (`layers.md`). */
   activeLayer: BuildingLayerId = DEFAULT_BUILDING_LAYER;
+  /** The cable route being clicked out (`wiring.md` §3.3); empty while none is. */
+  draftRoutePoints: readonly Vector2[] = [];
+  /** How the route tool lays the next route. */
+  armedInstallation: InstallationPresetId = DEFAULT_INSTALLATION_PRESET;
 
   constructor(buildingId: BuildingId) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -160,6 +166,22 @@ class BuildingEditSession {
 
   setActiveLayer(layer: BuildingLayerId): void {
     this.activeLayer = layer;
+  }
+
+  appendDraftRoutePoint(point: Vector2): void {
+    this.draftRoutePoints = [...this.draftRoutePoints, point];
+  }
+
+  dropLastDraftRoutePoint(): void {
+    this.draftRoutePoints = this.draftRoutePoints.slice(0, -1);
+  }
+
+  clearDraftRoute(): void {
+    this.draftRoutePoints = [];
+  }
+
+  setArmedInstallation(installation: InstallationPresetId): void {
+    this.armedInstallation = installation;
   }
 
   dispose(): void {}

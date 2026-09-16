@@ -16,6 +16,7 @@ import { HeatingPanel } from './HeatingPanel';
 import { BuildingsPanel } from './HousePanel';
 import { LayersPanel } from './LayersPanel';
 import { ObjectsPanel } from './ObjectsPanel';
+import { PanelAssemblyPanel } from './PanelAssemblyPanel';
 import { PanelGroup } from './PanelGroup';
 import { PathSegmentsPanel } from './PathSegmentsPanel';
 import { hasToolOptions, PropertiesPanel, ToolOptionsPanel } from './PropertiesPanel';
@@ -29,8 +30,11 @@ import { StructurePanel } from './StructurePanel';
 import { SupportsPanel } from './SupportsPanel';
 import { UtilitiesPanel } from './UtilitiesPanel';
 import { VentilationPanel } from './VentilationPanel';
+import { WallElevationPanel } from './WallElevationPanel';
 import { WallsPanel } from './WallsPanel';
 import { WarningsPanel } from './WarningsPanel';
+import { WiringMaterialsPanel } from './WiringMaterialsPanel';
+import { WiringRoutesPanel } from './WiringRoutesPanel';
 
 type PanelComponent = ComponentType<{ readonly store: SitePlannerStore }>;
 
@@ -88,7 +92,16 @@ const LAYER_SECTIONS: Readonly<Record<BuildingLayerId, PanelSection>> = {
     panels: [WallsPanel, RoomsPanel, StairsPanel],
   },
   furniture: { title: sitePlannerT.layers.names.furniture, panels: [FurniturePanel] },
-  electrical: { title: sitePlannerT.layers.names.electrical, panels: [ElectricalPanel] },
+  electrical: {
+    title: sitePlannerT.layers.names.electrical,
+    panels: [
+      ElectricalPanel,
+      WiringRoutesPanel,
+      WiringMaterialsPanel,
+      PanelAssemblyPanel,
+      WallElevationPanel,
+    ],
+  },
   services: {
     title: sitePlannerT.layers.names.services,
     panels: [EntriesPanel, HeatingPanel, VentilationPanel],

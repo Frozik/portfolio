@@ -31,7 +31,7 @@ import { findHandleAt, HANDLE_HIT_RADIUS_PX } from './plan-picking';
 /** How far outside its body a wall still answers a click, in pixels. */
 const WALL_PICK_TOLERANCE_PX = 6;
 /** The grab radius around a device symbol, generous around the drawn glyph. */
-const DEVICE_PICK_RADIUS_PX = 10;
+export const DEVICE_PICK_RADIUS_PX = 10;
 
 /** The storey the editor is aimed at — the only one the canvas offers. */
 export function activeStoreyOf(

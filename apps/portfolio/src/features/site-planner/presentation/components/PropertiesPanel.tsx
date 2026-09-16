@@ -23,6 +23,7 @@ import {
   SelectedWallProperties,
   WallToolProperties,
 } from './WallBuildingProperties';
+import { RouteToolProperties, SelectedWiringRouteProperties } from './WiringRouteProperties';
 
 /**
  * What the tool in hand is set to, when it has settings of its own: the
@@ -56,6 +57,8 @@ function toolOptionsFor(store: SitePlannerStore): ReactNode {
       return <ElectricToolProperties store={store} />;
     case 'building:connect':
       return <PanelHint>{sitePlannerT.electrical.connectHint}</PanelHint>;
+    case 'building:route':
+      return <RouteToolProperties store={store} />;
     case 'utility':
       return isNil(store.utilities.selectedUtilityRoute) ? (
         <UtilityToolProperties store={store} />
@@ -81,6 +84,12 @@ const SelectionProperties = observer(({ store }: { readonly store: SitePlannerSt
 
   if (!isNil(selectedDevice)) {
     return <SelectedDeviceProperties store={store} device={selectedDevice} />;
+  }
+
+  if (!isNil(store.electrics.wiring.selectedRoute)) {
+    return (
+      <SelectedWiringRouteProperties store={store} route={store.electrics.wiring.selectedRoute} />
+    );
   }
 
   if (!isNil(selectedUtilityRoute)) {

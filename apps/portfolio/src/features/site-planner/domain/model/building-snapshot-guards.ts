@@ -16,6 +16,8 @@ import { PITCHED_ROOF_KINDS } from './roofs';
 import type { RoomLabel } from './rooms';
 import { ROOM_TYPES } from './rooms';
 
+import { CABLE_TYPES } from './cables';
+import { INSTALLATION_PRESET_IDS } from './installation';
 import {
   isRecord,
   isArrayOf,
@@ -35,6 +37,8 @@ import type { SupportPost } from './supports';
 import { SUPPORT_PROFILES } from './supports';
 import type { Wall } from './walls';
 import { MIN_WALL_POINTS, WALL_MATERIALS, WALL_REFERENCE_LINES } from './walls';
+import type { WiringRoute } from './wiring-routes';
+import { MIN_WIRING_ROUTE_POINTS, WIRING_LEVELS } from './wiring-routes';
 
 /** The type guards of a stored building and everything on its storeys. */
 export function isBuilding(value: unknown): value is Building {
@@ -88,7 +92,24 @@ function isStorey(value: unknown): value is Storey {
     (value.supports === undefined || isArrayOf(value.supports, isSupportPost)) &&
     (value.slabs === undefined || isArrayOf(value.slabs, isShape)) &&
     (value.fireplaces === undefined || isArrayOf(value.fireplaces, isFireplace)) &&
-    (value.ducts === undefined || isArrayOf(value.ducts, isVerticalDuct))
+    (value.ducts === undefined || isArrayOf(value.ducts, isVerticalDuct)) &&
+    (value.wiringRoutes === undefined || isArrayOf(value.wiringRoutes, isWiringRoute))
+  );
+}
+
+function isWiringRoute(value: unknown): value is WiringRoute {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.id) &&
+    isArrayOf(value.points, isVector2) &&
+    value.points.length >= MIN_WIRING_ROUTE_POINTS &&
+    isOneOf(value.level, WIRING_LEVELS) &&
+    isArrayOf(
+      value.segments,
+      (segment): segment is WiringRoute['segments'][number] =>
+        isRecord(segment) && isOneOf(segment.installation, INSTALLATION_PRESET_IDS)
+    ) &&
+    value.segments.length === value.points.length - 1
   );
 }
 
@@ -164,7 +185,12 @@ function isCircuitGroup(value: unknown): value is CircuitGroup {
     isRecord(value) &&
     isNonEmptyString(value.id) &&
     isNonEmptyString(value.panelId) &&
-    isArrayOf(value.deviceIds, isNonEmptyString)
+    isArrayOf(value.deviceIds, isNonEmptyString) &&
+    (value.cableTypeId === undefined ||
+      isOneOf(
+        value.cableTypeId,
+        CABLE_TYPES.map(cable => cable.id)
+      ))
   );
 }
 

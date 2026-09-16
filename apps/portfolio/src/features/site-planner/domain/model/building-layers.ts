@@ -60,6 +60,7 @@ const SELECTION_LAYERS: Readonly<Record<Selection['kind'], BuildingLayerId | und
   stair: 'walls',
   furniture: 'furniture',
   device: 'electrical',
+  wiringRoute: 'electrical',
   fireplace: 'services',
   duct: 'services',
   utilityEntry: 'services',
@@ -99,6 +100,7 @@ const WARNING_LAYERS: Readonly<Record<BuildingWarning['kind'], BuildingLayerId>>
   'room-without-exhaust': 'services',
   'sauna-without-stove': 'services',
   'duct-outside-roof': 'services',
+  'conduit-overfilled': 'electrical',
 };
 
 export function layerOfWarning(warning: BuildingWarning): BuildingLayerId {

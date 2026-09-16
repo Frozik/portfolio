@@ -37,6 +37,8 @@ export interface SceneObjects {
   readonly foundations: LitMesh | undefined;
   /** The green and terrace covers over the exposed ceilings. */
   readonly roofOverlays: RoofOverlayGeometry;
+  /** The cable runs as tubes; nothing while the electrical layer is hidden. */
+  readonly wiring: LitMesh | undefined;
   /** One per placed piece, its template named by the catalogue row. */
   readonly furniture: readonly SceneFurniture[];
   /** One per planted tree, already standing on the ground it grows from. */

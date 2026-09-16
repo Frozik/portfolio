@@ -4,6 +4,8 @@ import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { subtractPolygons } from '../../domain/geometry/polygon-booleans';
 import { slabPolygon } from '../../domain/geometry/slab-geometry';
 import { editedBuildingId } from '../../domain/model/editor-mode';
+import { installationPreset, installationWidthMeters } from '../../domain/model/installation';
+import { wiringRoutesOf } from '../../domain/model/storeys';
 import type { PlanLayerKind } from '../../domain/view/plan-layers';
 import type { BuildingScene } from '../building-scene';
 import type { SitePlannerStore } from '../SitePlannerStore';
@@ -162,6 +164,17 @@ export function planBuildingOf(
     ),
     devices: shown('electrical', displayed?.devices ?? []),
     wires: shown('electrical', displayed?.wires ?? []),
+    wiringRoutes: shown(
+      'electrical',
+      (displayed?.storey === undefined ? [] : wiringRoutesOf(displayed.storey)).map(route => ({
+        id: route.id,
+        points: route.points,
+        installations: route.segments.map(segment => installationPreset(segment.installation).kind),
+        widthsMeters: route.segments.map(segment =>
+          installationWidthMeters(installationPreset(segment.installation))
+        ),
+      }))
+    ),
   };
 }
 
@@ -236,6 +249,9 @@ export function readPlanChrome(store: SitePlannerStore): PlanEditorChrome {
     selectedEntryId: store.utilities.selectedUtilityEntry?.entry.id,
     selectedStairGrip: store.stairs.selectedStairScene?.rotationGrip,
     pendingConnectDeviceId: store.electrics.pendingConnectDeviceId,
+    selectedWiringRoute: store.electrics.wiring.selectedRoute,
+    wiringRouteDraftPoints: store.electrics.wiring.draftRoutePreview,
+    wiringRouteSnap: store.electrics.wiring.draftRouteSnap,
     hoveredRoomIndex: store.storeys.hoveredRoomIndex,
     draftShape: store.draftShape,
     draftMark: store.draftMark,

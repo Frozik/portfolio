@@ -211,6 +211,8 @@ export const sitePlannerInteriorTranslationsEn = {
       `${room}: no exhaust shaft inside the room — a wet or a fired room needs one of its own.`,
     saunaWithoutStove: 'The sauna has no stove — nothing heats the room.',
     ductOutsideRoof: 'The shaft stands off the roof outline — it has nowhere to come out.',
+    conduitOverfilled: (percent: number) =>
+      `The conduit on this stretch is ${percent} % full — the trade pulls no more than 35 %. Widen it or lay a second one.`,
     roofTooFlat: (pitch: number) =>
       `A ${pitch}° roof does not shed: snow sits on it, and most coverings ask for 14° at least.`,
     storeyTooLow: (height: string) => `A ${height} storey is below the 2.2 m habitable minimum.`,

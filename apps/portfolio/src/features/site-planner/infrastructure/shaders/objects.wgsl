@@ -75,6 +75,8 @@ const FOUNDATION_COLOR = vec3<f32>(0.44, 0.44, 0.46);
 // Roof covers: planting over a green roof, decking over a terrace.
 const GREEN_ROOF_COLOR = vec3<f32>(0.28, 0.46, 0.26);
 const TERRACE_COLOR = vec3<f32>(0.52, 0.42, 0.3);
+// Cable runs in their conduit — the plan's power amber, so 2D and 3D agree.
+const WIRING_COLOR = vec3<f32>(0.96, 0.62, 0.04);
 
 fn shadePath(input: ObjectVertex, color: vec3<f32>) -> vec4<f32> {
     let normal = normalize(input.normal);
@@ -127,6 +129,11 @@ fn fsGreenRoof(input: ObjectVertex) -> @location(0) vec4<f32> {
 @fragment
 fn fsTerrace(input: ObjectVertex) -> @location(0) vec4<f32> {
     return shadePath(input, TERRACE_COLOR);
+}
+
+@fragment
+fn fsWiring(input: ObjectVertex) -> @location(0) vec4<f32> {
+    return shadePath(input, WIRING_COLOR);
 }
 
 // What every instanced template — a tree, a car — hands the fragment stage: it

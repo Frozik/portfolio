@@ -209,6 +209,7 @@ describe('the whole-building turn grip', () => {
     overhangFloor: [],
     devices: [],
     wires: [],
+    wiringRoutes: [],
   };
 
   function chromeWith(overrides: Partial<PlanEditorChrome>): PlanEditorChrome {
@@ -224,6 +225,9 @@ describe('the whole-building turn grip', () => {
       selectedBuildingId: undefined,
       pathHandleHighlight: undefined,
       activeLayer: undefined,
+      selectedWiringRoute: undefined,
+      wiringRouteDraftPoints: [],
+      wiringRouteSnap: undefined,
       selectedPathPointIndex: undefined,
       hoveredPathSegmentIndex: undefined,
       editFocus: undefined,

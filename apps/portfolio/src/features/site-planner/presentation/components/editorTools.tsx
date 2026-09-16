@@ -8,6 +8,7 @@ import {
   Flame,
   Footprints,
   Layers2,
+  Spline,
   Square,
   Wind,
   Zap,
@@ -23,6 +24,7 @@ import { FireplaceToolButton } from './FireplaceToolButton';
 import type { FlyoutSide } from './FlyoutToolButton';
 import { FurnitureToolButton } from './FurnitureToolButton';
 import { OpeningToolButton } from './OpeningToolButton';
+import { RouteToolButton } from './RouteToolButton';
 import { SlabToolButton } from './SlabToolButton';
 import { StairToolButton } from './StairToolButton';
 import { StoreySwitcher } from './StoreySwitcher';
@@ -105,6 +107,12 @@ export const EDITOR_TOOL_PRESENTATIONS: Partial<Record<EditorToolId, EditorToolP
     icon: Cable,
     label: sitePlannerT.electrical.connectLabel,
     hint: sitePlannerT.electrical.connectHint,
+  },
+  'building:route': {
+    icon: Spline,
+    label: sitePlannerT.wiring.toolLabel,
+    hint: sitePlannerT.wiring.toolHint,
+    Flyout: RouteToolButton,
   },
 };
 

@@ -168,7 +168,7 @@ export class SitePlannerStore implements PlanEditorCore {
   /** The open building's furniture ({@link FurnitureModel}). */
   readonly furniture: FurnitureModel;
 
-  /** The open building's electrical devices and their wiring ({@link ElectricsModel}). */
+  /** The open building's electrics: devices, groups, drawn routes ({@link ElectricsModel}). */
   readonly electrics: ElectricsModel;
 
   /** The open building's committed walls and their junctions ({@link WallEditorModel}). */

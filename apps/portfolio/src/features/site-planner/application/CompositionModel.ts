@@ -73,6 +73,7 @@ function selectedOperand(selection: Selection | undefined): SelectedOperand | un
     case 'slab':
     case 'fireplace':
     case 'duct':
+    case 'wiringRoute':
     case 'utilityRoute':
     case 'utilityEntry':
       return undefined;

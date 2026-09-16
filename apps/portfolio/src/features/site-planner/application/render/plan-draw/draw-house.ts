@@ -15,10 +15,11 @@ import type { ShapeId } from '../../../domain/model/shapes';
 import type { StairId } from '../../../domain/model/stairs';
 import type { SupportId } from '../../../domain/model/supports';
 import type { WallId } from '../../../domain/model/walls';
+import type { WiringRouteId } from '../../../domain/model/wiring-routes';
 import type { Meters } from '../../../domain/units';
 import type { PlanViewport } from '../../../domain/view/plan-viewport';
 import { planToScreen } from '../../../domain/view/plan-viewport';
-import type { PlanDeviceSymbol, PlanWireRun } from './draw-electrical';
+import type { PlanDeviceSymbol, PlanWireRun, PlanWiringRoute } from './draw-electrical';
 import { drawElectrical } from './draw-electrical';
 import { drawFurniture } from './draw-furniture';
 import type { PlanDuct, PlanFireplace } from './draw-heating';
@@ -130,6 +131,8 @@ export interface PlanBuilding {
   /** The displayed storey's electrical plan. */
   readonly devices: readonly PlanDeviceSymbol[];
   readonly wires: readonly PlanWireRun[];
+  /** The drawn cable routes the runs follow (`wiring.md` §3.3). */
+  readonly wiringRoutes: readonly PlanWiringRoute[];
 }
 
 /**
@@ -160,6 +163,7 @@ export function drawBuildings(
     selectedDuctId,
     selectedDeviceId,
     pendingConnectDeviceId,
+    selectedWiringRouteId,
     hoveredRoomIndex,
     roomTypeNames,
     squareMeterUnit,
@@ -185,6 +189,7 @@ export function drawBuildings(
     readonly selectedEntryId?: string;
     readonly selectedDeviceId?: DeviceId;
     readonly pendingConnectDeviceId?: DeviceId;
+    readonly selectedWiringRouteId?: WiringRouteId;
     /** The КОМНАТЫ row under the pointer; that room answers lit on the plan. */
     readonly hoveredRoomIndex?: number;
     readonly roomTypeNames: Readonly<Record<RoomTypeId, string>>;
@@ -282,8 +287,10 @@ export function drawBuildings(
       drawElectrical(ctx, viewport, {
         devices: building.devices,
         wires: building.wires,
+        routes: building.wiringRoutes,
         selectedDeviceId,
         pendingConnectDeviceId,
+        selectedWiringRouteId,
       })
     );
     drawUpperFootprints(ctx, viewport, building.upperFootprints);

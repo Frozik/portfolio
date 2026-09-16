@@ -153,6 +153,7 @@ export function drawPlan(
       selectedEntryId: chrome?.selectedEntryId,
       selectedDeviceId: chrome?.selectedDeviceId,
       pendingConnectDeviceId: chrome?.pendingConnectDeviceId,
+      selectedWiringRouteId: chrome?.selectedWiringRoute?.id,
       hoveredRoomIndex: chrome?.hoveredRoomIndex,
       roomTypeNames: labels.roomTypeNames,
       squareMeterUnit: labels.squareMeterUnit,

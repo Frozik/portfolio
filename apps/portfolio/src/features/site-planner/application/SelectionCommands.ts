@@ -195,6 +195,7 @@ export class SelectionCommands {
       case 'slab':
       case 'fireplace':
       case 'duct':
+      case 'wiringRoute':
         this.models.storeyObjects.removeSelectedStoreyObject(selection);
 
         return;

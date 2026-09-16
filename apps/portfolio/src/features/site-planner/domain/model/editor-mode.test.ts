@@ -91,6 +91,7 @@ describe('editorToolbar', () => {
       ...allowedPlanTools(mode),
       'building:electric',
       'building:connect',
+      'building:route',
     ]);
   });
 });

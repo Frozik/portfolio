@@ -131,6 +131,7 @@ export interface ObjectPipelines {
   readonly foundation: GPURenderPipeline;
   readonly greenRoof: GPURenderPipeline;
   readonly terrace: GPURenderPipeline;
+  readonly wiring: GPURenderPipeline;
   readonly dirtPath: GPURenderPipeline;
   readonly asphaltPath: GPURenderPipeline;
   readonly blendPath: GPURenderPipeline;
@@ -170,6 +171,7 @@ export function createObjectPipelines(
   const foundation = createLitPipeline(device, shaderModule, layout, format, 'fsFoundation');
   const greenRoof = createLitPipeline(device, shaderModule, layout, format, 'fsGreenRoof');
   const terrace = createLitPipeline(device, shaderModule, layout, format, 'fsTerrace');
+  const wiring = createLitPipeline(device, shaderModule, layout, format, 'fsWiring');
   const dirtPath = createLitPipeline(device, shaderModule, layout, format, 'fsPathDirt');
   const asphaltPath = createLitPipeline(device, shaderModule, layout, format, 'fsPathAsphalt');
   // The seam blends arrive painted per vertex, so their pipeline reads a
@@ -232,6 +234,7 @@ export function createObjectPipelines(
     foundation,
     greenRoof,
     terrace,
+    wiring,
     dirtPath,
     asphaltPath,
     blendPath,

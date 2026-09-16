@@ -25,6 +25,7 @@ import type { ElevationMark, MarkId } from '../../../domain/model/site-plan';
 import type { StairId } from '../../../domain/model/stairs';
 import type { SupportId } from '../../../domain/model/supports';
 import type { Wall } from '../../../domain/model/walls';
+import type { WiringRoute } from '../../../domain/model/wiring-routes';
 import type { AnalysisRaster } from '../../../domain/terrain/analysis-raster';
 import type { ContourPolyline } from '../../../domain/terrain/contour-types';
 import type { Meters } from '../../../domain/units';
@@ -122,6 +123,12 @@ export interface PlanEditorChrome {
   readonly selectedDeviceId: DeviceId | undefined;
   /** The first half of a running connect gesture. */
   readonly pendingConnectDeviceId: DeviceId | undefined;
+  /** The selected cable route itself, so its bends get squares and its stretches rings. */
+  readonly selectedWiringRoute: WiringRoute | undefined;
+  /** The cable route being clicked out, rubber band to the cursor included. */
+  readonly wiringRouteDraftPoints: readonly Vector2[];
+  /** The neighbouring route the next bend is caught by, shown before it is laid. */
+  readonly wiringRouteSnap: KeyPointSnap | undefined;
   /** The КОМНАТЫ row the pointer rests on; that room's region lights up. */
   readonly hoveredRoomIndex: number | undefined;
   /** The shape the running gesture is shaping; it stands in for the selection. */

@@ -15,6 +15,7 @@ import { PanelHint } from './PanelHint';
 import { PlannerPanel } from './PlannerPanel';
 
 const GLYPH_SIZE_PX = 12;
+const PERCENT_SCALE = 100;
 
 function describeWarning(warning: BuildingWarning): string {
   const labels = sitePlannerT.warnings;
@@ -45,6 +46,8 @@ function describeWarning(warning: BuildingWarning): string {
       return labels.ductOutsideRoof;
     case 'sauna-without-stove':
       return labels.saunaWithoutStove;
+    case 'conduit-overfilled':
+      return labels.conduitOverfilled(Math.round(warning.fillRatio * PERCENT_SCALE));
     default:
       return assertNever(warning);
   }

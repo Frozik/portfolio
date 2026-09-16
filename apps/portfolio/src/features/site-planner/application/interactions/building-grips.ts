@@ -13,6 +13,7 @@ import {
   draggedOpening,
   draggedStair,
   draggedSupport,
+  draggedWiringRoute,
 } from './dragged-storey-objects';
 import type { InteractionContext } from './editor-interaction';
 import type { DraggedObject } from './object-drag-gestures';
@@ -29,6 +30,7 @@ import {
   pickSupport,
   pickWall,
 } from './storey-object-picking';
+import { pickWiringRoute } from './wiring-route-picking';
 
 /** What a press on a storey object takes hold of: the thing to select, and how it moves. */
 interface Grab {
@@ -161,6 +163,17 @@ export function createBuildingGrips(
           gesture: 'move',
         };
   };
+  const wiringRoute: BuildingGrip = planPoint => {
+    const route = pickWiringRoute(context, buildingId, planPoint);
+
+    return isNil(route)
+      ? undefined
+      : {
+          selection: { kind: 'wiringRoute', buildingId, routeId: route.id },
+          dragged: draggedWiringRoute(context, buildingId, route),
+          gesture: 'move',
+        };
+  };
   const furniture: BuildingGrip = planPoint => {
     const item = pickFurniture(context, buildingId, planPoint);
 
@@ -175,7 +188,7 @@ export function createBuildingGrips(
 
   return {
     overWalls: [stairGrip, heating, furnitureGrip],
-    underWalls: [entry, device, opening, support, stair, furniture],
+    underWalls: [entry, device, wiringRoute, opening, support, stair, furniture],
   };
 }
 

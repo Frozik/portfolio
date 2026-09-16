@@ -102,6 +102,7 @@ export const OBJECT_EDITOR_SPECS: Readonly<Record<EditTargetKind, ObjectEditorSp
       { id: 'building:furniture', hotkey: 'f', layer: 'furniture' },
       { id: 'building:electric', hotkey: 'k', layer: 'electrical' },
       { id: 'building:connect', hotkey: 'l', layer: 'electrical' },
+      { id: 'building:route', hotkey: 'u', layer: 'electrical' },
       { id: 'building:fireplace', hotkey: 'j', layer: 'services' },
       { id: 'building:duct', hotkey: 'd', layer: 'services' },
     ],
@@ -256,6 +257,7 @@ export function editorDoorFor(selection: Selection): EditorDoor | undefined {
     case 'slab':
     case 'fireplace':
     case 'duct':
+    case 'wiringRoute':
     case 'utilityEntry':
       return undefined;
     default:

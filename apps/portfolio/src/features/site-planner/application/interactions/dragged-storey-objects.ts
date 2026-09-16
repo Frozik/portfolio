@@ -19,14 +19,18 @@ import type { UtilityEntry } from '../../domain/model/foundation';
 import { canEnterThroughFloor } from '../../domain/model/foundation';
 import type { FurnitureInstance } from '../../domain/model/furniture';
 import { findFurnitureEntry } from '../../domain/model/furniture';
+import { installationPreset, installationWidthMeters } from '../../domain/model/installation';
 import type { Opening } from '../../domain/model/openings';
 import type { StairInstance } from '../../domain/model/stairs';
 import type { SupportPost } from '../../domain/model/supports';
 import type { Wall } from '../../domain/model/walls';
+import type { WiringRoute } from '../../domain/model/wiring-routes';
+import { translateWiringRoute } from '../../domain/model/wiring-routes';
 import type { Meters } from '../../domain/units';
 import { normalizeTurnDegrees } from '../../domain/units';
 import type { PlanModifiers } from '../../domain/view/plan-input';
 import type { SitePlannerStore } from '../SitePlannerStore';
+import type { WiringModel } from '../WiringModel';
 import type { InteractionContext } from './editor-interaction';
 import { gridStep, snapPointToGrid } from './grid-snapping';
 import type { DraggedObject } from './object-drag-gestures';
@@ -232,6 +236,63 @@ export function draggedSupport(
     restore: () =>
       store.storeyObjects.moveSupport(buildingId, post.id, { position: post.position }),
   };
+}
+
+/**
+ * A route slides whole by its first bend, on the grid — and beside a
+ * neighbouring route whenever any of its bends comes within the magnet's
+ * reach: the whole run shifts by that one catch, so it lands parallel and
+ * touching the way it was drawn. Alt suspends both, as everywhere.
+ */
+export function draggedWiringRoute(
+  context: InteractionContext,
+  buildingId: BuildingId,
+  route: WiringRoute
+): DraggedObject {
+  const { store } = context;
+  const { wiring } = store.electrics;
+  const origin = route.points[0];
+
+  return {
+    origin,
+    moveTo: (draggedPoint, modifiers) => {
+      const landed = snapPointToGrid(store, draggedPoint, modifiers);
+      const shifted = translateWiringRoute(route, {
+        x: landed.x - origin.x,
+        y: landed.y - origin.y,
+      });
+
+      wiring.updateRoute(buildingId, magnetizeRouteBesideOthers(wiring, shifted));
+    },
+    restore: () => wiring.updateRoute(buildingId, route),
+  };
+}
+
+/** The route shifted by the nearest catch any of its bends makes on another route. */
+function magnetizeRouteBesideOthers(wiring: WiringModel, route: WiringRoute): WiringRoute {
+  let best: { readonly delta: Vector2; readonly distance: number } | undefined;
+
+  route.points.forEach((point, index) => {
+    const segment = route.segments[Math.min(index, route.segments.length - 1)];
+    const beside = wiring.besideRoutes(
+      point,
+      installationWidthMeters(installationPreset(segment.installation)),
+      route.id
+    );
+
+    if (isNil(beside)) {
+      return;
+    }
+
+    const delta = { x: beside.x - point.x, y: beside.y - point.y };
+    const distance = Math.hypot(delta.x, delta.y);
+
+    if (isNil(best) || distance < best.distance) {
+      best = { delta, distance };
+    }
+  });
+
+  return isNil(best) ? route : translateWiringRoute(route, best.delta);
 }
 
 /** A stair is an object like any other (R26): it moves and it turns. */

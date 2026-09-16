@@ -205,6 +205,8 @@ export const sitePlannerInteriorTranslationsRu: TranslationOf<
       `${room}: нет вытяжного канала внутри помещения — влажным и топочным помещениям нужен свой стояк.`,
     saunaWithoutStove: 'В сауне нет печи — помещение ничем не топится.',
     ductOutsideRoof: 'Стояк стоит вне контура крыши — выходить ему некуда.',
+    conduitOverfilled: (percent: number) =>
+      `Гофра на участке заполнена на ${percent} % — протягивают не больше 35 %. Возьмите шире или положите вторую.`,
     roofTooFlat: (pitch: number) =>
       `Уклон крыши ${pitch}° — снег не сходит; для большинства кровель минимум 14°.`,
   },

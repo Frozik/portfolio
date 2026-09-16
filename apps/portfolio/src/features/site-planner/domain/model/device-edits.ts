@@ -1,7 +1,8 @@
 import type { BuildingId } from './building';
 import { storeysOf } from './building';
 import type { Building } from './building';
-import type { CircuitGroup, DeviceId, ElectricalDevice } from './electrical';
+import type { CableTypeId } from './cables';
+import type { CircuitGroup, CircuitGroupId, DeviceId, ElectricalDevice } from './electrical';
 import { createCircuitGroup } from './electrical';
 import { mapStoreys } from './storey-edits';
 import type { StoreyId } from './storeys';
@@ -103,6 +104,21 @@ export function assignDeviceToPanel(
 
     return { ...storey, groups };
   });
+}
+
+/** Overrides the cable a группа is wired in; nothing puts the derived default back. */
+export function setGroupCableType(
+  buildings: readonly Building[],
+  buildingId: BuildingId,
+  groupId: CircuitGroupId,
+  cableTypeId: CableTypeId | undefined
+): readonly Building[] {
+  return mapStoreys(buildings, buildingId, storey => ({
+    ...storey,
+    groups: groupsOf(storey).map(group =>
+      group.id === groupId ? { ...group, cableTypeId } : group
+    ),
+  }));
 }
 
 /** Ties a switch to the light it commands; tying again unties nothing (idempotent). */

@@ -2692,6 +2692,224 @@ describe('PlanInteractionController', () => {
     });
   });
 
+  describe('cable routes in the building editor', () => {
+    const openWired = (): void => {
+      const building = store.building.addBuilding('Дом');
+
+      store.composition.addShapeTerm(
+        building.id,
+        createRectangle({ center: { x: 10, y: 10 }, width: 16, length: 16, rotationDegrees: 0 }),
+        'union'
+      );
+      store.enterEditMode({ kind: 'building', buildingId: building.id });
+      controller.onKeyDown('w', NO_MODIFIERS);
+      controller.onPointerDown({ x: 4, y: 8 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 16, y: 8 }, NO_MODIFIERS);
+      controller.onKeyDown('Enter', NO_MODIFIERS);
+      store.layers.setActiveLayer('electrical');
+      store.electrics.setArmedDeviceKind('panel');
+      controller.onKeyDown('k', NO_MODIFIERS);
+      controller.onPointerDown({ x: 5, y: 8 }, NO_MODIFIERS);
+      store.electrics.setArmedDeviceKind('outlet');
+      controller.onPointerDown({ x: 15, y: 8 }, NO_MODIFIERS);
+      controller.onKeyDown('l', NO_MODIFIERS);
+      controller.onPointerDown({ x: 5, y: 8 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 15, y: 8 }, NO_MODIFIERS);
+      store.setSelection(undefined);
+    };
+
+    const routes = () => storeysOf(store.buildings[0])[0].wiringRoutes ?? [];
+
+    it('clicks a route out with its U key and lays it on Enter, selected', () => {
+      openWired();
+
+      expect(controller.onKeyDown('u', NO_MODIFIERS)).toBe(true);
+      expect(store.activeTool).toBe('building:route');
+
+      controller.onPointerDown({ x: 5, y: 12 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 15, y: 12 }, NO_MODIFIERS);
+      controller.onKeyDown('Enter', NO_MODIFIERS);
+
+      expect(routes()).toHaveLength(1);
+      expect(routes()[0].segments[0].installation).toBe('conduit-20');
+      expect(store.selection?.kind).toBe('wiringRoute');
+      // The laid route is the one to correct: the select tool comes back
+      // with it, so the next press grabs a bend rather than starting anew.
+      expect(store.activeTool).toBe('select');
+    });
+
+    it('sends the group run along the drawn route once one reaches both ends', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 8.5 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 8.5 });
+      store.electrics.wiring.commitDraftRoute();
+
+      const [wire] = store.storeys.editedStoreyScene?.wires ?? [];
+
+      expect(wire.stretches).toHaveLength(1);
+      expect(wire.points).toContainEqual({ x: 5, y: 8.5 });
+      expect(store.storeys.editedStoreyScene?.wiringReport.lines[0].cableTypeId).toBe('vvg-3x2.5');
+    });
+
+    it('drops the draft on Escape and the last bend on Backspace', () => {
+      openWired();
+      controller.onKeyDown('u', NO_MODIFIERS);
+      controller.onPointerDown({ x: 5, y: 12 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 15, y: 12 }, NO_MODIFIERS);
+      controller.onKeyDown('Backspace', NO_MODIFIERS);
+
+      expect(store.electrics.wiring.draftRoutePoints).toHaveLength(1);
+
+      controller.onKeyDown('Escape', NO_MODIFIERS);
+
+      expect(store.electrics.wiring.draftRoutePoints).toHaveLength(0);
+      expect(store.editorMode.kind).toBe('edit');
+    });
+
+    it('lands the bend the rubber band previewed, snapped to the grid', () => {
+      openWired();
+      controller.onKeyDown('u', NO_MODIFIERS);
+      controller.onPointerDown({ x: 5, y: 12 }, NO_MODIFIERS);
+      controller.onPointerMove({ x: 9.3, y: 12.4 }, NO_MODIFIERS);
+
+      expect(store.electrics.wiring.draftRoutePreview.at(-1)).toEqual({ x: 9.5, y: 12.5 });
+
+      controller.onPointerDown({ x: 9.3, y: 12.4 }, NO_MODIFIERS);
+
+      expect(store.electrics.wiring.draftRoutePoints[1]).toEqual({ x: 9.5, y: 12.5 });
+    });
+
+    it('drags a bend of the selected route by its square onto the grid', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setActiveTool('select');
+
+      drag({ x: 15, y: 12 }, { x: 15.2, y: 14.3 });
+
+      expect(routes()[0].points[1]).toEqual({ x: 15, y: 14.5 });
+    });
+
+    it('plants a bend by pulling a midpoint ring and takes it out with a double click', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setActiveTool('select');
+
+      drag({ x: 10, y: 12 }, { x: 10, y: 15 });
+
+      expect(routes()[0].points).toEqual([
+        { x: 5, y: 12 },
+        { x: 10, y: 15 },
+        { x: 15, y: 12 },
+      ]);
+      expect(routes()[0].segments).toHaveLength(2);
+
+      controller.onDoubleClick({ x: 10, y: 15 }, NO_MODIFIERS);
+
+      expect(routes()[0].points).toHaveLength(2);
+      expect(routes()[0].segments).toHaveLength(1);
+      expect(store.editorMode.kind).toBe('edit');
+    });
+
+    it('lays a new route touching a neighbouring one, a conduit width apart', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setSelection(undefined);
+      controller.onKeyDown('u', NO_MODIFIERS);
+      controller.onPointerMove({ x: 6, y: 12.6 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 6, y: 12.6 }, NO_MODIFIERS);
+      controller.onPointerMove({ x: 14, y: 12.6 }, NO_MODIFIERS);
+      controller.onPointerDown({ x: 14, y: 12.6 }, NO_MODIFIERS);
+      controller.onKeyDown('Enter', NO_MODIFIERS);
+
+      // Two Ø20 conduits are 2 cm apart for real, but the sheet can only
+      // show a stroke's width at its zoom, so the run is laid that far off on
+      // the cursor's side — parallel, beside, visibly its own.
+      const [, laid] = routes();
+      const shownGap = 2 / store.view.viewport.pixelsPerMeter;
+
+      expect(laid.points[0].x).toBeCloseTo(6);
+      expect(laid.points[0].y).toBeCloseTo(12 + shownGap);
+      expect(laid.points[1].y).toBeCloseTo(12 + shownGap);
+    });
+
+    it('shows where the first bend will be caught before it is laid', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setSelection(undefined);
+      controller.onKeyDown('u', NO_MODIFIERS);
+      controller.onPointerMove({ x: 6, y: 12.6 }, NO_MODIFIERS);
+
+      const snap = store.electrics.wiring.draftRouteSnap;
+
+      expect(snap?.ownPoint).toEqual({ x: 6, y: 12.6 });
+      expect(snap?.targetPoint.x).toBeCloseTo(6);
+      expect(store.electrics.wiring.draftRoutePoints).toHaveLength(0);
+
+      controller.onPointerMove({ x: 6, y: 18 }, NO_MODIFIERS);
+
+      expect(store.electrics.wiring.draftRouteSnap).toBeUndefined();
+    });
+
+    it('lands a whole dragged route beside its neighbour', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 16 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 16 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setSelection(undefined);
+      store.setActiveTool('select');
+
+      drag({ x: 10, y: 16 }, { x: 10, y: 12.6 });
+
+      const shownGap = 2 / store.view.viewport.pixelsPerMeter;
+      const [, moved] = routes();
+
+      expect(moved.points[0].y).toBeCloseTo(12 + shownGap);
+      expect(moved.points[1].y).toBeCloseTo(12 + shownGap);
+      expect(moved.points[0].x).toBeCloseTo(5);
+    });
+
+    it('leaves the magnet off while Alt is held', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setSelection(undefined);
+      controller.onKeyDown('u', NO_MODIFIERS);
+
+      const alt = { ...NO_MODIFIERS, isAltPressed: true };
+
+      controller.onPointerMove({ x: 6, y: 12.6 }, alt);
+      controller.onPointerDown({ x: 6, y: 12.6 }, alt);
+
+      expect(store.electrics.wiring.draftRoutePoints[0]).toEqual({ x: 6, y: 12.6 });
+    });
+
+    it('picks a laid route with the select tool and drags it whole', () => {
+      openWired();
+      store.electrics.wiring.appendDraftRoutePoint({ x: 5, y: 12 });
+      store.electrics.wiring.appendDraftRoutePoint({ x: 15, y: 12 });
+      store.electrics.wiring.commitDraftRoute();
+      store.setSelection(undefined);
+      store.setActiveTool('select');
+
+      drag({ x: 10, y: 12 }, { x: 10, y: 14 });
+
+      expect(store.selection?.kind).toBe('wiringRoute');
+      expect(routes()[0].points[0]).toEqual({ x: 5, y: 14 });
+    });
+  });
+
   describe('regression: selecting things in the building editor', () => {
     const openHouse = (): void => {
       const building = store.building.addBuilding('Дом');

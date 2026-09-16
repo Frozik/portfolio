@@ -57,6 +57,7 @@ export function collectSceneWarnings(scene: BuildingScene): readonly BuildingWar
         strandedDucts: scene.ducts
           .filter(run => run.isOutsideRoof && run.storeyId === storeyScene.storey.id)
           .map(run => ({ id: run.duct.id, at: run.duct.position })),
+        overfilledStretches: storeyScene.wiringReport.overfilled,
         footprintBelow: below?.footprint,
         overhang: overhang ?? [],
         overhangMeters: isNil(overhang) ? 0 : maxOverhangMeters(overhang, below.footprint),

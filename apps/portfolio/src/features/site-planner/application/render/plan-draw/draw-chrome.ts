@@ -9,6 +9,7 @@ import { planToScreen } from '../../../domain/view/plan-viewport';
 import { drawBuildingSelection } from './draw-building-selection';
 import { drawCarSelection } from './draw-cars';
 import { drawDimensions } from './draw-dimensions';
+import { drawWiringRouteDraft } from './draw-electrical';
 import { computeFurnitureHandles } from './draw-furniture';
 import type { PlanBuilding } from './draw-house';
 import { drawMeasure } from './draw-measure';
@@ -146,6 +147,17 @@ export function drawChrome(
     );
   }
 
+  const { selectedWiringRoute } = chrome;
+
+  if (!isNil(selectedWiringRoute)) {
+    drawPathPointHandles(
+      ctx,
+      computePolylinePointHandles(selectedWiringRoute.points, viewport, { includeMidpoints: true }),
+      chrome.pathHandleHighlight,
+      undefined
+    );
+  }
+
   const { selectedWallJunction } = chrome;
 
   if (!isNil(selectedWallJunction)) {
@@ -169,6 +181,13 @@ export function drawChrome(
     readout: chrome.wallDraftReadout,
     meterUnit,
   });
+  drawWiringRouteDraft(ctx, viewport, chrome.wiringRouteDraftPoints);
+
+  const { wiringRouteSnap } = chrome;
+
+  if (!isNil(wiringRouteSnap)) {
+    drawSnapIndicator(ctx, viewport, wiringRouteSnap);
+  }
 
   const { keyPointSnap } = chrome;
 

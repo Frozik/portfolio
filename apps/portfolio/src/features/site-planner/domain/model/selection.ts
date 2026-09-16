@@ -14,6 +14,7 @@ import type { MarkId } from './site-plan';
 import type { StairId } from './stairs';
 import type { SupportId } from './supports';
 import type { WallId } from './walls';
+import type { WiringRouteId } from './wiring-routes';
 
 /** Which composition a selected shape belongs to. */
 /**
@@ -110,6 +111,11 @@ export type Selection =
       readonly kind: 'device';
       readonly buildingId: BuildingId;
       readonly deviceId: DeviceId;
+    }
+  | {
+      readonly kind: 'wiringRoute';
+      readonly buildingId: BuildingId;
+      readonly routeId: WiringRouteId;
     };
 
 /**
@@ -143,6 +149,7 @@ export const SELECTION_SCOPE: Readonly<Record<Selection['kind'], 'view' | 'edito
   slab: 'editor',
   fireplace: 'editor',
   duct: 'editor',
+  wiringRoute: 'editor',
   tree: 'view',
   car: 'view',
   path: 'view',
@@ -202,6 +209,8 @@ function selectionKey(selection: Selection): string {
       return `fireplace:${selection.buildingId}:${selection.fireplaceId}`;
     case 'duct':
       return `duct:${selection.buildingId}:${selection.ductId}`;
+    case 'wiringRoute':
+      return `wiringRoute:${selection.buildingId}:${selection.routeId}`;
     default:
       return assertNever(selection);
   }

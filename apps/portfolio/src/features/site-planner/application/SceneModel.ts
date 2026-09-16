@@ -1,5 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import { mergeLitMeshes } from '@frozik/utils/geometry/litMesh';
 import type { MultiPolygon } from '@frozik/utils/geometry/polygonTypes';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
@@ -40,6 +41,7 @@ import { derivePitchedRoofScene } from './roof-scenes';
 import type { StoreyScene } from './storey-scenes';
 import { deriveStoreyScenes } from './storey-scenes';
 import type { TerrainModel } from './TerrainModel';
+import { buildWiringSolids } from './wiring-scenes';
 
 const NO_BUILDING_WARNINGS: readonly BuildingWarning[] = [];
 const NO_SCENES: readonly BuildingScene[] = [];
@@ -263,6 +265,29 @@ export class SceneModel {
       activeStoreyId: this.core.activeStoreyId,
       visibleLayers: this.core.view.visibleLayers,
     };
+  }
+
+  /**
+   * The cable runs as tubes (`wiring.md` §3.5): the storeys in view — every
+   * one outside the building editor, the active one inside it — while the
+   * electrical layer is shown.
+   */
+  get wiringGeometry(): LitMesh | undefined {
+    if (!this.core.view.visibleLayers.has('electrical')) {
+      return undefined;
+    }
+
+    const session = this.core.editorSession;
+    const storeys = this.buildingScenes.flatMap(scene =>
+      scene.storeys.filter(
+        storeyScene =>
+          session?.kind !== 'building' ||
+          scene.building.id !== session.buildingId ||
+          storeyScene.storey.id === this.core.activeStoreyId
+      )
+    );
+
+    return mergeLitMeshes(buildWiringSolids(storeys));
   }
 
   /**

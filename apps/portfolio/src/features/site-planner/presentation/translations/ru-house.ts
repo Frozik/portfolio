@@ -22,6 +22,86 @@ export const sitePlannerHouseTranslationsRu: TranslationOf<typeof sitePlannerHou
       cycleHint: 'Q — следующий слой · Shift+Q — предыдущий',
       wallsHidden: 'Стены скрыты — проёмы и приборы не найдут стену',
     },
+    wiring: {
+      routesPanelTitle: 'Трассы',
+      materialsPanelTitle: 'Кабельный журнал',
+      toolLabel: 'Трасса',
+      toolHint:
+        'Кликайте по стенам и потолку — точки трассы · Enter или двойной клик — проложить · Backspace — убрать последний изгиб · Esc — отмена.',
+      menu: 'Выбрать способ прокладки',
+      routeTitle: 'Трасса',
+      segmentTitle: 'Участок',
+      installationLabel: 'Прокладка',
+      levelLabel: 'Идёт',
+      levels: {
+        ceiling: 'под потолком',
+        floor: 'по полу',
+      },
+      installations: {
+        'conduit-16': 'Гофра Ø16',
+        'conduit-20': 'Гофра Ø20',
+        'conduit-25': 'Гофра Ø25',
+        'conduit-32': 'Гофра Ø32',
+        chase: 'Штроба',
+        trunking: 'Кабель-канал',
+        tray: 'Лоток',
+        pipe: 'Труба Ø20',
+        open: 'Открыто',
+      },
+      cables: {
+        'vvg-3x1.5': 'ВВГнг(А)-LS 3×1.5',
+        'vvg-3x2.5': 'ВВГнг(А)-LS 3×2.5',
+        'vvg-3x4': 'ВВГнг(А)-LS 3×4',
+        'vvg-3x6': 'ВВГнг(А)-LS 3×6',
+      },
+      cableDefault: 'по потребителям',
+      groupTitle: 'Группа',
+      consumers: (count: number) => {
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        const word =
+          mod10 === 1 && mod100 !== 11
+            ? 'потребитель'
+            : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+              ? 'потребителя'
+              : 'потребителей';
+
+        return `${count} ${word}`;
+      },
+      cableLabel: 'Кабель',
+      cablesTotal: 'Кабель, с запасом 10 %',
+      installationsTotal: 'Прокладка',
+      pointsTotal: 'Точки',
+      remove: 'Убрать трассу',
+      routesEmptyHint:
+        'Трасс нет: провода идут вдоль стен. Нарисуйте трассу, чтобы сказать, где кабель пойдёт на самом деле.',
+      routeHint: 'Трасса тащится целиком; каждый участок прокладывается по-своему ниже.',
+      journalEmptyHint: 'Соедините щиток с потребителями — журнал заполнится сам.',
+      assemblyPanelTitle: 'Сборка щита',
+      assemblyTitle: (ordinal: number) => `Щиток ${ordinal}`,
+      enclosure: (used: number, size: number) => `${used} из ${size} модулей`,
+      moduleKinds: {
+        incomer: 'Вводной',
+        breaker: 'Автомат',
+        rcbo: 'Дифавтомат 30 мА',
+      },
+      purposes: {
+        lighting: 'Свет',
+        sockets: 'Розетки',
+        mixed: 'Розетки и свет',
+      },
+      assemblyEmptyHint:
+        'Повесьте щиток и соедините с ним группы: каждая группа станет автоматом, влажное помещение — дифавтоматом.',
+      elevationPanelTitle: 'Развёртка стены',
+      elevationWallLabel: 'Стена',
+      deviceLetters: {
+        panel: 'Щ',
+        outlet: 'Р',
+        switch: 'В',
+        light: 'С',
+      },
+      elevationEmptyHint: 'Нарисуйте стены — развёртка покажет проёмы, точки на высотах и спуски.',
+    },
     storeys: {
       storeyTitle: 'Этаж',
       add: 'Добавить этаж',

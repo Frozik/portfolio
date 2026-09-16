@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { Opaque } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
+import type { CableTypeId } from './cables';
 import type { WallId } from './walls';
 
 export type DeviceId = Opaque<'DeviceId', string>;
@@ -9,7 +10,7 @@ export type DeviceId = Opaque<'DeviceId', string>;
 export function createDeviceId(): DeviceId {
   return crypto.randomUUID() as DeviceId;
 }
-type CircuitGroupId = Opaque<'CircuitGroupId', string>;
+export type CircuitGroupId = Opaque<'CircuitGroupId', string>;
 
 /**
  * The electrical device kinds: the щиток is a
@@ -98,6 +99,32 @@ export interface CircuitGroup {
   readonly id: CircuitGroupId;
   readonly panelId: DeviceId;
   readonly deviceIds: readonly DeviceId[];
+  /** Absent means the section its consumers imply — read via {@link cableTypeOfGroup}. */
+  readonly cableTypeId?: CableTypeId;
+}
+
+/** Lighting runs on 1.5 mm², everything with a socket on it on 2.5 mm². */
+export function defaultCableTypeFor(consumerKinds: readonly DeviceKind[]): CableTypeId {
+  const isLightingOnly = consumerKinds.length > 0 && consumerKinds.every(kind => kind === 'light');
+
+  return isLightingOnly ? 'vvg-3x1.5' : 'vvg-3x2.5';
+}
+
+/** The cable a group is wired in: the override, or the section its consumers ask for. */
+export function cableTypeOfGroup(
+  group: CircuitGroup,
+  devices: readonly ElectricalDevice[]
+): CableTypeId {
+  return (
+    group.cableTypeId ??
+    defaultCableTypeFor(
+      group.deviceIds.flatMap(deviceId => {
+        const device = devices.find(candidate => candidate.id === deviceId);
+
+        return device === undefined ? [] : [device.kind];
+      })
+    )
+  );
 }
 
 export interface SwitchLink {

@@ -327,6 +327,7 @@ function readSceneObjects(store: SitePlannerStore): SceneObjects {
     houseGhost: store.scene.buildingsGhostGeometry,
     foundations: store.scene.foundationsGeometry,
     roofOverlays: store.scene.roofOverlaysGeometry,
+    wiring: store.scene.wiringGeometry,
     furniture: store.scene.sceneFurniture,
     trees: store.scene.sceneTrees,
     cars: store.scene.sceneCars,

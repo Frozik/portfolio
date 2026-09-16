@@ -20,25 +20,30 @@ import type { Meters } from '../domain/units';
 import type { PlanEditorCore } from './editor-core';
 import { takeStoreyObjectAway } from './storey-object-removal';
 import type { StoreysModel } from './StoreysModel';
+import { WiringModel } from './WiringModel';
 
 const DEVICE_HISTORY_GROUP = 'device';
 
 /**
  * The electrics of the open building: the armed device kind, hanging devices
- * on walls and lights on ceilings, and the connect gesture that wires a
- * consumer to its panel or a switch to its light.
+ * on walls and lights on ceilings, the connect gesture that wires a consumer
+ * to its panel or a switch to its light — and, as its own object, the drawn
+ * cable routes and the cables the groups are wired in ({@link WiringModel}).
  */
 export class ElectricsModel {
+  /** The drawn routes and group cables (`wiring.md`). */
+  readonly wiring: WiringModel;
   private readonly core: PlanEditorCore;
   private readonly storeys: StoreysModel;
 
   constructor(core: PlanEditorCore, storeys: StoreysModel) {
     this.core = core;
     this.storeys = storeys;
+    this.wiring = new WiringModel(core, storeys);
 
     makeAutoObservable<ElectricsModel, 'core' | 'storeys'>(
       this,
-      { core: false, storeys: false },
+      { core: false, storeys: false, wiring: false },
       { autoBind: true }
     );
   }
@@ -178,6 +183,7 @@ export class ElectricsModel {
     }
   }
 
-  /** Owns no timer or subscription; here so the store's teardown chain names every model. */
-  dispose(): void {}
+  dispose(): void {
+    this.wiring.dispose();
+  }
 }

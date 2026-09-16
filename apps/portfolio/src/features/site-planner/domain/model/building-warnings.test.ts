@@ -44,6 +44,7 @@ function storey(overrides: Partial<StoreyWarningInput> = {}): StoreyWarningInput
     ventPositions: [],
     saunaStovePositions: [],
     strandedDucts: [],
+    overfilledStretches: [],
     ...overrides,
   };
 }

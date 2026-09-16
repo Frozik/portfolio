@@ -22,10 +22,12 @@ import type { Building } from '../domain/model/building';
 import type { DeviceId, DeviceKind } from '../domain/model/electrical';
 import type { FurnitureInstance } from '../domain/model/furniture';
 import type { OpeningId } from '../domain/model/openings';
+import type { PanelAssembly } from '../domain/model/panel-assembly';
 import type { Slab } from '../domain/model/slabs';
 import type { Storey } from '../domain/model/storeys';
 import { devicesOf, furnitureOf, slabsOf } from '../domain/model/storeys';
 import type { Meters } from '../domain/units';
+import { derivePanelAssemblies } from './panel-scenes';
 import type { PlanWallBody } from './render/plan-draw/draw-wall-bodies';
 import type { BuildingRoom, RoofZoneScene } from './room-scenes';
 import { deriveRoofZones, deriveRooms } from './room-scenes';
@@ -37,6 +39,8 @@ import type { SupportScene } from './support-scenes';
 import { deriveSupportScenes } from './support-scenes';
 import type { PlanWire } from './wire-scenes';
 import { devicePlanPosition, deriveWires } from './wire-scenes';
+import type { WiringReport } from './wiring-report';
+import { deriveWiringReport } from './wiring-report';
 
 /** One opening resolved for the plan: its cut body, named and kinded. */
 interface PlanOpeningShape {
@@ -77,8 +81,12 @@ export interface StoreyScene {
   readonly roofZones: readonly RoofZoneScene[];
   readonly furniture: readonly FurnitureInstance[];
   readonly devices: readonly PlanDevice[];
-  /** The wiring, derived: along the walls wherever they connect. */
+  /** The wiring, derived: along the drawn routes where they reach, the walls otherwise. */
   readonly wires: readonly PlanWire[];
+  /** The cable journal and the materials the wiring adds up to (`wiring.md` §3.4). */
+  readonly wiringReport: WiringReport;
+  /** Every щиток of the storey on its DIN rail (`wiring.md` §3.6). */
+  readonly panelAssemblies: readonly PanelAssembly[];
   /** This storey's own stairs, with their derived steps and cutout. */
   readonly stairs: readonly StairScene[];
   /** The posts standing on this storey, each with both ends derived. */
@@ -210,6 +218,8 @@ export function deriveStoreyScenes(
 
   return resolved.map(({ storey, footprint, wallBodies }, level) => {
     const storeyBase = baseElevation;
+    const wires = deriveWires(storey);
+    const rooms = deriveRooms(storey, footprint, wallBodies);
     const stairScenes = stairScenesByLevel[level];
     const belowStairCutouts = (stairScenesByLevel[level - 1] ?? []).flatMap(
       stairScene => stairScene.cutout
@@ -250,7 +260,7 @@ export function deriveStoreyScenes(
               },
             ];
       }),
-      rooms: deriveRooms(storey, footprint, wallBodies),
+      rooms,
       stairs: stairScenes,
       supports: deriveSupportScenes(
         storey,
@@ -273,7 +283,9 @@ export function deriveStoreyScenes(
 
         return isNil(position) ? [] : [{ id: device.id, kind: device.kind, position }];
       }),
-      wires: deriveWires(storey),
+      wires,
+      wiringReport: deriveWiringReport(storey, wires),
+      panelAssemblies: derivePanelAssemblies(storey, rooms),
     };
   });
 }
