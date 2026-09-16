@@ -39,7 +39,8 @@ function restingAt(level: Level, x: number): BallState {
 
 function fly(level: Level, ball: BallState, seconds: number): BallState {
   let state = ball;
-  for (let tick = 0; tick < seconds * SECOND_STEPS && state.phase === 'flying'; tick += 1) {
+  const steps = Math.round(seconds * SECOND_STEPS);
+  for (let tick = 0; tick < steps && state.phase === 'flying'; tick += 1) {
     state = step(level, state, FIXED_STEP_SECONDS);
   }
   return state;
@@ -83,6 +84,12 @@ describe('toggleSpikes', () => {
     const touchingLastTooth: Vector2 = { x: 6 - SPIKE_WIDTH_METERS * 3 - 0.05, y: level.tee.y };
 
     expect(toggleSpikes(level, [true, false], touchingLastTooth)).toEqual([false, false]);
+  });
+
+  it('still retracts a standing row the ball has come to rest right next to: sinking never hurts', () => {
+    const besideFirstTooth: Vector2 = { x: 8 - SPIKE_WIDTH_METERS - 0.075, y: level.tee.y };
+
+    expect(toggleSpikes(level, [true, false], besideFirstTooth)).toEqual([false, true]);
   });
 });
 

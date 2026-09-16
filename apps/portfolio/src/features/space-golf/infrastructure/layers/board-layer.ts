@@ -9,7 +9,13 @@ import type { Level } from '../../domain/level';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
 import type { PixelRect } from '../render/board-viewport';
 import { boardPixelRect, fitBoard } from '../render/board-viewport';
+import { buildFloaterMesh } from '../render/floater-geometry';
 import { buildDustMesh, buildOverlayMesh } from '../render/frame-geometry';
+import {
+  FRAMED_KIND_OFFSET_BYTES,
+  FRAMED_LOCAL_OFFSET_BYTES,
+  FRAMED_VERTEX_STRIDE_BYTES,
+} from '../render/framed-mesh-writer';
 import type { LevelMeshes } from '../render/level-geometry';
 import { buildLevelMeshes } from '../render/level-geometry';
 import type { MeshData } from '../render/mesh-writer';
@@ -19,13 +25,9 @@ import type { ParticleField } from '../render/particles';
 import { advanceParticles, createParticleField } from '../render/particles';
 import type { SceneFrame } from '../render/scene-frame';
 import { buildSpikeMesh } from '../render/spike-geometry';
-import {
-  SURFACE_KIND_OFFSET_BYTES,
-  SURFACE_LOCAL_OFFSET_BYTES,
-  SURFACE_VERTEX_STRIDE_BYTES,
-} from '../render/surface-mesh-writer';
 import boardShaderSource from '../shaders/board.wgsl?raw';
 import khokhlomaShaderSource from '../shaders/khokhloma.wgsl?raw';
+import mezenShaderSource from '../shaders/mezen.wgsl?raw';
 import surfacesShaderSource from '../shaders/surfaces.wgsl?raw';
 
 const UNIFORM_BYTES = 32;
@@ -37,12 +39,12 @@ const MESH_LAYOUT: GPUVertexBufferLayout = {
     { shaderLocation: 1, offset: MESH_COLOR_OFFSET_BYTES, format: 'unorm8x4' },
   ],
 };
-const SURFACE_LAYOUT: GPUVertexBufferLayout = {
-  arrayStride: SURFACE_VERTEX_STRIDE_BYTES,
+const FRAMED_LAYOUT: GPUVertexBufferLayout = {
+  arrayStride: FRAMED_VERTEX_STRIDE_BYTES,
   attributes: [
     { shaderLocation: 0, offset: 0, format: 'float32x2' },
-    { shaderLocation: 1, offset: SURFACE_LOCAL_OFFSET_BYTES, format: 'float32x4' },
-    { shaderLocation: 2, offset: SURFACE_KIND_OFFSET_BYTES, format: 'unorm8x4' },
+    { shaderLocation: 1, offset: FRAMED_LOCAL_OFFSET_BYTES, format: 'float32x4' },
+    { shaderLocation: 2, offset: FRAMED_KIND_OFFSET_BYTES, format: 'unorm8x4' },
   ],
 };
 /** The pattern is shifted per level by this many metres per seed step, folded so the shift stays small. */
@@ -56,6 +58,12 @@ interface GpuMesh {
   readonly vertexCount: number;
 }
 
+/** A mesh that follows one per-stroke state array: rebuilt when the array is replaced, once per stroke. */
+interface StrokeMesh {
+  readonly states: readonly boolean[];
+  readonly gpu: GpuMesh;
+}
+
 /**
  * The whole board in one pass: the walls with their rims are uploaded once
  * per level; the dust, the ball, the aim dots and the burst are rewritten
@@ -67,6 +75,7 @@ export class BoardLayer implements RenderLayer {
   private pipeline!: GPURenderPipeline;
   private fillPipeline!: GPURenderPipeline;
   private surfacePipeline!: GPURenderPipeline;
+  private floaterPipeline!: GPURenderPipeline;
   private uniforms!: GPUBuffer;
   private bindGroup!: GPUBindGroup;
   private dynamicBuffer!: GPUBuffer;
@@ -76,8 +85,8 @@ export class BoardLayer implements RenderLayer {
   private stage:
     | { readonly level: Level; readonly gpu: Record<keyof LevelMeshes, GpuMesh> }
     | undefined;
-  /** The spike rows in the states of the current stroke; rebuilt when the states change, once per stroke. */
-  private spikes: { readonly states: readonly boolean[]; readonly gpu: GpuMesh } | undefined;
+  private spikes: StrokeMesh | undefined;
+  private floaters: StrokeMesh | undefined;
   private dust: ParticleField | undefined;
   private lastTime: number | undefined;
   private scissor: PixelRect | undefined;
@@ -119,7 +128,14 @@ export class BoardLayer implements RenderLayer {
       surfacesShaderSource,
       'vsSurface',
       'fsSurface',
-      SURFACE_LAYOUT
+      FRAMED_LAYOUT
+    );
+    this.floaterPipeline = this.createPipeline(
+      layout,
+      mezenShaderSource,
+      'vsMezen',
+      'fsMezen',
+      FRAMED_LAYOUT
     );
     this.uniforms = device.createBuffer({
       size: UNIFORM_BYTES,
@@ -148,9 +164,12 @@ export class BoardLayer implements RenderLayer {
       this.replaceStage(scene.level);
       this.dust = createParticleField(scene.level.seed, scene.level.width, scene.level.height);
     }
-    if (this.spikes?.states !== scene.ball.spikes) {
-      this.replaceSpikes(scene.level, scene.ball.spikes);
-    }
+    this.spikes = this.followStates(this.spikes, scene.ball.spikes, states =>
+      buildSpikeMesh(scene.level, states)
+    );
+    this.floaters = this.followStates(this.floaters, scene.ball.floaters, states =>
+      buildFloaterMesh(scene.level, states)
+    );
     const elapsed = this.lastTime === undefined ? 0 : state.time - this.lastTime;
     this.lastTime = state.time;
     if (!isNil(this.dust)) {
@@ -233,6 +252,12 @@ export class BoardLayer implements RenderLayer {
         pass.setVertexBuffer(0, this.spikes.gpu.buffer);
         pass.draw(this.spikes.gpu.vertexCount);
       }
+      if (!isNil(this.floaters) && this.floaters.gpu.vertexCount > 0) {
+        pass.setPipeline(this.floaterPipeline);
+        pass.setVertexBuffer(0, this.floaters.gpu.buffer);
+        pass.draw(this.floaters.gpu.vertexCount);
+        pass.setPipeline(this.pipeline);
+      }
       if (this.stage.gpu.surfaces.vertexCount > 0) {
         pass.setPipeline(this.surfacePipeline);
         pass.setVertexBuffer(0, this.stage.gpu.surfaces.buffer);
@@ -249,7 +274,10 @@ export class BoardLayer implements RenderLayer {
 
   dispose(): void {
     this.releaseStage();
-    this.releaseSpikes();
+    this.spikes?.gpu.buffer.destroy();
+    this.floaters?.gpu.buffer.destroy();
+    this.spikes = undefined;
+    this.floaters = undefined;
     this.uniforms.destroy();
     this.dynamicBuffer.destroy();
     this.dustBuffer.destroy();
@@ -278,14 +306,16 @@ export class BoardLayer implements RenderLayer {
     this.stage = undefined;
   }
 
-  private replaceSpikes(level: Level, states: readonly boolean[]): void {
-    this.releaseSpikes();
-    this.spikes = { states, gpu: this.upload(buildSpikeMesh(level, states)) };
-  }
-
-  private releaseSpikes(): void {
-    this.spikes?.gpu.buffer.destroy();
-    this.spikes = undefined;
+  private followStates(
+    mesh: StrokeMesh | undefined,
+    states: readonly boolean[],
+    build: (states: readonly boolean[]) => MeshData
+  ): StrokeMesh {
+    if (mesh?.states === states) {
+      return mesh;
+    }
+    mesh?.gpu.buffer.destroy();
+    return { states, gpu: this.upload(build(states)) };
   }
 
   /** Every pipeline shares the uniforms, the blend and the multisampling; the shader and the vertex layout differ. */

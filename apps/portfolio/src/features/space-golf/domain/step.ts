@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { BallState } from './ball';
+import type { BallState, Contact } from './ball';
 import { advanceTurn, currentGravity, turnTo } from './ball';
-import type { WallHit } from './collision';
-import { contactPosition, sweepCircleAgainstWalls } from './collision';
+import type { Impact, WallHit } from './collision';
+import { contactPosition, earlierHit, sweepCircleAgainstWalls } from './collision';
 import {
   AIR_DAMPING_PER_SECOND,
   BALL_RADIUS_METERS,
@@ -13,6 +13,7 @@ import {
   CUP_HOLD_SECONDS,
   ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND,
   FIXED_STEP_SECONDS,
+  FLOATER_RESTITUTION,
   GRAVITY_METERS_PER_SECOND_SQUARED,
   MAX_CONTACTS_PER_STEP,
   MAX_SPEED_METERS_PER_SECOND,
@@ -27,6 +28,8 @@ import {
   WALL_RESTITUTION,
 } from './constants';
 import { isInCup } from './cup';
+import type { FloaterHit } from './floaters';
+import { sweepCircleAgainstFloaters } from './floaters';
 import type { FaceKind, Level } from './level';
 import { edgeOf, isBeyondBoard } from './level';
 import { sweepCircleAgainstSpikes } from './spikes';
@@ -38,7 +41,8 @@ import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
  * remaining motion continues from it. The face rule lives here: a
  * horizontal or vertical face the ball touches becomes its floor, a diagonal
  * one only reflects, the hole's rim turns the floor into the face it is cut
- * into. An extended spike tooth met before any wall destroys the ball where
+ * into; a floater's side reflects a touch more than a wall and leaves gravity
+ * alone. An extended spike tooth met before any wall destroys the ball where
  * it touches it. The board is open: a ball that leaves it bursts the moment
  * it does unless gravity brings it back within a few seconds — the flight is
  * deterministic, so that is read off the flight itself.
@@ -60,7 +64,10 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
 
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
-    const wallHit = sweepCircleAgainstWalls(level, position, target, BALL_RADIUS_METERS);
+    const wallHit = earlierHit(
+      sweepCircleAgainstWalls(level.walls, position, target, BALL_RADIUS_METERS),
+      sweepCircleAgainstFloaters(level, ball.floaters, position, target, BALL_RADIUS_METERS)
+    );
     const spikeHit = sweepCircleAgainstSpikes(
       level,
       ball.spikes,
@@ -92,14 +99,14 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       const floorNormal = wallHit.kind === 'cup' ? edgeOf(level, level.cup).normal : wallHit.normal;
       floored = floorTo(floored, scale(floorNormal, -1));
     }
-    contact = response.resting ? { wall: wallHit.wall, edge: wallHit.edge } : undefined;
+    contact = response.resting ? contactOf(wallHit) : undefined;
     remaining *= 1 - wallHit.time;
   }
 
   velocity =
     contact === undefined
       ? scale(velocity, Math.exp(-AIR_DAMPING_PER_SECOND * dt))
-      : slowDown(velocity, rollingResistance(edgeOf(level, contact).kind) * dt);
+      : slowDown(velocity, rollingResistance(contactKind(level, contact)) * dt);
 
   const beyond = isBeyondBoard(level, position, BALL_RADIUS_METERS);
   const offscreenSeconds = beyond ? ball.offscreenSeconds + dt : 0;
@@ -147,6 +154,16 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   return next;
 }
 
+function contactOf(hit: WallHit | FloaterHit): Contact {
+  return 'wall' in hit
+    ? { wall: hit.wall, edge: hit.edge }
+    : { floater: hit.floater, edge: hit.edge };
+}
+
+function contactKind(level: Level, contact: Contact): FaceKind {
+  return 'wall' in contact ? edgeOf(level, contact).kind : 'floater';
+}
+
 // The floor the ball rolls along touches it every step: only a new floor restarts the turn.
 function floorTo(ball: BallState, down: Vector2): BallState {
   return ball.down.x === down.x && ball.down.y === down.y ? ball : turnTo(ball, down);
@@ -170,6 +187,7 @@ const RESTITUTION: Readonly<Record<FaceKind, number>> = {
   sticky: STICKY_RESTITUTION,
   deflector: WALL_RESTITUTION,
   cup: WALL_RESTITUTION,
+  floater: FLOATER_RESTITUTION,
 };
 
 interface Response {
@@ -183,14 +201,16 @@ interface Response {
  * wall's restitution — or dropped when too slow to bounce, which is how the
  * ball comes to lie on a face — and the tangential one loses a share to
  * friction. Every axis-aligned face and every segment of the hole's rim
- * makes a floor; corners and diagonals reflect and leave gravity alone. An
+ * makes a floor; corners and diagonals reflect and leave gravity alone, and
+ * so does a floater's side, though the ball may come to lie on it. An
  * elastic surface springs back even a soft touch, a viscous one swallows the
  * impact and grabs the ball along the face.
  */
-function respond(velocity: Vector2, hit: WallHit): Response {
+function respond(velocity: Vector2, hit: Impact): Response {
   const normalSpeed = dot(velocity, hit.normal);
   const tangential = subtract(velocity, scale(hit.normal, normalSpeed));
-  const isFloor = hit.at === 'face' && hit.kind !== 'deflector';
+  const onFace = hit.at === 'face' && hit.kind !== 'deflector';
+  const isFloor = onFace && hit.kind !== 'floater';
   const minBounceSpeed =
     hit.kind === 'bounce'
       ? ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND
@@ -203,7 +223,7 @@ function respond(velocity: Vector2, hit: WallHit): Response {
   const friction = hit.kind === 'sticky' ? STICKY_CONTACT_FRICTION : CONTACT_FRICTION;
   const kept = bouncesBack ? scale(tangential, friction) : tangential;
   const next = clampLength(add(kept, scale(hit.normal, reflected)), MAX_SPEED_METERS_PER_SECOND);
-  return { velocity: next, becomesFloor: isFloor, resting: isFloor && !bouncesBack };
+  return { velocity: next, becomesFloor: isFloor, resting: onFace && !bouncesBack };
 }
 
 /**

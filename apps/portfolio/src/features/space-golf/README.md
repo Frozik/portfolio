@@ -35,10 +35,20 @@ time.
   tall, stand on a few horizontal and vertical faces; every stroke flips
   every row — standing teeth sink into the face leaving a dark socket,
   sockets grow teeth — before
-  the ball moves, except a row the ball is lying on, which waits until the
-  ball has left it; a standing tooth bursts the ball where it touches it,
+  the ball moves, except a sunk row the ball is lying on, which waits
+  until the ball has left it; a standing tooth bursts the ball where it touches it,
   and the ball comes back to its last rest with the rows as the stroke left
   them, so the tooth that killed it is down for the next try
+- Squares, diamonds and circles float in the open, three to ten where
+  there is room, their centres ten ball diameters clear of every wall and
+  of each other; each is small, one ball across, or large, two, and flips
+  between the two with every stroke like the spikes do — unless the ball
+  is lying on it or would be swallowed by its growth — and which way it
+  flips is for the player to remember; its sides bounce the ball a touch
+  more briskly than a wall and never turn gravity, though the ball may
+  come to lie on top of one; painted after the Mezen tradition, red ochre
+  and soot on dark wood — rows of zigzags, lozenges and slanted strokes on
+  a square, a rim, a ring of rays and a sun on a circle
 - Levels are endless and procedural on a half-metre grid: each seed
   scatters ten to fourteen islands of L, T, U, Z and stair shapes around a
   tee shelf, a metre of space between them and under a third of the board

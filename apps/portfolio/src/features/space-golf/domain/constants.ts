@@ -59,8 +59,17 @@ export const CUP_RADIUS_METERS = CUP_TO_BALL_DIAMETER_RATIO * BALL_RADIUS_METERS
 /** A spike tooth is a ball's diameter wide at the base and stands two diameters out of the face. */
 export const SPIKE_WIDTH_METERS = 2 * BALL_RADIUS_METERS;
 export const SPIKE_HEIGHT_METERS = 4 * BALL_RADIUS_METERS;
-/** A tooth that would rise this close to the resting ball stays as it is when the stroke flips the rows. */
-export const SPIKE_FREEZE_CLEARANCE_METERS = 0.02;
+/** An obstacle that would move this close to the resting ball stays as it is when the stroke flips the board. */
+export const FREEZE_CLEARANCE_METERS = 0.02;
+
+/** A floating square is one ball diameter across when small and two when large (halved 2026-09-17 by feel). */
+export const FLOATER_SMALL_SIDE_METERS = 2 * BALL_RADIUS_METERS;
+export const FLOATER_LARGE_SIDE_METERS = 4 * BALL_RADIUS_METERS;
+/** A floater's sides give back a touch more than a wall does. */
+export const FLOATER_RESTITUTION = 0.65;
+const FLOATER_CLEARANCE_DIAMETERS = 10;
+/** A floater's centre keeps this far from every wall face and from every other floater's centre. */
+export const FLOATER_CLEARANCE_METERS = FLOATER_CLEARANCE_DIAMETERS * 2 * BALL_RADIUS_METERS;
 
 /**
  * The board is open: a ball that leaves it and would not be back within this

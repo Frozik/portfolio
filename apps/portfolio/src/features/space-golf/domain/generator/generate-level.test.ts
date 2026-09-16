@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { createBall } from '../ball';
-import { sweepCircleAgainstWalls } from '../collision';
-import { BALL_RADIUS_METERS, SPIKE_HEIGHT_METERS, SPIKE_WIDTH_METERS } from '../constants';
+import { distanceToSegment, sweepCircleAgainstWalls } from '../collision';
+import {
+  BALL_RADIUS_METERS,
+  FLOATER_CLEARANCE_METERS,
+  SPIKE_HEIGHT_METERS,
+  SPIKE_WIDTH_METERS,
+} from '../constants';
 import { edgeOf, pointAlongEdge } from '../level';
+import { touchesBall } from '../spikes';
 import { containsPoint } from '../walls';
 import { generateLevel } from './generate-level';
 
@@ -114,8 +120,46 @@ describe('generateLevel', () => {
           teeAlong >= 0 &&
           teeAlong <= face.length;
         expect(teeOnFace).toBe(false);
+        expect(touchesBall(row, level.tee)).toBe(false);
       }
     }
+  });
+
+  it('floats three to ten squares, diamonds and circles in the open, each centre ten ball diameters clear of every face, every other centre and the tee, large shape on the board', () => {
+    for (const seed of SEEDS) {
+      const level = levelOf(seed);
+
+      expect(level.floaters.length).toBeGreaterThanOrEqual(3);
+      expect(level.floaters.length).toBeLessThanOrEqual(10);
+      expect(FLOATER_CLEARANCE_METERS).toBeCloseTo(20 * BALL_RADIUS_METERS);
+      level.floaters.forEach((floater, index) => {
+        for (const wall of level.walls) {
+          for (const edge of wall.edges) {
+            expect(distanceToSegment(floater.center, edge)).toBeGreaterThanOrEqual(
+              FLOATER_CLEARANCE_METERS
+            );
+          }
+        }
+        level.floaters.forEach((other, otherIndex) => {
+          if (otherIndex !== index) {
+            expect(
+              Math.hypot(floater.center.x - other.center.x, floater.center.y - other.center.y)
+            ).toBeGreaterThanOrEqual(FLOATER_CLEARANCE_METERS);
+          }
+        });
+        expect(
+          Math.hypot(floater.center.x - level.tee.x, floater.center.y - level.tee.y)
+        ).toBeGreaterThanOrEqual(FLOATER_CLEARANCE_METERS);
+        for (const vertex of floater.large.vertices) {
+          expect(vertex.x).toBeGreaterThanOrEqual(0);
+          expect(vertex.y).toBeGreaterThanOrEqual(0);
+          expect(vertex.x).toBeLessThanOrEqual(level.width);
+          expect(vertex.y).toBeLessThanOrEqual(level.height);
+        }
+      });
+    }
+    const shapes = new Set(SEEDS.flatMap(seed => levelOf(seed).floaters.map(each => each.shape)));
+    expect(shapes).toEqual(new Set(['square', 'diamond', 'circle']));
   });
 
   it('is deterministic per seed', () => {
@@ -129,7 +173,12 @@ describe('generateLevel', () => {
       const ball = createBall(level);
       const below = { x: ball.position.x, y: ball.position.y - 1 };
 
-      const support = sweepCircleAgainstWalls(level, ball.position, below, BALL_RADIUS_METERS);
+      const support = sweepCircleAgainstWalls(
+        level.walls,
+        ball.position,
+        below,
+        BALL_RADIUS_METERS
+      );
 
       expect(support?.kind).toBe('floor');
       expect(support?.time).toBeLessThan(0.01);

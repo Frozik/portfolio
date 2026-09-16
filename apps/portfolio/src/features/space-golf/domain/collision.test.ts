@@ -49,7 +49,7 @@ describe('sweepCircleAgainstWalls', () => {
   it('returns the earliest face across every wall with its kind', () => {
     const level = createTestLevel();
 
-    const hit = sweepCircleAgainstWalls(level, { x: 1, y: 3 }, { x: 8, y: 3 }, RADIUS);
+    const hit = sweepCircleAgainstWalls(level.walls, { x: 1, y: 3 }, { x: 8, y: 3 }, RADIUS);
 
     expect(hit?.wall).toBe(4);
     expect(hit?.kind).toBe('floor');

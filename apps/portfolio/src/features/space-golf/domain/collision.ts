@@ -1,7 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { EdgeRef, FaceKind, Level, Segment } from './level';
-import { scale, subtract } from './vector';
+import type { EdgeRef, FaceKind, Segment, Wall } from './level';
+import { pointAlongEdge } from './level';
+import { distance, dot, scale, subtract } from './vector';
 
 export interface SegmentHit {
   /** Where along the motion the contact happens, 0..1. */
@@ -12,8 +13,34 @@ export interface SegmentHit {
   readonly at: 'face' | 'corner';
 }
 
-export interface WallHit extends SegmentHit, EdgeRef {
+/** A contact with a face of some kind: what the response is computed from. */
+export interface Impact extends SegmentHit {
   readonly kind: FaceKind;
+}
+
+export interface WallHit extends Impact, EdgeRef {}
+
+/** The earlier of two contacts along the same motion. */
+export function earlierHit<A extends SegmentHit, B extends SegmentHit>(
+  a: A | undefined,
+  b: B | undefined
+): A | B | undefined {
+  if (a === undefined || b === undefined) {
+    return a ?? b;
+  }
+  return a.time <= b.time ? a : b;
+}
+
+/** How far a point lies from the nearest point of a segment. */
+export function distanceToSegment(point: Vector2, segment: Segment): number {
+  const offset = subtract(point, segment.from);
+  const along = Math.min(Math.max(dot(offset, segment.direction), 0), segment.length);
+  return distance(point, pointAlongEdge(segment, along));
+}
+
+/** Whether any of the segments comes within `reach` of the point. */
+export function reachesPoint(segments: readonly Segment[], point: Vector2, reach: number): boolean {
+  return segments.some(segment => distanceToSegment(point, segment) <= reach);
 }
 
 /**
@@ -93,32 +120,46 @@ function sweepCircleAgainstPoint(
   return { time, normal: { x: contactX / size, y: contactY / size }, at: 'corner' };
 }
 
+/** The earliest face of one wall the moving circle touches; nothing when the motion stays clear of the wall's box. */
+export function sweepCircleAgainstWall(
+  wall: Wall,
+  from: Vector2,
+  to: Vector2,
+  radius: number
+): (Impact & { readonly edge: number }) | undefined {
+  const { bounds } = wall;
+  if (
+    bounds.max.x < Math.min(from.x, to.x) - radius ||
+    bounds.min.x > Math.max(from.x, to.x) + radius ||
+    bounds.max.y < Math.min(from.y, to.y) - radius ||
+    bounds.min.y > Math.max(from.y, to.y) + radius
+  ) {
+    return undefined;
+  }
+  let best: (Impact & { readonly edge: number }) | undefined;
+  const { edges } = wall;
+  for (let edgeIndex = 0; edgeIndex < edges.length; edgeIndex += 1) {
+    const edge = edges[edgeIndex];
+    const hit = sweepCircleAgainstSegment(from, to, radius, edge);
+    if (hit !== undefined && (best === undefined || hit.time < best.time)) {
+      best = { ...hit, edge: edgeIndex, kind: edge.kind };
+    }
+  }
+  return best;
+}
+
 /** The earliest wall the moving circle touches, with the face it belongs to. */
 export function sweepCircleAgainstWalls(
-  level: Level,
+  walls: readonly Wall[],
   from: Vector2,
   to: Vector2,
   radius: number
 ): WallHit | undefined {
   let best: WallHit | undefined;
-  const minX = Math.min(from.x, to.x) - radius;
-  const maxX = Math.max(from.x, to.x) + radius;
-  const minY = Math.min(from.y, to.y) - radius;
-  const maxY = Math.max(from.y, to.y) + radius;
-  const { walls } = level;
   for (let wallIndex = 0; wallIndex < walls.length; wallIndex += 1) {
-    const wall = walls[wallIndex];
-    const { bounds } = wall;
-    if (bounds.max.x < minX || bounds.min.x > maxX || bounds.max.y < minY || bounds.min.y > maxY) {
-      continue;
-    }
-    const { edges } = wall;
-    for (let edgeIndex = 0; edgeIndex < edges.length; edgeIndex += 1) {
-      const edge = edges[edgeIndex];
-      const hit = sweepCircleAgainstSegment(from, to, radius, edge);
-      if (hit !== undefined && (best === undefined || hit.time < best.time)) {
-        best = { ...hit, wall: wallIndex, edge: edgeIndex, kind: edge.kind };
-      }
+    const hit = sweepCircleAgainstWall(walls[wallIndex], from, to, radius);
+    if (hit !== undefined && (best === undefined || hit.time < best.time)) {
+      best = { ...hit, wall: wallIndex };
     }
   }
   return best;

@@ -28,6 +28,7 @@ function openLevel(floor: Wall): Level {
     tee: { x: 4.5, y: floor.bounds.max.y + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
     spikes: [],
+    floaters: [],
   };
 }
 

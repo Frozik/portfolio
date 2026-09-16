@@ -6,8 +6,9 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
  * `sticky`: a stretch of floor that swallows the impact and holds the ball; the floor rule still applies.
  * `deflector`: a 45° face — reflects only, gravity is untouched.
  * `cup`: one segment of the hole's rounded rim — touching it turns gravity into the face the hole is cut into.
+ * `floater`: a side of a floating square — a touch more elastic than a wall, gravity is untouched, the ball may lie on it.
  */
-export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup';
+export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup' | 'floater';
 
 /** The face kinds a stretch of a long, deep face may be given, each with its own look. */
 export type SurfaceKind = 'bounce' | 'sticky';
@@ -46,6 +47,12 @@ export interface EdgeRef {
   readonly edge: number;
 }
 
+/** A face of a floater in the shape it currently has. */
+export interface FloaterEdgeRef {
+  readonly floater: number;
+  readonly edge: number;
+}
+
 /**
  * The hole: a half-disc notch carved into a horizontal or vertical edge,
  * centred `at` metres along it. `edge` stays the index of the face the notch
@@ -72,6 +79,23 @@ export interface SpikeRow extends EdgeRef {
   readonly sides: readonly Segment[];
 }
 
+/** A floater's outline: a plain square, a square turned 45°, or a circle. */
+export type FloaterShape = 'square' | 'diamond' | 'circle';
+
+/**
+ * A body floating in the open — a square, a diamond or a circle — that is
+ * either small or large and flips between the two with every stroke;
+ * `largeAtStart` is its size on the tee. Both sizes are laid out once, as
+ * walls of `floater` faces: touching them never turns gravity.
+ */
+export interface Floater {
+  readonly center: Vector2;
+  readonly shape: FloaterShape;
+  readonly largeAtStart: boolean;
+  readonly small: Wall;
+  readonly large: Wall;
+}
+
 export interface Level {
   readonly seed: number;
   readonly width: number;
@@ -81,6 +105,7 @@ export interface Level {
   readonly tee: Vector2;
   readonly cup: Cup;
   readonly spikes: readonly SpikeRow[];
+  readonly floaters: readonly Floater[];
 }
 
 /** Whether a ball centred at `point` is wholly outside the board — the board has no walls around it. */

@@ -8,6 +8,7 @@ import {
   PREVIEW_DOT_COUNT,
   PREVIEW_INTERVAL_SECONDS,
 } from './constants';
+import { toggleFloaters } from './floaters';
 import type { Level } from './level';
 import { toggleSpikes } from './spikes';
 import { add, clampLength, distance, scale, subtract } from './vector';
@@ -29,7 +30,7 @@ export function aim(anchor: Vector2, pull: Vector2): Vector2 | undefined {
   );
 }
 
-/** The ball launched: the stroke counts from here, and the spike rows flip before it moves. */
+/** The ball launched: the stroke counts from here, and the spike rows and floaters flip before it moves. */
 export function shoot(level: Level, ball: BallState, velocity: Vector2): BallState {
   return {
     ...ball,
@@ -39,6 +40,7 @@ export function shoot(level: Level, ball: BallState, velocity: Vector2): BallSta
     contact: undefined,
     settlingSeconds: 0,
     spikes: toggleSpikes(level, ball.spikes, ball.position),
+    floaters: toggleFloaters(level, ball.floaters, ball.position),
   };
 }
 

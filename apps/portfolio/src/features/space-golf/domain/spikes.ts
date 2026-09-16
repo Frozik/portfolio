@@ -1,16 +1,16 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { SegmentHit } from './collision';
-import { sweepCircleAgainstSegment } from './collision';
+import { reachesPoint, sweepCircleAgainstSegment } from './collision';
 import {
   BALL_RADIUS_METERS,
-  SPIKE_FREEZE_CLEARANCE_METERS,
+  FREEZE_CLEARANCE_METERS,
   SPIKE_HEIGHT_METERS,
   SPIKE_WIDTH_METERS,
 } from './constants';
 import type { EdgeRef, Level, Segment, SpikeRow, Wall } from './level';
 import { pointAlongEdge } from './level';
-import { distance, dot, normalize, rightNormal, subtract } from './vector';
+import { distance, normalize, rightNormal, subtract } from './vector';
 
 export function rowLength(teeth: number): number {
   return teeth * SPIKE_WIDTH_METERS;
@@ -51,9 +51,10 @@ export function initialSpikes(level: Level): readonly boolean[] {
 }
 
 /**
- * The rows after a stroke is played: every row flips, except one whose
- * teeth would rise into the ball where it lies — that row keeps its state
- * until the ball has left it.
+ * The rows after a stroke is played: every row flips, except a retracted
+ * one whose teeth would rise into the ball where it lies — that row stays
+ * down until the ball has left it. A standing row always sinks: that can
+ * hurt nobody.
  */
 export function toggleSpikes(
   level: Level,
@@ -61,19 +62,13 @@ export function toggleSpikes(
   ball: Vector2
 ): readonly boolean[] {
   return level.spikes.map((row, index) =>
-    touchesBall(row, ball) ? extended[index] : !extended[index]
+    !extended[index] && touchesBall(row, ball) ? false : !extended[index]
   );
 }
 
-function touchesBall(row: SpikeRow, ball: Vector2): boolean {
-  const reach = BALL_RADIUS_METERS + SPIKE_FREEZE_CLEARANCE_METERS;
-  return row.sides.some(side => distanceToSegment(ball, side) <= reach);
-}
-
-function distanceToSegment(point: Vector2, side: Segment): number {
-  const offset = subtract(point, side.from);
-  const along = Math.min(Math.max(dot(offset, side.direction), 0), side.length);
-  return distance(point, pointAlongEdge(side, along));
+/** Whether the row's standing teeth would reach a ball centred at `ball`. */
+export function touchesBall(row: SpikeRow, ball: Vector2): boolean {
+  return reachesPoint(row.sides, ball, BALL_RADIUS_METERS + FREEZE_CLEARANCE_METERS);
 }
 
 /** The earliest extended tooth the moving circle touches, if any. */
@@ -85,16 +80,18 @@ export function sweepCircleAgainstSpikes(
   radius: number
 ): SegmentHit | undefined {
   let best: SegmentHit | undefined;
-  level.spikes.forEach((row, index) => {
+  const { spikes } = level;
+  for (let index = 0; index < spikes.length; index += 1) {
     if (!extended[index]) {
-      return;
+      continue;
     }
-    for (const side of row.sides) {
-      const hit = sweepCircleAgainstSegment(from, to, radius, side);
+    const { sides } = spikes[index];
+    for (let sideIndex = 0; sideIndex < sides.length; sideIndex += 1) {
+      const hit = sweepCircleAgainstSegment(from, to, radius, sides[sideIndex]);
       if (hit !== undefined && (best === undefined || hit.time < best.time)) {
         best = hit;
       }
     }
-  });
+  }
   return best;
 }

@@ -1,11 +1,15 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { GRAVITY_TURN_SECONDS } from './constants';
-import type { EdgeRef, Level } from './level';
+import { initialFloaters } from './floaters';
+import type { EdgeRef, FloaterEdgeRef, Level } from './level';
 import { initialSpikes } from './spikes';
 import { lerp, ZERO } from './vector';
 
 type BallPhase = 'aiming' | 'flying' | 'destroyed' | 'holed';
+
+/** What the ball lies on: a face of a wall, or a side of a floater in its current shape. */
+export type Contact = EdgeRef | FloaterEdgeRef;
 
 interface GravityTurn {
   readonly from: Vector2;
@@ -29,8 +33,8 @@ export interface BallState {
   /** Strokes played on this level so far. */
   readonly stroke: number;
   readonly rest: RestPoint;
-  /** The floor face the ball is in contact with, if any. */
-  readonly contact: EdgeRef | undefined;
+  /** The face the ball is in contact with, if any. */
+  readonly contact: Contact | undefined;
   /** How long the ball has been slow enough to count as coming to rest. */
   readonly settlingSeconds: number;
   /** How long the ball has been sitting in the cup; the hole counts after a second. */
@@ -39,6 +43,8 @@ export interface BallState {
   readonly offscreenSeconds: number;
   /** Which spike rows stand extended, by row index; the rows flip with every stroke. */
   readonly spikes: readonly boolean[];
+  /** Which floaters are large, by floater index; they flip with every stroke. */
+  readonly floaters: readonly boolean[];
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -57,6 +63,7 @@ export function createBall(level: Level): BallState {
     cupSeconds: 0,
     offscreenSeconds: 0,
     spikes: initialSpikes(level),
+    floaters: initialFloaters(level),
   };
 }
 

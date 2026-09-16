@@ -33,7 +33,8 @@ function signedDoubleArea(vertices: readonly Vector2[]): number {
  * each edge's orientation — an axis-aligned edge is a floor, a diagonal one a
  * deflector — so a diagonal can never be a floor by mistake; `kinds` names
  * the exceptions by edge index: a surface on an axis-aligned edge, or the
- * segments of a hole's rim, the one place an edge may have any orientation.
+ * segments of a hole's rim and the sides of a floater — the two places an
+ * edge may have any orientation.
  */
 export function createWall(
   vertices: readonly Vector2[],
@@ -50,10 +51,11 @@ export function createWall(
     const direction = normalize(subtract(to, from));
     const orientation = orientationOf(direction);
     const named = kinds.get(index);
-    if (orientation === undefined && named !== 'cup') {
+    const freeOrientation = named === 'cup' || named === 'floater';
+    if (orientation === undefined && !freeOrientation) {
       throw new Error(`createWall: edge ${index} is neither axis-aligned nor diagonal`);
     }
-    if (orientation === 'diagonal' && named !== undefined) {
+    if (orientation === 'diagonal' && named !== undefined && !freeOrientation) {
       throw new Error(`createWall: edge ${index} is diagonal and cannot be a ${named}`);
     }
     const kind: FaceKind = named ?? (orientation === 'diagonal' ? 'deflector' : 'floor');

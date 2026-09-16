@@ -5,10 +5,11 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import { cupCenter } from '../../domain/cup';
 import type { Edge, Level } from '../../domain/level';
 import { edgeOf } from '../../domain/level';
+import { FramedMeshWriter } from './framed-mesh-writer';
 import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE } from './palette';
-import { SurfaceMeshWriter } from './surface-mesh-writer';
+import { writeSurfaceBand } from './surface-mesh-writer';
 
 const RIM_WIDTH_METERS = 0.07;
 /** A surface band reaches this far into the block from the face line. */
@@ -34,7 +35,7 @@ export interface LevelMeshes {
 export function buildLevelMeshes(level: Level): LevelMeshes {
   const fill = new MeshWriter();
   const decor = new MeshWriter();
-  const surfaces = new SurfaceMeshWriter();
+  const surfaces = new FramedMeshWriter();
   for (const wall of level.walls) {
     fill.polygon(wall.vertices, PALETTE.lacquer);
     decor.border(wall.vertices, RIM_WIDTH_METERS, PALETTE.rim);
@@ -46,15 +47,16 @@ export function buildLevelMeshes(level: Level): LevelMeshes {
   return { fill: fill.finish(), decor: decor.finish(), surfaces: surfaces.finish() };
 }
 
-function writeSurface(writer: SurfaceMeshWriter, edge: Edge): void {
+function writeSurface(writer: FramedMeshWriter, edge: Edge): void {
   switch (edge.kind) {
     case 'bounce':
     case 'sticky':
-      writer.band(edge, edge.kind, SURFACE_WIDTH_METERS, SURFACE_OUTSET_METERS);
+      writeSurfaceBand(writer, edge, edge.kind, SURFACE_WIDTH_METERS, SURFACE_OUTSET_METERS);
       return;
     case 'floor':
     case 'deflector':
     case 'cup':
+    case 'floater':
       return;
     default:
       assertNever(edge.kind);

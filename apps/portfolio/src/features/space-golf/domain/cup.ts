@@ -71,6 +71,7 @@ export function isInCup(
 ): boolean {
   if (
     ball.contact === undefined ||
+    !('wall' in ball.contact) ||
     ball.contact.wall !== level.cup.wall ||
     wall.edges[ball.contact.edge]?.kind !== 'cup'
   ) {
