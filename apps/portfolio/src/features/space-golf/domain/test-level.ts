@@ -36,5 +36,6 @@ export function createTestLevel(): Level {
     cup: { wall: 0, edge: 2, at: 5.5, radius: CUP_RADIUS_METERS },
     spikes: [],
     floaters: [],
+    rods: [],
   });
 }

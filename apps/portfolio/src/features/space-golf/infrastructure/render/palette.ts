@@ -6,6 +6,11 @@ export const PALETTE = {
   /** The black lacquer the Khokhloma pattern is painted on. */
   lacquer: [24, 12, 9, 255],
   rim: [201, 178, 106, 255],
+  /** A sliding rod and the plates it slides through: steel, shaded across so the rod reads as round. */
+  steelDark: [78, 82, 92, 255],
+  steel: [168, 174, 186, 255],
+  steelLight: [236, 240, 246, 255],
+  rivet: [40, 42, 48, 255],
   /** A spike tooth: white like the ball, shaded across so it reads as a cone. */
   spikeLit: [255, 255, 255, 255],
   spikeShade: [150, 150, 162, 255],

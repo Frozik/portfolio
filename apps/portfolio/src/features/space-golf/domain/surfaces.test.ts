@@ -32,6 +32,7 @@ function slabLevel(kind: 'bounce' | 'sticky'): Level {
     cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
     spikes: [],
     floaters: [],
+    rods: [],
   };
 }
 

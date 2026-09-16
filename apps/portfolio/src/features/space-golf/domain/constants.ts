@@ -48,6 +48,11 @@ export const MIN_BOUNCE_SPEED_METERS_PER_SECOND = 0.8;
 /** An elastic surface gives back even a soft touch, so the ball hops a while before it lies still. */
 export const ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND = 0.25;
 
+/**
+ * A ball that covers less ground per step than this speed would while it
+ * touches something is settling — rolling out, or held still by whatever
+ * it is wedged against, whichever.
+ */
 export const REST_SPEED_METERS_PER_SECOND = 0.2;
 export const REST_SETTLE_SECONDS = 0.3;
 
@@ -65,11 +70,29 @@ export const FREEZE_CLEARANCE_METERS = 0.02;
 /** A floating square is one ball diameter across when small and two when large (halved 2026-09-17 by feel). */
 export const FLOATER_SMALL_SIDE_METERS = 2 * BALL_RADIUS_METERS;
 export const FLOATER_LARGE_SIDE_METERS = 4 * BALL_RADIUS_METERS;
-/** A floater's sides give back a touch more than a wall does. */
+/** A floater's sides — and a rod's — give back a touch more than a wall does. */
 export const FLOATER_RESTITUTION = 0.65;
 const FLOATER_CLEARANCE_DIAMETERS = 10;
 /** A floater's centre keeps this far from every wall face and from every other floater's centre. */
 export const FLOATER_CLEARANCE_METERS = FLOATER_CLEARANCE_DIAMETERS * 2 * BALL_RADIUS_METERS;
+
+/** A sliding rod is a ball's diameter thick, with a pointed tip half a diameter long that shoves a ball in its way aside. */
+export const ROD_WIDTH_METERS = 2 * BALL_RADIUS_METERS;
+export const ROD_TIP_METERS = BALL_RADIUS_METERS;
+/** Fully out, the rod's tip has sunk this far into the face it bridges to. */
+export const ROD_SEAT_DEPTH_METERS = ROD_TIP_METERS;
+/** A rod slides out while gravity points its way and back in otherwise, at this speed. */
+export const ROD_SPEED_METERS_PER_SECOND = 2;
+/**
+ * A rod that slides into the ball moves it out of the way step by step; of
+ * its own speed it hands the ball only this share, so the ball is nudged
+ * aside rather than kicked away.
+ */
+export const ROD_SHOVE_CARRY_SHARE = 0.3;
+const ROD_MAX_LENGTH_DIAMETERS = 40;
+/** A rod bridges the gap between two faces; the gap is at most this long, and at least long enough to be seen. */
+export const ROD_MAX_LENGTH_METERS = ROD_MAX_LENGTH_DIAMETERS * 2 * BALL_RADIUS_METERS;
+export const ROD_MIN_LENGTH_METERS = 0.6;
 
 /**
  * The board is open: a ball that leaves it and would not be back within this

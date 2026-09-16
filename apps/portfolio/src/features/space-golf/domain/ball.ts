@@ -2,14 +2,15 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { GRAVITY_TURN_SECONDS } from './constants';
 import { initialFloaters } from './floaters';
-import type { EdgeRef, FloaterEdgeRef, Level } from './level';
+import type { EdgeRef, FloaterEdgeRef, Level, RodEdgeRef } from './level';
+import { initialRods } from './rods';
 import { initialSpikes } from './spikes';
 import { lerp, ZERO } from './vector';
 
 type BallPhase = 'aiming' | 'flying' | 'destroyed' | 'holed';
 
-/** What the ball lies on: a face of a wall, or a side of a floater in its current shape. */
-export type Contact = EdgeRef | FloaterEdgeRef;
+/** What the ball lies on: a face of a wall, a side of a floater in its current shape, or a side of a rod where it stands. */
+export type Contact = EdgeRef | FloaterEdgeRef | RodEdgeRef;
 
 interface GravityTurn {
   readonly from: Vector2;
@@ -45,6 +46,8 @@ export interface BallState {
   readonly spikes: readonly boolean[];
   /** Which floaters are large, by floater index; they flip with every stroke. */
   readonly floaters: readonly boolean[];
+  /** How far each rod stands out of its wall, metres, by rod index; they slide with gravity. */
+  readonly rods: readonly number[];
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -64,6 +67,7 @@ export function createBall(level: Level): BallState {
     offscreenSeconds: 0,
     spikes: initialSpikes(level),
     floaters: initialFloaters(level),
+    rods: initialRods(level),
   };
 }
 

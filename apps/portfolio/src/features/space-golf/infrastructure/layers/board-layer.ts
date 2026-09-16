@@ -23,6 +23,7 @@ import { MESH_COLOR_OFFSET_BYTES, MESH_VERTEX_STRIDE_BYTES } from '../render/mes
 import { CLEAR_COLOR } from '../render/palette';
 import type { ParticleField } from '../render/particles';
 import { advanceParticles, createParticleField } from '../render/particles';
+import { buildRodMesh } from '../render/rod-geometry';
 import type { SceneFrame } from '../render/scene-frame';
 import { buildSpikeMesh } from '../render/spike-geometry';
 import boardShaderSource from '../shaders/board.wgsl?raw';
@@ -82,6 +83,8 @@ export class BoardLayer implements RenderLayer {
   private dynamicCount = 0;
   private dustBuffer!: GPUBuffer;
   private dustCount = 0;
+  private rodBuffer!: GPUBuffer;
+  private rodCount = 0;
   private stage:
     | { readonly level: Level; readonly gpu: Record<keyof LevelMeshes, GpuMesh> }
     | undefined;
@@ -153,6 +156,10 @@ export class BoardLayer implements RenderLayer {
       size: DYNAMIC_VERTEX_CAPACITY * MESH_VERTEX_STRIDE_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
+    this.rodBuffer = device.createBuffer({
+      size: DYNAMIC_VERTEX_CAPACITY * MESH_VERTEX_STRIDE_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
   }
 
   update(state: FrameState): void {
@@ -202,6 +209,7 @@ export class BoardLayer implements RenderLayer {
       { width: state.canvasWidth, height: state.canvasHeight }
     );
     this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust ?? []));
+    this.rodCount = this.writeDynamic(this.rodBuffer, buildRodMesh(scene.level, scene.ball.rods));
     this.dynamicCount = this.writeDynamic(this.dynamicBuffer, buildOverlayMesh(scene));
   }
 
@@ -237,6 +245,11 @@ export class BoardLayer implements RenderLayer {
       if (this.dustCount > 0) {
         pass.setVertexBuffer(0, this.dustBuffer);
         pass.draw(this.dustCount);
+      }
+      // The rods go under the islands: what is still inside a wall is hidden by it.
+      if (this.rodCount > 0) {
+        pass.setVertexBuffer(0, this.rodBuffer);
+        pass.draw(this.rodCount);
       }
       if (this.stage.gpu.fill.vertexCount > 0) {
         pass.setPipeline(this.fillPipeline);
@@ -281,6 +294,7 @@ export class BoardLayer implements RenderLayer {
     this.uniforms.destroy();
     this.dynamicBuffer.destroy();
     this.dustBuffer.destroy();
+    this.rodBuffer.destroy();
   }
 
   private replaceStage(level: Level): void {

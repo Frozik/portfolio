@@ -33,8 +33,8 @@ function signedDoubleArea(vertices: readonly Vector2[]): number {
  * each edge's orientation — an axis-aligned edge is a floor, a diagonal one a
  * deflector — so a diagonal can never be a floor by mistake; `kinds` names
  * the exceptions by edge index: a surface on an axis-aligned edge, or the
- * segments of a hole's rim and the sides of a floater — the two places an
- * edge may have any orientation.
+ * segments of a hole's rim and the sides of a floater or a rod — the places
+ * an edge may have any orientation.
  */
 export function createWall(
   vertices: readonly Vector2[],
@@ -51,7 +51,7 @@ export function createWall(
     const direction = normalize(subtract(to, from));
     const orientation = orientationOf(direction);
     const named = kinds.get(index);
-    const freeOrientation = named === 'cup' || named === 'floater';
+    const freeOrientation = named === 'cup' || named === 'floater' || named === 'rod';
     if (orientation === undefined && !freeOrientation) {
       throw new Error(`createWall: edge ${index} is neither axis-aligned nor diagonal`);
     }

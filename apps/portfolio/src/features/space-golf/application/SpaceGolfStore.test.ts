@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { BAND_SPEED_PER_METER, FIXED_STEP_SECONDS } from '../domain/constants';
 import { generateLevel } from '../domain/generator/generate-level';
 import type { Progress } from '../domain/progress';
+import { createRod } from '../domain/rods';
 import { createTestLevel } from '../domain/test-level';
 import type { LevelSource } from './ports/level-source';
 import type { ProgressRepository } from './ports/progress-repository';
@@ -126,6 +127,26 @@ describe('SpaceGolfStore', () => {
 
     expect(store.status).toBe('playing');
     expect(store.levelNumber).toBe(2);
+    expect(store.strokeCount).toBe(0);
+  });
+
+  it('drops the held aim when a rod knocks the resting ball into flight', async () => {
+    const level = createTestLevel();
+    const overTee = createRod({ x: level.tee.x, y: level.height }, { x: 0, y: -1 }, level.height);
+    const { store } = createStore(undefined, () => ({ ...level, rods: [overTee] }));
+    await store.start();
+
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 2 });
+    expect(store.preview).toHaveLength(5);
+    for (let frame = 0; frame < 60 * 9 && store.scene?.ball.phase === 'aiming'; frame += 1) {
+      store.advance(FRAME);
+    }
+
+    expect(store.scene?.ball.phase).toBe('flying');
+    expect(store.aiming).toBeUndefined();
+    expect(store.preview).toBeUndefined();
+    store.release();
     expect(store.strokeCount).toBe(0);
   });
 });

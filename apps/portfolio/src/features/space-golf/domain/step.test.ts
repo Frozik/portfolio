@@ -119,7 +119,7 @@ describe('step', () => {
   });
 
   it('keeps turning the pull while the ball rests, so a respawn eases back to the rest floor', () => {
-    const flying = fly(shoot(level, ballAt({ x: 7, y: 6 }), { x: 12, y: 0 }), 0.3);
+    const flying = fly(shoot(level, ballAt({ x: 7, y: level.tee.y }), { x: 12, y: 0 }), 0.3);
     const destroyed: BallState = { ...flying, phase: 'destroyed' };
 
     const resting = respawn(destroyed);

@@ -5,6 +5,9 @@ import { distanceToSegment, sweepCircleAgainstWalls } from '../collision';
 import {
   BALL_RADIUS_METERS,
   FLOATER_CLEARANCE_METERS,
+  ROD_MAX_LENGTH_METERS,
+  ROD_MIN_LENGTH_METERS,
+  ROD_SEAT_DEPTH_METERS,
   SPIKE_HEIGHT_METERS,
   SPIKE_WIDTH_METERS,
 } from '../constants';
@@ -160,6 +163,42 @@ describe('generateLevel', () => {
     }
     const shapes = new Set(SEEDS.flatMap(seed => levelOf(seed).floaters.map(each => each.shape)));
     expect(shapes).toEqual(new Set(['square', 'diamond', 'circle']));
+  });
+
+  it('slides two to four rods out of plain faces where they fit, each bridging squarely to a plain face across a clear gap and seating its tip in it', () => {
+    for (const seed of SEEDS) {
+      const level = levelOf(seed);
+
+      expect(level.rods.length).toBeGreaterThanOrEqual(1);
+      expect(level.rods.length).toBeLessThanOrEqual(4);
+      for (const rod of level.rods) {
+        const gap = rod.length - ROD_SEAT_DEPTH_METERS;
+        const tip = {
+          x: rod.base.x + rod.direction.x * gap,
+          y: rod.base.y + rod.direction.y * gap,
+        };
+        expect(gap).toBeGreaterThanOrEqual(ROD_MIN_LENGTH_METERS);
+        expect(gap).toBeLessThanOrEqual(ROD_MAX_LENGTH_METERS);
+        const faces = level.walls.flatMap(wall => wall.edges);
+        const from = faces.find(
+          face =>
+            distanceToSegment(rod.base, face) < 1e-6 &&
+            face.normal.x === rod.direction.x &&
+            face.normal.y === rod.direction.y
+        );
+        const to = faces.find(
+          face =>
+            distanceToSegment(tip, face) < 1e-6 &&
+            face.normal.x === -rod.direction.x &&
+            face.normal.y === -rod.direction.y
+        );
+        expect(from?.kind).toBe('floor');
+        expect(to?.kind).toBe('floor');
+        const middle = { x: (rod.base.x + tip.x) / 2, y: (rod.base.y + tip.y) / 2 };
+        expect(level.walls.some(wall => containsPoint(wall, middle))).toBe(false);
+      }
+    }
+    expect(SEEDS.some(seed => levelOf(seed).rods.length > 0)).toBe(true);
   });
 
   it('is deterministic per seed', () => {

@@ -7,8 +7,9 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
  * `deflector`: a 45° face — reflects only, gravity is untouched.
  * `cup`: one segment of the hole's rounded rim — touching it turns gravity into the face the hole is cut into.
  * `floater`: a side of a floating square — a touch more elastic than a wall, gravity is untouched, the ball may lie on it.
+ * `rod`: a side of a sliding rod — the same as a floater's, and the rod moves.
  */
-export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup' | 'floater';
+export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup' | 'floater' | 'rod';
 
 /** The face kinds a stretch of a long, deep face may be given, each with its own look. */
 export type SurfaceKind = 'bounce' | 'sticky';
@@ -50,6 +51,12 @@ export interface EdgeRef {
 /** A face of a floater in the shape it currently has. */
 export interface FloaterEdgeRef {
   readonly floater: number;
+  readonly edge: number;
+}
+
+/** A face of a rod where it currently stands. */
+export interface RodEdgeRef {
+  readonly rod: number;
   readonly edge: number;
 }
 
@@ -96,6 +103,20 @@ export interface Floater {
   readonly large: Wall;
 }
 
+/**
+ * A rod sliding out of a wall face along its normal, `length` metres to its
+ * seat in the face it bridges to — the gap plus the depth the tip sinks in.
+ * It slides out while gravity points its way and back in otherwise; how far
+ * it stands out lives in the ball's state. Every rod starts fully in.
+ */
+export interface Rod {
+  /** The middle of the rod on the face it slides out of. */
+  readonly base: Vector2;
+  /** Unit vector, the face's outward normal: which way the rod slides out. */
+  readonly direction: Vector2;
+  readonly length: number;
+}
+
 export interface Level {
   readonly seed: number;
   readonly width: number;
@@ -106,6 +127,7 @@ export interface Level {
   readonly cup: Cup;
   readonly spikes: readonly SpikeRow[];
   readonly floaters: readonly Floater[];
+  readonly rods: readonly Rod[];
 }
 
 /** Whether a ball centred at `point` is wholly outside the board — the board has no walls around it. */

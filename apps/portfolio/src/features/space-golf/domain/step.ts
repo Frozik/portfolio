@@ -32,8 +32,11 @@ import type { FloaterHit } from './floaters';
 import { sweepCircleAgainstFloaters } from './floaters';
 import type { FaceKind, Level } from './level';
 import { edgeOf, isBeyondBoard } from './level';
+import type { RodHit } from './rods';
+import { advanceRods, shoveOutOfRods, sweepCircleAgainstRods } from './rods';
 import { sweepCircleAgainstSpikes } from './spikes';
-import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
+import { isTouching } from './support';
+import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from './vector';
 
 /**
  * One fixed step of the flight. Gravity is integrated, then the motion is
@@ -41,32 +44,41 @@ import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
  * remaining motion continues from it. The face rule lives here: a
  * horizontal or vertical face the ball touches becomes its floor, a diagonal
  * one only reflects, the hole's rim turns the floor into the face it is cut
- * into; a floater's side reflects a touch more than a wall and leaves gravity
- * alone. An extended spike tooth met before any wall destroys the ball where
- * it touches it. The board is open: a ball that leaves it bursts the moment
+ * into; a floater's or a rod's side reflects a touch more than a wall and
+ * leaves gravity alone. The rods slide with gravity in every phase, and a
+ * rod that slides into the ball shoves it aside — off its rest, if need be.
+ * An extended spike tooth met before any wall destroys the ball where it
+ * touches it. The board is open: a ball that leaves it bursts the moment
  * it does unless gravity brings it back within a few seconds — the flight is
  * deterministic, so that is read off the flight itself.
  */
 export function step(level: Level, ball: BallState, dt: number): BallState {
   const turned = advanceTurn(ball, dt);
-  if (ball.phase !== 'flying') {
-    return turned;
+  const slid: BallState = { ...turned, rods: advanceRods(level, ball.rods, ball.down, dt) };
+  if (ball.phase === 'holed' || ball.phase === 'destroyed') {
+    return slid;
+  }
+  if (ball.phase === 'aiming') {
+    return restingStep(level, slid);
   }
 
   let velocity = add(
     ball.velocity,
-    scale(currentGravity(turned), GRAVITY_METERS_PER_SECOND_SQUARED * dt)
+    scale(currentGravity(slid), GRAVITY_METERS_PER_SECOND_SQUARED * dt)
   );
   let position = ball.position;
-  let floored = turned;
+  let floored = slid;
   let contact = ball.contact;
   let remaining = dt;
 
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
-    const wallHit = earlierHit(
-      sweepCircleAgainstWalls(level.walls, position, target, BALL_RADIUS_METERS),
-      sweepCircleAgainstFloaters(level, ball.floaters, position, target, BALL_RADIUS_METERS)
+    const hit = earlierHit(
+      earlierHit(
+        sweepCircleAgainstWalls(level.walls, position, target, BALL_RADIUS_METERS),
+        sweepCircleAgainstFloaters(level, ball.floaters, position, target, BALL_RADIUS_METERS)
+      ),
+      sweepCircleAgainstRods(level, slid.rods, position, target, BALL_RADIUS_METERS)
     );
     const spikeHit = sweepCircleAgainstSpikes(
       level,
@@ -75,7 +87,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       target,
       BALL_RADIUS_METERS
     );
-    if (spikeHit !== undefined && (wallHit === undefined || spikeHit.time <= wallHit.time)) {
+    if (spikeHit !== undefined && (hit === undefined || spikeHit.time <= hit.time)) {
       return {
         ...floored,
         position: contactPosition(position, target, spikeHit, CONTACT_EPSILON_METERS),
@@ -84,45 +96,59 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
         contact: undefined,
       };
     }
-    if (wallHit === undefined) {
+    if (hit === undefined) {
       position = target;
       remaining = 0;
       break;
     }
 
-    position = contactPosition(position, target, wallHit, CONTACT_EPSILON_METERS);
-    const response = respond(velocity, wallHit);
+    position = contactPosition(position, target, hit, CONTACT_EPSILON_METERS);
+    const response = respond(velocity, hit);
     velocity = response.velocity;
     if (response.becomesFloor) {
       // The rim counts as the face the hole is cut into: gravity turns into
       // that face, so the ball settles on the bottom of the notch.
-      const floorNormal = wallHit.kind === 'cup' ? edgeOf(level, level.cup).normal : wallHit.normal;
+      const floorNormal = hit.kind === 'cup' ? edgeOf(level, level.cup).normal : hit.normal;
       floored = floorTo(floored, scale(floorNormal, -1));
     }
-    contact = response.resting ? contactOf(wallHit) : undefined;
-    remaining *= 1 - wallHit.time;
+    contact = response.resting ? contactOf(hit) : undefined;
+    remaining *= 1 - hit.time;
   }
 
   velocity =
     contact === undefined
       ? scale(velocity, Math.exp(-AIR_DAMPING_PER_SECOND * dt))
       : slowDown(velocity, rollingResistance(contactKind(level, contact)) * dt);
+  const shoved = shoveOutOfRods(level, slid.rods, floored.down, { position, velocity });
+  if (shoved.position !== position) {
+    ({ position, velocity } = shoved);
+    contact = undefined;
+  }
 
   const beyond = isBeyondBoard(level, position, BALL_RADIUS_METERS);
   const offscreenSeconds = beyond ? ball.offscreenSeconds + dt : 0;
   if (offscreenSeconds >= OFFSCREEN_LIMIT_SECONDS) {
     return { ...ball, position, velocity: ZERO, phase: 'destroyed', contact: undefined };
   }
-  const slow = contact !== undefined && length(velocity) < REST_SPEED_METERS_PER_SECOND;
-  const settlingSeconds = slow ? ball.settlingSeconds + dt : 0;
+  // Rest is read off the ground covered, not the velocity: a ball wedged
+  // between two things gains speed from gravity every step yet goes
+  // nowhere — that speed is phantom and is cut down to the ground covered,
+  // and standing still against something is settling like rolling out is.
+  const travelled = distance(position, ball.position);
+  const still = travelled <= REST_SPEED_METERS_PER_SECOND * dt;
+  const held = still && isTouching(level, { ...floored, position });
+  if (held) {
+    velocity = clampLength(velocity, travelled / dt);
+  }
   const next: BallState = {
     ...floored,
     position,
     velocity,
     contact,
-    settlingSeconds,
+    settlingSeconds: 0,
     offscreenSeconds,
   };
+  const settlingSeconds = held ? ball.settlingSeconds + dt : 0;
   const justLeft = beyond && ball.offscreenSeconds === 0;
   if (justLeft && !comesBack(level, next)) {
     return { ...next, velocity: ZERO, phase: 'destroyed', contact: undefined };
@@ -131,9 +157,9 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   // In the hole the ball lies on the rim like on any wall; only the clock
   // differs: it does not come to "rest" for the player — no stroke can be
   // played out of the cup — and after a second inside the level is holed.
-  if (isInCup(level, next) && slow) {
+  if (isInCup(level, next) && held) {
     const cupSeconds = ball.cupSeconds + dt;
-    const seated: BallState = { ...next, cupSeconds, settlingSeconds: 0 };
+    const seated: BallState = { ...next, cupSeconds };
     return cupSeconds >= CUP_HOLD_SECONDS ? { ...seated, velocity: ZERO, phase: 'holed' } : seated;
   }
   if (next.cupSeconds > 0) {
@@ -147,21 +173,41 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       ...next,
       velocity: ZERO,
       phase: 'aiming',
-      settlingSeconds: 0,
       rest: { position, down: next.down },
     };
   }
-  return next;
+  return { ...next, settlingSeconds };
 }
 
-function contactOf(hit: WallHit | FloaterHit): Contact {
-  return 'wall' in hit
-    ? { wall: hit.wall, edge: hit.edge }
-    : { floater: hit.floater, edge: hit.edge };
+/**
+ * A resting ball only watches the rods: one sliding into it shoves it off
+ * its rest and into flight, and whatever held it sliding away — a rod from
+ * under it, or from beside it where it was wedged — leaves it touching
+ * nothing, so it falls.
+ */
+function restingStep(level: Level, ball: BallState): BallState {
+  const shoved = shoveOutOfRods(level, ball.rods, ball.down, ball);
+  if (shoved.position === ball.position && isTouching(level, ball)) {
+    return ball;
+  }
+  return { ...ball, ...shoved, phase: 'flying', contact: undefined, settlingSeconds: 0 };
+}
+
+function contactOf(hit: WallHit | FloaterHit | RodHit): Contact {
+  if ('wall' in hit) {
+    return { wall: hit.wall, edge: hit.edge };
+  }
+  if ('floater' in hit) {
+    return { floater: hit.floater, edge: hit.edge };
+  }
+  return { rod: hit.rod, edge: hit.edge };
 }
 
 function contactKind(level: Level, contact: Contact): FaceKind {
-  return 'wall' in contact ? edgeOf(level, contact).kind : 'floater';
+  if ('wall' in contact) {
+    return edgeOf(level, contact).kind;
+  }
+  return 'floater' in contact ? 'floater' : 'rod';
 }
 
 // The floor the ball rolls along touches it every step: only a new floor restarts the turn.
@@ -188,6 +234,7 @@ const RESTITUTION: Readonly<Record<FaceKind, number>> = {
   deflector: WALL_RESTITUTION,
   cup: WALL_RESTITUTION,
   floater: FLOATER_RESTITUTION,
+  rod: FLOATER_RESTITUTION,
 };
 
 interface Response {
@@ -210,7 +257,7 @@ function respond(velocity: Vector2, hit: Impact): Response {
   const normalSpeed = dot(velocity, hit.normal);
   const tangential = subtract(velocity, scale(hit.normal, normalSpeed));
   const onFace = hit.at === 'face' && hit.kind !== 'deflector';
-  const isFloor = onFace && hit.kind !== 'floater';
+  const isFloor = onFace && hit.kind !== 'floater' && hit.kind !== 'rod';
   const minBounceSpeed =
     hit.kind === 'bounce'
       ? ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND
