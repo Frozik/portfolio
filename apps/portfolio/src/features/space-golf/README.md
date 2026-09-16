@@ -9,15 +9,16 @@ horizontal or vertical wall the ball touches becomes the floor, 45° cuts
 only bounce it, and the cup must be reached by chaining walls. Rendered
 with WebGPU, physics written for the game (`features/space-golf/domain`).
 Reset to the essentials on 2026-09-14 — the field and the ball — to get the
-rendering and the feel right first; the cup is back, spikes, elastic bars,
-pickups and the solvability guarantee are on the way one at a time.
+rendering and the feel right first; the cup and the spikes are back,
+elastic bars, pickups and the solvability guarantee are on the way one at a
+time.
 
 - Press anywhere and pull the rubber band; five dots in a straight line
   from the ball show the direction and the power of the impulse, not the
   flight — the bend under gravity is for the player to judge; returning to
   the anchor cancels the stroke
 - Gravity does not flip at the hit: the pull travels from where it was to
-  the new floor in half a second whatever the angle, so a reversal passes
+  the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it
   before it is drawn back up; the dust drifts along the very same pull, so
   the field shows the turn as it happens
@@ -30,6 +31,14 @@ pickups and the solvability guarantee are on the way one at a time.
   so the outcome is readable before the stroke: a taut shimmering gold
   membrane between two posts keeps the ball hopping, a dark dripping goo
   swallows the impact and holds it
+- Spike rows of one to three white teeth, each a ball wide and two balls
+  tall, stand on a few horizontal and vertical faces; every stroke flips
+  every row — standing teeth sink into the face leaving a dark socket,
+  sockets grow teeth — before
+  the ball moves, except a row the ball is lying on, which waits until the
+  ball has left it; a standing tooth bursts the ball where it touches it,
+  and the ball comes back to its last rest with the rows as the stroke left
+  them, so the tooth that killed it is down for the next try
 - Levels are endless and procedural on a half-metre grid: each seed
   scatters ten to fourteen islands of L, T, U, Z and stair shapes around a
   tee shelf, a metre of space between them and under a third of the board

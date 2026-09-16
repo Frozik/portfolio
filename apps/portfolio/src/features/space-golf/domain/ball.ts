@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { GRAVITY_TURN_SECONDS } from './constants';
 import type { EdgeRef, Level } from './level';
+import { initialSpikes } from './spikes';
 import { lerp, ZERO } from './vector';
 
 type BallPhase = 'aiming' | 'flying' | 'destroyed' | 'holed';
@@ -36,6 +37,8 @@ export interface BallState {
   readonly cupSeconds: number;
   /** How long the ball has been outside the board; it bursts after a few seconds. */
   readonly offscreenSeconds: number;
+  /** Which spike rows stand extended, by row index; the rows flip with every stroke. */
+  readonly spikes: readonly boolean[];
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -53,6 +56,7 @@ export function createBall(level: Level): BallState {
     settlingSeconds: 0,
     cupSeconds: 0,
     offscreenSeconds: 0,
+    spikes: initialSpikes(level),
   };
 }
 

@@ -1,16 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import type { EdgeRef, FaceKind, Level } from './level';
+import type { EdgeRef, FaceKind, Level, Segment } from './level';
 import { scale, subtract } from './vector';
-
-/** Something the swept circle can run into: a face with its outward normal, direction and length precomputed. */
-export interface Segment {
-  readonly from: Vector2;
-  readonly to: Vector2;
-  readonly direction: Vector2;
-  readonly normal: Vector2;
-  readonly length: number;
-}
 
 export interface SegmentHit {
   /** Where along the motion the contact happens, 0..1. */

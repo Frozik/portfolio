@@ -6,6 +6,14 @@ export const PALETTE = {
   /** The black lacquer the Khokhloma pattern is painted on. */
   lacquer: [24, 12, 9, 255],
   rim: [201, 178, 106, 255],
+  /** A spike tooth: white like the ball, shaded across so it reads as a cone. */
+  spikeLit: [255, 255, 255, 255],
+  spikeShade: [150, 150, 162, 255],
+  spikeDark: [84, 84, 96, 255],
+  /** The socket a retracted tooth leaves: a dark hole in the face with a white lip. */
+  socketMouth: [58, 56, 60, 255],
+  socketDepth: [4, 4, 6, 255],
+  socketLip: [255, 255, 255, 255],
   ball: [255, 255, 255, 255],
   dot: [255, 255, 255, 220],
   flag: [255, 255, 255, 255],

@@ -29,6 +29,7 @@ import {
 import { isInCup } from './cup';
 import type { FaceKind, Level } from './level';
 import { edgeOf, isBeyondBoard } from './level';
+import { sweepCircleAgainstSpikes } from './spikes';
 import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
 
 /**
@@ -37,8 +38,9 @@ import { add, clampLength, dot, length, scale, subtract, ZERO } from './vector';
  * remaining motion continues from it. The face rule lives here: a
  * horizontal or vertical face the ball touches becomes its floor, a diagonal
  * one only reflects, the hole's rim turns the floor into the face it is cut
- * into. The board is open: a ball that leaves it bursts the moment it does
- * unless gravity brings it back within a few seconds — the flight is
+ * into. An extended spike tooth met before any wall destroys the ball where
+ * it touches it. The board is open: a ball that leaves it bursts the moment
+ * it does unless gravity brings it back within a few seconds — the flight is
  * deterministic, so that is read off the flight itself.
  */
 export function step(level: Level, ball: BallState, dt: number): BallState {
@@ -59,6 +61,22 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
     const wallHit = sweepCircleAgainstWalls(level, position, target, BALL_RADIUS_METERS);
+    const spikeHit = sweepCircleAgainstSpikes(
+      level,
+      ball.spikes,
+      position,
+      target,
+      BALL_RADIUS_METERS
+    );
+    if (spikeHit !== undefined && (wallHit === undefined || spikeHit.time <= wallHit.time)) {
+      return {
+        ...floored,
+        position: contactPosition(position, target, spikeHit, CONTACT_EPSILON_METERS),
+        velocity: ZERO,
+        phase: 'destroyed',
+        contact: undefined,
+      };
+    }
     if (wallHit === undefined) {
       position = target;
       remaining = 0;

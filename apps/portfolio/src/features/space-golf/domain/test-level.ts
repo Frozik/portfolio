@@ -34,5 +34,6 @@ export function createTestLevel(): Level {
     tee: { x: 1, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     // The floor's top edge runs from (10, 1) to (-1, 1), so `at` counts from x = 10.
     cup: { wall: 0, edge: 2, at: 5.5, radius: CUP_RADIUS_METERS },
+    spikes: [],
   });
 }

@@ -27,6 +27,7 @@ function openLevel(floor: Wall): Level {
     walls: [floor],
     tee: { x: 4.5, y: floor.bounds.max.y + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
+    spikes: [],
   };
 }
 
@@ -42,7 +43,7 @@ describe('the open board', () => {
   const level = openLevel(createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP));
 
   it('bursts the ball the moment it leaves the board when gravity will not bring it back', () => {
-    const launched = shoot(createBall(level), { x: 10, y: 0 });
+    const launched = shoot(level, createBall(level), { x: 10, y: 0 });
 
     const gone = fly(level, launched, 2);
 
@@ -54,7 +55,7 @@ describe('the open board', () => {
 
   it('lets a ball that gravity brings back fly on beyond the edge and land again', () => {
     const high = openLevel(createBlock(0, 0, BOARD_WIDTH_METERS, 12));
-    const launched = shoot(createBall(high), { x: 0, y: 10 });
+    const launched = shoot(high, createBall(high), { x: 0, y: 10 });
 
     const above = fly(high, launched, 0.9);
     expect(above.phase).toBe('flying');
@@ -69,7 +70,7 @@ describe('the open board', () => {
     const bleeding = openLevel(createBlock(-1, 0, BOARD_WIDTH_METERS + 2, FLOOR_TOP));
     const start = { ...createBall(bleeding), position: { x: 8, y: bleeding.tee.y } };
 
-    const state = fly(bleeding, shoot(start, { x: 3, y: 0 }), 8);
+    const state = fly(bleeding, shoot(bleeding, start, { x: 3, y: 0 }), 8);
 
     expect(state.phase).toBe('destroyed');
     expect(state.position.x).toBeGreaterThan(BOARD_WIDTH_METERS);

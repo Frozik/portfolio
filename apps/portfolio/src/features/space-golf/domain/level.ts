@@ -12,8 +12,8 @@ export type FaceKind = 'floor' | 'bounce' | 'sticky' | 'deflector' | 'cup';
 /** The face kinds a stretch of a long, deep face may be given, each with its own look. */
 export type SurfaceKind = 'bounce' | 'sticky';
 
-/** One face of a wall, with everything the sweep needs precomputed. */
-export interface Edge {
+/** Something the swept circle can run into, with everything the sweep needs precomputed. */
+export interface Segment {
   readonly from: Vector2;
   readonly to: Vector2;
   /** Unit vector from `from` to `to`. */
@@ -21,6 +21,10 @@ export interface Edge {
   /** Unit outward normal. */
   readonly normal: Vector2;
   readonly length: number;
+}
+
+/** One face of a wall. */
+export interface Edge extends Segment {
   readonly kind: FaceKind;
 }
 
@@ -53,6 +57,21 @@ export interface Cup extends EdgeRef {
   readonly radius: number;
 }
 
+/**
+ * A row of one to three spike teeth standing on a horizontal or vertical
+ * face, `from` metres along it, each a ball's diameter wide. Rows stand
+ * extended or retracted and flip with every stroke; `extendedAtStart` is
+ * the state on the tee. `sides` are the slanted sides of every tooth when
+ * extended, base on the face, apex two diameters out — what the ball must
+ * not touch.
+ */
+export interface SpikeRow extends EdgeRef {
+  readonly from: number;
+  readonly teeth: number;
+  readonly extendedAtStart: boolean;
+  readonly sides: readonly Segment[];
+}
+
 export interface Level {
   readonly seed: number;
   readonly width: number;
@@ -61,6 +80,7 @@ export interface Level {
   /** Where the ball starts, resting on a floor with gravity pointing down. */
   readonly tee: Vector2;
   readonly cup: Cup;
+  readonly spikes: readonly SpikeRow[];
 }
 
 /** Whether a ball centred at `point` is wholly outside the board — the board has no walls around it. */
@@ -77,7 +97,7 @@ export function edgeOf(level: Level, ref: EdgeRef): Edge {
   return level.walls[ref.wall].edges[ref.edge];
 }
 
-/** The point `at` metres along an edge from its first vertex. */
-export function pointAlongEdge(edge: Edge, at: number): Vector2 {
+/** The point `at` metres along a segment from its first vertex. */
+export function pointAlongEdge(edge: Segment, at: number): Vector2 {
   return { x: edge.from.x + edge.direction.x * at, y: edge.from.y + edge.direction.y * at };
 }

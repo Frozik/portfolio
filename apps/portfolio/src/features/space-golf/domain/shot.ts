@@ -8,6 +8,8 @@ import {
   PREVIEW_DOT_COUNT,
   PREVIEW_INTERVAL_SECONDS,
 } from './constants';
+import type { Level } from './level';
+import { toggleSpikes } from './spikes';
 import { add, clampLength, distance, scale, subtract } from './vector';
 
 /**
@@ -27,8 +29,8 @@ export function aim(anchor: Vector2, pull: Vector2): Vector2 | undefined {
   );
 }
 
-/** The ball launched: the stroke counts from here. */
-export function shoot(ball: BallState, velocity: Vector2): BallState {
+/** The ball launched: the stroke counts from here, and the spike rows flip before it moves. */
+export function shoot(level: Level, ball: BallState, velocity: Vector2): BallState {
   return {
     ...ball,
     velocity,
@@ -36,6 +38,7 @@ export function shoot(ball: BallState, velocity: Vector2): BallState {
     stroke: ball.stroke + 1,
     contact: undefined,
     settlingSeconds: 0,
+    spikes: toggleSpikes(level, ball.spikes, ball.position),
   };
 }
 

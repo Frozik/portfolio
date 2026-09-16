@@ -58,7 +58,7 @@ describe('previewDots', () => {
 
 describe('shoot and respawn', () => {
   it('counts the stroke on launch and keeps it after a destroyed ball respawns', () => {
-    const launched = shoot(createBall(level), { x: 1, y: 1 });
+    const launched = shoot(level, createBall(level), { x: 1, y: 1 });
     const back = respawn({ ...launched, phase: 'destroyed', position: { x: 5, y: 5 } });
 
     expect(launched.stroke).toBe(1);

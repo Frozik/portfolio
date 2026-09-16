@@ -30,6 +30,7 @@ function slabLevel(kind: 'bounce' | 'sticky'): Level {
     walls: [floor],
     tee: { x: 4.5, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },
+    spikes: [],
   };
 }
 
@@ -91,12 +92,12 @@ describe('a viscous surface', () => {
 
     const grabbed = fly(
       viscous,
-      shoot({ ...createBall(viscous), position: { x: 3, y: 3 } }, launch),
+      shoot(viscous, { ...createBall(viscous), position: { x: 3, y: 3 } }, launch),
       5
     );
     const rolled = fly(
       plainFloor,
-      shoot({ ...createBall(plainFloor), position: { x: 3, y: 3 } }, launch),
+      shoot(plainFloor, { ...createBall(plainFloor), position: { x: 3, y: 3 } }, launch),
       5
     );
 

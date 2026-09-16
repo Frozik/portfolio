@@ -1,17 +1,14 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import { BALL_RADIUS_METERS, CUP_RADIUS_METERS } from '../constants';
+import { CUP_RADIUS_METERS } from '../constants';
 import type { Cup, Edge, Wall } from '../level';
 import { pointAlongEdge } from '../level';
-import { dot, subtract } from '../vector';
 import type { Random } from './random';
+import { supportsTee } from './tee-support';
 
 /** Flat face kept on either side of the notch, clear of the corner cuts. */
 const CUP_MARGIN_METERS = 0.2;
 const MIN_FACE_METERS = 2 * (CUP_RADIUS_METERS + CUP_MARGIN_METERS);
-/** The tee's floor is the face right under the ball. */
-const TEE_SUPPORT_METERS = 2 * BALL_RADIUS_METERS;
-
 interface Size {
   readonly width: number;
   readonly height: number;
@@ -64,11 +61,4 @@ function isOnBoard(face: Edge, board: Size): boolean {
 
 function midpoint(face: Edge): Vector2 {
   return pointAlongEdge(face, face.length / 2);
-}
-
-function supportsTee(face: Edge, tee: Vector2): boolean {
-  const offset = subtract(tee, face.from);
-  const above = dot(offset, face.normal);
-  const along = dot(offset, face.direction);
-  return above >= 0 && above <= TEE_SUPPORT_METERS && along >= 0 && along <= face.length;
 }

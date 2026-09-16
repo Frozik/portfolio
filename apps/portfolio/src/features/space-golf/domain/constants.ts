@@ -56,6 +56,12 @@ export const CUP_HOLD_SECONDS = 1;
 const CUP_TO_BALL_DIAMETER_RATIO = 2;
 export const CUP_RADIUS_METERS = CUP_TO_BALL_DIAMETER_RATIO * BALL_RADIUS_METERS;
 
+/** A spike tooth is a ball's diameter wide at the base and stands two diameters out of the face. */
+export const SPIKE_WIDTH_METERS = 2 * BALL_RADIUS_METERS;
+export const SPIKE_HEIGHT_METERS = 4 * BALL_RADIUS_METERS;
+/** A tooth that would rise this close to the resting ball stays as it is when the stroke flips the rows. */
+export const SPIKE_FREEZE_CLEARANCE_METERS = 0.02;
+
 /**
  * The board is open: a ball that leaves it and would not be back within this
  * long bursts the moment it leaves, and comes back to its rest point.

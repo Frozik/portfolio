@@ -4,28 +4,21 @@ import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import { currentGravity } from '../../domain/ball';
-import {
-  AIM_RING_RADIUS_METERS,
-  BALL_RADIUS_METERS,
-  BOARD_HEIGHT_METERS,
-  BOARD_WIDTH_METERS,
-} from '../../domain/constants';
+import { BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS } from '../../domain/constants';
 import type { Level } from '../../domain/level';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
 import type { PixelRect } from '../render/board-viewport';
 import { boardPixelRect, fitBoard } from '../render/board-viewport';
+import { buildDustMesh, buildOverlayMesh } from '../render/frame-geometry';
 import type { LevelMeshes } from '../render/level-geometry';
 import { buildLevelMeshes } from '../render/level-geometry';
 import type { MeshData } from '../render/mesh-writer';
-import {
-  MESH_COLOR_OFFSET_BYTES,
-  MESH_VERTEX_STRIDE_BYTES,
-  MeshWriter,
-} from '../render/mesh-writer';
-import { CLEAR_COLOR, PALETTE } from '../render/palette';
+import { MESH_COLOR_OFFSET_BYTES, MESH_VERTEX_STRIDE_BYTES } from '../render/mesh-writer';
+import { CLEAR_COLOR } from '../render/palette';
 import type { ParticleField } from '../render/particles';
 import { advanceParticles, createParticleField } from '../render/particles';
 import type { SceneFrame } from '../render/scene-frame';
+import { buildSpikeMesh } from '../render/spike-geometry';
 import {
   SURFACE_KIND_OFFSET_BYTES,
   SURFACE_LOCAL_OFFSET_BYTES,
@@ -55,16 +48,8 @@ const SURFACE_LAYOUT: GPUVertexBufferLayout = {
 /** The pattern is shifted per level by this many metres per seed step, folded so the shift stays small. */
 const PATTERN_SHIFT_METERS_PER_SEED = 1.37;
 const PATTERN_SHIFT_PERIOD_SEEDS = 97;
-const PREVIEW_DOT_RADIUS_METERS = 0.045;
-/** The burst: a ring growing from the ball's size to this radius while fading. */
-const BURST_RADIUS_METERS = 0.6;
-const BURST_RING_WIDTH_METERS = 0.08;
-const BURST_SECONDS = 0.45;
-const AIM_RING_WIDTH_METERS = 0.02;
 /** Vertices the per-frame buffer can hold: ninety dust quads, or the ball, five dots and two rings. */
 const DYNAMIC_VERTEX_CAPACITY = 6144;
-const QUAD_HALF = 0.5;
-const ALPHA_MAX = 255;
 
 interface GpuMesh {
   readonly buffer: GPUBuffer;
@@ -91,6 +76,8 @@ export class BoardLayer implements RenderLayer {
   private stage:
     | { readonly level: Level; readonly gpu: Record<keyof LevelMeshes, GpuMesh> }
     | undefined;
+  /** The spike rows in the states of the current stroke; rebuilt when the states change, once per stroke. */
+  private spikes: { readonly states: readonly boolean[]; readonly gpu: GpuMesh } | undefined;
   private dust: ParticleField | undefined;
   private lastTime: number | undefined;
   private scissor: PixelRect | undefined;
@@ -161,6 +148,9 @@ export class BoardLayer implements RenderLayer {
       this.replaceStage(scene.level);
       this.dust = createParticleField(scene.level.seed, scene.level.width, scene.level.height);
     }
+    if (this.spikes?.states !== scene.ball.spikes) {
+      this.replaceSpikes(scene.level, scene.ball.spikes);
+    }
     const elapsed = this.lastTime === undefined ? 0 : state.time - this.lastTime;
     this.lastTime = state.time;
     if (!isNil(this.dust)) {
@@ -192,8 +182,8 @@ export class BoardLayer implements RenderLayer {
       { width: BOARD_WIDTH_METERS, height: BOARD_HEIGHT_METERS },
       { width: state.canvasWidth, height: state.canvasHeight }
     );
-    this.writeDust();
-    this.writeDynamic(scene);
+    this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust ?? []));
+    this.dynamicCount = this.writeDynamic(this.dynamicBuffer, buildOverlayMesh(scene));
   }
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
@@ -239,6 +229,10 @@ export class BoardLayer implements RenderLayer {
         pass.setVertexBuffer(0, this.stage.gpu.decor.buffer);
         pass.draw(this.stage.gpu.decor.vertexCount);
       }
+      if (!isNil(this.spikes) && this.spikes.gpu.vertexCount > 0) {
+        pass.setVertexBuffer(0, this.spikes.gpu.buffer);
+        pass.draw(this.spikes.gpu.vertexCount);
+      }
       if (this.stage.gpu.surfaces.vertexCount > 0) {
         pass.setPipeline(this.surfacePipeline);
         pass.setVertexBuffer(0, this.stage.gpu.surfaces.buffer);
@@ -255,6 +249,7 @@ export class BoardLayer implements RenderLayer {
 
   dispose(): void {
     this.releaseStage();
+    this.releaseSpikes();
     this.uniforms.destroy();
     this.dynamicBuffer.destroy();
     this.dustBuffer.destroy();
@@ -281,6 +276,16 @@ export class BoardLayer implements RenderLayer {
       mesh.buffer.destroy();
     }
     this.stage = undefined;
+  }
+
+  private replaceSpikes(level: Level, states: readonly boolean[]): void {
+    this.releaseSpikes();
+    this.spikes = { states, gpu: this.upload(buildSpikeMesh(level, states)) };
+  }
+
+  private releaseSpikes(): void {
+    this.spikes?.gpu.buffer.destroy();
+    this.spikes = undefined;
   }
 
   /** Every pipeline shares the uniforms, the blend and the multisampling; the shader and the vertex layout differ. */
@@ -324,74 +329,18 @@ export class BoardLayer implements RenderLayer {
     return { buffer, vertexCount: data.vertexCount };
   }
 
-  /** The drifting dust, rewritten every frame into the buffer drawn first. */
-  private writeDust(): void {
-    const writer = new MeshWriter();
-    for (const particle of this.dust ?? []) {
-      const { x, y } = particle.position;
-      const r = particle.radius * 2 * QUAD_HALF;
-      writer.convexPolygon(
-        [
-          { x: x - r, y: y - r },
-          { x: x + r, y: y - r },
-          { x: x + r, y: y + r },
-          { x: x - r, y: y + r },
-        ],
-        PALETTE.star
-      );
-    }
-    const data = writer.finish();
-    this.dustCount = Math.min(data.vertexCount, DYNAMIC_VERTEX_CAPACITY);
-    if (this.dustCount > 0) {
+  /** Rewrites a per-frame buffer, capped at its capacity; the count of vertices to draw. */
+  private writeDynamic(buffer: GPUBuffer, data: MeshData): number {
+    const count = Math.min(data.vertexCount, DYNAMIC_VERTEX_CAPACITY);
+    if (count > 0) {
       this.device.queue.writeBuffer(
-        this.dustBuffer,
+        buffer,
         0,
         data.vertexData,
         0,
-        this.dustCount * MESH_VERTEX_STRIDE_BYTES
+        count * MESH_VERTEX_STRIDE_BYTES
       );
     }
-  }
-
-  /** The ball, the aim ring, the dots and the burst — drawn over the board. */
-  private writeDynamic(scene: SceneFrame): void {
-    const writer = new MeshWriter();
-    if (scene.aimRing && scene.ball.phase === 'aiming') {
-      writer.ring(
-        scene.ball.position,
-        AIM_RING_RADIUS_METERS - AIM_RING_WIDTH_METERS / 2,
-        AIM_RING_RADIUS_METERS + AIM_RING_WIDTH_METERS / 2,
-        PALETTE.aimRing
-      );
-    }
-    if (!isNil(scene.preview)) {
-      for (const dot of scene.preview) {
-        writer.circle(dot, PREVIEW_DOT_RADIUS_METERS, PALETTE.dot);
-      }
-    }
-    if (!isNil(scene.burst)) {
-      const progress = Math.min(1, scene.burst.elapsedSeconds / BURST_SECONDS);
-      const radius = BALL_RADIUS_METERS + (BURST_RADIUS_METERS - BALL_RADIUS_METERS) * progress;
-      const alpha = Math.round(ALPHA_MAX * (1 - progress));
-      writer.ring(
-        scene.burst.position,
-        radius - BURST_RING_WIDTH_METERS / 2,
-        radius + BURST_RING_WIDTH_METERS / 2,
-        [PALETTE.burst[0], PALETTE.burst[1], PALETTE.burst[2], alpha]
-      );
-    } else if (scene.ball.phase !== 'holed') {
-      writer.circle(scene.ball.position, BALL_RADIUS_METERS, PALETTE.ball);
-    }
-    const data = writer.finish();
-    this.dynamicCount = Math.min(data.vertexCount, DYNAMIC_VERTEX_CAPACITY);
-    if (this.dynamicCount > 0) {
-      this.device.queue.writeBuffer(
-        this.dynamicBuffer,
-        0,
-        data.vertexData,
-        0,
-        this.dynamicCount * MESH_VERTEX_STRIDE_BYTES
-      );
-    }
+    return count;
   }
 }

@@ -145,10 +145,10 @@ export class SpaceGolfStore {
   release(): void {
     const velocity = this.pendingVelocity();
     this.aiming = undefined;
-    if (isNil(velocity) || isNil(this.ball)) {
+    if (isNil(velocity) || isNil(this.ball) || isNil(this.level)) {
       return;
     }
-    this.ball = shoot(this.ball, velocity);
+    this.ball = shoot(this.level, this.ball, velocity);
     this.strokeCount = this.ball.stroke;
   }
 

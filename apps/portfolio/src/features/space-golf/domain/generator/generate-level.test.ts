@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createBall } from '../ball';
 import { sweepCircleAgainstWalls } from '../collision';
-import { BALL_RADIUS_METERS } from '../constants';
-import { edgeOf } from '../level';
+import { BALL_RADIUS_METERS, SPIKE_HEIGHT_METERS, SPIKE_WIDTH_METERS } from '../constants';
+import { edgeOf, pointAlongEdge } from '../level';
 import { containsPoint } from '../walls';
 import { generateLevel } from './generate-level';
 
@@ -69,6 +69,52 @@ describe('generateLevel', () => {
       expect(face.from.x).toBeGreaterThanOrEqual(0);
       expect(face.from.x).toBeLessThanOrEqual(level.width);
       expect(Math.hypot(face.from.x - level.tee.x, face.from.y - level.tee.y)).toBeGreaterThan(0.5);
+    }
+  });
+
+  it('stands a few spike rows of one to three teeth on plain faces on the board, floor kept at both ends, never under the tee', () => {
+    for (const seed of SEEDS) {
+      const level = levelOf(seed);
+
+      expect(level.spikes.length).toBeGreaterThanOrEqual(2);
+      expect(level.spikes.length).toBeLessThanOrEqual(5);
+      expect(new Set(level.spikes.map(row => `${row.wall}/${row.edge}`)).size).toBe(
+        level.spikes.length
+      );
+      for (const row of level.spikes) {
+        const face = edgeOf(level, row);
+        const length = row.teeth * SPIKE_WIDTH_METERS;
+        expect(face.kind).toBe('floor');
+        expect(row.teeth).toBeGreaterThanOrEqual(1);
+        expect(row.teeth).toBeLessThanOrEqual(3);
+        expect(row.sides).toHaveLength(row.teeth * 2);
+        expect(row.from).toBeGreaterThanOrEqual(0.2);
+        expect(row.from + length).toBeLessThanOrEqual(face.length - 0.2 + 1e-9);
+        for (const along of [row.from, row.from + length]) {
+          const foot = pointAlongEdge(face, along);
+          const tip = {
+            x: foot.x + face.normal.x * SPIKE_HEIGHT_METERS,
+            y: foot.y + face.normal.y * SPIKE_HEIGHT_METERS,
+          };
+          for (const point of [foot, tip]) {
+            expect(point.x).toBeGreaterThanOrEqual(0);
+            expect(point.y).toBeGreaterThanOrEqual(0);
+            expect(point.x).toBeLessThanOrEqual(level.width);
+            expect(point.y).toBeLessThanOrEqual(level.height);
+          }
+        }
+        const teeAbove =
+          (level.tee.x - face.from.x) * face.normal.x + (level.tee.y - face.from.y) * face.normal.y;
+        const teeAlong =
+          (level.tee.x - face.from.x) * face.direction.x +
+          (level.tee.y - face.from.y) * face.direction.y;
+        const teeOnFace =
+          teeAbove >= 0 &&
+          teeAbove <= 2 * BALL_RADIUS_METERS &&
+          teeAlong >= 0 &&
+          teeAlong <= face.length;
+        expect(teeOnFace).toBe(false);
+      }
     }
   });
 

@@ -37,6 +37,13 @@ export class MeshWriter {
     this.vertex(c, color);
   }
 
+  /** A triangle with a colour per vertex, blended across it — shading without a texture. */
+  shadedTriangle(a: Vector2, b: Vector2, c: Vector2, colors: readonly [Rgba, Rgba, Rgba]): void {
+    this.vertex(a, colors[0]);
+    this.vertex(b, colors[1]);
+    this.vertex(c, colors[2]);
+  }
+
   /** Any simple polygon, concave ones included, through earcut. */
   polygon(points: readonly Vector2[], color: Rgba): void {
     const { positions, indices } = triangulatePolygon({ outer: points, holes: [] });
