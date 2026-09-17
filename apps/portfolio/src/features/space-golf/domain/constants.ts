@@ -17,12 +17,17 @@ export const FIXED_STEP_SECONDS = 1 / 120;
 /** How many contacts one step may resolve before the remainder is dropped. */
 export const MAX_CONTACTS_PER_STEP = 4;
 
-/** Raised 1.5× on 2026-09-17 by feel, from the recorded 10. */
-export const MAX_SPEED_METERS_PER_SECOND = 15;
+/** The recorded value; tried at 15 and 7.5 on 2026-09-17 and brought back. */
+export const MAX_SPEED_METERS_PER_SECOND = 10;
 /** Metres per second of launch speed per metre of band stretch. */
 export const BAND_SPEED_PER_METER = 7.5;
-/** A pull shorter than this is a slack band: no dots, no stroke. */
-export const AIM_DEAD_ZONE_METERS = 0.15;
+/**
+ * A pull shorter than this is a slack band: no dots, no stroke. It also
+ * sets the softest stroke there is — the dead zone times the band's speed
+ * per metre, 0.75 m/s (0.15 m at first; shortened 2026-09-17, the softest
+ * stroke hit too hard).
+ */
+export const AIM_DEAD_ZONE_METERS = 0.1;
 
 /** Share of the normal speed a wall gives back, flat or diagonal alike (recorded 0.3–0.5 on faces and corners). */
 export const WALL_RESTITUTION = 0.55;

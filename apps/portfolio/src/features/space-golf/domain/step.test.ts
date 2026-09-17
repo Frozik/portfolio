@@ -151,9 +151,10 @@ describe('step', () => {
   });
 
   it('never tunnels through a thin bar at full speed', () => {
+    // The bar stands 2 m away; fly a little past the time the ball needs to reach it.
     const state = fly(
       shoot(level, ballAt({ x: 2, y: 4 }), { x: MAX_SPEED_METERS_PER_SECOND, y: 0 }),
-      0.2
+      2 / MAX_SPEED_METERS_PER_SECOND + 0.1
     );
 
     expect(state.position.x).toBeLessThan(4);
