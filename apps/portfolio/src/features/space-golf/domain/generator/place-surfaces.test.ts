@@ -7,6 +7,9 @@ import { placeSurfaces } from './place-surfaces';
 import type { Random } from './random';
 import { createRandom } from './random';
 
+/** A tee nowhere near the walls under test: no corner is spared for it. */
+const FAR_TEE = { x: -100, y: -100 };
+
 /** A random source that never asks for a long chamfer and always wants the most surfaces. */
 const PLAIN: Random = {
   next: () => 0.5,
@@ -24,7 +27,9 @@ describe('placeSurfaces', () => {
       width: 6,
       height: 4,
     });
-    const walls = traceOutlines(grid).map(outline => createIslandWall(outline, grid, PLAIN));
+    const walls = traceOutlines(grid).map(outline =>
+      createIslandWall(outline, grid, PLAIN, FAR_TEE)
+    );
 
     const surfaces = placeSurfaces(PLAIN, walls, grid);
 
@@ -40,7 +45,9 @@ describe('placeSurfaces', () => {
 
   it('is reproducible for a seed', () => {
     const grid = fillRect(createEmptyGrid(18, 32), { x: 4, y: 4, width: 8, height: 6 });
-    const walls = traceOutlines(grid).map(outline => createIslandWall(outline, grid, PLAIN));
+    const walls = traceOutlines(grid).map(outline =>
+      createIslandWall(outline, grid, PLAIN, FAR_TEE)
+    );
 
     expect(placeSurfaces(createRandom(3), walls, grid)).toEqual(
       placeSurfaces(createRandom(3), walls, grid)

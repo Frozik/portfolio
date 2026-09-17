@@ -4,7 +4,7 @@ import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
 import type { BallState } from '../domain/ball';
 import { createBall, respawn } from '../domain/ball';
-import { FIXED_STEP_SECONDS } from '../domain/constants';
+import { CLOCK_SPEED, FIXED_STEP_SECONDS } from '../domain/constants';
 import type { Level } from '../domain/level';
 import type { Progress } from '../domain/progress';
 import { completeLevel, FIRST_LEVEL, INITIAL_PROGRESS } from '../domain/progress';
@@ -159,7 +159,7 @@ export class SpaceGolfStore {
     if (isNil(scene) || this.status !== 'playing') {
       return;
     }
-    this.accumulatorSeconds += Math.min(frameSeconds, MAX_FRAME_SECONDS);
+    this.accumulatorSeconds += Math.min(frameSeconds, MAX_FRAME_SECONDS) * CLOCK_SPEED;
     while (this.accumulatorSeconds >= FIXED_STEP_SECONDS) {
       this.accumulatorSeconds -= FIXED_STEP_SECONDS;
       this.tick(scene.level);

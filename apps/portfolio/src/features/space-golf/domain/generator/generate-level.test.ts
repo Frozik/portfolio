@@ -40,6 +40,28 @@ describe('generateLevel', () => {
     }
   });
 
+  it('frames the board with shores along its edges, bodies of complex shape between them and islets in what room is left', () => {
+    for (const seed of SEEDS) {
+      const level = levelOf(seed);
+      const onBoard = (wall: (typeof level.walls)[number]): boolean =>
+        wall.bounds.min.x >= 0 &&
+        wall.bounds.min.y >= 0 &&
+        wall.bounds.max.x <= level.width &&
+        wall.bounds.max.y <= level.height;
+      const area = (wall: (typeof level.walls)[number]): number =>
+        (wall.bounds.max.x - wall.bounds.min.x) * (wall.bounds.max.y - wall.bounds.min.y);
+
+      expect(level.walls.length).toBeGreaterThanOrEqual(10);
+      expect(level.walls.filter(wall => !onBoard(wall)).length).toBeGreaterThanOrEqual(2);
+      expect(level.walls.filter(wall => onBoard(wall) && area(wall) <= 1.5).length).toBeGreaterThan(
+        0
+      );
+      expect(level.walls.filter(wall => wall.vertices.length >= 12).length).toBeGreaterThanOrEqual(
+        3
+      );
+    }
+  });
+
   it('scatters a handful of islands with a gap between them, and not all of them are boxes', () => {
     for (const seed of SEEDS) {
       const level = levelOf(seed);
@@ -64,6 +86,20 @@ describe('generateLevel', () => {
         }
       }
     }
+  });
+
+  it('puts the cup at the far end of the board from the tee, never a short way off', () => {
+    const MANY_SEEDS = Array.from({ length: 60 }, (_, index) => index + 1);
+    const distances = MANY_SEEDS.map(seed => {
+      const level = levelOf(seed);
+      const face = edgeOf(level, level.cup);
+      const cup = pointAlongEdge(face, level.cup.at);
+      return Math.hypot(cup.x - level.tee.x, cup.y - level.tee.y);
+    });
+
+    expect(Math.min(...distances)).toBeGreaterThan(12);
+    const sorted = [...distances].sort((a, b) => a - b);
+    expect(sorted[Math.floor(sorted.length / 2)]).toBeGreaterThan(16);
   });
 
   it('cuts the cup into a horizontal or vertical face on the board, away from the tee', () => {
@@ -205,6 +241,31 @@ describe('generateLevel', () => {
   it('is deterministic per seed', () => {
     expect(generateLevel(1)).toEqual(levelOf(1));
     expect(levelOf(2)).not.toEqual(levelOf(1));
+  });
+
+  it('starts the ball on flat floor with room to spare on either side, never over a corner cut or a slope', () => {
+    const MANY_SEEDS = Array.from({ length: 60 }, (_, index) => index + 1);
+    const SPARE_METERS = 0.1;
+    for (const seed of MANY_SEEDS) {
+      const level = levelOf(seed);
+      const { tee } = level;
+      const support = sweepCircleAgainstWalls(
+        level.walls,
+        tee,
+        { x: tee.x, y: tee.y - 1 },
+        BALL_RADIUS_METERS
+      );
+
+      expect(support?.kind, `seed ${seed}`).toBe('floor');
+      expect(support?.at, `seed ${seed}`).toBe('face');
+      const face = edgeOf(level, { wall: support?.wall ?? 0, edge: support?.edge ?? 0 });
+      const left = Math.min(face.from.x, face.to.x);
+      const right = Math.max(face.from.x, face.to.x);
+      expect(left, `seed ${seed}`).toBeLessThanOrEqual(tee.x - BALL_RADIUS_METERS - SPARE_METERS);
+      expect(right, `seed ${seed}`).toBeGreaterThanOrEqual(
+        tee.x + BALL_RADIUS_METERS + SPARE_METERS
+      );
+    }
   });
 
   it('starts the ball resting on a floor with nothing overlapping it', () => {

@@ -4,8 +4,6 @@ import type { BallState } from './ball';
 import { createBall } from './ball';
 import {
   BALL_RADIUS_METERS,
-  BOARD_HEIGHT_METERS,
-  BOARD_WIDTH_METERS,
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
   CUP_RADIUS_METERS,
@@ -16,6 +14,9 @@ import { step } from './step';
 import { applySurfaces } from './surfaces';
 import { createBlock } from './walls';
 
+/** The specifications' own board, the reference's 9 × 16 m, whatever the game's grows to. */
+const BOARD_WIDTH_METERS = 9;
+const BOARD_HEIGHT_METERS = 16;
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const FLOOR_TOP = 1;
 const slab = createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP);
@@ -71,16 +72,21 @@ describe('applySurfaces', () => {
 
 describe('an elastic surface', () => {
   it('hops the ball far longer than plain floor would, and still lets it lie still in the end', () => {
-    const plain = slabLevel('sticky');
     const elastic = slabLevel('bounce');
-    const plainFloor = { ...plain, walls: [slab] };
+    const plainFloor = { ...slabLevel('sticky'), walls: [slab] };
 
-    const onPlain = fly(plainFloor, dropped(plainFloor, 1), 2.5);
-    const onElastic = fly(elastic, dropped(elastic, 1), 2.5);
-    const settled = fly(elastic, dropped(elastic, 1), 8);
+    const secondsToRest = (level: Level): number => {
+      let state = dropped(level, 1);
+      let ticks = 0;
+      while (state.phase === 'flying' && ticks < 10 * SECOND_STEPS) {
+        state = step(level, state, FIXED_STEP_SECONDS);
+        ticks += 1;
+      }
+      return ticks / SECOND_STEPS;
+    };
+    const settled = fly(elastic, dropped(elastic, 1), 10);
 
-    expect(onPlain.phase).toBe('aiming');
-    expect(onElastic.phase).toBe('flying');
+    expect(secondsToRest(elastic)).toBeGreaterThan(secondsToRest(plainFloor) * 1.3);
     expect(settled.phase).toBe('aiming');
     expect(settled.down).toEqual({ x: 0, y: -1 });
   });

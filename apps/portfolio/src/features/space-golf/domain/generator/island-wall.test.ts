@@ -6,6 +6,9 @@ import { createIslandWall } from './island-wall';
 import type { Random } from './random';
 import { createRandom } from './random';
 
+/** A tee nowhere near the walls under test: no corner is spared for it. */
+const FAR_TEE = { x: -100, y: -100 };
+
 /** Outlines below are in half-metre cells; the walls come out in metres. */
 const grid = createEmptyGrid(18, 32);
 /** A random source that never asks for a long chamfer. */
@@ -35,7 +38,8 @@ describe('createIslandWall', () => {
         { x: 1, y: 4 },
       ],
       grid,
-      NEVER
+      NEVER,
+      FAR_TEE
     );
 
     expect(wall.vertices).toHaveLength(12);
@@ -53,7 +57,8 @@ describe('createIslandWall', () => {
         { x: 0, y: 2 },
       ],
       grid,
-      NEVER
+      NEVER,
+      FAR_TEE
     );
 
     expect(wall.vertices).toContainEqual({ x: -1, y: -1 });
@@ -71,12 +76,38 @@ describe('createIslandWall', () => {
         { x: 1, y: 3 },
       ],
       grid,
-      ALWAYS
+      ALWAYS,
+      FAR_TEE
     );
 
     const flats = wall.edges.filter(edge => edge.kind === 'floor');
     expect(flats.every(edge => edge.length >= 0.3 - 1e-9)).toBe(true);
     expect(wall.edges.some(edge => edge.kind === 'deflector' && edge.length > 0.5)).toBe(true);
+  });
+
+  it('cuts the end of a limb one cell thick to a point, and fills an inner corner with a long diagonal', () => {
+    // An L: a thin arm two cells long standing on a bar.
+    const wall = createIslandWall(
+      [
+        { x: 1, y: 1 },
+        { x: 7, y: 1 },
+        { x: 7, y: 3 },
+        { x: 2, y: 3 },
+        { x: 2, y: 7 },
+        { x: 1, y: 7 },
+      ],
+      grid,
+      ALWAYS,
+      FAR_TEE
+    );
+
+    const tip = wall.vertices.filter(vertex => Math.abs(vertex.y - 3.5) < 1e-9);
+    expect(tip).toHaveLength(1);
+    expect(tip[0].x).toBeCloseTo(0.75);
+    const fillet = wall.edges.find(
+      edge => edge.kind === 'deflector' && edge.from.x > 1 && edge.from.y > 1.4 && edge.from.y < 2.6
+    );
+    expect(fillet?.length).toBeGreaterThan(0.3);
   });
 
   it('is reproducible for a seed', () => {
@@ -87,8 +118,8 @@ describe('createIslandWall', () => {
       { x: 1, y: 4 },
     ];
 
-    expect(createIslandWall(outline, grid, createRandom(7))).toEqual(
-      createIslandWall(outline, grid, createRandom(7))
+    expect(createIslandWall(outline, grid, createRandom(7), FAR_TEE)).toEqual(
+      createIslandWall(outline, grid, createRandom(7), FAR_TEE)
     );
   });
 });

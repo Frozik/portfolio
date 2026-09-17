@@ -6,7 +6,7 @@ import {
   ROD_MAX_LENGTH_METERS,
   ROD_MIN_LENGTH_METERS,
 } from '../constants';
-import type { Edge, EdgeRef, Level, Rod, RodKind, Segment } from '../level';
+import type { Edge, EdgeRef, Level, Rod, RodKind, Segment, Wall } from '../level';
 import { pointAlongEdge } from '../level';
 import { createRod, rodSeat, rodTipLength, rodWidth } from '../rods';
 import { add, dot, normalize, rightNormal, scale, subtract } from '../vector';
@@ -132,7 +132,7 @@ function isClear(rod: Rod, level: Level, others: readonly Rod[]): boolean {
   for (let along = CORRIDOR_SAMPLE_METERS; along < path.length; along += CORRIDOR_SAMPLE_METERS) {
     const middle = pointAlongEdge(path, along);
     for (const point of [middle, add(middle, across), subtract(middle, across)]) {
-      if (level.walls.some(wall => containsPoint(wall, point))) {
+      if (level.walls.some(wall => isInBounds(wall, point) && containsPoint(wall, point))) {
         return false;
       }
     }
@@ -158,6 +158,11 @@ function isClear(rod: Rod, level: Level, others: readonly Rod[]): boolean {
     );
   });
   return teethClear && floatersClear && rodsClear;
+}
+
+function isInBounds(wall: Wall, point: Vector2): boolean {
+  const { min, max } = wall.bounds;
+  return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y;
 }
 
 /** The rod's centre line from its base to the face it reaches. */

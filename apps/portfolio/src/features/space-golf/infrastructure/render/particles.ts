@@ -10,7 +10,8 @@ interface Particle {
 
 export type ParticleField = readonly Particle[];
 
-export const PARTICLE_COUNT = 90;
+/** Ninety on the 9 × 16 m board; scaled with the board's area. */
+export const PARTICLE_COUNT = 200;
 const MIN_RADIUS_METERS = 0.015;
 const MAX_RADIUS_METERS = 0.04;
 /** Dust spills this far past the board on every side and wraps around there. */

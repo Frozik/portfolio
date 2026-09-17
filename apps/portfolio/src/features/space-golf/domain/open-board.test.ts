@@ -4,8 +4,6 @@ import type { BallState } from './ball';
 import { createBall, respawn } from './ball';
 import {
   BALL_RADIUS_METERS,
-  BOARD_HEIGHT_METERS,
-  BOARD_WIDTH_METERS,
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
   CUP_RADIUS_METERS,
@@ -15,6 +13,9 @@ import { shoot } from './shot';
 import { step } from './step';
 import { createBlock } from './walls';
 
+/** The specifications' own board, the reference's 9 × 16 m, whatever the game's grows to. */
+const BOARD_WIDTH_METERS = 9;
+const BOARD_HEIGHT_METERS = 16;
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const FLOOR_TOP = 1;
 

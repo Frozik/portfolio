@@ -1,14 +1,11 @@
-import {
-  BALL_RADIUS_METERS,
-  BOARD_HEIGHT_METERS,
-  BOARD_WIDTH_METERS,
-  CONTACT_EPSILON_METERS,
-  CUP_RADIUS_METERS,
-} from './constants';
+import { BALL_RADIUS_METERS, CONTACT_EPSILON_METERS, CUP_RADIUS_METERS } from './constants';
 import { carveCup } from './cup';
 import type { Level } from './level';
 import { createBlock, createChamferedBlock } from './walls';
 
+/** The specifications' own board, the reference's 9 × 16 m, whatever the game's grows to. */
+const BOARD_WIDTH_METERS = 9;
+const BOARD_HEIGHT_METERS = 16;
 /** Thickness of the frame around the board. */
 const FRAME = 1;
 /** The floor rises this far into the board, so the cup's notch lies on it. */

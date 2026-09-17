@@ -64,10 +64,14 @@ time.
   ball in its path aside; a ball that has come to a stop against anything
   at all — wedged between a rod and a corner, say — is at rest and can be
   shot
-- Levels are endless and procedural on a half-metre grid: each seed
-  scatters ten to fourteen islands of L, T, U, Z and stair shapes around a
-  tee shelf, a metre of space between them and under a third of the board
-  solid, every corner cut at 45° and some by a long diagonal, every empty
+- Levels are endless and procedural on a half-metre grid over a 13.5 × 24 m
+  board, after the original's: a few shores lie along the board's edges
+  and reach into it as L and C shapes, bodies grown into L, T, Z and stair
+  shapes stand between them, and lozenge and octagon islets fill what room
+  is left; limbs are a metre thick, now and then half, no slot in an island
+  is narrower than a metre, a metre and a half of space lies between
+  islands and under a third of the board is solid; most corners, inner ones
+  too, are cut by a long diagonal and thin limbs end in a point, every empty
   cell reachable from the tee; each island is one polygon with a
   continuous rim, its body painted with a procedural Khokhloma pattern in
   a fragment shader; on a landscape screen the board turns a quarter to

@@ -88,6 +88,16 @@ function isOnBoard(center: Vector2, board: Size): boolean {
 }
 
 function isClearOf(center: Vector2, wall: Wall): boolean {
+  // Far from the wall's box is far from every face of it: most walls are dismissed here.
+  const { min, max } = wall.bounds;
+  if (
+    center.x < min.x - FLOATER_CLEARANCE_METERS ||
+    center.x > max.x + FLOATER_CLEARANCE_METERS ||
+    center.y < min.y - FLOATER_CLEARANCE_METERS ||
+    center.y > max.y + FLOATER_CLEARANCE_METERS
+  ) {
+    return true;
+  }
   return (
     !containsPoint(wall, center) &&
     wall.edges.every(edge => distanceToSegment(center, edge) >= FLOATER_CLEARANCE_METERS)

@@ -4,7 +4,7 @@ import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import { currentGravity } from '../../domain/ball';
-import { BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS } from '../../domain/constants';
+import { BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS, CLOCK_SPEED } from '../../domain/constants';
 import type { Level } from '../../domain/level';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
 import type { PixelRect } from '../render/board-viewport';
@@ -177,7 +177,7 @@ export class BoardLayer implements RenderLayer {
     this.floaters = this.followStates(this.floaters, scene.ball.floaters, states =>
       buildFloaterMesh(scene.level, states)
     );
-    const elapsed = this.lastTime === undefined ? 0 : state.time - this.lastTime;
+    const elapsed = this.lastTime === undefined ? 0 : (state.time - this.lastTime) * CLOCK_SPEED;
     this.lastTime = state.time;
     if (!isNil(this.dust)) {
       this.dust = advanceParticles(
@@ -204,7 +204,7 @@ export class BoardLayer implements RenderLayer {
       viewport.yAxis.y,
       viewport.scale,
       (scene.level.seed % PATTERN_SHIFT_PERIOD_SEEDS) * PATTERN_SHIFT_METERS_PER_SEED,
-      state.time,
+      state.time * CLOCK_SPEED,
     ]);
     this.device.queue.writeBuffer(this.uniforms, 0, values);
     this.scissor = boardPixelRect(

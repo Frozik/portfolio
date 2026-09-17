@@ -3,12 +3,19 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { CUP_RADIUS_METERS } from '../constants';
 import type { Cup, Edge, Wall } from '../level';
 import { pointAlongEdge } from '../level';
+import { distance } from '../vector';
 import type { Random } from './random';
 import { supportsTee } from './tee-support';
 
 /** Flat face kept on either side of the notch, clear of the corner cuts. */
 const CUP_MARGIN_METERS = 0.2;
 const MIN_FACE_METERS = 2 * (CUP_RADIUS_METERS + CUP_MARGIN_METERS);
+/**
+ * The cup goes on one of the far faces: those at least this share of the
+ * farthest face's distance from the tee. The course then runs the length of
+ * the board, and still not always to the same corner.
+ */
+const FAR_FACE_SHARE = 0.8;
 interface Size {
   readonly width: number;
   readonly height: number;
@@ -16,9 +23,9 @@ interface Size {
 
 /**
  * The cup goes on a horizontal or vertical face that lies on the board —
- * never an underside, which would need gravity to point up — in the lower
- * half by preference, and never on the face the ball starts on. The notch
- * is centred somewhere along the face with a margin to both ends.
+ * never an underside, which would need gravity to point up — at the far
+ * end of the board from the tee, and never on the face the ball starts on.
+ * The notch is centred somewhere along the face with a margin to both ends.
  */
 export function placeCup(random: Random, walls: readonly Wall[], board: Size, tee: Vector2): Cup {
   const faces = walls.flatMap((wall, wallIndex) =>
@@ -36,8 +43,11 @@ export function placeCup(random: Random, walls: readonly Wall[], board: Size, te
   if (faces.length === 0) {
     throw new Error('placeCup: no face long enough for the cup');
   }
-  const lower = faces.filter(candidate => midpoint(candidate.face).y < board.height / 2);
-  const chosen = random.pick(lower.length > 0 ? lower : faces);
+  const fromTee = (face: Edge): number => distance(midpoint(face), tee);
+  const farthest = Math.max(...faces.map(candidate => fromTee(candidate.face)));
+  const chosen = random.pick(
+    faces.filter(candidate => fromTee(candidate.face) >= farthest * FAR_FACE_SHARE)
+  );
   const span = chosen.face.length - 2 * (CUP_RADIUS_METERS + CUP_MARGIN_METERS);
   return {
     wall: chosen.wall,

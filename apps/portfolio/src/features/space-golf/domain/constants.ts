@@ -1,6 +1,6 @@
-/** The board is portrait, like the reference: 9 × 16 metres. */
-export const BOARD_WIDTH_METERS = 9;
-export const BOARD_HEIGHT_METERS = 16;
+/** The board is portrait, like the reference, and half again as large as its 9 × 16 m arena (2026-09-18, the player: roomier is more interesting). */
+export const BOARD_WIDTH_METERS = 13.5;
+export const BOARD_HEIGHT_METERS = 24;
 /** The layout grid: islands are built from half-metre cells, so the board reads fine-grained next to the ball. */
 export const CELL_METERS = 0.5;
 
@@ -14,6 +14,12 @@ export const GRAVITY_METERS_PER_SECOND_SQUARED = 7;
 export const GRAVITY_TURN_SECONDS = 0.3;
 /** Two sub-steps per 60 Hz frame; the preview and the flight run the very same steps. */
 export const FIXED_STEP_SECONDS = 1 / 120;
+/**
+ * The game's clock runs this much faster than the wall clock: every rule
+ * and constant is as tuned, the whole thing just plays out quicker
+ * (2026-09-18, the player: the ball felt slow).
+ */
+export const CLOCK_SPEED = 1.1;
 /** How many contacts one step may resolve before the remainder is dropped. */
 export const MAX_CONTACTS_PER_STEP = 4;
 
@@ -30,9 +36,9 @@ export const BAND_SPEED_PER_METER = 7.5;
 export const AIM_DEAD_ZONE_METERS = 0.1;
 
 /** Share of the normal speed a wall gives back, flat or diagonal alike (recorded 0.3–0.5 on faces and corners). */
-export const WALL_RESTITUTION = 0.55;
+export const WALL_RESTITUTION = 0.4;
 /** An elastic surface springs back like the recording's thick gold bars (≈ 0.75) and then some. */
-export const BOUNCE_RESTITUTION = 0.8;
+export const BOUNCE_RESTITUTION = 0.6;
 /** A viscous surface swallows the impact: the recording's sticky diamond kept 6 % of the normal speed. */
 export const STICKY_RESTITUTION = 0.06;
 /** Share of the tangential speed kept on an impact (recorded ≈ 0.5). */

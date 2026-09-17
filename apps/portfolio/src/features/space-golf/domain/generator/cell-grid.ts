@@ -50,27 +50,46 @@ const NEIGHBOURS: readonly Cell[] = [
   { x: 0, y: -1 },
 ];
 
-/** Whether every empty cell can be walked to from `from` through empty cells. */
+/**
+ * Whether every empty cell can be walked to from `from` through empty cells.
+ * Runs for every arm an island tries to grow, so it works on flat arrays
+ * of cell keys rather than on sets and cell objects.
+ */
 export function isConnected(grid: CellGrid, from: Cell): boolean {
-  const seen = new Set<number>();
-  const queue: Cell[] = [from];
-  seen.add(from.y * grid.width + from.x);
-  while (queue.length > 0) {
-    const cell = queue.pop();
-    if (cell === undefined) {
-      break;
-    }
+  const { width, height, solid } = grid;
+  const seen = new Uint8Array(width * height);
+  const stack = new Int32Array(width * height);
+  let top = 0;
+  let reached = 1;
+  const start = from.y * width + from.x;
+  seen[start] = 1;
+  stack[top] = start;
+  top += 1;
+  while (top > 0) {
+    top -= 1;
+    const key = stack[top];
+    const x = key % width;
+    const y = (key - x) / width;
     for (const delta of NEIGHBOURS) {
-      const next = { x: cell.x + delta.x, y: cell.y + delta.y };
-      const key = next.y * grid.width + next.x;
-      if (!isSolid(grid, next.x, next.y) && !seen.has(key)) {
-        seen.add(key);
-        queue.push(next);
+      const nextX = x + delta.x;
+      const nextY = y + delta.y;
+      if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) {
+        continue;
+      }
+      const next = nextY * width + nextX;
+      if (!solid[next] && seen[next] === 0) {
+        seen[next] = 1;
+        reached += 1;
+        stack[top] = next;
+        top += 1;
       }
     }
   }
-  const emptyCount = grid.solid.filter(cell => !cell).length;
-  return seen.size === emptyCount;
+  let emptyCount = 0;
+  for (let key = 0; key < solid.length; key += 1) {
+    emptyCount += solid[key] ? 0 : 1;
+  }
+  return reached === emptyCount;
 }
 
 /** Whether the rectangle overlaps a solid cell or leaves the grid. */
@@ -103,6 +122,41 @@ export function hasDiagonalOnlyContact(grid: CellGrid): boolean {
       ) {
         return true;
       }
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether some run of empty cells between two blocks — along a row or a
+ * column — is shorter than `minCells`: a slot too narrow to be a passage,
+ * the comb the original's islands never show. Runs that end at the board's
+ * edge are open space, not slots. Only the rows and columns crossing
+ * `within` are looked at: a new slot can only open where cells were added.
+ */
+export function hasNarrowSlot(grid: CellGrid, minCells: number, within: CellRect): boolean {
+  const scan = (length: number, solidAt: (index: number) => boolean): boolean => {
+    let run = -1;
+    for (let index = 0; index < length; index += 1) {
+      if (solidAt(index)) {
+        if (run > 0 && run < minCells) {
+          return true;
+        }
+        run = 0;
+      } else if (run >= 0) {
+        run += 1;
+      }
+    }
+    return false;
+  };
+  for (let y = within.y; y < within.y + within.height; y += 1) {
+    if (scan(grid.width, x => isBlock(grid, x, y))) {
+      return true;
+    }
+  }
+  for (let x = within.x; x < within.x + within.width; x += 1) {
+    if (scan(grid.height, y => isBlock(grid, x, y))) {
+      return true;
     }
   }
   return false;
