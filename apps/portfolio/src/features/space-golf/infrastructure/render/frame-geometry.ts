@@ -1,7 +1,9 @@
 import { isNil } from 'lodash-es';
 
+import type { Vector2 } from '@frozik/utils/math/vector2';
 import { AIM_RING_RADIUS_METERS, BALL_RADIUS_METERS } from '../../domain/constants';
-import type { MeshData } from './mesh-writer';
+
+import type { MeshData, Rgba } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE } from './palette';
 import type { ParticleField } from './particles';
@@ -14,6 +16,11 @@ const BURST_RING_WIDTH_METERS = 0.08;
 const BURST_SECONDS = 0.45;
 const AIM_RING_WIDTH_METERS = 0.02;
 const QUAD_HALF = 0.5;
+/** The trail tapers from this share of the ball's width at its tail to the full width at the ball, and fades the same way. */
+const TRAIL_TAIL_WIDTH_SHARE = 0.2;
+const TRAIL_HEAD_ALPHA = 190;
+/** How the trail fades along its length: 1 is even, higher keeps the light near the ball. */
+const TRAIL_FADE_POWER = 1.7;
 const ALPHA_MAX = 255;
 
 /** The drifting dust, the far background everything else is painted over. */
@@ -47,7 +54,7 @@ export function buildOverlayMesh(scene: SceneFrame): MeshData {
   const aimable = scene.ball.phase === 'aiming' || pending;
   if (scene.aimRing && aimable) {
     writer.ring(
-      scene.ball.position,
+      scene.ballPosition,
       AIM_RING_RADIUS_METERS - AIM_RING_WIDTH_METERS / 2,
       AIM_RING_RADIUS_METERS + AIM_RING_WIDTH_METERS / 2,
       pending ? PALETTE.aimRingPending : PALETTE.aimRing
@@ -69,7 +76,45 @@ export function buildOverlayMesh(scene: SceneFrame): MeshData {
       [PALETTE.burst[0], PALETTE.burst[1], PALETTE.burst[2], alpha]
     );
   } else if (scene.ball.phase !== 'holed') {
-    writer.circle(scene.ball.position, BALL_RADIUS_METERS, PALETTE.ball);
+    writeTrail(writer, [...scene.trail, scene.ballPosition]);
+    writer.circle(scene.ballPosition, BALL_RADIUS_METERS, PALETTE.ball);
   }
   return writer.finish();
+}
+
+/**
+ * A streak behind the flying ball along the path it really took: a ball a
+ * few pixels across covers more than its own width per frame, and drawn as
+ * a lone disc it strobes; the streak is the motion blur that joins the
+ * frames. Tapered and faded towards the tail, so it reads as a wake and not
+ * as a line.
+ */
+function writeTrail(writer: MeshWriter, path: readonly Vector2[]): void {
+  const last = path.length - 1;
+  const halfWidthAt = (index: number): number =>
+    BALL_RADIUS_METERS * (TRAIL_TAIL_WIDTH_SHARE + (1 - TRAIL_TAIL_WIDTH_SHARE) * (index / last));
+  const colorAt = (index: number): Rgba => [
+    PALETTE.ball[0],
+    PALETTE.ball[1],
+    PALETTE.ball[2],
+    Math.round(TRAIL_HEAD_ALPHA * (index / last) ** TRAIL_FADE_POWER),
+  ];
+  for (let index = 0; index < last; index += 1) {
+    const from = path[index];
+    const to = path[index + 1];
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    if (length === 0) {
+      continue;
+    }
+    const across = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
+    const corner = (point: Vector2, halfWidth: number, side: number): Vector2 => ({
+      x: point.x + across.x * halfWidth * side,
+      y: point.y + across.y * halfWidth * side,
+    });
+    const [tail, head] = [colorAt(index), colorAt(index + 1)];
+    const [a, b] = [corner(from, halfWidthAt(index), 1), corner(from, halfWidthAt(index), -1)];
+    const [c, d] = [corner(to, halfWidthAt(index + 1), -1), corner(to, halfWidthAt(index + 1), 1)];
+    writer.shadedTriangle(a, b, c, [tail, tail, head]);
+    writer.shadedTriangle(a, c, d, [tail, head, head]);
+  }
 }

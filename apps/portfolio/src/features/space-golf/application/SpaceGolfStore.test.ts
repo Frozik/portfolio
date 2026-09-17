@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BAND_SPEED_PER_METER,
+  CLOCK_SPEED,
   FIXED_STEP_SECONDS,
   ROD_SPEED_METERS_PER_SECOND,
 } from '../domain/constants';
@@ -187,5 +188,46 @@ describe('SpaceGolfStore', () => {
     expect(store.preview).toHaveLength(5);
     store.release();
     expect(store.strokeCount).toBe(0);
+  });
+
+  it('draws the ball between two physics steps by the share of a step the frame has left over, so its motion is even at any frame rate', async () => {
+    const { store } = createStore();
+    await store.start();
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 3, y: 3 });
+    store.release();
+    const stepOfWallTime = FIXED_STEP_SECONDS / CLOCK_SPEED;
+
+    store.advance(stepOfWallTime * 2.5);
+
+    const scene = store.scene;
+    const after = scene?.ball.position ?? { x: 0, y: 0 };
+    const shown = scene?.ballPosition ?? { x: 0, y: 0 };
+    const tee = scene?.level.tee ?? { x: 0, y: 0 };
+    const travelled = Math.hypot(after.x - tee.x, after.y - tee.y);
+    const shownTravel = Math.hypot(shown.x - tee.x, shown.y - tee.y);
+    expect(shownTravel).toBeLessThan(travelled);
+    expect(shownTravel).toBeGreaterThan(travelled * 0.6);
+  });
+
+  it('trails the flying ball with its last positions and drops the trail once it rests', async () => {
+    const { store } = createStore();
+    await store.start();
+    expect(store.scene?.trail).toEqual([]);
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 3, y: 3 });
+    store.release();
+
+    store.advance(FRAME);
+    store.advance(FRAME);
+    expect(store.scene?.trail.length).toBeGreaterThan(2);
+
+    for (let frame = 0; frame < 60 * 12 && store.scene?.ball.phase === 'flying'; frame += 1) {
+      store.advance(FRAME);
+    }
+    for (let frame = 0; frame < 6; frame += 1) {
+      store.advance(FRAME);
+    }
+    expect(store.scene?.trail).toEqual([]);
   });
 });

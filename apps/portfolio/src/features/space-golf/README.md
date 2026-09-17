@@ -25,6 +25,9 @@ time.
   through weightlessness and a ball that touched a ceiling sags off it
   before it is drawn back up; the dust drifts along the very same pull, so
   the field shows the turn as it happens
+- The physics runs in fixed steps and the ball is drawn between them, so
+  it glides evenly at any refresh rate, trailing a short tapered streak
+  along the path it really flew — a few-pixel ball would strobe without it
 - The board is open space: blocks at the edge run on past it, a ball can
   fly off — it bursts the moment it leaves unless gravity brings it back
   within three seconds, and reappears where it last rested; the cup is a real rounded notch, two ball widths across, that the ball has to roll into —

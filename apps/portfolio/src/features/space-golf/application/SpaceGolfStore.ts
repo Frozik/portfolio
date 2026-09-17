@@ -10,6 +10,8 @@ import type { Progress } from '../domain/progress';
 import { completeLevel, FIRST_LEVEL, INITIAL_PROGRESS } from '../domain/progress';
 import { aim, previewDots, shoot } from '../domain/shot';
 import { step } from '../domain/step';
+import { lerp } from '../domain/vector';
+import { extendTrail } from './ball-trail';
 import type { LevelSource } from './ports/level-source';
 import type { ProgressRepository } from './ports/progress-repository';
 
@@ -23,6 +25,18 @@ export type GameStatus = 'loading' | 'playing' | 'completed';
 export interface Aim {
   readonly anchor: Vector2;
   readonly pull: Vector2;
+}
+
+/** What the renderer reads every frame. */
+export interface Scene {
+  readonly level: Level;
+  /** The ball as the physics has it, one fixed step at a time. */
+  readonly ball: BallState;
+  readonly burst: Burst | undefined;
+  /** Where to draw the ball: smoothed between steps. */
+  readonly ballPosition: Vector2;
+  /** The flying ball's recent positions, oldest first, ending just behind `ballPosition`. */
+  readonly trail: readonly Vector2[];
 }
 
 export interface Burst {
@@ -46,6 +60,9 @@ export class SpaceGolfStore {
 
   private level: Level | undefined = undefined;
   private ball: BallState | undefined = undefined;
+  /** The ball one physics step ago: the renderer shows it somewhere between the two. */
+  private previousBall: BallState | undefined = undefined;
+  private trail: readonly Vector2[] = [];
   private burst: Burst | undefined = undefined;
   private progress: Progress = INITIAL_PROGRESS;
   private accumulatorSeconds = 0;
@@ -60,6 +77,8 @@ export class SpaceGolfStore {
       this,
       | 'level'
       | 'ball'
+      | 'previousBall'
+      | 'trail'
       | 'burst'
       | 'progress'
       | 'accumulatorSeconds'
@@ -73,6 +92,8 @@ export class SpaceGolfStore {
         aiming: observableRef,
         level: false,
         ball: false,
+        previousBall: false,
+        trail: false,
         burst: false,
         progress: false,
         accumulatorSeconds: false,
@@ -86,13 +107,18 @@ export class SpaceGolfStore {
   }
 
   /** Frame-rate state for the renderer, read every frame. */
-  get scene():
-    | { readonly level: Level; readonly ball: BallState; readonly burst: Burst | undefined }
-    | undefined {
+  get scene(): Scene | undefined {
     if (isNil(this.level) || isNil(this.ball)) {
       return undefined;
     }
-    return { level: this.level, ball: this.ball, burst: this.burst };
+    return {
+      level: this.level,
+      ball: this.ball,
+      burst: this.burst,
+      ballPosition: this.shownPosition(this.ball),
+      // The newest point is the step the shown ball has not reached yet.
+      trail: this.trail.slice(0, -1),
+    };
   }
 
   /** The five dots of the pending stroke, or nothing while the band is slack. */
@@ -101,7 +127,7 @@ export class SpaceGolfStore {
     if (isNil(velocity) || isNil(this.ball)) {
       return undefined;
     }
-    return previewDots(this.ball.position, velocity);
+    return previewDots(this.shownPosition(this.ball), velocity);
   }
 
   get hasPreviousLevel(): boolean {
@@ -150,6 +176,7 @@ export class SpaceGolfStore {
       return;
     }
     this.ball = shoot(this.level, this.ball, velocity);
+    this.previousBall = this.ball;
     this.strokeCount = this.ball.stroke;
   }
 
@@ -172,6 +199,8 @@ export class SpaceGolfStore {
       return;
     }
     this.ball = createBall(this.level);
+    this.previousBall = this.ball;
+    this.trail = [];
     this.burst = undefined;
     this.aiming = undefined;
     this.strokeCount = 0;
@@ -195,6 +224,21 @@ export class SpaceGolfStore {
     this.disposed = true;
   }
 
+  /**
+   * Where the ball is drawn: between the last two physics steps, by the
+   * share of a step the frame has left in the accumulator. The steps are
+   * fixed and the frames are not, so a frame holds now two steps and now
+   * three; drawn at the last step the ball would lurch, drawn in between it
+   * glides. Only a flight is smoothed: a respawn is a jump, not a motion.
+   */
+  private shownPosition(ball: BallState): Vector2 {
+    const previous = this.previousBall;
+    if (isNil(previous) || previous.phase !== 'flying' || ball.phase !== 'flying') {
+      return ball.position;
+    }
+    return lerp(previous.position, ball.position, this.accumulatorSeconds / FIXED_STEP_SECONDS);
+  }
+
   private pendingVelocity(): Vector2 | undefined {
     return isNil(this.aiming) ? undefined : aim(this.aiming.anchor, this.aiming.pull);
   }
@@ -204,13 +248,16 @@ export class SpaceGolfStore {
     if (isNil(this.ball) || this.ball.phase === 'holed') {
       return;
     }
+    this.previousBall = this.ball;
     this.ball = step(level, this.ball, FIXED_STEP_SECONDS);
+    this.trail = extendTrail(this.trail, this.ball);
     if (!isNil(this.burst)) {
       const elapsedSeconds = this.burst.elapsedSeconds + FIXED_STEP_SECONDS;
       this.burst = { ...this.burst, elapsedSeconds };
       if (elapsedSeconds >= BURST_SECONDS) {
         this.burst = undefined;
         this.ball = respawn(this.ball);
+        this.previousBall = this.ball;
       }
       return;
     }
@@ -245,6 +292,8 @@ export class SpaceGolfStore {
     const level = this.levelSource(levelNumber);
     this.level = level;
     this.ball = createBall(level);
+    this.previousBall = this.ball;
+    this.trail = [];
     this.burst = undefined;
     this.aiming = undefined;
     this.levelNumber = levelNumber;
