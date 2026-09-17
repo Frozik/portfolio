@@ -66,5 +66,6 @@ time.
   solid, every corner cut at 45° and some by a long diagonal, every empty
   cell reachable from the tee; each island is one polygon with a
   continuous rim, its body painted with a procedural Khokhloma pattern in
-  a fragment shader; the HUD steps to the previous and next level and the
+  a fragment shader; on a landscape screen the board turns a quarter to
+  fill it, the tee at the left; the HUD steps to the previous and next level and the
   current one is kept in IndexedDB

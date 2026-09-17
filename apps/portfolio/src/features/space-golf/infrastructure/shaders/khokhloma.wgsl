@@ -5,6 +5,8 @@
 struct BoardUniforms {
     viewport: vec2<f32>,   // device pixels
     origin: vec2<f32>,     // device-pixel position of the board's lower-left corner
+    xAxis: vec2<f32>,      // the board's x axis in device pixels per metre
+    yAxis: vec2<f32>,      // the board's y axis in device pixels per metre — turned a quarter on a landscape canvas
     scale: f32,            // device pixels per metre
     seed: f32,             // per-level shift of the pattern, metres
     time: f32,             // seconds since the session started; unused here
@@ -45,7 +47,7 @@ const TAU = 6.2831853;
 
 @vertex
 fn vsBoard(vertex: VertexIn) -> VertexOut {
-    let pixel = vec2<f32>(U.origin.x + vertex.position.x * U.scale, U.origin.y - vertex.position.y * U.scale);
+    let pixel = U.origin + U.xAxis * vertex.position.x + U.yAxis * vertex.position.y;
     let clip = pixel / U.viewport * 2.0 - 1.0;
     var out: VertexOut;
     out.clipPosition = vec4<f32>(clip.x, -clip.y, 0.0, 1.0);

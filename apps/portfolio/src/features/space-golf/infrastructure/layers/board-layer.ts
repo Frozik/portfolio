@@ -31,8 +31,8 @@ import khokhlomaShaderSource from '../shaders/khokhloma.wgsl?raw';
 import mezenShaderSource from '../shaders/mezen.wgsl?raw';
 import surfacesShaderSource from '../shaders/surfaces.wgsl?raw';
 
-const UNIFORM_BYTES = 32;
-const UNIFORM_FLOATS = 8;
+const UNIFORM_BYTES = 48;
+const UNIFORM_FLOATS = 12;
 const MESH_LAYOUT: GPUVertexBufferLayout = {
   arrayStride: MESH_VERTEX_STRIDE_BYTES,
   attributes: [
@@ -198,6 +198,10 @@ export class BoardLayer implements RenderLayer {
       state.canvasHeight,
       viewport.origin.x,
       viewport.origin.y,
+      viewport.xAxis.x,
+      viewport.xAxis.y,
+      viewport.yAxis.x,
+      viewport.yAxis.y,
       viewport.scale,
       (scene.level.seed % PATTERN_SHIFT_PERIOD_SEEDS) * PATTERN_SHIFT_METERS_PER_SEED,
       state.time,

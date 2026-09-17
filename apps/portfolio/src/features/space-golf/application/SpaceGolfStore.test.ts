@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { BAND_SPEED_PER_METER, FIXED_STEP_SECONDS } from '../domain/constants';
+import {
+  BAND_SPEED_PER_METER,
+  FIXED_STEP_SECONDS,
+  ROD_SPEED_METERS_PER_SECOND,
+} from '../domain/constants';
 import { generateLevel } from '../domain/generator/generate-level';
 import type { Progress } from '../domain/progress';
 import { createRod } from '../domain/rods';
@@ -139,7 +143,9 @@ describe('SpaceGolfStore', () => {
     store.beginAim({ x: 4, y: 4 });
     store.updateAim({ x: 4, y: 2 });
     expect(store.preview).toHaveLength(5);
-    for (let frame = 0; frame < 60 * 9 && store.scene?.ball.phase === 'aiming'; frame += 1) {
+    // The rod has the whole board to cross before it reaches the tee.
+    const framesToCross = Math.ceil((60 * level.height) / ROD_SPEED_METERS_PER_SECOND);
+    for (let frame = 0; frame < framesToCross && store.scene?.ball.phase === 'aiming'; frame += 1) {
       store.advance(FRAME);
     }
 

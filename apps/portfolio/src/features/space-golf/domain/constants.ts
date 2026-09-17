@@ -17,9 +17,10 @@ export const FIXED_STEP_SECONDS = 1 / 120;
 /** How many contacts one step may resolve before the remainder is dropped. */
 export const MAX_CONTACTS_PER_STEP = 4;
 
-export const MAX_SPEED_METERS_PER_SECOND = 10;
+/** Raised 1.5× on 2026-09-17 by feel, from the recorded 10. */
+export const MAX_SPEED_METERS_PER_SECOND = 15;
 /** Metres per second of launch speed per metre of band stretch. */
-export const BAND_SPEED_PER_METER = 5;
+export const BAND_SPEED_PER_METER = 7.5;
 /** A pull shorter than this is a slack band: no dots, no stroke. */
 export const AIM_DEAD_ZONE_METERS = 0.15;
 
@@ -82,7 +83,7 @@ export const ROD_TIP_METERS = BALL_RADIUS_METERS;
 /** Fully out, the rod's tip has sunk this far into the face it bridges to. */
 export const ROD_SEAT_DEPTH_METERS = ROD_TIP_METERS;
 /** A rod slides out while gravity points its way and back in otherwise, at this speed. */
-export const ROD_SPEED_METERS_PER_SECOND = 2;
+export const ROD_SPEED_METERS_PER_SECOND = 1.5;
 /**
  * A rod that slides into the ball moves it out of the way step by step; of
  * its own speed it hands the ball only this share, so the ball is nudged

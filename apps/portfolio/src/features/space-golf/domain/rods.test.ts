@@ -163,7 +163,8 @@ describe('rods in play', () => {
       rods: [0, 0.5],
     };
 
-    const shoved = runUntil(level, inTheWay, 2, state => state.phase !== 'aiming');
+    const secondsToCross = BAR_LEFT_X / ROD_SPEED_METERS_PER_SECOND;
+    const shoved = runUntil(level, inTheWay, secondsToCross, state => state.phase !== 'aiming');
 
     expect(shoved.phase).toBe('flying');
     expect(Math.abs(shoved.position.y - 5)).toBeGreaterThan(0);
