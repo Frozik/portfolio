@@ -134,7 +134,35 @@ describe('SpaceGolfStore', () => {
     expect(store.strokeCount).toBe(0);
   });
 
-  it('drops the held aim when a rod knocks the resting ball into flight', async () => {
+  it('lets the band be pulled while the ball still moves; letting go then plays nothing, letting go once it rests plays the stroke', async () => {
+    const { store } = createStore();
+    await store.start();
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 2 });
+    store.release();
+    expect(store.strokeCount).toBe(1);
+    expect(store.scene?.ball.phase).toBe('flying');
+
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 3 });
+    expect(store.aiming).toBeDefined();
+    expect(store.preview).toHaveLength(5);
+    store.release();
+    expect(store.strokeCount).toBe(1);
+    expect(store.aiming).toBeUndefined();
+
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 3 });
+    for (let frame = 0; frame < 60 * 10 && store.scene?.ball.phase !== 'aiming'; frame += 1) {
+      store.advance(FRAME);
+    }
+    expect(store.scene?.ball.phase).toBe('aiming');
+    expect(store.aiming).toBeDefined();
+    store.release();
+    expect(store.strokeCount).toBe(2);
+  });
+
+  it('keeps the held aim when a rod knocks the resting ball into flight, and plays no stroke until it rests again', async () => {
     const level = createTestLevel();
     const overTee = createRod(
       'slide',
@@ -155,8 +183,8 @@ describe('SpaceGolfStore', () => {
     }
 
     expect(store.scene?.ball.phase).toBe('flying');
-    expect(store.aiming).toBeUndefined();
-    expect(store.preview).toBeUndefined();
+    expect(store.aiming).toBeDefined();
+    expect(store.preview).toHaveLength(5);
     store.release();
     expect(store.strokeCount).toBe(0);
   });

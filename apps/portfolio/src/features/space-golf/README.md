@@ -13,10 +13,13 @@ rendering and the feel right first; the cup and the spikes are back,
 elastic bars, pickups and the solvability guarantee are on the way one at a
 time.
 
-- Press anywhere and pull the rubber band; five dots in a straight line
-  from the ball show the direction and the power of the impulse, not the
-  flight — the bend under gravity is for the player to judge; returning to
-  the anchor cancels the stroke
+- Press anywhere and pull the rubber band, at any time — while the ball
+  still moves the five dots and the ring follow it in grey, and turn white
+  the moment it rests and letting go plays the stroke; the dots run in a
+  straight line from the ball and show the direction and the power of the
+  impulse, not the flight — the bend under gravity is for the player to
+  judge; returning to the anchor cancels the stroke, and so does letting
+  go before the ball rests
 - Gravity does not flip at the hit: the pull travels from where it was to
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it

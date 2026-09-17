@@ -26,6 +26,9 @@ export const PALETTE = {
   socketLip: [255, 255, 255, 255],
   ball: [255, 255, 255, 255],
   dot: [255, 255, 255, 220],
+  /** The dots and the ring while the ball still moves: the pull is taken, the stroke waits for the rest. */
+  dotPending: [150, 150, 158, 150],
+  aimRingPending: [150, 150, 158, 50],
   flag: [255, 255, 255, 255],
   burst: [255, 236, 180, 255],
   star: [255, 255, 255, 90],

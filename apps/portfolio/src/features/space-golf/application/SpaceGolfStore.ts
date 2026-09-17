@@ -125,8 +125,9 @@ export class SpaceGolfStore {
     });
   }
 
+  /** The band may be pulled at any time while the level is played; only a resting ball can be shot with it. */
   beginAim(anchor: Vector2): void {
-    if (this.ball?.phase === 'aiming' && this.status === 'playing') {
+    if (!isNil(this.ball) && this.ball.phase !== 'holed' && this.status === 'playing') {
       this.aiming = { anchor, pull: anchor };
     }
   }
@@ -141,11 +142,11 @@ export class SpaceGolfStore {
     this.aiming = undefined;
   }
 
-  /** Releases the band: a stroke when it is stretched and the ball still rests, nothing otherwise. */
+  /** Releases the band: a stroke when it is stretched and the ball rests, nothing otherwise — the pull is simply let go. */
   release(): void {
     const velocity = this.pendingVelocity();
     this.aiming = undefined;
-    if (isNil(velocity) || isNil(this.ball) || isNil(this.level)) {
+    if (isNil(velocity) || isNil(this.ball) || isNil(this.level) || this.ball.phase !== 'aiming') {
       return;
     }
     this.ball = shoot(this.level, this.ball, velocity);
@@ -194,11 +195,8 @@ export class SpaceGolfStore {
     this.disposed = true;
   }
 
-  // A stroke needs a resting ball: a rod may have knocked it off its rest while the band is held.
   private pendingVelocity(): Vector2 | undefined {
-    return isNil(this.aiming) || this.ball?.phase !== 'aiming'
-      ? undefined
-      : aim(this.aiming.anchor, this.aiming.pull);
+    return isNil(this.aiming) ? undefined : aim(this.aiming.anchor, this.aiming.pull);
   }
 
   // A holed ball is final: the frame's remaining steps must not count the hole-out again.
@@ -207,10 +205,6 @@ export class SpaceGolfStore {
       return;
     }
     this.ball = step(level, this.ball, FIXED_STEP_SECONDS);
-    // A rod may knock the ball off its rest while the band is held: the aim goes with the rest.
-    if (this.ball.phase !== 'aiming' && !isNil(this.aiming)) {
-      this.aiming = undefined;
-    }
     if (!isNil(this.burst)) {
       const elapsedSeconds = this.burst.elapsedSeconds + FIXED_STEP_SECONDS;
       this.burst = { ...this.burst, elapsedSeconds };

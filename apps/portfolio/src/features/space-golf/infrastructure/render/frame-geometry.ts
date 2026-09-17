@@ -35,20 +35,27 @@ export function buildDustMesh(dust: ParticleField): MeshData {
   return writer.finish();
 }
 
-/** The ball, the aim ring, the dots and the burst — drawn over the board. */
+/**
+ * The ball, the aim ring, the dots and the burst — drawn over the board.
+ * The band may be pulled while the ball still moves: the ring and the dots
+ * then follow the ball in grey, and turn white the moment it rests and
+ * the stroke can be played.
+ */
 export function buildOverlayMesh(scene: SceneFrame): MeshData {
   const writer = new MeshWriter();
-  if (scene.aimRing && scene.ball.phase === 'aiming') {
+  const pending = scene.ball.phase === 'flying';
+  const aimable = scene.ball.phase === 'aiming' || pending;
+  if (scene.aimRing && aimable) {
     writer.ring(
       scene.ball.position,
       AIM_RING_RADIUS_METERS - AIM_RING_WIDTH_METERS / 2,
       AIM_RING_RADIUS_METERS + AIM_RING_WIDTH_METERS / 2,
-      PALETTE.aimRing
+      pending ? PALETTE.aimRingPending : PALETTE.aimRing
     );
   }
-  if (!isNil(scene.preview)) {
+  if (!isNil(scene.preview) && aimable) {
     for (const dot of scene.preview) {
-      writer.circle(dot, PREVIEW_DOT_RADIUS_METERS, PALETTE.dot);
+      writer.circle(dot, PREVIEW_DOT_RADIUS_METERS, pending ? PALETTE.dotPending : PALETTE.dot);
     }
   }
   if (!isNil(scene.burst)) {
