@@ -1,14 +1,17 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BallState } from './ball';
+import type { WallHit } from './collision';
 import { BALL_RADIUS_METERS } from './constants';
 import type { FaceKind, Level, Wall } from './level';
 import { edgeOf, pointAlongEdge } from './level';
-import { distance } from './vector';
+import { distance, scale, subtract } from './vector';
 import { createWall } from './walls';
 
 /** Segments the half-circle of the notch is drawn and collided with. */
 const CUP_ARC_SEGMENTS = 8;
+/** A corner this close to the rim's circle is a corner of the rim. */
+const RIM_TOLERANCE_METERS = 1e-3;
 
 /** The centre of the notch: on the face's line, `at` metres along the edge. */
 export function cupCenter(level: Level): Vector2 {
@@ -57,6 +60,23 @@ export function carveCup(level: Level): Level {
   const carved = createWall(vertices, kinds);
   const walls = level.walls.map((each, index) => (index === cup.wall ? carved : each));
   return { ...level, walls };
+}
+
+/**
+ * Whether a contact is with the hole's rim: one of its segments, or a
+ * corner on the rim's circle — the corners between segments and the two
+ * at the mouth, which the sweep may credit to the face beside the notch.
+ * `position` is the ball's centre at the contact.
+ */
+export function touchesRim(level: Level, hit: WallHit, position: Vector2): boolean {
+  if (hit.kind === 'cup') {
+    return true;
+  }
+  if (hit.at !== 'corner' || hit.wall !== level.cup.wall) {
+    return false;
+  }
+  const corner = subtract(position, scale(hit.normal, BALL_RADIUS_METERS));
+  return Math.abs(distance(corner, cupCenter(level)) - level.cup.radius) <= RIM_TOLERANCE_METERS;
 }
 
 /**

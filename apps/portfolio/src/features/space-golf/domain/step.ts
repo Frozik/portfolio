@@ -27,7 +27,7 @@ import {
   STICKY_ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED,
   WALL_RESTITUTION,
 } from './constants';
-import { isInCup } from './cup';
+import { isInCup, touchesRim } from './cup';
 import type { FloaterHit } from './floaters';
 import { sweepCircleAgainstFloaters } from './floaters';
 import type { FaceKind, Level } from './level';
@@ -103,12 +103,13 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     }
 
     position = contactPosition(position, target, hit, CONTACT_EPSILON_METERS);
-    const response = respond(velocity, hit);
+    const onRim = 'wall' in hit && touchesRim(level, hit, position);
+    const response = respond(velocity, hit, onRim);
     velocity = response.velocity;
     if (response.becomesFloor) {
       // The rim counts as the face the hole is cut into: gravity turns into
       // that face, so the ball settles on the bottom of the notch.
-      const floorNormal = hit.kind === 'cup' ? edgeOf(level, level.cup).normal : hit.normal;
+      const floorNormal = onRim ? edgeOf(level, level.cup).normal : hit.normal;
       floored = floorTo(floored, scale(floorNormal, -1));
     }
     contact = response.resting ? contactOf(hit) : undefined;
@@ -249,15 +250,17 @@ interface Response {
  * ball comes to lie on a face — and the tangential one loses a share to
  * friction. Every axis-aligned face and every segment of the hole's rim
  * makes a floor; corners and diagonals reflect and leave gravity alone, and
- * so does a floater's side, though the ball may come to lie on it. An
+ * so does a floater's side, though the ball may come to lie on it — except
+ * the hole's rim, which turns gravity wherever it is touched, between its
+ * segments too, so a ball dropped in under sideways gravity settles. An
  * elastic surface springs back even a soft touch, a viscous one swallows the
  * impact and grabs the ball along the face.
  */
-function respond(velocity: Vector2, hit: Impact): Response {
+function respond(velocity: Vector2, hit: Impact, onRim: boolean): Response {
   const normalSpeed = dot(velocity, hit.normal);
   const tangential = subtract(velocity, scale(hit.normal, normalSpeed));
   const onFace = hit.at === 'face' && hit.kind !== 'deflector';
-  const isFloor = onFace && hit.kind !== 'floater' && hit.kind !== 'rod';
+  const isFloor = (onFace && hit.kind !== 'floater' && hit.kind !== 'rod') || onRim;
   const minBounceSpeed =
     hit.kind === 'bounce'
       ? ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND

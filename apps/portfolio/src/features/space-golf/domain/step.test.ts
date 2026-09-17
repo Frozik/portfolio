@@ -179,6 +179,24 @@ describe('step', () => {
     expect(settled.phase).toBe('holed');
   });
 
+  it('turns gravity into the face the cup is cut into wherever the ball touches the rim, corners included', () => {
+    const sideways: Vector2 = { x: 1, y: 0 };
+    const acrossTheNotch = [4.38, 4.42, 4.46, 4.5, 4.54, 4.58, 4.62];
+    for (const x of acrossTheNotch) {
+      const dropping: BallState = {
+        ...ballAt({ x, y: 1.3 }),
+        phase: 'flying',
+        down: sideways,
+        turn: { from: sideways, elapsedSeconds: GRAVITY_TURN_SECONDS },
+        velocity: { x: 0, y: -1.5 },
+      };
+
+      const later = fly(dropping, 0.3);
+
+      expect(later.down, `dropped at x = ${x}`).toEqual({ x: 0, y: -1 });
+    }
+  });
+
   it('bounces a fast ball off the rim of the cup instead of catching it', () => {
     const fast = fly(shoot(level, ballAt({ x: 4.5, y: 3 }), { x: 0, y: -9 }), 0.4);
 
