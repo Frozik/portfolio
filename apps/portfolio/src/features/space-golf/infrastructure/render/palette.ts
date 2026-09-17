@@ -11,6 +11,11 @@ export const PALETTE = {
   steel: [168, 174, 186, 255],
   steelLight: [236, 240, 246, 255],
   rivet: [40, 42, 48, 255],
+  /** A screw rod and its plates: brass, so the two kinds are told apart at a glance; the thread is cut in dark. */
+  brassDark: [96, 72, 30, 255],
+  brass: [190, 150, 70, 255],
+  brassLight: [240, 214, 140, 255],
+  thread: [58, 42, 16, 255],
   /** A spike tooth: white like the ball, shaded across so it reads as a cone. */
   spikeLit: [255, 255, 255, 255],
   spikeShade: [150, 150, 162, 255],

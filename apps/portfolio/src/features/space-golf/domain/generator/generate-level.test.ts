@@ -7,11 +7,11 @@ import {
   FLOATER_CLEARANCE_METERS,
   ROD_MAX_LENGTH_METERS,
   ROD_MIN_LENGTH_METERS,
-  ROD_SEAT_DEPTH_METERS,
   SPIKE_HEIGHT_METERS,
   SPIKE_WIDTH_METERS,
 } from '../constants';
 import { edgeOf, pointAlongEdge } from '../level';
+import { rodTipLength } from '../rods';
 import { touchesBall } from '../spikes';
 import { containsPoint } from '../walls';
 import { generateLevel } from './generate-level';
@@ -172,7 +172,7 @@ describe('generateLevel', () => {
       expect(level.rods.length).toBeGreaterThanOrEqual(1);
       expect(level.rods.length).toBeLessThanOrEqual(4);
       for (const rod of level.rods) {
-        const gap = rod.length - ROD_SEAT_DEPTH_METERS;
+        const gap = rod.length - rodTipLength(rod.kind);
         const tip = {
           x: rod.base.x + rod.direction.x * gap,
           y: rod.base.y + rod.direction.y * gap,
@@ -198,7 +198,8 @@ describe('generateLevel', () => {
         expect(level.walls.some(wall => containsPoint(wall, middle))).toBe(false);
       }
     }
-    expect(SEEDS.some(seed => levelOf(seed).rods.length > 0)).toBe(true);
+    const kinds = new Set(SEEDS.flatMap(seed => levelOf(seed).rods.map(rod => rod.kind)));
+    expect(kinds).toEqual(new Set(['slide', 'screw']));
   });
 
   it('is deterministic per seed', () => {

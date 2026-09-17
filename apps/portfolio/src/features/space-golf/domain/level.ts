@@ -104,12 +104,20 @@ export interface Floater {
 }
 
 /**
+ * `slide`: a plain rod that slides out while gravity points its way and
+ * back in otherwise. `screw`: a thicker, threaded one that turns out while
+ * gravity points its way, in while gravity points the other way, and holds
+ * where it is while gravity is across it.
+ */
+export type RodKind = 'slide' | 'screw';
+
+/**
  * A rod sliding out of a wall face along its normal, `length` metres to its
  * seat in the face it bridges to — the gap plus the depth the tip sinks in.
- * It slides out while gravity points its way and back in otherwise; how far
- * it stands out lives in the ball's state. Every rod starts fully in.
+ * How far it stands out lives in the ball's state. Every rod starts fully in.
  */
 export interface Rod {
+  readonly kind: RodKind;
   /** The middle of the rod on the face it slides out of. */
   readonly base: Vector2;
   /** Unit vector, the face's outward normal: which way the rod slides out. */

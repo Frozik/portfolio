@@ -5,12 +5,10 @@ import {
   FLOATER_LARGE_SIDE_METERS,
   ROD_MAX_LENGTH_METERS,
   ROD_MIN_LENGTH_METERS,
-  ROD_SEAT_DEPTH_METERS,
-  ROD_WIDTH_METERS,
 } from '../constants';
-import type { Edge, EdgeRef, Level, Rod, Segment } from '../level';
+import type { Edge, EdgeRef, Level, Rod, RodKind, Segment } from '../level';
 import { pointAlongEdge } from '../level';
-import { createRod, rodSeat } from '../rods';
+import { createRod, rodSeat, rodTipLength, rodWidth } from '../rods';
 import { add, dot, normalize, rightNormal, scale, subtract } from '../vector';
 import { containsPoint } from '../walls';
 import type { Random } from './random';
@@ -20,9 +18,12 @@ const MIN_RODS = 2;
 const MAX_RODS = 4;
 /** Faces and spots tried before the level goes with the rods it has. */
 const ATTEMPTS = 300;
+const KINDS: readonly RodKind[] = ['slide', 'screw'];
+/** The widest rod there is, for what the faces must accommodate. */
+const WIDEST_ROD_METERS = Math.max(...KINDS.map(rodWidth));
 /** Face kept clear beside the rod at the ends of the face it slides out of and of the face it reaches. */
 const END_CLEARANCE_METERS = 0.2;
-const END_MARGIN_METERS = ROD_WIDTH_METERS / 2 + END_CLEARANCE_METERS;
+const END_MARGIN_METERS = WIDEST_ROD_METERS / 2 + END_CLEARANCE_METERS;
 /** Empty space kept around the rod's path, beyond its own thickness. */
 const CORRIDOR_CLEARANCE_METERS = 0.1;
 const CORRIDOR_SAMPLE_METERS = 0.05;
@@ -66,7 +67,8 @@ export function placeRods(random: Random, level: Level): readonly Rod[] {
     if (gap === undefined) {
       continue;
     }
-    const rod = createRod(base, direction, gap + ROD_SEAT_DEPTH_METERS);
+    const kind = random.pick(KINDS);
+    const rod = createRod(kind, base, direction, gap + rodTipLength(kind));
     if (isClear(rod, level, rods)) {
       rods.push(rod);
     }
@@ -119,7 +121,7 @@ function gapAcross(base: Vector2, direction: Vector2, faces: readonly Face[]): n
 /** The rod's path — its thickness plus the clearance, from base to the face it reaches — lies on the board and meets nothing. */
 function isClear(rod: Rod, level: Level, others: readonly Rod[]): boolean {
   const path = pathOf(rod);
-  const halfWidth = ROD_WIDTH_METERS / 2 + CORRIDOR_CLEARANCE_METERS;
+  const halfWidth = rodWidth(rod.kind) / 2 + CORRIDOR_CLEARANCE_METERS;
   const across = scale(rightNormal(rod.direction), halfWidth);
   const onBoard = [path.from, path.to].every(
     point => point.x >= 0 && point.y >= 0 && point.x <= level.width && point.y <= level.height
@@ -147,11 +149,12 @@ function isClear(rod: Rod, level: Level, others: readonly Rod[]): boolean {
   );
   const rodsClear = others.every(other => {
     const theirs = pathOf(other);
+    const apart = rodWidth(other.kind) + reach;
     return (
-      distanceToSegment(path.from, theirs) >= ROD_WIDTH_METERS + reach &&
-      distanceToSegment(path.to, theirs) >= ROD_WIDTH_METERS + reach &&
-      distanceToSegment(theirs.from, path) >= ROD_WIDTH_METERS + reach &&
-      distanceToSegment(theirs.to, path) >= ROD_WIDTH_METERS + reach
+      distanceToSegment(path.from, theirs) >= apart &&
+      distanceToSegment(path.to, theirs) >= apart &&
+      distanceToSegment(theirs.from, path) >= apart &&
+      distanceToSegment(theirs.to, path) >= apart
     );
   });
   return teethClear && floatersClear && rodsClear;
@@ -166,6 +169,6 @@ function pathOf(rod: Rod): Segment {
     to,
     direction,
     normal: rightNormal(direction),
-    length: rod.length - ROD_SEAT_DEPTH_METERS,
+    length: rod.length - rodTipLength(rod.kind),
   };
 }

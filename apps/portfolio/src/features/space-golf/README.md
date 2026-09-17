@@ -49,12 +49,13 @@ time.
   come to lie on top of one; painted after the Mezen tradition, red ochre
   and soot on dark wood — rows of zigzags, lozenges and slanted strokes on
   a square, a rim, a ring of rays and a sun on a circle
-- Two to four steel rods slide out of wall faces to bridge the gap to the
-  face squarely across, up to forty ball widths away, the pointed tip
-  seating in a steel plate on the far face like the one it slides out of: a
-  rod slides out at a
-  steady pace while gravity points its way and back in otherwise, so every
-  flip of the floor redraws the bridges; for the ball it is a wall as
+- Two to four rods slide out of wall faces to bridge the gap to the face
+  squarely across, up to forty ball widths away, the pointed tip seating in
+  a plate on the far face like the one it slides out of; a steel rod slides
+  out at a steady pace while gravity points its way and back in otherwise,
+  a thicker brass screw turns out along gravity, in against it and holds
+  where it is while gravity runs across it, so every flip of the floor
+  redraws the bridges; for the ball it is a wall as
   springy as a floater and just as indifferent to gravity, the ball may lie
   on it and is dropped when it slides away, and its pointed tip nudges a
   ball in its path aside; a ball that has come to a stop against anything

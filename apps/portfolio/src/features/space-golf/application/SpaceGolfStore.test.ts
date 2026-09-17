@@ -136,7 +136,12 @@ describe('SpaceGolfStore', () => {
 
   it('drops the held aim when a rod knocks the resting ball into flight', async () => {
     const level = createTestLevel();
-    const overTee = createRod({ x: level.tee.x, y: level.height }, { x: 0, y: -1 }, level.height);
+    const overTee = createRod(
+      'slide',
+      { x: level.tee.x, y: level.height },
+      { x: 0, y: -1 },
+      level.height
+    );
     const { store } = createStore(undefined, () => ({ ...level, rods: [overTee] }));
     await store.start();
 

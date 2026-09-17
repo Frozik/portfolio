@@ -2,16 +2,16 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
-import { ROD_WIDTH_METERS } from '../../domain/constants';
 import { cupCenter } from '../../domain/cup';
-import type { Edge, Level } from '../../domain/level';
+import type { Edge, Level, Rod } from '../../domain/level';
 import { edgeOf } from '../../domain/level';
-import { rodSeat } from '../../domain/rods';
+import { rodSeat, rodWidth } from '../../domain/rods';
 import { rightNormal } from '../../domain/vector';
 import { FramedMeshWriter } from './framed-mesh-writer';
 import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE } from './palette';
+import { rodTones } from './rod-geometry';
 import { writeSurfaceBand } from './surface-mesh-writer';
 
 const RIM_WIDTH_METERS = 0.07;
@@ -24,8 +24,8 @@ const FLAG_POLE_HEIGHT_METERS = 0.75;
 const FLAG_POLE_WIDTH_METERS = 0.03;
 const FLAG_WIDTH_METERS = 0.22;
 const FLAG_HEIGHT_METERS = 0.14;
-/** The steel plate a rod slides through: wider than the rod, sunk into the face and lipped out of it. */
-const PLATE_WIDTH_METERS = ROD_WIDTH_METERS * 1.8;
+/** The plate a rod slides through: this much wider than the rod, sunk into the face and lipped out of it. */
+const PLATE_WIDTH_FACTOR = 1.8;
 const PLATE_DEPTH_METERS = 0.06;
 const PLATE_LIP_METERS = 0.035;
 /** The dark opening the rod passes through, a touch narrower than the rod so the rod seems to fill it. */
@@ -56,8 +56,8 @@ export function buildLevelMeshes(level: Level): LevelMeshes {
   }
   writeFlag(decor, level);
   for (const rod of level.rods) {
-    writePlate(decor, rod.base, rod.direction);
-    writePlate(decor, rodSeat(rod), { x: -rod.direction.x, y: -rod.direction.y });
+    writePlate(decor, rod, rod.base, rod.direction);
+    writePlate(decor, rod, rodSeat(rod), { x: -rod.direction.x, y: -rod.direction.y });
   }
   return { fill: fill.finish(), decor: decor.finish(), surfaces: surfaces.finish() };
 }
@@ -101,28 +101,31 @@ function writeFlag(writer: MeshWriter, level: Level): void {
 }
 
 /**
- * A steel plate on a face at `center`, `normal` pointing out of the face: a
- * bevelled collar, dark where it sinks into the wall and bright at the lip,
+ * A plate on a face at `center`, `normal` pointing out of the face: a
+ * bevelled collar in the rod's own metal — steel for a sliding rod, brass
+ * for a screw — dark where it sinks into the wall and bright at the lip,
  * with a dark opening for the rod and a rivet either side of it.
  */
-function writePlate(writer: MeshWriter, center: Vector2, normal: Vector2): void {
+function writePlate(writer: MeshWriter, rod: Rod, center: Vector2, normal: Vector2): void {
   const along = rightNormal(normal);
   const corner = (side: number, out: number): Vector2 =>
     offset(offset(center, along, side), normal, out);
-  const half = PLATE_WIDTH_METERS / 2;
+  const width = rodWidth(rod.kind);
+  const half = (width * PLATE_WIDTH_FACTOR) / 2;
+  const tones = rodTones(rod.kind);
   writer.shadedTriangle(
     corner(-half, -PLATE_DEPTH_METERS),
     corner(half, -PLATE_DEPTH_METERS),
     corner(half, PLATE_LIP_METERS),
-    [PALETTE.steelDark, PALETTE.steelDark, PALETTE.steelLight]
+    [tones.dark, tones.dark, tones.light]
   );
   writer.shadedTriangle(
     corner(-half, -PLATE_DEPTH_METERS),
     corner(half, PLATE_LIP_METERS),
     corner(-half, PLATE_LIP_METERS),
-    [PALETTE.steelDark, PALETTE.steelLight, PALETTE.steelLight]
+    [tones.dark, tones.light, tones.light]
   );
-  const mouth = (ROD_WIDTH_METERS * PLATE_MOUTH_SHARE) / 2;
+  const mouth = (width * PLATE_MOUTH_SHARE) / 2;
   writer.convexPolygon(
     [
       corner(-mouth, -PLATE_DEPTH_METERS),

@@ -8,12 +8,12 @@ import {
   CONTACT_EPSILON_METERS,
   FIXED_STEP_SECONDS,
   ROD_SPEED_METERS_PER_SECOND,
-  ROD_TIP_METERS,
   ROD_WIDTH_METERS,
+  SCREW_WIDTH_FACTOR,
   WALL_RESTITUTION,
 } from './constants';
 import type { Level } from './level';
-import { advanceRods, createRod, rodShape } from './rods';
+import { advanceRods, createRod, rodShape, rodTipLength, rodWidth } from './rods';
 import { step } from './step';
 import { createTestLevel } from './test-level';
 import { createChamferedBlock } from './walls';
@@ -35,8 +35,13 @@ function withRods(): Level {
   return {
     ...base,
     rods: [
-      createRod({ x: 2, y: CEILING_Y }, DOWN, 2),
-      createRod({ x: LEFT_WALL_X, y: 5 }, RIGHT, BAR_LEFT_X - LEFT_WALL_X + ROD_TIP_METERS),
+      createRod('slide', { x: 2, y: CEILING_Y }, DOWN, 2),
+      createRod(
+        'slide',
+        { x: LEFT_WALL_X, y: 5 },
+        RIGHT,
+        BAR_LEFT_X - LEFT_WALL_X + rodTipLength('slide')
+      ),
     ],
   };
 }
@@ -75,14 +80,23 @@ describe('rodShape', () => {
     expect(shape.bounds.max.y).toBeCloseTo(CEILING_Y);
     expect(shape.bounds.min.y).toBeCloseTo(CEILING_Y - 0.5);
     expect(shape.edges.every(edge => edge.kind === 'rod')).toBe(true);
-    expect(ROD_TIP_METERS).toBeCloseTo(BALL_RADIUS_METERS);
+    expect(rodTipLength('slide')).toBeCloseTo(BALL_RADIUS_METERS);
+  });
+
+  it('makes a screw rod half again as thick, its point longer to match', () => {
+    const screw = createRod('screw', { x: 2, y: CEILING_Y }, DOWN, 2);
+    const shape = rodShape(screw, 1);
+
+    expect(rodWidth('screw')).toBeCloseTo(ROD_WIDTH_METERS * SCREW_WIDTH_FACTOR);
+    expect(shape.bounds.max.x - shape.bounds.min.x).toBeCloseTo(rodWidth('screw'));
+    expect(rodTipLength('screw')).toBeCloseTo(rodWidth('screw') / 2);
   });
 
   it('folds as it slides in: nothing of it stands behind the face, however thin the wall', () => {
     // The thin bar at x = 4..4.1 is far thinner than the rod is long.
     const level: Level = {
       ...base,
-      rods: [createRod({ x: 4.1, y: 4 }, RIGHT, 2)],
+      rods: [createRod('slide', { x: 4.1, y: 4 }, RIGHT, 2)],
     };
     const towardsTheBar: BallState = {
       ...createBall(level),
@@ -110,6 +124,22 @@ describe('advanceRods', () => {
 
     expect(out[0]).toBeCloseTo(1 + ROD_SPEED_METERS_PER_SECOND * dt);
     expect(out[1]).toBeCloseTo(1 - ROD_SPEED_METERS_PER_SECOND * dt);
+  });
+
+  it('turns a screw rod out along gravity, in against it, and holds it across gravity — where a sliding rod slides in', () => {
+    const screwed: Level = {
+      ...base,
+      rods: [
+        createRod('screw', { x: 2, y: CEILING_Y }, DOWN, 2),
+        createRod('slide', { x: 3, y: CEILING_Y }, DOWN, 2),
+      ],
+    };
+    const dt = 0.1;
+    const travel = ROD_SPEED_METERS_PER_SECOND * dt;
+
+    expect(advanceRods(screwed, [1, 1], DOWN, dt)[0]).toBeCloseTo(1 + travel);
+    expect(advanceRods(screwed, [1, 1], { x: 0, y: 1 }, dt)[0]).toBeCloseTo(1 - travel);
+    expect(advanceRods(screwed, [1, 1], RIGHT, dt)).toEqual([1, 1 - travel]);
   });
 
   it('stops at either end', () => {
@@ -189,8 +219,8 @@ describe('rods in play', () => {
     const dropped = runUntil(level, onRod, 2, state => state.phase !== 'aiming');
     expect(dropped.phase).toBe('flying');
     // The support goes the moment the shoulder of the tip slides past the ball.
-    expect(dropped.rods[1]).toBeLessThan(1.5 + ROD_TIP_METERS);
-    expect(dropped.rods[1]).toBeGreaterThan(1.5 - ROD_TIP_METERS);
+    expect(dropped.rods[1]).toBeLessThan(1.5 + rodTipLength('slide'));
+    expect(dropped.rods[1]).toBeGreaterThan(1.5 - rodTipLength('slide'));
 
     const fallen = run(level, dropped, 1);
     expect(fallen.position.y).toBeLessThan(top);
@@ -200,7 +230,10 @@ describe('rods in play', () => {
     // A rod hangs just right of the bar's top-right corner; the ball leans on the corner and the rod.
     const gap = 0.02;
     const rodX = BAR_RIGHT_X + BALL_RADIUS_METERS + ROD_WIDTH_METERS / 2 + gap;
-    const level: Level = { ...base, rods: [createRod({ x: rodX, y: CEILING_Y }, DOWN, 12)] };
+    const level: Level = {
+      ...base,
+      rods: [createRod('slide', { x: rodX, y: CEILING_Y }, DOWN, 12)],
+    };
     const leaning = {
       x: rodX - ROD_WIDTH_METERS / 2 - BALL_RADIUS_METERS,
       y: BAR_TOP_Y + Math.sqrt(BALL_RADIUS_METERS ** 2 - gap ** 2),
@@ -226,7 +259,7 @@ describe('rods in play', () => {
     const level: Level = {
       ...base,
       walls: [...base.walls, shelf],
-      rods: [createRod({ x: rodX, y: CEILING_Y }, DOWN, 12)],
+      rods: [createRod('slide', { x: rodX, y: CEILING_Y }, DOWN, 12)],
     };
     const dropped: BallState = {
       ...createBall(level),

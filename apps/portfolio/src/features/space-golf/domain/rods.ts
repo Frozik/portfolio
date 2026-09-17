@@ -1,17 +1,18 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Impact } from './collision';
 import { distanceToSegment, sweepCircleAgainstWall } from './collision';
+
 import {
   BALL_RADIUS_METERS,
   CONTACT_EPSILON_METERS,
-  ROD_SEAT_DEPTH_METERS,
   ROD_SHOVE_CARRY_SHARE,
   ROD_SPEED_METERS_PER_SECOND,
-  ROD_TIP_METERS,
   ROD_WIDTH_METERS,
+  SCREW_WIDTH_FACTOR,
 } from './constants';
-import type { FaceKind, Level, Rod, RodEdgeRef, Wall } from './level';
+import type { FaceKind, Level, Rod, RodEdgeRef, RodKind, Wall } from './level';
 import { add, dot, rightNormal, scale, subtract, ZERO } from './vector';
 import { containsPoint, createWall } from './walls';
 
@@ -21,22 +22,51 @@ const ROD_SIDES = 5;
 /** The shortest body the outline keeps behind the tip's shoulder, so the polygon never folds. */
 const SHAPE_MIN_BODY_METERS = CONTACT_EPSILON_METERS;
 
-export function createRod(base: Vector2, direction: Vector2, length: number): Rod {
-  return { base, direction, length };
+export function createRod(kind: RodKind, base: Vector2, direction: Vector2, length: number): Rod {
+  return { kind, base, direction, length };
+}
+
+export function rodWidth(kind: RodKind): number {
+  switch (kind) {
+    case 'slide':
+      return ROD_WIDTH_METERS;
+    case 'screw':
+      return ROD_WIDTH_METERS * SCREW_WIDTH_FACTOR;
+    default:
+      return assertNever(kind);
+  }
+}
+
+/** The pointed tip is half the rod's width long — a right-angled point — and sinks its own length into the far face. */
+export function rodTipLength(kind: RodKind): number {
+  return rodWidth(kind) / 2;
 }
 
 /** Where the rod meets the face it bridges to: the face's point, not the tip's seat inside it. */
 export function rodSeat(rod: Rod): Vector2 {
-  return add(rod.base, scale(rod.direction, rod.length - ROD_SEAT_DEPTH_METERS));
+  return add(rod.base, scale(rod.direction, rod.length - rodTipLength(rod.kind)));
 }
 
 export function initialRods(level: Level): readonly number[] {
   return level.rods.map(() => 0);
 }
 
-/** Whether gravity points the way the rod slides out: then it slides out, otherwise in. */
-function slidesOut(rod: Rod, down: Vector2): boolean {
-  return dot(rod.direction, down) > 0;
+/**
+ * Which way the rod moves under gravity pointing `down`: +1 out, -1 in, 0
+ * standing. A sliding rod goes out while gravity points its way and in
+ * otherwise; a screw rod goes in only while gravity points the other way
+ * and holds while gravity is across it.
+ */
+function drive(rod: Rod, down: Vector2): number {
+  const along = dot(rod.direction, down);
+  switch (rod.kind) {
+    case 'slide':
+      return along > 0 ? 1 : -1;
+    case 'screw':
+      return Math.sign(along);
+    default:
+      return assertNever(rod.kind);
+  }
 }
 
 /** How far every rod stands out after `dt` more seconds under gravity pointing `down`. */
@@ -47,19 +77,18 @@ export function advanceRods(
   dt: number
 ): readonly number[] {
   return level.rods.map((rod, index) => {
-    const travel = ROD_SPEED_METERS_PER_SECOND * dt;
-    const next = extensions[index] + (slidesOut(rod, down) ? travel : -travel);
+    const next = extensions[index] + drive(rod, down) * ROD_SPEED_METERS_PER_SECOND * dt;
     return Math.min(Math.max(next, 0), rod.length);
   });
 }
 
-/** The rod's velocity as it slides, nothing while it stands at either end. */
+/** The rod's velocity as it moves, nothing while it stands — at either end, or a screw across gravity. */
 function rodVelocity(rod: Rod, extension: number, down: Vector2): Vector2 {
-  const out = slidesOut(rod, down);
-  if ((out && extension >= rod.length) || (!out && extension <= 0)) {
+  const way = drive(rod, down);
+  if ((way > 0 && extension >= rod.length) || (way < 0 && extension <= 0)) {
     return ZERO;
   }
-  return scale(rod.direction, out ? ROD_SPEED_METERS_PER_SECOND : -ROD_SPEED_METERS_PER_SECOND);
+  return scale(rod.direction, way * ROD_SPEED_METERS_PER_SECOND);
 }
 
 /**
@@ -72,10 +101,11 @@ function rodVelocity(rod: Rod, extension: number, down: Vector2): Vector2 {
  * whichever way the rod points.
  */
 export function rodShape(rod: Rod, extension: number): Wall {
-  const side = scale(rightNormal(rod.direction), ROD_WIDTH_METERS / 2);
-  const out = Math.max(extension, ROD_TIP_METERS + SHAPE_MIN_BODY_METERS);
+  const tipLength = rodTipLength(rod.kind);
+  const side = scale(rightNormal(rod.direction), rodWidth(rod.kind) / 2);
+  const out = Math.max(extension, tipLength + SHAPE_MIN_BODY_METERS);
   const tip = add(rod.base, scale(rod.direction, out));
-  const shoulder = subtract(tip, scale(rod.direction, ROD_TIP_METERS));
+  const shoulder = subtract(tip, scale(rod.direction, tipLength));
   const tail = subtract(tip, scale(rod.direction, out));
   const vertices = [
     subtract(tail, side),

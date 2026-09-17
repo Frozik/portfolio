@@ -77,11 +77,10 @@ const FLOATER_CLEARANCE_DIAMETERS = 10;
 /** A floater's centre keeps this far from every wall face and from every other floater's centre. */
 export const FLOATER_CLEARANCE_METERS = FLOATER_CLEARANCE_DIAMETERS * 2 * BALL_RADIUS_METERS;
 
-/** A sliding rod is a ball's diameter thick, with a pointed tip half a diameter long that shoves a ball in its way aside. */
+/** A sliding rod is a ball's diameter thick, with a pointed tip half its width long that shoves a ball in its way aside; fully out, the tip has sunk its own length into the face it bridges to. */
 export const ROD_WIDTH_METERS = 2 * BALL_RADIUS_METERS;
-export const ROD_TIP_METERS = BALL_RADIUS_METERS;
-/** Fully out, the rod's tip has sunk this far into the face it bridges to. */
-export const ROD_SEAT_DEPTH_METERS = ROD_TIP_METERS;
+/** A screw rod is this much thicker than a sliding one. */
+export const SCREW_WIDTH_FACTOR = 1.5;
 /** A rod slides out while gravity points its way and back in otherwise, at this speed. */
 export const ROD_SPEED_METERS_PER_SECOND = 1.5;
 /**
