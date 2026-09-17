@@ -1,5 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
+import type { BonusState } from './bonus';
+import { placeBonus } from './bonus';
 import { GRAVITY_TURN_SECONDS } from './constants';
 import { initialFloaters } from './floaters';
 import type { EdgeRef, FloaterEdgeRef, Level, RodEdgeRef } from './level';
@@ -48,6 +50,9 @@ export interface BallState {
   readonly floaters: readonly boolean[];
   /** How far each rod stands out of its wall, metres, by rod index; they slide with gravity. */
   readonly rods: readonly number[];
+  readonly bonus: BonusState;
+  /** Bonuses taken on this level, capped: what the preview knows of the flight ahead. */
+  readonly foresight: number;
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -68,6 +73,8 @@ export function createBall(level: Level): BallState {
     spikes: initialSpikes(level),
     floaters: initialFloaters(level),
     rods: initialRods(level),
+    bonus: placeBonus(level, 0, level.tee),
+    foresight: 0,
   };
 }
 

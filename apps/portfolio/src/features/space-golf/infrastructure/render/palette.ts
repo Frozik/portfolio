@@ -6,6 +6,9 @@ export const PALETTE = {
   /** The black lacquer the Khokhloma pattern is painted on. */
   lacquer: [24, 12, 9, 255],
   rim: [201, 178, 106, 255],
+  /** The foresight bonus: a deep blue disc in a cyan ring, unlike anything else on the board. */
+  bonusFill: [14, 34, 56, 235],
+  bonusRing: [110, 215, 255, 255],
   /** A sliding rod and the plates it slides through: steel, shaded across so the rod reads as round. */
   steelDark: [78, 82, 92, 255],
   steel: [168, 174, 186, 255],

@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { AIM_RING_RADIUS_METERS, BALL_RADIUS_METERS } from '../../domain/constants';
 
+import { writeBonus } from './bonus-geometry';
 import type { MeshData, Rgba } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE } from './palette';
@@ -48,8 +49,11 @@ export function buildDustMesh(dust: ParticleField): MeshData {
  * then follow the ball in grey, and turn white the moment it rests and
  * the stroke can be played.
  */
-export function buildOverlayMesh(scene: SceneFrame): MeshData {
+export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshData {
   const writer = new MeshWriter();
+  if (!isNil(scene.ball.bonus.at) && scene.ball.phase !== 'holed') {
+    writeBonus(writer, scene.ball.bonus.at, timeSeconds);
+  }
   const pending = scene.ball.phase === 'flying';
   const aimable = scene.ball.phase === 'aiming' || pending;
   if (scene.aimRing && aimable) {

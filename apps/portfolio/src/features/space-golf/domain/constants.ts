@@ -114,6 +114,17 @@ export const OFFSCREEN_LIMIT_SECONDS = 3;
 /** The ring drawn round the ball while the band is held. */
 export const AIM_RING_RADIUS_METERS = 0.9;
 
+/** The bonus is a disc three ball diameters across; it stays for one to three strokes. */
+export const BONUS_RADIUS_METERS = 3 * BALL_RADIUS_METERS;
+export const BONUS_MIN_STROKES = 1;
+export const BONUS_MAX_STROKES = 3;
+/**
+ * Foresight, what the bonus gives: the first one bends the preview under
+ * gravity, each one after it adds dots, up to the cap.
+ */
+export const MAX_FORESIGHT = 5;
+export const FORESIGHT_DOTS_PER_LEVEL = 3;
+
 export const PREVIEW_DOT_COUNT = 5;
 export const PREVIEW_INTERVAL_SECONDS = 0.05;
 

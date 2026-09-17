@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BallState, Contact } from './ball';
 import { advanceTurn, currentGravity, turnTo } from './ball';
+import { isDue, isTaken, placeBonus, taken } from './bonus';
 import type { Impact, WallHit } from './collision';
 import { contactPosition, earlierHit, sweepCircleAgainstWalls } from './collision';
 import {
@@ -16,6 +17,7 @@ import {
   FLOATER_RESTITUTION,
   GRAVITY_METERS_PER_SECOND_SQUARED,
   MAX_CONTACTS_PER_STEP,
+  MAX_FORESIGHT,
   MAX_SPEED_METERS_PER_SECOND,
   MIN_BOUNCE_SPEED_METERS_PER_SECOND,
   OFFSCREEN_LIMIT_SECONDS,
@@ -141,6 +143,8 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   if (held) {
     velocity = clampLength(velocity, travelled / dt);
   }
+  // The bonus is no obstacle: a ball that touched it on the way has it, and flies on.
+  const hasBonus = isTaken(ball.bonus, ball.position, position);
   const next: BallState = {
     ...floored,
     position,
@@ -148,6 +152,8 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     contact,
     settlingSeconds: 0,
     offscreenSeconds,
+    bonus: hasBonus ? taken(ball.bonus) : ball.bonus,
+    foresight: hasBonus ? Math.min(ball.foresight + 1, MAX_FORESIGHT) : ball.foresight,
   };
   const settlingSeconds = held ? ball.settlingSeconds + dt : 0;
   const justLeft = beyond && ball.offscreenSeconds === 0;
@@ -186,7 +192,13 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
  * under it, or from beside it where it was wedged — leaves it touching
  * nothing, so it falls.
  */
-function restingStep(level: Level, ball: BallState): BallState {
+function restingStep(level: Level, resting: BallState): BallState {
+  // The bonus moves only here, with the ball at rest, so the player sees where it is
+  // before the stroke; with every bonus taken there is none left to show.
+  const ball: BallState =
+    isDue(resting.bonus) && resting.foresight < MAX_FORESIGHT
+      ? { ...resting, bonus: placeBonus(level, resting.bonus.moves + 1, resting.position) }
+      : resting;
   const shoved = shoveOutOfRods(level, ball.rods, ball.down, ball);
   if (shoved.position === ball.position && isTouching(level, ball)) {
     return ball;

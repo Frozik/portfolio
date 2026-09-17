@@ -25,6 +25,14 @@ time.
   through weightlessness and a ball that touched a ceiling sags off it
   before it is drawn back up; the dust drifts along the very same pull, so
   the field shows the turn as it happens
+- One bonus floats on the board, a breathing blue disc three balls across
+  with a little arc of dots for a logo: the ball flies through it and takes
+  it. The first one gives foresight — the aim dots bend under gravity and
+  stop at the first wall — and each further one, up to five, adds three
+  dots of range; it lasts for the level, and after the fifth no more
+  appear. The disc stays for one to three
+  strokes and moves, or comes back after it was taken, only when the ball
+  has come to rest, so a stroke can be planned for it
 - The physics runs in fixed steps and the ball is drawn between them, so
   it glides evenly at any refresh rate, trailing a short tapered streak
   along the path it really flew — a few-pixel ball would strobe without it

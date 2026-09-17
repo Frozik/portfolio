@@ -1,9 +1,14 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BallState } from './ball';
+import { afterStroke } from './bonus';
+import { sweepCircleAgainstWalls } from './collision';
 import {
   AIM_DEAD_ZONE_METERS,
+  BALL_RADIUS_METERS,
   BAND_SPEED_PER_METER,
+  FORESIGHT_DOTS_PER_LEVEL,
+  GRAVITY_METERS_PER_SECOND_SQUARED,
   MAX_SPEED_METERS_PER_SECOND,
   PREVIEW_DOT_COUNT,
   PREVIEW_INTERVAL_SECONDS,
@@ -41,6 +46,7 @@ export function shoot(level: Level, ball: BallState, velocity: Vector2): BallSta
     settlingSeconds: 0,
     spikes: toggleSpikes(level, ball.spikes, ball.position),
     floaters: toggleFloaters(level, ball.floaters, ball.position),
+    bonus: afterStroke(ball.bonus),
   };
 }
 
@@ -58,6 +64,38 @@ export function previewDots(from: Vector2, velocity: Vector2): readonly Vector2[
   for (let index = 0; index < PREVIEW_DOT_COUNT; index += 1) {
     dot = add(dot, stride);
     dots.push(dot);
+  }
+  return dots;
+}
+
+/**
+ * What the player is shown of the pending stroke. Without foresight, the
+ * straight impulse of `previewDots`. With it — a bonus taken on this level
+ * — the dots fall under the gravity the ball rests in, a few more of them
+ * with every further bonus, and stop at the first wall in their way: the
+ * flight up to its first bounce, no more.
+ */
+export function previewPath(
+  level: Level,
+  ball: BallState,
+  from: Vector2,
+  velocity: Vector2
+): readonly Vector2[] {
+  if (ball.foresight === 0) {
+    return previewDots(from, velocity);
+  }
+  const count = PREVIEW_DOT_COUNT + (ball.foresight - 1) * FORESIGHT_DOTS_PER_LEVEL;
+  const pull = scale(ball.down, GRAVITY_METERS_PER_SECOND_SQUARED);
+  const dots: Vector2[] = [];
+  let previous = from;
+  for (let index = 1; index <= count; index += 1) {
+    const time = index * PREVIEW_INTERVAL_SECONDS;
+    const dot = add(add(from, scale(velocity, time)), scale(pull, (time * time) / 2));
+    if (sweepCircleAgainstWalls(level.walls, previous, dot, BALL_RADIUS_METERS) !== undefined) {
+      break;
+    }
+    dots.push(dot);
+    previous = dot;
   }
   return dots;
 }

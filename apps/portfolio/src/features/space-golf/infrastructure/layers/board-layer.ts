@@ -214,7 +214,10 @@ export class BoardLayer implements RenderLayer {
     );
     this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust ?? []));
     this.rodCount = this.writeDynamic(this.rodBuffer, buildRodMesh(scene.level, scene.ball.rods));
-    this.dynamicCount = this.writeDynamic(this.dynamicBuffer, buildOverlayMesh(scene));
+    this.dynamicCount = this.writeDynamic(
+      this.dynamicBuffer,
+      buildOverlayMesh(scene, state.time * CLOCK_SPEED)
+    );
   }
 
   render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {

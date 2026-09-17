@@ -8,7 +8,7 @@ import { CLOCK_SPEED, FIXED_STEP_SECONDS } from '../domain/constants';
 import type { Level } from '../domain/level';
 import type { Progress } from '../domain/progress';
 import { completeLevel, FIRST_LEVEL, INITIAL_PROGRESS } from '../domain/progress';
-import { aim, previewDots, shoot } from '../domain/shot';
+import { aim, previewPath, shoot } from '../domain/shot';
 import { step } from '../domain/step';
 import { lerp } from '../domain/vector';
 import { extendTrail } from './ball-trail';
@@ -124,10 +124,10 @@ export class SpaceGolfStore {
   /** The five dots of the pending stroke, or nothing while the band is slack. */
   get preview(): readonly Vector2[] | undefined {
     const velocity = this.pendingVelocity();
-    if (isNil(velocity) || isNil(this.ball)) {
+    if (isNil(velocity) || isNil(this.ball) || isNil(this.level)) {
       return undefined;
     }
-    return previewDots(this.shownPosition(this.ball), velocity);
+    return previewPath(this.level, this.ball, this.shownPosition(this.ball), velocity);
   }
 
   get hasPreviousLevel(): boolean {
