@@ -20,12 +20,14 @@ time.
   impulse, not the flight — the bend under gravity is for the player to
   judge; returning to the anchor cancels the stroke, and so does letting
   go before the ball rests
-- The pull is drawn where the hand is: a hazy blue sphere quivers where the
-  press landed — the point the stroke is measured from, which nothing else
-  shows — and three lines of energy arc from it to the finger, swaying and
-  running with a travelling pulse, the whole picture brighter the further
-  the band is stretched and full at the strongest stroke. It is measured on
-  the screen, so it keeps its size at any zoom
+- The pull is drawn where the hand is, in the board's own Khokhloma gold: a
+  hazy amber sphere quivers where the press landed — the point the stroke is
+  measured from, which nothing else shows — and three ribbons of gold light,
+  white-hot down the middle, bow from it to the finger and wind into a
+  tendril's curl there, with four-pointed sparks riding along them out of
+  the haze. The whole picture fades up with the pull and is full at the
+  strongest stroke; it is measured on the screen, so it keeps its size at
+  any zoom
 - Gravity does not flip at the hit: the pull travels from where it was to
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it

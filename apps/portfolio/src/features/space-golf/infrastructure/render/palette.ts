@@ -39,9 +39,10 @@ export const PALETTE = {
   burst: [255, 236, 180, 255],
   star: [255, 255, 255, 90],
   aimRing: [255, 255, 255, 70],
-  /** The band being pulled: a cold blue haze at the anchor, its lines of energy near white. */
-  bandGlow: [86, 164, 255, 255],
-  bandCore: [206, 238, 255, 255],
+  /** The band being pulled, in the board's own Khokhloma gold: an amber haze at the anchor, ribbons of gold light, white-hot in the middle and in the sparks. */
+  bandGlow: [255, 168, 48, 255],
+  bandGold: [255, 206, 92, 255],
+  bandCore: [255, 250, 226, 255],
 } as const satisfies Record<string, Rgba>;
 
 /** The same colour at another opacity: the fading ring of a burst, the tail of a trail, the pull of the band. */

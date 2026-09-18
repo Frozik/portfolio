@@ -15,6 +15,8 @@ const GROWTH_FACTOR = 2;
 const LITTLE_ENDIAN = true;
 const CIRCLE_SEGMENTS = 24;
 const FULL_TURN = Math.PI * 2;
+/** How far a mitred corner may reach past the ribbon's half width before it is cut short: a fold back on itself would reach forever. */
+const MITRE_LIMIT = 4;
 
 export interface MeshData {
   readonly vertexData: ArrayBuffer;
@@ -83,6 +85,46 @@ export class MeshWriter {
       ],
       color
     );
+  }
+
+  /**
+   * A tapered strip along an open polyline: a width and a colour at every
+   * point of it, blended along the way — the wake of the ball, a stream of
+   * light. Every bend is mitred, so consecutive quads share their corners
+   * exactly: a quad per segment on its own leaves a wedge of background
+   * showing on the outside of every bend, which on a translucent ribbon
+   * reads as a row of dark notches. A point on top of its neighbour is
+   * dropped: it has no direction to be across.
+   */
+  ribbon(
+    points: readonly Vector2[],
+    shapeAt: (index: number) => { readonly halfWidth: number; readonly color: Rgba }
+  ): void {
+    const path = points
+      .map((point, index) => ({ point, shape: shapeAt(index) }))
+      .filter((node, index, all) => index === 0 || !isSamePoint(all[index - 1].point, node.point));
+    if (path.length < 2) {
+      return;
+    }
+    const directions = path
+      .slice(0, -1)
+      .map((node, index) => direction(node.point, path[index + 1].point));
+    const offsets = path.map((node, index) => {
+      const into = directions[index - 1] ?? directions[0];
+      const outOf = directions[index] ?? directions[directions.length - 1];
+      const across = mitreAcross(into, outOf);
+      return { x: across.x * node.shape.halfWidth, y: across.y * node.shape.halfWidth };
+    });
+    for (let index = 0; index + 1 < path.length; index += 1) {
+      const [tail, head] = [path[index], path[index + 1]];
+      const [near, far] = [offsets[index], offsets[index + 1]];
+      const a = { x: tail.point.x + near.x, y: tail.point.y + near.y };
+      const b = { x: tail.point.x - near.x, y: tail.point.y - near.y };
+      const c = { x: head.point.x - far.x, y: head.point.y - far.y };
+      const d = { x: head.point.x + far.x, y: head.point.y + far.y };
+      this.shadedTriangle(a, b, c, [tail.shape.color, tail.shape.color, head.shape.color]);
+      this.shadedTriangle(a, c, d, [tail.shape.color, head.shape.color, head.shape.color]);
+    }
   }
 
   /**
@@ -176,4 +218,31 @@ export class MeshWriter {
     this.buffer = grown;
     this.view = new DataView(grown);
   }
+}
+
+function isSamePoint(a: Vector2, b: Vector2): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+function direction(from: Vector2, to: Vector2): Vector2 {
+  const size = Math.hypot(to.x - from.x, to.y - from.y);
+  return { x: (to.x - from.x) / size, y: (to.y - from.y) / size };
+}
+
+/**
+ * The way across a ribbon at a point where the way along it bends: the
+ * bisector of the two segments' normals, lengthened by the bend so that
+ * both quads reach the very same corner. A ribbon that folds back on
+ * itself has no bisector — there the incoming normal has to do.
+ */
+function mitreAcross(into: Vector2, outOf: Vector2): Vector2 {
+  const normal = { x: -outOf.y, y: outOf.x };
+  const sum = { x: -into.y + normal.x, y: into.x + normal.y };
+  const size = Math.hypot(sum.x, sum.y);
+  if (size === 0) {
+    return normal;
+  }
+  const unit = { x: sum.x / size, y: sum.y / size };
+  const reach = Math.min(1 / (unit.x * normal.x + unit.y * normal.y), MITRE_LIMIT);
+  return { x: unit.x * reach, y: unit.y * reach };
 }

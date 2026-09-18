@@ -53,7 +53,15 @@ describe('the band being pulled', () => {
 
     const spread = widthAround(slack, ANCHOR);
     expect(spread).toBeGreaterThan(0.2);
-    expect(spread).toBeLessThan(0.5);
+    expect(spread).toBeLessThan(0.6);
+  });
+
+  it('ends every stream in a curl that winds on round the finger', () => {
+    const band = bandPulled(MAX_PULL_METERS);
+
+    const span = distance(band.anchor, band.pull);
+    const beyond = drawn(band).filter(vertex => distance(vertex.point, band.anchor) > span);
+    expect(beyond.length).toBeGreaterThan(0);
   });
 
   it('grows more opaque the further the band is pulled, and no further past the strongest stroke', () => {

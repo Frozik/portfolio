@@ -5,7 +5,7 @@ import { AIM_RING_RADIUS_METERS, BALL_RADIUS_METERS } from '../../domain/constan
 
 import { writeBand } from './band-geometry';
 import { writeBonus } from './bonus-geometry';
-import type { MeshData, Rgba } from './mesh-writer';
+import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE, withAlpha } from './palette';
 import type { ParticleField } from './particles';
@@ -100,26 +100,9 @@ export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshDa
  */
 function writeTrail(writer: MeshWriter, path: readonly Vector2[]): void {
   const last = path.length - 1;
-  const halfWidthAt = (index: number): number =>
-    BALL_RADIUS_METERS * (TRAIL_TAIL_WIDTH_SHARE + (1 - TRAIL_TAIL_WIDTH_SHARE) * (index / last));
-  const colorAt = (index: number): Rgba =>
-    withAlpha(PALETTE.ball, TRAIL_HEAD_ALPHA * (index / last) ** TRAIL_FADE_POWER);
-  for (let index = 0; index < last; index += 1) {
-    const from = path[index];
-    const to = path[index + 1];
-    const length = Math.hypot(to.x - from.x, to.y - from.y);
-    if (length === 0) {
-      continue;
-    }
-    const across = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
-    const corner = (point: Vector2, halfWidth: number, side: number): Vector2 => ({
-      x: point.x + across.x * halfWidth * side,
-      y: point.y + across.y * halfWidth * side,
-    });
-    const [tail, head] = [colorAt(index), colorAt(index + 1)];
-    const [a, b] = [corner(from, halfWidthAt(index), 1), corner(from, halfWidthAt(index), -1)];
-    const [c, d] = [corner(to, halfWidthAt(index + 1), -1), corner(to, halfWidthAt(index + 1), 1)];
-    writer.shadedTriangle(a, b, c, [tail, tail, head]);
-    writer.shadedTriangle(a, c, d, [tail, head, head]);
-  }
+  writer.ribbon(path, index => ({
+    halfWidth:
+      BALL_RADIUS_METERS * (TRAIL_TAIL_WIDTH_SHARE + (1 - TRAIL_TAIL_WIDTH_SHARE) * (index / last)),
+    color: withAlpha(PALETTE.ball, TRAIL_HEAD_ALPHA * (index / last) ** TRAIL_FADE_POWER),
+  }));
 }
