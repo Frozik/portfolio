@@ -9,6 +9,7 @@ export const spaceGolfTranslationsEn = {
     closeUp: 'Back to the playing scale',
     meters: (distance: number): string => `${distance} m`,
     compass: (distance: number): string => `The cup is ${distance} metres away`,
+    foresight: (level: number, max: number): string => `Foresight: level ${level} of ${max}`,
     scale: (meters: number): string => `Scale: the bar is ${meters} m long`,
   },
   status: {

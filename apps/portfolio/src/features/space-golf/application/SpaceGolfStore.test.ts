@@ -274,4 +274,36 @@ describe('SpaceGolfStore', () => {
     store.advance(FRAME);
     expect(made()).toBe(atRest + 1);
   });
+
+  it("shows how far the ball's foresight has grown: restored with a saved world, a level up with every bonus taken", async () => {
+    const first = createStore();
+    await first.store.start(PHONE);
+    const [saved] = first.saves;
+    const { ball } = saved.play;
+    const bonusOverhead = { x: ball.position.x, y: ball.position.y + 0.6 };
+    const grown: SavedWorld = {
+      ...saved,
+      play: {
+        ...saved.play,
+        ball: {
+          ...ball,
+          foresight: 2,
+          bonus: { ...ball.bonus, at: bonusOverhead, strokesLeft: 3 },
+        },
+      },
+    };
+
+    const { store } = createStore(grown);
+    await store.start(PHONE);
+    expect(store.foresight).toBe(2);
+
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 3.6 });
+    store.release();
+    for (let frame = 0; frame < 30 && store.foresight === 2; frame += 1) {
+      store.advance(FRAME);
+    }
+
+    expect(store.foresight).toBe(3);
+  });
 });

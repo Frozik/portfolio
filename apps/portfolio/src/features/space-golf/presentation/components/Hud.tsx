@@ -8,6 +8,7 @@ import { cn } from '@frozik/components/components/cn';
 
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { spaceGolfT } from '../translations';
+import { ForesightStatus } from './ForesightStatus';
 
 const ICON_SIZE_PX = 16;
 /** A reset asked for stays armed this long, waiting for the second press that confirms it. */
@@ -76,7 +77,8 @@ export const Hud = observer(({ store }: { readonly store: SpaceGolfStore }) => (
     <span className="rounded bg-black/50 px-2 py-1 tabular-nums">
       {spaceGolfT.hud.strokes(store.totalStrokes, store.strokesSinceHole)}
     </span>
-    <span className="flex gap-2">
+    <span className="flex items-center gap-2">
+      <ForesightStatus store={store} />
       <HudButton
         icon={LocateFixed}
         label={spaceGolfT.hud.toBall}

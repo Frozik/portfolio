@@ -67,6 +67,8 @@ export class SpaceGolfStore {
   holes = 0;
   totalStrokes = 0;
   strokesSinceHole = 0;
+  /** How far the ball's foresight has grown: the bonuses this ball has taken. The ball itself is not observable. */
+  foresight = 0;
   /** The band being pulled; nothing while no pointer is down. */
   aiming: Aim | undefined = undefined;
   /** The camera, the player's looking around and the compass. */
@@ -247,6 +249,7 @@ export class SpaceGolfStore {
     this.aiming = undefined;
     this.accumulatorSeconds = 0;
     this.view.reset(play.ball.position);
+    this.foresight = play.ball.foresight;
     this.status = 'playing';
   }
 
@@ -261,6 +264,7 @@ export class SpaceGolfStore {
     this.previousBall = before;
     this.play = { ...grounded, ball };
     this.trail = extendTrail(this.trail, ball);
+    this.foresight = ball.foresight;
     if (!isNil(this.burst)) {
       this.playBurst(this.burst);
       return;
@@ -282,6 +286,7 @@ export class SpaceGolfStore {
       this.burst = undefined;
       this.play = { ...this.play, ball };
       this.previousBall = ball;
+      this.foresight = ball.foresight;
     }
   }
 

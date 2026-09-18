@@ -12,6 +12,7 @@ export const spaceGolfTranslationsRu: TranslationOf<typeof spaceGolfTranslations
     closeUp: 'Вернуть игровой масштаб',
     meters: (distance: number): string => `${distance} м`,
     compass: (distance: number): string => `До лунки ${distance} м`,
+    foresight: (level: number, max: number): string => `Предвидение: уровень ${level} из ${max}`,
     scale: (meters: number): string => `Масштаб: отрезок ${meters} м`,
   },
   status: {

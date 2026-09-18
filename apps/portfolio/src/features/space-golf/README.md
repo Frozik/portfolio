@@ -30,7 +30,8 @@ time.
   it. The first one gives foresight — the aim dots become the flight itself
   up to its first touch, played ahead by the same physics the ball then
   flies by — and each further one, up to five, adds three
-  dots of range; it lasts for the level, and after the fifth no more
+  dots of range, shown in the HUD as five pips that light up one by one; it
+  lasts until the ball bursts, and after the fifth no more
   appear. The disc stays for one to three
   strokes and moves, or comes back after it was taken, only when the ball
   has come to rest, so a stroke can be planned for it
