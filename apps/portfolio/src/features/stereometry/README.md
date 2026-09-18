@@ -43,8 +43,20 @@ of solids.
 - Unified pointer handling works identically on mouse, touch, and
   stylus; no duplicate events on mobile
 
-**Puzzle format:**
-- Declarative puzzle files: list of figures (vertices + faces), input
-  constraints (points, lines), expected result
-- Edges and face adjacency derive automatically from the face list —
-  puzzle authors only describe what's unique to the puzzle
+**Puzzles:**
+
+Eight levels, in the order they appear in the picker, across eight solids.
+Every one is built with the same three gestures — draw a line between two
+points, extend an edge, drop a parallel — and the answer is checked against
+the exact geometry, so a construction that merely looks right does not pass.
+
+| # | Puzzle | Solid | What you build |
+| --- | --- | --- | --- |
+| 1 | Two solids, one line | cube + triangular prism | Two bodies stand on one plane, with a point marking one face of each. Build the line along which those two face planes meet. |
+| 2 | Trace of a plane | square pyramid | Three points on the lateral edges fix a cutting plane. Build the trace it leaves on the plane of the base. |
+| 3 | Octahedron section | regular octahedron | Three points sit on the edges. Build the pentagon the plane through them cuts out. |
+| 4 | Prism section | hexagonal prism | Three points on the base edges — two below, one above. Build the pentagonal section. |
+| 5 | Hexagon in a cube | cube | The plane through three marked points crosses all six faces. Build the whole hexagon. |
+| 6 | Section parallel to a plane | cuboid | Two segments sharing an endpoint span a plane. Build the section through a marked point parallel to it. |
+| 7 | Pyramid section | pentagonal pyramid | Build the section through the given point, parallel to both given lines. |
+| 8 | Plane intersection | pentagonal prism | Four segments form two pairs, each pair spanning a plane. Build the line where the two planes meet. |

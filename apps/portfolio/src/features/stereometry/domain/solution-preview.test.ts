@@ -1,5 +1,5 @@
-import { PUZZLE_1 } from './puzzles/puzzle-1';
-import { PUZZLE_2 } from './puzzles/puzzle-2';
+import { assert } from '@frozik/utils/assert/assert';
+import { PUZZLES } from './puzzles/registry';
 import { buildSolutionPreview } from './solution-preview';
 import type { PuzzleDefinition } from './types';
 
@@ -39,9 +39,11 @@ const CUBE: PuzzleDefinition = {
   expected: {},
 };
 
+const [FIRST_SHIPPED] = PUZZLES;
+
 describe('buildSolutionPreview', () => {
   it('projects the figure into the requested picture size', () => {
-    const preview = buildSolutionPreview(PUZZLE_1, SIZE, SIZE);
+    const preview = buildSolutionPreview(FIRST_SHIPPED, SIZE, SIZE);
 
     const inside = (point: { readonly x: number; readonly y: number }) =>
       point.x >= 0 && point.x <= SIZE && point.y >= 0 && point.y <= SIZE;
@@ -85,15 +87,18 @@ describe('buildSolutionPreview', () => {
   });
 
   it('draws the expected cross-section as a solution polygon with solution-styled edges', () => {
-    const preview = buildSolutionPreview(PUZZLE_1, SIZE, SIZE);
+    const sectionPuzzle = PUZZLES.find(puzzle => puzzle.expected.faces !== undefined);
+    assert(sectionPuzzle?.expected.faces !== undefined, 'no shipped puzzle answers with a section');
+
+    const preview = buildSolutionPreview(sectionPuzzle, SIZE, SIZE);
 
     expect(preview.faces).toHaveLength(1);
-    expect(preview.faces[0]).toHaveLength(PUZZLE_1.expected.faces?.[0].length ?? 0);
+    expect(preview.faces[0]).toHaveLength(sectionPuzzle.expected.faces[0].length);
     expect(preview.segments.some(segment => segment.modifiers.includes('solution'))).toBe(true);
   });
 
   it('renders every shipped puzzle', () => {
-    for (const puzzle of [PUZZLE_1, PUZZLE_2]) {
+    for (const puzzle of PUZZLES) {
       const preview = buildSolutionPreview(puzzle, SIZE, SIZE);
       expect(preview.segments.length).toBeGreaterThan(0);
     }
