@@ -10,7 +10,7 @@ export interface Random {
   pick<T>(items: readonly T[]): T;
 }
 
-export function createRandom(seed: number): Random {
+export function createRandom(seed: number | string): Random {
   const generator = alea(String(seed));
   return {
     next: () => generator(),

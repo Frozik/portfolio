@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { BallState } from './ball';
 import { createBall } from './ball';
 import {
-  BONUS_RADIUS_METERS,
+  BONUS_MAX_DISTANCE_METERS,
+  BONUS_MIN_DISTANCE_METERS,
   FIXED_STEP_SECONDS,
   MAX_FORESIGHT,
   PREVIEW_DOT_COUNT,
+  PREVIEW_INTERVAL_SECONDS,
 } from './constants';
-import { generateLevel } from './generator/generate-level';
-import { previewPath, shoot } from './shot';
+import { levelOf, startCourse } from './course';
+import { previewPath } from './preview';
+import { shoot } from './shot';
 import { step } from './step';
 import { createTestLevel } from './test-level';
 import { containsPoint } from './walls';
@@ -30,17 +33,16 @@ function withBonusAt(ball: BallState, x: number, y: number, strokesLeft = 3): Ba
 }
 
 describe('the bonus', () => {
-  it('lies in the open on a new level: on the board, clear of every wall and away from the ball', () => {
-    for (const seed of [1, 2, 3, 4, 5]) {
-      const generated = generateLevel(seed);
-      const { at } = createBall(generated).bonus;
+  it('lies in the open near the ball on a new course: clear of every wall, a stroke or two away and never a journey', () => {
+    for (const seed of [1, 2, 3]) {
+      const { course, ball } = startCourse(seed, { widthCells: 24, heightCells: 24 });
+      const spot = ball.bonus.at ?? { x: 0, y: 0 };
+      const away = Math.hypot(spot.x - ball.position.x, spot.y - ball.position.y);
 
-      expect(at).toBeDefined();
-      const spot = at ?? { x: 0, y: 0 };
-      expect(spot.x).toBeGreaterThan(BONUS_RADIUS_METERS);
-      expect(spot.x).toBeLessThan(generated.width - BONUS_RADIUS_METERS);
-      expect(generated.walls.some(wall => containsPoint(wall, spot))).toBe(false);
-      expect(Math.hypot(spot.x - generated.tee.x, spot.y - generated.tee.y)).toBeGreaterThan(1);
+      expect(ball.bonus.at).toBeDefined();
+      expect(levelOf(course).walls.some(wall => containsPoint(wall, spot))).toBe(false);
+      expect(away).toBeGreaterThanOrEqual(BONUS_MIN_DISTANCE_METERS);
+      expect(away).toBeLessThanOrEqual(BONUS_MAX_DISTANCE_METERS);
     }
   });
 
@@ -127,6 +129,24 @@ describe('the preview with foresight', () => {
     expect(bent[bent.length - 1].y).toBeLessThan(from.y);
     expect(bent[0].x).toBeCloseTo(plain[0].x);
     expect(longer.length).toBeGreaterThan(bent.length);
+  });
+
+  it('lies on the very flight the stroke then takes: every dot is where the ball will be at that moment', () => {
+    const ball = { ...createBall(level), position: from, foresight: MAX_FORESIGHT };
+    const stroke = { x: 3, y: 5 };
+
+    const dots = previewPath(level, ball, from, stroke);
+
+    let flown = shoot(level, ball, stroke);
+    const stepsPerDot = Math.round(PREVIEW_INTERVAL_SECONDS / FIXED_STEP_SECONDS);
+    expect(dots.length).toBeGreaterThan(PREVIEW_DOT_COUNT);
+    for (const dot of dots) {
+      for (let tick = 0; tick < stepsPerDot; tick += 1) {
+        flown = step(level, flown, FIXED_STEP_SECONDS);
+      }
+      expect(dot.x).toBeCloseTo(flown.position.x, 9);
+      expect(dot.y).toBeCloseTo(flown.position.y, 9);
+    }
   });
 
   it('stops at the first wall in its way', () => {

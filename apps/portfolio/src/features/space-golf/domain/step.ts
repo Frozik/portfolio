@@ -13,31 +13,33 @@ import {
   CONTACT_FRICTION,
   CUP_HOLD_SECONDS,
   ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND,
-  FIXED_STEP_SECONDS,
   FLOATER_RESTITUTION,
   GRAVITY_METERS_PER_SECOND_SQUARED,
+  MAX_AIRBORNE_SECONDS,
   MAX_CONTACTS_PER_STEP,
+  MAX_FLIGHT_SECONDS,
   MAX_FORESIGHT,
   MAX_SPEED_METERS_PER_SECOND,
   MIN_BOUNCE_SPEED_METERS_PER_SECOND,
-  OFFSCREEN_LIMIT_SECONDS,
   REST_SETTLE_SECONDS,
   REST_SPEED_METERS_PER_SECOND,
   ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED,
   STICKY_CONTACT_FRICTION,
   STICKY_RESTITUTION,
   STICKY_ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED,
+  TERMINAL_SPEED_METERS_PER_SECOND,
   WALL_RESTITUTION,
 } from './constants';
-import { isInCup, touchesRim } from './cup';
+import { hasCup, isInCup, touchesRim } from './cup';
 import type { FloaterHit } from './floaters';
 import { sweepCircleAgainstFloaters } from './floaters';
 import type { FaceKind, Level } from './level';
-import { edgeOf, isBeyondBoard } from './level';
+import { edgeOf } from './level';
+import { shoveOutOfRods } from './rod-shove';
 import type { RodHit } from './rods';
-import { advanceRods, shoveOutOfRods, sweepCircleAgainstRods } from './rods';
+import { advanceRods, sweepCircleAgainstRods } from './rods';
 import { sweepCircleAgainstSpikes } from './spikes';
-import { isTouching } from './support';
+import { isSafeRest, isTouching } from './support';
 import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from './vector';
 
 /**
@@ -50,9 +52,8 @@ import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from '
  * leaves gravity alone. The rods slide with gravity in every phase, and a
  * rod that slides into the ball shoves it aside — off its rest, if need be.
  * An extended spike tooth met before any wall destroys the ball where it
- * touches it. The board is open: a ball that leaves it bursts the moment
- * it does unless gravity brings it back within a few seconds — the flight is
- * deterministic, so that is read off the flight itself.
+ * touches it. The course has no edge: nothing ends a flight but a wall, a
+ * tooth or the cup, and no fall is faster than the terminal speed.
  */
 export function step(level: Level, ball: BallState, dt: number): BallState {
   const turned = advanceTurn(ball, dt);
@@ -61,17 +62,18 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     return slid;
   }
   if (ball.phase === 'aiming') {
-    return restingStep(level, slid);
+    return restingStep(level, slid, ball.rods);
   }
 
-  let velocity = add(
-    ball.velocity,
-    scale(currentGravity(slid), GRAVITY_METERS_PER_SECOND_SQUARED * dt)
+  let velocity = clampLength(
+    add(ball.velocity, scale(currentGravity(slid), GRAVITY_METERS_PER_SECOND_SQUARED * dt)),
+    TERMINAL_SPEED_METERS_PER_SECOND
   );
   let position = ball.position;
   let floored = slid;
   let contact = ball.contact;
   let remaining = dt;
+  let touched = false;
 
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
@@ -104,6 +106,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       break;
     }
 
+    touched = true;
     position = contactPosition(position, target, hit, CONTACT_EPSILON_METERS);
     const onRim = 'wall' in hit && touchesRim(level, hit, position);
     const response = respond(velocity, hit, onRim);
@@ -111,7 +114,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     if (response.becomesFloor) {
       // The rim counts as the face the hole is cut into: gravity turns into
       // that face, so the ball settles on the bottom of the notch.
-      const floorNormal = onRim ? edgeOf(level, level.cup).normal : hit.normal;
+      const floorNormal = onRim && hasCup(level) ? edgeOf(level, level.cup).normal : hit.normal;
       floored = floorTo(floored, scale(floorNormal, -1));
     }
     contact = response.resting ? contactOf(hit) : undefined;
@@ -122,17 +125,19 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     contact === undefined
       ? scale(velocity, Math.exp(-AIR_DAMPING_PER_SECOND * dt))
       : slowDown(velocity, rollingResistance(contactKind(level, contact)) * dt);
-  const shoved = shoveOutOfRods(level, slid.rods, floored.down, { position, velocity });
-  if (shoved.position !== position) {
-    ({ position, velocity } = shoved);
+  const shove = shoveOutOfRods(
+    level,
+    { before: ball.rods, now: slid.rods },
+    ball.floaters,
+    floored.down,
+    { position, velocity }
+  );
+  floored = { ...floored, rods: shove.rods };
+  if (shove.motion.position !== position) {
+    ({ position, velocity } = shove.motion);
     contact = undefined;
   }
 
-  const beyond = isBeyondBoard(level, position, BALL_RADIUS_METERS);
-  const offscreenSeconds = beyond ? ball.offscreenSeconds + dt : 0;
-  if (offscreenSeconds >= OFFSCREEN_LIMIT_SECONDS) {
-    return { ...ball, position, velocity: ZERO, phase: 'destroyed', contact: undefined };
-  }
   // Rest is read off the ground covered, not the velocity: a ball wedged
   // between two things gains speed from gravity every step yet goes
   // nowhere — that speed is phantom and is cut down to the ground covered,
@@ -145,21 +150,25 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   }
   // The bonus is no obstacle: a ball that touched it on the way has it, and flies on.
   const hasBonus = isTaken(ball.bonus, ball.position, position);
+  // A flight that will not end is ended here: nothing touched for too long is a fall with
+  // no bottom, and too long since the stroke is a ball bouncing or circling for ever.
+  const flightSeconds = ball.flightSeconds + dt;
+  const airborneSeconds = touched ? 0 : ball.airborneSeconds + dt;
+  if (flightSeconds >= MAX_FLIGHT_SECONDS || airborneSeconds >= MAX_AIRBORNE_SECONDS) {
+    return { ...floored, position, velocity: ZERO, phase: 'destroyed', contact: undefined };
+  }
   const next: BallState = {
     ...floored,
     position,
     velocity,
+    flightSeconds,
+    airborneSeconds,
     contact,
     settlingSeconds: 0,
-    offscreenSeconds,
     bonus: hasBonus ? taken(ball.bonus) : ball.bonus,
     foresight: hasBonus ? Math.min(ball.foresight + 1, MAX_FORESIGHT) : ball.foresight,
   };
   const settlingSeconds = held ? ball.settlingSeconds + dt : 0;
-  const justLeft = beyond && ball.offscreenSeconds === 0;
-  if (justLeft && !comesBack(level, next)) {
-    return { ...next, velocity: ZERO, phase: 'destroyed', contact: undefined };
-  }
 
   // In the hole the ball lies on the rim like on any wall; only the clock
   // differs: it does not come to "rest" for the player — no stroke can be
@@ -173,15 +182,8 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     return { ...next, cupSeconds: 0 };
   }
   if (settlingSeconds >= REST_SETTLE_SECONDS) {
-    if (beyond) {
-      return { ...next, velocity: ZERO, phase: 'destroyed', contact: undefined };
-    }
-    return {
-      ...next,
-      velocity: ZERO,
-      phase: 'aiming',
-      rest: { position, down: next.down },
-    };
+    const rested: BallState = { ...next, velocity: ZERO, phase: 'aiming' };
+    return isSafeRest(level, rested) ? { ...rested, rest: { position, down: next.down } } : rested;
   }
   return { ...next, settlingSeconds };
 }
@@ -192,18 +194,33 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
  * under it, or from beside it where it was wedged — leaves it touching
  * nothing, so it falls.
  */
-function restingStep(level: Level, resting: BallState): BallState {
+function restingStep(level: Level, resting: BallState, rodsBefore: readonly number[]): BallState {
   // The bonus moves only here, with the ball at rest, so the player sees where it is
   // before the stroke; with every bonus taken there is none left to show.
   const ball: BallState =
     isDue(resting.bonus) && resting.foresight < MAX_FORESIGHT
       ? { ...resting, bonus: placeBonus(level, resting.bonus.moves + 1, resting.position) }
       : resting;
-  const shoved = shoveOutOfRods(level, ball.rods, ball.down, ball);
-  if (shoved.position === ball.position && isTouching(level, ball)) {
-    return ball;
+  const shove = shoveOutOfRods(
+    level,
+    { before: rodsBefore, now: ball.rods },
+    ball.floaters,
+    ball.down,
+    { position: ball.position, velocity: ball.velocity }
+  );
+  const held: BallState = { ...ball, rods: shove.rods };
+  if (shove.motion.position === ball.position && isTouching(level, held)) {
+    return held;
   }
-  return { ...ball, ...shoved, phase: 'flying', contact: undefined, settlingSeconds: 0 };
+  return {
+    ...held,
+    ...shove.motion,
+    phase: 'flying',
+    contact: undefined,
+    settlingSeconds: 0,
+    flightSeconds: 0,
+    airborneSeconds: 0,
+  };
 }
 
 function contactOf(hit: WallHit | FloaterHit | RodHit): Contact {
@@ -286,22 +303,4 @@ function respond(velocity: Vector2, hit: Impact, onRim: boolean): Response {
   const kept = bouncesBack ? scale(tangential, friction) : tangential;
   const next = clampLength(add(kept, scale(hit.normal, reflected)), MAX_SPEED_METERS_PER_SECOND);
   return { velocity: next, becomesFloor: isFloor, resting: onFace && !bouncesBack };
-}
-
-/**
- * Whether a ball that has just left the board is back on it within the
- * off-screen limit: its flight is played ahead with the very same steps.
- * The look-ahead cannot recurse — the ball out there has left already, and
- * the first step that brings it back ends the search.
- */
-function comesBack(level: Level, ball: BallState): boolean {
-  const steps = Math.round(OFFSCREEN_LIMIT_SECONDS / FIXED_STEP_SECONDS);
-  let ahead = ball;
-  for (let tick = 0; tick < steps && ahead.phase === 'flying'; tick += 1) {
-    ahead = step(level, ahead, FIXED_STEP_SECONDS);
-    if (!isBeyondBoard(level, ahead.position, BALL_RADIUS_METERS)) {
-      return true;
-    }
-  }
-  return false;
 }

@@ -3,7 +3,9 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { distanceToSegment } from './collision';
 import {
   BALL_RADIUS_METERS,
+  BONUS_MAX_DISTANCE_METERS,
   BONUS_MAX_STROKES,
+  BONUS_MIN_DISTANCE_METERS,
   BONUS_MIN_STROKES,
   BONUS_RADIUS_METERS,
   FLOATER_LARGE_SIDE_METERS,
@@ -33,22 +35,21 @@ export interface BonusState {
 const ATTEMPTS = 200;
 /** Open space kept between the disc and anything solid. */
 const CLEARANCE_METERS = 0.3;
-/** The disc never appears on top of the ball: it has to be played for. */
-const MIN_BALL_DISTANCE_METERS = 2;
 /** The large diamond reaches this far from a floater's centre. */
 const FLOATER_REACH_METERS = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
 const SEED_STRIDE = 1009;
+const FULL_TURN = Math.PI * 2;
 
-/** The bonus in its spot number `moves`, away from the ball where it rests. */
+/** The bonus in its spot number `moves`: somewhere in the ring round the ball where it rests, a stroke or two away. */
 export function placeBonus(level: Level, moves: number, ball: Vector2): BonusState {
   const random = createRandom(level.seed * SEED_STRIDE + moves);
-  const inset = BONUS_RADIUS_METERS + CLEARANCE_METERS;
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
-    const at: Vector2 = {
-      x: inset + random.next() * (level.width - 2 * inset),
-      y: inset + random.next() * (level.height - 2 * inset),
-    };
-    if (distance(at, ball) >= MIN_BALL_DISTANCE_METERS && isInTheOpen(level, at)) {
+    const angle = random.next() * FULL_TURN;
+    const away =
+      BONUS_MIN_DISTANCE_METERS +
+      random.next() * (BONUS_MAX_DISTANCE_METERS - BONUS_MIN_DISTANCE_METERS);
+    const at: Vector2 = { x: ball.x + Math.cos(angle) * away, y: ball.y + Math.sin(angle) * away };
+    if (isInTheOpen(level, at)) {
       return { at, strokesLeft: random.int(BONUS_MIN_STROKES, BONUS_MAX_STROKES), moves };
     }
   }

@@ -6,7 +6,7 @@ import {
   ROD_MAX_LENGTH_METERS,
   ROD_MIN_LENGTH_METERS,
 } from '../constants';
-import type { Edge, EdgeRef, Level, Rod, RodKind, Segment, Wall } from '../level';
+import type { Edge, EdgeRef, Floater, Rod, RodKind, Segment, SpikeRow, Wall } from '../level';
 import { pointAlongEdge } from '../level';
 import { createRod, rodSeat, rodTipLength, rodWidth } from '../rods';
 import { add, dot, normalize, rightNormal, scale, subtract } from '../vector';
@@ -31,23 +31,46 @@ const CORRIDOR_SAMPLE_METERS = 0.05;
 const TEE_CLEARANCE_METERS = 1;
 /** A facing face's normal is the rod's direction reversed, within this. */
 const FACING_TOLERANCE = 1e-6;
+const ON_FACE_TOLERANCE_METERS = 1e-6;
 /** The large diamond reaches this far from a floater's centre. */
 const FLOATER_REACH_METERS = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
+
+/** What rods are placed on and among: the sector's own walls, and what already stands on and between them. */
+export interface RodGround {
+  /** A rod slides out of one of these and seats in one of these, and nowhere else. */
+  readonly walls: readonly Wall[];
+  /**
+   * The walls of the sectors next door: in a rod's way like any wall, never
+   * what it is fastened to. They are made anew after a hole while this
+   * sector stays, and a rod fastened to one was left hanging in the air;
+   * and two sectors out of each other's sight both fastened a rod to the
+   * same face of a third.
+   */
+  readonly neighbourWalls: readonly Wall[];
+  readonly spikes: readonly SpikeRow[];
+  readonly floaters: readonly Floater[];
+}
 
 interface Face extends EdgeRef {
   readonly face: Edge;
 }
 
 /**
- * Rods for a finished level — spikes and floaters placed, so their room is
- * known: two to four where they fit, each sliding out of a plain horizontal or vertical
- * face and bridging, fully out, to a plain face squarely across from it —
- * the tip sinking into that face — between a short and a long way off,
- * with the path between clear of walls,
+ * Rods for a finished sector — spikes and floaters placed, so their room is
+ * known: two to four where they fit, each sliding out of a plain horizontal
+ * or vertical face of the sector's own and bridging, fully out, to a plain
+ * face of its own squarely across from it — the tip sinking into that face
+ * — between a short and a long way off, with the path between clear of
+ * walls, the neighbours' too,
  * spike teeth, floaters, the tee and other rods, and both faces free of
  * spike rows and of the cup.
  */
-export function placeRods(random: Random, level: Level): readonly Rod[] {
+export function placeRods(
+  random: Random,
+  level: RodGround,
+  avoid: readonly Vector2[],
+  others: readonly Rod[]
+): readonly Rod[] {
   const faces = plainFaces(level);
   const wanted = random.int(MIN_RODS, MAX_RODS);
   const rods: Rod[] = [];
@@ -57,7 +80,7 @@ export function placeRods(random: Random, level: Level): readonly Rod[] {
     attempt += 1
   ) {
     const from = random.pick(faces);
-    if (supportsTee(from.face, level.tee)) {
+    if (avoid.some(point => supportsTee(from.face, point))) {
       continue;
     }
     const at = END_MARGIN_METERS + random.next() * (from.face.length - 2 * END_MARGIN_METERS);
@@ -69,7 +92,7 @@ export function placeRods(random: Random, level: Level): readonly Rod[] {
     }
     const kind = random.pick(KINDS);
     const rod = createRod(kind, base, direction, gap + rodTipLength(kind));
-    if (isClear(rod, level, rods)) {
+    if (isClear(rod, level, avoid, [...others, ...rods])) {
       rods.push(rod);
     }
   }
@@ -77,7 +100,7 @@ export function placeRods(random: Random, level: Level): readonly Rod[] {
 }
 
 /** Plain floor faces long enough for a rod, with no spike row and no cup on them. */
-function plainFaces(level: Level): readonly Face[] {
+function plainFaces(level: RodGround): readonly Face[] {
   return level.walls.flatMap((wall, wallIndex) =>
     wall.edges
       .map((face, edgeIndex) => ({ wall: wallIndex, edge: edgeIndex, face }))
@@ -90,9 +113,18 @@ function plainFaces(level: Level): readonly Face[] {
           candidate.face.length >= 2 * END_MARGIN_METERS &&
           before.kind !== 'cup' &&
           after.kind !== 'cup' &&
-          !level.spikes.some(row => row.wall === wallIndex && row.edge === candidate.edge)
+          !level.spikes.some(row => standsOn(row.base, candidate.face))
         );
       })
+  );
+}
+
+/** Whether a stretch of face lies on `face`: the same line, the same side. */
+function standsOn(stretch: Segment, face: Edge): boolean {
+  return (
+    dot(stretch.normal, face.normal) > 1 - FACING_TOLERANCE &&
+    distanceToSegment(stretch.from, face) < ON_FACE_TOLERANCE_METERS &&
+    distanceToSegment(stretch.to, face) < ON_FACE_TOLERANCE_METERS
   );
 }
 
@@ -119,20 +151,23 @@ function gapAcross(base: Vector2, direction: Vector2, faces: readonly Face[]): n
 }
 
 /** The rod's path — its thickness plus the clearance, from base to the face it reaches — lies on the board and meets nothing. */
-function isClear(rod: Rod, level: Level, others: readonly Rod[]): boolean {
+function isClear(
+  rod: Rod,
+  level: RodGround,
+  avoid: readonly Vector2[],
+  others: readonly Rod[]
+): boolean {
   const path = pathOf(rod);
   const halfWidth = rodWidth(rod.kind) / 2 + CORRIDOR_CLEARANCE_METERS;
   const across = scale(rightNormal(rod.direction), halfWidth);
-  const onBoard = [path.from, path.to].every(
-    point => point.x >= 0 && point.y >= 0 && point.x <= level.width && point.y <= level.height
-  );
-  if (!onBoard || distanceToSegment(level.tee, path) < TEE_CLEARANCE_METERS) {
+  if (avoid.some(point => distanceToSegment(point, path) < TEE_CLEARANCE_METERS)) {
     return false;
   }
+  const standing = [...level.walls, ...level.neighbourWalls];
   for (let along = CORRIDOR_SAMPLE_METERS; along < path.length; along += CORRIDOR_SAMPLE_METERS) {
     const middle = pointAlongEdge(path, along);
     for (const point of [middle, add(middle, across), subtract(middle, across)]) {
-      if (level.walls.some(wall => isInBounds(wall, point) && containsPoint(wall, point))) {
+      if (standing.some(wall => isInBounds(wall, point) && containsPoint(wall, point))) {
         return false;
       }
     }

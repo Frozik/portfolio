@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
-import type { Level, Rod, RodKind } from '../../domain/level';
+import type { Bounds, Level, Rod, RodKind } from '../../domain/level';
 import { rodShape, rodTipLength, rodWidth } from '../../domain/rods';
 import { add, rightNormal, scale, subtract } from '../../domain/vector';
 import type { MeshData, Rgba } from './mesh-writer';
@@ -42,9 +42,22 @@ export function rodTones(kind: RodKind): Tones {
  * reads as round, ending in a pointed tip shaded the same way. A screw rod
  * is brass with a thread of slanted grooves along its shaft.
  */
-export function buildRodMesh(level: Level, extensions: readonly number[]): MeshData {
+export function buildRodMesh(
+  level: Level,
+  extensions: readonly number[],
+  visible: Bounds
+): MeshData {
   const writer = new MeshWriter();
   level.rods.forEach((rod, index) => {
+    // Rebuilt every frame, and the course holds hundreds of rods: only those that can reach into the view.
+    if (
+      rod.base.x < visible.min.x - rod.length ||
+      rod.base.x > visible.max.x + rod.length ||
+      rod.base.y < visible.min.y - rod.length ||
+      rod.base.y > visible.max.y + rod.length
+    ) {
+      return;
+    }
     const shape = rodShape(rod, extensions[index]);
     const [tailLeft, tailRight, shoulderRight, tip, shoulderLeft] = shape.vertices;
     const tones = rodTones(rod.kind);

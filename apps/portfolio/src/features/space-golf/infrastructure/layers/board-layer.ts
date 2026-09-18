@@ -4,11 +4,8 @@ import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import { currentGravity } from '../../domain/ball';
-import { BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS, CLOCK_SPEED } from '../../domain/constants';
-import type { Level } from '../../domain/level';
+import { CLOCK_SPEED } from '../../domain/constants';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
-import type { PixelRect } from '../render/board-viewport';
-import { boardPixelRect, fitBoard } from '../render/board-viewport';
 import { buildFloaterMesh } from '../render/floater-geometry';
 import { buildDustMesh, buildOverlayMesh } from '../render/frame-geometry';
 import {
@@ -16,8 +13,6 @@ import {
   FRAMED_LOCAL_OFFSET_BYTES,
   FRAMED_VERTEX_STRIDE_BYTES,
 } from '../render/framed-mesh-writer';
-import type { LevelMeshes } from '../render/level-geometry';
-import { buildLevelMeshes } from '../render/level-geometry';
 import type { MeshData } from '../render/mesh-writer';
 import { MESH_COLOR_OFFSET_BYTES, MESH_VERTEX_STRIDE_BYTES } from '../render/mesh-writer';
 import { CLEAR_COLOR } from '../render/palette';
@@ -30,6 +25,8 @@ import boardShaderSource from '../shaders/board.wgsl?raw';
 import khokhlomaShaderSource from '../shaders/khokhloma.wgsl?raw';
 import mezenShaderSource from '../shaders/mezen.wgsl?raw';
 import surfacesShaderSource from '../shaders/surfaces.wgsl?raw';
+import type { GpuMesh } from './sector-mesh-cache';
+import { SectorMeshCache } from './sector-mesh-cache';
 
 const UNIFORM_BYTES = 48;
 const UNIFORM_FLOATS = 12;
@@ -53,11 +50,8 @@ const PATTERN_SHIFT_METERS_PER_SEED = 1.37;
 const PATTERN_SHIFT_PERIOD_SEEDS = 97;
 /** Vertices the per-frame buffer can hold: ninety dust quads, or the ball, five dots and two rings. */
 const DYNAMIC_VERTEX_CAPACITY = 6144;
-
-interface GpuMesh {
-  readonly buffer: GPUBuffer;
-  readonly vertexCount: number;
-}
+/** The dust lives in what the camera shows and this much more, so none pops in at the edge. */
+const DUST_MARGIN_METERS = 2;
 
 /** A mesh that follows one per-stroke state array: rebuilt when the array is replaced, once per stroke. */
 interface StrokeMesh {
@@ -85,14 +79,11 @@ export class BoardLayer implements RenderLayer {
   private dustCount = 0;
   private rodBuffer!: GPUBuffer;
   private rodCount = 0;
-  private stage:
-    | { readonly level: Level; readonly gpu: Record<keyof LevelMeshes, GpuMesh> }
-    | undefined;
+  private readonly sectors = new SectorMeshCache(data => this.upload(data));
   private spikes: StrokeMesh | undefined;
   private floaters: StrokeMesh | undefined;
   private dust: ParticleField | undefined;
   private lastTime: number | undefined;
-  private scissor: PixelRect | undefined;
 
   constructor(
     private readonly msaaManager: MsaaTextureManager,
@@ -167,10 +158,18 @@ export class BoardLayer implements RenderLayer {
     if (isNil(scene)) {
       return;
     }
-    if (this.stage?.level !== scene.level) {
-      this.replaceStage(scene.level);
-      this.dust = createParticleField(scene.level.seed, scene.level.width, scene.level.height);
-    }
+    this.sectors.sync(scene.slices);
+    const dustWindow = {
+      min: {
+        x: scene.visible.min.x - DUST_MARGIN_METERS,
+        y: scene.visible.min.y - DUST_MARGIN_METERS,
+      },
+      max: {
+        x: scene.visible.max.x + DUST_MARGIN_METERS,
+        y: scene.visible.max.y + DUST_MARGIN_METERS,
+      },
+    };
+    this.dust ??= createParticleField(scene.level.seed, dustWindow);
     this.spikes = this.followStates(this.spikes, scene.ball.spikes, states =>
       buildSpikeMesh(scene.level, states)
     );
@@ -179,19 +178,8 @@ export class BoardLayer implements RenderLayer {
     );
     const elapsed = this.lastTime === undefined ? 0 : (state.time - this.lastTime) * CLOCK_SPEED;
     this.lastTime = state.time;
-    if (!isNil(this.dust)) {
-      this.dust = advanceParticles(
-        this.dust,
-        currentGravity(scene.ball),
-        elapsed,
-        scene.level.width,
-        scene.level.height
-      );
-    }
-    const viewport = fitBoard(
-      { width: state.canvasWidth, height: state.canvasHeight },
-      { width: BOARD_WIDTH_METERS, height: BOARD_HEIGHT_METERS }
-    );
+    this.dust = advanceParticles(this.dust, currentGravity(scene.ball), elapsed, dustWindow);
+    const { viewport } = scene;
     const values = new Float32Array(UNIFORM_FLOATS);
     values.set([
       state.canvasWidth,
@@ -207,13 +195,11 @@ export class BoardLayer implements RenderLayer {
       state.time * CLOCK_SPEED,
     ]);
     this.device.queue.writeBuffer(this.uniforms, 0, values);
-    this.scissor = boardPixelRect(
-      viewport,
-      { width: BOARD_WIDTH_METERS, height: BOARD_HEIGHT_METERS },
-      { width: state.canvasWidth, height: state.canvasHeight }
+    this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust));
+    this.rodCount = this.writeDynamic(
+      this.rodBuffer,
+      buildRodMesh(scene.level, scene.ball.rods, scene.visible)
     );
-    this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust ?? []));
-    this.rodCount = this.writeDynamic(this.rodBuffer, buildRodMesh(scene.level, scene.ball.rods));
     this.dynamicCount = this.writeDynamic(
       this.dynamicBuffer,
       buildOverlayMesh(scene, state.time * CLOCK_SPEED)
@@ -244,10 +230,8 @@ export class BoardLayer implements RenderLayer {
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
     const scene = this.getScene();
-    if (!isNil(this.stage) && !isNil(scene) && !isNil(this.scissor)) {
-      // The board is the screen: the blocks bleeding past its edge and a
-      // ball on its way out are cut off there, as the original's arena is.
-      pass.setScissorRect(this.scissor.x, this.scissor.y, this.scissor.width, this.scissor.height);
+    if (!isNil(scene)) {
+      const shown = this.sectors.within(scene.visible);
       // The dust is the far background: everything else is painted over it.
       if (this.dustCount > 0) {
         pass.setVertexBuffer(0, this.dustBuffer);
@@ -258,16 +242,16 @@ export class BoardLayer implements RenderLayer {
         pass.setVertexBuffer(0, this.rodBuffer);
         pass.draw(this.rodCount);
       }
-      if (this.stage.gpu.fill.vertexCount > 0) {
-        pass.setPipeline(this.fillPipeline);
-        pass.setVertexBuffer(0, this.stage.gpu.fill.buffer);
-        pass.draw(this.stage.gpu.fill.vertexCount);
-        pass.setPipeline(this.pipeline);
-      }
-      if (this.stage.gpu.decor.vertexCount > 0) {
-        pass.setVertexBuffer(0, this.stage.gpu.decor.buffer);
-        pass.draw(this.stage.gpu.decor.vertexCount);
-      }
+      pass.setPipeline(this.fillPipeline);
+      this.drawEach(
+        pass,
+        shown.map(meshes => meshes.fill)
+      );
+      pass.setPipeline(this.pipeline);
+      this.drawEach(
+        pass,
+        shown.map(meshes => meshes.decor)
+      );
       if (!isNil(this.spikes) && this.spikes.gpu.vertexCount > 0) {
         pass.setVertexBuffer(0, this.spikes.gpu.buffer);
         pass.draw(this.spikes.gpu.vertexCount);
@@ -278,12 +262,12 @@ export class BoardLayer implements RenderLayer {
         pass.draw(this.floaters.gpu.vertexCount);
         pass.setPipeline(this.pipeline);
       }
-      if (this.stage.gpu.surfaces.vertexCount > 0) {
-        pass.setPipeline(this.surfacePipeline);
-        pass.setVertexBuffer(0, this.stage.gpu.surfaces.buffer);
-        pass.draw(this.stage.gpu.surfaces.vertexCount);
-        pass.setPipeline(this.pipeline);
-      }
+      pass.setPipeline(this.surfacePipeline);
+      this.drawEach(
+        pass,
+        shown.map(meshes => meshes.surfaces)
+      );
+      pass.setPipeline(this.pipeline);
       if (this.dynamicCount > 0) {
         pass.setVertexBuffer(0, this.dynamicBuffer);
         pass.draw(this.dynamicCount);
@@ -293,7 +277,7 @@ export class BoardLayer implements RenderLayer {
   }
 
   dispose(): void {
-    this.releaseStage();
+    this.sectors.dispose();
     this.spikes?.gpu.buffer.destroy();
     this.floaters?.gpu.buffer.destroy();
     this.spikes = undefined;
@@ -304,27 +288,13 @@ export class BoardLayer implements RenderLayer {
     this.rodBuffer.destroy();
   }
 
-  private replaceStage(level: Level): void {
-    this.releaseStage();
-    const meshes = buildLevelMeshes(level);
-    this.stage = {
-      level,
-      gpu: {
-        fill: this.upload(meshes.fill),
-        decor: this.upload(meshes.decor),
-        surfaces: this.upload(meshes.surfaces),
-      },
-    };
-  }
-
-  private releaseStage(): void {
-    if (isNil(this.stage)) {
-      return;
+  private drawEach(pass: GPURenderPassEncoder, meshes: readonly GpuMesh[]): void {
+    for (const mesh of meshes) {
+      if (mesh.vertexCount > 0) {
+        pass.setVertexBuffer(0, mesh.buffer);
+        pass.draw(mesh.vertexCount);
+      }
     }
-    for (const mesh of Object.values(this.stage.gpu)) {
-      mesh.buffer.destroy();
-    }
-    this.stage = undefined;
   }
 
   private followStates(

@@ -8,7 +8,7 @@ import {
   SPIKE_HEIGHT_METERS,
   SPIKE_WIDTH_METERS,
 } from './constants';
-import type { EdgeRef, Level, Segment, SpikeRow, Wall } from './level';
+import type { Level, Segment, SpikeRow } from './level';
 import { pointAlongEdge } from './level';
 import { distance, normalize, rightNormal, subtract } from './vector';
 
@@ -16,28 +16,33 @@ export function rowLength(teeth: number): number {
   return teeth * SPIKE_WIDTH_METERS;
 }
 
-/** A row on a face of `walls`: the sides of its teeth are laid out once here, for the sweep and the renderer alike. */
+/** A row on `face`, `from` metres along it: the sides of its teeth are laid out once here, for the sweep and the renderer alike. */
 export function createSpikeRow(
-  walls: readonly Wall[],
-  ref: EdgeRef,
+  face: Segment,
   from: number,
   teeth: number,
   extendedAtStart: boolean
 ): SpikeRow {
-  const edge = walls[ref.wall].edges[ref.edge];
   const sides: Segment[] = [];
   for (let tooth = 0; tooth < teeth; tooth += 1) {
-    const base = from + tooth * SPIKE_WIDTH_METERS;
-    const left = pointAlongEdge(edge, base);
-    const right = pointAlongEdge(edge, base + SPIKE_WIDTH_METERS);
-    const apex = pointAlongEdge(edge, base + SPIKE_WIDTH_METERS / 2);
+    const start = from + tooth * SPIKE_WIDTH_METERS;
+    const left = pointAlongEdge(face, start);
+    const right = pointAlongEdge(face, start + SPIKE_WIDTH_METERS);
+    const apex = pointAlongEdge(face, start + SPIKE_WIDTH_METERS / 2);
     const tip = {
-      x: apex.x + edge.normal.x * SPIKE_HEIGHT_METERS,
-      y: apex.y + edge.normal.y * SPIKE_HEIGHT_METERS,
+      x: apex.x + face.normal.x * SPIKE_HEIGHT_METERS,
+      y: apex.y + face.normal.y * SPIKE_HEIGHT_METERS,
     };
     sides.push(segment(left, tip), segment(tip, right));
   }
-  return { ...ref, from, teeth, extendedAtStart, sides };
+  const base: Segment = {
+    from: pointAlongEdge(face, from),
+    to: pointAlongEdge(face, from + rowLength(teeth)),
+    direction: face.direction,
+    normal: face.normal,
+    length: rowLength(teeth),
+  };
+  return { base, teeth, extendedAtStart, sides };
 }
 
 /** A tooth side run counter-clockwise round the tooth, so its outward normal points away from the solid. */
@@ -81,8 +86,13 @@ export function sweepCircleAgainstSpikes(
 ): SegmentHit | undefined {
   let best: SegmentHit | undefined;
   const { spikes } = level;
+  const reach = distance(from, to) + radius + SPIKE_HEIGHT_METERS;
   for (let index = 0; index < spikes.length; index += 1) {
-    if (!extended[index]) {
+    // The course holds hundreds of rows: only one within its own length of the motion can be met.
+    if (
+      !extended[index] ||
+      distance(spikes[index].base.from, from) > spikes[index].base.length + reach
+    ) {
       continue;
     }
     const { sides } = spikes[index];

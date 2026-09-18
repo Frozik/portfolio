@@ -14,9 +14,8 @@ import { step } from './step';
 import { applySurfaces } from './surfaces';
 import { createBlock } from './walls';
 
-/** The specifications' own board, the reference's 9 × 16 m, whatever the game's grows to. */
+/** The slab the specifications drop the ball on, nine metres wide. */
 const BOARD_WIDTH_METERS = 9;
-const BOARD_HEIGHT_METERS = 16;
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const FLOOR_TOP = 1;
 const slab = createBlock(0, 0, BOARD_WIDTH_METERS, FLOOR_TOP);
@@ -26,8 +25,6 @@ function slabLevel(kind: 'bounce' | 'sticky'): Level {
   const [floor] = applySurfaces([slab], [{ wall: 0, edge: 2, from: 2, length: 5, kind }]);
   return {
     seed: 0,
-    width: BOARD_WIDTH_METERS,
-    height: BOARD_HEIGHT_METERS,
     walls: [floor],
     tee: { x: 4.5, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     cup: { wall: 0, edge: 2, at: 0.5, radius: CUP_RADIUS_METERS },

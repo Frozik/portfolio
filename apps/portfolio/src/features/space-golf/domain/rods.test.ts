@@ -24,6 +24,7 @@ const DOWN: Vector2 = { x: 0, y: -1 };
 const RIGHT: Vector2 = { x: 1, y: 0 };
 const CEILING_Y = 16;
 const LEFT_WALL_X = 0;
+const FLOOR_Y = 1;
 
 /** The thin bar of the test level stands at x = 4..4.1, y = 2..6. */
 const BAR_LEFT_X = 4;
@@ -205,6 +206,58 @@ describe('rods in play', () => {
     );
   });
 
+  it('never push the ball into the wall it lies against: the ball slides along the face, out of the way', () => {
+    const level = withRods();
+    for (const offAxis of [0, 0.01, -0.03, 0.06]) {
+      const againstTheBar = {
+        x: BAR_LEFT_X - BALL_RADIUS_METERS - CONTACT_EPSILON_METERS,
+        y: 5 + offAxis,
+      };
+      let state: BallState = {
+        ...createBall(level),
+        down: RIGHT,
+        turn: { from: RIGHT, elapsedSeconds: 1 },
+        position: againstTheBar,
+        rest: { position: againstTheBar, down: RIGHT },
+        rods: [0, 3],
+      };
+
+      for (let tick = 0; tick < 2 * SECOND_STEPS; tick += 1) {
+        state = step(level, state, FIXED_STEP_SECONDS);
+        expect(state.position.x).toBeLessThanOrEqual(BAR_LEFT_X - BALL_RADIUS_METERS + 1e-9);
+      }
+    }
+  });
+
+  it('stop against a ball they have nowhere to push: a rod does not crush the ball through a wall, it waits for the ball to go', () => {
+    // The slant of the tip comes down on a ball lying in the corner of the left wall and the floor: down and to the left.
+    const rodX = LEFT_WALL_X + BALL_RADIUS_METERS + ROD_WIDTH_METERS * 0.4;
+    const reach = CEILING_Y - FLOOR_Y + rodTipLength('slide');
+    const level: Level = {
+      ...base,
+      rods: [createRod('slide', { x: rodX, y: CEILING_Y }, DOWN, reach)],
+    };
+    const inTheCorner = {
+      x: LEFT_WALL_X + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS,
+      y: FLOOR_Y + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS,
+    };
+    let state: BallState = {
+      ...createBall(level),
+      position: inTheCorner,
+      rest: { position: inTheCorner, down: DOWN },
+      rods: [reach - 1],
+    };
+
+    for (let tick = 0; tick < 2 * SECOND_STEPS; tick += 1) {
+      state = step(level, state, FIXED_STEP_SECONDS);
+      expect(state.position.y).toBeGreaterThanOrEqual(FLOOR_Y + BALL_RADIUS_METERS - 1e-9);
+      expect(state.position.x).toBeGreaterThanOrEqual(LEFT_WALL_X + BALL_RADIUS_METERS - 1e-9);
+    }
+    expect(state.phase).toBe('aiming');
+    expect(state.rods[0]).toBeLessThan(reach);
+    expect(state.rods[0]).toBeGreaterThan(reach - 1);
+  });
+
   it('drop a ball resting on a rod once the rod has slid out from under it', () => {
     const level = withRods();
     const top = 5 + ROD_WIDTH_METERS / 2;
@@ -224,6 +277,27 @@ describe('rods in play', () => {
 
     const fallen = run(level, dropped, 1);
     expect(fallen.position.y).toBeLessThan(top);
+  });
+
+  it('are no place to come back to: a ball at rest on a rod can be shot, but a burst ball returns to where it last rested clear of every rod — the rod may be gone by then', () => {
+    const level: Level = {
+      ...base,
+      rods: [createRod('screw', { x: LEFT_WALL_X, y: 5 }, RIGHT, 3)],
+    };
+    const tee = createBall(level);
+    const top = 5 + rodWidth('screw') / 2;
+    const dropped: BallState = {
+      ...tee,
+      phase: 'flying',
+      rods: [3],
+      position: { x: 1.5, y: top + BALL_RADIUS_METERS + 0.3 },
+    };
+
+    const state = runUntil(level, dropped, 4, each => each.phase !== 'flying');
+
+    expect(state.phase).toBe('aiming');
+    expect(state.position.y).toBeCloseTo(top + BALL_RADIUS_METERS, 2);
+    expect(state.rest).toEqual(tee.rest);
   });
 
   it('let the ball come to rest wedged between a standing rod and a corner — at rest is at rest, however it got there', () => {

@@ -1,6 +1,3 @@
-/** The board is portrait, like the reference, and half again as large as its 9 × 16 m arena (2026-09-18, the player: roomier is more interesting). */
-export const BOARD_WIDTH_METERS = 13.5;
-export const BOARD_HEIGHT_METERS = 24;
 /** The layout grid: islands are built from half-metre cells, so the board reads fine-grained next to the ball. */
 export const CELL_METERS = 0.5;
 
@@ -106,10 +103,24 @@ export const ROD_MAX_LENGTH_METERS = ROD_MAX_LENGTH_DIAMETERS * 2 * BALL_RADIUS_
 export const ROD_MIN_LENGTH_METERS = 0.6;
 
 /**
- * The board is open: a ball that leaves it and would not be back within this
- * long bursts the moment it leaves, and comes back to its rest point.
+ * No fall is faster than this: the course has no edge, a ball may fall
+ * through open space for a long while, and unbounded it would outrun the
+ * sweep and the making of the ground ahead of it.
  */
-export const OFFSCREEN_LIMIT_SECONDS = 3;
+export const TERMINAL_SPEED_METERS_PER_SECOND = 15;
+/**
+ * A flight that will not end is ended: the ball bursts and is back at its
+ * last rest. Two clocks, both far past anything a stroke does. A ball that
+ * has touched nothing for this long is falling through a gap in the
+ * country with no bottom to it — the highest lob there is, straight up at
+ * full power, is down again in under three seconds;
+ */
+export const MAX_AIRBORNE_SECONDS = 5;
+/** and one still not at rest this long after the stroke is bouncing or circling for ever — strokes settle in three to ten seconds (thirty at first: too long a wait to watch). */
+export const MAX_FLIGHT_SECONDS = 15;
+/** A new bonus appears this far from the resting ball: a stroke or two away, never a journey. */
+export const BONUS_MIN_DISTANCE_METERS = 3;
+export const BONUS_MAX_DISTANCE_METERS = 10;
 
 /** The ring drawn round the ball while the band is held. */
 export const AIM_RING_RADIUS_METERS = 0.9;

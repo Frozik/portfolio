@@ -1,8 +1,8 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { SPIKE_HEIGHT_METERS, SPIKE_WIDTH_METERS } from '../../domain/constants';
-import type { Edge, Level } from '../../domain/level';
-import { edgeOf, pointAlongEdge } from '../../domain/level';
+import type { Level, Segment } from '../../domain/level';
+import { pointAlongEdge } from '../../domain/level';
 import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE } from './palette';
@@ -20,9 +20,9 @@ const HIGHLIGHT_SHARE = 0.38;
 export function buildSpikeMesh(level: Level, extended: readonly boolean[]): MeshData {
   const writer = new MeshWriter();
   level.spikes.forEach((row, index) => {
-    const edge = edgeOf(level, row);
+    const edge = row.base;
     for (let tooth = 0; tooth < row.teeth; tooth += 1) {
-      const base = row.from + tooth * SPIKE_WIDTH_METERS;
+      const base = tooth * SPIKE_WIDTH_METERS;
       if (extended[index]) {
         writeTooth(writer, edge, base);
       } else {
@@ -33,7 +33,7 @@ export function buildSpikeMesh(level: Level, extended: readonly boolean[]): Mesh
   return writer.finish();
 }
 
-function writeTooth(writer: MeshWriter, edge: Edge, base: number): void {
+function writeTooth(writer: MeshWriter, edge: Segment, base: number): void {
   const left = lift(edge, base, -ROOT_DEPTH_METERS);
   const right = lift(edge, base + SPIKE_WIDTH_METERS, -ROOT_DEPTH_METERS);
   const highlight = lift(edge, base + SPIKE_WIDTH_METERS * HIGHLIGHT_SHARE, -ROOT_DEPTH_METERS);
@@ -50,7 +50,7 @@ function writeTooth(writer: MeshWriter, edge: Edge, base: number): void {
   ]);
 }
 
-function writeSocket(writer: MeshWriter, edge: Edge, base: number): void {
+function writeSocket(writer: MeshWriter, edge: Segment, base: number): void {
   const left = lift(edge, base, 0);
   const right = lift(edge, base + SPIKE_WIDTH_METERS, 0);
   const bottom = lift(edge, base + SPIKE_WIDTH_METERS / 2, -SOCKET_DEPTH_METERS);
@@ -63,7 +63,7 @@ function writeSocket(writer: MeshWriter, edge: Edge, base: number): void {
 }
 
 /** The point `along` the face, `by` metres out of it. */
-function lift(edge: Edge, along: number, by: number): Vector2 {
+function lift(edge: Segment, along: number, by: number): Vector2 {
   const point = pointAlongEdge(edge, along);
   return { x: point.x + edge.normal.x * by, y: point.y + edge.normal.y * by };
 }

@@ -2,34 +2,34 @@ import type { DBSchema, IDBPDatabase } from 'idb';
 import { openDB } from 'idb';
 import { isNil } from 'lodash-es';
 
-import type { ProgressRepository } from '../application/ports/progress-repository';
-import type { Progress } from '../domain/progress';
+import type { SavedWorld, WorldRepository } from '../application/ports/world-repository';
 
-const DATABASE_NAME = 'space-golf';
+/** A database of its own: the numbered levels kept their progress in `space-golf`, which nothing reads any more. */
+const DATABASE_NAME = 'space-golf-world';
 const DATABASE_VERSION = 1;
-const PROGRESS_STORE = 'progress';
-/** One player, one record. */
+const WORLD_STORE = 'world';
+/** One player, one world. */
 const CURRENT_KEY = 'current';
 
 interface SpaceGolfDbSchema extends DBSchema {
-  [PROGRESS_STORE]: {
+  [WORLD_STORE]: {
     key: string;
-    value: Progress;
+    value: SavedWorld;
   };
 }
 
-/** Keeps the player's level and stroke totals in IndexedDB. */
-export function createIndexedDBProgressRepository(
+/** Keeps the world — its sectors, the ball, the cup and the counters — in IndexedDB. */
+export function createIndexedDBWorldRepository(
   databaseName: string = DATABASE_NAME
-): ProgressRepository {
+): WorldRepository {
   let databasePromise: Promise<IDBPDatabase<SpaceGolfDbSchema>> | undefined;
 
   const openDatabase = (): Promise<IDBPDatabase<SpaceGolfDbSchema>> => {
     if (isNil(databasePromise)) {
       const opening = openDB<SpaceGolfDbSchema>(databaseName, DATABASE_VERSION, {
         upgrade(upgrading) {
-          if (!upgrading.objectStoreNames.contains(PROGRESS_STORE)) {
-            upgrading.createObjectStore(PROGRESS_STORE);
+          if (!upgrading.objectStoreNames.contains(WORLD_STORE)) {
+            upgrading.createObjectStore(WORLD_STORE);
           }
         },
       });
@@ -45,13 +45,17 @@ export function createIndexedDBProgressRepository(
   };
 
   return {
-    async load(): Promise<Progress | undefined> {
+    async load(): Promise<SavedWorld | undefined> {
       const database = await openDatabase();
-      return database.get(PROGRESS_STORE, CURRENT_KEY);
+      return database.get(WORLD_STORE, CURRENT_KEY);
     },
-    async save(progress: Progress): Promise<void> {
+    async save(world: SavedWorld): Promise<void> {
       const database = await openDatabase();
-      await database.put(PROGRESS_STORE, progress, CURRENT_KEY);
+      await database.put(WORLD_STORE, world, CURRENT_KEY);
+    },
+    async clear(): Promise<void> {
+      const database = await openDatabase();
+      await database.delete(WORLD_STORE, CURRENT_KEY);
     },
   };
 }

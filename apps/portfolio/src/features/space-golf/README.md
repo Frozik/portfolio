@@ -27,18 +27,27 @@ time.
   the field shows the turn as it happens
 - One bonus floats on the board, a breathing blue disc three balls across
   with a little arc of dots for a logo: the ball flies through it and takes
-  it. The first one gives foresight — the aim dots bend under gravity and
-  stop at the first wall — and each further one, up to five, adds three
+  it. The first one gives foresight — the aim dots become the flight itself
+  up to its first touch, played ahead by the same physics the ball then
+  flies by — and each further one, up to five, adds three
   dots of range; it lasts for the level, and after the fifth no more
   appear. The disc stays for one to three
   strokes and moves, or comes back after it was taken, only when the ball
   has come to rest, so a stroke can be planned for it
+- The course is shown at one scale on every screen — the ball is nine
+  pixels on a phone as on a desktop — by a camera that stands still while
+  the ball rests, is aimed and flies, and moves only once the flying ball
+  is within a tenth of the screen from a side, and then exactly as fast as
+  the ball; centring on the ball is the player's own — a double tap, `C` or
+  the HUD button glides there, eased in and out; two fingers, the
+  wheel, the right button or the arrows look around, a pinch or Ctrl + wheel
+  zooms out to an overview, and a
+  compass points to the cup with the distance, a scale bar under it showing
+  how long a metre is on the screen
 - The physics runs in fixed steps and the ball is drawn between them, so
   it glides evenly at any refresh rate, trailing a short tapered streak
   along the path it really flew — a few-pixel ball would strobe without it
-- The board is open space: blocks at the edge run on past it, a ball can
-  fly off — it bursts the moment it leaves unless gravity brings it back
-  within three seconds, and reappears where it last rested; the cup is a real rounded notch, two ball widths across, that the ball has to roll into —
+- The cup is a real rounded notch, two ball widths across, that the ball has to roll into —
   a fast ball bounces off its rim — and holing out adds the strokes to a
   running total kept with the level in IndexedDB
 - Long, deep faces carry a stretch of elastic or viscous surface, drawn
@@ -72,19 +81,26 @@ time.
   redraws the bridges; for the ball it is a wall as
   springy as a floater and just as indifferent to gravity, the ball may lie
   on it and is dropped when it slides away, and its pointed tip nudges a
-  ball in its path aside; a ball that has come to a stop against anything
+  ball in its path aside — along a wall the ball lies against, never into
+  it, and a ball with nowhere to go stops the rod until it is played away;
+  a ball that has come to a stop against anything
   at all — wedged between a rod and a corner, say — is at rest and can be
-  shot
-- Levels are endless and procedural on a half-metre grid over a 13.5 × 24 m
-  board, after the original's: a few shores lie along the board's edges
-  and reach into it as L and C shapes, bodies grown into L, T, Z and stair
-  shapes stand between them, and lozenge and octagon islets fill what room
-  is left; limbs are a metre thick, now and then half, no slot in an island
-  is narrower than a metre, a metre and a half of space lies between
-  islands and under a third of the board is solid; most corners, inner ones
-  too, are cut by a long diagonal and thin limbs end in a point, every empty
-  cell reachable from the tee; each island is one polygon with a
-  continuous rim, its body painted with a procedural Khokhloma pattern in
-  a fragment shader; on a landscape screen the board turns a quarter to
-  fill it, the tee at the left; the HUD steps to the previous and next level and the
-  current one is kept in IndexedDB
+  shot, though a burst ball comes back only to its last rest on the flat of
+  an island's face with no spike row under it and no floater or rod
+  touching it — ground that will still be there
+- The course is endless. The plane is cut into sectors sized to the
+  screen the world was made on. The country is made while the ball
+  rests — two screens out in every direction, a sector a frame — and the
+  stroke stops that work until the ball rests again, so a flight costs
+  nothing but itself; only a flight that leaves what was made, or a camera
+  looking past it, has a sector made on the fly. A sector is islands after the original's — blocks and bars grown
+  into L, T, Z and stair shapes, lozenge and octagon islets, a metre thick,
+  most corners cut by a long diagonal — that reach a little into the
+  sectors next door and keep their gap from what already stands there, so
+  no seam shows; then surfaces, spike rows, floaters and rods, every rod
+  fastened at both ends to islands of its own sector. Holing out closes the cup under the
+  ball, counts the hole, drops everything but the block of sectors round
+  the ball — the country beyond is made anew, differently — and cuts the
+  next cup one to three sectors away; there are no levels and no edge to
+  fall off, only a terminal speed. The world, the ball and the counters are
+  kept in IndexedDB, and a two-press button starts a new world

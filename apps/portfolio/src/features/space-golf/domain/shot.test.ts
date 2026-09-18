@@ -7,7 +7,8 @@ import {
   PREVIEW_DOT_COUNT,
   PREVIEW_INTERVAL_SECONDS,
 } from './constants';
-import { aim, previewDots, shoot } from './shot';
+import { previewDots } from './preview';
+import { aim, shoot } from './shot';
 import { createTestLevel } from './test-level';
 import { distance, length } from './vector';
 

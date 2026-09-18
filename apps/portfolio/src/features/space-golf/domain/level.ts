@@ -30,7 +30,8 @@ export interface Edge extends Segment {
   readonly kind: FaceKind;
 }
 
-interface Bounds {
+/** An axis-aligned box. */
+export interface Bounds {
   readonly min: Vector2;
   readonly max: Vector2;
 }
@@ -73,14 +74,15 @@ export interface Cup extends EdgeRef {
 
 /**
  * A row of one to three spike teeth standing on a horizontal or vertical
- * face, `from` metres along it, each a ball's diameter wide. Rows stand
+ * face, each a ball's diameter wide. Rows stand
  * extended or retracted and flip with every stroke; `extendedAtStart` is
  * the state on the tee. `sides` are the slanted sides of every tooth when
  * extended, base on the face, apex two diameters out — what the ball must
  * not touch.
  */
-export interface SpikeRow extends EdgeRef {
-  readonly from: number;
+export interface SpikeRow {
+  /** The stretch of face the row stands on, its normal pointing out of the wall. Geometry, not a reference: the cup moves and re-cuts walls, and an index would not survive that. */
+  readonly base: Segment;
   readonly teeth: number;
   readonly extendedAtStart: boolean;
   readonly sides: readonly Segment[];
@@ -125,27 +127,17 @@ export interface Rod {
   readonly length: number;
 }
 
+/** What the ball plays on: the endless course as made so far, or a hand-built arena in the specifications. It has no edge. */
 export interface Level {
   readonly seed: number;
-  readonly width: number;
-  readonly height: number;
   readonly walls: readonly Wall[];
   /** Where the ball starts, resting on a floor with gravity pointing down. */
   readonly tee: Vector2;
-  readonly cup: Cup;
+  /** The one cup, while there is one: between a hole-out and the next cup there is none. */
+  readonly cup: Cup | undefined;
   readonly spikes: readonly SpikeRow[];
   readonly floaters: readonly Floater[];
   readonly rods: readonly Rod[];
-}
-
-/** Whether a ball centred at `point` is wholly outside the board — the board has no walls around it. */
-export function isBeyondBoard(level: Level, point: Vector2, radius: number): boolean {
-  return (
-    point.x < -radius ||
-    point.y < -radius ||
-    point.x > level.width + radius ||
-    point.y > level.height + radius
-  );
 }
 
 export function edgeOf(level: Level, ref: EdgeRef): Edge {

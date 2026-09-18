@@ -54,13 +54,7 @@ export function placeSpikes(
     const maxTeeth = Math.min(MAX_TEETH, Math.floor(room / rowLength(1)));
     const teeth = random.int(MIN_TEETH, maxTeeth);
     const from = END_MARGIN_METERS + random.next() * (room - rowLength(teeth));
-    const row = createSpikeRow(
-      walls,
-      { wall: chosen.wall, edge: chosen.edge },
-      from,
-      teeth,
-      random.chance(EXTENDED_AT_START_CHANCE)
-    );
+    const row = createSpikeRow(chosen.face, from, teeth, random.chance(EXTENDED_AT_START_CHANCE));
     if (!touchesBall(row, tee)) {
       rows.push(row);
     }

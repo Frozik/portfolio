@@ -1,6 +1,6 @@
 import { BALL_RADIUS_METERS, CONTACT_EPSILON_METERS, CUP_RADIUS_METERS } from './constants';
 import { carveCup } from './cup';
-import type { Level } from './level';
+import type { Cup, Level } from './level';
 import { createBlock, createChamferedBlock } from './walls';
 
 /** The specifications' own board, the reference's 9 × 16 m, whatever the game's grows to. */
@@ -16,7 +16,7 @@ const FLOOR_TOP = 1;
  * stands at y = 1, a thin vertical bar in the middle, a chamfered block on
  * the right and the cup in the floor at x = 4.5.
  */
-export function createTestLevel(): Level {
+export function createTestLevel(): Level & { readonly cup: Cup } {
   const floor = createBlock(-FRAME, -FRAME, BOARD_WIDTH_METERS + 2 * FRAME, FRAME + FLOOR_TOP);
   const ceiling = createBlock(-FRAME, BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS + 2 * FRAME, FRAME);
   const left = createBlock(-FRAME, 0, FRAME, BOARD_HEIGHT_METERS);
@@ -25,8 +25,6 @@ export function createTestLevel(): Level {
   const chamfered = createChamferedBlock(6, 8, 2, 2, 0.5, new Set(['lowerLeft']));
   return carveCup({
     seed: 0,
-    width: BOARD_WIDTH_METERS,
-    height: BOARD_HEIGHT_METERS,
     walls: [floor, ceiling, left, right, bar, chamfered],
     tee: { x: 1, y: FLOOR_TOP + BALL_RADIUS_METERS + CONTACT_EPSILON_METERS },
     // The floor's top edge runs from (10, 1) to (-1, 1), so `at` counts from x = 10.

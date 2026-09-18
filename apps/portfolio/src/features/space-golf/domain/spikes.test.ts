@@ -27,7 +27,12 @@ function withRows(
   return {
     ...base,
     spikes: rows.map(row =>
-      createSpikeRow(base.walls, FLOOR_TOP, row.from, row.teeth, row.extendedAtStart)
+      createSpikeRow(
+        base.walls[FLOOR_TOP.wall].edges[FLOOR_TOP.edge],
+        row.from,
+        row.teeth,
+        row.extendedAtStart
+      )
     ),
   };
 }

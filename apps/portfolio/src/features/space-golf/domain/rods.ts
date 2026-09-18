@@ -2,19 +2,17 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Impact } from './collision';
-import { distanceToSegment, sweepCircleAgainstWall } from './collision';
+import { sweepCircleAgainstWall } from './collision';
 
 import {
-  BALL_RADIUS_METERS,
   CONTACT_EPSILON_METERS,
-  ROD_SHOVE_CARRY_SHARE,
   ROD_SPEED_METERS_PER_SECOND,
   ROD_WIDTH_METERS,
   SCREW_WIDTH_FACTOR,
 } from './constants';
 import type { FaceKind, Level, Rod, RodEdgeRef, RodKind, Wall } from './level';
-import { add, dot, rightNormal, scale, subtract, ZERO } from './vector';
-import { containsPoint, createWall } from './walls';
+import { add, distance, dot, rightNormal, scale, subtract, ZERO } from './vector';
+import { createWall } from './walls';
 
 export interface RodHit extends Impact, RodEdgeRef {}
 
@@ -83,7 +81,7 @@ export function advanceRods(
 }
 
 /** The rod's velocity as it moves, nothing while it stands — at either end, or a screw across gravity. */
-function rodVelocity(rod: Rod, extension: number, down: Vector2): Vector2 {
+export function rodVelocity(rod: Rod, extension: number, down: Vector2): Vector2 {
   const way = drive(rod, down);
   if ((way > 0 && extension >= rod.length) || (way < 0 && extension <= 0)) {
     return ZERO;
@@ -131,65 +129,15 @@ export function sweepCircleAgainstRods(
 ): RodHit | undefined {
   let best: RodHit | undefined;
   const { rods } = level;
+  const reach = distance(from, to) + radius;
   for (let index = 0; index < rods.length; index += 1) {
-    if (extensions[index] <= 0) {
+    // The course holds hundreds of rods: only one within its own length of the motion can be met.
+    if (extensions[index] <= 0 || distance(rods[index].base, from) > rods[index].length + reach) {
       continue;
     }
     const hit = sweepCircleAgainstWall(rodShape(rods[index], extensions[index]), from, to, radius);
     if (hit !== undefined && (best === undefined || hit.time < best.time)) {
       best = { ...hit, rod: index };
-    }
-  }
-  return best;
-}
-
-/** A ball's motion as far as the rods are concerned. */
-export interface Motion {
-  readonly position: Vector2;
-  readonly velocity: Vector2;
-}
-
-/**
- * The ball shoved clear of any rod that has slid into it: out along the
- * nearest side — off the pointed tip that is sideways — and carried at least
- * as fast as the rod moves. The same object back when no rod overlaps it.
- */
-export function shoveOutOfRods(
-  level: Level,
-  extensions: readonly number[],
-  down: Vector2,
-  motion: Motion
-): Motion {
-  let shoved = motion;
-  level.rods.forEach((rod, index) => {
-    const extension = extensions[index];
-    if (extension <= 0) {
-      return;
-    }
-    const shape = rodShape(rod, extension);
-    const nearest = nearestSide(shape, shoved.position);
-    const inside = containsPoint(shape, shoved.position);
-    const overlap = BALL_RADIUS_METERS - (inside ? -nearest.distance : nearest.distance);
-    if (overlap <= 0) {
-      return;
-    }
-    const { normal } = nearest;
-    const position = add(shoved.position, scale(normal, overlap + CONTACT_EPSILON_METERS));
-    const along = dot(shoved.velocity, normal);
-    const carried = dot(rodVelocity(rod, extension, down), normal) * ROD_SHOVE_CARRY_SHARE;
-    const velocity =
-      along < carried ? add(shoved.velocity, scale(normal, carried - along)) : shoved.velocity;
-    shoved = { position, velocity };
-  });
-  return shoved;
-}
-
-function nearestSide(shape: Wall, point: Vector2): { distance: number; normal: Vector2 } {
-  let best = { distance: Number.POSITIVE_INFINITY, normal: shape.edges[0].normal };
-  for (const edge of shape.edges) {
-    const distance = distanceToSegment(point, edge);
-    if (distance < best.distance) {
-      best = { distance, normal: edge.normal };
     }
   }
   return best;

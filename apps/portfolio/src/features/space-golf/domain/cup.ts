@@ -3,7 +3,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { BallState } from './ball';
 import type { WallHit } from './collision';
 import { BALL_RADIUS_METERS } from './constants';
-import type { FaceKind, Level, Wall } from './level';
+import type { Cup, FaceKind, Level } from './level';
 import { edgeOf, pointAlongEdge } from './level';
 import { distance, scale, subtract } from './vector';
 import { createWall } from './walls';
@@ -14,8 +14,13 @@ const CUP_ARC_SEGMENTS = 8;
 const RIM_TOLERANCE_METERS = 1e-3;
 
 /** The centre of the notch: on the face's line, `at` metres along the edge. */
-export function cupCenter(level: Level): Vector2 {
+export function cupCenter(level: Level & { readonly cup: Cup }): Vector2 {
   return pointAlongEdge(edgeOf(level, level.cup), level.cup.at);
+}
+
+/** Narrows a level to one that has its cup. */
+export function hasCup(level: Level): level is Level & { readonly cup: Cup } {
+  return level.cup !== undefined;
 }
 
 /**
@@ -25,7 +30,7 @@ export function cupCenter(level: Level): Vector2 {
  * alike, so the rim is a wall the ball can rest in or bounce off; touching
  * any of it turns gravity into the face the hole is cut into.
  */
-export function carveCup(level: Level): Level {
+export function carveCup(level: Level & { readonly cup: Cup }): Level & { readonly cup: Cup } {
   const { cup } = level;
   const wall = level.walls[cup.wall];
   const edge = wall.edges[cup.edge];
@@ -69,6 +74,9 @@ export function carveCup(level: Level): Level {
  * `position` is the ball's centre at the contact.
  */
 export function touchesRim(level: Level, hit: WallHit, position: Vector2): boolean {
+  if (!hasCup(level)) {
+    return false;
+  }
   if (hit.kind === 'cup') {
     return true;
   }
@@ -84,11 +92,11 @@ export function touchesRim(level: Level, hit: WallHit, position: Vector2): boole
  * with its centre inside the notch. Nothing pulls it in — it rolls in, or it
  * does not.
  */
-export function isInCup(
-  level: Level,
-  ball: BallState,
-  wall: Wall = level.walls[level.cup.wall]
-): boolean {
+export function isInCup(level: Level, ball: BallState): boolean {
+  if (!hasCup(level)) {
+    return false;
+  }
+  const wall = level.walls[level.cup.wall];
   if (
     ball.contact === undefined ||
     !('wall' in ball.contact) ||

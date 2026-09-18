@@ -46,6 +46,8 @@ function ballAt(position: Vector2): BallState {
 }
 
 const UP: Vector2 = { x: 0, y: 1 };
+/** The test level's right wall stands at x = 9. */
+const RIGHT_WALL_X = 9;
 
 describe('step', () => {
   it('makes the vertical wall the floor when the ball hits it', () => {
@@ -53,7 +55,7 @@ describe('step', () => {
 
     expect(state.down).toEqual({ x: 1, y: 0 });
     expect(state.velocity.x).toBeLessThan(0);
-    expect(state.position.x).toBeLessThanOrEqual(level.width - BALL_RADIUS_METERS);
+    expect(state.position.x).toBeLessThanOrEqual(RIGHT_WALL_X - BALL_RADIUS_METERS);
   });
 
   it('turns the pull towards the new floor over the turn time, not at the hit', () => {

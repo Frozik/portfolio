@@ -10,22 +10,26 @@ interface Particle {
 
 export type ParticleField = readonly Particle[];
 
-/** Ninety on the 9 × 16 m board; scaled with the board's area. */
+/** Enough for a desktop's view at the one scale to look dusty, and not too many for a phone. */
 export const PARTICLE_COUNT = 200;
 const MIN_RADIUS_METERS = 0.015;
 const MAX_RADIUS_METERS = 0.04;
-/** Dust spills this far past the board on every side and wraps around there. */
-const PARTICLE_MARGIN_METERS = 2;
 const DRIFT_SPEED_METERS_PER_SECOND = 0.35;
 
-export function createParticleField(seed: number, width: number, height: number): ParticleField {
+/** The window the dust lives in: what the camera shows, and a little more so none pops in at the edge. */
+export interface DustWindow {
+  readonly min: Vector2;
+  readonly max: Vector2;
+}
+
+export function createParticleField(seed: number, window: DustWindow): ParticleField {
   const random = createRandom(seed);
   const particles: Particle[] = [];
   for (let index = 0; index < PARTICLE_COUNT; index += 1) {
     particles.push({
       position: {
-        x: -PARTICLE_MARGIN_METERS + random.next() * (width + 2 * PARTICLE_MARGIN_METERS),
-        y: -PARTICLE_MARGIN_METERS + random.next() * (height + 2 * PARTICLE_MARGIN_METERS),
+        x: window.min.x + random.next() * (window.max.x - window.min.x),
+        y: window.min.y + random.next() * (window.max.y - window.min.y),
       },
       radius: MIN_RADIUS_METERS + random.next() * (MAX_RADIUS_METERS - MIN_RADIUS_METERS),
     });
@@ -33,22 +37,32 @@ export function createParticleField(seed: number, width: number, height: number)
   return particles;
 }
 
+/**
+ * The dust a moment later: drifted along gravity and wrapped into the
+ * window, which travels with the camera — the course has no edge, so the
+ * same motes serve wherever the player looks.
+ */
 export function advanceParticles(
   field: ParticleField,
   gravity: Vector2,
   dt: number,
-  width: number,
-  height: number
+  window: DustWindow
 ): ParticleField {
-  const minX = -PARTICLE_MARGIN_METERS;
-  const minY = -PARTICLE_MARGIN_METERS;
-  const spanX = width + 2 * PARTICLE_MARGIN_METERS;
-  const spanY = height + 2 * PARTICLE_MARGIN_METERS;
+  const spanX = window.max.x - window.min.x;
+  const spanY = window.max.y - window.min.y;
   return field.map(particle => ({
     ...particle,
     position: {
-      x: wrap(particle.position.x + gravity.x * DRIFT_SPEED_METERS_PER_SECOND * dt, minX, spanX),
-      y: wrap(particle.position.y + gravity.y * DRIFT_SPEED_METERS_PER_SECOND * dt, minY, spanY),
+      x: wrap(
+        particle.position.x + gravity.x * DRIFT_SPEED_METERS_PER_SECOND * dt,
+        window.min.x,
+        spanX
+      ),
+      y: wrap(
+        particle.position.y + gravity.y * DRIFT_SPEED_METERS_PER_SECOND * dt,
+        window.min.y,
+        spanY
+      ),
     },
   }));
 }

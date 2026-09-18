@@ -2,8 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 /**
  * How the board's metres map onto a canvas: a uniform scale, where the
- * board's origin lands and which way its axes run in pixels — down the
- * canvas's y for a portrait canvas, turned a quarter for a landscape one.
+ * board's origin lands and which way its axes run in pixels.
  */
 export interface BoardViewport {
   /** Pixels per metre. */
@@ -16,72 +15,23 @@ export interface BoardViewport {
   readonly yAxis: Vector2;
 }
 
-/** Air left around the board, as a share of the smaller fitting dimension. */
-const MARGIN_SHARE = 0.03;
-
 /**
- * Fits the whole board into the viewport, letterboxed and centred. A
- * portrait canvas shows the board upright, y up; a landscape canvas shows
- * it turned a quarter counter-clockwise, so the board's top — the tee —
- * is at the left and its bottom at the right, and the board fills the
- * screen instead of standing in a strip between black bars.
+ * The view a camera gives: `center` metres of the world in the middle of
+ * the canvas, `scale` pixels to the metre, y pointing up. The scale is the
+ * same on every device — nothing is fitted to the screen — so a small
+ * screen shows less of the world, not a smaller world.
  */
-export function fitBoard(
-  viewport: { readonly width: number; readonly height: number },
-  board: { readonly width: number; readonly height: number }
+export function viewportOf(
+  center: Vector2,
+  scale: number,
+  canvas: { readonly width: number; readonly height: number }
 ): BoardViewport {
-  if (viewport.width > viewport.height) {
-    const scale =
-      Math.min(viewport.width / board.height, viewport.height / board.width) * (1 - MARGIN_SHARE);
-    return {
-      scale,
-      origin: {
-        x: (viewport.width + board.height * scale) / 2,
-        y: (viewport.height + board.width * scale) / 2,
-      },
-      xAxis: { x: 0, y: -scale },
-      yAxis: { x: -scale, y: 0 },
-    };
-  }
-  const scale =
-    Math.min(viewport.width / board.width, viewport.height / board.height) * (1 - MARGIN_SHARE);
   return {
     scale,
-    origin: {
-      x: (viewport.width - board.width * scale) / 2,
-      y: (viewport.height + board.height * scale) / 2,
-    },
+    origin: { x: canvas.width / 2 - center.x * scale, y: canvas.height / 2 + center.y * scale },
     xAxis: { x: scale, y: 0 },
     yAxis: { x: 0, y: -scale },
   };
-}
-
-export interface PixelRect {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-/**
- * The board's rectangle on the canvas in whole pixels, clamped to the canvas:
- * the scissor of the render pass, so the board is the screen the way the
- * original's arena is — whatever lies beyond its edge is out of sight.
- */
-export function boardPixelRect(
-  viewport: BoardViewport,
-  board: { readonly width: number; readonly height: number },
-  canvas: { readonly width: number; readonly height: number }
-): PixelRect {
-  const corners = [
-    boardToPixel(viewport, { x: 0, y: 0 }),
-    boardToPixel(viewport, { x: board.width, y: board.height }),
-  ];
-  const left = Math.max(0, Math.floor(Math.min(corners[0].x, corners[1].x)));
-  const top = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y)));
-  const right = Math.min(canvas.width, Math.ceil(Math.max(corners[0].x, corners[1].x)));
-  const bottom = Math.min(canvas.height, Math.ceil(Math.max(corners[0].y, corners[1].y)));
-  return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 
 /** Board metres → pixels. */

@@ -33,6 +33,17 @@ export function createEmptyGrid(width: number, height: number): CellGrid {
   return { width, height, solid: new Array<boolean>(width * height).fill(false) };
 }
 
+/** A grid with exactly these cells solid; cells outside it are ignored. */
+export function gridOfCells(width: number, height: number, cells: Iterable<Cell>): CellGrid {
+  const solid = new Array<boolean>(width * height).fill(false);
+  for (const cell of cells) {
+    if (cell.x >= 0 && cell.y >= 0 && cell.x < width && cell.y < height) {
+      solid[cell.y * width + cell.x] = true;
+    }
+  }
+  return { width, height, solid };
+}
+
 export function fillRect(grid: CellGrid, rect: CellRect): CellGrid {
   const solid = [...grid.solid];
   for (let y = rect.y; y < rect.y + rect.height; y += 1) {
@@ -56,11 +67,32 @@ const NEIGHBOURS: readonly Cell[] = [
  * of cell keys rather than on sets and cell objects.
  */
 export function isConnected(grid: CellGrid, from: Cell): boolean {
+  const reached = reachableFrom(grid, from);
+  let emptyCount = 0;
+  let reachedCount = 0;
+  for (let key = 0; key < grid.solid.length; key += 1) {
+    emptyCount += grid.solid[key] ? 0 : 1;
+    reachedCount += reached[key];
+  }
+  return reachedCount === emptyCount;
+}
+
+/**
+ * The grid with every empty cell that cannot be walked to from `from` made
+ * solid: what already stands in a window may wall a pocket off, and a
+ * pocket nobody can enter is as good as rock — left empty it would make
+ * every later connectivity check fail.
+ */
+export function sealUnreachable(grid: CellGrid, from: Cell): CellGrid {
+  const reached = reachableFrom(grid, from);
+  return { ...grid, solid: grid.solid.map((solid, key) => solid || reached[key] === 0) };
+}
+
+function reachableFrom(grid: CellGrid, from: Cell): Uint8Array {
   const { width, height, solid } = grid;
   const seen = new Uint8Array(width * height);
   const stack = new Int32Array(width * height);
   let top = 0;
-  let reached = 1;
   const start = from.y * width + from.x;
   seen[start] = 1;
   stack[top] = start;
@@ -79,17 +111,12 @@ export function isConnected(grid: CellGrid, from: Cell): boolean {
       const next = nextY * width + nextX;
       if (!solid[next] && seen[next] === 0) {
         seen[next] = 1;
-        reached += 1;
         stack[top] = next;
         top += 1;
       }
     }
   }
-  let emptyCount = 0;
-  for (let key = 0; key < solid.length; key += 1) {
-    emptyCount += solid[key] ? 0 : 1;
-  }
-  return reached === emptyCount;
+  return seen;
 }
 
 /** Whether the rectangle overlaps a solid cell or leaves the grid. */

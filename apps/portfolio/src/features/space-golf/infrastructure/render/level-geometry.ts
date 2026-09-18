@@ -2,8 +2,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
-import { cupCenter } from '../../domain/cup';
-import type { Edge, Level, Rod } from '../../domain/level';
+import { cupCenter, hasCup } from '../../domain/cup';
+import type { Cup, Edge, Level, Rod } from '../../domain/level';
 import { edgeOf } from '../../domain/level';
 import { rodSeat, rodWidth } from '../../domain/rods';
 import { rightNormal } from '../../domain/vector';
@@ -54,7 +54,9 @@ export function buildLevelMeshes(level: Level): LevelMeshes {
       writeSurface(surfaces, edge);
     }
   }
-  writeFlag(decor, level);
+  if (hasCup(level)) {
+    writeFlag(decor, level);
+  }
   for (const rod of level.rods) {
     writePlate(decor, rod, rod.base, rod.direction);
     writePlate(decor, rod, rodSeat(rod), { x: -rod.direction.x, y: -rod.direction.y });
@@ -80,7 +82,7 @@ function writeSurface(writer: FramedMeshWriter, edge: Edge): void {
 }
 
 /** The pole stands on the bottom of the notch and rises out of it past the face. */
-function writeFlag(writer: MeshWriter, level: Level): void {
+function writeFlag(writer: MeshWriter, level: Level & { readonly cup: Cup }): void {
   const edge = edgeOf(level, level.cup);
   const poleBase = offset(cupCenter(level), edge.normal, -level.cup.radius);
   const poleTop = offset(poleBase, edge.normal, FLAG_POLE_HEIGHT_METERS);

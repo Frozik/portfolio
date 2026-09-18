@@ -1,11 +1,17 @@
-import { ChevronLeft, ChevronRight, Flag, RotateCcw } from 'lucide-react';
+import { useFunction } from '@frozik/components/hooks/useFunction';
+import { Check, Flag, Globe, LocateFixed, Maximize2, Minimize2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType } from 'react';
+import { useEffect, useState } from 'react';
+
+import { cn } from '@frozik/components/components/cn';
 
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { spaceGolfT } from '../translations';
 
 const ICON_SIZE_PX = 16;
+/** A reset asked for stays armed this long, waiting for the second press that confirms it. */
+const RESET_CONFIRM_MILLISECONDS = 3000;
 const BUTTON_CLASS =
   'pointer-events-auto flex size-9 items-center justify-center rounded-lg bg-neutral-800 text-neutral-300 shadow-lg transition-all hover:scale-110 hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-30';
 
@@ -13,44 +19,75 @@ const HudButton = ({
   icon: Icon,
   label,
   onClick,
-  disabled = false,
+  className,
 }: {
   readonly icon: ComponentType<{ readonly size: number }>;
   readonly label: string;
   readonly onClick: VoidFunction;
-  readonly disabled?: boolean;
+  readonly className?: string;
 }) => (
   <button
     type="button"
     onClick={onClick}
-    disabled={disabled}
     aria-label={label}
     title={label}
-    className={BUTTON_CLASS}
+    className={cn(BUTTON_CLASS, className)}
   >
     <Icon size={ICON_SIZE_PX} />
   </button>
 );
 
-/** The counters of the reference — the level, the strokes over all levels plus this one — with the way to the neighbouring levels and back to the tee. */
+/** A new world is two presses: the first arms the button, the second within a few seconds does it. */
+const ResetWorldButton = ({ onReset }: { readonly onReset: VoidFunction }) => {
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setArmed(false), RESET_CONFIRM_MILLISECONDS);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
+
+  const press = useFunction(() => {
+    if (armed) {
+      onReset();
+    }
+    setArmed(!armed);
+  });
+
+  return (
+    <HudButton
+      icon={armed ? Check : Globe}
+      label={armed ? spaceGolfT.hud.resetConfirm : spaceGolfT.hud.reset}
+      onClick={press}
+      className={armed ? 'bg-red-800 text-white' : undefined}
+    />
+  );
+};
+
+/** The counters — holes played, strokes over all of them plus those since the last — and the ways to look around and to start the world over. */
 export const Hud = observer(({ store }: { readonly store: SpaceGolfStore }) => (
   <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3 font-mono text-sm text-neutral-200">
-    <span className="flex items-center gap-1.5 rounded bg-black/50 px-2 py-1">
+    <span className="flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 tabular-nums">
       <Flag size={ICON_SIZE_PX} aria-hidden="true" />
-      {spaceGolfT.hud.level(store.levelNumber)}
+      {spaceGolfT.hud.holes(store.holes)}
     </span>
     <span className="rounded bg-black/50 px-2 py-1 tabular-nums">
-      {spaceGolfT.hud.strokes(store.totalStrokes, store.strokeCount)}
+      {spaceGolfT.hud.strokes(store.totalStrokes, store.strokesSinceHole)}
     </span>
     <span className="flex gap-2">
       <HudButton
-        icon={ChevronLeft}
-        label={spaceGolfT.hud.previous}
-        onClick={store.previousLevel}
-        disabled={!store.hasPreviousLevel}
+        icon={LocateFixed}
+        label={spaceGolfT.hud.toBall}
+        onClick={store.view.centerOnBall}
       />
-      <HudButton icon={ChevronRight} label={spaceGolfT.hud.next} onClick={store.nextLevel} />
-      <HudButton icon={RotateCcw} label={spaceGolfT.hud.restart} onClick={store.restart} />
+      <HudButton
+        icon={store.view.isOverview ? Minimize2 : Maximize2}
+        label={store.view.isOverview ? spaceGolfT.hud.closeUp : spaceGolfT.hud.overview}
+        onClick={store.view.toggleOverview}
+      />
+      <ResetWorldButton onReset={store.resetWorld} />
     </span>
   </div>
 ));

@@ -42,8 +42,10 @@ export interface BallState {
   readonly settlingSeconds: number;
   /** How long the ball has been sitting in the cup; the hole counts after a second. */
   readonly cupSeconds: number;
-  /** How long the ball has been outside the board; it bursts after a few seconds. */
-  readonly offscreenSeconds: number;
+  /** How long this flight has lasted; past the limit it is ended. */
+  readonly flightSeconds: number;
+  /** How long the flying ball has touched nothing; past the limit it is falling for ever. */
+  readonly airborneSeconds: number;
   /** Which spike rows stand extended, by row index; the rows flip with every stroke. */
   readonly spikes: readonly boolean[];
   /** Which floaters are large, by floater index; they flip with every stroke. */
@@ -69,7 +71,8 @@ export function createBall(level: Level): BallState {
     contact: undefined,
     settlingSeconds: 0,
     cupSeconds: 0,
-    offscreenSeconds: 0,
+    flightSeconds: 0,
+    airborneSeconds: 0,
     spikes: initialSpikes(level),
     floaters: initialFloaters(level),
     rods: initialRods(level),
@@ -100,7 +103,7 @@ export function advanceTurn(ball: BallState, dt: number): BallState {
   return { ...ball, turn: { ...ball.turn, elapsedSeconds } };
 }
 
-/** A destroyed ball back at its last resting point, ready to be shot again; the stroke stays counted. */
+/** A destroyed ball back at its last resting point, ready to be shot again; the stroke stays counted, and the foresight the bonuses gave is gone with the ball that earned it. */
 export function respawn(ball: BallState): BallState {
   return {
     ...turnTo(ball, ball.rest.down),
@@ -110,6 +113,8 @@ export function respawn(ball: BallState): BallState {
     contact: undefined,
     settlingSeconds: 0,
     cupSeconds: 0,
-    offscreenSeconds: 0,
+    flightSeconds: 0,
+    airborneSeconds: 0,
+    foresight: 0,
   };
 }

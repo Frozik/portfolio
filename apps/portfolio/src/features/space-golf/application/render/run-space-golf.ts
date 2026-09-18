@@ -5,13 +5,13 @@ import { startRenderLoop } from '@frozik/utils/webgpu/renderLoop';
 import { runGpuApp } from '@frozik/utils/webgpu/runGpuApp';
 import { isNil } from 'lodash-es';
 
-import { BOARD_HEIGHT_METERS, BOARD_WIDTH_METERS } from '../../domain/constants';
 import { createBoardPointerInput } from '../../infrastructure/input/board-pointer-input';
 import { BoardLayer } from '../../infrastructure/layers/board-layer';
 import { createGameUpdateLayer } from '../../infrastructure/layers/game-update-layer';
 import { MSAA_SAMPLE_COUNT } from '../../infrastructure/render-constants';
-import { fitBoard, pixelToBoard } from '../../infrastructure/render/board-viewport';
+import { viewportOf } from '../../infrastructure/render/board-viewport';
 import type { SceneFrame } from '../../infrastructure/render/scene-frame';
+import { VIEW_PIXELS_PER_METER } from '../camera';
 import type { SpaceGolfStore } from '../SpaceGolfStore';
 
 interface SpaceGolfGpuSession {
@@ -37,21 +37,28 @@ export function runSpaceGolf({
     if (isNil(scene)) {
       return undefined;
     }
+    store.view.resize({ width: canvas.clientWidth, height: canvas.clientHeight });
     const preview = store.preview;
+    // The canvas is sized in device pixels and the one scale is in CSS pixels.
+    const pixelRatio = canvas.clientWidth > 0 ? canvas.width / canvas.clientWidth : 1;
+    const viewport = viewportOf(
+      scene.view.center,
+      VIEW_PIXELS_PER_METER * scene.view.zoom * pixelRatio,
+      canvas
+    );
     // The ring goes with the dots: a slack band shows neither, so the
     // player sees at a glance that letting go now plays no stroke.
-    return { ...scene, preview, aimRing: !isNil(preview) };
+    return { ...scene, preview, aimRing: !isNil(preview), viewport, visible: store.view.visible };
   };
 
   const stopPointerInput = createBoardPointerInput(canvas, {
-    toBoard: (cssX, cssY) =>
-      pixelToBoard(
-        fitBoard(
-          { width: canvas.clientWidth, height: canvas.clientHeight },
-          { width: BOARD_WIDTH_METERS, height: BOARD_HEIGHT_METERS }
-        ),
-        { x: cssX, y: cssY }
-      ),
+    // The band is a difference of two points, measured at the one scale
+    // whatever the zoom and wherever the camera goes meanwhile: the same
+    // thumb travel is the same stroke.
+    toBand: (cssX, cssY) => ({ x: cssX / VIEW_PIXELS_PER_METER, y: -cssY / VIEW_PIXELS_PER_METER }),
+    onPan: store.view.pan,
+    onZoom: store.view.zoomBy,
+    onAttach: store.view.centerOnBall,
     onAnchor: store.beginAim,
     onPull: store.updateAim,
     onRelease: store.release,
