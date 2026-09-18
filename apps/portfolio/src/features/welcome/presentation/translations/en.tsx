@@ -128,98 +128,98 @@ export const welcomeTranslationsEn = {
         meta: 'AI · GA + Neural Net',
         title: 'Pendulum',
         description:
-          "A demo app where a genetic algorithm searches for a neural network capable of balancing an inverted pendulum. Watch generations evolve, compare their best scores, inspect the network's structure live — or grab the pendulum and try balancing it yourself.",
+          'A genetic algorithm breeds tiny neural networks until one learns to balance an inverted pendulum. Watch the generations get better — or grab the pendulum and try it yourself.',
         status: 'training',
       },
       sun: {
         meta: 'WebGPU · Rendering test',
         title: 'Sun',
         description:
-          'A WebGPU rendering test — a quarter-million particles shaded on the GPU to validate the pipeline and push throughput.',
+          'A quarter-million particles swirling into a sun — my stress test for a WebGPU pipeline.',
         status: '250K particles',
       },
       graphics: {
         meta: 'WebGPU · Primitives',
         title: 'Graphics',
         description:
-          'A WebGPU canvas for 2D primitives — variable-thickness lines with gradient fills and simple 2D shapes drawn in a fragment shader.',
+          'A little WebGPU sketchpad: lines of any thickness, gradients and simple shapes, all drawn by a shader.',
         status: '10k prims',
       },
       timeseries: {
         meta: 'WebGPU · Charts',
         title: 'Timeseries',
         description:
-          'A full-featured WebGPU charting engine — candles, lines, diamonds and more, with per-point color, transparency and thickness driven by value. 4 charts share a single WebGPU context — a shared-renderer pattern. All data lives on the GPU inside a texture.',
+          'A charting engine on WebGPU — candles, lines and more, smooth even with a lot of data. Four charts share one GPU context, and the data lives on the GPU.',
         status: 'live',
       },
       binance: {
         meta: 'WebGPU · Live market',
         title: 'Binance Orderbook',
         description:
-          'Live depth-of-market heatmap of real Binance data. Price levels across time are rendered on the GPU so every tick lands on screen the moment it arrives from the socket.',
+          "A live heatmap of the Binance order book: see where the market's money sits and how it moves, tick by tick.",
         status: 'btcusdt',
       },
       sudoku: {
         meta: 'Games · Puzzle',
         title: 'Sudoku',
         description:
-          'A Sudoku with comfortable controls, live result validation, automatic pencil marks, and full undo support.',
+          'Sudoku the way I like to play it: comfortable controls, automatic pencil marks, instant checks and undo.',
         status: 'play',
       },
       stereometry: {
         meta: 'Games · 3D geometry',
         title: 'Stereometry',
         description:
-          '3D stereometry trainer — construct lines and planes on polyhedra and solve classical problems, like finding the section of a pyramid by a plane defined through two lines.',
+          'A 3D geometry trainer: draw lines and planes on polyhedra and solve school classics — like the section of a pyramid.',
         status: '3d',
       },
       tanks: {
         meta: 'Games · WebGPU arcade',
         title: 'Tanks',
         description:
-          'A Battle City remake rendered on WebGPU — all 35 original stages with physics, enemy AI and timings traced from the original game, pixel art and sound synthesized entirely in code. Keyboard or touch.',
+          'Battle City, rebuilt from scratch: all 35 stages, the feel and timings of the original, pixel art and sound generated in code. Keyboard or touch.',
         status: '35 stages',
       },
       scorched: {
         meta: 'Games · WebGPU artillery',
         title: 'Scorched',
         description:
-          'A Scorched Earth remake on WebGPU — hot-seat artillery for up to ten tanks over destructible terrain, with the original manual\u2019s weapons catalog, wind, shields and eight AI personalities. Crater carving, falling dirt and explosion particles all run in compute shaders.',
+          'Scorched Earth for the browser: up to ten tanks at one screen, destructible terrain, wind, shields and 33 weapons — against friends or eight AI characters.',
         status: '33 weapons',
       },
       'space-golf': {
         meta: 'Games · WebGPU physics',
         title: 'Space Golf',
         description:
-          'A gravity-golf puzzle after Gravity Golfing: whichever wall the ball touches becomes the floor, 45° cuts only bounce it, and the cup is reached by chaining walls. Endless procedural islands on a half-metre grid, physics written for the game, Khokhloma-painted blocks, shimmering membranes and dripping goo — all drawn with WebGPU.',
+          'Golf where gravity follows the ball: whichever wall it touches becomes the floor. The course never ends — there is always another cup.',
         status: 'endless levels',
       },
       'site-planner': {
         meta: 'CAD · 2D plan + 3D terrain',
         title: 'Site Planner',
         description:
-          'A land-plot planner. Compose the plot outline and the building footprint from rectangles and circles, survey the ground with elevation marks, plant trees and lay paths — then look at it in 3D on WebGPU, with shadows cast by the real sun of a chosen date and time, slope and cut/fill analysis. Trace a scanned site plan, export the sheet as PNG or the plan as JSON.',
+          'Plan a plot of land in 2D — house, trees, paths, the lie of the ground — then look at it in 3D, with shadows from the real sun on any day and hour.',
         status: '2d → 3d',
       },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',
         description:
-          'Realtime retrospective board. Participants connect over WebRTC peer-to-peer — cards, voting, timer and phases sync without a central server.',
+          'A retrospective board for a team: cards, voting, a timer. Everyone connects peer-to-peer — no server in the middle.',
         status: 'p2p',
       },
       conf: {
         meta: 'Collaboration · AR',
         title: 'AR Video Chat',
         description:
-          "1-to-1 video chat with real-time face tracking that overlays AR glasses on the participant's face. Runs entirely in the browser — no plugins, no server-side inference.",
+          'One-to-one video chat that puts AR glasses on your face and keeps them there as you move. It all runs in the browser.',
         status: 'live',
       },
       controls: {
         meta: 'UI/UX · Input library',
         title: 'Controls',
         description:
-          'A collection of polished input controls — numeric with PIP highlighting, a free-form date/time picker that parses human phrases ("tom 13:00", "next fri 9am", "eom 23:59"), and more.',
+          'Inputs I wish every app had: a number field that highlights pips, and a date picker that understands "tom 13:00" or "next fri 9am".',
         status: 'input',
       },
     } as Record<string, IProjectTranslation>,
