@@ -8,12 +8,11 @@ describe('the scale bar', () => {
     expect(scaleBarFor(1)).toEqual({ meters: 1, pixels: VIEW_PIXELS_PER_METER });
   });
 
-  it('shows a rounder, longer measure as the view zooms out, so the bar never shrinks to a dash', () => {
-    const halfway = scaleBarFor(0.5);
+  it("is still one metre at a phone's home zoom, and a rounder, longer measure once a metre would shrink to a dash", () => {
     const overview = scaleBarFor(MIN_ZOOM);
 
-    expect(halfway).toEqual({ meters: 2, pixels: VIEW_PIXELS_PER_METER });
-    expect(overview.meters).toBe(5);
-    expect(overview.pixels).toBeCloseTo(5 * VIEW_PIXELS_PER_METER * MIN_ZOOM);
+    expect(scaleBarFor(0.5)).toEqual({ meters: 1, pixels: VIEW_PIXELS_PER_METER / 2 });
+    expect(overview.meters).toBe(2);
+    expect(overview.pixels).toBeCloseTo(2 * VIEW_PIXELS_PER_METER * MIN_ZOOM);
   });
 });

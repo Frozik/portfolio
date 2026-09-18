@@ -4,6 +4,7 @@ import {
   attachCamera,
   createCamera,
   glideCamera,
+  homeZoomFor,
   MIN_ZOOM,
   EDGE_MARGIN_VIEW_SHARE,
   panCamera,
@@ -128,6 +129,19 @@ describe('the camera', () => {
     expect(trackCamera(pushed, point, PHONE).center).toEqual(pushed.center);
     expect(point.x - pushed.center.x).toBeCloseTo(view.width * (1 / 2 - EDGE_MARGIN_VIEW_SHARE));
     expect(settle(pushed, point).center.x).toBeCloseTo(point.x, 2);
+  });
+
+  it('starts a narrow screen zoomed out, so a phone shows as much of the course as the game needs, and a wide screen at the one scale', () => {
+    expect(homeZoomFor({ width: 1600, height: 900 })).toBe(1);
+    expect(homeZoomFor({ width: 768, height: 1024 })).toBe(1);
+
+    const phone = homeZoomFor(PHONE);
+    expect(phone).toBeGreaterThanOrEqual(0.5);
+    expect(phone).toBeLessThan(0.55);
+    expect(
+      viewSizeMeters(zoomCamera(createCamera({ x: 0, y: 0 }), phone), PHONE).width
+    ).toBeCloseTo(12, 0);
+    expect(homeZoomFor({ width: 200, height: 300 })).toBe(0.5);
   });
 
   it('zooms out to an overview and never in past the one scale', () => {

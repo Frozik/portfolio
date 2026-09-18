@@ -7,14 +7,14 @@ const WINDOW = { min: { x: -30, y: 40 }, max: { x: -5, y: 54 } };
 describe('particle field', () => {
   it('carries every particle along the pull and wraps it into the window', () => {
     let field = createParticleField(2, WINDOW);
-    const before = field.map(particle => particle.position.y);
+    const before = field.particles.map(particle => particle.position.y);
 
     for (let tick = 0; tick < 60; tick += 1) {
       field = advanceParticles(field, { x: 0, y: -1 }, 1 / 60, WINDOW);
     }
 
-    expect(field).toHaveLength(PARTICLE_COUNT);
-    field.forEach((particle, index) => {
+    expect(field.particles).toHaveLength(PARTICLE_COUNT);
+    field.particles.forEach((particle, index) => {
       expect(particle.position.y).not.toBe(before[index]);
       expect(particle.position.y).toBeGreaterThanOrEqual(WINDOW.min.y);
       expect(particle.position.y).toBeLessThanOrEqual(WINDOW.max.y);
@@ -27,7 +27,7 @@ describe('particle field', () => {
 
     const moved = advanceParticles(field, { x: 0, y: 0 }, 1 / 60, elsewhere);
 
-    for (const particle of moved) {
+    for (const particle of moved.particles) {
       expect(particle.position.x).toBeGreaterThanOrEqual(elsewhere.min.x);
       expect(particle.position.x).toBeLessThanOrEqual(elsewhere.max.x);
     }
@@ -37,5 +37,47 @@ describe('particle field', () => {
     const field = createParticleField(3, WINDOW);
 
     expect(advanceParticles(field, { x: 0, y: 0 }, 1, WINDOW)).toEqual(field);
+  });
+
+  it('stays spread over the whole window when the view zooms out or in, instead of keeping to the patch it filled before', () => {
+    const CELLS = 3;
+    const spread = (window: typeof WINDOW, positions: readonly { x: number; y: number }[]) => {
+      const counts = Array.from({ length: CELLS * CELLS }, () => 0);
+      for (const { x, y } of positions) {
+        const column = Math.min(
+          CELLS - 1,
+          Math.floor(((x - window.min.x) / (window.max.x - window.min.x)) * CELLS)
+        );
+        const row = Math.min(
+          CELLS - 1,
+          Math.floor(((y - window.min.y) / (window.max.y - window.min.y)) * CELLS)
+        );
+        counts[row * CELLS + column] += 1;
+      }
+      return counts;
+    };
+    const zoomedOut = { min: { x: -55, y: 26 }, max: { x: 20, y: 68 } };
+    const fairShare = PARTICLE_COUNT / (CELLS * CELLS);
+
+    const wide = advanceParticles(
+      createParticleField(2, WINDOW),
+      { x: 0, y: -1 },
+      1 / 60,
+      zoomedOut
+    );
+    const narrowAgain = advanceParticles(wide, { x: 0, y: -1 }, 1 / 60, WINDOW);
+
+    for (const count of [
+      ...spread(
+        zoomedOut,
+        wide.particles.map(particle => particle.position)
+      ),
+      ...spread(
+        WINDOW,
+        narrowAgain.particles.map(particle => particle.position)
+      ),
+    ]) {
+      expect(count).toBeGreaterThan(fairShare / 3);
+    }
   });
 });

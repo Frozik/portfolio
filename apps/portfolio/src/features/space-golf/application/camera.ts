@@ -7,6 +7,10 @@ import { add, distance, lerp } from '../domain/vector';
 export const VIEW_PIXELS_PER_METER = 64;
 /** How far the view zooms out for an overview; it never zooms in past 1. */
 export const MIN_ZOOM = 0.3;
+/** A screen starts out showing at least this much of the course along its shorter side: what a stroke needs to be planned… */
+const HOME_VIEW_METERS = 12;
+/** …but never zoomed out further than this by itself: the ball must stay a ball. */
+const MIN_HOME_ZOOM = 0.5;
 /** A glide to a new centre covers the way at this speed on average… */
 const GLIDE_METERS_PER_SECOND = 5;
 /** …but never takes less than this, so a short one does not snap, nor more than this, so a long one does not drag. */
@@ -43,8 +47,20 @@ export interface CameraState {
   readonly attached: boolean;
 }
 
-export function createCamera(center: Vector2): CameraState {
-  return { center, glide: undefined, zoom: 1, attached: true };
+export function createCamera(center: Vector2, zoom = 1): CameraState {
+  return { center, glide: undefined, zoom, attached: true };
+}
+
+/**
+ * The zoom a screen starts at and comes back to from the overview. At the
+ * one scale a phone shows six metres across, the ball fills the eye and a
+ * stroke flies out of sight at once; a narrow screen therefore starts
+ * zoomed out to `HOME_VIEW_METERS` across. A wide one starts at the one
+ * scale.
+ */
+export function homeZoomFor(screen: Size): number {
+  const shorterSideMeters = Math.min(screen.width, screen.height) / VIEW_PIXELS_PER_METER;
+  return Math.min(1, Math.max(MIN_HOME_ZOOM, shorterSideMeters / HOME_VIEW_METERS));
 }
 
 /** What the screen shows, in metres. */

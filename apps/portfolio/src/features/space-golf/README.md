@@ -34,8 +34,9 @@ time.
   appear. The disc stays for one to three
   strokes and moves, or comes back after it was taken, only when the ball
   has come to rest, so a stroke can be planned for it
-- The course is shown at one scale on every screen — the ball is nine
-  pixels on a phone as on a desktop — by a camera that stands still while
+- The course is drawn at one scale, 64 pixels a metre, and a narrow screen
+  starts zoomed out from it — a phone shows twelve metres across, not six —
+  by a camera that stands still while
   the ball rests, is aimed and flies, and moves only once the flying ball
   is within a tenth of the screen from a side, and then exactly as fast as
   the ball; centring on the ball is the player's own — a double tap, `C` or

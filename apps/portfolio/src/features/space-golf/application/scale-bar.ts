@@ -3,7 +3,7 @@ import { VIEW_PIXELS_PER_METER } from './camera';
 /** The measures a bar may show, shortest first: the round numbers of a map's scale. */
 const MEASURES_METERS: readonly number[] = [1, 2, 5, 10];
 /** A bar shorter than this on the screen reads as a dash: the next measure is taken. */
-const MIN_BAR_PIXELS = 40;
+const MIN_BAR_PIXELS = 30;
 
 /** A length of the world drawn on the screen: what the distances of the HUD are read against. */
 export interface ScaleBar {

@@ -8,8 +8,8 @@ import { SpaceGolfStore } from './SpaceGolfStore';
 
 const FRAME = 1 / 60;
 const PHONE = { width: 390, height: 844 };
-/** A phone's sector is twelve metres wide at 64 pixels a metre. */
-const PIXELS_PER_SECTOR = 64 * 12;
+/** A pan this long looks well past everything a new world has made. */
+const FAR_AWAY_PIXELS = 5000;
 
 function createStore(saved?: SavedWorld) {
   const saves: SavedWorld[] = [];
@@ -233,12 +233,16 @@ describe('SpaceGolfStore', () => {
   it('makes the sectors the player looks at, a frame at a time', async () => {
     const { store } = createStore();
     await store.start(PHONE);
-    const sectorsAway = 6;
-    const lookedAt = (): boolean =>
-      store.scene?.slices.some(({ sector }) => sector.sx === sectorsAway) ?? false;
-    expect(lookedAt()).toBe(false);
+    const size = { widthCells: 24, heightCells: 27 };
+    const lookedAt = (): boolean => {
+      const { sx, sy } = sectorAt(size, store.view.center);
+      return (
+        store.scene?.slices.some(({ sector }) => sector.sx === sx && sector.sy === sy) ?? false
+      );
+    };
 
-    store.view.pan(PIXELS_PER_SECTOR * sectorsAway, 0);
+    store.view.pan(FAR_AWAY_PIXELS, 0);
+    expect(lookedAt()).toBe(false);
     for (let frame = 0; frame < 10; frame += 1) {
       store.advance(FRAME);
     }

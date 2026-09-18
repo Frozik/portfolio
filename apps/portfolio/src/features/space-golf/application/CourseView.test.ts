@@ -4,6 +4,7 @@ import type { Followed } from './CourseView';
 import { CourseView } from './CourseView';
 
 const DESKTOP = { width: 1600, height: 900 };
+const PHONE = { width: 390, height: 844 };
 const FRAME = 1 / 60;
 const BALL = { x: 50, y: 50 };
 
@@ -26,8 +27,8 @@ function settled(view: CourseView, target: Followed): CourseView {
 
 function createView(): CourseView {
   const view = new CourseView();
-  view.reset(BALL);
   view.resize(DESKTOP);
+  view.reset(BALL);
   return view;
 }
 
@@ -142,5 +143,26 @@ describe('the view of the course', () => {
     expect(view.isOverview).toBe(false);
     expect(view.zoom).toBe(1);
     expect(view.scaleBar).toEqual({ meters: 1, pixels: 64 });
+  });
+
+  it('starts a phone zoomed out to its own scale, and the overview button goes out from there and comes back to it', () => {
+    const view = new CourseView();
+    view.resize(PHONE);
+    view.reset(BALL);
+    const home = view.zoom;
+
+    expect(home).toBeLessThan(0.55);
+    expect(view.isOverview).toBe(false);
+
+    view.toggleOverview();
+    expect(view.isOverview).toBe(true);
+    expect(view.zoom).toBeLessThan(home);
+    view.toggleOverview();
+    expect(view.isOverview).toBe(false);
+    expect(view.zoom).toBeCloseTo(home);
+
+    view.zoomBy(10);
+    expect(view.zoom).toBe(1);
+    expect(view.isOverview).toBe(false);
   });
 });

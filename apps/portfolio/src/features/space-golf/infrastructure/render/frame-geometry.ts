@@ -27,7 +27,7 @@ const ALPHA_MAX = 255;
 /** The drifting dust, the far background everything else is painted over. */
 export function buildDustMesh(dust: ParticleField): MeshData {
   const writer = new MeshWriter();
-  for (const particle of dust) {
+  for (const particle of dust.particles) {
     const { x, y } = particle.position;
     const r = particle.radius * 2 * QUAD_HALF;
     writer.convexPolygon(

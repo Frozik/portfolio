@@ -10,6 +10,7 @@ import {
   centerShowing,
   createCamera,
   glideCamera,
+  homeZoomFor,
   MIN_ZOOM,
   panCamera,
   trackCamera,
@@ -25,6 +26,8 @@ const COMPASS_ANGLE_STEP_DEGREES = 2;
 const COMPASS_DISTANCE_STEP_METERS = 0.5;
 const HALF_TURN_DEGREES = 180;
 const NOWHERE: Vector2 = { x: 0, y: 0 };
+/** Zooms closer than this are the same zoom: a pinch back to the home zoom is not an overview. */
+const SAME_ZOOM_TOLERANCE = 1e-6;
 
 /** Which way the cup lies from the ball and how far; nothing to point at while the cup is on screen. */
 export interface Compass {
@@ -105,9 +108,9 @@ export class CourseView {
     };
   }
 
-  /** A new course: the view starts on `center`, following, at the one scale. */
+  /** A new course: the view starts on `center`, following, at the screen's home zoom. */
   reset(center: Vector2): void {
-    this.camera = createCamera(center);
+    this.camera = createCamera(center, homeZoomFor(this.screen));
     this.centring = false;
     this.isAttached = true;
     this.isOverview = false;
@@ -118,6 +121,7 @@ export class CourseView {
   /** The size of what the world is shown on, in CSS pixels. */
   resize(screen: Size): void {
     this.screen = screen;
+    this.isOverview = this.isZoomedOut();
   }
 
   /** Moves the view by hand: CSS pixels to the right and down the screen. It lets go of the ball. */
@@ -133,13 +137,14 @@ export class CourseView {
 
   zoomBy(factor: number): void {
     this.camera = zoomCamera(this.camera, factor);
-    this.isOverview = this.camera.zoom < 1;
+    this.isOverview = this.isZoomedOut();
     this.scaleBar = scaleBarFor(this.camera.zoom);
   }
 
-  /** The whole reach of the zoom in one press, and back. */
+  /** Out to the whole reach of the zoom in one press, and back to the screen's home zoom in another. */
   toggleOverview(): void {
-    this.zoomBy(this.isOverview ? 1 / MIN_ZOOM : MIN_ZOOM);
+    const target = this.isOverview ? homeZoomFor(this.screen) : MIN_ZOOM;
+    this.zoomBy(target / this.camera.zoom);
   }
 
   /** Follows the ball again, from wherever the player had looked away to. */
@@ -168,6 +173,10 @@ export class CourseView {
       this.centring = this.centring && !isNil(this.camera.glide);
     }
     this.pointCompass(followed);
+  }
+
+  private isZoomedOut(): boolean {
+    return this.camera.zoom < homeZoomFor(this.screen) - SAME_ZOOM_TOLERANCE;
   }
 
   private pointCompass(followed: Followed): void {
