@@ -48,7 +48,7 @@ const FRAMED_LAYOUT: GPUVertexBufferLayout = {
 /** The pattern is shifted per level by this many metres per seed step, folded so the shift stays small. */
 const PATTERN_SHIFT_METERS_PER_SEED = 1.37;
 const PATTERN_SHIFT_PERIOD_SEEDS = 97;
-/** Vertices the per-frame buffer can hold: ninety dust quads, or the ball, five dots and two rings. */
+/** Vertices the per-frame buffer can hold: ninety dust quads, or the whole overlay — the ball with its trail, twenty dots, the rings and the band being pulled. */
 const DYNAMIC_VERTEX_CAPACITY = 6144;
 /** The dust lives in what the camera shows and this much more, so none pops in at the edge. */
 const DUST_MARGIN_METERS = 2;

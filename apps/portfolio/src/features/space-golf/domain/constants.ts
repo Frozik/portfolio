@@ -24,6 +24,8 @@ export const MAX_CONTACTS_PER_STEP = 4;
 export const MAX_SPEED_METERS_PER_SECOND = 10;
 /** Metres per second of launch speed per metre of band stretch. */
 export const BAND_SPEED_PER_METER = 7.5;
+/** Stretching the band past this adds nothing: the launch speed is already capped there. */
+export const MAX_PULL_METERS = MAX_SPEED_METERS_PER_SECOND / BAND_SPEED_PER_METER;
 /**
  * A pull shorter than this is a slack band: no dots, no stroke. It also
  * sets the softest stroke there is — the dead zone times the band's speed

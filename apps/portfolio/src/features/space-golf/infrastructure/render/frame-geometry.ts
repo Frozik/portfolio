@@ -3,10 +3,11 @@ import { isNil } from 'lodash-es';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { AIM_RING_RADIUS_METERS, BALL_RADIUS_METERS } from '../../domain/constants';
 
+import { writeBand } from './band-geometry';
 import { writeBonus } from './bonus-geometry';
 import type { MeshData, Rgba } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
-import { PALETTE } from './palette';
+import { PALETTE, withAlpha } from './palette';
 import type { ParticleField } from './particles';
 import type { SceneFrame } from './scene-frame';
 
@@ -44,10 +45,10 @@ export function buildDustMesh(dust: ParticleField): MeshData {
 }
 
 /**
- * The ball, the aim ring, the dots and the burst — drawn over the board.
- * The band may be pulled while the ball still moves: the ring and the dots
- * then follow the ball in grey, and turn white the moment it rests and
- * the stroke can be played.
+ * The ball, the band being pulled, the aim ring, the dots and the burst —
+ * drawn over the board. The band may be pulled while the ball still moves:
+ * the ring and the dots then follow the ball in grey, and turn white the
+ * moment it rests and the stroke can be played.
  */
 export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshData {
   const writer = new MeshWriter();
@@ -73,16 +74,19 @@ export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshDa
   if (!isNil(scene.burst)) {
     const progress = Math.min(1, scene.burst.elapsedSeconds / BURST_SECONDS);
     const radius = BALL_RADIUS_METERS + (BURST_RADIUS_METERS - BALL_RADIUS_METERS) * progress;
-    const alpha = Math.round(ALPHA_MAX * (1 - progress));
     writer.ring(
       scene.burst.position,
       radius - BURST_RING_WIDTH_METERS / 2,
       radius + BURST_RING_WIDTH_METERS / 2,
-      [PALETTE.burst[0], PALETTE.burst[1], PALETTE.burst[2], alpha]
+      withAlpha(PALETTE.burst, ALPHA_MAX * (1 - progress))
     );
   } else if (scene.ball.phase !== 'holed') {
     writeTrail(writer, [...scene.trail, scene.ballPosition]);
     writer.circle(scene.ballPosition, BALL_RADIUS_METERS, PALETTE.ball);
+  }
+  // The band is what the hand is doing: it goes over everything, the ball included.
+  if (!isNil(scene.band)) {
+    writeBand(writer, scene.band, timeSeconds);
   }
   return writer.finish();
 }
@@ -98,12 +102,8 @@ function writeTrail(writer: MeshWriter, path: readonly Vector2[]): void {
   const last = path.length - 1;
   const halfWidthAt = (index: number): number =>
     BALL_RADIUS_METERS * (TRAIL_TAIL_WIDTH_SHARE + (1 - TRAIL_TAIL_WIDTH_SHARE) * (index / last));
-  const colorAt = (index: number): Rgba => [
-    PALETTE.ball[0],
-    PALETTE.ball[1],
-    PALETTE.ball[2],
-    Math.round(TRAIL_HEAD_ALPHA * (index / last) ** TRAIL_FADE_POWER),
-  ];
+  const colorAt = (index: number): Rgba =>
+    withAlpha(PALETTE.ball, TRAIL_HEAD_ALPHA * (index / last) ** TRAIL_FADE_POWER);
   for (let index = 0; index < last; index += 1) {
     const from = path[index];
     const to = path[index + 1];

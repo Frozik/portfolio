@@ -275,6 +275,32 @@ describe('SpaceGolfStore', () => {
     expect(made()).toBe(atRest + 1);
   });
 
+  it('puts a burst ball in the middle of the screen: the view goes to where it comes back', async () => {
+    const first = createStore();
+    await first.store.start(PHONE);
+    const [saved] = first.saves;
+    const { ball } = saved.play;
+    const whereItBurst = { x: ball.position.x + 20, y: ball.position.y + 20 };
+    const burst: SavedWorld = {
+      ...saved,
+      play: {
+        ...saved.play,
+        ball: { ...ball, phase: 'destroyed', position: whereItBurst },
+      },
+    };
+
+    const { store } = createStore(burst);
+    await store.start(PHONE);
+    store.view.pan(0, 300);
+    for (let frame = 0; frame < 120; frame += 1) {
+      store.advance(FRAME);
+    }
+
+    expect(store.scene?.ball.phase).toBe('aiming');
+    expect(store.view.isAttached).toBe(true);
+    expect(store.view.center).toEqual(ball.rest.position);
+  });
+
   it("shows how far the ball's foresight has grown: restored with a saved world, a level up with every bonus taken", async () => {
     const first = createStore();
     await first.store.start(PHONE);

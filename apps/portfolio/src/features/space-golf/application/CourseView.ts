@@ -53,10 +53,10 @@ export interface Followed {
 /**
  * The player's view of the course, at one scale on every device: a camera
  * that stays where it is while the ball rests and the stroke is aimed,
- * centres on the ball only when the player asks, and stands
- * still through a flight until the ball nears the edge of the screen; the
- * player's own looking around, which lets go of the ball;
- * and the compass to the cup. The camera moves every frame and is not
+ * centres on the ball when the player asks and when a burst one comes back
+ * to its rest, and stands still through a flight until the ball nears the
+ * edge of the screen; the player's own looking around, which lets go of
+ * the ball; and the compass to the cup. The camera moves every frame and is not
  * observable; what the HUD shows is.
  */
 export class CourseView {
@@ -68,7 +68,7 @@ export class CourseView {
   scaleBar: ScaleBar = scaleBarFor(1);
 
   private camera: CameraState = createCamera(NOWHERE);
-  /** The player has asked for the ball in the middle and the glide there is not over. */
+  /** The ball has been asked for in the middle and the glide there is not over. */
   private centring = false;
   private screen: Size = { width: 1, height: 1 };
 
@@ -154,7 +154,7 @@ export class CourseView {
     this.isAttached = true;
   }
 
-  /** The player's own asking for the ball in the middle of the screen: nothing else centres the view. */
+  /** The ball put in the middle of the screen: the player's own asking, and a burst ball come back to its rest. */
   centerOnBall(): void {
     this.attach();
     this.centring = true;
@@ -166,7 +166,7 @@ export class CourseView {
       this.centring = false;
       this.camera = trackCamera(this.camera, followed.ball, this.screen);
     } else {
-      // A flight leaves the ball in sight and the view where it is; only a ball come back elsewhere needs going to.
+      // A flight leaves the ball in sight and the view where it is; only a ball moved elsewhere needs going to.
       const target = this.centring
         ? followed.ball
         : centerShowing(this.camera, followed.ball, this.screen);

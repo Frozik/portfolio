@@ -13,6 +13,7 @@ import { viewportOf } from '../../infrastructure/render/board-viewport';
 import type { SceneFrame } from '../../infrastructure/render/scene-frame';
 import { VIEW_PIXELS_PER_METER } from '../camera';
 import type { SpaceGolfStore } from '../SpaceGolfStore';
+import { bandToBoard, toBand } from './band-points';
 
 interface SpaceGolfGpuSession {
   readonly cleanup: VoidFunction;
@@ -46,16 +47,28 @@ export function runSpaceGolf({
       VIEW_PIXELS_PER_METER * scene.view.zoom * pixelRatio,
       canvas
     );
+    const { aiming } = store;
+    const band = isNil(aiming)
+      ? undefined
+      : {
+          anchor: bandToBoard(viewport, aiming.anchor, pixelRatio),
+          pull: bandToBoard(viewport, aiming.pull, pixelRatio),
+          meterOnBoard: 1 / scene.view.zoom,
+        };
     // The ring goes with the dots: a slack band shows neither, so the
     // player sees at a glance that letting go now plays no stroke.
-    return { ...scene, preview, aimRing: !isNil(preview), viewport, visible: store.view.visible };
+    return {
+      ...scene,
+      preview,
+      band,
+      aimRing: !isNil(preview),
+      viewport,
+      visible: store.view.visible,
+    };
   };
 
   const stopPointerInput = createBoardPointerInput(canvas, {
-    // The band is a difference of two points, measured at the one scale
-    // whatever the zoom and wherever the camera goes meanwhile: the same
-    // thumb travel is the same stroke.
-    toBand: (cssX, cssY) => ({ x: cssX / VIEW_PIXELS_PER_METER, y: -cssY / VIEW_PIXELS_PER_METER }),
+    toBand,
     onPan: store.view.pan,
     onZoom: store.view.zoomBy,
     onAttach: store.view.centerOnBall,

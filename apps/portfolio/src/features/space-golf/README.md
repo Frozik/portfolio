@@ -20,6 +20,12 @@ time.
   impulse, not the flight — the bend under gravity is for the player to
   judge; returning to the anchor cancels the stroke, and so does letting
   go before the ball rests
+- The pull is drawn where the hand is: a hazy blue sphere quivers where the
+  press landed — the point the stroke is measured from, which nothing else
+  shows — and three lines of energy arc from it to the finger, swaying and
+  running with a travelling pulse, the whole picture brighter the further
+  the band is stretched and full at the strongest stroke. It is measured on
+  the screen, so it keeps its size at any zoom
 - Gravity does not flip at the hit: the pull travels from where it was to
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it
@@ -45,7 +51,9 @@ time.
   the ball rests, is aimed and flies, and moves only once the flying ball
   is within a tenth of the screen from a side, and then exactly as fast as
   the ball; centring on the ball is the player's own — a double tap, `C` or
-  the HUD button glides there, eased in and out; two fingers, the
+  the HUD button glides there, eased in and out — and the view's own only
+  for a burst ball, which it glides to the middle of the screen where it
+  comes back; two fingers, the
   wheel, the right button or the arrows look around, a pinch or Ctrl + wheel
   zooms out to an overview, and a
   compass points to the cup with the distance, a scale bar under it showing

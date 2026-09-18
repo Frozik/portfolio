@@ -55,7 +55,7 @@ describe('the view of the course', () => {
     expect(settled(view, followed({ ball: { x: 54, y: 50 } })).center).toEqual(BALL);
   });
 
-  it('goes, gliding, just far enough to show a ball that has come back out of sight', () => {
+  it('goes, gliding, just far enough to show a resting ball the view has been left off, and no further', () => {
     const view = createView();
     const halfWidth = DESKTOP.width / 64 / 2;
     const cameBack = { x: 50 + halfWidth * 3, y: 50 };
