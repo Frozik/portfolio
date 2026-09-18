@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef } from 'mobx';
 
+import type { BonusKind } from '../domain/bonus';
 import type { Bounds } from '../domain/level';
 import { distance, subtract } from '../domain/vector';
 import type { CameraState, Size } from './camera';
@@ -35,8 +36,8 @@ export interface Compass {
   readonly angleDegrees: number;
   readonly distanceMeters: number;
   readonly cupOnScreen: boolean;
-  /** Which way the bonus lies, while there is one and it is out of sight. */
-  readonly bonusAngleDegrees: number | undefined;
+  /** Which way the bonus lies and which it is, while there is one and it is out of sight. */
+  readonly bonus: { readonly angleDegrees: number; readonly kind: BonusKind } | undefined;
 }
 
 /** What the view follows this frame. */
@@ -46,7 +47,7 @@ export interface Followed {
   readonly isFlying: boolean;
   /** Nothing between a hole-out and the next cup. */
   readonly cup: Vector2 | undefined;
-  readonly bonus: Vector2 | undefined;
+  readonly bonus: { readonly at: Vector2; readonly kind: BonusKind } | undefined;
 }
 
 /**
@@ -198,8 +199,10 @@ export class CourseView {
       angleDegrees: bearing(followed.cup),
       distanceMeters: distance(followed.cup, followed.ball),
       cupOnScreen: inSight(followed.cup),
-      bonusAngleDegrees:
-        isNil(followed.bonus) || inSight(followed.bonus) ? undefined : bearing(followed.bonus),
+      bonus:
+        isNil(followed.bonus) || inSight(followed.bonus.at)
+          ? undefined
+          : { angleDegrees: bearing(followed.bonus.at), kind: followed.bonus.kind },
     };
     const shown = this.compass;
     const turned = (before: number | undefined, after: number | undefined): boolean =>
@@ -210,7 +213,8 @@ export class CourseView {
       isNil(shown) ||
       shown.cupOnScreen !== next.cupOnScreen ||
       turned(shown.angleDegrees, next.angleDegrees) ||
-      turned(shown.bonusAngleDegrees, next.bonusAngleDegrees) ||
+      shown.bonus?.kind !== next.bonus?.kind ||
+      turned(shown.bonus?.angleDegrees, next.bonus?.angleDegrees) ||
       Math.abs(shown.distanceMeters - next.distanceMeters) >= COMPASS_DISTANCE_STEP_METERS
     ) {
       this.compass = next;

@@ -25,16 +25,20 @@ time.
   through weightlessness and a ball that touched a ceiling sags off it
   before it is drawn back up; the dust drifts along the very same pull, so
   the field shows the turn as it happens
-- One bonus floats on the board, a breathing blue disc three balls across
-  with a little arc of dots for a logo: the ball flies through it and takes
-  it. The first one gives foresight — the aim dots become the flight itself
-  up to its first touch, played ahead by the same physics the ball then
-  flies by — and each further one, up to five, adds three
-  dots of range, shown in the HUD as five pips that light up one by one; it
-  lasts until the ball bursts, and after the fifth no more
-  appear. The disc stays for one to three
-  strokes and moves, or comes back after it was taken, only when the ball
-  has come to rest, so a stroke can be planned for it
+- One bonus floats on the board, a breathing disc three balls across: the
+  ball flies through it and takes it. A blue one with a little arc of dots
+  gives foresight — the aim dots become the flight itself up to its first
+  touch, played ahead by the same physics the ball then flies by — and each
+  further one, up to five, adds three dots of range, shown in the HUD as
+  five pips that light up one by one. A pink one with a splat of gum gives
+  the grip: the next ten touches of an island's face that end a flight —
+  flat or 45° — stick
+  the ball right where it touches, ten more with every further disc, the
+  count shown in the HUD; spikes still
+  burst it, floaters and rods still bounce it. Both last until the ball
+  bursts; past the fifth foresight every disc is a grip. The disc stays for
+  one to three strokes and moves, or comes back after it was taken, only
+  when the ball has come to rest, so a stroke can be planned for it
 - The course is drawn at one scale, 64 pixels a metre, and a narrow screen
   starts zoomed out from it — a phone shows twelve metres across, not six —
   by a camera that stands still while

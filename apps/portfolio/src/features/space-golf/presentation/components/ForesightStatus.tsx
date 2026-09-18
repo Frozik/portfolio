@@ -7,7 +7,7 @@ import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { MAX_FORESIGHT } from '../../domain/constants';
 import { spaceGolfT } from '../translations';
 
-const ICON_SIZE_PX = 14;
+const ICON_SIZE_PX = 13;
 const LEVELS = Array.from({ length: MAX_FORESIGHT }, (_, index) => index + 1);
 
 /**
@@ -17,7 +17,7 @@ const LEVELS = Array.from({ length: MAX_FORESIGHT }, (_, index) => index + 1);
  */
 export const ForesightStatus = observer(({ store }: { readonly store: SpaceGolfStore }) => (
   <span
-    className="flex h-9 items-center gap-1.5 rounded-lg bg-black/50 px-2.5"
+    className="flex h-7 items-center gap-1 rounded-md bg-black/50 px-1.5"
     role="img"
     aria-label={spaceGolfT.hud.foresight(store.foresight, MAX_FORESIGHT)}
     title={spaceGolfT.hud.foresight(store.foresight, MAX_FORESIGHT)}
@@ -25,12 +25,12 @@ export const ForesightStatus = observer(({ store }: { readonly store: SpaceGolfS
     <span className={cn('flex', store.foresight > 0 ? 'text-sky-300' : 'text-neutral-500')}>
       <Crosshair size={ICON_SIZE_PX} aria-hidden="true" />
     </span>
-    <span className="flex items-center gap-1">
+    <span className="flex items-center gap-0.5">
       {LEVELS.map(level => (
         <span
           key={level}
           className={cn(
-            'size-1.5 rounded-full transition-colors duration-300',
+            'size-1 rounded-full transition-colors duration-300',
             level <= store.foresight ? 'bg-sky-300' : 'bg-neutral-600'
           )}
         />

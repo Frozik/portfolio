@@ -9,6 +9,9 @@ export const PALETTE = {
   /** The foresight bonus: a deep blue disc in a cyan ring, unlike anything else on the board. */
   bonusFill: [14, 34, 56, 235],
   bonusRing: [110, 215, 255, 255],
+  /** The grip bonus: a deep plum disc in a gum-pink ring — nothing else on the board is pink. */
+  gripFill: [50, 14, 40, 235],
+  gripRing: [255, 128, 204, 255],
   /** A sliding rod and the plates it slides through: steel, shaded across so the rod reads as round. */
   steelDark: [78, 82, 92, 255],
   steel: [168, 174, 186, 255],

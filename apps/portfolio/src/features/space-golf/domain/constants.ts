@@ -134,6 +134,8 @@ export const BONUS_MAX_STROKES = 3;
  * gravity, each one after it adds dots, up to the cap.
  */
 export const MAX_FORESIGHT = 5;
+/** A grip bonus adds this many touches of an island that stick the ball where it touches; bonuses add up. */
+export const GRIP_TOUCHES = 10;
 export const FORESIGHT_DOTS_PER_LEVEL = 3;
 
 export const PREVIEW_DOT_COUNT = 5;

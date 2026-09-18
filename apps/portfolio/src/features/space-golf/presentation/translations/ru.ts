@@ -13,6 +13,7 @@ export const spaceGolfTranslationsRu: TranslationOf<typeof spaceGolfTranslations
     meters: (distance: number): string => `${distance} м`,
     compass: (distance: number): string => `До лунки ${distance} м`,
     foresight: (level: number, max: number): string => `Предвидение: уровень ${level} из ${max}`,
+    grip: (touches: number): string => `Липучка: осталось прилипаний — ${touches}`,
     scale: (meters: number): string => `Масштаб: отрезок ${meters} м`,
   },
   status: {

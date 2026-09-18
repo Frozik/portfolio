@@ -9,6 +9,7 @@ import { cn } from '@frozik/components/components/cn';
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { spaceGolfT } from '../translations';
 import { ForesightStatus } from './ForesightStatus';
+import { GripStatus } from './GripStatus';
 
 const ICON_SIZE_PX = 16;
 /** A reset asked for stays armed this long, waiting for the second press that confirms it. */
@@ -77,19 +78,24 @@ export const Hud = observer(({ store }: { readonly store: SpaceGolfStore }) => (
     <span className="rounded bg-black/50 px-2 py-1 tabular-nums">
       {spaceGolfT.hud.strokes(store.totalStrokes, store.strokesSinceHole)}
     </span>
-    <span className="flex items-center gap-2">
-      <ForesightStatus store={store} />
-      <HudButton
-        icon={LocateFixed}
-        label={spaceGolfT.hud.toBall}
-        onClick={store.view.centerOnBall}
-      />
-      <HudButton
-        icon={store.view.isOverview ? Minimize2 : Maximize2}
-        label={store.view.isOverview ? spaceGolfT.hud.closeUp : spaceGolfT.hud.overview}
-        onClick={store.view.toggleOverview}
-      />
-      <ResetWorldButton onReset={store.resetWorld} />
+    <span className="flex flex-wrap-reverse items-center justify-end gap-2">
+      <span className="flex items-center gap-1">
+        <GripStatus store={store} />
+        <ForesightStatus store={store} />
+      </span>
+      <span className="flex gap-2">
+        <HudButton
+          icon={LocateFixed}
+          label={spaceGolfT.hud.toBall}
+          onClick={store.view.centerOnBall}
+        />
+        <HudButton
+          icon={store.view.isOverview ? Minimize2 : Maximize2}
+          label={store.view.isOverview ? spaceGolfT.hud.closeUp : spaceGolfT.hud.overview}
+          onClick={store.view.toggleOverview}
+        />
+        <ResetWorldButton onReset={store.resetWorld} />
+      </span>
     </span>
   </div>
 ));

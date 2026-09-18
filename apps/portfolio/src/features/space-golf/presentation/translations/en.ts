@@ -10,6 +10,7 @@ export const spaceGolfTranslationsEn = {
     meters: (distance: number): string => `${distance} m`,
     compass: (distance: number): string => `The cup is ${distance} metres away`,
     foresight: (level: number, max: number): string => `Foresight: level ${level} of ${max}`,
+    grip: (touches: number): string => `Grip: ${touches} touches left`,
     scale: (meters: number): string => `Scale: the bar is ${meters} m long`,
   },
   status: {

@@ -100,11 +100,12 @@ describe('the view of the course', () => {
   });
 
   it('adds an arrow to the bonus only while the bonus is out of sight, and has no compass with no cup', () => {
-    const far = settled(createView(), followed({ bonus: { x: 50, y: 10 } }));
-    expect(far.compass?.bonusAngleDegrees).toBeCloseTo(180);
+    const far = settled(createView(), followed({ bonus: { at: { x: 50, y: 10 }, kind: 'grip' } }));
+    expect(far.compass?.bonus?.angleDegrees).toBeCloseTo(180);
+    expect(far.compass?.bonus?.kind).toBe('grip');
 
-    const near = settled(createView(), followed({ bonus: { x: 52, y: 50 } }));
-    expect(near.compass?.bonusAngleDegrees).toBeUndefined();
+    const near = settled(createView(), followed({ bonus: { at: { x: 52, y: 50 }, kind: 'grip' } }));
+    expect(near.compass?.bonus).toBeUndefined();
 
     expect(settled(createView(), followed({ cup: undefined })).compass).toBeUndefined();
   });

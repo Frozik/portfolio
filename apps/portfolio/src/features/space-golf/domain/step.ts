@@ -2,7 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BallState, Contact } from './ball';
 import { advanceTurn, currentGravity, turnTo } from './ball';
-import { isDue, isTaken, placeBonus, taken } from './bonus';
+import { bonusKindsFor, isDue, isTaken, placeBonus } from './bonus';
 import type { Impact, WallHit } from './collision';
 import { contactPosition, earlierHit, sweepCircleAgainstWalls } from './collision';
 import {
@@ -18,7 +18,6 @@ import {
   MAX_AIRBORNE_SECONDS,
   MAX_CONTACTS_PER_STEP,
   MAX_FLIGHT_SECONDS,
-  MAX_FORESIGHT,
   MAX_SPEED_METERS_PER_SECOND,
   MIN_BOUNCE_SPEED_METERS_PER_SECOND,
   REST_SETTLE_SECONDS,
@@ -40,6 +39,7 @@ import type { RodHit } from './rods';
 import { advanceRods, sweepCircleAgainstRods } from './rods';
 import { sweepCircleAgainstSpikes } from './spikes';
 import { isSafeRest, isTouching } from './support';
+import { withBonusTaken } from './take-bonus';
 import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from './vector';
 
 /**
@@ -74,6 +74,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   let contact = ball.contact;
   let remaining = dt;
   let touched = false;
+  let isStuck = false;
 
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
@@ -117,6 +118,23 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
       const floorNormal = onRim && hasCup(level) ? edgeOf(level, level.cup).normal : hit.normal;
       floored = floorTo(floored, scale(floorNormal, -1));
     }
+    if (
+      ball.grip > 0 &&
+      ball.airborneSeconds > 0 &&
+      'wall' in hit &&
+      !onRim &&
+      edgeOf(level, hit).kind !== 'cup'
+    ) {
+      // The grip: the ball stays where it touched the island. Gravity has turned as the face
+      // turns it, and the cup keeps its own rule — a ball held off its bottom would never hole out.
+      // Only a touch that ends a free flight counts: a ball rolling along a face, or nudged along
+      // it by a rod, is the same touch going on — it stuck anew every step and the rod burnt
+      // through forty touches in a second.
+      isStuck = true;
+      velocity = ZERO;
+      contact = contactOf(hit);
+      break;
+    }
     contact = response.resting ? contactOf(hit) : undefined;
     remaining *= 1 - hit.time;
   }
@@ -157,6 +175,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   if (flightSeconds >= MAX_FLIGHT_SECONDS || airborneSeconds >= MAX_AIRBORNE_SECONDS) {
     return { ...floored, position, velocity: ZERO, phase: 'destroyed', contact: undefined };
   }
+  const grip = isStuck ? ball.grip - 1 : ball.grip;
   const next: BallState = {
     ...floored,
     position,
@@ -165,10 +184,10 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     airborneSeconds,
     contact,
     settlingSeconds: 0,
-    bonus: hasBonus ? taken(ball.bonus) : ball.bonus,
-    foresight: hasBonus ? Math.min(ball.foresight + 1, MAX_FORESIGHT) : ball.foresight,
+    grip,
+    ...(hasBonus ? withBonusTaken({ ...ball, grip }) : {}),
   };
-  const settlingSeconds = held ? ball.settlingSeconds + dt : 0;
+  const settlingSeconds = restSeconds(ball.settlingSeconds + dt, held, isStuck);
 
   // In the hole the ball lies on the rim like on any wall; only the clock
   // differs: it does not come to "rest" for the player — no stroke can be
@@ -196,11 +215,18 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
  */
 function restingStep(level: Level, resting: BallState, rodsBefore: readonly number[]): BallState {
   // The bonus moves only here, with the ball at rest, so the player sees where it is
-  // before the stroke; with every bonus taken there is none left to show.
-  const ball: BallState =
-    isDue(resting.bonus) && resting.foresight < MAX_FORESIGHT
-      ? { ...resting, bonus: placeBonus(level, resting.bonus.moves + 1, resting.position) }
-      : resting;
+  // before the stroke.
+  const ball: BallState = isDue(resting.bonus)
+    ? {
+        ...resting,
+        bonus: placeBonus(
+          level,
+          resting.bonus.moves + 1,
+          resting.position,
+          bonusKindsFor(resting.foresight)
+        ),
+      }
+    : resting;
   const shove = shoveOutOfRods(
     level,
     { before: rodsBefore, now: ball.rods },
@@ -221,6 +247,14 @@ function restingStep(level: Level, resting: BallState, rodsBefore: readonly numb
     flightSeconds: 0,
     airborneSeconds: 0,
   };
+}
+
+/** How long the ball has been settling: a stuck ball is at rest at once, a held one is getting there, any other starts over. */
+function restSeconds(settling: number, held: boolean, isStuck: boolean): number {
+  if (isStuck) {
+    return REST_SETTLE_SECONDS;
+  }
+  return held ? settling : 0;
 }
 
 function contactOf(hit: WallHit | FloaterHit | RodHit): Contact {

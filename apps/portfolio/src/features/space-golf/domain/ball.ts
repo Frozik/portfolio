@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import type { BonusState } from './bonus';
-import { placeBonus } from './bonus';
+import { bonusKindsFor, placeBonus } from './bonus';
 import { GRAVITY_TURN_SECONDS } from './constants';
 import { initialFloaters } from './floaters';
 import type { EdgeRef, FloaterEdgeRef, Level, RodEdgeRef } from './level';
@@ -53,8 +53,10 @@ export interface BallState {
   /** How far each rod stands out of its wall, metres, by rod index; they slide with gravity. */
   readonly rods: readonly number[];
   readonly bonus: BonusState;
-  /** Bonuses taken on this level, capped: what the preview knows of the flight ahead. */
+  /** Foresight bonuses this ball has taken, capped: what the preview knows of the flight ahead. */
   readonly foresight: number;
+  /** Touches of an island that will still stick the ball where it touches: what the grip bonus gave. */
+  readonly grip: number;
 }
 
 const DOWN: Vector2 = { x: 0, y: -1 };
@@ -76,8 +78,9 @@ export function createBall(level: Level): BallState {
     spikes: initialSpikes(level),
     floaters: initialFloaters(level),
     rods: initialRods(level),
-    bonus: placeBonus(level, 0, level.tee),
+    bonus: placeBonus(level, 0, level.tee, bonusKindsFor(0)),
     foresight: 0,
+    grip: 0,
   };
 }
 
@@ -103,7 +106,7 @@ export function advanceTurn(ball: BallState, dt: number): BallState {
   return { ...ball, turn: { ...ball.turn, elapsedSeconds } };
 }
 
-/** A destroyed ball back at its last resting point, ready to be shot again; the stroke stays counted, and the foresight the bonuses gave is gone with the ball that earned it. */
+/** A destroyed ball back at its last resting point, ready to be shot again; the stroke stays counted, and what the bonuses gave — foresight, grip — is gone with the ball that earned it. */
 export function respawn(ball: BallState): BallState {
   return {
     ...turnTo(ball, ball.rest.down),
@@ -116,5 +119,6 @@ export function respawn(ball: BallState): BallState {
     flightSeconds: 0,
     airborneSeconds: 0,
     foresight: 0,
+    grip: 0,
   };
 }

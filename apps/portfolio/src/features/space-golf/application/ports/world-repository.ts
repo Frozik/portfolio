@@ -1,7 +1,7 @@
 import type { Play } from '../../domain/course';
 
 /** The format of a saved world; a world saved under another version is discarded, not migrated. */
-export const SAVED_WORLD_VERSION = 2;
+export const SAVED_WORLD_VERSION = 3;
 
 /** Everything a reload needs to put the player back on the very spot. */
 export interface SavedWorld {

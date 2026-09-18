@@ -9,6 +9,7 @@ import {
   BONUS_MIN_STROKES,
   BONUS_RADIUS_METERS,
   FLOATER_LARGE_SIDE_METERS,
+  MAX_FORESIGHT,
 } from './constants';
 import { createRandom } from './generator/random';
 import type { Level, Segment, Wall } from './level';
@@ -23,7 +24,18 @@ import { containsPoint } from './walls';
  * spots it has had: with the level's seed it fixes the next one, so a level
  * plays the same every time.
  */
+/**
+ * What a bonus gives: foresight — the aim dots become the flight ahead, a
+ * level further with each one — or the grip, which sticks the ball to the
+ * next `GRIP_TOUCHES` island faces it touches.
+ */
+export type BonusKind = 'foresight' | 'grip';
+
+const ALL_KINDS: readonly BonusKind[] = ['foresight', 'grip'];
+const KINDS_PAST_FORESIGHT: readonly BonusKind[] = ['grip'];
+
 export interface BonusState {
+  readonly kind: BonusKind;
   /** Where the disc is; nothing while it is taken and the ball has not rested yet. */
   readonly at: Vector2 | undefined;
   /** Strokes it still stays for; at nought it moves at the ball's next rest. */
@@ -40,9 +52,20 @@ const FLOATER_REACH_METERS = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
 const SEED_STRIDE = 1009;
 const FULL_TURN = Math.PI * 2;
 
-/** The bonus in its spot number `moves`: somewhere in the ring round the ball where it rests, a stroke or two away. */
-export function placeBonus(level: Level, moves: number, ball: Vector2): BonusState {
+/** The kinds a new bonus is drawn from: foresight only while there is some left to gain. */
+export function bonusKindsFor(foresight: number): readonly BonusKind[] {
+  return foresight < MAX_FORESIGHT ? ALL_KINDS : KINDS_PAST_FORESIGHT;
+}
+
+/** The bonus in its spot number `moves`, of one of `kinds`: somewhere in the ring round the ball where it rests, a stroke or two away. */
+export function placeBonus(
+  level: Level,
+  moves: number,
+  ball: Vector2,
+  kinds: readonly BonusKind[]
+): BonusState {
   const random = createRandom(level.seed * SEED_STRIDE + moves);
+  const kind = random.pick(kinds);
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
     const angle = random.next() * FULL_TURN;
     const away =
@@ -50,10 +73,10 @@ export function placeBonus(level: Level, moves: number, ball: Vector2): BonusSta
       random.next() * (BONUS_MAX_DISTANCE_METERS - BONUS_MIN_DISTANCE_METERS);
     const at: Vector2 = { x: ball.x + Math.cos(angle) * away, y: ball.y + Math.sin(angle) * away };
     if (isInTheOpen(level, at)) {
-      return { at, strokesLeft: random.int(BONUS_MIN_STROKES, BONUS_MAX_STROKES), moves };
+      return { kind, at, strokesLeft: random.int(BONUS_MIN_STROKES, BONUS_MAX_STROKES), moves };
     }
   }
-  return { at: undefined, strokesLeft: BONUS_MIN_STROKES, moves };
+  return { kind, at: undefined, strokesLeft: BONUS_MIN_STROKES, moves };
 }
 
 /** A stroke has been played: one fewer to stay for. */

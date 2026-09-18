@@ -69,6 +69,8 @@ export class SpaceGolfStore {
   strokesSinceHole = 0;
   /** How far the ball's foresight has grown: the bonuses this ball has taken. The ball itself is not observable. */
   foresight = 0;
+  /** Touches that will still stick the ball to an island: what is left of the grip bonus. */
+  grip = 0;
   /** The band being pulled; nothing while no pointer is down. */
   aiming: Aim | undefined = undefined;
   /** The camera, the player's looking around and the compass. */
@@ -250,6 +252,7 @@ export class SpaceGolfStore {
     this.accumulatorSeconds = 0;
     this.view.reset(play.ball.position);
     this.foresight = play.ball.foresight;
+    this.grip = play.ball.grip;
     this.status = 'playing';
   }
 
@@ -265,6 +268,7 @@ export class SpaceGolfStore {
     this.play = { ...grounded, ball };
     this.trail = extendTrail(this.trail, ball);
     this.foresight = ball.foresight;
+    this.grip = ball.grip;
     if (!isNil(this.burst)) {
       this.playBurst(this.burst);
       return;
@@ -287,6 +291,7 @@ export class SpaceGolfStore {
       this.play = { ...this.play, ball };
       this.previousBall = ball;
       this.foresight = ball.foresight;
+      this.grip = ball.grip;
     }
   }
 
@@ -323,7 +328,7 @@ export class SpaceGolfStore {
         ball: this.shownPosition(ball),
         isFlying: ball.phase === 'flying',
         cup: hasCup(level) ? cupCenter(level) : undefined,
-        bonus: ball.bonus.at,
+        bonus: isNil(ball.bonus.at) ? undefined : { at: ball.bonus.at, kind: ball.bonus.kind },
       },
       frameSeconds
     );

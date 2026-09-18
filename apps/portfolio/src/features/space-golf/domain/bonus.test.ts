@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BallState } from './ball';
 import { createBall } from './ball';
+import { bonusKindsFor, placeBonus } from './bonus';
 import {
   BONUS_MAX_DISTANCE_METERS,
   BONUS_MIN_DISTANCE_METERS,
@@ -29,7 +30,7 @@ function run(ball: BallState, seconds: number): BallState {
 }
 
 function withBonusAt(ball: BallState, x: number, y: number, strokesLeft = 3): BallState {
-  return { ...ball, bonus: { ...ball.bonus, at: { x, y }, strokesLeft } };
+  return { ...ball, bonus: { ...ball.bonus, kind: 'foresight', at: { x, y }, strokesLeft } };
 }
 
 describe('the bonus', () => {
@@ -62,7 +63,7 @@ describe('the bonus', () => {
     expect(taken.velocity).toEqual(missed.velocity);
   });
 
-  it('is gone for good once the last one is taken: with foresight at its cap no new disc appears', () => {
+  it('never runs out: with foresight at its cap the disc still comes back, and from then on it is always the grip', () => {
     const start = {
       ...createBall(level),
       position: { x: 2, y: 8 },
@@ -72,12 +73,26 @@ describe('the bonus', () => {
     const taken = run(shoot(level, withBonusAt(start, 3, 8), { x: 6, y: 0 }), 0.3);
     expect(taken.foresight).toBe(MAX_FORESIGHT);
 
-    const rested = run(taken, 10);
-    expect(rested.phase).toBe('aiming');
-    expect(rested.bonus.at).toBeUndefined();
-    const nextStroke = run(shoot(level, rested, { x: 0.5, y: 0 }), 6);
-    expect(nextStroke.phase).toBe('aiming');
-    expect(nextStroke.bonus.at).toBeUndefined();
+    let state = run(taken, 10);
+    for (let move = 0; move < 6; move += 1) {
+      expect(state.phase).toBe('aiming');
+      expect(state.bonus.at).toBeDefined();
+      expect(state.bonus.kind).toBe('grip');
+      state = run(
+        shoot(level, { ...state, bonus: { ...state.bonus, strokesLeft: 1 } }, { x: 0.5, y: 0 }),
+        6
+      );
+    }
+  });
+
+  it('comes in both kinds while there is foresight left to gain', () => {
+    const kinds = new Set<string>();
+    for (let moves = 0; moves < 40; moves += 1) {
+      kinds.add(placeBonus(level, moves, level.tee, bonusKindsFor(0)).kind);
+    }
+
+    expect([...kinds].sort()).toEqual(['foresight', 'grip']);
+    expect(bonusKindsFor(MAX_FORESIGHT)).toEqual(['grip']);
   });
 
   it('counts strokes down and moves only once the ball has come to rest, to a new spot with a new count of one to three', () => {

@@ -51,8 +51,9 @@ export function buildDustMesh(dust: ParticleField): MeshData {
  */
 export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshData {
   const writer = new MeshWriter();
-  if (!isNil(scene.ball.bonus.at) && scene.ball.phase !== 'holed') {
-    writeBonus(writer, scene.ball.bonus.at, timeSeconds);
+  const { bonus } = scene.ball;
+  if (!isNil(bonus.at) && scene.ball.phase !== 'holed') {
+    writeBonus(writer, { at: bonus.at, kind: bonus.kind }, timeSeconds);
   }
   const pending = scene.ball.phase === 'flying';
   const aimable = scene.ball.phase === 'aiming' || pending;

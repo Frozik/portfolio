@@ -2,21 +2,29 @@ import { isNil } from 'lodash-es';
 import { Navigation2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
+import { cn } from '@frozik/components/components/cn';
+
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
+import type { BonusKind } from '../../domain/bonus';
 import { spaceGolfT } from '../translations';
 
 const ARROW_SIZE_PX = 22;
 const BONUS_ARROW_SIZE_PX = 13;
+/** The arrow to the bonus wears the bonus's own colour. */
+const BONUS_ARROW_CLASS: Readonly<Record<BonusKind, string>> = {
+  foresight: 'text-sky-300',
+  grip: 'text-pink-300',
+};
 
 /**
  * Which way the cup lies from the ball, and how far: the one thing that
  * knows where an unseen cup is. With the cup on screen it is gone — the
- * flag speaks for itself there. A smaller blue arrow points at the bonus
- * while that is out of sight, whether the cup is or not.
+ * flag speaks for itself there. A smaller arrow in the bonus's own colour points at
+ * the bonus while that is out of sight, whether the cup is or not.
  */
 export const Compass = observer(({ store }: { readonly store: SpaceGolfStore }) => {
   const { compass } = store.view;
-  if (isNil(compass) || (compass.cupOnScreen && isNil(compass.bonusAngleDegrees))) {
+  if (isNil(compass) || (compass.cupOnScreen && isNil(compass.bonus))) {
     return null;
   }
   return (
@@ -33,10 +41,13 @@ export const Compass = observer(({ store }: { readonly store: SpaceGolfStore }) 
           <Navigation2 size={ARROW_SIZE_PX} aria-hidden="true" />
         </span>
       )}
-      {!isNil(compass.bonusAngleDegrees) && (
+      {!isNil(compass.bonus) && (
         <span
-          className="flex text-sky-300 transition-transform duration-150"
-          style={{ transform: `rotate(${compass.bonusAngleDegrees}deg)` }}
+          className={cn(
+            'flex transition-transform duration-150',
+            BONUS_ARROW_CLASS[compass.bonus.kind]
+          )}
+          style={{ transform: `rotate(${compass.bonus.angleDegrees}deg)` }}
         >
           <Navigation2 size={BONUS_ARROW_SIZE_PX} aria-hidden="true" />
         </span>
