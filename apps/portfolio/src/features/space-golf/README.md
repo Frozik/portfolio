@@ -20,14 +20,23 @@ time.
   impulse, not the flight — the bend under gravity is for the player to
   judge; returning to the anchor cancels the stroke, and so does letting
   go before the ball rests
-- The pull is drawn where the hand is, in the board's own Khokhloma gold: a
-  hazy amber sphere quivers where the press landed — the point the stroke is
-  measured from, which nothing else shows — and three ribbons of gold light,
-  white-hot down the middle, bow from it to the finger and wind into a
-  tendril's curl there, with four-pointed sparks riding along them out of
-  the haze. The whole picture fades up with the pull and is full at the
-  strongest stroke; it is measured on the screen, so it keeps its size at
-  any zoom
+- The pull is drawn as what it is — a bow, painted in Khokhloma: its
+  leather-wrapped grip stands where the press landed, its recurve limbs lie
+  across the shot — narrow at the grip, broad as a blade where the painting
+  goes, hooking back into a bound horn at the tip — in black lacquer inside
+  a gold edge, with golden blooms, clusters of red berries and leaves down
+  them, and the string is drawn back to the finger, bending the limbs as it
+  goes. The
+  arrow on the string — brass shaft, steel head, one white feather and one
+  red off its bound tail — points where the ball will fly, and gold
+  four-pointed sparks ride it out of the nock — but only while the ball rests and letting
+  go would play the stroke: pull the band with the ball still moving and the
+  bow is drawn on nothing, as the ring and the dots go grey. The bow appears with the stroke itself: a
+  band too slack to play one shows no bow, as it shows no ring and no dots,
+  only a haze where the press landed; and the string stops at the strongest
+  stroke — pulling further only turns the bow, since the speed is capped
+  there anyway. It turns with the finger, brightens the further the string
+  is drawn, and is measured on the screen, so it keeps its size at any zoom
 - Gravity does not flip at the hit: the pull travels from where it was to
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it

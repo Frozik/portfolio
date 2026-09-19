@@ -39,10 +39,12 @@ export const PALETTE = {
   burst: [255, 236, 180, 255],
   star: [255, 255, 255, 90],
   aimRing: [255, 255, 255, 70],
-  /** The band being pulled, in the board's own Khokhloma gold: an amber haze at the anchor, ribbons of gold light, white-hot in the middle and in the sparks. */
+  /** The bow the band is drawn as, and the light about it: an amber haze where the hand is, gold sparks, a white-hot string. */
   bandGlow: [255, 168, 48, 255],
   bandGold: [255, 206, 92, 255],
   bandCore: [255, 250, 226, 255],
+  /** The Khokhloma berry painted along the bow's limbs, the same red the pattern shader uses. */
+  berry: [189, 26, 18, 255],
 } as const satisfies Record<string, Rgba>;
 
 /** The same colour at another opacity: the fading ring of a burst, the tail of a trail, the pull of the band. */

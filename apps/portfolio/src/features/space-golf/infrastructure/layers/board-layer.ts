@@ -6,6 +6,7 @@ import { isNil } from 'lodash-es';
 import { currentGravity } from '../../domain/ball';
 import { CLOCK_SPEED } from '../../domain/constants';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
+import { DynamicVertexBuffer } from '../render/dynamic-vertex-buffer';
 import { buildFloaterMesh } from '../render/floater-geometry';
 import { buildDustMesh, buildOverlayMesh } from '../render/frame-geometry';
 import {
@@ -48,8 +49,13 @@ const FRAMED_LAYOUT: GPUVertexBufferLayout = {
 /** The pattern is shifted per level by this many metres per seed step, folded so the shift stays small. */
 const PATTERN_SHIFT_METERS_PER_SEED = 1.37;
 const PATTERN_SHIFT_PERIOD_SEEDS = 97;
-/** Vertices the per-frame buffer can hold: ninety dust quads, or the whole overlay — the ball with its trail, twenty dots, the rings and the band being pulled. */
-const DYNAMIC_VERTEX_CAPACITY = 6144;
+/**
+ * Room the per-frame buffers start with — ninety dust quads, or an overlay of
+ * the ball with its trail, the dots and the rings. The drawn bow alone is over
+ * five thousand vertices, so an overlay carrying one grows past this; the
+ * buffer grows with it rather than cutting the frame short.
+ */
+const INITIAL_DYNAMIC_VERTEX_CAPACITY = 6144;
 /** The dust lives in what the camera shows and this much more, so none pops in at the edge. */
 const DUST_MARGIN_METERS = 2;
 
@@ -73,11 +79,11 @@ export class BoardLayer implements RenderLayer {
   private floaterPipeline!: GPURenderPipeline;
   private uniforms!: GPUBuffer;
   private bindGroup!: GPUBindGroup;
-  private dynamicBuffer!: GPUBuffer;
-  private dynamicCount = 0;
-  private dustBuffer!: GPUBuffer;
+  private overlayVertices!: DynamicVertexBuffer;
+  private overlayCount = 0;
+  private dustVertices!: DynamicVertexBuffer;
   private dustCount = 0;
-  private rodBuffer!: GPUBuffer;
+  private rodVertices!: DynamicVertexBuffer;
   private rodCount = 0;
   private readonly sectors = new SectorMeshCache(data => this.upload(data));
   private spikes: StrokeMesh | undefined;
@@ -139,18 +145,15 @@ export class BoardLayer implements RenderLayer {
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniforms } }],
     });
-    this.dynamicBuffer = device.createBuffer({
-      size: DYNAMIC_VERTEX_CAPACITY * MESH_VERTEX_STRIDE_BYTES,
+    const perFrame = {
+      device,
+      strideBytes: MESH_VERTEX_STRIDE_BYTES,
+      initialVertices: INITIAL_DYNAMIC_VERTEX_CAPACITY,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    this.dustBuffer = device.createBuffer({
-      size: DYNAMIC_VERTEX_CAPACITY * MESH_VERTEX_STRIDE_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    this.rodBuffer = device.createBuffer({
-      size: DYNAMIC_VERTEX_CAPACITY * MESH_VERTEX_STRIDE_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
+    };
+    this.overlayVertices = new DynamicVertexBuffer(perFrame);
+    this.dustVertices = new DynamicVertexBuffer(perFrame);
+    this.rodVertices = new DynamicVertexBuffer(perFrame);
   }
 
   update(state: FrameState): void {
@@ -195,13 +198,11 @@ export class BoardLayer implements RenderLayer {
       state.time * CLOCK_SPEED,
     ]);
     this.device.queue.writeBuffer(this.uniforms, 0, values);
-    this.dustCount = this.writeDynamic(this.dustBuffer, buildDustMesh(this.dust));
-    this.rodCount = this.writeDynamic(
-      this.rodBuffer,
+    this.dustCount = this.dustVertices.write(buildDustMesh(this.dust));
+    this.rodCount = this.rodVertices.write(
       buildRodMesh(scene.level, scene.ball.rods, scene.visible)
     );
-    this.dynamicCount = this.writeDynamic(
-      this.dynamicBuffer,
+    this.overlayCount = this.overlayVertices.write(
       buildOverlayMesh(scene, state.time * CLOCK_SPEED)
     );
   }
@@ -234,12 +235,12 @@ export class BoardLayer implements RenderLayer {
       const shown = this.sectors.within(scene.visible);
       // The dust is the far background: everything else is painted over it.
       if (this.dustCount > 0) {
-        pass.setVertexBuffer(0, this.dustBuffer);
+        pass.setVertexBuffer(0, this.dustVertices.buffer);
         pass.draw(this.dustCount);
       }
       // The rods go under the islands: what is still inside a wall is hidden by it.
       if (this.rodCount > 0) {
-        pass.setVertexBuffer(0, this.rodBuffer);
+        pass.setVertexBuffer(0, this.rodVertices.buffer);
         pass.draw(this.rodCount);
       }
       pass.setPipeline(this.fillPipeline);
@@ -268,9 +269,9 @@ export class BoardLayer implements RenderLayer {
         shown.map(meshes => meshes.surfaces)
       );
       pass.setPipeline(this.pipeline);
-      if (this.dynamicCount > 0) {
-        pass.setVertexBuffer(0, this.dynamicBuffer);
-        pass.draw(this.dynamicCount);
+      if (this.overlayCount > 0) {
+        pass.setVertexBuffer(0, this.overlayVertices.buffer);
+        pass.draw(this.overlayCount);
       }
     }
     pass.end();
@@ -283,9 +284,9 @@ export class BoardLayer implements RenderLayer {
     this.spikes = undefined;
     this.floaters = undefined;
     this.uniforms.destroy();
-    this.dynamicBuffer.destroy();
-    this.dustBuffer.destroy();
-    this.rodBuffer.destroy();
+    this.overlayVertices.destroy();
+    this.dustVertices.destroy();
+    this.rodVertices.destroy();
   }
 
   private drawEach(pass: GPURenderPassEncoder, meshes: readonly GpuMesh[]): void {
@@ -348,20 +349,5 @@ export class BoardLayer implements RenderLayer {
       this.device.queue.writeBuffer(buffer, 0, data.vertexData);
     }
     return { buffer, vertexCount: data.vertexCount };
-  }
-
-  /** Rewrites a per-frame buffer, capped at its capacity; the count of vertices to draw. */
-  private writeDynamic(buffer: GPUBuffer, data: MeshData): number {
-    const count = Math.min(data.vertexCount, DYNAMIC_VERTEX_CAPACITY);
-    if (count > 0) {
-      this.device.queue.writeBuffer(
-        buffer,
-        0,
-        data.vertexData,
-        0,
-        count * MESH_VERTEX_STRIDE_BYTES
-      );
-    }
-    return count;
   }
 }
