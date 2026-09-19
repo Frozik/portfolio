@@ -15,8 +15,15 @@ const GROWTH_FACTOR = 2;
 const LITTLE_ENDIAN = true;
 const CIRCLE_SEGMENTS = 24;
 const FULL_TURN = Math.PI * 2;
-/** How far a mitred corner may reach past the ribbon's half width before it is cut short: a fold back on itself would reach forever. */
-const MITRE_LIMIT = 4;
+/**
+ * How far a mitred corner may reach past the ribbon's half width before the
+ * bend is bevelled instead: a right angle still comes to a point (1.41),
+ * anything sharper is cut off. The usual limit for a stroke is 4, which on
+ * a wake a few pixels wide reads as a needle rather than a corner.
+ */
+const MITRE_LIMIT = 1.6;
+/** The same for a closed outline's corners, where the mitre is a division: a corner that doubles back reaches four widths and no further. */
+const MIN_MITRE_SPREAD = 0.5;
 
 export interface MeshData {
   readonly vertexData: ArrayBuffer;
@@ -90,11 +97,14 @@ export class MeshWriter {
   /**
    * A tapered strip along an open polyline: a width and a colour at every
    * point of it, blended along the way — the wake of the ball, a stream of
-   * light. Every bend is mitred, so consecutive quads share their corners
-   * exactly: a quad per segment on its own leaves a wedge of background
-   * showing on the outside of every bend, which on a translucent ribbon
-   * reads as a row of dark notches. A point on top of its neighbour is
-   * dropped: it has no direction to be across.
+   * light. A gentle bend is mitred, so the two quads share their corners
+   * exactly and no wedge of background shows through on the outside of it;
+   * a sharp one is bevelled instead — each quad keeps its own square end
+   * and a triangle fills the wedge between them. Mitring a sharp bend
+   * throws its corner out along the way instead of across it, which on the
+   * ball's wake read as white needles shooting out of the ball at every
+   * bounce. A point on top of its neighbour is dropped: it has no
+   * direction to be across.
    */
   ribbon(
     points: readonly Vector2[],
@@ -109,28 +119,44 @@ export class MeshWriter {
     const directions = path
       .slice(0, -1)
       .map((node, index) => direction(node.point, path[index + 1].point));
-    const offsets = path.map((node, index) => {
-      const into = directions[index - 1] ?? directions[0];
-      const outOf = directions[index] ?? directions[directions.length - 1];
-      const across = mitreAcross(into, outOf);
-      return { x: across.x * node.shape.halfWidth, y: across.y * node.shape.halfWidth };
-    });
+    const joints = path.map((node, index) =>
+      jointAcross(
+        directions[index - 1] ?? directions[index],
+        directions[index] ?? directions[index - 1],
+        node.shape.halfWidth
+      )
+    );
     for (let index = 0; index + 1 < path.length; index += 1) {
       const [tail, head] = [path[index], path[index + 1]];
-      const [near, far] = [offsets[index], offsets[index + 1]];
-      const a = { x: tail.point.x + near.x, y: tail.point.y + near.y };
-      const b = { x: tail.point.x - near.x, y: tail.point.y - near.y };
-      const c = { x: head.point.x - far.x, y: head.point.y - far.y };
-      const d = { x: head.point.x + far.x, y: head.point.y + far.y };
+      const [leaving, arriving] = [joints[index].outOf, joints[index + 1].into];
+      const a = { x: tail.point.x + leaving.x, y: tail.point.y + leaving.y };
+      const b = { x: tail.point.x - leaving.x, y: tail.point.y - leaving.y };
+      const c = { x: head.point.x - arriving.x, y: head.point.y - arriving.y };
+      const d = { x: head.point.x + arriving.x, y: head.point.y + arriving.y };
       this.shadedTriangle(a, b, c, [tail.shape.color, tail.shape.color, head.shape.color]);
       this.shadedTriangle(a, c, d, [tail.shape.color, head.shape.color, head.shape.color]);
     }
+    path.forEach(({ point, shape }, index) => {
+      const { into, outOf, outerSide } = joints[index];
+      if (outerSide === 0) {
+        return;
+      }
+      this.triangle(
+        point,
+        { x: point.x + into.x * outerSide, y: point.y + into.y * outerSide },
+        { x: point.x + outOf.x * outerSide, y: point.y + outOf.y * outerSide },
+        shape.color
+      );
+    });
   }
 
   /**
    * A band `width` wide just inside a closed counter-clockwise outline, one
    * quad per edge meeting its neighbours at mitred corners — a continuous
-   * stroke with no gap or overlap at any corner.
+   * stroke with no gap or overlap at any corner. A corner that doubles back
+   * on itself divides by nothing and an outline that repeats a point has no
+   * direction there: both are held off, so one bad outline cannot throw a
+   * vertex to infinity and draw a line across the screen.
    */
   border(points: readonly Vector2[], width: number, color: Rgba): void {
     const count = points.length;
@@ -139,12 +165,12 @@ export class MeshWriter {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const size = Math.hypot(dx, dy);
-      return { x: dy / size, y: -dx / size };
+      return size === 0 ? { x: 0, y: 0 } : { x: dy / size, y: -dx / size };
     });
     const inner = points.map((point, index) => {
       const before = normals[(index - 1 + count) % count];
       const after = normals[index];
-      const miter = 1 + before.x * after.x + before.y * after.y;
+      const miter = Math.max(1 + before.x * after.x + before.y * after.y, MIN_MITRE_SPREAD);
       return {
         x: point.x - ((before.x + after.x) * width) / miter,
         y: point.y - ((before.y + after.y) * width) / miter,
@@ -230,19 +256,29 @@ function direction(from: Vector2, to: Vector2): Vector2 {
 }
 
 /**
- * The way across a ribbon at a point where the way along it bends: the
- * bisector of the two segments' normals, lengthened by the bend so that
- * both quads reach the very same corner. A ribbon that folds back on
- * itself has no bisector — there the incoming normal has to do.
+ * The two ways across a ribbon at a point where the way along it bends:
+ * the one the arriving quad ends on and the one the leaving quad starts
+ * from. A gentle bend shares one mitred corner — the bisector of the two
+ * normals, lengthened so both quads reach the very same point. A sharp one
+ * cannot: the mitre would run off along the way rather than across it, so
+ * each quad keeps its own square end and `outerSide` says which side of
+ * the bend the wedge between them is left open on, for a triangle to fill.
  */
-function mitreAcross(into: Vector2, outOf: Vector2): Vector2 {
-  const normal = { x: -outOf.y, y: outOf.x };
-  const sum = { x: -into.y + normal.x, y: into.x + normal.y };
-  const size = Math.hypot(sum.x, sum.y);
-  if (size === 0) {
-    return normal;
+function jointAcross(
+  into: Vector2,
+  outOf: Vector2,
+  halfWidth: number
+): { readonly into: Vector2; readonly outOf: Vector2; readonly outerSide: number } {
+  const arriving = { x: -into.y * halfWidth, y: into.x * halfWidth };
+  const leaving = { x: -outOf.y * halfWidth, y: outOf.x * halfWidth };
+  const bisector = { x: arriving.x + leaving.x, y: arriving.y + leaving.y };
+  const size = Math.hypot(bisector.x, bisector.y);
+  const reach = size === 0 ? Number.POSITIVE_INFINITY : (2 * halfWidth * halfWidth) / size;
+  if (reach <= MITRE_LIMIT * halfWidth) {
+    const mitred = { x: (bisector.x / size) * reach, y: (bisector.y / size) * reach };
+    return { into: mitred, outOf: mitred, outerSide: 0 };
   }
-  const unit = { x: sum.x / size, y: sum.y / size };
-  const reach = Math.min(1 / (unit.x * normal.x + unit.y * normal.y), MITRE_LIMIT);
-  return { x: unit.x * reach, y: unit.y * reach };
+  // A ribbon folded back on itself ends both quads on the same line: nothing is left open between them.
+  const turn = into.x * outOf.y - into.y * outOf.x;
+  return { into: arriving, outOf: leaving, outerSide: turn === 0 ? 0 : -Math.sign(turn) };
 }

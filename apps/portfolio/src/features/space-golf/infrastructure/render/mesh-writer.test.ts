@@ -54,6 +54,54 @@ describe('a ribbon along a polyline', () => {
     expect(reach(points[0], { x: 0, y: 0 })).toBeCloseTo(HALF_WIDTH);
   });
 
+  it('leaves no needle where the way doubles back: a bounce is bevelled, not spiked', () => {
+    const awayFromPath = (point: Vector2, path: readonly Vector2[]): number => {
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let index = 0; index + 1 < path.length; index += 1) {
+        const [from, to] = [path[index], path[index + 1]];
+        const run = { x: to.x - from.x, y: to.y - from.y };
+        const size = run.x * run.x + run.y * run.y;
+        const along = Math.max(
+          0,
+          Math.min(1, ((point.x - from.x) * run.x + (point.y - from.y) * run.y) / size)
+        );
+        nearest = Math.min(
+          nearest,
+          Math.hypot(point.x - (from.x + run.x * along), point.y - (from.y + run.y * along))
+        );
+      }
+      return nearest;
+    };
+
+    for (const turn of [120, 150, 170, 179, 180]) {
+      const angle = (turn * Math.PI) / 180;
+      const bounce = [
+        { x: 0, y: 0 },
+        { x: 0.1, y: 0 },
+        { x: 0.1 + Math.cos(angle) * 0.1, y: Math.sin(angle) * 0.1 },
+      ];
+
+      const reach = Math.max(...ribbonPoints(bounce).map(point => awayFromPath(point, bounce)));
+      expect(reach).toBeLessThanOrEqual(HALF_WIDTH * 1.05);
+    }
+  });
+
+  it('fills the wedge a bevelled bend leaves open, with the bend itself as its apex', () => {
+    const sharp = [
+      { x: 0, y: 0 },
+      { x: 0.1, y: 0 },
+      { x: 0.02, y: 0.06 },
+    ];
+
+    const points = ribbonPoints(sharp);
+    // Two quads and one triangle: the wedge filler is the last of them.
+    expect(points).toHaveLength(15);
+    const apex = points.slice(12);
+    expect(apex.some(point => Math.hypot(point.x - sharp[1].x, point.y - sharp[1].y) < 1e-6)).toBe(
+      true
+    );
+  });
+
   it('draws a point standing on top of its neighbour as nothing at all, never as a hole', () => {
     const doubled = [
       { x: 0, y: 0 },
@@ -64,6 +112,45 @@ describe('a ribbon along a polyline', () => {
     const points = ribbonPoints(doubled);
     expect(points).toHaveLength(6);
     expect(points.every(({ x, y }) => Number.isFinite(x) && Number.isFinite(y))).toBe(true);
+  });
+
+  it('keeps a corner of an outline that doubles back within reach, never throwing it to infinity', () => {
+    const spur = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 0.0001 },
+      { x: 0, y: 0.0001 },
+    ];
+
+    const writer = new MeshWriter();
+    writer.border(spur, HALF_WIDTH, GOLD);
+    const { vertexData, vertexCount } = writer.finish();
+    const view = new DataView(vertexData);
+    for (let index = 0; index < vertexCount; index += 1) {
+      const at = index * MESH_VERTEX_STRIDE_BYTES;
+      const [x, y] = [view.getFloat32(at, true), view.getFloat32(at + 4, true)];
+      expect(Number.isFinite(x) && Number.isFinite(y)).toBe(true);
+      expect(Math.hypot(x, y)).toBeLessThan(2);
+    }
+  });
+
+  it('draws an outline that repeats a point without turning anything into a not-a-number', () => {
+    const repeated = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+    ];
+
+    const writer = new MeshWriter();
+    writer.border(repeated, HALF_WIDTH, GOLD);
+    const { vertexData, vertexCount } = writer.finish();
+    const view = new DataView(vertexData);
+    for (let index = 0; index < vertexCount; index += 1) {
+      const at = index * MESH_VERTEX_STRIDE_BYTES;
+      expect(Number.isFinite(view.getFloat32(at, true))).toBe(true);
+      expect(Number.isFinite(view.getFloat32(at + 4, true))).toBe(true);
+    }
   });
 
   it('follows the width it is given at every point: a strip that tapers away to nothing', () => {
