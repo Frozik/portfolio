@@ -56,7 +56,8 @@ export interface Followed {
  * centres on the ball when the player asks and when a burst one comes back
  * to its rest, and stands still through a flight until the ball nears the
  * edge of the screen; the player's own looking around, which lets go of
- * the ball; and the compass to the cup. The camera moves every frame and is not
+ * the ball until a stroke is played — or until a flight would leave the
+ * screen; and the compass to the cup. The camera moves every frame and is not
  * observable; what the HUD shows is.
  */
 export class CourseView {
@@ -164,6 +165,11 @@ export class CourseView {
   follow(followed: Followed, frameSeconds: number): void {
     if (followed.isFlying) {
       this.centring = false;
+      // A flight is what must be watched: a view let go of mid-flight may be
+      // looked around in, but it takes the ball back rather than lose it.
+      if (!this.isAttached && !this.inSight(followed.ball)) {
+        this.attach();
+      }
       this.camera = trackCamera(this.camera, followed.ball, this.screen);
     } else {
       // A flight leaves the ball in sight and the view where it is; only a ball moved elsewhere needs going to.
@@ -176,6 +182,16 @@ export class CourseView {
     this.pointCompass(followed);
   }
 
+  private inSight(point: Vector2): boolean {
+    const { visible } = this;
+    return (
+      point.x >= visible.min.x &&
+      point.x <= visible.max.x &&
+      point.y >= visible.min.y &&
+      point.y <= visible.max.y
+    );
+  }
+
   private isZoomedOut(): boolean {
     return this.camera.zoom < homeZoomFor(this.screen) - SAME_ZOOM_TOLERANCE;
   }
@@ -185,12 +201,6 @@ export class CourseView {
       this.compass = undefined;
       return;
     }
-    const { visible } = this;
-    const inSight = (point: Vector2): boolean =>
-      point.x >= visible.min.x &&
-      point.x <= visible.max.x &&
-      point.y >= visible.min.y &&
-      point.y <= visible.max.y;
     const bearing = (point: Vector2): number => {
       const to = subtract(point, followed.ball);
       return (Math.atan2(to.x, to.y) * HALF_TURN_DEGREES) / Math.PI;
@@ -198,9 +208,9 @@ export class CourseView {
     const next: Compass = {
       angleDegrees: bearing(followed.cup),
       distanceMeters: distance(followed.cup, followed.ball),
-      cupOnScreen: inSight(followed.cup),
+      cupOnScreen: this.inSight(followed.cup),
       bonus:
-        isNil(followed.bonus) || inSight(followed.bonus.at)
+        isNil(followed.bonus) || this.inSight(followed.bonus.at)
           ? undefined
           : { angleDegrees: bearing(followed.bonus.at), kind: followed.bonus.kind },
     };

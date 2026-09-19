@@ -28,6 +28,13 @@ export interface Frame {
 }
 
 /**
+ * The four bytes that say what is painted in the frame: the first picks the
+ * painting, the rest are the painter's own — which of its colours, how
+ * brightly it burns. Whatever a shader does not read stays nought.
+ */
+export type PaintKind = readonly [number, number, number, number];
+
+/**
  * Quads that carry their own coordinate frame to the shader — the painting
  * is done in `along`/`across`, not on the board — plus a kind byte that
  * picks what is painted.
@@ -36,14 +43,14 @@ export class FramedMeshWriter {
   private readonly quads: {
     readonly vertices: readonly FramedVertex[];
     readonly frame: Frame;
-    readonly kind: number;
+    readonly kind: PaintKind;
   }[] = [];
 
   /** The corners in order round the quad. */
   quad(
     corners: readonly [FramedVertex, FramedVertex, FramedVertex, FramedVertex],
     frame: Frame,
-    kind: number
+    kind: PaintKind
   ): void {
     const [a, b, c, d] = corners;
     this.quads.push({ vertices: [a, b, c, a, c, d], frame, kind });
@@ -63,7 +70,9 @@ export class FramedMeshWriter {
         view.setFloat32(local + FLOAT32_BYTES, vertex.across, LITTLE_ENDIAN);
         view.setFloat32(local + 2 * FLOAT32_BYTES, quad.frame.length, LITTLE_ENDIAN);
         view.setFloat32(local + 3 * FLOAT32_BYTES, quad.frame.width, LITTLE_ENDIAN);
-        view.setUint8(offset + FRAMED_KIND_OFFSET_BYTES, quad.kind);
+        quad.kind.forEach((byte, channel) => {
+          view.setUint8(offset + FRAMED_KIND_OFFSET_BYTES + channel, byte);
+        });
         offset += FRAMED_VERTEX_STRIDE_BYTES;
       }
     }

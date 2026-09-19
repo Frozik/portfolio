@@ -9,9 +9,12 @@ import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE, withAlpha } from './palette';
 import type { ParticleField } from './particles';
+import { nearnessOf } from './particles';
 import type { SceneFrame } from './scene-frame';
 
 const PREVIEW_DOT_RADIUS_METERS = 0.045;
+/** The share of the dust's light the farthest mote keeps: distance dims as well as shrinks. */
+const FARTHEST_STAR_ALPHA_SHARE = 0.45;
 /** The burst: a ring growing from the ball's size to this radius while fading. */
 const BURST_RADIUS_METERS = 0.6;
 const BURST_RING_WIDTH_METERS = 0.08;
@@ -25,12 +28,14 @@ const TRAIL_HEAD_ALPHA = 190;
 const TRAIL_FADE_POWER = 1.7;
 const ALPHA_MAX = 255;
 
-/** The drifting dust, the far background everything else is painted over. */
+/** The drifting dust, the far background everything else is painted over; the farther a mote, the fainter it burns. */
 export function buildDustMesh(dust: ParticleField): MeshData {
   const writer = new MeshWriter();
   for (const particle of dust.particles) {
     const { x, y } = particle.position;
     const r = particle.radius * 2 * QUAD_HALF;
+    const burning =
+      FARTHEST_STAR_ALPHA_SHARE + (1 - FARTHEST_STAR_ALPHA_SHARE) * nearnessOf(particle);
     writer.convexPolygon(
       [
         { x: x - r, y: y - r },
@@ -38,7 +43,7 @@ export function buildDustMesh(dust: ParticleField): MeshData {
         { x: x + r, y: y + r },
         { x: x - r, y: y + r },
       ],
-      PALETTE.star
+      withAlpha(PALETTE.star, PALETTE.star[3] * burning)
     );
   }
   return writer.finish();

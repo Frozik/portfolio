@@ -6,6 +6,9 @@ import { isNil } from 'lodash-es';
 import { currentGravity } from '../../domain/ball';
 import { CLOCK_SPEED } from '../../domain/constants';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
+import { advanceDeepSky, createDeepSky } from '../render/deep-sky';
+import type { DeepSky } from '../render/deep-sky';
+import { buildDeepSkyMesh } from '../render/deep-sky-geometry';
 import { DynamicVertexBuffer } from '../render/dynamic-vertex-buffer';
 import { buildFloaterMesh } from '../render/floater-geometry';
 import { buildDustMesh, buildOverlayMesh } from '../render/frame-geometry';
@@ -23,6 +26,7 @@ import { buildRodMesh } from '../render/rod-geometry';
 import type { SceneFrame } from '../render/scene-frame';
 import { buildSpikeMesh } from '../render/spike-geometry';
 import boardShaderSource from '../shaders/board.wgsl?raw';
+import deepSkyShaderSource from '../shaders/deep-sky.wgsl?raw';
 import khokhlomaShaderSource from '../shaders/khokhloma.wgsl?raw';
 import mezenShaderSource from '../shaders/mezen.wgsl?raw';
 import surfacesShaderSource from '../shaders/surfaces.wgsl?raw';
@@ -77,10 +81,13 @@ export class BoardLayer implements RenderLayer {
   private fillPipeline!: GPURenderPipeline;
   private surfacePipeline!: GPURenderPipeline;
   private floaterPipeline!: GPURenderPipeline;
+  private deepSkyPipeline!: GPURenderPipeline;
   private uniforms!: GPUBuffer;
   private bindGroup!: GPUBindGroup;
   private overlayVertices!: DynamicVertexBuffer;
   private overlayCount = 0;
+  private deepSkyVertices!: DynamicVertexBuffer;
+  private deepSkyCount = 0;
   private dustVertices!: DynamicVertexBuffer;
   private dustCount = 0;
   private rodVertices!: DynamicVertexBuffer;
@@ -89,6 +96,7 @@ export class BoardLayer implements RenderLayer {
   private spikes: StrokeMesh | undefined;
   private floaters: StrokeMesh | undefined;
   private dust: ParticleField | undefined;
+  private deepSky: DeepSky | undefined;
   private lastTime: number | undefined;
 
   constructor(
@@ -137,6 +145,13 @@ export class BoardLayer implements RenderLayer {
       'fsMezen',
       FRAMED_LAYOUT
     );
+    this.deepSkyPipeline = this.createPipeline(
+      layout,
+      deepSkyShaderSource,
+      'vsDeepSky',
+      'fsDeepSky',
+      FRAMED_LAYOUT
+    );
     this.uniforms = device.createBuffer({
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -152,6 +167,10 @@ export class BoardLayer implements RenderLayer {
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     };
     this.overlayVertices = new DynamicVertexBuffer(perFrame);
+    this.deepSkyVertices = new DynamicVertexBuffer({
+      ...perFrame,
+      strideBytes: FRAMED_VERTEX_STRIDE_BYTES,
+    });
     this.dustVertices = new DynamicVertexBuffer(perFrame);
     this.rodVertices = new DynamicVertexBuffer(perFrame);
   }
@@ -182,6 +201,8 @@ export class BoardLayer implements RenderLayer {
     const elapsed = this.lastTime === undefined ? 0 : (state.time - this.lastTime) * CLOCK_SPEED;
     this.lastTime = state.time;
     this.dust = advanceParticles(this.dust, currentGravity(scene.ball), elapsed, dustWindow);
+    this.deepSky ??= createDeepSky(scene.level.seed, scene.visible);
+    this.deepSky = advanceDeepSky(this.deepSky, elapsed, scene.visible);
     const { viewport } = scene;
     const values = new Float32Array(UNIFORM_FLOATS);
     values.set([
@@ -198,6 +219,7 @@ export class BoardLayer implements RenderLayer {
       state.time * CLOCK_SPEED,
     ]);
     this.device.queue.writeBuffer(this.uniforms, 0, values);
+    this.deepSkyCount = this.deepSkyVertices.write(buildDeepSkyMesh(this.deepSky));
     this.dustCount = this.dustVertices.write(buildDustMesh(this.dust));
     this.rodCount = this.rodVertices.write(
       buildRodMesh(scene.level, scene.ball.rods, scene.visible)
@@ -233,6 +255,13 @@ export class BoardLayer implements RenderLayer {
     const scene = this.getScene();
     if (!isNil(scene)) {
       const shown = this.sectors.within(scene.visible);
+      // The deep sky lies behind even the dust: a galaxy never crosses a mote.
+      if (this.deepSkyCount > 0) {
+        pass.setPipeline(this.deepSkyPipeline);
+        pass.setVertexBuffer(0, this.deepSkyVertices.buffer);
+        pass.draw(this.deepSkyCount);
+        pass.setPipeline(this.pipeline);
+      }
       // The dust is the far background: everything else is painted over it.
       if (this.dustCount > 0) {
         pass.setVertexBuffer(0, this.dustVertices.buffer);
@@ -285,6 +314,7 @@ export class BoardLayer implements RenderLayer {
     this.floaters = undefined;
     this.uniforms.destroy();
     this.overlayVertices.destroy();
+    this.deepSkyVertices.destroy();
     this.dustVertices.destroy();
     this.rodVertices.destroy();
   }

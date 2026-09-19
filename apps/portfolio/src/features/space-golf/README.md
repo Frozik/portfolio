@@ -41,7 +41,23 @@ time.
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it
   before it is drawn back up; the dust drifts along the very same pull, so
-  the field shows the turn as it happens
+  the field shows the turn as it happens — and it drifts in layers, each
+  mote by its size: the big ones are near, go with the pull at full speed,
+  slide past with the board when the view is panned and burn at full light;
+  the small ones are far off, drift at a quarter of the speed, are carried
+  most of the way along with a pan and burn fainter, so the space behind the
+  board has depth
+- Further off than any of the dust, a pale galaxy or nebula now and then
+  drifts across: three of them are abroad over a field wider than the
+  screen, each swelling up out of nothing, holding, and going back into it
+  over forty seconds, so none is ever seen to appear. They are carried
+  almost all the way along with a pan — a seventh of the board's rate — and
+  painted, like everything else here, procedurally: `shaders/deep-sky.wgsl`
+  gets one quad per thing and paints in its disc a galaxy — two logarithmic
+  arms wound out of a warm bulge, grained with stars and cut by dust lanes —
+  or a nebula of two-coloured clouds from four octaves of noise, thinning to
+  nothing well inside the rim. Colour more than light: anything brighter out
+  there reads as a thing in the game rather than the depth behind it
 - One bonus floats on the board, a breathing disc three balls across: the
   ball flies through it and takes it. A blue one with a little arc of dots
   gives foresight — the aim dots become the flight itself up to its first
@@ -68,7 +84,10 @@ time.
   wheel, the right button or the arrows look around, a pinch or Ctrl + wheel
   zooms out to an overview, and a
   compass points to the cup with the distance, a scale bar under it showing
-  how long a metre is on the screen
+  how long a metre is on the screen. Looking around lets go of the ball —
+  the next stroke, a double tap, `C` or the HUD button take it up again —
+  but a flight is never lost: a ball about to leave a view the player had
+  looked away with takes the view back with it
 - The physics runs in fixed steps and the ball is drawn between them, so
   it glides evenly at any refresh rate, trailing a short tapered streak
   along the path it really flew — a few-pixel ball would strobe without it

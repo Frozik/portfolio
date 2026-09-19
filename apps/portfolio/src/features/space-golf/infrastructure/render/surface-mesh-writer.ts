@@ -1,7 +1,10 @@
 import type { Edge, SurfaceKind } from '../../domain/level';
-import type { FramedMeshWriter, FramedVertex } from './framed-mesh-writer';
+import type { FramedMeshWriter, FramedVertex, PaintKind } from './framed-mesh-writer';
 
-const KIND_BYTE: Readonly<Record<SurfaceKind, number>> = { bounce: 0, sticky: 255 };
+const KIND_BYTES: Readonly<Record<SurfaceKind, PaintKind>> = {
+  bounce: [0, 0, 0, 0],
+  sticky: [255, 0, 0, 0],
+};
 
 /**
  * One quad per surface in the band's own frame: `along` runs from the
@@ -32,6 +35,6 @@ export function writeSurfaceBand(
       corner(0, width),
     ],
     { length: edge.length, width },
-    KIND_BYTE[kind]
+    KIND_BYTES[kind]
   );
 }

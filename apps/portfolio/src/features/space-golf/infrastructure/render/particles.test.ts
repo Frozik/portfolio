@@ -21,6 +21,54 @@ describe('particle field', () => {
     });
   });
 
+  it('drifts the small motes slower than the big ones: the field moves in layers, not as one sheet', () => {
+    const field = createParticleField(5, WINDOW);
+    const sorted = [...field.particles].sort((a, b) => a.radius - b.radius);
+    const [smallest] = sorted;
+    const largest = sorted[sorted.length - 1];
+    const startedAt = new Map(field.particles.map(particle => [particle, particle.position.y]));
+
+    // Straight up, a tenth of a second: short enough that nothing wraps round the window.
+    const moved = advanceParticles(field, { x: 0, y: 1 }, 0.1, WINDOW);
+    const wentBy = (index: number): number =>
+      moved.particles[index].position.y - (startedAt.get(field.particles[index]) ?? 0);
+
+    const small = wentBy(field.particles.indexOf(smallest));
+    const large = wentBy(field.particles.indexOf(largest));
+    expect(small).toBeGreaterThan(0);
+    expect(small).toBeLessThan(large / 2);
+    field.particles.forEach((_, index) => {
+      const share = wentBy(index) / large;
+      expect(share).toBeGreaterThanOrEqual(0.2);
+      expect(share).toBeLessThanOrEqual(1.0001);
+    });
+  });
+
+  it('carries the far motes along with a panning camera and leaves the near ones on the board', () => {
+    const field = createParticleField(5, WINDOW);
+    const sorted = [...field.particles].sort((a, b) => a.radius - b.radius);
+    const [smallest] = sorted;
+    const largest = sorted[sorted.length - 1];
+    const panned = {
+      min: { x: WINDOW.min.x + 1, y: WINDOW.min.y },
+      max: { x: WINDOW.max.x + 1, y: WINDOW.max.y },
+    };
+
+    // A pan of a metre to the right, with no pull at all: only the parallax
+    // moves anything, and a mote that wraps round the window went the same way.
+    const moved = advanceParticles(field, { x: 0, y: 0 }, 1 / 60, panned);
+    const span = WINDOW.max.x - WINDOW.min.x;
+    const wentBy = (particle: (typeof field.particles)[number]): number => {
+      const gone =
+        moved.particles[field.particles.indexOf(particle)].position.x - particle.position.x;
+      return (((gone % span) + span + span / 2) % span) - span / 2;
+    };
+
+    expect(wentBy(largest)).toBeCloseTo(0);
+    expect(wentBy(smallest)).toBeGreaterThan(0.4);
+    expect(wentBy(smallest)).toBeLessThan(1);
+  });
+
   it('follows the window wherever the camera takes it: the same motes serve the whole endless course', () => {
     const field = createParticleField(2, WINDOW);
     const elsewhere = { min: { x: 500, y: -90 }, max: { x: 525, y: -76 } };

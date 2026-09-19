@@ -133,6 +133,33 @@ describe('the view of the course', () => {
     expect(settled(view, followed()).center.x).toBeCloseTo(50, 1);
   });
 
+  it('takes a flying ball back when the view was let go of and the ball would leave it', () => {
+    const view = settled(createView(), followed());
+    const halfWidth = DESKTOP.width / 64 / 2;
+
+    view.pan(640, 0);
+    expect(view.isAttached).toBe(false);
+
+    // Looking around while the ball flies is allowed — until it would be lost.
+    view.follow(followed({ isFlying: true, ball: { x: 50 + halfWidth * 0.3, y: 50 } }), FRAME);
+    expect(view.isAttached).toBe(false);
+
+    view.follow(followed({ isFlying: true, ball: { x: 50 - halfWidth * 2, y: 50 } }), FRAME);
+    expect(view.isAttached).toBe(true);
+    expect(view.center.x).toBeLessThan(50);
+  });
+
+  it('leaves a view the player looked away with alone while the ball rests', () => {
+    const view = settled(createView(), followed());
+
+    view.pan(640, 0);
+    const looked = view.center.x;
+    settled(view, followed({ ball: { x: 50 - 30, y: 50 } }));
+
+    expect(view.isAttached).toBe(false);
+    expect(view.center.x).toBeCloseTo(looked, 1);
+  });
+
   it('goes out to the overview and back in one press each', () => {
     const view = createView();
 

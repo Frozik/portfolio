@@ -4,13 +4,13 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import { FLOATER_LARGE_SIDE_METERS, FLOATER_SMALL_SIDE_METERS } from '../../domain/constants';
 import type { Floater, Level } from '../../domain/level';
-import type { FramedVertex } from './framed-mesh-writer';
+import type { FramedVertex, PaintKind } from './framed-mesh-writer';
 import { FramedMeshWriter } from './framed-mesh-writer';
 import type { MeshData } from './mesh-writer';
 
-/** What the painting shader gets in the kind byte: rows of ornament for a square, rings for a circle. */
-const PAINT_ROWS = 0;
-const PAINT_RINGS = 255;
+/** What the painting shader gets in the kind bytes: rows of ornament for a square, rings for a circle. */
+const PAINT_ROWS: PaintKind = [0, 0, 0, 0];
+const PAINT_RINGS: PaintKind = [255, 0, 0, 0];
 const PLAIN_AXES: readonly [Vector2, Vector2] = [
   { x: 1, y: 0 },
   { x: 0, y: 1 },
