@@ -1,0 +1,52 @@
+name: communication
+
+services:
+  communication:
+    image: ${COMMUNICATION_IMAGE:-ghcr.io/frozik/communication}:${COMMUNICATION_TAG:-latest}
+    restart: unless-stopped
+
+    # Docker writes its own iptables rules ahead of ufw, so an unqualified
+    # "8443:8443" would expose the port to the internet despite the
+    # default-deny firewall. The bind address is what keeps it loopback-only.
+    ports:
+      - "127.0.0.1:${FASTIFY_PORT:-8443}:8443"
+
+    # Same KEY=VALUE files the systemd unit used as EnvironmentFile.
+    env_file:
+      - path: /etc/communication/turn-secret
+        required: true
+      - path: /etc/communication/oauth-public-ids
+        required: true
+      - path: /etc/communication/oauth-secrets
+        required: false
+
+    environment:
+      NODE_ENV: production
+      NODE_CONFIG_DIR: /app/config
+      NODE_CONFIG_ENV: production
+
+    volumes:
+      - /etc/communication/production.toml:/app/config/production.toml:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    # Matches the old unit's TimeoutStopSec: active calls drain before SIGKILL.
+    stop_grace_period: 20s
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    logging:
+      driver: journald
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    # Only a pub/sub bus for the socket.io adapter — nothing to persist,
+    # so no volume and no RDB/AOF.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

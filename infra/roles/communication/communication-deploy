@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# communication-deploy — the ONLY command the CI ssh key can run.
+#
+# Installed to /usr/local/bin by deploy-user.sh and pinned as a forced
+# command in the deploy user's authorized_keys, so whatever the client
+# sends, sshd runs this and nothing else. The client's string arrives in
+# SSH_ORIGINAL_COMMAND; we never execute it, we match it against a
+# two-verb allowlist.
+set -euo pipefail
+
+ROLE=/opt/infra/roles/communication
+COMPOSE=/opt/communication/docker-compose.yml
+
+read -r verb arg <<< "${SSH_ORIGINAL_COMMAND:-deploy}"
+
+case "${verb}" in
+  head)
+    # Which commit is actually running. CI stamps the label at build time.
+    exec docker inspect --format \
+      '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
+      "$(docker compose -f "${COMPOSE}" images -q communication)"
+    ;;
+  deploy)
+    # An exact image tag may be named — this is also how rollback runs.
+    # Forty hex characters or nothing; the value reaches an image name.
+    if [[ -n "${arg}" ]]; then
+      [[ "${arg}" =~ ^[0-9a-f]{40}$ ]] || { echo "refused: bad tag" >&2; exit 1; }
+      export COMMUNICATION_TAG="${arg}"
+    fi
+    ;;
+  *)
+    echo "refused: ${SSH_ORIGINAL_COMMAND:-}" >&2
+    exit 1
+    ;;
+esac
+
+bash "${ROLE}/compose-up.sh"
+bash "${ROLE}/smoke-test.sh"

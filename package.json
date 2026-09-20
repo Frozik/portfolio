@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "moon run portfolio:analyze",
     "build": "moon run :build",
-    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :test",
+    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :shellcheck :test",
     "conventions": "moon run root:conventions",
     "conventions:baseline": "moon run root:conventions-baseline",
     "coverage": "moon run root:test-coverage",
@@ -17,6 +17,7 @@
     "layers": "moon run root:layers",
     "lighthouse": "moon run portfolio:lighthouse",
     "lint": "moon run root:lint",
+    "shellcheck": "moon run infra:shellcheck",
     "lint-fix": "moon run root:lint-fix",
     "prepare": "lefthook install",
     "setup": "moon setup",

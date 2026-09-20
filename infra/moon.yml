@@ -1,0 +1,25 @@
+language: bash
+layer: application
+stack: infrastructure
+
+tags:
+  - infrastructure
+
+fileGroups:
+  scripts:
+    - 'bin/**/*.sh'
+    - 'lib/**/*.sh'
+    - 'roles/**/*.sh'
+    - 'roles/communication/communication-deploy'
+
+tasks:
+  # The 1.6k lines that provision production had no gate at all until the
+  # scripts became their own project. --source-path=SCRIPTDIR lets shellcheck
+  # follow `source` across bin/ -> lib/ and roles/ -> ../../lib.
+  shellcheck:
+    command: 'shellcheck -x --source-path=SCRIPTDIR --severity=warning bin/*.sh lib/*.sh roles/*/*.sh roles/communication/communication-deploy'
+    inputs:
+      - '@group(scripts)'
+    options:
+      runInCI: true
+      mergeArgs: 'replace'

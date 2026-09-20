@@ -1,0 +1,89 @@
+# Deploy workflow for the communication server.
+#
+# NOT ACTIVE YET. It lives here rather than in .github/workflows/ because it
+# would fail on every push until three things exist:
+#   1. the deploy keypair (ssh-keygen), its public half installed on the box
+#      by roles/communication/deploy-user.sh
+#   2. the GitHub environment `production`
+#   3. its secrets DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_KNOWN_HOSTS
+#
+# Once those are in place:
+#   git mv infra/deploy-communication.yml .github/workflows/deploy-communication.yml
+name: Deploy communication
+
+# Same gate as the Pages deploy: not "on push" but "when CI went green", so a
+# red commit never reaches the box.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Two concurrent deploys would race for the same container. No
+# cancel-in-progress: a half-finished deploy is worse than a queue.
+concurrency:
+  group: communication-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # Full history: the gate below diffs against the deployed commit.
+          fetch-depth: 0
+
+      # Loads the key into an agent for this job only; never written to disk.
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      # Pinning the host key instead of StrictHostKeyChecking=no, which would
+      # accept any machine answering on that address.
+      - name: Trust the host key
+        run: install -m 600 -D /dev/stdin ~/.ssh/known_hosts <<< '${{ secrets.DEPLOY_KNOWN_HOSTS }}'
+
+      # A portfolio-only commit must not restart the signaling server and drop
+      # live WebRTC sessions. The range starts at what is actually deployed, so
+      # a skipped or failed deploy is picked up by the next run.
+      - name: Does this commit touch the server?
+        id: gate
+        run: |
+          deployed="$(ssh '${{ secrets.DEPLOY_HOST }}' head)"
+          head='${{ github.event.workflow_run.head_sha || github.sha }}'
+          echo "deployed=${deployed}" >> "$GITHUB_OUTPUT"
+
+          if [ "$deployed" = "$head" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          # After a force-push the deployed commit may be gone from history.
+          if ! git cat-file -e "${deployed}^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          changed="$(git diff --name-only "$deployed" "$head" -- \
+            apps/communication libs/utils libs/communication-protocol \
+            infra pnpm-lock.yaml pnpm-workspace.yaml)"
+          if [ -n "$changed" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Deploys the exact image CI built for this commit, not a floating :latest.
+      - name: Deploy
+        if: steps.gate.outputs.run == 'true'
+        run: ssh '${{ secrets.DEPLOY_HOST }}' "deploy ${{ github.event.workflow_run.head_sha || github.sha }}"
+
+      - name: Nothing to do
+        if: steps.gate.outputs.run != 'true'
+        run: echo "Server unchanged since ${{ steps.gate.outputs.deployed }}"
