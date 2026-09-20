@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -43,7 +43,7 @@ export const RoundResultOverlay = observer(() => {
   const winner = store.world.players.find(player => player.id === winnerId);
   const { biggestHit, topDamage } = store.world.roundHighlights;
 
-  const handleContinue = useFunction(() => {
+  const handleContinue = useEventCallback(() => {
     store.continueAfterRound();
   });
 

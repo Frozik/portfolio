@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { formatMeters } from '../../application/render/plan-draw/shared';
@@ -31,8 +31,10 @@ const MarkRow = observer(
     const isSelected =
       !isNil(selection) && selection.kind === 'mark' && selection.markId === mark.id;
 
-    const handleSelect = useFunction(() => store.setSelection({ kind: 'mark', markId: mark.id }));
-    const handleRemove = useFunction(() => store.marks.removeElevationMark(mark.id));
+    const handleSelect = useEventCallback(() =>
+      store.setSelection({ kind: 'mark', markId: mark.id })
+    );
+    const handleRemove = useEventCallback(() => store.marks.removeElevationMark(mark.id));
 
     return (
       <li
@@ -81,8 +83,8 @@ const MarkRow = observer(
 export const ElevationMarksPanel = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
 
-  const handleOpenCsvDialog = useFunction(() => setIsCsvDialogOpen(true));
-  const handleCloseCsvDialog = useFunction(() => setIsCsvDialogOpen(false));
+  const handleOpenCsvDialog = useEventCallback(() => setIsCsvDialogOpen(true));
+  const handleCloseCsvDialog = useEventCallback(() => setIsCsvDialogOpen(false));
 
   const { elevationMarks } = store;
 

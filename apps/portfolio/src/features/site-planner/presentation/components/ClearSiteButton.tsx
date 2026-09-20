@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -17,9 +17,9 @@ import { ToolbarIconButton } from './ToolbarIconButton';
 export const ClearSiteButton = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const [isAsked, setIsAsked] = useState(false);
 
-  const handleAsk = useFunction(() => setIsAsked(true));
-  const handleCancel = useFunction(() => setIsAsked(false));
-  const handleConfirm = useFunction(() => {
+  const handleAsk = useEventCallback(() => setIsAsked(true));
+  const handleCancel = useEventCallback(() => setIsAsked(false));
+  const handleConfirm = useEventCallback(() => {
     setIsAsked(false);
     store.document.clearSite();
   });

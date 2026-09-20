@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingId } from '../../domain/model/building';
@@ -31,10 +31,10 @@ const WallRow = observer(
     const labels = sitePlannerT.walls;
     const isSelected = store.walls.selectedWall?.id === wall.id;
 
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'wall', buildingId, wallId: wall.id });
     });
-    const handleRemove = useFunction(() => {
+    const handleRemove = useEventCallback(() => {
       store.walls.removeWall(buildingId, wall.id);
     });
 

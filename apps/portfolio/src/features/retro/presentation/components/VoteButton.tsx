@@ -1,15 +1,15 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Minus, Plus, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, GroupId } from '../../domain/types';
 import { retroT } from '../translations';
 
 export const VoteButton = observer(
   ({ store, targetId }: { readonly store: RoomStore; readonly targetId: CardId | GroupId }) => {
-    const handleAdd = useFunction(() => store.voting.add(targetId));
-    const handleRemove = useFunction(() => store.voting.remove(targetId));
+    const handleAdd = useEventCallback(() => store.voting.add(targetId));
+    const handleRemove = useEventCallback(() => store.voting.remove(targetId));
 
     const phase = store.phase;
     if (phase !== 'vote' && phase !== 'discuss') {

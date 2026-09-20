@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { range } from 'lodash-es';
 import { Flag, Volume2, VolumeX } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
@@ -15,7 +15,7 @@ export const TanksHud = observer(() => {
   const { stageNumber, score, bestScore, lives, enemiesRemaining, isMuted } = store;
   const enemySlots = useMemo(() => range(enemiesRemaining), [enemiesRemaining]);
 
-  const handleMuteClick = useFunction(() => {
+  const handleMuteClick = useEventCallback(() => {
     store.toggleMute();
   });
 

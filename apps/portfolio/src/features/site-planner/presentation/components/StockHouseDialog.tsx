@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
@@ -97,7 +97,7 @@ const TemplateRow = observer(
     readonly isSelected: boolean;
     readonly onSelect: (id: string) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(template.id));
+    const handleClick = useEventCallback(() => onSelect(template.id));
 
     return (
       <button
@@ -139,20 +139,20 @@ export const StockHouseDialog = observer(
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const selected = STOCK_HOUSE_TEMPLATES.find(template => template.id === selectedId);
 
-    const handleSelect = useFunction((id: string) => {
+    const handleSelect = useEventCallback((id: string) => {
       setSelectedId(id);
       setFileIssue(false);
     });
-    const handlePlace = useFunction(() => {
+    const handlePlace = useEventCallback(() => {
       if (!isNil(selected)) {
         store.building.placeStockHouse(selected.id);
         onClose();
       }
     });
-    const handleImportClick = useFunction(() => {
+    const handleImportClick = useEventCallback(() => {
       fileInputRef.current?.click();
     });
-    const handleFileChange = useFunction(async (event: ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useEventCallback(async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
 
       event.target.value = '';

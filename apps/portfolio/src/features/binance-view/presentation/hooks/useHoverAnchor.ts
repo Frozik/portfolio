@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 interface IAnchorPoint {
   readonly x: number;
@@ -21,7 +21,7 @@ export function useHoverAnchor(): {
   const pendingAnchorRef = useRef<IAnchorPoint | undefined>(undefined);
   const rafIdRef = useRef<number | undefined>(undefined);
 
-  const flushHoverAnchor = useFunction(() => {
+  const flushHoverAnchor = useEventCallback(() => {
     rafIdRef.current = undefined;
     const next = pendingAnchorRef.current;
     if (!isNil(next)) {
@@ -29,14 +29,14 @@ export function useHoverAnchor(): {
     }
   });
 
-  const scheduleHoverAnchor = useFunction((point: IAnchorPoint) => {
+  const scheduleHoverAnchor = useEventCallback((point: IAnchorPoint) => {
     pendingAnchorRef.current = point;
     if (isNil(rafIdRef.current)) {
       rafIdRef.current = requestAnimationFrame(flushHoverAnchor);
     }
   });
 
-  const clearHoverAnchor = useFunction(() => {
+  const clearHoverAnchor = useEventCallback(() => {
     pendingAnchorRef.current = undefined;
     if (!isNil(rafIdRef.current)) {
       cancelAnimationFrame(rafIdRef.current);

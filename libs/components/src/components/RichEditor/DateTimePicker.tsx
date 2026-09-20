@@ -8,7 +8,7 @@ import type { ChangeEvent, KeyboardEvent, Ref } from 'react';
 import { memo, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import { useIsCoarsePointer } from '../../hooks/useIsCoarsePointer';
 import { cn } from '../cn';
 import { CalendarPopup } from './components/CalendarPopup';
@@ -135,7 +135,7 @@ export const DateTimePicker = memo(
     // Invalid text stays visible after blur so the typo can be fixed.
     const displayText = focused || !isNil(error) ? inputText : formattedValue;
 
-    const clampToRange = useFunction((dateTime: Temporal.ZonedDateTime) => {
+    const clampToRange = useEventCallback((dateTime: Temporal.ZonedDateTime) => {
       const date = dateTime.toPlainDate();
 
       if (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) {
@@ -148,7 +148,7 @@ export const DateTimePicker = memo(
     });
 
     // Commits emit only changes: leaving an untouched field must not re-emit its value.
-    const commitValue = useFunction((next: Temporal.ZonedDateTime): Temporal.ZonedDateTime => {
+    const commitValue = useEventCallback((next: Temporal.ZonedDateTime): Temporal.ZonedDateTime => {
       const clamped = clampToRange(next);
       setError(undefined);
       if (isNil(value) || Temporal.ZonedDateTime.compare(clamped, value) !== 0) {
@@ -157,14 +157,14 @@ export const DateTimePicker = memo(
       return clamped;
     });
 
-    const clearValue = useFunction(() => {
+    const clearValue = useEventCallback(() => {
       setError(undefined);
       if (!isNil(value)) {
         onValueChange?.(undefined);
       }
     });
 
-    const commitText = useFunction((text: string) => {
+    const commitText = useEventCallback((text: string) => {
       const trimmed = text.trim();
       if (trimmed.length === 0) {
         clearValue();
@@ -179,7 +179,7 @@ export const DateTimePicker = memo(
       }
     });
 
-    const settle = useFunction(() => {
+    const settle = useEventCallback(() => {
       if (cancelledRef.current) {
         cancelledRef.current = false;
         return;
@@ -195,7 +195,7 @@ export const DateTimePicker = memo(
       wasFocusedRef.current = focused;
     }, [focused, settle]);
 
-    const handleFocusChange = useFunction((nextFocused: boolean) => {
+    const handleFocusChange = useEventCallback((nextFocused: boolean) => {
       if (nextFocused) {
         cancelledRef.current = false;
         setInputText(isNil(error) ? formattedValue : inputText);
@@ -203,17 +203,17 @@ export const DateTimePicker = memo(
       setFocused(nextFocused);
     });
 
-    const handleCancel = useFunction(() => {
+    const handleCancel = useEventCallback(() => {
       cancelledRef.current = true;
       setError(undefined);
       setInputText(formattedValue);
     });
 
-    const handleFocusSelection = useFunction((currentValue: string): ISelection | undefined =>
+    const handleFocusSelection = useEventCallback((currentValue: string): ISelection | undefined =>
       currentValue.length === 0 ? undefined : { start: 0, end: currentValue.length }
     );
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLDivElement>) => {
       const entersPopup =
         popupOpen &&
         ((event.key === 'Tab' && !event.shiftKey) || (event.key === 'ArrowDown' && event.altKey));
@@ -233,21 +233,21 @@ export const DateTimePicker = memo(
       setInputText(format(commitValue(stepDateTime(base, step, direction))));
     });
 
-    const handleSelectCalendarDate = useFunction((date: Temporal.PlainDate) => {
+    const handleSelectCalendarDate = useEventCallback((date: Temporal.PlainDate) => {
       const plainTime = value?.toPlainTime() ?? MIDNIGHT;
       setInputText(format(commitValue(date.toZonedDateTime({ timeZone, plainTime }))));
     });
 
-    const handleTimeChange = useFunction((plainTime: Temporal.PlainTime) => {
+    const handleTimeChange = useEventCallback((plainTime: Temporal.PlainTime) => {
       const date = value?.toPlainDate() ?? resolvedToday;
       setInputText(format(commitValue(date.toZonedDateTime({ timeZone, plainTime }))));
     });
 
-    const handleReturnToField = useFunction(() => {
+    const handleReturnToField = useEventCallback(() => {
       setFieldFocusRequest(previous => previous + 1);
     });
 
-    const handlePopupLeave = useFunction((direction: TLeaveDirection) => {
+    const handlePopupLeave = useEventCallback((direction: TLeaveDirection) => {
       if (direction === 'forward') {
         editorRef.current?.focusNext();
       } else {
@@ -260,11 +260,11 @@ export const DateTimePicker = memo(
     const showsNativePicker =
       !disabled && (nativePicker === 'always' || (nativePicker === 'auto' && isCoarsePointer));
 
-    const handleOpenNativePicker = useFunction(() => {
+    const handleOpenNativePicker = useEventCallback(() => {
       nativeInputRef.current?.showPicker();
     });
 
-    const handleNativeInputChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleNativeInputChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       const picked = fromNativeInputValue(event.currentTarget.value, inputType, timeZone);
       if (isNil(picked)) {
         setInputText('');

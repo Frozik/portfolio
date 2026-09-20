@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Armchair } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -53,9 +53,9 @@ export const FurnitureToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedId = store.furniture.armedFurnitureId;
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:furniture'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:furniture'));
 
-    const handleChoose = useFunction((catalogId: FurnitureCatalogId) => {
+    const handleChoose = useEventCallback((catalogId: FurnitureCatalogId) => {
       store.furniture.setArmedFurnitureId(catalogId);
       store.setActiveTool('building:furniture');
     });

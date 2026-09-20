@@ -8,11 +8,11 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ShapeOwner } from '../../domain/model/selection';
 import type { CsgTerm, ShapeId } from '../../domain/model/shapes';
@@ -78,7 +78,7 @@ export const GroupSection = observer(
     const terms = resolveTerms(store, owner) ?? NO_TERMS;
     const { resolvedActiveGroup } = store.composition;
     const isActive = resolvedActiveGroup.owner === owner && isNil(resolvedActiveGroup.groupId);
-    const handleActivate = useFunction(() => store.composition.setActiveGroup(owner));
+    const handleActivate = useEventCallback(() => store.composition.setActiveGroup(owner));
 
     const sensors = useSensors(
       useSensor(PointerSensor, {
@@ -99,13 +99,13 @@ export const GroupSection = observer(
       [draggedOperand]
     );
 
-    const handleDragStart = useFunction(({ active }: DragStartEvent) => {
+    const handleDragStart = useEventCallback(({ active }: DragStartEvent) => {
       setDraggedOperandId(active.id as ShapeId);
     });
-    const handleDragCancel = useFunction(() => {
+    const handleDragCancel = useEventCallback(() => {
       setDraggedOperandId(undefined);
     });
-    const handleDragEnd = useFunction(({ active, over }: DragEndEvent) => {
+    const handleDragEnd = useEventCallback(({ active, over }: DragEndEvent) => {
       setDraggedOperandId(undefined);
 
       const target = readDropTarget(over?.data.current);

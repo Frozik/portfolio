@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useMountedOnce } from '@frozik/components/hooks/useMountedOnce';
 import type { ReactNode } from 'react';
 import { lazy, memo, Suspense, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { CONTACT_LINKS } from '../../contentData';
 import { welcomeT } from '../../translations';
@@ -24,8 +24,8 @@ const ContactListComponent = ({
   const [qrRequest, setQrRequest] = useState<IContactQRRequest | null>(null);
   const qrModalMounted = useMountedOnce(qrRequest !== null);
 
-  const handleQRRequest = useFunction((payload: IContactQRRequest) => setQrRequest(payload));
-  const handleQRClose = useFunction(() => setQrRequest(null));
+  const handleQRRequest = useEventCallback((payload: IContactQRRequest) => setQrRequest(payload));
+  const handleQRClose = useEventCallback(() => setQrRequest(null));
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { useTanksStore } from '../../application/useTanksStore';
 import {
@@ -21,7 +21,7 @@ export const StageIntro = observer(({ isOpening }: { readonly isOpening: boolean
   const store = useTanksStore();
   const { stageNumber } = store;
 
-  const handleSkip = useFunction(() => {
+  const handleSkip = useEventCallback(() => {
     store.skipStageIntro();
   });
 

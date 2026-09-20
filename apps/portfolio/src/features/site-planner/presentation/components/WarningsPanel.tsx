@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { TriangleAlert } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { layerOfWarning } from '../../domain/model/building-layers';
@@ -59,7 +59,7 @@ function describeWarning(warning: BuildingWarning): string {
  */
 const WarningRow = memo(
   ({ store, warning }: { readonly store: SitePlannerStore; readonly warning: BuildingWarning }) => {
-    const handleClick = useFunction(() => store.storeys.revealWarning(warning));
+    const handleClick = useEventCallback(() => store.storeys.revealWarning(warning));
 
     return (
       <button

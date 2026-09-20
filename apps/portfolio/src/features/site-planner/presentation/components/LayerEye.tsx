@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Eye, EyeOff } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingLayerId } from '../../domain/model/building-layers';
@@ -21,7 +21,7 @@ export const LayerEye = observer(
     const labels = sitePlannerT.layers;
     const title = canToggle ? (isVisible ? labels.hide : labels.show) : labels.activeAlwaysVisible;
 
-    const handleToggle = useFunction(() => store.layers.toggleLayerVisibility(layer));
+    const handleToggle = useEventCallback(() => store.layers.toggleLayerVisibility(layer));
 
     return (
       <button

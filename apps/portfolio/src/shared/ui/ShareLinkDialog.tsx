@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { Check, Copy, X } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { TCopyStatus } from '../hooks/useCopyToClipboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { DialogShell } from './DialogShell';
@@ -47,7 +47,7 @@ const ShareLinkDialogComponent = ({
 }) => {
   const { status, copy } = useCopyToClipboard();
 
-  const handleCopy = useFunction(async () => {
+  const handleCopy = useEventCallback(async () => {
     const succeeded = await copy(url);
     onCopyResult?.(succeeded);
   });

@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { EyeOff, Glasses } from 'lucide-react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { TGlassesStyle } from '../../domain/glasses-style';
@@ -45,7 +45,7 @@ const GlassesPickerItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (style: TGlassesStyle) => void;
   }) => {
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       onSelect(style);
     });
     return (

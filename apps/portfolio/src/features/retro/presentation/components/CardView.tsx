@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, Pencil, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
@@ -59,21 +59,21 @@ const CardViewComponent = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(card.text);
 
-  const handleDeleteClick = useFunction(() => {
+  const handleDeleteClick = useEventCallback(() => {
     onDelete?.();
   });
 
-  const handleStartEdit = useFunction(() => {
+  const handleStartEdit = useEventCallback(() => {
     setDraft(card.text);
     setIsEditing(true);
   });
 
-  const handleCancelEdit = useFunction(() => {
+  const handleCancelEdit = useEventCallback(() => {
     setIsEditing(false);
     setDraft(card.text);
   });
 
-  const handleSaveEdit = useFunction(() => {
+  const handleSaveEdit = useEventCallback(() => {
     const trimmed = draft.trim();
     if (trimmed.length === 0) {
       return;
@@ -84,11 +84,11 @@ const CardViewComponent = ({
     setIsEditing(false);
   });
 
-  const handleDraftChange = useFunction((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleDraftChange = useEventCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(event.target.value);
   });
 
-  const handleDraftKeyDown = useFunction((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleDraftKeyDown = useEventCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSaveEdit();

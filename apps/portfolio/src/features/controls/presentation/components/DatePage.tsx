@@ -1,5 +1,4 @@
 import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
@@ -7,6 +6,7 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { Fragment, memo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
+import { useEventCallback } from 'usehooks-ts';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
@@ -189,7 +189,7 @@ export const DatePage = memo(() => {
   const [timeResolution, setTimeResolution] = useState<ETimeResolution>(ETimeResolution.Minutes);
   const [direction, setDirection] = useState<ParseDirection>('future');
 
-  const parseInput = useFunction((input: string) =>
+  const parseInput = useEventCallback((input: string) =>
     parseFuzzyDate(input, {
       now: Temporal.Now.zonedDateTimeISO(TIME_ZONE),
       nearest: direction === 'nearest',

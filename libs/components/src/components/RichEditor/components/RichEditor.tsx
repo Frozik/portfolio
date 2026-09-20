@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../../cn';
 import type {
   INormalizedInput,
@@ -94,7 +94,7 @@ export const RichEditor = memo(
     const composingRef = useRef(false);
     const [focused, setFocused] = useState(false);
 
-    const moveFocusOnward = useFunction(() => {
+    const moveFocusOnward = useEventCallback(() => {
       const element = elementRef.current;
       if (isNil(element)) {
         return;
@@ -115,7 +115,7 @@ export const RichEditor = memo(
 
     const html = useMemo(() => toHtml(value, focused), [toHtml, value, focused]);
 
-    const restoreDom = useFunction(() => {
+    const restoreDom = useEventCallback(() => {
       const element = elementRef.current;
       if (isNil(element)) {
         return;
@@ -124,7 +124,7 @@ export const RichEditor = memo(
       setElementSelection(element, selectionRef.current);
     });
 
-    const commit = useFunction((result: INormalizedInput | undefined) => {
+    const commit = useEventCallback((result: INormalizedInput | undefined) => {
       if (isNil(result)) {
         restoreDom();
         return;
@@ -139,7 +139,7 @@ export const RichEditor = memo(
       onValueChange?.(result.value);
     });
 
-    const handleBeforeInput = useFunction((event: InputEvent) => {
+    const handleBeforeInput = useEventCallback((event: InputEvent) => {
       const element = elementRef.current;
       if (isNil(element) || event.isComposing || event.inputType === 'insertCompositionText') {
         return;
@@ -164,7 +164,7 @@ export const RichEditor = memo(
       commit(normalizeInput(next.value, next.selection));
     });
 
-    const handleSelectionChange = useFunction(() => {
+    const handleSelectionChange = useEventCallback(() => {
       const element = elementRef.current;
       if (isNil(element) || composingRef.current) {
         return;
@@ -205,11 +205,11 @@ export const RichEditor = memo(
       }
     }, [html, focused]);
 
-    const handleCompositionStart = useFunction(() => {
+    const handleCompositionStart = useEventCallback(() => {
       composingRef.current = true;
     });
 
-    const handleCompositionEnd = useFunction((event: CompositionEvent<HTMLDivElement>) => {
+    const handleCompositionEnd = useEventCallback((event: CompositionEvent<HTMLDivElement>) => {
       composingRef.current = false;
 
       const element = event.currentTarget;
@@ -218,7 +218,7 @@ export const RichEditor = memo(
       commit(normalizeInput(composed, selection));
     });
 
-    const handlePointerDown = useFunction((event: PointerEvent<HTMLDivElement>) => {
+    const handlePointerDown = useEventCallback((event: PointerEvent<HTMLDivElement>) => {
       const element = event.currentTarget;
       if (disabled || element.contains(document.activeElement)) {
         return;
@@ -233,7 +233,7 @@ export const RichEditor = memo(
       element.focus();
     });
 
-    const handleFocus = useFunction(() => {
+    const handleFocus = useEventCallback(() => {
       if (disabled) {
         return;
       }
@@ -242,13 +242,13 @@ export const RichEditor = memo(
       onFocusChange?.(true);
     });
 
-    const handleBlur = useFunction(() => {
+    const handleBlur = useEventCallback(() => {
       composingRef.current = false;
       setFocused(false);
       onFocusChange?.(false);
     });
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLDivElement>) => {
       if (event.nativeEvent.isComposing) {
         return;
       }

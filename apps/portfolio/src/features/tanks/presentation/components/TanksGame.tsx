@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useIsCoarsePointer } from '@frozik/components/hooks/useIsCoarsePointer';
 import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
 import { useWakeLock } from '@frozik/components/hooks/useWakeLock';
@@ -7,6 +6,7 @@ import { isNil } from 'lodash-es';
 import { Pause } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { WebGpuUnsupportedNotice } from '../../../../shared/components/WebGpuUnsupportedNotice';
 import { Button } from '../../../../shared/ui/Button';
@@ -82,7 +82,7 @@ export const TanksGame = observer(
     }, [isPlaying, requestWakeLock, releaseWakeLock]);
 
     /** Enter and Escape mean "move the flow along" wherever the player currently is. */
-    const handleFlowKey = useFunction(() => {
+    const handleFlowKey = useEventCallback(() => {
       switch (store.gameStatus) {
         case 'menu':
           store.startGame();
@@ -98,16 +98,16 @@ export const TanksGame = observer(
       }
     });
 
-    const handleFireKey = useFunction(() => {
+    const handleFireKey = useEventCallback(() => {
       store.skipStageIntro();
     });
 
-    const handlePauseClick = useFunction(() => {
+    const handlePauseClick = useEventCallback(() => {
       store.togglePause();
     });
 
     /** The first touch of the canvas is as good a gesture as any to start the audio with. */
-    const handleCanvasPointerDown = useFunction(() => {
+    const handleCanvasPointerDown = useEventCallback(() => {
       audioControllerRef.current?.unlock();
     });
 

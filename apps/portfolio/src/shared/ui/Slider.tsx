@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo, useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 const TOOLTIP_SIDE_OFFSET = 4;
 const TOOLTIP_DELAY_DURATION = 0;
@@ -29,15 +29,15 @@ const SliderThumbWithTooltip = memo(
     const [isHovering, setIsHovering] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const handleMouseEnter = useFunction(() => {
+    const handleMouseEnter = useEventCallback(() => {
       setIsHovering(true);
     });
 
-    const handleMouseLeave = useFunction(() => {
+    const handleMouseLeave = useEventCallback(() => {
       setIsHovering(false);
     });
 
-    const handlePointerDown = useFunction(() => {
+    const handlePointerDown = useEventCallback(() => {
       setIsDragging(true);
 
       const handlePointerUp = () => {
@@ -117,7 +117,7 @@ export const Slider = memo(
   }) => {
     const sliderValue = useMemo(() => [value], [value]);
 
-    const handleValueChange = useFunction((values: number[]) => {
+    const handleValueChange = useEventCallback((values: number[]) => {
       onChange(values[0]);
     });
 
@@ -181,7 +181,7 @@ export const RangeSlider = memo(
     readonly showTooltip?: boolean;
     readonly formatTooltip?: (value: number) => ReactNode;
   }) => {
-    const handleValueChange = useFunction((values: number[]) => {
+    const handleValueChange = useEventCallback((values: number[]) => {
       const [start, end] = values;
       assert(!isNil(start) && !isNil(end), 'range slider reports both thumbs');
       onChange([start, end]);

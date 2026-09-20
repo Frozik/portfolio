@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { range } from 'lodash-es';
 import { LayoutGrid, PenTool, Trash2, Undo } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { getPairs, getUsedNumbers, hasMarks } from '../../domain/services';
 import type { IField, ITool, ToolMode } from '../../domain/types';
@@ -46,7 +46,7 @@ export const FieldControls = observer(
     readonly onExitGame: VoidFunction;
     readonly onRestartGame: VoidFunction;
   }) => {
-    const handleToggleToolMode = useFunction(() => {
+    const handleToggleToolMode = useEventCallback(() => {
       onSelectToolMode(tool.mode === 'pen' ? 'notes' : 'pen');
     });
 
@@ -180,7 +180,7 @@ const ToolValueButton = memo(
     readonly style: CSSProperties;
     readonly onSelect: (value: number) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(value));
+    const handleClick = useEventCallback(() => onSelect(value));
     return (
       <button
         type="button"

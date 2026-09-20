@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { INavProject } from './navTypes';
 import { PROJECT_ICON_SIZE_PX } from './navTypes';
 
@@ -12,7 +12,7 @@ export const NavProjectButton = memo(
     readonly onSelect: (route: string) => void;
   }) => {
     const Icon = project.icon;
-    const handleClick = useFunction(() => {
+    const handleClick = useEventCallback(() => {
       onSelect(project.route);
     });
     return (

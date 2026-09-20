@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useIsCoarsePointer } from '@frozik/components/hooks/useIsCoarsePointer';
 import { useWakeLock } from '@frozik/components/hooks/useWakeLock';
 import { getIsHosted } from '@frozik/utils/isHosted';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { WebGpuUnsupportedNotice } from '../../../../shared/components/WebGpuUnsupportedNotice';
 import { AimGhost } from '../../application/aim-ghost';
@@ -132,7 +132,7 @@ export const ScorchedGame = observer(
     });
 
     /** The first touch of the canvas is as good a gesture as any to start the audio with. */
-    const handleCanvasPointerDown = useFunction(
+    const handleCanvasPointerDown = useEventCallback(
       (event: Parameters<typeof dragHandlers.onPointerDown>[0]) => {
         audioControllerRef.current?.unlock();
         dragHandlers.onPointerDown(event);
@@ -140,7 +140,7 @@ export const ScorchedGame = observer(
     );
 
     /** The till rings from the screen that spends the money; the controller lives here. */
-    const handlePurchase = useFunction(() => {
+    const handlePurchase = useEventCallback(() => {
       audioControllerRef.current?.playPurchase();
     });
 

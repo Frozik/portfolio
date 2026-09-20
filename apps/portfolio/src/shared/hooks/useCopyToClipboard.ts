@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { copyToClipboard } from '../lib/copyToClipboard';
 
 const STATUS_RESET_DELAY_MS = 1800;
@@ -19,7 +19,7 @@ export function useCopyToClipboard(): {
   const [status, setStatus] = useState<TCopyStatus>('idle');
   const resetTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearResetTimeout = useFunction(() => {
+  const clearResetTimeout = useEventCallback(() => {
     if (resetTimeoutIdRef.current !== null) {
       clearTimeout(resetTimeoutIdRef.current);
       resetTimeoutIdRef.current = null;
@@ -28,7 +28,7 @@ export function useCopyToClipboard(): {
 
   useEffect(() => clearResetTimeout, [clearResetTimeout]);
 
-  const copy = useFunction(async (text: string): Promise<boolean> => {
+  const copy = useEventCallback(async (text: string): Promise<boolean> => {
     const succeeded = await copyToClipboard(text);
     clearResetTimeout();
     setStatus(succeeded ? 'copied' : 'failed');

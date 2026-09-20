@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { ChangeEvent, ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Slider } from '../../../../shared/ui/Slider';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -127,35 +127,37 @@ export const AdvancedOptionsPanel = memo(
   }) => {
     const { advanced } = setup;
 
-    const patch = useFunction((changes: Partial<ScorchedAdvancedOptions>) => {
+    const patch = useEventCallback((changes: Partial<ScorchedAdvancedOptions>) => {
       onChange({ ...setup, advanced: { ...advanced, ...changes } });
     });
 
-    const handleGravity = useFunction((gravity: number) => patch({ gravity }));
-    const handleViscosity = useFunction((viscosity: number) => patch({ viscosity }));
-    const handleTalk = useFunction((talkProbabilityPercent: number) =>
+    const handleGravity = useEventCallback((gravity: number) => patch({ gravity }));
+    const handleViscosity = useEventCallback((viscosity: number) => patch({ viscosity }));
+    const handleTalk = useEventCallback((talkProbabilityPercent: number) =>
       patch({ talkProbabilityPercent })
     );
-    const handleArmsLevel = useFunction((armsLevel: number) => patch({ armsLevel }));
-    const handleInterest = useFunction((interestPercent: number) => patch({ interestPercent }));
+    const handleArmsLevel = useEventCallback((armsLevel: number) => patch({ armsLevel }));
+    const handleInterest = useEventCallback((interestPercent: number) =>
+      patch({ interestPercent })
+    );
 
-    const handleBorders = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleBorders = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       patch({ isBordersExtendEnabled: event.target.checked });
     });
 
-    const handleTunneling = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleTunneling = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       patch({ isTunnelingEnabled: event.target.checked });
     });
 
-    const handleTankFalls = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleTankFalls = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       patch({ areTankFallsEnabled: event.target.checked });
     });
 
-    const handlePlayOrder = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+    const handlePlayOrder = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
       patch({ playOrder: event.target.value === 'random' ? 'random' : 'sequential' });
     });
 
-    const handleWallMode = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+    const handleWallMode = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
       patch({ wallMode: toWallMode(event.target.value) });
     });
 

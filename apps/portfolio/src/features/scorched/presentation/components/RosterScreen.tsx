@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import type { ScorchedSetupOptions } from '../../application/scorched-setup';
@@ -56,11 +56,11 @@ const PlayerCard = memo(
   }) => {
     const controllerValue = toControllerValue(player.controller);
 
-    const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleNameChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       onNameChange(player.id, event.target.value);
     });
 
-    const handleControllerChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+    const handleControllerChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
       onControllerChange(player.id, fromControllerValue(event.target.value));
     });
 
@@ -110,27 +110,29 @@ export const RosterScreen = observer(() => {
   const store = useScorchedStore();
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  const handlePlayerCountChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+  const handlePlayerCountChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
     store.roster.setSize(Number(event.target.value));
   });
 
-  const handleNameChange = useFunction((playerId: PlayerId, name: string) => {
+  const handleNameChange = useEventCallback((playerId: PlayerId, name: string) => {
     store.roster.setName(playerId, name);
   });
 
-  const handleControllerChange = useFunction((playerId: PlayerId, controller: PlayerController) => {
-    store.roster.setController(playerId, controller);
-  });
+  const handleControllerChange = useEventCallback(
+    (playerId: PlayerId, controller: PlayerController) => {
+      store.roster.setController(playerId, controller);
+    }
+  );
 
-  const handleSetupChange = useFunction((setup: ScorchedSetupOptions) => {
+  const handleSetupChange = useEventCallback((setup: ScorchedSetupOptions) => {
     store.roster.setOptions(setup);
   });
 
-  const handleToggleAdvanced = useFunction(() => {
+  const handleToggleAdvanced = useEventCallback(() => {
     setIsAdvancedOpen(current => !current);
   });
 
-  const handleStart = useFunction(() => {
+  const handleStart = useEventCallback(() => {
     store.startMatch();
   });
 

@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -16,7 +16,7 @@ export const HandoverOverlay = observer(() => {
   const store = useScorchedStore();
   const { activePlayer } = store.world;
 
-  const handleReady = useFunction(() => {
+  const handleReady = useEventCallback(() => {
     store.confirmHandover();
   });
 

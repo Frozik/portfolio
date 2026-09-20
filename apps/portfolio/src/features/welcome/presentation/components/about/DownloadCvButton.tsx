@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Download, Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { welcomeT } from '../../translations';
 
 const ICON_SIZE_PX = 14;
@@ -9,7 +9,7 @@ const ICON_SIZE_PX = 14;
 const DownloadCvButtonComponent = () => {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleClick = useFunction(async () => {
+  const handleClick = useEventCallback(async () => {
     if (isGenerating) {
       return;
     }

@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useIsCoarsePointer } from '@frozik/components/hooks/useIsCoarsePointer';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { PanelRight, Settings } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Alert } from '../../../shared/ui/Alert';
 import { Button } from '../../../shared/ui/Button';
@@ -107,10 +107,10 @@ export const SitePlanner = observer(() => {
 
   useViewModeHotkey(store);
 
-  const handleOpenSettings = useFunction(() => setIsSettingsOpen(true));
-  const handleCloseSettings = useFunction(() => setIsSettingsOpen(false));
-  const handleOpenPanels = useFunction(() => setArePanelsOpen(true));
-  const handleClosePanels = useFunction(() => setArePanelsOpen(false));
+  const handleOpenSettings = useEventCallback(() => setIsSettingsOpen(true));
+  const handleCloseSettings = useEventCallback(() => setIsSettingsOpen(false));
+  const handleOpenPanels = useEventCallback(() => setArePanelsOpen(true));
+  const handleClosePanels = useEventCallback(() => setArePanelsOpen(false));
 
   const hasPanelsButton = isCompact && store.viewMode === 'plan';
 

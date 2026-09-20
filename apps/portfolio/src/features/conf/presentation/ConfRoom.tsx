@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
@@ -90,7 +90,7 @@ const ConfRoomBody = observer(
       }
     }, [roomStore, searchParams, setSearchParams]);
 
-    const handleLeave = useFunction(() => {
+    const handleLeave = useEventCallback(() => {
       roomStore.leave();
       void navigate(LOBBY_PATH);
     });
@@ -100,11 +100,11 @@ const ConfRoomBody = observer(
       onActivate: handleLeave,
     });
 
-    const handleOpenShare = useFunction(() => {
+    const handleOpenShare = useEventCallback(() => {
       roomStore.openShareDialog();
     });
 
-    const handleCloseShare = useFunction(() => {
+    const handleCloseShare = useEventCallback(() => {
       roomStore.closeShareDialog();
     });
 

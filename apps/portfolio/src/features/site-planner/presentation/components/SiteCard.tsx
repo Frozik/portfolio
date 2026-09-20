@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -16,7 +16,7 @@ const ICON_SIZE_PX = 14;
  * is edited. A double-click on the plot itself opens the same editor.
  */
 export const SiteCard = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const handleEdit = useFunction(() => store.enterEditMode({ kind: 'site' }));
+  const handleEdit = useEventCallback(() => store.enterEditMode({ kind: 'site' }));
 
   return (
     <PlannerPanel title={sitePlannerT.structure.boundary}>

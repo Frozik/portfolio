@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 const GLYPH_SIZE_PX = 12;
 
@@ -28,7 +28,7 @@ export const PanelGroup = memo(
     readonly onToggle: (title: string) => void;
     readonly children: ReactNode;
   }) => {
-    const handleToggle = useFunction(() => onToggle(title));
+    const handleToggle = useEventCallback(() => onToggle(title));
 
     return (
       <section className="flex shrink-0 flex-col gap-2">

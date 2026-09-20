@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
@@ -45,19 +45,19 @@ export const SelectedUtilityRouteProperties = observer(
     const profile = store.utilities.trenchProfiles.get(route.id);
     const isEditingThisRoute = editedUtilityRouteId(store.editorMode) === route.id;
 
-    const handleSystemChange = useFunction((value: string) => {
+    const handleSystemChange = useEventCallback((value: string) => {
       const system = parseTrenchSystem(value);
 
       if (!isNil(system)) {
         store.utilities.setUtilityRouteSystem(route.id, system);
       }
     });
-    const handleDiameterChange = useFunction((value: number | undefined) => {
+    const handleDiameterChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value) && value > 0) {
         store.utilities.setUtilityRouteDiameter(route.id, value);
       }
     });
-    const handleEnterEditMode = useFunction(() =>
+    const handleEnterEditMode = useEventCallback(() =>
       store.modes.openEditorDoor({
         target: { kind: 'utilityRoute', routeId: route.id },
         aimAt: undefined,
@@ -117,7 +117,7 @@ export const SelectedUtilityRouteProperties = observer(
 export const UtilityToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.utilities;
 
-  const handleSystemChange = useFunction((value: string) => {
+  const handleSystemChange = useEventCallback((value: string) => {
     const system = parseTrenchSystem(value);
 
     if (!isNil(system)) {

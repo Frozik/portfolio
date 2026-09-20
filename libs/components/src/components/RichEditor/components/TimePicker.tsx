@@ -5,7 +5,7 @@ import type { KeyboardEvent, MouseEvent, Ref } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
 import styles from '../styles.module.css';
 
@@ -137,49 +137,51 @@ export const TimePicker = memo(
     });
 
     // The field keeps focus (and the popover stays open) while the spinners are clicked.
-    const handleMouseDown = useFunction((event: MouseEvent) => {
+    const handleMouseDown = useEventCallback((event: MouseEvent) => {
       event.preventDefault();
     });
 
-    const handleStep = useFunction((unit: TTimeUnit, diff: number) => {
+    const handleStep = useEventCallback((unit: TTimeUnit, diff: number) => {
       onTimeChange(stepUnit(time, unit, diff));
     });
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLSpanElement>, unit: TTimeUnit) => {
-      const index = units.indexOf(unit);
+    const handleKeyDown = useEventCallback(
+      (event: KeyboardEvent<HTMLSpanElement>, unit: TTimeUnit) => {
+        const index = units.indexOf(unit);
 
-      switch (event.key) {
-        case 'ArrowUp':
-          event.preventDefault();
-          handleStep(unit, event.shiftKey ? SHIFT_STEP : 1);
-          return;
-        case 'ArrowDown':
-          event.preventDefault();
-          handleStep(unit, event.shiftKey ? -SHIFT_STEP : -1);
-          return;
-        case 'ArrowLeft':
-          event.preventDefault();
-          followActiveUnitRef.current = true;
-          setActiveUnit(units[Math.max(0, index - 1)]);
-          return;
-        case 'ArrowRight':
-          event.preventDefault();
-          followActiveUnitRef.current = true;
-          setActiveUnit(units[Math.min(units.length - 1, index + 1)]);
-          return;
-        case 'Tab':
-          event.preventDefault();
-          onLeave(event.shiftKey ? 'backward' : 'forward');
-          return;
-        case 'Enter':
-        case 'Escape':
-          event.preventDefault();
-          onReturnToField();
-          return;
-        default:
-          return;
+        switch (event.key) {
+          case 'ArrowUp':
+            event.preventDefault();
+            handleStep(unit, event.shiftKey ? SHIFT_STEP : 1);
+            return;
+          case 'ArrowDown':
+            event.preventDefault();
+            handleStep(unit, event.shiftKey ? -SHIFT_STEP : -1);
+            return;
+          case 'ArrowLeft':
+            event.preventDefault();
+            followActiveUnitRef.current = true;
+            setActiveUnit(units[Math.max(0, index - 1)]);
+            return;
+          case 'ArrowRight':
+            event.preventDefault();
+            followActiveUnitRef.current = true;
+            setActiveUnit(units[Math.min(units.length - 1, index + 1)]);
+            return;
+          case 'Tab':
+            event.preventDefault();
+            onLeave(event.shiftKey ? 'backward' : 'forward');
+            return;
+          case 'Enter':
+          case 'Escape':
+            event.preventDefault();
+            onReturnToField();
+            return;
+          default:
+            return;
+        }
       }
-    });
+    );
 
     return (
       <fieldset
@@ -216,16 +218,16 @@ function useHoldRepeat(onStep: () => void): {
   const delayRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const repeatedRef = useRef(false);
-  const step = useFunction(onStep);
+  const step = useEventCallback(onStep);
 
-  const stop = useFunction(() => {
+  const stop = useEventCallback(() => {
     clearTimeout(delayRef.current);
     clearInterval(intervalRef.current);
     delayRef.current = undefined;
     intervalRef.current = undefined;
   });
 
-  const start = useFunction(() => {
+  const start = useEventCallback(() => {
     stop();
     repeatedRef.current = false;
     delayRef.current = setTimeout(() => {
@@ -237,7 +239,7 @@ function useHoldRepeat(onStep: () => void): {
   });
 
   // A click that ends a hold has already stepped through the repeat.
-  const handleClick = useFunction(() => {
+  const handleClick = useEventCallback(() => {
     if (repeatedRef.current) {
       repeatedRef.current = false;
       return;
@@ -282,7 +284,7 @@ const TimeUnit = memo(
   }) => {
     const holdUp = useHoldRepeat(() => onStep(unit, 1));
     const holdDown = useHoldRepeat(() => onStep(unit, -1));
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLSpanElement>) =>
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLSpanElement>) =>
       onKeyDown(event, unit)
     );
     const value = time[unit];

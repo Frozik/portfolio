@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { MapPin } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent, ReactNode } from 'react';
 import { lazy, memo, Suspense, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { Drawer } from '../../../../shared/ui/Drawer';
@@ -106,14 +106,14 @@ const CheckboxRow = memo(
 );
 
 const GridSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const handleStepChange = useFunction((value: string) => {
+  const handleStepChange = useEventCallback((value: string) => {
     const step = GRID_STEP_OPTIONS.find(candidate => String(candidate) === value);
 
     if (!isNil(step)) {
       store.document.updateSettings({ gridStepMeters: step }, GRID_STEP_HISTORY_GROUP);
     }
   });
-  const handleSnapToggle = useFunction(() =>
+  const handleSnapToggle = useEventCallback(() =>
     store.document.updateSettings({ isSnapEnabled: !store.settings.isSnapEnabled })
   );
 
@@ -137,12 +137,12 @@ const GridSection = observer(({ store }: { readonly store: SitePlannerStore }) =
 });
 
 const TerrainSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const handleSetbackChange = useFunction((value: number | undefined) => {
+  const handleSetbackChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.document.updateSettings({ setbackMeters: value }, SETBACK_HISTORY_GROUP);
     }
   });
-  const handleContourIntervalChange = useFunction((value: number | undefined) => {
+  const handleContourIntervalChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value) && value > 0) {
       store.document.updateSettings(
         { contourIntervalMeters: value },
@@ -150,12 +150,12 @@ const TerrainSection = observer(({ store }: { readonly store: SitePlannerStore }
       );
     }
   });
-  const handleFrostDepthChange = useFunction((value: number | undefined) => {
+  const handleFrostDepthChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value) && value > 0) {
       store.document.updateSettings({ frostDepthMeters: value }, FROST_DEPTH_HISTORY_GROUP);
     }
   });
-  const handleResolutionChange = useFunction((value: string) => {
+  const handleResolutionChange = useEventCallback((value: string) => {
     const resolution = HEIGHTFIELD_RESOLUTION_OPTIONS.find(
       candidate => String(candidate) === value
     );
@@ -208,7 +208,7 @@ const TimeZoneField = observer(({ store }: { readonly store: SitePlannerStore })
   const [rejectedDraft, setRejectedDraft] = useState<string | undefined>(undefined);
   const value = rejectedDraft ?? store.settings.location.timeZoneId;
 
-  const handleChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
     const nextTimeZoneId = event.target.value;
 
     if (isValidTimeZoneId(nextTimeZoneId)) {
@@ -259,7 +259,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
   const { location } = store.settings;
   const [isMapOpen, setIsMapOpen] = useState(false);
 
-  const handleLatitudeChange = useFunction((value: number | undefined) => {
+  const handleLatitudeChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.document.updateSettings(
         { location: { latitudeDegrees: value } },
@@ -267,7 +267,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
       );
     }
   });
-  const handleLongitudeChange = useFunction((value: number | undefined) => {
+  const handleLongitudeChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.document.updateSettings(
         { location: { longitudeDegrees: value } },
@@ -275,14 +275,14 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
       );
     }
   });
-  const handleMapOpen = useFunction(() => setIsMapOpen(true));
-  const handleMapClose = useFunction(() => setIsMapOpen(false));
+  const handleMapOpen = useEventCallback(() => setIsMapOpen(true));
+  const handleMapClose = useEventCallback(() => setIsMapOpen(false));
 
   /**
    * The picked place reaches the plan as one settings edit, so the coordinates
    * and the time zone that came with them are a single step to undo.
    */
-  const handleMapApply = useFunction((picked: SiteLocationChanges) => {
+  const handleMapApply = useEventCallback((picked: SiteLocationChanges) => {
     store.document.updateSettings({ location: picked }, LOCATION_MAP_HISTORY_GROUP);
   });
 
@@ -325,7 +325,7 @@ const LocationSection = observer(({ store }: { readonly store: SitePlannerStore 
 
 const LayerRow = observer(
   ({ store, layer }: { readonly store: SitePlannerStore; readonly layer: PlanLayerKind }) => {
-    const handleToggle = useFunction(() => store.layers.toggleLayerVisibility(layer));
+    const handleToggle = useEventCallback(() => store.layers.toggleLayerVisibility(layer));
     const canToggle = store.layers.canToggleLayerVisibility(layer);
 
     return (

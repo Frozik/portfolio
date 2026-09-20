@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Crown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { initialsOf } from '../../../../shared/lib/initialsOf';
 import { AvatarImage } from '../../../../shared/ui/AvatarImage';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -33,7 +33,7 @@ export const PresencePanel = observer(({ store }: { readonly store: RoomStore })
   const isFacilitatorOnline =
     facilitatorId !== undefined && users.some(user => user.clientId === facilitatorId);
 
-  const handleTakeOver = useFunction(() => store.claimFacilitator());
+  const handleTakeOver = useEventCallback(() => store.claimFacilitator());
 
   if (store.currentSnapshot === undefined) {
     return null;

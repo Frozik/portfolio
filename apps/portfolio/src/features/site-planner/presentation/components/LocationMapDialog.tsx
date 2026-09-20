@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { isNil, round } from 'lodash-es';
+import 'leaflet/dist/leaflet.css';
 import { memo, useEffect, useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
@@ -152,7 +152,7 @@ export const LocationMapDialog = memo(
      * carrying them into the plan would leave the settings field and the file
      * disagreeing about the same place.
      */
-    const handleApply = useFunction(() => {
+    const handleApply = useEventCallback(() => {
       onApply({
         latitudeDegrees: round(point.lat, COORDINATE_DECIMALS),
         longitudeDegrees: round(point.lng, COORDINATE_DECIMALS),

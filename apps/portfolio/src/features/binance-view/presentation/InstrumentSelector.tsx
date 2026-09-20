@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../shared/ui/Dropdown';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
@@ -23,7 +23,7 @@ const InstrumentOption = memo(
     readonly isSelected: boolean;
     readonly onSelect: (symbol: InstrumentSymbol) => void;
   }) => {
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       onSelect(symbol);
     });
 
@@ -42,7 +42,7 @@ export const InstrumentSelector = observer(() => {
   const store = useBinanceViewStore();
   const navigate = useNavigate();
 
-  const handleSelect = useFunction((symbol: InstrumentSymbol) => {
+  const handleSelect = useEventCallback((symbol: InstrumentSymbol) => {
     void navigate(instrumentRoute(symbol));
   });
 

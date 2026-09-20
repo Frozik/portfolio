@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
@@ -8,6 +7,7 @@ import { observer } from 'mobx-react-lite';
 import type { ChangeEvent, FormEvent, MouseEvent } from 'react';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
@@ -37,7 +37,7 @@ const RoomRow = memo(
     readonly lobbyStore: ConfLobbyStore;
     readonly onDelete: (roomId: RoomId) => void;
   }) => {
-    const handleDelete = useFunction((event: MouseEvent<HTMLButtonElement>) => {
+    const handleDelete = useEventCallback((event: MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
       onDelete(room.roomId);
@@ -87,16 +87,16 @@ export const ConfLobby = observer(() => {
     void lobbyStore.loadRooms();
   }, [lobbyStore]);
 
-  const handleCreate = useFunction(() => {
+  const handleCreate = useEventCallback(() => {
     const roomId = lobbyStore.createRoom();
     void navigate(`/conf/${roomId}${CREATED_QUERY_FLAG}`);
   });
 
-  const handleJoinInputChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+  const handleJoinInputChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
     setJoinInput(event.target.value);
   });
 
-  const handleJoinSubmit = useFunction((event: FormEvent<HTMLFormElement>) => {
+  const handleJoinSubmit = useEventCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const roomId = extractRoomIdFromInput(joinInput, ROOM_ID_FROM_URL_PATTERN);
     if (roomId === null) {
@@ -105,15 +105,15 @@ export const ConfLobby = observer(() => {
     void navigate(`/conf/${roomId}`);
   });
 
-  const handleRequestDelete = useFunction((roomId: RoomId) => {
+  const handleRequestDelete = useEventCallback((roomId: RoomId) => {
     setPendingDeleteRoomId(roomId);
   });
 
-  const handleCancelDelete = useFunction(() => {
+  const handleCancelDelete = useEventCallback(() => {
     setPendingDeleteRoomId(null);
   });
 
-  const handleConfirmDelete = useFunction(() => {
+  const handleConfirmDelete = useEventCallback(() => {
     if (pendingDeleteRoomId === null) {
       return;
     }
@@ -121,9 +121,9 @@ export const ConfLobby = observer(() => {
     setPendingDeleteRoomId(null);
   });
 
-  const getRoomKey = useFunction((room: IConfRoomIndexEntry) => room.roomId);
+  const getRoomKey = useEventCallback((room: IConfRoomIndexEntry) => room.roomId);
 
-  const renderRoom = useFunction((room: IConfRoomIndexEntry) => (
+  const renderRoom = useEventCallback((room: IConfRoomIndexEntry) => (
     <RoomRow room={room} lobbyStore={lobbyStore} onDelete={handleRequestDelete} />
   ));
 

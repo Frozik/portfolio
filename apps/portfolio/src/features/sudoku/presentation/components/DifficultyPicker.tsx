@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SudokuDifficulty } from '../../domain/types';
 
@@ -36,7 +36,7 @@ const DifficultyCard = memo(
     readonly option: DifficultyOption;
     readonly onSelect: (value: SudokuDifficulty) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(option.value));
+    const handleClick = useEventCallback(() => onSelect(option.value));
 
     return (
       <button

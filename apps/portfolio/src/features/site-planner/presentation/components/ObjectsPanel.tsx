@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { LucideIcon } from 'lucide-react';
 import { Car, Home, Plus, Route, Trash2, TreePine } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { Button } from '../../../../shared/ui/Button';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
@@ -119,8 +119,10 @@ const TreeRow = observer(
     const isSelected =
       !isNil(selection) && selection.kind === 'tree' && selection.treeId === tree.id;
 
-    const handleSelect = useFunction(() => store.setSelection({ kind: 'tree', treeId: tree.id }));
-    const handleRemove = useFunction(() => store.siteObjects.removeTree(tree.id));
+    const handleSelect = useEventCallback(() =>
+      store.setSelection({ kind: 'tree', treeId: tree.id })
+    );
+    const handleRemove = useEventCallback(() => store.siteObjects.removeTree(tree.id));
 
     return (
       <ObjectRow
@@ -140,8 +142,8 @@ const CarRow = observer(
     const { selection } = store;
     const isSelected = !isNil(selection) && selection.kind === 'car' && selection.carId === car.id;
 
-    const handleSelect = useFunction(() => store.setSelection({ kind: 'car', carId: car.id }));
-    const handleRemove = useFunction(() => store.siteObjects.removeCar(car.id));
+    const handleSelect = useEventCallback(() => store.setSelection({ kind: 'car', carId: car.id }));
+    const handleRemove = useEventCallback(() => store.siteObjects.removeCar(car.id));
 
     return (
       <ObjectRow
@@ -162,8 +164,10 @@ const PathRow = observer(
     const isSelected =
       !isNil(selection) && selection.kind === 'path' && selection.pathId === path.id;
 
-    const handleSelect = useFunction(() => store.setSelection({ kind: 'path', pathId: path.id }));
-    const handleRemove = useFunction(() => store.siteObjects.removePath(path.id));
+    const handleSelect = useEventCallback(() =>
+      store.setSelection({ kind: 'path', pathId: path.id })
+    );
+    const handleRemove = useEventCallback(() => store.siteObjects.removePath(path.id));
 
     return (
       <ObjectRow
@@ -210,10 +214,10 @@ const BuildingRow = observer(
     const isSelected =
       !isNil(selection) && selection.kind === 'building' && selection.buildingId === building.id;
 
-    const handleSelect = useFunction(() =>
+    const handleSelect = useEventCallback(() =>
       store.setSelection({ kind: 'building', buildingId: building.id })
     );
-    const handleRemove = useFunction(() => store.building.removeBuilding(building.id));
+    const handleRemove = useEventCallback(() => store.building.removeBuilding(building.id));
 
     return (
       <ObjectRow
@@ -236,7 +240,7 @@ const BuildingPresetItem = memo(
     readonly presetId: BuildingPresetId;
     readonly onSelect: (presetId: BuildingPresetId) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(presetId));
+    const handleSelect = useEventCallback(() => onSelect(presetId));
 
     return (
       <DropdownItem onSelect={handleSelect} className="gap-2 py-1.5 text-xs">
@@ -252,7 +256,7 @@ const BuildingPresetItem = memo(
  * the footprint drawing waits behind «Редактировать участок».
  */
 const BuildingsSection = observer(({ store }: { readonly store: SitePlannerStore }) => {
-  const handleAdd = useFunction((presetId: BuildingPresetId) => {
+  const handleAdd = useEventCallback((presetId: BuildingPresetId) => {
     store.building.addBuilding(
       `${sitePlannerT.structure.presets[presetId]} ${store.buildings.length + 1}`,
       presetId

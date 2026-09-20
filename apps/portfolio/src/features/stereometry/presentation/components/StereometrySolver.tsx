@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { getIsHosted } from '@frozik/utils/isHosted';
 import { isNil } from 'lodash-es';
 import { Move, Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 
 import { useRegisterTopNavBack } from '../../../../app/components/TopNavBackContext';
 import { WebGpuGuard } from '../../../../shared/components/WebGpuGuard';
@@ -24,7 +24,7 @@ export const StereometrySolver = observer(({ puzzle }: { readonly puzzle: Puzzle
   const store = useStereometryStore();
   const navigate = useNavigate();
 
-  const handleBackToPuzzles = useFunction(() => {
+  const handleBackToPuzzles = useEventCallback(() => {
     void navigate('/stereometry');
   });
   useRegisterTopNavBack({
@@ -54,11 +54,11 @@ export const StereometrySolver = observer(({ puzzle }: { readonly puzzle: Puzzle
     };
   }, [puzzle, store]);
 
-  const handleSetRotateMode = useFunction(() => {
+  const handleSetRotateMode = useEventCallback(() => {
     store.setInteractionMode('rotate');
   });
 
-  const handleSetPanMode = useFunction(() => {
+  const handleSetPanMode = useEventCallback(() => {
     store.setInteractionMode('pan');
   });
 

@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Download } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -25,9 +25,9 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleExportJson = useFunction(() => exportPlanJson(store.document.snapshot));
+  const handleExportJson = useEventCallback(() => exportPlanJson(store.document.snapshot));
 
-  const handleExportPng = useFunction(() => {
+  const handleExportPng = useEventCallback(() => {
     exportPlanPng({ store, labels: PLAN_LABELS })
       .then(hasExported => {
         if (!hasExported) {
@@ -37,9 +37,9 @@ export const ExportMenu = observer(({ store }: { readonly store: SitePlannerStor
       .catch(() => store.persistence.reportExportFailure());
   });
 
-  const handlePickFile = useFunction(() => fileInputRef.current?.click());
+  const handlePickFile = useEventCallback(() => fileInputRef.current?.click());
 
-  const handleFileChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     // Resetting the control is what lets the very same file be picked again

@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Flame } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -40,9 +40,9 @@ export const FireplaceToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedKind = store.ducts.armedFireplaceKind;
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:fireplace'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:fireplace'));
 
-    const handleChoose = useFunction((kind: FireplaceKind) => {
+    const handleChoose = useEventCallback((kind: FireplaceKind) => {
       store.ducts.setArmedFireplaceKind(kind);
       store.setActiveTool('building:fireplace');
     });

@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { BuildingScene } from '../../application/building-scene';
@@ -26,7 +26,7 @@ const AddEntryItem = memo(
     readonly system: UtilitySystem;
     readonly onSelect: (system: UtilitySystem) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(system));
+    const handleSelect = useEventCallback(() => onSelect(system));
 
     return (
       <DropdownItem onSelect={handleSelect} className="gap-2 py-1.5 text-xs">
@@ -55,7 +55,7 @@ const EntryRow = observer(
     const labels = sitePlannerT.house.entries;
     const { building } = scene;
 
-    const handleOffsetChange = useFunction((value: number | undefined) => {
+    const handleOffsetChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.utilities.updateUtilityEntry(building.id, entry.id, {
           outlineOffsetMeters: value,
@@ -63,29 +63,29 @@ const EntryRow = observer(
         });
       }
     });
-    const handleFloorXChange = useFunction((value: number | undefined) => {
+    const handleFloorXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value) && !isNil(entry.floorPosition)) {
         store.utilities.updateUtilityEntry(building.id, entry.id, {
           floorPosition: { x: value, y: entry.floorPosition.y },
         });
       }
     });
-    const handleFloorYChange = useFunction((value: number | undefined) => {
+    const handleFloorYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value) && !isNil(entry.floorPosition)) {
         store.utilities.updateUtilityEntry(building.id, entry.id, {
           floorPosition: { x: entry.floorPosition.x, y: value },
         });
       }
     });
-    const handleDepthChange = useFunction((value: number | undefined) => {
+    const handleDepthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.utilities.updateUtilityEntry(building.id, entry.id, { depthMeters: value });
       }
     });
-    const handleRemove = useFunction(() => {
+    const handleRemove = useEventCallback(() => {
       store.utilities.removeUtilityEntry(building.id, entry.id);
     });
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'utilityEntry', buildingId: building.id, entryId: entry.id });
     });
     const isSelected =
@@ -173,7 +173,7 @@ export const EntriesBlock = observer(
     const labels = sitePlannerT.house.entries;
     const entries = entriesOf(scene.building);
 
-    const handleAdd = useFunction((system: UtilitySystem) => {
+    const handleAdd = useEventCallback((system: UtilitySystem) => {
       store.utilities.addUtilityEntry(scene.building.id, system);
     });
 

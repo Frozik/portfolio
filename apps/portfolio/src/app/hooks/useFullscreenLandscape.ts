@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isFunction } from 'lodash-es';
 import { useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 export interface IFullscreenLandscape {
   /** True when the browser can put the page fullscreen (orientation lock stays best-effort). */
@@ -54,7 +54,7 @@ export function useFullscreenLandscape(): IFullscreenLandscape {
     };
   }, []);
 
-  const toggle = useFunction(async () => {
+  const toggle = useEventCallback(async () => {
     if (isActive) {
       const saved = savedStateRef.current;
       savedStateRef.current = null;

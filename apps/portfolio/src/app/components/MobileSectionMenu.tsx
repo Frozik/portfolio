@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Home } from 'lucide-react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { Drawer } from '../../shared/ui/Drawer';
 import type { INavSectionTranslation } from '../translations';
 import { GameOfLifeBackground } from './GameOfLifeBackground';
@@ -41,17 +41,17 @@ const MobileSectionMenuComponent = ({
   readonly onNavigateProject: (route: string) => void;
   readonly onNavigateHome?: () => void;
 }) => {
-  const handleSectionClick = useFunction((sectionId: string) => {
+  const handleSectionClick = useEventCallback((sectionId: string) => {
     onNavigateSection(sectionId);
     onClose();
   });
 
-  const handleProjectClick = useFunction((route: string) => {
+  const handleProjectClick = useEventCallback((route: string) => {
     onNavigateProject(route);
     onClose();
   });
 
-  const handleHomeClick = useFunction(() => {
+  const handleHomeClick = useEventCallback(() => {
     onNavigateHome?.();
     onClose();
   });

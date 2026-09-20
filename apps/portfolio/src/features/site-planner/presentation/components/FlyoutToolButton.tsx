@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as Popover from '@radix-ui/react-popover';
 import { isNil } from 'lodash-es';
 import type { MouseEvent, ReactNode } from 'react';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 
@@ -44,7 +44,7 @@ function FlyoutVariantRow<Value>({
   readonly isArmed: boolean;
   readonly onChoose: (value: Value) => void;
 }) {
-  const handleClick = useFunction(() => onChoose(variant.value));
+  const handleClick = useEventCallback(() => onChoose(variant.value));
 
   return (
     <div className="flex items-center gap-0.5">
@@ -103,13 +103,13 @@ export function FlyoutToolButton<Value>({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleContextMenu = useFunction((event: MouseEvent<HTMLButtonElement>) => {
+  const handleContextMenu = useEventCallback((event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setIsOpen(true);
   });
-  const handleOpen = useFunction(() => setIsOpen(true));
+  const handleOpen = useEventCallback(() => setIsOpen(true));
 
-  const handleChoose = useFunction((value: Value) => {
+  const handleChoose = useEventCallback((value: Value) => {
     setIsOpen(false);
     onChoose(value);
   });

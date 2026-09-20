@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { PLASMA_MAX_BATTERIES, PLASMA_MIN_BATTERIES } from '../../domain/constants';
@@ -47,17 +47,17 @@ export const ShotSetupBar = observer(() => {
 
   const triggerCount = countOf('contact-trigger');
 
-  const handleGuidanceChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+  const handleGuidanceChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
     const { value } = event.target;
 
     store.aim.setGuidance(isGuidanceKind(value) ? value : undefined);
   });
 
-  const handleTriggerChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+  const handleTriggerChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
     store.aim.setContactTriggerArmed(event.target.checked);
   });
 
-  const handleBatteriesChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+  const handleBatteriesChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
     store.aim.setPlasmaBatteries(Number(event.target.value));
   });
 

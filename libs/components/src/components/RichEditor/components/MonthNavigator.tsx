@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import type { ICalendarAriaLabels } from '../defs';
 import styles from '../styles.module.css';
 
@@ -22,14 +22,14 @@ export const MonthNavigator = memo(
       .toPlainDate({ day: 1 })
       .toLocaleString(locale, { month: 'long', year: 'numeric' });
 
-    const handlePreviousYear = useFunction(() =>
+    const handlePreviousYear = useEventCallback(() =>
       onYearMonthChange(yearMonth.subtract({ years: 1 }))
     );
-    const handlePreviousMonth = useFunction(() =>
+    const handlePreviousMonth = useEventCallback(() =>
       onYearMonthChange(yearMonth.subtract({ months: 1 }))
     );
-    const handleNextMonth = useFunction(() => onYearMonthChange(yearMonth.add({ months: 1 })));
-    const handleNextYear = useFunction(() => onYearMonthChange(yearMonth.add({ years: 1 })));
+    const handleNextMonth = useEventCallback(() => onYearMonthChange(yearMonth.add({ months: 1 })));
+    const handleNextYear = useEventCallback(() => onYearMonthChange(yearMonth.add({ years: 1 })));
 
     return (
       <fieldset className={styles.monthNavigator} aria-label={ariaLabels.monthNavigation}>

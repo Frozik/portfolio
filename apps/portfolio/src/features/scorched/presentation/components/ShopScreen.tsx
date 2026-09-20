@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { groupBy, isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -79,18 +79,18 @@ export const ShopScreen = observer(({ onPurchase }: { readonly onPurchase: VoidF
     return [...weaponRows, ...itemRows].filter(row => row.ownedCount > 0);
   };
 
-  const handleBuy = useFunction((entry: ShopEntryRef) => {
+  const handleBuy = useEventCallback((entry: ShopEntryRef) => {
     if (store.shop.buy(entry)) {
       onPurchase();
     }
   });
 
-  const handleDone = useFunction(() => {
+  const handleDone = useEventCallback(() => {
     store.leaveShop();
   });
 
-  const handleOpenSell = useFunction(() => setIsSellOpen(true));
-  const handleCloseSell = useFunction(() => setIsSellOpen(false));
+  const handleOpenSell = useEventCallback(() => setIsSellOpen(true));
+  const handleCloseSell = useEventCallback(() => setIsSellOpen(false));
 
   const quoteFor = (entry: ShopEntryRef) =>
     quoteShopPurchase(

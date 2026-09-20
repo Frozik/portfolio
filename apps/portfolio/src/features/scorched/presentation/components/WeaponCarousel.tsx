@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { groupBy } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo, useMemo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { useScorchedStore } from '../../application/useScorchedStore';
 import type { WeaponFamily, WeaponId } from '../../domain/types';
@@ -34,7 +34,7 @@ const WeaponChip = memo(
     readonly isSelected: boolean;
     readonly onSelect: (weaponId: WeaponId) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(weaponId));
+    const handleClick = useEventCallback(() => onSelect(weaponId));
 
     return (
       <button
@@ -76,11 +76,11 @@ export const WeaponCarousel = observer(() => {
     [availableWeapons]
   );
 
-  const handleSelect = useFunction((weaponId: WeaponId) => {
+  const handleSelect = useEventCallback((weaponId: WeaponId) => {
     store.aim.selectWeapon(weaponId);
   });
 
-  const handleClose = useFunction(() => {
+  const handleClose = useEventCallback(() => {
     store.aim.setCarouselOpen(false);
   });
 

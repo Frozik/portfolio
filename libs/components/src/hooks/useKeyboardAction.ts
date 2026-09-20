@@ -2,7 +2,7 @@ import { isEmpty, isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect, useMemo } from 'react';
 
-import { useFunction } from './useFunction';
+import { useEventCallback } from 'usehooks-ts';
 
 export function useKeyboardAction(
   keyCodes: string | string[] | undefined,
@@ -11,7 +11,7 @@ export function useKeyboardAction(
 ) {
   const pressedKeys = useMemo(() => new Set<string>(), []);
 
-  const handleKeyDownEvent = useFunction((event: KeyboardEvent) => {
+  const handleKeyDownEvent = useEventCallback((event: KeyboardEvent) => {
     pressedKeys.add(event.code);
 
     if (isNil(keyCodes)) {
@@ -25,11 +25,13 @@ export function useKeyboardAction(
       event.preventDefault();
     }
   });
-  const handleKeyUpEvent = useFunction(({ code }: KeyboardEvent) => void pressedKeys.delete(code));
+  const handleKeyUpEvent = useEventCallback(
+    ({ code }: KeyboardEvent) => void pressedKeys.delete(code)
+  );
   // When the window loses focus the matching keyup may never arrive, leaving a
   // key "stuck" as pressed. Reset the held-keys set on blur so the next focus
   // starts clean.
-  const handleWindowBlur = useFunction(() => pressedKeys.clear());
+  const handleWindowBlur = useEventCallback(() => pressedKeys.clear());
 
   useEffect(() => {
     if (isEmpty(keyCodes)) {

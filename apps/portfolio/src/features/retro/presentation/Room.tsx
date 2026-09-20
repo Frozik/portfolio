@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
@@ -87,7 +87,7 @@ const RoomBody = observer(
     useTimerTick(roomStore);
     useAwarenessPresence(roomStore, identityStore);
 
-    const handleBackToLobby = useFunction(() => {
+    const handleBackToLobby = useEventCallback(() => {
       void navigate('/retro');
     });
     useRegisterTopNavBack({
@@ -104,7 +104,7 @@ const RoomBody = observer(
       }
     }, [roomStore, searchParams, setSearchParams]);
 
-    const handleCopyResult = useFunction((copied: boolean) => {
+    const handleCopyResult = useEventCallback((copied: boolean) => {
       roomStore.toast.show(copied ? retroT.room.linkCopied : retroT.errors.copyFailed);
     });
 

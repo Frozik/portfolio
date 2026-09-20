@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Tag } from '../../../../shared/ui/Tag';
 import type { ShopEntryRef, ShopQuote } from '../../domain/shop';
@@ -37,7 +37,7 @@ export const ShopEntryCard = memo(
     const isBuyable = quote.isAffordable;
     const isPermanent = isPermanentEntry(entry);
 
-    const handleBuy = useFunction(() => {
+    const handleBuy = useEventCallback(() => {
       onBuy(entry);
     });
 

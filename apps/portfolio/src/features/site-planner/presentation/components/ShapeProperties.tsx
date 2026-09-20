@@ -1,10 +1,10 @@
 import type { IRichEditorHandle } from '@frozik/components/components/RichEditor/defs';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil, round } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { RefObject } from 'react';
 import { memo, useEffect, useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -66,27 +66,27 @@ const BoxedShapeProperties = memo(
       x: round(rawAnchor.x, ANCHOR_DISPLAY_DECIMALS),
       y: round(rawAnchor.y, ANCHOR_DISPLAY_DECIMALS),
     };
-    const handleCenterXChange = useFunction((value: number | undefined) => {
+    const handleCenterXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange(moveShapeByAnchor(shape, { x: value, y: anchor.y }), 'center-x');
       }
     });
-    const handleCenterYChange = useFunction((value: number | undefined) => {
+    const handleCenterYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange(moveShapeByAnchor(shape, { x: anchor.x, y: value }), 'center-y');
       }
     });
-    const handleWidthChange = useFunction((value: number | undefined) => {
+    const handleWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...shape, width: value }, 'width');
       }
     });
-    const handleLengthChange = useFunction((value: number | undefined) => {
+    const handleLengthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...shape, length: value }, 'length');
       }
     });
-    const handleRotationChange = useFunction((value: number | undefined) => {
+    const handleRotationChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange(rotateRectangleAroundAnchor(shape, normalizeTurnDegrees(value)), 'rotation');
       }
@@ -149,17 +149,17 @@ const CircleProperties = memo(
       x: round(rawAnchor.x, ANCHOR_DISPLAY_DECIMALS),
       y: round(rawAnchor.y, ANCHOR_DISPLAY_DECIMALS),
     };
-    const handleCenterXChange = useFunction((value: number | undefined) => {
+    const handleCenterXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange(moveShapeByAnchor(shape, { x: value, y: anchor.y }), 'center-x');
       }
     });
-    const handleCenterYChange = useFunction((value: number | undefined) => {
+    const handleCenterYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange(moveShapeByAnchor(shape, { x: anchor.x, y: value }), 'center-y');
       }
     });
-    const handleRadiusChange = useFunction((value: number | undefined) => {
+    const handleRadiusChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...shape, radius: value }, 'radius');
       }
@@ -241,7 +241,7 @@ export const SelectedGroupProperties = observer(
     const { selection } = store;
     const { group, operation } = groupTerm;
 
-    const handleOperationChange = useFunction((value: string) => {
+    const handleOperationChange = useEventCallback((value: string) => {
       if (value !== operation && !isNil(selection) && selection.kind === 'group') {
         store.composition.toggleTermOperation(selection.owner, group.id);
       }
@@ -273,7 +273,7 @@ export const SelectedShapeProperties = observer(
     const sizeFieldRef = useRef<IRichEditorHandle>(null);
     // Typing a number arrives one keystroke at a time; the field the keystrokes
     // belong to is what collapses them into a single step to undo.
-    const handleChange = useFunction((nextShape: Shape, field: ShapeField) => {
+    const handleChange = useEventCallback((nextShape: Shape, field: ShapeField) => {
       store.pushHistory(`${nextShape.id}:${field}`);
       store.composition.updateSelectedShape(nextShape);
     });

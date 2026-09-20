@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { OverlayMode } from '../../domain/view/overlay-mode';
 import { sitePlannerT } from '../translations';
@@ -32,7 +32,7 @@ const OverlayModeButton = memo(
     readonly isActive: boolean;
     readonly onSelect: (overlayMode: OverlayMode) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(option.value));
+    const handleClick = useEventCallback(() => onSelect(option.value));
 
     return (
       <button

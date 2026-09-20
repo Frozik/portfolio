@@ -139,8 +139,10 @@ this is also how you roll back — set the tag:
 COMMUNICATION_TAG=<commit-sha> bash infra/bin/deploy-communication.sh --host production
 ```
 
-Once GitHub Actions is wired up (see `server.md` at the repo root), neither
-command is needed for a routine release: pushing to `main` deploys.
+Neither command is needed for a routine release: pushing to `main` deploys.
+`.github/workflows/deploy-communication.yml` waits for CI to go green, asks the
+box which commit it is running, and rolls out only when that range actually
+touches the server (`pnpm exec affected-projects`).
 
 ---
 

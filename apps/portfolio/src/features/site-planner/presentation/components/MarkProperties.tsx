@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElevationMark } from '../../domain/model/site-plan';
@@ -21,17 +21,17 @@ const MarkProperties = memo(
     readonly mark: ElevationMark;
     readonly onChange: (mark: ElevationMark, field: MarkField) => void;
   }) => {
-    const handlePositionXChange = useFunction((value: number | undefined) => {
+    const handlePositionXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...mark, position: { ...mark.position, x: value } }, 'position-x');
       }
     });
-    const handlePositionYChange = useFunction((value: number | undefined) => {
+    const handlePositionYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...mark, position: { ...mark.position, y: value } }, 'position-y');
       }
     });
-    const handleElevationChange = useFunction((value: number | undefined) => {
+    const handleElevationChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...mark, elevation: value }, 'elevation');
       }
@@ -67,7 +67,7 @@ const MarkProperties = memo(
 
 export const SelectedMarkProperties = observer(
   ({ store, mark }: { readonly store: SitePlannerStore; readonly mark: ElevationMark }) => {
-    const handleChange = useFunction((nextMark: ElevationMark, field: MarkField) => {
+    const handleChange = useEventCallback((nextMark: ElevationMark, field: MarkField) => {
       store.pushHistory(`${nextMark.id}:${field}`);
 
       if (field === 'elevation') {

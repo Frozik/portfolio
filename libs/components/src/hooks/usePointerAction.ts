@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect } from 'react';
 
-import { useFunction } from './useFunction';
+import { useEventCallback } from 'usehooks-ts';
 
 export function usePointerAction(
   action: (pointer: {
@@ -13,7 +13,7 @@ export function usePointerAction(
   }) => boolean | undefined | void,
   ref: RefObject<HTMLElement | null> | undefined
 ) {
-  const handlePointerEvent = useFunction((event: PointerEvent) => {
+  const handlePointerEvent = useEventCallback((event: PointerEvent) => {
     if (action(getPropsFromEvent(event))) {
       event.preventDefault();
     }

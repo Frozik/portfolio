@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -29,7 +29,7 @@ const SurfaceItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (surface: PathSurface) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(surface));
+    const handleSelect = useEventCallback(() => onSelect(surface));
 
     return (
       <DropdownItem
@@ -68,27 +68,29 @@ const SegmentBlock = observer(
     const { surfaceLabel, surfaces, startWidth, endWidth, title } = sitePlannerT.segments;
     const currentLabel = surfaces[surface];
 
-    const handleStartWidthChange = useFunction((value: number | undefined) => {
+    const handleStartWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${segmentIndex}:width`);
         store.siteObjects.setPathPointWidth(path.id, segmentIndex, value);
       }
     });
-    const handleEndWidthChange = useFunction((value: number | undefined) => {
+    const handleEndWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${segmentIndex + 1}:width`);
         store.siteObjects.setPathPointWidth(path.id, segmentIndex + 1, value);
       }
     });
-    const handleSurfaceSelect = useFunction((next: PathSurface) => {
+    const handleSurfaceSelect = useEventCallback((next: PathSurface) => {
       if (next !== surface) {
         store.siteObjects.setPathSegmentSurface(path.id, segmentIndex, next);
       }
     });
-    const handlePointerEnter = useFunction(() =>
+    const handlePointerEnter = useEventCallback(() =>
       store.modes.setHoveredPathSegmentIndex(segmentIndex)
     );
-    const handlePointerLeave = useFunction(() => store.modes.setHoveredPathSegmentIndex(undefined));
+    const handlePointerLeave = useEventCallback(() =>
+      store.modes.setHoveredPathSegmentIndex(undefined)
+    );
 
     return (
       <div

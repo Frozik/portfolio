@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isEmpty, isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { cellAt } from '../../domain/services';
 import type { IField, ITool } from '../../domain/types';
@@ -43,8 +43,8 @@ export const FieldCell = observer(
     const noteSize = Math.floor(cellSize / field.size);
     const showsNotes = !hasValue && hasNotes;
 
-    const handleMouseOver = useFunction(() => onOverCell(globalRow, globalColumn));
-    const handleClick = useFunction(() => onClickCell(globalRow, globalColumn));
+    const handleMouseOver = useEventCallback(() => onOverCell(globalRow, globalColumn));
+    const handleClick = useEventCallback(() => onClickCell(globalRow, globalColumn));
 
     const isFixed = type === EFieldType.Fixed;
     const isWrong = status === ECellStatus.Wrong;

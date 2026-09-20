@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
@@ -12,7 +12,7 @@ export const GameOverOverlay = observer(() => {
   const store = useTanksStore();
   const { score, bestScore } = store;
 
-  const handlePlayAgain = useFunction(() => {
+  const handlePlayAgain = useEventCallback(() => {
     store.returnToMenu();
   });
 

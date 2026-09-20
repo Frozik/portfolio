@@ -8,10 +8,10 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { RoomStore } from '../../application/RoomStore';
 import type { CardId, ClientId, ColumnId, IRetroCard } from '../../domain/types';
@@ -33,27 +33,27 @@ const ColumnListComponent = ({ store }: { store: RoomStore }) => {
 
   const [activeCardId, setActiveCardId] = useState<CardId | undefined>(undefined);
 
-  const handleAddCard = useFunction((columnId: ColumnId, text: string) => {
+  const handleAddCard = useEventCallback((columnId: ColumnId, text: string) => {
     store.addCard(columnId, text);
   });
 
-  const handleDeleteCard = useFunction((cardId: CardId) => {
+  const handleDeleteCard = useEventCallback((cardId: CardId) => {
     store.deleteCard(cardId);
   });
 
-  const handleEditCard = useFunction((cardId: CardId, text: string) => {
+  const handleEditCard = useEventCallback((cardId: CardId, text: string) => {
     store.editCard(cardId, text);
   });
 
-  const handleDragStart = useFunction((event: DragStartEvent) => {
+  const handleDragStart = useEventCallback((event: DragStartEvent) => {
     setActiveCardId(event.active.id as CardId);
   });
 
-  const handleDragCancel = useFunction(() => {
+  const handleDragCancel = useEventCallback(() => {
     setActiveCardId(undefined);
   });
 
-  const handleDragEnd = useFunction((event: DragEndEvent) => {
+  const handleDragEnd = useEventCallback((event: DragEndEvent) => {
     setActiveCardId(undefined);
     const over = event.over;
     if (over === null) {

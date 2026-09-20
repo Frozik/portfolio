@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { welcomeT } from '../../translations';
 import type { TContactIconKey } from './ContactIcon';
 import { ContactIcon } from './ContactIcon';
@@ -54,7 +54,7 @@ const ContactRowComponent = ({
 }) => {
   const isMailto = href.startsWith('mailto:');
 
-  const handleQRClick = useFunction(() => {
+  const handleQRClick = useEventCallback(() => {
     if (!onQRRequest || !qrValue || !qrTitle) {
       return;
     }

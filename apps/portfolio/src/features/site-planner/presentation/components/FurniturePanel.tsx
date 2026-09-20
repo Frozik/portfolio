@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingId } from '../../domain/model/building';
@@ -26,10 +26,10 @@ const PlacedRow = memo(
     readonly buildingId: BuildingId;
     readonly item: FurnitureInstance;
   }) => {
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'furniture', buildingId, furnitureId: item.id });
     });
-    const handleRemove = useFunction(() => {
+    const handleRemove = useEventCallback(() => {
       store.furniture.removeFurniture(buildingId, item.id);
     });
 

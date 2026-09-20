@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { BookOpen, CarFront, Home, HousePlus, LandPlot, Warehouse } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -30,7 +30,7 @@ export const SiteEditorButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const isActive = isSiteEditMode(store.editorMode) && !store.modes.isEditingBuilding;
 
-    const handleToggle = useFunction(() => {
+    const handleToggle = useEventCallback(() => {
       if (store.modes.isEditingBuilding) {
         // The editor stays open — the aim just moves from the house to the plot.
         store.composition.setActiveGroup('boundary');
@@ -73,14 +73,14 @@ export const HouseEditorButton = observer(
     const isActive = store.modes.isEditingBuilding;
     const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
-    const handleToggle = useFunction(() => {
+    const handleToggle = useEventCallback(() => {
       if (store.modes.isEditingBuilding) {
         store.exitEditMode();
       } else {
         store.building.enterBuildingEditing(sitePlannerT.structure.house);
       }
     });
-    const handleAction = useFunction((action: HouseDoorAction) => {
+    const handleAction = useEventCallback((action: HouseDoorAction) => {
       switch (action.kind) {
         case 'stock-catalog':
           setIsCatalogOpen(true);
@@ -97,7 +97,7 @@ export const HouseEditorButton = observer(
           assertNever(action);
       }
     });
-    const handleCatalogClose = useFunction(() => setIsCatalogOpen(false));
+    const handleCatalogClose = useEventCallback(() => setIsCatalogOpen(false));
 
     return (
       <>
@@ -164,7 +164,7 @@ export const EditorToolButton = observer(
     readonly side: FlyoutSide;
   }) => {
     const presentation = EDITOR_TOOL_PRESENTATIONS[spec.id];
-    const handleClick = useFunction(() => store.setActiveTool(spec.id));
+    const handleClick = useEventCallback(() => store.setActiveTool(spec.id));
 
     if (isNil(presentation)) {
       return null;

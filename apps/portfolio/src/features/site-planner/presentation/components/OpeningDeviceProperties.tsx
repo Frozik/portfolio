@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElectricalDevice } from '../../domain/model/electrical';
@@ -36,22 +36,22 @@ export const SelectedOpeningProperties = observer(
     const buildingId = selection?.kind === 'opening' ? selection.buildingId : undefined;
     const labels = sitePlannerT.openings;
 
-    const handleOffsetChange = useFunction((value: number | undefined) => {
+    const handleOffsetChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.openings.updateOpeningProperties(buildingId, opening.id, { offsetMeters: value });
       }
     });
-    const handleWidthChange = useFunction((value: number | undefined) => {
+    const handleWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.openings.updateOpeningProperties(buildingId, opening.id, { widthMeters: value });
       }
     });
-    const handleSillChange = useFunction((value: number | undefined) => {
+    const handleSillChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.openings.updateOpeningProperties(buildingId, opening.id, { sillMeters: value });
       }
     });
-    const handleHeadChange = useFunction((value: number | undefined) => {
+    const handleHeadChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.openings.updateOpeningProperties(buildingId, opening.id, { headMeters: value });
       }
@@ -108,28 +108,28 @@ export const SelectedFurnitureProperties = observer(
     const buildingId = selection?.kind === 'furniture' ? selection.buildingId : undefined;
     const labels = sitePlannerT.furniture;
 
-    const handleXChange = useFunction((value: number | undefined) => {
+    const handleXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.furniture.updateFurnitureProperties(buildingId, furniture.id, {
           position: { x: value, y: furniture.position.y },
         });
       }
     });
-    const handleYChange = useFunction((value: number | undefined) => {
+    const handleYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.furniture.updateFurnitureProperties(buildingId, furniture.id, {
           position: { x: furniture.position.x, y: value },
         });
       }
     });
-    const handleRotationChange = useFunction((value: number | undefined) => {
+    const handleRotationChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.furniture.updateFurnitureProperties(buildingId, furniture.id, {
           rotationDegrees: normalizeTurnDegrees(value),
         });
       }
     });
-    const handleElevationChange = useFunction((value: number | undefined) => {
+    const handleElevationChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.furniture.updateFurnitureProperties(buildingId, furniture.id, {
           elevationMeters: value,
@@ -186,28 +186,28 @@ export const SelectedDeviceProperties = observer(
     const labels = sitePlannerT.electrical;
     const { host } = device;
 
-    const handleOffsetChange = useFunction((value: number | undefined) => {
+    const handleOffsetChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'wall') {
         store.electrics.updateDeviceProperties(buildingId, device.id, {
           host: { ...host, offsetMeters: value },
         });
       }
     });
-    const handleHeightChange = useFunction((value: number | undefined) => {
+    const handleHeightChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'wall') {
         store.electrics.updateDeviceProperties(buildingId, device.id, {
           host: { ...host, heightMeters: value },
         });
       }
     });
-    const handleXChange = useFunction((value: number | undefined) => {
+    const handleXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'ceiling') {
         store.electrics.updateDeviceProperties(buildingId, device.id, {
           host: { kind: 'ceiling', position: { x: value, y: host.position.y } },
         });
       }
     });
-    const handleYChange = useFunction((value: number | undefined) => {
+    const handleYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value) && host.kind === 'ceiling') {
         store.electrics.updateDeviceProperties(buildingId, device.id, {
           host: { kind: 'ceiling', position: { x: host.position.x, y: value } },
@@ -263,7 +263,7 @@ export const SelectedDeviceProperties = observer(
 export const OpeningToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.openings;
 
-  const handlePresetChange = useFunction((value: string) => {
+  const handlePresetChange = useEventCallback((value: string) => {
     const preset = parseOpeningPreset(value);
 
     if (!isNil(preset)) {
@@ -290,7 +290,7 @@ export const ElectricToolProperties = observer(
   ({ store }: { readonly store: SitePlannerStore }) => {
     const labels = sitePlannerT.electrical;
 
-    const handleKindChange = useFunction((value: string) => {
+    const handleKindChange = useEventCallback((value: string) => {
       const kind = parseDeviceKind(value);
 
       if (!isNil(kind)) {

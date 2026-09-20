@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Spline } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -38,8 +38,8 @@ export const RouteToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armed = store.electrics.wiring.armedInstallation;
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:route'));
-    const handleChoose = useFunction((preset: InstallationPresetId) => {
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:route'));
+    const handleChoose = useEventCallback((preset: InstallationPresetId) => {
       store.electrics.wiring.setArmedInstallation(preset);
       store.setActiveTool('building:route');
     });

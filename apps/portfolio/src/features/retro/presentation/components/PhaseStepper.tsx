@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { RoomStore } from '../../application/RoomStore';
 import { PHASE_ORDER } from '../../domain/constants';
 import type { RetroPhase } from '../../domain/types';
@@ -58,9 +58,9 @@ export const PhaseStepper = observer(({ store }: { readonly store: RoomStore }) 
       ? retroT.phases.hintVote(remainingVotes, totalVotes)
       : STATIC_PHASE_HINTS[phase];
 
-  const handlePrev = useFunction(() => store.rewindPhase());
-  const handleNext = useFunction(() => store.advancePhase());
-  const handleJumpToPhase = useFunction((target: RetroPhase) => {
+  const handlePrev = useEventCallback(() => store.rewindPhase());
+  const handleNext = useEventCallback(() => store.advancePhase());
+  const handleJumpToPhase = useEventCallback((target: RetroPhase) => {
     store.setPhase(target);
   });
 
@@ -148,7 +148,7 @@ const PhaseButton = ({
   readonly canNavigate: boolean;
   readonly onNavigate: (phase: RetroPhase) => void;
 }) => {
-  const handleClick = useFunction(() => {
+  const handleClick = useEventCallback(() => {
     if (!canNavigate) {
       return;
     }

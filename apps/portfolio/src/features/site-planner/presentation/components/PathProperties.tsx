@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -25,7 +25,7 @@ const PathProperties = memo(
     readonly hint: string;
     readonly onWidthChange: (width: number) => void;
   }) => {
-    const handleWidthChange = useFunction((value: number | undefined) => {
+    const handleWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onWidthChange(value);
       }
@@ -52,12 +52,12 @@ export const SelectedPathProperties = observer(
   ({ store, path }: { readonly store: SitePlannerStore; readonly path: SitePath }) => {
     const isEditingThisPath = editedPathId(store.editorMode) === path.id;
 
-    const handleWidthChange = useFunction((width: number) => {
+    const handleWidthChange = useEventCallback((width: number) => {
       store.pushHistory(`${path.id}:width`);
       store.siteObjects.setPathWidth(path.id, width);
     });
 
-    const handleEnterEditMode = useFunction(() =>
+    const handleEnterEditMode = useEventCallback(() =>
       store.modes.openEditorDoor({ target: { kind: 'path', pathId: path.id }, aimAt: undefined })
     );
 
@@ -107,19 +107,19 @@ const PathPointProperties = observer(
     readonly pointIndex: number;
     readonly point: PathPoint;
   }) => {
-    const handlePositionXChange = useFunction((value: number | undefined) => {
+    const handlePositionXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:x`);
         store.siteObjects.movePathPoint(path.id, pointIndex, { x: value, y: point.position.y });
       }
     });
-    const handlePositionYChange = useFunction((value: number | undefined) => {
+    const handlePositionYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:y`);
         store.siteObjects.movePathPoint(path.id, pointIndex, { x: point.position.x, y: value });
       }
     });
-    const handleWidthChange = useFunction((value: number | undefined) => {
+    const handleWidthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.pushHistory(`${path.id}:point:${pointIndex}:width`);
         store.siteObjects.setPathPointWidth(path.id, pointIndex, value);

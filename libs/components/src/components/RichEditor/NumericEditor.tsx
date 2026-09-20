@@ -2,7 +2,7 @@ import { clamp, isNil } from 'lodash-es';
 import type { KeyboardEvent, Ref } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useFunction } from '../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle, ISelection } from './defs';
@@ -72,7 +72,7 @@ export const NumericEditor = memo(
       setEditingText(formatNumericValue(value));
     }, [value, focused]);
 
-    const commitText = useFunction((nextText: string) => {
+    const commitText = useEventCallback((nextText: string) => {
       setEditingText(nextText);
 
       const nextValue = parseNumericText(nextText);
@@ -82,7 +82,7 @@ export const NumericEditor = memo(
       }
     });
 
-    const settle = useFunction(() => {
+    const settle = useEventCallback(() => {
       const settled = settleNumericText(editingText, {
         decimals: isNil(decimals) && isNil(pipStart) ? undefined : displayScale,
         min,
@@ -111,36 +111,38 @@ export const NumericEditor = memo(
       [decimals, pipStart, pipSize]
     );
 
-    const handleFocusSelection = useFunction((currentValue: string): ISelection | undefined => {
-      if (isNil(pipStart) || currentValue.length === 0) {
-        return undefined;
+    const handleFocusSelection = useEventCallback(
+      (currentValue: string): ISelection | undefined => {
+        if (isNil(pipStart) || currentValue.length === 0) {
+          return undefined;
+        }
+
+        const decimalIndex = currentValue.indexOf('.');
+        const integerLength = decimalIndex >= 0 ? decimalIndex : currentValue.length;
+        const selectionStart = integerLength + pipStart;
+        if (selectionStart > currentValue.length) {
+          return undefined;
+        }
+
+        return {
+          start: selectionStart,
+          end: Math.min(selectionStart + pipSize, currentValue.length),
+        };
       }
+    );
 
-      const decimalIndex = currentValue.indexOf('.');
-      const integerLength = decimalIndex >= 0 ? decimalIndex : currentValue.length;
-      const selectionStart = integerLength + pipStart;
-      if (selectionStart > currentValue.length) {
-        return undefined;
-      }
-
-      return {
-        start: selectionStart,
-        end: Math.min(selectionStart + pipSize, currentValue.length),
-      };
-    });
-
-    const handleFocusChange = useFunction((nextFocused: boolean) => {
+    const handleFocusChange = useEventCallback((nextFocused: boolean) => {
       if (nextFocused) {
         valueBeforeEditRef.current = value;
       }
       setFocused(nextFocused);
     });
 
-    const handleCancel = useFunction(() => {
+    const handleCancel = useEventCallback(() => {
       commitText(formatNumericValue(valueBeforeEditRef.current));
     });
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLDivElement>) => {
       if (isNil(step) || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) {
         return;
       }

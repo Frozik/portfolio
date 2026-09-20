@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { sharedT } from '../translations';
 import { Alert } from '../ui/Alert';
@@ -24,7 +24,7 @@ const SignInProviderButton = memo(
     readonly onResult: (provider: IOidcProvider, result: IOidcSignInResult) => void;
   }) => {
     const Button = SIGN_IN_BUTTONS[provider.id];
-    const handleResult = useFunction((result: IOidcSignInResult) => {
+    const handleResult = useEventCallback((result: IOidcSignInResult) => {
       onResult(provider, result);
     });
     return <Button provider={provider} onResult={handleResult} />;
@@ -42,7 +42,7 @@ export const SignInGate = observer(({ children }: { readonly children: ReactNode
   const session = useAuthSession();
   const providers = useOidcProviders();
 
-  const handleResult = useFunction((provider: IOidcProvider, result: IOidcSignInResult) => {
+  const handleResult = useEventCallback((provider: IOidcProvider, result: IOidcSignInResult) => {
     session.adoptResult(provider.id, result);
   });
 

@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
 
@@ -23,11 +23,11 @@ const MuteControlsComponent = ({
   readonly onToggleAudio: () => void;
   readonly onToggleVideo: () => void;
 }) => {
-  const handleToggleAudio = useFunction(() => {
+  const handleToggleAudio = useEventCallback(() => {
     onToggleAudio();
   });
 
-  const handleToggleVideo = useFunction(() => {
+  const handleToggleVideo = useEventCallback(() => {
     onToggleVideo();
   });
 

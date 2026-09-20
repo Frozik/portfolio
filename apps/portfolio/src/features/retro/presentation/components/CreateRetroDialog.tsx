@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
@@ -28,7 +28,7 @@ const TemplateCard = memo(
     readonly selected: boolean;
     readonly onSelect: (id: string) => void;
   }) => {
-    const handleClick = useFunction(() => {
+    const handleClick = useEventCallback(() => {
       onSelect(template.id);
     });
 
@@ -86,19 +86,19 @@ const CreateRetroDialogComponent = ({
   const [template, setTemplate] = useState<string>(DEFAULT_TEMPLATE_ID);
   const [votesPerParticipant, setVotesPerParticipant] = useState(DEFAULT_VOTES);
 
-  const handleNameChange = useFunction((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = useEventCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
   });
 
-  const handleTemplateSelect = useFunction((nextId: string) => {
+  const handleTemplateSelect = useEventCallback((nextId: string) => {
     setTemplate(nextId);
   });
 
-  const handleVotesChange = useFunction((value: number) => {
+  const handleVotesChange = useEventCallback((value: number) => {
     setVotesPerParticipant(value);
   });
 
-  const handleSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useEventCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedName = name.trim();
     const finalName = trimmedName.length > 0 ? trimmedName : retroT.create.namePlaceholderFallback;

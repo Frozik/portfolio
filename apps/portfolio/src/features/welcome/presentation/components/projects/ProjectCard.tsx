@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import type { IProjectTranslation } from '../../translations/types';
 import type { TProjectFxKind } from './fx/types';
 import { ProjectFx } from './ProjectFx';
@@ -23,8 +23,8 @@ const ProjectCardComponent = ({
 }) => {
   const [hovered, setHovered] = useState(false);
 
-  const handleEnter = useFunction(() => setHovered(true));
-  const handleLeave = useFunction(() => setHovered(false));
+  const handleEnter = useEventCallback(() => setHovered(true));
+  const handleLeave = useEventCallback(() => setHovered(false));
 
   const numberLabel = String(index + 1).padStart(INDEX_PAD_SIZE, '0');
 

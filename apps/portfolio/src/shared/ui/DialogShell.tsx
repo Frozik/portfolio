@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { MonoKicker } from './MonoKicker';
 
 const CLOSE_ICON_SIZE_PX = 14;
@@ -55,13 +55,13 @@ const DialogShellComponent = ({
    */
   readonly compact?: boolean;
 }) => {
-  const handleOpenChange = useFunction((nextOpen: boolean) => {
+  const handleOpenChange = useEventCallback((nextOpen: boolean) => {
     if (!nextOpen) {
       onClose();
     }
   });
 
-  const preventClose = useFunction((event: Event) => {
+  const preventClose = useEventCallback((event: Event) => {
     event.preventDefault();
   });
 

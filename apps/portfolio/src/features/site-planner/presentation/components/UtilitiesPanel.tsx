@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { Trash2, TriangleAlert } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
 import { formatCubicMeters, formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -24,10 +24,10 @@ const RouteRow = observer(
     const labels = sitePlannerT.utilities;
     const isSelected = store.utilities.selectedUtilityRoute?.id === route.id;
 
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'utilityRoute', routeId: route.id });
     });
-    const handleRemove = useFunction(() => {
+    const handleRemove = useEventCallback(() => {
       store.utilities.removeUtilityRoute(route.id);
     });
 

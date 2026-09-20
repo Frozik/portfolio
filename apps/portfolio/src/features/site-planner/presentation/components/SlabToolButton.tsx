@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -26,9 +26,9 @@ export const SlabToolButton = observer(
     const armedTool = store.armedShapeTool;
     const ArmedIcon = SHAPE_TOOL_ICONS[armedTool];
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:slab'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:slab'));
 
-    const handleChoose = useFunction((tool: ShapeTool) => {
+    const handleChoose = useEventCallback((tool: ShapeTool) => {
       store.tooling.setArmedShapeTool(tool);
       store.setActiveTool('building:slab');
     });

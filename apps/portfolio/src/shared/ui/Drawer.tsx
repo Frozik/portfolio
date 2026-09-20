@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { isNil } from 'lodash-es';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 const CLOSE_ICON_SIZE_PX = 18;
 const FALLBACK_TITLE = 'Menu';
@@ -25,7 +25,7 @@ export const Drawer = memo(
     children?: ReactNode;
     className?: string;
   }) => {
-    const handleOpenChange = useFunction((nextOpen: boolean) => {
+    const handleOpenChange = useEventCallback((nextOpen: boolean) => {
       if (!nextOpen) {
         onClose();
       }

@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
@@ -38,7 +38,7 @@ const WallItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (wallId: WallId) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(wallId));
+    const handleSelect = useEventCallback(() => onSelect(wallId));
 
     return (
       <DropdownItem
@@ -165,7 +165,7 @@ export const WallElevationPanel = observer(({ store }: { readonly store: SitePla
   const scene = store.storeys.editedStoreyScene;
   const labels = sitePlannerT.wiring;
   const [chosenWallId, setChosenWallId] = useState<WallId | undefined>(undefined);
-  const handleChoose = useFunction((wallId: WallId) => setChosenWallId(wallId));
+  const handleChoose = useEventCallback((wallId: WallId) => setChosenWallId(wallId));
 
   if (isNil(scene)) {
     return null;

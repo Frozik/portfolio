@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { millisecondsToISO8601 } from '@frozik/utils/date/iso8601';
 import { isNil } from 'lodash-es';
 import { Wifi, WifiOff } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { IAttachFailure } from '../application/BinanceViewStore';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
@@ -46,10 +46,10 @@ export const BinanceStatusBadge = observer(() => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const togglePopup = useFunction(() => {
+  const togglePopup = useEventCallback(() => {
     setIsOpen(previous => !previous);
   });
-  const closePopup = useFunction(() => {
+  const closePopup = useEventCallback(() => {
     setIsOpen(false);
   });
 

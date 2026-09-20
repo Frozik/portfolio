@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
@@ -38,7 +38,7 @@ const InstallationItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (preset: InstallationPresetId) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(preset));
+    const handleSelect = useEventCallback(() => onSelect(preset));
 
     return (
       <DropdownItem
@@ -72,7 +72,7 @@ const SegmentRow = observer(
     const labels = sitePlannerT.wiring;
     const current = route.segments[segmentIndex].installation;
 
-    const handleSelect = useFunction((preset: InstallationPresetId) => {
+    const handleSelect = useEventCallback((preset: InstallationPresetId) => {
       if (!isNil(buildingId) && preset !== current) {
         store.electrics.wiring.setSegmentInstallation(buildingId, route.id, segmentIndex, preset);
       }
@@ -121,7 +121,7 @@ export const SelectedWiringRouteProperties = observer(
     const buildingId = selection?.kind === 'wiringRoute' ? selection.buildingId : undefined;
     const labels = sitePlannerT.wiring;
 
-    const handleLevelChange = useFunction((level: WiringLevel) => {
+    const handleLevelChange = useEventCallback((level: WiringLevel) => {
       if (!isNil(buildingId)) {
         store.electrics.wiring.setRouteLevel(buildingId, route.id, level);
       }
@@ -152,7 +152,7 @@ export const SelectedWiringRouteProperties = observer(
 export const RouteToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.wiring;
 
-  const handleChange = useFunction((value: string) => {
+  const handleChange = useEventCallback((value: string) => {
     const preset = parseInstallationPreset(value);
 
     if (!isNil(preset)) {

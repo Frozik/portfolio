@@ -1,5 +1,4 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
@@ -8,6 +7,7 @@ import { Crown, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { AccountChip } from '../../../shared/communication/AccountChip';
 import { initialsOf, UNKNOWN_PARTICIPANT_INITIAL } from '../../../shared/lib/initialsOf';
 import { AvatarImage } from '../../../shared/ui/AvatarImage';
@@ -143,7 +143,7 @@ const RoomRow = memo(
     readonly ownerDisplayName: string;
     readonly onDelete: (roomId: RoomId) => void;
   }) => {
-    const handleDelete = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleDelete = useEventCallback((event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
       onDelete(room.roomId);
@@ -209,25 +209,25 @@ export const Lobby = observer(() => {
     void lobbyStore.loadRooms();
   }, [lobbyStore]);
 
-  const handleCreate = useFunction((params: ICreateRoomParams) => {
+  const handleCreate = useEventCallback((params: ICreateRoomParams) => {
     const roomId = lobbyStore.createRoom(params, { ownerClientId: myClientId });
     lobbyStore.closeCreateDialog();
     void navigate(`/retro/${roomId}?created=1`);
   });
 
-  const handleOpenCreateDialog = useFunction(() => {
+  const handleOpenCreateDialog = useEventCallback(() => {
     lobbyStore.openCreateDialog();
   });
 
-  const handleCloseCreateDialog = useFunction(() => {
+  const handleCloseCreateDialog = useEventCallback(() => {
     lobbyStore.closeCreateDialog();
   });
 
-  const handleJoinInputChange = useFunction((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleJoinInputChange = useEventCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setJoinInput(event.target.value);
   });
 
-  const handleJoinSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
+  const handleJoinSubmit = useEventCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const roomId = extractRoomIdFromInput(joinInput, ROOM_ID_FROM_URL_PATTERN);
     if (roomId === undefined) {
@@ -236,15 +236,15 @@ export const Lobby = observer(() => {
     void navigate(`/retro/${roomId}`);
   });
 
-  const handleRequestDeleteRoom = useFunction((roomId: RoomId) => {
+  const handleRequestDeleteRoom = useEventCallback((roomId: RoomId) => {
     setPendingDeleteRoomId(roomId);
   });
 
-  const handleCancelDelete = useFunction(() => {
+  const handleCancelDelete = useEventCallback(() => {
     setPendingDeleteRoomId(undefined);
   });
 
-  const handleConfirmDelete = useFunction(() => {
+  const handleConfirmDelete = useEventCallback(() => {
     if (pendingDeleteRoomId === undefined) {
       return;
     }
@@ -252,9 +252,9 @@ export const Lobby = observer(() => {
     setPendingDeleteRoomId(undefined);
   });
 
-  const getRoomKey = useFunction((room: IRoomIndexEntry) => room.roomId);
+  const getRoomKey = useEventCallback((room: IRoomIndexEntry) => room.roomId);
 
-  const renderRoom = useFunction((room: IRoomIndexEntry) => {
+  const renderRoom = useEventCallback((room: IRoomIndexEntry) => {
     const isMine = room.ownerClientId === myClientId;
     const ownerClientId = room.ownerClientId;
     const ownerProfile = ownerClientId !== undefined ? directory.get(ownerClientId) : undefined;

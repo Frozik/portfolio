@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { floorToFloorMeters } from '../../domain/geometry/storey-plates';
@@ -34,7 +34,7 @@ export const StoreyPanel = observer(({ store }: { readonly store: SitePlannerSto
   const labels = sitePlannerT.storeys;
   const { meterUnit } = sitePlannerT.plan;
 
-  const handleHeightChange = useFunction((heightMeters: number | undefined) => {
+  const handleHeightChange = useEventCallback((heightMeters: number | undefined) => {
     if (!isNil(scene) && !isNil(heightMeters)) {
       store.storeys.setStoreyHeightOnEdited(scene.storey.id, heightMeters as Meters);
     }

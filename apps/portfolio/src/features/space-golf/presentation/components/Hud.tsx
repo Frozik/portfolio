@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check, Flag, Globe, LocateFixed, Maximize2, Minimize2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { cn } from '@frozik/components/components/cn';
 
@@ -51,7 +51,7 @@ const ResetWorldButton = ({ onReset }: { readonly onReset: VoidFunction }) => {
     return () => window.clearTimeout(timer);
   }, [armed]);
 
-  const press = useFunction(() => {
+  const press = useEventCallback(() => {
     if (armed) {
       onReset();
     }

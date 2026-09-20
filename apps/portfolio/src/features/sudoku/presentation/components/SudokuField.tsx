@@ -1,9 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useMemo, useRef, useState } from 'react';
-import { useResizeObserver } from 'usehooks-ts';
+import { useEventCallback, useResizeObserver } from 'usehooks-ts';
 import { puzzleSolved } from '../../domain/services';
 import type { IField, ITool, ToolMode } from '../../domain/types';
 import { FIELD_CONTROLS_MARGIN_PX, FIELD_GAP_PX, FIELD_GROUP_GAP_PX } from '../layout-constants';
@@ -81,10 +80,10 @@ export const SudokuField = observer(
       undefined
     );
 
-    const handleOverCell = useFunction((row: number, column: number) =>
+    const handleOverCell = useEventCallback((row: number, column: number) =>
       setSelectedCell({ row, column })
     );
-    const handleOutCell = useFunction(() => setSelectedCell(undefined));
+    const handleOutCell = useEventCallback(() => setSelectedCell(undefined));
 
     const completed = puzzleSolved(field);
 

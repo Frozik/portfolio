@@ -1,10 +1,10 @@
 import type { TIdentityProvider } from '@frozik/communication-protocol/identity';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { CredentialResponse } from '@react-oauth/google';
 import { GoogleLogin } from '@react-oauth/google';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType, ReactElement } from 'react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { sharedT } from '../../translations';
 import { GoogleOidcProvider } from './GoogleOidcProvider';
 import type { IOidcProvider } from './IOidcProvider';
@@ -23,7 +23,7 @@ interface ISignInButtonProps {
 }
 
 const GoogleSignInButton = observer(({ provider, onResult }: ISignInButtonProps) => {
-  const handleSuccess = useFunction((response: CredentialResponse) => {
+  const handleSuccess = useEventCallback((response: CredentialResponse) => {
     if (typeof response.credential !== 'string' || response.credential.length === 0) {
       return;
     }
@@ -37,7 +37,7 @@ const GoogleSignInButton = observer(({ provider, onResult }: ISignInButtonProps)
     onResult(result);
   });
 
-  const handleError = useFunction(() => {
+  const handleError = useEventCallback(() => {
     // The Google identity SDK already logs errors to the console; we
     // keep the gate idle so the user can retry by clicking the button
     // again.
@@ -61,7 +61,7 @@ const GoogleSignInButton = observer(({ provider, onResult }: ISignInButtonProps)
 
 const YandexSignInButton = observer(({ provider, onResult }: ISignInButtonProps) => {
   const [isPending, setIsPending] = useState(false);
-  const handleClick = useFunction(async () => {
+  const handleClick = useEventCallback(async () => {
     if (isPending) {
       return;
     }

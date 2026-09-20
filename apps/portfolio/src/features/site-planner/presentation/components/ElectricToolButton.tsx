@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
 import { Lightbulb, Plug, ToggleLeft, Zap } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -50,9 +50,9 @@ export const ElectricToolButton = observer(
     const armedKind = store.electrics.armedDeviceKind;
     const ArmedIcon = KIND_ICONS[armedKind];
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:electric'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:electric'));
 
-    const handleChoose = useFunction((kind: DeviceKind) => {
+    const handleChoose = useEventCallback((kind: DeviceKind) => {
       store.electrics.setArmedDeviceKind(kind);
       store.setActiveTool('building:electric');
     });

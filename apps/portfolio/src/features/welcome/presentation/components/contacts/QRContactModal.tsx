@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { appT } from '../../../../../app/translations';
 import { useCopyToClipboard } from '../../../../../shared/hooks/useCopyToClipboard';
 import { DialogShell } from '../../../../../shared/ui/DialogShell';
@@ -23,7 +23,7 @@ const QRContactModalComponent = ({
   readonly onClose: () => void;
 }) => {
   const { status, copy } = useCopyToClipboard();
-  const handleCopy = useFunction(() => {
+  const handleCopy = useEventCallback(() => {
     void copy(value);
   });
 

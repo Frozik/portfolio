@@ -1,11 +1,11 @@
 import { useDraggable } from '@dnd-kit/core';
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useIsCoarsePointer } from '@frozik/components/hooks/useIsCoarsePointer';
 import { isNil } from 'lodash-es';
 import { ChevronDown, ChevronUp, Circle, Group, Square, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ShapeOwner } from '../../domain/model/selection';
 import type { CsgOperation, Shape, ShapeId } from '../../domain/model/shapes';
@@ -45,7 +45,7 @@ export const TermOperationToggle = observer(
     readonly operation: CsgOperation;
   }) => {
     const isUnion = operation === 'union';
-    const handleToggleOperation = useFunction(() =>
+    const handleToggleOperation = useEventCallback(() =>
       store.composition.toggleTermOperation(owner, operandId)
     );
 
@@ -88,13 +88,13 @@ export const TermActions = observer(
   }) => {
     const isCoarsePointer = useIsCoarsePointer();
 
-    const handleMoveUp = useFunction(() =>
+    const handleMoveUp = useEventCallback(() =>
       store.composition.reorderTerm(owner, operandId, index - 1)
     );
-    const handleMoveDown = useFunction(() =>
+    const handleMoveDown = useEventCallback(() =>
       store.composition.reorderTerm(owner, operandId, index + 1)
     );
-    const handleRemove = useFunction(() => store.composition.removeTerm(owner, operandId));
+    const handleRemove = useEventCallback(() => store.composition.removeTerm(owner, operandId));
 
     return (
       <div
@@ -159,10 +159,12 @@ export const ShapeTermRow = observer(
     const ShapeIcon = shape.kind === 'rectangle' ? Square : Circle;
     const label = describeShape(shape);
 
-    const handleSelect = useFunction(() =>
+    const handleSelect = useEventCallback(() =>
       store.setSelection({ kind: 'shape', owner, shapeId: shape.id })
     );
-    const handleWrapInGroup = useFunction(() => store.composition.wrapTermInGroup(owner, shape.id));
+    const handleWrapInGroup = useEventCallback(() =>
+      store.composition.wrapTermInGroup(owner, shape.id)
+    );
 
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
       id: shape.id,

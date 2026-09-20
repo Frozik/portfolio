@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LetterboxTransform } from '@frozik/utils/webgpu/letterboxTransform';
 import { isNil } from 'lodash-es';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { AimGhost } from '../../application/aim-ghost';
 import type { IPointerAimInput } from '../../application/pointer-aim-source';
@@ -38,7 +38,7 @@ export function useDragAim(params: {
   const { transform, pointerInput, aimGhost, getOrigin, getMaxPower, isEnabled } = params;
   const pointerIdRef = useRef<number | undefined>(undefined);
 
-  const updateAim = useFunction((event: ReactPointerEvent<HTMLCanvasElement>) => {
+  const updateAim = useEventCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     const origin = getOrigin();
     const bounds = event.currentTarget.getBoundingClientRect();
 
@@ -64,7 +64,7 @@ export function useDragAim(params: {
     );
   });
 
-  const onPointerDown = useFunction((event: ReactPointerEvent<HTMLCanvasElement>) => {
+  const onPointerDown = useEventCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     // A second finger landing on the field is ignored so the aim never fights itself.
     if (!isEnabled || !isNil(pointerIdRef.current)) {
       return;
@@ -76,7 +76,7 @@ export function useDragAim(params: {
     updateAim(event);
   });
 
-  const onPointerMove = useFunction((event: ReactPointerEvent<HTMLCanvasElement>) => {
+  const onPointerMove = useEventCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (pointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -84,7 +84,7 @@ export function useDragAim(params: {
     updateAim(event);
   });
 
-  const onPointerUp = useFunction((event: ReactPointerEvent<HTMLCanvasElement>) => {
+  const onPointerUp = useEventCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (pointerIdRef.current !== event.pointerId) {
       return;
     }

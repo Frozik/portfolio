@@ -1,10 +1,10 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 
 import { TopNavCenterPortal } from '../../../app/components/TopNavCenterContext';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
@@ -52,51 +52,55 @@ export const BinanceViewContent = observer(() => {
     canvasRef,
   });
 
-  const handleCanvasPointerMove = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
-    // A held button is a pan; a lingering tooltip over a dragged chart distracts.
-    if (event.buttons !== 0) {
-      return;
-    }
-    // A pinned popup freezes every hover surface so nothing shifts under the reader.
-    if (!isNil(store.tradesStore?.pinnedBucket)) {
-      clearTrackedPointer();
-      lastHoverProbeRef.current = undefined;
-      clearHoverAnchor();
-      return;
-    }
-    const rect = event.currentTarget.getBoundingClientRect();
-    const cssPoint = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    trackPointer(cssPoint);
-    scheduleHoverAnchor(cssPoint);
+  const handleCanvasPointerMove = useEventCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      // A held button is a pan; a lingering tooltip over a dragged chart distracts.
+      if (event.buttons !== 0) {
+        return;
+      }
+      // A pinned popup freezes every hover surface so nothing shifts under the reader.
+      if (!isNil(store.tradesStore?.pinnedBucket)) {
+        clearTrackedPointer();
+        lastHoverProbeRef.current = undefined;
+        clearHoverAnchor();
+        return;
+      }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const cssPoint = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      trackPointer(cssPoint);
+      scheduleHoverAnchor(cssPoint);
 
-    // Touch pointers get no hover preview — only mouse and pen do.
-    if (event.pointerType === 'touch') {
-      return;
-    }
-    const last = lastHoverProbeRef.current;
-    if (
-      !isNil(last) &&
-      Math.hypot(event.clientX - last.x, event.clientY - last.y) < HOVER_DEAD_ZONE_PX
-    ) {
-      return;
-    }
-    lastHoverProbeRef.current = { x: event.clientX, y: event.clientY };
+      // Touch pointers get no hover preview — only mouse and pen do.
+      if (event.pointerType === 'touch') {
+        return;
+      }
+      const last = lastHoverProbeRef.current;
+      if (
+        !isNil(last) &&
+        Math.hypot(event.clientX - last.x, event.clientY - last.y) < HOVER_DEAD_ZONE_PX
+      ) {
+        return;
+      }
+      lastHoverProbeRef.current = { x: event.clientX, y: event.clientY };
 
-    const chartState = store.chartState;
-    if (isNil(chartState)) {
-      return;
+      const chartState = store.chartState;
+      if (isNil(chartState)) {
+        return;
+      }
+      store.tradesStore?.setHoveredBucketAt(buildTradeHitTestPointer(event, chartState));
+      store.candleStore?.setHoveredCandleAt(buildCandleHitTestPointer(event, chartState));
     }
-    store.tradesStore?.setHoveredBucketAt(buildTradeHitTestPointer(event, chartState));
-    store.candleStore?.setHoveredCandleAt(buildCandleHitTestPointer(event, chartState));
-  });
+  );
 
-  const handleCanvasPointerDown = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
-    stopHoverLoop();
-    store.orderbookStore?.clearSelectedCell();
-    pointerStartRef.current = { x: event.clientX, y: event.clientY, type: event.pointerType };
-  });
+  const handleCanvasPointerDown = useEventCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      stopHoverLoop();
+      store.orderbookStore?.clearSelectedCell();
+      pointerStartRef.current = { x: event.clientX, y: event.clientY, type: event.pointerType };
+    }
+  );
 
-  const handleCanvasPointerUp = useFunction((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handleCanvasPointerUp = useEventCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const start = pointerStartRef.current;
     pointerStartRef.current = undefined;
     if (isNil(start)) {
@@ -121,7 +125,7 @@ export const BinanceViewContent = observer(() => {
     }
   });
 
-  const handleCanvasPointerLeave = useFunction(() => {
+  const handleCanvasPointerLeave = useEventCallback(() => {
     stopHoverLoop();
     store.orderbookStore?.clearSelectedCell();
     store.tradesStore?.clearHoveredBucket();
@@ -130,11 +134,11 @@ export const BinanceViewContent = observer(() => {
     lastHoverProbeRef.current = undefined;
   });
 
-  const handleCanvasContextMenu = useFunction((event: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasContextMenu = useEventCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     event.preventDefault();
   });
 
-  const handleClosePopup = useFunction(() => {
+  const handleClosePopup = useEventCallback(() => {
     store.tradesStore?.clearPinnedBucket();
   });
 

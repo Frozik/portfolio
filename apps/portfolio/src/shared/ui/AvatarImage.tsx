@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 /**
  * Profile picture with a fallback for the cases the URL cannot be shown:
@@ -21,7 +21,7 @@ export const AvatarImage = memo(
     readonly fallback: ReactNode;
   }) => {
     const [failedSrc, setFailedSrc] = useState<string | undefined>(undefined);
-    const handleError = useFunction(() => {
+    const handleError = useEventCallback(() => {
       setFailedSrc(src);
     });
 

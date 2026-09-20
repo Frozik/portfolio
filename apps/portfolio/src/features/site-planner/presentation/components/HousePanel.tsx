@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { BuildingScene } from '../../application/building-scene';
 import { formatCubicMeters, formatMeters } from '../../application/render/plan-draw/shared';
@@ -38,7 +38,7 @@ const PadModeItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (mode: PadElevationMode) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(mode));
+    const handleSelect = useEventCallback(() => onSelect(mode));
 
     return (
       <DropdownItem
@@ -67,7 +67,7 @@ const PadModeSelect = observer(
     const { padModeLabel, padModes } = sitePlannerT.house;
     const currentLabel = padModes[building.padElevationMode];
 
-    const handleSelect = useFunction((mode: PadElevationMode) => {
+    const handleSelect = useEventCallback((mode: PadElevationMode) => {
       store.building.setPadElevationMode(building.id, mode);
     });
 
@@ -166,7 +166,7 @@ const FoundationKindItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (kind: FoundationKind) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(kind));
+    const handleSelect = useEventCallback(() => onSelect(kind));
 
     return (
       <DropdownItem
@@ -194,15 +194,15 @@ const FoundationBlock = observer(
     const labels = sitePlannerT.house.foundation;
     const currentLabel = labels.kinds[foundation.kind];
 
-    const handleKindSelect = useFunction((kind: FoundationKind) => {
+    const handleKindSelect = useEventCallback((kind: FoundationKind) => {
       store.building.updateFoundation(building.id, { kind });
     });
-    const handleDepthChange = useFunction((value: number | undefined) => {
+    const handleDepthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.updateFoundation(building.id, { depthMeters: value });
       }
     });
-    const handlePlinthChange = useFunction((value: number | undefined) => {
+    const handlePlinthChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.updateFoundation(building.id, { heightAboveGroundMeters: value });
       }
@@ -272,22 +272,22 @@ const BuildingBlock = observer(
   ({ store, scene }: { readonly store: SitePlannerStore; readonly scene: BuildingScene }) => {
     const { building, padElevation } = scene;
 
-    const handleManualPadChange = useFunction((value: number | undefined) => {
+    const handleManualPadChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.setManualPadElevation(building.id, value);
       }
     });
-    const handlePadDropChange = useFunction((value: number | undefined) => {
+    const handlePadDropChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.setPadDrop(building.id, value);
       }
     });
-    const handleWallHeightChange = useFunction((value: number | undefined) => {
+    const handleWallHeightChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         store.building.setWallHeight(building.id, value);
       }
     });
-    const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleNameChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       store.building.renameBuilding(building.id, event.target.value);
     });
 

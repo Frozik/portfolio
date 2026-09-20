@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { BinanceViewStore } from '../../application/BinanceViewStore';
 import { buildCandleHitTestPointerFromCss } from '../build-candle-hit-test-pointer';
@@ -32,7 +32,7 @@ export function useHoverHitTestLoop({
   const hoverActiveRef = useRef(false);
   const rafIdRef = useRef<number | undefined>(undefined);
 
-  const hoverLoop = useFunction(() => {
+  const hoverLoop = useEventCallback(() => {
     rafIdRef.current = undefined;
     if (!hoverActiveRef.current) {
       return;
@@ -56,7 +56,7 @@ export function useHoverHitTestLoop({
     rafIdRef.current = requestAnimationFrame(hoverLoop);
   });
 
-  const trackPointer = useFunction((point: IPointerPosition) => {
+  const trackPointer = useEventCallback((point: IPointerPosition) => {
     pendingPointerRef.current = point;
     if (hoverActiveRef.current) {
       return;
@@ -67,11 +67,11 @@ export function useHoverHitTestLoop({
     }
   });
 
-  const clearTrackedPointer = useFunction(() => {
+  const clearTrackedPointer = useEventCallback(() => {
     pendingPointerRef.current = undefined;
   });
 
-  const stopHoverLoop = useFunction(() => {
+  const stopHoverLoop = useEventCallback(() => {
     hoverActiveRef.current = false;
     if (rafIdRef.current !== undefined) {
       cancelAnimationFrame(rafIdRef.current);

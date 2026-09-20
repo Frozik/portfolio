@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { LucideIcon } from 'lucide-react';
 import { Circle, Egg, Square } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { isPlanTool } from '../../domain/model/editor-mode';
@@ -54,7 +54,7 @@ export const ShapeToolButton = observer(
     const armedTool = store.armedShapeTool;
     const ArmedIcon = SHAPE_TOOL_ICONS[armedTool];
 
-    const handleActivate = useFunction(() => store.setActiveTool(armedTool));
+    const handleActivate = useEventCallback(() => store.setActiveTool(armedTool));
 
     return (
       <FlyoutToolButton

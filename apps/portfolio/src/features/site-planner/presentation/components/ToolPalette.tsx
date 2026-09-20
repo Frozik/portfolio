@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import type { LucideIcon } from 'lucide-react';
 import { Flag, Hand, MousePointer2, Route, Ruler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -84,7 +84,7 @@ const ToolButton = memo(
     readonly onSelect: (tool: PlanTool) => void;
   }) => {
     const { icon: Icon, label } = descriptor;
-    const handleClick = useFunction(() => onSelect(descriptor.tool));
+    const handleClick = useEventCallback(() => onSelect(descriptor.tool));
     const title = `${label} (${TOOL_HOTKEYS[descriptor.tool]})`;
 
     return (

@@ -1,9 +1,9 @@
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { Fragment, memo, useMemo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
@@ -102,7 +102,7 @@ const ColumnComponent = ({
   readonly onDeleteCard: (cardId: CardId) => void;
   readonly onEditCard: (cardId: CardId, text: string) => void;
 }) => {
-  const handleAddCard = useFunction((text: string) => {
+  const handleAddCard = useEventCallback((text: string) => {
     onAddCard(column.id, text);
   });
 

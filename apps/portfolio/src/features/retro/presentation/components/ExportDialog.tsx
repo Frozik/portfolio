@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import DOMPurify from 'dompurify';
 import { isNil } from 'lodash-es';
 import { Check, Copy, Download } from 'lucide-react';
 import { marked } from 'marked';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { useCopyToClipboard } from '../../../../shared/hooks/useCopyToClipboard';
 import { downloadFile } from '../../../../shared/lib/downloadFile';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
@@ -52,17 +52,17 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
     return DOMPurify.sanitize(rawHtml);
   }, [markdown]);
 
-  const handleCopy = useFunction(async () => {
+  const handleCopy = useEventCallback(async () => {
     const copied = await copy(markdown);
     store.toast.show(copied ? retroT.close.markdownCopied : retroT.errors.copyFailed);
   });
 
-  const handleDownload = useFunction(() => {
+  const handleDownload = useEventCallback(() => {
     const safeName = snapshot?.meta.name.replace(SAFE_NAME_PATTERN, '_') ?? SAFE_NAME_FALLBACK;
     downloadFile(`${safeName}.md`, markdown, 'text/markdown');
   });
 
-  const handleClose = useFunction(() => {
+  const handleClose = useEventCallback(() => {
     store.closeDialog();
   });
 

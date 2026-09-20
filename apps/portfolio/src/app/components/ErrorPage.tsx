@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Home } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { Button } from '../../shared/ui/Button';
 import { appT } from '../translations';
 
@@ -43,7 +43,7 @@ const ErrorPageComponent = ({
 
   const stars = useMemo(generateStars, []);
 
-  const handleStatusClick = useFunction(() => {
+  const handleStatusClick = useEventCallback(() => {
     setStatusCode(previous => (previous >= TEAPOT_STATUS ? FIRST_STATUS : previous + 1));
     setGlitchKey(previous => previous + 1);
   });

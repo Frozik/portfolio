@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { EyeOff, Layers } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingLayerId } from '../../domain/model/building-layers';
@@ -52,7 +52,7 @@ export const LayerToolButton = observer(
     const labels = sitePlannerT.layers;
     const counts = store.layers.objectCounts;
 
-    const handleChoose = useFunction((choice: LayerMenuChoice) => {
+    const handleChoose = useEventCallback((choice: LayerMenuChoice) => {
       switch (choice.kind) {
         case 'layer':
           store.layers.setActiveLayer(choice.layer);

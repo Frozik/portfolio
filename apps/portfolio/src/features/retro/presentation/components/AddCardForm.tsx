@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { ArrowRight } from 'lucide-react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { ColumnId } from '../../domain/types';
 import { retroT } from '../translations';
@@ -22,7 +22,7 @@ const AddCardFormComponent = ({
 }) => {
   const [text, setText] = useState('');
 
-  const submit = useFunction(() => {
+  const submit = useEventCallback(() => {
     const trimmed = text.trim();
     if (trimmed.length === 0 || disabled) {
       return;
@@ -32,27 +32,27 @@ const AddCardFormComponent = ({
     onTypingChange(undefined);
   });
 
-  const handleChange = useFunction((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = useEventCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(event.target.value);
   });
 
-  const handleKeyDown = useFunction((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useEventCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       submit();
     }
   });
 
-  const handleSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useEventCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     submit();
   });
 
-  const handleFocus = useFunction(() => {
+  const handleFocus = useEventCallback(() => {
     onTypingChange(columnId);
   });
 
-  const handleBlur = useFunction(() => {
+  const handleBlur = useEventCallback(() => {
     onTypingChange(undefined);
   });
 

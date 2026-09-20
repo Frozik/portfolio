@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { usePointerAction } from '@frozik/components/hooks/usePointerAction';
 import {
   isFailValueDescriptor,
@@ -10,7 +9,7 @@ import { Bot } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useResizeObserver } from 'usehooks-ts';
+import { useEventCallback, useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
 import { Alert } from '../../../../shared/ui/Alert';
@@ -69,7 +68,7 @@ export const DrawNeuralNetwork = observer(() => {
   }, [context, layout, width, height, selectedNeuronId]);
 
   usePointerAction(
-    useFunction(({ x, y }) => {
+    useEventCallback(({ x, y }) => {
       setSelectedNeuronId(findNeuronAtPoint(layout, width, height, x, y)?.id);
     }),
     canvasRef

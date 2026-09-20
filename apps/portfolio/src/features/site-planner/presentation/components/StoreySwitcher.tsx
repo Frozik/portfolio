@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
@@ -27,7 +27,7 @@ const StoreyButton = memo(
     readonly isActive: boolean;
     readonly onSelect: (storeyId: StoreyId) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(storeyId));
+    const handleClick = useEventCallback(() => onSelect(storeyId));
     const title = `${sitePlannerT.storeys.storeyTitle} ${ordinal}`;
 
     return (
@@ -60,21 +60,23 @@ export const StoreySwitcher = observer(({ store }: { readonly store: SitePlanner
   const building = store.buildings.find(candidate => candidate.id === buildingId);
   const labels = sitePlannerT.storeys;
 
-  const handleSelect = useFunction((storeyId: StoreyId) => store.storeys.setActiveStorey(storeyId));
-  const handleAddEmpty = useFunction(() =>
+  const handleSelect = useEventCallback((storeyId: StoreyId) =>
+    store.storeys.setActiveStorey(storeyId)
+  );
+  const handleAddEmpty = useEventCallback(() =>
     store.storeys.addStoreyToEditedBuilding({ copyWalls: false })
   );
-  const handleAddCopy = useFunction(() =>
+  const handleAddCopy = useEventCallback(() =>
     store.storeys.addStoreyToEditedBuilding({ copyWalls: true })
   );
-  const handleToggleReference = useFunction(() => store.storeys.toggleReferenceStorey());
+  const handleToggleReference = useEventCallback(() => store.storeys.toggleReferenceStorey());
   const [isRemoveConfirmOpen, setRemoveConfirmOpen] = useState(false);
-  const handleRemoveRequest = useFunction(() => setRemoveConfirmOpen(true));
-  const handleRemoveCancel = useFunction(() => setRemoveConfirmOpen(false));
+  const handleRemoveRequest = useEventCallback(() => setRemoveConfirmOpen(true));
+  const handleRemoveCancel = useEventCallback(() => setRemoveConfirmOpen(false));
   // A storey carries its walls, openings, furniture, wiring — and now the
   // stairs that climbed into it. One mis-aimed 24 px click is a day's work,
   // and the chip cannot say «Ctrl+Z» loudly enough to make that acceptable.
-  const handleRemoveConfirm = useFunction(() => {
+  const handleRemoveConfirm = useEventCallback(() => {
     const activeStoreyId = store.storeys.activeStoreyId;
 
     setRemoveConfirmOpen(false);

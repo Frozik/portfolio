@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Drawer } from '../../../shared/ui/Drawer';
 import type { TradesStreamStore } from '../application/TradesStreamStore';
@@ -44,7 +44,7 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
   readonly tradesStore: TradesStreamStore;
   readonly onClose: () => void;
 }) {
-  const handleClose = useFunction(() => {
+  const handleClose = useEventCallback(() => {
     onClose();
   });
 

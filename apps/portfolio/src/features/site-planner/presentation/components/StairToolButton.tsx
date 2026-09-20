@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Footprints } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -40,9 +40,9 @@ export const StairToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedKind = store.stairs.armedStairKind;
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:stair'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:stair'));
 
-    const handleChoose = useFunction((kind: StairKind) => {
+    const handleChoose = useEventCallback((kind: StairKind) => {
       store.stairs.setArmedStairKind(kind);
       store.setActiveTool('building:stair');
     });

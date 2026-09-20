@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useMountedOnce } from '@frozik/components/hooks/useMountedOnce';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { ArrowLeft, Home, Menu } from 'lucide-react';
 import { lazy, memo, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgQrCode } from '../../icons/SvgQrCode';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
@@ -58,24 +58,24 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
   const { config: backConfig } = useTopNavBack();
   const setCenterHost = useTopNavCenterHostSetter();
 
-  const handleBackActivate = useFunction(() => {
+  const handleBackActivate = useEventCallback(() => {
     if (backConfig !== null) {
       backConfig.onActivate();
     }
   });
 
-  const handleQROpen = useFunction(() => setQrOpen(true));
-  const handleQRClose = useFunction(() => setQrOpen(false));
-  const handleMenuOpen = useFunction(() => setMenuOpen(true));
-  const handleMenuClose = useFunction(() => setMenuOpen(false));
-  const handleSectionNavigate = useFunction((sectionId: string) => {
+  const handleQROpen = useEventCallback(() => setQrOpen(true));
+  const handleQRClose = useEventCallback(() => setQrOpen(false));
+  const handleMenuOpen = useEventCallback(() => setMenuOpen(true));
+  const handleMenuClose = useEventCallback(() => setMenuOpen(false));
+  const handleSectionNavigate = useEventCallback((sectionId: string) => {
     if (variant === 'inner') {
       void navigate(`/#${sectionId}`);
       return;
     }
     scrollToSection(sectionId);
   });
-  const handleProjectNavigate = useFunction((route: string) => {
+  const handleProjectNavigate = useEventCallback((route: string) => {
     void navigate(route);
   });
 
@@ -93,7 +93,7 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
     []
   );
 
-  const handleBrandClick = useFunction(() => {
+  const handleBrandClick = useEventCallback(() => {
     if (variant === 'inner') {
       navigate('/');
       return;

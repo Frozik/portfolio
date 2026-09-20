@@ -6,7 +6,7 @@ import type { KeyboardEvent } from 'react';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import { clampDate, moveActiveDate } from '../calendar-keys';
 import type { TLeaveDirection } from '../defs';
 import { DayCell } from './DayCell';
@@ -125,7 +125,7 @@ export const DateSelector = memo(
       }
     });
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Tab') {
         event.preventDefault();
         onLeave(event.shiftKey ? 'backward' : 'forward');

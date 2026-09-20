@@ -1,6 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -20,7 +20,7 @@ const LayerRow = observer(
     const isActive = store.layers.activeLayer === layer;
     const count = store.layers.objectCounts[layer];
 
-    const handleActivate = useFunction(() => store.layers.setActiveLayer(layer));
+    const handleActivate = useEventCallback(() => store.layers.setActiveLayer(layer));
 
     return (
       <div

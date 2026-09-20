@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Waypoints } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { UtilitySystem } from '../../domain/model/foundation';
@@ -40,9 +40,9 @@ export const UtilityToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedSystem = store.utilities.nextUtilitySystem;
 
-    const handleActivate = useFunction(() => store.setActiveTool(UTILITY_TOOL));
+    const handleActivate = useEventCallback(() => store.setActiveTool(UTILITY_TOOL));
 
-    const handleChoose = useFunction((system: UtilitySystem) => {
+    const handleChoose = useEventCallback((system: UtilitySystem) => {
       store.utilities.setNextUtilitySystem(system);
       store.setActiveTool(UTILITY_TOOL);
     });

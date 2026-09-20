@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { ArrowLeft, ArrowRight, Volume2, VolumeX, Wind } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -28,11 +28,11 @@ export const ScorchedHud = observer(() => {
   const { thinkingPlayerId: aiThinkingPlayerId } = store.ai;
   const { elevationDegrees: aimElevationDegrees, power: aimPower } = store.aim;
 
-  const handleToggleMute = useFunction(() => {
+  const handleToggleMute = useEventCallback(() => {
     store.toggleMute();
   });
 
-  const handleOpenWeapons = useFunction(() => {
+  const handleOpenWeapons = useEventCallback(() => {
     store.aim.setCarouselOpen(true);
   });
 

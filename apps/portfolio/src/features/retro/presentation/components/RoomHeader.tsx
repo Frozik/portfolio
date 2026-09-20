@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Eye, Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
@@ -34,8 +34,8 @@ export const RoomHeader = observer(({ store }: { readonly store: RoomStore }) =>
     (facilitatorProfile?.name ?? '').trim() !== ''
       ? (facilitatorProfile?.name ?? '')
       : (snapshot?.meta.facilitatorName.trim() ?? '');
-  const handleOpenShareDialog = useFunction(() => store.showDialog('share'));
-  const handleOpenResults = useFunction(() => store.showDialog('export'));
+  const handleOpenShareDialog = useEventCallback(() => store.showDialog('share'));
+  const handleOpenResults = useEventCallback(() => store.showDialog('export'));
 
   return (
     <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-landing-border-soft bg-landing-bg/70 px-4 py-3.5 backdrop-blur-md sm:px-6">

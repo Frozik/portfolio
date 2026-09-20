@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Eye } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
@@ -10,7 +10,7 @@ import { retroT } from '../translations';
 const ICON_SIZE_PX = 12;
 
 export const ClosePanel = observer(({ store }: { readonly store: RoomStore }) => {
-  const handleOpenResults = useFunction(() => store.showDialog('export'));
+  const handleOpenResults = useEventCallback(() => store.showDialog('export'));
 
   if (store.phase !== 'close') {
     return null;

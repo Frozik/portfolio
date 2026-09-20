@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { INavSectionTranslation } from '../translations';
 
 export const NavSectionButton = memo(
@@ -12,7 +12,7 @@ export const NavSectionButton = memo(
     readonly className: string;
     readonly onSelect: (sectionId: string) => void;
   }) => {
-    const handleClick = useFunction(() => {
+    const handleClick = useEventCallback(() => {
       onSelect(section.id);
     });
     return (

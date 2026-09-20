@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { ChangeEvent } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type {
   ScorchedSetupOptions,
@@ -56,7 +56,7 @@ const SegmentButton = memo(
     readonly isActive: boolean;
     readonly onSelect: (value: string) => void;
   }) => {
-    const handleClick = useFunction(() => onSelect(choice.value));
+    const handleClick = useEventCallback(() => onSelect(choice.value));
 
     return (
       <button
@@ -110,15 +110,15 @@ export const CuratedOptionsRow = memo(
     readonly setup: ScorchedSetupOptions;
     readonly onChange: (setup: ScorchedSetupOptions) => void;
   }) => {
-    const handleRoundsChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+    const handleRoundsChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
       onChange({ ...setup, roundCount: Number(event.target.value) });
     });
 
-    const handleCashChange = useFunction((event: ChangeEvent<HTMLSelectElement>) => {
+    const handleCashChange = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
       onChange({ ...setup, startingCash: Number(event.target.value) });
     });
 
-    const handleWindSelect = useFunction((value: string) => {
+    const handleWindSelect = useEventCallback((value: string) => {
       const wind = WIND_PRESETS.find(candidate => candidate === value);
 
       if (!isNil(wind)) {
@@ -126,7 +126,7 @@ export const CuratedOptionsRow = memo(
       }
     });
 
-    const handleWallsSelect = useFunction((value: string) => {
+    const handleWallsSelect = useEventCallback((value: string) => {
       const walls = WALLS_PRESETS.find(candidate => candidate === value);
 
       if (!isNil(walls)) {

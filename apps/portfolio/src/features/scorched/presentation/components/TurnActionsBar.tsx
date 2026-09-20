@@ -1,5 +1,4 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import {
   BatteryCharging,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { useScorchedStore } from '../../application/useScorchedStore';
 import { MAX_TANK_HEALTH } from '../../domain/constants';
@@ -50,7 +50,7 @@ const ShieldButton = memo(
     readonly isDisabled: boolean;
     readonly onRaise: (itemId: ItemId) => void;
   }) => {
-    const handleClick = useFunction(() => onRaise(itemId));
+    const handleClick = useEventCallback(() => onRaise(itemId));
     const name = scorchedT.itemNames[itemId];
 
     return (
@@ -80,27 +80,27 @@ export const TurnActionsBar = observer(() => {
   const { activePlayerId, activePlayer } = store.world;
   const { isFuelMoveMode } = store.turnActions;
 
-  const handleSpendBattery = useFunction(() => {
+  const handleSpendBattery = useEventCallback(() => {
     store.turnActions.spendBattery();
   });
 
-  const handleToggleFuelMove = useFunction(() => {
+  const handleToggleFuelMove = useEventCallback(() => {
     store.turnActions.setFuelMoveMode(!store.turnActions.isFuelMoveMode);
   });
 
-  const handleDriveLeft = useFunction(() => {
+  const handleDriveLeft = useEventCallback(() => {
     store.turnActions.driveTank(DRIVE_LEFT);
   });
 
-  const handleDriveRight = useFunction(() => {
+  const handleDriveRight = useEventCallback(() => {
     store.turnActions.driveTank(DRIVE_RIGHT);
   });
 
-  const handleRetreat = useFunction(() => {
+  const handleRetreat = useEventCallback(() => {
     store.turnActions.retreat();
   });
 
-  const handleRaiseShield = useFunction((itemId: ItemId) => {
+  const handleRaiseShield = useEventCallback((itemId: ItemId) => {
     store.turnActions.raiseShield(itemId);
   });
 

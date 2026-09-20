@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useKeyboardAction } from '@frozik/components/hooks/useKeyboardAction';
 import { usePointerAction } from '@frozik/components/hooks/usePointerAction';
 import { isNil } from 'lodash-es';
@@ -6,7 +5,7 @@ import { PauseCircle, PlayCircle } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode, RefObject } from 'react';
 import { useEffect, useRef } from 'react';
-import { useResizeObserver } from 'usehooks-ts';
+import { useEventCallback, useResizeObserver } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { Slider } from '../../../../shared/ui/Slider';
@@ -62,7 +61,7 @@ export const PendulumPlayground = observer(
     useKeyboardAction(pauseResumeKeyCode, session.togglePaused, ref);
 
     usePointerAction(
-      useFunction(({ x, y, buttons }) => {
+      useEventCallback(({ x, y, buttons }) => {
         const pressed = (buttons & PRIMARY_POINTER_BUTTON_MASK) !== 0;
         session.setPointerPosition(pressed ? { x: x - width / 2, y: y - height / 2 } : undefined);
       }),

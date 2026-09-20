@@ -697,6 +697,9 @@ importers:
       temporal-polyfill:
         specifier: 'catalog:'
         version: 0.3.2
+      usehooks-ts:
+        specifier: 'catalog:'
+        version: 3.1.1(react@19.3.0)
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*

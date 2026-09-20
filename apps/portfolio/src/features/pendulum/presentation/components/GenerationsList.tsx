@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { ISO } from '@frozik/utils/date/types';
 import {
   isEmptyValueDescriptor,
@@ -15,6 +14,7 @@ import { observer } from 'mobx-react-lite';
 import type { ComponentProps } from 'react';
 import { memo } from 'react';
 import { Temporal } from 'temporal-polyfill';
+import { useEventCallback } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
@@ -53,8 +53,10 @@ const PLAYER_ACTION_ICON_SIZE = 14;
 
 const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer }) => {
   const store = usePendulumStore();
-  const handleSelectForTest = useFunction(() => store.selectRobot(player.name));
-  const handleOpenNeuralNetwork = useFunction(() => store.openNeuralNetworkDialog(player.name));
+  const handleSelectForTest = useEventCallback(() => store.selectRobot(player.name));
+  const handleOpenNeuralNetwork = useEventCallback(() =>
+    store.openNeuralNetworkDialog(player.name)
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -111,10 +113,10 @@ const CompetitionListItem = memo(
     readonly onContinue: (competitionStart: ISO | undefined) => void;
     readonly onDelete: (competitionStart: ISO) => void;
   }) => {
-    const handleContinueClick = useFunction(() =>
+    const handleContinueClick = useEventCallback(() =>
       onContinue(startDate === 'new' ? undefined : startDate)
     );
-    const handleDeleteClick = useFunction(() => {
+    const handleDeleteClick = useEventCallback(() => {
       if (startDate !== 'new') {
         onDelete(startDate);
       }
@@ -201,7 +203,7 @@ export const GenerationsList = observer(() => {
   const currentCompetition = store.generations;
   const maxPopulationSize = store.maxPopulationSize;
 
-  const handleContinueCompetition = useFunction((competitionStart: ISO | undefined) => {
+  const handleContinueCompetition = useEventCallback((competitionStart: ISO | undefined) => {
     if (isNil(competitionStart)) {
       store.createCompetition();
     } else {
@@ -209,11 +211,11 @@ export const GenerationsList = observer(() => {
     }
   });
 
-  const handleDeleteCompetition = useFunction((competitionStart: ISO) => {
+  const handleDeleteCompetition = useEventCallback((competitionStart: ISO) => {
     store.deleteCompetition(competitionStart);
   });
 
-  const renderCompetitionItem = useFunction((startDate: 'new' | ISO) => (
+  const renderCompetitionItem = useEventCallback((startDate: 'new' | ISO) => (
     <CompetitionListItem
       startDate={startDate}
       onContinue={handleContinueCompetition}

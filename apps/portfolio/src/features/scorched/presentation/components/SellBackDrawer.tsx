@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { Drawer } from '../../../../shared/ui/Drawer';
@@ -28,7 +28,7 @@ const SellRow = memo(
     readonly unitPrice: number;
     readonly onSell: (entry: ShopEntryRef) => void;
   }) => {
-    const handleSell = useFunction(() => {
+    const handleSell = useEventCallback(() => {
       onSell(sellable.entry);
     });
 
@@ -62,7 +62,7 @@ export const SellBackDrawer = observer(
   }) => {
     const store = useScorchedStore();
 
-    const handleSell = useFunction((entry: ShopEntryRef) => {
+    const handleSell = useEventCallback((entry: ShopEntryRef) => {
       store.shop.sell(entry, ONE_UNIT);
     });
 

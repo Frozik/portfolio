@@ -4,7 +4,7 @@ import type { FocusEvent, MouseEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import { clampDate } from '../calendar-keys';
 import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
 import { DateSelector } from './DateSelector';
@@ -73,7 +73,7 @@ export const CalendarPopup = memo(
       );
     }, [value]);
 
-    const focusGrid = useFunction(() => {
+    const focusGrid = useEventCallback(() => {
       // Keep the keyboard inside the shown month; the browsed month wins over the value.
       if (!isSameYearMonth(activeDate.toPlainYearMonth(), yearMonth)) {
         setActiveDate(clampDate(yearMonth.toPlainDate({ day: 1 }), minDate, maxDate));
@@ -88,14 +88,14 @@ export const CalendarPopup = memo(
       }
     }, [focusRequest, focusGrid]);
 
-    const handleActiveDateChange = useFunction((date: Temporal.PlainDate) => {
+    const handleActiveDateChange = useEventCallback((date: Temporal.PlainDate) => {
       setActiveDate(date);
       setYearMonth(previous =>
         isSameYearMonth(date.toPlainYearMonth(), previous) ? previous : date.toPlainYearMonth()
       );
     });
 
-    const handleGridLeave = useFunction((direction: TLeaveDirection) => {
+    const handleGridLeave = useEventCallback((direction: TLeaveDirection) => {
       if (direction === 'forward' && showTime) {
         setTimeFocusRequest(previous => previous + 1);
       } else {
@@ -103,7 +103,7 @@ export const CalendarPopup = memo(
       }
     });
 
-    const handleTimeLeave = useFunction((direction: TLeaveDirection) => {
+    const handleTimeLeave = useEventCallback((direction: TLeaveDirection) => {
       if (direction === 'backward') {
         focusGrid();
       } else {
@@ -112,12 +112,12 @@ export const CalendarPopup = memo(
     });
 
     // The field keeps focus (and the popover stays open) while the popup is clicked.
-    const handleMouseDown = useFunction((event: MouseEvent) => {
+    const handleMouseDown = useEventCallback((event: MouseEvent) => {
       event.preventDefault();
     });
 
-    const handleFocus = useFunction(() => onFocusWithinChange(true));
-    const handleBlur = useFunction((event: FocusEvent<HTMLElement>) => {
+    const handleFocus = useEventCallback(() => onFocusWithinChange(true));
+    const handleBlur = useEventCallback((event: FocusEvent<HTMLElement>) => {
       if (!event.currentTarget.contains(event.relatedTarget)) {
         onFocusWithinChange(false);
       }

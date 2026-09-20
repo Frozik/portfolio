@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
@@ -34,7 +34,7 @@ const CableItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (cableTypeId: CableTypeId | undefined) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(cableTypeId));
+    const handleSelect = useEventCallback(() => onSelect(cableTypeId));
     const caption = isNil(cableTypeId)
       ? sitePlannerT.wiring.cableDefault
       : sitePlannerT.wiring.cables[cableTypeId];
@@ -73,7 +73,7 @@ const LineRow = observer(
     const labels = sitePlannerT.wiring;
     const { meterUnit } = sitePlannerT.plan;
 
-    const handleCableSelect = useFunction((cableTypeId: CableTypeId | undefined) => {
+    const handleCableSelect = useEventCallback((cableTypeId: CableTypeId | undefined) => {
       store.electrics.wiring.setGroupCableType(buildingId, line.groupId, cableTypeId);
     });
 

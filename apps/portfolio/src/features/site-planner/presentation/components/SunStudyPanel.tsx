@@ -1,5 +1,4 @@
 import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
 import { isNil } from 'lodash-es';
@@ -7,6 +6,7 @@ import { Pause, Play, Sunrise, Sunset } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 import { Temporal } from 'temporal-polyfill';
+import { useEventCallback } from 'usehooks-ts';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { Slider } from '../../../../shared/ui/Slider';
@@ -39,11 +39,11 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
    * `nearest` rather than the default future-only reading: a study is as often
    * about the winter that has passed as about the summer to come.
    */
-  const parseDateInput = useFunction((input: string) =>
+  const parseDateInput = useEventCallback((input: string) =>
     parseFuzzyDate(input, { now: Temporal.Now.zonedDateTimeISO(timeZoneId), nearest: true })
   );
 
-  const handleDateChange = useFunction((picked: Temporal.ZonedDateTime | undefined) => {
+  const handleDateChange = useEventCallback((picked: Temporal.ZonedDateTime | undefined) => {
     if (!isNil(picked)) {
       store.sun.setDate(picked.toPlainDate());
     }

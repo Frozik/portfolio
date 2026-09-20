@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
@@ -46,7 +46,7 @@ export const SelectedWallProperties = observer(
     const buildingId = selection?.kind === 'wall' ? selection.buildingId : undefined;
     const labels = sitePlannerT.walls;
 
-    const handleMaterialChange = useFunction((value: string) => {
+    const handleMaterialChange = useEventCallback((value: string) => {
       const material = parseWallMaterial(value);
 
       if (!isNil(buildingId) && !isNil(material)) {
@@ -58,19 +58,19 @@ export const SelectedWallProperties = observer(
         });
       }
     });
-    const handleThicknessChange = useFunction((value: number | undefined) => {
+    const handleThicknessChange = useEventCallback((value: number | undefined) => {
       if (!isNil(buildingId) && !isNil(value)) {
         store.walls.updateWallProperties(buildingId, wall.id, { thicknessMeters: value });
       }
     });
-    const handleReferenceLineChange = useFunction((value: string) => {
+    const handleReferenceLineChange = useEventCallback((value: string) => {
       const referenceLine = parseWallReferenceLine(value);
 
       if (!isNil(buildingId) && !isNil(referenceLine)) {
         store.walls.updateWallProperties(buildingId, wall.id, { referenceLine });
       }
     });
-    const handleCloseRing = useFunction(() => {
+    const handleCloseRing = useEventCallback(() => {
       if (!isNil(buildingId)) {
         store.walls.closeWallRing(buildingId, wall.id);
       }
@@ -120,10 +120,10 @@ export const SelectedWallProperties = observer(
  */
 export const SelectedBuildingProperties = observer(
   ({ store, building }: { readonly store: SitePlannerStore; readonly building: Building }) => {
-    const handleNameChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleNameChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       store.building.renameBuilding(building.id, event.target.value);
     });
-    const handleEdit = useFunction(() => {
+    const handleEdit = useEventCallback(() => {
       store.modes.openEditorDoor({
         target: { kind: 'building', buildingId: building.id },
         aimAt: undefined,
@@ -161,7 +161,7 @@ export const SelectedBuildingProperties = observer(
  */
 export const WallToolProperties = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const labels = sitePlannerT.walls;
-  const handleTrace = useFunction(() => store.wallDraft.traceBaseOutlineWalls());
+  const handleTrace = useEventCallback(() => store.wallDraft.traceBaseOutlineWalls());
 
   return (
     <div className="flex flex-col gap-2">

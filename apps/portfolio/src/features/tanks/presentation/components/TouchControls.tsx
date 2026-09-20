@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { useTanksStore } from '../../application/useTanksStore';
 import type { Direction } from '../../domain/types';
 import {
@@ -59,7 +59,7 @@ export const TouchControls = memo(() => {
     return () => touchControls.release();
   }, [store]);
 
-  const steerFromPointer = useFunction((event: ReactPointerEvent<HTMLDivElement>) => {
+  const steerFromPointer = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const direction = resolveDpadDirection(
       event.clientX - (bounds.left + bounds.width / 2),
@@ -70,7 +70,7 @@ export const TouchControls = memo(() => {
     store.touchControls.setDirection(direction);
   });
 
-  const handleDpadPointerDown = useFunction((event: ReactPointerEvent<HTMLDivElement>) => {
+  const handleDpadPointerDown = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     // A second finger landing on the pad is ignored so steering never fights itself.
     if (!isNil(dpadPointerIdRef.current)) {
       return;
@@ -81,7 +81,7 @@ export const TouchControls = memo(() => {
     steerFromPointer(event);
   });
 
-  const handleDpadPointerMove = useFunction((event: ReactPointerEvent<HTMLDivElement>) => {
+  const handleDpadPointerMove = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (dpadPointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -89,7 +89,7 @@ export const TouchControls = memo(() => {
     steerFromPointer(event);
   });
 
-  const handleDpadPointerEnd = useFunction((event: ReactPointerEvent<HTMLDivElement>) => {
+  const handleDpadPointerEnd = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (dpadPointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -99,7 +99,7 @@ export const TouchControls = memo(() => {
     store.touchControls.setDirection(undefined);
   });
 
-  const handleFirePointerDown = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleFirePointerDown = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!isNil(firePointerIdRef.current)) {
       return;
     }
@@ -110,7 +110,7 @@ export const TouchControls = memo(() => {
     store.touchControls.setFire(true);
   });
 
-  const handleFirePointerEnd = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleFirePointerEnd = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     if (firePointerIdRef.current !== event.pointerId) {
       return;
     }

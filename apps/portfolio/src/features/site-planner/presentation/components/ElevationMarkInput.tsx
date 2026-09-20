@@ -1,8 +1,8 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElevationMark } from '../../domain/model/site-plan';
@@ -47,7 +47,7 @@ const ElevationField = memo(
      */
     const isSettledRef = useRef(false);
 
-    const commit = useFunction(() => {
+    const commit = useEventCallback(() => {
       if (isSettledRef.current) {
         return;
       }
@@ -65,12 +65,12 @@ const ElevationField = memo(
       onApply(elevation);
     });
 
-    const cancel = useFunction(() => {
+    const cancel = useEventCallback(() => {
       isSettledRef.current = true;
       onCancel();
     });
 
-    const handleChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
+    const handleChange = useEventCallback((event: ChangeEvent<HTMLInputElement>) => {
       setText(event.target.value);
     });
 
@@ -82,7 +82,7 @@ const ElevationField = memo(
       inputRef.current?.select();
     }, []);
 
-    const handleKeyDown = useFunction((event: KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = useEventCallback((event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key === COMMIT_KEY) {
         event.preventDefault();
         commit();
@@ -123,7 +123,7 @@ const ElevationField = memo(
 export const ElevationMarkInput = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const mark = store.marks.elevationInputMark;
 
-  const handleApply = useFunction((elevation: Meters) => {
+  const handleApply = useEventCallback((elevation: Meters) => {
     if (!isNil(mark)) {
       store.marks.setElevationMarkElevation(mark.id, elevation);
     }

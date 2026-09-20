@@ -1,4 +1,3 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import {
   isFailValueDescriptor,
   isLoadingValueDescriptor,
@@ -6,6 +5,7 @@ import {
 } from '@frozik/utils/value-descriptors/utils';
 import { Bot, User, X } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
@@ -20,7 +20,7 @@ export const TestPlayground = observer(() => {
   const store = usePendulumStore();
   const robot = store.selectedRobot;
 
-  const handleRemoveRobot = useFunction(() => store.selectRobot(undefined));
+  const handleRemoveRobot = useEventCallback(() => store.selectRobot(undefined));
 
   if (isLoadingValueDescriptor(robot)) {
     return (

@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { PlacedObject } from '../../domain/model/placed-object';
@@ -46,9 +46,9 @@ export const PlacedObjectToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedObject = store.siteObjects.nextPlacedObject;
 
-    const handleActivate = useFunction(() => store.setActiveTool(PLACED_OBJECT_TOOL));
+    const handleActivate = useEventCallback(() => store.setActiveTool(PLACED_OBJECT_TOOL));
 
-    const handleChoose = useFunction((object: PlacedObject) => {
+    const handleChoose = useEventCallback((object: PlacedObject) => {
       store.siteObjects.setNextPlacedObject(object);
       store.setActiveTool(PLACED_OBJECT_TOOL);
     });

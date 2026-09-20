@@ -1,9 +1,9 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isFailValueDescriptor, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useEventCallback } from 'usehooks-ts';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { useSudokuStore } from '../application/useSudokuStore';
@@ -34,27 +34,27 @@ export const Sudoku = observer(() => {
     }
   }, [puzzle, store]);
 
-  const handleClickCell = useFunction((row: number, column: number) =>
+  const handleClickCell = useEventCallback((row: number, column: number) =>
     store.applyTool(row, column)
   );
 
-  const handleSelectToolValue = useFunction((value: number) => store.setToolValue(value));
+  const handleSelectToolValue = useEventCallback((value: number) => store.setToolValue(value));
 
-  const handleSelectToolMode = useFunction((mode: ToolMode) => store.setToolMode(mode));
+  const handleSelectToolMode = useEventCallback((mode: ToolMode) => store.setToolMode(mode));
 
-  const handleMarkField = useFunction(() => store.markField());
+  const handleMarkField = useEventCallback(() => store.markField());
 
-  const handleSelectPuzzleDifficulty = useFunction((difficulty: SudokuDifficulty) => {
+  const handleSelectPuzzleDifficulty = useEventCallback((difficulty: SudokuDifficulty) => {
     navigate(`/sudoku/${store.createPuzzle(difficulty)}`);
   });
 
-  const handleRestartGame = useFunction(() => navigate('/sudoku'));
+  const handleRestartGame = useEventCallback(() => navigate('/sudoku'));
 
   const isSolvingPuzzle = !isNil(puzzle);
 
-  const handleRestorePreviousState = useFunction(() => store.restorePreviousState());
+  const handleRestorePreviousState = useEventCallback(() => store.restorePreviousState());
 
-  const handleRestartPuzzle = useFunction(() => store.restartPuzzle());
+  const handleRestartPuzzle = useEventCallback(() => store.restartPuzzle());
 
   return (
     <div className="h-full w-full mx-auto flex min-h-0 select-none flex-col items-center justify-center max-[840px]:p-0">

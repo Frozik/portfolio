@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { Building } from '../../domain/model/building';
 import { sitePlannerT } from '../translations';
@@ -31,7 +31,7 @@ export const StructurePanel = observer(({ store }: { readonly store: SitePlanner
 /** One named structure: its term tree under its name, removable as a whole. */
 const BuildingSection = observer(
   ({ store, building }: { readonly store: SitePlannerStore; readonly building: Building }) => {
-    const handleRemove = useFunction(() => store.building.removeBuilding(building.id));
+    const handleRemove = useEventCallback(() => store.building.removeBuilding(building.id));
 
     return (
       <GroupSection

@@ -1,5 +1,5 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
@@ -8,7 +8,7 @@ import { tanksT } from '../translations';
 export const PauseOverlay = observer(() => {
   const store = useTanksStore();
 
-  const handleResume = useFunction(() => {
+  const handleResume = useEventCallback(() => {
     store.togglePause();
   });
 

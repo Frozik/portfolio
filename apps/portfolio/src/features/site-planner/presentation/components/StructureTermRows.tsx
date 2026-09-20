@@ -1,11 +1,11 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { Folder, FolderOutput } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Fragment } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ShapeOwner } from '../../domain/model/selection';
 import type { CsgOperation, CsgTerm, ShapeGroup, ShapeId } from '../../domain/model/shapes';
@@ -58,11 +58,11 @@ const GroupTermRow = observer(
       resolvedActiveGroup.owner === owner && resolvedActiveGroup.groupId === group.id;
     const label = describeGroup(group);
 
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'group', owner, groupId: group.id });
       store.composition.setActiveGroup(owner, group.id);
     });
-    const handleUngroup = useFunction(() => store.composition.ungroupTerm(owner, group.id));
+    const handleUngroup = useEventCallback(() => store.composition.ungroupTerm(owner, group.id));
 
     const isDropBlocked = blockedGroupIds.has(group.id);
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({

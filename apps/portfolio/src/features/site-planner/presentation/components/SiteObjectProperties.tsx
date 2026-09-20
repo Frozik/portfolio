@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -30,29 +30,29 @@ const TreeProperties = memo(
     readonly tree: TreeInstance;
     readonly onChange: (tree: TreeInstance, field: TreeField) => void;
   }) => {
-    const handleSpeciesChange = useFunction((value: string) => {
+    const handleSpeciesChange = useEventCallback((value: string) => {
       const species = parseTreeSpecies(value);
 
       if (!isNil(species)) {
         onChange(changeTreeSpecies(tree, species), 'species');
       }
     });
-    const handlePositionXChange = useFunction((value: number | undefined) => {
+    const handlePositionXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...tree, position: { ...tree.position, x: value } }, 'position-x');
       }
     });
-    const handlePositionYChange = useFunction((value: number | undefined) => {
+    const handlePositionYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...tree, position: { ...tree.position, y: value } }, 'position-y');
       }
     });
-    const handleCrownRadiusChange = useFunction((value: number | undefined) => {
+    const handleCrownRadiusChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...tree, crownRadius: value }, 'crown-radius');
       }
     });
-    const handleHeightChange = useFunction((value: number | undefined) => {
+    const handleHeightChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...tree, height: value }, 'height');
       }
@@ -103,17 +103,17 @@ const CarProperties = memo(
     readonly car: CarInstance;
     readonly onChange: (car: CarInstance, field: CarField) => void;
   }) => {
-    const handlePositionXChange = useFunction((value: number | undefined) => {
+    const handlePositionXChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...car, position: { ...car.position, x: value } }, 'position-x');
       }
     });
-    const handlePositionYChange = useFunction((value: number | undefined) => {
+    const handlePositionYChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...car, position: { ...car.position, y: value } }, 'position-y');
       }
     });
-    const handleRotationChange = useFunction((value: number | undefined) => {
+    const handleRotationChange = useEventCallback((value: number | undefined) => {
       if (!isNil(value)) {
         onChange({ ...car, rotationDegrees: value }, 'rotation');
       }
@@ -149,7 +149,7 @@ const CarProperties = memo(
 
 export const SelectedTreeProperties = observer(
   ({ store, tree }: { readonly store: SitePlannerStore; readonly tree: TreeInstance }) => {
-    const handleChange = useFunction((nextTree: TreeInstance, field: TreeField) => {
+    const handleChange = useEventCallback((nextTree: TreeInstance, field: TreeField) => {
       store.pushHistory(`${nextTree.id}:${field}`);
       store.siteObjects.updateTree(nextTree);
     });
@@ -160,7 +160,7 @@ export const SelectedTreeProperties = observer(
 
 export const SelectedCarProperties = observer(
   ({ store, car }: { readonly store: SitePlannerStore; readonly car: CarInstance }) => {
-    const handleChange = useFunction((nextCar: CarInstance, field: CarField) => {
+    const handleChange = useEventCallback((nextCar: CarInstance, field: CarField) => {
       store.pushHistory(`${nextCar.id}:${field}`);
       store.siteObjects.updateCar(nextCar);
     });

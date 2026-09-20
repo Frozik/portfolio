@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { LogOut } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import { sharedT } from '../translations';
 import { Avatar } from '../ui/Avatar';
 import { useAuthSession } from './CommunicationProvider';
@@ -28,7 +28,7 @@ export const AccountChip = observer(
     readonly className?: string;
   }) => {
     const session = useAuthSession();
-    const handleClick = useFunction(() => {
+    const handleClick = useEventCallback(() => {
       session.signOut();
     });
 

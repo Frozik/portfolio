@@ -42,6 +42,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwind-merge": "catalog:",
-    "temporal-polyfill": "catalog:"
+    "temporal-polyfill": "catalog:",
+    "usehooks-ts": "catalog:"
   }
 }

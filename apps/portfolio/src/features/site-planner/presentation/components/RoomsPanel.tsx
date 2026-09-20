@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown, Droplets } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { BuildingRoom } from '../../application/room-scenes';
@@ -29,7 +29,7 @@ const RoomTypeItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (roomTypeId: RoomTypeId | undefined) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(roomTypeId));
+    const handleSelect = useEventCallback(() => onSelect(roomTypeId));
     const caption = isNil(roomTypeId)
       ? sitePlannerT.rooms.unassigned
       : sitePlannerT.rooms.types[roomTypeId];
@@ -68,11 +68,13 @@ const RoomRow = observer(
       ? `${labels.roomTitle} ${ordinal}`
       : labels.types[room.roomTypeId];
 
-    const handleSelect = useFunction((roomTypeId: RoomTypeId | undefined) => {
+    const handleSelect = useEventCallback((roomTypeId: RoomTypeId | undefined) => {
       store.building.setRoomType(buildingId, room, roomTypeId);
     });
-    const handlePointerEnter = useFunction(() => store.storeys.setHoveredRoomIndex(ordinal - 1));
-    const handlePointerLeave = useFunction(() => store.storeys.setHoveredRoomIndex(undefined));
+    const handlePointerEnter = useEventCallback(() =>
+      store.storeys.setHoveredRoomIndex(ordinal - 1)
+    );
+    const handlePointerLeave = useEventCallback(() => store.storeys.setHoveredRoomIndex(undefined));
 
     return (
       <div

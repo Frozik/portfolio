@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingId } from '../../domain/model/building';
@@ -29,10 +29,10 @@ const DeviceRow = memo(
     readonly device: ElectricalDevice;
     readonly ordinal: number;
   }) => {
-    const handleSelect = useFunction(() => {
+    const handleSelect = useEventCallback(() => {
       store.setSelection({ kind: 'device', buildingId, deviceId: device.id });
     });
-    const handleRemove = useFunction(() => {
+    const handleRemove = useEventCallback(() => {
       store.electrics.removeDevice(buildingId, device.id);
     });
 

@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -19,11 +19,11 @@ export const MatchResultOverlay = observer(() => {
   const championPlayer = store.world.players.find(player => player.id === champion?.playerId);
   const hasWinner = !isNil(champion) && champion.kills > NO_KILLS;
 
-  const handlePlayAgain = useFunction(() => {
+  const handlePlayAgain = useEventCallback(() => {
     store.startMatch();
   });
 
-  const handleChangePlayers = useFunction(() => {
+  const handleChangePlayers = useEventCallback(() => {
     store.returnToSetup();
   });
 

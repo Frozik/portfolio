@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { ChangeEvent } from 'react';
 import { memo, useMemo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { DialogShell } from '../../../../shared/ui/DialogShell';
@@ -33,17 +33,17 @@ export const ElevationCsvDialog = memo(
     const [text, setText] = useState('');
     const { marks, skippedLineNumbers } = useMemo(() => parseElevationCsv(text), [text]);
 
-    const handleChange = useFunction((event: ChangeEvent<HTMLTextAreaElement>) => {
+    const handleChange = useEventCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
       setText(event.target.value);
     });
 
-    const handleSubmit = useFunction(() => {
+    const handleSubmit = useEventCallback(() => {
       onSubmit(marks);
       setText('');
       onClose();
     });
 
-    const handleClose = useFunction(() => {
+    const handleClose = useEventCallback(() => {
       setText('');
       onClose();
     });

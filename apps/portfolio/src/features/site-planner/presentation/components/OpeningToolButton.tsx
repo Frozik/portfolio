@@ -1,6 +1,6 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { DoorOpen } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { OBJECT_EDITOR_SPECS } from '../../domain/model/editor-mode';
@@ -41,9 +41,9 @@ export const OpeningToolButton = observer(
   ({ store, side }: { readonly store: SitePlannerStore; readonly side: FlyoutSide }) => {
     const armedPreset = store.openings.armedOpeningPreset;
 
-    const handleActivate = useFunction(() => store.setActiveTool('building:opening'));
+    const handleActivate = useEventCallback(() => store.setActiveTool('building:opening'));
 
-    const handleChoose = useFunction((preset: OpeningPreset) => {
+    const handleChoose = useEventCallback((preset: OpeningPreset) => {
       store.openings.setArmedOpeningPreset(preset);
       store.setActiveTool('building:opening');
     });

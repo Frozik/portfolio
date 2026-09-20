@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { IPointerAimInput } from '../../application/pointer-aim-source';
 import { useScorchedStore } from '../../application/useScorchedStore';
@@ -57,7 +57,7 @@ const Stepper = memo(
     const initialTimeoutRef = useRef<number | undefined>(undefined);
     const intervalRef = useRef<number | undefined>(undefined);
 
-    const stopRepeat = useFunction(() => {
+    const stopRepeat = useEventCallback(() => {
       window.clearTimeout(initialTimeoutRef.current);
       window.clearInterval(intervalRef.current);
       initialTimeoutRef.current = undefined;
@@ -67,7 +67,7 @@ const Stepper = memo(
     // A finger still down when the overlay unmounts would nudge the barrel forever.
     useEffect(() => stopRepeat, [stopRepeat]);
 
-    const handlePointerDown = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handlePointerDown = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
       if (!isNil(pointerIdRef.current)) {
         return;
       }
@@ -85,7 +85,7 @@ const Stepper = memo(
       }, STEPPER_INITIAL_REPEAT_MS);
     });
 
-    const handlePointerEnd = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handlePointerEnd = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
       if (pointerIdRef.current !== event.pointerId) {
         return;
       }
@@ -143,17 +143,19 @@ export const TouchControls = observer(
 
     useEffect(() => () => pointerInput.release(), [pointerInput]);
 
-    const handleFirePointerDown = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
-      if (!isNil(firePointerIdRef.current)) {
-        return;
+    const handleFirePointerDown = useEventCallback(
+      (event: ReactPointerEvent<HTMLButtonElement>) => {
+        if (!isNil(firePointerIdRef.current)) {
+          return;
+        }
+
+        firePointerIdRef.current = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setIsFireActive(true);
       }
+    );
 
-      firePointerIdRef.current = event.pointerId;
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setIsFireActive(true);
-    });
-
-    const releaseFirePointer = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const releaseFirePointer = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
       if (firePointerIdRef.current !== event.pointerId) {
         return false;
       }
@@ -164,7 +166,7 @@ export const TouchControls = observer(
       return true;
     });
 
-    const handleFirePointerUp = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handleFirePointerUp = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
       if (releaseFirePointer(event)) {
         pointerInput.requestFire();
       }
@@ -174,11 +176,13 @@ export const TouchControls = observer(
      * A cancelled pointer is the system taking the touch away — a palm, a notification, a gesture
      * the browser claimed. The finger never came off the button, so the shot must not go off.
      */
-    const handleFirePointerCancel = useFunction((event: ReactPointerEvent<HTMLButtonElement>) => {
-      releaseFirePointer(event);
-    });
+    const handleFirePointerCancel = useEventCallback(
+      (event: ReactPointerEvent<HTMLButtonElement>) => {
+        releaseFirePointer(event);
+      }
+    );
 
-    const handleBadgeClick = useFunction(() => {
+    const handleBadgeClick = useEventCallback(() => {
       store.aim.setCarouselOpen(true);
     });
 

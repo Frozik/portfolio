@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Milliseconds } from '@frozik/utils/date/types';
 import { isNil } from 'lodash-es';
 import { Minus, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
+import { useEventCallback } from 'usehooks-ts';
 import type { RoomStore } from '../../application/RoomStore';
 import type { TimerSeverity } from '../../application/TimerModel';
 import {
@@ -63,13 +63,13 @@ export const Timer = observer(({ store }: { readonly store: RoomStore }) => {
   const { severity: timerSeverity, remainingMs: remainingTimerMs } = store.timer;
   const timer = store.currentSnapshot?.meta.timer;
 
-  const handleStart = useFunction(() => store.timer.start());
-  const handlePause = useFunction(() => store.timer.pause());
-  const handleReset = useFunction(() => store.timer.reset(DEFAULT_BRAINSTORM_DURATION_MS));
-  const handleDecrease = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleStart = useEventCallback(() => store.timer.start());
+  const handlePause = useEventCallback(() => store.timer.pause());
+  const handleReset = useEventCallback(() => store.timer.reset(DEFAULT_BRAINSTORM_DURATION_MS));
+  const handleDecrease = useEventCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     store.timer.addMilliseconds(-pickStep(event) as Milliseconds);
   });
-  const handleIncrease = useFunction((event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleIncrease = useEventCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     store.timer.addMilliseconds(pickStep(event));
   });
 

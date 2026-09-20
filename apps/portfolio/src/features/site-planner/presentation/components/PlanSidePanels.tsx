@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType } from 'react';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingLayerId } from '../../domain/model/building-layers';
@@ -151,7 +151,7 @@ export const PlanSidePanels = observer(({ store }: { readonly store: SitePlanner
   const sections = mode.kind === 'edit' ? EDITOR_SECTIONS[mode.target.kind](store) : VIEW_SECTIONS;
   const [closedTitles, setClosedTitles] = useState<readonly string[]>([]);
 
-  const handleToggle = useFunction((title: string) => {
+  const handleToggle = useEventCallback((title: string) => {
     setClosedTitles(previous =>
       previous.includes(title)
         ? previous.filter(candidate => candidate !== title)

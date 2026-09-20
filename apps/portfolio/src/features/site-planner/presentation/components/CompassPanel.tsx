@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil, range } from 'lodash-es';
 import { Navigation } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -81,7 +81,7 @@ const CompassDial = observer(({ store }: { readonly store: SitePlannerStore }) =
     halfWidth: NEEDLE_HALF_WIDTH,
   });
 
-  const turnTowardsPointer = useFunction((event: ReactPointerEvent<SVGSVGElement>) => {
+  const turnTowardsPointer = useEventCallback((event: ReactPointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const offset: Vector2 = {
       x: event.clientX - (bounds.left + bounds.width / 2),
@@ -101,7 +101,7 @@ const CompassDial = observer(({ store }: { readonly store: SitePlannerStore }) =
     );
   });
 
-  const handlePointerDown = useFunction((event: ReactPointerEvent<SVGSVGElement>) => {
+  const handlePointerDown = useEventCallback((event: ReactPointerEvent<SVGSVGElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     isTurningRef.current = true;
     // Announced before the needle moves: everything until the pointer comes up
@@ -110,13 +110,13 @@ const CompassDial = observer(({ store }: { readonly store: SitePlannerStore }) =
     turnTowardsPointer(event);
   });
 
-  const handlePointerMove = useFunction((event: ReactPointerEvent<SVGSVGElement>) => {
+  const handlePointerMove = useEventCallback((event: ReactPointerEvent<SVGSVGElement>) => {
     if (isTurningRef.current) {
       turnTowardsPointer(event);
     }
   });
 
-  const handlePointerRelease = useFunction(() => {
+  const handlePointerRelease = useEventCallback(() => {
     isTurningRef.current = false;
   });
 
@@ -190,7 +190,7 @@ const CompassDial = observer(({ store }: { readonly store: SitePlannerStore }) =
 export const CompassSettings = observer(({ store }: { readonly store: SitePlannerStore }) => {
   const { northOffsetDegrees } = store.settings.location;
 
-  const handleAzimuthChange = useFunction((value: number | undefined) => {
+  const handleAzimuthChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       // Typed one keystroke at a time, so the burst collapses into one step.
       store.pushHistory(NORTH_OFFSET_HISTORY_GROUP);
@@ -198,7 +198,7 @@ export const CompassSettings = observer(({ store }: { readonly store: SitePlanne
     }
   });
 
-  const handleResetToNorthUp = useFunction(() => {
+  const handleResetToNorthUp = useEventCallback(() => {
     store.pushHistory();
     store.document.setNorthOffsetDegrees(NORTH_UP_DEGREES);
   });

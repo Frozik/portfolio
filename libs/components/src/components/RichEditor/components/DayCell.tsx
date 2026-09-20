@@ -2,7 +2,7 @@ import type { Ref } from 'react';
 import { memo } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
-import { useFunction } from '../../../hooks/useFunction';
+import { useEventCallback } from 'usehooks-ts';
 import styles from '../styles.module.css';
 
 export const DayCell = memo(
@@ -29,7 +29,7 @@ export const DayCell = memo(
     readonly onSelect: (date: Temporal.PlainDate) => void;
     readonly locale: string;
   }) => {
-    const handleClick = useFunction(() => onSelect(date));
+    const handleClick = useEventCallback(() => onSelect(date));
 
     return (
       <button

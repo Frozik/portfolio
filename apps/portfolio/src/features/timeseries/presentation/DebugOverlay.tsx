@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { getIsHosted } from '@frozik/utils/isHosted';
 import { isNil } from 'lodash-es';
 import { memo, useEffect, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { ISharedTimeseriesRenderer } from '../application/render/types';
 import { timeseriesT } from './translations';
@@ -36,11 +36,11 @@ export const DebugOverlay = memo(
       return () => clearInterval(intervalId);
     }, [renderer]);
 
-    const handleDebugToggle = useFunction(() => {
+    const handleDebugToggle = useEventCallback(() => {
       renderer?.setDebugMode(!renderer.debugMode);
     });
 
-    const handleLoadingDelayToggle = useFunction(() => {
+    const handleLoadingDelayToggle = useEventCallback(() => {
       renderer?.setInstantLoad(!renderer.instantLoad);
     });
 

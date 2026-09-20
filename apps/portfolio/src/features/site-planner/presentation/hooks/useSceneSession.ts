@@ -1,7 +1,7 @@
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { SiteSceneSession } from '../../application/render/run-site-scene';
 import { runSiteScene } from '../../application/render/run-site-scene';
@@ -35,5 +35,5 @@ export function useSceneSession(
     };
   }, [canvasRef, store]);
 
-  return useFunction(() => sessionRef.current?.resetCamera());
+  return useEventCallback(() => sessionRef.current?.resetCamera());
 }

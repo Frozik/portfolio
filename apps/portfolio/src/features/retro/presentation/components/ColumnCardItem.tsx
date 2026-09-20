@@ -1,9 +1,9 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import type { CardId, ClientId, IRetroCard, RetroPhase } from '../../domain/types';
 import { CardView } from './CardView';
@@ -38,10 +38,10 @@ const ColumnCardItemComponent = ({
   readonly onDeleteCard: (cardId: CardId) => void;
   readonly onEditCard: (cardId: CardId, text: string) => void;
 }) => {
-  const handleDelete = useFunction(() => {
+  const handleDelete = useEventCallback(() => {
     onDeleteCard(card.id);
   });
-  const handleEdit = useFunction((text: string) => {
+  const handleEdit = useEventCallback((text: string) => {
     onEditCard(card.id, text);
   });
 

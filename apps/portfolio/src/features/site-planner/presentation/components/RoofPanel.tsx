@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { clamp, isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 
 import { Button } from '../../../../shared/ui/Button';
 import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
@@ -42,7 +42,7 @@ const CoverItem = memo(
     readonly isSelected: boolean;
     readonly onSelect: (cover: RoofCover) => void;
   }) => {
-    const handleSelect = useFunction(() => onSelect(cover));
+    const handleSelect = useEventCallback(() => onSelect(cover));
 
     return (
       <DropdownItem
@@ -76,7 +76,7 @@ const ZoneRow = observer(
     const labels = sitePlannerT.roof;
     const caption = `${labels.zoneTitle} ${ordinal} · ${labels.covers[zone.cover]}`;
 
-    const handleSelect = useFunction((cover: RoofCover) => {
+    const handleSelect = useEventCallback((cover: RoofCover) => {
       store.roof.setRoofCover(buildingId, zone, cover);
     });
 
@@ -135,27 +135,27 @@ const PitchedRoofSection = observer(({ store }: { readonly store: SitePlannerSto
   const roof = store.roof.editedPitchedRoof;
   const scene = store.roof.editedPitchedRoofScene;
 
-  const handleToggle = useFunction(() => store.roof.togglePitchedRoof());
-  const handleKindChange = useFunction((kind: string) => {
+  const handleToggle = useEventCallback(() => store.roof.togglePitchedRoof());
+  const handleKindChange = useEventCallback((kind: string) => {
     const parsed = parsePitchedRoofKind(kind);
 
     if (!isNil(parsed)) {
       store.roof.updatePitchedRoof({ kind: parsed });
     }
   });
-  const handlePitchChange = useFunction((value: number | undefined) => {
+  const handlePitchChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.roof.updatePitchedRoof({
         pitchDegrees: clamp(value, MIN_ROOF_PITCH_DEGREES, MAX_ROOF_PITCH_DEGREES),
       });
     }
   });
-  const handleOverhangChange = useFunction((value: number | undefined) => {
+  const handleOverhangChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.roof.updatePitchedRoof({ overhangMeters: Math.max(0, value) });
     }
   });
-  const handleRidgeChange = useFunction((value: number | undefined) => {
+  const handleRidgeChange = useEventCallback((value: number | undefined) => {
     if (!isNil(value)) {
       store.roof.updatePitchedRoof({ ridgeDegrees: normalizeTurnDegrees(value) });
     }

@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
@@ -65,7 +65,7 @@ const ActionItemRow = observer(
     readonly canEdit: boolean;
     readonly store: RoomStore;
   }) => {
-    const handleDelete = useFunction(() => {
+    const handleDelete = useEventCallback(() => {
       store.deleteActionItem(id);
     });
 
@@ -99,11 +99,11 @@ const ActionItemComposer = observer(
     const trimmedLength = draft.trim().length;
     const isSubmitDisabled = trimmedLength === 0;
 
-    const handleChange = useFunction((event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = useEventCallback((event: React.ChangeEvent<HTMLInputElement>) => {
       setDraft(event.target.value);
     });
 
-    const handleSubmit = useFunction((event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = useEventCallback((event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (isSubmitDisabled) {
         return;

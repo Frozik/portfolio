@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
-import { useFunction } from '@frozik/components/hooks/useFunction';
 import { PhoneOff } from 'lucide-react';
 import { memo, useState } from 'react';
+import { useEventCallback } from 'usehooks-ts';
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
@@ -16,15 +16,15 @@ const buttonClass =
 const LeaveButtonComponent = ({ onLeave }: { readonly onLeave: () => void }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  const handleOpenConfirm = useFunction(() => {
+  const handleOpenConfirm = useEventCallback(() => {
     setIsConfirmOpen(true);
   });
 
-  const handleCancel = useFunction(() => {
+  const handleCancel = useEventCallback(() => {
     setIsConfirmOpen(false);
   });
 
-  const handleConfirm = useFunction(() => {
+  const handleConfirm = useEventCallback(() => {
     setIsConfirmOpen(false);
     onLeave();
   });
