@@ -64,6 +64,13 @@ jobs:
     name: Lighthouse budgets
     runs-on: ubuntu-latest
     needs: check
+    permissions:
+      contents: read
+      # Unused while `upload.target` is `filesystem` — LHCI only posts a commit
+      # status from its `lhci` and `temporary-public-storage` targets. Granted
+      # together with the token below so switching target is a one-line change
+      # rather than a confusing 403.
+      statuses: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,6 +96,11 @@ jobs:
       - name: Lighthouse CI against the production build
         working-directory: apps/portfolio
         run: pnpm exec lhci autorun
+        env:
+          # Satisfies lhci's healthcheck, which warns whenever any upload target
+          # is configured without a token, without checking whether that target
+          # can use one. Unused today; ready if the target ever changes.
+          LHCI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # The image the production box runs. On a pull request it is only built
   # (the old behaviour, a compile check); on main it is published to GHCR.

@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "startServerCommand": "pnpm exec vite preview --port 4173 --strictPort",
+      "startServerCommand": "NO_COLOR=1 pnpm exec vite preview --port 4173 --strictPort",
       "startServerReadyPattern": "localhost:4173",
       "startServerReadyTimeout": 60000,
       "url": ["http://localhost:4173/portfolio/"],
