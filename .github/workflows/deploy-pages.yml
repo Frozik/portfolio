@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
@@ -56,7 +56,7 @@ jobs:
     outputs:
       run: ${{ steps.gate.outputs.run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
@@ -109,7 +109,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           # Full history and tags: a rebuild stamps the app with `git describe --tags`.
@@ -132,7 +132,7 @@ jobs:
         with:
           auto-install: true
       - if: hashFiles('apps/portfolio/dist/index.html') == ''
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .moon/cache
           key: moon-${{ runner.os }}-${{ github.sha }}
@@ -142,7 +142,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           PORTFOLIO_VERSION="$(pnpm exec predict-version)" moon run portfolio:build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/portfolio/dist
 
