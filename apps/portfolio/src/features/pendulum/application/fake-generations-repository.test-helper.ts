@@ -6,7 +6,6 @@ import type {
   IRepositoryObserver,
   IRobotRecord,
 } from '../domain/ports/generations-repository';
-import type { RobotModelUrl } from '../domain/types';
 
 export interface IFakeGenerationsRepository extends IGenerationsRepository {
   readonly robots: Map<string, IRobotRecord>;
@@ -45,16 +44,18 @@ export function createFakeGenerationsRepository(): IFakeGenerationsRepository {
       return () => observers.delete(observer);
     },
     async addGeneration(competitionStart, generation) {
-      persisted.set(competitionStart, [...(persisted.get(competitionStart) ?? []), generation]);
+      // IndexedDB stores by structured clone, so a generation carrying anything
+      // it cannot clone — an observable proxy, most easily — must fail here too.
+      persisted.set(competitionStart, [
+        ...(persisted.get(competitionStart) ?? []),
+        structuredClone(generation),
+      ]);
     },
     async deleteCompetition(competitionStart) {
       persisted.delete(competitionStart);
     },
     async findRobot(robotName) {
       return robots.get(robotName);
-    },
-    async saveRobotModel(competitionStart, robot) {
-      return `fake://${competitionStart}/${robot.name}` as RobotModelUrl;
     },
     emitCompetitionStarts(starts) {
       for (const observer of startsObservers) {

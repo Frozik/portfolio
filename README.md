@@ -14,7 +14,7 @@ retrospective boards — all in the browser, all written from scratch in
 strict TypeScript.
 
 **Stack:** React 19 · TypeScript 7 · MobX 7 · Tailwind CSS v4 · Radix UI ·
-Vite 8 · WebGPU · WebRTC · Yjs · Socket.IO · TensorFlow.js · MediaPipe.
+Vite 8 · WebGPU · WebRTC · Yjs · Socket.IO · MediaPipe.
 
 ## Demos
 
@@ -23,7 +23,7 @@ Every demo has its own README with the details; the landing page is the
 
 | Demo | What it shows | Live |
 |---|---|---|
-| [Pendulum](./apps/portfolio/src/features/pendulum/README.md) | A genetic algorithm evolves TensorFlow.js networks to swing up and balance an inverted pendulum on a cart; closed-form physics, no engine. | [open](https://frozik.github.io/portfolio/pendulum)
+| [Pendulum](./apps/portfolio/src/features/pendulum/README.md) | A genetic algorithm evolves small neural networks to swing up and balance an inverted pendulum on a cart; own inference, closed-form physics, no engine. | [open](https://frozik.github.io/portfolio/pendulum)
 | [Sudoku](./apps/portfolio/src/features/sudoku/README.md) | Sudoku with four difficulties, pen and notes modes, undo and validation. | [open](https://frozik.github.io/portfolio/sudoku)
 | [Sun](./apps/portfolio/src/features/sun/README.md) | 250,000 WebGPU particles on a sphere with an inertial orbit camera. | [open](https://frozik.github.io/portfolio/sun)
 | [Graphics](./apps/portfolio/src/features/graphics/README.md) | GPU-side 2D primitives — variable-width lines, gradients, animated shapes — at near-zero CPU cost. | [open](https://frozik.github.io/portfolio/graphics)

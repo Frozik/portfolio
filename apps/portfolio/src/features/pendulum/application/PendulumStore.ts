@@ -1,12 +1,11 @@
 import { getNowISO8601 } from '@frozik/utils/date/now';
 import type { ISO } from '@frozik/utils/date/types';
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
+import { failedValueDescriptor } from '@frozik/utils/value-descriptors/failedValueDescriptor';
 import { ValueDescriptorError } from '@frozik/utils/value-descriptors/fails/error';
-import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptor } from '@frozik/utils/value-descriptors/types';
 import {
   createSyncedValueDescriptor,
-  createUnsyncedValueDescriptor,
   EMPTY_VD,
   isFailValueDescriptor,
   isLoadingValueDescriptor,
@@ -32,7 +31,7 @@ interface IPendulumStoreDependencies {
   readonly repository: IGenerationsRepository;
   readonly frames: IFrameScheduler;
   readonly createKeyStateSource: () => IKeyStateSource;
-  readonly loadRobot: (record: IRobotRecord) => Promise<IRobotPlayer>;
+  readonly loadRobot: (record: IRobotRecord) => IRobotPlayer;
 }
 
 export class PendulumStore {
@@ -86,7 +85,10 @@ export class PendulumStore {
         },
         error: error => {
           runInAction(() => {
-            this.competitionsList = createUnsyncedValueDescriptor(toFail(error));
+            this.competitionsList = failedValueDescriptor(
+              'pendulum: watching the competitions list',
+              error
+            );
           });
         },
       }),
@@ -127,7 +129,10 @@ export class PendulumStore {
       },
       error: error => {
         runInAction(() => {
-          this.generations = createUnsyncedValueDescriptor(toFail(error));
+          this.generations = failedValueDescriptor(
+            `pendulum: watching the generations of ${competitionStart}`,
+            error
+          );
         });
       },
     });
@@ -142,7 +147,10 @@ export class PendulumStore {
 
     this.dependencies.repository.deleteCompetition(competitionStart).catch((error: unknown) => {
       runInAction(() => {
-        this.generations = createUnsyncedValueDescriptor(toFail(error));
+        this.generations = failedValueDescriptor(
+          `pendulum: deleting the competition ${competitionStart}`,
+          error
+        );
       });
     });
   }
@@ -184,7 +192,10 @@ export class PendulumStore {
             return;
           }
           runInAction(() => {
-            this.selectedRobot = createUnsyncedValueDescriptor(toFail(error));
+            this.selectedRobot = failedValueDescriptor(
+              `pendulum: loading the robot "${robotName}"`,
+              error
+            );
           });
         }
       );
@@ -222,7 +233,6 @@ export class PendulumStore {
       competitionStart,
       getGenerations: () => this.syncedGenerations,
       onGenerationCompleted: generation => this.appendGeneration(competitionStart, generation),
-      saveRobotModel: (start, robot) => this.dependencies.repository.saveRobotModel(start, robot),
     });
   }
 
@@ -233,7 +243,10 @@ export class PendulumStore {
       .addGeneration(competitionStart, generation)
       .catch((error: unknown) => {
         runInAction(() => {
-          this.generations = createUnsyncedValueDescriptor(toFail(error));
+          this.generations = failedValueDescriptor(
+            `pendulum: persisting the generation ${generation.id}`,
+            error
+          );
         });
       });
   }
@@ -246,7 +259,7 @@ export class PendulumStore {
 
     this.fitness.playground.addCompetition(competition).catch((error: unknown) => {
       runInAction(() => {
-        this.generations = createUnsyncedValueDescriptor(toFail(error));
+        this.generations = failedValueDescriptor('pendulum: starting the competition', error);
       });
     });
   }

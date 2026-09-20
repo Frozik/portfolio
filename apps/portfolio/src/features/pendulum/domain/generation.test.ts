@@ -1,6 +1,6 @@
 import type { IGeneration } from './generation';
 import { maxPopulationSize, mergeSnapshotWithOptimisticTail } from './generation';
-import type { RobotModelUrl } from './types';
+import { fakeNetworkSnapshot } from './neural-network/fake-network.test-helper';
 
 function generation(id: number, playersCount = 1): IGeneration {
   return {
@@ -8,7 +8,7 @@ function generation(id: number, playersCount = 1): IGeneration {
     maxScore: id,
     players: Array.from({ length: playersCount }, (_, index) => ({
       name: `robot-${id}-${index}`,
-      modelUrl: `model-${id}-${index}` as RobotModelUrl,
+      network: fakeNetworkSnapshot(),
       score: id,
     })),
   };

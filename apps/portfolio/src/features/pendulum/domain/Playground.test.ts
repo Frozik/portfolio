@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
 
+import { fakeNetworkSnapshot } from './neural-network/fake-network.test-helper';
 import { Playground } from './Playground';
 import { createFakeFrameScheduler } from './ports/fake-frame-scheduler.test-helper';
 import type {
@@ -54,10 +55,10 @@ function createRobot(name: string): IRobotPlayer & { readonly dispose: TDisposeS
     type: EPlayerType.Robot,
     name,
     play: () => ({ pivotVelocity: 0 }),
-    mutate: async () => robot,
-    crossoverModels: async () => robot,
+    mutate: () => robot,
+    crossoverWith: () => robot,
     describeNetwork: () => [],
-    save: async () => undefined,
+    snapshot: fakeNetworkSnapshot,
     dispose: vi.fn(() => undefined),
   };
   return robot;

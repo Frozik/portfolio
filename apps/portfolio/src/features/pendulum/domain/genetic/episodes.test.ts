@@ -1,3 +1,4 @@
+import { fakeNetworkSnapshot } from '../neural-network/fake-network.test-helper';
 import type { IRobotPlayer } from '../types';
 import { EPlayerType } from '../types';
 import { EPISODES_PER_ROBOT, episodesOf, sumScoresByPlayer } from './episodes';
@@ -7,10 +8,10 @@ function createRobot(name: string): IRobotPlayer {
     type: EPlayerType.Robot,
     name,
     play: () => ({ pivotVelocity: 0 }),
-    mutate: async () => robot,
-    crossoverModels: async () => robot,
+    mutate: () => robot,
+    crossoverWith: () => robot,
     describeNetwork: () => [],
-    save: async () => undefined,
+    snapshot: fakeNetworkSnapshot,
     dispose: () => undefined,
   };
   return robot;

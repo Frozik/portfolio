@@ -1,13 +1,7 @@
 import type { ISO } from '@frozik/utils/date/types';
-import type { Opaque } from '@frozik/utils/types/base';
 
+import type { INetworkSnapshot } from './neural-network/DenseNetwork';
 import type { TLayerDescriptor } from './neural-network/types';
-
-/**
- * Storage address of a persisted robot network. Minted and resolved only by
- * the generations repository; the domain carries it around unopened.
- */
-export type RobotModelUrl = Opaque<'RobotModelUrl', string>;
 
 export interface IPoint {
   readonly x: number;
@@ -66,12 +60,13 @@ export interface IRobotPlayer {
 
   play(world: IWorld, deltaTime: DOMHighResTimeStamp): IAction;
 
-  mutate(mutationRate?: number): Promise<IRobotPlayer>;
-  crossoverModels(secondParent: IRobotPlayer): Promise<IRobotPlayer>;
+  mutate(mutationRate?: number): IRobotPlayer;
+  crossoverWith(secondParent: IRobotPlayer): IRobotPlayer;
 
   describeNetwork(): readonly TLayerDescriptor[];
 
-  save(modelUrl: RobotModelUrl): Promise<void>;
+  /** The weights as a value the repository can store; the player keeps no storage address. */
+  snapshot(): INetworkSnapshot;
 
   dispose(): void;
 }

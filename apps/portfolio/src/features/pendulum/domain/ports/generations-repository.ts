@@ -1,11 +1,11 @@
 import type { ISO } from '@frozik/utils/date/types';
 
 import type { IGeneration } from '../generation';
-import type { IRobotPlayer, RobotModelUrl } from '../types';
+import type { INetworkSnapshot } from '../neural-network/DenseNetwork';
 
 export interface IRobotRecord {
   readonly name: string;
-  readonly modelUrl: RobotModelUrl;
+  readonly network: INetworkSnapshot;
   readonly score: number;
 }
 
@@ -26,6 +26,4 @@ export interface IGenerationsRepository {
   addGeneration(competitionStart: ISO, generation: IGeneration): Promise<void>;
   deleteCompetition(competitionStart: ISO): Promise<void>;
   findRobot(robotName: string): Promise<IRobotRecord | undefined>;
-  /** Stores the robot's network and returns the address it can be reloaded from. */
-  saveRobotModel(competitionStart: ISO, robot: IRobotPlayer): Promise<RobotModelUrl>;
 }

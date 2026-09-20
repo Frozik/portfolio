@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
@@ -122,6 +123,7 @@ export class CandleStreamStore {
     try {
       record = await db.candles.getBlock(blockId);
     } catch (error) {
+      reportError(`binance-view: reading the candle block ${blockId}`, error);
       this.persistence.disable(toFail(error));
     }
     this.pendingReloads.delete(blockId);

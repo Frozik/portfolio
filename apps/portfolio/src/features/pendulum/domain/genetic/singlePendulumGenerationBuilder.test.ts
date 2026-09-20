@@ -1,4 +1,5 @@
 import { RAILS_HALF_LENGTH } from '../constants';
+import { fakeNetworkSnapshot } from '../neural-network/fake-network.test-helper';
 import type { IRobotPlayer, IScoredPlayer } from '../types';
 import { EPlayerType } from '../types';
 import { MAX_SCORE_PER_MS, SEASONED_SCORE_PER_MS } from './constants';
@@ -13,10 +14,10 @@ function createRobot(name: string): IRobotPlayer {
     type: EPlayerType.Robot,
     name,
     play: () => ({ pivotVelocity: 0 }),
-    mutate: async () => createRobot(`${name}'`),
-    crossoverModels: async () => createRobot(`${name}x`),
+    mutate: () => createRobot(`${name}'`),
+    crossoverWith: () => createRobot(`${name}x`),
     describeNetwork: () => [],
-    save: async () => undefined,
+    snapshot: fakeNetworkSnapshot,
     dispose: () => undefined,
   };
   return robot;

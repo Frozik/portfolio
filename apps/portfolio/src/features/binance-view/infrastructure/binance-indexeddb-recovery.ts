@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 
@@ -41,6 +42,7 @@ export async function openBinanceDbWithQuotaRecovery(dbName: string): Promise<Bi
     return { kind: 'opened', db };
   } catch (error) {
     if (!isQuotaExceeded(error)) {
+      reportError('binance-view: opening the local database', error);
       return { kind: 'unavailable', reason: toFail(error) };
     }
   }
@@ -49,6 +51,7 @@ export async function openBinanceDbWithQuotaRecovery(dbName: string): Promise<Bi
     await deleteDatabase(dbName);
     return { kind: 'opened', db: await openBinanceDb(dbName) };
   } catch (recoveryError) {
+    reportError('binance-view: recreating the local database after a quota failure', recoveryError);
     return { kind: 'unavailable', reason: toFail(recoveryError) };
   }
 }

@@ -15,21 +15,17 @@ import { firstValueFrom, from, merge, of, Subject } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
 import type { IGeneration } from '../domain/generation';
+import type { INetworkSnapshot } from '../domain/neural-network/DenseNetwork';
 import type {
   IGenerationsRepository,
   IRepositoryObserver,
   IRobotRecord,
 } from '../domain/ports/generations-repository';
-import type { IRobotPlayer, RobotModelUrl } from '../domain/types';
-
-enum ERobotType {
-  TensorFlow = 'TensorFlow',
-}
 
 interface IDBRobot {
-  readonly type: ERobotType.TensorFlow;
   readonly name: string;
-  readonly modelUrl: RobotModelUrl;
+  /** Typed arrays survive structured clone, so the weights are stored as they are. */
+  readonly network: INetworkSnapshot;
   readonly score: number;
 }
 
@@ -40,7 +36,7 @@ interface IDBGeneration {
   readonly robotNames: readonly string[];
 }
 
-const CURRENT_DATABASE_VERSION = 2;
+const CURRENT_DATABASE_VERSION = 3;
 const DATABASE_NAME = 'competitions';
 
 const ROBOTS_TABLE_NAME = 'robots';
@@ -57,15 +53,19 @@ const ROBOT_NAME_FIELD: keyof IDBRobot = 'name';
 const ROBOT_SCORE_FIELD: keyof IDBRobot = 'score';
 
 const REMOVE_REDUNDANT_NAME_INDEX_VERSION = 2;
+const STORE_WEIGHTS_WITH_ROBOT_VERSION = 3;
+
+const TENSORFLOW_DATABASE_NAME = 'tensorflowjs';
 
 const DATABASE_SHARE_RESET_DELAY = 30_000 as Milliseconds;
 
-// tf.js resolves this scheme to its own IndexedDB store; the robot record keeps
-// the very same URL so the model is reloaded from where it was saved.
-const ROBOT_MODEL_URL_SCHEME = 'indexeddb://';
-
-function buildRobotModelUrl(competitionStart: ISO, robotName: string): RobotModelUrl {
-  return `${ROBOT_MODEL_URL_SCHEME}${competitionStart}-player-${robotName}` as RobotModelUrl;
+/**
+ * tf.js kept the weights in a database of its own, which nothing reads now that
+ * robots carry theirs. A failed delete only leaves disk behind, so the app
+ * neither waits for it nor reacts to it.
+ */
+function discardTensorflowStorage(): void {
+  indexedDB.deleteDatabase(TENSORFLOW_DATABASE_NAME);
 }
 
 interface IDBCompetitions extends DBSchema {
@@ -150,11 +150,6 @@ export function createIndexedDbGenerationsRepository(): IGenerationsRepository {
     findRobot(robotName) {
       return withDatabase(database => getRobot(database, robotName));
     },
-    async saveRobotModel(competitionStart, robot: IRobotPlayer) {
-      const modelUrl = buildRobotModelUrl(competitionStart, robot.name);
-      await robot.save(modelUrl);
-      return modelUrl;
-    },
   };
 }
 
@@ -163,8 +158,9 @@ async function createGenerationDB(
 ): Promise<IDBPDatabase<IDBCompetitions>> {
   const currentVersion = (await getDatabaseVersion(DATABASE_NAME)) ?? 0;
   const requestedVersion = Math.max(currentVersion, CURRENT_DATABASE_VERSION);
+  let droppedTensorflowRobots = false;
 
-  return createDB<IDBCompetitions>(DATABASE_NAME, requestedVersion, {
+  const database = await createDB<IDBCompetitions>(DATABASE_NAME, requestedVersion, {
     async blocked() {
       await dbCallback(EDatabaseErrorCallbackType.Blocked);
     },
@@ -203,8 +199,23 @@ async function createGenerationDB(
         // lookups already go through the primary key. Drop the dead index.
         transaction.objectStore(ROBOTS_TABLE_NAME).deleteIndex(ROBOT_NAME_INDEX);
       }
+
+      if (oldVersion > 0 && oldVersion < STORE_WEIGHTS_WITH_ROBOT_VERSION) {
+        // Robots used to hold a tf.js storage address instead of their weights,
+        // and the database behind those addresses is gone. Nothing can replay
+        // such a competition, so its generations go with its robots.
+        transaction.objectStore(ROBOTS_TABLE_NAME).clear();
+        transaction.objectStore(GENERATIONS_TABLE_NAME).clear();
+        droppedTensorflowRobots = true;
+      }
     },
   });
+
+  if (droppedTensorflowRobots) {
+    discardTensorflowStorage();
+  }
+
+  return database;
 }
 
 async function getCompetitions(database: IDBPDatabase<IDBCompetitions>): Promise<readonly ISO[]> {
@@ -272,7 +283,7 @@ async function getGenerations(
   const readRobot = (robotName: string): IRobotRecord => {
     const robot = robotsMap.get(robotName);
     assert(!isNil(robot), `Robot "${robotName}" was loaded with its generation`);
-    return { name: robot.name, modelUrl: robot.modelUrl, score: robot.score };
+    return { name: robot.name, network: robot.network, score: robot.score };
   };
 
   return orderedGenerations.map(({ robotNames, id, maxScore }) => ({
@@ -293,7 +304,7 @@ async function getRobot(
 
   return isNil(robot)
     ? undefined
-    : { name: robot.name, modelUrl: robot.modelUrl, score: robot.score };
+    : { name: robot.name, network: robot.network, score: robot.score };
 }
 
 async function deleteCompetition(
@@ -358,9 +369,8 @@ async function addGeneration(
     ...generation.players.map(async player => {
       const robot = await robotsStore.get(player.name);
       await robotsStore.put({
-        type: ERobotType.TensorFlow,
         name: player.name,
-        modelUrl: player.modelUrl,
+        network: player.network,
         score: isNil(robot) ? player.score : Math.max(robot.score, player.score),
       });
     }),

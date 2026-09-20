@@ -1,10 +1,10 @@
 import { last } from 'lodash-es';
 
-import type { RobotModelUrl } from './types';
+import type { INetworkSnapshot } from './neural-network/DenseNetwork';
 
 export interface IGenerationPlayer {
   readonly name: string;
-  readonly modelUrl: RobotModelUrl;
+  readonly network: INetworkSnapshot;
   readonly score: number;
 }
 

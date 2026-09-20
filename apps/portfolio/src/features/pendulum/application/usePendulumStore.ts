@@ -1,6 +1,6 @@
 import { useRootStore } from '../../../app/stores/StoreContext';
 import { useRefcountedFeatureStore } from '../../../app/stores/useRefcountedFeatureStore';
-import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
+import { NetworkPlayer } from '../domain/players/NetworkPlayer';
 import { animationFrameScheduler } from '../infrastructure/animation-frame-scheduler';
 import { createIndexedDbGenerationsRepository } from '../infrastructure/IndexedDBGenerationsRepository';
 import { WindowKeyStateSource } from '../infrastructure/WindowKeyStateSource';
@@ -19,7 +19,7 @@ export function usePendulumStore(): PendulumStore {
         repository: createIndexedDbGenerationsRepository(),
         frames: animationFrameScheduler,
         createKeyStateSource: () => new WindowKeyStateSource(),
-        loadRobot: record => TensorflowPlayer.load(record.name, record.modelUrl),
+        loadRobot: record => NetworkPlayer.fromSnapshot(record.name, record.network),
       })
   );
 

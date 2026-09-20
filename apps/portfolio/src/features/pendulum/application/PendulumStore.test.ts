@@ -8,8 +8,9 @@ import {
 } from '@frozik/utils/value-descriptors/utils';
 import type { Mock } from 'vitest';
 import type { IGeneration } from '../domain/generation';
+import { fakeNetworkSnapshot } from '../domain/neural-network/fake-network.test-helper';
 import { createFakeFrameScheduler } from '../domain/ports/fake-frame-scheduler.test-helper';
-import type { IRobotPlayer, RobotModelUrl } from '../domain/types';
+import type { IRobotPlayer } from '../domain/types';
 import { EPlayerType } from '../domain/types';
 import { createFakeGenerationsRepository } from './fake-generations-repository.test-helper';
 
@@ -21,7 +22,7 @@ function generation(id: number): IGeneration {
   return {
     id,
     maxScore: id,
-    players: [{ name: `robot-${id}`, modelUrl: `fake://${id}` as RobotModelUrl, score: id }],
+    players: [{ name: `robot-${id}`, network: fakeNetworkSnapshot(), score: id }],
   };
 }
 
@@ -32,10 +33,10 @@ function createRobot(name: string): TSpiedRobot {
     type: EPlayerType.Robot,
     name,
     play: () => ({ pivotVelocity: 0 }),
-    mutate: async () => robot,
-    crossoverModels: async () => robot,
+    mutate: () => robot,
+    crossoverWith: () => robot,
     describeNetwork: () => [],
-    save: async () => undefined,
+    snapshot: fakeNetworkSnapshot,
     dispose: vi.fn(() => undefined),
   };
   return robot;
@@ -57,7 +58,7 @@ function setup() {
       keyStateSources.push(source);
       return source;
     },
-    loadRobot: async record => {
+    loadRobot: record => {
       const robot = robots.get(record.name);
       if (robot === undefined) {
         throw new Error(`no robot ${record.name}`);
@@ -196,7 +197,7 @@ describe('PendulumStore test player', () => {
     const { store, repository, robots, keyStateSources } = setup();
     const robot = createRobot('r1');
     robots.set('r1', robot);
-    repository.robots.set('r1', { name: 'r1', modelUrl: 'fake://r1' as RobotModelUrl, score: 1 });
+    repository.robots.set('r1', { name: 'r1', network: fakeNetworkSnapshot(), score: 1 });
 
     store.selectRobot('r1');
     await flushPromises();
@@ -230,12 +231,12 @@ describe('PendulumStore test player', () => {
     robots.set('fast', fast);
     repository.robots.set('slow', {
       name: 'slow',
-      modelUrl: 'fake://s' as RobotModelUrl,
+      network: fakeNetworkSnapshot(),
       score: 1,
     });
     repository.robots.set('fast', {
       name: 'fast',
-      modelUrl: 'fake://f' as RobotModelUrl,
+      network: fakeNetworkSnapshot(),
       score: 1,
     });
 

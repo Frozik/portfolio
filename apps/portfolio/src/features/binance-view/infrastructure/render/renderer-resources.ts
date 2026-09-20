@@ -1,4 +1,5 @@
 import { assert } from '@frozik/utils/assert/assert';
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
 import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
@@ -64,6 +65,7 @@ async function requestDevice(adapter: GPUAdapter): Promise<GPUDevice | ValueDesc
   try {
     return await adapter.requestDevice({ requiredLimits });
   } catch (error) {
+    reportError('binance-view: requesting a WebGPU device', error);
     return toFail(error);
   }
 }
@@ -195,6 +197,7 @@ export async function initRendererResources(
     };
   } catch (error) {
     device.destroy();
+    reportError('binance-view: building the WebGPU render pipelines', error);
     return { kind: 'unsupported', reason: toFail(error) };
   }
 }

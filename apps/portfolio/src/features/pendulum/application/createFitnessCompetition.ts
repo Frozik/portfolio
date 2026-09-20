@@ -8,12 +8,9 @@ import {
   POPULATION_SIZE,
 } from '../domain/genetic/constants';
 import { createSinglePendulumScoreCalculator } from '../domain/genetic/createSinglePendulumScoreCalculator';
-import { createTensorflowPlayers } from '../domain/genetic/createTensorflowPlayers';
 import { episodesOf, sumScoresByPlayer } from '../domain/genetic/episodes';
-import { loadTensorflowPlayers } from '../domain/genetic/loadTensorflowPlayers';
 import { singlePendulumGenerationBuilder } from '../domain/genetic/singlePendulumGenerationBuilder';
-import { TensorflowPlayer } from '../domain/players/TensorflowPlayer';
-import type { IGenerationsRepository } from '../domain/ports/generations-repository';
+import { NetworkPlayer } from '../domain/players/NetworkPlayer';
 import type { ICompetition, INextGenerationEntry, IScoredPlayer, TPlayer } from '../domain/types';
 import { isScoredRobot } from '../domain/types';
 
@@ -29,17 +26,15 @@ export function createFitnessCompetition({
   competitionStart,
   getGenerations,
   onGenerationCompleted,
-  saveRobotModel,
 }: {
   readonly competitionStart: ISO;
   readonly getGenerations: () => readonly IGeneration[];
   readonly onGenerationCompleted: (generation: IGeneration) => void;
-  readonly saveRobotModel: IGenerationsRepository['saveRobotModel'];
 }): ICompetition {
   const breedNextGeneration = singlePendulumGenerationBuilder(
     POPULATION_SIZE,
     MAX_RUNS,
-    () => new TensorflowPlayer()
+    () => new NetworkPlayer()
   );
 
   let completedGenerationsCount = getGenerations().length;
@@ -53,8 +48,8 @@ export function createFitnessCompetition({
     async init(): Promise<readonly INextGenerationEntry[]> {
       const savedPlayers = getGenerations().at(-1)?.players;
       const players = isNil(savedPlayers)
-        ? await createTensorflowPlayers(POPULATION_SIZE)
-        : await loadTensorflowPlayers(savedPlayers);
+        ? Array.from({ length: POPULATION_SIZE }, () => new NetworkPlayer())
+        : savedPlayers.map(({ name, network }) => NetworkPlayer.fromSnapshot(name, network));
 
       return players.flatMap(player => episodesOf(player));
     },
@@ -74,13 +69,11 @@ export function createFitnessCompetition({
 
       const playersWithScore = sumScoresByPlayer(episodesWithScore);
 
-      const players = await Promise.all(
-        playersWithScore.filter(isScoredRobot).map(async ({ player, score }) => ({
-          name: player.name,
-          modelUrl: await saveRobotModel(competitionStart, player),
-          score,
-        }))
-      );
+      const players = playersWithScore.filter(isScoredRobot).map(({ player, score }) => ({
+        name: player.name,
+        network: player.snapshot(),
+        score,
+      }));
 
       onGenerationCompleted({
         id: completedGenerationsCount,

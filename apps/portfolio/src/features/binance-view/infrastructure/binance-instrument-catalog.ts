@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { EValueDescriptorErrorCode } from '@frozik/utils/value-descriptors/codes';
 import { Fail } from '@frozik/utils/value-descriptors/fails/fail';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
@@ -92,6 +93,7 @@ export function createBinanceInstrumentCatalog(apiHost: string): IInstrumentCata
         const listing: IInstrumentListing = { tickSize, lastPrice };
         return { kind: 'listed', listing };
       } catch (error) {
+        reportError(`binance-view: looking up the instrument ${symbol}`, error);
         return { kind: 'failed', reason: toFail(error) };
       }
     },

@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 
@@ -35,6 +36,7 @@ export async function persistAggregateBlock(
     });
     return undefined;
   } catch (error) {
+    reportError(`binance-view: storing the aggregate block ${event.block.blockId}`, error);
     return toFail(error);
   }
 }
@@ -51,6 +53,7 @@ export async function persistRawTrades(
     await db.putRawTrades({ blockId: event.block.blockId, bucketsRaw });
     return undefined;
   } catch (error) {
+    reportError(`binance-view: storing the raw trades of block ${event.block.blockId}`, error);
     return toFail(error);
   }
 }
@@ -69,6 +72,7 @@ export async function loadRawTradesFromDb(
     );
     return { kind: 'loaded', buckets };
   } catch (error) {
+    reportError(`binance-view: loading the raw trades of block ${blockId}`, error);
     return { kind: 'failed', reason: toFail(error) };
   }
 }

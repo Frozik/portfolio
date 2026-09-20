@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 import { isNil } from 'lodash-es';
@@ -39,6 +40,7 @@ export class PersistenceGate {
       return;
     }
     operation(db).catch((error: unknown) => {
+      reportError('binance-view: writing to the local database', error);
       this.disable(toFail(error));
     });
   }

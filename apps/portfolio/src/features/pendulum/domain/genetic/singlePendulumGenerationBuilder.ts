@@ -52,11 +52,11 @@ export function singlePendulumGenerationBuilder(
   maxRuns: number,
   createRobot: () => IRobotPlayer
 ) {
-  return async (
+  return (
     playersWithScore: readonly IScoredPlayer[],
     timeStep: DOMHighResTimeStamp,
     runsPassed: number
-  ): Promise<TCompetitionOutcome> => {
+  ): TCompetitionOutcome => {
     if (runsPassed >= maxRuns) {
       return { kind: 'finished' };
     }
@@ -71,7 +71,7 @@ export function singlePendulumGenerationBuilder(
 
     for (const { player } of elite) {
       for (const mutationRate of ELITE_MUTATION_RATES) {
-        newPopulation.push({ player: await player.mutate(mutationRate) });
+        newPopulation.push({ player: player.mutate(mutationRate) });
       }
     }
 
@@ -85,14 +85,14 @@ export function singlePendulumGenerationBuilder(
       switch (action) {
         case EAction.Mutate: {
           const parent = tournamentWinner(ranked);
-          newPopulation.push({ player: await parent.mutate(sample(MUTATION_RATES)) });
+          newPopulation.push({ player: parent.mutate(sample(MUTATION_RATES)) });
           break;
         }
         case EAction.Crossover: {
           const father = tournamentWinner(ranked);
           const mother = tournamentWinner(ranked);
           if (father !== mother) {
-            newPopulation.push({ player: await father.crossoverModels(mother) });
+            newPopulation.push({ player: father.crossoverWith(mother) });
           }
           break;
         }

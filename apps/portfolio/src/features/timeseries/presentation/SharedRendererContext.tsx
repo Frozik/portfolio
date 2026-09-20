@@ -1,3 +1,4 @@
+import { reportError } from '@frozik/utils/diagnostics/reportError';
 import { toFail } from '@frozik/utils/value-descriptors/fails/utils';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 import { isNil } from 'lodash-es';
@@ -38,6 +39,7 @@ export const SharedRendererProvider = memo(({ children }: { readonly children: R
         setState({ status: 'ready', renderer: sharedRenderer });
       },
       (error: unknown) => {
+        reportError('timeseries: creating the shared renderer', error);
         setState({ status: 'unsupported', fail: toFail(error) });
       }
     );
