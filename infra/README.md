@@ -11,12 +11,45 @@ plus its Redis run as containers pulled from GHCR. Nothing is built on the box.
 ## Layout
 
 ```
+hosts/   the inventory — one env file per machine
 bin/     what a human runs
-lib/     plumbing for the scripts themselves (ssh multiplexing, args, logging)
+lib/     plumbing for the scripts themselves (ssh multiplexing, args, inventory, logging)
 roles/   grouped by the component being configured
   edge/            haproxy, coturn, certbot, firewall, ssh hardening, journald
   communication/   docker, secrets, config, compose, deploy user, smoke test
 ```
+
+## The inventory
+
+Machines are declared in `hosts/<name>.env` as plain `KEY=VALUE` — deliberately
+dumber than an Ansible inventory, so the values a human reads are the ones the
+scripts source, with no parser in between. **No secrets live here**: the Yandex
+client_secret and the TURN secret exist only on the machine itself, in
+`/etc/communication/` at mode 600.
+
+```bash
+pnpm hosts                 # what is declared
+pnpm hosts -- --check      # plus what each machine reports: kernel, uptime,
+                           # disk, the commit actually deployed, cert expiry
+```
+
+Every command takes `--host <name>` instead of a raw IP:
+
+```bash
+bash infra/bin/deploy-communication.sh --host production
+bash infra/bin/provision-host.sh --host production --cert-email you@example.com
+```
+
+An explicit flag always wins over the file, so `--host production --domain
+other.example` works for a one-off.
+
+**The portfolio build reads the same files.** `VITE_COMMUNICATION_URL` and the
+OAuth client ids used to be duplicated in `apps/portfolio/.env.production` and
+`.env.local`; both are gone. `vite-plugins/deployment-target.ts` derives them
+from `hosts/<name>.env`, so rotating an OAuth client is a one-line edit here
+rather than three edits that silently drift apart. `DEPLOY_HOST_NAME` picks a
+different host, `VITE_COMMUNICATION_URL` still overrides the URL for a local
+backend.
 
 A role step is invoked as `remote_run_script <role>/<step>`; `bin/` scripts
 rsync `lib/` and `roles/` to the target and run the steps over one multiplexed
@@ -51,7 +84,7 @@ remotely. You need:
 
 ```bash
 bash infra/bin/provision-host.sh \
-  --ssh-host root@<IP> \
+  --host production \
   --google-client-id <YOUR_CLIENT_ID>.apps.googleusercontent.com \
   --cert-email ops@example.com
 ```
@@ -94,7 +127,7 @@ Role steps are idempotent. Re-running after a partial failure is safe.
 To deploy a new version:
 
 ```bash
-bash infra/bin/deploy-communication.sh --ssh-host root@<IP>
+bash infra/bin/deploy-communication.sh --host production
 ```
 
 It pulls the published image and runs `docker compose up -d`, which sends
@@ -103,7 +136,7 @@ calls drain, starts the new one, then smoke-tests. To pin an exact build —
 this is also how you roll back — set the tag:
 
 ```bash
-COMMUNICATION_TAG=<commit-sha> bash infra/bin/deploy-communication.sh --ssh-host root@<IP>
+COMMUNICATION_TAG=<commit-sha> bash infra/bin/deploy-communication.sh --host production
 ```
 
 Once GitHub Actions is wired up (see `server.md` at the repo root), neither
@@ -158,7 +191,8 @@ walkthrough is here.
    - `--google-client-id` flag of `install.sh` (server-side `aud` check).
    - `VITE_GOOGLE_OAUTH_CLIENT_ID` env var when building the portfolio
      (frontend identifies itself to Google).
-   - `apps/portfolio/.env.local` for local dev.
+   - nowhere else: the browser bundle reads the same `hosts/<name>.env`
+     through `apps/portfolio/vite-plugins/deployment-target.ts`.
 
 6. **Publish the consent screen** (when ready for any Google user):
    `OAuth consent screen` → `Publish App`. Because we only use
@@ -193,7 +227,8 @@ walkthrough is here.
    as a real secret.
 
    - Set `VITE_YANDEX_OAUTH_CLIENT_ID=<client_id>` in
-     `apps/portfolio/.env.local` (already gitignored via `*.local`).
+     `infra/hosts/<name>.env` — the one place both the server and the
+     browser bundle read it from.
    - Pass the secret via `--yandex-client-secret <SECRET>` when
      running `install.sh`. The orchestrator writes it to
      `/etc/communication/oauth-secrets` (mode 600, owner
@@ -210,7 +245,7 @@ walkthrough is here.
 ## Operations
 
 - **Graceful upgrade**: `bash infra/bin/deploy-communication.sh
-  --ssh-host root@<IP>` — `SIGTERM` + 16s drain + start, smoke-tested.
+  --host production` — `docker compose up -d`, 20 s drain, smoke-tested.
 - **Cert renewal**: handled by `certbot.timer` + hooks under
   `/etc/letsencrypt/renewal-hooks/`. `pre/open-http-port.sh` and
   `post/close-http-port.sh` toggle UFW for port 80 around the HTTP-01

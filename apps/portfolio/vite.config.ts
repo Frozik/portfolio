@@ -10,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 import { readAppVersion } from './vite-plugins/app-version.ts';
+import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 
 // vite-plugin-pwa re-exports workbox-build's option types only through its own
@@ -63,10 +64,16 @@ const precacheAppShellAndCv: ManifestTransform = manifestEntries => {
 /** Both halves of the lazy CV download: the feature's own modules and the react-pdf stack. */
 const CV_PDF_MODULE = /\/(features\/welcome\/presentation\/pdf\/|node_modules\/@react-pdf\/)/;
 
+/** Signaling URL and OAuth client ids come from `infra/hosts/`, not a local .env copy. */
+const DEPLOYMENT = readDeploymentTarget(resolve(import.meta.dirname, '..', '..'));
+
 export default defineConfig(({ isSsrBuild = false }) => ({
   base: BASE,
   define: {
     __APP_VERSION__: JSON.stringify(readAppVersion()),
+    'import.meta.env.VITE_COMMUNICATION_URL': JSON.stringify(DEPLOYMENT.communicationUrl),
+    'import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.googleClientId),
+    'import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.yandexClientId),
   },
   // Low-poly 3D assets (CC0, Kenney car kit) ship as raw GLB binaries.
   assetsInclude: ['**/*.glb'],

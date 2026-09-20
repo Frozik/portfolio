@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# shellcheck source=hosts.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/hosts.sh"
+
 SSH_HOST="${SSH_HOST:-}"
 GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}"
 # Yandex OAuth — both fields optional. When unset, the Yandex sign-in
@@ -21,10 +24,15 @@ HARDEN_SSH="${HARDEN_SSH:-true}"
 
 usage_install() {
   cat >&2 <<USAGE
-Usage: install.sh --ssh-host <user@host> --google-client-id <ID> --cert-email <EMAIL>
+Usage: provision-host.sh --host <name> --cert-email <EMAIL>
+       provision-host.sh --ssh-host <user@host> --google-client-id <ID> --cert-email <EMAIL>
                   [--no-haproxy] [--domain <DOMAIN>]
 
-Required:
+  --host              A machine declared in infra/hosts/ (see `bin/hosts.sh`).
+                      Loads its ssh target, domain, CORS origins and public
+                      OAuth ids; any explicit flag below still wins.
+
+Required (unless --host supplies them):
   --ssh-host          SSH target (e.g. root@1.2.3.4)
   --google-client-id  Google OAuth 2.0 Web Client ID
   --cert-email        Email for Lets Encrypt notices
@@ -45,7 +53,10 @@ USAGE
 
 usage_upgrade() {
   cat >&2 <<USAGE
-Usage: upgrade.sh --ssh-host <user@host> [--no-haproxy] [--domain <DOMAIN>]
+Usage: deploy-communication.sh --host <name>
+       deploy-communication.sh --ssh-host <user@host> [--no-haproxy] [--domain <DOMAIN>]
+
+  --host              A machine declared in infra/hosts/ (see `bin/hosts.sh`).
 
 Required:
   --ssh-host          SSH target
@@ -59,6 +70,8 @@ USAGE
 _parse_common() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --host)
+        load_host "$2" >/dev/null; shift 2;;
       --ssh-host)
         SSH_HOST="$2"; shift 2;;
       --google-client-id)

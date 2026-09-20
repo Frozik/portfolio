@@ -12,7 +12,10 @@ export default defineConfig({
         test: {
           name: 'portfolio',
           environment: 'happy-dom',
-          include: ['apps/portfolio/src/**/*.{test,spec}.{ts,tsx}'],
+          include: [
+            'apps/portfolio/src/**/*.{test,spec}.{ts,tsx}',
+            'apps/portfolio/vite-plugins/**/*.{test,spec}.ts',
+          ],
         },
       },
       {

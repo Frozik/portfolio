@@ -9,5 +9,6 @@
     "vite-plugins/**/*.ts",
     "src/app/prerender/assemble-landing-html.ts",
     "src/app/prerender/defer-entry-scripts.ts"
-  ]
+  ],
+  "exclude": ["vite-plugins/**/*.test.ts", "vite-plugins/**/*.spec.ts"]
 }

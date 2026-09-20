@@ -13,6 +13,13 @@ fileGroups:
     - 'roles/communication/communication-deploy'
 
 tasks:
+  # Shows the inventory; `-- --check` also asks each machine what it reports.
+  hosts:
+    command: 'bash bin/hosts.sh'
+    options:
+      cache: false
+      runInCI: false
+
   # The 1.6k lines that provision production had no gate at all until the
   # scripts became their own project. --source-path=SCRIPTDIR lets shellcheck
   # follow `source` across bin/ -> lib/ and roles/ -> ../../lib.
