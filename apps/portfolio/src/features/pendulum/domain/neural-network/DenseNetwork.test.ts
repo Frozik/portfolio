@@ -60,6 +60,21 @@ describe('DenseNetwork', () => {
     expect(stored.predict(observation)[0]).toBe(network.predict(observation)[0]);
   });
 
+  it('refuses a layer whose weights do not fill its shape', () => {
+    expect(() => new DenseNetwork([layer(2, 3, [1, 2, 3], [0, 0, 0])])).toThrow();
+  });
+
+  it('refuses a layer carrying the wrong number of biases', () => {
+    expect(() => new DenseNetwork([layer(2, 1, [1, 1], [0, 0])])).toThrow();
+  });
+
+  it('refuses layers that do not join up', () => {
+    expect(
+      () =>
+        new DenseNetwork([layer(2, 3, new Array(6).fill(0), [0, 0, 0]), layer(2, 1, [1, 1], [0])])
+    ).toThrow();
+  });
+
   it('answers identically after a round trip through a snapshot', () => {
     const network = new DenseNetwork([
       layer(2, 3, [0.1, -0.2, 0.3, 0.4, 0.5, -0.6], [0.01, 0.02, 0.03]),

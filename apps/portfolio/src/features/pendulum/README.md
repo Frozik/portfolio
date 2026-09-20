@@ -24,7 +24,14 @@ closed-form Lagrangian model of an N-link chain pendulum on a cart with a
 prescribed rail velocity (mass-matrix form, exact impulse when the cart's
 velocity changes, quadratic air drag, pointer push), integrated with RK4 at a
 substep capped to 4 ms — no physics engine, deterministic and effectively
-independent of the frame rate.
+independent of the frame rate. Training runs on a single rod, where those
+equations collapse — the mass matrix is `[[L²]]`, the Coriolis term carries
+`sin(0)`, and the bob's position is only ever needed by the pointer push — so
+that case has its own solver (`domain/physics/single-rod-step.ts`): 0.89 µs a
+tick against 11.79 µs for the general one, which cuts the whole training tick
+from 14.1 µs to 3.0 µs. The two paths are pinned against each other on random
+states in `single-rod-step.test.ts`, using the fact that the pointer pushes
+with exactly zero beyond its radius.
 
 **Fitness Playground** — simulation area for neural networks. Each robot is
 a `5 → 16 (tanh) → 1 (tanh)` network that sees the rod's angle from the

@@ -10,10 +10,10 @@ import {
   matchValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
-import { Bot, Network, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ComponentProps } from 'react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
@@ -43,11 +43,11 @@ function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
   return 'blue';
 }
 
+const PLAYER_ACTION_ICON_SIZE = 14;
+
 const ScoreCell = ({ maxScore }: IGeneration) => (
   <Tag color={scoreTagColor(maxScore)}>{Math.round(maxScore)}</Tag>
 );
-
-const PLAYER_ACTION_ICON_SIZE = 14;
 
 const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer }) => {
   const store = usePendulumStore();
@@ -69,7 +69,7 @@ const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer
         title={pendulumT.generationsList.useRobotInTest}
         onClick={handleSelectForTest}
       >
-        <Bot size={PLAYER_ACTION_ICON_SIZE} />
+        <span aria-hidden className="icon-mask icon-mask-bot size-3.5" />
       </Button>
       <Button
         variant="ghost"
@@ -79,7 +79,7 @@ const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer
         title={pendulumT.generationsList.viewNeuralNetwork}
         onClick={handleOpenNeuralNetwork}
       >
-        <Network size={PLAYER_ACTION_ICON_SIZE} />
+        <span aria-hidden className="icon-mask icon-mask-network size-3.5" />
       </Button>
     </div>
   );
@@ -169,6 +169,8 @@ const StartCompetitionPrompt = memo(({ onStart }: { readonly onStart: VoidFuncti
   </div>
 ));
 
+const NEWEST_GENERATION_FIRST = { columnId: 'id', direction: 'desc' } as const;
+
 const generationColumns: readonly VirtualTableColumn<IGeneration>[] = [
   {
     id: 'id',
@@ -220,6 +222,17 @@ export const GenerationsList = observer(() => {
     />
   ));
 
+  // A fresh object here would change the columns' identity on every render,
+  // and with it every row's props — the whole visible window would rebuild
+  // each time a generation lands.
+  const hiddenColumnIds = useMemo(() => {
+    const hidden: Record<string, boolean> = {};
+    for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex += 1) {
+      hidden[`player-${playerIndex}`] = playerIndex >= maxPopulationSize;
+    }
+    return hidden;
+  }, [maxPopulationSize]);
+
   if (isWaitingArgumentsValueDescriptor(competitionsList)) {
     return (
       <div className={OVERLAY_MESSAGE_CONTAINER_CLASS}>
@@ -232,11 +245,6 @@ export const GenerationsList = observer(() => {
     synced: ({ value }) => ['new' as const, ...value],
     unsynced: vd => (isEmptyValueDescriptor(vd) ? ['new' as const] : []),
   });
-
-  const hiddenColumnIds: Record<string, boolean> = {};
-  for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex += 1) {
-    hiddenColumnIds[`player-${playerIndex}`] = playerIndex >= maxPopulationSize;
-  }
 
   const generationRows = matchValueDescriptor(currentCompetition, {
     synced: ({ value }) => [...value],
@@ -280,7 +288,7 @@ export const GenerationsList = observer(() => {
           columns={generationColumns}
           rowKey={({ id }) => String(id)}
           hiddenColumnIds={hiddenColumnIds}
-          initialSort={{ columnId: 'id', direction: 'desc' }}
+          initialSort={NEWEST_GENERATION_FIRST}
         />
       )}
     </div>

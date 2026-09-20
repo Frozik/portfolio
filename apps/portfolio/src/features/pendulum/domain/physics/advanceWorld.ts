@@ -10,6 +10,7 @@ import { rungeKutta4Step } from './integrate';
 import { bobPositions, bobVelocities } from './kinematics';
 import { dragAcceleration } from './medium';
 import { pointerPushAcceleration } from './pointer-push';
+import { advanceSingleRod } from './single-rod-step';
 
 /**
  * Longest RK4 substep. The slowest motion is the 2 s small-angle swing, so
@@ -40,7 +41,48 @@ export function advanceWorld(
   );
   const pivotVelocity = (pivotX - world.pivotX) / deltaTime;
   const gravity = gravityAcceleration(environment.gravity);
+  const deltaPivotVelocity = pivotVelocity - world.pivotVelocity;
+  const substeps = Math.ceil(deltaTime / MAX_SUBSTEP);
 
+  const chain = hasSingleRodAndNoPointer(world, environment)
+    ? advanceSingleRod(world, deltaTime, substeps, pivotVelocity, deltaPivotVelocity, gravity)
+    : advanceChain(
+        world,
+        deltaTime,
+        substeps,
+        pivotVelocity,
+        deltaPivotVelocity,
+        gravity,
+        environment
+      );
+
+  return {
+    pivotX,
+    pivotVelocity,
+    angles: chain.angles.map(wrapToHalfTurn),
+    angularVelocities: chain.angularVelocities,
+  };
+}
+
+/**
+ * Whether the collapsed single-rod equations apply. The pointer push is what
+ * makes a bob's position matter, so a chain of one is only special while no
+ * pointer is pushing it.
+ */
+function hasSingleRodAndNoPointer(world: IWorld, environment: IEnvironment): boolean {
+  return world.angles.length === 1 && isNil(environment.pointerPosition);
+}
+
+/** The general chain: RK4 over the Lagrangian equations of motion. */
+function advanceChain(
+  world: IWorld,
+  deltaTime: DOMHighResTimeStamp,
+  substeps: number,
+  pivotVelocity: number,
+  deltaPivotVelocity: number,
+  gravity: number,
+  environment: IEnvironment
+): IChainState {
   const derivative = (state: IChainState, elapsed: DOMHighResTimeStamp): IChainState => {
     const snapshot: IWorld = {
       ...state,
@@ -60,21 +102,15 @@ export function advanceWorld(
 
   let chain: IChainState = {
     angles: world.angles,
-    angularVelocities: angularVelocitiesAfterPivotKick(world, pivotVelocity - world.pivotVelocity),
+    angularVelocities: angularVelocitiesAfterPivotKick(world, deltaPivotVelocity),
   };
-  const substeps = Math.ceil(deltaTime / MAX_SUBSTEP);
   const step = deltaTime / substeps;
 
   for (let index = 0; index < substeps; index++) {
     chain = rungeKutta4Step(chain, index * step, step, derivative);
   }
 
-  return {
-    pivotX,
-    pivotVelocity,
-    angles: chain.angles.map(wrapToHalfTurn),
-    angularVelocities: chain.angularVelocities,
-  };
+  return chain;
 }
 
 function totalAcceleration(

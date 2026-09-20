@@ -41,6 +41,27 @@ export class DenseNetwork {
   constructor(layers: readonly IDenseLayer[]) {
     assert(layers.length > 0, 'A network needs at least one layer');
 
+    layers.forEach(({ inputSize, outputSize, weights, biases }, index) => {
+      assert(
+        weights.length === inputSize * outputSize,
+        `Layer ${index} is ${inputSize}×${outputSize} but carries ${weights.length} weights`
+      );
+      assert(
+        biases.length === outputSize,
+        `Layer ${index} has ${outputSize} units but carries ${biases.length} biases`
+      );
+    });
+
+    for (let index = 1; index < layers.length; index += 1) {
+      const answered = layers[index - 1].outputSize;
+      const read = layers[index].inputSize;
+
+      assert(
+        answered === read,
+        `Layer ${index} reads ${read} inputs but the one before answers with ${answered}`
+      );
+    }
+
     this.layers = layers.map(({ inputSize, outputSize, weights, biases }) => ({
       inputSize,
       outputSize,

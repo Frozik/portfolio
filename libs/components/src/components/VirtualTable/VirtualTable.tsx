@@ -93,17 +93,22 @@ export function VirtualTable<TRow>({
     [columns, hiddenColumnIds]
   );
 
+  const columnsById = useMemo(() => new Map(columns.map(column => [column.id, column])), [columns]);
+
   const valueOf = useCallback(
-    (row: TRow, columnId: string) => columns.find(column => column.id === columnId)?.value(row),
-    [columns]
+    (row: TRow, columnId: string) => columnsById.get(columnId)?.value(row),
+    [columnsById]
   );
 
   const sorted = useMemo(() => sortRows(rows, sort, valueOf), [rows, sort, valueOf]);
+
+  const keyAt = useCallback((index: number) => rowKey(sorted[index], index), [sorted, rowKey]);
 
   const { startIndex, endIndex, offsetBefore, offsetAfter, measureRow } = useVirtualRows({
     count: sorted.length,
     estimatedRowHeight: estimatedRowHeightPx,
     scrollElementRef: scrollRef,
+    keyAt,
   });
 
   const toggleSort = useCallback((columnId: string) => {
@@ -168,15 +173,8 @@ export function VirtualTable<TRow>({
             </tr>
           )}
           {sorted.slice(startIndex, endIndex + 1).map((row, offset) => {
-            const index = startIndex + offset;
-            return (
-              <Row
-                key={rowKey(row, index)}
-                row={row}
-                columns={visibleColumns}
-                measure={measureRow(index)}
-              />
-            );
+            const key = rowKey(row, startIndex + offset);
+            return <Row key={key} row={row} columns={visibleColumns} measure={measureRow(key)} />;
           })}
           {offsetAfter > 0 && (
             <tr aria-hidden>

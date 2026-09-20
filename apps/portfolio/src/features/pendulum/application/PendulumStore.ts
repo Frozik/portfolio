@@ -69,6 +69,12 @@ export class PendulumStore {
         robotLoadToken: false,
         fitness: false,
         test: false,
+        // Replaced whole, never edited in place. Deep observability would proxy
+        // every generation and every robot inside it, so a render that walks the
+        // list pays a proxy trap and a dependency registration per element —
+        // tens of thousands of them once a competition has run for a while.
+        competitionsList: observableRef,
+        generations: observableRef,
         competition: observableRef,
         selectedRobot: observableRef,
       },

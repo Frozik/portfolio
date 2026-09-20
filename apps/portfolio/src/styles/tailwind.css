@@ -371,6 +371,32 @@
   }
 }
 
+/*
+  The generations table repeats these two icons once per robot per generation —
+  more than a thousand of them on screen. Drawn as `lucide` components each is
+  an `<svg>` with half a dozen children, and mounting one generation's row then
+  costs tens of milliseconds; as a mask each is a single element. The artwork is
+  copied from lucide-react 1.47.0 (`bot` and `network`, ISC) and has to be
+  refreshed by hand if those icons change there.
+*/
+@layer utilities {
+  .icon-mask {
+    display: inline-block;
+    background-color: currentColor;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+  }
+
+  .icon-mask-bot {
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M12%208V4H8'/%3E%3Crect%20width='16'%20height='12'%20x='4'%20y='8'%20rx='2'/%3E%3Cpath%20d='M2%2014h2'/%3E%3Cpath%20d='M20%2014h2'/%3E%3Cpath%20d='M15%2013v2'/%3E%3Cpath%20d='M9%2013v2'/%3E%3C/svg%3E");
+  }
+
+  .icon-mask-network {
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Crect%20x='16'%20y='16'%20width='6'%20height='6'%20rx='1'/%3E%3Crect%20x='2'%20y='16'%20width='6'%20height='6'%20rx='1'/%3E%3Crect%20x='9'%20y='2'%20width='6'%20height='6'%20rx='1'/%3E%3Cpath%20d='M5%2016v-3a1%201%200%200%201%201-1h12a1%201%200%200%201%201%201v3'/%3E%3Cpath%20d='M12%2012V8'/%3E%3C/svg%3E");
+  }
+}
+
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
