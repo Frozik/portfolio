@@ -91,8 +91,14 @@ jobs:
         run: pnpm exec lhci autorun
 
   # The image the production box runs. On a pull request it is only built
-  # (the old behaviour, a compile check); on main it is published to GHCR
-  # and the deploy workflow rolls it out.
+  # (the old behaviour, a compile check); on main it is published to GHCR.
+  #
+  # Deliberately NOT gated on "did communication change": the deploy workflow
+  # decides that, comparing against the commit the box is actually running, and
+  # gating here too would let the two disagree — a commit CI skipped could be
+  # one the deploy still wants, leaving it with no image to pull. Publishing
+  # every main commit costs little (buildx reuses cached layers and GHCR
+  # deduplicates them) and it means any commit can be rolled back to.
   server-image:
     name: Server image
     runs-on: ubuntu-latest

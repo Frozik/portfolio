@@ -59,18 +59,20 @@ ufw deny 80/tcp >/dev/null
 if ! command -v setfacl >/dev/null 2>&1; then
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq acl >/dev/null
 fi
-# Both `communication` (Fastify TLS) and `turnserver` (coturn TURNS)
-# need to read the cert at runtime.
-for sysuser in communication turnserver; do
-  if id -u "${sysuser}" >/dev/null 2>&1; then
-    setfacl -R -m u:"${sysuser}":rX /etc/letsencrypt/live
-    setfacl -R -m u:"${sysuser}":rX /etc/letsencrypt/archive
-    setfacl -d -R -m u:"${sysuser}":rX /etc/letsencrypt/live
-    setfacl -d -R -m u:"${sysuser}":rX /etc/letsencrypt/archive
+# coturn reads the cert as the host user `turnserver`. The app reads it from
+# inside its container, where the user is uid 1001 (pinned by the Dockerfile)
+# — a different uid from any host account, so it is granted by number.
+CONTAINER_UID=1001
+for grantee in turnserver "${CONTAINER_UID}"; do
+  if [[ "${grantee}" == "${CONTAINER_UID}" ]] || id -u "${grantee}" >/dev/null 2>&1; then
+    for dir in /etc/letsencrypt/live /etc/letsencrypt/archive; do
+      setfacl -R -m u:"${grantee}":rX "${dir}"
+      setfacl -d -R -m u:"${grantee}":rX "${dir}"
+    done
   else
-    warn "User ${sysuser} not present yet — skipping ACL grant"
+    warn "User ${grantee} not present yet — skipping ACL grant"
   fi
 done
-ok "Granted communication+turnserver read ACL on /etc/letsencrypt/{live,archive}"
+ok "Granted turnserver + container uid ${CONTAINER_UID} read ACL on /etc/letsencrypt/{live,archive}"
 
 ok "Certificate issued: ${CERT_PATH}"

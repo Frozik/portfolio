@@ -1,5 +1,10 @@
 name: communication
 
+# One service on purpose. The app's [redis] section is disabled, so it uses an
+# in-process room registry and the stock single-node Socket.IO adapter — a
+# Redis container would sit here unused. Multi-node would add it back together
+# with `redis.enabled = true` and a REDIS_URL.
+
 services:
   communication:
     image: ${COMMUNICATION_IMAGE:-ghcr.io/frozik/communication}:${COMMUNICATION_TAG:-latest}
@@ -32,21 +37,5 @@ services:
     # Matches the old unit's TimeoutStopSec: active calls drain before SIGKILL.
     stop_grace_period: 20s
 
-    depends_on:
-      redis:
-        condition: service_healthy
-
     logging:
       driver: journald
-
-  redis:
-    image: redis:8-alpine
-    restart: unless-stopped
-    # Only a pub/sub bus for the socket.io adapter — nothing to persist,
-    # so no volume and no RDB/AOF.
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5

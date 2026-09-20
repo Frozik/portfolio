@@ -57,12 +57,14 @@ else
 fi
 
 remote_run_script edge/packages
+remote_run_script edge/trim-packages
 remote_run_script communication/docker
 remote_run_script communication/turn-secret
 remote_run_script communication/oauth-secrets
 remote_run_script communication/config
 remote_run_script edge/renewal-hook
 remote_run_script edge/journald
+remote_run_script edge/log-hygiene
 remote_run_script edge/expiry-timer
 remote_run_script edge/certificate
 remote_run_script edge/haproxy
@@ -71,6 +73,7 @@ remote_run_script edge/firewall
 remote_run_script edge/enable-services
 remote_run_script communication/compose-up
 remote_run_script communication/deploy-user
+remote_run_script communication/docker-prune
 remote_run_script communication/smoke-test
 
 ok "Installation complete"

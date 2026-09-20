@@ -1,14 +1,9 @@
-# Deploy workflow for the communication server.
+# Deploys the communication server whenever CI goes green on main.
 #
-# NOT ACTIVE YET. It lives here rather than in .github/workflows/ because it
-# would fail on every push until three things exist:
-#   1. the deploy keypair (ssh-keygen), its public half installed on the box
-#      by roles/communication/deploy-user.sh
-#   2. the GitHub environment `production`
-#   3. its secrets DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_KNOWN_HOSTS
-#
-# Once those are in place:
-#   git mv infra/deploy-communication.yml .github/workflows/deploy-communication.yml
+# Requires (all in place since 2026-09-20): the deploy keypair installed on the
+# box by infra/roles/communication/deploy-user.sh behind an ssh forced command,
+# the GitHub environment `production`, and its secrets DEPLOY_SSH_KEY,
+# DEPLOY_HOST and DEPLOY_KNOWN_HOSTS.
 name: Deploy communication
 
 # Same gate as the Pages deploy: not "on push" but "when CI went green", so a
@@ -51,9 +46,16 @@ jobs:
       - name: Trust the host key
         run: install -m 600 -D /dev/stdin ~/.ssh/known_hosts <<< '${{ secrets.DEPLOY_KNOWN_HOSTS }}'
 
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+
       # A portfolio-only commit must not restart the signaling server and drop
-      # live WebRTC sessions. The range starts at what is actually deployed, so
-      # a skipped or failed deploy is picked up by the next run.
+      # live WebRTC sessions. `affected-projects` walks Moon's real dependency
+      # graph, so a change in libs/utils counts and a change in libs/components
+      # does not — no hand-maintained path list to rot. The range starts at what
+      # is actually deployed, so a skipped or failed deploy is picked up next time.
       - name: Does this commit touch the server?
         id: gate
         run: |
@@ -62,18 +64,17 @@ jobs:
           echo "deployed=${deployed}" >> "$GITHUB_OUTPUT"
 
           if [ "$deployed" = "$head" ]; then
+            echo "Already running ${head}"
             echo "run=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
           # After a force-push the deployed commit may be gone from history.
           if ! git cat-file -e "${deployed}^{commit}" 2>/dev/null; then
+            echo "Deployed commit ${deployed} is not in history — deploying to resync"
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
-          changed="$(git diff --name-only "$deployed" "$head" -- \
-            apps/communication libs/utils libs/communication-protocol \
-            infra pnpm-lock.yaml pnpm-workspace.yaml)"
-          if [ -n "$changed" ]; then
+          if pnpm exec affected-projects "$deployed" "$head" --is communication; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

@@ -28,21 +28,25 @@ for unit in "${UNITS[@]}"; do
 done
 
 COMPOSE_FILE="/opt/communication/docker-compose.yml"
-for service in communication redis; do
-  state="$(docker compose -f "${COMPOSE_FILE}" ps --format '{{.State}}' "${service}" 2>/dev/null || true)"
-  if [[ "${state}" == "running" ]]; then
-    ok "container ${service} running"
-  else
-    die "container ${service} is '${state:-missing}'. docker compose -f ${COMPOSE_FILE} logs ${service}"
-  fi
-done
+state="$(docker compose -f "${COMPOSE_FILE}" ps --format '{{.State}}' communication 2>/dev/null || true)"
+if [[ "${state}" == "running" ]]; then
+  ok "container communication running"
+else
+  die "container communication is '${state:-missing}'. docker compose -f ${COMPOSE_FILE} logs communication"
+fi
 
 LIVE_URL="https://127.0.0.1:${FASTIFY_PORT}/health/live"
 READY_URL="https://127.0.0.1:${FASTIFY_PORT}/health/ready"
 
-info "GET ${LIVE_URL}"
-# -k: cert CN is the public sslip.io hostname, not 127.0.0.1.
-curl -fsSk --max-time 5 "${LIVE_URL}" >/dev/null
+WAIT_SECONDS="${WAIT_SECONDS:-45}"
+info "Waiting up to ${WAIT_SECONDS}s for ${LIVE_URL}"
+deadline=$(( $(date +%s) + WAIT_SECONDS ))
+until curl -fsSk --max-time 3 "${LIVE_URL}" >/dev/null 2>&1; do
+  if (( $(date +%s) >= deadline )); then
+    die "/health/live did not answer within ${WAIT_SECONDS}s. docker compose -f ${COMPOSE_FILE} logs communication"
+  fi
+  sleep 2
+done
 ok "/health/live -> 200"
 
 info "GET ${READY_URL}"

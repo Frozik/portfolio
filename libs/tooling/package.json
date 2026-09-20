@@ -4,6 +4,7 @@
   "private": true,
   "description": "Repository-wide checks and build helpers, run straight from their TypeScript sources",
   "bin": {
+    "affected-projects": "./src/affected-projects.ts",
     "check-source-conventions": "./src/check-source-conventions.ts",
     "predict-version": "./src/predict-version.ts"
   },
