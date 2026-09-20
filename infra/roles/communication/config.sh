@@ -33,14 +33,17 @@ else
 fi
 TURN_PLAIN_PORT=3478
 
-# In HAProxy mode Fastify must bind 127.0.0.1:8443 (HAProxy backend
-# target). In direct mode (--no-haproxy) Fastify itself owns :443.
+# Inside the container Fastify always binds 0.0.0.0:8443 — 127.0.0.1 there
+# would be the container's own loopback, unreachable through the published
+# port. What keeps it off the internet is the publish spec below, not the
+# bind address: "127.0.0.1:8443:8443" in HAProxy mode (HAProxy is the only
+# client), "0.0.0.0:443:8443" in direct mode.
+FASTIFY_PORT=8443
+FASTIFY_HOST="0.0.0.0"
 if [[ "${EDGE_HAPROXY_ENABLED}" == "true" ]]; then
-  FASTIFY_PORT=8443
-  FASTIFY_HOST="127.0.0.1"
+  FASTIFY_PUBLISH="127.0.0.1:8443"
 else
-  FASTIFY_PORT=443
-  FASTIFY_HOST="0.0.0.0"
+  FASTIFY_PUBLISH="0.0.0.0:443"
 fi
 
 # CORS origins. Empty list crashes load-config in production; populate
@@ -99,6 +102,7 @@ TURN_TLS_PORT=${TURN_TLS_PORT}
 TURN_PLAIN_PORT=${TURN_PLAIN_PORT}
 FASTIFY_PORT=${FASTIFY_PORT}
 FASTIFY_HOST=${FASTIFY_HOST}
+FASTIFY_PUBLISH=${FASTIFY_PUBLISH}
 COMMUNICATION_IMAGE=${COMMUNICATION_IMAGE:-ghcr.io/frozik/communication}
 VARS
 chmod 644 /etc/communication/deploy-vars

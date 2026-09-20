@@ -73,14 +73,13 @@ COPY --from=builder --chown=communication:communication /out/package.json ./pack
 
 ENV NODE_ENV=production \
     NODE_CONFIG_DIR=/app/config \
-    NODE_CONFIG_ENV=production \
-    PORT=4445
+    NODE_CONFIG_ENV=production
 
 USER communication
 
-EXPOSE 4445 4446
+EXPOSE 8443
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||4445)+'/health/live',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+  CMD node -e "require('https').get({host:'127.0.0.1',port:process.env.PORT||8443,path:'/health/live',rejectUnauthorized:false},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 ENTRYPOINT ["node", "dist/main.js"]

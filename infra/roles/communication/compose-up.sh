@@ -20,11 +20,11 @@ if [[ -f "${SCRIPT_DIR}/docker-compose.yml" ]]; then
 fi
 [[ -f "${COMPOSE_FILE}" ]] || die "${COMPOSE_FILE} missing"
 
-# FASTIFY_PORT (and the image override, when set) come from deploy-vars.
+# FASTIFY_PUBLISH (and the image override, when set) come from deploy-vars.
 if [[ -f /etc/communication/deploy-vars ]]; then
   # shellcheck disable=SC1091
   source /etc/communication/deploy-vars
-  export FASTIFY_PORT COMMUNICATION_IMAGE
+  export FASTIFY_PORT FASTIFY_PUBLISH COMMUNICATION_IMAGE
 fi
 
 # COMMUNICATION_TAG may be exported by the caller to pin an exact image.

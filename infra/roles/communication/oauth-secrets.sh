@@ -33,10 +33,15 @@ chmod 644 "${OAUTH_PUBLIC_FILE}"
 ok "Wrote ${OAUTH_PUBLIC_FILE}"
 
 
+# An unset variable means "nothing to write", NOT "delete what is there".
+# Running this step alone without the full provisioning environment used to
+# wipe a live secret; removal now has to be asked for explicitly.
 if [[ -z "${YANDEX_OAUTH_CLIENT_SECRET:-}" ]]; then
-  if [[ -f "${OAUTH_SECRETS_FILE}" ]]; then
+  if [[ "${OAUTH_SECRETS_PURGE:-false}" == "true" && -f "${OAUTH_SECRETS_FILE}" ]]; then
     rm -f "${OAUTH_SECRETS_FILE}"
-    ok "Removed ${OAUTH_SECRETS_FILE} (no OAuth secrets to persist)"
+    ok "Removed ${OAUTH_SECRETS_FILE} (OAUTH_SECRETS_PURGE=true)"
+  elif [[ -f "${OAUTH_SECRETS_FILE}" ]]; then
+    warn "YANDEX_OAUTH_CLIENT_SECRET unset — keeping the existing ${OAUTH_SECRETS_FILE} untouched"
   else
     ok "No OAuth client secrets configured — skipping ${OAUTH_SECRETS_FILE}"
   fi

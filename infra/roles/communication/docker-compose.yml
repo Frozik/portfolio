@@ -9,7 +9,7 @@ services:
     # "8443:8443" would expose the port to the internet despite the
     # default-deny firewall. The bind address is what keeps it loopback-only.
     ports:
-      - "127.0.0.1:${FASTIFY_PORT:-8443}:8443"
+      - "${FASTIFY_PUBLISH:-127.0.0.1:8443}:8443"
 
     # Same KEY=VALUE files the systemd unit used as EnvironmentFile.
     env_file:

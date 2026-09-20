@@ -1,8 +1,14 @@
 {
   "server": {
-    "port": "PORT",
+    "port": {
+      "__name": "PORT",
+      "__format": "json"
+    },
     "tls": {
-      "enabled": "TLS_ENABLED",
+      "enabled": {
+        "__name": "TLS_ENABLED",
+        "__format": "json"
+      },
       "cert_path": "TLS_CERT_PATH",
       "key_path": "TLS_KEY_PATH"
     }
@@ -11,20 +17,38 @@
     "google_oauth_client_id": "GOOGLE_OAUTH_CLIENT_ID",
     "yandex_oauth_client_id": "YANDEX_OAUTH_CLIENT_ID",
     "yandex_oauth_client_secret": "YANDEX_OAUTH_CLIENT_SECRET",
-    "token_expiry_warning_seconds": "TOKEN_EXPIRY_WARNING_SECONDS",
-    "clock_tolerance_seconds": "CLOCK_TOLERANCE_SECONDS",
+    "token_expiry_warning_seconds": {
+      "__name": "TOKEN_EXPIRY_WARNING_SECONDS",
+      "__format": "json"
+    },
+    "clock_tolerance_seconds": {
+      "__name": "CLOCK_TOLERANCE_SECONDS",
+      "__format": "json"
+    },
     "jwks": {
-      "fetch_max_attempts": "JWKS_FETCH_MAX_ATTEMPTS",
-      "fetch_timeout_ms": "JWKS_FETCH_TIMEOUT_MS"
+      "fetch_max_attempts": {
+        "__name": "JWKS_FETCH_MAX_ATTEMPTS",
+        "__format": "json"
+      },
+      "fetch_timeout_ms": {
+        "__name": "JWKS_FETCH_TIMEOUT_MS",
+        "__format": "json"
+      }
     }
   },
   "turn": {
     "shared_secret": "TURN_SHARED_SECRET",
     "realm": "TURN_REALM",
-    "ttl_seconds": "TURN_TTL_SECONDS"
+    "ttl_seconds": {
+      "__name": "TURN_TTL_SECONDS",
+      "__format": "json"
+    }
   },
   "edge": {
-    "haproxy_enabled": "EDGE_HAPROXY_ENABLED"
+    "haproxy_enabled": {
+      "__name": "EDGE_HAPROXY_ENABLED",
+      "__format": "json"
+    }
   },
   "logging": {
     "level": "LOG_LEVEL"

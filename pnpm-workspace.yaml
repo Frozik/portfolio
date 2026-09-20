@@ -73,6 +73,7 @@ catalog:
   "config": "^5.0.1"
   "dependency-cruiser": "^18.2.0"
   "dompurify": "^3.4.14"
+  "esbuild": "^0.28.2"
   "earcut": "^3.2.3"
   "fake-indexeddb": "^6.2.5"
   "fastify": "^5.12.3"
