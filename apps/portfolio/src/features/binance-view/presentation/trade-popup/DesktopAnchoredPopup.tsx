@@ -69,7 +69,7 @@ export function DesktopAnchoredPopup({
     <div
       ref={rootRef}
       // Starts invisible so the layout effect can measure and place it before the first paint.
-      className="invisible absolute left-0 top-0 z-40 flex max-h-[320px] w-[340px] flex-col rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-xl backdrop-blur"
+      className="invisible absolute left-0 top-0 z-40 flex max-h-[320px] w-[400px] flex-col rounded-md border border-border bg-surface-elevated/95 text-xs text-text-secondary shadow-xl backdrop-blur"
     >
       {children}
     </div>

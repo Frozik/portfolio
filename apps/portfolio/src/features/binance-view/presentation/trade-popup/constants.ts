@@ -8,4 +8,3 @@ export const QUANTITY_FRACTION_DIGITS = 4;
 export const PRICE_FRACTION_DIGITS = 2;
 
 export const ROW_HEIGHT_PX = 24;
-export const ROW_OVERSCAN = 8;

@@ -1,3 +1,5 @@
+import type { VirtualTableColumn } from '@frozik/components/components/VirtualTable/VirtualTable';
+import { VirtualTable } from '@frozik/components/components/VirtualTable/VirtualTable';
 import type { ISO } from '@frozik/utils/date/types';
 import {
   isEmptyValueDescriptor,
@@ -7,7 +9,6 @@ import {
   isWaitingArgumentsValueDescriptor,
   matchValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
-import type { CellContext, ColumnDef, ColumnVisibilityState } from '@tanstack/react-table';
 import { isNil } from 'lodash-es';
 import { Bot, Network, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -19,8 +20,6 @@ import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { Button } from '../../../../shared/ui/Button';
-import type { TDataTableFeatures } from '../../../../shared/ui/DataTable';
-import { DataTable } from '../../../../shared/ui/DataTable';
 import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -44,10 +43,9 @@ function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
   return 'blue';
 }
 
-const ScoreCell = ({ getValue }: CellContext<TDataTableFeatures, IGeneration, unknown>) => {
-  const maxScore = getValue<number>();
-  return <Tag color={scoreTagColor(maxScore)}>{Math.round(maxScore)}</Tag>;
-};
+const ScoreCell = ({ maxScore }: IGeneration) => (
+  <Tag color={scoreTagColor(maxScore)}>{Math.round(maxScore)}</Tag>
+);
 
 const PLAYER_ACTION_ICON_SIZE = 14;
 
@@ -87,12 +85,9 @@ const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer
   );
 });
 
-const PlayerCell = ({ getValue }: CellContext<TDataTableFeatures, IGeneration, unknown>) => {
-  const player = getValue<IGenerationPlayer | undefined>();
-  if (isNil(player)) {
-    return null;
-  }
-  return <PlayerCellContent player={player} />;
+const playerCell = (playerIndex: number) => (generation: IGeneration) => {
+  const player: IGenerationPlayer | undefined = generation.players[playerIndex];
+  return isNil(player) ? null : <PlayerCellContent player={player} />;
 };
 
 const COMPETITION_DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -174,25 +169,27 @@ const StartCompetitionPrompt = memo(({ onStart }: { readonly onStart: VoidFuncti
   </div>
 ));
 
-const generationColumns: ColumnDef<TDataTableFeatures, IGeneration, unknown>[] = [
+const generationColumns: readonly VirtualTableColumn<IGeneration>[] = [
   {
-    accessorKey: 'id',
+    id: 'id',
     header: pendulumT.generationsList.columnId,
-    size: 80,
-    enableSorting: true,
+    value: ({ id }) => id,
+    widthPx: 80,
+    sortable: true,
   },
   {
-    accessorKey: 'maxScore',
+    id: 'maxScore',
     header: pendulumT.generationsList.columnBestScore,
-    size: 110,
+    value: ({ maxScore }) => maxScore,
     cell: ScoreCell,
+    widthPx: 110,
   },
   ...Array.from({ length: POPULATION_SIZE }, (_, playerIndex) => ({
     id: `player-${playerIndex}`,
-    accessorFn: ({ players }: IGeneration) => players[playerIndex],
     header: pendulumT.generationsList.columnPlayer(playerIndex + 1),
-    size: 340,
-    cell: PlayerCell,
+    value: ({ players }: IGeneration) => players[playerIndex],
+    cell: playerCell(playerIndex),
+    widthPx: 340,
   })),
 ];
 
@@ -236,9 +233,9 @@ export const GenerationsList = observer(() => {
     unsynced: vd => (isEmptyValueDescriptor(vd) ? ['new' as const] : []),
   });
 
-  const columnVisibility: ColumnVisibilityState = {};
-  for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex++) {
-    columnVisibility[`player-${playerIndex}`] = playerIndex < maxPopulationSize;
+  const hiddenColumnIds: Record<string, boolean> = {};
+  for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex += 1) {
+    hiddenColumnIds[`player-${playerIndex}`] = playerIndex >= maxPopulationSize;
   }
 
   const generationRows = matchValueDescriptor(currentCompetition, {
@@ -277,12 +274,13 @@ export const GenerationsList = observer(() => {
         ))}
 
       {showsGenerations && (
-        <DataTable
-          virtual
-          data={generationRows}
+        <VirtualTable
+          className="absolute inset-0 rounded-lg border border-border"
+          rows={generationRows}
           columns={generationColumns}
-          columnVisibility={columnVisibility}
-          initialSorting={[{ id: 'id', desc: true }]}
+          rowKey={({ id }) => String(id)}
+          hiddenColumnIds={hiddenColumnIds}
+          initialSort={{ columnId: 'id', direction: 'desc' }}
         />
       )}
     </div>

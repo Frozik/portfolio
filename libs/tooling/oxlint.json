@@ -104,7 +104,7 @@
     "react/refs": "off",
     "react/immutability": "off",
     "react/use-memo": "off",
-    "react/incompatible-library": "off",
+    "react/incompatible-library": "error",
     "react/static-components": "off",
     "react/hooks": "off",
     "react/exhaustive-effect-dependencies": "off",

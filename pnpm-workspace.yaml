@@ -50,8 +50,6 @@ catalog:
   "@react-pdf/renderer": "^4.9.0"
   "@socket.io/redis-adapter": "^8.3.0"
   "@tailwindcss/vite": "^4.3.3"
-  "@tanstack/react-table": "^9.2.4"
-  "@tanstack/react-virtual": "^3.14.13"
   "@tensorflow/tfjs": "^4.22.0"
   "@testing-library/react": "^16.3.3"
   "@types/leaflet": "^1.9.22"

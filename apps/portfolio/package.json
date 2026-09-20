@@ -29,8 +29,6 @@
     "@radix-ui/react-tooltip": "catalog:",
     "@react-oauth/google": "catalog:",
     "@react-pdf/renderer": "catalog:",
-    "@tanstack/react-table": "catalog:",
-    "@tanstack/react-virtual": "catalog:",
     "@tensorflow/tfjs": "catalog:",
     "alea": "catalog:",
     "buffer": "catalog:",
