@@ -111,6 +111,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Registry names must be lowercase; the GitHub owner is not (Frozik).
+      - name: Lowercase the image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/communication" >> "$GITHUB_OUTPUT"
       - name: Build and publish
         uses: docker/build-push-action@v7
         with:
@@ -118,8 +122,8 @@ jobs:
           file: apps/communication/Dockerfile
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/communication:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/communication:latest
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:latest
           # The box reports the running commit from this label.
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
