@@ -6,8 +6,7 @@ import { isNil } from 'lodash-es';
 import { currentGravity } from '../../domain/ball';
 import { CLOCK_SPEED } from '../../domain/constants';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
-import { advanceDeepSky, createDeepSky } from '../render/deep-sky';
-import type { DeepSky } from '../render/deep-sky';
+import { buildCometMesh } from '../render/comet-geometry';
 import { buildDeepSkyMesh } from '../render/deep-sky-geometry';
 import { DynamicVertexBuffer } from '../render/dynamic-vertex-buffer';
 import { buildFloaterMesh } from '../render/floater-geometry';
@@ -20,10 +19,10 @@ import {
 import type { MeshData } from '../render/mesh-writer';
 import { MESH_COLOR_OFFSET_BYTES, MESH_VERTEX_STRIDE_BYTES } from '../render/mesh-writer';
 import { CLEAR_COLOR } from '../render/palette';
-import type { ParticleField } from '../render/particles';
-import { advanceParticles, createParticleField } from '../render/particles';
 import { buildRodMesh } from '../render/rod-geometry';
 import type { SceneFrame } from '../render/scene-frame';
+import type { Sky } from '../render/sky';
+import { advanceSky, createSky } from '../render/sky';
 import { buildSpikeMesh } from '../render/spike-geometry';
 import boardShaderSource from '../shaders/board.wgsl?raw';
 import deepSkyShaderSource from '../shaders/deep-sky.wgsl?raw';
@@ -60,8 +59,6 @@ const PATTERN_SHIFT_PERIOD_SEEDS = 97;
  * buffer grows with it rather than cutting the frame short.
  */
 const INITIAL_DYNAMIC_VERTEX_CAPACITY = 6144;
-/** The dust lives in what the camera shows and this much more, so none pops in at the edge. */
-const DUST_MARGIN_METERS = 2;
 
 /** A mesh that follows one per-stroke state array: rebuilt when the array is replaced, once per stroke. */
 interface StrokeMesh {
@@ -90,13 +87,14 @@ export class BoardLayer implements RenderLayer {
   private deepSkyCount = 0;
   private dustVertices!: DynamicVertexBuffer;
   private dustCount = 0;
+  private cometVertices!: DynamicVertexBuffer;
+  private cometCount = 0;
   private rodVertices!: DynamicVertexBuffer;
   private rodCount = 0;
   private readonly sectors = new SectorMeshCache(data => this.upload(data));
   private spikes: StrokeMesh | undefined;
   private floaters: StrokeMesh | undefined;
-  private dust: ParticleField | undefined;
-  private deepSky: DeepSky | undefined;
+  private sky: Sky | undefined;
   private lastTime: number | undefined;
 
   constructor(
@@ -172,6 +170,7 @@ export class BoardLayer implements RenderLayer {
       strideBytes: FRAMED_VERTEX_STRIDE_BYTES,
     });
     this.dustVertices = new DynamicVertexBuffer(perFrame);
+    this.cometVertices = new DynamicVertexBuffer(perFrame);
     this.rodVertices = new DynamicVertexBuffer(perFrame);
   }
 
@@ -181,17 +180,6 @@ export class BoardLayer implements RenderLayer {
       return;
     }
     this.sectors.sync(scene.slices);
-    const dustWindow = {
-      min: {
-        x: scene.visible.min.x - DUST_MARGIN_METERS,
-        y: scene.visible.min.y - DUST_MARGIN_METERS,
-      },
-      max: {
-        x: scene.visible.max.x + DUST_MARGIN_METERS,
-        y: scene.visible.max.y + DUST_MARGIN_METERS,
-      },
-    };
-    this.dust ??= createParticleField(scene.level.seed, dustWindow);
     this.spikes = this.followStates(this.spikes, scene.ball.spikes, states =>
       buildSpikeMesh(scene.level, states)
     );
@@ -200,9 +188,11 @@ export class BoardLayer implements RenderLayer {
     );
     const elapsed = this.lastTime === undefined ? 0 : (state.time - this.lastTime) * CLOCK_SPEED;
     this.lastTime = state.time;
-    this.dust = advanceParticles(this.dust, currentGravity(scene.ball), elapsed, dustWindow);
-    this.deepSky ??= createDeepSky(scene.level.seed, scene.visible);
-    this.deepSky = advanceDeepSky(this.deepSky, elapsed, scene.visible);
+    this.sky = advanceSky(this.sky ?? createSky(scene.level.seed, scene.visible), {
+      elapsed,
+      gravity: currentGravity(scene.ball),
+      visible: scene.visible,
+    });
     const { viewport } = scene;
     const values = new Float32Array(UNIFORM_FLOATS);
     values.set([
@@ -219,8 +209,11 @@ export class BoardLayer implements RenderLayer {
       state.time * CLOCK_SPEED,
     ]);
     this.device.queue.writeBuffer(this.uniforms, 0, values);
-    this.deepSkyCount = this.deepSkyVertices.write(buildDeepSkyMesh(this.deepSky));
-    this.dustCount = this.dustVertices.write(buildDustMesh(this.dust));
+    this.deepSkyCount = this.deepSkyVertices.write(buildDeepSkyMesh(this.sky.deep));
+    this.dustCount = this.dustVertices.write(buildDustMesh(this.sky.dust));
+    this.cometCount = this.cometVertices.write(
+      buildCometMesh(this.sky.comets.comet, state.time * CLOCK_SPEED)
+    );
     this.rodCount = this.rodVertices.write(
       buildRodMesh(scene.level, scene.ball.rods, scene.visible)
     );
@@ -266,6 +259,11 @@ export class BoardLayer implements RenderLayer {
       if (this.dustCount > 0) {
         pass.setVertexBuffer(0, this.dustVertices.buffer);
         pass.draw(this.dustCount);
+      }
+      // A comet crosses the sky over the dust and behind the board.
+      if (this.cometCount > 0) {
+        pass.setVertexBuffer(0, this.cometVertices.buffer);
+        pass.draw(this.cometCount);
       }
       // The rods go under the islands: what is still inside a wall is hidden by it.
       if (this.rodCount > 0) {
@@ -316,6 +314,7 @@ export class BoardLayer implements RenderLayer {
     this.overlayVertices.destroy();
     this.deepSkyVertices.destroy();
     this.dustVertices.destroy();
+    this.cometVertices.destroy();
     this.rodVertices.destroy();
   }
 

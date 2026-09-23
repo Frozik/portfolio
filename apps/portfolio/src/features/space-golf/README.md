@@ -58,6 +58,15 @@ time.
   or a nebula of two-coloured clouds from four octaves of noise, thinning to
   nothing well inside the rim. Colour more than light: anything brighter out
   there reads as a thing in the game rather than the depth behind it
+- Every so often — nine to twenty-four seconds apart, the first one soon
+  after a world is made — a comet crosses the sky: a white-hot head in a
+  blue-white glow, a tail streaming back over two and a half metres and
+  fading to nothing, sparks twinkling along it. It flies straight, at its
+  own fourteen metres a second, along a line laid through the middle of the
+  screen at any angle from off one edge to off the other, so it is never
+  seen to start or stop; the board's gravity does not reach it. It passes
+  over the dust and behind the islands, and the same world sends the same
+  comets
 - One bonus floats on the board, a breathing disc three balls across: the
   ball flies through it and takes it. A blue one with a little arc of dots
   gives foresight — the aim dots become the flight itself up to its first

@@ -38,6 +38,8 @@ export const PALETTE = {
   flag: [255, 255, 255, 255],
   burst: [255, 236, 180, 255],
   star: [255, 255, 255, 90],
+  /** A comet's light: blue-white, the one bright thing in the sky behind the board. */
+  comet: [196, 226, 255, 255],
   aimRing: [255, 255, 255, 70],
   /** The bow the band is drawn as, and the light about it: an amber haze where the hand is, gold sparks, a white-hot string. */
   bandGlow: [255, 168, 48, 255],
