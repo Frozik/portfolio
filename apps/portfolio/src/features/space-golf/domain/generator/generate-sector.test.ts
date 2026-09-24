@@ -179,34 +179,31 @@ describe('generateSector', () => {
     expect(kinds.size).toBeGreaterThan(0);
   });
 
-  it("never lets two rods cross nor come within a rod of one another, and keeps every floater's large shape off every rod's path — the neighbours' rods and floaters included, whichever was made first", () => {
+  it("hands the neighbours' rods to what it places next, so nothing of a new sector is laid across a rod already standing next door", () => {
+    // The rule itself is the placers' and is specified there; here only that a sector passes on what it was handed.
     const floaterReach = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
-    let pairs = 0;
-    // A dozen worlds of nine sectors each: enough to have caught the crossing this guards against, and quick.
-    for (let worldSeed = 1; worldSeed <= 12; worldSeed += 1) {
-      const standing: Sector[] = [];
-      for (const sx of [-1, 0, 1]) {
-        for (const sy of [-1, 0, 1]) {
-          standing.push(generateSector(request({ worldSeed, sx, sy, neighbours: [...standing] })));
-        }
+    const standing: Sector[] = [];
+    for (const sx of [0, 1]) {
+      for (const sy of [0, 1]) {
+        standing.push(generateSector(request({ worldSeed: 5, sx, sy, neighbours: [...standing] })));
       }
-      const rods = standing.flatMap(sector => sector.rods);
-      const floaters = standing.flatMap(sector => sector.floaters);
-      rods.forEach((rod, index) => {
-        const path = rodPath(rod);
-        rods.slice(index + 1).forEach(other => {
-          pairs += 1;
-          const apart = rodWidth(rod.kind) / 2 + rodWidth(other.kind) / 2;
-          expect(distanceBetweenSegments(path, rodPath(other))).toBeGreaterThanOrEqual(apart);
-        });
-        for (const floater of floaters) {
-          expect(distanceToSegment(floater.center, path)).toBeGreaterThanOrEqual(
-            floaterReach + rodWidth(rod.kind) / 2
-          );
-        }
-      });
     }
-    expect(pairs).toBeGreaterThan(100);
+    const rods = standing.flatMap(sector => sector.rods);
+    const floaters = standing.flatMap(sector => sector.floaters);
+
+    expect(rods.length).toBeGreaterThan(4);
+    rods.forEach((rod, index) => {
+      const path = rodPath(rod);
+      for (const other of rods.slice(index + 1)) {
+        const apart = rodWidth(rod.kind) / 2 + rodWidth(other.kind) / 2;
+        expect(distanceBetweenSegments(path, rodPath(other))).toBeGreaterThanOrEqual(apart);
+      }
+      for (const floater of floaters) {
+        expect(distanceToSegment(floater.center, path)).toBeGreaterThanOrEqual(
+          floaterReach + rodWidth(rod.kind) / 2
+        );
+      }
+    });
   });
 
   it('fastens every rod to islands of its own: it slides out of one and seats in one, so no rod is left in the air when the sector next door is made anew', () => {
