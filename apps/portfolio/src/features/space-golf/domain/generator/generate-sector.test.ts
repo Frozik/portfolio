@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { distanceToSegment, sweepCircleAgainstWalls } from '../collision';
+import { distanceBetweenSegments, distanceToSegment, sweepCircleAgainstWalls } from '../collision';
 import {
   BALL_RADIUS_METERS,
   CELL_METERS,
   FLOATER_CLEARANCE_METERS,
+  FLOATER_LARGE_SIDE_METERS,
   ROD_MAX_LENGTH_METERS,
   ROD_MIN_LENGTH_METERS,
 } from '../constants';
-import { rodSeat, rodTipLength } from '../rods';
+import { rodPath, rodSeat, rodTipLength, rodWidth } from '../rods';
 import { containsPoint } from '../walls';
 import type { Sector, SectorRequest } from './generate-sector';
 import { generateSector, sectorAt, sectorBounds, SECTOR_OVERHANG_CELLS } from './generate-sector';
@@ -176,6 +177,35 @@ describe('generateSector', () => {
       }
     }
     expect(kinds.size).toBeGreaterThan(0);
+  });
+
+  it("never lets two rods cross nor come within a rod of one another, and keeps every floater's large shape off every rod's path — the neighbours' rods and floaters included, whichever was made first", () => {
+    const floaterReach = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
+    let pairs = 0;
+    for (let worldSeed = 1; worldSeed <= 40; worldSeed += 1) {
+      const standing: Sector[] = [];
+      for (const sx of [-1, 0, 1]) {
+        for (const sy of [-1, 0, 1]) {
+          standing.push(generateSector(request({ worldSeed, sx, sy, neighbours: [...standing] })));
+        }
+      }
+      const rods = standing.flatMap(sector => sector.rods);
+      const floaters = standing.flatMap(sector => sector.floaters);
+      rods.forEach((rod, index) => {
+        const path = rodPath(rod);
+        rods.slice(index + 1).forEach(other => {
+          pairs += 1;
+          const apart = rodWidth(rod.kind) / 2 + rodWidth(other.kind) / 2;
+          expect(distanceBetweenSegments(path, rodPath(other))).toBeGreaterThanOrEqual(apart);
+        });
+        for (const floater of floaters) {
+          expect(distanceToSegment(floater.center, path)).toBeGreaterThanOrEqual(
+            floaterReach + rodWidth(rod.kind) / 2
+          );
+        }
+      });
+    }
+    expect(pairs).toBeGreaterThan(100);
   });
 
   it('fastens every rod to islands of its own: it slides out of one and seats in one, so no rod is left in the air when the sector next door is made anew', () => {

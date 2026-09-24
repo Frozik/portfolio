@@ -38,6 +38,33 @@ export function distanceToSegment(point: Vector2, segment: Segment): number {
   return distance(point, pointAlongEdge(segment, along));
 }
 
+/**
+ * How far apart two segments lie at their nearest: nothing if they cross,
+ * else the least of each end to the other segment — the nearest points of
+ * two segments that do not cross always include an end of one of them.
+ */
+export function distanceBetweenSegments(a: Segment, b: Segment): number {
+  if (segmentsCross(a, b)) {
+    return 0;
+  }
+  return Math.min(
+    distanceToSegment(a.from, b),
+    distanceToSegment(a.to, b),
+    distanceToSegment(b.from, a),
+    distanceToSegment(b.to, a)
+  );
+}
+
+/** Whether two segments cross: each one's ends lie on opposite sides of the other's line. */
+function segmentsCross(a: Segment, b: Segment): boolean {
+  const side = (segment: Segment, point: Vector2): number =>
+    (segment.to.x - segment.from.x) * (point.y - segment.from.y) -
+    (segment.to.y - segment.from.y) * (point.x - segment.from.x);
+  const bAcrossA = side(a, b.from) * side(a, b.to);
+  const aAcrossB = side(b, a.from) * side(b, a.to);
+  return bAcrossA < 0 && aAcrossB < 0;
+}
+
 /** Whether any of the segments comes within `reach` of the point. */
 export function reachesPoint(segments: readonly Segment[], point: Vector2, reach: number): boolean {
   return segments.some(segment => distanceToSegment(point, segment) <= reach);

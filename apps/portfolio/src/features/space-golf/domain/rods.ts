@@ -10,8 +10,8 @@ import {
   ROD_WIDTH_METERS,
   SCREW_WIDTH_FACTOR,
 } from './constants';
-import type { FaceKind, Level, Rod, RodEdgeRef, RodKind, Wall } from './level';
-import { add, distance, dot, rightNormal, scale, subtract, ZERO } from './vector';
+import type { FaceKind, Level, Rod, RodEdgeRef, RodKind, Segment, Wall } from './level';
+import { add, distance, dot, normalize, rightNormal, scale, subtract, ZERO } from './vector';
 import { createWall } from './walls';
 
 export interface RodHit extends Impact, RodEdgeRef {}
@@ -43,6 +43,19 @@ export function rodTipLength(kind: RodKind): number {
 /** Where the rod meets the face it bridges to: the face's point, not the tip's seat inside it. */
 export function rodSeat(rod: Rod): Vector2 {
   return add(rod.base, scale(rod.direction, rod.length - rodTipLength(rod.kind)));
+}
+
+/** The rod's centre line from its base to the face it reaches, fully out: what must stay clear of everything else. */
+export function rodPath(rod: Rod): Segment {
+  const to = rodSeat(rod);
+  const direction = normalize(subtract(to, rod.base));
+  return {
+    from: rod.base,
+    to,
+    direction,
+    normal: rightNormal(direction),
+    length: rod.length - rodTipLength(rod.kind),
+  };
 }
 
 export function initialRods(level: Level): readonly number[] {

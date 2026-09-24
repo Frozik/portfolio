@@ -127,7 +127,12 @@ time.
   a square, a rim, a ring of rays and a sun on a circle
 - Two to four rods slide out of wall faces to bridge the gap to the face
   squarely across, up to forty ball widths away, the pointed tip seating in
-  a plate on the far face like the one it slides out of; a steel rod slides
+  a plate on the far face like the one it slides out of. No two rods ever
+  cross or come within a rod of each other, and no rod's path runs over a
+  square, a diamond or a circle — the whole of each path is measured
+  against the whole of every other, and against every floater's large
+  shape, the sectors next door included, whichever of them was made first;
+  a steel rod slides
   out at a steady pace while gravity points its way and back in otherwise,
   a thicker brass screw turns out along gravity, in against it and holds
   where it is while gravity runs across it, so every flip of the floor

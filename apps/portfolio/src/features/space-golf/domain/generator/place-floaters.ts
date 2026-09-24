@@ -3,7 +3,8 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import { distanceToSegment } from '../collision';
 import { CELL_METERS, FLOATER_CLEARANCE_METERS, FLOATER_LARGE_SIDE_METERS } from '../constants';
 import { createFloater } from '../floaters';
-import type { Bounds, Floater, FloaterShape, Wall } from '../level';
+import type { Bounds, Floater, FloaterShape, Rod, Wall } from '../level';
+import { rodPath, rodWidth } from '../rods';
 import { distance } from '../vector';
 import { containsPoint } from '../walls';
 import type { Random } from './random';
@@ -14,6 +15,8 @@ const SHAPES: readonly FloaterShape[] = ['square', 'diamond', 'circle'];
 const LARGE_AT_START_CHANCE = 0.5;
 /** The large diamond reaches this far from the centre, farther than the other shapes: the centre keeps at least that from the board's edge. */
 const LARGE_REACH_METERS = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
+/** Empty space kept between a floater's large shape and a rod's path, beyond the rod's own thickness. */
+const ROD_CLEARANCE_METERS = 0.1;
 /** Candidate centres are sampled on this grid and then nudged off it, so the squares do not line up. */
 const CANDIDATE_STEP_METERS = CELL_METERS / 2;
 
@@ -22,7 +25,10 @@ const CANDIDATE_STEP_METERS = CELL_METERS / 2;
  * open — as many as fit with their centres at least the clearance from
  * every wall face, from every other floater's centre — those already
  * standing next door included — and from the points to `avoid`, with their
- * large shape wholly in the region. The admissible centres are found on a
+ * large shape wholly in the region and off the path of every rod already
+ * standing next door: a rod keeps off the floaters it finds, and a floater
+ * made later keeps off the rods it finds, so neither ever runs over the
+ * other whichever was made first. The admissible centres are found on a
  * grid first, so a region with room always gets its share; half of them
  * are large to begin with.
  */
@@ -31,7 +37,8 @@ export function placeFloaters(
   walls: readonly Wall[],
   region: Bounds,
   avoid: readonly Vector2[],
-  others: readonly Floater[]
+  others: readonly Floater[],
+  rods: readonly Rod[]
 ): readonly Floater[] {
   const floaters: Floater[] = [];
   const admissible = (center: Vector2): boolean =>
@@ -40,7 +47,12 @@ export function placeFloaters(
     [...others, ...floaters].every(
       other => distance(center, other.center) >= FLOATER_CLEARANCE_METERS
     ) &&
-    walls.every(wall => isClearOf(center, wall));
+    walls.every(wall => isClearOf(center, wall)) &&
+    rods.every(
+      rod =>
+        distanceToSegment(center, rodPath(rod)) >=
+        LARGE_REACH_METERS + rodWidth(rod.kind) / 2 + ROD_CLEARANCE_METERS
+    );
   let candidates = gridCenters(region).filter(admissible);
   const wanted = random.int(MIN_FLOATERS, MAX_FLOATERS);
   while (floaters.length < wanted && candidates.length > 0) {

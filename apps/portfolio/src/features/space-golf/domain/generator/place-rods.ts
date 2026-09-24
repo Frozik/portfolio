@@ -1,6 +1,6 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
-import { distanceToSegment } from '../collision';
+import { distanceBetweenSegments, distanceToSegment } from '../collision';
 import {
   FLOATER_LARGE_SIDE_METERS,
   ROD_MAX_LENGTH_METERS,
@@ -8,8 +8,8 @@ import {
 } from '../constants';
 import type { Edge, EdgeRef, Floater, Rod, RodKind, Segment, SpikeRow, Wall } from '../level';
 import { pointAlongEdge } from '../level';
-import { createRod, rodSeat, rodTipLength, rodWidth } from '../rods';
-import { add, dot, normalize, rightNormal, scale, subtract } from '../vector';
+import { createRod, rodPath, rodTipLength, rodWidth } from '../rods';
+import { add, dot, rightNormal, scale, subtract } from '../vector';
 import { containsPoint } from '../walls';
 import type { Random } from './random';
 import { supportsTee } from './tee-support';
@@ -157,7 +157,7 @@ function isClear(
   avoid: readonly Vector2[],
   others: readonly Rod[]
 ): boolean {
-  const path = pathOf(rod);
+  const path = rodPath(rod);
   const halfWidth = rodWidth(rod.kind) / 2 + CORRIDOR_CLEARANCE_METERS;
   const across = scale(rightNormal(rod.direction), halfWidth);
   if (avoid.some(point => distanceToSegment(point, path) < TEE_CLEARANCE_METERS)) {
@@ -182,33 +182,15 @@ function isClear(
   const floatersClear = level.floaters.every(
     floater => distanceToSegment(floater.center, path) >= FLOATER_REACH_METERS + reach
   );
-  const rodsClear = others.every(other => {
-    const theirs = pathOf(other);
-    const apart = rodWidth(other.kind) + reach;
-    return (
-      distanceToSegment(path.from, theirs) >= apart &&
-      distanceToSegment(path.to, theirs) >= apart &&
-      distanceToSegment(theirs.from, path) >= apart &&
-      distanceToSegment(theirs.to, path) >= apart
-    );
-  });
+  // The whole of each path against the whole of the other: measured end to
+  // end only, two rods crossing in the middle of both counted as clear.
+  const rodsClear = others.every(
+    other => distanceBetweenSegments(path, rodPath(other)) >= rodWidth(other.kind) + reach
+  );
   return teethClear && floatersClear && rodsClear;
 }
 
 function isInBounds(wall: Wall, point: Vector2): boolean {
   const { min, max } = wall.bounds;
   return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y;
-}
-
-/** The rod's centre line from its base to the face it reaches. */
-function pathOf(rod: Rod): Segment {
-  const to = rodSeat(rod);
-  const direction = normalize(subtract(to, rod.base));
-  return {
-    from: rod.base,
-    to,
-    direction,
-    normal: rightNormal(direction),
-    length: rod.length - rodTipLength(rod.kind),
-  };
 }

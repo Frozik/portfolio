@@ -161,7 +161,14 @@ export function generateSector(request: SectorRequest): Sector {
     tee
   );
   const avoid = [...keepClear, tee];
-  const floaters = placeFloaters(random, [...walls, ...theirWalls], region, avoid, theirFloaters);
+  const floaters = placeFloaters(
+    random,
+    [...walls, ...theirWalls],
+    region,
+    avoid,
+    theirFloaters,
+    theirRods
+  );
   const rods = placeRods(
     random,
     {
