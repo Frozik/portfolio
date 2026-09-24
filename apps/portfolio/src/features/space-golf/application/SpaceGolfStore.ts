@@ -292,7 +292,7 @@ export class SpaceGolfStore {
       this.previousBall = ball;
       this.foresight = ball.foresight;
       this.grip = ball.grip;
-      this.view.centerOnBall();
+      this.view.centerOnReturnedBall();
     }
   }
 

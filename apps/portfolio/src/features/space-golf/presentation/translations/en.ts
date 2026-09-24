@@ -4,7 +4,11 @@ export const spaceGolfTranslationsEn = {
     strokes: (total: number, current: number): string => `${total} +${current}`,
     reset: 'Start a new world',
     resetConfirm: 'Press again to erase this world and start a new one',
-    toBall: 'Back to the ball',
+    following: {
+      edge: 'Back to the ball — press again within two seconds to centre it at rest, and again to keep it centred',
+      rest: 'The ball is centred whenever it rests — press again to keep it centred always',
+      always: 'The ball is kept in the middle always — press again to follow it at the edge only',
+    },
     overview: 'Look at the whole course',
     closeUp: 'Back to the playing scale',
     meters: (distance: number): string => `${distance} m`,

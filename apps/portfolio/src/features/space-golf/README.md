@@ -89,14 +89,21 @@ time.
   the ball; centring on the ball is the player's own — a double tap, `C` or
   the HUD button glides there, eased in and out — and the view's own only
   for a burst ball, which it glides to the middle of the screen where it
-  comes back; two fingers, the
+  comes back. Presses of that button within two seconds of one another
+  count round three ways of keeping the ball, and its icon shows which: at
+  the edge only, as above; centred whenever it comes to rest; or centred
+  always, the flight and all. A press after a pause starts over at the
+  edge, whatever was set — the way out of any of them is to wait and press
+  once; two fingers, the
   wheel, the right button or the arrows look around, a pinch or Ctrl + wheel
   zooms out to an overview, and a
   compass points to the cup with the distance, a scale bar under it showing
-  how long a metre is on the screen. Looking around lets go of the ball —
-  the next stroke, a double tap, `C` or the HUD button take it up again —
-  but a flight is never lost: a ball about to leave a view the player had
-  looked away with takes the view back with it
+  how long a metre is on the screen. Looking around wins over every motion
+  of the view's own — a glide under way stops, a flight being followed is
+  let go of, a ball due to be centred at rest is not, a burst ball comes
+  back where it comes back — and the view stays where the hand put it until
+  the next stroke takes it up again, or a double tap, `C` or the HUD button
+  does
 - The physics runs in fixed steps and the ball is drawn between them, so
   it glides evenly at any refresh rate, trailing a short tapered streak
   along the path it really flew — a few-pixel ball would strobe without it

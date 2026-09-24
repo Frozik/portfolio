@@ -291,14 +291,47 @@ describe('SpaceGolfStore', () => {
 
     const { store } = createStore(burst);
     await store.start(PHONE);
-    store.view.pan(0, 300);
     for (let frame = 0; frame < 120; frame += 1) {
       store.advance(FRAME);
     }
 
     expect(store.scene?.ball.phase).toBe('aiming');
-    expect(store.view.isAttached).toBe(true);
     expect(store.view.center).toEqual(ball.rest.position);
+  });
+
+  it('leaves a burst ball where the player had looked away from it: the hand wins until the next stroke', async () => {
+    const first = createStore();
+    await first.store.start(PHONE);
+    const [saved] = first.saves;
+    const { ball } = saved.play;
+    const burst: SavedWorld = {
+      ...saved,
+      play: {
+        ...saved.play,
+        ball: {
+          ...ball,
+          phase: 'destroyed',
+          position: { x: ball.position.x + 20, y: ball.position.y + 20 },
+        },
+      },
+    };
+
+    const { store } = createStore(burst);
+    await store.start(PHONE);
+    store.view.pan(0, 300);
+    const looked = store.view.center;
+    for (let frame = 0; frame < 120; frame += 1) {
+      store.advance(FRAME);
+    }
+
+    expect(store.scene?.ball.phase).toBe('aiming');
+    expect(store.view.isAttached).toBe(false);
+    expect(store.view.center).toEqual(looked);
+
+    store.beginAim({ x: 4, y: 4 });
+    store.updateAim({ x: 4, y: 3 });
+    store.release();
+    expect(store.view.isAttached).toBe(true);
   });
 
   it("shows how far the ball's foresight has grown: restored with a saved world, a level up with every bonus taken", async () => {

@@ -133,20 +133,38 @@ describe('the view of the course', () => {
     expect(settled(view, followed()).center.x).toBeCloseTo(50, 1);
   });
 
-  it('takes a flying ball back when the view was let go of and the ball would leave it', () => {
+  it('lets the hand win over every motion of its own until the next stroke: a flight followed, a glide under way, a ball centred at rest', () => {
     const view = settled(createView(), followed());
     const halfWidth = DESKTOP.width / 64 / 2;
 
+    // A pan in mid-flight: the ball flies off and the view stays put.
+    view.follow(followed({ isFlying: true, ball: { x: 50 + halfWidth * 0.5, y: 50 } }), FRAME);
     view.pan(640, 0);
+    const looked = view.center.x;
+    view.follow(followed({ isFlying: true, ball: { x: 50 - halfWidth * 3, y: 50 } }), FRAME);
     expect(view.isAttached).toBe(false);
+    expect(view.center.x).toBeCloseTo(looked, 6);
 
-    // Looking around while the ball flies is allowed — until it would be lost.
-    view.follow(followed({ isFlying: true, ball: { x: 50 + halfWidth * 0.3, y: 50 } }), FRAME);
-    expect(view.isAttached).toBe(false);
+    // A pan during a centring glide: the glide is over.
+    view.attach();
+    view.centerOnBall();
+    view.follow(followed({ ball: { x: 40, y: 50 } }), FRAME);
+    view.pan(-100, 0);
+    const stopped = view.center.x;
+    settled(view, followed({ ball: { x: 40, y: 50 } }));
+    expect(view.center.x).toBeCloseTo(stopped, 6);
 
-    view.follow(followed({ isFlying: true, ball: { x: 50 - halfWidth * 2, y: 50 } }), FRAME);
-    expect(view.isAttached).toBe(true);
-    expect(view.center.x).toBeLessThan(50);
+    // A pan while the ball is to be centred at rest: it is not, until a stroke.
+    view.attach();
+    view.centerOnBall();
+    view.centerOnBall();
+    expect(view.following).toBe('rest');
+    view.pan(300, 0);
+    const left = view.center.x;
+    settled(view, followed({ ball: { x: 45, y: 50 } }));
+    expect(view.center.x).toBeCloseTo(left, 6);
+    view.attach();
+    expect(settled(view, followed({ ball: { x: 45, y: 50 } })).center.x).toBeCloseTo(45, 6);
   });
 
   it('leaves a view the player looked away with alone while the ball rests', () => {
@@ -158,6 +176,78 @@ describe('the view of the course', () => {
 
     expect(view.isAttached).toBe(false);
     expect(view.center.x).toBeCloseTo(looked, 1);
+  });
+
+  it('counts quick presses of the ball button round the ways of following, and starts over after a pause', () => {
+    const view = createView();
+    const pause = (seconds: number): void => {
+      for (let frame = 0; frame < seconds * 60; frame += 1) {
+        view.follow(followed(), FRAME);
+      }
+    };
+
+    expect(view.following).toBe('edge');
+    view.centerOnBall();
+    expect(view.following).toBe('edge');
+    pause(1);
+    view.centerOnBall();
+    expect(view.following).toBe('rest');
+    pause(1.5);
+    view.centerOnBall();
+    expect(view.following).toBe('always');
+    pause(0.5);
+    view.centerOnBall();
+    expect(view.following).toBe('edge');
+
+    view.centerOnBall();
+    view.centerOnBall();
+    expect(view.following).toBe('always');
+    pause(2.5);
+    view.centerOnBall();
+    expect(view.following).toBe('edge');
+  });
+
+  it('centred at rest: a flight is followed at the edge as ever, and the ball glides to the middle once it rests', () => {
+    const view = createView();
+    view.centerOnBall();
+    view.centerOnBall();
+    const halfWidth = DESKTOP.width / 64 / 2;
+
+    view.follow(followed({ isFlying: true, ball: { x: 50 + halfWidth * 0.5, y: 50 } }), FRAME);
+    expect(view.center).toEqual(BALL);
+
+    const rested = { x: 50 + halfWidth * 0.5, y: 50 };
+    expect(settled(view, followed({ ball: rested })).center).toEqual(rested);
+  });
+
+  it('centred always: the ball stays in the very middle through its flight', () => {
+    const view = createView();
+    view.centerOnBall();
+    view.centerOnBall();
+    view.centerOnBall();
+
+    for (let frame = 1; frame <= 30; frame += 1) {
+      const ball = { x: 50 + frame * 0.2, y: 50 - frame * 0.1 };
+      view.follow(followed({ isFlying: true, ball }), FRAME);
+      expect(view.center).toEqual(ball);
+    }
+  });
+
+  it('a burst ball come back is centred without touching the way of following — and not at all while the player has looked away', () => {
+    const view = createView();
+    view.centerOnBall();
+    view.centerOnBall();
+
+    view.centerOnReturnedBall();
+    expect(view.following).toBe('rest');
+    expect(settled(view, followed({ ball: { x: 58, y: 44 } })).center).toEqual({ x: 58, y: 44 });
+
+    view.pan(640, 0);
+    const looked = view.center.x;
+    view.centerOnReturnedBall();
+    settled(view, followed({ ball: { x: 20, y: 44 } }));
+    expect(view.isAttached).toBe(false);
+    expect(view.center.x).toBeCloseTo(looked, 6);
   });
 
   it('goes out to the overview and back in one press each', () => {

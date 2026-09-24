@@ -7,7 +7,11 @@ export const spaceGolfTranslationsRu: TranslationOf<typeof spaceGolfTranslations
     strokes: (total: number, current: number): string => `${total} +${current}`,
     reset: 'Начать новый мир',
     resetConfirm: 'Нажмите ещё раз: этот мир сотрётся и начнётся новый',
-    toBall: 'Вернуться к шару',
+    following: {
+      edge: 'Вернуться к шару — нажмите ещё раз в течение двух секунд, чтобы центровать его на остановке, и ещё раз, чтобы держать в центре',
+      rest: 'Шар центруется при каждой остановке — нажмите ещё раз, чтобы держать его в центре всегда',
+      always: 'Шар всегда в центре — нажмите ещё раз, чтобы следить за ним только у края',
+    },
     overview: 'Посмотреть всё поле',
     closeUp: 'Вернуть игровой масштаб',
     meters: (distance: number): string => `${distance} м`,

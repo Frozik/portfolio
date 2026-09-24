@@ -1,4 +1,13 @@
-import { Check, Flag, Globe, LocateFixed, Maximize2, Minimize2 } from 'lucide-react';
+import {
+  Check,
+  Crosshair,
+  Flag,
+  Globe,
+  Locate,
+  LocateFixed,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
@@ -6,12 +15,19 @@ import { useEventCallback } from 'usehooks-ts';
 
 import { cn } from '@frozik/components/components/cn';
 
+import type { Following } from '../../application/CourseView';
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { spaceGolfT } from '../translations';
 import { ForesightStatus } from './ForesightStatus';
 import { GripStatus } from './GripStatus';
 
 const ICON_SIZE_PX = 16;
+/** The ball button shows how the ball is kept: at the edge, centred at rest, centred always. */
+const FOLLOWING_ICON: Readonly<Record<Following, ComponentType<{ readonly size: number }>>> = {
+  edge: Locate,
+  rest: LocateFixed,
+  always: Crosshair,
+};
 /** A reset asked for stays armed this long, waiting for the second press that confirms it. */
 const RESET_CONFIRM_MILLISECONDS = 3000;
 const BUTTON_CLASS =
@@ -85,8 +101,8 @@ export const Hud = observer(({ store }: { readonly store: SpaceGolfStore }) => (
       </span>
       <span className="flex gap-2">
         <HudButton
-          icon={LocateFixed}
-          label={spaceGolfT.hud.toBall}
+          icon={FOLLOWING_ICON[store.view.following]}
+          label={spaceGolfT.hud.following[store.view.following]}
           onClick={store.view.centerOnBall}
         />
         <HudButton

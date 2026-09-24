@@ -11,6 +11,7 @@ import {
   centerShowing,
   createCamera,
   glideCamera,
+  holdCamera,
   homeZoomFor,
   MIN_ZOOM,
   panCamera,
@@ -29,6 +30,21 @@ const HALF_TURN_DEGREES = 180;
 const NOWHERE: Vector2 = { x: 0, y: 0 };
 /** Zooms closer than this are the same zoom: a pinch back to the home zoom is not an overview. */
 const SAME_ZOOM_TOLERANCE = 1e-6;
+/** Presses of the ball button this close together count on from one another; one later starts over. */
+const PRESS_WINDOW_SECONDS = 2;
+
+/**
+ * How the view keeps the ball: at the edge only — standing still until the
+ * ball nears a side of the screen, the way that never makes a screen swim;
+ * centred whenever it comes to rest; or centred always, the flight and all.
+ */
+export type Following = 'edge' | 'rest' | 'always';
+
+const NEXT_FOLLOWING: Readonly<Record<Following, Following>> = {
+  edge: 'rest',
+  rest: 'always',
+  always: 'edge',
+};
 
 /** Which way the cup lies from the ball and how far; nothing to point at while the cup is on screen. */
 export interface Compass {
@@ -55,15 +71,18 @@ export interface Followed {
  * that stays where it is while the ball rests and the stroke is aimed,
  * centres on the ball when the player asks and when a burst one comes back
  * to its rest, and stands still through a flight until the ball nears the
- * edge of the screen; the player's own looking around, which lets go of
- * the ball until a stroke is played — or until a flight would leave the
- * screen; and the compass to the cup. The camera moves every frame and is not
- * observable; what the HUD shows is.
+ * edge of the screen — or, as the ball button's presses set it, centres the
+ * ball whenever it rests, or keeps it in the middle always; the player's
+ * own looking around, which wins over all of that and lets go of the ball
+ * until a stroke is played; and the compass to the cup. The camera moves
+ * every frame and is not observable; what the HUD shows is.
  */
 export class CourseView {
   /** Whether the view follows the ball; a pan lets go of it. */
   isAttached = true;
   isOverview = false;
+  /** How the ball is kept, as the ball button's presses have set it. */
+  following: Following = 'edge';
   compass: Compass | undefined = undefined;
   /** A measure of the world as long as it is on the screen now. */
   scaleBar: ScaleBar = scaleBarFor(1);
@@ -71,16 +90,19 @@ export class CourseView {
   private camera: CameraState = createCamera(NOWHERE);
   /** The ball has been asked for in the middle and the glide there is not over. */
   private centring = false;
+  /** Since the ball button was last pressed: the next press counts on from it only within the window. */
+  private sincePressSeconds = Number.POSITIVE_INFINITY;
   private screen: Size = { width: 1, height: 1 };
 
   constructor() {
-    makeAutoObservable<this, 'camera' | 'centring' | 'screen'>(
+    makeAutoObservable<this, 'camera' | 'centring' | 'sincePressSeconds' | 'screen'>(
       this,
       {
         compass: observableRef,
         scaleBar: observableRef,
         camera: false,
         centring: false,
+        sincePressSeconds: false,
         screen: false,
       },
       { autoBind: true }
@@ -126,7 +148,12 @@ export class CourseView {
     this.isOverview = this.isZoomedOut();
   }
 
-  /** Moves the view by hand: CSS pixels to the right and down the screen. It lets go of the ball. */
+  /**
+   * Moves the view by hand: CSS pixels to the right and down the screen. The
+   * hand wins over every motion of the view's own — a glide under way, a
+   * flight being followed, a ball to be centred at rest — and the view is
+   * left where the hand put it until the next stroke takes it back.
+   */
   pan(rightPixels: number, downPixels: number): void {
     const metersPerPixel = 1 / (VIEW_PIXELS_PER_METER * this.camera.zoom);
     this.camera = panCamera(this.camera, {
@@ -155,27 +182,48 @@ export class CourseView {
     this.isAttached = true;
   }
 
-  /** The ball put in the middle of the screen: the player's own asking, and a burst ball come back to its rest. */
+  /**
+   * The ball button, or what stands for it — a double tap, `C`: the ball
+   * is put in the middle of the screen, and presses in quick succession
+   * count round the ways of following — the edge, then centred at rest,
+   * then centred always. A press after a pause starts over at the edge,
+   * whatever was set: the way out of any mode is to wait and press once.
+   */
   centerOnBall(): void {
     this.attach();
+    this.following =
+      this.sincePressSeconds <= PRESS_WINDOW_SECONDS ? NEXT_FOLLOWING[this.following] : 'edge';
+    this.sincePressSeconds = 0;
     this.centring = true;
+  }
+
+  /**
+   * A burst ball come back to its rest is put in the middle of the screen,
+   * the following left as it is — unless the player has looked away, when
+   * the view stays where they put it, as it does for everything automatic.
+   */
+  centerOnReturnedBall(): void {
+    if (this.isAttached) {
+      this.centring = true;
+    }
   }
 
   /** A frame of following, and the compass kept pointing at the cup. */
   follow(followed: Followed, frameSeconds: number): void {
+    this.sincePressSeconds += frameSeconds;
     if (followed.isFlying) {
       this.centring = false;
-      // A flight is what must be watched: a view let go of mid-flight may be
-      // looked around in, but it takes the ball back rather than lose it.
-      if (!this.isAttached && !this.inSight(followed.ball)) {
-        this.attach();
-      }
-      this.camera = trackCamera(this.camera, followed.ball, this.screen);
+      this.camera =
+        this.following === 'always'
+          ? holdCamera(this.camera, followed.ball)
+          : trackCamera(this.camera, followed.ball, this.screen);
     } else {
-      // A flight leaves the ball in sight and the view where it is; only a ball moved elsewhere needs going to.
-      const target = this.centring
-        ? followed.ball
-        : centerShowing(this.camera, followed.ball, this.screen);
+      // A flight leaves the ball in sight and the view where it is; only a
+      // ball moved elsewhere needs going to — unless the ball is to be centred at rest.
+      const target =
+        this.centring || this.following !== 'edge'
+          ? followed.ball
+          : centerShowing(this.camera, followed.ball, this.screen);
       this.camera = glideCamera(this.camera, target, frameSeconds);
       this.centring = this.centring && !isNil(this.camera.glide);
     }

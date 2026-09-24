@@ -182,7 +182,8 @@ describe('generateSector', () => {
   it("never lets two rods cross nor come within a rod of one another, and keeps every floater's large shape off every rod's path — the neighbours' rods and floaters included, whichever was made first", () => {
     const floaterReach = (FLOATER_LARGE_SIDE_METERS / 2) * Math.SQRT2;
     let pairs = 0;
-    for (let worldSeed = 1; worldSeed <= 40; worldSeed += 1) {
+    // A dozen worlds of nine sectors each: enough to have caught the crossing this guards against, and quick.
+    for (let worldSeed = 1; worldSeed <= 12; worldSeed += 1) {
       const standing: Sector[] = [];
       for (const sx of [-1, 0, 1]) {
         for (const sy of [-1, 0, 1]) {

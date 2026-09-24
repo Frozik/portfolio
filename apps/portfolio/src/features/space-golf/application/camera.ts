@@ -141,6 +141,14 @@ export function centerShowing(camera: CameraState, point: Vector2, screen: Size)
   };
 }
 
+/** The camera on a point outright — the ball kept in the very middle through its flight, for a player who asks for that. */
+export function holdCamera(camera: CameraState, point: Vector2): CameraState {
+  if (!camera.attached) {
+    return camera;
+  }
+  return { ...camera, center: point, glide: undefined };
+}
+
 /** The view moved by hand, `delta` in metres: it lets go of its target until attached again. */
 export function panCamera(camera: CameraState, delta: Vector2): CameraState {
   return { ...camera, center: add(camera.center, delta), glide: undefined, attached: false };
