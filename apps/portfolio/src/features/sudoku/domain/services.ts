@@ -127,6 +127,17 @@ function withoutNote(cell: IFieldCell, note: number): IFieldCell {
   return { ...cell, notes: cell.notes.filter(candidate => candidate !== note) };
 }
 
+/**
+ * Whether `value` legally fits `(row, column)`: the cell is empty and no peer holds it.
+ * A hint for the board only — the pen still writes wherever the player clicks.
+ */
+export function canPlaceValue(field: IField, row: number, column: number, value: number): boolean {
+  return (
+    isNil(cellAt(field, row, column).value) &&
+    getBoundCells(field, row, column).every(bound => bound.cell.value !== value)
+  );
+}
+
 function applyPen(field: IField, row: number, column: number, value: number): IField {
   const cell = cellAt(field, row, column);
   if (cell.value === value) {

@@ -5,12 +5,13 @@ import {
 import {
   addFieldMarks,
   applyToolToFieldReducer,
+  canPlaceValue,
   getUsedNumbers,
   loadField,
   puzzleSolved,
 } from './services';
 import type { IField, ITool } from './types';
-import { EFieldType } from './types';
+import { ECellStatus, EFieldType } from './types';
 
 // A valid 9x9 sudoku puzzle string (81 chars, size=3)
 // '0' represents empty cells
@@ -145,6 +146,16 @@ describe('applyToolToFieldReducer', () => {
     expect(afterClear.cells[CELL_INDEX].value).toBeUndefined();
   });
 
+  it('pen mode writes a conflicting value and marks it wrong', () => {
+    const field = getLoadedField(VALID_PUZZLE);
+    // Row 0 holds a fixed 5 at (0, 0); (0, 2) is an empty guess cell in that row.
+    const result = applyToolToFieldReducer(field, { mode: 'pen', value: 5 }, 0, 2);
+
+    const CELL_INDEX = 2;
+    expect(result.cells[CELL_INDEX].value).toBe(5);
+    expect(result.cells[CELL_INDEX].status).toBe(ECellStatus.Wrong);
+  });
+
   it('notes mode toggles candidate on', () => {
     const field = getLoadedField(VALID_PUZZLE);
     const tool: ITool = { mode: 'notes', value: 4 };
@@ -197,6 +208,49 @@ describe('applyToolToFieldReducer', () => {
     // Last cell of the board — outside the row, column and group of (0, 2).
     const UNAFFECTED_CELL_INDEX = 80;
     expect(result.cells[UNAFFECTED_CELL_INDEX]).toBe(field.cells[UNAFFECTED_CELL_INDEX]);
+  });
+});
+
+describe('canPlaceValue', () => {
+  function getLoadedField(puzzle: string): IField {
+    const result = loadField(puzzle);
+    if (!isSyncedValueDescriptor(result)) {
+      throw new Error('Failed to load field');
+    }
+    return result.value;
+  }
+
+  it('allows a value no peer holds', () => {
+    expect(canPlaceValue(getLoadedField(VALID_PUZZLE), 0, 2, 4)).toBe(true);
+  });
+
+  it('rejects a value already in the row', () => {
+    expect(canPlaceValue(getLoadedField(VALID_PUZZLE), 0, 2, 5)).toBe(false);
+  });
+
+  it('rejects a value already in the column', () => {
+    // Column 2 holds a fixed 8 at (2, 2).
+    expect(canPlaceValue(getLoadedField(VALID_PUZZLE), 0, 2, 8)).toBe(false);
+  });
+
+  it('rejects a value already in the group', () => {
+    // The top-left group holds a fixed 6 at (1, 0).
+    expect(canPlaceValue(getLoadedField(VALID_PUZZLE), 0, 2, 6)).toBe(false);
+  });
+
+  it('rejects any value for a given cell', () => {
+    expect(canPlaceValue(getLoadedField(VALID_PUZZLE), 0, 0, 1)).toBe(false);
+  });
+
+  it('rejects any value for a cell that already holds a guess', () => {
+    const field = applyToolToFieldReducer(
+      getLoadedField(VALID_PUZZLE),
+      { mode: 'pen', value: 4 },
+      0,
+      2
+    );
+    expect(canPlaceValue(field, 0, 2, 1)).toBe(false);
+    expect(canPlaceValue(field, 0, 2, 4)).toBe(false);
   });
 });
 

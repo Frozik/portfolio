@@ -3,7 +3,7 @@ import { isEmpty, isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { cellAt } from '../../domain/services';
+import { canPlaceValue, cellAt } from '../../domain/services';
 import type { IField, ITool } from '../../domain/types';
 import { ECellStatus, EFieldType } from '../../domain/types';
 
@@ -49,6 +49,10 @@ export const FieldCell = observer(
     const isFixed = type === EFieldType.Fixed;
     const isWrong = status === ECellStatus.Wrong;
     const isHighlighted = hasValue && value === tool.value;
+    const isPlaceable =
+      tool.mode === 'pen' &&
+      !isNil(tool.value) &&
+      canPlaceValue(field, globalRow, globalColumn, tool.value);
     const isRowOrColumnHovered =
       selectedCell?.row === globalRow || selectedCell?.column === globalColumn;
 
@@ -60,6 +64,7 @@ export const FieldCell = observer(
           // track; otherwise its line box overlaps the neighbour and steals its clicks.
           'flex min-h-0 min-w-0 overflow-hidden bg-neutral-700 leading-none',
           isFixed ? 'cursor-not-allowed text-neutral-300' : 'cursor-pointer text-neutral-500',
+          isPlaceable && 'bg-green-900',
           hasValue && 'items-center justify-center',
           showsNotes && 'grid place-items-center',
           isHighlighted && (isFixed ? 'font-bold text-blue-500' : 'font-bold text-blue-600'),
