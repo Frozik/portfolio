@@ -51,6 +51,11 @@ const SpaceGolf = lazy(() =>
     default: m.SpaceGolf,
   }))
 );
+const OsmMap = lazy(() =>
+  import('../../features/osm-map/presentation/OsmMap').then(m => ({
+    default: m.OsmMap,
+  }))
+);
 const SitePlanner = lazy(() =>
   import('../../features/site-planner/presentation/SitePlanner').then(m => ({
     default: m.SitePlanner,
@@ -113,6 +118,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="stereometry/:puzzleId" element={<Stereometry />} />
             <Route path="space-golf" element={<SpaceGolf />} />
             <Route path="site-planner" element={<SitePlanner />} />
+            <Route path="osm-map" element={<OsmMap />} />
             <Route path="controls" element={<Controls />} />
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>

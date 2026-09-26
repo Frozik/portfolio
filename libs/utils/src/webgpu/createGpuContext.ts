@@ -7,13 +7,26 @@ export interface GpuContext {
   readonly format: GPUTextureFormat;
 }
 
-export async function createGpuContext(canvas: HTMLCanvasElement): Promise<GpuContext> {
+export interface GpuContextOptions {
+  /**
+   * Limits to raise above WebGPU's defaults, chosen against what the adapter
+   * supports (a request beyond the adapter's own limit is a validation error).
+   */
+  readonly requiredLimits?: (adapterLimits: GPUSupportedLimits) => Record<string, number>;
+}
+
+export async function createGpuContext(
+  canvas: HTMLCanvasElement,
+  options: GpuContextOptions = {}
+): Promise<GpuContext> {
   assert(!isNil(navigator.gpu), 'WebGPU is not supported');
 
   const adapter = await navigator.gpu.requestAdapter();
   assert(!isNil(adapter), 'WebGPU adapter not available');
 
-  const device = await adapter.requestDevice();
+  const device = await adapter.requestDevice({
+    requiredLimits: options.requiredLimits?.(adapter.limits),
+  });
 
   const canvasContext = canvas.getContext('webgpu');
   assert(!isNil(canvasContext), 'Failed to get WebGPU canvas context');

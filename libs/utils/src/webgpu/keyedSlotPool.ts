@@ -1,6 +1,6 @@
-import { assert } from '@frozik/utils/assert/assert';
-import type { ISlotPoolGrowth } from '@frozik/utils/webgpu/lruSlotPool';
-import { LruSlotPool } from '@frozik/utils/webgpu/lruSlotPool';
+import { assert } from '../assert/assert';
+import type { ISlotPoolGrowth } from './lruSlotPool';
+import { LruSlotPool } from './lruSlotPool';
 
 export interface IKeyedSlotPoolOptions<TKey extends NonNullable<unknown>> {
   readonly initialCapacity: number;
@@ -12,10 +12,9 @@ export interface IKeyedSlotPoolOptions<TKey extends NonNullable<unknown>> {
 }
 
 /**
- * Maps opaque block keys onto the dense slot indices handed out by
- * {@link LruSlotPool}. Every binance-view texture manager keys its GPU
- * slots by block id and shares this bookkeeping; the texture geometry
- * (how a slot maps to texels) stays with the individual manager.
+ * Maps opaque keys (block ids, tile keys, …) onto the dense slot indices
+ * handed out by {@link LruSlotPool}. The texture geometry (how a slot maps
+ * to texels or layers) stays with the individual manager.
  */
 export class KeyedSlotPool<TKey extends NonNullable<unknown>> {
   private readonly pool: LruSlotPool;

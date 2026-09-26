@@ -201,6 +201,13 @@ export const welcomeTranslationsEn = {
           'Plan a plot of land in 2D — house, trees, paths, the lie of the ground — then look at it in 3D, with shadows from the real sun on any day and hour.',
         status: '2d → 3d',
       },
+      'osm-map': {
+        meta: 'Maps · WebGPU engine',
+        title: 'OSM Map',
+        description:
+          'A slippy map written from scratch on WebGPU over OpenStreetMap tiles: tilt it to the foggy horizon, and watch fine tiles near you and coarse ones far away fill in over a checkerboard as they load.',
+        status: 'one draw call',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

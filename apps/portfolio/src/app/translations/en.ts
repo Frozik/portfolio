@@ -42,6 +42,7 @@ export const appTranslationsEn = {
     stereometry: 'Stereometry',
     spaceGolf: 'Space Golf',
     sitePlanner: 'Site Planner',
+    osmMap: 'OSM Map',
     controls: 'Controls',
     retro: 'Retro',
     conf: 'Conference',

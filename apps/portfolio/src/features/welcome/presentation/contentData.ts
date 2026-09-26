@@ -52,6 +52,7 @@ export const PROJECT_ROUTES: readonly IProjectRoute[] = [
   { id: 'scorched', route: '/scorched', fx: 'artillery' },
   { id: 'space-golf', route: '/space-golf', fx: 'gravity' },
   { id: 'site-planner', route: '/site-planner', fx: 'contours' },
+  { id: 'osm-map', route: '/osm-map', fx: 'tiles' },
   { id: 'retro', route: '/retro', fx: 'peers' },
   { id: 'conf', route: '/conf', fx: 'ar' },
   { id: 'controls', route: '/controls', fx: 'typing' },
