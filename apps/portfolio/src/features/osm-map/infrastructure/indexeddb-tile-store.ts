@@ -114,8 +114,5 @@ export function createIndexedDBTileStore(
         // Storage is a cache: a write that fails is not worth a broken map.
       }
     },
-    get count(): number {
-      return knownCount;
-    },
   };
 }

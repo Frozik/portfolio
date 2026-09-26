@@ -10,6 +10,4 @@ export interface TileStore {
   /** The stored bytes, or nothing; a hit counts as an access. */
   get(key: TileKey): Promise<Blob | undefined>;
   set(key: TileKey, bytes: Blob): Promise<void>;
-  /** Tiles held, as last known. */
-  readonly count: number;
 }

@@ -16,7 +16,6 @@ import type { CameraGeometry, MapCameraState, Viewport } from '../../domain/map-
 import { cameraGeometry, viewOf } from '../../domain/map-camera';
 import type { MapView } from '../../domain/map-view';
 import type { TileAtlasPort } from '../../domain/ports/tile-atlas';
-import type { TileStore } from '../../domain/ports/tile-store';
 import type { StreetTile } from '../../domain/street-tile';
 import { selectStreetTiles } from '../../domain/street-tile-selection';
 import { metresPerUnitAt } from '../../domain/tile-grid';
@@ -36,7 +35,6 @@ import {
   writeTileInstances,
 } from '../../infrastructure/tile-instance-buffer';
 import type { TileLoader } from '../../infrastructure/tile-loader';
-import type { MapStats } from '../OsmMapStore';
 import type { StreetTraffic } from './street-traffic';
 
 export interface MapSceneDependencies {
@@ -45,9 +43,8 @@ export interface MapSceneDependencies {
   readonly streetLoader: TileLoader<StreetTile>;
   readonly traffic: StreetTraffic;
   readonly atlas: TileAtlasPort;
-  readonly store: TileStore;
   readonly onPoseChanged: (view: MapView) => void;
-  readonly onStats: (stats: MapStats) => void;
+  readonly onBearing: (bearingDeg: number) => void;
 }
 
 /**
@@ -124,7 +121,7 @@ export class MapScene {
   }
 
   advance(state: FrameState): MapFrame | undefined {
-    const { camera, loader, streetLoader, traffic, atlas, store, onPoseChanged, onStats } =
+    const { camera, loader, streetLoader, traffic, atlas, onPoseChanged, onBearing } =
       this.dependencies;
     const cameraState = camera.tick();
     const viewport: Viewport = { widthPx: state.canvasWidth, heightPx: state.canvasHeight };
@@ -153,7 +150,9 @@ export class MapScene {
       if (!this.buildingsShown) {
         this.buildingRises.clear();
       }
-      onPoseChanged(viewOf(cameraState));
+      const view = viewOf(cameraState);
+      onPoseChanged(view);
+      onBearing(view.bearingDeg);
     }
     // A load finishing frees a network slot for the next queued tile, and a
     // failed tile's backoff runs out, so the schedule must run at rest too,
@@ -205,7 +204,6 @@ export class MapScene {
       state.time
     );
     const instanceCount = instances.length;
-    const view = viewOf(cameraState);
     writeTileInstances(this.instanceData, instances, origin);
     const streetTiles = standing.map((tile): StreetTilePlacement => {
       const corner = tileOrigin(tile.coord);
@@ -221,19 +219,6 @@ export class MapScene {
     const cars = traffic.poses().flatMap((pose): CarInstance[] => {
       const placementIndex = placementOf.get(pose.tileKey);
       return placementIndex === undefined ? [] : [{ ...pose, placementIndex }];
-    });
-    onStats({
-      zoom: view.zoom,
-      bearingDeg: view.bearingDeg,
-      pitchDeg: view.pitchDeg,
-      visibleTiles: this.selected.length,
-      loadingTiles: loader.pendingCount,
-      atlasUsed: atlas.usedCount,
-      atlasCapacity: atlas.capacity,
-      cachedTiles: store.count,
-      buildingTiles: streetTiles.length,
-      loadingBuildingTiles: streetLoader.pendingCount,
-      cars: cars.length,
     });
     return {
       viewProjection: this.geometry.viewProjection,

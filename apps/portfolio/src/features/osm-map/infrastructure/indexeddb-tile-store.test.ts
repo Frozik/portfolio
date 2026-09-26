@@ -23,7 +23,7 @@ async function settleClock(): Promise<void> {
 }
 
 describe('IndexedDB tile store', () => {
-  it('returns what was stored and counts it', async () => {
+  it('returns what was stored, the latest write winning', async () => {
     const store = createIndexedDBTileStore(uniqueDatabaseName(), 10);
 
     await store.set(1, blob('one'));
@@ -31,7 +31,6 @@ describe('IndexedDB tile store', () => {
 
     expect(await sizeOf(store, 1)).toBe('one again'.length);
     expect(await store.get(2)).toBeUndefined();
-    expect(store.count).toBe(1);
   });
 
   it('forgets the least recently read tiles once past the ceiling', async () => {
@@ -50,7 +49,6 @@ describe('IndexedDB tile store', () => {
     expect(await store.get(2)).toBeUndefined();
     expect(await store.get(1)).toBeDefined();
     expect(await store.get(4)).toBeDefined();
-    expect(store.count).toBe(3);
   });
 
   it('remembers tiles across a reopen of the same database', async () => {
@@ -60,6 +58,5 @@ describe('IndexedDB tile store', () => {
     const reopened = createIndexedDBTileStore(name, 10);
 
     expect(await sizeOf(reopened, 7)).toBe('seven'.length);
-    expect(reopened.count).toBe(1);
   });
 });

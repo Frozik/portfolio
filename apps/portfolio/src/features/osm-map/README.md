@@ -148,7 +148,7 @@ their shaders, the gesture controller and the hash sync.
 visible tiles → loads → instances, street placements and cars — and hands
 the layers a frame only when something changed; `street-traffic.ts` keeps
 the moving cars between frames; `run-osm-map.ts` is the composition root. The
-MobX store holds only the HUD readout and the reset command; the camera
+MobX store holds only the compass bearing and the locate state; the camera
 never touches MobX because it changes every frame.
 
 Two details worth knowing before changing the renderer:

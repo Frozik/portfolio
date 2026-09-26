@@ -10,9 +10,8 @@ import { requestCurrentPosition } from '../infrastructure/geolocation';
 import { createHomeStorage } from '../infrastructure/home-storage';
 import { Attribution } from './components/Attribution';
 import { Compass } from './components/Compass';
-import { Hud } from './components/Hud';
+import { HelpPopover } from './components/HelpPopover';
 import { LocateButton } from './components/LocateButton';
-import { osmMapT } from './translations';
 
 /** The composition root: the store gets the browser's geolocation and web storage here and nowhere else. */
 function createStore(): OsmMapStore {
@@ -35,12 +34,9 @@ export const OsmMap = observer(() => {
     <WebGpuGuard className="h-full w-full">
       <div className="relative h-full w-full select-none">
         <canvas ref={canvasRef} className="h-full w-full [touch-action:none]" />
-        <Hud store={store} />
         <Compass store={store} />
         <LocateButton store={store} />
-        <p className="pointer-events-none absolute inset-x-0 bottom-8 mx-auto w-max max-w-[92%] rounded bg-neutral-900/60 px-3 py-1 text-center font-mono text-xs text-neutral-200">
-          {osmMapT.help}
-        </p>
+        <HelpPopover />
         <Attribution />
       </div>
     </WebGpuGuard>

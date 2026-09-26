@@ -58,9 +58,6 @@ function createFakeStore(): TileStore {
       bytes.set(key, blob);
       return Promise.resolve();
     },
-    get count(): number {
-      return bytes.size;
-    },
   };
 }
 
@@ -71,8 +68,6 @@ function createFakeAtlas(): TileAtlasPort {
     layerOf: key => layers.get(key),
     has: key => layers.has(key),
     touch: () => undefined,
-    capacity: 64,
-    usedCount: 0,
     coverage: new ResidentTileIndex(),
   };
 }
@@ -138,9 +133,8 @@ function createStreetScene(zoom: number) {
     }),
     traffic: new StreetTraffic(sink.roadsOf),
     atlas,
-    store: createFakeStore(),
     onPoseChanged: () => undefined,
-    onStats: () => undefined,
+    onBearing: () => undefined,
   });
   return { scene, streets, setTime: (next: number) => (time = next) };
 }
@@ -176,9 +170,8 @@ describe('MapScene', () => {
       }),
       traffic: new StreetTraffic(() => []),
       atlas,
-      store: createFakeStore(),
       onPoseChanged: () => undefined,
-      onStats: () => undefined,
+      onBearing: () => undefined,
     });
 
     const first = scene.advance(frame(time));

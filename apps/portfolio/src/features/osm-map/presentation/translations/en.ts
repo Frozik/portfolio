@@ -1,16 +1,5 @@
 export const osmMapTranslationsEn = {
   hud: {
-    zoom: (zoom: number): string => `z ${zoom.toFixed(2)}`,
-    pitch: (degrees: number): string => `pitch ${degrees.toFixed(0)}°`,
-    bearing: (degrees: number): string => `bearing ${degrees.toFixed(0)}°`,
-    tiles: (visible: number, loading: number): string =>
-      loading > 0 ? `${visible} tiles, ${loading} loading` : `${visible} tiles`,
-    atlas: (used: number, capacity: number): string => `atlas ${used}/${capacity}`,
-    cached: (count: number): string => `stored ${count}`,
-    buildings: (tiles: number, loading: number): string =>
-      loading > 0 ? `buildings ${tiles} tiles, ${loading} loading` : `buildings ${tiles} tiles`,
-    cars: (count: number): string => `cars ${count}`,
-    reset: 'Reset view',
     locate: 'Show where I am',
     locating: 'Finding where you are…',
     locateFailure: {
@@ -23,6 +12,39 @@ export const osmMapTranslationsEn = {
     compass: (bearingDeg: number): string =>
       `North is ${Math.round(bearingDeg)}° off — press to point it up`,
   },
-  help: 'Drag to pan, wheel or pinch to zoom, right button or Ctrl+drag to turn and tilt; two fingers tilt by dragging and turn by twisting.',
+  help: {
+    open: 'How to use the map',
+    close: 'Close',
+    title: 'How to use the map',
+    sections: [
+      {
+        title: 'Mouse',
+        items: [
+          ['Drag', 'pan'],
+          ['Wheel', 'zoom around the cursor'],
+          ['Right button or Ctrl + drag', 'turn and tilt'],
+        ],
+      },
+      {
+        title: 'Touch',
+        items: [
+          ['One finger', 'pan'],
+          ['Pinch', 'zoom'],
+          ['Two fingers dragging', 'tilt'],
+          ['Two fingers twisting', 'turn'],
+        ],
+      },
+      {
+        title: 'On the map',
+        items: [
+          ['Compass', 'turns with the map; press it to put north up'],
+          ['Crosshair button', 'centres the map on you'],
+          ['Buildings', 'rise from zoom 16'],
+          ['Cars', 'drive the streets from zoom 17'],
+          ['Link', 'the address bar follows the view; share it to share the view'],
+        ],
+      },
+    ],
+  },
   attribution: '© OpenStreetMap contributors · OpenFreeMap · © OpenMapTiles',
 };

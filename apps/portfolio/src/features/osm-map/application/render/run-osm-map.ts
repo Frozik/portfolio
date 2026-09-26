@@ -137,9 +137,8 @@ async function initGpu(
     streetLoader,
     traffic: new StreetTraffic(key => streetCache.roadsOf(key)),
     atlas,
-    store: tileStore,
     onPoseChanged: publishView,
-    onStats: store.reportFrame,
+    onBearing: store.reportBearing,
   });
   // The ground layer runs the scene; the street layer draws the same
   // frame right after it, and a frame is consumed once.

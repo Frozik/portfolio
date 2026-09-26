@@ -53,8 +53,6 @@ function createFakeAtlas(): TileAtlasPort & {
     layerOf: key => layers.get(key),
     has: key => layers.has(key),
     touch: () => undefined,
-    capacity: 64,
-    usedCount: 0,
     coverage: new ResidentTileIndex(),
   };
 }
@@ -66,9 +64,6 @@ function createFakeStore(): TileStore {
     set: (key, blob) => {
       bytes.set(key, blob);
       return Promise.resolve();
-    },
-    get count(): number {
-      return bytes.size;
     },
   };
 }
@@ -109,7 +104,7 @@ async function settle(): Promise<void> {
 
 describe('TileLoader', () => {
   it('fetches the tiles nearest the screen centre first, decodes and uploads them, then closes the image', async () => {
-    const { loader, pending, atlas, store, onChange, decoded } = createLoader();
+    const { loader, pending, atlas, onChange, decoded } = createLoader();
     const near = selected(0, 100);
     const far = selected(1, 500);
 
@@ -121,7 +116,6 @@ describe('TileLoader', () => {
     expect(pending[0].coord).toEqual(near.coord);
     expect(atlas.stored).toEqual([near.key]);
     expect(decoded[0].close).toHaveBeenCalled();
-    expect(store.count).toBe(1);
     expect(loader.readyTile(near.key)).toEqual({ fadeStart: 3 });
     expect(loader.readyTile(far.key)).toBeUndefined();
     expect(onChange).toHaveBeenCalledTimes(1);

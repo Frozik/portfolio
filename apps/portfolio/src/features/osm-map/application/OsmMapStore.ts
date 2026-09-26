@@ -1,4 +1,3 @@
-import { isEqual } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import type { MapView } from '../domain/map-view';
@@ -8,44 +7,14 @@ import type { HomeStorage } from './ports/home-storage';
 import type { MapViewControl } from './ports/map-view-control';
 import type { PositionFailure, PositionSource } from './ports/position-source';
 
-/** The per-frame readout the HUD shows; replaced only when a value moved. */
-export interface MapStats {
-  readonly zoom: number;
-  readonly bearingDeg: number;
-  readonly pitchDeg: number;
-  readonly visibleTiles: number;
-  readonly loadingTiles: number;
-  readonly atlasUsed: number;
-  readonly atlasCapacity: number;
-  /** Encoded tiles held in the on-disk store beyond the atlas. */
-  readonly cachedTiles: number;
-  /** z14 building tiles standing in the frame, and the ones still on their way. */
-  readonly buildingTiles: number;
-  readonly loadingBuildingTiles: number;
-  /** Cars on the move this frame. */
-  readonly cars: number;
-}
-
-const INITIAL_STATS: MapStats = {
-  zoom: DEFAULT_VIEW.zoom,
-  bearingDeg: DEFAULT_VIEW.bearingDeg,
-  pitchDeg: DEFAULT_VIEW.pitchDeg,
-  visibleTiles: 0,
-  loadingTiles: 0,
-  atlasUsed: 0,
-  atlasCapacity: 0,
-  cachedTiles: 0,
-  buildingTiles: 0,
-  loadingBuildingTiles: 0,
-  cars: 0,
-};
-
 /**
  * Thin: the camera lives in the renderer and changes every frame, so only
- * what React shows is observable here, plus the commands the HUD sends back.
+ * what React shows is observable here — the bearing for the compass, the
+ * state of a "where am I" request — plus the commands the buttons send back.
  */
 export class OsmMapStore {
-  stats: MapStats = INITIAL_STATS;
+  /** Where north is, for the compass; written by the renderer only when it moved. */
+  bearingDeg = DEFAULT_VIEW.bearingDeg;
   /** A "where am I" request is out and unanswered. */
   locating = false;
   /** Why the last "where am I" press got no position, until the next press. */
@@ -81,7 +50,7 @@ export class OsmMapStore {
     return this.homeView;
   }
 
-  /** The user was found here: remembered for the next visit and for "reset view". */
+  /** The user was found here: remembered for the next visit. */
   setHome(position: LonLat): void {
     this.homeView = viewAround(position);
     this.homeStorage.write(position);
@@ -109,9 +78,9 @@ export class OsmMapStore {
     );
   }
 
-  reportFrame(stats: MapStats): void {
-    if (!isEqual(this.stats, stats)) {
-      this.stats = stats;
+  reportBearing(bearingDeg: number): void {
+    if (this.bearingDeg !== bearingDeg) {
+      this.bearingDeg = bearingDeg;
     }
   }
 
@@ -123,10 +92,6 @@ export class OsmMapStore {
         this.viewControl = undefined;
       }
     };
-  }
-
-  resetView(): void {
-    this.viewControl?.setView(this.homeView);
   }
 
   resetNorth(): void {

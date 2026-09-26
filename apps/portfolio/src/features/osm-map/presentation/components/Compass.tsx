@@ -15,7 +15,7 @@ const NEEDLE_HALF_WIDTH = 4;
  * turns the map back to north-up.
  */
 export const Compass = observer(({ store }: { readonly store: OsmMapStore }) => {
-  const { bearingDeg } = store.stats;
+  const { bearingDeg } = store;
   return (
     <button
       type="button"

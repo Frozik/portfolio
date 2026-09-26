@@ -57,14 +57,6 @@ export class TileAtlas implements TileAtlasPort {
     return this.textureVersion;
   }
 
-  get capacity(): number {
-    return this.slots.capacity;
-  }
-
-  get usedCount(): number {
-    return this.slots.allocatedCount;
-  }
-
   createView(): GPUTextureView {
     return this.texture.createView({ dimension: '2d-array' });
   }

@@ -3,17 +3,6 @@ import type { osmMapTranslationsEn } from './en';
 
 export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = {
   hud: {
-    zoom: (zoom: number): string => `z ${zoom.toFixed(2)}`,
-    pitch: (degrees: number): string => `наклон ${degrees.toFixed(0)}°`,
-    bearing: (degrees: number): string => `азимут ${degrees.toFixed(0)}°`,
-    tiles: (visible: number, loading: number): string =>
-      loading > 0 ? `тайлов ${visible}, грузится ${loading}` : `тайлов ${visible}`,
-    atlas: (used: number, capacity: number): string => `атлас ${used}/${capacity}`,
-    cached: (count: number): string => `на диске ${count}`,
-    buildings: (tiles: number, loading: number): string =>
-      loading > 0 ? `здания: тайлов ${tiles}, грузится ${loading}` : `здания: тайлов ${tiles}`,
-    cars: (count: number): string => `машин ${count}`,
-    reset: 'Сбросить вид',
     locate: 'Показать, где я',
     locating: 'Определяем, где вы…',
     locateFailure: {
@@ -26,6 +15,39 @@ export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = 
     compass: (bearingDeg: number): string =>
       `Север отклонён на ${Math.round(bearingDeg)}° — нажмите, чтобы направить его вверх`,
   },
-  help: 'Перетаскивание — сдвиг, колесо или щипок — масштаб, правая кнопка или Ctrl+перетаскивание — поворот и наклон; два пальца наклоняют движением и поворачивают скручиванием.',
+  help: {
+    open: 'Как пользоваться картой',
+    close: 'Закрыть',
+    title: 'Как пользоваться картой',
+    sections: [
+      {
+        title: 'Мышь',
+        items: [
+          ['Перетаскивание', 'сдвиг'],
+          ['Колесо', 'масштаб вокруг курсора'],
+          ['Правая кнопка или Ctrl + перетаскивание', 'поворот и наклон'],
+        ],
+      },
+      {
+        title: 'Касания',
+        items: [
+          ['Один палец', 'сдвиг'],
+          ['Щипок', 'масштаб'],
+          ['Два пальца движением', 'наклон'],
+          ['Два пальца скручиванием', 'поворот'],
+        ],
+      },
+      {
+        title: 'На карте',
+        items: [
+          ['Компас', 'крутится вместе с картой; нажмите, чтобы вернуть север наверх'],
+          ['Кнопка с прицелом', 'центрирует карту на вас'],
+          ['Здания', 'вырастают с 16-го зума'],
+          ['Машины', 'ездят по улицам с 17-го зума'],
+          ['Ссылка', 'адресная строка следует за видом; поделитесь ей, чтобы показать этот вид'],
+        ],
+      },
+    ],
+  },
   attribution: '© участники OpenStreetMap · OpenFreeMap · © OpenMapTiles',
 };
