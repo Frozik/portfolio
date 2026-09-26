@@ -1,8 +1,8 @@
 import { PbfWriter } from 'pbf';
 
-import { tileGridOf } from '../domain/building-footprint';
 import { DEFAULT_BUILDING_HEIGHT_M } from '../domain/constants';
-import { decodeBuildingTile, footprintsOfTile } from './building-tile-decoder';
+import { tileGridOf } from '../domain/tile-grid';
+import { decodeStreetTile, footprintsOfTile } from './street-tile-decoder';
 
 const TILE = { z: 14, x: 9570, y: 4760 };
 const EXTENT = 4096;
@@ -11,12 +11,15 @@ const VERTICES_PER_TRIANGLE = 3;
 
 interface EncodedFeature {
   readonly ring: readonly (readonly [number, number])[];
-  readonly properties: Readonly<Record<string, number | boolean>>;
+  readonly properties: Readonly<Record<string, number | boolean | string>>;
+  /** A road rather than a building: an open line in the `transportation` layer. */
+  readonly line?: boolean;
 }
 
 const MOVE_TO = 1;
 const LINE_TO = 2;
 const CLOSE_PATH = 7;
+const LINE_STRING = 2;
 const POLYGON = 3;
 const MVT_VERSION = 2;
 
@@ -28,7 +31,7 @@ function zigzag(value: number): number {
   return (value << 1) ^ (value >> 31);
 }
 
-function geometryOf(ring: EncodedFeature['ring']): number[] {
+function geometryOf(ring: EncodedFeature['ring'], closed: boolean): number[] {
   const [first, ...rest] = ring;
   const commands = [
     command(MOVE_TO, 1),
@@ -41,14 +44,34 @@ function geometryOf(ring: EncodedFeature['ring']): number[] {
     commands.push(zigzag(point[0] - previous[0]), zigzag(point[1] - previous[1]));
     previous = point;
   }
-  commands.push(command(CLOSE_PATH, 1));
+  if (closed) {
+    commands.push(command(CLOSE_PATH, 1));
+  }
   return commands;
 }
 
-/** The smallest Mapbox vector tile with a `building` layer, straight from the protobuf schema. */
+/** The smallest Mapbox vector tile with a `building` and a `transportation` layer, straight from the protobuf schema. */
 function encodeTile(features: readonly EncodedFeature[]): ArrayBuffer {
+  const pbf = new PbfWriter();
+  encodeLayer(
+    pbf,
+    'building',
+    features.filter(feature => feature.line !== true)
+  );
+  encodeLayer(
+    pbf,
+    'transportation',
+    features.filter(feature => feature.line === true)
+  );
+  const bytes = pbf.finish();
+  const copy = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copy).set(bytes);
+  return copy;
+}
+
+function encodeLayer(pbf: PbfWriter, name: string, features: readonly EncodedFeature[]): void {
   const keys: string[] = [];
-  const values: (number | boolean)[] = [];
+  const values: (number | boolean | string)[] = [];
   const tagsOf = (properties: EncodedFeature['properties']): number[] =>
     Object.entries(properties).flatMap(([key, value]) => {
       if (!keys.includes(key)) {
@@ -59,21 +82,21 @@ function encodeTile(features: readonly EncodedFeature[]): ArrayBuffer {
     });
   const encodedFeatures = features.map(feature => ({
     tags: tagsOf(feature.properties),
-    geometry: geometryOf(feature.ring),
+    type: feature.line === true ? LINE_STRING : POLYGON,
+    geometry: geometryOf(feature.ring, feature.line !== true),
   }));
 
-  const pbf = new PbfWriter();
   pbf.writeMessage(
     3,
     (_, layer) => {
       layer.writeVarintField(15, MVT_VERSION);
-      layer.writeStringField(1, 'building');
+      layer.writeStringField(1, name);
       for (const feature of encodedFeatures) {
         layer.writeMessage(
           2,
           (_, writer) => {
             writer.writePackedVarint(2, feature.tags);
-            writer.writeVarintField(3, POLYGON);
+            writer.writeVarintField(3, feature.type);
             writer.writePackedVarint(4, feature.geometry);
           },
           undefined
@@ -88,6 +111,8 @@ function encodeTile(features: readonly EncodedFeature[]): ArrayBuffer {
           (_, writer) => {
             if (typeof value === 'boolean') {
               writer.writeBooleanField(7, value);
+            } else if (typeof value === 'string') {
+              writer.writeStringField(1, value);
             } else {
               writer.writeDoubleField(3, value);
             }
@@ -99,10 +124,6 @@ function encodeTile(features: readonly EncodedFeature[]): ArrayBuffer {
     },
     undefined
   );
-  const bytes = pbf.finish();
-  const copy = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(copy).set(bytes);
-  return copy;
 }
 
 const SQUARE: EncodedFeature['ring'] = [
@@ -133,11 +154,26 @@ describe('building tile decoding', () => {
     });
   });
 
-  it('extrudes the tile into one mesh', () => {
-    const bytes = encodeTile([{ ring: SQUARE, properties: { render_height: 12 } }]);
+  it('extrudes the tile into one mesh and turns its roads into lanes, tunnels and paths left out', () => {
+    const road: EncodedFeature['ring'] = [
+      [0, 2000],
+      [4096, 2000],
+    ];
+    const bytes = encodeTile([
+      { ring: SQUARE, properties: { render_height: 12 } },
+      { ring: road, properties: { class: 'secondary', oneway: 0 }, line: true },
+      { ring: road, properties: { class: 'minor', oneway: 1 }, line: true },
+      { ring: road, properties: { class: 'tertiary', brunnel: 'tunnel' }, line: true },
+      { ring: road, properties: { class: 'path' }, line: true },
+    ]);
 
-    expect(decodeBuildingTile(bytes, TILE).indices).toHaveLength(
-      TRIANGLES_PER_BOX * VERTICES_PER_TRIANGLE
-    );
+    const tile = decodeStreetTile(bytes, TILE);
+
+    expect(tile.buildings.indices).toHaveLength(TRIANGLES_PER_BOX * VERTICES_PER_TRIANGLE);
+    expect(tile.roads.map(road => [road.roadClass, road.oneway])).toEqual([
+      ['secondary', 0],
+      ['minor', 1],
+    ]);
+    expect(tile.roads[0].bordersAtStart && tile.roads[0].bordersAtEnd).toBe(true);
   });
 });

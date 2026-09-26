@@ -78,16 +78,52 @@ export const HASH_WRITE_DELAY_MS = 300;
 export const BUILDING_TILE_ZOOM = 14;
 /** Buildings rise once the camera is this close; farther out the raster map is the whole picture. */
 export const BUILDINGS_MIN_ZOOM = 16;
+/** Buildings stay until the camera backs off to here: a gap under the threshold, so hovering at it never flickers them. */
+export const BUILDINGS_HIDE_ZOOM = 15.5;
 /** Metres in one Web Mercator unit at the equator: the Earth's circumference. */
 export const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
 /** What OpenMapTiles gives an untagged building; the same stands in for a missing value. */
 export const DEFAULT_BUILDING_HEIGHT_M = 5;
-/** Building meshes kept on the GPU before the least recently drawn are dropped. */
-export const MAX_BUILDING_MESH_BYTES = 96 * 2 ** 20;
+/** Building meshes kept on the GPU before the least recently drawn are dropped: thirty dense city tiles. */
+export const MAX_BUILDING_MESH_BYTES = 128 * 2 ** 20;
+/**
+ * Street tiles a picture asks for at once, nearest the screen centre first:
+ * the working set must fit the cache with room to spare, or tiles in view
+ * would evict each other and blink. Dense city tiles run to 4 MB each.
+ */
+export const MAX_STREET_TILES_IN_VIEW = 16;
 /** Encoded building tiles kept in IndexedDB. */
 export const MAX_STORED_BUILDING_TILES = 300;
 /** How long a building tile takes to grow out of the ground when it enters the picture. */
 export const BUILDING_RISE_SECONDS = 0.6;
+/** Cars appear once a car is a few pixels long; at z16 they would be moving specks. */
+export const CARS_MIN_ZOOM = 17;
+/** Cars stay until the camera backs off to here, for the same reason as the buildings. */
+export const CARS_HIDE_ZOOM = 16.5;
+/** Traffic animates at this rate: smooth enough for small movers, half the battery of 60. */
+export const FPS_TRAFFIC = 30;
+/** Right-hand traffic: a lane sits this far right of the road's centre line. */
+export const LANE_OFFSET_M = 1.75;
+/** One car per this much road at seeding, before the road class weighs in. */
+export const CAR_SPACING_M = 80;
+/** Ceiling per tile; counts scale down proportionally when the roads would seed more. */
+export const MAX_CARS_PER_TILE = 400;
+/** Junction vertices match by position on this grid: 1/64 of a tile unit, about a centimetre. */
+export const JUNCTION_GRID_PER_UNIT = 64;
+/** At a junction a car keeps to its road this often; otherwise it turns onto another. */
+export const KEEP_STRAIGHT_PROBABILITY = 0.7;
+/** A car this close to a junction is in it; the box no two cars from different roads share. */
+export const JUNCTION_ZONE_M = 9;
+/** A car this close to a junction, coming from the right, has priority: the other waits at the zone edge. */
+export const YIELD_DISTANCE_M = 25;
+/** Four cars each yielding to their right would wait forever; after this long the waiting car goes. */
+export const MAX_YIELD_SECONDS = 3;
+/** Cars a frame can draw; a screen of z14 tiles at z17 holds a few hundred. */
+export const MAX_CARS_PER_FRAME = 4096;
+/** Bumper to bumper is not driving: a car never closes on the one ahead below this. */
+export const CAR_MIN_GAP_M = 8;
+/** A frame this long is a tab that was hidden; traffic steps by this much at most. */
+export const MAX_TRAFFIC_STEP_SECONDS = 0.1;
 /** z14 tiles a frame can place; a 4K view at full tilt from z16 needs about twenty. */
 export const MAX_BUILDING_TILES_PER_FRAME = 64;
 

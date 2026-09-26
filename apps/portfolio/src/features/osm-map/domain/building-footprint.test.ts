@@ -1,6 +1,5 @@
-import type { TileGrid } from './building-footprint';
-import { buildingTileMesh, metresPerUnitAt, polygonsOfTileRings } from './building-footprint';
-import { EARTH_CIRCUMFERENCE_M } from './constants';
+import { BUILDING_MESH_UNIT_M, buildingTileMesh, polygonsOfTileRings } from './building-footprint';
+import type { TileGrid } from './tile-grid';
 
 /** One tile unit is one metre, so the numbers can be read off directly. */
 const METRE_GRID: TileGrid = { extent: 4096, tileSizeM: 4096 };
@@ -30,11 +29,6 @@ function signedArea(ring: readonly { x: number; y: number }[]): number {
 }
 
 describe('building footprints', () => {
-  it('scales the map unit to the ground: the whole equator at the equator, half of it near 60° north', () => {
-    expect(metresPerUnitAt({ z: 0, x: 0, y: 0 })).toBeCloseTo(EARTH_CIRCUMFERENCE_M, -5);
-    expect(metresPerUnitAt({ z: 14, x: 9570, y: 4760 })).toBeCloseTo(EARTH_CIRCUMFERENCE_M / 2, -5);
-  });
-
   it('turns tile rings into plan polygons: metres, north up, outer counter-clockwise, holes clockwise', () => {
     const [polygon] = polygonsOfTileRings([SQUARE_TILE_RING, HOLE_TILE_RING], METRE_GRID);
 
@@ -64,16 +58,22 @@ describe('building footprints', () => {
     expect(polygons.every(polygon => polygon.holes.length === 0)).toBe(true);
   });
 
-  it('extrudes every footprint between its base and its height into one mesh', () => {
+  it('boxes every footprint between its base and its height into one compact mesh', () => {
     const polygons = polygonsOfTileRings([SQUARE_TILE_RING], METRE_GRID);
 
     const mesh = buildingTileMesh([
       { polygons, heightM: 12, minHeightM: 3 },
       { polygons, heightM: 2, minHeightM: 2 },
     ]);
-    const heights = new Set(Array.from(mesh.positions).filter((_, index) => index % 3 === 1));
+    const heights = new Set(
+      Array.from(mesh.positions)
+        .filter((_, index) => index % 4 === 1)
+        .map(tenths => tenths * BUILDING_MESH_UNIT_M)
+    );
 
+    expect(mesh.positions).toHaveLength(8 * 4);
     expect(mesh.indices).toHaveLength(TRIANGLES_PER_BOX * VERTICES_PER_TRIANGLE);
     expect(heights).toEqual(new Set([3, 12]));
+    expect(Math.max(...mesh.indices)).toBe(7);
   });
 });

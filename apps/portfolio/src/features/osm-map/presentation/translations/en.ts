@@ -9,6 +9,7 @@ export const osmMapTranslationsEn = {
     cached: (count: number): string => `stored ${count}`,
     buildings: (tiles: number, loading: number): string =>
       loading > 0 ? `buildings ${tiles} tiles, ${loading} loading` : `buildings ${tiles} tiles`,
+    cars: (count: number): string => `cars ${count}`,
     reset: 'Reset view',
     locate: 'Show where I am',
     locating: 'Finding where you are…',

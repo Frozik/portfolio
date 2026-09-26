@@ -19,6 +19,7 @@ export const Hud = observer(({ store }: { readonly store: OsmMapStore }) => {
         <div>{osmMapT.hud.atlas(stats.atlasUsed, stats.atlasCapacity)}</div>
         <div>{osmMapT.hud.cached(stats.cachedTiles)}</div>
         <div>{osmMapT.hud.buildings(stats.buildingTiles, stats.loadingBuildingTiles)}</div>
+        {stats.cars > 0 && <div>{osmMapT.hud.cars(stats.cars)}</div>}
       </div>
       <Button
         variant="secondary"

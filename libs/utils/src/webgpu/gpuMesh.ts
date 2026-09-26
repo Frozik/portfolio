@@ -14,7 +14,7 @@ export interface GpuMesh {
   readonly indexCount: number;
 }
 
-export function createVertexBuffer(device: GPUDevice, data: Float32Array): GPUBuffer {
+export function createVertexBuffer(device: GPUDevice, data: ArrayBufferView): GPUBuffer {
   const buffer = device.createBuffer({
     size: data.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,

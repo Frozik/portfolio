@@ -25,39 +25,47 @@ const WALL_COLOR: vec3<f32> = vec3<f32>(0.86, 0.85, 0.82);
 const ROOF_COLOR: vec3<f32> = vec3<f32>(0.93, 0.92, 0.90);
 const AMBIENT: f32 = 0.55;
 const ROOF_NORMAL_Y: f32 = 0.5;
+// Positions come as int16 tenths of a metre.
+const POSITION_UNIT_M: f32 = 0.1;
 
 struct VSOut {
     @builtin(position) position: vec4<f32>,
-    @location(0) normal: vec3<f32>,
+    @location(0) world: vec3<f32>,
     @location(1) viewDistance: f32,
 };
 
 @vertex
 fn vs(
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>,
+    @location(0) position: vec4<i32>,
     @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
     let placement = placements[instanceIndex];
+    let metres = vec3<f32>(position.xyz) * POSITION_UNIT_M;
     // Ease-out cubic: the boxes shoot up and settle, rather than creep to their height.
     let progress = clamp((U.time - placement.riseStart) / U.riseSeconds, 0.0, 1.0);
     let settled = 1.0 - pow(1.0 - progress, 3.0);
     let world = vec3<f32>(
-        placement.offset.x + position.x * placement.scale,
-        position.y * placement.scale * settled,
-        placement.offset.y + position.z * placement.scale,
+        placement.offset.x + metres.x * placement.scale,
+        metres.y * placement.scale * settled,
+        placement.offset.y + metres.z * placement.scale,
     );
 
     var out: VSOut;
     out.position = U.viewProjection * vec4<f32>(world, 1.0);
-    out.normal = normal;
+    out.world = world;
     out.viewDistance = distance(world, U.cameraPosition);
     return out;
 }
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-    let normal = normalize(in.normal);
+    // Flat faces: the normal is the cross product of the screen-space
+    // derivatives, turned to face the camera since the boxes are drawn from
+    // both sides.
+    var normal = normalize(cross(dpdx(in.world), dpdy(in.world)));
+    if (dot(normal, U.cameraPosition - in.world) < 0.0) {
+        normal = -normal;
+    }
     let diffuse = max(dot(normal, U.sunDirection), 0.0);
     let base = select(WALL_COLOR, ROOF_COLOR, normal.y > ROOF_NORMAL_Y);
     let lit = base * (AMBIENT + (1.0 - AMBIENT) * diffuse);

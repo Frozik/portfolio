@@ -1,13 +1,8 @@
-import { extrudeFootprint } from '@frozik/utils/geometry/extrudeFootprint';
-import type { LitMesh } from '@frozik/utils/geometry/litMesh';
-import { EMPTY_LIT_MESH, mergeLitMeshes } from '@frozik/utils/geometry/litMesh';
 import type { MultiPolygon, PolygonWithHoles, Ring } from '@frozik/utils/geometry/polygonTypes';
-import type { Vector2 } from '@frozik/utils/math/vector2';
+import { triangulatePolygon } from '@frozik/utils/geometry/triangulatePolygon';
 
-import { DEGREES_PER_RADIAN, EARTH_CIRCUMFERENCE_M } from './constants';
-import { worldToLonLat } from './mercator';
-import type { TileCoord } from './tile-key';
-import { tileBounds, tileWorldSize } from './tile-key';
+import type { TileGrid, TileRing } from './tile-grid';
+import { toPlan } from './tile-grid';
 
 /** A building as one box: its plan in metres from the tile's north-west corner (x east, y north). */
 export interface BuildingFootprint {
@@ -16,28 +11,7 @@ export interface BuildingFootprint {
   readonly minHeightM: number;
 }
 
-/** A ring as the vector tile stores it: integer tile units from the north-west corner, y down. */
-export type TileRing = readonly Vector2[];
-
-/** How the tile's integer grid maps onto the ground. */
-export interface TileGrid {
-  /** Units across the tile, `4096` in every Mapbox vector tile. */
-  readonly extent: number;
-  readonly tileSizeM: number;
-}
-
 const MIN_RING_VERTEX_COUNT = 3;
-
-/** Metres in one Mercator unit at the tile's latitude, where the map's vertical axis must agree with the ground. */
-export function metresPerUnitAt(coord: TileCoord): number {
-  const bounds = tileBounds(coord);
-  const { lat } = worldToLonLat({ x: 0, y: (bounds.minY + bounds.maxY) / 2 });
-  return EARTH_CIRCUMFERENCE_M * Math.cos(lat / DEGREES_PER_RADIAN);
-}
-
-export function tileGridOf(coord: TileCoord, extent: number): TileGrid {
-  return { extent, tileSizeM: tileWorldSize(coord.z) * metresPerUnitAt(coord) };
-}
 
 function signedArea(ring: Ring): number {
   let doubled = 0;
@@ -54,15 +28,10 @@ function wound(ring: Ring, counterClockwise: boolean): Ring {
   return signedArea(ring) > 0 === counterClockwise ? ring : ring.toReversed();
 }
 
-function toPlan(ring: TileRing, grid: TileGrid): Ring {
-  const scale = grid.tileSizeM / grid.extent;
-  const open =
-    ring.length > 1 &&
-    ring[0].x === ring[ring.length - 1].x &&
-    ring[0].y === ring[ring.length - 1].y
-      ? ring.slice(0, -1)
-      : ring;
-  return open.map(point => ({ x: point.x * scale, y: -point.y * scale }));
+function withoutClosingPoint(ring: TileRing): TileRing {
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  return ring.length > 1 && first.x === last.x && first.y === last.y ? ring.slice(0, -1) : ring;
 }
 
 /**
@@ -80,7 +49,7 @@ export function polygonsOfTileRings(rings: readonly TileRing[], grid: TileGrid):
       continue;
     }
     const isOuter = signedArea(tileRing) > 0;
-    const ring = toPlan(tileRing, grid);
+    const ring = toPlan(withoutClosingPoint(tileRing), grid);
     if (isOuter) {
       current = { outer: wound(ring, true), holes: [] };
       polygons.push(current);
@@ -91,16 +60,93 @@ export function polygonsOfTileRings(rings: readonly TileRing[], grid: TileGrid):
   return polygons;
 }
 
-/** Every footprint of a tile as one mesh in metres from the tile's north-west corner, y up, z south. */
-export function buildingTileMesh(footprints: readonly BuildingFootprint[]): LitMesh {
-  const meshes = footprints
-    .filter(footprint => footprint.heightM > footprint.minHeightM)
-    .map(footprint =>
-      extrudeFootprint({
-        polygons: footprint.polygons,
-        padElevation: footprint.minHeightM,
-        wallHeight: footprint.heightM - footprint.minHeightM,
-      })
-    );
-  return mergeLitMeshes(meshes) ?? EMPTY_LIT_MESH;
+/**
+ * Building boxes as the GPU takes them: every ring vertex twice, at the
+ * base and at the roof, as four `int16` (x east, y up, z south, unused) in
+ * tenths of a metre from the tile's north-west corner — a dense city tile
+ * runs to a hundred thousand vertices, and flat faces need no normals, the
+ * shader derives them. Walls join the two rings, the roof is the polygon
+ * triangulated.
+ */
+export interface BuildingMesh {
+  readonly positions: Int16Array;
+  readonly indices: Uint32Array;
+}
+
+export const BUILDING_MESH_UNIT_M = 0.1;
+
+function quantized(metres: number): number {
+  return Math.round(metres / BUILDING_MESH_UNIT_M);
+}
+
+/** The roof triangulation indexes the rings in this order, so the box's vertices follow it. */
+function ringsOf(polygon: PolygonWithHoles): readonly Ring[] {
+  return [polygon.outer, ...polygon.holes.filter(hole => hole.length >= MIN_RING_VERTEX_COUNT)];
+}
+
+interface BoxBuilder {
+  readonly positions: number[];
+  readonly indices: number[];
+  vertexCount: number;
+}
+
+function appendBox(
+  builder: BoxBuilder,
+  polygon: PolygonWithHoles,
+  footprint: BuildingFootprint
+): void {
+  const rings = ringsOf(polygon);
+  const roof = triangulatePolygon({ outer: rings[0], holes: rings.slice(1) });
+  const ringVertexCount = rings.reduce((sum, ring) => sum + ring.length, 0);
+  if (roof.indices.length === 0 || roof.positions.length !== ringVertexCount * 2) {
+    return;
+  }
+  const top = builder.vertexCount;
+  const bottom = top + ringVertexCount;
+  for (const elevation of [footprint.heightM, footprint.minHeightM]) {
+    for (const ring of rings) {
+      for (const point of ring) {
+        builder.positions.push(quantized(point.x), quantized(elevation), quantized(-point.y), 0);
+      }
+    }
+  }
+  builder.vertexCount += ringVertexCount * 2;
+  for (const index of roof.indices) {
+    builder.indices.push(top + index);
+  }
+  let ringStart = 0;
+  for (const ring of rings) {
+    for (let index = 0; index < ring.length; index++) {
+      const from = ringStart + index;
+      const to = ringStart + ((index + 1) % ring.length);
+      builder.indices.push(
+        top + from,
+        top + to,
+        bottom + to,
+        top + from,
+        bottom + to,
+        bottom + from
+      );
+    }
+    ringStart += ring.length;
+  }
+}
+
+/** Every footprint of a tile as one mesh in tenths of a metre from the tile's north-west corner, y up, z south. */
+export function buildingTileMesh(footprints: readonly BuildingFootprint[]): BuildingMesh {
+  const builder: BoxBuilder = { positions: [], indices: [], vertexCount: 0 };
+  for (const footprint of footprints) {
+    if (footprint.heightM <= footprint.minHeightM) {
+      continue;
+    }
+    for (const polygon of footprint.polygons) {
+      if (polygon.outer.length >= MIN_RING_VERTEX_COUNT) {
+        appendBox(builder, polygon, footprint);
+      }
+    }
+  }
+  return {
+    positions: Int16Array.from(builder.positions),
+    indices: Uint32Array.from(builder.indices),
+  };
 }

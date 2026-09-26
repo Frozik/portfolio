@@ -18,13 +18,15 @@ import { DEFAULT_VIEW } from './map-view';
 const VIEWPORT: Viewport = { widthPx: 1600, heightPx: 900 };
 const CENTER: PixelPoint = { x: 800, y: 450 };
 const LOWER_LEFT: PixelPoint = { x: 300, y: 800 };
+/** Far enough from the zoom ceiling for the tests that zoom in. */
+const CITY_ZOOM = 14;
 
 function flatCamera(): MapCameraState {
-  return createMapCamera({ ...DEFAULT_VIEW, pitchDeg: 0, bearingDeg: 0 });
+  return createMapCamera({ ...DEFAULT_VIEW, zoom: CITY_ZOOM, pitchDeg: 0, bearingDeg: 0 });
 }
 
 function tiltedCamera(): MapCameraState {
-  return createMapCamera({ ...DEFAULT_VIEW, pitchDeg: 55, bearingDeg: 30 });
+  return createMapCamera({ ...DEFAULT_VIEW, zoom: CITY_ZOOM, pitchDeg: 55, bearingDeg: 30 });
 }
 
 describe('map camera', () => {
@@ -185,6 +187,6 @@ describe('map camera', () => {
     expect(view.bearingDeg).toBeCloseTo(-10, 9);
     expect(view.lat).toBeCloseTo(DEFAULT_VIEW.lat, 9);
     expect(view.lon).toBeCloseTo(DEFAULT_VIEW.lon, 9);
-    expect(view.zoom).toBe(DEFAULT_VIEW.zoom);
+    expect(view.zoom).toBe(CITY_ZOOM);
   });
 });

@@ -1,6 +1,6 @@
 # OSM Map
 
-Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes at street zoom.
+Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes and cars driving the streets at street zoom.
 
 Live: [https://frozik.github.io/portfolio/osm-map](https://frozik.github.io/portfolio/osm-map) · Part of the [portfolio](../../../../../README.md) monorepo; code lives in `apps/portfolio/src/features/osm-map/`.
 
@@ -72,8 +72,8 @@ the boxes that stand on the raster ground at street zoom.
   moment after the camera rests, and only once you have moved the map — a
   pose nobody chose stays out of the URL so the next visit still asks where
   you are) so a link reproduces it. Without a hash the
-  map opens where it last found you (remembered in web storage; Moscow on a
-  first visit) and asks the browser for your position, jumping there once
+  map opens where it last found you (remembered in web storage; central
+  Osaka at street level on a first visit) and asks the browser for your position, jumping there once
   the fix arrives unless you have already moved the map. The button under
   the compass asks again on demand and centres the map on you, keeping the
   zoom and the tilt.
@@ -84,17 +84,50 @@ the boxes that stand on the raster ground at street zoom.
   free, keyless, no own tile pipeline). The z14 ancestors of the raster tiles in
   view go through the same schedule, priority and IndexedDB tier as the
   pictures (a second `TileLoader` over a mesh cache instead of the atlas); a
-  worker decodes the tile and extrudes every footprint with
-  `@frozik/utils/geometry/extrudeFootprint` into one mesh per tile, in metres
-  from the tile corner. The building layer draws each tile with an offset and
-  a metres-to-map-units scale taken at the tile's latitude, lit by a fixed sun
-  and fogged like the ground, into its own depth buffer: the ground never
-  writes depth because every box stands above it. Meshes are kept on the GPU
-  up to a byte ceiling, least recently drawn first out. A tile entering the
-  picture grows out of the ground over 0.6 s (ease-out, in the vertex
-  shader), whether it just landed or came back from the cache; leaving and
-  returning grows it again. No roofs, parts or labels — the deferred stage 2
-  plan covers those.
+  worker decodes the tile and boxes every footprint into one compact mesh per
+  tile: each ring vertex twice, base and roof, as `int16` tenths of a metre
+  from the tile corner, no normals — the shader derives flat normals from
+  screen-space derivatives. A dense city tile (central Osaka) is 120–220k
+  triangles and 2–4 MB this way, a third of what per-face vertices cost. The
+  building layer draws each tile with an offset and a metres-to-map-units
+  scale taken at the tile's latitude, lit by a fixed sun and fogged like the
+  ground, into its own depth buffer: the ground never writes depth because
+  every box stands above it. Meshes are kept on the GPU up to a byte ceiling
+  (128 MB), least recently drawn first out, and a picture asks for at most
+  sixteen street tiles, nearest the screen centre first, so the tiles in
+  view always fit the cache and never evict each other. Whether buildings show
+  is decided once for the whole picture, with a gap between showing (z16)
+  and hiding (z15.5) so hovering at the threshold never flickers them; the
+  street tiles are the z14 tiles under every raster tile from z14 down to
+  the fog, so a tile near the horizon does not blink as the camera turns. A
+  tile standing for the first time grows out of the ground over 0.6 s
+  (ease-out, in the vertex shader) and keeps that moment until buildings are
+  hidden, so a tile drifting out of the picture and back does not regrow.
+  No roofs, parts or labels — the deferred stage 2 plan covers those.
+- **Cars on the streets** from zoom 17. The same z14 tile carries the
+  `transportation` layer; the worker cuts every drivable road (`motorway`
+  … `service`, tunnels left out) to the tile square and keys each vertex
+  on a grid shared by all tiles, so the roads of every tile in the picture
+  join into one street graph: a vertex two lines share is a junction, and
+  the same road crossing a tile border is a junction too. A car follows its
+  road; at a junction it keeps straight 70% of the time and otherwise turns
+  onto a random other road (never a U-turn); at a dead end inside the map
+  it turns around; it is gone only when it drives off the edge of the loaded
+  roads, and another car comes in at such an edge to replace it. Right-hand
+  traffic: on a two-way road a car keeps 1.75 m to the right of the centre
+  line. Junctions are safe: a car about to enter one waits at its edge while
+  a car from another road is inside it or about to arrive from the right
+  (priority to the right), and gives up waiting after 3 s so four polite
+  cars never lock each other up; on its own road it never closes on the car
+  ahead. Cars are seeded when a tile enters the picture, deterministically
+  from the tile key, sparser than the real thing — busiest on main roads,
+  nearly none on service roads — with five procedural body shapes (sedan,
+  hatchback, crossover, van, bus on bus-class roads only) and a ten-colour
+  fleet palette. One instanced draw per body in the street pass, with the
+  tile's placement, lit and fogged like the boxes and occluded by them.
+  While cars are in the picture the loop runs at 30 fps rather than idling;
+  they appear at z17 and go at z16.5, and below that the map rests as
+  before.
 - **Render on demand**: at rest, with nothing in flight and no fade running,
   no frame is submitted and the loop idles at 10 fps.
 
@@ -103,16 +136,18 @@ the boxes that stand on the raster ground at street zoom.
 `domain/` is pure and unit-tested: Mercator maths, the immutable camera
 (`map-camera.ts`), frustum planes, the tile walk (`tile-selection.ts`), the
 tile schedule (`tile-schedule.ts`, the one owner of what every tile is
-doing), the building footprints and their z14 selection
-(`building-footprint.ts`, `building-tile-selection.ts`), the detail budget
-and the hash format. `infrastructure/` owns WebGPU and the network: the
-atlas with its staging mip chain, the generic loader, the two tile sources,
-the mesh worker and cache, the ground and building layers with their
-shaders, the gesture controller and the hash sync.
+doing), the street tiles — building footprints, road lines, the street graph, car
+bodies, the traffic simulation and the z14 selection
+(`building-footprint.ts`, `road-lines.ts`, `street-graph.ts`,
+`car-bodies.ts`, `car-traffic.ts`, `street-tile-selection.ts`) — the detail
+budget and the hash format. `infrastructure/` owns WebGPU and the network:
+the atlas with its staging mip chain, the generic loader, the two tile
+sources, the street tile worker and cache, the ground and street layers with
+their shaders, the gesture controller and the hash sync.
 `application/render/map-scene.ts` runs the per-frame pipeline — camera →
-visible tiles → loads → instances and building placements — and hands the
-layers a frame only when something changed; `run-osm-map.ts` is the
-composition root. The
+visible tiles → loads → instances, street placements and cars — and hands
+the layers a frame only when something changed; `street-traffic.ts` keeps
+the moving cars between frames; `run-osm-map.ts` is the composition root. The
 MobX store holds only the HUD readout and the reset command; the camera
 never touches MobX because it changes every frame.
 

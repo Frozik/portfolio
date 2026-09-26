@@ -7,16 +7,25 @@ export interface MapView {
   readonly pitchDeg: number;
 }
 
-/** The opening pose over a place: the default zoom and tilt, north up. */
+/** How the map opens over a place it was told about: city scale, north up, tilted enough to show the horizon. */
+const HOME_ZOOM = 14;
+const HOME_PITCH_DEG = 50;
+
 export function viewAround(position: { readonly lat: number; readonly lon: number }): MapView {
-  return { ...DEFAULT_VIEW, lat: position.lat, lon: position.lon };
+  return {
+    lat: position.lat,
+    lon: position.lon,
+    zoom: HOME_ZOOM,
+    bearingDeg: 0,
+    pitchDeg: HOME_PITCH_DEG,
+  };
 }
 
-/** Moscow centre, tilted enough to show the horizon; used when neither the hash nor geolocation says where. */
+/** Central Osaka at street level, among the boxes and the cars; used when neither the hash nor geolocation says where. */
 export const DEFAULT_VIEW: MapView = {
-  lat: 55.7539,
-  lon: 37.6208,
-  zoom: 14,
-  bearingDeg: 0,
-  pitchDeg: 50,
+  lat: 34.64906,
+  lon: 135.50297,
+  zoom: 18.39,
+  bearingDeg: 109,
+  pitchDeg: 64.6,
 };

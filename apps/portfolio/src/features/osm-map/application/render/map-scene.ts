@@ -1,10 +1,11 @@
-import type { LitMesh } from '@frozik/utils/geometry/litMesh';
 import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
 
-import { metresPerUnitAt } from '../../domain/building-footprint';
-import { selectBuildingTiles } from '../../domain/building-tile-selection';
 import {
   BUILDING_RISE_SECONDS,
+  BUILDINGS_HIDE_ZOOM,
+  BUILDINGS_MIN_ZOOM,
+  CARS_HIDE_ZOOM,
+  CARS_MIN_ZOOM,
   FADE_IN_SECONDS,
   FPS_SAMPLE_QUIET_SECONDS,
   MAX_INSTANCES_PER_FRAME,
@@ -16,12 +17,19 @@ import { cameraGeometry, viewOf } from '../../domain/map-camera';
 import type { MapView } from '../../domain/map-view';
 import type { TileAtlasPort } from '../../domain/ports/tile-atlas';
 import type { TileStore } from '../../domain/ports/tile-store';
+import type { StreetTile } from '../../domain/street-tile';
+import { selectStreetTiles } from '../../domain/street-tile-selection';
+import { metresPerUnitAt } from '../../domain/tile-grid';
 import { planTileInstances } from '../../domain/tile-instances';
 import type { TileKey } from '../../domain/tile-key';
 import { tileOrigin } from '../../domain/tile-key';
 import type { SelectedTile } from '../../domain/tile-selection';
 import { selectTiles } from '../../domain/tile-selection';
-import type { BuildingPlacement, MapFrame } from '../../infrastructure/layers/map-frame';
+import type {
+  CarInstance,
+  MapFrame,
+  StreetTilePlacement,
+} from '../../infrastructure/layers/map-frame';
 import type { MapCameraController } from '../../infrastructure/map-camera-controller';
 import {
   createTileInstanceData,
@@ -29,11 +37,13 @@ import {
 } from '../../infrastructure/tile-instance-buffer';
 import type { TileLoader } from '../../infrastructure/tile-loader';
 import type { MapStats } from '../OsmMapStore';
+import type { StreetTraffic } from './street-traffic';
 
 export interface MapSceneDependencies {
   readonly camera: MapCameraController;
   readonly loader: TileLoader<ImageBitmap>;
-  readonly buildingLoader: TileLoader<LitMesh>;
+  readonly streetLoader: TileLoader<StreetTile>;
+  readonly traffic: StreetTraffic;
   readonly atlas: TileAtlasPort;
   readonly store: TileStore;
   readonly onPoseChanged: (view: MapView) => void;
@@ -53,8 +63,11 @@ export class MapScene {
   private lastViewport: Viewport = { widthPx: 0, heightPx: 0 };
   private geometry: CameraGeometry | undefined;
   private selected: readonly SelectedTile[] = [];
-  private buildingTiles: readonly SelectedTile[] = [];
-  /** When each building tile in the picture entered it; a tile that leaves and returns grows again. */
+  private streetTiles: readonly SelectedTile[] = [];
+  /** One decision for the whole picture, with a gap between showing and hiding so the threshold never flickers. */
+  private buildingsShown = false;
+  private carsShown = false;
+  /** When each street tile first stood while buildings were shown; kept until they are hidden, so a tile blinking at the edge never regrows. */
   private readonly buildingRises = new Map<TileKey, number>();
   private readonly instanceData = createTileInstanceData(MAX_INSTANCES_PER_FRAME);
   private loadsChanged = false;
@@ -92,21 +105,26 @@ export class MapScene {
     );
   }
 
+  /** Cars are on the move: frames keep coming, at the traffic rate rather than the interaction rate. */
+  get trafficMoving(): boolean {
+    return this.dependencies.traffic.moving;
+  }
+
   private get pendingCount(): number {
-    const { loader, buildingLoader } = this.dependencies;
-    return loader.pendingCount + buildingLoader.pendingCount;
+    const { loader, streetLoader } = this.dependencies;
+    return loader.pendingCount + streetLoader.pendingCount;
   }
 
   private get nextRetryAt(): number | undefined {
-    const { loader, buildingLoader } = this.dependencies;
-    const retries = [loader.nextRetryAt, buildingLoader.nextRetryAt].filter(
+    const { loader, streetLoader } = this.dependencies;
+    const retries = [loader.nextRetryAt, streetLoader.nextRetryAt].filter(
       retry => retry !== undefined
     );
     return retries.length === 0 ? undefined : Math.min(...retries);
   }
 
   advance(state: FrameState): MapFrame | undefined {
-    const { camera, loader, buildingLoader, atlas, store, onPoseChanged, onStats } =
+    const { camera, loader, streetLoader, traffic, atlas, store, onPoseChanged, onStats } =
       this.dependencies;
     const cameraState = camera.tick();
     const viewport: Viewport = { widthPx: state.canvasWidth, heightPx: state.canvasHeight };
@@ -124,7 +142,17 @@ export class MapScene {
       this.appliedDetail = detail;
       this.geometry = cameraGeometry(cameraState, viewport);
       this.selected = selectTiles(this.geometry, detail);
-      this.buildingTiles = selectBuildingTiles(this.selected, cameraState.zoom);
+      this.buildingsShown = shown(
+        cameraState.zoom,
+        this.buildingsShown,
+        BUILDINGS_MIN_ZOOM,
+        BUILDINGS_HIDE_ZOOM
+      );
+      this.carsShown = shown(cameraState.zoom, this.carsShown, CARS_MIN_ZOOM, CARS_HIDE_ZOOM);
+      this.streetTiles = this.buildingsShown ? selectStreetTiles(this.selected) : [];
+      if (!this.buildingsShown) {
+        this.buildingRises.clear();
+      }
       onPoseChanged(viewOf(cameraState));
     }
     // A load finishing frees a network slot for the next queued tile, and a
@@ -133,18 +161,26 @@ export class MapScene {
     const retryDue = this.nextRetryAt !== undefined && state.time >= this.nextRetryAt;
     if (poseChanged || this.loadsChanged || retryDue) {
       loader.reconcile(this.selected, state.time);
-      buildingLoader.reconcile(this.buildingTiles, state.time);
+      streetLoader.reconcile(this.streetTiles, state.time);
     }
 
     const fading = this.selected.some(tile => {
       const ready = loader.readyTile(tile.key);
       return ready !== undefined && state.time - ready.fadeStart < FADE_IN_SECONDS;
     });
-    const standing = this.buildingTiles.filter(
-      tile => buildingLoader.readyTile(tile.key) !== undefined
+    const standing = this.streetTiles.filter(
+      tile => streetLoader.readyTile(tile.key) !== undefined
     );
     const rising = this.trackBuildingRises(standing, state.time);
-    const animating = fading || rising;
+    if (this.carsShown) {
+      traffic.step(
+        standing.map(tile => tile.key),
+        state.time
+      );
+    } else {
+      traffic.pause();
+    }
+    const animating = fading || rising || traffic.moving;
     const changed = poseChanged || this.loadsChanged || animating || this.wasAnimating;
     this.loadsChanged = false;
     this.wasAnimating = animating;
@@ -171,7 +207,7 @@ export class MapScene {
     const instanceCount = instances.length;
     const view = viewOf(cameraState);
     writeTileInstances(this.instanceData, instances, origin);
-    const buildings = standing.map((tile): BuildingPlacement => {
+    const streetTiles = standing.map((tile): StreetTilePlacement => {
       const corner = tileOrigin(tile.coord);
       return {
         key: tile.key,
@@ -180,6 +216,11 @@ export class MapScene {
         scale: 1 / metresPerUnitAt(tile.coord),
         riseStart: this.buildingRises.get(tile.key) ?? state.time,
       };
+    });
+    const placementOf = new Map(streetTiles.map((placement, index) => [placement.key, index]));
+    const cars = traffic.poses().flatMap((pose): CarInstance[] => {
+      const placementIndex = placementOf.get(pose.tileKey);
+      return placementIndex === undefined ? [] : [{ ...pose, placementIndex }];
     });
     onStats({
       zoom: view.zoom,
@@ -190,8 +231,9 @@ export class MapScene {
       atlasUsed: atlas.usedCount,
       atlasCapacity: atlas.capacity,
       cachedTiles: store.count,
-      buildingTiles: buildings.length,
-      loadingBuildingTiles: buildingLoader.pendingCount,
+      buildingTiles: streetTiles.length,
+      loadingBuildingTiles: streetLoader.pendingCount,
+      cars: cars.length,
     });
     return {
       viewProjection: this.geometry.viewProjection,
@@ -201,24 +243,24 @@ export class MapScene {
       time: state.time,
       instanceData: this.instanceData,
       instanceCount,
-      buildings,
+      streetTiles,
+      cars,
     };
   }
 
-  /** Stamps newcomers with now, forgets leavers, and says whether any tile is still growing. */
+  /** Stamps newcomers with now and says whether any standing tile is still growing. */
   private trackBuildingRises(standing: readonly SelectedTile[], nowSeconds: number): boolean {
-    const standingKeys = new Set(standing.map(tile => tile.key));
-    for (const key of this.buildingRises.keys()) {
-      if (!standingKeys.has(key)) {
-        this.buildingRises.delete(key);
-      }
-    }
     let rising = false;
-    for (const key of standingKeys) {
+    for (const { key } of standing) {
       const riseStart = this.buildingRises.get(key) ?? nowSeconds;
       this.buildingRises.set(key, riseStart);
       rising ||= nowSeconds - riseStart < BUILDING_RISE_SECONDS;
     }
     return rising;
   }
+}
+
+/** Shows past `showAt`, hides only below `hideAt`; in between, whatever it was. */
+function shown(zoom: number, wasShown: boolean, showAt: number, hideAt: number): boolean {
+  return zoom >= showAt || (wasShown && zoom >= hideAt);
 }

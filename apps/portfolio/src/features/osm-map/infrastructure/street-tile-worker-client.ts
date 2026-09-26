@@ -1,36 +1,40 @@
-import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { StreetTile } from '../domain/street-tile';
 import type { TileCoord } from '../domain/tile-key';
-import type { BuildingMeshRequest, BuildingMeshResponse } from './building-mesh.worker';
+import type { StreetTileRequest, StreetTileResponse } from './street-tile.worker';
 
-export interface BuildingMeshDecoder {
-  decode(bytes: Blob, coord: TileCoord, signal: AbortSignal): Promise<LitMesh>;
+export interface StreetTileDecoder {
+  decode(bytes: Blob, coord: TileCoord, signal: AbortSignal): Promise<StreetTile>;
   dispose(): void;
 }
 
 interface PendingDecode {
-  readonly resolve: (mesh: LitMesh) => void;
+  readonly resolve: (tile: StreetTile) => void;
   readonly reject: (reason: unknown) => void;
 }
 
 /**
- * The main-thread end of the mesh worker: one request per tile, answered by
- * id. An aborted request rejects at once and its answer, when it comes, is
- * dropped — the worker never learns of the abort, it just finishes.
+ * The main-thread end of the street tile worker: one request per tile,
+ * answered by id. An aborted request rejects at once and its answer, when
+ * it comes, is dropped — the worker never learns of the abort, it just
+ * finishes.
  */
-export function createBuildingMeshDecoder(): BuildingMeshDecoder {
-  const worker = new Worker(new URL('./building-mesh.worker.ts', import.meta.url), {
+export function createStreetTileDecoder(): StreetTileDecoder {
+  const worker = new Worker(new URL('./street-tile.worker.ts', import.meta.url), {
     type: 'module',
   });
   const pending = new Map<number, PendingDecode>();
   let nextId = 0;
 
-  worker.onmessage = ({ data }: MessageEvent<BuildingMeshResponse>): void => {
+  worker.onmessage = ({ data }: MessageEvent<StreetTileResponse>): void => {
     const request = pending.get(data.id);
     if (request === undefined) {
       return;
     }
     pending.delete(data.id);
-    request.resolve({ positions: data.positions, normals: data.normals, indices: data.indices });
+    request.resolve({
+      buildings: { positions: data.positions, indices: data.indices },
+      roads: data.roads,
+    });
   };
   worker.onerror = (event: ErrorEvent): void => {
     for (const request of pending.values()) {
@@ -40,12 +44,12 @@ export function createBuildingMeshDecoder(): BuildingMeshDecoder {
   };
 
   return {
-    async decode(bytes: Blob, coord: TileCoord, signal: AbortSignal): Promise<LitMesh> {
+    async decode(bytes: Blob, coord: TileCoord, signal: AbortSignal): Promise<StreetTile> {
       signal.throwIfAborted();
       const buffer = await bytes.arrayBuffer();
       signal.throwIfAborted();
       const id = nextId++;
-      return new Promise<LitMesh>((resolve, reject) => {
+      return new Promise<StreetTile>((resolve, reject) => {
         pending.set(id, { resolve, reject });
         signal.addEventListener(
           'abort',
@@ -56,14 +60,14 @@ export function createBuildingMeshDecoder(): BuildingMeshDecoder {
           },
           { once: true }
         );
-        const request: BuildingMeshRequest = { id, bytes: buffer, coord };
+        const request: StreetTileRequest = { id, bytes: buffer, coord };
         worker.postMessage(request, [buffer]);
       });
     },
     dispose(): void {
       worker.terminate();
       for (const request of pending.values()) {
-        request.reject(new Error('Building mesh decoder disposed'));
+        request.reject(new Error('Street tile decoder disposed'));
       }
       pending.clear();
     },

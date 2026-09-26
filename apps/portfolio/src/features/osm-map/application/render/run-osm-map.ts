@@ -1,5 +1,4 @@
 import { DisposableBag } from '@frozik/utils/disposable/DisposableBag';
-import type { LitMesh } from '@frozik/utils/geometry/litMesh';
 import { createGpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { RenderLayerManager } from '@frozik/utils/webgpu/renderLayerManager';
@@ -12,26 +11,29 @@ import {
   FPS_IDLE,
   FPS_INTERACTION,
   FPS_RESIZE,
+  FPS_TRAFFIC,
   MAX_STORED_BUILDING_TILES,
 } from '../../domain/constants';
-import { BuildingMeshCache } from '../../infrastructure/building-mesh-cache';
-import { createBuildingMeshDecoder } from '../../infrastructure/building-mesh-decoder';
+import type { StreetTile } from '../../domain/street-tile';
 import { requestCurrentPosition } from '../../infrastructure/geolocation';
 import { createIndexedDBTileStore } from '../../infrastructure/indexeddb-tile-store';
-import { MapBuildingLayer } from '../../infrastructure/layers/map-building-layer';
 import type { MapFrame } from '../../infrastructure/layers/map-frame';
 import { MapGroundLayer } from '../../infrastructure/layers/map-ground-layer';
+import { MapStreetLayer } from '../../infrastructure/layers/map-street-layer';
 import { createMapCameraController } from '../../infrastructure/map-camera-controller';
 import { createOpenFreeMapTileSource } from '../../infrastructure/openfreemap-tile-source';
 import { createOsmTileSource } from '../../infrastructure/osm-tile-source';
+import { StreetTileCache } from '../../infrastructure/street-tile-cache';
+import { createStreetTileDecoder } from '../../infrastructure/street-tile-worker-client';
 import { TileAtlas } from '../../infrastructure/tile-atlas';
 import { TileLoader } from '../../infrastructure/tile-loader';
 import { createViewHashSync } from '../../infrastructure/view-hash-sync';
 import type { OsmMapStore } from '../OsmMapStore';
 import { MapScene } from './map-scene';
+import { StreetTraffic } from './street-traffic';
 
-/** Encoded building tiles keep to their own database: their keys collide with the raster tiles'. */
-const BUILDING_STORE_NAME = 'osm-map-buildings';
+/** Encoded street tiles keep to their own database: their keys collide with the raster tiles'. */
+const STREET_STORE_NAME = 'osm-map-streets';
 
 /** The composition root of the running map; the returned function tears everything down. */
 export function runOsmMap({
@@ -103,9 +105,9 @@ async function initGpu(
     Math.min(context.device.limits.maxTextureArrayLayers, ATLAS_LAYERS_TARGET)
   );
   const tileStore = createIndexedDBTileStore();
-  const buildingStore = createIndexedDBTileStore(BUILDING_STORE_NAME, MAX_STORED_BUILDING_TILES);
-  const buildingCache = new BuildingMeshCache(context.device);
-  const meshDecoder = createBuildingMeshDecoder();
+  const streetStore = createIndexedDBTileStore(STREET_STORE_NAME, MAX_STORED_BUILDING_TILES);
+  const streetCache = new StreetTileCache(context.device);
+  const streetDecoder = createStreetTileDecoder();
   let frameTime = 0;
   const onLoadChange = (): void => {
     scene.markLoadsChanged();
@@ -121,40 +123,43 @@ async function initGpu(
     readNow: () => frameTime,
     onChange: onLoadChange,
   });
-  const buildingLoader = new TileLoader<LitMesh>({
+  const streetLoader = new TileLoader<StreetTile>({
     source: createOpenFreeMapTileSource(),
-    sink: buildingCache,
-    store: buildingStore,
-    decode: (bytes, coord, signal) => meshDecoder.decode(bytes, coord, signal),
+    sink: streetCache,
+    store: streetStore,
+    decode: (bytes, coord, signal) => streetDecoder.decode(bytes, coord, signal),
     readNow: () => frameTime,
     onChange: onLoadChange,
   });
   const scene = new MapScene({
     camera,
     loader,
-    buildingLoader,
+    streetLoader,
+    traffic: new StreetTraffic(key => streetCache.roadsOf(key)),
     atlas,
     store: tileStore,
     onPoseChanged: publishView,
     onStats: store.reportFrame,
   });
-  // The ground layer runs the scene; the building layer draws the same
+  // The ground layer runs the scene; the street layer draws the same
   // frame right after it, and a frame is consumed once.
   let currentFrame: MapFrame | undefined;
   const groundLayer = new MapGroundLayer(context, atlas, state => {
     frameTime = state.time;
     if (scene.busy) {
       fpsController.raise(FPS_INTERACTION);
+    } else if (scene.trafficMoving) {
+      fpsController.raise(FPS_TRAFFIC);
     }
     currentFrame = scene.advance(state);
     return currentFrame;
   });
-  const buildingLayer = new MapBuildingLayer(context, buildingCache, () => {
+  const streetLayer = new MapStreetLayer(context, streetCache, () => {
     const frame = currentFrame;
     currentFrame = undefined;
     return frame;
   });
-  const layerManager = new RenderLayerManager([groundLayer, buildingLayer]);
+  const layerManager = new RenderLayerManager([groundLayer, streetLayer]);
   const stopRenderLoop = startRenderLoop({
     canvas,
     context,
@@ -169,10 +174,10 @@ async function initGpu(
     cleanup: () => {
       stopRenderLoop();
       loader.dispose();
-      buildingLoader.dispose();
-      meshDecoder.dispose();
+      streetLoader.dispose();
+      streetDecoder.dispose();
       layerManager.dispose();
-      buildingCache.dispose();
+      streetCache.dispose();
       atlas.dispose();
       fpsController.dispose();
       context.device.destroy();

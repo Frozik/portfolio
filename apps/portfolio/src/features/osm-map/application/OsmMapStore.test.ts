@@ -39,6 +39,7 @@ const STATS: MapStats = {
   cachedTiles: 40,
   buildingTiles: 3,
   loadingBuildingTiles: 1,
+  cars: 12,
 };
 
 describe('OsmMapStore', () => {

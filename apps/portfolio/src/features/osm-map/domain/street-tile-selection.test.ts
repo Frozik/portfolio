@@ -1,5 +1,4 @@
-import { selectBuildingTiles } from './building-tile-selection';
-import { BUILDINGS_MIN_ZOOM } from './constants';
+import { selectStreetTiles } from './street-tile-selection';
 import type { TileCoord } from './tile-key';
 import { childrenOf, tileKeyOf } from './tile-key';
 import type { SelectedTile } from './tile-selection';
@@ -10,14 +9,7 @@ function selectedTile(coord: TileCoord, screenDistancePx: number): SelectedTile 
   return { key: tileKeyOf(coord), coord, edgePx: 300, screenDistancePx };
 }
 
-describe('building tile selection', () => {
-  it('asks for nothing until the camera is close enough for buildings', () => {
-    const tiles = childrenOf(Z14).map(coord => selectedTile(coord, 0));
-
-    expect(selectBuildingTiles(tiles, BUILDINGS_MIN_ZOOM - 0.01)).toEqual([]);
-    expect(selectBuildingTiles(tiles, BUILDINGS_MIN_ZOOM)).toHaveLength(1);
-  });
-
+describe('street tile selection', () => {
   it('collapses the finer raster tiles onto their z14 ancestor with the best priority among them', () => {
     const [nearChild, ...farChildren] = childrenOf(Z14);
     const tiles = [
@@ -26,15 +18,15 @@ describe('building tile selection', () => {
       selectedTile({ z: 15, x: 2 * Z14.x + 2, y: 2 * Z14.y }, 10),
     ];
 
-    const buildingTiles = selectBuildingTiles(tiles, BUILDINGS_MIN_ZOOM);
+    const buildingTiles = selectStreetTiles(tiles);
 
     expect(buildingTiles.map(tile => tile.coord)).toEqual([{ z: 14, x: Z14.x + 1, y: Z14.y }, Z14]);
     expect(buildingTiles[1].screenDistancePx).toBe(40);
   });
 
-  it('leaves out the tiles at z14 and coarser, which have no z14 ancestor to draw', () => {
+  it('keeps a raster tile at z14 as its own street tile and leaves out the coarser ones', () => {
     const tiles = [selectedTile(Z14, 0), selectedTile({ z: 13, x: 4785, y: 2380 }, 0)];
 
-    expect(selectBuildingTiles(tiles, BUILDINGS_MIN_ZOOM)).toEqual([]);
+    expect(selectStreetTiles(tiles).map(tile => tile.coord)).toEqual([Z14]);
   });
 });

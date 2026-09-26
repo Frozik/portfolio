@@ -22,6 +22,8 @@ export interface MapStats {
   /** z14 building tiles standing in the frame, and the ones still on their way. */
   readonly buildingTiles: number;
   readonly loadingBuildingTiles: number;
+  /** Cars on the move this frame. */
+  readonly cars: number;
 }
 
 const INITIAL_STATS: MapStats = {
@@ -35,6 +37,7 @@ const INITIAL_STATS: MapStats = {
   cachedTiles: 0,
   buildingTiles: 0,
   loadingBuildingTiles: 0,
+  cars: 0,
 };
 
 /**

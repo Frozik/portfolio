@@ -37,11 +37,12 @@ function samplePixels(): PixelPoint[] {
 
 describe('tile selection', () => {
   it('picks one uniform zoom level equal to the camera zoom when looking straight down', () => {
-    const state = createMapCamera({ ...DEFAULT_VIEW, pitchDeg: 0 });
+    const zoom = 14;
+    const state = createMapCamera({ ...DEFAULT_VIEW, zoom, pitchDeg: 0 });
     const tiles = selectTiles(cameraGeometry(state, VIEWPORT), FULL_DETAIL);
 
     expect(tiles.length).toBeGreaterThan(0);
-    expect(new Set(tiles.map(tile => tile.coord.z))).toEqual(new Set([DEFAULT_VIEW.zoom]));
+    expect(new Set(tiles.map(tile => tile.coord.z))).toEqual(new Set([zoom]));
   });
 
   it('covers every visible ground point with exactly one tile', () => {
@@ -70,7 +71,7 @@ describe('tile selection', () => {
   });
 
   it('ranks the tile under the screen centre first and the ones at the edges last', () => {
-    const state = createMapCamera({ ...DEFAULT_VIEW, pitchDeg: 60, bearingDeg: 40 });
+    const state = createMapCamera({ ...DEFAULT_VIEW, zoom: 14, pitchDeg: 60, bearingDeg: 40 });
     const tiles = selectTiles(cameraGeometry(state, VIEWPORT), FULL_DETAIL);
     const centre = unprojectToGround(state, VIEWPORT, {
       x: VIEWPORT.widthPx / 2,

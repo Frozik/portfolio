@@ -12,6 +12,7 @@ export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = 
     cached: (count: number): string => `на диске ${count}`,
     buildings: (tiles: number, loading: number): string =>
       loading > 0 ? `здания: тайлов ${tiles}, грузится ${loading}` : `здания: тайлов ${tiles}`,
+    cars: (count: number): string => `машин ${count}`,
     reset: 'Сбросить вид',
     locate: 'Показать, где я',
     locating: 'Определяем, где вы…',
