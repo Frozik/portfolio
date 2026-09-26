@@ -1,9 +1,9 @@
 import { isNil } from 'lodash-es';
 
 import type { WorldPoint } from '@frozik/utils/geometry/worldFrame';
+import type { GpuMesh } from '@frozik/utils/webgpu/gpuMesh';
+import { bindGpuMesh, createVertexBuffer, releaseGpuMesh } from '@frozik/utils/webgpu/gpuMesh';
 import type { SceneTree } from '../../domain/terrain/place-trees';
-import type { GpuMesh } from './gpu-mesh';
-import { bindGpuMesh, createVertexBuffer, releaseGpuMesh } from './gpu-mesh';
 import { CAR_INSTANCE_FLOATS, TREE_INSTANCE_FLOATS } from './vertex-layouts';
 
 /** The instances drawn from one template, grown as the planting does. */

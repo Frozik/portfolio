@@ -1,7 +1,7 @@
 import { assert } from '@frozik/utils/assert/assert';
 import type { ISlotPoolGrowth } from '@frozik/utils/webgpu/lruSlotPool';
 
-import { KeyedSlotPool } from './keyed-slot-pool';
+import { KeyedSlotPool } from '@frozik/utils/webgpu/keyedSlotPool';
 
 /**
  * Bytes per texel for the texture formats this manager currently supports.

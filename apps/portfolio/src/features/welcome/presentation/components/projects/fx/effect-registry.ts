@@ -16,6 +16,7 @@ import { drawRotate } from './effects/draw-rotate';
 import { createShapesState, drawShapes } from './effects/draw-shapes';
 import { drawTanks } from './effects/draw-tanks';
 import { drawTicker } from './effects/draw-ticker';
+import { drawTiles } from './effects/draw-tiles';
 import { createTypingState, drawTyping } from './effects/draw-typing';
 import type { IFxDrawContext, TFxDraw, TFxEffectFactory, TFxRender, TProjectFxKind } from './types';
 
@@ -48,6 +49,7 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   artillery: createStatelessFxEffect(drawArtillery),
   contours: createStatelessFxEffect(drawContours),
   gravity: createStatelessFxEffect(drawGravity),
+  tiles: createStatelessFxEffect(drawTiles),
 };
 
 export function createFxRender(kind: TProjectFxKind): TFxRender {

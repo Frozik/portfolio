@@ -1,11 +1,12 @@
 import { isNil } from 'lodash-es';
 
+import { wrapToHalfTurn } from '../math/wrapToHalfTurn';
 import { computePinchScale, pointerDistance } from './pinchScale';
 
 const DRAG_POINTER_COUNT = 1;
 const PINCH_POINTER_COUNT = 2;
 
-interface PointerPosition {
+export interface PointerPosition {
   readonly clientX: number;
   readonly clientY: number;
 }
@@ -13,8 +14,8 @@ interface PointerPosition {
 export interface PointerGestureHandlers {
   /** Single-pointer drag delta in client pixels. */
   readonly onDrag: (deltaX: number, deltaY: number, timeStamp: number) => void;
-  /** Two-pointer pinch: multiply the tracked zoom distance by `scale`. */
-  readonly onPinch: (scale: number) => void;
+  /** Two-pointer pinch: multiply the tracked zoom distance by `scale`; `center` is the midpoint between the pointers. */
+  readonly onPinch: (scale: number, center: PointerPosition) => void;
   /**
    * How far the midpoint between two pointers moved, in client pixels. Reported
    * alongside {@link onPinch} — the two are the same gesture, and a camera that
@@ -22,7 +23,10 @@ export interface PointerGestureHandlers {
    * zoom on two fingers leave it out.
    */
   readonly onTwoPointerDrag?: (deltaX: number, deltaY: number) => void;
-  readonly onWheel: (deltaY: number) => void;
+  /** How far the line between two pointers turned, in radians; positive is clockwise on screen (client y grows downward). */
+  readonly onTwoPointerRotate?: (deltaRadians: number) => void;
+  /** Wheel scroll with the cursor position it happened at. */
+  readonly onWheel: (deltaY: number, position: PointerPosition) => void;
   /** Focus loss dropped every tracked pointer — consumers should reset momentum. */
   readonly onReset: VoidFunction;
   /** First pointer of a gesture went down; carries the modifier keys of that press. */
@@ -52,10 +56,16 @@ export function createPointerGestureTracker(
 ): PointerGestureTracker {
   const activePointers = new Map<number, PointerPosition>();
   let lastPinchDistance = 0;
+  let lastPinchAngle = 0;
 
   function measurePinchDistance(): number {
     const [first, second] = [...activePointers.values()];
     return pointerDistance(first.clientX, first.clientY, second.clientX, second.clientY);
+  }
+
+  function measurePinchAngle(): number {
+    const [first, second] = [...activePointers.values()];
+    return Math.atan2(second.clientY - first.clientY, second.clientX - first.clientX);
   }
 
   function measurePinchCenter(): PointerPosition {
@@ -74,12 +84,18 @@ export function createPointerGestureTracker(
     const currentDistance = measurePinchDistance();
     const scale = computePinchScale(lastPinchDistance, currentDistance);
 
+    const center = measurePinchCenter();
+
     if (!isNil(scale)) {
       lastPinchDistance = currentDistance;
-      handlers.onPinch(scale);
+      handlers.onPinch(scale, center);
     }
 
-    const center = measurePinchCenter();
+    if (handlers.onTwoPointerRotate !== undefined) {
+      const currentAngle = measurePinchAngle();
+      handlers.onTwoPointerRotate(wrapToHalfTurn(currentAngle - lastPinchAngle));
+      lastPinchAngle = currentAngle;
+    }
 
     handlers.onTwoPointerDrag?.(
       center.clientX - previousCenter.clientX,
@@ -92,6 +108,7 @@ export function createPointerGestureTracker(
 
     if (activePointers.size === PINCH_POINTER_COUNT) {
       lastPinchDistance = measurePinchDistance();
+      lastPinchAngle = measurePinchAngle();
     }
   }
 
@@ -159,7 +176,7 @@ export function createPointerGestureTracker(
 
   function onWheel(event: WheelEvent): void {
     event.preventDefault();
-    handlers.onWheel(event.deltaY);
+    handlers.onWheel(event.deltaY, { clientX: event.clientX, clientY: event.clientY });
   }
 
   element.addEventListener('pointerdown', onPointerDown);

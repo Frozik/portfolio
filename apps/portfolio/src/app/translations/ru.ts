@@ -39,6 +39,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     stereometry: 'Стереометрия',
     spaceGolf: 'Космический гольф',
     sitePlanner: 'Планировщик участка',
+    osmMap: 'Карта OSM',
     controls: 'Элементы управления',
     retro: 'Ретроспектива',
     conf: 'Конференция',

@@ -4,7 +4,7 @@ import { doubleSlotCapacity } from '@frozik/utils/webgpu/lruSlotPool';
 import { FLOATS_PER_TEXEL, INITIAL_GPU_BLOCKS, MAX_GPU_BLOCKS } from '../../domain/constants';
 import type { ITextureLayoutConfig, UnixTimeMs } from '../../domain/types';
 
-import { KeyedSlotPool } from '../block-store/keyed-slot-pool';
+import { KeyedSlotPool } from '@frozik/utils/webgpu/keyedSlotPool';
 
 const TEXTURE_FORMAT: GPUTextureFormat = 'rgba32float';
 const TEXTURE_USAGE =

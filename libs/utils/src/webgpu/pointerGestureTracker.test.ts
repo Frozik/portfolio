@@ -6,6 +6,8 @@ import { createPointerGestureTracker } from './pointerGestureTracker';
 
 const FIRST_POINTER_ID = 1;
 const SECOND_POINTER_ID = 2;
+const WHEEL_CLIENT_X = 30;
+const WHEEL_CLIENT_Y = 40;
 
 function createPointerEvent(
   type: string,
@@ -37,6 +39,9 @@ function cancelPointer(pointerId: number): void {
 
 function scrollWheel(element: HTMLElement, deltaY: number): WheelEvent {
   const event = new WheelEvent('wheel', { deltaY, cancelable: true });
+  // happy-dom's WheelEvent ignores the MouseEvent position fields of its init.
+  Object.defineProperty(event, 'clientX', { value: WHEEL_CLIENT_X });
+  Object.defineProperty(event, 'clientY', { value: WHEEL_CLIENT_Y });
   element.dispatchEvent(event);
   return event;
 }
@@ -46,6 +51,7 @@ function createHandlerMocks() {
     onDrag: vi.fn<PointerGestureHandlers['onDrag']>(),
     onPinch: vi.fn<PointerGestureHandlers['onPinch']>(),
     onTwoPointerDrag: vi.fn<NonNullable<PointerGestureHandlers['onTwoPointerDrag']>>(),
+    onTwoPointerRotate: vi.fn<NonNullable<PointerGestureHandlers['onTwoPointerRotate']>>(),
     onWheel: vi.fn<PointerGestureHandlers['onWheel']>(),
     onReset: vi.fn<VoidFunction>(),
     onGestureStart: vi.fn<NonNullable<PointerGestureHandlers['onGestureStart']>>(),
@@ -126,7 +132,7 @@ describe('createPointerGestureTracker', () => {
 
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: 100, clientY: 0 });
 
-    expect(handlers.onPinch).toHaveBeenCalledWith(2);
+    expect(handlers.onPinch).toHaveBeenCalledWith(2, { clientX: 50, clientY: 0 });
     expect(handlers.onDrag).not.toHaveBeenCalled();
   });
 
@@ -137,8 +143,8 @@ describe('createPointerGestureTracker', () => {
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: 100, clientY: 0 });
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: 50, clientY: 0 });
 
-    expect(handlers.onPinch).toHaveBeenNthCalledWith(1, 2);
-    expect(handlers.onPinch).toHaveBeenNthCalledWith(2, 2);
+    expect(handlers.onPinch).toHaveBeenNthCalledWith(1, 2, expect.anything());
+    expect(handlers.onPinch).toHaveBeenNthCalledWith(2, 2, expect.anything());
   });
 
   it('skips degenerate pinches where both fingers collapse onto one point', () => {
@@ -158,7 +164,7 @@ describe('createPointerGestureTracker', () => {
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: 100, clientY: 0 });
 
     expect(handlers.onPinch).toHaveBeenCalledTimes(1);
-    expect(handlers.onPinch).toHaveBeenCalledWith(2);
+    expect(handlers.onPinch).toHaveBeenCalledWith(2, expect.anything());
   });
 
   it('treats the minimum separation as a valid pinch', () => {
@@ -167,7 +173,7 @@ describe('createPointerGestureTracker', () => {
 
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: PINCH_MIN_DISTANCE_PX, clientY: 0 });
 
-    expect(handlers.onPinch).toHaveBeenCalledWith(200 / PINCH_MIN_DISTANCE_PX);
+    expect(handlers.onPinch).toHaveBeenCalledWith(200 / PINCH_MIN_DISTANCE_PX, expect.anything());
   });
 
   it('reports how far the midpoint between two pointers travelled', () => {
@@ -188,6 +194,25 @@ describe('createPointerGestureTracker', () => {
 
     expect(handlers.onPinch).not.toHaveBeenCalled();
     expect(handlers.onTwoPointerDrag).toHaveBeenCalledWith(-100, 0);
+  });
+
+  it('reports how far the line between two pointers turned', () => {
+    pressPointer(element, { pointerId: FIRST_POINTER_ID, clientX: 0, clientY: 0 });
+    pressPointer(element, { pointerId: SECOND_POINTER_ID, clientX: 100, clientY: 0 });
+
+    movePointer({ pointerId: SECOND_POINTER_ID, clientX: 0, clientY: 100 });
+
+    expect(handlers.onTwoPointerRotate).toHaveBeenCalledTimes(1);
+    expect(handlers.onTwoPointerRotate.mock.calls[0][0]).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it('reports a rotation across the atan2 seam as the short way round', () => {
+    pressPointer(element, { pointerId: FIRST_POINTER_ID, clientX: 0, clientY: 0 });
+    pressPointer(element, { pointerId: SECOND_POINTER_ID, clientX: -100, clientY: 1 });
+
+    movePointer({ pointerId: SECOND_POINTER_ID, clientX: -100, clientY: -1 });
+
+    expect(Math.abs(handlers.onTwoPointerRotate.mock.calls[0][0])).toBeLessThan(0.1);
   });
 
   it('leaves the two-pointer drag alone while a single pointer moves', () => {
@@ -236,7 +261,10 @@ describe('createPointerGestureTracker', () => {
     const wheelDelta = 120;
     const event = scrollWheel(element, wheelDelta);
 
-    expect(handlers.onWheel).toHaveBeenCalledWith(wheelDelta);
+    expect(handlers.onWheel).toHaveBeenCalledWith(wheelDelta, {
+      clientX: WHEEL_CLIENT_X,
+      clientY: WHEEL_CLIENT_Y,
+    });
     expect(event.defaultPrevented).toBe(true);
   });
 
@@ -246,7 +274,7 @@ describe('createPointerGestureTracker', () => {
 
     movePointer({ pointerId: SECOND_POINTER_ID, clientX: 100, clientY: 0 });
 
-    expect(handlers.onPinch).toHaveBeenCalledWith(2);
+    expect(handlers.onPinch).toHaveBeenCalledWith(2, expect.anything());
   });
 
   it('ignores an external pointer that is already tracked', () => {
