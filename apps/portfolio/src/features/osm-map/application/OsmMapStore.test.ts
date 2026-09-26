@@ -37,6 +37,8 @@ const STATS: MapStats = {
   atlasUsed: 10,
   atlasCapacity: 64,
   cachedTiles: 40,
+  buildingTiles: 3,
+  loadingBuildingTiles: 1,
 };
 
 describe('OsmMapStore', () => {

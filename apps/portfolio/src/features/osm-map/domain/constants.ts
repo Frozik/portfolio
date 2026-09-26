@@ -74,6 +74,23 @@ export const LOW_FPS_REPORTS_TO_STEP_DOWN = 8;
 
 export const HASH_WRITE_DELAY_MS = 300;
 
+/** The vector tiles carry buildings at their last zoom; finer views draw the z14 ancestor's mesh. */
+export const BUILDING_TILE_ZOOM = 14;
+/** Buildings rise once the camera is this close; farther out the raster map is the whole picture. */
+export const BUILDINGS_MIN_ZOOM = 16;
+/** Metres in one Web Mercator unit at the equator: the Earth's circumference. */
+export const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
+/** What OpenMapTiles gives an untagged building; the same stands in for a missing value. */
+export const DEFAULT_BUILDING_HEIGHT_M = 5;
+/** Building meshes kept on the GPU before the least recently drawn are dropped. */
+export const MAX_BUILDING_MESH_BYTES = 96 * 2 ** 20;
+/** Encoded building tiles kept in IndexedDB. */
+export const MAX_STORED_BUILDING_TILES = 300;
+/** How long a building tile takes to grow out of the ground when it enters the picture. */
+export const BUILDING_RISE_SECONDS = 0.6;
+/** z14 tiles a frame can place; a 4K view at full tilt from z16 needs about twenty. */
+export const MAX_BUILDING_TILES_PER_FRAME = 64;
+
 export const GEOLOCATION_TIMEOUT_MS = 10_000;
 /** A fix this old is still good enough to open the map over the right city. */
 export const GEOLOCATION_MAX_AGE_MS = 600_000;

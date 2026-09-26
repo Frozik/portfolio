@@ -94,6 +94,10 @@ export class TileAtlas implements TileAtlasPort {
     return this.slots.getSlot(key);
   }
 
+  has(key: TileKey): boolean {
+    return this.slots.getSlot(key) !== undefined;
+  }
+
   touch(key: TileKey): void {
     this.slots.touch(key);
   }

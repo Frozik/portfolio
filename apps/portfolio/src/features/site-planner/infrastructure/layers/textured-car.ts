@@ -1,9 +1,9 @@
+import type { GpuMesh } from '@frozik/utils/webgpu/gpuMesh';
+import { createIndexBuffer, createVertexBuffer } from '@frozik/utils/webgpu/gpuMesh';
 import carTextureUrl from '../assets/car-colormap.png?url';
 import carModelUrl from '../assets/car-suv.glb?url';
 import { fitCarMesh } from '../gltf/fit-car-mesh';
 import { parseGlb } from '../gltf/parse-glb';
-import type { GpuMesh } from './gpu-mesh';
-import { createIndexBuffer, createVertexBuffer } from './gpu-mesh';
 
 export interface TexturedCarAsset {
   readonly mesh: GpuMesh;

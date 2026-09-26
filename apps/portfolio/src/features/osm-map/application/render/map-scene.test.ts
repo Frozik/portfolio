@@ -1,10 +1,17 @@
+import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import { EMPTY_LIT_MESH } from '@frozik/utils/geometry/litMesh';
 import type { FrameState } from '@frozik/utils/webgpu/renderLayer';
 
-import { MAX_CONCURRENT_LOADS } from '../../domain/constants';
+import {
+  BUILDING_RISE_SECONDS,
+  BUILDINGS_MIN_ZOOM,
+  MAX_CONCURRENT_LOADS,
+} from '../../domain/constants';
 import type { MapCameraState } from '../../domain/map-camera';
 import { createMapCamera } from '../../domain/map-camera';
 import { DEFAULT_VIEW } from '../../domain/map-view';
 import type { TileAtlasPort } from '../../domain/ports/tile-atlas';
+import type { TileSink } from '../../domain/ports/tile-sink';
 import type { TileSource } from '../../domain/ports/tile-source';
 import type { TileStore } from '../../domain/ports/tile-store';
 import { ResidentTileIndex } from '../../domain/resident-tile-index';
@@ -17,8 +24,8 @@ function frame(time: number): FrameState {
   return { time, canvasWidth: 1600, canvasHeight: 900, devicePixelRatio: 1 };
 }
 
-function restingCamera(): MapCameraController {
-  const state: MapCameraState = createMapCamera(DEFAULT_VIEW);
+function restingCamera(zoom: number = DEFAULT_VIEW.zoom): MapCameraController {
+  const state: MapCameraState = createMapCamera({ ...DEFAULT_VIEW, zoom });
   return {
     tick: () => state,
     setView: () => undefined,
@@ -58,11 +65,17 @@ function createFakeAtlas(): TileAtlasPort {
   return {
     store: key => layers.set(key, layers.size),
     layerOf: key => layers.get(key),
+    has: key => layers.has(key),
     touch: () => undefined,
     capacity: 64,
     usedCount: 0,
     coverage: new ResidentTileIndex(),
   };
+}
+
+function createFakeMeshSink(): TileSink<LitMesh> {
+  const keys = new Set<TileKey>();
+  return { store: key => keys.add(key), has: key => keys.has(key), touch: () => undefined };
 }
 
 async function settle(): Promise<void> {
@@ -74,18 +87,27 @@ async function settle(): Promise<void> {
 describe('MapScene', () => {
   it('keeps loading the queue while the camera is at rest', async () => {
     const { source, resolvers } = createFakeSource();
+    const atlas = createFakeAtlas();
     let time = 0;
     const scene = new MapScene({
       camera: restingCamera(),
-      loader: new TileLoader({
+      loader: new TileLoader<ImageBitmap>({
         source,
-        atlas: createFakeAtlas(),
+        sink: atlas,
         store: createFakeStore(),
         decode: () => Promise.resolve({ close: () => undefined } as unknown as ImageBitmap),
         readNow: () => time,
         onChange: () => scene.markLoadsChanged(),
       }),
-      atlas: createFakeAtlas(),
+      buildingLoader: new TileLoader<LitMesh>({
+        source: createFakeSource().source,
+        sink: createFakeMeshSink(),
+        store: createFakeStore(),
+        decode: () => Promise.resolve(EMPTY_LIT_MESH),
+        readNow: () => time,
+        onChange: () => scene.markLoadsChanged(),
+      }),
+      atlas,
       store: createFakeStore(),
       onPoseChanged: () => undefined,
       onStats: () => undefined,
@@ -104,5 +126,48 @@ describe('MapScene', () => {
 
     expect(afterLanding).toBeDefined();
     expect(resolvers).toHaveLength(MAX_CONCURRENT_LOADS + 1);
+  });
+
+  it('grows building tiles out of the ground when they enter the picture and draws until they stand', async () => {
+    const buildings = createFakeSource();
+    let time = 0;
+    const scene = new MapScene({
+      camera: restingCamera(BUILDINGS_MIN_ZOOM),
+      loader: new TileLoader<ImageBitmap>({
+        source: createFakeSource().source,
+        sink: createFakeAtlas(),
+        store: createFakeStore(),
+        decode: () => Promise.resolve({ close: () => undefined } as unknown as ImageBitmap),
+        readNow: () => time,
+        onChange: () => scene.markLoadsChanged(),
+      }),
+      buildingLoader: new TileLoader<LitMesh>({
+        source: buildings.source,
+        sink: createFakeMeshSink(),
+        store: createFakeStore(),
+        decode: () => Promise.resolve(EMPTY_LIT_MESH),
+        readNow: () => time,
+        onChange: () => scene.markLoadsChanged(),
+      }),
+      atlas: createFakeAtlas(),
+      store: createFakeStore(),
+      onPoseChanged: () => undefined,
+      onStats: () => undefined,
+    });
+
+    scene.advance(frame(time));
+    await settle();
+    buildings.resolvers[0]();
+    await settle();
+    time = 5;
+    const landed = scene.advance(frame(time));
+    const midway = scene.advance(frame(time + BUILDING_RISE_SECONDS / 2));
+    const settled = scene.advance(frame(time + BUILDING_RISE_SECONDS * 2));
+    const atRest = scene.advance(frame(time + BUILDING_RISE_SECONDS * 3));
+
+    expect(landed?.buildings.map(placement => placement.riseStart)).toEqual([time]);
+    expect(midway?.buildings[0].riseStart).toBe(time);
+    expect(settled).toBeDefined();
+    expect(atRest).toBeUndefined();
   });
 });

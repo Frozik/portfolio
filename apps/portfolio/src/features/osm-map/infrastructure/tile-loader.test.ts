@@ -6,6 +6,7 @@ import { ResidentTileIndex } from '../domain/resident-tile-index';
 import type { TileCoord, TileKey } from '../domain/tile-key';
 import { tileKeyOf } from '../domain/tile-key';
 import type { SelectedTile } from '../domain/tile-selection';
+import type { TileLoaderOptions } from './tile-loader';
 import { TileLoader } from './tile-loader';
 
 interface PendingLoad {
@@ -50,6 +51,7 @@ function createFakeAtlas(): TileAtlasPort & {
       stored.push(key);
     },
     layerOf: key => layers.get(key),
+    has: key => layers.has(key),
     touch: () => undefined,
     capacity: 64,
     usedCount: 0,
@@ -71,21 +73,22 @@ function createFakeStore(): TileStore {
   };
 }
 
-function createLoader(overrides: Partial<ConstructorParameters<typeof TileLoader>[0]> = {}) {
+function createLoader(overrides: Partial<TileLoaderOptions<ImageBitmap>> = {}) {
   const { source, pending } = createFakeSource();
   const atlas = createFakeAtlas();
   const store = createFakeStore();
   const onChange = vi.fn();
   const decoded: ReturnType<typeof fakeImage>[] = [];
-  const loader = new TileLoader({
+  const loader = new TileLoader<ImageBitmap>({
     source,
-    atlas,
+    sink: atlas,
     store,
     decode: () => {
       const image = fakeImage();
       decoded.push(image);
       return Promise.resolve(image);
     },
+    release: image => image.close(),
     readNow: () => 3,
     onChange,
     ...overrides,
@@ -119,7 +122,7 @@ describe('TileLoader', () => {
     expect(atlas.stored).toEqual([near.key]);
     expect(decoded[0].close).toHaveBeenCalled();
     expect(store.count).toBe(1);
-    expect(loader.readyTile(near.key)).toEqual({ layer: 0, fadeStart: 3 });
+    expect(loader.readyTile(near.key)).toEqual({ fadeStart: 3 });
     expect(loader.readyTile(far.key)).toBeUndefined();
     expect(onChange).toHaveBeenCalledTimes(1);
   });
@@ -210,7 +213,7 @@ describe('TileLoader', () => {
     await settle();
 
     expect(pending).toHaveLength(1);
-    expect(loader.readyTile(tile.key)).toEqual({ layer: 0, fadeStart: Number.NEGATIVE_INFINITY });
+    expect(loader.readyTile(tile.key)).toEqual({ fadeStart: Number.NEGATIVE_INFINITY });
   });
 
   it('aborts everything on dispose', async () => {

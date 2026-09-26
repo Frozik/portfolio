@@ -1,14 +1,15 @@
 # OSM Map
 
-Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load.
+Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes at street zoom.
 
 Live: [https://frozik.github.io/portfolio/osm-map](https://frozik.github.io/portfolio/osm-map) · Part of the [portfolio](../../../../../README.md) monorepo; code lives in `apps/portfolio/src/features/osm-map/`.
 
 A Google/Yandex-maps-like viewer written from scratch on WebGPU over the
 OpenStreetMap standard raster tiles. No MapLibre, no Leaflet: the camera,
 the tile walk, the loading and the drawing are all in this feature. Labels
-and vector data are out of scope by design — it is a raster-tile engine,
-not a cartography stack.
+are out of scope by design — it is a raster-tile engine, not a cartography
+stack; the one piece of vector data it reads is building footprints, for
+the boxes that stand on the raster ground at street zoom.
 
 ## What it does
 
@@ -76,6 +77,24 @@ not a cartography stack.
   the fix arrives unless you have already moved the map. The button under
   the compass asks again on demand and centres the map on you, keeping the
   zoom and the tilt.
+- **Buildings as boxes** from zoom 16: every footprint in view rises to its
+  OSM height over the raster ground. The footprints come from
+  [OpenFreeMap](https://openfreemap.org)'s planet vector tiles (OpenMapTiles
+  schema, `building` layer at z14 with `render_height` / `render_min_height`;
+  free, keyless, no own tile pipeline). The z14 ancestors of the raster tiles in
+  view go through the same schedule, priority and IndexedDB tier as the
+  pictures (a second `TileLoader` over a mesh cache instead of the atlas); a
+  worker decodes the tile and extrudes every footprint with
+  `@frozik/utils/geometry/extrudeFootprint` into one mesh per tile, in metres
+  from the tile corner. The building layer draws each tile with an offset and
+  a metres-to-map-units scale taken at the tile's latitude, lit by a fixed sun
+  and fogged like the ground, into its own depth buffer: the ground never
+  writes depth because every box stands above it. Meshes are kept on the GPU
+  up to a byte ceiling, least recently drawn first out. A tile entering the
+  picture grows out of the ground over 0.6 s (ease-out, in the vertex
+  shader), whether it just landed or came back from the cache; leaving and
+  returning grows it again. No roofs, parts or labels — the deferred stage 2
+  plan covers those.
 - **Render on demand**: at rest, with nothing in flight and no fade running,
   no frame is submitted and the loop idles at 10 fps.
 
@@ -84,12 +103,16 @@ not a cartography stack.
 `domain/` is pure and unit-tested: Mercator maths, the immutable camera
 (`map-camera.ts`), frustum planes, the tile walk (`tile-selection.ts`), the
 tile schedule (`tile-schedule.ts`, the one owner of what every tile is
-doing), the detail budget and the hash format. `infrastructure/` owns
-WebGPU and the network: the atlas with its staging mip chain, the loader,
-the instanced ground layer and shader, the gesture controller and the hash
-sync. `application/render/map-scene.ts` runs the per-frame pipeline —
-camera → visible tiles → loads → instances — and hands the layer a frame
-only when something changed; `run-osm-map.ts` is the composition root. The
+doing), the building footprints and their z14 selection
+(`building-footprint.ts`, `building-tile-selection.ts`), the detail budget
+and the hash format. `infrastructure/` owns WebGPU and the network: the
+atlas with its staging mip chain, the generic loader, the two tile sources,
+the mesh worker and cache, the ground and building layers with their
+shaders, the gesture controller and the hash sync.
+`application/render/map-scene.ts` runs the per-frame pipeline — camera →
+visible tiles → loads → instances and building placements — and hands the
+layers a frame only when something changed; `run-osm-map.ts` is the
+composition root. The
 MobX store holds only the HUD readout and the reset command; the camera
 never touches MobX because it changes every frame.
 

@@ -2,34 +2,19 @@ import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
-import type { Mat4 } from 'wgpu-matrix';
-
 import {
   CHECKER_CELLS_PER_TILE,
   FADE_IN_SECONDS,
   MAX_ANISOTROPY,
   MAX_INSTANCES_PER_FRAME,
 } from '../../domain/constants';
-import type { WorldVector } from '../../domain/map-camera';
 import groundShaderSource from '../shaders/ground.wgsl?raw';
 import type { TileAtlas } from '../tile-atlas';
 import { TILE_INSTANCE_BYTES } from '../tile-instance-buffer';
+import { FOG_COLOR } from './fog';
+import type { MapFrame } from './map-frame';
 
-/** Pale haze the far ground dissolves into; also the clear colour, so the cut-off is invisible. */
-const FOG_COLOR = { r: 0.84, g: 0.87, b: 0.9, a: 1 } as const;
 const VERTICES_PER_QUAD = 6;
-
-/** What the scene hands the layer for a frame that changed. */
-export interface MapFrame {
-  readonly viewProjection: Mat4;
-  /** Camera position relative to the camera target, like the instance origins. */
-  readonly cameraPosition: WorldVector;
-  readonly fogStart: number;
-  readonly fogEnd: number;
-  readonly time: number;
-  readonly instanceData: Float32Array;
-  readonly instanceCount: number;
-}
 
 export class MapGroundLayer implements RenderLayer {
   private readonly device: GPUDevice;

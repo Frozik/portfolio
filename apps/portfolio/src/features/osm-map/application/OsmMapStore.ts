@@ -19,6 +19,9 @@ export interface MapStats {
   readonly atlasCapacity: number;
   /** Encoded tiles held in the on-disk store beyond the atlas. */
   readonly cachedTiles: number;
+  /** z14 building tiles standing in the frame, and the ones still on their way. */
+  readonly buildingTiles: number;
+  readonly loadingBuildingTiles: number;
 }
 
 const INITIAL_STATS: MapStats = {
@@ -30,6 +33,8 @@ const INITIAL_STATS: MapStats = {
   atlasUsed: 0,
   atlasCapacity: 0,
   cachedTiles: 0,
+  buildingTiles: 0,
+  loadingBuildingTiles: 0,
 };
 
 /**

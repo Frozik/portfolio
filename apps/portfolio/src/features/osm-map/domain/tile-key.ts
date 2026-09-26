@@ -37,6 +37,12 @@ export function childrenOf({ z, x, y }: TileCoord): readonly TileCoord[] {
   ];
 }
 
+/** The tile at zoom `z` that contains `coord`; `coord` itself when already that coarse. */
+export function ancestorAt({ z, x, y }: TileCoord, ancestorZ: number): TileCoord {
+  const span = 2 ** (z - ancestorZ);
+  return { z: ancestorZ, x: Math.floor(x / span), y: Math.floor(y / span) };
+}
+
 export interface GroundRect {
   readonly minX: number;
   readonly minY: number;

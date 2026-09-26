@@ -10,6 +10,8 @@ export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = 
       loading > 0 ? `тайлов ${visible}, грузится ${loading}` : `тайлов ${visible}`,
     atlas: (used: number, capacity: number): string => `атлас ${used}/${capacity}`,
     cached: (count: number): string => `на диске ${count}`,
+    buildings: (tiles: number, loading: number): string =>
+      loading > 0 ? `здания: тайлов ${tiles}, грузится ${loading}` : `здания: тайлов ${tiles}`,
     reset: 'Сбросить вид',
     locate: 'Показать, где я',
     locating: 'Определяем, где вы…',
@@ -24,5 +26,5 @@ export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = 
       `Север отклонён на ${Math.round(bearingDeg)}° — нажмите, чтобы направить его вверх`,
   },
   help: 'Перетаскивание — сдвиг, колесо или щипок — масштаб, правая кнопка или Ctrl+перетаскивание — поворот и наклон; два пальца наклоняют движением и поворачивают скручиванием.',
-  attribution: '© участники OpenStreetMap',
+  attribution: '© участники OpenStreetMap · OpenFreeMap · © OpenMapTiles',
 };

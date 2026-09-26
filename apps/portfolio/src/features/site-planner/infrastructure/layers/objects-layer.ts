@@ -5,6 +5,13 @@ import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import { isNil } from 'lodash-es';
 
 import type { LitMesh } from '@frozik/utils/geometry/litMesh';
+import type { GpuMesh } from '@frozik/utils/webgpu/gpuMesh';
+import {
+  bindGpuMesh,
+  releaseGpuMesh,
+  uploadColoredMesh,
+  uploadLitMesh,
+} from '@frozik/utils/webgpu/gpuMesh';
 import type { ShadowMap } from '@frozik/utils/webgpu/shadowMap';
 import { buildCarTemplate } from '../../domain/geometry/car-mesh';
 import { buildFurnitureTemplate } from '../../domain/geometry/furniture-mesh';
@@ -20,8 +27,6 @@ import type { SceneTree } from '../../domain/terrain/place-trees';
 import commonShaderSource from '../shaders/common.wgsl?raw';
 import objectsShaderSource from '../shaders/objects.wgsl?raw';
 import shadowShaderSource from '../shaders/shadow.wgsl?raw';
-import type { GpuMesh } from './gpu-mesh';
-import { bindGpuMesh, releaseGpuMesh, uploadColoredMesh, uploadLitMesh } from './gpu-mesh';
 import type { TemplateInstances } from './instanced-templates';
 import {
   buildTreeInstanceData,
