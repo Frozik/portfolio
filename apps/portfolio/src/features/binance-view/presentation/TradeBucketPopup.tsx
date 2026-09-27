@@ -90,7 +90,9 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
   if (isMobile) {
     return (
       <Drawer open={true} onClose={handleClose} placement="right" title={time}>
-        <div className={`flex flex-col gap-2 text-xs text-text-secondary ${lockedSelectClass}`}>
+        <div
+          className={`flex h-full min-h-0 flex-col gap-2 text-xs text-text-secondary ${lockedSelectClass}`}
+        >
           <div className="font-mono text-text">
             {binanceT.tradePopup.headerAggregates(volume, vwap, tradeCount)}
           </div>
@@ -98,10 +100,6 @@ export const TradeBucketPopup = observer(function TradeBucketPopup({
             trades={trades}
             totalNotional={totalNotional}
             isLoading={isLoading}
-            // The drawer's own scrolling container handles overflow; we
-            // pass a generous max-height so the inner virtualizer still
-            // measures correctly without competing for vertical space.
-            maxHeightPx={Number.POSITIVE_INFINITY}
           />
         </div>
       </Drawer>

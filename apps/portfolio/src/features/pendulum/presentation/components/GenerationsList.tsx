@@ -1,5 +1,12 @@
-import type { VirtualTableColumn } from '@frozik/components/components/VirtualTable/VirtualTable';
-import { VirtualTable } from '@frozik/components/components/VirtualTable/VirtualTable';
+import '@frozik/table/theme/table.css';
+
+import { clientRows } from '@frozik/table/core/rows/client-rows';
+import { gridView } from '@frozik/table/extensions/grid-view/core';
+import type { ICellContext } from '@frozik/table/react/column';
+import { reactColumn } from '@frozik/table/react/column';
+import { sorting } from '@frozik/table/react/extensions/sorting/sorting';
+import { Table } from '@frozik/table/react/Table';
+import { useTable } from '@frozik/table/react/useTable';
 import type { ISO } from '@frozik/utils/date/types';
 import {
   isEmptyValueDescriptor,
@@ -45,8 +52,10 @@ function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {
 
 const PLAYER_ACTION_ICON_SIZE = 14;
 
-const ScoreCell = ({ maxScore }: IGeneration) => (
-  <Tag color={scoreTagColor(maxScore)}>{Math.round(maxScore)}</Tag>
+const define = reactColumn<IGeneration>();
+
+const ScoreCell = ({ row }: ICellContext<IGeneration>) => (
+  <Tag color={scoreTagColor(row.maxScore)}>{Math.round(row.maxScore)}</Tag>
 );
 
 const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer }) => {
@@ -85,10 +94,12 @@ const PlayerCellContent = memo(({ player }: { readonly player: IGenerationPlayer
   );
 });
 
-const playerCell = (playerIndex: number) => (generation: IGeneration) => {
-  const player: IGenerationPlayer | undefined = generation.players[playerIndex];
-  return isNil(player) ? null : <PlayerCellContent player={player} />;
-};
+const playerCell =
+  (playerIndex: number) =>
+  ({ row }: ICellContext<IGeneration>) => {
+    const player: IGenerationPlayer | undefined = row.players[playerIndex];
+    return isNil(player) ? null : <PlayerCellContent player={player} />;
+  };
 
 const COMPETITION_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: 'numeric',
@@ -169,31 +180,49 @@ const StartCompetitionPrompt = memo(({ onStart }: { readonly onStart: VoidFuncti
   </div>
 ));
 
-const NEWEST_GENERATION_FIRST = { columnId: 'id', direction: 'desc' } as const;
+const NEWEST_GENERATION_FIRST = {
+  extensions: { sorting: [{ columnId: 'id', direction: 'desc' as const }] },
+};
 
-const generationColumns: readonly VirtualTableColumn<IGeneration>[] = [
-  {
-    id: 'id',
-    header: pendulumT.generationsList.columnId,
-    value: ({ id }) => id,
-    widthPx: 80,
-    sortable: true,
-  },
-  {
-    id: 'maxScore',
-    header: pendulumT.generationsList.columnBestScore,
-    value: ({ maxScore }) => maxScore,
-    cell: ScoreCell,
-    widthPx: 110,
-  },
-  ...Array.from({ length: POPULATION_SIZE }, (_, playerIndex) => ({
-    id: `player-${playerIndex}`,
-    header: pendulumT.generationsList.columnPlayer(playerIndex + 1),
-    value: ({ players }: IGeneration) => players[playerIndex],
-    cell: playerCell(playerIndex),
-    widthPx: 340,
-  })),
-];
+const ID_COLUMN_WIDTH = 80;
+const SCORE_COLUMN_WIDTH = 110;
+const PLAYER_COLUMN_WIDTH = 340;
+
+/** Player columns beyond the population of the loaded competition stay hidden. */
+function generationColumns(maxPopulationSize: number) {
+  return [
+    define({
+      id: 'id',
+      title: pendulumT.generationsList.columnId,
+      kind: 'number',
+      value: ({ id }) => id,
+      width: ID_COLUMN_WIDTH,
+      align: 'start',
+    }),
+    define({
+      id: 'maxScore',
+      title: pendulumT.generationsList.columnBestScore,
+      kind: 'number',
+      value: ({ maxScore }) => maxScore,
+      cell: ScoreCell,
+      width: SCORE_COLUMN_WIDTH,
+      align: 'start',
+      sort: false,
+    }),
+    ...Array.from({ length: POPULATION_SIZE }, (_, playerIndex) =>
+      define({
+        id: `player-${playerIndex}`,
+        title: pendulumT.generationsList.columnPlayer(playerIndex + 1),
+        kind: 'custom',
+        value: ({ players }) => players[playerIndex],
+        cell: playerCell(playerIndex),
+        width: PLAYER_COLUMN_WIDTH,
+        hidden: playerIndex >= maxPopulationSize,
+        sort: false,
+      })
+    ),
+  ];
+}
 
 export const GenerationsList = observer(() => {
   const store = usePendulumStore();
@@ -222,16 +251,21 @@ export const GenerationsList = observer(() => {
     />
   ));
 
-  // A fresh object here would change the columns' identity on every render,
-  // and with it every row's props — the whole visible window would rebuild
-  // each time a generation lands.
-  const hiddenColumnIds = useMemo(() => {
-    const hidden: Record<string, boolean> = {};
-    for (let playerIndex = 0; playerIndex < POPULATION_SIZE; playerIndex += 1) {
-      hidden[`player-${playerIndex}`] = playerIndex >= maxPopulationSize;
-    }
-    return hidden;
-  }, [maxPopulationSize]);
+  const columns = useMemo(() => generationColumns(maxPopulationSize), [maxPopulationSize]);
+  const model = useTable({
+    columns,
+    rowKey: ({ id }) => String(id),
+    rows: clientRows({
+      rows: () =>
+        matchValueDescriptor(store.generations, {
+          synced: ({ value }) => value,
+          unsynced: () => [],
+        }),
+    }),
+    extensions: [gridView(), sorting({ cycle: ['desc', 'asc', null] })],
+    initialState: NEWEST_GENERATION_FIRST,
+    context: undefined,
+  });
 
   if (isWaitingArgumentsValueDescriptor(competitionsList)) {
     return (
@@ -244,11 +278,6 @@ export const GenerationsList = observer(() => {
   const competitionsDataSource: ('new' | ISO)[] = matchValueDescriptor(competitionsList, {
     synced: ({ value }) => ['new' as const, ...value],
     unsynced: vd => (isEmptyValueDescriptor(vd) ? ['new' as const] : []),
-  });
-
-  const generationRows = matchValueDescriptor(currentCompetition, {
-    synced: ({ value }) => [...value],
-    unsynced: () => [],
   });
 
   const failedDescriptor = [competitionsList, currentCompetition].find(isFailValueDescriptor);
@@ -282,13 +311,12 @@ export const GenerationsList = observer(() => {
         ))}
 
       {showsGenerations && (
-        <VirtualTable
-          className="absolute inset-0 rounded-lg border border-border"
-          rows={generationRows}
-          columns={generationColumns}
-          rowKey={({ id }) => String(id)}
-          hiddenColumnIds={hiddenColumnIds}
-          initialSort={NEWEST_GENERATION_FIRST}
+        <Table
+          model={model}
+          className="h-full"
+          theme="dark"
+          hoverHighlight={false}
+          focusable={false}
         />
       )}
     </div>

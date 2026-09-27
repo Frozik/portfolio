@@ -46,6 +46,10 @@
       "entry": ["src/**/*.{ts,tsx}!"],
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "libs/table": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "libs/communication-protocol": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]

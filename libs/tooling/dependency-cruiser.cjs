@@ -72,9 +72,41 @@ module.exports = {
       comment:
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
-      from: { path: '^(apps/portfolio|libs/(utils|components|communication-protocol))/' },
+      from: { path: '^(apps/portfolio|libs/(utils|components|table|communication-protocol))/' },
       to: {
         path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
+      },
+    },
+    {
+      name: 'table-kernel-is-view-free',
+      comment:
+        'The table kernel and every extension core are headless: React, the React adapter and the DOM stay in libs/table/src/react.',
+      severity: 'error',
+      from: { path: '^libs/table/src/(core|extensions)/' },
+      to: {
+        path: '(^libs/table/src/react/|/node_modules/(react|react-dom|mobx-react-lite)(/|$))',
+      },
+    },
+    {
+      name: 'table-extensions-are-isolated',
+      comment:
+        'A table extension never imports another extension; they meet only through the kernel.',
+      severity: 'error',
+      from: { path: '^libs/table/src/extensions/([^/]+)/' },
+      to: {
+        path: '^libs/table/src/extensions/([^/]+)/',
+        pathNot: '^libs/table/src/extensions/$1/',
+      },
+    },
+    {
+      name: 'table-extension-ui-imports-own-core-only',
+      comment:
+        'The React part of an extension may import only its own core, the kernel and the shared adapter.',
+      severity: 'error',
+      from: { path: '^libs/table/src/react/extensions/([^/]+)/' },
+      to: {
+        path: '^libs/table/src/extensions/([^/]+)/',
+        pathNot: '^libs/table/src/extensions/$1/',
       },
     },
     {

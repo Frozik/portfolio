@@ -1,0 +1,182 @@
+import type { ComponentType, CSSProperties, HTMLAttributes, ReactNode } from 'react';
+import { isValidElement } from 'react';
+
+import type { IColumnDefinition, IColumnTitle } from '../core/columns/column';
+import type { IColumnLayout } from '../core/columns/columns-model';
+import type { TBivariantCallback } from '../core/kernel/callback';
+import type { TDisplayRow } from '../core/rows/display-row';
+import type { TableModel } from '../core/table-model';
+
+export interface IHeaderContext<TRow, TValue = unknown> {
+  readonly table: TableModel<TRow, unknown>;
+  readonly column: IColumn<TRow, TValue>;
+  readonly layout: IColumnLayout<TRow>;
+}
+
+export interface IGroupHeaderContext<TRow> {
+  readonly table: TableModel<TRow, unknown>;
+  readonly group: { readonly id: string; readonly title: string | IColumnTitle };
+}
+
+export interface ICellContext<TRow, TValue = unknown> extends IHeaderContext<TRow, TValue> {
+  readonly row: TRow;
+  readonly rowKey: string;
+  readonly rowIndex: number;
+  readonly value: TValue;
+  readonly text: string;
+  readonly isFocused: boolean;
+}
+
+export interface IRowContext<TRow> {
+  readonly table: TableModel<TRow, unknown>;
+  readonly displayRow: TDisplayRow<TRow>;
+  readonly rowIndex: number;
+}
+
+export interface ICellDecoration {
+  readonly className?: string;
+  readonly data?: Readonly<Record<string, string | boolean | undefined>>;
+  /** ARIA states of the cell (`selected`, `expanded`…), keyed without the `aria-` prefix. */
+  readonly aria?: Readonly<Record<string, string | boolean | undefined>>;
+  /** Only for values computed from the data (a heatmap colour); static looks belong to a class. */
+  readonly style?: CSSProperties;
+}
+
+/**
+ * A function component for a cell or a header of one column. Typed
+ * bivariantly in its props so a column of one value type stays assignable to
+ * `IColumn<TRow, unknown>`; `memo` and `observer` components qualify too.
+ */
+export type TCellComponent<TRow, TValue = unknown> = TBivariantCallback<
+  [props: ICellContext<TRow, TValue>],
+  ReactNode
+>;
+export type THeaderComponent<TRow, TValue = unknown> = TBivariantCallback<
+  [props: IHeaderContext<TRow, TValue>],
+  ReactNode
+>;
+
+/** A value, or a function of the cell that computes it: presentation may depend on the data. */
+export type TResolvable<TValue, TContext> =
+  | TValue
+  | TBivariantCallback<[context: TContext], TValue>;
+
+export function resolve<TValue, TContext>(
+  resolvable: TResolvable<TValue, TContext>,
+  context: TContext
+): TValue {
+  return typeof resolvable === 'function'
+    ? (resolvable as (context: TContext) => TValue)(context)
+    : resolvable;
+}
+
+/**
+ * A cell component and a per-cell resolver are both functions, so the only
+ * way to tell them apart is to call: a resolver hands back a component (a
+ * function, or a `memo` / `observer` object), a component hands back what to
+ * render. Plain function components are rendered from that result, so a cell
+ * component that uses hooks must be wrapped in `memo` or `observer`.
+ */
+export function resolveCell<TRow, TValue>(
+  cell: TResolvable<TCellComponent<TRow, TValue>, ICellContext<TRow, TValue>> | undefined,
+  context: ICellContext<TRow, TValue>
+): { readonly Component: TCellComponent<TRow, TValue> } | { readonly node: ReactNode } | undefined {
+  if (cell === undefined) {
+    return undefined;
+  }
+  if (typeof cell !== 'function') {
+    return { Component: cell };
+  }
+  const result: unknown = cell(context);
+  if (
+    typeof result === 'function' ||
+    (typeof result === 'object' &&
+      result !== null &&
+      '$$typeof' in result &&
+      !isValidElement(result))
+  ) {
+    return { Component: result as TCellComponent<TRow, TValue> };
+  }
+  return { node: result as ReactNode };
+}
+
+export interface INamedPart<TContext> {
+  readonly id: string;
+  readonly render: ComponentType<TContext>;
+  /** Shown on hover and focus only, unless `active` says the part carries state. */
+  readonly hoverOnly?: boolean;
+  active?(context: TContext): boolean;
+}
+
+export interface INamedProps<TContext> {
+  readonly id: string;
+  props(context: TContext): HTMLAttributes<HTMLDivElement>;
+}
+
+export interface INamedDecorator<TContext> {
+  readonly id: string;
+  decorate(context: TContext): ICellDecoration | undefined;
+}
+
+export type TOverride = false | ComponentType<never>;
+
+export interface ITitleSpec<TRow, TValue> extends IColumnTitle {
+  readonly component: THeaderComponent<TRow, TValue>;
+}
+
+/**
+ * A column as the React adapter sees it: the kernel definition plus
+ * presentation slots. Every slot is `NoInfer`: the value type comes from
+ * `value` alone, so a component written for `unknown` fits any column.
+ */
+export interface IColumn<TRow, TValue = unknown> extends IColumnDefinition<TRow, TValue> {
+  readonly title: string | ITitleSpec<TRow, NoInfer<TValue>>;
+  readonly cell?: NoInfer<TResolvable<TCellComponent<TRow, TValue>, ICellContext<TRow, TValue>>>;
+  readonly decorate?: NoInfer<TResolvable<ICellDecoration | undefined, ICellContext<TRow, TValue>>>;
+  readonly header?: NoInfer<THeaderComponent<TRow, TValue>>;
+  readonly headerDecorate?: NoInfer<
+    TResolvable<ICellDecoration | undefined, IHeaderContext<TRow, TValue>>
+  >;
+  parts?(
+    parts: readonly INamedPart<IHeaderContext<TRow>>[],
+    context: IHeaderContext<TRow, TValue>
+  ): readonly INamedPart<IHeaderContext<TRow>>[];
+  readonly overrides?: Readonly<Record<string, TOverride>>;
+  readonly cellClass?: NoInfer<TResolvable<string | undefined, ICellContext<TRow, TValue>>>;
+}
+
+export type TAnyReactColumn<TRow> = IColumn<TRow, unknown>;
+
+/** What a table-level `cellSpec` may override for one cell: how the value reads, edits and looks — never what the column is. */
+export type TCellSpec<TRow, TValue = unknown> = Partial<
+  Omit<
+    IColumn<TRow, TValue>,
+    | 'id'
+    | 'title'
+    | 'value'
+    | 'width'
+    | 'minWidth'
+    | 'maxWidth'
+    | 'flex'
+    | 'pin'
+    | 'hidden'
+    | 'lock'
+    | 'header'
+    | 'headerDecorate'
+    | 'parts'
+    | 'overrides'
+    | 'sort'
+    | 'filter'
+    | 'filterRow'
+    | 'filterEditor'
+    | 'aggregate'
+    | 'groupable'
+    | 'groupTitle'
+  >
+>;
+
+export type TCellSpecResolver<TRow> = (context: ICellContext<TRow>) => TCellSpec<TRow> | undefined;
+
+export function reactColumn<TRow>() {
+  return <TValue>(column: IColumn<TRow, TValue>): IColumn<TRow, TValue> => column;
+}

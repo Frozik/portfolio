@@ -208,6 +208,13 @@ export const welcomeTranslationsEn = {
           'A slippy map written from scratch on WebGPU over OpenStreetMap tiles: tilt it to the foggy horizon, and watch fine tiles near you and coarse ones far away fill in over a checkerboard as they load.',
         status: 'one draw call',
       },
+      table: {
+        meta: 'Data grid · Own library',
+        title: 'Table',
+        description:
+          'A data grid built from scratch as a headless kernel plus extensions — sorting, filters, grouping, editing, selection and the visible grid itself are all plug-ins. Three data sources, two themes, 100 000 rows without a hiccup.',
+        status: 'headless',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

@@ -17,6 +17,7 @@
     "@dnd-kit/core": "catalog:",
     "@frozik/communication-protocol": "workspace:*",
     "@frozik/components": "workspace:*",
+    "@frozik/table": "workspace:*",
     "@frozik/utils": "workspace:*",
     "@mapbox/vector-tile": "catalog:",
     "@mediapipe/tasks-vision": "catalog:",

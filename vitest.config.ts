@@ -29,6 +29,14 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'table',
+          environment: 'happy-dom',
+          include: ['libs/table/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'utils',
           environment: 'happy-dom',
           include: [

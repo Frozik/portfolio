@@ -1,0 +1,52 @@
+export interface ITableTranslations {
+  readonly empty: string;
+  readonly noMatches: string;
+  readonly loading: string;
+  readonly loadFailed: string;
+  readonly retry: string;
+  readonly notReady: string;
+  readonly sortAscending: string;
+  readonly sortDescending: string;
+  readonly sortNone: string;
+  sortPriority(priority: number): string;
+  readonly resizeColumn: string;
+  readonly showColumns: string;
+  readonly searchColumns: string;
+  readonly columnLocked: string;
+  readonly lastVisibleColumn: string;
+  readonly selectAll: string;
+  readonly selectRow: string;
+  readonly filter: string;
+  readonly clearFilter: string;
+  readonly resetFilters: string;
+  filtersActive(count: number): string;
+  filterConditions(count: number): string;
+  readonly filterCustom: string;
+  readonly and: string;
+  readonly or: string;
+  readonly addCondition: string;
+  readonly removeCondition: string;
+  readonly selectAllValues: string;
+  readonly searchValues: string;
+  readonly any: string;
+  readonly yes: string;
+  readonly no: string;
+  readonly from: string;
+  readonly to: string;
+  readonly quickFilter: string;
+  readonly regexpMode: string;
+  readonly invalidRegexp: string;
+  readonly expandGroup: string;
+  readonly collapseGroup: string;
+  groupLevel(level: number): string;
+  readonly expandRow: string;
+  readonly collapseRow: string;
+  readonly tooltip: string;
+  newRows(count: number): string;
+  readonly liveStopped: string;
+  readonly filterOps: Readonly<Record<string, string>>;
+  /** Labels of the built-in menu items by their label key (`menu.sort.asc`). */
+  readonly menu: Readonly<Record<string, string>>;
+  /** Human text for the reasons commands give (`sorting.disabled`), shown on disabled items. */
+  readonly reasons: Readonly<Record<string, string>>;
+}

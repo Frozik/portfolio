@@ -462,6 +462,9 @@ importers:
       '@frozik/components':
         specifier: workspace:*
         version: link:../../libs/components
+      '@frozik/table':
+        specifier: workspace:*
+        version: link:../../libs/table
       '@frozik/utils':
         specifier: workspace:*
         version: link:../../libs/utils
@@ -691,6 +694,52 @@ importers:
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.7.0
+      temporal-polyfill:
+        specifier: 'catalog:'
+        version: 0.3.2
+      usehooks-ts:
+        specifier: 'catalog:'
+        version: 3.1.1(react@19.3.0)
+    devDependencies:
+      '@frozik/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@types/lodash-es':
+        specifier: 'catalog:'
+        version: 4.17.12
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+
+  libs/table:
+    dependencies:
+      '@frozik/components':
+        specifier: workspace:*
+        version: link:../components
+      '@frozik/utils':
+        specifier: workspace:*
+        version: link:../utils
+      lodash-es:
+        specifier: 'catalog:'
+        version: 4.18.1
+      mobx:
+        specifier: 'catalog:'
+        version: 7.0.3
+      mobx-react-lite:
+        specifier: 'catalog:'
+        version: 5.0.3(mobx@7.0.3)(react@19.3.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.0(react@19.3.0)
       temporal-polyfill:
         specifier: 'catalog:'
         version: 0.3.2

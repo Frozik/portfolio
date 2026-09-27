@@ -41,6 +41,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     sitePlanner: 'Планировщик участка',
     osmMap: 'Карта OSM',
     controls: 'Элементы управления',
+    table: 'Таблица',
     retro: 'Ретроспектива',
     conf: 'Конференция',
   },

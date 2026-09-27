@@ -1,0 +1,170 @@
+export const tableDemoTranslationsEn = {
+  title: 'Table',
+  subtitle:
+    'A data grid built as a headless kernel plus extensions — the visible grid itself is one of them.',
+  pages: {
+    showcase: 'Showcase',
+    sources: 'Sources',
+    extensions: 'Extensions',
+    brandBook: 'Brand book',
+  },
+  controls: {
+    theme: 'Theme',
+    themes: { auto: 'Auto', light: 'Light', dark: 'Dark' },
+    density: 'Density',
+    densities: { normal: 'Normal', compact: 'Compact' },
+    locale: 'Language',
+    rows: 'Rows',
+    regenerate: 'New data',
+    columns: 'Columns',
+    filterRow: 'Filter row',
+    group: 'Group',
+    groupModes: { none: 'Off', symbol: 'Symbol', symbolSide: 'Symbol › Side' },
+    selection: 'Selection',
+    selectionModes: { none: 'Off', single: 'One row', multiple: 'Rows', cells: 'Cell blocks' },
+    selected: 'Selected',
+    copy: 'Copy',
+    exportCsv: 'Export CSV',
+  },
+  columns: {
+    id: '#',
+    time: 'Time',
+    symbol: 'Symbol',
+    side: 'Side',
+    price: 'Price',
+    quantity: 'Quantity',
+    notional: 'Notional',
+    venue: 'Venue',
+    status: 'Status',
+    note: 'Note',
+    level: 'Level',
+    source: 'Source',
+    message: 'Message',
+  },
+  levels: { info: 'Info', warning: 'Warning', error: 'Error' },
+  sides: { buy: 'Buy', sell: 'Sell' },
+  statuses: { filled: 'Filled', partial: 'Partial', cancelled: 'Cancelled' },
+  groups: { instrument: 'Instrument', execution: 'Execution' },
+  validation: { positive: 'Must be positive', large: 'Unusually large' },
+  detail: { fills: 'Fills' },
+  menu: { copySymbol: 'Copy symbol' },
+  tooltips: {
+    notional: 'Price × quantity; the colour scales with the size of the trade',
+    cancelled: 'Cancelled before any fill',
+  },
+  sources: {
+    client: 'Client',
+    snapshot: 'Snapshot server',
+    log: 'Event log',
+    hint: {
+      client: 'Every row is in memory: sorting, filtering and grouping run in the kernel pipeline.',
+      snapshot:
+        'The server answers one window for the current sort and filters, then pushes price changes and removals; the client re-filters and re-sorts the deltas itself.',
+      log: 'History arrives in chunks by time as you scroll; live events join at the top when you are there, or wait behind the chip. Sorting is by time only, filters go to the server.',
+    },
+    epoch: 'Epoch',
+    rows: 'Rows',
+    unknown: 'unknown',
+    hasMore: 'more to load',
+    serverLog: 'Server log',
+    pauseLog: 'Pause',
+    resumeLog: 'Resume',
+  },
+  extensions: {
+    hint: 'Switch extensions off and their UI disappears with them; the model is rebuilt with the new set. The "app" extension is written in place: a guard, a menu item, a header part and an override by name.',
+    names: {
+      sorting: 'Sorting',
+      filtering: 'Filtering',
+      grouping: 'Grouping',
+      selection: 'Selection',
+      editing: 'Editing',
+      detailRows: 'Detail rows',
+      contextMenu: 'Context menu',
+      tooltips: 'Tooltips',
+      app: 'App extension',
+    },
+    view: 'View',
+    views: { grid: 'Grid', list: 'Cards' },
+    liveBadge: 'live',
+    symbolLocked: 'The symbol column stays visible in this demo',
+    toast: 'Symbol copied',
+  },
+  apiReference: {
+    open: 'API',
+    snapshot: {
+      title: 'snapshotRows — a server window with deltas',
+      intro:
+        'The server receives one window plus the query (sort, filters, quick, extra), answers with a snapshot of that window and then pushes changes. The client re-filters and re-sorts every delta with the same rules it uses for client rows.',
+      sections: {
+        subscribe: {
+          title: 'Subscribe',
+          text: 'One subscription per window and query. The returned function ends it; the signal is aborted at the same moment, so in-flight work can stop.',
+        },
+        events: {
+          title: 'Events',
+          text: 'snapshot replaces the window (and total when given); upsert brings new or changed rows; remove deletes by key; total corrects the count; error reports a failure.',
+        },
+        window: {
+          title: 'Window',
+          text: 'Always one contiguous range: the visible rows plus a buffer, rounded out to whole pages, so the server never deals with blocks or merges.',
+        },
+        epoch: {
+          title: 'Epoch and count',
+          text: 'Any change of the query starts a new epoch: the old subscription is closed and its late events ignored. The count is the server total corrected by local deltas, or the loaded edge plus one page while the total is unknown.',
+        },
+        deltas: {
+          title: 'Deltas through the pipeline',
+          text: 'An upsert that no longer matches the filters leaves the window; one that matches takes its sorted place; an unknown key is inserted. Nothing is re-requested.',
+        },
+        errors: {
+          title: 'Errors',
+          text: 'keepStaleOn decides whether the rows stay on screen (marked stale) or the window turns into failed placeholders with a retry.',
+        },
+      },
+    },
+    log: {
+      title: 'logRows — an append-only log by time',
+      intro:
+        'Rows only arrive, never change, and the one order is time. History is fetched in chunks as you scroll; live events come through a subscription. Nothing is re-sorted and the scroll never jumps.',
+      sections: {
+        options: {
+          title: 'Options',
+          text: 'time reads the event time; timeColumnId names the only sortable column; fetch serves history; subscribe streams live events; range bounds the log.',
+        },
+        fetch: {
+          title: 'Fetching history',
+          text: 'Each chunk continues from the far end of what is loaded: exclusive on the side already held, inclusive on the other. A chunk shorter than softLimit means the end of data.',
+        },
+        subscribe: {
+          title: 'Live stream',
+          text: 'start says from which moment the stream is complete; append delivers new rows; error reports a transport failure.',
+        },
+        direction: {
+          title: 'Direction',
+          text: 'The direction follows the sort of the time column: newest first by default. Sorting by any other column is refused with a reason the UI shows.',
+        },
+        gaps: {
+          title: 'Gaps',
+          text: 'Between the freshest history row and the moment live became complete the source fetches the missing rows once; too many of them means a full reload.',
+        },
+        buffer: {
+          title: 'Buffer',
+          text: 'Live rows join the lane immediately only while the user is at the fresh edge; otherwise they wait behind the "N new rows" chip so the scroll never moves under the pointer.',
+        },
+        filters: {
+          title: 'Filters',
+          text: 'Column filters go to the server with every request; the quick filter is refused because history is never fully on the client. A till in the past stops the live stream.',
+        },
+      },
+    },
+  },
+  totals: 'Total',
+  brandBook: {
+    tokens: 'Tokens',
+    tokensHint: 'Every colour and size the grid uses is a CSS variable on the table root.',
+    themes: 'Light and dark',
+    density: 'Density',
+    states: 'Cell states',
+    stateNames: { focused: 'focused', selected: 'selected', invalid: 'invalid', edited: 'edited' },
+  },
+};

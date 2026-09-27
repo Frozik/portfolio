@@ -44,6 +44,7 @@ export const appTranslationsEn = {
     sitePlanner: 'Site Planner',
     osmMap: 'OSM Map',
     controls: 'Controls',
+    table: 'Table',
     retro: 'Retro',
     conf: 'Conference',
   },

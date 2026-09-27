@@ -35,7 +35,8 @@ Every demo has its own README with the details; the landing page is the
 | [Ashfall](./apps/portfolio/src/features/scorched/README.md) | Scorched Earth reimagined: hot-seat artillery for 2–10 players over terrain simulated in WebGPU compute shaders. | [open](https://frozik.github.io/portfolio/scorched)
 | [Site Planner](./apps/portfolio/src/features/site-planner/README.md) | A plot-and-house planner: survey the ground, draw the plot, build a multi-storey house with walls, stairs, roofs, furniture and norm-checked electrics and utilities, and see it in 3D. | [open](https://frozik.github.io/portfolio/site-planner)
 | [OSM Map](./apps/portfolio/src/features/osm-map/README.md) | Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes and cars driving the streets at street zoom. | [open](https://frozik.github.io/portfolio/osm-map)
-| [Controls](./apps/portfolio/src/features/controls/README.md) | Financial input controls from the shared component library: precise numeric editors and a natural-language date picker. | [open](https://frozik.github.io/portfolio/controls)
+| [Controls](./apps/portfolio/src/features/controls/README.md) | Financial input controls from the shared component library: precise numeric editors and a natural-language date picker. | [open](https://frozik.github.io/portfolio/controls) |
+| [Table](./apps/portfolio/src/features/table/README.md) | Showcase and brand book of `@frozik/table`, a data grid built as a headless MobX kernel plus extensions, the visible grid included. | [open](https://frozik.github.io/portfolio/table)
 | [Retro](./apps/portfolio/src/features/retro/README.md) | A peer-to-peer retrospective board: CRDT state synced browser to browser over WebRTC, no database. | [open](https://frozik.github.io/portfolio/retro)
 | [Conf](./apps/portfolio/src/features/conf/README.md) | A two-person video call with AR glasses and an emotion emoji composited into the outgoing stream by MediaPipe. | [open](https://frozik.github.io/portfolio/conf)
 
@@ -52,8 +53,8 @@ pnpm check-all  # lint, format, types, layer boundaries, dead code, conventions,
 - **A pnpm + Moon monorepo**: the browser app in
   [`apps/portfolio`](./apps/portfolio/README.md), the signaling and TURN
   backend in [`apps/communication`](./apps/communication/README.md), shared
-  code in `libs/` (utilities and astronomy, the component library, the wire
-  protocol, repository tooling).
+  code in `libs/` (utilities and astronomy, the component library, the
+  data-grid library, the wire protocol, repository tooling).
 - **Every feature is an independent slice** with a framework-free domain at
   its centre and React, MobX and WebGPU plugged in at the edges; the layer
   direction is enforced by dependency-cruiser in CI.

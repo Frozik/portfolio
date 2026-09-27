@@ -64,6 +64,9 @@ const SitePlanner = lazy(() =>
 const Controls = lazy(() =>
   import('../../features/controls/presentation/Controls').then(m => ({ default: m.Controls }))
 );
+const TableDemo = lazy(() =>
+  import('../../features/table/presentation/TableDemo').then(m => ({ default: m.TableDemo }))
+);
 const Retro = lazy(() =>
   import('../../features/retro/presentation/Retro').then(m => ({ default: m.Retro }))
 );
@@ -120,6 +123,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="site-planner" element={<SitePlanner />} />
             <Route path="osm-map" element={<OsmMap />} />
             <Route path="controls" element={<Controls />} />
+            <Route path="table" element={<TableDemo />} />
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>
                 <Route index element={<Lobby />} />

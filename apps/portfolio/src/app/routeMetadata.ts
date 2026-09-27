@@ -10,6 +10,7 @@ import {
   Map,
   Mountain,
   Orbit,
+  Rows3,
   Shapes,
   SlidersHorizontal,
   StickyNote,
@@ -63,4 +64,5 @@ export const ROUTE_METADATA: readonly IRouteMetadata[] = [
   { segment: 'retro', titleKey: 'retro', icon: StickyNote, navVisible: true },
   { segment: 'conf', titleKey: 'conf', icon: Video, navVisible: true },
   { segment: 'controls', titleKey: 'controls', icon: SlidersHorizontal, navVisible: true },
+  { segment: 'table', titleKey: 'table', icon: Rows3, navVisible: true },
 ];
