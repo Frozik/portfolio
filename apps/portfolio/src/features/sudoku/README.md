@@ -13,7 +13,8 @@ Picking a number on the keypad turns the board into a map for that number:
 
 - every cell already holding it is highlighted, notes included;
 - in pen mode, every empty cell where it can legally go — none of its row,
-  column or group holds the number yet — gets a dark green background;
+  column or group holds the number yet — gets a barely visible green tint,
+  faint enough not to pull the eye away from the digits;
 - notes mode shows no targets: a candidate is the player's hypothesis and
   may be written anywhere a note is allowed.
 

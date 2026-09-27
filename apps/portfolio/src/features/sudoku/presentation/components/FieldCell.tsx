@@ -9,6 +9,8 @@ import { ECellStatus, EFieldType } from '../../domain/types';
 
 const CELL_GLOW_CLASS = '[text-shadow:0_0_10px_#000]';
 const NOTE_GLOW_CLASS = '[text-shadow:0_0_5px_#000]';
+const PLACEABLE_CELL_CLASS =
+  'bg-[color-mix(in_oklab,var(--color-green-500)_4%,var(--color-neutral-700))]';
 
 export const FieldCell = observer(
   ({
@@ -64,7 +66,7 @@ export const FieldCell = observer(
           // track; otherwise its line box overlaps the neighbour and steals its clicks.
           'flex min-h-0 min-w-0 overflow-hidden bg-neutral-700 leading-none',
           isFixed ? 'cursor-not-allowed text-neutral-300' : 'cursor-pointer text-neutral-500',
-          isPlaceable && 'bg-green-900',
+          isPlaceable && PLACEABLE_CELL_CLASS,
           hasValue && 'items-center justify-center',
           showsNotes && 'grid place-items-center',
           isHighlighted && (isFixed ? 'font-bold text-blue-500' : 'font-bold text-blue-600'),
