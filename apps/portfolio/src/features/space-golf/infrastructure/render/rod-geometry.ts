@@ -1,5 +1,3 @@
-import type { Vector2 } from '@frozik/utils/math/vector2';
-
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import type { Bounds, Level, Rod, RodKind } from '../../domain/level';
@@ -64,23 +62,15 @@ export function buildRodMesh(
     const side = scale(rightNormal(rod.direction), rodWidth(rod.kind));
     const highlightTail = add(tailLeft, scale(side, HIGHLIGHT_SHARE));
     const highlightShoulder = add(shoulderLeft, scale(side, HIGHLIGHT_SHARE));
-    writeStrip(
-      writer,
-      tailLeft,
-      shoulderLeft,
-      highlightTail,
-      highlightShoulder,
-      tones.dark,
-      tones.light
+    writer.shadedStrip(
+      [tailLeft, shoulderLeft],
+      [highlightTail, highlightShoulder],
+      [tones.dark, tones.light]
     );
-    writeStrip(
-      writer,
-      highlightTail,
-      highlightShoulder,
-      tailRight,
-      shoulderRight,
-      tones.light,
-      tones.dark
+    writer.shadedStrip(
+      [highlightTail, highlightShoulder],
+      [tailRight, shoulderRight],
+      [tones.light, tones.dark]
     );
     writer.shadedTriangle(shoulderLeft, tip, highlightShoulder, [
       tones.dark,
@@ -109,18 +99,4 @@ function writeThread(writer: MeshWriter, rod: Rod, extension: number): void {
     const right = add(add(rod.base, scale(rod.direction, along + THREAD_SLANT_METERS)), side);
     writer.segment(left, right, THREAD_WIDTH_METERS, PALETTE.thread);
   }
-}
-
-/** A quad between two long edges, each in its own colour, blended across. */
-function writeStrip(
-  writer: MeshWriter,
-  fromA: Vector2,
-  toA: Vector2,
-  fromB: Vector2,
-  toB: Vector2,
-  colorA: Rgba,
-  colorB: Rgba
-): void {
-  writer.shadedTriangle(fromA, toA, toB, [colorA, colorA, colorB]);
-  writer.shadedTriangle(fromA, toB, fromB, [colorA, colorB, colorB]);
 }

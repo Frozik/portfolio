@@ -2,6 +2,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { createRandom } from '../../domain/generator/random';
 import type { DustWindow } from './particles';
+import { grownBy, reachOf } from './sky-window';
 
 /** A comet comes by every so often: this long to wait between one and the next, at the shortest and the longest. */
 const MIN_WAIT_SECONDS = 9;
@@ -93,11 +94,7 @@ function launched(sky: CometSky, visible: DustWindow): Comet {
     x: visible.min.x + width * (0.5 + (random.next() - 0.5) * THROUGH_SHARE),
     y: visible.min.y + height * (0.5 + (random.next() - 0.5) * THROUGH_SHARE),
   };
-  const bounds = {
-    min: { x: visible.min.x - OFFSCREEN_MARGIN_METERS, y: visible.min.y - OFFSCREEN_MARGIN_METERS },
-    max: { x: visible.max.x + OFFSCREEN_MARGIN_METERS, y: visible.max.y + OFFSCREEN_MARGIN_METERS },
-  };
-  const [back, ahead] = reachOf(through, heading, bounds);
+  const [back, ahead] = reachOf(through, heading, grownBy(visible, OFFSCREEN_MARGIN_METERS));
   const from = { x: through.x + heading.x * back, y: through.y + heading.y * back };
   const to = { x: through.x + heading.x * ahead, y: through.y + heading.y * ahead };
   return {
@@ -106,24 +103,4 @@ function launched(sky: CometSky, visible: DustWindow): Comet {
     ageSeconds: 0,
     crossingSeconds: Math.hypot(to.x - from.x, to.y - from.y) / SPEED_METERS_PER_SECOND,
   };
-}
-
-/** How far a line through `point` along `heading` runs inside `bounds`, backwards and forwards. */
-function reachOf(
-  point: Vector2,
-  heading: Vector2,
-  bounds: DustWindow
-): readonly [back: number, ahead: number] {
-  let back = Number.NEGATIVE_INFINITY;
-  let ahead = Number.POSITIVE_INFINITY;
-  for (const axis of ['x', 'y'] as const) {
-    if (heading[axis] === 0) {
-      continue;
-    }
-    const toMin = (bounds.min[axis] - point[axis]) / heading[axis];
-    const toMax = (bounds.max[axis] - point[axis]) / heading[axis];
-    back = Math.max(back, Math.min(toMin, toMax));
-    ahead = Math.min(ahead, Math.max(toMin, toMax));
-  }
-  return [back, ahead];
 }

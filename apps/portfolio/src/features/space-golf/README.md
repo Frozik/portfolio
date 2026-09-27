@@ -58,6 +58,29 @@ time.
   or a nebula of two-coloured clouds from four octaves of noise, thinning to
   nothing well inside the rim. Colour more than light: anything brighter out
   there reads as a thing in the game rather than the depth behind it
+- Nearer than the galaxies and still behind the dust, a space station falls
+  past now and then — the first eight seconds after a world is made, the
+  next forty-five to a hundred seconds after the last has gone. It is a
+  quarter the size of a middling galaxy, 2.1 m from one end of its truss to the other:
+  eight wings of solar cells fore and aft of the truss, radiators trailing
+  behind it, the modules strung along the way it set out. It comes in from
+  off the screen upstream of the pull and falls the way gravity points at
+  a metre and a half a second, as the dust does; it cannot turn, so when
+  the floor changes it goes the new way lying as it lay — sideways, or tail
+  first — and through weightlessness it hangs still. It sets out only on a
+  settled floor, never askew between two. A pan carries it 70 % of the way
+  along, and it is over once the whole of it is off the screen and falling
+  away, so it is never seen to start or stop. Drawn opaque in held-down
+  tones, flat triangles like the comet: depth, not a thing in play. It has
+  a day of its own, fourteen seconds round: a planet's shadow — a disc 2.4
+  half spans in radius — comes over it and goes, from a side drawn once for
+  the pass, so for a while the whole of it stands in the sun, a third
+  brighter than it is painted, and for a while it is dimmed to half. In
+  between, the shadow's edge crosses it as an arc of the light that came
+  round the planet through its air, red towards the dark and blue towards
+  the day, glinting on whatever it passes over. `shaders/station.wgsl`
+  lights it per pixel from the shadow's place, handed over in the eight
+  floats the board's uniform block grew by
 - Every so often — nine to twenty-four seconds apart, the first one soon
   after a world is made — a comet crosses the sky: a white-hot head in a
   blue-white glow, a tail streaming back over two and a half metres and

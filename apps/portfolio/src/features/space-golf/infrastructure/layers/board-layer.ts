@@ -6,6 +6,7 @@ import { isNil } from 'lodash-es';
 import { currentGravity } from '../../domain/ball';
 import { CLOCK_SPEED } from '../../domain/constants';
 import { MSAA_SAMPLE_COUNT } from '../render-constants';
+import { BOARD_UNIFORM_BYTES, boardUniformsOf } from '../render/board-uniforms';
 import { buildCometMesh } from '../render/comet-geometry';
 import { buildDeepSkyMesh } from '../render/deep-sky-geometry';
 import { DynamicVertexBuffer } from '../render/dynamic-vertex-buffer';
@@ -24,16 +25,16 @@ import type { SceneFrame } from '../render/scene-frame';
 import type { Sky } from '../render/sky';
 import { advanceSky, createSky } from '../render/sky';
 import { buildSpikeMesh } from '../render/spike-geometry';
+import { buildStationMesh } from '../render/station-geometry';
 import boardShaderSource from '../shaders/board.wgsl?raw';
 import deepSkyShaderSource from '../shaders/deep-sky.wgsl?raw';
 import khokhlomaShaderSource from '../shaders/khokhloma.wgsl?raw';
 import mezenShaderSource from '../shaders/mezen.wgsl?raw';
+import stationShaderSource from '../shaders/station.wgsl?raw';
 import surfacesShaderSource from '../shaders/surfaces.wgsl?raw';
 import type { GpuMesh } from './sector-mesh-cache';
 import { SectorMeshCache } from './sector-mesh-cache';
 
-const UNIFORM_BYTES = 48;
-const UNIFORM_FLOATS = 12;
 const MESH_LAYOUT: GPUVertexBufferLayout = {
   arrayStride: MESH_VERTEX_STRIDE_BYTES,
   attributes: [
@@ -49,9 +50,6 @@ const FRAMED_LAYOUT: GPUVertexBufferLayout = {
     { shaderLocation: 2, offset: FRAMED_KIND_OFFSET_BYTES, format: 'unorm8x4' },
   ],
 };
-/** The pattern is shifted per level by this many metres per seed step, folded so the shift stays small. */
-const PATTERN_SHIFT_METERS_PER_SEED = 1.37;
-const PATTERN_SHIFT_PERIOD_SEEDS = 97;
 /**
  * Room the per-frame buffers start with — ninety dust quads, or an overlay of
  * the ball with its trail, the dots and the rings. The drawn bow alone is over
@@ -79,12 +77,15 @@ export class BoardLayer implements RenderLayer {
   private surfacePipeline!: GPURenderPipeline;
   private floaterPipeline!: GPURenderPipeline;
   private deepSkyPipeline!: GPURenderPipeline;
+  private stationPipeline!: GPURenderPipeline;
   private uniforms!: GPUBuffer;
   private bindGroup!: GPUBindGroup;
   private overlayVertices!: DynamicVertexBuffer;
   private overlayCount = 0;
   private deepSkyVertices!: DynamicVertexBuffer;
   private deepSkyCount = 0;
+  private stationVertices!: DynamicVertexBuffer;
+  private stationCount = 0;
   private dustVertices!: DynamicVertexBuffer;
   private dustCount = 0;
   private cometVertices!: DynamicVertexBuffer;
@@ -150,8 +151,15 @@ export class BoardLayer implements RenderLayer {
       'fsDeepSky',
       FRAMED_LAYOUT
     );
+    this.stationPipeline = this.createPipeline(
+      layout,
+      stationShaderSource,
+      'vsStation',
+      'fsStation',
+      MESH_LAYOUT
+    );
     this.uniforms = device.createBuffer({
-      size: UNIFORM_BYTES,
+      size: BOARD_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this.bindGroup = device.createBindGroup({
@@ -169,6 +177,7 @@ export class BoardLayer implements RenderLayer {
       ...perFrame,
       strideBytes: FRAMED_VERTEX_STRIDE_BYTES,
     });
+    this.stationVertices = new DynamicVertexBuffer(perFrame);
     this.dustVertices = new DynamicVertexBuffer(perFrame);
     this.cometVertices = new DynamicVertexBuffer(perFrame);
     this.rodVertices = new DynamicVertexBuffer(perFrame);
@@ -193,23 +202,21 @@ export class BoardLayer implements RenderLayer {
       gravity: currentGravity(scene.ball),
       visible: scene.visible,
     });
-    const { viewport } = scene;
-    const values = new Float32Array(UNIFORM_FLOATS);
-    values.set([
-      state.canvasWidth,
-      state.canvasHeight,
-      viewport.origin.x,
-      viewport.origin.y,
-      viewport.xAxis.x,
-      viewport.xAxis.y,
-      viewport.yAxis.x,
-      viewport.yAxis.y,
-      viewport.scale,
-      (scene.level.seed % PATTERN_SHIFT_PERIOD_SEEDS) * PATTERN_SHIFT_METERS_PER_SEED,
-      state.time * CLOCK_SPEED,
-    ]);
-    this.device.queue.writeBuffer(this.uniforms, 0, values);
+    const { station } = this.sky.stations;
+    this.device.queue.writeBuffer(
+      this.uniforms,
+      0,
+      boardUniformsOf({
+        canvasWidth: state.canvasWidth,
+        canvasHeight: state.canvasHeight,
+        viewport: scene.viewport,
+        seed: scene.level.seed,
+        timeSeconds: state.time * CLOCK_SPEED,
+        station,
+      })
+    );
     this.deepSkyCount = this.deepSkyVertices.write(buildDeepSkyMesh(this.sky.deep));
+    this.stationCount = this.stationVertices.write(buildStationMesh(station));
     this.dustCount = this.dustVertices.write(buildDustMesh(this.sky.dust));
     this.cometCount = this.cometVertices.write(
       buildCometMesh(this.sky.comets.comet, state.time * CLOCK_SPEED)
@@ -253,6 +260,13 @@ export class BoardLayer implements RenderLayer {
         pass.setPipeline(this.deepSkyPipeline);
         pass.setVertexBuffer(0, this.deepSkyVertices.buffer);
         pass.draw(this.deepSkyCount);
+        pass.setPipeline(this.pipeline);
+      }
+      // The station passes in front of the galaxies and behind the dust, which still shows the pull across it.
+      if (this.stationCount > 0) {
+        pass.setPipeline(this.stationPipeline);
+        pass.setVertexBuffer(0, this.stationVertices.buffer);
+        pass.draw(this.stationCount);
         pass.setPipeline(this.pipeline);
       }
       // The dust is the far background: everything else is painted over it.
@@ -313,6 +327,7 @@ export class BoardLayer implements RenderLayer {
     this.uniforms.destroy();
     this.overlayVertices.destroy();
     this.deepSkyVertices.destroy();
+    this.stationVertices.destroy();
     this.dustVertices.destroy();
     this.cometVertices.destroy();
     this.rodVertices.destroy();

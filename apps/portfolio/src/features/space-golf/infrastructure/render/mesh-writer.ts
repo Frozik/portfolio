@@ -53,6 +53,17 @@ export class MeshWriter {
     this.vertex(c, colors[2]);
   }
 
+  /** A quad between two long edges, each in its own colour, blended across. */
+  shadedStrip(
+    edgeA: readonly [from: Vector2, to: Vector2],
+    edgeB: readonly [from: Vector2, to: Vector2],
+    colors: readonly [edgeA: Rgba, edgeB: Rgba]
+  ): void {
+    const [[fromA, toA], [fromB, toB], [colorA, colorB]] = [edgeA, edgeB, colors];
+    this.shadedTriangle(fromA, toA, toB, [colorA, colorA, colorB]);
+    this.shadedTriangle(fromA, toB, fromB, [colorA, colorB, colorB]);
+  }
+
   /** Any simple polygon, concave ones included, through earcut. */
   polygon(points: readonly Vector2[], color: Rgba): void {
     const { positions, indices } = triangulatePolygon({ outer: points, holes: [] });

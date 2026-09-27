@@ -40,6 +40,14 @@ export const PALETTE = {
   star: [255, 255, 255, 90],
   /** A comet's light: blue-white, the one bright thing in the sky behind the board. */
   comet: [196, 226, 255, 255],
+  /** The station far behind the board: every tone held down, so it reads as depth and never as a thing in play. */
+  stationHullDark: [44, 48, 60, 255],
+  stationHullLight: [146, 152, 168, 255],
+  stationTruss: [88, 92, 106, 255],
+  stationRadiator: [122, 128, 142, 255],
+  stationPanel: [20, 30, 66, 255],
+  stationPanelRib: [54, 74, 132, 255],
+  stationMast: [134, 112, 68, 255],
   aimRing: [255, 255, 255, 70],
   /** The bow the band is drawn as, and the light about it: an amber haze where the hand is, gold sparks, a white-hot string. */
   bandGlow: [255, 168, 48, 255],
