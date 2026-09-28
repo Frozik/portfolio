@@ -33,6 +33,8 @@ export interface MapFrame {
   readonly fogStart: number;
   readonly fogEnd: number;
   readonly time: number;
+  /** Ground metres under one CSS pixel at the camera target, for patterns that keep their size on screen. */
+  readonly metresPerPixel: number;
   readonly instanceData: Float32Array;
   readonly instanceCount: number;
   readonly streetTiles: readonly StreetTilePlacement[];

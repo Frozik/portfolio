@@ -12,6 +12,8 @@ import { useEventCallback } from 'usehooks-ts';
 import { useIsCoarsePointer } from '../../hooks/useIsCoarsePointer';
 import { cn } from '../cn';
 import { CalendarPopup } from './components/CalendarPopup';
+import { CalendarIcon } from './components/icons';
+import { PopupDrawer } from './components/PopupDrawer';
 import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle, ISelection, TLeaveDirection } from './defs';
 import {
@@ -26,7 +28,7 @@ import styles from './styles.module.css';
 
 const DEFAULT_TIME_ZONE = 'UTC';
 const MIDNIGHT = new Temporal.PlainTime(0);
-const POPOVER_SIDE_OFFSET = 4;
+const POPOVER_COLLISION_PADDING = 8;
 
 function formatDateOnly(value: Temporal.ZonedDateTime): string {
   return value.toPlainDate().toString();
@@ -320,7 +322,7 @@ export const DateTimePicker = memo(
                 aria-label={ariaLabels.openNativePicker}
                 onClick={handleOpenNativePicker}
               >
-                📅
+                <CalendarIcon />
               </button>
             </div>
           )}
@@ -333,29 +335,32 @@ export const DateTimePicker = memo(
         <Popover.Portal>
           <Popover.Content
             className={styles.popoverLayer}
-            sideOffset={POPOVER_SIDE_OFFSET}
+            align="start"
+            collisionPadding={POPOVER_COLLISION_PADDING}
             onOpenAutoFocus={preventFocusSteal}
             onCloseAutoFocus={preventFocusSteal}
           >
-            <CalendarPopup
-              value={value?.toPlainDate()}
-              time={value?.toPlainTime() ?? MIDNIGHT}
-              today={resolvedToday}
-              getDayInfo={getDayInfo}
-              startOfWeek={startOfWeek}
-              showTime={showTime}
-              timeResolution={timeResolution}
-              minDate={minDate}
-              maxDate={maxDate}
-              focusRequest={popupFocusRequest}
-              onSelectDate={handleSelectCalendarDate}
-              onTimeChange={handleTimeChange}
-              onFocusWithinChange={setPopupFocused}
-              onLeave={handlePopupLeave}
-              onReturnToField={handleReturnToField}
-              locale={locale}
-              ariaLabels={ariaLabels}
-            />
+            <PopupDrawer held={popupFocused}>
+              <CalendarPopup
+                value={value?.toPlainDate()}
+                time={value?.toPlainTime() ?? MIDNIGHT}
+                today={resolvedToday}
+                getDayInfo={getDayInfo}
+                startOfWeek={startOfWeek}
+                showTime={showTime}
+                timeResolution={timeResolution}
+                minDate={minDate}
+                maxDate={maxDate}
+                focusRequest={popupFocusRequest}
+                onSelectDate={handleSelectCalendarDate}
+                onTimeChange={handleTimeChange}
+                onFocusWithinChange={setPopupFocused}
+                onLeave={handlePopupLeave}
+                onReturnToField={handleReturnToField}
+                locale={locale}
+                ariaLabels={ariaLabels}
+              />
+            </PopupDrawer>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>

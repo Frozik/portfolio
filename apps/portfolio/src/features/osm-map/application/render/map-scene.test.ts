@@ -19,6 +19,7 @@ import type { RoadLine } from '../../domain/road-lines';
 import { roadLinesOfTile } from '../../domain/road-lines';
 import type { StreetTile } from '../../domain/street-tile';
 import type { TileCoord, TileKey } from '../../domain/tile-key';
+import type { WaterMesh } from '../../domain/water-surface';
 import type { MapCameraController } from '../../infrastructure/map-camera-controller';
 import { TileLoader } from '../../infrastructure/tile-loader';
 import { MapScene } from './map-scene';
@@ -74,6 +75,7 @@ function createFakeAtlas(): TileAtlasPort {
 
 function createFakeStreetSink(): TileSink<StreetTile> & {
   roadsOf: (key: TileKey) => readonly RoadLine[];
+  hasWater: (key: TileKey) => boolean;
 } {
   const tiles = new Map<TileKey, StreetTile>();
   return {
@@ -81,10 +83,16 @@ function createFakeStreetSink(): TileSink<StreetTile> & {
     has: key => tiles.has(key),
     touch: () => undefined,
     roadsOf: key => tiles.get(key)?.roads ?? [],
+    hasWater: key => (tiles.get(key)?.water.indices.length ?? 0) > 0,
   };
 }
 
 const NO_BUILDINGS: BuildingMesh = { positions: new Int16Array(0), indices: new Uint32Array(0) };
+const NO_WATER: WaterMesh = { positions: new Int16Array(0), indices: new Uint32Array(0) };
+const POND: WaterMesh = {
+  positions: Int16Array.from([0, 0, 100, 0, 100, 100]),
+  indices: Uint32Array.from([0, 1, 2]),
+};
 
 /** One straight one-way street through the tile, long enough for a few cars. */
 function straightStreet(coord: TileCoord): readonly RoadLine[] {
@@ -107,7 +115,7 @@ function straightStreet(coord: TileCoord): readonly RoadLine[] {
   );
 }
 
-function createStreetScene(zoom: number) {
+function createStreetScene(zoom: number, water: WaterMesh = NO_WATER) {
   const streets = createFakeSource();
   const sink = createFakeStreetSink();
   const atlas = createFakeAtlas();
@@ -127,11 +135,17 @@ function createStreetScene(zoom: number) {
       sink,
       store: createFakeStore(),
       decode: (_bytes, coord) =>
-        Promise.resolve({ buildings: NO_BUILDINGS, roads: straightStreet(coord) }),
+        Promise.resolve({
+          buildings: NO_BUILDINGS,
+          roads: straightStreet(coord),
+          water,
+          trees: [],
+        }),
       readNow: () => time,
       onChange: () => scene.markLoadsChanged(),
     }),
     traffic: new StreetTraffic(sink.roadsOf),
+    hasWater: sink.hasWater,
     atlas,
     onPoseChanged: () => undefined,
     onBearing: () => undefined,
@@ -164,11 +178,13 @@ describe('MapScene', () => {
         source: createFakeSource().source,
         sink: createFakeStreetSink(),
         store: createFakeStore(),
-        decode: () => Promise.resolve({ buildings: NO_BUILDINGS, roads: [] }),
+        decode: () =>
+          Promise.resolve({ buildings: NO_BUILDINGS, roads: [], water: NO_WATER, trees: [] }),
         readNow: () => time,
         onChange: () => scene.markLoadsChanged(),
       }),
       traffic: new StreetTraffic(() => []),
+      hasWater: () => false,
       atlas,
       onPoseChanged: () => undefined,
       onBearing: () => undefined,
@@ -225,7 +241,22 @@ describe('MapScene', () => {
     expect(first?.cars[0].placementIndex).toBe(0);
     expect(later?.cars[0].x).toBeGreaterThan(first?.cars[0].x ?? Number.POSITIVE_INFINITY);
     expect(muchLater).toBeDefined();
-    expect(scene.trafficMoving).toBe(true);
+    expect(scene.animatedAtRest).toBe(true);
+  });
+
+  it('keeps the frames coming while a tile with water is in the picture, so its ripples move', async () => {
+    const { scene, streets, setTime } = createStreetScene(BUILDINGS_MIN_ZOOM, POND);
+
+    scene.advance(frame(0));
+    await settle();
+    streets.resolvers[0]();
+    await settle();
+    setTime(5);
+    scene.advance(frame(5));
+    const longAfter = scene.advance(frame(5 + BUILDING_RISE_SECONDS * 3));
+
+    expect(longAfter).toBeDefined();
+    expect(scene.animatedAtRest).toBe(true);
   });
 
   it("keeps a tile's rise where it was when the tile blinks out of the picture and back", async () => {

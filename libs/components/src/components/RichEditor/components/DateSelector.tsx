@@ -1,4 +1,4 @@
-import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from '@frozik/utils/date/boundaries';
+import { getStartOfMonth, getStartOfWeek } from '@frozik/utils/date/boundaries';
 import type { EDayType } from '@frozik/utils/date/constants';
 import { DAYS_IN_WEEK, EDayType as DayType, EDayOfWeek } from '@frozik/utils/date/constants';
 import { isNil } from 'lodash-es';
@@ -12,6 +12,9 @@ import type { TLeaveDirection } from '../defs';
 import { DayCell } from './DayCell';
 import { defaultStartOfWeek } from './week-info';
 import styles from '../styles.module.css';
+
+// Every month fits in six weeks; a constant row count keeps the popup from resizing between months.
+const WEEKS_IN_GRID = 6;
 
 interface IGridDay {
   readonly date: Temporal.PlainDate;
@@ -75,28 +78,22 @@ export const DateSelector = memo(
     );
 
     // Day types and range bounds change rarely; selection and today are cheap per-cell checks.
-    const days = useMemo((): readonly IGridDay[] => {
-      const endOfMonth = getEndOfMonth(yearMonth);
-      const grid: IGridDay[] = [];
-
-      for (
-        let date = firstVisibleDate;
-        Temporal.PlainDate.compare(date, endOfMonth) <= 0;
-        date = date.add({ days: 1 })
-      ) {
-        const dayType = getDayInfo(date);
-        grid.push({
-          date,
-          weekend: dayType === DayType.Weekend || dayType === DayType.Holiday,
-          overflow:
-            Temporal.PlainYearMonth.compare(date, yearMonth) !== 0 ||
-            (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) ||
-            (!isNil(maxDate) && Temporal.PlainDate.compare(date, maxDate) > 0),
-        });
-      }
-
-      return grid;
-    }, [yearMonth, firstVisibleDate, getDayInfo, minDate, maxDate]);
+    const days = useMemo(
+      (): readonly IGridDay[] =>
+        Array.from({ length: WEEKS_IN_GRID * DAYS_IN_WEEK }, (_, index) => {
+          const date = firstVisibleDate.add({ days: index });
+          const dayType = getDayInfo(date);
+          return {
+            date,
+            weekend: dayType === DayType.Weekend || dayType === DayType.Holiday,
+            overflow:
+              Temporal.PlainYearMonth.compare(date, yearMonth) !== 0 ||
+              (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) ||
+              (!isNil(maxDate) && Temporal.PlainDate.compare(date, maxDate) > 0),
+          };
+        }),
+      [yearMonth, firstVisibleDate, getDayInfo, minDate, maxDate]
+    );
 
     const weekdays = useMemo(
       () =>

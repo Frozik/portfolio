@@ -11,7 +11,7 @@ import {
   FPS_IDLE,
   FPS_INTERACTION,
   FPS_RESIZE,
-  FPS_TRAFFIC,
+  FPS_ANIMATION,
   MAX_STORED_BUILDING_TILES,
 } from '../../domain/constants';
 import type { StreetTile } from '../../domain/street-tile';
@@ -20,6 +20,7 @@ import { createIndexedDBTileStore } from '../../infrastructure/indexeddb-tile-st
 import type { MapFrame } from '../../infrastructure/layers/map-frame';
 import { MapGroundLayer } from '../../infrastructure/layers/map-ground-layer';
 import { MapStreetLayer } from '../../infrastructure/layers/map-street-layer';
+import { MapWaterLayer } from '../../infrastructure/layers/map-water-layer';
 import { createMapCameraController } from '../../infrastructure/map-camera-controller';
 import { createOpenFreeMapTileSource } from '../../infrastructure/openfreemap-tile-source';
 import { createOsmTileSource } from '../../infrastructure/osm-tile-source';
@@ -136,29 +137,28 @@ async function initGpu(
     loader,
     streetLoader,
     traffic: new StreetTraffic(key => streetCache.roadsOf(key)),
+    hasWater: key => streetCache.hasWater(key),
     atlas,
     onPoseChanged: publishView,
     onBearing: store.reportBearing,
   });
-  // The ground layer runs the scene; the street layer draws the same
-  // frame right after it, and a frame is consumed once.
+  // The ground layer runs the scene; the water and street layers draw the
+  // same frame right after it, and the next tick replaces it.
   let currentFrame: MapFrame | undefined;
   const groundLayer = new MapGroundLayer(context, atlas, state => {
     frameTime = state.time;
     if (scene.busy) {
       fpsController.raise(FPS_INTERACTION);
-    } else if (scene.trafficMoving) {
-      fpsController.raise(FPS_TRAFFIC);
+    } else if (scene.animatedAtRest) {
+      fpsController.raise(FPS_ANIMATION);
     }
     currentFrame = scene.advance(state);
     return currentFrame;
   });
-  const streetLayer = new MapStreetLayer(context, streetCache, () => {
-    const frame = currentFrame;
-    currentFrame = undefined;
-    return frame;
-  });
-  const layerManager = new RenderLayerManager([groundLayer, streetLayer]);
+  const readFrame = (): MapFrame | undefined => currentFrame;
+  const waterLayer = new MapWaterLayer(context, streetCache, readFrame);
+  const streetLayer = new MapStreetLayer(context, streetCache, readFrame);
+  const layerManager = new RenderLayerManager([groundLayer, waterLayer, streetLayer]);
   const stopRenderLoop = startRenderLoop({
     canvas,
     context,

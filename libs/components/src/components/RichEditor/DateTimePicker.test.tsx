@@ -1,5 +1,6 @@
 import type { DateTimeParseResult } from '@frozik/utils/date/fuzzy/types';
 import { act, fireEvent, render } from '@testing-library/react';
+import { isNil } from 'lodash-es';
 import { useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
@@ -47,6 +48,14 @@ function ControlledPicker({
       nativePicker={nativePicker}
     />
   );
+}
+
+function drawerOf(): HTMLElement {
+  const drawer = document.querySelector('[aria-label="Date picker"]')?.parentElement;
+  if (isNil(drawer)) {
+    throw new Error('no popup rendered');
+  }
+  return drawer;
 }
 
 function selectAll(editor: HTMLElement) {
@@ -180,6 +189,60 @@ describe('DateTimePicker', () => {
     fireEvent.keyDown(document.activeElement as Element, { key: 'Tab', shiftKey: true });
 
     expect(document.activeElement).toBe(editor);
+  });
+
+  it('shows only the edge of the popup on focus and pulls it out while the mouse is over it', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    focusEditor(editorOf(container));
+    const drawer = drawerOf();
+
+    expect(drawer.hasAttribute('data-expanded')).toBe(false);
+
+    fireEvent.pointerEnter(drawer, { pointerType: 'mouse' });
+    expect(drawer.hasAttribute('data-expanded')).toBe(true);
+
+    fireEvent.pointerLeave(drawer, { pointerType: 'mouse' });
+    expect(drawer.hasAttribute('data-expanded')).toBe(false);
+  });
+
+  it('keeps the popup pulled out while the keyboard is inside it', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    const editor = editorOf(container);
+    focusEditor(editor);
+
+    fireEvent.keyDown(editor, { key: 'Tab' });
+    expect(drawerOf().hasAttribute('data-expanded')).toBe(true);
+
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' });
+    expect(drawerOf().hasAttribute('data-expanded')).toBe(false);
+  });
+
+  it('a tap keeps the popup pulled out, since a touch never hovers', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    focusEditor(editorOf(container));
+    const drawer = drawerOf();
+
+    fireEvent.pointerEnter(drawer, { pointerType: 'touch' });
+    fireEvent.pointerLeave(drawer, { pointerType: 'touch' });
+    expect(drawer.hasAttribute('data-expanded')).toBe(false);
+
+    fireEvent.click(drawer);
+
+    expect(drawer.hasAttribute('data-expanded')).toBe(true);
+  });
+
+  it('shows six weeks for every month, so the popup keeps its size while months are browsed', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    focusEditor(editorOf(container));
+    const dayCount = () => document.querySelectorAll('button[aria-pressed]').length;
+    const daysInSixWeeks = 42;
+
+    expect(dayCount()).toBe(daysInSixWeeks);
+
+    fireEvent.click(document.querySelector('[aria-label="Previous month"]') as Element);
+
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('February 2026');
+    expect(dayCount()).toBe(daysInSixWeeks);
   });
 
   it('Tab from the days reaches the time spinner, arrows step it and Tab leaves the picker', () => {

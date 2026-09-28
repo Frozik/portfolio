@@ -6,6 +6,7 @@
 
 .editor,
 .field,
+.popover-layer,
 .popover-content,
 .error-tooltip {
   --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
@@ -20,6 +21,7 @@
   --re-fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
   --re-accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
   --re-red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
+  --re-on-accent: var(--color-landing-bg, light-dark(#ffffff, #07090c));
   --re-mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
 }
 
@@ -84,9 +86,12 @@
   color: var(--re-accent);
 }
 
+/* A flex column, not a block: an inline-block editor would leave a baseline gap
+   between the field and the drawer that slides out from under it. */
 .field {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-with-picker {
@@ -114,16 +119,24 @@
   position: absolute;
   inset: 0;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--re-fg-dim);
   cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
   touch-action: manipulation;
+  transition: color 0.15s ease;
 
   &:hover {
     color: var(--re-fg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--re-accent);
+    outline-offset: -2px;
   }
 }
 
@@ -138,47 +151,238 @@
 }
 
 /* Radix renders the popover wrapper in normal stacking; hosts wrap their
-   content in `relative z-10` layers above a canvas background. */
+   content in `relative z-10` layers above a canvas background. The layer is
+   the slot the drawer slides out of: it keeps the full popup size, clips at
+   the edge touching the field and lets the pointer through where it is empty. */
 .popover-layer {
   z-index: 100;
+  pointer-events: none;
+  clip-path: inset(0 -100vmax -100vmax);
+
+  &[data-side='top'] {
+    clip-path: inset(-100vmax -100vmax 0);
+  }
 }
 
-.popover-content {
+@property --re-reveal {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Hidden behind the field until pulled out. The handle hangs outside the
+   drawer's box, so collapsing it never resizes the popup Radix has positioned.
+   The slide animates `--re-reveal`, not the transform: the hidden offset
+   changes sign when the popup flips sides, and a transition on the transform
+   would sweep the whole popup across the field on every flip. */
+.popover-drawer {
+  --re-peek: 20px;
+  --re-corner: 10px;
+  --re-hidden-shift: -100%;
+  --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --re-retract-delay: 0.12s;
+  position: relative;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: var(--radix-popover-content-available-width, 100%);
+  pointer-events: auto;
   color-scheme: light dark;
   background-color: var(--re-bg-card);
-  border: 1px solid var(--re-border);
-  border-radius: 0;
-  padding: 10px;
-  box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
+  border: solid var(--re-border);
+  border-width: 0 1px;
+  transform: translateY(calc((1 - var(--re-reveal)) * var(--re-hidden-shift)));
+  transition:
+    --re-reveal var(--re-slide) var(--re-retract-delay),
+    box-shadow var(--re-slide) var(--re-retract-delay);
+
+  @media (pointer: coarse) {
+    --re-peek: 28px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    --re-slide: 0s;
+    --re-retract-delay: 0s;
+  }
+
+  &[data-expanded] {
+    --re-retract-delay: 0s;
+    --re-reveal: 1;
+    box-shadow: 0 18px 48px -12px rgb(0 0 0 / 0.7);
+  }
+
+  &:not([data-expanded]) > .popover-content {
+    pointer-events: none;
+  }
+}
+
+/* `@starting-style` grows the handle out of the field on open; engines without
+   it show the handle at once. Collapsed, it is the popup's closing hairline. */
+.popover-handle {
+  position: absolute;
+  top: 100%;
+  right: -1px;
+  left: -1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--re-peek);
+  background-color: var(--re-bg-card);
+  border: solid var(--re-border);
+  border-width: 0 1px 1px;
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.6);
+  cursor: pointer;
+  transition:
+    height var(--re-slide) var(--re-retract-delay),
+    box-shadow var(--re-slide) var(--re-retract-delay);
+
+  @starting-style {
+    height: 0;
+  }
+
+  &::before {
+    content: '';
+    width: 32px;
+    height: 2px;
+    background-color: var(--re-accent);
+    opacity: 0.7;
+    transition: opacity var(--re-slide) var(--re-retract-delay);
+  }
+}
+
+.popover-drawer[data-expanded] > .popover-handle {
+  height: 0;
+  box-shadow: none;
+  cursor: auto;
+
+  &::before {
+    opacity: 0;
+  }
+}
+
+.popover-drawer::before,
+.popover-handle::after {
+  content: '';
+  position: absolute;
+  width: var(--re-corner);
+  height: var(--re-corner);
+  border: 1px solid var(--re-accent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.popover-drawer::before {
+  top: 0;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.popover-handle::after {
+  right: -1px;
+  bottom: -1px;
+  border-top: none;
+  border-left: none;
+}
+
+.popover-layer[data-side='top'] {
+  .popover-drawer {
+    --re-hidden-shift: 100%;
+  }
+
+  .popover-handle {
+    top: auto;
+    bottom: 100%;
+    border-width: 1px 1px 0;
+    box-shadow: 0 -6px 16px -8px rgb(0 0 0 / 0.6);
+  }
+
+  .popover-drawer::before {
+    inset: auto -1px 0 auto;
+    border: 1px solid var(--re-accent);
+    border-top: none;
+    border-left: none;
+  }
+
+  .popover-handle::after {
+    inset: -1px auto auto -1px;
+    border: 1px solid var(--re-accent);
+    border-right: none;
+    border-bottom: none;
+  }
+}
+
+/* The panes sit side by side while the viewport has room and wrap when it does
+   not. Each pane draws its top and left hairline one pixel outside its box, so
+   the container clips the outer ones and only the divider between panes shows,
+   whichever way they are laid out.
+   The height is bounded by the roomier side of the field, not by the side the
+   popup is on: Radix flips only a popup that overflows, and one that shrank
+   with the room on its side never would. `--re-viewport-margin` is the
+   popover's collision padding, top plus bottom. */
+.popover-content {
+  --re-cell: 36px;
+  --re-pane-padding: 12px;
+  --re-pane-header: 32px;
+  --re-viewport-margin: 16px;
+  --re-room-here: var(--radix-popover-content-available-height);
+  --re-room-across: calc(
+    100dvh - var(--re-viewport-margin) - var(--radix-popover-trigger-height) - var(--re-room-here)
+  );
+  display: flex;
+  flex-wrap: wrap;
+  max-height: calc(max(var(--re-room-here), var(--re-room-across)) - var(--re-peek));
+  overflow: hidden auto;
   outline: none;
   font-family: var(--re-mono);
   color: var(--re-fg);
-  min-width: var(--radix-popover-trigger-width);
+
+  @media (pointer: coarse) {
+    --re-cell: 40px;
+  }
+}
+
+.calendar-pane,
+.time-picker {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: -1px 0 0 -1px;
+  padding: var(--re-pane-padding);
+  border: solid var(--re-border);
+  border-width: 1px 0 0 1px;
 }
 
 .month-navigator {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 8px;
+  gap: 8px;
+  height: var(--re-pane-header);
+  padding: 0;
   border: none;
-  margin: 0;
+  margin: 0 0 8px;
   min-width: 0;
-  color: var(--re-fg);
-  font-size: 14px;
-  font-weight: 500;
   user-select: none;
 }
 
+.month-navigator-group {
+  display: flex;
+}
+
 .month-navigator-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--re-pane-header);
+  height: var(--re-pane-header);
+  padding: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
   color: var(--re-fg-dim);
   cursor: pointer;
-  padding: 4px 10px;
-  font-size: 16px;
-  line-height: 1;
+  touch-action: manipulation;
   transition:
     border-color 0.15s ease,
     color 0.15s ease,
@@ -189,100 +393,118 @@
     border-color: var(--re-border);
     color: var(--re-fg);
   }
+
+  &:active {
+    color: var(--re-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--re-accent);
+    outline-offset: -2px;
+  }
 }
 
 .month-navigator-label {
-  font-weight: 500;
   font-family: var(--re-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
   color: var(--re-fg);
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, auto);
-  gap: 4px;
-  padding: 4px;
-  justify-items: center;
+  grid-template-columns: repeat(7, minmax(var(--re-cell), 1fr));
+  gap: 2px;
 }
 
 .weekday {
   display: flex;
-  width: 28px;
   height: 28px;
   align-items: center;
   justify-content: center;
   font-family: var(--re-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
   color: var(--re-fg-faint);
   pointer-events: none;
 }
 
-/* Background priority (low → high): today → weekend → weekend+today → selected → weekend+selected. */
+/* Priority (low → high): weekend tint → today brackets → selected fill. */
 .day-cell {
+  --re-today-tick: 6px;
   display: flex;
-  width: 28px;
-  height: 28px;
+  width: 100%;
+  height: var(--re-cell);
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid transparent;
-  background: transparent;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  background-repeat: no-repeat;
   cursor: pointer;
   font-family: var(--re-mono);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
   color: var(--re-fg-dim);
+  touch-action: manipulation;
   transition:
     color 0.15s ease,
-    border-color 0.15s ease;
+    background-color 0.15s ease;
 
-  &:hover,
-  &:focus-visible {
-    border-color: var(--re-accent);
+  &:hover {
+    background-color: color-mix(in oklab, var(--re-accent) 16%, transparent);
     color: var(--re-fg);
-    outline: none;
   }
 
-  &[data-today] {
-    background: color-mix(in oklab, var(--re-accent) 15%, transparent);
-    font-weight: 600;
-    color: var(--re-fg);
+  &:focus-visible {
+    outline: 2px solid var(--re-accent);
+    outline-offset: 1px;
   }
 
   &[data-weekend] {
-    background: color-mix(in oklab, var(--re-red) 12%, transparent);
+    color: color-mix(in oklab, var(--re-red) 80%, var(--re-fg));
   }
 
-  &[data-weekend][data-today] {
-    background: color-mix(in oklab, var(--re-red) 20%, transparent);
+  &[data-today] {
+    background-image:
+      linear-gradient(var(--re-accent) 0 0), linear-gradient(var(--re-accent) 0 0),
+      linear-gradient(var(--re-accent) 0 0), linear-gradient(var(--re-accent) 0 0);
+    background-position:
+      top left,
+      top left,
+      bottom right,
+      bottom right;
+    background-size:
+      var(--re-today-tick) 1px,
+      1px var(--re-today-tick),
+      var(--re-today-tick) 1px,
+      1px var(--re-today-tick);
+    font-weight: 600;
+    color: var(--re-accent);
   }
 
   &[data-selected] {
-    background: color-mix(in oklab, var(--re-accent) 55%, transparent);
-    color: var(--re-fg);
-  }
-
-  &[data-weekend][data-selected] {
-    background: color-mix(in oklab, var(--re-red) 40%, transparent);
+    background-color: var(--re-accent);
+    background-image: none;
+    font-weight: 600;
+    color: var(--re-on-accent);
   }
 
   &:disabled {
     cursor: default;
-    color: var(--re-fg-faint);
+    background-color: transparent;
+    color: color-mix(in oklab, var(--re-fg-faint) 55%, transparent);
 
-    &[data-today],
     &[data-selected] {
+      background-color: color-mix(in oklab, var(--re-accent) 30%, transparent);
       color: var(--re-fg-dim);
-    }
-
-    &:hover {
-      border-color: transparent;
     }
   }
 }
@@ -296,22 +518,37 @@
 
 .time-picker {
   display: flex;
+  flex-direction: column;
+}
+
+.pane-kicker {
+  display: flex;
+  align-items: center;
+  height: var(--re-pane-header);
+  margin-bottom: 8px;
+  font-family: var(--re-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--re-fg-faint);
+  user-select: none;
+}
+
+.time-picker-units {
+  display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 10px 4px 4px;
-  border: none;
-  border-top: 1px solid var(--re-border-soft);
-  margin: 6px 0 0;
-  min-width: 0;
+  gap: 4px;
 }
 
 .time-picker-separator {
   color: var(--re-fg-faint);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   line-height: 1;
-  padding: 0 1px;
+  user-select: none;
 }
 
 .time-picker-unit,
@@ -319,31 +556,29 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  border: none;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
+  gap: 4px;
 }
 
 .time-picker-unit {
-  width: 42px;
+  width: 44px;
 }
 
 .time-picker-unit-wide {
-  width: 52px;
+  width: 56px;
 }
 
 .time-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 28px;
+  padding: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0;
   color: var(--re-fg-faint);
   cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  padding: 4px;
-  width: 100%;
   touch-action: manipulation;
   user-select: none;
   transition:
@@ -356,17 +591,29 @@
     background-color: var(--re-bg-elevated);
     border-color: var(--re-border);
   }
+
+  &:active {
+    color: var(--re-accent);
+  }
 }
 
 .time-picker-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  background-color: var(--re-bg-elevated);
+  border: 1px solid var(--re-border);
   color: var(--re-fg);
-  font-size: 14px;
   font-family: var(--re-mono);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
   line-height: 1;
-  padding: 2px 4px;
-  border: 1px solid transparent;
   user-select: none;
+  transition: border-color 0.15s ease;
 
   &:focus-visible {
     border-color: var(--re-accent);

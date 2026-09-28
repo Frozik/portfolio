@@ -1,6 +1,11 @@
 import { PbfWriter } from 'pbf';
 
-import { DEFAULT_BUILDING_HEIGHT_M } from '../domain/constants';
+import {
+  DEFAULT_BUILDING_HEIGHT_M,
+  FOREST_AREA_PER_TREE_M2,
+  PARK_AREA_PER_TREE_M2,
+  STREET_MESH_UNIT_M,
+} from '../domain/constants';
 import { tileGridOf } from '../domain/tile-grid';
 import { decodeStreetTile, footprintsOfTile } from './street-tile-decoder';
 
@@ -9,11 +14,20 @@ const EXTENT = 4096;
 const TRIANGLES_PER_BOX = 10;
 const VERTICES_PER_TRIANGLE = 3;
 
+type LayerName = 'building' | 'transportation' | 'water' | 'landcover' | 'park';
+const LAYERS: readonly LayerName[] = ['building', 'transportation', 'water', 'landcover', 'park'];
+
 interface EncodedFeature {
   readonly ring: readonly (readonly [number, number])[];
   readonly properties: Readonly<Record<string, number | boolean | string>>;
   /** A road rather than a building: an open line in the `transportation` layer. */
   readonly line?: boolean;
+  /** The layer the feature goes in; a building unless said otherwise, a road when it is a line. */
+  readonly layer?: LayerName;
+}
+
+function layerOf(feature: EncodedFeature): LayerName {
+  return feature.layer ?? (feature.line === true ? 'transportation' : 'building');
 }
 
 const MOVE_TO = 1;
@@ -50,19 +64,16 @@ function geometryOf(ring: EncodedFeature['ring'], closed: boolean): number[] {
   return commands;
 }
 
-/** The smallest Mapbox vector tile with a `building` and a `transportation` layer, straight from the protobuf schema. */
+/** The smallest Mapbox vector tile with the layers the decoder reads, straight from the protobuf schema. */
 function encodeTile(features: readonly EncodedFeature[]): ArrayBuffer {
   const pbf = new PbfWriter();
-  encodeLayer(
-    pbf,
-    'building',
-    features.filter(feature => feature.line !== true)
-  );
-  encodeLayer(
-    pbf,
-    'transportation',
-    features.filter(feature => feature.line === true)
-  );
+  for (const layer of LAYERS) {
+    encodeLayer(
+      pbf,
+      layer,
+      features.filter(feature => layerOf(feature) === layer)
+    );
+  }
   const bytes = pbf.finish();
   const copy = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(copy).set(bytes);
@@ -175,5 +186,53 @@ describe('building tile decoding', () => {
       ['minor', 1],
     ]);
     expect(tile.roads[0].bordersAtStart && tile.roads[0].bordersAtEnd).toBe(true);
+    expect(tile.water.indices).toHaveLength(0);
+    expect(tile.trees).toEqual([]);
+  });
+
+  it('plants woods from the landcover layer and parks, but not grass or farmland', () => {
+    const block: EncodedFeature['ring'] = [
+      [0, 0],
+      [2000, 0],
+      [2000, 2000],
+      [0, 2000],
+    ];
+    const bytes = encodeTile([
+      { ring: block, properties: { class: 'wood' }, layer: 'landcover' },
+      { ring: block, properties: { class: 'grass' }, layer: 'landcover' },
+      { ring: block, properties: { class: 'park' }, layer: 'park' },
+    ]);
+    const grassOnly = encodeTile([
+      { ring: block, properties: { class: 'farmland' }, layer: 'landcover' },
+    ]);
+
+    const tile = decodeStreetTile(bytes, TILE);
+    const treeCount = tile.trees.reduce((sum, batch) => sum + batch.instances.length / 4, 0);
+    const blockSideM = (2000 * tileGridOf(TILE, EXTENT).tileSizeM) / EXTENT;
+
+    expect(treeCount).toBeGreaterThan(0);
+    const woodAndPark =
+      (blockSideM * blockSideM) / FOREST_AREA_PER_TREE_M2 +
+      (blockSideM * blockSideM) / PARK_AREA_PER_TREE_M2;
+    expect(treeCount).toBeLessThan(woodAndPark * 1.2);
+    expect(decodeStreetTile(grassOnly, TILE).trees).toEqual([]);
+  });
+
+  it('cuts the water to the tile square and lays it flat as one mesh', () => {
+    const ocean: EncodedFeature['ring'] = [
+      [-64, -64],
+      [4160, -64],
+      [4160, 4160],
+      [-64, 4160],
+    ];
+    const bytes = encodeTile([{ ring: ocean, properties: { class: 'ocean' }, layer: 'water' }]);
+
+    const tile = decodeStreetTile(bytes, TILE);
+
+    expect(tile.water.indices).toHaveLength(2 * VERTICES_PER_TRIANGLE);
+    expect(Math.min(...tile.water.positions)).toBe(0);
+    expect(Math.max(...tile.water.positions)).toBe(
+      Math.round(tileGridOf(TILE, EXTENT).tileSizeM / STREET_MESH_UNIT_M)
+    );
   });
 });

@@ -80,18 +80,26 @@ export const BUILDING_TILE_ZOOM = 14;
 export const BUILDINGS_MIN_ZOOM = 16;
 /** Buildings stay until the camera backs off to here: a gap under the threshold, so hovering at it never flickers them. */
 export const BUILDINGS_HIDE_ZOOM = 15.5;
+/** Street meshes — building boxes and water surfaces — are `int16` in this unit from the tile's north-west corner. */
+export const STREET_MESH_UNIT_M = 0.1;
 /** Metres in one Web Mercator unit at the equator: the Earth's circumference. */
 export const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
 /** What OpenMapTiles gives an untagged building; the same stands in for a missing value. */
 export const DEFAULT_BUILDING_HEIGHT_M = 5;
-/** Building meshes kept on the GPU before the least recently drawn are dropped: thirty dense city tiles. */
-export const MAX_BUILDING_MESH_BYTES = 128 * 2 ** 20;
 /**
- * Street tiles a picture asks for at once, nearest the screen centre first:
- * the working set must fit the cache with room to spare, or tiles in view
- * would evict each other and blink. Dense city tiles run to 4 MB each.
+ * Street meshes kept on the GPU before the least recently drawn are dropped:
+ * sixty dense city tiles, four screens of downtown. WebGPU has no memory
+ * budget to ask; the ceiling is a guess at what a phone's browser tab can
+ * hold beside the atlas without the device being lost.
  */
-export const MAX_STREET_TILES_IN_VIEW = 16;
+export const MAX_BUILDING_MESH_BYTES = 256 * 2 ** 20;
+/**
+ * Street tiles a picture asks for at once, nearest the camera target first:
+ * a full tilt at z16 sees about forty z14 tiles down to the fog, and the
+ * working set must fit the cache with room to spare, or tiles in view would
+ * evict each other and blink. Dense city tiles run to 4 MB each.
+ */
+export const MAX_STREET_TILES_IN_VIEW = 32;
 /** Encoded building tiles kept in IndexedDB. */
 export const MAX_STORED_BUILDING_TILES = 300;
 /** How long a building tile takes to grow out of the ground when it enters the picture. */
@@ -100,8 +108,8 @@ export const BUILDING_RISE_SECONDS = 0.6;
 export const CARS_MIN_ZOOM = 17;
 /** Cars stay until the camera backs off to here, for the same reason as the buildings. */
 export const CARS_HIDE_ZOOM = 16.5;
-/** Traffic animates at this rate: smooth enough for small movers, half the battery of 60. */
-export const FPS_TRAFFIC = 30;
+/** Traffic and water animate at this rate: smooth enough for small movers, half the battery of 60. */
+export const FPS_ANIMATION = 30;
 /** Right-hand traffic: a lane sits this far right of the road's centre line. */
 export const LANE_OFFSET_M = 1.75;
 /** One car per this much road at seeding, before the road class weighs in. */
@@ -124,6 +132,12 @@ export const MAX_CARS_PER_FRAME = 4096;
 export const CAR_MIN_GAP_M = 8;
 /** A frame this long is a tab that was hidden; traffic steps by this much at most. */
 export const MAX_TRAFFIC_STEP_SECONDS = 0.1;
+/** One tree per this much forest; sparser than the real thing, dense enough to read as woods. */
+export const FOREST_AREA_PER_TREE_M2 = 350;
+/** One tree per this much park: lawns with trees, not a forest. */
+export const PARK_AREA_PER_TREE_M2 = 1200;
+/** Ceiling per tile; a tile that is all forest plants proportionally fewer. */
+export const MAX_TREES_PER_TILE = 10_000;
 /** z14 tiles a frame can place; a 4K view at full tilt from z16 needs about twenty. */
 export const MAX_BUILDING_TILES_PER_FRAME = 64;
 

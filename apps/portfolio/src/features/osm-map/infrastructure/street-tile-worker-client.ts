@@ -34,6 +34,8 @@ export function createStreetTileDecoder(): StreetTileDecoder {
     request.resolve({
       buildings: { positions: data.positions, indices: data.indices },
       roads: data.roads,
+      water: data.water,
+      trees: data.trees,
     });
   };
   worker.onerror = (event: ErrorEvent): void => {

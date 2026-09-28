@@ -165,7 +165,7 @@ fn treeWorldPosition(
     );
 }
 
-// Trees: one low-polygon template per species (domain/geometry/tree-mesh.ts),
+// Trees: one low-polygon template per species (@frozik/utils/geometry/treeTemplate.ts),
 // drawn once per planted tree. The template counts crown radii in x and z and
 // tree heights in y, so the instance's two scales are all it takes to size it —
 // and the normal is divided by the same scales, which is what keeps a squat tree

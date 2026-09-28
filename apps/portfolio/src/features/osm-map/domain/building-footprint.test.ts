@@ -1,4 +1,5 @@
-import { BUILDING_MESH_UNIT_M, buildingTileMesh, polygonsOfTileRings } from './building-footprint';
+import { buildingTileMesh, polygonsOfTileRings } from './building-footprint';
+import { STREET_MESH_UNIT_M } from './constants';
 import type { TileGrid } from './tile-grid';
 
 /** One tile unit is one metre, so the numbers can be read off directly. */
@@ -68,7 +69,7 @@ describe('building footprints', () => {
     const heights = new Set(
       Array.from(mesh.positions)
         .filter((_, index) => index % 4 === 1)
-        .map(tenths => tenths * BUILDING_MESH_UNIT_M)
+        .map(tenths => tenths * STREET_MESH_UNIT_M)
     );
 
     expect(mesh.positions).toHaveLength(8 * 4);

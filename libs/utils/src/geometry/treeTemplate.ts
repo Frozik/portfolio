@@ -1,14 +1,10 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
+import { assertNever } from '../assert/assertNever';
+import type { ColoredMesh } from './litMesh';
+import type { LocalPoint, MeshBuilder, Rgb } from './meshBuilder';
+import { appendQuad, appendTriangle, createMeshBuilder, finishColoredMesh } from './meshBuilder';
 
-import type { ColoredMesh } from '@frozik/utils/geometry/litMesh';
-import type { LocalPoint, MeshBuilder, Rgb } from '@frozik/utils/geometry/meshBuilder';
-import {
-  appendQuad,
-  appendTriangle,
-  createMeshBuilder,
-  finishColoredMesh,
-} from '@frozik/utils/geometry/meshBuilder';
-import type { TreeSpecies } from '../model/plot-objects';
+/** The species a template exists for; a feature's own species vocabulary maps onto these. */
+export type TreeTemplateSpecies = 'spruce' | 'pine' | 'thuja' | 'deciduous';
 
 /** `#173420` — the near-black green of a spruce read against a lit sky. */
 const SPRUCE_CROWN_COLOR: Rgb = [0.0902, 0.2039, 0.1255];
@@ -82,7 +78,7 @@ const HALF = 0.5;
  * silhouette: the plan draws that radius as the tree's circle, so a species
  * whose template fell short of it would spread less in 3D than on the plan.
  */
-export function buildTreeTemplate(species: TreeSpecies): ColoredMesh {
+export function buildTreeTemplate(species: TreeTemplateSpecies): ColoredMesh {
   switch (species) {
     case 'spruce':
       return buildSpruceTemplate();

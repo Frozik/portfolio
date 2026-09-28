@@ -7,6 +7,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import { useEventCallback } from 'usehooks-ts';
 import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
+import { ChevronIcon } from './icons';
 import styles from '../styles.module.css';
 
 type TTimeUnit = 'hour' | 'minute' | 'second' | 'millisecond';
@@ -189,19 +190,24 @@ export const TimePicker = memo(
         onMouseDown={handleMouseDown}
         aria-label={ariaLabels.time}
       >
-        {units.map((unit, index) => (
-          <TimeUnit
-            key={unit}
-            ref={unit === activeUnit ? activeUnitRef : undefined}
-            unit={unit}
-            time={time}
-            active={unit === activeUnit}
-            separator={index === 0 ? undefined : unit === 'millisecond' ? '.' : ':'}
-            onStep={handleStep}
-            onKeyDown={handleKeyDown}
-            {...labelsOf(unit, ariaLabels)}
-          />
-        ))}
+        <span className={styles.paneKicker} aria-hidden="true">
+          {ariaLabels.time}
+        </span>
+        <div className={styles.timePickerUnits}>
+          {units.map((unit, index) => (
+            <TimeUnit
+              key={unit}
+              ref={unit === activeUnit ? activeUnitRef : undefined}
+              unit={unit}
+              time={time}
+              active={unit === activeUnit}
+              separator={index === 0 ? undefined : unit === 'millisecond' ? '.' : ':'}
+              onStep={handleStep}
+              onKeyDown={handleKeyDown}
+              {...labelsOf(unit, ariaLabels)}
+            />
+          ))}
+        </div>
       </fieldset>
     );
   }
@@ -304,7 +310,7 @@ const TimeUnit = memo(
             aria-label={increase}
             {...holdUp}
           >
-            ▲
+            <ChevronIcon direction="up" />
           </button>
           <span
             ref={ref}
@@ -326,7 +332,7 @@ const TimeUnit = memo(
             aria-label={decrease}
             {...holdDown}
           >
-            ▼
+            <ChevronIcon direction="down" />
           </button>
         </div>
       </>

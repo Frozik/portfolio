@@ -1,3 +1,4 @@
+import type { MultiPolygon, PolygonWithHoles } from '@frozik/utils/geometry/polygonTypes';
 import { VectorTile, type VectorTileLayer } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 
@@ -7,12 +8,21 @@ import { DEFAULT_BUILDING_HEIGHT_M } from '../domain/constants';
 import type { RoadClass, TileRoad } from '../domain/road-lines';
 import { ROAD_CLASSES, roadLinesOfTile } from '../domain/road-lines';
 import type { StreetTile } from '../domain/street-tile';
+import { clippedPolygonsOfTileRings } from '../domain/tile-clip';
 import type { TileGrid } from '../domain/tile-grid';
 import { tileGridOf } from '../domain/tile-grid';
 import type { TileCoord } from '../domain/tile-key';
+import { tileKeyOf } from '../domain/tile-key';
+import type { TreeCover, TreeCoverKind } from '../domain/tree-cover';
+import { plantTrees } from '../domain/tree-cover';
+import { waterTileMesh } from '../domain/water-surface';
 
 const BUILDING_LAYER = 'building';
 const TRANSPORTATION_LAYER = 'transportation';
+const WATER_LAYER = 'water';
+const LANDCOVER_LAYER = 'landcover';
+const PARK_LAYER = 'park';
+const WOOD_CLASS = 'wood';
 const LINE_FEATURE = 2;
 const POLYGON_FEATURE = 3;
 const TUNNEL = 'tunnel';
@@ -68,6 +78,38 @@ function roadsOfLayer(layer: VectorTileLayer): readonly TileRoad[] {
   return roads;
 }
 
+/** Every polygon of a layer that passes the filter, cut to the tile. */
+function polygonsOfLayer(
+  layer: VectorTileLayer | undefined,
+  coord: TileCoord,
+  keep: (properties: Record<string, unknown>) => boolean = () => true
+): MultiPolygon {
+  if (layer === undefined) {
+    return [];
+  }
+  const grid = tileGridOf(coord, layer.extent);
+  const polygons: PolygonWithHoles[] = [];
+  for (let index = 0; index < layer.length; index++) {
+    const feature = layer.feature(index);
+    if (feature.type === POLYGON_FEATURE && keep(feature.properties)) {
+      polygons.push(...clippedPolygonsOfTileRings(feature.loadGeometry(), grid));
+    }
+  }
+  return polygons;
+}
+
+/** Woods from the `landcover` layer and every polygon of the `park` layer grow trees. */
+function treeCoversOf(layers: VectorTile['layers'], coord: TileCoord): readonly TreeCover[] {
+  const covers: readonly (readonly [TreeCoverKind, MultiPolygon])[] = [
+    [
+      'forest',
+      polygonsOfLayer(layers[LANDCOVER_LAYER], coord, ({ class: cls }) => cls === WOOD_CLASS),
+    ],
+    ['park', polygonsOfLayer(layers[PARK_LAYER], coord)],
+  ];
+  return covers.flatMap(([kind, polygons]) => (polygons.length === 0 ? [] : [{ kind, polygons }]));
+}
+
 export function decodeStreetTile(bytes: ArrayBuffer, coord: TileCoord): StreetTile {
   const { layers } = new VectorTile(new PbfReader(bytes));
   const buildings = layers[BUILDING_LAYER];
@@ -87,5 +129,7 @@ export function decodeStreetTile(bytes: ArrayBuffer, coord: TileCoord): StreetTi
             transportation.extent,
             tileGridOf(coord, transportation.extent).tileSizeM
           ),
+    water: waterTileMesh(polygonsOfLayer(layers[WATER_LAYER], coord)),
+    trees: plantTrees(treeCoversOf(layers, coord), String(tileKeyOf(coord))),
   };
 }

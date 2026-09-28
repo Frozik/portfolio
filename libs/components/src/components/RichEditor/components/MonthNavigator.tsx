@@ -3,6 +3,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import { useEventCallback } from 'usehooks-ts';
 import type { ICalendarAriaLabels } from '../defs';
+import { ChevronIcon, DoubleChevronIcon } from './icons';
 import styles from '../styles.module.css';
 
 export const MonthNavigator = memo(
@@ -33,14 +34,14 @@ export const MonthNavigator = memo(
 
     return (
       <fieldset className={styles.monthNavigator} aria-label={ariaLabels.monthNavigation}>
-        <div>
+        <div className={styles.monthNavigatorGroup}>
           <button
             type="button"
             className={styles.monthNavigatorBtn}
             onClick={handlePreviousYear}
             aria-label={ariaLabels.previousYear}
           >
-            {'<<'}
+            <DoubleChevronIcon direction="left" />
           </button>
           <button
             type="button"
@@ -48,20 +49,20 @@ export const MonthNavigator = memo(
             onClick={handlePreviousMonth}
             aria-label={ariaLabels.previousMonth}
           >
-            {'<'}
+            <ChevronIcon direction="left" />
           </button>
         </div>
         <span className={styles.monthNavigatorLabel} aria-live="polite" aria-atomic="true">
           {label}
         </span>
-        <div>
+        <div className={styles.monthNavigatorGroup}>
           <button
             type="button"
             className={styles.monthNavigatorBtn}
             onClick={handleNextMonth}
             aria-label={ariaLabels.nextMonth}
           >
-            {'>'}
+            <ChevronIcon direction="right" />
           </button>
           <button
             type="button"
@@ -69,7 +70,7 @@ export const MonthNavigator = memo(
             onClick={handleNextYear}
             aria-label={ariaLabels.nextYear}
           >
-            {'>>'}
+            <DoubleChevronIcon direction="right" />
           </button>
         </div>
       </fieldset>

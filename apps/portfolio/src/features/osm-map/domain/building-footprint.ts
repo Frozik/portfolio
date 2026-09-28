@@ -1,6 +1,8 @@
 import type { MultiPolygon, PolygonWithHoles, Ring } from '@frozik/utils/geometry/polygonTypes';
 import { triangulatePolygon } from '@frozik/utils/geometry/triangulatePolygon';
 
+import { STREET_MESH_UNIT_M } from './constants';
+import { signedArea } from './ring-area';
 import type { TileGrid, TileRing } from './tile-grid';
 import { toPlan } from './tile-grid';
 
@@ -12,16 +14,6 @@ export interface BuildingFootprint {
 }
 
 const MIN_RING_VERTEX_COUNT = 3;
-
-function signedArea(ring: Ring): number {
-  let doubled = 0;
-  for (let index = 0; index < ring.length; index++) {
-    const current = ring[index];
-    const next = ring[(index + 1) % ring.length];
-    doubled += current.x * next.y - next.x * current.y;
-  }
-  return doubled / 2;
-}
 
 /** Winding decides the outward normals of the walls; the source's convention is not trusted, the area is. */
 function wound(ring: Ring, counterClockwise: boolean): Ring {
@@ -73,10 +65,8 @@ export interface BuildingMesh {
   readonly indices: Uint32Array;
 }
 
-export const BUILDING_MESH_UNIT_M = 0.1;
-
 function quantized(metres: number): number {
-  return Math.round(metres / BUILDING_MESH_UNIT_M);
+  return Math.round(metres / STREET_MESH_UNIT_M);
 }
 
 /** The roof triangulation indexes the rings in this order, so the box's vertices follow it. */

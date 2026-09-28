@@ -1,6 +1,6 @@
 # OSM Map
 
-Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes and cars driving the streets at street zoom.
+Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes, woods and parks planted with trees, cars driving the streets and water rippling at street zoom.
 
 Live: [https://frozik.github.io/portfolio/osm-map](https://frozik.github.io/portfolio/osm-map) · Part of the [portfolio](../../../../../README.md) monorepo; code lives in `apps/portfolio/src/features/osm-map/`.
 
@@ -93,9 +93,12 @@ the boxes that stand on the raster ground at street zoom.
   scale taken at the tile's latitude, lit by a fixed sun and fogged like the
   ground, into its own depth buffer: the ground never writes depth because
   every box stands above it. Meshes are kept on the GPU up to a byte ceiling
-  (128 MB), least recently drawn first out, and a picture asks for at most
-  sixteen street tiles, nearest the screen centre first, so the tiles in
-  view always fit the cache and never evict each other. Whether buildings show
+  (256 MB), least recently drawn first out, and a picture asks for at most
+  thirty-two street tiles, nearest the camera target on the ground first —
+  a tilted view puts the horizon nearer the middle of the screen than the
+  ground beside the camera, so a screen-centre order would leave the sides
+  flat — and the tiles in view always fit the cache and never evict each
+  other. Whether buildings show
   is decided once for the whole picture, with a gap between showing (z16)
   and hiding (z15.5) so hovering at the threshold never flickers them; the
   street tiles are the z14 tiles under every raster tile from z14 down to
@@ -128,6 +131,41 @@ the boxes that stand on the raster ground at street zoom.
   While cars are in the picture the loop runs at 30 fps rather than idling;
   they appear at z17 and go at z16.5, and below that the map rests as
   before.
+- **Ripples on the water** from zoom 16, with the buildings. The same z14
+  tile carries the `water` layer; the worker cuts every water polygon to the
+  tile square (the tile's buffer overlaps the neighbour's, and water blended
+  twice would show a darker band along the seam) and triangulates it into a
+  flat mesh in the same `int16` tenths of a metre as the boxes. A water
+  layer between the ground and the street draws each tile's water blended
+  over the raster with one draw, and the fragment shader paints the ripple
+  symbol: rows of wavy dashes, a sine travelling east, alternate rows
+  staggered by half a dash; the raster shows through between them. The
+  symbol is sized in CSS pixels at the camera target (rows 28 px apart, a
+  64 px wavelength) and converted to ground metres from the zoom and the
+  latitude every frame, so it keeps its size on screen at every zoom and
+  only perspective shrinks it toward the horizon, where lines thinner than a
+  pixel are widened to one and faded and the pattern dissolves once rows
+  come closer than a few pixels. The
+  ripples fade in with the tile's rise, take the fog and are covered by the
+  boxes and cars, and while water is in the picture the loop runs at 30 fps
+  like the traffic.
+- **Trees in the woods and parks** from zoom 16, with the buildings. The
+  `landcover` layer's `wood` polygons and every polygon of the `park` layer
+  are cut to the tile square and triangulated; the worker plants each
+  triangle in proportion to its area (one tree per 350 m² of forest, per
+  1200 m² of park, at most 10 000 per tile, the whole tile thinned past
+  that), drops every tree uniformly inside its triangle and seeds the draw
+  from the tile key, so a tile grows the same woods every time. Woods are
+  seven parts spruce to three broadleaf and 8–16 m tall; parks are mostly
+  broadleaf, 6–12 m, with wider crowns. The two species are the low-polygon
+  templates shared with the site planner (`@frozik/utils/geometry/
+  treeTemplate`), uploaded once; a tile's trees are one instance buffer per
+  species — four `int16` per tree: foot, crown radius, height — kept on the
+  GPU with the tile's boxes and drawn with one instanced call per species
+  per tile, each tree tinted a little differently by its index. Trees grow
+  out of the ground with the tile's rise, take the sun and the fog like the
+  boxes, and stand in the same depth buffer, so a box hides the trees
+  behind it and a car drives between them.
 - **Render on demand**: at rest, with nothing in flight and no fade running,
   no frame is submitted and the loop idles at 10 fps.
 
@@ -137,13 +175,15 @@ the boxes that stand on the raster ground at street zoom.
 (`map-camera.ts`), frustum planes, the tile walk (`tile-selection.ts`), the
 tile schedule (`tile-schedule.ts`, the one owner of what every tile is
 doing), the street tiles — building footprints, road lines, the street graph, car
-bodies, the traffic simulation and the z14 selection
-(`building-footprint.ts`, `road-lines.ts`, `street-graph.ts`,
-`car-bodies.ts`, `car-traffic.ts`, `street-tile-selection.ts`) — the detail
-budget and the hash format. `infrastructure/` owns WebGPU and the network:
+bodies, the traffic simulation, the water surface, the tree cover and the z14
+selection (`building-footprint.ts`, `road-lines.ts`, `street-graph.ts`,
+`car-bodies.ts`, `car-traffic.ts`, `water-surface.ts`, `tree-cover.ts`,
+`tile-clip.ts`, `street-tile-selection.ts`) — the detail budget and the hash
+format. `infrastructure/` owns WebGPU and the network:
 the atlas with its staging mip chain, the generic loader, the two tile
-sources, the street tile worker and cache, the ground and street layers with
-their shaders, the gesture controller and the hash sync.
+sources, the street tile worker and cache, the ground and water layers, the
+street layer with its painters (buildings, trees, cars) and their shaders,
+the gesture controller and the hash sync.
 `application/render/map-scene.ts` runs the per-frame pipeline — camera →
 visible tiles → loads → instances, street placements and cars — and hands
 the layers a frame only when something changed; `street-traffic.ts` keeps

@@ -13,7 +13,7 @@ import {
 import type { DetailBudget } from '../../domain/detail-budget';
 import { detailFactorOf, INITIAL_DETAIL_BUDGET, reportFps } from '../../domain/detail-budget';
 import type { CameraGeometry, MapCameraState, Viewport } from '../../domain/map-camera';
-import { cameraGeometry, viewOf } from '../../domain/map-camera';
+import { cameraGeometry, groundMetresPerCssPixel, viewOf } from '../../domain/map-camera';
 import type { MapView } from '../../domain/map-view';
 import type { TileAtlasPort } from '../../domain/ports/tile-atlas';
 import type { StreetTile } from '../../domain/street-tile';
@@ -42,6 +42,8 @@ export interface MapSceneDependencies {
   readonly loader: TileLoader<ImageBitmap>;
   readonly streetLoader: TileLoader<StreetTile>;
   readonly traffic: StreetTraffic;
+  /** Whether a standing street tile has water to ripple, which keeps the frames coming. */
+  readonly hasWater: (key: TileKey) => boolean;
   readonly atlas: TileAtlasPort;
   readonly onPoseChanged: (view: MapView) => void;
   readonly onBearing: (bearingDeg: number) => void;
@@ -64,6 +66,7 @@ export class MapScene {
   /** One decision for the whole picture, with a gap between showing and hiding so the threshold never flickers. */
   private buildingsShown = false;
   private carsShown = false;
+  private wavesInView = false;
   /** When each street tile first stood while buildings were shown; kept until they are hidden, so a tile blinking at the edge never regrows. */
   private readonly buildingRises = new Map<TileKey, number>();
   private readonly instanceData = createTileInstanceData(MAX_INSTANCES_PER_FRAME);
@@ -102,9 +105,9 @@ export class MapScene {
     );
   }
 
-  /** Cars are on the move: frames keep coming, at the traffic rate rather than the interaction rate. */
-  get trafficMoving(): boolean {
-    return this.dependencies.traffic.moving;
+  /** Cars on the move or water rippling: frames keep coming, at the animation rate rather than the interaction rate. */
+  get animatedAtRest(): boolean {
+    return this.dependencies.traffic.moving || this.wavesInView;
   }
 
   private get pendingCount(): number {
@@ -121,7 +124,7 @@ export class MapScene {
   }
 
   advance(state: FrameState): MapFrame | undefined {
-    const { camera, loader, streetLoader, traffic, atlas, onPoseChanged, onBearing } =
+    const { camera, loader, streetLoader, traffic, hasWater, atlas, onPoseChanged, onBearing } =
       this.dependencies;
     const cameraState = camera.tick();
     const viewport: Viewport = { widthPx: state.canvasWidth, heightPx: state.canvasHeight };
@@ -146,7 +149,9 @@ export class MapScene {
         BUILDINGS_HIDE_ZOOM
       );
       this.carsShown = shown(cameraState.zoom, this.carsShown, CARS_MIN_ZOOM, CARS_HIDE_ZOOM);
-      this.streetTiles = this.buildingsShown ? selectStreetTiles(this.selected) : [];
+      this.streetTiles = this.buildingsShown
+        ? selectStreetTiles(this.selected, cameraState.target)
+        : [];
       if (!this.buildingsShown) {
         this.buildingRises.clear();
       }
@@ -179,7 +184,8 @@ export class MapScene {
     } else {
       traffic.pause();
     }
-    const animating = fading || rising || traffic.moving;
+    this.wavesInView = standing.some(tile => hasWater(tile.key));
+    const animating = fading || rising || traffic.moving || this.wavesInView;
     const changed = poseChanged || this.loadsChanged || animating || this.wasAnimating;
     this.loadsChanged = false;
     this.wasAnimating = animating;
@@ -226,6 +232,7 @@ export class MapScene {
       fogStart: this.geometry.fogStart,
       fogEnd: this.geometry.fogEnd,
       time: state.time,
+      metresPerPixel: groundMetresPerCssPixel(cameraState, state.devicePixelRatio),
       instanceData: this.instanceData,
       instanceCount,
       streetTiles,

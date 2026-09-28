@@ -131,29 +131,31 @@ export const CalendarPopup = memo(
         onBlur={handleBlur}
         aria-label={ariaLabels.datePicker}
       >
-        <MonthNavigator
-          yearMonth={yearMonth}
-          onYearMonthChange={setYearMonth}
-          locale={locale}
-          ariaLabels={ariaLabels}
-        />
-        <DateSelector
-          yearMonth={yearMonth}
-          today={today}
-          getDayInfo={getDayInfo}
-          startOfWeek={startOfWeek}
-          selectedDate={value}
-          activeDate={activeDate}
-          focusRequest={gridFocusRequest}
-          minDate={minDate}
-          maxDate={maxDate}
-          onSelectCalendarDate={onSelectDate}
-          onActiveDateChange={handleActiveDateChange}
-          onLeave={handleGridLeave}
-          onReturnToField={onReturnToField}
-          locale={locale}
-          label={ariaLabels.calendarDays}
-        />
+        <div className={styles.calendarPane}>
+          <MonthNavigator
+            yearMonth={yearMonth}
+            onYearMonthChange={setYearMonth}
+            locale={locale}
+            ariaLabels={ariaLabels}
+          />
+          <DateSelector
+            yearMonth={yearMonth}
+            today={today}
+            getDayInfo={getDayInfo}
+            startOfWeek={startOfWeek}
+            selectedDate={value}
+            activeDate={activeDate}
+            focusRequest={gridFocusRequest}
+            minDate={minDate}
+            maxDate={maxDate}
+            onSelectCalendarDate={onSelectDate}
+            onActiveDateChange={handleActiveDateChange}
+            onLeave={handleGridLeave}
+            onReturnToField={onReturnToField}
+            locale={locale}
+            label={ariaLabels.calendarDays}
+          />
+        </div>
         {showTime && (
           <TimePicker
             time={time}
