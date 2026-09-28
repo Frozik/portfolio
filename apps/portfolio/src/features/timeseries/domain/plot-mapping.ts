@@ -1,13 +1,26 @@
 import type { IChartFrameLayout } from './frame-layout';
 
-/** Project a tick time onto its device-pixel X coordinate inside the plot rect. */
+/**
+ * The visible range is spread over the whole canvas, margins included,
+ * because that is where the series shaders and the pan and zoom gestures put
+ * it; the plot rectangle only clips what is drawn.
+ */
 export function timeToPixelX(layout: IChartFrameLayout, time: number): number {
   const normalized = (time - layout.timeStart) / (layout.timeEnd - layout.timeStart);
-  return layout.plotLeft + normalized * layout.plotWidth;
+  return normalized * layout.canvasWidth;
 }
 
-/** Project a tick value onto its device-pixel Y coordinate inside the plot rect. */
 export function valueToPixelY(layout: IChartFrameLayout, value: number): number {
   const normalized = (value - layout.valueMin) / (layout.valueMax - layout.valueMin);
-  return layout.plotBottom - normalized * layout.plotHeight;
+  return layout.canvasHeight - normalized * layout.canvasHeight;
+}
+
+export function pixelXToTime(layout: IChartFrameLayout, pixelX: number): number {
+  const normalized = pixelX / layout.canvasWidth;
+  return layout.timeStart + normalized * (layout.timeEnd - layout.timeStart);
+}
+
+export function pixelYToValue(layout: IChartFrameLayout, pixelY: number): number {
+  const normalized = 1 - pixelY / layout.canvasHeight;
+  return layout.valueMin + normalized * (layout.valueMax - layout.valueMin);
 }

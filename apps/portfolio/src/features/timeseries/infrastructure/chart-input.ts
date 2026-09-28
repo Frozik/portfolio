@@ -19,19 +19,21 @@ interface IVelocitySample {
   readonly timestamp: number;
 }
 
-interface IPointerPosition {
+interface ITrackedPointer {
   readonly clientX: number;
   readonly clientY: number;
 }
 
 const MIN_VELOCITY_SAMPLES = 2;
+const RESTING_CURSOR = 'crosshair';
+const PANNING_CURSOR = 'grabbing';
 
 /**
  * Pointer events on the chart canvas: one pointer pans, two pinch-zoom, the
  * wheel zooms. A released pan keeps scrolling with decaying inertia.
  */
 export class ChartInputController {
-  private readonly activePointers = new Map<number, IPointerPosition>();
+  private readonly activePointers = new Map<number, ITrackedPointer>();
   private readonly velocitySamples: IVelocitySample[] = [];
   private lastPinchDistance = 0;
   /** Pixels per millisecond; `0` when at rest. */
@@ -83,7 +85,7 @@ export class ChartInputController {
     this.canvas.addEventListener('pointerup', this.handlePointerUp);
     this.canvas.addEventListener('pointercancel', this.handlePointerCancel);
     this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
-    this.canvas.style.cursor = 'grab';
+    this.canvas.style.cursor = RESTING_CURSOR;
   }
 
   detach(): void {
@@ -103,7 +105,7 @@ export class ChartInputController {
     this.velocitySamples.length = 0;
 
     if (this.activePointers.size === 1) {
-      this.canvas.style.cursor = 'grabbing';
+      this.canvas.style.cursor = PANNING_CURSOR;
     } else if (this.activePointers.size === 2) {
       this.lastPinchDistance = this.getPointerDistance();
     }
@@ -141,7 +143,7 @@ export class ChartInputController {
     }
     this.activePointers.delete(event.pointerId);
     if (this.activePointers.size === 0) {
-      this.canvas.style.cursor = 'grab';
+      this.canvas.style.cursor = RESTING_CURSOR;
       this.startInertia();
     }
   };
@@ -149,7 +151,7 @@ export class ChartInputController {
   private readonly handlePointerCancel = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
     if (this.activePointers.size === 0) {
-      this.canvas.style.cursor = 'grab';
+      this.canvas.style.cursor = RESTING_CURSOR;
     }
   };
 
@@ -213,7 +215,7 @@ export class ChartInputController {
     this.lastInertiaTimestamp = performance.now();
   }
 
-  private getTwoPointers(): readonly [IPointerPosition, IPointerPosition] {
+  private getTwoPointers(): readonly [ITrackedPointer, ITrackedPointer] {
     const [first, second] = this.activePointers.values();
     assert(!isNil(first) && !isNil(second), 'pinch needs two active pointers');
     return [first, second];

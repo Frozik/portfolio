@@ -11,8 +11,11 @@ import {
 } from '../../domain/constants';
 import { FrameLayoutCache } from '../../domain/frame-layout';
 import type { ISeriesConfig } from '../../domain/types';
+import { ChartOverlay } from '../../infrastructure/canvas-draw/chart-overlay';
 import { CanvasSizeTracker } from '../../infrastructure/canvas-size-tracker';
 import { ChartInputController } from '../../infrastructure/chart-input';
+import { CrosshairPointer } from '../../infrastructure/crosshair-pointer';
+import { GridLayer } from '../../infrastructure/layers/grid-layer';
 import { SlotAllocator } from '../../infrastructure/slot-allocator';
 import { TextMeasureCache } from '../../infrastructure/text-measure-cache';
 import { TimeseriesChartState } from './chart-state';
@@ -26,17 +29,31 @@ const INITIAL_VALUE_MAX = 200;
 export interface ICreateTimeseriesChartParams {
   readonly renderer: ISharedTimeseriesRenderer;
   readonly seriesConfigs: readonly ISeriesConfig[];
-  readonly targetCanvas: HTMLCanvasElement;
+  /** Grid and series are drawn here by the shared device; it also takes the pointer input. */
+  readonly chartCanvas: HTMLCanvasElement;
+  /** Transparent 2D canvas stacked above `chartCanvas` for axes, labels and loading bars. */
+  readonly overlayCanvas: HTMLCanvasElement;
   readonly initialTimeStart: number;
   readonly initialTimeEnd: number;
   readonly seed: string;
 }
 
-/** Composition root of one chart: wires the canvas, input, texture slots and series together. */
+/** Composition root of one chart: wires the canvases, input, texture slots and series together. */
 export function createTimeseriesChart(params: ICreateTimeseriesChartParams): TimeseriesChartState {
-  const { renderer, seriesConfigs, targetCanvas, initialTimeStart, initialTimeEnd, seed } = params;
-  const target2dContext = targetCanvas.getContext('2d');
-  assert(!isNil(target2dContext), 'Failed to get 2D canvas context');
+  const {
+    renderer,
+    seriesConfigs,
+    chartCanvas,
+    overlayCanvas,
+    initialTimeStart,
+    initialTimeEnd,
+    seed,
+  } = params;
+  const gpuContext = chartCanvas.getContext('webgpu');
+  assert(!isNil(gpuContext), 'Failed to get WebGPU context on the chart canvas');
+  gpuContext.configure({ device: renderer.device, format: renderer.format, alphaMode: 'opaque' });
+  const overlayContext = overlayCanvas.getContext('2d');
+  assert(!isNil(overlayContext), 'Failed to get 2D context on the overlay canvas');
 
   const viewport = new ViewportState({
     viewTimeStart: initialTimeStart,
@@ -60,35 +77,49 @@ export function createTimeseriesChart(params: ICreateTimeseriesChartParams): Tim
   const fpsController = new FpsController(FPS_IDLE);
   const inputController = new ChartInputController(
     viewport,
-    targetCanvas,
+    chartCanvas,
     GLOBAL_EPOCH_OFFSET,
     GLOBAL_EPOCH_OFFSET + FULL_YEAR_SECONDS,
     fpsController
   );
   inputController.attach();
+  const crosshairPointer = new CrosshairPointer(chartCanvas, fpsController);
+  crosshairPointer.attach();
 
   let chart: TimeseriesChartState | undefined;
-  const canvasSize = new CanvasSizeTracker(targetCanvas, (newWidth, previousWidth) => {
-    chart?.springTimeAxis(newWidth, previousWidth);
-  });
+  const canvasSize = new CanvasSizeTracker(
+    [chartCanvas, overlayCanvas],
+    (newWidth, previousWidth) => {
+      chart?.springTimeAxis(newWidth, previousWidth);
+    }
+  );
   const resizeObserver = new ResizeObserver(() => {
     canvasSize.measure();
     fpsController.raise(FPS_RESIZE);
   });
-  resizeObserver.observe(targetCanvas);
+  resizeObserver.observe(chartCanvas);
 
   chart = new TimeseriesChartState({
-    target2dContext,
+    gpuContext,
+    overlay: new ChartOverlay(overlayContext, new TextMeasureCache()),
     viewport,
     canvasSize,
     inputController,
+    crosshairPointer,
     fpsController,
     allocator,
     dataPipelines,
     seriesManager,
-    textMeasurer: new TextMeasureCache(),
+    gridLayer: new GridLayer(
+      renderer.device,
+      renderer.resources.gridBindGroupLayout,
+      renderer.resources.gridPipeline
+    ),
     layoutCache: new FrameLayoutCache(),
-    dispose: () => resizeObserver.disconnect(),
+    dispose: () => {
+      resizeObserver.disconnect();
+      gpuContext.unconfigure();
+    },
   });
   return chart;
 }

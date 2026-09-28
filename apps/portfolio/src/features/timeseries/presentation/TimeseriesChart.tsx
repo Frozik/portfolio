@@ -17,19 +17,22 @@ export const TimeseriesChart = memo(
     readonly chartSeed: string;
     readonly seriesConfigs: readonly ISeriesConfig[];
   }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const chartCanvasRef = useRef<HTMLCanvasElement>(null);
+    const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const rendererState = useSharedRendererState();
     const renderer = rendererState.status === 'ready' ? rendererState.renderer : undefined;
 
     useEffect(() => {
-      const targetCanvas = canvasRef.current;
-      if (isNil(renderer) || isNil(targetCanvas)) {
+      const chartCanvas = chartCanvasRef.current;
+      const overlayCanvas = overlayCanvasRef.current;
+      if (isNil(renderer) || isNil(chartCanvas) || isNil(overlayCanvas)) {
         return;
       }
       const chart = createTimeseriesChart({
         renderer,
         seriesConfigs,
-        targetCanvas,
+        chartCanvas,
+        overlayCanvas,
         initialTimeStart,
         initialTimeEnd,
         seed: chartSeed,
@@ -39,7 +42,14 @@ export const TimeseriesChart = memo(
 
     return (
       <div className="relative h-full w-full">
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full [touch-action:none]" />
+        <canvas
+          ref={chartCanvasRef}
+          className="absolute inset-0 h-full w-full [touch-action:none]"
+        />
+        <canvas
+          ref={overlayCanvasRef}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        />
       </div>
     );
   }

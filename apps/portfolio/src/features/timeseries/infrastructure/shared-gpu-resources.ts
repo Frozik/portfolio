@@ -1,7 +1,8 @@
-import { MSAA_SAMPLE_COUNT } from '../domain/constants';
+import { GRID_LINE_COLOR, MSAA_SAMPLE_COUNT } from '../domain/constants';
 import candlestickSpecificSource from './shaders/candlestick.wgsl?raw';
 import commonShaderSource from './shaders/common.wgsl?raw';
 import debugLinesSource from './shaders/debug-lines.wgsl?raw';
+import gridSource from './shaders/grid.wgsl?raw';
 import lineSpecificSource from './shaders/line.wgsl?raw';
 import rhombusSpecificSource from './shaders/rhombus.wgsl?raw';
 
@@ -12,6 +13,8 @@ export interface ISharedGpuResources {
   readonly candlestickPipeline: GPURenderPipeline;
   readonly rhombusPipeline: GPURenderPipeline;
   readonly debugPipeline: GPURenderPipeline;
+  readonly gridBindGroupLayout: GPUBindGroupLayout;
+  readonly gridPipeline: GPURenderPipeline;
 }
 
 const ALPHA_BLEND: GPUBlendState = {
@@ -36,6 +39,43 @@ const SERIES_SHADERS = {
   debug: { source: debugLinesSource, vertexEntry: 'vsDebugLines', fragmentEntry: 'fsDebugLines' },
 } satisfies Record<string, ISeriesShader>;
 
+function createGridBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
+  return device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+      { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+    ],
+  });
+}
+
+function createGridPipeline(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  bindGroupLayout: GPUBindGroupLayout
+): GPURenderPipeline {
+  const module = device.createShaderModule({ code: gridSource });
+  return device.createRenderPipeline({
+    layout: device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+    vertex: { module, entryPoint: 'vsGrid' },
+    fragment: {
+      module,
+      entryPoint: 'fsGrid',
+      constants: {
+        COLOR_R: GRID_LINE_COLOR.r,
+        COLOR_G: GRID_LINE_COLOR.g,
+        COLOR_B: GRID_LINE_COLOR.b,
+      },
+      targets: [{ format, blend: ALPHA_BLEND }],
+    },
+    primitive: { topology: 'triangle-list' },
+    multisample: { count: MSAA_SAMPLE_COUNT },
+  });
+}
+
 export function createSharedGpuResources(
   device: GPUDevice,
   format: GPUTextureFormat
@@ -56,6 +96,7 @@ export function createSharedGpuResources(
     ],
   });
   const layout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+  const gridBindGroupLayout = createGridBindGroupLayout(device);
 
   const createPipeline = (shader: ISeriesShader): GPURenderPipeline => {
     const module = device.createShaderModule({ code: commonShaderSource + shader.source });
@@ -78,5 +119,7 @@ export function createSharedGpuResources(
     candlestickPipeline: createPipeline(SERIES_SHADERS.candlestick),
     rhombusPipeline: createPipeline(SERIES_SHADERS.rhombus),
     debugPipeline: createPipeline(SERIES_SHADERS.debug),
+    gridBindGroupLayout,
+    gridPipeline: createGridPipeline(device, format, gridBindGroupLayout),
   };
 }

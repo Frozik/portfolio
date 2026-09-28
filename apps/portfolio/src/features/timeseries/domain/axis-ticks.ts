@@ -1,3 +1,4 @@
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import { Temporal } from 'temporal-polyfill';
 
 import type { IAxisTick } from './types';
@@ -13,6 +14,7 @@ const HOURS_PER_DAY = 24;
 const NICE_BASES = [1, 2, 5];
 const TARGET_Y_TICK_COUNT = 8;
 const MIN_Y_TICK_COUNT = 2;
+const DEGENERATE_RANGE_DECIMALS = 1;
 
 /** Approximate width of a tick label in pixels for spacing calculations. */
 const X_LABEL_WIDTH_PX = 70;
@@ -24,8 +26,42 @@ function epochToInstant(epochSeconds: number): Temporal.Instant {
   return Temporal.Instant.fromEpochNanoseconds(ns);
 }
 
+function padTwoDigits(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
 function formatHourMinute(hour: number, minute: number): string {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  return `${padTwoDigits(hour)}:${padTwoDigits(minute)}`;
+}
+
+/**
+ * A single moment on the time axis, one step finer than the tick labels of
+ * the same scale so it still tells neighbouring positions apart: the day
+ * where ticks name months, the minute where they name days and hours, the
+ * second where they name minutes.
+ */
+export function formatTimeAtScale(epochSeconds: number, scale: ETimeScale): string {
+  const moment = epochToInstant(epochSeconds).toZonedDateTimeISO('UTC');
+  const month = moment.toPlainDate().toLocaleString('en-US', { month: 'short' });
+  const date = `${moment.day} ${month}`;
+
+  switch (scale) {
+    case ETimeScale.Day256:
+    case ETimeScale.Day64:
+      return `${date} ${moment.year}`;
+
+    case ETimeScale.Day16:
+    case ETimeScale.Day4:
+    case ETimeScale.Day1:
+      return `${date} ${formatHourMinute(moment.hour, moment.minute)}`;
+
+    case ETimeScale.Hour12:
+    case ETimeScale.Hour1:
+      return `${date} ${formatHourMinute(moment.hour, moment.minute)}:${padTwoDigits(moment.second)}`;
+
+    default:
+      return assertNever(scale);
+  }
 }
 
 /**
@@ -186,6 +222,9 @@ function computeRawXTicks(timeStart: number, timeEnd: number, scale: ETimeScale)
     case ETimeScale.Hour12:
     case ETimeScale.Hour1:
       return generateMinuteTicks(timeStart, timeEnd);
+
+    default:
+      return assertNever(scale);
   }
 }
 
@@ -226,19 +265,11 @@ export function computeYTicks(
   const range = valueMax - valueMin;
 
   if (range <= 0) {
-    return [{ position: valueMin, label: formatYLabel(valueMin, 1) }];
+    return [{ position: valueMin, label: formatValueAtRange(valueMin, valueMin, valueMax) }];
   }
 
-  // Pick step that gives roughly TARGET_Y_TICK_COUNT ticks
-  let step = niceStep(range / TARGET_Y_TICK_COUNT);
-
-  // If too few ticks would show, try a smaller step
-  const tickCount = Math.floor(range / step);
-  if (tickCount < MIN_Y_TICK_COUNT) {
-    step = niceStep(range / MIN_Y_TICK_COUNT);
-  }
-
-  const decimals = Math.max(0, -Math.floor(Math.log10(step)) + 1);
+  const step = computeYStep(range);
+  const decimals = decimalsForStep(step);
   const ticks: IAxisTick[] = [];
   const start = Math.ceil(valueMin / step) * step;
 
@@ -249,6 +280,23 @@ export function computeYTicks(
   }
 
   return thinTicks(ticks, valueMin, valueMax, plotHeightPx, Y_LABEL_HEIGHT_PX);
+}
+
+/** Any value written with the decimals the Y-axis ticks of this range carry. */
+export function formatValueAtRange(value: number, valueMin: number, valueMax: number): string {
+  const range = valueMax - valueMin;
+  const decimals = range > 0 ? decimalsForStep(computeYStep(range)) : DEGENERATE_RANGE_DECIMALS;
+  return formatYLabel(value, decimals);
+}
+
+function computeYStep(range: number): number {
+  const step = niceStep(range / TARGET_Y_TICK_COUNT);
+  const tickCount = Math.floor(range / step);
+  return tickCount < MIN_Y_TICK_COUNT ? niceStep(range / MIN_Y_TICK_COUNT) : step;
+}
+
+function decimalsForStep(step: number): number {
+  return Math.max(0, -Math.floor(Math.log10(step)) + 1);
 }
 
 function formatYLabel(value: number, decimals: number): string {

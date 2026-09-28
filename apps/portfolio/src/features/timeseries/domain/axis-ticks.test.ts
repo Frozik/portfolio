@@ -1,6 +1,6 @@
 import { Temporal } from 'temporal-polyfill';
 
-import { computeXTicks, computeYTicks } from './axis-ticks';
+import { computeXTicks, computeYTicks, formatTimeAtScale, formatValueAtRange } from './axis-ticks';
 import { GLOBAL_EPOCH_OFFSET } from './constants';
 import { ETimeScale } from './types';
 
@@ -459,5 +459,50 @@ describe('computeYTicks', () => {
       const hasDecimals = ticks.some(t => t.label.includes('.'));
       expect(hasDecimals).toBe(true);
     });
+  });
+});
+
+describe('formatTimeAtScale', () => {
+  const moment = Number(
+    Temporal.ZonedDateTime.from('2026-07-04T09:05:07+00:00[UTC]').epochNanoseconds / 1_000_000_000n
+  );
+
+  it('names the day where the ticks name months', () => {
+    expect(formatTimeAtScale(moment, ETimeScale.Day256)).toBe('4 Jul 2026');
+    expect(formatTimeAtScale(moment, ETimeScale.Day64)).toBe('4 Jul 2026');
+  });
+
+  it('names the minute where the ticks name days and hours', () => {
+    expect(formatTimeAtScale(moment, ETimeScale.Day16)).toBe('4 Jul 09:05');
+    expect(formatTimeAtScale(moment, ETimeScale.Day4)).toBe('4 Jul 09:05');
+    expect(formatTimeAtScale(moment, ETimeScale.Day1)).toBe('4 Jul 09:05');
+  });
+
+  it('names the second where the ticks name minutes', () => {
+    expect(formatTimeAtScale(moment, ETimeScale.Hour12)).toBe('4 Jul 09:05:07');
+    expect(formatTimeAtScale(moment, ETimeScale.Hour1)).toBe('4 Jul 09:05:07');
+  });
+});
+
+describe('formatValueAtRange', () => {
+  const PLOT_HEIGHT_PX = 1000;
+
+  it.each([
+    [80, 120],
+    [94, 96.5],
+    [0, 1000],
+    [0, 0.01],
+  ])('writes a value with as many decimals as the ticks of the range %d…%d', (min, max) => {
+    const [firstTick] = computeYTicks(min, max, PLOT_HEIGHT_PX);
+    const tickDecimals = firstTick.label.split('.')[1]?.length ?? 0;
+    const valueBetweenTicks = min + (max - min) / Math.PI;
+
+    expect(formatValueAtRange(valueBetweenTicks, min, max)).toBe(
+      valueBetweenTicks.toFixed(tickDecimals)
+    );
+  });
+
+  it('keeps one decimal when the range has collapsed to a point', () => {
+    expect(formatValueAtRange(42, 42, 42)).toBe('42.0');
   });
 });

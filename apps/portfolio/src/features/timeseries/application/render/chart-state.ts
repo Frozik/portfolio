@@ -1,3 +1,4 @@
+import { SCENE_BACKGROUND_COLOR } from '@frozik/utils/webgpu/backgroundColor';
 import type { FpsController } from '@frozik/utils/webgpu/fpsController';
 import { isNil } from 'lodash-es';
 
@@ -8,38 +9,40 @@ import {
   ZOOM_LERP_SPEED,
   ZOOM_SNAP_THRESHOLD,
 } from '../../domain/constants';
+import { computeCrosshair } from '../../domain/crosshair';
 import type { FrameLayoutCache, IChartFrameLayout } from '../../domain/frame-layout';
 import { computePlotGeometry } from '../../domain/plot-geometry';
-import type { ITextMeasurer } from '../../domain/text-measurer';
 import type { ILoadingRegion, IPlotArea } from '../../domain/types';
 import {
   autoScaleY,
   scaleFromTimeRange,
   visibleValueRangeAcrossSeries,
 } from '../../domain/viewport';
-import { drawChartAxes } from '../../infrastructure/canvas-draw/axes';
-import { drawChartGrid } from '../../infrastructure/canvas-draw/grid';
-import { drawLoadingBars } from '../../infrastructure/canvas-draw/loading-bars';
+import type { ChartOverlay } from '../../infrastructure/canvas-draw/chart-overlay';
 import type { CanvasSizeTracker } from '../../infrastructure/canvas-size-tracker';
 import type { ChartInputController } from '../../infrastructure/chart-input';
+import type { CrosshairPointer } from '../../infrastructure/crosshair-pointer';
+import type { GridLayer } from '../../infrastructure/layers/grid-layer';
 import type { ISeriesLayerManager } from '../../infrastructure/layers/types';
 import type { SlotAllocator } from '../../infrastructure/slot-allocator';
-import type { ITimeseriesChart } from './types';
+import type { ITimeseriesChart, ITimeseriesFrame } from './types';
 import type { ViewportState } from './viewport-state';
 
 const MIN_POINTS_FOR_RENDERING = 2;
 
 /** Everything a chart is made of; assembled by `createTimeseriesChart`. */
 export interface ITimeseriesChartDeps {
-  readonly target2dContext: CanvasRenderingContext2D;
+  readonly gpuContext: GPUCanvasContext;
+  readonly overlay: ChartOverlay;
   readonly viewport: ViewportState;
   readonly canvasSize: CanvasSizeTracker;
   readonly inputController: ChartInputController;
+  readonly crosshairPointer: CrosshairPointer;
   readonly fpsController: FpsController;
   readonly allocator: SlotAllocator;
   readonly dataPipelines: readonly BlockDataPipeline[];
   readonly seriesManager: ISeriesLayerManager;
-  readonly textMeasurer: ITextMeasurer;
+  readonly gridLayer: GridLayer;
   readonly layoutCache: FrameLayoutCache;
   /** Torn down with the chart: observers and listeners the factory attached. */
   readonly dispose: VoidFunction;
@@ -47,8 +50,8 @@ export interface ITimeseriesChartDeps {
 
 /**
  * One chart of the grid: advances the zoom animation, keeps the visible
- * blocks resident, autoscales the value axis and paints grid, GPU image and
- * axes onto its 2D canvas.
+ * blocks resident, autoscales the value axis, draws grid and series into its
+ * own GPU canvas and the axes and crosshair onto the 2D overlay above it.
  */
 export class TimeseriesChartState implements ITimeseriesChart {
   private lastTextureCapacity: number;
@@ -96,8 +99,15 @@ export class TimeseriesChartState implements ITimeseriesChart {
   }
 
   prepareFrame(): IPlotArea | undefined {
-    const { viewport, dataPipelines, fpsController, allocator, seriesManager, canvasSize } =
-      this.deps;
+    const {
+      viewport,
+      dataPipelines,
+      fpsController,
+      allocator,
+      seriesManager,
+      gridLayer,
+      canvasSize,
+    } = this.deps;
     const { viewTimeStart, viewTimeEnd } = viewport.current;
     const scale = scaleFromTimeRange(viewTimeStart, viewTimeEnd);
     const allBlockSets = dataPipelines.map(pipeline =>
@@ -140,6 +150,7 @@ export class TimeseriesChartState implements ITimeseriesChart {
       viewValueMin,
       viewValueMax,
     });
+    gridLayer.update(this.getFrameLayout());
 
     const geometry = computePlotGeometry(
       canvasSize.width,
@@ -154,45 +165,57 @@ export class TimeseriesChartState implements ITimeseriesChart {
     };
   }
 
-  recordDrawCalls(
-    pass: GPURenderPassEncoder,
-    plotArea: IPlotArea,
-    debugPipeline: GPURenderPipeline | undefined
-  ): void {
-    this.deps.seriesManager.renderAll(pass, plotArea);
-    if (!isNil(debugPipeline)) {
-      this.deps.seriesManager.renderDebug(pass, debugPipeline, plotArea);
-    }
-  }
+  renderFrame({ encoder, multisampleView, plotArea, debugPipeline }: ITimeseriesFrame): void {
+    const {
+      canvasSize,
+      gpuContext,
+      gridLayer,
+      seriesManager,
+      overlay,
+      viewport,
+      crosshairPointer,
+    } = this.deps;
+    // Sized right before drawing: a resize clears both canvases, and both are redrawn this frame.
+    const canvasCleared = canvasSize.syncBackingStore();
 
-  presentFrame(image: ImageBitmap): void {
-    const { canvasSize, target2dContext, textMeasurer, viewport } = this.deps;
-    // The backing store is sized right before painting so no blank frame shows.
-    canvasSize.syncBackingStore();
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: multisampleView,
+          resolveTarget: gpuContext.getCurrentTexture().createView(),
+          loadOp: 'clear',
+          clearValue: SCENE_BACKGROUND_COLOR,
+          storeOp: 'discard',
+        },
+      ],
+    });
+    gridLayer.render(pass);
+    seriesManager.renderAll(pass, plotArea);
+    if (!isNil(debugPipeline)) {
+      seriesManager.renderDebug(pass, debugPipeline, plotArea);
+    }
+    pass.end();
+
     const layout = this.getFrameLayout();
-    if (!isNil(layout)) {
-      drawChartGrid(target2dContext, layout);
-    }
-    target2dContext.drawImage(image, 0, 0);
-    if (!isNil(layout)) {
-      drawChartAxes(target2dContext, layout, textMeasurer);
-    }
-    drawLoadingBars({
-      ctx: target2dContext,
-      regions: this.getLoadingRegions(),
+    overlay.paint({
+      layout,
+      crosshair: isNil(layout) ? undefined : computeCrosshair(layout, crosshairPointer.position),
+      loadingRegions: this.getLoadingRegions(),
       timeStart: viewport.current.viewTimeStart,
       timeEnd: viewport.current.viewTimeEnd,
       canvasWidth: canvasSize.width,
       canvasHeight: canvasSize.height,
       devicePixelRatio: canvasSize.devicePixelRatio,
-      nowMs: performance.now(),
+      canvasCleared,
     });
   }
 
   dispose(): void {
     this.deps.dispose();
     this.deps.inputController.detach();
+    this.deps.crosshairPointer.detach();
     this.deps.seriesManager.dispose();
+    this.deps.gridLayer.dispose();
     this.deps.allocator.dispose();
     this.deps.fpsController.dispose();
   }

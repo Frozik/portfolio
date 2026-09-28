@@ -10,14 +10,21 @@ export interface ITimeseriesChart {
   update(): void;
   /** `undefined` when there is nothing to draw and nothing loading. */
   prepareFrame(): IPlotArea | undefined;
-  recordDrawCalls(
-    pass: GPURenderPassEncoder,
-    plotArea: IPlotArea,
-    debugPipeline: GPURenderPipeline | undefined
-  ): void;
-  /** Paints the frame's GPU image between the grid below and the axes above it. */
-  presentFrame(image: ImageBitmap): void;
+  /**
+   * Records the pass that draws grid and series straight into the chart's own
+   * canvas, and repaints the 2D overlay above it. `multisampleView` must have
+   * the chart's `width` × `height`.
+   */
+  renderFrame(frame: ITimeseriesFrame): void;
   dispose(): void;
+}
+
+export interface ITimeseriesFrame {
+  readonly encoder: GPUCommandEncoder;
+  readonly multisampleView: GPUTextureView;
+  readonly plotArea: IPlotArea;
+  /** Set while the debug overlay asks for the data block boundaries. */
+  readonly debugPipeline: GPURenderPipeline | undefined;
 }
 
 export interface ISharedTimeseriesRenderer {

@@ -1,17 +1,18 @@
 /**
- * Tracks the device-pixel size of a chart canvas.
+ * Tracks the device-pixel size shared by the stacked canvases of a chart.
  *
- * `measure()` reads the CSS box once per frame; every consumer then reuses
- * the cached numbers instead of re-reading `clientWidth`/`clientHeight`,
- * which would force an extra layout flush. Width changes are reported to
- * the owner so it can react (the chart springs its time axis).
+ * `measure()` reads the CSS box of the first canvas once per frame; every
+ * consumer then reuses the cached numbers instead of re-reading
+ * `clientWidth`/`clientHeight`, which would force an extra layout flush.
+ * Width changes are reported to the owner so it can react (the chart springs
+ * its time axis).
  */
 export class CanvasSizeTracker {
   private canvasWidth = 0;
   private canvasHeight = 0;
 
   constructor(
-    private readonly canvas: HTMLCanvasElement,
+    private readonly canvases: readonly [HTMLCanvasElement, ...HTMLCanvasElement[]],
     private readonly onWidthChange: (newWidth: number, previousWidth: number) => void
   ) {
     this.measure();
@@ -31,11 +32,12 @@ export class CanvasSizeTracker {
 
   measure(): void {
     const dpr = this.devicePixelRatio;
-    const newWidth = Math.floor(this.canvas.clientWidth * dpr);
+    const [measuredCanvas] = this.canvases;
+    const newWidth = Math.floor(measuredCanvas.clientWidth * dpr);
     const previousWidth = this.canvasWidth;
 
     this.canvasWidth = newWidth;
-    this.canvasHeight = Math.floor(this.canvas.clientHeight * dpr);
+    this.canvasHeight = Math.floor(measuredCanvas.clientHeight * dpr);
 
     if (previousWidth > 0 && newWidth !== previousWidth) {
       this.onWidthChange(newWidth, previousWidth);
@@ -43,16 +45,20 @@ export class CanvasSizeTracker {
   }
 
   /**
-   * Sync the backing-store pixel dimensions to the size measured earlier this
-   * frame. Returns true if the backing store was resized.
+   * Sync the backing store of every canvas to the size measured earlier this
+   * frame, all in one frame so the layers never disagree. Returns true if
+   * they were resized, which also clears them.
    */
   syncBackingStore(): boolean {
-    if (this.canvas.width !== this.canvasWidth || this.canvas.height !== this.canvasHeight) {
-      this.canvas.width = this.canvasWidth;
-      this.canvas.height = this.canvasHeight;
-      return true;
+    const [measuredCanvas] = this.canvases;
+    if (measuredCanvas.width === this.canvasWidth && measuredCanvas.height === this.canvasHeight) {
+      return false;
     }
 
-    return false;
+    for (const canvas of this.canvases) {
+      canvas.width = this.canvasWidth;
+      canvas.height = this.canvasHeight;
+    }
+    return true;
   }
 }

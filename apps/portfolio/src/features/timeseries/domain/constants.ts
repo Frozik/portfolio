@@ -115,20 +115,31 @@ export const X_LABEL_Y_AXIS_CLEARANCE = 18;
 /** Axis line color. */
 export const AXIS_LINE_COLOR = '#aaa';
 
-/** Grid line color. */
-export const GRID_LINE_COLOR = '#444';
+const GRID_LINE_CHANNEL = 0x44 / 0xff;
+
+/** Grid line color (`#444`) as GPU channels. */
+export const GRID_LINE_COLOR = {
+  r: GRID_LINE_CHANNEL,
+  g: GRID_LINE_CHANNEL,
+  b: GRID_LINE_CHANNEL,
+} as const;
+
+/** Crosshair arms: light against the dark scene, dimmer than the crossing itself. */
+export const CROSSHAIR_LINE_COLOR = 'rgba(205, 215, 235, 0.7)';
+
+/** The thick crossing under the pointer. */
+export const CROSSHAIR_CENTER_COLOR = '#ffffff';
+
+/** Dark blue, so the crosshair labels stand apart from the grey tick labels. */
+export const CROSSHAIR_LABEL_BG_COLOR = '#16337a';
+
+export const CROSSHAIR_LABEL_COLOR = '#eef3ff';
 
 /** Axis font size in pixels. */
 export const AXIS_FONT_SIZE = 11;
 
 /** Axis font family. */
 export const AXIS_FONT_FAMILY = 'monospace';
-
-/** Initial offscreen canvas width in pixels. */
-export const INITIAL_OFFSCREEN_WIDTH = 1024;
-
-/** Initial offscreen canvas height in pixels. */
-export const INITIAL_OFFSCREEN_HEIGHT = 768;
 
 /** Seconds in approximately 3 months (90 days). */
 const THREE_MONTHS_SECONDS = 90 * 24 * 3600;
