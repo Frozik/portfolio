@@ -68,12 +68,21 @@ export const GroupHeaderRows = observer(function GroupHeaderRows<TRow>({
       {cellsOf(slice.level(level), tracks).map(cell => {
         const group = cell.span?.group;
         const first = cell.first;
-        const sticky = first !== undefined && !isSpacer(first) ? first.stickyOffset : undefined;
-        const section = first !== undefined && !isSpacer(first) ? first.section : undefined;
+        if (first === undefined || isSpacer(first)) {
+          return (
+            <div
+              key={cell.key}
+              className="ft-spacer"
+              aria-hidden
+              style={{ gridColumn: `span ${cell.tracks}` }}
+            />
+          );
+        }
         const style: CSSProperties = {
           gridColumn: `span ${cell.tracks}`,
-          ...(sticky === undefined ? {} : { '--ft-sticky': `${sticky}px` }),
+          ...(first.stickyOffset === undefined ? {} : { '--ft-sticky': `${first.stickyOffset}px` }),
         } as CSSProperties;
+        const section = first.section;
         if (group === undefined) {
           return (
             <div

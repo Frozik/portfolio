@@ -67,6 +67,8 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  /* Rows are max-content wide; without containment that width would size the table's container instead of scrolling inside it. */
+  contain: inline-size;
   overflow: auto;
   overflow-anchor: none;
   outline: none;
@@ -80,6 +82,11 @@
   display: grid;
   grid-template-columns: var(--ft-columns);
   min-width: max-content;
+}
+
+.ft-header .ft-spacer {
+  height: auto;
+  background: var(--table-bg-header);
 }
 
 .ft-header {

@@ -43,7 +43,9 @@ const model = useTable({
 past the box it is in, and when that box has no height of its own the React
 adapter caps the root at what is left of the screen below it, so the rows
 always scroll inside the table rather than the page. `layout: 'content'`
-sizes it to its rows instead.
+sizes it to its rows instead. Width works the same way: the scroll container
+is contained in the inline axis, so a row wider than the box scrolls inside
+the table instead of stretching a flex or grid parent to the row's width.
 
 Every extension slice is typed on the model by its id (`model.sorting.set(…)`),
 the kernel never mutates rows (edits go through `set` → `onRowChange`), and
