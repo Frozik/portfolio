@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { column } from '../../../core/columns/column';
 import { createTable } from '../../../core/create-table';
@@ -70,7 +70,7 @@ describe('filtering in the grid', () => {
     const [nameField] = screen.getAllByRole('searchbox', { name: 'Filter' });
 
     fireEvent.change(nameField, { target: { value: 'b' } });
-    await vi.waitFor(() => expect(model.filtering.activeCount).toBe(1));
+    await waitFor(() => expect(model.filtering.activeCount).toBe(1));
 
     expect(renderedNames()).toEqual(['birch']);
   });
@@ -96,7 +96,7 @@ describe('filtering in the grid', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search' }), {
       target: { value: 'ash' },
     });
-    await vi.waitFor(() => expect(renderedNames()).toEqual(['ash']));
+    await waitFor(() => expect(renderedNames()).toEqual(['ash']));
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(model.filtering.activeCount).toBe(0);

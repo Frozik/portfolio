@@ -232,6 +232,7 @@ describe('TradesStreamStore', () => {
   });
 
   it('reports a failed write once and stops persisting instead of logging', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { store, gate, dbState, persistenceFailures } = buildStore();
     store.startStream();
     gate.hasFirstOrderbookSnapshot = true;
@@ -244,7 +245,12 @@ describe('TradesStreamStore', () => {
 
     expect(persistenceFailures.length).toBe(1);
     expect(persistenceFailures[0]?.meta.message).toBe('quota exceeded');
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('storing the aggregate block'),
+      expect.any(Error)
+    );
 
+    consoleError.mockRestore();
     store.dispose();
   });
 
