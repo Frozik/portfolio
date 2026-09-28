@@ -25,5 +25,16 @@ original ROM.
   fixed-timestep 60 Hz simulation, decoupled from display refresh
 - Instanced WebGPU rendering: terrain quadrants, sprites with palette
   variants, see-through forest canopy above the tanks, effects overlay
-- Keyboard + touch controls (diagonal-split D-pad with slide-between-zones
-  steering), auto-pause on tab switch, best score persistence
+- Keyboard + touch controls, auto-pause on tab switch, best score persistence
+- Touch: the play area is split in two — any press on the left half holds the
+  gun, with the fire button riding the finger, and any press on the right half
+  plants a floating joystick under the thumb.
+  Inside the circle around the press the tank stands still; outside it the
+  ground is split along the diagonals into four directions. The stick follows
+  a thumb that outruns its reach, so reversing takes a short move back, and
+  holds its direction while the thumb drifts just across a diagonal, so the
+  tank does not flip between two headings. A captured finger may travel
+  anywhere, but neither control follows it out of its own half of the screen.
+  Both controls are drawn 144 px
+  wide — wider than a thumb — and light up along their rims, so the feedback
+  shows around the finger that covers their centre

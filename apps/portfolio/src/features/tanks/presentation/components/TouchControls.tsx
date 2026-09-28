@@ -1,56 +1,53 @@
 import { cn } from '@frozik/components/components/cn';
+import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 import { useTanksStore } from '../../application/useTanksStore';
-import type { Direction } from '../../domain/types';
 import {
   TOUCH_ANCHOR_BOTTOM_CLASS,
   TOUCH_ANCHOR_LEFT_CLASS,
   TOUCH_ANCHOR_RIGHT_CLASS,
-  TOUCH_DPAD_SIZE_CLASS,
-  TOUCH_DPAD_VIEWBOX_SIZE,
-  TOUCH_FIRE_SIZE_CLASS,
-  TOUCH_GLYPH_OPACITY_CLASS,
-  TOUCH_SURFACE_ACTIVE_CLASS,
-  TOUCH_SURFACE_IDLE_CLASS,
-  TOUCH_SURFACE_TRANSITION_CLASS,
-  TOUCH_ZONE_ACTIVE_FILL_CLASS,
-  TOUCH_ZONE_IDLE_FILL_CLASS,
-  TOUCH_ZONE_STROKE_CLASS,
-  TOUCH_ZONE_TRANSITION_CLASS,
+  TOUCH_HINT_OPACITY_CLASS,
 } from '../constants';
-import { resolveDpadDirection } from '../dpad-geometry';
+import type { JoystickState } from '../floating-joystick';
+import { getKnobOffset, plantJoystick, tiltJoystick } from '../floating-joystick';
+import type { TouchZoneSize } from '../touch-zone';
+import { clampToZone } from '../touch-zone';
 import { tanksT } from '../translations';
+import { FireGlyph } from './FireGlyph';
+import { JoystickGlyph } from './JoystickGlyph';
 
-interface DpadZone {
-  readonly direction: Direction;
-  /** Triangle from two corners of the square to its centre — the "rays to the corners" split. */
-  readonly trianglePoints: string;
-  readonly chevronPoints: string;
+const UNDER_THE_FINGER_CLASS = 'absolute -translate-x-1/2 -translate-y-1/2';
+
+const ZONE_BASE_CLASS =
+  'pointer-events-auto absolute inset-y-0 w-1/2 select-none [touch-action:none] ' +
+  '[-webkit-touch-callout:none]';
+
+function readZonePointer(event: ReactPointerEvent<HTMLElement>): {
+  readonly point: Vector2;
+  readonly zone: TouchZoneSize;
+} {
+  const bounds = event.currentTarget.getBoundingClientRect();
+
+  return {
+    point: { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+    zone: { width: bounds.width, height: bounds.height },
+  };
 }
-
-const DPAD_ZONES: readonly DpadZone[] = [
-  { direction: 'up', trianglePoints: '0,0 100,0 50,50', chevronPoints: '38,24 50,12 62,24' },
-  { direction: 'right', trianglePoints: '100,0 100,100 50,50', chevronPoints: '76,38 88,50 76,62' },
-  { direction: 'down', trianglePoints: '0,100 100,100 50,50', chevronPoints: '38,76 50,88 62,76' },
-  { direction: 'left', trianglePoints: '0,0 0,100 50,50', chevronPoints: '24,38 12,50 24,62' },
-];
-
-const CONTAINER_BASE_CLASS =
-  'pointer-events-auto absolute select-none rounded-2xl border border-white/15 ' +
-  'backdrop-blur-sm [touch-action:none]';
-
-const DPAD_VIEWBOX = `0 0 ${TOUCH_DPAD_VIEWBOX_SIZE} ${TOUCH_DPAD_VIEWBOX_SIZE}`;
 
 /** Lives outside the WebGPU canvas — costs nothing per frame and cannot desync from it. */
 export const TouchControls = memo(() => {
   const store = useTanksStore();
-  const dpadPointerIdRef = useRef<number | undefined>(undefined);
-  const firePointerIdRef = useRef<number | undefined>(undefined);
-  const [activeDirection, setActiveDirection] = useState<Direction | undefined>(undefined);
-  const [isFireActive, setIsFireActive] = useState(false);
+  const steeringPointerIdRef = useRef<number | undefined>(undefined);
+  // Moves can outpace renders; the ref is what the next move builds on, the state what is drawn.
+  const joystickRef = useRef<JoystickState | undefined>(undefined);
+  const firingPointerIdsRef = useRef(new Set<number>());
+  const leadFiringPointerIdRef = useRef<number | undefined>(undefined);
+  const [joystick, setJoystick] = useState<JoystickState | undefined>(undefined);
+  /** Where the fire button rides; set for as long as the gun is held. */
+  const [firePoint, setFirePoint] = useState<Vector2 | undefined>(undefined);
 
   // A finger still down when the overlay unmounts would leave the tank driving forever.
   useEffect(() => {
@@ -59,133 +56,134 @@ export const TouchControls = memo(() => {
     return () => touchControls.release();
   }, [store]);
 
-  const steerFromPointer = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const direction = resolveDpadDirection(
-      event.clientX - (bounds.left + bounds.width / 2),
-      event.clientY - (bounds.top + bounds.height / 2)
-    );
-
-    setActiveDirection(direction);
-    store.touchControls.setDirection(direction);
+  const steer = useEventCallback((next: JoystickState | undefined) => {
+    joystickRef.current = next;
+    setJoystick(next);
+    store.touchControls.setDirection(next?.direction);
   });
 
-  const handleDpadPointerDown = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    // A second finger landing on the pad is ignored so steering never fights itself.
-    if (!isNil(dpadPointerIdRef.current)) {
+  const handleSteerPointerDown = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    // A second finger landing on the zone is ignored so steering never fights itself.
+    if (!isNil(steeringPointerIdRef.current)) {
       return;
     }
 
-    dpadPointerIdRef.current = event.pointerId;
+    steeringPointerIdRef.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
-    steerFromPointer(event);
+    steer(plantJoystick(readZonePointer(event).point));
   });
 
-  const handleDpadPointerMove = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dpadPointerIdRef.current !== event.pointerId) {
+  const handleSteerPointerMove = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (steeringPointerIdRef.current !== event.pointerId || isNil(joystickRef.current)) {
       return;
     }
 
-    steerFromPointer(event);
+    const { point, zone } = readZonePointer(event);
+
+    steer(tiltJoystick(joystickRef.current, point, zone));
   });
 
-  const handleDpadPointerEnd = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dpadPointerIdRef.current !== event.pointerId) {
+  const handleSteerPointerEnd = useEventCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (steeringPointerIdRef.current !== event.pointerId) {
       return;
     }
 
-    dpadPointerIdRef.current = undefined;
-    setActiveDirection(undefined);
-    store.touchControls.setDirection(undefined);
+    steeringPointerIdRef.current = undefined;
+    steer(undefined);
   });
 
+  // The button rides the finger that landed last.
   const handleFirePointerDown = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!isNil(firePointerIdRef.current)) {
-      return;
-    }
-
-    firePointerIdRef.current = event.pointerId;
+    firingPointerIdsRef.current.add(event.pointerId);
+    leadFiringPointerIdRef.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
-    setIsFireActive(true);
+    setFirePoint(readZonePointer(event).point);
     store.touchControls.setFire(true);
   });
 
+  const handleFirePointerMove = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (leadFiringPointerIdRef.current === event.pointerId) {
+      const { point, zone } = readZonePointer(event);
+
+      setFirePoint(clampToZone(point, zone));
+    }
+  });
+
+  // The gun stays held until the last finger leaves the zone.
   const handleFirePointerEnd = useEventCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (firePointerIdRef.current !== event.pointerId) {
+    firingPointerIdsRef.current.delete(event.pointerId);
+
+    if (leadFiringPointerIdRef.current === event.pointerId) {
+      leadFiringPointerIdRef.current = undefined;
+    }
+    if (firingPointerIdsRef.current.size > 0) {
       return;
     }
 
-    firePointerIdRef.current = undefined;
-    setIsFireActive(false);
+    setFirePoint(undefined);
     store.touchControls.setFire(false);
   });
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
-      {/* Pointer-only chrome: the four zones cannot be operated by assistive tech, and arrow
-          keys steer on every device, so announcing an inoperable widget would only add noise. */}
-      <div
-        aria-hidden="true"
-        onPointerDown={handleDpadPointerDown}
-        onPointerMove={handleDpadPointerMove}
-        onPointerUp={handleDpadPointerEnd}
-        onPointerCancel={handleDpadPointerEnd}
-        className={cn(
-          CONTAINER_BASE_CLASS,
-          TOUCH_DPAD_SIZE_CLASS,
-          TOUCH_ANCHOR_BOTTOM_CLASS,
-          TOUCH_ANCHOR_RIGHT_CLASS
-        )}
-      >
-        <svg viewBox={DPAD_VIEWBOX} aria-hidden="true" className="size-full">
-          {DPAD_ZONES.map(zone => (
-            <g key={zone.direction}>
-              <polygon
-                points={zone.trianglePoints}
-                className={cn(
-                  TOUCH_ZONE_TRANSITION_CLASS,
-                  TOUCH_ZONE_STROKE_CLASS,
-                  activeDirection === zone.direction
-                    ? TOUCH_ZONE_ACTIVE_FILL_CLASS
-                    : TOUCH_ZONE_IDLE_FILL_CLASS
-                )}
-              />
-              <polyline
-                points={zone.chevronPoints}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={cn('fill-none stroke-white stroke-[3]', TOUCH_GLYPH_OPACITY_CLASS)}
-              />
-            </g>
-          ))}
-        </svg>
-      </div>
-
       <button
         type="button"
         aria-label={tanksT.touch.fire}
         onPointerDown={handleFirePointerDown}
+        onPointerMove={handleFirePointerMove}
         onPointerUp={handleFirePointerEnd}
         onPointerCancel={handleFirePointerEnd}
-        className={cn(
-          CONTAINER_BASE_CLASS,
-          TOUCH_FIRE_SIZE_CLASS,
-          TOUCH_ANCHOR_BOTTOM_CLASS,
-          TOUCH_ANCHOR_LEFT_CLASS,
-          TOUCH_SURFACE_TRANSITION_CLASS,
-          isFireActive ? TOUCH_SURFACE_ACTIVE_CLASS : TOUCH_SURFACE_IDLE_CLASS
-        )}
+        className={cn(ZONE_BASE_CLASS, 'left-0 cursor-default outline-none')}
       >
-        <svg viewBox="0 0 48 48" aria-hidden="true" className="size-full p-4">
-          <g
-            className={cn('fill-none stroke-white stroke-[3]', TOUCH_GLYPH_OPACITY_CLASS)}
-            strokeLinecap="round"
+        {isNil(firePoint) ? (
+          <FireGlyph
+            className={cn(
+              'absolute',
+              TOUCH_HINT_OPACITY_CLASS,
+              TOUCH_ANCHOR_BOTTOM_CLASS,
+              TOUCH_ANCHOR_LEFT_CLASS
+            )}
+          />
+        ) : (
+          <span
+            className={UNDER_THE_FINGER_CLASS}
+            // The button rides the finger, so its position exists only at runtime.
+            style={{ left: firePoint.x, top: firePoint.y }}
           >
-            <circle cx="24" cy="24" r="13" />
-            <path d="M24 2v10M24 36v10M2 24h10M36 24h10" />
-          </g>
-        </svg>
+            <FireGlyph isActive />
+          </span>
+        )}
       </button>
+
+      {/* Pointer-only chrome: the stick cannot be operated by assistive tech, and arrow keys
+          steer on every device, so announcing an inoperable widget would only add noise. */}
+      <div
+        aria-hidden="true"
+        onPointerDown={handleSteerPointerDown}
+        onPointerMove={handleSteerPointerMove}
+        onPointerUp={handleSteerPointerEnd}
+        onPointerCancel={handleSteerPointerEnd}
+        className={cn(ZONE_BASE_CLASS, 'right-0')}
+      >
+        {isNil(joystick) ? (
+          <JoystickGlyph
+            className={cn(
+              'absolute',
+              TOUCH_HINT_OPACITY_CLASS,
+              TOUCH_ANCHOR_BOTTOM_CLASS,
+              TOUCH_ANCHOR_RIGHT_CLASS
+            )}
+          />
+        ) : (
+          <div
+            className={UNDER_THE_FINGER_CLASS}
+            // The stick stands wherever the thumb landed, so its position exists only at runtime.
+            style={{ left: joystick.center.x, top: joystick.center.y }}
+          >
+            <JoystickGlyph direction={joystick.direction} thumbOffset={getKnobOffset(joystick)} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });
