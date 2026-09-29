@@ -12,7 +12,9 @@ import {
   ZOOM_FACTOR_MAX,
   ZOOM_FACTOR_MIN,
 } from '../domain/constants';
+import type { IPointerPosition } from '../domain/crosshair';
 import { clampViewport, panViewport, zoomViewport } from '../domain/viewport';
+import { TouchHold } from './touch-hold';
 
 interface IVelocitySample {
   readonly deltaX: number;
@@ -27,14 +29,23 @@ interface ITrackedPointer {
 const MIN_VELOCITY_SAMPLES = 2;
 const RESTING_CURSOR = 'crosshair';
 const PANNING_CURSOR = 'grabbing';
+const TOUCH_POINTER = 'touch';
+
+/** What a held finger drives instead of the viewport. */
+export interface IHeldCrosshair {
+  holdAt(position: IPointerPosition): void;
+  release(): void;
+}
 
 /**
  * Pointer events on the chart canvas: one pointer pans, two pinch-zoom, the
- * wheel zooms. A released pan keeps scrolling with decaying inertia.
+ * wheel zooms. A released pan keeps scrolling with decaying inertia. A
+ * finger resting for a moment holds the crosshair instead, until it lifts.
  */
 export class ChartInputController {
   private readonly activePointers = new Map<number, ITrackedPointer>();
   private readonly velocitySamples: IVelocitySample[] = [];
+  private readonly touchHold: TouchHold;
   private lastPinchDistance = 0;
   /** Pixels per millisecond; `0` when at rest. */
   private inertiaVelocity = 0;
@@ -45,8 +56,14 @@ export class ChartInputController {
     private readonly canvas: HTMLCanvasElement,
     private readonly dataMinTime: number,
     private readonly dataMaxTime: number,
-    private readonly fpsController: FpsController
-  ) {}
+    private readonly fpsController: FpsController,
+    crosshair: IHeldCrosshair
+  ) {
+    this.touchHold = new TouchHold(
+      position => crosshair.holdAt(position),
+      () => crosshair.release()
+    );
+  }
 
   get isInteracting(): boolean {
     return this.activePointers.size > 0;
@@ -94,6 +111,7 @@ export class ChartInputController {
     this.canvas.removeEventListener('pointerup', this.handlePointerUp);
     this.canvas.removeEventListener('pointercancel', this.handlePointerCancel);
     this.canvas.removeEventListener('wheel', this.handleWheel);
+    this.touchHold.end();
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
@@ -106,7 +124,11 @@ export class ChartInputController {
 
     if (this.activePointers.size === 1) {
       this.canvas.style.cursor = PANNING_CURSOR;
+      if (event.pointerType === TOUCH_POINTER) {
+        this.touchHold.begin({ x: event.offsetX, y: event.offsetY });
+      }
     } else if (this.activePointers.size === 2) {
+      this.touchHold.end();
       this.lastPinchDistance = this.getPointerDistance();
     }
   };
@@ -126,6 +148,9 @@ export class ChartInputController {
     if (this.activePointers.size !== 1) {
       return;
     }
+    if (this.touchHold.move({ x: event.offsetX, y: event.offsetY })) {
+      return;
+    }
     const deltaX = event.clientX - previous.clientX;
     this.recordVelocitySample(deltaX, event.timeStamp);
     const [nextStart, nextEnd] = this.clampedPan(deltaX);
@@ -143,6 +168,7 @@ export class ChartInputController {
     }
     this.activePointers.delete(event.pointerId);
     if (this.activePointers.size === 0) {
+      this.touchHold.end();
       this.canvas.style.cursor = RESTING_CURSOR;
       this.startInertia();
     }
@@ -151,6 +177,7 @@ export class ChartInputController {
   private readonly handlePointerCancel = (event: PointerEvent): void => {
     this.activePointers.delete(event.pointerId);
     if (this.activePointers.size === 0) {
+      this.touchHold.end();
       this.canvas.style.cursor = RESTING_CURSOR;
     }
   };

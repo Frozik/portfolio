@@ -75,15 +75,16 @@ export function createTimeseriesChart(params: ICreateTimeseriesChartParams): Tim
     seed,
   });
   const fpsController = new FpsController(FPS_IDLE);
+  const crosshairPointer = new CrosshairPointer(chartCanvas, fpsController);
   const inputController = new ChartInputController(
     viewport,
     chartCanvas,
     GLOBAL_EPOCH_OFFSET,
     GLOBAL_EPOCH_OFFSET + FULL_YEAR_SECONDS,
-    fpsController
+    fpsController,
+    crosshairPointer
   );
   inputController.attach();
-  const crosshairPointer = new CrosshairPointer(chartCanvas, fpsController);
   crosshairPointer.attach();
 
   let chart: TimeseriesChartState | undefined;

@@ -6,11 +6,13 @@ import type { IPointerPosition } from '../domain/crosshair';
 const TOUCH_POINTER = 'touch';
 
 /**
- * Where the mouse or pen hovers over the chart canvas. A finger has no hover:
- * it pans and pinches, so touch pointers never show a crosshair.
+ * Where the pointer is over the chart canvas. A mouse or pen hovers; a
+ * finger pans and pinches, so it drives the crosshair only while the chart
+ * input holds it (`holdAt` … `release`).
  */
 export class CrosshairPointer {
   private currentPosition: IPointerPosition | undefined;
+  private touchHeld = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -35,13 +37,26 @@ export class CrosshairPointer {
     this.canvas.removeEventListener('pointercancel', this.handlePointerGone);
   }
 
+  holdAt(position: IPointerPosition): void {
+    this.touchHeld = true;
+    this.currentPosition = position;
+    this.fpsController.raise(FPS_INTERACTION);
+  }
+
+  release(): void {
+    this.touchHeld = false;
+    this.currentPosition = undefined;
+    this.fpsController.raise(FPS_INTERACTION);
+  }
+
   private readonly handlePointerMove = (event: PointerEvent): void => {
-    this.currentPosition =
-      event.pointerType === TOUCH_POINTER ? undefined : { x: event.offsetX, y: event.offsetY };
+    const follows = event.pointerType !== TOUCH_POINTER || this.touchHeld;
+    this.currentPosition = follows ? { x: event.offsetX, y: event.offsetY } : undefined;
     this.fpsController.raise(FPS_INTERACTION);
   };
 
   private readonly handlePointerGone = (): void => {
+    this.touchHeld = false;
     this.currentPosition = undefined;
     this.fpsController.raise(FPS_INTERACTION);
   };

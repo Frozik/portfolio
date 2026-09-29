@@ -28,7 +28,9 @@ straight into the canvas of each chart.
   months as you zoom out
 - A crosshair follows the mouse or pen: thin dashed lines across the plot,
   a thick bright crossing under the pointer, and the exact time and value
-  written on dark blue where the axis labels sit
+  written on dark blue where the axis labels sit. On touch, a finger
+  resting for a moment takes the crosshair with it until it lifts; moving
+  straight away pans as usual, and a second finger pinches
 - Debug overlay with FPS counter and a toggle to visualize the data
   block boundaries
 - Fullscreen with landscape lock on mobile

@@ -78,6 +78,12 @@ export const PAN_INERTIA_MIN_VELOCITY = 0.01;
 /** Number of recent pointer moves used to estimate pan velocity. */
 export const PAN_VELOCITY_SAMPLE_COUNT = 5;
 
+/** A finger resting this long on the chart drives the crosshair instead of panning. */
+export const TOUCH_HOLD_DELAY_MS = 300;
+
+/** A finger that travels further than this before the delay is panning, not holding. */
+export const TOUCH_HOLD_SLOP_PX = 8;
+
 /** Interpolation speed for animated zoom (0–1, higher = faster). */
 export const ZOOM_LERP_SPEED = 0.18;
 

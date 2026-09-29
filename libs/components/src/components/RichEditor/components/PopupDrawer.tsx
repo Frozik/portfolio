@@ -1,8 +1,11 @@
 import type { MouseEvent, PointerEvent, ReactNode } from 'react';
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import { useEventCallback } from 'usehooks-ts';
 import styles from '../styles.module.css';
+
+/** How long the drawer stays out after nothing holds it, so a slip of the mouse does not shut it. */
+export const POPUP_RETRACT_DELAY_MS = 700;
 
 /** Shows only its handle until the mouse is over it, a tap pins it or the owner holds it out. */
 export const PopupDrawer = memo(
@@ -16,6 +19,19 @@ export const PopupDrawer = memo(
   }) => {
     const [hovered, setHovered] = useState(false);
     const [pinned, setPinned] = useState(false);
+    const [lingers, setLingers] = useState(false);
+    const isWanted = held || hovered || pinned;
+
+    useEffect(() => {
+      if (isWanted) {
+        setLingers(true);
+        return undefined;
+      }
+
+      const timer = setTimeout(() => setLingers(false), POPUP_RETRACT_DELAY_MS);
+
+      return () => clearTimeout(timer);
+    }, [isWanted]);
 
     const handlePointerEnter = useEventCallback((event: PointerEvent) => {
       if (event.pointerType !== 'touch') {
@@ -39,7 +55,7 @@ export const PopupDrawer = memo(
     return (
       <div
         className={styles.popoverDrawer}
-        data-expanded={held || hovered || pinned || undefined}
+        data-expanded={isWanted || lingers || undefined}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         onClick={handleClick}

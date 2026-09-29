@@ -33,8 +33,10 @@ shared library.
   only when neither side fits
 - The popup is a drawer under the field: focus shows only its 20 px handle
   (28 px on touch), hovering the handle slides the whole popup out from under
-  the input while the handle shrinks to the popup's closing hairline, leaving
-  it slides it back. The keyboard inside the popup holds it out; on touch a
+  the input while the handle shrinks to the popup's closing hairline. It
+  stays out for 0.7 s after the mouse leaves (`POPUP_RETRACT_DELAY_MS`), so a
+  slip past its edge does not shut it, and coming back within that time keeps
+  it open. The keyboard inside the popup holds it out; on touch a
   tap pins it. The slide is a CSS transform clipped at the field's edge
   (`clip-path`) and driven by a registered `@property` factor rather than a
   transition on the transform itself, so flipping sides never sweeps the

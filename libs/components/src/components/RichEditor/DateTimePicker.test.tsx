@@ -4,6 +4,7 @@ import { isNil } from 'lodash-es';
 import { useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
+import { POPUP_RETRACT_DELAY_MS } from './components/PopupDrawer';
 import { DateTimePicker } from './DateTimePicker';
 import { blurEditor, editorOf, focusEditor, typeInto } from './editor-test-helpers.test-helper';
 
@@ -62,7 +63,17 @@ function selectAll(editor: HTMLElement) {
   return { start: 0, end: (editor.textContent ?? '').length };
 }
 
+function letTimePass(milliseconds: number): void {
+  act(() => {
+    vi.advanceTimersByTime(milliseconds);
+  });
+}
+
 describe('DateTimePicker', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('commits the typed date once when the field loses focus', () => {
     const onValueChange = vi.fn();
     const { container } = render(
@@ -200,9 +211,36 @@ describe('DateTimePicker', () => {
 
     fireEvent.pointerEnter(drawer, { pointerType: 'mouse' });
     expect(drawer.hasAttribute('data-expanded')).toBe(true);
+  });
+
+  it('stays out for a moment after the mouse leaves, then slides back', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    focusEditor(editorOf(container));
+    const drawer = drawerOf();
+    fireEvent.pointerEnter(drawer, { pointerType: 'mouse' });
+    vi.useFakeTimers();
 
     fireEvent.pointerLeave(drawer, { pointerType: 'mouse' });
+    letTimePass(POPUP_RETRACT_DELAY_MS - 1);
+    expect(drawer.hasAttribute('data-expanded')).toBe(true);
+
+    letTimePass(1);
     expect(drawer.hasAttribute('data-expanded')).toBe(false);
+  });
+
+  it('stays out when the mouse comes back before the moment is over', () => {
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    focusEditor(editorOf(container));
+    const drawer = drawerOf();
+    fireEvent.pointerEnter(drawer, { pointerType: 'mouse' });
+    vi.useFakeTimers();
+
+    fireEvent.pointerLeave(drawer, { pointerType: 'mouse' });
+    letTimePass(POPUP_RETRACT_DELAY_MS - 1);
+    fireEvent.pointerEnter(drawer, { pointerType: 'mouse' });
+    letTimePass(POPUP_RETRACT_DELAY_MS * 2);
+
+    expect(drawer.hasAttribute('data-expanded')).toBe(true);
   });
 
   it('keeps the popup pulled out while the keyboard is inside it', () => {
@@ -212,8 +250,11 @@ describe('DateTimePicker', () => {
 
     fireEvent.keyDown(editor, { key: 'Tab' });
     expect(drawerOf().hasAttribute('data-expanded')).toBe(true);
+    vi.useFakeTimers();
 
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' });
+    letTimePass(POPUP_RETRACT_DELAY_MS);
+
     expect(drawerOf().hasAttribute('data-expanded')).toBe(false);
   });
 
