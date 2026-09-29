@@ -44,8 +44,9 @@ jobs:
         run: echo "PORTFOLIO_VERSION=$(pnpm exec predict-version)" >> "$GITHUB_ENV"
       - name: Affected checks, tests and builds
         run: moon ci --color
+      # Posts the moon report as a pull request comment; a push has no pull request to comment on.
       - uses: moonrepo/run-report-action@v1
-        if: success() || failure()
+        if: github.event_name == 'pull_request' && (success() || failure())
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Keep the portfolio build for the Lighthouse job

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { column } from '../../../core/columns/column';
 import { createTable } from '../../../core/create-table';
@@ -89,7 +89,7 @@ describe('editing in the grid', () => {
     fireEvent.keyDown(cell(0, 0), { key: 'Enter' });
     expect(model.editing.current?.columnId).toBe('name');
 
-    model.editing.update('oak');
+    act(() => model.editing.update('oak'));
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
 
     expect(changes.map(change => change.next.name)).toEqual(['oak']);

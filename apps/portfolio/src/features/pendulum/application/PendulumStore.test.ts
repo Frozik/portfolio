@@ -122,12 +122,18 @@ describe('PendulumStore competitions', () => {
   });
 
   it('shows the load failure instead of the generations', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { repository, store } = setup();
 
     store.loadCompetition(START);
     repository.failGenerations(START, new Error('storage is gone'));
 
     expect(isFailValueDescriptor(store.generations)).toBe(true);
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('watching the generations'),
+      expect.any(Error)
+    );
+    consoleError.mockRestore();
     store.dispose();
   });
 
@@ -211,6 +217,7 @@ describe('PendulumStore test player', () => {
   });
 
   it('reports an unknown robot as not found', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { store } = setup();
 
     store.selectRobot('ghost');
@@ -220,6 +227,11 @@ describe('PendulumStore test player', () => {
       isFailValueDescriptor(store.selectedRobot) &&
         store.selectedRobot.fail.code === EValueDescriptorErrorCode.NOT_FOUND
     ).toBe(true);
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('loading the robot "ghost"'),
+      expect.any(Error)
+    );
+    consoleError.mockRestore();
     store.dispose();
   });
 
