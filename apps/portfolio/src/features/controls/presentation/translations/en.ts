@@ -22,6 +22,7 @@ export const controlsTranslationsEn = {
       ordinals: 'Ordinals:',
       time: 'Time:',
       dateTime: 'Date + time:',
+      shifted: 'Shifted by an offset:',
     },
     arrowKeyStep: 'Arrow key step',
     stepMinute: 'Minute',

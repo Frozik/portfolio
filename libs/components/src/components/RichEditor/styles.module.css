@@ -8,7 +8,11 @@
 .field,
 .popover-layer,
 .popover-content,
+.popup-sheet,
 .error-tooltip {
+  --re-peek: 20px;
+  --re-corner: 10px;
+  --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
   --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
   --re-bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
   --re-border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
@@ -23,6 +27,14 @@
   --re-red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
   --re-on-accent: var(--color-landing-bg, light-dark(#ffffff, #07090c));
   --re-mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+
+  @media (pointer: coarse) {
+    --re-peek: 28px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    --re-slide: 0s;
+  }
 }
 
 .editor {
@@ -176,10 +188,7 @@
    changes sign when the popup flips sides, and a transition on the transform
    would sweep the whole popup across the field on every flip. */
 .popover-drawer {
-  --re-peek: 20px;
-  --re-corner: 10px;
   --re-hidden-shift: -100%;
-  --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
   position: relative;
   box-sizing: border-box;
   width: max-content;
@@ -194,14 +203,6 @@
     --re-reveal var(--re-slide),
     box-shadow var(--re-slide);
 
-  @media (pointer: coarse) {
-    --re-peek: 28px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    --re-slide: 0s;
-  }
-
   &[data-expanded] {
     --re-reveal: 1;
     box-shadow: 0 18px 48px -12px rgb(0 0 0 / 0.7);
@@ -212,30 +213,31 @@
   }
 }
 
-/* `@starting-style` grows the handle out of the field on open; engines without
-   it show the handle at once. Collapsed, it is the popup's closing hairline. */
-.popover-handle {
-  position: absolute;
-  top: 100%;
-  right: -1px;
-  left: -1px;
+/* On touch the popover holds only the tab, the width of the field; the popup
+   itself is the sheet below. */
+.popover-tab {
+  position: relative;
+  width: var(--radix-popover-trigger-width);
+  pointer-events: auto;
+  color-scheme: light dark;
+}
+
+/* The pull tab: an accent bar on the popup's edge. */
+.popup-handle {
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  width: 100%;
   height: var(--re-peek);
+  padding: 0;
+  overflow: hidden;
   background-color: var(--re-bg-card);
-  border: solid var(--re-border);
-  border-width: 0 1px 1px;
-  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.6);
+  border: none;
+  border-radius: 0;
   cursor: pointer;
-  transition:
-    height var(--re-slide),
-    box-shadow var(--re-slide);
-
-  @starting-style {
-    height: 0;
-  }
+  touch-action: manipulation;
+  user-select: none;
 
   &::before {
     content: '';
@@ -245,9 +247,46 @@
     opacity: 0.7;
     transition: opacity var(--re-slide);
   }
+
+  &:hover::before {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--re-accent);
+    outline-offset: -2px;
+  }
 }
 
-.popover-drawer[data-expanded] > .popover-handle {
+/* Hangs outside the drawer's box, so it never resizes the popup Radix has
+   positioned; `@starting-style` grows it out of the field on open, engines
+   without it show it at once. Pulled out, the drawer's handle shrinks to the
+   popup's closing hairline. */
+.popover-drawer > .popup-handle,
+.popover-tab > .popup-handle {
+  position: absolute;
+  top: 100%;
+  right: -1px;
+  left: -1px;
+  width: auto;
+  border: solid var(--re-border);
+  border-width: 0 1px 1px;
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.6);
+  transition:
+    height var(--re-slide),
+    box-shadow var(--re-slide);
+
+  @starting-style {
+    height: 0;
+  }
+}
+
+.popover-tab > .popup-handle {
+  right: 0;
+  left: 0;
+}
+
+.popover-drawer[data-expanded] > .popup-handle {
   height: 0;
   box-shadow: none;
   cursor: auto;
@@ -257,15 +296,23 @@
   }
 }
 
+/* The corner brackets frame the pulled-out popup only: a lone bracket on a
+   collapsed handle reads as a rendering glitch. */
 .popover-drawer::before,
-.popover-handle::after {
+.popover-drawer > .popup-handle::after {
   content: '';
   position: absolute;
   width: var(--re-corner);
   height: var(--re-corner);
   border: 1px solid var(--re-accent);
-  opacity: 0.6;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity var(--re-slide);
+}
+
+.popover-drawer[data-expanded]::before,
+.popover-drawer[data-expanded] > .popup-handle::after {
+  opacity: 0.6;
 }
 
 .popover-drawer::before {
@@ -275,7 +322,7 @@
   border-bottom: none;
 }
 
-.popover-handle::after {
+.popup-handle::after {
   right: -1px;
   bottom: -1px;
   border-top: none;
@@ -287,7 +334,7 @@
     --re-hidden-shift: 100%;
   }
 
-  .popover-handle {
+  .popup-handle {
     top: auto;
     bottom: 100%;
     border-width: 1px 1px 0;
@@ -301,12 +348,86 @@
     border-left: none;
   }
 
-  .popover-handle::after {
+  .popup-handle::after {
     inset: -1px auto auto -1px;
     border: 1px solid var(--re-accent);
     border-right: none;
     border-bottom: none;
   }
+}
+
+/* The touch popup: a modal `<dialog>` in the top layer, which no transformed
+   ancestor can trap, rising from the bottom edge. Portrait takes the full
+   width; landscape sizes to the content, centred. `overlay` and `display`
+   transition discretely so the slide-out plays before the dialog leaves the
+   top layer; engines without them cut. */
+.popup-sheet {
+  --re-sheet-margin: 48px;
+  position: fixed;
+  inset: auto 0 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--re-sheet-margin));
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom);
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  background-color: var(--re-bg-card);
+  border: solid var(--re-border);
+  border-width: 1px 1px 0;
+  color: var(--re-fg);
+  color-scheme: light dark;
+  box-shadow: 0 -18px 48px -12px rgb(0 0 0 / 0.7);
+  translate: 0 100%;
+  transition:
+    translate var(--re-slide),
+    overlay var(--re-slide) allow-discrete,
+    display var(--re-slide) allow-discrete;
+
+  @media (orientation: portrait) {
+    width: 100%;
+    border-width: 1px 0 0;
+  }
+
+  &[open] {
+    translate: none;
+
+    @starting-style {
+      translate: 0 100%;
+    }
+  }
+
+  &::backdrop {
+    background-color: rgb(0 0 0 / 0);
+    transition:
+      background-color var(--re-slide),
+      overlay var(--re-slide) allow-discrete,
+      display var(--re-slide) allow-discrete;
+  }
+
+  &[open]::backdrop {
+    background-color: rgb(0 0 0 / 0.5);
+
+    @starting-style {
+      background-color: rgb(0 0 0 / 0);
+    }
+  }
+
+  > .popup-handle {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  > .popover-content {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+body:has(.popup-sheet[open]) {
+  overflow: hidden;
 }
 
 /* The panes sit side by side while the viewport has room and wrap when it does

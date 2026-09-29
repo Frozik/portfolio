@@ -50,4 +50,5 @@ export interface ICalendarAriaLabels {
   readonly decreaseMilliseconds: string;
   readonly calendarDays: string;
   readonly openNativePicker: string;
+  readonly toggleCalendar: string;
 }

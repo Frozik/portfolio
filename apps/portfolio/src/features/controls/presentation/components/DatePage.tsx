@@ -2,6 +2,8 @@ import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTim
 import { useToday } from '@frozik/components/hooks/useToday';
 import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
+import type { IParseContext } from '@frozik/utils/date/fuzzy/types';
+import { getNowInstant } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { Fragment, memo, useState } from 'react';
@@ -41,6 +43,9 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: 'tomorrow' },
       { text: 'tom' },
       { text: 'yesterday' },
+      { text: 'day after tomorrow' },
+      { text: 'tonight' },
+      { text: 'tomorrow morning' },
       { text: 'now' },
       { text: 'noon' },
       { text: 'midday' },
@@ -55,9 +60,13 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: 'bom' },
       { text: 'eoy' },
       { text: 'boy' },
-      { text: 'eoq', after: ', ' },
-      { text: 'end of month' },
-      { text: 'start of year' },
+      { text: 'eoq' },
+      { text: 'eow' },
+      { text: 'bow' },
+      { text: 'eod', after: ', ' },
+      { text: 'end of month', after: ', ' },
+      { text: 'start of year', after: ', ' },
+      { text: 'end of next month' },
     ],
   },
   {
@@ -69,7 +78,10 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: 'monday', after: '–' },
       { text: 'sunday', after: ', ' },
       { text: 'next fri', after: ', ' },
-      { text: 'last monday' },
+      { text: 'this fri', after: ', ' },
+      { text: 'next weekend', after: ', ' },
+      { text: 'last monday', after: ', ' },
+      { text: 'wed 15 jan 2025' },
     ],
   },
   {
@@ -79,9 +91,18 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: '+3d' },
       { text: '-1w' },
       { text: '2m' },
-      { text: '1y', after: ', ' },
+      { text: '1y' },
+      { text: '+4h' },
+      { text: '30min' },
+      { text: '30s' },
+      { text: '1h30min' },
+      { text: '1.5h', after: ', ' },
       { text: 'in 3 days', after: ', ' },
-      { text: '2 weeks ago' },
+      { text: 'in 2 hours', after: ', ' },
+      { text: 'in an hour', after: ', ' },
+      { text: '2 weeks ago', after: ', ' },
+      { text: 'a week ago', after: ', ' },
+      { text: 'next week' },
     ],
   },
   {
@@ -97,6 +118,8 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: '10nov' },
       { text: 'nov10' },
       { text: '15nov2025' },
+      { text: 'sept 15', after: ', ' },
+      { text: '1st of january' },
     ],
   },
   {
@@ -135,10 +158,13 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
       { text: '13:00' },
       { text: '9:30:45' },
       { text: '9:30:45.123' },
+      { text: '10 30' },
       { text: '9am' },
       { text: '5:30pm' },
       { text: '12am' },
       { text: '12pm' },
+      { text: '9.30pm', after: ', ' },
+      { text: '9 p.m.' },
     ],
   },
   {
@@ -146,12 +172,26 @@ const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
     label: controlsT.datePage.categories.dateTime,
     tokens: [
       { text: 'tom 13:00' },
+      { text: 'tomorrow at 5pm', after: ', ' },
       { text: 'mon 9am' },
       { text: 'next fri 17:00' },
       { text: 'last mon 9am' },
       { text: '+3d 8:00' },
       { text: 'eom 23:59' },
       { text: '15 jan 2025 14:30' },
+      { text: '15 06 27 10 30' },
+      { text: '8 30 15 06 27' },
+    ],
+  },
+  {
+    id: 'shifted',
+    label: controlsT.datePage.categories.shifted,
+    tokens: [
+      { text: 'eom -4h' },
+      { text: 'end-of-month -4h' },
+      { text: 'tom 13:00 +30min' },
+      { text: 'mon +1w' },
+      { text: '15 jan 2025 -1d' },
     ],
   },
 ];
@@ -189,11 +229,8 @@ export const DatePage = memo(() => {
   const [timeResolution, setTimeResolution] = useState<ETimeResolution>(ETimeResolution.Minutes);
   const [direction, setDirection] = useState<ParseDirection>('future');
 
-  const parseInput = useEventCallback((input: string) =>
-    parseFuzzyDate(input, {
-      now: Temporal.Now.zonedDateTimeISO(TIME_ZONE),
-      nearest: direction === 'nearest',
-    })
+  const parseInput = useEventCallback((input: string, context: IParseContext) =>
+    parseFuzzyDate(input, { ...context, nearest: direction === 'nearest' })
   );
 
   return (
@@ -230,6 +267,7 @@ export const DatePage = memo(() => {
           value={value}
           onValueChange={setValue}
           timeZone={TIME_ZONE}
+          getNow={getNowInstant}
           onParseInput={parseInput}
           getDayInfo={getDayInfo}
           step={step}

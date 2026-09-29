@@ -26,6 +26,7 @@ export const controlsTranslationsRu: TranslationOf<typeof controlsTranslationsEn
       ordinals: 'Порядковые:',
       time: 'Время:',
       dateTime: 'Дата + время:',
+      shifted: 'Со сдвигом:',
     },
     arrowKeyStep: 'Шаг клавиш-стрелок',
     stepMinute: 'Минута',

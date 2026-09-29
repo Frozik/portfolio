@@ -1,6 +1,8 @@
 import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
+import type { IParseContext } from '@frozik/utils/date/fuzzy/types';
+import { getNowInstant } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
 import { Pause, Play, Sunrise, Sunset } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -39,8 +41,8 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
    * `nearest` rather than the default future-only reading: a study is as often
    * about the winter that has passed as about the summer to come.
    */
-  const parseDateInput = useEventCallback((input: string) =>
-    parseFuzzyDate(input, { now: Temporal.Now.zonedDateTimeISO(timeZoneId), nearest: true })
+  const parseDateInput = useEventCallback((input: string, context: IParseContext) =>
+    parseFuzzyDate(input, { ...context, nearest: true })
   );
 
   const handleDateChange = useEventCallback((picked: Temporal.ZonedDateTime | undefined) => {
@@ -68,6 +70,7 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
           value={pickedDate}
           onValueChange={handleDateChange}
           timeZone={timeZoneId}
+          getNow={getNowInstant}
           onParseInput={parseDateInput}
           showTime={false}
           today={today}

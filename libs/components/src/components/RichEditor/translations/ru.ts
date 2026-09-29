@@ -25,4 +25,5 @@ export const calendarAriaLabelsRu: ICalendarAriaLabels = {
   calendarDays: 'Дни месяца',
   openNativePicker: 'Открыть системный выбор даты',
   decreaseMilliseconds: 'Уменьшить миллисекунды',
+  toggleCalendar: 'Всплывающий календарь',
 };

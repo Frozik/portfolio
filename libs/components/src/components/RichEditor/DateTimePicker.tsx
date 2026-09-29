@@ -1,7 +1,9 @@
+import { assert } from '@frozik/utils/assert/assert';
 import type { EDayOfWeek, EDayType } from '@frozik/utils/date/constants';
 import { EDateTimeStep, ETimeResolution } from '@frozik/utils/date/constants';
-import type { DateTimeParseResult } from '@frozik/utils/date/fuzzy/types';
+import type { DateTimeParseResult, IParseContext } from '@frozik/utils/date/fuzzy/types';
 import { stepDateTime } from '@frozik/utils/date/stepDateTime';
+import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 import * as Popover from '@radix-ui/react-popover';
 import { isNil } from 'lodash-es';
 import type { ChangeEvent, KeyboardEvent, Ref } from 'react';
@@ -14,7 +16,10 @@ import { cn } from '../cn';
 import { CalendarPopup } from './components/CalendarPopup';
 import { CalendarIcon } from './components/icons';
 import { PopupDrawer } from './components/PopupDrawer';
+import { PopupHandle } from './components/PopupHandle';
+import { PopupSheet } from './components/PopupSheet';
 import { RichEditor } from './components/RichEditor';
+import { defaultFormatDate, formatDateOnly } from './date-format';
 import type { IRichEditorHandle, ISelection, TLeaveDirection } from './defs';
 import {
   fromNativeInputValue,
@@ -30,27 +35,6 @@ const DEFAULT_TIME_ZONE = 'UTC';
 const MIDNIGHT = new Temporal.PlainTime(0);
 const POPOVER_COLLISION_PADDING = 8;
 
-function formatDateOnly(value: Temporal.ZonedDateTime): string {
-  return value.toPlainDate().toString();
-}
-
-/** `YYYY-MM-DD`, followed by the time down to the last non-zero unit. */
-function defaultFormatDate(value: Temporal.ZonedDateTime): string {
-  const dateTime = value.toPlainDateTime();
-  const smallestUnit =
-    dateTime.millisecond !== 0
-      ? 'millisecond'
-      : dateTime.second !== 0
-        ? 'second'
-        : dateTime.hour !== 0 || dateTime.minute !== 0
-          ? 'minute'
-          : undefined;
-
-  return isNil(smallestUnit)
-    ? formatDateOnly(value)
-    : dateTime.toString({ smallestUnit }).replace('T', ' ');
-}
-
 export const DateTimePicker = memo(
   ({
     ref,
@@ -58,6 +42,7 @@ export const DateTimePicker = memo(
     value,
     onValueChange,
     timeZone = DEFAULT_TIME_ZONE,
+    getNow,
     onParseInput,
     getDayInfo,
     startOfWeek,
@@ -78,7 +63,13 @@ export const DateTimePicker = memo(
     readonly value?: Temporal.ZonedDateTime;
     readonly onValueChange?: (value: Temporal.ZonedDateTime | undefined) => void;
     readonly timeZone?: string;
-    readonly onParseInput: (text: string) => DateTimeParseResult;
+    /**
+     * The clock the picker lives by. It is asked at the moment the text is read, so a
+     * backtest can hand over a clock that shows the past.
+     */
+    readonly getNow: () => Temporal.Instant;
+    /** The picker supplies the moment and its own zone, so the text is read where the calendar is. */
+    readonly onParseInput: (text: string, context: IParseContext) => DateTimeParseResult;
     readonly getDayInfo?: (date: Temporal.PlainDate) => EDayType;
     readonly startOfWeek?: EDayOfWeek;
     readonly step?: EDateTimeStep;
@@ -96,11 +87,13 @@ export const DateTimePicker = memo(
     /** A button opening the OS date picker: on coarse pointers only (`auto`), always, or never. */
     readonly nativePicker?: 'auto' | 'always' | 'never';
   }) => {
+    assert(isValidTimeZoneId(timeZone), `DateTimePicker: unknown time zone "${timeZone}"`);
+
     const ariaLabels = useMemo(() => getCalendarAriaLabels(locale), [locale]);
     const format = formatDate ?? (showTime ? defaultFormatDate : formatDateOnly);
     const resolvedToday = useMemo(
-      () => today ?? Temporal.Now.plainDateISO(timeZone),
-      [today, timeZone]
+      () => today ?? getNow().toZonedDateTimeISO(timeZone).toPlainDate(),
+      [today, getNow, timeZone]
     );
 
     const [focused, setFocused] = useState(false);
@@ -131,7 +124,12 @@ export const DateTimePicker = memo(
       }
     }, [fieldFocusRequest]);
 
-    const popupOpen = (focused || popupFocused) && !disabled;
+    // On touch the tab opens a sheet rather than sliding the drawer out; the sheet
+    // outlives the field's focus and takes the tab's place while it is up.
+    const [sheetPulled, setSheetPulled] = useState(false);
+    const usesSheet = isCoarsePointer;
+    const sheetOpen = usesSheet && sheetPulled && !disabled;
+    const popupOpen = (focused || popupFocused) && !disabled && !sheetOpen;
 
     const formattedValue = isNil(value) ? '' : format(value);
     // Invalid text stays visible after blur so the typo can be fixed.
@@ -173,7 +171,7 @@ export const DateTimePicker = memo(
         return;
       }
 
-      const result = onParseInput(trimmed);
+      const result = onParseInput(trimmed, { now: getNow(), timeZone });
       if (result.success) {
         setInputText(format(commitValue(result.value)));
       } else {
@@ -249,6 +247,9 @@ export const DateTimePicker = memo(
       setFieldFocusRequest(previous => previous + 1);
     });
 
+    const handleSheetOpen = useEventCallback(() => setSheetPulled(true));
+    const handleSheetClose = useEventCallback(() => setSheetPulled(false));
+
     const handlePopupLeave = useEventCallback((direction: TLeaveDirection) => {
       if (direction === 'forward') {
         editorRef.current?.focusNext();
@@ -278,6 +279,28 @@ export const DateTimePicker = memo(
 
     const hasError = !isNil(error);
     const errorId = useId();
+
+    const calendar = (
+      <CalendarPopup
+        value={value?.toPlainDate()}
+        time={value?.toPlainTime() ?? MIDNIGHT}
+        today={resolvedToday}
+        getDayInfo={getDayInfo}
+        startOfWeek={startOfWeek}
+        showTime={showTime}
+        timeResolution={timeResolution}
+        minDate={minDate}
+        maxDate={maxDate}
+        focusRequest={popupFocusRequest}
+        onSelectDate={handleSelectCalendarDate}
+        onTimeChange={handleTimeChange}
+        onFocusWithinChange={setPopupFocused}
+        onLeave={handlePopupLeave}
+        onReturnToField={handleReturnToField}
+        locale={locale}
+        ariaLabels={ariaLabels}
+      />
+    );
 
     return (
       <Popover.Root open={popupOpen}>
@@ -331,6 +354,16 @@ export const DateTimePicker = memo(
               {error}
             </div>
           )}
+          {usesSheet && (
+            <PopupSheet
+              open={sheetOpen}
+              label={ariaLabels.datePicker}
+              handleLabel={ariaLabels.toggleCalendar}
+              onClose={handleSheetClose}
+            >
+              {calendar}
+            </PopupSheet>
+          )}
         </Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
@@ -340,27 +373,15 @@ export const DateTimePicker = memo(
             onOpenAutoFocus={preventFocusSteal}
             onCloseAutoFocus={preventFocusSteal}
           >
-            <PopupDrawer held={popupFocused}>
-              <CalendarPopup
-                value={value?.toPlainDate()}
-                time={value?.toPlainTime() ?? MIDNIGHT}
-                today={resolvedToday}
-                getDayInfo={getDayInfo}
-                startOfWeek={startOfWeek}
-                showTime={showTime}
-                timeResolution={timeResolution}
-                minDate={minDate}
-                maxDate={maxDate}
-                focusRequest={popupFocusRequest}
-                onSelectDate={handleSelectCalendarDate}
-                onTimeChange={handleTimeChange}
-                onFocusWithinChange={setPopupFocused}
-                onLeave={handlePopupLeave}
-                onReturnToField={handleReturnToField}
-                locale={locale}
-                ariaLabels={ariaLabels}
-              />
-            </PopupDrawer>
+            {usesSheet ? (
+              <div className={styles.popoverTab}>
+                <PopupHandle label={ariaLabels.toggleCalendar} onPress={handleSheetOpen} />
+              </div>
+            ) : (
+              <PopupDrawer held={popupFocused} label={ariaLabels.toggleCalendar}>
+                {calendar}
+              </PopupDrawer>
+            )}
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>

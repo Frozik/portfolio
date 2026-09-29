@@ -1,6 +1,6 @@
 import tzLookup from '@photostructure/tz-lookup';
 
-import { isValidTimeZoneId } from '../domain/sun/time-zone';
+import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 
 /**
  * The IANA zone a point on Earth keeps, read from the boundary table bundled

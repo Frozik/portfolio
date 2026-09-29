@@ -1,4 +1,4 @@
-import { isValidTimeZoneId } from '../sun/time-zone';
+import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 import type { Building } from './building';
 import type { CarInstance, PathPoint, SitePath, TreeInstance } from './plot-objects';
 import { PATH_SURFACES, TREE_SPECIES } from './plot-objects';

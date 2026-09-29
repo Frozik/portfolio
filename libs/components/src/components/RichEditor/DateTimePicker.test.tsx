@@ -1,4 +1,4 @@
-import type { DateTimeParseResult } from '@frozik/utils/date/fuzzy/types';
+import type { DateTimeParseResult, IParseContext } from '@frozik/utils/date/fuzzy/types';
 import { act, fireEvent, render } from '@testing-library/react';
 import { isNil } from 'lodash-es';
 import { useState } from 'react';
@@ -10,6 +10,11 @@ import { blurEditor, editorOf, focusEditor, typeInto } from './editor-test-helpe
 
 const TIME_ZONE = 'UTC';
 const TODAY = Temporal.PlainDate.from('2026-03-10');
+const NOW = Temporal.Instant.from('2026-03-10T09:30:00Z');
+
+function getNow(): Temporal.Instant {
+  return NOW;
+}
 
 function parseIsoDate(text: string): DateTimeParseResult {
   try {
@@ -20,6 +25,10 @@ function parseIsoDate(text: string): DateTimeParseResult {
   } catch {
     return { success: false, reason: 'not a date' };
   }
+}
+
+function parseWithContext(text: string, _context: IParseContext): DateTimeParseResult {
+  return parseIsoDate(text);
 }
 
 function ControlledPicker({
@@ -43,6 +52,7 @@ function ControlledPicker({
       value={value}
       onValueChange={handleChange}
       timeZone={TIME_ZONE}
+      getNow={getNow}
       onParseInput={parseIsoDate}
       today={TODAY}
       disabled={disabled}
@@ -59,6 +69,48 @@ function drawerOf(): HTMLElement {
   return drawer;
 }
 
+function handleOf(root: ParentNode): HTMLElement {
+  const handle = root.querySelector<HTMLElement>('[aria-label="Calendar popup"]');
+  if (isNil(handle)) {
+    throw new Error('no popup handle rendered');
+  }
+  return handle;
+}
+
+function sheetOf(): HTMLDialogElement | null {
+  return document.querySelector<HTMLDialogElement>('dialog');
+}
+
+/** The tab under the field, as opposed to the sheet's own handle. */
+function tabOf(): HTMLElement {
+  const tab = [...document.querySelectorAll<HTMLElement>('[aria-label="Calendar popup"]')].find(
+    handle => isNil(handle.closest('dialog'))
+  );
+  if (isNil(tab)) {
+    throw new Error('no tab rendered');
+  }
+  return tab;
+}
+
+const COARSE_POINTER_QUERY = '(pointer: coarse)';
+
+function pretendCoarsePointer(): void {
+  const matchMedia = window.matchMedia.bind(window);
+  vi.spyOn(window, 'matchMedia').mockImplementation(query => {
+    const list = matchMedia(query);
+    // happy-dom's list keeps private fields, so its methods only run bound to the real object.
+    return new Proxy(list, {
+      get: (target, key) => {
+        if (key === 'matches' && query === COARSE_POINTER_QUERY) {
+          return true;
+        }
+        const member: unknown = Reflect.get(target, key, target);
+        return typeof member === 'function' ? member.bind(target) : member;
+      },
+    });
+  });
+}
+
 function selectAll(editor: HTMLElement) {
   return { start: 0, end: (editor.textContent ?? '').length };
 }
@@ -72,6 +124,7 @@ function letTimePass(milliseconds: number): void {
 describe('DateTimePicker', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('commits the typed date once when the field loses focus', () => {
@@ -131,6 +184,70 @@ describe('DateTimePicker', () => {
     expect(onValueChange).not.toHaveBeenCalled();
     expect(editor.textContent).toBe('garbage');
     expect(container.querySelector('[role="alert"]')?.textContent).toBe('not a date');
+  });
+
+  it('refuses to draw itself in a time zone that does not exist', () => {
+    const reactReport = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+    expect(() =>
+      render(<DateTimePicker timeZone="Europe/Berln" getNow={getNow} onParseInput={parseIsoDate} />)
+    ).toThrow('DateTimePicker: unknown time zone "Europe/Berln"');
+
+    reactReport.mockRestore();
+  });
+
+  it('hands the text to the parser with the moment of its clock and its own zone', () => {
+    const onParseInput = vi.fn(parseWithContext);
+    const { container } = render(
+      <DateTimePicker timeZone="Pacific/Auckland" getNow={getNow} onParseInput={onParseInput} />
+    );
+    const editor = editorOf(container);
+
+    typeInto(editor, { data: '2026-01-02', selection: { start: 0, end: 0 } });
+    blurEditor(editor);
+
+    expect(onParseInput).toHaveBeenCalledExactlyOnceWith('2026-01-02', {
+      now: NOW,
+      timeZone: 'Pacific/Auckland',
+    });
+  });
+
+  it('asks the clock when the text is read, not when the picker was drawn', () => {
+    const later = NOW.add({ hours: 2 });
+    const clock = vi.fn(getNow);
+    const onParseInput = vi.fn(parseWithContext);
+    const { container } = render(
+      <DateTimePicker timeZone={TIME_ZONE} getNow={clock} onParseInput={onParseInput} />
+    );
+    const editor = editorOf(container);
+
+    clock.mockReturnValue(later);
+    typeInto(editor, { data: '2026-01-02', selection: { start: 0, end: 0 } });
+    blurEditor(editor);
+
+    expect(onParseInput).toHaveBeenCalledExactlyOnceWith('2026-01-02', {
+      now: later,
+      timeZone: TIME_ZONE,
+    });
+  });
+
+  it('takes today from its clock when no day is given, so a clock in the past moves the whole picker', () => {
+    const onValueChange = vi.fn();
+    const inThePast = () => Temporal.Instant.from('2019-07-04T22:30:00Z');
+    const { container } = render(
+      <DateTimePicker
+        timeZone="Pacific/Auckland"
+        getNow={inThePast}
+        onParseInput={parseIsoDate}
+        onValueChange={onValueChange}
+      />
+    );
+    const editor = editorOf(container);
+
+    focusEditor(editor);
+    fireEvent.keyDown(editor, { key: 'ArrowUp' });
+
+    expect(onValueChange.mock.calls[0][0]?.toPlainDate().toString()).toBe('2019-07-06');
   });
 
   it('steps the date with the arrow keys from today when empty', () => {
@@ -267,9 +384,65 @@ describe('DateTimePicker', () => {
     fireEvent.pointerLeave(drawer, { pointerType: 'touch' });
     expect(drawer.hasAttribute('data-expanded')).toBe(false);
 
-    fireEvent.click(drawer);
+    fireEvent.click(handleOf(drawer));
 
     expect(drawer.hasAttribute('data-expanded')).toBe(true);
+  });
+
+  it('on touch the handle opens the calendar as a sheet from the bottom of the screen', () => {
+    pretendCoarsePointer();
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <ControlledPicker initial={undefined} onValueChange={onValueChange} />
+    );
+    const editor = editorOf(container);
+    focusEditor(editor);
+    expect(sheetOf()?.open).toBe(false);
+    expect(document.querySelector('[data-expanded]')).toBeNull();
+
+    fireEvent.click(tabOf());
+
+    const sheet = sheetOf();
+    expect(sheet?.open).toBe(true);
+    expect(sheet?.querySelector('[aria-label="Days of the month"]')).not.toBeNull();
+    expect(document.activeElement).not.toBe(editor);
+    expect(() => tabOf()).toThrow('no tab rendered');
+
+    fireEvent.click(sheet?.querySelector('[aria-label="March 18, 2026"]') as Element);
+    expect(onValueChange.mock.calls[0][0]?.toPlainDate().toString()).toBe('2026-03-18');
+    expect(editor.textContent).toBe('2026-03-18');
+    expect(sheet?.open).toBe(true);
+
+    fireEvent.click(handleOf(sheet as ParentNode));
+
+    expect(sheet?.open).toBe(false);
+    expect(document.activeElement).not.toBe(editor);
+  });
+
+  it('a tap on the backdrop or Escape shuts the sheet, and the tab goes with the blurred field', () => {
+    pretendCoarsePointer();
+    const { container } = render(<ControlledPicker initial={undefined} onValueChange={vi.fn()} />);
+    const editor = editorOf(container);
+    focusEditor(editor);
+    fireEvent.click(tabOf());
+    const sheet = sheetOf() as HTMLDialogElement;
+    expect(sheet.open).toBe(true);
+
+    fireEvent.click(sheet);
+    expect(sheet.open).toBe(false);
+    expect(() => tabOf()).toThrow('no tab rendered');
+
+    focusEditor(editor);
+    fireEvent.click(tabOf());
+    expect(sheet.open).toBe(true);
+    act(() => {
+      sheet.close();
+    });
+    expect(sheet.open).toBe(false);
+
+    focusEditor(editor);
+    fireEvent.click(tabOf());
+    expect(sheet.open).toBe(true);
   });
 
   it('shows six weeks for every month, so the popup keeps its size while months are browsed', () => {

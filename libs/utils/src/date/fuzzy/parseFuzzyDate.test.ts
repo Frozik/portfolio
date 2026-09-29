@@ -1,18 +1,18 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
+import type { IParseFuzzyDateOptions } from './parseFuzzyDate';
 import { parseFuzzyDate } from './parseFuzzyDate';
-import { applyContextRules, tagCandidates } from './scoring';
-import { detectConflicts } from './slot-context';
-import { resolveSlots } from './slot-resolution';
-import { tokenize } from './tokenizer';
-import type { DateTimeParseResult, ISlotContext } from './types';
-import { ETokenKind } from './types';
+import type { DateTimeParseResult } from './types';
+
+function askedAt(moment: Temporal.ZonedDateTime): IParseFuzzyDateOptions {
+  return { now: moment.toInstant(), timeZone: moment.timeZoneId };
+}
 
 describe('parseFuzzyDate', () => {
   const now = Temporal.PlainDate.from('2024-06-15').toZonedDateTime('UTC'); // Saturday at midnight
 
   function parse(input: string): DateTimeParseResult {
-    return parseFuzzyDate(input, { now });
+    return parseFuzzyDate(input, askedAt(now));
   }
 
   function expectDate(input: string, expected: string): void {
@@ -256,7 +256,7 @@ describe('parseFuzzyDate', () => {
     const nowAt14 = Temporal.ZonedDateTime.from('2024-06-15T14:00:00[UTC]');
 
     function parseAt14(input: string): DateTimeParseResult {
-      return parseFuzzyDate(input, { now: nowAt14 });
+      return parseFuzzyDate(input, askedAt(nowAt14));
     }
 
     function expectDateAt14(input: string, expected: string): void {
@@ -305,7 +305,7 @@ describe('parseFuzzyDate', () => {
       const nowTue14 = Temporal.ZonedDateTime.from('2024-06-18T14:00:00[UTC]');
 
       function parseTue14(input: string): DateTimeParseResult {
-        return parseFuzzyDate(input, { now: nowTue14 });
+        return parseFuzzyDate(input, askedAt(nowTue14));
       }
 
       it.each([
@@ -352,7 +352,7 @@ describe('parseFuzzyDate', () => {
     const nowAt14 = Temporal.ZonedDateTime.from('2024-06-15T14:00:00[UTC]');
 
     function parseNearest(input: string): DateTimeParseResult {
-      return parseFuzzyDate(input, { now: nowAt14, nearest: true });
+      return parseFuzzyDate(input, { ...askedAt(nowAt14), nearest: true });
     }
 
     function expectNearestDate(input: string, expected: string): void {
@@ -398,426 +398,849 @@ describe('parseFuzzyDate', () => {
   });
 });
 
-function makeContext(overrides: Partial<ISlotContext> = {}): ISlotContext {
-  return {
-    hasDateKeyword: false,
-    hasBoundaryKeyword: false,
-    hasMonthName: false,
-    hasTimeKeyword: false,
-    hasColonTime: false,
-    hasOrdinal: false,
-    hasAmPm: false,
-    hasOffset: false,
-    hasWeekday: false,
-    hasQuarter: false,
-    colonCount: 0,
-    datePartCount: 0,
-    hasDotAfterColon: false,
-    ...overrides,
-  };
-}
+describe('parseFuzzyDate — the examples the Controls page documents', () => {
+  const saturdayMidnight = Temporal.ZonedDateTime.from('2024-06-15T00:00:00[UTC]');
 
-describe('tokenize', () => {
-  it('classifies month names', () => {
-    const tokens = tokenize('jan');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.MonthName);
-    expect(tokens[0].value).toBe(1);
-  });
+  it.each([
+    // keywords
+    ['today', '2024-06-15T00:00:00'],
+    ['tomorrow', '2024-06-16T00:00:00'],
+    ['tom', '2024-06-16T00:00:00'],
+    ['yesterday', '2024-06-14T00:00:00'],
+    ['day after tomorrow', '2024-06-17T00:00:00'],
+    ['tonight', '2024-06-15T20:00:00'],
+    ['tomorrow morning', '2024-06-16T09:00:00'],
+    ['now', '2024-06-15T00:00:00'],
+    ['noon', '2024-06-15T12:00:00'],
+    ['midday', '2024-06-15T12:00:00'],
+    ['midnight', '2024-06-15T00:00:00'],
+    // boundaries
+    ['eom', '2024-06-30T00:00:00'],
+    ['bom', '2024-07-01T00:00:00'],
+    ['eoy', '2024-12-31T00:00:00'],
+    ['boy', '2025-01-01T00:00:00'],
+    ['eoq', '2024-06-30T00:00:00'],
+    ['eow', '2024-06-16T00:00:00'],
+    ['bow', '2024-06-17T00:00:00'],
+    ['eod', '2024-06-15T23:59:59.999'],
+    ['end of month', '2024-06-30T00:00:00'],
+    ['start of year', '2025-01-01T00:00:00'],
+    ['end of next month', '2024-07-31T00:00:00'],
+    // weekdays
+    ['mon', '2024-06-17T00:00:00'],
+    ['tue', '2024-06-18T00:00:00'],
+    ['wed', '2024-06-19T00:00:00'],
+    ['thu', '2024-06-20T00:00:00'],
+    ['fri', '2024-06-21T00:00:00'],
+    ['sat', '2024-06-22T00:00:00'],
+    ['sun', '2024-06-16T00:00:00'],
+    ['monday', '2024-06-17T00:00:00'],
+    ['tuesday', '2024-06-18T00:00:00'],
+    ['wednesday', '2024-06-19T00:00:00'],
+    ['thursday', '2024-06-20T00:00:00'],
+    ['friday', '2024-06-21T00:00:00'],
+    ['saturday', '2024-06-22T00:00:00'],
+    ['sunday', '2024-06-16T00:00:00'],
+    ['next fri', '2024-06-21T00:00:00'],
+    ['this fri', '2024-06-21T00:00:00'],
+    ['next weekend', '2024-06-22T00:00:00'],
+    ['last monday', '2024-06-10T00:00:00'],
+    ['wed 15 jan 2025', '2025-01-15T00:00:00'],
+    // offsets
+    ['+3d', '2024-06-18T00:00:00'],
+    ['-1w', '2024-06-08T00:00:00'],
+    ['2m', '2024-08-15T00:00:00'],
+    ['1y', '2025-06-15T00:00:00'],
+    ['in 3 days', '2024-06-18T00:00:00'],
+    ['2 weeks ago', '2024-06-01T00:00:00'],
+    ['+4h', '2024-06-15T04:00:00'],
+    ['in 2 hours', '2024-06-15T02:00:00'],
+    ['30min', '2024-06-15T00:30:00'],
+    ['30s', '2024-06-15T00:00:30'],
+    ['1h30min', '2024-06-15T01:30:00'],
+    ['1.5h', '2024-06-15T01:30:00'],
+    ['in an hour', '2024-06-15T01:00:00'],
+    ['a week ago', '2024-06-08T00:00:00'],
+    ['next week', '2024-06-22T00:00:00'],
+    // dates
+    ['2025-01-15', '2025-01-15T00:00:00'],
+    ['15/03/2025', '2025-03-15T00:00:00'],
+    ['15.03.2025', '2025-03-15T00:00:00'],
+    ['15 jan 2025', '2025-01-15T00:00:00'],
+    ['jan 15 25', '2025-01-15T00:00:00'],
+    ['15 06 27', '2027-06-15T00:00:00'],
+    ['10nov', '2024-11-10T00:00:00'],
+    ['nov10', '2024-11-10T00:00:00'],
+    ['15nov2025', '2025-11-15T00:00:00'],
+    ['sept 15', '2024-09-15T00:00:00'],
+    ['1st of january', '2025-01-01T00:00:00'],
+    // months
+    ['jan', '2025-01-01T00:00:00'],
+    ['december', '2024-12-01T00:00:00'],
+    ['january 2027', '2027-01-01T00:00:00'],
+    ["jan '27", '2027-01-01T00:00:00'],
+    ['2027-01', '2027-01-01T00:00:00'],
+    ['01/2027', '2027-01-01T00:00:00'],
+    ['2027 jan', '2027-01-01T00:00:00'],
+    // quarters
+    ['Q1', '2025-01-01T00:00:00'],
+    ['Q2 2025', '2025-04-01T00:00:00'],
+    ['Q3/2025', '2025-07-01T00:00:00'],
+    ['1Q25', '2025-01-01T00:00:00'],
+    ['4Q2025', '2025-10-01T00:00:00'],
+    // ordinals
+    ['15th', '2024-06-15T00:00:00'],
+    ['the 1st', '2024-07-01T00:00:00'],
+    ['22nd', '2024-06-22T00:00:00'],
+    // time
+    ['13:00', '2024-06-15T13:00:00'],
+    ['9:30:45', '2024-06-15T09:30:45'],
+    ['9:30:45.123', '2024-06-15T09:30:45.123'],
+    ['10 30', '2024-06-15T10:30:00'],
+    ['9am', '2024-06-15T09:00:00'],
+    ['5:30pm', '2024-06-15T17:30:00'],
+    ['12am', '2024-06-15T00:00:00'],
+    ['12pm', '2024-06-15T12:00:00'],
+    ['9.30pm', '2024-06-15T21:30:00'],
+    ['9 p.m.', '2024-06-15T21:00:00'],
+    // date + time
+    ['tom 13:00', '2024-06-16T13:00:00'],
+    ['tomorrow at 5pm', '2024-06-16T17:00:00'],
+    ['mon 9am', '2024-06-17T09:00:00'],
+    ['next fri 17:00', '2024-06-21T17:00:00'],
+    ['last mon 9am', '2024-06-10T09:00:00'],
+    ['+3d 8:00', '2024-06-18T08:00:00'],
+    ['eom 23:59', '2024-06-30T23:59:00'],
+    ['15 jan 2025 14:30', '2025-01-15T14:30:00'],
+    ['15 06 27 10 30', '2027-06-15T10:30:00'],
+    ['8 30 15 06 27', '2015-08-30T06:27:00'],
+    // a date or a time, shifted
+    ['eom -4h', '2024-06-29T20:00:00'],
+    ['end-of-month -4h', '2024-06-29T20:00:00'],
+    ['tom 13:00 +30min', '2024-06-16T13:30:00'],
+    ['mon +1w', '2024-06-24T00:00:00'],
+    ['15 jan 2025 -1d', '2025-01-14T00:00:00'],
+  ])('parses "%s" → %s', (input, expected) => {
+    const result = parseFuzzyDate(input, askedAt(saturdayMidnight));
 
-  it('classifies bare numbers', () => {
-    const tokens = tokenize('10 20');
-    expect(tokens).toHaveLength(2);
-    expect(tokens[0].kind).toBe(ETokenKind.Number);
-    expect(tokens[0].value).toBe(10);
-    expect(tokens[1].value).toBe(20);
-  });
-
-  it('classifies colon time', () => {
-    const tokens = tokenize('13:00');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[0].extra).toBe('13:0:0.0');
-  });
-
-  it('classifies colon time with seconds and ms', () => {
-    const tokens = tokenize('9:30:45.123');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].extra).toBe('9:30:45.123');
-  });
-
-  it('splits "9am" into colon time token', () => {
-    const tokens = tokenize('9am');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[0].extra).toBe('9:0:0.0');
-  });
-
-  it('splits "5:30pm" into colon time token', () => {
-    const tokens = tokenize('5:30pm');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].extra).toBe('17:30:0.0');
-  });
-
-  it('classifies ordinals', () => {
-    const tokens = tokenize('15th');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Ordinal);
-    expect(tokens[0].value).toBe(15);
-  });
-
-  it('classifies date keywords', () => {
-    const tokens = tokenize('tomorrow');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Keyword);
-  });
-
-  it('classifies time keywords', () => {
-    const tokens = tokenize('noon');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.TimeKeyword);
-  });
-
-  it('classifies boundary keywords', () => {
-    const tokens = tokenize('eom');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.BoundaryKeyword);
-  });
-
-  it('classifies apostrophe year', () => {
-    const tokens = tokenize("'27");
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].value).toBe(2027);
-  });
-
-  it('classifies offset tokens', () => {
-    const tokens = tokenize('+3d');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Offset);
-    expect(tokens[0].value).toBe(3);
-    expect(tokens[0].extra).toBe('d');
-  });
-
-  it('classifies duration tokens', () => {
-    const tokens = tokenize('1w');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Duration);
-    expect(tokens[0].value).toBe(1);
-    expect(tokens[0].extra).toBe('w');
-  });
-
-  it('classifies unknown tokens', () => {
-    const tokens = tokenize('gibberish');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Unknown);
-  });
-
-  it('handles comma-separated input', () => {
-    const tokens = tokenize('10, nov, 2025');
-    expect(tokens).toHaveLength(3);
-    expect(tokens[0].value).toBe(10);
-    expect(tokens[1].value).toBe(11);
-    expect(tokens[2].value).toBe(2025);
-  });
-
-  it('classifies weekday names', () => {
-    const tokens = tokenize('monday');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.WeekdayName);
-    expect(tokens[0].value).toBe(1);
-  });
-
-  it('classifies quarter tokens', () => {
-    const tokens = tokenize('Q1');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Quarter);
-    expect(tokens[0].value).toBe(1);
-  });
-
-  it('classifies AM/PM standalone', () => {
-    const tokens = tokenize('pm');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.AmPm);
-    expect(tokens[0].value).toBe(12);
-  });
-
-  it('classifies direction tokens', () => {
-    const tokens = tokenize('next');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Direction);
-    expect(tokens[0].value).toBe(1);
-  });
-
-  it('classifies unit tokens', () => {
-    const tokens = tokenize('days');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Unit);
-    expect(tokens[0].extra).toBe('d');
-  });
-
-  it('splits "yesterday10" into keyword + hour', () => {
-    const tokens = tokenize('yesterday10');
-    expect(tokens).toHaveLength(2);
-    expect(tokens[0].kind).toBe(ETokenKind.Keyword);
-    expect(tokens[0].raw).toBe('yesterday');
-    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[1].extra).toBe('10:0:0.0');
-  });
-
-  it('splits "tom9" into keyword + hour', () => {
-    const tokens = tokenize('tom9');
-    expect(tokens).toHaveLength(2);
-    expect(tokens[0].kind).toBe(ETokenKind.Keyword);
-    expect(tokens[0].raw).toBe('tom');
-    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[1].extra).toBe('9:0:0.0');
-  });
-
-  it('splits "mon14" into weekday + hour', () => {
-    const tokens = tokenize('mon14');
-    expect(tokens).toHaveLength(2);
-    expect(tokens[0].kind).toBe(ETokenKind.WeekdayName);
-    expect(tokens[0].raw).toBe('mon');
-    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[1].extra).toBe('14:0:0.0');
-  });
-
-  it('splits "friday18" into weekday + hour', () => {
-    const tokens = tokenize('friday18');
-    expect(tokens).toHaveLength(2);
-    expect(tokens[0].kind).toBe(ETokenKind.WeekdayName);
-    expect(tokens[0].value).toBe(5);
-    expect(tokens[1].kind).toBe(ETokenKind.ColonTime);
-    expect(tokens[1].extra).toBe('18:0:0.0');
-  });
-
-  it('does not split non-keyword mixed tokens like "hello10"', () => {
-    const tokens = tokenize('hello10');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Unknown);
-  });
-
-  it('rejects keyword + hour > 23', () => {
-    const tokens = tokenize('tom25');
-    expect(tokens).toHaveLength(1);
-    expect(tokens[0].kind).toBe(ETokenKind.Unknown);
+    expect(result.success && result.value.toPlainDateTime().toString()).toBe(expected);
   });
 });
 
-describe('detectConflicts', () => {
-  it('detects two date keywords', () => {
-    const tokens = tokenize('tom yesterday');
-    expect(detectConflicts(tokens)).toBeDefined();
+describe('parseFuzzyDate — how the parts of an input combine', () => {
+  const saturdayAfternoon = Temporal.ZonedDateTime.from('2024-06-15T14:00:00[UTC]');
+
+  function parsed(input: string, now = saturdayAfternoon): string | false {
+    const result = parseFuzzyDate(input, askedAt(now));
+    return result.success && result.value.toPlainDateTime().toString();
+  }
+
+  it('reads "now" as the moment it is asked at', () => {
+    expect(parsed('now')).toBe('2024-06-15T14:00:00');
   });
 
-  it('detects date keyword + duration', () => {
-    const tokens = tokenize('yesterday 1d');
-    expect(detectConflicts(tokens)).toBeDefined();
+  it.each([
+    ['yesterday noon', '2024-06-14T12:00:00'],
+    ['noon yesterday', '2024-06-14T12:00:00'],
+    ['13:00 tom', '2024-06-16T13:00:00'],
+    ['9am mon', '2024-06-17T09:00:00'],
+    ['8:30 15.12', '2024-12-15T08:30:00'],
+    ['17:05 15/06/99', '1999-06-15T17:05:00'],
+    ['8 30 25.06.99', '1999-06-25T08:30:00'],
+    ['17 05 jan 25, 2025', '2025-01-25T17:05:00'],
+  ])('reads the same whichever of the date and the time comes first: "%s"', (input, expected) => {
+    expect(parsed(input)).toBe(expected);
   });
 
-  it('detects date keyword + offset', () => {
-    const tokens = tokenize('tom +3d');
-    expect(detectConflicts(tokens)).toBeDefined();
+  it.each([
+    ['15 jan 2025 noon', '2025-01-15T12:00:00'],
+    ['15.03.2024 midnight', '2024-03-15T00:00:00'],
+    ['yesterday 9:00', '2024-06-14T09:00:00'],
+    ['today 9:00', '2024-06-15T09:00:00'],
+  ])('leaves a date that is told in full where it is, past or not: "%s"', (input, expected) => {
+    expect(parsed(input)).toBe(expected);
   });
 
-  it('detects two time sources', () => {
-    const tokens = tokenize('noon 13:00');
-    expect(detectConflicts(tokens)).toBeDefined();
+  it.each([
+    ['9 pm', '2024-06-15T21:00:00'],
+    ['9:30 pm', '2024-06-15T21:30:00'],
+    ['9 30 pm', '2024-06-15T21:30:00'],
+    ['12 30 am', '2024-06-16T00:30:00'],
+    ['jan 1 12 30 pm', '2025-01-01T12:30:00'],
+    ['tom 12 am', '2024-06-16T00:00:00'],
+    ['jan 1 pm', '2025-01-01T13:00:00'],
+  ])('applies am and pm written apart from the hour: "%s"', (input, expected) => {
+    expect(parsed(input)).toBe(expected);
   });
 
-  it('detects multiple month names', () => {
-    const tokens = tokenize('jan feb');
-    expect(detectConflicts(tokens)).toBeDefined();
-  });
-
-  it('allows date keyword + time', () => {
-    const tokens = tokenize('tomorrow 13:00');
-    expect(detectConflicts(tokens)).toBeUndefined();
-  });
-
-  it('allows date keyword + number (hour)', () => {
-    const tokens = tokenize('tom 10');
-    expect(detectConflicts(tokens)).toBeUndefined();
-  });
-
-  it('allows month + day + time numbers', () => {
-    const tokens = tokenize('10 nov 10 30');
-    expect(detectConflicts(tokens)).toBeUndefined();
-  });
-});
-
-describe('tagCandidates', () => {
-  it('creates candidates for Number and Ordinal tokens only', () => {
-    const tokens = tokenize('10 nov 2025');
-    const context = makeContext({ hasMonthName: true });
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates).toHaveLength(2);
-    expect(candidates[0].token.value).toBe(10);
-    expect(candidates[1].token.value).toBe(2025);
-  });
-
-  it('assigns year score 1.0 for 4-digit numbers', () => {
-    const tokens = tokenize('2025');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates[0].scores.year).toBe(1.0);
-  });
-
-  it('assigns ms score 1.0 for 3-digit numbers (100-999)', () => {
-    const tokens = tokenize('123');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates[0].scores.ms).toBe(1.0);
-  });
-
-  it('assigns year score 0.9 for 60-99 range', () => {
-    const tokens = tokenize('82');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates[0].scores.year).toBe(0.9);
-  });
-
-  it('assigns day and hour scores for 13-23 range', () => {
-    const tokens = tokenize('14');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates[0].scores.day).toBe(0.5);
-    expect(candidates[0].scores.hour).toBe(0.7);
-  });
-
-  it('includes Ordinal tokens as candidates', () => {
-    const tokens = tokenize('15th');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0].token.kind).toBe(ETokenKind.Ordinal);
-  });
-});
-
-describe('applyContextRules', () => {
-  it('zeros month for all candidates when MonthName present', () => {
-    const tokens = tokenize('10 nov 2025');
-    const context = makeContext({ hasMonthName: true });
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    for (const c of candidates) {
-      expect(c.scores.month).toBe(0);
+  it.each([
+    ['tom 13:00 45', '2024-06-16T13:00:45'],
+    ['tom 13:00 45 900', '2024-06-16T13:00:45.9'],
+    ['jan 25 27 17 05', '2027-01-25T17:05:00'],
+  ])(
+    'reads the numbers after the date as the time, largest part first: "%s"',
+    (input, expected) => {
+      expect(parsed(input)).toBe(expected);
     }
+  );
+
+  it.each([
+    ['15-jan-2025', '2025-01-15T00:00:00'],
+    ['15/jan/2025', '2025-01-15T00:00:00'],
+    ['15 - 03 - 2025', '2025-03-15T00:00:00'],
+    ['end-of-month', '2024-06-30T00:00:00'],
+    ['3 days', '2024-06-18T00:00:00'],
+    ['15/06/17', '2017-06-15T00:00:00'],
+    ['tom 10:30.', '2024-06-16T10:30:00'],
+    ["q1'25", '2025-01-01T00:00:00'],
+    ['Q32026', '2026-07-01T00:00:00'],
+    ['TOMORROW 9AM', '2024-06-16T09:00:00'],
+  ])('reads "%s"', (input, expected) => {
+    expect(parsed(input)).toBe(expected);
   });
 
-  it('zeros day/month/year when date keyword present', () => {
-    const tokens = tokenize('10 30');
-    const context = makeContext({ hasDateKeyword: true });
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    for (const c of candidates) {
-      expect(c.scores.day).toBe(0);
-      expect(c.scores.month).toBe(0);
-      expect(c.scores.year).toBe(0);
+  describe('words that only join the others', () => {
+    it.each([
+      ['tomorrow at 5pm', '2024-06-16T17:00:00'],
+      ['tom at 17:00', '2024-06-16T17:00:00'],
+      ['on monday', '2024-06-17T00:00:00'],
+      ['monday at 9', '2024-06-17T09:00:00'],
+      ['at noon', '2024-06-16T12:00:00'],
+      ['15 jan at 14:30', '2025-01-15T14:30:00'],
+      ['on 15 jan', '2025-01-15T00:00:00'],
+      ['on the 15th', '2024-07-15T00:00:00'],
+      ['1st of january', '2025-01-01T00:00:00'],
+      ['15th of jan 2025', '2025-01-15T00:00:00'],
+      ['the 15th of january', '2025-01-15T00:00:00'],
+    ])('reads "%s" as if they were not written', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each(['at', 'on the', 'of'])('reads nothing in "%s" alone', input => {
+      expect(parsed(input)).toBe(false);
+    });
+  });
+
+  describe('a weekday beside a date', () => {
+    it.each([
+      ['wed 15 jan 2025', '2025-01-15T00:00:00'],
+      ['wednesday, 15 jan 2025', '2025-01-15T00:00:00'],
+      ['Wed Jan 15 2025', '2025-01-15T00:00:00'],
+      ['15.01.2025 wed', '2025-01-15T00:00:00'],
+      ['Wed, 15 Jan 2025 14:30:00 +0200', '2025-01-15T12:30:00'],
+      ['Wed Jan 15 14:30:00 UTC 2025', '2025-01-15T14:30:00'],
+    ])('confirms the date of "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each(['thu 15 jan 2025', 'mon 15.01.2025', 'wed thu 15 jan 2025'])(
+      'does not read "%s", whose weekday is another',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
+
+    it.each([
+      ['fri 21 jun', '2024-06-21T00:00:00'],
+      ['sat 21 jun', '2025-06-21T00:00:00'],
+      ['fri 13th', '2024-09-13T00:00:00'],
+      ['mon 15/06', '2026-06-15T00:00:00'],
+      ['sun 29 feb', '2032-02-29T00:00:00'],
+    ])('takes the next occurrence of "%s" that falls on the weekday', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it('still takes a number beside a lone weekday for the hour', () => {
+      expect(parsed('mon 14 30')).toBe('2024-06-17T14:30:00');
+    });
+  });
+
+  describe('words that count from today', () => {
+    it.each([
+      ['next week', '2024-06-22T00:00:00'],
+      ['next month', '2024-07-15T00:00:00'],
+      ['next year', '2025-06-15T00:00:00'],
+      ['last week', '2024-06-08T00:00:00'],
+      ['last year', '2023-06-15T00:00:00'],
+      ['this month', '2024-06-15T00:00:00'],
+      ['next week 9:00', '2024-06-22T09:00:00'],
+      ['day after tomorrow', '2024-06-17T00:00:00'],
+      ['day before yesterday', '2024-06-13T00:00:00'],
+      ['day after tomorrow 9am', '2024-06-17T09:00:00'],
+      ['a week ago', '2024-06-08T00:00:00'],
+      ['in a week', '2024-06-22T00:00:00'],
+      ['in an hour', '2024-06-15T15:00:00'],
+      ['an hour ago', '2024-06-15T13:00:00'],
+    ])('reads "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['this friday', '2024-06-21T00:00:00'],
+      ['this sat', '2024-06-15T00:00:00'],
+      ['next sat', '2024-06-22T00:00:00'],
+    ])('takes today for "this" weekday when today is one: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+  });
+
+  describe('other ways to spell the same', () => {
+    it.each([
+      ['sept 15', '2024-09-15T00:00:00'],
+      ['15 Sept 2025', '2025-09-15T00:00:00'],
+      ['9 p.m.', '2024-06-15T21:00:00'],
+      ['9:30 p.m.', '2024-06-15T21:30:00'],
+      ['9 a.m.', '2024-06-16T09:00:00'],
+      ['9.30pm', '2024-06-15T21:30:00'],
+      ['tom 9.30am', '2024-06-16T09:30:00'],
+      ['2 hrs', '2024-06-15T16:00:00'],
+      ['30s', '2024-06-15T14:00:30'],
+      ['+30sec', '2024-06-15T14:00:30'],
+      ['in 30 seconds', '2024-06-15T14:00:30'],
+      ['90 secs ago', '2024-06-15T13:58:30'],
+      ['1h30min', '2024-06-15T15:30:00'],
+      ['-1h30min', '2024-06-15T12:30:00'],
+      ['eom -1d12h', '2024-06-28T12:00:00'],
+      ['tom 13:00 +1h30min', '2024-06-16T14:30:00'],
+    ])('reads "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['15\u00a0jan', '2025-01-15T00:00:00'],
+      ['tom\u00a013:00', '2024-06-16T13:00:00'],
+      ['\uff11\uff15 jan \uff12\uff10\uff12\uff15', '2025-01-15T00:00:00'],
+      ['15\u201303\u20132025', '2025-03-15T00:00:00'],
+      ['15 jan \u2013 1d', '2025-01-14T00:00:00'],
+      ['eom \u22124h', '2024-06-29T20:00:00'],
+    ])('reads "%s" copied from a formatted text', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each(['1/2d', '9:30h', 'eom/4h'])(
+      'does not read "%s", an offset joined by what is no sign',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
+  });
+
+  describe('an offset with a fraction', () => {
+    it.each([
+      ['1.5h', '2024-06-15T15:30:00'],
+      ['+1.5h', '2024-06-15T15:30:00'],
+      ['-1.5h', '2024-06-15T12:30:00'],
+      ['0.5h', '2024-06-15T14:30:00'],
+      ['-0.5h', '2024-06-15T13:30:00'],
+      ['1.25h', '2024-06-15T15:15:00'],
+      ['1,5h', '2024-06-15T15:30:00'],
+      ['2.5min', '2024-06-15T14:02:30'],
+      ['1.5s', '2024-06-15T14:00:01.5'],
+      ['2.5d', '2024-06-17T12:00:00'],
+      ['0.5w', '2024-06-18T12:00:00'],
+      ['in 1.5 hours', '2024-06-15T15:30:00'],
+      ['1.5 hours ago', '2024-06-15T12:30:00'],
+      ['eom -1.5h', '2024-06-29T22:30:00'],
+      ['eom-1.5h', '2024-06-29T22:30:00'],
+      ['tom 13:00 +0.5h', '2024-06-16T13:30:00'],
+      ['1.5h30min', '2024-06-15T16:00:00'],
+    ])('reads "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each(['1.5m', '1.5y', '2.5 months', 'in 1.5 years'])(
+      'does not read "%s": a part of a month or a year has no length of its own',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
+
+    it.each([
+      ['15.03.2025', '2025-03-15T00:00:00'],
+      ['15.03', '2025-03-15T00:00:00'],
+      ['jan 15, 2025', '2025-01-15T00:00:00'],
+      ['10, nov, 2025', '2025-11-10T00:00:00'],
+      ['tom, 13:00', '2024-06-16T13:00:00'],
+    ])('still reads the dot and the comma of "%s" as separators', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+  });
+
+  describe('the parts of a day', () => {
+    it.each([
+      ['tonight', '2024-06-15T20:00:00'],
+      ['tomorrow morning', '2024-06-16T09:00:00'],
+      ['tom afternoon', '2024-06-16T15:00:00'],
+      ['mon evening', '2024-06-17T19:00:00'],
+      ['15 jan 2025 morning', '2025-01-15T09:00:00'],
+      ['evening', '2024-06-15T19:00:00'],
+      ['morning', '2024-06-16T09:00:00'],
+    ])('reads "%s" as the usual hour of that part', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['tonight at 9', '2024-06-15T21:00:00'],
+      ['tonight 9:30', '2024-06-15T21:30:00'],
+      ['tonight 11 45', '2024-06-15T23:45:00'],
+      ['tomorrow evening 8', '2024-06-16T20:00:00'],
+      ['tomorrow morning 8', '2024-06-16T08:00:00'],
+      ['tom afternoon 12:30', '2024-06-16T12:30:00'],
+    ])('takes an hour of the dial in "%s" for that half of the day', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['tonight 21:00', '2024-06-15T21:00:00'],
+      ['tonight 9pm', '2024-06-15T21:00:00'],
+      ['tomorrow morning 9am', '2024-06-16T09:00:00'],
+      ['tonight 0:30', '2024-06-15T00:30:00'],
+    ])('leaves an hour that says its half of the day as it is: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each(['tonight tomorrow', 'morning evening', 'tonight noon'])(
+      'does not choose between the two readings of "%s"',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
+  });
+
+  describe('the weekend', () => {
+    it.each([
+      ['2024-06-12T14:00:00[UTC]', 'weekend', '2024-06-15T00:00:00'],
+      ['2024-06-12T14:00:00[UTC]', 'this weekend', '2024-06-15T00:00:00'],
+      ['2024-06-12T14:00:00[UTC]', 'next weekend', '2024-06-22T00:00:00'],
+      ['2024-06-12T14:00:00[UTC]', 'last weekend', '2024-06-08T00:00:00'],
+      ['2024-06-15T14:00:00[UTC]', 'weekend', '2024-06-15T00:00:00'],
+      ['2024-06-15T14:00:00[UTC]', 'next weekend', '2024-06-22T00:00:00'],
+      ['2024-06-16T14:00:00[UTC]', 'weekend', '2024-06-16T00:00:00'],
+      ['2024-06-16T14:00:00[UTC]', 'next weekend', '2024-06-22T00:00:00'],
+      ['2024-06-16T14:00:00[UTC]', 'last weekend', '2024-06-08T00:00:00'],
+    ])('asked at %s, reads "%s"', (asked, input, expected) => {
+      expect(parsed(input, Temporal.ZonedDateTime.from(asked))).toBe(expected);
+    });
+
+    it.each([
+      ['next weekend 10:00', '2024-06-22T10:00:00'],
+      ['next weekend morning', '2024-06-22T09:00:00'],
+      ['next weekend +1d', '2024-06-23T00:00:00'],
+    ])('reads "%s" with what stands beside it', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+  });
+
+  describe('the edges of a period', () => {
+    it.each([
+      ['eod', '2024-06-15T23:59:59.999'],
+      ['end of day', '2024-06-15T23:59:59.999'],
+      ['eow', '2024-06-16T00:00:00'],
+      ['end of week', '2024-06-16T00:00:00'],
+      ['bow', '2024-06-17T00:00:00'],
+      ['sow', '2024-06-17T00:00:00'],
+      ['start of week', '2024-06-17T00:00:00'],
+      ['boq', '2024-07-01T00:00:00'],
+      ['soq', '2024-07-01T00:00:00'],
+      ['start of quarter', '2024-07-01T00:00:00'],
+      ['beginning of quarter', '2024-07-01T00:00:00'],
+      ['end of quarter', '2024-06-30T00:00:00'],
+    ])('reads "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['end of next month', '2024-07-31T00:00:00'],
+      ['end-of-next-month', '2024-07-31T00:00:00'],
+      ['start of next month', '2024-07-01T00:00:00'],
+      ['end of last month', '2024-05-31T00:00:00'],
+      ['start of last month', '2024-05-01T00:00:00'],
+      ['end of this month', '2024-06-30T00:00:00'],
+      ['end of next year', '2025-12-31T00:00:00'],
+      ['start of next quarter', '2024-07-01T00:00:00'],
+      ['end of next quarter', '2024-09-30T00:00:00'],
+      ['end of next week', '2024-06-23T00:00:00'],
+      ['start of last week', '2024-06-03T00:00:00'],
+      ['end of next month 18:00', '2024-07-31T18:00:00'],
+      ['end of next month -4h', '2024-07-30T20:00:00'],
+    ])('reads "%s", the edge of a period next to this one', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it('takes today for a start that falls on today', () => {
+      const monday = Temporal.ZonedDateTime.from('2024-07-01T09:00:00[UTC]');
+
+      expect(parsed('bow', monday)).toBe('2024-07-01T00:00:00');
+      expect(parsed('boq', monday)).toBe('2024-07-01T00:00:00');
+      expect(parsed('eow', monday)).toBe('2024-07-07T00:00:00');
+    });
+  });
+
+  describe('numbers with nothing but spaces between them', () => {
+    it.each([
+      ['10 30', '2024-06-16T10:30:00'],
+      ['15 30', '2024-06-15T15:30:00'],
+      ['17 45 30', '2024-06-15T17:45:30'],
+      ['0 05', '2024-06-16T00:05:00'],
+      ['12 25', '2024-06-16T12:25:00'],
+    ])('reads "%s" as a time when it can be one', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['25 12', '2024-12-25T00:00:00'],
+      ['30 8', '2024-08-30T00:00:00'],
+      ['8 30 27', '2027-08-30T00:00:00'],
+      ['31 12 99', '1999-12-31T00:00:00'],
+      ['99 12 31', '1999-12-31T00:00:00'],
+      ['82 06 15 10 30', '1982-06-15T10:30:00'],
+      ['12 99', '1999-12-01T00:00:00'],
+      ['99 12', '1999-12-01T00:00:00'],
+      ['15 06 10', '2010-06-15T00:00:00'],
+      ['01 2027', '2027-01-01T00:00:00'],
+      ['2027 01', '2027-01-01T00:00:00'],
+      ['2025 01 15', '2025-01-15T00:00:00'],
+    ])('reads "%s" as the date its values allow', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['8 30 15 06 27', '2015-08-30T06:27:00'],
+      ['15 06 27 10 30', '2027-06-15T10:30:00'],
+      ['30 8 15 06 27', '2015-08-30T06:27:00'],
+      ['15 06 2027 10', '2027-06-15T10:00:00'],
+      ['15 06 27 10 30 45', '2027-06-15T10:30:45'],
+      ['15 06 27 10 30 45 900', '2027-06-15T10:30:45.9'],
+      ['2025 01 15 9 30', '2025-01-15T09:30:00'],
+      ['25 12 17 30', '2024-12-25T17:30:00'],
+      ['25 12 17 30 45', '2024-12-25T17:30:45'],
+      ['01 2027 10 30', '2027-01-01T10:30:00'],
+    ])('reads "%s" as a date followed by a time', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['1 01 17 00', '2025-01-01T17:00:00'],
+      ['10 11 12 13', '2024-11-10T12:13:00'],
+      ['5 03 27 8', '2027-03-05T08:00:00'],
+      ['2025 3 5 8', '2025-03-05T08:00:00'],
+      ['15 06 17', '2017-06-15T00:00:00'],
+    ])('takes the reading the numbers of "%s" weigh most in', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['5 03 8:05 45', '2025-03-05T08:05:45'],
+      ['8:05 45 5 03', '2025-03-05T08:05:45'],
+      ['8:05 45 10', '2024-07-10T08:05:45'],
+      ['15 jan 14:30 2025', '2025-01-15T14:30:00'],
+    ])('keeps the date and the time of "%s" whole when it can', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['30 45', false],
+      ['45 10', false],
+      ['45', false],
+      ['2025 13 01', false],
+      ['32 13 2025', false],
+      ['1 2 3 4 5 6 7 8', false],
+    ])('does not read "%s", which fits no order', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+  });
+
+  describe('an offset beside a date or a time', () => {
+    it.each([
+      ['end-of-month -4h', '2024-06-29T20:00:00'],
+      ['end of month -4h', '2024-06-29T20:00:00'],
+      ['eom -4h', '2024-06-29T20:00:00'],
+      ['eom 18:00 -4h', '2024-06-30T14:00:00'],
+      ['eom -1d', '2024-06-29T00:00:00'],
+      ['eoy +1d', '2025-01-01T00:00:00'],
+      ['bom -1d', '2024-06-30T00:00:00'],
+      ['eoq +2w', '2024-07-14T00:00:00'],
+      ['tom -4h', '2024-06-15T20:00:00'],
+      ['tom +3d', '2024-06-19T00:00:00'],
+      ['tom 13:00 +30min', '2024-06-16T13:30:00'],
+      ['yesterday 9am -90min', '2024-06-14T07:30:00'],
+      ['mon +1w', '2024-06-24T00:00:00'],
+      ['next fri 17:00 -2h', '2024-06-21T15:00:00'],
+      ['15 jan 2025 -1d', '2025-01-14T00:00:00'],
+      ['15.03.2025 +2w', '2025-03-29T00:00:00'],
+      ['2025-01-31 +1m', '2025-02-28T00:00:00'],
+      ['Q1 2025 -1d', '2024-12-31T00:00:00'],
+      ['jan 2027 +1y', '2028-01-01T00:00:00'],
+      ['15 jan 2025 14:30 in 2 hours', '2025-01-15T16:30:00'],
+      ['eom 3 days ago', '2024-06-27T00:00:00'],
+    ])('shifts what the rest of "%s" says', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['-4h eom', '2024-06-29T20:00:00'],
+      ['+30min tom 13:00', '2024-06-16T13:30:00'],
+      ['+1d 15.03.2025', '2025-03-16T00:00:00'],
+    ])('shifts the same when it is written first: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['eom-4h', '2024-06-29T20:00:00'],
+      ['tom-1d', '2024-06-15T00:00:00'],
+      ['eom+2d', '2024-07-02T00:00:00'],
+      ['mon14-30min', '2024-06-17T13:30:00'],
+    ])('takes a dash that joins it to the word before for its minus: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['eom -1d -4h', '2024-06-28T20:00:00'],
+      ['tom +1w +2d 9:00', '2024-06-25T09:00:00'],
+    ])('applies several offsets one after another: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['+3d', '2024-06-18T00:00:00'],
+      ['2 weeks ago', '2024-06-01T00:00:00'],
+      ['+3d 8:00', '2024-06-18T08:00:00'],
+      ['+1d 15', '2024-06-16T15:00:00'],
+    ])('shifts today when nothing else tells the date: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it.each([
+      ['+4h', '2024-06-15T18:00:00'],
+      ['-30min', '2024-06-15T13:30:00'],
+      ['in 2 hours', '2024-06-15T16:00:00'],
+      ['90 minutes ago', '2024-06-15T12:30:00'],
+      ['45 mins', '2024-06-15T14:45:00'],
+      ['now +2h', '2024-06-15T16:00:00'],
+      ['+1d +4h', '2024-06-16T18:00:00'],
+    ])('shifts this very moment when it counts hours or minutes alone: "%s"', (input, expected) => {
+      expect(parsed(input)).toBe(expected);
+    });
+
+    it('chooses the occurrence after the shift, not before it', () => {
+      expect(parsed('noon +4h')).toBe('2024-06-15T16:00:00');
+      expect(parsed('noon +1h')).toBe('2024-06-16T13:00:00');
+    });
+
+    it.each(['eom -99999999999h', 'tom +99999999999min', '15 jan 9999 +1y'])(
+      'fails on "%s", which reaches past the calendar, and does not throw',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
+  });
+
+  describe('the moment and the zone, told apart', () => {
+    const moment = Temporal.Instant.from('2024-06-15T12:30:00Z');
+
+    it.each(['Europe/Berln', '', '+25:00'])(
+      'refuses to read anything in the time zone "%s", which does not exist',
+      timeZone => {
+        expect(() => parseFuzzyDate('today', { now: moment, timeZone })).toThrow(
+          `parseFuzzyDate: unknown time zone "${timeZone}"`
+        );
+      }
+    );
+
+    it.each([
+      ['UTC', '2024-06-15T13:00:00+00:00[UTC]'],
+      ['Europe/Berlin', '2024-06-16T13:00:00+02:00[Europe/Berlin]'],
+      ['Pacific/Auckland', '2024-06-16T13:00:00+12:00[Pacific/Auckland]'],
+      ['America/Los_Angeles', '2024-06-15T13:00:00-07:00[America/Los_Angeles]'],
+    ])('reads "13:00" asked at one moment in %s', (timeZone, expected) => {
+      const result = parseFuzzyDate('13:00', { now: moment, timeZone });
+
+      expect(result.success && result.value.toString()).toBe(expected);
+    });
+
+    it('takes the first occurrence not yet past unless the nearest is asked for', () => {
+      const options = { now: moment, timeZone: 'Europe/Berlin' };
+      const ahead = parseFuzzyDate('9:00', options);
+      const nearest = parseFuzzyDate('9:00', { ...options, nearest: true });
+
+      expect(ahead.success && ahead.value.toPlainDateTime().toString()).toBe('2024-06-16T09:00:00');
+      expect(nearest.success && nearest.value.toPlainDateTime().toString()).toBe(
+        '2024-06-15T09:00:00'
+      );
+    });
+  });
+
+  describe('the time zone of the asker', () => {
+    const sameInstant = Temporal.Instant.from('2024-06-15T12:30:00Z');
+    const inAuckland = sameInstant.toZonedDateTimeISO('Pacific/Auckland');
+    const inLosAngeles = sameInstant.toZonedDateTimeISO('America/Los_Angeles');
+
+    function read(input: string, now: Temporal.ZonedDateTime): string | false {
+      const result = parseFuzzyDate(input, askedAt(now));
+      return result.success && result.value.toString();
     }
+
+    it.each([
+      ['today', '2024-06-16T00:00:00+12:00[Pacific/Auckland]'],
+      ['tom 9:00', '2024-06-17T09:00:00+12:00[Pacific/Auckland]'],
+      ['13:00', '2024-06-16T13:00:00+12:00[Pacific/Auckland]'],
+      ['eom', '2024-06-30T00:00:00+12:00[Pacific/Auckland]'],
+      ['+1h', '2024-06-16T01:30:00+12:00[Pacific/Auckland]'],
+    ])('reads "%s" on the calendar and the clock of Auckland', (input, expected) => {
+      expect(read(input, inAuckland)).toBe(expected);
+    });
+
+    it.each([
+      ['today', '2024-06-15T00:00:00-07:00[America/Los_Angeles]'],
+      ['tom 9:00', '2024-06-16T09:00:00-07:00[America/Los_Angeles]'],
+      ['13:00', '2024-06-15T13:00:00-07:00[America/Los_Angeles]'],
+      ['+1h', '2024-06-15T06:30:00-07:00[America/Los_Angeles]'],
+    ])('reads "%s" at the same instant on those of Los Angeles', (input, expected) => {
+      expect(read(input, inLosAngeles)).toBe(expected);
+    });
+
+    it('answers in the zone of the asker when the input names another', () => {
+      expect(read('15 jan 2025 14:30Z', inAuckland)).toBe(
+        '2025-01-16T03:30:00+13:00[Pacific/Auckland]'
+      );
+    });
+
+    it('moves a time the clocks skip to the first one that exists', () => {
+      const beforeSpringForward = Temporal.ZonedDateTime.from('2024-03-30T12:00:00[Europe/Berlin]');
+
+      expect(read('tom 2:30', beforeSpringForward)).toBe(
+        '2024-03-31T03:30:00+02:00[Europe/Berlin]'
+      );
+    });
+
+    it('takes the first of the two times the clocks repeat', () => {
+      const beforeFallBack = Temporal.ZonedDateTime.from('2024-10-26T12:00:00[Europe/Berlin]');
+
+      expect(read('tom 2:30', beforeFallBack)).toBe('2024-10-27T02:30:00+02:00[Europe/Berlin]');
+    });
   });
 
-  it('zeros hour/minute/second/ms when ColonTime present', () => {
-    const tokens = tokenize('10');
-    const context = makeContext({ hasColonTime: true });
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.hour).toBe(0);
-    expect(candidates[0].scores.minute).toBe(0);
-    expect(candidates[0].scores.second).toBe(0);
-    expect(candidates[0].scores.ms).toBe(0);
+  describe('a time told in another time zone', () => {
+    const berlinAfternoon = Temporal.ZonedDateTime.from('2024-06-15T14:00:00[Europe/Berlin]');
+
+    it.each([
+      ['2024-01-15T14:30:00Z', '2024-01-15T15:30:00'],
+      ['2024-01-15T14:30Z', '2024-01-15T15:30:00'],
+      ['2024-01-15T14:30:00.123456789Z', '2024-01-15T15:30:00.123'],
+      ['2024-01-15T14:30:00+02:00', '2024-01-15T13:30:00'],
+      ['2024-01-15T23:30:00-05:00', '2024-01-16T05:30:00'],
+      ['15 jan 2025 10:30+02:00', '2025-01-15T09:30:00'],
+      ['15 jan 2025 10:30 +0200', '2025-01-15T09:30:00'],
+      ['15 jan 2025 10:30 utc', '2025-01-15T11:30:00'],
+    ])('reads "%s" as that moment on the clock of the asker', (input, expected) => {
+      expect(parsed(input, berlinAfternoon)).toBe(expected);
+    });
+
+    it('gives back the moment a date editor wrote as an instant', () => {
+      const picked = Temporal.ZonedDateTime.from('2025-03-09T18:45:30.5[Europe/Berlin]');
+
+      expect(parsed(picked.toInstant().toString(), berlinAfternoon)).toBe(
+        picked.toPlainDateTime().toString()
+      );
+    });
+
+    it.each(['10:30+25:00', '10:30+02:60', '10:30Z+02:00', '10:30+02:00 11:30Z'])(
+      'does not read "%s"',
+      input => {
+        expect(parsed(input, berlinAfternoon)).toBe(false);
+      }
+    );
   });
 
-  it('zeros hour/minute/second/ms when TimeKeyword present', () => {
-    const tokens = tokenize('10');
-    const context = makeContext({ hasTimeKeyword: true });
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.hour).toBe(0);
+  describe('what is left untold recurs', () => {
+    it('takes the next month that has the day', () => {
+      const lastOfJanuary = Temporal.ZonedDateTime.from('2025-01-31T09:00:00[UTC]');
+
+      expect(parsed('31st', lastOfJanuary)).toBe('2025-03-31T00:00:00');
+    });
+
+    it('takes the next year that has the leap day', () => {
+      expect(parsed('feb 29')).toBe('2028-02-29T00:00:00');
+    });
+
+    it('takes today for a day and month that fall on today, while the day has not begun', () => {
+      const saturdayMidnight = Temporal.ZonedDateTime.from('2024-06-15T00:00:00[UTC]');
+
+      expect(parsed('15.06', saturdayMidnight)).toBe('2024-06-15T00:00:00');
+      expect(parsed('15 jun', saturdayMidnight)).toBe('2024-06-15T00:00:00');
+    });
+
+    it('takes next year for a month whose first day has begun', () => {
+      const firstOfJune = Temporal.ZonedDateTime.from('2024-06-01T09:00:00[UTC]');
+
+      expect(parsed('june', firstOfJune)).toBe('2025-06-01T00:00:00');
+      expect(parsed('june', firstOfJune.startOfDay())).toBe('2024-06-01T00:00:00');
+    });
+
+    it('takes next year for a day and month whose time has passed today', () => {
+      expect(parsed('15.06 9:00')).toBe('2025-06-15T09:00:00');
+      expect(parsed('15 jun 15:00')).toBe('2024-06-15T15:00:00');
+    });
   });
 
-  it('boosts day for number adjacent to MonthName (after)', () => {
-    const tokens = tokenize('nov 10');
-    const context = makeContext({ hasMonthName: true });
-    const candidates = tagCandidates(tokens, context);
-    const baseDayScore = candidates[0].scores.day;
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.day).toBe(baseDayScore + 0.5 + 0.3);
+  describe('contradictions', () => {
+    it.each([
+      'tom yesterday',
+      'mon tue',
+      'eom bom',
+      'jan feb',
+      '15th jan 16th',
+      'noon 13:00',
+      '13:00 14:00',
+      "15 jan 2025 '26",
+      '9 am pm',
+      'today jan',
+    ])('does not choose between the two readings of "%s"', input => {
+      expect(parsed(input)).toBe(false);
+    });
   });
 
-  it('boosts day for number adjacent to MonthName (before)', () => {
-    const tokens = tokenize('10 nov');
-    const context = makeContext({ hasMonthName: true });
-    const candidates = tagCandidates(tokens, context);
-    const baseDayScore = candidates[0].scores.day;
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.day).toBe(baseDayScore + 0.5 + 0.3);
-  });
+  describe('input that does not read in full', () => {
+    it.each([
+      'mon 45',
+      'tom25',
+      'tom 13:00 900',
+      'next',
+      'days',
+      'the',
+      'in 3',
+      'pm',
+      '2025',
+      '13:00 2025',
+      'jan gibberish',
+    ])('does not drop the part of "%s" it cannot place', input => {
+      expect(parsed(input)).toBe(false);
+    });
 
-  it('applies position boost for date keyword (time order)', () => {
-    const tokens = tokenize('10 30');
-    const context = makeContext({ hasDateKeyword: true });
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.hour).toBeGreaterThan(0);
-    expect(candidates[1].scores.minute).toBeGreaterThan(0);
-  });
+    it.each([
+      '+99999999999y',
+      '-99999999999d',
+      '99999999999m',
+      'in 99999999999999999999 days',
+      '9999999 weeks ago',
+      '999999999999999999999',
+      '15 jan 99999',
+    ])('fails on "%s", which reaches past the calendar, and does not throw', input => {
+      expect(parsed(input)).toBe(false);
+    });
 
-  it('applies AM/PM influence to candidate with highest hour score', () => {
-    const tokens = tokenize('10');
-    const context = makeContext({ hasAmPm: true });
-    const candidates = tagCandidates(tokens, context);
-    const hourBefore = candidates[0].scores.hour;
-    applyContextRules(candidates, tokens, context);
-    expect(candidates[0].scores.hour).toBe(hourBefore + 0.2);
-  });
+    it.each(['2025-13-01', '2025-31-12', '31/31/2025', '13/2025'])(
+      'does not reorder the parts of "%s" to make a date of them',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
 
-  it('zeros day for Number candidates when Ordinal present', () => {
-    const tokens = tokenize('15th 10');
-    const context = makeContext({ hasOrdinal: true });
-    const candidates = tagCandidates(tokens, context);
-    const numberCandidate = candidates.find(c => c.token.kind === ETokenKind.Number);
-    applyContextRules(candidates, tokens, context);
-    expect(numberCandidate?.scores.day).toBe(0);
-  });
-});
-
-describe('resolveSlots', () => {
-  it('assigns 4-digit number to year (certain assignment)', () => {
-    const tokens = tokenize('2025');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    const result = resolveSlots(candidates);
-    expect(result).toBeDefined();
-    expect(result?.get(candidates[0])).toBe('year');
-  });
-
-  it('assigns 3-digit number to ms (certain assignment)', () => {
-    const tokens = tokenize('123');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    const result = resolveSlots(candidates);
-    expect(result).toBeDefined();
-    expect(result?.get(candidates[0])).toBe('ms');
-  });
-
-  it('assigns multiple numbers via greedy resolution', () => {
-    const tokens = tokenize('15 3 2025');
-    const context = makeContext();
-    const candidates = tagCandidates(tokens, context);
-    applyContextRules(candidates, tokens, context);
-    const result = resolveSlots(candidates);
-    expect(result).toBeDefined();
-    expect(result?.get(candidates[0])).toBe('day');
-    expect(result?.get(candidates[1])).toBe('month');
-    expect(result?.get(candidates[2])).toBe('year');
-  });
-
-  it('returns defined for empty candidates', () => {
-    const result = resolveSlots([]);
-    expect(result).toBeDefined();
-    expect(result?.size).toBe(0);
+    it.each(['25:00', '12:60', '13pm', '0am', '31.06.2025', '29 feb 2025', '15/13/2025'])(
+      'does not read "%s", which no clock or calendar has',
+      input => {
+        expect(parsed(input)).toBe(false);
+      }
+    );
   });
 });

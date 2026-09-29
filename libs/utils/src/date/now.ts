@@ -12,6 +12,11 @@ export function getNowPlainDate(zone: Temporal.TimeZoneLike = 'UTC'): Temporal.P
   return instant.toZonedDateTimeISO(zone).toPlainDate();
 }
 
+/** The system clock as a value to hand over: what reads the time through it can be given another clock. */
+export function getNowInstant(): Temporal.Instant {
+  return Temporal.Now.instant();
+}
+
 export function getNowISO8601(): ISO {
   return Temporal.Now.instant().toString() as ISO;
 }

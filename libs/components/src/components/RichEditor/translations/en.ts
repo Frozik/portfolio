@@ -25,4 +25,5 @@ export const calendarAriaLabelsEn: ICalendarAriaLabels = {
   calendarDays: 'Days of the month',
   openNativePicker: 'Open the system date picker',
   decreaseMilliseconds: 'Decrease milliseconds',
+  toggleCalendar: 'Calendar popup',
 };

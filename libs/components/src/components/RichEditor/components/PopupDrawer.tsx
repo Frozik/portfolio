@@ -2,6 +2,7 @@ import type { MouseEvent, PointerEvent, ReactNode } from 'react';
 import { memo, useEffect, useState } from 'react';
 
 import { useEventCallback } from 'usehooks-ts';
+import { PopupHandle } from './PopupHandle';
 import styles from '../styles.module.css';
 
 /** How long the drawer stays out after nothing holds it, so a slip of the mouse does not shut it. */
@@ -11,10 +12,12 @@ export const POPUP_RETRACT_DELAY_MS = 700;
 export const PopupDrawer = memo(
   ({
     held,
+    label,
     children,
   }: {
     /** Stays pulled out whatever the pointer does, e.g. while the keyboard is inside. */
     readonly held: boolean;
+    readonly label: string;
     readonly children: ReactNode;
   }) => {
     const [hovered, setHovered] = useState(false);
@@ -62,7 +65,7 @@ export const PopupDrawer = memo(
         onMouseDown={handleMouseDown}
       >
         {children}
-        <div className={styles.popoverHandle} aria-hidden="true" />
+        <PopupHandle label={label} />
       </div>
     );
   }

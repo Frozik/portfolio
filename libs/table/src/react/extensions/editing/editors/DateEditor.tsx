@@ -5,7 +5,11 @@ import { useEventCallback } from 'usehooks-ts';
 
 import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
 import type { IRichEditorHandle } from '@frozik/components/components/RichEditor/defs';
+import { assert } from '@frozik/utils/assert/assert';
 import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
+import type { IParseContext } from '@frozik/utils/date/fuzzy/types';
+import { getNowInstant } from '@frozik/utils/date/now';
+import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 
 import type { IEditorProps } from '../editing-column';
 import { useEditorFocus } from './useEditorFocus';
@@ -72,9 +76,10 @@ export function DateEditor<TRow>({
   const ref = useRef<IRichEditorHandle>(null);
   useEditorFocus(ref);
   const timeZone = options.timeZone ?? Temporal.Now.timeZoneId();
+  assert(isValidTimeZoneId(timeZone), `column "${column.id}": unknown time zone "${timeZone}"`);
   const showTime = options.showTime ?? column.kind !== 'date';
-  const parse = useEventCallback((text: string) =>
-    parseFuzzyDate(text, { now: Temporal.Now.zonedDateTimeISO(timeZone), nearest: true })
+  const parse = useEventCallback((text: string, context: IParseContext) =>
+    parseFuzzyDate(text, { ...context, nearest: true })
   );
   const handleChange = useEventCallback((picked: Temporal.ZonedDateTime | undefined) =>
     onChange(likeOriginal(value, picked))
@@ -85,6 +90,7 @@ export function DateEditor<TRow>({
       className="ft-editor-field"
       value={toZoned(draft, timeZone)}
       onValueChange={handleChange}
+      getNow={getNowInstant}
       onParseInput={parse}
       timeZone={timeZone}
       showTime={showTime}

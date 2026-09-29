@@ -6,6 +6,7 @@ import type { ChangeEvent, ReactNode } from 'react';
 import { lazy, memo, Suspense, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
+import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 import { Button } from '../../../../shared/ui/Button';
 import { Drawer } from '../../../../shared/ui/Drawer';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
@@ -13,7 +14,6 @@ import { Spinner } from '../../../../shared/ui/Spinner';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { SiteLocationChanges } from '../../domain/model/settings-edits';
-import { isValidTimeZoneId } from '../../domain/sun/time-zone';
 import type { Meters } from '../../domain/units';
 import type { PlanLayerKind } from '../../domain/view/plan-layers';
 import { PLAN_LAYER_KINDS } from '../../domain/view/plan-layers';
