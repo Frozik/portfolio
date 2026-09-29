@@ -34,10 +34,24 @@ through `rowClass` setting the grid's `--table-row-bg` (green under 10,
 orange up to 10 000, red above); the selection and hover overlays stay visible
 on top of the tint. Editing starts with
 Enter, F2, a double click or by typing: price and quantity open the numeric
-editor with validation (an error blocks, a warning only marks), side and
+editor with validation (an error blocks, a warning only marks), the price of
+a filled trade is final (the column's `editable` rule over the row), side and
 status open a select list, the note opens a text field or a textarea
 depending on its length, and cancelled trades are locked through a
-table-level `cellSpec`. Every commit goes to the store as a new row; the
+table-level `cellSpec`. Every cell is one component with a view and an edit mode: price and quantity
+are `numberCell`, side and status are `selectCell` with their own view
+component (the coloured side, the status tag), the venue is the default
+`TextCell`, the note is `TextCell` or a `textareaCell` by length. Dragging a header
+reorders columns; a column dropped inside the "Instrument" or "Execution"
+group joins it, dropped beside it leaves, and dropped on the group's own
+header becomes its first or last column. The autosize
+control switches how the columns without a declared width follow their
+content (grow only by default, fit both ways, once by the first rows or by
+the header, or off). The commit
+control switches between sending every
+edit at once and confirming by row: in the latter a row-actions column
+appears at the end with apply and revert for an edited row, calling the row
+API of the editing slice. Every commit goes to the store as a new row; the
 kernel never mutates data. A double click on a row (or the arrow in the
 first column) opens its detail: a nested compact table of the fills the
 trade was assembled from, with its own model and id. A right click (or

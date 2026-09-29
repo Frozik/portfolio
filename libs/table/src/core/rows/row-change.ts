@@ -1,7 +1,8 @@
-/** One committed edit: the row as it was, the row as `set` made it, and where it happened. */
+/** One confirmed row edit: the row as the application last gave it and the row every `set` made of it. */
 export interface IRowChange<TRow> {
-  readonly row: TRow;
-  readonly next: TRow;
+  readonly old: TRow;
+  readonly new: TRow;
   readonly rowKey: string;
-  readonly columnId: string;
+  /** The columns edited, in the order they were. */
+  readonly fields: readonly string[];
 }

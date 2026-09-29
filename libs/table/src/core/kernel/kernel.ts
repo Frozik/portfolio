@@ -27,7 +27,7 @@ export interface ITableKernel<TRow, TContext> {
   extension<TSlice>(id: string): TSlice | undefined;
   /** Menu items every extension offers for the target, in registration order. */
   menu(context: IMenuContext<TRow>): readonly TMenuItem[];
-  /** Hands an edited row to the application; the kernel never mutates rows itself. */
-  changeRow(change: IRowChange<TRow>): void | Promise<void>;
+  /** Hands confirmed edits to the application; the kernel never mutates rows itself. */
+  changeRows(changes: readonly IRowChange<TRow>[]): void | Promise<void>;
   reportSourceError(error: unknown): void;
 }

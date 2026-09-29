@@ -62,8 +62,8 @@ describe('ColumnsModel', () => {
 
   it('keeps the user order and widths as state and returns to the definition on reset', () => {
     const columns = model();
-    columns.move('price', 0);
     columns.pin('price', null);
+    columns.move('price', 0);
     columns.resize('name', 180);
 
     expect(columns.visibleIds).toEqual(['price', 'name', 'note']);

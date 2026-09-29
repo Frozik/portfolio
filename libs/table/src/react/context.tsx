@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { createContext, useContext } from 'react';
 
 import { assert } from '@frozik/utils/assert/assert';
@@ -10,6 +10,8 @@ import type { ITableTranslations } from './translations/types';
 
 export interface ITableContextValue<TRow> {
   readonly table: TableModel<TRow, unknown>;
+  /** The `.ft` root element, for extensions that measure or position against the table. */
+  readonly rootRef: RefObject<HTMLDivElement | null>;
   readonly slots: IResolvedSlots<TRow>;
   readonly translations: ITableTranslations;
   readonly locale: string;

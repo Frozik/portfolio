@@ -1,3 +1,5 @@
+import { observable, runInAction } from 'mobx';
+
 import { column } from '../../core/columns/column';
 import { createTable } from '../../core/create-table';
 import { clientRows } from '../../core/rows/client-rows';
@@ -16,13 +18,14 @@ const define = column<TItem>();
 
 function harness(
   options: IEditingOptions<TItem> = {},
-  change?: (change: IRowChange<TItem>) => void | Promise<void>
+  change?: (changes: readonly IRowChange<TItem>[]) => void | Promise<void>
 ) {
-  let items: TItem[] = [
+  const items = observable.box<readonly TItem[]>([
     { id: 1, name: 'cedar', price: 30 },
     { id: 2, name: 'ash', price: 10, locked: true },
-  ];
+  ]);
   const changes: IRowChange<TItem>[] = [];
+  const calls: number[] = [];
   const model = createTable({
     columns: [
       define({
@@ -37,7 +40,7 @@ function harness(
             : name.length > 8
               ? { level: 'warning', message: 'Long' }
               : undefined,
-        editable: row => row.locked !== true,
+        editable: ({ row }) => row.locked !== true,
       }),
       define({
         id: 'price',
@@ -45,23 +48,30 @@ function harness(
         kind: 'number',
         value: row => row.price,
         set: (row, price) => ({ ...row, price }),
+        editable: true,
       }),
       define({ id: 'id', title: 'Id', kind: 'number', value: row => row.id }),
+      define({
+        id: 'silent',
+        title: 'Silent',
+        kind: 'number',
+        value: row => row.price,
+        set: (row, price) => ({ ...row, price }),
+      }),
     ],
     rowKey: 'id',
-    rows: clientRows({ rows: () => items }),
+    rows: clientRows({ rows: () => items.get() }),
     extensions: [editing<TItem>(options)],
     context: undefined,
-    onRowChange: rowChange => {
-      changes.push(rowChange);
-      return change?.(rowChange);
+    onRowsChange: rowChanges => {
+      changes.push(...rowChanges);
+      calls.push(rowChanges.length);
+      return change?.(rowChanges);
     },
   });
-  const apply = (next: TItem): void => {
-    items = items.map(item => (item.id === next.id ? next : item));
-    model.rows.refresh();
-  };
-  return { model, changes, apply, rows: () => items };
+  const arrive = (next: TItem): void =>
+    runInAction(() => items.set(items.get().map(item => (item.id === next.id ? next : item))));
+  return { model, changes, calls, arrive };
 }
 
 function rowAt(model: ReturnType<typeof harness>['model'], index: number): TItem | undefined {
@@ -81,14 +91,16 @@ describe('editing', () => {
     expect(model.editing.current?.validation?.level).toBe('warning');
     expect(model.editing.commit()).toBe(true);
     expect(changes).toHaveLength(1);
-    expect(changes[0].next.name).toBe('cedar tree');
-    expect(changes[0].row.name).toBe('cedar');
+    expect(changes[0].new.name).toBe('cedar tree');
+    expect(changes[0].old.name).toBe('cedar');
+    expect(changes[0].fields).toEqual(['name']);
     expect(model.editing.current).toBeNull();
   });
 
-  it('refuses read-only cells: without set, locked by the column rule or by the table', () => {
+  it('refuses read-only cells: without set, without editable, locked by the column rule or by the table', () => {
     const { model } = harness();
     expect(model.editing.reasonAgainst('1', 'id')).toBe('editing.notEditable');
+    expect(model.editing.reasonAgainst('1', 'silent')).toBe('editing.notEditable');
     expect(model.editing.reasonAgainst('2', 'name')).toBe('editing.notEditable');
     expect(model.editing.reasonAgainst('1', 'price')).toBeUndefined();
     expect(harness({ readOnly: true }).model.editing.reasonAgainst('1', 'price')).toBe(
@@ -109,8 +121,29 @@ describe('editing', () => {
     expect(model.editing.isEdited('1')).toBe(false);
   });
 
-  it('shows the draft over the live row until the application settles it, in draft mode', () => {
-    const { model, changes } = harness({ commitMode: 'draft' });
+  it('takes a value a cell produced on its own, without a session, through the same rules', () => {
+    const { model, changes } = harness();
+    expect(model.editing.change({ rowKey: '1', columnId: 'name', value: 'oak' })).toEqual({
+      ok: true,
+    });
+    expect(changes.map(change => change.new.name)).toEqual(['oak']);
+    expect(model.editing.current).toBeNull();
+    expect(model.editing.change({ rowKey: '1', columnId: 'name', value: '' })).toEqual({
+      ok: false,
+      reason: 'editing.invalid',
+    });
+    expect(model.editing.change({ rowKey: '2', columnId: 'name', value: 'elm' })).toEqual({
+      ok: false,
+      reason: 'editing.notEditable',
+    });
+    expect(model.editing.change({ rowKey: '1', columnId: 'price', value: 30 })).toEqual({
+      ok: true,
+    });
+    expect(changes).toHaveLength(1);
+  });
+
+  it('keeps the edits of a row until it is confirmed, in confirm mode, and drops them on revert', () => {
+    const { model, changes } = harness({ commitMode: 'confirm' });
     model.editing.begin({ rowKey: '1', columnId: 'name' });
     model.editing.update('oak');
     model.editing.commit();
@@ -118,8 +151,55 @@ describe('editing', () => {
     expect(rowAt(model, 0)?.name).toBe('oak');
     expect(model.editing.isEdited('1', 'name')).toBe(true);
     expect(model.editing.pending).toEqual(['1']);
-    model.editing.discard('1');
+    model.editing.revert('1');
     expect(rowAt(model, 0)?.name).toBe('cedar');
+    expect(model.editing.pending).toEqual([]);
+  });
+
+  it('confirms one row through its API and every pending row in one call, each with old, new and fields', () => {
+    const { model, changes, calls } = harness({ commitMode: 'confirm' });
+    model.editing.change({ rowKey: '1', columnId: 'name', value: 'oak' });
+    model.editing.change({ rowKey: '1', columnId: 'price', value: 31 });
+    model.editing.change({ rowKey: '2', columnId: 'price', value: 11 });
+    model.editing.confirm('1');
+    expect(calls).toEqual([1]);
+    expect(changes[0]).toMatchObject({
+      old: { name: 'cedar', price: 30 },
+      new: { name: 'oak', price: 31 },
+      rowKey: '1',
+      fields: ['name', 'price'],
+    });
+    model.editing.change({ rowKey: '1', columnId: 'name', value: 'elm' });
+    model.editing.confirmAll();
+    expect(calls).toEqual([1, 2]);
+    expect(changes.slice(1).map(change => change.rowKey)).toEqual(['2', '1']);
+    expect(model.editing.pending).toEqual([]);
+  });
+
+  it('holds the row a session is on and its unconfirmed edit while a new version arrives, by default', () => {
+    const { model, arrive } = harness({ commitMode: 'confirm' });
+    model.editing.begin({ rowKey: '1', columnId: 'name' });
+    arrive({ id: 1, name: 'cedar 2', price: 35 });
+    expect(rowAt(model, 0)?.name).toBe('cedar');
+    model.editing.update('oak');
+    model.editing.commit();
+    expect(rowAt(model, 0)).toMatchObject({ name: 'oak', price: 30 });
+    model.editing.revert('1');
+    expect(rowAt(model, 0)).toMatchObject({ name: 'cedar 2', price: 35 });
+  });
+
+  it('applies a new version at once and drops the edit on it, under the apply policy', () => {
+    const { model, arrive } = harness({ commitMode: 'confirm', incoming: 'apply' });
+    model.editing.change({ rowKey: '1', columnId: 'name', value: 'oak' });
+    expect(model.editing.isEdited('1')).toBe(true);
+    arrive({ id: 1, name: 'cedar 2', price: 35 });
+    expect(rowAt(model, 0)).toMatchObject({ name: 'cedar 2', price: 35 });
+    expect(model.editing.isEdited('1')).toBe(false);
+
+    model.editing.begin({ rowKey: '1', columnId: 'name' });
+    arrive({ id: 1, name: 'cedar 3', price: 36 });
+    expect(model.editing.current).toBeNull();
+    expect(rowAt(model, 0)?.name).toBe('cedar 3');
   });
 
   it('marks the row as updating while the application promise runs and rolls back when it rejects', async () => {
@@ -150,6 +230,6 @@ describe('editing', () => {
     });
     model.editing.update(5);
     model.editing.commit();
-    expect(changes[0].next.price).toBe(10);
+    expect(changes[0].new.price).toBe(10);
   });
 });

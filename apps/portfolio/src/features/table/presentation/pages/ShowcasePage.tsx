@@ -1,6 +1,8 @@
 import { clientRows } from '@frozik/table/core/rows/client-rows';
 import type { ISelectionMode } from '@frozik/table/core/selection/selection-port';
+import type { TAutoSizeMode } from '@frozik/table/extensions/column-resize/core';
 import { columnVisibility } from '@frozik/table/extensions/column-visibility/core';
+import type { TCommitMode } from '@frozik/table/extensions/editing/contracts';
 import { gridView } from '@frozik/table/extensions/grid-view/core';
 import { persistence } from '@frozik/table/extensions/persistence/core';
 import { localStateStorage } from '@frozik/table/extensions/persistence/local-storage';
@@ -25,7 +27,7 @@ import { Table } from '@frozik/table/react/Table';
 import { useTable } from '@frozik/table/react/useTable';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
@@ -53,6 +55,11 @@ const GROUPS = [
     columns: ['price', 'quantity', 'notional'],
   },
 ];
+
+const COMMIT_MODES: readonly TCommitMode[] = ['immediate', 'confirm'];
+const AUTOSIZE_MODES: readonly TAutoSizeMode[] = ['off', 'header', 'firstData', 'fit', 'grow'];
+/** The apply / revert column only makes sense while rows wait for confirmation. */
+const ACTIONS_COLUMN = 'actions';
 
 const NEWEST_FIRST = {
   extensions: { sorting: [{ columnId: 'time', direction: 'desc' as const }] },
@@ -163,7 +170,7 @@ export const ShowcasePage = observer(() => {
     ],
     initialState: NEWEST_FIRST,
     context: undefined,
-    onRowChange: ({ next }) => store.updateTrade(next),
+    onRowsChange: changes => changes.forEach(change => store.updateTrade(change.new)),
   });
   const [pickerOpen, setPickerOpen] = useState(false);
   const togglePicker = useEventCallback(() => setPickerOpen(open => !open));
@@ -173,6 +180,16 @@ export const ShowcasePage = observer(() => {
   const changeGroup = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
     model.grouping.setGroupBy(GROUP_BY[event.target.value as TGroupChoice]);
   });
+  const changeCommitMode = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    model.editing.setCommitMode(event.target.value as TCommitMode);
+  });
+  const changeAutoSize = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    model.columnResize.setAutoSizeMode(event.target.value as TAutoSizeMode);
+  });
+  const commitMode = model.editing.commitMode;
+  useEffect(() => {
+    model.columns.setVisible(ACTIONS_COLUMN, commitMode === 'confirm');
+  }, [model, commitMode]);
   const toggleFilterRow = useEventCallback(() =>
     model.filtering.setFilterRow(!model.filtering.filterRow)
   );
@@ -222,6 +239,34 @@ export const ShowcasePage = observer(() => {
               {SELECTION_CHOICES.map(choice => (
                 <option key={choice} value={choice}>
                   {tableDemoT.controls.selectionModes[choice]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-landing-fg-dim">
+            {tableDemoT.controls.commit}
+            <select
+              className={SELECT_CLASS}
+              value={model.editing.commitMode}
+              onChange={changeCommitMode}
+            >
+              {COMMIT_MODES.map(mode => (
+                <option key={mode} value={mode}>
+                  {tableDemoT.controls.commitModes[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-landing-fg-dim">
+            {tableDemoT.controls.autoSize}
+            <select
+              className={SELECT_CLASS}
+              value={model.columnResize.autoSizeMode}
+              onChange={changeAutoSize}
+            >
+              {AUTOSIZE_MODES.map(mode => (
+                <option key={mode} value={mode}>
+                  {tableDemoT.controls.autoSizeModes[mode]}
                 </option>
               ))}
             </select>

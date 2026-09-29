@@ -4,7 +4,7 @@ import { column } from '../core/columns/column';
 import { createTable } from '../core/create-table';
 import { clientRows } from '../core/rows/client-rows';
 import { gridView } from '../extensions/grid-view/core';
-import type { ICellContext } from './column';
+import type { ICellContext, ICellProps } from './column';
 import { reactColumn } from './column';
 import { sorting } from './extensions/sorting/sorting';
 import { Table } from './Table';
@@ -56,8 +56,8 @@ describe('<Table>', () => {
           title: 'Price',
           kind: 'number',
           value: row => row.price,
-          cell: (context: ICellContext<TItem, number>) =>
-            context.value > 15 ? Loud : ({ text }) => <i>{text}</i>,
+          cell: (context: ICellProps<TItem, number>) =>
+            context.value > 15 ? Loud : ({ text }: ICellContext<TItem>) => <i>{text}</i>,
         }),
       ],
       rowKey: 'id',

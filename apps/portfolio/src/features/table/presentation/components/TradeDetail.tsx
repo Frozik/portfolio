@@ -18,7 +18,7 @@ import { tableDemoT } from '../translations';
 
 const define = reactColumn<IDemoFill>();
 const PRICE_DIGITS = 2;
-const QUANTITY_DIGITS = 3;
+const QUANTITY_DIGITS = 0;
 
 function fillColumns(locale: string) {
   return [

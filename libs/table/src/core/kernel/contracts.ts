@@ -2,6 +2,7 @@ import type { TPinSide } from '../columns/column';
 
 /** Command ids and payloads. Extensions add their own through declaration merging. */
 export interface ITableCommands {
+  /** `toIndex`: a slot among the visible columns of the column's section, the column itself excluded. */
   readonly 'columns.move': { readonly columnId: string; readonly toIndex: number };
   readonly 'columns.pin': { readonly columnId: string; readonly side: TPinSide | null };
   readonly 'columns.setVisible': { readonly columnId: string; readonly visible: boolean };

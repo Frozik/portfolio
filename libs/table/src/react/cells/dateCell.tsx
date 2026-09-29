@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
 
@@ -11,20 +11,26 @@ import type { IParseContext } from '@frozik/utils/date/fuzzy/types';
 import { getNowInstant } from '@frozik/utils/date/now';
 import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
 
-import type { IEditorProps } from '../editing-column';
-import { useEditorFocus } from './useEditorFocus';
+import type { ICellProps, TCellComponent } from '../column';
+import { useTableContext } from '../context';
+import { useFieldFocus } from './useFieldFocus';
 
-type TDateValue =
+export interface IDateCellOptions {
+  readonly timeZone?: string;
+  /** Defaults to the column kind: time for `datetime`, none for `date`. */
+  readonly showTime?: boolean;
+}
+
+export type TDateValue =
   | string
   | Temporal.Instant
   | Temporal.ZonedDateTime
   | Temporal.PlainDate
-  | Temporal.PlainDateTime;
+  | Temporal.PlainDateTime
+  | null
+  | undefined;
 
-function toZoned(
-  value: TDateValue | null | undefined,
-  timeZone: string
-): Temporal.ZonedDateTime | undefined {
+function toZoned(value: TDateValue, timeZone: string): Temporal.ZonedDateTime | undefined {
   if (isNil(value) || value === '') {
     return undefined;
   }
@@ -44,9 +50,9 @@ function toZoned(
 
 /** The picked moment in the representation the cell already used, so `set` receives what `value` returns. */
 function likeOriginal(
-  original: TDateValue | null | undefined,
+  original: TDateValue,
   picked: Temporal.ZonedDateTime | undefined
-): TDateValue | undefined {
+): TDateValue {
   if (picked === undefined) {
     return undefined;
   }
@@ -65,37 +71,44 @@ function likeOriginal(
   return picked;
 }
 
-export function DateEditor<TRow>({
-  draft,
+function DateField<TRow>({
   value,
-  onChange,
-  options,
-  locale,
+  edit,
   column,
-}: IEditorProps<TRow, TDateValue | null | undefined>) {
+  options,
+}: ICellProps<TRow, TDateValue> & { readonly options: IDateCellOptions }) {
+  const { locale } = useTableContext();
   const ref = useRef<IRichEditorHandle>(null);
-  useEditorFocus(ref);
+  useFieldFocus(ref);
   const timeZone = options.timeZone ?? Temporal.Now.timeZoneId();
   assert(isValidTimeZoneId(timeZone), `column "${column.id}": unknown time zone "${timeZone}"`);
-  const showTime = options.showTime ?? column.kind !== 'date';
   const parse = useEventCallback((text: string, context: IParseContext) =>
     parseFuzzyDate(text, { ...context, nearest: true })
   );
   const handleChange = useEventCallback((picked: Temporal.ZonedDateTime | undefined) =>
-    onChange(likeOriginal(value, picked))
+    edit.update(likeOriginal(value, picked))
   );
   return (
     <DateTimePicker
       ref={ref}
-      className="ft-editor-field"
-      value={toZoned(draft, timeZone)}
+      className="ft-cell-field"
+      value={toZoned(edit.draft, timeZone)}
       onValueChange={handleChange}
       getNow={getNowInstant}
       onParseInput={parse}
       timeZone={timeZone}
-      showTime={showTime}
+      showTime={options.showTime ?? column.kind !== 'date'}
       locale={locale}
       nativePicker="never"
     />
   );
 }
+
+/** The formatted date in view mode, a date-time picker in edit mode. */
+export function dateCell<TRow>(options: IDateCellOptions = {}): TCellComponent<TRow, TDateValue> {
+  return memo(function DateCell(props: ICellProps<TRow, TDateValue>) {
+    return props.mode === 'edit' ? <DateField {...props} options={options} /> : props.text;
+  });
+}
+
+export const DateCell = dateCell<unknown>();

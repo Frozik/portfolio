@@ -20,6 +20,7 @@ export interface ITableOptions<TRow, TContext, TExtensions extends readonly TAny
   readonly context: TContext;
   readonly ready?: boolean;
   readonly initialState?: Partial<ITableState>;
-  onRowChange?(change: IRowChange<TRow>): void | Promise<void>;
+  /** Confirmed edits, one entry per row; a returned promise keeps the rows updating and rolls them back when it rejects. */
+  onRowsChange?(changes: readonly IRowChange<TRow>[]): void | Promise<void>;
   onSourceError?(error: unknown): void;
 }

@@ -115,6 +115,7 @@ export function focusedMenuContext<TRow>(
   return {
     target: 'cell',
     columnId: focused.columnId,
+    groupId: undefined,
     rowKey: focused.rowKey,
     row: displayRow?.kind === 'leaf' ? displayRow.row : undefined,
   };
@@ -146,7 +147,7 @@ export function contextMenu<TRow = never>(
         slice,
         keys,
         menu: ({ target }) =>
-          target !== 'header'
+          target === 'cell'
             ? []
             : [
                 { separator: true },

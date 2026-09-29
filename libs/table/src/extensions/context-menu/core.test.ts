@@ -29,6 +29,7 @@ describe('context menu', () => {
     const menu = model.contextMenu.itemsFor({
       target: 'header',
       columnId: 'name',
+      groupId: undefined,
       rowKey: undefined,
       row: undefined,
     });
@@ -53,7 +54,7 @@ describe('context menu', () => {
       context: undefined,
     });
     model.contextMenu.openAt(
-      { target: 'header', columnId: 'name', rowKey: undefined, row: undefined },
+      { target: 'header', columnId: 'name', groupId: undefined, rowKey: undefined, row: undefined },
       { left: 10, top: 20 }
     );
     expect(model.contextMenu.open?.position).toEqual({ left: 10, top: 20 });

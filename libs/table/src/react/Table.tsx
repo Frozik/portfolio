@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { cn } from '@frozik/components/components/cn';
 
@@ -57,9 +57,11 @@ function TableComponent<TRow>({
     () => ({ ...getTableTranslations(locale), ...translations }),
     [locale, translations]
   );
+  const rootRef = useRef<HTMLDivElement>(null);
   const value = useMemo<ITableContextValue<TRow>>(
     () => ({
       table: model,
+      rootRef,
       slots,
       translations: resolvedTranslations,
       locale,
@@ -91,6 +93,7 @@ function TableComponent<TRow>({
   return (
     <TableContextProvider value={value}>
       <div
+        ref={rootRef}
         className={cn('ft', className)}
         data-table-theme={theme}
         data-density={density}

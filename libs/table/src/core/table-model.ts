@@ -45,8 +45,8 @@ export class TableModel<TRow, TContext> implements ITableKernel<TRow, TContext> 
   private readonly source: IRowSource<TRow>;
   private readonly keyOf: TBivariantCallback<[row: TRow], string>;
   private readonly pinnedRows: TPinnedRows<TRow>;
-  private readonly onRowChange:
-    | TBivariantCallback<[change: IRowChange<TRow>], void | Promise<void>>
+  private readonly onRowsChange:
+    | TBivariantCallback<[changes: readonly IRowChange<TRow>[]], void | Promise<void>>
     | undefined;
   private readonly onSourceError: ((error: unknown) => void) | undefined;
   private readonly disposers = new DisposableBag();
@@ -57,14 +57,20 @@ export class TableModel<TRow, TContext> implements ITableKernel<TRow, TContext> 
     this.ready = options.ready ?? true;
     this.keyOf = resolveRowKey(options.rowKey);
     this.pinnedRows = options.pinnedRows;
-    this.onRowChange = options.onRowChange?.bind(options);
+    this.onRowsChange = options.onRowsChange?.bind(options);
     this.onSourceError = options.onSourceError?.bind(options);
     this.columns = new ColumnsModel(options.columns, this.commands, this.events);
     this.registry = new ExtensionRegistry(this.commands);
     this.focus = new FocusModel(this.columns, () => this.source);
     makeAutoObservable<
       TableModel<TRow, TContext>,
-      'registry' | 'source' | 'keyOf' | 'pinnedRows' | 'onRowChange' | 'onSourceError' | 'disposers'
+      | 'registry'
+      | 'source'
+      | 'keyOf'
+      | 'pinnedRows'
+      | 'onRowsChange'
+      | 'onSourceError'
+      | 'disposers'
     >(
       this,
       {
@@ -76,14 +82,14 @@ export class TableModel<TRow, TContext> implements ITableKernel<TRow, TContext> 
         source: false,
         keyOf: false,
         pinnedRows: false,
-        onRowChange: false,
+        onRowsChange: false,
         onSourceError: false,
         disposers: false,
         rowKey: false,
         extension: false,
         rowExtent: false,
         menu: false,
-        changeRow: false,
+        changeRows: false,
         reportSourceError: false,
       },
       { autoBind: true }
@@ -197,8 +203,8 @@ export class TableModel<TRow, TContext> implements ITableKernel<TRow, TContext> 
     });
   }
 
-  changeRow(change: IRowChange<TRow>): void | Promise<void> {
-    return this.onRowChange?.(change);
+  changeRows(changes: readonly IRowChange<TRow>[]): void | Promise<void> {
+    return this.onRowsChange?.(changes);
   }
 
   reportSourceError(error: unknown): void {

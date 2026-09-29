@@ -1,4 +1,4 @@
-import { lateColumnIndex, mergeColumnOrder, moveWithin } from './column-order';
+import { lateColumnIndex, mergeColumnOrder, moveToSlot } from './column-order';
 
 describe('column order', () => {
   it('keeps the definition order when nothing was persisted', () => {
@@ -22,9 +22,20 @@ describe('column order', () => {
     expect(lateColumnIndex(['late', 'a'], ['a'], 'late')).toBe(0);
   });
 
-  it('moves a column to a bounded index within the order', () => {
-    expect(moveWithin(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a']);
-    expect(moveWithin(['a', 'b', 'c'], 'c', -5)).toEqual(['c', 'a', 'b']);
-    expect(moveWithin(['a', 'b', 'c'], 'missing', 1)).toEqual(['a', 'b', 'c']);
+  it('moves a column to a slot among its visible neighbours, leaving hidden and pinned columns in place', () => {
+    const order = ['pinned', 'a', 'hidden', 'b', 'c'];
+    const slots = ['a', 'b', 'c'];
+    expect(
+      moveToSlot(
+        order,
+        'c',
+        slots.filter(id => id !== 'c'),
+        1
+      )
+    ).toEqual(['pinned', 'a', 'hidden', 'c', 'b']);
+    expect(moveToSlot(order, 'a', ['b', 'c'], 2)).toEqual(['pinned', 'hidden', 'b', 'c', 'a']);
+    expect(moveToSlot(order, 'a', ['b', 'c'], -5)).toEqual(['pinned', 'hidden', 'a', 'b', 'c']);
+    expect(moveToSlot(order, 'pinned', [], 0)).toEqual(order);
+    expect(moveToSlot(order, 'missing', slots, 1)).toEqual(order);
   });
 });

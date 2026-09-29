@@ -15,7 +15,7 @@ export interface IDemoFill {
 const MAX_FILLS = 4;
 const FILL_PRICE_JITTER = 0.001;
 const SECONDS_BETWEEN_FILLS = 2;
-const FILL_DECIMALS = 3;
+const FILL_PRICE_DECIMALS = 2;
 
 /** The executions a trade was assembled from; deterministic per trade so the detail is stable. */
 export function fillsOf(trade: IDemoTrade): readonly IDemoFill[] {
@@ -23,14 +23,17 @@ export function fillsOf(trade: IDemoTrade): readonly IDemoFill[] {
     return [];
   }
   const random = seededRandom(trade.id);
-  const count = 1 + Math.floor(random() * MAX_FILLS);
-  const share = trade.quantity / count;
+  const count = Math.min(trade.quantity, 1 + Math.floor(random() * MAX_FILLS));
+  const share = Math.floor(trade.quantity / count);
+  const remainder = trade.quantity - share * count;
   const start = Temporal.Instant.from(trade.time);
   return Array.from({ length: count }, (_, index) => ({
     id: `${trade.id}:${index + 1}`,
     time: start.add({ seconds: index * SECONDS_BETWEEN_FILLS }).toString() as ISO,
-    price: trade.price * (1 + (random() - 0.5) * FILL_PRICE_JITTER),
-    quantity: Number(share.toFixed(FILL_DECIMALS)),
+    price: Number(
+      (trade.price * (1 + (random() - 0.5) * FILL_PRICE_JITTER)).toFixed(FILL_PRICE_DECIMALS)
+    ),
+    quantity: share + (index < remainder ? 1 : 0),
     venue: trade.venue,
   }));
 }

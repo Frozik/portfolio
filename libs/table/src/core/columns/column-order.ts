@@ -43,17 +43,31 @@ export function mergeColumnOrder(
   return merged;
 }
 
-export function moveWithin(
+/**
+ * Moves a column to a slot among `slots`: the columns it can be dropped
+ * between (the visible ones of its section, itself excluded, in order). Every
+ * other column — hidden, or pinned elsewhere — keeps its place next to its
+ * neighbours. A slot past the end lands after the last of them; a column
+ * alone in its section has nowhere to go and stays.
+ */
+export function moveToSlot(
   order: readonly string[],
   columnId: string,
+  slots: readonly string[],
   toIndex: number
 ): readonly string[] {
-  const fromIndex = order.indexOf(columnId);
-  if (fromIndex === -1) {
+  if (!order.includes(columnId) || slots.length === 0) {
     return order;
   }
-  const next = order.filter(id => id !== columnId);
-  const boundedIndex = Math.max(0, Math.min(toIndex, next.length));
-  next.splice(boundedIndex, 0, columnId);
-  return next;
+  const without = order.filter(id => id !== columnId);
+  const bounded = Math.max(0, Math.min(toIndex, slots.length));
+  const before = slots[bounded];
+  const last = slots.at(-1);
+  const insertAt =
+    before !== undefined
+      ? without.indexOf(before)
+      : last === undefined
+        ? without.length
+        : without.indexOf(last) + 1;
+  return [...without.slice(0, insertAt), columnId, ...without.slice(insertAt)];
 }

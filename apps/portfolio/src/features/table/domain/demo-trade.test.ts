@@ -11,7 +11,11 @@ describe('generateTrades', () => {
     expect(first[1].time > first[0].time).toBe(true);
   });
 
-  it('never yields a zero quantity', () => {
-    expect(generateTrades(500).every(trade => trade.quantity > 0)).toBe(true);
+  it('deals in whole quantities and prices in cents', () => {
+    const trades = generateTrades(500);
+    expect(trades.every(trade => Number.isInteger(trade.quantity) && trade.quantity > 0)).toBe(
+      true
+    );
+    expect(trades.every(trade => trade.price === Number(trade.price.toFixed(2)))).toBe(true);
   });
 });

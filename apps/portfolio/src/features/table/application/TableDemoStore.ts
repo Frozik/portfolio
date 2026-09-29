@@ -9,7 +9,6 @@ import { fakeSnapshotServer } from '../infrastructure/fakeSnapshotServer';
 
 export type TDemoTheme = 'auto' | 'light' | 'dark';
 export type TDemoDensity = 'normal' | 'compact';
-export type TDemoLocale = 'en' | 'ru';
 export type TDemoPage = 'showcase' | 'sources' | 'extensions' | 'brandBook';
 export type TDemoExtension =
   | 'sorting'
@@ -36,7 +35,8 @@ export interface IServerLogLine {
 export class TableDemoStore {
   theme: TDemoTheme = 'dark';
   density: TDemoDensity = 'normal';
-  locale: TDemoLocale = getCurrentLanguage() === 'ru' ? 'ru' : 'en';
+  /** The page language; the demo follows the application, it has no language of its own. */
+  readonly locale = getCurrentLanguage();
   page: TDemoPage = 'showcase';
   source: TDemoSource = 'snapshot';
   view: TDemoView = 'grid';
@@ -90,10 +90,6 @@ export class TableDemoStore {
 
   setDensity(density: TDemoDensity): void {
     this.density = density;
-  }
-
-  setLocale(locale: TDemoLocale): void {
-    this.locale = locale;
   }
 
   setPage(page: TDemoPage): void {

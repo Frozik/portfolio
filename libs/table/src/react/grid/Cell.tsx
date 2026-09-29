@@ -1,4 +1,4 @@
-import { isEqual } from 'lodash-es';
+import { isEqual, noop } from 'lodash-es';
 import { computed, untracked } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import type { MouseEvent } from 'react';
@@ -10,7 +10,7 @@ import { cn } from '@frozik/components/components/cn';
 import { columnText } from '../../core/columns/column';
 import type { IColumnLayout } from '../../core/columns/columns-model';
 import { defaultCellFor } from '../cells/defaultCell';
-import type { ICellContext, IColumn } from '../column';
+import type { ICellContext, ICellEdit, ICellProps, IColumn } from '../column';
 import { resolve, resolveCell } from '../column';
 import { useTableContext } from '../context';
 import type { ICellLook } from './cellAttributes';
@@ -29,8 +29,23 @@ function signOf(value: unknown): 'positive' | 'negative' | 'zero' | undefined {
 
 interface ICellState {
   readonly isFocused: boolean;
+  readonly isEditing: boolean;
+  readonly editable: boolean;
   readonly look: ICellLook;
   readonly cellClass: string | undefined;
+}
+
+/** What a cell can do about editing without the editing extension: nothing. */
+function inertEdit<TValue>(value: TValue): ICellEdit<TValue> {
+  return {
+    draft: value,
+    validation: undefined,
+    initialKey: undefined,
+    update: noop,
+    commit: noop,
+    cancel: noop,
+    change: () => false,
+  };
 }
 
 /**
@@ -69,6 +84,7 @@ export const Cell = observer(function Cell<TRow>({
       value: declared.value(row),
       text: columnText(declared, row),
       isFocused: false,
+      isEditing: false,
     };
     const spec = cellSpec(base);
     return spec === undefined ? declared : { ...declared, ...spec };
@@ -76,7 +92,7 @@ export const Cell = observer(function Cell<TRow>({
   const value = column.value(row);
   const text = columnText(column, row);
   const contextOf = useCallback(
-    (isFocused: boolean): ICellContext<TRow> => ({
+    (isFocused: boolean, isEditing: boolean): ICellContext<TRow> => ({
       table,
       column,
       layout,
@@ -86,17 +102,22 @@ export const Cell = observer(function Cell<TRow>({
       value,
       text,
       isFocused,
+      isEditing,
     }),
     [table, column, layout, row, rowKey, rowIndex, value, text]
   );
+  const editSlot = slots.single('cell.edit');
   const stateBox = useMemo(
     () =>
       computed(
         (): ICellState => {
           const isFocused = table.focus.isFocused(rowKey, column.id);
-          const context = contextOf(isFocused);
+          const isEditing = editSlot?.isEditing(rowKey, column.id) ?? false;
+          const context = contextOf(isFocused, isEditing);
           return {
             isFocused,
+            isEditing,
+            editable: editSlot?.editable(context) ?? false,
             look: mergeDecorations([
               ...slots.list('cell.decorate').map(named => named.decorate(context)),
               resolve(column.decorate, context),
@@ -106,34 +127,43 @@ export const Cell = observer(function Cell<TRow>({
         },
         { equals: isEqual }
       ),
-    [table, slots, column, rowKey, contextOf]
+    [table, slots, editSlot, column, rowKey, contextOf]
   );
   const state = stateBox.get();
-  const context = contextOf(state.isFocused);
-  const resolvedCell = resolveCell(column.cell, context);
+  const context = contextOf(state.isFocused, state.isEditing);
+  const cellProps: ICellProps<TRow> = {
+    ...context,
+    mode: column.interactive === true ? undefined : state.isEditing ? 'edit' : 'view',
+    editable: state.editable,
+    edit: editSlot === undefined ? inertEdit(value) : editSlot.editOf(context),
+  };
+  const resolvedCell = resolveCell(column.cell, cellProps);
   const Content =
     resolvedCell !== undefined && 'Component' in resolvedCell
       ? resolvedCell.Component
-      : (slots.single('cell') ?? defaultCellFor(column.kind));
+      : (slots.single('cell') ?? defaultCellFor<TRow>(column.kind));
   const content =
     resolvedCell !== undefined && 'node' in resolvedCell ? (
       resolvedCell.node
-    ) : Content === undefined ? (
-      text
     ) : (
-      <Content {...context} />
+      <Content {...cellProps} />
     );
-  const Overlay = slots.single('cell.overlay');
+  const validation = state.isEditing ? cellProps.edit.validation : undefined;
   const props = untracked(() => mergeProps(slots.list('cell.props'), context));
   const position = positionAttributes(layout, columns);
   const elementRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const element = elementRef.current;
-    if (state.isFocused && element !== null && !element.contains(document.activeElement)) {
+    if (
+      state.isFocused &&
+      !state.isEditing &&
+      element !== null &&
+      !element.contains(document.activeElement)
+    ) {
       element.focus({ preventScroll: true });
     }
-  }, [state.isFocused]);
+  }, [state.isFocused, state.isEditing]);
 
   const handleClick = useEventCallback((event: MouseEvent<HTMLDivElement>) => {
     props.onClick?.(event);
@@ -158,11 +188,15 @@ export const Cell = observer(function Cell<TRow>({
       data-kind={column.kind}
       data-sign={signOf(value)}
       data-focused={state.isFocused ? '' : undefined}
+      data-editing={state.isEditing ? '' : undefined}
+      data-editable={state.editable ? '' : undefined}
+      data-invalid={validation?.level === 'error' ? '' : undefined}
+      data-warning={validation?.level === 'warning' ? '' : undefined}
+      title={validation?.message}
       data-wrap={column.wrap === true ? '' : undefined}
       data-interactive={column.interactive === true ? '' : undefined}
     >
       {content}
-      {state.isFocused && Overlay !== undefined && <Overlay {...context} />}
     </div>
   );
 });

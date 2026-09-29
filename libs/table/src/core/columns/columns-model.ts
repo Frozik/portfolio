@@ -5,7 +5,7 @@ import type { CommandBus, TCommandOutcome } from '../kernel/command-bus';
 import type { ITableCommands, ITableEvents } from '../kernel/contracts';
 import type { EventBus } from '../kernel/event-bus';
 import type { IColumnLock, TAnyColumn, TPinSide } from './column';
-import { mergeColumnOrder, moveWithin } from './column-order';
+import { mergeColumnOrder, moveToSlot } from './column-order';
 import type { IColumnState, TWidthAuthor } from './column-state';
 import { resolveWidths } from './column-widths';
 
@@ -54,6 +54,7 @@ export class ColumnsModel<TRow> {
         isService: false,
         pinOf: false,
         isHidden: false,
+        flexOf: false,
         sectionOf: false,
         lockReason: false,
       },
@@ -92,6 +93,12 @@ export class ColumnsModel<TRow> {
     return this.stateOf(columnId).hidden ?? this.byId.get(columnId)?.hidden ?? false;
   }
 
+  /** A column shares the free space unless a width was authored for it: a dragged or fitted width ends its flex. */
+  flexOf(columnId: string): number | undefined {
+    const state = this.stateOf(columnId);
+    return state.width === undefined ? (state.flex ?? this.byId.get(columnId)?.flex) : undefined;
+  }
+
   /** Contributed by an extension (a checkbox, a row number): pinned first, never sorted, copied or exported. */
   isService(columnId: string): boolean {
     return this.serviceColumns.some(column => column.id === columnId);
@@ -117,7 +124,7 @@ export class ColumnsModel<TRow> {
         return {
           id,
           width: state.width ?? definition?.width,
-          flex: state.flex ?? definition?.flex,
+          flex: this.flexOf(id),
           minWidth: definition?.minWidth,
           maxWidth: definition?.maxWidth,
         };
@@ -171,10 +178,15 @@ export class ColumnsModel<TRow> {
     this.viewportWidth = width;
   }
 
+  /** `toIndex` is a slot among the visible columns of the column's section, itself excluded: what a drop marker points at. */
   move(columnId: string, toIndex: number): TCommandOutcome {
     return this.commands.run('columns.move', { columnId, toIndex }, () => {
       const ownOrder = this.orderedIds.filter(id => !this.isService(id));
-      this.order = moveWithin(ownOrder, columnId, toIndex);
+      const section = this.sectionOf(columnId);
+      const slots = ownOrder.filter(
+        id => id !== columnId && !this.isHidden(id) && this.sectionOf(id) === section
+      );
+      this.order = moveToSlot(ownOrder, columnId, slots, toIndex);
       this.events.emit('columns.changed', { columnId });
     });
   }

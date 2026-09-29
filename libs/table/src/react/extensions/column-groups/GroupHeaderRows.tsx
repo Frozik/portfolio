@@ -1,9 +1,12 @@
 import { observer } from 'mobx-react-lite';
 import type { CSSProperties } from 'react';
 
+import { cn } from '@frozik/components/components/cn';
+
 import type { IColumnGroupsSlice, IGroupHeaderSpan } from '../../../extensions/column-groups/core';
-import type { IGroupHeaderContext } from '../../column';
+import type { IColumn, IGroupHeaderContext, IHeaderContext } from '../../column';
 import { useTableContext } from '../../context';
+import { mergeDecorations, mergeProps } from '../../grid/cellAttributes';
 import { gridViewOf } from '../../grid/gridViewOf';
 import type { TTrack } from '../../grid/template';
 import { isSpacer, rowTracks } from '../../grid/template';
@@ -38,7 +41,11 @@ function cellsOf<TRow>(
       continue;
     }
     cells.push({
-      key: isSpacer(track) ? `spacer-${track.spacer}` : (span?.group?.id ?? track.id),
+      key: isSpacer(track)
+        ? `spacer-${track.spacer}`
+        : span?.group === undefined
+          ? track.id
+          : `${span.group.id}:${track.id}`,
       span: isSpacer(track) ? undefined : span,
       tracks: 1,
       first: track,
@@ -47,6 +54,11 @@ function cellsOf<TRow>(
   return cells;
 }
 
+/**
+ * The rows above the column headers: a cell per group over its run of
+ * columns. A gap in a row belongs to the ungrouped column beneath it, so it
+ * takes that column's header behaviour: its menu, its drag.
+ */
 export const GroupHeaderRows = observer(function GroupHeaderRows<TRow>({
   table,
 }: IViewContext<TRow>) {
@@ -84,25 +96,37 @@ export const GroupHeaderRows = observer(function GroupHeaderRows<TRow>({
         } as CSSProperties;
         const section = first.section;
         if (group === undefined) {
+          const headerContext: IHeaderContext<TRow> = {
+            table,
+            column: first.definition as IColumn<TRow>,
+            layout: first,
+          };
           return (
             <div
               key={cell.key}
               className="ft-header-cell"
-              aria-hidden
+              {...mergeProps(slots.list('header.cell.props'), headerContext)}
               style={style}
+              data-column-id={first.id}
               data-section={section}
             />
           );
         }
         const context: IGroupHeaderContext<TRow> = { table, group };
+        const props = mergeProps(slots.list('header.group.props'), context);
+        const look = mergeDecorations(
+          slots.list('header.group.decorate').map(named => named.decorate(context))
+        );
         return (
           <div
             key={cell.key}
             role="columnheader"
-            className="ft-header-cell"
+            className={cn('ft-header-cell', look.className)}
+            {...props}
+            {...look.data}
             data-group={group.id}
             data-section={section}
-            style={style}
+            style={{ ...style, ...look.style }}
           >
             {GroupHeader !== undefined ? (
               <GroupHeader {...context} />

@@ -1,6 +1,8 @@
+/** Where a menu was asked for: a cell, a column header, or a column group's header. */
 export interface IMenuContext<TRow> {
-  readonly target: 'cell' | 'header';
+  readonly target: 'cell' | 'header' | 'group';
   readonly columnId: string | undefined;
+  readonly groupId: string | undefined;
   readonly rowKey: string | undefined;
   readonly row: TRow | undefined;
 }

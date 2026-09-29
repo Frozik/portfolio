@@ -3,6 +3,10 @@ import { formatNumber } from '@frozik/table/core/format/formatNumber';
 import { dateFilter } from '@frozik/table/extensions/filtering/specs/date';
 import { enumFilter } from '@frozik/table/extensions/filtering/specs/enum';
 import { setFilter } from '@frozik/table/extensions/filtering/specs/set';
+import { numberCell } from '@frozik/table/react/cells/numberCell';
+import { selectCell } from '@frozik/table/react/cells/selectCell';
+import { textareaCell } from '@frozik/table/react/cells/textareaCell';
+import { TextCell } from '@frozik/table/react/cells/TextCell';
 import type { ICellContext, IColumn } from '@frozik/table/react/column';
 import { reactColumn } from '@frozik/table/react/column';
 
@@ -10,20 +14,22 @@ import { cn } from '@frozik/components/components/cn';
 
 import { Tag } from '../../../shared/ui/Tag';
 import { fillsOf } from '../domain/demo-fill';
-import type { IDemoTrade, TTradeStatus } from '../domain/demo-trade';
+import type { IDemoTrade, TTradeSide, TTradeStatus } from '../domain/demo-trade';
 import { notionalOf } from '../domain/demo-trade';
+import { RowActionsCell } from './components/RowActionsCell';
 import { NUMBER_LOCALE } from './numberLocale';
 import { tableDemoT } from './translations';
 
 const define = reactColumn<IDemoTrade>();
 
 const PRICE_DIGITS = 2;
-const QUANTITY_DIGITS = 3;
+const QUANTITY_DIGITS = 0;
 const ID_WIDTH = 64;
 const TIME_WIDTH = 190;
 const SIDE_WIDTH = 96;
 const STATUS_WIDTH = 120;
 const NOTE_WIDTH = 320;
+const ACTIONS_WIDTH = 88;
 
 const STATUS_COLOR: Readonly<Record<TTradeStatus, 'green' | 'orange' | 'red'>> = {
   filled: 'green',
@@ -50,6 +56,10 @@ const FillsTooltip = ({ row }: ICellContext<IDemoTrade>) => (
 const StatusCell = ({ row }: ICellContext<IDemoTrade>) => (
   <Tag color={STATUS_COLOR[row.status]}>{tableDemoT.statuses[row.status]}</Tag>
 );
+
+const SIDES: readonly TTradeSide[] = ['buy', 'sell'];
+
+const LongNoteCell = textareaCell<IDemoTrade>();
 
 export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, unknown>[] {
   return [
@@ -86,17 +96,12 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       kind: 'text',
       value: trade => trade.side,
       set: (trade, side) => ({ ...trade, side }),
-      cell: SideCell,
+      editable: true,
+      cell: selectCell({
+        values: SIDES.map(side => ({ value: side, label: tableDemoT.sides[side] })),
+        view: SideCell,
+      }),
       width: SIDE_WIDTH,
-      editor: {
-        kind: 'select',
-        options: {
-          values: [
-            { value: 'buy', label: tableDemoT.sides.buy },
-            { value: 'sell', label: tableDemoT.sides.sell },
-          ],
-        },
-      },
       filter: enumFilter({
         options: [
           { key: 'buy', label: tableDemoT.sides.buy },
@@ -110,11 +115,12 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       kind: 'number',
       value: trade => trade.price,
       set: (trade, price) => ({ ...trade, price }),
+      editable: ({ row }) => row.status !== 'filled',
       validate: price => (price <= 0 ? tableDemoT.validation.positive : undefined),
       format: price => formatNumber(price, { locale: NUMBER_LOCALE, digits: PRICE_DIGITS }),
       filter: true,
       aggregate: 'avg',
-      editor: { kind: 'number', options: { decimal: PRICE_DIGITS, min: 0 } },
+      cell: numberCell({ decimal: PRICE_DIGITS, min: 0 }),
     }),
     define({
       id: 'quantity',
@@ -122,6 +128,7 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       kind: 'number',
       value: trade => trade.quantity,
       set: (trade, quantity) => ({ ...trade, quantity }),
+      editable: true,
       validate: quantity =>
         quantity <= 0
           ? tableDemoT.validation.positive
@@ -132,7 +139,7 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
         formatNumber(quantity, { locale: NUMBER_LOCALE, digits: QUANTITY_DIGITS }),
       filter: true,
       aggregate: 'sum',
-      editor: { kind: 'number', options: { decimal: QUANTITY_DIGITS, min: 0 } },
+      cell: numberCell({ decimal: QUANTITY_DIGITS, min: 0 }),
     }),
     define({
       id: 'notional',
@@ -150,6 +157,8 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       title: tableDemoT.columns.venue,
       kind: 'text',
       value: trade => trade.venue,
+      set: (trade, venue) => ({ ...trade, venue }),
+      editable: true,
       filter: setFilter({ values: 'accumulate' }),
     }),
     define({
@@ -158,18 +167,16 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       kind: 'text',
       value: trade => trade.status,
       set: (trade, status) => ({ ...trade, status }),
-      cell: StatusCell,
+      editable: true,
+      cell: selectCell({
+        values: STATUSES.map(status => ({ value: status, label: tableDemoT.statuses[status] })),
+        view: StatusCell,
+      }),
       width: STATUS_WIDTH,
       tooltip: context =>
         context.row.status === 'cancelled'
           ? tableDemoT.tooltips.cancelled
           : { component: FillsTooltip },
-      editor: {
-        kind: 'select',
-        options: {
-          values: STATUSES.map(status => ({ value: status, label: tableDemoT.statuses[status] })),
-        },
-      },
       filter: setFilter<TTradeStatus>({
         values: ['filled', 'partial', 'cancelled'],
         labelOf: status => tableDemoT.statuses[status],
@@ -181,9 +188,24 @@ export function showcaseColumns(locale: string): readonly IColumn<IDemoTrade, un
       kind: 'text',
       value: trade => trade.note,
       set: (trade, note) => ({ ...trade, note }),
+      editable: true,
       width: NOTE_WIDTH,
       filter: true,
-      editor: context => (context.value.length > SHORT_NOTE ? 'textarea' : 'text'),
+      cell: context => (context.value.length > SHORT_NOTE ? LongNoteCell : TextCell),
+    }),
+    define({
+      id: 'actions',
+      title: tableDemoT.columns.actions,
+      kind: 'custom',
+      value: trade => trade.id,
+      cell: RowActionsCell,
+      width: ACTIONS_WIDTH,
+      hidden: true,
+      interactive: true,
+      align: 'center',
+      sort: false,
+      groupable: false,
+      copy: 'text',
     }),
   ];
 }

@@ -1,4 +1,4 @@
-import type { CSSProperties, HTMLAttributes } from 'react';
+import type { CSSProperties, HTMLAttributes, SyntheticEvent } from 'react';
 import type { TAlign, TColumnKind } from '../../core/columns/column';
 
 import type { IColumnLayout } from '../../core/columns/columns-model';
@@ -99,14 +99,64 @@ export function mergeDecorations(decorations: readonly (ICellDecoration | undefi
   };
 }
 
-/** Element attributes contributed by extensions, later contributions winning on a clash. */
+type THandler = (event: SyntheticEvent) => void;
+
+function isHandler(key: string, value: unknown): value is THandler {
+  return key.startsWith('on') && typeof value === 'function';
+}
+
+const POINTER_HANDLER = /^on(Mouse|Pointer|Click|DoubleClick|ContextMenu)/;
+const CONTROL_SELECTOR = 'input, textarea, select, button, [contenteditable]';
+
+/** A control inside a cell owns its pointer: what starts on it never reaches the extensions' mouse handlers. */
+function fromControl(event: SyntheticEvent): boolean {
+  return event.target instanceof Element && event.target.closest(CONTROL_SELECTOR) !== null;
+}
+
+function outsideControls(key: string, handler: THandler): THandler {
+  if (!POINTER_HANDLER.test(key)) {
+    return handler;
+  }
+  return event => {
+    if (!fromControl(event)) {
+      handler(event);
+    }
+  };
+}
+
+/** Runs the handlers in contribution order; one that prevents default has claimed the gesture, the rest do not run. */
+function chain(first: THandler, second: THandler): THandler {
+  return event => {
+    first(event);
+    if (!event.defaultPrevented) {
+      second(event);
+    }
+  };
+}
+
+/**
+ * Element attributes contributed by extensions. Event handlers accumulate:
+ * every extension sees the event unless an earlier one claimed it with
+ * `preventDefault()` (editing a cell on a double click leaves nothing for
+ * the detail row). Mouse events that start on a control inside the cell (a
+ * field, a button) stay with that control, as key events already do in the
+ * grid. Any other attribute is taken from the later contribution.
+ */
 export function mergeProps<TContext>(
   contributions: readonly INamedProps<TContext>[],
   context: TContext
 ): HTMLAttributes<HTMLDivElement> {
-  const merged: HTMLAttributes<HTMLDivElement> = {};
+  const merged: Record<string, unknown> = {};
   for (const named of contributions) {
-    Object.assign(merged, named.props(context));
+    for (const [key, value] of Object.entries(named.props(context))) {
+      const existing = merged[key];
+      if (!isHandler(key, value)) {
+        merged[key] = value;
+        continue;
+      }
+      const guarded = outsideControls(key, value);
+      merged[key] = isHandler(key, existing) ? chain(existing, guarded) : guarded;
+    }
   }
-  return merged;
+  return merged as HTMLAttributes<HTMLDivElement>;
 }

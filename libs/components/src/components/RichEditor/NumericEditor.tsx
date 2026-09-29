@@ -35,6 +35,7 @@ export const NumericEditor = memo(
     placeholder,
     disabled = false,
     locale = 'en',
+    onFocusSelection,
   }: {
     readonly ref?: Ref<IRichEditorHandle>;
     readonly className?: string;
@@ -52,6 +53,8 @@ export const NumericEditor = memo(
     readonly placeholder?: string;
     readonly disabled?: boolean;
     readonly locale?: string;
+    /** What to select when the field takes focus; by default the pip digits, or nothing. */
+    readonly onFocusSelection?: (value: string) => ISelection | undefined;
   }) => {
     const ariaLabels = useMemo(() => getCalendarAriaLabels(locale), [locale]);
     const decimals = isNil(decimal) ? undefined : Math.max(decimal, 0);
@@ -113,6 +116,9 @@ export const NumericEditor = memo(
 
     const handleFocusSelection = useEventCallback(
       (currentValue: string): ISelection | undefined => {
+        if (onFocusSelection !== undefined) {
+          return onFocusSelection(currentValue);
+        }
         if (isNil(pipStart) || currentValue.length === 0) {
           return undefined;
         }

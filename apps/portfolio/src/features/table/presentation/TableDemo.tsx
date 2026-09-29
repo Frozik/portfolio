@@ -7,12 +7,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { cn } from '@frozik/components/components/cn';
 
 import { Button } from '../../../shared/ui/Button';
-import type {
-  TDemoDensity,
-  TDemoLocale,
-  TDemoPage,
-  TDemoTheme,
-} from '../application/TableDemoStore';
+import type { TDemoDensity, TDemoPage, TDemoTheme } from '../application/TableDemoStore';
 import { useTableDemoStore } from '../application/useTableDemoStore';
 import { BrandBookPage } from './pages/BrandBookPage';
 import { ExtensionsPage } from './pages/ExtensionsPage';
@@ -23,7 +18,6 @@ import { tableDemoT } from './translations';
 const PAGES: readonly TDemoPage[] = ['showcase', 'sources', 'extensions', 'brandBook'];
 const THEMES: readonly TDemoTheme[] = ['auto', 'light', 'dark'];
 const DENSITIES: readonly TDemoDensity[] = ['normal', 'compact'];
-const LOCALES: readonly TDemoLocale[] = ['en', 'ru'];
 const ROW_COUNTS: readonly number[] = [100, 5_000, 100_000];
 
 const SELECT_CLASS =
@@ -87,13 +81,6 @@ export const TableDemo = observer(() => {
             values={DENSITIES}
             render={density => tableDemoT.controls.densities[density]}
             onChange={store.setDensity}
-          />
-          <Select
-            label={tableDemoT.controls.locale}
-            value={store.locale}
-            values={LOCALES}
-            render={locale => locale.toUpperCase()}
-            onChange={store.setLocale}
           />
           <Select
             label={tableDemoT.controls.rows}

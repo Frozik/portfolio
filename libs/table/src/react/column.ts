@@ -6,6 +6,7 @@ import type { IColumnLayout } from '../core/columns/columns-model';
 import type { TBivariantCallback } from '../core/kernel/callback';
 import type { TDisplayRow } from '../core/rows/display-row';
 import type { TableModel } from '../core/table-model';
+import type { IValidation } from '../extensions/editing/contracts';
 
 export interface IHeaderContext<TRow, TValue = unknown> {
   readonly table: TableModel<TRow, unknown>;
@@ -25,6 +26,36 @@ export interface ICellContext<TRow, TValue = unknown> extends IHeaderContext<TRo
   readonly value: TValue;
   readonly text: string;
   readonly isFocused: boolean;
+  /** The table's editing session is on this cell. */
+  readonly isEditing: boolean;
+}
+
+export type TCellMode = 'view' | 'edit';
+
+/** How a cell component edits: through the table's session, or on its own with `change`. Inert without the editing extension. */
+export interface ICellEdit<TValue> {
+  /** The session's draft, or the value when there is no session. */
+  readonly draft: TValue;
+  readonly validation: IValidation | undefined;
+  /** The key press that opened the session, for the field to start from. */
+  readonly initialKey: string | undefined;
+  update(draft: TValue): void;
+  commit(): void;
+  cancel(): void;
+  /** Hands a value produced without a session to the table; `false` when it was refused (locked, invalid). */
+  change(value: TValue): boolean;
+}
+
+/**
+ * What one cell component receives: the context, plus the mode the table put
+ * it in and the means to edit. `mode` is `undefined` on an `interactive`
+ * column, where the component decides its mode itself.
+ */
+export interface ICellProps<TRow, TValue = unknown> extends ICellContext<TRow, TValue> {
+  readonly mode: TCellMode | undefined;
+  /** The column rule, the table rules and the row state all allow an edit right now. */
+  readonly editable: boolean;
+  readonly edit: ICellEdit<TValue>;
 }
 
 export interface IRowContext<TRow> {
@@ -43,12 +74,14 @@ export interface ICellDecoration {
 }
 
 /**
- * A function component for a cell or a header of one column. Typed
- * bivariantly in its props so a column of one value type stays assignable to
- * `IColumn<TRow, unknown>`; `memo` and `observer` components qualify too.
+ * A function component for a cell (both modes) or a header of one column.
+ * Typed bivariantly in its props so a column of one value type stays
+ * assignable to `IColumn<TRow, unknown>`; a view-only component takes the
+ * subset it needs, as `ICellContext<TRow>` or `ICellProps<TRow, TValue>`;
+ * `memo` and `observer` components qualify too.
  */
 export type TCellComponent<TRow, TValue = unknown> = TBivariantCallback<
-  [props: ICellContext<TRow, TValue>],
+  [props: ICellProps<TRow, TValue>],
   ReactNode
 >;
 export type THeaderComponent<TRow, TValue = unknown> = TBivariantCallback<
@@ -78,8 +111,8 @@ export function resolve<TValue, TContext>(
  * component that uses hooks must be wrapped in `memo` or `observer`.
  */
 export function resolveCell<TRow, TValue>(
-  cell: TResolvable<TCellComponent<TRow, TValue>, ICellContext<TRow, TValue>> | undefined,
-  context: ICellContext<TRow, TValue>
+  cell: TResolvable<TCellComponent<TRow, TValue>, ICellProps<TRow, TValue>> | undefined,
+  context: ICellProps<TRow, TValue>
 ): { readonly Component: TCellComponent<TRow, TValue> } | { readonly node: ReactNode } | undefined {
   if (cell === undefined) {
     return undefined;
@@ -108,6 +141,7 @@ export interface INamedPart<TContext> {
   active?(context: TContext): boolean;
 }
 
+/** Element attributes one extension adds; event handlers of every extension run in order until one claims the event with `preventDefault()`. */
 export interface INamedProps<TContext> {
   readonly id: string;
   props(context: TContext): HTMLAttributes<HTMLDivElement>;
@@ -131,7 +165,8 @@ export interface ITitleSpec<TRow, TValue> extends IColumnTitle {
  */
 export interface IColumn<TRow, TValue = unknown> extends IColumnDefinition<TRow, TValue> {
   readonly title: string | ITitleSpec<TRow, NoInfer<TValue>>;
-  readonly cell?: NoInfer<TResolvable<TCellComponent<TRow, TValue>, ICellContext<TRow, TValue>>>;
+  /** The one component of the cell, for both modes; a resolver picks it per cell, by data or by mode. */
+  readonly cell?: NoInfer<TResolvable<TCellComponent<TRow, TValue>, ICellProps<TRow, TValue>>>;
   readonly decorate?: NoInfer<TResolvable<ICellDecoration | undefined, ICellContext<TRow, TValue>>>;
   readonly header?: NoInfer<THeaderComponent<TRow, TValue>>;
   readonly headerDecorate?: NoInfer<

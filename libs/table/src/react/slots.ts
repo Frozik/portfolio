@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import type { TableModel } from '../core/table-model';
 import type {
   ICellContext,
+  ICellEdit,
   IGroupHeaderContext,
   IHeaderContext,
   INamedDecorator,
@@ -18,6 +19,13 @@ export interface IViewContext<TRow> {
   readonly table: TableModel<TRow, unknown>;
 }
 
+/** What the editing extension tells every cell: whether it is in edit mode, whether it may be, and how to edit. */
+export interface ICellEditSlot<TRow> {
+  isEditing(rowKey: string, columnId: string): boolean;
+  editable(context: ICellContext<TRow>): boolean;
+  editOf(context: ICellContext<TRow>): ICellEdit<unknown>;
+}
+
 /** Every place the grid lets an extension put something. Lists accumulate; single slots replace the default. */
 export interface IViewContributions<TRow> {
   /** Replaces the grid itself: another representation of the same rows and columns (a list, a canvas). */
@@ -27,12 +35,14 @@ export interface IViewContributions<TRow> {
   readonly 'header.cell.decorate'?: readonly INamedDecorator<IHeaderContext<TRow>>[];
   readonly 'header.cell'?: THeaderComponent<TRow>;
   readonly 'header.group'?: ComponentType<IGroupHeaderContext<TRow>>;
+  readonly 'header.group.props'?: readonly INamedProps<IGroupHeaderContext<TRow>>[];
+  readonly 'header.group.decorate'?: readonly INamedDecorator<IGroupHeaderContext<TRow>>[];
   readonly 'header.row.before'?: ComponentType<IViewContext<TRow>>;
   readonly 'header.row.after'?: ComponentType<IViewContext<TRow>>;
   readonly cell?: TCellComponent<TRow>;
   readonly 'cell.props'?: readonly INamedProps<ICellContext<TRow>>[];
   readonly 'cell.decorate'?: readonly INamedDecorator<ICellContext<TRow>>[];
-  readonly 'cell.overlay'?: TCellComponent<TRow>;
+  readonly 'cell.edit'?: ICellEditSlot<TRow>;
   readonly row?: ComponentType<IRowContext<TRow>>;
   readonly 'row.after'?: ComponentType<IRowContext<TRow>>;
   readonly 'body.overlay'?: ComponentType<IViewContext<TRow>>;

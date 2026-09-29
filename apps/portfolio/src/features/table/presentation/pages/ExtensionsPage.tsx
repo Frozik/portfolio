@@ -99,7 +99,7 @@ const ExtensionsTable = observer(() => {
     rows: clientRows({ rows: () => store.trades }),
     extensions: extensionsFor(store.enabled, store.view),
     context: undefined,
-    onRowChange: ({ next }) => store.updateTrade(next),
+    onRowsChange: changes => changes.forEach(change => store.updateTrade(change.new)),
   });
   return (
     <Table

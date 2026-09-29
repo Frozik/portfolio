@@ -27,7 +27,13 @@ function contextMenuView<TRow>(slice: IContextMenuSlice<TRow>): IViewContributio
       {
         id: 'contextMenu.cell',
         props: ({ column, rowKey, row }) => ({
-          onContextMenu: opener({ target: 'cell', columnId: column.id, rowKey, row }),
+          onContextMenu: opener({
+            target: 'cell',
+            columnId: column.id,
+            groupId: undefined,
+            rowKey,
+            row,
+          }),
         }),
       },
     ],
@@ -38,6 +44,21 @@ function contextMenuView<TRow>(slice: IContextMenuSlice<TRow>): IViewContributio
           onContextMenu: opener({
             target: 'header',
             columnId: column.id,
+            groupId: undefined,
+            rowKey: undefined,
+            row: undefined,
+          }),
+        }),
+      },
+    ],
+    'header.group.props': [
+      {
+        id: 'contextMenu.group',
+        props: ({ group }) => ({
+          onContextMenu: opener({
+            target: 'group',
+            columnId: undefined,
+            groupId: group.id,
             rowKey: undefined,
             row: undefined,
           }),
@@ -48,7 +69,7 @@ function contextMenuView<TRow>(slice: IContextMenuSlice<TRow>): IViewContributio
   };
 }
 
-/** Right click, Shift+F10 or a long press opens the items every extension offers for a cell or a header. */
+/** Right click, Shift+F10 or a long press opens the items every extension offers for a cell, a column header or a group header. */
 export function contextMenu<TRow = never>(
   options: IContextMenuOptions<TRow> = {}
 ): ITableExtension<TRow, 'contextMenu', IContextMenuSlice<TRow>> {
