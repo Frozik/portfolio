@@ -30,6 +30,7 @@ import {
   withConditions,
 } from '../fields/models';
 import type { IFilterEditorContext } from '../filtering-column';
+import { useRowKeys } from './useRowKeys';
 
 type TCondition = ITextCondition | INumberCondition | IDateCondition;
 type TSpecWithOperators = { readonly operators: readonly IFilterOperator<unknown, TCondition>[] };
@@ -153,6 +154,7 @@ export const ConditionForm = observer(function ConditionForm<TRow>({
     current.conditions.length === 0
       ? [{ op: options.defaultOp ?? operators[0]?.id ?? '' }]
       : current.conditions;
+  const rowKeys = useRowKeys(conditions);
 
   const commit = (next: TConditionModel): void => {
     setDraft(next);
@@ -164,9 +166,14 @@ export const ConditionForm = observer(function ConditionForm<TRow>({
   const changeJoin = useEventCallback((event: ChangeEvent<HTMLSelectElement>) =>
     commit({ ...current, join: event.target.value as TJoin })
   );
-  const addCondition = useEventCallback(() =>
-    update([...conditions, { op: options.defaultOp ?? operators[0]?.id ?? '' }])
-  );
+  const addCondition = useEventCallback(() => {
+    rowKeys.add();
+    update([...conditions, { op: options.defaultOp ?? operators[0]?.id ?? '' }]);
+  });
+  const removeCondition = (index: number): void => {
+    rowKeys.remove(index);
+    update(conditions.filter((_, at) => at !== index));
+  };
   const clear = useEventCallback(() => {
     setDraft(null);
     lastSent.current = null;
@@ -175,8 +182,8 @@ export const ConditionForm = observer(function ConditionForm<TRow>({
 
   return (
     <div className="ft-filter-form">
-      {conditions.map((condition, index) => (
-        <div key={index} className="ft-filter-condition">
+      {rowKeys.rows.map(({ key, item: condition }, index) => (
+        <div key={key} className="ft-filter-condition">
           {index > 0 && (
             <select
               className="ft-filter-select ft-filter-join"
@@ -218,7 +225,7 @@ export const ConditionForm = observer(function ConditionForm<TRow>({
               type="button"
               className="ft-icon-button"
               aria-label={translations.removeCondition}
-              onClick={() => update(conditions.filter((_, at) => at !== index))}
+              onClick={() => removeCondition(index)}
             >
               ×
             </button>

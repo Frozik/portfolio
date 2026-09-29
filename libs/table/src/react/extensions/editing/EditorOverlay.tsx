@@ -18,11 +18,9 @@ export const EditorOverlay = observer(function EditorOverlay<TRow>(context: ICel
   const slice = table.extension<IEditingSlice<TRow>>('editing');
   assert(slice !== undefined, 'EditorOverlay renders only with the editing extension');
   const session = slice.isEditing(rowKey, column.id) ? slice.current : null;
+  const editing = session !== null;
   const containerRef = useRef<HTMLDivElement>(null);
-  const editor = useMemo(
-    () => (session === null ? undefined : editorFor(context)),
-    [session === null, context]
-  );
+  const editor = useMemo(() => (editing ? editorFor(context) : undefined), [editing, context]);
 
   const finish = useEventCallback((move: 'down' | 'right' | undefined) => {
     if (!slice.commit()) {
@@ -53,7 +51,7 @@ export const EditorOverlay = observer(function EditorOverlay<TRow>(context: ICel
   });
 
   useEffect(() => {
-    if (session === null) {
+    if (!editing) {
       return undefined;
     }
     const onPointerDown = (event: PointerEvent): void => {
@@ -68,7 +66,7 @@ export const EditorOverlay = observer(function EditorOverlay<TRow>(context: ICel
     };
     document.addEventListener('pointerdown', onPointerDown, true);
     return () => document.removeEventListener('pointerdown', onPointerDown, true);
-  }, [session === null, slice]);
+  }, [editing, slice]);
 
   if (session === null || editor?.component === undefined) {
     return null;

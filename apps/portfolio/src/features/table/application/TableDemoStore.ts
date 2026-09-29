@@ -27,6 +27,11 @@ export type TDemoSource = 'client' | 'snapshot' | 'log';
 const DEFAULT_ROW_COUNT = 5_000;
 const SERVER_LOG_LINES = 8;
 
+export interface IServerLogLine {
+  readonly id: number;
+  readonly text: string;
+}
+
 /** Settings of the showcase and the rows every page shares. */
 export class TableDemoStore {
   theme: TDemoTheme = 'dark';
@@ -46,8 +51,9 @@ export class TableDemoStore {
     'tooltips',
     'app',
   ]);
-  serverLog: readonly string[] = [];
+  serverLog: readonly IServerLogLine[] = [];
   serverLogPaused = false;
+  private serverLogSeq = 0;
   rowCount = DEFAULT_ROW_COUNT;
   /** The fake journal behind the log source; one per store so its live stream survives tab switches. */
   readonly eventLog = fakeLogServer({ log: text => this.appendServerLog(text) });
@@ -55,9 +61,9 @@ export class TableDemoStore {
   private edits: ReadonlyMap<number, IDemoTrade> = new Map();
 
   constructor() {
-    makeAutoObservable<TableDemoStore, 'seed' | 'edits'>(
+    makeAutoObservable<TableDemoStore, 'seed' | 'edits' | 'serverLogSeq'>(
       this,
-      { eventLog: false, seed: false, edits: true, snapshotSubscribe: false },
+      { eventLog: false, seed: false, edits: true, serverLogSeq: false, snapshotSubscribe: false },
       { autoBind: true }
     );
   }
@@ -121,7 +127,11 @@ export class TableDemoStore {
     if (this.serverLogPaused) {
       return;
     }
-    this.serverLog = [...this.serverLog.slice(-(SERVER_LOG_LINES - 1)), text];
+    this.serverLogSeq += 1;
+    this.serverLog = [
+      ...this.serverLog.slice(-(SERVER_LOG_LINES - 1)),
+      { id: this.serverLogSeq, text },
+    ];
   }
 
   toggleServerLogPause(): void {

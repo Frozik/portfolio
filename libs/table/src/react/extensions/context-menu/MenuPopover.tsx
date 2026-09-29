@@ -23,6 +23,20 @@ function isDisabled(item: TEntry): boolean {
   return item.disabled !== undefined && item.disabled !== false;
 }
 
+/** A separator has no id of its own; it is named after the entry it follows. */
+function keyedItems(
+  items: readonly TMenuItem[]
+): readonly { readonly key: string; readonly item: TMenuItem }[] {
+  let previous = 'start';
+  return items.map(item => {
+    if (isEntry(item)) {
+      previous = item.id;
+      return { key: item.id, item };
+    }
+    return { key: `separator-after-${previous}`, item };
+  });
+}
+
 /** The open menu: a positioned list with arrow keys, Enter, Escape and outside clicks. */
 export const MenuPopover = observer(function MenuPopover<TRow>({ table }: IViewContext<TRow>) {
   const { translations } = useTableContext<TRow>();
@@ -106,10 +120,10 @@ export const MenuPopover = observer(function MenuPopover<TRow>({ table }: IViewC
       style={style}
       onKeyDown={handleKeyDown}
     >
-      {open.items.map((item, index) =>
+      {keyedItems(open.items).map(({ key, item }, index) =>
         isEntry(item) ? (
           <div
-            key={item.id}
+            key={key}
             role="menuitem"
             tabIndex={-1}
             className="ft-menu-item"
@@ -127,7 +141,7 @@ export const MenuPopover = observer(function MenuPopover<TRow>({ table }: IViewC
             {translations.menu[item.label] ?? item.label}
           </div>
         ) : (
-          <div key={`separator-${index}`} role="separator" className="ft-menu-separator" />
+          <div key={key} role="separator" className="ft-menu-separator" />
         )
       )}
     </div>

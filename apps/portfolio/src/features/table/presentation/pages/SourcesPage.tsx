@@ -109,9 +109,9 @@ const SourceView = observer(function SourceView<TRow>({
               </Button>
             </div>
             <ol className="flex flex-col gap-0.5 font-mono text-[11px]">
-              {store.serverLog.map((line, index) => (
-                <li key={index} className="truncate">
-                  {line}
+              {store.serverLog.map(line => (
+                <li key={line.id} className="truncate">
+                  {line.text}
                 </li>
               ))}
             </ol>

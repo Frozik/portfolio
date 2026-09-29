@@ -66,7 +66,7 @@ export function SelectEditor<TRow>({
     >
       {values.map((option, index) => (
         <div
-          key={index}
+          key={option.label}
           role="option"
           tabIndex={-1}
           aria-selected={Object.is(option.value, draft)}
