@@ -38,8 +38,11 @@ tasks:
     command: 'pnpm run types'
     inputs:
       - 'src/**/*'
-      - 'tsconfig.json'
-      - 'tsconfig.app.json'
+      - 'vite-plugins/**/*'
+      - 'e2e/**/*'
+      - 'vite.config.ts'
+      - 'playwright.config.ts'
+      - 'tsconfig*.json'
     options:
       runInCI: true
 

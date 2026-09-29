@@ -11,7 +11,9 @@ fileGroups:
   sources:
     - 'apps/*/src/**/*'
     - 'libs/*/src/**/*'
+    - 'apps/*/e2e/**/*'
     - 'apps/*/vite.config.ts'
+    - 'apps/*/playwright.config.ts'
     - 'vitest.config.ts'
   manifests:
     - 'package.json'
