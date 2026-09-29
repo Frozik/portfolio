@@ -1,8 +1,5 @@
-import { resolve } from 'node:path';
-
 import type { ConsoleMessage } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { loadEnv } from 'vite';
 
 import { ROUTE_METADATA } from '../src/app/routeMetadata';
 
@@ -18,19 +15,14 @@ const IGNORED_CONSOLE_PATTERNS = [
   /GPUDevice/i,
 ];
 
-// The signaling server is outside the smoke test: its health probe fails (refused or CORS)
-// and the retro / conf routes must still render.
-const COMMUNICATION_HOST = new URL(
-  loadEnv('production', resolve(import.meta.dirname, '..'), 'VITE_').VITE_COMMUNICATION_URL ??
-    'http://localhost:4445'
-).host;
+// The signaling server is outside the smoke test: retro and conf probe its liveness on mount,
+// and the probe is answered here so the run never depends on the server or its CORS rules.
+const HEALTH_PROBE = '**/health/live';
+const HEALTHY = { status: 200, contentType: 'application/json', body: '{"status":"ok"}' };
 
 function isExpectedConsoleError(message: ConsoleMessage): boolean {
   const source = `${message.text()} ${message.location().url}`;
-  return (
-    source.includes(COMMUNICATION_HOST) ||
-    IGNORED_CONSOLE_PATTERNS.some(pattern => pattern.test(source))
-  );
+  return IGNORED_CONSOLE_PATTERNS.some(pattern => pattern.test(source));
 }
 
 for (const segment of ROUTES) {
@@ -49,6 +41,7 @@ for (const segment of ROUTES) {
       problems.push(`console.error: ${message.text()}`);
     });
 
+    await page.route(HEALTH_PROBE, route => route.fulfill(HEALTHY));
     await page.goto(segment);
     await expect(page.locator('#root')).not.toBeEmpty();
     await expect(page.locator('#initial-loader')).toHaveCount(0, { timeout: 15_000 });

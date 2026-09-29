@@ -122,7 +122,8 @@ module.exports = {
     // node_modules edges stay in the graph (the package rules above match on them) but are not followed.
     doNotFollow: { path: 'node_modules' },
     exclude: { path: ['\\.test\\.tsx?$', '^(apps|libs)/[^/]+/dist/'] },
-    tsPreCompilationDeps: true,
+    // TypeScript 7 has no compiler API dependency-cruiser can use, so swc parses the sources; it keeps type-only imports in the graph.
+    parser: 'swc',
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],

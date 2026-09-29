@@ -9,7 +9,9 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: process.env.CI !== undefined,
+  // Retries tell a flaky test from a broken one in the report; either fails the run.
   retries: process.env.CI === undefined ? 0 : 2,
+  failOnFlakyTests: process.env.CI !== undefined,
   reporter: process.env.CI === undefined ? 'list' : [['list'], ['github']],
   use: {
     baseURL: BASE_URL,
