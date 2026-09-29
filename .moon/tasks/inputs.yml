@@ -1,0 +1,11 @@
+# Inherited by every project. A task is shaped by more than its listed inputs:
+# the moon configs that define it and the dependency graph it runs against.
+# `moon ci` runs only affected tasks, so without these a task definition or a
+# lockfile bump would reach main without the task ever running.
+implicitInputs:
+  - '/.moon/*.yml'
+  - '/.moon/tasks/**/*'
+  - 'moon.yml'
+  - 'package.json'
+  - '/pnpm-workspace.yaml'
+  - '/pnpm-lock.yaml'
