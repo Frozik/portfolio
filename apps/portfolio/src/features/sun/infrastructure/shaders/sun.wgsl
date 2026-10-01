@@ -2,7 +2,13 @@ const PI: f32 = 3.1415926535;
 const TWO_PI: f32 = PI * 2.0;
 const SPHERE_RADIUS: f32 = 5.0;
 const TRIANGLE_HALF_SIZE: f32 = 0.25;
-const EVERY_NTH_CENTER_LINE: f32 = 50.0;
+// The triangle is TRIANGLE_HALF_SIZE at this many instances and shrinks as their
+// number grows, so the sphere stays covered alike and the fill cost with it: the
+// benchmark then measures triangles, not overdraw.
+const REFERENCE_INSTANCE_COUNT: f32 = 250000.0;
+const MAX_TRIANGLE_SCALE: f32 = 4.0;
+// Lines to the centre: a fixed number of them whatever the instance count.
+const CENTER_LINE_COUNT: f32 = 5000.0;
 
 // Sunspot parameters
 const SPOT_NOISE_SCALE: f32 = 1.2;
@@ -187,7 +193,8 @@ fn vs(
     let instID = f32(iid);
 
     // Triangle vertex position (equilateral triangle in XY plane)
-    var pos = vec3<f32>(0.0, TRIANGLE_HALF_SIZE, 0.0);
+    let sizeScale = min(sqrt(REFERENCE_INSTANCE_COUNT / U.instanceCount), MAX_TRIANGLE_SCALE);
+    var pos = vec3<f32>(0.0, TRIANGLE_HALF_SIZE * sizeScale, 0.0);
     let angle = f32(vid) * TWO_PI / 3.0;
     let rotated = rot2d(angle) * pos.xy;
     pos = vec3<f32>(rotated, 0.0);
@@ -216,9 +223,10 @@ fn vs(
     // Offset from center + push outward by sinVal
     pos = pos + iPos + normal * sinVal;
 
-    // Every 50th instance: first vertex draws a line to center
+    // Some instances draw their first vertex at the centre: a line to it
+    let centerLineStride = u32(max(round(U.instanceCount / CENTER_LINE_COUNT), 1.0));
     var finalPos: vec4<f32>;
-    if (vid == 0u && (u32(instID) % u32(EVERY_NTH_CENTER_LINE)) == 0u) {
+    if (vid == 0u && (iid % centerLineStride) == 0u) {
         finalPos = U.mvp * vec4<f32>(0.0, 0.0, 0.0, 1.0);
     } else {
         finalPos = U.mvp * vec4<f32>(pos, 1.0);

@@ -2,6 +2,8 @@ import { isNil } from 'lodash-es';
 import { assert } from '../assert/assert';
 
 export interface GpuContext {
+  /** What the device was made from: its `info`, `features` and `limits` say what the card could do beyond what was asked for. */
+  readonly adapter: GPUAdapter;
   readonly device: GPUDevice;
   readonly canvasContext: GPUCanvasContext;
   readonly format: GPUTextureFormat;
@@ -38,5 +40,5 @@ export async function createGpuContext(
     alphaMode: 'premultiplied',
   });
 
-  return { device, canvasContext, format };
+  return { adapter, device, canvasContext, format };
 }

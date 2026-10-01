@@ -25,7 +25,7 @@ Every demo has its own README with the details; the landing page is the
 |---|---|---|
 | [Pendulum](./apps/portfolio/src/features/pendulum/README.md) | A genetic algorithm evolves small neural networks to swing up and balance an inverted pendulum on a cart; own inference, closed-form physics, no engine. | [open](https://frozik.github.io/portfolio/pendulum)
 | [Sudoku](./apps/portfolio/src/features/sudoku/README.md) | Sudoku with four difficulties, pen and notes modes, undo and validation. | [open](https://frozik.github.io/portfolio/sudoku)
-| [Sun](./apps/portfolio/src/features/sun/README.md) | 250,000 WebGPU particles on a sphere with an inertial orbit camera. | [open](https://frozik.github.io/portfolio/sun)
+| [Sun](./apps/portfolio/src/features/sun/README.md) | A WebGPU benchmark: a sun of as many triangles as the device draws at its display's frame rate, with a report of the graphics card. | [open](https://frozik.github.io/portfolio/sun)
 | [Graphics](./apps/portfolio/src/features/graphics/README.md) | GPU-side 2D primitives — variable-width lines, gradients, animated shapes — at near-zero CPU cost. | [open](https://frozik.github.io/portfolio/graphics)
 | [Timeseries](./apps/portfolio/src/features/timeseries/README.md) | Four interactive time-series charts on one shared WebGPU device, streaming synthetic data. | [open](https://frozik.github.io/portfolio/timeseries)
 | [Binance Orderbook](./apps/portfolio/src/features/binance-view/README.md) | A Bookmap-style live depth-of-market heatmap over a real Binance WebSocket feed, with trades and an hour of history. | [open](https://frozik.github.io/portfolio/binance)

@@ -35,7 +35,7 @@ export class SunLayer implements RenderLayer {
     private readonly camera: SunCameraController,
     private readonly msaaManager: MsaaTextureManager,
     private readonly depthManager: DepthTextureManager,
-    /** Instances to draw this frame; the composition root lowers it on weak devices. */
+    /** Instances to draw this frame: the count the benchmark is trying. */
     private readonly readInstanceCount: () => number
   ) {
     this.device = context.device;
