@@ -148,7 +148,7 @@ function keptRound(course: Course, point: Vector2): readonly { sx: number; sy: n
 
 /**
  * The play with the sector at `(sx, sy)` made, if it was not there: made
- * among the sectors standing within reach, clear of the ball, and appended —
+ * among the sectors standing within reach, clear of the ball and the bonus, and appended —
  * so nothing the ball's states are indexed by moves — with its spikes,
  * floaters and rods in their starting states.
  */
@@ -168,7 +168,11 @@ export function withSector(play: Play, sx: number, sy: number): Play {
         Math.abs(each.sx - sx) <= NEIGHBOUR_REACH_SECTORS &&
         Math.abs(each.sy - sy) <= NEIGHBOUR_REACH_SECTORS
     ),
-    keepClear: [ball.position, ball.rest.position],
+    keepClear: [
+      ball.position,
+      ball.rest.position,
+      ...(ball.bonus.at === undefined ? [] : [ball.bonus.at]),
+    ],
     withTee: false,
   });
   return {

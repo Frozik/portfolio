@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { distanceToSegment } from './collision';
+import { BONUS_RADIUS_METERS } from './constants';
 import { afterHoleOut, keepingSectors, levelOf, slicesOf, startCourse, withSector } from './course';
 import { cupCenter, hasCup } from './cup';
 import { sectorAt, sectorKey } from './generator/generate-sector';
 import { edgeOf } from './level';
+import { containsPoint } from './walls';
 
 const SIZE = { widthCells: 24, heightCells: 24 };
 
@@ -60,6 +63,28 @@ describe('sectors coming and going', () => {
     expect(grown.ball.spikes.slice(0, play.ball.spikes.length)).toEqual(play.ball.spikes);
     expect(grown.ball.rods).toHaveLength(levelOf(grown.course).rods.length);
     expect(withSector(grown, 5, 5)).toBe(grown);
+  });
+
+  it('grows nothing of a new sector over the bonus lying where an island would have stood', () => {
+    for (const seed of [3, 7, 11]) {
+      const play = startCourse(seed, SIZE);
+      const [island] = withSector(play, 5, 5).course.sectors.slice(-1);
+      const { min, max } = island.walls[0].bounds;
+      const middle = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
+      const under = island.walls.some(wall => containsPoint(wall, middle))
+        ? middle
+        : island.walls[0].edges[0].from;
+      const waiting = { ...play, ball: { ...play.ball, bonus: { ...play.ball.bonus, at: under } } };
+
+      const [made] = withSector(waiting, 5, 5).course.sectors.slice(-1);
+
+      expect(made.walls.some(wall => containsPoint(wall, under))).toBe(false);
+      for (const wall of made.walls) {
+        for (const edge of wall.edges) {
+          expect(distanceToSegment(under, edge)).toBeGreaterThan(BONUS_RADIUS_METERS);
+        }
+      }
+    }
   });
 
   it('drops sectors with their states, always keeping the one the cup is in', () => {

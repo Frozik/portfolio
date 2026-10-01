@@ -80,7 +80,7 @@ export interface SectorRequest {
   readonly size: SectorSize;
   /** The sectors already standing within reach: their islands, floaters and rods are kept clear of. */
   readonly neighbours: readonly Sector[];
-  /** Points no island may grow over: the ball where it lies. */
+  /** Points no island may grow over: the ball where it lies, the bonus where it waits. */
   readonly keepClear: readonly Vector2[];
   readonly withTee: boolean;
 }

@@ -103,7 +103,9 @@ time.
   burst it, floaters and rods still bounce it. Both last until the ball
   bursts; past the fifth foresight every disc is a grip. The disc stays for
   one to three strokes and moves, or comes back after it was taken, only
-  when the ball has come to rest, so a stroke can be planned for it
+  when the ball has come to rest, so a stroke can be planned for it. It
+  lies in the open, and a sector made after it — beyond the ones standing,
+  or the new country after a hole — grows no island over it
 - The course is drawn at one scale, 64 pixels a metre, and a narrow screen
   starts zoomed out from it — a phone shows twelve metres across, not six —
   by a camera that stands still while
