@@ -32,6 +32,8 @@ export const tableDemoTranslationsRu: TranslationOf<typeof tableDemoTranslations
     selected: 'Выделено',
     copy: 'Копировать',
     exportCsv: 'Экспорт CSV',
+    expand: 'Растянуть таблицу на весь экран',
+    collapse: 'Вернуть таблицу на место',
     autoSize: 'Автосайз',
     autoSizeModes: {
       off: 'Выкл',

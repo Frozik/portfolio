@@ -36,9 +36,11 @@ import { Button } from '../../../../shared/ui/Button';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';
 import { notionalOf } from '../../domain/demo-trade';
+import { ExpandableFrame } from '../components/ExpandableFrame';
 import { TradeDetail } from '../components/TradeDetail';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';
+import { SPLIT_CLASS } from '../sidePanelLayout';
 import { tableDemoT } from '../translations';
 
 const ColumnPicker = lazy(() =>
@@ -198,7 +200,7 @@ export const ShowcasePage = observer(() => {
   const selectedCount = model.selection.count ?? model.selection.summary?.cells ?? 0;
 
   return (
-    <div className="flex min-h-0 flex-1 gap-4">
+    <div className={SPLIT_CLASS}>
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={togglePicker}>
@@ -281,20 +283,26 @@ export const ShowcasePage = observer(() => {
             {tableDemoT.controls.selected}: {selectedCount.toLocaleString()}
           </span>
         </div>
-        <Table
-          model={model}
-          className="min-h-0 flex-1"
-          theme={store.theme}
-          density={store.density}
-          locale={store.locale}
-          numberLocale={NUMBER_LOCALE}
-          cellSpec={lockCancelled}
-          rowClass={notionalTint}
-        />
+        <ExpandableFrame className="flex-1">
+          <Table
+            model={model}
+            className="min-h-0 flex-1"
+            theme={store.theme}
+            density={store.density}
+            locale={store.locale}
+            numberLocale={NUMBER_LOCALE}
+            cellSpec={lockCancelled}
+            rowClass={notionalTint}
+          />
+        </ExpandableFrame>
       </div>
       {pickerOpen && (
         <Suspense fallback={null}>
-          <ColumnPicker model={model} locale={store.locale} className="self-start" />
+          <ColumnPicker
+            model={model}
+            locale={store.locale}
+            className="max-h-[35%] shrink-0 overflow-y-auto md:max-h-none md:self-start"
+          />
         </Suspense>
       )}
     </div>

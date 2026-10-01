@@ -83,5 +83,18 @@ CSS variables on the table root), the light and dark themes side by side,
 the compact density, and the cell states (`focused`, `selected`, `invalid`,
 `edited`) as `data-*` attributes a theme styles.
 
+**Full screen** — the table of the showcase, sources and extensions pages
+carries a round button in its bottom right corner that stretches it over
+the whole screen from where it stands and puts it back: the way to read a
+wide table on a phone. It is the same element in both states — scroll,
+selection and an open editor survive — and the move is a view transition
+(`document.startViewTransition`) in which the frame grows as a window onto
+the table instead of scaling it; browsers without the API, and users who
+asked for reduced motion, get the switch without the animation. On a
+narrow screen (under 768 px) the panel that stands beside a table — the
+source's log, the extension switches, the column picker — goes above it
+instead, within a third of the height and scrolling inside, so the table
+gets the full width.
+
 Pages arrive with the implementation phases of the library: sources
 (client / snapshot / log), cells and editors, extensions.

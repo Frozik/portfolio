@@ -24,6 +24,8 @@ export const tableDemoTranslationsEn = {
     selected: 'Selected',
     copy: 'Copy',
     exportCsv: 'Export CSV',
+    expand: 'Stretch the table over the whole screen',
+    collapse: 'Put the table back in its place',
     autoSize: 'Autosize',
     autoSizeModes: {
       off: 'Off',

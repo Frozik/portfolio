@@ -16,9 +16,12 @@ import { Button } from '../../../../shared/ui/Button';
 import type { TDemoSource } from '../../application/TableDemoStore';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import { ApiReference } from '../components/ApiReference';
+import { ExpandableFrame } from '../components/ExpandableFrame';
 import { eventColumns } from '../eventColumns';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';
+import { SIDE_PANEL_CLASS, SPLIT_CLASS } from '../sidePanelLayout';
+
 import { tableDemoT } from '../translations';
 
 const SOURCES: readonly TDemoSource[] = ['client', 'snapshot', 'log'];
@@ -75,16 +78,18 @@ const SourceView = observer(function SourceView<TRow>({
   const store = useTableDemoStore();
   const { rows } = model;
   return (
-    <div className="flex min-h-0 flex-1 gap-4">
-      <Table
-        model={model}
-        className="min-h-0 flex-1"
-        theme={store.theme}
-        density={store.density}
-        locale={store.locale}
-        numberLocale={NUMBER_LOCALE}
-      />
-      <aside className="flex w-64 shrink-0 flex-col gap-3 text-xs text-landing-fg-dim">
+    <div className={SPLIT_CLASS}>
+      <ExpandableFrame className="flex-1">
+        <Table
+          model={model}
+          className="min-h-0 flex-1"
+          theme={store.theme}
+          density={store.density}
+          locale={store.locale}
+          numberLocale={NUMBER_LOCALE}
+        />
+      </ExpandableFrame>
+      <aside className={cn('flex flex-col gap-3 text-xs text-landing-fg-dim', SIDE_PANEL_CLASS)}>
         <div className="flex items-start justify-between gap-2">
           <p>{tableDemoT.sources.hint[store.source]}</p>
           {store.source !== 'client' && <ApiReference source={store.source} />}

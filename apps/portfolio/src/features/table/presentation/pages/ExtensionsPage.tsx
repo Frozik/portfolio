@@ -16,12 +16,17 @@ import { useTable } from '@frozik/table/react/useTable';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 
+import { cn } from '@frozik/components/components/cn';
 import type { TDemoExtension, TDemoView } from '../../application/TableDemoStore';
+
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';
+import { ExpandableFrame } from '../components/ExpandableFrame';
 import { TradeDetail } from '../components/TradeDetail';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';
+import { SIDE_PANEL_CLASS, SPLIT_CLASS } from '../sidePanelLayout';
+
 import { tableDemoT } from '../translations';
 
 const EXTENSIONS: readonly TDemoExtension[] = [
@@ -102,23 +107,25 @@ const ExtensionsTable = observer(() => {
     onRowsChange: changes => changes.forEach(change => store.updateTrade(change.new)),
   });
   return (
-    <Table
-      model={model}
-      className="min-h-0 flex-1"
-      theme={store.theme}
-      density={store.density}
-      locale={store.locale}
-      numberLocale={NUMBER_LOCALE}
-    />
+    <ExpandableFrame className="flex-1">
+      <Table
+        model={model}
+        className="min-h-0 flex-1"
+        theme={store.theme}
+        density={store.density}
+        locale={store.locale}
+        numberLocale={NUMBER_LOCALE}
+      />
+    </ExpandableFrame>
   );
 });
 
 export const ExtensionsPage = observer(() => {
   const store = useTableDemoStore();
   return (
-    <div className="flex min-h-0 flex-1 gap-4">
+    <div className={SPLIT_CLASS}>
       <ExtensionsTable key={`${store.extensionsKey}:${store.view}`} />
-      <aside className="flex w-64 shrink-0 flex-col gap-3 text-xs text-landing-fg-dim">
+      <aside className={cn('flex flex-col gap-3 text-xs text-landing-fg-dim', SIDE_PANEL_CLASS)}>
         <p>{tableDemoT.extensions.hint}</p>
         <label className="flex items-center gap-2">
           {tableDemoT.extensions.view}
@@ -134,7 +141,7 @@ export const ExtensionsPage = observer(() => {
             ))}
           </select>
         </label>
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 md:flex-col md:flex-nowrap">
           {EXTENSIONS.map(extension => (
             <li key={extension}>
               <label className="flex items-center gap-2 text-landing-fg">
