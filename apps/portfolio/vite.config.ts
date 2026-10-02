@@ -10,13 +10,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 import { readAppVersion } from './vite-plugins/app-version.ts';
+import { buildAssetsDefine } from './vite-plugins/build-assets.ts';
 import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 
 // vite-plugin-pwa re-exports workbox-build's option types only through its own
 // options object, so the transform type is derived from there.
 type ManifestTransform = NonNullable<
-  NonNullable<VitePWAOptions['workbox']>['manifestTransforms']
+  NonNullable<VitePWAOptions['injectManifest']>['manifestTransforms']
 >[number];
 
 const ENABLE_BUNDLE_STATS = process.env.ANALYZE === 'true';
@@ -31,9 +32,9 @@ const PRERENDER_RENDER_ENTRY = 'src/app/prerender/render-landing.tsx';
 const PRERENDER_DIR = '.prerender';
 /** The SSR bundle needs a name the plugin can find; the browser build hashes its entry. */
 const PRERENDER_ENTRY_FILE = 'render-landing.js';
-const DAY_SECONDS = 24 * 60 * 60;
-const RUNTIME_ASSET_CACHE_MAX_ENTRIES = 200;
-const RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS = 30 * DAY_SECONDS;
+/** The service worker source (`src/sw/sw.ts`); the build writes it to `dist/sw.js`. */
+const SERVICE_WORKER_DIR = 'src/sw';
+const SERVICE_WORKER_FILE = 'sw.ts';
 
 /** The CV renderer chunk (`generateCvPdf`) and the TTF fonts it embeds — see `chunkFileNames`. */
 const CV_DOWNLOAD_ASSET = /^assets\/(cv-[^/]+\.js|[^/]+\.ttf)$/;
@@ -42,10 +43,9 @@ const CV_DOWNLOAD_ASSET = /^assets\/(cv-[^/]+\.js|[^/]+\.ttf)$/;
  * Precache the app shell — `index.html`, everything it references (entry,
  * modulepreloads, CSS) and the PWA icons — plus the CV download, which most
  * visitors click and which would otherwise wait for 1.2 MB on first use.
- * Every other hashed asset is cached on first use instead (see
- * `runtimeCaching`): precaching all feature chunks pulled ~6 MB (TensorFlow,
- * 3D assets, …) right after the landing page opened, competing with the user's
- * first navigation on mobile data.
+ * Every other hashed asset is cached on first use, or all at once as the
+ * offline pack (`src/sw/offline-pack.ts`) — never at install, where the whole
+ * build would compete with the visitor's first navigation on mobile data.
  */
 const precacheAppShellAndCv: ManifestTransform = manifestEntries => {
   const indexHtml = readFileSync(resolve(import.meta.dirname, OUT_DIR, 'index.html'), 'utf8');
@@ -91,29 +91,13 @@ export default defineConfig(({ isSsrBuild = false }) => ({
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: 'inline',
-        workbox: {
-          // The plugin only defaults these for `injectRegister: 'auto'`; without them a
-          // new worker waits until every tab closes and `autoUpdate` never fires.
-          skipWaiting: true,
-          clientsClaim: true,
+        strategies: 'injectManifest',
+        srcDir: SERVICE_WORKER_DIR,
+        filename: SERVICE_WORKER_FILE,
+        injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
           manifestTransforms: [precacheAppShellAndCv],
-          runtimeCaching: [
-            {
-              urlPattern: new RegExp(`${BASE}/assets/`),
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'hashed-assets',
-                expiration: {
-                  maxEntries: RUNTIME_ASSET_CACHE_MAX_ENTRIES,
-                  maxAgeSeconds: RUNTIME_ASSET_CACHE_MAX_AGE_SECONDS,
-                },
-              },
-            },
-          ],
-          navigateFallback: `${BASE}/index.html`,
-          navigateFallbackAllowlist: [new RegExp(`^${BASE}`)],
-          navigateFallbackDenylist: [/\.pdf$/],
+          buildPlugins: { vite: [buildAssetsDefine(resolve(import.meta.dirname, OUT_DIR))] },
         },
         manifest: {
           name: 'Portfolio',

@@ -136,7 +136,7 @@
     "no-underscore-dangle": [
       "warn",
       {
-        "allow": ["__APP_VERSION__"]
+        "allow": ["__APP_VERSION__", "__BUILD_ASSETS__", "__WB_MANIFEST"]
       }
     ]
   },

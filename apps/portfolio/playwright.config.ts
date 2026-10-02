@@ -2,6 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}/portfolio/`;
+const UPDATE_SPEC = /update\.spec\.ts$/;
+const CHROMIUM = {
+  ...devices['Desktop Chrome'],
+  // Headless Chromium has no GPU: WebGPU either works through SwiftShader
+  // or the app must show its unsupported notice — both are valid outcomes.
+  launchOptions: { args: ['--enable-unsafe-webgpu', '--use-angle=swiftshader'] },
+};
 
 // Smoke tests run against the production build served by `vite preview`, the
 // same setup Lighthouse uses — never against the dev server.
@@ -26,12 +33,16 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        // Headless Chromium has no GPU: WebGPU either works through SwiftShader
-        // or the app must show its unsupported notice — both are valid outcomes.
-        launchOptions: { args: ['--enable-unsafe-webgpu', '--use-angle=swiftshader'] },
-      },
+      testIgnore: UPDATE_SPEC,
+      use: CHROMIUM,
+    },
+    // The update test rewrites `dist/sw.js` while it runs, which every other open
+    // page would pick up as an update — so it runs alone, after the rest.
+    {
+      name: 'update',
+      testMatch: UPDATE_SPEC,
+      dependencies: ['chromium'],
+      use: CHROMIUM,
     },
   ],
 });

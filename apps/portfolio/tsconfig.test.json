@@ -11,5 +11,6 @@
     "vite-plugins/**/*.ts",
     "e2e/**/*.ts",
     "playwright.config.ts"
-  ]
+  ],
+  "exclude": ["src/sw/sw.ts", "src/sw/sw-env.d.ts"]
 }

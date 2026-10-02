@@ -26,6 +26,17 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     fullscreenLandscape: 'Полноэкранный режим (landscape)',
     backToHome: 'На главную',
   },
+  offline: {
+    heading: 'офлайн',
+    incomplete: 'Без интернета не работает',
+    downloading: (cached: number, total: number): string =>
+      `Загрузка… ${cached} из ${total} файлов`,
+    ready: 'Работает без интернета',
+    failed: 'Загрузка прервалась',
+    download: 'Скачать',
+    retry: 'Повторить',
+    installHint: 'Установите как приложение — скачается само и будет обновляться.',
+  },
   pageTitles: {
     cv: 'Резюме',
     pendulum: 'Маятник',

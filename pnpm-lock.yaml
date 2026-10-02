@@ -300,6 +300,18 @@ catalogs:
     wgpu-matrix:
       specifier: ^3.4.2
       version: 3.4.2
+    workbox-core:
+      specifier: ^7.4.1
+      version: 7.4.1
+    workbox-precaching:
+      specifier: ^7.4.1
+      version: 7.4.1
+    workbox-routing:
+      specifier: ^7.4.1
+      version: 7.4.1
+    workbox-strategies:
+      specifier: ^7.4.1
+      version: 7.4.1
     y-indexeddb:
       specifier: ^9.0.12
       version: 9.0.12
@@ -603,6 +615,18 @@ importers:
       wgpu-matrix:
         specifier: 'catalog:'
         version: 3.4.2
+      workbox-core:
+        specifier: 'catalog:'
+        version: 7.4.1
+      workbox-precaching:
+        specifier: 'catalog:'
+        version: 7.4.1
+      workbox-routing:
+        specifier: 'catalog:'
+        version: 7.4.1
+      workbox-strategies:
+        specifier: 'catalog:'
+        version: 7.4.1
       y-indexeddb:
         specifier: 'catalog:'
         version: 9.0.12(yjs@13.6.33)

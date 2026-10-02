@@ -2,12 +2,14 @@ import { Home } from 'lucide-react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 import { Drawer } from '../../shared/ui/Drawer';
+import { useOfflinePackStore } from '../offline/OfflinePackContext';
 import type { INavSectionTranslation } from '../translations';
 import { GameOfLifeBackground } from './GameOfLifeBackground';
 import { NavProjectButton } from './NavProjectButton';
 import { NavSectionButton } from './NavSectionButton';
 import type { INavProject } from './navTypes';
 import { PROJECT_ICON_SIZE_PX } from './navTypes';
+import { OfflinePackSection } from './OfflinePackSection';
 
 const NESTED_SECTION_BUTTON_CLASS =
   'flex w-full items-baseline gap-3 rounded-sm border border-transparent px-3 py-2 text-left font-mono text-sm text-landing-fg-dim transition-colors hover:border-landing-border hover:text-landing-fg';
@@ -41,6 +43,8 @@ const MobileSectionMenuComponent = ({
   readonly onNavigateProject: (route: string) => void;
   readonly onNavigateHome?: () => void;
 }) => {
+  const offlinePack = useOfflinePackStore();
+
   const handleSectionClick = useEventCallback((sectionId: string) => {
     onNavigateSection(sectionId);
     onClose();
@@ -119,6 +123,8 @@ const MobileSectionMenuComponent = ({
             ))}
           </ul>
         </section>
+
+        <OfflinePackSection store={offlinePack} />
       </div>
     </Drawer>
   );

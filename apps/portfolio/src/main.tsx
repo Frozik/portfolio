@@ -8,16 +8,19 @@ import { setupCloudflareBeacon } from './app/bootstrap/cloudflareBeacon';
 import { selectRootContainer, shouldHydrate } from './app/bootstrap/root-container';
 import { setupServiceWorkerUpdate } from './app/bootstrap/serviceWorkerUpdate';
 import { Application } from './app/components/Application';
+import { bootstrapOfflinePack } from './app/offline/bootstrapOfflinePack';
+import { createServiceWorkerOfflinePackPort } from './app/offline/offlinePackPort';
 import { getCurrentLanguage } from './shared/i18n/locale';
 
 setupCloudflareBeacon();
 setupServiceWorkerUpdate();
+const offlinePack = bootstrapOfflinePack(createServiceWorkerOfflinePackPort());
 
 function bootstrap() {
   const container = selectRootContainer(document, getCurrentLanguage());
   const application = (
     <StrictMode>
-      <Application />
+      <Application offlinePack={offlinePack} />
     </StrictMode>
   );
 

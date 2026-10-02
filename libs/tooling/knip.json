@@ -19,6 +19,7 @@
     "apps/portfolio": {
       "entry": [
         "src/main.tsx",
+        "src/sw/sw.ts",
         "src/app/prerender/render-landing.tsx",
         "vite.config.ts",
         "lighthouserc.json",

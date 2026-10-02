@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "serve": "vite",
     "serve-https": "HTTPS=true vite",
-    "types": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.test.json"
+    "types": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.sw.json && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:",
@@ -64,6 +64,10 @@
     "usehooks-ts": "catalog:",
     "webgpu-utils": "catalog:",
     "wgpu-matrix": "catalog:",
+    "workbox-core": "catalog:",
+    "workbox-precaching": "catalog:",
+    "workbox-routing": "catalog:",
+    "workbox-strategies": "catalog:",
     "y-indexeddb": "catalog:",
     "y-webrtc": "catalog:",
     "yjs": "catalog:"

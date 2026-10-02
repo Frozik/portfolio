@@ -5,6 +5,8 @@
   },
   "include": ["src"],
   "exclude": [
+    "src/sw/sw.ts",
+    "src/sw/sw-env.d.ts",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/**/*.spec.ts",

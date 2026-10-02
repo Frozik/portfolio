@@ -29,6 +29,17 @@ export const appTranslationsEn = {
     fullscreenLandscape: 'Fullscreen landscape',
     backToHome: 'Back to home',
   },
+  offline: {
+    heading: 'offline',
+    incomplete: 'Not available offline',
+    downloading: (cached: number, total: number): string =>
+      `Downloading… ${cached} of ${total} files`,
+    ready: 'Available offline',
+    failed: 'Download interrupted',
+    download: 'Download',
+    retry: 'Retry',
+    installHint: 'Install as an app and it downloads itself — and stays up to date.',
+  },
   pageTitles: {
     cv: 'CV',
     pendulum: 'Pendulum',
