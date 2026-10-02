@@ -16,6 +16,8 @@ const SERVICE_WORKER_FILE = resolve(DIST, 'sw.js');
 const PRECACHE_ENTRY = /\{"revision":(?:null|"([0-9a-f]{32})"),"url":"([^"]+)"\}/g;
 const UPDATE_RELOAD_TIMEOUT_MS = 15_000;
 const PACK_DOWNLOAD_TIMEOUT_MS = 60_000;
+/** Two pack downloads on a CI runner do not fit the default 30 s. */
+const TEST_TIMEOUT_MS = 180_000;
 const HASHED_ASSETS_CACHE = 'hashed-assets';
 
 function precacheManifest(): ReadonlyMap<string, string | null> {
@@ -85,6 +87,7 @@ test('a changed worker takes over the open page and reloads it', async ({ page }
 test('a downloaded offline pack is completed again by the next build while it installs', async ({
   page,
 }) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
   await openAsReturningVisitor(page);
   await page.getByRole('button', { name: appTranslationsEn.nav.openMenu }).click();
   const menu = page.getByRole('dialog');

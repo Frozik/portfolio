@@ -49,6 +49,15 @@ jobs:
         if: github.event_name == 'pull_request' && (success() || failure())
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
+      # Playwright keeps a trace for every failed test; without this it dies with the runner.
+      - name: Keep the e2e traces of a failed run
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: apps/portfolio/test-results
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Keep the portfolio build for the Lighthouse job
         uses: actions/upload-artifact@v7
         if: success()
