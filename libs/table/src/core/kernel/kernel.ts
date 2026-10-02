@@ -1,3 +1,4 @@
+import type { EventBus } from '@frozik/utils/events/event-bus';
 import type { ColumnsModel } from '../columns/columns-model';
 import type { FocusModel } from '../focus/focus-model';
 import type { IRowChange } from '../rows/row-change';
@@ -5,7 +6,6 @@ import type { IRowSource } from '../rows/row-source';
 import type { ITableState } from '../state/table-state';
 import type { CommandBus } from './command-bus';
 import type { ITableCommands, ITableEvents } from './contracts';
-import type { EventBus } from './event-bus';
 import type { IMenuContext, TMenuItem } from './menu';
 
 /** What every extension sees of the table: the model and the buses, nothing about other extensions but their slices. */

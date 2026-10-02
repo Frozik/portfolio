@@ -50,6 +50,10 @@
       "entry": ["src/**/*.{ts,tsx}!"],
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "libs/charts": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "libs/communication-protocol": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]

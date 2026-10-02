@@ -10,6 +10,12 @@ here is not considered done. It is laid out like every other feature —
 the showcase settings and the rows every page shares), `presentation/`
 (the shell and its pages).
 
+The table gets the whole page. The name of the page shown stands in the top
+bar; pressing it opens a row with the pages — showcase, sources, extensions,
+brand book — and, on the same level, the theme, density and row count
+switches, which wrap to a second line when the row is too narrow. Pressing
+it again puts the row away.
+
 **Showcase** — one table over 100 to 100 000 generated trades with the
 extensions of the first release wired in: sorting (click cycles, Shift+click
 adds a column, priority badges), pinning, column resizing (drag handle,
@@ -90,7 +96,8 @@ wide table on a phone. It is the same element in both states — scroll,
 selection and an open editor survive — and the move is a view transition
 (`document.startViewTransition`) in which the frame grows as a window onto
 the table instead of scaling it; browsers without the API, and users who
-asked for reduced motion, get the switch without the animation. On a
+asked for reduced motion, get the switch without the animation. The frame is
+`shared/ui/ExpandableFrame`, the same one the charts demo puts its charts in. On a
 narrow screen (under 768 px) the panel that stands beside a table — the
 source's log, the extension switches, the column picker — goes above it
 instead, within a third of the height and scrolling inside, so the table

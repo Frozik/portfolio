@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:",
+    "@frozik/charts": "workspace:*",
     "@frozik/communication-protocol": "workspace:*",
     "@frozik/components": "workspace:*",
     "@frozik/table": "workspace:*",

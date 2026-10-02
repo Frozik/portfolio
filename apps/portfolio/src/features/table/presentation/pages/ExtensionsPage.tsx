@@ -19,9 +19,9 @@ import { useMemo } from 'react';
 import { cn } from '@frozik/components/components/cn';
 import type { TDemoExtension, TDemoView } from '../../application/TableDemoStore';
 
+import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';
-import { ExpandableFrame } from '../components/ExpandableFrame';
 import { TradeDetail } from '../components/TradeDetail';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';

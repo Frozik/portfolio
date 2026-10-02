@@ -38,6 +38,8 @@ export class TableDemoStore {
   /** The page language; the demo follows the application, it has no language of its own. */
   readonly locale = getCurrentLanguage();
   page: TDemoPage = 'showcase';
+  /** The row of pages and settings is shown; hidden until asked for, so that it takes no room from the table. */
+  isPageMenuOpen = false;
   source: TDemoSource = 'snapshot';
   view: TDemoView = 'grid';
   enabled: ReadonlySet<TDemoExtension> = new Set<TDemoExtension>([
@@ -90,6 +92,10 @@ export class TableDemoStore {
 
   setDensity(density: TDemoDensity): void {
     this.density = density;
+  }
+
+  togglePageMenu(): void {
+    this.isPageMenuOpen = !this.isPageMenuOpen;
   }
 
   setPage(page: TDemoPage): void {

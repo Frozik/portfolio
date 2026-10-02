@@ -1,0 +1,30 @@
+import { useChart } from '@frozik/charts/react/useChart';
+import { range } from 'lodash-es';
+import { observer } from 'mobx-react-lite';
+
+import {
+  createOverviewChart,
+  OVERVIEW_CHART_COUNT,
+} from '../../application/charts/overview-charts';
+import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore';
+import { DemoStage } from '../components/DemoStage';
+import { ExpandableChart } from '../components/ExpandableChart';
+import { useDebugBlocks } from '../components/useDebugBlocks';
+
+export const OverviewPage = observer(() => {
+  const store = useTimeseriesDemoStore();
+  const charts = useChart(() =>
+    range(OVERVIEW_CHART_COUNT).map(index => createOverviewChart(index, store))
+  );
+  useDebugBlocks(charts, store.debug);
+
+  return (
+    <DemoStage>
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+        {charts.map(chart => (
+          <ExpandableChart key={chart.id} model={chart} className="h-full w-full" />
+        ))}
+      </div>
+    </DemoStage>
+  );
+});

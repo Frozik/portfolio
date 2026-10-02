@@ -39,6 +39,7 @@ export interface SharedTranslation {
   webGpuGuard: WebGpuGuardTranslation;
   signInGate: SignInGateTranslation;
   accountChip: AccountChipTranslation;
+  expandableFrame: { expand: string; collapse: string };
 }
 
 export const sharedTranslationsEn: SharedTranslation = {
@@ -98,5 +99,9 @@ export const sharedTranslationsEn: SharedTranslation = {
       google: 'Signed in with Google',
       yandex: 'Signed in with Yandex',
     },
+  },
+  expandableFrame: {
+    expand: 'Stretch over the whole screen',
+    collapse: 'Put back in its place',
   },
 };

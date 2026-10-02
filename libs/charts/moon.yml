@@ -1,0 +1,16 @@
+language: typescript
+layer: library
+
+tags:
+  - library
+
+tasks:
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - 'src/**/*'
+      - 'types/**/*'
+      - 'tsconfig.json'
+      - 'tsconfig.headless.json'
+    options:
+      runInCI: true

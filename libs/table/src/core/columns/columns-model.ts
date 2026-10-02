@@ -1,9 +1,9 @@
 import { isNil } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
+import type { EventBus } from '@frozik/utils/events/event-bus';
 import type { CommandBus, TCommandOutcome } from '../kernel/command-bus';
 import type { ITableCommands, ITableEvents } from '../kernel/contracts';
-import type { EventBus } from '../kernel/event-bus';
 import type { IColumnLock, TAnyColumn, TPinSide } from './column';
 import { mergeColumnOrder, moveToSlot } from './column-order';
 import type { IColumnState, TWidthAuthor } from './column-state';

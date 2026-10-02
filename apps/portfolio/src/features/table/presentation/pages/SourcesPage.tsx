@@ -13,10 +13,10 @@ import { useMemo } from 'react';
 import { cn } from '@frozik/components/components/cn';
 
 import { Button } from '../../../../shared/ui/Button';
+import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import type { TDemoSource } from '../../application/TableDemoStore';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import { ApiReference } from '../components/ApiReference';
-import { ExpandableFrame } from '../components/ExpandableFrame';
 import { eventColumns } from '../eventColumns';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';

@@ -1,7 +1,5 @@
 export const tableDemoTranslationsEn = {
-  title: 'Table',
-  subtitle:
-    'A data grid built as a headless kernel plus extensions — the visible grid itself is one of them.',
+  pageMenu: 'Pages and settings of the demo',
   pages: {
     showcase: 'Showcase',
     sources: 'Sources',
@@ -24,8 +22,6 @@ export const tableDemoTranslationsEn = {
     selected: 'Selected',
     copy: 'Copy',
     exportCsv: 'Export CSV',
-    expand: 'Stretch the table over the whole screen',
-    collapse: 'Put the table back in its place',
     autoSize: 'Autosize',
     autoSizeModes: {
       off: 'Off',

@@ -37,6 +37,14 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'charts',
+          environment: 'happy-dom',
+          include: ['libs/charts/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'utils',
           environment: 'happy-dom',
           include: [

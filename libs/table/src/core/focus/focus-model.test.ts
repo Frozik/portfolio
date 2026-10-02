@@ -1,8 +1,8 @@
+import { EventBus } from '@frozik/utils/events/event-bus';
 import { column } from '../columns/column';
 import { ColumnsModel } from '../columns/columns-model';
 import { CommandBus } from '../kernel/command-bus';
 import type { ITableCommands, ITableEvents } from '../kernel/contracts';
-import { EventBus } from '../kernel/event-bus';
 import { clientRows } from '../rows/client-rows';
 import { FocusModel } from './focus-model';
 

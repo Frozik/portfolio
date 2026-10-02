@@ -72,7 +72,9 @@ module.exports = {
       comment:
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
-      from: { path: '^(apps/portfolio|libs/(utils|components|table|communication-protocol))/' },
+      from: {
+        path: '^(apps/portfolio|libs/(utils|components|table|charts|communication-protocol))/',
+      },
       to: {
         path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
       },
@@ -108,6 +110,78 @@ module.exports = {
         path: '^libs/table/src/extensions/([^/]+)/',
         pathNot: '^libs/table/src/extensions/$1/',
       },
+    },
+    {
+      name: 'charts-core-is-innermost',
+      comment:
+        'The chart kernel knows no data kind, mark, extension, backend or adapter: they all depend on it.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/core/' },
+      to: { path: '^libs/charts/src/(data|marks|extensions|webgpu|canvas2d|dom|react|theme)/' },
+    },
+    {
+      name: 'charts-headless-layers-are-platform-free',
+      comment:
+        'Data kinds, marks and extension cores run without a DOM, a GPU or React: backends and adapters attach to them, never the other way round.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/(core|data|marks|extensions)/' },
+      to: {
+        path: '(^libs/charts/src/(webgpu|canvas2d|dom|react|theme)/|/node_modules/(react|react-dom|idb|webgpu-utils)(/|$))',
+      },
+    },
+    {
+      name: 'charts-families-are-independent',
+      comment:
+        'Data kinds, marks and extensions do not know each other: a series is assembled from them by the application.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/(data|marks|extensions)/' },
+      to: {
+        path: '^libs/charts/src/(data|marks|extensions)/',
+        pathNot: '^libs/charts/src/$1/',
+      },
+    },
+    {
+      name: 'charts-dom-knows-no-backend',
+      comment: 'The browser host and the IndexedDB cache serve any backend.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/dom/' },
+      to: { path: '^libs/charts/src/(webgpu|canvas2d|react)/' },
+    },
+    {
+      name: 'charts-extensions-are-isolated',
+      comment:
+        'A chart extension never imports another extension; they meet through the kernel and the slices declared in core.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/extensions/([^/]+)/' },
+      to: {
+        path: '^libs/charts/src/extensions/([^/]+)/',
+        pathNot: '^libs/charts/src/extensions/$1/',
+      },
+    },
+    {
+      name: 'charts-backends-are-independent',
+      comment: 'A backend never imports another backend: a chart may be built from either alone.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/(webgpu|canvas2d)/' },
+      to: {
+        path: '^libs/charts/src/(webgpu|canvas2d|react)/',
+        pathNot: '^libs/charts/src/$1/',
+      },
+    },
+    {
+      name: 'charts-react-is-outermost',
+      comment: 'Only the React adapter knows React.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/', pathNot: '^libs/charts/src/react/' },
+      to: { path: '(^libs/charts/src/react/|/node_modules/(react|react-dom)(/|$))' },
+    },
+    {
+      name: 'charts-universal-is-a-composition',
+      comment:
+        'universal/ only puts the painters of both backends together; nothing in the library builds on it.',
+      severity: 'error',
+      from: { path: '^libs/charts/src/', pathNot: '^libs/charts/src/universal/' },
+      to: { path: '^libs/charts/src/universal/' },
     },
     {
       name: 'no-circular',

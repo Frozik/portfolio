@@ -1,0 +1,15 @@
+{
+  "extends": "@frozik/typescript-config/lib",
+  "include": [
+    "src/core",
+    "src/data",
+    "src/marks",
+    "src/extensions",
+    "types/headless"
+  ],
+  "exclude": ["src/**/*.test.ts"],
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["node"]
+  }
+}

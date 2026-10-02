@@ -58,4 +58,8 @@ export const sharedTranslationsRu: SharedTranslation = {
       yandex: 'Вход через Яндекс',
     },
   },
+  expandableFrame: {
+    expand: 'Растянуть на весь экран',
+    collapse: 'Вернуть на место',
+  },
 };

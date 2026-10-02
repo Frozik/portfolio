@@ -2,9 +2,7 @@ import type { TranslationOf } from '../../../../shared/i18n/types';
 import type { tableDemoTranslationsEn } from './en';
 
 export const tableDemoTranslationsRu: TranslationOf<typeof tableDemoTranslationsEn> = {
-  title: 'Таблица',
-  subtitle:
-    'Таблица данных как headless-ядро плюс расширения — сама видимая таблица тоже одно из них.',
+  pageMenu: 'Страницы и настройки демо',
   pages: {
     showcase: 'Витрина',
     sources: 'Источники',
@@ -32,8 +30,6 @@ export const tableDemoTranslationsRu: TranslationOf<typeof tableDemoTranslations
     selected: 'Выделено',
     copy: 'Копировать',
     exportCsv: 'Экспорт CSV',
-    expand: 'Растянуть таблицу на весь экран',
-    collapse: 'Вернуть таблицу на место',
     autoSize: 'Автосайз',
     autoSizeModes: {
       off: 'Выкл',

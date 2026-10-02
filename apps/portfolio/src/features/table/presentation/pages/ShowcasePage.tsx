@@ -33,10 +33,10 @@ import { useEventCallback } from 'usehooks-ts';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import { Button } from '../../../../shared/ui/Button';
+import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';
 import { notionalOf } from '../../domain/demo-trade';
-import { ExpandableFrame } from '../components/ExpandableFrame';
 import { TradeDetail } from '../components/TradeDetail';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';

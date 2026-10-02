@@ -1,146 +1,81 @@
-import { packColor, unpackColor } from '@frozik/utils/webgpu/colorPacking';
-import { memo } from 'react';
+import { cn } from '@frozik/components/components/cn';
+import { assertNever } from '@frozik/utils/assert/assertNever';
+import { ChevronDown } from 'lucide-react';
+import { observer } from 'mobx-react-lite';
+import type { ReactNode } from 'react';
 
-import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
-import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
-import { WebGpuUnsupportedNotice } from '../../../shared/components/WebGpuUnsupportedNotice';
-import { CHART_ZOOM_LEVELS, GLOBAL_EPOCH_OFFSET } from '../domain/constants';
-import type { IDataPoint, ISeriesConfig } from '../domain/types';
-import { EChartType } from '../domain/types';
-import { DebugOverlay } from './DebugOverlay';
-import { SharedRendererProvider, useSharedRendererState } from './SharedRendererContext';
-import { TimeseriesChart } from './TimeseriesChart';
+import { TopNavCenterPortal } from '../../../app/components/TopNavCenterContext';
+import { Button } from '../../../shared/ui/Button';
+import type { TDemoPage } from '../application/TimeseriesDemoStore';
+import { DEMO_PAGES } from '../application/TimeseriesDemoStore';
+import { useTimeseriesDemoStore } from '../application/useTimeseriesDemoStore';
+import { LivePage } from './pages/LivePage';
+import { MarksPage } from './pages/MarksPage';
+import { OverviewPage } from './pages/OverviewPage';
+import { SnapshotPage } from './pages/SnapshotPage';
+import { SyncPage } from './pages/SyncPage';
+import { timeseriesT } from './translations';
 
-const VALUE_THRESHOLD_HIGHEST = 110;
-const VALUE_THRESHOLD_HIGH = 105;
-const VALUE_THRESHOLD_MEDIUM = 100;
-const VALUE_THRESHOLD_LOW = 95;
+const PAGE_MENU_ID = 'timeseries-page-menu';
 
-const RHOMBUS_COLOR_RED = packColor(0.9, 0.2, 0.2, 1.0);
-const RHOMBUS_COLOR_ORANGE = packColor(1.0, 0.6, 0.1, 1.0);
-const RHOMBUS_COLOR_GREEN = packColor(0.2, 0.8, 0.3, 1.0);
-const RHOMBUS_COLOR_BLUE = packColor(0.2, 0.5, 0.9, 1.0);
-const RHOMBUS_COLOR_DEFAULT = packColor(0.7, 0.7, 0.7, 1.0);
-
-const LINE_LIGHT_BLUE_COLOR = packColor(0, 0.5, 1.0, 1.0);
-const LINE_LIGHT_BLUE_SIZE = 10;
-const CANDLESTICK_ALPHA = 0.6;
-const LINE_ORANGE_COLOR = packColor(1.0, 0.6, 0.1, 1.0);
-
-const LINE_SIZE_LEVEL_1 = 2;
-const LINE_SIZE_LEVEL_2 = 4;
-const LINE_SIZE_LEVEL_3 = 6;
-const LINE_SIZE_LEVEL_4 = 8;
-const LINE_SIZE_LEVEL_5 = 10;
-
-function lineSizeByValue(value: number): number {
-  if (value > VALUE_THRESHOLD_HIGHEST) {
-    return LINE_SIZE_LEVEL_5;
+function pageOf(page: TDemoPage): ReactNode {
+  switch (page) {
+    case 'overview':
+      return <OverviewPage />;
+    case 'marks':
+      return <MarksPage />;
+    case 'live':
+      return <LivePage />;
+    case 'snapshot':
+      return <SnapshotPage />;
+    case 'sync':
+      return <SyncPage />;
+    default:
+      return assertNever(page);
   }
-  if (value > VALUE_THRESHOLD_HIGH) {
-    return LINE_SIZE_LEVEL_4;
-  }
-  if (value > VALUE_THRESHOLD_MEDIUM) {
-    return LINE_SIZE_LEVEL_3;
-  }
-  if (value > VALUE_THRESHOLD_LOW) {
-    return LINE_SIZE_LEVEL_2;
-  }
-  return LINE_SIZE_LEVEL_1;
 }
 
-function rhombusColorByValue(value: number): number {
-  if (value > VALUE_THRESHOLD_HIGHEST) {
-    return RHOMBUS_COLOR_RED;
-  }
-  if (value > VALUE_THRESHOLD_HIGH) {
-    return RHOMBUS_COLOR_ORANGE;
-  }
-  if (value > VALUE_THRESHOLD_MEDIUM) {
-    return RHOMBUS_COLOR_DEFAULT;
-  }
-  if (value > VALUE_THRESHOLD_LOW) {
-    return RHOMBUS_COLOR_GREEN;
-  }
-  return RHOMBUS_COLOR_BLUE;
-}
-
-/** Series configurations for each of the 4 charts in the grid. */
-const CHART_SERIES_CONFIGS: readonly (readonly ISeriesConfig[])[] = [
-  // Top-left: thick light-blue line + 20% transparent candlestick
-  [
-    {
-      chartType: EChartType.Line,
-      seedSuffix: '',
-      colorFn: () => LINE_LIGHT_BLUE_COLOR,
-      sizeFn: () => LINE_LIGHT_BLUE_SIZE,
-    },
-    {
-      chartType: EChartType.Candlestick,
-      seedSuffix: '-series-2',
-      colorFn: (_value: number, index: number, points: readonly IDataPoint[]) => {
-        const original = unpackColor(points[index].color);
-        return packColor(original.r, original.g, original.b, CANDLESTICK_ALPHA);
-      },
-    },
-  ],
-  // Top-right: candlestick only
-  [{ chartType: EChartType.Candlestick, seedSuffix: '' }],
-  // Bottom-left: line with value-based thickness, orange color
-  [
-    {
-      chartType: EChartType.Line,
-      seedSuffix: '',
-      colorFn: () => LINE_ORANGE_COLOR,
-      sizeFn: (value: number) => lineSizeByValue(value),
-    },
-  ],
-  // Bottom-right: rhombus with value-based coloring
-  [
-    {
-      chartType: EChartType.Rhombus,
-      seedSuffix: '',
-      colorFn: (value: number) => rhombusColorByValue(value),
-    },
-  ],
-];
-
-const TimeseriesContent = memo(() => {
-  const rendererState = useSharedRendererState();
-
-  if (rendererState.status === 'unsupported') {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-        <WebGpuUnsupportedNotice />
-        <ValueDescriptorFail fail={rendererState.fail} />
-      </div>
-    );
-  }
+export const Timeseries = observer(() => {
+  const store = useTimeseriesDemoStore();
 
   return (
-    <div className="h-full w-full relative grid grid-cols-2 grid-rows-2">
-      <DebugOverlay
-        renderer={rendererState.status === 'ready' ? rendererState.renderer : undefined}
-      />
-      {CHART_ZOOM_LEVELS.map((level, index) => (
-        <TimeseriesChart
-          key={`${level[0]}-${level[1]}`}
-          initialTimeStart={GLOBAL_EPOCH_OFFSET + level[0]}
-          initialTimeEnd={GLOBAL_EPOCH_OFFSET + level[1]}
-          chartSeed={`chart-${index}`}
-          seriesConfigs={CHART_SERIES_CONFIGS[index]}
-        />
-      ))}
+    <div className="flex h-full w-full flex-col">
+      <TopNavCenterPortal>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={store.isPageMenuOpen}
+          aria-controls={PAGE_MENU_ID}
+          aria-label={timeseriesT.pageMenu}
+          onClick={store.togglePageMenu}
+        >
+          {timeseriesT.pages[store.page]}
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 transition-transform duration-200',
+              store.isPageMenuOpen && 'rotate-180'
+            )}
+          />
+        </Button>
+      </TopNavCenterPortal>
+      {store.isPageMenuOpen && (
+        <nav id={PAGE_MENU_ID} className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1">
+          {DEMO_PAGES.map(page => (
+            <Button
+              key={page}
+              size="sm"
+              variant={store.page === page ? 'primary' : 'ghost'}
+              onClick={() => store.setPage(page)}
+            >
+              {timeseriesT.pages[page]}
+            </Button>
+          ))}
+          <span className="ml-2 hidden text-xs text-text-secondary lg:inline">
+            {timeseriesT.captions[store.page]}
+          </span>
+        </nav>
+      )}
+      <div className="relative min-h-0 flex-1">{pageOf(store.page)}</div>
     </div>
-  );
-});
-
-export const Timeseries = memo(() => {
-  return (
-    <WebGpuGuard className="h-full w-full">
-      <SharedRendererProvider>
-        <TimeseriesContent />
-      </SharedRendererProvider>
-    </WebGpuGuard>
   );
 });

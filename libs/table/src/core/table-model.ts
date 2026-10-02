@@ -3,13 +3,13 @@ import { makeAutoObservable, reaction } from 'mobx';
 
 import { DisposableBag } from '@frozik/utils/disposable/DisposableBag';
 
+import { EventBus } from '@frozik/utils/events/event-bus';
 import type { TAnyColumn } from './columns/column';
 import { ColumnsModel } from './columns/columns-model';
 import { FocusModel } from './focus/focus-model';
 import type { TBivariantCallback } from './kernel/callback';
 import { CommandBus } from './kernel/command-bus';
 import type { ITableCommands, ITableEvents } from './kernel/contracts';
-import { EventBus } from './kernel/event-bus';
 import type { IKeyBinding } from './kernel/extension';
 import { ExtensionRegistry } from './kernel/extension-registry';
 import type { ITableKernel } from './kernel/kernel';

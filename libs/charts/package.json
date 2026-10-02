@@ -1,0 +1,45 @@
+{
+  "name": "@frozik/charts",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./core/*": "./src/core/*.ts",
+    "./data/*": "./src/data/*.ts",
+    "./marks/*": "./src/marks/*.ts",
+    "./extensions/*": "./src/extensions/*.ts",
+    "./dom/*": "./src/dom/*.ts",
+    "./webgpu/*": "./src/webgpu/*.ts",
+    "./canvas2d/*": "./src/canvas2d/*.ts",
+    "./universal/*": "./src/universal/*.ts",
+    "./theme/*": "./src/theme/*.ts",
+    "./testing/*": "./src/testing/*.ts",
+    "./react/*": "./src/react/*.tsx"
+  },
+  "scripts": {
+    "types": "tsc --noEmit && tsc --noEmit -p tsconfig.headless.json"
+  },
+  "dependencies": {
+    "@frozik/utils": "workspace:*",
+    "idb": "catalog:",
+    "lodash-es": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "webgpu-utils": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@webgpu/types": "catalog:",
+    "fake-indexeddb": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  }
+}
