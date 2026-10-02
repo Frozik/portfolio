@@ -1,9 +1,12 @@
+import { isNil } from 'lodash-es';
+
 import type { IChartFrame } from '../../core/frame/chart-frame';
 import type { IPixelRect } from '../../core/frame/pixel-rect';
 import { requiredTicks } from '../../core/frame/required-ticks';
 import { TICKS_EXTENSION } from '../../core/frame/ticks';
 import type { IChartExtension } from '../../core/kernel/extension';
-import { valueToPixel, xToPixel } from '../../core/viewport/plot-mapping';
+import { valueToPixel } from '../../core/scale/scale-mapping';
+import { xToPixel } from '../../core/viewport/plot-mapping';
 
 const LINE_WIDTH_RATIO = 0.5;
 const DASH_LENGTH = 10;
@@ -48,15 +51,22 @@ export function gridCore<TX>(): IChartExtension<TX, 'grid', IGridSlice<TX>> {
             });
           }
         }
-        for (const tick of ticks.yTicks(frame)) {
-          const pixel = valueToPixel(frame, tick.position);
-          if (pixel >= plot.top && pixel <= plot.bottom) {
-            lines.push({
-              left: plot.left,
-              top: Math.round(pixel - thickness / 2),
-              width: plot.width,
-              height: thickness,
-            });
+        // A pane's lines follow its first scale: one set of lines per pane, however many scales it has.
+        for (const pane of frame.panes) {
+          const [scale] = pane.scales;
+          if (isNil(scale)) {
+            continue;
+          }
+          for (const tick of ticks.valueTicks(frame, scale)) {
+            const pixel = valueToPixel(scale, tick.position);
+            if (pixel >= pane.plot.top && pixel <= pane.plot.bottom) {
+              lines.push({
+                left: plot.left,
+                top: Math.round(pixel - thickness / 2),
+                width: plot.width,
+                height: thickness,
+              });
+            }
           }
         }
         return {

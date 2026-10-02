@@ -14,6 +14,7 @@ import { recordingContext } from '../../testing/recording-context';
 import { canvas2d } from '../backend';
 import { areaStyle } from './area/areaStyle';
 import { candleStyle } from './candle/candleStyle';
+import { columnStyle } from './column/columnStyle';
 import { markerStyle } from './marker/markerStyle';
 import { ringStyle } from './marker/ringStyle';
 
@@ -210,5 +211,42 @@ describe('the candle mark on the 2D canvas', () => {
 
     expect(rising.some(call => call.startsWith('fillStyle = rgba(255, 0, 0'))).toBe(true);
     expect(falling.some(call => call.startsWith('fillStyle = rgba(0, 0, 255'))).toBe(true);
+  });
+});
+
+describe('the column mark on the 2D canvas', () => {
+  it('stands a column from the bottom of the plot to each value', () => {
+    const calls = drawn(points(50, 100), columnStyle<number>({ width: 10, gap: 0 }));
+
+    expect(calls.filter(call => call.startsWith('fillRect(')).slice(1)).toEqual([
+      'fillRect(-5, 250, 10, 240)',
+      'fillRect(495, 0, 10, 490)',
+    ]);
+  });
+
+  it('stands a histogram on nought: up for what is above it, down for what is below', () => {
+    const chart = drawn(
+      { shape: 'point', points: [{ x: 50, value: 75 }] },
+      columnStyle<number>({ width: 10, gap: 0, baseline: 50 })
+    );
+    const below = drawn(
+      { shape: 'point', points: [{ x: 50, value: 25 }] },
+      columnStyle<number>({ width: 10, gap: 0, baseline: 50 })
+    );
+
+    expect(chart).toContain('fillRect(495, 125, 10, 125)');
+    expect(below).toContain('fillRect(495, 250, 10, 125)');
+  });
+
+  it('narrows to what the interval leaves once the gap is kept, and stands mid-interval', () => {
+    const calls = drawn(points(100), columnStyle<number>({ width: 50, gap: 4 }), 2);
+
+    expect(calls).toContain('fillRect(2, 0, 16, 490)');
+  });
+
+  it('puts no column on a gap', () => {
+    const calls = drawn(points(50, Number.NaN, 50), columnStyle<number>({ width: 10, gap: 0 }));
+
+    expect(calls.filter(call => call.startsWith('fillRect('))).toHaveLength(3);
   });
 });

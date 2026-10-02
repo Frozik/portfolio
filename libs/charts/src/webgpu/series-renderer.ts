@@ -4,6 +4,9 @@ import type { StructuredView } from 'webgpu-utils';
 import { makeStructuredView } from 'webgpu-utils';
 
 import type { IChartFrame } from '../core/frame/chart-frame';
+import { scaleOf } from '../core/frame/chart-frame';
+import type { IPlotRect } from '../core/frame/plot-rect';
+import type { IScaleFrame } from '../core/scale/scale';
 import { lowerBound, upperBound } from '../core/series/search';
 import type { IMarkUse, IStyledRun } from '../core/series/style-processor';
 import { ChunkStore } from './chunk-store';
@@ -11,10 +14,11 @@ import { DataTexture } from './data-texture';
 import { Layer } from './layer';
 import type { IWebGpuMarkPainter } from './painter';
 import { isMarkPainter, WEBGPU_BACKEND } from './painter';
+import { scaleUniformsOf } from './scale-uniforms';
 import type { SeriesPipeline } from './series-pipeline';
 import type { TAxisKind } from './series-shader';
 import { uniformLayouts } from './shader-data';
-import { elementsPerSlot, splitPosition, splitValue } from './texel-encoding';
+import { elementsPerSlot, splitPosition } from './texel-encoding';
 import type { IInstanceRange } from './visible-slice';
 import { visibleSliceOf } from './visible-slice';
 
@@ -25,6 +29,8 @@ interface IPlannedDraw {
   readonly layer: Layer;
   readonly vertices: number;
   readonly instances: IInstanceRange;
+  /** The plot of the pane the layer is drawn in. */
+  readonly plot: IPlotRect;
 }
 
 export interface ISeriesRendererOptions {
@@ -69,10 +75,11 @@ export class SeriesRenderer {
     this.planned.length = 0;
     const liveKeys = new Set<string>();
     for (const series of frame.series) {
+      const scale = scaleOf(frame, series.scaleId);
       for (const styled of series.runs) {
         const key = `${series.id}:${styled.run.id}`;
         liveKeys.add(key);
-        this.plan(frame, key, styled);
+        this.plan(frame, key, styled, scale);
       }
     }
     this.chunks.retain(liveKeys);
@@ -82,11 +89,10 @@ export class SeriesRenderer {
     if (this.planned.length === 0) {
       return;
     }
-    const { plot } = frame;
-    pass.setScissorRect(plot.left, plot.top, plot.width, plot.height);
     pass.setPipeline(this.pipeline.pipelineFor(this.axis));
     pass.setBindGroup(0, this.frameGroup());
-    for (const { layer, vertices, instances } of this.planned) {
+    for (const { layer, vertices, instances, plot } of this.planned) {
+      pass.setScissorRect(plot.left, plot.top, plot.width, plot.height);
       layer.draw(pass, vertices, instances);
     }
     pass.setScissorRect(0, 0, frame.size.width, frame.size.height);
@@ -108,13 +114,16 @@ export class SeriesRenderer {
       devicePixelRatio: frame.size.devicePixelRatio,
       invXSpan: 1 / unitsPerSpan,
       viewStart: splitPosition(frame.x.start),
-      yMin: splitValue(frame.y.min),
-      invYSpan: 1 / (frame.y.max - frame.y.min),
     });
     this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameView.arrayBuffer);
   }
 
-  private plan(frame: IChartFrame<unknown>, key: string, styled: IStyledRun<unknown>): void {
+  private plan(
+    frame: IChartFrame<unknown>,
+    key: string,
+    styled: IStyledRun<unknown>,
+    scale: IScaleFrame
+  ): void {
     const { run } = styled;
     // One element beyond each edge, so a line entering the view starts outside it.
     const from = Math.max(0, lowerBound(frame.domain, run.x, run.length, frame.x.start) - 1);
@@ -129,7 +138,7 @@ export class SeriesRenderer {
     for (const use of styled.style.marks) {
       const painter = painterOf(use);
       const mark = this.pipeline.codeOf(painter);
-      for (const spec of painter.layers({ frame, styled, use })) {
+      for (const spec of painter.layers({ frame, scale, styled, use })) {
         const layer = this.nextLayer();
         const elements = layer.write(
           {
@@ -138,13 +147,19 @@ export class SeriesRenderer {
             outline: spec.outline ? 1 : 0,
             params: spec.params,
             stepOverSpan: (run.step ?? 0) / frame.xSpan,
+            ...scaleUniformsOf(frame, scale),
           },
           chunks
         );
         const visible = visibleSliceOf(run.shape, from, to, elementsPerSlot(run.shape), elements);
         const instances = painter.instances(visible, use);
         if (instances.count > 0) {
-          this.planned.push({ layer, vertices: painter.verticesPerInstance, instances });
+          this.planned.push({
+            layer,
+            vertices: painter.verticesPerInstance,
+            instances,
+            plot: scale.plot,
+          });
         }
       }
     }

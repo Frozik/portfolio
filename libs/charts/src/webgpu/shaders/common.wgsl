@@ -5,8 +5,6 @@ struct Frame {
     devicePixelRatio: f32,
     invXSpan: f32,
     viewStart: vec2<u32>,
-    yMin: vec2<f32>,
-    invYSpan: f32,
 };
 
 struct Layer {
@@ -17,6 +15,14 @@ struct Layer {
     outline: u32,
     params: vec4<f32>,
     stepOverSpan: f32,
+    // The value scale the layer is drawn against: its minimum in two parts
+    // (or the logarithm of it), one over its length, and where on the canvas
+    // it lies, as fractions of the canvas height counted from the bottom.
+    valueKind: u32,
+    valueMin: vec2<f32>,
+    invValueSpan: f32,
+    scaleOrigin: f32,
+    scaleShare: f32,
 };
 
 struct Chunk {
@@ -35,6 +41,8 @@ const SHAPE_CANDLE: u32 = 1u;
 const POINT_TEXELS: u32 = 2u;
 const CANDLE_TEXELS: u32 = 4u;
 const CANDLE_POINTS: u32 = 4u;
+
+const SCALE_LOG: u32 = 1u;
 
 const JOIN_LINEAR: u32 = 0u;
 const JOIN_STEP_AFTER: u32 = 1u;
@@ -137,10 +145,19 @@ fn isGap(bits: u32) -> bool {
     return (bits & 0x7F800000u) == 0x7F800000u && (bits & 0x007FFFFFu) != 0u;
 }
 
-// The viewport is subtracted from each part before the parts are added, so
-// the value is never rounded to a single float32.
+// A value as a fraction of the canvas height from its bottom. On a linear
+// scale the minimum is subtracted from each part before the parts are added,
+// so the value is never rounded to a single float32; a logarithmic scale
+// spans orders of magnitude and has no use for that precision.
 fn valueY(high: u32, low: u32) -> f32 {
-    return ((bitcast<f32>(high) - frame.yMin.x) + (bitcast<f32>(low) - frame.yMin.y)) * frame.invYSpan;
+    var along: f32;
+    if (layer.valueKind == SCALE_LOG) {
+        along = (log(bitcast<f32>(high) + bitcast<f32>(low)) - layer.valueMin.x) * layer.invValueSpan;
+    } else {
+        along = ((bitcast<f32>(high) - layer.valueMin.x) + (bitcast<f32>(low) - layer.valueMin.y))
+            * layer.invValueSpan;
+    }
+    return layer.scaleOrigin + along * layer.scaleShare;
 }
 
 fn readElement(index: u32) -> Element {

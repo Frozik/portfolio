@@ -1,6 +1,7 @@
 import { isNil } from 'lodash-es';
 
 import type { IChartFrame } from '../core/frame/chart-frame';
+import type { IScaleFrame } from '../core/scale/scale';
 import type { IMarkUse, IStyledRun } from '../core/series/style-processor';
 import type { ITextMeasurer } from './text-measurer';
 
@@ -27,13 +28,14 @@ export function isCanvasPainterFactory(candidate: unknown): candidate is TCanvas
   return typeof candidate === 'function';
 }
 
-/** What draws a mark on the 2D canvas: one styled run at a time, already clipped to the plot. */
+/** What draws a mark on the 2D canvas: one styled run at a time against its value scale, already clipped to the plot of its pane. */
 export interface ICanvasMarkPainter {
   drawRun(
     context: CanvasRenderingContext2D,
     frame: IChartFrame<unknown>,
     styled: IStyledRun<unknown>,
-    use: IMarkUse
+    use: IMarkUse,
+    scale: IScaleFrame
   ): void;
 }
 

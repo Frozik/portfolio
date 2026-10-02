@@ -1,11 +1,13 @@
 import { areaCanvasPainter } from '../../canvas2d/marks/area/painter';
 import { candleCanvasPainter } from '../../canvas2d/marks/candle/painter';
+import { columnCanvasPainter } from '../../canvas2d/marks/column/painter';
 import { lineCanvasPainter } from '../../canvas2d/marks/line/painter';
 import { markerCanvasPainter } from '../../canvas2d/marks/marker/painter';
 import { CANVAS2D_BACKEND } from '../../canvas2d/painter';
 import { withPainter } from '../../core/series/mark';
 import { area as gpuArea } from '../../webgpu/marks/area/area';
 import { candle as gpuCandle } from '../../webgpu/marks/candle/candle';
+import { column as gpuColumn } from '../../webgpu/marks/column/column';
 import { line as gpuLine } from '../../webgpu/marks/line/line';
 import { marker as gpuMarker } from '../../webgpu/marks/marker/marker';
 
@@ -17,3 +19,4 @@ export const line = withPainter(gpuLine, CANVAS2D_BACKEND, lineCanvasPainter);
 export const area = withPainter(gpuArea, CANVAS2D_BACKEND, areaCanvasPainter);
 export const marker = withPainter(gpuMarker, CANVAS2D_BACKEND, markerCanvasPainter);
 export const candle = withPainter(gpuCandle, CANVAS2D_BACKEND, candleCanvasPainter);
+export const column = withPainter(gpuColumn, CANVAS2D_BACKEND, columnCanvasPainter);

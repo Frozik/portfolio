@@ -86,7 +86,7 @@ export const TableDemo = observer(() => {
           id={PAGE_MENU_ID}
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
         >
-          <nav className="flex flex-wrap gap-2">
+          <nav className="flex select-none flex-wrap gap-2">
             {PAGES.map(page => (
               <Button
                 key={page}

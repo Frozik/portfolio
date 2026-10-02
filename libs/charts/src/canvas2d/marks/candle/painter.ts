@@ -1,5 +1,6 @@
+import { valueToPixel } from '../../../core/scale/scale-mapping';
 import { cssOf } from '../../../core/series/color';
-import { valueToPixel, xToPixel } from '../../../core/viewport/plot-mapping';
+import { xToPixel } from '../../../core/viewport/plot-mapping';
 import { candleOptionsOf } from '../../../marks/candle/core';
 import type { ICanvasMarkPainter } from '../../painter';
 import { paintAt, stepPixelsOf, visibleElements } from '../path-points';
@@ -11,7 +12,7 @@ import { paintAt, stepPixelsOf, visibleElements } from '../path-points';
  * no coarser scale is left the body narrows to what the interval leaves it (§4.3).
  */
 export const candleCanvasPainter: ICanvasMarkPainter = {
-  drawRun(context, frame, { run, style }, use): void {
+  drawRun(context, frame, { run, style }, use, scale): void {
     if (run.shape !== 'candle') {
       return;
     }
@@ -33,21 +34,23 @@ export const candleCanvasPainter: ICanvasMarkPainter = {
         Math.min(paintAt(style.fill.size, element) * dpr, stepPixels - gap * dpr)
       );
       const wickWidth = Math.max(strokeSize, dpr);
-      const openY = valueToPixel(frame, open);
-      const closeY = valueToPixel(frame, run.close[element]);
+      const openY = valueToPixel(scale, open);
+      const closeY = valueToPixel(scale, run.close[element]);
       const bodyHeight = Math.max(Math.abs(closeY - openY), dpr);
       const bodyLeft = centerX - bodyWidth / 2;
       const bodyTop = (openY + closeY) / 2 - bodyHeight / 2;
       const bodyBottom = bodyTop + bodyHeight;
 
-      const high = valueToPixel(frame, run.max[element]);
-      const low = valueToPixel(frame, run.min[element]);
+      const highY = valueToPixel(scale, run.max[element]);
+      const lowY = valueToPixel(scale, run.min[element]);
+      const wickTop = Math.min(highY, lowY);
+      const wickBottom = Math.max(highY, lowY);
       context.fillStyle = strokeColor;
-      if (high < bodyTop) {
-        context.fillRect(centerX - wickWidth / 2, high, wickWidth, bodyTop - high);
+      if (wickTop < bodyTop) {
+        context.fillRect(centerX - wickWidth / 2, wickTop, wickWidth, bodyTop - wickTop);
       }
-      if (low > bodyBottom) {
-        context.fillRect(centerX - wickWidth / 2, bodyBottom, wickWidth, low - bodyBottom);
+      if (wickBottom > bodyBottom) {
+        context.fillRect(centerX - wickWidth / 2, bodyBottom, wickWidth, wickBottom - bodyBottom);
       }
 
       context.fillStyle = cssOf(paintAt(style.fill.color, element));

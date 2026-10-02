@@ -1,9 +1,16 @@
 import { ChartDataError } from '@frozik/charts/core/series/data-error';
 import { makeAutoObservable } from 'mobx';
 
-export type TDemoPage = 'overview' | 'marks' | 'live' | 'snapshot' | 'sync';
+export type TDemoPage = 'overview' | 'workspace' | 'marks' | 'live' | 'snapshot' | 'sync';
 
-export const DEMO_PAGES: readonly TDemoPage[] = ['overview', 'marks', 'live', 'snapshot', 'sync'];
+export const DEMO_PAGES: readonly TDemoPage[] = [
+  'overview',
+  'workspace',
+  'marks',
+  'live',
+  'snapshot',
+  'sync',
+];
 
 const MIN_DELAY_MS = 300;
 const MAX_DELAY_MS = 1500;

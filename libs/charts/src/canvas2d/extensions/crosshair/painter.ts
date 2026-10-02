@@ -1,12 +1,13 @@
 import { clamp, isNil } from 'lodash-es';
 
-import type { IChartFrame, IPlotRect } from '../../../core/frame/chart-frame';
+import type { IChartFrame } from '../../../core/frame/chart-frame';
+import type { ICrosshair, ICrosshairSlice } from '../../../core/frame/crosshair';
+import type { IPlotRect } from '../../../core/frame/plot-rect';
 import type { IChartTheme } from '../../../core/frame/theme';
 import { cssOf } from '../../../core/series/color';
 import { ownFrame } from '../../../core/stage/backend';
-import type { ICrosshair, ICrosshairSlice } from '../../../extensions/crosshair/core';
 import type { IAxisLabelStyle, ILabelColors } from '../../axis-label';
-import { axisLabelStyleOf, drawAxisLabel } from '../../axis-label';
+import { axisLabelStyleOf, drawAxisLabel, scaleLabelPlacement } from '../../axis-label';
 import type { ICanvasPainter, TCanvasPainterFactory } from '../../painter';
 import type { ITextMeasurer } from '../../text-measurer';
 
@@ -93,22 +94,29 @@ function drawLabels<TX>(
     colors
   );
 
+  // One label per scale of the pane under the pointer, each where the tick labels of its scale sit.
   const halfBoxHeight = style.boxHeight / 2;
-  drawAxisLabel(
-    context,
-    style,
-    {
-      text: crosshair.valueLabel,
-      textWidth: text.measureWidth(crosshair.valueLabel, style.font),
-      placement: {
-        boxLeft: style.valueLabelTextX - style.paddingX,
-        centerY: clamp(centerY, plot.top + halfBoxHeight, style.xLabelCenterY - style.boxHeight),
-        textX: style.valueLabelTextX,
-        textAlign: 'start',
-      },
-    },
-    colors
+  const labelCenterY = clamp(
+    centerY,
+    plot.top + halfBoxHeight,
+    style.xLabelCenterY - style.boxHeight
   );
+  for (const { scale, label } of crosshair.values) {
+    if (!scale.visible) {
+      continue;
+    }
+    const textWidth = text.measureWidth(label, style.font);
+    drawAxisLabel(
+      context,
+      style,
+      {
+        text: label,
+        textWidth,
+        placement: scaleLabelPlacement(frame, scale, style, textWidth, labelCenterY),
+      },
+      colors
+    );
+  }
 }
 
 /** Dashed arms clipped to the plot, a thick solid crossing under the pointer, and what it points at on both axes. */

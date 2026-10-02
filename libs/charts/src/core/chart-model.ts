@@ -1,3 +1,4 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { EventBus } from '@frozik/utils/events/event-bus';
 import { isNil } from 'lodash-es';
 
@@ -14,15 +15,16 @@ import type { IChartEvents } from './kernel/events';
 import { ExtensionRegistry } from './kernel/extension-registry';
 import type { IChartKernel } from './kernel/kernel';
 import { SeriesModel } from './kernel/series-model';
+import { percentBaseOf } from './scale/percent-base';
+import { ScaleSet } from './scale/scale-set';
 import type { IDataFailure } from './series/series-data';
 import type { IPaintContribution } from './stage/backend';
-import type { IAxisDomain, IAxisRange, IValueRange } from './viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from './viewport/axis-domain';
 import { spanOf, withinMaxSpan } from './viewport/axis-domain';
 import { plotRectOf } from './viewport/plot-geometry';
 import { Viewport } from './viewport/viewport';
 
 const IDLE_FPS = 10;
-const DEFAULT_Y: IValueRange = { min: 0, max: 1 };
 const CSS_PIXEL_RATIO = 1;
 
 /**
@@ -33,6 +35,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
   readonly id: string | undefined;
   readonly domain: IAxisDomain<TX>;
   readonly viewport: Viewport<TX>;
+  readonly scales: ScaleSet;
   readonly series: SeriesModel<TX>;
   readonly events = new EventBus<IChartEvents<TX>>();
   readonly frames = new FrameDemand(IDLE_FPS);
@@ -53,27 +56,38 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     this.viewport = new Viewport({
       domain: this.domain,
       x: { start: options.x.start, end: options.x.end },
-      y: options.y ?? DEFAULT_Y,
       constrain: range => withinMaxSpan(this.domain, this.registry.constrainX(range)),
       onChange: () => {
         this.frames.raise(ACTIVE_FPS);
         this.events.emit('viewport.changed', undefined);
       },
     });
-    this.series = new SeriesModel(options.series, this.domain, {
-      dataChanged: (seriesIds, range) => {
-        this.touchData();
-        this.events.emit('data.changed', { seriesIds, range });
+    this.scales = new ScaleSet({ panes: options.panes, scales: options.scales, range: options.y });
+    this.series = new SeriesModel(
+      options.series,
+      this.domain,
+      {
+        dataChanged: (seriesIds, range) => {
+          this.touchData();
+          this.events.emit('data.changed', { seriesIds, range });
+        },
+        dataFailed: (seriesIds, failure) => {
+          this.touchData();
+          this.events.emit('data.failed', { seriesIds, failure });
+        },
+        styleChanged: seriesId => {
+          this.touchData();
+          this.events.emit('style.changed', { seriesId });
+        },
       },
-      dataFailed: (seriesIds, failure) => {
-        this.touchData();
-        this.events.emit('data.failed', { seriesIds, failure });
-      },
-      styleChanged: seriesId => {
-        this.touchData();
-        this.events.emit('style.changed', { seriesId });
-      },
-    });
+      this.scales.defaultId
+    );
+    for (const { scale, id } of options.series) {
+      assert(
+        isNil(scale) || this.scales.ids.includes(scale),
+        `series "${id}" names the value scale "${scale}", which the chart does not have`
+      );
+    }
     for (const extension of options.extensions) {
       this.registry.register(extension, this);
     }
@@ -169,9 +183,17 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       return undefined;
     }
 
-    const fitted = this.registry.fitY({ domain: this.domain, x: this.viewport.current, series });
-    if (!isNil(fitted)) {
-      this.viewport.setY(fitted);
+    for (const scaleId of this.scales.ids) {
+      const fitted = this.registry.fitY({
+        domain: this.domain,
+        x: this.viewport.current,
+        scaleKind: this.scales.kindOf(scaleId),
+        padding: this.scales.paddingOf(scaleId),
+        series: series.filter(each => each.scaleId === scaleId),
+      });
+      if (!isNil(fitted)) {
+        this.scales.setRange(scaleId, fitted);
+      }
     }
     return this.frameOf(size, series, loading, failed);
   }
@@ -211,6 +233,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       .join(';');
     const key = [
       this.viewport.revision,
+      this.scales.revision,
       size.width,
       size.height,
       size.devicePixelRatio,
@@ -227,13 +250,21 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       return this.built;
     }
     this.builtKey = key;
+    const plot = plotRectOf(size, insets);
+    const x = this.viewport.current;
     return {
       domain: this.domain,
-      x: this.viewport.current,
-      xSpan: spanOf(this.domain, this.viewport.current),
-      y: this.viewport.y,
+      x,
+      xSpan: spanOf(this.domain, x),
       size,
-      plot: plotRectOf(size, insets),
+      plot,
+      panes: this.scales.layout(size, plot, scaleId =>
+        percentBaseOf(
+          this.domain,
+          x.start,
+          series.filter(each => each.scaleId === scaleId)
+        )
+      ),
       series,
       loading,
       failed,

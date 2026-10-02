@@ -1,9 +1,11 @@
 import { isNil } from 'lodash-es';
 
 import type { IChartFrame } from '../../core/frame/chart-frame';
+import type { IScaleFrame } from '../../core/scale/scale';
+import { valueToPixel } from '../../core/scale/scale-mapping';
 import type { TRun } from '../../core/series/point-run';
 import { lowerBound, upperBound } from '../../core/series/search';
-import { valueToPixel, xToPixel } from '../../core/viewport/plot-mapping';
+import { xToPixel } from '../../core/viewport/plot-mapping';
 import type { TLineJoin } from '../../marks/line/core';
 
 const CANDLE_CORNERS = 4;
@@ -39,7 +41,11 @@ export function stepPixelsOf(frame: IChartFrame<unknown>, run: TRun<unknown>): n
 }
 
 /** The points of the elements in view: an element is one point, a candle four spread evenly over its interval — open, low, high, close. */
-export function pointsOf(frame: IChartFrame<unknown>, run: TRun<unknown>): IPathPoint[] {
+export function pointsOf(
+  frame: IChartFrame<unknown>,
+  run: TRun<unknown>,
+  scale: IScaleFrame
+): IPathPoint[] {
   const { from, to } = visibleElements(frame, run);
   const stepPixels = stepPixelsOf(frame, run);
   const points: IPathPoint[] = [];
@@ -47,7 +53,7 @@ export function pointsOf(frame: IChartFrame<unknown>, run: TRun<unknown>): IPath
     const x = xToPixel(frame, run.x[element]);
     if (run.shape === 'point') {
       const value = run.value[element];
-      points.push({ x, y: valueToPixel(frame, value), element, isGap: Number.isNaN(value) });
+      points.push({ x, y: valueToPixel(scale, value), element, isGap: Number.isNaN(value) });
       continue;
     }
     const corners = [run.open[element], run.min[element], run.max[element], run.close[element]];
@@ -55,7 +61,7 @@ export function pointsOf(frame: IChartFrame<unknown>, run: TRun<unknown>): IPath
     for (let corner = 0; corner < CANDLE_CORNERS; corner += 1) {
       points.push({
         x: x + (stepPixels * (corner * 2 + 1)) / CORNER_SPREAD,
-        y: valueToPixel(frame, corners[corner]),
+        y: valueToPixel(scale, corners[corner]),
         element,
         isGap,
       });

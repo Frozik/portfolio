@@ -50,9 +50,9 @@ function strokePath(
 
 /** The line mark on the 2D canvas: the same joins, gaps and outline as on WebGPU, drawn as paths (§6.7). */
 export const lineCanvasPainter: ICanvasMarkPainter = {
-  drawRun(context, frame, { run, style }, use): void {
+  drawRun(context, frame, { run, style }, use, scale): void {
     const options = lineOptionsOf(use.options);
-    const points = joined(pointsOf(frame, run), options.join);
+    const points = joined(pointsOf(frame, run, scale), options.join);
 
     context.lineJoin = 'round';
     context.lineCap = 'round';

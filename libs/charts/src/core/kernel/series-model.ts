@@ -17,6 +17,8 @@ import { maxOf, minOf } from '../viewport/axis-domain';
 
 interface ISeriesEntry<TX> {
   readonly id: string;
+  readonly name: string;
+  readonly scaleId: string;
   readonly data: ISeriesData<TX>;
   style: IStyleProcessor<TX>;
   styleRevision: number;
@@ -45,10 +47,13 @@ export class SeriesModel<TX> {
   constructor(
     definitions: readonly ISeries<TX>[],
     private readonly domain: IAxisDomain<TX>,
-    private readonly hooks: ISeriesHooks<TX>
+    private readonly hooks: ISeriesHooks<TX>,
+    defaultScaleId: string
   ) {
     this.entries = definitions.map(definition => ({
       id: definition.id,
+      name: definition.name ?? definition.id,
+      scaleId: definition.scale ?? defaultScaleId,
       data: this.instanceOf(definition.data),
       style: definition.style,
       styleRevision: 0,
@@ -154,6 +159,8 @@ export class SeriesModel<TX> {
   frames(visible: IVisibleSpan<TX>, theme: IChartTheme): readonly ISeriesFrame<TX>[] {
     return this.entries.map(entry => ({
       id: entry.id,
+      name: entry.name,
+      scaleId: entry.scaleId,
       runs: this.styledRuns(entry, entry.data.runs(this.needOf(entry, visible)), theme),
     }));
   }

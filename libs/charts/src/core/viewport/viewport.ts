@@ -1,31 +1,27 @@
-import type { IAxisDomain, IAxisRange, IValueRange } from './axis-domain';
+import type { IAxisDomain, IAxisRange } from './axis-domain';
 import { isSameRange, shiftRange } from './axis-domain';
-
-export type TViewportAxis = 'x' | 'y';
 
 /** `current` is what is drawn; `target` is where an animation is heading. */
 export interface IViewportState<TX> {
   readonly current: IAxisRange<TX>;
   readonly target: IAxisRange<TX>;
-  readonly y: IValueRange;
 }
 
 export interface IViewportOptions<TX> {
   readonly domain: IAxisDomain<TX>;
   readonly x: IAxisRange<TX>;
-  readonly y: IValueRange;
   /** Applied to every X range written through the public commands. */
   readonly constrain: (range: IAxisRange<TX>) => IAxisRange<TX>;
   readonly onChange: VoidFunction;
 }
 
-/** The one writable home of a chart's visible range; readers get immutable snapshots. */
+/** The one writable home of a chart's visible range along X; readers get immutable snapshots. */
 export class Viewport<TX> {
   private state: IViewportState<TX>;
   private changes = 0;
 
   constructor(private readonly options: IViewportOptions<TX>) {
-    this.state = { current: options.x, target: options.x, y: options.y };
+    this.state = { current: options.x, target: options.x };
   }
 
   get current(): IAxisRange<TX> {
@@ -34,10 +30,6 @@ export class Viewport<TX> {
 
   get target(): IAxisRange<TX> {
     return this.state.target;
-  }
-
-  get y(): IValueRange {
-    return this.state.y;
   }
 
   /** Grows with every change: a frame built for one revision stays valid until the next. */
@@ -72,18 +64,12 @@ export class Viewport<TX> {
     this.write({ ...this.state, current: range });
   }
 
-  setY(y: IValueRange): void {
-    this.write({ ...this.state, y });
-  }
-
   private write(next: IViewportState<TX>): void {
     const { domain } = this.options;
     const previous = this.state;
     if (
       isSameRange(domain, previous.current, next.current) &&
-      isSameRange(domain, previous.target, next.target) &&
-      previous.y.min === next.y.min &&
-      previous.y.max === next.y.max
+      isSameRange(domain, previous.target, next.target)
     ) {
       return;
     }

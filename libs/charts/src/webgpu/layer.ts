@@ -12,6 +12,11 @@ export interface ILayerUniforms {
   readonly outline: number;
   readonly params: readonly [number, number, number, number];
   readonly stepOverSpan: number;
+  readonly valueKind: number;
+  readonly valueMin: readonly [number, number];
+  readonly invValueSpan: number;
+  readonly scaleOrigin: number;
+  readonly scaleShare: number;
 }
 
 /**

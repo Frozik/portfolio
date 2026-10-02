@@ -140,7 +140,10 @@ describe('a chart', () => {
     });
     const { chart } = mounted([fit]);
 
-    expect(chart.prepareFrame(0)?.y).toEqual({ min: -1, max: 1 });
+    expect(chart.scales.rangeOf('main')).toEqual({ min: 0, max: 1 });
+    chart.prepareFrame(0);
+
+    expect(chart.scales.rangeOf('main')).toEqual({ min: -1, max: 1 });
   });
 
   it('adds the room extensions take to the margin', () => {

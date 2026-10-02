@@ -13,8 +13,10 @@ store with the page and the switches of the debug panel), `presentation/` (the s
 its pages).
 
 The charts get the whole page. The name of the page shown stands in the top
-bar; pressing it opens the row of pages — overview, marks, live, snapshot,
-synced — and pressing it again puts the row away.
+bar; pressing it opens the row of pages — overview, scales & panes, marks,
+live, snapshot, synced — and pressing it again puts the row away. Each page
+in the row has an info icon: hovering, focusing or tapping it says what the
+page shows.
 
 **Overview** — a 2×2 grid of charts over a year of synthetic data, each with
 its own series and its own stretch of the year:
@@ -35,6 +37,20 @@ fixed grid (1 ms … 240 days) at which an element still gets the pixels its
 style asks for, so a candle never touches its neighbour. What the overview
 has read is kept in IndexedDB: opened again, the page shows its history at
 once and asks the source only for what it has not seen.
+
+**Scales & panes** — one chart, three panes on a shared time axis. The price
+pane holds four series against four value scales: candles and a benchmark
+labelled in per cent on the right, a curve on a logarithmic scale and a
+stepped rate on the left — the outer scale of each side in a gutter of its
+own, each scale's labels in the colour of its series. The scales carry the
+usual axis properties: a title at the top end, the rate running downwards
+(inverted), the volume starting at a fixed nought with thousands written
+short, the histogram fixed at both ends. Under the price pane a pane of
+volume columns and a pane with a histogram that stands on nought, green
+above it and red below. A legend in the corner of every pane reads each
+series at the element the crosshair snaps to; a limit and a support level
+are marked across the price pane, three events on the time axis. The
+crosshair writes the pointed height on every scale of the pane it is over.
 
 **Marks** — every way to draw, over a fixed set of sixty hourly elements:
 an area with a line along its edge and stairs over the same points, both

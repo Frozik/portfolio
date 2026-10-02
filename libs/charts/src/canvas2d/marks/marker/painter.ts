@@ -38,12 +38,12 @@ function tracePath(
  * marker is the size its style names with or without one (§6.7).
  */
 export const markerCanvasPainter: ICanvasMarkPainter = {
-  drawRun(context, frame, { run, style }, use): void {
+  drawRun(context, frame, { run, style }, use, scale): void {
     const { figure } = markerOptionsOf(use.options);
     const dpr = frame.size.devicePixelRatio;
     context.lineJoin = 'miter';
 
-    for (const point of pointsOf(frame, run)) {
+    for (const point of pointsOf(frame, run, scale)) {
       if (point.isGap) {
         continue;
       }

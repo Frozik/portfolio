@@ -2,6 +2,7 @@ export const timeseriesTranslationsEn = {
   pageMenu: 'Pages of the demo',
   pages: {
     overview: 'Overview',
+    workspace: 'Scales & panes',
     marks: 'Marks',
     live: 'Live',
     snapshot: 'Snapshot',
@@ -10,6 +11,8 @@ export const timeseriesTranslationsEn = {
   captions: {
     overview:
       'Four charts on one GPU device: a line under the candles of another series, candles, a line whose thickness follows the value, markers coloured by threshold.',
+    workspace:
+      'One chart, three panes: four value scales on the price pane — one in per cent, one logarithmic — volume and a histogram below, a legend, levels and events.',
     marks:
       'Every way to draw: area and stairs with a gap in the data, a line and rings drawn from candles, every marker figure with fill and stroke in different colours and sizes, a line with an outline.',
     live: 'A series that ends at this very moment: new elements arrive by subscription, the candle of the current interval keeps growing.',

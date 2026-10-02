@@ -1,6 +1,7 @@
 import { isNil } from 'lodash-es';
 
 import type { IChartFrame } from '../core/frame/chart-frame';
+import type { IScaleFrame } from '../core/scale/scale';
 import type { IMarkUse, IStyledRun } from '../core/series/style-processor';
 import type { IInstanceRange, IVisibleSlice } from './visible-slice';
 
@@ -16,6 +17,8 @@ export interface IMarkLayer {
 
 export interface IMarkLayerContext {
   readonly frame: IChartFrame<unknown>;
+  /** The value scale the series is measured against. */
+  readonly scale: IScaleFrame;
   readonly styled: IStyledRun<unknown>;
   readonly use: IMarkUse;
 }

@@ -1,21 +1,19 @@
+import { isNil } from 'lodash-es';
+
 import type { IChartSize } from '../host/size-source';
+import type { IPaneFrame, IScaleFrame } from '../scale/scale';
 import type { IDataFailure } from '../series/series-data';
 import type { IStyledRun } from '../series/style-processor';
-import type { IAxisDomain, IAxisRange, IValueRange } from '../viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
+import type { IPlotRect } from './plot-rect';
 import type { IChartTheme } from './theme';
-
-/** Device pixels from the top-left corner of the canvas. */
-export interface IPlotRect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-  readonly right: number;
-  readonly bottom: number;
-}
 
 export interface ISeriesFrame<TX> {
   readonly id: string;
+  /** What the series is called in a legend; its id when it has no name. */
+  readonly name: string;
+  /** The value scale the series is measured against. */
+  readonly scaleId: string;
   readonly runs: readonly IStyledRun<TX>[];
 }
 
@@ -29,11 +27,29 @@ export interface IChartFrame<TX> {
   readonly x: IAxisRange<TX>;
   /** Length of `x` in axis units. */
   readonly xSpan: number;
-  readonly y: IValueRange;
   readonly size: IChartSize;
+  /** The whole plot: every pane together. */
   readonly plot: IPlotRect;
+  /** The panes top to bottom; a chart that names none has one. */
+  readonly panes: readonly IPaneFrame[];
   readonly series: readonly ISeriesFrame<TX>[];
   readonly loading: readonly IAxisRange<TX>[];
   readonly failed: readonly IDataFailure<TX>[];
   readonly theme: IChartTheme;
+}
+
+/** The scale of the given id; a frame is only ever asked for scales its chart has. */
+export function scaleOf<TX>(frame: IChartFrame<TX>, scaleId: string): IScaleFrame {
+  for (const pane of frame.panes) {
+    const scale = pane.scales.find(candidate => candidate.id === scaleId);
+    if (!isNil(scale)) {
+      return scale;
+    }
+  }
+  throw new Error(`the frame has no value scale "${scaleId}"`);
+}
+
+/** The first scale of the first pane: what a chart with one scale means by "the value axis". */
+export function mainScaleOf<TX>(frame: IChartFrame<TX>): IScaleFrame {
+  return frame.panes[0].scales[0];
 }

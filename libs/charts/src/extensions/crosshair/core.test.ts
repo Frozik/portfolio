@@ -2,6 +2,7 @@ import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { mainScaleOf } from '../../core/frame/chart-frame';
 import type { IPointerInput, TPointerKind } from '../../core/host/pointer-source';
 import { mountLineChart } from '../../testing/line-chart';
 import { panZoom } from '../pan-zoom/core';
@@ -44,7 +45,8 @@ describe('crosshair', () => {
 
     assert(!isNil(crosshair), 'the pointer is over the plot');
     expect(crosshair.x).toBeCloseTo(50, 0);
-    expect(crosshair.value).toBeCloseTo((frame.y.min + frame.y.max) / 2, 0);
+    const { min, max } = mainScaleOf(frame);
+    expect(crosshair.value).toBeCloseTo((min + max) / 2, 0);
     expect(crosshair.xLabel).not.toBe('');
     expect(crosshair.valueLabel).not.toBe('');
     expect(chart.crosshair.point?.x).toBe(crosshair.x);

@@ -1,3 +1,4 @@
+import type { IScaleFrame } from '../scale/scale';
 import type { IChartFrame } from './chart-frame';
 
 export interface IAxisTick<TPosition> {
@@ -21,9 +22,10 @@ export interface ITickGenerator<TPosition> {
 /** What the `ticks` extension offers the grid, the axes and the crosshair: the one set of ticks they all draw from. */
 export interface ITicksSlice<TX> {
   xTicks(frame: IChartFrame<TX>): readonly IAxisTick<TX>[];
-  yTicks(frame: IChartFrame<TX>): readonly IAxisTick<number>[];
+  /** The ticks of a value scale; their positions are values, whatever the labels say. */
+  valueTicks(frame: IChartFrame<TX>, scale: IScaleFrame): readonly IAxisTick<number>[];
   formatX(frame: IChartFrame<TX>, position: TX): string;
-  formatY(frame: IChartFrame<TX>, value: number): string;
+  formatValue(frame: IChartFrame<TX>, scale: IScaleFrame, value: number): string;
 }
 
 export const TICKS_EXTENSION = 'ticks';

@@ -1,7 +1,7 @@
 import { isNil } from 'lodash-es';
 
+import { floorPixelOf, valueToPixel } from '../../../core/scale/scale-mapping';
 import { cssOf } from '../../../core/series/color';
-import { valueToPixel } from '../../../core/viewport/plot-mapping';
 import { areaOptionsOf } from '../../../marks/area/core';
 import type { ICanvasMarkPainter } from '../../painter';
 import type { IPathPoint } from '../path-points';
@@ -9,10 +9,10 @@ import { joined, paintAt, pointsOf } from '../path-points';
 
 /** The area mark on the 2D canvas: a band from the line down to its baseline, broken at gaps (§6.7). */
 export const areaCanvasPainter: ICanvasMarkPainter = {
-  drawRun(context, frame, { run, style }, use): void {
+  drawRun(context, frame, { run, style }, use, scale): void {
     const { baseline, join } = areaOptionsOf(use.options);
-    const points = joined(pointsOf(frame, run), join);
-    const floor = baseline === 'bottom' ? frame.plot.bottom : valueToPixel(frame, baseline);
+    const points = joined(pointsOf(frame, run, scale), join);
+    const floor = baseline === 'bottom' ? floorPixelOf(scale) : valueToPixel(scale, baseline);
     const isUniform = typeof style.fill.color === 'number';
 
     let band: IPathPoint[] = [];

@@ -50,12 +50,14 @@ export function linearTicks(options: ILinearTicksOptions = {}): ITickGenerator<n
       const decimals = decimalsOf(step);
       const ticks: IAxisTick<number>[] = [];
       for (
-        let value = Math.ceil(start / step) * step;
+        let value = Math.ceil(start / step - STEP_TOLERANCE) * step;
         value <= end + step * STEP_TOLERANCE;
         value += step
       ) {
-        if (value >= start && value <= end) {
-          ticks.push({ position: value, label: value.toFixed(decimals) });
+        // A range that ends a hair short of a round value, by rounding, still has its tick there — at its own end.
+        if (value >= start - step * STEP_TOLERANCE && value <= end + step * STEP_TOLERANCE) {
+          const position = Math.min(Math.max(value, start), end) + 0;
+          ticks.push({ position, label: value.toFixed(decimals) });
         }
       }
       return thinTicks(ticks, position => ((position - start) / range) * lengthPx, minGapPx);

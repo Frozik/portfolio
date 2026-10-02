@@ -1,6 +1,8 @@
 import type { IChartFrame } from '../core/frame/chart-frame';
+import type { IScaleFrame } from '../core/scale/scale';
 import type { TColor } from '../core/series/color';
 import { cssOf } from '../core/series/color';
+import { SCALE_GUTTER } from '../extensions/axes/core';
 import type { ITextMeasurer } from './text-measurer';
 
 const TICK_LENGTH = 5;
@@ -8,7 +10,7 @@ const LABEL_PADDING_X = 3;
 const LABEL_PADDING_Y = 2;
 const LABEL_RADIUS = 2;
 const X_LABEL_GAP = 3;
-const Y_LABEL_GAP = 4;
+const VALUE_LABEL_GAP = 4;
 
 /** Device-pixel label styling, resolved once per paint from the frame. */
 export interface IAxisLabelStyle {
@@ -21,8 +23,10 @@ export interface IAxisLabelStyle {
   readonly glyphCenterOffset: number;
   /** Vertical centre of the labels that sit above the X axis. */
   readonly xLabelCenterY: number;
-  /** Where the text of the labels beside the value axis starts. */
-  readonly valueLabelTextX: number;
+  /** Room between a value scale's tick mark and its label. */
+  readonly valueLabelGap: number;
+  /** The width kept for a value scale beyond the first on its side. */
+  readonly gutter: number;
 }
 
 export interface ILabelPlacement {
@@ -55,8 +59,41 @@ export function axisLabelStyleOf(
     boxHeight: fontSize + LABEL_PADDING_Y * dpr * 2,
     glyphCenterOffset: text.getGlyphMetrics(font).centerOffset,
     xLabelCenterY: plot.bottom - tickLength - X_LABEL_GAP * dpr - fontSize / 2,
-    valueLabelTextX: plot.left + tickLength + Y_LABEL_GAP * dpr,
+    valueLabelGap: VALUE_LABEL_GAP * dpr,
+    gutter: SCALE_GUTTER * dpr,
   };
+}
+
+/**
+ * Where the line of a value scale stands. The first scale on a side stands
+ * on the edge of the plot; each further one a gutter beyond it.
+ */
+export function scaleLineX(
+  frame: IChartFrame<unknown>,
+  scale: IScaleFrame,
+  style: IAxisLabelStyle
+): number {
+  return scale.side === 'left'
+    ? frame.plot.left - scale.order * style.gutter
+    : frame.plot.right + scale.order * style.gutter;
+}
+
+/** A label of a value scale at a height: beside the scale's line, towards the plot. */
+export function scaleLabelPlacement(
+  frame: IChartFrame<unknown>,
+  scale: IScaleFrame,
+  style: IAxisLabelStyle,
+  textWidth: number,
+  centerY: number
+): ILabelPlacement {
+  const lineX = scaleLineX(frame, scale, style);
+  const reach = style.tickLength + style.valueLabelGap;
+  if (scale.side === 'left') {
+    const textX = lineX + reach;
+    return { boxLeft: textX - style.paddingX, centerY, textX, textAlign: 'start' };
+  }
+  const textX = lineX - reach;
+  return { boxLeft: textX - textWidth - style.paddingX, centerY, textX, textAlign: 'end' };
 }
 
 /** A label on its rounded background box; expects `context.font` to be `style.font`. */

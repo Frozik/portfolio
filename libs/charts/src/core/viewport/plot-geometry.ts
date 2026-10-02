@@ -1,4 +1,4 @@
-import type { IPlotRect } from '../frame/chart-frame';
+import type { IPlotRect } from '../frame/plot-rect';
 import type { IInsets } from '../frame/theme';
 import type { IChartSize } from '../host/size-source';
 

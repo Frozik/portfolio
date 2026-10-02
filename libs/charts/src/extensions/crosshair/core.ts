@@ -1,12 +1,18 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { ACTIVE_FPS } from '../../core/frame/frame-demand';
 
 import type { IChartFrame } from '../../core/frame/chart-frame';
+import type { ICrosshair, ICrosshairSlice, ICrosshairValue } from '../../core/frame/crosshair';
+import { CROSSHAIR_EXTENSION } from '../../core/frame/crosshair';
 import { requiredTicks } from '../../core/frame/required-ticks';
 import { TICKS_EXTENSION } from '../../core/frame/ticks';
 import type { IPointerInput } from '../../core/host/pointer-source';
 import type { IChartExtension } from '../../core/kernel/extension';
-import { pixelToValue, pixelToX } from '../../core/viewport/plot-mapping';
+import type { IPaneFrame } from '../../core/scale/scale';
+import { pixelToValue } from '../../core/scale/scale-mapping';
+import { nearestElement } from '../../core/series/nearest';
+import { pixelToX, xToPixel } from '../../core/viewport/plot-mapping';
 import type { IHoldPosition } from './touch-hold';
 import { TouchHold } from './touch-hold';
 
@@ -17,41 +23,74 @@ const CENTER_THICKNESS_RATIO = 3;
 const CENTER_ARM_LENGTH = 10;
 const DASH_LENGTH = 4;
 
-/** Everything is in device pixels, measured from the top-left corner of the canvas. */
-export interface ICrosshair<TX> {
-  /** Left edge of the vertical line and top edge of the horizontal one. */
-  readonly lineLeft: number;
-  readonly lineTop: number;
-  readonly thickness: number;
-  /** The lines are this thick for `centerArmLength` to each side of where they cross. */
-  readonly centerThickness: number;
-  readonly centerArmLength: number;
-  readonly dashLength: number;
-  readonly x: TX;
-  readonly value: number;
-  readonly xLabel: string;
-  readonly valueLabel: string;
+export interface ICrosshairOptions {
+  /**
+   * The series the crosshair snaps to, by id: its vertical line stands on the
+   * nearest element of any of them instead of under the pointer itself. None,
+   * and it does not snap.
+   */
+  readonly snap?: readonly string[];
 }
 
-export interface ICrosshairSlice<TX> {
-  /** Where the pointer is over the chart, CSS pixels; none while it is away or a finger only pans. */
-  readonly position: IHoldPosition | undefined;
-  /** The crosshair under the pointer, or none while the pointer is outside the plot. */
-  crosshairOf(frame: IChartFrame<TX>): ICrosshair<TX> | undefined;
-  /** The position and value under the pointer, in the last frame drawn. */
-  readonly point: { readonly x: TX; readonly value: number } | undefined;
+/** Where along X the crosshair stands: the position it reports and the pixel its line is centred on. */
+interface IStand<TX> {
+  readonly x: TX;
+  readonly pixel: number;
+}
+
+/** The element nearest to the pointer among the series named; a candle is pointed at mid-interval, where it is drawn. */
+function nearestStand<TX>(
+  frame: IChartFrame<TX>,
+  seriesIds: readonly string[],
+  pointerPixel: number
+): IStand<TX> | undefined {
+  const pointed = pixelToX(frame, pointerPixel);
+  let nearest: IStand<TX> | undefined;
+  for (const { id, runs } of frame.series) {
+    const found = seriesIds.includes(id) ? nearestElement(frame.domain, runs, pointed) : undefined;
+    if (isNil(found)) {
+      continue;
+    }
+    const { run } = found.styled;
+    const x = run.x[found.index];
+    const halfStep = run.shape === 'candle' ? (run.step ?? 0) / 2 : 0;
+    const pixel = xToPixel(frame, x) + (halfStep / frame.xSpan) * frame.size.width;
+    if (isNil(nearest) || Math.abs(pixel - pointerPixel) < Math.abs(nearest.pixel - pointerPixel)) {
+      nearest = { x, pixel };
+    }
+  }
+  return nearest;
+}
+
+/** The pane a height of the canvas falls into; between two panes, the nearer one. */
+function paneAt<TX>(frame: IChartFrame<TX>, pixel: number): IPaneFrame {
+  const distanceTo = ({ plot }: IPaneFrame): number =>
+    pixel < plot.top ? plot.top - pixel : Math.max(0, pixel - plot.bottom);
+  return frame.panes.reduce((nearest, pane) =>
+    distanceTo(pane) < distanceTo(nearest) ? pane : nearest
+  );
 }
 
 /**
  * Follows a mouse or a pen. A finger pans and pinches, so it drives the
  * crosshair only after resting for a moment, and until it lifts (§7.1).
  */
-export function crosshairCore<TX>(): IChartExtension<TX, 'crosshair', ICrosshairSlice<TX>> {
+export function crosshairCore<TX>(
+  options: ICrosshairOptions = {}
+): IChartExtension<TX, typeof CROSSHAIR_EXTENSION, ICrosshairSlice<TX>> {
+  const snapTo = options.snap ?? [];
+
   return {
-    id: 'crosshair',
+    id: CROSSHAIR_EXTENSION,
     requires: [TICKS_EXTENSION],
     create(kernel) {
       const ticks = requiredTicks(kernel);
+      for (const seriesId of snapTo) {
+        assert(
+          kernel.series.ids.includes(seriesId),
+          `the crosshair snaps to the series "${seriesId}", which the chart does not have`
+        );
+      }
       const touches = new Set<number>();
       let position: IHoldPosition | undefined;
 
@@ -111,10 +150,17 @@ export function crosshairCore<TX>(): IChartExtension<TX, 'crosshair', ICrosshair
           return undefined;
         }
         const thickness = Math.max(1, Math.round(LINE_THICKNESS * size.devicePixelRatio));
-        const lineLeft = Math.floor(pixelX);
+        const snapped = nearestStand(frame, snapTo, pixelX);
+        const lineLeft = isNil(snapped)
+          ? Math.floor(pixelX)
+          : Math.round(snapped.pixel - thickness / 2);
         const lineTop = Math.floor(pixelY);
-        const x = pixelToX(frame, lineLeft + thickness / 2);
-        const value = pixelToValue(frame, lineTop + thickness / 2);
+        const x = snapped?.x ?? pixelToX(frame, lineLeft + thickness / 2);
+        const height = lineTop + thickness / 2;
+        const values = paneAt(frame, height).scales.map((scale): ICrosshairValue => {
+          const value = pixelToValue(scale, height);
+          return { scale, value, label: ticks.formatValue(frame, scale, value) };
+        });
         return {
           lineLeft,
           lineTop,
@@ -123,9 +169,10 @@ export function crosshairCore<TX>(): IChartExtension<TX, 'crosshair', ICrosshair
           centerArmLength: Math.round(CENTER_ARM_LENGTH * size.devicePixelRatio),
           dashLength: Math.round(DASH_LENGTH * size.devicePixelRatio),
           x,
-          value,
           xLabel: ticks.formatX(frame, x),
-          valueLabel: ticks.formatY(frame, value),
+          value: values[0].value,
+          valueLabel: values[0].label,
+          values,
         };
       };
 

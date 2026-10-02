@@ -1,13 +1,13 @@
 import { CANVAS2D_BACKEND } from '@frozik/charts/canvas2d/painter';
 import { canvasRectPainter } from '@frozik/charts/canvas2d/rect-painter';
 import type { IChartFrame } from '@frozik/charts/core/frame/chart-frame';
+import type { ICrosshairSlice } from '@frozik/charts/core/frame/crosshair';
 import { ACTIVE_FPS } from '@frozik/charts/core/frame/frame-demand';
 import type { IPixelRect } from '@frozik/charts/core/frame/pixel-rect';
 import type { IChartExtension } from '@frozik/charts/core/kernel/extension';
 import type { IChartKernel } from '@frozik/charts/core/kernel/kernel';
 import { ownFrame, PAINT_BAND } from '@frozik/charts/core/stage/backend';
 import { xToPixel } from '@frozik/charts/core/viewport/plot-mapping';
-import type { ICrosshairSlice } from '@frozik/charts/extensions/crosshair/core';
 import { WEBGPU_BACKEND } from '@frozik/charts/webgpu/painter';
 import { rectPainter } from '@frozik/charts/webgpu/rect-painter';
 import { isNil } from 'lodash-es';

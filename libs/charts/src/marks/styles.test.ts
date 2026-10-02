@@ -8,6 +8,8 @@ import { AREA_MARK, areaOptionsOf } from './area/core';
 import { createAreaStyle } from './area/style';
 import { CANDLE_MARK, candleOptionsOf } from './candle/core';
 import { createCandleStyle } from './candle/style';
+import { COLUMN_MARK, columnOptionsOf } from './column/core';
+import { createColumnStyle } from './column/style';
 import { LINE_MARK, lineOptionsOf } from './line/core';
 import { createStairsStyle } from './line/stairs-style';
 import { createLineStyle } from './line/style';
@@ -169,6 +171,30 @@ describe('the candle style', () => {
 
   it('refuses a run of points: candles are drawn from candles only', () => {
     expect(() => styled(createCandleStyle<number>(CANDLE_MARK), POINTS)).toThrow(/candle data/);
+  });
+});
+
+describe('the column style', () => {
+  it('names its width and gap for the choice of scale, and stands on the bottom of the plot', () => {
+    const processor = createColumnStyle<number>(COLUMN_MARK, { width: 6, gap: 2 });
+    const [use] = styled(processor, POINTS).marks;
+
+    expect([processor.elementWidth, processor.elementGap]).toEqual([6, 2]);
+    expect(columnOptionsOf(use.options)).toEqual({ baseline: 'bottom', gap: 2 });
+  });
+
+  it('reaches to its baseline when the scale is fitted: a histogram always shows nought', () => {
+    const run = runOfBatch(POINTS);
+
+    expect(COLUMN_MARK.valueRange(run, 0, 3, { baseline: 0, gap: 0 })).toEqual({ min: 0, max: 30 });
+    expect(COLUMN_MARK.valueRange(run, 0, 3, undefined)).toEqual({ min: 10, max: 30 });
+  });
+
+  it('measures a candle by its close', () => {
+    expect(COLUMN_MARK.valueRange(runOfBatch(CANDLES), 0, 2, undefined)).toEqual({
+      min: 9,
+      max: 15,
+    });
   });
 });
 

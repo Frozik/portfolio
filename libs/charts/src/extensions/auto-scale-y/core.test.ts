@@ -8,18 +8,18 @@ describe('auto scale of the value axis', () => {
   it('fits the values in view with room above and below', () => {
     const { chart } = mountLineChart([autoScaleY({ padding: 0.1 })]);
 
-    const frame = chart.prepareFrame(0);
+    chart.prepareFrame(0);
 
-    expect(frame?.y).toEqual({ min: 8, max: 32 });
+    expect(chart.scales.rangeOf('main')).toEqual({ min: 8, max: 32 });
   });
 
   it('follows the visible part of the data, not all of it', () => {
     const { chart } = mountLineChart([autoScaleY({ padding: 0 })]);
     chart.viewport.jump({ start: 40, end: 110 });
 
-    const frame = chart.prepareFrame(0);
+    chart.prepareFrame(0);
 
-    expect(frame?.y).toEqual({ min: 20, max: 30 });
+    expect(chart.scales.rangeOf('main')).toEqual({ min: 20, max: 30 });
   });
 
   it('keeps the axis as it was when what is visible has no height', () => {
@@ -31,10 +31,10 @@ describe('auto scale of the value axis', () => {
       ],
     });
     const { chart } = mountLineChart([autoScaleY()], { data: flat });
-    const before = chart.viewport.y;
+    const before = chart.scales.rangeOf('main');
 
-    const frame = chart.prepareFrame(0);
+    chart.prepareFrame(0);
 
-    expect(frame?.y).toEqual(before);
+    expect(chart.scales.rangeOf('main')).toEqual(before);
   });
 });

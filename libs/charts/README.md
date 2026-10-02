@@ -67,6 +67,33 @@ In React the stage comes from `<ChartStageProvider backends={…}>` and
 gives it `compare`, `diff` and `add`. `timeDomain` is `bigint` nanoseconds,
 `numberDomain` a plain number; the same extensions and marks work over both.
 
+**Value scales and panes.** A chart has as many value scales as it names:
+each has a side (left or right), a kind (linear or logarithmic), labels (the
+value, or its change in per cent from the first value in view) and a colour,
+and each series is measured against the scale it names. Scales live in
+panes — horizontal bands with a shared X axis, stacked by weight. The first
+scale on a side is written inside the plot; every further one gets a gutter
+beyond it. Without `scales` a chart has one, on the left.
+
+| Scale option | What it does |
+| --- | --- |
+| `id`, `pane`, `side` | the name series refer to, the pane it lies in, `left` or `right` |
+| `kind` | `linear` or `log` |
+| `labels` | `value`, or `percent` from the first value in view |
+| `min`, `max` | a fixed end; an end not given follows the data (`autoScaleY`) |
+| `padding` | room beyond the data at the ends that follow it, in place of the autoscale's own |
+| `inverted` | the minimum at the top |
+| `visible` | `false` draws no line, ticks or labels and takes no gutter; the series are drawn all the same |
+| `title` | what the scale measures, written at its top end |
+| `format` | how a value is written on ticks, under the crosshair and on levels |
+| `color` | the colour of its labels |
+
+**Reading a chart.** `legend()` writes the name of every series and the
+values of its element nearest to the pointer — one for a point, open, high,
+low and close for a candle. `crosshair({ snap: ['price'] })` stands the
+vertical line on the nearest element of the series it names. `annotations()` marks levels across a pane and events
+on the X axis, and lets the application change them on a live chart.
+
 **Data.** A series is data plus a style processor. Data comes in two shapes —
 points and candles — always as columns. `timeseries(source)` reads history by
 range and the new by subscription: it keeps the intervals it knows whole,
@@ -82,7 +109,8 @@ elements; `indexedDbCache` keeps it between sessions when the series has a
 `key`. The data texture is the WebGPU backend's own cache.
 
 **Marks and style.** `lineStyle`, `stairsStyle`, `areaStyle`, `markerStyle`
-(circle, ring and thirteen polygons), `candleStyle`. A style processor names
+(circle, ring and thirteen polygons), `candleStyle`, `columnStyle` (volume
+bars from the bottom of the pane, a histogram from nought). A style processor names
 the shape it draws from and turns a run of data into fill and stroke — a
 colour and a size, constant or per element. Lines, areas and markers can be
 drawn from candles too (through their four points); candles only from candles.

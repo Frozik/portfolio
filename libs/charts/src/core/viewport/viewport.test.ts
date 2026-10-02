@@ -11,7 +11,6 @@ function createViewport(
   const viewport = new Viewport({
     domain: numberDomain,
     x: { start: 0, end: 100 },
-    y: { min: 0, max: 1 },
     constrain,
     onChange,
   });
@@ -68,11 +67,11 @@ describe('Viewport', () => {
     const { viewport, onChange } = createViewport();
 
     viewport.jump({ start: 0, end: 100 });
-    viewport.setY({ min: 0, max: 1 });
+    viewport.setTarget({ start: 0, end: 100 });
     expect(onChange).not.toHaveBeenCalled();
     expect(viewport.revision).toBe(0);
 
-    viewport.setY({ min: 0, max: 2 });
+    viewport.setTarget({ start: 0, end: 200 });
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(viewport.revision).toBe(1);
   });

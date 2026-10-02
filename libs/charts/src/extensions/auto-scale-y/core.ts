@@ -1,23 +1,28 @@
 import { isNil } from 'lodash-es';
 
 import type { IChartExtension, IVisibleData } from '../../core/kernel/extension';
+import { fromAxis, toAxis } from '../../core/scale/scale-mapping';
 import { lowerBound, upperBound } from '../../core/series/search';
 import type { IValueRange } from '../../core/viewport/axis-domain';
 
 const DEFAULT_PADDING = 0.1;
+/** A logarithmic scale cannot reach nought: values at or below it are shown this far under the maximum. */
+const LOG_FLOOR_RATIO = 1e-3;
 
 export interface IAutoScaleYOptions {
-  /** Room left above and below the data, as a share of its height. */
+  /** Room left above and below the data, as a share of its height; a scale may ask for its own. */
   readonly padding?: number;
 }
 
-/** Fits the value axis to what is visible, with a little room; candles by their extremes (§7.1). */
+/** Fits every value scale to what is visible against it, with a little room; candles by their extremes (§7.1). */
 export function autoScaleY<TX>(
   options: IAutoScaleYOptions = {}
 ): IChartExtension<TX, 'autoScaleY', undefined> {
-  const padding = options.padding ?? DEFAULT_PADDING;
+  const defaultPadding = options.padding ?? DEFAULT_PADDING;
 
-  const fitY = ({ domain, x, series }: IVisibleData<TX>): IValueRange | undefined => {
+  const fitY = (visible: IVisibleData<TX>): IValueRange | undefined => {
+    const { domain, x, scaleKind, series } = visible;
+    const padding = visible.padding ?? defaultPadding;
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
     for (const { runs } of series) {
@@ -37,8 +42,11 @@ export function autoScaleY<TX>(
     if (!(min < max)) {
       return undefined;
     }
-    const room = (max - min) * padding;
-    return { min: min - room, max: max + room };
+    // The room is measured as the axis measures: on a logarithmic scale it is a ratio, not a difference.
+    const low = toAxis(scaleKind, scaleKind === 'log' && min <= 0 ? max * LOG_FLOOR_RATIO : min);
+    const high = toAxis(scaleKind, max);
+    const room = (high - low) * padding;
+    return { min: fromAxis(scaleKind, low - room), max: fromAxis(scaleKind, high + room) };
   };
 
   return { id: 'autoScaleY', create: () => ({ slice: undefined, fitY }) };
