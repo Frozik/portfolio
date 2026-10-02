@@ -6,6 +6,9 @@
 /* Class-based dark mode toggle */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* A size container too short to stack panels: a phone held sideways */
+@custom-variant short-landscape (@container (orientation: landscape) and (height < 520px));
+
 @theme {
   /* Brand colors */
   --color-brand-50: oklch(0.97 0.01 250);

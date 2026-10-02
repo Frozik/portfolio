@@ -1,5 +1,7 @@
+import { isNil } from 'lodash-es';
+
 import type { IKeyStateSource } from '../ports/key-state-source';
-import type { IAction, IHumanPlayer } from '../types';
+import type { IAction, IHumanPlayer, IWorld } from '../types';
 import { EPlayerType } from '../types';
 
 export const HUMAN_PLAYER_NAME = 'Human';
@@ -11,9 +13,19 @@ export class HumanPlayer implements IHumanPlayer {
   readonly type = EPlayerType.Human;
   readonly name = HUMAN_PLAYER_NAME;
 
-  constructor(private readonly keyState: IKeyStateSource) {}
+  constructor(
+    private readonly keyState: IKeyStateSource,
+    /** The rail position a held pointer drags the cart to, `undefined` while nothing is held. */
+    private readonly dragTarget: () => number | undefined
+  ) {}
 
-  play(): IAction {
+  play(world: IWorld, deltaTime: DOMHighResTimeStamp): IAction {
+    const target = this.dragTarget();
+
+    if (!isNil(target) && deltaTime > 0) {
+      return { pivotVelocity: (target - world.pivotX) / deltaTime };
+    }
+
     let carVelocity = 0;
 
     if (this.keyState.isPressed('ArrowLeft')) {

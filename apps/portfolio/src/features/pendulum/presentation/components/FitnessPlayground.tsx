@@ -15,7 +15,13 @@ export const FitnessPlayground = observer(() => {
   const store = usePendulumStore();
 
   return matchValueDescriptor(store.generations, {
-    synced: () => <PendulumPlayground session={store.fitness} pauseResumeKeyCode="Space" />,
+    synced: () => (
+      <PendulumPlayground
+        session={store.fitness}
+        pauseResumeKeyCode="Space"
+        onSceneClick={store.fitness.togglePaused}
+      />
+    ),
     unsynced: generations => {
       if (isLoadingValueDescriptor(generations)) {
         return (

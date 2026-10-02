@@ -50,6 +50,7 @@ export class PendulumStore {
   private readonly disposers: VoidFunction[] = [];
   private unwatchGenerations: VoidFunction | undefined;
   private robotLoadToken = 0;
+  private testCartTarget: number | undefined;
 
   constructor(private readonly dependencies: IPendulumStoreDependencies) {
     this.fitness = new PlaygroundSession(dependencies.frames, (_, multiplier) =>
@@ -59,7 +60,7 @@ export class PendulumStore {
 
     makeAutoObservable<
       PendulumStore,
-      'dependencies' | 'disposers' | 'unwatchGenerations' | 'robotLoadToken'
+      'dependencies' | 'disposers' | 'unwatchGenerations' | 'robotLoadToken' | 'testCartTarget'
     >(
       this,
       {
@@ -67,6 +68,7 @@ export class PendulumStore {
         disposers: false,
         unwatchGenerations: false,
         robotLoadToken: false,
+        testCartTarget: false,
         fitness: false,
         test: false,
         // Replaced whole, never edited in place. Deep observability would proxy
@@ -207,6 +209,11 @@ export class PendulumStore {
       );
   }
 
+  /** Drags the human's cart to a rail position in the test playground; robots ignore it. */
+  dragTestCart(targetX: number | undefined): void {
+    this.testCartTarget = targetX;
+  }
+
   openNeuralNetworkDialog(robotName: string): void {
     this.selectRobot(robotName);
     this.isNeuralNetworkDialogOpen = true;
@@ -272,11 +279,15 @@ export class PendulumStore {
 
   private runTestPlayer(robot: ValueDescriptor<IRobotPlayer>): void {
     this.test.playground.clear();
+    this.test.setPointerPosition(undefined);
+    this.testCartTarget = undefined;
 
     if (isSyncedValueDescriptor(robot)) {
       this.test.playground.addPlayer(robot.value);
     } else if (!isLoadingValueDescriptor(robot) && !isFailValueDescriptor(robot)) {
-      this.test.playground.addPlayer(new HumanPlayer(this.dependencies.createKeyStateSource()));
+      this.test.playground.addPlayer(
+        new HumanPlayer(this.dependencies.createKeyStateSource(), () => this.testCartTarget)
+      );
     }
   }
 }

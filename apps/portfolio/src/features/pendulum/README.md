@@ -55,9 +55,20 @@ with generation numbers and all robots from that generation. Select any robot
 to test it.
 
 **Test Playground** — test individual robots by applying external forces.
-Click on the area to introduce instability — closer to the weight means
-stronger force, longer press means greater effect. Deselect the robot to try
-manual control (arrow keys for movement, Shift for boost).
+Press on the area (mouse or finger) to introduce instability — closer to the
+weight means stronger force, longer press means greater effect. Deselect the
+robot to try manual control: press and drag (mouse or finger) and the cart
+follows the pointer along the rail at once, or use the arrow keys (Shift for
+boost). A press also resumes a paused playground.
+
+**Small screens** — the scene is drawn in its own coordinates and scaled down
+to whatever room a playground gets (never up past 1:1), at the device pixel
+ratio. In portrait the two playgrounds take only the height their shrunk
+scene needs and the generations table gets the rest; a phone held sideways
+(a container under 520 px tall) switches to two columns, playgrounds stacked
+on the left and the table on the right. Touch devices (`pointer: coarse`)
+drop the pause button and the gravity slider: a tap on the fitness playground
+pauses and resumes it, on any device.
 
 **Neural Network** — visualizes the network structure: weights, biases, layers,
 and neuron counts. Hover over a neuron to inspect its weights and biases.

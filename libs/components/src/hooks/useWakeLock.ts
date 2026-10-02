@@ -9,13 +9,18 @@ export interface IWakeLockOptions {
 export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions | undefined = {}) {
   const [released, setReleased] = useState<boolean | undefined>();
   const wakeLock = useRef<WakeLockSentinel | null>(null);
+  // The request still in flight. `release` and unmount clear it, and a lock
+  // arriving for a request that is no longer the pending one is dropped at
+  // once — otherwise an effect cleanup racing its own request (StrictMode, a
+  // quick unmount) would leak a lock nobody holds a reference to.
+  const pendingRequest = useRef<symbol | null>(null);
 
   // https://caniuse.com/mdn-api_wakelock
   const isSupported = typeof window !== 'undefined' && 'wakeLock' in navigator;
 
   const request = useCallback(
     async (type: WakeLockType = 'screen') => {
-      const isWakeLockAlreadyDefined = wakeLock.current != null;
+      const isWakeLockAlreadyDefined = wakeLock.current != null || pendingRequest.current != null;
       if (!isSupported) {
         // oxlint-disable-next-line no-console -- intentional user-facing warning
         return console.warn(
@@ -27,8 +32,18 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
         return console.warn('Calling `request` multiple times without `release` has no effect');
       }
 
+      const requestToken = Symbol('wake lock request');
+      pendingRequest.current = requestToken;
+
       try {
-        wakeLock.current = await navigator.wakeLock.request(type);
+        const sentinel = await navigator.wakeLock.request(type);
+
+        if (pendingRequest.current !== requestToken) {
+          await sentinel.release();
+          return;
+        }
+        pendingRequest.current = null;
+        wakeLock.current = sentinel;
 
         wakeLock.current.onrelease = (e: Event) => {
           // Default to `true` - `released` API is experimental: https://caniuse.com/mdn-api_wakelocksentinel_released
@@ -40,6 +55,9 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
         onRequest?.();
         setReleased(wakeLock.current?.released || false);
       } catch (error) {
+        if (pendingRequest.current === requestToken) {
+          pendingRequest.current = null;
+        }
         onError?.(error as Error);
       }
     },
@@ -47,7 +65,6 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
   );
 
   const release = useCallback(async () => {
-    const isWakeLockUndefined = wakeLock.current == null;
     if (!isSupported) {
       // oxlint-disable-next-line no-console -- intentional user-facing warning
       return console.warn(
@@ -55,19 +72,16 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
       );
     }
 
-    if (isWakeLockUndefined) {
-      // oxlint-disable-next-line no-console -- intentional user-facing warning
-      return console.warn('Calling `release` before `request` has no effect.');
+    if (pendingRequest.current != null) {
+      pendingRequest.current = null;
+      return;
     }
 
     await wakeLock.current?.release();
   }, [isSupported]);
 
   // Release any acquired wake lock when the component unmounts, otherwise the
-  // sentinel keeps the screen awake forever after the consumer is gone. Release
-  // the ref directly (not via `release`) so we don't emit the "release before
-  // request" warning when no lock was ever acquired, and guard against an
-  // already-released sentinel.
+  // sentinel keeps the screen awake forever after the consumer is gone.
   useEffect(() => {
     return () => {
       const sentinel = wakeLock.current;
@@ -75,6 +89,7 @@ export function useWakeLock({ onError, onRequest, onRelease }: IWakeLockOptions 
         void sentinel.release();
       }
       wakeLock.current = null;
+      pendingRequest.current = null;
     };
   }, []);
 
