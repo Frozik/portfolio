@@ -1,15 +1,18 @@
 import type { GpuContext } from '@frozik/utils/webgpu/createGpuContext';
 import type { GpuMesh } from '@frozik/utils/webgpu/gpuMesh';
 import { bindGpuMesh } from '@frozik/utils/webgpu/gpuMesh';
-import type { RenderLayer } from '@frozik/utils/webgpu/renderLayer';
+import type { FrameState, RenderLayer } from '@frozik/utils/webgpu/renderLayer';
 import type { StructuredView } from 'webgpu-utils';
 import { makeShaderDataDefinitions, makeStructuredView } from 'webgpu-utils';
 
 import { BUILDING_RISE_SECONDS, MAX_BUILDING_TILES_PER_FRAME } from '../../domain/constants';
+import { waveFieldAround } from '../../domain/wave-field';
 import waterShaderSource from '../shaders/water.wgsl?raw';
 import type { StreetTileCache } from '../street-tile-cache';
 import { FOG_COLOR } from './fog';
 import type { MapFrame } from './map-frame';
+import type { RasterWaterMask } from './raster-water-mask';
+import { SUN_DIRECTION } from './sun';
 
 const FLOATS_PER_PLACEMENT = 4;
 /** Water vertices: two `int16` in tenths of a metre, x east and z south — see `WaterMesh`. */
@@ -26,16 +29,19 @@ interface WaterDraw {
 }
 
 /**
- * Ripples over the water of every street tile in the picture: the water
- * polygons drawn flat on the ground, blended over the raster tiles, with the
- * shader painting animated wavy dashes and the raster showing through
- * everywhere else. Drawn between the ground and the street, so the boxes and
+ * The water of every street tile in the picture: the water polygons drawn
+ * flat on the ground over the raster tiles, with the shader computing a
+ * moving wave surface per pixel and lighting it — sky reflection by Fresnel,
+ * glints toward the sun — only where the raster shows open water, so its
+ * bridges, piers and names stay on top. Drawn between the ground and the street, so the boxes and
  * cars stand over it; no depth, since nothing on the plane occludes it.
  */
 export class MapWaterLayer implements RenderLayer {
   private readonly device: GPUDevice;
   private readonly pipeline: GPURenderPipeline;
-  private readonly bindGroup: GPUBindGroup;
+  private readonly bindGroupLayout: GPUBindGroupLayout;
+  private bindGroup: GPUBindGroup | undefined;
+  private boundMaskView: GPUTextureView | undefined;
   private readonly uniformBuffer: GPUBuffer;
   private readonly uniformView: StructuredView;
   private readonly placementBuffer: GPUBuffer;
@@ -47,6 +53,7 @@ export class MapWaterLayer implements RenderLayer {
   constructor(
     context: GpuContext,
     private readonly cache: StreetTileCache,
+    private readonly rasterWater: RasterWaterMask,
     /** The frame the ground layer produced this tick, or nothing when the picture is unchanged. */
     private readonly readFrame: () => MapFrame | undefined
   ) {
@@ -61,7 +68,7 @@ export class MapWaterLayer implements RenderLayer {
       size: this.placementData.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    const layout = this.device.createBindGroupLayout({
+    this.bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -69,11 +76,12 @@ export class MapWaterLayer implements RenderLayer {
           buffer: { type: 'uniform' },
         },
         { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       ],
     });
     const shaderModule = this.device.createShaderModule({ code: waterShaderSource });
     this.pipeline = this.device.createRenderPipeline({
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [layout] }),
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
       vertex: { module: shaderModule, entryPoint: 'vs', buffers: [...WATER_VERTEX_BUFFERS] },
       fragment: {
         module: shaderModule,
@@ -90,13 +98,6 @@ export class MapWaterLayer implements RenderLayer {
       },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     });
-    this.bindGroup = this.device.createBindGroup({
-      layout,
-      entries: [
-        { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: { buffer: this.placementBuffer } },
-      ],
-    });
   }
 
   update(): void {
@@ -108,28 +109,36 @@ export class MapWaterLayer implements RenderLayer {
     if (this.draws.length === 0) {
       return;
     }
+    const waves = waveFieldAround(frame.origin);
     this.uniformView.set({
       viewProjection: frame.viewProjection,
       cameraPosition: [frame.cameraPosition.x, frame.cameraPosition.y, frame.cameraPosition.z],
       fogStart: frame.fogStart,
       fogColor: [FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b],
       fogEnd: frame.fogEnd,
+      sunDirection: SUN_DIRECTION,
       time: frame.time,
+      waveOffset: [waves.offset.x, waves.offset.y],
       riseSeconds: BUILDING_RISE_SECONDS,
-      metresPerPixel: frame.metresPerPixel,
+      metresPerUnit: waves.metresPerUnit,
     });
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformView.arrayBuffer);
   }
 
-  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView): void {
+  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
     if (this.draws.length === 0) {
       return;
     }
+    const maskView = this.rasterWater.ensureView(
+      this.device,
+      state.canvasWidth,
+      state.canvasHeight
+    );
     const pass = encoder.beginRenderPass({
       colorAttachments: [{ view: canvasView, loadOp: 'load', storeOp: 'store' }],
     });
     pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setBindGroup(0, this.bindGroupFor(maskView));
     for (const { mesh, placementIndex } of this.draws) {
       bindGpuMesh(pass, mesh);
       pass.drawIndexed(mesh.indexCount, 1, 0, 0, placementIndex);
@@ -140,6 +149,22 @@ export class MapWaterLayer implements RenderLayer {
   dispose(): void {
     this.uniformBuffer.destroy();
     this.placementBuffer.destroy();
+  }
+
+  /** The mask is a new texture after every resize; the bind group follows it. */
+  private bindGroupFor(maskView: GPUTextureView): GPUBindGroup {
+    if (this.bindGroup === undefined || this.boundMaskView !== maskView) {
+      this.bindGroup = this.device.createBindGroup({
+        layout: this.bindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.uniformBuffer } },
+          { binding: 1, resource: { buffer: this.placementBuffer } },
+          { binding: 2, resource: maskView },
+        ],
+      });
+      this.boundMaskView = maskView;
+    }
+    return this.bindGroup;
   }
 
   /** Only the tiles with water go in: the placement index is the draw's, not the frame's. */

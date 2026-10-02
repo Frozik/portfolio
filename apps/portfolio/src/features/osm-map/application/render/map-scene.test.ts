@@ -4,6 +4,7 @@ import type { BuildingMesh } from '../../domain/building-footprint';
 import {
   BUILDING_RISE_SECONDS,
   BUILDINGS_MIN_ZOOM,
+  CARS_HIDE_ZOOM,
   CARS_MIN_ZOOM,
   MAX_CONCURRENT_LOADS,
 } from '../../domain/constants';
@@ -116,14 +117,16 @@ function straightStreet(coord: TileCoord): readonly RoadLine[] {
 }
 
 function createStreetScene(zoom: number, water: WaterMesh = NO_WATER) {
+  const loadingReports: boolean[] = [];
   const streets = createFakeSource();
+  const rasters = createFakeSource();
   const sink = createFakeStreetSink();
   const atlas = createFakeAtlas();
   let time = 0;
   const scene = new MapScene({
     camera: restingCamera(zoom),
     loader: new TileLoader<ImageBitmap>({
-      source: createFakeSource().source,
+      source: rasters.source,
       sink: atlas,
       store: createFakeStore(),
       decode: () => Promise.resolve({ close: () => undefined } as unknown as ImageBitmap),
@@ -149,8 +152,9 @@ function createStreetScene(zoom: number, water: WaterMesh = NO_WATER) {
     atlas,
     onPoseChanged: () => undefined,
     onBearing: () => undefined,
+    onLoading: loading => loadingReports.push(loading),
   });
-  return { scene, streets, setTime: (next: number) => (time = next) };
+  return { scene, streets, rasters, loadingReports, setTime: (next: number) => (time = next) };
 }
 
 async function settle(): Promise<void> {
@@ -179,7 +183,12 @@ describe('MapScene', () => {
         sink: createFakeStreetSink(),
         store: createFakeStore(),
         decode: () =>
-          Promise.resolve({ buildings: NO_BUILDINGS, roads: [], water: NO_WATER, trees: [] }),
+          Promise.resolve({
+            buildings: NO_BUILDINGS,
+            roads: [],
+            water: NO_WATER,
+            trees: [],
+          }),
         readNow: () => time,
         onChange: () => scene.markLoadsChanged(),
       }),
@@ -188,6 +197,7 @@ describe('MapScene', () => {
       atlas,
       onPoseChanged: () => undefined,
       onBearing: () => undefined,
+      onLoading: () => undefined,
     });
 
     const first = scene.advance(frame(time));
@@ -242,6 +252,41 @@ describe('MapScene', () => {
     expect(later?.cars[0].x).toBeGreaterThan(first?.cars[0].x ?? Number.POSITIVE_INFINITY);
     expect(muchLater).toBeDefined();
     expect(scene.animatedAtRest).toBe(true);
+  });
+
+  it('shows cars when the map opens between the zoom that hides them and the one that shows them', async () => {
+    const { scene, streets } = createStreetScene((CARS_HIDE_ZOOM + CARS_MIN_ZOOM) / 2);
+
+    scene.advance(frame(0));
+    await settle();
+    streets.resolvers[0]();
+    await settle();
+    const opened = scene.advance(frame(1));
+
+    expect(opened?.cars.length).toBeGreaterThan(0);
+  });
+
+  it('reports loading while tiles are on their way and stops once the last one has landed', async () => {
+    const { scene, streets, rasters, loadingReports } = createStreetScene(BUILDINGS_MIN_ZOOM);
+    const sources = [streets, rasters];
+    const answered = (): number =>
+      sources.reduce((count, source) => count + source.resolvers.length, 0);
+
+    scene.advance(frame(0));
+    await settle();
+    const whileOnTheWay = loadingReports.at(-1);
+    let time = 0;
+    let answeredBefore = 0;
+    while (answered() > answeredBefore) {
+      answeredBefore = answered();
+      sources.forEach(source => source.resolvers.forEach(resolve => resolve()));
+      await settle();
+      scene.advance(frame(++time));
+      await settle();
+    }
+
+    expect(whileOnTheWay).toBe(true);
+    expect(loadingReports.at(-1)).toBe(false);
   });
 
   it('keeps the frames coming while a tile with water is in the picture, so its ripples move', async () => {

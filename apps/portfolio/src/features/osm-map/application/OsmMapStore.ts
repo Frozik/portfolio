@@ -9,12 +9,15 @@ import type { PositionFailure, PositionSource } from './ports/position-source';
 
 /**
  * Thin: the camera lives in the renderer and changes every frame, so only
- * what React shows is observable here — the bearing for the compass, the
+ * what React shows is observable here — the bearing for the compass,
+ * whether tiles are loading, the
  * state of a "where am I" request — plus the commands the buttons send back.
  */
 export class OsmMapStore {
   /** Where north is, for the compass; written by the renderer only when it moved. */
   bearingDeg = DEFAULT_VIEW.bearingDeg;
+  /** Tiles of the picture — raster or street — are still on their way. */
+  loading = false;
   /** A "where am I" request is out and unanswered. */
   locating = false;
   /** Why the last "where am I" press got no position, until the next press. */
@@ -81,6 +84,12 @@ export class OsmMapStore {
   reportBearing(bearingDeg: number): void {
     if (this.bearingDeg !== bearingDeg) {
       this.bearingDeg = bearingDeg;
+    }
+  }
+
+  reportLoading(loading: boolean): void {
+    if (this.loading !== loading) {
+      this.loading = loading;
     }
   }
 

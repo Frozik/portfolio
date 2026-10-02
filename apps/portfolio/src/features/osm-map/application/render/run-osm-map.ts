@@ -21,6 +21,7 @@ import type { MapFrame } from '../../infrastructure/layers/map-frame';
 import { MapGroundLayer } from '../../infrastructure/layers/map-ground-layer';
 import { MapStreetLayer } from '../../infrastructure/layers/map-street-layer';
 import { MapWaterLayer } from '../../infrastructure/layers/map-water-layer';
+import { createRasterWaterMask } from '../../infrastructure/layers/raster-water-mask';
 import { createMapCameraController } from '../../infrastructure/map-camera-controller';
 import { createOpenFreeMapTileSource } from '../../infrastructure/openfreemap-tile-source';
 import { createOsmTileSource } from '../../infrastructure/osm-tile-source';
@@ -141,11 +142,13 @@ async function initGpu(
     atlas,
     onPoseChanged: publishView,
     onBearing: store.reportBearing,
+    onLoading: store.reportLoading,
   });
   // The ground layer runs the scene; the water and street layers draw the
   // same frame right after it, and the next tick replaces it.
   let currentFrame: MapFrame | undefined;
-  const groundLayer = new MapGroundLayer(context, atlas, state => {
+  const rasterWater = createRasterWaterMask();
+  const groundLayer = new MapGroundLayer(context, atlas, rasterWater, state => {
     frameTime = state.time;
     if (scene.busy) {
       fpsController.raise(FPS_INTERACTION);
@@ -156,7 +159,7 @@ async function initGpu(
     return currentFrame;
   });
   const readFrame = (): MapFrame | undefined => currentFrame;
-  const waterLayer = new MapWaterLayer(context, streetCache, readFrame);
+  const waterLayer = new MapWaterLayer(context, streetCache, rasterWater, readFrame);
   const streetLayer = new MapStreetLayer(context, streetCache, readFrame);
   const layerManager = new RenderLayerManager([groundLayer, waterLayer, streetLayer]);
   const stopRenderLoop = startRenderLoop({
@@ -176,6 +179,7 @@ async function initGpu(
       streetLoader.dispose();
       streetDecoder.dispose();
       layerManager.dispose();
+      rasterWater.dispose();
       streetCache.dispose();
       atlas.dispose();
       fpsController.dispose();

@@ -13,7 +13,7 @@ import {
 import type { DetailBudget } from '../../domain/detail-budget';
 import { detailFactorOf, INITIAL_DETAIL_BUDGET, reportFps } from '../../domain/detail-budget';
 import type { CameraGeometry, MapCameraState, Viewport } from '../../domain/map-camera';
-import { cameraGeometry, groundMetresPerCssPixel, viewOf } from '../../domain/map-camera';
+import { cameraGeometry, viewOf } from '../../domain/map-camera';
 import type { MapView } from '../../domain/map-view';
 import type { TileAtlasPort } from '../../domain/ports/tile-atlas';
 import type { StreetTile } from '../../domain/street-tile';
@@ -47,6 +47,8 @@ export interface MapSceneDependencies {
   readonly atlas: TileAtlasPort;
   readonly onPoseChanged: (view: MapView) => void;
   readonly onBearing: (bearingDeg: number) => void;
+  /** Whether any tile — raster or street — is still on its way. */
+  readonly onLoading: (loading: boolean) => void;
 }
 
 /**
@@ -63,9 +65,13 @@ export class MapScene {
   private geometry: CameraGeometry | undefined;
   private selected: readonly SelectedTile[] = [];
   private streetTiles: readonly SelectedTile[] = [];
-  /** One decision for the whole picture, with a gap between showing and hiding so the threshold never flickers. */
-  private buildingsShown = false;
-  private carsShown = false;
+  /**
+   * One decision for the whole picture, with a gap between showing and hiding
+   * so the threshold never flickers. Both start shown: a map opened inside
+   * the gap — a reload, a shared link — keeps what was on screen.
+   */
+  private buildingsShown = true;
+  private carsShown = true;
   private wavesInView = false;
   /** When each street tile first stood while buildings were shown; kept until they are hidden, so a tile blinking at the edge never regrows. */
   private readonly buildingRises = new Map<TileKey, number>();
@@ -124,8 +130,17 @@ export class MapScene {
   }
 
   advance(state: FrameState): MapFrame | undefined {
-    const { camera, loader, streetLoader, traffic, hasWater, atlas, onPoseChanged, onBearing } =
-      this.dependencies;
+    const {
+      camera,
+      loader,
+      streetLoader,
+      traffic,
+      hasWater,
+      atlas,
+      onPoseChanged,
+      onBearing,
+      onLoading,
+    } = this.dependencies;
     const cameraState = camera.tick();
     const viewport: Viewport = { widthPx: state.canvasWidth, heightPx: state.canvasHeight };
     const detail = detailFactorOf(this.budget);
@@ -167,6 +182,7 @@ export class MapScene {
       loader.reconcile(this.selected, state.time);
       streetLoader.reconcile(this.streetTiles, state.time);
     }
+    onLoading(this.pendingCount > 0);
 
     const fading = this.selected.some(tile => {
       const ready = loader.readyTile(tile.key);
@@ -228,11 +244,11 @@ export class MapScene {
     });
     return {
       viewProjection: this.geometry.viewProjection,
+      origin,
       cameraPosition: { x: position.x - origin.x, y: position.y, z: position.z - origin.y },
       fogStart: this.geometry.fogStart,
       fogEnd: this.geometry.fogEnd,
       time: state.time,
-      metresPerPixel: groundMetresPerCssPixel(cameraState, state.devicePixelRatio),
       instanceData: this.instanceData,
       instanceCount,
       streetTiles,

@@ -13,22 +13,12 @@ import { CarPainter } from './car-painter';
 import { FOG_COLOR } from './fog';
 import type { MapFrame } from './map-frame';
 import type { StreetPainter } from './street-painter';
+import { SUN_DIRECTION } from './sun';
 import { TreePainter } from './tree-painter';
 
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 const SINGLE_SAMPLE = 1;
 const FLOATS_PER_PLACEMENT = 4;
-/** From the south-west and high, so east and north walls read darker than the roofs. */
-const SUN_DIRECTION = normalized([-0.45, 0.8, 0.4]);
-
-function normalized([x, y, z]: readonly [number, number, number]): readonly [
-  number,
-  number,
-  number,
-] {
-  const length = Math.hypot(x, y, z);
-  return [x / length, y / length, z / length];
-}
 
 /**
  * The street over the raster ground: building boxes, trees and the cars on

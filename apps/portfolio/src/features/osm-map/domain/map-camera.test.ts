@@ -1,18 +1,10 @@
-import {
-  DEGREES_PER_RADIAN,
-  EARTH_CIRCUMFERENCE_M,
-  MAX_PITCH_RADIANS,
-  MAX_ZOOM,
-  MIN_ZOOM,
-  TILE_SIZE_PX,
-} from './constants';
+import { DEGREES_PER_RADIAN, MAX_PITCH_RADIANS, MAX_ZOOM, MIN_ZOOM } from './constants';
 import type { MapCameraState, PixelPoint, Viewport } from './map-camera';
 import {
   cameraGeometry,
   coastCamera,
   createMapCamera,
   dragCamera,
-  groundMetresPerCssPixel,
   moveCameraTo,
   projectGround,
   rotateBy,
@@ -196,22 +188,5 @@ describe('map camera', () => {
     expect(view.lat).toBeCloseTo(DEFAULT_VIEW.lat, 9);
     expect(view.lon).toBeCloseTo(DEFAULT_VIEW.lon, 9);
     expect(view.zoom).toBe(CITY_ZOOM);
-  });
-
-  it('measures the ground under a CSS pixel at the target: a tile of 256 device pixels at the zoom, at the latitude', () => {
-    const zoom = 16;
-    const equator = createMapCamera({ lon: 0, lat: 0, zoom, bearingDeg: 0, pitchDeg: 0 });
-    const retinaRatio = 2;
-
-    const atEquator = groundMetresPerCssPixel(equator, 1);
-    const onRetina = groundMetresPerCssPixel(equator, retinaRatio);
-    const upNorth = groundMetresPerCssPixel(
-      createMapCamera({ lon: 0, lat: 60, zoom, bearingDeg: 0, pitchDeg: 0 }),
-      1
-    );
-
-    expect(atEquator).toBeCloseTo(EARTH_CIRCUMFERENCE_M / (TILE_SIZE_PX * 2 ** zoom), 6);
-    expect(onRetina).toBeCloseTo(atEquator * retinaRatio, 6);
-    expect(upNorth).toBeCloseTo(atEquator / 2, 3);
   });
 });

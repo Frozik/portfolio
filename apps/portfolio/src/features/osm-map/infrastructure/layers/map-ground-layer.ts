@@ -13,8 +13,11 @@ import type { TileAtlas } from '../tile-atlas';
 import { TILE_INSTANCE_BYTES } from '../tile-instance-buffer';
 import { FOG_COLOR } from './fog';
 import type { MapFrame } from './map-frame';
+import type { RasterWaterMask } from './raster-water-mask';
+import { RASTER_WATER_MASK_FORMAT } from './raster-water-mask';
 
 const VERTICES_PER_QUAD = 6;
+const NO_WATER: GPUColor = { r: 0, g: 0, b: 0, a: 0 };
 
 export class MapGroundLayer implements RenderLayer {
   private readonly device: GPUDevice;
@@ -32,6 +35,7 @@ export class MapGroundLayer implements RenderLayer {
   constructor(
     context: GpuContext,
     private readonly atlas: TileAtlas,
+    private readonly waterMask: RasterWaterMask,
     /** Returns the next frame to draw, or nothing when the picture is unchanged. */
     private readonly readFrame: (state: FrameState) => MapFrame | undefined
   ) {
@@ -78,7 +82,11 @@ export class MapGroundLayer implements RenderLayer {
     this.pipeline = this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
       vertex: { module: shaderModule, entryPoint: 'vs' },
-      fragment: { module: shaderModule, entryPoint: 'fs', targets: [{ format: context.format }] },
+      fragment: {
+        module: shaderModule,
+        entryPoint: 'fs',
+        targets: [{ format: context.format }, { format: RASTER_WATER_MASK_FORMAT }],
+      },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     });
     this.bindGroup = this.createBindGroup();
@@ -119,7 +127,7 @@ export class MapGroundLayer implements RenderLayer {
     return wasDirty;
   }
 
-  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView): void {
+  render(encoder: GPUCommandEncoder, canvasView: GPUTextureView, state: FrameState): void {
     if (this.boundAtlasVersion !== this.atlas.version) {
       this.bindGroup = this.createBindGroup();
       this.boundAtlasVersion = this.atlas.version;
@@ -127,6 +135,12 @@ export class MapGroundLayer implements RenderLayer {
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         { view: canvasView, loadOp: 'clear', clearValue: FOG_COLOR, storeOp: 'store' },
+        {
+          view: this.waterMask.ensureView(this.device, state.canvasWidth, state.canvasHeight),
+          loadOp: 'clear',
+          clearValue: NO_WATER,
+          storeOp: 'store',
+        },
       ],
     });
     pass.setPipeline(this.pipeline);

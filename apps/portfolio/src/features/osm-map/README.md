@@ -27,6 +27,9 @@ the boxes that stand on the raster ground at street zoom.
   get one zoom level deeper. A per-frame budget coarsens the threshold when
   a 4K screen at full tilt would ask for too many tiles, and a sustained
   low frame rate halves the detail for the session.
+- **Loading bar**: an 8 px shimmering blue line along the top edge, under
+  the nav, while any tile — raster or street geometry — is queued or on its
+  way. It is an overlay, so the map never shifts when it comes and goes.
 - **Progressive loading**: tiles that have not arrived show a procedural
   dark/light checkerboard whose cells encode the pending zoom level — or a
   picture borrowed from the cache, see below; each tile fades in the moment
@@ -100,7 +103,9 @@ the boxes that stand on the raster ground at street zoom.
   flat — and the tiles in view always fit the cache and never evict each
   other. Whether buildings show
   is decided once for the whole picture, with a gap between showing (z16)
-  and hiding (z15.5) so hovering at the threshold never flickers them; the
+  and hiding (z15.5) so hovering at the threshold never flickers them — a
+  map opened inside that gap (a reload, a shared link) starts with them
+  shown, and the same holds for the cars; the
   street tiles are the z14 tiles under every raster tile from z14 down to
   the fog, so a tile near the horizon does not blink as the camera turns. A
   tile standing for the first time grows out of the ground over 0.6 s
@@ -131,27 +136,36 @@ the boxes that stand on the raster ground at street zoom.
   While cars are in the picture the loop runs at 30 fps rather than idling;
   they appear at z17 and go at z16.5, and below that the map rests as
   before.
-- **Ripples on the water** from zoom 16, with the buildings. The same z14
-  tile carries the `water` layer; the worker cuts every water polygon to the
-  tile square (the tile's buffer overlaps the neighbour's, and water blended
-  twice would show a darker band along the seam) and triangulates it into a
+- **Water** from zoom 16, with the buildings. The same z14
+  tile carries the `water` layer; the worker cuts every water polygon one
+  tile unit past the tile square (meshes quantised per tile never meet
+  exactly, and a crack shows the raster through; the water is opaque, so the
+  sliver drawn twice is invisible) and triangulates it into a
   flat mesh in the same `int16` tenths of a metre as the boxes. A water
-  layer between the ground and the street draws each tile's water blended
-  over the raster with one draw, and the fragment shader paints the ripple
-  symbol: rows of wavy dashes, a sine travelling east, alternate rows
-  staggered by half a dash; the raster shows through between them. The
-  symbol is sized in CSS pixels at the camera target (rows 28 px apart, a
-  64 px wavelength) and converted to ground metres from the zoom and the
-  latitude every frame, so it keeps its size on screen at every zoom and
-  only perspective shrinks it toward the horizon, where lines thinner than a
-  pixel are widened to one and faded and the pattern dissolves once rows
-  come closer than a few pixels. The
-  ripples fade in with the tile's rise, take the fog and are covered by the
+  layer between the ground and the street draws each tile's water over the
+  raster with one draw, and the fragment shader computes a moving surface
+  per pixel: fourteen travelling waves in ground metres, 25 m down to 3.6 m,
+  measured from one anchor on the ground so every tile shares the pattern,
+  fanned around a wind direction, each moving at its deep-water speed
+  (long waves outrun short ones) and each pulling the next toward its
+  crests, which sharpens them and hides the grid of sines. The analytic
+  slope gives a normal, and the normal lights the water: a deep-to-crest
+  body colour shaded by the sun, the sky reflected by Fresnel — barely
+  straight down, strongly at a tilt — and glints toward the same sun that
+  lights the boxes. A wave fades out before it gets shorter than two
+  pixels, so far water settles into a calm sheet instead of shimmering.
+  The raster keeps priority over the water: the ground pass writes a second
+  target, a one-channel mask of how close each pixel is to the OSM water
+  fill (`#aad3df`), and the water is drawn only where the mask is set — so
+  the bridges, piers, ferry lines and river names the raster painted over
+  the water stay on top, with their antialiased edges. The
+  water fades in with the tile's rise, takes the fog and is covered by the
   boxes and cars, and while water is in the picture the loop runs at 30 fps
   like the traffic.
 - **Trees in the woods and parks** from zoom 16, with the buildings. The
-  `landcover` layer's `wood` polygons and every polygon of the `park` layer
-  are cut to the tile square and triangulated; the worker plants each
+  `landcover` layer's `wood` polygons and its `grass` polygons of subclass
+  `park` or `garden` (the `park` layer is not city parks but protected
+  areas — a heritage zone covers a whole centre, river included) are cut to the tile square and triangulated; the worker plants each
   triangle in proportion to its area (one tree per 350 m² of forest, per
   1200 m² of park, at most 10 000 per tile, the whole tile thinned past
   that), drops every tree uniformly inside its triangle and seeds the draw

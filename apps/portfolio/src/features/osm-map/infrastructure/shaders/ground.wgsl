@@ -32,6 +32,12 @@ struct TileInstance {
 
 const CHECKER_DARK: vec3<f32> = vec3<f32>(0.70, 0.72, 0.75);
 const CHECKER_LIGHT: vec3<f32> = vec3<f32>(0.80, 0.82, 0.85);
+// The standard OSM style's water fill, #aad3df. A pixel this colour is open
+// water; anything painted over it — a bridge, a pier, a name — is not, and
+// the antialiased edge between the two falls in between.
+const RASTER_WATER: vec3<f32> = vec3<f32>(0.667, 0.827, 0.875);
+const WATER_WITHIN: f32 = 0.03;
+const NOT_WATER_BEYOND: f32 = 0.12;
 
 const CORNERS = array<vec2<f32>, 6>(
     vec2<f32>(0.0, 0.0), vec2<f32>(1.0, 0.0), vec2<f32>(0.0, 1.0),
@@ -43,6 +49,12 @@ struct VSOut {
     @location(0) uv: vec2<f32>,
     @location(1) viewDistance: f32,
     @location(2) @interpolate(flat) instance: u32,
+};
+
+struct FSOut {
+    @location(0) color: vec4<f32>,
+    // How much of the pixel is the raster's open water, for the water layer.
+    @location(1) water: vec4<f32>,
 };
 
 @vertex
@@ -61,7 +73,7 @@ fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instance
 }
 
 @fragment
-fn fs(in: VSOut) -> @location(0) vec4<f32> {
+fn fs(in: VSOut) -> FSOut {
     let tile = tiles[in.instance];
 
     let cell = floor(in.uv * U.checkerCells);
@@ -82,5 +94,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let color = mix(base, image, fade);
 
     let fog = smoothstep(U.fogStart, U.fogEnd, in.viewDistance);
-    return vec4<f32>(mix(color, U.fogColor, fog), 1.0);
+    let water = 1.0 - smoothstep(WATER_WITHIN, NOT_WATER_BEYOND, distance(color, RASTER_WATER));
+    return FSOut(vec4<f32>(mix(color, U.fogColor, fog), 1.0), vec4<f32>(water, 0.0, 0.0, 1.0));
 }

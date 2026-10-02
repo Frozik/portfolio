@@ -22,6 +22,15 @@ describe('tile clipping', () => {
     expect(Math.sign(signedArea(clipped))).toBe(Math.sign(signedArea(OCEAN_RING)));
   });
 
+  it('leaves a margin beyond the tile square when asked, for surfaces that must overlap their neighbours', () => {
+    const margin = 2;
+
+    const clipped = clipRingToTile(OCEAN_RING, EXTENT, margin);
+
+    expect(clipped).toContainEqual({ x: -margin, y: -margin });
+    expect(clipped).toContainEqual({ x: EXTENT + margin, y: EXTENT + margin });
+  });
+
   it('drops a ring that lies wholly in the buffer or is left without area', () => {
     const beyond = OCEAN_RING.map(point => ({ x: point.x - EXTENT - 2 * BUFFER, y: point.y }));
     const alongEdge = [

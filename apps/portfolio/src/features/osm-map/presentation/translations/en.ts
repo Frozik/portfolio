@@ -1,5 +1,6 @@
 export const osmMapTranslationsEn = {
   hud: {
+    loading: 'Loading the map…',
     locate: 'Show where I am',
     locating: 'Finding where you are…',
     locateFailure: {

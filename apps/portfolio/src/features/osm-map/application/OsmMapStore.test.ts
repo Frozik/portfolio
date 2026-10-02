@@ -36,6 +36,17 @@ describe('OsmMapStore', () => {
     expect(store.bearingDeg).toBe(35);
   });
 
+  it('says tiles are loading while the renderer reports so', () => {
+    const { store } = createStore();
+
+    store.reportLoading(true);
+    const whileLoading = store.loading;
+    store.reportLoading(false);
+
+    expect(whileLoading).toBe(true);
+    expect(store.loading).toBe(false);
+  });
+
   it('sends north-up to the attached renderer and to nobody after detaching', () => {
     const { store } = createStore();
     const resetNorth = vi.fn();

@@ -200,10 +200,11 @@ describe('building tile decoding', () => {
     const bytes = encodeTile([
       { ring: block, properties: { class: 'wood' }, layer: 'landcover' },
       { ring: block, properties: { class: 'grass' }, layer: 'landcover' },
-      { ring: block, properties: { class: 'park' }, layer: 'park' },
+      { ring: block, properties: { class: 'grass', subclass: 'park' }, layer: 'landcover' },
     ]);
     const grassOnly = encodeTile([
       { ring: block, properties: { class: 'farmland' }, layer: 'landcover' },
+      { ring: block, properties: { class: 'grass', subclass: 'grass' }, layer: 'landcover' },
     ]);
 
     const tile = decodeStreetTile(bytes, TILE);
@@ -218,7 +219,21 @@ describe('building tile decoding', () => {
     expect(decodeStreetTile(grassOnly, TILE).trees).toEqual([]);
   });
 
-  it('cuts the water to the tile square and lays it flat as one mesh', () => {
+  it('plants nothing over a protected area: the park layer is nature reserves and heritage zones, water and streets included', () => {
+    const wholeTile: EncodedFeature['ring'] = [
+      [0, 0],
+      [EXTENT, 0],
+      [EXTENT, EXTENT],
+      [0, EXTENT],
+    ];
+    const bytes = encodeTile([
+      { ring: wholeTile, properties: { class: 'protected_area' }, layer: 'park' },
+    ]);
+
+    expect(decodeStreetTile(bytes, TILE).trees).toEqual([]);
+  });
+
+  it('cuts the water one tile unit past the tile square, so neighbours overlap instead of cracking, and lays it flat as one mesh', () => {
     const ocean: EncodedFeature['ring'] = [
       [-64, -64],
       [4160, -64],
@@ -230,9 +245,8 @@ describe('building tile decoding', () => {
     const tile = decodeStreetTile(bytes, TILE);
 
     expect(tile.water.indices).toHaveLength(2 * VERTICES_PER_TRIANGLE);
-    expect(Math.min(...tile.water.positions)).toBe(0);
-    expect(Math.max(...tile.water.positions)).toBe(
-      Math.round(tileGridOf(TILE, EXTENT).tileSizeM / STREET_MESH_UNIT_M)
-    );
+    const meshUnitsPerTileUnit = tileGridOf(TILE, EXTENT).tileSizeM / EXTENT / STREET_MESH_UNIT_M;
+    expect(Math.min(...tile.water.positions)).toBe(Math.round(-meshUnitsPerTileUnit));
+    expect(Math.max(...tile.water.positions)).toBe(Math.round((EXTENT + 1) * meshUnitsPerTileUnit));
   });
 });

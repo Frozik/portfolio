@@ -3,6 +3,7 @@ import type { osmMapTranslationsEn } from './en';
 
 export const osmMapTranslationsRu: TranslationOf<typeof osmMapTranslationsEn> = {
   hud: {
+    loading: 'Карта загружается…',
     locate: 'Показать, где я',
     locating: 'Определяем, где вы…',
     locateFailure: {

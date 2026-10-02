@@ -21,8 +21,11 @@ const BUILDING_LAYER = 'building';
 const TRANSPORTATION_LAYER = 'transportation';
 const WATER_LAYER = 'water';
 const LANDCOVER_LAYER = 'landcover';
-const PARK_LAYER = 'park';
 const WOOD_CLASS = 'wood';
+/** Water reaches this far into the neighbouring tile: opaque, so the overlap is invisible, while a crack between two quantised meshes is not. */
+const WATER_OVERLAP_TILE_UNITS = 1;
+/** City parks and gardens are `grass` landcover told apart by subclass; the `park` layer is protected areas, whole city centres with their rivers. */
+const PARK_SUBCLASSES: readonly unknown[] = ['park', 'garden'];
 const LINE_FEATURE = 2;
 const POLYGON_FEATURE = 3;
 const TUNNEL = 'tunnel';
@@ -82,7 +85,8 @@ function roadsOfLayer(layer: VectorTileLayer): readonly TileRoad[] {
 function polygonsOfLayer(
   layer: VectorTileLayer | undefined,
   coord: TileCoord,
-  keep: (properties: Record<string, unknown>) => boolean = () => true
+  keep: (properties: Record<string, unknown>) => boolean = () => true,
+  margin: number = 0
 ): MultiPolygon {
   if (layer === undefined) {
     return [];
@@ -92,20 +96,25 @@ function polygonsOfLayer(
   for (let index = 0; index < layer.length; index++) {
     const feature = layer.feature(index);
     if (feature.type === POLYGON_FEATURE && keep(feature.properties)) {
-      polygons.push(...clippedPolygonsOfTileRings(feature.loadGeometry(), grid));
+      polygons.push(...clippedPolygonsOfTileRings(feature.loadGeometry(), grid, margin));
     }
   }
   return polygons;
 }
 
-/** Woods from the `landcover` layer and every polygon of the `park` layer grow trees. */
+/** Woods, parks and gardens of the `landcover` layer grow trees. */
 function treeCoversOf(layers: VectorTile['layers'], coord: TileCoord): readonly TreeCover[] {
   const covers: readonly (readonly [TreeCoverKind, MultiPolygon])[] = [
     [
       'forest',
       polygonsOfLayer(layers[LANDCOVER_LAYER], coord, ({ class: cls }) => cls === WOOD_CLASS),
     ],
-    ['park', polygonsOfLayer(layers[PARK_LAYER], coord)],
+    [
+      'park',
+      polygonsOfLayer(layers[LANDCOVER_LAYER], coord, ({ subclass }) =>
+        PARK_SUBCLASSES.includes(subclass)
+      ),
+    ],
   ];
   return covers.flatMap(([kind, polygons]) => (polygons.length === 0 ? [] : [{ kind, polygons }]));
 }
@@ -129,7 +138,9 @@ export function decodeStreetTile(bytes: ArrayBuffer, coord: TileCoord): StreetTi
             transportation.extent,
             tileGridOf(coord, transportation.extent).tileSizeM
           ),
-    water: waterTileMesh(polygonsOfLayer(layers[WATER_LAYER], coord)),
+    water: waterTileMesh(
+      polygonsOfLayer(layers[WATER_LAYER], coord, () => true, WATER_OVERLAP_TILE_UNITS)
+    ),
     trees: plantTrees(treeCoversOf(layers, coord), String(tileKeyOf(coord))),
   };
 }

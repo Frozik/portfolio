@@ -22,7 +22,6 @@ import {
 import type { MapView } from './map-view';
 import type { GroundPoint, LonLat } from './mercator';
 import { lonLatToWorld, worldToLonLat } from './mercator';
-import { metresPerUnitAtPoint } from './tile-grid';
 
 export interface Viewport {
   readonly widthPx: number;
@@ -109,11 +108,6 @@ function clampCamera(state: MapCameraState): MapCameraState {
 
 function worldPerPixel(zoom: number): number {
   return 1 / (TILE_SIZE_PX * 2 ** zoom);
-}
-
-/** Ground metres under one CSS pixel at the camera target: the size of a screen-anchored pattern drawn on the ground. */
-export function groundMetresPerCssPixel(state: MapCameraState, devicePixelRatio: number): number {
-  return worldPerPixel(state.zoom) * devicePixelRatio * metresPerUnitAtPoint(state.target);
 }
 
 function focalLengthPx(viewport: Viewport): number {

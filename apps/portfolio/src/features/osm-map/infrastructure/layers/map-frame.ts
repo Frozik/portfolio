@@ -2,6 +2,7 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import type { CarBody } from '../../domain/car-bodies';
 import type { WorldVector } from '../../domain/map-camera';
+import type { GroundPoint } from '../../domain/mercator';
 import type { TileKey } from '../../domain/tile-key';
 
 /** Where a street tile stands this frame: its corner relative to the camera target, and metres → map units. */
@@ -28,13 +29,13 @@ export interface CarInstance {
 /** What the scene hands the layers for a frame that changed. */
 export interface MapFrame {
   readonly viewProjection: Mat4;
+  /** The point on the map everything in the frame is relative to: the camera target. */
+  readonly origin: GroundPoint;
   /** Camera position relative to the camera target, like the instance origins. */
   readonly cameraPosition: WorldVector;
   readonly fogStart: number;
   readonly fogEnd: number;
   readonly time: number;
-  /** Ground metres under one CSS pixel at the camera target, for patterns that keep their size on screen. */
-  readonly metresPerPixel: number;
   readonly instanceData: Float32Array;
   readonly instanceCount: number;
   readonly streetTiles: readonly StreetTilePlacement[];
