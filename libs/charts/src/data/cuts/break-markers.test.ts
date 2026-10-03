@@ -87,6 +87,13 @@ describe('break markers at the cuts of a run', () => {
     expect(marked.breakMarkers).toEqual([1]);
   });
 
+  it('breaks between two points standing on the two edges of a cut, both at the cut point', () => {
+    const marked = markBreaks(numberDomain, mapping, virtualRun([30, 40, 60, 70], undefined));
+
+    expect(Array.from(marked.x)).toEqual([30, 40, 40, 40, 50]);
+    expect(marked.breakMarkers).toEqual([2]);
+  });
+
   it('breaks between plain points on the two sides of a cut', () => {
     expect(markBreaks(numberDomain, mapping, virtualRun([30, 70], undefined)).breakMarkers).toEqual(
       [1]

@@ -44,6 +44,23 @@ function worldBeside<TX>(
   return domain.plus(side < 0 ? cut.from : cut.to, domain.minus(virtual, cut.at));
 }
 
+/**
+ * Which edge of a cut an element on the cut point stands for. Elements at
+ * one virtual position are in world order, so one followed by another on
+ * the same point is the edge before the cut and one preceded by another the
+ * edge after it; one alone there goes by the run's convention.
+ */
+function sideOf<TX>(run: TRun<TX>, index: number, convention: TCutEdge): TCutEdge {
+  const x = run.x[index];
+  if (index + 1 < run.length && run.x[index + 1] === x) {
+    return 'before';
+  }
+  if (index > 0 && run.x[index - 1] === x) {
+    return 'after';
+  }
+  return convention;
+}
+
 /** A break: the element the run breaks before, and where the marker stands. */
 export interface IBreak<TX> {
   readonly before: number;
@@ -69,8 +86,8 @@ export function breaksOf<TX>(
   }
   const { step, aggregateTime } = run;
   const edge: TCutEdge = aggregateTime === 'start' ? 'after' : 'before';
-  const intervalAt = (virtual: TX, beside: ICutInView<TX>): IAxisRange<TX> =>
-    aggregateIntervalOf(domain, aggregateTime, step, worldBeside(domain, virtual, beside, edge));
+  const intervalAt = (virtual: TX, beside: ICutInView<TX>, side: TCutEdge): IAxisRange<TX> =>
+    aggregateIntervalOf(domain, aggregateTime, step, worldBeside(domain, virtual, beside, side));
   const cuts = mapping.cutsIn({ start: run.x[from - 1], end: run.x[to - 1] });
   let first = 0;
   for (let index = from; index < to && first < cuts.length; index += 1) {
@@ -86,8 +103,8 @@ export function breaksOf<TX>(
     if (last === first) {
       continue;
     }
-    const before = intervalAt(left, cuts[first]);
-    const after = intervalAt(right, cuts[last - 1]);
+    const before = intervalAt(left, cuts[first], sideOf(run, index - 1, edge));
+    const after = intervalAt(right, cuts[last - 1], sideOf(run, index, edge));
     for (let at = first; at < last; at += 1) {
       if (breaksBetween(domain, step, before, after, cuts[at])) {
         breaks.push({ before: index, at: cuts[at].at });
