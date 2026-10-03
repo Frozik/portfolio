@@ -3,13 +3,9 @@
   "ignoreWorkspaces": ["libs/typescript-config"],
   "workspaces": {
     ".": {
-      "entry": ["vitest.config.ts"],
       "ignoreDependencies": [
-        "@lhci/cli",
         "lighthouse",
         "@swc/core",
-        "lefthook",
-        "semantic-release",
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
         "@semantic-release/github",
@@ -18,26 +14,17 @@
     },
     "apps/portfolio": {
       "entry": [
-        "src/main.tsx",
         "src/sw/sw.ts",
         "src/app/prerender/render-landing.tsx",
-        "vite.config.ts",
         "lighthouserc.json",
-        "playwright.config.ts",
         "e2e/**/*.ts"
       ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "vite.config.ts",
-        "e2e/**/*.ts",
-        "playwright.config.ts"
-      ],
-      "ignoreDependencies": ["tailwindcss", "buffer"]
+      "project": ["src/**/*.{ts,tsx,css}", "e2e/**/*.ts"],
+      "ignoreDependencies": ["buffer"]
     },
     "apps/communication": {
-      "entry": ["src/main.ts", "scripts/**/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
-      "ignoreDependencies": ["pino-pretty", "toml", "tsx"]
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["pino-pretty", "toml"]
     },
     "libs/utils": {
       "entry": ["src/**/*.ts!"],
@@ -60,11 +47,6 @@
       "project": ["src/**/*.ts"]
     },
     "libs/tooling": {
-      "entry": [
-        "src/check-source-conventions.ts",
-        "src/predict-version.ts",
-        "dependency-cruiser.cjs"
-      ],
       "project": ["src/**/*.ts"]
     }
   },
