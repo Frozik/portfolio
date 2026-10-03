@@ -8,9 +8,9 @@ fn candleVertex(vertex: u32, instance: u32) -> VertexOutput {
     }
 
     let onePixel = frame.devicePixelRatio;
-    let centerX = (candle.x + layer.stepOverSpan * 0.5) * frame.canvas.x;
+    let centerX = (candle.spanLeft + candle.spanWidth * 0.5) * frame.canvas.x;
     // When no coarser scale is left the candles narrow to what their interval leaves them (§4.3).
-    let bodyWidth = max(min(candle.fillSize, layer.params.x), onePixel);
+    let bodyWidth = max(min(candle.fillSize, widestBar(candle)), onePixel);
     let wickWidth = max(candle.strokeSize, onePixel);
 
     let open = candle.open * frame.canvas.y;

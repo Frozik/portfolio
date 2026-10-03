@@ -5,13 +5,15 @@ import type {
   ISubscribeRequest,
   ITimeseriesSource,
 } from '@frozik/charts/data/timeseries/source';
+import { NANOS_PER_MILLISECOND } from '@frozik/utils/date/constants';
 import { isNil } from 'lodash-es';
 
 import type { TNoise } from '../domain/noise';
+import type { IBarGrid } from './bar-grid';
+import { uniformGrid } from './bar-grid';
 
 /** A series with no live edge starts its subscription here: everything before is history. */
 const ENDLESS_SINCE = 7_258_118_400_000_000_000n;
-const NANOS_PER_MILLISECOND = 1_000_000;
 const MIN_TICK_MS = 100;
 const MAX_TICK_MS = 1000;
 /** How many moments inside a candle are looked at to find its extremes. */
@@ -25,11 +27,8 @@ export interface INoiseSourceOptions {
   readonly failure?: () => ChartDataError | undefined;
   /** The present moment, nanoseconds: nothing exists after it and new elements keep arriving. Without it the series is endless and still. */
   readonly now?: () => bigint;
-}
-
-function floorTo(time: bigint, step: bigint): bigint {
-  const remainder = time % step;
-  return time - (remainder < 0n ? remainder + step : remainder);
+  /** Where the elements of a scale stand; at every multiple of it from the epoch by default. */
+  readonly gridOf?: (scale: bigint) => IBarGrid;
 }
 
 function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
@@ -46,34 +45,6 @@ function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-interface ISpan {
-  readonly first: bigint | undefined;
-  readonly last: bigint | undefined;
-}
-
-/** The span cut to the soft limit from the end the direction names; `reach` is the length the limit allows. */
-function limited(
-  { direction }: IFetchRequest,
-  { first, last }: ISpan,
-  reach: bigint
-): { readonly start: bigint; readonly end: bigint } {
-  if (isNil(first)) {
-    if (isNil(last)) {
-      throw new ChartDataError('INVALID_ARGUMENT', 'a request names at least one bound');
-    }
-    return { start: last - reach, end: last };
-  }
-  if (isNil(last)) {
-    return { start: first, end: first + reach };
-  }
-  if (last - first <= reach) {
-    return { start: first, end: last };
-  }
-  return direction === 'forward'
-    ? { start: first, end: first + reach }
-    : { start: last - reach, end: last };
-}
-
 /**
  * A time series source over noise: one element at every multiple of the scale,
  * a point the value at that moment and a candle the path over its interval.
@@ -85,13 +56,19 @@ export function noiseSource({
   delayMs,
   failure,
   now,
+  gridOf = uniformGrid,
 }: INoiseSourceOptions): ITimeseriesSource {
   /** The time of the last element that exists: a candle exists once its interval has closed. */
-  const lastExisting = (shape: TShape, scale: bigint): bigint | undefined => {
+  const lastExisting = (shape: TShape, grid: IBarGrid): bigint | undefined => {
     if (isNil(now)) {
       return undefined;
     }
-    return floorTo(shape === 'candle' ? now() - scale : now(), scale);
+    const present = now();
+    let last = grid.floor(present);
+    while (shape === 'candle' && grid.end(last) > present) {
+      last = grid.previous(last);
+    }
+    return last;
   };
 
   const candleAt = (start: bigint, end: bigint) => {
@@ -107,20 +84,18 @@ export function noiseSource({
     return { x: start, open, min, max, close };
   };
 
-  const batchOf = (shape: TShape, scale: bigint, first: bigint, count: number): TBatch => {
-    const x = new BigInt64Array(count);
-    for (let index = 0; index < count; index += 1) {
-      x[index] = first + BigInt(index) * scale;
-    }
+  const batchOf = (shape: TShape, grid: IBarGrid, times: readonly bigint[]): TBatch => {
+    const x = BigInt64Array.from(times);
     if (shape === 'point') {
       return { shape, points: { x, value: Float64Array.from(x, time => noise(time)) } };
     }
-    const open = new Float64Array(count);
-    const min = new Float64Array(count);
-    const max = new Float64Array(count);
-    const close = new Float64Array(count);
+    const { length } = x;
+    const open = new Float64Array(length);
+    const min = new Float64Array(length);
+    const max = new Float64Array(length);
+    const close = new Float64Array(length);
     x.forEach((time, index) => {
-      const candle = candleAt(time, time + scale);
+      const candle = candleAt(time, grid.end(time));
       open[index] = candle.open;
       min[index] = candle.min;
       max[index] = candle.max;
@@ -129,29 +104,45 @@ export function noiseSource({
     return { shape, candles: { x, open, min, max, close } };
   };
 
-  /** The first and the last element time the request covers, before the limit. */
-  const spanOf = (request: IFetchRequest): ISpan => {
-    const { from, to, includeFrom, includeTo, scale, shape } = request;
-    let first: bigint | undefined;
-    if (!isNil(from)) {
-      const aligned = floorTo(from, scale);
-      first =
-        aligned === from && includeFrom
-          ? aligned
-          : aligned === from
-            ? from + scale
-            : aligned + scale;
-    }
-    let last: bigint | undefined;
-    if (!isNil(to)) {
-      const aligned = floorTo(to, scale);
-      last = aligned === to && !includeTo ? to - scale : aligned;
-    }
-    const existing = lastExisting(shape, scale);
+  /** The element times the request covers, ascending: up to the limit from the end the direction names. */
+  const timesOf = (request: IFetchRequest, grid: IBarGrid): readonly bigint[] => {
+    const { from, to, includeFrom, includeTo, shape, direction, softLimit } = request;
+    const first = isNil(from)
+      ? undefined
+      : includeFrom && grid.floor(from) === from
+        ? from
+        : grid.next(grid.floor(from));
+    let last = isNil(to)
+      ? undefined
+      : includeTo || grid.floor(to) !== to
+        ? grid.floor(to)
+        : grid.previous(to);
+    const existing = lastExisting(shape, grid);
     if (!isNil(existing) && (isNil(last) || last > existing)) {
       last = existing;
     }
-    return { first, last };
+    const times: bigint[] = [];
+    if (direction === 'forward' && !isNil(first)) {
+      for (
+        let time = first;
+        times.length < softLimit && (isNil(last) || time <= last);
+        time = grid.next(time)
+      ) {
+        times.push(time);
+      }
+      return times;
+    }
+    if (isNil(last)) {
+      throw new ChartDataError('INVALID_ARGUMENT', 'a request names at least one bound');
+    }
+    for (
+      let time = last;
+      times.length < softLimit && (isNil(first) || time >= first);
+      time = grid.previous(time)
+    ) {
+      times.push(time);
+    }
+    return times.reverse();
   };
 
   return {
@@ -161,14 +152,14 @@ export function noiseSource({
       if (!isNil(rejection)) {
         throw rejection;
       }
-      const { scale, shape, softLimit } = request;
-      const { start, end } = limited(request, spanOf(request), BigInt(softLimit - 1) * scale);
-      return batchOf(shape, scale, start, end < start ? 0 : Number((end - start) / scale) + 1);
+      const grid = gridOf(request.scale);
+      return batchOf(request.shape, grid, timesOf(request, grid));
     },
 
     subscribe(request: ISubscribeRequest): VoidFunction {
       const { scale, shape } = request;
-      const liveEdge = (): bigint => lastExisting(shape, scale) ?? ENDLESS_SINCE;
+      const grid = gridOf(scale);
+      const liveEdge = (): bigint => lastExisting(shape, grid) ?? ENDLESS_SINCE;
       /** The time of the last element delivered; none while the connection is down. */
       let sent: bigint | undefined;
       let isDownReported = false;
@@ -179,11 +170,16 @@ export function noiseSource({
         }
         const existing = liveEdge();
         if (existing > sent) {
-          request.onBatch(batchOf(shape, scale, sent + scale, Number((existing - sent) / scale)));
+          const times: bigint[] = [];
+          for (let time = grid.next(sent); time <= existing; time = grid.next(time)) {
+            times.push(time);
+          }
+          request.onBatch(batchOf(shape, grid, times));
           sent = existing;
         }
         if (shape === 'candle') {
-          request.onPending?.(candleAt(existing + scale, now()));
+          const forming = grid.next(existing);
+          request.onPending?.(forming <= now() ? candleAt(forming, now()) : undefined);
         }
       };
 

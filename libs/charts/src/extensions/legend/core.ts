@@ -8,6 +8,7 @@ import type { IChartExtension } from '../../core/kernel/extension';
 import type { TColor } from '../../core/series/color';
 import { channelsOf } from '../../core/series/color';
 import { nearestElement } from '../../core/series/nearest';
+import { isBreakMarker } from '../../core/series/point-run';
 import type { ISample } from '../../core/series/sample';
 import { sampleAt } from '../../core/series/sample';
 import { upperBound } from '../../core/series/search';
@@ -62,11 +63,14 @@ export function legendCore<TX>(): IChartExtension<TX, 'legend', ILegendSlice<TX>
       const crosshair = (): ICrosshairSlice<TX> | undefined =>
         kernel.extension<ICrosshairSlice<TX>>(CROSSHAIR_EXTENSION);
 
-      /** The last element at or before the right edge of the view. */
+      /** The last element at or before the right edge of the view, break markers aside. */
       const lastInView = (frame: IChartFrame<TX>, series: ISeriesFrame<TX>) => {
         for (const styled of series.runs.toReversed()) {
           const { run } = styled;
-          const index = upperBound(frame.domain, run.x, run.length, frame.x.end) - 1;
+          let index = upperBound(frame.domain, run.x, run.length, frame.x.end) - 1;
+          while (index >= 0 && isBreakMarker(run, index)) {
+            index -= 1;
+          }
           if (index >= 0) {
             return { styled, index };
           }

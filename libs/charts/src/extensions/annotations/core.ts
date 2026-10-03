@@ -15,6 +15,7 @@ export interface ILevel {
 
 /** A moment marked on the X axis: an earnings report, a deployment, a trade. */
 export interface IEventMark<TX> {
+  /** In world coordinates: on an axis with cuts the event stands where the chart shows that moment. */
   readonly x: TX;
   /** A letter or two shown in the badge. */
   readonly label: string;

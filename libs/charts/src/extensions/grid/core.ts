@@ -2,6 +2,8 @@ import { isNil } from 'lodash-es';
 
 import type { IChartFrame } from '../../core/frame/chart-frame';
 import type { IPixelRect } from '../../core/frame/pixel-rect';
+import type { TRectPattern } from '../../core/frame/rect-pattern';
+import { dashed } from '../../core/frame/rect-pattern';
 import { requiredTicks } from '../../core/frame/required-ticks';
 import { TICKS_EXTENSION } from '../../core/frame/ticks';
 import type { IChartExtension } from '../../core/kernel/extension';
@@ -13,8 +15,7 @@ const DASH_LENGTH = 10;
 
 export interface IChartGrid {
   readonly lines: readonly IPixelRect[];
-  /** Length of a dash and of the gap after it, in device pixels. */
-  readonly dashLength: number;
+  readonly pattern: TRectPattern;
   readonly opacity: number;
 }
 
@@ -71,7 +72,7 @@ export function gridCore<TX>(): IChartExtension<TX, 'grid', IGridSlice<TX>> {
         }
         return {
           lines,
-          dashLength: DASH_LENGTH * size.devicePixelRatio,
+          pattern: dashed(DASH_LENGTH * size.devicePixelRatio),
           opacity: Math.min(1, nominalThickness / thickness),
         };
       };

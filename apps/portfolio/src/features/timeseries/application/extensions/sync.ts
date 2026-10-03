@@ -4,6 +4,7 @@ import type { IChartFrame } from '@frozik/charts/core/frame/chart-frame';
 import type { ICrosshairSlice } from '@frozik/charts/core/frame/crosshair';
 import { ACTIVE_FPS } from '@frozik/charts/core/frame/frame-demand';
 import type { IPixelRect } from '@frozik/charts/core/frame/pixel-rect';
+import { dashed } from '@frozik/charts/core/frame/rect-pattern';
 import type { IChartExtension } from '@frozik/charts/core/kernel/extension';
 import type { IChartKernel } from '@frozik/charts/core/kernel/kernel';
 import { ownFrame, PAINT_BAND } from '@frozik/charts/core/stage/backend';
@@ -90,7 +91,7 @@ export function createSyncGroup<TX>(): ISyncGroup<TX> {
             rects: peerLineOf(ownFrame<TX>(frame)),
             color: PEER_CURSOR,
             opacity: 1,
-            dashLength: CURSOR_DASH * frame.size.devicePixelRatio,
+            pattern: dashed(CURSOR_DASH * frame.size.devicePixelRatio),
           }),
         };
 

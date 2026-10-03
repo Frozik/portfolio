@@ -12,8 +12,8 @@ export function gridOnWebGpu<TX>(slice: IGridSlice<TX>): IPaintContribution {
     band: PAINT_BAND.grid,
     painter: rectPainter({
       batchOf(frame) {
-        const { lines, dashLength, opacity } = slice.gridOf(ownFrame<TX>(frame));
-        return { rects: lines, color: frame.theme.grid, opacity, dashLength };
+        const { lines, pattern, opacity } = slice.gridOf(ownFrame<TX>(frame));
+        return { rects: lines, color: frame.theme.grid, opacity, pattern };
       },
     }),
   };

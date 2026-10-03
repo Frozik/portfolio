@@ -1,5 +1,5 @@
 import { isNil } from 'lodash-es';
-import { ACTIVE_FPS } from '../../core/frame/frame-demand';
+import { ACTIVE_FPS, ACTIVE_FRAME_MS } from '../../core/frame/frame-demand';
 
 import type { IChartExtension } from '../../core/kernel/extension';
 import type { IAxisDomain, IAxisRange } from '../../core/viewport/axis-domain';
@@ -10,7 +10,7 @@ const DEFAULT_SPEED = 0.18;
 const SNAP_SHARE = 0.005;
 
 export interface ISmoothZoomOptions {
-  /** The share of the remaining way covered each frame, 0…1. */
+  /** The share of the remaining way covered in one frame at the active rate, 0…1; a slower frame covers as much as the time it took. */
   readonly speed?: number;
 }
 
@@ -34,7 +34,8 @@ export function smoothZoom<TX>(
       const animate = <T>(
         axis: IAxisDomain<T>,
         current: IAxisRange<T>,
-        target: IAxisRange<T>
+        target: IAxisRange<T>,
+        elapsedMs: number
       ): IAxisRange<T> => {
         const startGap = axis.diff(target.start, current.start);
         const endGap = axis.diff(target.end, current.end);
@@ -43,9 +44,10 @@ export function smoothZoom<TX>(
           return target;
         }
         frames.raise(ACTIVE_FPS);
+        const share = 1 - (1 - speed) ** (elapsedMs / ACTIVE_FRAME_MS);
         return {
-          start: axis.add(current.start, startGap * speed),
-          end: axis.add(current.end, endGap * speed),
+          start: axis.add(current.start, startGap * share),
+          end: axis.add(current.end, endGap * share),
         };
       };
 

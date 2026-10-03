@@ -1,4 +1,5 @@
 import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
+import type { IAxisMapping } from '../viewport/axis-mapping';
 import type { ChartDataError } from './data-error';
 import type { TRun } from './point-run';
 import type { TShape } from './shape';
@@ -42,6 +43,8 @@ export interface IDataListener<TX> {
 
 export interface IDataContext<TX> {
   readonly domain: IAxisDomain<TX>;
+  /** The cuts of the axis; data is handed over and asked for in the world coordinate and kept in the virtual one. */
+  readonly mapping: IAxisMapping<TX> | undefined;
 }
 
 /** A description of data that a chart turns into one live instance, shared by every series naming it (§4.1). */

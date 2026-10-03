@@ -2,8 +2,8 @@ import { isNil } from 'lodash-es';
 
 import { columnsOf } from '../core/series/columns';
 import { ChartDataError } from '../core/series/data-error';
-import type { TRun } from '../core/series/point-run';
-import { rangeOfRun, runOf } from '../core/series/point-run';
+import type { TAggregateTime, TRun } from '../core/series/point-run';
+import { DEFAULT_AGGREGATE_TIME, rangeOfRun, runOf } from '../core/series/point-run';
 import type {
   IDataFailure,
   IDataNeed,
@@ -18,6 +18,8 @@ const STATIC_RUN_ID = 1;
 export interface IStaticDataOptions {
   /** Length of one element's interval in axis units, for data that is aggregated. */
   readonly step?: number;
+  /** What an aggregated element's position marks; the start of its interval by default. */
+  readonly aggregateTime?: TAggregateTime;
 }
 
 /** A set of points or candles that never changes: all of it is there from the start (§4.1). */
@@ -31,7 +33,12 @@ export function staticData<TX>(
       const run: TRun<TX> | undefined =
         columns.length === 0
           ? undefined
-          : runOf(columns, { id: STATIC_RUN_ID, revision: 0, step: options.step });
+          : runOf(columns, {
+              id: STATIC_RUN_ID,
+              revision: 0,
+              step: options.step,
+              aggregateTime: options.aggregateTime ?? DEFAULT_AGGREGATE_TIME,
+            });
       const runs = isNil(run) ? [] : [run];
       const failures = new Map<string, IDataFailure<TX>>();
 

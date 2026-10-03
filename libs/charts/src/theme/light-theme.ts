@@ -11,6 +11,7 @@ const CANDLE_STROKE_SHADE = 0.35;
 export const lightTheme: IChartTheme = {
   background: rgba(1, 1, 1),
   grid: rgba(GRID_SHADE, GRID_SHADE, GRID_SHADE),
+  cut: rgba(0xc0 / 0xff, 0x70 / 0xff, 0x10 / 0xff),
   axisLine: rgba(AXIS_SHADE, AXIS_SHADE, AXIS_SHADE),
   label: {
     text: rgba(LABEL_SHADE, LABEL_SHADE, LABEL_SHADE),

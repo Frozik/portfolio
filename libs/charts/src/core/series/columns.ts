@@ -44,6 +44,34 @@ function isObjects<TElement>(
   return Array.isArray(elements);
 }
 
+/**
+ * The positions of a column in the coordinate of the axis: a column only ever
+ * holds the type its batch was given in, so the view is read back the same way.
+ */
+export function positionsOf<TX>(column: TAxisColumn): ArrayLike<TX> {
+  return column as unknown as ArrayLike<TX>;
+}
+
+/** Columns as a batch again: what a source answers with after its columns were worked on. */
+export function batchOfColumns<TX>(columns: TColumns): TBatch<TX> {
+  return columns.shape === 'point'
+    ? { shape: 'point', points: { x: positionsOf<TX>(columns.x), value: columns.value } }
+    : {
+        shape: 'candle',
+        candles: {
+          x: positionsOf<TX>(columns.x),
+          open: columns.open,
+          min: columns.min,
+          max: columns.max,
+          close: columns.close,
+        },
+      };
+}
+
+export function axisColumnOf<TX>(positions: ArrayLike<TX>): TAxisColumn {
+  return axisColumn(positions);
+}
+
 function axisColumn<TX>(positions: ArrayLike<TX>): TAxisColumn {
   if (positions instanceof BigInt64Array || positions instanceof Float64Array) {
     return positions;

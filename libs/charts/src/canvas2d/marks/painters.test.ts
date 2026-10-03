@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createChart } from '../../core/create-chart';
 import { rgba } from '../../core/series/color';
+import type { TAggregateTime } from '../../core/series/point-run';
 import { series } from '../../core/series/series';
 import type { TBatch } from '../../core/series/shape';
 import type { IStyleProcessor } from '../../core/series/style-processor';
@@ -27,11 +28,18 @@ const TEXT = {
 };
 
 /** What the 2D canvas is asked to draw for one series on a 1000×500 chart showing X 0…100 and values 0…100. */
-function drawn(batch: TBatch<number>, style: IStyleProcessor<number>, step?: number): string[] {
+function drawn(
+  batch: TBatch<number>,
+  style: IStyleProcessor<number>,
+  step?: number,
+  aggregateTime?: TAggregateTime
+): string[] {
   const chart = createChart({
     x: { domain: numberDomain, start: 0, end: 100 },
     y: { min: 0, max: 100 },
-    series: [series({ id: 'series', data: staticData<number>(batch, { step }), style })],
+    series: [
+      series({ id: 'series', data: staticData<number>(batch, { step, aggregateTime }), style }),
+    ],
     extensions: [],
   });
   chart.attach(createFakeHost({ width: 1000, height: 500, devicePixelRatio: 1 }));
@@ -187,6 +195,31 @@ describe('the candle mark on the 2D canvas', () => {
     expect(calls).toContain('fillRect(2, 200, 16, 100)');
   });
 
+  it('draws a candle stamped by its end to the left of its position', () => {
+    const calls = drawn(
+      { shape: 'candle', candles: [{ x: 50, open: 40, min: 10, max: 90, close: 60 }] },
+      candleStyle<number>({ width: 10, gap: 0, stroke: { size: 0 } }),
+      20,
+      'end'
+    );
+
+    expect(calls).toContain('fillRect(395, 200, 10, 100)');
+  });
+
+  it('narrows a candle to the room its neighbour leaves when they stand closer than the step', () => {
+    const calls = drawn(
+      {
+        shape: 'candle',
+        candles: [50, 55].map(x => ({ x, open: 40, min: 10, max: 90, close: 60 })),
+      },
+      candleStyle<number>({ width: 100, gap: 0, stroke: { size: 0 } }),
+      20
+    );
+
+    expect(calls).toContain('fillRect(500, 200, 50, 100)');
+    expect(calls).toContain('fillRect(600, 200, 100, 100)');
+  });
+
   it('draws no wick on the side where the body reaches the extreme', () => {
     const calls = drawn(
       { shape: 'candle', candles: [{ x: 0, open: 10, min: 10, max: 90, close: 60 }] },
@@ -242,6 +275,17 @@ describe('the column mark on the 2D canvas', () => {
     const calls = drawn(points(100), columnStyle<number>({ width: 50, gap: 4 }), 2);
 
     expect(calls).toContain('fillRect(2, 0, 16, 490)');
+  });
+
+  it('stands a column stamped by its end to the left of its position', () => {
+    const calls = drawn(
+      { shape: 'point', points: [{ x: 50, value: 100 }] },
+      columnStyle<number>({ width: 10, gap: 0 }),
+      20,
+      'end'
+    );
+
+    expect(calls).toContain('fillRect(395, 0, 10, 490)');
   });
 
   it('puts no column on a gap', () => {

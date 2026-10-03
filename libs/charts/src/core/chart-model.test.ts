@@ -243,3 +243,52 @@ describe('the series of a chart', () => {
     expect(() => chart.prepareFrame(0)).toThrow(/cannot be drawn from point data/);
   });
 });
+
+describe('a chart over an axis with cuts', () => {
+  const CUTS = [{ from: 40, to: 60 }];
+
+  function cutChart(cuts = CUTS) {
+    const chart = createChart({
+      x: { domain: numberDomain, cuts, start: 0, end: 100 },
+      series: [
+        series({
+          id: 'line',
+          data: staticData<number>({
+            shape: 'point',
+            points: [0, 20, 80, 100].map(x => ({ x, value: x })),
+          }),
+          style: createLineStyle<number>(LINE_MARK),
+        }),
+      ],
+      extensions: [],
+    });
+    chart.attach(createFakeHost({ width: 1000, height: 500, devicePixelRatio: 1 }));
+    return chart;
+  }
+
+  it('shows the world range asked for, counted without the cut', () => {
+    const chart = cutChart();
+
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 80 });
+    expect(chart.prepareFrame(0)?.mapping?.toWorld(50)).toBe(70);
+  });
+
+  it('keeps the same world range in view when the cuts change', () => {
+    const chart = cutChart();
+    chart.viewport.x.jump({ start: 10, end: 70 });
+
+    chart.setCuts([{ from: 20, to: 30 }]);
+
+    expect(chart.viewport.x.current).toEqual({ start: 10, end: 80 });
+    expect(chart.prepareFrame(0)?.mapping?.id).toContain('[["20","30"]]');
+  });
+
+  it('shows the axis whole again when the cuts are taken away', () => {
+    const chart = cutChart();
+
+    chart.setCuts(undefined);
+
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
+    expect(chart.prepareFrame(0)?.mapping).toBeUndefined();
+  });
+});

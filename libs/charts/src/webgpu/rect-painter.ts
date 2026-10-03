@@ -2,6 +2,7 @@ import { isNil } from 'lodash-es';
 
 import type { IChartFrame } from '../core/frame/chart-frame';
 import type { IPixelRect } from '../core/frame/pixel-rect';
+import type { TRectPattern } from '../core/frame/rect-pattern';
 import type { TColor } from '../core/series/color';
 import { channelsOf } from '../core/series/color';
 import { PREMULTIPLIED_BLEND } from './blend';
@@ -10,8 +11,11 @@ import rectsSource from './shaders/rects.wgsl?raw';
 
 const SHARED_KEY = 'rects';
 const FLOATS_PER_RECT = 4;
-const UNIFORM_FLOATS = 8;
+const UNIFORM_FLOATS = 12;
 const COLOR_OFFSET = 4;
+const PATTERN_OFFSET = 8;
+/** What the shader reads as the pattern: nought solid, one dashed, two a zigzag. */
+const PATTERN_CODE: Record<TRectPattern['kind'], number> = { solid: 0, dashed: 1, zigzag: 2 };
 const VERTICES_PER_RECT = 6;
 const INITIAL_CAPACITY = 64;
 
@@ -19,8 +23,7 @@ export interface IRectBatch {
   readonly rects: readonly IPixelRect[];
   readonly color: TColor;
   readonly opacity: number;
-  /** Length of a dash and of the gap after it along the longer side, device pixels; nought draws solid. */
-  readonly dashLength: number;
+  readonly pattern: TRectPattern;
 }
 
 export interface IRectSource {
@@ -104,8 +107,21 @@ class RectPainter implements IWebGpuPainter {
 
     const { red, green, blue, alpha } = channelsOf(batch.color);
     const coverage = alpha * batch.opacity;
-    this.uniforms.set([frame.size.width, frame.size.height, batch.dashLength]);
+    const { pattern } = batch;
+    this.uniforms.set([frame.size.width, frame.size.height]);
     this.uniforms.set([red * coverage, green * coverage, blue * coverage, coverage], COLOR_OFFSET);
+    this.uniforms.set(
+      [
+        PATTERN_CODE[pattern.kind],
+        pattern.kind === 'dashed'
+          ? pattern.dashLength
+          : pattern.kind === 'zigzag'
+            ? pattern.period
+            : 0,
+        pattern.kind === 'zigzag' ? pattern.thickness : 0,
+      ],
+      PATTERN_OFFSET
+    );
     device.queue.writeBuffer(this.uniformBuffer, 0, this.uniforms);
   }
 

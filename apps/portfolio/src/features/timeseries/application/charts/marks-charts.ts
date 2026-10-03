@@ -3,7 +3,6 @@ import { rgba, withAlpha } from '@frozik/charts/core/series/color';
 import type { ISeries } from '@frozik/charts/core/series/series';
 import { series } from '@frozik/charts/core/series/series';
 import { staticData } from '@frozik/charts/data/static-data';
-import { timeDomain } from '@frozik/charts/data/timeseries/time-domain';
 import type { TFigure } from '@frozik/charts/marks/marker/figures';
 import { POLYGON_FIGURES } from '@frozik/charts/marks/marker/figures';
 import { areaStyle } from '@frozik/charts/universal/marks/areaStyle';
@@ -15,6 +14,7 @@ import { stairsStyle } from '@frozik/charts/universal/marks/stairsStyle';
 
 import { HOUR, MINUTE, YEAR_START } from '../../domain/demo-time';
 import { AREA_BLUE, BLUE, GREEN, LIGHT_BLUE, ORANGE, RED, WHITE } from '../palette';
+import { localTimeDomain } from './local-time-domain';
 import { timeExtensions } from './time-extensions';
 
 const COUNT = 60;
@@ -185,7 +185,7 @@ export const MARKS_CHART_COUNT = SCENES.length;
 export function createMarksChart(index: number) {
   return createChart({
     id: `marks-${index}`,
-    x: { domain: timeDomain, start: YEAR_START, end: END },
+    x: { domain: localTimeDomain(), start: YEAR_START, end: END },
     series: SCENES[index].series,
     extensions: timeExtensions({ minRange: HOUR, valuePadding: SCENES[index].valuePadding }),
   });

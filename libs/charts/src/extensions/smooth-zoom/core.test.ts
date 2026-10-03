@@ -9,10 +9,23 @@ describe('smooth zoom', () => {
     chart.prepareFrame(0);
 
     chart.viewport.x.setTarget({ start: 40, end: 60 });
-    chart.prepareFrame(16);
+    chart.prepareFrame(1000 / 60);
 
-    expect(chart.viewport.x.current).toEqual({ start: 20, end: 80 });
+    expect(chart.viewport.x.current.start).toBeCloseTo(20);
+    expect(chart.viewport.x.current.end).toBeCloseTo(80);
     expect(chart.viewport.x.target).toEqual({ start: 40, end: 60 });
+  });
+
+  it('covers in one slow frame what two frames of the active rate would', () => {
+    const framesOf = (times: readonly number[]): number => {
+      const { chart } = mountLineChart([smoothZoom({ speed: 0.5 })]);
+      chart.prepareFrame(0);
+      chart.viewport.x.setTarget({ start: 40, end: 60 });
+      times.forEach(now => chart.prepareFrame(now));
+      return chart.viewport.x.current.start;
+    };
+
+    expect(framesOf([2000 / 60])).toBeCloseTo(framesOf([1000 / 60, 2000 / 60]));
   });
 
   it('lands exactly on the target and stops asking for frames', () => {

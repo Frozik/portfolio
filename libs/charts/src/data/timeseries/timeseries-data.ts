@@ -1,6 +1,6 @@
 import { isNil } from 'lodash-es';
 
-import type { TRun } from '../../core/series/point-run';
+import type { TAggregateTime, TRun } from '../../core/series/point-run';
 import type {
   IDataFailure,
   IDataListener,
@@ -8,6 +8,7 @@ import type {
   ISeriesData,
 } from '../../core/series/series-data';
 import type { IAxisRange } from '../../core/viewport/axis-domain';
+import type { BreakMarking } from '../cuts/break-marking';
 import { chooseScale } from '../scale-choice';
 import type { IPersistentCache } from './cache/persistent-cache';
 import { Channel } from './channel';
@@ -32,6 +33,9 @@ export interface ITimeseriesSettings {
   readonly maxElements: number;
   readonly now: () => number;
   readonly persistent: { readonly cache: IPersistentCache; readonly key: string } | undefined;
+  readonly aggregateTime: TAggregateTime;
+  /** The cuts of the axis, for the break markers in the runs; none, and runs go out as they are. */
+  readonly breaks: BreakMarking<bigint>;
 }
 
 interface IActiveChannel {
@@ -141,7 +145,7 @@ export class TimeseriesData implements ISeriesData<bigint> {
   }
 
   runs(need: IDataNeed<bigint>): readonly TRun<bigint>[] {
-    return this.channelFor(need)?.runsIn(intervalOf(need.range)) ?? [];
+    return this.settings.breaks.of(this.channelFor(need)?.runsIn(intervalOf(need.range)) ?? []);
   }
 
   retry(range: IAxisRange<bigint>): void {
@@ -168,7 +172,7 @@ export class TimeseriesData implements ISeriesData<bigint> {
     if (need.widthPx <= 0 || span <= 0) {
       return undefined;
     }
-    const { scales, source, maxConcurrent, retry, now, persistent } = this.settings;
+    const { scales, source, maxConcurrent, retry, now, persistent, aggregateTime } = this.settings;
     const scale = scales[chooseScale(this.steps, span / need.widthPx, need.pixelsPerElement)];
     const key = `${need.shape}:${scale}`;
     let channel = this.channels.get(key);
@@ -185,6 +189,7 @@ export class TimeseriesData implements ISeriesData<bigint> {
         retry,
         now,
         persistent,
+        aggregateTime,
         onChanged: range => this.listeners.forEach(listener => listener.changed(range)),
         onFailed: ({ interval, error }) =>
           this.listeners.forEach(listener => listener.failed({ range: interval, error })),

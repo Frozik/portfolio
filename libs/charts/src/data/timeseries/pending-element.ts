@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 
 import type { TColumns } from '../../core/series/columns';
 import { columnsOf } from '../../core/series/columns';
-import type { TRun } from '../../core/series/point-run';
+import type { TAggregateTime, TRun } from '../../core/series/point-run';
 import { runOf } from '../../core/series/point-run';
 import type { ICandle, IPoint, TShape } from '../../core/series/shape';
 
@@ -17,6 +17,7 @@ export interface IPendingElementOptions {
   readonly shape: TShape;
   /** Length of the element's interval, nanoseconds. */
   readonly step: number;
+  readonly aggregateTime: TAggregateTime;
   /** The id of the run the element is shown as; the same for as long as the channel lives. */
   readonly runId: number;
 }
@@ -38,7 +39,7 @@ export class PendingElement {
 
   /** Replaces the element, or takes it away; says whether anything changed. An element of the wrong shape counts as none. */
   set(element: IPoint | ICandle | undefined): boolean {
-    const { shape, step, runId } = this.options;
+    const { shape, step, aggregateTime, runId } = this.options;
     const columns = isNil(element) ? undefined : elementColumns(shape, element);
     if (isNil(columns) && isNil(this.shown)) {
       return false;
@@ -46,7 +47,7 @@ export class PendingElement {
     this.revision += 1;
     this.shown = isNil(columns)
       ? undefined
-      : runOf<bigint>(columns, { id: runId, revision: this.revision, step });
+      : runOf<bigint>(columns, { id: runId, revision: this.revision, step, aggregateTime });
     return true;
   }
 }

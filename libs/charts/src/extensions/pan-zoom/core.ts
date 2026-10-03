@@ -8,8 +8,8 @@ import { spanOf } from '../../core/viewport/axis-domain';
 
 const WHEEL_ZOOM_IN = 0.7;
 const WHEEL_ZOOM_OUT = 1.3;
-/** Share of the velocity kept each frame while a released pan coasts. */
-const INERTIA_DAMPING = 0.95;
+/** A released pan loses half its speed every this many milliseconds, whatever the frame rate. */
+const INERTIA_HALF_LIFE_MS = 225;
 /** A pointer that rested this long before lifting was stopped, not flicked. */
 const FLICK_MAX_REST_MS = 80;
 /** Pixels per millisecond below which coasting stops. */
@@ -186,9 +186,11 @@ export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
             velocity = 0;
             return;
           }
-          const moved = pan(velocity * Math.max(0, now - coastedAt));
+          // The way covered while the speed decays over the frame: the integral of the exponential.
+          const kept = 0.5 ** (Math.max(0, now - coastedAt) / INERTIA_HALF_LIFE_MS);
+          const moved = pan((velocity * INERTIA_HALF_LIFE_MS * (1 - kept)) / Math.LN2);
           coastedAt = now;
-          velocity = moved ? velocity * INERTIA_DAMPING : 0;
+          velocity = moved ? velocity * kept : 0;
           frames.raise(ACTIVE_FPS);
         },
         mount(host): VoidFunction {

@@ -1,9 +1,11 @@
+import { NANOS_PER_SECOND } from '@frozik/utils/date/constants';
+
 import type { TRun } from '../core/series/point-run';
 import type { TShape } from '../core/series/shape';
 import type { IPaint, IStyle } from '../core/series/style-processor';
 import { CHANNELS_PER_TEXEL, SLOT_TEXELS } from './slot-layout';
 
-const NANOS_PER_SECOND = 1_000_000_000n;
+const NANOS_PER_SECOND_BIG = BigInt(NANOS_PER_SECOND);
 
 /** A point takes two texels, a candle four; the last texel of both is the paint (§6.4). */
 export const TEXELS_PER_ELEMENT: Readonly<Record<TShape, number>> = { point: 2, candle: 4 };
@@ -41,8 +43,9 @@ function writeSplit(texels: Uint32Array, offset: number, value: number): void {
  * the moments are less than 2³¹ seconds — 68 years — apart (`MAX_TIME_SPAN`).
  */
 function writeTime(texels: Uint32Array, offset: number, nanoseconds: bigint): void {
-  const withinSecond = ((nanoseconds % NANOS_PER_SECOND) + NANOS_PER_SECOND) % NANOS_PER_SECOND;
-  const seconds = (nanoseconds - withinSecond) / NANOS_PER_SECOND;
+  const withinSecond =
+    ((nanoseconds % NANOS_PER_SECOND_BIG) + NANOS_PER_SECOND_BIG) % NANOS_PER_SECOND_BIG;
+  const seconds = (nanoseconds - withinSecond) / NANOS_PER_SECOND_BIG;
   texels[offset] = Number(BigInt.asUintN(SECONDS_BITS, seconds));
   texels[offset + 1] = Number(withinSecond);
 }

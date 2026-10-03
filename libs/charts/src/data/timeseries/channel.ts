@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import type { TColumns } from '../../core/series/columns';
 import { columnsOf } from '../../core/series/columns';
 import { ChartDataError, isAbsent, isTransient, toDataError } from '../../core/series/data-error';
-import type { TRun } from '../../core/series/point-run';
+import type { TAggregateTime, TRun } from '../../core/series/point-run';
 import type { ICandle, IPoint, TBatch, TShape } from '../../core/series/shape';
 import { PersistedSegments } from './cache/persisted-segments';
 import type { IPersistentCache } from './cache/persistent-cache';
@@ -45,6 +45,7 @@ export interface IChannelOptions {
   readonly now: () => number;
   /** Where what is read is kept between sessions, and the name it is kept under; none, and nothing is kept. */
   readonly persistent: { readonly cache: IPersistentCache; readonly key: string } | undefined;
+  readonly aggregateTime: TAggregateTime;
   onChanged(interval: IInterval): void;
   onFailed(failure: IChannelFailure): void;
 }
@@ -72,12 +73,14 @@ export class Channel {
     this.store = new SegmentStore({
       shape: options.shape,
       step: Number(options.scale),
+      aggregateTime: options.aggregateTime,
       nextId: options.nextId,
     });
     this.failures = new FailureLog(options.retry, options.now);
     this.pending = new PendingElement({
       shape: options.shape,
       step: Number(options.scale),
+      aggregateTime: options.aggregateTime,
       runId: options.nextId(),
     });
     const { persistent } = options;

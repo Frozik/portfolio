@@ -1,5 +1,5 @@
 import type { IAxisTick, ITickGenerator } from '../../core/frame/ticks';
-import { thinTicks } from './thin-ticks';
+import { laidOut } from './laid-out';
 
 /** Base nice multipliers — scaled by powers of 10 to cover any range. */
 const NICE_BASES = [1, 2, 5] as const;
@@ -41,14 +41,15 @@ export function linearTicks(options: ILinearTicksOptions = {}): ITickGenerator<n
   const minGapPx = (options.labelSizePx ?? DEFAULT_LABEL_SIZE_PX) + MIN_LABEL_GAP_PX;
 
   return {
-    ticks({ start, end }, lengthPx): readonly IAxisTick<number>[] {
+    ticks(axis): readonly IAxisTick<number>[] {
+      const { start, end } = axis.range;
       const range = end - start;
       if (range <= 0) {
         return [{ position: start, label: start.toFixed(DEGENERATE_RANGE_DECIMALS) }];
       }
       const step = stepOf(range);
       const decimals = decimalsOf(step);
-      const ticks: IAxisTick<number>[] = [];
+      const candidates: number[] = [];
       for (
         let value = Math.ceil(start / step - STEP_TOLERANCE) * step;
         value <= end + step * STEP_TOLERANCE;
@@ -56,13 +57,15 @@ export function linearTicks(options: ILinearTicksOptions = {}): ITickGenerator<n
       ) {
         // A range that ends a hair short of a round value, by rounding, still has its tick there — at its own end.
         if (value >= start - step * STEP_TOLERANCE && value <= end + step * STEP_TOLERANCE) {
-          const position = Math.min(Math.max(value, start), end) + 0;
-          ticks.push({ position, label: value.toFixed(decimals) });
+          candidates.push(Math.min(Math.max(value, start), end) + 0);
         }
       }
-      return thinTicks(ticks, position => ((position - start) / range) * lengthPx, minGapPx);
+      return laidOut(candidates, axis, minGapPx, (_, shown) => ({
+        label: shown.toFixed(decimals),
+        rank: 0,
+      }));
     },
-    format(position, { start, end }): string {
+    format(position, { range: { start, end } }): string {
       const range = end - start;
       return position.toFixed(range > 0 ? decimalsOf(stepOf(range)) : DEGENERATE_RANGE_DECIMALS);
     },

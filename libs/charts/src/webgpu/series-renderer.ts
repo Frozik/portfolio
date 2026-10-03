@@ -1,4 +1,5 @@
 import { assert } from '@frozik/utils/assert/assert';
+import { NANOS_PER_SECOND } from '@frozik/utils/date/constants';
 import { isNil } from 'lodash-es';
 import type { StructuredView } from 'webgpu-utils';
 import { makeStructuredView } from 'webgpu-utils';
@@ -7,6 +8,7 @@ import type { IChartFrame } from '../core/frame/chart-frame';
 import { scaleOf } from '../core/frame/chart-frame';
 import type { IPlotRect } from '../core/frame/plot-rect';
 import type { IScaleFrame } from '../core/scale/scale';
+import type { TRun } from '../core/series/point-run';
 import { lowerBound, upperBound } from '../core/series/search';
 import type { IMarkUse, IStyledRun } from '../core/series/style-processor';
 import { ChunkStore } from './chunk-store';
@@ -22,7 +24,6 @@ import { elementsPerSlot, splitPosition } from './texel-encoding';
 import type { IInstanceRange } from './visible-slice';
 import { visibleSliceOf } from './visible-slice';
 
-const NANOS_PER_SECOND = 1e9;
 const SHAPE_CODE = { point: 0, candle: 1 } as const;
 
 interface IPlannedDraw {
@@ -37,6 +38,12 @@ export interface ISeriesRendererOptions {
   readonly device: GPUDevice;
   readonly pipeline: SeriesPipeline;
   readonly maxTextureRows: number | undefined;
+}
+
+/** The step of a run with the side it lies on: forward from the position, or backward when the run stamps the end. */
+function signedStepOf(run: TRun<unknown>): number {
+  const step = run.step ?? 0;
+  return run.aggregateTime === 'start' ? step : -step;
 }
 
 /** Draws the series of one chart: keeps their chunks in its data texture and a layer per mark in use (§6.5). */
@@ -146,7 +153,7 @@ export class SeriesRenderer {
             shape: SHAPE_CODE[run.shape],
             outline: spec.outline ? 1 : 0,
             params: spec.params,
-            stepOverSpan: (run.step ?? 0) / frame.xSpan,
+            stepOverSpan: signedStepOf(run) / frame.xSpan,
             ...scaleUniformsOf(frame, scale),
           },
           chunks

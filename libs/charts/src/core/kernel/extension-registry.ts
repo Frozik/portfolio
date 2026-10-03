@@ -61,8 +61,13 @@ export class ExtensionRegistry<TX> {
   }
 
   /** Where the drawn range of an axis goes this frame: towards the target, or straight to it when nothing animates. */
-  animate<T>(domain: IAxisDomain<T>, current: IAxisRange<T>, target: IAxisRange<T>): IAxisRange<T> {
-    return this.animator?.animate?.(domain, current, target) ?? target;
+  animate<T>(
+    domain: IAxisDomain<T>,
+    current: IAxisRange<T>,
+    target: IAxisRange<T>,
+    elapsedMs: number
+  ): IAxisRange<T> {
+    return this.animator?.animate?.(domain, current, target, elapsedMs) ?? target;
   }
 
   fitY(visible: IVisibleData<TX>): IAxisRange<number> | undefined {

@@ -7,9 +7,9 @@ fn columnVertex(vertex: u32, instance: u32) -> VertexOutput {
     }
 
     let onePixel = frame.devicePixelRatio;
-    let centerX = (column.x + layer.stepOverSpan * 0.5) * frame.canvas.x;
+    let centerX = (column.spanLeft + column.spanWidth * 0.5) * frame.canvas.x;
     // When no coarser scale is left the columns narrow to what their interval leaves them (§4.3).
-    let width = max(min(column.fillSize, layer.params.x), onePixel);
+    let width = max(min(column.fillSize, widestBar(column)), onePixel);
     let top = column.close * frame.canvas.y;
     let base = layer.params.y * frame.canvas.y;
 

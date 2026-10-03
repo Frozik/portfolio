@@ -5,7 +5,7 @@ import { isNil } from 'lodash-es';
 import type { IChartOptions, TAnyExtension } from './chart-options';
 import type { IChartFrame, ISeriesFrame } from './frame/chart-frame';
 import { darkTheme } from './frame/dark-theme';
-import { ACTIVE_FPS, FrameDemand } from './frame/frame-demand';
+import { ACTIVE_FPS, ACTIVE_FRAME_MS, FrameDemand } from './frame/frame-demand';
 import type { IChartTheme } from './frame/theme';
 import { addInsets } from './frame/theme';
 import type { IChartHost } from './host/chart-host';
@@ -21,6 +21,8 @@ import type { IDataFailure } from './series/series-data';
 import type { IPaintContribution } from './stage/backend';
 import type { IAxisDomain, IAxisRange } from './viewport/axis-domain';
 import { spanOf, withinMaxSpan } from './viewport/axis-domain';
+import type { IAxisMapping, TCuts } from './viewport/axis-mapping';
+import { mappingOf, toVirtualRange, toWorldRange } from './viewport/axis-mapping';
 import { AxisViewport } from './viewport/axis-viewport';
 import type { IChartViewport } from './viewport/chart-viewport';
 import { plotRectOf } from './viewport/plot-geometry';
@@ -48,15 +50,18 @@ export class ChartModel<TX> implements IChartKernel<TX> {
   private measured: IChartSize | undefined;
   private built: IChartFrame<TX> | undefined;
   private builtKey = '';
+  private frameAt: number | undefined;
   private dataChanges = 0;
 
   constructor(options: IChartOptions<TX, readonly TAnyExtension<TX>[]>) {
     this.id = options.id;
     this.domain = options.x.domain;
     this.currentTheme = options.theme ?? darkTheme;
+    const mapping = this.mappingOf(options.x.cuts);
     const x = new AxisViewport({
       domain: this.domain,
-      initial: { start: options.x.start, end: options.x.end },
+      mapping,
+      initial: this.virtualRangeOf(mapping, { start: options.x.start, end: options.x.end }),
       constrain: range => withinMaxSpan(this.domain, this.registry.constrainX(range)),
       onChange: () => this.axisChanged(undefined),
     });
@@ -80,6 +85,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     this.series = new SeriesModel(
       options.series,
       this.domain,
+      mapping,
       {
         dataChanged: (seriesIds, range) => {
           this.touchData();
@@ -148,6 +154,30 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     this.touchData();
   }
 
+  /**
+   * Other stretches taken out of the axis: the same world range stays in
+   * view, the data starts over under the new cuts (sessions §4.1).
+   */
+  setCuts(cuts: TCuts<TX> | undefined): void {
+    const { x } = this.viewport;
+    const shown = isNil(x.mapping) ? x.current : toWorldRange(x.mapping, x.current);
+    const mapping = this.mappingOf(cuts);
+    x.remap(mapping, this.virtualRangeOf(mapping, shown));
+    this.series.remap(mapping);
+    this.touchData();
+  }
+
+  private mappingOf(cuts: TCuts<TX> | undefined): IAxisMapping<TX> | undefined {
+    return isNil(cuts) ? undefined : mappingOf(this.domain, cuts);
+  }
+
+  private virtualRangeOf(
+    mapping: IAxisMapping<TX> | undefined,
+    world: IAxisRange<TX>
+  ): IAxisRange<TX> {
+    return isNil(mapping) ? world : toVirtualRange(mapping, world);
+  }
+
   /** The chart is on a stage: extensions get the host, the data starts asking and listening (§3.9). */
   attach(host: IChartHost): void {
     this.host = host;
@@ -182,7 +212,9 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       return undefined;
     }
     this.registry.tick(now);
-    this.animateAxis(this.viewport.x);
+    const elapsedMs = isNil(this.frameAt) ? ACTIVE_FRAME_MS : Math.max(0, now - this.frameAt);
+    this.frameAt = now;
+    this.animateAxis(this.viewport.x, elapsedMs);
 
     const visible = {
       range: this.viewport.x.current,
@@ -202,7 +234,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       if (!scale.isHeld) {
         this.fitScale(scaleId, scale, series);
       }
-      this.animateAxis(scale);
+      this.animateAxis(scale, elapsedMs);
     }
     return this.frameOf(size, series, loading, failed);
   }
@@ -230,8 +262,8 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     }
   }
 
-  private animateAxis<T>(axis: AxisViewport<T>): void {
-    axis.setCurrent(this.registry.animate(axis.domain, axis.current, axis.target));
+  private animateAxis<T>(axis: AxisViewport<T>, elapsedMs: number): void {
+    axis.setCurrent(this.registry.animate(axis.domain, axis.current, axis.target, elapsedMs));
   }
 
   private axisChanged(scaleId: string | undefined): void {
@@ -296,6 +328,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       domain: this.domain,
       x,
       xSpan: spanOf(this.domain, x),
+      mapping: this.viewport.x.mapping,
       size,
       plot,
       panes: this.scales.layout(size, plot, scaleId =>

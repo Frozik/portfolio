@@ -1,4 +1,5 @@
 import type { ICandle, IPoint, TBatch, TShape } from '../../core/series/shape';
+import type { ICut } from '../../core/viewport/cut';
 import type { TTimeScale } from './time-scale';
 
 export type TFetchDirection = 'forward' | 'backward';
@@ -20,6 +21,12 @@ export interface IFetchRequest {
    * time is never split between two answers (§4.4).
    */
   readonly softLimit: number;
+  /**
+   * Stretches inside the bounds the chart will throw away — closed sessions.
+   * A source that knows them leaves them out; one that does not ignores the
+   * field and nothing is lost (sessions §5.2).
+   */
+  readonly skip?: readonly ICut<bigint>[];
   readonly signal: AbortSignal;
 }
 

@@ -2,7 +2,7 @@ import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 
 import type { TColumns } from '../../core/series/columns';
-import type { TRun } from '../../core/series/point-run';
+import type { TAggregateTime, TRun } from '../../core/series/point-run';
 import { runOf } from '../../core/series/point-run';
 import type { TShape } from '../../core/series/shape';
 import { ColumnBuffer, sliceColumns } from './column-buffer';
@@ -23,6 +23,7 @@ export interface ISegmentStoreOptions {
   readonly shape: TShape;
   /** Length of one element's interval, nanoseconds. */
   readonly step: number;
+  readonly aggregateTime: TAggregateTime;
   /** Run ids, unique among everything one series may ever be handed. */
   readonly nextId: () => number;
 }
@@ -164,6 +165,7 @@ export class SegmentStore {
             id: segment.id,
             revision: segment.revision,
             step: this.options.step,
+            aggregateTime: this.options.aggregateTime,
           });
         }
         runs.push(segment.run);

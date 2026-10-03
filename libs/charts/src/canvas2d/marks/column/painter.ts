@@ -1,9 +1,8 @@
 import { floorPixelOf, valueToPixel } from '../../../core/scale/scale-mapping';
 import { cssOf } from '../../../core/series/color';
-import { xToPixel } from '../../../core/viewport/plot-mapping';
 import { columnOptionsOf } from '../../../marks/column/core';
 import type { ICanvasMarkPainter } from '../../painter';
-import { paintAt, stepPixelsOf, visibleElements } from '../path-points';
+import { elementSpanOf, paintAt, stepPixelsOf, visibleElements } from '../path-points';
 
 /**
  * The column mark on the 2D canvas: a rectangle from the baseline to the
@@ -15,8 +14,7 @@ export const columnCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {
     const { baseline, gap } = columnOptionsOf(use.options);
     const dpr = frame.size.devicePixelRatio;
-    const stepPixels = stepPixelsOf(frame, run);
-    const widest = stepPixels > 0 ? stepPixels - gap * dpr : Number.POSITIVE_INFINITY;
+    const isAggregated = stepPixelsOf(frame, run) > 0;
     const base = baseline === 'bottom' ? floorPixelOf(scale) : valueToPixel(scale, baseline);
     const values = run.shape === 'candle' ? run.close : run.value;
     const { from, to } = visibleElements(frame, run);
@@ -26,8 +24,10 @@ export const columnCanvasPainter: ICanvasMarkPainter = {
       if (Number.isNaN(value)) {
         continue;
       }
+      const span = elementSpanOf(frame, run, element);
+      const widest = isAggregated ? span.width - gap * dpr : Number.POSITIVE_INFINITY;
       const width = Math.max(dpr, Math.min(paintAt(style.fill.size, element) * dpr, widest));
-      const left = xToPixel(frame, run.x[element]) + stepPixels / 2 - width / 2;
+      const left = span.left + span.width / 2 - width / 2;
       const top = valueToPixel(scale, value);
       const height = Math.max(Math.abs(base - top), dpr);
       const upper = (top + base) / 2 - height / 2;

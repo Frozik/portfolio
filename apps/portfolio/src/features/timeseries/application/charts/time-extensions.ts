@@ -16,20 +16,14 @@ import { MINUTE } from '../../domain/demo-time';
 export interface ITimeExtensionsOptions {
   /** The shortest stretch of time a chart zooms in to. */
   readonly minRange?: bigint;
-  /** The zone the labels of the time axis are written in; UTC by default. */
-  readonly timeZone?: string;
   /** Room left above and below the data, as a share of its height; the default of the autoscale when not given. */
   readonly valuePadding?: number;
 }
 
 /** What every chart over time in the demo is made of: axes, grid, crosshair, gestures, autoscale. */
-export function timeExtensions({
-  minRange = MINUTE,
-  timeZone,
-  valuePadding,
-}: ITimeExtensionsOptions = {}) {
+export function timeExtensions({ minRange = MINUTE, valuePadding }: ITimeExtensionsOptions = {}) {
   return [
-    ticks({ x: timeTicks({ timeZone }) }),
+    ticks({ x: timeTicks() }),
     grid<bigint>(),
     axes<bigint>(),
     crosshair<bigint>(),

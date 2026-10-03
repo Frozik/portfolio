@@ -60,7 +60,7 @@ function windowedSource() {
 }
 
 function opened(source: ISnapshotSource<number>, scales?: readonly number[]): ISeriesData<number> {
-  const data = snapshot(source, { scales }).create({ domain: numberDomain });
+  const data = snapshot(source, { scales }).create({ domain: numberDomain, mapping: undefined });
   data.activate();
   return data;
 }

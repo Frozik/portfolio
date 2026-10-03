@@ -1,9 +1,8 @@
 import { valueToPixel } from '../../../core/scale/scale-mapping';
 import { cssOf } from '../../../core/series/color';
-import { xToPixel } from '../../../core/viewport/plot-mapping';
 import { candleOptionsOf } from '../../../marks/candle/core';
 import type { ICanvasMarkPainter } from '../../painter';
-import { paintAt, stepPixelsOf, visibleElements } from '../path-points';
+import { elementSpanOf, paintAt, visibleElements } from '../path-points';
 
 /**
  * The candle mark on the 2D canvas: a body from open to close in the middle of
@@ -18,7 +17,6 @@ export const candleCanvasPainter: ICanvasMarkPainter = {
     }
     const { gap } = candleOptionsOf(use.options);
     const dpr = frame.size.devicePixelRatio;
-    const stepPixels = stepPixelsOf(frame, run);
     const { from, to } = visibleElements(frame, run);
 
     for (let element = from; element < to; element += 1) {
@@ -26,12 +24,13 @@ export const candleCanvasPainter: ICanvasMarkPainter = {
       if (Number.isNaN(open)) {
         continue;
       }
-      const centerX = xToPixel(frame, run.x[element]) + stepPixels / 2;
+      const span = elementSpanOf(frame, run, element);
+      const centerX = span.left + span.width / 2;
       const strokeSize = paintAt(style.stroke.size, element) * dpr;
       const strokeColor = cssOf(paintAt(style.stroke.color, element));
       const bodyWidth = Math.max(
         dpr,
-        Math.min(paintAt(style.fill.size, element) * dpr, stepPixels - gap * dpr)
+        Math.min(paintAt(style.fill.size, element) * dpr, span.width - gap * dpr)
       );
       const wickWidth = Math.max(strokeSize, dpr);
       const openY = valueToPixel(scale, open);

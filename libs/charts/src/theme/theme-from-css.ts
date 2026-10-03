@@ -55,6 +55,7 @@ export function themeFromCss(element: Element, base: IChartTheme): IChartTheme {
   return {
     background: color('background', base.background),
     grid: color('grid', base.grid),
+    cut: color('cut', base.cut),
     axisLine: color('axis-line', base.axisLine),
     label: {
       text: color('label-text', base.label.text),

@@ -1,5 +1,5 @@
 import type { IAxisTick, ITickGenerator } from '../../core/frame/ticks';
-import { thinTicks } from './thin-ticks';
+import { laidOut } from './laid-out';
 
 const DECIMAL = 10;
 /** Within a decade the ticks stand at these multiples of its start; fewer of them when decades are crowded. */
@@ -20,7 +20,8 @@ export function logTicks(): ITickGenerator<number> {
   const minGapPx = DEFAULT_LABEL_SIZE_PX + MIN_LABEL_GAP_PX;
 
   return {
-    ticks({ start, end }, lengthPx): readonly IAxisTick<number>[] {
+    ticks(axis): readonly IAxisTick<number>[] {
+      const { start, end } = axis.range;
       if (!(start > 0) || !(end > start)) {
         return [];
       }
@@ -28,17 +29,16 @@ export function logTicks(): ITickGenerator<number> {
       const lastDecade = Math.ceil(Math.log10(end));
       const multipliers =
         lastDecade - firstDecade <= DENSE_UP_TO_DECADES ? DENSE_MULTIPLIERS : SPARSE_MULTIPLIERS;
-      const ticks: IAxisTick<number>[] = [];
+      const candidates: number[] = [];
       for (let decade = firstDecade; decade <= lastDecade; decade += 1) {
         for (const multiplier of multipliers) {
           const position = multiplier * DECIMAL ** decade;
           if (position >= start && position <= end) {
-            ticks.push({ position, label: label(position) });
+            candidates.push(position);
           }
         }
       }
-      const span = Math.log(end / start);
-      return thinTicks(ticks, position => (Math.log(position / start) / span) * lengthPx, minGapPx);
+      return laidOut(candidates, axis, minGapPx, (_, shown) => ({ label: label(shown), rank: 0 }));
     },
     format(position): string {
       if (!(position > 0)) {

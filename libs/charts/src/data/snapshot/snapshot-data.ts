@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 
 import { columnsOf } from '../../core/series/columns';
 import { ChartDataError, toDataError } from '../../core/series/data-error';
-import type { TRun } from '../../core/series/point-run';
+import type { TAggregateTime, TRun } from '../../core/series/point-run';
 import { runOf } from '../../core/series/point-run';
 import type {
   IDataFailure,
@@ -13,6 +13,7 @@ import type {
 import type { TShape } from '../../core/series/shape';
 import type { IAxisDomain, IAxisRange } from '../../core/viewport/axis-domain';
 import { spanOf } from '../../core/viewport/axis-domain';
+import type { BreakMarking } from '../cuts/break-marking';
 import { chooseScale } from '../scale-choice';
 import type { ISnapshotSource, ISnapshotWindow } from './source';
 
@@ -26,6 +27,8 @@ export interface ISnapshotSettings<TX> {
   readonly domain: IAxisDomain<TX>;
   /** Ascending. */
   readonly scales: readonly number[] | undefined;
+  readonly aggregateTime: TAggregateTime;
+  readonly breaks: BreakMarking<TX>;
 }
 
 /** What a window was read for: another scale or density needs another window. */
@@ -103,7 +106,7 @@ export class SnapshotData<TX> implements ISeriesData<TX> {
 
   runs(need: IDataNeed<TX>): readonly TRun<TX>[] {
     const run = this.states.get(need.shape)?.window?.run;
-    return isNil(run) ? [] : [run];
+    return this.settings.breaks.of(isNil(run) ? [] : [run]);
   }
 
   retry(): void {
@@ -204,7 +207,12 @@ export class SnapshotData<TX> implements ISeriesData<TX> {
       run:
         columns.length === 0
           ? undefined
-          : runOf<TX>(columns, { id: this.runIds, revision: 0, step: grain.scale }),
+          : runOf<TX>(columns, {
+              id: this.runIds,
+              revision: 0,
+              step: grain.scale,
+              aggregateTime: this.settings.aggregateTime,
+            }),
       range: answer.range,
       grain,
     };

@@ -1,11 +1,16 @@
 import { isNil } from 'lodash-es';
 
-/** The three operations the kernel needs from an X coordinate, whatever its type (§3.8). */
+/** The operations the kernel needs from an X coordinate, whatever its type (§3.8). */
 export interface IAxisDomain<TX> {
   compare(first: TX, second: TX): number;
   /** `minuend − subtrahend` in axis units, as a plain number. */
   diff(minuend: TX, subtrahend: TX): number;
   add(position: TX, delta: number): TX;
+  /** The origin of the axis: where virtual and world coordinates meet when stretches are taken out (sessions §2). */
+  readonly zero: TX;
+  /** `minuend − subtrahend` in the coordinate's own type: exact, for lengths that add up over decades. */
+  minus(minuend: TX, subtrahend: TX): TX;
+  plus(position: TX, offset: TX): TX;
   /** The longest range a chart over this axis may show, in axis units; none, and any length may be shown. */
   readonly maxSpan?: number;
 }

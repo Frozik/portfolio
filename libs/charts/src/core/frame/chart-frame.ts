@@ -5,6 +5,7 @@ import type { IPaneFrame, IScaleFrame } from '../scale/scale';
 import type { IDataFailure } from '../series/series-data';
 import type { IStyledRun } from '../series/style-processor';
 import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
+import type { IAxisMapping } from '../viewport/axis-mapping';
 import type { IPlotRect } from './plot-rect';
 import type { IChartTheme } from './theme';
 
@@ -27,6 +28,8 @@ export interface IChartFrame<TX> {
   readonly x: IAxisRange<TX>;
   /** Length of `x` in axis units. */
   readonly xSpan: number;
+  /** The cuts of the axis, for whatever shows world positions; none while the axis is shown whole. */
+  readonly mapping: IAxisMapping<TX> | undefined;
   readonly size: IChartSize;
   /** The whole plot: every pane together. */
   readonly plot: IPlotRect;

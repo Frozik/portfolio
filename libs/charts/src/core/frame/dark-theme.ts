@@ -12,6 +12,8 @@ const CANDLE_STROKE_SHADE = 0.55;
 export const darkTheme: IChartTheme = {
   background: rgba(0x07 / 0xff, 0x09 / 0xff, 0x0c / 0xff),
   grid: rgba(GRID_SHADE, GRID_SHADE, GRID_SHADE),
+  // Amber, not a grey: a cut must stand out from the grid lines it runs among.
+  cut: rgba(0xe6 / 0xff, 0xa8 / 0xff, 0x3c / 0xff),
   axisLine: rgba(AXIS_SHADE, AXIS_SHADE, AXIS_SHADE),
   label: {
     text: rgba(LABEL_SHADE, LABEL_SHADE, LABEL_SHADE),

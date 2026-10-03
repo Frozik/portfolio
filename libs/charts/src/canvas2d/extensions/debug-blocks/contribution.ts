@@ -1,3 +1,4 @@
+import { SOLID } from '../../../core/frame/rect-pattern';
 import { rgba } from '../../../core/series/color';
 import type { IPaintContribution } from '../../../core/stage/backend';
 import { ownFrame, PAINT_BAND } from '../../../core/stage/backend';
@@ -20,7 +21,7 @@ export function debugBlocksOnCanvas<TX>(slice: IDebugBlocksSlice<TX>): IPaintCon
         rects: slice.linesOf(ownFrame<TX>(frame)),
         color: LINE_COLOR,
         opacity: LINE_OPACITY,
-        dashLength: 0,
+        pattern: SOLID,
       }),
     }),
   };

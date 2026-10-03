@@ -19,8 +19,13 @@ export function bounds<TX>(options: IBoundsOptions<TX>): IChartExtension<TX, 'bo
     id: 'bounds',
     create(kernel) {
       const { domain } = kernel;
-      const limit = (side: TX | 'data' | undefined, known: TX | undefined): TX | undefined =>
-        side === 'data' ? known : side;
+      // Limits are given in world coordinates; the extent of the data already comes as the viewport counts it.
+      const limit = (side: TX | 'data' | undefined, known: TX | undefined): TX | undefined => {
+        if (side === 'data') {
+          return known;
+        }
+        return isNil(side) ? undefined : (kernel.viewport.x.mapping?.toVirtual(side) ?? side);
+      };
 
       const constrainX = (range: IAxisRange<TX>): IAxisRange<TX> => {
         let { start, end } = range;

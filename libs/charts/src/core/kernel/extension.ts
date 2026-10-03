@@ -24,8 +24,13 @@ export interface IExtensionInstance<TX, TSlice> {
   tick?(now: number): void;
   /** Narrows an X range about to be written: bounds, a least span. */
   constrainX?(range: IAxisRange<TX>): IAxisRange<TX>;
-  /** Moves what is drawn along an axis towards its target; without an animator the drawn range is the target. */
-  animate?<T>(domain: IAxisDomain<T>, current: IAxisRange<T>, target: IAxisRange<T>): IAxisRange<T>;
+  /** Moves what is drawn along an axis towards its target over the time since the last frame; without an animator the drawn range is the target. */
+  animate?<T>(
+    domain: IAxisDomain<T>,
+    current: IAxisRange<T>,
+    target: IAxisRange<T>,
+    elapsedMs: number
+  ): IAxisRange<T>;
   /** The range of a value scale that fits what is visible against it. */
   fitY?(visible: IVisibleData<TX>): IAxisRange<number> | undefined;
   /** Room taken round the plot, CSS pixels. */

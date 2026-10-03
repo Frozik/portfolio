@@ -14,6 +14,7 @@ struct Layer {
     // 1 while the layer draws the outline of its mark instead of the mark itself.
     outline: u32,
     params: vec4<f32>,
+    // The step of the run as a fraction of the visible span, negative when the run stamps the end of its elements.
     stepOverSpan: f32,
     // The value scale the layer is drawn against: its minimum in two parts
     // (or the logarithm of it), one over its length, and where on the canvas
@@ -89,6 +90,9 @@ struct Element {
     strokeSize: f32,
     strokeColor: vec4<f32>,
     gap: bool,
+    // The interval the element covers, as fractions of the canvas width: where it starts and how wide it is.
+    spanLeft: f32,
+    spanWidth: f32,
 };
 
 struct PointSample {
@@ -160,6 +164,26 @@ fn valueY(high: u32, low: u32) -> f32 {
     return layer.scaleOrigin + along * layer.scaleShare;
 }
 
+fn elementX(index: u32) -> f32 {
+    return axisX(loadTexel(elementTexel(index)).xy);
+}
+
+// The interval of an element: its step from its position forward, or
+// backward when the run stamps the end — but no further than the neighbour on
+// that side, which is where an axis with stretches taken out brings the
+// elements round them together.
+fn elementSpan(index: u32, x: f32) -> vec2<f32> {
+    let step = abs(layer.stepOverSpan);
+    let total = chunks[layer.chunkCount - 1u].end;
+    if (layer.stepOverSpan >= 0.0) {
+        let next = select(x + step, elementX(index + 1u), index + 1u < total);
+        return vec2<f32>(x, clamp(next - x, 0.0, step));
+    }
+    let previous = select(x - step, elementX(index - 1u), index > 0u);
+    let width = clamp(x - previous, 0.0, step);
+    return vec2<f32>(x - width, width);
+}
+
 fn readElement(index: u32) -> Element {
     let base = elementTexel(index);
     let head = loadTexel(base);
@@ -168,6 +192,9 @@ fn readElement(index: u32) -> Element {
 
     element.x = axisX(head.xy);
     element.gap = isGap(head.z);
+    let span = elementSpan(index, element.x);
+    element.spanLeft = span.x;
+    element.spanWidth = span.y;
     if (layer.shape == SHAPE_CANDLE) {
         let second = loadTexel(base + 1u);
         let third = loadTexel(base + 2u);
@@ -203,7 +230,7 @@ fn corePoint(index: u32) -> PointSample {
     var x = element.x;
     var y = element.close;
     if (layer.shape == SHAPE_CANDLE) {
-        x = element.x + layer.stepOverSpan * (f32(corner) * 2.0 + 1.0) / 8.0;
+        x = element.spanLeft + element.spanWidth * (f32(corner) * 2.0 + 1.0) / 8.0;
         var corners = array<f32, 4>(element.open, element.low, element.high, element.close);
         y = corners[corner];
     }
@@ -228,15 +255,25 @@ fn joinedPoint(index: u32, join: u32) -> PointSample {
         return before;
     }
     let after = corePoint(index / 2u + 1u);
+    // A step after holds its value up to the next element even when nothing stands there:
+    // the level run reaches a gap, and only the riser into it is lost.
     var corner = before;
     if (join == JOIN_STEP_AFTER) {
         corner.pixel = vec2<f32>(after.pixel.x, before.pixel.y);
     } else {
         corner = after;
         corner.pixel = vec2<f32>(before.pixel.x, after.pixel.y);
+        corner.gap = before.gap || after.gap;
     }
-    corner.gap = before.gap || after.gap;
     return corner;
+}
+
+// The widest a bar may be: its span less the gap kept beside it (layer.params.x, device pixels); anything, for data that is not aggregated.
+fn widestBar(element: Element) -> f32 {
+    if (layer.stepOverSpan == 0.0) {
+        return 1e9;
+    }
+    return element.spanWidth * frame.canvas.x - layer.params.x;
 }
 
 fn toClip(pixel: vec2<f32>) -> vec4<f32> {

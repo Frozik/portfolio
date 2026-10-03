@@ -6,7 +6,8 @@ import { loadingIndicator } from '@frozik/charts/canvas2d/extensions/loading-ind
 import { createChart } from '@frozik/charts/core/create-chart';
 import { rgba } from '@frozik/charts/core/series/color';
 import { series } from '@frozik/charts/core/series/series';
-import { timeDomain } from '@frozik/charts/data/timeseries/time-domain';
+import type { ISchedule } from '@frozik/charts/core/timeline/schedule';
+import { schedule } from '@frozik/charts/core/timeline/schedule-cuts';
 import { timeseries } from '@frozik/charts/data/timeseries/timeseries';
 import { autoScaleY } from '@frozik/charts/extensions/auto-scale-y/core';
 import { bounds } from '@frozik/charts/extensions/bounds/core';
@@ -15,18 +16,40 @@ import { scaleZoom } from '@frozik/charts/extensions/scale-zoom/core';
 import { smoothZoom } from '@frozik/charts/extensions/smooth-zoom/core';
 import { ticks } from '@frozik/charts/extensions/ticks/core';
 import { timeTicks } from '@frozik/charts/extensions/ticks/time-ticks';
+import { cuts } from '@frozik/charts/universal/extensions/cuts';
 import { debugBlocks } from '@frozik/charts/universal/extensions/debugBlocks';
 import { grid } from '@frozik/charts/universal/extensions/grid';
 import { candleStyle } from '@frozik/charts/universal/marks/candleStyle';
 import { columnStyle } from '@frozik/charts/universal/marks/columnStyle';
 import { lineStyle } from '@frozik/charts/universal/marks/lineStyle';
+import { EDayOfWeek } from '@frozik/utils/date/constants';
 
 import { DAY, MINUTE, YEAR, YEAR_START } from '../../domain/demo-time';
 import type { ISourceConditions } from '../demo-source';
 import { demoSource } from '../demo-source';
 import { GREEN, LIGHT_BLUE, ORANGE, RED } from '../palette';
+import { localTimeDomain } from './local-time-domain';
 
 const SHOWN = 60n * DAY;
+/** The exchange keeps New York hours, whatever clock the visitor reads the chart by: nights and weekends are cut out of the axis. */
+const SESSIONS: ISchedule = {
+  timeZone: 'America/New_York',
+  entries: [
+    {
+      kind: 'weekly',
+      effect: 'open',
+      days: [
+        EDayOfWeek.Monday,
+        EDayOfWeek.Tuesday,
+        EDayOfWeek.Wednesday,
+        EDayOfWeek.Thursday,
+        EDayOfWeek.Friday,
+      ],
+      from: '09:30',
+      to: '20:00',
+    },
+  ],
+};
 const CENTER = 100;
 const CANDLE_WIDTH = 7;
 const CANDLE_GAP = 2;
@@ -73,15 +96,17 @@ function growthOf(noise: number): number {
  * snaps to; a limit, a support level and three events are marked.
  */
 export function createWorkspaceChart(conditions: ISourceConditions) {
+  const domain = localTimeDomain();
+  const sessions = schedule(SESSIONS).mappingOf(domain);
   const start = YEAR_START + YEAR / 2n;
   const end = start + SHOWN;
   const dataOf = (seed: string, shape?: (noise: number) => number) =>
-    timeseries(demoSource({ seed, period: YEAR, shape }, conditions), { retry: true });
+    timeseries(demoSource({ seed, period: YEAR, shape, sessions }, conditions), { retry: true });
   const price = dataOf('workspace-price');
 
   return createChart({
     id: 'workspace',
-    x: { domain: timeDomain, start, end },
+    x: { domain, cuts: schedule(SESSIONS), start, end },
     panes: [{ id: 'price', weight: 3 }, { id: 'volume' }, { id: 'momentum' }],
     scales: [
       { id: 'price', side: 'right', title: 'USD' },
@@ -148,6 +173,7 @@ export function createWorkspaceChart(conditions: ISourceConditions) {
     extensions: [
       ticks({ x: timeTicks() }),
       grid<bigint>(),
+      cuts<bigint>(),
       axes<bigint>(),
       annotations<bigint>({
         levels: [

@@ -106,7 +106,7 @@ describe('pan and zoom', () => {
     expect(viewport.x.current.start).toBe(released);
   });
 
-  it('coasts from the moment of release: the first frame moves by one frame of travel', () => {
+  it('coasts from the moment of release: the first frame moves by a frame of travel, less the slowing within it', () => {
     const { chart, host, viewport } = panning();
 
     host.pointer.feed(pointer('down', 500, 0));
@@ -116,7 +116,24 @@ describe('pan and zoom', () => {
     const released = viewport.x.current.start;
     chart.prepareFrame(46);
 
-    expect(released - viewport.x.current.start).toBeCloseTo(3.2);
+    expect(released - viewport.x.current.start).toBeCloseTo(3.12, 2);
+  });
+
+  it('coasts the same distance however the frames fall: slow frames do not carry it further', () => {
+    const coastedWith = (frameMs: number): number => {
+      const { chart, host, viewport } = panning();
+      host.pointer.feed(pointer('down', 500, 0));
+      host.pointer.feed(pointer('move', 520, 10));
+      host.pointer.feed(pointer('move', 540, 20));
+      host.pointer.feed(pointer('up', 540, 20));
+      const released = viewport.x.current.start;
+      for (let now = 20 + frameMs; now < 5000; now += frameMs) {
+        chart.prepareFrame(now);
+      }
+      return released - viewport.x.current.start;
+    };
+
+    expect(coastedWith(100)).toBeCloseTo(coastedWith(16), 0);
   });
 
   it('zooms in when two pointers move apart', () => {

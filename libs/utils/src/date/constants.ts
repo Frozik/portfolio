@@ -13,6 +13,16 @@ export const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY;
 /** Number of days in one week. */
 export const DAYS_IN_WEEK = 7;
 
+/** Nanoseconds, as `Temporal` counts epoch time; a week is still well within a safe integer. */
+const MICROSECONDS_PER_MILLISECOND = 1000;
+export const NANOS_PER_MICROSECOND = 1000;
+export const NANOS_PER_MILLISECOND = NANOS_PER_MICROSECOND * MICROSECONDS_PER_MILLISECOND;
+export const NANOS_PER_SECOND = NANOS_PER_MILLISECOND * MS_PER_SECOND;
+export const NANOS_PER_MINUTE = NANOS_PER_SECOND * SECONDS_PER_MINUTE;
+export const NANOS_PER_HOUR = NANOS_PER_MINUTE * MINUTES_PER_HOUR;
+export const NANOS_PER_DAY = NANOS_PER_HOUR * HOURS_PER_DAY;
+export const NANOS_PER_WEEK = NANOS_PER_DAY * DAYS_IN_WEEK;
+
 export enum EDayOfWeek {
   Monday = 1,
   Tuesday = 2,

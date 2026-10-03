@@ -2,7 +2,6 @@ import { createChart } from '@frozik/charts/core/create-chart';
 import type { ISeries } from '@frozik/charts/core/series/series';
 import { series } from '@frozik/charts/core/series/series';
 import type { ISeriesDataFactory } from '@frozik/charts/core/series/series-data';
-import { timeDomain } from '@frozik/charts/data/timeseries/time-domain';
 import { timeseries } from '@frozik/charts/data/timeseries/timeseries';
 import { candleStyle } from '@frozik/charts/universal/marks/candleStyle';
 import { lineStyle } from '@frozik/charts/universal/marks/lineStyle';
@@ -16,6 +15,7 @@ import type { ISourceConditions } from '../demo-source';
 import { demoSource } from '../demo-source';
 import { LIGHT_BLUE, ORANGE, TRANSLUCENT_GREEN, TRANSLUCENT_RED } from '../palette';
 import { colorByValue, lineSizeByValue } from '../value-bands';
+import { localTimeDomain } from './local-time-domain';
 import { timeExtensions } from './time-extensions';
 
 const CANDLE_WIDTH = 7;
@@ -109,7 +109,7 @@ export function createOverviewChart(index: number, conditions: ISourceConditions
   );
   return createChart({
     id: `overview-${index}`,
-    x: { domain: timeDomain, start: YEAR_START + start, end: YEAR_START + end },
+    x: { domain: localTimeDomain(), start: YEAR_START + start, end: YEAR_START + end },
     series: scene.series(dataOf),
     extensions: timeExtensions(),
   });

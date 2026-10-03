@@ -76,7 +76,7 @@ function drawEvents<TX>(
   const centerY =
     style.xLabelCenterY - style.boxHeight - EVENT_BADGE_GAP * frame.size.devicePixelRatio;
   for (const event of slice.events) {
-    const pixel = xToPixel(frame, event.x);
+    const pixel = xToPixel(frame, frame.mapping?.toVirtual(event.x) ?? event.x);
     if (pixel < plot.left || pixel > plot.right) {
       continue;
     }

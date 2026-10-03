@@ -3,12 +3,20 @@ import type { IChartExtension } from './kernel/extension';
 import type { IPaneOptions, IScaleOptions } from './scale/scale';
 import type { ISeries } from './series/series';
 import type { IAxisDomain, IValueRange } from './viewport/axis-domain';
+import type { TCuts } from './viewport/axis-mapping';
 
 export type TAnyExtension<TX> = IChartExtension<TX, string, unknown>;
 
 export interface IChartOptions<TX, TExtensions extends readonly TAnyExtension<TX>[]> {
   readonly id?: string;
-  readonly x: { readonly domain: IAxisDomain<TX>; readonly start: TX; readonly end: TX };
+  readonly x: {
+    readonly domain: IAxisDomain<TX>;
+    /** Stretches of the axis taken out of view, in world coordinates; none, and the axis is shown whole. */
+    readonly cuts?: TCuts<TX>;
+    /** The range shown at first, in world coordinates. */
+    readonly start: TX;
+    readonly end: TX;
+  };
   /** The range of the first value scale before any data arrives and when nothing fits it to the data. */
   readonly y?: IValueRange;
   /** The panes top to bottom; one when not given. */

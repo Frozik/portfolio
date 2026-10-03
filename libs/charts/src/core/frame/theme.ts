@@ -11,6 +11,8 @@ export interface IInsets {
 export interface IChartTheme {
   readonly background: TColor;
   readonly grid: TColor;
+  /** The strip at a cut of the axis: where closed time was taken out. */
+  readonly cut: TColor;
   readonly axisLine: TColor;
   readonly label: { readonly text: TColor; readonly background: TColor };
   readonly crosshair: {

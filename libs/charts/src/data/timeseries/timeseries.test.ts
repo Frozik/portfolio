@@ -4,10 +4,10 @@ import { columnsOf } from '../../core/series/columns';
 import { ChartDataError } from '../../core/series/data-error';
 import type { IDataNeed, ISeriesData } from '../../core/series/series-data';
 import type { IPoint, TShape } from '../../core/series/shape';
+import { timeDomain } from '../../core/viewport/time-domain';
 import { memoryPersistentCache } from '../../testing/memory-persistent-cache';
 import type { IMemorySource } from '../../testing/memory-timeseries-source';
 import { memorySource } from '../../testing/memory-timeseries-source';
-import { timeDomain } from './time-domain';
 import { TIME_SCALE } from './time-scale';
 import type { ITimeseriesOptions } from './timeseries';
 import { timeseries } from './timeseries';
@@ -49,7 +49,7 @@ async function settle(): Promise<void> {
 }
 
 function opened(source: IMemorySource, options: ITimeseriesOptions = {}): ISeriesData<bigint> {
-  const data = timeseries(source, options).create({ domain: timeDomain });
+  const data = timeseries(source, options).create({ domain: timeDomain(), mapping: undefined });
   data.activate();
   return data;
 }

@@ -11,6 +11,7 @@ import { staticData } from '../../data/static-data';
 import { LINE_MARK } from '../../marks/line/core';
 import { createLineStyle } from '../../marks/line/style';
 import { createFakeHost } from '../../testing/fake-host';
+import { logTickAxis } from '../../testing/tick-axis';
 import { ticks } from './core';
 import { linearTicks } from './linear-ticks';
 import { logTicks } from './log-ticks';
@@ -98,13 +99,13 @@ describe('ticks of a value scale', () => {
 
 describe('logarithmic ticks', () => {
   it('thin to the powers of ten alone when the range spans many of them', () => {
-    const found = logTicks().ticks({ start: 1, end: 1e6 }, 600);
+    const found = logTicks().ticks(logTickAxis({ start: 1, end: 1e6 }, 600));
 
     expect(found.map(tick => tick.position)).toEqual([1, 10, 100, 1e3, 1e4, 1e5, 1e6]);
   });
 
   it('label values under one with the decimals they need', () => {
-    const found = logTicks().ticks({ start: 0.01, end: 1 }, 600);
+    const found = logTicks().ticks(logTickAxis({ start: 0.01, end: 1 }, 600));
 
     expect(found.map(tick => tick.label)).toEqual([
       '0.01',
@@ -118,6 +119,6 @@ describe('logarithmic ticks', () => {
   });
 
   it('have nothing to say about a range that reaches nought', () => {
-    expect(logTicks().ticks({ start: 0, end: 100 }, 600)).toEqual([]);
+    expect(logTicks().ticks(logTickAxis({ start: 0, end: 100 }, 600))).toEqual([]);
   });
 });

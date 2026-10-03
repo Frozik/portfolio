@@ -1,6 +1,8 @@
 const MS_PER_SECOND = 1000;
 /** The rate a chart asks for while something on it moves. */
 export const ACTIVE_FPS = 60;
+/** One frame at the active rate: what a motion is tuned for; a slower frame covers more of it at once. */
+export const ACTIVE_FRAME_MS = MS_PER_SECOND / ACTIVE_FPS;
 /** A raised rate holds this long after the last raise. */
 const HOLD_MS = 500;
 

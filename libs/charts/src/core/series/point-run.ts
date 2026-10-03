@@ -1,8 +1,17 @@
 import { assert } from '@frozik/utils/assert/assert';
 
-import type { IAxisRange } from '../viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
 import type { TColumns } from './columns';
 import type { TShape } from './shape';
+
+/**
+ * What the position of an aggregated element marks: the start of its interval
+ * (`[x, x + step)`, as Binance and TradingView stamp bars) or its end
+ * (`(x − step, x]`: a five-minute bar over 23:55–00:00 stamped 00:00).
+ */
+export type TAggregateTime = 'start' | 'end';
+
+export const DEFAULT_AGGREGATE_TIME: TAggregateTime = 'start';
 
 interface IRunHeader<TX> {
   readonly id: number;
@@ -12,6 +21,13 @@ interface IRunHeader<TX> {
   readonly x: ArrayLike<TX>;
   /** Length of one element's interval in axis units; none for data that is not aggregated. */
   readonly step: number | undefined;
+  readonly aggregateTime: TAggregateTime;
+  /**
+   * Indices of the technical NaN elements that stand for a cut of the axis:
+   * not data, never shown — only there so a line does not join the elements
+   * on the two sides of the cut (sessions §6).
+   */
+  readonly breakMarkers: readonly number[];
 }
 
 export interface IPointRun<TX> extends IRunHeader<TX> {
@@ -49,15 +65,48 @@ export interface IRunIdentity {
   readonly id: number;
   readonly revision: number;
   readonly step: number | undefined;
+  readonly aggregateTime: TAggregateTime;
+}
+
+/** Whether the element is a break marker: a technical gap no one is shown. */
+export function isBreakMarker<TX>(run: TRun<TX>, index: number): boolean {
+  return run.breakMarkers.includes(index);
+}
+
+/** The interval an aggregate at `x` covers: `[start, end)` counted from its position by the stamp. */
+export function aggregateIntervalOf<TX>(
+  domain: IAxisDomain<TX>,
+  aggregateTime: TAggregateTime,
+  step: number | undefined,
+  x: TX
+): IAxisRange<TX> {
+  const length = step ?? 0;
+  return aggregateTime === 'start'
+    ? { start: x, end: domain.add(x, length) }
+    : { start: domain.add(x, -length), end: x };
+}
+
+/** The interval an element of the run covers in axis units. */
+export function elementIntervalOf<TX>(
+  domain: IAxisDomain<TX>,
+  run: TRun<TX>,
+  index: number
+): IAxisRange<TX> {
+  return aggregateIntervalOf(domain, run.aggregateTime, run.step, run.x[index]);
 }
 
 /** Columns as a run: the columns are taken as they are, not copied. */
-export function runOf<TX>(columns: TColumns, identity: IRunIdentity): TRun<TX> {
+export function runOf<TX>(
+  columns: TColumns,
+  identity: IRunIdentity,
+  breakMarkers: readonly number[] = []
+): TRun<TX> {
   const x = columns.x as unknown as ArrayLike<TX>;
   return columns.shape === 'point'
-    ? { ...identity, shape: 'point', length: columns.length, x, value: columns.value }
+    ? { ...identity, breakMarkers, shape: 'point', length: columns.length, x, value: columns.value }
     : {
         ...identity,
+        breakMarkers,
         shape: 'candle',
         length: columns.length,
         x,

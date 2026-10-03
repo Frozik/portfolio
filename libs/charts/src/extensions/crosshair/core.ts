@@ -12,6 +12,9 @@ import type { IChartExtension } from '../../core/kernel/extension';
 import type { IPaneFrame } from '../../core/scale/scale';
 import { pixelToValue } from '../../core/scale/scale-mapping';
 import { nearestElement } from '../../core/series/nearest';
+import type { TRun } from '../../core/series/point-run';
+import { elementIntervalOf } from '../../core/series/point-run';
+import type { TCutEdge } from '../../core/viewport/axis-mapping';
 import { pixelToX, xToPixel } from '../../core/viewport/plot-mapping';
 import type { IHoldPosition } from './touch-hold';
 import { TouchHold } from './touch-hold';
@@ -36,6 +39,14 @@ export interface ICrosshairOptions {
 interface IStand<TX> {
   readonly x: TX;
   readonly pixel: number;
+  /** On a cut, the edge the element's time means: the one its interval starts or ends at. */
+  readonly edge: TCutEdge;
+}
+
+/** The middle of an element's interval on the canvas: where a candle is drawn. */
+function intervalMiddlePixel<TX>(frame: IChartFrame<TX>, run: TRun<TX>, index: number): number {
+  const { start, end } = elementIntervalOf(frame.domain, run, index);
+  return (xToPixel(frame, start) + xToPixel(frame, end)) / 2;
 }
 
 /** The element nearest to the pointer among the series named; a candle is pointed at mid-interval, where it is drawn. */
@@ -53,10 +64,10 @@ function nearestStand<TX>(
     }
     const { run } = found.styled;
     const x = run.x[found.index];
-    const halfStep = run.shape === 'candle' ? (run.step ?? 0) / 2 : 0;
-    const pixel = xToPixel(frame, x) + (halfStep / frame.xSpan) * frame.size.width;
+    const pixel =
+      run.shape === 'candle' ? intervalMiddlePixel(frame, run, found.index) : xToPixel(frame, x);
     if (isNil(nearest) || Math.abs(pixel - pointerPixel) < Math.abs(nearest.pixel - pointerPixel)) {
-      nearest = { x, pixel };
+      nearest = { x, pixel, edge: run.aggregateTime === 'start' ? 'after' : 'before' };
     }
   }
   return nearest;
@@ -169,7 +180,7 @@ export function crosshairCore<TX>(
           centerArmLength: Math.round(CENTER_ARM_LENGTH * size.devicePixelRatio),
           dashLength: Math.round(DASH_LENGTH * size.devicePixelRatio),
           x,
-          xLabel: ticks.formatX(frame, x),
+          xLabel: ticks.formatX(frame, x, snapped?.edge),
           value: values[0].value,
           valueLabel: values[0].label,
           values,

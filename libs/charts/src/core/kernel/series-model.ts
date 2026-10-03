@@ -14,12 +14,14 @@ import type {
 import type { IStyledRun, IStyleProcessor } from '../series/style-processor';
 import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
 import { maxOf, minOf } from '../viewport/axis-domain';
+import type { IAxisMapping } from '../viewport/axis-mapping';
 
 interface ISeriesEntry<TX> {
   readonly id: string;
   readonly name: string;
   readonly scaleId: string;
-  readonly data: ISeriesData<TX>;
+  readonly factory: ISeriesDataFactory<TX>;
+  data: ISeriesData<TX>;
   style: IStyleProcessor<TX>;
   styleRevision: number;
   /** Styled runs by run id: a run is styled again only when its revision or the style changed (§5.2). */
@@ -43,17 +45,22 @@ export class SeriesModel<TX> {
   private readonly entries: ISeriesEntry<TX>[];
   private readonly instances = new Map<ISeriesDataFactory<TX>, ISeriesData<TX>>();
   private readonly unsubscribes: VoidFunction[] = [];
+  private mapping: IAxisMapping<TX> | undefined;
+  private isActive = false;
 
   constructor(
     definitions: readonly ISeries<TX>[],
     private readonly domain: IAxisDomain<TX>,
+    mapping: IAxisMapping<TX> | undefined,
     private readonly hooks: ISeriesHooks<TX>,
     defaultScaleId: string
   ) {
+    this.mapping = mapping;
     this.entries = definitions.map(definition => ({
       id: definition.id,
       name: definition.name ?? definition.id,
       scaleId: definition.scale ?? defaultScaleId,
+      factory: definition.data,
       data: this.instanceOf(definition.data),
       style: definition.style,
       styleRevision: 0,
@@ -63,14 +70,24 @@ export class SeriesModel<TX> {
       new Set(this.entries.map(entry => entry.id)).size === this.entries.length,
       'series ids are unique within a chart'
     );
-    for (const data of this.instances.values()) {
-      const seriesIds = this.entries.filter(entry => entry.data === data).map(entry => entry.id);
-      this.unsubscribes.push(
-        data.subscribe({
-          changed: range => this.hooks.dataChanged(seriesIds, range),
-          failed: failure => this.hooks.dataFailed(seriesIds, failure),
-        })
-      );
+    this.listen();
+  }
+
+  /**
+   * Other cuts of the axis: the data is in the virtual coordinate and cannot
+   * be told apart from what was cut, so every instance starts over and asks
+   * the source again; what was read stays on disk under the old cuts.
+   */
+  remap(mapping: IAxisMapping<TX> | undefined): void {
+    this.mapping = mapping;
+    this.forget();
+    for (const entry of this.entries) {
+      entry.data = this.instanceOf(entry.factory);
+      entry.styled.clear();
+    }
+    this.listen();
+    if (this.isActive) {
+      this.activate();
     }
   }
 
@@ -137,12 +154,14 @@ export class SeriesModel<TX> {
   }
 
   activate(): void {
+    this.isActive = true;
     for (const data of this.instances.values()) {
       data.activate();
     }
   }
 
   suspend(): void {
+    this.isActive = false;
     for (const data of this.instances.values()) {
       data.suspend();
     }
@@ -166,6 +185,10 @@ export class SeriesModel<TX> {
   }
 
   dispose(): void {
+    this.forget();
+  }
+
+  private forget(): void {
     for (const unsubscribe of this.unsubscribes.splice(0)) {
       unsubscribe();
     }
@@ -175,12 +198,24 @@ export class SeriesModel<TX> {
     this.instances.clear();
   }
 
+  private listen(): void {
+    for (const data of this.instances.values()) {
+      const seriesIds = this.entries.filter(entry => entry.data === data).map(entry => entry.id);
+      this.unsubscribes.push(
+        data.subscribe({
+          changed: range => this.hooks.dataChanged(seriesIds, range),
+          failed: failure => this.hooks.dataFailed(seriesIds, failure),
+        })
+      );
+    }
+  }
+
   private instanceOf(factory: ISeriesDataFactory<TX>): ISeriesData<TX> {
     const existing = this.instances.get(factory);
     if (!isNil(existing)) {
       return existing;
     }
-    const created = factory.create({ domain: this.domain });
+    const created = factory.create({ domain: this.domain, mapping: this.mapping });
     this.instances.set(factory, created);
     return created;
   }

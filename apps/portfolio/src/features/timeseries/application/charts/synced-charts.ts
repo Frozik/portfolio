@@ -1,6 +1,5 @@
 import { createChart } from '@frozik/charts/core/create-chart';
 import { series } from '@frozik/charts/core/series/series';
-import { timeDomain } from '@frozik/charts/data/timeseries/time-domain';
 import { timeseries } from '@frozik/charts/data/timeseries/timeseries';
 import { candleStyle } from '@frozik/charts/universal/marks/candleStyle';
 import { lineStyle } from '@frozik/charts/universal/marks/lineStyle';
@@ -10,6 +9,7 @@ import type { ISourceConditions } from '../demo-source';
 import { demoSource } from '../demo-source';
 import { createSyncGroup } from '../extensions/sync';
 import { LIGHT_BLUE } from '../palette';
+import { localTimeDomain } from './local-time-domain';
 import { timeExtensions } from './time-extensions';
 
 const SHOWN = 14n * DAY;
@@ -22,7 +22,7 @@ export function createSyncedCharts(conditions: ISourceConditions) {
   return SEEDS.map((seed, index) =>
     createChart({
       id: seed,
-      x: { domain: timeDomain, start, end: start + SHOWN },
+      x: { domain: localTimeDomain(), start, end: start + SHOWN },
       series: [
         series({
           id: 'price',

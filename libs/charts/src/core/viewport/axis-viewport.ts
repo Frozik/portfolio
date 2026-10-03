@@ -1,5 +1,6 @@
 import type { IAxisDomain, IAxisRange } from './axis-domain';
 import { isSameRange, shiftRange } from './axis-domain';
+import type { IAxisMapping } from './axis-mapping';
 
 /** `current` is what is drawn; `target` is where an animation is heading. */
 interface IAxisViewportState<T> {
@@ -11,6 +12,8 @@ interface IAxisViewportState<T> {
 
 export interface IAxisViewportOptions<T> {
   readonly domain: IAxisDomain<T>;
+  /** The correspondence between the world axis and the virtual one the viewport counts in; none, and they are the same. */
+  readonly mapping?: IAxisMapping<T>;
   readonly initial: IAxisRange<T>;
   /** Applied to every range written through the public commands. */
   readonly constrain: (range: IAxisRange<T>) => IAxisRange<T>;
@@ -26,14 +29,21 @@ export interface IAxisViewportOptions<T> {
 export class AxisViewport<T> {
   private state: IAxisViewportState<T>;
   private changes = 0;
+  private correspondence: IAxisMapping<T> | undefined;
 
   constructor(private readonly options: IAxisViewportOptions<T>) {
     const initial = options.constrain(options.initial);
     this.state = { current: initial, target: initial, isHeld: false };
+    this.correspondence = options.mapping;
   }
 
   get domain(): IAxisDomain<T> {
     return this.options.domain;
+  }
+
+  /** How the virtual coordinate of the viewport relates to the world one; none while the axis is shown whole. */
+  get mapping(): IAxisMapping<T> | undefined {
+    return this.correspondence;
   }
 
   get current(): IAxisRange<T> {
@@ -88,6 +98,15 @@ export class AxisViewport<T> {
 
   release(): void {
     this.write({ ...this.state, isHeld: false });
+  }
+
+  /** Another set of cuts: the range given is already in the new virtual coordinate. */
+  remap(mapping: IAxisMapping<T> | undefined, range: IAxisRange<T>): void {
+    this.correspondence = mapping;
+    const constrained = this.options.constrain(range);
+    this.state = { ...this.state, current: constrained, target: constrained };
+    this.changes += 1;
+    this.options.onChange();
   }
 
   private write(next: IAxisViewportState<T>): void {

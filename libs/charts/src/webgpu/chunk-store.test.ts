@@ -13,6 +13,8 @@ function styledPoints(length: number, revision = 0, styleRevision = 0): IStyledR
     id: 1,
     revision,
     step: undefined,
+    aggregateTime: 'start',
+    breakMarkers: [],
     shape: 'point',
     length,
     x: new BigInt64Array(length),

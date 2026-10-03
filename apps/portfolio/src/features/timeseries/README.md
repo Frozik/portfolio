@@ -57,6 +57,15 @@ above it and red below. A legend in the corner of every pane reads each
 series at the element the crosshair snaps to; a limit and a support level
 are marked across the price pane, three events on the time axis. The
 crosshair writes the pointed height on every scale of the pane it is over.
+The exchange of this page trades on working days from 09:30 to 20:00 New
+York time, while the axis — like every time axis of the demo — reads the
+clock in the visitor's own zone: the chart carries that schedule, and the nights and weekends are cut
+out of the time axis — each cut a zigzag seam of no width, the data on both
+sides of it joined up, a line broken across it, ticks and the crosshair
+naming the moment the session opens. The source knows the schedule too: its
+bars are counted from the opening of every session, the last bar of a
+session closing with it, and a request that spans a closed stretch it is
+not worth reading through is asked round.
 
 **Marks** — every way to draw, over a fixed set of sixty hourly elements:
 an area with a line along its edge and stairs over the same points, both
@@ -82,7 +91,8 @@ memory are styled anew.
 
 **Snapshot** — an ordinary chart: a numeric X axis and a set of points the
 application holds and replaces as a whole a few times a second. The same
-area style, grid, axes and gestures as over time.
+area style, grid, axes and gestures as over time; a stretch of the axis is
+cut out, showing that cuts are a matter of the axis, not of time.
 
 **Synced** — two charts of different series sharing one viewport; the
 position under the pointer on one is marked on the other by a dashed line.

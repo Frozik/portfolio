@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createChart } from '../../core/create-chart';
 import { series } from '../../core/series/series';
-import { timeDomain } from '../../data/timeseries/time-domain';
+import { timeDomain } from '../../core/viewport/time-domain';
 import { timeseries } from '../../data/timeseries/timeseries';
 import { LINE_MARK } from '../../marks/line/core';
 import { createLineStyle } from '../../marks/line/style';
@@ -28,7 +28,7 @@ async function liveChart(options?: IFollowTailOptions) {
     })),
   });
   const chart = createChart({
-    x: { domain: timeDomain, start: 0n, end: 100n * SECOND },
+    x: { domain: timeDomain(), start: 0n, end: 100n * SECOND },
     series: [series({ id: 'line', data: timeseries(source), style: createLineStyle(LINE_MARK) })],
     extensions: [followTail<bigint>({ glideMs: 0, ...options })],
   });

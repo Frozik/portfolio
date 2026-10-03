@@ -1,7 +1,6 @@
 import { createChart } from '@frozik/charts/core/create-chart';
 import { series } from '@frozik/charts/core/series/series';
 import type { IStyleProcessor } from '@frozik/charts/core/series/style-processor';
-import { timeDomain } from '@frozik/charts/data/timeseries/time-domain';
 import { TIME_SCALES } from '@frozik/charts/data/timeseries/time-scale';
 import { timeseries } from '@frozik/charts/data/timeseries/timeseries';
 import { followTail } from '@frozik/charts/extensions/follow-tail/core';
@@ -15,6 +14,7 @@ import { MINUTE, SECOND } from '../../domain/demo-time';
 import type { ISourceConditions } from '../demo-source';
 import { demoSource } from '../demo-source';
 import { AREA_BLUE, LIGHT_BLUE, TRANSLUCENT_GREEN, TRANSLUCENT_RED } from '../palette';
+import { localTimeDomain } from './local-time-domain';
 import { timeExtensions } from './time-extensions';
 
 const NOISE_PERIOD = 10n * MINUTE;
@@ -50,7 +50,7 @@ export function createLiveChart(conditions: ISourceConditions) {
   const end = now() + (SHOWN * BigInt(HEADROOM * PERCENT)) / BigInt(PERCENT);
   return createChart({
     id: 'live',
-    x: { domain: timeDomain, start: end - SHOWN, end },
+    x: { domain: localTimeDomain(), start: end - SHOWN, end },
     series: [
       series({ id: PRICE_SERIES, data, style: LIVE_STYLES.line }),
       series({
@@ -60,7 +60,7 @@ export function createLiveChart(conditions: ISourceConditions) {
       }),
     ],
     extensions: [
-      ...timeExtensions({ minRange: MIN_SHOWN, timeZone: Temporal.Now.timeZoneId() }),
+      ...timeExtensions({ minRange: MIN_SHOWN }),
       followTail<bigint>({ headroom: HEADROOM, glideMs: GLIDE_MS }),
     ],
   });
