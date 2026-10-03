@@ -8,6 +8,7 @@ import { snapshotOf } from '@frozik/charts/data/snapshot/snapshot-of';
 import { autoScaleY } from '@frozik/charts/extensions/auto-scale-y/core';
 import { bounds } from '@frozik/charts/extensions/bounds/core';
 import { panZoom } from '@frozik/charts/extensions/pan-zoom/core';
+import { scaleZoom } from '@frozik/charts/extensions/scale-zoom/core';
 import { smoothZoom } from '@frozik/charts/extensions/smooth-zoom/core';
 import { ticks } from '@frozik/charts/extensions/ticks/core';
 import { linearTicks } from '@frozik/charts/extensions/ticks/linear-ticks';
@@ -56,6 +57,7 @@ export function createDepthChart() {
       axes<number>(),
       crosshair<number>(),
       panZoom<number>(),
+      scaleZoom<number>(),
       smoothZoom<number>(),
       bounds<number>({ min: 0, max: DEPTH_EXTENT, minRange: MIN_RANGE }),
       autoScaleY<number>(),

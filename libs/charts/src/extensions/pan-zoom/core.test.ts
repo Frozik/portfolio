@@ -10,7 +10,7 @@ function pointer(
   timeStamp = 0,
   pointerId = 1
 ): IPointerInput {
-  return { phase, pointerId, kind: 'mouse', x, y: 100, timeStamp };
+  return { phase, pointerId, kind: 'mouse', shiftKey: false, x, y: 100, timeStamp };
 }
 
 function panning() {
@@ -44,7 +44,7 @@ describe('pan and zoom', () => {
   it('zooms the target in round the cursor on a wheel turn towards the chart', () => {
     const { host, viewport } = panning();
 
-    host.pointer.wheel({ x: 250, y: 100, deltaY: -1 });
+    host.pointer.wheel({ x: 250, y: 100, deltaY: -1, shiftKey: false });
 
     expect(viewport.target.start).toBeCloseTo(7.5);
     expect(viewport.target.end).toBeCloseTo(77.5);
@@ -53,7 +53,7 @@ describe('pan and zoom', () => {
   it('zooms out on a wheel turn away from the chart', () => {
     const { host, viewport } = panning();
 
-    host.pointer.wheel({ x: 500, y: 100, deltaY: 1 });
+    host.pointer.wheel({ x: 500, y: 100, deltaY: 1, shiftKey: false });
 
     expect(viewport.target.start).toBeCloseTo(-15);
     expect(viewport.target.end).toBeCloseTo(115);
@@ -131,6 +131,28 @@ describe('pan and zoom', () => {
     expect(span).toBeLessThan(100);
     expect(viewport.target.start).toBeGreaterThan(0);
     expect(viewport.target.end).toBeLessThan(100);
+  });
+
+  it('pans by the middle of two pointers moving together', () => {
+    const { host, viewport } = panning();
+
+    host.pointer.feed(pointer('down', 400, 0, 1));
+    host.pointer.feed(pointer('down', 600, 0, 2));
+    host.pointer.feed(pointer('move', 500, 10, 1));
+    host.pointer.feed(pointer('move', 700, 10, 2));
+
+    expect(viewport.current).toEqual({ start: -10, end: 90 });
+  });
+
+  it('leaves the X axis alone when two pointers spread straight up and down', () => {
+    const { host, viewport } = panning();
+
+    host.pointer.feed(pointer('down', 500, 0, 1));
+    host.pointer.feed(pointer('down', 500, 0, 2));
+    host.pointer.feed(pointer('move', 500, 10, 1));
+
+    expect(viewport.current).toEqual({ start: 0, end: 100 });
+    expect(viewport.target).toEqual({ start: 0, end: 100 });
   });
 
   it('stops listening once the chart is taken off its host', () => {

@@ -106,7 +106,15 @@ describe('the 2D canvas surface', () => {
     surface.paint(frame, 0);
     calls.length = 0;
 
-    host.pointer.feed({ phase: 'move', pointerId: 1, kind: 'mouse', x: 500, y: 250, timeStamp: 0 });
+    host.pointer.feed({
+      phase: 'move',
+      pointerId: 1,
+      kind: 'mouse',
+      shiftKey: false,
+      x: 500,
+      y: 250,
+      timeStamp: 0,
+    });
     surface.paint(frame, 16);
 
     expect(calls).toContain('setLineDash(4,4)');

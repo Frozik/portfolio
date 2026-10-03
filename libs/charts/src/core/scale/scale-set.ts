@@ -32,6 +32,8 @@ interface IScale {
   readonly side: TScaleSide;
   readonly order: number;
   range: IValueRange;
+  /** Set by hand: the autoscale leaves the range alone until the hold is released. */
+  isHeld: boolean;
 }
 
 /**
@@ -93,6 +95,7 @@ export class ScaleSet {
           other => other.paneId === paneId && other.side === side && other.options.visible !== false
         ).length,
         range: pinned(scale, initial),
+        isHeld: false,
       });
     }
     this.scales = placed;
@@ -127,12 +130,23 @@ export class ScaleSet {
 
   /** The ends the scale leaves to the data take the range given; the ends it fixes stay where they are. */
   setRange(id: string, fitted: IValueRange): void {
+    this.put(this.scaleOf(id), fitted);
+  }
+
+  /** A range set by hand: kept as it is, fixed ends aside, until the scale is released. */
+  hold(id: string, range: IValueRange): void {
     const scale = this.scaleOf(id);
-    const range = pinned(scale.options, fitted);
-    if (scale.range.min !== range.min || scale.range.max !== range.max) {
-      scale.range = range;
-      this.changes += 1;
-    }
+    scale.isHeld = true;
+    this.put(scale, range);
+  }
+
+  isHeld(id: string): boolean {
+    return this.scaleOf(id).isHeld;
+  }
+
+  /** Gives the scale back to the autoscale. */
+  release(id: string): void {
+    this.scaleOf(id).isHeld = false;
   }
 
   /** How many visible scales stand beyond the first on a side, in the pane that has the most: the gutters the axes need. */
@@ -193,6 +207,14 @@ export class ScaleSet {
         }));
       return { id: pane.id, plot: panePlot, scales };
     });
+  }
+
+  private put(scale: IScale, wanted: IValueRange): void {
+    const range = pinned(scale.options, wanted);
+    if (scale.range.min !== range.min || scale.range.max !== range.max) {
+      scale.range = range;
+      this.changes += 1;
+    }
   }
 
   private scaleOf(id: string): IScale {

@@ -4,11 +4,12 @@ import type { IChartFrame } from '../../../core/frame/chart-frame';
 import type { ITicksSlice } from '../../../core/frame/ticks';
 import type { IScaleFrame } from '../../../core/scale/scale';
 import { valueToPixel } from '../../../core/scale/scale-mapping';
+import { scaleLineX } from '../../../core/scale/scale-strip';
 import { cssOf } from '../../../core/series/color';
 import { ownFrame } from '../../../core/stage/backend';
 import { xToPixel } from '../../../core/viewport/plot-mapping';
 import type { IAxisLabelStyle, ILabelColors } from '../../axis-label';
-import { axisLabelStyleOf, drawAxisLabel, scaleLabelPlacement, scaleLineX } from '../../axis-label';
+import { axisLabelStyleOf, drawAxisLabel, scaleLabelPlacement } from '../../axis-label';
 import type { ICanvasPainter, TCanvasPainterFactory } from '../../painter';
 import type { ITextMeasurer } from '../../text-measurer';
 
@@ -101,7 +102,7 @@ function drawScale<TX>(paint: IAxesPaint<TX>, scale: IScaleFrame, isLowestPane: 
   const { theme } = frame;
   const { plot } = scale;
   const clearance = AXIS_CLEARANCE * frame.size.devicePixelRatio;
-  const lineX = scaleLineX(frame, scale, style);
+  const lineX = scaleLineX(frame, scale);
   const tickEnd = lineX + (scale.side === 'left' ? style.tickLength : -style.tickLength);
   // Inside the plot the lowest labels would lie on the labels of the X axis.
   const lowestCenter =

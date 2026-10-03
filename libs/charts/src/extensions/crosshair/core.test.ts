@@ -19,7 +19,7 @@ function input(
   kind: TPointerKind = 'mouse',
   pointerId = 1
 ): IPointerInput {
-  return { phase, pointerId, kind, x, y, timeStamp: 0 };
+  return { phase, pointerId, kind, x, y, timeStamp: 0, shiftKey: false };
 }
 
 function scene() {

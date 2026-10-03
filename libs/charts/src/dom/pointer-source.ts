@@ -1,5 +1,5 @@
 import type { IPointerInput, IPointerSource, TPointerKind } from '../core/host/pointer-source';
-import { PointerListeners } from '../core/host/pointer-source';
+import { CursorLayers, PointerListeners } from '../core/host/pointer-source';
 
 const POINTER_EVENTS = [
   'pointerdown',
@@ -32,6 +32,7 @@ export interface IDomPointerSource extends IPointerSource {
  */
 export function createPointerSource(element: HTMLElement): IDomPointerSource {
   const listeners = new PointerListeners();
+  const cursors = new CursorLayers();
 
   const positionOf = (event: MouseEvent): { readonly x: number; readonly y: number } => {
     const box = element.getBoundingClientRect();
@@ -50,13 +51,16 @@ export function createPointerSource(element: HTMLElement): IDomPointerSource {
       kind: kindOf(event),
       ...positionOf(event),
       timeStamp: event.timeStamp,
+      shiftKey: event.shiftKey,
     };
     listeners.pointer(input);
   };
 
   const onWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    listeners.wheel({ ...positionOf(event), deltaY: event.deltaY });
+    // Browsers turn Shift + wheel into a horizontal scroll: the turn then arrives as deltaX.
+    const deltaY = event.shiftKey && event.deltaY === 0 ? event.deltaX : event.deltaY;
+    listeners.wheel({ ...positionOf(event), deltaY, shiftKey: event.shiftKey });
   };
 
   const stopListening = new AbortController();
@@ -69,8 +73,8 @@ export function createPointerSource(element: HTMLElement): IDomPointerSource {
 
   return {
     subscribe: (listener, priority) => listeners.add(listener, priority),
-    setCursor(cursor): void {
-      element.style.cursor = cursor;
+    setCursor(cursor, priority = 0): void {
+      element.style.cursor = cursors.set(cursor, priority);
     },
     dispose(): void {
       stopListening.abort();

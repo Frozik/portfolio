@@ -45,7 +45,13 @@ stepped rate on the left — the outer scale of each side in a gutter of its
 own, each scale's labels in the colour of its series. The scales carry the
 usual axis properties: a title at the top end, the rate running downwards
 (inverted), the volume starting at a fixed nought with thousands written
-short, the histogram fixed at both ends. Under the price pane a pane of
+short, the histogram fixed at both ends. Every scale can be worked by hand:
+drag its strip to stretch it or turn the wheel over it (with Shift held,
+both move it instead), hold Shift over the plot to drag the scales of the pane up and down or stretch them with the
+wheel, or on a touch screen move and
+spread two fingers on the plot; then scroll the chart as it is —
+a double click or tap on a scale gives it back to the autoscale, on the plot
+every scale of the pane. Under the price pane a pane of
 volume columns and a pane with a histogram that stands on nought, green
 above it and red below. A legend in the corner of every pane reads each
 series at the element the crosshair snaps to; a limit and a support level

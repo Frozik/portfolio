@@ -88,6 +88,18 @@ beyond it. Without `scales` a chart has one, on the left.
 | `format` | how a value is written on ticks, under the crosshair and on levels |
 | `color` | the colour of its labels |
 
+`scaleZoom()` lets the pointer work on the scales: dragging the strip of a
+scale stretches its range about the middle, the wheel over it about the
+value under the pointer, and with Shift held both move the scale instead;
+on the plot with Shift held a drag moves every
+scale of the pane and the wheel stretches them about the value under the
+pointer; and two fingers on the plot move the scales by their
+middle and stretch them by their vertical spread while `panZoom()` pans and
+zooms the X axis by the same fingers sideways. A plain drag is the pan along
+X, however much it strays up or down. A scale touched by hand keeps its
+range however the chart moves along X; a double tap on a scale gives it back
+to the autoscale, a double tap on the plot every scale of the pane.
+
 **Reading a chart.** `legend()` writes the name of every series and the
 values of its element nearest to the pointer — one for a point, open, high,
 low and close for a candle. `crosshair({ snap: ['price'] })` stands the

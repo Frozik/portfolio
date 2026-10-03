@@ -11,6 +11,7 @@ import { timeseries } from '@frozik/charts/data/timeseries/timeseries';
 import { autoScaleY } from '@frozik/charts/extensions/auto-scale-y/core';
 import { bounds } from '@frozik/charts/extensions/bounds/core';
 import { panZoom } from '@frozik/charts/extensions/pan-zoom/core';
+import { scaleZoom } from '@frozik/charts/extensions/scale-zoom/core';
 import { smoothZoom } from '@frozik/charts/extensions/smooth-zoom/core';
 import { ticks } from '@frozik/charts/extensions/ticks/core';
 import { timeTicks } from '@frozik/charts/extensions/ticks/time-ticks';
@@ -165,6 +166,7 @@ export function createWorkspaceChart(conditions: ISourceConditions) {
       loadingIndicator<bigint>(),
       debugBlocks<bigint>(),
       panZoom<bigint>(),
+      scaleZoom<bigint>(),
       smoothZoom<bigint>(),
       bounds<bigint>({ minRange: Number(MINUTE) }),
       autoScaleY<bigint>(),

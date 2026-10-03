@@ -1,4 +1,4 @@
-import { computePinchScale, pointerDistance } from '@frozik/utils/webgpu/pinchScale';
+import { computePinchScale } from '@frozik/utils/webgpu/pinchScale';
 import { isNil } from 'lodash-es';
 import { ACTIVE_FPS } from '../../core/frame/frame-demand';
 
@@ -29,8 +29,18 @@ interface ITrackedPointer {
   readonly y: number;
 }
 
+/** How far apart two fingers are along X: the pinch of the X axis; their vertical part is for the value scales. */
+function spreadOf([first, second]: readonly [ITrackedPointer, ITrackedPointer]): number {
+  return Math.abs(first.x - second.x);
+}
+
+function middleOf([first, second]: readonly [ITrackedPointer, ITrackedPointer]): number {
+  return (first.x + second.x) / 2;
+}
+
 /**
- * One pointer pans, two pinch-zoom, the wheel zooms round the cursor; a
+ * One pointer pans; two pan by their middle and zoom by how far apart they
+ * are along X; the wheel zooms round the cursor. A
  * released pan keeps coasting and slows down. Zooming moves the target, so an
  * animator can ease into it; panning moves what is drawn at once (§7.1).
  */
@@ -80,17 +90,17 @@ export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
         return isNil(first) || isNil(second) ? undefined : [first, second];
       };
 
-      const pinch = (): void => {
+      const pinch = (previousMiddle: number): void => {
         const pair = twoPointers();
         if (isNil(pair)) {
           return;
         }
-        const [first, second] = pair;
-        const distance = pointerDistance(first.x, first.y, second.x, second.y);
-        const scale = computePinchScale(pinchDistance, distance);
+        pan(middleOf(pair) - previousMiddle);
+        const spread = spreadOf(pair);
+        const scale = computePinchScale(pinchDistance, spread);
         if (!isNil(scale)) {
-          zoom(scale, (first.x + second.x) / 2);
-          pinchDistance = distance;
+          zoom(scale, middleOf(pair));
+          pinchDistance = spread;
         }
       };
 
@@ -123,9 +133,7 @@ export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
               setCursor(PANNING_CURSOR);
             } else {
               const pair = twoPointers();
-              pinchDistance = isNil(pair)
-                ? 0
-                : pointerDistance(pair[0].x, pair[0].y, pair[1].x, pair[1].y);
+              pinchDistance = isNil(pair) ? 0 : spreadOf(pair);
             }
             break;
           }
@@ -134,9 +142,10 @@ export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
             if (isNil(previous)) {
               return;
             }
+            const before = twoPointers();
             pointers.set(input.pointerId, input);
-            if (pointers.size === 2) {
-              pinch();
+            if (!isNil(before) && pointers.size === 2) {
+              pinch(middleOf(before));
             } else if (pointers.size === 1) {
               const deltaX = input.x - previous.x;
               samples.push({ deltaX, timeStamp: input.timeStamp });

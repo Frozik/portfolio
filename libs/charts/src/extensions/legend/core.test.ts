@@ -66,7 +66,15 @@ function scene(options: ICrosshairOptions = {}) {
   const frame = chart.prepareFrame(0);
   assert(!isNil(frame), 'the chart has something to draw');
   const pointAt = (x: number): void =>
-    host.pointer.feed({ phase: 'move', pointerId: 1, kind: 'mouse', x, y: 100, timeStamp: 0 });
+    host.pointer.feed({
+      phase: 'move',
+      pointerId: 1,
+      kind: 'mouse',
+      shiftKey: false,
+      x,
+      y: 100,
+      timeStamp: 0,
+    });
   return { chart, frame, pointAt };
 }
 
@@ -198,7 +206,15 @@ describe('a crosshair that snaps', () => {
     const frame = chart.prepareFrame(0);
     assert(!isNil(frame), 'the chart has something to draw');
 
-    host.pointer.feed({ phase: 'move', pointerId: 1, kind: 'mouse', x: 300, y: 100, timeStamp: 0 });
+    host.pointer.feed({
+      phase: 'move',
+      pointerId: 1,
+      kind: 'mouse',
+      shiftKey: false,
+      x: 300,
+      y: 100,
+      timeStamp: 0,
+    });
     const crosshair = chart.crosshair.crosshairOf(frame);
 
     expect(crosshair?.x).toBe(40);
@@ -227,7 +243,15 @@ describe('a crosshair that snaps', () => {
     const frame = chart.prepareFrame(0);
     assert(!isNil(frame), 'the chart has something to draw');
 
-    host.pointer.feed({ phase: 'move', pointerId: 1, kind: 'mouse', x: 330, y: 100, timeStamp: 0 });
+    host.pointer.feed({
+      phase: 'move',
+      pointerId: 1,
+      kind: 'mouse',
+      shiftKey: false,
+      x: 330,
+      y: 100,
+      timeStamp: 0,
+    });
 
     expect(chart.crosshair.crosshairOf(frame)?.lineLeft).toBe(330);
   });

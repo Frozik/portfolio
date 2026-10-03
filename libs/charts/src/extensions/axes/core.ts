@@ -1,8 +1,6 @@
 import { TICKS_EXTENSION } from '../../core/frame/ticks';
 import type { IChartExtension } from '../../core/kernel/extension';
-
-/** The width kept for every value scale beyond the first on its side, CSS pixels: the first is written inside the plot. */
-export const SCALE_GUTTER = 56;
+import { SCALE_GUTTER } from '../../core/scale/scale-strip';
 
 /**
  * The axis lines and the tick labels. Everything it draws comes from the

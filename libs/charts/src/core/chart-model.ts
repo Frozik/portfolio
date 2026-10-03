@@ -184,6 +184,9 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     }
 
     for (const scaleId of this.scales.ids) {
+      if (this.scales.isHeld(scaleId)) {
+        continue;
+      }
       const fitted = this.registry.fitY({
         domain: this.domain,
         x: this.viewport.current,

@@ -1,8 +1,8 @@
 import type { IChartFrame } from '../core/frame/chart-frame';
 import type { IScaleFrame } from '../core/scale/scale';
+import { scaleLineX } from '../core/scale/scale-strip';
 import type { TColor } from '../core/series/color';
 import { cssOf } from '../core/series/color';
-import { SCALE_GUTTER } from '../extensions/axes/core';
 import type { ITextMeasurer } from './text-measurer';
 
 const TICK_LENGTH = 5;
@@ -25,8 +25,6 @@ export interface IAxisLabelStyle {
   readonly xLabelCenterY: number;
   /** Room between a value scale's tick mark and its label. */
   readonly valueLabelGap: number;
-  /** The width kept for a value scale beyond the first on its side. */
-  readonly gutter: number;
 }
 
 export interface ILabelPlacement {
@@ -60,22 +58,7 @@ export function axisLabelStyleOf(
     glyphCenterOffset: text.getGlyphMetrics(font).centerOffset,
     xLabelCenterY: plot.bottom - tickLength - X_LABEL_GAP * dpr - fontSize / 2,
     valueLabelGap: VALUE_LABEL_GAP * dpr,
-    gutter: SCALE_GUTTER * dpr,
   };
-}
-
-/**
- * Where the line of a value scale stands. The first scale on a side stands
- * on the edge of the plot; each further one a gutter beyond it.
- */
-export function scaleLineX(
-  frame: IChartFrame<unknown>,
-  scale: IScaleFrame,
-  style: IAxisLabelStyle
-): number {
-  return scale.side === 'left'
-    ? frame.plot.left - scale.order * style.gutter
-    : frame.plot.right + scale.order * style.gutter;
 }
 
 /** A label of a value scale at a height: beside the scale's line, towards the plot. */
@@ -86,7 +69,7 @@ export function scaleLabelPlacement(
   textWidth: number,
   centerY: number
 ): ILabelPlacement {
-  const lineX = scaleLineX(frame, scale, style);
+  const lineX = scaleLineX(frame, scale);
   const reach = style.tickLength + style.valueLabelGap;
   if (scale.side === 'left') {
     const textX = lineX + reach;

@@ -54,7 +54,14 @@ function painted(
   const host = createFakeHost({ width: 1000, height: 500, devicePixelRatio: 1 });
   chart.attach(host);
   if (!isNil(pointer)) {
-    host.pointer.feed({ phase: 'move', pointerId: 1, kind: 'mouse', timeStamp: 0, ...pointer });
+    host.pointer.feed({
+      phase: 'move',
+      pointerId: 1,
+      kind: 'mouse',
+      shiftKey: false,
+      timeStamp: 0,
+      ...pointer,
+    });
   }
   const frame = chart.prepareFrame(0);
   assert(!isNil(frame), 'the chart has something to draw');
