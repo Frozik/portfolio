@@ -10,16 +10,16 @@ describe('auto scale of the value axis', () => {
 
     chart.prepareFrame(0);
 
-    expect(chart.scales.rangeOf('main')).toEqual({ min: 8, max: 32 });
+    expect(chart.viewport.scale('main').current).toEqual({ start: 8, end: 32 });
   });
 
   it('follows the visible part of the data, not all of it', () => {
     const { chart } = mountLineChart([autoScaleY({ padding: 0 })]);
-    chart.viewport.jump({ start: 40, end: 110 });
+    chart.viewport.x.jump({ start: 40, end: 110 });
 
     chart.prepareFrame(0);
 
-    expect(chart.scales.rangeOf('main')).toEqual({ min: 20, max: 30 });
+    expect(chart.viewport.scale('main').current).toEqual({ start: 20, end: 30 });
   });
 
   it('keeps the axis as it was when what is visible has no height', () => {
@@ -31,10 +31,10 @@ describe('auto scale of the value axis', () => {
       ],
     });
     const { chart } = mountLineChart([autoScaleY()], { data: flat });
-    const before = chart.scales.rangeOf('main');
+    const before = chart.viewport.scale('main').current;
 
     chart.prepareFrame(0);
 
-    expect(chart.scales.rangeOf('main')).toEqual(before);
+    expect(chart.viewport.scale('main').current).toEqual(before);
   });
 });

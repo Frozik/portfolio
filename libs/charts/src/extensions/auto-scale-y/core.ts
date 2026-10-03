@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import type { IChartExtension, IVisibleData } from '../../core/kernel/extension';
 import { fromAxis, toAxis } from '../../core/scale/scale-mapping';
 import { lowerBound, upperBound } from '../../core/series/search';
-import type { IValueRange } from '../../core/viewport/axis-domain';
+import type { IAxisRange } from '../../core/viewport/axis-domain';
 
 const DEFAULT_PADDING = 0.1;
 /** A logarithmic scale cannot reach nought: values at or below it are shown this far under the maximum. */
@@ -20,7 +20,7 @@ export function autoScaleY<TX>(
 ): IChartExtension<TX, 'autoScaleY', undefined> {
   const defaultPadding = options.padding ?? DEFAULT_PADDING;
 
-  const fitY = (visible: IVisibleData<TX>): IValueRange | undefined => {
+  const fitY = (visible: IVisibleData<TX>): IAxisRange<number> | undefined => {
     const { domain, x, scaleKind, series } = visible;
     const padding = visible.padding ?? defaultPadding;
     let min = Number.POSITIVE_INFINITY;
@@ -46,7 +46,7 @@ export function autoScaleY<TX>(
     const low = toAxis(scaleKind, scaleKind === 'log' && min <= 0 ? max * LOG_FLOOR_RATIO : min);
     const high = toAxis(scaleKind, max);
     const room = (high - low) * padding;
-    return { min: fromAxis(scaleKind, low - room), max: fromAxis(scaleKind, high + room) };
+    return { start: fromAxis(scaleKind, low - room), end: fromAxis(scaleKind, high + room) };
   };
 
   return { id: 'autoScaleY', create: () => ({ slice: undefined, fitY }) };

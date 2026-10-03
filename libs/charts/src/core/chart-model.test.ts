@@ -81,7 +81,7 @@ describe('a chart', () => {
 
     expect(chart.prepareFrame(16)).toBe(first);
 
-    chart.viewport.jump({ start: 10, end: 60 });
+    chart.viewport.x.jump({ start: 10, end: 60 });
     const moved = chart.prepareFrame(32);
     expect(moved).not.toBe(first);
 
@@ -112,38 +112,38 @@ describe('a chart', () => {
     });
     const { chart } = mounted([firstHundred]);
 
-    chart.viewport.jump({ start: -50, end: 500 });
+    chart.viewport.x.jump({ start: -50, end: 500 });
 
-    expect(chart.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 
   it('draws the target at once without an animator and lets an animator approach it', () => {
     const { chart } = mounted([]);
-    chart.viewport.setTarget({ start: 40, end: 80 });
+    chart.viewport.x.setTarget({ start: 40, end: 80 });
     expect(chart.prepareFrame(0)?.x).toEqual({ start: 40, end: 80 });
 
     const halfway = defineExtension<number, 'halfway'>('halfway', {
-      animate: (current, target) => ({
-        start: (current.start + target.start) / 2,
-        end: (current.end + target.end) / 2,
+      animate: (domain, current, target) => ({
+        start: domain.add(current.start, domain.diff(target.start, current.start) / 2),
+        end: domain.add(current.end, domain.diff(target.end, current.end) / 2),
       }),
     });
     const animated = mounted([halfway]).chart;
-    animated.viewport.setTarget({ start: 40, end: 80 });
+    animated.viewport.x.setTarget({ start: 40, end: 80 });
 
     expect(animated.prepareFrame(0)?.x).toEqual({ start: 20, end: 90 });
   });
 
   it('fits the value axis with what an extension makes of the visible data', () => {
     const fit = defineExtension<number, 'fit'>('fit', {
-      fitY: visible => ({ min: -1, max: visible.series.length }),
+      fitY: visible => ({ start: -1, end: visible.series.length }),
     });
     const { chart } = mounted([fit]);
 
-    expect(chart.scales.rangeOf('main')).toEqual({ min: 0, max: 1 });
+    expect(chart.viewport.scale('main').current).toEqual({ start: 0, end: 1 });
     chart.prepareFrame(0);
 
-    expect(chart.scales.rangeOf('main')).toEqual({ min: -1, max: 1 });
+    expect(chart.viewport.scale('main').current).toEqual({ start: -1, end: 1 });
   });
 
   it('adds the room extensions take to the margin', () => {
@@ -226,9 +226,9 @@ describe('the series of a chart', () => {
       extensions: [],
     });
 
-    chart.viewport.setTarget({ start: -2000, end: 4000 });
+    chart.viewport.x.setTarget({ start: -2000, end: 4000 });
 
-    expect(chart.viewport.target).toEqual({ start: 500, end: 1500 });
+    expect(chart.viewport.x.target).toEqual({ start: 500, end: 1500 });
   });
 
   it('refuse to draw when a mark cannot draw the shape it was given', () => {

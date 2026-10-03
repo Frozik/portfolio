@@ -38,6 +38,6 @@ describe('annotations', () => {
 
     chart.prepareFrame(0);
 
-    expect(chart.scales.rangeOf('main')).toEqual({ min: 0, max: 1 });
+    expect(chart.viewport.scale('main').current).toEqual({ start: 0, end: 1 });
   });
 });

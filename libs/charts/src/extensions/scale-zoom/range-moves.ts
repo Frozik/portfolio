@@ -1,10 +1,10 @@
 import type { IScaleFrame } from '../../core/scale/scale';
 import { fromAxis, pixelToValue, toAxis } from '../../core/scale/scale-mapping';
-import type { IValueRange } from '../../core/viewport/axis-domain';
+import type { IAxisRange } from '../../core/viewport/axis-domain';
 
-function rangeOf(scale: IScaleFrame, low: number, high: number): IValueRange | undefined {
-  const next = { min: fromAxis(scale.kind, low), max: fromAxis(scale.kind, high) };
-  return Number.isFinite(next.min) && Number.isFinite(next.max) && next.min < next.max
+function rangeOf(scale: IScaleFrame, low: number, high: number): IAxisRange<number> | undefined {
+  const next = { start: fromAxis(scale.kind, low), end: fromAxis(scale.kind, high) };
+  return Number.isFinite(next.start) && Number.isFinite(next.end) && next.start < next.end
     ? next
     : undefined;
 }
@@ -12,12 +12,12 @@ function rangeOf(scale: IScaleFrame, low: number, high: number): IValueRange | u
 /** The range stretched by `factor` about `anchor`, both measured as the axis measures; none when nothing is left of it. */
 export function stretched(
   scale: IScaleFrame,
-  range: IValueRange,
+  range: IAxisRange<number>,
   factor: number,
   anchor: number
-): IValueRange | undefined {
-  const low = toAxis(scale.kind, range.min);
-  const high = toAxis(scale.kind, range.max);
+): IAxisRange<number> | undefined {
+  const low = toAxis(scale.kind, range.start);
+  const high = toAxis(scale.kind, range.end);
   return rangeOf(scale, anchor - (anchor - low) * factor, anchor + (high - anchor) * factor);
 }
 
@@ -33,7 +33,7 @@ export function pinched(
   scale: IScaleFrame,
   from: readonly [number, number],
   to: readonly [number, number]
-): IValueRange | undefined {
+): IAxisRange<number> | undefined {
   const low = toAxis(scale.kind, scale.min);
   const span = toAxis(scale.kind, scale.max) - low;
   const along = (y: number): number => (toAxis(scale.kind, pixelToValue(scale, y)) - low) / span;
@@ -48,7 +48,11 @@ export function pinched(
 }
 
 /** The range of the scale moved so that what stood at `fromY` stands at `toY`, device pixels. */
-export function shifted(scale: IScaleFrame, fromY: number, toY: number): IValueRange | undefined {
+export function shifted(
+  scale: IScaleFrame,
+  fromY: number,
+  toY: number
+): IAxisRange<number> | undefined {
   const delta =
     toAxis(scale.kind, pixelToValue(scale, fromY)) - toAxis(scale.kind, pixelToValue(scale, toY));
   return rangeOf(

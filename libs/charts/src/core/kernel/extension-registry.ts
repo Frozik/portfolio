@@ -5,7 +5,7 @@ import type { IInsets } from '../frame/theme';
 import { addInsets, NO_INSETS } from '../frame/theme';
 import type { IChartHost } from '../host/chart-host';
 import type { IPaintContribution } from '../stage/backend';
-import type { IAxisRange, IValueRange } from '../viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
 import type { IChartExtension, IExtensionInstance, IVisibleData } from './extension';
 import type { IChartKernel } from './kernel';
 
@@ -60,12 +60,12 @@ export class ExtensionRegistry<TX> {
     );
   }
 
-  /** Where the drawn range goes this frame: towards the target, or straight to it when nothing animates. */
-  animate(current: IAxisRange<TX>, target: IAxisRange<TX>): IAxisRange<TX> {
-    return this.animator?.animate?.(current, target) ?? target;
+  /** Where the drawn range of an axis goes this frame: towards the target, or straight to it when nothing animates. */
+  animate<T>(domain: IAxisDomain<T>, current: IAxisRange<T>, target: IAxisRange<T>): IAxisRange<T> {
+    return this.animator?.animate?.(domain, current, target) ?? target;
   }
 
-  fitY(visible: IVisibleData<TX>): IValueRange | undefined {
+  fitY(visible: IVisibleData<TX>): IAxisRange<number> | undefined {
     for (const instance of this.fitters) {
       const fitted = instance.fitY?.(visible);
       if (!isNil(fitted)) {

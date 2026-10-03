@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 import { ACTIVE_FPS } from '../../core/frame/frame-demand';
 
 import type { IChartExtension } from '../../core/kernel/extension';
-import type { IAxisRange } from '../../core/viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from '../../core/viewport/axis-domain';
 import { spanOf } from '../../core/viewport/axis-domain';
 
 const DEFAULT_SPEED = 0.18;
@@ -15,7 +15,8 @@ export interface ISmoothZoomOptions {
 }
 
 /**
- * Eases what is drawn towards the target instead of jumping, and on a resize
+ * Eases what is drawn along every axis towards its target instead of jumping
+ * — the X axis after a zoom, a value scale after a fit — and on a resize
  * keeps the time per pixel for a moment, so the chart springs to its new
  * width instead of snapping (§7.1).
  */
@@ -27,19 +28,24 @@ export function smoothZoom<TX>(
   return {
     id: 'smoothZoom',
     create(kernel) {
-      const { domain, viewport, frames } = kernel;
+      const { domain, frames } = kernel;
+      const { x: viewport } = kernel.viewport;
 
-      const animate = (current: IAxisRange<TX>, target: IAxisRange<TX>): IAxisRange<TX> => {
-        const startGap = domain.diff(target.start, current.start);
-        const endGap = domain.diff(target.end, current.end);
-        const snap = spanOf(domain, current) * SNAP_SHARE;
+      const animate = <T>(
+        axis: IAxisDomain<T>,
+        current: IAxisRange<T>,
+        target: IAxisRange<T>
+      ): IAxisRange<T> => {
+        const startGap = axis.diff(target.start, current.start);
+        const endGap = axis.diff(target.end, current.end);
+        const snap = spanOf(axis, current) * SNAP_SHARE;
         if (Math.abs(startGap) <= snap && Math.abs(endGap) <= snap) {
           return target;
         }
         frames.raise(ACTIVE_FPS);
         return {
-          start: domain.add(current.start, startGap * speed),
-          end: domain.add(current.end, endGap * speed),
+          start: axis.add(current.start, startGap * speed),
+          end: axis.add(current.end, endGap * speed),
         };
       };
 

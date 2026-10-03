@@ -52,7 +52,8 @@ const chart = createChart({
 
 const unmount = mountChart(stage, chart, { input: overlay, canvases: { webgpu: canvas, canvas2d: overlay } });
 
-chart.viewport.setTarget({ start, end });
+chart.viewport.x.setTarget({ start, end });
+chart.viewport.scale('price').hold({ start: 90, end: 110 });
 chart.series.setStyle('price', stairsStyle({ color: BLUE }));
 chart.crosshair.point; // the slice of an extension, typed by its id
 chart.on('data.failed', ({ seriesIds, failure }) => {});
@@ -66,6 +67,15 @@ In React the stage comes from `<ChartStageProvider backends={…}>` and
 **X axis.** The kernel is generic over the coordinate: an `IAxisDomain`
 gives it `compare`, `diff` and `add`. `timeDomain` is `bigint` nanoseconds,
 `numberDomain` a plain number; the same extensions and marks work over both.
+
+**Viewport.** Every axis — the X axis and each value scale — is an
+`AxisViewport`: the range drawn (`current`), the range an animation heads
+for (`target`), whether a hand holds it, and a revision. `chart.viewport.x`
+and `chart.viewport.scale(id)` are the same thing over different
+coordinates, so the policies that move them are the same too: `panZoom`
+writes ranges, `bounds` constrains them, `autoScaleY` sets the target of a
+scale from the data, `smoothZoom` eases every axis to its target, and a scale
+held by hand (`scaleZoom`) is one the autoscale skips.
 
 **Value scales and panes.** A chart has as many value scales as it names:
 each has a side (left or right), a kind (linear or logarithmic), labels (the

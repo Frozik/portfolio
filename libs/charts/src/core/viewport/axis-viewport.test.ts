@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { IAxisRange } from './axis-domain';
+import { AxisViewport } from './axis-viewport';
 import { numberDomain } from './number-domain';
-import { Viewport } from './viewport';
 
 function createViewport(
   constrain: (range: IAxisRange<number>) => IAxisRange<number> = range => range
 ) {
   const onChange = vi.fn();
-  const viewport = new Viewport({
+  const viewport = new AxisViewport({
     domain: numberDomain,
-    x: { start: 0, end: 100 },
+    initial: { start: 0, end: 100 },
     constrain,
     onChange,
   });
@@ -23,7 +23,7 @@ const clampToFirstThousand = (range: IAxisRange<number>): IAxisRange<number> => 
   return { start, end: start + span };
 };
 
-describe('Viewport', () => {
+describe('the viewport of an axis', () => {
   it('keeps what is drawn until an animator moves it towards the target', () => {
     const { viewport } = createViewport();
 
@@ -61,6 +61,19 @@ describe('Viewport', () => {
 
     expect(viewport.target).toEqual({ start: 900, end: 1000 });
     expect(viewport.current).toEqual({ start: -5, end: 95 });
+  });
+
+  it('is held by hand until released, and announces both', () => {
+    const { viewport, onChange } = createViewport(clampToFirstThousand);
+
+    viewport.hold({ start: -50, end: 50 });
+    expect(viewport.isHeld).toBe(true);
+    expect(viewport.current).toEqual({ start: 0, end: 100 });
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    viewport.release();
+    expect(viewport.isHeld).toBe(false);
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 
   it('announces a change once and only when something changed', () => {

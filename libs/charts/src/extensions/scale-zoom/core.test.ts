@@ -75,7 +75,7 @@ describe('zooming a value scale', () => {
     host.pointer.wheel({ ...ON_SCALE, deltaY: 100, shiftKey: false });
 
     expect(range()).toMatchObject({ min: -15, max: 115 });
-    expect(chart.viewport.target).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.target).toEqual({ start: 0, end: 100 });
   });
 
   it('doubles the range when the scale is dragged down over the height of its pane', () => {
@@ -94,7 +94,7 @@ describe('zooming a value scale', () => {
     const { chart, host, range } = mounted();
     host.pointer.wheel({ ...ON_SCALE, deltaY: 100, shiftKey: false });
 
-    chart.viewport.jump({ start: 10, end: 110 });
+    chart.viewport.x.jump({ start: 10, end: 110 });
 
     expect(range()).toMatchObject({ min: -15, max: 115 });
   });
@@ -122,7 +122,7 @@ describe('zooming a value scale', () => {
     feed('up', { x: ON_PLOT.x + 50, y: ON_PLOT.y });
 
     expect(range()).toMatchObject({ min: 0, max: 100 });
-    expect(chart.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 
   it('takes two taps far apart in time for two single ones', () => {
@@ -143,11 +143,11 @@ describe('zooming a value scale', () => {
 
     host.pointer.wheel({ x: plotLeft - 20, y: 250, deltaY: 100, shiftKey: false });
 
-    expect(chart.scales.isHeld('outer')).toBe(true);
-    expect(chart.scales.isHeld('main')).toBe(false);
-    const { min, max } = chart.scales.rangeOf('outer');
-    expect(min).toBeCloseTo(-0.15);
-    expect(max).toBeCloseTo(1.15);
+    expect(chart.viewport.scale('outer').isHeld).toBe(true);
+    expect(chart.viewport.scale('main').isHeld).toBe(false);
+    const { start, end } = chart.viewport.scale('outer').current;
+    expect(start).toBeCloseTo(-0.15);
+    expect(end).toBeCloseTo(1.15);
   });
 
   it('leaves a fixed end where it is', () => {
@@ -165,7 +165,7 @@ describe('zooming a value scale', () => {
     feed('move', { x: ON_SCALE.x + 100, y: ON_SCALE.y });
     feed('up', { x: ON_SCALE.x + 100, y: ON_SCALE.y });
 
-    expect(chart.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 
   it('moves every scale of the pane with a drag up or down the plot while Shift is held, and nothing along X', () => {
@@ -178,7 +178,7 @@ describe('zooming a value scale', () => {
 
     expect(range().min).toBeCloseTo(50);
     expect(range().max).toBeCloseTo(150);
-    expect(chart.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 
   it('leaves the scales alone when a pan without Shift strays up or down', () => {
@@ -188,8 +188,8 @@ describe('zooming a value scale', () => {
     feed('move', { x: ON_PLOT.x + 100, y: ON_PLOT.y + 30 });
     feed('up', { x: ON_PLOT.x + 100, y: ON_PLOT.y + 30 });
 
-    expect(chart.viewport.current.start).toBeLessThan(0);
-    expect(chart.scales.isHeld('main')).toBe(false);
+    expect(chart.viewport.x.current.start).toBeLessThan(0);
+    expect(chart.viewport.scale('main').isHeld).toBe(false);
   });
 
   it('moves the scales of the pane by the middle of two fingers and stretches them by their spread', () => {
@@ -222,7 +222,7 @@ describe('zooming a value scale', () => {
     host.pointer.wheel({ ...ON_PLOT, deltaY: 100, shiftKey: true });
 
     expect(range()).toMatchObject({ min: -15, max: 115 });
-    expect(chart.viewport.target).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.target).toEqual({ start: 0, end: 100 });
   });
 
   it('zooms the X axis with the wheel over the plot without Shift, and holds no scale', () => {
@@ -230,8 +230,8 @@ describe('zooming a value scale', () => {
 
     host.pointer.wheel({ ...ON_PLOT, deltaY: 100, shiftKey: false });
 
-    expect(chart.viewport.target).not.toEqual({ start: 0, end: 100 });
-    expect(chart.scales.isHeld('main')).toBe(false);
+    expect(chart.viewport.x.target).not.toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.scale('main').isHeld).toBe(false);
   });
 
   it('moves a scale instead of stretching it when it is dragged with Shift held', () => {

@@ -21,8 +21,9 @@ import type { IDataFailure } from './series/series-data';
 import type { IPaintContribution } from './stage/backend';
 import type { IAxisDomain, IAxisRange } from './viewport/axis-domain';
 import { spanOf, withinMaxSpan } from './viewport/axis-domain';
+import { AxisViewport } from './viewport/axis-viewport';
+import type { IChartViewport } from './viewport/chart-viewport';
 import { plotRectOf } from './viewport/plot-geometry';
-import { Viewport } from './viewport/viewport';
 
 const IDLE_FPS = 10;
 const CSS_PIXEL_RATIO = 1;
@@ -34,7 +35,7 @@ const CSS_PIXEL_RATIO = 1;
 export class ChartModel<TX> implements IChartKernel<TX> {
   readonly id: string | undefined;
   readonly domain: IAxisDomain<TX>;
-  readonly viewport: Viewport<TX>;
+  readonly viewport: IChartViewport<TX>;
   readonly scales: ScaleSet;
   readonly series: SeriesModel<TX>;
   readonly events = new EventBus<IChartEvents<TX>>();
@@ -53,16 +54,29 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     this.id = options.id;
     this.domain = options.x.domain;
     this.currentTheme = options.theme ?? darkTheme;
-    this.viewport = new Viewport({
+    const x = new AxisViewport({
       domain: this.domain,
-      x: { start: options.x.start, end: options.x.end },
+      initial: { start: options.x.start, end: options.x.end },
       constrain: range => withinMaxSpan(this.domain, this.registry.constrainX(range)),
-      onChange: () => {
-        this.frames.raise(ACTIVE_FPS);
-        this.events.emit('viewport.changed', undefined);
-      },
+      onChange: () => this.axisChanged(undefined),
     });
-    this.scales = new ScaleSet({ panes: options.panes, scales: options.scales, range: options.y });
+    this.scales = new ScaleSet({
+      panes: options.panes,
+      scales: options.scales,
+      range: options.y,
+      onChange: scaleId => this.axisChanged(scaleId),
+    });
+    const { scales } = this;
+    this.viewport = {
+      x,
+      scale: id => scales.viewportOf(id),
+      get scaleIds() {
+        return scales.ids;
+      },
+      get revision() {
+        return x.revision + scales.revision;
+      },
+    };
     this.series = new SeriesModel(
       options.series,
       this.domain,
@@ -168,10 +182,10 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       return undefined;
     }
     this.registry.tick(now);
-    this.viewport.setCurrent(this.registry.animate(this.viewport.current, this.viewport.target));
+    this.animateAxis(this.viewport.x);
 
     const visible = {
-      range: this.viewport.current,
+      range: this.viewport.x.current,
       widthPx: size.width / Math.max(CSS_PIXEL_RATIO, size.devicePixelRatio),
     };
     this.series.prepare(visible);
@@ -184,21 +198,45 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     }
 
     for (const scaleId of this.scales.ids) {
-      if (this.scales.isHeld(scaleId)) {
-        continue;
+      const scale = this.viewport.scale(scaleId);
+      if (!scale.isHeld) {
+        this.fitScale(scaleId, scale, series);
       }
-      const fitted = this.registry.fitY({
-        domain: this.domain,
-        x: this.viewport.current,
-        scaleKind: this.scales.kindOf(scaleId),
-        padding: this.scales.paddingOf(scaleId),
-        series: series.filter(each => each.scaleId === scaleId),
-      });
-      if (!isNil(fitted)) {
-        this.scales.setRange(scaleId, fitted);
-      }
+      this.animateAxis(scale);
     }
     return this.frameOf(size, series, loading, failed);
+  }
+
+  /** The scale eases to what fits the data, but lands on its first fit at once: there is nothing to ease from yet. */
+  private fitScale(
+    scaleId: string,
+    scale: AxisViewport<number>,
+    series: readonly ISeriesFrame<TX>[]
+  ): void {
+    const fitted = this.registry.fitY({
+      domain: this.domain,
+      x: this.viewport.x.current,
+      scaleKind: this.scales.kindOf(scaleId),
+      padding: this.scales.paddingOf(scaleId),
+      series: series.filter(each => each.scaleId === scaleId),
+    });
+    if (isNil(fitted)) {
+      return;
+    }
+    if (scale.revision === 0) {
+      scale.jump(fitted);
+    } else {
+      scale.setTarget(fitted);
+    }
+  }
+
+  private animateAxis<T>(axis: AxisViewport<T>): void {
+    axis.setCurrent(this.registry.animate(axis.domain, axis.current, axis.target));
+  }
+
+  private axisChanged(scaleId: string | undefined): void {
+    this.frames.raise(ACTIVE_FPS);
+    this.events.emit('viewport.changed', { scaleId });
   }
 
   dispose(): void {
@@ -236,7 +274,6 @@ export class ChartModel<TX> implements IChartKernel<TX> {
       .join(';');
     const key = [
       this.viewport.revision,
-      this.scales.revision,
       size.width,
       size.height,
       size.devicePixelRatio,
@@ -254,7 +291,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     }
     this.builtKey = key;
     const plot = plotRectOf(size, insets);
-    const x = this.viewport.current;
+    const x = this.viewport.x.current;
     return {
       domain: this.domain,
       x,

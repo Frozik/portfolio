@@ -3,7 +3,7 @@ import type { IInsets } from '../frame/theme';
 import type { IChartHost } from '../host/chart-host';
 import type { TScaleKind } from '../scale/scale';
 import type { IPaintContribution } from '../stage/backend';
-import type { IAxisDomain, IAxisRange, IValueRange } from '../viewport/axis-domain';
+import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
 import type { IChartKernel } from './kernel';
 
 /** What is on screen this frame against one value scale, before the scale is fitted to it. */
@@ -24,10 +24,10 @@ export interface IExtensionInstance<TX, TSlice> {
   tick?(now: number): void;
   /** Narrows an X range about to be written: bounds, a least span. */
   constrainX?(range: IAxisRange<TX>): IAxisRange<TX>;
-  /** Moves what is drawn towards the target; without an animator the drawn range is the target. */
-  animate?(current: IAxisRange<TX>, target: IAxisRange<TX>): IAxisRange<TX>;
+  /** Moves what is drawn along an axis towards its target; without an animator the drawn range is the target. */
+  animate?<T>(domain: IAxisDomain<T>, current: IAxisRange<T>, target: IAxisRange<T>): IAxisRange<T>;
   /** The range of a value scale that fits what is visible against it. */
-  fitY?(visible: IVisibleData<TX>): IValueRange | undefined;
+  fitY?(visible: IVisibleData<TX>): IAxisRange<number> | undefined;
   /** Room taken round the plot, CSS pixels. */
   insets?(): IInsets;
   readonly paint?: readonly IPaintContribution[];

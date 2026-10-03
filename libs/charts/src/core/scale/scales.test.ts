@@ -296,7 +296,7 @@ describe('a scale labelled in per cent', () => {
     });
     expect(scaleOf(frame, 'change').base).toBe(50);
 
-    chart.viewport.jump({ start: 40, end: 140 });
+    chart.viewport.x.jump({ start: 40, end: 140 });
     const moved = chart.prepareFrame(16);
     assert(!isNil(moved), 'the chart has something to draw');
     expect(scaleOf(moved, 'change').base).toBe(60);

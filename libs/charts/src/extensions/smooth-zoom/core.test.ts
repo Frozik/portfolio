@@ -8,23 +8,23 @@ describe('smooth zoom', () => {
     const { chart } = mountLineChart([smoothZoom({ speed: 0.5 })]);
     chart.prepareFrame(0);
 
-    chart.viewport.setTarget({ start: 40, end: 60 });
+    chart.viewport.x.setTarget({ start: 40, end: 60 });
     chart.prepareFrame(16);
 
-    expect(chart.viewport.current).toEqual({ start: 20, end: 80 });
-    expect(chart.viewport.target).toEqual({ start: 40, end: 60 });
+    expect(chart.viewport.x.current).toEqual({ start: 20, end: 80 });
+    expect(chart.viewport.x.target).toEqual({ start: 40, end: 60 });
   });
 
   it('lands exactly on the target and stops asking for frames', () => {
     const { chart } = mountLineChart([smoothZoom({ speed: 0.5 })]);
     chart.prepareFrame(0);
-    chart.viewport.setTarget({ start: 40, end: 60 });
+    chart.viewport.x.setTarget({ start: 40, end: 60 });
 
     for (let now = 16; now < 1000; now += 16) {
       chart.prepareFrame(now);
     }
 
-    expect(chart.viewport.current).toEqual({ start: 40, end: 60 });
+    expect(chart.viewport.x.current).toEqual({ start: 40, end: 60 });
   });
 
   it('keeps the range per pixel when the chart is resized, then eases back', () => {
@@ -34,10 +34,10 @@ describe('smooth zoom', () => {
     host.resize({ width: 2000, height: 500, devicePixelRatio: 1 });
     chart.prepareFrame(16);
 
-    const { current } = chart.viewport;
+    const { current } = chart.viewport.x;
     expect(current.end - current.start).toBeGreaterThan(100);
     expect(current.end - current.start).toBeLessThan(200);
     expect((current.start + current.end) / 2).toBeCloseTo(50);
-    expect(chart.viewport.target).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.target).toEqual({ start: 0, end: 100 });
   });
 });

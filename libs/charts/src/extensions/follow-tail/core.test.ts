@@ -51,46 +51,46 @@ describe('following the tail', () => {
     push(110n);
     chart.prepareFrame(48);
 
-    expect(chart.viewport.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
+    expect(chart.viewport.x.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
   });
 
   it('stays where the user went once they leave the end for history', async () => {
     const { chart, push } = await liveChart();
-    chart.viewport.jump({ start: -50n * SECOND, end: 50n * SECOND });
+    chart.viewport.x.jump({ start: -50n * SECOND, end: 50n * SECOND });
     chart.prepareFrame(48);
 
     push(110n);
     chart.prepareFrame(64);
 
     expect(chart.followTail.isFollowing).toBe(false);
-    expect(chart.viewport.current).toEqual({ start: -50n * SECOND, end: 50n * SECOND });
+    expect(chart.viewport.x.current).toEqual({ start: -50n * SECOND, end: 50n * SECOND });
   });
 
   it('returns to the end and follows again on resume', async () => {
     const { chart, push } = await liveChart();
-    chart.viewport.jump({ start: -50n * SECOND, end: 50n * SECOND });
+    chart.viewport.x.jump({ start: -50n * SECOND, end: 50n * SECOND });
     chart.prepareFrame(48);
 
     chart.followTail.resume();
-    expect(chart.viewport.current.end).toBe(100n * SECOND);
+    expect(chart.viewport.x.current.end).toBe(100n * SECOND);
 
     push(120n);
     chart.prepareFrame(64);
-    expect(chart.viewport.current.end).toBe(120n * SECOND);
+    expect(chart.viewport.x.current.end).toBe(120n * SECOND);
   });
 
   it('returns with the room it was told to keep to the right of the last element', async () => {
     const { chart, push } = await liveChart({ headroom: 0.1 });
-    chart.viewport.jump({ start: -50n * SECOND, end: 50n * SECOND });
+    chart.viewport.x.jump({ start: -50n * SECOND, end: 50n * SECOND });
     chart.prepareFrame(48);
 
     chart.followTail.resume();
-    expect(chart.viewport.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
+    expect(chart.viewport.x.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
 
     push(120n);
     chart.prepareFrame(64);
     expect(chart.followTail.isFollowing).toBe(true);
-    expect(chart.viewport.current.end).toBe(130n * SECOND);
+    expect(chart.viewport.x.current.end).toBe(130n * SECOND);
   });
 });
 
@@ -102,18 +102,18 @@ describe('following the tail with a glide', () => {
 
     push(110n);
     chart.prepareFrame(48);
-    expect(chart.viewport.current.end).toBe(100n * SECOND);
+    expect(chart.viewport.x.current.end).toBe(100n * SECOND);
 
     chart.prepareFrame(148);
-    const early = chart.viewport.current.end;
+    const early = chart.viewport.x.current.end;
     chart.prepareFrame(248);
-    const halfway = chart.viewport.current.end;
+    const halfway = chart.viewport.x.current.end;
     chart.prepareFrame(448);
 
     expect(early).toBeGreaterThan(100n * SECOND);
     expect(early - 100n * SECOND).toBeLessThan((halfway - 100n * SECOND) / 2n);
     expect(halfway).toBe(105n * SECOND);
-    expect(chart.viewport.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
+    expect(chart.viewport.x.current).toEqual({ start: 10n * SECOND, end: 110n * SECOND });
   });
 
   it('counts as following all through the glide, though the edge is still behind', async () => {
@@ -136,7 +136,7 @@ describe('following the tail with a glide', () => {
     chart.prepareFrame(264);
     chart.prepareFrame(664);
 
-    expect(chart.viewport.current.end).toBe(120n * SECOND);
+    expect(chart.viewport.x.current.end).toBe(120n * SECOND);
     expect(chart.followTail.isFollowing).toBe(true);
   });
 
@@ -146,11 +146,11 @@ describe('following the tail with a glide', () => {
     chart.prepareFrame(48);
     chart.prepareFrame(148);
 
-    chart.viewport.jump({ start: -50n * SECOND, end: 50n * SECOND });
+    chart.viewport.x.jump({ start: -50n * SECOND, end: 50n * SECOND });
     chart.prepareFrame(248);
     chart.prepareFrame(448);
 
     expect(chart.followTail.isFollowing).toBe(false);
-    expect(chart.viewport.current).toEqual({ start: -50n * SECOND, end: 50n * SECOND });
+    expect(chart.viewport.x.current).toEqual({ start: -50n * SECOND, end: 50n * SECOND });
   });
 });

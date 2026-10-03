@@ -26,8 +26,8 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('down', 500));
     host.pointer.feed(pointer('move', 600));
 
-    expect(viewport.current).toEqual({ start: -10, end: 90 });
-    expect(viewport.target).toEqual({ start: -10, end: 90 });
+    expect(viewport.x.current).toEqual({ start: -10, end: 90 });
+    expect(viewport.x.target).toEqual({ start: -10, end: 90 });
   });
 
   it('shows a grabbing hand while the chart is held', () => {
@@ -46,8 +46,8 @@ describe('pan and zoom', () => {
 
     host.pointer.wheel({ x: 250, y: 100, deltaY: -1, shiftKey: false });
 
-    expect(viewport.target.start).toBeCloseTo(7.5);
-    expect(viewport.target.end).toBeCloseTo(77.5);
+    expect(viewport.x.target.start).toBeCloseTo(7.5);
+    expect(viewport.x.target.end).toBeCloseTo(77.5);
   });
 
   it('zooms out on a wheel turn away from the chart', () => {
@@ -55,8 +55,8 @@ describe('pan and zoom', () => {
 
     host.pointer.wheel({ x: 500, y: 100, deltaY: 1, shiftKey: false });
 
-    expect(viewport.target.start).toBeCloseTo(-15);
-    expect(viewport.target.end).toBeCloseTo(115);
+    expect(viewport.x.target.start).toBeCloseTo(-15);
+    expect(viewport.x.target.end).toBeCloseTo(115);
   });
 
   it('keeps coasting after a flick and slows to a stop', () => {
@@ -66,18 +66,18 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('move', 520, 10));
     host.pointer.feed(pointer('move', 540, 20));
     host.pointer.feed(pointer('up', 540, 20));
-    const released = viewport.current.start;
+    const released = viewport.x.current.start;
 
     chart.prepareFrame(36);
-    const coasted = viewport.current.start;
+    const coasted = viewport.x.current.start;
     expect(coasted).toBeLessThan(released);
 
     for (let now = 52; now < 10_000; now += 16) {
       chart.prepareFrame(now);
     }
-    const rested = viewport.current.start;
+    const rested = viewport.x.current.start;
     chart.prepareFrame(10_016);
-    expect(viewport.current.start).toBe(rested);
+    expect(viewport.x.current.start).toBe(rested);
     expect(rested).toBeLessThan(coasted);
   });
 
@@ -87,10 +87,10 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('down', 500, 0));
     host.pointer.feed(pointer('move', 540, 10));
     host.pointer.feed(pointer('cancel', 540, 20));
-    const released = viewport.current.start;
+    const released = viewport.x.current.start;
     chart.prepareFrame(36);
 
-    expect(viewport.current.start).toBe(released);
+    expect(viewport.x.current.start).toBe(released);
   });
 
   it('does not coast when the pointer rested before it lifted, however fast it moved earlier', () => {
@@ -100,10 +100,10 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('move', 520, 10));
     host.pointer.feed(pointer('move', 540, 20));
     host.pointer.feed(pointer('up', 540, 2020));
-    const released = viewport.current.start;
+    const released = viewport.x.current.start;
     chart.prepareFrame(2036);
 
-    expect(viewport.current.start).toBe(released);
+    expect(viewport.x.current.start).toBe(released);
   });
 
   it('coasts from the moment of release: the first frame moves by one frame of travel', () => {
@@ -113,10 +113,10 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('move', 520, 10));
     host.pointer.feed(pointer('move', 540, 20));
     host.pointer.feed(pointer('up', 540, 30));
-    const released = viewport.current.start;
+    const released = viewport.x.current.start;
     chart.prepareFrame(46);
 
-    expect(released - viewport.current.start).toBeCloseTo(3.2);
+    expect(released - viewport.x.current.start).toBeCloseTo(3.2);
   });
 
   it('zooms in when two pointers move apart', () => {
@@ -127,10 +127,10 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('move', 300, 10, 1));
     host.pointer.feed(pointer('move', 700, 10, 2));
 
-    const span = viewport.target.end - viewport.target.start;
+    const span = viewport.x.target.end - viewport.x.target.start;
     expect(span).toBeLessThan(100);
-    expect(viewport.target.start).toBeGreaterThan(0);
-    expect(viewport.target.end).toBeLessThan(100);
+    expect(viewport.x.target.start).toBeGreaterThan(0);
+    expect(viewport.x.target.end).toBeLessThan(100);
   });
 
   it('pans by the middle of two pointers moving together', () => {
@@ -141,7 +141,7 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('move', 500, 10, 1));
     host.pointer.feed(pointer('move', 700, 10, 2));
 
-    expect(viewport.current).toEqual({ start: -10, end: 90 });
+    expect(viewport.x.current).toEqual({ start: -10, end: 90 });
   });
 
   it('leaves the X axis alone when two pointers spread straight up and down', () => {
@@ -151,8 +151,8 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('down', 500, 0, 2));
     host.pointer.feed(pointer('move', 500, 10, 1));
 
-    expect(viewport.current).toEqual({ start: 0, end: 100 });
-    expect(viewport.target).toEqual({ start: 0, end: 100 });
+    expect(viewport.x.current).toEqual({ start: 0, end: 100 });
+    expect(viewport.x.target).toEqual({ start: 0, end: 100 });
   });
 
   it('stops listening once the chart is taken off its host', () => {
@@ -162,6 +162,6 @@ describe('pan and zoom', () => {
     host.pointer.feed(pointer('down', 500));
     host.pointer.feed(pointer('move', 600));
 
-    expect(viewport.current).toEqual({ start: 0, end: 100 });
+    expect(viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 });

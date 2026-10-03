@@ -48,7 +48,8 @@ export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
   return {
     id: 'panZoom',
     create(kernel) {
-      const { domain, viewport, frames } = kernel;
+      const { domain, frames } = kernel;
+      const { x: viewport } = kernel.viewport;
       const pointers = new Map<number, ITrackedPointer>();
       const samples: IVelocitySample[] = [];
       let pinchDistance = 0;

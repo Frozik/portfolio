@@ -43,7 +43,7 @@ describe('debug blocks', () => {
 
   it('marks only the beginning of a run when the backend names no block size', () => {
     const { chart, frame } = scene();
-    chart.viewport.jump({ start: -50, end: 50 });
+    chart.viewport.x.jump({ start: -50, end: 50 });
     chart.debugBlocks.setEnabled(true);
     const moved = chart.prepareFrame(16);
     assert(!isNil(moved), 'the chart has something to draw');

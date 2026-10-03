@@ -17,34 +17,34 @@ describe('bounds', () => {
   it('slides a range that crosses a limit back inside, keeping its length', () => {
     const viewport = viewportWith({ min: 0, max: 1000 });
 
-    viewport.jump({ start: -30, end: 70 });
-    expect(viewport.current).toEqual({ start: 0, end: 100 });
+    viewport.x.jump({ start: -30, end: 70 });
+    expect(viewport.x.current).toEqual({ start: 0, end: 100 });
 
-    viewport.jump({ start: 950, end: 1050 });
-    expect(viewport.current).toEqual({ start: 900, end: 1000 });
+    viewport.x.jump({ start: 950, end: 1050 });
+    expect(viewport.x.current).toEqual({ start: 900, end: 1000 });
   });
 
   it('shows everything between the limits when asked for more', () => {
     const viewport = viewportWith({ min: 0, max: 1000 });
 
-    viewport.jump({ start: -500, end: 5000 });
+    viewport.x.jump({ start: -500, end: 5000 });
 
-    expect(viewport.current).toEqual({ start: 0, end: 1000 });
+    expect(viewport.x.current).toEqual({ start: 0, end: 1000 });
   });
 
   it('widens a range shorter than the least span round its middle', () => {
     const viewport = viewportWith({ minRange: 60 });
 
-    viewport.jump({ start: 495, end: 505 });
+    viewport.x.jump({ start: 495, end: 505 });
 
-    expect(viewport.current).toEqual({ start: 470, end: 530 });
+    expect(viewport.x.current).toEqual({ start: 470, end: 530 });
   });
 
   it('leaves a side unlimited until the data that limits it is known', () => {
     const viewport = viewportWith({ max: 'data' });
 
-    viewport.jump({ start: 5000, end: 6000 });
+    viewport.x.jump({ start: 5000, end: 6000 });
 
-    expect(viewport.current).toEqual({ start: 5000, end: 6000 });
+    expect(viewport.x.current).toEqual({ start: 5000, end: 6000 });
   });
 });

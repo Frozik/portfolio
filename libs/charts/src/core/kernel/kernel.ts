@@ -6,7 +6,7 @@ import type { IChartTheme } from '../frame/theme';
 import type { IChartSize } from '../host/size-source';
 import type { ScaleSet } from '../scale/scale-set';
 import type { IAxisDomain, IAxisRange } from '../viewport/axis-domain';
-import type { Viewport } from '../viewport/viewport';
+import type { IChartViewport } from '../viewport/chart-viewport';
 import type { IChartEvents } from './events';
 import type { SeriesModel } from './series-model';
 
@@ -14,8 +14,9 @@ import type { SeriesModel } from './series-model';
 export interface IChartKernel<TX> {
   readonly id: string | undefined;
   readonly domain: IAxisDomain<TX>;
-  readonly viewport: Viewport<TX>;
-  /** The value scales and their ranges. */
+  /** The X axis and every value scale: what is in view along each of them. */
+  readonly viewport: IChartViewport<TX>;
+  /** The value scales as declared: their kinds, sides, panes and layout. */
   readonly scales: ScaleSet;
   readonly series: SeriesModel<TX>;
   readonly events: EventBus<IChartEvents<TX>>;

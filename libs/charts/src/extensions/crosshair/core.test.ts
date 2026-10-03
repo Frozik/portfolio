@@ -77,7 +77,7 @@ describe('crosshair', () => {
     host.pointer.feed(input('move', 600, 250, 'touch'));
 
     expect(chart.crosshair.position).toBeUndefined();
-    expect(chart.viewport.current).toEqual({ start: -10, end: 90 });
+    expect(chart.viewport.x.current).toEqual({ start: -10, end: 90 });
   });
 
   it('takes a finger that rested for a moment, and its moves no longer pan', () => {
@@ -88,7 +88,7 @@ describe('crosshair', () => {
     host.pointer.feed(input('move', 600, 260, 'touch'));
 
     expect(chart.crosshair.position).toMatchObject({ x: 600, y: 260 });
-    expect(chart.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(chart.viewport.x.current).toEqual({ start: 0, end: 100 });
 
     host.pointer.feed(input('up', 600, 260, 'touch'));
     expect(chart.crosshair.position).toBeUndefined();

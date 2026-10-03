@@ -38,39 +38,39 @@ describe('a group of synced charts', () => {
   it('moves every member with the one that is panned, and the move stays', () => {
     const [first, second] = pair();
 
-    first.viewport.shift(-10);
+    first.viewport.x.shift(-10);
     first.prepareFrame(16);
     second.prepareFrame(16);
 
     for (const chart of [first, second]) {
-      expect(chart.viewport.current).toEqual({ start: -10, end: 90 });
-      expect(chart.viewport.target).toEqual({ start: -10, end: 90 });
+      expect(chart.viewport.x.current).toEqual({ start: -10, end: 90 });
+      expect(chart.viewport.x.target).toEqual({ start: -10, end: 90 });
     }
   });
 
   it('follows whichever member is moved', () => {
     const [first, second] = pair();
 
-    second.viewport.jump({ start: 40, end: 60 });
+    second.viewport.x.jump({ start: 40, end: 60 });
 
-    expect(first.viewport.current).toEqual({ start: 40, end: 60 });
+    expect(first.viewport.x.current).toEqual({ start: 40, end: 60 });
   });
 
   it('gives every member the target of a zoom, so they ease into it together', () => {
     const [first, second] = pair();
 
-    first.viewport.setTarget({ start: 20, end: 80 });
+    first.viewport.x.setTarget({ start: 20, end: 80 });
 
-    expect(second.viewport.target).toEqual({ start: 20, end: 80 });
-    expect(second.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(second.viewport.x.target).toEqual({ start: 20, end: 80 });
+    expect(second.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 
   it('lets a chart go once it is disposed of', () => {
     const [first, second] = pair();
     second.dispose();
 
-    first.viewport.jump({ start: 40, end: 60 });
+    first.viewport.x.jump({ start: 40, end: 60 });
 
-    expect(second.viewport.current).toEqual({ start: 0, end: 100 });
+    expect(second.viewport.x.current).toEqual({ start: 0, end: 100 });
   });
 });

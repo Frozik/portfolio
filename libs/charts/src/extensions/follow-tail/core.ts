@@ -50,7 +50,8 @@ export function followTail<TX>(
   return {
     id: 'followTail',
     create(kernel) {
-      const { domain, viewport, frames } = kernel;
+      const { domain, frames } = kernel;
+      const { x: viewport } = kernel.viewport;
       let knownEnd: TX | undefined;
       let following = false;
       let glide: IGlide | undefined;

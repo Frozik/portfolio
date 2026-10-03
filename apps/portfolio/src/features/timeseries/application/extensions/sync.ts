@@ -54,15 +54,15 @@ export function createSyncGroup<TX>(): ISyncGroup<TX> {
         members.add(kernel);
 
         // Writing to a member makes it report a change of its own; without the guard it would write its not yet updated target back.
-        const stopFollowing = kernel.events.on('viewport.changed', () => {
-          if (isSyncing) {
+        const stopFollowing = kernel.events.on('viewport.changed', ({ scaleId }) => {
+          if (isSyncing || !isNil(scaleId)) {
             return;
           }
           isSyncing = true;
           for (const other of members) {
             if (other !== kernel) {
-              other.viewport.setCurrent(kernel.viewport.current);
-              other.viewport.setTarget(kernel.viewport.target);
+              other.viewport.x.setCurrent(kernel.viewport.x.current);
+              other.viewport.x.setTarget(kernel.viewport.x.target);
             }
           }
           isSyncing = false;

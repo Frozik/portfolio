@@ -1,12 +1,11 @@
 import { isNil } from 'lodash-es';
 
-import { ACTIVE_FPS } from '../../core/frame/frame-demand';
 import type { IPointerInput, IWheelInput } from '../../core/host/pointer-source';
 import type { IChartExtension } from '../../core/kernel/extension';
 import type { IPaneFrame, IScaleFrame } from '../../core/scale/scale';
 import { pixelToValue, toAxis } from '../../core/scale/scale-mapping';
 import { containsPixel, scaleStripOf } from '../../core/scale/scale-strip';
-import type { IValueRange } from '../../core/viewport/axis-domain';
+import type { IAxisRange } from '../../core/viewport/axis-domain';
 import { DoubleTap } from './double-tap';
 import { pinched, shifted, stretched } from './range-moves';
 
@@ -37,7 +36,7 @@ interface IStretch {
   readonly pointerId: number;
   readonly scale: IScaleFrame;
   readonly startY: number;
-  readonly startRange: IValueRange;
+  readonly startRange: IAxisRange<number>;
   /** The height of the pane, CSS pixels: what the drag is measured against. */
   readonly heightPx: number;
 }
@@ -83,7 +82,7 @@ export function scaleZoom<TX>(): IChartExtension<TX, 'scaleZoom', undefined> {
   return {
     id: 'scaleZoom',
     create(kernel) {
-      const { scales, frames } = kernel;
+      const { viewport } = kernel;
       let gesture: IStretch | IShift | IPinch | undefined;
       const resting = new Map<number, IResting>();
       const doubleTap = new DoubleTap();
@@ -110,18 +109,16 @@ export function scaleZoom<TX>(): IChartExtension<TX, 'scaleZoom', undefined> {
       const paneAt = (at: IPixelPoint): IPaneFrame | undefined =>
         kernel.frame?.panes.find(pane => containsPixel(pane.plot, at.x, at.y));
 
-      const hold = (scaleId: string, range: IValueRange | undefined): void => {
+      const hold = (scaleId: string, range: IAxisRange<number> | undefined): void => {
         if (!isNil(range)) {
-          scales.hold(scaleId, range);
-          frames.raise(ACTIVE_FPS);
+          viewport.scale(scaleId).hold(range);
         }
       };
 
       const release = (released: readonly IScaleFrame[]): void => {
         for (const scale of released) {
-          scales.release(scale.id);
+          viewport.scale(scale.id).release();
         }
-        frames.raise(ACTIVE_FPS);
       };
 
       /** A second finger on the same pane makes a pinch of the two; the gesture of one finger, if any, ends. */
@@ -166,7 +163,7 @@ export function scaleZoom<TX>(): IChartExtension<TX, 'scaleZoom', undefined> {
             pointerId: input.pointerId,
             scale,
             startY: input.y,
-            startRange: scales.rangeOf(scale.id),
+            startRange: viewport.scale(scale.id).current,
             heightPx: scale.plot.height / devicePixelRatio,
           };
           return true;
@@ -189,7 +186,7 @@ export function scaleZoom<TX>(): IChartExtension<TX, 'scaleZoom', undefined> {
       const stretchTo = ({ scale, startY, startRange, heightPx }: IStretch, y: number): void => {
         const factor = DRAG_DOUBLING ** ((y - startY) / heightPx);
         const middle =
-          (toAxis(scale.kind, startRange.min) + toAxis(scale.kind, startRange.max)) / 2;
+          (toAxis(scale.kind, startRange.start) + toAxis(scale.kind, startRange.end)) / 2;
         hold(scale.id, stretched(scale, startRange, factor, middle));
       };
 
@@ -286,7 +283,7 @@ export function scaleZoom<TX>(): IChartExtension<TX, 'scaleZoom', undefined> {
         const factor = input.deltaY > 0 ? WHEEL_ZOOM_OUT : WHEEL_ZOOM_IN;
         for (const scale of turned) {
           const anchor = toAxis(scale.kind, pixelToValue(scale, y));
-          hold(scale.id, stretched(scale, scales.rangeOf(scale.id), factor, anchor));
+          hold(scale.id, stretched(scale, viewport.scale(scale.id).current, factor, anchor));
         }
         return true;
       };

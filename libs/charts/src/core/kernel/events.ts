@@ -4,7 +4,8 @@ import type { IAxisRange } from '../viewport/axis-domain';
 
 /** What a chart tells the outside about; extension slices add their own events (§3.3). */
 export interface IChartEvents<TX> {
-  readonly 'viewport.changed': undefined;
+  /** An axis moved: the X axis when `scaleId` is none, else the value scale named. */
+  readonly 'viewport.changed': { readonly scaleId: string | undefined };
   readonly 'size.changed': { readonly previous: IChartSize | undefined; readonly next: IChartSize };
   readonly 'data.changed': {
     readonly seriesIds: readonly string[];
