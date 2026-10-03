@@ -4,8 +4,8 @@ import type { IMarkLayer, IWebGpuMarkPainter } from '../../painter';
 import { canvasFractionOf } from '../../scale-uniforms';
 import columnSource from './column.wgsl?raw';
 
-/** Data that is not aggregated has no interval to narrow a column to. */
-const NO_WIDTH_LIMIT = 1e9;
+/** Columns of data that is not aggregated have no interval to be narrowed to. */
+const NO_WIDTH_LIMIT = Number.POSITIVE_INFINITY;
 
 export const columnPainter: IWebGpuMarkPainter = {
   markId: 'column',
