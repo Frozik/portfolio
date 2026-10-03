@@ -91,6 +91,24 @@ describe('ColumnsModel', () => {
     expect(columns.pin('name', 'left')).toEqual({ ok: false, reason: 'columns.pinWidth' });
   });
 
+  it('shows a previewed move in the layout without touching the saved order until it is committed', () => {
+    const columns = model();
+    columns.pin('price', null);
+    columns.previewMove('price', 0);
+
+    expect(columns.visibleIds).toEqual(['price', 'name', 'note']);
+    expect(columns.state.map(state => state.id)).toEqual(['name', 'price', 'note']);
+
+    columns.clearPreview();
+    expect(columns.visibleIds).toEqual(['name', 'price', 'note']);
+
+    columns.previewMove('price', 0);
+    columns.move('price', 0);
+    columns.clearPreview();
+    expect(columns.visibleIds).toEqual(['price', 'name', 'note']);
+    expect(columns.state.map(state => state.id)).toEqual(['price', 'name', 'note']);
+  });
+
   it('puts service columns first and never lets them be reordered by state', () => {
     const columns = model();
     columns.setServiceColumns([

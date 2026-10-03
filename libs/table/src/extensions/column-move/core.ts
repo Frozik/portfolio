@@ -1,5 +1,7 @@
 import { makeAutoObservable } from 'mobx';
 
+import type { IColumnDrag, IColumnDragPort } from '../../core/columns/column-drag-port';
+import { COLUMN_MOVE_ID } from '../../core/columns/column-drag-port';
 import type { TCommandOutcome } from '../../core/kernel/command-bus';
 import type { IExtensionInstance, ITableExtension } from '../../core/kernel/extension';
 import type { ITableKernel } from '../../core/kernel/kernel';
@@ -15,28 +17,25 @@ declare module '../../core/kernel/contracts' {
   }
 }
 
-export interface IColumnDrag {
-  readonly columnId: string;
-  /** Where the column would land, as a slot among the visible columns of its own section. */
-  readonly targetIndex: number | undefined;
-  /** The group header the pointer is over: the column joins that group at the slot. */
-  readonly targetGroup: string | undefined;
-}
-
-export interface IColumnMoveSlice {
-  readonly drag: IColumnDrag | null;
+export interface IColumnMoveSlice extends IColumnDragPort {
   /** Whether the column may be dragged at all; where it may land is asked per target while hovering. */
   reasonAgainst(columnId: string): string | undefined;
   begin(columnId: string): void;
-  /** Marks the target when the column may land there; an illegal target shows no marker and drops nowhere. */
+  /** Moves the column to a legal target at once; an illegal or absent one leaves it where it last was. */
   hover(targetIndex: number | undefined, targetGroup?: string): void;
+  /** Fixes the column where it stands. */
   drop(): TCommandOutcome | undefined;
   cancel(): void;
   move(columnId: string, toIndex: number): TCommandOutcome;
 }
 
+interface IActiveDrag {
+  readonly columnId: string;
+  readonly targetGroup: string | undefined;
+}
+
 class ColumnMoveSlice<TRow> implements IColumnMoveSlice {
-  drag: IColumnDrag | null = null;
+  private active: IActiveDrag | null = null;
 
   constructor(private readonly kernel: ITableKernel<TRow, unknown>) {
     makeAutoObservable<ColumnMoveSlice<TRow>, 'kernel' | 'ownIndex' | 'landReason'>(
@@ -46,6 +45,20 @@ class ColumnMoveSlice<TRow> implements IColumnMoveSlice {
     );
   }
 
+  /** The slot comes from the columns model, which shows the column there already. */
+  get drag(): IColumnDrag | null {
+    if (this.active === null) {
+      return null;
+    }
+    const { columnId, targetGroup } = this.active;
+    const preview = this.kernel.columns.preview;
+    return {
+      columnId,
+      targetIndex: preview?.columnId === columnId ? preview.toIndex : undefined,
+      targetGroup,
+    };
+  }
+
   /** Probed with the column's own place: a move that changes nothing is always allowed, so only a lock can refuse. */
   reasonAgainst(columnId: string): string | undefined {
     return this.landReason(columnId, this.ownIndex(columnId));
@@ -53,26 +66,27 @@ class ColumnMoveSlice<TRow> implements IColumnMoveSlice {
 
   begin(columnId: string): void {
     if (this.reasonAgainst(columnId) === undefined) {
-      this.drag = { columnId, targetIndex: undefined, targetGroup: undefined };
+      this.active = { columnId, targetGroup: undefined };
     }
   }
 
   hover(targetIndex: number | undefined, targetGroup?: string): void {
-    if (this.drag === null) {
+    if (this.active === null || targetIndex === undefined) {
       return;
     }
-    const legal =
-      targetIndex !== undefined && this.landReason(this.drag.columnId, targetIndex) === undefined;
-    const next = legal ? targetIndex : undefined;
-    const group = legal ? targetGroup : undefined;
-    if (this.drag.targetIndex !== next || this.drag.targetGroup !== group) {
-      this.drag = { ...this.drag, targetIndex: next, targetGroup: group };
+    const { columnId } = this.active;
+    if (this.landReason(columnId, targetIndex) !== undefined) {
+      return;
+    }
+    this.kernel.columns.previewMove(columnId, targetIndex);
+    if (this.active.targetGroup !== targetGroup) {
+      this.active = { columnId, targetGroup };
     }
   }
 
   drop(): TCommandOutcome | undefined {
     const drag = this.drag;
-    this.drag = null;
+    this.cancel();
     if (drag === null || drag.targetIndex === undefined) {
       return undefined;
     }
@@ -85,7 +99,8 @@ class ColumnMoveSlice<TRow> implements IColumnMoveSlice {
   }
 
   cancel(): void {
-    this.drag = null;
+    this.active = null;
+    this.kernel.columns.clearPreview();
   }
 
   move(columnId: string, toIndex: number): TCommandOutcome {
@@ -104,9 +119,13 @@ class ColumnMoveSlice<TRow> implements IColumnMoveSlice {
   }
 }
 
-export function columnMove<TRow = never>(): ITableExtension<TRow, 'columnMove', IColumnMoveSlice> {
+export function columnMove<TRow = never>(): ITableExtension<
+  TRow,
+  typeof COLUMN_MOVE_ID,
+  IColumnMoveSlice
+> {
   return {
-    id: 'columnMove',
+    id: COLUMN_MOVE_ID,
     create(kernel): IExtensionInstance<TRow, IColumnMoveSlice> {
       return { slice: new ColumnMoveSlice(kernel), dispose: () => undefined };
     },

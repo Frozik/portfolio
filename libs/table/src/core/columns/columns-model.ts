@@ -22,6 +22,12 @@ export interface IColumnLayout<TRow> {
   readonly stickyOffset: number | undefined;
 }
 
+/** A move shown in the layout before it is committed: a column mid-drag stands where it would land. */
+export interface IColumnMovePreview {
+  readonly columnId: string;
+  readonly toIndex: number;
+}
+
 /** Room the scrolling centre keeps even when everything else is pinned. */
 const MIN_CENTER_WIDTH = 80;
 
@@ -37,6 +43,7 @@ export class ColumnsModel<TRow> {
   private serviceColumns: readonly TAnyColumn<TRow>[] = [];
   private states = new Map<string, IColumnState>();
   private order: readonly string[] | undefined = undefined;
+  preview: IColumnMovePreview | null = null;
   private viewportWidth: number | undefined = undefined;
 
   constructor(
@@ -45,7 +52,10 @@ export class ColumnsModel<TRow> {
     private readonly events: EventBus<ITableEvents>
   ) {
     this.definitions = definitions;
-    makeAutoObservable<ColumnsModel<TRow>, 'commands' | 'events' | 'sectionOf' | 'lockReason'>(
+    makeAutoObservable<
+      ColumnsModel<TRow>,
+      'commands' | 'events' | 'sectionOf' | 'lockReason' | 'placed'
+    >(
       this,
       {
         commands: false,
@@ -57,6 +67,7 @@ export class ColumnsModel<TRow> {
         flexOf: false,
         sectionOf: false,
         lockReason: false,
+        placed: false,
       },
       { autoBind: true }
     );
@@ -71,10 +82,19 @@ export class ColumnsModel<TRow> {
     return new Map(this.all.map(column => [column.id, column]));
   }
 
+  /** The declared columns as committed: what the state carries; a previewed move shows in `orderedIds` only. */
+  private get committedIds(): readonly string[] {
+    return mergeColumnOrder(
+      this.definitions.map(column => column.id),
+      this.order
+    );
+  }
+
   get orderedIds(): readonly string[] {
     const serviceIds = this.serviceColumns.map(column => column.id);
-    const ownIds = this.definitions.map(column => column.id);
-    return [...serviceIds, ...mergeColumnOrder(ownIds, this.order)];
+    const own =
+      this.preview === null ? this.committedIds : this.placed(this.committedIds, this.preview);
+    return [...serviceIds, ...own];
   }
 
   stateOf(columnId: string): IColumnState {
@@ -162,7 +182,7 @@ export class ColumnsModel<TRow> {
   }
 
   get state(): readonly IColumnState[] {
-    return this.orderedIds.filter(id => !this.isService(id)).map(id => this.stateOf(id));
+    return this.committedIds.map(id => this.stateOf(id));
   }
 
   setDefinitions(definitions: readonly TAnyColumn<TRow>[]): void {
@@ -178,17 +198,20 @@ export class ColumnsModel<TRow> {
     this.viewportWidth = width;
   }
 
-  /** `toIndex` is a slot among the visible columns of the column's section, itself excluded: what a drop marker points at. */
+  /** `toIndex` is a slot among the visible columns of the column's section, itself excluded: where a dragged column stands. */
   move(columnId: string, toIndex: number): TCommandOutcome {
     return this.commands.run('columns.move', { columnId, toIndex }, () => {
-      const ownOrder = this.orderedIds.filter(id => !this.isService(id));
-      const section = this.sectionOf(columnId);
-      const slots = ownOrder.filter(
-        id => id !== columnId && !this.isHidden(id) && this.sectionOf(id) === section
-      );
-      this.order = moveToSlot(ownOrder, columnId, slots, toIndex);
+      this.order = this.placed(this.committedIds, { columnId, toIndex });
       this.events.emit('columns.changed', { columnId });
     });
+  }
+
+  previewMove(columnId: string, toIndex: number): void {
+    this.preview = { columnId, toIndex };
+  }
+
+  clearPreview(): void {
+    this.preview = null;
   }
 
   pin(columnId: string, side: TPinSide | null): TCommandOutcome {
@@ -221,6 +244,18 @@ export class ColumnsModel<TRow> {
       this.order = undefined;
       this.events.emit('columns.changed', { columnId: undefined });
     });
+  }
+
+  /** The slot is counted among the visible columns of the column's own section, so it is the same before and after the move. */
+  private placed(
+    order: readonly string[],
+    { columnId, toIndex }: IColumnMovePreview
+  ): readonly string[] {
+    const section = this.sectionOf(columnId);
+    const slots = order.filter(
+      id => id !== columnId && !this.isHidden(id) && this.sectionOf(id) === section
+    );
+    return moveToSlot(order, columnId, slots, toIndex);
   }
 
   private patch(columnId: string, change: Partial<IColumnState>): void {

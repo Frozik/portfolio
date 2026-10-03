@@ -59,10 +59,19 @@ is the ceiling of a column without one). Measurement reads the rendered
 header and cells, so what is scrolled in decides; the menu's "fit column"
 and a double-click on the resize handle still fit on request, uncapped.
 
+Dragging a header reorders live: the column stands where it would land as
+soon as the pointer names a slot — in the header, the group rows and every
+body row, the kernel showing the moved order as a preview over the
+committed one — and the drop fixes it there, while a release before any
+legal slot, Escape or a cancelled pointer returns it. The headers slide into
+their new places (a FLIP over measured positions, honouring
+`prefers-reduced-motion`); the body follows at once.
+
 A column's group is part of the table state, not only of the definition:
-dropped between two columns of a group it joins that group, dropped beside
-a group it leaves its own, and dropped on a group's header (which lights up
-while the pointer is over it) it becomes the group's first or last column.
+dragged between two columns of a group it joins that group, dragged beside
+a group it leaves its own, and dragged onto a group's header (which lights
+up while the pointer is over it) it becomes the group's first or last
+column — the group rows show the membership before the drop.
 The context menu opens on a cell, a column header or a column group's
 header; a group offers to pin itself as one, to unpin, and to hide its
 columns, next to the table-level items.

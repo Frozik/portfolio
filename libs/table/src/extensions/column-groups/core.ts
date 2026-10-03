@@ -2,6 +2,8 @@ import { isNil, isPlainObject } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 
 import type { IColumnTitle, TPinSide } from '../../core/columns/column';
+import type { IColumnDragPort } from '../../core/columns/column-drag-port';
+import { COLUMN_MOVE_ID } from '../../core/columns/column-drag-port';
 import type { TCommandOutcome } from '../../core/kernel/command-bus';
 import type { IExtensionInstance, ITableExtension } from '../../core/kernel/extension';
 import type { ITableKernel } from '../../core/kernel/kernel';
@@ -105,13 +107,15 @@ class ColumnGroupsSlice<TRow> implements IColumnGroupsSlice {
   ) {
     this.groups = options.groups;
     collectPaths(options.groups, [], this.definedPaths);
-    makeAutoObservable<ColumnGroupsSlice<TRow>, 'kernel' | 'definedPaths' | 'groups'>(
+    makeAutoObservable<ColumnGroupsSlice<TRow>, 'kernel' | 'definedPaths' | 'groups' | 'landingOf'>(
       this,
       {
         kernel: false,
         definedPaths: false,
         groups: false,
         pathOf: false,
+        landingOf: false,
+        joinedGroup: false,
         level: false,
         leavesOf: false,
         groupForSlot: false,
@@ -129,11 +133,30 @@ class ColumnGroupsSlice<TRow> implements IColumnGroupsSlice {
   }
 
   pathOf(columnId: string): readonly IColumnGroupDefinition[] {
-    const moved = this.membership.get(columnId);
+    const landing = this.landingOf(columnId);
+    const moved = landing === undefined ? this.membership.get(columnId) : landing;
     if (moved === undefined) {
       return this.definedPaths.get(columnId) ?? [];
     }
     return moved === null ? [] : (pathToGroup(this.groups, moved) ?? []);
+  }
+
+  /** A column mid-drag already shows the membership its drop would give it. */
+  private landingOf(columnId: string): string | null | undefined {
+    const drag = this.kernel.extension<IColumnDragPort>(COLUMN_MOVE_ID)?.drag;
+    if (drag?.columnId !== columnId || drag.targetIndex === undefined) {
+      return undefined;
+    }
+    return this.joinedGroup(columnId, drag.targetIndex, drag.targetGroup);
+  }
+
+  /** The group a column landing at the slot belongs to: the one named, else whatever its neighbours share. */
+  joinedGroup(
+    columnId: string,
+    toIndex: number,
+    groupId: string | null | undefined
+  ): string | null {
+    return groupId === undefined ? this.groupForSlot(columnId, toIndex) : groupId;
   }
 
   leavesOf(groupId: string): readonly string[] {
@@ -254,10 +277,7 @@ export function columnGroups<TRow = never>(
         };
       };
       const stopListening = kernel.events.on('columnMove.drop', ({ columnId, toIndex, groupId }) =>
-        slice.setGroup(
-          columnId,
-          groupId === undefined ? slice.groupForSlot(columnId, toIndex) : groupId
-        )
+        slice.setGroup(columnId, slice.joinedGroup(columnId, toIndex, groupId))
       );
       return {
         slice,

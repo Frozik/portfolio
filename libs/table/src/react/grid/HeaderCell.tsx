@@ -1,6 +1,6 @@
 import { untracked } from 'mobx';
 import { observer } from 'mobx-react-lite';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { cn } from '@frozik/components/components/cn';
 
@@ -9,6 +9,7 @@ import type { IColumn, IHeaderContext, INamedPart } from '../column';
 import { resolve } from '../column';
 import { useTableContext } from '../context';
 import { mergeDecorations, mergeProps, positionAttributes } from './cellAttributes';
+import { useSlideOnReorder } from './useSlideOnReorder';
 
 function HeaderParts<TRow>({
   parts,
@@ -38,6 +39,8 @@ export const HeaderCell = observer(function HeaderCell<TRow>({
   readonly columns: readonly IColumnLayout<TRow>[];
 }) {
   const { table, slots } = useTableContext<TRow>();
+  const ref = useRef<HTMLDivElement>(null);
+  useSlideOnReorder(ref, layout.index);
   const column = layout.definition as IColumn<TRow>;
   const context = useMemo<IHeaderContext<TRow>>(
     () => ({ table, column, layout }),
@@ -58,6 +61,7 @@ export const HeaderCell = observer(function HeaderCell<TRow>({
   const title = column.title;
   return (
     <div
+      ref={ref}
       role="columnheader"
       aria-colindex={layout.index + 1}
       {...props}

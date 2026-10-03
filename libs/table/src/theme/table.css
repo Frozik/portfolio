@@ -149,30 +149,11 @@
   opacity: 0.5;
 }
 
-.ft-header-cell[data-drop='before']::before,
-.ft-header-cell[data-drop='after']::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  background: var(--table-accent);
-  border-radius: 1px;
-}
-
-.ft-header-cell[data-drop='before']::before {
-  left: 0;
-}
-
 /* The group the dragged column would join. */
 .ft-group-row .ft-header-cell[data-drop-group] {
   color: var(--table-accent);
   background: color-mix(in srgb, var(--table-accent) 14%, transparent);
   box-shadow: inset 0 0 0 1px var(--table-accent);
-}
-
-.ft-header-cell[data-drop='after']::after {
-  right: 0;
 }
 
 .ft-header-part {

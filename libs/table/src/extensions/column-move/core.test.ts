@@ -23,15 +23,35 @@ function table() {
 }
 
 describe('column move', () => {
-  it('marks where the column would land and drops it there, joining the group its neighbours share', () => {
+  it('places the column where it would land while hovering and fixes it there on drop, in the group its neighbours share', () => {
     const model = table();
     expect(model.columnMove.reasonAgainst('b')).toBeUndefined();
     model.columnMove.begin('a');
     model.columnMove.hover(1);
     expect(model.columnMove.drag?.targetIndex).toBe(1);
-    expect(model.columnMove.drop()).toEqual({ ok: true });
     expect(model.columns.visibleIds).toEqual(['b', 'a', 'c', 'd']);
     expect(model.columnGroups.leavesOf('pair')).toEqual(['b', 'a', 'c']);
+    expect(model.columns.state.map(state => state.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(model.columnMove.drop()).toEqual({ ok: true });
+    expect(model.columns.visibleIds).toEqual(['b', 'a', 'c', 'd']);
+    expect(model.columns.state.map(state => state.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(model.columnGroups.leavesOf('pair')).toEqual(['b', 'a', 'c']);
+  });
+
+  it('keeps the column where it was last allowed when the pointer leaves the targets, and returns it on cancel', () => {
+    const model = table();
+    model.columnMove.begin('a');
+    model.commands.guard('columns.move', ({ toIndex }) =>
+      toIndex === 3 ? 'app.lastStaysLast' : undefined
+    );
+    model.columnMove.hover(2);
+    model.columnMove.hover(3);
+    model.columnMove.hover(undefined);
+    expect(model.columnMove.drag?.targetIndex).toBe(2);
+    expect(model.columns.visibleIds).toEqual(['b', 'c', 'a', 'd']);
+    model.columnMove.cancel();
+    expect(model.columnMove.drag).toBeNull();
+    expect(model.columns.visibleIds).toEqual(['a', 'b', 'c', 'd']);
   });
 
   it('joins the group whose header the column is dropped on, and leaves it when dropped beside', () => {
@@ -39,6 +59,7 @@ describe('column move', () => {
     model.columnMove.begin('d');
     model.columnMove.hover(3, 'pair');
     expect(model.columnMove.drag).toEqual({ columnId: 'd', targetIndex: 3, targetGroup: 'pair' });
+    expect(model.columnGroups.leavesOf('pair')).toEqual(['b', 'c', 'd']);
     model.columnMove.drop();
     expect(model.columns.visibleIds).toEqual(['a', 'b', 'c', 'd']);
     expect(model.columnGroups.leavesOf('pair')).toEqual(['b', 'c', 'd']);

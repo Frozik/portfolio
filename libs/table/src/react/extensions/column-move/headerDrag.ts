@@ -1,3 +1,4 @@
+import { isNil } from 'lodash-es';
 import type { HTMLAttributes, PointerEvent } from 'react';
 
 import type { IColumnMoveSlice } from '../../../extensions/column-move/core';
@@ -63,6 +64,11 @@ function groupTargetAt<TRow>(
   return index === undefined ? undefined : { index, group: groupId };
 }
 
+/**
+ * The column under the pointer, or nothing to change: the dragged column
+ * already stands where it last landed, so the pointer over it names no new
+ * slot — asking would send the column back to its own place.
+ */
 function targetAt<TRow>(
   context: IHeaderContext<TRow>,
   x: number,
@@ -74,32 +80,69 @@ function targetAt<TRow>(
     return groupTargetAt(context, groupCell, x);
   }
   const cell = under?.closest<HTMLElement>('[data-column-id]');
-  if (cell === null || cell === undefined || cell.dataset.columnId === undefined) {
+  const overId = cell?.dataset.columnId;
+  if (isNil(cell) || isNil(overId) || overId === context.column.id) {
     return undefined;
   }
   const bounds = cell.getBoundingClientRect();
-  const index = slotOf(context, cell.dataset.columnId, x > bounds.left + bounds.width / 2);
+  const index = slotOf(context, overId, x > bounds.left + bounds.width / 2);
   return index === undefined ? undefined : { index, group: undefined };
+}
+
+/** Follows one drag on the document, where the pointer keeps arriving as the header cells change places under it. */
+function follow<TRow>(context: IHeaderContext<TRow>, slice: IColumnMoveSlice): void {
+  const onMove = (event: globalThis.PointerEvent) => {
+    const target = targetAt(context, event.clientX, event.clientY);
+    slice.hover(target?.index, target?.group);
+  };
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      end();
+      slice.cancel();
+    }
+  };
+  const onUp = () => {
+    end();
+    slice.drop();
+  };
+  const onCancel = () => {
+    end();
+    slice.cancel();
+  };
+  const end = () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onCancel);
+    document.removeEventListener('keydown', onKey);
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onCancel);
+  document.addEventListener('keydown', onKey);
 }
 
 /**
  * Pointer handlers that turn a header cell into a drag source for column
  * reordering. One gesture lives across renders: the header re-renders as
- * the drop indicator moves, so the origin of the press cannot live in the
- * handlers of one render. The pointer is captured only once the drag has
- * begun: a captured pointer retargets the click to the header cell, which
- * would take it away from the buttons inside.
+ * the column moves, so the origin of the press cannot live in the
+ * handlers of one render. The cell only detects the drag; it is followed on
+ * the document, because React moves the cell in the DOM as its column
+ * changes place, and a moved element loses its pointer capture. The click
+ * that ends a drag is swallowed so the header's own click handlers (sorting)
+ * never see it.
  */
 export function createHeaderDrag<TRow>(
   slice: IColumnMoveSlice
 ): (context: IHeaderContext<TRow>) => HTMLAttributes<HTMLDivElement> {
   let origin: { readonly x: number; readonly y: number } | null = null;
+  let endsADrag = false;
   return context => {
     if (slice.reasonAgainst(context.column.id) !== undefined) {
       return {};
     }
     return {
       onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
+        endsADrag = false;
         const onControl =
           event.target instanceof Element && event.target.closest(CONTROL_SELECTOR) !== null;
         if (event.button !== 0 || onControl) {
@@ -108,30 +151,23 @@ export function createHeaderDrag<TRow>(
         origin = { x: event.clientX, y: event.clientY };
       },
       onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-        if (origin === null) {
+        if (origin === null || Math.abs(event.clientX - origin.x) < DRAG_THRESHOLD_PX) {
           return;
         }
-        if (slice.drag === null) {
-          if (Math.abs(event.clientX - origin.x) < DRAG_THRESHOLD_PX) {
-            return;
-          }
-          event.currentTarget.setPointerCapture(event.pointerId);
-          slice.begin(context.column.id);
+        origin = null;
+        slice.begin(context.column.id);
+        if (slice.drag !== null) {
+          endsADrag = true;
+          follow(context, slice);
         }
-        const target = targetAt(context, event.clientX, event.clientY);
-        slice.hover(target?.index, target?.group);
       },
       onPointerUp: () => {
         origin = null;
-        slice.drop();
-      },
-      onPointerCancel: () => {
-        origin = null;
-        slice.cancel();
       },
       onClickCapture: event => {
-        if (slice.drag !== null) {
+        if (endsADrag) {
           event.stopPropagation();
+          endsADrag = false;
         }
       },
     };
