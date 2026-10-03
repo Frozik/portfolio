@@ -25,8 +25,14 @@ function virtualRun(
   );
 }
 
+/**
+ * A quadratic pass over 8000 cuts × 112 000 elements takes seconds; the bound
+ * only has to separate that from a linear pass on a loaded CI runner.
+ */
+const LINEAR_PASS_BUDGET_MS = 500;
+
 describe('break markers at the cuts of a run', () => {
-  it('marks a long run over thousands of cuts in a few milliseconds', () => {
+  it('marks a long run over thousands of cuts in a moment', () => {
     const manyCuts = cutsMapping(
       numberDomain,
       Array.from({ length: 8000 }, (_, index) => ({ from: index * 24 + 14, to: index * 24 + 24 }))
@@ -46,7 +52,7 @@ describe('break markers at the cuts of a run', () => {
 
     const marked = markBreaks(numberDomain, manyCuts, run);
 
-    expect(performance.now() - started).toBeLessThan(50);
+    expect(performance.now() - started).toBeLessThan(LINEAR_PASS_BUDGET_MS);
     expect(marked.breakMarkers).toHaveLength(7999);
   });
 

@@ -20,6 +20,12 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# `pnpm install` installs the lefthook hooks into the runner's clone, so the
+# tag push below would rerun the whole pre-push gate — the CI run that
+# triggered this workflow has already passed it on this very commit.
+env:
+  LEFTHOOK: 0
+
 jobs:
   # Tags the commit and publishes a GitHub Release from its Conventional Commits
   # (feat → minor, fix / perf / refactor → patch, `!` → major); commits of other
