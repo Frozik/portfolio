@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { cutsMapping } from './axis-mapping';
+import { cutsMapping, suppliedMapping } from './axis-mapping';
+import type { ICutSupply } from './cut-table';
 import { numberDomain } from './number-domain';
 import { timeDomain } from './time-domain';
 
@@ -84,5 +85,40 @@ describe('an axis with cuts', () => {
 
     expect(decades.toVirtual(moment)).toBe(10n * YEAR + 123n);
     expect(decades.toWorld(decades.toVirtual(moment))).toBe(moment);
+  });
+});
+
+describe('an axis whose cuts are supplied as it is looked at', () => {
+  const STRIDE = 10;
+  const STRIDES_SCROLLED = 50;
+
+  it('asks the supply only for the stride it has not seen yet, scrolled either way, and counts on from there', () => {
+    const asked: (readonly [number, number])[] = [];
+    const supply: ICutSupply<number> = {
+      stride: STRIDE,
+      cutsBetween(from, to) {
+        asked.push([from, to]);
+        return [{ from: from + 4, to: from + 6 }];
+      },
+    };
+    const mapping = suppliedMapping(numberDomain, 'supplied', supply);
+
+    for (let stride = 0; stride <= STRIDES_SCROLLED; stride++) {
+      mapping.toVirtual(stride * STRIDE + 5);
+      mapping.toVirtual(-stride * STRIDE - 5);
+    }
+
+    expect(asked).toEqual(
+      Array.from({ length: STRIDES_SCROLLED + 1 }, (_, stride) => [
+        [stride * STRIDE, (stride + 1) * STRIDE],
+        [-(stride + 1) * STRIDE, 0 - stride * STRIDE],
+      ]).flat()
+    );
+    expect(mapping.toVirtual(STRIDES_SCROLLED * STRIDE + 5)).toBe(
+      STRIDES_SCROLLED * (STRIDE - 2) + 4
+    );
+    expect(mapping.toVirtual(-STRIDES_SCROLLED * STRIDE - 5)).toBe(
+      -STRIDES_SCROLLED * (STRIDE - 2) - 4
+    );
   });
 });

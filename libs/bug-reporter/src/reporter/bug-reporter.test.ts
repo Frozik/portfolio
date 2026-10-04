@@ -45,9 +45,14 @@ function createReporter() {
   return { reporter, capture, mask, sink, diagnostics, clickMarks };
 }
 
+function silencedConsoleError() {
+  return vi.spyOn(console, 'error').mockImplementation(() => undefined);
+}
+
 describe('BugReporter', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('walks screenshot → annotate → compose → download → done and names the archive by its time', async () => {
@@ -92,15 +97,18 @@ describe('BugReporter', () => {
     expect(reporter.snapshot.phase.kind).toBe('annotating');
   });
 
-  it('returns to the menu with a notice when the tab request is refused while arming', async () => {
+  it('returns to the menu with a notice when the tab request is refused while arming, logging the cause', async () => {
+    const consoleError = silencedConsoleError();
     const { reporter, capture } = createReporter();
-    capture.nextPrepare = () => Promise.reject(new CaptureError('denied'));
+    const refusal = new CaptureError('denied');
+    capture.nextPrepare = () => Promise.reject(refusal);
     reporter.open();
 
     await reporter.armRecording();
 
     expect(reporter.snapshot.phase.kind).toBe('choosing');
     expect(reporter.snapshot.notice).toBe('capture-denied');
+    expect(consoleError).toHaveBeenCalledWith('Bug reporter: screen capture failed:', refusal);
   });
 
   it('disarms back to where the draft is', async () => {
@@ -130,16 +138,19 @@ describe('BugReporter', () => {
     expect(mask.active).toBe(0);
   });
 
-  it('returns to the menu with a notice when the person refuses tab capture', async () => {
+  it('returns to the menu with a notice when the person refuses tab capture, logging the cause', async () => {
+    const consoleError = silencedConsoleError();
     const { reporter, capture, mask } = createReporter();
     reporter.open();
-    capture.nextGrab = () => Promise.reject(new CaptureError('denied'));
+    const refusal = new CaptureError('denied');
+    capture.nextGrab = () => Promise.reject(refusal);
 
     await reporter.takeScreenshot();
 
     expect(reporter.snapshot.phase.kind).toBe('choosing');
     expect(reporter.snapshot.notice).toBe('capture-denied');
     expect(mask.active).toBe(0);
+    expect(consoleError).toHaveBeenCalledWith('Bug reporter: screen capture failed:', refusal);
   });
 
   it('counts down, records with click marks and frame sampling, and lands in compose with the video', async () => {
@@ -227,6 +238,7 @@ describe('BugReporter', () => {
   });
 
   it('goes back to compose when the save dialog is dismissed, and reports a failed save', async () => {
+    const consoleError = silencedConsoleError();
     const { reporter, sink } = createReporter();
     reporter.open();
     reporter.describeOnly();
@@ -236,10 +248,12 @@ describe('BugReporter', () => {
     expect(reporter.snapshot.notice).toBeNull();
 
     sink.outcome = 'saved';
-    sink.failWith = new Error('disk full');
+    const diskFull = new Error('disk full');
+    sink.failWith = diskFull;
     await reporter.download();
     expect(reporter.snapshot.phase.kind).toBe('composing');
     expect(reporter.snapshot.notice).toBe('save-failed');
+    expect(consoleError).toHaveBeenCalledWith('Bug reporter: saving the archive failed:', diskFull);
   });
 
   it('cancel from any step drops the draft and releases the capture', async () => {

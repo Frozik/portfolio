@@ -1,6 +1,6 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createChart } from '../../core/create-chart';
 import { series } from '../../core/series/series';
@@ -33,7 +33,8 @@ function stripsOf(cuts: readonly ICut<number>[] | undefined) {
   chart.attach(createFakeHost({ width: 1000, height: 500, devicePixelRatio: 1 }));
   const frame = chart.prepareFrame(0);
   assert(!isNil(frame), 'the chart has something to draw');
-  return chart.cuts.cutsOf(frame);
+  const lookups = isNil(frame.mapping) ? undefined : vi.spyOn(frame.mapping, 'firstCutIn');
+  return { ...chart.cuts.cutsOf(frame), lookups: lookups?.mock.calls.length ?? 0 };
 }
 
 describe('the strips at the cuts of the axis', () => {
@@ -59,12 +60,12 @@ describe('the strips at the cuts of the axis', () => {
       from: index * 0.02,
       to: index * 0.02 + 0.01,
     }));
-    const started = performance.now();
-    const { strips } = stripsOf(cuts);
+    const stripsAcrossThePlot = 1000 / 8 + 1;
+    const { strips, lookups } = stripsOf(cuts);
 
     expect(strips.length).toBeGreaterThan(100);
-    expect(strips.length).toBeLessThanOrEqual(1000 / 8 + 1);
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(strips.length).toBeLessThanOrEqual(stripsAcrossThePlot);
+    expect(lookups).toBeLessThanOrEqual(stripsAcrossThePlot);
   });
 
   it('draw nothing on an axis shown whole', () => {

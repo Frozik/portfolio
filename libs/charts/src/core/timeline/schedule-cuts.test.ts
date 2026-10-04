@@ -1,11 +1,14 @@
 import { EDayOfWeek } from '@frozik/utils/date/constants';
 import { Temporal } from 'temporal-polyfill';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { IAxisMapping } from '../viewport/axis-mapping';
 import { timeDomain } from '../viewport/time-domain';
 import type { ISchedule } from './schedule';
 import { schedule } from './schedule-cuts';
+import { cutsOfWeek } from './week-cuts';
+
+vi.mock('./week-cuts', { spy: true });
 
 const MOSCOW = 'Europe/Moscow';
 const WEEKDAYS = [
@@ -195,32 +198,13 @@ describe('a schedule of trading sessions', () => {
     expect(mapping.toWorld(mapping.toVirtual(moment))).toBe(moment);
   });
 
-  it('grows a week at a time while the axis is scrolled without counting the table over again', () => {
-    const mapping = mappingOf(session);
-    mapping.toVirtual(at('2026-05-11T12:00'));
-    const moments = Array.from({ length: 520 }, (_, week) => [
-      Temporal.PlainDateTime.from('2026-05-11T12:00').add({ weeks: week }).toZonedDateTime(MOSCOW)
-        .epochNanoseconds,
-      Temporal.PlainDateTime.from('1969-05-11T12:00')
-        .subtract({ weeks: week })
-        .toZonedDateTime(MOSCOW).epochNanoseconds,
-    ]);
-    const started = performance.now();
+  it('covers half a century of weeks by placing one and copying the plain rest', () => {
+    const mapping = mappingOf(session, 'UTC');
+    vi.mocked(cutsOfWeek).mockClear();
 
-    for (const [forward, backward] of moments) {
-      mapping.toVirtual(forward);
-      mapping.toVirtual(backward);
-    }
+    const virtual = mapping.toVirtual(at('2026-05-11T12:00', 'UTC'));
 
-    expect(performance.now() - started).toBeLessThan(500);
-  });
-
-  it('covers half a century of weeks in a moment by copying the plain ones', () => {
-    const mapping = mappingOf(session);
-    const started = performance.now();
-    const virtual = mapping.toVirtual(at('2026-05-11T12:00'));
-
-    expect(mapping.toWorld(virtual)).toBe(at('2026-05-11T12:00'));
-    expect(performance.now() - started).toBeLessThan(500);
+    expect(mapping.toWorld(virtual)).toBe(at('2026-05-11T12:00', 'UTC'));
+    expect(cutsOfWeek).toHaveBeenCalledOnce();
   });
 });

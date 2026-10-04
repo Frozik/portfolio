@@ -25,19 +25,20 @@ function virtualRun(
   );
 }
 
-/**
- * A quadratic pass over 8000 cuts × 112 000 elements takes seconds; the bound
- * only has to separate that from a linear pass on a loaded CI runner.
- */
-const LINEAR_PASS_BUDGET_MS = 500;
+/** A walk over the elements and the cuts together compares each a few times; a pass over every cut per element would compare them ~10⁹ times. */
+const LINEAR_WALK_STEPS_PER_ITEM = 4;
 
 describe('break markers at the cuts of a run', () => {
-  it('marks a long run over thousands of cuts in a moment', () => {
+  it('marks a long run over thousands of cuts in one walk over both', () => {
+    const cutCount = 8000;
     const manyCuts = cutsMapping(
       numberDomain,
-      Array.from({ length: 8000 }, (_, index) => ({ from: index * 24 + 14, to: index * 24 + 24 }))
+      Array.from({ length: cutCount }, (_, index) => ({
+        from: index * 24 + 14,
+        to: index * 24 + 24,
+      }))
     );
-    const worldXs = Array.from({ length: 8000 * 14 }, (_, index) => {
+    const worldXs = Array.from({ length: cutCount * 14 }, (_, index) => {
       const day = Math.floor(index / 14);
       return day * 24 + (index % 14);
     });
@@ -48,12 +49,19 @@ describe('break markers at the cuts of a run', () => {
       }),
       { id: 1, revision: 0, step: 1, aggregateTime: 'start' }
     );
-    const started = performance.now();
+    let comparisons = 0;
+    const countingDomain = {
+      ...numberDomain,
+      compare: (first: number, second: number) => {
+        comparisons += 1;
+        return numberDomain.compare(first, second);
+      },
+    };
 
-    const marked = markBreaks(numberDomain, manyCuts, run);
+    const marked = markBreaks(countingDomain, manyCuts, run);
 
-    expect(performance.now() - started).toBeLessThan(LINEAR_PASS_BUDGET_MS);
-    expect(marked.breakMarkers).toHaveLength(7999);
+    expect(marked.breakMarkers).toHaveLength(cutCount - 1);
+    expect(comparisons).toBeLessThanOrEqual(LINEAR_WALK_STEPS_PER_ITEM * (run.length + cutCount));
   });
 
   it('puts a technical NaN between neighbours with the cut wholly between their intervals', () => {
