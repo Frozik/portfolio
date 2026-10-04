@@ -279,3 +279,19 @@ implements `ISeriesData`. None of them touches the kernel.
 
 The shaders are imported with Vite's `?raw`; the package ships sources and is
 meant to be built by a Vite consumer.
+
+## Agent tools (WebMCP)
+
+`agent/` lets a browser agent drive charts through
+[WebMCP](https://developer.chrome.com/docs/ai/webmcp), headless like the
+kernel. `defineChartTarget({ chart, codec })` wraps one chart behind a uniform
+interface, positions travelling as text: `timeCodec(timeZone)` reads anything
+the date picker reads (ISO, "yesterday 10:00") and prints local date-times,
+`numberCodec` plain numbers. `defineChartTools({ prefix, targets })` turns the
+targets into tools — list the charts, zoom and scroll along X, go to a
+position or a range, fit the data, stretch, hold and reset value scales,
+follow live data, read values at a point. The commands write the way the
+gestures do: zoom eases the target round an anchor as the wheel does,
+scrolling shifts like a drag, a scale is held by hand and released as a double
+tap releases it; positions are world coordinates, the cuts taken out and put
+back on the way.

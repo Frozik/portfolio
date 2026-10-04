@@ -1,9 +1,10 @@
 import { isFailValueDescriptor, matchValueDescriptor } from '@frozik/utils/value-descriptors/utils';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { memo, useEffect } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
+import { useFeatureAgentTools } from '../../../app/components/TopNavAgentToolsContext';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import { ValueDescriptorFail } from '../../../shared/components/ValueDescriptorFail';
 import { useSudokuStore } from '../application/useSudokuStore';
@@ -44,9 +45,22 @@ export const Sudoku = observer(() => {
 
   const handleMarkField = useEventCallback(() => store.markField());
 
-  const handleSelectPuzzleDifficulty = useEventCallback((difficulty: SudokuDifficulty) => {
-    navigate(`/sudoku/${store.createPuzzle(difficulty)}`);
-  });
+  const openPuzzle = useEventCallback((generatedPuzzle: string) =>
+    navigate(`/sudoku/${generatedPuzzle}`)
+  );
+
+  const loadAgentTools = useCallback(
+    () =>
+      import('../application/sudoku-agent-tools').then(module =>
+        module.createSudokuAgentTools(store, openPuzzle)
+      ),
+    [store, openPuzzle]
+  );
+  useFeatureAgentTools(loadAgentTools);
+
+  const handleSelectPuzzleDifficulty = useEventCallback((difficulty: SudokuDifficulty) =>
+    openPuzzle(store.createPuzzle(difficulty))
+  );
 
   const handleRestartGame = useEventCallback(() => navigate('/sudoku'));
 

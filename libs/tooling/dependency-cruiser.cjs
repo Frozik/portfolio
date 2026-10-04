@@ -124,7 +124,7 @@ module.exports = {
       comment:
         'Data kinds, marks and extension cores run without a DOM, a GPU or React: backends and adapters attach to them, never the other way round.',
       severity: 'error',
-      from: { path: '^libs/charts/src/(core|data|marks|extensions)/' },
+      from: { path: '^libs/charts/src/(core|data|marks|extensions|agent)/' },
       to: {
         path: '(^libs/charts/src/(webgpu|canvas2d|dom|react|theme)/|/node_modules/(react|react-dom|idb|webgpu-utils)(/|$))',
       },

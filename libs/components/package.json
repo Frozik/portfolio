@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@frozik/utils": "workspace:*",
-    "tabbable": "catalog:"
+    "tabbable": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

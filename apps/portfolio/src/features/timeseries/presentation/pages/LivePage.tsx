@@ -12,6 +12,7 @@ import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore
 import { DemoStage } from '../components/DemoStage';
 import { ExpandableChart } from '../components/ExpandableChart';
 import { useDebugBlocks } from '../components/useDebugBlocks';
+import { useTimeseriesAgentTools } from '../components/useTimeseriesAgentTools';
 import { timeseriesT } from '../translations';
 
 const STYLES: readonly TLiveStyle[] = ['line', 'stairs', 'area'];
@@ -21,6 +22,7 @@ export const LivePage = observer(() => {
   const chart = useChart(() => createLiveChart(store));
   const charts = useChart(() => [chart]);
   useDebugBlocks(charts, store.debug);
+  useTimeseriesAgentTools(charts);
   const isFollowing = useChartValue(chart, live => live.followTail.isFollowing);
   const [style, setStyle] = useState<TLiveStyle>('line');
 

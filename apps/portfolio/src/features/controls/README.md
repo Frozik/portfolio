@@ -86,3 +86,14 @@ shared library.
   (minutes, seconds, milliseconds)
 - Parse direction toggle: future-only vs nearest match
 - Weekend highlighting in calendar grid
+
+## Agent tools
+
+Both fields are exposed to WebMCP agents through the component library's own
+tools: `controls_number_read` / `_enter` and `controls_date_read` / `_enter`
+take the text a person would type and go through the editors' own
+normalisation, rounding, parsing and clamping (`numeric-entry.ts`,
+`date-entry.ts`, shared with the components). `controls_read_settings`,
+`controls_set_number_format` and `controls_set_date_options` turn the knobs
+below them. The field state lives in `ControlsDemoStore` so tools and page
+share it.

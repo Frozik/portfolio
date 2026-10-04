@@ -657,6 +657,9 @@ importers:
       yjs:
         specifier: 'catalog:'
         version: 13.6.33
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*
@@ -791,6 +794,9 @@ importers:
       webgpu-utils:
         specifier: 'catalog:'
         version: 2.1.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*
@@ -849,6 +855,9 @@ importers:
       usehooks-ts:
         specifier: 'catalog:'
         version: 3.1.1(react@19.3.0)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*
@@ -895,6 +904,9 @@ importers:
       usehooks-ts:
         specifier: 'catalog:'
         version: 3.1.1(react@19.3.0)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*
@@ -964,6 +976,9 @@ importers:
       wgpu-matrix:
         specifier: 'catalog:'
         version: 3.4.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@frozik/typescript-config':
         specifier: workspace:*

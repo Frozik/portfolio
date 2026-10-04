@@ -2,6 +2,7 @@ import { lazy, memo, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Welcome } from '../../features/welcome/presentation/Welcome';
 import { OverlayLoader } from '../../shared/components/OverlayLoader';
+import { useAppAgentTools } from '../hooks/useAppAgentTools';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LandingLayout } from './LandingLayout';
 
@@ -10,6 +11,9 @@ import { LandingLayout } from './LandingLayout';
 // entry has run. Every other route stays lazy.
 const Pendulum = lazy(() =>
   import('../../features/pendulum/presentation/Pendulum').then(m => ({ default: m.Pendulum }))
+);
+const WebMcp = lazy(() =>
+  import('../../features/webmcp/presentation/WebMcp').then(m => ({ default: m.WebMcp }))
 );
 const Sudoku = lazy(() =>
   import('../../features/sudoku/presentation/Sudoku').then(m => ({ default: m.Sudoku }))
@@ -106,6 +110,8 @@ const CommunicationRoot = lazy(() =>
  * prerender, which wraps it in a static router instead.
  */
 export const ApplicationRoutes = memo(() => {
+  useAppAgentTools();
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<OverlayLoader />}>
@@ -130,6 +136,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="controls" element={<Controls />} />
             <Route path="table" element={<TableDemo />} />
             <Route path="bug-reporter" element={<BugReporterDemo />} />
+            <Route path="webmcp" element={<WebMcp />} />
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>
                 <Route index element={<Lobby />} />

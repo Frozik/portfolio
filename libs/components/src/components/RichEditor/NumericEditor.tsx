@@ -6,6 +6,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle, ISelection } from './defs';
+import { numericDisplayScale, settledDecimals } from './numeric-entry';
 import {
   createNumericHtmlRenderer,
   createNumericInputNormalizer,
@@ -58,7 +59,8 @@ export const NumericEditor = memo(
   }) => {
     const ariaLabels = useMemo(() => getCalendarAriaLabels(locale), [locale]);
     const decimals = isNil(decimal) ? undefined : Math.max(decimal, 0);
-    const displayScale = Math.max(decimals ?? 0, isNil(pipStart) ? 0 : pipStart + pipSize);
+    const format = { decimal, pipStart, pipSize };
+    const displayScale = numericDisplayScale(format);
 
     const [editingText, setEditingText] = useState(() => formatNumericValue(value));
     const [focused, setFocused] = useState(false);
@@ -87,7 +89,7 @@ export const NumericEditor = memo(
 
     const settle = useEventCallback(() => {
       const settled = settleNumericText(editingText, {
-        decimals: isNil(decimals) && isNil(pipStart) ? undefined : displayScale,
+        decimals: settledDecimals(format),
         min,
         max,
       });

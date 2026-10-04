@@ -41,6 +41,14 @@ const PRICE_JITTER = 0.004;
 const MAX_QUANTITY = 12;
 const PRICE_DECIMALS = 2;
 
+/** The reason a table command refuses to touch a cancelled trade. */
+export const CANCELLED_TRADE_REASON = 'trade.cancelled';
+
+/** A cancelled trade is closed: only its status may still change. */
+export function isLockedField(trade: IDemoTrade, columnId: string): boolean {
+  return trade.status === 'cancelled' && columnId !== 'status';
+}
+
 export function notionalOf(trade: IDemoTrade): number {
   return trade.price * trade.quantity;
 }

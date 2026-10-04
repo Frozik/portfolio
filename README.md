@@ -14,7 +14,7 @@ retrospective boards — all in the browser, all written from scratch in
 strict TypeScript.
 
 **Stack:** React 19 · TypeScript 7 · MobX 7 · Tailwind CSS v4 · Radix UI ·
-Vite 8 · WebGPU · WebRTC · Yjs · Socket.IO · MediaPipe.
+Vite 8 · WebGPU · WebRTC · Yjs · Socket.IO · MediaPipe · WebMCP.
 
 ## Demos
 
@@ -63,6 +63,12 @@ pnpm check-all  # lint, format, types, layer boundaries, dead code, conventions,
   dependency-cruiser, knip, repository conventions and Vitest; git hooks run
   the affected subset, CI runs `moon ci` and releases with semantic-release
   from Conventional Commits.
+- **Agent-ready through [WebMCP](https://developer.chrome.com/docs/ai/webmcp)**:
+  pages expose typed tools to browser AI agents — open any demo, play sudoku
+  with hints and checks — instead of leaving them to guess at the DOM; a
+  WebMCP badge in the top bar marks the demos that offer their own tools and
+  links to [the page that lists them](https://frozik.github.io/portfolio/webmcp).
+  Details in the [app README](./apps/portfolio/README.md#agent-tools-webmcp).
 - **The landing scores 95+ on mobile Lighthouse**: prerendered at build time,
   a one-level-deep critical path, and a service worker that precaches the
   shell. The playbook is in the

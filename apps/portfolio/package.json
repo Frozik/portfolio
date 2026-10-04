@@ -71,7 +71,8 @@
     "workbox-strategies": "catalog:",
     "y-indexeddb": "catalog:",
     "y-webrtc": "catalog:",
-    "yjs": "catalog:"
+    "yjs": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

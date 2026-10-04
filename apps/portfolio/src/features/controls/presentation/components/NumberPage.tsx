@@ -1,12 +1,12 @@
 import { NumericEditor } from '@frozik/components/components/RichEditor/NumericEditor';
-import { sortBy } from 'lodash-es';
-import { memo, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { SectionNumber } from '../../../../shared/ui/SectionNumber';
 import { RangeSlider, Slider } from '../../../../shared/ui/Slider';
+import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
 import { Kbd } from './Kbd';
 
@@ -17,15 +17,8 @@ const DECIMALS_MIN = 0;
 const DECIMALS_MAX = 10;
 const DECIMALS_STEP = 1;
 
-export const NumberPage = memo(() => {
-  const [range, setRange] = useState<readonly [number, number]>([2, 4]);
-  const [decimals, setDecimals] = useState(6);
-  const [numericValue, setNumericValue] = useState<number | undefined>(undefined);
-
-  const [rangeStart, rangeEnd] = sortBy(range);
-  const hasPipRange = rangeStart !== rangeEnd;
-  const pipStart = hasPipRange ? rangeStart : undefined;
-  const pipSize = hasPipRange ? rangeEnd - rangeStart : undefined;
+export const NumberPage = observer(() => {
+  const store = useControlsDemoStore();
 
   return (
     <section className="flex flex-col gap-5">
@@ -38,11 +31,11 @@ export const NumberPage = memo(() => {
 
       <CardFrame className="p-6">
         <NumericEditor
-          value={numericValue}
-          onValueChange={setNumericValue}
-          decimal={decimals}
-          pipStart={pipStart}
-          pipSize={pipSize}
+          value={store.numericValue}
+          onValueChange={store.setNumericValue}
+          decimal={store.decimals}
+          pipStart={store.pip?.start}
+          pipSize={store.pip?.size}
           allowNegative
           placeholder={controlsT.numberPage.placeholder}
           locale={getCurrentLanguage()}
@@ -56,8 +49,8 @@ export const NumberPage = memo(() => {
             min={PIP_RANGE_MIN}
             max={PIP_RANGE_MAX}
             step={PIP_RANGE_STEP}
-            value={range}
-            onChange={setRange}
+            value={store.pipRange}
+            onChange={store.setPipRange}
             showTooltip
           />
         </div>
@@ -68,8 +61,8 @@ export const NumberPage = memo(() => {
             min={DECIMALS_MIN}
             max={DECIMALS_MAX}
             step={DECIMALS_STEP}
-            value={decimals}
-            onChange={setDecimals}
+            value={store.decimals}
+            onChange={store.setDecimals}
             showTooltip
           />
         </div>

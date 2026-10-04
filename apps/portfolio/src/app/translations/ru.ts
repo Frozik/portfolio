@@ -1,3 +1,4 @@
+import { selectPluralForm } from '../../shared/i18n/plural';
 import type { TranslationOf } from '../../shared/i18n/types';
 import type { appTranslationsEn } from './en';
 
@@ -25,6 +26,11 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     closeQR: 'Закрыть QR-код',
     fullscreenLandscape: 'Полноэкранный режим (landscape)',
     backToHome: 'На главную',
+    webMcpLabel: 'WebMCP',
+    webMcpLive: (toolCount: number): string =>
+      `${toolCount} ${selectPluralForm('ru', toolCount, { one: 'инструмент', few: 'инструмента', many: 'инструментов' })} для ИИ-агентов на этой странице через WebMCP — подробнее`,
+    webMcpAvailable:
+      'Эта страница предоставляет инструменты ИИ-агентам через WebMCP; этот браузер пока не поддерживает WebMCP.',
   },
   offline: {
     heading: 'офлайн',
@@ -54,6 +60,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     controls: 'Элементы управления',
     table: 'Таблица',
     bugReporter: 'Репорт багов',
+    webmcp: 'WebMCP',
     retro: 'Ретроспектива',
     conf: 'Конференция',
   },

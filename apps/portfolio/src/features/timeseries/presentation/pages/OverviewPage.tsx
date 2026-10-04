@@ -10,6 +10,7 @@ import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore
 import { DemoStage } from '../components/DemoStage';
 import { ExpandableChart } from '../components/ExpandableChart';
 import { useDebugBlocks } from '../components/useDebugBlocks';
+import { useTimeseriesAgentTools } from '../components/useTimeseriesAgentTools';
 
 export const OverviewPage = observer(() => {
   const store = useTimeseriesDemoStore();
@@ -17,6 +18,7 @@ export const OverviewPage = observer(() => {
     range(OVERVIEW_CHART_COUNT).map(index => createOverviewChart(index, store))
   );
   useDebugBlocks(charts, store.debug);
+  useTimeseriesAgentTools(charts);
 
   return (
     <DemoStage>

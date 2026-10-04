@@ -21,7 +21,8 @@
     "lru-cache": "catalog:",
     "rxjs": "catalog:",
     "temporal-polyfill": "catalog:",
-    "wgpu-matrix": "catalog:"
+    "wgpu-matrix": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

@@ -1,3 +1,5 @@
+import { selectPluralForm } from '../../shared/i18n/plural';
+
 export interface INavSectionTranslation {
   readonly id: string;
   readonly label: string;
@@ -28,6 +30,11 @@ export const appTranslationsEn = {
     closeQR: 'Close QR code',
     fullscreenLandscape: 'Fullscreen landscape',
     backToHome: 'Back to home',
+    webMcpLabel: 'WebMCP',
+    webMcpLive: (toolCount: number): string =>
+      `${toolCount} ${selectPluralForm('en', toolCount, { one: 'tool', other: 'tools' })} for AI agents on this page via WebMCP — see what they do`,
+    webMcpAvailable:
+      'This page offers tools to AI agents via WebMCP; this browser does not expose WebMCP yet.',
   },
   offline: {
     heading: 'offline',
@@ -57,6 +64,7 @@ export const appTranslationsEn = {
     controls: 'Controls',
     table: 'Table',
     bugReporter: 'Bug Reporter',
+    webmcp: 'WebMCP',
     retro: 'Retro',
     conf: 'Conference',
   },

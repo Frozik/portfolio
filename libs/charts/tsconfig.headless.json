@@ -5,6 +5,7 @@
     "src/data",
     "src/marks",
     "src/extensions",
+    "src/agent",
     "types/headless"
   ],
   "exclude": ["src/**/*.test.ts"],

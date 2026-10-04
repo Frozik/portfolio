@@ -173,3 +173,12 @@ the library.
   direction, a soft limit that never splits a moment, a subscription that
   starts where history ends — and is checked by the library's contract
   test suite, the same one a real adapter would run
+
+## Agent tools
+
+Every page exposes its charts to WebMCP agents through `@frozik/charts/agent`
+(`timeseries_list_charts`, `_zoom`, `_scroll`, `_go_to`, `_show_range`, `_fit`,
+`_zoom_scale`, `_reset_scales`, `_follow_live`, `_values_at`) plus
+`timeseries_open_page`; switching pages swaps the charts the tools work on.
+Time is written as local date-times or plain words, the depth chart's X as
+numbers.

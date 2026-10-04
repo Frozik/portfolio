@@ -25,18 +25,20 @@ import { sorting } from '@frozik/table/react/extensions/sorting/sorting';
 import { tooltips } from '@frozik/table/react/extensions/tooltips/tooltips';
 import { Table } from '@frozik/table/react/Table';
 import { useTable } from '@frozik/table/react/useTable';
+import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
+import { useFeatureAgentTools } from '../../../../app/components/TopNavAgentToolsContext';
 import { Button } from '../../../../shared/ui/Button';
 import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';
-import { notionalOf } from '../../domain/demo-trade';
+import { CANCELLED_TRADE_REASON, isLockedField, notionalOf } from '../../domain/demo-trade';
 import { TradeDetail } from '../components/TradeDetail';
 import { NUMBER_LOCALE } from '../numberLocale';
 import { showcaseColumns } from '../showcaseColumns';
@@ -124,9 +126,7 @@ function notionalTint({ displayRow }: IRowContext<IDemoTrade>): string | undefin
 
 /** Cancelled trades are history: nothing on the row may change. */
 function lockCancelled(context: ICellContext<IDemoTrade>) {
-  return context.row.status === 'cancelled' && context.column.id !== 'status'
-    ? { editable: false as const }
-    : undefined;
+  return isLockedField(context.row, context.column.id) ? { editable: false as const } : undefined;
 }
 
 const SELECT_CLASS =
@@ -188,6 +188,25 @@ export const ShowcasePage = observer(() => {
   const changeAutoSize = useEventCallback((event: ChangeEvent<HTMLSelectElement>) => {
     model.columnResize.setAutoSizeMode(event.target.value as TAutoSizeMode);
   });
+  useEffect(
+    () =>
+      model.commands.guard('editing.begin', ({ rowKey, columnId }) => {
+        const index = model.rows.indexOf(rowKey);
+        const displayRow = isNil(index) ? undefined : model.rows.rowAt(index);
+        return displayRow?.kind === 'leaf' && isLockedField(displayRow.row, columnId)
+          ? CANCELLED_TRADE_REASON
+          : undefined;
+      }),
+    [model]
+  );
+  const loadAgentTools = useCallback(
+    () =>
+      import('../../application/table-agent-tools').then(module =>
+        module.createTableAgentTools(model)
+      ),
+    [model]
+  );
+  useFeatureAgentTools(loadAgentTools);
   const commitMode = model.editing.commitMode;
   useEffect(() => {
     model.columns.setVisible(ACTIONS_COLUMN, commitMode === 'confirm');

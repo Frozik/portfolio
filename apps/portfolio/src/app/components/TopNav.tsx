@@ -14,8 +14,10 @@ import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
 import type { INavProject } from './navTypes';
+import { useTopNavAgentTools } from './TopNavAgentToolsContext';
 import { useTopNavBack } from './TopNavBackContext';
 import { useTopNavCenterHostSetter } from './TopNavCenterContext';
+import { WebMcpBadge } from './WebMcpBadge';
 
 const GITHUB_URL = 'https://github.com/frozik/portfolio';
 const ICON_SIZE_PX = 16;
@@ -57,6 +59,7 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
   const fullscreen = useFullscreenLandscape();
   const { config: backConfig } = useTopNavBack();
   const setCenterHost = useTopNavCenterHostSetter();
+  const agentTools = useTopNavAgentTools();
 
   const handleBackActivate = useEventCallback(() => {
     if (backConfig !== null) {
@@ -136,6 +139,8 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
           <div ref={setCenterHost} className="flex min-w-0 flex-1 items-center justify-center" />
 
           <div className="flex items-center gap-1.5 md:gap-2">
+            {!isNil(agentTools) && <WebMcpBadge toolCount={agentTools.toolCount} />}
+
             {fullscreen.isSupported && (
               <button
                 type="button"

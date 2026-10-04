@@ -7,10 +7,12 @@ import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore
 import { DemoStage } from '../components/DemoStage';
 import { ExpandableChart } from '../components/ExpandableChart';
 import { useDebugBlocks } from '../components/useDebugBlocks';
+import { useTimeseriesAgentTools } from '../components/useTimeseriesAgentTools';
 
 export const MarksPage = observer(() => {
   const store = useTimeseriesDemoStore();
   const charts = useChart(() => range(MARKS_CHART_COUNT).map(createMarksChart));
+  useTimeseriesAgentTools(charts);
   useDebugBlocks(charts, store.debug);
 
   return (

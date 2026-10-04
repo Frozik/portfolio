@@ -319,15 +319,28 @@ export class GridViewSlice<TRow> {
     return this.offsets[Math.min(this.maxRows, this.rowCount)] ?? 0;
   }
 
+  /** The rows the viewport shows, overscan aside, as first and last index. */
+  get visibleRows(): { readonly first: number; readonly last: number } {
+    const { startIndex, endIndex } = virtualWindowFromOffsets({
+      offsets: this.offsets,
+      scrollTop: this.virtualScrollTop,
+      viewportHeight: this.viewport.height,
+      overscan: 0,
+    });
+    return { first: startIndex, last: endIndex };
+  }
+
+  /** Brings a row into view, leaving the scroll alone when it is already well inside. */
   scrollToRow(index: number): void {
-    if (isNil(this.scrollPort)) {
-      return;
-    }
     const { startIndex, endIndex } = this.rowWindow;
     if (index >= startIndex + this.overscanRows && index <= endIndex - this.overscanRows) {
       return;
     }
-    this.scrollPort.scrollTo({ top: (this.offsets[index] ?? 0) * this.scrollScale });
+    this.scrollRowToTop(index);
+  }
+
+  scrollRowToTop(index: number): void {
+    this.scrollPort?.scrollTo({ top: (this.offsets[index] ?? 0) * this.scrollScale });
   }
 
   scrollToColumn(layout: IColumnLayout<TRow>): void {

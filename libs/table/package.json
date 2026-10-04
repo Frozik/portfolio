@@ -12,6 +12,7 @@
   ],
   "exports": {
     "./core/*": "./src/core/*.ts",
+    "./agent/*": "./src/agent/*.ts",
     "./extensions/*": "./src/extensions/*.ts",
     "./react/column": "./src/react/column.ts",
     "./react/slots": "./src/react/slots.ts",
@@ -27,7 +28,8 @@
     "@frozik/utils": "workspace:*",
     "lodash-es": "catalog:",
     "temporal-polyfill": "catalog:",
-    "usehooks-ts": "catalog:"
+    "usehooks-ts": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

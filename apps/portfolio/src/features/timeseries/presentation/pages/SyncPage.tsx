@@ -6,10 +6,12 @@ import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore
 import { DemoStage } from '../components/DemoStage';
 import { ExpandableChart } from '../components/ExpandableChart';
 import { useDebugBlocks } from '../components/useDebugBlocks';
+import { useTimeseriesAgentTools } from '../components/useTimeseriesAgentTools';
 
 export const SyncPage = observer(() => {
   const store = useTimeseriesDemoStore();
   const charts = useChart(() => createSyncedCharts(store));
+  useTimeseriesAgentTools(charts);
   useDebugBlocks(charts, store.debug);
 
   return (

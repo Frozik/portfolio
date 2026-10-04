@@ -89,6 +89,18 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
         items: ['WebGPU', 'WebGL', 'TensorFlow.js', 'Matter.js', 'WebRTC', 'WebSocket'],
       },
       {
+        group: 'AI',
+        items: [
+          'Claude Code',
+          'Context Engineering',
+          'Agent Skills',
+          'Subagents & Hooks',
+          'Spec-Driven Development',
+          'MCP',
+          'WebMCP',
+        ],
+      },
+      {
         group: 'Сборка и тулинг',
         items: ['Webpack', 'Vite', 'NX', 'Biome', 'Docker', 'GitHub Actions'],
       },

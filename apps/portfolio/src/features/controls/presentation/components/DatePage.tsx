@@ -1,24 +1,23 @@
 import { DateTimePicker } from '@frozik/components/components/RichEditor/DateTimePicker';
 import { useToday } from '@frozik/components/hooks/useToday';
 import { EDateTimeStep, EDayOfWeek, EDayType, ETimeResolution } from '@frozik/utils/date/constants';
-import { parseFuzzyDate } from '@frozik/utils/date/fuzzy/parseFuzzyDate';
-import type { IParseContext } from '@frozik/utils/date/fuzzy/types';
 import { getNowInstant } from '@frozik/utils/date/now';
 import { isNil } from 'lodash-es';
+import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
-import { Fragment, memo, useState } from 'react';
-import { Temporal } from 'temporal-polyfill';
-import { useEventCallback } from 'usehooks-ts';
+import { Fragment } from 'react';
+import type { Temporal } from 'temporal-polyfill';
 
 import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { CardFrame } from '../../../../shared/ui/CardFrame';
 import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import { SectionNumber } from '../../../../shared/ui/SectionNumber';
+import type { ParseDirection } from '../../application/ControlsDemoStore';
+import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
 import { Kbd } from './Kbd';
 
-const TIME_ZONE = Temporal.Now.timeZoneId();
 const WEEKEND_DAYS = new Set([EDayOfWeek.Saturday, EDayOfWeek.Sunday]);
 
 const DEFAULT_TOKEN_SEPARATOR = ' ';
@@ -30,9 +29,6 @@ type FormatCategory = {
   readonly label: ReactNode;
   readonly tokens: ReadonlyArray<FormatToken>;
 };
-
-/** Whether an ambiguous input like "mon" resolves forward only or to the closest date. */
-type ParseDirection = 'future' | 'nearest';
 
 const FORMAT_CATEGORIES: ReadonlyArray<FormatCategory> = [
   {
@@ -222,16 +218,10 @@ function getDayInfo(date: Temporal.PlainDate): EDayType {
   return EDayType.Business;
 }
 
-export const DatePage = memo(() => {
-  const today = useToday(TIME_ZONE);
-  const [value, setValue] = useState<Temporal.ZonedDateTime | undefined>(undefined);
-  const [step, setStep] = useState<EDateTimeStep>(EDateTimeStep.Day);
-  const [timeResolution, setTimeResolution] = useState<ETimeResolution>(ETimeResolution.Minutes);
-  const [direction, setDirection] = useState<ParseDirection>('future');
-
-  const parseInput = useEventCallback((input: string, context: IParseContext) =>
-    parseFuzzyDate(input, { ...context, nearest: direction === 'nearest' })
-  );
+export const DatePage = observer(() => {
+  const store = useControlsDemoStore();
+  const today = useToday(store.timeZone);
+  const { dateValue: value, step, timeResolution, direction } = store;
 
   return (
     <section className="flex flex-col gap-5">
@@ -265,10 +255,10 @@ export const DatePage = memo(() => {
       <CardFrame className="p-6">
         <DateTimePicker
           value={value}
-          onValueChange={setValue}
-          timeZone={TIME_ZONE}
+          onValueChange={store.setDateValue}
+          timeZone={store.timeZone}
           getNow={getNowInstant}
-          onParseInput={parseInput}
+          onParseInput={store.parseDate}
           getDayInfo={getDayInfo}
           step={step}
           timeResolution={timeResolution}
@@ -281,7 +271,12 @@ export const DatePage = memo(() => {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <MonoKicker tone="faint">{controlsT.datePage.arrowKeyStep}</MonoKicker>
-          <RadioGroup options={STEP_OPTIONS} value={step} onChange={setStep} optionType="button" />
+          <RadioGroup
+            options={STEP_OPTIONS}
+            value={step}
+            onChange={store.setStep}
+            optionType="button"
+          />
         </div>
 
         <div className="flex flex-col gap-3">
@@ -289,7 +284,7 @@ export const DatePage = memo(() => {
           <RadioGroup
             options={TIME_RESOLUTION_OPTIONS}
             value={timeResolution}
-            onChange={setTimeResolution}
+            onChange={store.setTimeResolution}
             optionType="button"
           />
         </div>
@@ -299,7 +294,7 @@ export const DatePage = memo(() => {
           <RadioGroup
             options={DIRECTION_OPTIONS}
             value={direction}
-            onChange={setDirection}
+            onChange={store.setDirection}
             optionType="button"
           />
           <p className="text-xs text-landing-fg-faint">

@@ -66,11 +66,16 @@ export class SudokuStore {
   }
 
   applyTool(row: number, column: number): void {
-    if (!isSyncedValueDescriptor(this.field) || isNil(this.tool.value)) {
+    this.applyToolAt(row, column, this.tool);
+  }
+
+  /** Applies a tool other than the keypad's, so an agent's move leaves the player's selection alone. */
+  applyToolAt(row: number, column: number, tool: ITool): void {
+    if (!isSyncedValueDescriptor(this.field) || isNil(tool.value)) {
       return;
     }
     const previousField = this.field.value;
-    const nextField = applyToolToFieldReducer(previousField, this.tool, row, column);
+    const nextField = applyToolToFieldReducer(previousField, tool, row, column);
     if (previousField !== nextField) {
       this.history = [...this.history, previousField];
     }
@@ -79,14 +84,21 @@ export class SudokuStore {
 
   /** Toggles candidate notes: fills them when none exist, clears them otherwise. */
   markField(): void {
+    this.replaceField(field => (hasMarks(field) ? removeFieldMarks(field) : addFieldMarks(field)));
+  }
+
+  /** Notes every legal candidate in every cell, replacing whatever notes were there. */
+  fillMarks(): void {
+    this.replaceField(addFieldMarks);
+  }
+
+  private replaceField(edit: (field: IField) => IField): void {
     if (!isSyncedValueDescriptor(this.field)) {
       return;
     }
     const field = this.field.value;
     this.history = [...this.history, field];
-    this.field = createSyncedValueDescriptor(
-      hasMarks(field) ? removeFieldMarks(field) : addFieldMarks(field)
-    );
+    this.field = createSyncedValueDescriptor(edit(field));
   }
 
   restorePreviousState(): void {

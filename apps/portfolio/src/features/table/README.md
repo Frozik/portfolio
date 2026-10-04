@@ -105,3 +105,11 @@ gets the full width.
 
 Pages arrive with the implementation phases of the library: sources
 (client / snapshot / log), cells and editors, extensions.
+
+## Agent tools
+
+The showcase table is exposed to WebMCP agents through `@frozik/table/agent`
+as `trades_*`: describe, read rows, scroll, sort, filter, search, edit cells
+and settle edits. The rule that a cancelled trade may only change its status
+is a guard on `editing.begin`, so it binds an agent's edit as it binds a
+click; the `cellSpec` keeps only the look.

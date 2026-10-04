@@ -67,4 +67,5 @@ export const ROUTE_METADATA: readonly IRouteMetadata[] = [
   { segment: 'controls', titleKey: 'controls', icon: SlidersHorizontal, navVisible: true },
   { segment: 'table', titleKey: 'table', icon: Rows3, navVisible: true },
   { segment: 'bug-reporter', titleKey: 'bugReporter', icon: Bug, navVisible: true },
+  { segment: 'webmcp', titleKey: 'webmcp', navVisible: false },
 ];

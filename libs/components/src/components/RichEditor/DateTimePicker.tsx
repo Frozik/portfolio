@@ -19,6 +19,7 @@ import { PopupDrawer } from './components/PopupDrawer';
 import { PopupHandle } from './components/PopupHandle';
 import { PopupSheet } from './components/PopupSheet';
 import { RichEditor } from './components/RichEditor';
+import { clampToDateRange } from './date-entry';
 import { defaultFormatDate, formatDateOnly } from './date-format';
 import type { IRichEditorHandle, ISelection, TLeaveDirection } from './defs';
 import {
@@ -135,21 +136,9 @@ export const DateTimePicker = memo(
     // Invalid text stays visible after blur so the typo can be fixed.
     const displayText = focused || !isNil(error) ? inputText : formattedValue;
 
-    const clampToRange = useEventCallback((dateTime: Temporal.ZonedDateTime) => {
-      const date = dateTime.toPlainDate();
-
-      if (!isNil(minDate) && Temporal.PlainDate.compare(date, minDate) < 0) {
-        return minDate.toZonedDateTime({ timeZone, plainTime: dateTime.toPlainTime() });
-      }
-      if (!isNil(maxDate) && Temporal.PlainDate.compare(date, maxDate) > 0) {
-        return maxDate.toZonedDateTime({ timeZone, plainTime: dateTime.toPlainTime() });
-      }
-      return dateTime;
-    });
-
     // Commits emit only changes: leaving an untouched field must not re-emit its value.
     const commitValue = useEventCallback((next: Temporal.ZonedDateTime): Temporal.ZonedDateTime => {
-      const clamped = clampToRange(next);
+      const clamped = clampToDateRange(next, { minDate, maxDate });
       setError(undefined);
       if (isNil(value) || Temporal.ZonedDateTime.compare(clamped, value) !== 0) {
         onValueChange?.(clamped);

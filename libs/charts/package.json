@@ -10,6 +10,7 @@
   "sideEffects": false,
   "exports": {
     "./core/*": "./src/core/*.ts",
+    "./agent/*": "./src/agent/*.ts",
     "./data/*": "./src/data/*.ts",
     "./marks/*": "./src/marks/*.ts",
     "./extensions/*": "./src/extensions/*.ts",
@@ -29,7 +30,8 @@
     "idb": "catalog:",
     "lodash-es": "catalog:",
     "temporal-polyfill": "catalog:",
-    "webgpu-utils": "catalog:"
+    "webgpu-utils": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

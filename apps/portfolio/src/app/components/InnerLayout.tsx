@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { TopNav } from './TopNav';
+import { TopNavAgentToolsProvider } from './TopNavAgentToolsContext';
 import { TopNavBackProvider } from './TopNavBackContext';
 import { TopNavCenterProvider } from './TopNavCenterContext';
 
@@ -20,12 +21,14 @@ export const InnerLayout = memo(() => {
   return (
     <TopNavBackProvider>
       <TopNavCenterProvider>
-        <div className="flex h-dvh w-dvw flex-col overflow-hidden">
-          <TopNav variant="inner" />
-          <main className="relative min-h-0 flex-1 overflow-auto bg-black">
-            <Outlet />
-          </main>
-        </div>
+        <TopNavAgentToolsProvider>
+          <div className="flex h-dvh w-dvw flex-col overflow-hidden">
+            <TopNav variant="inner" />
+            <main className="relative min-h-0 flex-1 overflow-auto bg-black">
+              <Outlet />
+            </main>
+          </div>
+        </TopNavAgentToolsProvider>
       </TopNavCenterProvider>
     </TopNavBackProvider>
   );

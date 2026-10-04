@@ -103,3 +103,18 @@ row API — `model.editing.confirm(rowKey)` / `revert(rowKey)`, or
 from the source while it is edited follows the `incoming` policy: `hold`
 (default) keeps showing what is being edited until the edit ends, `apply`
 shows the new version and drops the edit.
+
+## Agent tools (WebMCP)
+
+`agent/` exposes a table to browser agents through
+[WebMCP](https://developer.chrome.com/docs/ai/webmcp).
+`defineTableTools({ prefix, table, reasons })` builds tools from the slices
+the table has: describe it (columns with kind, editability, sortability and
+filter kind; counts; rows in view; sort, filters, search, pending edits), read
+rows by display index, scroll to a row or by pages (`gridView` now has
+`visibleRows` and `scrollRowToTop`), sort, set a column filter as the
+serializable filter model, search, edit a cell and confirm or revert edits.
+Every write goes through the slice the UI uses — guards, column validation and
+the confirm flow apply to the agent as to a person — and refusal keys come back
+as words; `reasons` spells out the application's own guard keys. A rule that
+must hold for agents too belongs in a guard, not only in the React `cellSpec`.

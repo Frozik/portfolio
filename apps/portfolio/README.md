@@ -16,6 +16,41 @@ smoke tests (`apps/portfolio/e2e`). Dependency versions live once in
 `pnpm-workspace.yaml` (`catalog:`); git hooks are `lefthook.yml`; CI runs
 `moon ci` and deploys to GitHub Pages from `main`.
 
+## Agent tools (WebMCP)
+
+Pages expose typed tools to browser agents through
+[WebMCP](https://developer.chrome.com/docs/ai/webmcp) (`document.modelContext`,
+Chrome's origin trial 149–156 or `chrome://flags/#enable-webmcp-testing`), so an
+agent calls a function instead of guessing at the DOM. Every page offers
+`portfolio_list_demos` and `portfolio_open_demo`; a demo adds its own tools while
+it is open — sudoku, the charts (`@frozik/charts/agent`), the table
+(`@frozik/table/agent`) and the controls (the component library's
+`editor-agent-tools`). The kernel (`defineAgentTool`, `refuse`,
+`registerAgentTools`) lives in `@frozik/utils/webmcp/`, so libraries ship their
+own tool factories; the app only registers them.
+
+- **One adapter owns the draft API** (`@frozik/utils/webmcp/modelContext.ts`).
+  It has already moved once (`navigator` → `document`, `provideContext` →
+  `registerTool`), so nothing else touches it. `useAgentTools`
+  (`src/shared/webmcp/`) registers on mount and withdraws on
+  unmount by aborting the registration signal, as the spec unregisters.
+- **The top bar shows a WebMCP badge on demos with their own tools**
+  (`useFeatureAgentTools` announces them, `WebMcpBadge` links to the `/webmcp`
+  page, which lists every tool per demo).
+  It glows with a live dot and the tool count when this browser registered
+  them; without WebMCP it stays dim and says so.
+- **Visitors without WebMCP pay nothing.** Tool modules and zod sit behind a
+  dynamic import that runs only when `document.modelContext` exists.
+- **Input is parsed, not trusted.** A tool declares a zod schema; the agent sees
+  it as JSON Schema. Chrome 154 does not validate arguments itself, so ones
+  that break the schema are answered with the reason before the tool body runs.
+- **Mistakes come back as results, not exceptions.** Chrome hands the agent a
+  bare "invocation failed" for a thrown error, so anything the agent can fix
+  (a given cell, an unknown demo, a bad argument) returns `{ error }` with the
+  reason; throwing is left for bugs.
+- **Agent moves go through the same store actions** as the player's clicks, so
+  undo, validation and the rendered board stay one source of truth.
+
 ## Performance & PWA
 
 The landing page is tuned for Lighthouse on a throttled mobile profile

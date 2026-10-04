@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { BackgroundCanvas } from './BackgroundCanvas';
 import { TopNav } from './TopNav';
+import { TopNavAgentToolsProvider } from './TopNavAgentToolsContext';
 import { TopNavBackProvider } from './TopNavBackContext';
 import { TopNavCenterProvider } from './TopNavCenterContext';
 
@@ -26,11 +27,13 @@ export const LandingLayout = memo(() => {
   return (
     <TopNavBackProvider>
       <TopNavCenterProvider>
-        <BackgroundCanvas />
-        <TopNav />
-        <main className="relative z-[2]">
-          <Outlet />
-        </main>
+        <TopNavAgentToolsProvider>
+          <BackgroundCanvas />
+          <TopNav />
+          <main className="relative z-[2]">
+            <Outlet />
+          </main>
+        </TopNavAgentToolsProvider>
       </TopNavCenterProvider>
     </TopNavBackProvider>
   );
