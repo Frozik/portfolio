@@ -15,6 +15,7 @@ import { drawPeers } from './effects/draw-peers';
 import { drawRotate } from './effects/draw-rotate';
 import { drawRows } from './effects/draw-rows';
 import { createShapesState, drawShapes } from './effects/draw-shapes';
+import { drawShutter } from './effects/draw-shutter';
 import { drawTanks } from './effects/draw-tanks';
 import { drawTicker } from './effects/draw-ticker';
 import { drawTiles } from './effects/draw-tiles';
@@ -52,6 +53,7 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   gravity: createStatelessFxEffect(drawGravity),
   tiles: createStatelessFxEffect(drawTiles),
   rows: createStatelessFxEffect(drawRows),
+  shutter: createStatelessFxEffect(drawShutter),
 };
 
 export function createFxRender(kind: TProjectFxKind): TFxRender {

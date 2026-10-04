@@ -67,6 +67,11 @@ const Controls = lazy(() =>
 const TableDemo = lazy(() =>
   import('../../features/table/presentation/TableDemo').then(m => ({ default: m.TableDemo }))
 );
+const BugReporterDemo = lazy(() =>
+  import('../../features/bug-reporter/presentation/BugReporterDemo').then(m => ({
+    default: m.BugReporterDemo,
+  }))
+);
 const Retro = lazy(() =>
   import('../../features/retro/presentation/Retro').then(m => ({ default: m.Retro }))
 );
@@ -124,6 +129,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="osm-map" element={<OsmMap />} />
             <Route path="controls" element={<Controls />} />
             <Route path="table" element={<TableDemo />} />
+            <Route path="bug-reporter" element={<BugReporterDemo />} />
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>
                 <Route index element={<Lobby />} />

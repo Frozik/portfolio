@@ -53,6 +53,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     osmMap: 'Карта OSM',
     controls: 'Элементы управления',
     table: 'Таблица',
+    bugReporter: 'Репорт багов',
     retro: 'Ретроспектива',
     conf: 'Конференция',
   },

@@ -56,6 +56,7 @@ export const appTranslationsEn = {
     osmMap: 'OSM Map',
     controls: 'Controls',
     table: 'Table',
+    bugReporter: 'Bug Reporter',
     retro: 'Retro',
     conf: 'Conference',
   },

@@ -57,4 +57,5 @@ export const PROJECT_ROUTES: readonly IProjectRoute[] = [
   { id: 'conf', route: '/conf', fx: 'ar' },
   { id: 'controls', route: '/controls', fx: 'typing' },
   { id: 'table', route: '/table', fx: 'rows' },
+  { id: 'bug-reporter', route: '/bug-reporter', fx: 'shutter' },
 ];

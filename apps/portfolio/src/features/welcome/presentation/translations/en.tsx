@@ -215,6 +215,13 @@ export const welcomeTranslationsEn = {
           'A data grid built from scratch as a headless kernel plus extensions — sorting, filters, grouping, editing, selection and the visible grid itself are all plug-ins. Three data sources, two themes, 100 000 rows without a hiccup.',
         status: 'headless',
       },
+      'bug-reporter': {
+        meta: 'Bug reporting · Own library',
+        title: 'Bug Reporter',
+        description:
+          'One bug button: a screenshot with marks or a tab recording, the console, errors, actions and device details — zipped and streamed to disk, no backend. Fields marked as sensitive never make it into a capture.',
+        status: 'masked',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

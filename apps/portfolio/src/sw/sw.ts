@@ -46,7 +46,8 @@ registerRoute(
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL(`${BASE}index.html`), {
     allowlist: [new RegExp(`^${BASE}`)],
-    denylist: [/\.pdf$/],
+    // StreamSaver's `mitm.html` is loaded before its own worker exists; answering it with the shell would break every streamed download.
+    denylist: [/\.pdf$/, /\/stream-saver\//],
   })
 );
 

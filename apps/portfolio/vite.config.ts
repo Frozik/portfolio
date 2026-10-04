@@ -13,6 +13,7 @@ import { readAppVersion } from './vite-plugins/app-version.ts';
 import { buildAssetsDefine } from './vite-plugins/build-assets.ts';
 import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
+import { STREAM_SAVER_DIR, streamSaverAssets } from './vite-plugins/stream-saver-assets.ts';
 
 // vite-plugin-pwa re-exports workbox-build's option types only through its own
 // options object, so the transform type is derived from there.
@@ -80,6 +81,7 @@ export default defineConfig(({ isSsrBuild = false }) => ({
   plugins: [
     tailwindcss(),
     react(),
+    streamSaverAssets(),
     !isSsrBuild &&
       prerenderedLanding({
         renderEntry: PRERENDER_RENDER_ENTRY,
@@ -96,6 +98,8 @@ export default defineConfig(({ isSsrBuild = false }) => ({
         filename: SERVICE_WORKER_FILE,
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
+          // StreamSaver's page and worker belong to their own service worker scope, not the app shell.
+          globIgnores: [`${STREAM_SAVER_DIR}/**`],
           manifestTransforms: [precacheAppShellAndCv],
           buildPlugins: { vite: [buildAssetsDefine(resolve(import.meta.dirname, OUT_DIR))] },
         },

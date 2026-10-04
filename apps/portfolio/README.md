@@ -44,6 +44,14 @@ representative):
   the asset list of the deployment is baked into it at build time
   (`vite-plugins/build-assets.ts`), so on activation it drops cached assets
   of previous builds instead of relying on age or entry limits.
+- **A second service worker lives beside ours.** The bug reporter streams
+  its zip to disk through StreamSaver where the native save dialog is
+  missing (Firefox, Safari); its `mitm.html` and `sw.js` are served from the
+  installed package under `/portfolio/stream-saver/`
+  (`vite-plugins/stream-saver-assets.ts`), which is that worker's own scope.
+  The app worker's navigation route denies that path and the precache ignores
+  it: `mitm.html` is requested before its worker exists, and answering it
+  with the shell would break every streamed download.
 - **The offline pack makes every route work without a network.** Every hashed
   asset outside the precached shell (about 2.4 MB compressed for the whole
   site) can be downloaded into the asset cache in one go. The installed app

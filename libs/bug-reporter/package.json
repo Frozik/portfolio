@@ -1,0 +1,52 @@
+{
+  "name": "@frozik/bug-reporter",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./core/*": "./src/core/*.ts",
+    "./collectors/*": "./src/collectors/*.ts",
+    "./capture/*": "./src/capture/*.ts",
+    "./archive/*": "./src/archive/*.ts",
+    "./delivery/*": "./src/delivery/*.ts",
+    "./reporter/*": "./src/reporter/*.ts",
+    "./react/translations/*": "./src/react/translations/*.ts",
+    "./react/*": "./src/react/*.tsx",
+    "./testing/*": "./src/testing/*.ts",
+    "./theme/*": "./src/theme/*"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frozik/utils": "workspace:*",
+    "client-zip": "catalog:",
+    "fix-webm-duration": "catalog:",
+    "lodash-es": "catalog:",
+    "lucide-react": "catalog:",
+    "streamsaver": "catalog:",
+    "usehooks-ts": "catalog:",
+    "web-vitals": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/lodash-es": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/streamsaver": "catalog:",
+    "@webgpu/types": "catalog:",
+    "fflate": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  }
+}

@@ -20,7 +20,7 @@
         "e2e/**/*.ts"
       ],
       "project": ["src/**/*.{ts,tsx,css}", "e2e/**/*.ts"],
-      "ignoreDependencies": ["buffer"]
+      "ignoreDependencies": ["buffer", "streamsaver"]
     },
     "apps/communication": {
       "project": ["src/**/*.ts"],
@@ -39,6 +39,10 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "libs/charts": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "libs/bug-reporter": {
       "entry": ["src/**/*.{ts,tsx}!"],
       "project": ["src/**/*.{ts,tsx}"]
     },

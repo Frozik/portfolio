@@ -73,7 +73,7 @@ module.exports = {
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
       from: {
-        path: '^(apps/portfolio|libs/(utils|components|table|charts|communication-protocol))/',
+        path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol))/',
       },
       to: {
         path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
@@ -182,6 +182,34 @@ module.exports = {
       severity: 'error',
       from: { path: '^libs/charts/src/', pathNot: '^libs/charts/src/universal/' },
       to: { path: '^libs/charts/src/universal/' },
+    },
+    {
+      name: 'bug-reporter-core-is-platform-free',
+      comment:
+        'The bug-reporter core is pure: no DOM-bound package, no React, no zip, download or metrics library — those live in collectors, capture, archive and delivery.',
+      severity: 'error',
+      from: { path: '^libs/bug-reporter/src/core/' },
+      to: {
+        path: '(^libs/bug-reporter/src/(collectors|capture|archive|delivery|reporter|react|theme|testing)/|/node_modules/(react|react-dom|client-zip|streamsaver|web-vitals|fix-webm-duration)(/|$))',
+      },
+    },
+    {
+      name: 'bug-reporter-adapters-meet-only-through-core',
+      comment:
+        'Collectors, capture, archive and delivery depend on the core only; the reporter composes them and the React adapter renders the reporter.',
+      severity: 'error',
+      from: { path: '^libs/bug-reporter/src/(collectors|capture|archive|delivery)/' },
+      to: {
+        path: '^libs/bug-reporter/src/(collectors|capture|archive|delivery|reporter|react)/',
+        pathNot: '^libs/bug-reporter/src/$1/',
+      },
+    },
+    {
+      name: 'bug-reporter-react-is-outermost',
+      comment: 'Only the React adapter knows React.',
+      severity: 'error',
+      from: { path: '^libs/bug-reporter/src/', pathNot: '^libs/bug-reporter/src/react/' },
+      to: { path: '(^libs/bug-reporter/src/react/|/node_modules/(react|react-dom)(/|$))' },
     },
     {
       name: 'no-circular',

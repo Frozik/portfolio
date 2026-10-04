@@ -1,0 +1,656 @@
+/* @frozik/bug-reporter — masking rules and widget styles. Colours follow the
+   OS scheme through light-dark(); every token can be overridden on
+   .bug-reporter or any ancestor. */
+
+/* Masking. While the document root carries data-bug-capture, an element with
+   .bug-mask keeps its box but its text is drawn transparent — there are no
+   glyph pixels for a deblurring pass to recover — and a frosted overlay gives
+   the viewer the familiar "blurred" look. .bug-block hides a subtree entirely
+   behind a solid box. */
+
+:root[data-bug-capture] .bug-mask,
+:root[data-bug-capture] .bug-mask * {
+  color: transparent !important;
+  text-shadow: none !important;
+  caret-color: transparent !important;
+}
+
+:root[data-bug-capture] .bug-mask::placeholder,
+:root[data-bug-capture] .bug-mask *::placeholder {
+  color: transparent !important;
+}
+
+:root[data-bug-capture] .bug-mask {
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-bug-capture] .bug-mask::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: var(--bug-mask-bg, light-dark(rgb(120 120 128 / 0.35), rgb(160 160 170 / 0.3)));
+  backdrop-filter: blur(var(--bug-mask-blur, 10px));
+  -webkit-backdrop-filter: blur(var(--bug-mask-blur, 10px));
+  pointer-events: none;
+}
+
+:root[data-bug-capture] .bug-mask :is(img, svg, canvas, video, picture, iframe) {
+  visibility: hidden;
+}
+
+:root[data-bug-capture] .bug-block {
+  background: var(--bug-block-bg, light-dark(#d4d4d8, #3f3f46));
+  border-radius: inherit;
+}
+
+:root[data-bug-capture] .bug-block > * {
+  visibility: hidden;
+}
+
+/* The widget never appears in a capture; the recording pill is the one
+   exception, so the person can see the timer and stop. */
+:root[data-bug-capture] .bug-reporter-hidden-on-capture {
+  visibility: hidden;
+}
+
+/* Widget tokens. */
+
+.bug-reporter {
+  --bug-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bug-bg: light-dark(#ffffff, #1b1d23);
+  --bug-bg-elevated: light-dark(#f6f7f9, #23262e);
+  --bug-fg: light-dark(#111827, #e8ecf3);
+  --bug-fg-muted: light-dark(#6b7280, #9aa3b2);
+  --bug-border: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.1));
+  --bug-accent: light-dark(#2563eb, #60a5fa);
+  --bug-accent-fg: light-dark(#ffffff, #0b1220);
+  --bug-danger: #e5484d;
+  --bug-warning-bg: light-dark(#fff7e6, #3a2d14);
+  --bug-warning-fg: light-dark(#8a5a00, #f5c842);
+  --bug-radius: 12px;
+  --bug-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
+  --bug-launcher-size: 48px;
+  --bug-launcher-offset: 20px;
+  --bug-z: 2147483000;
+
+  color-scheme: light dark;
+  font-family: var(--bug-font);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--bug-fg);
+}
+
+.bug-reporter *,
+.bug-reporter *::before,
+.bug-reporter *::after {
+  box-sizing: border-box;
+}
+
+.bug-reporter button {
+  font: inherit;
+  color: inherit;
+}
+
+.bug-reporter-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Launcher. */
+
+.bug-reporter-launcher {
+  position: fixed;
+  right: var(--bug-launcher-offset);
+  bottom: var(--bug-launcher-offset);
+  z-index: var(--bug-z);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--bug-launcher-size);
+  height: var(--bug-launcher-size);
+  border: 1px solid var(--bug-border);
+  border-radius: 50%;
+  background: var(--bug-bg);
+  color: var(--bug-fg);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.bug-reporter-launcher:hover,
+.bug-reporter-launcher:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
+}
+
+.bug-reporter-launcher:focus-visible,
+.bug-reporter button:focus-visible {
+  outline: 2px solid var(--bug-accent);
+  outline-offset: 2px;
+}
+
+/* Menu: a top-layer popover anchored above the launcher. */
+
+.bug-reporter-menu {
+  position: fixed;
+  inset: auto var(--bug-launcher-offset)
+    calc(var(--bug-launcher-offset) + var(--bug-launcher-size) + 12px) auto;
+  width: min(340px, calc(100vw - 2 * var(--bug-launcher-offset)));
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--bug-border);
+  border-radius: var(--bug-radius);
+  background: var(--bug-bg);
+  color: var(--bug-fg);
+  box-shadow: var(--bug-shadow);
+}
+
+.bug-reporter-menu::backdrop {
+  background: transparent;
+}
+
+.bug-reporter-menu-title,
+.bug-reporter-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.bug-reporter-menu-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.bug-reporter-menu-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--bug-border);
+  border-radius: 10px;
+  background: var(--bug-bg-elevated);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bug-reporter-menu-action:hover {
+  border-color: var(--bug-accent);
+}
+
+.bug-reporter-menu-icon {
+  display: inline-flex;
+  color: var(--bug-accent);
+}
+
+.bug-reporter-menu-hint,
+.bug-reporter-muted {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--bug-fg-muted);
+}
+
+.bug-reporter-notice {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bug-warning-bg);
+  color: var(--bug-warning-fg);
+  font-size: 13px;
+}
+
+/* Capture bar: fixed at the top while a capture is prepared or runs. */
+
+.bug-reporter-bar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: var(--bug-z);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--bug-border);
+  border-radius: 999px;
+  background: var(--bug-bg);
+  box-shadow: var(--bug-shadow);
+  transform: translateX(-50%);
+  font-variant-numeric: tabular-nums;
+}
+
+.bug-reporter-bar-hint {
+  color: var(--bug-fg-muted);
+}
+
+.bug-reporter-bar-countdown {
+  min-width: 1.5em;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bug-reporter-bar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bug-danger);
+  animation: bug-reporter-blink 1s steps(2, start) infinite;
+}
+
+.bug-reporter-bar-limit {
+  color: var(--bug-fg-muted);
+}
+
+.bug-reporter-button-record {
+  border-color: var(--bug-danger);
+  background: var(--bug-danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+@keyframes bug-reporter-blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-reporter-bar-dot {
+    animation: none;
+  }
+}
+
+/* The video that decodes the captured tab for a screenshot: in the document, invisible, one pixel. */
+
+.bug-reporter-offscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Shutter flash after a screenshot. */
+
+.bug-reporter-flash {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  pointer-events: none;
+  animation: bug-reporter-shutter 420ms ease-out forwards;
+}
+
+@keyframes bug-reporter-shutter {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bug-reporter-flash {
+    animation-duration: 120ms;
+  }
+}
+
+/* Click marks: painted inside the application root so a recording shows where the person clicked. */
+
+.bug-click-marks {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000;
+  pointer-events: none;
+}
+
+.bug-click-mark {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 3px solid #e5484d;
+  border-radius: 50%;
+  animation: bug-click-mark 600ms ease-out forwards;
+}
+
+@keyframes bug-click-mark {
+  from {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+/* Dialog: compose, done and (full screen) the screenshot editor. */
+
+.bug-reporter-dialog {
+  /* A host reset that zeroes every margin (Tailwind preflight) would pin the dialog to the top-left corner. */
+  margin: auto;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--bug-border);
+  border-radius: var(--bug-radius);
+  background: var(--bug-bg);
+  color: var(--bug-fg);
+  box-shadow: var(--bug-shadow);
+  font-family: var(--bug-font);
+  font-size: 14px;
+}
+
+.bug-reporter-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.bug-reporter-dialog[data-fullscreen] {
+  width: calc(100vw - 32px);
+  height: calc(100vh - 32px);
+  max-width: none;
+  max-height: none;
+}
+
+.bug-reporter-compose,
+.bug-reporter-done {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.bug-reporter-compose-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bug-reporter-compose-header .bug-reporter-title {
+  margin: 0;
+}
+
+.bug-reporter-field,
+.bug-reporter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bug-reporter-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--bug-fg-muted);
+}
+
+.bug-reporter-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--bug-border);
+  border-radius: 10px;
+  background: var(--bug-bg-elevated);
+  color: var(--bug-fg);
+  font: inherit;
+  resize: vertical;
+}
+
+.bug-reporter-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bug-reporter-attachment {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--bug-border);
+  border-radius: 10px;
+  background: var(--bug-bg-elevated);
+}
+
+.bug-reporter-thumbnail {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #000000;
+}
+
+.bug-reporter-attachment-meta {
+  font-size: 12px;
+  color: var(--bug-fg-muted);
+}
+
+.bug-reporter-attachment .bug-reporter-icon-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--bug-bg);
+}
+
+.bug-reporter-add-actions,
+.bug-reporter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bug-reporter-actions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bug-reporter-included {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+}
+
+.bug-reporter-included > legend {
+  margin-bottom: 8px;
+}
+
+.bug-reporter-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.bug-reporter-progress {
+  margin-right: auto;
+  color: var(--bug-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Buttons. */
+
+.bug-reporter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--bug-border);
+  border-radius: 10px;
+  background: var(--bug-bg-elevated);
+  cursor: pointer;
+}
+
+.bug-reporter-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.bug-reporter-button-primary {
+  border-color: var(--bug-accent);
+  background: var(--bug-accent);
+  color: var(--bug-accent-fg);
+  font-weight: 600;
+}
+
+.bug-reporter-button-small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.bug-reporter-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--bug-border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Screenshot editor. */
+
+.bug-reporter-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+.bug-reporter-editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bug-reporter-editor-header .bug-reporter-title {
+  margin: 0;
+}
+
+.bug-reporter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--bug-border);
+  border-radius: 10px;
+  background: var(--bug-bg-elevated);
+}
+
+.bug-reporter-toolbar-gap {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--bug-border);
+}
+
+.bug-reporter-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bug-reporter-tool[aria-pressed='true'] {
+  background: var(--bug-accent);
+  color: var(--bug-accent-fg);
+}
+
+.bug-reporter-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bug-reporter-swatch {
+  width: 22px;
+  height: 22px;
+  margin: 0 3px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.bug-reporter-swatch[aria-pressed='true'] {
+  border-color: var(--bug-fg);
+}
+
+.bug-reporter-editor-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  border-radius: 10px;
+  background: light-dark(#e5e7eb, #0f1116);
+}
+
+.bug-reporter-editor-frame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+}
+
+.bug-reporter-editor-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 180px);
+  object-fit: contain;
+}
+
+.bug-reporter-editor-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.bug-reporter-done {
+  align-items: flex-start;
+}
+
+.bug-reporter-done p {
+  margin: 0;
+}
+
+.bug-reporter-done-icon {
+  color: #16a34a;
+}

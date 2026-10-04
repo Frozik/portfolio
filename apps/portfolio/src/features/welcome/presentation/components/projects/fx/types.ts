@@ -14,7 +14,8 @@ export type TProjectFxKind =
   | 'contours'
   | 'gravity'
   | 'tiles'
-  | 'rows';
+  | 'rows'
+  | 'shutter';
 
 export type TAccentAlpha = (alpha: number) => string;
 

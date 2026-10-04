@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Box,
   Brain,
+  Bug,
   CandlestickChart,
   Gamepad2,
   Grid3x3,
@@ -65,4 +66,5 @@ export const ROUTE_METADATA: readonly IRouteMetadata[] = [
   { segment: 'conf', titleKey: 'conf', icon: Video, navVisible: true },
   { segment: 'controls', titleKey: 'controls', icon: SlidersHorizontal, navVisible: true },
   { segment: 'table', titleKey: 'table', icon: Rows3, navVisible: true },
+  { segment: 'bug-reporter', titleKey: 'bugReporter', icon: Bug, navVisible: true },
 ];
