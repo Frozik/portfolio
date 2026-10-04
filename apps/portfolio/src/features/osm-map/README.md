@@ -169,7 +169,14 @@ the boxes that stand on the raster ground at street zoom.
   triangle in proportion to its area (one tree per 350 m² of forest, per
   1200 m² of park, at most 10 000 per tile, the whole tile thinned past
   that), drops every tree uniformly inside its triangle and seeds the draw
-  from the tile key, so a tile grows the same woods every time. Woods are
+  from the tile key, so a tile grows the same woods every time. A park
+  polygon often encloses what is not lawn — a castle park holds its moats —
+  so before planting the worker rasterises the tile's taken ground at 2 m:
+  water, building footprints, transportation and aeroway areas, pitches,
+  tracks and sand, and every road, path, rail and waterway (tunnels left
+  out) as a band of its class's width. A tree whose trunk or half its crown
+  radius would land on taken ground is not planted, so the rest of the
+  cover keeps its density. Woods are
   seven parts spruce to three broadleaf and 8–16 m tall; parks are mostly
   broadleaf, 6–12 m, with wider crowns. The two species are the low-polygon
   templates shared with the site planner (`@frozik/utils/geometry/

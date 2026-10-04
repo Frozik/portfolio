@@ -8,7 +8,10 @@ import {
   MAX_TREES_PER_TILE,
   PARK_AREA_PER_TREE_M2,
   STREET_MESH_UNIT_M,
+  TREE_CLEARANCE_CROWN_SHARE,
 } from './constants';
+import type { GroundMask } from './ground-mask';
+import { isGroundFree } from './ground-mask';
 
 /** The two silhouettes a map tells apart: a conifer and a broadleaf. */
 export type MapTreeSpecies = Extract<TreeTemplateSpecies, 'spruce' | 'deciduous'>;
@@ -111,10 +114,16 @@ function quantized(metres: number): number {
 /**
  * Plants every cover of a tile: a triangle gets trees in proportion to its
  * area, each dropped uniformly inside it, the whole tile thinned when it
- * would exceed `MAX_TREES_PER_TILE`. Seeded, so a tile grows the same woods
- * every time it is decoded.
+ * would exceed `MAX_TREES_PER_TILE`. A tree that would stand on taken
+ * ground — a moat inside a park polygon, a road through a wood — is not
+ * planted, and the rest of the cover keeps its density. Seeded, so a tile
+ * grows the same woods every time it is decoded.
  */
-export function plantTrees(covers: readonly TreeCover[], seed: string): readonly TreeBatch[] {
+export function plantTrees(
+  covers: readonly TreeCover[],
+  ground: GroundMask,
+  seed: string
+): readonly TreeBatch[] {
   const triangles = covers.flatMap(trianglesOf);
   const expectedCount = triangles.reduce(
     (sum, triangle) => sum + triangle.areaM2 / STANDS[triangle.kind].areaPerTreeM2,
@@ -132,12 +141,16 @@ export function plantTrees(covers: readonly TreeCover[], seed: string): readonly
       const x = (1 - rootU) * triangle.ax + rootU * (1 - v) * triangle.bx + rootU * v * triangle.cx;
       const y = (1 - rootU) * triangle.ay + rootU * (1 - v) * triangle.by + rootU * v * triangle.cy;
       const species: MapTreeSpecies = random() < stand.spruceShare ? 'spruce' : 'deciduous';
-      planted[species].push(
-        quantized(x),
-        quantized(-y),
-        quantized(between(stand.crownRadiusM, random())),
-        quantized(between(stand.heightM, random()))
-      );
+      const crownRadiusM = between(stand.crownRadiusM, random());
+      const heightM = between(stand.heightM, random());
+      if (isGroundFree({ x, y }, crownRadiusM * TREE_CLEARANCE_CROWN_SHARE, ground)) {
+        planted[species].push(
+          quantized(x),
+          quantized(-y),
+          quantized(crownRadiusM),
+          quantized(heightM)
+        );
+      }
     }
   }
   return MAP_TREE_SPECIES.flatMap(species =>

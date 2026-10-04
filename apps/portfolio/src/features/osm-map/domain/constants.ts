@@ -138,6 +138,10 @@ export const FOREST_AREA_PER_TREE_M2 = 350;
 export const PARK_AREA_PER_TREE_M2 = 1200;
 /** Ceiling per tile; a tile that is all forest plants proportionally fewer. */
 export const MAX_TREES_PER_TILE = 10_000;
+/** Ground taken by water, buildings and roads is rasterised this fine before trees are planted around it. */
+export const GROUND_MASK_CELL_M = 2;
+/** A tree keeps this share of its crown radius clear of taken ground: crowns may lean over a road, trunks may not stand in it. */
+export const TREE_CLEARANCE_CROWN_SHARE = 0.5;
 /** z14 tiles a frame can place; a 4K view at full tilt from z16 needs about twenty. */
 export const MAX_BUILDING_TILES_PER_FRAME = 64;
 

@@ -29,8 +29,13 @@ export function metresPerUnitAt(coord: TileCoord): number {
   return metresPerUnitAtPoint({ x: 0, y: (bounds.minY + bounds.maxY) / 2 });
 }
 
+/** The tile's side on the ground, in metres. */
+export function tileSizeMOf(coord: TileCoord): number {
+  return tileWorldSize(coord.z) * metresPerUnitAt(coord);
+}
+
 export function tileGridOf(coord: TileCoord, extent: number): TileGrid {
-  return { extent, tileSizeM: tileWorldSize(coord.z) * metresPerUnitAt(coord) };
+  return { extent, tileSizeM: tileSizeMOf(coord) };
 }
 
 /** Tile units (y down) to plan metres from the tile's north-west corner (x east, y north). */
