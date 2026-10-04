@@ -16,6 +16,11 @@ CONF_PATH="/etc/logrotate.d/communication-hygiene"
 info "Writing ${CONF_PATH}"
 cat > "${CONF_PATH}" <<'ROTATE'
 # Managed by infra/roles/edge/log-hygiene.sh
+#
+# /var/log is root:syslog 0775 on Ubuntu, which logrotate refuses without a
+# `su` directive. logrotate.conf sets `su root adm` globally, but this file is
+# also run on its own below, where that global does not apply.
+su root adm
 
 /var/log/dmesg {
     weekly

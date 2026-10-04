@@ -16,6 +16,9 @@ GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}"
 # provider as `auth/invalid-token`.
 YANDEX_OAUTH_CLIENT_ID="${YANDEX_OAUTH_CLIENT_ID:-}"
 YANDEX_OAUTH_CLIENT_SECRET="${YANDEX_OAUTH_CLIENT_SECRET:-}"
+# A host file carries the public id but never the secret, which stays on the
+# machine; only an id typed on the command line must come with its secret.
+YANDEX_ID_FROM_FLAG=false
 CERT_EMAIL="${CERT_EMAIL:-}"
 EDGE_HAPROXY_ENABLED="${EDGE_HAPROXY_ENABLED:-true}"
 COMMUNICATION_DOMAIN="${COMMUNICATION_DOMAIN:-}"
@@ -23,7 +26,7 @@ COMMUNICATION_CORS_ORIGINS="${COMMUNICATION_CORS_ORIGINS:-}"
 HARDEN_SSH="${HARDEN_SSH:-true}"
 
 usage_install() {
-  cat >&2 <<USAGE
+  cat >&2 <<'USAGE'
 Usage: provision-host.sh --host <name> --cert-email <EMAIL>
        provision-host.sh --ssh-host <user@host> --google-client-id <ID> --cert-email <EMAIL>
                   [--no-haproxy] [--domain <DOMAIN>]
@@ -52,7 +55,7 @@ USAGE
 }
 
 usage_upgrade() {
-  cat >&2 <<USAGE
+  cat >&2 <<'USAGE'
 Usage: deploy-communication.sh --host <name>
        deploy-communication.sh --ssh-host <user@host> [--no-haproxy] [--domain <DOMAIN>]
 
@@ -77,7 +80,7 @@ _parse_common() {
       --google-client-id)
         GOOGLE_OAUTH_CLIENT_ID="$2"; shift 2;;
       --yandex-client-id)
-        YANDEX_OAUTH_CLIENT_ID="$2"; shift 2;;
+        YANDEX_OAUTH_CLIENT_ID="$2"; YANDEX_ID_FROM_FLAG=true; shift 2;;
       --yandex-client-secret)
         YANDEX_OAUTH_CLIENT_SECRET="$2"; shift 2;;
       --cert-email)
@@ -128,8 +131,9 @@ validate_install_args() {
     usage_install
     exit 2
   fi
-  # Yandex pair: either both empty (provider disabled) or both set.
-  if [[ -n "${YANDEX_OAUTH_CLIENT_ID}" && -z "${YANDEX_OAUTH_CLIENT_SECRET}" ]]; then
+  # Yandex pair: either both empty (provider disabled) or both set — except an
+  # id from --host, whose secret is already on the machine and is kept.
+  if [[ "${YANDEX_ID_FROM_FLAG}" == "true" && -z "${YANDEX_OAUTH_CLIENT_SECRET}" ]]; then
     err "--yandex-client-id was provided without --yandex-client-secret"
     usage_install
     exit 2
