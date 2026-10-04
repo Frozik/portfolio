@@ -64,6 +64,14 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'transport',
+          environment: 'node',
+          include: ['libs/transport/src/**/*.{test,spec}.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'communication',
           environment: 'node',
           include: ['apps/communication/src/**/*.{test,spec}.ts'],

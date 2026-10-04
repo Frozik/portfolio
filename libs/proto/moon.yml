@@ -1,0 +1,52 @@
+language: typescript
+layer: library
+
+tags:
+  - library
+
+fileGroups:
+  contract:
+    - 'proto/**/*'
+    - 'buf.yaml'
+    - 'buf.gen.yaml'
+
+tasks:
+  generate:
+    command: 'pnpm run generate'
+    inputs:
+      - '@group(contract)'
+    outputs:
+      - 'src/gen'
+    options:
+      runInCI: false
+
+  proto-lint:
+    command: 'pnpm run proto-lint'
+    inputs:
+      - '@group(contract)'
+    options:
+      runInCI: true
+
+  proto-breaking:
+    command: 'pnpm run proto-breaking'
+    inputs:
+      - '@group(contract)'
+    options:
+      cache: false
+      runInCI: true
+
+  proto-fresh:
+    command: 'pnpm run proto-fresh'
+    inputs:
+      - '@group(contract)'
+      - 'src/gen/**/*'
+    options:
+      runInCI: true
+
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - 'src/**/*'
+      - 'tsconfig.json'
+    options:
+      runInCI: true

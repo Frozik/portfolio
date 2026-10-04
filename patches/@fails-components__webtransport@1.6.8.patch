@@ -1,0 +1,37 @@
+diff --git a/lib/server.js b/lib/server.js
+index 6e1a840c2cde01b97ebf4195b90ae4f455f1f78a..a8e7ebd95f7773b0e7c6f5b202da125c5c85f00e 100644
+--- a/lib/server.js
++++ b/lib/server.js
+@@ -251,7 +251,7 @@ export class HttpServer {
+   onSessionRequest(args) {
+     if ((args.promise || args.protocol !== 'http3:libquiche') && args.header) {
+       if (!this.requestHandler) throw new Error('Request handler not set')
+-      this.requestHandler({ header: args.header })
++      this.requestHandler({ header: args.header, peerAddress: args.peerAddress })
+         .then((/** @type {any} */ result) => {
+           log('oSR', result)
+           this.transportInt.finishSessionRequest({
+diff --git a/lib/stream.js b/lib/stream.js
+index 5a7b50c42be0912d56cee3f6c8acd9e01539de66..493f78477004167f551bab2c64eec0e9a8d97d15 100644
+--- a/lib/stream.js
++++ b/lib/stream.js
+@@ -289,10 +289,15 @@ export class HttpWTStream {
+     if (readBytes !== undefined && readBytes > 0 && !this.readableclosed) {
+       log.trace('commitReadbuffer', readBytes)
+       // console.log('stream read received', args.data, Date.now())
+-      if (this.pendingoperationRead && drained) {
+-        if (this.readableController.desiredSize != null && !this.finaldrain_) {
+-          if (this.readableController.desiredSize < 0) retObj.stopReading = true
+-        }
++      // Backpressure: the native side only pauses on an explicit stopReading()
++      // call, and a pull resolved only when "drained" could stall the stream.
++      if (
++        this.readableController.desiredSize != null &&
++        !this.finaldrain_ &&
++        this.readableController.desiredSize <= 0
++      )
++        this.objint.stopReading()
++      if (this.pendingoperationRead) {
+         // this.readableController.enqueue(data)
+         const res = this.pendingresRead
+         this.pendingoperationRead = null

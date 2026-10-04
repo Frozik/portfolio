@@ -183,6 +183,7 @@
     "**/build/**",
     "**/coverage/**",
     "**/.moon/**",
-    "**/.claude/**"
+    "**/.claude/**",
+    "libs/proto/src/gen/**"
   ]
 }

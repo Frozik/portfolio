@@ -64,6 +64,7 @@ export const appTranslationsEn = {
     controls: 'Controls',
     table: 'Table',
     bugReporter: 'Bug Reporter',
+    transport: 'HTTP/3 Transport',
     webmcp: 'WebMCP',
     retro: 'Retro',
     conf: 'Conference',

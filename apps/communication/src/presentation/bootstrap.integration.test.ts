@@ -27,7 +27,6 @@ import type {
 import type { Socket as ClientSocket } from 'socket.io-client';
 import { io as ioClient } from 'socket.io-client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { IServerConfig } from '../application/config/server-config-schema';
 import type { IVerifierHealth } from '../application/ports/IVerifierHealth';
 import type { AuthErrorCode, TokenClaims } from '../domain/Identity';
 import type { IIdentityVerifier } from '../domain/IIdentityVerifier';
@@ -36,65 +35,13 @@ import { err, ok } from '../domain/Result';
 import type { Milliseconds, UserId } from '../domain/types';
 import type { BootstrapResult } from './bootstrap';
 import { bootstrap } from './bootstrap';
+import { buildTestConfig as buildConfig } from './testing/test-server-config';
 
 const ROOM_ID = '550e8400-e29b-41d4-a716-446655440000';
 const ALT_ROOM_ID = '550e8400-e29b-41d4-a716-446655440001';
-const TEST_AUDIENCE = 'test-client';
 const ONE_SECOND_MS = 1_000;
 const HANDSHAKE_TIMEOUT_MS = 1_500;
 const TEST_TIMEOUT_MS = 15_000;
-
-function buildConfig(overrides: Partial<IServerConfig> = {}): IServerConfig {
-  const base: IServerConfig = {
-    server: {
-      port: 0,
-      host: '127.0.0.1',
-      cors_allowed_origins: ['http://localhost:5173'],
-      shutdown_grace_ms: 1_000,
-      tls: { enabled: false, cert_path: '', key_path: '' },
-    },
-    auth: {
-      google_oauth_client_id: TEST_AUDIENCE,
-      yandex_oauth_client_id: '',
-      yandex_oauth_client_secret: '',
-      token_expiry_warning_seconds: 1,
-      clock_tolerance_seconds: 0,
-      jwks: { fetch_max_attempts: 1, fetch_timeout_ms: 100 },
-    },
-    room: {
-      max_listeners: 50,
-      response_gather_timeout_ms: 500,
-      max_http_buffer_bytes: 1_048_576,
-      max_tabs_per_user: 5,
-      max_inflight_dispatches_per_socket: 32,
-    },
-    signal: {
-      max_publish_per_second_per_socket: 100,
-      max_publish_burst: 200,
-      max_payload_bytes: 16_384,
-    },
-    turn: {
-      enabled: true,
-      shared_secret: 'test-secret',
-      realm: 'test-realm',
-      ttl_seconds: 3_600,
-      anonymous_ttl_seconds: 600,
-      urls: ['turn:turn.example.com:3478'],
-      credential_requests_per_minute_per_socket: 5,
-    },
-    edge: { haproxy_enabled: false },
-    security: {
-      handshake_rate_per_ip_per_minute: 1_000,
-      failed_handshake_block_threshold: 100,
-      failed_handshake_block_seconds: 30,
-    },
-    admin: { token: 'admin-secret', port: 0 },
-    logging: { level: 'error', pretty: false },
-    build: { id: 'test', commit: 'abc', version: '0.0.0' },
-    redis: { enabled: false, url: 'redis://127.0.0.1:6379', key_prefix: 'comm:' },
-  };
-  return { ...base, ...overrides };
-}
 
 type StubIssuedToken = {
   token: string;

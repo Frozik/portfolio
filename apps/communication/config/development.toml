@@ -4,3 +4,8 @@ cors_allowed_origins = ["http://localhost:5173"]
 [logging]
 level = "debug"
 pretty = true
+
+[transport]
+# Browsers resolve localhost to ::1 first and QUIC does not fall back to IPv4,
+# so the development listener takes both stacks.
+http3_host = "::"

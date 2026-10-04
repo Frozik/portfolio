@@ -234,6 +234,13 @@ export const welcomeTranslationsEn = {
           'One bug button: a screenshot with marks or a tab recording, the console, errors, actions and device details — zipped and streamed to disk, no backend. Fields marked as sensitive never make it into a capture.',
         status: 'masked',
       },
+      transport: {
+        meta: 'Networking · Own library',
+        title: 'HTTP/3 Transport',
+        description:
+          'One Connect RPC transport over HTTP/3 WebTransport that falls back to a WebSocket by itself. A function plotted live as the server samples each window you zoom into, and a file echoed through the server back to disk with backpressure end to end.',
+        status: 'http/3',
+      },
       retro: {
         meta: 'Collaboration · P2P',
         title: 'Retro',

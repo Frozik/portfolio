@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package frozik.transport.v1;
+
+// Streams a file to the server and straight back, with backpressure end to end
+// and nothing stored. The first request carries the header, the rest carry
+// chunks; the last response carries the summary.
+service FileService {
+  rpc GetEchoLimits(GetEchoLimitsRequest) returns (GetEchoLimitsResponse);
+  rpc Echo(stream EchoRequest) returns (stream EchoResponse);
+}
+
+message GetEchoLimitsRequest {}
+
+message GetEchoLimitsResponse {
+  uint64 max_file_bytes = 1;
+  uint64 bytes_per_hour = 2;
+  uint64 rate_bytes_per_second = 3;
+  uint32 max_chunk_bytes = 4;
+}
+
+message EchoRequest {
+  oneof part {
+    FileHeader header = 1;
+    bytes chunk = 2;
+  }
+}
+
+message FileHeader {
+  string name = 1;
+  uint64 size = 2;
+}
+
+message EchoResponse {
+  oneof part {
+    bytes chunk = 1;
+    EchoSummary summary = 2;
+  }
+}
+
+message EchoSummary {
+  uint64 bytes = 1;
+  uint32 crc32 = 2;
+  uint64 max_buffered_bytes = 3;
+}

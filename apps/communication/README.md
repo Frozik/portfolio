@@ -110,6 +110,11 @@ env vars (mapped via `config/custom-environment-variables.json`).
 | `LOG_LEVEL`                      | `logging.level`                 | `trace`/`debug`/`info`/`warn`/...  |
 | `BUILD_ID`, `BUILD_COMMIT`, `BUILD_VERSION` | `build.*`            | Stamped at build time              |
 | `ADMIN_TOKEN`                    | `admin.token`                   | Bearer for `/admin/log-level`      |
+| `TRANSPORT_ENABLED`              | `transport.enabled`             | HTTP/3 + WebSocket transport (default `true`) |
+| `TRANSPORT_HTTP3_PORT`           | `transport.http3_port`          | UDP port of the HTTP/3 listener, default 4447 |
+
+The `[transport]` and `[transport.echo]` sections of `default.toml` hold the
+session, stream and window limits and the echo quotas.
 
 ---
 
@@ -125,11 +130,46 @@ env vars (mapped via `config/custom-environment-variables.json`).
 | `/health/live`                         | Liveness probe (always 200 once started)               |
 | `/health/ready`                        | Readiness — 503 while JWKS unreachable                 |
 | `/metrics`                             | Prometheus exposition                                  |
+| `:443/udp` → `:4447/udp` `/transport`  | HTTP/3 WebTransport (published past HAProxy, see below)|
+| `:443/transport` (WebSocket)           | The transport's fallback, through HAProxy like Socket.IO |
+| `/transport/pinned-certificate`        | Development only: the self-signed HTTP/3 certificate's hash and port |
 
 In HAProxy mode all WSS *and* TURNS terminate on `:443`; the SNI router
 demultiplexes by hostname (`<IP>.sslip.io` -> Fastify, `turn-<IP>.sslip.io`
 -> coturn). With `--no-haproxy`, Fastify owns `:443` directly and coturn
 runs TURNS on `:5349`.
+
+---
+
+## Transport services (HTTP/3)
+
+Besides Socket.IO the server serves two Connect services from
+[`@frozik/proto`](../../libs/proto/README.md) over
+[`@frozik/transport`](../../libs/transport/README.md): `PlotService` (parse
+a function of `x` with the Pratt parser in `domain/expression/`, sample it,
+stream the points) and `FileService` (stream a file straight back, nothing
+stored). Both protocols carry the same handlers: HTTP/3 on UDP straight from
+the client — HAProxy's TCP passthrough cannot carry QUIC — and the WebSocket
+fallback on the public HTTPS port, next to Socket.IO.
+
+Who may open a session: no foreign `Origin`, the per-IP attempt rate of
+`[security]` and `max_sessions_per_ip` — for HTTP/3, where addresses are real.
+Fallback sessions come through HAProxy as 127.0.0.1, so there HAProxy's own
+per-source limits apply, as for Socket.IO, and echoes there answer only to the
+server-wide cap (`concurrent_total`) rather than all sharing one address's
+quota. A stream where no bytes move either way for `stream_idle_timeout_ms` is
+reset, whichever side stalled — a request that never arrives, or a response
+nobody reads, frees its slot. Memory per stream is
+bounded by `stream_window_bytes` (QUIC) or the multiplexer's credit, whatever
+the client does. A certificate renewal restarts only the HTTP/3 listener;
+open sessions reconnect. Drain closes transport sessions before Socket.IO,
+which closes the shared HTTP server. Without TLS (development) the HTTP/3
+listener makes a 13-day self-signed certificate at start and publishes its
+hash at `/transport/pinned-certificate`.
+
+Metrics: `communication_transport_sessions{protocol}`,
+`communication_transport_echo_bytes_total`,
+`communication_transport_echo_rejected_total{reason}`.
 
 ---
 

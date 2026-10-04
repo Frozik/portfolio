@@ -76,6 +76,9 @@ const BugReporterDemo = lazy(() =>
     default: m.BugReporterDemo,
   }))
 );
+const Transport = lazy(() =>
+  import('../../features/transport/presentation/Transport').then(m => ({ default: m.Transport }))
+);
 const Retro = lazy(() =>
   import('../../features/retro/presentation/Retro').then(m => ({ default: m.Retro }))
 );
@@ -136,6 +139,7 @@ export const ApplicationRoutes = memo(() => {
             <Route path="controls" element={<Controls />} />
             <Route path="table" element={<TableDemo />} />
             <Route path="bug-reporter" element={<BugReporterDemo />} />
+            <Route path="transport" element={<Transport />} />
             <Route path="webmcp" element={<WebMcp />} />
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>

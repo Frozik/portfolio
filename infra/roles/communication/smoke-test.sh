@@ -55,3 +55,21 @@ if curl -fsSk --max-time 5 "${READY_URL}" >/dev/null; then
 else
   warn "/health/ready did not return 200 — JWKS may still be warming up"
 fi
+
+info "GET ${LIVE_URL%/health/live}/transport as a WebSocket upgrade"
+upgrade_status="$(curl -sk --http1.1 --max-time 3 -o /dev/null -w '%{http_code}' \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+  "https://127.0.0.1:${FASTIFY_PORT}/transport" || true)"
+if [[ "${upgrade_status}" == "101" ]]; then
+  ok "transport WebSocket fallback -> 101"
+else
+  die "transport WebSocket fallback answered '${upgrade_status}'. docker compose -f ${COMPOSE_FILE} logs communication"
+fi
+
+http3_binding="$(docker compose -f "${COMPOSE_FILE}" port --protocol udp communication 4447 2>/dev/null || true)"
+if [[ -n "${http3_binding}" ]]; then
+  ok "transport HTTP/3 published on udp ${http3_binding}"
+else
+  die "transport HTTP/3 port 4447/udp is not published. Check docker-compose.yml"
+fi

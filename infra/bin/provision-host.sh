@@ -64,6 +64,7 @@ remote_run_script communication/oauth-secrets
 remote_run_script communication/config
 remote_run_script edge/renewal-hook
 remote_run_script edge/journald
+remote_run_script edge/udp-buffers
 remote_run_script edge/log-hygiene
 remote_run_script edge/expiry-timer
 remote_run_script edge/certificate

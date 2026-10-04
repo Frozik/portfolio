@@ -20,6 +20,7 @@
     "lodash-es": "catalog:",
     "lru-cache": "catalog:",
     "rxjs": "catalog:",
+    "streamsaver": "catalog:",
     "temporal-polyfill": "catalog:",
     "wgpu-matrix": "catalog:",
     "zod": "catalog:"
@@ -28,6 +29,7 @@
     "@frozik/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
+    "@types/streamsaver": "catalog:",
     "@webgpu/types": "catalog:",
     "fake-indexeddb": "catalog:"
   }

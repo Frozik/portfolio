@@ -7,6 +7,8 @@ this — see [`apps/communication`](../apps/communication/README.md).
 One host runs the signaling stack: HAProxy terminates :443 and routes by SNI,
 coturn relays TURN, certbot keeps the certificate fresh, and the Node service
 plus its Redis run as containers pulled from GHCR. Nothing is built on the box.
+UDP 443 bypasses HAProxy: it is published straight to the container's HTTP/3
+(WebTransport) listener, which HAProxy's TCP passthrough cannot carry.
 
 ## Layout
 
@@ -15,7 +17,7 @@ hosts/   the inventory — one env file per machine
 bin/     what a human runs
 lib/     plumbing for the scripts themselves (ssh multiplexing, args, inventory, logging)
 roles/   grouped by the component being configured
-  edge/            haproxy, coturn, certbot, firewall, ssh hardening, journald
+  edge/            haproxy, coturn, certbot, firewall, ssh hardening, journald, UDP buffers
   communication/   docker, secrets, config, compose, deploy user, smoke test
 ```
 
@@ -255,7 +257,9 @@ walkthrough is here.
   these hooks renewals time out and the cert silently expires, which
   took the service down in Aug 2026). `deploy/communication.sh` reloads
   HAProxy and coturn; the Node service picks up the new cert in place
-  via fs.watch (CertWatcher), so active sessions survive renewals.
+  via fs.watch (CertWatcher), so active sessions survive renewals — except
+  HTTP/3: its QUIC stack cannot swap certificates in place, so the transport
+  restarts only its HTTP/3 listener and those sessions reconnect.
 - **Cert expiry alerts**: `communication-cert-check.timer` runs daily
   and warns to journald 7 days before expiry.
 - **Live log level**:

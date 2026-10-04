@@ -65,20 +65,6 @@ declare global {
     readonly lineNumber?: number;
   }
 
-  interface SaveFilePickerType {
-    readonly description?: string;
-    readonly accept: Readonly<Record<string, readonly string[]>>;
-  }
-
-  interface SaveFilePickerOptions {
-    readonly suggestedName?: string;
-    readonly types?: readonly SaveFilePickerType[];
-  }
-
-  interface Window {
-    showSaveFilePicker?(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
-  }
-
   interface DisplayMediaStreamOptions {
     readonly preferCurrentTab?: boolean;
     readonly selfBrowserSurface?: 'include' | 'exclude';

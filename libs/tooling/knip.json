@@ -52,6 +52,19 @@
     },
     "libs/tooling": {
       "project": ["src/**/*.ts"]
+    },
+    "libs/transport": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": [
+        "@fails-components/webtransport-transport-http3-quiche"
+      ]
+    },
+    "libs/proto": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["@bufbuild/protoc-gen-es"],
+      "ignoreBinaries": ["diff"]
     }
   },
   "rules": {

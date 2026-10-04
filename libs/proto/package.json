@@ -1,0 +1,29 @@
+{
+  "name": "@frozik/proto",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "proto",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/gen/*.ts"
+  },
+  "scripts": {
+    "generate": "buf generate",
+    "proto-breaking": "if git cat-file -e origin/main:libs/proto/buf.yaml 2>/dev/null; then buf breaking --against '../../.git#ref=origin/main,subdir=libs/proto'; else echo 'no contract on origin/main yet: nothing to compare'; fi",
+    "proto-fresh": "rm -rf .generated-check && buf generate -o .generated-check && diff -r .generated-check/src/gen src/gen; status=$?; rm -rf .generated-check; exit $status",
+    "proto-lint": "buf lint",
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "catalog:",
+    "@bufbuild/protoc-gen-es": "catalog:",
+    "@frozik/typescript-config": "workspace:*"
+  }
+}

@@ -9,6 +9,7 @@ import { RoomSectionSchema } from './sections/room-section';
 import { SecuritySectionSchema } from './sections/security-section';
 import { ServerSectionSchema } from './sections/server-section';
 import { SignalSectionSchema } from './sections/signal-section';
+import { TransportSectionSchema } from './sections/transport-section';
 import { TurnSectionSchema } from './sections/turn-section';
 
 // Top-level configuration. Cross-section refinements (env-specific CORS,
@@ -26,6 +27,7 @@ export const ServerConfigSchema = z.object({
   logging: LoggingSectionSchema,
   build: BuildSectionSchema,
   redis: RedisSectionSchema,
+  transport: TransportSectionSchema,
 });
 
 export type IServerConfig = z.infer<typeof ServerConfigSchema>;

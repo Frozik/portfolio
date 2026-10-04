@@ -31,7 +31,6 @@
     "fix-webm-duration": "catalog:",
     "lodash-es": "catalog:",
     "lucide-react": "catalog:",
-    "streamsaver": "catalog:",
     "usehooks-ts": "catalog:",
     "web-vitals": "catalog:"
   },
@@ -41,7 +40,6 @@
     "@types/lodash-es": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/streamsaver": "catalog:",
     "@webgpu/types": "catalog:",
     "fflate": "catalog:"
   },

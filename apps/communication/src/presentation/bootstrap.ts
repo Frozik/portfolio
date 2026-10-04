@@ -16,11 +16,13 @@ import { createPublicApp } from './bootstrap/public-app';
 import { createRoomBackend } from './bootstrap/room-backend';
 import { createDrain } from './bootstrap/server-drain';
 import { watchTlsCertificates } from './bootstrap/tls-reload';
+import { createTransportEndpoint } from './bootstrap/transport';
 import type { LifecycleState } from './http-routes';
 import { registerAdminHttpRoutes, registerPublicHttpRoutes } from './http-routes';
 import type { CommunicationMetrics } from './metrics';
 import { createCommunicationMetrics } from './metrics';
 import { registerSocketHandlers } from './socket-handlers';
+import { registerPinnedCertificateRoute } from './transport/pinned-certificate-route';
 
 const ADMIN_HOST = '127.0.0.1';
 const SOCKET_PING_INTERVAL_MS = 25_000;
@@ -40,7 +42,7 @@ export type BootstrapResult = {
   adminApp: FastifyInstance;
   io: SocketIOServer;
   metrics: CommunicationMetrics;
-  start: () => Promise<{ publicPort: number; adminPort: number }>;
+  start: () => Promise<{ publicPort: number; adminPort: number; http3Port: number }>;
   drain: (graceMs?: number) => Promise<void>;
   close: () => Promise<void>;
 };
@@ -135,16 +137,30 @@ export async function bootstrap(
     metricsRegistry: metrics.registry,
   });
 
+  const transportEndpoint = createTransportEndpoint({
+    config,
+    httpServer,
+    logger: serverLogger.child({ component: 'transport' }),
+    metrics,
+  });
+  registerPinnedCertificateRoute(
+    publicApp,
+    config.transport.path,
+    () => transportEndpoint.pinnedCertificate
+  );
+
   let certWatcher = watchTlsCertificates(config.server.tls, httpServer, serverLogger);
 
-  const start = async (): Promise<{ publicPort: number; adminPort: number }> => {
+  const start = async (): Promise<{ publicPort: number; adminPort: number; http3Port: number }> => {
     await publicApp.listen({ port: config.server.port, host: config.server.host });
     await adminApp.listen({ port: config.admin.port, host: ADMIN_HOST });
+    const http3Port = await transportEndpoint.start();
     lifecycleState.isReady = true;
     lifecycleState.startedAtMs = Temporal.Now.instant().epochMilliseconds;
     return {
       publicPort: listenedPort(publicApp, 'public'),
       adminPort: listenedPort(adminApp, 'admin'),
+      http3Port,
     };
   };
 
@@ -153,6 +169,7 @@ export async function bootstrap(
     transport,
     metrics,
     apps: [publicApp, adminApp],
+    closeTransport: () => transportEndpoint.close(),
     releaseResources: async () => {
       certWatcher?.stop();
       certWatcher = null;

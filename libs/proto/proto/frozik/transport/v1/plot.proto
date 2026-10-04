@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package frozik.transport.v1;
+
+// Samples a function of one variable on the server. The expression is parsed
+// without eval; a parse failure is InvalidArgument carrying ExpressionError.
+service PlotService {
+  rpc GetPlotLimits(GetPlotLimitsRequest) returns (GetPlotLimitsResponse);
+  rpc Sample(SampleRequest) returns (stream SampleResponse);
+}
+
+message GetPlotLimitsRequest {}
+
+message GetPlotLimitsResponse {
+  uint32 expression_max_length = 1;
+  uint32 sample_max_points = 2;
+}
+
+message SampleRequest {
+  string expression = 1;
+  double x_min = 2;
+  double x_max = 3;
+  uint32 points = 4;
+}
+
+// One chunk of the sampled curve; a NaN y is a gap (asymptote or undefined value).
+message SampleResponse {
+  repeated double x = 1;
+  repeated double y = 2;
+}
+
+message ExpressionError {
+  uint32 position = 1;
+  ExpressionErrorReason reason = 2;
+}
+
+enum ExpressionErrorReason {
+  EXPRESSION_ERROR_REASON_UNSPECIFIED = 0;
+  EXPRESSION_ERROR_REASON_EMPTY = 1;
+  EXPRESSION_ERROR_REASON_TOO_LONG = 2;
+  EXPRESSION_ERROR_REASON_TOO_DEEP = 3;
+  EXPRESSION_ERROR_REASON_UNEXPECTED_CHARACTER = 4;
+  EXPRESSION_ERROR_REASON_INVALID_NUMBER = 5;
+  EXPRESSION_ERROR_REASON_UNKNOWN_IDENTIFIER = 6;
+  EXPRESSION_ERROR_REASON_UNEXPECTED_TOKEN = 7;
+  EXPRESSION_ERROR_REASON_UNEXPECTED_END = 8;
+}

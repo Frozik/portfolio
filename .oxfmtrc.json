@@ -18,7 +18,9 @@
   "overrides": [
     {
       "files": ["**/*.json", "**/*.jsonc"],
-      "options": { "printWidth": 80 }
+      "options": {
+        "printWidth": 80
+      }
     }
   ],
   "ignorePatterns": [
@@ -35,6 +37,7 @@
     "**/*.yaml",
     "pnpm-lock.yaml",
     "libs/tooling/file-size-baseline.json",
-    "apps/portfolio/bundle-stats.json"
+    "apps/portfolio/bundle-stats.json",
+    "libs/proto/src/gen/**"
   ]
 }

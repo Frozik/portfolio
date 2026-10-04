@@ -1,0 +1,40 @@
+{
+  "name": "@frozik/transport",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./client/*": "./src/client/*.ts",
+    "./server/*": {
+      "browser": null,
+      "node": "./src/server/*.ts"
+    },
+    "./shared/*": "./src/shared/*.ts",
+    "./testing/*": "./src/testing/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect": "catalog:",
+    "@fails-components/webtransport": "catalog:",
+    "@fails-components/webtransport-transport-http3-quiche": "catalog:",
+    "@frozik/utils": "workspace:*",
+    "@peculiar/x509": "catalog:",
+    "reflect-metadata": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/proto": "workspace:*",
+    "@frozik/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:"
+  }
+}

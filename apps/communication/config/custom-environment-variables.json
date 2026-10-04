@@ -63,5 +63,15 @@
   },
   "redis": {
     "url": "REDIS_URL"
+  },
+  "transport": {
+    "enabled": {
+      "__name": "TRANSPORT_ENABLED",
+      "__format": "json"
+    },
+    "http3_port": {
+      "__name": "TRANSPORT_HTTP3_PORT",
+      "__format": "json"
+    }
   }
 }

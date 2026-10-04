@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "moon run portfolio:analyze",
     "build": "moon run :build",
-    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :shellcheck :test",
+    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :shellcheck :proto-lint :proto-breaking :proto-fresh :test",
     "conventions": "moon run root:conventions",
     "conventions:baseline": "moon run root:conventions-baseline",
     "coverage": "moon run root:test-coverage",

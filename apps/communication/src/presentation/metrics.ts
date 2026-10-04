@@ -26,11 +26,14 @@ export type CommunicationMetrics = {
     handshakeRateLimitedTotal: Counter<never>;
     signalPublishTotal: Counter<'outcome'>;
     turnCredentialsIssuedTotal: Counter<never>;
+    transportEchoBytesTotal: Counter<never>;
+    transportEchoRejectedTotal: Counter<'reason'>;
   };
   gauges: {
     activeRooms: Gauge<never>;
     activeSockets: Gauge<never>;
     pendingCorrelations: Gauge<never>;
+    transportSessions: Gauge<'protocol'>;
   };
 };
 
@@ -105,6 +108,17 @@ export function createCommunicationMetrics(): CommunicationMetrics {
       help: 'TURN credential issuance count.',
       registers: [registry],
     }),
+    transportEchoBytesTotal: new Counter({
+      name: 'communication_transport_echo_bytes_total',
+      help: 'Bytes echoed back by FileService.Echo.',
+      registers: [registry],
+    }),
+    transportEchoRejectedTotal: new Counter({
+      name: 'communication_transport_echo_rejected_total',
+      help: 'FileService.Echo calls refused or cut short, by reason.',
+      labelNames: ['reason'],
+      registers: [registry],
+    }),
   };
 
   const gauges = {
@@ -121,6 +135,12 @@ export function createCommunicationMetrics(): CommunicationMetrics {
     pendingCorrelations: new Gauge({
       name: 'communication_pending_correlations',
       help: 'Number of in-flight dispatch correlations server-wide.',
+      registers: [registry],
+    }),
+    transportSessions: new Gauge({
+      name: 'communication_transport_sessions',
+      help: 'Open transport sessions by protocol (http3 / websocket).',
+      labelNames: ['protocol'],
       registers: [registry],
     }),
   };

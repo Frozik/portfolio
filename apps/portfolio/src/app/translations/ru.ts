@@ -60,6 +60,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     controls: 'Элементы управления',
     table: 'Таблица',
     bugReporter: 'Репорт багов',
+    transport: 'Транспорт HTTP/3',
     webmcp: 'WebMCP',
     retro: 'Ретроспектива',
     conf: 'Конференция',

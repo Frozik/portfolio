@@ -14,12 +14,16 @@
     "types": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.sw.json && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect": "catalog:",
     "@dnd-kit/core": "catalog:",
     "@frozik/bug-reporter": "workspace:*",
     "@frozik/charts": "workspace:*",
     "@frozik/communication-protocol": "workspace:*",
     "@frozik/components": "workspace:*",
+    "@frozik/proto": "workspace:*",
     "@frozik/table": "workspace:*",
+    "@frozik/transport": "workspace:*",
     "@frozik/utils": "workspace:*",
     "@mapbox/vector-tile": "catalog:",
     "@mediapipe/tasks-vision": "catalog:",

@@ -68,6 +68,29 @@ const VALID_CONFIG = {
     url: 'redis://127.0.0.1:6379',
     key_prefix: 'comm:',
   },
+  transport: {
+    enabled: true,
+    path: '/transport',
+    http3_host: '0.0.0.0',
+    http3_port: 4447,
+    max_sessions: 256,
+    max_sessions_per_ip: 8,
+    max_streams_per_session: 16,
+    stream_idle_timeout_ms: 30000,
+    stream_window_bytes: 262144,
+    session_window_bytes: 1048576,
+    expression_max_length: 200,
+    expression_max_depth: 48,
+    sample_max_points: 20000,
+    sample_chunk_points: 1000,
+    echo: {
+      max_file_bytes: 1073741824,
+      bytes_per_ip_per_hour: 4294967296,
+      concurrent_per_ip: 2,
+      concurrent_total: 16,
+      rate_bytes_per_second: 25000000,
+    },
+  },
 };
 
 function cloneConfig(): typeof VALID_CONFIG {

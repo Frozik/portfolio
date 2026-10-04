@@ -13,8 +13,12 @@
     "types": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect": "catalog:",
     "@fastify/rate-limit": "catalog:",
     "@frozik/communication-protocol": "workspace:*",
+    "@frozik/proto": "workspace:*",
+    "@frozik/transport": "workspace:*",
     "@frozik/utils": "workspace:*",
     "@prometheus-io/client": "catalog:",
     "@socket.io/redis-adapter": "catalog:",
@@ -32,6 +36,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@fails-components/webtransport": "catalog:",
     "@frozik/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",

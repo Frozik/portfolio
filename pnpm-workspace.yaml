@@ -13,7 +13,9 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   '@parcel/watcher': true
+  '@fails-components/webtransport-transport-http3-quiche': true
   core-js: false
+  '@bufbuild/buf': false
 
 peerDependencyRules:
   allowedVersions:
@@ -31,12 +33,19 @@ catalog:
   "@swc/core": "^1.16.2"
   "oxfmt": "^0.70.0"
   "oxlint": "^1.85.0"
+  "@bufbuild/buf": "^1.73.0"
+  "@bufbuild/protobuf": "^2.16.0"
+  "@bufbuild/protoc-gen-es": "^2.16.0"
+  "@connectrpc/connect": "^2.2.0"
   "@dnd-kit/core": "^6.3.1"
+  "@fails-components/webtransport": "1.6.8"
+  "@fails-components/webtransport-transport-http3-quiche": "1.6.8"
   "@fastify/rate-limit": "^11.2.0"
   "@lhci/cli": "^0.15.1"
   "@mapbox/vector-tile": "^3.0.0"
   "@mediapipe/tasks-vision": "^1.0.1"
   "@moonrepo/cli": "^2.5.5"
+  "@peculiar/x509": "^2.1.0"
   "@photostructure/tz-lookup": "^11.7.0"
   "@playwright/test": "^1.63.0"
   "@prometheus-io/client": "^0.16.1"
@@ -60,6 +69,7 @@ catalog:
   "@types/react": "^19.3.0"
   "@types/react-dom": "^19.3.0"
   "@types/streamsaver": "^2.0.5"
+  "@types/ws": "^8.18.1"
   "@vitejs/plugin-basic-ssl": "^2.3.0"
   "@vitejs/plugin-react": "^6.1.1"
   "@vitest/coverage-v8": "^4.1.11"
@@ -104,6 +114,7 @@ catalog:
   "react-dom": "^19.3.0"
   "react-router-dom": "^7.18.4"
   "redis": "^6.2.1"
+  "reflect-metadata": "^0.2.2"
   "rollup-plugin-visualizer": "^7.1.1"
   "rxjs": "^7.8.2"
   "simplex-noise": "^4.0.3"
@@ -129,6 +140,7 @@ catalog:
   "workbox-precaching": "^7.4.1"
   "workbox-routing": "^7.4.1"
   "workbox-strategies": "^7.4.1"
+  "ws": "^8.21.3"
   "y-indexeddb": "^9.0.12"
   "y-webrtc": "^10.3.0"
   "yjs": "^13.6.33"
@@ -151,3 +163,6 @@ minimumReleaseAgeExclude:
   - '@playwright/test@1.63.0'
   - playwright-core@1.63.0
   - playwright@1.63.0
+
+patchedDependencies:
+  '@fails-components/webtransport@1.6.8': patches/@fails-components__webtransport@1.6.8.patch

@@ -73,11 +73,27 @@ module.exports = {
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
       from: {
-        path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol))/',
+        path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol|proto)|libs/transport/src/(client|codec|frame|mux|tunnel|testing|shared))/',
       },
       to: {
-        path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter)(/|$)',
+        path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter|@fails-components/[^/]+|ws|@peculiar/x509|reflect-metadata)(/|$)',
       },
+    },
+    {
+      name: 'transport-client-does-not-reach-server',
+      comment:
+        'The browser half of @frozik/transport never imports the Node half (native HTTP/3, ws, certificates).',
+      severity: 'error',
+      from: { path: '^libs/transport/src/', pathNot: '^libs/transport/src/server/' },
+      to: { path: '^libs/transport/src/server/' },
+    },
+    {
+      name: 'wire-types-stay-at-the-edge',
+      comment:
+        'Generated protobuf types are the wire contract: presentation (server) and infrastructure (browser) translate them; domain and application keep their own types.',
+      severity: 'error',
+      from: { path: '/(domain|application)/' },
+      to: { path: '^libs/proto/' },
     },
     {
       name: 'table-kernel-is-view-free',

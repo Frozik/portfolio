@@ -14,3 +14,6 @@ max_publish_per_second_per_socket = 1000
 
 [logging]
 level = "warn"
+
+[transport]
+enabled = false

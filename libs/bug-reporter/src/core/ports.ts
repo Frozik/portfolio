@@ -1,3 +1,5 @@
+import type { FileSinkStrategy } from '@frozik/utils/file-sink/file-sink';
+
 import type { IRecordingFormat } from './recording-format';
 import type { IBugReport, IDiagnosticsCounts, IDiagnosticsSnapshot } from './report';
 
@@ -54,7 +56,7 @@ export interface ICaptureMask {
   apply(): Promise<TRestoreMask>;
 }
 
-export type TSaveStrategy = 'file-system-access' | 'stream-saver' | 'blob-download';
+export type TSaveStrategy = FileSinkStrategy;
 export type TSaveOutcome = 'saved' | 'cancelled';
 
 export interface IReportSink {

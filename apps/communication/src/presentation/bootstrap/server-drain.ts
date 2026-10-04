@@ -14,6 +14,11 @@ export type DrainParams = {
   transport: SocketIORoomTransport;
   metrics: CommunicationMetrics;
   apps: readonly FastifyInstance[];
+  /**
+   * Transport sessions ride the public server's sockets, and `io.close()`
+   * closes that server and waits for every connection, so they go first.
+   */
+  closeTransport: () => Promise<void>;
   /** Everything to let go of once the apps are down: the cert watcher, the Redis clients. */
   releaseResources: () => Promise<void>;
 };
@@ -69,6 +74,7 @@ export function createDrain({
   transport,
   metrics,
   apps,
+  closeTransport,
   releaseResources,
 }: DrainParams): (windowMs: number) => Promise<void> {
   let isRefusingUpgrades = false;
@@ -91,6 +97,7 @@ export function createDrain({
     for (const [, socket] of io.sockets.sockets) {
       socket.disconnect(true);
     }
+    await closeTransport();
     await closeSocketServer(io);
     for (const app of apps) {
       await app.close();

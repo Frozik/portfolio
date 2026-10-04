@@ -76,7 +76,7 @@ tasks:
       runInCI: false
 
   layers:
-    command: 'depcruise --config libs/tooling/dependency-cruiser.cjs apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src libs/tooling/src libs/table/src'
+    command: 'depcruise --config libs/tooling/dependency-cruiser.cjs apps/portfolio/src apps/communication/src libs/utils/src libs/components/src libs/communication-protocol/src libs/tooling/src libs/table/src libs/transport/src libs/proto/src'
     inputs:
       - '@group(sources)'
       - 'libs/tooling/dependency-cruiser.cjs'
