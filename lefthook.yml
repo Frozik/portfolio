@@ -1,6 +1,7 @@
 # Git hooks (lefthook). Commit stays fast: only staged files are linted and the
-# affected type-checks run. The full gate (`pnpm check-all`) runs before push and in CI —
-# never `moon check --all`: it also runs lighthouse and analyze.
+# affected type-checks run. Push runs what CI runs — `moon ci`, the tasks marked
+# `runInCI` (build and e2e included) for what changed since origin/main — so CI
+# finds nothing the push did not. Lighthouse and the server image stay CI jobs.
 
 pre-commit:
   parallel: true
@@ -22,5 +23,7 @@ pre-commit:
 
 pre-push:
   jobs:
-    - name: full gate
-      run: pnpm check-all
+    # CI=1 gives Playwright its CI behaviour: retries, failOnFlakyTests and a
+    # fresh preview server instead of whatever is already listening.
+    - name: what CI runs
+      run: CI=1 pnpm exec moon ci --base origin/main --head HEAD
