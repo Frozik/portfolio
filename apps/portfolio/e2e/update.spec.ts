@@ -20,6 +20,10 @@ const PACK_DOWNLOAD_TIMEOUT_MS = 60_000;
 const TEST_TIMEOUT_MS = 180_000;
 const HASHED_ASSETS_CACHE = 'hashed-assets';
 
+// Two tests here rewrite the one `dist/sw.js`; run side by side, one restores
+// the file while the other's page is still waiting for the update it deployed.
+test.describe.configure({ mode: 'default' });
+
 function precacheManifest(): ReadonlyMap<string, string | null> {
   const source = readFileSync(SERVICE_WORKER_FILE, 'utf8');
   return new Map(

@@ -5,7 +5,8 @@
 implicitInputs:
   - '/.moon/*.yml'
   - '/.moon/tasks/**/*'
-  - 'moon.yml'
-  - 'package.json'
+  # A glob, not two paths: infra has no package.json and some libs no moon.yml,
+  # and a missing plain path makes moon warn on every run.
+  - '{moon.yml,package.json}'
   - '/pnpm-workspace.yaml'
   - '/pnpm-lock.yaml'

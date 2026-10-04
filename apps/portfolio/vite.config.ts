@@ -97,6 +97,8 @@ export default defineConfig(({ isSsrBuild = false }) => ({
         srcDir: SERVICE_WORKER_DIR,
         filename: SERVICE_WORKER_FILE,
         injectManifest: {
+          // A classic worker: registered without `type: 'module'`, it must not be an ES module.
+          rollupFormat: 'iife',
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,ttf}'],
           // StreamSaver's page and worker belong to their own service worker scope, not the app shell.
           globIgnores: [`${STREAM_SAVER_DIR}/**`],
@@ -160,6 +162,11 @@ export default defineConfig(({ isSsrBuild = false }) => ({
     noExternal: [/^@frozik\//],
   },
   build: {
+    // The two largest chunks load on demand, never on the landing: the CV PDF
+    // renderer (~1.2 MB, on export) and the site planner (~0.7 MB, its route).
+    // The landing is held to the Lighthouse budgets instead; this still flags a
+    // chunk that outgrows both.
+    chunkSizeWarningLimit: 1250,
     rollupOptions: {
       output: isSsrBuild
         ? // Same asset names as the browser build, so the markup rendered here points at files that exist in `dist`.
