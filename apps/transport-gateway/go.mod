@@ -5,7 +5,7 @@ go 1.26.8
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/prometheus/client_golang v1.24.1
-	github.com/quic-go/quic-go v0.62.0
+	github.com/quic-go/quic-go v0.63.0
 	github.com/quic-go/webtransport-go v0.13.0
 )
 
