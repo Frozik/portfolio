@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { appTranslationsEn } from '../src/app/translations/en';
+import { waitForApp } from './app-ready';
 
 // The offline pack promises that every demo opens without a network once it is
 // downloaded. The test takes the visitor's path — the menu button — and then
@@ -43,13 +44,14 @@ test('the menu downloads the offline pack and every game then opens with the net
 }) => {
   test.setTimeout(TEST_TIMEOUT_MS);
   await page.goto('');
+  await waitForApp(page);
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 
   await openMenu(page);
   const menu = page.getByRole('dialog');
   await expect(menu.getByText(appTranslationsEn.offline.incomplete)).toBeVisible();
   await menu.getByRole('button', { name: appTranslationsEn.offline.download }).click();
-  await expect(menu.getByText(appTranslationsEn.offline.ready)).toBeVisible({
+  await expect(menu.getByText(appTranslationsEn.offline.ready, { exact: true })).toBeVisible({
     timeout: PACK_DOWNLOAD_TIMEOUT_MS,
   });
 
@@ -64,6 +66,7 @@ test('the menu downloads the offline pack and every game then opens with the net
   for (const segment of GAME_ROUTES) {
     // Readiness is asserted below; the full `load` of an offline page proves nothing more.
     await page.goto(segment, { waitUntil: 'domcontentloaded' });
+    await waitForApp(page);
     await expect(page.locator('#root')).not.toBeEmpty();
     await expect(page.locator('#initial-loader')).toHaveCount(0);
     await expect(page.locator('nav').first()).toBeVisible();

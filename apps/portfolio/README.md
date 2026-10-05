@@ -117,6 +117,18 @@ representative):
   it; the same test rewrites `dist/sw.js` under a running page and expects
   the page to reload under the new worker, and a downloaded pack to be
   completed again by the worker that installs.
+- **A page left on a removed build recovers instead of going blank.** A
+  deployment replaces every hashed file on the server, so a tab still running
+  the previous build — without the pack, its lazy chunks were never cached —
+  gets a 404 for the next route it opens. Vite reports it as
+  `vite:preloadError`; the page shows the "Updating…" banner, asks the
+  registration for an update and waits for the worker that brings the new
+  build, or reloads once if that worker already took over before the page's
+  listener existed (the entry runs only after the first paint). A failure the
+  reload does not cure — offline, a chunk that is gone for good — takes the
+  banner down and stays on the error page rather than reloading in a loop.
+  `e2e/update.spec.ts` answers the scripts with 404 under a running page and
+  expects both outcomes.
 - **The landing is prerendered at build time** by the `prerendered-landing`
   Vite plugin (`apps/portfolio/vite-plugins/`): it runs an SSR build of the
   render entry, renders the route to static HTML in a worker thread per

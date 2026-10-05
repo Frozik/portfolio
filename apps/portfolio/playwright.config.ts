@@ -3,10 +3,15 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}/portfolio/`;
 const UPDATE_SPEC = /update\.spec\.ts$/;
-const CHROMIUM = {
-  ...devices['Desktop Chrome'],
-  // Headless Chromium has no GPU: WebGPU either works through SwiftShader
-  // or the app must show its unsupported notice — both are valid outcomes.
+const ROUTES_SPEC = /routes\.spec\.ts$/;
+const CHROMIUM = devices['Desktop Chrome'];
+// Headless Chromium has no GPU: WebGPU either works through SwiftShader or the
+// app must show its unsupported notice — both are valid outcomes. Only the
+// route walk gets it: SwiftShader posing as a GPU runs canvas and compositing
+// without backpressure, so a page left animating for a minute queues minutes
+// of raster that the renderer drains, frozen, on the next navigation.
+const WEBGPU_CHROMIUM = {
+  ...CHROMIUM,
   launchOptions: { args: ['--enable-unsafe-webgpu', '--use-angle=swiftshader'] },
 };
 
@@ -46,8 +51,13 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'routes',
+      testMatch: ROUTES_SPEC,
+      use: WEBGPU_CHROMIUM,
+    },
+    {
       name: 'chromium',
-      testIgnore: UPDATE_SPEC,
+      testIgnore: [UPDATE_SPEC, ROUTES_SPEC],
       use: CHROMIUM,
     },
     // The update test rewrites `dist/sw.js` while it runs, which every other open
@@ -55,7 +65,7 @@ export default defineConfig({
     {
       name: 'update',
       testMatch: UPDATE_SPEC,
-      dependencies: ['chromium'],
+      dependencies: ['routes', 'chromium'],
       use: CHROMIUM,
     },
   ],

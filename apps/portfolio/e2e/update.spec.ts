@@ -5,6 +5,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { appTranslationsEn } from '../src/app/translations/en';
+import { waitForApp } from './app-ready';
 
 // A service worker can trap its users in one build forever: when it caches its
 // own script, or when the shell it serves is never revalidated. These tests pin
@@ -49,6 +50,7 @@ async function openAsReturningVisitor(page: Page): Promise<void> {
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
   await page.locator('#root').waitFor();
+  await waitForApp(page);
 }
 
 async function deployChangedWorker(page: Page): Promise<void> {
@@ -64,6 +66,62 @@ async function deployChangedWorker(page: Page): Promise<void> {
     writeFileSync(SERVICE_WORKER_FILE, original);
   }
 }
+
+// A deployment replaces every hashed file on the server, so a page still
+// running the previous build finds its next lazy chunk gone — answered 404,
+// as GitHub Pages does.
+const SCRIPT_ASSETS = '**/assets/*.js';
+const SUDOKU_LINK = 'a[href$="/sudoku"]';
+
+async function removeScriptsFromServer(page: Page): Promise<void> {
+  await page.context().route(SCRIPT_ASSETS, route => route.fulfill({ status: 404 }));
+}
+
+test('a page whose build was removed from the server reloads into the current one', async ({
+  page,
+}) => {
+  await openAsReturningVisitor(page);
+  await removeScriptsFromServer(page);
+  const updating = page.getByRole('status').filter({ hasText: 'Updating' });
+
+  await page.locator(SUDOKU_LINK).first().click();
+  await expect(updating).toBeVisible();
+  await page.context().unroute(SCRIPT_ASSETS);
+  await page.waitForEvent('load', { timeout: UPDATE_RELOAD_TIMEOUT_MS });
+
+  await waitForApp(page);
+  await expect(page).toHaveURL(/\/sudoku$/);
+  await expect(page.locator('main')).not.toBeEmpty();
+});
+
+test('a missing chunk the reload does not bring back stops reloading', async ({ page }) => {
+  await openAsReturningVisitor(page);
+  // Per document: when the update banner came and went, and how many documents
+  // the tab has loaded since the click.
+  await page.addInitScript(() => {
+    const bannerLog: string[] = [];
+    Object.assign(window, { bannerLog });
+    sessionStorage.setItem('documents', String(Number(sessionStorage.getItem('documents')) + 1));
+    new MutationObserver(() => {
+      const shown = [...document.querySelectorAll('[role="status"]')].some(element =>
+        element.textContent?.includes('Updating')
+      );
+      if (shown !== (bannerLog.at(-1) === 'shown')) {
+        bannerLog.push(shown ? 'shown' : 'hidden');
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.evaluate(() => sessionStorage.setItem('documents', '1'));
+  await removeScriptsFromServer(page);
+
+  await page.locator(SUDOKU_LINK).first().click();
+
+  // Only the path that gives up takes the banner down; every reload keeps it up.
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { bannerLog?: string[] }).bannerLog))
+    .toEqual(['shown', 'hidden']);
+  expect(await page.evaluate(() => sessionStorage.getItem('documents'))).toBe('2');
+});
 
 test('a changed worker takes over the open page and reloads it', async ({ page }) => {
   await openAsReturningVisitor(page);
@@ -96,7 +154,7 @@ test('a downloaded offline pack is completed again by the next build while it in
   await page.getByRole('button', { name: appTranslationsEn.nav.openMenu }).click();
   const menu = page.getByRole('dialog');
   await menu.getByRole('button', { name: appTranslationsEn.offline.download }).click();
-  await expect(menu.getByText(appTranslationsEn.offline.ready)).toBeVisible({
+  await expect(menu.getByText(appTranslationsEn.offline.ready, { exact: true })).toBeVisible({
     timeout: PACK_DOWNLOAD_TIMEOUT_MS,
   });
 
