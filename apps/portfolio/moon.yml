@@ -75,6 +75,9 @@ tasks:
       - 'playwright.config.ts'
     options:
       runInCI: true
+      # Browser suites starve on a 4-core runner beside the gateway's race-enabled
+      # Go tests and its e2e; tasks sharing this mutex never run at once.
+      mutex: 'heavy-suites'
 
   lighthouse:
     command: 'pnpm run lighthouse'

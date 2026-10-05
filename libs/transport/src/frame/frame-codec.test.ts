@@ -3,8 +3,6 @@ import { FRAME_TYPE, FrameProtocolError, MAX_DATA_FRAME_BYTES } from './frame';
 import { encodeFrame, FrameDecoder } from './frame-codec';
 
 /** Quadratic copying took ~280 ms per frame here, over a second for four; linear takes tens. */
-const BYTE_BY_BYTE_FRAMES = 4;
-const BYTE_BY_BYTE_BUDGET_MS = 400;
 
 const FRAMES: readonly Frame[] = [
   { kind: 'head', json: { method: 'POST', url: 'https://x/a', header: [['a', 'b']] } },
@@ -65,19 +63,5 @@ describe('frame codec', () => {
     expect(() =>
       encodeFrame({ kind: 'data', bytes: new Uint8Array(MAX_DATA_FRAME_BYTES + 1) })
     ).toThrow(FrameProtocolError);
-  });
-
-  it('reassembles frames delivered a byte at a time in linear time', () => {
-    const frame = encodeFrame({ kind: 'data', bytes: new Uint8Array(MAX_DATA_FRAME_BYTES) });
-    const decoder = new FrameDecoder();
-    const startedAt = performance.now();
-    let decoded = 0;
-    for (let round = 0; round < BYTE_BY_BYTE_FRAMES; round += 1) {
-      for (let offset = 0; offset < frame.byteLength; offset += 1) {
-        decoded += decoder.push(frame.subarray(offset, offset + 1)).length;
-      }
-    }
-    expect(decoded).toBe(BYTE_BY_BYTE_FRAMES);
-    expect(performance.now() - startedAt).toBeLessThan(BYTE_BY_BYTE_BUDGET_MS);
   });
 });

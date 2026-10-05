@@ -29,6 +29,7 @@ tasks:
       - '@group(vectors)'
     options:
       runInCI: true
+      mutex: 'heavy-suites'
 
   lint:
     command: 'go vet ./...'
@@ -59,3 +60,4 @@ tasks:
       - '/libs/transport/src/**/*'
     options:
       runInCI: true
+      mutex: 'heavy-suites'
