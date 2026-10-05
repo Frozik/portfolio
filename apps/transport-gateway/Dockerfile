@@ -2,7 +2,7 @@
 #
 # HTTP/3 gateway — a static Go binary on distroless. Build context: this directory.
 # The compiler runs natively and cross-compiles, instead of under emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26.8 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.1 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
