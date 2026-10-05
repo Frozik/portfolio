@@ -15,7 +15,6 @@ const DIST_ASSETS = resolve(import.meta.dirname, '..', 'dist', 'assets');
 const PACK_DOWNLOAD_TIMEOUT_MS = 60_000;
 /** A CI runner downloads the pack and renders four routes in well over the default 30 s. */
 const TEST_TIMEOUT_MS = 180_000;
-const ROUTE_RENDER_TIMEOUT_MS = 15_000;
 
 async function openMenu(page: Page): Promise<void> {
   await page.getByRole('button', { name: appTranslationsEn.nav.openMenu }).click();
@@ -64,10 +63,8 @@ test('the menu downloads the offline pack and every game then opens with the net
   });
   for (const segment of GAME_ROUTES) {
     await page.goto(segment);
-    await expect(page.locator('#root')).not.toBeEmpty({ timeout: ROUTE_RENDER_TIMEOUT_MS });
-    await expect(page.locator('#initial-loader')).toHaveCount(0, {
-      timeout: ROUTE_RENDER_TIMEOUT_MS,
-    });
+    await expect(page.locator('#root')).not.toBeEmpty();
+    await expect(page.locator('#initial-loader')).toHaveCount(0);
     await expect(page.locator('nav').first()).toBeVisible();
   }
   expect(problems).toEqual([]);

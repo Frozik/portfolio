@@ -14,7 +14,7 @@ import { appTranslationsEn } from '../src/app/translations/en';
 const DIST = resolve(import.meta.dirname, '..', 'dist');
 const SERVICE_WORKER_FILE = resolve(DIST, 'sw.js');
 const PRECACHE_ENTRY = /\{"revision":(?:null|"([0-9a-f]{32})"),"url":"([^"]+)"\}/g;
-const UPDATE_RELOAD_TIMEOUT_MS = 15_000;
+const UPDATE_RELOAD_TIMEOUT_MS = 60_000;
 const PACK_DOWNLOAD_TIMEOUT_MS = 60_000;
 /** Two pack downloads on a CI runner do not fit the default 30 s. */
 const TEST_TIMEOUT_MS = 180_000;

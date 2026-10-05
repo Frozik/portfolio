@@ -10,11 +10,24 @@ const CHROMIUM = {
   launchOptions: { args: ['--enable-unsafe-webgpu', '--use-angle=swiftshader'] },
 };
 
+// Every wait in these tests is for an event — the app mounted, the worker
+// cached the shell — and passes the moment it happens. CI runners are slow and
+// shared, so the waits are long: the margin is spent only where it is needed,
+// and a slow machine never reads as a broken app.
+const WAIT_TIMEOUT_MS = 30_000;
+const TEST_TIMEOUT_MS = 120_000;
+// What Playwright picks on GitHub's 4-core runner; the pre-push hook runs with
+// CI=1 as well, so local runs see the same parallelism.
+const CI_WORKERS = 2;
+
 // Smoke tests run against the production build served by `vite preview`, the
 // same setup Lighthouse uses — never against the dev server.
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  timeout: TEST_TIMEOUT_MS,
+  expect: { timeout: WAIT_TIMEOUT_MS },
+  workers: process.env.CI === undefined ? undefined : CI_WORKERS,
   forbidOnly: process.env.CI !== undefined,
   // Retries tell a flaky test from a broken one in the report; either fails the run.
   retries: process.env.CI === undefined ? 0 : 2,
@@ -23,6 +36,7 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'retain-on-failure',
+    navigationTimeout: WAIT_TIMEOUT_MS,
   },
   webServer: {
     command: `pnpm exec vite preview --port ${PORT} --strictPort`,

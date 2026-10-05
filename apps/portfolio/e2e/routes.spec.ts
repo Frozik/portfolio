@@ -18,12 +18,6 @@ const IGNORED_CONSOLE_PATTERNS = [
 // The signaling server is outside the smoke test: retro and conf probe its liveness on mount,
 // and the probe is answered here so the run never depends on the server or its CORS rules.
 const HEALTH_PROBE = '**/health/live';
-/**
- * Waits, not measurements: they pass the moment the app is up, and the margin
- * only spends itself on a slow or busy CI runner.
- */
-const APP_BOOT_TIMEOUT_MS = 30_000;
-const ROUTE_TEST_TIMEOUT_MS = 60_000;
 const HEALTHY = { status: 200, contentType: 'application/json', body: '{"status":"ok"}' };
 
 function isExpectedConsoleError(message: ConsoleMessage): boolean {
@@ -33,7 +27,6 @@ function isExpectedConsoleError(message: ConsoleMessage): boolean {
 
 for (const segment of ROUTES) {
   test(`route /${segment} renders without errors`, async ({ page }) => {
-    test.setTimeout(ROUTE_TEST_TIMEOUT_MS);
     const problems: string[] = [];
     page.on('pageerror', error => {
       problems.push(`pageerror: ${error.message}`);
@@ -50,8 +43,8 @@ for (const segment of ROUTES) {
 
     await page.route(HEALTH_PROBE, route => route.fulfill(HEALTHY));
     await page.goto(segment);
-    await expect(page.locator('#root')).not.toBeEmpty({ timeout: APP_BOOT_TIMEOUT_MS });
-    await expect(page.locator('#initial-loader')).toHaveCount(0, { timeout: APP_BOOT_TIMEOUT_MS });
+    await expect(page.locator('#root')).not.toBeEmpty();
+    await expect(page.locator('#initial-loader')).toHaveCount(0);
     await expect(page.locator('nav').first()).toBeVisible();
 
     expect(problems).toEqual([]);
