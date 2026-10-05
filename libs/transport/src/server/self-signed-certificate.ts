@@ -9,9 +9,9 @@ import {
 } from '@peculiar/x509';
 import { Temporal } from 'temporal-polyfill';
 
-import type { TransportCertificate } from './http3-listener';
-
-export interface SelfSignedCertificate extends TransportCertificate {
+export interface SelfSignedCertificate {
+  readonly cert: string;
+  readonly key: string;
   /** SHA-256 of the DER certificate, for the browser's `serverCertificateHashes`. */
   readonly sha256: Uint8Array<ArrayBuffer>;
 }
@@ -38,6 +38,7 @@ export async function createSelfSignedCertificate(): Promise<SelfSignedCertifica
       new SubjectAlternativeNameExtension([
         { type: 'dns', value: 'localhost' },
         { type: 'ip', value: '127.0.0.1' },
+        { type: 'ip', value: '::1' },
       ]),
     ],
   });

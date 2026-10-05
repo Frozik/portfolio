@@ -11,10 +11,13 @@ interface FakeSession extends ITransportSession {
 
 const labels = new WeakMap<ITransportSession, string>();
 
-function fakeSession(label: string, outcome: 'opens' | 'fails' | 'hangs'): FakeSession {
+type SessionOutcome = 'opens' | 'fails' | 'hangs' | 'no-streams';
+
+/** `no-streams` is Safari against a server that grants no stream credit: ready, but no stream ever opens. */
+function fakeSession(label: string, outcome: SessionOutcome): FakeSession {
   const closing = Promise.withResolvers<void>();
   const ready =
-    outcome === 'opens'
+    outcome === 'opens' || outcome === 'no-streams'
       ? Promise.resolve()
       : outcome === 'fails'
         ? Promise.reject(new Error(`${label} unreachable`))
@@ -23,7 +26,10 @@ function fakeSession(label: string, outcome: 'opens' | 'fails' | 'hangs'): FakeS
     ready,
     closed: closing.promise,
     incomingBidirectionalStreams: new ReadableStream(),
-    createBidirectionalStream: () => Promise.reject(new Error('not used')),
+    createBidirectionalStream: () =>
+      outcome === 'opens'
+        ? Promise.resolve({ readable: new ReadableStream(), writable: new WritableStream() })
+        : new Promise(() => undefined),
     close: () => closing.resolve(),
     drop: () => closing.resolve(),
   };
@@ -78,6 +84,27 @@ describe('session connector', () => {
       expect(await labelOf(instance.session())).toBe('ws');
       expect(states.at(-1)).toEqual({ kind: 'open', protocol: 'websocket' });
     }
+  });
+
+  it('falls back when an HTTP/3 session opens but cannot open a stream', async () => {
+    const { instance, states } = connector(
+      () => fakeSession('h3', 'no-streams'),
+      () => fakeSession('ws', 'opens')
+    );
+
+    expect(await labelOf(instance.session())).toBe('ws');
+    expect(states.at(-1)).toEqual({ kind: 'open', protocol: 'websocket' });
+  });
+
+  it('says why a forced HTTP/3 session is unusable when no stream opens', async () => {
+    const { instance, states } = connector(
+      () => fakeSession('h3', 'no-streams'),
+      () => fakeSession('ws', 'opens'),
+      'http3'
+    );
+
+    await expect(instance.session()).rejects.toThrow(/no stream/);
+    expect(states.at(-1)).toEqual(expect.objectContaining({ kind: 'failed' }));
   });
 
   it('goes straight to the WebSocket where the browser has no WebTransport', async () => {

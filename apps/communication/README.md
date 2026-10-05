@@ -110,11 +110,16 @@ env vars (mapped via `config/custom-environment-variables.json`).
 | `LOG_LEVEL`                      | `logging.level`                 | `trace`/`debug`/`info`/`warn`/...  |
 | `BUILD_ID`, `BUILD_COMMIT`, `BUILD_VERSION` | `build.*`            | Stamped at build time              |
 | `ADMIN_TOKEN`                    | `admin.token`                   | Bearer for `/admin/log-level`      |
-| `TRANSPORT_ENABLED`              | `transport.enabled`             | HTTP/3 + WebSocket transport (default `true`) |
-| `TRANSPORT_HTTP3_PORT`           | `transport.http3_port`          | UDP port of the HTTP/3 listener, default 4447 |
+| `TRANSPORT_ENABLED`              | `transport.enabled`             | The transport services (default `true`) |
+| `TRANSPORT_HTTP3_PORT`           | `transport.http3_port`          | The gateway's UDP port, named in the development pinned certificate (default 4447) |
+| `TRANSPORT_GATEWAY_ENABLED`      | `transport.gateway.enabled`     | The gateway's listener (`true` in compose and development) |
+| `TRANSPORT_GATEWAY_HOST`         | `transport.gateway.host`        | `0.0.0.0` in the container, never published |
+| `TRANSPORT_GATEWAY_PORT`         | `transport.gateway.port`        | Default 4448 |
+| `TRANSPORT_GATEWAY_SECRET`       | `transport.gateway.secret`      | **Secret**, ≥ 16 characters, shared with the gateway |
 
-The `[transport]` and `[transport.echo]` sections of `default.toml` hold the
-session, stream and window limits and the echo quotas.
+The `[transport]`, `[transport.gateway]` and `[transport.echo]` sections of
+`default.toml` hold the session and stream limits, the gateway listener and
+the echo quotas.
 
 ---
 
@@ -130,9 +135,10 @@ session, stream and window limits and the echo quotas.
 | `/health/live`                         | Liveness probe (always 200 once started)               |
 | `/health/ready`                        | Readiness — 503 while JWKS unreachable                 |
 | `/metrics`                             | Prometheus exposition                                  |
-| `:443/udp` → `:4447/udp` `/transport`  | HTTP/3 WebTransport (published past HAProxy, see below)|
+| `:443/udp` (gateway container)         | HTTP/3 WebTransport, terminated by [`apps/transport-gateway`](../transport-gateway/README.md) |
 | `:443/transport` (WebSocket)           | The transport's fallback, through HAProxy like Socket.IO |
-| `/transport/pinned-certificate`        | Development only: the self-signed HTTP/3 certificate's hash and port |
+| `:4448/transport` (WebSocket)          | The gateway's listener — compose network only, shared secret required |
+| `/transport/pinned-certificate`        | Development only: the self-signed certificate's hash and the gateway's UDP port |
 
 In HAProxy mode all WSS *and* TURNS terminate on `:443`; the SNI router
 demultiplexes by hostname (`<IP>.sslip.io` -> Fastify, `turn-<IP>.sslip.io`
@@ -148,24 +154,40 @@ Besides Socket.IO the server serves two Connect services from
 [`@frozik/transport`](../../libs/transport/README.md): `PlotService` (parse
 a function of `x` with the Pratt parser in `domain/expression/`, sample it,
 stream the points) and `FileService` (stream a file straight back, nothing
-stored). Both protocols carry the same handlers: HTTP/3 on UDP straight from
-the client — HAProxy's TCP passthrough cannot carry QUIC — and the WebSocket
-fallback on the public HTTPS port, next to Socket.IO.
+stored). Node serves them on multiplexed WebSockets only, on two listeners:
+
+- the public one, on the HTTPS port next to Socket.IO — browsers on the
+  fallback, through HAProxy;
+- `[transport.gateway]` (4448) — the HTTP/3 gateway
+  ([`apps/transport-gateway`](../transport-gateway/README.md)), a Go container
+  that terminates HTTP/3 on UDP 443 (HAProxy's TCP passthrough cannot carry
+  QUIC) and opens one WebSocket here per browser session. The listener is
+  never published; the gateway proves itself with the shared secret
+  (`TRANSPORT_GATEWAY_SECRET`, `/etc/communication/gateway-secret` on the box)
+  and the `frozik-mux.v1` subprotocol, and only then are the browser address
+  and Origin it forwards believed. Calls arriving this way report the
+  protocol `http3`. A plain HTTP request gets `426`.
 
 Who may open a session: no foreign `Origin`, the per-IP attempt rate of
-`[security]` and `max_sessions_per_ip` — for HTTP/3, where addresses are real.
-Fallback sessions come through HAProxy as 127.0.0.1, so there HAProxy's own
-per-source limits apply, as for Socket.IO, and echoes there answer only to the
-server-wide cap (`concurrent_total`) rather than all sharing one address's
-quota. A stream where no bytes move either way for `stream_idle_timeout_ms` is
-reset, whichever side stalled — a request that never arrives, or a response
-nobody reads, frees its slot. Memory per stream is
-bounded by `stream_window_bytes` (QUIC) or the multiplexer's credit, whatever
-the client does. A certificate renewal restarts only the HTTP/3 listener;
-open sessions reconnect. Drain closes transport sessions before Socket.IO,
-which closes the shared HTTP server. Without TLS (development) the HTTP/3
-listener makes a 13-day self-signed certificate at start and publishes its
-hash at `/transport/pinned-certificate`.
+`[security]` and `max_sessions_per_ip` — through the gateway, where addresses
+are real. Fallback sessions come through HAProxy as 127.0.0.1, so there
+HAProxy's own per-source limits apply, as for Socket.IO, and echoes there
+answer only to the server-wide cap (`concurrent_total`) rather than all sharing
+one address's quota. A stream where no bytes move either way for
+`stream_idle_timeout_ms` is reset, whichever side stalled — a request that
+never arrives, or a response nobody reads, frees its slot. Memory per stream
+is bounded by the multiplexer's credit, whatever the client does. Drain closes
+transport sessions before Socket.IO, which closes the shared HTTP server.
+
+Without TLS (development) Node writes a 13-day self-signed certificate to
+`transport.dev_certificate_dir` (`.dev-certs`, reused while it has a day
+left), which the gateway container mounts and serves, and publishes its hash
+with the gateway's UDP port at `/transport/pinned-certificate`. `pnpm dev`
+starts the gateway (`docker compose -f ../transport-gateway/compose.dev.yml up -d`)
+before Node; without Docker the WebSocket fallback still works. The listener
+binds `127.0.0.1`, which Docker Desktop reaches through `host.docker.internal`;
+on Linux, where that name is the bridge address, bind `0.0.0.0` in a
+`config/local.toml` instead.
 
 Metrics: `communication_transport_sessions{protocol}`,
 `communication_transport_echo_bytes_total`,

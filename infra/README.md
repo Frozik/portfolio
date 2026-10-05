@@ -132,19 +132,30 @@ To deploy a new version:
 bash infra/bin/deploy-communication.sh --host production
 ```
 
-It pulls the published image and runs `docker compose up -d`, which sends
-SIGTERM to the old container, waits out `stop_grace_period` (20 s) so active
-calls drain, starts the new one, then smoke-tests. To pin an exact build —
-this is also how you roll back — set the tag:
+The server is two images built from the same commit: `communication` (Node)
+and `transport-gateway` (the Go HTTP/3 gateway). The compose file that starts
+them ships inside the communication image (`apps/communication/deploy/docker-compose.yml`
+→ `/deploy`), so `roles/communication/compose-up.sh` pulls the communication
+image, extracts that file, validates it, installs it as
+`/opt/communication/docker-compose.yml` (keeping the old one as `.previous`)
+and runs `docker compose up -d`, which sends SIGTERM to the old containers,
+waits out `stop_grace_period` (20 s) so active calls drain, starts the new
+ones, then smoke-tests both. To pin an exact build — this is also how you roll
+back, compose file included — set the tag:
 
 ```bash
 COMMUNICATION_TAG=<commit-sha> bash infra/bin/deploy-communication.sh --host production
 ```
 
 Neither command is needed for a routine release: pushing to `main` deploys.
+CI publishes both images for every commit on `main`;
 `.github/workflows/deploy-communication.yml` waits for CI to go green, asks the
 box which commit it is running, and rolls out only when that range actually
-touches the server (`pnpm exec affected-projects`).
+touches the server — `communication` or `transport-gateway`
+(`pnpm exec affected-projects … --is communication --is transport-gateway`).
+Images from before the gateway carry no compose file, so rolling back past it
+is by hand: restore `/opt/communication/docker-compose.yml.previous` and
+`docker compose up -d`.
 
 ---
 
@@ -257,9 +268,9 @@ walkthrough is here.
   these hooks renewals time out and the cert silently expires, which
   took the service down in Aug 2026). `deploy/communication.sh` reloads
   HAProxy and coturn; the Node service picks up the new cert in place
-  via fs.watch (CertWatcher), so active sessions survive renewals — except
-  HTTP/3: its QUIC stack cannot swap certificates in place, so the transport
-  restarts only its HTTP/3 listener and those sessions reconnect.
+  via fs.watch (CertWatcher), so active sessions survive renewals; the HTTP/3
+  gateway re-reads the files when they change and serves the new pair to the
+  next handshake, live sessions untouched.
 - **Cert expiry alerts**: `communication-cert-check.timer` runs daily
   and warns to journald 7 days before expiry.
 - **Live log level**:

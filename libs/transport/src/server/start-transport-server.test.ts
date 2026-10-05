@@ -1,36 +1,56 @@
+import type { AddressInfo } from 'node:net';
+
 import { createClient } from '@connectrpc/connect';
 import { PlotService } from '@frozik/proto/frozik/transport/v1/plot_pb';
+import { WebSocket } from 'ws';
 
-import type { TransportProtocol } from '../shared/session';
-import { TRANSPORT_CLIENT_ADDRESS } from './peer';
-import type { SelfSignedCertificate } from './self-signed-certificate';
-import { createSelfSignedCertificate } from './self-signed-certificate';
+import type { ITransportSession, TransportProtocol } from '../shared/session';
+import { TRANSPORT_CLIENT_ADDRESS, TRANSPORT_PROTOCOL } from './peer';
 import type { TestServer } from './test-server';
-import { openTestSession, startTestServer, stopTestServer, transportOver } from './test-server';
+import {
+  openGatewaySession,
+  openTestSession,
+  startTestServer,
+  stopTestServer,
+  TEST_CLIENT_ADDRESS,
+  transportOver,
+} from './test-server';
+
+interface Call {
+  readonly address: string | undefined;
+  readonly protocol: TransportProtocol;
+}
 
 interface Running extends TestServer {
-  readonly clientAddresses: (string | undefined)[];
+  readonly calls: Call[];
 }
 
 interface StartOptions {
-  readonly certificate?: SelfSignedCertificate | 'self-signed';
   readonly maxSessionsPerIp?: number;
   readonly behindProxy?: readonly TransportProtocol[];
 }
 
 async function start(options: StartOptions = {}): Promise<Running> {
-  const clientAddresses: (string | undefined)[] = [];
+  const calls: Call[] = [];
   const server = await startTestServer({
     ...options,
     register: router =>
       router.service(PlotService, {
         getPlotLimits: (_, context) => {
-          clientAddresses.push(context.values.get(TRANSPORT_CLIENT_ADDRESS));
+          calls.push({
+            address: context.values.get(TRANSPORT_CLIENT_ADDRESS),
+            protocol: context.values.get(TRANSPORT_PROTOCOL),
+          });
           return { expressionMaxLength: 1, sampleMaxPoints: 2 };
         },
       }),
   });
-  return { ...server, clientAddresses };
+  return { ...server, calls };
+}
+
+async function askLimits(session: ITransportSession): Promise<void> {
+  await createClient(PlotService, transportOver(session)).getPlotLimits({});
+  session.close();
 }
 
 describe('transport server', () => {
@@ -43,47 +63,70 @@ describe('transport server', () => {
     }
   });
 
-  it('serves the same Connect handlers over HTTP/3 and over the WebSocket fallback', async () => {
+  it('serves the same handlers to browsers on the fallback and to the HTTP/3 gateway', async () => {
     running = await start();
-    const sessions = [
-      await openTestSession(running, 'http3'),
-      await openTestSession(running, 'websocket'),
-    ];
 
-    for (const session of sessions) {
-      const limits = await createClient(PlotService, transportOver(session)).getPlotLimits({});
-      expect(limits.sampleMaxPoints).toBe(2);
-      session.close();
-    }
-    expect(running.clientAddresses).toEqual(['127.0.0.1', '127.0.0.1']);
+    await askLimits(await openTestSession(running, 'websocket'));
+    await askLimits(await openTestSession(running, 'http3'));
+
+    expect(running.calls).toEqual([
+      { address: '127.0.0.1', protocol: 'websocket' },
+      { address: TEST_CLIENT_ADDRESS, protocol: 'http3' },
+    ]);
   });
 
-  it('hides the address of a session that came through a proxy', async () => {
+  it('hides the address of the proxied fallback but keeps the one the gateway forwards', async () => {
     running = await start({ behindProxy: ['websocket'] });
-    const session = await openTestSession(running, 'websocket');
 
-    await createClient(PlotService, transportOver(session)).getPlotLimits({});
+    await askLimits(await openTestSession(running, 'websocket'));
+    await askLimits(await openTestSession(running, 'http3'));
 
-    expect(running.clientAddresses).toEqual([undefined]);
-    session.close();
+    expect(running.calls.map(call => call.address)).toEqual([undefined, TEST_CLIENT_ADDRESS]);
   });
 
-  it('refuses sessions past the per-address cap', async () => {
-    running = await start({ maxSessionsPerIp: 0 });
+  it('ignores gateway headers on the public listener, so nobody can claim an address there', async () => {
+    running = await start();
 
-    await expect(openTestSession(running, 'http3')).rejects.toThrow();
-    await expect(openTestSession(running, 'websocket')).rejects.toThrow();
+    await askLimits(
+      await openGatewaySession(running, { clientAddress: '198.51.100.1' }, running.http)
+    );
+
+    expect(running.calls).toEqual([{ address: '127.0.0.1', protocol: 'websocket' }]);
   });
 
-  it('presents a reloaded certificate to new sessions', async () => {
-    running = await start({ certificate: await createSelfSignedCertificate() });
-    const replacement = await createSelfSignedCertificate();
+  it.each([
+    ['a wrong secret', { secret: 'guessed' }],
+    ['no client address', { clientAddress: '' }],
+    ['another protocol version', { subprotocol: 'frozik-mux.v0' }],
+    ['a page from a foreign origin', { origin: 'https://evil.example' }],
+  ])('refuses a gateway session with %s', async (_, headers) => {
+    running = await start();
 
-    await running.server.reloadCertificate(replacement);
+    await expect(openGatewaySession(running, headers)).rejects.toThrow();
+  });
 
-    const session = await openTestSession(running, 'http3', replacement.sha256);
-    const limits = await createClient(PlotService, transportOver(session)).getPlotLimits({});
-    expect(limits.expressionMaxLength).toBe(1);
-    session.close();
+  it('counts sessions per forwarded address, not per gateway', async () => {
+    running = await start({ maxSessionsPerIp: 1 });
+
+    const first = await openGatewaySession(running, { clientAddress: '198.51.100.1' });
+    const second = await openGatewaySession(running, { clientAddress: '198.51.100.2' });
+    await expect(openGatewaySession(running, { clientAddress: '198.51.100.1' })).rejects.toThrow();
+
+    first.close();
+    second.close();
+  });
+
+  it('still takes a browser bundle from before the subprotocol was named', async () => {
+    running = await start();
+    const { port } = running.http.address() as AddressInfo;
+    const socket = new WebSocket(`ws://127.0.0.1:${port}/transport`);
+
+    await new Promise((resolve, reject) => {
+      socket.once('open', resolve);
+      socket.once('error', reject);
+    });
+
+    expect(socket.protocol).toBe('');
+    socket.close();
   });
 });

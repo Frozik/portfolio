@@ -9,6 +9,9 @@ export const MUX_PROTOCOL_LIMITS = {
   maxDataBytes: 64 * 1024,
 } as const;
 
+/** The WebSocket subprotocol that names this wire format and its version (`MUX.md`). */
+export const MUX_SUBPROTOCOL = 'frozik-mux.v1';
+
 export const MUX_DEFAULT_SEND_BUFFER = {
   sendBufferBytes: 1024 * 1024,
   drainPollMs: 5,

@@ -1,18 +1,17 @@
-import { readFile } from 'node:fs/promises';
 import type { Server as HttpServer } from 'node:http';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import type { TransportCertificate } from '@frozik/transport/server/http3-listener';
 import type { TransportServer } from '@frozik/transport/server/start-transport-server';
 import { startTransportServer } from '@frozik/transport/server/start-transport-server';
 import type { PinnedCertificateBody } from '@frozik/transport/shared/pinned-certificate';
+import { encodePinnedCertificate } from '@frozik/transport/shared/pinned-certificate';
 import { Temporal } from 'temporal-polyfill';
 
 import type { IServerConfig } from '../../application/config/server-config-schema';
 import type { IServerLogger } from '../../application/ports/IServerLogger';
 import { EchoAdmission } from '../../application/transport/EchoAdmission';
-import type { CertWatcher } from '../../infrastructure/CertWatcher';
-import { startCertWatcher } from '../../infrastructure/CertWatcher';
 import type { CommunicationMetrics } from '../metrics';
 import { createTransportRouter } from '../transport/transport-router';
 
@@ -20,7 +19,7 @@ import { createTransportRouter } from '../transport/transport-router';
 const ECHO_CHUNK_BYTES = 64 * 1024;
 
 export interface TransportEndpoint {
-  /** Listens for HTTP/3 and attaches the WebSocket fallback; resolves to the UDP port. */
+  /** Serves the fallback on the public server and opens the gateway's listener; resolves to its port (0 when off). */
   start(): Promise<number>;
   close(): Promise<void>;
   /** What the development route answers; undefined with a real certificate. */
@@ -74,28 +73,38 @@ export function createTransportEndpoint({
   );
 
   let server: TransportServer | undefined;
-  let certWatcher: CertWatcher | undefined;
+  let gatewayHttp: HttpServer | undefined;
+  let pinnedCertificate: PinnedCertificateBody | undefined;
 
   return {
     get pinnedCertificate() {
-      return server?.pinnedCertificate;
+      return pinnedCertificate;
     },
     async start() {
       if (!transport.enabled) {
         return 0;
       }
-      server = await startTransportServer({
+      if (!config.server.tls.enabled) {
+        // Development only, and it pulls in an X.509 library: loaded only here.
+        const { ensureDevCertificate } = await import('@frozik/transport/server/dev-certificate');
+        const sha256 = await ensureDevCertificate(transport.dev_certificate_dir);
+        pinnedCertificate = encodePinnedCertificate({ sha256, http3Port: transport.http3_port });
+      }
+      gatewayHttp = transport.gateway.enabled
+        ? await listen(transport.gateway.host, transport.gateway.port)
+        : undefined;
+      server = startTransportServer({
         handlers: router.handlers,
         path: transport.path,
-        http3: { host: transport.http3_host, port: transport.http3_port },
-        certificate: await certificateOf(config),
         websocket: { server: httpServer },
+        gateway:
+          gatewayHttp === undefined
+            ? undefined
+            : { server: gatewayHttp, secret: transport.gateway.secret },
         limits: {
           maxSessions: transport.max_sessions,
           maxStreamsPerSession: transport.max_streams_per_session,
           streamIdleTimeoutMs: transport.stream_idle_timeout_ms,
-          streamWindowBytes: transport.stream_window_bytes,
-          sessionWindowBytes: transport.session_window_bytes,
         },
         admission: {
           allowedOrigins: config.server.cors_allowed_origins,
@@ -110,57 +119,32 @@ export function createTransportEndpoint({
             message: error instanceof Error ? error.message : String(error),
           }),
       });
-      certWatcher = watchCertificate(config, server, logger);
-      logger.info('transport.listening', { http3Port: server.http3Port, path: transport.path });
-      return server.http3Port;
+      const gatewayPort =
+        gatewayHttp === undefined ? 0 : (gatewayHttp.address() as AddressInfo).port;
+      logger.info('transport.listening', { path: transport.path, gatewayPort });
+      return gatewayPort;
     },
     async close() {
-      certWatcher?.stop();
-      certWatcher = undefined;
-      await server?.close();
+      server?.close();
       server = undefined;
+      if (gatewayHttp !== undefined) {
+        const closing = gatewayHttp;
+        gatewayHttp = undefined;
+        closing.closeAllConnections();
+        await new Promise(resolve => closing.close(resolve));
+      }
     },
   };
 }
 
-/** Without TLS (development) the transport makes its own certificate for browsers to pin. */
-async function certificateOf(config: IServerConfig): Promise<TransportCertificate | 'self-signed'> {
-  const tls = config.server.tls;
-  if (!tls.enabled) {
-    return 'self-signed';
-  }
-  const [cert, key] = await Promise.all([
-    readFile(tls.cert_path, 'utf8'),
-    readFile(tls.key_path, 'utf8'),
-  ]);
-  return { cert, key };
-}
+const HTTP_UPGRADE_REQUIRED = 426;
 
-/** The same files the HTTPS server watches; a renewal restarts the HTTP/3 listener. */
-function watchCertificate(
-  config: IServerConfig,
-  server: TransportServer,
-  logger: IServerLogger
-): CertWatcher | undefined {
-  const tls = config.server.tls;
-  if (!tls.enabled) {
-    return undefined;
-  }
-  return startCertWatcher({
-    certPath: tls.cert_path,
-    keyPath: tls.key_path,
-    onReload: ({ cert, key }) => {
-      server.reloadCertificate({ cert: cert.toString('utf8'), key: key.toString('utf8') }).then(
-        () => logger.info('transport.certificate-reloaded'),
-        (error: unknown) =>
-          logger.warn('transport.certificate-reload-failed', {
-            message: error instanceof Error ? error.message : String(error),
-          })
-      );
-    },
-    onError: error =>
-      logger.warn('transport.certificate-watch-failed', {
-        message: error instanceof Error ? error.message : String(error),
-      }),
+/** The gateway's own server: WebSocket upgrades only, anything else is told so at once. */
+async function listen(host: string, port: number): Promise<HttpServer> {
+  const server = createServer((_, response) => response.writeHead(HTTP_UPGRADE_REQUIRED).end());
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, () => resolve());
   });
+  return server;
 }

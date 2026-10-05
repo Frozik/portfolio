@@ -72,6 +72,18 @@
     "http3_port": {
       "__name": "TRANSPORT_HTTP3_PORT",
       "__format": "json"
+    },
+    "gateway": {
+      "enabled": {
+        "__name": "TRANSPORT_GATEWAY_ENABLED",
+        "__format": "json"
+      },
+      "host": "TRANSPORT_GATEWAY_HOST",
+      "port": {
+        "__name": "TRANSPORT_GATEWAY_PORT",
+        "__format": "json"
+      },
+      "secret": "TRANSPORT_GATEWAY_SECRET"
     }
   }
 }

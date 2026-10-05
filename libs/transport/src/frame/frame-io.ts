@@ -43,6 +43,11 @@ export class FrameWriter {
     settleTeardown(this.writer.abort(reason));
   }
 
+  /** Called once if the stream fails under the writer: the peer reset it or stopped reading. */
+  onFailure(listener: (reason: unknown) => void): void {
+    this.writer.closed.catch(listener);
+  }
+
   private async write(frame: Frame): Promise<void> {
     await this.writer.ready;
     await this.writer.write(encodeFrame(frame));

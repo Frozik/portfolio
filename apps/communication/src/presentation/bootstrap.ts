@@ -42,7 +42,7 @@ export type BootstrapResult = {
   adminApp: FastifyInstance;
   io: SocketIOServer;
   metrics: CommunicationMetrics;
-  start: () => Promise<{ publicPort: number; adminPort: number; http3Port: number }>;
+  start: () => Promise<{ publicPort: number; adminPort: number; gatewayPort: number }>;
   drain: (graceMs?: number) => Promise<void>;
   close: () => Promise<void>;
 };
@@ -151,16 +151,20 @@ export async function bootstrap(
 
   let certWatcher = watchTlsCertificates(config.server.tls, httpServer, serverLogger);
 
-  const start = async (): Promise<{ publicPort: number; adminPort: number; http3Port: number }> => {
+  const start = async (): Promise<{
+    publicPort: number;
+    adminPort: number;
+    gatewayPort: number;
+  }> => {
     await publicApp.listen({ port: config.server.port, host: config.server.host });
     await adminApp.listen({ port: config.admin.port, host: ADMIN_HOST });
-    const http3Port = await transportEndpoint.start();
+    const gatewayPort = await transportEndpoint.start();
     lifecycleState.isReady = true;
     lifecycleState.startedAtMs = Temporal.Now.instant().epochMilliseconds;
     return {
       publicPort: listenedPort(publicApp, 'public'),
       adminPort: listenedPort(adminApp, 'admin'),
-      http3Port,
+      gatewayPort,
     };
   };
 

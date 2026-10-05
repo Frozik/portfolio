@@ -55,10 +55,7 @@
     },
     "libs/transport": {
       "entry": ["src/**/*.ts!"],
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": [
-        "@fails-components/webtransport-transport-http3-quiche"
-      ]
+      "project": ["src/**/*.ts"]
     },
     "libs/proto": {
       "entry": ["src/**/*.ts!"],

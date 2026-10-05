@@ -9,13 +9,8 @@ updates:
       timezone: Europe/Moscow
     open-pull-requests-limit: 10
     groups:
-      # Patched (patches/, see libs/transport/README.md): any bump fails `pnpm install`
-      # until the patch is ported or dropped, so it comes alone instead of blocking the rest.
-      webtransport:
-        patterns: ['@fails-components/*']
       minor-and-patch:
         update-types: [minor, patch]
-        exclude-patterns: ['@fails-components/*']
       react:
         patterns: ['react', 'react-dom', '@types/react', '@types/react-dom', 'react-router-dom']
       radix:
@@ -45,3 +40,19 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+
+  - package-ecosystem: gomod
+    directory: /apps/transport-gateway
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Moscow
+    groups:
+      go-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /apps/transport-gateway
+    schedule:
+      interval: monthly

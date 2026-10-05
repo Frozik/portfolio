@@ -1,4 +1,5 @@
-# Deploys the communication server whenever CI goes green on main.
+# Deploys the communication server — the Node image and the HTTP/3 gateway
+# image, both built by CI for the same commit — whenever CI goes green on main.
 #
 # Requires (all in place since 2026-09-20): the deploy keypair installed on the
 # box by infra/roles/communication/deploy-user.sh behind an ssh forced command,
@@ -52,10 +53,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # A portfolio-only commit must not restart the signaling server and drop
-      # live WebRTC sessions. `affected-projects` walks Moon's real dependency
-      # graph, so a change in libs/utils counts and a change in libs/components
-      # does not — no hand-maintained path list to rot. The range starts at what
-      # is actually deployed, so a skipped or failed deploy is picked up next time.
+      # live WebRTC sessions. The server is two images — Node and the HTTP/3
+      # gateway — deployed together, so a change to either deploys both.
+      # `affected-projects` walks Moon's real dependency graph, so a change in
+      # libs/utils counts and a change in libs/components does not — no
+      # hand-maintained path list to rot. The range starts at what is actually
+      # deployed, so a skipped or failed deploy is picked up next time.
       - name: Does this commit touch the server?
         id: gate
         run: |
@@ -74,7 +77,7 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
-          if pnpm exec affected-projects "$deployed" "$head" --is communication; then
+          if pnpm exec affected-projects "$deployed" "$head" --is communication --is transport-gateway; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

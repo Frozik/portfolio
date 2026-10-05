@@ -61,9 +61,13 @@ Layered like every other feature; the network lives only in
 network object the page builds. It is a Connect `Transport`, so both
 services' generated clients run over it, and it reports which protocol
 carries it. It tries HTTP/3 first and falls back to a WebSocket on its own
-when HTTP/3 does not answer within four seconds or the browser has no
+when HTTP/3 does not open a stream within four seconds or the browser has no
 WebTransport; it remembers the failure for five minutes so reconnects do not
-wait again. The connection panel shows the state and lets the visitor force
+wait again. HTTP/3 is served by a Go gateway in front of the Node server
+([`apps/transport-gateway`](../../../../transport-gateway/README.md),
+quic-go/webtransport-go), which bridges each WebTransport session onto the
+same multiplexed WebSocket the fallback uses — so Safari, which needs the
+newer WebTransport flow control, works over HTTP/3 too. The connection panel shows the state and lets the visitor force
 either path to compare them. Each call is its own stream: a slow echo never
 holds back a plot.
 
@@ -118,9 +122,10 @@ names it knows (`2pix` is `2·pi·x`).
 
 **Development.** With `VITE_COMMUNICATION_URL=http://localhost:4445` the
 page talks to a local server: the WebSocket fallback on the same port, and
-HTTP/3 on the UDP port and self-signed certificate the server hands out at
-`/transport/pinned-certificate` (browsers accept a pinned certificate only
-for at most fourteen days, so the server makes a new one at every start).
-Without that variable the page talks to production. The development listener
-takes IPv6 and IPv4 alike (`http3_host = "::"`): browsers resolve `localhost`
-to `::1` first, and QUIC does not fall back to IPv4.
+HTTP/3 through the gateway container that `pnpm dev` in `apps/communication`
+starts (Docker; without it only the fallback works). The certificate is a
+self-signed one Node writes to `.dev-certs` and the gateway serves; the page
+pins it by the hash at `/transport/pinned-certificate` (browsers accept a
+pinned certificate for at most fourteen days, so Node renews it when less than
+a day is left; Safari supports pinning from 26.4). Without that variable the
+page talks to production.

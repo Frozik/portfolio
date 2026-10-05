@@ -88,6 +88,7 @@ export const transportTranslationsRu: TranslationOf<typeof transportTranslations
   failures: {
     refused: (message: string) => `Отказано: ${message}`,
     quota: (message: string) => `Превышен предел: ${message}`,
-    unreachable: (message: string) => `Нет ответа: ${message}`,
+    unreachable: (message: string) =>
+      message === '' ? 'Нет ответа от сервера.' : `Нет ответа: ${message}`,
   },
 };

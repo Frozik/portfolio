@@ -76,7 +76,7 @@ module.exports = {
         path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol|proto)|libs/transport/src/(client|codec|frame|mux|tunnel|testing|shared))/',
       },
       to: {
-        path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter|@fails-components/[^/]+|ws|@peculiar/x509|reflect-metadata)(/|$)',
+        path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter|ws|@peculiar/x509|reflect-metadata)(/|$)',
       },
     },
     {

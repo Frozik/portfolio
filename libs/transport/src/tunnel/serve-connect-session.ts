@@ -2,7 +2,6 @@ import type { ContextValues } from '@connectrpc/connect';
 import type { UniversalHandler, UniversalServerResponse } from '@connectrpc/connect/protocol';
 
 import { FrameReader, FrameWriter } from '../frame/frame-io';
-import { settleTeardown } from '../frame/settle';
 import type { IBidirectionalStream, ITransportSession } from '../shared/session';
 import { startIdleWatchdog } from './idle-watchdog';
 import { EndSchema, headerEntries, RequestHeadSchema, toHeaders } from './tunnel-heads';
@@ -37,31 +36,35 @@ export async function serveConnectSession(
 ): Promise<void> {
   const byPath = new Map(handlers.map(handler => [handler.requestPath, handler]));
   const streams = session.incomingBidirectionalStreams.getReader();
+  const context: StreamContext = { byPath, streamIdleTimeoutMs, contextValues, onStreamError };
   let active = 0;
+  let slotFreed: (() => void) | undefined;
   try {
     for (;;) {
+      // A handler whose stream was aborted may still be finishing when the
+      // stream that replaced it arrives; waiting for its slot, instead of
+      // refusing the newcomer, keeps a client that cancels and retries — a
+      // chart while zooming — from seeing its live call reset. The transport
+      // below already bounds the live streams, so the wait is short.
+      while (active >= maxStreams) {
+        await new Promise<void>(resolve => {
+          slotFreed = resolve;
+        });
+      }
       const { value: stream, done } = await streams.read();
       if (done) {
         return;
       }
-      if (active >= maxStreams) {
-        refuse(stream, 'too many concurrent streams');
-        continue;
-      }
       active += 1;
-      const context: StreamContext = { byPath, streamIdleTimeoutMs, contextValues, onStreamError };
       void serveStream(stream, context).finally(() => {
         active -= 1;
+        slotFreed?.();
+        slotFreed = undefined;
       });
     }
   } catch (error) {
     onStreamError(error);
   }
-}
-
-function refuse(stream: IBidirectionalStream, reason: string): void {
-  settleTeardown(stream.writable.abort(reason));
-  settleTeardown(stream.readable.cancel(reason));
 }
 
 export class StreamIdleError extends Error {
@@ -94,6 +97,9 @@ async function serveStream(
   );
   const reader = new FrameReader(stream.readable, watchdog.touch);
   const writer = new FrameWriter(stream.writable, watchdog.touch);
+  // A client that cancels its call resets the stream; the handler learns it
+  // through its signal at once, not on its next write or the idle timeout.
+  writer.onFailure(teardown);
   try {
     const head = RequestHeadSchema.parse(await reader.head());
     const handler = byPath.get(new URL(head.url).pathname);

@@ -1,5 +1,5 @@
 import type { IMessageSocket } from '../mux/message-socket';
-import { muxSessionOptions } from '../mux/mux-limits';
+import { MUX_SUBPROTOCOL, muxSessionOptions } from '../mux/mux-limits';
 import { createMuxSession } from '../mux/mux-session';
 import type { ITransportSession } from '../shared/session';
 
@@ -19,7 +19,7 @@ class BrowserMessageSocket implements IMessageSocket {
   private readonly socket: WebSocket;
 
   constructor(url: string) {
-    this.socket = new WebSocket(url);
+    this.socket = new WebSocket(url, MUX_SUBPROTOCOL);
     this.socket.binaryType = 'arraybuffer';
     this.opened = new Promise((resolve, reject) => {
       this.socket.addEventListener('open', () => resolve(), { once: true });

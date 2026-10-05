@@ -18,13 +18,17 @@ const STALL_WAIT_MS = 80;
 const IDLE_TIMEOUT_MS = 50;
 const CONTENT_TYPE = 'content-type';
 
-function connect(register: (router: ConnectRouter) => void, streamIdleTimeoutMs = 5_000) {
+function connect(
+  register: (router: ConnectRouter) => void,
+  streamIdleTimeoutMs = 5_000,
+  maxStreams = 8
+) {
   const { client, server } = createMemorySessionPair();
   const router = createConnectRouter({ readMaxBytes: READ_MAX_BYTES });
   register(router);
   void serveConnectSession(server, {
     handlers: router.handlers,
-    maxStreams: 8,
+    maxStreams,
     streamIdleTimeoutMs,
     onStreamError: () => undefined,
   });
@@ -209,5 +213,36 @@ describe('Connect over a transport session', () => {
 
     expect(released).toBe(true);
     await reading.catch(() => undefined);
+  });
+
+  it('waits for a handler still cleaning up instead of refusing the call that replaced it', async () => {
+    const CLEANUP_MS = 50;
+    const transport = connect(
+      router =>
+        router.service(PlotService, {
+          async *sample(request, context) {
+            if (request.xMin === 0) {
+              await new Promise(resolve => context.signal.addEventListener('abort', resolve));
+              await new Promise(resolve => setTimeout(resolve, CLEANUP_MS));
+              return;
+            }
+            yield { x: [request.xMin], y: [1] };
+          },
+        }),
+      5_000,
+      1
+    );
+    const client = createClient(PlotService, transport);
+    const controller = new AbortController();
+    const superseded = Array.fromAsync(
+      client.sample({ xMin: 0 }, { signal: controller.signal })
+    ).catch(() => undefined);
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    controller.abort();
+    const replacement = await Array.fromAsync(client.sample({ xMin: 7 }));
+
+    expect(replacement.map(chunk => chunk.x[0])).toEqual([7]);
+    await superseded;
   });
 });

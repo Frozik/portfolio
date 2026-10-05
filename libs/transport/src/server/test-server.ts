@@ -4,60 +4,55 @@ import type { AddressInfo } from 'node:net';
 
 import type { ConnectRouter, Transport } from '@connectrpc/connect';
 import { createConnectRouter } from '@connectrpc/connect';
-import { quicheLoaded, WebTransport } from '@fails-components/webtransport';
+import { WebSocket } from 'ws';
 
 import { openWebSocketSession } from '../client/browser-websocket';
 import { createSessionTransport } from '../client/session-transport';
-import { settleTeardown } from '../frame/settle';
-import { decodePinnedCertificate } from '../shared/pinned-certificate';
+import { MUX_SUBPROTOCOL, muxSessionOptions } from '../mux/mux-limits';
+import { createMuxSession } from '../mux/mux-session';
 import type { ITransportSession, TransportProtocol } from '../shared/session';
-import type { SelfSignedCertificate } from './self-signed-certificate';
+import { GATEWAY_CLIENT_ADDRESS_HEADER } from './gateway-identity';
+import { NodeMessageSocket } from './node-message-socket';
 import type { TransportServer } from './start-transport-server';
 import { startTransportServer } from './start-transport-server';
 
 const PATH = '/transport';
-const TEST_STREAM_WINDOW_BYTES = 256 * 1024;
 const READ_MAX_BYTES = 1024 * 1024;
+const GATEWAY_MAX_INCOMING_STREAMS = 0;
+
+export const TEST_GATEWAY_SECRET = 'test-gateway-secret';
+/** What the stand-in gateway forwards as the browser's address unless told otherwise. */
+export const TEST_CLIENT_ADDRESS = '203.0.113.7';
 
 export interface TestServer {
   readonly server: TransportServer;
+  /** The public server: browsers on the WebSocket fallback. */
   readonly http: Server;
-  readonly sha256: Uint8Array<ArrayBuffer>;
-  /** The HTTP/3 stream receive window the server was started with. */
-  readonly streamWindowBytes: number;
+  /** The internal server only the HTTP/3 gateway reaches. */
+  readonly gatewayHttp: Server;
 }
 
 export interface TestServerOptions {
   readonly register: (router: ConnectRouter) => void;
-  readonly certificate?: SelfSignedCertificate | 'self-signed';
   readonly maxSessionsPerIp?: number;
   readonly behindProxy?: readonly TransportProtocol[];
 }
 
-/** A transport server on loopback ports picked by the OS: HTTP/3 and the WebSocket fallback. */
+/** A transport server on loopback ports picked by the OS: the public listener and the gateway's. */
 export async function startTestServer({
   register,
-  certificate = 'self-signed',
   maxSessionsPerIp = 8,
   behindProxy = [],
 }: TestServerOptions): Promise<TestServer> {
   const router = createConnectRouter();
   register(router);
-  const http = createServer();
-  await new Promise<void>(resolve => http.listen(0, '127.0.0.1', resolve));
-  const server = await startTransportServer({
+  const [http, gatewayHttp] = await Promise.all([listenOnLoopback(), listenOnLoopback()]);
+  const server = startTransportServer({
     handlers: router.handlers,
     path: PATH,
-    http3: { host: '127.0.0.1', port: 0 },
-    certificate,
     websocket: { server: http },
-    limits: {
-      maxSessions: 8,
-      maxStreamsPerSession: 8,
-      streamIdleTimeoutMs: 5_000,
-      streamWindowBytes: TEST_STREAM_WINDOW_BYTES,
-      sessionWindowBytes: TEST_STREAM_WINDOW_BYTES * 4,
-    },
+    gateway: { server: gatewayHttp, secret: TEST_GATEWAY_SECRET },
+    limits: { maxSessions: 8, maxStreamsPerSession: 8, streamIdleTimeoutMs: 5_000 },
     admission: {
       allowedOrigins: ['https://site.example'],
       maxSessionsPerIp,
@@ -66,53 +61,66 @@ export async function startTestServer({
     },
     onError: () => undefined,
   });
-  const sha256 =
-    certificate === 'self-signed'
-      ? decodePinnedCertificate(server.pinnedCertificate).sha256
-      : certificate.sha256;
-  return { server, http, sha256, streamWindowBytes: TEST_STREAM_WINDOW_BYTES };
+  return { server, http, gatewayHttp };
 }
 
-export async function stopTestServer({ server, http }: TestServer): Promise<void> {
-  await server.close();
-  http.closeAllConnections();
-  await new Promise(resolve => http.close(resolve));
+export async function stopTestServer({ server, http, gatewayHttp }: TestServer): Promise<void> {
+  server.close();
+  await Promise.all([closeServer(http), closeServer(gatewayHttp)]);
 }
 
-export async function openTestSession(
+/** `http3` stands for a browser behind the gateway: the session the gateway opens on its behalf. */
+export function openTestSession(
   running: TestServer,
-  protocol: TransportProtocol,
-  sha256 = running.sha256
+  protocol: TransportProtocol
 ): Promise<ITransportSession> {
   switch (protocol) {
     case 'http3':
-      return http3Session(running, sha256);
+      return openGatewaySession(running);
     case 'websocket':
       return websocketSession(running);
   }
 }
 
-type ClientOptions = NonNullable<ConstructorParameters<typeof WebTransport>[1]>;
+export interface GatewayHeaders {
+  readonly secret?: string;
+  readonly clientAddress?: string;
+  readonly origin?: string;
+  readonly subprotocol?: string;
+}
 
-/**
- * Options for the fails-components client with the given receive windows. It
- * reads them at runtime but types only the DOM options, and left alone it grows
- * a stream window to 6 MiB, which would hide the server's own bound.
- */
-export function testClientOptions(
-  sha256: Uint8Array<ArrayBuffer>,
-  windowBytes: number
-): ClientOptions {
-  const options: ClientOptions & Record<string, unknown> = {
-    serverCertificateHashes: [{ algorithm: 'sha-256', value: sha256 }],
-    initialStreamFlowControlWindow: windowBytes,
-    streamFlowControlWindowSizeLimit: windowBytes,
-    streamShouldAutoTuneReceiveWindow: false,
-    initialSessionFlowControlWindow: windowBytes * 4,
-    sessionFlowControlWindowSizeLimit: windowBytes * 4,
-    sessionShouldAutoTuneReceiveWindow: false,
-  };
-  return options;
+/** Dials like the HTTP/3 gateway does; any field can be changed to play a forger. */
+export function openGatewaySession(
+  running: TestServer,
+  headers: GatewayHeaders = {},
+  server: Server = running.gatewayHttp
+): Promise<ITransportSession> {
+  return dialGateway(`ws://127.0.0.1:${portOf(server)}${PATH}`, headers);
+}
+
+/** The session the HTTP/3 gateway opens on a browser's behalf, at any listener URL. */
+export async function dialGateway(
+  url: string,
+  {
+    secret = TEST_GATEWAY_SECRET,
+    clientAddress = TEST_CLIENT_ADDRESS,
+    origin,
+    subprotocol = MUX_SUBPROTOCOL,
+  }: GatewayHeaders = {}
+): Promise<ITransportSession> {
+  const socket = new WebSocket(url, subprotocol, {
+    headers: {
+      authorization: `Bearer ${secret}`,
+      [GATEWAY_CLIENT_ADDRESS_HEADER]: clientAddress,
+      ...(origin === undefined ? {} : { origin }),
+    },
+  });
+  const session = createMuxSession(
+    new NodeMessageSocket(socket),
+    muxSessionOptions('client', GATEWAY_MAX_INCOMING_STREAMS)
+  );
+  await session.ready;
+  return session;
 }
 
 export function transportOver(session: ITransportSession): Transport {
@@ -123,29 +131,23 @@ export function transportOver(session: ITransportSession): Transport {
   });
 }
 
-async function http3Session(
-  running: TestServer,
-  sha256: Uint8Array<ArrayBuffer>
-): Promise<ITransportSession> {
-  await quicheLoaded;
-  const transport = new WebTransport(
-    `https://127.0.0.1:${running.server.http3Port}${PATH}`,
-    testClientOptions(sha256, running.streamWindowBytes)
-  );
-  settleTeardown(transport.closed);
-  await transport.ready;
-  return {
-    ready: transport.ready,
-    closed: transport.closed,
-    incomingBidirectionalStreams: transport.incomingBidirectionalStreams,
-    createBidirectionalStream: () => transport.createBidirectionalStream(),
-    close: () => transport.close(),
-  };
-}
-
 async function websocketSession(running: TestServer): Promise<ITransportSession> {
-  const { port } = running.http.address() as AddressInfo;
-  const session = openWebSocketSession(`ws://127.0.0.1:${port}${PATH}`);
+  const session = openWebSocketSession(`ws://127.0.0.1:${portOf(running.http)}${PATH}`);
   await session.ready;
   return session;
+}
+
+async function listenOnLoopback(): Promise<Server> {
+  const server = createServer();
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  return server;
+}
+
+async function closeServer(server: Server): Promise<void> {
+  server.closeAllConnections();
+  await new Promise(resolve => server.close(resolve));
+}
+
+function portOf(server: Server): number {
+  return (server.address() as AddressInfo).port;
 }

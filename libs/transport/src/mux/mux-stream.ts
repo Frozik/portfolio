@@ -92,6 +92,10 @@ export class MuxStream implements IBidirectionalStream {
     }
     this.remoteState = 'finished';
     this.wakeReader.resolve();
+    // The peer's direction is over the moment its FIN arrives, read to the end
+    // or not: a Connect handler stops at its END frame and never asks for more.
+    // Whatever is still queued stays readable from this stream.
+    this.markRemoteDone();
   }
 
   receiveCredit(bytes: number): void {

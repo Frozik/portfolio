@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 // Which Moon projects a commit range touches, dependencies included.
 //
 //   affected-projects <base> [head]        prints one project id per line
-//   affected-projects <base> [head] --is <id>   exits 0 when <id> is affected, 1 otherwise
+//   affected-projects <base> [head] --is <id> [--is <id>…]   exits 0 when any <id> is affected, 1 otherwise
 //
 // Deploy workflows ask this instead of matching paths by hand: a change in
 // `libs/utils` reaches both apps, a change in `libs/components` reaches only
@@ -40,13 +40,12 @@ function affectedProjects(files: readonly string[]): readonly string[] {
 
 const [base, ...rest] = process.argv.slice(2);
 if (base === undefined) {
-  console.error('usage: affected-projects <base> [head] [--is <project-id>]');
+  console.error('usage: affected-projects <base> [head] [--is <project-id>]...');
   process.exit(2);
 }
 
-const isIndex = rest.indexOf('--is');
-const wanted = isIndex === -1 ? undefined : rest[isIndex + 1];
-const head = isIndex === 0 ? 'HEAD' : (rest[0] ?? 'HEAD');
+const wanted = rest.flatMap((arg, index) => (rest[index - 1] === '--is' ? [arg] : []));
+const head = rest[0] === undefined || rest[0] === '--is' ? 'HEAD' : rest[0];
 
 const files = changedFiles(base, head);
 // Moon attributes a lockfile change to the root project alone, but a
@@ -54,14 +53,14 @@ const files = changedFiles(base, head);
 const everything = isLockfileChange(files);
 const projects = everything ? undefined : affectedProjects(files);
 
-if (wanted === undefined) {
+if (wanted.length === 0) {
   console.log(everything ? '<all: lockfile changed>' : projects?.join('\n'));
   process.exit(0);
 }
 
-const affected = everything || (projects?.includes(wanted) ?? false);
+const affected = everything || wanted.some(id => projects?.includes(id) ?? false);
 const reason = everything
   ? 'a lockfile changed, so every project counts as affected'
   : `affected projects: ${projects?.join(', ') || 'none'}`;
-console.log(`${wanted}: ${affected ? 'affected' : 'not affected'} (${reason})`);
+console.log(`${wanted.join(' or ')}: ${affected ? 'affected' : 'not affected'} (${reason})`);
 process.exit(affected ? 0 : 1);

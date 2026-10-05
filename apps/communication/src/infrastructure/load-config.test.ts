@@ -71,14 +71,13 @@ const VALID_CONFIG = {
   transport: {
     enabled: true,
     path: '/transport',
-    http3_host: '0.0.0.0',
     http3_port: 4447,
+    dev_certificate_dir: '.dev-certs',
+    gateway: { enabled: false, host: '127.0.0.1', port: 4448, secret: '' },
     max_sessions: 256,
     max_sessions_per_ip: 8,
     max_streams_per_session: 16,
     stream_idle_timeout_ms: 30000,
-    stream_window_bytes: 262144,
-    session_window_bytes: 1048576,
     expression_max_length: 200,
     expression_max_depth: 48,
     sample_max_points: 20000,
@@ -102,6 +101,13 @@ describe('loadConfigFromObject', () => {
     const result = loadConfigFromObject(VALID_CONFIG);
     expect(result.server.port).toBe(4445);
     expect(result.logging.level).toBe('info');
+  });
+
+  it('refuses an enabled gateway listener whose secret is short enough to guess', () => {
+    const config = cloneConfig();
+    config.transport.gateway = { enabled: true, host: '0.0.0.0', port: 4448, secret: 'short' };
+
+    expect(() => loadConfigFromObject(config)).toThrow(/transport\.gateway\.secret/);
   });
 
   it('throws ConfigValidationError when a required key is missing', () => {

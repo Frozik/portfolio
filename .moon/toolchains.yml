@@ -13,3 +13,7 @@ node:
 pnpm:
   version: '11.25.0'
   installArgs: ['--frozen-lockfile']
+
+# The HTTP/3 gateway (apps/transport-gateway). Exact for the same reason as node.
+go:
+  version: '1.26.8'

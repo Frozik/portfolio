@@ -60,6 +60,7 @@ remote_run_script edge/packages
 remote_run_script edge/trim-packages
 remote_run_script communication/docker
 remote_run_script communication/turn-secret
+remote_run_script communication/gateway-secret
 remote_run_script communication/oauth-secrets
 remote_run_script communication/config
 remote_run_script edge/renewal-hook

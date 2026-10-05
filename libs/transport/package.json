@@ -22,8 +22,6 @@
   "dependencies": {
     "@bufbuild/protobuf": "catalog:",
     "@connectrpc/connect": "catalog:",
-    "@fails-components/webtransport": "catalog:",
-    "@fails-components/webtransport-transport-http3-quiche": "catalog:",
     "@frozik/utils": "workspace:*",
     "@peculiar/x509": "catalog:",
     "reflect-metadata": "catalog:",

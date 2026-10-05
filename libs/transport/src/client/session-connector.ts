@@ -115,7 +115,7 @@ export class SessionConnector {
     const http3 = this.options.openers.http3;
     if (http3 !== undefined && this.shouldTryHttp3()) {
       try {
-        return { session: await this.ready(await http3()), protocol: 'http3' };
+        return { session: await this.established(await http3(), 'http3'), protocol: 'http3' };
       } catch (error) {
         this.http3FailedAt = this.options.now();
         if (this.mode === 'http3') {
@@ -126,7 +126,10 @@ export class SessionConnector {
     if (this.mode === 'http3') {
       throw new Error('HTTP/3 is not available in this browser');
     }
-    return { session: await this.ready(this.options.openers.websocket()), protocol: 'websocket' };
+    return {
+      session: await this.established(this.options.openers.websocket(), 'websocket'),
+      protocol: 'websocket',
+    };
   }
 
   private shouldTryHttp3(): boolean {
@@ -143,16 +146,31 @@ export class SessionConnector {
     }
   }
 
-  private async ready(session: ITransportSession): Promise<ITransportSession> {
+  /**
+   * A session counts once it is ready and, over HTTP/3, has opened a stream —
+   * both within the one connect timeout. Safari waits for WebTransport stream
+   * credit that a server built on an older draft never grants: its sessions
+   * turn ready, yet no stream ever opens.
+   */
+  private async established(
+    session: ITransportSession,
+    protocol: TransportProtocol
+  ): Promise<ITransportSession> {
+    const timeoutMs = this.options.connectTimeoutMs;
+    let waitingFor = 'no session';
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(
-        () => reject(new Error(`no session within ${this.options.connectTimeoutMs} ms`)),
-        this.options.connectTimeoutMs
+        () => reject(new Error(`${waitingFor} within ${timeoutMs} ms`)),
+        timeoutMs
       );
     });
     try {
       await Promise.race([session.ready, timeout]);
+      if (protocol === 'http3') {
+        waitingFor = 'HTTP/3 session opened, but no stream';
+        await Promise.race([openProbeStream(session), timeout]);
+      }
       return session;
     } catch (error) {
       settleTeardown(session.ready);
@@ -170,4 +188,13 @@ export class SessionConnector {
       listener(state);
     }
   }
+}
+
+/** Opens a stream and resets it at once; the server sees a stream end before its first frame. */
+async function openProbeStream(session: ITransportSession): Promise<void> {
+  const opening = session.createBidirectionalStream();
+  settleTeardown(opening);
+  const stream = await opening;
+  settleTeardown(stream.writable.abort());
+  settleTeardown(stream.readable.cancel());
 }

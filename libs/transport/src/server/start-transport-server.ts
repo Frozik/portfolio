@@ -1,14 +1,11 @@
-import type { Server } from 'node:http';
+import type { IncomingMessage, Server } from 'node:http';
 
 import { createContextValues } from '@connectrpc/connect';
 import type { UniversalHandler } from '@connectrpc/connect/protocol';
 
-import type { PinnedCertificateBody } from '../shared/pinned-certificate';
-import { encodePinnedCertificate } from '../shared/pinned-certificate';
 import type { ITransportSession, TransportProtocol } from '../shared/session';
 import { serveConnectSession } from '../tunnel/serve-connect-session';
-import type { Http3Listener, TransportCertificate } from './http3-listener';
-import { startHttp3Listener } from './http3-listener';
+import { identifyDirectRequest, identifyGatewayRequest } from './gateway-identity';
 import type { SessionRequest } from './peer';
 import { TRANSPORT_CLIENT_ADDRESS, TRANSPORT_PROTOCOL } from './peer';
 import type { SessionAdmissionOptions } from './session-admission';
@@ -18,22 +15,20 @@ import { startWebSocketListener } from './websocket-listener';
 
 export interface TransportServerOptions {
   readonly handlers: readonly UniversalHandler[];
-  /** The same path serves both protocols: `https://host/<path>` over UDP and `wss://host/<path>` over TCP. */
+  /** Browsers reach `wss://host/<path>`, the HTTP/3 gateway `ws://<internal>/<path>`. */
   readonly path: string;
-  readonly http3: { readonly host: string; readonly port: number };
-  /**
-   * The public certificate, or `'self-signed'` for development: a 13-day
-   * certificate made at start, which browsers pin by hash (see `pinnedCertificate`).
-   */
-  readonly certificate: TransportCertificate | 'self-signed';
+  /** The public HTTP(S) server: browsers on the WebSocket fallback. */
   readonly websocket: { readonly server: Server };
+  /**
+   * An internal server only the HTTP/3 gateway reaches: one multiplexed
+   * session per browser WebTransport session, served as `http3`.
+   */
+  readonly gateway?: { readonly server: Server; readonly secret: string };
   readonly limits: {
     readonly maxSessions: number;
     readonly maxStreamsPerSession: number;
     /** A stream with no bytes moving either way for this long is reset. */
     readonly streamIdleTimeoutMs: number;
-    readonly streamWindowBytes: number;
-    readonly sessionWindowBytes: number;
   };
   readonly admission: Omit<SessionAdmissionOptions, 'now'>;
   readonly onSessionChange?: (change: SessionChange) => void;
@@ -46,22 +41,18 @@ export interface SessionChange {
 }
 
 export interface TransportServer {
-  readonly http3Port: number;
-  /** What the development route answers; undefined with a public certificate. */
-  readonly pinnedCertificate: PinnedCertificateBody | undefined;
-  reloadCertificate(certificate: TransportCertificate): Promise<void>;
   /** Refuses new sessions and closes the live ones. */
-  close(): Promise<void>;
+  close(): void;
 }
 
-/** Serves Connect handlers to browsers over HTTP/3 and over the WebSocket fallback alike. */
-export async function startTransportServer(
-  options: TransportServerOptions
-): Promise<TransportServer> {
+/**
+ * Serves Connect handlers over multiplexed WebSockets: straight from browsers
+ * on the fallback, and from the HTTP/3 gateway for browsers on WebTransport.
+ */
+export function startTransportServer(options: TransportServerOptions): TransportServer {
   const live = new Set<ITransportSession>();
   let isClosing = false;
   const admission = createSessionAdmission({ ...options.admission, now: () => performance.now() });
-  const { certificate, pinnedSha256 } = await resolveCertificate(options.certificate);
 
   const admitFor = (protocol: TransportProtocol) => (request: SessionRequest) =>
     !isClosing && live.size < options.limits.maxSessions && admission.admit(request, protocol);
@@ -90,53 +81,36 @@ export async function startTransportServer(
     });
   };
 
-  const http3: Http3Listener = await startHttp3Listener({
-    ...options.http3,
-    certificate,
-    path: options.path,
-    streamWindowBytes: options.limits.streamWindowBytes,
-    sessionWindowBytes: options.limits.sessionWindowBytes,
-    admit: admitFor('http3'),
-    onSession: serveFor('http3'),
-    onError: options.onError,
-  });
-  const websocket: WebSocketListener = startWebSocketListener({
-    server: options.websocket.server,
-    path: options.path,
-    maxStreamsPerSession: options.limits.maxStreamsPerSession,
-    admit: admitFor('websocket'),
-    onSession: serveFor('websocket'),
-  });
-  const pinnedCertificate =
-    pinnedSha256 === undefined
-      ? undefined
-      : encodePinnedCertificate({ sha256: pinnedSha256, http3Port: http3.port });
+  const listen = (
+    protocol: TransportProtocol,
+    server: Server,
+    identify: (request: IncomingMessage) => SessionRequest | undefined
+  ): WebSocketListener =>
+    startWebSocketListener({
+      server,
+      path: options.path,
+      maxStreamsPerSession: options.limits.maxStreamsPerSession,
+      identify,
+      admit: admitFor(protocol),
+      onSession: serveFor(protocol),
+    });
+
+  const listeners = [
+    listen('websocket', options.websocket.server, identifyDirectRequest),
+    ...(options.gateway === undefined
+      ? []
+      : [listen('http3', options.gateway.server, identifyGatewayRequest(options.gateway.secret))]),
+  ];
 
   return {
-    get http3Port() {
-      return http3.port;
-    },
-    pinnedCertificate,
-    reloadCertificate: next => http3.reloadCertificate(next),
-    async close() {
+    close() {
       isClosing = true;
-      websocket.close();
+      for (const listener of listeners) {
+        listener.close();
+      }
       for (const session of live) {
         session.close();
       }
-      await http3.close();
     },
   };
-}
-
-async function resolveCertificate(source: TransportCertificate | 'self-signed'): Promise<{
-  readonly certificate: TransportCertificate;
-  readonly pinnedSha256: Uint8Array<ArrayBuffer> | undefined;
-}> {
-  if (source !== 'self-signed') {
-    return { certificate: source, pinnedSha256: undefined };
-  }
-  const { createSelfSignedCertificate } = await import('./self-signed-certificate');
-  const selfSigned = await createSelfSignedCertificate();
-  return { certificate: selfSigned, pinnedSha256: selfSigned.sha256 };
 }

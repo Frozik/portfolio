@@ -1,12 +1,14 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { create } from '@bufbuild/protobuf';
 import { Code, ConnectError, createClient } from '@connectrpc/connect';
-import { quicheLoaded, WebTransport } from '@fails-components/webtransport';
 import type { EchoRequest } from '@frozik/proto/frozik/transport/v1/file_pb';
 import { EchoRequestSchema, FileService } from '@frozik/proto/frozik/transport/v1/file_pb';
 import { ExpressionErrorSchema, PlotService } from '@frozik/proto/frozik/transport/v1/plot_pb';
 import { openWebSocketSession } from '@frozik/transport/client/browser-websocket';
 import { createSessionTransport } from '@frozik/transport/client/session-transport';
-import { testClientOptions } from '@frozik/transport/server/test-server';
+import { dialGateway, TEST_GATEWAY_SECRET } from '@frozik/transport/server/test-server';
 import { decodePinnedCertificate } from '@frozik/transport/shared/pinned-certificate';
 import type { ITransportSession } from '@frozik/transport/shared/session';
 import { Crc32 } from '@frozik/utils/hash/crc32';
@@ -20,7 +22,9 @@ import { buildTestConfig } from './testing/test-server-config';
 const CHUNK_BYTES = 64 * 1024;
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const TEST_TIMEOUT_MS = 20_000;
-const STREAM_WINDOW_BYTES = 262_144;
+/** The multiplexer's per-stream credit, both ways (`libs/transport/MUX.md`). */
+const STREAM_CREDIT_BYTES = 262_144;
+const DEV_CERTIFICATE_DIR = join(tmpdir(), `transport-dev-certs-${process.pid}`);
 const STALL_WAIT_MS = 300;
 /** A loaded machine needs a few rounds to stall; a sender that never stalls fails after these. */
 const MAX_SETTLE_ROUNDS = 10;
@@ -30,6 +34,7 @@ const IN_FLIGHT_MESSAGES = 16;
 interface Running {
   readonly app: BootstrapResult;
   readonly publicPort: number;
+  readonly gatewayPort: number;
 }
 
 function transportConfig(): IServerConfig {
@@ -37,14 +42,13 @@ function transportConfig(): IServerConfig {
     transport: {
       enabled: true,
       path: '/transport',
-      http3_host: '127.0.0.1',
-      http3_port: 0,
+      http3_port: 4447,
+      dev_certificate_dir: DEV_CERTIFICATE_DIR,
+      gateway: { enabled: true, host: '127.0.0.1', port: 0, secret: TEST_GATEWAY_SECRET },
       max_sessions: 16,
       max_sessions_per_ip: 16,
       max_streams_per_session: 8,
       stream_idle_timeout_ms: 1_000,
-      stream_window_bytes: STREAM_WINDOW_BYTES,
-      session_window_bytes: 1_048_576,
       expression_max_length: 200,
       expression_max_depth: 48,
       sample_max_points: 5_000,
@@ -62,28 +66,13 @@ function transportConfig(): IServerConfig {
 
 async function start(): Promise<Running> {
   const app = await bootstrap(transportConfig());
-  const { publicPort } = await app.start();
-  return { app, publicPort };
+  const { publicPort, gatewayPort } = await app.start();
+  return { app, publicPort, gatewayPort };
 }
 
-async function http3Session(running: Running): Promise<ITransportSession> {
-  const response = await fetch(
-    `http://127.0.0.1:${running.publicPort}/transport/pinned-certificate`
-  );
-  const { sha256, http3Port } = decodePinnedCertificate(await response.json());
-  await quicheLoaded;
-  const transport = new WebTransport(
-    `https://127.0.0.1:${http3Port}/transport`,
-    testClientOptions(sha256, STREAM_WINDOW_BYTES)
-  );
-  await transport.ready;
-  return {
-    ready: transport.ready,
-    closed: transport.closed,
-    incomingBidirectionalStreams: transport.incomingBidirectionalStreams,
-    createBidirectionalStream: () => transport.createBidirectionalStream(),
-    close: () => transport.close(),
-  };
+/** What the HTTP/3 gateway opens for a browser: a session on the gateway's own listener. */
+function gatewaySession(running: Running): Promise<ITransportSession> {
+  return dialGateway(`ws://127.0.0.1:${running.gatewayPort}/transport`);
 }
 
 function websocketSession(running: Running): Promise<ITransportSession> {
@@ -132,10 +121,10 @@ describe('transport endpoint', () => {
   });
 
   it(
-    'samples a plot over HTTP/3 and reports a parse error with its position',
+    'samples a plot through the HTTP/3 gateway and reports a parse error with its position',
     async () => {
       running = await start();
-      const { plot } = clientsOver(await http3Session(running));
+      const { plot } = clientsOver(await gatewaySession(running));
 
       const chunks = await Array.fromAsync(
         plot.sample({ expression: 'x^2 + 2x + 3', xMin: -1, xMax: 1, points: 2_001 })
@@ -160,7 +149,7 @@ describe('transport endpoint', () => {
     'echoes a file back byte for byte with a matching checksum',
     async () => {
       running = await start();
-      const { file } = clientsOver(await http3Session(running));
+      const { file } = clientsOver(await gatewaySession(running));
       const size = 3 * 1024 * 1024 + 17;
 
       let received = 0;
@@ -186,7 +175,7 @@ describe('transport endpoint', () => {
     'refuses files over the limit and streams that send more than they declared',
     async () => {
       running = await start();
-      const { file } = clientsOver(await http3Session(running));
+      const { file } = clientsOver(await gatewaySession(running));
 
       const oversize = await Array.fromAsync(file.echo(fileOf(1, MAX_FILE_BYTES + 1))).then(
         () => undefined,
@@ -217,7 +206,7 @@ describe('transport endpoint', () => {
   );
 
   it.each([
-    ['HTTP/3', http3Session],
+    ['the HTTP/3 gateway', gatewaySession],
     ['the WebSocket fallback', websocketSession],
   ] as const)(
     'holds a client that never reads the echo to two windows over %s, not the whole file',
@@ -247,8 +236,24 @@ describe('transport endpoint', () => {
       }
 
       expect(sent).toBe(previous);
-      expect(sent).toBeLessThan(STREAM_WINDOW_BYTES * 2 + IN_FLIGHT_MESSAGES * CHUNK_BYTES);
+      expect(sent).toBeLessThan(STREAM_CREDIT_BYTES * 2 + IN_FLIGHT_MESSAGES * CHUNK_BYTES);
       controller.abort();
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'tells a development browser which certificate to pin and where HTTP/3 listens',
+    async () => {
+      running = await start();
+
+      const response = await fetch(
+        `http://127.0.0.1:${running.publicPort}/transport/pinned-certificate`
+      );
+      const pinned = decodePinnedCertificate(await response.json());
+
+      expect(pinned.sha256).toHaveLength(32);
+      expect(pinned.http3Port).toBe(4447);
     },
     TEST_TIMEOUT_MS
   );

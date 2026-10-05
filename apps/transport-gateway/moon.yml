@@ -1,0 +1,61 @@
+language: go
+layer: application
+stack: backend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+  # The mux wire format is pinned by vectors both implementations run.
+  vectors:
+    - '/libs/transport/src/mux/mux-vectors.json'
+
+tasks:
+  build:
+    command: 'go build ./...'
+    inputs:
+      - '@group(sources)'
+    options:
+      runInCI: true
+
+  test:
+    command: 'go test -race -count 1 ./...'
+    inputs:
+      - '@group(sources)'
+      - '@group(vectors)'
+    options:
+      runInCI: true
+
+  lint:
+    command: 'go vet ./...'
+    inputs:
+      - '@group(sources)'
+    options:
+      runInCI: true
+
+  format-check:
+    script: 'test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }'
+    inputs:
+      - '@group(sources)'
+    options:
+      runInCI: true
+
+  # The gateway in front of the real Node server: a Connect call and the echo's
+  # backpressure through the whole chain, over real HTTP/3.
+  e2e:
+    command: 'go test -tags e2e -count 1 ./e2e/...'
+    # Starts Node from its sources, so the workspace's packages must be installed first.
+    toolchains:
+      - 'go'
+      - 'javascript'
+    inputs:
+      - '@group(sources)'
+      - '/apps/communication/src/**/*'
+      - '/apps/communication/config/**/*'
+      - '/libs/transport/src/**/*'
+    options:
+      runInCI: true

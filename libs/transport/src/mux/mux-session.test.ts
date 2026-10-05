@@ -156,6 +156,27 @@ describe('WebSocket multiplexer', () => {
     expect(await readAll(accepted.readable)).toEqual(new Uint8Array([1, 2, 3]));
   });
 
+  it('frees a stream once both sides finished, even if the reader stops at its own end marker', async () => {
+    const limits = { ...TEST_MUX_LIMITS, maxIncomingStreams: 1 };
+    const { client, server } = createMemorySessionPair(limits);
+
+    // A Connect handler reads the request up to its END frame and never asks for
+    // the end of the stream; the slot must come back all the same.
+    for (let call = 0; call < 3; call += 1) {
+      const stream = await client.createBidirectionalStream();
+      const request = stream.writable.getWriter();
+      await request.write(new Uint8Array([call]));
+      await request.close();
+      const accepted = await acceptOne(server.incomingBidirectionalStreams);
+      const incoming = accepted.readable.getReader();
+      await incoming.read();
+      incoming.releaseLock();
+      await accepted.writable.getWriter().close();
+
+      await expect(readAll(stream.readable)).resolves.toEqual(new Uint8Array());
+    }
+  });
+
   it('fails the peer stream both ways when one side aborts it', async () => {
     const { client, server } = createMemorySessionPair();
     const stream = await client.createBidirectionalStream();

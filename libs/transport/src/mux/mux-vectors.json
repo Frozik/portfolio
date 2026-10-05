@@ -1,0 +1,54 @@
+{
+  "maxDataBytes": 65536,
+  "valid": [
+    {
+      "name": "OPEN a client stream",
+      "hex": "0100000001",
+      "message": { "type": "open", "streamId": 1 }
+    },
+    {
+      "name": "DATA with a payload",
+      "hex": "020000000368656c6c6f",
+      "message": { "type": "data", "streamId": 3, "hex": "68656c6c6f" }
+    },
+    {
+      "name": "DATA without a payload",
+      "hex": "0200000005",
+      "message": { "type": "data", "streamId": 5, "hex": "" }
+    },
+    {
+      "name": "FIN",
+      "hex": "0300000007",
+      "message": { "type": "fin", "streamId": 7 }
+    },
+    {
+      "name": "RESET",
+      "hex": "0400000009",
+      "message": { "type": "reset", "streamId": 9 }
+    },
+    {
+      "name": "CREDIT of 128 KiB",
+      "hex": "050000000b00020000",
+      "message": { "type": "credit", "streamId": 11, "bytes": 131072 }
+    },
+    {
+      "name": "big-endian stream id",
+      "hex": "0101020304",
+      "message": { "type": "open", "streamId": 16909060 }
+    }
+  ],
+  "invalid": [
+    { "name": "shorter than the header", "hex": "01000000" },
+    { "name": "unknown type", "hex": "0600000001" },
+    { "name": "OPEN with a payload", "hex": "010000000100" },
+    { "name": "FIN with a payload", "hex": "030000000100" },
+    { "name": "RESET with a payload", "hex": "040000000100" },
+    { "name": "CREDIT too short", "hex": "0500000001000200" },
+    { "name": "CREDIT too long", "hex": "05000000010002000000" },
+    {
+      "name": "DATA over the limit",
+      "hex": "0200000001",
+      "payloadBytes": 65537
+    }
+  ]
+}

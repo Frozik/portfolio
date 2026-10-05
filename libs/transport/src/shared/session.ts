@@ -5,8 +5,8 @@ export interface IBidirectionalStream {
 
 /**
  * The subset of the WebTransport session API the transport relies on. Native
- * WebTransport, the server sessions of fails-components and the WebSocket
- * multiplexer all provide it, so everything above is unaware of the wire.
+ * WebTransport and the WebSocket multiplexer both provide it, so everything
+ * above is unaware of the wire.
  */
 export interface ITransportSession {
   readonly ready: Promise<unknown>;

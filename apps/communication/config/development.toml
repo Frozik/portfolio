@@ -5,7 +5,10 @@ cors_allowed_origins = ["http://localhost:5173"]
 level = "debug"
 pretty = true
 
-[transport]
-# Browsers resolve localhost to ::1 first and QUIC does not fall back to IPv4,
-# so the development listener takes both stacks.
-http3_host = "::"
+[transport.gateway]
+# The gateway runs in a container (apps/transport-gateway/compose.dev.yml) and
+# reaches this host through host.docker.internal, which Docker Desktop routes to
+# the host's loopback — so the listener stays off the local network.
+enabled = true
+host = "127.0.0.1"
+secret = "development-gateway-secret"

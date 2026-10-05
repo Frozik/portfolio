@@ -27,7 +27,8 @@ install -m 755 "${SCRIPT_DIR}/compose-up.sh" "${ROLE_DIR}/compose-up.sh"
 install -m 755 "${SCRIPT_DIR}/smoke-test.sh" "${ROLE_DIR}/smoke-test.sh"
 mkdir -p /opt/infra/lib
 install -m 644 "${SCRIPT_DIR}/../../lib/common.sh" /opt/infra/lib/common.sh
-install -m 644 "${SCRIPT_DIR}/docker-compose.yml" "${ROLE_DIR}/docker-compose.yml"
+# The stack file now ships inside the image; a copy here would only mislead.
+rm -f "${ROLE_DIR}/docker-compose.yml"
 
 info "Installing ${WRAPPER_PATH}"
 install -m 755 "${SCRIPT_DIR}/communication-deploy" "${WRAPPER_PATH}"

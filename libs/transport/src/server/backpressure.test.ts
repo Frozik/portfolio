@@ -50,15 +50,6 @@ async function settledAt(counter: () => number): Promise<number> {
   throw new Error(`still moving after ${MAX_SETTLE_ROUNDS} rounds, at ${previous} bytes`);
 }
 
-function windowOf(protocol: TransportProtocol, running: TestServer): number {
-  switch (protocol) {
-    case 'http3':
-      return running.streamWindowBytes;
-    case 'websocket':
-      return MUX_PROTOCOL_LIMITS.initialCredit;
-  }
-}
-
 describe.each(PROTOCOLS)('backpressure over %s', protocol => {
   let running: TestServer | undefined;
   let session: ITransportSession | undefined;
@@ -69,7 +60,7 @@ describe.each(PROTOCOLS)('backpressure over %s', protocol => {
     session = await openTestSession(running, protocol);
     return {
       files: createClient(FileService, transportOver(session)),
-      window: windowOf(protocol, running),
+      window: MUX_PROTOCOL_LIMITS.initialCredit,
     };
   }
 

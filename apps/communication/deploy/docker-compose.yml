@@ -1,0 +1,79 @@
+name: communication
+
+# The production stack, shipped inside the communication image (/deploy) so
+# that deploying a commit — rollback included — always starts that commit's
+# stack. infra/roles/communication/compose-up.sh extracts and installs it.
+#
+# No Redis on purpose: the app's [redis] section is disabled, so it uses an
+# in-process room registry and the stock single-node Socket.IO adapter.
+
+services:
+  communication:
+    image: ${COMMUNICATION_IMAGE:-ghcr.io/frozik/communication}:${COMMUNICATION_TAG:-latest}
+    restart: unless-stopped
+
+    # Docker writes its own iptables rules ahead of ufw, so an unqualified
+    # "8443:8443" would expose the port to the internet despite the
+    # default-deny firewall. The bind address is what keeps it loopback-only.
+    # The gateway's listener (4448) has no `ports:` entry at all: only the
+    # gateway reaches it, over the compose network.
+    ports:
+      - "${FASTIFY_PUBLISH:-127.0.0.1:8443}:8443"
+
+    env_file:
+      - path: /etc/communication/turn-secret
+        required: true
+      - path: /etc/communication/oauth-public-ids
+        required: true
+      - path: /etc/communication/oauth-secrets
+        required: false
+      - path: /etc/communication/gateway-secret
+        required: true
+
+    environment:
+      NODE_ENV: production
+      NODE_CONFIG_DIR: /app/config
+      NODE_CONFIG_ENV: production
+      TRANSPORT_GATEWAY_ENABLED: "true"
+      TRANSPORT_GATEWAY_HOST: 0.0.0.0
+
+    volumes:
+      - /etc/communication/production.toml:/app/config/production.toml:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    # Active calls drain before SIGKILL.
+    stop_grace_period: 20s
+
+    logging:
+      driver: journald
+
+  # HTTP/3 (WebTransport) is UDP, which HAProxy's TCP passthrough cannot carry,
+  # so the gateway is published straight to the internet on purpose. It bridges
+  # every browser session to the communication container's gateway listener.
+  gateway:
+    image: ${GATEWAY_IMAGE:-ghcr.io/frozik/transport-gateway}:${GATEWAY_TAG:-latest}
+    restart: unless-stopped
+    # The uid the Let's Encrypt ACLs grant (roles/edge/certificate.sh), as for communication.
+    user: "1001:1001"
+    depends_on:
+      - communication
+
+    ports:
+      - "${HTTP3_PUBLISH:-443}:4447/udp"
+
+    env_file:
+      - path: /etc/communication/gateway-secret
+        required: true
+
+    environment:
+      GATEWAY_UPSTREAM_URL: ws://communication:4448/transport
+      GATEWAY_CERT_FILE: /etc/letsencrypt/live/communication/fullchain.pem
+      GATEWAY_KEY_FILE: /etc/letsencrypt/live/communication/privkey.pem
+
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    stop_grace_period: 20s
+
+    logging:
+      driver: journald

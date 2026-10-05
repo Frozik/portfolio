@@ -84,6 +84,7 @@ export const transportTranslationsEn = {
   failures: {
     refused: (message: string) => `Refused: ${message}`,
     quota: (message: string) => `Over the limit: ${message}`,
-    unreachable: (message: string) => `No answer: ${message}`,
+    unreachable: (message: string) =>
+      message === '' ? 'No answer from the server.' : `No answer: ${message}`,
   },
 };
