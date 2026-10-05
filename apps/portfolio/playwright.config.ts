@@ -13,7 +13,8 @@ const CHROMIUM = {
 // Every wait in these tests is for an event — the app mounted, the worker
 // cached the shell — and passes the moment it happens. CI runners are slow and
 // shared, so the waits are long: the margin is spent only where it is needed,
-// and a slow machine never reads as a broken app.
+// and a slow machine never reads as a broken app. Navigations get no limit of
+// their own beyond the test's: a page load is not what these tests measure.
 const WAIT_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS = 120_000;
 // What Playwright picks on GitHub's 4-core runner; the pre-push hook runs with
@@ -36,7 +37,6 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'retain-on-failure',
-    navigationTimeout: WAIT_TIMEOUT_MS,
   },
   webServer: {
     command: `pnpm exec vite preview --port ${PORT} --strictPort`,

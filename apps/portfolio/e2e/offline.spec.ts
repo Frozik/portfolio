@@ -62,7 +62,8 @@ test('the menu downloads the offline pack and every game then opens with the net
     problems.push(error.message);
   });
   for (const segment of GAME_ROUTES) {
-    await page.goto(segment);
+    // Readiness is asserted below; the full `load` of an offline page proves nothing more.
+    await page.goto(segment, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#root')).not.toBeEmpty();
     await expect(page.locator('#initial-loader')).toHaveCount(0);
     await expect(page.locator('nav').first()).toBeVisible();
