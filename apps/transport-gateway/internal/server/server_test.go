@@ -40,6 +40,8 @@ const (
 	settleRounds = 10
 	// Short so a vanished client is noticed within the test.
 	testIdleTimeout = time.Second
+	// Only an upper bound for an event that is due at once; a loaded CI runner can be slow.
+	eventWait = 10 * time.Second
 )
 
 // fakeNode stands in for Node's gateway listener: it checks what the gateway
@@ -392,17 +394,22 @@ func TestFreesNodesSessionWhenTheBrowserVanishesWithoutClosing(t *testing.T) {
 	if _, _, err := dial(t, url, client); err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	if node.live.Load() != 1 {
-		t.Fatalf("node holds %d sessions, want 1", node.live.Load())
-	}
+	// The fake node counts its session only after the upgrade it answered, so
+	// the browser's dial can return first.
+	waitForLiveSessions(t, node, 1, eventWait)
 
 	// A browser process killed outright: no CONNECTION_CLOSE, just silence.
 	socket.Close()
 
-	deadline := time.Now().Add(3 * testIdleTimeout)
-	for node.live.Load() != 0 {
+	waitForLiveSessions(t, node, 0, 3*testIdleTimeout+eventWait)
+}
+
+func waitForLiveSessions(t *testing.T, node *fakeNode, want int32, within time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(within)
+	for node.live.Load() != want {
 		if time.Now().After(deadline) {
-			t.Fatalf("node still holds %d sessions after the browser vanished", node.live.Load())
+			t.Fatalf("node holds %d sessions, want %d", node.live.Load(), want)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
