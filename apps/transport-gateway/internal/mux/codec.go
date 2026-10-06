@@ -1,5 +1,5 @@
 // Package mux implements the multiplexer protocol frozik-mux.v1
-// (libs/transport/MUX.md): many byte streams over one WebSocket, each with
+// (libs/transport/README.md, "Multiplexer protocol"): many byte streams over one WebSocket, each with
 // per-stream credit so a reader that stops reading stops the writer.
 package mux
 

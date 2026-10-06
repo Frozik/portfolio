@@ -44,7 +44,7 @@ it granted.
 | `cmd/gateway` | wiring, graceful drain on SIGTERM, `-healthcheck` |
 | `internal/config` | the environment, read and validated once |
 | `internal/certs` | the TLS pair from files, re-read when they change (Let's Encrypt renewals, the development certificate) |
-| `internal/mux` | the `frozik-mux.v1` protocol ([`libs/transport/MUX.md`](../../libs/transport/MUX.md)), both roles |
+| `internal/mux` | the `frozik-mux.v1` protocol ([`libs/transport`](../../libs/transport/README.md#multiplexer-protocol-frozik-muxv1)), both roles |
 | `internal/upstream` | the dial to Node with the secret, address and Origin |
 | `internal/bridge` | one WebTransport session ⇄ one mux session |
 | `internal/server` | the HTTP/3 server, the CONNECT handler, live-session accounting for drain |

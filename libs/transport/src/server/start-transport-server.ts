@@ -4,6 +4,7 @@ import { createContextValues } from '@connectrpc/connect';
 import type { UniversalHandler } from '@connectrpc/connect/protocol';
 
 import type { ITransportSession, TransportProtocol } from '../shared/session';
+import type { TraceContext } from '../shared/trace-context';
 import { serveConnectSession } from '../tunnel/serve-connect-session';
 import { identifyDirectRequest, identifyGatewayRequest } from './gateway-identity';
 import type { SessionRequest } from './peer';
@@ -32,7 +33,8 @@ export interface TransportServerOptions {
   };
   readonly admission: Omit<SessionAdmissionOptions, 'now'>;
   readonly onSessionChange?: (change: SessionChange) => void;
-  readonly onError: (error: unknown) => void;
+  /** A call that broke at the transport level; `trace` is its trace once its head arrived. */
+  readonly onError: (error: unknown, trace: TraceContext | undefined) => void;
 }
 
 export interface SessionChange {

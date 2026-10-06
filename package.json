@@ -12,6 +12,7 @@
     "coverage": "moon run root:test-coverage",
     "dev": "moon run portfolio:dev",
     "format": "moon run root:format",
+    "fullstack": "moon run communication:dev portfolio:dev-local",
     "format-check": "moon run root:format-check",
     "hosts": "moon run infra:hosts",
     "knip": "moon run root:knip",

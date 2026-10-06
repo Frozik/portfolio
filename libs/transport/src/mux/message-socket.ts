@@ -4,9 +4,10 @@ export interface IMessageSocket {
   readonly closed: Promise<void>;
   /** Bytes accepted by `send` but not yet handed to the network. */
   readonly bufferedAmount: number;
-  send(message: Uint8Array<ArrayBuffer>): void;
+  /** A string goes out as a text message, bytes as a binary one. */
+  send(message: Uint8Array<ArrayBuffer> | string): void;
   close(code: number, reason: string): void;
-  onMessage(listener: (message: Uint8Array) => void): void;
+  onMessage(listener: (message: Uint8Array | string) => void): void;
 }
 
 export const SOCKET_CLOSE_NORMAL = 1000;

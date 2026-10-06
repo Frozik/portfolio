@@ -34,6 +34,14 @@ tasks:
     options:
       persistent: true
 
+  # The page against the local communication server (`pnpm fullstack` runs both).
+  dev-local:
+    command: 'pnpm run serve'
+    env:
+      VITE_COMMUNICATION_URL: 'http://localhost:4445'
+    options:
+      persistent: true
+
   type-check:
     command: 'pnpm run types'
     inputs:

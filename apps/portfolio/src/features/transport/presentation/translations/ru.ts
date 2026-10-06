@@ -19,6 +19,9 @@ export const transportTranslationsRu: TranslationOf<typeof transportTranslations
     modes: { auto: 'Авто', http3: 'Только HTTP/3', websocket: 'Только WebSocket' },
     modeHint:
       '«Авто» сначала пробует HTTP/3 и сам переходит на запасной путь; остальные режимы задают путь жёстко.',
+    wireFormats: { binary: 'BIN', json: 'JSON' },
+    wireFormatHint:
+      'BIN — protobuf. JSON — для отладки: вызовы без байтов идут в JSON, а в WebSocket каждое сообщение, кроме сырых байтов файла, — читаемый текст в DevTools.',
   },
   plot: {
     title: 'График функции',
@@ -86,6 +89,12 @@ export const transportTranslationsRu: TranslationOf<typeof transportTranslations
     unknownProtocol: 'транспорт неизвестен (сессия уже оборвалась)',
   },
   failures: {
+    trace: {
+      label: 'Trace ID',
+      copy: 'Скопировать trace ID',
+      copied: 'Скопировано',
+      copyFailed: 'Не удалось скопировать',
+    },
     refused: (message: string) => `Отказано: ${message}`,
     quota: (message: string) => `Превышен предел: ${message}`,
     unreachable: (message: string) =>

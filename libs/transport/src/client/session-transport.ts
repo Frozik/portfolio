@@ -9,26 +9,31 @@ import { createTransport as createConnectProtocolTransport } from '@connectrpc/c
 
 import { usesBinaryCodec } from '../codec/select-codec';
 import type { IBidirectionalStream } from '../shared/session';
+import type { WireFormat } from '../shared/wire-format';
 import { createTunnelHttpClient } from '../tunnel/tunnel-http-client';
+import { traceInterceptor } from './call-trace';
 
 export interface SessionTransportOptions {
   readonly openStream: () => Promise<IBidirectionalStream>;
   readonly baseUrl: string;
   readonly readMaxBytes: number;
+  /** Read on every call, so the format can change between calls. */
+  readonly wireFormat: () => WireFormat;
 }
 
 const COMPRESS_MIN_BYTES = 1024;
 
-/** Connect over transport-session streams, binary protobuf for methods that move bytes and JSON for the rest. */
+/** Connect over transport-session streams, with the codec `usesBinaryCodec` picks per call. */
 export function createSessionTransport({
   openStream,
   baseUrl,
   readMaxBytes,
+  wireFormat,
 }: SessionTransportOptions): Transport {
   const common = {
     httpClient: createTunnelHttpClient(openStream),
     baseUrl,
-    interceptors: [],
+    interceptors: [traceInterceptor],
     acceptCompression: [],
     sendCompression: null,
     compressMinBytes: COMPRESS_MIN_BYTES,
@@ -38,7 +43,7 @@ export function createSessionTransport({
   const json = createConnectProtocolTransport({ ...common, useBinaryFormat: false });
   const binary = createConnectProtocolTransport({ ...common, useBinaryFormat: true });
   const codecFor = (method: DescMethodUnary | DescMethodStreaming) =>
-    usesBinaryCodec(method) ? binary : json;
+    usesBinaryCodec(method, wireFormat()) ? binary : json;
 
   return {
     unary<I extends DescMessage, O extends DescMessage>(

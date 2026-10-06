@@ -4,11 +4,12 @@ import { observer } from 'mobx-react-lite';
 
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { ConnectionModel } from '../../application/ConnectionModel';
-import type { ConnectionState, TransportMode } from '../../domain/connection';
+import type { ConnectionState, TransportMode, WireFormat } from '../../domain/connection';
 import { Panel } from '../common/Panel';
 import { transportT } from '../translations';
 
 const MODES: readonly TransportMode[] = ['auto', 'http3', 'websocket'];
+const WIRE_FORMATS: readonly WireFormat[] = ['binary', 'json'];
 
 function describe(state: ConnectionState): string {
   const texts = transportT.connection.states;
@@ -49,6 +50,16 @@ export const ConnectionPanel = observer(
         onChange={connection.setMode}
       />
       <p className="text-xs text-landing-fg-dim">{transportT.connection.modeHint}</p>
+      <RadioGroup
+        optionType="button"
+        options={WIRE_FORMATS.map(format => ({
+          value: format,
+          label: transportT.connection.wireFormats[format],
+        }))}
+        value={connection.wireFormat}
+        onChange={connection.setWireFormat}
+      />
+      <p className="text-xs text-landing-fg-dim">{transportT.connection.wireFormatHint}</p>
     </Panel>
   )
 );

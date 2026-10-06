@@ -3,6 +3,7 @@ import {
   ExpressionErrorReason as WireReason,
   ExpressionErrorSchema,
 } from '@frozik/proto/frozik/transport/v1/plot_pb';
+import { traceIdOf } from '@frozik/transport/client/call-trace';
 
 import type { CallFailure } from '../domain/call-failure';
 import { CallFailedError } from '../domain/call-failure';
@@ -24,7 +25,10 @@ export function toCallFailedError(error: unknown): CallFailedError {
   if (error instanceof CallFailedError) {
     return error;
   }
-  return new CallFailedError(callFailureOf(ConnectError.from(error)));
+  return new CallFailedError({
+    ...callFailureOf(ConnectError.from(error)),
+    traceId: traceIdOf(error),
+  });
 }
 
 function callFailureOf(error: ConnectError): CallFailure {

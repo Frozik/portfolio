@@ -1,7 +1,6 @@
 import type { ExpressionErrorReason } from './plot';
 
-/** A call that reached the server and was answered with an error, or never reached it. */
-export type CallFailure =
+type CallFailureReason =
   | {
       readonly kind: 'expression';
       readonly position: number;
@@ -10,6 +9,13 @@ export type CallFailure =
   | { readonly kind: 'refused'; readonly message: string }
   | { readonly kind: 'quota'; readonly message: string }
   | { readonly kind: 'unreachable'; readonly message: string };
+
+/**
+ * A call that reached the server and was answered with an error, or never
+ * reached it. `traceId` finds the call in the server's log; a failure that
+ * never became a call has none.
+ */
+export type CallFailure = CallFailureReason & { readonly traceId?: string };
 
 export class CallFailedError extends Error {
   override readonly name = 'CallFailedError';

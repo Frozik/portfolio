@@ -1,8 +1,17 @@
 import type { ContextValues } from '@connectrpc/connect';
+import { createContextValues } from '@connectrpc/connect';
 import type { UniversalHandler, UniversalServerResponse } from '@connectrpc/connect/protocol';
 
 import { FrameReader, FrameWriter } from '../frame/frame-io';
 import type { IBidirectionalStream, ITransportSession } from '../shared/session';
+import type { TraceContext } from '../shared/trace-context';
+import {
+  formatTraceparent,
+  newTraceContext,
+  parseTraceparent,
+  TRACEPARENT_HEADER,
+  TRANSPORT_TRACE,
+} from '../shared/trace-context';
 import { startIdleWatchdog } from './idle-watchdog';
 import { EndSchema, headerEntries, RequestHeadSchema, toHeaders } from './tunnel-heads';
 
@@ -20,7 +29,8 @@ export interface ServeConnectSessionOptions {
   readonly streamIdleTimeoutMs: number;
   /** Per-call values handlers read from `context.values`, such as the peer address. */
   readonly contextValues?: () => ContextValues;
-  readonly onStreamError: (error: unknown) => void;
+  /** `trace` is the call's, once its HEAD arrived; undefined for failures before that. */
+  readonly onStreamError: (error: unknown, trace: TraceContext | undefined) => void;
 }
 
 /** Serves every stream the peer opens until the session ends; never rejects. */
@@ -63,7 +73,7 @@ export async function serveConnectSession(
       });
     }
   } catch (error) {
-    onStreamError(error);
+    onStreamError(error, undefined);
   }
 }
 
@@ -75,7 +85,7 @@ interface StreamContext {
   readonly byPath: ReadonlyMap<string, UniversalHandler>;
   readonly streamIdleTimeoutMs: number;
   readonly contextValues: (() => ContextValues) | undefined;
-  readonly onStreamError: (error: unknown) => void;
+  readonly onStreamError: ServeConnectSessionOptions['onStreamError'];
 }
 
 async function serveStream(
@@ -83,6 +93,7 @@ async function serveStream(
   { byPath, streamIdleTimeoutMs, contextValues, onStreamError }: StreamContext
 ): Promise<void> {
   const aborted = new AbortController();
+  let trace: TraceContext | undefined;
   const teardown = (error: unknown) => {
     if (aborted.signal.aborted) {
       return;
@@ -90,7 +101,7 @@ async function serveStream(
     aborted.abort(error);
     writer.abort(error);
     reader.cancel(error);
-    onStreamError(error);
+    onStreamError(error, trace);
   };
   const watchdog = startIdleWatchdog(streamIdleTimeoutMs, () =>
     teardown(new StreamIdleError(`no bytes moved for ${streamIdleTimeoutMs} ms`))
@@ -102,6 +113,8 @@ async function serveStream(
   writer.onFailure(teardown);
   try {
     const head = RequestHeadSchema.parse(await reader.head());
+    const header = toHeaders(head.header);
+    trace = callTrace(header);
     const handler = byPath.get(new URL(head.url).pathname);
     const response: UniversalServerResponse =
       handler === undefined
@@ -110,10 +123,10 @@ async function serveStream(
             httpVersion: TUNNEL_HTTP_VERSION,
             url: head.url,
             method: head.method,
-            header: toHeaders(head.header),
+            header,
             body: reader.body(json => EndSchema.parse(json)),
             signal: aborted.signal,
-            contextValues: contextValues?.(),
+            contextValues: (contextValues?.() ?? createContextValues()).set(TRANSPORT_TRACE, trace),
           });
     await writer.head({ status: response.status, header: headerEntries(response.header) });
     if (response.body !== undefined) {
@@ -125,4 +138,18 @@ async function serveStream(
   } finally {
     watchdog.stop();
   }
+}
+
+/**
+ * The caller's trace, or a new one for a caller that sent none; written back
+ * into the headers so every interceptor and handler sees the same id.
+ */
+function callTrace(header: Headers): TraceContext {
+  const sent = parseTraceparent(header.get(TRACEPARENT_HEADER));
+  if (sent !== undefined) {
+    return sent;
+  }
+  const created = newTraceContext();
+  header.set(TRACEPARENT_HEADER, formatTraceparent(created));
+  return created;
 }

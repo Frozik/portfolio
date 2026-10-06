@@ -5,6 +5,7 @@ import { PlotService } from '@frozik/proto/frozik/transport/v1/plot_pb';
 import { WebSocket } from 'ws';
 
 import type { ITransportSession, TransportProtocol } from '../shared/session';
+import type { WireFormat } from '../shared/wire-format';
 import { TRANSPORT_CLIENT_ADDRESS, TRANSPORT_PROTOCOL } from './peer';
 import type { TestServer } from './test-server';
 import {
@@ -48,8 +49,8 @@ async function start(options: StartOptions = {}): Promise<Running> {
   return { ...server, calls };
 }
 
-async function askLimits(session: ITransportSession): Promise<void> {
-  await createClient(PlotService, transportOver(session)).getPlotLimits({});
+async function askLimits(session: ITransportSession, format: WireFormat = 'binary'): Promise<void> {
+  await createClient(PlotService, transportOver(session, format)).getPlotLimits({});
   session.close();
 }
 
@@ -75,6 +76,14 @@ describe('transport server', () => {
     ]);
   });
 
+  it('serves a debugging browser on the JSON wire it asks for', async () => {
+    running = await start();
+
+    await askLimits(await openTestSession(running, 'websocket', 'json'), 'json');
+
+    expect(running.calls).toEqual([{ address: '127.0.0.1', protocol: 'websocket' }]);
+  });
+
   it('hides the address of the proxied fallback but keeps the one the gateway forwards', async () => {
     running = await start({ behindProxy: ['websocket'] });
 
@@ -98,6 +107,7 @@ describe('transport server', () => {
     ['a wrong secret', { secret: 'guessed' }],
     ['no client address', { clientAddress: '' }],
     ['another protocol version', { subprotocol: 'frozik-mux.v0' }],
+    ['the JSON wire, which is for browsers only', { subprotocol: 'frozik-mux-json.v1' }],
     ['a page from a foreign origin', { origin: 'https://evil.example' }],
   ])('refuses a gateway session with %s', async (_, headers) => {
     running = await start();

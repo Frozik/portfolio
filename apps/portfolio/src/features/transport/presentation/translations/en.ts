@@ -15,6 +15,9 @@ export const transportTranslationsEn = {
     protocols: { http3: 'HTTP/3 (WebTransport)', websocket: 'WebSocket (fallback)' },
     modes: { auto: 'Auto', http3: 'HTTP/3 only', websocket: 'WebSocket only' },
     modeHint: 'Auto tries HTTP/3 first and falls back by itself; the others force one path.',
+    wireFormats: { binary: 'BIN', json: 'JSON' },
+    wireFormatHint:
+      'BIN is protobuf. JSON is for debugging: calls that move no bytes go as JSON, and on the WebSocket every message but raw file bytes is readable text in DevTools.',
   },
   plot: {
     title: 'Plot a function',
@@ -82,6 +85,12 @@ export const transportTranslationsEn = {
     unknownProtocol: 'transport unknown (the session had dropped)',
   },
   failures: {
+    trace: {
+      label: 'Trace ID',
+      copy: 'Copy the trace ID',
+      copied: 'Copied',
+      copyFailed: 'Could not copy',
+    },
     refused: (message: string) => `Refused: ${message}`,
     quota: (message: string) => `Over the limit: ${message}`,
     unreachable: (message: string) =>

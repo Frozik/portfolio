@@ -11,6 +11,7 @@ import { createSessionTransport } from '@frozik/transport/client/session-transpo
 import { dialGateway, TEST_GATEWAY_SECRET } from '@frozik/transport/server/test-server';
 import { decodePinnedCertificate } from '@frozik/transport/shared/pinned-certificate';
 import type { ITransportSession } from '@frozik/transport/shared/session';
+import type { WireFormat } from '@frozik/transport/shared/wire-format';
 import { Crc32 } from '@frozik/utils/hash/crc32';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -22,7 +23,7 @@ import { buildTestConfig } from './testing/test-server-config';
 const CHUNK_BYTES = 64 * 1024;
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const TEST_TIMEOUT_MS = 20_000;
-/** The multiplexer's per-stream credit, both ways (`libs/transport/MUX.md`). */
+/** The multiplexer's per-stream credit, both ways (`libs/transport/README.md`). */
 const STREAM_CREDIT_BYTES = 262_144;
 const DEV_CERTIFICATE_DIR = join(tmpdir(), `transport-dev-certs-${process.pid}`);
 const STALL_WAIT_MS = 300;
@@ -75,16 +76,20 @@ function gatewaySession(running: Running): Promise<ITransportSession> {
   return dialGateway(`ws://127.0.0.1:${running.gatewayPort}/transport`);
 }
 
-function websocketSession(running: Running): Promise<ITransportSession> {
-  const session = openWebSocketSession(`ws://127.0.0.1:${running.publicPort}/transport`);
+function websocketSession(
+  running: Running,
+  format: WireFormat = 'binary'
+): Promise<ITransportSession> {
+  const session = openWebSocketSession(`ws://127.0.0.1:${running.publicPort}/transport`, format);
   return session.ready.then(() => session);
 }
 
-function clientsOver(session: ITransportSession) {
+function clientsOver(session: ITransportSession, format: WireFormat = 'binary') {
   const transport = createSessionTransport({
     openStream: () => session.createBidirectionalStream(),
     baseUrl: 'https://127.0.0.1',
     readMaxBytes: 4 * 1024 * 1024,
+    wireFormat: () => format,
   });
   return { plot: createClient(PlotService, transport), file: createClient(FileService, transport) };
 }
@@ -201,6 +206,36 @@ describe('transport endpoint', () => {
       const limits = await plot.getPlotLimits({});
 
       expect(limits.sampleMaxPoints).toBe(5_000);
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'serves both services over the JSON wire a debugging client asks for',
+    async () => {
+      running = await start();
+      const { plot, file } = clientsOver(await websocketSession(running, 'json'), 'json');
+      const size = 300 * 1024 + 5;
+
+      const chunks = await Array.fromAsync(
+        plot.sample({ expression: 'x^2', xMin: -1, xMax: 1, points: 3 })
+      );
+      const failure = await Array.fromAsync(
+        plot.sample({ expression: 'x + * 2', xMin: 0, xMax: 1, points: 10 })
+      ).then(
+        () => undefined,
+        (error: unknown) => ConnectError.from(error)
+      );
+      const crc = new Crc32();
+      for await (const response of file.echo(fileOf(size))) {
+        if (response.part.case === 'chunk') {
+          crc.update(response.part.value);
+        }
+      }
+
+      expect(chunks.flatMap(chunk => chunk.y)).toEqual([1, 0, 1]);
+      expect(failure?.findDetails(ExpressionErrorSchema)[0]?.position).toBe(4);
+      expect(crc.value).toBe(expectedCrc(size));
     },
     TEST_TIMEOUT_MS
   );

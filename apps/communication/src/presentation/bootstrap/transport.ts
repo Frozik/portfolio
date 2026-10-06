@@ -13,6 +13,7 @@ import type { IServerConfig } from '../../application/config/server-config-schem
 import type { IServerLogger } from '../../application/ports/IServerLogger';
 import { EchoAdmission } from '../../application/transport/EchoAdmission';
 import type { CommunicationMetrics } from '../metrics';
+import { logCall } from '../transport/call-log';
 import { createTransportRouter } from '../transport/transport-router';
 
 /** Matches the multiplexer's DATA limit, so one echo chunk is one message on either protocol. */
@@ -69,7 +70,8 @@ export function createTransportEndpoint({
       },
       onEchoed: bytes => metrics.counters.transportEchoBytesTotal.inc(bytes),
       onRejected: reason => metrics.counters.transportEchoRejectedTotal.inc({ reason }),
-    }
+    },
+    record => logCall(logger, record)
   );
 
   let server: TransportServer | undefined;
@@ -114,8 +116,9 @@ export function createTransportEndpoint({
         },
         onSessionChange: ({ protocol, delta }) =>
           metrics.gauges.transportSessions.inc({ protocol }, delta),
-        onError: error =>
+        onError: (error, trace) =>
           logger.debug('transport.stream-error', {
+            trace_id: trace?.traceId,
             message: error instanceof Error ? error.message : String(error),
           }),
       });

@@ -65,6 +65,11 @@ export class SessionConnector {
     this.drop();
   }
 
+  /** Closes the live session; the next call opens a fresh one. */
+  reconnect(): void {
+    this.drop();
+  }
+
   dispose(): void {
     this.drop();
     this.listeners.clear();

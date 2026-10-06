@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 
-import { MUX_SUBPROTOCOL } from '../mux/mux-limits';
+import { MUX_WIRES } from '../mux/mux-wire';
 import type { SessionRequest } from './peer';
 
 /** Set by the HTTP/3 gateway to the browser's address; read only on the gateway's own listener. */
@@ -33,7 +33,7 @@ export function identifyGatewayRequest(
     if (
       !authorization.startsWith(BEARER) ||
       !timingSafeEqual(digest(authorization.slice(BEARER.length)), expected) ||
-      !offered.includes(MUX_SUBPROTOCOL) ||
+      !offered.includes(MUX_WIRES.binary.subprotocol) ||
       typeof address !== 'string' ||
       address.length === 0
     ) {

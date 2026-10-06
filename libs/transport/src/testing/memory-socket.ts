@@ -15,7 +15,7 @@ class MemorySocket implements IMessageSocket {
   bufferedAmount = 0;
 
   private peer: MemorySocket | undefined;
-  private listener: ((message: Uint8Array) => void) | undefined;
+  private listener: ((message: Uint8Array | string) => void) | undefined;
   private isClosed = false;
   private readonly closing = Promise.withResolvers<void>();
 
@@ -27,14 +27,15 @@ class MemorySocket implements IMessageSocket {
     this.peer = peer;
   }
 
-  send(message: Uint8Array<ArrayBuffer>): void {
+  send(message: Uint8Array<ArrayBuffer> | string): void {
     if (this.isClosed) {
       return;
     }
-    const copy = message.slice();
-    this.bufferedAmount += copy.byteLength;
+    const copy = typeof message === 'string' ? message : message.slice();
+    const size = typeof copy === 'string' ? copy.length : copy.byteLength;
+    this.bufferedAmount += size;
     setTimeout(() => {
-      this.bufferedAmount -= copy.byteLength;
+      this.bufferedAmount -= size;
       this.peer?.deliver(copy);
     }, 0);
   }
@@ -44,11 +45,11 @@ class MemorySocket implements IMessageSocket {
     this.peer?.shut();
   }
 
-  onMessage(listener: (message: Uint8Array) => void): void {
+  onMessage(listener: (message: Uint8Array | string) => void): void {
     this.listener = listener;
   }
 
-  private deliver(message: Uint8Array): void {
+  private deliver(message: Uint8Array | string): void {
     if (!this.isClosed) {
       this.listener?.(message);
     }

@@ -8,9 +8,10 @@ import { WebSocket } from 'ws';
 
 import { openWebSocketSession } from '../client/browser-websocket';
 import { createSessionTransport } from '../client/session-transport';
-import { MUX_SUBPROTOCOL, muxSessionOptions } from '../mux/mux-limits';
-import { createMuxSession } from '../mux/mux-session';
+import { createMuxSession, muxSessionOptions } from '../mux/mux-session';
+import { MUX_WIRES } from '../mux/mux-wire';
 import type { ITransportSession, TransportProtocol } from '../shared/session';
+import type { WireFormat } from '../shared/wire-format';
 import { GATEWAY_CLIENT_ADDRESS_HEADER } from './gateway-identity';
 import { NodeMessageSocket } from './node-message-socket';
 import type { TransportServer } from './start-transport-server';
@@ -72,13 +73,14 @@ export async function stopTestServer({ server, http, gatewayHttp }: TestServer):
 /** `http3` stands for a browser behind the gateway: the session the gateway opens on its behalf. */
 export function openTestSession(
   running: TestServer,
-  protocol: TransportProtocol
+  protocol: TransportProtocol,
+  format: WireFormat = 'binary'
 ): Promise<ITransportSession> {
   switch (protocol) {
     case 'http3':
       return openGatewaySession(running);
     case 'websocket':
-      return websocketSession(running);
+      return websocketSession(running, format);
   }
 }
 
@@ -105,7 +107,7 @@ export async function dialGateway(
     secret = TEST_GATEWAY_SECRET,
     clientAddress = TEST_CLIENT_ADDRESS,
     origin,
-    subprotocol = MUX_SUBPROTOCOL,
+    subprotocol = MUX_WIRES.binary.subprotocol,
   }: GatewayHeaders = {}
 ): Promise<ITransportSession> {
   const socket = new WebSocket(url, subprotocol, {
@@ -117,22 +119,29 @@ export async function dialGateway(
   });
   const session = createMuxSession(
     new NodeMessageSocket(socket),
-    muxSessionOptions('client', GATEWAY_MAX_INCOMING_STREAMS)
+    muxSessionOptions('client', GATEWAY_MAX_INCOMING_STREAMS, MUX_WIRES.binary)
   );
   await session.ready;
   return session;
 }
 
-export function transportOver(session: ITransportSession): Transport {
+export function transportOver(
+  session: ITransportSession,
+  format: WireFormat = 'binary'
+): Transport {
   return createSessionTransport({
     openStream: () => session.createBidirectionalStream(),
     baseUrl: 'https://127.0.0.1',
     readMaxBytes: READ_MAX_BYTES,
+    wireFormat: () => format,
   });
 }
 
-async function websocketSession(running: TestServer): Promise<ITransportSession> {
-  const session = openWebSocketSession(`ws://127.0.0.1:${portOf(running.http)}${PATH}`);
+async function websocketSession(
+  running: TestServer,
+  format: WireFormat
+): Promise<ITransportSession> {
+  const session = openWebSocketSession(`ws://127.0.0.1:${portOf(running.http)}${PATH}`, format);
   await session.ready;
   return session;
 }

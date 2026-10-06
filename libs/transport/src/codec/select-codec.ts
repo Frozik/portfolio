@@ -1,15 +1,17 @@
 import type { DescField, DescMessage, DescMethod } from '@bufbuild/protobuf';
 import { ScalarType } from '@bufbuild/protobuf';
 
+import type { WireFormat } from '../shared/wire-format';
+
 const carriesBytesCache = new WeakMap<DescMessage, boolean>();
 
 /**
- * Methods that move `bytes` use binary protobuf; everything else uses JSON,
- * which stays readable in logs. Derived from the schema, so a contract change
+ * Binary protobuf unless the JSON wire is asked for; even then methods that
+ * move `bytes` stay binary. Derived from the schema, so a contract change
  * picks the right codec by itself.
  */
-export function usesBinaryCodec(method: DescMethod): boolean {
-  return carriesBytes(method.input) || carriesBytes(method.output);
+export function usesBinaryCodec(method: DescMethod, format: WireFormat): boolean {
+  return format === 'binary' || carriesBytes(method.input) || carriesBytes(method.output);
 }
 
 function carriesBytes(message: DescMessage): boolean {

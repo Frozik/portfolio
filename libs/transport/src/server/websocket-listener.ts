@@ -3,9 +3,10 @@ import type { Duplex } from 'node:stream';
 
 import { WebSocketServer } from 'ws';
 
-import { MUX_PROTOCOL_LIMITS, MUX_SUBPROTOCOL, muxSessionOptions } from '../mux/mux-limits';
+import { MUX_MAX_TEXT_MESSAGE_BYTES, MUX_PROTOCOL_LIMITS } from '../mux/mux-limits';
 import { MUX_HEADER_BYTES } from '../mux/mux-message';
-import { createMuxSession } from '../mux/mux-session';
+import { createMuxSession, muxSessionOptions } from '../mux/mux-session';
+import { MUX_WIRES, muxWireOf } from '../mux/mux-wire';
 import type { ITransportSession } from '../shared/session';
 import { NodeMessageSocket } from './node-message-socket';
 import type { SessionRequest } from './peer';
@@ -26,13 +27,18 @@ export interface WebSocketListener {
 }
 
 const FORBIDDEN_RESPONSE = 'HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n';
+/** In order of preference: the binary wire wins when a client offers both. */
+const SUBPROTOCOLS = [MUX_WIRES.binary.subprotocol, MUX_WIRES.json.subprotocol];
 
 export function startWebSocketListener(options: WebSocketListenerOptions): WebSocketListener {
   const sockets = new WebSocketServer({
     noServer: true,
-    maxPayload: MUX_HEADER_BYTES + MUX_PROTOCOL_LIMITS.maxDataBytes,
-    // Bundles from before the subprotocol name none; they speak the same v1.
-    handleProtocols: protocols => (protocols.has(MUX_SUBPROTOCOL) ? MUX_SUBPROTOCOL : false),
+    maxPayload: Math.max(
+      MUX_HEADER_BYTES + MUX_PROTOCOL_LIMITS.maxDataBytes,
+      MUX_MAX_TEXT_MESSAGE_BYTES
+    ),
+    // Bundles from before the subprotocol name none; they speak the binary v1.
+    handleProtocols: protocols => SUBPROTOCOLS.find(name => protocols.has(name)) ?? false,
   });
   const onUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     if (new URL(request.url ?? '/', 'http://upgrade').pathname !== options.path) {
@@ -48,7 +54,7 @@ export function startWebSocketListener(options: WebSocketListenerOptions): WebSo
       options.onSession(
         createMuxSession(
           new NodeMessageSocket(webSocket),
-          muxSessionOptions('server', options.maxStreamsPerSession)
+          muxSessionOptions('server', options.maxStreamsPerSession, muxWireOf(webSocket.protocol))
         ),
         ip
       );

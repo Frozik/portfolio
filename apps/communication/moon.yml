@@ -10,6 +10,12 @@ fileGroups:
     - 'src/**/*'
 
 tasks:
+  # Node in watch mode plus the HTTP/3 gateway container when Docker is there.
+  dev:
+    command: 'pnpm run dev'
+    options:
+      persistent: true
+
   build:
     command: 'pnpm run build'
     inputs:

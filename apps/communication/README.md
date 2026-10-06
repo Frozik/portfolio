@@ -189,6 +189,18 @@ binds `127.0.0.1`, which Docker Desktop reaches through `host.docker.internal`;
 on Linux, where that name is the bridge address, bind `0.0.0.0` in a
 `config/local.toml` instead.
 
+Every call is logged once, when it ends, as `transport.call` with its
+`trace_id` — the [W3C Trace Context](https://www.w3.org/TR/trace-context/) trace id the browser sent in `traceparent` (a call
+without one gets a fresh id), the same id the page shows beside an error:
+`procedure`, `protocol`, `duration_ms`, the first three request messages as
+JSON (`requests`, long strings and bytes cut to their length), the message
+counts and the `outcome`; server faults (`Internal`, `Unknown`, …) add the
+stack. The client address stays out. Every line is `debug`: development
+(`pnpm fullstack`) shows them, production runs at `info` and writes none — the
+box is a demo, not a log store. To look at live calls for a while, raise the
+level through the admin port (`POST /admin/log-level`) and grep
+`journalctl CONTAINER_NAME=communication` for the trace id.
+
 Metrics: `communication_transport_sessions{protocol}`,
 `communication_transport_echo_bytes_total`,
 `communication_transport_echo_rejected_total{reason}`.

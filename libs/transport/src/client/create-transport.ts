@@ -1,5 +1,7 @@
 import type { Transport } from '@connectrpc/connect';
 
+import type { WireFormat } from '../shared/wire-format';
+
 import { openWebSocketSession } from './browser-websocket';
 import { transportEndpoints } from './endpoints';
 import { isWebTransportAvailable, openWebTransport } from './native-webtransport';
@@ -16,6 +18,8 @@ export interface TransportOptions {
   readonly connectTimeoutMs?: number;
   readonly http3RetryAfterMs?: number;
   readonly readMaxBytes?: number;
+  /** `binary` unless set; `json` makes the wire readable for debugging (`WireFormat`). */
+  readonly wireFormat?: WireFormat;
 }
 
 /** A Connect transport that also reports which protocol carries it. */
@@ -23,6 +27,9 @@ export interface ITransport extends Transport {
   readonly state: TransportState;
   subscribe(listener: (state: TransportState) => void): () => void;
   setMode(mode: TransportMode): void;
+  readonly wireFormat: WireFormat;
+  /** Applies from the next call; the WebSocket reconnects to name the new subprotocol. */
+  setWireFormat(format: WireFormat): void;
   dispose(): void;
 }
 
@@ -39,6 +46,7 @@ const TUNNEL_BASE_URL = 'https://transport.invalid';
  */
 export function createTransport(options: TransportOptions): ITransport {
   const endpoints = transportEndpoints(options.serverUrl, options.path ?? DEFAULT_PATH);
+  let wireFormat = options.wireFormat ?? 'binary';
   const connector = new SessionConnector({
     openers: {
       http3: isWebTransportAvailable()
@@ -47,7 +55,7 @@ export function createTransport(options: TransportOptions): ITransport {
             return openWebTransport(target.url, target.serverCertificateHashes);
           }
         : undefined,
-      websocket: () => openWebSocketSession(endpoints.fallbackUrl),
+      websocket: () => openWebSocketSession(endpoints.fallbackUrl, wireFormat),
     },
     mode: options.mode ?? 'auto',
     connectTimeoutMs: options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS,
@@ -58,6 +66,7 @@ export function createTransport(options: TransportOptions): ITransport {
     openStream: async () => (await connector.session()).createBidirectionalStream(),
     baseUrl: TUNNEL_BASE_URL,
     readMaxBytes: options.readMaxBytes ?? DEFAULT_READ_MAX_BYTES,
+    wireFormat: () => wireFormat,
   });
   return {
     unary: transport.unary.bind(transport),
@@ -67,6 +76,15 @@ export function createTransport(options: TransportOptions): ITransport {
     },
     subscribe: listener => connector.subscribe(listener),
     setMode: mode => connector.setMode(mode),
+    get wireFormat() {
+      return wireFormat;
+    },
+    setWireFormat: format => {
+      if (format !== wireFormat) {
+        wireFormat = format;
+        connector.reconnect();
+      }
+    },
     dispose: () => connector.dispose(),
   };
 }

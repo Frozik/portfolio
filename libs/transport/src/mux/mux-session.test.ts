@@ -3,6 +3,7 @@ import { createMemorySessionPair, TEST_MUX_LIMITS } from '../testing/memory-sess
 import { createMemorySocketPair } from '../testing/memory-socket';
 import { encodeMuxMessage, MUX_TYPE } from './mux-message';
 import { createMuxSession } from './mux-session';
+import { MUX_WIRES } from './mux-wire';
 
 const STALL_WAIT_MS = 50;
 
@@ -105,7 +106,11 @@ describe('WebSocket multiplexer', () => {
 
   it('drops the whole session when the peer sends past its credit', async () => {
     const [rawClient, serverSocket] = createMemorySocketPair();
-    const server = createMuxSession(serverSocket, { ...TEST_MUX_LIMITS, role: 'server' });
+    const server = createMuxSession(serverSocket, {
+      ...TEST_MUX_LIMITS,
+      wire: MUX_WIRES.binary,
+      role: 'server',
+    });
     rawClient.send(encodeMuxMessage({ type: MUX_TYPE.open, streamId: 1 }));
     const flood = new Uint8Array(TEST_MUX_LIMITS.maxDataBytes);
     for (let sent = 0; sent <= TEST_MUX_LIMITS.initialCredit; sent += flood.byteLength) {
@@ -131,7 +136,7 @@ describe('WebSocket multiplexer', () => {
           deliver = listener;
         },
       },
-      { ...TEST_MUX_LIMITS, role: 'server' }
+      { ...TEST_MUX_LIMITS, wire: MUX_WIRES.binary, role: 'server' }
     );
 
     expect(() => {

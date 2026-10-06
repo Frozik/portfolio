@@ -1,6 +1,6 @@
 # HTTP/3 Transport
 
-One transport for every call: Connect RPC over HTTP/3 WebTransport, with a multiplexed WebSocket taking over by itself when UDP is blocked. Plots a function the server samples, and echoes a file through the server straight back to disk with backpressure end to end.
+One transport for every call: Connect RPC over HTTP/3 WebTransport, with a multiplexed WebSocket taking over by itself when UDP is blocked. Plots a function the server samples, and echoes a file through the server straight back to disk with backpressure end to end. Every call carries a W3C Trace Context id that a failure shows and the server logs under.
 
 Live: [https://frozik.github.io/portfolio/transport](https://frozik.github.io/portfolio/transport) · Part of the [portfolio](../../../../../README.md) monorepo; code lives in `apps/portfolio/src/features/transport/`; the transport lives in [`libs/transport`](../../../../../libs/transport/README.md), the contract in [`libs/proto`](../../../../../libs/proto/README.md), the services in [`apps/communication`](../../../../communication/README.md).
 
@@ -19,7 +19,7 @@ import { PlotService } from '@frozik/proto/frozik/transport/v1/plot_pb';
 // 1. One transport per server: HTTP/3 first, the WebSocket fallback by itself.
 const transport = createTransport({ serverUrl: 'https://api.example' });
 
-// 2. Generated clients over it — JSON or binary protobuf, chosen per method.
+// 2. Generated clients over it — binary protobuf, or JSON with `wireFormat: 'json'`.
 const plots = createClient(PlotService, transport);
 const files = createClient(FileService, transport);
 
@@ -71,10 +71,22 @@ newer WebTransport flow control, works over HTTP/3 too. The connection panel sho
 either path to compare them. Each call is its own stream: a slow echo never
 holds back a plot.
 
-**The codec follows the schema.** Methods whose messages carry `bytes` travel
-as binary protobuf; everything else as JSON, readable in the server logs. So
-`GetPlotLimits`, `Sample` and `GetEchoLimits` are JSON, `Echo` is binary —
-nothing is configured, the transport reads it from the method descriptor.
+**BIN or JSON.** By default every call is binary protobuf in binary
+WebSocket messages. The connection panel's *JSON* switch is the debugging
+format (`wireFormat: 'json'`, `setWireFormat`): methods whose messages carry
+no `bytes` — `GetPlotLimits`, `Sample`, `GetEchoLimits` — go as JSON, and the
+WebSocket reconnects on the readable `frozik-mux-json.v1` wire, where the
+call heads, trailers, JSON messages and flow-control messages are text
+messages in DevTools and only the file bytes of `Echo` stay binary. `Echo`
+remains binary protobuf in either format; the transport reads that from the
+method descriptor. Over HTTP/3 the switch changes the codec only — the gateway
+always talks binary to Node.
+
+**Trace ids — W3C Trace Context.** Every call sends a
+[W3C Trace Context](https://www.w3.org/TR/trace-context/) `traceparent`; when one fails, the
+error notice shows its trace id with a copy button, and the server has logged
+that call under the same id — what the page sent and how it ended (see
+[`libs/transport`](../../../../../libs/transport/README.md#trace-ids--w3c-trace-context)).
 
 **Plot a function.** The visitor types a function of `x`
 (`x^2 + 2x + 3`, `2sin(x)`, `1/x`) and the range the chart opens on; the page
@@ -120,10 +132,13 @@ cap (HAProxy limits connections per source). The plot takes expressions up to
 200 characters and at most 20 000 points per window; letters run together split into the
 names it knows (`2pix` is `2·pi·x`).
 
-**Development.** With `VITE_COMMUNICATION_URL=http://localhost:4445` the
-page talks to a local server: the WebSocket fallback on the same port, and
-HTTP/3 through the gateway container that `pnpm dev` in `apps/communication`
-starts (Docker; without it only the fallback works). The certificate is a
+**Development.** `pnpm fullstack` at the repository root starts both halves:
+the communication server in watch mode with the gateway container, and the
+page with `VITE_COMMUNICATION_URL=http://localhost:4445`, so it talks to the
+local server — the WebSocket fallback on the same port, HTTP/3 through the
+gateway (Docker; without it only the fallback works). Open
+`http://localhost:5173/portfolio/transport`: the server admits only that
+origin. The certificate is a
 self-signed one Node writes to `.dev-certs` and the gateway serves; the page
 pins it by the hash at `/transport/pinned-certificate` (browsers accept a
 pinned certificate for at most fourteen days, so Node renews it when less than
