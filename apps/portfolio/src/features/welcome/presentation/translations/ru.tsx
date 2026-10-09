@@ -19,7 +19,14 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
   },
   hero: {
     remote: 'Удалённо · по всему миру',
+    myTime: 'моё время',
     utc: 'UTC+3',
+    sky: {
+      open: 'Показать небо',
+      label: 'Небо сейчас',
+      sunrise: 'рассвет',
+      sunset: 'закат',
+    },
     available: 'Открыт для удалённой работы',
     headline1: 'Senior Frontend',
     headline2: 'Engineer',

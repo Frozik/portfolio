@@ -94,7 +94,8 @@ describe('charting the course', () => {
   });
 
   it('keeps what the camera shows however far it has been panned from the ball, the memory cap notwithstanding', () => {
-    const PANNED_SECTORS = 150;
+    const MAX_SECTORS = 40;
+    const PANNED_SECTORS = 60;
     const FRAMES_PER_SECTOR = 8;
     let play = frames(startCourse(WORLD_SEED, SIZE), ENOUGH_FRAMES);
     let seen = nothingSeen();
@@ -104,10 +105,11 @@ describe('charting the course', () => {
     };
     for (let sx = 0; sx <= PANNED_SECTORS; sx += 1) {
       for (let frame = 0; frame < FRAMES_PER_SECTOR; frame += 1) {
-        ({ play, seen } = chart(play, seen, lookAt(sx)));
+        ({ play, seen } = chart(play, seen, lookAt(sx), MAX_SECTORS));
       }
     }
 
+    expect(play.course.sectors.length).toBeLessThanOrEqual(MAX_SECTORS);
     expect(hasSector(play.course, PANNED_SECTORS, 0)).toBe(true);
     expect(hasSector(play.course, 0, 0)).toBe(true);
   });

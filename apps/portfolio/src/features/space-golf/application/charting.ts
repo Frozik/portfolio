@@ -65,7 +65,12 @@ export function ground(play: Play): Play {
  * shows, when they are not there. What the camera shows is remembered as
  * seen, and past the cap the farthest of the seen is forgotten.
  */
-export function chart(play: Play, seen: Seen, visible: Bounds): Charted {
+export function chart(
+  play: Play,
+  seen: Seen,
+  visible: Bounds,
+  maxSectors: number = MAX_SECTORS
+): Charted {
   const grounded = ground(play);
   const { course, ball } = grounded;
   const here = sectorAt(course.size, ball.position);
@@ -84,7 +89,7 @@ export function chart(play: Play, seen: Seen, visible: Bounds): Charted {
       nowSeen.add(sectorKey(sx, sy));
     }
   }
-  return forgetFarthest({ play: made, seen: nowSeen }, shown);
+  return forgetFarthest({ play: made, seen: nowSeen }, shown, maxSectors);
 }
 
 /** The play after a hole-out has dropped the far sectors: nothing is seen yet in the new country. */
@@ -102,16 +107,20 @@ function headingOf(ball: BallState): Vector2 {
  * from the ball looked at the farthest sectors of all, which were forgotten
  * the frame after they were made, and the screen stayed empty).
  */
-function forgetFarthest(charted: Charted, shown: readonly SectorIndex[]): Charted {
+function forgetFarthest(
+  charted: Charted,
+  shown: readonly SectorIndex[],
+  maxSectors: number
+): Charted {
   const { course, ball } = charted.play;
-  if (course.sectors.length <= MAX_SECTORS) {
+  if (course.sectors.length <= maxSectors) {
     return charted;
   }
   const here = sectorAt(course.size, ball.position);
   const pinned = new Set(
     [...blockRound(here, AHEAD_RING_SECTORS), ...shown].map(({ sx, sy }) => sectorKey(sx, sy))
   );
-  const room = Math.max(0, MAX_SECTORS - pinned.size);
+  const room = Math.max(0, maxSectors - pinned.size);
   const nearestSeen = [...charted.seen]
     .filter(key => !pinned.has(key))
     .map(key => {

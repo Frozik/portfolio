@@ -19,7 +19,14 @@ export const welcomeTranslationsEn = {
   },
   hero: {
     remote: 'Remote · worldwide',
+    myTime: 'my time',
     utc: 'UTC+3',
+    sky: {
+      open: 'Show the sky',
+      label: 'The sky right now',
+      sunrise: 'sunrise',
+      sunset: 'sunset',
+    },
     available: 'Available for remote work',
     headline1: 'Senior Frontend',
     headline2: 'Engineer',
