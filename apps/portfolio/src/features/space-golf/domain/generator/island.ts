@@ -25,8 +25,8 @@ const THIN_ARM_THICKNESS = 1;
 const THIN_ARM_CHANCE = 0.2;
 /** A thin arm is a long one: a short thin stub reads as a sliver. */
 const MIN_THIN_ARM_LENGTH = 3;
-const MIN_ARM_LENGTH = 2;
-const MAX_ARM_LENGTH = 6;
+const MIN_ARM_LENGTH = 3;
+const MAX_ARM_LENGTH = 8;
 /** No pocket or slot in an island is narrower than this many cells — a metre. */
 const MIN_SLOT_CELLS = 2;
 const BLOCK_CHANCE = 0.35;
@@ -36,8 +36,8 @@ const MAX_BLOCK_HEIGHT = 4;
 /** Bars run from short to the long framing shapes the original lays along its edges. */
 const MIN_BAR_LENGTH = 3;
 const MAX_BAR_LENGTH = 14;
-const MAX_BODY_WIDTH = 16;
-const MAX_BODY_HEIGHT = 14;
+const MAX_BODY_WIDTH = 20;
+const MAX_BODY_HEIGHT = 18;
 /** How often a body's arm runs along its longer side rather than any way. */
 const ALONG_THE_LENGTH_CHANCE = 0.5;
 /** An islet's footprint, in cells: lozenges a cell thick and small octagons. */
@@ -127,7 +127,7 @@ export function growIsland(
   // The flood fill is the dear one: it goes last.
   if (
     hasNarrowSlot(grown, MIN_SLOT_CELLS, arm) ||
-    hasDiagonalOnlyContact(grown) ||
+    hasDiagonalOnlyContact(grown, arm) ||
     !isConnected(grown, anchor)
   ) {
     return undefined;

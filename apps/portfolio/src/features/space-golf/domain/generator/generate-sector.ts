@@ -131,10 +131,10 @@ export function generateSector(request: SectorRequest): Sector {
     y: point.y + toWindow.y,
   }));
 
+  const land: Cell[] = request.neighbours.flatMap(each =>
+    each.cells.map(cell => ({ x: cell.x - originCell.x, y: cell.y - originCell.y }))
+  );
   const obstacles: Cell[] = [
-    ...request.neighbours.flatMap(each =>
-      each.cells.map(cell => ({ x: cell.x - originCell.x, y: cell.y - originCell.y }))
-    ),
     ...[...theirFloaters.map(floater => floater.center), ...keepClear].flatMap(blobOf),
     ...theirRods.flatMap(pathCells),
   ];
@@ -149,6 +149,7 @@ export function generateSector(request: SectorRequest): Sector {
       height: size.heightCells,
     },
     overhangCells: SECTOR_OVERHANG_CELLS,
+    land,
     obstacles,
     withTee: request.withTee,
   });

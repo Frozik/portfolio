@@ -11,11 +11,18 @@ import {
 } from '../constants';
 import { rodPath, rodSeat, rodTipLength, rodWidth } from '../rods';
 import { containsPoint } from '../walls';
+import type { Cell } from './cell-grid';
 import type { Sector, SectorRequest } from './generate-sector';
 import { generateSector, sectorAt, sectorBounds, SECTOR_OVERHANG_CELLS } from './generate-sector';
 
 const SIZE = { widthCells: 24, heightCells: 27 };
 const SEEDS = [1, 2, 3];
+const SIDES: readonly (readonly [number, number])[] = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
 
 function request(overrides: Partial<SectorRequest> = {}): SectorRequest {
   return {
@@ -42,6 +49,53 @@ function gapBetween(a: Sector, b: Sector): number {
     }
   }
   return nearest;
+}
+
+/** The cells grouped into islands: cells sharing a side belong to one. */
+function islandsOf(cells: readonly Cell[]): readonly (readonly Cell[])[] {
+  const keyOf = (cell: Cell): string => `${cell.x},${cell.y}`;
+  const unvisited = new Map(cells.map(cell => [keyOf(cell), cell]));
+  const islands: Cell[][] = [];
+  for (const start of cells) {
+    if (!unvisited.delete(keyOf(start))) {
+      continue;
+    }
+    const island: Cell[] = [];
+    const frontier = [start];
+    for (let cell = frontier.pop(); cell !== undefined; cell = frontier.pop()) {
+      island.push(cell);
+      for (const [dx, dy] of SIDES) {
+        const key = keyOf({ x: cell.x + dx, y: cell.y + dy });
+        const neighbour = unvisited.get(key);
+        if (neighbour !== undefined) {
+          unvisited.delete(key);
+          frontier.push(neighbour);
+        }
+      }
+    }
+    islands.push(island);
+  }
+  return islands;
+}
+
+/** How far the cell of the sector's ground farthest from the land is from it, in steps that may go diagonally. */
+function widestGapOf(sector: Sector, land: readonly Cell[]): number {
+  let widest = 0;
+  for (let y = sector.sy * SIZE.heightCells; y < (sector.sy + 1) * SIZE.heightCells; y += 1) {
+    for (let x = sector.sx * SIZE.widthCells; x < (sector.sx + 1) * SIZE.widthCells; x += 1) {
+      const nearest = Math.min(
+        ...land.map(cell => Math.max(Math.abs(cell.x - x), Math.abs(cell.y - y)))
+      );
+      widest = Math.max(widest, nearest);
+    }
+  }
+  return widest;
+}
+
+function boxAreaOf(cells: readonly Cell[]): number {
+  const xs = cells.map(cell => cell.x);
+  const ys = cells.map(cell => cell.y);
+  return (Math.max(...xs) - Math.min(...xs) + 1) * (Math.max(...ys) - Math.min(...ys) + 1);
 }
 
 describe('sectors of the plane', () => {
@@ -73,6 +127,44 @@ describe('generateSector', () => {
         expect(wall.bounds.min.y).toBeGreaterThanOrEqual(ground.min.y - reach - 1e-9);
         expect(wall.bounds.max.x).toBeLessThanOrEqual(ground.max.x + reach + 1e-9);
         expect(wall.bounds.max.y).toBeLessThanOrEqual(ground.max.y + reach + 1e-9);
+      }
+    }
+  });
+
+  it('grows every island bigger than an islet into a shape, even boxed in by the sectors round it: none is a bare block or bar', () => {
+    const ISLET_MAX_CELLS = 6;
+    const BLOCK_SECTORS = 3;
+    for (const worldSeed of SEEDS) {
+      const made: Sector[] = [];
+      for (let sy = 0; sy < BLOCK_SECTORS; sy += 1) {
+        for (let sx = 0; sx < BLOCK_SECTORS; sx += 1) {
+          made.push(generateSector(request({ worldSeed, sx, sy, neighbours: [...made] })));
+        }
+      }
+      const bodies = made
+        .flatMap(sector => islandsOf(sector.cells))
+        .filter(island => island.length > ISLET_MAX_CELLS);
+
+      expect(bodies.length).toBeGreaterThan(0);
+      for (const body of bodies) {
+        expect(body.length).toBeLessThan(boxAreaOf(body));
+      }
+    }
+  });
+
+  it('leaves no wide void: every spot of a sector lies within three metres of an island, its own or one next door', () => {
+    const MAX_VOID_CELLS = 6;
+    const BLOCK_SECTORS = 3;
+    for (const worldSeed of SEEDS) {
+      const made: Sector[] = [];
+      for (let sy = 0; sy < BLOCK_SECTORS; sy += 1) {
+        for (let sx = 0; sx < BLOCK_SECTORS; sx += 1) {
+          const sector = generateSector(request({ worldSeed, sx, sy, neighbours: [...made] }));
+          made.push(sector);
+          const land = made.flatMap(each => each.cells);
+
+          expect(widestGapOf(sector, land)).toBeLessThanOrEqual(MAX_VOID_CELLS);
+        }
       }
     }
   });

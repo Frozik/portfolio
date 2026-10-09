@@ -93,6 +93,25 @@ describe('charting the course', () => {
     expect(hasSector(frames(flying(play, { x: 1, y: 1 }), 1, lookingFar).course, 6, 0)).toBe(true);
   });
 
+  it('keeps what the camera shows however far it has been panned from the ball, the memory cap notwithstanding', () => {
+    const PANNED_SECTORS = 150;
+    const FRAMES_PER_SECTOR = 8;
+    let play = frames(startCourse(WORLD_SEED, SIZE), ENOUGH_FRAMES);
+    let seen = nothingSeen();
+    const lookAt = (sx: number): Bounds => {
+      const bounds = sectorBounds(SIZE, sx, 0);
+      return viewRound({ x: bounds.min.x + 6, y: bounds.min.y + 6 });
+    };
+    for (let sx = 0; sx <= PANNED_SECTORS; sx += 1) {
+      for (let frame = 0; frame < FRAMES_PER_SECTOR; frame += 1) {
+        ({ play, seen } = chart(play, seen, lookAt(sx)));
+      }
+    }
+
+    expect(hasSector(play.course, PANNED_SECTORS, 0)).toBe(true);
+    expect(hasSector(play.course, 0, 0)).toBe(true);
+  });
+
   it('never leaves the ball over ground that is not there', () => {
     const play = startCourse(WORLD_SEED, SIZE);
     const far = sectorBounds(SIZE, 9, -7);

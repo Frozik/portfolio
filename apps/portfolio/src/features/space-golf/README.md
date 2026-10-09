@@ -183,11 +183,17 @@ time.
   rests — two screens out in every direction, a sector a frame — and the
   stroke stops that work until the ball rests again, so a flight costs
   nothing but itself; only a flight that leaves what was made, or a camera
-  looking past it, has a sector made on the fly. A sector is islands after the original's — blocks and bars grown
-  into L, T, Z and stair shapes, lozenge and octagon islets, a metre thick,
-  most corners cut by a long diagonal — that reach a little into the
+  looking past it, has a sector made on the fly. Past 120 sectors the seen
+  ones farthest from the ball are forgotten, but never what is on screen,
+  however far the view has been panned. A sector is islands after the original's — blocks and bars grown
+  into L, T, Z and stair shapes, a metre thick, most corners cut by a long
+  diagonal, each grown with two to six arms as soon as it is seeded and
+  dropped if it cannot take a shape, so no bare block or bar is left; a
+  lozenge or octagon islet only now and then — that reach a little into the
   sectors next door and keep their gap from what already stands there, so
-  no seam shows; then surfaces, spike rows, floaters and rods, every rod
+  no seam shows. No spot of a sector lies more than three metres from an
+  island, its own or one next door: the widest gaps left by the scatter get
+  an island of their own; then surfaces, spike rows, floaters and rods, every rod
   fastened at both ends to islands of its own sector. Holing out closes the cup under the
   ball, counts the hole, drops everything but the block of sectors round
   the ball — the country beyond is made anew, differently — and cuts the

@@ -134,11 +134,14 @@ export function overlapsSolid(grid: CellGrid, rect: CellRect): boolean {
 /**
  * Whether two solid cells touch only at a corner, with both cells between
  * them empty. Such a point contact leaves no room for a 45° junction, so
- * layouts with one are rejected.
+ * layouts with one are rejected. Only the corners of `within` and round it
+ * are looked at: what stood in the window before — a rod's stepped path,
+ * say — is not the new cells' contact (2026-10-10: scanning the whole
+ * window refused every arm near a slanted rod and left sectors empty).
  */
-export function hasDiagonalOnlyContact(grid: CellGrid): boolean {
-  for (let y = 0; y < grid.height - 1; y += 1) {
-    for (let x = 0; x < grid.width - 1; x += 1) {
+export function hasDiagonalOnlyContact(grid: CellGrid, within: CellRect): boolean {
+  for (let y = within.y - 1; y < within.y + within.height; y += 1) {
+    for (let x = within.x - 1; x < within.x + within.width; x += 1) {
       const lowerLeft = isBlock(grid, x, y);
       const lowerRight = isBlock(grid, x + 1, y);
       const upperLeft = isBlock(grid, x, y + 1);

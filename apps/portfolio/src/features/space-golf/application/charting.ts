@@ -84,7 +84,7 @@ export function chart(play: Play, seen: Seen, visible: Bounds): Charted {
       nowSeen.add(sectorKey(sx, sy));
     }
   }
-  return forgetFarthest({ play: made, seen: nowSeen });
+  return forgetFarthest({ play: made, seen: nowSeen }, shown);
 }
 
 /** The play after a hole-out has dropped the far sectors: nothing is seen yet in the new country. */
@@ -96,16 +96,24 @@ function headingOf(ball: BallState): Vector2 {
   return add(ball.position, scale(ball.velocity, FLIGHT_LOOKAHEAD_SECONDS));
 }
 
-function forgetFarthest(charted: Charted): Charted {
+/**
+ * Past the cap the seen sectors farthest from the ball go, but never the
+ * ring round it nor what the camera shows (2026-10-10: a camera panned far
+ * from the ball looked at the farthest sectors of all, which were forgotten
+ * the frame after they were made, and the screen stayed empty).
+ */
+function forgetFarthest(charted: Charted, shown: readonly SectorIndex[]): Charted {
   const { course, ball } = charted.play;
   if (course.sectors.length <= MAX_SECTORS) {
     return charted;
   }
   const here = sectorAt(course.size, ball.position);
-  const ring = new Set(blockRound(here, AHEAD_RING_SECTORS).map(({ sx, sy }) => sectorKey(sx, sy)));
-  const room = Math.max(0, MAX_SECTORS - ring.size);
+  const pinned = new Set(
+    [...blockRound(here, AHEAD_RING_SECTORS), ...shown].map(({ sx, sy }) => sectorKey(sx, sy))
+  );
+  const room = Math.max(0, MAX_SECTORS - pinned.size);
   const nearestSeen = [...charted.seen]
-    .filter(key => !ring.has(key))
+    .filter(key => !pinned.has(key))
     .map(key => {
       const [sx, sy] = key.split(',').map(Number);
       return { key, away: steps({ sx, sy }, here) };
@@ -113,10 +121,10 @@ function forgetFarthest(charted: Charted): Charted {
     .sort((a, b) => a.away - b.away)
     .slice(0, room)
     .map(each => each.key);
-  const keep = new Set([...ring, ...nearestSeen]);
+  const keep = new Set([...pinned, ...nearestSeen]);
   return {
     play: keepingSectors(charted.play, keep),
-    seen: new Set(nearestSeen),
+    seen: new Set([...charted.seen].filter(key => keep.has(key))),
   };
 }
 
