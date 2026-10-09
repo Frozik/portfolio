@@ -1,5 +1,6 @@
 import type { Cell, CellGrid, CellRect } from './cell-grid';
 import {
+  fillCells,
   fillRect,
   hasDiagonalOnlyContact,
   hasNarrowSlot,
@@ -8,49 +9,22 @@ import {
   overlapsSolid,
 } from './cell-grid';
 import type { Random } from './random';
+import type { IslandKind } from './seed-shapes';
+import { LIMB_THICKNESS, MAX_THICKNESS_CELLS, seedFootprint } from './seed-shapes';
 
-/**
- * The original's boards, read off eight screenshots (2026-09-18), mix three
- * kinds of island on the very half-metre module this grid has: long ones
- * framing the screen's edges, free-standing blocks and bars grown by arms
- * into an L, T, Z or stair, and lozenges and octagons a cell or two across.
- * The endless course has no edge to frame, so the first two are one kind
- * here: `body`, a block or a bar, short or long, grown by arms; `islet` is
- * never grown. Limbs are two cells thick, now and then one.
- */
-export type IslandKind = 'body' | 'islet';
-
-const LIMB_THICKNESS = 2;
 const THIN_ARM_THICKNESS = 1;
 const THIN_ARM_CHANCE = 0.2;
 /** A thin arm is a long one: a short thin stub reads as a sliver. */
 const MIN_THIN_ARM_LENGTH = 3;
 const MIN_ARM_LENGTH = 3;
 const MAX_ARM_LENGTH = 8;
+const MAX_GIANT_ARM_LENGTH = 16;
 /** No pocket or slot in an island is narrower than this many cells — a metre. */
 const MIN_SLOT_CELLS = 2;
-const BLOCK_CHANCE = 0.35;
-const MIN_BLOCK_SIDE = 3;
-const MAX_BLOCK_WIDTH = 5;
-const MAX_BLOCK_HEIGHT = 4;
-/** Bars run from short to the long framing shapes the original lays along its edges. */
-const MIN_BAR_LENGTH = 3;
-const MAX_BAR_LENGTH = 14;
-const MAX_BODY_WIDTH = 20;
-const MAX_BODY_HEIGHT = 18;
+const BODY_BOX: Box = { width: 20, height: 18 };
+const GIANT_BOX: Box = { width: 44, height: 30 };
 /** How often a body's arm runs along its longer side rather than any way. */
 const ALONG_THE_LENGTH_CHANCE = 0.5;
-/** An islet's footprint, in cells: lozenges a cell thick and small octagons. */
-const ISLET_SIZES: readonly (readonly [width: number, height: number])[] = [
-  [2, 1],
-  [3, 1],
-  [4, 1],
-  [1, 2],
-  [1, 3],
-  [2, 2],
-  [3, 2],
-  [2, 3],
-];
 /** Empty cells kept between one island and the next — a metre and a half, ten ball widths — so there is room to fly between them (a metre until 2026-09-18). */
 export const ISLAND_GAP_CELLS = 3;
 const DIRECTIONS: readonly Cell[] = [
@@ -59,6 +33,11 @@ const DIRECTIONS: readonly Cell[] = [
   { x: 0, y: 1 },
   { x: 0, y: -1 },
 ];
+
+interface Box {
+  readonly width: number;
+  readonly height: number;
+}
 
 export interface Island {
   readonly kind: IslandKind;
@@ -83,23 +62,37 @@ export function seedIsland(
   kind: IslandKind,
   region: CellRect
 ): Placement | undefined {
-  const rect = seedOf(random, kind, region);
+  const footprint = seedFootprint(random, kind);
+  const rect: CellRect = {
+    x: region.x + random.int(0, Math.max(0, region.width - footprint.width)),
+    y: region.y + random.int(0, Math.max(0, region.height - footprint.height)),
+    width: footprint.width,
+    height: footprint.height,
+  };
   if (!fits(grid, rect, anchor, new Set()) || overlapsSolid(grid, rect)) {
     return undefined;
   }
-  const grown = fillRect(grid, rect);
+  const cells = footprint.cells.map(cell => ({ x: rect.x + cell.x, y: rect.y + cell.y }));
+  const grown = fillCells(grid, cells);
   if (!isConnected(grown, anchor)) {
     return undefined;
   }
-  return { grid: grown, island: { kind, cells: new Set(cellsOf(grown, rect)), bounds: rect } };
+  return {
+    grid: grown,
+    island: { kind, cells: new Set(cells.map(cell => keyOf(grid, cell))), bounds: rect },
+  };
 }
 
 /**
  * The island with one more arm: a bar starting next to one of its cells
- * and running off, which turns a bar into an L, a T, a U, a Z or a stair
- * or a long bar into a C. The island keeps its gap from every other and
- * stays within its box; every empty cell stays reachable from the tee.
- * Nothing when the arm does not fit, and never for an islet.
+ * and running off, which turns a bar into an L, a T, a Z, a cross or a
+ * stair. The island keeps its gap from every other and stays within its
+ * box; every empty cell stays reachable from the tee. No row or column
+ * crosses it twice, so it never wraps round a yard of its own — a U, a C
+ * or a hook reads as a hollow the ball is trapped in — and no arm lies
+ * along another so close that the two make a lump thicker than an island
+ * may be (2026-10-10, both the user's call). Nothing when the arm does not
+ * fit, and never for an islet.
  */
 export function growIsland(
   random: Random,
@@ -116,11 +109,19 @@ export function growIsland(
   const towards = random.pick(DIRECTIONS);
   const arm = armFrom(random, island, { x: cell.x + towards.x, y: cell.y + towards.y });
   const bounds = union(island.bounds, arm);
-  if (!withinBox(bounds) || !contains(limit, arm) || !fits(grid, arm, anchor, island.cells)) {
+  if (
+    !withinBox(bounds, island.kind) ||
+    !contains(limit, arm) ||
+    !fits(grid, arm, anchor, island.cells)
+  ) {
     return undefined;
   }
   const added = cellsOf(grid, arm).filter(key => !island.cells.has(key));
   if (added.length === 0 || added.length > budget) {
+    return undefined;
+  }
+  const cells = new Set([...island.cells, ...added]);
+  if (!isOrthogonallyConvex(grid, cells) || isTooThick(grid, cells, added)) {
     return undefined;
   }
   const grown = fillRect(grid, arm);
@@ -134,33 +135,71 @@ export function growIsland(
   }
   return {
     grid: grown,
-    island: { ...island, cells: new Set([...island.cells, ...added]), bounds },
+    island: { ...island, cells, bounds },
   };
 }
 
-function seedOf(random: Random, kind: IslandKind, region: CellRect): CellRect {
-  const [width, height] = kind === 'islet' ? random.pick(ISLET_SIZES) : bodySize(random);
+function withinBox(bounds: CellRect, kind: IslandKind): boolean {
+  const box = kind === 'giant' ? GIANT_BOX : BODY_BOX;
+  return bounds.width <= box.width && bounds.height <= box.height;
+}
+
+/** Whether some square too big to lie inside an island is all island, one of the `added` cells in it. */
+function isTooThick(grid: CellGrid, cells: ReadonlySet<number>, added: readonly number[]): boolean {
+  const side = MAX_THICKNESS_CELLS + 1;
+  const isIsland = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < grid.width && y < grid.height && cells.has(y * grid.width + x);
+  const isSolidSquare = (left: number, bottom: number): boolean => {
+    for (let y = bottom; y < bottom + side; y += 1) {
+      for (let x = left; x < left + side; x += 1) {
+        if (!isIsland(x, y)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  return added.some(key => {
+    const { x, y } = cellOf(grid, key);
+    for (let bottom = y - side + 1; bottom <= y; bottom += 1) {
+      for (let left = x - side + 1; left <= x; left += 1) {
+        if (isSolidSquare(left, bottom)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+}
+
+/** Whether every row and every column of the island is one unbroken run of its cells. */
+function isOrthogonallyConvex(grid: CellGrid, cells: ReadonlySet<number>): boolean {
+  const rows = new Map<number, Run>();
+  const columns = new Map<number, Run>();
+  for (const key of cells) {
+    const { x, y } = cellOf(grid, key);
+    rows.set(y, extend(rows.get(y), x));
+    columns.set(x, extend(columns.get(x), y));
+  }
+  const unbroken = (run: Run): boolean => run.last - run.first + 1 === run.count;
+  return [...rows.values()].every(unbroken) && [...columns.values()].every(unbroken);
+}
+
+interface Run {
+  readonly first: number;
+  readonly last: number;
+  readonly count: number;
+}
+
+function extend(run: Run | undefined, at: number): Run {
+  if (run === undefined) {
+    return { first: at, last: at, count: 1 };
+  }
   return {
-    x: region.x + random.int(0, Math.max(0, region.width - width)),
-    y: region.y + random.int(0, Math.max(0, region.height - height)),
-    width,
-    height,
+    first: Math.min(run.first, at),
+    last: Math.max(run.last, at),
+    count: run.count + 1,
   };
-}
-
-/** A chunky block, or a bar two cells thick. */
-function bodySize(random: Random): readonly [width: number, height: number] {
-  const block = random.chance(BLOCK_CHANCE);
-  const horizontal = random.chance(1 / 2);
-  const length = block
-    ? random.int(MIN_BLOCK_SIDE, MAX_BLOCK_WIDTH)
-    : random.int(MIN_BAR_LENGTH, MAX_BAR_LENGTH);
-  const thickness = block ? random.int(MIN_BLOCK_SIDE, MAX_BLOCK_HEIGHT) : LIMB_THICKNESS;
-  return horizontal ? [length, thickness] : [thickness, length];
-}
-
-function withinBox(bounds: CellRect): boolean {
-  return bounds.width <= MAX_BODY_WIDTH && bounds.height <= MAX_BODY_HEIGHT;
 }
 
 function contains(outer: CellRect, inner: CellRect): boolean {
@@ -186,7 +225,8 @@ function armFrom(random: Random, island: Island, cell: Cell): CellRect {
   const along = armWay(random, island);
   const thin = random.chance(THIN_ARM_CHANCE);
   const thickness = thin ? THIN_ARM_THICKNESS : LIMB_THICKNESS;
-  const length = random.int(thin ? MIN_THIN_ARM_LENGTH : MIN_ARM_LENGTH, MAX_ARM_LENGTH);
+  const longest = island.kind === 'giant' ? MAX_GIANT_ARM_LENGTH : MAX_ARM_LENGTH;
+  const length = random.int(thin ? MIN_THIN_ARM_LENGTH : MIN_ARM_LENGTH, longest);
   const far = { x: cell.x + along.x * (length - 1), y: cell.y + along.y * (length - 1) };
   const horizontal = along.y === 0;
   const across = random.int(0, thickness - 1);

@@ -4,11 +4,12 @@ import { BALL_RADIUS_METERS, CELL_METERS, CONTACT_EPSILON_METERS } from '../cons
 import type { Wall } from '../level';
 import type { Cell, CellGrid, CellRect } from './cell-grid';
 import { fillRect, gridOfCells, isBlock, sealUnreachable } from './cell-grid';
-import type { Island, IslandKind, Placement } from './island';
+import type { Island, Placement } from './island';
 import { growIsland, seedIsland } from './island';
 import { createIslandWall } from './island-wall';
 import { traceOutlines } from './outline';
 import type { Random } from './random';
+import type { IslandKind } from './seed-shapes';
 import { widestVoid } from './voids';
 
 /**
@@ -25,7 +26,10 @@ const ISLETS: Range = { min: 0, max: 2 };
 const ISLET_RESERVE_CELLS = 20;
 const SEED_ATTEMPTS = 200;
 /** A body is kept only with this many arms grown: a bare block or bar is no shape. */
-const ARMS: Range = { min: 2, max: 6 };
+const BODY_ARMS: Range = { min: 2, max: 6 };
+const GIANT_ARMS: Range = { min: 10, max: 18 };
+/** The chance of a giant per reference area: one sector in eight on a phone, one in four on a desktop. */
+const GIANT_CHANCE = 0.25;
 const ARM_ATTEMPTS = 60;
 /**
  * No spot of the ground lies farther than this from an island, in cells — a
@@ -129,6 +133,9 @@ export function createLayout(random: Random, plan: LayoutPlan): Layout {
     }
     return placed;
   };
+  if (random.chance(GIANT_CHANCE * areaShare)) {
+    place('giant', 1, growthBudget, region);
+  }
   place('body', Math.max(1, wanted(BODIES)), growthBudget, region);
   place('islet', wanted(ISLETS), budget, region);
 
@@ -179,7 +186,8 @@ function shapeBody(
   budget: number,
   limit: CellRect
 ): Placement | undefined {
-  const arms = random.int(ARMS.min, ARMS.max);
+  const range = seeded.island.kind === 'giant' ? GIANT_ARMS : BODY_ARMS;
+  const arms = random.int(range.min, range.max);
   let shaped = seeded;
   let grown = 0;
   for (let attempt = 0; attempt < ARM_ATTEMPTS && grown < arms; attempt += 1) {
@@ -192,7 +200,7 @@ function shapeBody(
   }
   const { cells, bounds } = shaped.island;
   const bare = cells.size === bounds.width * bounds.height;
-  return grown >= ARMS.min && !bare ? shaped : undefined;
+  return grown >= range.min && !bare ? shaped : undefined;
 }
 
 /** An empty cell of the region, the nearest to its middle: where walking the window starts. */

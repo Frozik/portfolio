@@ -14,6 +14,8 @@ import { containsPoint } from '../walls';
 import type { Cell } from './cell-grid';
 import type { Sector, SectorRequest } from './generate-sector';
 import { generateSector, sectorAt, sectorBounds, SECTOR_OVERHANG_CELLS } from './generate-sector';
+import { ISLAND_GAP_CELLS } from './island';
+import { MAX_THICKNESS_CELLS } from './seed-shapes';
 
 const SIZE = { widthCells: 24, heightCells: 27 };
 const SEEDS = [1, 2, 3];
@@ -92,6 +94,32 @@ function widestGapOf(sector: Sector, land: readonly Cell[]): number {
   return widest;
 }
 
+const BLOCK_SECTORS = 3;
+
+/** A block of sectors made in order, each knowing the ones made before it, as the course grows. */
+function blockOfSectors(worldSeed: number): readonly Sector[] {
+  const made: Sector[] = [];
+  for (let sy = 0; sy < BLOCK_SECTORS; sy += 1) {
+    for (let sx = 0; sx < BLOCK_SECTORS; sx += 1) {
+      made.push(generateSector(request({ worldSeed, sx, sy, neighbours: [...made] })));
+    }
+  }
+  return made;
+}
+
+/** Whether every line of the island — grouped by `line`, ordered by `along` — is one unbroken run. */
+function crossingsOf(
+  island: readonly Cell[],
+  line: (cell: Cell) => number,
+  along: (cell: Cell) => number
+): boolean {
+  const lines = Map.groupBy(island, line);
+  return [...lines.values()].every(cells => {
+    const positions = cells.map(along);
+    return Math.max(...positions) - Math.min(...positions) + 1 === positions.length;
+  });
+}
+
 function boxAreaOf(cells: readonly Cell[]): number {
   const xs = cells.map(cell => cell.x);
   const ys = cells.map(cell => cell.y);
@@ -133,15 +161,8 @@ describe('generateSector', () => {
 
   it('grows every island bigger than an islet into a shape, even boxed in by the sectors round it: none is a bare block or bar', () => {
     const ISLET_MAX_CELLS = 6;
-    const BLOCK_SECTORS = 3;
     for (const worldSeed of SEEDS) {
-      const made: Sector[] = [];
-      for (let sy = 0; sy < BLOCK_SECTORS; sy += 1) {
-        for (let sx = 0; sx < BLOCK_SECTORS; sx += 1) {
-          made.push(generateSector(request({ worldSeed, sx, sy, neighbours: [...made] })));
-        }
-      }
-      const bodies = made
+      const bodies = blockOfSectors(worldSeed)
         .flatMap(sector => islandsOf(sector.cells))
         .filter(island => island.length > ISLET_MAX_CELLS);
 
@@ -152,9 +173,60 @@ describe('generateSector', () => {
     }
   });
 
+  it('never wraps an island round a yard of its own: every row and every column crosses it once', () => {
+    for (const worldSeed of SEEDS) {
+      for (const sector of blockOfSectors(worldSeed)) {
+        for (const island of islandsOf(sector.cells)) {
+          expect(
+            crossingsOf(
+              island,
+              cell => cell.y,
+              cell => cell.x
+            )
+          ).toBe(true);
+          expect(
+            crossingsOf(
+              island,
+              cell => cell.x,
+              cell => cell.y
+            )
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('is never thicker than a metre and a half anywhere: a big island is big by its branches, not a lump', () => {
+    const side = MAX_THICKNESS_CELLS + 1;
+    for (const worldSeed of SEEDS) {
+      for (const sector of blockOfSectors(worldSeed)) {
+        const solid = new Set(sector.cells.map(cell => `${cell.x},${cell.y}`));
+        const lumps = sector.cells.filter(corner =>
+          Array.from({ length: side * side }, (_, index) => ({
+            x: corner.x + (index % side),
+            y: corner.y + Math.floor(index / side),
+          })).every(cell => solid.has(`${cell.x},${cell.y}`))
+        );
+
+        expect(lumps).toEqual([]);
+      }
+    }
+  });
+
+  it('now and then grows a giant several times the size of a common island', () => {
+    const GIANT_CELLS = 100;
+    const islands = SEEDS.flatMap(worldSeed =>
+      blockOfSectors(worldSeed).flatMap(sector => islandsOf(sector.cells))
+    );
+
+    expect(islands.some(island => island.length >= GIANT_CELLS)).toBe(true);
+    expect(islands.filter(island => island.length >= GIANT_CELLS).length).toBeLessThan(
+      islands.length / 10
+    );
+  });
+
   it('leaves no wide void: every spot of a sector lies within three metres of an island, its own or one next door', () => {
     const MAX_VOID_CELLS = 6;
-    const BLOCK_SECTORS = 3;
     for (const worldSeed of SEEDS) {
       const made: Sector[] = [];
       for (let sy = 0; sy < BLOCK_SECTORS; sy += 1) {
@@ -177,7 +249,7 @@ describe('generateSector', () => {
       expect(gapBetween(first, second)).toBeGreaterThan(3);
       const border = sectorBounds(SIZE, 1, 0).min.x / CELL_METERS;
       const nearTheSeam = [...first.cells, ...second.cells].filter(
-        cell => Math.abs(cell.x - border) <= 2
+        cell => Math.abs(cell.x - border) <= ISLAND_GAP_CELLS
       );
       expect(nearTheSeam.length).toBeGreaterThan(0);
     }

@@ -44,6 +44,14 @@ export function gridOfCells(width: number, height: number, cells: Iterable<Cell>
   return { width, height, solid };
 }
 
+export function fillCells(grid: CellGrid, cells: readonly Cell[]): CellGrid {
+  const solid = [...grid.solid];
+  for (const cell of cells) {
+    solid[cell.y * grid.width + cell.x] = true;
+  }
+  return { ...grid, solid };
+}
+
 export function fillRect(grid: CellGrid, rect: CellRect): CellGrid {
   const solid = [...grid.solid];
   for (let y = rect.y; y < rect.y + rect.height; y += 1) {

@@ -186,9 +186,16 @@ time.
   looking past it, has a sector made on the fly. Past 120 sectors the seen
   ones farthest from the ball are forgotten, but never what is on screen,
   however far the view has been panned. A sector is islands after the original's — blocks and bars grown
-  into L, T, Z and stair shapes, a metre thick, most corners cut by a long
-  diagonal, each grown with two to six arms as soon as it is seeded and
-  dropped if it cannot take a shape, so no bare block or bar is left; a
+  into L, T, Z, cross and stair shapes, a metre thick, most corners cut by a
+  long diagonal, each grown with two to six arms as soon as it is seeded and
+  dropped if it cannot take a shape, so no bare block or bar is left; no
+  row or column crosses an island twice, so none wraps round a yard of its
+  own — no U, C or hook to trap the ball in a hollow — and nowhere is one
+  thicker than a metre and a half: a big island is big by its branches,
+  never a solid lump. Some start from a diagonal staircase or a cross
+  instead of a bar and grow their arms from it; now and then a giant, a
+  long spine, staircase or cross grown with ten to eighteen arms up to
+  twenty-two metres across; a
   lozenge or octagon islet only now and then — that reach a little into the
   sectors next door and keep their gap from what already stands there, so
   no seam shows. No spot of a sector lies more than three metres from an
