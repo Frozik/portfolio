@@ -1,5 +1,5 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import {
   DEFAULT_CONTOUR_INTERVAL_METERS,
   DEFAULT_GRID_STEP_METERS,
@@ -22,7 +22,7 @@ import type { UtilityRoute } from './routing';
 import type { ShapeComposition } from './shapes';
 import { createRectangle } from './shapes';
 
-export type MarkId = Opaque<'MarkId', string>;
+export type MarkId = Brand<string, 'MarkId'>;
 
 export interface ElevationMark {
   readonly id: MarkId;

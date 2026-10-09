@@ -1,12 +1,12 @@
 import type { ISO, Milliseconds } from '@frozik/utils/date/types';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
-export type RoomId = Opaque<'RoomId', string>;
-export type CardId = Opaque<'CardId', string>;
-export type GroupId = Opaque<'GroupId', string>;
-export type ActionItemId = Opaque<'ActionItemId', string>;
-export type ColumnId = Opaque<'ColumnId', string>;
-export type ClientId = Opaque<'ClientId', number>;
+export type RoomId = Brand<string, 'RoomId'>;
+export type CardId = Brand<string, 'CardId'>;
+export type GroupId = Brand<string, 'GroupId'>;
+export type ActionItemId = Brand<string, 'ActionItemId'>;
+export type ColumnId = Brand<string, 'ColumnId'>;
+export type ClientId = Brand<number, 'ClientId'>;
 
 const RETRO_PHASES = ['brainstorm', 'group', 'vote', 'discuss', 'close'] as const;
 export type RetroPhase = (typeof RETRO_PHASES)[number];

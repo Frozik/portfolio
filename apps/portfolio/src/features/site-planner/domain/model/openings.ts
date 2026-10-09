@@ -1,9 +1,9 @@
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 import type { WallId } from './walls';
 
-export type OpeningId = Opaque<'OpeningId', string>;
+export type OpeningId = Brand<string, 'OpeningId'>;
 
 export type OpeningKind = 'door' | 'window';
 

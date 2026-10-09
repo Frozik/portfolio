@@ -1,16 +1,16 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 import type { CableTypeId } from './cables';
 import type { WallId } from './walls';
 
-export type DeviceId = Opaque<'DeviceId', string>;
+export type DeviceId = Brand<string, 'DeviceId'>;
 
 export function createDeviceId(): DeviceId {
   return crypto.randomUUID() as DeviceId;
 }
-export type CircuitGroupId = Opaque<'CircuitGroupId', string>;
+export type CircuitGroupId = Brand<string, 'CircuitGroupId'>;
 
 /**
  * The electrical device kinds: the щиток is a

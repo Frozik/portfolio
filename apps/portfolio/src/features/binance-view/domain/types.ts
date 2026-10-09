@@ -1,10 +1,10 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import type { ValueDescriptorFail } from '@frozik/utils/value-descriptors/types';
 
 import type { InstrumentSymbol } from './instruments';
 
-export type UnixTimeMs = Opaque<'UnixTimeMs', number>;
+export type UnixTimeMs = Brand<number, 'UnixTimeMs'>;
 
 export interface IOrderbookSnapshot {
   readonly eventTimeMs: UnixTimeMs;

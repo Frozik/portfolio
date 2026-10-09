@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
-export type StairId = Opaque<'StairId', string>;
+export type StairId = Brand<string, 'StairId'>;
 
 export function createStairId(): StairId {
   return crypto.randomUUID() as StairId;

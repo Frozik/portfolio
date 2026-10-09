@@ -1,12 +1,12 @@
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { DISPLAY_NAME_MAX_LENGTH, DISPLAY_NAME_MIN_LENGTH, UUID_V4_REGEX } from './constants';
 import { InvalidPayloadError } from './errors';
 
 // Branded identifiers — opaque so plain strings cannot be mistakenly used in
 // their place.
-export type RoomId = Opaque<'RoomId', string>;
-export type UserId = Opaque<'UserId', string>;
-export type DisplayName = Opaque<'DisplayName', string>;
+export type RoomId = Brand<string, 'RoomId'>;
+export type UserId = Brand<string, 'UserId'>;
+export type DisplayName = Brand<string, 'DisplayName'>;
 
 // Plain `string` aliases (per plan m12 — not branded).
 export type SocketId = string;

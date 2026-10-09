@@ -1,11 +1,11 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { RotatedBox } from '../geometry/hit-test-shape';
 import type { Meters } from '../units';
 import type { UtilitySystem } from './foundation';
 
-export type FurnitureId = Opaque<'FurnitureId', string>;
+export type FurnitureId = Brand<string, 'FurnitureId'>;
 
 export function createFurnitureId(): FurnitureId {
   return crypto.randomUUID() as FurnitureId;

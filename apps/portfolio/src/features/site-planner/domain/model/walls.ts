@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
-export type WallId = Opaque<'WallId', string>;
+export type WallId = Brand<string, 'WallId'>;
 
 /**
  * What a wall is built of — the user-named set plus glazing.

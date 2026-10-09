@@ -1,19 +1,19 @@
 import type { ISO } from '@frozik/utils/date/types';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 /**
  * Stable identifier of a conf room; used both in the URL and as the
  * y-webrtc topic suffix. Session-independent — two participants sharing
  * the same link join the same room.
  */
-export type RoomId = Opaque<'ConfRoomId', string>;
+export type RoomId = Brand<string, 'ConfRoomId'>;
 
 /**
  * Per-session participant identifier. Minted with `crypto.randomUUID()`
  * on each room mount and held in memory only — conf is fully anonymous
  * and nothing about a participant is persisted.
  */
-export type ParticipantId = Opaque<'ConfParticipantId', string>;
+export type ParticipantId = Brand<string, 'ConfParticipantId'>;
 
 /**
  * Persisted lobby entry for a previously created or visited conf room.

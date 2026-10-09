@@ -1,4 +1,4 @@
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { IBlockSpatialIndexItem } from './block-store/block-spatial-index';
 import type { UnixTimeMs } from './types';
@@ -20,10 +20,10 @@ import type { UnixTimeMs } from './types';
  */
 
 /** Opaque numeric trade id from Binance's `@aggTrade` stream (field `a`). */
-export type TradeId = Opaque<'TradeId', number>;
+export type TradeId = Brand<number, 'TradeId'>;
 
 /** Opaque base-asset quantity for a trade (field `q`). */
-export type Quantity = Opaque<'Quantity', number>;
+export type Quantity = Brand<number, 'Quantity'>;
 
 /**
  * One raw trade as received from Binance's `<symbol>@aggTrade` stream

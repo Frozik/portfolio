@@ -1,15 +1,15 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { DEFAULT_CAR_ROTATION_DEGREES } from '../constants';
 import type { Meters } from '../units';
 import { normalizeTurnDegrees } from '../units';
 
 /** What stands on the plot outside the buildings: trees, cars and the paths between them. */
-export type TreeId = Opaque<'TreeId', string>;
+export type TreeId = Brand<string, 'TreeId'>;
 
-export type PathId = Opaque<'PathId', string>;
+export type PathId = Brand<string, 'PathId'>;
 
-export type CarId = Opaque<'CarId', string>;
+export type CarId = Brand<string, 'CarId'>;
 
 /**
  * The kinds of tree the catalogue plants. Named species rather than families —

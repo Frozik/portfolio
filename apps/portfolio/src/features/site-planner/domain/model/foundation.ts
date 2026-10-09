@@ -1,6 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
@@ -58,7 +58,7 @@ export const ENTRY_SYSTEMS: readonly UtilitySystem[] = [
 /** Fresh entries walk along the outline this far apart, so badges never stack. */
 export const ENTRY_SPACING_METERS: Meters = 3;
 
-export type UtilityEntryId = Opaque<'UtilityEntryId', string>;
+export type UtilityEntryId = Brand<string, 'UtilityEntryId'>;
 
 export type UtilityEntryKind = 'sleeve' | 'facade';
 

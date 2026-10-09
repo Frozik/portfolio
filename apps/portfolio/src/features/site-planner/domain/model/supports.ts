@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
-export type SupportId = Opaque<'SupportId', string>;
+export type SupportId = Brand<string, 'SupportId'>;
 
 export function createSupportId(): SupportId {
   return crypto.randomUUID() as SupportId;

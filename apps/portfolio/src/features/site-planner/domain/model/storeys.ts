@@ -1,5 +1,5 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 import type { VerticalDuct } from './ducts';
@@ -16,7 +16,7 @@ import type { SupportPost } from './supports';
 import type { Wall } from './walls';
 import type { WiringRoute } from './wiring-routes';
 
-export type StoreyId = Opaque<'StoreyId', string>;
+export type StoreyId = Brand<string, 'StoreyId'>;
 
 /**
  * What an exposed stretch of ceiling is covered with:
@@ -31,7 +31,7 @@ export const ROOF_COVERS: readonly RoofCover[] = ['membrane', 'terrace', 'green'
 /** The default an unlabelled stretch of exposed ceiling wears. */
 export const DEFAULT_ROOF_COVER: RoofCover = 'membrane';
 
-export type RoofZoneLabelId = Opaque<'RoofZoneLabelId', string>;
+export type RoofZoneLabelId = Brand<string, 'RoofZoneLabelId'>;
 
 /**
  * The stored half of a roof zone: zones themselves derive from the exposed

@@ -1,4 +1,4 @@
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { DEFAULT_PAD_ELEVATION_MODE, DEFAULT_WALL_HEIGHT_METERS } from '../constants';
 import type { Meters } from '../units';
 import type { Foundation, UtilityEntry } from './foundation';
@@ -11,7 +11,7 @@ import type { RoofZoneLabel, Storey, StoreyId } from './storeys';
 import type { Wall } from './walls';
 
 /** A building of the plan: its footprint composition, pad and foundation, storeys, roof and utility entries — with the readers that fill in what an older document left out. */
-export type BuildingId = Opaque<'BuildingId', string>;
+export type BuildingId = Brand<string, 'BuildingId'>;
 
 export type PadElevationMode = 'terrain-center' | 'terrain-mean' | 'terrain-min' | 'manual';
 

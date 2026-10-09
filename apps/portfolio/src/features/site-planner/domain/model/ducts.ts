@@ -1,9 +1,9 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 
-export type DuctId = Opaque<'DuctId', string>;
+export type DuctId = Brand<string, 'DuctId'>;
 
 export function createDuctId(): DuctId {
   return crypto.randomUUID() as DuctId;

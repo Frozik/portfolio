@@ -1,5 +1,5 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 /**
  * What a room is for. A catalog row, not
@@ -49,7 +49,7 @@ export function isWetRoomType(roomTypeId: RoomTypeId): boolean {
   return ROOM_TYPES.find(type => type.id === roomTypeId)?.isWet ?? false;
 }
 
-export type RoomLabelId = Opaque<'RoomLabelId', string>;
+export type RoomLabelId = Brand<string, 'RoomLabelId'>;
 
 /**
  * The stored half of a room: rooms themselves derive from the wall loops and

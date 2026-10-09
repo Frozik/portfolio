@@ -1,10 +1,10 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { InstallationPresetId } from './installation';
 import { DEFAULT_INSTALLATION_PRESET } from './installation';
 
-export type WiringRouteId = Opaque<'WiringRouteId', string>;
+export type WiringRouteId = Brand<string, 'WiringRouteId'>;
 
 export function createWiringRouteId(): WiringRouteId {
   return crypto.randomUUID() as WiringRouteId;

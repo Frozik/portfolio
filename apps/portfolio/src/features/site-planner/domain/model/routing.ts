@@ -1,12 +1,12 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { isNil } from 'lodash-es';
 
 import type { Meters } from '../units';
 import type { UtilitySystem } from './foundation';
 import { defaultEntryDepth, ENTRY_SYSTEMS } from './foundation';
 
-export type UtilityRouteId = Opaque<'UtilityRouteId', string>;
+export type UtilityRouteId = Brand<string, 'UtilityRouteId'>;
 
 /**
  * One site trench — the outdoor half of a utility system, drawn on the plot

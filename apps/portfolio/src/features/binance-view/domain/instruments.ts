@@ -1,8 +1,8 @@
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { isNil } from 'lodash-es';
 
 /** A Binance spot symbol in exchange form (`BTCUSDT`); minted only by {@link parseInstrumentSymbol}. */
-export type InstrumentSymbol = Opaque<'InstrumentSymbol', string>;
+export type InstrumentSymbol = Brand<string, 'InstrumentSymbol'>;
 
 /** An instrument the chart can show: its symbol and the heatmap price-bin height. */
 export interface IInstrument {

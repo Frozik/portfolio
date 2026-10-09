@@ -1,11 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 import { isNil } from 'lodash-es';
 
 import type { Meters } from '../units';
 
-export type ShapeId = Opaque<'ShapeId', string>;
+export type ShapeId = Brand<string, 'ShapeId'>;
 
 export interface RectangleShape {
   readonly kind: 'rectangle';

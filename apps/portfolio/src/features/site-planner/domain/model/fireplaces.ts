@@ -1,11 +1,11 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import type { Opaque } from '@frozik/utils/types/base';
+import type { Brand } from '@frozik/utils/types/base';
 
 import type { Meters } from '../units';
 import type { DuctId, VerticalDuct } from './ducts';
 import { DEFAULT_FLUE_DEPTH_METERS, DEFAULT_FLUE_WIDTH_METERS } from './ducts';
 
-export type FireplaceId = Opaque<'FireplaceId', string>;
+export type FireplaceId = Brand<string, 'FireplaceId'>;
 
 export function createFireplaceId(): FireplaceId {
   return crypto.randomUUID() as FireplaceId;
