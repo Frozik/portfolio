@@ -52,9 +52,9 @@ const FRAMED_LAYOUT: GPUVertexBufferLayout = {
 };
 /**
  * Room the per-frame buffers start with — ninety dust quads, or an overlay of
- * the ball with its trail, the dots and the rings. The drawn bow alone is over
- * five thousand vertices, so an overlay carrying one grows past this; the
- * buffer grows with it rather than cutting the frame short.
+ * the ball with its trail, the dots, the rings and the charging blaster
+ * (some twelve hundred vertices of its own). An overlay that needs more
+ * grows the buffer rather than cutting the frame short.
  */
 const INITIAL_DYNAMIC_VERTEX_CAPACITY = 6144;
 

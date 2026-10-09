@@ -49,12 +49,10 @@ export const PALETTE = {
   stationPanelRib: [54, 74, 132, 255],
   stationMast: [134, 112, 68, 255],
   aimRing: [255, 255, 255, 70],
-  /** The bow the band is drawn as, and the light about it: an amber haze where the hand is, gold sparks, a white-hot string. */
+  /** The blaster's energy: an amber haze about the core, gold motes, white-hot at full charge. */
   bandGlow: [255, 168, 48, 255],
   bandGold: [255, 206, 92, 255],
   bandCore: [255, 250, 226, 255],
-  /** The Khokhloma berry painted along the bow's limbs, the same red the pattern shader uses. */
-  berry: [189, 26, 18, 255],
 } as const satisfies Record<string, Rgba>;
 
 /** The same colour at another opacity: the fading ring of a burst, the tail of a trail, the pull of the band. */

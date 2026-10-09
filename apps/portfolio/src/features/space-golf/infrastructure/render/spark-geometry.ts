@@ -65,6 +65,6 @@ export function twinkle(timeSeconds: number, offset: number, radiansPerSecond: n
   return HALF + HALF * Math.sin(timeSeconds * radiansPerSecond + offset * FULL_TURN);
 }
 
-export function around(center: Vector2, angle: number, radius: number): Vector2 {
+function around(center: Vector2, angle: number, radius: number): Vector2 {
   return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
 }

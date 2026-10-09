@@ -3,8 +3,8 @@ import { isNil } from 'lodash-es';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { AIM_RING_RADIUS_METERS, BALL_RADIUS_METERS } from '../../domain/constants';
 
+import { writeBlaster } from './blaster-geometry';
 import { writeBonus } from './bonus-geometry';
-import { writeBow } from './bow-geometry';
 import type { MeshData } from './mesh-writer';
 import { MeshWriter } from './mesh-writer';
 import { PALETTE, withAlpha } from './palette';
@@ -50,7 +50,7 @@ export function buildDustMesh(dust: ParticleField): MeshData {
 }
 
 /**
- * The ball, the bow being drawn, the aim ring, the dots and the burst —
+ * The ball, the blaster being charged, the aim ring, the dots and the burst —
  * drawn over the board. The band may be pulled while the ball still moves:
  * the ring and the dots then follow the ball in grey, and turn white the
  * moment it rests and the stroke can be played.
@@ -89,10 +89,10 @@ export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshDa
     writeTrail(writer, [...scene.trail, scene.ballPosition]);
     writer.circle(scene.ballPosition, BALL_RADIUS_METERS, PALETTE.ball);
   }
-  // The bow is what the hand is doing: it goes over everything, the ball
-  // included; the arrow waits for a ball that can be shot.
+  // The blaster is what the hand is doing: it goes over everything, the
+  // ball included; it fires only at a ball that can be shot.
   if (!isNil(scene.band)) {
-    writeBow(writer, scene.band, { nocked: scene.ball.phase === 'aiming', timeSeconds });
+    writeBlaster(writer, scene.band, { armed: scene.ball.phase === 'aiming', timeSeconds });
   }
   return writer.finish();
 }

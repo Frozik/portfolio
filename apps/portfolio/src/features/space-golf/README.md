@@ -20,23 +20,26 @@ time.
   impulse, not the flight — the bend under gravity is for the player to
   judge; returning to the anchor cancels the stroke, and so does letting
   go before the ball rests
-- The pull is drawn as what it is — a bow, painted in Khokhloma: its
-  leather-wrapped grip stands where the press landed, its recurve limbs lie
-  across the shot — narrow at the grip, broad as a blade where the painting
-  goes, hooking back into a bound horn at the tip — in black lacquer inside
-  a gold edge, with golden blooms, clusters of red berries and leaves down
-  them, and the string is drawn back to the finger, bending the limbs as it
-  goes. The
-  arrow on the string — brass shaft, steel head, one white feather and one
-  red off its bound tail — points where the ball will fly, and gold
-  four-pointed sparks ride it out of the nock — but only while the ball rests and letting
-  go would play the stroke: pull the band with the ball still moving and the
-  bow is drawn on nothing, as the ring and the dots go grey. The bow appears with the stroke itself: a
-  band too slack to play one shows no bow, as it shows no ring and no dots,
-  only a haze where the press landed; and the string stops at the strongest
-  stroke — pulling further only turns the bow, since the speed is capped
-  there anyway. It turns with the finger, brightens the further the string
-  is drawn, and is measured on the screen, so it keeps its size at any zoom
+- The pull is drawn as a blaster charging. The press is the core where the
+  energy gathers: a reticle marks it from the very first touch, so the
+  centre of the shot is never in doubt. Once the pull earns a stroke the
+  blaster stands round the core — one smooth hull, black lacquer in a gold
+  edge like the islands, the chamber drawn out into a nose along the shot,
+  nothing bolted on. A beam draws energy from the finger into the core,
+  motes of gold flowing along it faster the harder it is pulled; the core
+  swells and turns from gold to white-hot; a gauge of twelve segments set
+  in the chamber fills from the back round both sides to the nose; a
+  channel inside the hull fills towards the nose; and three focusing rings
+  floating ahead of it, touching nothing, light one by one as the charge
+  passes a third, two thirds and all of it. At full charge the gauge
+  flickers white and the light gathers past the last ring, so the strongest
+  stroke reads without counting. A band too slack to play a stroke shows
+  only the reticle and a dim core, as it shows no ring and no dots; the
+  beam stops at the strongest stroke — pulling further only turns the
+  blaster, since the speed is capped there anyway; and pulled with the ball
+  still moving the blaster charges but stays cold, its gauge and channel
+  grey and its rings dark, as the ring and the dots go grey. It is measured
+  on the screen, so it keeps its size at any zoom
 - Gravity does not flip at the hit: the pull travels from where it was to
   the new floor in 0.3 s whatever the angle, so a reversal passes
   through weightlessness and a ball that touched a ceiling sags off it
