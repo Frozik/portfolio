@@ -94,6 +94,25 @@ describe('RichEditor', () => {
     expect(editor.innerHTML).toBe('');
   });
 
+  it('shows markup in the value as text, never as elements', () => {
+    const value = '<img src="x" data-probe="1"> a < b';
+    const { container } = render(<RichEditor value={value} />);
+    const editor = editorOf(container);
+
+    expect(editor.querySelector('img')).toBeNull();
+    expect(editor.textContent).toBe(value);
+  });
+
+  it('keeps typed markup as text', () => {
+    const { container } = render(<ControlledEditor initial="" />);
+    const editor = editorOf(container);
+
+    typeInto(editor, { data: '<b>bold</b>', selection: { start: 0, end: 0 } });
+
+    expect(editor.querySelector('b')).toBeNull();
+    expect(editor.textContent).toBe('<b>bold</b>');
+  });
+
   it('exposes focus() through its handle', () => {
     let handle: { focus(): void } | null = null;
     const { container } = render(

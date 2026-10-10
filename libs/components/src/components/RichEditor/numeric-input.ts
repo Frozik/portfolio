@@ -1,6 +1,13 @@
 import { clamp, isEmpty, isNil } from 'lodash-es';
 
-import type { INormalizedInput, ISelection, THtmlRenderer, TInputNormalizer } from './defs';
+import type {
+  INormalizedInput,
+  ISelection,
+  ITextSegment,
+  TInputNormalizer,
+  TSegmentRenderer,
+} from './defs';
+import { mergeSegments } from './segments';
 import styles from './styles.module.css';
 
 const MAX_DIGITS = 50;
@@ -81,11 +88,11 @@ function splitNumericText(text: string): INumericParts {
 }
 
 /**
- * Wraps digits in group / pip spans by their power of ten. Out of focus the
+ * Gives digits group / pip classes by their power of ten. Out of focus the
  * fraction is padded to the display scale so the field reads as a formatted
  * number; while editing the text is shown exactly as typed.
  */
-export function createNumericHtmlRenderer({
+export function createNumericSegmentRenderer({
   decimal,
   pipStart,
   pipSize = DEFAULT_PIP_SIZE,
@@ -93,14 +100,14 @@ export function createNumericHtmlRenderer({
   readonly decimal?: number;
   readonly pipStart?: number;
   readonly pipSize?: number;
-}): THtmlRenderer {
+}): TSegmentRenderer {
   const displayScale = Math.max(decimal ?? 0, isNil(pipStart) ? 0 : pipStart + pipSize);
   const pipRange = isNil(pipStart)
     ? undefined
     : { high: -pipStart, low: -(pipStart + pipSize - 1) };
 
-  const classesOf = (power: number, leadingPower: number): string =>
-    [
+  const classesOf = (power: number, leadingPower: number): string | undefined => {
+    const classes = [
       power > 0 && power % DIGITS_PER_GROUP === 0 ? styles.groupEnd : '',
       power >= 0 && power % DIGITS_PER_GROUP === DIGITS_PER_GROUP - 1 && power !== leadingPower
         ? styles.groupStart
@@ -109,30 +116,34 @@ export function createNumericHtmlRenderer({
     ]
       .filter(className => !isEmpty(className))
       .join(' ');
+    return isEmpty(classes) ? undefined : classes;
+  };
 
-  const digitHtml = (digit: string, power: number, leadingPower: number): string => {
-    const classes = classesOf(power, leadingPower);
-    return isEmpty(classes) ? digit : `<span class="${classes}">${digit}</span>`;
+  const digitSegment = (digit: string, power: number, leadingPower: number): ITextSegment => {
+    const className = classesOf(power, leadingPower);
+    return isNil(className) ? { text: digit } : { text: digit, className };
   };
 
   return (text, editing) => {
     if (isEmpty(text)) {
-      return '';
+      return [];
     }
 
     const { negative, integer, fraction } = splitNumericText(text);
     const fractionDigits = editing ? (fraction ?? '') : (fraction ?? '').padEnd(displayScale, '0');
     const leadingPower = integer.length - 1;
-
-    const integerHtml = Array.from(integer, (digit, index) =>
-      digitHtml(digit, leadingPower - index, leadingPower)
-    ).join('');
-    const fractionHtml = Array.from(fractionDigits, (digit, index) =>
-      digitHtml(digit, -(index + 1), leadingPower)
-    ).join('');
     const separator = !isNil(fraction) || fractionDigits.length > 0 ? '.' : '';
 
-    return `${negative ? '-' : ''}${integerHtml}${separator}${fractionHtml}`;
+    return mergeSegments([
+      { text: negative ? '-' : '' },
+      ...Array.from(integer, (digit, index) =>
+        digitSegment(digit, leadingPower - index, leadingPower)
+      ),
+      { text: separator },
+      ...Array.from(fractionDigits, (digit, index) =>
+        digitSegment(digit, -(index + 1), leadingPower)
+      ),
+    ]).filter(segment => !isEmpty(segment.text));
   };
 }
 

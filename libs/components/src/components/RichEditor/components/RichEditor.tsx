@@ -16,16 +16,17 @@ import type {
   INormalizedInput,
   IRichEditorHandle,
   ISelection,
-  THtmlRenderer,
+  ITextSegment,
   TInputNormalizer,
+  TSegmentRenderer,
 } from '../defs';
 import { findNextTabStop } from '../focus-navigation';
+import { plainSegments, renderSegments } from '../segments';
 import { getElementSelection, rangeToSelection, setElementSelection } from '../selection';
 import { applyTextEdit, readInputData, textEditFromInput, toSingleLine } from '../text-edit';
 import styles from '../styles.module.css';
 
 const acceptInput: TInputNormalizer = (value, selection) => ({ value, selection });
-const plainHtml: THtmlRenderer = text => text;
 
 const PLAINTEXT_ONLY = 'plaintext-only';
 // Engines without `plaintext-only` treat the unknown value as `inherit`, which
@@ -44,9 +45,10 @@ function endOf(value: string): ISelection {
 /**
  * Single-line, strictly controlled contentEditable. Every edit is intercepted
  * in `beforeinput`, applied to `value` as a string operation and passed
- * through `normalizeInput`; the DOM only ever shows what `toHtml` renders for
- * the current `value`. IME composition is the one edit the browser must own:
- * the field reads the composed text back on `compositionend`.
+ * through `normalizeInput`; the DOM only ever shows the segments `toSegments`
+ * renders for the current `value`, written as text nodes. IME composition is
+ * the one edit the browser must own: the field reads the composed text back on
+ * `compositionend`.
  */
 export const RichEditor = memo(
   ({
@@ -59,7 +61,7 @@ export const RichEditor = memo(
     enterKeyHint = 'next',
     onValueChange,
     normalizeInput = acceptInput,
-    toHtml = plainHtml,
+    toSegments = plainSegments,
     onFocusChange,
     onFocusSelection,
     onCancel,
@@ -77,7 +79,7 @@ export const RichEditor = memo(
     readonly enterKeyHint?: 'enter' | 'done' | 'next';
     readonly onValueChange?: (value: string) => void;
     readonly normalizeInput?: TInputNormalizer;
-    readonly toHtml?: THtmlRenderer;
+    readonly toSegments?: TSegmentRenderer;
     readonly onFocusChange?: (focused: boolean) => void;
     /** Selection to apply when the field gains focus; `undefined` keeps the caret where the browser put it. */
     readonly onFocusSelection?: (value: string) => ISelection | undefined;
@@ -92,6 +94,7 @@ export const RichEditor = memo(
     const selectionRef = useRef<ISelection>(endOf(value));
     const emittedValueRef = useRef(value);
     const composingRef = useRef(false);
+    const renderedSegmentsRef = useRef<readonly ITextSegment[] | undefined>(undefined);
     const [focused, setFocused] = useState(false);
 
     const moveFocusOnward = useEventCallback(() => {
@@ -113,14 +116,15 @@ export const RichEditor = memo(
       [moveFocusOnward]
     );
 
-    const html = useMemo(() => toHtml(value, focused), [toHtml, value, focused]);
+    const segments = useMemo(() => toSegments(value, focused), [toSegments, value, focused]);
 
     const restoreDom = useEventCallback(() => {
       const element = elementRef.current;
       if (isNil(element)) {
         return;
       }
-      element.innerHTML = html;
+      renderSegments(element, segments);
+      renderedSegmentsRef.current = segments;
       setElementSelection(element, selectionRef.current);
     });
 
@@ -195,6 +199,17 @@ export const RichEditor = memo(
       }
     }, [value]);
 
+    // Equal segments leave the DOM alone, as an unchanged `innerHTML` did: focusing
+    // must not replace the text nodes the browser just put its caret in.
+    useLayoutEffect(() => {
+      const element = elementRef.current;
+      if (isNil(element) || isEqual(renderedSegmentsRef.current, segments)) {
+        return;
+      }
+      renderSegments(element, segments);
+      renderedSegmentsRef.current = segments;
+    }, [segments]);
+
     useLayoutEffect(() => {
       const element = elementRef.current;
       if (isNil(element) || !focused || composingRef.current) {
@@ -203,7 +218,7 @@ export const RichEditor = memo(
       if (!isEqual(getElementSelection(element), selectionRef.current)) {
         setElementSelection(element, selectionRef.current);
       }
-    }, [html, focused]);
+    }, [segments, focused]);
 
     const handleCompositionStart = useEventCallback(() => {
       composingRef.current = true;
@@ -293,8 +308,6 @@ export const RichEditor = memo(
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        // oxlint-disable-next-line react/no-danger -- the HTML is rendered from `value` by `toHtml`, never from user markup
-        dangerouslySetInnerHTML={{ __html: html }}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}

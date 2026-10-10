@@ -8,7 +8,7 @@ import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle, ISelection } from './defs';
 import { numericDisplayScale, settledDecimals } from './numeric-entry';
 import {
-  createNumericHtmlRenderer,
+  createNumericSegmentRenderer,
   createNumericInputNormalizer,
   formatNumericValue,
   parseNumericText,
@@ -111,8 +111,8 @@ export const NumericEditor = memo(
       [allowNegative]
     );
 
-    const toHtml = useMemo(
-      () => createNumericHtmlRenderer({ decimal: decimals, pipStart, pipSize }),
+    const toSegments = useMemo(
+      () => createNumericSegmentRenderer({ decimal: decimals, pipStart, pipSize }),
       [decimals, pipStart, pipSize]
     );
 
@@ -175,7 +175,7 @@ export const NumericEditor = memo(
         placeholder={placeholder}
         inputMode={allowNegative || displayScale > 0 || isNil(decimals) ? 'decimal' : 'numeric'}
         normalizeInput={normalizeInput}
-        toHtml={toHtml}
+        toSegments={toSegments}
         onValueChange={commitText}
         onFocusChange={handleFocusChange}
         onFocusSelection={handleFocusSelection}

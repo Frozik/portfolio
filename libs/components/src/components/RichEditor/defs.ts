@@ -14,8 +14,16 @@ export type TInputNormalizer = (
   selection: ISelection
 ) => INormalizedInput | undefined;
 
-/** Renders the value as the HTML shown in the field; `editing` is true while it has focus. */
-export type THtmlRenderer = (text: string, editing: boolean) => string;
+export interface ITextSegment {
+  readonly text: string;
+  readonly className?: string;
+}
+
+/**
+ * Splits the value into the segments shown in the field; `editing` is true while it has focus.
+ * Segments are written as text nodes, so nothing in the value is ever parsed as markup.
+ */
+export type TSegmentRenderer = (text: string, editing: boolean) => readonly ITextSegment[];
 
 export interface IRichEditorHandle {
   focus(): void;

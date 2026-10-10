@@ -1,6 +1,6 @@
 import type { ISelection } from './defs';
 import {
-  createNumericHtmlRenderer,
+  createNumericSegmentRenderer,
   createNumericInputNormalizer,
   formatNumericValue,
   parseNumericText,
@@ -69,44 +69,49 @@ describe('numeric input normalizer', () => {
   });
 });
 
-describe('numeric html renderer', () => {
+describe('numeric segment renderer', () => {
   it('renders nothing for an empty value', () => {
-    expect(createNumericHtmlRenderer({})('', false)).toBe('');
-    expect(createNumericHtmlRenderer({})('', true)).toBe('');
+    expect(createNumericSegmentRenderer({})('', false)).toEqual([]);
+    expect(createNumericSegmentRenderer({})('', true)).toEqual([]);
   });
 
   it('marks thousands-group boundaries while editing', () => {
-    expect(createNumericHtmlRenderer({})('1234', true)).toBe(
-      `<span class="${styles.groupEnd}">1</span><span class="${styles.groupStart}">2</span>34`
-    );
+    expect(createNumericSegmentRenderer({})('1234', true)).toEqual([
+      { text: '1', className: styles.groupEnd },
+      { text: '2', className: styles.groupStart },
+      { text: '34' },
+    ]);
   });
 
   it('leaves a single group of digits unmarked', () => {
-    expect(createNumericHtmlRenderer({})('123', true)).toBe('123');
+    expect(createNumericSegmentRenderer({})('123', true)).toEqual([{ text: '123' }]);
   });
 
   it('pads the fraction to the decimal scale out of focus', () => {
-    expect(createNumericHtmlRenderer({ decimal: 2 })('5', false)).toBe('5.00');
-    expect(createNumericHtmlRenderer({ decimal: 2 })('5.5', false)).toBe('5.50');
+    expect(createNumericSegmentRenderer({ decimal: 2 })('5', false)).toEqual([{ text: '5.00' }]);
+    expect(createNumericSegmentRenderer({ decimal: 2 })('5.5', false)).toEqual([{ text: '5.50' }]);
   });
 
   it('shows the text exactly as typed while editing', () => {
-    expect(createNumericHtmlRenderer({ decimal: 2 })('5.', true)).toBe('5.');
-    expect(createNumericHtmlRenderer({ decimal: 2 })('.5', true)).toBe('.5');
+    expect(createNumericSegmentRenderer({ decimal: 2 })('5.', true)).toEqual([{ text: '5.' }]);
+    expect(createNumericSegmentRenderer({ decimal: 2 })('.5', true)).toEqual([{ text: '.5' }]);
   });
 
   it('never trims a longer fraction', () => {
-    expect(createNumericHtmlRenderer({ decimal: 0 })('5.5', false)).toBe('5.5');
+    expect(createNumericSegmentRenderer({ decimal: 0 })('5.5', false)).toEqual([{ text: '5.5' }]);
   });
 
   it('keeps a leading minus sign', () => {
-    expect(createNumericHtmlRenderer({})('-12', true)).toBe('-12');
+    expect(createNumericSegmentRenderer({})('-12', true)).toEqual([{ text: '-12' }]);
   });
 
   it('marks the pip digits', () => {
-    expect(createNumericHtmlRenderer({ pipStart: 0, pipSize: 2 })('1', false)).toBe(
-      `<span class="${styles.pip}">1</span>.<span class="${styles.pip}">0</span>0`
-    );
+    expect(createNumericSegmentRenderer({ pipStart: 0, pipSize: 2 })('1', false)).toEqual([
+      { text: '1', className: styles.pip },
+      { text: '.' },
+      { text: '0', className: styles.pip },
+      { text: '0' },
+    ]);
   });
 });
 
