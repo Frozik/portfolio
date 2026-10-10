@@ -1,3 +1,4 @@
+import { removeById, replaceById } from '@frozik/utils/collections/edit-by-id';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import type { Meters } from '../units';
@@ -5,7 +6,6 @@ import { DEGREES_TO_RADIANS, normalizeTurnDegrees } from '../units';
 import type { BuildingId, PadElevationMode } from './building';
 import { entriesOf, foundationOf } from './building';
 import type { Building } from './building';
-import { removeById, replaceById } from './edit-collections';
 import type { Foundation, UtilityEntry, UtilityEntryId } from './foundation';
 import type { RoomLabel } from './rooms';
 import type { CsgTerm, Shape, ShapeComposition } from './shapes';

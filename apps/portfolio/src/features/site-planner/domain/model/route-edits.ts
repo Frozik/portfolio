@@ -1,5 +1,5 @@
+import { removeById, replaceById } from '@frozik/utils/collections/edit-by-id';
 import type { Vector2 } from '@frozik/utils/math/vector2';
-import { removeById, replaceById } from './edit-collections';
 import type { UtilityRoute, UtilityRouteId } from './routing';
 import { MIN_ROUTE_POINTS } from './routing';
 

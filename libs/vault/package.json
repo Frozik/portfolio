@@ -1,0 +1,23 @@
+{
+  "name": "@frozik/vault",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ports/*": "./src/ports/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "temporal-polyfill": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  }
+}

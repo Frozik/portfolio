@@ -1,7 +1,7 @@
+import { removeById, replaceById } from '@frozik/utils/collections/edit-by-id';
 import type { Vector2 } from '@frozik/utils/math/vector2';
 import { isNil } from 'lodash-es';
 import type { Meters } from '../units';
-import { removeById, replaceById } from './edit-collections';
 import type {
   CarId,
   CarInstance,

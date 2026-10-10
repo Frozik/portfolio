@@ -1,0 +1,23 @@
+{
+  "name": "@frozik/cloud-storage",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./core/*": "./src/core/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frozik/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  }
+}

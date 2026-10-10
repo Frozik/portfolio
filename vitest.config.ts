@@ -53,6 +53,22 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'vault',
+          environment: 'happy-dom',
+          include: ['libs/vault/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'cloud-storage',
+          environment: 'happy-dom',
+          include: ['libs/cloud-storage/src/**/*.{test,spec}.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'utils',
           environment: 'happy-dom',
           include: [

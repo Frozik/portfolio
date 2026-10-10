@@ -46,6 +46,14 @@
       "entry": ["src/**/*.{ts,tsx}!"],
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "libs/vault": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "libs/cloud-storage": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
     "libs/communication-protocol": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]

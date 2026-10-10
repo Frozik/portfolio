@@ -15,3 +15,6 @@ export type Unbrand<Type> = Type extends { readonly [brand]: { readonly base: in
   : Type;
 
 export type Primitive = string | number | boolean | null | undefined;
+
+/** A list with at least one element, so the first one is typed as present. */
+export type TNonEmptyArray<T> = readonly [T, ...T[]];

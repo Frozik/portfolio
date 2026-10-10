@@ -73,7 +73,7 @@ module.exports = {
         'Server-only packages must never reach the browser bundle. `socket.io-parser` / `engine.io-client` are legitimately pulled by the browser socket.io-client.',
       severity: 'error',
       from: {
-        path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol|proto)|libs/transport/src/(client|codec|frame|mux|tunnel|testing|shared))/',
+        path: '^(apps/portfolio|libs/(utils|components|table|charts|bug-reporter|communication-protocol|proto|vault|cloud-storage)|libs/transport/src/(client|codec|frame|mux|tunnel|testing|shared))/',
       },
       to: {
         path: '/node_modules/(fastify|@fastify/[^/]+|socket\\.io|engine\\.io|jose|config|toml|@prometheus-io/client|pino|pino-pretty|p-retry|redis|@redis/[^/]+|@socket\\.io/redis-adapter|ws|@peculiar/x509|reflect-metadata)(/|$)',
@@ -226,6 +226,99 @@ module.exports = {
       severity: 'error',
       from: { path: '^libs/bug-reporter/src/', pathNot: '^libs/bug-reporter/src/react/' },
       to: { path: '(^libs/bug-reporter/src/react/|/node_modules/(react|react-dom)(/|$))' },
+    },
+    {
+      name: 'vault-ports-are-bottom',
+      comment:
+        'The ports (randomness, wall clock, time source) are seen by every layer and see none.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/ports/' },
+      to: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/ports/' },
+    },
+    {
+      name: 'vault-model-is-innermost',
+      comment:
+        'The vault model knows no bytes, storage or UI — only the ports and the data/ snapshots; merge sees only the model. See .claude/plan/design/vault/application.md §1.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/(model|merge)/' },
+      to: {
+        path: '^libs/vault/src/',
+        pathNot: ['^libs/vault/src/(model|ports|data)/', '^libs/vault/src/$1/'],
+      },
+    },
+    {
+      name: 'vault-crypto-is-below-format',
+      comment: 'Crypto primitives know bytes and keys, never the file format or the cards.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/crypto/' },
+      to: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/(crypto|ports)/' },
+    },
+    {
+      name: 'vault-sync-sees-format-and-storage-core',
+      comment:
+        'The sync engine works over the format, the merge and the storage port (vault-sees-only-storage-core) — never over the codec or the UI.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/sync/' },
+      to: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/(sync|merge|format|model|ports)/' },
+    },
+    {
+      name: 'vault-importers-are-independent',
+      comment: 'An importer never reaches into another one; they meet only through the model.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/import/([^/]+)/' },
+      to: { path: '^libs/vault/src/import/([^/]+)/', pathNot: '^libs/vault/src/import/$1/' },
+    },
+    {
+      name: 'vault-react-is-outermost',
+      comment: 'Only libs/vault/src/react knows React, the React controls and the MobX bindings.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/react/' },
+      to: {
+        path: '(^libs/vault/src/react/|^libs/components/|/node_modules/(react|react-dom|mobx-react-lite)(/|$))',
+      },
+    },
+    {
+      name: 'vault-core-is-platform-free',
+      comment:
+        'Outside react/, persistence/ and adapters/ the vault core imports no storage or WASM package; DOM globals (fetch, indexedDB, document…) are banned there by the no-restricted-globals override in oxlint.json.',
+      severity: 'error',
+      from: {
+        path: '^libs/vault/src/',
+        pathNot: ['^libs/vault/src/(react|persistence)/', '/adapters/'],
+      },
+      to: { path: '/node_modules/(idb|hash-wasm|mobx|mobx-react-lite)(/|$)' },
+    },
+    {
+      name: 'vault-sees-only-storage-core',
+      comment:
+        'The vault depends on the storage port, never on a concrete provider; only its test fakes may reuse the in-memory one.',
+      severity: 'error',
+      from: { path: '^libs/vault/', pathNot: '^libs/vault/src/testing/' },
+      to: { path: '^libs/cloud-storage/src/', pathNot: '^libs/cloud-storage/src/core/' },
+    },
+    {
+      name: 'cloud-storage-core-is-innermost',
+      comment: 'The provider port knows no provider.',
+      severity: 'error',
+      from: { path: '^libs/cloud-storage/src/core/' },
+      to: { path: '^libs/cloud-storage/src/', pathNot: '^libs/cloud-storage/src/core/' },
+    },
+    {
+      name: 'cloud-storage-adapters-meet-only-through-core',
+      comment: 'A provider never imports another provider; the contract suite sees only the port.',
+      severity: 'error',
+      from: { path: '^libs/cloud-storage/src/([^/]+)/' },
+      to: {
+        path: '^libs/cloud-storage/src/([^/]+)/',
+        pathNot: ['^libs/cloud-storage/src/$1/', '^libs/cloud-storage/src/core/'],
+      },
+    },
+    {
+      name: 'cloud-storage-knows-no-vault',
+      comment: 'Storage moves bytes; it never learns what a password vault is.',
+      severity: 'error',
+      from: { path: '^libs/cloud-storage/' },
+      to: { path: '^libs/vault/' },
     },
     {
       name: 'no-circular',

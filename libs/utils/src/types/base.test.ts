@@ -1,5 +1,5 @@
 import type { Milliseconds, Seconds } from '../date/types';
-import type { Brand, Unbrand } from './base';
+import type { Brand, TNonEmptyArray, Unbrand } from './base';
 
 type RoomId = Brand<string, 'RoomId'>;
 type Tags = Brand<readonly string[], 'Tags'>;
@@ -16,5 +16,13 @@ describe('Brand', () => {
     expectTypeOf<Unbrand<Tags>>().toEqualTypeOf<readonly string[]>();
     expectTypeOf<Unbrand<Milliseconds | undefined>>().toEqualTypeOf<number | undefined>();
     expectTypeOf<Unbrand<boolean>>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe('TNonEmptyArray', () => {
+  it('types the first element as present and refuses an empty list', () => {
+    expectTypeOf<TNonEmptyArray<number>[0]>().toEqualTypeOf<number>();
+    expectTypeOf<readonly []>().not.toExtend<TNonEmptyArray<number>>();
+    expectTypeOf<readonly [1, 2]>().toExtend<TNonEmptyArray<number>>();
   });
 });

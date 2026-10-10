@@ -142,6 +142,74 @@
   },
   "overrides": [
     {
+      "files": ["libs/vault/src/**"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "Use the Temporal API (temporal-polyfill); date helpers live in libs/utils/src/date/."
+          },
+          {
+            "name": "fetch",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "indexedDB",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "localStorage",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "document",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "window",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "navigator",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "XMLHttpRequest",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "WebSocket",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "Worker",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "libs/vault/src/react/**",
+        "libs/vault/src/persistence/**",
+        "libs/vault/src/**/adapters/**"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "Use the Temporal API (temporal-polyfill); date helpers live in libs/utils/src/date/."
+          }
+        ]
+      }
+    },
+    {
       "files": [
         "**/*.test.ts",
         "**/*.test.tsx",

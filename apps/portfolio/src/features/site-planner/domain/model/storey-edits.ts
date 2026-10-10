@@ -1,9 +1,9 @@
+import { replaceById } from '@frozik/utils/collections/edit-by-id';
 import { isNil } from 'lodash-es';
 import type { Meters } from '../units';
 import type { BuildingId } from './building';
 import { storeysOf } from './building';
 import type { Building } from './building';
-import { replaceById } from './edit-collections';
 import type { PitchedRoof } from './roofs';
 import type { RoomLabel } from './rooms';
 import type { StoreyObject, StoreyObjectKind } from './storey-objects';
