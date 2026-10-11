@@ -68,7 +68,7 @@ describe('the WebMCP page', () => {
   });
 
   it('lists exactly the controls tools', () => {
-    expect(namesOf(createControlsAgentTools(new ControlsDemoStore()))).toEqual(
+    expect(namesOf(createControlsAgentTools(new ControlsDemoStore(), 'en'))).toEqual(
       catalogued('controls')
     );
   });

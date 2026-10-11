@@ -85,7 +85,7 @@ export function drawPlan(
   }
 
   // Everything an open editor is NOT editing steps back to this opacity —
-  // present as context, visibly out of reach (see modes.md).
+  // present as context, visibly out of reach.
   const editFocus = chrome?.editFocus;
   const dimmed = (isDimmed: boolean, draw: () => void): void => {
     if (!isDimmed) {

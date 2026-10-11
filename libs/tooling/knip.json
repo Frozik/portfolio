@@ -26,6 +26,10 @@
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["pino-pretty", "toml"]
     },
+    "apps/vault-extension": {
+      "entry": ["src/entrypoints/**/*.{ts,tsx}", "e2e/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "e2e/**/*.ts"]
+    },
     "libs/utils": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]

@@ -8,7 +8,7 @@ import { elementSpanOf, paintAt, visibleElements } from '../path-points';
  * The candle mark on the 2D canvas: a body from open to close in the middle of
  * the candle's interval, and a wick from it up to the high and down to the low.
  * The wick never runs through the body: a translucent body would show it. When
- * no coarser scale is left the body narrows to what the interval leaves it (§4.3).
+ * no coarser scale is left the body narrows to what the interval leaves it.
  */
 export const candleCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {

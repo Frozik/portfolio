@@ -30,7 +30,7 @@ const TOOL_HOTKEY =
     ?.hotkey?.toUpperCase() ?? '';
 
 /**
- * The rail's route tool (`wiring.md` §3.3): one button armed with how the
+ * The rail's route tool: one button armed with how the
  * cable is laid — a conduit of some bore, a chase, trunking — and the flyout
  * to arm it from, the trench tool's pattern with methods for systems.
  */

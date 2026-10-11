@@ -236,6 +236,14 @@ module.exports = {
       to: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/ports/' },
     },
     {
+      name: 'extension-domain-is-innermost',
+      comment:
+        'The extension’s domain (the form detector) reads plain records; the DOM, the browser API and the UI stay outside. See .claude/plan/design/vault/extension.md §5.',
+      severity: 'error',
+      from: { path: '^apps/vault-extension/src/domain/' },
+      to: { path: '^apps/vault-extension/src/', pathNot: '^apps/vault-extension/src/domain/' },
+    },
+    {
       name: 'vault-model-is-innermost',
       comment:
         'The vault model knows no bytes, storage or UI — only the ports and the data/ snapshots; merge sees only the model. See .claude/plan/design/vault/application.md §1.',
@@ -260,6 +268,14 @@ module.exports = {
       severity: 'error',
       from: { path: '^libs/vault/src/sync/' },
       to: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/(sync|merge|format|model|ports)/' },
+    },
+    {
+      name: 'vault-session-is-the-shell',
+      comment:
+        'session/ runs the automata over the codec, the device stores and the storage port for both clients; the layers it drives never reach back into it.',
+      severity: 'error',
+      from: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/(session|testing)/' },
+      to: { path: '^libs/vault/src/session/' },
     },
     {
       name: 'vault-importers-are-independent',

@@ -9,6 +9,7 @@ export type DeploymentTarget = {
   readonly communicationUrl: string;
   readonly googleClientId: string;
   readonly yandexClientId: string;
+  readonly googleVaultClientId: string;
 };
 
 /** `KEY=VALUE` lines, `#` comments, no quoting or interpolation. */
@@ -45,6 +46,8 @@ export function toDeploymentTarget(
     googleClientId,
     // Yandex is optional: without it the provider stays disabled in the UI.
     yandexClientId: values.YANDEX_OAUTH_CLIENT_ID ?? '',
+    // Optional too: without it the vault offers no Google Drive.
+    googleVaultClientId: values.GOOGLE_VAULT_CLIENT_ID ?? '',
   };
 }
 

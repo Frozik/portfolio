@@ -189,6 +189,14 @@
           {
             "name": "Worker",
             "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "process",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+          },
+          {
+            "name": "Buffer",
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
           }
         ]
       }
@@ -226,6 +234,8 @@
         "**/vite.config.ts",
         "**/vitest.config.ts",
         "**/playwright.config.ts",
+        "**/wxt.config.ts",
+        "apps/vault-extension/src/entrypoints/**",
         "**/*.d.ts"
       ],
       "rules": {
@@ -239,7 +249,7 @@
       }
     },
     {
-      "files": ["**/*-worker.ts", "**/Worker*.ts"],
+      "files": ["**/*-worker.ts", "**/Worker*.ts", "**/*-channel.ts"],
       "rules": {
         "unicorn/require-post-message-target-origin": "off"
       }

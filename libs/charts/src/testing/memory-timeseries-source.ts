@@ -18,7 +18,7 @@ export interface IMemorySourceOptions {
   readonly scales?: readonly TTimeScale[];
 }
 
-/** A time series source over arrays in memory that keeps the contract to the letter: the reference for tests and for writing one's own (§4.4). */
+/** A time series source over arrays in memory that keeps the contract to the letter: the reference for tests and for writing one's own. */
 export interface IMemorySource extends ITimeseriesSource {
   /** Every request made, oldest first. */
   readonly requests: readonly IFetchRequest[];

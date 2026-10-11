@@ -21,6 +21,7 @@ import { drawTanks } from './effects/draw-tanks';
 import { drawTicker } from './effects/draw-ticker';
 import { drawTiles } from './effects/draw-tiles';
 import { createTypingState, drawTyping } from './effects/draw-typing';
+import { drawVault } from './effects/draw-vault';
 import type { IFxDrawContext, TFxDraw, TFxEffectFactory, TFxRender, TProjectFxKind } from './types';
 
 function createStatelessFxEffect(render: TFxRender): TFxEffectFactory {
@@ -56,6 +57,7 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   rows: createStatelessFxEffect(drawRows),
   shutter: createStatelessFxEffect(drawShutter),
   streams: createStatelessFxEffect(drawStreams),
+  vault: createStatelessFxEffect(drawVault),
 };
 
 export function createFxRender(kind: TProjectFxKind): TFxRender {

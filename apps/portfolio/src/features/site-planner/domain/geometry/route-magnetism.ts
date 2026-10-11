@@ -16,7 +16,7 @@ interface Catch {
 }
 
 /**
- * The Sweet Home 3D magnet for conduits (`wiring.md` §9): beside every
+ * The Sweet Home 3D magnet for conduits: beside every
  * existing route runs a COMPANION line, offset by the two conduits' half
  * widths — the line a run laid touching it would follow. A point near a
  * companion slides freely along it (the run ends where the hand stops, not

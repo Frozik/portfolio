@@ -1,4 +1,10 @@
+# An application compiles the libraries' sources as its own (package exports
+# point at src): a library change must re-run its build and its type-check, or
+# a cached green hides an app that no longer compiles.
 tasks:
   build:
+    inputs:
+      - '/libs/*/src/**/*'
+  type-check:
     inputs:
       - '/libs/*/src/**/*'

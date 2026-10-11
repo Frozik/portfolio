@@ -21,7 +21,7 @@ interface WiringSegment {
 }
 
 /**
- * A hand-drawn cable route (`wiring.md` §3.3): a polyline on the storey's
+ * A hand-drawn cable route: a polyline on the storey's
  * plan, a level, and an installation method per segment. Cable runs that can
  * reach it follow it instead of the walls; runs that cannot keep the derived
  * path. The route says WHERE and HOW; which cables ride it is derived.

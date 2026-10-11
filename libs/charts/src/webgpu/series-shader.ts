@@ -16,7 +16,7 @@ function wgslFloat(value: number): string {
   return Number.isInteger(value) ? `${value}.0` : String(value);
 }
 
-/** The marker figures as constants: the one table of §5.3, in the shader's words. */
+/** The marker figures as constants: one table, in the shader's words. */
 export function figureTableSource(): string {
   const polygons: readonly (readonly IFigurePoint[])[] = POLYGON_FIGURES.map(
     figure => FIGURE_POLYGONS[figure]
@@ -39,7 +39,7 @@ export function figureTableSource(): string {
 /**
  * One module for every connected mark: the shared code, the axis reader, each
  * mark's vertex function, and a `switch` over the mark the layer names. A new
- * mark brings its function; nobody edits the shared shader by hand (§6.6).
+ * mark brings its function; nobody edits the shared shader by hand.
  */
 export function seriesShaderSource(
   painters: readonly IWebGpuMarkPainter[],

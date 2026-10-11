@@ -12,3 +12,9 @@ tasks:
       - 'tsconfig.json'
     options:
       runInCI: true
+  # sync.md §8.6 — the contract against rclone in Docker; plain `test` skips it.
+  webdav-contract:
+    command: 'bash scripts/webdav-contract.sh'
+    options:
+      cache: false
+      runInCI: false

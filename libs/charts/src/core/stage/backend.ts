@@ -1,6 +1,6 @@
 import type { IChartFrame } from '../frame/chart-frame';
 
-/** Named bands a surface draws in, bottom first (§6.2). */
+/** Named bands a surface draws in, bottom first. */
 export const PAINT_BAND = {
   grid: 100,
   series: 200,
@@ -13,7 +13,7 @@ export const PAINT_BAND = {
  * Something an extension draws on one backend; the backend types the painter,
  * the kernel only carries it. Contributions sharing an id are the same thing
  * drawn by different backends: a stage uses the one whose backend is lowest
- * in its stack (§6.2).
+ * in its stack.
  */
 export interface IPaintContribution {
   readonly id: string;
@@ -32,7 +32,7 @@ export interface ISurface {
   dispose(): void;
 }
 
-/** A way of drawing and the resources every chart drawn that way shares (§6.1). */
+/** A way of drawing and the resources every chart drawn that way shares. */
 export interface IRenderBackend {
   readonly id: string;
   /** Settles with the reason if the backend can no longer draw: a lost GPU device. */

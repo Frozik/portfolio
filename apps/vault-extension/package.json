@@ -1,0 +1,44 @@
+{
+  "name": "@frozik/vault-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension of the password vault: unlock, find the site's cards, fill the login form",
+  "type": "module",
+  "scripts": {
+    "build": "wxt build",
+    "build:e2e": "wxt build --mode e2e",
+    "dev": "wxt",
+    "e2e": "playwright test",
+    "fixture": "tsx e2e/make-fixture.ts",
+    "postinstall": "wxt prepare",
+    "test": "vitest run --root ../.. --project vault-extension",
+    "types": "tsc --noEmit -p tsconfig.json",
+    "zip": "wxt zip"
+  },
+  "dependencies": {
+    "@frozik/cloud-storage": "workspace:*",
+    "@frozik/components": "workspace:*",
+    "@frozik/utils": "workspace:*",
+    "@frozik/vault": "workspace:*",
+    "lodash-es": "catalog:",
+    "lucide-react": "catalog:",
+    "mobx": "catalog:",
+    "mobx-react-lite": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "usehooks-ts": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@wxt-dev/module-react": "catalog:",
+    "tsx": "catalog:",
+    "wxt": "catalog:"
+  }
+}

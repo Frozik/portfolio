@@ -1,4 +1,4 @@
-import type { DBSchema, IDBPDatabase, OpenDBCallbacks } from 'idb';
+import type { DBSchema, IDBPDatabase, IDBPTransaction, OpenDBCallbacks, StoreNames } from 'idb';
 import { openDB } from 'idb';
 
 /** IndexedDB lifecycle errors surfaced to a repository's error callback. */
@@ -59,7 +59,11 @@ export async function getDatabaseVersion(databaseName: string): Promise<undefine
 export async function openVersionedDatabase<Schema extends DBSchema>(
   databaseName: string,
   version: number,
-  upgrade: (database: IDBPDatabase<Schema>, oldVersion: number) => void,
+  upgrade: (
+    database: IDBPDatabase<Schema>,
+    oldVersion: number,
+    transaction: IDBPTransaction<Schema, StoreNames<Schema>[], 'versionchange'>
+  ) => void,
   onError?: TDatabaseErrorCallback
 ): Promise<IDBPDatabase<Schema>> {
   const currentVersion = (await getDatabaseVersion(databaseName)) ?? 0;
@@ -69,6 +73,7 @@ export async function openVersionedDatabase<Schema extends DBSchema>(
     blocked: onError && (() => onError(EDatabaseErrorCallbackType.Blocked)),
     blocking: onError && (() => onError(EDatabaseErrorCallbackType.Blocking)),
     terminated: onError && (() => onError(EDatabaseErrorCallbackType.Terminated)),
-    upgrade: (database, oldVersion) => upgrade(database, oldVersion),
+    upgrade: (database, oldVersion, _newVersion, transaction) =>
+      upgrade(database, oldVersion, transaction),
   });
 }

@@ -34,7 +34,7 @@ function createColorReader(): (css: string) => TColor | undefined {
 /**
  * The theme an element asks for through its `--chart-*` custom properties;
  * a token that is not set keeps the value of `base`. Read once, when the
- * chart is mounted and when the page theme changes — never in a frame (§8).
+ * chart is mounted and when the page theme changes — never in a frame.
  */
 export function themeFromCss(element: Element, base: IChartTheme): IChartTheme {
   const styles = getComputedStyle(element);

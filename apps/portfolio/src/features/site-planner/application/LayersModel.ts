@@ -22,7 +22,7 @@ const NO_COUNTS: Readonly<Record<BuildingLayerId, number>> = {
 };
 
 /**
- * The layers of the open building (`layers.md`): which one is being worked
+ * The layers of the open building: which one is being worked
  * in, and which are shown. Activity is the editor session's; visibility is
  * the viewport's, shared with the plan's own layers — this model is the one
  * place the two meet, so the invariant «the active layer is always visible»

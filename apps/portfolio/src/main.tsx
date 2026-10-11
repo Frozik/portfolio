@@ -2,6 +2,7 @@ import './styles/tailwind.css';
 
 import { StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
+import { z } from 'zod';
 
 import { BASENAME } from './app/basename';
 import { setupCloudflareBeacon } from './app/bootstrap/cloudflareBeacon';
@@ -12,6 +13,8 @@ import { bootstrapOfflinePack } from './app/offline/bootstrapOfflinePack';
 import { createServiceWorkerOfflinePackPort } from './app/offline/offlinePackPort';
 import { getCurrentLanguage } from './shared/i18n/locale';
 
+// The CSP forbids `eval`; zod's code-generating fast path would trip it on the first parse.
+z.config({ jitless: true });
 setupCloudflareBeacon();
 setupServiceWorkerUpdate();
 const offlinePack = bootstrapOfflinePack(createServiceWorkerOfflinePackPort());

@@ -32,6 +32,8 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
       - name: Install the Playwright browser for the e2e task
         run: moon run portfolio:install-browsers -- --with-deps
+      - name: Install the Chromium the extension's e2e loads it into
+        run: moon run vault-extension:install-browsers
       - uses: actions/cache@v6
         with:
           path: .moon/cache
@@ -55,7 +57,9 @@ jobs:
         if: failure()
         with:
           name: playwright-test-results
-          path: apps/portfolio/test-results
+          path: |
+            apps/portfolio/test-results
+            apps/vault-extension/test-results
           if-no-files-found: ignore
           retention-days: 7
       - name: Keep the portfolio build for the Lighthouse job
@@ -80,6 +84,20 @@ jobs:
           node-version-file: package.json
       - uses: pnpm/action-setup@v6
       - run: pnpm audit --prod --audit-level high
+
+  # sync.md §8.6 — the storage contract against a real WebDAV server (rclone in
+  # Docker). Informational: a registry hiccup pulling the image must not turn
+  # the run red, so it reports without gating the deploys.
+  webdav-contract:
+    name: WebDAV contract (rclone)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: moon run cloud-storage:webdav-contract
 
   lighthouse:
     name: Lighthouse budgets

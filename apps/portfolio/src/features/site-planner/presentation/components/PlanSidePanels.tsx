@@ -62,7 +62,7 @@ const PROPERTIES_SECTION: PanelSection = {
 
 /**
  * Which panels each mode shows, in reading order — the panel half of the
- * object-editor registry (`object-editors.md`): a future editor contributes
+ * object-editor registry: a future editor contributes
  * its column as one more row here, never as another branch.
  *
  * The rows are grouped by the job in hand (R27): what is being built, what is
@@ -77,7 +77,7 @@ const VIEW_SECTIONS: readonly PanelSection[] = [
 ];
 
 /**
- * The building editor's column follows its active layer (`layers.md` §6.6):
+ * The building editor's column follows its active layer:
  * the layers card, the storey, the findings and the properties stand
  * whatever the layer, and between them come the panels of the layer alone —
  * the walls' column has no furniture list to scroll past.

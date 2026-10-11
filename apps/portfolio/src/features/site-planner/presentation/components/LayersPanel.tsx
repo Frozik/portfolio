@@ -52,7 +52,7 @@ const LayerRow = observer(
 );
 
 /**
- * The layers of the open building as a card in the column (`layers.md` §8):
+ * The layers of the open building as a card in the column:
  * one row each, the active one lit, an eye apiece, and the two sweeps —
  * the Photoshop panel, sized to this column. The rail's layer button lists
  * the same rows for the narrow screen, where the column is a drawer.

@@ -55,6 +55,7 @@ export const PROJECT_ROUTES: readonly IProjectRoute[] = [
   { id: 'osm-map', route: '/osm-map', fx: 'tiles' },
   { id: 'retro', route: '/retro', fx: 'peers' },
   { id: 'conf', route: '/conf', fx: 'ar' },
+  { id: 'vault', route: '/vault', fx: 'vault' },
   { id: 'controls', route: '/controls', fx: 'typing' },
   { id: 'table', route: '/table', fx: 'rows' },
   { id: 'bug-reporter', route: '/bug-reporter', fx: 'shutter' },

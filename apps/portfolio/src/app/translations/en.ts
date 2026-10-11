@@ -65,6 +65,7 @@ export const appTranslationsEn = {
     table: 'Table',
     bugReporter: 'Bug Reporter',
     transport: 'HTTP/3 Transport',
+    vault: 'Password Vault',
     webmcp: 'WebMCP',
     retro: 'Retro',
     conf: 'Conference',

@@ -4,7 +4,7 @@ import type { IChartExtension } from '../../core/kernel/extension';
 /** The wash over a failed range moves slowly: half the rate is smooth enough and costs half as much. */
 const FAILED_FPS = 30;
 
-/** Shows what is still on its way and what failed to arrive; keeps frames coming while either is animated (§7.1). */
+/** Shows what is still on its way and what failed to arrive; keeps frames coming while either is animated. */
 export function loadingIndicatorCore<TX>(): IChartExtension<TX, 'loadingIndicator', undefined> {
   return {
     id: 'loadingIndicator',

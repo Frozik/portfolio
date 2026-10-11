@@ -9,7 +9,7 @@ import { GroupSection } from './StructureTermTree';
 /**
  * The scene tree: the plot and the house with their CSG terms. Selecting a group
  * header is what decides where a newly drawn shape lands. Lives in site editing
- * — reshaping the ground plan is what that mode is (see modes.md).
+ * — reshaping the ground plan is what that mode is.
  */
 
 export const StructurePanel = observer(({ store }: { readonly store: SitePlannerStore }) => {

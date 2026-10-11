@@ -21,7 +21,7 @@ const EVERYTHING = Number.MAX_SAFE_INTEGER;
 const START_TIMEOUT_MS = 1000;
 
 /**
- * The guarantees every time series source owes the chart (§4.4), as a test
+ * The guarantees every time series source owes the chart, as a test
  * suite: run it over a demo source and over the adapter of a real server
  * alike. The soft limit in particular is kept by the server, and this is the
  * only way to check it.

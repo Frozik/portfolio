@@ -1,18 +1,7 @@
-import { Buffer } from 'buffer';
-
 import { downloadBlob } from '../../../../shared/lib/downloadFile';
+import { ensureBrowserGlobalsForPdfKit } from '../../../../shared/lib/pdf/pdfkit-globals';
 
 const PDF_FILE_NAME = 'dmitry-sharov-cv.pdf';
-
-/** PDFKit reads these Node globals at render time; recorded as debt in CLAUDE.md. */
-function ensureBrowserGlobalsForPdfKit(): void {
-  if (!('Buffer' in globalThis)) {
-    Object.assign(globalThis, { Buffer });
-  }
-  if (!('process' in globalThis)) {
-    Object.assign(globalThis, { process: { env: {} } });
-  }
-}
 
 export async function downloadCvPdf(): Promise<void> {
   ensureBrowserGlobalsForPdfKit();

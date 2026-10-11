@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import type { IMark } from '../../core/series/mark';
 import { valueRangeOfElements } from '../../core/series/mark';
 
-/** How a line gets from point A to point B (§5.3). */
+/** How a line gets from point A to point B. */
 export type TLineJoin = 'linear' | 'stepAfter' | 'stepBefore';
 
 export interface ILineMarkOptions {

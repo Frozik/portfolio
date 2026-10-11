@@ -83,9 +83,9 @@ export interface StoreyScene {
   readonly devices: readonly PlanDevice[];
   /** The wiring, derived: along the drawn routes where they reach, the walls otherwise. */
   readonly wires: readonly PlanWire[];
-  /** The cable journal and the materials the wiring adds up to (`wiring.md` §3.4). */
+  /** The cable journal and the materials the wiring adds up to. */
   readonly wiringReport: WiringReport;
-  /** Every щиток of the storey on its DIN rail (`wiring.md` §3.6). */
+  /** Every щиток of the storey on its DIN rail. */
   readonly panelAssemblies: readonly PanelAssembly[];
   /** This storey's own stairs, with their derived steps and cutout. */
   readonly stairs: readonly StairScene[];

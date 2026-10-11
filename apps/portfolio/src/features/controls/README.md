@@ -1,6 +1,6 @@
 # Controls
 
-Financial input controls from the shared component library: precise numeric editors and a natural-language date picker.
+Input controls from the shared component library: precise numeric editors, a natural-language date picker and the form fields of a password vault.
 
 Live: [https://frozik.github.io/portfolio/controls](https://frozik.github.io/portfolio/controls) · Part of the [portfolio](../../../../../README.md) monorepo; code lives in `apps/portfolio/src/features/controls/`.
 
@@ -87,13 +87,47 @@ shared library.
 - Parse direction toggle: future-only vs nearest match
 - Weekend highlighting in calendar grid
 
+**Form controls** (the fields the password vault needs, same rails — each
+control a pure module plus a thin component, `--re-*` tokens, en/ru labels):
+- `SecretEditor` — a native password input, never a `contentEditable`: the
+  value stays inside the input element, autofill and spell check are told to
+  stay away, a shown value hides itself again after five seconds
+- `MaskedEditor` — IBAN in fours, a phone with a leading `+`; groups are
+  margins, so copying gives the bare value
+- `TextEditor` — one line of plain text in the family's frame (the login),
+  Escape brings back the value it had on focus
+- `UrlEditor` — the host bright, the rest of the address dimmed, so
+  `bank.example@evil.example` shows where it really goes; an internationalised host also
+  shows its ASCII name (`аpple.com` with a Cyrillic `а` → `xn--pple-43d.com`)
+- `MonthYearEditor` — a card expiry as `MM/YY`: the slash comes with the first
+  year digit, `5` reads as May, a pasted `12/2029` or `2029-12` reads whole; on a fine pointer the twelve months of a year
+  peek out under the field like the calendar, on touch the numeric keyboard
+  is all
+- `Select` / `MultiSelect` / `Combobox` — WAI-ARIA comboboxes: focus stays in
+  the field and points at the active option, arrows, Home/End and typed
+  letters move, Enter takes; the select family rises as a sheet on touch,
+  the combobox keeps its list under the field (a modal sheet would take the
+  keyboard away); options may sit under group headings (`role="group"`) and
+  carry a picture before the label, also shown in the field (the currency
+  select groups by region and shows each sign)
+- `Checkbox` (native), `MultilineEditor` (grows with its text, Ctrl+Enter
+  moves on), `ListEditor` (add with Enter in the last item, reorder by the ⋮⋮
+  handle beside the remove button — drag it, or Space and the arrows — or
+  Alt+↑/↓, each control stays with its item; it can number its items, the
+  first glowing — the password in use of a rotation), `Tabs` (Radix),
+  `FileDrop` (pick, drop or paste, filtered by `accept` alike, bytes handed
+  to the owner)
+
 ## Agent tools
 
-Both fields are exposed to WebMCP agents through the component library's own
+The fields are exposed to WebMCP agents through the component library's own
 tools: `controls_number_read` / `_enter` and `controls_date_read` / `_enter`
 take the text a person would type and go through the editors' own
 normalisation, rounding, parsing and clamping (`numeric-entry.ts`,
 `date-entry.ts`, shared with the components). `controls_read_settings`,
 `controls_set_number_format` and `controls_set_date_options` turn the knobs
 below them. The field state lives in `ControlsDemoStore` so tools and page
-share it.
+share it. The form fields add `controls_form_*` tools (`form-agent-tools.ts`):
+choice lists accept only their options, masked fields go through their mask,
+the expiry through `MM/YY`; the password field has none on purpose, the
+backup-code list and the file drop neither.

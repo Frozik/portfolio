@@ -30,7 +30,7 @@ const ENTER_MODE_KEY = 'Enter';
 /** Finishes the polyline of a path, as the double click does. */
 const COMMIT_KEY = 'Enter';
 
-/** Steps the building editor's active layer: Q forward, Shift+Q back (`layers.md`). */
+/** Steps the building editor's active layer: Q forward, Shift+Q back. */
 const LAYER_CYCLE_KEY = 'q';
 
 /** What the keyboard needs from the controller: the open editor, and the gestures in flight. */

@@ -28,7 +28,7 @@ export interface IPointerListener {
   wheel?(input: IWheelInput): boolean | void;
 }
 
-/** Pointer and wheel input over the chart, free of the DOM: gestures are tested by feeding it events (§3.7). */
+/** Pointer and wheel input over the chart, free of the DOM: gestures are tested by feeding it events. */
 export interface IPointerSource {
   /** Listeners are called from the highest priority down; equal priorities in the order they subscribed. */
   subscribe(listener: IPointerListener, priority?: number): VoidFunction;

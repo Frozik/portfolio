@@ -24,7 +24,7 @@ export interface IScheduleRules {
   readonly timeZone: string;
   /** Every zone a boundary is read in, the schedule's first; a week is plain when none of them shifts its clock. */
   readonly timeZones: readonly string[];
-  /** No `open` entry: the axis is open save for what the `closed` ones take out (sessions §3). */
+  /** No `open` entry: the axis is open save for what the `closed` ones take out. */
   readonly openByDefault: boolean;
   readonly weekly: readonly IWeeklyRule[];
   readonly once: readonly IOnceRule[];

@@ -58,7 +58,7 @@ const ARROW_UP: readonly IFigurePoint[] = [
 /**
  * Every marker figure but the circle as a polygon in a unit square centred on
  * the element, Y up. The one table both backends draw from: a new figure is a
- * row here, not a new mark and not a new shader branch (§5.3).
+ * row here, not a new mark and not a new shader branch.
  */
 export const POLYGON_FIGURES = [
   'square',

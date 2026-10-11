@@ -1,43 +1,9 @@
-/* RichEditor + DateTimePicker calendar popup. Colors read the host's
-   `--color-landing-*` variables; each fallback follows the OS color scheme so
-   the components render on their own. Baseline: Chrome 120, Safari 17.2,
-   Firefox 128 (native nesting, color-mix, light-dark). Plain CSS module: the
-   component roots below declare the palette once as custom properties. */
-
-.editor,
-.field,
-.popover-layer,
-.popover-content,
-.popup-sheet,
-.error-tooltip {
-  --re-peek: 20px;
-  --re-corner: 10px;
-  --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-  --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
-  --re-bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
-  --re-border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
-  --re-border-soft: var(
-    --color-landing-border-soft,
-    light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04))
-  );
-  --re-fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
-  --re-fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
-  --re-fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
-  --re-accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
-  --re-red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
-  --re-on-accent: var(--color-landing-bg, light-dark(#ffffff, #07090c));
-  --re-mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
-
-  @media (pointer: coarse) {
-    --re-peek: 28px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    --re-slide: 0s;
-  }
-}
+/* RichEditor + DateTimePicker calendar popup. Baseline: Chrome 120, Safari
+   17.2, Firefox 128 (native nesting, color-mix, light-dark). Plain CSS module:
+   each control root composes the family palette. */
 
 .editor {
+  composes: tokens from '../control-tokens.module.css';
   color-scheme: light dark;
   background: var(--re-bg-card);
   border: 1px solid var(--re-border);
@@ -101,6 +67,7 @@
 /* A flex column, not a block: an inline-block editor would leave a baseline gap
    between the field and the drawer that slides out from under it. */
 .field {
+  composes: tokens from '../control-tokens.module.css';
   position: relative;
   display: flex;
   flex-direction: column;
@@ -162,272 +129,10 @@
   }
 }
 
-/* Radix renders the popover wrapper in normal stacking; hosts wrap their
-   content in `relative z-10` layers above a canvas background. The layer is
-   the slot the drawer slides out of: it keeps the full popup size, clips at
-   the edge touching the field and lets the pointer through where it is empty. */
-.popover-layer {
-  z-index: 100;
-  pointer-events: none;
-  clip-path: inset(0 -100vmax -100vmax);
-
-  &[data-side='top'] {
-    clip-path: inset(-100vmax -100vmax 0);
-  }
-}
-
-@property --re-reveal {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0;
-}
-
-/* Hidden behind the field until pulled out. The handle hangs outside the
-   drawer's box, so collapsing it never resizes the popup Radix has positioned.
-   The slide animates `--re-reveal`, not the transform: the hidden offset
-   changes sign when the popup flips sides, and a transition on the transform
-   would sweep the whole popup across the field on every flip. */
-.popover-drawer {
-  --re-hidden-shift: -100%;
-  position: relative;
-  box-sizing: border-box;
-  width: max-content;
-  max-width: var(--radix-popover-content-available-width, 100%);
-  pointer-events: auto;
-  color-scheme: light dark;
-  background-color: var(--re-bg-card);
-  border: solid var(--re-border);
-  border-width: 0 1px;
-  transform: translateY(calc((1 - var(--re-reveal)) * var(--re-hidden-shift)));
-  transition:
-    --re-reveal var(--re-slide),
-    box-shadow var(--re-slide);
-
-  &[data-expanded] {
-    --re-reveal: 1;
-    box-shadow: 0 18px 48px -12px rgb(0 0 0 / 0.7);
-  }
-
-  &:not([data-expanded]) > .popover-content {
-    pointer-events: none;
-  }
-}
-
-/* On touch the popover holds only the tab, the width of the field; the popup
-   itself is the sheet below. */
-.popover-tab {
-  position: relative;
-  width: var(--radix-popover-trigger-width);
-  pointer-events: auto;
-  color-scheme: light dark;
-}
-
-/* The pull tab: an accent bar on the popup's edge. */
-.popup-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 100%;
-  height: var(--re-peek);
-  padding: 0;
-  overflow: hidden;
-  background-color: var(--re-bg-card);
-  border: none;
-  border-radius: 0;
-  cursor: pointer;
-  touch-action: manipulation;
-  user-select: none;
-
-  &::before {
-    content: '';
-    width: 32px;
-    height: 2px;
-    background-color: var(--re-accent);
-    opacity: 0.7;
-    transition: opacity var(--re-slide);
-  }
-
-  &:hover::before {
-    opacity: 1;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--re-accent);
-    outline-offset: -2px;
-  }
-}
-
-/* Hangs outside the drawer's box, so it never resizes the popup Radix has
-   positioned; `@starting-style` grows it out of the field on open, engines
-   without it show it at once. Pulled out, the drawer's handle shrinks to the
-   popup's closing hairline. */
-.popover-drawer > .popup-handle,
-.popover-tab > .popup-handle {
-  position: absolute;
-  top: 100%;
-  right: -1px;
-  left: -1px;
-  width: auto;
-  border: solid var(--re-border);
-  border-width: 0 1px 1px;
-  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.6);
-  transition:
-    height var(--re-slide),
-    box-shadow var(--re-slide);
-
-  @starting-style {
-    height: 0;
-  }
-}
-
-.popover-tab > .popup-handle {
-  right: 0;
-  left: 0;
-}
-
-.popover-drawer[data-expanded] > .popup-handle {
-  height: 0;
-  box-shadow: none;
-  cursor: auto;
-
-  &::before {
-    opacity: 0;
-  }
-}
-
-/* The corner brackets frame the pulled-out popup only: a lone bracket on a
-   collapsed handle reads as a rendering glitch. */
-.popover-drawer::before,
-.popover-drawer > .popup-handle::after {
-  content: '';
-  position: absolute;
-  width: var(--re-corner);
-  height: var(--re-corner);
-  border: 1px solid var(--re-accent);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--re-slide);
-}
-
-.popover-drawer[data-expanded]::before,
-.popover-drawer[data-expanded] > .popup-handle::after {
-  opacity: 0.6;
-}
-
-.popover-drawer::before {
-  top: 0;
-  left: -1px;
-  border-right: none;
-  border-bottom: none;
-}
-
-.popup-handle::after {
-  right: -1px;
-  bottom: -1px;
-  border-top: none;
-  border-left: none;
-}
-
-.popover-layer[data-side='top'] {
-  .popover-drawer {
-    --re-hidden-shift: 100%;
-  }
-
-  .popup-handle {
-    top: auto;
-    bottom: 100%;
-    border-width: 1px 1px 0;
-    box-shadow: 0 -6px 16px -8px rgb(0 0 0 / 0.6);
-  }
-
-  .popover-drawer::before {
-    inset: auto -1px 0 auto;
-    border: 1px solid var(--re-accent);
-    border-top: none;
-    border-left: none;
-  }
-
-  .popup-handle::after {
-    inset: -1px auto auto -1px;
-    border: 1px solid var(--re-accent);
-    border-right: none;
-    border-bottom: none;
-  }
-}
-
-/* The touch popup: a modal `<dialog>` in the top layer, which no transformed
-   ancestor can trap, rising from the bottom edge. Portrait takes the full
-   width; landscape sizes to the content, centred. `overlay` and `display`
-   transition discretely so the slide-out plays before the dialog leaves the
-   top layer; engines without them cut. */
-.popup-sheet {
-  --re-sheet-margin: 48px;
-  position: fixed;
-  inset: auto 0 0;
-  box-sizing: border-box;
-  width: max-content;
-  max-width: 100%;
-  max-height: calc(100dvh - var(--re-sheet-margin));
-  margin: 0 auto;
-  padding: 0 0 env(safe-area-inset-bottom);
-  overflow: hidden auto;
-  overscroll-behavior: contain;
-  background-color: var(--re-bg-card);
-  border: solid var(--re-border);
-  border-width: 1px 1px 0;
-  color: var(--re-fg);
-  color-scheme: light dark;
-  box-shadow: 0 -18px 48px -12px rgb(0 0 0 / 0.7);
-  translate: 0 100%;
-  transition:
-    translate var(--re-slide),
-    overlay var(--re-slide) allow-discrete,
-    display var(--re-slide) allow-discrete;
-
-  @media (orientation: portrait) {
-    width: 100%;
-    border-width: 1px 0 0;
-  }
-
-  &[open] {
-    translate: none;
-
-    @starting-style {
-      translate: 0 100%;
-    }
-  }
-
-  &::backdrop {
-    background-color: rgb(0 0 0 / 0);
-    transition:
-      background-color var(--re-slide),
-      overlay var(--re-slide) allow-discrete,
-      display var(--re-slide) allow-discrete;
-  }
-
-  &[open]::backdrop {
-    background-color: rgb(0 0 0 / 0.5);
-
-    @starting-style {
-      background-color: rgb(0 0 0 / 0);
-    }
-  }
-
-  > .popup-handle {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-
-  > .popover-content {
-    max-height: none;
-    overflow: visible;
-  }
-}
-
-body:has(.popup-sheet[open]) {
-  overflow: hidden;
+/* In the touch sheet the dialog scrolls, not the calendar. */
+dialog > .popover-content {
+  max-height: none;
+  overflow: visible;
 }
 
 /* The panes sit side by side while the viewport has room and wrap when it does
@@ -439,6 +144,7 @@ body:has(.popup-sheet[open]) {
    with the room on its side never would. `--re-viewport-margin` is the
    popover's collision padding, top plus bottom. */
 .popover-content {
+  composes: tokens from '../control-tokens.module.css';
   --re-cell: 36px;
   --re-pane-padding: 12px;
   --re-pane-header: 32px;
@@ -628,6 +334,7 @@ body:has(.popup-sheet[open]) {
 }
 
 .error-tooltip {
+  composes: tokens from '../control-tokens.module.css';
   color: var(--re-red);
   font-size: 12px;
   padding: 2px 0;
@@ -737,4 +444,260 @@ body:has(.popup-sheet[open]) {
     border-color: var(--re-accent);
     outline: none;
   }
+}
+
+/* SecretEditor: a native password input in the family's frame, with room for
+   the owner's buttons (generator, copy) and the show / hide toggle. */
+.secret-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-block: 2px;
+  padding-inline-end: 4px;
+}
+
+.secret-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.02em;
+
+  &:focus {
+    outline: 0;
+  }
+
+  &::placeholder {
+    color: var(--re-fg-faint);
+  }
+}
+
+.secret-toggle {
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--re-fg-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--re-fg);
+    background: var(--re-bg-elevated);
+    outline: 0;
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--re-accent);
+  }
+}
+
+/* MaskedEditor: a group starts with a margin, not a space, so copying gives
+   the bare characters and the caret never steps over a separator. */
+.mask-gap {
+  margin-inline-start: 0.6ch;
+}
+
+/* UrlEditor: the host carries the colour, the rest of the address recedes. */
+.url-dim {
+  color: var(--re-fg-faint);
+}
+
+.url-field {
+  composes: tokens from '../control-tokens.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.url-punycode {
+  color: var(--re-fg-faint);
+  font-family: var(--re-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.url-host {
+  color: var(--re-fg);
+  font-weight: 600;
+}
+
+/* Checkbox: the native control, coloured with the family's accent. */
+.checkbox {
+  composes: tokens from '../control-tokens.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--re-fg);
+  font-size: 13px;
+  cursor: pointer;
+
+  & input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--re-accent);
+    cursor: inherit;
+  }
+
+  &:has(input:disabled) {
+    color: var(--re-fg-faint);
+    cursor: default;
+  }
+}
+
+/* MultilineEditor: grows with its text up to a limit, then scrolls. */
+.multiline {
+  display: block;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  font-family: var(--re-mono);
+}
+
+/* ListEditor: one row per item, its buttons beside it. */
+.list {
+  composes: tokens from '../control-tokens.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.list-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-number {
+  flex: none;
+  width: 18px;
+  color: var(--re-fg-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.list-number-marked {
+  color: var(--re-accent);
+  font-weight: 600;
+  text-shadow: 0 0 6px var(--re-accent);
+}
+
+.list-row-dragging {
+  position: relative;
+  z-index: 1;
+  opacity: 0.9;
+}
+
+.list-actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.list-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.list-button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--re-fg-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--re-fg);
+    border-color: var(--re-border);
+    outline: 0;
+  }
+
+  &:disabled {
+    visibility: hidden;
+  }
+}
+
+/* Tabs: an underlined row of triggers over the active panel. */
+.tabs {
+  composes: tokens from '../control-tokens.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--re-fg);
+}
+
+.tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: inset 0 -1px 0 var(--re-border);
+}
+
+.tabs-list {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  overflow: auto hidden;
+  scrollbar-width: thin;
+}
+
+.tabs-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.tabs-trigger {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--re-fg-dim);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--re-fg);
+    outline: 0;
+  }
+
+  &[data-state='active'] {
+    color: var(--re-fg);
+    border-bottom-color: var(--re-accent);
+  }
+}
+
+/* MonthYearEditor: twelve months of the year shown, three to a row. */
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(calc(var(--re-cell) * 2), 1fr));
+  gap: 2px;
 }

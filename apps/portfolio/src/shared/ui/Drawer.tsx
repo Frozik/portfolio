@@ -15,6 +15,7 @@ export const Drawer = memo(
     open,
     onClose,
     placement = 'right',
+    mobile = 'sheet',
     children,
     className,
   }: {
@@ -22,6 +23,8 @@ export const Drawer = memo(
     open: boolean;
     onClose: () => void;
     placement?: 'left' | 'right';
+    /** On a narrow screen: a bottom sheet, or the same side drawer as on a wide one (a navigation menu). */
+    mobile?: 'sheet' | 'side';
     children?: ReactNode;
     className?: string;
   }) => {
@@ -44,9 +47,15 @@ export const Drawer = memo(
             aria-describedby={undefined}
             className={cn(
               'fixed z-50 flex flex-col bg-surface-elevated shadow-xl',
-              // Mobile: bottom sheet, 50% height (slides up from the bottom)
-              'inset-x-0 bottom-0 h-1/2 rounded-t-2xl',
-              'data-[state=open]:animate-slide-in-bottom data-[state=closed]:animate-slide-out-bottom',
+              mobile === 'side'
+                ? cn('inset-y-0 h-full w-80 max-w-[85vw]', {
+                    'left-0 data-[state=open]:animate-slide-in-left data-[state=closed]:animate-slide-out-left':
+                      placement === 'left',
+                    'right-0 data-[state=open]:animate-slide-in-right data-[state=closed]:animate-slide-out-right':
+                      placement === 'right',
+                  })
+                : // Mobile: bottom sheet, 50% height (slides up from the bottom)
+                  'inset-x-0 bottom-0 h-1/2 rounded-t-2xl data-[state=open]:animate-slide-in-bottom data-[state=closed]:animate-slide-out-bottom',
               // Desktop: side drawer. `animate-*` is a single property, so the `md:`
               // variant fully replaces the mobile vertical slide — no diagonal motion.
               'md:inset-x-auto md:top-0 md:h-full md:w-80 md:rounded-t-none',

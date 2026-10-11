@@ -27,7 +27,7 @@ function segment(start: bigint, count: number): IStoredSegment {
   };
 }
 
-/** What a time series relies on in any persistent cache: one suite for every implementation of the port (§4.7). */
+/** What a time series relies on in any persistent cache: one suite for every implementation of the port. */
 export function describePersistentCache(
   name: string,
   options: IPersistentCacheContractOptions

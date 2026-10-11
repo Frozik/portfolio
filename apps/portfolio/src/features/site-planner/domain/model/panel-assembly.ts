@@ -4,7 +4,7 @@ import type { CircuitGroupId, DeviceId, DeviceKind } from './electrical';
 import type { RoomTypeId } from './rooms';
 
 /**
- * What stands on the DIN rail of a щиток (`wiring.md` §3.6, brought
+ * What stands on the DIN rail of a щиток (brought
  * forward): the incomer, then one protective device per группа — a plain
  * breaker, or an RCBO where the group serves a wet room. Derived from the
  * groups, never drawn: a group added on the plan is a module added here.

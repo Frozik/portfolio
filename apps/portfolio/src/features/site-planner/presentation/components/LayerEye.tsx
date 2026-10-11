@@ -11,7 +11,7 @@ const EYE_SIZE_PX = 12;
 
 /**
  * The eye beside a layer's row. The active layer's eye is disabled rather than
- * hidden: what cannot be seen cannot be worked in (`layers.md` §7 п.2), and a
+ * hidden: what cannot be seen cannot be worked in, and a
  * disabled eye says so where the finger already is.
  */
 export const LayerEye = observer(

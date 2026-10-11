@@ -3,7 +3,7 @@ import { assert } from '@frozik/utils/assert/assert';
 /**
  * Equal-temperament note names and the arithmetic that turns them into frequencies. This lives
  * with the rest of the audio code rather than in `domain/`: a jingle's pitch is not a game rule,
- * it is a property of the sound the infrastructure synthesises (§12.3).
+ * it is a property of the sound the infrastructure synthesises.
  */
 const PITCH_CLASS_NAMES = [
   'C',

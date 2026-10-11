@@ -33,6 +33,21 @@ describe('checkSourceConventions', () => {
     expect(problems).toEqual(['src/a.ts:2: separator comment — split the file instead']);
   });
 
+  it('reports a CSS module class read by its kebab-case name', () => {
+    writeSource('View.tsx', [
+      'const a = styles.popupSheet;',
+      "const b = styles['popup-sheet'];",
+      "const c = popupStyles['popover-layer'];",
+    ]);
+
+    const { problems } = checkSourceConventions({ roots: ['src'], baseline: {}, cwd });
+
+    expect(problems).toEqual([
+      'src/View.tsx:2: kebab-case CSS module key — classes are exported camelCase only',
+      'src/View.tsx:3: kebab-case CSS module key — classes are exported camelCase only',
+    ]);
+  });
+
   it('rejects an oversized file the baseline does not know', () => {
     writeSource('big.ts', linesOf(MAX_LINES + 1));
 

@@ -21,7 +21,7 @@ export interface ISeriesFrame<TX> {
 /**
  * Everything a painter sees. The same object for as long as nothing in it
  * changed, so a painter tells "nothing to repaint" by reference, and grid,
- * axes, series and crosshair all read one mapping from data to pixels (§3.6).
+ * axes, series and crosshair all read one mapping from data to pixels.
  */
 export interface IChartFrame<TX> {
   readonly domain: IAxisDomain<TX>;

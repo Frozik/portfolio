@@ -7,7 +7,7 @@ export interface IInsets {
   readonly bottom: number;
 }
 
-/** Every colour and size a chart is drawn with; extensions and style processors read their tokens from it (§8). */
+/** Every colour and size a chart is drawn with; extensions and style processors read their tokens from it. */
 export interface IChartTheme {
   readonly background: TColor;
   readonly grid: TColor;

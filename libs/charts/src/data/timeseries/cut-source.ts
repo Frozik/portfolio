@@ -13,7 +13,7 @@ import type { ITimeseriesSource } from './source';
 /**
  * A source of time with the cuts of the axis applied at its door: asked in
  * world time, answering in virtual time with nothing inside the cuts left.
- * The channel behind it never learns that anything was cut (sessions §5).
+ * The channel behind it never learns that anything was cut.
  */
 export function cutTimeseriesSource(
   source: ITimeseriesSource,

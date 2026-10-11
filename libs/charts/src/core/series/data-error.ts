@@ -1,4 +1,4 @@
-/** The gRPC status codes: what went wrong decides what the chart does next (§4.6). */
+/** The gRPC status codes: what went wrong decides what the chart does next. */
 export type TDataErrorCode =
   | 'CANCELLED'
   | 'UNKNOWN'

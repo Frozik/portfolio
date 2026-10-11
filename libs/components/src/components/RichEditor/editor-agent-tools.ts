@@ -7,9 +7,12 @@ import { z } from 'zod';
 
 import { clampToDateRange } from './date-entry';
 import { defaultFormatDate } from './date-format';
+import type { TMask } from './masked-input';
+import { enterMaskedText } from './masked-input';
 import type { INumericFieldFormat } from './numeric-entry';
 import { enterNumericText, settledDecimals } from './numeric-entry';
 import { formatNumericValue } from './numeric-input';
+import { normalizeUrlInput } from './url-input';
 
 const textInput = z.object({
   text: z.string().describe('Exactly what a person would type into the field.'),
@@ -146,6 +149,227 @@ export function defineDateTimePickerTools({
         const value = clampToDateRange(result.value, { minDate, maxDate });
         setValue(value);
         return describe(value);
+      },
+    }),
+  ];
+}
+
+/**
+ * `<name>_read` and `<name>_enter` for one `MaskedEditor`. Entering goes
+ * through the mask, so the agent gets exactly the characters a person typing
+ * the same text would: anything the mask does not accept is dropped.
+ */
+export function defineMaskedEditorTools({
+  name,
+  label,
+  getValue,
+  setValue,
+  mask,
+  accepts,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getValue: () => string;
+  readonly setValue: (value: string) => void;
+  readonly mask: TMask;
+  /** What the field takes, for the agent: "digits and a leading +", "letters and digits, up to 34". */
+  readonly accepts: string;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Reads the "${label}" field. It takes ${accepts}.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ value: getValue() }),
+    }),
+    defineAgentTool({
+      name: `${name}_enter`,
+      title: `Enter ${label}`,
+      description: `Types text into the "${label}" field as a person would; it keeps ${accepts} and drops the rest. Returns the stored value.`,
+      input: textInput,
+      execute: ({ text }) => {
+        const value = enterMaskedText(text, mask);
+        setValue(value);
+        return { value };
+      },
+    }),
+  ];
+}
+
+/** `<name>_read` and `<name>_enter` for one `TextEditor`: the text as given. */
+export function defineTextEditorTools({
+  name,
+  label,
+  getValue,
+  setValue,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getValue: () => string;
+  readonly setValue: (value: string) => void;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Reads the "${label}" field.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ value: getValue() }),
+    }),
+    defineAgentTool({
+      name: `${name}_enter`,
+      title: `Enter ${label}`,
+      description: `Types text into the "${label}" field. Returns the stored value.`,
+      input: textInput,
+      execute: ({ text }) => {
+        setValue(text);
+        return { value: text };
+      },
+    }),
+  ];
+}
+
+/** `<name>_read` and `<name>_enter` for one `UrlEditor`: spaces go, as when a person pastes an address. */
+export function defineUrlEditorTools({
+  name,
+  label,
+  getValue,
+  setValue,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getValue: () => string;
+  readonly setValue: (value: string) => void;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Reads the "${label}" address field.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ value: getValue() }),
+    }),
+    defineAgentTool({
+      name: `${name}_enter`,
+      title: `Enter ${label}`,
+      description: `Types an address into the "${label}" field; spaces are dropped. Returns the stored value.`,
+      input: textInput,
+      execute: ({ text }) => {
+        const value =
+          normalizeUrlInput(text, { start: text.length, end: text.length })?.value ?? '';
+        setValue(value);
+        return { value };
+      },
+    }),
+  ];
+}
+
+/** `<name>_read` and `<name>_set` for one `Checkbox`. */
+export function defineCheckboxTools({
+  name,
+  label,
+  getChecked,
+  setChecked,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getChecked: () => boolean;
+  readonly setChecked: (checked: boolean) => void;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Reads whether "${label}" is ticked.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ checked: getChecked() }),
+    }),
+    defineAgentTool({
+      name: `${name}_set`,
+      title: `Set ${label}`,
+      description: `Ticks or clears "${label}".`,
+      input: z.object({ checked: z.boolean() }),
+      execute: ({ checked }) => {
+        setChecked(checked);
+        return { checked };
+      },
+    }),
+  ];
+}
+
+/** `<name>_read` and `<name>_enter` for one `MultilineEditor`; line breaks are kept. */
+export function defineMultilineEditorTools({
+  name,
+  label,
+  getValue,
+  setValue,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getValue: () => string;
+  readonly setValue: (value: string) => void;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Reads the "${label}" text, several lines.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ value: getValue() }),
+    }),
+    defineAgentTool({
+      name: `${name}_enter`,
+      title: `Enter ${label}`,
+      description: `Replaces the "${label}" text; line breaks are kept.`,
+      input: textInput,
+      execute: ({ text }) => {
+        setValue(text);
+        return { value: text };
+      },
+    }),
+  ];
+}
+
+/** `<name>_read` and `<name>_open` for one `Tabs`: the agent sees every tab and opens one by id. */
+export function defineTabsTools({
+  name,
+  label,
+  getTabs,
+  getActive,
+  setActive,
+}: {
+  readonly name: string;
+  readonly label: string;
+  readonly getTabs: () => readonly { readonly id: string; readonly label: string }[];
+  readonly getActive: () => string;
+  readonly setActive: (id: string) => void;
+}): readonly IAgentTool[] {
+  return [
+    defineAgentTool({
+      name: `${name}_read`,
+      title: `Read ${label}`,
+      description: `Lists the "${label}" tabs and says which one is open.`,
+      input: z.object({}),
+      readOnly: true,
+      execute: () => ({ tabs: getTabs(), active: getActive() }),
+    }),
+    defineAgentTool({
+      name: `${name}_open`,
+      title: `Open ${label} tab`,
+      description: `Opens one of the "${label}" tabs by its id, as read with ${name}_read.`,
+      input: z.object({ id: z.string() }),
+      execute: ({ id }) => {
+        if (!getTabs().some(tab => tab.id === id)) {
+          return refuse(`There is no "${id}" tab.`);
+        }
+        setActive(id);
+        return { active: id };
       },
     }),
   ];

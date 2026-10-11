@@ -32,7 +32,7 @@ import {
  * corners, the objects on the floor (`building-grips.ts`), the slabs — and the
  * keyboard edits the selected wall junction (`wall-junction-detach.ts`).
  *
- * Only the ACTIVE layer answers the select tool (`layers.md` §6.7): a press
+ * Only the ACTIVE layer answers the select tool: a press
  * passes through whatever the other layers show, so the walls under a sofa
  * are context while the furniture is being arranged, not a competing target.
  */
@@ -158,7 +158,7 @@ export class BuildingEditInteraction implements EditorInteraction {
    * Commits the polyline being clicked out; on a corner of the selected wall
    * it edits the contour — plain removes the corner, Alt CUTS there (a ring
    * opens, an open wall splits in two); on an object of another layer it
-   * steps into that layer with the object selected (`layers.md` §7 п.6 — the
+   * steps into that layer with the object selected (the
    * Illustrator isolation habit, «double-click means deeper»); over emptiness
    * it closes the editor.
    */

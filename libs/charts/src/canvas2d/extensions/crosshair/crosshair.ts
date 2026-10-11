@@ -7,7 +7,7 @@ import { crosshairCore } from '../../../extensions/crosshair/core';
 import { CANVAS2D_BACKEND } from '../../painter';
 import { crosshairPainter } from './painter';
 
-/** The crosshair with its labels on the 2D canvas, above everything else (§7.1). */
+/** The crosshair with its labels on the 2D canvas, above everything else. */
 export function crosshair<TX>(
   options: ICrosshairOptions = {}
 ): IChartExtension<TX, 'crosshair', ICrosshairSlice<TX>> {

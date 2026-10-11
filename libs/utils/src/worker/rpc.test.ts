@@ -1,7 +1,8 @@
 import { assert } from '../assert/assert';
-import type { IRpcWorker } from './rpc-client';
+import type { IInMemoryWorkerPair } from './in-memory-worker.test-helper';
+import { createInMemoryWorkerPair } from './in-memory-worker.test-helper';
 import { createRpcClient } from './rpc-client';
-import type { IRpcScope, TRpcHandlers } from './rpc-server';
+import type { TRpcHandlers } from './rpc-server';
 import { serveRpc } from './rpc-server';
 
 type TEchoContract = {
@@ -14,46 +15,6 @@ type TEchoContract = {
   readonly failUncloneably: { readonly request: null; readonly response: never };
   readonly wait: { readonly request: null; readonly response: 'done' };
 };
-
-interface IWorkerPair {
-  readonly worker: IRpcWorker;
-  readonly scope: IRpcScope;
-  readonly crash: (event: Event) => void;
-  readonly isTerminated: () => boolean;
-}
-
-/** A worker and its global scope in one thread: messages are structured-cloned and buffers really transferred. */
-function createWorkerPair(): IWorkerPair {
-  const toWorker = new EventTarget();
-  const toClient = new EventTarget();
-  let terminated = false;
-  const deliver = (target: EventTarget, message: unknown, transfer: Transferable[]): void => {
-    const data: unknown = structuredClone(message, { transfer });
-    queueMicrotask(() => {
-      if (!terminated) {
-        target.dispatchEvent(new MessageEvent('message', { data }));
-      }
-    });
-  };
-
-  return {
-    worker: {
-      postMessage: (message, transfer) => deliver(toWorker, message, transfer),
-      addEventListener: (type: string, listener: (event: MessageEvent) => void) =>
-        toClient.addEventListener(type, listener as EventListener),
-      terminate: () => {
-        terminated = true;
-      },
-    },
-    scope: {
-      postMessage: (message, { transfer }) => deliver(toClient, message, transfer),
-      addEventListener: (type, listener) =>
-        toWorker.addEventListener(type, listener as EventListener),
-    },
-    crash: event => toClient.dispatchEvent(event),
-    isTerminated: () => terminated,
-  };
-}
 
 interface IEchoHandlers extends TRpcHandlers<TEchoContract> {
   readonly waitSignals: AbortSignal[];
@@ -93,11 +54,11 @@ function createEchoHandlers(): IEchoHandlers {
   };
 }
 
-function connect(): IWorkerPair & {
+function connect(): IInMemoryWorkerPair & {
   readonly client: ReturnType<typeof createRpcClient<TEchoContract>>;
   readonly handlers: IEchoHandlers;
 } {
-  const pair = createWorkerPair();
+  const pair = createInMemoryWorkerPair();
   const handlers = createEchoHandlers();
   serveRpc<TEchoContract>(pair.scope, handlers);
   return { ...pair, handlers, client: createRpcClient<TEchoContract>(pair.worker) };

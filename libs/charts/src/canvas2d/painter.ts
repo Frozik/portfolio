@@ -10,7 +10,7 @@ export const CANVAS2D_BACKEND = 'canvas2d';
 /**
  * Something drawn on the 2D canvas of a chart. The surface repaints all its
  * painters together, and only when one of them says its picture is out of
- * date or the canvas was cleared by a resize (§6.7).
+ * date or the canvas was cleared by a resize.
  */
 export interface ICanvasPainter {
   /** Whether what was painted last no longer shows this frame. */

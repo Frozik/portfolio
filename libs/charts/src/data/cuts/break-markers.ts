@@ -11,7 +11,7 @@ import type { IAxisMapping, ICutInView, TCutEdge } from '../../core/viewport/axi
 /**
  * Whether the cut lies wholly between the intervals of two neighbours and the
  * elements are shorter than the open stretch before it: the time missing
- * between them was time they would have covered (sessions §5.1, rule 3).
+ * between them was time they would have covered.
  */
 function breaksBetween<TX>(
   domain: IAxisDomain<TX>,
@@ -179,7 +179,7 @@ function withBreakPositions(column: TAxisColumn, breaks: readonly IBreak<unknown
  * The run with a technical NaN element at every break, so a line, a stair or
  * an area does not join the elements on its two sides. The markers are not
  * data: `breakMarkers` names them, and whatever shows elements to the user
- * skips them (sessions §6).
+ * skips them.
  */
 export function markedWith<TX>(run: TRun<TX>, breaks: readonly IBreak<TX>[]): TRun<TX> {
   if (breaks.length === 0) {

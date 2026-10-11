@@ -1,5 +1,5 @@
 export const sitePlannerHouseTranslationsEn = {
-  /** The building editor's layers (`layers.md`): the rail button and its menu. */
+  /** The building editor's layers: the rail button and its menu. */
   layers: {
     panelTitle: 'Layers',
     /** The rail button: what is in hand, and the way to the list. */
@@ -21,7 +21,7 @@ export const sitePlannerHouseTranslationsEn = {
     /** Status-bar warning: nothing hosts an opening or a device while the walls are off. */
     wallsHidden: 'Walls are hidden — openings and devices will find no wall',
   },
-  /** Cable routes, cables and the journal (`wiring.md`). */
+  /** Cable routes, cables and the journal. */
   wiring: {
     routesPanelTitle: 'Cable routes',
     materialsPanelTitle: 'Cable journal',

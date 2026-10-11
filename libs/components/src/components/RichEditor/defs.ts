@@ -31,6 +31,13 @@ export interface IRichEditorHandle {
   focusNext(): void;
 }
 
+/** WAI-ARIA editable combobox: the field owns a list of suggestions and points at the active one. */
+export interface IComboboxAria {
+  readonly listId: string;
+  readonly expanded: boolean;
+  readonly activeOptionId: string | undefined;
+}
+
 export type TLeaveDirection = 'forward' | 'backward';
 
 export interface ICalendarAriaLabels {
@@ -59,4 +66,21 @@ export interface ICalendarAriaLabels {
   readonly calendarDays: string;
   readonly openNativePicker: string;
   readonly toggleCalendar: string;
+  readonly secretInputLabel: string;
+  readonly showSecret: string;
+  readonly hideSecret: string;
+  readonly addItem: string;
+  readonly removeItem: string;
+  readonly moveItem: string;
+  readonly reorderInstructions: string;
+  readonly itemPickedUp: (position: number) => string;
+  readonly itemMovedTo: (position: number) => string;
+  readonly itemDropped: (position: number) => string;
+  readonly itemMoveCancelled: string;
+  readonly showOptions: string;
+  readonly options: string;
+  readonly monthYearInputLabel: string;
+  readonly monthPicker: string;
+  readonly fileDropHint: string;
+  readonly filesRejected: string;
 }

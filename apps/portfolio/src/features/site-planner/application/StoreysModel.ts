@@ -253,7 +253,7 @@ export class StoreysModel {
    * Answers a finding in the Замечания panel: aims the editor at the storey
    * and the layer it belongs to and brings its place into view. A list of
    * findings is only useful if each row is a way to get to the thing it is
-   * about — and to the tools that fix it (`layers.md` §7 п.8).
+   * about — and to the tools that fix it.
    */
   revealWarning(warning: BuildingWarning): void {
     this.core.setViewMode('plan');

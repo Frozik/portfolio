@@ -30,7 +30,7 @@ import { StairToolButton } from './StairToolButton';
 import { StoreySwitcher } from './StoreySwitcher';
 
 /**
- * The presentation half of `OBJECT_EDITOR_SPECS` (see `object-editors.md`):
+ * The presentation half of `OBJECT_EDITOR_SPECS`:
  * how an editor-contributed tool looks and reads. The domain table says a tool
  * exists and what key arms it; this registry says which icon stands for it in
  * the rail and what the status bar explains while it is in hand. A tool
@@ -117,7 +117,7 @@ export const EDITOR_TOOL_PRESENTATIONS: Partial<Record<EditorToolId, EditorToolP
 };
 
 /**
- * How each building layer looks and reads (`layers.md` §8.2). A layer wears
+ * How each building layer looks and reads. A layer wears
  * the glyph of its main tool, so it is recognised by the sign already learnt.
  */
 export const LAYER_PRESENTATIONS: Readonly<

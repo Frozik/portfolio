@@ -19,7 +19,7 @@ export interface ICanvas2dOptions {
 /**
  * The 2D canvas as a backend: nothing shared between charts but the text
  * metrics. Above another backend it is a transparent overlay; alone, or at the
- * bottom of the stack, it draws the series too (§6.7).
+ * bottom of the stack, it draws the series too.
  */
 export function canvas2d(options: ICanvas2dOptions = {}): IRenderBackend {
   const text = options.text ?? createTextMeasurer();

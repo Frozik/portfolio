@@ -24,7 +24,7 @@ interface IResidentRun {
 /**
  * The styled runs of one chart in its data texture, a chunk per slot. A chunk
  * is written when it is first drawn and again only when its run or style
- * changed; a slot taken by eviction is refilled from the run in memory (§4.7).
+ * changed; a slot taken by eviction is refilled from the run in memory.
  */
 export class ChunkStore {
   private readonly runs = new Map<string, IResidentRun>();

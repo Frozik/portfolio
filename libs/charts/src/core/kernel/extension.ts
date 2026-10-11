@@ -17,7 +17,7 @@ export interface IVisibleData<TX> {
   readonly series: readonly ISeriesFrame<TX>[];
 }
 
-/** Everything an extension hands the kernel. Every field but the slice is optional; the kernel composes what is there (§3.5). */
+/** Everything an extension hands the kernel. Every field but the slice is optional; the kernel composes what is there. */
 export interface IExtensionInstance<TX, TSlice> {
   readonly slice: TSlice;
   /** A step before the frame is built: inertia, animation, timers. */

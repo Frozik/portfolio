@@ -8,7 +8,7 @@ import { elementSpanOf, paintAt, stepPixelsOf, visibleElements } from '../path-p
  * The column mark on the 2D canvas: a rectangle from the baseline to the
  * value, in the middle of the element's interval; a candle counts by its
  * close. When no coarser scale is left the columns narrow to what their
- * interval leaves them (§4.3).
+ * interval leaves them.
  */
 export const columnCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {

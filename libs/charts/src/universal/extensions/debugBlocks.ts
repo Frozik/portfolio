@@ -8,7 +8,7 @@ import { elementsPerSlot } from '../../webgpu/texel-encoding';
 
 /**
  * A yellow line where each chunk of the data texture begins. The 2D canvas
- * has no chunks; there the lines stand where WebGPU would have cut (§7.1).
+ * has no chunks; there the lines stand where WebGPU would have cut.
  */
 export function debugBlocks<TX>(): IChartExtension<TX, 'debugBlocks', IDebugBlocksSlice<TX>> {
   return withPaint(debugBlocksCore<TX>({ blockSize: elementsPerSlot }), slice => [

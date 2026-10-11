@@ -19,7 +19,7 @@ export interface InteractionContext {
 /**
  * The canvas behaviour of one open editor — the seam a future complex editor
  * (the building editor first) plugs into without the shell growing a special
- * case (see `object-editors.md`). The shell consults the active mode's
+ * case. The shell consults the active mode's
  * interaction before its own shared handling: a `true` from a pointer or key
  * handler means the event belonged to the editor.
  *

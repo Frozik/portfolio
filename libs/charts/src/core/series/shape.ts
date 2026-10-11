@@ -2,7 +2,7 @@ export type TShape = 'point' | 'candle';
 
 export interface IPoint<TX = bigint> {
   readonly x: TX;
-  /** `NaN` marks a gap: no data at this position (§4.2). */
+  /** `NaN` marks a gap: no data at this position. */
   readonly value: number;
 }
 

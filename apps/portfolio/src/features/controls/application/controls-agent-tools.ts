@@ -10,6 +10,7 @@ import { isNil } from 'lodash-es';
 import { z } from 'zod';
 
 import type { ControlsDemoStore } from './ControlsDemoStore';
+import { createFormAgentTools } from './form-agent-tools';
 
 const DECIMALS_MIN = 0;
 const DECIMALS_MAX = 10;
@@ -28,8 +29,11 @@ function readSettings(store: ControlsDemoStore) {
   };
 }
 
-/** The two demo fields through the component library's own tools, plus the knobs that shape them. */
-export function createControlsAgentTools(store: ControlsDemoStore): readonly IAgentTool[] {
+/** The demo fields through the component library's own tools, plus the knobs that shape them. */
+export function createControlsAgentTools(
+  store: ControlsDemoStore,
+  locale: string
+): readonly IAgentTool[] {
   return [
     ...defineNumericEditorTools({
       name: 'controls_number',
@@ -105,5 +109,6 @@ export function createControlsAgentTools(store: ControlsDemoStore): readonly IAg
         return readSettings(store);
       },
     }),
+    ...createFormAgentTools(store.form, locale),
   ];
 }

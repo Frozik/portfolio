@@ -11,7 +11,7 @@ import type { ISnapshotSource, ISnapshotWindow } from './source';
 /**
  * A snapshot source with the cuts of the axis applied at its door: asked in
  * world coordinates, answering in virtual ones with nothing inside the cuts
- * left; the windows behind it never learn that anything was cut (sessions §5).
+ * left; the windows behind it never learn that anything was cut.
  */
 export function cutSnapshotSource<TX>(
   source: ISnapshotSource<TX>,

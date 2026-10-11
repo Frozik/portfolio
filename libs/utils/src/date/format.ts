@@ -24,3 +24,8 @@ export function formatDateTime(iso: ISO, timeZone: Temporal.TimeZoneLike = 'UTC'
 export function formatDateTimeLocal(iso: ISO): string {
   return formatDateTime(iso, Temporal.Now.timeZoneId());
 }
+
+/** A calendar date as the reader's language writes it ("Oct 31, 2026", «31 окт. 2026 г.»). */
+export function formatPlainDate(date: Temporal.PlainDate, locale: string): string {
+  return date.toLocaleString(locale, { dateStyle: 'medium' });
+}

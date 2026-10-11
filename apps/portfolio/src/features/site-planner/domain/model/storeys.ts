@@ -91,7 +91,7 @@ export interface Storey {
    * read via {@link slabsOf}.
    */
   readonly slabs?: readonly Slab[];
-  /** Hand-drawn cable routes (`wiring.md` §3.3) — read via {@link wiringRoutesOf}. */
+  /** Hand-drawn cable routes — read via {@link wiringRoutesOf}. */
   readonly wiringRoutes?: readonly WiringRoute[];
 }
 

@@ -6,9 +6,9 @@ import type { TShape } from './shape';
 
 export interface IDataNeed<TX> {
   readonly range: IAxisRange<TX>;
-  /** The shape the series draws from: named by its style processor (§5.2). */
+  /** The shape the series draws from: named by its style processor. */
   readonly shape: TShape;
-  /** CSS pixels along X one element must get: the chart's density (§4.3). */
+  /** CSS pixels along X one element must get: the chart's density. */
   readonly pixelsPerElement: number;
   /** CSS pixels the range is spread over. */
   readonly widthPx: number;
@@ -19,7 +19,7 @@ export interface IDataFailure<TX> {
   readonly error: ChartDataError;
 }
 
-/** What a frame needs from the data of a series; how the data is fetched and kept is the data kind's business (§4.1). */
+/** What a frame needs from the data of a series; how the data is fetched and kept is the data kind's business. */
 export interface ISeriesData<TX> {
   activate(): void;
   suspend(): void;
@@ -47,7 +47,7 @@ export interface IDataContext<TX> {
   readonly mapping: IAxisMapping<TX> | undefined;
 }
 
-/** A description of data that a chart turns into one live instance, shared by every series naming it (§4.1). */
+/** A description of data that a chart turns into one live instance, shared by every series naming it. */
 export interface ISeriesDataFactory<TX> {
   create(context: IDataContext<TX>): ISeriesData<TX>;
 }

@@ -22,8 +22,7 @@ import type { SitePlannerStore } from './SitePlannerStore';
  * the input layer hands it plan-space points, it reads the active tool and the
  * selection from the store, and it writes back through the store's edit actions.
  *
- * The controller is the SHELL of the interaction system (see
- * `object-editors.md`): it keeps what every mode shares — the cursor readout,
+ * The controller is the SHELL of the interaction system: it keeps what every mode shares — the cursor readout,
  * the tool hotkeys, the Escape ladder, undo/redo, the shared tools, and view
  * mode itself, the editor of the whole plan. An open editor's own canvas
  * behaviour lives in its `EditorInteraction`, created on entry and dropped
@@ -183,7 +182,7 @@ export class PlanInteractionController implements PlanInputTarget {
   }
 
   /**
-   * The double click is the mode door (see `modes.md`): in view mode it opens
+   * The double click is the mode door: in view mode it opens
    * the editor of what it lands on; inside a mode the open editor decides —
    * a path's removes a point over one, and every editor steps back out over
    * emptiness. Finishing a drawn polyline still comes first.

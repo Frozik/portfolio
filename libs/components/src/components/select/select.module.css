@@ -1,0 +1,106 @@
+/* Select, MultiSelect, Combobox: a field that looks like the editor and a
+   list of options in the popup layer. */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.icon-trigger {
+  justify-content: center;
+  width: auto;
+  padding-inline: 8px;
+}
+
+.trigger-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.placeholder {
+  color: var(--re-fg-faint);
+}
+
+.chevron {
+  color: var(--re-fg-dim);
+  font-size: 10px;
+}
+
+.listbox {
+  composes: tokens from '../control-tokens.module.css';
+  box-sizing: border-box;
+  min-width: var(--radix-popover-trigger-width, 100%);
+  max-height: min(320px, 50dvh);
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--re-fg);
+  font-size: 13px;
+  list-style: none;
+}
+
+.group-label {
+  padding: 8px 12px 4px;
+  color: var(--re-fg-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: default;
+  user-select: none;
+}
+
+.decoration {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+
+  &::before {
+    content: '';
+    width: 12px;
+    color: var(--re-accent);
+  }
+
+  &[aria-selected='true']::before {
+    content: '✓';
+  }
+
+  &[data-active] {
+    background-color: var(--re-bg-elevated);
+    outline: 1px solid var(--re-accent);
+    outline-offset: -1px;
+  }
+
+  &[aria-disabled='true'] {
+    color: var(--re-fg-faint);
+    cursor: default;
+  }
+
+  @media (pointer: coarse) {
+    padding-block: 12px;
+  }
+}

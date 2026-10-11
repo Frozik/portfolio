@@ -85,7 +85,7 @@ export class ShapeGestures<TContext> {
   }
 
   /**
-   * Shift over the anchor mark takes hold of the anchor itself (see modes.md):
+   * Shift over the anchor mark takes hold of the anchor itself:
    * the shape stays put while its point of reference is dragged, magnetised to
    * the shape's own corners, side middles and centre — Alt lets it go free.
    */

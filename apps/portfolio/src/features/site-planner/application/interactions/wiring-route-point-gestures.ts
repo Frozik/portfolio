@@ -20,7 +20,7 @@ function selectedRouteBuilding(context: InteractionContext) {
 
 /**
  * The cable-route instantiation of the shared polyline point gestures
- * (`wiring.md` §3.3): a bend is a bare plan point on the grid, the edits go
+ *: a bend is a bare plan point on the grid, the edits go
  * through the wiring model, and a cancelled drag puts the whole route back.
  * The same squares, rings and grid magnet a path or a wall has.
  */

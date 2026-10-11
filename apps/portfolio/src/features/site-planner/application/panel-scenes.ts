@@ -17,7 +17,7 @@ import { devicePlanPosition } from './wire-scenes';
 const ROOM_REACH_METERS = 0.35;
 
 /**
- * Every щиток of the storey assembled (`wiring.md` §3.6): its groups read
+ * Every щиток of the storey assembled: its groups read
  * with the cable they carry and the rooms their consumers stand in, so a
  * bathroom socket puts its group behind an RCBO and the breaker is captioned
  * by the room. Derived beside the wires, from the same storey.

@@ -42,8 +42,7 @@ interface Chain {
 }
 
 /**
- * The run from one point to another along the drawn routes (`wiring.md`
- * §3.3): each end is dropped onto the nearest route within reach, and the
+ * The run from one point to another along the drawn routes: each end is dropped onto the nearest route within reach, and the
  * shortest path over the routes — joined wherever a vertex of one stands on
  * another — is the run. Nothing when either end is out of reach or the routes
  * do not connect: the caller then keeps the derived path along the walls.

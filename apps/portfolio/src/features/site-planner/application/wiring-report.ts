@@ -37,7 +37,7 @@ interface OverfilledStretch {
 }
 
 /**
- * What the storey's wiring adds up to (`wiring.md` §3.4): the cable journal
+ * What the storey's wiring adds up to: the cable journal
  * per группа, the metres per cable type and per installation method, the
  * points by kind, and every drawn stretch whose conduit is overfilled. Pure
  * over the derived runs, so it is exactly as current as the plan.

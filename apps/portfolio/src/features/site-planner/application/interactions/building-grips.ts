@@ -194,7 +194,7 @@ export function createBuildingGrips(
 
 /**
  * What stands under the pointer on ANY shown layer, in the select tool's own
- * order — the question a double click asks (`layers.md` §7 п.6) that a press,
+ * order — the question a double click asks that a press,
  * which only the active layer answers, does not.
  */
 export function pickAcrossLayers(

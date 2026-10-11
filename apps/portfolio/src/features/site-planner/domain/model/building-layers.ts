@@ -19,7 +19,7 @@ import {
  * The layers of the building editor — the разделы of a house project: what
  * carries it, what divides it, what furnishes it, what wires it, what runs
  * through it. Exactly one is ACTIVE (drawn, picked, its tools on the rail);
- * the rest are context or hidden. See `layers.md`.
+ * the rest are context or hidden.
  *
  * A layer is never stored on an object: what an object IS says which layer it
  * belongs to, so the tables below are the whole membership — one column per

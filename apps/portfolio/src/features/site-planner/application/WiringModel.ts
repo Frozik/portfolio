@@ -41,7 +41,7 @@ import type { StoreysModel } from './StoreysModel';
 const GROUP_CABLE_HISTORY_GROUP = 'group:cable';
 
 /**
- * The hand-drawn cable routes of the open building (`wiring.md` §3.3): the
+ * The hand-drawn cable routes of the open building: the
  * one being clicked out, the committed ones on the active storey, and the
  * cable each группа is wired in. The runs themselves stay derived.
  */
@@ -81,7 +81,7 @@ export class WiringModel {
   }
 
   /**
-   * A point laid beside an existing route lands touching it (`wiring.md` §9):
+   * A point laid beside an existing route lands touching it:
    * the magnet outranks the grid the way OSNAP outranks it, and Alt holds it
    * off with every other snap.
    */

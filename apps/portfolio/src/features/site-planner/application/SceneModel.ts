@@ -268,7 +268,7 @@ export class SceneModel {
   }
 
   /**
-   * The cable runs as tubes (`wiring.md` §3.5): the storeys in view — every
+   * The cable runs as tubes: the storeys in view — every
    * one outside the building editor, the active one inside it — while the
    * electrical layer is shown.
    */

@@ -1,0 +1,33 @@
+/* The palette of the control family. Colors read the host's
+   `--color-landing-*` variables; each fallback follows the OS color scheme so
+   the controls render on their own. Every control root composes this class,
+   so the palette is declared once whichever family the control belongs to. */
+
+.tokens {
+  --re-peek: 20px;
+  --re-corner: 10px;
+  --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --re-bg-card: var(--color-landing-bg-card, light-dark(#ffffff, #0f1320));
+  --re-bg-elevated: var(--color-landing-bg-elev, light-dark(#f3f4f6, #0d1016));
+  --re-border: var(--color-landing-border, light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08)));
+  --re-border-soft: var(
+    --color-landing-border-soft,
+    light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04))
+  );
+  --re-fg: var(--color-landing-fg, light-dark(#111827, #e7ecf3));
+  --re-fg-dim: var(--color-landing-fg-dim, light-dark(#4b5563, #a2adbd));
+  --re-fg-faint: var(--color-landing-fg-faint, light-dark(#6b7280, #76819a));
+  --re-accent: var(--color-landing-accent, light-dark(#2563eb, #60a5fa));
+  --re-red: var(--color-landing-red, light-dark(#dc2626, #ff4f58));
+  --re-orange: var(--color-landing-orange, light-dark(#c2410c, #fb923c));
+  --re-on-accent: var(--color-landing-bg, light-dark(#ffffff, #07090c));
+  --re-mono: ui-monospace, SFMono-Regular, Menlo, 'Cascadia Code', monospace;
+
+  @media (pointer: coarse) {
+    --re-peek: 28px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    --re-slide: 0s;
+  }
+}

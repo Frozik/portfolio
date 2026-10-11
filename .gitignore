@@ -55,3 +55,7 @@ test-results
 playwright-report
 IDEA.md
 *.tsbuildinfo
+
+# WXT: the built extension and its generated types
+.output
+.wxt

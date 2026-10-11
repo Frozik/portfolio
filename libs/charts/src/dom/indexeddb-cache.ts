@@ -91,7 +91,7 @@ function waitingOf(series: string, segment: IStoredSegment): IWaiting {
   };
 }
 
-/** The persistent cache of time series in IndexedDB: columns stored as they are, typed arrays and all (§4.7). */
+/** The persistent cache of time series in IndexedDB: columns stored as they are, typed arrays and all. */
 export function indexedDbCache(options: IIndexedDbCacheOptions): IIndexedDbCache {
   const { name, version = 1, maxBytes = DEFAULT_MAX_BYTES, maxAgeMs } = options;
   let disabled = false;

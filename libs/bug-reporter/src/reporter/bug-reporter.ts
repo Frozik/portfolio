@@ -57,7 +57,7 @@ const COUNTED_SECTIONS: readonly (keyof IDiagnosticsCounts)[] = [
 ];
 
 /**
- * The report session as a state machine (plan §6.3): one capture permission
+ * The report session as a state machine: one capture permission
  * per report, the mask held exactly for the span of a capture, diagnostics
  * snapshotted at download so they include everything up to that moment.
  */

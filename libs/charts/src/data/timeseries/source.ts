@@ -18,13 +18,13 @@ export interface IFetchRequest {
   /**
    * At least this many elements when the range holds them; having reached it,
    * the source adds every element at the time of the last one given, so a
-   * time is never split between two answers (§4.4).
+   * time is never split between two answers.
    */
   readonly softLimit: number;
   /**
    * Stretches inside the bounds the chart will throw away — closed sessions.
    * A source that knows them leaves them out; one that does not ignores the
-   * field and nothing is lost (sessions §5.2).
+   * field and nothing is lost.
    */
   readonly skip?: readonly ICut<bigint>[];
   readonly signal: AbortSignal;
@@ -42,7 +42,7 @@ export interface ISubscribeRequest {
   onError(error: unknown): void;
 }
 
-/** A series of time that only grows to the right: history by range, the new by subscription (§4.4). */
+/** A series of time that only grows to the right: history by range, the new by subscription. */
 export interface ITimeseriesSource {
   /** Elements in ascending order of time, whatever the direction. */
   fetch(request: IFetchRequest): Promise<TBatch>;

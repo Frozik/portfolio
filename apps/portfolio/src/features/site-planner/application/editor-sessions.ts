@@ -21,7 +21,7 @@ import type { StoreyId } from '../domain/model/storeys';
 
 /**
  * The transient state one editor visit owns — created by `enterEditMode`,
- * disposed by `exitEditMode`, never persisted (see `object-editors.md`). What
+ * disposed by `exitEditMode`, never persisted. What
  * lives here is the editor's own sub-world: which of the path's points is
  * being edited today; which storey is active and which wall is selected once
  * the building editor exists. The store keeps thin facades over the current
@@ -94,9 +94,9 @@ class BuildingEditSession {
   activeStoreyId: StoreyId | undefined = undefined;
   /** Chief Architect's reference display: the storey below ghosts through. */
   isReferenceStoreyVisible = true;
-  /** The layer being worked in — exactly one, as with the storey (`layers.md`). */
+  /** The layer being worked in — exactly one, as with the storey. */
   activeLayer: BuildingLayerId = DEFAULT_BUILDING_LAYER;
-  /** The cable route being clicked out (`wiring.md` §3.3); empty while none is. */
+  /** The cable route being clicked out; empty while none is. */
   draftRoutePoints: readonly Vector2[] = [];
   /** How the route tool lays the next route. */
   armedInstallation: InstallationPresetId = DEFAULT_INSTALLATION_PRESET;

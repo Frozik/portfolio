@@ -40,7 +40,7 @@ const LayerRowIcon = memo(
 );
 
 /**
- * The rail's layer button (`layers.md` §8.1): it wears the active layer's
+ * The rail's layer button: it wears the active layer's
  * glyph, and its list — the body and the corner triangle both open it — is
  * the one place the layers are switched and shown or hidden. It stands on the
  * rail rather than in the side column because the column is a drawer on a

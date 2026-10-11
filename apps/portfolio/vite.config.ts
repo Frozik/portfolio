@@ -11,6 +11,7 @@ import { defineConfig } from 'vitest/config';
 
 import { readAppVersion } from './vite-plugins/app-version.ts';
 import { buildAssetsDefine } from './vite-plugins/build-assets.ts';
+import { contentSecurityPolicy } from './vite-plugins/content-security-policy.ts';
 import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 import { STREAM_SAVER_DIR, streamSaverAssets } from './vite-plugins/stream-saver-assets.ts';
@@ -70,11 +71,15 @@ const DEPLOYMENT = readDeploymentTarget(resolve(import.meta.dirname, '..', '..')
 
 export default defineConfig(({ isSsrBuild = false }) => ({
   base: BASE,
+  // Every app worker starts as `type: 'module'`; ES output lets a worker's dynamic imports
+  // (the strength meter's per-language dictionaries) stay lazy chunks instead of one file.
+  worker: { format: 'es' },
   define: {
     __APP_VERSION__: JSON.stringify(readAppVersion()),
     'import.meta.env.VITE_COMMUNICATION_URL': JSON.stringify(DEPLOYMENT.communicationUrl),
     'import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.googleClientId),
     'import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.yandexClientId),
+    'import.meta.env.VITE_GOOGLE_VAULT_CLIENT_ID': JSON.stringify(DEPLOYMENT.googleVaultClientId),
   },
   // Low-poly 3D assets (CC0, Kenney car kit) ship as raw GLB binaries.
   assetsInclude: ['**/*.glb'],
@@ -134,6 +139,8 @@ export default defineConfig(({ isSsrBuild = false }) => ({
           ],
         },
       }),
+    !isSsrBuild &&
+      contentSecurityPolicy({ communicationUrl: DEPLOYMENT.communicationUrl, basePath: BASE }),
     ENABLE_BUNDLE_STATS &&
       visualizer({
         filename: 'bundle-stats.html',

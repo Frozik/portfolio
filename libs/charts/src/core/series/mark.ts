@@ -2,10 +2,10 @@ import type { IValueRange } from '../viewport/axis-domain';
 import type { TRun } from './point-run';
 import type { TShape } from './shape';
 
-/** A way to draw data: a line, an area, a marker, a candle (§5.3). */
+/** A way to draw data: a line, an area, a marker, a candle. */
 export interface IMark {
   readonly id: string;
-  /** The data shapes the mark can draw: its row of the compatibility map (§5.4). */
+  /** The data shapes the mark can draw: its row of the compatibility map. */
   readonly shapes: readonly TShape[];
   /** The values elements `from`…`to` (exclusive) reach, for autoscaling; none when they are all gaps. */
   valueRange<TX>(
@@ -14,7 +14,7 @@ export interface IMark {
     to: number,
     options: unknown
   ): IValueRange | undefined;
-  /** What draws the mark, by backend id; attached by the backend the mark is imported from (§6.2). */
+  /** What draws the mark, by backend id; attached by the backend the mark is imported from. */
   readonly painters: Readonly<Record<string, unknown>>;
 }
 

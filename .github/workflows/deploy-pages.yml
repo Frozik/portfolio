@@ -45,6 +45,12 @@ jobs:
         with:
           auto-install: true
       - run: pnpm install --frozen-lockfile
+      # The browser extension ships with the release as a zip, its manifest
+      # carrying the version this release is about to get.
+      - name: Build the extension for the release
+        run: |
+          echo "VAULT_EXTENSION_VERSION=$(pnpm exec predict-version)" >> "$GITHUB_ENV"
+      - run: moon run vault-extension:zip
       - run: pnpm exec semantic-release --extends ./libs/tooling/semantic-release.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

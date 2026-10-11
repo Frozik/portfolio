@@ -1,12 +1,12 @@
 import { isNil } from 'lodash-es';
 
-/** The operations the kernel needs from an X coordinate, whatever its type (§3.8). */
+/** The operations the kernel needs from an X coordinate, whatever its type. */
 export interface IAxisDomain<TX> {
   compare(first: TX, second: TX): number;
   /** `minuend − subtrahend` in axis units, as a plain number. */
   diff(minuend: TX, subtrahend: TX): number;
   add(position: TX, delta: number): TX;
-  /** The origin of the axis: where virtual and world coordinates meet when stretches are taken out (sessions §2). */
+  /** The origin of the axis: where virtual and world coordinates meet when stretches are taken out. */
   readonly zero: TX;
   /** `minuend − subtrahend` in the coordinate's own type: exact, for lengths that add up over decades. */
   minus(minuend: TX, subtrahend: TX): TX;

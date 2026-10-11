@@ -20,7 +20,7 @@ export interface ISurfaceOptions {
   readonly encoder: () => GPUCommandEncoder;
 }
 
-/** One chart's canvas on the shared device: its own context, its own data, the device's pipelines (§6.3). */
+/** One chart's canvas on the shared device: its own context, its own data, the device's pipelines. */
 export class WebGpuSurface implements ISurface {
   private readonly context: GPUCanvasContext;
   private readonly below: readonly IWebGpuPainter[];

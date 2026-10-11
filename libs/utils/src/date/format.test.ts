@@ -1,7 +1,7 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 
-import { formatDateTime, formatDateTimeLocal } from './format';
+import { formatDateTime, formatDateTimeLocal, formatPlainDate } from './format';
 import type { ISO } from './types';
 
 describe('formatDateTime', () => {
@@ -33,5 +33,14 @@ describe('formatDateTimeLocal', () => {
     const iso = '2024-03-15T13:45:09Z' as ISO;
     const localZone = Temporal.Now.timeZoneId();
     expect(formatDateTimeLocal(iso)).toBe(formatDateTime(iso, localZone));
+  });
+});
+
+describe('formatPlainDate', () => {
+  it('writes a date the way the language of the reader does', () => {
+    const date = Temporal.PlainDate.from('2026-10-31');
+
+    expect(formatPlainDate(date, 'en')).toBe('Oct 31, 2026');
+    expect(formatPlainDate(date, 'de')).toBe('31.10.2026');
   });
 });

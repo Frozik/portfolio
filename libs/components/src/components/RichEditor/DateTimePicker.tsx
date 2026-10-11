@@ -13,11 +13,11 @@ import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
 import { useIsCoarsePointer } from '../../hooks/useIsCoarsePointer';
 import { cn } from '../cn';
+import { PopupDrawer } from '../popup/PopupDrawer';
+import { PopupHandle } from '../popup/PopupHandle';
+import { PopupSheet } from '../popup/PopupSheet';
 import { CalendarPopup } from './components/CalendarPopup';
 import { CalendarIcon } from './components/icons';
-import { PopupDrawer } from './components/PopupDrawer';
-import { PopupHandle } from './components/PopupHandle';
-import { PopupSheet } from './components/PopupSheet';
 import { RichEditor } from './components/RichEditor';
 import { clampToDateRange } from './date-entry';
 import { defaultFormatDate, formatDateOnly } from './date-format';
@@ -30,6 +30,7 @@ import {
   toNativeInputValue,
 } from './native-picker';
 import { getCalendarAriaLabels } from './translations/translations';
+import popupStyles from '../popup/popup.module.css';
 import styles from './styles.module.css';
 
 const DEFAULT_TIME_ZONE = 'UTC';
@@ -356,14 +357,14 @@ export const DateTimePicker = memo(
         </Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
-            className={styles.popoverLayer}
+            className={popupStyles.popoverLayer}
             align="start"
             collisionPadding={POPOVER_COLLISION_PADDING}
             onOpenAutoFocus={preventFocusSteal}
             onCloseAutoFocus={preventFocusSteal}
           >
             {usesSheet ? (
-              <div className={styles.popoverTab}>
+              <div className={popupStyles.popoverTab}>
                 <PopupHandle label={ariaLabels.toggleCalendar} onPress={handleSheetOpen} />
               </div>
             ) : (

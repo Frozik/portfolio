@@ -6,13 +6,15 @@ import { sortBy } from 'lodash-es';
 import { makeAutoObservable } from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 
+import { FormControlsDemo } from './FormControlsDemo';
+
 /** Whether an ambiguous input like "mon" resolves forward only or to the closest date. */
 export type ParseDirection = 'future' | 'nearest';
 
 const DEFAULT_DECIMALS = 6;
 const DEFAULT_PIP_RANGE: readonly [number, number] = [2, 4];
 
-/** What both demo fields hold and how they are set up, for the page and for agents alike. */
+/** What the demo fields hold and how they are set up, for the page and for agents alike. */
 export class ControlsDemoStore {
   numericValue: number | undefined = undefined;
   decimals = DEFAULT_DECIMALS;
@@ -22,9 +24,10 @@ export class ControlsDemoStore {
   timeResolution = ETimeResolution.Minutes;
   direction: ParseDirection = 'future';
   readonly timeZone = Temporal.Now.timeZoneId();
+  readonly form = new FormControlsDemo();
 
   constructor() {
-    makeAutoObservable(this, { timeZone: false }, { autoBind: true });
+    makeAutoObservable(this, { timeZone: false, form: false }, { autoBind: true });
   }
 
   /** The pip digits as first index and length; none when the range is empty. */

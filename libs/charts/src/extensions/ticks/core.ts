@@ -39,7 +39,7 @@ function signed(label: string, percent: number): string {
  * and shared by whatever draws from them: a label names exactly the line
  * under it. The generators come as parameters, so a time axis and a numeric
  * one are the same extension; a logarithmic scale gets ticks by powers of
- * ten, and a scale labelled in per cent gets round percentages (§7.2).
+ * ten, and a scale labelled in per cent gets round percentages.
  */
 export function ticks<TX>(
   options: ITicksOptions<TX>

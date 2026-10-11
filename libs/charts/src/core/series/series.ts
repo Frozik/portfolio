@@ -1,7 +1,7 @@
 import type { ISeriesDataFactory } from './series-data';
 import type { IStyleProcessor } from './style-processor';
 
-/** Data and a style processor: what the user sees as one graph on the axes (§5.1). */
+/** Data and a style processor: what the user sees as one graph on the axes. */
 export interface ISeries<TX> {
   readonly id: string;
   /** What the series is called in a legend; its id when not given. */

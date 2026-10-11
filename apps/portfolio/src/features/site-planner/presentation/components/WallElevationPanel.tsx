@@ -157,7 +157,7 @@ const ElevationSheet = memo(({ elevation }: { readonly elevation: WallElevation 
 });
 
 /**
- * One wall of the active storey unfolded (`wiring.md` §3.6): pick the wall,
+ * One wall of the active storey unfolded: pick the wall,
  * or let the selected device pick its own. Read straight off the plan, so
  * moving a socket on the plan moves it on the sheet.
  */

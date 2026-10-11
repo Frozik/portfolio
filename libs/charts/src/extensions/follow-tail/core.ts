@@ -39,7 +39,7 @@ export interface IFollowTailSlice {
  * whatever room there was to its right; it eases to each new element rather
  * than jumping. Following stops when the user leaves
  * the end for history and comes back by itself once the last element is in
- * view again, or on `resume` (§7.1).
+ * view again, or on `resume`.
  */
 export function followTail<TX>(
   options: IFollowTailOptions = {}

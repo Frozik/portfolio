@@ -8,7 +8,7 @@ const HOLD_MS = 500;
 
 /**
  * How often the chart wants frames. Whoever needs one raises a rate; a raised
- * rate lapses on its own, and with nothing raised the chart idles (§3.6).
+ * rate lapses on its own, and with nothing raised the chart idles.
  */
 export class FrameDemand {
   private readonly expiryByRate = new Map<number, number>();

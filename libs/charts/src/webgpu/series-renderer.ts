@@ -46,7 +46,7 @@ function signedStepOf(run: TRun<unknown>): number {
   return run.aggregateTime === 'start' ? step : -step;
 }
 
-/** Draws the series of one chart: keeps their chunks in its data texture and a layer per mark in use (§6.5). */
+/** Draws the series of one chart: keeps their chunks in its data texture and a layer per mark in use. */
 export class SeriesRenderer {
   private readonly device: GPUDevice;
   private readonly pipeline: SeriesPipeline;

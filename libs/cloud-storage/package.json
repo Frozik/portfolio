@@ -9,15 +9,26 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./core/*": "./src/core/*.ts"
+    "./core/*": "./src/core/*.ts",
+    "./memory/*": "./src/memory/*.ts",
+    "./indexeddb/*": "./src/indexeddb/*.ts",
+    "./webdav/*": "./src/webdav/*.ts",
+    "./google-drive/*": "./src/google-drive/*.ts",
+    "./testing/*": "./src/testing/*.ts"
   },
   "scripts": {
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@frozik/utils": "workspace:*"
+    "@frozik/utils": "workspace:*",
+    "fast-xml-parser": "catalog:",
+    "idb": "catalog:",
+    "lodash-es": "catalog:",
+    "temporal-polyfill": "catalog:"
   },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "fake-indexeddb": "catalog:"
   }
 }

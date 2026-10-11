@@ -7,7 +7,7 @@ import { annotationsCore } from '../../../extensions/annotations/core';
 import { CANVAS2D_BACKEND } from '../../painter';
 import { annotationsPainter } from './painter';
 
-/** Levels across a pane and event marks on the X axis, drawn on the 2D canvas with their labels (§7.1). */
+/** Levels across a pane and event marks on the X axis, drawn on the 2D canvas with their labels. */
 export function annotations<TX>(
   options: IAnnotationsOptions<TX> = {}
 ): IChartExtension<TX, 'annotations', IAnnotationsSlice<TX>> {

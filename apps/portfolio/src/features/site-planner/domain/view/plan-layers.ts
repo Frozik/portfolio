@@ -10,7 +10,7 @@ import { BUILDING_LAYER_IDS } from '../model/building-layers';
  * whatever the overlay segment is colouring — the toolbar decides *which*
  * analysis exists at all, this set decides whether the sheet shows it.
  *
- * The building layers (`layers.md`) are members too: their visibility is the
+ * The building layers are members too: their visibility is the
  * same kind of fact, read by the plan, the 3D view and the export alike; only
  * their ACTIVITY is the building editor's own.
  */

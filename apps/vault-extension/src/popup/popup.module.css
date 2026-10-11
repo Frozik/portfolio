@@ -1,0 +1,118 @@
+.popup {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  color-scheme: light dark;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 340px;
+  min-height: 200px;
+  padding: 14px;
+  background: var(--re-bg-card);
+  color: var(--re-fg);
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.host {
+  color: var(--re-fg-faint);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--re-bg-elevated);
+}
+
+.faint {
+  color: var(--re-fg-faint);
+  font-size: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--re-border-soft);
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--re-mono);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.button {
+  padding: 6px 12px;
+  border: 1px solid var(--re-border);
+  border-radius: 6px;
+  background: var(--re-bg-elevated);
+  color: var(--re-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.iconButton {
+  composes: button;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px;
+}
+
+.primary {
+  composes: button;
+  border-color: var(--re-accent);
+  background: var(--re-accent);
+  color: var(--re-on-accent);
+}
+
+.notice {
+  color: var(--re-fg-dim);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--re-red);
+  font-size: 12px;
+}

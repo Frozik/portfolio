@@ -3,7 +3,7 @@ import type { IColumnStyleOptions } from '../../../marks/column/style';
 import { createColumnStyle } from '../../../marks/column/style';
 import { column } from './column';
 
-/** A column per element from a baseline to its value, drawn on WebGPU (§5.3). */
+/** A column per element from a baseline to its value, drawn on WebGPU. */
 export function columnStyle<TX>(options: IColumnStyleOptions<TX> = {}): IStyleProcessor<TX> {
   return createColumnStyle(column, options);
 }

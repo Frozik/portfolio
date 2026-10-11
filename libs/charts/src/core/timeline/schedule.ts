@@ -1,6 +1,6 @@
 import type { EDayOfWeek } from '@frozik/utils/date/constants';
 
-/** Whether an entry opens the time it names or closes it; closed always wins (sessions §3). */
+/** Whether an entry opens the time it names or closes it; closed always wins. */
 export type TScheduleEffect = 'open' | 'closed';
 
 /**

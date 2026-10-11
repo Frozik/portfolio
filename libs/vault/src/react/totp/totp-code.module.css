@@ -1,0 +1,78 @@
+.totp {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  --totp-color: var(--re-fg);
+  --totp-ring: var(--re-accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--totp-color);
+
+  &[data-urgency='soon'] {
+    --totp-color: var(--re-orange);
+    --totp-ring: var(--re-orange);
+  }
+
+  &[data-urgency='urgent'] {
+    --totp-color: var(--re-red);
+    --totp-ring: var(--re-red);
+  }
+}
+
+.code {
+  font-family: var(--re-mono);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+
+.ring {
+  width: 22px;
+  height: 22px;
+  transform: rotate(-90deg);
+}
+
+.track {
+  fill: none;
+  stroke: var(--re-border);
+  stroke-width: 3;
+}
+
+.progress {
+  fill: none;
+  stroke: var(--totp-ring);
+  stroke-width: 3;
+  transition: stroke-dashoffset 1s linear;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--re-fg);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--re-bg-elevated);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.problem {
+  color: var(--re-red);
+  font-size: 12px;
+}

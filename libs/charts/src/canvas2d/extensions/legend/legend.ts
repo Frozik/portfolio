@@ -6,7 +6,7 @@ import { legendCore } from '../../../extensions/legend/core';
 import { CANVAS2D_BACKEND } from '../../painter';
 import { legendPainter } from './painter';
 
-/** The names of the series and their values under the pointer, written in the corner of every pane (§7.1). */
+/** The names of the series and their values under the pointer, written in the corner of every pane. */
 export function legend<TX>(): IChartExtension<TX, 'legend', ILegendSlice<TX>> {
   return withPaint(legendCore<TX>(), slice => [
     {

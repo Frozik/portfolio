@@ -116,7 +116,7 @@ export class SitePlannerStore implements PlanEditorCore {
    * whichever is selected — echoed back as its highlight.
    */
   pathHandleHighlight: PathHandleHighlight | undefined = undefined;
-  /** View or one opened editor; see `modes.md` for the contract. */
+  /** View or one opened editor. */
   editorMode: EditorMode = VIEW_MODE;
   /**
    * The open editor's own transient state (`editor-sessions.ts`), living

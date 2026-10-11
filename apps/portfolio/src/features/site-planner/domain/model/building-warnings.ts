@@ -103,7 +103,7 @@ export interface StoreyWarningInput {
   readonly saunaStovePositions: readonly Vector2[];
   /** Shafts of this storey that miss the roof entirely — they exit nowhere. */
   readonly strandedDucts: readonly { readonly id: DuctId; readonly at: Vector2 }[];
-  /** Drawn stretches whose conduit the cables overfill (`wiring.md` §3.4). */
+  /** Drawn stretches whose conduit the cables overfill. */
   readonly overfilledStretches: readonly {
     readonly routeId: WiringRouteId;
     readonly segmentIndex: number;

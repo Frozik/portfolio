@@ -14,7 +14,7 @@ export interface ICutting<TX> {
   readonly aggregateTime: TAggregateTime;
 }
 
-/** Whether anything of the element's interval is left once the cuts are taken out (sessions §5.1). */
+/** Whether anything of the element's interval is left once the cuts are taken out. */
 function isShown<TX>({ domain, mapping, step, aggregateTime }: ICutting<TX>, x: TX): boolean {
   if (step === undefined || step === 0) {
     return !mapping.isCut(x);
@@ -35,7 +35,7 @@ function pick(column: Float64Array, kept: readonly number[]): Float64Array {
  * Columns handed over by a source, as the chart keeps them: positions in the
  * virtual coordinate, and only the elements that have anything left to show
  * — an element lying wholly inside a cut is dropped, one that reaches out of
- * it stays (sessions §5).
+ * it stays.
  */
 export function cutColumns<TX>(cutting: ICutting<TX>, columns: TColumns): TColumns {
   const positions = positionsOf<TX>(columns.x);

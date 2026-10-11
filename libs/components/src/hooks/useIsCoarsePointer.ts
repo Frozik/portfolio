@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 /**
- * The touch overlay belongs to devices whose *primary* pointer is a finger (§12.2): a hybrid
+ * The touch overlay belongs to devices whose *primary* pointer is a finger: a hybrid
  * laptop with a touchscreen still reports `(pointer: fine)` and keeps the desktop experience.
  */
 const COARSE_POINTER_QUERY = '(pointer: coarse)';

@@ -11,7 +11,7 @@ const DEFAULT_GAP = 1;
 const DEFAULT_STROKE_SIZE = 1;
 
 export interface ICandleStyleOptions<TX> {
-  /** Width of the body, CSS pixels: with `gap`, what the scale is chosen from (§4.3). */
+  /** Width of the body, CSS pixels: with `gap`, what the scale is chosen from. */
   readonly width?: number;
   /** The least room kept between neighbouring candles, CSS pixels. */
   readonly gap?: number;

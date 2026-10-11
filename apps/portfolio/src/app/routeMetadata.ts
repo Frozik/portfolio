@@ -6,6 +6,7 @@ import {
   CandlestickChart,
   Gamepad2,
   Grid3x3,
+  KeyRound,
   LandPlot,
   LineChart,
   Map,
@@ -68,6 +69,7 @@ export const ROUTE_METADATA: readonly IRouteMetadata[] = [
   { segment: 'controls', titleKey: 'controls', icon: SlidersHorizontal, navVisible: true },
   { segment: 'table', titleKey: 'table', icon: Rows3, navVisible: true },
   { segment: 'bug-reporter', titleKey: 'bugReporter', icon: Bug, navVisible: true },
+  { segment: 'vault', titleKey: 'vault', icon: KeyRound, navVisible: true },
   { segment: 'transport', titleKey: 'transport', icon: Network, navVisible: true },
   { segment: 'webmcp', titleKey: 'webmcp', navVisible: false },
 ];

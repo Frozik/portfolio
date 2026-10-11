@@ -18,7 +18,7 @@ export interface IFetchPlan {
  * One request per hole in what is wanted, latest first. A hole that touches
  * what is known on its left grows from that edge forward; any other is read
  * backward from its right edge, as far as the limit lets it — which is how
- * the beginning of history is found (§4.4).
+ * the beginning of history is found.
  */
 export function planFetches(
   wanted: IInterval,

@@ -2,7 +2,7 @@
  * The cables a house is wired with — ВВГнг(А)-LS, the copper flat cable the
  * Russian residential norm set assumes — by section. Only what the journal
  * and the panel need: the section chooses the breaker, the outer diameter
- * fills the conduit (`wiring.md` §3.2).
+ * fills the conduit.
  */
 export type CableTypeId = 'vvg-3x1.5' | 'vvg-3x2.5' | 'vvg-3x4' | 'vvg-3x6';
 

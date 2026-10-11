@@ -22,7 +22,7 @@ export interface IStaticDataOptions {
   readonly aggregateTime?: TAggregateTime;
 }
 
-/** A set of points or candles that never changes: all of it is there from the start (§4.1). */
+/** A set of points or candles that never changes: all of it is there from the start. */
 export function staticData<TX>(
   batch: TBatch<TX>,
   options: IStaticDataOptions = {}

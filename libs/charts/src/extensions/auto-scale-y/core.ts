@@ -14,7 +14,7 @@ export interface IAutoScaleYOptions {
   readonly padding?: number;
 }
 
-/** Fits every value scale to what is visible against it, with a little room; candles by their extremes (§7.1). */
+/** Fits every value scale to what is visible against it, with a little room; candles by their extremes. */
 export function autoScaleY<TX>(
   options: IAutoScaleYOptions = {}
 ): IChartExtension<TX, 'autoScaleY', undefined> {

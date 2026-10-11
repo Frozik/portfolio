@@ -24,7 +24,7 @@ interface ElevationDevice {
 }
 
 /**
- * One wall unfolded into a sheet (`wiring.md` §3.6, brought forward): its
+ * One wall unfolded into a sheet (brought forward): its
  * length and height, the openings cut into it, the devices hung on it at
  * their heights, and the ceiling run the cables drop from. Everything the
  * plan already knows, seen from the side — which is the view the electrician

@@ -31,10 +31,10 @@ export interface IStyleContext {
   readonly theme: IChartTheme;
 }
 
-/** Stands between data and drawing: names the shape to ask for and turns a run into a styled run (§5.2). */
+/** Stands between data and drawing: names the shape to ask for and turns a run into a styled run. */
 export interface IStyleProcessor<TX = unknown> {
   readonly shape: TShape;
-  /** Width of one element along X and the least gap between neighbours, CSS pixels: the scale is chosen from them (§4.3). */
+  /** Width of one element along X and the least gap between neighbours, CSS pixels: the scale is chosen from them. */
   readonly elementWidth: number;
   readonly elementGap: number;
   style(run: TRun<TX>, context: IStyleContext): IStyle;

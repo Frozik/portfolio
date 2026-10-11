@@ -9,6 +9,7 @@ tasks:
     command: 'pnpm run types'
     inputs:
       - 'src/**/*'
+      - 'types/**/*'
       - 'tsconfig.json'
     options:
       runInCI: true

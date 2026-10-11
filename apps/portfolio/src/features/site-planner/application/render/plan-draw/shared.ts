@@ -13,12 +13,11 @@ import { planToScreen } from '../../../domain/view/plan-viewport';
  */
 /**
  * Everything an open editor is NOT editing steps back to this opacity —
- * present as context, visibly out of reach (see modes.md).
+ * present as context, visibly out of reach.
  */
 export const EDIT_DIM_ALPHA = 0.35;
 /**
- * The opacity of a building layer that is shown but not active (`layers.md`
- * §6.3): lighter than the dim of what lies outside the editor, because the
+ * The opacity of a building layer that is shown but not active: lighter than the dim of what lies outside the editor, because the
  * walls are what the furniture is being placed against and must stay legible.
  */
 export const CONTEXT_LAYER_ALPHA = 0.55;

@@ -84,7 +84,7 @@ function paneAt<TX>(frame: IChartFrame<TX>, pixel: number): IPaneFrame {
 
 /**
  * Follows a mouse or a pen. A finger pans and pinches, so it drives the
- * crosshair only after resting for a moment, and until it lifts (§7.1).
+ * crosshair only after resting for a moment, and until it lifts.
  */
 export function crosshairCore<TX>(
   options: ICrosshairOptions = {}

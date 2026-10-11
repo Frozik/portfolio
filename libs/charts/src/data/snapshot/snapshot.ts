@@ -9,7 +9,7 @@ import { SnapshotData } from './snapshot-data';
 import type { ISnapshotSource } from './source';
 
 export interface ISnapshotOptions {
-  /** The steps the source can aggregate by, in axis units; without them the source is asked by density alone (§4.5). */
+  /** The steps the source can aggregate by, in axis units; without them the source is asked by density alone. */
   readonly scales?: readonly number[];
   /** What the position of an aggregated element marks; the start of its interval by default. */
   readonly aggregateTime?: TAggregateTime;

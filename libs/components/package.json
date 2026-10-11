@@ -19,12 +19,29 @@
     "./components/RichEditor/components/MonthNavigator": "./src/components/RichEditor/components/MonthNavigator.tsx",
     "./components/RichEditor/components/TimePicker": "./src/components/RichEditor/components/TimePicker.tsx",
     "./components/RichEditor/components/RichEditor": "./src/components/RichEditor/components/RichEditor.tsx",
+    "./components/RichEditor/Checkbox": "./src/components/RichEditor/Checkbox.tsx",
+    "./components/RichEditor/ListEditor": "./src/components/RichEditor/ListEditor.tsx",
+    "./components/RichEditor/MaskedEditor": "./src/components/RichEditor/MaskedEditor.tsx",
+    "./components/RichEditor/MonthYearEditor": "./src/components/RichEditor/MonthYearEditor.tsx",
+    "./components/RichEditor/MultilineEditor": "./src/components/RichEditor/MultilineEditor.tsx",
+    "./components/RichEditor/SecretEditor": "./src/components/RichEditor/SecretEditor.tsx",
+    "./components/RichEditor/Tabs": "./src/components/RichEditor/Tabs.tsx",
+    "./components/RichEditor/TextEditor": "./src/components/RichEditor/TextEditor.tsx",
+    "./components/RichEditor/UrlEditor": "./src/components/RichEditor/UrlEditor.tsx",
+    "./components/file-drop/FileDrop": "./src/components/file-drop/FileDrop.tsx",
+    "./components/select/Combobox": "./src/components/select/Combobox.tsx",
+    "./components/select/MultiSelect": "./src/components/select/MultiSelect.tsx",
+    "./components/select/Select": "./src/components/select/Select.tsx",
+    "./components/control-tokens.module.css": "./src/components/control-tokens.module.css",
     "./*": "./src/*.ts"
   },
   "scripts": {
     "types": "tsc --noEmit"
   },
   "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
     "@frozik/utils": "workspace:*",
     "tabbable": "catalog:",
     "zod": "catalog:"
@@ -38,6 +55,7 @@
   },
   "peerDependencies": {
     "@radix-ui/react-popover": "catalog:",
+    "@radix-ui/react-tabs": "catalog:",
     "clsx": "catalog:",
     "lodash-es": "catalog:",
     "react": "catalog:",

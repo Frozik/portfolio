@@ -13,8 +13,7 @@ const TUBE_METERS: Meters = 0.03;
 const HALF = 0.5;
 
 /**
- * The wiring of the given storeys as the 3D view shows it (`wiring.md`
- * §3.5): every run a thin square tube along its level under the ceiling or
+ * The wiring of the given storeys as the 3D view shows it: every run a thin square tube along its level under the ceiling or
  * over the floor, and a drop at either end down to the device's height. The
  * bends stay sharp — at this scale a mitre reads as honestly as a sweep.
  */

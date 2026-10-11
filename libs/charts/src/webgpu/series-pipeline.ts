@@ -9,7 +9,7 @@ import { seriesShaderSource } from './series-shader';
 /**
  * The one pipeline that draws every series of every chart on a backend: its
  * shader is assembled from the marks seen so far and rebuilt when a new mark
- * appears. A mark's code is its place in the list, so codes never change (§6.3).
+ * appears. A mark's code is its place in the list, so codes never change.
  */
 export class SeriesPipeline {
   readonly frameLayout: GPUBindGroupLayout;

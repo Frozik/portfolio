@@ -5,7 +5,7 @@ import type { ICutsSlice } from '../../extensions/cuts/core';
 import { cutsCore } from '../../extensions/cuts/core';
 import { cutsOnWebGpu } from '../../webgpu/extensions/cuts/contribution';
 
-/** A dashed strip under the series at every cut of the axis in view, drawn by the bottom backend of the stage (sessions §6). */
+/** A dashed strip under the series at every cut of the axis in view, drawn by the bottom backend of the stage. */
 export function cuts<TX>(): IChartExtension<TX, 'cuts', ICutsSlice<TX>> {
   return withPaint(cutsCore<TX>(), slice => [cutsOnWebGpu(slice), cutsOnCanvas(slice)]);
 }

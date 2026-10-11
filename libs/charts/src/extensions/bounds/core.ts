@@ -13,7 +13,7 @@ export interface IBoundsOptions<TX> {
   readonly minRange?: number;
 }
 
-/** Keeps the visible range inside limits and no shorter than a least span (§7.1). */
+/** Keeps the visible range inside limits and no shorter than a least span. */
 export function bounds<TX>(options: IBoundsOptions<TX>): IChartExtension<TX, 'bounds', undefined> {
   return {
     id: 'bounds',

@@ -18,7 +18,7 @@ export interface ISmoothZoomOptions {
  * Eases what is drawn along every axis towards its target instead of jumping
  * — the X axis after a zoom, a value scale after a fit — and on a resize
  * keeps the time per pixel for a moment, so the chart springs to its new
- * width instead of snapping (§7.1).
+ * width instead of snapping.
  */
 export function smoothZoom<TX>(
   options: ISmoothZoomOptions = {}

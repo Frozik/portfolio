@@ -22,7 +22,7 @@ export interface ILayerUniforms {
 /**
  * One draw call's worth of state: how to draw (uniforms) and where the data
  * lies (the chunk list). The chunk list knows nothing of the mark, so several
- * layers may draw the same chunks differently (§6.5).
+ * layers may draw the same chunks differently.
  */
 export class Layer {
   private readonly uniformBuffer: GPUBuffer;

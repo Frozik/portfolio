@@ -58,7 +58,7 @@ interface IShapeState<TX> {
   view: IAxisRange<TX> | undefined;
 }
 
-/** One window per shape — the last answer — replaced whole; the old one is drawn until the new arrives (§4.5). */
+/** One window per shape — the last answer — replaced whole; the old one is drawn until the new arrives. */
 export class SnapshotData<TX> implements ISeriesData<TX> {
   readonly extent = {};
   private readonly states = new Map<TShape, IShapeState<TX>>();

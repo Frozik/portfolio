@@ -18,17 +18,17 @@ const DEFAULT_RETRY: IRetryPolicy = { delayMs: 1000, maxDelayMs: 30_000 };
 const DEFAULT_REQUEST_WORTH = 256;
 
 export interface ITimeseriesOptions {
-  /** The lasting name of the series: what its data is kept under between sessions. Without it nothing is kept (§4.7). */
+  /** The lasting name of the series: what its data is kept under between sessions. Without it nothing is kept. */
   readonly key?: string;
-  /** The scales the series may be asked at; the whole grid by default (§4.3). */
+  /** The scales the series may be asked at; the whole grid by default. */
   readonly scales?: readonly TTimeScale[];
   /** Room read beyond each edge of what is shown, in its lengths. */
   readonly prefetch?: number;
   readonly maxConcurrent?: number;
-  /** Asks again by itself after a transient failure, pausing longer each time; off by default (§4.6). */
+  /** Asks again by itself after a transient failure, pausing longer each time; off by default. */
   readonly retry?: boolean | IRetryPolicy;
   readonly cache?: {
-    /** How many elements are kept in memory; what is on screen is kept whatever the number (§4.7). */
+    /** How many elements are kept in memory; what is on screen is kept whatever the number. */
     readonly memory?: { readonly maxElements?: number };
     /** Where what is read outlives the page; needs `key`. Nothing is written to disk unless asked. */
     readonly persistent?: IPersistentCache;
@@ -40,7 +40,7 @@ export interface ITimeseriesOptions {
   /**
    * Under cuts, how many needless elements one request to the source is
    * worth: a closed stretch that would bring back more than this is asked
-   * round rather than through (sessions §5.3). A few hundred by default.
+   * round rather than through. A few hundred by default.
    */
   readonly requestWorth?: number;
 }
@@ -55,7 +55,7 @@ function retryOf(retry: ITimeseriesOptions['retry']): IRetryPolicy | undefined {
 /**
  * An endless series over time whose past never changes: history is read on
  * demand, the new arrives by subscription. A description — the chart makes
- * one live instance of it for all the series that name it (§4.4).
+ * one live instance of it for all the series that name it.
  */
 export function timeseries(
   source: ITimeseriesSource,

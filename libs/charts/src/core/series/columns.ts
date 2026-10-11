@@ -22,7 +22,7 @@ export interface ICandleData {
   readonly close: Float64Array;
 }
 
-/** A batch as the library keeps it: always columns, whatever the source sent (§4.2). */
+/** A batch as the library keeps it: always columns, whatever the source sent. */
 export type TColumns = IPointData | ICandleData;
 
 export function columnsOf<TX>(batch: TBatch<TX>): TColumns {

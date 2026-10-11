@@ -1,0 +1,75 @@
+language: typescript
+layer: application
+stack: frontend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'wxt.config.ts'
+
+tasks:
+  build:
+    command: 'pnpm run build'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    outputs:
+      - '.output/chrome-mv3'
+    options:
+      runInCI: true
+
+  # The e2e build grants the test domain up front: Playwright cannot click the toolbar icon.
+  build-e2e:
+    command: 'pnpm run build:e2e'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    outputs:
+      - '.output/chrome-mv3-e2e'
+    options:
+      runInCI: true
+
+  # The release asset: the production build zipped, its manifest stamped with VAULT_EXTENSION_VERSION.
+  zip:
+    command: 'pnpm run zip'
+    inputs:
+      - '@group(sources)'
+      - 'tsconfig.json'
+    outputs:
+      - '.output/*.zip'
+    env:
+      VAULT_EXTENSION_VERSION: '$VAULT_EXTENSION_VERSION'
+    options:
+      cache: false
+
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(sources)'
+      - 'e2e/**/*'
+      - 'playwright.config.ts'
+      - 'tsconfig.json'
+    options:
+      runInCI: true
+
+  # Extensions need the full Chromium, not the headless shell the portfolio's suite uses.
+  install-browsers:
+    command: 'playwright install chromium'
+    inputs: []
+    options:
+      cache: false
+
+  e2e:
+    command: 'pnpm exec playwright test'
+    deps:
+      - 'build-e2e'
+    inputs:
+      - '@group(sources)'
+      - 'e2e/**/*'
+      - 'playwright.config.ts'
+    options:
+      runInCI: true
+      mutex: 'heavy-suites'

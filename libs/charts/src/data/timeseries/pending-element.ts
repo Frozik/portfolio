@@ -25,7 +25,7 @@ export interface IPendingElementOptions {
 /**
  * The element still being formed — the candle of an interval that has not
  * closed. It lies apart from what is known for good: a run of one element
- * whose revision grows with every update, never cached and never kept (§4.4).
+ * whose revision grows with every update, never cached and never kept.
  */
 export class PendingElement {
   private revision = 0;

@@ -13,7 +13,7 @@ const DEFAULT_SIZE = 1;
 const NO_STROKE = { color: 0, size: 0 } as const;
 
 export interface ILineStyleOptions<TX> {
-  /** The shape to draw from; a line from candles runs through the four points of each (§5.4). */
+  /** The shape to draw from; a line from candles runs through the four points of each. */
   readonly shape?: TShape;
   readonly color?: TPaintSource<TX>;
   /** Thickness, CSS pixels. */

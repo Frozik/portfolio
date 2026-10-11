@@ -29,7 +29,7 @@ export interface ICutsSlice<TX> {
  * where the chart skipped over closed time and sewed the two sides together. The axis is walked a gap at a time, asking
  * for the next cut from there, so a view over thousands of sessions costs as
  * many lookups as there are strips to draw. Read from the frame, so a painter
- * asks for nothing the frame has not settled (sessions §6).
+ * asks for nothing the frame has not settled.
  */
 export function cutsCore<TX>(): IChartExtension<TX, 'cuts', ICutsSlice<TX>> {
   return {

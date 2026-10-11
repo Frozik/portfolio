@@ -4,7 +4,16 @@ import type { IAgentTool } from '@frozik/utils/webmcp/agentTool';
 import { isNil } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 
-import { defineDateTimePickerTools, defineNumericEditorTools } from './editor-agent-tools';
+import {
+  defineCheckboxTools,
+  defineDateTimePickerTools,
+  defineMaskedEditorTools,
+  defineMultilineEditorTools,
+  defineNumericEditorTools,
+  defineTabsTools,
+  defineUrlEditorTools,
+} from './editor-agent-tools';
+import { MASKS } from './masked-input';
 import type { INumericFieldFormat } from './numeric-entry';
 
 const NOW = Temporal.Instant.from('2026-10-04T09:00:00Z');
@@ -125,5 +134,96 @@ describe('date-time picker tools', () => {
       display: '',
     });
     expect(field.value()).toBeUndefined();
+  });
+});
+
+function textField(define: typeof defineUrlEditorTools) {
+  let value = '';
+  const call = caller(
+    define({
+      name: 'site',
+      label: 'Site',
+      getValue: () => value,
+      setValue: next => {
+        value = next;
+      },
+    })
+  );
+  return { call, value: () => value };
+}
+
+describe('text field tools', () => {
+  it('keep only what the mask accepts, as typing would', async () => {
+    let value = '';
+    const call = caller(
+      defineMaskedEditorTools({
+        name: 'iban',
+        label: 'IBAN',
+        getValue: () => value,
+        setValue: next => {
+          value = next;
+        },
+        mask: MASKS.iban,
+        accepts: 'letters and digits',
+      })
+    );
+
+    await expect(call('iban_enter', { text: 'de89 3704-0044 0532 0130 00' })).resolves.toEqual({
+      value: 'DE89370400440532013000',
+    });
+    await expect(call('iban_read')).resolves.toEqual({ value: 'DE89370400440532013000' });
+  });
+
+  it('drop spaces from an address and keep line breaks in a note', async () => {
+    const site = textField(defineUrlEditorTools);
+    await site.call('site_enter', { text: ' bank.example /login ' });
+    expect(site.value()).toBe('bank.example/login');
+
+    const note = textField(defineMultilineEditorTools);
+    await note.call('site_enter', { text: 'one\ntwo' });
+    expect(note.value()).toBe('one\ntwo');
+  });
+});
+
+describe('choice tools', () => {
+  it('tick a checkbox and read it back', async () => {
+    let checked = false;
+    const call = caller(
+      defineCheckboxTools({
+        name: 'favorite',
+        label: 'Favorite',
+        getChecked: () => checked,
+        setChecked: next => {
+          checked = next;
+        },
+      })
+    );
+
+    await call('favorite_set', { checked: true });
+    await expect(call('favorite_read')).resolves.toEqual({ checked: true });
+  });
+
+  it('open a tab by id and refuse one that does not exist', async () => {
+    let active = 'main';
+    const call = caller(
+      defineTabsTools({
+        name: 'card',
+        label: 'Card',
+        getTabs: () => [
+          { id: 'main', label: 'Main' },
+          { id: 'bank', label: 'Bank' },
+        ],
+        getActive: () => active,
+        setActive: id => {
+          active = id;
+        },
+      })
+    );
+
+    await expect(call('card_open', { id: 'bank' })).resolves.toEqual({ active: 'bank' });
+    await expect(call('card_open', { id: 'nope' })).resolves.toMatchObject({
+      error: expect.any(String),
+    });
+    expect(active).toBe('bank');
   });
 });

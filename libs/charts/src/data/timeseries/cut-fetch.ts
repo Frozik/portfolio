@@ -24,7 +24,7 @@ export interface ICutFetching {
   readonly domain: IAxisDomain<bigint>;
   readonly mapping: IAxisMapping<bigint>;
   readonly aggregateTime: TAggregateTime;
-  /** How many needless elements one request is worth: a cut that would bring more than this splits the request (sessions §5.3). */
+  /** How many needless elements one request is worth: a cut that would bring more than this splits the request. */
   readonly requestWorth: number;
 }
 
@@ -47,7 +47,7 @@ function withinBounds(columns: TColumns, request: IFetchRequest): TColumns {
  * asked, an answer the limit stopped short asked on from where it ended,
  * until the limit is reached or the bounds are. Once a source shows that it
  * leaves the `skip` stretches out by itself, the bounds go in one request
- * from then on (sessions §5.3).
+ * from then on.
  */
 export class CutFetcher {
   private honoursSkip = false;

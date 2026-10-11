@@ -23,7 +23,7 @@ export interface IMarkLayerContext {
   readonly use: IMarkUse;
 }
 
-/** What draws a mark on WebGPU: its vertex function and how its layers are parameterised (§6.6). */
+/** What draws a mark on WebGPU: its vertex function and how its layers are parameterised. */
 export interface IWebGpuMarkPainter {
   readonly markId: string;
   /** WGSL defining `vertexFunction(vertex: u32, instance: u32) -> VertexOutput`. */

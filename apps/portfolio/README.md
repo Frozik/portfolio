@@ -51,6 +51,10 @@ own tool factories; the app only registers them.
 - **Agent moves go through the same store actions** as the player's clicks, so
   undo, validation and the rendered board stay one source of truth.
 
+## Content Security Policy
+
+The built page carries a `<meta>` CSP (GitHub Pages sets no headers), added last in the build by `vite-plugins/content-security-policy.ts`: scripts only from the site itself, by the SHA-256 of each inline script, and from three exact paths (Google sign-in, Cloudflare's beacon, MediaPipe's npm folder on jsDelivr); `object-src 'none'`, `base-uri 'none'`; network access only to the signalling server, Binance, the map tiles, the sign-in services, MediaPipe's model, and the paths the vault uses: the Drive API, Have I Been Pwned's range API, 2FA Directory's list and the two site-icon services (icon.horse, favicone.com). **Trusted Types** are enforced: a `default` policy lets script URLs through only from the build's assets, the service worker, `blob:` URLs the page made, and those paths, and every markup string is refused — the two places that wrote HTML now build nodes (the update banner) or hand over DOMPurify's trusted value (retro's export). `e2e/csp.spec.ts` checks that an injected script does not run; the route walk fails on any violation while a page loads. Two looseners, on purpose: `style-src 'unsafe-inline'`, because the prerendered landing and React write `style` attributes that only a per-response nonce could allow and a static GitHub Pages site has none; and `img-src https:`, because sign-in avatars come from whatever host the identity provider serves them from.
+
 ## Performance & PWA
 
 The landing page is tuned for Lighthouse on a throttled mobile profile

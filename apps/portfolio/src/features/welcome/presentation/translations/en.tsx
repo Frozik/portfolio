@@ -262,6 +262,13 @@ export const welcomeTranslationsEn = {
           'One-to-one video chat that puts AR glasses on your face and keeps them there as you move. It all runs in the browser.',
         status: 'live',
       },
+      vault: {
+        meta: 'Security · Own format',
+        title: 'Password Vault',
+        description:
+          'A password manager in the browser: one encrypted file in your own Google Drive or WebDAV, Argon2id and AES-GCM in a Worker, edits merged across devices, passkey unlock, an audit, and import from KeePass, Bitwarden, CXF and the browsers.',
+        status: 'e2e',
+      },
       controls: {
         meta: 'UI/UX · Input library',
         title: 'Controls',

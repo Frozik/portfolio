@@ -35,7 +35,7 @@ function tracePath(
 /**
  * The marker mark on the 2D canvas: the figure of the table on every point,
  * filled and outlined. The outline lies inside the figure, as on WebGPU, so a
- * marker is the size its style names with or without one (§6.7).
+ * marker is the size its style names with or without one.
  */
 export const markerCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {

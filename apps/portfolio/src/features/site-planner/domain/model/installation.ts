@@ -1,5 +1,5 @@
 /**
- * How a cable is laid on a stretch of route (`wiring.md` §3.1): in a
+ * How a cable is laid on a stretch of route: in a
  * corrugated conduit of a standard bore, in a chase cut into the wall, in
  * surface trunking, on a tray, in a rigid pipe, or bare. Data, not tools —
  * a stretch is switched between them in a dropdown, the way a path segment

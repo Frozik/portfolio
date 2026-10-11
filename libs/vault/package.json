@@ -9,15 +9,61 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./ports/*": "./src/ports/*.ts"
+    "./ports/*": "./src/ports/*.ts",
+    "./crypto/*": "./src/crypto/*.ts",
+    "./format/*": "./src/format/*.ts",
+    "./codec/*": "./src/codec/*.ts",
+    "./model/*": "./src/model/*.ts",
+    "./merge/*": "./src/merge/*.ts",
+    "./persistence/*": "./src/persistence/*.ts",
+    "./lifecycle/*": "./src/lifecycle/*.ts",
+    "./sync/*": "./src/sync/*.ts",
+    "./session/*": "./src/session/*.ts",
+    "./generator/*": "./src/generator/*.ts",
+    "./otp/*": "./src/otp/*.ts",
+    "./audit/*": "./src/audit/*.ts",
+    "./import/*": "./src/import/*.ts",
+    "./export/*": "./src/export/*.ts",
+    "./testing/*": "./src/testing/*.ts",
+    "./react/sensitive-class": "./src/react/sensitive-class.ts",
+    "./react/*": "./src/react/*.tsx"
   },
   "scripts": {
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "generate-fixtures": "tsx scripts/generate-golden-fixtures.ts"
   },
   "dependencies": {
-    "temporal-polyfill": "catalog:"
+    "@frozik/cloud-storage": "workspace:*",
+    "@frozik/components": "workspace:*",
+    "@frozik/utils": "workspace:*",
+    "credit-card-type": "catalog:",
+    "fast-xml-parser": "catalog:",
+    "fflate": "catalog:",
+    "hash-wasm": "catalog:",
+    "ibantools": "catalog:",
+    "idb": "catalog:",
+    "kdbxweb": "catalog:",
+    "lodash-es": "catalog:",
+    "lucide-react": "catalog:",
+    "punycode.js": "catalog:",
+    "react-svg-credit-card-payment-icons": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "tldts": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "fake-indexeddb": "catalog:",
+    "fast-check": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
   }
 }

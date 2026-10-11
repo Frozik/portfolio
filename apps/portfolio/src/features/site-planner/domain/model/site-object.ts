@@ -11,8 +11,7 @@ import { flattenShapes } from './shapes';
  * One object of the plan as view mode holds it — the whole building, the whole
  * path — with its data captured at the moment a gesture takes hold. The union
  * is what unifies the view-mode manipulation of every object kind: one pick,
- * one drag, one restore, written once against this type (see `modes.md`,
- * «Objects»).
+ * one drag, one restore, written once against this type.
  */
 export type SiteObjectState =
   | { readonly kind: 'building'; readonly building: Building }

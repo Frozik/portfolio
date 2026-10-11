@@ -315,7 +315,7 @@ class SnapshotRowSource<TRow> implements IRowSource<TRow> {
   }
 }
 
-/** A server-side window with deltas; see the spec's §6.4 for the contract every server adapter implements. */
+/** A server-side window with deltas — the contract every server adapter implements. */
 export function snapshotRows<TRow>(options: ISnapshotRowsOptions<TRow>): TRowSourceFactory<TRow> {
   return context => new SnapshotRowSource(context, options);
 }

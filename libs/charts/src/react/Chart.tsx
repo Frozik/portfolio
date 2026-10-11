@@ -19,7 +19,7 @@ const UNDERLYING_CANVAS_STYLE: CSSProperties = { ...CANVAS_STYLE, pointerEvents:
 /**
  * A chart on the nearest stage: one canvas per backend of the stack, bottom
  * first, the topmost taking the pointer. Mounts the model when the stage is
- * ready and takes it off on unmount (§9).
+ * ready and takes it off on unmount.
  */
 export function Chart<TX>({
   model,

@@ -19,7 +19,7 @@ export interface ISnapshotWindow<TX> {
   readonly range?: IAxisRange<TX>;
 }
 
-/** A set of elements that becomes another with time: read by window, replaced whole (§4.5). */
+/** A set of elements that becomes another with time: read by window, replaced whole. */
 export interface ISnapshotSource<TX> {
   fetch(request: ISnapshotRequest<TX>): Promise<ISnapshotWindow<TX>>;
   /** The data in `range` became different; without a range, all of it. */

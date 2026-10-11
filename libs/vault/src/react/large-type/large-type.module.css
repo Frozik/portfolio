@@ -1,0 +1,36 @@
+.grid {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-family: var(--re-mono);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.2ch;
+  padding: 4px 2px;
+  border: 1px solid var(--re-border-soft);
+  border-radius: 6px;
+}
+
+.character {
+  color: var(--re-fg);
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.digit {
+  color: var(--re-accent);
+}
+
+.symbol {
+  color: var(--re-red);
+}
+
+.position {
+  color: var(--re-fg-faint);
+  font-size: 11px;
+}

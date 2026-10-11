@@ -46,7 +46,7 @@ function indexAfter(buffer: ColumnBuffer, time: bigint): number {
 /**
  * What is known of one series at one shape and scale: intervals of time about
  * which everything is known, each with its elements. Intervals that touch are
- * one segment, so a line runs through them unbroken (§4.4).
+ * one segment, so a line runs through them unbroken.
  */
 export class SegmentStore {
   private segments: ISegment[] = [];

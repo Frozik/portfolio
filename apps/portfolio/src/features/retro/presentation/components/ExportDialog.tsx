@@ -44,13 +44,18 @@ export const ExportDialog = observer(({ store }: { readonly store: RoomStore }) 
     return renderSnapshotToMarkdown(snapshot, retroT.markdown);
   }, [snapshot]);
 
-  const htmlContent = useMemo(() => {
-    if (markdown === '') {
-      return '';
-    }
-    const rawHtml = marked.parse(markdown, { gfm: true, async: false });
-    return DOMPurify.sanitize(rawHtml);
-  }, [markdown]);
+  // Trusted Types are enforced site-wide: every value React writes as HTML,
+  // the empty one too, comes from DOMPurify's own policy.
+  const htmlContent = useMemo(
+    () =>
+      DOMPurify.sanitize(
+        markdown === '' ? '' : marked.parse(markdown, { gfm: true, async: false }),
+        {
+          RETURN_TRUSTED_TYPE: true,
+        }
+      ),
+    [markdown]
+  );
 
   const handleCopy = useEventCallback(async () => {
     const copied = await copy(markdown);

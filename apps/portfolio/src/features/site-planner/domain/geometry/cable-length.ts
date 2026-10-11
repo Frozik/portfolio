@@ -16,7 +16,7 @@ export function runHeightMeters(level: WiringLevel, storeyHeightMeters: Meters):
 }
 
 /**
- * What one cable run measures (`wiring.md` §3.4): the horizontal along the
+ * What one cable run measures: the horizontal along the
  * plan plus the drop at either end from the run's level to the device — a
  * socket at 0.3 m under a ceiling run costs a wall's height of cable, a
  * ceiling light costs nothing. The reserve is the caller's to add.

@@ -22,7 +22,7 @@ export interface IMarkerStyleOptions<TX> {
   readonly size?: TPaintSource<TX>;
   /** The outline of the figure; with a transparent `color` the figure is hollow. */
   readonly stroke?: { readonly color: TPaintSource<TX>; readonly size: TPaintSource<TX> };
-  /** The least distance between neighbouring markers along X, CSS pixels: the scale is chosen so they do not crowd (§4.3). One pixel by default. */
+  /** The least distance between neighbouring markers along X, CSS pixels: the scale is chosen so they do not crowd. One pixel by default. */
   readonly spacing?: number;
 }
 

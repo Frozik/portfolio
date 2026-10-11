@@ -1,6 +1,6 @@
 /**
  * Index of the finest step at which one element gets at least
- * `pixelsPerElement` pixels; the coarsest when none does (§4.3).
+ * `pixelsPerElement` pixels; the coarsest when none does.
  * `steps` are in axis units, ascending.
  */
 export function chooseScale(

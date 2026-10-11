@@ -13,7 +13,7 @@ import type { PlanEditorCore } from './editor-core';
 import { createEditorSession } from './editor-sessions';
 
 /**
- * View or one opened editor (see `modes.md`): the doors in and the way back
+ * View or one opened editor: the doors in and the way back
  * out, the session an open editor keeps, and what the mode bar names.
  */
 export class EditorModesModel {
@@ -32,7 +32,7 @@ export class EditorModesModel {
   }
 
   /**
-   * Opens one object for deep editing; see `modes.md`. The editor arrives with
+   * Opens one object for deep editing. The editor arrives with
    * a fresh session for its transient state; the tool falls back to selection
    * because whatever was armed may not exist in the new mode, and a path
    * target arrives selected — it is the only thing left to point at.

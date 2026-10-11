@@ -38,6 +38,7 @@
     "pnpm-lock.yaml",
     "libs/tooling/file-size-baseline.json",
     "apps/portfolio/bundle-stats.json",
-    "libs/proto/src/gen/**"
+    "libs/proto/src/gen/**",
+    "libs/vault/src/data/**"
   ]
 }

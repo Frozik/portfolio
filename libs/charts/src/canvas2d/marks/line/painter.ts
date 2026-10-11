@@ -48,7 +48,7 @@ function strokePath(
   flush();
 }
 
-/** The line mark on the 2D canvas: the same joins, gaps and outline as on WebGPU, drawn as paths (§6.7). */
+/** The line mark on the 2D canvas: the same joins, gaps and outline as on WebGPU, drawn as paths. */
 export const lineCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {
     const options = lineOptionsOf(use.options);

@@ -16,7 +16,8 @@ export type TProjectFxKind =
   | 'tiles'
   | 'rows'
   | 'shutter'
-  | 'streams';
+  | 'streams'
+  | 'vault';
 
 export type TAccentAlpha = (alpha: number) => string;
 

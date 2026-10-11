@@ -4,7 +4,7 @@ import type { ISnapshotSource } from './source';
 /**
  * A snapshot source over data the application already holds: every answer is
  * the whole set, so panning and zooming ask for nothing and only a change
- * makes the chart read again (§4.5).
+ * makes the chart read again.
  */
 export function snapshotOf<TX>(
   read: (shape: TShape) => TBatch<TX>,

@@ -6,7 +6,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { forwardRef, memo } from 'react';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors ' +
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors ' +
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ' +
     'disabled:pointer-events-none disabled:opacity-50',
   {
@@ -17,13 +17,14 @@ const buttonVariants = cva(
           'border border-border bg-surface-elevated text-text hover:bg-surface-overlay ' +
           'active:bg-surface',
         ghost: 'text-text hover:bg-surface-elevated active:bg-surface-overlay',
-        link: 'text-brand-400 underline-offset-4 hover:underline p-0 h-auto',
+        link: 'text-brand-400 underline-offset-4 hover:underline p-0 h-auto whitespace-normal',
         danger: 'bg-error text-white hover:opacity-90 active:opacity-80',
       },
       size: {
         sm: 'h-7 px-3 text-xs',
         md: 'h-9 px-4 text-sm',
         lg: 'h-11 px-6 text-base',
+        icon: 'size-7 p-0',
       },
     },
     defaultVariants: {

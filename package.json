@@ -25,7 +25,8 @@
     "shellcheck": "moon run infra:shellcheck",
     "test": "moon run root:test",
     "test:watch": "moon run root:test-watch",
-    "types": "moon run :type-check"
+    "types": "moon run :type-check",
+    "webdav-contract": "moon run cloud-storage:webdav-contract"
   },
   "devDependencies": {
     "@frozik/tooling": "workspace:*",

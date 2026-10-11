@@ -16,7 +16,7 @@ const NO_STROKE = { color: 0, size: 0 } as const;
 export interface IColumnStyleOptions<TX> {
   readonly shape?: TShape;
   readonly color?: TPaintSource<TX>;
-  /** Width of a column, CSS pixels: with `gap`, what the scale is chosen from (§4.3). */
+  /** Width of a column, CSS pixels: with `gap`, what the scale is chosen from. */
   readonly width?: number;
   /** The least room kept between neighbouring columns, CSS pixels. */
   readonly gap?: number;

@@ -19,7 +19,7 @@ export function markerOptionsOf(options: unknown): IMarkerMarkOptions {
   return isMarkerOptions(options) ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS;
 }
 
-/** A figure on every element; on each of a candle's four points (§5.3, §5.4). */
+/** A figure on every element; on each of a candle's four points. */
 export const MARKER_MARK: IMark = {
   id: 'marker',
   shapes: ['point', 'candle'],

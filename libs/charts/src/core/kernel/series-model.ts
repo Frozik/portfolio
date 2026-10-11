@@ -24,7 +24,7 @@ interface ISeriesEntry<TX> {
   data: ISeriesData<TX>;
   style: IStyleProcessor<TX>;
   styleRevision: number;
-  /** Styled runs by run id: a run is styled again only when its revision or the style changed (§5.2). */
+  /** Styled runs by run id: a run is styled again only when its revision or the style changed. */
   readonly styled: Map<number, IStyledRun<TX>>;
 }
 
@@ -95,7 +95,7 @@ export class SeriesModel<TX> {
     return this.entries.map(entry => entry.id);
   }
 
-  /** The chart's density: the widest element with its gap among the series (§4.3). */
+  /** The chart's density: the widest element with its gap among the series. */
   get pixelsPerElement(): number {
     return Math.max(
       1,
@@ -130,7 +130,7 @@ export class SeriesModel<TX> {
     return this.entryOf(id).style;
   }
 
-  /** Another look for a series on a live chart; data is asked for again only if the shape changed (§5.2). */
+  /** Another look for a series on a live chart; data is asked for again only if the shape changed. */
   setStyle(id: string, style: IStyleProcessor<TX>): void {
     const entry = this.entryOf(id);
     entry.style = style;

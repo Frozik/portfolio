@@ -52,7 +52,7 @@ export interface IChannelOptions {
 
 /**
  * One series at one shape and scale: what is known of it, the subscription
- * that feeds its live edge, and the requests filling the holes in between (§4.4).
+ * that feeds its live edge, and the requests filling the holes in between.
  */
 export class Channel {
   readonly store: SegmentStore;
@@ -327,7 +327,7 @@ export class Channel {
     }
   }
 
-  /** A transient error closes nothing: the source reconnects by itself. Any other ends the live edge (§4.4). */
+  /** A transient error closes nothing: the source reconnects by itself. Any other ends the live edge. */
   private onLiveError(thrown: unknown): void {
     const error = toDataError(thrown);
     if (error.code === 'CANCELLED') {

@@ -19,7 +19,7 @@ export function candleOptionsOf(options: unknown): ICandleMarkOptions {
   return isCandleOptions(options) ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS;
 }
 
-/** A body from open to close and a wick from the low to the high; drawn from candles only (§5.4). */
+/** A body from open to close and a wick from the low to the high; drawn from candles only. */
 export const CANDLE_MARK: IMark = {
   id: 'candle',
   shapes: ['candle'],

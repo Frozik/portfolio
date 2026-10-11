@@ -6,7 +6,7 @@ import { axesCore } from '../../../extensions/axes/core';
 import { CANVAS2D_BACKEND } from '../../painter';
 import { axesPainter } from './painter';
 
-/** Axis lines and tick labels, drawn on the 2D canvas: text is sharper there (§6.2). */
+/** Axis lines and tick labels, drawn on the 2D canvas: text is sharper there. */
 export function axes<TX>(): IChartExtension<TX, 'axes', undefined> {
   return withPaint(axesCore<TX>(), (_slice, kernel) => [
     {

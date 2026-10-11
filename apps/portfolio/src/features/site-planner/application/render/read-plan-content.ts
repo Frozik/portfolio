@@ -65,7 +65,7 @@ export function planBuildingOf(
     readonly isEdited: boolean;
     readonly active: StoreyScene | undefined;
     readonly below: StoreyScene | undefined;
-    /** A hidden layer's objects are left off the sheet (`layers.md` §6.4). */
+    /** A hidden layer's objects are left off the sheet. */
     readonly visibleLayers: ReadonlySet<PlanLayerKind>;
   }
 ): PlanBuilding {

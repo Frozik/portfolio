@@ -14,7 +14,7 @@ const THROTTLE_TOLERANCE_MS = 2;
 type TBackendSource = IRenderBackend | Promise<IRenderBackend>;
 
 export interface IStageOptions {
-  /** The stack a chart is drawn with, bottom first; as a promise when the stack itself depends on what the device can do (§6.2). */
+  /** The stack a chart is drawn with, bottom first; as a promise when the stack itself depends on what the device can do. */
   readonly backends: readonly TBackendSource[] | Promise<readonly TBackendSource[]>;
   readonly scheduler: IFrameScheduler;
 }
@@ -46,7 +46,7 @@ export async function createStage(options: IStageOptions): Promise<Stage> {
 
 /**
  * A group of charts on one frame loop: every chart of every backend is drawn
- * in the same frame (§6.1). When a backend can no longer draw — a lost GPU
+ * in the same frame. When a backend can no longer draw — a lost GPU
  * device — the stage goes on with the backends that are left, if every chart
  * on it can be drawn by them.
  */

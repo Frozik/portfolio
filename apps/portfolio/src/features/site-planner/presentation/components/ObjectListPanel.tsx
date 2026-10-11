@@ -100,7 +100,7 @@ function Row({ row }: { readonly row: ObjectRow }) {
 }
 
 /**
- * The list every storey-object panel is (`object-editors.md`): stairs, posts,
+ * The list every storey-object panel is: stairs, posts,
  * slabs, fires, shafts. They differed only in what each row SAYS, so they now
  * differ only in that — the card, the selected state, the buttons, the empty
  * hint and the layout are one component, and a new kind of object contributes

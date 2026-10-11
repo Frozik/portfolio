@@ -129,7 +129,7 @@ const LineRow = observer(
 );
 
 /**
- * The cable journal of the active storey (`wiring.md` §3.4): a line per
+ * The cable journal of the active storey: a line per
  * группа with its cable and metres, then what it all adds up to — cable by
  * type, metres of each installation method, points by kind. Derived on every
  * change, so it can never disagree with the plan it is printed from.

@@ -20,6 +20,8 @@ const SOURCE_FILE = /\.(ts|tsx)$/;
 const TEST_FILE = /\.test\.tsx?$/;
 /** `// ── Title ──`, `// ----------`, `// ==== ====`: a divider where a file split belongs. */
 const SEPARATOR_COMMENT = /^\s*\/\/\s*(?:[─═━\-=*#]{5,}|[─═━]+\s.*\s[─═━]+)\s*$/;
+/** Vite exports CSS module classes camelCase only (`localsConvention`), so a kebab-case key reads `undefined` at run time. */
+const KEBAB_CSS_MODULE_KEY = /\b\w*[sS]tyles\[['"]\w+-[\w-]+['"]\]/;
 
 function* walk(directory: string): Generator<string> {
   for (const entry of readdirSync(directory)) {
@@ -33,7 +35,8 @@ function* walk(directory: string): Generator<string> {
 }
 
 /**
- * The conventions the linter cannot express: no separator comments, and
+ * The conventions the linter cannot express: no separator comments, CSS
+ * module classes read by their camelCase name, and
  * oversized files may only shrink. A file over {@link MAX_LINES} must be in
  * the baseline with a length it has not exceeded; a file not listed may not
  * cross the limit at all.
@@ -57,6 +60,11 @@ export function checkSourceConventions({
       lines.forEach((line, index) => {
         if (SEPARATOR_COMMENT.test(line)) {
           problems.push(`${file}:${index + 1}: separator comment — split the file instead`);
+        }
+        if (KEBAB_CSS_MODULE_KEY.test(line)) {
+          problems.push(
+            `${file}:${index + 1}: kebab-case CSS module key — classes are exported camelCase only`
+          );
         }
       });
       const length = lines.length;

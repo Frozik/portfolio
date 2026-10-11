@@ -1,10 +1,12 @@
 import { memo, useCallback } from 'react';
 
 import { useFeatureAgentTools } from '../../../app/components/TopNavAgentToolsContext';
+import { getCurrentLanguage } from '../../../shared/i18n/locale';
 import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import { useControlsDemoStore } from '../application/useControlsDemoStore';
 import { ControlsBackground } from './components/ControlsBackground';
 import { DatePage } from './components/DatePage';
+import { FormPage } from './components/FormPage';
 import { NumberPage } from './components/NumberPage';
 import { controlsT } from './translations';
 
@@ -13,7 +15,7 @@ export const Controls = memo(() => {
   const loadAgentTools = useCallback(
     () =>
       import('../application/controls-agent-tools').then(module =>
-        module.createControlsAgentTools(store)
+        module.createControlsAgentTools(store, getCurrentLanguage())
       ),
     [store]
   );
@@ -42,6 +44,7 @@ export const Controls = memo(() => {
         </section>
         <NumberPage />
         <DatePage />
+        <FormPage />
       </div>
     </div>
   );

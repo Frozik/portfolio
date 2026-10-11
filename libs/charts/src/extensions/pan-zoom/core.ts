@@ -42,7 +42,7 @@ function middleOf([first, second]: readonly [ITrackedPointer, ITrackedPointer]):
  * One pointer pans; two pan by their middle and zoom by how far apart they
  * are along X; the wheel zooms round the cursor. A
  * released pan keeps coasting and slows down. Zooming moves the target, so an
- * animator can ease into it; panning moves what is drawn at once (§7.1).
+ * animator can ease into it; panning moves what is drawn at once.
  */
 export function panZoom<TX>(): IChartExtension<TX, 'panZoom', undefined> {
   return {

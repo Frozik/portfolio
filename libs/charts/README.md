@@ -8,11 +8,6 @@ WebGPU backend that draws every chart of a page with one device, one frame
 loop and one submission a frame, and a Canvas 2D backend that draws text and
 pointer-driven marks above it — or a whole chart on its own.
 
-The design specification (in Russian, kept with the repository's other design
-documents under `.claude/plan/design/charts/spec.md`) covers the principles,
-the data kinds, the texture layout, the shader and the decisions taken; the
-`§` citations in the source refer to it.
-
 ```
 src/
   core/         kernel: viewport, series, frame, extension registry, stage; host ports (pointer, size, frames)

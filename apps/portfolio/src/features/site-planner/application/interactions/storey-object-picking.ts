@@ -57,7 +57,7 @@ function toleranceMeters(context: InteractionContext, pixels: number): number {
 /**
  * The topmost wall whose body covers the point; later walls lie over earlier.
  * Hidden walls answer nothing — not to the select tool, and not as a host for
- * an opening or a device (`layers.md` §6.4): what is off the sheet is off.
+ * an opening or a device: what is off the sheet is off.
  */
 export function pickWall(
   context: InteractionContext,

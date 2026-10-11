@@ -7,7 +7,7 @@ import { CHANNELS_PER_TEXEL, SLOT_TEXELS } from './slot-layout';
 
 const NANOS_PER_SECOND_BIG = BigInt(NANOS_PER_SECOND);
 
-/** A point takes two texels, a candle four; the last texel of both is the paint (§6.4). */
+/** A point takes two texels, a candle four; the last texel of both is the paint. */
 export const TEXELS_PER_ELEMENT: Readonly<Record<TShape, number>> = { point: 2, candle: 4 };
 
 export function elementsPerSlot(shape: TShape): number {
@@ -28,7 +28,7 @@ function floatBits(value: number): number {
 /**
  * A value as two float32: the nearest float and what the rounding lost.
  * Together about 48 significant bits; the shader subtracts the viewport from
- * each part before adding them, so nothing is rounded to one float32 (§6.4).
+ * each part before adding them, so nothing is rounded to one float32.
  */
 function writeSplit(texels: Uint32Array, offset: number, value: number): void {
   const high = Math.fround(value);

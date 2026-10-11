@@ -29,7 +29,7 @@ interface IFailure extends IChannelFailure {
  * The requests of one channel that failed. A failure stays shown until the
  * interval is read; one that will be retried stops being in the way of a new
  * request once its pause has passed, and is forgotten altogether when the
- * view leaves it — retrying what nobody looks at is a waste (§4.6).
+ * view leaves it — retrying what nobody looks at is a waste.
  */
 export class FailureLog {
   private failures: readonly IFailure[] = [];

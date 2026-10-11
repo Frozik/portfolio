@@ -5,7 +5,7 @@ import { debugBlocksCore } from '../../../extensions/debug-blocks/core';
 import { elementsPerSlot } from '../../texel-encoding';
 import { debugBlocksOnWebGpu } from './contribution';
 
-/** A yellow line where each chunk of the data texture begins, over the series (§7.1). */
+/** A yellow line where each chunk of the data texture begins, over the series. */
 export function debugBlocks<TX>(): IChartExtension<TX, 'debugBlocks', IDebugBlocksSlice<TX>> {
   return withPaint(debugBlocksCore<TX>({ blockSize: elementsPerSlot }), slice => [
     debugBlocksOnWebGpu(slice),

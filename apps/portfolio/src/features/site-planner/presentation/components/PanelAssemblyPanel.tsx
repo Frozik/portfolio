@@ -124,7 +124,7 @@ const ModuleRow = memo(({ module }: { readonly module: PanelModule }) => {
 });
 
 /**
- * Every щиток of the active storey on its rail (`wiring.md` §3.6): the
+ * Every щиток of the active storey on its rail: the
  * incomer, a breaker per группа rated by its cable, an RCBO wherever a
  * consumer stands in a wet room, and the smallest stock box that holds them
  * with a fifth in reserve. Nothing here is drawn by hand — wire a group on

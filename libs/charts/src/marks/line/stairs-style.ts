@@ -3,7 +3,7 @@ import type { IStyleProcessor } from '../../core/series/style-processor';
 import type { ILineStyleOptions } from './style';
 import { createLineStyle } from './style';
 
-/** A line that holds each value until the next point: "the last known value" of a time series (§5.3). */
+/** A line that holds each value until the next point: "the last known value" of a time series. */
 export function createStairsStyle<TX>(
   mark: IMark,
   options: ILineStyleOptions<TX> = {}

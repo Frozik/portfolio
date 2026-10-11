@@ -27,6 +27,14 @@ describe('toDeploymentTarget', () => {
     expect(toDeploymentTarget(withoutYandex, 'production').yandexClientId).toBe('');
   });
 
+  it('leaves the vault without Google Drive when the host declares no vault client', () => {
+    expect(toDeploymentTarget(complete, 'production').googleVaultClientId).toBe('');
+    expect(
+      toDeploymentTarget({ ...complete, GOOGLE_VAULT_CLIENT_ID: 'vault-id' }, 'production')
+        .googleVaultClientId
+    ).toBe('vault-id');
+  });
+
   it('refuses a host with no domain rather than building a broken bundle', () => {
     const { COMMUNICATION_DOMAIN: _omitted, ...withoutDomain } = complete;
     expect(() => toDeploymentTarget(withoutDomain, 'staging')).toThrow('staging');

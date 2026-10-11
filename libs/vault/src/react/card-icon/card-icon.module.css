@@ -1,0 +1,108 @@
+.icon {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--re-bg-elevated);
+  color: var(--card-color, var(--re-fg-dim));
+}
+
+.picture {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.red {
+  --card-color: light-dark(#dc2626, #f87171);
+}
+.orange {
+  --card-color: light-dark(#ea580c, #fb923c);
+}
+.amber {
+  --card-color: light-dark(#d97706, #fbbf24);
+}
+.green {
+  --card-color: light-dark(#16a34a, #4ade80);
+}
+.teal {
+  --card-color: light-dark(#0d9488, #2dd4bf);
+}
+.blue {
+  --card-color: light-dark(#2563eb, #60a5fa);
+}
+.indigo {
+  --card-color: light-dark(#4f46e5, #818cf8);
+}
+.violet {
+  --card-color: light-dark(#7c3aed, #a78bfa);
+}
+.pink {
+  --card-color: light-dark(#db2777, #f472b6);
+}
+.slate {
+  --card-color: light-dark(#475569, #94a3b8);
+}
+
+.networkLogo {
+  width: 28px;
+  height: auto;
+}
+
+.plasticLogo {
+  display: block;
+  width: 56px;
+  height: auto;
+}
+
+.network {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pickerField {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.optionIcon {
+  display: inline-flex;
+  color: var(--card-color, currentColor);
+}
+
+.optionPicture {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.swatch {
+  composes: tokens from '@frozik/components/components/control-tokens.module.css';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card-color);
+}
+
+.noColor {
+  border: 1px solid var(--re-border);
+  background: linear-gradient(135deg, transparent 45%, var(--re-fg-faint) 45% 55%, transparent 55%);
+}

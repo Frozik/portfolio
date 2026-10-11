@@ -29,7 +29,7 @@ export interface ITickAxis<TPosition> {
   shownAt(position: TPosition): TPosition;
 }
 
-/** Where the ticks of one axis stand and what they are called; time and plain numbers are two of these (§7.2). */
+/** Where the ticks of one axis stand and what they are called; time and plain numbers are two of these. */
 export interface ITickGenerator<TPosition> {
   /** Ticks for the axis, thinned so their labels do not overlap. */
   ticks(axis: ITickAxis<TPosition>): readonly IAxisTick<TPosition>[];

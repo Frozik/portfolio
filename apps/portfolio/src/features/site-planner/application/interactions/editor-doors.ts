@@ -5,7 +5,7 @@ import type { SitePlannerStore } from '../SitePlannerStore';
 import { pickPath, pickShape, pickUtilityRoute } from './plan-picking';
 
 /**
- * The double click as the mode door in view mode (see `modes.md`): it opens
+ * The double click as the mode door in view mode: it opens
  * the editor of what it lands on — a trench first, then a path, then the plot
  * or the building whose footprint is under the pointer.
  */

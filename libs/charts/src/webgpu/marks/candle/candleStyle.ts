@@ -3,7 +3,7 @@ import type { ICandleStyleOptions } from '../../../marks/candle/style';
 import { createCandleStyle } from '../../../marks/candle/style';
 import { candle } from './candle';
 
-/** Candles with a body and a wick, drawn on WebGPU; always asks for candle data (§5.3). */
+/** Candles with a body and a wick, drawn on WebGPU; always asks for candle data. */
 export function candleStyle<TX>(options: ICandleStyleOptions<TX> = {}): IStyleProcessor<TX> {
   return createCandleStyle(candle, options);
 }

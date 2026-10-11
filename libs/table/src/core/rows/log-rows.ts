@@ -380,7 +380,7 @@ class LogRowSource<TRow> implements IRowSource<TRow>, ILiveRowSource {
   }
 }
 
-/** An append-only log by time; see the spec's §6.5. */
+/** An append-only log by time. */
 export function logRows<TRow>(options: ILogRowsOptions<TRow>): TRowSourceFactory<TRow> {
   return context => new LogRowSource(context, options);
 }

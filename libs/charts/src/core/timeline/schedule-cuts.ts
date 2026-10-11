@@ -23,7 +23,7 @@ const PLAIN_WEEK_SLACK = BigInt(NANOS_PER_DAY);
  * which no zone shifts its clock and no single entry falls is the same as
  * every other such week with the same clock offsets, so it is placed once
  * and then copied — that is what makes a table from the epoch to today
- * a matter of milliseconds (sessions §3).
+ * a matter of milliseconds.
  */
 class ScheduleSupply implements ICutSupply<bigint> {
   readonly stride = NANOS_PER_WEEK;

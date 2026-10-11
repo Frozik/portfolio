@@ -11,7 +11,7 @@ import type { PlanTool, Selection, ShapeOwner } from './selection';
 /**
  * What the editor has opened for deep editing: the plot (with the footprints
  * and the terrain marks), a path, a utility trench, or a building's own
- * anatomy — walls today, storeys and more per `building-editor.md`.
+ * anatomy — walls today, storeys and more in time.
  */
 export type EditTarget =
   | { readonly kind: 'site' }
@@ -22,7 +22,7 @@ export type EditTarget =
 /**
  * The Blender-style two-level contract: a neutral view mode where whole
  * objects are placed and arranged, and an edit mode where one target opens up
- * while everything else dims and locks. See `modes.md` for the full design.
+ * while everything else dims and locks.
  */
 export type EditorMode =
   | { readonly kind: 'view' }
@@ -69,7 +69,7 @@ export interface EditorToolSpec {
   /** Active only inside the owning editor; must not shadow a shared hotkey. */
   readonly hotkey: string | undefined;
   /**
-   * The layer the tool draws on (`layers.md`): it stands on the rail and
+   * The layer the tool draws on: it stands on the rail and
    * answers its key only while that layer is active. A tool of an editor
    * without layers carries none.
    */
@@ -78,8 +78,8 @@ export interface EditorToolSpec {
 
 /**
  * What one editor contributes to the toolbar: the shared tools it inherits, in
- * rail order, and its own tools shown after them. The object-editor registry
- * of `object-editors.md` — a future editor (the building's) is one more row,
+ * rail order, and its own tools shown after them. The object-editor registry:
+ * a future editor (the building's) is one more row,
  * never a new special case in the rail, the hotkeys or the controller.
  */
 export interface ObjectEditorSpec {
@@ -237,8 +237,8 @@ export function editorDoorFor(selection: Selection): EditorDoor | undefined {
         aimAt: undefined,
       };
     case 'building':
-      // The building's own editor (walls and, in time, the rest of
-      // `building-editor.md`); the footprint stays behind the site editor's door.
+      // The building's own editor (walls and, in time, the rest of the
+      // building); the footprint stays behind the site editor's door.
       return {
         target: { kind: 'building', buildingId: selection.buildingId },
         aimAt: undefined,

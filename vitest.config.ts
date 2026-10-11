@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 // server and the framework-free libs under plain Node. `--project <name>`
 // scopes a run to one of them.
 export default defineConfig({
+  // Golden vault files are binary fixtures, imported as data URLs (`?inline`) so the same tests run in a browser.
+  assetsInclude: ['**/*.pwv'],
   test: {
     globals: true,
     projects: [
@@ -48,6 +50,14 @@ export default defineConfig({
           name: 'charts',
           environment: 'happy-dom',
           include: ['libs/charts/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vault-extension',
+          environment: 'happy-dom',
+          include: ['apps/vault-extension/src/**/*.{test,spec}.{ts,tsx}'],
         },
       },
       {

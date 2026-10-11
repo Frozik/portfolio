@@ -2,7 +2,7 @@ import { NANOS_PER_DAY } from '@frozik/utils/date/constants';
 
 import type { IAxisDomain } from './axis-domain';
 
-/** Time as nanoseconds from the Unix epoch: too many for a `number`, so a `bigint` (§3.8). */
+/** Time as nanoseconds from the Unix epoch: too many for a `number`, so a `bigint`. */
 const DAYS_PER_YEAR = 365.25;
 const NANOS_PER_YEAR = DAYS_PER_YEAR * NANOS_PER_DAY;
 /**

@@ -5,7 +5,7 @@ import { loadingIndicatorCore } from '../../../extensions/loading-indicator/core
 import { CANVAS2D_BACKEND } from '../../painter';
 import { loadingIndicatorPainter } from './painter';
 
-/** Bars along the bottom edge for what is loading and what failed (§7.1). */
+/** Bars along the bottom edge for what is loading and what failed. */
 export function loadingIndicator<TX>(): IChartExtension<TX, 'loadingIndicator', undefined> {
   return withPaint(loadingIndicatorCore<TX>(), () => [
     {

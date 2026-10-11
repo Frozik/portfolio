@@ -17,7 +17,7 @@ export type TCutEdge = 'before' | 'after';
 
 /**
  * The correspondence between the world axis and the virtual one the chart
- * runs on, where every cut has no length (sessions §2). `toVirtual` is
+ * runs on, where every cut has no length. `toVirtual` is
  * monotone and continuous; `toWorld` is its inverse off the cuts, and on a
  * cut gives the edge asked for — the one after it unless told otherwise.
  */
@@ -156,7 +156,7 @@ export function tableMapping<TX>(
   }
 }
 
-/** The axis with the given stretches taken out; nothing else about the axis changes (sessions §3). */
+/** The axis with the given stretches taken out; nothing else about the axis changes. */
 export function cutsMapping<TX>(
   domain: IAxisDomain<TX>,
   cuts: readonly ICut<TX>[]

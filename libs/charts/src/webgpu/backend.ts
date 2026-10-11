@@ -21,7 +21,7 @@ export interface IWebGpuBackendOptions {
   readonly device?: GPUDevice;
   readonly sampleCount?: number;
   readonly texture?: {
-    /** The ceiling of one chart's data texture, in rows of 2048 texels (§4.7). */
+    /** The ceiling of one chart's data texture, in rows of 2048 texels. */
     readonly maxRows?: number;
   };
 }
@@ -33,7 +33,7 @@ async function requestDevice(): Promise<GPUDevice> {
   return adapter.requestDevice();
 }
 
-/** One device, one series pipeline and one command encoder a frame for every chart of the stage (§6.3). */
+/** One device, one series pipeline and one command encoder a frame for every chart of the stage. */
 export async function webgpu(options: IWebGpuBackendOptions = {}): Promise<WebGpuBackend> {
   const device = options.device ?? (await requestDevice());
   return new WebGpuBackend(device, isNil(options.device), options);

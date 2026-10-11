@@ -94,9 +94,9 @@ export interface PlanEditorChrome {
   readonly selectedPathPointIndex: number | undefined;
   /** The segment whose panel block the pointer rests on; lit over the ribbon. */
   readonly hoveredPathSegmentIndex: number | undefined;
-  /** What an open editor is focused on; everything else dims (see modes.md). */
+  /** What an open editor is focused on; everything else dims. */
   readonly editFocus: EditTarget | undefined;
-  /** The building editor's active layer; the other layers of its building dim (`layers.md`). */
+  /** The building editor's active layer; the other layers of its building dim. */
   readonly activeLayer: BuildingLayerId | undefined;
   /** The selected wall inside the building editor, with the draft polyline. */
   readonly selectedWall: Wall | undefined;

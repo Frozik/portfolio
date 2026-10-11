@@ -73,7 +73,7 @@ function deviceHeightMeters(
 /**
  * The wiring the circuits imply: one run from the panel to every consumer of
  * its группа and a link from every switch to its light — along the DRAWN
- * routes wherever both ends reach them (`wiring.md` §3.3), along the walls
+ * routes wherever both ends reach them, along the walls
  * otherwise. Every run is measured as it is laid: the horizontal plus the
  * drops from the run's level to each device.
  */

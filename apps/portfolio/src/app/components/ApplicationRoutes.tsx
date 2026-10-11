@@ -79,6 +79,17 @@ const BugReporterDemo = lazy(() =>
 const Transport = lazy(() =>
   import('../../features/transport/presentation/Transport').then(m => ({ default: m.Transport }))
 );
+const Vault = lazy(() =>
+  import('../../features/vault/presentation/Vault').then(m => ({ default: m.Vault }))
+);
+const VaultStart = lazy(() =>
+  import('../../features/vault/presentation/VaultStart').then(m => ({ default: m.VaultStart }))
+);
+const VaultWorkspace = lazy(() =>
+  import('../../features/vault/presentation/VaultWorkspace').then(m => ({
+    default: m.VaultWorkspace,
+  }))
+);
 const Retro = lazy(() =>
   import('../../features/retro/presentation/Retro').then(m => ({ default: m.Retro }))
 );
@@ -141,6 +152,10 @@ export const ApplicationRoutes = memo(() => {
             <Route path="bug-reporter" element={<BugReporterDemo />} />
             <Route path="transport" element={<Transport />} />
             <Route path="webmcp" element={<WebMcp />} />
+            <Route path="vault" element={<Vault />}>
+              <Route index element={<VaultStart />} />
+              <Route path=":vaultId/*" element={<VaultWorkspace />} />
+            </Route>
             <Route element={<CommunicationRoot />}>
               <Route path="retro" element={<Retro />}>
                 <Route index element={<Lobby />} />

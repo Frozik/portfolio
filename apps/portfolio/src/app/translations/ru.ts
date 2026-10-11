@@ -61,6 +61,7 @@ export const appTranslationsRu: TranslationOf<typeof appTranslationsEn> = {
     table: 'Таблица',
     bugReporter: 'Репорт багов',
     transport: 'Транспорт HTTP/3',
+    vault: 'Хранилище паролей',
     webmcp: 'WebMCP',
     retro: 'Ретроспектива',
     conf: 'Конференция',

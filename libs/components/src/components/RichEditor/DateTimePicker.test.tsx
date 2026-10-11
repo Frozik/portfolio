@@ -4,7 +4,8 @@ import { isNil } from 'lodash-es';
 import { useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 
-import { POPUP_RETRACT_DELAY_MS } from './components/PopupDrawer';
+import { pretendCoarsePointer } from '../../hooks/coarse-pointer.test-helper';
+import { POPUP_RETRACT_DELAY_MS } from '../popup/PopupDrawer';
 import { DateTimePicker } from './DateTimePicker';
 import { blurEditor, editorOf, focusEditor, typeInto } from './editor-test-helpers.test-helper';
 
@@ -90,25 +91,6 @@ function tabOf(): HTMLElement {
     throw new Error('no tab rendered');
   }
   return tab;
-}
-
-const COARSE_POINTER_QUERY = '(pointer: coarse)';
-
-function pretendCoarsePointer(): void {
-  const matchMedia = window.matchMedia.bind(window);
-  vi.spyOn(window, 'matchMedia').mockImplementation(query => {
-    const list = matchMedia(query);
-    // happy-dom's list keeps private fields, so its methods only run bound to the real object.
-    return new Proxy(list, {
-      get: (target, key) => {
-        if (key === 'matches' && query === COARSE_POINTER_QUERY) {
-          return true;
-        }
-        const member: unknown = Reflect.get(target, key, target);
-        return typeof member === 'function' ? member.bind(target) : member;
-      },
-    });
-  });
 }
 
 function selectAll(editor: HTMLElement) {

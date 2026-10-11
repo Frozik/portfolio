@@ -139,7 +139,9 @@ const DialogShellComponent = ({
             </div>
           </div>
           <div className="mt-1">{children}</div>
-          {footer !== undefined && <div className="mt-6 flex justify-end gap-2">{footer}</div>}
+          {footer !== undefined && (
+            <div className="mt-6 flex flex-wrap justify-end gap-2">{footer}</div>
+          )}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

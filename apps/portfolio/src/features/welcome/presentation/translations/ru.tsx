@@ -263,6 +263,13 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
           'Видеочат один на один, который надевает на вас AR-очки и держит их на лице, как бы вы ни двигались. Всё работает прямо в браузере.',
         status: 'live',
       },
+      vault: {
+        meta: 'Безопасность · Свой формат',
+        title: 'Password Vault',
+        description:
+          'Менеджер паролей в браузере: один зашифрованный файл в вашем Google Drive или WebDAV, Argon2id и AES-GCM в Worker, правки сливаются между устройствами, вход по passkey, аудит и импорт из KeePass, Bitwarden, CXF и браузеров.',
+        status: 'e2e',
+      },
       controls: {
         meta: 'UI/UX · Библиотека контролов',
         title: 'Controls',

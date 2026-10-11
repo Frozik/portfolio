@@ -1,5 +1,6 @@
-// Minimal ambient typings for the subset of `window.google.accounts.id`
-// used by the silent ID-token refresh helper. The full reference lives at
+// Minimal ambient typings for the subset of `window.google.accounts` used:
+// `id` by the silent ID-token refresh helper, `oauth2` by the vault's Drive
+// token source. The full reference lives at
 // https://developers.google.com/identity/gsi/web/reference/js-reference.
 //
 // Pulling `@types/google.accounts` is overkill for our narrow surface and
@@ -43,10 +44,45 @@ interface IGoogleAccountsId {
   disableAutoSelect(): void;
 }
 
+/** https://developers.google.com/identity/oauth2/web/reference/js-reference — the token model only. */
+interface IGoogleTokenResponse {
+  readonly access_token?: string;
+  readonly expires_in?: number | string;
+  readonly scope?: string;
+  readonly error?: string;
+  readonly error_description?: string;
+}
+
+interface IGoogleTokenClientError {
+  readonly type: 'popup_failed_to_open' | 'popup_closed' | 'unknown';
+  readonly message?: string;
+}
+
+interface IGoogleTokenClientConfig {
+  readonly client_id: string;
+  readonly scope: string;
+  readonly callback: (response: IGoogleTokenResponse) => void;
+  readonly error_callback?: (error: IGoogleTokenClientError) => void;
+  readonly login_hint?: string;
+}
+
+interface IGoogleTokenClient {
+  requestAccessToken(overrides?: {
+    readonly prompt?: '' | 'none' | 'consent' | 'select_account';
+  }): void;
+}
+
+interface IGoogleAccountsOauth2 {
+  initTokenClient(config: IGoogleTokenClientConfig): IGoogleTokenClient;
+  hasGrantedAllScopes(response: IGoogleTokenResponse, ...scopes: readonly string[]): boolean;
+  revoke(accessToken: string, done?: () => void): void;
+}
+
 interface Window {
   readonly google?: {
     readonly accounts?: {
       readonly id?: IGoogleAccountsId;
+      readonly oauth2?: IGoogleAccountsOauth2;
     };
   };
 }

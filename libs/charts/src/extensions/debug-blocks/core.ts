@@ -22,7 +22,7 @@ export interface IDebugBlocksOptions {
   readonly blockSize?: (shape: TShape) => number;
 }
 
-/** Marks where the blocks a backend cuts the data into begin; off until switched on (§7.1). */
+/** Marks where the blocks a backend cuts the data into begin; off until switched on. */
 export function debugBlocksCore<TX>(
   options: IDebugBlocksOptions = {}
 ): IChartExtension<TX, 'debugBlocks', IDebugBlocksSlice<TX>> {

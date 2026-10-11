@@ -21,7 +21,7 @@ export function areaOptionsOf(options: unknown): IAreaMarkOptions {
   return isAreaOptions(options) ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS;
 }
 
-/** A band from the line to its baseline (§5.3). */
+/** A band from the line to its baseline. */
 export const AREA_MARK: IMark = {
   id: 'area',
   shapes: ['point', 'candle'],

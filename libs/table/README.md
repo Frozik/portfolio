@@ -6,11 +6,8 @@ extensions of the same kernel, so nothing that is not plugged in is rendered
 or bundled. React is the first adapter; the kernel and every extension core
 are free of React and the DOM.
 
-The design specification (in Russian, kept with the repository's other design
-documents under `.claude/plan/design/table/spec.md`) covers the principles,
-data sources (`clientRows`, `snapshotRows`, `logRows`), the extension
-contract, view slots, theming, budgets and the implementation phases; the
-`§` citations in the source refer to it.
+The library is built around three data sources (`clientRows`, `snapshotRows`,
+`logRows`), an extension contract, view slots, theming and render budgets.
 
 ```
 src/

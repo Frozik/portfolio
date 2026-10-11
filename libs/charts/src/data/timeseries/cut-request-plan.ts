@@ -17,13 +17,13 @@ export interface IRequestPiece extends IRequestBounds {
 export interface IRequestPlanning {
   readonly step: bigint;
   readonly aggregateTime: TAggregateTime;
-  /** How many needless elements one request is worth: a cut that would bring more than this splits the request (sessions §5.3). */
+  /** How many needless elements one request is worth: a cut that would bring more than this splits the request. */
   readonly requestWorth: number;
 }
 
 /**
  * An element whose interval starts inside a cut and reaches out of it stays
- * (sessions §5.1), and lies up to one step inside the cut: a piece bounded by a
+ *, and lies up to one step inside the cut: a piece bounded by a
  * cut reaches that far into it, so the element is asked for.
  */
 function reachOf({ step, aggregateTime }: IRequestPlanning): { before: bigint; after: bigint } {

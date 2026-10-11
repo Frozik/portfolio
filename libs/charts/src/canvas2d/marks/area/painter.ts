@@ -7,7 +7,7 @@ import type { ICanvasMarkPainter } from '../../painter';
 import type { IPathPoint } from '../path-points';
 import { joined, paintAt, pointsOf } from '../path-points';
 
-/** The area mark on the 2D canvas: a band from the line down to its baseline, broken at gaps (§6.7). */
+/** The area mark on the 2D canvas: a band from the line down to its baseline, broken at gaps. */
 export const areaCanvasPainter: ICanvasMarkPainter = {
   drawRun(context, frame, { run, style }, use, scale): void {
     const { baseline, join } = areaOptionsOf(use.options);

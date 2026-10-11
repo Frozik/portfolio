@@ -32,7 +32,7 @@ const CSS_PIXEL_RATIO = 1;
 
 /**
  * A chart without pixels: the viewport, the series, the extensions, and the
- * pipeline that turns them into one immutable frame a backend can draw (§3.6).
+ * pipeline that turns them into one immutable frame a backend can draw.
  */
 export class ChartModel<TX> implements IChartKernel<TX> {
   readonly id: string | undefined;
@@ -156,7 +156,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
 
   /**
    * Other stretches taken out of the axis: the same world range stays in
-   * view, the data starts over under the new cuts (sessions §4.1).
+   * view, the data starts over under the new cuts.
    */
   setCuts(cuts: TCuts<TX> | undefined): void {
     const { x } = this.viewport;
@@ -178,7 +178,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     return isNil(mapping) ? world : toVirtualRange(mapping, world);
   }
 
-  /** The chart is on a stage: extensions get the host, the data starts asking and listening (§3.9). */
+  /** The chart is on a stage: extensions get the host, the data starts asking and listening. */
   attach(host: IChartHost): void {
     this.host = host;
     this.unmountExtensions = this.registry.mount(host);
@@ -293,7 +293,7 @@ export class ChartModel<TX> implements IChartKernel<TX> {
     this.frames.raise(ACTIVE_FPS);
   }
 
-  /** The same frame object for as long as nothing it is made of changed (§3.6). */
+  /** The same frame object for as long as nothing it is made of changed. */
   private frameOf(
     size: IChartSize,
     series: readonly ISeriesFrame<TX>[],

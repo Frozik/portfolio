@@ -57,7 +57,7 @@ function widened(interval: IInterval, share: number): IInterval {
 /**
  * A series of time as a chart sees it: a channel per shape and scale in use,
  * each remembering what it has read. Zooming to another scale opens another
- * channel; what the others know stays until memory runs short (§4.4, §4.7).
+ * channel; what the others know stays until memory runs short.
  */
 export class TimeseriesData implements ISeriesData<bigint> {
   private readonly channels = new Map<string, Channel>();
@@ -210,7 +210,7 @@ export class TimeseriesData implements ISeriesData<bigint> {
   /**
    * Over the budget, first what is not shown goes, least recently shown
    * first, then what lies far from the wanted range. What is on screen is
-   * never dropped, whatever the budget (§4.7).
+   * never dropped, whatever the budget.
    */
   private freeMemory(): void {
     const { maxElements } = this.settings;

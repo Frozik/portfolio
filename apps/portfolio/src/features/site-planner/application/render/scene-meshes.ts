@@ -50,7 +50,7 @@ export interface GhostPass {
   readonly activeStoreyId: StoreyId | undefined;
   /**
    * A hidden building layer leaves the scene altogether — not ghosted, absent,
-   * shadow and all (`layers.md` §6.4). The geometry it stood on is still
+   * shadow and all. The geometry it stood on is still
    * derived: a stairwell stays cut whether or not the stair is shown.
    */
   readonly visibleLayers: ReadonlySet<PlanLayerKind>;

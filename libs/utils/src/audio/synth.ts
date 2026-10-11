@@ -1,7 +1,7 @@
 import { random } from 'lodash-es';
 
 /**
- * A hand-rolled, fully typed WebAudio voice (§12.3). The parameter model is inspired by the
+ * A hand-rolled, fully typed WebAudio voice. The parameter model is inspired by the
  * tiny 8-bit synth libraries, but written out as named fields rather than a positional argument
  * array — the candidates ship no TypeScript types, and a recipe you can read is worth more here
  * than a kilobyte saved.

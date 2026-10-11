@@ -15,7 +15,7 @@ export const DEFAULT_AGGREGATE_TIME: TAggregateTime = 'start';
 
 interface IRunHeader<TX> {
   readonly id: number;
-  /** Grows whenever the run's elements change: the only thing a consumer needs to notice a change (§4.1). */
+  /** Grows whenever the run's elements change: the only thing a consumer needs to notice a change. */
   readonly revision: number;
   readonly length: number;
   readonly x: ArrayLike<TX>;
@@ -25,7 +25,7 @@ interface IRunHeader<TX> {
   /**
    * Indices of the technical NaN elements that stand for a cut of the axis:
    * not data, never shown — only there so a line does not join the elements
-   * on the two sides of the cut (sessions §6).
+   * on the two sides of the cut.
    */
   readonly breakMarkers: readonly number[];
 }

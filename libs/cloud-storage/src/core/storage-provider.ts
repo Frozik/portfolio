@@ -3,7 +3,6 @@ import type { Brand } from '@frozik/utils/types/base';
 
 import type { TStorageResult } from './storage-error';
 
-/** sync.md §8.1 */
 export type TStoragePath = Brand<string, 'StoragePath'>;
 
 export type TStorageRev = Brand<string, 'StorageRev'>;
@@ -42,6 +41,10 @@ export type TWriteResult =
   | { readonly kind: 'ok'; readonly stat: IStorageObjectStat }
   | { readonly kind: 'conflict'; readonly current: IStorageObjectStat | null };
 
+export type TRemoveResult =
+  | { readonly kind: 'removed' }
+  | { readonly kind: 'conflict'; readonly current: IStorageObjectStat | null };
+
 export interface IStorageProvider {
   readonly kind: TStorageKind;
   readonly capabilities: IStorageCapabilities;
@@ -57,7 +60,7 @@ export interface IStorageProvider {
     path: TStoragePath,
     precondition: TWritePrecondition,
     signal: AbortSignal
-  ): Promise<TStorageResult<void>>;
+  ): Promise<TStorageResult<TRemoveResult>>;
   list(
     directory: TStoragePath,
     signal: AbortSignal

@@ -1,0 +1,53 @@
+/* FileDrop: a dashed zone that takes a click, a drop or a paste. */
+
+.zone {
+  composes: tokens from '../control-tokens.module.css';
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 16px;
+  border: 1px dashed var(--re-border);
+  background-color: var(--re-bg-card);
+  color: var(--re-fg-dim);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible,
+  &[data-dragging] {
+    border-color: var(--re-accent);
+    color: var(--re-fg);
+    outline: 0;
+  }
+
+  &[data-dragging] {
+    background-color: color-mix(in oklab, var(--re-accent) 10%, var(--re-bg-card));
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.input {
+  display: none;
+}
+
+.hint {
+  color: var(--re-fg-faint);
+  font-size: 12px;
+}
+
+.rejected {
+  color: var(--re-red);
+  font-size: 12px;
+}

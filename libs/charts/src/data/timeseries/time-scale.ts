@@ -1,7 +1,7 @@
 /**
  * The steps a time series may be aggregated by, in nanoseconds. Each divides
  * the next, and intervals are counted from the Unix epoch in UTC, so an
- * element of a coarser scale is always a whole number of finer ones (§4.3).
+ * element of a coarser scale is always a whole number of finer ones.
  */
 export const TIME_SCALE = {
   milliseconds1: 1_000_000n,

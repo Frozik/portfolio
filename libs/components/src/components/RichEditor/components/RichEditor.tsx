@@ -13,6 +13,7 @@ import {
 import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../../cn';
 import type {
+  IComboboxAria,
   INormalizedInput,
   IRichEditorHandle,
   ISelection,
@@ -21,6 +22,7 @@ import type {
   TSegmentRenderer,
 } from '../defs';
 import { findNextTabStop } from '../focus-navigation';
+import { SECRET_FIELD_ATTRIBUTES } from '../secret-attributes';
 import { plainSegments, renderSegments } from '../segments';
 import { getElementSelection, rangeToSelection, setElementSelection } from '../selection';
 import { applyTextEdit, readInputData, textEditFromInput, toSingleLine } from '../text-edit';
@@ -66,6 +68,8 @@ export const RichEditor = memo(
     onFocusSelection,
     onCancel,
     onKeyDown,
+    combobox,
+    secret = false,
     'aria-label': ariaLabel,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -75,7 +79,7 @@ export const RichEditor = memo(
     readonly disabled?: boolean;
     readonly value?: string;
     readonly placeholder?: string;
-    readonly inputMode?: 'text' | 'decimal' | 'numeric';
+    readonly inputMode?: 'text' | 'decimal' | 'numeric' | 'url' | 'email';
     readonly enterKeyHint?: 'enter' | 'done' | 'next';
     readonly onValueChange?: (value: string) => void;
     readonly normalizeInput?: TInputNormalizer;
@@ -86,6 +90,9 @@ export const RichEditor = memo(
     /** Escape: the owner reverts its own state before the field blurs. */
     readonly onCancel?: () => void;
     readonly onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+    readonly combobox?: IComboboxAria;
+    /** A secret typed in plain text (a card number): kept from other managers and Grammarly. */
+    readonly secret?: boolean;
     readonly 'aria-label'?: string;
     readonly 'aria-invalid'?: boolean;
     readonly 'aria-describedby'?: string;
@@ -269,10 +276,11 @@ export const RichEditor = memo(
       }
 
       // Overlay layers (Radix) prevent Escape in the capture phase before the
-      // event reaches the field; only the owner's own veto skips the built-ins.
+      // event reaches the field; only the owner's own veto skips the built-ins:
+      // preventing a key, or claiming one already prevented by stopping it.
       const preventedBefore = event.defaultPrevented;
       onKeyDown?.(event);
-      if (event.defaultPrevented && !preventedBefore) {
+      if ((event.defaultPrevented && !preventedBefore) || event.isPropagationStopped()) {
         return;
       }
 
@@ -293,13 +301,18 @@ export const RichEditor = memo(
       <div
         ref={elementRef}
         className={cn(styles.contentEditable, className)}
-        role="textbox"
+        role={isNil(combobox) ? 'textbox' : 'combobox'}
         tabIndex={disabled ? undefined : 0}
-        aria-multiline={false}
+        aria-multiline={isNil(combobox) ? false : undefined}
+        aria-autocomplete={isNil(combobox) ? undefined : 'list'}
+        aria-controls={combobox?.listId}
+        aria-expanded={combobox?.expanded}
+        aria-activedescendant={combobox?.activeOptionId}
         aria-label={ariaLabel}
         aria-disabled={disabled || undefined}
         aria-invalid={ariaInvalid || undefined}
         aria-describedby={ariaDescribedBy}
+        {...(secret ? SECRET_FIELD_ATTRIBUTES : {})}
         aria-placeholder={placeholder}
         data-placeholder={placeholder}
         contentEditable={disabled ? false : PLAINTEXT_ONLY_SUPPORTED ? PLAINTEXT_ONLY : true}

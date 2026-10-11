@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { screen, fireEvent, render } from '@testing-library/react';
 import { useState } from 'react';
 
 import { blurEditor, editorOf, focusEditor, typeInto } from './editor-test-helpers.test-helper';
@@ -136,5 +136,11 @@ describe('NumericEditor', () => {
 
     expect(editor.hasAttribute('tabindex')).toBe(false);
     expect(editor.getAttribute('contenteditable')).toBe('false');
+  });
+
+  it('takes its name from the owner, so two numbers on one form are told apart', () => {
+    render(<NumericEditor value={20} aria-label="Length" />);
+
+    expect(screen.getByLabelText('Length')).toBeTruthy();
   });
 });

@@ -2,7 +2,7 @@ import type { IChartSize } from '../host/size-source';
 import type { IDataFailure } from '../series/series-data';
 import type { IAxisRange } from '../viewport/axis-domain';
 
-/** What a chart tells the outside about; extension slices add their own events (§3.3). */
+/** What a chart tells the outside about; extension slices add their own events. */
 export interface IChartEvents<TX> {
   /** An axis moved: the X axis when `scaleId` is none, else the value scale named. */
   readonly 'viewport.changed': { readonly scaleId: string | undefined };

@@ -131,7 +131,7 @@ export interface PlanBuilding {
   /** The displayed storey's electrical plan. */
   readonly devices: readonly PlanDeviceSymbol[];
   readonly wires: readonly PlanWireRun[];
-  /** The drawn cable routes the runs follow (`wiring.md` §3.3). */
+  /** The drawn cable routes the runs follow. */
   readonly wiringRoutes: readonly PlanWiringRoute[];
 }
 
@@ -216,7 +216,7 @@ export function drawBuildings(
     const path = buildMultiPolygonPath(building.polygons, viewport);
     // A layer other than the active one is context: present, legible, out
     // of reach — the same contract as the dim outside the editor, one shade
-    // lighter (`layers.md` §6.3).
+    // lighter.
     const onLayer = (layer: BuildingLayerId, draw: () => void): void => {
       const isContext =
         building.id === focusBuildingId && !isNil(activeLayer) && layer !== activeLayer;

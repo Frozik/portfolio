@@ -31,7 +31,7 @@ const DEVICE_HISTORY_GROUP = 'device';
  * cable routes and the cables the groups are wired in ({@link WiringModel}).
  */
 export class ElectricsModel {
-  /** The drawn routes and group cables (`wiring.md`). */
+  /** The drawn routes and group cables. */
   readonly wiring: WiringModel;
   private readonly core: PlanEditorCore;
   private readonly storeys: StoreysModel;

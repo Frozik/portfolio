@@ -18,7 +18,7 @@ export interface IPersistedSegmentsOptions {
 /**
  * The persistent cache as one channel uses it: before the source is asked for
  * a hole, the cache is asked once; what it holds goes into memory, and the
- * source is left with the rest (§4.7).
+ * source is left with the rest.
  */
 export class PersistedSegments {
   /** What the cache has been asked about. */

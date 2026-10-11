@@ -8,7 +8,7 @@ export interface IStoredSegment extends IInterval {
 
 /**
  * A place where what a time series has read outlives the page: the past of a
- * series never changes, so what was stored stays true (§4.7). Implementations
+ * series never changes, so what was stored stays true. Implementations
  * never reject and never throw — a failed read is a miss, a failed write is
  * forgotten: a cache must not be able to break a chart.
  */
