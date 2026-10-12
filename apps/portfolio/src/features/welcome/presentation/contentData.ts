@@ -49,7 +49,6 @@ export const PROJECT_ROUTES: readonly IProjectRoute[] = [
   { id: 'sudoku', route: '/sudoku', fx: 'cursor' },
   { id: 'stereometry', route: '/stereometry', fx: 'rotate' },
   { id: 'tanks', route: '/tanks', fx: 'tanks' },
-  { id: 'scorched', route: '/scorched', fx: 'artillery' },
   { id: 'space-golf', route: '/space-golf', fx: 'gravity' },
   { id: 'site-planner', route: '/site-planner', fx: 'contours' },
   { id: 'osm-map', route: '/osm-map', fx: 'tiles' },

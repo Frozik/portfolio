@@ -52,7 +52,6 @@ export const appTranslationsEn = {
     pendulum: 'Pendulum',
     sudoku: 'Sudoku',
     tanks: 'Tanks',
-    scorched: 'Ashfall',
     sun: 'Sun',
     graphics: 'Graphics',
     timeseries: 'Timeseries',

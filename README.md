@@ -8,8 +8,8 @@
 
 Interactive demos that go deeper than a to-do app: a house planner with
 norm-checked electrics, a Battle City remake traced from the ROM, a live
-Binance depth heatmap, artillery over GPU-simulated terrain, a genetic
-algorithm learning to balance a pendulum, peer-to-peer video and
+Binance depth heatmap, a genetic algorithm learning to balance a pendulum,
+peer-to-peer video and
 retrospective boards — all in the browser, all written from scratch in
 strict TypeScript.
 
@@ -32,7 +32,6 @@ Every demo has its own README with the details; the landing page is the
 | [Space Golf](./apps/portfolio/src/features/space-golf/README.md) | A gravity-flipping golf puzzle after Gravity Golfing, with its own physics and procedural Khokhloma-painted levels. | [open](https://frozik.github.io/portfolio/space-golf)
 | [Stereometry](./apps/portfolio/src/features/stereometry/README.md) | A 3D construction workbench for stereometry puzzles with per-fragment occlusion of construction lines. | [open](https://frozik.github.io/portfolio/stereometry)
 | [Tanks](./apps/portfolio/src/features/tanks/README.md) | A Battle City (NES, 1985) remake with mechanics traced from the ROM, all 35 stages, synthesized audio and no extracted assets. | [open](https://frozik.github.io/portfolio/tanks)
-| [Ashfall](./apps/portfolio/src/features/scorched/README.md) | Scorched Earth reimagined: hot-seat artillery for 2–10 players over terrain simulated in WebGPU compute shaders. | [open](https://frozik.github.io/portfolio/scorched)
 | [Site Planner](./apps/portfolio/src/features/site-planner/README.md) | A plot-and-house planner: survey the ground, draw the plot, build a multi-storey house with walls, stairs, roofs, furniture and norm-checked electrics and utilities, and see it in 3D. | [open](https://frozik.github.io/portfolio/site-planner)
 | [OSM Map](./apps/portfolio/src/features/osm-map/README.md) | Own WebGPU slippy-map engine over OSM tiles: a tilted camera with fog, quadtree LOD that mixes tile zooms in one frame, tiles fading in over a checkerboard as they load, OSM buildings rising as boxes, woods and parks planted with trees, cars driving the streets and water rippling at street zoom. | [open](https://frozik.github.io/portfolio/osm-map)
 | [Password Vault](./apps/portfolio/src/features/vault/README.md) | A browser password manager: one end-to-end encrypted file in the user's own Google Drive or WebDAV, Argon2id and AES-GCM in a Worker, CRDT-style merge across devices, passkey unlock, an audit, and import/export for KeePass, Bitwarden, CXF and the browsers. | [open](https://frozik.github.io/portfolio/vault)

@@ -11,7 +11,7 @@ import { waitForApp } from './app-ready';
 // downloaded. The test takes the visitor's path — the menu button — and then
 // checks both the promise's mechanism (every built asset is in a cache) and the
 // promise itself (routes render with the network cut).
-const GAME_ROUTES = ['sudoku', 'tanks', 'scorched', 'space-golf'];
+const GAME_ROUTES = ['sudoku', 'tanks', 'space-golf'];
 const DIST_ASSETS = resolve(import.meta.dirname, '..', 'dist', 'assets');
 const PACK_DOWNLOAD_TIMEOUT_MS = 60_000;
 /** A CI runner downloads the pack and renders four routes in well over the default 30 s. */

@@ -199,13 +199,6 @@ export const welcomeTranslationsEn = {
           'Battle City, rebuilt from scratch: all 35 stages, the feel and timings of the original, pixel art and sound generated in code. Keyboard or touch.',
         status: '35 stages',
       },
-      scorched: {
-        meta: 'Games · WebGPU artillery',
-        title: 'Scorched',
-        description:
-          'Scorched Earth for the browser: up to ten tanks at one screen, destructible terrain, wind, shields and 33 weapons — against friends or eight AI characters.',
-        status: '33 weapons',
-      },
       'space-golf': {
         meta: 'Games · WebGPU physics',
         title: 'Space Golf',

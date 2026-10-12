@@ -200,13 +200,6 @@ export const welcomeTranslationsRu: typeof welcomeTranslationsEn = {
           'Battle City, собранный с нуля: все 35 уровней, ощущения и тайминги оригинала, а пиксель-арт и звук рождаются прямо в коде. Клавиатура или тач.',
         status: 'играть',
       },
-      scorched: {
-        meta: 'Игры · WebGPU-артиллерия',
-        title: 'Scorched',
-        description:
-          'Scorched Earth в браузере: до десяти танков за одним экраном, разрушаемый ландшафт, ветер, щиты и 33 вида оружия — против друзей или восьми характеров ИИ.',
-        status: '33 оружия',
-      },
       'space-golf': {
         meta: 'Игры · Физика на WebGPU',
         title: 'Космический гольф',

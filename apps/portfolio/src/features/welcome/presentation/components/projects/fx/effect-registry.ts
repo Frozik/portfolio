@@ -4,7 +4,6 @@
  */
 
 import { drawAR } from './effects/draw-ar';
-import { drawArtillery } from './effects/draw-artillery';
 import { drawContours } from './effects/draw-contours';
 import { drawCrosshair } from './effects/draw-crosshair';
 import { drawCursor } from './effects/draw-cursor';
@@ -50,7 +49,6 @@ const FX_EFFECTS: Record<TProjectFxKind, TFxEffectFactory> = {
   typing: createStatefulFxEffect(createTypingState, drawTyping),
   ar: createStatelessFxEffect(drawAR),
   tanks: createStatelessFxEffect(drawTanks),
-  artillery: createStatelessFxEffect(drawArtillery),
   contours: createStatelessFxEffect(drawContours),
   gravity: createStatelessFxEffect(drawGravity),
   tiles: createStatelessFxEffect(drawTiles),

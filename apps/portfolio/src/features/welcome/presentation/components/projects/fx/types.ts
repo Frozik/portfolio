@@ -10,7 +10,6 @@ export type TProjectFxKind =
   | 'ar'
   | 'typing'
   | 'tanks'
-  | 'artillery'
   | 'contours'
   | 'gravity'
   | 'tiles'
