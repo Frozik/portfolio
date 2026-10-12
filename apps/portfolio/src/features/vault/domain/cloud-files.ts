@@ -15,8 +15,27 @@ export type TCloudLocation =
       readonly path: string;
     };
 
-/** The folder a vault lives in, in either Drive space. */
+/** The folder a vault lives in by default; the hidden space always uses it. */
 export const DRIVE_VAULT_FOLDER: TStoragePath = storagePath('Vault');
+
+const DRIVE_SEPARATOR = '/';
+const NOT_A_FOLDER_NAME: ReadonlySet<string> = new Set(['.', '..']);
+
+/**
+ * A folder typed for My Drive, nested by slashes: names trimmed, empty ones
+ * dropped; `null` when nothing is left or a name is `.`, `..` or holds a
+ * control character.
+ */
+export function driveFolderOf(typed: string): TStoragePath | null {
+  const names = typed
+    .split(DRIVE_SEPARATOR)
+    .map(name => name.trim())
+    .filter(name => name !== '');
+  const valid =
+    names.length > 0 &&
+    names.every(name => !NOT_A_FOLDER_NAME.has(name) && ![...name].some(isControlCharacter));
+  return valid ? storagePath(names.join(DRIVE_SEPARATOR)) : null;
+}
 
 const VAULT_EXTENSION = '.pwv';
 
@@ -31,10 +50,14 @@ const UNSAFE_IN_FILE_NAME = /[\\/:*?"<>|]/g;
 const FIRST_PRINTABLE = 0x20;
 const FALLBACK_NAME = 'Vault';
 
+function isControlCharacter(character: string): boolean {
+  return (character.codePointAt(0) ?? 0) < FIRST_PRINTABLE;
+}
+
 /** The file a vault gets in a cloud folder: its name, made safe, with the `.pwv` extension. */
 export function vaultFileName(vaultName: string): string {
   const printable = [...vaultName]
-    .map(character => ((character.codePointAt(0) ?? 0) < FIRST_PRINTABLE ? '-' : character))
+    .map(character => (isControlCharacter(character) ? '-' : character))
     .join('');
   const safe = printable.replace(UNSAFE_IN_FILE_NAME, '-').trim();
   return `${safe === '' ? FALLBACK_NAME : safe}${VAULT_EXTENSION}`;

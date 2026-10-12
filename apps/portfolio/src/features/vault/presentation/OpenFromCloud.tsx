@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
 
 import { Alert } from '../../../shared/ui/Alert';
-import { Button } from '../../../shared/ui/Button';
 import { CardFrame } from '../../../shared/ui/CardFrame';
 import { Spinner } from '../../../shared/ui/Spinner';
 import type { TAdoptFailure } from '../application/cloud-adoption';
@@ -40,7 +39,16 @@ function failureText(failure: TAdoptFailure): string {
  * device and the usual unlock opens it.
  */
 export const OpenFromCloud = observer(
-  ({ store, onClose }: { readonly store: VaultFeatureStore; readonly onClose: () => void }) => {
+  ({
+    store,
+    onClose,
+    onCreateHere,
+  }: {
+    readonly store: VaultFeatureStore;
+    readonly onClose: () => void;
+    /** The reached folder is empty and the user wants a new vault in it. */
+    readonly onCreateHere: () => void;
+  }) => {
     const navigate = useNavigate();
     const { cloud } = store;
     const opened = useEventCallback((vaultKey: TVaultKey | null) => {
@@ -62,16 +70,14 @@ export const OpenFromCloud = observer(
         <p className="text-[13px] text-landing-fg-dim">{cloudT.opening.intro}</p>
         <CloudPanels
           cloud={cloud}
-          driveAction={{ kind: 'open', onOpen: openFromDrive }}
-          webDavAction={{ kind: 'open', onOpen: openFromWebDav }}
+          driveAction={{ kind: 'open', onOpen: openFromDrive, onCreate: onCreateHere }}
+          webDavAction={{ kind: 'open', onOpen: openFromWebDav, onCreate: onCreateHere }}
+          onClose={onClose}
         />
         {cloud.opening.kind === 'opening' && <Spinner />}
         {cloud.opening.kind === 'failed' && (
           <Alert type="error" message={failureText(cloud.opening.failure)} />
         )}
-        <Button type="button" variant="secondary" className="self-start" onClick={onClose}>
-          {cloudT.webdav.cancel}
-        </Button>
       </CardFrame>
     );
   }

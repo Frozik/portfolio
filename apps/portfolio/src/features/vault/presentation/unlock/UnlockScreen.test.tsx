@@ -10,6 +10,7 @@ import { UnlockScreen } from './UnlockScreen';
 const VAULT: IKnownVault = {
   vaultKey: 'abc' as TVaultKey,
   name: 'Home',
+  description: '',
   lastOpenedAt: 1 as Milliseconds,
   unsyncedChanges: false,
 };

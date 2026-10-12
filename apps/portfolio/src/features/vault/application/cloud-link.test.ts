@@ -36,7 +36,7 @@ describe('a vault kept in a cloud', () => {
       path: 'Family.pwv',
     });
     expect(Object.keys(store.registry.entryOf(store.session?.vaultKey ?? '') ?? {}).sort()).toEqual(
-      ['lastOpenedAt', 'name', 'unsyncedChanges', 'vaultKey']
+      ['description', 'lastOpenedAt', 'name', 'unsyncedChanges', 'vaultKey']
     );
     expect(store.cloud.webDavForm).toBeNull();
   });
@@ -140,7 +140,10 @@ describe('two devices and one cloud', () => {
     await when(() => first.store.session?.document.cards.has(reply.id) === true);
 
     const snapshots = await first.device.snapshots.list(vaultKey ?? '');
-    expect(snapshots.ok && snapshots.value.length).toBe(1);
+    expect(snapshots.ok && snapshots.value.map(snapshot => snapshot.reason)).toEqual([
+      'before-sync',
+      'periodic',
+    ]);
     expect(vaultKey).toBe(first.store.session?.vaultKey);
     expect(second.session?.document.cards.get(added.id)?.title).toBe('Bank');
     expect(second.session?.cloud.location).toMatchObject({ kind: 'webdav' });

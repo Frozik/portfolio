@@ -13,6 +13,8 @@ import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import { latestStampOf } from '@frozik/vault/model/document-stamp';
 import { hlcReceive, hlcTick, initialHlc } from '@frozik/vault/model/hlc';
 import { emptyVaultDocument } from '@frozik/vault/model/vault-document';
+import type { IVaultTitle } from '@frozik/vault/model/vault-settings-edits';
+import { renameVault } from '@frozik/vault/model/vault-settings-edits';
 import type { IVaultRegistry, TVaultKey } from '@frozik/vault/persistence/ports';
 import { openedGuard } from '@frozik/vault/session/opened-guard';
 import { fileHashOf } from '@frozik/vault/session/sync-effect-runner';
@@ -42,7 +44,7 @@ export interface IVaultOpeningServices extends IVaultSessionServices {
 /** Keys in the Worker, an empty document, the first local write, the registry entry. */
 export async function createVault(
   services: IVaultOpeningServices,
-  name: string,
+  title: IVaultTitle,
   password: TBytes,
   signal: AbortSignal
 ): Promise<TResult<IOpenedSession, TUnlockFailure>> {
@@ -57,7 +59,7 @@ export async function createVault(
   }
   const now = services.clock.now();
   const clock = hlcTick(initialHlc(deviceId.value), now);
-  const document = emptyVaultDocument(name, clock);
+  const document = renameVault(emptyVaultDocument(title.name, clock), title, clock);
   const manifest = newManifest(now);
   const sealed = await services.codec.seal(
     document,
@@ -77,7 +79,8 @@ export async function createVault(
   }
   const listed = await services.registry.put({
     vaultKey,
-    name,
+    name: document.settings.name,
+    description: document.settings.description,
     lastOpenedAt: now as Milliseconds,
     unsyncedChanges: false,
   });

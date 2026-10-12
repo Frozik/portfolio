@@ -1,8 +1,10 @@
 import { Checkbox } from '@frozik/components/components/RichEditor/Checkbox';
+import { MultilineEditor } from '@frozik/components/components/RichEditor/MultilineEditor';
 import { TextEditor } from '@frozik/components/components/RichEditor/TextEditor';
 import { Select } from '@frozik/components/components/select/Select';
 import type { Milliseconds } from '@frozik/utils/date/types';
 import { CURRENT_SCHEMA_VERSION } from '@frozik/vault/format/manifest';
+import type { IVaultTitle } from '@frozik/vault/model/vault-settings-edits';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -20,12 +22,14 @@ import {
 } from '../../domain/device-settings';
 import { VaultField } from '../components/VaultField';
 import { settingsT } from '../translations/settings';
+import { BackupsSection } from './BackupsSection';
 import { ChangePasswordPanel } from './ChangePasswordPanel';
 import { durationLabel } from './duration-label';
 import { RotateKeyPanel } from './RotateKeyPanel';
 import { TemplatesSection } from './TemplatesSection';
 
 const NEVER = 'never';
+const DESCRIPTION_MAX_ROWS = 4;
 
 function hiddenKey(ms: Milliseconds | null): string {
   return ms === null ? NEVER : String(ms);
@@ -36,7 +40,7 @@ function choiceOptions(choices: readonly (Milliseconds | null)[]) {
 }
 
 /**
- * This device's timeouts for the vault, the vault's name,
+ * This device's timeouts for the vault, the vault's name and description,
  * removing it from the device, and what the vault is built on. The settings
  * of the vault itself (thresholds, icons) arrive with the audit (v1).
  */
@@ -58,13 +62,14 @@ export const VaultSettings = observer(
     readonly data: ReactNode;
     /** The recovery key and its Emergency Kit. */
     readonly recovery: ReactNode;
-    readonly onRename: (name: string) => void;
+    readonly onRename: (title: IVaultTitle) => void;
     readonly onForget: () => void;
   }) => {
     const t = settingsT;
     const locale = getCurrentLanguage();
     const { settings } = session.deviceSettings;
     const [name, setName] = useState(session.document.settings.name);
+    const [description, setDescription] = useState(session.document.settings.description);
     const [confirmingForget, setConfirmingForget] = useState(false);
 
     return (
@@ -138,25 +143,32 @@ export const VaultSettings = observer(
         <CardFrame className="flex flex-col gap-4 p-6">
           <h3 className="text-[16px] font-medium text-landing-fg">{t.vault}</h3>
           <VaultField label={t.name}>
-            {() => (
-              <div className="flex gap-2">
-                <TextEditor
-                  className="flex-1"
-                  aria-label={t.name}
-                  value={name}
-                  onValueChange={setName}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={name.trim() === '' || name.trim() === session.document.settings.name}
-                  onClick={() => onRename(name)}
-                >
-                  {t.rename}
-                </Button>
-              </div>
+            {() => <TextEditor aria-label={t.name} value={name} onValueChange={setName} />}
+          </VaultField>
+          <VaultField label={t.description} hint={t.descriptionHint}>
+            {describedBy => (
+              <MultilineEditor
+                aria-label={t.description}
+                aria-describedby={describedBy}
+                maxRows={DESCRIPTION_MAX_ROWS}
+                value={description}
+                onValueChange={setDescription}
+              />
             )}
           </VaultField>
+          <Button
+            type="button"
+            variant="secondary"
+            className="self-start"
+            disabled={
+              name.trim() === '' ||
+              (name.trim() === session.document.settings.name &&
+                description.trim() === session.document.settings.description)
+            }
+            onClick={() => onRename({ name, description })}
+          >
+            {t.saveTitle}
+          </Button>
           <ChangePasswordPanel keys={session.keys} />
           {recovery}
           <RotateKeyPanel rotation={session.rotation} />
@@ -171,6 +183,7 @@ export const VaultSettings = observer(
         </CardFrame>
 
         {cloud}
+        <BackupsSection session={session} />
         <TemplatesSection session={session} />
         {data}
 

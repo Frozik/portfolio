@@ -1,12 +1,17 @@
 import { cn } from '@frozik/components/components/cn';
+import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
-import { memo, useId } from 'react';
+import { useId } from 'react';
 
 import { editorT } from '../translations/editor';
 import { CHANGED_MARK_CLASS } from './changed-mark';
 
-/** A labelled control with a hint or an error under it; the control gets `describedBy` to point at that text. */
-export const VaultField = memo(
+/**
+ * A labelled control with a hint or an error under it; the control gets
+ * `describedBy` to point at that text. An observer, because the control is
+ * rendered here: what it reads from a store is tracked by this component.
+ */
+export const VaultField = observer(
   ({
     label,
     hint,

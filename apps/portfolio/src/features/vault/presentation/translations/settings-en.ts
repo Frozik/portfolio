@@ -1,6 +1,28 @@
 /** The settings page. */
 export const settingsTranslationsEn = {
   open: 'Settings',
+  backups: {
+    title: 'Backups on this device',
+    intro:
+      'Earlier versions of the vault, sealed with its key: kept before another device’s changes come in, before a rollback, and once an hour while you edit.',
+    kept: 'Keep',
+    keptCount: (count: number) => `${count} backups`,
+    none: 'No backups yet.',
+    reasons: {
+      'before-sync': 'before a sync',
+      periodic: 'while editing',
+      'before-restore': 'before a rollback',
+    },
+    restore: 'Roll back',
+    restoreTitle: (when: string) => `Roll the vault back to ${when}?`,
+    restoreMessage:
+      'Changed cards get the version they had then; their current version stays in each card’s history. Cards made since go to the trash, cards deleted since come back. The vault as it is now is kept as a backup first, so this can be undone. Every device takes the rollback with its next sync.',
+    restored: (restored: number, revived: number, trashed: number) =>
+      `Rolled back: ${restored} cards restored, ${revived} brought back, ${trashed} moved to the trash.`,
+    olderKey:
+      'This backup was sealed before the vault got a new key and cannot be opened any more.',
+    unreadable: 'This backup could not be read.',
+  },
   title: 'Settings',
   back: 'Back to the vault',
   security: 'Security on this device',
@@ -21,6 +43,10 @@ export const settingsTranslationsEn = {
   vault: 'This vault',
   name: 'Name',
   rename: 'Rename',
+  description: 'Description',
+  descriptionHint:
+    'Shown in this device’s list of vaults before the password is typed, like the name. Keep secrets out of it.',
+  saveTitle: 'Save',
   forget: 'Delete this vault from this device',
   forgetTitle: 'Delete this vault from this device?',
   forgetMessage:

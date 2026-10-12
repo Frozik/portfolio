@@ -101,15 +101,37 @@ describe('VaultFeatureStore', () => {
     expect(store.session?.document.cards.size).toBeGreaterThan(10);
   });
 
-  it('renames the vault in the vault itself and in the device list', async () => {
+  it('renames and describes the vault in the vault itself and in the device list', async () => {
     const store = aDevice().startStore();
     store.create('Home', PASSWORD);
     await when(() => store.session !== null);
 
-    await store.renameVault('Family');
+    await store.renameVault({ name: 'Family', description: 'Shared with the kids' });
 
-    expect(store.session?.document.settings.name).toBe('Family');
-    expect(store.registry.vaults.value?.map(vault => vault.name)).toEqual(['Family']);
+    expect(store.session?.document.settings).toMatchObject({
+      name: 'Family',
+      description: 'Shared with the kids',
+    });
+    expect(
+      store.registry.vaults.value?.map(({ name, description }) => ({ name, description }))
+    ).toEqual([{ name: 'Family', description: 'Shared with the kids' }]);
+  });
+
+  it('forgets a vault from the list without opening it, leaving the open one as it is', async () => {
+    const device = aDevice();
+    const home = device.startStore();
+    home.create('Home', PASSWORD);
+    await when(() => home.session !== null);
+    const homeKey = home.session?.vaultKey ?? '';
+    home.lock('route-left');
+    const store = device.startStore();
+    store.create('Work', PASSWORD);
+    await when(() => store.session !== null);
+
+    await store.forgetVault(homeKey);
+
+    expect(store.registry.vaults.value?.map(vault => vault.name)).toEqual(['Work']);
+    expect(store.session?.document.settings.name).toBe('Work');
   });
 
   it('forgets a vault on this device: the list no longer has it and it cannot be opened', async () => {

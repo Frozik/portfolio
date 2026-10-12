@@ -44,6 +44,12 @@ describe('golden vault files v1.0', () => {
     expect(opened.document.assetBytes).toEqual(expected.assetBytes);
   });
 
+  it('reads a vault written before descriptions as one without a description', async () => {
+    const opened = await openGolden(sampleFile);
+
+    expect(opened.document.settings.description).toBe('');
+  });
+
   it('opens a file of a newer schema read-only, showing what it does not know as such', async () => {
     const opened = await openGolden(futureSchemaFile);
     const unknownSpecs = [...opened.document.cards.values()]

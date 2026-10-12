@@ -15,6 +15,12 @@ export const vaultTranslationsRu: TranslationOf<typeof vaultTranslationsEn> = {
     neverOpened: 'ещё не открывалось',
     lastOpened: (when: string) => `открыто ${when}`,
     unsynced: 'есть несинхронизированные правки',
+    delete: (name: string) => `Удалить «${name}» с этого устройства`,
+    deleteTitle: (name: string) => `Удалить «${name}» с этого устройства?`,
+    deleteMessage:
+      'Его копия в этом браузере и всё, что устройство о нём знает, будут удалены. Копия в облаке останется на месте; хранилище, которое есть только здесь, пропадёт навсегда.',
+    deleteConfirm: 'Удалить',
+    cancel: 'Отмена',
   },
   failures: {
     quota: 'Хранилище браузера заполнено. Освободите место и обновите страницу.',
@@ -37,6 +43,9 @@ export const vaultTranslationsRu: TranslationOf<typeof vaultTranslationsEn> = {
   create: {
     title: 'Новое хранилище',
     name: 'Название хранилища',
+    description: 'Описание (необязательно)',
+    descriptionHint:
+      'Видно в списке хранилищ на этом устройстве ещё до ввода пароля, как и название. Не пишите сюда секретов.',
     password: 'Мастер-пароль',
     passwordHint: (minimum: number, suggested: number) =>
       `Не меньше ${minimum} символов, лучше ${suggested} и больше. Любые символы, включая пробелы.`,

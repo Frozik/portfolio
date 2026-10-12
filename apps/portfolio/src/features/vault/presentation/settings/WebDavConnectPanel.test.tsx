@@ -3,12 +3,15 @@ import { act, render, screen } from '@testing-library/react';
 
 import { WebDavConnectForm } from '../../application/WebDavConnectForm';
 import type { TProbeWebDav } from '../../domain/ports/webdav-prober';
-import { WebDavConnectPanel } from './WebDavConnectPanel';
+import { WebDavConnectPanel, WebDavVaults } from './WebDavConnectPanel';
 
 async function checked(probe: TProbeWebDav) {
   const form = new WebDavConnectForm(probe);
   render(
-    <WebDavConnectPanel form={form} action={{ kind: 'keep', onKeep: vi.fn() }} onClose={vi.fn()} />
+    <>
+      <WebDavConnectPanel form={form} />
+      <WebDavVaults form={form} action={{ kind: 'keep', onKeep: vi.fn() }} />
+    </>
   );
   await act(async () => {
     form.setEndpoint('https://cloud.example.org/dav/');

@@ -73,4 +73,53 @@ describe('Google Drive connect form', () => {
       failure: { kind: 'auth', reason: 'popup-blocked' },
     });
   });
+
+  it('looks for vaults in the folder typed for My Drive and keeps the vault there', async () => {
+    const drive = aDrive();
+    const form = new GoogleDriveConnectForm(drive.openDrive);
+    await drive
+      .storageOf('my-drive')
+      ?.write(
+        storagePath('Documents/Passwords/Home.pwv'),
+        Uint8Array.of(1),
+        { kind: 'absent' },
+        SIGNAL
+      );
+    await when(() => form.ready);
+
+    form.setFolder('Documents/Passwords');
+    await form.connect();
+
+    expect(form.check).toMatchObject({
+      kind: 'found',
+      vaults: [{ path: 'Documents/Passwords/Home.pwv' }],
+    });
+    expect(form.connectionFor('Family.pwv')?.location).toMatchObject({
+      path: 'Documents/Passwords/Family.pwv',
+    });
+  });
+
+  it('does not sign in while the typed folder names nothing', async () => {
+    const drive = aDrive();
+    const form = new GoogleDriveConnectForm(drive.openDrive);
+    await when(() => form.ready);
+
+    form.setFolder(' / ');
+    await form.connect();
+
+    expect(drive.authorize).not.toHaveBeenCalled();
+    expect(form.folderProblem).toBe(true);
+  });
+
+  it('keeps the hidden folder fixed, whatever was typed for My Drive', async () => {
+    const drive = aDrive();
+    const form = new GoogleDriveConnectForm(drive.openDrive);
+    form.setFolder('Documents');
+    form.setSpace('app-data');
+    await when(() => form.ready);
+
+    await form.connect();
+
+    expect(form.connectionFor('Family.pwv')?.location).toMatchObject({ path: 'Vault/Family.pwv' });
+  });
 });

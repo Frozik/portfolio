@@ -144,10 +144,15 @@ describe('nothing secret at rest', () => {
         random
       )
     );
-    await stores.snapshots.add('v1', { takenAt: 1 as Milliseconds, file: sealed.value });
+    await stores.snapshots.add(
+      'v1',
+      { takenAt: 1 as Milliseconds, reason: 'before-sync', file: sealed.value },
+      10
+    );
     await stores.registry.put({
       vaultKey: 'v1',
       name: 'Personal',
+      description: '',
       lastOpenedAt: null,
       unsyncedChanges: false,
     });

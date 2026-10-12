@@ -1,5 +1,4 @@
 import type { IStorageProvider, TStoragePath } from '@frozik/cloud-storage/core/storage-provider';
-import type { Milliseconds } from '@frozik/utils/date/types';
 import type { TLockReason, TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import { mergeDocument } from '@frozik/vault/merge/merge-document';
 import { latestStampOf } from '@frozik/vault/model/document-stamp';
@@ -27,10 +26,10 @@ import { CloudLink } from './CloudLink';
 import { decodeDeviceSettings, DeviceSettingsModel } from './DeviceSettingsModel';
 import { startHousekeeping } from './housekeeping';
 import type { KeyRotation } from './KeyRotation';
-import { keepLocalSnapshot } from './local-snapshot';
 import { LockSignals } from './LockSignals';
 import { ProtectedGateModel } from './ProtectedGateModel';
 import { RevealModel } from './RevealModel';
+import { createSessionBackups } from './session-backups';
 import { createSessionFiles, followCloudSyncs } from './session-files';
 import { createSessionReplica } from './session-replica';
 import { createKeyRotation } from './session-rotation';
@@ -42,6 +41,7 @@ import { SyncRecord } from './SyncRecord';
 import type { TDocumentEdit } from './transact';
 import type { IOpenedSession, IVaultSessionServices } from './vault-session-inputs';
 import { VaultAudit } from './VaultAudit';
+import type { VaultBackups } from './VaultBackups';
 import type { VaultFiles } from './VaultFiles';
 import { VaultView } from './VaultView';
 
@@ -68,6 +68,7 @@ export class VaultSession {
   readonly rotation: KeyRotation;
   readonly audit: VaultAudit;
   readonly files: VaultFiles;
+  readonly backups: VaultBackups;
 
   private clock: IHlc;
   private readonly controller = new AbortController();
@@ -150,6 +151,11 @@ export class VaultSession {
       link: cloudLinkRecord(services.deviceConfig, opened, services.random),
       record: this.syncRecord,
       localFile: signal => services.localCopyOf(opened.vaultKey).read(LOCAL_COPY_PATH, signal),
+    });
+    this.backups = createSessionBackups(this, {
+      services,
+      opened,
+      signal: this.controller.signal,
     });
     this.files = createSessionFiles(this, {
       services,
@@ -281,6 +287,7 @@ export class VaultSession {
     this.clock = hlcTick(this.clock, this.services.clock.now());
     const { document, result } = edit(this.document, this.clock);
     if (document !== this.document) {
+      this.backups.noteEdit();
       this.document = document;
       this.local.dispatch({ kind: 'push-requested' });
       this.cloud.requestPush();
@@ -347,15 +354,7 @@ export class VaultSession {
     ).clock;
     if (this.document !== before && !isEqual(this.document, before)) {
       if (target === 'cloud') {
-        void keepLocalSnapshot(
-          {
-            vaultKey: this.opened.vaultKey,
-            localCopy: this.services.localCopyOf(this.opened.vaultKey),
-            snapshots: this.services.snapshots,
-            takenAt: this.services.clock.now() as Milliseconds,
-          },
-          this.controller.signal
-        );
+        void this.backups.keep('before-sync');
         this.local.dispatch({ kind: 'push-requested' });
       } else {
         this.cloud.requestPush();

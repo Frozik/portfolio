@@ -1,4 +1,5 @@
 import { Checkbox } from '@frozik/components/components/RichEditor/Checkbox';
+import { MultilineEditor } from '@frozik/components/components/RichEditor/MultilineEditor';
 import { SecretEditor } from '@frozik/components/components/RichEditor/SecretEditor';
 import { TextEditor } from '@frozik/components/components/RichEditor/TextEditor';
 import { assertNever } from '@frozik/utils/assert/assertNever';
@@ -16,6 +17,8 @@ import {
 import { VaultField } from '../components/VaultField';
 import { vaultT } from '../translations';
 import { StrengthMeter } from './StrengthMeter';
+
+const DESCRIPTION_MAX_ROWS = 4;
 
 function problemText(problem: NonNullable<CreateVaultForm['problem']>): string {
   const problems = vaultT.create.problems;
@@ -41,10 +44,13 @@ function problemText(problem: NonNullable<CreateVaultForm['problem']>): string {
 export const CreateVaultPanel = observer(
   ({
     form,
+    note,
     onSubmit,
     onCancel,
   }: {
     readonly form: CreateVaultForm;
+    /** Where the new vault goes, when not only this browser. */
+    readonly note?: string;
     readonly onSubmit: () => void;
     readonly onCancel: () => void;
   }) => {
@@ -56,6 +62,7 @@ export const CreateVaultPanel = observer(
     return (
       <CardFrame className="flex flex-col gap-5 p-6">
         <h2 className="text-[20px] font-medium text-landing-fg">{t.title}</h2>
+        {!isNil(note) && <p className="text-[13px] text-landing-fg-dim">{note}</p>}
         <VaultField label={t.name}>
           {describedBy => (
             <TextEditor
@@ -63,6 +70,17 @@ export const CreateVaultPanel = observer(
               aria-describedby={describedBy}
               value={form.name}
               onValueChange={form.setName}
+            />
+          )}
+        </VaultField>
+        <VaultField label={t.description} hint={t.descriptionHint}>
+          {describedBy => (
+            <MultilineEditor
+              aria-label={t.description}
+              aria-describedby={describedBy}
+              maxRows={DESCRIPTION_MAX_ROWS}
+              value={form.description}
+              onValueChange={form.setDescription}
             />
           )}
         </VaultField>

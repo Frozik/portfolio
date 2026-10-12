@@ -23,13 +23,13 @@ function run(
 describe('vault lifecycle', () => {
   it('creates a vault and opens a session on it', () => {
     const { state, effects } = run({ kind: 'no-vault' }, [
-      { kind: 'create-requested', name: 'Personal', password },
+      { kind: 'create-requested', name: 'Personal', description: 'Mine', password },
       { kind: 'created', result: { ok: true, value: 'v1' } },
     ]);
 
     expect(state).toEqual(unlocked);
     expect(effects).toEqual([
-      { kind: 'create', name: 'Personal', password },
+      { kind: 'create', name: 'Personal', description: 'Mine', password },
       { kind: 'start-session', vaultKey: 'v1', access: 'read-write' },
     ]);
   });

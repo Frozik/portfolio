@@ -82,6 +82,8 @@ export interface IUserTemplate {
 /** Vault-wide preferences, one last-writer-wins unit. */
 export interface IVaultSettings {
   readonly name: string;
+  /** A line or two about the vault, shown beside its name; empty when there is none. */
+  readonly description: string;
   /** Days before expiry a card counts as "soon", per template; others use the default. */
   readonly expiryWarningDays: Readonly<Partial<Record<TTemplateId, number>>>;
   readonly providerHint: IProviderHint | null;
@@ -115,7 +117,7 @@ export const DEFAULT_EXPIRY_WARNING_DAYS = 30;
 
 export function emptyVaultDocument(name: string, at: IHlc): IVaultDocument {
   return {
-    settings: { name, expiryWarningDays: {}, providerHint: null, updatedAt: at },
+    settings: { name, description: '', expiryWarningDays: {}, providerHint: null, updatedAt: at },
     cards: new Map(),
     groups: new Map(),
     templates: new Map(),

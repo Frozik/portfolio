@@ -7,6 +7,7 @@ import type { TRunInDatabase } from './device-database';
 const KNOWN_VAULT_SCHEMA = z.object({
   vaultKey: z.string(),
   name: z.string(),
+  description: z.string().catch(''),
   lastOpenedAt: z.number().nullable(),
   unsyncedChanges: z.boolean(),
 });
@@ -22,12 +23,12 @@ function readKnownVault(entry: unknown): readonly IKnownVault[] {
 export function createVaultRegistry(run: TRunInDatabase): IVaultRegistry {
   return {
     list: () => run(async database => (await database.getAll('registry')).flatMap(readKnownVault)),
-    put: ({ vaultKey, name, lastOpenedAt, unsyncedChanges }) =>
+    put: ({ vaultKey, name, description, lastOpenedAt, unsyncedChanges }) =>
       run(
         async database =>
           void (await database.put(
             'registry',
-            { vaultKey, name, lastOpenedAt, unsyncedChanges },
+            { vaultKey, name, description, lastOpenedAt, unsyncedChanges },
             vaultKey
           ))
       ),

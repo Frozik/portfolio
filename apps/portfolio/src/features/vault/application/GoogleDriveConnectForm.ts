@@ -2,9 +2,10 @@ import type { TStorageError } from '@frozik/cloud-storage/core/storage-error';
 import { storagePath } from '@frozik/cloud-storage/core/storage-path';
 import type { IStorageObjectStat, TStoragePath } from '@frozik/cloud-storage/core/storage-provider';
 import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
+import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
-import { DRIVE_VAULT_FOLDER, isVaultFile } from '../domain/cloud-files';
+import { DRIVE_VAULT_FOLDER, driveFolderOf, isVaultFile } from '../domain/cloud-files';
 import type { ICloudConnection } from '../domain/ports/cloud';
 import type {
   IGoogleDrive,
@@ -32,6 +33,8 @@ const UNCHECKED: TDriveCheck = { kind: 'unchecked' };
  */
 export class GoogleDriveConnectForm {
   space: TDriveSpace = 'my-drive';
+  /** Typed for My Drive only; the hidden space has no folders to choose from. */
+  folder: string = DRIVE_VAULT_FOLDER;
   ready = false;
   check: TDriveCheck = UNCHECKED;
 
@@ -48,11 +51,25 @@ export class GoogleDriveConnectForm {
     void this.prepare();
   }
 
+  /** Where the vault's file goes: the typed folder in My Drive, the fixed one in the hidden space. */
+  get folderPath(): TStoragePath | null {
+    return this.space === 'my-drive' ? driveFolderOf(this.folder) : DRIVE_VAULT_FOLDER;
+  }
+
+  get folderProblem(): boolean {
+    return isNil(this.folderPath);
+  }
+
+  setFolder(folder: string): void {
+    this.folder = folder;
+    this.uncheck();
+  }
+
   setSpace(space: TDriveSpace): void {
     if (space === this.space) {
       return;
     }
-    this.restart();
+    this.uncheck();
     this.space = space;
     this.drive = this.openDrive(space);
     void this.prepare();
@@ -60,10 +77,11 @@ export class GoogleDriveConnectForm {
 
   /** Call from the click itself: the sign-in popup is opened before the first `await`. */
   async connect(): Promise<void> {
-    if (!this.ready) {
+    const folder = this.folderPath;
+    if (!this.ready || isNil(folder)) {
       return;
     }
-    this.restart();
+    this.uncheck();
     const { signal } = this.controller;
     const authorizing = this.drive.auth.authorize();
     this.check = { kind: 'signing-in' };
@@ -76,7 +94,7 @@ export class GoogleDriveConnectForm {
       return;
     }
     this.settle({ kind: 'looking' });
-    const listed = await this.drive.storage.list(DRIVE_VAULT_FOLDER, signal);
+    const listed = await this.drive.storage.list(folder, signal);
     if (signal.aborted) {
       return;
     }
@@ -89,7 +107,8 @@ export class GoogleDriveConnectForm {
 
   /** The signed-in Drive with the vault's file in its `Vault` folder; `null` until signed in. */
   connectionFor(fileName: string): ICloudConnection | null {
-    return this.connectionAt(storagePath(`${DRIVE_VAULT_FOLDER}/${fileName}`));
+    const folder = this.folderPath;
+    return isNil(folder) ? null : this.connectionAt(storagePath(`${folder}/${fileName}`));
   }
 
   /** The signed-in Drive at a path the check found or the vault will take; `null` until signed in. */
@@ -123,7 +142,8 @@ export class GoogleDriveConnectForm {
     this.check = check;
   }
 
-  private restart(): void {
+  /** Back to choosing where in Drive: the sign-in and the look are to be done again. */
+  uncheck(): void {
     this.controller.abort();
     this.controller = new AbortController();
     this.check = UNCHECKED;

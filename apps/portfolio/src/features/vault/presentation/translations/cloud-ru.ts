@@ -5,9 +5,13 @@ export const cloudTranslationsRu: TranslationOf<typeof cloudTranslationsEn> = {
   drive: {
     connect: 'Подключить Google Drive…',
     title: 'Google Drive',
+    folder: 'Папка',
+    folderHint:
+      'В «Моём диске»; вложенные — через «/», например Документы/Пароли. Имя файла — по названию хранилища. Сайт видит только папки, которые создал сам: папку с таким именем, созданную вручную, он не возьмёт — рядом появится новая.',
+    folderProblem: 'Укажите папку: не пустую и без «.» или «..».',
     spaces: {
       'my-drive': {
-        label: 'Папка Vault в «Моём диске»',
+        label: 'Папка в «Моём диске»',
         description:
           'Файл виден в Drive, его можно сохранить или перенести. Сайт получает доступ только к файлам, которые создал сам.',
       },
@@ -93,6 +97,7 @@ export const cloudTranslationsRu: TranslationOf<typeof cloudTranslationsEn> = {
     },
   },
   status: {
+    sync: 'Синхронизировать',
     syncNow: 'Синхронизировать сейчас: забрать изменения других устройств и отправить свои',
     unreachable: 'Облако: пароль к нему утерян — подключите заново в настройках',
     otherTab: 'Облако: синхронизирует другая вкладка',
@@ -104,6 +109,10 @@ export const cloudTranslationsRu: TranslationOf<typeof cloudTranslationsEn> = {
     quota: 'Не синхронизировано: в облаке нет места',
     retrying: 'Ещё не синхронизировано — повторим',
   },
+  wizard: {
+    steps: { choose: 'Облако', connect: 'Подключение', open: 'Хранилище', keep: 'Сохранение' },
+    back: 'Назад',
+  },
   section: {
     title: 'Облако',
     localOnly:
@@ -113,6 +122,8 @@ export const cloudTranslationsRu: TranslationOf<typeof cloudTranslationsEn> = {
     mergesWith:
       'Здесь уже есть файл хранилища: если это то же хранилище, они сольются, если другое — синхронизация остановится.',
     noVaultsToOpen: 'Хранилищ здесь нет.',
+    createHere: 'Создать здесь новое хранилище',
+    createdHere: 'Новое хранилище сразу будет храниться в этой папке облака.',
     open: 'Открыть',
     keepHere: 'Хранить здесь',
     disconnect: 'Отключить облако',

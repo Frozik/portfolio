@@ -3,9 +3,13 @@ export const cloudTranslationsEn = {
   drive: {
     connect: 'Connect Google Drive…',
     title: 'Google Drive',
+    folder: 'Folder',
+    folderHint:
+      'In My Drive; nested folders with “/”, e.g. Documents/Passwords. The file is named after the vault. The site sees only the folders it made itself: a folder of that name made by hand is not used — a new one appears beside it.',
+    folderProblem: 'Name a folder: not empty, no “.” or “..”.',
     spaces: {
       'my-drive': {
-        label: 'A Vault folder in My Drive',
+        label: 'A folder in My Drive',
         description:
           'You see the file in Drive and can back it up or move it. The site gets access only to the files it creates.',
       },
@@ -92,6 +96,7 @@ export const cloudTranslationsEn = {
     },
   },
   status: {
+    sync: 'Sync',
     syncNow: 'Sync now: take the other devices’ changes and send this one’s',
     unreachable: 'Cloud: the password for it is gone — reconnect in the settings',
     otherTab: 'Cloud: synced by another tab',
@@ -103,6 +108,10 @@ export const cloudTranslationsEn = {
     quota: 'Not synced: the cloud is full',
     retrying: 'Not synced yet — will retry',
   },
+  wizard: {
+    steps: { choose: 'Cloud', connect: 'Connection', open: 'Vault', keep: 'Keep here' },
+    back: 'Back',
+  },
   section: {
     title: 'Cloud',
     localOnly: 'This browser only — connect a cloud or export, so the vault survives this device.',
@@ -111,6 +120,8 @@ export const cloudTranslationsEn = {
     mergesWith:
       'A vault file is already there: keeping this vault here merges with it if it is the same vault, and stops if it is another one.',
     noVaultsToOpen: 'There is no vault here.',
+    createHere: 'Create a new vault here',
+    createdHere: 'The new vault is kept in this cloud folder from the start.',
     open: 'Open',
     keepHere: 'Keep this vault here',
     disconnect: 'Disconnect the cloud',

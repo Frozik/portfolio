@@ -122,6 +122,7 @@ export const CARD_SCHEMA = CARD_STATE_SCHEMA.extend({
 
 export const VAULT_JSON_SCHEMA = z.object({
   name: z.string(),
+  description: z.string().catch(''),
   settings: z.object({ expiryWarningDays: z.record(z.string(), z.int().nonnegative()) }),
   providerHint: z
     .object({ kind: z.string(), url: z.string().nullable(), username: z.string().nullable() })

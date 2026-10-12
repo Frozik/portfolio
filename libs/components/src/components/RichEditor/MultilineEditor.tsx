@@ -6,6 +6,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../cn';
 import type { IRichEditorHandle } from './defs';
 import { findNextTabStop } from './focus-navigation';
+import { multilineHeight } from './multiline-height';
 import { useRevertOnCancel } from './use-revert-on-cancel';
 import styles from './styles.module.css';
 
@@ -64,10 +65,18 @@ export const MultilineEditor = memo(
       if (isNil(textarea)) {
         return;
       }
-      const lineHeight = Number.parseFloat(getComputedStyle(textarea).lineHeight) || 0;
+      const style = getComputedStyle(textarea);
+      const pixels = (value: string) => Number.parseFloat(value) || 0;
       textarea.style.height = 'auto';
-      const limit = lineHeight > 0 ? lineHeight * maxRows : Number.POSITIVE_INFINITY;
-      textarea.style.height = `${Math.min(textarea.scrollHeight, limit)}px`;
+      const { height, overflows } = multilineHeight({
+        scrollHeight: textarea.scrollHeight,
+        lineHeight: pixels(style.lineHeight),
+        paddingY: pixels(style.paddingTop) + pixels(style.paddingBottom),
+        borderY: pixels(style.borderTopWidth) + pixels(style.borderBottomWidth),
+        maxRows,
+      });
+      textarea.style.height = `${height}px`;
+      textarea.style.overflowY = overflows ? 'auto' : 'hidden';
     }, [value, maxRows]);
 
     const handleChange = useEventCallback((event: ChangeEvent<HTMLTextAreaElement>) =>

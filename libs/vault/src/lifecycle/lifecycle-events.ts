@@ -11,7 +11,12 @@ export type TCredential = Exclude<TUnlock, { readonly kind: 'session' }>;
 /** What happened to the vault on this tab, in past tense. */
 export type TLifecycleEvent =
   | { readonly kind: 'vault-chosen'; readonly vaultKey: TVaultKey }
-  | { readonly kind: 'create-requested'; readonly name: string; readonly password: TBytes }
+  | {
+      readonly kind: 'create-requested';
+      readonly name: string;
+      readonly description: string;
+      readonly password: TBytes;
+    }
   | { readonly kind: 'created'; readonly result: TResult<TVaultKey, TUnlockFailure> }
   | { readonly kind: 'unlock-requested'; readonly credential: TCredential }
   | {

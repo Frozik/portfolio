@@ -50,8 +50,19 @@ describe('CreateVaultForm', () => {
     expect(form.take()).toBeNull();
     form.setAcknowledged(true);
 
-    expect(form.take()).toEqual({ name: 'Home', password: STRONG });
+    expect(form.take()).toEqual({ name: 'Home', description: '', password: STRONG });
     expect(form.password).toBe('');
     expect(form.confirmation).toBe('');
+  });
+
+  it('hands over an optional description with the name, trimmed', () => {
+    const { form } = aForm();
+    form.setName('Home');
+    form.setDescription('  Shared with the kids \n');
+    form.setPassword(STRONG);
+    form.setConfirmation(STRONG);
+    form.setAcknowledged(true);
+
+    expect(form.take()).toMatchObject({ name: 'Home', description: 'Shared with the kids' });
   });
 });

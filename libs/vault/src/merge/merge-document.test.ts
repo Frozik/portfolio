@@ -128,7 +128,13 @@ const documentArbitrary: fc.Arbitrary<IVaultDocument> = fc
       assert(first !== undefined && second !== undefined);
       const linkId: TLinkId = linkIdOf(first, second);
       return aDocument(cards, {
-        settings: { name, expiryWarningDays: {}, providerHint: null, updatedAt: settingsAt },
+        settings: {
+          name,
+          description: '',
+          expiryWarningDays: {},
+          providerHint: null,
+          updatedAt: settingsAt,
+        },
         tombstones: tombstones.reduce(
           (map, [key, at]) =>
             map.set(key, (map.get(key)?.wallMs ?? -1) > at.wallMs ? (map.get(key) ?? at) : at),

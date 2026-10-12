@@ -1,6 +1,7 @@
 import { openVersionedDatabase } from '@frozik/utils/database';
 import { err, ok } from '@frozik/utils/result/result';
-import type { DBSchema, IDBPDatabase } from 'idb';
+import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
+import { isNil } from 'lodash-es';
 
 import type { TBytes } from '../../crypto/bytes';
 import type { TPersisted } from '../ports';
@@ -22,42 +23,79 @@ export interface IDeviceSchema extends DBSchema {
     key: [string, string];
     value: { readonly vaultKey: string; readonly recordKey: string; readonly sealed: TBytes };
   };
+  /** What each snapshot is; the file apart, so a list does not read every file. */
   snapshots: {
     key: number;
-    value: { readonly vaultKey: string; readonly takenAt: number; readonly file: TBytes };
+    value: {
+      readonly vaultKey: string;
+      readonly takenAt: number;
+      readonly reason?: string;
+      readonly size?: number;
+      /** Only in a snapshot kept before the files moved out, until the upgrade moves it. */
+      readonly file?: TBytes;
+    };
     indexes: { vault: string };
   };
+  'snapshot-files': { key: number; value: TBytes };
 }
 
 export type TSealedStoreName = 'drafts' | 'usage' | 'device-config';
 
 export const DEVICE_DATABASE_NAME = 'pwv:device';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+/** The version that moved snapshot files out of the snapshot list. */
+const SNAPSHOT_FILES_VERSION = 2;
 const QUOTA_ERROR = 'QuotaExceededError';
 
 export function openDeviceDatabase(name: string): Promise<IDBPDatabase<IDeviceSchema>> {
-  return openVersionedDatabase<IDeviceSchema>(name, SCHEMA_VERSION, database => {
-    const stores = database.objectStoreNames;
-    if (!stores.contains('registry')) {
-      database.createObjectStore('registry');
-    }
-    if (!stores.contains('sync-state')) {
-      database.createObjectStore('sync-state');
-    }
-    if (!stores.contains('device')) {
-      database.createObjectStore('device');
-    }
-    for (const sealed of ['drafts', 'usage', 'device-config'] as const) {
-      if (!stores.contains(sealed)) {
-        database.createObjectStore(sealed, { keyPath: ['vaultKey', 'recordKey'] });
+  return openVersionedDatabase<IDeviceSchema>(
+    name,
+    SCHEMA_VERSION,
+    (database, oldVersion, transaction) => {
+      const stores = database.objectStoreNames;
+      if (!stores.contains('registry')) {
+        database.createObjectStore('registry');
+      }
+      if (!stores.contains('sync-state')) {
+        database.createObjectStore('sync-state');
+      }
+      if (!stores.contains('device')) {
+        database.createObjectStore('device');
+      }
+      for (const sealed of ['drafts', 'usage', 'device-config'] as const) {
+        if (!stores.contains(sealed)) {
+          database.createObjectStore(sealed, { keyPath: ['vaultKey', 'recordKey'] });
+        }
+      }
+      if (!stores.contains('snapshots')) {
+        database
+          .createObjectStore('snapshots', { autoIncrement: true })
+          .createIndex('vault', 'vaultKey');
+      }
+      if (!stores.contains('snapshot-files')) {
+        database.createObjectStore('snapshot-files');
+      }
+      if (oldVersion > 0 && oldVersion < SNAPSHOT_FILES_VERSION) {
+        void moveSnapshotFiles(transaction);
       }
     }
-    if (!stores.contains('snapshots')) {
-      database
-        .createObjectStore('snapshots', { autoIncrement: true })
-        .createIndex('vault', 'vaultKey');
+  );
+}
+
+/** Snapshots of version 1 carried their file inline and were all taken before a sync. */
+async function moveSnapshotFiles(
+  transaction: IDBPTransaction<IDeviceSchema, StoreNames<IDeviceSchema>[], 'versionchange'>
+): Promise<void> {
+  const files = transaction.objectStore('snapshot-files');
+  let cursor = await transaction.objectStore('snapshots').openCursor();
+  while (cursor !== null) {
+    const { vaultKey, takenAt, file } = cursor.value;
+    if (!isNil(file)) {
+      await files.put(file, cursor.key);
+      await cursor.update({ vaultKey, takenAt, reason: 'before-sync', size: file.byteLength });
     }
-  });
+    cursor = await cursor.continue();
+  }
 }
 
 export type TRunInDatabase = <T>(

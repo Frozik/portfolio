@@ -59,7 +59,7 @@ export class WebDavConnectForm {
   setEndpoint(endpoint: string): void {
     this.preset = null;
     this.typedEndpoint = endpoint;
-    this.forgetCheck();
+    this.uncheck();
   }
 
   /** A service from the list, or `null` to type the address; the address shown so far stays to edit. */
@@ -67,29 +67,29 @@ export class WebDavConnectForm {
     const preset = isNil(id) ? undefined : webDavPresetOf(id);
     this.typedEndpoint = this.endpoint;
     this.preset = preset ?? null;
-    this.forgetCheck();
+    this.uncheck();
   }
 
   setServer(server: string): void {
     this.server = server;
-    this.forgetCheck();
+    this.uncheck();
   }
 
   setUsername(username: string): void {
     this.username = username;
-    this.forgetCheck();
+    this.uncheck();
   }
 
   setPassword(password: string): void {
     this.password = password;
-    this.forgetCheck();
+    this.uncheck();
   }
 
   async runCheck(): Promise<void> {
     if (!this.canCheck) {
       return;
     }
-    this.forgetCheck();
+    this.uncheck();
     const controller = new AbortController();
     this.controller = controller;
     this.check = { kind: 'checking' };
@@ -126,11 +126,12 @@ export class WebDavConnectForm {
   }
 
   dispose(): void {
-    this.forgetCheck();
+    this.uncheck();
     this.password = '';
   }
 
-  private forgetCheck(): void {
+  /** Back to the settings: the folder is to be checked again. */
+  uncheck(): void {
     this.controller?.abort();
     this.controller = null;
     this.check = UNCHECKED;

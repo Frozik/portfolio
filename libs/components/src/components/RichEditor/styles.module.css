@@ -556,7 +556,7 @@ dialog > .popover-content {
   display: block;
   resize: none;
   white-space: pre-wrap;
-  overflow-y: auto;
+  overflow-y: hidden;
   font-family: var(--re-mono);
 }
 

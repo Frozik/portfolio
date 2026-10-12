@@ -4,6 +4,27 @@ import type { settingsTranslationsEn } from './settings-en';
 /** Страница настроек. */
 export const settingsTranslationsRu: TranslationOf<typeof settingsTranslationsEn> = {
   open: 'Настройки',
+  backups: {
+    title: 'Резервные копии на этом устройстве',
+    intro:
+      'Прежние версии хранилища, зашифрованные его ключом: сохраняются перед приходом изменений с других устройств, перед откатом и раз в час, пока вы редактируете.',
+    kept: 'Хранить',
+    keptCount: (count: number) => `${count} копий`,
+    none: 'Копий пока нет.',
+    reasons: {
+      'before-sync': 'перед синхронизацией',
+      periodic: 'во время правок',
+      'before-restore': 'перед откатом',
+    },
+    restore: 'Откатить',
+    restoreTitle: (when: string) => `Откатить хранилище к ${when}?`,
+    restoreMessage:
+      'Изменённые карточки получат тогдашнюю версию, текущая останется в истории карточки. Карточки, созданные позже, уйдут в корзину, удалённые с тех пор — вернутся. Сначала текущее состояние сохранится копией, так что откат можно отменить. Другие устройства получат откат при следующей синхронизации.',
+    restored: (restored: number, revived: number, trashed: number) =>
+      `Откат выполнен: восстановлено карточек — ${restored}, возвращено — ${revived}, в корзину — ${trashed}.`,
+    olderKey: 'Эта копия сделана до смены ключа хранилища и больше не открывается.',
+    unreadable: 'Эту копию не удалось прочитать.',
+  },
   title: 'Настройки',
   back: 'К хранилищу',
   security: 'Безопасность на этом устройстве',
@@ -24,6 +45,10 @@ export const settingsTranslationsRu: TranslationOf<typeof settingsTranslationsEn
   vault: 'Это хранилище',
   name: 'Название',
   rename: 'Переименовать',
+  description: 'Описание',
+  descriptionHint:
+    'Видно в списке хранилищ на этом устройстве ещё до ввода пароля, как и название. Не пишите сюда секретов.',
+  saveTitle: 'Сохранить',
   forget: 'Удалить хранилище с этого устройства',
   forgetTitle: 'Удалить хранилище с этого устройства?',
   forgetMessage:

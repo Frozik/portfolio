@@ -18,6 +18,7 @@ import { vaultPaths } from '../../domain/vault-paths';
 import { NewGroupDialog } from '../card-view/NewGroupDialog';
 import { vaultT } from '../translations';
 import { SmartGroupDialog } from './SmartGroupDialog';
+import { SyncButton } from './SyncButton';
 
 const ICON_SIZE = 14;
 
@@ -190,6 +191,7 @@ export const VaultSidebar = observer(
         {naming && (
           <NewGroupDialog session={session} onCreated={noop} onClose={() => setNaming(false)} />
         )}
+        <SyncButton cloud={session.cloud} />
       </nav>
     );
   }

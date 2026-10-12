@@ -15,6 +15,7 @@ const DEVICE_SETTINGS_SCHEMA = z.object({
   clipboardClearMs: z.number().positive(),
   checkLeaks: z.boolean().default(false),
   loadSiteIcons: z.boolean().default(true),
+  backupsKept: z.int().positive().default(DEFAULT_DEVICE_SETTINGS.backupsKept),
 });
 
 /** A stored record that no longer reads as settings falls back to the defaults, never fails the session. */
@@ -23,7 +24,7 @@ export function decodeDeviceSettings(value: unknown): IDeviceSettings | null {
   if (!parsed.success) {
     return null;
   }
-  const { lock, clipboardClearMs, checkLeaks, loadSiteIcons } = parsed.data;
+  const { lock, clipboardClearMs, checkLeaks, loadSiteIcons, backupsKept } = parsed.data;
   return {
     lock: {
       idle: lock.idle as Milliseconds,
@@ -32,6 +33,7 @@ export function decodeDeviceSettings(value: unknown): IDeviceSettings | null {
     clipboardClearMs: clipboardClearMs as Milliseconds,
     checkLeaks,
     loadSiteIcons,
+    backupsKept,
   };
 }
 

@@ -6,7 +6,12 @@ import type { TLockReason } from './lifecycle-state';
 /** What the shell must do; each outcome returns as an event. */
 export type TLifecycleEffect =
   /** Calibrate, make the keys and the first file, write it locally, add it to the registry. */
-  | { readonly kind: 'create'; readonly name: string; readonly password: TBytes }
+  | {
+      readonly kind: 'create';
+      readonly name: string;
+      readonly description: string;
+      readonly password: TBytes;
+    }
   /** Open the freshest copy (the cloud's when it is newer) with the credential, then forget the credential. */
   | { readonly kind: 'open'; readonly vaultKey: TVaultKey; readonly credential: TCredential }
   | {

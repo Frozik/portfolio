@@ -82,7 +82,7 @@ export const VaultWorkspace = observer(() => {
               <PasskeysSection store={store} session={session} />
             </>
           }
-          onRename={name => void store.renameVault(name)}
+          onRename={title => void store.renameVault(title)}
           onForget={forget}
         />
       );

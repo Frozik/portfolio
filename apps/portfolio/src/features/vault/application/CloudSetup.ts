@@ -1,4 +1,5 @@
 import type { IStorageProvider, TStoragePath } from '@frozik/cloud-storage/core/storage-provider';
+import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { IVaultRegistry, TVaultKey } from '@frozik/vault/persistence/ports';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, runInAction } from 'mobx';
@@ -9,6 +10,8 @@ import type { TOpenGoogleDrive } from '../domain/ports/google-drive';
 import type { TProbeWebDav } from '../domain/ports/webdav-prober';
 import type { TAdoptFailure } from './cloud-adoption';
 import { adoptCloudVault } from './cloud-adoption';
+import type { TCloudStep } from './cloud-wizard';
+import { cloudStep } from './cloud-wizard';
 import { GoogleDriveConnectForm } from './GoogleDriveConnectForm';
 import type { VaultRegistryModel } from './VaultRegistryModel';
 import type { VaultSession } from './VaultSession';
@@ -33,6 +36,13 @@ interface IPendingLink {
   readonly secrets: IWebDavSecrets | null;
 }
 
+/** A vault about to be created in the checked folder: any vault the device knew before is not it. */
+interface IPendingNewVault {
+  readonly knownBefore: ReadonlySet<TVaultKey>;
+  readonly connection: ICloudConnection;
+  readonly secrets: IWebDavSecrets | null;
+}
+
 /**
  * The Drive and WebDAV
  * forms, keeping the open vault in a cloud or leaving it, and opening a vault
@@ -45,13 +55,17 @@ export class CloudSetup {
   opening: TCloudOpening = { kind: 'idle' };
 
   private pending: IPendingLink | null = null;
+  private pendingNew: IPendingNewVault | null = null;
   private readonly controller = new AbortController();
 
   constructor(
     private readonly services: ICloudSetupServices,
     private readonly registry: VaultRegistryModel
   ) {
-    makeAutoObservable<CloudSetup, 'services' | 'registry' | 'pending' | 'controller'>(
+    makeAutoObservable<
+      CloudSetup,
+      'services' | 'registry' | 'pending' | 'pendingNew' | 'controller'
+    >(
       this,
       {
         webDavForm: observableRef,
@@ -60,13 +74,38 @@ export class CloudSetup {
         services: false,
         registry: false,
         pending: false,
+        pendingNew: false,
         controller: false,
       },
       { autoBind: true }
     );
   }
 
+  get step(): TCloudStep {
+    return cloudStep(this.driveForm, this.webDavForm);
+  }
+
+  /** Back one step: from the vaults to the connection, from the connection to the choice of cloud. */
+  back(): void {
+    const { step } = this;
+    this.opening = { kind: 'idle' };
+    switch (step.kind) {
+      case 'choose':
+        return;
+      case 'connect':
+        this.closeDriveForm();
+        this.closeWebDavForm();
+        return;
+      case 'pick':
+        step.cloud.form.uncheck();
+        return;
+      default:
+        assertNever(step);
+    }
+  }
+
   openWebDavForm(): void {
+    this.closeDriveForm();
     this.webDavForm ??= new WebDavConnectForm(this.services.probeWebDav);
   }
 
@@ -76,6 +115,7 @@ export class CloudSetup {
   }
 
   openDriveForm(): void {
+    this.closeWebDavForm();
     this.driveForm ??= new GoogleDriveConnectForm(this.services.openGoogleDrive);
   }
 
@@ -123,12 +163,42 @@ export class CloudSetup {
     return isNil(connection) ? null : this.adopt(connection, null);
   }
 
-  /** At unlock: a vault just opened from a cloud is linked to it, any other picks its own link up again. */
+  /**
+   * The folder the wizard reached gets the vault about to be created, under
+   * its name; `false` when no folder is reached. It is linked once the new
+   * vault's session starts.
+   */
+  prepareNewVaultHere(vaultName: string): boolean {
+    const fileName = vaultFileName(vaultName);
+    const webDavLink = this.webDavForm?.linkFor(fileName);
+    const connection = isNil(webDavLink)
+      ? this.driveForm?.connectionFor(fileName)
+      : this.services.connectCloud(webDavLink.location, webDavLink.secrets);
+    if (isNil(connection)) {
+      return false;
+    }
+    const listed = this.registry.vaults.value ?? [];
+    this.pendingNew = {
+      knownBefore: new Set(listed.map(vault => vault.vaultKey)),
+      connection,
+      secrets: webDavLink?.secrets ?? null,
+    };
+    return true;
+  }
+
+  /** At unlock: a vault just opened from a cloud or made in one is linked to it, any other picks its own link up again. */
   attachTo(session: VaultSession): void {
-    const { pending } = this;
+    const { pending, pendingNew } = this;
+    this.pendingNew = null;
     if (!isNil(pending) && pending.vaultKey === session.vaultKey) {
       this.pending = null;
       void this.keepIn(session, pending.connection, pending.secrets);
+      return;
+    }
+    if (!isNil(pendingNew) && !pendingNew.knownBefore.has(session.vaultKey)) {
+      this.closeWebDavForm();
+      this.driveForm = null;
+      void this.keepIn(session, pendingNew.connection, pendingNew.secrets);
       return;
     }
     void session.cloud.restore();

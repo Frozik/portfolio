@@ -35,6 +35,17 @@ describe('document codec', () => {
     expect(decoded.value.settings).toEqual(document.settings);
   });
 
+  it('keeps the vault description', () => {
+    const described = {
+      ...document,
+      settings: { ...document.settings, description: 'Shared with the family' },
+    };
+    const decoded = decodeDocument(asFiles(encodeDocument(described)));
+
+    assert(decoded.ok);
+    expect(decoded.value.settings.description).toBe('Shared with the family');
+  });
+
   it('stores a scan as is and the JSON compressed', () => {
     const entries = encodeDocument(document);
 

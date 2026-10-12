@@ -12,6 +12,7 @@ export const STRENGTH_DEBOUNCE_MS = 250;
 /** The "create a vault" form: never a `<form>` the browser could post. */
 export class CreateVaultForm {
   name = '';
+  description = '';
   password = '';
   confirmation = '';
   acknowledged = false;
@@ -41,6 +42,10 @@ export class CreateVaultForm {
     this.name = name;
   }
 
+  setDescription(description: string): void {
+    this.description = description;
+  }
+
   setPassword(password: string): void {
     this.password = password;
     this.estimate();
@@ -55,11 +60,19 @@ export class CreateVaultForm {
   }
 
   /** Hands the password over once and forgets it here; `null` while something still blocks creating. */
-  take(): { readonly name: string; readonly password: string } | null {
+  take(): {
+    readonly name: string;
+    readonly description: string;
+    readonly password: string;
+  } | null {
     if (!isNil(this.problem)) {
       return null;
     }
-    const taken = { name: this.name.trim(), password: this.password };
+    const taken = {
+      name: this.name.trim(),
+      description: this.description.trim(),
+      password: this.password,
+    };
     this.password = '';
     this.confirmation = '';
     this.strength = null;

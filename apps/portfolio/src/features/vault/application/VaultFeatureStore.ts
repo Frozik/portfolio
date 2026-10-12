@@ -11,6 +11,7 @@ import type { TPersisted, TVaultKey } from '@frozik/vault/persistence/ports';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
+import type { IVaultTitle } from '@frozik/vault/model/vault-settings-edits';
 import { renameVault } from '@frozik/vault/model/vault-settings-edits';
 import { passkeySalt, passkeysOf } from '@frozik/vault/session/passkeys-of';
 import { fileHashOf } from '@frozik/vault/session/sync-effect-runner';
@@ -34,7 +35,7 @@ import type { IVaultOpeningServices } from './vault-opening';
 import type { IOpenedSession } from './vault-session-inputs';
 import { VaultExport } from './VaultExport';
 import { VaultImport } from './VaultImport';
-import { VaultRegistryModel } from './VaultRegistryModel';
+import { VaultRegistryModel, withTitle } from './VaultRegistryModel';
 import { VaultSession } from './VaultSession';
 
 /**
@@ -116,8 +117,13 @@ export class VaultFeatureStore {
   }
 
   /** The typed password becomes bytes here and travels on; the Worker zeroes its copy. */
-  create(name: string, password: string): void {
-    this.dispatch({ kind: 'create-requested', name, password: encodePassword(password) });
+  create(name: string, password: string, description = ''): void {
+    this.dispatch({
+      kind: 'create-requested',
+      name,
+      description,
+      password: encodePassword(password),
+    });
   }
 
   openCreateForm(): void {
@@ -136,30 +142,27 @@ export class VaultFeatureStore {
     const taken = this.createForm?.take();
     if (!isNil(taken)) {
       this.closeCreateForm();
-      this.create(taken.name, taken.password);
+      this.create(taken.name, taken.password, taken.description);
     }
   }
 
-  /** The name lives in the vault (synchronised) and in this device's list of vaults. */
-  async renameVault(name: string): Promise<void> {
+  /** The name and description live in the vault (synchronised) and in this device's list of vaults. */
+  async renameVault(title: IVaultTitle): Promise<void> {
     const { session } = this;
     if (isNil(session)) {
       return;
     }
-    session.apply((document, at) => renameVault(document, name, at));
-    await this.registry.change(session.vaultKey, entry => ({
-      ...entry,
-      name: session.document.settings.name,
-    }));
+    session.apply((document, at) => renameVault(document, title, at));
+    await this.registry.change(session.vaultKey, entry =>
+      withTitle(entry, session.document.settings)
+    );
   }
 
   /**
-   * Removes the open vault from this device: its local copy
-   * and every record of it, then ends the session in every tab. A vault that
-   * lives only here is gone for good; the screen asks first.
+   * Removes a vault (the open one by default) from this device: its local copy and every
+   * record of it; its session, if this tab has one, ends in every tab. The screen asks first.
    */
-  async forgetVault(): Promise<void> {
-    const vaultKey = this.session?.vaultKey;
+  async forgetVault(vaultKey = this.session?.vaultKey): Promise<void> {
     if (isNil(vaultKey)) {
       return;
     }
@@ -168,7 +171,10 @@ export class VaultFeatureStore {
       .localCopyOf(vaultKey)
       .remove(LOCAL_COPY_PATH, { kind: 'overwrite' }, signal);
     await this.services.forgetOnDevice(vaultKey);
-    this.dispatch({ kind: 'forgotten' });
+    if ('vaultKey' in this.lifecycle && this.lifecycle.vaultKey === vaultKey) {
+      this.dispatch({ kind: 'forgotten' });
+    }
+    await this.registry.refresh();
   }
 
   /** An import into the open vault, for as long as the screen showing it. */
@@ -284,7 +290,7 @@ export class VaultFeatureStore {
     const { signal } = this.controller;
     switch (effect.kind) {
       case 'create': {
-        const created = await createVault(this.services, effect.name, effect.password, signal);
+        const created = await createVault(this.services, effect, effect.password, signal);
         runInAction(() => {
           this.opened = created.ok ? created.value : null;
         });
@@ -341,9 +347,8 @@ export class VaultFeatureStore {
     });
     this.session = session;
     this.cloud.attachTo(session);
-    const { name } = session.document.settings;
     void this.registry.change(session.vaultKey, entry =>
-      entry.name === name ? entry : { ...entry, name }
+      withTitle(entry, session.document.settings)
     );
     const texts = this.demoTexts;
     this.demoTexts = null;

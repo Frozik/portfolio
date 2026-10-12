@@ -207,6 +207,7 @@ export function decodeDocument(
   return ok({
     settings: {
       name: vault.name,
+      description: vault.description,
       expiryWarningDays: vault.settings.expiryWarningDays as Readonly<
         Partial<Record<TTemplateId, number>>
       >,
@@ -328,6 +329,7 @@ export function encodeDocument(document: IVaultDocument): readonly IContainerEnt
   return [
     jsonEntry(VAULT_PATH, {
       name: settings.name,
+      description: settings.description,
       settings: { expiryWarningDays: settings.expiryWarningDays },
       providerHint: settings.providerHint,
       settingsUpdatedAt: settings.updatedAt,

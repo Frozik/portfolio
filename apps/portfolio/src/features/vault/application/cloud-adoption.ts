@@ -72,6 +72,7 @@ export async function adoptCloudVault(
   const listed = await registry.put({
     vaultKey,
     name: nameOf(connection.location.path),
+    description: '',
     lastOpenedAt: null,
     unsyncedChanges: false,
   });

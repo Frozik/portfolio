@@ -1,6 +1,9 @@
 import 'fake-indexeddb/auto';
 
+import { assert } from '@frozik/utils/assert/assert';
 import type { Milliseconds } from '@frozik/utils/date/types';
+import { openDB } from 'idb';
+import { isNil, omit } from 'lodash-es';
 
 import { createSeededRandom } from '../../testing/seeded-random';
 import { openDeviceDatabase } from './device-database';
@@ -17,6 +20,7 @@ function freshStores(): ReturnType<typeof createIndexedDbDeviceStores> & { reado
 const vault = {
   vaultKey: 'a1b2',
   name: 'Personal',
+  description: '',
   lastOpenedAt: 1_760_000_000_000 as Milliseconds,
   unsyncedChanges: false,
 } as const;
@@ -36,7 +40,7 @@ describe('device stores', () => {
     expect(await stores.registry.list()).toEqual({ ok: true, value: [vault] });
   });
 
-  it('keep only a vault’s name and dates in the open, whatever else a caller hands over', async () => {
+  it('keep only a vault’s name, description and dates in the open, whatever else a caller hands over', async () => {
     const stores = freshStores();
 
     const handedOver = { ...vault, url: 'https://dav.example/jane/' };
@@ -45,6 +49,15 @@ describe('device stores', () => {
     const database = await openDeviceDatabase(stores.name);
 
     expect(await database.get('registry', vault.vaultKey)).toEqual(vault);
+  });
+
+  it('read a vault listed before descriptions as one without a description', async () => {
+    const stores = freshStores();
+    const database = await openDeviceDatabase(stores.name);
+    await database.put('registry', omit(vault, 'description'), vault.vaultKey);
+    database.close();
+
+    expect(await stores.registry.list()).toEqual({ ok: true, value: [vault] });
   });
 
   it('skip a registry entry this version cannot read instead of failing the list', async () => {
@@ -137,24 +150,86 @@ describe('device stores', () => {
     });
   });
 
-  it('keep the ten newest snapshots of a vault, newest first', async () => {
+  it('keep as many newest snapshots of a vault as asked, newest first', async () => {
     const stores = freshStores();
-    for (let index = 1; index <= 12; index += 1) {
-      await stores.snapshots.add(vault.vaultKey, {
-        takenAt: index as Milliseconds,
-        file: Uint8Array.of(index),
-      });
+    for (let index = 1; index <= 7; index += 1) {
+      await stores.snapshots.add(
+        vault.vaultKey,
+        { takenAt: index as Milliseconds, reason: 'periodic', file: Uint8Array.of(index) },
+        5
+      );
     }
-    await stores.snapshots.add('other-vault', {
-      takenAt: 99 as Milliseconds,
-      file: Uint8Array.of(99),
-    });
+    await stores.snapshots.add(
+      'other-vault',
+      { takenAt: 99 as Milliseconds, reason: 'periodic', file: Uint8Array.of(99) },
+      5
+    );
 
     const listed = await stores.snapshots.list(vault.vaultKey);
 
-    expect(listed.ok && listed.value.map(snapshot => snapshot.takenAt)).toEqual([
-      12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
-    ]);
+    expect(listed.ok && listed.value.map(snapshot => snapshot.takenAt)).toEqual([7, 6, 5, 4, 3]);
+  });
+
+  it('list snapshots without their files and read one file by its id', async () => {
+    const stores = freshStores();
+    await stores.snapshots.add(
+      vault.vaultKey,
+      { takenAt: 5 as Milliseconds, reason: 'before-sync', file: Uint8Array.of(1, 2, 3) },
+      5
+    );
+
+    const listed = await stores.snapshots.list(vault.vaultKey);
+    assert(listed.ok);
+    const [entry] = listed.value;
+    assert(!isNil(entry));
+
+    expect(entry).toEqual({ id: entry.id, takenAt: 5, reason: 'before-sync', size: 3 });
+    expect(await stores.snapshots.read(vault.vaultKey, entry.id)).toEqual({
+      ok: true,
+      value: Uint8Array.of(1, 2, 3),
+    });
+    expect(await stores.snapshots.read('other-vault', entry.id)).toEqual({ ok: true, value: null });
+  });
+
+  it('drop the files of the snapshots it no longer keeps', async () => {
+    const stores = freshStores();
+    for (let index = 1; index <= 3; index += 1) {
+      await stores.snapshots.add(
+        vault.vaultKey,
+        { takenAt: index as Milliseconds, reason: 'periodic', file: Uint8Array.of(index) },
+        1
+      );
+    }
+    const database = await openDeviceDatabase(stores.name);
+
+    expect(await database.count('snapshot-files')).toBe(1);
+    database.close();
+  });
+
+  it('carry snapshots kept by an earlier version over, files apart', async () => {
+    const name = `pwv:test-legacy:${databases}`;
+    databases += 1;
+    const legacy = await openDB(name, 1, {
+      upgrade(database) {
+        database
+          .createObjectStore('snapshots', { autoIncrement: true })
+          .createIndex('vault', 'vaultKey');
+      },
+    });
+    await legacy.add('snapshots', { vaultKey: 'a1b2', takenAt: 4, file: Uint8Array.of(9, 9) });
+    legacy.close();
+    const stores = createIndexedDbDeviceStores(createSeededRandom(databases), name);
+
+    const listed = await stores.snapshots.list('a1b2');
+    assert(listed.ok);
+    const [entry] = listed.value;
+    assert(!isNil(entry));
+
+    expect(entry).toMatchObject({ takenAt: 4, reason: 'before-sync', size: 2 });
+    expect(await stores.snapshots.read('a1b2', entry.id)).toEqual({
+      ok: true,
+      value: Uint8Array.of(9, 9),
+    });
   });
 
   it('forget everything on this device on request', async () => {

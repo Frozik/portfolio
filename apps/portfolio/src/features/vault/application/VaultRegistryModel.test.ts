@@ -9,6 +9,7 @@ function knownVault(name: string, lastOpenedAt: number | null): IKnownVault {
   return {
     vaultKey: name as TVaultKey,
     name,
+    description: '',
     lastOpenedAt: lastOpenedAt as Milliseconds | null,
     unsyncedChanges: false,
   };

@@ -14,6 +14,7 @@ function known(vaultKey: TVaultKey): IKnownVault {
   return {
     vaultKey,
     name: vaultKey,
+    description: '',
     lastOpenedAt: 1 as Milliseconds,
     unsyncedChanges: false,
   };
@@ -25,7 +26,11 @@ describe('forgetVaultOnDevice', () => {
     for (const vaultKey of [HOME, WORK]) {
       await stores.registry.put(known(vaultKey));
       await stores.drafts.put(vaultKey, 'card-draft', Uint8Array.of(1));
-      await stores.snapshots.add(vaultKey, { takenAt: 1 as Milliseconds, file: Uint8Array.of(2) });
+      await stores.snapshots.add(
+        vaultKey,
+        { takenAt: 1 as Milliseconds, reason: 'periodic', file: Uint8Array.of(2) },
+        10
+      );
       await stores.syncState.put(vaultKey, {
         maxSeenRevision: 1,
         maxSeenKeyslotsEpoch: 0,

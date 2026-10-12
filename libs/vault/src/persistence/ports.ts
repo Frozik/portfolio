@@ -20,6 +20,8 @@ export type TVaultKey = string;
 export interface IKnownVault {
   readonly vaultKey: TVaultKey;
   readonly name: string;
+  /** Open like the name, by the user's choice: shown in the list of vaults before the unlock. */
+  readonly description: string;
   readonly lastOpenedAt: Milliseconds | null;
   /** A write that met a conflict after locking waits for the next unlock. */
   readonly unsyncedChanges: boolean;
@@ -71,16 +73,32 @@ export interface ISealedRecordStore {
   keys(vaultKey: TVaultKey): TPersisted<readonly string[]>;
 }
 
+/** Why the local copy was kept: a cloud version was about to change it, time passed, or a rollback was about to. */
+export type TSnapshotReason = 'before-sync' | 'periodic' | 'before-restore';
+
 export interface ISnapshot {
   readonly takenAt: Milliseconds;
+  readonly reason: TSnapshotReason;
   /** A sealed `.pwv`, the same format as the vault itself. */
   readonly file: TBytes;
 }
 
-/** The last local versions before a cloud version changed something, as insurance against a merge bug. */
+/** A snapshot as listed: what it is, not its file. */
+export interface ISnapshotEntry {
+  readonly id: number;
+  readonly takenAt: Milliseconds;
+  readonly reason: TSnapshotReason;
+  readonly size: number;
+}
+
+/** Earlier local versions of a vault, sealed as the vault is: a way back from a bad merge or a bad edit. */
 export interface ISnapshotStore {
-  add(vaultKey: TVaultKey, snapshot: ISnapshot): TPersisted<void>;
-  list(vaultKey: TVaultKey): TPersisted<readonly ISnapshot[]>;
+  /** Adds one and keeps only the `keep` newest. */
+  add(vaultKey: TVaultKey, snapshot: ISnapshot, keep: number): TPersisted<void>;
+  /** Newest first. */
+  list(vaultKey: TVaultKey): TPersisted<readonly ISnapshotEntry[]>;
+  /** `null` when there is no such snapshot of this vault. */
+  read(vaultKey: TVaultKey, id: number): TPersisted<TBytes | null>;
   clear(vaultKey: TVaultKey): TPersisted<void>;
 }
 

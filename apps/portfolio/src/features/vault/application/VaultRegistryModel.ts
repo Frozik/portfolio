@@ -5,11 +5,19 @@ import {
   EMPTY_VD,
   isSyncedValueDescriptor,
 } from '@frozik/utils/value-descriptors/utils';
+import type { IVaultTitle } from '@frozik/vault/model/vault-settings-edits';
 import type { IKnownVault, IVaultRegistry } from '@frozik/vault/persistence/ports';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import { vaultErrorFail } from './vault-error-fail';
+
+/** The record carrying the vault's own name and description; the same record when they already match. */
+export function withTitle(entry: IKnownVault, title: IVaultTitle): IKnownVault {
+  return entry.name === title.name && entry.description === title.description
+    ? entry
+    : { ...entry, name: title.name, description: title.description };
+}
 
 /** The vaults this device knows, newest opened first. */
 export class VaultRegistryModel {

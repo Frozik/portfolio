@@ -14,6 +14,7 @@ async function settingsOf() {
   const session: VaultSession | null = store.session;
   assert(session !== null);
   const onForget = vi.fn();
+  const onRename = vi.fn();
   render(
     <MemoryRouter>
       <VaultSettings
@@ -22,12 +23,12 @@ async function settingsOf() {
         cloud={null}
         data={null}
         recovery={null}
-        onRename={vi.fn()}
+        onRename={onRename}
         onForget={onForget}
       />
     </MemoryRouter>
   );
-  return { session, onForget };
+  return { session, onForget, onRename };
 }
 
 describe('VaultSettings', () => {
@@ -38,6 +39,19 @@ describe('VaultSettings', () => {
     act(() => fireEvent.click(screen.getByRole('option', { name: '1 minute' })));
 
     expect(session.deviceSettings.settings.lock.idle).toBe(60_000);
+  });
+
+  it('saves a description with the name, and only once something changed', async () => {
+    const { onRename } = await settingsOf();
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(save.hasAttribute('disabled')).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Shared with the kids' },
+    });
+    fireEvent.click(save);
+
+    expect(onRename).toHaveBeenCalledWith({ name: 'Demo', description: 'Shared with the kids' });
   });
 
   it('deletes the vault from the device only after asking', async () => {

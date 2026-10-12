@@ -12,6 +12,12 @@ export const vaultTranslationsEn = {
     neverOpened: 'never opened',
     lastOpened: (when: string) => `opened ${when}`,
     unsynced: 'changes waiting to sync',
+    delete: (name: string) => `Delete “${name}” from this device`,
+    deleteTitle: (name: string) => `Delete “${name}” from this device?`,
+    deleteMessage:
+      'Its copy in this browser and everything this device kept of it go. A copy in a cloud stays where it is; a vault that lives only here is gone for good.',
+    deleteConfirm: 'Delete',
+    cancel: 'Cancel',
   },
   failures: {
     quota: 'The browser storage is full. Free some space and reload the page.',
@@ -34,6 +40,9 @@ export const vaultTranslationsEn = {
   create: {
     title: 'New vault',
     name: 'Vault name',
+    description: 'Description (optional)',
+    descriptionHint:
+      'Shown in this device’s list of vaults before the password is typed, like the name. Keep secrets out of it.',
     password: 'Master password',
     passwordHint: (minimum: number, suggested: number) =>
       `At least ${minimum} characters; ${suggested} or more is better. Any characters, spaces included.`,

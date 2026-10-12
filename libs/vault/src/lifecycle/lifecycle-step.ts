@@ -71,7 +71,14 @@ export function lifecycleStep(
         : stay(state);
     case 'create-requested':
       return state.kind === 'no-vault'
-        ? go({ kind: 'creating' }, [{ kind: 'create', name: event.name, password: event.password }])
+        ? go({ kind: 'creating' }, [
+            {
+              kind: 'create',
+              name: event.name,
+              description: event.description,
+              password: event.password,
+            },
+          ])
         : stay(state);
     case 'created':
       if (state.kind !== 'creating') {
