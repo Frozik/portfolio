@@ -104,6 +104,7 @@ const ProtectedGate = observer(({ model }: { readonly model: PopupModel }) => {
           autoComplete="off"
           value={password}
           onValueChange={setPassword}
+          locale={navigator.language}
           onEnter={() => void open()}
         />
         <button type="button" className={styles.button} onClick={() => void open()}>

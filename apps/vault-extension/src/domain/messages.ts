@@ -1,8 +1,16 @@
 import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import type { TCardId, TFieldId } from '@frozik/vault/model/ids';
 
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import type { ICardSummary, ICardView } from './card-views';
-import type { IWebDavSource, TConnectOutcome, TPullOutcome } from './cloud';
+
+import type {
+  IDriveSource,
+  IWebDavSource,
+  TConnectOutcome,
+  TDriveSearch,
+  TPullOutcome,
+} from './cloud';
 
 /** What the worker is: nothing set up, set up and locked (and why), or open. */
 export type TExtensionStatus =
@@ -33,7 +41,10 @@ export type TRequest =
       readonly source: IWebDavSource;
       readonly password: string;
     }
+  | { readonly kind: 'find-drive-vaults'; readonly space: TDriveSpace; readonly folder: string }
+  | { readonly kind: 'connect-drive'; readonly source: IDriveSource }
   | { readonly kind: 'sync' }
+  | { readonly kind: 'drive-sign-in' }
   | { readonly kind: 'open-protected'; readonly password: string }
   | { readonly kind: 'page-cards'; readonly pageUrl: string }
   | { readonly kind: 'search'; readonly query: string }
@@ -56,7 +67,10 @@ interface IResponses {
   readonly unlock: TUnlockFailure | null;
   readonly lock: null;
   readonly 'connect-webdav': TConnectOutcome;
+  readonly 'find-drive-vaults': TDriveSearch;
+  readonly 'connect-drive': TConnectOutcome;
   readonly sync: TPullOutcome;
+  readonly 'drive-sign-in': TPullOutcome;
   readonly 'open-protected': TUnlockFailure | null;
   readonly 'page-cards': readonly ICardSummary[];
   readonly search: readonly ICardSummary[];

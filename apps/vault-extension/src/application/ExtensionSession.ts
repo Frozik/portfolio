@@ -15,11 +15,19 @@ import { vaultKeyOf } from '@frozik/vault/session/vault-key-of';
 import { isNil } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import type { ICardSummary, ICardView } from '../domain/card-views';
 import { summaryOf, viewOf } from '../domain/card-views';
-import type { IWebDavSource, TConnectOutcome, TPullOutcome } from '../domain/cloud';
+
+import type {
+  IDriveSource,
+  IWebDavSource,
+  TConnectOutcome,
+  TDriveSearch,
+  TPullOutcome,
+} from '../domain/cloud';
 import type { TExtensionStatus, TFillOutcome } from '../domain/messages';
-import type { IExtensionServices, IFillRequest, ISessionKey } from '../domain/ports';
+import type { IExtensionServices, IFillRequest, ISessionKey, ISetup } from '../domain/ports';
 import { cardServesPage, cardsForPage } from '../domain/site-cards';
 import { CloudCopy, LOCAL_COPY } from './CloudCopy';
 
@@ -96,24 +104,48 @@ export class ExtensionSession {
   }
 
   /** The vault file in a WebDAV folder becomes the copy, and is pulled again while unlocked. */
-  async connectWebDav(source: IWebDavSource, password: string): Promise<TConnectOutcome> {
-    const outcome = await this.cloud.connect(source, password);
-    if (outcome === 'connected') {
-      this.opened = null;
-    }
-    return outcome;
+  connectWebDav(source: IWebDavSource, password: string): Promise<TConnectOutcome> {
+    return this.connect(this.cloud.connect({ kind: 'webdav', source, password }));
+  }
+
+  findDriveVaults(space: TDriveSpace, folder: string): Promise<TDriveSearch> {
+    return this.cloud.findDriveVaults(space, folder);
+  }
+
+  /** A vault file found in Google Drive becomes the copy, and is pulled again while unlocked. */
+  connectDrive(source: IDriveSource): Promise<TConnectOutcome> {
+    return this.connect(this.cloud.connect({ kind: 'google-drive', source }));
   }
 
   /**
    * A newer cloud file replaces the copy and is opened next;
    * one under a key this session no longer has (a rotation) locks the extension.
    */
-  async sync(): Promise<TPullOutcome> {
+  sync(): Promise<TPullOutcome> {
+    return this.pullWith((setup, opened) => this.cloud.pull(setup, opened));
+  }
+
+  /** Google's window for the vault's account, when its token could not be renewed unseen. */
+  signInToDrive(): Promise<TPullOutcome> {
+    return this.pullWith((setup, opened) => this.cloud.signInAgain(setup, opened));
+  }
+
+  private async connect(connecting: Promise<TConnectOutcome>): Promise<TConnectOutcome> {
+    const outcome = await connecting;
+    if (outcome === 'connected') {
+      this.opened = null;
+    }
+    return outcome;
+  }
+
+  private async pullWith(
+    pull: (setup: ISetup, opened: IOpened) => Promise<TPullOutcome>
+  ): Promise<TPullOutcome> {
     const [setup, opened] = await Promise.all([this.services.setup.load(), this.open()]);
     if (isNil(setup) || isNil(opened)) {
       return 'no-cloud';
     }
-    const outcome = await this.cloud.pull(setup, opened);
+    const outcome = await pull(setup, opened);
     if (outcome === 'updated') {
       this.opened = null;
     }

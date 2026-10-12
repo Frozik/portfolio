@@ -4,7 +4,7 @@ import { createWebDavProvider } from '@frozik/cloud-storage/webdav/webdav-provid
 import { createWebDavTransport } from '@frozik/cloud-storage/webdav/webdav-transport';
 import { err, ok } from '@frozik/utils/result/result';
 
-import { isVaultFile } from '../domain/cloud-files';
+import { isVaultFile } from '@frozik/vault/format/cloud-file-names';
 import type { TProbeWebDav } from '../domain/ports/webdav-prober';
 
 const FOLDER = storagePath('');

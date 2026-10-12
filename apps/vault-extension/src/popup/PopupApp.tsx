@@ -21,6 +21,16 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
     case 'locked':
       return <UnlockScreen model={model} />;
     case 'unlocked':
+      if (model.inTab) {
+        return (
+          <>
+            <p className={styles.lead}>{popupT.connected}</p>
+            <button type="button" className={styles.primary} onClick={model.closeTab}>
+              {popupT.closeTab}
+            </button>
+          </>
+        );
+      }
       return isNil(opened) ? (
         <CardsScreen model={model} />
       ) : (
@@ -31,11 +41,14 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
   }
 });
 
-/** The popup: the page's host on top, then setup, unlock or the cards. */
-export const PopupApp = observer(({ model }: { readonly model: PopupModel }) => (
-  <main className={styles.popup}>
+const Sheet = observer(({ model }: { readonly model: PopupModel }) => (
+  <main className={model.inTab ? styles.sheet : styles.popup}>
     <header className={styles.header}>
-      <strong>{model.vaultName ?? popupT.title}</strong>
+      {model.inTab ? (
+        <h1 className={styles.title}>{model.vaultName ?? popupT.driveTabTitle}</h1>
+      ) : (
+        <strong>{model.vaultName ?? popupT.title}</strong>
+      )}
       {model.status?.kind === 'unlocked' && (
         <button type="button" className={styles.button} onClick={() => void model.lock()}>
           {popupT.lock}
@@ -51,3 +64,14 @@ export const PopupApp = observer(({ model }: { readonly model: PopupModel }) => 
     <Body model={model} />
   </main>
 ));
+
+/** The popup: the page's host on top, then setup, unlock or the cards; opened as a tab, one card centred on the page. */
+export const PopupApp = observer(({ model }: { readonly model: PopupModel }) =>
+  model.inTab ? (
+    <div className={styles.page}>
+      <Sheet model={model} />
+    </div>
+  ) : (
+    <Sheet model={model} />
+  )
+);

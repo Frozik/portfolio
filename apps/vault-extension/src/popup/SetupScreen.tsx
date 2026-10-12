@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
 import type { PopupModel } from '../application/PopupModel';
+import { DriveForm } from './DriveForm';
 import { popupT } from './popup-texts';
 import styles from './popup.module.css';
 
@@ -46,7 +47,6 @@ const WebDavForm = observer(({ model }: { readonly model: PopupModel }) => {
       );
     }
   });
-  const { notice } = model;
   return (
     <>
       <p className={styles.notice}>{popupT.orWebDav}</p>
@@ -90,6 +90,7 @@ const WebDavForm = observer(({ model }: { readonly model: PopupModel }) => {
         autoComplete="off"
         value={password}
         onValueChange={setPassword}
+        locale={navigator.language}
       />
       <TextEditor
         aria-label={popupT.fileName}
@@ -105,16 +106,27 @@ const WebDavForm = observer(({ model }: { readonly model: PopupModel }) => {
       >
         {popupT.connect}
       </button>
-      {notice?.kind === 'host-refused' && <p className={styles.error}>{popupT.hostRefused}</p>}
-      {notice?.kind === 'connect-failed' && (
-        <p className={styles.error}>{popupT.connectFailures[notice.outcome]}</p>
+      {model.notice?.kind === 'host-refused' && (
+        <p className={styles.error}>{popupT.hostRefused}</p>
       )}
     </>
   );
 });
 
-/** No vault yet: a vault file from disk or from a WebDAV folder becomes the extension's copy. */
+/** No vault yet: a vault file from disk, Google Drive or a WebDAV folder becomes the extension's copy. */
 export const SetupScreen = observer(({ model }: { readonly model: PopupModel }) => {
+  const connectFailure = model.notice?.kind === 'connect-failed' && (
+    <p className={styles.error}>{popupT.connectFailures[model.notice.outcome]}</p>
+  );
+  if (model.inTab) {
+    return (
+      <>
+        <p className={styles.lead}>{popupT.driveTabIntro}</p>
+        <DriveForm model={model} />
+        {connectFailure}
+      </>
+    );
+  }
   const take = useEventCallback((files: readonly IPickedFile[]) => {
     const [file] = files;
     if (!isNil(file)) {
@@ -130,7 +142,9 @@ export const SetupScreen = observer(({ model }: { readonly model: PopupModel }) 
       {model.notice?.kind === 'file-refused' && (
         <p className={styles.error}>{popupT.fileRefused}</p>
       )}
+      <DriveForm model={model} />
       <WebDavForm model={model} />
+      {connectFailure}
     </>
   );
 });

@@ -25,6 +25,7 @@ export const UnlockScreen = observer(({ model }: { readonly model: PopupModel })
         autoComplete="off"
         value={password}
         onValueChange={setPassword}
+        locale={navigator.language}
         onEnter={unlock}
       />
       <button type="button" className={styles.primary} disabled={model.busy} onClick={unlock}>

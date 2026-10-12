@@ -4,7 +4,7 @@ import type { IVaultRegistry, TVaultKey } from '@frozik/vault/persistence/ports'
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
-import { vaultFileName } from '../domain/cloud-files';
+import { vaultFileName } from '@frozik/vault/format/cloud-file-names';
 import type { ICloudConnection, IWebDavSecrets, TConnectCloud } from '../domain/ports/cloud';
 import type { TOpenGoogleDrive } from '../domain/ports/google-drive';
 import type { TProbeWebDav } from '../domain/ports/webdav-prober';

@@ -6,8 +6,10 @@ import type { TCardId, TFieldId } from '@frozik/vault/model/ids';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observable, observableRef, runInAction } from 'mobx';
 
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import type { ICardSummary, ICardView } from '../domain/card-views';
-import type { IWebDavSource, TConnectOutcome } from '../domain/cloud';
+
+import type { IDriveSource, IWebDavSource, TConnectOutcome, TDriveSearch } from '../domain/cloud';
 import type { TExtensionStatus, TFillOutcome } from '../domain/messages';
 import type { IActiveTab, TAskWorker } from '../domain/ports';
 
@@ -35,6 +37,9 @@ export class PopupModel {
   busy = false;
   /** The fill waits for a yes: the page is plain HTTP. */
   confirmingInsecure = false;
+  driveSearch: TDriveSearch | null = null;
+  /** The pull found Google's token gone and could not renew it without a window. */
+  signInNeeded = false;
   readonly revealed = observable.map<TFieldId, string>();
 
   constructor(
@@ -42,8 +47,13 @@ export class PopupModel {
     private readonly activeTab: () => Promise<IActiveTab | null>,
     /** The WebDAV host, asked for within the click that connects. */
     private readonly requestHost: (url: string) => Promise<boolean>,
-    /** The popup closes once its work is done: after a fill, after the lock. */
-    private readonly close: () => void
+    /** The popup (or its tab) closes once its work is done: after a fill, after the lock. */
+    private readonly close: () => void,
+    /**
+     * The popup opened as a tab, for Google's sign-in: the popup itself closes
+     * as Google's window takes focus. `null` in that tab.
+     */
+    readonly openInTab: (() => void) | null
   ) {
     makeAutoObservable<PopupModel, 'ask' | 'activeTab' | 'requestHost' | 'close'>(
       this,
@@ -53,6 +63,8 @@ export class PopupModel {
         results: observableRef,
         opened: observableRef,
         notice: observableRef,
+        driveSearch: observableRef,
+        openInTab: false,
         ask: false,
         activeTab: false,
         requestHost: false,
@@ -65,6 +77,16 @@ export class PopupModel {
   get vaultName(): string | null {
     const { status } = this;
     return isNil(status) || status.kind === 'not-set-up' ? null : status.vaultName;
+  }
+
+  /** The popup opened as a tab: Google Drive's setup, not the cards of a page. */
+  get inTab(): boolean {
+    return isNil(this.openInTab);
+  }
+
+  /** The tab's work is done once the vault is connected and opens. */
+  closeTab(): void {
+    this.close();
   }
 
   /** The page's host in the header, punycode beside a host that has other letters. */
@@ -105,6 +127,33 @@ export class PopupModel {
       this.busy = false;
       this.notice = outcome === 'connected' ? null : { kind: 'connect-failed', outcome };
     });
+    await this.start();
+  }
+
+  /** Google's window, then the vault files in the folder; one of them is chosen next. */
+  async findDriveVaults(space: TDriveSpace, folder: string): Promise<void> {
+    this.busy = true;
+    this.driveSearch = null;
+    const search = await this.ask({ kind: 'find-drive-vaults', space, folder });
+    runInAction(() => {
+      this.busy = false;
+      this.driveSearch = search;
+    });
+  }
+
+  async connectDrive(source: IDriveSource): Promise<void> {
+    this.busy = true;
+    const outcome = await this.ask({ kind: 'connect-drive', source });
+    runInAction(() => {
+      this.busy = false;
+      this.notice = outcome === 'connected' ? null : { kind: 'connect-failed', outcome };
+    });
+    await this.start();
+  }
+
+  /** The worker opens Google's window; the popup closes behind it, the next one finds the vault pulled. */
+  async signInToDrive(): Promise<void> {
+    await this.ask({ kind: 'drive-sign-in' });
     await this.start();
   }
 
@@ -216,6 +265,9 @@ export class PopupModel {
       return;
     }
     const pulled = await this.ask({ kind: 'sync' });
+    runInAction(() => {
+      this.signInNeeded = pulled === 'signed-out';
+    });
     if (pulled === 'rotated') {
       const locked = await this.ask({ kind: 'status' });
       runInAction(() => {

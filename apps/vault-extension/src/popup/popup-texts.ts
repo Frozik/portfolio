@@ -1,6 +1,7 @@
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 
-import type { TConnectOutcome } from '../domain/cloud';
+import type { TConnectOutcome, TDriveSearch } from '../domain/cloud';
 import type { TFillOutcome } from '../domain/messages';
 
 const EN = {
@@ -25,7 +26,34 @@ const EN = {
     'not-found': 'There is no such file in that folder.',
     'not-a-vault': 'That file is not a vault.',
     unreachable: 'The server did not answer, or refused the username and password.',
+    'signed-out': 'Google asks to sign in again.',
   } satisfies Record<Exclude<TConnectOutcome, 'connected'>, string>,
+  orDrive: 'Or find it in Google Drive:',
+  driveInTab: 'Google’s sign-in opens in a tab: this popup would close behind its window.',
+  connectDrive: 'Connect Google Drive',
+  driveSpace: 'Where in Drive',
+  spaces: {
+    'my-drive': 'A folder in My Drive',
+    'app-data': 'The app’s hidden folder',
+  } satisfies Record<TDriveSpace, string>,
+  driveFolder: 'Folder in My Drive',
+  findInDrive: 'Sign in to Google and find vaults',
+  noDriveVaults: 'No vault in that folder.',
+  driveFailures: {
+    cancelled: 'The sign-in window was closed before it finished.',
+    refused: 'Google refused the sign-in.',
+    failed: 'Google’s sign-in could not run.',
+    unavailable: 'This build has no Google client, so Drive is off.',
+    unreachable: 'Drive did not answer, or there is no such folder.',
+  } satisfies Record<Extract<TDriveSearch, { kind: 'failed' }>['reason'], string>,
+  signInNeeded: 'Google’s sign-in has expired: the vault is not updated from Drive.',
+  signIn: 'Sign in',
+  driveTabTitle: 'Connect Google Drive',
+  driveTabIntro:
+    'Find the vault the web app keeps in Google Drive: choose the same place and folder, sign in to Google and pick the file. The extension keeps its own copy and pulls changes from Drive.',
+  connected:
+    'The vault is connected. This tab can be closed: the extension opens from its icon in the toolbar.',
+  closeTab: 'Close the tab',
   masterPassword: 'Master password',
   unlock: 'Unlock',
   unlocking: 'Unlocking…',
@@ -83,7 +111,34 @@ const RU: typeof EN = {
     'not-found': 'В этой папке нет такого файла.',
     'not-a-vault': 'Этот файл — не хранилище.',
     unreachable: 'Сервер не ответил или не принял имя и пароль.',
+    'signed-out': 'Google просит войти снова.',
   },
+  orDrive: 'Или найдите его в Google Drive:',
+  driveInTab: 'Вход в Google откроется во вкладке: это окошко закрылось бы за окном Google.',
+  connectDrive: 'Подключить Google Drive',
+  driveSpace: 'Где в Drive',
+  spaces: {
+    'my-drive': 'Папка в «Моём диске»',
+    'app-data': 'Скрытая папка приложения',
+  },
+  driveFolder: 'Папка в «Моём диске»',
+  findInDrive: 'Войти в Google и найти хранилища',
+  noDriveVaults: 'В этой папке нет хранилищ.',
+  driveFailures: {
+    cancelled: 'Окно входа закрыто до завершения.',
+    refused: 'Google отказал во входе.',
+    failed: 'Вход в Google не удалось запустить.',
+    unavailable: 'В этой сборке нет клиента Google, поэтому Drive выключен.',
+    unreachable: 'Drive не ответил, или такой папки нет.',
+  },
+  signInNeeded: 'Вход в Google истёк: хранилище не обновляется из Drive.',
+  signIn: 'Войти',
+  driveTabTitle: 'Подключение Google Drive',
+  driveTabIntro:
+    'Найдите хранилище, которое веб-приложение держит в Google Drive: выберите то же место и папку, войдите в Google и выберите файл. Расширение хранит свою копию и подтягивает изменения из Drive.',
+  connected:
+    'Хранилище подключено. Вкладку можно закрыть: расширение открывается значком на панели браузера.',
+  closeTab: 'Закрыть вкладку',
   masterPassword: 'Мастер-пароль',
   unlock: 'Открыть',
   unlocking: 'Открываю…',

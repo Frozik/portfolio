@@ -1,9 +1,13 @@
 /* The palette of the control family. Colors read the host's
    `--color-landing-*` variables; each fallback follows the OS color scheme so
    the controls render on their own. Every control root composes this class,
-   so the palette is declared once whichever family the control belongs to. */
+   so the palette is declared once whichever family the control belongs to.
+   The fallbacks' `light-dark()` resolves against the element's own color
+   scheme — and a build that lowers it for older browsers reads it from there
+   too — so the element declaring the palette declares the scheme with it. */
 
 .tokens {
+  color-scheme: light dark;
   --re-peek: 20px;
   --re-corner: 10px;
   --re-slide: 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);

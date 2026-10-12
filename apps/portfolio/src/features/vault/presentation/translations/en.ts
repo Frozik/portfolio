@@ -6,6 +6,22 @@ export const vaultTranslationsEn = {
     'Every card is encrypted in the browser before it is stored: Argon2id derives the key from your master password, AES-GCM seals the file, and the file goes to your own Google Drive or WebDAV — no server of ours ever sees it.',
   demoVaultName: 'Demo',
   demoWarning: 'A demonstration: do not keep real passwords here.',
+  extension: {
+    title: 'Password Vault for Chrome',
+    text: 'The extension fills logins on sites from the same vault file, and reaches WebDAV services a web page cannot.',
+    download: 'Download from GitHub',
+    downloadStep: {
+      before: 'Open the ',
+      link: 'latest release on GitHub',
+      after:
+        ', download password-vault-…-chrome.zip from its Assets section at the bottom and unpack it.',
+    },
+    steps: [
+      'Open chrome://extensions and turn on Developer mode.',
+      'Click “Load unpacked” and choose the unpacked folder.',
+    ],
+    dismiss: 'Hide',
+  },
   deviceVaults: {
     title: 'Vaults on this device',
     empty: 'This device knows no vaults yet.',

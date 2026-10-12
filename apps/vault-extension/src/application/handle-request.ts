@@ -32,8 +32,14 @@ async function answer(
       return null;
     case 'connect-webdav':
       return session.connectWebDav(request.source, request.password);
+    case 'find-drive-vaults':
+      return session.findDriveVaults(request.space, request.folder);
+    case 'connect-drive':
+      return session.connectDrive(request.source);
     case 'sync':
       return session.sync();
+    case 'drive-sign-in':
+      return session.signInToDrive();
     case 'open-protected':
       return session.openProtected(request.password);
     case 'page-cards':

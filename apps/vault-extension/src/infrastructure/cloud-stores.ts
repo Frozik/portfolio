@@ -6,10 +6,10 @@ import { ok } from '@frozik/utils/result/result';
 import { fromHexBytes, toHex } from '@frozik/vault/crypto/bytes';
 import type { ISealedRecordStore } from '@frozik/vault/persistence/ports';
 import { browser } from 'wxt/browser';
-import { z } from 'zod';
 
 import type { IWebDavSource } from '../domain/cloud';
-import type { IPendingWebDavLink, ISyncAlarm } from '../domain/ports';
+import { CLOUD_LINK_SCHEMA } from '../domain/cloud';
+import type { IPendingCloudLink, ISyncAlarm } from '../domain/ports';
 
 /** The extension only reads: no write needs the server's compare-and-swap. */
 const READ_ONLY_FEATURES = {
@@ -20,11 +20,7 @@ const READ_ONLY_FEATURES = {
 export const SYNC_ALARM = 'pull';
 /** A pull this often while unlocked. */
 const SYNC_EVERY_MINUTES = 15;
-const PENDING_LINK = 'pending-webdav-link';
-const PENDING_LINK_SCHEMA = z.object({
-  source: z.object({ folderUrl: z.string(), username: z.string(), fileName: z.string() }),
-  password: z.string().min(1),
-});
+const PENDING_LINK = 'pending-cloud-link';
 
 /** The host was granted at setup, so the extension reads the folder without CORS. */
 export function openWebDav(source: IWebDavSource, password: string): IStorageProvider {
@@ -71,10 +67,10 @@ export const CHROME_DEVICE_CONFIG: ISealedRecordStore = {
   },
 };
 
-/** The link typed at setup, in `storage.session` until an unlock seals it: a browser restart forgets it. */
-export const CHROME_PENDING_WEBDAV_LINK: IPendingWebDavLink = {
+/** The link given at setup, in `storage.session` until an unlock seals it: a browser restart forgets it. */
+export const CHROME_PENDING_CLOUD_LINK: IPendingCloudLink = {
   async load() {
-    const parsed = PENDING_LINK_SCHEMA.safeParse(
+    const parsed = CLOUD_LINK_SCHEMA.safeParse(
       (await browser.storage.session.get(PENDING_LINK))[PENDING_LINK]
     );
     return parsed.success ? parsed.data : null;

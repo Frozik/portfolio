@@ -1,6 +1,6 @@
 import { storagePath } from '@frozik/cloud-storage/core/storage-path';
 
-import { driveFolderOf, isVaultFile, vaultFileName } from './cloud-files';
+import { driveFolderOf, isVaultFile, vaultFileName } from './cloud-file-names';
 
 describe('vault files in a cloud', () => {
   it('names the file after the vault, without characters a cloud refuses', () => {

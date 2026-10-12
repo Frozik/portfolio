@@ -1,9 +1,11 @@
 import type { IStorageProvider } from '@frozik/cloud-storage/core/storage-provider';
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
+import type { TResult } from '@frozik/utils/result/result';
 import type { TFieldSpec } from '@frozik/vault/model/card';
 import type { ISealedRecordStore, TVaultKey } from '@frozik/vault/persistence/ports';
 import type { IRandom } from '@frozik/vault/ports/random';
 
-import type { IWebDavLink, IWebDavSource } from './cloud';
+import type { IWebDavSource, TCloudLink, IDriveSignInFailure } from './cloud';
 import type { TFillOutcome, TRequest, TResponseOf } from './messages';
 
 /** The session's key, in `chrome.storage.session`: gone with a restart, an update or a lock. */
@@ -75,12 +77,25 @@ export interface IIdleAlarm {
   cancel(): Promise<void>;
 }
 
-/** The WebDAV password before the first unlock: in `storage.session`, until it can be sealed. */
-/** A WebDAV link with no key to seal it under yet: until the next unlock, in memory that a browser restart wipes. */
-export interface IPendingWebDavLink {
-  load(): Promise<IWebDavLink | null>;
-  save(link: IWebDavLink): Promise<void>;
+/** A cloud link with no key to seal it under yet: until the next unlock, in memory that a browser restart wipes. */
+export interface IPendingCloudLink {
+  load(): Promise<TCloudLink | null>;
+  save(link: TCloudLink): Promise<void>;
   clear(): Promise<void>;
+}
+
+/** Google sign-in and Drive; a token lives about an hour, in memory only. */
+export interface IGoogleDriveAccess {
+  /**
+   * Google's own window, opened by the worker: the popup closes as the window takes focus. Answers
+   * the account signed in, when Drive tells it.
+   */
+  signIn(
+    space: TDriveSpace,
+    account: string | null
+  ): Promise<TResult<string | null, IDriveSignInFailure>>;
+  /** The space with the token signed in; an expired one is renewed without a window, or the call answers `auth-required`. */
+  open(space: TDriveSpace, account: string | null): IStorageProvider;
 }
 
 /** A pull every so often while unlocked; the lock stops it. */
@@ -94,7 +109,8 @@ export interface IExtensionServices {
   readonly openWebDav: (source: IWebDavSource, password: string) => IStorageProvider;
   /** Where the vault comes from and its credentials, sealed under the vault's key, in this browser. */
   readonly deviceConfig: ISealedRecordStore;
-  readonly pendingWebDavLink: IPendingWebDavLink;
+  readonly googleDrive: IGoogleDriveAccess;
+  readonly pendingLink: IPendingCloudLink;
   readonly syncAlarm: ISyncAlarm;
   readonly random: IRandom;
   readonly sessionKeys: ISessionKeyStore;

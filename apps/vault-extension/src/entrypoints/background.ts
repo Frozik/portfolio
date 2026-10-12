@@ -13,11 +13,12 @@ import { handleRequest } from '../application/handle-request';
 import type { TRequest } from '../domain/messages';
 import {
   CHROME_DEVICE_CONFIG,
-  CHROME_PENDING_WEBDAV_LINK,
+  CHROME_PENDING_CLOUD_LINK,
   CHROME_SYNC_ALARM,
   openWebDav,
   SYNC_ALARM,
 } from '../infrastructure/cloud-stores';
+import { CHROME_GOOGLE_DRIVE } from '../infrastructure/google-drive-access';
 import { CHROME_IDLE_ALARM, IDLE_ALARM } from '../infrastructure/idle-alarm';
 import { OFFSCREEN_CLIPBOARD } from '../infrastructure/offscreen-clipboard';
 import { CHROME_PAGE_FILLER } from '../infrastructure/page-filler';
@@ -74,7 +75,8 @@ export default defineBackground({
         protectedWindow: CHROME_PROTECTED_WINDOW,
         openWebDav,
         deviceConfig: CHROME_DEVICE_CONFIG,
-        pendingWebDavLink: CHROME_PENDING_WEBDAV_LINK,
+        pendingLink: CHROME_PENDING_CLOUD_LINK,
+        googleDrive: CHROME_GOOGLE_DRIVE,
         syncAlarm: CHROME_SYNC_ALARM,
         random: WEB_RANDOM,
         now: () => Temporal.Now.instant().epochMilliseconds,

@@ -115,7 +115,10 @@ A file field takes a pick, a drop, a paste or, on a phone, the camera. Photos ar
 ## Chrome extension
 
 [`apps/vault-extension`](../../../../vault-extension/README.md) is a second client of the same vault
-file: it keeps its own copy (chosen from disk or read from a WebDAV folder), unlocks it with the
+file: it keeps its own copy (chosen from disk, or read from Google Drive or a WebDAV folder), unlocks it with the
 master password, offers the page's cards and fills their login form on your click — each frame
 checking its own address before it types. It only reads; its zip comes with every release.
+In a desktop Chromium browser (Chrome, Edge, Brave…) the start screen shows where to get it — a
+link to the latest release and the three steps of loading it unpacked — until hidden; it is not in
+the Chrome Web Store, and no page may install an extension itself.
 

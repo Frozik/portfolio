@@ -5,7 +5,11 @@ import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
-import { DRIVE_VAULT_FOLDER, driveFolderOf, isVaultFile } from '../domain/cloud-files';
+import {
+  DRIVE_VAULT_FOLDER,
+  driveFolderOf,
+  isVaultFile,
+} from '@frozik/vault/format/cloud-file-names';
 import type { ICloudConnection } from '../domain/ports/cloud';
 import type {
   IGoogleDrive,

@@ -17,6 +17,7 @@ import { Spinner } from '../../../shared/ui/Spinner';
 import { DEMO_VAULT_PASSWORD } from '../domain/demo-vault';
 import { vaultPaths } from '../domain/vault-paths';
 import { CreateVaultPanel } from './create/CreateVaultPanel';
+import { ExtensionOffer } from './ExtensionOffer';
 import { OpenFromCloud } from './OpenFromCloud';
 import { registryFailureText } from './registry-failure-text';
 import { vaultT } from './translations';
@@ -165,6 +166,7 @@ export const VaultStart = observer(() => {
     <section className="flex flex-col gap-4">
       <Alert type="warning" message={vaultT.demoWarning} />
       <StartActions />
+      <ExtensionOffer />
       <h2 className="text-[20px] font-medium text-landing-fg">{vaultT.deviceVaults.title}</h2>
       {!isNil(vaults.fail) ? (
         <Alert type="error" message={registryFailureText(vaults.fail)} />

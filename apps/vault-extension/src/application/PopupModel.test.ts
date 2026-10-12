@@ -18,7 +18,7 @@ const CARD: ICardView = {
 const SUMMARY = { id: CARD.id, title: CARD.title, login: 'jane', shared: false, protected: false };
 
 /** A worker that answers as told and records what it was asked. */
-function aWorker(answers: { readonly fill: readonly string[] }) {
+function aWorker(answers: { readonly fill: readonly string[]; readonly sync?: string }) {
   const asked: TRequest[] = [];
   const fills = [...answers.fill];
   const answerTo = (request: TRequest): unknown => {
@@ -32,7 +32,7 @@ function aWorker(answers: { readonly fill: readonly string[] }) {
       case 'fill':
         return fills.shift() ?? 'filled';
       case 'sync':
-        return 'unchanged';
+        return answers.sync ?? 'unchanged';
       default:
         return null;
     }
@@ -54,7 +54,8 @@ describe('the popup', () => {
       () => Promise.resolve(true),
       () => {
         closed = true;
-      }
+      },
+      null
     );
 
     await model.start();
@@ -78,7 +79,8 @@ describe('the popup', () => {
       worker.ask,
       () => Promise.resolve({ id: 3, url: 'http://router.local/' }),
       () => Promise.resolve(true),
-      () => undefined
+      () => undefined,
+      null
     );
     await model.start();
     await when(() => model.opened !== null);
@@ -92,5 +94,22 @@ describe('the popup', () => {
         .filter(request => request.kind === 'fill')
         .map(request => 'allowInsecure' in request && request.allowInsecure)
     ).toEqual([false, true]);
+  });
+
+  it('asks for Google’s sign-in when Drive’s token is gone, and has the worker open Google’s window', async () => {
+    const worker = aWorker({ fill: [], sync: 'signed-out' });
+    const model = new PopupModel(
+      worker.ask,
+      () => Promise.resolve(null),
+      () => Promise.resolve(true),
+      () => undefined,
+      null
+    );
+
+    await model.start();
+    expect(model.signInNeeded).toBe(true);
+    await model.signInToDrive();
+
+    expect(worker.asked.map(request => request.kind)).toContain('drive-sign-in');
   });
 });

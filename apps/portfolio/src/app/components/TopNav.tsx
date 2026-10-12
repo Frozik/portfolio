@@ -9,6 +9,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { SvgGitHub } from '../../icons/SvgGitHub';
 import { SvgQrCode } from '../../icons/SvgQrCode';
 import { SvgRotateToLandscape } from '../../icons/SvgRotateToLandscape';
+import { REPOSITORY_URL } from '../../shared/lib/repository';
 import { APP_VERSION } from '../app-version';
 import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape';
 import { ROUTE_METADATA } from '../routeMetadata';
@@ -19,7 +20,6 @@ import { useTopNavBack } from './TopNavBackContext';
 import { useTopNavCenterHostSetter } from './TopNavCenterContext';
 import { WebMcpBadge } from './WebMcpBadge';
 
-const GITHUB_URL = 'https://github.com/frozik/portfolio';
 const ICON_SIZE_PX = 16;
 
 // Both overlays pull the Radix Dialog family (and the QR one qrcode.react) —
@@ -171,7 +171,7 @@ const TopNavComponent = ({ variant = 'landing' }: { readonly variant?: TopNavVar
             </button>
 
             <a
-              href={GITHUB_URL}
+              href={REPOSITORY_URL}
               target="_blank"
               rel="noopener noreferrer"
               className={iconButtonClassName}

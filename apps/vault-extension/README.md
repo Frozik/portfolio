@@ -11,7 +11,9 @@ on and fills their login form. It is a separate client of the same file — the 
    [release](https://github.com/Frozik/portfolio/releases) and unpack it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the
    unpacked folder.
-3. Click the extension's icon. Choose the vault file (`.pwv`, exported from the web app), or connect
+3. Click the extension's icon. Choose the vault file (`.pwv`, exported from the web app), find it
+   in Google Drive (the popup opens itself as a tab for Google's sign-in; choose the same place —
+   a folder in My Drive or the app's hidden folder — the web app keeps the vault in), or connect
    the WebDAV folder it lives in (the server's address, username and an app password; Chrome asks
    once for access to that server, so no CORS setup is needed). "Service" fills the address for
    Nextcloud, ownCloud, Seafile and fifteen hosted services — pCloud, Yandex.Disk, GMX, WEB.DE,
@@ -37,8 +39,10 @@ To stop Chrome's own password manager from offering itself next to the vault, tu
   30 seconds by the extension's offscreen page, though the popup has long closed.
 - **Protected cards** ask for the master password again before their secrets leave the extension's
   background, and stay open for five minutes.
-- **Sync.** A vault from a WebDAV folder is pulled when the popup opens and every 15 minutes while
-  unlocked. The extension only reads: a newer file replaces its copy; a file under another key (the
+- **Sync.** A vault from Google Drive or a WebDAV folder is pulled when the popup opens and every
+  15 minutes while unlocked. Google's token lives an hour and is renewed without a window for the
+  account the vault was found with; when Google wants the user (signed out, access revoked) the
+  popup says so and "Sign in" opens Google's window again. The extension only reads: a newer file replaces its copy; a file under another key (the
   vault was rotated elsewhere) locks it until the new key's password is typed.
 - **Lock.** After five minutes without use, from the popup, and whenever Chrome restarts or the
   extension updates — the key lives only in `chrome.storage.session`. Locking reloads the extension,
@@ -49,8 +53,9 @@ To stop Chrome's own password manager from offering itself next to the vault, tu
 - The vault key is unwrapped once with the master password and kept as raw bytes in
   `chrome.storage.session` (memory only, closed to content scripts); every time the background wakes
   it opens the copy again with it. Of the vault, `storage.local` keeps in the open only its name:
-  the WebDAV folder, login, file name and app password wait in `storage.session` (gone with a browser
-  restart) until the first unlock, then are sealed together under the vault's key. A pull that finds
+  where the file is (the WebDAV folder, login, file name and app password, or the Drive space, path
+  and Google account) waits in `storage.session` (gone with a browser restart) until the first
+  unlock, then is sealed under the vault's key. Google's token is kept only in `storage.session`. A pull that finds
   the vault re-keyed elsewhere keeps them in `storage.session` again, so the next unlock seals them
   under the new key.
 - The background answers only the extension's own pages; nothing a web page says reaches it, and no
@@ -73,8 +78,8 @@ To stop Chrome's own password manager from offering itself next to the vault, tu
 | `activeTab`, `scripting` | read the tab's address and inject the fill script, only after your click |
 | `alarms` | the idle lock and the 15-minute pull outlive the background's sleep |
 | `offscreen`, `clipboardWrite` | copy, and clear the clipboard after 30 seconds |
-| `identity` | Google sign-in for Drive (not used yet, see below) |
-| `https://www.googleapis.com/*` | Google Drive (not used yet) |
+| `identity` | Google's sign-in window for Drive (`launchWebAuthFlow`) |
+| `https://www.googleapis.com/*` | Google Drive |
 | optional `https://*/*` | the one WebDAV server you connect, asked for when you connect it |
 | optional `tabs` | reserved for a badge with the number of cards (not used yet) |
 
@@ -83,12 +88,20 @@ pages); there is no remote code.
 
 ## Not yet
 
-- **Google Drive.** Needs the OAuth client to accept the extension's redirect
-  (`https://<extension-id>.chromiumapp.org/`), a Google Cloud console step of the vault's owner
-  (spike S3 in the plan). Until then a Drive vault is opened from its downloaded file.
 - Passkey unlock, the badge with the number of matching cards, a settings page for the timeouts,
   and "create a card for this site" (which would open the web app).
 - One-time codes of the HOTP kind: their counter belongs to the web app.
+
+## Google Drive
+
+The extension signs in with the web app's own OAuth client (`GOOGLE_VAULT_CLIENT_ID` from
+`infra/hosts/<name>.env`, read at build time): `drive.file` lets an app see only the files its own
+client made, so a client of its own would not find the web app's vault. Google sends the sign-in
+back to `https://cinlldikjajnedgfcgnkoefcnnmmphbc.chromiumapp.org/`, which that client lists among
+its authorized redirect URIs. The id is fixed by the public key in the manifest (`key` in
+`wxt.config.ts`), so every install, unpacked or from the release zip, has the same one. The sign-in
+runs in the background worker, because the popup closes as Google's window takes focus; that is
+also why the setup moves to a tab.
 
 ## Development
 

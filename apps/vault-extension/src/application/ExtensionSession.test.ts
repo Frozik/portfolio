@@ -1,8 +1,11 @@
 import { storagePath } from '@frozik/cloud-storage/core/storage-path';
+import type { IStorageProvider } from '@frozik/cloud-storage/core/storage-provider';
+import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import { createMemoryProvider } from '@frozik/cloud-storage/memory/memory-provider';
 import { assert } from '@frozik/utils/assert/assert';
 import type { Milliseconds } from '@frozik/utils/date/types';
-import { ok } from '@frozik/utils/result/result';
+import type { TResult } from '@frozik/utils/result/result';
+import { err, ok } from '@frozik/utils/result/result';
 import { createInThreadCodec } from '@frozik/vault/codec/in-thread-codec';
 import { encodePassword } from '@frozik/vault/crypto/password-normalization';
 import type { IVaultCard } from '@frozik/vault/model/card';
@@ -12,7 +15,7 @@ import { createFakeKdf } from '@frozik/vault/testing/fake-kdf';
 import { createSeededRandom } from '@frozik/vault/testing/seeded-random';
 import { aManifest } from '@frozik/vault/testing/vault-file-fixtures';
 
-import type { IWebDavLink } from '../domain/cloud';
+import type { TCloudLink, IDriveSignInFailure } from '../domain/cloud';
 import type { IExtensionServices, IFillRequest, ISessionKey, ISetup } from '../domain/ports';
 import { ExtensionSession, IDLE_LOCK_MS, PROTECTED_OPEN_MS } from './ExtensionSession';
 
@@ -20,6 +23,19 @@ const PASSWORD = 'correct horse battery staple';
 const SIGNAL = new AbortController().signal;
 const NOW = 1_760_000_000_000;
 const HOST_RULE = { kind: 'url', match: 'host', useSharedCredentials: true } as const;
+const ACCOUNT = 'jane@example.com';
+
+function authRequired() {
+  return Promise.resolve(err({ kind: 'auth-required' } as const));
+}
+
+/** Drive once Google's token is gone and cannot be renewed without a window. */
+const SIGNED_OUT_DRIVE: IStorageProvider = {
+  ...createMemoryProvider(),
+  stat: authRequired,
+  read: authRequired,
+  list: authRequired,
+};
 
 function anAccount(url: string, details: Partial<IVaultCard> = {}): IVaultCard {
   return aCardWith(
@@ -69,8 +85,17 @@ function aBrowser() {
   let now = NOW;
   const folders = new Map<string, ReturnType<typeof createMemoryProvider>>();
   const sealed = new Map<string, Uint8Array<ArrayBuffer>>();
-  let pendingLink: IWebDavLink | null = null;
+  let pendingLink: TCloudLink | null = null;
   const passwordsUsed: string[] = [];
+  const drives = new Map<TDriveSpace, ReturnType<typeof createMemoryProvider>>();
+  const drive = (space: TDriveSpace) => {
+    const found = drives.get(space) ?? createMemoryProvider();
+    drives.set(space, found);
+    return found;
+  };
+  let signedIn = false;
+  let signInAnswer: TResult<string | null, IDriveSignInFailure> = ok(ACCOUNT);
+  const signInsFor: (string | null)[] = [];
   const services: IExtensionServices = {
     localCopyOf: vaultKey => {
       const copy = copies.get(vaultKey) ?? createMemoryProvider();
@@ -151,7 +176,15 @@ function aBrowser() {
       },
       keys: () => Promise.resolve(ok([...sealed.keys()])),
     },
-    pendingWebDavLink: {
+    googleDrive: {
+      signIn: (_space, account) => {
+        signInsFor.push(account);
+        signedIn = signInAnswer.ok;
+        return Promise.resolve(signInAnswer);
+      },
+      open: space => (signedIn ? drive(space) : SIGNED_OUT_DRIVE),
+    },
+    pendingLink: {
       load: () => Promise.resolve(pendingLink),
       save: link => {
         pendingLink = link;
@@ -186,6 +219,14 @@ function aBrowser() {
     pendingLink: () => pendingLink,
     setup: () => setup,
     passwordsUsed,
+    drive,
+    signInsFor,
+    signOut: () => {
+      signedIn = false;
+    },
+    answerSignIn: (answer: TResult<string | null, IDriveSignInFailure>) => {
+      signInAnswer = answer;
+    },
     folder: (url: string) => {
       const folder = folders.get(url) ?? createMemoryProvider();
       folders.set(url, folder);
@@ -372,6 +413,63 @@ describe('the extension’s session', () => {
     expect(browser.pendingLink()?.source).toEqual(source);
     expect(browser.hasSessionKey()).toBe(false);
     expect(browser.reloads()).toBe(1);
+  });
+
+  it('finds the vaults in a Drive folder after Google’s sign-in and keeps the account only sealed', async () => {
+    const browser = aBrowser();
+    const { file, codec, argon2 } = await aVaultFile([anAccount('https://github.com')]);
+    const myDrive = browser.drive('my-drive');
+    await myDrive.write(storagePath('Vault/Family.pwv'), file, { kind: 'overwrite' }, SIGNAL);
+    await myDrive.write(storagePath('Vault/notes.txt'), file, { kind: 'overwrite' }, SIGNAL);
+    const session = new ExtensionSession(browser.services, codec, argon2);
+
+    const found = await session.findDriveVaults('my-drive', ' Vault/ ');
+    expect(found).toEqual({
+      kind: 'found',
+      space: 'my-drive',
+      account: ACCOUNT,
+      paths: ['Vault/Family.pwv'],
+    });
+    expect(
+      await session.connectDrive({ space: 'my-drive', path: 'Vault/Family.pwv', account: ACCOUNT })
+    ).toBe('connected');
+    expect(await session.status()).toEqual({ kind: 'locked', vaultName: 'Family' });
+    expect(JSON.stringify(browser.setup())).not.toContain(ACCOUNT);
+    expect(await session.unlock(PASSWORD)).toBeNull();
+
+    expect(browser.pendingLink()).toBeNull();
+    expect(await session.sync()).toBe('unchanged');
+  });
+
+  it('says Google’s sign-in is needed when the token cannot be renewed unseen, and pulls once signed in again', async () => {
+    const browser = aBrowser();
+    const { file, codec, argon2 } = await aVaultFile([]);
+    await browser
+      .drive('app-data')
+      .write(storagePath('Vault/Family.pwv'), file, { kind: 'overwrite' }, SIGNAL);
+    const session = new ExtensionSession(browser.services, codec, argon2);
+    await session.findDriveVaults('app-data', '');
+    await session.connectDrive({ space: 'app-data', path: 'Vault/Family.pwv', account: ACCOUNT });
+    await session.unlock(PASSWORD);
+
+    browser.signOut();
+    expect(await session.sync()).toBe('signed-out');
+    expect(await session.signInToDrive()).toBe('unchanged');
+
+    expect(browser.signInsFor).toEqual([null, ACCOUNT]);
+  });
+
+  it('finds nothing when Google’s sign-in is closed unfinished', async () => {
+    const browser = aBrowser();
+    const { codec, argon2 } = await aVaultFile([]);
+    browser.answerSignIn(err({ kind: 'cancelled', detail: 'The user did not approve access.' }));
+    const session = new ExtensionSession(browser.services, codec, argon2);
+
+    expect(await session.findDriveVaults('my-drive', 'Vault')).toEqual({
+      kind: 'failed',
+      reason: 'cancelled',
+      detail: 'The user did not approve access.',
+    });
   });
 
   it('clears a copied secret before the lock reloads the extension, which would cancel the clearing', async () => {

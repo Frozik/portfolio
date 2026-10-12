@@ -23,9 +23,17 @@ const CardList = observer(
   )
 );
 
-/** The page's cards; none ⇒ a search over the whole vault. */
+/** The page's cards (none ⇒ a search over the whole vault), and Google's sign-in when Drive asks for it. */
 export const CardsScreen = observer(({ model }: { readonly model: PopupModel }) => (
   <>
+    {model.signInNeeded && (
+      <div className={styles.row}>
+        <p className={styles.error}>{popupT.signInNeeded}</p>
+        <button type="button" className={styles.button} onClick={() => void model.signInToDrive()}>
+          {popupT.signIn}
+        </button>
+      </div>
+    )}
     {model.pageCards.length > 0 ? (
       <CardList model={model} cards={model.pageCards} />
     ) : (
