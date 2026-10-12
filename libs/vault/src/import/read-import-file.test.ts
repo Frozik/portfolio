@@ -15,6 +15,7 @@ import {
   SAFARI_CSV,
   SAFEINCLOUD_XML,
 } from '../testing/import-fixtures';
+import { aSafeInCloudDb } from '../testing/safeincloud-db-fixture';
 import { createSeededRandom } from '../testing/seeded-random';
 import { applyImport } from './apply-import';
 import type { IImportBatch } from './imported-card';
@@ -229,6 +230,12 @@ describe('reading an export', () => {
       ok: true,
       value: { kind: 'vault-file', vault: file, sealedBlobs: new Map() },
     });
+  });
+
+  it('tells a SafeInCloud database by its magic and asks for its password', async () => {
+    const file = await aSafeInCloudDb(SAFEINCLOUD_XML, 'secret');
+
+    expect(readImportFile(file)).toEqual({ ok: true, value: { kind: 'safeincloud-file' } });
   });
 
   it('says so when the file is none of the known exports', () => {

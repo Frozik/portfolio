@@ -30,6 +30,9 @@ async function answer(
     case 'lock':
       await session.lock();
       return null;
+    case 'reset':
+      await session.reset();
+      return null;
     case 'connect-webdav':
       return session.connectWebDav(request.source, request.password);
     case 'find-drive-vaults':

@@ -40,6 +40,8 @@ export class PopupModel {
   driveSearch: TDriveSearch | null = null;
   /** The pull found Google's token gone and could not renew it without a window. */
   signInNeeded = false;
+  /** The reset waits for a yes: it drops the extension's copy of the vault. */
+  confirmingReset = false;
   readonly revealed = observable.map<TFieldId, string>();
 
   constructor(
@@ -171,6 +173,21 @@ export class PopupModel {
 
   async lock(): Promise<void> {
     await this.ask({ kind: 'lock' });
+    this.close();
+  }
+
+  askToReset(): void {
+    this.confirmingReset = true;
+  }
+
+  cancelReset(): void {
+    this.confirmingReset = false;
+  }
+
+  /** The worker forgets the vault and reloads, which closes the popup; the next one offers the setup. */
+  async reset(): Promise<void> {
+    this.confirmingReset = false;
+    await this.ask({ kind: 'reset' });
     this.close();
   }
 

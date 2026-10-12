@@ -1,7 +1,8 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { utf8 } from '@frozik/vault/crypto/bytes';
 import { vaultKeyOf } from '@frozik/vault/session/vault-key-of';
-import { CHROME_CSV } from '@frozik/vault/testing/import-fixtures';
+import { CHROME_CSV, SAFEINCLOUD_XML } from '@frozik/vault/testing/import-fixtures';
+import { aSafeInCloudDb } from '@frozik/vault/testing/safeincloud-db-fixture';
 import { when } from 'mobx';
 
 import { aDevice, KEEPASS_KEY_FILE, KEEPASS_PASSWORD } from './fake-device.test-helper';
@@ -151,6 +152,22 @@ describe('import and export', () => {
 
     expect(titlesOf(session)).toEqual(['From KeePass']);
     expect(flow.keyFile).toBeNull();
+  });
+
+  it('opens a SafeInCloud database with its own password before the preview', async () => {
+    const { store, session } = await unlocked('Mine');
+    const flow = store.importInto(session, key => key);
+
+    await flow.choose(await aSafeInCloudDb(SAFEINCLOUD_XML, 'sic password'));
+    expect(flow.step).toMatchObject({ kind: 'vault-password', source: { format: 'safeincloud' } });
+    flow.setVaultPassword('not it');
+    await flow.openVaultFile();
+    expect(flow.step).toMatchObject({ kind: 'vault-password', failure: 'wrong-password' });
+    flow.setVaultPassword('sic password');
+    await flow.openVaultFile();
+    await flow.confirm();
+
+    expect(titlesOf(session)).toEqual(['Example mail', 'Travel card']);
   });
 
   it('writes nothing when the import is cancelled while its files are being sealed', async () => {

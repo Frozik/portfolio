@@ -14,6 +14,7 @@ import { aCardWith, aField, anHlc } from '@frozik/vault/testing/builders';
 import { createFakeKdf } from '@frozik/vault/testing/fake-kdf';
 import { createSeededRandom } from '@frozik/vault/testing/seeded-random';
 import { aManifest } from '@frozik/vault/testing/vault-file-fixtures';
+import { isNil } from 'lodash-es';
 
 import type { TCloudLink, IDriveSignInFailure } from '../domain/cloud';
 import type { IExtensionServices, IFillRequest, ISessionKey, ISetup } from '../domain/ports';
@@ -119,6 +120,10 @@ function aBrowser() {
         setup = next;
         return Promise.resolve();
       },
+      clear: () => {
+        setup = null;
+        return Promise.resolve();
+      },
     },
     filler: {
       fill: (tabId, request) => {
@@ -183,6 +188,10 @@ function aBrowser() {
         return Promise.resolve(signInAnswer);
       },
       open: space => (signedIn ? drive(space) : SIGNED_OUT_DRIVE),
+      signOut: () => {
+        signedIn = false;
+        return Promise.resolve();
+      },
     },
     pendingLink: {
       load: () => Promise.resolve(pendingLink),
@@ -216,6 +225,9 @@ function aBrowser() {
     alarm: () => alarm,
     hasSessionKey: () => sessionKey !== null,
     syncing: () => syncing,
+    copyOf: (vaultKey: string) => copies.get(vaultKey),
+    sealedRecords: () => [...sealed.keys()],
+    signedIn: () => signedIn,
     pendingLink: () => pendingLink,
     setup: () => setup,
     passwordsUsed,
@@ -273,6 +285,54 @@ describe('the extension’s session', () => {
     expect(browser.hasSessionKey()).toBe(false);
     expect(browser.reloads()).toBe(1);
     expect(await worker().status()).toMatchObject({ kind: 'locked' });
+  });
+
+  it('forgets its vault on reset — the copy, its cloud link, the Google sign-in — and takes another', async () => {
+    const browser = aBrowser();
+    const { file, codec, argon2 } = await aVaultFile([anAccount('https://github.com')]);
+    const { file: other } = await aVaultFile([]);
+    await browser
+      .drive('my-drive')
+      .write(storagePath('Vault/Family.pwv'), file, { kind: 'overwrite' }, SIGNAL);
+    const worker = () => new ExtensionSession(browser.services, codec, argon2);
+    const session = worker();
+    await session.findDriveVaults('my-drive', 'Vault');
+    await session.connectDrive({ space: 'my-drive', path: 'Vault/Family.pwv', account: ACCOUNT });
+    await session.unlock(PASSWORD);
+    const vaultKey = browser.setup()?.vaultKey;
+    assert(!isNil(vaultKey));
+    expect(browser.sealedRecords()).not.toEqual([]);
+
+    await session.reset();
+
+    expect(await worker().status()).toEqual({ kind: 'not-set-up' });
+    expect(browser.hasSessionKey()).toBe(false);
+    expect(browser.syncing()).toBe(false);
+    expect(browser.reloads()).toBe(1);
+    expect(browser.signedIn()).toBe(false);
+    expect(browser.sealedRecords()).toEqual([]);
+    expect(await browser.copyOf(vaultKey)?.stat(storagePath('vault.pwv'), SIGNAL)).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(
+      await browser.drive('my-drive').stat(storagePath('Vault/Family.pwv'), SIGNAL)
+    ).toMatchObject({
+      ok: true,
+      value: { path: 'Vault/Family.pwv' },
+    });
+    expect(await worker().openFile(other, 'Work.pwv')).toBe(true);
+    expect(await worker().status()).toEqual({ kind: 'locked', vaultName: 'Work' });
+  });
+
+  it('can be reset while locked, its password forgotten', async () => {
+    const { browser, session, worker } = await unlockedWith([]);
+    await session.lock();
+
+    await worker().reset();
+
+    expect(await worker().status()).toEqual({ kind: 'not-set-up' });
+    expect(browser.setup()).toBeNull();
   });
 
   it('offers the cards of the page by their addresses, never one of another site or subdomain', async () => {

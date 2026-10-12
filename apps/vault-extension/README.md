@@ -47,6 +47,9 @@ To stop Chrome's own password manager from offering itself next to the vault, tu
 - **Lock.** After five minutes without use, from the popup, and whenever Chrome restarts or the
   extension updates — the key lives only in `chrome.storage.session`. Locking reloads the extension,
   so nothing of the open vault stays in any of its pages.
+- **Disconnect.** Under the master password, "Disconnect this vault…" asks once, then the extension
+  forgets the vault: its copy, the sealed link to the cloud, Google's token and the setup; it locks
+  and offers the setup again. The file in the cloud and the web app's copy are untouched.
 
 ## Security model
 

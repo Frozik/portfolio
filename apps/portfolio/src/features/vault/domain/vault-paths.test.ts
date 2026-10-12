@@ -2,7 +2,7 @@ import type { TCardId, TGroupId } from '@frozik/vault/model/ids';
 import type { TVaultKey } from '@frozik/vault/persistence/ports';
 
 import type { TVaultSection } from './vault-paths';
-import { parseVaultPage, vaultPaths } from './vault-paths';
+import { parseStartPage, parseVaultPage, vaultPaths } from './vault-paths';
 
 const VAULT = '0a1b2c3d4e5f60718293a4b5c6d7e8f9' as TVaultKey;
 const CARD = '6f9619ff-8b86-4011-b42d-00c04fc964ff' as TCardId;
@@ -49,5 +49,17 @@ describe('vaultPaths', () => {
     expect(parseVaultPage(`all/${CARD}/edit`)).toEqual({ kind: 'unknown' });
     expect(parseVaultPage('settings/extra')).toEqual({ kind: 'unknown' });
     expect(parseVaultPage(`all/${CARD}/history/more`)).toEqual({ kind: 'unknown' });
+  });
+
+  it('gives each way to a vault its own address, so the browser’s Back steps through them', () => {
+    expect(parseStartPage(vaultPaths.start())).toBe('start');
+    expect(parseStartPage(vaultPaths.create())).toBe('create');
+    expect(parseStartPage(vaultPaths.openFromCloud())).toBe('open-from-cloud');
+    expect(parseStartPage(vaultPaths.createInCloud())).toBe('create-in-cloud');
+  });
+
+  it('takes an unknown start address for the start itself', () => {
+    expect(parseStartPage('/vault/open/elsewhere')).toBe('start');
+    expect(parseStartPage('/vault/new/more')).toBe('start');
   });
 });

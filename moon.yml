@@ -11,6 +11,7 @@ fileGroups:
   sources:
     - 'apps/*/src/**/*'
     - 'libs/*/src/**/*'
+    - 'libs/*/fixtures/**/*'
     - 'apps/*/e2e/**/*'
     - 'apps/*/vite.config.ts'
     - 'apps/*/vite-plugins/**/*'

@@ -11,13 +11,15 @@ Every page of a vault has its own address, so a link opens the same card after u
 | Address | Page |
 |---|---|
 | `/vault` | the vaults this device knows |
+| `/vault/new` | a new vault's form |
+| `/vault/open`, `/vault/open/new` | open a vault from a cloud; a new vault in the folder it reached |
 | `/vault/:vaultId` | unlock, then all cards |
 | `/vault/:vaultId/:section` | `all`, `favorites`, `expiring`, `expired`, `archive`, `trash` or a group |
 | `/vault/:vaultId/:section/:cardId` | a card |
 | `/vault/:vaultId/:section/:cardId/history` | its history |
 | `/vault/:vaultId/settings`, `/vault/:vaultId/audit` | settings, audit |
 
-The address is the only owner of the selection; `domain/vault-paths.ts` builds and reads every one. Search text, titles and field values never enter an address — people paste passwords into search. An address the page does not know says so instead of redirecting.
+The address is the only owner of the selection; `domain/vault-paths.ts` builds and reads every one. Search text, titles and field values never enter an address — people paste passwords into search. An address the page does not know says so instead of redirecting. Cancel on a page reached from the one before it is the browser's Back, so the history holds no loop; a vault created or opened takes its form's place in the history.
 
 ## Creating and unlocking
 
@@ -76,7 +78,7 @@ Per device: how soon the vault locks when idle (1, 5, 15 minutes or an hour) and
 
 ## Import and export
 
-Settings → Data. **Import** takes a file and tells what it is by its content: the password CSV of Chrome, Edge, Firefox or Safari, a SafeInCloud XML export (fields one to one under their own names, labels as groups, star and colour; attachments are reported, not carried), a Bitwarden export (JSON or CSV), a file in the FIDO Alliance's Credential Exchange Format (CXF 1.0 — `cxf.json` alone or zipped with its files; logins, cards, Wi-Fi, passports and ID documents, SSH keys, one-time codes, custom fields, collections and tags as groups, item references as links; passkeys are reported), a KeePass database (`.kdbx` 3 or 4, opened with its master password in a Worker of its own that loads only then: groups and tags as groups, protected fields as secrets, KeePassXC's and KeePass's one-time codes, expiry, attachments; with its password, its key file or both) or another `.pwv`, which first asks for that vault's password. Every imported file's SHA-256 is computed from its bytes; one that disagrees with the hash its source declares stays out and is reported. A preview counts the entries by kind, lists what cannot come along, and — when some are already here (the same site and login) — asks whether to skip them, replace the cards (the old version stays in history) or keep both; nothing is written before "Import". An empty vault links here from its card list.
+Settings → Data. **Import** takes a file and tells what it is by its content: the password CSV of Chrome, Edge, Firefox or Safari, a SafeInCloud database (`.db`, opened with its password — the app's local database or a backup; its Google Drive copy sits in the app's hidden folder, which Google lets no other app read) or its XML export (fields one to one under their own names, labels as groups, star and colour; attachments are reported, not carried), a Bitwarden export (JSON or CSV), a file in the FIDO Alliance's Credential Exchange Format (CXF 1.0 — `cxf.json` alone or zipped with its files; logins, cards, Wi-Fi, passports and ID documents, SSH keys, one-time codes, custom fields, collections and tags as groups, item references as links; passkeys are reported), a KeePass database (`.kdbx` 3 or 4, opened with its master password in a Worker of its own that loads only then: groups and tags as groups, protected fields as secrets, KeePassXC's and KeePass's one-time codes, expiry, attachments; with its password, its key file or both) or another `.pwv`, which first asks for that vault's password. Every imported file's SHA-256 is computed from its bytes; one that disagrees with the hash its source declares stays out and is reported. A preview counts the entries by kind, lists what cannot come along, and — when some are already here (the same site and login) — asks whether to skip them, replace the cards (the old version stays in history) or keep both; nothing is written before "Import". An empty vault links here from its card list.
 
 **Export** makes the file first and saves it on a second click, where the browser's save dialog may open: an encrypted copy (`.pwv`, or `.pwv.zip` with the big files beside it, still sealed) under a password of its own — a new key and a new id, so it can be handed over and never syncs with this vault — or, after the master password and a confirmation that the file is not encrypted, the open zip (the vault's JSON and each card's files by name), CXF for other password managers (a zip with `cxf.json` and the files, their SHA-256 computed from the bytes written; colour, icon, protection and archive travel in an extension of our own) or a CSV in Bitwarden's columns that most managers read.
 
@@ -122,3 +124,100 @@ In a desktop Chromium browser (Chrome, Edge, Brave…) the start screen shows wh
 link to the latest release and the three steps of loading it unpacked — until hidden; it is not in
 the Chrome Web Store, and no page may install an extension itself.
 
+
+## Running your own instance
+
+The vault is a static page: there is no server holding data, every key is derived and every file
+sealed in the browser, and the vault lives in your own cloud. What you have to trust is **the code
+the page loads** — whoever controls the files served at the vault's address controls the vault.
+The public build at `frozik.github.io` is a demonstration (the start screen says so) and shares its
+origin with every other demo. For real passwords, build your own copy and serve it from an origin
+of its own. The steps below assume a domain such as `vault.example.com`.
+
+### What you need
+
+- A domain or subdomain used **for this app only**. Pages on one origin share its storage and its
+  service worker: never a shared `<user>.github.io`, which every Pages project of the account shares.
+- A static host that serves HTTPS and lets you set response headers: Cloudflare Pages, Netlify,
+  or your own nginx or Caddy. HTTPS is not optional — WebCrypto, the service worker, passkeys and
+  the clipboard work only in a secure context.
+- Node 24 and pnpm 11 to build.
+
+### Build
+
+1. Fork the repository, clone your fork, `pnpm install`.
+2. Describe your deployment in `infra/hosts/mine.env` (no quotes):
+   ```
+   COMMUNICATION_DOMAIN=communication.invalid   # required by the build; a placeholder is fine without the conf/retro server
+   GOOGLE_OAUTH_CLIENT_ID=unused                # required by the build; site sign-in, not the vault
+   GOOGLE_VAULT_CLIENT_ID=<your client id>      # optional: Google Drive for the vault (below)
+   ```
+3. Remove what reports to third parties:
+   - `apps/portfolio/src/app/bootstrap/cloudflareBeacon.ts` sends page views to the original
+     author's Cloudflare analytics from any non-local host. Delete its call in `src/main.tsx`, and
+     both `cloudflareinsights.com` entries in `vite-plugins/content-security-policy.ts`.
+   - In the same policy, drop the hosts of demos you do not serve (Binance, map tiles, MediaPipe).
+4. Have the installed app open the vault: set the manifest's `start_url` in
+   `apps/portfolio/vite.config.ts` to `` `${BASE}/vault` ``. Everything is served under `BASE`
+   (`/portfolio`); keep it, or change it there — the CSP and the Trusted Types policy follow it.
+5. `DEPLOY_HOST_NAME=mine pnpm build`; the site is `apps/portfolio/dist`. Build from a tag of your
+   fork and keep the commit next to the deployment, so what runs can always be rebuilt and compared.
+
+### Serve it with real headers
+
+The build puts its CSP in a `<meta>` tag because GitHub Pages sets no headers; a `<meta>` CSP
+cannot stop the page being framed, and nothing but a header can turn on HSTS. Send these with every
+response:
+
+```
+Content-Security-Policy: <the policy from dist/index.html's meta tag>; frame-ancestors 'none'
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+```
+
+- The CSP carries hashes of the page's inline scripts, which change with each build: take it from
+  the freshly built `dist/index.html` every time you deploy.
+- `same-origin-allow-popups` rather than `same-origin`: Google's sign-in for Drive is a popup that
+  must answer its opener.
+- Serve `sw.js` with `Cache-Control: no-cache`. The service worker updates itself: a new
+  deployment reaches every installed copy at its next start, so protect the deploy itself — two
+  factors on the host account, a protected branch, deployments only from your own tags.
+
+### Clouds
+
+- **Google Drive.** In the Google Cloud console, create a project and enable the Google Drive API.
+  On the OAuth consent screen choose External and add the scopes `drive.file` and `drive.appdata`;
+  for yourself and your family, "Testing" with your accounts added as test users is enough. Under
+  Credentials, create an OAuth client ID of type "Web application" with
+  `https://vault.example.com` as an authorised JavaScript origin, and put its id into
+  `GOOGLE_VAULT_CLIENT_ID`. `drive.file` lets the app see only the files it created, so a vault
+  made with another client id stays invisible to yours.
+- **WebDAV** (Nextcloud, a NAS…). Add your server's origin to `connect-src` in
+  `vite-plugins/content-security-policy.ts`, then allow your vault's origin in the server's CORS
+  settings — the connect form shows ready-made snippets for common servers.
+
+### Install it
+
+- **Desktop** — Chrome or Edge: the install icon in the address bar opens the vault in its own
+  window. Safari on macOS 14+: File → Add to Dock. Firefox does not install web apps on most systems; a pinned tab works.
+- **Android** — Chrome: menu → Install app.
+- **iPhone and iPad** — Safari: Share → Add to Home Screen. Do install it there: Safari deletes a
+  website's storage after seven days without use, which would take the local copy with it;
+  apps on the Home Screen are exempt. Keep the vault in a cloud all the same.
+- **Offline** the installed app opens from its cache and works with the local copy; changes go to
+  the cloud once the network is back.
+- **Passkeys** belong to a domain. A passkey made on one address does not open the vault on
+  another: after moving to a new domain, unlock with the password and add the passkeys again.
+
+### What it does not protect against
+
+- While the vault is unlocked, anything with access to the browser process — DevTools, a
+  debugger, malware — sees what the page sees. Locking reloads the page for that reason.
+- Clipboard history managers see what you copy; the page cannot mark a copy as concealed.
+- Screenshots and screen sharing cannot be blocked or detected by a web page.
+- Guessing the master password is limited only by Argon2id's cost: a long passphrase is the
+  protection, not the format.
+- The code has had no independent security audit. You run your instance at your own risk.

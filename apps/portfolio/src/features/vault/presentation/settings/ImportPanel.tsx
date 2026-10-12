@@ -15,14 +15,14 @@ import { getCurrentLanguage } from '../../../../shared/i18n/locale';
 import { Alert } from '../../../../shared/ui/Alert';
 import { Button } from '../../../../shared/ui/Button';
 import { RadioGroup } from '../../../../shared/ui/RadioGroup';
-import type { VaultImport } from '../../application/VaultImport';
+import type { TLockedSource, VaultImport } from '../../application/VaultImport';
 import { VaultField } from '../components/VaultField';
 import { vaultT } from '../translations';
 import { dataT } from '../translations/data';
 import { translateTemplateKey } from '../translations/template-texts';
 
 const ACCEPTED =
-  '.csv,.json,.xml,.pwv,.kdbx,.zip,text/csv,application/json,text/xml,application/xml,application/zip,image/*';
+  '.csv,.json,.xml,.pwv,.kdbx,.db,.zip,text/csv,application/json,text/xml,application/xml,application/zip,image/*';
 const IMAGE_TYPE = 'image/';
 const DUPLICATE_POLICIES: readonly TDuplicatePolicy[] = ['skip', 'replace', 'keep-both'];
 
@@ -135,6 +135,23 @@ const KeyFile = observer(({ flow }: { readonly flow: VaultImport }) => {
   );
 });
 
+function passwordTexts(format: TLockedSource['format']): {
+  readonly label: string;
+  readonly hint: string;
+} {
+  const t = dataT.import;
+  switch (format) {
+    case 'pwv':
+      return { label: t.vaultPassword, hint: t.vaultPasswordHint };
+    case 'kdbx':
+      return { label: t.keePassPassword, hint: t.keePassPasswordHint };
+    case 'safeincloud':
+      return { label: t.safeInCloudPassword, hint: t.safeInCloudPasswordHint };
+    default:
+      return assertNever(format);
+  }
+}
+
 const VaultPassword = observer(({ flow }: { readonly flow: VaultImport }) => {
   const t = dataT.import;
   const { step } = flow;
@@ -143,7 +160,7 @@ const VaultPassword = observer(({ flow }: { readonly flow: VaultImport }) => {
   }
   const open = (): void => void flow.openVaultFile();
   const keePass = step.source.format === 'kdbx';
-  const label = keePass ? t.keePassPassword : t.vaultPassword;
+  const { label, hint } = passwordTexts(step.source.format);
   return (
     <div
       className="flex flex-col gap-3"
@@ -152,7 +169,7 @@ const VaultPassword = observer(({ flow }: { readonly flow: VaultImport }) => {
     >
       <VaultField
         label={label}
-        hint={keePass ? t.keePassPasswordHint : t.vaultPasswordHint}
+        hint={hint}
         error={isNil(step.failure) ? null : vaultT.unlock.failures[step.failure]}
       >
         {describedBy => (

@@ -155,4 +155,7 @@ export const CHROME_GOOGLE_DRIVE: IGoogleDriveAccess = {
     };
     return withRetry(createGoogleDriveProvider({ transport: createDriveTransport(tokens), space }));
   },
+  async signOut() {
+    await browser.storage.session.remove(TOKEN_KEY);
+  },
 };

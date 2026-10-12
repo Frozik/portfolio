@@ -4,7 +4,7 @@ export const dataTranslationsEn = {
   import: {
     title: 'Import',
     intro:
-      'A password CSV from Chrome, Edge, Firefox or Safari, a SafeInCloud XML export, a Bitwarden export (JSON or CSV), a KeePass database (.kdbx), a CXF file (.json or .zip), a screenshot of Google Authenticator’s transfer QR, or another .pwv vault. Nothing is saved before you confirm.',
+      'A password CSV from Chrome, Edge, Firefox or Safari, a SafeInCloud database (.db) or its XML export, a Bitwarden export (JSON or CSV), a KeePass database (.kdbx), a CXF file (.json or .zip), a screenshot of Google Authenticator’s transfer QR, or another .pwv vault. Nothing is saved before you confirm.',
     drop: 'Choose, drop or paste the exported file',
     failures: {
       'no-qr-code': 'There is no QR code in this picture.',
@@ -19,6 +19,9 @@ export const dataTranslationsEn = {
     keePassPassword: 'Master password of the KeePass database',
     keePassPasswordHint:
       'The database opens here only to read its entries. Leave the password empty if it opens with a key file alone.',
+    safeInCloudPassword: 'Password of the SafeInCloud database',
+    safeInCloudPasswordHint:
+      'The database opens here only to read its cards. Take the .db from the app’s local database or a backup.',
     keyFile: 'Key file, if the database has one: choose or drop it',
     keyFileChosen: (name: string) => `Key file: ${name}`,
     keyFileRemove: 'Remove',

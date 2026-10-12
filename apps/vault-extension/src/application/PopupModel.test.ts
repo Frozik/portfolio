@@ -112,4 +112,28 @@ describe('the popup', () => {
 
     expect(worker.asked.map(request => request.kind)).toContain('drive-sign-in');
   });
+
+  it('disconnects the vault only after the yes, then closes as the worker reloads', async () => {
+    const worker = aWorker({ fill: [] });
+    let closed = false;
+    const model = new PopupModel(
+      worker.ask,
+      () => Promise.resolve(null),
+      () => Promise.resolve(true),
+      () => {
+        closed = true;
+      },
+      null
+    );
+
+    model.askToReset();
+    model.cancelReset();
+    expect(worker.asked.map(request => request.kind)).not.toContain('reset');
+    model.askToReset();
+    expect(model.confirmingReset).toBe(true);
+    await model.reset();
+
+    expect(worker.asked.map(request => request.kind)).toEqual(['reset']);
+    expect(closed).toBe(true);
+  });
 });

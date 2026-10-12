@@ -194,6 +194,23 @@ export class ExtensionSession {
     this.services.restart.reload();
   }
 
+  /**
+   * The extension forgets its vault — the copy, where it came from, Google's
+   * token — and locks; the file in the cloud and the web app's copy stay.
+   */
+  async reset(): Promise<void> {
+    const setup = await this.services.setup.load();
+    if (!isNil(setup)) {
+      await this.services
+        .localCopyOf(setup.vaultKey)
+        .remove(LOCAL_COPY, { kind: 'overwrite' }, SIGNAL);
+      await this.cloud.forget(setup.vaultKey);
+    }
+    await this.services.googleDrive.signOut();
+    await this.services.setup.clear();
+    await this.lock();
+  }
+
   /** Every request of the popup is use: the idle lock starts over. */
   async touch(): Promise<void> {
     if (!isNil(this.opened)) {

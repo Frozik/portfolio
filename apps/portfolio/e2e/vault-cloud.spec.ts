@@ -89,7 +89,7 @@ test('a vault kept in Google Drive opens in a second browser profile with its ca
   const other = await second.newPage();
   await other.goto('vault');
   await waitForApp(other);
-  await other.getByRole('button', { name: 'Open from a cloud…' }).click();
+  await other.getByRole('link', { name: 'Open from a cloud…' }).click();
   await signInToDrive(other);
   await other.getByRole('button', { name: 'Open', exact: true }).click();
   const password = other.getByLabel('Master password');

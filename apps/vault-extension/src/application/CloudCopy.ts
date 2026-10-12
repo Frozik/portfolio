@@ -102,7 +102,7 @@ export class CloudCopy {
       : { kind: 'failed', reason: 'unreachable', detail: listed.error.kind };
   }
 
-  /** A vault chosen from disk has no cloud: the link of the one before goes. */
+  /** The vault's link goes: one chosen from disk has no cloud, a reset leaves no vault. */
   async forget(vaultKey: string): Promise<void> {
     await this.services.pendingLink.clear();
     await this.services.deviceConfig.delete(vaultKey, CLOUD_LINK_RECORD);

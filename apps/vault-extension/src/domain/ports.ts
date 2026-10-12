@@ -35,6 +35,7 @@ export interface ISetup {
 export interface ISetupStore {
   load(): Promise<ISetup | null>;
   save(setup: ISetup): Promise<void>;
+  clear(): Promise<void>;
 }
 
 type TUrlSpec = Extract<TFieldSpec, { readonly kind: 'url' }>;
@@ -96,6 +97,8 @@ export interface IGoogleDriveAccess {
   ): Promise<TResult<string | null, IDriveSignInFailure>>;
   /** The space with the token signed in; an expired one is renewed without a window, or the call answers `auth-required`. */
   open(space: TDriveSpace, account: string | null): IStorageProvider;
+  /** The token goes: the next vault may live under another account. */
+  signOut(): Promise<void>;
 }
 
 /** A pull every so often while unlocked; the lock stops it. */

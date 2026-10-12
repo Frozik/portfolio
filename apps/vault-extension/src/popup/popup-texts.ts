@@ -58,6 +58,11 @@ const EN = {
   unlock: 'Unlock',
   unlocking: 'Unlocking…',
   lock: 'Lock',
+  reset: 'Disconnect this vault…',
+  resetWarning: (name: string) =>
+    `The extension forgets “${name}”: its copy here, where it comes from and the Google sign-in. The file in the cloud and the web app keep everything. You can connect this or another vault again afterwards.`,
+  resetConfirm: 'Disconnect',
+  resetCancel: 'Cancel',
   failures: {
     'wrong-password': 'Wrong password.',
     'slot-tampered': 'The vault file has been tampered with.',
@@ -143,6 +148,11 @@ const RU: typeof EN = {
   unlock: 'Открыть',
   unlocking: 'Открываю…',
   lock: 'Заблокировать',
+  reset: 'Отключить хранилище…',
+  resetWarning: (name: string) =>
+    `Расширение забудет «${name}»: свою копию, откуда оно берётся, и вход в Google. Файл в облаке и веб-версия сохранят всё. Потом можно подключить это или другое хранилище заново.`,
+  resetConfirm: 'Отключить',
+  resetCancel: 'Отмена',
   failures: {
     'wrong-password': 'Неверный пароль.',
     'slot-tampered': 'Файл хранилища подменён.',

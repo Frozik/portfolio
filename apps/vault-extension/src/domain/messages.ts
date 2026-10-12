@@ -36,6 +36,8 @@ export type TRequest =
   | { readonly kind: 'open-file'; readonly file: string; readonly name: string }
   | { readonly kind: 'unlock'; readonly password: string }
   | { readonly kind: 'lock' }
+  /** The extension forgets its vault; the file in the cloud and on other devices stays. */
+  | { readonly kind: 'reset' }
   | {
       readonly kind: 'connect-webdav';
       readonly source: IWebDavSource;
@@ -66,6 +68,7 @@ interface IResponses {
   readonly 'open-file': { readonly ok: boolean };
   readonly unlock: TUnlockFailure | null;
   readonly lock: null;
+  readonly reset: null;
   readonly 'connect-webdav': TConnectOutcome;
   readonly 'find-drive-vaults': TDriveSearch;
   readonly 'connect-drive': TConnectOutcome;

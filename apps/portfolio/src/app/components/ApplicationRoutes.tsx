@@ -150,6 +150,8 @@ export const ApplicationRoutes = memo(() => {
             <Route path="webmcp" element={<WebMcp />} />
             <Route path="vault" element={<Vault />}>
               <Route index element={<VaultStart />} />
+              <Route path="new" element={<VaultStart />} />
+              <Route path="open/*" element={<VaultStart />} />
               <Route path=":vaultId/*" element={<VaultWorkspace />} />
             </Route>
             <Route element={<CommunicationRoot />}>

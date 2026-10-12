@@ -6,7 +6,7 @@ export const dataTranslationsRu: typeof dataTranslationsEn = {
   import: {
     title: 'Импорт',
     intro:
-      'CSV паролей из Chrome, Edge, Firefox или Safari, XML-выгрузка SafeInCloud, выгрузка Bitwarden (JSON или CSV), база KeePass (.kdbx), файл CXF (.json или .zip), снимок экрана с QR переноса из Google Authenticator или другое хранилище .pwv. Ничего не сохраняется до подтверждения.',
+      'CSV паролей из Chrome, Edge, Firefox или Safari, база SafeInCloud (.db) или её XML-выгрузка, выгрузка Bitwarden (JSON или CSV), база KeePass (.kdbx), файл CXF (.json или .zip), снимок экрана с QR переноса из Google Authenticator или другое хранилище .pwv. Ничего не сохраняется до подтверждения.',
     drop: 'Выберите, перетащите или вставьте выгруженный файл',
     failures: {
       'no-qr-code': 'На этой картинке нет QR-кода.',
@@ -21,6 +21,9 @@ export const dataTranslationsRu: typeof dataTranslationsEn = {
     keePassPassword: 'Мастер-пароль базы KeePass',
     keePassPasswordHint:
       'База открывается здесь только чтобы прочитать записи. Если она открывается одним файлом-ключом, оставьте пароль пустым.',
+    safeInCloudPassword: 'Пароль базы SafeInCloud',
+    safeInCloudPasswordHint:
+      'База открывается здесь только чтобы прочитать карточки. Возьмите .db из локальной базы приложения или резервной копии.',
     keyFile: 'Файл-ключ, если он у базы есть: выберите или перетащите',
     keyFileChosen: (name: string) => `Файл-ключ: ${name}`,
     keyFileRemove: 'Убрать',

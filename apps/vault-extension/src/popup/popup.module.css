@@ -157,6 +157,35 @@
   color: var(--re-on-accent);
 }
 
+.danger {
+  composes: button;
+  border-color: var(--re-red);
+  background: var(--re-red);
+  color: var(--re-on-accent);
+}
+
+.quiet {
+  align-self: center;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--re-fg-faint);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--re-red) 45%, transparent);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 .notice {
   color: var(--re-fg-dim);
   font-size: 12px;

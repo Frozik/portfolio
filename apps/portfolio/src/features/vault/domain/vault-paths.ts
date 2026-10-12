@@ -14,7 +14,12 @@ export type TVaultPage =
   | { readonly kind: 'audit' }
   | { readonly kind: 'unknown' };
 
+/** What the URL selects before a vault is open: the start, or one of the ways to get a vault. */
+export type TStartPage = 'start' | 'create' | 'open-from-cloud' | 'create-in-cloud';
+
 const ROOT = '/vault';
+const NEW = 'new';
+const OPEN = 'open';
 const SETTINGS = 'settings';
 const AUDIT = 'audit';
 const HISTORY = 'history';
@@ -36,6 +41,10 @@ function vaultRoot(vaultKey: TVaultKey): string {
 /** Every vault URL is built here; search text, titles and values never enter one. */
 export const vaultPaths = {
   start: (): string => ROOT,
+  create: (): string => `${ROOT}/${NEW}`,
+  openFromCloud: (): string => `${ROOT}/${OPEN}`,
+  /** A new vault in the cloud folder the opening reached. */
+  createInCloud: (): string => `${ROOT}/${OPEN}/${NEW}`,
   vault: vaultRoot,
   section: (vaultKey: TVaultKey, section: TVaultSection): string =>
     `${vaultRoot(vaultKey)}/${sectionSegment(section)}`,
@@ -70,4 +79,23 @@ export function parseVaultPage(splat: string): TVaultPage {
   return last === HISTORY
     ? { kind: 'history', section, cardId: cardId as TCardId }
     : { kind: 'unknown' };
+}
+
+/** Reads a pathname below `/vault` that no vault owns; anything else is the start. */
+export function parseStartPage(pathname: string): TStartPage {
+  const segments = pathname.split('/').filter(segment => segment !== '');
+  const [, first, second, ...rest] = segments;
+  if (rest.length > 0) {
+    return 'start';
+  }
+  if (first === NEW && second === undefined) {
+    return 'create';
+  }
+  if (first !== OPEN) {
+    return 'start';
+  }
+  if (second === undefined) {
+    return 'open-from-cloud';
+  }
+  return second === NEW ? 'create-in-cloud' : 'start';
 }

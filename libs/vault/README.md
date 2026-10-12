@@ -62,7 +62,9 @@ Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
   by name and settles duplicates (same registrable domain and login: skip,
   replace keeping history, or keep both); the preview is that edit run on a
   copy, so the two cannot disagree. Sources: the browser CSVs (Chrome/Edge,
-  Firefox, Safari — told apart by their headers), SafeInCloud XML, Bitwarden
+  Firefox, Safari — told apart by their headers), SafeInCloud XML and its
+  sealed `.db` (PBKDF2-SHA1 and AES-CBC through WebCrypto, then zlib — the same
+  XML inside; a check value tells a wrong password from a damaged file), Bitwarden
   JSON and CSV, another `.pwv` opened with its own password. Exports: the open
   zip (the container plus each card's files by name) and Bitwarden-style CSV,
   which reads back in; the sealed copy with its own password is the codec's

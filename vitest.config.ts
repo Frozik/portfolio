@@ -4,8 +4,8 @@ import { defineConfig } from 'vitest/config';
 // server and the framework-free libs under plain Node. `--project <name>`
 // scopes a run to one of them.
 export default defineConfig({
-  // Golden vault files are binary fixtures, imported as data URLs (`?inline`) so the same tests run in a browser.
-  assetsInclude: ['**/*.pwv'],
+  // Golden vault and SafeInCloud files are binary fixtures, imported as data URLs (`?inline`) so the same tests run in a browser.
+  assetsInclude: ['**/*.pwv', '**/*.db'],
   test: {
     globals: true,
     projects: [

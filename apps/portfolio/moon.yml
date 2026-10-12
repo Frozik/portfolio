@@ -24,6 +24,10 @@ tasks:
       - 'vite-plugins/**/*'
       # The version stamped into the bundle: a cached build must never carry an old one.
       - '$PORTFOLIO_VERSION'
+      # The addresses and OAuth client ids baked in come from the chosen host's file.
+      - '/infra/hosts/*.env'
+      - '$DEPLOY_HOST_NAME'
+      - '$VITE_COMMUNICATION_URL'
     outputs:
       - 'dist'
     options:

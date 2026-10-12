@@ -19,4 +19,7 @@ export const CHROME_SETUP: ISetupStore = {
   async save({ vaultKey, name, cloudRev }) {
     await browser.storage.local.set({ [KEY]: { vaultKey, name, cloudRev } });
   },
+  async clear() {
+    await browser.storage.local.remove(KEY);
+  },
 };

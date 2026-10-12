@@ -30,6 +30,7 @@ import { startsWithKdbxMagic } from './kdbx/kdbx-magic';
 import { importOtpMigration } from './otp-migration/import-otp-migration';
 import { importSafeInCloud } from './safeincloud/map-safeincloud';
 import { parseSafeInCloud } from './safeincloud/parse-safeincloud';
+import { startsWithSafeInCloudMagic } from './safeincloud/read-safeincloud-db';
 
 export type TImportFile =
   | { readonly kind: 'entries'; readonly batch: IImportBatch }
@@ -43,7 +44,9 @@ export type TImportFile =
       readonly sealedBlobs: ReadonlyMap<string, TBytes>;
     }
   /** A KeePass database: the same, its key derived in a Worker. */
-  | { readonly kind: 'kdbx-file' };
+  | { readonly kind: 'kdbx-file' }
+  /** A SafeInCloud database (`.db`): the same, its XML inside. */
+  | { readonly kind: 'safeincloud-file' };
 
 export type TImportFileError = 'unrecognized' | 'encrypted-export';
 
@@ -109,7 +112,7 @@ function csvBatch(text: string): TResult<IImportBatch, TImportFileError> {
 
 /**
  * What a chosen file is, told by its content rather than
- * its name: a vault and a KeePass file by their magic, a CXF archive by the zip's, Google Authenticator's transfer by its
+ * its name: a vault, a KeePass and a SafeInCloud database by their magic, a CXF archive by the zip's, Google Authenticator's transfer by its
  * scheme, JSON and XML by the first character, the CSV dialect by its header.
  */
 export function readImportFile(bytes: TBytes): TResult<TImportFile, TImportFileError> {
@@ -118,6 +121,9 @@ export function readImportFile(bytes: TBytes): TResult<TImportFile, TImportFileE
   }
   if (startsWithKdbxMagic(bytes)) {
     return ok({ kind: 'kdbx-file' });
+  }
+  if (startsWithSafeInCloudMagic(bytes)) {
+    return ok({ kind: 'safeincloud-file' });
   }
   if (startsWithZipMagic(bytes)) {
     return zipFile(bytes);

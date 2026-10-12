@@ -54,7 +54,7 @@ export const OpenFromCloud = observer(
     const opened = useEventCallback((vaultKey: TVaultKey | null) => {
       if (!isNil(vaultKey)) {
         store.choose(vaultKey);
-        void navigate(vaultPaths.vault(vaultKey));
+        void navigate(vaultPaths.vault(vaultKey), { replace: true });
       }
     });
     const openFromDrive = useEventCallback(
