@@ -1,4 +1,4 @@
-import { isNil } from 'lodash-es';
+import { countBy, isNil } from 'lodash-es';
 
 import { collectFields } from '../../fill/collect-fields';
 import { detectLoginForm } from './detect-login-form';
@@ -31,10 +31,7 @@ function marked(
     case 'username':
       return { [roleOf(form.username) ?? '']: 1 };
     case 'otp':
-      return form.fields.reduce<Record<string, number>>((counts, index) => {
-        const role = roleOf(index) ?? '';
-        return { ...counts, [role]: (counts[role] ?? 0) + 1 };
-      }, {});
+      return countBy(form.fields, index => roleOf(index) ?? '');
     default:
       return {};
   }
@@ -48,10 +45,7 @@ describe('the login form detector', () => {
     const form = detectLoginForm(records);
 
     expect(form.kind).toBe(kind);
-    const expected = inputs.reduce<Record<string, number>>((counts, input) => {
-      const role = input.getAttribute('data-expect');
-      return isNil(role) ? counts : { ...counts, [role]: (counts[role] ?? 0) + 1 };
-    }, {});
+    const expected = countBy(inputs.flatMap(input => input.getAttribute('data-expect') ?? []));
     const found = marked(form, inputs);
     if (form.kind === 'login' && !Object.hasOwn(expected, 'username')) {
       expect(found).toEqual({ 'no username': 1, ...expected });

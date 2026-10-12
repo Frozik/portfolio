@@ -11,6 +11,8 @@ const SIZE = { widthCells: 24, heightCells: 24 };
 const WORLD_SEED = 3;
 const AHEAD_SECTORS = 2;
 const ENOUGH_FRAMES = 40;
+/** Waits for sixty sectors to be generated, it does not time them: about a second locally, slow CI runners get room. */
+const PANNING_TIMEOUT_MS = 60_000;
 
 function viewRound(point: Vector2): Bounds {
   return { min: { x: point.x - 3, y: point.y - 6 }, max: { x: point.x + 3, y: point.y + 6 } };
@@ -93,26 +95,30 @@ describe('charting the course', () => {
     expect(hasSector(frames(flying(play, { x: 1, y: 1 }), 1, lookingFar).course, 6, 0)).toBe(true);
   });
 
-  it('keeps what the camera shows however far it has been panned from the ball, the memory cap notwithstanding', () => {
-    const MAX_SECTORS = 40;
-    const PANNED_SECTORS = 60;
-    const FRAMES_PER_SECTOR = 8;
-    let play = frames(startCourse(WORLD_SEED, SIZE), ENOUGH_FRAMES);
-    let seen = nothingSeen();
-    const lookAt = (sx: number): Bounds => {
-      const bounds = sectorBounds(SIZE, sx, 0);
-      return viewRound({ x: bounds.min.x + 6, y: bounds.min.y + 6 });
-    };
-    for (let sx = 0; sx <= PANNED_SECTORS; sx += 1) {
-      for (let frame = 0; frame < FRAMES_PER_SECTOR; frame += 1) {
-        ({ play, seen } = chart(play, seen, lookAt(sx), MAX_SECTORS));
+  it(
+    'keeps what the camera shows however far it has been panned from the ball, the memory cap notwithstanding',
+    () => {
+      const MAX_SECTORS = 40;
+      const PANNED_SECTORS = 60;
+      const FRAMES_PER_SECTOR = 8;
+      let play = frames(startCourse(WORLD_SEED, SIZE), ENOUGH_FRAMES);
+      let seen = nothingSeen();
+      const lookAt = (sx: number): Bounds => {
+        const bounds = sectorBounds(SIZE, sx, 0);
+        return viewRound({ x: bounds.min.x + 6, y: bounds.min.y + 6 });
+      };
+      for (let sx = 0; sx <= PANNED_SECTORS; sx += 1) {
+        for (let frame = 0; frame < FRAMES_PER_SECTOR; frame += 1) {
+          ({ play, seen } = chart(play, seen, lookAt(sx), MAX_SECTORS));
+        }
       }
-    }
 
-    expect(play.course.sectors.length).toBeLessThanOrEqual(MAX_SECTORS);
-    expect(hasSector(play.course, PANNED_SECTORS, 0)).toBe(true);
-    expect(hasSector(play.course, 0, 0)).toBe(true);
-  });
+      expect(play.course.sectors.length).toBeLessThanOrEqual(MAX_SECTORS);
+      expect(hasSector(play.course, PANNED_SECTORS, 0)).toBe(true);
+      expect(hasSector(play.course, 0, 0)).toBe(true);
+    },
+    PANNING_TIMEOUT_MS
+  );
 
   it('never leaves the ball over ground that is not there', () => {
     const play = startCourse(WORLD_SEED, SIZE);

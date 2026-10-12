@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { Copy } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
@@ -8,6 +9,7 @@ import { oneTimeCode, totpStep } from '../../otp/one-time-code';
 import { SENSITIVE_CLASS } from '../sensitive-class';
 import { getVaultReactTranslations } from '../translations/translations';
 import styles from './totp-code.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 const COPY_ICON_SIZE = 14;
 const TICK_MS = 1000;
@@ -92,7 +94,7 @@ export const TotpCode = memo(
     const remaining = period - (instant.epochMilliseconds % period);
     const secondsLeft = Math.ceil(remaining / MS_PER_SECOND);
     return (
-      <span className={styles.totp} data-urgency={urgencyOf(secondsLeft)}>
+      <span className={cn(controlTokens.tokens, styles.totp)} data-urgency={urgencyOf(secondsLeft)}>
         <span className={`${styles.code} ${SENSITIVE_CLASS}`} aria-label={t.label}>
           {code === null ? '' : grouped(code.code)}
         </span>

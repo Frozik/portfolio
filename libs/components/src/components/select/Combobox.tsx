@@ -11,6 +11,7 @@ import { getCalendarAriaLabels } from '../RichEditor/translations/translations';
 import { useRevertOnCancel } from '../RichEditor/use-revert-on-cancel';
 import { matchingSuggestions, moveActive } from './listbox-navigation';
 import { OptionList, optionIdOf } from './OptionList';
+import controlTokens from '../control-tokens.module.css';
 import editorStyles from '../RichEditor/styles.module.css';
 
 /**
@@ -105,11 +106,11 @@ export function Combobox({
       sheet={undefined}
       handleLabel={labels.showOptions}
       onDismiss={close}
-      className={editorStyles.field}
+      className={cn(controlTokens.tokens, editorStyles.field)}
       field={
         <RichEditor
           ref={ref}
-          className={cn(editorStyles.editor, className)}
+          className={cn(controlTokens.tokens, editorStyles.editor, className)}
           value={value}
           onValueChange={handleValueChange}
           placeholder={placeholder}

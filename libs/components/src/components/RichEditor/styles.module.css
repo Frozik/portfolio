@@ -1,9 +1,8 @@
 /* RichEditor + DateTimePicker calendar popup. Baseline: Chrome 120, Safari
    17.2, Firefox 128 (native nesting, color-mix, light-dark). Plain CSS module:
-   each control root composes the family palette. */
+   each control root carries the family palette (`control-tokens.module.css`). */
 
 .editor {
-  composes: tokens from '../control-tokens.module.css';
   color-scheme: light dark;
   background: var(--re-bg-card);
   border: 1px solid var(--re-border);
@@ -67,7 +66,6 @@
 /* A flex column, not a block: an inline-block editor would leave a baseline gap
    between the field and the drawer that slides out from under it. */
 .field {
-  composes: tokens from '../control-tokens.module.css';
   position: relative;
   display: flex;
   flex-direction: column;
@@ -144,7 +142,6 @@ dialog > .popover-content {
    with the room on its side never would. `--re-viewport-margin` is the
    popover's collision padding, top plus bottom. */
 .popover-content {
-  composes: tokens from '../control-tokens.module.css';
   --re-cell: 36px;
   --re-pane-padding: 12px;
   --re-pane-header: 32px;
@@ -334,7 +331,6 @@ dialog > .popover-content {
 }
 
 .error-tooltip {
-  composes: tokens from '../control-tokens.module.css';
   color: var(--re-red);
   font-size: 12px;
   padding: 2px 0;
@@ -509,7 +505,6 @@ dialog > .popover-content {
 }
 
 .url-field {
-  composes: tokens from '../control-tokens.module.css';
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -529,7 +524,6 @@ dialog > .popover-content {
 
 /* Checkbox: the native control, coloured with the family's accent. */
 .checkbox {
-  composes: tokens from '../control-tokens.module.css';
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -562,7 +556,6 @@ dialog > .popover-content {
 
 /* ListEditor: one row per item, its buttons beside it. */
 .list {
-  composes: tokens from '../control-tokens.module.css';
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -642,7 +635,6 @@ dialog > .popover-content {
 
 /* Tabs: an underlined row of triggers over the active panel. */
 .tabs {
-  composes: tokens from '../control-tokens.module.css';
   display: flex;
   flex-direction: column;
   gap: 12px;

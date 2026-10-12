@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
 import { cn } from '../cn';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 /** The native checkbox with the family's tokens: lighter and more accessible than a custom one. */
@@ -27,7 +28,7 @@ export const Checkbox = memo(
       onCheckedChange?.(event.target.checked)
     );
     return (
-      <label className={cn(styles.checkbox, className)}>
+      <label className={cn(controlTokens.tokens, styles.checkbox, className)}>
         <input
           type="checkbox"
           checked={checked}

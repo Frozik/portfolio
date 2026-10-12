@@ -1,8 +1,10 @@
 import { isNil } from 'lodash-es';
 import type { MouseEvent } from 'react';
 import { Fragment, useEffect, useRef } from 'react';
+import { cn } from '../cn';
 
 import type { IListboxOption } from './listbox-navigation';
+import controlTokens from '../control-tokens.module.css';
 import styles from './select.module.css';
 
 export function optionIdOf(listId: string, index: number): string {
@@ -96,7 +98,7 @@ export function OptionList<TValue extends string>({
       role="listbox"
       aria-label={label}
       aria-multiselectable={multiple || undefined}
-      className={styles.listbox}
+      className={cn(controlTokens.tokens, styles.listbox)}
     >
       {runsOf(options).map(({ group, start, entries }) =>
         isNil(group) ? (

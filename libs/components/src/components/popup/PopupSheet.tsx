@@ -1,9 +1,11 @@
 import { isNil } from 'lodash-es';
 import type { MouseEvent, ReactNode } from 'react';
 import { memo, useEffect, useRef } from 'react';
+import { cn } from '../cn';
 
 import { useEventCallback } from 'usehooks-ts';
 import { PopupHandle } from './PopupHandle';
+import controlTokens from '../control-tokens.module.css';
 import styles from './popup.module.css';
 
 /** A modal `<dialog>` rising from the bottom of the screen; its handle, the backdrop and Escape shut it. */
@@ -48,7 +50,7 @@ export const PopupSheet = memo(
     return (
       <dialog
         ref={dialogRef}
-        className={styles.popupSheet}
+        className={cn(controlTokens.tokens, styles.popupSheet)}
         aria-label={label}
         onClose={onClose}
         onClick={handleClick}

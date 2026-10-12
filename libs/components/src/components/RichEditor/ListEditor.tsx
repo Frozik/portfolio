@@ -22,6 +22,7 @@ import type { IRichEditorHandle } from './defs';
 import { moveItem, removeItem, replaceItem } from './list-edit';
 import { ListEditorRow } from './ListEditorRow';
 import { getCalendarAriaLabels } from './translations/translations';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 export interface IListItemControls<T> {
@@ -150,7 +151,7 @@ export function ListEditor<T>({
   });
 
   return (
-    <div className={cn(styles.list, className)}>
+    <div className={cn(controlTokens.tokens, styles.list, className)}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

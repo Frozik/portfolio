@@ -6,7 +6,6 @@
 }
 
 .popup {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   color-scheme: light dark;
   box-sizing: border-box;
   display: flex;
@@ -24,7 +23,6 @@
 
 /* The popup opened as a tab: the page takes the palette, one card sits centred in it. */
 .page {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   color-scheme: light dark;
   box-sizing: border-box;
   display: flex;

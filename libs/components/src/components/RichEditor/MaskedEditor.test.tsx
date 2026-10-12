@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { useState } from 'react';
 
 import { defineMaskedEditorTools } from './editor-agent-tools';
@@ -52,7 +52,7 @@ describe('MaskedEditor', () => {
     focusEditor(editor);
 
     typeInto(editor, { data: '3', selection: { start: 4, end: 4 } });
-    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fireEvent.keyDown(editor, { key: 'Escape' });
 
     expect(onValueChange).toHaveBeenLastCalledWith('DE89');
   });

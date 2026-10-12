@@ -59,6 +59,11 @@ function cardTitled(session: VaultSession, title: string) {
   return card;
 }
 
+/** The session once its last edit is saved: the save re-renders the layout when it lands. */
+function saved(session: VaultSession): Promise<void> {
+  return when(() => session.local.state.phase.kind === 'idle');
+}
+
 function renderLayout(
   session: VaultSession,
   page: Extract<TVaultPage, { kind: 'section' | 'card' | 'history' }>
@@ -158,6 +163,7 @@ describe('VaultLayout', () => {
     const session = await demoSession();
     const github = cardTitled(session, 'GitHub');
     session.transact(changeCard(github.id, card => renameCard(card, 'GitHub (renamed)')));
+    await saved(session);
     renderLayout(session, { kind: 'history', section: 'all', cardId: github.id });
 
     const [latest] = screen.getAllByTestId('revision-changes');
@@ -180,6 +186,7 @@ describe('VaultLayout', () => {
         })
       )
     );
+    await saved(session);
     const { container } = renderLayout(session, {
       kind: 'card',
       section: 'all',

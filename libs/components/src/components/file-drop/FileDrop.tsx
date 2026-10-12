@@ -12,6 +12,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../cn';
 import { getCalendarAriaLabels } from '../RichEditor/translations/translations';
 import { acceptsFile } from './accept-file';
+import controlTokens from '../control-tokens.module.css';
 import styles from './file-drop.module.css';
 
 export interface IPickedFile {
@@ -118,7 +119,7 @@ export function FileDrop({
       tabIndex={disabled ? -1 : 0}
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
-      className={cn(styles.zone, className)}
+      className={cn(controlTokens.tokens, styles.zone, className)}
       data-dragging={dragging || undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}

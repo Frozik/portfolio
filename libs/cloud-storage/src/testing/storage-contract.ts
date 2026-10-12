@@ -9,6 +9,15 @@ const EVERY_BYTE = Uint8Array.from({ length: 256 }, (_, index) => index);
 const ONE_MIB = 1024 * 1024;
 
 /**
+ * Where two byte arrays of one length first differ, or -1. `toEqual` walks a
+ * mebibyte element by element through its generic equality: seconds on a
+ * busy CI runner, past the test's timeout.
+ */
+function firstDifference(actual: Uint8Array, expected: Uint8Array): number {
+  return expected.findIndex((byte, index) => actual[index] !== byte);
+}
+
+/**
  * One suite every provider passes: the same promises about
  * revisions, preconditions and errors, whatever stores the bytes.
  */
@@ -42,7 +51,8 @@ export function describeStorageProviderContract(
       const read = await provider.read(FILE, SIGNAL);
 
       assert(written.ok && written.value.kind === 'ok' && read.ok && read.value !== null);
-      expect(read.value.bytes).toEqual(large);
+      expect(read.value.bytes.length).toBe(ONE_MIB);
+      expect(firstDifference(read.value.bytes, large)).toBe(-1);
       expect(read.value.stat).toEqual(written.value.stat);
       expect(read.value.stat.size).toBe(ONE_MIB);
     });

@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { Checkbox } from '@frozik/components/components/RichEditor/Checkbox';
 import { NumericEditor } from '@frozik/components/components/RichEditor/NumericEditor';
 import { Select } from '@frozik/components/components/select/Select';
@@ -25,6 +26,7 @@ import type { ISitePasswordRules } from '../../generator/site-password-rules';
 import type { IRandom } from '../../ports/random';
 import { getVaultReactTranslations } from '../translations/translations';
 import styles from './password-generator.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 const MODES: readonly TGeneratorMode[] = ['random', 'passphrase', 'pin'];
 const MODES_WITH_SITE: readonly TGeneratorMode[] = ['site', ...MODES];
@@ -105,7 +107,7 @@ export const PasswordGenerator = memo(
     const setPinLength = (length: number): void => update({ pinLength: length });
 
     return (
-      <div className={styles.generator}>
+      <div className={cn(controlTokens.tokens, styles.generator)}>
         <Select<TGeneratorMode>
           aria-label={t.mode}
           options={(isNil(site) ? MODES : MODES_WITH_SITE).map(value => ({

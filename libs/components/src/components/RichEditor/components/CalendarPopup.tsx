@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import type { FocusEvent, MouseEvent } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
+import { cn } from '../../cn';
 
 import { useEventCallback } from 'usehooks-ts';
 import { clampDate } from '../calendar-keys';
@@ -10,6 +11,7 @@ import type { ICalendarAriaLabels, TLeaveDirection } from '../defs';
 import { DateSelector } from './DateSelector';
 import { MonthNavigator } from './MonthNavigator';
 import { TimePicker } from './TimePicker';
+import controlTokens from '../../control-tokens.module.css';
 import styles from '../styles.module.css';
 
 function isSameYearMonth(left: Temporal.PlainYearMonth, right: Temporal.PlainYearMonth): boolean {
@@ -125,7 +127,7 @@ export const CalendarPopup = memo(
 
     return (
       <section
-        className={styles.popoverContent}
+        className={cn(controlTokens.tokens, styles.popoverContent)}
         onMouseDown={handleMouseDown}
         onFocus={handleFocus}
         onBlur={handleBlur}

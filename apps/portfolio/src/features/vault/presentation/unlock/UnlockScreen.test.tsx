@@ -1,6 +1,8 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 import type { IKnownVault, TVaultKey } from '@frozik/vault/persistence/ports';
-import { fireEvent, render, screen } from '@testing-library/react';
+import type { RenderResult } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 
 import { formatRecoveryKey, generateRecoveryKey } from '@frozik/vault/crypto/recovery-key';
 import { createSeededRandom } from '@frozik/vault/testing/seeded-random';
@@ -19,6 +21,15 @@ const NO_PASSKEYS = { load: () => Promise.resolve([]), unlock: () => Promise.res
 
 const passwordField = (): HTMLInputElement => screen.getByLabelText('Master password');
 
+/** The screen once its passkeys have loaded: the list comes in after the first render. */
+async function renderLoaded(screenElement: ReactElement): Promise<RenderResult> {
+  const rendered = render(screenElement);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  return rendered;
+}
+
 /** What is wrong with a control, as its description says it: `data-state` of the text it points at. */
 function problemOf(control: HTMLElement): string | null {
   const description = document.getElementById(control.getAttribute('aria-describedby') ?? '');
@@ -26,9 +37,9 @@ function problemOf(control: HTMLElement): string | null {
 }
 
 describe('UnlockScreen', () => {
-  it('unlocks with Enter, lets go of the password and offers it to the browser under the vault name', () => {
+  it('unlocks with Enter, lets go of the password and offers it to the browser under the vault name', async () => {
     const onUnlock = vi.fn();
-    const { container } = render(
+    const { container } = await renderLoaded(
       <UnlockScreen
         vault={VAULT}
         unlocking={false}
@@ -50,8 +61,8 @@ describe('UnlockScreen', () => {
     );
   });
 
-  it('says the password was wrong and marks the field', () => {
-    render(
+  it('says the password was wrong and marks the field', async () => {
+    await renderLoaded(
       <UnlockScreen
         vault={VAULT}
         unlocking={false}
@@ -66,9 +77,9 @@ describe('UnlockScreen', () => {
     expect(problemOf(passwordField())).toBe('wrong-password');
   });
 
-  it('takes no second attempt while the key is being derived', () => {
+  it('takes no second attempt while the key is being derived', async () => {
     const onUnlock = vi.fn();
-    render(
+    await renderLoaded(
       <UnlockScreen
         vault={VAULT}
         unlocking
@@ -85,11 +96,11 @@ describe('UnlockScreen', () => {
     expect(screen.getByRole('button', { name: 'Unlock' })).toHaveProperty('disabled', true);
   });
 
-  it('opens with the recovery key, telling a typo from a wrong key', () => {
+  it('opens with the recovery key, telling a typo from a wrong key', async () => {
     const onKey = vi.fn();
     const key = formatRecoveryKey(generateRecoveryKey(createSeededRandom(4)));
     const typo = `${key.slice(0, -1)}${key.endsWith('0') ? '1' : '0'}`;
-    render(
+    await renderLoaded(
       <UnlockScreen
         vault={VAULT}
         unlocking={false}

@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { isNil } from 'lodash-es';
 import type { ComponentType, SVGProps } from 'react';
 import { memo } from 'react';
@@ -19,6 +20,7 @@ import {
 import type { TCardNetwork } from '../../model/card-network';
 import { getVaultReactTranslations } from '../translations/translations';
 import styles from './card-icon.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 /** The icon set draws no Troy, Naranja or Verve: those keep a word mark. */
 const NETWORK_LOGOS: Readonly<Record<TCardNetwork, ComponentType<SVGProps<SVGSVGElement>> | null>> =
@@ -56,14 +58,14 @@ export const CardNetworkLogo = memo(
     const Logo = NETWORK_LOGOS[network];
     if (isNil(Logo)) {
       return (
-        <span className={styles.network} data-network={network}>
+        <span className={cn(controlTokens.tokens, styles.network)} data-network={network}>
           {name}
         </span>
       );
     }
     return (
       <span
-        className={size === 'icon' ? styles.icon : undefined}
+        className={size === 'icon' ? cn(controlTokens.tokens, styles.icon) : undefined}
         role="img"
         aria-label={name}
         data-network={network}

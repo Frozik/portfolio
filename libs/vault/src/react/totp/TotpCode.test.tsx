@@ -7,11 +7,10 @@ import { TotpCode } from './TotpCode';
 const RFC_URI =
   'otpauth://totp/Test:alice?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=8&period=30&issuer=Test';
 
-describe('TotpCode', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+/** Waits for the code's once-a-second tick, it does not time it: slow CI runners get room. */
+const NEXT_TICK_TIMEOUT_MS = 10_000;
 
+describe('TotpCode', () => {
   it('shows the code of the moment and copies the code, not the secret', async () => {
     const at = Temporal.Instant.fromEpochMilliseconds(59_000);
     const copied: string[] = [];
@@ -28,15 +27,14 @@ describe('TotpCode', () => {
   });
 
   it('turns to the next code when its period ends', async () => {
-    vi.useFakeTimers();
     let at = Temporal.Instant.fromEpochMilliseconds(59_000);
     render(<TotpCode uri={RFC_URI} now={() => at} locale="en" onCopy={() => undefined} />);
     const code = (): string | null => screen.getByLabelText('One-time code').textContent;
-    await vi.waitFor(() => expect(code()).toBe('942 87082'));
+    await waitFor(() => expect(code()).toBe('942 87082'));
 
     at = Temporal.Instant.fromEpochMilliseconds(61_000);
 
-    await vi.waitFor(() => expect(code()).not.toBe('942 87082'));
+    await waitFor(() => expect(code()).not.toBe('942 87082'), { timeout: NEXT_TICK_TIMEOUT_MS });
     expect(code()).not.toBe('');
   });
 

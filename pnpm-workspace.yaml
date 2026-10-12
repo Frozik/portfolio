@@ -20,6 +20,11 @@ peerDependencyRules:
   allowedVersions:
     "vite-plugin-pwa>vite": "8"
 
+# kdbxweb 2.1.1, the latest, still asks for @xmldom/xmldom ^0.7, whose high advisories
+# are fixed only in 0.8.15; the parser and serializer kdbxweb calls are the same there.
+overrides:
+  '@xmldom/xmldom': 0.8.15
+
 # Single source of dependency versions; workspace packages reference them with "catalog:".
 catalog:
   "@types/semver": "^7.8.0"

@@ -11,6 +11,7 @@ import { CARD_COLORS } from '../../model/card-appearance';
 import { getVaultReactTranslations } from '../translations/translations';
 import { BUILTIN_ICON_COMPONENTS } from './builtin-icon-components';
 import styles from './card-icon.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 const ICON_SIZE = 16;
 const AUTO = 'auto';
@@ -76,12 +77,12 @@ export const CardAppearancePicker = memo(
         {
           value: NO_COLOR,
           label: t.noColor,
-          decoration: <span className={cn(styles.swatch, styles.noColor)} />,
+          decoration: <span className={cn(controlTokens.tokens, styles.swatch, styles.noColor)} />,
         },
         ...CARD_COLORS.map(option => ({
           value: option,
           label: t.colors[option],
-          decoration: <span className={cn(styles.swatch, styles[option])} />,
+          decoration: <span className={cn(controlTokens.tokens, styles.swatch, styles[option])} />,
         })),
       ],
       [t]

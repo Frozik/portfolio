@@ -91,13 +91,11 @@ function positiveInteger(value: string): number | null {
 
 /** Unknown rules and malformed values are skipped, as Apple's parser does: a hint, never a reason to fail. */
 export function parsePasswordRules(text: string): IPasswordRules {
-  let rules: IPasswordRules = {
-    minLength: null,
-    maxLength: null,
-    maxConsecutive: null,
-    required: [],
-    allowed: [],
-  };
+  let minLength: number | null = null;
+  let maxLength: number | null = null;
+  let maxConsecutive: number | null = null;
+  const required: (readonly string[])[] = [];
+  const allowed: string[] = [];
   for (const rule of splitOutsideClasses(text, RULE_END)) {
     const colon = rule.indexOf(NAME_END);
     if (colon < 0) {
@@ -107,28 +105,29 @@ export function parsePasswordRules(text: string): IPasswordRules {
     const value = rule.slice(colon + 1);
     switch (name) {
       case 'minlength':
-        rules = { ...rules, minLength: positiveInteger(value) ?? rules.minLength };
+        minLength = positiveInteger(value) ?? minLength;
         break;
       case 'maxlength':
-        rules = { ...rules, maxLength: positiveInteger(value) ?? rules.maxLength };
+        maxLength = positiveInteger(value) ?? maxLength;
         break;
       case 'max-consecutive':
-        rules = { ...rules, maxConsecutive: positiveInteger(value) ?? rules.maxConsecutive };
+        maxConsecutive = positiveInteger(value) ?? maxConsecutive;
         break;
       case 'required': {
-        const required = charactersOf(value);
-        rules =
-          required.length === 0 ? rules : { ...rules, required: [...rules.required, required] };
+        const characters = charactersOf(value);
+        if (characters.length > 0) {
+          required.push(characters);
+        }
         break;
       }
       case 'allowed':
-        rules = { ...rules, allowed: uniq([...rules.allowed, ...charactersOf(value)]) };
+        allowed.push(...charactersOf(value));
         break;
       default:
         break;
     }
   }
-  return rules;
+  return { minLength, maxLength, maxConsecutive, required, allowed: uniq(allowed) };
 }
 
 /** Every character a password under the rules may use; with no sets given, any printable one. */

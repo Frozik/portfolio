@@ -1,7 +1,6 @@
 /* FileDrop: a dashed zone that takes a click, a drop or a paste. */
 
 .zone {
-  composes: tokens from '../control-tokens.module.css';
   display: flex;
   flex-direction: column;
   align-items: center;

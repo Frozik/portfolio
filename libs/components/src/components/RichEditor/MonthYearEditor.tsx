@@ -12,6 +12,7 @@ import type { IRichEditorHandle } from './defs';
 import { formatMonthYear, normalizeMonthYearInput, parseMonthYear } from './month-year-input';
 import { getCalendarAriaLabels } from './translations/translations';
 import { useRevertOnCancel } from './use-revert-on-cancel';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 /**
@@ -76,11 +77,12 @@ export const MonthYearEditor = memo(
         held={false}
         sheet={undefined}
         handleLabel={labels.monthPicker}
-        className={styles.field}
+        className={cn(controlTokens.tokens, styles.field)}
         field={
           <RichEditor
             ref={ref}
             className={cn(
+              controlTokens.tokens,
               styles.editor,
               parsed.kind === 'invalid' && styles.editorError,
               className

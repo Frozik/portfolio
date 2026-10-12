@@ -97,7 +97,10 @@ jobs:
       - uses: moonrepo/setup-toolchain@v0
         with:
           auto-install: true
-      - run: moon run cloud-storage:webdav-contract
+      # Not `moon run`: the task is `runInCI: false` so that `moon ci` (and the
+      # pre-push hook) never needs Docker, and moon honours that even here.
+      - run: pnpm install --frozen-lockfile
+      - run: bash libs/cloud-storage/scripts/webdav-contract.sh
 
   lighthouse:
     name: Lighthouse budgets

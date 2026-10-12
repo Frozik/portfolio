@@ -1,7 +1,9 @@
+import { cn } from '@frozik/components/components/cn';
 import { memo } from 'react';
 
 import { SENSITIVE_CLASS } from '../sensitive-class';
 import styles from './large-type.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 const DIGIT = /^\p{Nd}$/u;
 const LETTER = /^\p{L}$/u;
@@ -35,7 +37,7 @@ export const LargeTypeView = memo(
     readonly value: string;
     readonly 'aria-label': string;
   }) => (
-    <ol className={`${styles.grid} ${SENSITIVE_CLASS}`} aria-label={ariaLabel}>
+    <ol className={cn(controlTokens.tokens, styles.grid, SENSITIVE_CLASS)} aria-label={ariaLabel}>
       {cellsOf(value).map(({ position, character }) => (
         <li key={position} className={styles.cell}>
           <span className={classOf(character)}>{character === ' ' ? SPACE_SIGN : character}</span>

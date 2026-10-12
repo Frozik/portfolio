@@ -1,5 +1,4 @@
 .totp {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   --totp-color: var(--re-fg);
   --totp-ring: var(--re-accent);
   display: flex;

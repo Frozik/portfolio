@@ -1,5 +1,4 @@
 .grid {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   display: flex;
   flex-wrap: wrap;
   gap: 4px;

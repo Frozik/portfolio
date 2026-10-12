@@ -10,6 +10,7 @@ import { SECRET_FIELD_ATTRIBUTES } from './secret-attributes';
 import type { ISecretInputFormat } from './secret-input';
 import { normalizeSecretInput } from './secret-input';
 import { getCalendarAriaLabels } from './translations/translations';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 const FREE_TEXT: ISecretInputFormat = {};
@@ -131,7 +132,7 @@ export const SecretEditor = memo(
     const toggle = useEventCallback(() => setRevealed(current => !current));
 
     return (
-      <div className={cn(styles.editor, styles.secretField, className)}>
+      <div className={cn(controlTokens.tokens, styles.editor, styles.secretField, className)}>
         <input
           {...SECRET_INPUT_ATTRIBUTES}
           autoComplete={autoComplete}

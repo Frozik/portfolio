@@ -7,6 +7,7 @@ import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle, TSegmentRenderer } from './defs';
 import { normalizeUrlInput, punycodeHostOf, urlSegments } from './url-input';
 import { useRevertOnCancel } from './use-revert-on-cancel';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 /**
@@ -43,10 +44,10 @@ export const UrlEditor = memo(
     );
     const punycodeHost = punycodeHostOf(value);
     return (
-      <div className={styles.urlField}>
+      <div className={cn(controlTokens.tokens, styles.urlField)}>
         <RichEditor
           ref={ref}
-          className={cn(styles.editor, className)}
+          className={cn(controlTokens.tokens, styles.editor, className)}
           value={value}
           onValueChange={onValueChange}
           normalizeInput={normalizeUrlInput}

@@ -1,5 +1,4 @@
 .icon {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -60,7 +59,6 @@
 }
 
 .network {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   display: inline-flex;
   align-items: center;
   padding: 1px 6px;
@@ -95,7 +93,6 @@
 }
 
 .swatch {
-  composes: tokens from '@frozik/components/components/control-tokens.module.css';
   width: 14px;
   height: 14px;
   border-radius: 50%;

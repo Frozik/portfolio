@@ -6,6 +6,7 @@ import { cn } from '../cn';
 import { RichEditor } from './components/RichEditor';
 import type { IRichEditorHandle } from './defs';
 import { useRevertOnCancel } from './use-revert-on-cancel';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 /**
@@ -49,7 +50,7 @@ export const TextEditor = memo(
     return (
       <RichEditor
         ref={ref}
-        className={cn(styles.editor, className)}
+        className={cn(controlTokens.tokens, styles.editor, className)}
         value={value}
         onValueChange={onValueChange}
         placeholder={placeholder}

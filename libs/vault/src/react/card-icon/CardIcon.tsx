@@ -1,3 +1,4 @@
+import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { memo } from 'react';
@@ -11,6 +12,7 @@ import { templateOf } from '../../model/templates/registry';
 import { BUILTIN_ICON_COMPONENTS } from './builtin-icon-components';
 import { CardNetworkLogo } from './CardNetworkLogo';
 import styles from './card-icon.module.css';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 const ICON_SIZE = 18;
 
@@ -61,7 +63,7 @@ export const CardIcon = memo(
     }
     if (card.icon.kind === 'auto' && !isNil(picture)) {
       return (
-        <span className={styles.icon} aria-hidden="true">
+        <span className={cn(controlTokens.tokens, styles.icon)} aria-hidden="true">
           <img className={styles.picture} src={picture} alt="" />
         </span>
       );
@@ -69,7 +71,7 @@ export const CardIcon = memo(
     const Icon = BUILTIN_ICON_COMPONENTS[builtinOf(card)];
     const colorClass = card.icon.kind !== 'builtin' || isNil(card.color) ? '' : styles[card.color];
     return (
-      <span className={`${styles.icon} ${colorClass ?? ''}`} aria-hidden="true">
+      <span className={cn(controlTokens.tokens, styles.icon, colorClass)} aria-hidden="true">
         <Icon size={ICON_SIZE} />
       </span>
     );

@@ -30,6 +30,7 @@ import {
   toNativeInputValue,
 } from './native-picker';
 import { getCalendarAriaLabels } from './translations/translations';
+import controlTokens from '../control-tokens.module.css';
 import popupStyles from '../popup/popup.module.css';
 import styles from './styles.module.css';
 
@@ -294,10 +295,11 @@ export const DateTimePicker = memo(
 
     return (
       <Popover.Root open={popupOpen}>
-        <Popover.Anchor className={styles.field}>
+        <Popover.Anchor className={cn(controlTokens.tokens, styles.field)}>
           <RichEditor
             ref={editorRef}
             className={cn(
+              controlTokens.tokens,
               styles.editor,
               hasError && styles.editorError,
               showsNativePicker && styles.editorWithPicker,
@@ -340,7 +342,11 @@ export const DateTimePicker = memo(
             </div>
           )}
           {hasError && (
-            <div id={errorId} className={styles.errorTooltip} role="alert">
+            <div
+              id={errorId}
+              className={cn(controlTokens.tokens, styles.errorTooltip)}
+              role="alert"
+            >
               {error}
             </div>
           )}
@@ -357,7 +363,7 @@ export const DateTimePicker = memo(
         </Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
-            className={popupStyles.popoverLayer}
+            className={cn(controlTokens.tokens, popupStyles.popoverLayer)}
             align="start"
             collisionPadding={POPOVER_COLLISION_PADDING}
             onOpenAutoFocus={preventFocusSteal}

@@ -1,6 +1,8 @@
+import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
 import type { PopupModel } from '../application/PopupModel';
 import { CardScreen } from './CardScreen';
@@ -42,7 +44,7 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
 });
 
 const Sheet = observer(({ model }: { readonly model: PopupModel }) => (
-  <main className={model.inTab ? styles.sheet : styles.popup}>
+  <main className={cn(controlTokens.tokens, model.inTab ? styles.sheet : styles.popup)}>
     <header className={styles.header}>
       {model.inTab ? (
         <h1 className={styles.title}>{model.vaultName ?? popupT.driveTabTitle}</h1>
@@ -68,7 +70,7 @@ const Sheet = observer(({ model }: { readonly model: PopupModel }) => (
 /** The popup: the page's host on top, then setup, unlock or the cards; opened as a tab, one card centred on the page. */
 export const PopupApp = observer(({ model }: { readonly model: PopupModel }) =>
   model.inTab ? (
-    <div className={styles.page}>
+    <div className={cn(controlTokens.tokens, styles.page)}>
       <Sheet model={model} />
     </div>
   ) : (

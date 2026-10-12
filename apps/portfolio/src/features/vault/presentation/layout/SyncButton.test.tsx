@@ -14,7 +14,7 @@ describe('SyncButton', () => {
 
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Sync' })));
 
-    await when(() => cloud.status.kind === 'synced');
+    await act(() => when(() => cloud.status.kind === 'synced'));
     expect(screen.getByRole('button', { name: 'Sync' })).toBeTruthy();
   });
 

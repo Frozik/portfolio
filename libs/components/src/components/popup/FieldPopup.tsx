@@ -3,9 +3,11 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { useEventCallback } from 'usehooks-ts';
+import { cn } from '../cn';
 
 import { PopupDrawer } from './PopupDrawer';
 import { PopupSheet } from './PopupSheet';
+import controlTokens from '../control-tokens.module.css';
 import styles from './popup.module.css';
 
 /** Keeps the popup this far from the viewport edges. */
@@ -74,7 +76,7 @@ export function FieldPopup({
       </Popover.Anchor>
       <Popover.Portal>
         <Popover.Content
-          className={styles.popoverLayer}
+          className={cn(controlTokens.tokens, styles.popoverLayer)}
           align="start"
           collisionPadding={COLLISION_PADDING}
           onOpenAutoFocus={preventFocusSteal}

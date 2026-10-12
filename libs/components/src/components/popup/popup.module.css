@@ -6,7 +6,6 @@
    the slot the drawer slides out of: it keeps the full popup size, clips at
    the edge touching the field and lets the pointer through where it is empty. */
 .popover-layer {
-  composes: tokens from '../control-tokens.module.css';
   z-index: 100;
   pointer-events: none;
   clip-path: inset(0 -100vmax -100vmax);
@@ -202,7 +201,6 @@
    transition discretely so the slide-out plays before the dialog leaves the
    top layer; engines without them cut. */
 .popup-sheet {
-  composes: tokens from '../control-tokens.module.css';
   --re-sheet-margin: 48px;
   position: fixed;
   inset: auto 0 0;

@@ -8,6 +8,7 @@ import type { IRichEditorHandle } from './defs';
 import { findNextTabStop } from './focus-navigation';
 import { multilineHeight } from './multiline-height';
 import { useRevertOnCancel } from './use-revert-on-cancel';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 const DEFAULT_MAX_ROWS = 12;
@@ -96,7 +97,7 @@ export const MultilineEditor = memo(
     return (
       <textarea
         ref={textareaRef}
-        className={cn(styles.editor, styles.multiline, className)}
+        className={cn(controlTokens.tokens, styles.editor, styles.multiline, className)}
         rows={1}
         value={value}
         placeholder={placeholder}

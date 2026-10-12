@@ -16,6 +16,7 @@ import {
   settleNumericText,
 } from './numeric-input';
 import { getCalendarAriaLabels } from './translations/translations';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 const DEFAULT_PIP_SIZE = 2;
@@ -171,7 +172,7 @@ export const NumericEditor = memo(
     return (
       <RichEditor
         ref={ref}
-        className={cn(styles.editor, className)}
+        className={cn(controlTokens.tokens, styles.editor, className)}
         disabled={disabled}
         value={editingText}
         placeholder={placeholder}

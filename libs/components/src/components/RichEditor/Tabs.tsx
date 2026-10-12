@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 
 import { cn } from '../cn';
+import controlTokens from '../control-tokens.module.css';
 import styles from './styles.module.css';
 
 export interface ITab<TId extends string> {
@@ -40,7 +41,7 @@ export function Tabs<TId extends string>({
   };
   return (
     <TabsPrimitive.Root
-      className={cn(styles.tabs, className)}
+      className={cn(controlTokens.tokens, styles.tabs, className)}
       value={value}
       onValueChange={handleValueChange}
     >

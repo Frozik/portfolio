@@ -2,9 +2,11 @@ import type { MouseEvent } from 'react';
 import { memo, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
+import { cn } from '../../cn';
 
 import type { ICalendarAriaLabels } from '../defs';
 import { DoubleChevronIcon } from './icons';
+import controlTokens from '../../control-tokens.module.css';
 import styles from '../styles.module.css';
 
 const MONTHS_IN_YEAR = 12;
@@ -34,7 +36,10 @@ export const MonthYearPopup = memo(
     const handleNextYear = useEventCallback(() => setYear(current => current + 1));
 
     return (
-      <div className={styles.popoverContent} onMouseDown={keepFieldFocused}>
+      <div
+        className={cn(controlTokens.tokens, styles.popoverContent)}
+        onMouseDown={keepFieldFocused}
+      >
         <div className={styles.calendarPane} role="group" aria-label={ariaLabels.monthPicker}>
           <div className={styles.monthNavigator}>
             <button

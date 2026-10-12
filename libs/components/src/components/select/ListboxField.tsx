@@ -5,6 +5,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { cn } from '../cn';
 import { FieldPopup } from '../popup/FieldPopup';
 import { optionIdOf } from './OptionList';
+import controlTokens from '../control-tokens.module.css';
 import editorStyles from '../RichEditor/styles.module.css';
 import styles from './select.module.css';
 
@@ -67,12 +68,13 @@ export function ListboxField({
       sheet={usesSheet ? { label, onClose } : undefined}
       handleLabel={handleLabel}
       onDismiss={onClose}
-      className={editorStyles.field}
+      className={cn(controlTokens.tokens, editorStyles.field)}
       field={
         <button
           type="button"
           role="combobox"
           className={cn(
+            controlTokens.tokens,
             editorStyles.editor,
             styles.trigger,
             !isNil(icon) && styles.iconTrigger,
