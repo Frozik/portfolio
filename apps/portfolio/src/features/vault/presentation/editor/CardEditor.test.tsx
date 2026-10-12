@@ -18,12 +18,18 @@ function changedFields(): readonly HTMLElement[] {
     .filter(field => field.getAttribute('data-state') === 'changed');
 }
 
+/** The session once its last edit is saved: the save re-renders the layout when it lands. */
+function saved(session: VaultSession): Promise<void> {
+  return when(() => session.local.state.phase.kind === 'idle');
+}
+
 async function editingGithub() {
   const store = aDevice().startStore();
   store.startDemo('Demo', key => key);
   await when(() => (store.session?.document.cards.size ?? 0) > 0);
   const session: VaultSession | null = store.session;
   assert(session !== null);
+  await saved(session);
   const github = [...session.document.cards.values()].find(card => card.title === 'GitHub');
   assert(github !== undefined);
   render(
@@ -45,6 +51,7 @@ describe('CardEditor', () => {
 
     act(() => session.editing.draft?.change(card => renameCard(card, 'GitHub (work)')));
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+    await act(() => saved(session));
 
     expect(session.document.cards.get(github.id)?.title).toBe('GitHub (work)');
     expect(session.editing.draft).toBeNull();
@@ -72,6 +79,7 @@ describe('CardEditor', () => {
     act(() => {
       fireEvent.keyDown(window, { key: 's', ctrlKey: true });
     });
+    await act(() => saved(session));
 
     expect(session.document.cards.get(github.id)?.title).toBe('Renamed');
   });
@@ -244,6 +252,7 @@ describe('CardEditor', () => {
     expect(changedFields()).toHaveLength(1);
     expect(screen.getByTestId('card-unsaved')).toBeTruthy();
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+    await act(() => saved(session));
     expect(screen.queryByTestId('card-unsaved')).toBeNull();
   });
 

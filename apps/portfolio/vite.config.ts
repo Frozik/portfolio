@@ -13,6 +13,7 @@ import { readAppVersion } from './vite-plugins/app-version.ts';
 import { buildAssetsDefine } from './vite-plugins/build-assets.ts';
 import { contentSecurityPolicy } from './vite-plugins/content-security-policy.ts';
 import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
+import { kdbxWithoutNodeCrypto } from './vite-plugins/kdbx-without-node-crypto.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 import { STREAM_SAVER_DIR, streamSaverAssets } from './vite-plugins/stream-saver-assets.ts';
 
@@ -73,7 +74,8 @@ export default defineConfig(({ isSsrBuild = false }) => ({
   base: BASE,
   // Every app worker starts as `type: 'module'`; ES output lets a worker's dynamic imports
   // (the strength meter's per-language dictionaries) stay lazy chunks instead of one file.
-  worker: { format: 'es' },
+  // The KeePass import reads kdbxweb inside a worker, which has its own plugin list.
+  worker: { format: 'es', plugins: () => [kdbxWithoutNodeCrypto()] },
   define: {
     __APP_VERSION__: JSON.stringify(readAppVersion()),
     'import.meta.env.VITE_COMMUNICATION_URL': JSON.stringify(DEPLOYMENT.communicationUrl),

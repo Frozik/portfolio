@@ -13,6 +13,7 @@ async function settingsOf() {
   await when(() => (store.session?.document.cards.size ?? 0) > 0);
   const session: VaultSession | null = store.session;
   assert(session !== null);
+  await when(() => session.local.state.phase.kind === 'idle');
   const onForget = vi.fn();
   const onRename = vi.fn();
   render(

@@ -5,6 +5,7 @@ import { withContentSecurityPolicy } from './content-security-policy';
 const PAGE =
   '<!doctype html><html><head><meta charset="UTF-8"><script>document.title="x"</script>' +
   '<script type="module" src="/portfolio/assets/e.js"></script></head><body></body></html>';
+const CHARSET_SNIFF_BYTES = 1024;
 const OPTIONS = { communicationUrl: 'https://signal.example.org', basePath: '/portfolio/' };
 
 function policyOf(html: string): string {
@@ -16,6 +17,13 @@ describe('content security policy', () => {
     const html = withContentSecurityPolicy(PAGE, OPTIONS);
 
     expect(html.indexOf('Content-Security-Policy')).toBeLessThan(html.indexOf('<script'));
+  });
+
+  it('leaves the charset declaration first, inside the bytes a browser sniffs it from', () => {
+    const html = withContentSecurityPolicy(PAGE, OPTIONS);
+
+    expect(html.indexOf('<meta charset')).toBeLessThan(html.indexOf('Content-Security-Policy'));
+    expect(html.indexOf('<meta charset')).toBeLessThan(CHARSET_SNIFF_BYTES);
   });
 
   it('allows each inline script by its hash, the Trusted Types policy included', () => {

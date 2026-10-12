@@ -18,6 +18,7 @@ async function demoSession(): Promise<VaultSession> {
   store.startDemo('Demo', key => key);
   await when(() => (store.session?.document.cards.size ?? 0) > 0);
   assert(store.session !== null);
+  await saved(store.session);
   return store.session;
 }
 
@@ -154,6 +155,7 @@ describe('VaultLayout', () => {
     act(() => fireEvent.click(screen.getByRole('menuitem', { name: 'Add to favorites' })));
     openMenu();
     act(() => fireEvent.click(screen.getByRole('menuitem', { name: 'Move to trash' })));
+    await act(() => saved(session));
 
     expect(session.document.cards.get(amazon.id)?.favorite).toBe(true);
     expect(session.document.cards.get(amazon.id)?.trashedAt).not.toBeNull();
@@ -169,6 +171,7 @@ describe('VaultLayout', () => {
     const [latest] = screen.getAllByTestId('revision-changes');
     expect(latest?.textContent).toContain('GitHub (renamed)');
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Restore this version' })));
+    await act(() => saved(session));
 
     expect(session.document.cards.get(github.id)?.title).toBe('GitHub');
   });

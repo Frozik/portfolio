@@ -10,7 +10,8 @@ const TRUSTED_SCRIPT_PREFIXES = [
 ] as const;
 
 const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g;
-const HEAD_OPEN = /<head[^>]*>/;
+/** The head's opening, with the charset declaration that must stay within the first 1024 bytes. */
+const HEAD_OPEN = /<head[^>]*>(\s*<meta charset[^>]*>)?/;
 
 /**
  * The `default` Trusted Types policy: a script URL passes
