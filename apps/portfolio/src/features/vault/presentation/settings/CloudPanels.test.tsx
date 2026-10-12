@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { aDevice, TEST_FOLDER } from '../../application/fake-device.test-helper';
 import { CloudPanels } from './CloudPanels';
@@ -23,7 +23,7 @@ describe('CloudPanels', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Connect Google Drive…' }));
     expect(button('Connect a WebDAV folder…')).toBeNull();
-    expect(screen.getByText('Google Drive')).toBeTruthy();
+    expect(screen.getByTestId('drive-connect')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(button('Connect a WebDAV folder…')).not.toBeNull();
@@ -42,7 +42,8 @@ describe('CloudPanels', () => {
     });
 
     expect(screen.queryByLabelText('Login')).toBeNull();
-    expect(screen.getByText('Vault').closest('li')?.getAttribute('aria-current')).toBe('step');
+    const steps = within(screen.getByTestId('wizard-steps')).getAllByRole('listitem');
+    expect(steps.at(-1)?.getAttribute('aria-current')).toBe('step');
   });
 
   it('offers a new vault right in a reached folder that has none', async () => {

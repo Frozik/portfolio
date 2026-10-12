@@ -118,7 +118,9 @@ export const PasswordGenerator = memo(
         />
         {mode === 'site' && !isNil(site) && !isNil(siteRange) && (
           <>
-            <span className={styles.entropy}>{t.siteRules(site.domain)}</span>
+            <span className={styles.entropy} data-testid="generator-site-rules">
+              {t.siteRules(site.domain)}
+            </span>
             <label className={styles.row}>
               <span>{t.length}</span>
               <NumericEditor
@@ -224,12 +226,20 @@ export const PasswordGenerator = memo(
             <output className={styles.value} aria-live="off">
               {generated.value.value}
             </output>
-            <span className={styles.entropy}>
+            <span
+              className={styles.entropy}
+              data-testid="generator-entropy"
+              data-bits={Math.round(generated.value.entropyBits)}
+            >
               {t.entropy(Math.round(generated.value.entropyBits))}
             </span>
           </>
         ) : (
-          <span className={styles.problem}>
+          <span
+            className={styles.problem}
+            data-testid="generator-problem"
+            data-state={generated.error}
+          >
             {generated.error === 'site-rules' ? t.siteRulesBroken : t.noCharacters}
           </span>
         )}

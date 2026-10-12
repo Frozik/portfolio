@@ -82,7 +82,11 @@ export const TotpCode = memo(
     }, [params, step]);
 
     if (!params.ok || params.value.type !== 'totp') {
-      return <span className={styles.problem}>{t.unreadable}</span>;
+      return (
+        <span className={styles.problem} data-testid="totp-unreadable">
+          {t.unreadable}
+        </span>
+      );
     }
     const period = params.value.period * MS_PER_SECOND;
     const remaining = period - (instant.epochMilliseconds % period);

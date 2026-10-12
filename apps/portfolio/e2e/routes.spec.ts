@@ -70,5 +70,5 @@ test('landing exposes the section navigation and the CV sections', async ({ page
 test('unknown route shows the error page', async ({ page }) => {
   await page.goto('this-route-does-not-exist');
   await waitForApp(page);
-  await expect(page.getByText(/404|Not Found/).first()).toBeVisible();
+  await expect(page.getByTestId('error-page')).toHaveAttribute('data-state', '404');
 });

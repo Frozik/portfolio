@@ -22,13 +22,17 @@ const TEST_FILE = /\.test\.tsx?$/;
 const SEPARATOR_COMMENT = /^\s*\/\/\s*(?:[─═━\-=*#]{5,}|[─═━]+\s.*\s[─═━]+)\s*$/;
 /** Vite exports CSS module classes camelCase only (`localsConvention`), so a kebab-case key reads `undefined` at run time. */
 const KEBAB_CSS_MODULE_KEY = /\b\w*[sS]tyles\[['"]\w+-[\w-]+['"]\]/;
+/** Specs that drive a UI: Playwright's end-to-end ones and Testing Library's component tests. */
+const UI_TEST = /\.(spec\.ts|test\.tsx)$/;
+/** Wording is copy: it is edited and translated, so a test that finds or checks it breaks with no bug. */
+const TEXT_LOCATOR = /\b(?:get|query|find)(?:All)?ByText\(/;
 
 function* walk(directory: string): Generator<string> {
   for (const entry of readdirSync(directory)) {
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) {
       yield* walk(path);
-    } else if (SOURCE_FILE.test(entry) && !TEST_FILE.test(entry)) {
+    } else if (SOURCE_FILE.test(entry)) {
       yield path;
     }
   }
@@ -36,7 +40,8 @@ function* walk(directory: string): Generator<string> {
 
 /**
  * The conventions the linter cannot express: no separator comments, CSS
- * module classes read by their camelCase name, and
+ * module classes read by their camelCase name, UI tests (end-to-end and
+ * component) that never find an element by its wording, and
  * oversized files may only shrink. A file over {@link MAX_LINES} must be in
  * the baseline with a length it has not exceeded; a file not listed may not
  * cross the limit at all.
@@ -57,6 +62,18 @@ export function checkSourceConventions({
     for (const path of walk(join(cwd, root))) {
       const file = relative(cwd, path);
       const lines = readFileSync(path, 'utf8').split('\n');
+      if (UI_TEST.test(file)) {
+        lines.forEach((line, index) => {
+          if (TEXT_LOCATOR.test(line)) {
+            problems.push(
+              `${file}:${index + 1}: a test finds an element by its wording — use its role, label or data-testid, and data-state for a state`
+            );
+          }
+        });
+      }
+      if (TEST_FILE.test(file)) {
+        continue;
+      }
       lines.forEach((line, index) => {
         if (SEPARATOR_COMMENT.test(line)) {
           problems.push(`${file}:${index + 1}: separator comment — split the file instead`);

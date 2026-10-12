@@ -112,7 +112,7 @@ describe('<Table>', () => {
       extensions: [gridView()],
       context: undefined,
     });
-    render(<Table model={empty} emptyState="Nothing here" />);
-    expect(screen.getByText('Nothing here')).toBeTruthy();
+    render(<Table model={empty} emptyState={<p data-testid="empty-state">Nothing here</p>} />);
+    expect(screen.getByTestId('empty-state')).toBeTruthy();
   });
 });

@@ -25,9 +25,8 @@ describe('WebDavConnectPanel', () => {
   it('shows how to allow this site on each usual server when the page cannot reach it', async () => {
     await checked(() => Promise.resolve(err({ kind: 'cors-blocked' })));
 
-    expect(screen.getByText(/does not allow this site/)).toBeTruthy();
-    expect(screen.getByText('Nextcloud')).toBeTruthy();
-    expect(screen.getByText(/--allow-origin/).textContent).toContain(window.location.origin);
+    expect(screen.getByTestId('webdav-cors-blocked')).toBeTruthy();
+    expect(screen.getByTestId('cors-snippets').textContent).toContain(window.location.origin);
   });
 
   it('says plainly when the server cannot refuse a stale write itself', async () => {
@@ -44,7 +43,7 @@ describe('WebDavConnectPanel', () => {
       )
     );
 
-    expect(screen.getByText(/cannot refuse a stale write itself/)).toBeTruthy();
-    expect(screen.queryByText('Nextcloud')).toBeNull();
+    expect(screen.getByTestId('webdav-writes').getAttribute('data-state')).toBe('check-then-write');
+    expect(screen.queryByTestId('cors-snippets')).toBeNull();
   });
 });

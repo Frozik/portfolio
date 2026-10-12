@@ -48,6 +48,25 @@ describe('checkSourceConventions', () => {
     ]);
   });
 
+  it('rejects a UI test that finds an element by its wording, end-to-end or component', () => {
+    writeSource('vault.spec.ts', [
+      "await page.getByRole('button', { name: 'Save' }).click();",
+      "await expect(page.getByText('Synced with the cloud')).toBeVisible();",
+      "await expect(page.getByTestId('cloud-status')).toHaveAttribute('data-state', 'synced');",
+    ]);
+    writeSource('Panel.test.tsx', [
+      "expect(screen.queryAllByText('not saved')).toHaveLength(0);",
+      "expect(screen.getByRole('dialog')).toBeTruthy();",
+    ]);
+    writeSource('Page.tsx', ['const found = screen.getByText(label);']);
+
+    const { problems } = checkSourceConventions({ roots: ['src'], baseline: {}, cwd });
+
+    const advice =
+      'a test finds an element by its wording — use its role, label or data-testid, and data-state for a state';
+    expect(problems).toEqual([`src/Panel.test.tsx:1: ${advice}`, `src/vault.spec.ts:2: ${advice}`]);
+  });
+
   it('rejects an oversized file the baseline does not know', () => {
     writeSource('big.ts', linesOf(MAX_LINES + 1));
 

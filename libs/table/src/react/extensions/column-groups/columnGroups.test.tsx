@@ -55,8 +55,8 @@ describe('column group header row', () => {
     const model = harness();
     fireEvent.contextMenu(screen.getByRole('columnheader', { name: 'Facts' }));
     const menu = screen.getByRole('menu');
-    expect(within(menu).getByText('Pin group right')).toBeTruthy();
-    fireEvent.click(within(menu).getByText('Hide group columns'));
+    expect(within(menu).getByRole('menuitem', { name: 'Pin group right' })).toBeTruthy();
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Hide group columns' }));
     expect(model.columns.isHidden('name')).toBe(true);
     expect(model.columns.isHidden('size')).toBe(true);
   });
@@ -67,6 +67,8 @@ describe('column group header row', () => {
     const gap = groupRow?.querySelector('[data-section="left"]');
     expect(gap?.getAttribute('data-column-id')).toBe('id');
     fireEvent.contextMenu(gap as Element);
-    expect(within(screen.getByRole('menu')).getByText('Reset columns')).toBeTruthy();
+    expect(
+      within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Reset columns' })
+    ).toBeTruthy();
   });
 });

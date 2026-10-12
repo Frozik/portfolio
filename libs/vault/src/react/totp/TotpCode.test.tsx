@@ -71,6 +71,6 @@ describe('TotpCode', () => {
       />
     );
 
-    expect(screen.getByText('This one-time code secret cannot be read.')).toBeTruthy();
+    expect(screen.getByTestId('totp-unreadable')).toBeTruthy();
   });
 });

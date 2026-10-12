@@ -45,9 +45,9 @@ describe('context menu in the grid', () => {
 
     fireEvent.contextMenu(header);
     const menu = screen.getByRole('menu');
-    expect(within(menu).getByText('Sort ascending')).toBeDefined();
+    expect(within(menu).getByRole('menuitem', { name: 'Sort ascending' })).toBeDefined();
 
-    fireEvent.click(within(menu).getByText('Open'));
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Open' }));
     expect(opened).toEqual(['']);
     expect(screen.queryByRole('menu')).toBeNull();
   });

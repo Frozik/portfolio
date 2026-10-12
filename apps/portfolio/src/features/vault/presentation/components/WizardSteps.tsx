@@ -7,7 +7,7 @@ const ICON_SIZE = 12;
 /** Where a step-by-step flow is: the steps done, the current one, the ones ahead. */
 export const WizardSteps = memo(
   ({ steps, current }: { readonly steps: readonly string[]; readonly current: number }) => (
-    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2" data-testid="wizard-steps">
       {steps.map((label, index) => {
         const done = index < current;
         const active = index === current;

@@ -71,6 +71,7 @@ export function ListEditorRow({
         <span
           className={cn(styles.listNumber, number.marked && styles.listNumberMarked)}
           title={number.label}
+          data-testid="list-number"
         >
           {number.value}
         </span>

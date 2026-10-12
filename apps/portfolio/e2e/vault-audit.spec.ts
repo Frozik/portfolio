@@ -22,5 +22,5 @@ test('the demo vault’s audit finds its weak and its reused password', async ({
 
   await expect(page.getByRole('heading', { name: /^Weak · / })).toBeVisible();
   await expect(page.getByRole('heading', { name: /^Reused on several sites · / })).toBeVisible();
-  await expect(page.getByText('Data sourced from 2FA Directory')).toBeVisible();
+  await expect(page.getByTestId('two-factor-directory')).toHaveAttribute('data-state', 'loaded');
 });

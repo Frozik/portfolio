@@ -17,7 +17,12 @@ export const KeysChangedNotice = observer(
       const t = keysT.recovering;
       return (
         <div className="flex flex-wrap items-center gap-3">
-          <Alert type="warning" message={t.message} description={t.description} />
+          <Alert
+            type="warning"
+            message={t.message}
+            description={t.description}
+            data-testid="opened-with-recovery-key"
+          />
           <NavLink to={settingsPath} className="text-[13px] text-landing-fg underline">
             {t.action}
           </NavLink>

@@ -46,7 +46,7 @@ const AddPasskey = observer(({ flow }: { readonly flow: PasskeyFlow }) => {
     case 'added':
       return (
         <div className="flex flex-col gap-3">
-          <Alert type="success" message={t.added} />
+          <Alert type="success" message={t.added} data-testid="passkey-added" />
           <Button type="button" variant="secondary" className="self-start" onClick={flow.reset}>
             {t.again}
           </Button>

@@ -21,7 +21,7 @@ test('a KeePass database opens with its password and its entries join the vault'
   await page.locator('input[type="file"]').first().setInputFiles(KEEPASS_FILE);
   await page.getByLabel('Master password of the KeePass database').fill('not it');
   await page.getByRole('button', { name: 'Open', exact: true }).click();
-  await expect(page.getByText('Wrong password', { exact: false })).toBeVisible();
+  await expect(page.getByTestId('import-password')).toHaveAttribute('data-state', 'wrong-password');
   await page.getByLabel('Master password of the KeePass database').fill(KEEPASS_PASSWORD);
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await page.getByRole('button', { name: 'Import', exact: true }).click();

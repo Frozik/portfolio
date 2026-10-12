@@ -27,8 +27,8 @@ describe('VaultStart', () => {
 
     renderStart(store);
 
-    expect(screen.getByText('Home')).not.toBeNull();
-    expect(screen.getByText('Shared with the kids')).not.toBeNull();
+    const home = screen.getByRole('link', { name: /Home/ });
+    expect(within(home).getByTestId('vault-description').textContent).toBe('Shared with the kids');
   });
 
   it('deletes a vault from this device only once the user confirms', async () => {
@@ -46,6 +46,6 @@ describe('VaultStart', () => {
       await when(() => store.registry.vaults.value?.length === 0);
     });
 
-    expect(screen.queryByText('Home')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Home/ })).toBeNull();
   });
 });

@@ -53,7 +53,10 @@ const VaultRow = memo(
       >
         <span className="text-[17px] font-medium">{vault.name}</span>
         {vault.description !== '' && (
-          <span className="text-[14px] whitespace-pre-line text-landing-fg-dim">
+          <span
+            className="text-[14px] whitespace-pre-line text-landing-fg-dim"
+            data-testid="vault-description"
+          >
             {vault.description}
           </span>
         )}

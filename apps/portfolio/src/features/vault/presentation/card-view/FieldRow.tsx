@@ -84,20 +84,32 @@ export const FieldRow = observer(
       field.sensitive && !locked && field.spec.kind !== 'otp' && field.spec.kind !== 'multiline';
     const rotation = passwordRotationOf(field);
     const shown = isNil(rotation)
-      ? values.map((value, index) => ({ value, index, caption: null }))
+      ? values.map((value, index) => ({ value, index, caption: null, turn: undefined }))
       : [
-          { value: rotation.current, index: 0, caption: t.currentPassword },
+          { value: rotation.current, index: 0, caption: t.currentPassword, turn: 'current' },
           ...(isNil(rotation.previous)
             ? []
-            : [{ value: rotation.previous, index: 1, caption: t.previousPassword }]),
+            : [
+                {
+                  value: rotation.previous,
+                  index: 1,
+                  caption: t.previousPassword,
+                  turn: 'previous',
+                },
+              ]),
         ];
     return (
       <div className="flex flex-col gap-1 border-b border-landing-border-soft py-3">
         <span className="text-[12px] text-landing-fg-faint">{field.label}</span>
-        {shown.map(({ value, index, caption }) => {
+        {shown.map(({ value, index, caption, turn }) => {
           const masked = field.sensitive && (locked || !session.reveal.isRevealed(field.id, index));
           return (
-            <div key={index} className="flex flex-wrap items-center gap-1">
+            <div
+              key={index}
+              className="flex flex-wrap items-center gap-1"
+              data-testid={isNil(turn) ? undefined : 'password-in-turn'}
+              data-state={turn}
+            >
               {!isNil(caption) && (
                 <span className="w-full text-[11px] text-landing-fg-faint">{caption}</span>
               )}

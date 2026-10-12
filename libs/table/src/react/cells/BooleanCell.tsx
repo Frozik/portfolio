@@ -11,7 +11,10 @@ export function BooleanCell<TRow>({ value, editable, edit }: ICellProps<TRow, bo
       className="ft-cell-boolean"
       data-checked={checked ? '' : undefined}
       data-editable={editable ? '' : undefined}
-      aria-label={String(checked)}
+      role="checkbox"
+      tabIndex={-1}
+      aria-checked={checked}
+      aria-readonly={editable ? undefined : true}
       onClick={editable ? () => edit.change(!checked) : undefined}
     >
       {checked ? CHECKED : UNCHECKED}

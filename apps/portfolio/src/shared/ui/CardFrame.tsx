@@ -12,6 +12,7 @@ const CardFrameComponent = ({
   accentColor,
   hoverable,
   className,
+  'data-testid': testId,
 }: {
   readonly children: ReactNode;
   /**
@@ -23,8 +24,11 @@ const CardFrameComponent = ({
   /** Applies the `lift-hover` utility — a 1 px translateY on hover. */
   readonly hoverable?: boolean;
   readonly className?: string;
+  /** For tests: they find a block by what it is, not by its wording. */
+  readonly 'data-testid'?: string;
 }) => (
   <div
+    data-testid={testId}
     className={cn(
       'card-corners relative border border-landing-border-soft bg-landing-bg-card',
       hoverable === true && 'lift-hover',

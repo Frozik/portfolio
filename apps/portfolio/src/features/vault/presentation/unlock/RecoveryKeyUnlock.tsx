@@ -54,7 +54,11 @@ export function RecoveryKeyUnlock({
 
   return (
     <>
-      <VaultField label={t.recoveryKey} error={isNil(shown) ? null : failureText(shown)}>
+      <VaultField
+        label={t.recoveryKey}
+        error={isNil(shown) ? null : failureText(shown)}
+        errorKind={shown}
+      >
         {describedBy => (
           <SecretEditor
             aria-label={t.recoveryKey}

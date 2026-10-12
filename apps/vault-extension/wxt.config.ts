@@ -39,6 +39,8 @@ export default defineConfig({
   // The shared controls name their CSS classes in kebab case and read them in camel case, as the web app's build does.
   vite: () => ({
     css: { modules: { localsConvention: 'camelCaseOnly' } },
+    // The worker is one file by necessity (no `import()` in an MV3 service worker), Argon2's WebAssembly in it; it loads from disk.
+    build: { chunkSizeWarningLimit: 1024 },
     define: { 'import.meta.env.VITE_GOOGLE_VAULT_CLIENT_ID': JSON.stringify(vaultClientId()) },
   }),
   zip: { artifactTemplate: 'password-vault-{{version}}-{{browser}}.zip' },

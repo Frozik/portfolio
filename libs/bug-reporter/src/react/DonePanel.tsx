@@ -16,7 +16,7 @@ export function DonePanel({
   readonly onClose: () => void;
 }) {
   return (
-    <div className="bug-reporter-done">
+    <div className="bug-reporter-done" data-testid="bug-report-saved" data-file={fileName}>
       <CheckCircle2 size={ICON_SIZE} className="bug-reporter-done-icon" aria-hidden="true" />
       <h2 className="bug-reporter-title">{translations.doneTitle}</h2>
       <p>{translations.doneBody(fileName)}</p>

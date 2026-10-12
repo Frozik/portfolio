@@ -19,6 +19,12 @@ const NO_PASSKEYS = { load: () => Promise.resolve([]), unlock: () => Promise.res
 
 const passwordField = (): HTMLInputElement => screen.getByLabelText('Master password');
 
+/** What is wrong with a control, as its description says it: `data-state` of the text it points at. */
+function problemOf(control: HTMLElement): string | null {
+  const description = document.getElementById(control.getAttribute('aria-describedby') ?? '');
+  return description?.getAttribute('data-state') ?? null;
+}
+
 describe('UnlockScreen', () => {
   it('unlocks with Enter, lets go of the password and offers it to the browser under the vault name', () => {
     const onUnlock = vi.fn();
@@ -56,8 +62,8 @@ describe('UnlockScreen', () => {
       />
     );
 
-    expect(screen.getByText('Wrong password.')).toBeTruthy();
     expect(passwordField().getAttribute('aria-invalid')).toBe('true');
+    expect(problemOf(passwordField())).toBe('wrong-password');
   });
 
   it('takes no second attempt while the key is being derived', () => {
@@ -98,7 +104,7 @@ describe('UnlockScreen', () => {
 
     fireEvent.change(field, { target: { value: typo } });
     fireEvent.keyDown(field, { key: 'Enter' });
-    expect(screen.getByText('There is a typo in the recovery key.')).toBeTruthy();
+    expect(problemOf(field)).toBe('checksum-mismatch');
     fireEvent.change(field, { target: { value: key.toLowerCase() } });
     fireEvent.keyDown(field, { key: 'Enter' });
 

@@ -52,7 +52,7 @@ describe('FieldValueEditor', () => {
       aField({ kind: 'boolean' }, 'false', { label: 'Hidden network' })
     );
 
-    expect(screen.getByText('12/29')).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Valid thru' }).textContent).toBe('12/29');
     fireEvent.click(screen.getByRole('checkbox'));
     expect(changes).toEqual([{ cardinality: 'single', value: 'true' }]);
   });

@@ -30,7 +30,7 @@ test('a recovery key made in the settings opens the vault in place of the passwo
     .getByLabel('Master password', { exact: true })
     .fill(DEMO_PASSWORD);
   await page.getByRole('button', { name: 'Turn the recovery key on' }).click();
-  await expect(page.getByText('The recovery key opens the vault from now on')).toBeVisible();
+  await expect(page.getByTestId('recovery-key-on')).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to the vault' }).click();
   await page.getByRole('button', { name: 'Lock' }).click();
@@ -39,5 +39,5 @@ test('a recovery key made in the settings opens the vault in place of the passwo
   await field.fill(key);
   await field.press('Enter');
 
-  await expect(page.getByText('Opened with the recovery key.')).toBeVisible();
+  await expect(page.getByTestId('opened-with-recovery-key')).toBeVisible();
 });

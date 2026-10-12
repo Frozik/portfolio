@@ -70,7 +70,11 @@ export const CardListRow = observer(
               </span>
             )}
             {hasOtp && <span>{t.badges.otp}</span>}
-            {modified && <span className="text-warning">{t.badges.unsaved}</span>}
+            {modified && (
+              <span className="text-warning" data-testid="card-unsaved">
+                {t.badges.unsaved}
+              </span>
+            )}
           </span>
         </span>
       </div>

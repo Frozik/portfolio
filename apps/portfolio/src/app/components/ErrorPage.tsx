@@ -49,7 +49,11 @@ const ErrorPageComponent = ({
   });
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-surface">
+    <div
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-surface"
+      data-testid="error-page"
+      data-state={statusCode}
+    >
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         {stars.map(star => (
           <div

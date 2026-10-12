@@ -154,7 +154,7 @@ test('a downloaded offline pack is completed again by the next build while it in
   await page.getByRole('button', { name: appTranslationsEn.nav.openMenu }).click();
   const menu = page.getByRole('dialog');
   await menu.getByRole('button', { name: appTranslationsEn.offline.download }).click();
-  await expect(menu.getByText(appTranslationsEn.offline.ready, { exact: true })).toBeVisible({
+  await expect(menu.getByTestId('offline-pack')).toHaveAttribute('data-state', 'ready', {
     timeout: PACK_DOWNLOAD_TIMEOUT_MS,
   });
 

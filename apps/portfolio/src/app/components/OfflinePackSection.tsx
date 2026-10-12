@@ -101,7 +101,11 @@ export const OfflinePackSection = observer(({ store }: { readonly store: Offline
   };
 
   return (
-    <section className="relative z-10 flex flex-col gap-2">
+    <section
+      className="relative z-10 flex flex-col gap-2"
+      data-testid="offline-pack"
+      data-state={status.state}
+    >
       <h3 className="font-mono text-[10px] tracking-[0.1em] text-landing-fg-faint uppercase">
         {t.heading}
       </h3>

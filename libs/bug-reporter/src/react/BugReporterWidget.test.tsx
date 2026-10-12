@@ -92,10 +92,12 @@ describe('BugReporterWidget', () => {
     expect(reporter.snapshot.included.console).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Download report (.zip)' }));
-    await waitFor(() => expect(screen.getByText('Report saved')).toBeDefined());
+    await waitFor(() => expect(screen.getByTestId('bug-report-saved')).toBeDefined());
 
     expect(sink.saved[0]?.fileName).toBe('bug-report-2026-10-04T12-30-00.zip');
-    expect(screen.getByText('Saved as bug-report-2026-10-04T12-30-00.zip.')).toBeDefined();
+    expect(screen.getByTestId('bug-report-saved').getAttribute('data-file')).toBe(
+      'bug-report-2026-10-04T12-30-00.zip'
+    );
   });
 
   it('shows the screenshot editor after a capture and keeps the screenshot on "use"', async () => {
@@ -125,9 +127,9 @@ describe('BugReporterWidget', () => {
     act(() => reporter.open());
     await act(() => reporter.armRecording());
 
-    expect(screen.getByText('Arrange the page, then start recording.')).toBeDefined();
+    expect(screen.getByTestId('capture-bar').getAttribute('data-state')).toBe('armed');
     fireEvent.click(screen.getByRole('button', { name: 'Start recording' }));
-    expect(screen.getByText('Recording starts in')).toBeDefined();
+    expect(screen.getByTestId('capture-bar').getAttribute('data-state')).toBe('countdown');
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000);
     });

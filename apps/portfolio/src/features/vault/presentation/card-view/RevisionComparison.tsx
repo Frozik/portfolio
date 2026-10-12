@@ -8,6 +8,10 @@ import { isNil } from 'lodash-es';
 import { changeKey, changeText } from '../editor/change-text';
 import { versionsT } from '../translations/versions';
 
+function isMasked(field: ICardField): boolean {
+  return field.sensitive || field.spec.kind === 'unknown';
+}
+
 /** A field's value as the comparison shows it: a secret is never written out, only said to be there. */
 function shown(field: ICardField | null): string {
   const t = versionsT.compare;
@@ -30,6 +34,8 @@ interface IComparedRow {
   readonly label: string;
   readonly earlier: string;
   readonly current: string;
+  /** A secret on either side: its values are only said to be there. */
+  readonly masked: boolean;
 }
 
 /** `diffCardStates(now, then)`: `before` is the card now, `after` the version then. */
@@ -41,6 +47,7 @@ function rowOf(change: TCardChange): IComparedRow {
         label: change.after.label,
         earlier: shown(change.after),
         current: shown(change.before),
+        masked: isMasked(change.after) || isMasked(change.before),
       };
     case 'field-added':
       return {
@@ -48,6 +55,7 @@ function rowOf(change: TCardChange): IComparedRow {
         label: change.field.label,
         earlier: shown(change.field),
         current: '—',
+        masked: isMasked(change.field),
       };
     case 'field-removed':
       return {
@@ -55,6 +63,7 @@ function rowOf(change: TCardChange): IComparedRow {
         label: change.field.label,
         earlier: '—',
         current: shown(change.field),
+        masked: isMasked(change.field),
       };
     case 'title':
       return {
@@ -62,12 +71,19 @@ function rowOf(change: TCardChange): IComparedRow {
         label: changeText(change),
         earlier: change.after,
         current: change.before,
+        masked: false,
       };
     case 'flag':
     case 'appearance':
     case 'groups':
     case 'tabs':
-      return { key: changeKey(change), label: changeText(change), earlier: '', current: '' };
+      return {
+        key: changeKey(change),
+        label: changeText(change),
+        earlier: '',
+        current: '',
+        masked: false,
+      };
     default:
       return assertNever(change);
   }
@@ -88,7 +104,11 @@ export function RevisionComparison({ changes }: { readonly changes: readonly TCa
       </thead>
       <tbody className="text-landing-fg-dim">
         {rows.map(row => (
-          <tr key={row.key} className="border-t border-landing-border-soft align-top">
+          <tr
+            key={row.key}
+            className="border-t border-landing-border-soft align-top"
+            data-state={row.masked ? 'masked' : undefined}
+          >
             <td className="py-1 pr-3 text-landing-fg">{row.label}</td>
             <td className="py-1 pr-3 break-all">{row.earlier}</td>
             <td className="py-1 break-all">{row.current}</td>

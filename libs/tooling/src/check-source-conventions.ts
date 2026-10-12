@@ -11,13 +11,13 @@ import { checkSourceConventions, MAX_LINES, nextBaseline } from './source-conven
 
 const BASELINE_PATH = 'libs/tooling/file-size-baseline.json';
 const UPDATE_FLAG = '--update-baseline';
-/** Every workspace package's sources — a new package is covered the day it appears. */
+/** Every workspace package's sources and end-to-end specs — a new package is covered the day it appears. */
 const WORKSPACE_DIRECTORIES = ['apps', 'libs'];
 
 function sourceRoots(): string[] {
   return WORKSPACE_DIRECTORIES.flatMap(directory =>
     readdirSync(directory)
-      .map(name => join(directory, name, 'src'))
+      .flatMap(name => [join(directory, name, 'src'), join(directory, name, 'e2e')])
       .filter(root => existsSync(root))
   );
 }

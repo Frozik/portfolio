@@ -28,7 +28,9 @@ describe('PasswordGenerator', () => {
     const [password] = used;
     expect(password).toHaveLength(20);
     expect(password).toMatch(/\d/);
-    expect(screen.getByText(/bits of entropy/)).toBeTruthy();
+    expect(
+      Number(screen.getByTestId('generator-entropy').getAttribute('data-bits'))
+    ).toBeGreaterThan(100);
   });
 
   it('draws another one on request', () => {
@@ -47,7 +49,9 @@ describe('PasswordGenerator', () => {
       act(() => fireEvent.click(screen.getByRole('checkbox', { name: set })));
     }
 
-    expect(screen.getByText('Pick at least one kind of character.')).toBeTruthy();
+    expect(screen.getByTestId('generator-problem').getAttribute('data-state')).toBe(
+      'no-characters'
+    );
     expect(screen.getByRole('button', { name: 'Use' })).toHaveProperty('disabled', true);
   });
 
@@ -62,6 +66,6 @@ describe('PasswordGenerator', () => {
     const [password] = used;
     expect(password).toMatch(/^[a-z0-9]{12}$/);
     expect(password).toMatch(/\d/);
-    expect(screen.getByText(/as bank\.example asks/)).toBeTruthy();
+    expect(screen.getByTestId('generator-site-rules').textContent).toContain('bank.example');
   });
 });

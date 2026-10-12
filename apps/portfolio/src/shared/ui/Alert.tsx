@@ -32,18 +32,22 @@ type AlertProps = VariantProps<typeof alertVariants> & {
   message: ReactNode;
   description?: ReactNode;
   className?: string;
+  /** For end-to-end tests: they find a message by what it means, not by its wording. */
+  'data-testid'?: string;
 };
 
-export const Alert = memo(({ type = 'info', message, description, className }: AlertProps) => {
-  const Icon = ICON_MAP[type ?? 'info'];
+export const Alert = memo(
+  ({ type = 'info', message, description, className, 'data-testid': testId }: AlertProps) => {
+    const Icon = ICON_MAP[type ?? 'info'];
 
-  return (
-    <div className={cn(alertVariants({ type }), className)} role="alert">
-      <Icon className="mt-0.5 shrink-0" size={ICON_SIZE} />
-      <div className="flex flex-col gap-1">
-        <div className="font-medium">{message}</div>
-        {description && <div className="text-sm opacity-80">{description}</div>}
+    return (
+      <div className={cn(alertVariants({ type }), className)} role="alert" data-testid={testId}>
+        <Icon className="mt-0.5 shrink-0" size={ICON_SIZE} />
+        <div className="flex flex-col gap-1">
+          <div className="font-medium">{message}</div>
+          {description && <div className="text-sm opacity-80">{description}</div>}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);

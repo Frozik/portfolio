@@ -102,7 +102,11 @@ export const AuditPage = observer(({ session }: { readonly session: VaultSession
         ))
       )}
       {directoryLoaded && (
-        <span className="text-[12px] text-landing-fg-faint">
+        <span
+          className="text-[12px] text-landing-fg-faint"
+          data-testid="two-factor-directory"
+          data-state={isNil(twoFactorDomains) ? 'missing' : 'loaded'}
+        >
           {isNil(twoFactorDomains) ? t.directoryMissing : t.twoFactorCredit}
         </span>
       )}

@@ -23,7 +23,7 @@ export const ExtensionOffer = memo(() => {
     return null;
   }
   return (
-    <CardFrame className="flex flex-col gap-3 p-6">
+    <CardFrame className="flex flex-col gap-3 p-6" data-testid="extension-offer">
       <h2 className="text-[16px] font-medium text-landing-fg">{t.title}</h2>
       <p className="text-[13px] text-landing-fg-dim">{t.text}</p>
       <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] text-landing-fg-dim">

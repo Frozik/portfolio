@@ -78,11 +78,11 @@ test('a vault kept in Google Drive opens in a second browser profile with its ca
   await page.getByRole('link', { name: 'Settings' }).click();
   await signInToDrive(page);
   await page.getByRole('button', { name: 'Keep this vault here' }).click();
-  await expect(
-    page.getByText('Google Drive · A Vault folder in My Drive · Vault/Demo.pwv')
-  ).toBeVisible();
+  const location = page.getByTestId('cloud-location');
+  await expect(location).toHaveAttribute('data-state', 'google-drive');
+  await expect(location).toContainText('Vault/Demo.pwv');
   await page.getByRole('link', { name: 'Back to the vault' }).click();
-  await expect(page.getByText('Synced with the cloud')).toBeVisible();
+  await expect(page.getByTestId('cloud-status')).toHaveAttribute('data-state', 'synced');
 
   const second = await browser.newContext();
   await useFakeGoogle(second, drive);
@@ -97,7 +97,7 @@ test('a vault kept in Google Drive opens in a second browser profile with its ca
   await password.press('Enter');
 
   await expect(other.getByRole('option', { name: /GitHub/ })).toBeVisible();
-  await expect(other.getByText('Synced with the cloud')).toBeVisible();
+  await expect(other.getByTestId('cloud-status')).toHaveAttribute('data-state', 'synced');
   expect(drive.paths('drive')).toEqual(['Vault', 'Vault/Demo.pwv']);
   await first.close();
   await second.close();

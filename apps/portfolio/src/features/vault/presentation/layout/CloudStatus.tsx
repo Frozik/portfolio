@@ -39,7 +39,7 @@ export const CloudStatus = observer(({ cloud }: { readonly cloud: CloudLink }) =
   }
   const trouble = status.kind === 'stopped' || status.kind === 'unreachable';
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-2" data-testid="cloud-status" data-state={status.kind}>
       <span className={trouble ? 'text-[12px] text-error' : 'text-[12px] text-landing-fg-faint'}>
         {statusText(status)}
       </span>

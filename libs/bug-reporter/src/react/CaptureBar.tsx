@@ -31,7 +31,13 @@ export function CaptureBar({
   readonly onCancel: () => void;
 }) {
   return (
-    <div className="bug-reporter-bar" role="region" aria-label={translations.menuTitle}>
+    <div
+      className="bug-reporter-bar"
+      role="region"
+      aria-label={translations.menuTitle}
+      data-testid="capture-bar"
+      data-state={phase.kind}
+    >
       <BarContent
         phase={phase}
         translations={translations}

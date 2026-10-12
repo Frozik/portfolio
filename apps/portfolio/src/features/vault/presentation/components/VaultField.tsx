@@ -16,6 +16,7 @@ export const VaultField = observer(
     label,
     hint,
     error,
+    errorKind,
     changed = false,
     children,
   }: {
@@ -24,6 +25,8 @@ export const VaultField = observer(
     readonly changed?: boolean;
     readonly hint?: ReactNode;
     readonly error?: string | null;
+    /** What the error is, beside its words: tests and styles read it from `data-state`. */
+    readonly errorKind?: string | null;
     readonly children: (describedBy: string) => ReactNode;
   }) => {
     const describedBy = useId();
@@ -36,6 +39,7 @@ export const VaultField = observer(
         {children(describedBy)}
         <span
           id={describedBy}
+          data-state={errorKind ?? undefined}
           className={cn(
             'text-[12px] leading-[1.4]',
             error ? 'text-error' : 'text-landing-fg-faint'

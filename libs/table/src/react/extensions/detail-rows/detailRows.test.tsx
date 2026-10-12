@@ -18,7 +18,11 @@ const items: TItem[] = [
 const define = column<TItem>();
 
 function Detail({ displayRow }: IRowContext<TItem>) {
-  return <p>detail of {displayRow.kind === 'leaf' ? displayRow.row.name : '?'}</p>;
+  return (
+    <p data-testid="row-detail">
+      detail of {displayRow.kind === 'leaf' ? displayRow.row.name : '?'}
+    </p>
+  );
 }
 
 function harness() {
@@ -43,20 +47,20 @@ describe('detail rows in the grid', () => {
     const toggle = within(firstRow ?? document.body).getByRole('button', { name: 'Show details' });
 
     fireEvent.click(toggle);
-    expect(screen.getByText('detail of cedar')).toBeDefined();
+    expect(screen.getByTestId('row-detail').textContent).toBe('detail of cedar');
     expect(model.rowExtent('1')).toBe(120);
 
     fireEvent.click(within(firstRow ?? document.body).getAllByRole('gridcell')[1]);
     fireEvent.keyDown(screen.getByRole('grid'), { key: 'ArrowLeft' });
     expect(model.focus.cell?.columnId).toBe('detail');
     fireEvent.keyDown(screen.getByRole('grid'), { key: 'ArrowLeft' });
-    expect(screen.queryByText('detail of cedar')).toBeNull();
+    expect(screen.queryByTestId('row-detail')).toBeNull();
   });
 
   it('opens the detail with a click on the row when expandOn is click', () => {
     harness();
     const rows = screen.getAllByRole('row').filter(row => row.classList.contains('ft-body-row'));
     fireEvent.click(within(rows[1]).getAllByRole('gridcell')[1]);
-    expect(screen.getByText('detail of ash')).toBeDefined();
+    expect(screen.getByTestId('row-detail').textContent).toBe('detail of ash');
   });
 });

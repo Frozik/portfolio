@@ -107,6 +107,8 @@ export const EditorFieldRow = observer(
     const verdict = validateField(field, card);
     return (
       <div
+        data-testid="editor-field"
+        data-state={changed ? 'changed' : 'saved'}
         className={cn(
           'flex flex-col gap-1.5 border-b border-landing-border-soft py-3',
           changed && CHANGED_MARK_CLASS
@@ -264,6 +266,8 @@ export const EditorFieldRow = observer(
             className={
               verdict.kind === 'invalid' ? 'text-[12px] text-error' : 'text-[12px] text-warning'
             }
+            data-testid="field-verdict"
+            data-state={verdict.code}
           >
             {t.validation[verdict.code]}
           </span>

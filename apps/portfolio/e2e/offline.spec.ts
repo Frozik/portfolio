@@ -49,9 +49,9 @@ test('the menu downloads the offline pack and every game then opens with the net
 
   await openMenu(page);
   const menu = page.getByRole('dialog');
-  await expect(menu.getByText(appTranslationsEn.offline.incomplete)).toBeVisible();
+  await expect(menu.getByTestId('offline-pack')).toHaveAttribute('data-state', 'incomplete');
   await menu.getByRole('button', { name: appTranslationsEn.offline.download }).click();
-  await expect(menu.getByText(appTranslationsEn.offline.ready, { exact: true })).toBeVisible({
+  await expect(menu.getByTestId('offline-pack')).toHaveAttribute('data-state', 'ready', {
     timeout: PACK_DOWNLOAD_TIMEOUT_MS,
   });
 

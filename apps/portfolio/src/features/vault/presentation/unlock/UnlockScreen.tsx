@@ -90,6 +90,7 @@ export const UnlockScreen = observer(
             <VaultField
               label={t.password}
               error={isNil(passwordFailure) ? null : t.failures[passwordFailure]}
+              errorKind={passwordFailure}
             >
               {describedBy => (
                 <SecretEditor

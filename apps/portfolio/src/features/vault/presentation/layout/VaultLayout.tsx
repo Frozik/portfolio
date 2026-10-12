@@ -183,7 +183,7 @@ export const VaultLayout = observer(
             ) : isNil(cardId) ? (
               <p className="text-[14px] text-landing-fg-faint">{vaultT.card.choose}</p>
             ) : isNil(card) ? (
-              <Alert type="warning" message={vaultT.card.notFound} />
+              <Alert type="warning" message={vaultT.card.notFound} data-testid="card-not-found" />
             ) : page.kind === 'history' ? (
               <CardHistory
                 card={card}

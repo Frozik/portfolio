@@ -114,7 +114,11 @@ describe('ListEditor', () => {
       />
     );
 
-    expect(['1', '2', '3'].every(number => screen.queryByText(number) !== null)).toBe(true);
+    expect(screen.getAllByTestId('list-number').map(number => number.textContent)).toEqual([
+      '1',
+      '2',
+      '3',
+    ]);
     expect(screen.getByTitle('The password in use').textContent).toBe('1');
   });
 

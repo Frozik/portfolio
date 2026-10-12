@@ -37,7 +37,13 @@ function outcomeAlert(outcome: TRestoreOutcome) {
   switch (outcome.kind) {
     case 'restored': {
       const { restored, revived, trashed } = outcome.summary;
-      return <Alert type="success" message={t.restored(restored, revived, trashed)} />;
+      return (
+        <Alert
+          type="success"
+          message={t.restored(restored, revived, trashed)}
+          data-testid="backup-restored"
+        />
+      );
     }
     case 'older-key':
       return <Alert type="error" message={t.olderKey} />;

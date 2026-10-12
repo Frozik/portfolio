@@ -98,7 +98,7 @@ describe('Select', () => {
     render(
       <>
         <Country onCountry={vi.fn()} />
-        <p>elsewhere</p>
+        <p data-testid="elsewhere">elsewhere</p>
       </>
     );
 
@@ -106,8 +106,8 @@ describe('Select', () => {
     expect(field().getAttribute('aria-expanded')).toBe('true');
     await listeningForOutsidePresses();
 
-    fireEvent.pointerDown(screen.getByText('elsewhere'));
-    fireEvent.click(screen.getByText('elsewhere'));
+    fireEvent.pointerDown(screen.getByTestId('elsewhere'));
+    fireEvent.click(screen.getByTestId('elsewhere'));
     expect(field().getAttribute('aria-expanded')).toBe('false');
   });
 

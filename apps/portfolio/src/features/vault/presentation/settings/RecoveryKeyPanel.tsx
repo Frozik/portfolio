@@ -126,7 +126,7 @@ const FlowBody = observer(
       case 'saving':
         return <Confirmation flow={flow} />;
       case 'done':
-        return <Alert type="success" message={t.done} />;
+        return <Alert type="success" message={t.done} data-testid="recovery-key-on" />;
       default:
         return assertNever(step);
     }

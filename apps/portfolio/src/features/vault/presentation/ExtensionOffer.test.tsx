@@ -21,17 +21,17 @@ describe('ExtensionOffer', () => {
       screen.getByRole('link', { name: 'latest release on GitHub' }).getAttribute('href')
     ).toBe('https://github.com/frozik/portfolio/releases/latest');
     fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
-    expect(screen.queryByText('Password Vault for Chrome')).toBeNull();
+    expect(screen.queryByTestId('extension-offer')).toBeNull();
 
     unmount();
     render(<ExtensionOffer />);
-    expect(screen.queryByText('Password Vault for Chrome')).toBeNull();
+    expect(screen.queryByTestId('extension-offer')).toBeNull();
   });
 
   it('offers nothing where Chrome extensions do not run', () => {
     browse(undefined);
     render(<ExtensionOffer />);
 
-    expect(screen.queryByText('Password Vault for Chrome')).toBeNull();
+    expect(screen.queryByTestId('extension-offer')).toBeNull();
   });
 });

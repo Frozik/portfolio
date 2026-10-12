@@ -12,6 +12,12 @@ import { aDevice } from '../../application/fake-device.test-helper';
 import type { VaultSession } from '../../application/VaultSession';
 import { VaultLayout } from '../layout/VaultLayout';
 
+function changedFields(): readonly HTMLElement[] {
+  return screen
+    .queryAllByTestId('editor-field')
+    .filter(field => field.getAttribute('data-state') === 'changed');
+}
+
 async function editingGithub() {
   const store = aDevice().startStore();
   store.startDemo('Demo', key => key);
@@ -76,7 +82,7 @@ describe('CardEditor', () => {
     act(() => session.editing.draft?.change(card => renameCard(card, 'Half done')));
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Cancel' })));
 
-    expect(screen.getByText('Discard the changes?')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(session.editing.draft).not.toBeNull();
   });
 
@@ -88,7 +94,7 @@ describe('CardEditor', () => {
     assert(login !== undefined);
 
     act(() => fireEvent.click(screen.getByRole('button', { name: `Remove “${login.label}”` })));
-    expect(screen.getByText(`Remove “${login.label}”?`)).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(allFields(draft.card).some(field => field.id === login.id)).toBe(true);
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Remove' })));
     expect(allFields(draft.card).some(field => field.id === login.id)).toBe(false);
@@ -126,7 +132,7 @@ describe('CardEditor', () => {
 
     act(() => fireEvent.mouseDown(screen.getByRole('tab', { name: 'New tab' })));
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Delete tab' })));
-    expect(screen.getByText('Delete the “New tab” tab?')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Move the fields and delete' })));
 
     expect(draft.card.tabs).toHaveLength(1);
@@ -141,7 +147,7 @@ describe('CardEditor', () => {
 
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Add a tab' })));
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Delete tab' })));
-    expect(screen.getByText('Delete the “New tab” tab?')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(draft.card.tabs).toHaveLength(2);
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Delete' })));
 
@@ -227,7 +233,7 @@ describe('CardEditor', () => {
     assert(draft !== null);
     const login = allFields(draft.card).find(field => field.spec.kind === 'login');
     assert(login !== undefined);
-    expect(screen.queryAllByText('(changed, not saved yet)')).toHaveLength(0);
+    expect(changedFields()).toHaveLength(0);
 
     act(() =>
       draft.change(card =>
@@ -235,10 +241,10 @@ describe('CardEditor', () => {
       )
     );
 
-    expect(screen.getAllByText('(changed, not saved yet)')).toHaveLength(1);
-    expect(screen.getByText('not saved')).toBeTruthy();
+    expect(changedFields()).toHaveLength(1);
+    expect(screen.getByTestId('card-unsaved')).toBeTruthy();
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
-    expect(screen.queryByText('not saved')).toBeNull();
+    expect(screen.queryByTestId('card-unsaved')).toBeNull();
   });
 
   it('will not save a value its kind rejects, and says why', async () => {
@@ -255,6 +261,6 @@ describe('CardEditor', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
-    expect(screen.getByText('This does not look like a web address.')).toBeTruthy();
+    expect(screen.getByTestId('field-verdict').getAttribute('data-state')).toBe('url-format');
   });
 });

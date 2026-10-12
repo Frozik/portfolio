@@ -73,13 +73,15 @@ describe('RichEditor', () => {
         </>
       );
     }
-    const { container, getByText } = render(<Outer />);
+    const { container, getByRole } = render(<Outer />);
     const editor = editorOf(container);
     typeInto(editor, { data: '0', selection: { start: 1, end: 1 } });
     expect(getElementSelection(editor)).toEqual({ start: 2, end: 2 });
 
     act(() => {
-      getByText('grow').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      getByRole('button', { name: 'grow' }).dispatchEvent(
+        new MouseEvent('click', { bubbles: true })
+      );
     });
 
     expect(editor.textContent).toBe('12345');

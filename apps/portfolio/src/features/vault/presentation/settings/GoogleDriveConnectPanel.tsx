@@ -83,7 +83,7 @@ export const GoogleDriveConnectPanel = observer(
     ];
 
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4" data-testid="drive-connect">
         <h4 className="text-[15px] font-medium text-landing-fg">{t.title}</h4>
         <RadioGroup options={options} value={form.space} onChange={form.setSpace} />
         <p className="text-[13px] text-landing-fg-dim">{t.spaces[form.space].description}</p>

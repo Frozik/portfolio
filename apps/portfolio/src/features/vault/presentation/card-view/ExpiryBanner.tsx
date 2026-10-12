@@ -19,9 +19,17 @@ export const ExpiryBanner = observer(
     }
     const t = vaultT.cardExtras;
     return status === 'expired' ? (
-      <Alert type="error" message={t.expired(formatPlainDate(date, getCurrentLanguage()))} />
+      <Alert
+        type="error"
+        message={t.expired(formatPlainDate(date, getCurrentLanguage()))}
+        data-testid="card-expired"
+      />
     ) : (
-      <Alert type="warning" message={t.expiresSoon(formatPlainDate(date, getCurrentLanguage()))} />
+      <Alert
+        type="warning"
+        message={t.expiresSoon(formatPlainDate(date, getCurrentLanguage()))}
+        data-testid="card-expires-soon"
+      />
     );
   }
 );

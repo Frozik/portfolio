@@ -1,7 +1,8 @@
+import { assert } from '@frozik/utils/assert/assert';
 import { diffCardStates } from '@frozik/vault/model/card-diff';
 import { setFieldValue } from '@frozik/vault/model/field-edits';
 import { aCardWith, aField } from '@frozik/vault/testing/builders';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 import { RevisionComparison } from './RevisionComparison';
 
@@ -21,9 +22,14 @@ describe('RevisionComparison', () => {
 
     const { container } = render(<RevisionComparison changes={diffCardStates(now, then)} />);
 
-    expect(screen.getByText('jane')).toBeTruthy();
-    expect(screen.getByText('jane.doe')).toBeTruthy();
-    expect(screen.getAllByText('hidden')).toHaveLength(2);
+    const [, loginRow, passwordRow] = screen.getAllByRole('row');
+    assert(loginRow !== undefined && passwordRow !== undefined);
+    expect(
+      within(loginRow)
+        .getAllByRole('cell')
+        .map(cell => cell.textContent)
+    ).toEqual(['Login', 'jane', 'jane.doe']);
+    expect(passwordRow.getAttribute('data-state')).toBe('masked');
     expect(container.textContent).not.toContain('secret');
   });
 });

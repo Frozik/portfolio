@@ -145,7 +145,11 @@ const VaultPassword = observer(({ flow }: { readonly flow: VaultImport }) => {
   const keePass = step.source.format === 'kdbx';
   const label = keePass ? t.keePassPassword : t.vaultPassword;
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className="flex flex-col gap-3"
+      data-testid="import-password"
+      data-state={step.failure ?? 'asking'}
+    >
       <VaultField
         label={label}
         hint={keePass ? t.keePassPasswordHint : t.vaultPasswordHint}

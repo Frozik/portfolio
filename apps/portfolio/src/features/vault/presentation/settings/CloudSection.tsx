@@ -21,7 +21,13 @@ export const CloudSection = observer(
     return (
       <CardFrame className="flex flex-col gap-4 p-6">
         <h3 className="text-[16px] font-medium text-landing-fg">{t.title}</h3>
-        <p className="text-[13px] text-landing-fg-dim">{locationText(location)}</p>
+        <p
+          className="text-[13px] text-landing-fg-dim"
+          data-testid="cloud-location"
+          data-state={location?.kind ?? 'local'}
+        >
+          {locationText(location)}
+        </p>
         {isNil(location) ? (
           <CloudPanels
             cloud={store.cloud}

@@ -77,20 +77,24 @@ describe('VaultLayout', () => {
     const { container } = renderLayout(session, { kind: 'section', section: 'all' });
 
     expect(screen.getAllByRole('option').length).toBeGreaterThan(5);
-    expect(screen.getByText('GitHub')).toBeTruthy();
-    expect(screen.getByText('•••• 1111')).toBeTruthy();
+    expect(screen.getByRole('option', { name: /GitHub/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /•••• 1111/ })).toBeTruthy();
     expectNoSecretIn(container, secretsOf(session));
   });
 
   it('shows a secret only on request', async () => {
     const session = await demoSession();
     const github = cardTitled(session, 'GitHub');
-    renderLayout(session, { kind: 'card', section: 'all', cardId: github.id });
+    const { container } = renderLayout(session, {
+      kind: 'card',
+      section: 'all',
+      cardId: github.id,
+    });
 
-    expect(screen.queryByText('tundra-velvet-orbit-cactus-lantern')).toBeNull();
+    expect(container.textContent).not.toContain('tundra-velvet-orbit-cactus-lantern');
     const [show] = screen.getAllByRole('button', { name: 'Show', pressed: false });
     act(() => fireEvent.click(show));
-    expect(screen.getByText('tundra-velvet-orbit-cactus-lantern')).toBeTruthy();
+    expect(container.textContent).toContain('tundra-velvet-orbit-cactus-lantern');
   });
 
   it('keeps the secrets of a protected card out of the page', async () => {
@@ -110,7 +114,7 @@ describe('VaultLayout', () => {
     const session = await demoSession();
     renderLayout(session, { kind: 'card', section: 'all', cardId: 'missing' as TCardId });
 
-    expect(screen.getByText('There is no such card in this vault.')).toBeTruthy();
+    expect(screen.getByTestId('card-not-found')).toBeTruthy();
   });
 
   it('opens a protected card with the master password typed again', async () => {
@@ -156,7 +160,8 @@ describe('VaultLayout', () => {
     session.transact(changeCard(github.id, card => renameCard(card, 'GitHub (renamed)')));
     renderLayout(session, { kind: 'history', section: 'all', cardId: github.id });
 
-    expect(screen.getByText('Title: “GitHub (renamed)” → “GitHub”')).toBeTruthy();
+    const [latest] = screen.getAllByTestId('revision-changes');
+    expect(latest?.textContent).toContain('GitHub (renamed)');
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Restore this version' })));
 
     expect(session.document.cards.get(github.id)?.title).toBe('GitHub');
@@ -181,8 +186,9 @@ describe('VaultLayout', () => {
       cardId: github.id,
     });
 
-    expect(screen.getByText('In use')).toBeTruthy();
-    expect(screen.getByText('Before it')).toBeTruthy();
+    expect(
+      screen.getAllByTestId('password-in-turn').map(row => row.getAttribute('data-state'))
+    ).toEqual(['current', 'previous']);
     expect(container.textContent).not.toContain('autumn-3');
     const [showCurrent] = screen.getAllByRole('button', { name: 'Show' });
     assert(showCurrent !== undefined);
@@ -212,8 +218,8 @@ describe('VaultLayout', () => {
     const { container } = renderLayout(session, { kind: 'card', section: 'all', cardId: amex.id });
 
     expect(container.querySelector('[data-network="american-express"] svg')).not.toBeNull();
-    expect(screen.getAllByText('•••• 0005').length).toBeGreaterThan(0);
-    expect(screen.getByText(/^Expired on /)).toBeTruthy();
+    expect(container.textContent).toContain('•••• 0005');
+    expect(screen.getByTestId('card-expired')).toBeTruthy();
     expectNoSecretIn(container, secretsOf(session));
   });
 

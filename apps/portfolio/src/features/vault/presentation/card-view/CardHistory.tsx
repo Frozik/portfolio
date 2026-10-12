@@ -66,7 +66,10 @@ export const CardHistory = observer(
                   {comparing === key ? (
                     <RevisionComparison changes={changes} />
                   ) : (
-                    <ul className="list-disc pl-5 text-[12px] text-landing-fg-dim">
+                    <ul
+                      className="list-disc pl-5 text-[12px] text-landing-fg-dim"
+                      data-testid="revision-changes"
+                    >
                       {changes.map(change => (
                         <li key={changeKey(change)}>{changeText(change)}</li>
                       ))}

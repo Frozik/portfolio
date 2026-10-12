@@ -38,7 +38,7 @@ describe('BackupsSection', () => {
       );
     });
 
-    expect(await screen.findByText(/Rolled back: .* 1 moved to the trash/)).toBeTruthy();
+    expect(await screen.findByTestId('backup-restored')).toBeTruthy();
     expect(session.document.cards.get(later.id)?.trashedAt).not.toBeNull();
   });
 });

@@ -35,7 +35,11 @@ const SelfEditingCell = observer(function SelfEditingCell({
   const [draft, setDraft] = useState<string | undefined>(undefined);
   if (draft === undefined) {
     return (
-      <span data-mode={mode ?? 'own'} onDoubleClick={() => editable && setDraft(value)}>
+      <span
+        data-testid="self-editing"
+        data-mode={mode ?? 'own'}
+        onDoubleClick={() => editable && setDraft(value)}
+      >
         {text}
       </span>
     );
@@ -172,7 +176,7 @@ describe('editing in the grid', () => {
     fireEvent.keyDown(cell(0, 2), { key: ' ' });
     expect(changes[0]?.new.live).toBe(true);
     expect(model.editing.current).toBeNull();
-    fireEvent.click(within(cell(0, 2)).getByText('–'));
+    fireEvent.click(within(cell(0, 2)).getByRole('checkbox'));
     expect(changes[1]?.new.live).toBe(true);
   });
 
@@ -203,14 +207,14 @@ describe('editing in the grid', () => {
     const { model, changes } = harness();
     expect(cell(0, 3).querySelector('[data-mode]')?.getAttribute('data-mode')).toBe('own');
     expect(cell(0, 0).querySelector('[data-mode]')).toBeNull();
-    fireEvent.doubleClick(within(cell(0, 3)).getByText('wood'));
+    fireEvent.doubleClick(within(cell(0, 3)).getByTestId('self-editing'));
     expect(model.editing.current).toBeNull();
     const field = within(cell(0, 3)).getByRole('textbox');
     fireEvent.change(field, { target: { value: 'timber' } });
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(changes.map(change => change.new.tag)).toEqual(['timber']);
 
-    fireEvent.doubleClick(within(cell(1, 3)).getByText('ash'));
+    fireEvent.doubleClick(within(cell(1, 3)).getByTestId('self-editing'));
     expect(within(cell(1, 3)).queryByRole('textbox')).toBeNull();
   });
 

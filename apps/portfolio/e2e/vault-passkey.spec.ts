@@ -31,7 +31,7 @@ test('a passkey added in the settings unlocks the vault without the password', a
   await passkeys.getByLabel('Master password', { exact: true }).fill(DEMO_PASSWORD);
   await passkeys.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Create a passkey on this device' }).click();
-  await expect(page.getByText('The passkey opens the vault from now on')).toBeVisible();
+  await expect(page.getByTestId('passkey-added')).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to the vault' }).click();
   await page.getByRole('button', { name: 'Lock' }).click();

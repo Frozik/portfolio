@@ -30,7 +30,7 @@ const CorsSnippets = memo(() => {
   const t = cloudT.webdav;
   const origin = window.location.origin;
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" data-testid="cors-snippets">
       {WEBDAV_SERVERS.map(server => (
         <details key={server} className="rounded-md border border-landing-border">
           <summary className="cursor-pointer px-3 py-2 text-[13px] text-landing-fg">
@@ -53,7 +53,12 @@ const Findings = memo(({ features }: { readonly features: IWebDavFeatures }) => 
       message={t.reachable}
       description={
         <ul className="flex list-disc flex-col gap-1 pl-5">
-          <li>{features.conditionalRequests ? t.atomic : t.checkThenWrite}</li>
+          <li
+            data-testid="webdav-writes"
+            data-state={features.conditionalRequests ? 'atomic' : 'check-then-write'}
+          >
+            {features.conditionalRequests ? t.atomic : t.checkThenWrite}
+          </li>
           <li>{features.moveReplace ? t.moveReplace : t.noMoveReplace}</li>
           {features.revisionKind === 'last-modified' && <li>{t.lastModified}</li>}
         </ul>
@@ -73,7 +78,11 @@ const CheckProgress = observer(({ form }: { readonly form: WebDavConnectForm }) 
     case 'failed':
       return (
         <div className="flex flex-col gap-3">
-          <Alert type="error" message={failureText(check.failure)} />
+          <Alert
+            type="error"
+            message={failureText(check.failure)}
+            data-testid={`webdav-${check.failure.kind}`}
+          />
           {check.failure.kind === 'cors-blocked' && <CorsSnippets />}
         </div>
       );
