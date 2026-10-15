@@ -2,7 +2,7 @@ import { assert } from '@frozik/utils/assert/assert';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { when } from 'mobx';
 
-import { aDevice, linkedToWebDav, TEST_PASSWORD } from '../../application/fake-device.test-helper';
+import { aDevice, linkedToWebDav, TEST_PASSWORD } from '@frozik/vault-app/testing/fake-device';
 import { SyncButton } from './SyncButton';
 
 describe('SyncButton', () => {

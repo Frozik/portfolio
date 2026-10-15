@@ -35,7 +35,7 @@ test('a passkey added in the settings unlocks the vault without the password', a
 
   await page.getByRole('link', { name: 'Back to the vault' }).click();
   await page.getByRole('button', { name: 'Lock' }).click();
-  await page.getByRole('button', { name: 'Unlock with a passkey' }).click();
+  await page.getByTestId('passkey-unlock').click();
 
   await expect(page.getByRole('option', { name: /GitHub/ })).toBeVisible();
 });

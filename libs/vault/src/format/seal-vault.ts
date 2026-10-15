@@ -4,7 +4,6 @@ import type { IContainerEntry } from './container';
 import { packContainer } from './container';
 import { sealEnvelope } from './envelope';
 import { DEFAULT_CHUNK_SIZE, SAVE_SALT_BYTES } from './header';
-import type { ITlvRecord } from './header-tlv';
 import type { TManifest } from './manifest';
 import { encodeManifest, MANIFEST_PATH } from './manifest';
 import type { IVaultKeys } from './vault-keys';
@@ -19,7 +18,6 @@ export interface ISealContext extends IVaultKeys {
   /** `max(remote, max seen) + 1`. */
   readonly revision: number;
   readonly movedTo: string | null;
-  readonly preserved: readonly ITlvRecord[];
 }
 
 /**

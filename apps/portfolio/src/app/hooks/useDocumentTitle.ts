@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { getCurrentLanguage } from '../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { ROUTE_METADATA } from '../routeMetadata';
 import { appT } from '../translations';
 
@@ -20,7 +20,7 @@ export function useDocumentTitle(): void {
   const pageTitle = resolveTitle(pathname);
 
   useEffect(() => {
-    document.documentElement.lang = getCurrentLanguage();
+    document.documentElement.lang = pageLanguage();
   }, []);
 
   useEffect(() => {

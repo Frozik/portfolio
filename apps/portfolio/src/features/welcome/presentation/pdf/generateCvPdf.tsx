@@ -1,5 +1,5 @@
+import { ensureBrowserGlobalsForPdfKit } from '@frozik/components/pdf/pdfkit-globals';
 import { downloadBlob } from '../../../../shared/lib/downloadFile';
-import { ensureBrowserGlobalsForPdfKit } from '../../../../shared/lib/pdf/pdfkit-globals';
 
 const PDF_FILE_NAME = 'dmitry-sharov-cv.pdf';
 

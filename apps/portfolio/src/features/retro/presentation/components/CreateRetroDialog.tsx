@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { Slider } from '../../../../shared/ui/Slider';
 import type { ICreateRoomParams } from '../../application/RetroLobbyStore';
 import { RETRO_TEMPLATES } from '../../domain/templates';

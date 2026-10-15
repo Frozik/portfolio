@@ -2,8 +2,8 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import { enumerateVoteTargets } from '../../domain/retro-snapshot';

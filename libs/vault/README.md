@@ -20,18 +20,17 @@ src/
   model/        cards, tabs, fields, field kinds, templates, groups, links, expiry, search
   merge/        merge(local, remote, base?) — last writer per card wins, the loser goes to history
   persistence/  device-local ports and their IndexedDB adapters
-  lifecycle/    the lock / unlock state machine — effects as data
   sync/         the sync state machine — effects as data
   session/      the clients' shared shell: runs the machines' effects over the codec and the storage port
   generator/ otp/ audit/ import/ export/ data/
-  react/        components shared by both clients, over @frozik/components controls
   theme/        vault.css
   testing/      fakes and test-data builders
 ```
 
 Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
-`persistence/`, `lifecycle/`, `sync/`, `session/`, `generator/`, `otp/`,
-`audit/`, `data/`, `import/`, `export/`, `react/` and `testing/`.
+`persistence/`, `sync/`, `session/`, `generator/`, `otp/`, `audit/`, `data/`,
+`import/`, `export/` and `testing/`. The lock lifecycle lives in
+`@frozik/vault-app` (`session/domain`), the React widgets in `@frozik/vault-react`.
 
 ## What holds it together
 
@@ -44,10 +43,21 @@ Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
 - **Format** — `.pwv`: an authenticated TLV header, then the sealed zip. A
   newer document schema opens read-only and is never written back, so an
   older client cannot erase what it does not understand; unknown field kinds
-  are shown as such instead of failing the file.
+  are shown as such instead of failing the file. Format 1.1 names the site
+  each passkey belongs to in a skippable header record. A 1.0 client opens
+  the file but drops the record when it saves; a passkey without an entry has
+  an unknown site and is offered everywhere, as in 1.0, while one with an
+  entry is offered only on its site (`passkeysOf(file, rpId)`). From 1.1 on a
+  session keeps every skippable record it does not know (`IVaultKeys.preserved`)
+  and writes it back.
 - **Golden files** — `fixtures/v1.0/*.pwv` freeze the format. Regenerate them
   only on purpose (`pnpm --filter @frozik/vault run generate-fixtures`) and
-  review the diff.
+  review the diff. `testing/format-v1-0.ts` states what a 1.0 reader accepts
+  and what a 1.0 client's save keeps, for tests of every later minor version.
+- **Contract suites** — `testing/device-stores-contract.ts` (the device
+  stores every client's storage passes) and `testing/subtle-crypto-contract.ts`
+  (the WebCrypto calls the core makes, with RFC/NIST known answers), run here
+  on IndexedDB and Node and later on each new platform's adapters.
 - **Model** — immutable cards with tabs and typed fields, edits as pure
   functions stamped with a hybrid logical clock, history, smart groups in one
   pass, URL matching by host by default. Bank details are international:
@@ -80,9 +90,9 @@ Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
 | `vault-crypto-is-below-format` | primitives never know the format or the cards |
 | `vault-sync-sees-format-and-storage-core` | the sync engine never names a provider, the codec or the UI |
 | `vault-importers-are-independent` | importers meet only through the model |
-| `vault-react-is-outermost` | only `react/` knows React |
-| `vault-core-is-platform-free` | no storage or WASM package outside `react/`, `persistence/` and `adapters/` |
+| `vault-core-knows-no-react` | no React, React widgets or `@frozik/components` |
+| `vault-core-is-platform-free` | no storage or WASM package outside `persistence/` and `adapters/` |
 | `vault-sees-only-storage-core` | only `@frozik/cloud-storage/core/*` is visible |
 
-Outside `react/`, `persistence/` and `adapters/`, an oxlint override also bans
+Outside `persistence/` and `adapters/`, an oxlint override also bans
 `fetch`, `indexedDB`, `document`, `window` and the other platform globals.

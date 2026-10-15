@@ -1,0 +1,7 @@
+{
+  "extends": "@frozik/typescript-config/lib",
+  "include": ["src", "types"],
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  }
+}

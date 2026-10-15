@@ -13,7 +13,7 @@ import { useMemo } from 'react';
 
 import { cn } from '@frozik/components/components/cn';
 
-import { Spinner } from '../../../../shared/ui/Spinner';
+import { Spinner } from '@frozik/components/ui/Spinner';
 import { COLOR_BUY, COLOR_SELL } from '../../domain/trades-constants';
 import type { ITrade } from '../../domain/trades-types';
 import { binanceT } from '../translations';

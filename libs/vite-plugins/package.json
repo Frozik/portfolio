@@ -1,0 +1,24 @@
+{
+  "name": "@frozik/vite-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build plugins the web apps share: the page's CSP, the app version, the host files, kdbxweb without Node crypto",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lodash-es": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -2,7 +2,7 @@ import type { BugReporter } from '@frozik/bug-reporter/reporter/bug-reporter';
 import { createBugReporter } from '@frozik/bug-reporter/reporter/create-bug-reporter';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import { getCurrentLanguage } from '../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import type { IDesk } from '../domain/desk';
 import { generateDesk } from '../domain/generate-desk';
 
@@ -28,7 +28,7 @@ const STREAM_SAVER_MITM = `${import.meta.env.BASE_URL}stream-saver/mitm.html`;
 /** The mock desk and the controls that make it misbehave on purpose, so a report has something to show. */
 export class BugReporterDemoStore {
   readonly desk: IDesk = generateDesk(DESK_SEED);
-  readonly locale = getCurrentLanguage();
+  readonly locale = pageLanguage();
   readonly reporter: BugReporter;
   panels: readonly TDeskPanel[] = ['accounts', 'positions', 'news', 'symptoms'];
   activity: readonly IActivityLine[] = [];

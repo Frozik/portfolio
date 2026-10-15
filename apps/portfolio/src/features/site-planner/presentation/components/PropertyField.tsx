@@ -3,7 +3,7 @@ import { NumericEditor } from '@frozik/components/components/RichEditor/NumericE
 import type { Ref } from 'react';
 import { memo } from 'react';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { PropertyRow } from './PropertyRow';
 
 /** Captioned numeric input — the keyboard path to every exact value in the editor (R20). */
@@ -37,7 +37,7 @@ export const PropertyField = memo(
           decimal={decimal}
           allowNegative={allowNegative}
           onValueChange={onValueChange}
-          locale={getCurrentLanguage()}
+          locale={pageLanguage()}
         />
       </PropertyRow>
     </fieldset>

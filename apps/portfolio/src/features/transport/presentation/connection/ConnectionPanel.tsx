@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { observer } from 'mobx-react-lite';
 
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import type { ConnectionModel } from '../../application/ConnectionModel';
 import type { ConnectionState, TransportMode, WireFormat } from '../../domain/connection';
 import { Panel } from '../common/Panel';

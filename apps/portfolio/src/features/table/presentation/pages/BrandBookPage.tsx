@@ -8,7 +8,7 @@ import { observer } from 'mobx-react-lite';
 import type { ReactNode, RefObject } from 'react';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import type { TDemoTheme } from '../../application/TableDemoStore';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';

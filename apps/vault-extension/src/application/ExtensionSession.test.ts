@@ -18,7 +18,9 @@ import { isNil } from 'lodash-es';
 
 import type { TCloudLink, IDriveSignInFailure } from '../domain/cloud';
 import type { IExtensionServices, IFillRequest, ISessionKey, ISetup } from '../domain/ports';
+import type { IQuickLockRecord } from '../domain/quick-unlock';
 import { ExtensionSession, IDLE_LOCK_MS, PROTECTED_OPEN_MS } from './ExtensionSession';
+import { handleRequest } from './handle-request';
 
 const PASSWORD = 'correct horse battery staple';
 const SIGNAL = new AbortController().signal;
@@ -65,7 +67,7 @@ async function aVaultFile(cards: readonly IVaultCard[]) {
   const sealed = await codec.seal(
     document,
     aManifest(),
-    { ...keys.value, revision: 1, movedTo: null, preserved: [] },
+    { ...keys.value, revision: 1, movedTo: null },
     new AbortController().signal
   );
   assert(sealed.ok);
@@ -77,6 +79,8 @@ function aBrowser() {
   const copies = new Map<string, ReturnType<typeof createMemoryProvider>>();
   let sessionKey: ISessionKey | null = null;
   let setup: ISetup | null = null;
+  let quickLock: IQuickLockRecord | null = null;
+  const lastMaster = new Map<string, Milliseconds>();
   const filled: { readonly tabId: number; readonly request: IFillRequest }[] = [];
   const copied: string[] = [];
   let reloads = 0;
@@ -104,7 +108,11 @@ function aBrowser() {
       return copy;
     },
     sessionKeys: {
-      load: () => Promise.resolve(sessionKey),
+      // Like `storage.session`, every read is a fresh copy the reader may zero.
+      load: () =>
+        Promise.resolve(
+          isNil(sessionKey) ? null : { ...sessionKey, rawDek: sessionKey.rawDek.slice() }
+        ),
       save: key => {
         sessionKey = { ...key, rawDek: key.rawDek.slice() };
         return Promise.resolve();
@@ -151,8 +159,28 @@ function aBrowser() {
     restart: {
       reload: () => {
         reloads += 1;
+        quickLock = null;
       },
     },
+    quickLocks: {
+      load: () => Promise.resolve(quickLock),
+      save: record => {
+        quickLock = record;
+        return Promise.resolve();
+      },
+      clear: () => {
+        quickLock = null;
+        return Promise.resolve();
+      },
+    },
+    lastMaster: {
+      load: vaultKey => Promise.resolve(lastMaster.get(vaultKey) ?? null),
+      save: (vaultKey, at) => {
+        lastMaster.set(vaultKey, at);
+        return Promise.resolve();
+      },
+    },
+    quickExpiry: { set: () => Promise.resolve(), cancel: () => Promise.resolve() },
     idleAlarm: {
       set: delayMs => {
         alarm = delayMs;
@@ -272,7 +300,12 @@ describe('the extension’s session', () => {
     expect(await session.unlock('wrong')).toBe('wrong-password');
     expect(await session.unlock(PASSWORD)).toBeNull();
 
-    expect(await session.status()).toEqual({ kind: 'unlocked', vaultName: 'Family' });
+    expect(await session.status()).toEqual({
+      kind: 'unlocked',
+      vaultName: 'Family',
+      quickUnlock: false,
+      reminderDue: false,
+    });
     expect(browser.alarm()).toBe(IDLE_LOCK_MS);
   });
 
@@ -340,19 +373,21 @@ describe('the extension’s session', () => {
     const accounts = anAccount('https://accounts.example.com');
     const { session } = await unlockedWith([github, accounts]);
 
-    expect((await session.pageCards('https://github.com/login')).map(card => card.id)).toEqual([
-      github.id,
-    ]);
-    expect(await session.pageCards('https://evil.example.com/login')).toEqual([]);
-    expect(await session.pageCards('https://github.com.evil.net/login')).toEqual([]);
+    expect(
+      (await session.cards.pageCards('https://github.com/login')).map(card => card.id)
+    ).toEqual([github.id]);
+    expect(await session.cards.pageCards('https://evil.example.com/login')).toEqual([]);
+    expect(await session.cards.pageCards('https://github.com.evil.net/login')).toEqual([]);
   });
 
   it('fills login, password and the current code on the card’s site, and refuses any other', async () => {
     const github = anAccount('https://github.com');
     const { browser, session } = await unlockedWith([github]);
 
-    expect(await session.fill(github.id, 7, 'https://github.com/login', false)).toBe('filled');
-    expect(await session.fill(github.id, 7, 'https://gist.github.com/login', false)).toBe(
+    expect(await session.cards.fill(github.id, 7, 'https://github.com/login', false)).toBe(
+      'filled'
+    );
+    expect(await session.cards.fill(github.id, 7, 'https://gist.github.com/login', false)).toBe(
       'other-site'
     );
 
@@ -367,19 +402,21 @@ describe('the extension’s session', () => {
   it('keeps a protected card’s secrets in the worker until the master password is typed again', async () => {
     const bank = anAccount('https://bank.example', { protected: true });
     const { browser, session } = await unlockedWith([bank]);
-    const view = await session.card(bank.id);
+    const view = await session.cards.card(bank.id);
     const password = view?.fields.find(field => field.kind === 'password');
     assert(password !== undefined);
 
     expect(password.value).toBeNull();
-    expect(await session.reveal(bank.id, password.id)).toBeNull();
-    expect(await session.fill(bank.id, 1, 'https://bank.example/', false)).toBe('not-allowed');
+    expect(await session.cards.reveal(bank.id, password.id)).toBeNull();
+    expect(await session.cards.fill(bank.id, 1, 'https://bank.example/', false)).toBe(
+      'not-allowed'
+    );
     expect(await session.openProtected('wrong')).toBe('wrong-password');
     expect(await session.openProtected(PASSWORD)).toBeNull();
-    expect(await session.copy(bank.id, password.id)).toBe(true);
+    expect(await session.cards.copy(bank.id, password.id)).toBe(true);
     browser.advance(PROTECTED_OPEN_MS);
 
-    expect(await session.reveal(bank.id, password.id)).toBeNull();
+    expect(await session.cards.reveal(bank.id, password.id)).toBeNull();
     expect(browser.copied).toEqual(['s3cret']);
   });
 
@@ -421,14 +458,14 @@ describe('the extension’s session', () => {
         ]),
       },
       aManifest(),
-      { ...reopened.value.keys, revision: 2, movedTo: null, preserved: [] },
+      { ...reopened.value.keys, revision: 2, movedTo: null },
       SIGNAL
     );
     assert(newer.ok);
     await folder.write(storagePath(source.fileName), newer.value, { kind: 'overwrite' }, SIGNAL);
 
     expect(await session.sync()).toBe('updated');
-    expect((await session.pageCards('https://bank.example/')).map(card => card.id)).toEqual([
+    expect((await session.cards.pageCards('https://bank.example/')).map(card => card.id)).toEqual([
       bank.id,
     ]);
     expect(browser.passwordsUsed.every(password => password === 'app-password')).toBe(true);
@@ -463,7 +500,7 @@ describe('the extension’s session', () => {
     const rotated = await first.codec.seal(
       reopened.value.document,
       aManifest(),
-      { ...rotatedKeys.value, revision: 2, movedTo: null, preserved: [] },
+      { ...rotatedKeys.value, revision: 2, movedTo: null },
       SIGNAL
     );
     assert(rotated.ok);
@@ -535,10 +572,12 @@ describe('the extension’s session', () => {
   it('clears a copied secret before the lock reloads the extension, which would cancel the clearing', async () => {
     const github = anAccount('https://github.com');
     const { browser, session } = await unlockedWith([github]);
-    const login = (await session.card(github.id))?.fields.find(field => field.kind === 'login');
+    const login = (await session.cards.card(github.id))?.fields.find(
+      field => field.kind === 'login'
+    );
     assert(login !== undefined);
 
-    await session.copy(github.id, login.id);
+    await session.cards.copy(github.id, login.id);
     await session.lock();
 
     expect(browser.copied).toEqual(['jane', '(cleared)']);
@@ -547,11 +586,13 @@ describe('the extension’s session', () => {
   it('keeps a protected card open for a worker woken later, until the window ends', async () => {
     const bank = anAccount('https://bank.example', { protected: true });
     const { session, worker } = await unlockedWith([bank]);
-    const password = (await session.card(bank.id))?.fields.find(field => field.kind === 'password');
+    const password = (await session.cards.card(bank.id))?.fields.find(
+      field => field.kind === 'password'
+    );
     assert(password !== undefined);
     await session.openProtected(PASSWORD);
 
-    expect(await worker().reveal(bank.id, password.id)).toBe('s3cret');
+    expect(await worker().cards.reveal(bank.id, password.id)).toBe('s3cret');
   });
 
   it('keeps no key when the file opens its key slot but not its contents', async () => {
@@ -564,5 +605,53 @@ describe('the extension’s session', () => {
 
     expect(await session.unlock(PASSWORD)).toBe('corrupted');
     expect(browser.hasSessionKey()).toBe(false);
+  });
+
+  it('turns the idle lock into a PIN’s one try once a PIN is set up', async () => {
+    const { session, worker } = await unlockedWith([]);
+    expect(await session.setUpQuickUnlock(PASSWORD, '2468')).toBe(true);
+    expect(await session.status()).toMatchObject({ kind: 'unlocked', quickUnlock: true });
+
+    await session.lockQuickly();
+    const locked = await worker().status();
+    const opened = await worker().quickUnlock('2468');
+
+    expect(locked).toEqual({ kind: 'quick-locked', vaultName: 'Family', digits: 4 });
+    expect(opened).toBe('opened');
+    expect(await worker().status()).toMatchObject({ kind: 'unlocked' });
+  });
+
+  it('leaves only the master password after a wrong PIN', async () => {
+    const { session, worker } = await unlockedWith([]);
+    await session.setUpQuickUnlock(PASSWORD, '2468');
+    await session.lockQuickly();
+
+    expect(await worker().quickUnlock('1111')).toBe('wrong-pin');
+    expect(await worker().quickUnlock('2468')).toBe('wrong-pin');
+    expect(await worker().status()).toEqual({ kind: 'locked', vaultName: 'Family' });
+  });
+
+  it('locks fully at the idle lock without a PIN, and refuses a PIN under a wrong password', async () => {
+    const { session, browser } = await unlockedWith([]);
+
+    expect(await session.setUpQuickUnlock('not it', '2468')).toBe(false);
+    await session.lockQuickly();
+
+    expect(browser.reloads()).toBe(1);
+  });
+
+  it('keeps the PIN after the lock button and leaves only the master password after locking completely', async () => {
+    const { session, worker } = await unlockedWith([]);
+    await session.setUpQuickUnlock(PASSWORD, '2468');
+
+    await handleRequest(session, { kind: 'lock' });
+    const afterButton = await worker().status();
+    await worker().quickUnlock('2468');
+    await handleRequest(worker(), { kind: 'lock-completely' });
+
+    const afterComplete = await session.status();
+
+    expect(afterButton).toEqual({ kind: 'quick-locked', vaultName: 'Family', digits: 4 });
+    expect(afterComplete).toEqual({ kind: 'locked', vaultName: 'Family' });
   });
 });

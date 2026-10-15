@@ -20,6 +20,7 @@ export function createSealedJsonRecord<T>({
   label,
   random,
   decode,
+  encode = value => value,
 }: {
   readonly store: ISealedRecordStore;
   readonly vaultKey: TVaultKey;
@@ -28,6 +29,8 @@ export function createSealedJsonRecord<T>({
   readonly label: THkdfLabel;
   readonly random: IRandom;
   readonly decode: (value: unknown) => T | null;
+  /** The stored shape of a value, when it is not the value itself. */
+  readonly encode?: (value: T) => unknown;
 }): ISealedJsonRecord<T> {
   const slot = { vaultKey, recordKey };
   const key = deriveAesKey(dek, label);
@@ -41,7 +44,7 @@ export function createSealedJsonRecord<T>({
   return {
     save: value =>
       inTurn(async () =>
-        store.put(vaultKey, recordKey, await sealRecord(await key, slot, value, random))
+        store.put(vaultKey, recordKey, await sealRecord(await key, slot, encode(value), random))
       ),
     load: () =>
       inTurn(async () => {

@@ -1,3 +1,5 @@
+import { whenUpdatesAreDue } from '@frozik/utils/service-worker/updates-due';
+import { onWorkerTakeover } from '@frozik/utils/service-worker/worker-takeover';
 import { isNil } from 'lodash-es';
 
 import { UpdateBanner } from './updateBanner';
@@ -26,15 +28,12 @@ export function setupServiceWorkerUpdate(): void {
     setTimeout(() => window.location.reload(), UPDATE_BANNER_DISPLAY_MS);
   };
 
-  // `clientsClaim()` also fires `controllerchange` on the very first install,
-  // when there is nothing to update — reloading there would restart every first
-  // visit. Only that first claim of an uncontrolled page is skipped: a later
-  // change, however long the tab stayed open, is a real update.
-  let awaitingFirstClaim = navigator.serviceWorker.controller === null;
+  // `clientsClaim()` also takes over on the very first install, when there is
+  // nothing to update — reloading there would restart every first visit. A
+  // later change, however long the tab stayed open, is a real update.
   let stale = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (awaitingFirstClaim && !stale) {
-      awaitingFirstClaim = false;
+  onWorkerTakeover(navigator.serviceWorker, ({ firstClaim }) => {
+    if (firstClaim && !stale) {
       return;
     }
     reload();
@@ -74,33 +73,11 @@ export function setupServiceWorkerUpdate(): void {
     });
   });
 
-  navigator.serviceWorker.ready.then(registration => {
-    const checkForUpdate = () => {
-      if (navigator.onLine === false) {
-        return;
-      }
+  void navigator.serviceWorker.ready.then(registration =>
+    whenUpdatesAreDue(() => {
       registration.update().catch(() => undefined);
-    };
-
-    setInterval(checkForUpdate, SW_UPDATE_CHECK_INTERVAL_MS);
-
-    // Safari throttles interval timers in background tabs and freezes pages
-    // entirely in iOS standalone mode, so the interval alone can leave a
-    // returning user on a stale build for a long time. Returning to the tab
-    // (visibilitychange) and restoring from the back-forward cache (pageshow
-    // with `persisted`) are exactly the moments a stale page resurfaces —
-    // check immediately on both.
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        checkForUpdate();
-      }
-    });
-    window.addEventListener('pageshow', event => {
-      if (event.persisted) {
-        checkForUpdate();
-      }
-    });
-  });
+    }, SW_UPDATE_CHECK_INTERVAL_MS)
+  );
 }
 
 function consumeStaleBuildReload(): boolean {

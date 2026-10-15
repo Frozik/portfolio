@@ -36,6 +36,11 @@ export interface IPasswordKeyslot extends IKeyslotSealing {
 export interface IPrfKeyslot extends IKeyslotSealing {
   readonly kind: 'prf';
   readonly credentialId: TBytes;
+  /**
+   * The site the passkey belongs to: a browser offers it only there. `null`
+   * for a slot saved by a client that did not record sites: offered everywhere.
+   */
+  readonly rpId: string | null;
 }
 
 export interface IRecoveryKeyslot extends IKeyslotSealing {
@@ -48,7 +53,7 @@ export type TKeyslot = IPasswordKeyslot | IPrfKeyslot | IRecoveryKeyslot;
 /** What a new slot is made of; a new password slot is always Argon2id, PBKDF2 is only read. */
 export type TNewKeyslot =
   | { readonly kind: 'password'; readonly params: IArgon2Params }
-  | { readonly kind: 'prf'; readonly credentialId: TBytes }
+  | { readonly kind: 'prf'; readonly credentialId: TBytes; readonly rpId: string }
   | { readonly kind: 'recovery' };
 
 /** Everything a KEK is derived from besides the secret — a stored slot satisfies it as is. */
@@ -172,7 +177,7 @@ export async function createKeyslot(
     case 'password':
       return { kind: 'password', kdf: { kind: 'argon2id', params: spec.params }, ...sealing };
     case 'prf':
-      return { kind: 'prf', credentialId: spec.credentialId, ...sealing };
+      return { kind: 'prf', credentialId: spec.credentialId, rpId: spec.rpId, ...sealing };
     case 'recovery':
       return { kind: 'recovery', ...sealing };
     default:

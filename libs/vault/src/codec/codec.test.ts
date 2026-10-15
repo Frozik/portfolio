@@ -82,7 +82,7 @@ describe('vault codec', () => {
     const sealed = await client.call('seal', {
       document: sampleVaultDocument(createSeededRandom(3)),
       manifest: aManifest(),
-      context: { ...keys, revision: 1, movedTo: null, preserved: [] },
+      context: { ...keys, revision: 1, movedTo: null },
     });
     assert(sealed.ok && sealed.value.ok);
     const opened = await createInThreadCodec(dependencies).open(

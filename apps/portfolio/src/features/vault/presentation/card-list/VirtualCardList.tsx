@@ -8,9 +8,9 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import type { VaultView } from '../../application/VaultView';
-import { vaultT } from '../translations';
+import { Button } from '@frozik/components/ui/Button';
+import type { VaultView } from '@frozik/vault-app/document/application/VaultView';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 import { CardListRow } from './CardListRow';
 import { nextActiveIndex } from './list-navigation';
 

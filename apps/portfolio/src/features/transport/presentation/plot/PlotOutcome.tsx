@@ -1,7 +1,7 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { observer } from 'mobx-react-lite';
 
-import { Alert } from '../../../../shared/ui/Alert';
+import { Alert } from '@frozik/components/ui/Alert';
 import type { LastSample, PlotModel, PlotState } from '../../application/PlotModel';
 import { CallFailureNotice } from '../common/CallFailureNotice';
 import { transportT } from '../translations';

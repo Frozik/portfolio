@@ -1,22 +1,22 @@
 import { cn } from '@frozik/components/components/cn';
+import { LargeTypeView } from '@frozik/vault-react/large-type/LargeTypeView';
+import { SENSITIVE_CLASS } from '@frozik/vault-react/sensitive-class';
+import { TotpCode } from '@frozik/vault-react/totp/TotpCode';
 import { fileAssetIdsOf } from '@frozik/vault/model/asset-edits';
 import type { ICardField } from '@frozik/vault/model/card';
 import { passwordRotationOf } from '@frozik/vault/model/card';
 import { FIELD_KINDS } from '@frozik/vault/model/field-kinds/registry';
-import { LargeTypeView } from '@frozik/vault/react/large-type/LargeTypeView';
-import { SENSITIVE_CLASS } from '@frozik/vault/react/sensitive-class';
-import { TotpCode } from '@frozik/vault/react/totp/TotpCode';
 import { isNil } from 'lodash-es';
 import { Copy, Eye, EyeOff, Maximize2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { Button } from '../../../../shared/ui/Button';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
-import type { VaultSession } from '../../application/VaultSession';
-import { AssetPreview } from '../files/AssetPreview';
-import { vaultT } from '../translations';
+import { Button } from '@frozik/components/ui/Button';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { AssetPreview } from '@frozik/vault-react/files/AssetPreview';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 
 const ICON_SIZE = 14;
 
@@ -73,7 +73,7 @@ export const FieldRow = observer(
           <TotpCode
             uri={field.value.value}
             now={session.now}
-            locale={getCurrentLanguage()}
+            locale={pageLanguage()}
             onCopy={code => void session.clipboard.copy(code)}
           />
         </div>

@@ -5,8 +5,8 @@ import { UrlEditor } from '@frozik/components/components/RichEditor/UrlEditor';
 import { MultiSelect } from '@frozik/components/components/select/MultiSelect';
 import { observer } from 'mobx-react-lite';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { GROUPS } from '../../application/FormControlsDemo';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
@@ -18,7 +18,7 @@ const REVEAL_TIMEOUT_MS = 5000;
 export const FormAccountTab = observer(() => {
   const { form } = useControlsDemoStore();
   const t = controlsT.formPage;
-  const locale = getCurrentLanguage();
+  const locale = pageLanguage();
 
   return (
     <CardFrame className="flex flex-col gap-5 p-6">

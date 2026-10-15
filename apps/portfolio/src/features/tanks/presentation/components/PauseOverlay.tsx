@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
 import { tanksT } from '../translations';
 

@@ -6,7 +6,7 @@ import type { RefObject } from 'react';
 import { memo, useEffect, useRef } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import {
   anchorPlanPosition,

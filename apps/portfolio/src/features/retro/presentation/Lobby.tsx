@@ -1,4 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { ConfirmDialog } from '@frozik/components/ui/ConfirmDialog';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import {
   isFailValueDescriptor,
   isSyncedValueDescriptor,
@@ -11,15 +15,11 @@ import { useEventCallback } from 'usehooks-ts';
 import { AccountChip } from '../../../shared/communication/AccountChip';
 import { initialsOf, UNKNOWN_PARTICIPANT_INITIAL } from '../../../shared/lib/initialsOf';
 import { AvatarImage } from '../../../shared/ui/AvatarImage';
-import { CardFrame } from '../../../shared/ui/CardFrame';
-import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
 import { CreateRoomCard } from '../../../shared/ui/lobby/CreateRoomCard';
 import { JoinByLinkCard } from '../../../shared/ui/lobby/JoinByLinkCard';
 import { extractRoomIdFromInput, formatLocalDateTime } from '../../../shared/ui/lobby/lobbyFormat';
 import { LobbyHero } from '../../../shared/ui/lobby/LobbyHero';
 import { RoomListSection } from '../../../shared/ui/lobby/RoomListSection';
-import { MonoKicker } from '../../../shared/ui/MonoKicker';
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import type { ICreateRoomParams } from '../application/RetroLobbyStore';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';

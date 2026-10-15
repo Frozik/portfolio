@@ -12,6 +12,7 @@
     "./core/*": "./src/core/*.ts",
     "./memory/*": "./src/memory/*.ts",
     "./indexeddb/*": "./src/indexeddb/*.ts",
+    "./sql/*": "./src/sql/*.ts",
     "./webdav/*": "./src/webdav/*.ts",
     "./google-drive/*": "./src/google-drive/*.ts",
     "./testing/*": "./src/testing/*.ts"

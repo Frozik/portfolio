@@ -8,7 +8,7 @@ import type { PointerEvent, ReactNode, RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 import { useEventCallback, useResizeObserver } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { Slider } from '../../../../shared/ui/Slider';
 import type { PlaygroundSession } from '../../application/PlaygroundSession';
 import type { IPoint } from '../../domain/types';

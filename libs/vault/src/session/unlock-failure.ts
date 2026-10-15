@@ -1,7 +1,17 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import type { TCodecError } from '../codec/vault-codec';
-import type { TUnlockFailure } from '../lifecycle/lifecycle-state';
+
+/** Why an unlock failed, each with its own message. */
+export type TUnlockFailure =
+  | 'wrong-password'
+  | 'slot-tampered'
+  | 'corrupted'
+  | 'unsupported-format'
+  | 'unavailable'
+  | 'not-found'
+  /** The key this device kept no longer opens the vault: a new fingerprint or face was enrolled, or the vault's key changed. */
+  | 'biometric-invalidated';
 
 /** Why an unlock failed, in the words the unlock screen has a message for. */
 export function unlockFailureOf(error: TCodecError): TUnlockFailure {

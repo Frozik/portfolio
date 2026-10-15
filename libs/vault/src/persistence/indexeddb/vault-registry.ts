@@ -1,23 +1,6 @@
-import type { Milliseconds } from '@frozik/utils/date/types';
-import { z } from 'zod';
-
-import type { IKnownVault, IVaultRegistry } from '../ports';
+import type { IVaultRegistry } from '../ports';
+import { readKnownVault } from '../stored-records';
 import type { TRunInDatabase } from './device-database';
-
-const KNOWN_VAULT_SCHEMA = z.object({
-  vaultKey: z.string(),
-  name: z.string(),
-  description: z.string().catch(''),
-  lastOpenedAt: z.number().nullable(),
-  unsyncedChanges: z.boolean(),
-});
-
-function readKnownVault(entry: unknown): readonly IKnownVault[] {
-  const parsed = KNOWN_VAULT_SCHEMA.safeParse(entry);
-  return parsed.success
-    ? [{ ...parsed.data, lastOpenedAt: parsed.data.lastOpenedAt as Milliseconds | null }]
-    : [];
-}
 
 /** Open records read through a schema; an entry this version cannot read is skipped, not fatal. */
 export function createVaultRegistry(run: TRunInDatabase): IVaultRegistry {

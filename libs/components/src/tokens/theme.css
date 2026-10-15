@@ -1,0 +1,77 @@
+/* Generated from src/tokens/color-roles.ts by `pnpm --filter @frozik/components run generate-theme`. */
+
+@theme static {
+  --color-bg: light-dark(#f9fafb, #07090c);
+  --color-bg-elevated: light-dark(#f3f4f6, #0d1016);
+  --color-bg-card: light-dark(#ffffff, #0f1320);
+  --color-fg: light-dark(#111827, #e7ecf3);
+  --color-fg-dim: light-dark(#4b5563, #a2adbd);
+  --color-fg-faint: light-dark(#636b78, #76819a);
+  --color-line: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08));
+  --color-line-soft: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04));
+  --color-accent: light-dark(#2563eb, #60a5fa);
+  --color-accent-soft: light-dark(#dbeafe, #1e3a5f);
+  --color-on-accent: light-dark(#ffffff, #07090c);
+  --color-danger: light-dark(#b91c1c, #ff4f58);
+  --color-caution: light-dark(#854d0e, #f5c842);
+  --color-positive: light-dark(#15803d, #4cd964);
+  --color-focus-ring: light-dark(#2563eb, #60a5fa);
+  --color-scrim: light-dark(rgb(15 23 42 / 0.4), rgb(0 0 0 / 0.6));
+  --color-landing-bg: var(--color-bg);
+  --color-landing-bg-elev: var(--color-bg-elevated);
+  --color-landing-bg-card: var(--color-bg-card);
+  --color-landing-fg: var(--color-fg);
+  --color-landing-fg-dim: var(--color-fg-dim);
+  --color-landing-fg-faint: var(--color-fg-faint);
+  --color-landing-accent: var(--color-accent);
+  --color-landing-accent-dim: var(--color-accent-soft);
+  --color-landing-green: var(--color-positive);
+  --color-landing-red: var(--color-danger);
+  --color-landing-yellow: var(--color-caution);
+  --color-landing-border: var(--color-line);
+  --color-landing-border-soft: var(--color-line-soft);
+}
+
+[data-theme] {
+  --color-bg: light-dark(#f9fafb, #07090c);
+  --color-bg-elevated: light-dark(#f3f4f6, #0d1016);
+  --color-bg-card: light-dark(#ffffff, #0f1320);
+  --color-fg: light-dark(#111827, #e7ecf3);
+  --color-fg-dim: light-dark(#4b5563, #a2adbd);
+  --color-fg-faint: light-dark(#636b78, #76819a);
+  --color-line: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.08));
+  --color-line-soft: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.04));
+  --color-accent: light-dark(#2563eb, #60a5fa);
+  --color-accent-soft: light-dark(#dbeafe, #1e3a5f);
+  --color-on-accent: light-dark(#ffffff, #07090c);
+  --color-danger: light-dark(#b91c1c, #ff4f58);
+  --color-caution: light-dark(#854d0e, #f5c842);
+  --color-positive: light-dark(#15803d, #4cd964);
+  --color-focus-ring: light-dark(#2563eb, #60a5fa);
+  --color-scrim: light-dark(rgb(15 23 42 / 0.4), rgb(0 0 0 / 0.6));
+  --color-landing-bg: var(--color-bg);
+  --color-landing-bg-elev: var(--color-bg-elevated);
+  --color-landing-bg-card: var(--color-bg-card);
+  --color-landing-fg: var(--color-fg);
+  --color-landing-fg-dim: var(--color-fg-dim);
+  --color-landing-fg-faint: var(--color-fg-faint);
+  --color-landing-accent: var(--color-accent);
+  --color-landing-accent-dim: var(--color-accent-soft);
+  --color-landing-green: var(--color-positive);
+  --color-landing-red: var(--color-danger);
+  --color-landing-yellow: var(--color-caution);
+  --color-landing-border: var(--color-line);
+  --color-landing-border-soft: var(--color-line-soft);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-theme='system'] {
+  color-scheme: light dark;
+}

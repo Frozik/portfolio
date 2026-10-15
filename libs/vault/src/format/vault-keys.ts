@@ -9,8 +9,9 @@ import type { TKeyslot } from '../crypto/keyslot';
 import { createKeyslot } from '../crypto/keyslot';
 import type { IRandom } from '../ports/random';
 import { VAULT_ID_BYTES } from './header';
+import type { ITlvRecord } from './header-tlv';
 
-/** The key material a session seals with; the slots are the current set, not the last read header's. */
+/** What a session seals the header with; the slots are the current set, not the last read header's. */
 export interface IVaultKeys {
   readonly vaultId: TBytes;
   readonly dek: CryptoKey;
@@ -20,6 +21,8 @@ export interface IVaultKeys {
   readonly keyslotsEpoch: number;
   /** Rotations so far; a file under a lower one holds a retired key. */
   readonly keyGeneration: number;
+  /** Records of a newer format version from the last file taken in, written back unread. */
+  readonly preserved: readonly ITlvRecord[];
 }
 
 /** A new vault: a random id and DEK behind one password slot; the raw DEK is zeroed. */
@@ -49,6 +52,7 @@ export async function createVaultKeys(
       keyslots: [passwordSlot],
       keyslotsEpoch: 0,
       keyGeneration: 0,
+      preserved: [],
     };
   } finally {
     rawDek.fill(0);

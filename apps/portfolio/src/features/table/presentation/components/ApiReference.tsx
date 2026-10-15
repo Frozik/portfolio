@@ -2,7 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Info } from 'lucide-react';
 import { memo } from 'react';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { TApiSource } from '../apiReference';
 import { LOG_API, SNAPSHOT_API } from '../apiReference';
 import { tableDemoT } from '../translations';

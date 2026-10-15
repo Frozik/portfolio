@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
-import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
 
 const DeskPanelComponent = ({
   title,

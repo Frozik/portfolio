@@ -195,3 +195,58 @@
   color: var(--re-red);
   font-size: 12px;
 }
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--re-border-soft);
+  border-radius: 8px;
+}
+
+.banner p {
+  margin: 0;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings summary {
+  cursor: pointer;
+  color: var(--re-fg-dim);
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The popup follows the system unless the user chose a scheme for the extension. */
+:global([data-theme='light']) {
+  color-scheme: light;
+}
+
+:global([data-theme='dark']) {
+  color-scheme: dark;
+}

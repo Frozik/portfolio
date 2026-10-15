@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { Plus, Trash2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { SOFT_ACTION_ITEM_LIMIT } from '../../domain/constants';
 import type { ActionItemId } from '../../domain/types';

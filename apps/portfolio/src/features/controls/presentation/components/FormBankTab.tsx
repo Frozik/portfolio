@@ -5,8 +5,8 @@ import { Combobox } from '@frozik/components/components/select/Combobox';
 import { Select } from '@frozik/components/components/select/Select';
 import { observer } from 'mobx-react-lite';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { BANK_SUGGESTIONS, CURRENCIES, CURRENCY_DETAILS } from '../../application/FormControlsDemo';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
@@ -15,7 +15,7 @@ import { FormField } from './FormField';
 export const FormBankTab = observer(() => {
   const { form } = useControlsDemoStore();
   const t = controlsT.formPage;
-  const locale = getCurrentLanguage();
+  const locale = pageLanguage();
 
   return (
     <CardFrame className="flex flex-col gap-5 p-6">

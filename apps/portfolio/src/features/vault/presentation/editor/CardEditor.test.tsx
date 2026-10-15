@@ -8,8 +8,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { typeInto } from '@frozik/components/components/RichEditor/editor-test-helpers.test-helper';
 
-import { aDevice } from '../../application/fake-device.test-helper';
-import type { VaultSession } from '../../application/VaultSession';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { aDevice } from '@frozik/vault-app/testing/fake-device';
 import { VaultLayout } from '../layout/VaultLayout';
 
 function changedFields(): readonly HTMLElement[] {

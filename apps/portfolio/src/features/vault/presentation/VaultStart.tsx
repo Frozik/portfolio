@@ -9,24 +9,27 @@ import { memo, useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Alert } from '../../../shared/ui/Alert';
-import { Button } from '../../../shared/ui/Button';
-import { CardFrame } from '../../../shared/ui/CardFrame';
-import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog';
-import { MonoKicker } from '../../../shared/ui/MonoKicker';
-import { Spinner } from '../../../shared/ui/Spinner';
-import { DEMO_VAULT_PASSWORD } from '../domain/demo-vault';
-import type { TStartPage } from '../domain/vault-paths';
-import { parseStartPage, vaultPaths } from '../domain/vault-paths';
-import { CreateVaultPanel } from './create/CreateVaultPanel';
-import { ExtensionOffer } from './ExtensionOffer';
+import { Alert } from '@frozik/components/ui/Alert';
+import { Button } from '@frozik/components/ui/Button';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { ConfirmDialog } from '@frozik/components/ui/ConfirmDialog';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { Spinner } from '@frozik/components/ui/Spinner';
+import { DEMO_VAULT_PASSWORD } from '@frozik/vault-app/document/domain/demo-vault';
+import type { TStartPage } from '@frozik/vault-app/navigation/vault-pages';
+import { parseStartPage } from '@frozik/vault-app/navigation/vault-paths';
+import { storageFailureText } from '@frozik/vault-app/texts/vault/storage-failure-wording';
+import { CreateVaultPanel } from '@frozik/vault-react/create/CreateVaultPanel';
+import { cloudT } from '@frozik/vault-react/texts/cloud';
+import { translateTemplateKey } from '@frozik/vault-react/texts/templates';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 import { OpenFromCloud } from './OpenFromCloud';
-import { registryFailureText } from './registry-failure-text';
-import { vaultT } from './translations';
-import { cloudT } from './translations/cloud';
-import { translateTemplateKey } from './translations/template-texts';
 import { STEPPED, useStepBack } from './useStepBack';
 import { useVaultOutletStore } from './useVaultOutletStore';
+import { vaultPaths } from './vault-paths';
+
+/** The product's own site: the same vault as a standalone app, on a separate origin. */
+const CIPHRA_VAULT_URL = 'https://ciphra-vault.github.io/';
 
 const DELETE_ICON_SIZE = 16;
 
@@ -163,7 +166,7 @@ const StartActions = observer(({ page }: { readonly page: TStartPage }) => {
       return (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-3">
-            <Button type="button" onClick={tryDemo}>
+            <Button type="button" data-testid="try-demo" onClick={tryDemo}>
               {vaultT.start.tryDemo}
             </Button>
             <Button asChild variant="secondary">
@@ -190,18 +193,26 @@ const StartActions = observer(({ page }: { readonly page: TStartPage }) => {
 /** The start screen: try the demo, create a vault, or pick one this device knows. */
 export const VaultStart = observer(() => {
   const store = useVaultOutletStore();
-  const page = parseStartPage(useLocation().pathname);
+  const page = parseStartPage(vaultPaths.belowRoot(useLocation().pathname));
   const { vaults } = store.registry;
   const [deleting, setDeleting] = useState<IKnownVault | null>(null);
 
   return (
     <section className="flex flex-col gap-4">
-      <Alert type="warning" message={vaultT.demoWarning} />
+      <Alert
+        type="warning"
+        data-testid="demo-warning"
+        message={vaultT.demoWarning}
+        description={
+          <a href={CIPHRA_VAULT_URL} target="_blank" rel="noreferrer" className="underline">
+            {vaultT.ciphra.keepRealOnes}
+          </a>
+        }
+      />
       <StartActions page={page} />
-      <ExtensionOffer />
       <h2 className="text-[20px] font-medium text-landing-fg">{vaultT.deviceVaults.title}</h2>
       {!isNil(vaults.fail) ? (
-        <Alert type="error" message={registryFailureText(vaults.fail)} />
+        <Alert type="error" message={storageFailureText(vaultT, vaults.fail)} />
       ) : isNil(vaults.value) ? (
         <Spinner />
       ) : vaults.value.length === 0 ? (

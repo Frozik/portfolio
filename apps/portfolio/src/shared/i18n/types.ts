@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 
-export type Language = 'en' | 'ru';
-
 export type TranslationOf<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => string
     ? (...args: A) => string

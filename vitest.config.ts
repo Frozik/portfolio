@@ -63,9 +63,52 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'vault-web',
+          environment: 'happy-dom',
+          include: [
+            'apps/vault-web/src/**/*.{test,spec}.{ts,tsx}',
+            'apps/vault-web/vite-plugins/**/*.{test,spec}.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'vault',
           environment: 'happy-dom',
           include: ['libs/vault/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vault-browser',
+          environment: 'happy-dom',
+          include: ['libs/vault-browser/src/**/*.{test,spec}.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vault-http',
+          environment: 'node',
+          include: ['libs/vault-http/src/**/*.{test,spec}.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vault-react',
+          environment: 'happy-dom',
+          include: ['libs/vault-react/src/**/*.{test,spec}.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vault-app',
+          environment: 'node',
+          include: ['libs/vault-app/src/**/*.{test,spec}.ts'],
         },
       },
       {
@@ -108,7 +151,10 @@ export default defineConfig({
         test: {
           name: 'tooling',
           environment: 'node',
-          include: ['libs/tooling/src/**/*.{test,spec}.ts'],
+          include: [
+            'libs/tooling/src/**/*.{test,spec}.ts',
+            'libs/vite-plugins/src/**/*.{test,spec}.ts',
+          ],
         },
       },
     ],

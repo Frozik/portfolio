@@ -52,7 +52,7 @@ describe('vault header', () => {
     const header = aHeader({
       keyslots: [
         passwordSlot,
-        { kind: 'prf', credentialId: utf8('credential'), ...sealing },
+        { kind: 'prf', credentialId: utf8('credential'), rpId: 'vault.example', ...sealing },
         { kind: 'recovery', ...sealing },
       ],
       movedTo: 'google-drive:file-id',

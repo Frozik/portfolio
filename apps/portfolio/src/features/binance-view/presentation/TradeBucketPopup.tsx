@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Drawer } from '../../../shared/ui/Drawer';
+import { Drawer } from '@frozik/components/ui/Drawer';
 import type { TradesStreamStore } from '../application/TradesStreamStore';
 import type { ITrade, ITradeBucketHitTestResult } from '../domain/trades-types';
 import {

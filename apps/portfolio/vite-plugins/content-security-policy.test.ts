@@ -1,18 +1,23 @@
 import { createHash } from 'node:crypto';
 
-import { withContentSecurityPolicy } from './content-security-policy';
+import { withContentSecurityPolicy } from '@frozik/vite-plugins/content-security-policy';
+
+import { portfolioContentSecurityPolicy } from './content-security-policy';
 
 const PAGE =
   '<!doctype html><html><head><meta charset="UTF-8"><script>document.title="x"</script>' +
   '<script type="module" src="/portfolio/assets/e.js"></script></head><body></body></html>';
 const CHARSET_SNIFF_BYTES = 1024;
-const OPTIONS = { communicationUrl: 'https://signal.example.org', basePath: '/portfolio/' };
+const OPTIONS = portfolioContentSecurityPolicy({
+  communicationUrl: 'https://signal.example.org',
+  basePath: '/portfolio',
+});
 
 function policyOf(html: string): string {
   return /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html)?.[1] ?? '';
 }
 
-describe('content security policy', () => {
+describe('the portfolio’s content security policy', () => {
   it('comes first in the head, before any script it governs', () => {
     const html = withContentSecurityPolicy(PAGE, OPTIONS);
 

@@ -5,8 +5,8 @@ import { MaskedEditor } from '@frozik/components/components/RichEditor/MaskedEdi
 import { MultilineEditor } from '@frozik/components/components/RichEditor/MultilineEditor';
 import { observer } from 'mobx-react-lite';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
 import { FormField } from './FormField';
@@ -14,7 +14,7 @@ import { FormField } from './FormField';
 export const FormNotesTab = observer(() => {
   const { form } = useControlsDemoStore();
   const t = controlsT.formPage;
-  const locale = getCurrentLanguage();
+  const locale = pageLanguage();
 
   return (
     <CardFrame className="flex flex-col gap-5 p-6">

@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 import { appT } from '../../../../../app/translations';
 import { useCopyToClipboard } from '../../../../../shared/hooks/useCopyToClipboard';
-import { DialogShell } from '../../../../../shared/ui/DialogShell';
 import { QRCode } from '../../../../../shared/ui/QRCode';
 import { welcomeT } from '../../translations';
 

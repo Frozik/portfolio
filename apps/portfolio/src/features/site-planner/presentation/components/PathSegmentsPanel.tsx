@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { editedPathId } from '../../domain/model/editor-mode';
 import type { PathSurface, SitePath } from '../../domain/model/plot-objects';

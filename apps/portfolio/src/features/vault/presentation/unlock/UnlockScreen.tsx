@@ -1,23 +1,24 @@
 import type { IRichEditorHandle } from '@frozik/components/components/RichEditor/defs';
 import { SecretEditor } from '@frozik/components/components/RichEditor/SecretEditor';
 import type { TBytes } from '@frozik/vault/crypto/bytes';
-import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import type { IKnownVault } from '@frozik/vault/persistence/ports';
+import type { TUnlockFailure } from '@frozik/vault/session/unlock-failure';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { Button } from '../../../../shared/ui/Button';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { Spinner } from '../../../../shared/ui/Spinner';
-import { VaultField } from '../components/VaultField';
-import { vaultT } from '../translations';
-import { keysT } from '../translations/keys';
-import { PasskeyUnlock } from './PasskeyUnlock';
-import { RecoveryKeyUnlock } from './RecoveryKeyUnlock';
+import { Button } from '@frozik/components/ui/Button';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { Spinner } from '@frozik/components/ui/Spinner';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
+import { VaultField } from '@frozik/vault-react/form/VaultField';
+import { useKeptWhileChecked } from '@frozik/vault-react/hooks/useKeptWhileChecked';
+import { keysT } from '@frozik/vault-react/texts/keys';
+import { vaultT } from '@frozik/vault-react/texts/vault';
+import { PasskeyUnlock } from '@frozik/vault-react/unlock/PasskeyUnlock';
+import { RecoveryKeyUnlock } from '@frozik/vault-react/unlock/RecoveryKeyUnlock';
 
 /**
  * The browser may remember the master
@@ -32,16 +33,19 @@ export const UnlockScreen = observer(
     onUnlock,
     onUnlockWithRecoveryKey,
     passkeys,
+    notice = null,
   }: {
     readonly vault: IKnownVault;
     readonly unlocking: boolean;
     readonly failure: TUnlockFailure | null;
     readonly onUnlock: (password: string) => void;
     readonly onUnlockWithRecoveryKey: (recoveryKey: TBytes) => void;
-    readonly passkeys: Pick<ComponentProps<typeof PasskeyUnlock>, 'load' | 'unlock'>;
+    readonly passkeys: Pick<ComponentProps<typeof PasskeyUnlock>, 'load' | 'unlock'> | null;
+    /** Why the master password is asked for now, when the screen should say it (a failed quick code). */
+    readonly notice?: string | null;
   }) => {
     const t = vaultT.unlock;
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useKeptWhileChecked(unlocking);
     const [withRecoveryKey, setWithRecoveryKey] = useState(false);
     const [triedPasskey, setTriedPasskey] = useState(false);
     const passwordFailure = triedPasskey ? null : failure;
@@ -59,12 +63,16 @@ export const UnlockScreen = observer(
       }
       setTriedPasskey(false);
       onUnlock(password);
-      setPassword('');
     });
 
     return (
       <CardFrame className="flex max-w-[480px] flex-col gap-5 p-6">
         <h2 className="text-[20px] font-medium text-landing-fg">{vault.name}</h2>
+        {!isNil(notice) && (
+          <p role="status" data-testid="unlock-notice" className="text-[13px] text-warning">
+            {notice}
+          </p>
+        )}
         <input
           type="text"
           name="username"
@@ -81,12 +89,14 @@ export const UnlockScreen = observer(
           />
         ) : (
           <>
-            <PasskeyUnlock
-              {...passkeys}
-              unlocking={unlocking}
-              wrongPasskey={triedPasskey && failure === 'wrong-password'}
-              onTry={() => setTriedPasskey(true)}
-            />
+            {!isNil(passkeys) && (
+              <PasskeyUnlock
+                {...passkeys}
+                unlocking={unlocking}
+                wrongPasskey={triedPasskey && failure === 'wrong-password'}
+                onTry={() => setTriedPasskey(true)}
+              />
+            )}
             <VaultField
               label={t.password}
               error={isNil(passwordFailure) ? null : t.failures[passwordFailure]}
@@ -103,7 +113,7 @@ export const UnlockScreen = observer(
                   onValueChange={setPassword}
                   onEnter={submit}
                   disabled={unlocking}
-                  locale={getCurrentLanguage()}
+                  locale={pageLanguage()}
                 />
               )}
             </VaultField>

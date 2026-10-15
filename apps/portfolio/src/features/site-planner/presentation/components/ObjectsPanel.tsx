@@ -1,4 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
+import { Button } from '@frozik/components/ui/Button';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { isNil } from 'lodash-es';
 import type { LucideIcon } from 'lucide-react';
 import { Car, Home, Plus, Route, Trash2, TreePine } from 'lucide-react';
@@ -6,8 +8,6 @@ import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { Button } from '../../../../shared/ui/Button';
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { storeysOf } from '../../domain/model/building';

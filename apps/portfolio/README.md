@@ -16,6 +16,15 @@ smoke tests (`apps/portfolio/e2e`). Dependency versions live once in
 `pnpm-workspace.yaml` (`catalog:`); git hooks are `lefthook.yml`; CI runs
 `moon ci` and deploys to GitHub Pages from `main`.
 
+**Colours** come from one source, `libs/components/src/tokens/color-roles.ts`: semantic
+roles (`bg`, `fg`, `accent`, `danger`, `line`, …) with a light and a dark value each. A
+generator writes them as a Tailwind theme of `light-dark()` values
+(`libs/components/src/tokens/theme.css`, kept current by the `theme-fresh` task), and a
+test checks the WCAG contrast of every text and focus pair in both schemes. The portfolio is
+dark (`color-scheme: dark` on `<html>`); an element with `data-theme="light" | "dark" |
+"system"` repaints everything inside it, `landing-*` classes included (they are aliases of
+the roles).
+
 ## Agent tools (WebMCP)
 
 Pages expose typed tools to browser agents through

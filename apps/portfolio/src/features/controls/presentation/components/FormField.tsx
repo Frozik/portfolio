@@ -2,7 +2,7 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 
 /** A field of the form showcase: its kicker, the control and an optional hint. */
 export const FormField = memo(

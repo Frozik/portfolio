@@ -3,8 +3,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { when } from 'mobx';
 import { MemoryRouter } from 'react-router-dom';
 
-import { aDevice } from '../../application/fake-device.test-helper';
-import type { VaultSession } from '../../application/VaultSession';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { aDevice } from '@frozik/vault-app/testing/fake-device';
 import { VaultSettings } from './VaultSettings';
 
 async function settingsOf() {

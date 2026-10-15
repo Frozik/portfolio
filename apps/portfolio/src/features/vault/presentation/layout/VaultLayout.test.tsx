@@ -7,10 +7,10 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { when } from 'mobx';
 import { MemoryRouter } from 'react-router-dom';
 
-import { changeCard } from '../../application/card-actions';
-import { aDevice } from '../../application/fake-device.test-helper';
-import type { VaultSession } from '../../application/VaultSession';
-import type { TVaultPage } from '../../domain/vault-paths';
+import { changeCard } from '@frozik/vault-app/document/application/card-actions';
+import type { TVaultPage } from '@frozik/vault-app/navigation/vault-pages';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { aDevice } from '@frozik/vault-app/testing/fake-device';
 import { VaultLayout } from './VaultLayout';
 
 async function demoSession(): Promise<VaultSession> {

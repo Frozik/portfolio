@@ -74,6 +74,7 @@ export function OptionList<TValue extends string>({
       }}
       id={optionIdOf(id, index)}
       role="option"
+      data-value={option.value}
       tabIndex={-1}
       aria-selected={isSelected(option.value)}
       aria-disabled={option.disabled === true || undefined}

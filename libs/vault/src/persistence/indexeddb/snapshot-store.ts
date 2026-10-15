@@ -1,17 +1,8 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 
-import type { ISnapshotEntry, ISnapshotStore, TSnapshotReason } from '../ports';
+import type { ISnapshotEntry, ISnapshotStore } from '../ports';
+import { snapshotReasonOf } from '../stored-records';
 import type { TRunInDatabase } from './device-database';
-
-const REASONS: ReadonlySet<string> = new Set<TSnapshotReason>([
-  'before-sync',
-  'periodic',
-  'before-restore',
-]);
-
-function reasonOf(stored: string | undefined): TSnapshotReason {
-  return REASONS.has(stored ?? '') ? (stored as TSnapshotReason) : 'before-sync';
-}
 
 export function createSnapshotStore(run: TRunInDatabase): ISnapshotStore {
   return {
@@ -41,7 +32,7 @@ export function createSnapshotStore(run: TRunInDatabase): ISnapshotStore {
           .map((value, position): ISnapshotEntry => ({
             id: ids[position] ?? 0,
             takenAt: value.takenAt as Milliseconds,
-            reason: reasonOf(value.reason),
+            reason: snapshotReasonOf(value.reason),
             size: value.size ?? value.file?.byteLength ?? 0,
           }))
           .reverse();

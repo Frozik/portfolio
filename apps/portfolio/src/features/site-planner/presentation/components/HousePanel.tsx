@@ -1,11 +1,11 @@
 import { cn } from '@frozik/components/components/cn';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { isNil } from 'lodash-es';
 import { Check, ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import type { BuildingScene } from '../../application/building-scene';
 import { formatCubicMeters, formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';

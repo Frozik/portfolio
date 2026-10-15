@@ -12,3 +12,11 @@ tasks:
       - 'tsconfig.json'
     options:
       runInCI: true
+
+  theme-fresh:
+    command: 'pnpm run theme-fresh'
+    inputs:
+      - 'src/tokens/**/*'
+      - 'scripts/generate-theme.ts'
+    options:
+      runInCI: true

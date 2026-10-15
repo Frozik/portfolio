@@ -7,7 +7,7 @@ export type TStoragePath = Brand<string, 'StoragePath'>;
 
 export type TStorageRev = Brand<string, 'StorageRev'>;
 
-export type TStorageKind = 'memory' | 'indexeddb' | 'google-drive' | 'webdav';
+export type TStorageKind = 'memory' | 'indexeddb' | 'sql' | 'google-drive' | 'webdav';
 
 export type TWritePrecondition =
   | { readonly kind: 'absent' }

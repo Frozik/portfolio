@@ -1,0 +1,56 @@
+{
+  "name": "@frozik/vault-react",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./changed-mark": "./src/changed-mark.ts",
+    "./sensitive-class": "./src/sensitive-class.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./texts/*": "./src/texts/*.ts",
+    "./editor/tab-label": "./src/editor/tab-label.ts",
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
+    "@frozik/cloud-storage": "workspace:*",
+    "@frozik/components": "workspace:*",
+    "@frozik/utils": "workspace:*",
+    "@frozik/vault": "workspace:*",
+    "@frozik/vault-app": "workspace:*",
+    "@react-pdf/renderer": "catalog:",
+    "lodash-es": "catalog:",
+    "lucide-react": "catalog:",
+    "mobx": "catalog:",
+    "mobx-react-lite": "catalog:",
+    "react-router-dom": "catalog:",
+    "react-svg-credit-card-payment-icons": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "uqr": "catalog:",
+    "usehooks-ts": "catalog:"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/lodash-es": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  }
+}

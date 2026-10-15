@@ -7,8 +7,8 @@ import { useEventCallback } from 'usehooks-ts';
 
 import { cn } from '@frozik/components/components/cn';
 
+import { Button } from '@frozik/components/ui/Button';
 import { TopNavCenterPortal } from '../../../app/components/TopNavCenterContext';
-import { Button } from '../../../shared/ui/Button';
 import type { TDemoDensity, TDemoPage, TDemoTheme } from '../application/TableDemoStore';
 import { useTableDemoStore } from '../application/useTableDemoStore';
 import { BrandBookPage } from './pages/BrandBookPage';

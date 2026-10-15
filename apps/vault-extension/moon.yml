@@ -8,6 +8,7 @@ tags:
 fileGroups:
   sources:
     - 'src/**/*'
+    - 'public/**/*'
     - 'wxt.config.ts'
 
 tasks:
@@ -33,6 +34,7 @@ tasks:
       runInCI: true
 
   # The release asset: the production build zipped, its manifest stamped with VAULT_EXTENSION_VERSION.
+  # Release workflows only: it rebuilds .output/chrome-mv3, so beside `build` in `moon ci` the two race.
   zip:
     command: 'pnpm run zip'
     inputs:
@@ -44,6 +46,7 @@ tasks:
       VAULT_EXTENSION_VERSION: '$VAULT_EXTENSION_VERSION'
     options:
       cache: false
+      runInCI: false
 
   type-check:
     command: 'pnpm run types'

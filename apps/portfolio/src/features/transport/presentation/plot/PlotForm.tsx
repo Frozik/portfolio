@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { PlotModel } from '../../application/PlotModel';
 import { transportT } from '../translations';
 

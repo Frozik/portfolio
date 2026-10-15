@@ -1,8 +1,8 @@
 import { useOutletContext } from 'react-router-dom';
 
-import type { VaultFeatureStore } from '../application/VaultFeatureStore';
+import type { VaultApp } from '@frozik/vault-app/session/application/VaultApp';
 
 /** The child routes read the store the `Vault` shell built and passed down its outlet. */
-export function useVaultOutletStore(): VaultFeatureStore {
-  return useOutletContext<VaultFeatureStore>();
+export function useVaultOutletStore(): VaultApp {
+  return useOutletContext<VaultApp>();
 }

@@ -138,6 +138,7 @@ export async function openVaultFile(
       keyslots: header.keyslots,
       keyslotsEpoch: header.keyslotsEpoch,
       keyGeneration: header.keyGeneration,
+      preserved: header.preserved,
     },
     manifest: manifest.value,
     entries,

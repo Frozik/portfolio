@@ -1,4 +1,6 @@
 import { cn } from '@frozik/components/components/cn';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { Check, Copy, X } from 'lucide-react';
 import type { ReactElement } from 'react';
@@ -6,8 +8,6 @@ import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 import type { TCopyStatus } from '../hooks/useCopyToClipboard';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { DialogShell } from './DialogShell';
-import { MonoKicker } from './MonoKicker';
 import { QRCode } from './QRCode';
 
 const QR_PIXEL_SIZE_PX = 216;

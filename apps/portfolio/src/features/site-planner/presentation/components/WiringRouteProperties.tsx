@@ -5,8 +5,8 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { InstallationPresetId } from '../../domain/model/installation';
 import { INSTALLATION_PRESET_IDS, parseInstallationPreset } from '../../domain/model/installation';

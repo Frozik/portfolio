@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import { transportT } from './translations';
 
 const TransportIntroComponent = () => (

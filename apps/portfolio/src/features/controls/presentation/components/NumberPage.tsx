@@ -1,10 +1,10 @@
 import { NumericEditor } from '@frozik/components/components/RichEditor/NumericEditor';
 import { observer } from 'mobx-react-lite';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
-import { SectionNumber } from '../../../../shared/ui/SectionNumber';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { RangeSlider, Slider } from '../../../../shared/ui/Slider';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
@@ -38,7 +38,7 @@ export const NumberPage = observer(() => {
           pipSize={store.pip?.size}
           allowNegative
           placeholder={controlsT.numberPage.placeholder}
-          locale={getCurrentLanguage()}
+          locale={pageLanguage()}
         />
       </CardFrame>
 

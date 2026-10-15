@@ -1,4 +1,5 @@
 import { usePointerAction } from '@frozik/components/hooks/usePointerAction';
+import { Alert } from '@frozik/components/ui/Alert';
 import {
   isFailValueDescriptor,
   isLoadingValueDescriptor,
@@ -12,7 +13,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEventCallback, useResizeObserver } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail } from '../../../../shared/components/ValueDescriptorFail';
-import { Alert } from '../../../../shared/ui/Alert';
 import { usePendulumStore } from '../../application/usePendulumStore';
 import { buildNeuralNetworkLayout, findNeuronAtPoint } from '../../domain/neural-network/layout';
 import { OVERLAY_MESSAGE_CONTAINER_CLASS, PLAYER_LABEL_CLASS } from '../constants';

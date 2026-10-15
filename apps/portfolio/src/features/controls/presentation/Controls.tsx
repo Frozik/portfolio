@@ -1,8 +1,8 @@
 import { memo, useCallback } from 'react';
 
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { useFeatureAgentTools } from '../../../app/components/TopNavAgentToolsContext';
-import { getCurrentLanguage } from '../../../shared/i18n/locale';
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
 import { useControlsDemoStore } from '../application/useControlsDemoStore';
 import { ControlsBackground } from './components/ControlsBackground';
 import { DatePage } from './components/DatePage';
@@ -15,7 +15,7 @@ export const Controls = memo(() => {
   const loadAgentTools = useCallback(
     () =>
       import('../application/controls-agent-tools').then(module =>
-        module.createControlsAgentTools(store, getCurrentLanguage())
+        module.createControlsAgentTools(store, pageLanguage())
       ),
     [store]
   );

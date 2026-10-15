@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { when } from 'mobx';
 import { MemoryRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
-import { aDevice, TEST_PASSWORD } from '../application/fake-device.test-helper';
-import type { VaultFeatureStore } from '../application/VaultFeatureStore';
+import type { VaultApp } from '@frozik/vault-app/session/application/VaultApp';
+import { aDevice, TEST_PASSWORD } from '@frozik/vault-app/testing/fake-device';
 import { VaultStart } from './VaultStart';
 
-function renderStart(store: VaultFeatureStore) {
+function renderStart(store: VaultApp) {
   render(
     <MemoryRouter>
       <Routes>
@@ -23,7 +23,7 @@ function Where() {
 }
 
 /** The start's routes as the app declares them, beginning at the given address. */
-function renderStartAt(store: VaultFeatureStore, path: string) {
+function renderStartAt(store: VaultApp, path: string) {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Where />
@@ -89,7 +89,7 @@ describe('VaultStart', () => {
     const store = aDevice().startStore();
     store.create('Home', TEST_PASSWORD);
     await when(() => store.session !== null);
-    store.lock('route-left');
+    store.lock('left');
     await store.registry.refresh();
     renderStart(store);
 

@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { EyeOff, Glasses } from 'lucide-react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { TGlassesStyle } from '../../domain/glasses-style';
 import { GLASSES_STYLES } from '../../domain/glasses-style';

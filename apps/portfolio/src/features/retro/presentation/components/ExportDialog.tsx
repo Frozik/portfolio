@@ -1,4 +1,5 @@
 import { cn } from '@frozik/components/components/cn';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import DOMPurify from 'dompurify';
 import { isNil } from 'lodash-es';
 import { Check, Copy, Download } from 'lucide-react';
@@ -8,7 +9,6 @@ import { useMemo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 import { useCopyToClipboard } from '../../../../shared/hooks/useCopyToClipboard';
 import { downloadFile } from '../../../../shared/lib/downloadFile';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
 import type { RoomStore } from '../../application/RoomStore';
 import { renderSnapshotToMarkdown } from '../../domain/markdown-export';
 import { retroT } from '../translations';

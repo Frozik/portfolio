@@ -12,6 +12,7 @@ import { Temporal } from 'temporal-polyfill';
 
 import { useEventCallback } from 'usehooks-ts';
 import { useIsCoarsePointer } from '../../hooks/useIsCoarsePointer';
+import { usePortalContainer } from '../../ui/portal-container';
 import { cn } from '../cn';
 import { PopupDrawer } from '../popup/PopupDrawer';
 import { PopupHandle } from '../popup/PopupHandle';
@@ -92,6 +93,7 @@ export const DateTimePicker = memo(
   }) => {
     assert(isValidTimeZoneId(timeZone), `DateTimePicker: unknown time zone "${timeZone}"`);
 
+    const container = usePortalContainer();
     const ariaLabels = useMemo(() => getCalendarAriaLabels(locale), [locale]);
     const format = formatDate ?? (showTime ? defaultFormatDate : formatDateOnly);
     const resolvedToday = useMemo(
@@ -361,7 +363,7 @@ export const DateTimePicker = memo(
             </PopupSheet>
           )}
         </Popover.Anchor>
-        <Popover.Portal>
+        <Popover.Portal container={container}>
           <Popover.Content
             className={cn(controlTokens.tokens, popupStyles.popoverLayer)}
             align="start"

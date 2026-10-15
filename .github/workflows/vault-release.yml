@@ -1,0 +1,288 @@
+# Ciphra Vault's release, called by the organization's repository
+# (`ciphra-vault/ciphra-vault.github.io`):
+#
+#   uses: Frozik/portfolio/.github/workflows/vault-release.yml@<sha> # vX.Y.Z
+#   secrets: inherit
+#
+# The APK is built without secrets; only the `sign` job, behind the `release`
+# environment and without the monorepo's code, sees the keystore.
+#
+# The commit built is the one the caller pinned — the OIDC claim `job_workflow_sha` — and
+# its monorepo tag is the release version — no input that could drift from it.
+# A tag that touches none of the vault's projects since the last release
+# publishes nothing, so an unrelated portfolio release never shows users an update.
+name: Vault release
+
+on:
+  workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
+      ANDROID_KEY_ALIAS:
+        required: true
+      ANDROID_KEY_PASSWORD:
+        required: true
+
+permissions: {}
+
+env:
+  MONOREPO: Frozik/portfolio
+
+jobs:
+  # The OIDC token is read here alone: no checkout, nothing installed, so no dependency's
+  # script ever runs with the right to mint this workflow's identity.
+  pinned:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    outputs:
+      sha: ${{ steps.pinned.outputs.sha }}
+    steps:
+      - id: pinned
+        name: Read the pinned commit from the job's OIDC token
+        run: |
+          token="$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=vault-release" | jq -r .value)"
+          payload="$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+')"
+          while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="$payload="; done
+          sha="$(printf '%s' "$payload" | base64 -d | jq -r .job_workflow_sha)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  gate:
+    needs: pinned
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+      version: ${{ steps.gate.outputs.version }}
+      sha: ${{ needs.pinned.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ env.MONOREPO }}
+          ref: ${{ needs.pinned.outputs.sha }}
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@261c62cb5b0f580c7be7c8cd0f023a2e96756095 # v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASES: ${{ github.repository }}
+          SHA: ${{ needs.pinned.outputs.sha }}
+        run: |
+          version="$(git describe --tags --exact-match "$SHA")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          last="$(gh release view --repo "$RELEASES" --json tagName --jq .tagName 2>/dev/null || true)"
+          if [ -z "$last" ] || pnpm exec affected-projects "$last" "$SHA" --is vault-web --is vault-extension --is vault-native; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ env.MONOREPO }}
+          ref: ${{ needs.gate.outputs.sha }}
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@261c62cb5b0f580c7be7c8cd0f023a2e96756095 # v0
+        with:
+          auto-install: true
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: pnpm install --frozen-lockfile
+      - name: Build the web app and the extension stamped with the release
+        env:
+          VAULT_WEB_VERSION: ${{ env.VERSION }}
+          VAULT_EXTENSION_VERSION: ${{ env.VERSION }}
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          moon run vault-web:build vault-extension:zip
+      - name: Build the APK, signed later (prebuild signs it with a throwaway debug key, which `sign` replaces)
+        env:
+          VAULT_NATIVE_VERSION: ${{ env.VERSION }}
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          VAULT_NATIVE_VERSION_CODE="$(node libs/tooling/src/write-android-version-code.ts "$VERSION")"
+          export SOURCE_DATE_EPOCH VAULT_NATIVE_VERSION_CODE
+          # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
+          pnpm --dir apps/vault-native run build-apk
+          mkdir -p unsigned
+          cp apps/vault-native/android/app/build/outputs/apk/release/app-release.apk unsigned/ciphra-vault.apk
+      - name: Collect the release files and version.json, the APK's SHA-256 still to come
+        env:
+          RELEASES: ${{ github.repository }}
+        run: |
+          mkdir -p release manifest
+          cp apps/vault-extension/.output/*-chrome.zip "release/ciphra-vault-extension-$VERSION.zip"
+          touch apps/vault-web/dist/.nojekyll
+          base="https://github.com/$RELEASES/releases/download/$VERSION"
+          node libs/tooling/src/write-release-manifest.ts "$VERSION" \
+            "$base/ciphra-vault-extension-$VERSION.zip" "$base/ciphra-vault-$VERSION.apk" pending \
+            > manifest/version.json
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/vault-web
+          format: cyclonedx-json
+          output-file: release/ciphra-vault-web.cdx.json
+          upload-artifact: false
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/vault-extension
+          format: cyclonedx-json
+          output-file: release/ciphra-vault-extension.cdx.json
+          upload-artifact: false
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/vault-native
+          format: cyclonedx-json
+          output-file: release/ciphra-vault-android.cdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release
+          path: release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: manifest
+          path: manifest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: site
+          path: apps/vault-web/dist
+          include-hidden-files: true
+
+  # The keystore reaches only this job: no checkout, nothing of the monorepo runs here.
+  sign:
+    needs: [gate, build]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    environment: release
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      # The certificate the READMEs publish; a different key in the secrets fails the release.
+      CERTIFICATE_SHA256: b2a0b977dfc8355d16147e938fac7e1154a4ed1f040445bc34b83d4df1e10b0b
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - name: Align, sign and verify the APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          tools="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -1)"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          mkdir -p signed
+          "$tools/zipalign" -p -f 4 unsigned/ciphra-vault.apk "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" \
+            --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+            --out "signed/ciphra-vault-$VERSION.apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$RUNNER_TEMP/release.keystore"
+          "$tools/apksigner" verify --print-certs "signed/ciphra-vault-$VERSION.apk" \
+            | tee "$RUNNER_TEMP/certs.txt"
+          grep -qx "Signer #1 certificate SHA-256 digest: $CERTIFICATE_SHA256" "$RUNNER_TEMP/certs.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: signed-apk
+          path: signed
+
+  # version.json names the signed APK's SHA-256, so it is finished once the APK is.
+  assemble:
+    needs: [gate, sign]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: signed-apk
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: site
+          path: site
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: manifest
+          path: manifest
+      - name: Put the signed APK's SHA-256 into version.json, write the checksums
+        run: |
+          apk_sha="$(sha256sum "release/ciphra-vault-$VERSION.apk" | cut -d' ' -f1)"
+          jq --arg sha "$apk_sha" '.android.sha256 = $sha' manifest/version.json > site/version.json
+          (cd release && sha256sum -- * > SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-final
+          path: release
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: site
+
+  attest:
+    needs: assemble
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-final
+          path: release
+      - uses: actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc # v2
+        with:
+          subject-checksums: release/SHA256SUMS
+          sbom-path: release/ciphra-vault-extension.cdx.json
+
+  # Release assets first, the site after: the site's version.json never names a zip that 404s.
+  publish:
+    needs: [gate, attest]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-final
+          path: release
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ needs.gate.outputs.version }}
+          name: Ciphra Vault ${{ needs.gate.outputs.version }}
+          files: release/*
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

@@ -1,7 +1,7 @@
 import { Tabs } from '@frozik/components/components/RichEditor/Tabs';
 import { observer } from 'mobx-react-lite';
 
-import { SectionNumber } from '../../../../shared/ui/SectionNumber';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import { FORM_TABS } from '../../application/FormControlsDemo';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';

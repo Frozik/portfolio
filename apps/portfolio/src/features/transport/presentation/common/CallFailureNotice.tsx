@@ -1,7 +1,7 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { memo } from 'react';
 
-import { Alert } from '../../../../shared/ui/Alert';
+import { Alert } from '@frozik/components/ui/Alert';
 import type { CallFailure } from '../../domain/call-failure';
 import { transportT } from '../translations';
 import { TraceIdLine } from './TraceIdLine';

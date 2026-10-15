@@ -4,7 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
 import { HUD_ICON_SIZE_PX } from '../constants';
 import { tanksT } from '../translations';

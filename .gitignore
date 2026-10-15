@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-kill-switch
 dist-ssr
 dev-dist
 *.local
@@ -59,3 +60,12 @@ IDEA.md
 # WXT: the built extension and its generated types
 .output
 .wxt
+
+# Expo
+.expo
+expo-env.d.ts
+apps/vault-native/android
+
+# Android signing keys never enter the repository
+*.keystore
+*.jks

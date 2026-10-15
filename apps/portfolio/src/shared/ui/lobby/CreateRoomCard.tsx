@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react';
 import { memo } from 'react';
 
-import { CardFrame } from '../CardFrame';
-import { MonoKicker } from '../MonoKicker';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 
 /**
  * Shared "start a new room" lobby card. Visual is identical across retro and

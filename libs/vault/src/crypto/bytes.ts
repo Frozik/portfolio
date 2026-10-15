@@ -46,24 +46,31 @@ export function fromHexBytes(hex: string): TBytes | null {
 
 const BASE64_URL = /^[A-Za-z0-9_-]*$/;
 
-/** RFC 4648 §5 without padding: how CXF writes ids, hashes and keys. */
-export function toBase64Url(bytes: Uint8Array): string {
+/** RFC 4648 §4, padded: what a `data:` URI carries. */
+export function toBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);
   }
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+  return btoa(binary);
+}
+
+export function fromBase64(text: string): TBytes | null {
+  try {
+    return Uint8Array.from(atob(text), character => character.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+/** RFC 4648 §5 without padding: how CXF writes ids, hashes and keys. */
+export function toBase64Url(bytes: Uint8Array): string {
+  return toBase64(bytes).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 
 export function fromBase64Url(text: string): TBytes | null {
   if (!BASE64_URL.test(text)) {
     return null;
   }
-  try {
-    return Uint8Array.from(atob(text.replaceAll('-', '+').replaceAll('_', '/')), character =>
-      character.charCodeAt(0)
-    );
-  } catch {
-    return null;
-  }
+  return fromBase64(text.replaceAll('-', '+').replaceAll('_', '/'));
 }

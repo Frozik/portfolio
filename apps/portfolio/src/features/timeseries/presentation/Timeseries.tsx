@@ -4,8 +4,8 @@ import { ChevronDown } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import type { ReactNode } from 'react';
 
+import { Button } from '@frozik/components/ui/Button';
 import { TopNavCenterPortal } from '../../../app/components/TopNavCenterContext';
-import { Button } from '../../../shared/ui/Button';
 import type { TDemoPage } from '../application/TimeseriesDemoStore';
 import { DEMO_PAGES } from '../application/TimeseriesDemoStore';
 import { useTimeseriesDemoStore } from '../application/useTimeseriesDemoStore';

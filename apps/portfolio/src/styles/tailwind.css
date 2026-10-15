@@ -1,7 +1,10 @@
 @import 'tailwindcss';
+@import '../../../../libs/components/src/tokens/theme.css';
+@import '../../../../libs/components/src/ui/ui.css';
 
 /* Scan shared library sources for utility classes */
 @source "../../../../libs/components/src";
+@source "../../../../libs/vault-react/src";
 
 /* Class-based dark mode toggle */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -10,50 +13,9 @@
 @custom-variant short-landscape (@container (orientation: landscape) and (height < 520px));
 
 @theme {
-  /* Brand colors */
-  --color-brand-50: oklch(0.97 0.01 250);
-  --color-brand-100: oklch(0.93 0.03 250);
-  --color-brand-200: oklch(0.86 0.06 250);
-  --color-brand-300: oklch(0.76 0.1 250);
-  --color-brand-400: oklch(0.66 0.16 250);
-  --color-brand-500: oklch(0.55 0.22 250);
-  --color-brand-600: oklch(0.47 0.2 250);
-  --color-brand-700: oklch(0.39 0.16 250);
-  --color-brand-800: oklch(0.32 0.12 250);
-  --color-brand-900: oklch(0.25 0.08 250);
-
-  /* Semantic colors */
-  --color-success: oklch(0.65 0.18 145);
-  --color-warning: oklch(0.75 0.15 75);
-  --color-error: oklch(0.6 0.22 25);
-  --color-info: oklch(0.6 0.18 250);
-
-  /* Surface colors (dark theme default) */
-  --color-surface: oklch(0.14 0.005 250);
-  --color-surface-elevated: oklch(0.18 0.005 250);
-  --color-surface-overlay: oklch(0.22 0.005 250);
-  --color-border: oklch(0.3 0.01 250);
-  --color-text: oklch(0.93 0.005 250);
-  --color-text-secondary: oklch(0.65 0.01 250);
-  --color-text-muted: oklch(0.45 0.01 250);
-
-  /* Landing-page palette (dedicated namespace, see REDESIGN.md).
-     Kept HEX-based and separate from the oklch demo tokens above so that
-     the landing visual language does not bleed into the inner demo routes. */
-  --color-landing-bg: #07090c;
-  --color-landing-bg-elev: #0d1016;
-  --color-landing-bg-card: #0f1320;
-  --color-landing-fg: #e7ecf3;
-  --color-landing-fg-dim: #a2adbd;
-  --color-landing-fg-faint: #76819a;
-  --color-landing-accent: #60a5fa;
-  --color-landing-accent-dim: #1e3a5f;
-  --color-landing-green: #4cd964;
-  --color-landing-red: #ff4f58;
-  --color-landing-yellow: #f5c842;
+  /* The landing palette's own accent; the rest of `landing-*` are aliases of the colour roles
+     (`@frozik/components/tokens`). */
   --color-landing-purple: #a78bfa;
-  --color-landing-border: rgb(255 255 255 / 0.08);
-  --color-landing-border-soft: rgb(255 255 255 / 0.04);
 
   /* Landing container — mirrors `--container-narrow` from the Portfolio-tw.html prototype. */
   --container-narrow: 1080px;
@@ -75,16 +37,8 @@
   --radius-full: 9999px;
 
   /* Animations */
-  --animate-fade-in: fade-in 150ms ease-out;
-  --animate-fade-out: fade-out 100ms ease-in;
-  --animate-slide-in-left: slide-in-left 200ms ease-out;
-  --animate-slide-out-left: slide-out-left 150ms ease-in;
   --animate-slide-in-top: slide-in-top 400ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-out-top: slide-out-top 150ms ease-in;
-  --animate-slide-in-right: slide-in-right 200ms ease-out;
-  --animate-slide-out-right: slide-out-right 150ms ease-in;
-  --animate-slide-in-bottom: slide-in-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-slide-out-bottom: slide-out-bottom 200ms ease-in;
   --animate-zzz-1: zzz-float 2.5s ease-in-out infinite;
   --animate-zzz-2: zzz-float 2.5s ease-in-out 0.4s infinite;
   --animate-zzz-3: zzz-float 2.5s ease-in-out 0.8s infinite;
@@ -103,22 +57,6 @@
   --animate-hero-reveal: hero-reveal 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-exp-expand: exp-expand 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes fade-out {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
   @keyframes slide-in-top {
     from {
       transform: translateY(-100%);
@@ -135,54 +73,6 @@
     }
     to {
       transform: translateY(-100%);
-    }
-  }
-  @keyframes slide-in-left {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-  @keyframes slide-out-left {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-100%);
-    }
-  }
-  @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-  @keyframes slide-out-right {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(100%);
-    }
-  }
-  @keyframes slide-in-bottom {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
-  }
-  @keyframes slide-out-bottom {
-    from {
-      transform: translateY(0);
-    }
-    to {
-      transform: translateY(100%);
     }
   }
   @keyframes zzz-float {
@@ -421,13 +311,6 @@
   border-bottom: 1px dashed var(--color-landing-border-soft);
 }
 
-/* Horizontal hairline used by landing SectionHead to fill remaining space. */
-@utility section-rule {
-  flex: 1 1 auto;
-  height: 1px;
-  background: var(--color-landing-border-soft);
-}
-
 /* Pulsing 40-px hairline used in the Hero scroll-to-explore hint. */
 @utility scroll-line {
   &::after {
@@ -490,48 +373,6 @@
   }
 }
 
-/* Pair of accent corner brackets — top-left and bottom-right only, 10 px.
-   Used on retro card surfaces to echo the landing's schematic aesthetic
-   without the full 8-segment frame that `thumb-corners` draws. */
-@utility card-corners {
-  position: relative;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border: 1px solid var(--color-landing-accent);
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  &::before {
-    top: -1px;
-    left: -1px;
-    border-right: none;
-    border-bottom: none;
-  }
-
-  &::after {
-    bottom: -1px;
-    right: -1px;
-    border-left: none;
-    border-top: none;
-  }
-}
-
-/* Subtle lift on hover — 1 px translate with a short ease.
-   Borders and other surface tweaks are applied by callers directly. */
-@utility lift-hover {
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-}
-
 /* Corner brackets around project-card thumbnails — 8 orthogonal 12×1 line segments. */
 @utility thumb-corners {
   background:
@@ -558,7 +399,9 @@
      landing foreground color (previously they fell through to the browser's
      black default). Demo routes override via their own containers / utility
      classes, so setting this at the root is safe. */
+  /* The portfolio is dark; a part that offers a choice sets its own `data-theme`. */
   html {
+    color-scheme: dark;
     scroll-behavior: smooth;
   }
 

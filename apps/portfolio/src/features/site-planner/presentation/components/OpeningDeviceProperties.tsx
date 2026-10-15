@@ -1,7 +1,7 @@
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElectricalDevice } from '../../domain/model/electrical';
 import { DEVICE_KINDS, parseDeviceKind } from '../../domain/model/electrical';

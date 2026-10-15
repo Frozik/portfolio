@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { CableLine } from '../../application/wiring-report';

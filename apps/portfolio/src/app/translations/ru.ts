@@ -1,4 +1,4 @@
-import { selectPluralForm } from '../../shared/i18n/plural';
+import { selectPluralForm } from '@frozik/utils/i18n/plural';
 import type { TranslationOf } from '../../shared/i18n/types';
 import type { appTranslationsEn } from './en';
 

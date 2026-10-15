@@ -87,7 +87,7 @@ const sealed = await codec.seal(
     createdAt: '2026-10-12T00:00:00Z',
     createdBy: 'vault-extension e2e fixture',
   },
-  { ...keys, revision: 1, movedTo: null, preserved: [] },
+  { ...keys, revision: 1, movedTo: null },
   new AbortController().signal
 );
 if (!sealed.ok) {

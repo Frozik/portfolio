@@ -4,17 +4,32 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
+import type { AppearanceModel } from '@frozik/vault-app/device/application/AppearanceModel';
+import type { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 import type { PopupModel } from '../application/PopupModel';
 import { CardScreen } from './CardScreen';
 import { CardsScreen } from './CardsScreen';
 import { popupT } from './popup-texts';
+import { PopupSettings } from './PopupSettings';
+import { QuickUnlockScreen } from './QuickUnlockScreen';
+import { ReminderPrompt } from './ReminderPrompt';
 import { SetupScreen } from './SetupScreen';
 import { UnlockScreen } from './UnlockScreen';
+import { UpdateBanner } from './UpdateBanner';
 import styles from './popup.module.css';
 
-const Body = observer(({ model }: { readonly model: PopupModel }) => {
+interface IPopupParts {
+  readonly model: PopupModel;
+  readonly appearance: AppearanceModel;
+  readonly updates: UpdateWatch;
+}
+
+const Body = observer(({ model, appearance, updates }: IPopupParts) => {
   const { status, opened } = model;
   if (isNil(status)) {
+    return null;
+  }
+  if (updates.verdict === 'required' && status.kind !== 'not-set-up') {
     return null;
   }
   switch (status.kind) {
@@ -22,6 +37,8 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
       return <SetupScreen model={model} />;
     case 'locked':
       return <UnlockScreen model={model} />;
+    case 'quick-locked':
+      return <QuickUnlockScreen model={model} digits={status.digits} />;
     case 'unlocked':
       if (model.inTab) {
         return (
@@ -34,7 +51,11 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
         );
       }
       return isNil(opened) ? (
-        <CardsScreen model={model} />
+        <>
+          {status.reminderDue && <ReminderPrompt model={model} />}
+          <CardsScreen model={model} />
+          <PopupSettings model={model} appearance={appearance} quickUnlock={status.quickUnlock} />
+        </>
       ) : (
         <CardScreen model={model} card={opened} />
       );
@@ -43,8 +64,11 @@ const Body = observer(({ model }: { readonly model: PopupModel }) => {
   }
 });
 
-const Sheet = observer(({ model }: { readonly model: PopupModel }) => (
-  <main className={cn(controlTokens.tokens, model.inTab ? styles.sheet : styles.popup)}>
+const Sheet = observer(({ model, appearance, updates }: IPopupParts) => (
+  <main
+    className={cn(controlTokens.tokens, model.inTab ? styles.sheet : styles.popup)}
+    data-theme={appearance.preference}
+  >
     <header className={styles.header}>
       {model.inTab ? (
         <h1 className={styles.title}>{model.vaultName ?? popupT.driveTabTitle}</h1>
@@ -63,17 +87,18 @@ const Sheet = observer(({ model }: { readonly model: PopupModel }) => (
         {!isNil(model.host.punycode) && ` (${model.host.punycode})`}
       </span>
     )}
-    <Body model={model} />
+    <UpdateBanner watch={updates} />
+    <Body model={model} appearance={appearance} updates={updates} />
   </main>
 ));
 
 /** The popup: the page's host on top, then setup, unlock or the cards; opened as a tab, one card centred on the page. */
-export const PopupApp = observer(({ model }: { readonly model: PopupModel }) =>
-  model.inTab ? (
-    <div className={cn(controlTokens.tokens, styles.page)}>
-      <Sheet model={model} />
+export const PopupApp = observer((parts: IPopupParts) =>
+  parts.model.inTab ? (
+    <div className={cn(controlTokens.tokens, styles.page)} data-theme={parts.appearance.preference}>
+      <Sheet {...parts} />
     </div>
   ) : (
-    <Sheet model={model} />
+    <Sheet {...parts} />
   )
 );

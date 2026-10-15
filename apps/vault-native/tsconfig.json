@@ -1,0 +1,19 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["jest"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "index.ts",
+    "polyfills.ts",
+    "dev-notices.ts",
+    "jest.setup.ts",
+    "app.config.ts",
+    "src"
+  ],
+  "exclude": ["../../libs/**/*.test.ts", "../../libs/**/*.test.tsx"]
+}

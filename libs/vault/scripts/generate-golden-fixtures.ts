@@ -61,7 +61,7 @@ async function main(): Promise<void> {
     argon2: HASH_WASM_KDF,
     random,
   });
-  const context = { ...keys, revision: 1, movedTo: null, preserved: [] };
+  const context = { ...keys, revision: 1, movedTo: null };
   const entries = encodeDocument(sampleVaultDocument(createSeededRandom(GOLDEN_SAMPLE_SEED)));
   const manifest: TManifest = {
     format: 'pwv',

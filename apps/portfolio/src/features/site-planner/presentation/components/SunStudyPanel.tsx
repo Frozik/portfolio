@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import { Slider } from '../../../../shared/ui/Slider';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
@@ -75,7 +75,7 @@ export const SunStudyPanel = observer(({ store }: { readonly store: SitePlannerS
           showTime={false}
           today={today}
           placeholder={sitePlannerT.sun.date}
-          locale={getCurrentLanguage()}
+          locale={pageLanguage()}
         />
       </fieldset>
 

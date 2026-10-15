@@ -1,4 +1,5 @@
 import { cn } from '@frozik/components/components/cn';
+import { Spinner } from '@frozik/components/ui/Spinner';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { Share2 } from 'lucide-react';
@@ -11,7 +12,6 @@ import type { ICommunicationClient } from '../../../shared/communication/Communi
 import { useAnonymousCommunicationClient } from '../../../shared/communication/useCommunicationClient';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
 import { Sparkline } from '../../../shared/ui/Sparkline';
-import { Spinner } from '../../../shared/ui/Spinner';
 import { Tooltip } from '../../../shared/ui/Tooltip';
 import { useConfLobbyStore } from '../application/useConfLobbyStore';
 import { useConfRoomStore } from '../application/useConfRoomStore';

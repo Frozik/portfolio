@@ -8,11 +8,11 @@ import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
-import { SectionNumber } from '../../../../shared/ui/SectionNumber';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import type { ParseDirection } from '../../application/ControlsDemoStore';
 import { useControlsDemoStore } from '../../application/useControlsDemoStore';
 import { controlsT } from '../translations';
@@ -264,7 +264,7 @@ export const DatePage = observer(() => {
           timeResolution={timeResolution}
           placeholder={controlsT.datePage.placeholder}
           today={today}
-          locale={getCurrentLanguage()}
+          locale={pageLanguage()}
         />
       </CardFrame>
 

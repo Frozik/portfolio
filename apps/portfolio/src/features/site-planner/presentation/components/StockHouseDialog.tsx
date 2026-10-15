@@ -5,8 +5,8 @@ import type { ChangeEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
+import { Button } from '@frozik/components/ui/Button';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
 import { drawPlan } from '../../application/render/plan-draw/draw-plan';
 import { buildTemplatePreview } from '../../application/render/template-preview';

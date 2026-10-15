@@ -9,21 +9,22 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-import { Alert } from '../../../../shared/ui/Alert';
-import { Button } from '../../../../shared/ui/Button';
-import type { VaultSession } from '../../application/VaultSession';
-import { SiteCardIcon } from '../components/SiteCardIcon';
-import { tabLabelOf } from '../editor/tab-label';
-import { vaultT } from '../translations';
-import { editorT } from '../translations/editor';
-import { CardMenu } from './CardMenu';
-import { ConcurrentVersions } from './ConcurrentVersions';
-import { ExpiryBanner } from './ExpiryBanner';
+import { Alert } from '@frozik/components/ui/Alert';
+import { Button } from '@frozik/components/ui/Button';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { SiteCardIcon } from '@frozik/vault-react/card-icon/SiteCardIcon';
+import { CardMenu } from '@frozik/vault-react/card/CardMenu';
+import { ConcurrentVersions } from '@frozik/vault-react/card/ConcurrentVersions';
+import { ExpiryBanner } from '@frozik/vault-react/card/ExpiryBanner';
+import { LinkedCards } from '@frozik/vault-react/card/LinkedCards';
+import { PhysicalCard } from '@frozik/vault-react/card/PhysicalCard';
+import { RotationBanner } from '@frozik/vault-react/card/RotationBanner';
+import { tabLabelOf } from '@frozik/vault-react/editor/tab-label';
+import { ProtectedGateDialog } from '@frozik/vault-react/protected/ProtectedGateDialog';
+import { editorT } from '@frozik/vault-react/texts/editor';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 import { FieldRow } from './FieldRow';
-import { LinkedCards } from './LinkedCards';
-import { PhysicalCard } from './PhysicalCard';
-import { ProtectedGateDialog } from './ProtectedGateDialog';
-import { RotationBanner } from './RotationBanner';
 
 const ICON_SIZE = 16;
 
@@ -62,7 +63,11 @@ export const CardView = observer(
     return (
       <article className="flex flex-col gap-4">
         <header className="flex items-center gap-2">
-          <SiteCardIcon card={card} siteIcon={session.view.siteIconOf(card)} />
+          <SiteCardIcon
+            card={card}
+            siteIcon={session.view.siteIconOf(card)}
+            locale={pageLanguage()}
+          />
           <h2 className="min-w-0 flex-1 truncate text-[22px] font-medium text-landing-fg">
             {card.title === '' ? vaultT.list.untitled : card.title}
           </h2>

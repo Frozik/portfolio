@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { DialogShell } from '../../shared/ui/DialogShell';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import { QRCode } from '../../shared/ui/QRCode';
 import { appT } from '../translations';
 

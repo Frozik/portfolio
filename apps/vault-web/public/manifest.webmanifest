@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Ciphra Vault",
+  "short_name": "Ciphra",
+  "description": "A zero-knowledge password manager whose only storage is one encrypted file in your own cloud.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07090c",
+  "theme_color": "#07090c",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

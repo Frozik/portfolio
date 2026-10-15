@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
+import { ConfirmDialog } from '@frozik/components/ui/ConfirmDialog';
 import { PhoneOff } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { confT } from '../translations';
 

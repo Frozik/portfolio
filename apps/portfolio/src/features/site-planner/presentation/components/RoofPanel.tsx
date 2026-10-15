@@ -5,9 +5,9 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { Button } from '@frozik/components/ui/Button';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { RoofZoneScene } from '../../application/room-scenes';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';

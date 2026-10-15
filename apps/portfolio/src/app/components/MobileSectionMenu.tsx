@@ -1,7 +1,7 @@
+import { Drawer } from '@frozik/components/ui/Drawer';
 import { Home } from 'lucide-react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { Drawer } from '../../shared/ui/Drawer';
 import { useOfflinePackStore } from '../offline/OfflinePackContext';
 import type { INavSectionTranslation } from '../translations';
 import { GameOfLifeBackground } from './GameOfLifeBackground';

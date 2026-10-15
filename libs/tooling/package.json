@@ -5,8 +5,10 @@
   "description": "Repository-wide checks and build helpers, run straight from their TypeScript sources",
   "bin": {
     "affected-projects": "./src/affected-projects.ts",
+    "android-version-code": "./src/write-android-version-code.ts",
     "check-source-conventions": "./src/check-source-conventions.ts",
-    "predict-version": "./src/predict-version.ts"
+    "predict-version": "./src/predict-version.ts",
+    "release-manifest": "./src/write-release-manifest.ts"
   },
   "type": "module",
   "scripts": {

@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@import '../../../../libs/components/src/tokens/theme.css';
+@import '../../../../libs/components/src/ui/ui.css';
+
+@source "../../../../libs/components/src";
+@source "../../../../libs/vault-react/src";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* A finger needs 44 px: on a coarse pointer every button is at least that tall. */
+@media (pointer: coarse) {
+  :where(button, [role='button'], [role='combobox']) {
+    min-height: 44px;
+  }
+}

@@ -5,7 +5,7 @@ import type { ChangeEvent } from 'react';
 import { useRef, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
 import { exportPlanJson, exportPlanPng } from '../../application/plan-export';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';

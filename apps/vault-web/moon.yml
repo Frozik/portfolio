@@ -1,0 +1,100 @@
+language: typescript
+layer: application
+stack: frontend
+
+tags:
+  - application
+
+fileGroups:
+  vite:
+    - 'public/**/*'
+    - 'src/**/*'
+    - 'index.html'
+    - 'vite.config.ts'
+    - 'vite-plugins/**/*'
+
+tasks:
+  build:
+    command: 'pnpm run build'
+    inputs:
+      - '@group(vite)'
+      - 'tsconfig*.json'
+      # The version stamped into the bundle: a cached build must never carry an old one.
+      - '$VAULT_WEB_VERSION'
+      # The vault's OAuth client id comes from the chosen host's file.
+      - '/infra/hosts/*.env'
+      - '$DEPLOY_HOST_NAME'
+    outputs:
+      - 'dist'
+    options:
+      runInCI: true
+
+  # The emergency worker that retires every installed copy; e2e deploys it over a running build.
+  build-kill-switch:
+    command: 'pnpm run build:kill-switch'
+    inputs:
+      - '@group(vite)'
+      - 'tsconfig*.json'
+    outputs:
+      - 'dist-kill-switch'
+    options:
+      runInCI: true
+
+  # The iPhone project runs on WebKit; Chromium comes with the portfolio's install.
+  install-browsers:
+    command: 'playwright install webkit'
+    inputs: []
+    options:
+      cache: false
+
+  dev:
+    command: 'pnpm run serve'
+    options:
+      persistent: true
+
+  # The production build as it ships, service worker and CSP included: what the PWA install sees.
+  preview:
+    command: 'pnpm run preview'
+    deps:
+      - 'build'
+    options:
+      persistent: true
+      runInCI: false
+
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(vite)'
+      - 'e2e/**/*'
+      - 'playwright.config.ts'
+      - 'tsconfig*.json'
+    options:
+      runInCI: true
+
+  e2e:
+    command: 'pnpm exec playwright test'
+    deps:
+      - 'build'
+      - 'build-kill-switch'
+      - 'portfolio:build'
+    inputs:
+      - '@group(vite)'
+      - 'e2e/**/*'
+      - 'playwright.config.ts'
+    options:
+      runInCI: true
+      mutex: 'heavy-suites'
+
+  # N3 and the category budgets, in the light and the dark scheme; against the production build.
+  lighthouse:
+    command: 'pnpm run lighthouse'
+    deps:
+      - 'build'
+    inputs:
+      - '@group(vite)'
+      - 'lighthouserc*.json'
+    outputs:
+      - '.lighthouseci'
+    options:
+      cache: false
+      runInCI: false

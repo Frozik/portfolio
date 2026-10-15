@@ -1,8 +1,8 @@
+import { ensurePdfFontsRegistered } from '@frozik/components/pdf/pdf-fonts';
 import { Document, Image, Link, Page, Text, View } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import avatarPngUrl from '../../../../assets/avatar.png';
-import { ensurePdfFontsRegistered } from '../../../../shared/lib/pdf/pdf-fonts';
 import { findEarliestStart, getYearsOfExperience } from '../../domain/career';
 import { CONTACT_LINKS } from '../contentData';
 import { formatDateMonthYear, measureDuration } from '../experience-format';

@@ -28,8 +28,20 @@ async function answer(
     case 'unlock':
       return session.unlock(request.password);
     case 'lock':
+      await session.lockQuickly();
+      return null;
+    case 'lock-completely':
       await session.lock();
       return null;
+    case 'quick-unlock':
+      return session.quickUnlock(request.pin);
+    case 'quick-set-up':
+      return session.setUpQuickUnlock(request.password, request.pin);
+    case 'quick-switch-off':
+      await session.switchOffQuickUnlock();
+      return null;
+    case 'remind':
+      return session.remind(request.password);
     case 'reset':
       await session.reset();
       return null;
@@ -46,19 +58,24 @@ async function answer(
     case 'open-protected':
       return session.openProtected(request.password);
     case 'page-cards':
-      return session.pageCards(request.pageUrl);
+      return session.cards.pageCards(request.pageUrl);
     case 'search':
-      return session.search(request.query);
+      return session.cards.search(request.query);
     case 'card':
-      return session.card(request.cardId);
+      return session.cards.card(request.cardId);
     case 'reveal':
-      return session.reveal(request.cardId, request.fieldId);
+      return session.cards.reveal(request.cardId, request.fieldId);
     case 'copy':
-      return session.copy(request.cardId, request.fieldId);
+      return session.cards.copy(request.cardId, request.fieldId);
     case 'copy-code':
-      return session.copyCode(request.cardId, request.fieldId);
+      return session.cards.copyCode(request.cardId, request.fieldId);
     case 'fill':
-      return session.fill(request.cardId, request.tabId, request.pageUrl, request.allowInsecure);
+      return session.cards.fill(
+        request.cardId,
+        request.tabId,
+        request.pageUrl,
+        request.allowInsecure
+      );
     default:
       return assertNever(request);
   }

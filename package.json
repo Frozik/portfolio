@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "moon run portfolio:analyze",
     "build": "moon run :build",
-    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :shellcheck :proto-lint :proto-breaking :proto-fresh :test",
+    "check-all": "moon run :lint :format-check :type-check :layers :knip :conventions :shellcheck :proto-lint :proto-breaking :proto-fresh :theme-fresh :test",
     "conventions": "moon run root:conventions",
     "conventions:baseline": "moon run root:conventions-baseline",
     "coverage": "moon run root:test-coverage",
@@ -26,6 +26,10 @@
     "test": "moon run root:test",
     "test:watch": "moon run root:test-watch",
     "types": "moon run :type-check",
+    "vault-android": "moon run vault-native:run-android",
+    "vault-native": "moon run vault-native:start",
+    "vault-web": "moon run vault-web:dev",
+    "vault-web:preview": "moon run vault-web:preview",
     "webdav-contract": "moon run cloud-storage:webdav-contract"
   },
   "devDependencies": {

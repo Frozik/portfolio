@@ -5,21 +5,17 @@ import type { IVaultCard } from '@frozik/vault/model/card';
 import type { TCardSort } from '@frozik/vault/model/card-sort';
 import { CARD_SORTS } from '@frozik/vault/model/card-sort';
 import type { TCardId, TTemplateId } from '@frozik/vault/model/ids';
-import { BUILTIN_TEMPLATES } from '@frozik/vault/model/templates/registry';
-import { Plus } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef } from 'react';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import type { VaultView } from '../../application/VaultView';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
+import type { VaultView } from '@frozik/vault-app/document/application/VaultView';
+import { NewCardMenu } from '@frozik/vault-react/editor/NewCardMenu';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 import { VirtualCardList } from '../card-list/VirtualCardList';
 import { shortcutLabel } from '../shortcut-label';
-import { vaultT } from '../translations';
-import { editorT } from '../translations/editor';
-import { translateTemplateKey } from '../translations/template-texts';
 
 const SEARCH_KEY = 'k';
-const NEW_CARD_ICON_SIZE = 16;
 
 /** Search (focused on unlock and by Ctrl/⌘+K), sort, and the list of the chosen section. */
 export const CardListPane = observer(
@@ -79,26 +75,13 @@ export const CardListPane = observer(
             options={CARD_SORTS.map(sort => ({ value: sort, label: t.sorts[sort] }))}
             value={view.sort}
             onValueChange={view.setSort}
-            locale={getCurrentLanguage()}
+            locale={pageLanguage()}
           />
           {onCreate !== null && (
-            <Select<TTemplateId>
-              aria-label={editorT.newCard}
-              icon={<Plus size={NEW_CARD_ICON_SIZE} />}
-              options={[
-                ...BUILTIN_TEMPLATES.map(template => ({
-                  value: template.id,
-                  label: translateTemplateKey(template.nameKey),
-                })),
-                ...view.userTemplates.map(template => ({
-                  value: template.id,
-                  label: template.name,
-                })),
-              ]}
-              value={undefined}
+            <NewCardMenu
+              choices={view.templateChoices}
               disabled={createDisabled}
-              onValueChange={onCreate}
-              locale={getCurrentLanguage()}
+              onCreate={onCreate}
             />
           )}
         </div>

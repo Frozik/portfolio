@@ -34,6 +34,8 @@ jobs:
         run: moon run portfolio:install-browsers -- --with-deps
       - name: Install the Chromium the extension's e2e loads it into
         run: moon run vault-extension:install-browsers
+      - name: Install the WebKit the vault web app's iPhone project runs on
+        run: moon run vault-web:install-browsers -- --with-deps
       - uses: actions/cache@v6
         with:
           path: .moon/cache
@@ -70,6 +72,85 @@ jobs:
           path: apps/portfolio/dist
           if-no-files-found: ignore
           retention-days: 3
+
+  # The Android app: its JavaScript bundle builds and its Expo packages match the SDK. Runs only
+  # when the app or what it imports changed; the APK and the on-device flows need Android's
+  # toolchain and a phone, and run by hand.
+  native:
+    name: Android app bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if pnpm exec affected-projects "$BASE" "$GITHUB_SHA" --is vault-native; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.affected.outputs.run == 'true'
+        working-directory: apps/vault-native
+        run: pnpm exec expo install --check
+      # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
+      - if: steps.affected.outputs.run == 'true'
+        run: pnpm --dir apps/vault-native run bundle-check
+
+  # The Android app on an emulator, through the Maestro flows. Informational until it has a
+  # record: an emulator on a shared runner flakes, and a red run that is no defect teaches
+  # everyone to ignore CI.
+  native-e2e:
+    name: Android app on an emulator
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if pnpm exec affected-projects "$BASE" "$GITHUB_SHA" --is vault-native; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.affected.outputs.run == 'true'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - if: steps.affected.outputs.run == 'true'
+        run: pnpm --dir apps/vault-native run build-apk
+      - if: steps.affected.outputs.run == 'true'
+        name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - if: steps.affected.outputs.run == 'true'
+        run: curl -fsSL https://get.maestro.mobile.dev | bash
+      - if: steps.affected.outputs.run == 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: |
+            adb install apps/vault-native/android/app/build/outputs/apk/release/app-release.apk
+            "$HOME/.maestro/bin/maestro" test apps/vault-native/e2e
 
   # Blocking: a high advisory against a production dependency fails the run,
   # and with it the deploys, until the lockfile is bumped. It reads only the

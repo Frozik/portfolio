@@ -146,6 +146,7 @@ export async function withNewKey(
       keyslots: [slot],
       keyslotsEpoch: keys.keyslotsEpoch + 1,
       keyGeneration: keys.keyGeneration + 1,
+      preserved: keys.preserved,
     });
   } finally {
     rawDek.fill(0);
@@ -161,11 +162,17 @@ export function withPasskey(
   {
     current,
     credentialId,
+    rpId,
     prfOutput,
-  }: { readonly current: TSlotSecret; readonly credentialId: TBytes; readonly prfOutput: TBytes },
+  }: {
+    readonly current: TSlotSecret;
+    readonly credentialId: TBytes;
+    readonly rpId: string;
+    readonly prfOutput: TBytes;
+  },
   dependencies: IKeyslotDependencies
 ): Promise<TResult<IVaultKeys, TKeyslotChangeError>> {
-  return withSlot(keys, current, { kind: 'prf', credentialId }, prfOutput, dependencies);
+  return withSlot(keys, current, { kind: 'prf', credentialId, rpId }, prfOutput, dependencies);
 }
 
 /** A passkey no longer opens the vault: no secret is needed to drop a slot, only a newer epoch. */

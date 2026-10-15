@@ -20,7 +20,7 @@
         "e2e/**/*.ts"
       ],
       "project": ["src/**/*.{ts,tsx,css}", "e2e/**/*.ts"],
-      "ignoreDependencies": ["buffer", "streamsaver"]
+      "ignoreDependencies": ["streamsaver"]
     },
     "apps/communication": {
       "project": ["src/**/*.ts"],
@@ -30,13 +30,27 @@
       "entry": ["src/entrypoints/**/*.{ts,tsx}", "e2e/**/*.ts"],
       "project": ["src/**/*.{ts,tsx}", "e2e/**/*.ts"]
     },
+    "apps/vault-web": {
+      "entry": ["e2e/**/*.ts"],
+      "project": [
+        "src/**/*.{ts,tsx,css}",
+        "vite-plugins/**/*.ts",
+        "e2e/**/*.ts"
+      ]
+    },
+    "apps/vault-native": {
+      "entry": ["src/app/**/*.tsx"],
+      "project": ["src/**/*.{ts,tsx}", "*.ts"],
+      "ignoreBinaries": ["maestro"]
+    },
     "libs/utils": {
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"]
     },
     "libs/components": {
       "entry": ["src/**/*.{ts,tsx}!"],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["buffer"]
     },
     "libs/table": {
       "entry": ["src/**/*.{ts,tsx}!"],
@@ -53,6 +67,22 @@
     "libs/vault": {
       "entry": ["src/**/*.{ts,tsx}!"],
       "project": ["src/**/*.{ts,tsx}"]
+    },
+    "libs/vault-browser": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
+    "libs/vault-http": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
+    },
+    "libs/vault-react": {
+      "entry": ["src/**/*.{ts,tsx}!"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "libs/vault-app": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
     },
     "libs/cloud-storage": {
       "entry": ["src/**/*.ts!"],
@@ -74,6 +104,10 @@
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["@bufbuild/protoc-gen-es"],
       "ignoreBinaries": ["diff"]
+    },
+    "libs/vite-plugins": {
+      "entry": ["src/**/*.ts!"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

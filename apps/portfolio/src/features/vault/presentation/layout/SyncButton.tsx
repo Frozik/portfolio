@@ -1,9 +1,9 @@
 import { RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
-import { Button } from '../../../../shared/ui/Button';
-import type { CloudLink } from '../../application/CloudLink';
-import { cloudT } from '../translations/cloud';
+import { Button } from '@frozik/components/ui/Button';
+import type { CloudLink } from '@frozik/vault-app/cloud/application/CloudLink';
+import { cloudT } from '@frozik/vault-react/texts/cloud';
 
 const SYNC_ICON_SIZE = 14;
 

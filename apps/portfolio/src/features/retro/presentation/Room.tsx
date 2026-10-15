@@ -1,3 +1,5 @@
+import { Alert } from '@frozik/components/ui/Alert';
+import { Spinner } from '@frozik/components/ui/Spinner';
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
@@ -7,9 +9,7 @@ import { useEventCallback } from 'usehooks-ts';
 import { useRegisterTopNavBack } from '../../../app/components/TopNavBackContext';
 import type { ICommunicationClient } from '../../../shared/communication/CommunicationClient';
 import { useCommunicationClient } from '../../../shared/communication/useCommunicationClient';
-import { Alert } from '../../../shared/ui/Alert';
 import { ShareLinkDialog } from '../../../shared/ui/ShareLinkDialog';
-import { Spinner } from '../../../shared/ui/Spinner';
 import { useIdentityStore } from '../application/useIdentityStore';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { useRoomStore } from '../application/useRoomStore';

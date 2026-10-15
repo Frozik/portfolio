@@ -7,9 +7,9 @@ import { observer } from 'mobx-react-lite';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Alert } from '../../../shared/ui/Alert';
-import { Button } from '../../../shared/ui/Button';
-import { Drawer } from '../../../shared/ui/Drawer';
+import { Alert } from '@frozik/components/ui/Alert';
+import { Button } from '@frozik/components/ui/Button';
+import { Drawer } from '@frozik/components/ui/Drawer';
 import type { SitePlannerStore } from '../application/SitePlannerStore';
 import { useSitePlannerStore } from '../application/useSitePlannerStore';
 import { attachPlanPointerInput } from '../infrastructure/plan-pointer-input';

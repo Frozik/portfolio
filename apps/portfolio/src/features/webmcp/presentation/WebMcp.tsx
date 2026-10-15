@@ -3,9 +3,9 @@ import { ArrowUpRight } from 'lucide-react';
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { CardFrame } from '../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../shared/ui/MonoKicker';
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import type { IToolSection } from './tool-catalog';
 import { TOOL_CATALOG } from './tool-catalog';
 import { webMcpT } from './translations';

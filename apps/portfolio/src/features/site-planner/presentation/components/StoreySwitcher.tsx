@@ -5,8 +5,8 @@ import { observer } from 'mobx-react-lite';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import { ConfirmDialog } from '@frozik/components/ui/ConfirmDialog';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { storeysOf } from '../../domain/model/building';
 import { editedBuildingId } from '../../domain/model/editor-mode';

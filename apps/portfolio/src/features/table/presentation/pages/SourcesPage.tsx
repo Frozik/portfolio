@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 
 import { cn } from '@frozik/components/components/cn';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import type { TDemoSource } from '../../application/TableDemoStore';
 import { useTableDemoStore } from '../../application/useTableDemoStore';

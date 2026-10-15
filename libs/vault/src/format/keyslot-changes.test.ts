@@ -205,8 +205,16 @@ describe('rotating the key', () => {
 describe('passkeys', () => {
   it('open the vault with their PRF output, each with its own slot, until removed', async () => {
     const { keys, context, dependencies } = await aVault();
-    const laptop = { credentialId: Uint8Array.of(1, 2), prfOutput: dependencies.random.bytes(32) };
-    const phone = { credentialId: Uint8Array.of(3, 4), prfOutput: dependencies.random.bytes(32) };
+    const laptop = {
+      credentialId: Uint8Array.of(1, 2),
+      rpId: 'vault.example',
+      prfOutput: dependencies.random.bytes(32),
+    };
+    const phone = {
+      credentialId: Uint8Array.of(3, 4),
+      rpId: 'vault.example',
+      prfOutput: dependencies.random.bytes(32),
+    };
     const once = await withPasskey(
       keys,
       { current: PASSWORD, ...laptop, prfOutput: laptop.prfOutput.slice() },

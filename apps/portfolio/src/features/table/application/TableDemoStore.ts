@@ -1,7 +1,7 @@
 import type { TAnyColumn } from '@frozik/table/core/columns/column';
 import { makeAutoObservable } from 'mobx';
 
-import { getCurrentLanguage } from '../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import type { IDemoTrade } from '../domain/demo-trade';
 import { generateTrades } from '../domain/demo-trade';
 import { fakeLogServer } from '../infrastructure/fakeLogServer';
@@ -36,7 +36,7 @@ export class TableDemoStore {
   theme: TDemoTheme = 'dark';
   density: TDemoDensity = 'normal';
   /** The page language; the demo follows the application, it has no language of its own. */
-  readonly locale = getCurrentLanguage();
+  readonly locale = pageLanguage();
   page: TDemoPage = 'showcase';
   /** The row of pages and settings is shown; hidden until asked for, so that it takes no room from the table. */
   isPageMenuOpen = false;

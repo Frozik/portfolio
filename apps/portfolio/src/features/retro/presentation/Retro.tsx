@@ -1,10 +1,10 @@
 import { observer } from 'mobx-react-lite';
 import { Outlet } from 'react-router-dom';
 
+import { Spinner } from '@frozik/components/ui/Spinner';
 import { SignInGate } from '../../../shared/communication/SignInGate';
 import { useSignalingHealth } from '../../../shared/communication/useSignalingHealth';
 import { useFirstUserGesture } from '../../../shared/hooks/useFirstUserGesture';
-import { Spinner } from '../../../shared/ui/Spinner';
 import { useRetroLobbyStore } from '../application/useRetroLobbyStore';
 import { RetroBackground } from './components/RetroBackground';
 import { SignalingUnavailable } from './components/SignalingUnavailable';

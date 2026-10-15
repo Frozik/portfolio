@@ -24,7 +24,7 @@ function aWorker(answers: { readonly fill: readonly string[]; readonly sync?: st
   const answerTo = (request: TRequest): unknown => {
     switch (request.kind) {
       case 'status':
-        return { kind: 'unlocked', vaultName: 'Family' };
+        return { kind: 'unlocked', vaultName: 'Family', quickUnlock: false, reminderDue: false };
       case 'page-cards':
         return [SUMMARY];
       case 'card':

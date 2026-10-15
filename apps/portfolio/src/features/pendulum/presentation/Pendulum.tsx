@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
 import { observer } from 'mobx-react-lite';
 
-import { DialogShell } from '../../../shared/ui/DialogShell';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import { usePendulumStore } from '../application/usePendulumStore';
 import { DrawNeuralNetwork } from './components/DrawNeuralNetwork';
 import { FitnessPlayground } from './components/FitnessPlayground';

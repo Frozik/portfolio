@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { ElevationMark } from '../../domain/model/site-plan';

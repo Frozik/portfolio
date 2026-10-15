@@ -14,7 +14,7 @@ function aSlot(kind: TKeyslot['kind'], byte: number): TKeyslot {
         ...sealing,
       }
     : kind === 'prf'
-      ? { kind, credentialId: Uint8Array.of(byte), ...sealing }
+      ? { kind, credentialId: Uint8Array.of(byte), rpId: 'vault.example', ...sealing }
       : { kind, ...sealing };
 }
 

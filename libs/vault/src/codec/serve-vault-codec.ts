@@ -36,6 +36,7 @@ export type TVaultCodecContract = {
       readonly keys: IVaultKeys;
       readonly current: TSlotSecret;
       readonly credentialId: TBytes;
+      readonly rpId: string;
       readonly prfOutput: TBytes;
     };
     readonly response: TResult<IVaultKeys, TCodecError>;
@@ -98,9 +99,9 @@ export function serveVaultCodec(
       },
     },
     addPasskey: {
-      handle: async ({ keys, current, credentialId, prfOutput }, signal) => {
+      handle: async ({ keys, current, credentialId, rpId, prfOutput }, signal) => {
         try {
-          return await codec.addPasskey(keys, { current, credentialId, prfOutput }, signal);
+          return await codec.addPasskey(keys, { current, credentialId, rpId, prfOutput }, signal);
         } finally {
           slotSecretBytes(current).fill(0);
           prfOutput.fill(0);

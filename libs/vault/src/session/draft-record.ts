@@ -2,6 +2,7 @@ import { decodeDraft } from '../format/draft-codec';
 import type { TCardDraft } from '../model/draft';
 import type { ISealedRecordStore, TVaultKey } from '../persistence/ports';
 import type { IRandom } from '../ports/random';
+import { DRAFT_LABEL } from './device-record-labels';
 import type { ISealedJsonRecord } from './sealed-json-record';
 import { createSealedJsonRecord } from './sealed-json-record';
 
@@ -31,7 +32,7 @@ export function createDraftRecord({
     vaultKey,
     recordKey: DRAFT_RECORD,
     dek,
-    label: 'pwv/draft',
+    label: DRAFT_LABEL,
     random,
     decode: decodeDraft,
   });

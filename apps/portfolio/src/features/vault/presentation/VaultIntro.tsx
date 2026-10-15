@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
-import { vaultT } from './translations';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 
 const VaultIntroComponent = () => (
   <section className="flex flex-col gap-6">

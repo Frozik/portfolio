@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import type { IColumnConfig } from '../../domain/types';
 import { retroT } from '../translations';
 

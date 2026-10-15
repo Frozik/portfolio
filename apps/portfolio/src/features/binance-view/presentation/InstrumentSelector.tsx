@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../shared/ui/Dropdown';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import { useBinanceViewStore } from '../application/useBinanceViewStore';
 import type { InstrumentSymbol } from '../domain/instruments';
 import { CURATED_INSTRUMENTS } from '../domain/instruments';

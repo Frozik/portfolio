@@ -10,14 +10,14 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
-import { Button } from '../../../../shared/ui/Button';
-import { SmartGroupBuilder } from '../../application/SmartGroupBuilder';
-import type { VaultSession } from '../../application/VaultSession';
-import type { TVaultSection } from '../../domain/vault-paths';
-import { vaultPaths } from '../../domain/vault-paths';
-import { NewGroupDialog } from '../card-view/NewGroupDialog';
-import { vaultT } from '../translations';
-import { SmartGroupDialog } from './SmartGroupDialog';
+import { Button } from '@frozik/components/ui/Button';
+import { SmartGroupBuilder } from '@frozik/vault-app/document/application/SmartGroupBuilder';
+import type { TVaultSection } from '@frozik/vault-app/navigation/vault-pages';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { NewGroupDialog } from '@frozik/vault-react/card/NewGroupDialog';
+import { SmartGroupDialog } from '@frozik/vault-react/card/SmartGroupDialog';
+import { vaultT } from '@frozik/vault-react/texts/vault';
+import { vaultPaths } from '../vault-paths';
 import { SyncButton } from './SyncButton';
 
 const ICON_SIZE = 14;

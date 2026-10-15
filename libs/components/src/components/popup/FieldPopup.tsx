@@ -3,6 +3,7 @@ import { isNil } from 'lodash-es';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { useEventCallback } from 'usehooks-ts';
+import { usePortalContainer } from '../../ui/portal-container';
 import { cn } from '../cn';
 
 import { PopupDrawer } from './PopupDrawer';
@@ -47,6 +48,7 @@ export function FieldPopup({
   readonly children: ReactNode;
 }) {
   const anchorRef = useRef<HTMLDivElement>(null);
+  const container = usePortalContainer();
   const handleOpenChange = useEventCallback((next: boolean) => {
     if (!next) {
       onDismiss?.();
@@ -74,7 +76,7 @@ export function FieldPopup({
           </PopupSheet>
         )}
       </Popover.Anchor>
-      <Popover.Portal>
+      <Popover.Portal container={container}>
         <Popover.Content
           className={cn(controlTokens.tokens, styles.popoverLayer)}
           align="start"

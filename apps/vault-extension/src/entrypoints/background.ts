@@ -22,6 +22,12 @@ import { CHROME_GOOGLE_DRIVE } from '../infrastructure/google-drive-access';
 import { CHROME_IDLE_ALARM, IDLE_ALARM } from '../infrastructure/idle-alarm';
 import { OFFSCREEN_CLIPBOARD } from '../infrastructure/offscreen-clipboard';
 import { CHROME_PAGE_FILLER } from '../infrastructure/page-filler';
+import {
+  CHROME_LAST_MASTER,
+  CHROME_QUICK_EXPIRY,
+  CHROME_QUICK_LOCKS,
+  QUICK_EXPIRY_ALARM,
+} from '../infrastructure/quick-lock-store';
 import { CHROME_RESTART } from '../infrastructure/restart';
 import {
   CHROME_PROTECTED_WINDOW,
@@ -48,9 +54,9 @@ async function fillBest(session: ExtensionSession): Promise<void> {
     await browser.action.openPopup();
     return;
   }
-  const [best] = await session.pageCards(tab.url);
+  const [best] = await session.cards.pageCards(tab.url);
   if (!isNil(best)) {
-    await session.fill(best.id, tab.id, tab.url, false);
+    await session.cards.fill(best.id, tab.id, tab.url, false);
   }
 }
 
@@ -73,6 +79,9 @@ export default defineBackground({
         restart: CHROME_RESTART,
         idleAlarm: CHROME_IDLE_ALARM,
         protectedWindow: CHROME_PROTECTED_WINDOW,
+        quickLocks: CHROME_QUICK_LOCKS,
+        lastMaster: CHROME_LAST_MASTER,
+        quickExpiry: CHROME_QUICK_EXPIRY,
         openWebDav,
         deviceConfig: CHROME_DEVICE_CONFIG,
         pendingLink: CHROME_PENDING_CLOUD_LINK,
@@ -97,6 +106,9 @@ export default defineBackground({
     });
     browser.alarms.onAlarm.addListener(alarm => {
       if (alarm.name === IDLE_ALARM) {
+        void session.lockQuickly();
+      }
+      if (alarm.name === QUICK_EXPIRY_ALARM) {
         void session.lock();
       }
       if (alarm.name === SYNC_ALARM) {

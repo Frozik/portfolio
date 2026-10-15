@@ -3,7 +3,6 @@
    each control root carries the family palette (`control-tokens.module.css`). */
 
 .editor {
-  color-scheme: light dark;
   background: var(--re-bg-card);
   border: 1px solid var(--re-border);
   box-sizing: border-box;

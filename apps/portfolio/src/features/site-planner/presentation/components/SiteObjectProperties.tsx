@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { CarInstance, TreeInstance } from '../../domain/model/plot-objects';
 import { changeTreeSpecies, parseTreeSpecies, TREE_SPECIES } from '../../domain/model/plot-objects';

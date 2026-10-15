@@ -4,8 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
+import { Button } from '@frozik/components/ui/Button';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import type { SiteLocationChanges } from '../../domain/model/settings-edits';
 import { COORDINATE_DECIMALS } from '../constants';
 import { sitePlannerT } from '../translations';

@@ -1,9 +1,9 @@
 import { cn } from '@frozik/components/components/cn';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { isNil } from 'lodash-es';
 import { Eye, Share2 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import { retroT } from '../translations';

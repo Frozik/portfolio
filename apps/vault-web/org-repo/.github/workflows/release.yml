@@ -1,0 +1,20 @@
+# Merging Dependabot's bump of the ref below is the release: the build itself lives in the
+# monorepo and runs at exactly the commit pinned here.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/release.yml]
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      attestations: write
+    uses: Frozik/portfolio/.github/workflows/vault-release.yml@0000000000000000000000000000000000000000 # v0.0.0
+    # The APK's signing key: only the monorepo workflow's `sign` job, in the `release` environment, reads it.
+    secrets: inherit

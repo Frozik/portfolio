@@ -51,6 +51,19 @@ To stop Chrome's own password manager from offering itself next to the vault, tu
   forgets the vault: its copy, the sealed link to the cloud, Google's token and the setup; it locks
   and offers the setup again. The file in the cloud and the web app's copy are untouched.
 
+- **Quick unlock by PIN.** Under the master password, Settings in the popup sets a PIN of 4–8
+  digits. The idle lock and the lock button then keep the vault's key behind it for 12 hours,
+  one try: the key is
+  sealed with AES-GCM under a key derived from the PIN and a random pepper, both in
+  `storage.session`; a wrong PIN, **Lock completely**, a restart or the end of the 12 hours
+  leave only the master password. The PIN itself is stored sealed with the vault's key.
+- **Reminder.** A week after the master password was last typed here, the popup asks for it —
+  it never locks for it.
+- **Theme.** System, light or dark for the popup, kept in the extension.
+- **Updates.** The popup reads Ciphra Vault's `version.json`: a newer release is offered with a
+  link to its download; a release below the security floor locks the vault and asks to install
+  the new one (an unpacked extension never updates itself).
+
 ## Security model
 
 - The vault key is unwrapped once with the master password and kept as raw bytes in

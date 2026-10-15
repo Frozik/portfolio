@@ -1,4 +1,4 @@
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 
 const UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
 const STEP = 1000;
@@ -11,7 +11,7 @@ export function formatBytes(bytes: number): string {
     value /= STEP;
     unitIndex += 1;
   }
-  return new Intl.NumberFormat(getCurrentLanguage(), {
+  return new Intl.NumberFormat(pageLanguage(), {
     style: 'unit',
     unit: UNITS[unitIndex],
     unitDisplay: 'short',

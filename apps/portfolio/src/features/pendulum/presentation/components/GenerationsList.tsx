@@ -1,5 +1,6 @@
 import '@frozik/table/theme/table.css';
 
+import { Button } from '@frozik/components/ui/Button';
 import { clientRows } from '@frozik/table/core/rows/client-rows';
 import { gridView } from '@frozik/table/extensions/grid-view/core';
 import type { ICellContext } from '@frozik/table/react/column';
@@ -8,6 +9,7 @@ import { sorting } from '@frozik/table/react/extensions/sorting/sorting';
 import { Table } from '@frozik/table/react/Table';
 import { useTable } from '@frozik/table/react/useTable';
 import type { ISO } from '@frozik/utils/date/types';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import {
   isEmptyValueDescriptor,
   isFailValueDescriptor,
@@ -25,8 +27,6 @@ import { Temporal } from 'temporal-polyfill';
 import { useEventCallback } from 'usehooks-ts';
 import { OverlayLoader } from '../../../../shared/components/OverlayLoader';
 import { ValueDescriptorFail as ValueDescriptorFailAlert } from '../../../../shared/components/ValueDescriptorFail';
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
-import { Button } from '../../../../shared/ui/Button';
 import { List } from '../../../../shared/ui/List';
 import { Tag } from '../../../../shared/ui/Tag';
 import { Tooltip } from '../../../../shared/ui/Tooltip';
@@ -37,7 +37,7 @@ import { OVERLAY_MESSAGE_CONTAINER_CLASS } from '../constants';
 import { pendulumT } from '../translations';
 
 function getDateLocale(): string {
-  return getCurrentLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
+  return pageLanguage() === 'ru' ? 'ru-RU' : 'en-GB';
 }
 
 function scoreTagColor(score: number): ComponentProps<typeof Tag>['color'] {

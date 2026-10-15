@@ -136,7 +136,12 @@
     "no-underscore-dangle": [
       "warn",
       {
-        "allow": ["__APP_VERSION__", "__BUILD_ASSETS__", "__WB_MANIFEST"]
+        "allow": [
+          "__APP_VERSION__",
+          "__BUILD_ASSETS__",
+          "__KILL_SWITCH__",
+          "__WB_MANIFEST"
+        ]
       }
     ]
   },
@@ -152,58 +157,121 @@
           },
           {
             "name": "fetch",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "indexedDB",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "localStorage",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "sessionStorage",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "document",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "window",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "navigator",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "XMLHttpRequest",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "WebSocket",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "Worker",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "process",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
           },
           {
             "name": "Buffer",
-            "message": "The vault core is platform-free: reach the outside world through a port (application.md §1)."
+            "message": "The vault core is platform-free: reach the outside world through a port (application.md \u00a71)."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["libs/vault-app/src/**"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "Use the Temporal API (temporal-polyfill); date helpers live in libs/utils/src/date/."
+          },
+          {
+            "name": "fetch",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "indexedDB",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "localStorage",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "document",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "window",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "navigator",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "XMLHttpRequest",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "WebSocket",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "Worker",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "process",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "Buffer",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
+          },
+          {
+            "name": "chrome",
+            "message": "The vault application layer is platform-free: reach the outside world through a port."
           }
         ]
       }
     },
     {
       "files": [
-        "libs/vault/src/react/**",
         "libs/vault/src/persistence/**",
         "libs/vault/src/**/adapters/**"
       ],
@@ -236,10 +304,18 @@
         "**/playwright.config.ts",
         "**/wxt.config.ts",
         "apps/vault-extension/src/entrypoints/**",
-        "**/*.d.ts"
+        "**/*.d.ts",
+        "apps/vault-native/app.config.ts",
+        "apps/vault-native/src/app/**"
       ],
       "rules": {
         "import/no-default-export": "off"
+      }
+    },
+    {
+      "files": ["apps/vault-native/**"],
+      "rules": {
+        "react/style-prop-object": ["warn", { "allow": ["StatusBar"] }]
       }
     },
     {

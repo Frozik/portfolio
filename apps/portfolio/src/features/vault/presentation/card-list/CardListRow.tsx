@@ -6,9 +6,10 @@ import type { TExpiryStatus } from '@frozik/vault/model/expiry';
 import { Lock, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
-import { CHANGED_MARK_CLASS } from '../components/changed-mark';
-import { SiteCardIcon } from '../components/SiteCardIcon';
-import { vaultT } from '../translations';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
+import { SiteCardIcon } from '@frozik/vault-react/card-icon/SiteCardIcon';
+import { CHANGED_MARK_CLASS } from '@frozik/vault-react/changed-mark';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 
 const ICON_SIZE = 14;
 
@@ -55,7 +56,7 @@ export const CardListRow = observer(
         style={{ top, height }}
         onClick={() => onOpen(card)}
       >
-        <SiteCardIcon card={card} siteIcon={siteIcon} />
+        <SiteCardIcon card={card} siteIcon={siteIcon} locale={pageLanguage()} />
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex items-center gap-2 text-[14px] font-medium text-landing-fg">
             <span className="truncate">{card.title === '' ? t.untitled : card.title}</span>

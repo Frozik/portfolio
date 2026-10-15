@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
-import { MonoKicker } from '../MonoKicker';
-import { SectionNumber } from '../SectionNumber';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import { formatRoomCount } from './lobbyFormat';
 
 interface LobbyHeroProps {

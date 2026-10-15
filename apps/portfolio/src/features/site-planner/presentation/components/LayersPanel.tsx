@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { BuildingLayerId } from '../../domain/model/building-layers';
 import { BUILDING_LAYER_IDS } from '../../domain/model/building-layers';

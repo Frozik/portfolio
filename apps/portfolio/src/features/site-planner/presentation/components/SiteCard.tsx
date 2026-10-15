@@ -2,7 +2,7 @@ import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { sitePlannerT } from '../translations';
 import { PanelHint } from './PanelHint';

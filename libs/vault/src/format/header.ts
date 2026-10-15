@@ -14,6 +14,8 @@ import type { ITlvRecord } from './header-tlv';
 import { decodeTlv, encodeTlv } from './header-tlv';
 import type { TKeyslotDecodeError } from './keyslot-codec';
 import { decodeKeyslot, encodeKeyslot } from './keyslot-codec';
+import type { TPasskeySites } from './passkey-sites';
+import { decodePasskeySites, encodePasskeySites, passkeySiteOf } from './passkey-sites';
 
 export const VAULT_ID_BYTES = 16;
 export const SAVE_SALT_BYTES = 32;
@@ -21,7 +23,7 @@ export const DEFAULT_CHUNK_SIZE = 65_536;
 
 const MAGIC = utf8('PWVAULT\0');
 const FORMAT_MAJOR = 1;
-const FORMAT_MINOR = 0;
+const FORMAT_MINOR = 1;
 const PREAMBLE_BYTES = MAGIC.length + 2 + 2 + 4;
 const MAX_HEADER_BYTES = 65_536;
 const MIN_CHUNK_SIZE = 1024;
@@ -47,6 +49,7 @@ const TLV = {
   keyslot: 0x09,
   movedTo: 0x0a,
   keyGeneration: 0x0b,
+  passkeySites: 0x0c,
 } as const;
 
 const KNOWN_TYPES: ReadonlySet<number> = new Set(Object.values(TLV));
@@ -91,6 +94,11 @@ function record(type: number, value: TBytes): ITlvRecord {
   return { type, skippable: false, value };
 }
 
+/** Records an older build may skip: it opens the file without them. */
+function optionalRecord(type: number, value: TBytes | null): readonly ITlvRecord[] {
+  return isNil(value) ? [] : [{ type, skippable: true, value }];
+}
+
 export function encodeHeader(header: IVaultHeader): TBytes {
   const records: ITlvRecord[] = [
     record(TLV.vaultId, header.vaultId),
@@ -103,9 +111,11 @@ export function encodeHeader(header: IVaultHeader): TBytes {
     record(TLV.keyslotsEpoch, u64Value(header.keyslotsEpoch)),
     ...header.keyslots.map(slot => record(TLV.keyslot, encodeKeyslot(slot))),
     ...(isNil(header.movedTo) ? [] : [record(TLV.movedTo, utf8(header.movedTo))]),
-    ...(header.keyGeneration === 0
-      ? []
-      : [{ type: TLV.keyGeneration, skippable: true, value: u64Value(header.keyGeneration) }]),
+    ...optionalRecord(
+      TLV.keyGeneration,
+      header.keyGeneration === 0 ? null : u64Value(header.keyGeneration)
+    ),
+    ...optionalRecord(TLV.passkeySites, encodePasskeySites(header.keyslots)),
     ...header.preserved,
   ];
   const body = encodeTlv(records);
@@ -179,11 +189,12 @@ function readU64(value: TBytes | null): number | null {
 }
 
 function decodeKeyslots(
-  values: readonly TBytes[]
+  values: readonly TBytes[],
+  sites: TPasskeySites
 ): TResult<TNonEmptyArray<TKeyslot>, THeaderDecodeError> {
   const slots: TKeyslot[] = [];
   for (const value of values) {
-    const slot = decodeKeyslot(value);
+    const slot = decodeKeyslot(value, credentialId => passkeySiteOf(sites, credentialId));
     if (!slot.ok) {
       return slot;
     }
@@ -267,7 +278,14 @@ export function decodeHeader(file: TBytes): TResult<IDecodedHeader, THeaderDecod
   if (!grouped.ok) {
     return grouped;
   }
-  const keyslots = decodeKeyslots(grouped.value.slots);
+  const sitesRecord = grouped.value.byType.get(TLV.passkeySites);
+  const sites = isNil(sitesRecord)
+    ? ok(new Map<string, string>())
+    : decodePasskeySites(sitesRecord);
+  if (!sites.ok) {
+    return sites;
+  }
+  const keyslots = decodeKeyslots(grouped.value.slots, sites.value);
   if (!keyslots.ok) {
     return keyslots;
   }

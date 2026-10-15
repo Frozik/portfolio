@@ -1,6 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
 
-import { PDF_FONT_FAMILY } from '../../../../shared/lib/pdf/pdf-fonts';
+import { PDF_FONT_FAMILY } from '@frozik/components/pdf/pdf-fonts';
 
 const COLOR_BG = '#ffffff';
 const COLOR_TEXT = '#1f2937';

@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
+import { Alert } from '@frozik/components/ui/Alert';
 import { sharedT } from '../translations';
-import { Alert } from '../ui/Alert';
 import { useAuthSession, useOidcProviders } from './CommunicationProvider';
 import type { IOidcProvider } from './oidc/IOidcProvider';
 import { SIGN_IN_BUTTONS } from './oidc/sign-in-buttons';

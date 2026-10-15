@@ -85,7 +85,7 @@ async function headerOf(opened: IOpenedVault, file: TBytes): Promise<IOpenedHead
 }
 
 function sealContext(keys: IVaultKeys, revision: number): ISealContext {
-  return { ...keys, revision, movedTo: null, preserved: [] };
+  return { ...keys, revision, movedTo: null };
 }
 
 /**

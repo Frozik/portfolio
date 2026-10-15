@@ -1,37 +1,18 @@
 import type { TStoragePath } from '@frozik/cloud-storage/core/storage-provider';
-import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { TVaultKey } from '@frozik/vault/persistence/ports';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Alert } from '../../../shared/ui/Alert';
-import { CardFrame } from '../../../shared/ui/CardFrame';
-import { Spinner } from '../../../shared/ui/Spinner';
-import type { TAdoptFailure } from '../application/cloud-adoption';
-import type { VaultFeatureStore } from '../application/VaultFeatureStore';
-import { vaultPaths } from '../domain/vault-paths';
-import { CloudPanels } from './settings/CloudPanels';
-import { cloudT } from './translations/cloud';
-
-function failureText(failure: TAdoptFailure): string {
-  const t = cloudT.opening;
-  switch (failure.kind) {
-    case 'storage':
-      return failure.error.kind === 'server'
-        ? cloudT.webdav.failures.server(failure.error.status)
-        : cloudT.webdav.failures[failure.error.kind];
-    case 'not-found':
-      return t.notFound;
-    case 'not-a-vault':
-      return t.notAVault;
-    case 'device':
-      return t.device;
-    default:
-      return assertNever(failure);
-  }
-}
+import { Alert } from '@frozik/components/ui/Alert';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { Spinner } from '@frozik/components/ui/Spinner';
+import type { VaultApp } from '@frozik/vault-app/session/application/VaultApp';
+import { adoptFailureText } from '@frozik/vault-app/texts/cloud/cloud-wording';
+import { CloudPanels } from '@frozik/vault-react/cloud/CloudPanels';
+import { cloudT } from '@frozik/vault-react/texts/cloud';
+import { vaultPaths } from './vault-paths';
 
 /**
  * Sign in to Drive or
@@ -44,7 +25,7 @@ export const OpenFromCloud = observer(
     onClose,
     onCreateHere,
   }: {
-    readonly store: VaultFeatureStore;
+    readonly store: VaultApp;
     readonly onClose: () => void;
     /** The reached folder is empty and the user wants a new vault in it. */
     readonly onCreateHere: () => void;
@@ -76,7 +57,7 @@ export const OpenFromCloud = observer(
         />
         {cloud.opening.kind === 'opening' && <Spinner />}
         {cloud.opening.kind === 'failed' && (
-          <Alert type="error" message={failureText(cloud.opening.failure)} />
+          <Alert type="error" message={adoptFailureText(cloudT, cloud.opening.failure)} />
         )}
       </CardFrame>
     );

@@ -1,10 +1,10 @@
 import { cn } from '@frozik/components/components/cn';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { Check, Pencil, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import { useUserDirectoryStore } from '../../application/useUserDirectoryStore';
 import { visibleCardText } from '../../domain/anonymity';
 import { REDACTED_CARD_PLACEHOLDER } from '../../domain/constants';

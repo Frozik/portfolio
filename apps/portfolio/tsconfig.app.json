@@ -3,7 +3,7 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },
-  "include": ["src"],
+  "include": ["src", "../../libs/vault-browser/types"],
   "exclude": [
     "src/sw/sw.ts",
     "src/sw/sw-env.d.ts",

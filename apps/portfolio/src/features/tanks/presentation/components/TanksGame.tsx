@@ -8,8 +8,8 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useRef } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
+import { Button } from '@frozik/components/ui/Button';
 import { WebGpuUnsupportedNotice } from '../../../../shared/components/WebGpuUnsupportedNotice';
-import { Button } from '../../../../shared/ui/Button';
 import { runTanks } from '../../application/render/tanks-draw';
 import { createTanksSession } from '../../application/tanks-session';
 import { TanksAudioController } from '../../application/TanksAudioController';

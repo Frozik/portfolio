@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Dropdown, DropdownItem } from '../../../../shared/ui/Dropdown';
+import { Dropdown, DropdownItem } from '@frozik/components/ui/Dropdown';
 import type { BuildingScene } from '../../application/building-scene';
 import { UTILITY_SYSTEM_COLORS } from '../../application/render/plan-draw/draw-house';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';

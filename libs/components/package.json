@@ -6,6 +6,7 @@
     "dist",
     "src"
   ],
+  "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
@@ -33,16 +34,32 @@
     "./components/select/MultiSelect": "./src/components/select/MultiSelect.tsx",
     "./components/select/Select": "./src/components/select/Select.tsx",
     "./components/control-tokens.module.css": "./src/components/control-tokens.module.css",
-    "./*": "./src/*.ts"
+    "./*": "./src/*.ts",
+    "./pdf/*": "./src/pdf/*.ts",
+    "./tokens/theme.css": "./src/tokens/theme.css",
+    "./tokens/*": "./src/tokens/*.ts",
+    "./ui/ui.css": "./src/ui/ui.css",
+    "./ui/portal-container": "./src/ui/portal-container.ts",
+    "./ui/*": "./src/ui/*.tsx"
   },
   "scripts": {
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "generate-theme": "tsx scripts/generate-theme.ts",
+    "theme-fresh": "tsx scripts/generate-theme.ts --check"
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:",
     "@dnd-kit/sortable": "catalog:",
     "@dnd-kit/utilities": "catalog:",
     "@frozik/utils": "workspace:*",
+    "@radix-ui/react-dialog": "catalog:",
+    "@radix-ui/react-dropdown-menu": "catalog:",
+    "@radix-ui/react-radio-group": "catalog:",
+    "@radix-ui/react-slot": "catalog:",
+    "@react-pdf/renderer": "catalog:",
+    "buffer": "catalog:",
+    "class-variance-authority": "catalog:",
+    "lucide-react": "catalog:",
     "tabbable": "catalog:",
     "zod": "catalog:"
   },
@@ -51,7 +68,8 @@
     "@testing-library/react": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
+    "@types/react-dom": "catalog:",
+    "tsx": "catalog:"
   },
   "peerDependencies": {
     "@radix-ui/react-popover": "catalog:",

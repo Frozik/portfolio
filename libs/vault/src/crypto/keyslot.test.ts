@@ -85,7 +85,11 @@ describe('key slots', () => {
 
     it.each([
       ['password', { kind: 'password', params: ARGON2_DEFAULT }, encodePassword('correct horse')],
-      ['passkey', { kind: 'prf', credentialId: fromHex('c0ffee') }, fromHex('11'.repeat(32))],
+      [
+        'passkey',
+        { kind: 'prf', credentialId: fromHex('c0ffee'), rpId: 'vault.example' },
+        fromHex('11'.repeat(32)),
+      ],
       ['recovery', { kind: 'recovery' }, RECOVERY_KEY],
     ] as const)('of kind %s opens with its own secret only', async (_name, spec, secret) => {
       const slot = await createKeyslot(spec, secret, RAW_DEK, VAULT_ID, dependencies);
@@ -127,7 +131,12 @@ describe('key slots', () => {
         VAULT_ID,
         dependencies
       );
-      const relabelled: TKeyslot = { ...slot, kind: 'prf', credentialId: fromHex('00') };
+      const relabelled: TKeyslot = {
+        ...slot,
+        kind: 'prf',
+        credentialId: fromHex('00'),
+        rpId: 'vault.example',
+      };
       const kek = await deriveSlotKek(
         { kind: 'recovery', salt: slot.salt },
         RECOVERY_KEY,

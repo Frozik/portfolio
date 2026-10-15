@@ -16,7 +16,6 @@
     "./model/*": "./src/model/*.ts",
     "./merge/*": "./src/merge/*.ts",
     "./persistence/*": "./src/persistence/*.ts",
-    "./lifecycle/*": "./src/lifecycle/*.ts",
     "./sync/*": "./src/sync/*.ts",
     "./session/*": "./src/session/*.ts",
     "./generator/*": "./src/generator/*.ts",
@@ -24,9 +23,7 @@
     "./audit/*": "./src/audit/*.ts",
     "./import/*": "./src/import/*.ts",
     "./export/*": "./src/export/*.ts",
-    "./testing/*": "./src/testing/*.ts",
-    "./react/sensitive-class": "./src/react/sensitive-class.ts",
-    "./react/*": "./src/react/*.tsx"
+    "./testing/*": "./src/testing/*.ts"
   },
   "scripts": {
     "types": "tsc --noEmit",
@@ -34,7 +31,6 @@
   },
   "dependencies": {
     "@frozik/cloud-storage": "workspace:*",
-    "@frozik/components": "workspace:*",
     "@frozik/utils": "workspace:*",
     "credit-card-type": "catalog:",
     "fast-xml-parser": "catalog:",
@@ -44,26 +40,17 @@
     "idb": "catalog:",
     "kdbxweb": "catalog:",
     "lodash-es": "catalog:",
-    "lucide-react": "catalog:",
     "punycode.js": "catalog:",
-    "react-svg-credit-card-payment-icons": "catalog:",
     "temporal-polyfill": "catalog:",
     "tldts": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",
-    "@testing-library/react": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
     "fake-indexeddb": "catalog:",
     "fast-check": "catalog:",
     "tsx": "catalog:"
-  },
-  "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
   }
 }

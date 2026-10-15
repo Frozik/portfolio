@@ -6,11 +6,11 @@ import type { ChangeEvent, ReactNode } from 'react';
 import { lazy, memo, Suspense, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
+import { Button } from '@frozik/components/ui/Button';
+import { Drawer } from '@frozik/components/ui/Drawer';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
+import { Spinner } from '@frozik/components/ui/Spinner';
 import { isValidTimeZoneId } from '@frozik/utils/date/time-zone';
-import { Button } from '../../../../shared/ui/Button';
-import { Drawer } from '../../../../shared/ui/Drawer';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
-import { Spinner } from '../../../../shared/ui/Spinner';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { SiteLocationChanges } from '../../domain/model/settings-edits';

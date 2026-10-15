@@ -55,5 +55,5 @@ export async function aVault(seed = 1): Promise<{
     elapsed: () => 0 as Milliseconds,
   };
   const keys = await createVaultKeys(TEST_PASSWORD, ARGON2_DEFAULT, dependencies);
-  return { keys, dependencies, context: { ...keys, revision: 1, movedTo: null, preserved: [] } };
+  return { keys, dependencies, context: { ...keys, revision: 1, movedTo: null } };
 }

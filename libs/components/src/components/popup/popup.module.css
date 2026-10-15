@@ -33,7 +33,6 @@
   width: max-content;
   max-width: var(--radix-popover-content-available-width, 100%);
   pointer-events: auto;
-  color-scheme: light dark;
   background-color: var(--re-bg-card);
   border: solid var(--re-border);
   border-width: 0 1px;
@@ -58,7 +57,6 @@
   position: relative;
   width: var(--radix-popover-trigger-width);
   pointer-events: auto;
-  color-scheme: light dark;
 }
 
 /* The pull tab: an accent bar on the popup's edge. */
@@ -216,7 +214,6 @@
   border: solid var(--re-border);
   border-width: 1px 1px 0;
   color: var(--re-fg);
-  color-scheme: light dark;
   box-shadow: 0 -18px 48px -12px rgb(0 0 0 / 0.7);
   translate: 0 100%;
   transition:

@@ -1,5 +1,5 @@
 import { SecretEditor } from '@frozik/components/components/RichEditor/SecretEditor';
-import { TotpCode } from '@frozik/vault/react/totp/TotpCode';
+import { TotpCode } from '@frozik/vault-react/totp/TotpCode';
 import { isNil } from 'lodash-es';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { observer } from 'mobx-react-lite';

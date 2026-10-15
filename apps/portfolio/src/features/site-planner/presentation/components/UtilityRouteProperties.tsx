@@ -3,8 +3,8 @@ import { PencilRuler } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import { RadioGroup } from '../../../../shared/ui/RadioGroup';
+import { Button } from '@frozik/components/ui/Button';
+import { RadioGroup } from '@frozik/components/ui/RadioGroup';
 import { formatMeters } from '../../application/render/plan-draw/shared';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { editedUtilityRouteId } from '../../domain/model/editor-mode';

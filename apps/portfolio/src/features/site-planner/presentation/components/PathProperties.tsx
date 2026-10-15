@@ -4,7 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { memo } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { editedPathId } from '../../domain/model/editor-mode';
 import type { PathPoint, SitePath } from '../../domain/model/plot-objects';

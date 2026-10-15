@@ -17,7 +17,14 @@ const VAULT: IKnownVault = {
   unsyncedChanges: false,
 };
 
-const NO_PASSKEYS = { load: () => Promise.resolve([]), unlock: () => Promise.resolve(null) };
+const NO_PASSKEYS = {
+  load: () =>
+    Promise.resolve({
+      credentialIds: [],
+      capabilities: { prf: true, platform: 'passkey' as const },
+    }),
+  unlock: () => Promise.resolve(null),
+};
 
 const passwordField = (): HTMLInputElement => screen.getByLabelText('Master password');
 
@@ -37,7 +44,7 @@ function problemOf(control: HTMLElement): string | null {
 }
 
 describe('UnlockScreen', () => {
-  it('unlocks with Enter, lets go of the password and offers it to the browser under the vault name', async () => {
+  it('unlocks with Enter, keeps the password until it is checked and offers it to the browser under the vault name', async () => {
     const onUnlock = vi.fn();
     const { container } = await renderLoaded(
       <UnlockScreen
@@ -54,7 +61,7 @@ describe('UnlockScreen', () => {
     fireEvent.keyDown(passwordField(), { key: 'Enter' });
 
     expect(onUnlock).toHaveBeenCalledWith('correct horse');
-    expect(passwordField().value).toBe('');
+    expect(passwordField().value).toBe('correct horse');
     expect(passwordField().getAttribute('autocomplete')).toBe('current-password');
     expect(container.querySelector('input[autocomplete="username"]')?.getAttribute('value')).toBe(
       'Home'

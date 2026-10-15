@@ -1,5 +1,5 @@
-import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import type { TCardId, TFieldId } from '@frozik/vault/model/ids';
+import type { TUnlockFailure } from '@frozik/vault/session/unlock-failure';
 
 import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import type { ICardSummary, ICardView } from './card-views';
@@ -16,7 +16,19 @@ import type {
 export type TExtensionStatus =
   | { readonly kind: 'not-set-up' }
   | { readonly kind: 'locked'; readonly vaultName: string }
-  | { readonly kind: 'unlocked'; readonly vaultName: string };
+  /** The key waits behind a PIN of `digits` for one try. */
+  | { readonly kind: 'quick-locked'; readonly vaultName: string; readonly digits: number }
+  | {
+      readonly kind: 'unlocked';
+      readonly vaultName: string;
+      /** A PIN is set up for the idle lock on this browser. */
+      readonly quickUnlock: boolean;
+      /** A week without the master password: the popup asks for it. */
+      readonly reminderDue: boolean;
+    };
+
+/** A PIN's one try: opened, or the master password from now on. */
+export type TQuickUnlockOutcome = 'opened' | 'wrong-pin';
 
 export type TFillOutcome =
   | 'filled'
@@ -36,6 +48,12 @@ export type TRequest =
   | { readonly kind: 'open-file'; readonly file: string; readonly name: string }
   | { readonly kind: 'unlock'; readonly password: string }
   | { readonly kind: 'lock' }
+  | { readonly kind: 'lock-completely' }
+  | { readonly kind: 'quick-unlock'; readonly pin: string }
+  | { readonly kind: 'quick-set-up'; readonly password: string; readonly pin: string }
+  | { readonly kind: 'quick-switch-off' }
+  /** The weekly reminder answered: the master password, checked, starts the week over. */
+  | { readonly kind: 'remind'; readonly password: string }
   /** The extension forgets its vault; the file in the cloud and on other devices stays. */
   | { readonly kind: 'reset' }
   | {
@@ -68,6 +86,12 @@ interface IResponses {
   readonly 'open-file': { readonly ok: boolean };
   readonly unlock: TUnlockFailure | null;
   readonly lock: null;
+  readonly 'lock-completely': null;
+  readonly 'quick-unlock': TQuickUnlockOutcome;
+  /** The password was wrong or the PIN unusable: `false`. */
+  readonly 'quick-set-up': boolean;
+  readonly 'quick-switch-off': null;
+  readonly remind: boolean;
   readonly reset: null;
   readonly 'connect-webdav': TConnectOutcome;
   readonly 'find-drive-vaults': TDriveSearch;

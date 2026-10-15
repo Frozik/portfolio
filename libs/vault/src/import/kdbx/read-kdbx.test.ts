@@ -4,9 +4,11 @@ import { Kdbx, KdbxCredentials, ProtectedValue } from 'kdbxweb';
 import * as kdbxweb from 'kdbxweb';
 
 import { utf8 } from '../../crypto/bytes';
+import { referenceNodeArgon2 } from '../../testing/reference-node-argon2';
 import type { IImportedCard } from '../imported-card';
 import { readImportFile } from '../read-import-file';
 import { HASH_WASM_KDBX_ARGON2 } from './adapters/kdbx-argon2-hash-wasm';
+import { nodeKdbxArgon2 } from './adapters/kdbx-argon2-node';
 import { readKdbx } from './read-kdbx';
 
 const PASSWORD = 'keepass master';
@@ -101,6 +103,17 @@ describe('KeePass import', () => {
       /^otpauth:\/\/totp\/.*secret=JBSWY3DPEHPK3PXP/
     );
     expect(fieldsOf(passport)['field.expiresOn']).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('opens the same database through a native Argon2, as a phone does', async () => {
+    const read = await readKdbx(
+      await aKeePassFile(),
+      { password: PASSWORD, keyFile: null },
+      nodeKdbxArgon2(referenceNodeArgon2)
+    );
+
+    assert(read.ok);
+    expect(read.value.cards.map(card => card.title).sort()).toEqual(['GitHub', 'Passport']);
   });
 
   it('says the password is wrong, and that a file which is not KeePass cannot be read', async () => {

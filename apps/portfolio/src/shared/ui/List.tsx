@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
+import { Spinner } from '@frozik/components/ui/Spinner';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
-import { Spinner } from './Spinner';
 
 function ListInner<T>({
   dataSource,

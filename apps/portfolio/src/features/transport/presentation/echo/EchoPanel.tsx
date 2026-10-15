@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import type { ChangeEvent } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { EchoModel } from '../../application/EchoModel';
 import { formatBytes, formatRate } from '../common/format';
 import { Panel } from '../common/Panel';

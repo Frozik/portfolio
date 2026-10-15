@@ -2,8 +2,8 @@ import { Link2 } from 'lucide-react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { memo } from 'react';
 
-import { CardFrame } from '../CardFrame';
-import { MonoKicker } from '../MonoKicker';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 
 /**
  * Shared "join by link" lobby card: paste a room URL or id and submit. The

@@ -7,7 +7,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { FULL_TURN_DEGREES } from '../../domain/units';
 import { northNeedleAngleDegrees, northOffsetTowards } from '../../domain/view/north-offset';

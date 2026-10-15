@@ -1,8 +1,8 @@
 import { SecretEditor } from '@frozik/components/components/RichEditor/SecretEditor';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
+import { useKeptWhileChecked } from '@frozik/vault-react/hooks/useKeptWhileChecked';
 import type { PopupModel } from '../application/PopupModel';
 import { popupT } from './popup-texts';
 import styles from './popup.module.css';
@@ -33,11 +33,10 @@ const ResetVault = observer(({ model }: { readonly model: PopupModel }) => {
 
 /** Locked: the master password, the key derived in the worker; the vault can be disconnected from here. */
 export const UnlockScreen = observer(({ model }: { readonly model: PopupModel }) => {
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useKeptWhileChecked(model.busy);
   const unlock = useEventCallback(() => {
-    if (password !== '') {
+    if (password !== '' && !model.busy) {
       void model.unlock(password);
-      setPassword('');
     }
   });
   const { notice } = model;
@@ -51,12 +50,24 @@ export const UnlockScreen = observer(({ model }: { readonly model: PopupModel })
         onValueChange={setPassword}
         locale={navigator.language}
         onEnter={unlock}
+        disabled={model.busy}
       />
-      <button type="button" className={styles.primary} disabled={model.busy} onClick={unlock}>
+      <button
+        type="button"
+        className={styles.primary}
+        data-testid="unlock-submit"
+        disabled={model.busy}
+        onClick={unlock}
+      >
         {model.busy ? popupT.unlocking : popupT.unlock}
       </button>
       {notice?.kind === 'unlock-failed' && (
         <p className={styles.error}>{popupT.failures[notice.failure]}</p>
+      )}
+      {notice?.kind === 'wrong-pin' && (
+        <p className={styles.error} data-testid="unlock-notice">
+          {popupT.quick.wrongPin}
+        </p>
       )}
       <ResetVault model={model} />
     </>

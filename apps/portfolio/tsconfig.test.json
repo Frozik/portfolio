@@ -10,7 +10,8 @@
     "src/**/*.tsx",
     "vite-plugins/**/*.ts",
     "e2e/**/*.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "../../libs/vault-browser/types/*.d.ts"
   ],
   "exclude": ["src/sw/sw.ts", "src/sw/sw-env.d.ts"]
 }

@@ -2,8 +2,8 @@ import { Eye } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { CardFrame } from '../../../../shared/ui/CardFrame';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
+import { CardFrame } from '@frozik/components/ui/CardFrame';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import type { RoomStore } from '../../application/RoomStore';
 import { retroT } from '../translations';
 

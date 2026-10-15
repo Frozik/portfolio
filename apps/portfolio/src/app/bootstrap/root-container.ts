@@ -1,7 +1,7 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { isNil } from 'lodash-es';
 
-import type { Language } from '../../shared/i18n/types';
+import type { Language } from '@frozik/utils/i18n/language';
 import { PRERENDER_ATTRIBUTE } from '../prerender/assemble-landing-html';
 
 const ROOT_ID = 'root';

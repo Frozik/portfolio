@@ -2,7 +2,7 @@ import { cn } from '@frozik/components/components/cn';
 import { observer } from 'mobx-react-lite';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import { useTanksStore } from '../../application/useTanksStore';
 import { GAME_OVER_RISE_ANIMATION_CLASS } from '../constants';
 import { tanksT } from '../translations';

@@ -6,7 +6,7 @@ import { useTable } from '@frozik/table/react/useTable';
 import { observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
 
-import { getCurrentLanguage } from '../../../../shared/i18n/locale';
+import { pageLanguage } from '@frozik/utils/i18n/page-language';
 import type { EchoModel } from '../../application/EchoModel';
 import { transportT } from '../translations';
 import { echoResultColumns } from './echo-result-columns';
@@ -30,7 +30,7 @@ export const EchoResults = observer(({ echo }: { readonly echo: EchoModel }) => 
       <h3 className="font-mono text-[11px] tracking-[0.1em] text-landing-fg-faint uppercase">
         {transportT.echo.results}
       </h3>
-      <Table model={model} theme="auto" density="compact" locale={getCurrentLanguage()} />
+      <Table model={model} theme="auto" density="compact" locale={pageLanguage()} />
     </section>
   );
 });

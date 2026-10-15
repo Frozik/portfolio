@@ -1,0 +1,159 @@
+/* The theme of the shared UI primitives (`ui/*`): their palette, motion and utilities. */
+
+@theme {
+  /* Brand colors */
+  --color-brand-50: oklch(0.97 0.01 250);
+  --color-brand-100: oklch(0.93 0.03 250);
+  --color-brand-200: oklch(0.86 0.06 250);
+  --color-brand-300: oklch(0.76 0.1 250);
+  --color-brand-400: oklch(0.66 0.16 250);
+  --color-brand-500: oklch(0.55 0.22 250);
+  --color-brand-600: oklch(0.47 0.2 250);
+  --color-brand-700: oklch(0.39 0.16 250);
+  --color-brand-800: oklch(0.32 0.12 250);
+  --color-brand-900: oklch(0.25 0.08 250);
+
+  /* Semantic colors */
+  --color-success: oklch(0.65 0.18 145);
+  --color-warning: oklch(0.75 0.15 75);
+  --color-error: oklch(0.6 0.22 25);
+  --color-info: oklch(0.6 0.18 250);
+
+  /* Surface colors (dark theme default) */
+  --color-surface: oklch(0.14 0.005 250);
+  --color-surface-elevated: oklch(0.18 0.005 250);
+  --color-surface-overlay: oklch(0.22 0.005 250);
+  --color-border: oklch(0.3 0.01 250);
+  --color-text: oklch(0.93 0.005 250);
+  --color-text-secondary: oklch(0.65 0.01 250);
+  --color-text-muted: oklch(0.45 0.01 250);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-fade-out: fade-out 100ms ease-in;
+  --animate-slide-in-left: slide-in-left 200ms ease-out;
+  --animate-slide-out-left: slide-out-left 150ms ease-in;
+  --animate-slide-in-right: slide-in-right 200ms ease-out;
+  --animate-slide-out-right: slide-out-right 150ms ease-in;
+  --animate-slide-in-bottom: slide-in-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-out-bottom: slide-out-bottom 200ms ease-in;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes slide-out-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes slide-in-bottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-out-bottom {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* Under a theme root (the vault) the primitives paint with the colour roles, so they follow
+   light and dark; elsewhere they keep the dark palette above. */
+[data-theme] {
+  --color-surface: var(--color-bg);
+  --color-surface-elevated: var(--color-bg-elevated);
+  --color-surface-overlay: var(--color-bg-card);
+  --color-border: var(--color-line);
+  --color-text: var(--color-fg);
+  --color-text-secondary: var(--color-fg-dim);
+  --color-text-muted: var(--color-fg-faint);
+}
+
+@utility section-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--color-landing-border-soft);
+}
+
+@utility card-corners {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--color-landing-accent);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  &::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+  }
+}
+
+@utility lift-hover {
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}

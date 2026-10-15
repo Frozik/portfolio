@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog';
+import { ConfirmDialog } from '@frozik/components/ui/ConfirmDialog';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import { sitePlannerT } from '../translations';
 import { ToolbarIconButton } from './ToolbarIconButton';

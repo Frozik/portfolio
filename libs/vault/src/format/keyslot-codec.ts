@@ -107,8 +107,14 @@ function readCredentialId(reader: ByteReader): TBytes | null {
   return reader.has(length) ? reader.take(length) : null;
 }
 
-/** A slot of a kind or KDF this build does not know refuses the file: it is a newer format. */
-export function decodeKeyslot(value: TBytes): TResult<TKeyslot, TKeyslotDecodeError> {
+/**
+ * A slot of a kind or KDF this build does not know refuses the file: it is a
+ * newer format. A passkey's site lives outside its slot, so older builds read the slot unchanged.
+ */
+export function decodeKeyslot(
+  value: TBytes,
+  siteOf: (credentialId: TBytes) => string | null
+): TResult<TKeyslot, TKeyslotDecodeError> {
   const reader = new ByteReader(value);
   if (!reader.has(2)) {
     return err('corrupted');
@@ -143,6 +149,6 @@ export function decodeKeyslot(value: TBytes): TResult<TKeyslot, TKeyslotDecodeEr
   }
   const credentialId = readCredentialId(reader);
   return !isNil(credentialId) && reader.remaining === 0
-    ? ok({ kind: 'prf', credentialId, ...sealing.value })
+    ? ok({ kind: 'prf', credentialId, rpId: siteOf(credentialId), ...sealing.value })
     : err('corrupted');
 }

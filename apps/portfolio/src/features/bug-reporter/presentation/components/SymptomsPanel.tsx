@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { TSymptom } from '../../application/BugReporterDemoStore';
 import { useBugReporterDemoStore } from '../../application/useBugReporterDemoStore';
 import { bugReporterDemoT } from '../translations';

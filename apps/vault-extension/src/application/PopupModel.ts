@@ -1,8 +1,8 @@
 import { toBase64Url } from '@frozik/vault/crypto/bytes';
-import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
 import type { IHostDisplay } from '@frozik/vault/model/host-display';
 import { describeHost } from '@frozik/vault/model/host-display';
 import type { TCardId, TFieldId } from '@frozik/vault/model/ids';
+import type { TUnlockFailure } from '@frozik/vault/session/unlock-failure';
 import { isNil } from 'lodash-es';
 import { makeAutoObservable, observable, observableRef, runInAction } from 'mobx';
 
@@ -20,7 +20,12 @@ export type TPopupNotice =
   | { readonly kind: 'copied' }
   | { readonly kind: 'file-refused' }
   | { readonly kind: 'connect-failed'; readonly outcome: Exclude<TConnectOutcome, 'connected'> }
-  | { readonly kind: 'host-refused' };
+  | { readonly kind: 'host-refused' }
+  /** The PIN's one try failed: the master password from now on. */
+  | { readonly kind: 'wrong-pin' }
+  | { readonly kind: 'quick-on' }
+  | { readonly kind: 'quick-refused' }
+  | { readonly kind: 'reminder-refused' };
 
 /**
  * The popup: lives while it is open, holds nothing secret
@@ -171,9 +176,50 @@ export class PopupModel {
     }
   }
 
+  async quickUnlock(pin: string): Promise<void> {
+    this.busy = true;
+    const outcome = await this.ask({ kind: 'quick-unlock', pin });
+    runInAction(() => {
+      this.busy = false;
+      this.notice = outcome === 'opened' ? null : { kind: 'wrong-pin' };
+    });
+    await this.start();
+  }
+
+  /** A PIN for the idle lock, under the master password typed again; the PIN arrives typed twice and equal. */
+  async setUpQuickUnlock(password: string, pin: string): Promise<void> {
+    this.busy = true;
+    const done = await this.ask({ kind: 'quick-set-up', password, pin });
+    runInAction(() => {
+      this.busy = false;
+      this.notice = { kind: done ? 'quick-on' : 'quick-refused' };
+    });
+    await this.start();
+  }
+
+  async switchOffQuickUnlock(): Promise<void> {
+    await this.ask({ kind: 'quick-switch-off' });
+    await this.start();
+  }
+
+  async remind(password: string): Promise<void> {
+    const done = await this.ask({ kind: 'remind', password });
+    runInAction(() => {
+      this.notice = done ? null : { kind: 'reminder-refused' };
+    });
+    await this.start();
+  }
+
+  /** Behind the PIN when there is one, as password managers lock. */
   async lock(): Promise<void> {
     await this.ask({ kind: 'lock' });
     this.close();
+  }
+
+  /** No key left behind a PIN: only the master password opens the vault again, and the popup says so. */
+  async lockCompletely(): Promise<void> {
+    await this.ask({ kind: 'lock-completely' });
+    await this.start();
   }
 
   askToReset(): void {

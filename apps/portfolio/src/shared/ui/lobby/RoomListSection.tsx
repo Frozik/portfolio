@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
-import { Alert } from '../Alert';
-import { SectionNumber } from '../SectionNumber';
-import { Spinner } from '../Spinner';
+import { Alert } from '@frozik/components/ui/Alert';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
+import { Spinner } from '@frozik/components/ui/Spinner';
 
 /**
  * Shared "active rooms" lobby section: section marker, then exactly one of

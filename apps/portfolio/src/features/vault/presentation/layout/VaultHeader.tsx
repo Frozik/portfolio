@@ -1,47 +1,24 @@
-import { assertNever } from '@frozik/utils/assert/assertNever';
-import type { ISyncState } from '@frozik/vault/sync/sync-state';
 import { isNil } from 'lodash-es';
 import { Menu } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 
-import { Alert } from '../../../../shared/ui/Alert';
-import { Button } from '../../../../shared/ui/Button';
-import type { VaultSession } from '../../application/VaultSession';
-import { vaultPaths } from '../../domain/vault-paths';
+import { Alert } from '@frozik/components/ui/Alert';
+import { Button } from '@frozik/components/ui/Button';
+import type { VaultSession } from '@frozik/vault-app/session/application/VaultSession';
+import { saveStatusText } from '@frozik/vault-app/texts/vault/status-wording';
+import { auditT } from '@frozik/vault-react/texts/audit';
+import { settingsT } from '@frozik/vault-react/texts/settings';
+import { vaultT } from '@frozik/vault-react/texts/vault';
 import { shortcutLabel } from '../shortcut-label';
-import { vaultT } from '../translations';
-import { auditT } from '../translations/audit';
-import { settingsT } from '../translations/settings';
+import { vaultPaths } from '../vault-paths';
 import { CloudStatus } from './CloudStatus';
 
 const MS_PER_SECOND = 1000;
 const LOCK_KEY = 'l';
 const BACK_KEY = 'Escape';
 const MENU_ICON_SIZE = 18;
-
-function saveStatusText(state: ISyncState): string {
-  const t = vaultT.status;
-  const { phase } = state;
-  switch (phase.kind) {
-    case 'idle':
-      return t.saved;
-    case 'waiting':
-      return t.waiting;
-    case 'stopped':
-      return t.stopped[phase.reason.kind];
-    case 'statting':
-    case 'reading':
-    case 'opening':
-    case 'merging':
-    case 'sealing':
-    case 'writing':
-      return t.saving;
-    default:
-      return assertNever(phase);
-  }
-}
 
 /**
  * The vault's name, whether this device holds its
@@ -126,7 +103,7 @@ export const VaultHeader = observer(
           <span
             className={stopped ? 'text-[12px] text-error' : 'text-[12px] text-landing-fg-faint'}
           >
-            {saveStatusText(session.local.state)}
+            {saveStatusText(vaultT, session.local.state)}
           </span>
           <CloudStatus cloud={session.cloud} />
           <span aria-live="polite" className="text-[12px] text-landing-fg-faint">

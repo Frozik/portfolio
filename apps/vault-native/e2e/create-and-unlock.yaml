@@ -1,0 +1,42 @@
+# A new vault on a clean phone, locked, and opened again with its master password.
+appId: io.github.ciphravault.vault
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: create-vault
+- tapOn:
+    id: create-name
+- inputText: Family
+- tapOn:
+    id: create-password
+- inputText: correct horse battery staple
+- tapOn:
+    id: create-confirmation
+- inputText: correct horse battery staple
+- hideKeyboard
+- tapOn:
+    id: create-acknowledged
+- tapOn:
+    id: create-submit
+- extendedWaitUntil:
+    visible:
+      id: card-list-screen
+    timeout: 120000
+- tapOn:
+    id: lock
+- extendedWaitUntil:
+    visible:
+      id: vault-row
+    timeout: 60000
+- tapOn:
+    id: vault-row
+- tapOn:
+    id: unlock-password
+- inputText: correct horse battery staple
+- tapOn:
+    id: unlock-submit
+- extendedWaitUntil:
+    visible:
+      id: card-list-screen
+    timeout: 120000

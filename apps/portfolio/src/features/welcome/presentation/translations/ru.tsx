@@ -1,4 +1,4 @@
-import { selectPluralForm } from '../../../../shared/i18n/plural';
+import { selectPluralForm } from '@frozik/utils/i18n/plural';
 import type { welcomeTranslationsEn } from './en';
 import { welcomeEarlierExperienceRu } from './ru-experience-earlier';
 import { welcomeRecentExperienceRu } from './ru-experience-recent';

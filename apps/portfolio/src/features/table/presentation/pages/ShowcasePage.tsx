@@ -33,8 +33,8 @@ import { useEventCallback } from 'usehooks-ts';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
+import { Button } from '@frozik/components/ui/Button';
 import { useFeatureAgentTools } from '../../../../app/components/TopNavAgentToolsContext';
-import { Button } from '../../../../shared/ui/Button';
 import { ExpandableFrame } from '../../../../shared/ui/ExpandableFrame';
 import { useTableDemoStore } from '../../application/useTableDemoStore';
 import type { IDemoTrade } from '../../domain/demo-trade';

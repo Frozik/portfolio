@@ -1,0 +1,19 @@
+# Screenshots stay blocked until the user confirms, and are blocked again on request.
+appId: io.github.ciphravault.vault
+---
+- runFlow: create-and-unlock.yaml
+- tapOn:
+    id: tab-settings
+- scrollUntilVisible:
+    element:
+      id: allow-screenshots
+- tapOn:
+    id: allow-screenshots
+- tapOn:
+    id: confirm-screenshots
+- assertVisible:
+    id: block-screenshots
+- tapOn:
+    id: block-screenshots
+- assertVisible:
+    id: allow-screenshots

@@ -10,7 +10,8 @@ export type THkdfLabel =
   | 'pwv/device-usage'
   | 'pwv/prf-kek'
   | 'pwv/recovery-kek'
-  | 'pwv/blob';
+  | 'pwv/blob'
+  | 'pwv/quick-kek';
 
 const BITS_PER_BYTE = 8;
 const AES_KEY_BITS = 256;

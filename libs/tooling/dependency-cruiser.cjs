@@ -3,6 +3,11 @@
  * `pnpm layers` (part of `check-all`). Circular dependencies stay with madge.
  */
 const FEATURE = '^apps/portfolio/src/features/([^/]+)/';
+/**
+ * The renderers built on the shared vault application layer. The portfolio's
+ * vault renderer predates it and still derives from the core itself (known debt).
+ */
+const VAULT_RENDERERS = '^apps/(vault-web/src/screens|vault-native/src/(app|ui))/';
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -54,6 +59,14 @@ module.exports = {
         ],
       },
       to: { path: '/infrastructure/' },
+    },
+    {
+      name: 'node-sqlite-only-in-tests',
+      comment:
+        'node:sqlite drives the SQL stores in tests only; a phone runs the same SQL through expo-sqlite.',
+      severity: 'error',
+      from: { pathNot: '/testing/' },
+      to: { dependencyTypes: ['core'], path: 'sqlite' },
     },
     {
       name: 'libs-do-not-import-apps',
@@ -285,22 +298,22 @@ module.exports = {
       to: { path: '^libs/vault/src/import/([^/]+)/', pathNot: '^libs/vault/src/import/$1/' },
     },
     {
-      name: 'vault-react-is-outermost',
-      comment: 'Only libs/vault/src/react knows React, the React controls and the MobX bindings.',
+      name: 'vault-core-knows-no-react',
+      comment: 'React widgets live in libs/vault-react; the core is the same under every renderer.',
       severity: 'error',
-      from: { path: '^libs/vault/src/', pathNot: '^libs/vault/src/react/' },
+      from: { path: '^libs/vault/' },
       to: {
-        path: '(^libs/vault/src/react/|^libs/components/|/node_modules/(react|react-dom|mobx-react-lite)(/|$))',
+        path: '(^libs/vault-react/|^libs/components/|/node_modules/(react|react-dom|mobx-react-lite)(/|$))',
       },
     },
     {
       name: 'vault-core-is-platform-free',
       comment:
-        'Outside react/, persistence/ and adapters/ the vault core imports no storage or WASM package; DOM globals (fetch, indexedDB, document…) are banned there by the no-restricted-globals override in oxlint.json.',
+        'Outside persistence/, adapters/ and the test helpers the vault core imports no storage or WASM package; DOM globals (fetch, indexedDB, document…) are banned there by the no-restricted-globals override in oxlint.json.',
       severity: 'error',
       from: {
         path: '^libs/vault/src/',
-        pathNot: ['^libs/vault/src/(react|persistence)/', '/adapters/'],
+        pathNot: ['^libs/vault/src/persistence/', '/adapters/', '^libs/vault/src/testing/'],
       },
       to: { path: '/node_modules/(idb|hash-wasm|mobx|mobx-react-lite)(/|$)' },
     },
@@ -311,6 +324,146 @@ module.exports = {
       severity: 'error',
       from: { path: '^libs/vault/', pathNot: '^libs/vault/src/testing/' },
       to: { path: '^libs/cloud-storage/src/', pathNot: '^libs/cloud-storage/src/core/' },
+    },
+    {
+      name: 'vault-core-does-not-import-vault-app',
+      comment: 'The core is the shared kernel; the application layer sits on top of it.',
+      severity: 'error',
+      from: { path: '^libs/vault/' },
+      to: { path: '^libs/vault-app/' },
+    },
+    {
+      name: 'vault-app-is-framework-free',
+      comment:
+        'The application layer runs under every renderer (web, extension, React Native): MobX is its only framework; DOM globals are banned by the oxlint override.',
+      severity: 'error',
+      from: { path: '^libs/vault-app/' },
+      to: {
+        path: '(^libs/components/|/node_modules/(react|react-dom|react-router|react-router-dom|react-native|idb|hash-wasm)(/|$))',
+      },
+    },
+    {
+      name: 'vault-app-sees-no-platform-adapters',
+      comment:
+        'The browser storage and the KDFs of the core are adapters; the application layer gets them through ports.',
+      severity: 'error',
+      from: { path: '^libs/vault-app/' },
+      to: { path: '^libs/vault/src/(persistence/indexeddb|crypto/adapters)/' },
+    },
+    {
+      name: 'vault-native-keeps-secrets-out-of-the-settings-store',
+      comment:
+        'The key-value store is plaintext SQLite: it keeps only what must be read before any key (the lock note, the theme); everything of a vault goes through the sealed device stores.',
+      severity: 'error',
+      from: {
+        path: '^apps/vault-native/',
+        pathNot:
+          '^apps/vault-native/src/infrastructure/(runtime-reload-wipe|[a-z-]*theme-store)(\\.test)?\\.ts$',
+      },
+      to: { path: '/node_modules/expo-sqlite/kv-store' },
+    },
+    {
+      name: 'vault-native-takes-only-tokens-from-components',
+      comment:
+        'The web primitives are DOM and Tailwind; the phone paints with the shared tokens only.',
+      severity: 'error',
+      from: { path: '^apps/vault-native/' },
+      to: { path: '^libs/components/', pathNot: '^libs/components/src/tokens/' },
+    },
+    {
+      name: 'vault-http-runs-everywhere',
+      comment:
+        'The fetch adapters serve the browser and the phone alike: no DOM, Worker or browser-storage code behind them.',
+      severity: 'error',
+      from: { path: '^libs/vault-http/' },
+      to: {
+        path: '(^libs/(vault-browser|vault-react|components)/|^libs/vault/src/persistence/indexeddb/|/node_modules/(idb|react|react-dom|react-native)(/|$))',
+      },
+    },
+    {
+      name: 'vault-native-uses-no-browser-adapters',
+      comment:
+        'The phone keeps its data in SQLite and runs Argon2 natively; the browser storage, the WASM KDF and the browser adapters are not for it.',
+      severity: 'error',
+      from: { path: '^apps/vault-native/' },
+      to: {
+        path: '(^libs/vault/src/(persistence/indexeddb/|crypto/adapters/kdf-hash-wasm)|^libs/vault-browser/)',
+      },
+    },
+    {
+      name: 'vault-application-does-not-import-infrastructure',
+      comment: 'A port stands between an application model and an adapter.',
+      severity: 'error',
+      from: { path: '^libs/vault[a-z-]*/src/.*application/' },
+      to: { path: '/infrastructure/' },
+    },
+    {
+      name: 'vault-app-domain-stays-in-its-context',
+      comment:
+        'A context’s domain uses only its own domain, the core and @frozik/utils (plus the shared navigation); other contexts’ shapes it may name as types.',
+      severity: 'error',
+      from: { path: '^libs/vault-app/src/([^/]+)/domain/' },
+      to: {
+        path: '^libs/vault-app/src/',
+        pathNot: ['^libs/vault-app/src/$1/domain/', '^libs/vault-app/src/navigation/'],
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'vault-app-contexts-meet-in-the-session',
+      comment:
+        'An application model may use other contexts’ domain and name their models as types; only session/application, the composition point, uses other contexts’ models.',
+      severity: 'error',
+      from: {
+        path: '^libs/vault-app/src/([^/]+)/application/',
+        pathNot: '^libs/vault-app/src/session/',
+      },
+      to: {
+        path: '^libs/vault-app/src/[^/]+/application/',
+        pathNot: '^libs/vault-app/src/$1/application/',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'vault-app-application-does-not-import-texts',
+      comment: 'Wording belongs to the renderer side: models expose states, texts render them.',
+      severity: 'error',
+      from: { path: '^libs/vault-app/src/[^/]+/application/' },
+      to: { path: '^libs/vault-app/src/texts/' },
+    },
+    {
+      name: 'vault-renderer-holds-no-logic',
+      comment:
+        'A renderer reads models, navigation and texts of the application layer and only types of the core; it never reaches an adapter or another renderer.',
+      severity: 'error',
+      from: { path: VAULT_RENDERERS },
+      to: {
+        path: '^libs/vault-app/src/',
+        pathNot: [
+          '^libs/vault-app/src/[^/]+/application/',
+          '^libs/vault-app/src/(navigation|texts)/',
+        ],
+      },
+    },
+    {
+      name: 'vault-renderer-reads-only-core-types',
+      severity: 'error',
+      from: { path: VAULT_RENDERERS },
+      to: { path: '^libs/vault/src/', dependencyTypesNot: ['type-only'] },
+    },
+    {
+      name: 'vault-renderer-reaches-no-adapter',
+      comment:
+        'Only a composition root constructs adapters; the portfolio vault’s root is Vault.tsx.',
+      severity: 'error',
+      from: {
+        path: `(${VAULT_RENDERERS}|^apps/portfolio/src/features/vault/presentation/)`,
+        pathNot: [
+          '^apps/portfolio/src/features/vault/presentation/Vault\\.tsx$',
+          '^apps/vault-native/src/app/_layout\\.tsx$',
+        ],
+      },
+      to: { path: '(/infrastructure/|^libs/vault-(browser|http)/)' },
     },
     {
       name: 'cloud-storage-core-is-innermost',

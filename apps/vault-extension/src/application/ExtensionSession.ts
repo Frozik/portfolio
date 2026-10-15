@@ -3,21 +3,12 @@ import { importDek } from '@frozik/vault/crypto/dek';
 import type { IKdf } from '@frozik/vault/crypto/kdf-port';
 import { encodePassword } from '@frozik/vault/crypto/password-normalization';
 import { unwrapSessionDek } from '@frozik/vault/format/session-dek';
-import type { TUnlockFailure } from '@frozik/vault/lifecycle/lifecycle-state';
-import type { IVaultCard } from '@frozik/vault/model/card';
-import { allFields, fieldValues } from '@frozik/vault/model/card';
-import { searchCards } from '@frozik/vault/model/card-search';
-import type { TCardId, TFieldId } from '@frozik/vault/model/ids';
-import { parseOtpUri } from '@frozik/vault/model/validation/otpauth-uri';
 import type { IVaultDocument } from '@frozik/vault/model/vault-document';
-import { oneTimeCode } from '@frozik/vault/otp/one-time-code';
+import type { TUnlockFailure } from '@frozik/vault/session/unlock-failure';
 import { vaultKeyOf } from '@frozik/vault/session/vault-key-of';
 import { isNil } from 'lodash-es';
-import { Temporal } from 'temporal-polyfill';
 
 import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
-import type { ICardSummary, ICardView } from '../domain/card-views';
-import { summaryOf, viewOf } from '../domain/card-views';
 
 import type {
   IDriveSource,
@@ -26,17 +17,17 @@ import type {
   TDriveSearch,
   TPullOutcome,
 } from '../domain/cloud';
-import type { TExtensionStatus, TFillOutcome } from '../domain/messages';
-import type { IExtensionServices, IFillRequest, ISessionKey, ISetup } from '../domain/ports';
-import { cardServesPage, cardsForPage } from '../domain/site-cards';
+import type { TExtensionStatus, TQuickUnlockOutcome } from '../domain/messages';
+import type { IExtensionServices, ISessionKey, ISetup } from '../domain/ports';
 import { CloudCopy, LOCAL_COPY } from './CloudCopy';
+import { ExtensionCards } from './ExtensionCards';
+import { ExtensionQuickLock } from './ExtensionQuickLock';
 
 /** The default idle lock, as on the web. */
 export const IDLE_LOCK_MS = 5 * 60 * 1000;
 /** A protected card stays open this long after the password is typed again. */
 export const PROTECTED_OPEN_MS = 5 * 60 * 1000;
 
-const LOGIN_KINDS: ReadonlySet<string> = new Set(['login', 'email']);
 const SIGNAL = new AbortController().signal;
 
 interface IOpened {
@@ -47,11 +38,6 @@ interface IOpened {
   readonly keyId: Uint8Array<ArrayBuffer>;
 }
 
-function firstValue(card: IVaultCard, kinds: ReadonlySet<string>): string | null {
-  const field = allFields(card).find(candidate => kinds.has(candidate.spec.kind));
-  return isNil(field) ? null : (fieldValues(field)[0] ?? null);
-}
-
 /**
  * The service worker's session: the vault opened from
  * its local copy with the key `chrome.storage.session` keeps, re-opened after
@@ -60,6 +46,9 @@ function firstValue(card: IVaultCard, kinds: ReadonlySet<string>): string | null
 export class ExtensionSession {
   private opened: IOpened | null = null;
   private readonly cloud: CloudCopy;
+  private readonly quick: ExtensionQuickLock;
+  /** What the popup reads and fills, from the vault this session opened. */
+  readonly cards: ExtensionCards;
 
   constructor(
     private readonly services: IExtensionServices,
@@ -67,6 +56,8 @@ export class ExtensionSession {
     private readonly argon2: IKdf
   ) {
     this.cloud = new CloudCopy(services);
+    this.quick = new ExtensionQuickLock({ ...services, expiry: services.quickExpiry });
+    this.cards = new ExtensionCards(services, async () => (await this.open())?.document ?? null);
   }
 
   async status(): Promise<TExtensionStatus> {
@@ -75,9 +66,72 @@ export class ExtensionSession {
       return { kind: 'not-set-up' };
     }
     const opened = await this.open();
-    return isNil(opened)
-      ? { kind: 'locked', vaultName: setup.name }
-      : { kind: 'unlocked', vaultName: setup.name };
+    if (isNil(opened)) {
+      const prompt = await this.quick.prompt();
+      return isNil(prompt)
+        ? { kind: 'locked', vaultName: setup.name }
+        : { kind: 'quick-locked', vaultName: setup.name, digits: prompt.digits };
+    }
+    return {
+      kind: 'unlocked',
+      vaultName: setup.name,
+      quickUnlock: await this.withKey(key => this.quick.isSetUp(key), false),
+      reminderDue: await this.quick.reminderDue(setup.vaultKey),
+    };
+  }
+
+  /** The idle lock and the lock button: behind the PIN when there is one, otherwise full. */
+  async lockQuickly(): Promise<void> {
+    if (await this.withKey(key => this.quick.lock(key), false)) {
+      await this.setAside();
+    } else {
+      await this.lock();
+    }
+  }
+
+  /** The PIN's one try; a wrong one leaves the master password as the only way in. */
+  async quickUnlock(pin: string): Promise<TQuickUnlockOutcome> {
+    const key = await this.quick.open(pin);
+    return !isNil(key) && (await this.adopt(key)) ? 'opened' : 'wrong-pin';
+  }
+
+  /** A PIN for this browser, under the master password typed again. */
+  async setUpQuickUnlock(password: string, pin: string): Promise<boolean> {
+    if (!isNil(await this.checkPassword(password))) {
+      return false;
+    }
+    const setup = await this.services.setup.load();
+    if (!isNil(setup)) {
+      await this.quick.masterTyped(setup.vaultKey);
+    }
+    return this.withKey(key => this.quick.setUp(key, pin), false);
+  }
+
+  switchOffQuickUnlock(): Promise<void> {
+    return this.withKey(key => this.quick.switchOff(key), undefined);
+  }
+
+  /** The weekly reminder: the master password, checked, starts the week over. */
+  async remind(password: string): Promise<boolean> {
+    const setup = await this.services.setup.load();
+    if (isNil(setup) || !isNil(await this.checkPassword(password))) {
+      return false;
+    }
+    await this.quick.masterTyped(setup.vaultKey);
+    return true;
+  }
+
+  /** The session's key for one step, zeroed after it. */
+  private async withKey<T>(step: (key: ISessionKey) => Promise<T>, without: T): Promise<T> {
+    const key = await this.services.sessionKeys.load();
+    if (isNil(key)) {
+      return without;
+    }
+    try {
+      return await step(key);
+    } finally {
+      key.rawDek.fill(0);
+    }
   }
 
   /** A vault file chosen from disk becomes the copy the extension keeps. */
@@ -177,6 +231,8 @@ export class ExtensionSession {
     }
     await this.services.sessionKeys.save(key);
     unwrapped.value.rawDek.fill(0);
+    await this.quick.end();
+    await this.quick.masterTyped(setup.vaultKey);
     await this.cloud.sealPendingLink(setup.vaultKey, opened.dek);
     await this.services.idleAlarm.set(IDLE_LOCK_MS);
     await this.services.syncAlarm.start();
@@ -186,6 +242,7 @@ export class ExtensionSession {
   /** The key leaves the session store, then the extension reloads: memory goes with it. */
   async lock(): Promise<void> {
     await this.services.clipboard.clearPending();
+    await this.quick.end();
     await this.services.sessionKeys.clear();
     await this.services.protectedWindow.save(0);
     await this.services.idleAlarm.cancel();
@@ -218,33 +275,18 @@ export class ExtensionSession {
     }
   }
 
-  async pageCards(pageUrl: string): Promise<readonly ICardSummary[]> {
-    const opened = await this.open();
-    return isNil(opened)
-      ? []
-      : cardsForPage(opened.document, pageUrl).map(({ card, match }) =>
-          summaryOf(card, match === 'shared')
-        );
-  }
-
-  async search(query: string): Promise<readonly ICardSummary[]> {
-    const opened = await this.open();
-    if (isNil(opened)) {
-      return [];
-    }
-    const live = [...opened.document.cards.values()].filter(
-      card => isNil(card.archivedAt) && isNil(card.trashedAt)
-    );
-    return searchCards(live, query).map(card => summaryOf(card, false));
-  }
-
-  async card(cardId: TCardId): Promise<ICardView | null> {
-    const card = await this.cardOf(cardId);
-    return isNil(card) ? null : viewOf(card);
-  }
-
   /** The master password again, for a protected card's secrets. */
   async openProtected(password: string): Promise<TUnlockFailure | null> {
+    const checked = await this.checkPassword(password);
+    if (!isNil(checked)) {
+      return checked;
+    }
+    await this.services.protectedWindow.save(this.services.now() + PROTECTED_OPEN_MS);
+    return null;
+  }
+
+  /** Whether the password opens the kept copy; nothing changes either way. */
+  async checkPassword(password: string): Promise<TUnlockFailure | null> {
     const setup = await this.services.setup.load();
     const file = isNil(setup) ? null : await this.localFile(setup.vaultKey);
     if (isNil(file)) {
@@ -259,84 +301,34 @@ export class ExtensionSession {
       return 'wrong-password';
     }
     checked.value.rawDek.fill(0);
-    await this.services.protectedWindow.save(this.services.now() + PROTECTED_OPEN_MS);
     return null;
   }
 
-  async reveal(cardId: TCardId, fieldId: TFieldId): Promise<string | null> {
-    const card = await this.secretsOf(cardId);
-    const field = isNil(card) ? undefined : allFields(card).find(entry => entry.id === fieldId);
-    return isNil(field) ? null : fieldValues(field).join('\n');
-  }
-
-  async copy(cardId: TCardId, fieldId: TFieldId): Promise<boolean> {
-    const value = await this.reveal(cardId, fieldId);
-    return isNil(value) ? false : this.services.clipboard.copy(value);
-  }
-
-  /** The current code of a TOTP field; HOTP stays with the web app, which owns its counter. */
-  async copyCode(cardId: TCardId, fieldId: TFieldId): Promise<boolean> {
-    const code = await this.codeOf(cardId, fieldId);
-    return isNil(code) ? false : this.services.clipboard.copy(code);
-  }
-
-  /** Login, password and the current code, for a page the card's addresses allow. */
-  async fill(
-    cardId: TCardId,
-    tabId: number,
-    pageUrl: string,
-    allowInsecure: boolean
-  ): Promise<TFillOutcome> {
-    const card = await this.secretsOf(cardId);
-    if (isNil(card)) {
-      return isNil(this.opened) ? 'locked' : 'not-allowed';
+  /** A key given back by the quick lock opens the session as an unlock does. */
+  async adopt(key: ISessionKey): Promise<boolean> {
+    const setup = await this.services.setup.load();
+    const file = isNil(setup) ? null : await this.localFile(setup.vaultKey);
+    if (isNil(setup) || isNil(file) || setup.vaultKey !== key.vaultKey) {
+      return false;
     }
-    if (!cardServesPage(card, pageUrl)) {
-      return 'other-site';
+    const opened = await this.openWith(key, setup.name, file);
+    if (!isNil(opened)) {
+      await this.services.sessionKeys.save(key);
+      await this.services.idleAlarm.set(IDLE_LOCK_MS);
+      await this.services.syncAlarm.start();
     }
-    const otpField = allFields(card).find(field => field.spec.kind === 'otp');
-    const request: IFillRequest = {
-      username: firstValue(card, LOGIN_KINDS),
-      password: firstValue(card, new Set(['password'])),
-      otp: isNil(otpField) ? null : await this.codeOf(card.id, otpField.id),
-      addresses: allFields(card).flatMap(field => {
-        const { spec } = field;
-        return spec.kind === 'url' ? fieldValues(field).map(stored => ({ stored, spec })) : [];
-      }),
-      allowInsecure,
-    };
-    return this.services.filler.fill(tabId, request);
+    key.rawDek.fill(0);
+    return !isNil(opened);
   }
 
-  private async codeOf(cardId: TCardId, fieldId: TFieldId): Promise<string | null> {
-    const uri = await this.reveal(cardId, fieldId);
-    const params = isNil(uri) ? null : parseOtpUri(uri);
-    if (isNil(params) || !params.ok || params.value.type !== 'totp') {
-      return null;
-    }
-    const code = await oneTimeCode(params.value, {
-      kind: 'time',
-      at: Temporal.Instant.fromEpochMilliseconds(this.services.now()),
-    });
-    return code.ok ? code.value.code : null;
-  }
-
-  private async cardOf(cardId: TCardId): Promise<IVaultCard | null> {
-    const opened = await this.open();
-    const card = opened?.document.cards.get(cardId);
-    return isNil(card) || !isNil(card.trashedAt) ? null : card;
-  }
-
-  /** A card whose secrets may leave the worker now: a protected one only while it is open. */
-  private async secretsOf(cardId: TCardId): Promise<IVaultCard | null> {
-    const card = await this.cardOf(cardId);
-    if (isNil(card)) {
-      return null;
-    }
-    if (!card.protected) {
-      return card;
-    }
-    return this.services.now() < (await this.services.protectedWindow.load()) ? card : null;
+  /** The quick lock took the key: the open vault leaves this worker's memory, nothing reloads. */
+  async setAside(): Promise<void> {
+    await this.services.clipboard.clearPending();
+    await this.services.sessionKeys.clear();
+    await this.services.protectedWindow.save(0);
+    await this.services.idleAlarm.cancel();
+    await this.services.syncAlarm.stop();
+    this.opened = null;
   }
 
   private async localFile(vaultKey: string): Promise<Uint8Array<ArrayBuffer> | null> {

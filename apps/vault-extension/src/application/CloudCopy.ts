@@ -2,6 +2,10 @@ import { storagePath } from '@frozik/cloud-storage/core/storage-path';
 import type { IStorageProvider, TStoragePath } from '@frozik/cloud-storage/core/storage-provider';
 import type { TDriveSpace } from '@frozik/cloud-storage/google-drive/drive-space';
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import {
+  createCloudLinkRecord,
+  forgetCloudLink,
+} from '@frozik/vault-app/cloud/application/cloud-link-record';
 import type { TBytes } from '@frozik/vault/crypto/bytes';
 import { bytesEqual } from '@frozik/vault/crypto/bytes';
 import {
@@ -11,17 +15,15 @@ import {
 } from '@frozik/vault/format/cloud-file-names';
 import { decodeHeader } from '@frozik/vault/format/header';
 import type { ISealedJsonRecord } from '@frozik/vault/session/sealed-json-record';
-import { createSealedJsonRecord } from '@frozik/vault/session/sealed-json-record';
 import { vaultKeyOf } from '@frozik/vault/session/vault-key-of';
 import { isNil } from 'lodash-es';
 
 import type { TCloudLink, TConnectOutcome, TDriveSearch, TPullOutcome } from '../domain/cloud';
-import { CLOUD_LINK_SCHEMA } from '../domain/cloud';
+import { extensionLinkOf, sharedLinkOf } from '../domain/cloud-link-mapping';
 import type { IExtensionServices, ISetup } from '../domain/ports';
 
 /** The copy the extension keeps, in its own IndexedDB. */
 export const LOCAL_COPY = storagePath('vault.pwv');
-const CLOUD_LINK_RECORD = 'cloud-link';
 const SIGNAL = new AbortController().signal;
 const PATH_SEPARATOR = '/';
 
@@ -105,7 +107,7 @@ export class CloudCopy {
   /** The vault's link goes: one chosen from disk has no cloud, a reset leaves no vault. */
   async forget(vaultKey: string): Promise<void> {
     await this.services.pendingLink.clear();
-    await this.services.deviceConfig.delete(vaultKey, CLOUD_LINK_RECORD);
+    await forgetCloudLink(this.services.deviceConfig, vaultKey);
   }
 
   /** The link given at setup, or kept over a key rotation, sealed under the vault's key once it is unlocked. */
@@ -189,17 +191,19 @@ export class CloudCopy {
   }
 
   private linkRecord(vaultKey: string, dek: CryptoKey): ISealedJsonRecord<TCloudLink> {
-    return createSealedJsonRecord({
+    const record = createCloudLinkRecord({
       store: this.services.deviceConfig,
       vaultKey,
-      recordKey: CLOUD_LINK_RECORD,
       dek,
-      label: 'pwv/device-config',
       random: this.services.random,
-      decode: value => {
-        const parsed = CLOUD_LINK_SCHEMA.safeParse(value);
-        return parsed.success ? parsed.data : null;
-      },
     });
+    return {
+      save: link => record.save(sharedLinkOf(link)),
+      load: async () => {
+        const link = await record.load();
+        return isNil(link) ? null : extensionLinkOf(link);
+      },
+      clear: record.clear,
+    };
   }
 }

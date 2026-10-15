@@ -7,6 +7,7 @@ import type { IRandom } from '@frozik/vault/ports/random';
 
 import type { IWebDavSource, TCloudLink, IDriveSignInFailure } from './cloud';
 import type { TFillOutcome, TRequest, TResponseOf } from './messages';
+import type { ILastMasterStore, IQuickExpiryAlarm, IQuickLockStore } from './quick-unlock';
 
 /** The session's key, in `chrome.storage.session`: gone with a restart, an update or a lock. */
 export interface ISessionKey {
@@ -123,6 +124,10 @@ export interface IExtensionServices {
   readonly restart: IRestart;
   readonly idleAlarm: IIdleAlarm;
   readonly protectedWindow: IProtectedWindow;
+  /** The idle lock's key behind a PIN, when one is set up. */
+  readonly quickLocks: IQuickLockStore;
+  readonly lastMaster: ILastMasterStore;
+  readonly quickExpiry: IQuickExpiryAlarm;
   readonly now: () => number;
 }
 

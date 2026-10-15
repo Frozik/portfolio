@@ -52,6 +52,7 @@ export interface IVaultCodec {
     change: {
       readonly current: TSlotSecret;
       readonly credentialId: TBytes;
+      readonly rpId: string;
       readonly prfOutput: TBytes;
     },
     signal: AbortSignal

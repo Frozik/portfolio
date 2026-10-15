@@ -1,0 +1,90 @@
+language: typescript
+layer: application
+stack: frontend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'index.ts'
+    - 'polyfills.ts'
+    - 'dev-notices.ts'
+    - 'jest.setup.ts'
+    - 'app.config.ts'
+    - 'assets/**/*'
+    - 'metro.config.js'
+    - 'babel.config.js'
+    - 'jest.config.js'
+  # The workspace libraries ship TypeScript the app compiles itself: a change there is a change here.
+  libraries:
+    - '/libs/*/src/**/*'
+    - '/libs/*/package.json'
+
+# What runs on the user's machine and in CI is type-check and jest; the bundle and anything
+# that needs Android's toolchain run in the `native` CI job or by hand.
+tasks:
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+      - 'tsconfig.json'
+    options:
+      runInCI: true
+
+  test:
+    command: 'pnpm run test'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+    options:
+      runInCI: true
+      mutex: 'heavy-suites'
+
+  bundle-check:
+    command: 'pnpm run bundle-check'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+    outputs:
+      - 'dist'
+    options:
+      runInCI: false
+
+  # A release-shaped APK, signed with the debug key prebuild generates: what the emulator runs.
+  build-apk:
+    command: 'pnpm run build-apk'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+      # The release stamped into the APK: a cached build must never carry an old one.
+      - '$VAULT_NATIVE_VERSION'
+      - '$VAULT_NATIVE_VERSION_CODE'
+    outputs:
+      - 'android/app/build/outputs/apk/release'
+    options:
+      runInCI: false
+
+  e2e-android:
+    command: 'pnpm run e2e-android'
+    deps:
+      - 'build-apk'
+    inputs:
+      - 'e2e/**/*'
+    options:
+      cache: false
+      runInCI: false
+
+  start:
+    command: 'pnpm run start'
+    options:
+      persistent: true
+      runInCI: false
+
+  run-android:
+    command: 'pnpm run android'
+    options:
+      persistent: true
+      runInCI: false

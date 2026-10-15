@@ -9,11 +9,13 @@ import type { VitePWAOptions } from 'vite-plugin-pwa';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
-import { readAppVersion } from './vite-plugins/app-version.ts';
+import { readAppVersion } from '@frozik/vite-plugins/app-version';
+import { contentSecurityPolicy } from '@frozik/vite-plugins/content-security-policy';
+import { kdbxWithoutNodeCrypto } from '@frozik/vite-plugins/kdbx-without-node-crypto';
+
 import { buildAssetsDefine } from './vite-plugins/build-assets.ts';
-import { contentSecurityPolicy } from './vite-plugins/content-security-policy.ts';
+import { portfolioContentSecurityPolicy } from './vite-plugins/content-security-policy.ts';
 import { readDeploymentTarget } from './vite-plugins/deployment-target.ts';
-import { kdbxWithoutNodeCrypto } from './vite-plugins/kdbx-without-node-crypto.ts';
 import { prerenderedLanding } from './vite-plugins/prerendered-landing.ts';
 import { STREAM_SAVER_DIR, streamSaverAssets } from './vite-plugins/stream-saver-assets.ts';
 
@@ -35,6 +37,8 @@ const PRERENDER_RENDER_ENTRY = 'src/app/prerender/render-landing.tsx';
 const PRERENDER_DIR = '.prerender';
 /** The SSR bundle needs a name the plugin can find; the browser build hashes its entry. */
 const PRERENDER_ENTRY_FILE = 'render-landing.js';
+/** CI computes the release version before building and hands it over in this variable. */
+const VERSION_ENV = 'PORTFOLIO_VERSION';
 /** The service worker source (`src/sw/sw.ts`); the build writes it to `dist/sw.js`. */
 const SERVICE_WORKER_DIR = 'src/sw';
 const SERVICE_WORKER_FILE = 'sw.ts';
@@ -77,7 +81,7 @@ export default defineConfig(({ isSsrBuild = false }) => ({
   // The KeePass import reads kdbxweb inside a worker, which has its own plugin list.
   worker: { format: 'es', plugins: () => [kdbxWithoutNodeCrypto()] },
   define: {
-    __APP_VERSION__: JSON.stringify(readAppVersion()),
+    __APP_VERSION__: JSON.stringify(readAppVersion(VERSION_ENV)),
     'import.meta.env.VITE_COMMUNICATION_URL': JSON.stringify(DEPLOYMENT.communicationUrl),
     'import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.googleClientId),
     'import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID': JSON.stringify(DEPLOYMENT.yandexClientId),
@@ -142,7 +146,12 @@ export default defineConfig(({ isSsrBuild = false }) => ({
         },
       }),
     !isSsrBuild &&
-      contentSecurityPolicy({ communicationUrl: DEPLOYMENT.communicationUrl, basePath: BASE }),
+      contentSecurityPolicy(
+        portfolioContentSecurityPolicy({
+          communicationUrl: DEPLOYMENT.communicationUrl,
+          basePath: BASE,
+        })
+      ),
     ENABLE_BUNDLE_STATS &&
       visualizer({
         filename: 'bundle-stats.html',

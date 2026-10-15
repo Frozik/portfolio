@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { TLiveStyle } from '../../application/charts/live-chart';
 import { createLiveChart, LIVE_STYLES, PRICE_SERIES } from '../../application/charts/live-chart';
 import { useTimeseriesDemoStore } from '../../application/useTimeseriesDemoStore';

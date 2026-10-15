@@ -3,7 +3,7 @@ import { isNil } from 'lodash-es';
 import { Check } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 
-import { Button } from '../../../../shared/ui/Button';
+import { Button } from '@frozik/components/ui/Button';
 import type { SitePlannerStore } from '../../application/SitePlannerStore';
 import type { EditedObjectDescriptor } from '../../domain/model/editor-mode';
 import { sitePlannerT } from '../translations';

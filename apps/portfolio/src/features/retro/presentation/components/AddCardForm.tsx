@@ -1,8 +1,8 @@
 import { cn } from '@frozik/components/components/cn';
+import { MonoKicker } from '@frozik/components/ui/MonoKicker';
 import { ArrowRight } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
-import { MonoKicker } from '../../../../shared/ui/MonoKicker';
 import type { ColumnId } from '../../domain/types';
 import { retroT } from '../translations';
 

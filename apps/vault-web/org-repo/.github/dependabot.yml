@@ -1,0 +1,7 @@
+# Each monorepo tag raises the pinned release workflow; a reviewed merge publishes it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily

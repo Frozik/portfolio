@@ -5,7 +5,7 @@ import { BugReporterWidget } from '@frozik/bug-reporter/react/BugReporterWidget'
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { observer } from 'mobx-react-lite';
 
-import { SectionNumber } from '../../../shared/ui/SectionNumber';
+import { SectionNumber } from '@frozik/components/ui/SectionNumber';
 import type { TDeskPanel } from '../application/BugReporterDemoStore';
 import { useBugReporterDemoStore } from '../application/useBugReporterDemoStore';
 import { AccountsPanel } from './components/AccountsPanel';

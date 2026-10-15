@@ -3,8 +3,8 @@ import type { ChangeEvent } from 'react';
 import { memo, useMemo, useState } from 'react';
 import { useEventCallback } from 'usehooks-ts';
 
-import { Button } from '../../../../shared/ui/Button';
-import { DialogShell } from '../../../../shared/ui/DialogShell';
+import { Button } from '@frozik/components/ui/Button';
+import { DialogShell } from '@frozik/components/ui/DialogShell';
 import type { ElevationMarkDraft } from '../../domain/model/parse-elevation-csv';
 import { parseElevationCsv } from '../../domain/model/parse-elevation-csv';
 import { sitePlannerT } from '../translations';
