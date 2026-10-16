@@ -1015,6 +1015,9 @@ importers:
       '@frozik/typescript-config':
         specifier: workspace:*
         version: link:../../libs/typescript-config
+      '@frozik/vite-plugins':
+        specifier: workspace:*
+        version: link:../../libs/vite-plugins
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0

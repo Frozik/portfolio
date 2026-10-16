@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",
+    "@frozik/vite-plugins": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",

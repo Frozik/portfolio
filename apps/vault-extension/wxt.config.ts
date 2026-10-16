@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { manifestVersionOf } from '@frozik/vite-plugins/manifest-version';
 import { isNil } from 'lodash-es';
 import { defineConfig } from 'wxt';
 
@@ -10,8 +11,7 @@ import { defineConfig } from 'wxt';
  */
 const E2E_HOSTS = ['https://*.example.test/*'];
 
-/** Chrome takes one to four dotted integers: the release's version, stamped by CI, without a pre-release tail. */
-const RELEASE_VERSION = /^\d+\.\d+\.\d+/.exec(process.env.VAULT_EXTENSION_VERSION ?? '')?.[0];
+const RELEASE_VERSION = manifestVersionOf(process.env.VAULT_EXTENSION_VERSION);
 
 /**
  * The public half of the extension's key: it fixes the extension's id, so the

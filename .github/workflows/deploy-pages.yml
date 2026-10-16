@@ -50,7 +50,8 @@ jobs:
       - name: Build the extension for the release
         run: |
           echo "VAULT_EXTENSION_VERSION=$(pnpm exec predict-version)" >> "$GITHUB_ENV"
-      - run: moon run vault-extension:zip
+      # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
+      - run: pnpm --dir apps/vault-extension run zip
       - run: pnpm exec semantic-release --extends ./libs/tooling/semantic-release.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

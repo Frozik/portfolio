@@ -9,6 +9,7 @@ TypeScript sources.
   script URLs through only from the site's own assets and service worker, `blob:` URLs and a
   listed set of services.
 - `app-version` — the version a build is stamped with: a variable CI sets, else `git describe`.
+- `manifest-version` — that version as an extension manifest takes it: `v2.50.0` → `2.50.0`.
 - `host-file` — reads `infra/hosts/<name>.env` (`DEPLOY_HOST_NAME`, `production` by default),
   so OAuth client ids and addresses have one owner.
 - `kdbx-without-node-crypto` — kdbxweb bundled for the browser without Node's `crypto`.

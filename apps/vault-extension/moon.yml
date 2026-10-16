@@ -34,7 +34,8 @@ tasks:
       runInCI: true
 
   # The release asset: the production build zipped, its manifest stamped with VAULT_EXTENSION_VERSION.
-  # Release workflows only: it rebuilds .output/chrome-mv3, so beside `build` in `moon ci` the two race.
+  # Release workflows only, through `pnpm run zip` (moon skips a `runInCI: false` task on CI even
+  # when named): it rebuilds .output/chrome-mv3, so beside `build` in `moon ci` the two race.
   zip:
     command: 'pnpm run zip'
     inputs:
