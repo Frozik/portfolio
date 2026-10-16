@@ -6,6 +6,7 @@ import { WebGpuGuard } from '../../../shared/components/WebGpuGuard';
 import { runSpaceGolf } from '../application/render/run-space-golf';
 import { SpaceGolfStore } from '../application/SpaceGolfStore';
 import { useSpaceGolfStore } from '../application/useSpaceGolfStore';
+import { createFollowingStorage } from '../infrastructure/following-storage';
 import { createIndexedDBWorldRepository } from '../infrastructure/IndexedDBWorldRepository';
 import { Compass } from './components/Compass';
 import { Hud } from './components/Hud';
@@ -14,10 +15,12 @@ import { spaceGolfT } from './translations';
 
 const SEED_RANGE = 2 ** 31;
 
-/** The composition root: the store gets its database and its source of new worlds here and nowhere else. */
+/** The composition root: the store gets its database, its source of new worlds and its remembered way of following here and nowhere else. */
 function createStore(): SpaceGolfStore {
-  return new SpaceGolfStore(createIndexedDBWorldRepository(), () =>
-    Math.floor(Math.random() * SEED_RANGE)
+  return new SpaceGolfStore(
+    createIndexedDBWorldRepository(),
+    () => Math.floor(Math.random() * SEED_RANGE),
+    createFollowingStorage()
   );
 }
 

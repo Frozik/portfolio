@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Followed } from './CourseView';
 import { CourseView } from './CourseView';
+import type { Following, FollowingStorage } from './ports/following-storage';
 
 const DESKTOP = { width: 1600, height: 900 };
 const PHONE = { width: 390, height: 844 };
@@ -25,8 +26,19 @@ function settled(view: CourseView, target: Followed): CourseView {
   return view;
 }
 
-function createView(): CourseView {
-  const view = new CourseView();
+function storageOf(following: Following): FollowingStorage & { readonly written: Following[] } {
+  const written: Following[] = [];
+  return {
+    written,
+    read: () => written.at(-1) ?? following,
+    write: next => {
+      written.push(next);
+    },
+  };
+}
+
+function createView(following: Following = 'edge'): CourseView {
+  const view = new CourseView(storageOf(following));
   view.resize(DESKTOP);
   view.reset(BALL);
   return view;
@@ -178,33 +190,42 @@ describe('the view of the course', () => {
     expect(view.center.x).toBeCloseTo(looked, 1);
   });
 
-  it('counts quick presses of the ball button round the ways of following, and starts over after a pause', () => {
-    const view = createView();
+  it('counts quick presses of the ball button on from the first, and a press after a pause only centres', () => {
+    const view = createView('rest');
     const pause = (seconds: number): void => {
       for (let frame = 0; frame < seconds * 60; frame += 1) {
         view.follow(followed(), FRAME);
       }
     };
 
-    expect(view.following).toBe('edge');
-    view.centerOnBall();
-    expect(view.following).toBe('edge');
-    pause(1);
     view.centerOnBall();
     expect(view.following).toBe('rest');
+    pause(1);
+    view.centerOnBall();
+    expect(view.following).toBe('always');
     pause(1.5);
     view.centerOnBall();
-    expect(view.following).toBe('always');
+    expect(view.following).toBe('edge');
     pause(0.5);
     view.centerOnBall();
-    expect(view.following).toBe('edge');
+    expect(view.following).toBe('rest');
 
-    view.centerOnBall();
-    view.centerOnBall();
-    expect(view.following).toBe('always');
     pause(2.5);
     view.centerOnBall();
-    expect(view.following).toBe('edge');
+    expect(view.following).toBe('rest');
+  });
+
+  it('remembers the way of following past a new world and into the next visit', () => {
+    const storage = storageOf('edge');
+    const view = new CourseView(storage);
+    view.reset(BALL);
+    view.centerOnBall();
+    view.centerOnBall();
+    expect(storage.written).toEqual(['rest']);
+
+    view.reset({ x: 0, y: 0 });
+    expect(view.following).toBe('rest');
+    expect(new CourseView(storage).following).toBe('rest');
   });
 
   it('centred at rest: a flight is followed at the edge as ever, and the ball glides to the middle once it rests', () => {
@@ -264,7 +285,7 @@ describe('the view of the course', () => {
   });
 
   it('starts a phone zoomed out to its own scale, and the overview button goes out from there and comes back to it', () => {
-    const view = new CourseView();
+    const view = new CourseView(storageOf('edge'));
     view.resize(PHONE);
     view.reset(BALL);
     const home = view.zoom;

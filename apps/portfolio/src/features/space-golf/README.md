@@ -118,11 +118,12 @@ time.
   the HUD button glides there, eased in and out — and the view's own only
   for a burst ball, which it glides to the middle of the screen where it
   comes back. Presses of that button within two seconds of one another
-  count round three ways of keeping the ball, and its icon shows which: at
-  the edge only, as above; centred whenever it comes to rest; or centred
-  always, the flight and all. A press after a pause starts over at the
-  edge, whatever was set — the way out of any of them is to wait and press
-  once; two fingers, the
+  count on round three ways of keeping the ball, and its icon shows which:
+  at the edge only, as above; centred whenever it comes to rest, which is
+  where a first visit starts; or centred always, the flight and all. A
+  press after a pause only centres and leaves the way as it was set, and
+  the way chosen is kept in `localStorage` — past a new world and into the
+  next visit; two fingers, the
   wheel, the right button or the arrows look around, a pinch or Ctrl + wheel
   zooms out to an overview, and a
   compass points to the cup with the distance, a scale bar under it showing

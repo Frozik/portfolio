@@ -20,6 +20,7 @@ import {
   viewSizeMeters,
   zoomCamera,
 } from './camera';
+import type { Following, FollowingStorage } from './ports/following-storage';
 import type { ScaleBar } from './scale-bar';
 import { scaleBarFor } from './scale-bar';
 
@@ -32,13 +33,6 @@ const NOWHERE: Vector2 = { x: 0, y: 0 };
 const SAME_ZOOM_TOLERANCE = 1e-6;
 /** Presses of the ball button this close together count on from one another; one later starts over. */
 const PRESS_WINDOW_SECONDS = 2;
-
-/**
- * How the view keeps the ball: at the edge only — standing still until the
- * ball nears a side of the screen, the way that never makes a screen swim;
- * centred whenever it comes to rest; or centred always, the flight and all.
- */
-export type Following = 'edge' | 'rest' | 'always';
 
 const NEXT_FOLLOWING: Readonly<Record<Following, Following>> = {
   edge: 'rest',
@@ -81,8 +75,8 @@ export class CourseView {
   /** Whether the view follows the ball; a pan lets go of it. */
   isAttached = true;
   isOverview = false;
-  /** How the ball is kept, as the ball button's presses have set it. */
-  following: Following = 'edge';
+  /** How the ball is kept, as the ball button's presses have set it, in this world or an earlier one. */
+  following: Following;
   compass: Compass | undefined = undefined;
   /** A measure of the world as long as it is on the screen now. */
   scaleBar: ScaleBar = scaleBarFor(1);
@@ -94,8 +88,12 @@ export class CourseView {
   private sincePressSeconds = Number.POSITIVE_INFINITY;
   private screen: Size = { width: 1, height: 1 };
 
-  constructor() {
-    makeAutoObservable<this, 'camera' | 'centring' | 'sincePressSeconds' | 'screen'>(
+  constructor(private readonly followingStorage: FollowingStorage) {
+    this.following = followingStorage.read();
+    makeAutoObservable<
+      this,
+      'camera' | 'centring' | 'sincePressSeconds' | 'screen' | 'followingStorage'
+    >(
       this,
       {
         compass: observableRef,
@@ -104,6 +102,7 @@ export class CourseView {
         centring: false,
         sincePressSeconds: false,
         screen: false,
+        followingStorage: false,
       },
       { autoBind: true }
     );
@@ -184,15 +183,18 @@ export class CourseView {
 
   /**
    * The ball button, or what stands for it — a double tap, `C`: the ball
-   * is put in the middle of the screen, and presses in quick succession
-   * count round the ways of following — the edge, then centred at rest,
-   * then centred always. A press after a pause starts over at the edge,
-   * whatever was set: the way out of any mode is to wait and press once.
+   * is put in the middle of the screen, and the presses that follow it in
+   * quick succession count on round the ways of following — the edge, then
+   * centred at rest, then centred always. A press after a pause only
+   * centres: the way of following stays as it was set, and is kept for the
+   * next visit.
    */
   centerOnBall(): void {
     this.attach();
-    this.following =
-      this.sincePressSeconds <= PRESS_WINDOW_SECONDS ? NEXT_FOLLOWING[this.following] : 'edge';
+    if (this.sincePressSeconds <= PRESS_WINDOW_SECONDS) {
+      this.following = NEXT_FOLLOWING[this.following];
+      this.followingStorage.write(this.following);
+    }
     this.sincePressSeconds = 0;
     this.centring = true;
   }

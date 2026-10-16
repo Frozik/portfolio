@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CLOCK_SPEED, FIXED_STEP_SECONDS } from '../domain/constants';
 import { cupCenter, hasCup } from '../domain/cup';
 import { sectorAt } from '../domain/generator/generate-sector';
+import type { Following } from './ports/following-storage';
 import type { SavedWorld, WorldRepository } from './ports/world-repository';
 import { SpaceGolfStore } from './SpaceGolfStore';
 
@@ -26,10 +27,20 @@ function createStore(saved?: SavedWorld) {
     },
   };
   let seed = 11;
-  const store = new SpaceGolfStore(repository, () => {
-    seed += 1;
-    return seed;
-  });
+  let following: Following = 'edge';
+  const store = new SpaceGolfStore(
+    repository,
+    () => {
+      seed += 1;
+      return seed;
+    },
+    {
+      read: () => following,
+      write: next => {
+        following = next;
+      },
+    }
+  );
   return { store, saves, cleared: () => cleared };
 }
 

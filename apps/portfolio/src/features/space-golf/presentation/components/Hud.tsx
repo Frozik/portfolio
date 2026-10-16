@@ -15,7 +15,7 @@ import { useEventCallback } from 'usehooks-ts';
 
 import { cn } from '@frozik/components/components/cn';
 
-import type { Following } from '../../application/CourseView';
+import type { Following } from '../../application/ports/following-storage';
 import type { SpaceGolfStore } from '../../application/SpaceGolfStore';
 import { spaceGolfT } from '../translations';
 import { ForesightStatus } from './ForesightStatus';

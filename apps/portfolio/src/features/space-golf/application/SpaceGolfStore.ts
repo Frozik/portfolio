@@ -18,6 +18,7 @@ import type { Size } from './camera';
 import type { Seen } from './charting';
 import { chart, ground, nothingSeen, sectorSizeFor } from './charting';
 import { CourseView } from './CourseView';
+import type { FollowingStorage } from './ports/following-storage';
 import type { WorldRepository } from './ports/world-repository';
 import { SAVED_WORLD_VERSION } from './ports/world-repository';
 
@@ -74,7 +75,7 @@ export class SpaceGolfStore {
   /** The band being pulled; nothing while no pointer is down. */
   aiming: Aim | undefined = undefined;
   /** The camera, the player's looking around and the compass. */
-  readonly view = new CourseView();
+  readonly view: CourseView;
 
   private play: Play | undefined = undefined;
   private seen: Seen = nothingSeen();
@@ -89,8 +90,10 @@ export class SpaceGolfStore {
   constructor(
     private readonly worldRepository: WorldRepository,
     /** A seed for a new world: the shell's to supply, a constant in the specifications. */
-    private readonly newWorldSeed: () => number
+    private readonly newWorldSeed: () => number,
+    followingStorage: FollowingStorage
   ) {
+    this.view = new CourseView(followingStorage);
     makeAutoObservable<
       this,
       | 'play'
