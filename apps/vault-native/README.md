@@ -130,14 +130,21 @@ moon run vault-native:bundle-check            # expo export: the Hermes bundle b
 moon run vault-native:start                   # Metro for a development build
 moon run vault-native:run-android             # a development build on a connected phone
 moon run vault-native:build-apk               # a release-shaped APK (prebuild's debug signature)
-moon run vault-native:e2e-android             # the Maestro flows in e2e/ against it
+pnpm vault-android:e2e                        # the Maestro flows in e2e/ on the running emulator / phone
 ```
+
+`pnpm vault-android:e2e` (`e2e-android.sh`) is the `native-e2e` CI job run locally: it builds the
+release APK for the connected device's ABI only, installs it and runs the flows on a 320x640 dp
+screen (the smallest phone, as on the CI emulator; restored afterwards); CI calls the same
+script with `--prebuilt`. It needs a booted emulator (`emulator -avd <name>`) and Maestro
+(`curl -fsSL https://get.maestro.mobile.dev | bash`). `install-ndk.sh` installs the NDK
+react-native asks for before Gradle does: Gradle's own single download sometimes arrives cut short.
 
 Metro serves the development build without lazy bundles (`metro.config.js`): lazily split
 `import()`s of a package with `.cjs` and `.mjs` side by side asked for a module the split bundle
 never defined. Release bundles never split, so development loads code the way the APK does.
 
-Only `type-check` and `test` run in `moon ci`; the bundle, the APK and the Maestro flows run in
+Only `type-check`, `test` and `shellcheck` run in `moon ci`; the bundle, the APK and the Maestro flows run in
 the `native` and `native-e2e` CI jobs, which need Java and an emulator.
 
 - `src/app` — Expo Router routes, thin files over the screens; `_layout.tsx` is the root.

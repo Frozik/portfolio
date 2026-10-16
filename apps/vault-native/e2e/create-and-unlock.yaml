@@ -1,4 +1,5 @@
 # A new vault on a clean phone, locked, and opened again with its master password.
+# The CI emulator's screen is small: the fields below the password are scrolled to, not assumed in view.
 appId: io.github.ciphravault.vault
 ---
 - launchApp:
@@ -11,29 +12,42 @@ appId: io.github.ciphravault.vault
 - tapOn:
     id: create-password
 - inputText: correct horse battery staple
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: create-confirmation
+    centerElement: true
 - tapOn:
     id: create-confirmation
 - inputText: correct horse battery staple
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: create-acknowledged
+    centerElement: true
 - tapOn:
     id: create-acknowledged
+- scrollUntilVisible:
+    element:
+      id: create-submit
+    centerElement: true
 - tapOn:
     id: create-submit
 - extendedWaitUntil:
     visible:
       id: card-list-screen
     timeout: 120000
+# The lock restarts the app straight on this vault's unlock screen.
 - tapOn:
     id: lock
 - extendedWaitUntil:
     visible:
-      id: vault-row
+      id: unlock-password
     timeout: 60000
-- tapOn:
-    id: vault-row
 - tapOn:
     id: unlock-password
 - inputText: correct horse battery staple
+- hideKeyboard
 - tapOn:
     id: unlock-submit
 - extendedWaitUntil:

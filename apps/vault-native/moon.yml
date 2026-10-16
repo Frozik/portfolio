@@ -67,15 +67,19 @@ tasks:
     options:
       runInCI: false
 
+  # Builds the APK for the connected device's ABI itself, so not after `build-apk` (every ABI).
   e2e-android:
     command: 'pnpm run e2e-android'
-    deps:
-      - 'build-apk'
-    inputs:
-      - 'e2e/**/*'
     options:
       cache: false
       runInCI: false
+
+  shellcheck:
+    command: 'shellcheck --severity=warning e2e-android.sh install-ndk.sh'
+    inputs:
+      - '*.sh'
+    options:
+      runInCI: true
 
   start:
     command: 'pnpm run start'

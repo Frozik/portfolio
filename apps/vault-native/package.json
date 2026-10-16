@@ -11,7 +11,7 @@
     "test": "jest",
     "types": "tsc --noEmit",
     "build-apk": "expo prebuild --platform android --no-install --clean && cd android && ./gradlew assembleRelease --no-daemon",
-    "e2e-android": "maestro test e2e"
+    "e2e-android": "./e2e-android.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "catalog:",
