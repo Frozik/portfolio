@@ -8,6 +8,10 @@ export default defineConfig({
   assetsInclude: ['**/*.pwv', '**/*.db'],
   test: {
     globals: true,
+    // A timeout only stops a hung test. The default 5 s measured the runner instead: the whole
+    // suite in parallel on a two-core CI runner runs CPU-bound tests many times slower than locally.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     projects: [
       {
         extends: true,

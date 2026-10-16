@@ -44,7 +44,10 @@ describe('vault container', () => {
     const many = zipSync(
       Object.fromEntries(
         Array.from({ length: 20_001 }, (_, index) => [`cards/${index}.json`, new Uint8Array(0)])
-      )
+      ),
+      // Stored, not deflated: the limit reads only the directory, and deflating 20 001 entries
+      // took the test past its timeout on a busy CI runner.
+      { level: 0 }
     );
 
     expect(unpackContainer(many)).toEqual({ ok: false, error: 'zip-limits' });
