@@ -114,6 +114,7 @@ jobs:
           SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           export SOURCE_DATE_EPOCH
           moon run vault-web:build vault-extension:zip
+      - run: apps/vault-native/install-ndk.sh
       - name: Build the APK, signed later (prebuild signs it with a throwaway debug key, which `sign` replaces)
         env:
           VAULT_NATIVE_VERSION: ${{ env.VERSION }}

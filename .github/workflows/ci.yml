@@ -133,6 +133,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - if: steps.affected.outputs.run == 'true'
+        run: apps/vault-native/install-ndk.sh
+      - if: steps.affected.outputs.run == 'true'
         run: pnpm --dir apps/vault-native run build-apk
       - if: steps.affected.outputs.run == 'true'
         name: Let the emulator use KVM
