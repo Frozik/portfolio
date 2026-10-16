@@ -14,7 +14,8 @@ fi
 sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
 for attempt in 1 2 3; do
-  if yes | "$sdkmanager" --install "ndk;$version" >/dev/null; then
+  # Not `yes | sdkmanager`: under pipefail yes dies of SIGPIPE once sdkmanager exits, failing a good install.
+  if "$sdkmanager" --install "ndk;$version" < <(yes); then
     echo "NDK $version installed"
     exit 0
   fi
