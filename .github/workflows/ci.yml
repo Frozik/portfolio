@@ -137,9 +137,19 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - if: steps.affected.outputs.run == 'true'
         run: apps/vault-native/install-ndk.sh
+      - if: steps.affected.outputs.run == 'true'
+        run: apps/vault-native/ccache-env.sh
+      - if: steps.affected.outputs.run == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.ccache
+          key: ccache-android-x86_64-${{ github.sha }}
+          restore-keys: ccache-android-x86_64-
       # Only the emulator's ABI: the native code of every module compiles once instead of four times.
       - if: steps.affected.outputs.run == 'true'
-        run: pnpm --dir apps/vault-native run build-apk -PreactNativeArchitectures=x86_64
+        run: |
+          pnpm --dir apps/vault-native run build-apk -PreactNativeArchitectures=x86_64
+          ccache --show-stats
       - if: steps.affected.outputs.run == 'true'
         name: Let the emulator use KVM
         run: |

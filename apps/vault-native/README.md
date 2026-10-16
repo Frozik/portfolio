@@ -139,6 +139,10 @@ screen (the smallest phone, as on the CI emulator; restored afterwards); CI call
 script with `--prebuilt`. It needs a booted emulator (`emulator -avd <name>`) and Maestro
 (`curl -fsSL https://get.maestro.mobile.dev | bash`). `install-ndk.sh` installs the NDK
 react-native asks for before Gradle does: Gradle's own single download sometimes arrives cut short.
+On CI and in the release, `ccache-env.sh` routes the native modules' C/C++ compiles through
+ccache (CMake reads the launcher from the environment) and `actions/cache` keeps `~/.ccache`:
+compiling C++ was about half of the 33-minute four-ABI release build, and unchanged C++ now
+comes from the cache.
 
 Metro serves the development build without lazy bundles (`metro.config.js`): lazily split
 `import()`s of a package with `.cjs` and `.mjs` side by side asked for a module the split bundle

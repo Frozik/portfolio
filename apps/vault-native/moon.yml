@@ -75,7 +75,7 @@ tasks:
       runInCI: false
 
   shellcheck:
-    command: 'shellcheck --severity=warning e2e-android.sh install-ndk.sh'
+    command: 'shellcheck --severity=warning ccache-env.sh e2e-android.sh install-ndk.sh'
     inputs:
       - '*.sh'
     options:

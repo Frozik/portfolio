@@ -2,7 +2,10 @@
 # (`ciphra-vault/ciphra-vault.github.io`):
 #
 #   uses: Frozik/portfolio/.github/workflows/vault-release.yml@<sha> # vX.Y.Z
-#   secrets: inherit
+#   secrets:
+#     ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}   # and the other three by name
+#
+# By name, not `secrets: inherit`: inherit passes nothing across owners (the org calls Frozik's repo).
 #
 # The APK is built without secrets; only the `sign` job, behind the `release`
 # environment and without the monorepo's code, sees the keystore.
@@ -105,6 +108,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # Gradle's downloads and build cache; written only by the org repository's `main`, the one branch releases run on.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - run: pnpm install --frozen-lockfile
       - name: Build the web app and the extension stamped with the release
         env:
@@ -117,6 +122,13 @@ jobs:
           # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
           pnpm --dir apps/vault-extension run zip
       - run: apps/vault-native/install-ndk.sh
+      - run: apps/vault-native/ccache-env.sh
+      # The native modules' objects, four ABIs: about half the APK's build when the C++ did not change.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.ccache
+          key: ccache-android-release-${{ needs.gate.outputs.sha }}
+          restore-keys: ccache-android-release-
       - name: Build the APK, signed later (prebuild signs it with a throwaway debug key, which `sign` replaces)
         env:
           VAULT_NATIVE_VERSION: ${{ env.VERSION }}
@@ -128,6 +140,7 @@ jobs:
           pnpm --dir apps/vault-native run build-apk
           mkdir -p unsigned
           cp apps/vault-native/android/app/build/outputs/apk/release/app-release.apk unsigned/ciphra-vault.apk
+          ccache --show-stats
       - name: Collect the release files and version.json, the APK's SHA-256 still to come
         env:
           RELEASES: ${{ github.repository }}
@@ -207,7 +220,9 @@ jobs:
           rm -f "$RUNNER_TEMP/release.keystore"
           "$tools/apksigner" verify --print-certs "signed/ciphra-vault-$VERSION.apk" \
             | tee "$RUNNER_TEMP/certs.txt"
-          grep -qx "Signer #1 certificate SHA-256 digest: $CERTIFICATE_SHA256" "$RUNNER_TEMP/certs.txt"
+          # Every signer, whatever apksigner calls it ("Signer #1", "V3.0 Signer"), holds the published certificate.
+          digests="$(sed -n 's/^.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | sort -u)"
+          [ "$digests" = "$CERTIFICATE_SHA256" ]
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: signed-apk
@@ -261,7 +276,11 @@ jobs:
         with:
           name: release-final
           path: release
-      - uses: actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc # v2
+      # Without a predicate or an SBOM, attest records SLSA build provenance.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: release/SHA256SUMS
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: release/SHA256SUMS
           sbom-path: release/ciphra-vault-extension.cdx.json
