@@ -39,7 +39,7 @@
 .content-editable {
   display: inline-block;
   overflow: hidden;
-  white-space: nowrap;
+  white-space: pre;
   text-overflow: clip;
 
   &:empty::before {
