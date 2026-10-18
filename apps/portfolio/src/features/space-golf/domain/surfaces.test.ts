@@ -10,7 +10,8 @@ import {
 } from './constants';
 import type { Level } from './level';
 import { shoot } from './shot';
-import { step } from './step';
+import type { Touch } from './step';
+import { step, stepWithTouches } from './step';
 import { applySurfaces } from './surfaces';
 import { createBlock } from './walls';
 
@@ -64,6 +65,34 @@ describe('applySurfaces', () => {
     ]);
     expect(floor.edges[3].from).toEqual({ x: 7, y: 1 });
     expect(floor.edges[3].to).toEqual({ x: 2, y: 1 });
+  });
+});
+
+function firstTouch(level: Level, ball: BallState): Touch | undefined {
+  let state = ball;
+  for (let tick = 0; tick < 10 * SECOND_STEPS; tick += 1) {
+    const stepped = stepWithTouches(level, state, FIXED_STEP_SECONDS);
+    if (stepped.touches.length > 0) {
+      return stepped.touches[0];
+    }
+    state = stepped.ball;
+  }
+  return undefined;
+}
+
+describe('a touch', () => {
+  it('tells where on the face the ball landed, what the face is made of and how hard it was hit', () => {
+    const viscous = slabLevel('sticky');
+
+    const fromHigh = firstTouch(viscous, dropped(viscous, 1));
+    const fromLow = firstTouch(viscous, dropped(viscous, 0.25));
+
+    expect(fromHigh?.kind).toBe('sticky');
+    expect(fromHigh?.at).toBe('face');
+    expect(fromHigh?.normal).toEqual({ x: 0, y: 1 });
+    expect(fromHigh?.point.x).toBeCloseTo(4.5);
+    expect(fromHigh?.point.y).toBeCloseTo(FLOOR_TOP, 2);
+    expect(fromHigh?.speed).toBeGreaterThan(fromLow?.speed ?? Infinity);
   });
 });
 

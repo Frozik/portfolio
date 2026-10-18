@@ -3,6 +3,7 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { BallState } from '../../domain/ball';
 import type { SectorSlice } from '../../domain/course';
 import type { Bounds, Level } from '../../domain/level';
+import type { Splash } from '../../domain/splash';
 import type { BoardViewport } from './board-viewport';
 
 /**
@@ -32,6 +33,8 @@ export interface SceneFrame {
   readonly burst: { readonly position: Vector2; readonly elapsedSeconds: number } | undefined;
   /** Where to draw the ball: smoothed between two physics steps. */
   readonly ballPosition: Vector2;
+  /** The drops still in the air from the ball's landings in elastic and viscous surfaces. */
+  readonly splashes: readonly Splash[];
   /** The flying ball's recent positions, oldest first, ending just behind `ballPosition`. */
   readonly trail: readonly Vector2[];
   /** How the world maps onto the canvas this frame, in device pixels: the camera's doing. */

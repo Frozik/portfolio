@@ -16,7 +16,7 @@ export const FIXED_STEP_SECONDS = 1 / 120;
  * and constant is as tuned, the whole thing just plays out quicker
  * (2026-09-18, the player: the ball felt slow).
  */
-export const CLOCK_SPEED = 1.1;
+export const CLOCK_SPEED = 1.25;
 /** How many contacts one step may resolve before the remainder is dropped. */
 export const MAX_CONTACTS_PER_STEP = 4;
 
@@ -35,15 +35,18 @@ export const MAX_PULL_METERS = MAX_SPEED_METERS_PER_SECOND / BAND_SPEED_PER_METE
 export const AIM_DEAD_ZONE_METERS = 0.1;
 
 /** Share of the normal speed a wall gives back, flat or diagonal alike (recorded 0.3–0.5 on faces and corners). */
-export const WALL_RESTITUTION = 0.4;
+export const WALL_RESTITUTION = 0.55;
 /** An elastic surface springs back like the recording's thick gold bars (≈ 0.75) and then some. */
-export const BOUNCE_RESTITUTION = 0.6;
+export const BOUNCE_RESTITUTION = 0.8;
 /** A viscous surface swallows the impact: the recording's sticky diamond kept 6 % of the normal speed. */
-export const STICKY_RESTITUTION = 0.06;
+export const STICKY_RESTITUTION = 0.2;
 /** Share of the tangential speed kept on an impact (recorded ≈ 0.5). */
 export const CONTACT_FRICTION = 0.55;
 /** A viscous surface grabs the ball along the face too. */
 export const STICKY_CONTACT_FRICTION = 0.15;
+/** A floater's sides — and a rod's — give back a touch more than a wall does. */
+export const FLOATER_RESTITUTION = 0.65;
+
 /**
  * Rolling resistance while in contact with the floor: a constant
  * deceleration, so the ball stops in finite time rather than creeping —
@@ -81,8 +84,6 @@ export const FREEZE_CLEARANCE_METERS = 0.02;
 /** A floating square is one ball diameter across when small and two when large (halved 2026-09-17 by feel). */
 export const FLOATER_SMALL_SIDE_METERS = 2 * BALL_RADIUS_METERS;
 export const FLOATER_LARGE_SIDE_METERS = 4 * BALL_RADIUS_METERS;
-/** A floater's sides — and a rod's — give back a touch more than a wall does. */
-export const FLOATER_RESTITUTION = 0.65;
 const FLOATER_CLEARANCE_DIAMETERS = 10;
 /** A floater's centre keeps this far from every wall face and from every other floater's centre. */
 export const FLOATER_CLEARANCE_METERS = FLOATER_CLEARANCE_DIAMETERS * 2 * BALL_RADIUS_METERS;
@@ -137,7 +138,7 @@ export const BONUS_MAX_STROKES = 3;
  */
 export const MAX_FORESIGHT = 5;
 /** A grip bonus adds this many touches of an island that stick the ball where it touches; bonuses add up. */
-export const GRIP_TOUCHES = 10;
+export const GRIP_TOUCHES = 5;
 export const FORESIGHT_DOTS_PER_LEVEL = 3;
 
 export const PREVIEW_DOT_COUNT = 5;

@@ -1,7 +1,7 @@
 import type { Vector2 } from '@frozik/utils/math/vector2';
 
 import { AIM_DEAD_ZONE_METERS, MAX_PULL_METERS } from '../../domain/constants';
-import { distance } from '../../domain/vector';
+import { chargeOf, stretchOf } from './band-charge';
 import type { MeshWriter, Rgba } from './mesh-writer';
 import { PALETTE, withAlpha } from './palette';
 import type { DrawnBand } from './scene-frame';
@@ -75,7 +75,6 @@ const MOTE_TRIPS_PER_SECOND = { empty: 0.5, full: 2.2 } as const;
 const MOTE_ALPHA = 240;
 const TWINKLE_RADIANS_PER_SECOND = 5.5;
 
-const FULL_CHARGE_TOLERANCE = 1e-9;
 const FULL_TURN = Math.PI * 2;
 
 interface Span {
@@ -116,7 +115,7 @@ export function writeBlaster(
   band: DrawnBand,
   shot: { readonly armed: boolean; readonly timeSeconds: number }
 ): void {
-  const stretchMeters = distance(band.anchor, band.pull) / band.meterOnBoard;
+  const stretchMeters = stretchOf(band);
   const charge = chargeOf(stretchMeters);
   const forward =
     stretchMeters > 0
@@ -363,17 +362,6 @@ function writeArc(
       color
     );
   }
-}
-
-/**
- * How full the core is for a stretch: nothing at the softest stroke, all at
- * the strongest. A stretch measured back off the board at the strongest
- * stroke comes out a hair short of it, and the last ring and the light past it
- * would never light: that hair counts as full.
- */
-function chargeOf(stretchMeters: number): number {
-  const share = (stretchMeters - AIM_DEAD_ZONE_METERS) / (MAX_PULL_METERS - AIM_DEAD_ZONE_METERS);
-  return share >= 1 - FULL_CHARGE_TOLERANCE ? 1 : Math.max(0, share);
 }
 
 function spanOf(span: Span, charge: number): number {

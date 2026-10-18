@@ -8,18 +8,23 @@ import {
   FIXED_STEP_SECONDS,
   FLOATER_LARGE_SIDE_METERS,
   FLOATER_SMALL_SIDE_METERS,
-  WALL_RESTITUTION,
 } from './constants';
 import { createFloater, toggleFloaters } from './floaters';
 import type { FloaterShape, Level } from './level';
 import { shoot } from './shot';
 import { step } from './step';
 import { createTestLevel } from './test-level';
+import { reboundSpeed } from './test-rebound';
 
 const base = createTestLevel();
 const CENTER: Vector2 = { x: 2, y: 5 };
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const DOWN: Vector2 = { x: 0, y: -1 };
+const LEFT: Vector2 = { x: -1, y: 0 };
+const UP_LEFT: Vector2 = { x: -Math.SQRT1_2, y: Math.SQRT1_2 };
+/** The thin bar of the test level stands at x = 4..4.1, y = 2..6. */
+const BAR_LEFT_X = 4;
+const BAR_TOP_LEFT: Vector2 = { x: BAR_LEFT_X, y: 6 };
 
 function withFloater(shape: FloaterShape, largeAtStart: boolean): Level {
   return { ...base, floaters: [createFloater(CENTER, shape, largeAtStart)] };
@@ -138,7 +143,27 @@ describe('floaters in play', () => {
     expect(state.phase).toBe('flying');
     expect(state.down).toEqual(DOWN);
     expect(state.position.x).toBeLessThan(leftFace);
-    expect(-state.velocity.x).toBeGreaterThan(speed * WALL_RESTITUTION);
+    expect(-state.velocity.x).toBeGreaterThan(
+      reboundSpeed(base, { x: BAR_LEFT_X, y: CENTER.y }, LEFT, speed)
+    );
+  });
+
+  it('bounce the ball off a corner as briskly as off a side — the square is one material', () => {
+    const level = withFloater('square', true);
+    const half = FLOATER_LARGE_SIDE_METERS / 2;
+    const speed = 5;
+
+    const offCorner = reboundSpeed(
+      level,
+      { x: CENTER.x - half, y: CENTER.y + half },
+      UP_LEFT,
+      speed
+    );
+    const offSide = reboundSpeed(level, { x: CENTER.x - half, y: CENTER.y }, LEFT, speed);
+    const offIslandCorner = reboundSpeed(base, BAR_TOP_LEFT, UP_LEFT, speed);
+
+    expect(offCorner).toBeCloseTo(offSide, 1);
+    expect(offCorner).toBeGreaterThan(offIslandCorner);
   });
 
   it('deflect a falling ball sideways off a turned square, gravity untouched', () => {

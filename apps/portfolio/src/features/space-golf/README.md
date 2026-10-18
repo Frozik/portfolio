@@ -17,7 +17,7 @@ time.
   still moves the five dots and the ring follow it in grey, and turn white
   the moment it rests and letting go plays the stroke; the dots run in a
   straight line from the ball and show the direction and the power of the
-  impulse, not the flight — the bend under gravity is for the player to
+  impulse — brighter the harder the pull — not the flight — the bend under gravity is for the player to
   judge; returning to the anchor cancels the stroke, and so does letting
   go before the ball rests
 - The pull is drawn as a blaster charging. The press is the core where the
@@ -99,9 +99,9 @@ time.
   touch, played ahead by the same physics the ball then flies by — and each
   further one, up to five, adds three dots of range, shown in the HUD as
   five pips that light up one by one. A pink one with a splat of gum gives
-  the grip: the next ten touches of an island's face that end a flight —
+  the grip: the next five touches of an island's face that end a flight —
   flat or 45° — stick
-  the ball right where it touches, ten more with every further disc, the
+  the ball right where it touches, five more with every further disc, the
   count shown in the HUD; spikes still
   burst it, floaters and rods still bounce it. Both last until the ball
   bursts; past the fifth foresight every disc is a grip. The disc stays for
@@ -143,6 +143,10 @@ time.
   so the outcome is readable before the stroke: a taut shimmering gold
   membrane between two posts keeps the ball hopping, a dark dripping goo
   swallows the impact and holds it
+- A ball landing on an island's face throws up a few faint drops, like a
+  ball dropped in a puddle — rim gold off the plain face, membrane gold
+  or goo violet off a surface — more of them and higher the harder it
+  lands; they arc back onto the face and fade within a second
 - Spike rows of one to three white teeth, each a ball wide and two balls
   tall, stand on a few horizontal and vertical faces; every stroke flips
   every row — standing teeth sink into the face leaving a dark socket,
@@ -156,7 +160,7 @@ time.
   of each other; each is small, one ball across, or large, two, and flips
   between the two with every stroke like the spikes do — unless the ball
   is lying on it or would be swallowed by its growth — and which way it
-  flips is for the player to remember; its sides bounce the ball a touch
+  flips is for the player to remember; its sides and corners bounce the ball a touch
   more briskly than a wall and never turn gravity, though the ball may
   come to lie on top of one; painted after the Mezen tradition, red ochre
   and soot on dark wood — rows of zigzags, lozenges and slanted strokes on

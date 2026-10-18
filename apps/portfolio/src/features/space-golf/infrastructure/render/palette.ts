@@ -37,6 +37,10 @@ export const PALETTE = {
   aimRingPending: [150, 150, 158, 50],
   flag: [255, 255, 255, 255],
   burst: [255, 236, 180, 255],
+  /** Drops thrown up by a landing: the island's rim gold, the membrane's deeper gold and the goo's violet. */
+  islandDrop: [201, 178, 106, 190],
+  elasticDrop: [240, 180, 60, 200],
+  viscousDrop: [176, 108, 220, 200],
   star: [255, 255, 255, 90],
   /** A comet's light: blue-white, the one bright thing in the sky behind the board. */
   comet: [196, 226, 255, 255],

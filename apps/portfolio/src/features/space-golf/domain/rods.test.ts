@@ -10,18 +10,19 @@ import {
   ROD_SPEED_METERS_PER_SECOND,
   ROD_WIDTH_METERS,
   SCREW_WIDTH_FACTOR,
-  WALL_RESTITUTION,
 } from './constants';
 import type { Level } from './level';
 import { advanceRods, createRod, rodShape, rodTipLength, rodWidth } from './rods';
 import { step } from './step';
 import { createTestLevel } from './test-level';
+import { reboundSpeed } from './test-rebound';
 import { createChamferedBlock } from './walls';
 
 const base = createTestLevel();
 const SECOND_STEPS = Math.round(1 / FIXED_STEP_SECONDS);
 const DOWN: Vector2 = { x: 0, y: -1 };
 const RIGHT: Vector2 = { x: 1, y: 0 };
+const LEFT: Vector2 = { x: -1, y: 0 };
 const CEILING_Y = 16;
 const LEFT_WALL_X = 0;
 const FLOOR_Y = 1;
@@ -179,7 +180,20 @@ describe('rods in play', () => {
     expect(state.phase).toBe('flying');
     expect(state.down).toEqual(DOWN);
     expect(state.position.x).toBeLessThan(2 - ROD_WIDTH_METERS / 2);
-    expect(-state.velocity.x).toBeGreaterThan(speed * WALL_RESTITUTION);
+    expect(-state.velocity.x).toBeGreaterThan(
+      reboundSpeed(base, { x: BAR_LEFT_X, y: 4 }, LEFT, speed)
+    );
+  });
+
+  it('bounce the ball off the pointed tip more briskly than off an island — the rod is one material', () => {
+    const level = withRods();
+    const standing = { ...createBall(level), rods: [2, 0] };
+    const speed = 5;
+
+    const offTip = reboundSpeed(level, { x: 2, y: CEILING_Y - 2 }, DOWN, speed, standing);
+    const offCeiling = reboundSpeed(base, { x: 6, y: CEILING_Y }, DOWN, speed);
+
+    expect(offTip).toBeGreaterThan(offCeiling);
   });
 
   it('shove a resting ball aside with the pointed tip and set it flying', () => {

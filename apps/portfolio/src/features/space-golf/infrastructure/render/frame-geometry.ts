@@ -10,9 +10,10 @@ import { MeshWriter } from './mesh-writer';
 import { PALETTE, withAlpha } from './palette';
 import type { ParticleField } from './particles';
 import { nearnessOf } from './particles';
+import { writePreviewDots } from './preview-geometry';
 import type { SceneFrame } from './scene-frame';
+import { writeSplashes } from './splash-geometry';
 
-const PREVIEW_DOT_RADIUS_METERS = 0.045;
 /** The share of the dust's light the farthest mote keeps: distance dims as well as shrinks. */
 const FARTHEST_STAR_ALPHA_SHARE = 0.45;
 /** The burst: a ring growing from the ball's size to this radius while fading. */
@@ -50,7 +51,7 @@ export function buildDustMesh(dust: ParticleField): MeshData {
 }
 
 /**
- * The ball, the blaster being charged, the aim ring, the dots and the burst —
+ * The ball, the blaster being charged, the aim ring, the dots, the splashes and the burst —
  * drawn over the board. The band may be pulled while the ball still moves:
  * the ring and the dots then follow the ball in grey, and turn white the
  * moment it rests and the stroke can be played.
@@ -72,10 +73,9 @@ export function buildOverlayMesh(scene: SceneFrame, timeSeconds: number): MeshDa
     );
   }
   if (!isNil(scene.preview) && aimable) {
-    for (const dot of scene.preview) {
-      writer.circle(dot, PREVIEW_DOT_RADIUS_METERS, pending ? PALETTE.dotPending : PALETTE.dot);
-    }
+    writePreviewDots(writer, scene.preview, { band: scene.band, pending });
   }
+  writeSplashes(writer, scene.splashes);
   if (!isNil(scene.burst)) {
     const progress = Math.min(1, scene.burst.elapsedSeconds / BURST_SECONDS);
     const radius = BALL_RADIUS_METERS + (BURST_RADIUS_METERS - BALL_RADIUS_METERS) * progress;

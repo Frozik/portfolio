@@ -3,35 +3,27 @@ import type { Vector2 } from '@frozik/utils/math/vector2';
 import type { BallState, Contact } from './ball';
 import { advanceTurn, currentGravity, turnTo } from './ball';
 import { bonusKindsFor, isDue, isTaken, placeBonus } from './bonus';
-import type { Impact, WallHit } from './collision';
+import type { WallHit } from './collision';
 import { contactPosition, earlierHit, sweepCircleAgainstWalls } from './collision';
 import {
   AIR_DAMPING_PER_SECOND,
   BALL_RADIUS_METERS,
-  BOUNCE_RESTITUTION,
   CONTACT_EPSILON_METERS,
-  CONTACT_FRICTION,
   CUP_HOLD_SECONDS,
-  ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND,
-  FLOATER_RESTITUTION,
   GRAVITY_METERS_PER_SECOND_SQUARED,
   MAX_AIRBORNE_SECONDS,
   MAX_CONTACTS_PER_STEP,
   MAX_FLIGHT_SECONDS,
-  MAX_SPEED_METERS_PER_SECOND,
-  MIN_BOUNCE_SPEED_METERS_PER_SECOND,
   REST_SETTLE_SECONDS,
   REST_SPEED_METERS_PER_SECOND,
   ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED,
-  STICKY_CONTACT_FRICTION,
-  STICKY_RESTITUTION,
   STICKY_ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED,
   TERMINAL_SPEED_METERS_PER_SECOND,
-  WALL_RESTITUTION,
 } from './constants';
 import { hasCup, isInCup, touchesRim } from './cup';
 import type { FloaterHit } from './floaters';
 import { sweepCircleAgainstFloaters } from './floaters';
+import { respond } from './impact-response';
 import type { FaceKind, Level } from './level';
 import { edgeOf } from './level';
 import { shoveOutOfRods } from './rod-shove';
@@ -41,6 +33,39 @@ import { sweepCircleAgainstSpikes } from './spikes';
 import { isSafeRest, isTouching } from './support';
 import { withBonusTaken } from './take-bonus';
 import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from './vector';
+
+/** The ball meeting a face or a corner: where on it, which way the face looks, what it is made of and how hard it was hit. */
+export interface Touch {
+  readonly point: Vector2;
+  readonly normal: Vector2;
+  readonly kind: FaceKind;
+  readonly at: 'face' | 'corner';
+  /** The ball's speed into the face, metres per second. */
+  readonly speed: number;
+}
+
+/** The ball a step later, and every face it met on the way. */
+export interface Stepped {
+  readonly ball: BallState;
+  readonly touches: readonly Touch[];
+}
+
+type Sweep =
+  | { readonly outcome: 'destroyed'; readonly ball: BallState; readonly touches: readonly Touch[] }
+  | {
+      readonly outcome: 'moved';
+      readonly ball: BallState;
+      readonly position: Vector2;
+      readonly velocity: Vector2;
+      readonly contact: Contact | undefined;
+      readonly touched: boolean;
+      readonly isStuck: boolean;
+      readonly touches: readonly Touch[];
+    };
+
+export function step(level: Level, ball: BallState, dt: number): BallState {
+  return stepWithTouches(level, ball, dt).ball;
+}
 
 /**
  * One fixed step of the flight. Gravity is integrated, then the motion is
@@ -55,16 +80,24 @@ import { add, clampLength, distance, dot, length, scale, subtract, ZERO } from '
  * touches it. The course has no edge: nothing ends a flight but a wall, a
  * tooth or the cup, and no fall is faster than the terminal speed.
  */
-export function step(level: Level, ball: BallState, dt: number): BallState {
+export function stepWithTouches(level: Level, ball: BallState, dt: number): Stepped {
   const turned = advanceTurn(ball, dt);
   const slid: BallState = { ...turned, rods: advanceRods(level, ball.rods, ball.down, dt) };
   if (ball.phase === 'holed' || ball.phase === 'destroyed') {
-    return slid;
+    return { ball: slid, touches: [] };
   }
   if (ball.phase === 'aiming') {
-    return restingStep(level, slid, ball.rods);
+    return { ball: restingStep(level, slid, ball.rods), touches: [] };
   }
+  const sweep = sweepFlight(level, ball, slid, dt);
+  if (sweep.outcome === 'destroyed') {
+    return { ball: sweep.ball, touches: sweep.touches };
+  }
+  return { ball: settleFlight(level, ball, sweep, dt), touches: sweep.touches };
+}
 
+/** The motion of one step swept against every face, each contact resolved in turn. */
+function sweepFlight(level: Level, ball: BallState, slid: BallState, dt: number): Sweep {
   let velocity = clampLength(
     add(ball.velocity, scale(currentGravity(slid), GRAVITY_METERS_PER_SECOND_SQUARED * dt)),
     TERMINAL_SPEED_METERS_PER_SECOND
@@ -75,6 +108,7 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
   let remaining = dt;
   let touched = false;
   let isStuck = false;
+  const touches: Touch[] = [];
 
   for (let bounces = 0; bounces < MAX_CONTACTS_PER_STEP && remaining > 0; bounces += 1) {
     const target = add(position, scale(velocity, remaining));
@@ -94,11 +128,15 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     );
     if (spikeHit !== undefined && (hit === undefined || spikeHit.time <= hit.time)) {
       return {
-        ...floored,
-        position: contactPosition(position, target, spikeHit, CONTACT_EPSILON_METERS),
-        velocity: ZERO,
-        phase: 'destroyed',
-        contact: undefined,
+        outcome: 'destroyed',
+        ball: {
+          ...floored,
+          position: contactPosition(position, target, spikeHit, CONTACT_EPSILON_METERS),
+          velocity: ZERO,
+          phase: 'destroyed',
+          contact: undefined,
+        },
+        touches,
       };
     }
     if (hit === undefined) {
@@ -109,6 +147,13 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
 
     touched = true;
     position = contactPosition(position, target, hit, CONTACT_EPSILON_METERS);
+    touches.push({
+      point: subtract(position, scale(hit.normal, BALL_RADIUS_METERS)),
+      normal: hit.normal,
+      kind: hit.kind,
+      at: hit.at,
+      speed: Math.max(0, -dot(velocity, hit.normal)),
+    });
     const onRim = 'wall' in hit && touchesRim(level, hit, position);
     const response = respond(velocity, hit, onRim);
     velocity = response.velocity;
@@ -138,24 +183,43 @@ export function step(level: Level, ball: BallState, dt: number): BallState {
     contact = response.resting ? contactOf(hit) : undefined;
     remaining *= 1 - hit.time;
   }
+  return {
+    outcome: 'moved',
+    ball: floored,
+    position,
+    velocity,
+    contact,
+    touched,
+    isStuck,
+    touches,
+  };
+}
 
-  velocity =
+/** The swept ball slowed, shoved by the rods, and read for rest, the bonus, the cup and a flight that will not end. */
+function settleFlight(
+  level: Level,
+  ball: BallState,
+  sweep: Extract<Sweep, { readonly outcome: 'moved' }>,
+  dt: number
+): BallState {
+  let { position, contact } = sweep;
+  const { touched, isStuck } = sweep;
+  let velocity =
     contact === undefined
-      ? scale(velocity, Math.exp(-AIR_DAMPING_PER_SECOND * dt))
-      : slowDown(velocity, rollingResistance(contactKind(level, contact)) * dt);
+      ? scale(sweep.velocity, Math.exp(-AIR_DAMPING_PER_SECOND * dt))
+      : slowDown(sweep.velocity, rollingResistance(contactKind(level, contact)) * dt);
   const shove = shoveOutOfRods(
     level,
-    { before: ball.rods, now: slid.rods },
+    { before: ball.rods, now: sweep.ball.rods },
     ball.floaters,
-    floored.down,
+    sweep.ball.down,
     { position, velocity }
   );
-  floored = { ...floored, rods: shove.rods };
+  const floored: BallState = { ...sweep.ball, rods: shove.rods };
   if (shove.motion.position !== position) {
     ({ position, velocity } = shove.motion);
     contact = undefined;
   }
-
   // Rest is read off the ground covered, not the velocity: a ball wedged
   // between two things gains speed from gravity every step yet goes
   // nowhere — that speed is phantom and is cut down to the ground covered,
@@ -289,52 +353,4 @@ function rollingResistance(kind: FaceKind): number {
   return kind === 'sticky'
     ? STICKY_ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED
     : ROLLING_RESISTANCE_METERS_PER_SECOND_SQUARED;
-}
-
-const RESTITUTION: Readonly<Record<FaceKind, number>> = {
-  floor: WALL_RESTITUTION,
-  bounce: BOUNCE_RESTITUTION,
-  sticky: STICKY_RESTITUTION,
-  deflector: WALL_RESTITUTION,
-  cup: WALL_RESTITUTION,
-  floater: FLOATER_RESTITUTION,
-  rod: FLOATER_RESTITUTION,
-};
-
-interface Response {
-  readonly velocity: Vector2;
-  readonly becomesFloor: boolean;
-  readonly resting: boolean;
-}
-
-/**
- * The velocity after a contact. The normal component is reflected with the
- * wall's restitution — or dropped when too slow to bounce, which is how the
- * ball comes to lie on a face — and the tangential one loses a share to
- * friction. Every axis-aligned face and every segment of the hole's rim
- * makes a floor; corners and diagonals reflect and leave gravity alone, and
- * so does a floater's side, though the ball may come to lie on it — except
- * the hole's rim, which turns gravity wherever it is touched, between its
- * segments too, so a ball dropped in under sideways gravity settles. An
- * elastic surface springs back even a soft touch, a viscous one swallows the
- * impact and grabs the ball along the face.
- */
-function respond(velocity: Vector2, hit: Impact, onRim: boolean): Response {
-  const normalSpeed = dot(velocity, hit.normal);
-  const tangential = subtract(velocity, scale(hit.normal, normalSpeed));
-  const onFace = hit.at === 'face' && hit.kind !== 'deflector';
-  const isFloor = (onFace && hit.kind !== 'floater' && hit.kind !== 'rod') || onRim;
-  const minBounceSpeed =
-    hit.kind === 'bounce'
-      ? ELASTIC_MIN_BOUNCE_SPEED_METERS_PER_SECOND
-      : MIN_BOUNCE_SPEED_METERS_PER_SECOND;
-  const bouncesBack = -normalSpeed >= minBounceSpeed;
-  const restitution = hit.at === 'corner' ? WALL_RESTITUTION : RESTITUTION[hit.kind];
-  const reflected = bouncesBack ? -normalSpeed * restitution : 0;
-  // Impact friction belongs to impacts: a ball rolling along its floor meets
-  // the face every step and must keep its speed, the rolling resistance is its.
-  const friction = hit.kind === 'sticky' ? STICKY_CONTACT_FRICTION : CONTACT_FRICTION;
-  const kept = bouncesBack ? scale(tangential, friction) : tangential;
-  const next = clampLength(add(kept, scale(hit.normal, reflected)), MAX_SPEED_METERS_PER_SECOND);
-  return { velocity: next, becomesFloor: isFloor, resting: onFace && !bouncesBack };
 }

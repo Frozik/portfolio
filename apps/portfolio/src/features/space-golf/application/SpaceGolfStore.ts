@@ -11,7 +11,9 @@ import { cupCenter, hasCup } from '../domain/cup';
 import type { Level } from '../domain/level';
 import { previewPath } from '../domain/preview';
 import { aim, shoot } from '../domain/shot';
-import { step } from '../domain/step';
+import type { Splash } from '../domain/splash';
+import { splashesAfter } from '../domain/splash';
+import { stepWithTouches } from '../domain/step';
 import { lerp } from '../domain/vector';
 import { extendTrail } from './ball-trail';
 import type { Size } from './camera';
@@ -50,6 +52,8 @@ export interface Scene {
   /** The ball as the physics has it, one fixed step at a time. */
   readonly ball: BallState;
   readonly burst: Burst | undefined;
+  /** The drops still in the air from the ball's landings in elastic and viscous surfaces. */
+  readonly splashes: readonly Splash[];
   /** Where to draw the ball: smoothed between steps. */
   readonly ballPosition: Vector2;
   /** The flying ball's recent positions, oldest first, ending just behind `ballPosition`. */
@@ -83,6 +87,7 @@ export class SpaceGolfStore {
   private previousBall: BallState | undefined = undefined;
   private trail: readonly Vector2[] = [];
   private burst: Burst | undefined = undefined;
+  private splashes: readonly Splash[] = [];
   private accumulatorSeconds = 0;
   private started = false;
   private disposed = false;
@@ -101,6 +106,7 @@ export class SpaceGolfStore {
       | 'previousBall'
       | 'trail'
       | 'burst'
+      | 'splashes'
       | 'accumulatorSeconds'
       | 'started'
       | 'disposed'
@@ -116,6 +122,7 @@ export class SpaceGolfStore {
         previousBall: false,
         trail: false,
         burst: false,
+        splashes: false,
         accumulatorSeconds: false,
         started: false,
         disposed: false,
@@ -137,6 +144,7 @@ export class SpaceGolfStore {
       view: { center: this.view.center, zoom: this.view.zoom },
       ball: this.play.ball,
       burst: this.burst,
+      splashes: this.splashes,
       ballPosition: this.shownPosition(this.play.ball),
       // The newest point is the step the shown ball has not reached yet.
       trail: this.trail.slice(0, -1),
@@ -251,6 +259,7 @@ export class SpaceGolfStore {
     this.previousBall = play.ball;
     this.trail = [];
     this.burst = undefined;
+    this.splashes = [];
     this.aiming = undefined;
     this.accumulatorSeconds = 0;
     this.view.reset(play.ball.position);
@@ -266,8 +275,9 @@ export class SpaceGolfStore {
     // The ball never flies over ground that is not there: its sector is made before the step.
     const grounded = ground(this.play);
     const before = grounded.ball;
-    const ball = step(levelOf(grounded.course), before, FIXED_STEP_SECONDS);
+    const { ball, touches } = stepWithTouches(levelOf(grounded.course), before, FIXED_STEP_SECONDS);
     this.previousBall = before;
+    this.splashes = splashesAfter(this.splashes, touches, FIXED_STEP_SECONDS);
     this.play = { ...grounded, ball };
     this.trail = extendTrail(this.trail, ball);
     this.foresight = ball.foresight;
@@ -296,6 +306,7 @@ export class SpaceGolfStore {
       this.foresight = ball.foresight;
       this.grip = ball.grip;
       this.view.centerOnReturnedBall();
+      this.save();
     }
   }
 
