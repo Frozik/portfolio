@@ -49,7 +49,14 @@ adb install -r "$apk"
 # what CI's emulator has by default, so a control pushed below the fold fails here as it does there.
 adb shell wm size 640x1280
 adb shell wm density 320
-trap 'adb shell wm size reset; adb shell wm density reset' EXIT
+# shellcheck source=../../libs/tooling/scripts/android/e2e-agent.sh
+source ../../libs/tooling/scripts/android/e2e-agent.sh
+trap 'stop_e2e_agent; adb shell wm size reset; adb shell wm density reset' EXIT
+if [[ "$prebuilt" == true ]]; then
+  start_e2e_agent --prebuilt
+else
+  start_e2e_agent
+fi
 
 rm -rf "$artifacts"
 node --test --test-concurrency=1 ${only[@]+"${only[@]}"} e2e/*.e2e.mts

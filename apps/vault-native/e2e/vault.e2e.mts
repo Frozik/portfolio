@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { defineE2eTest } from '@frozik/tooling/src/android-e2e/e2e-test.ts';
-import { hideKeyboard, launchClean, screenDriver } from '@frozik/tooling/src/android-e2e/screen.ts';
+import {
+  fill,
+  launchClean,
+  scrollIntoView,
+  tap,
+  waitForElement,
+} from '@frozik/tooling/src/android-e2e/screen.ts';
 
 import { firstWindowFlags, isSecure, PACKAGE, windowSecure } from './support/window.mts';
 
@@ -14,9 +20,6 @@ const RESTART_MS = 60_000;
 /** Twelve characters, the shortest the app accepts: typing time is test time. */
 const MASTER_PASSWORD = 'e2e-pass-1234';
 
-/** The vault has no e2e channel: its views are found from the screen dump. */
-const { fill, scrollIntoView, tap, waitForElement } = screenDriver();
-
 /** Every test brings the app to the state it needs itself: nothing to prepare. */
 const e2eTest = defineE2eTest(async () => {});
 
@@ -26,22 +29,21 @@ async function createLockAndUnlock(): Promise<void> {
   await tap('create-vault');
   await fill('create-name', 'Family');
   await fill('create-password', MASTER_PASSWORD);
-  await hideKeyboard();
   await scrollIntoView('create-confirmation');
   await fill('create-confirmation', MASTER_PASSWORD);
-  await hideKeyboard();
   await scrollIntoView('create-acknowledged');
   await tap('create-acknowledged');
+  // The form lays itself out anew once acknowledged: the submit button moves down.
+  await waitForElement('create-acknowledged', { checked: true });
   await scrollIntoView('create-submit');
   await tap('create-submit');
-  await waitForElement('card-list-screen', KEY_DERIVATION_MS);
+  await waitForElement('card-list-screen', { timeoutMs: KEY_DERIVATION_MS });
   // The lock restarts the app straight on this vault's unlock screen.
   await tap('lock');
-  await waitForElement('unlock-password', RESTART_MS);
+  await waitForElement('unlock-password', { timeoutMs: RESTART_MS });
   await fill('unlock-password', MASTER_PASSWORD);
-  await hideKeyboard();
   await tap('unlock-submit');
-  await waitForElement('card-list-screen', KEY_DERIVATION_MS);
+  await waitForElement('card-list-screen', { timeoutMs: KEY_DERIVATION_MS });
 }
 
 describe('the vault on a phone', () => {

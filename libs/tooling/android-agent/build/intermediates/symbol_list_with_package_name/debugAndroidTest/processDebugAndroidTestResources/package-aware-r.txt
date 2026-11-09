@@ -1,0 +1,3 @@
+io.github.frozik.e2eagent.test
+style WhiteBackgroundDialogTheme
+style WhiteBackgroundTheme

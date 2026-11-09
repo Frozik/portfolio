@@ -142,10 +142,10 @@ release APK for the connected device's ABI only, installs it and runs `node --te
 afterwards); CI calls the same script with `--prebuilt`. Only what a phone alone shows is tested
 there — the window kept from screenshots from the first frame of a cold start (read from the
 window manager over `adb`), and a vault created, locked and opened again with Argon2 and the
-keystore for real; every screen's logic is a Jest test. The test drives the screen over `adb`
-(taps by `testID`, typing at once); each test is bounded as a hang guard and a failure leaves the screen, the view
+keystore for real; every screen's logic is a Jest test. The test drives the screen through the shared e2e agent
+(taps by `testID`, text set at once); each test is bounded as a hang guard and a failure leaves the screen, the view
 tree and logcat in `e2e-artifacts/`, which CI uploads. The run takes about
-55 s on a Mac; the approach is described once for both Android apps in
+12 s on a Mac; the approach is described once for both Android apps in
 [`libs/tooling/src/android-e2e`](../../libs/tooling/src/android-e2e/README.md). It needs a booted emulator (`emulator -avd <name>`). `libs/tooling/scripts/android/install-ndk.sh` installs the NDK
 react-native asks for before Gradle does: Gradle's own single download sometimes arrives cut short.
 On CI and in the release, `libs/tooling/scripts/android/ccache-env.sh` routes the native modules' C/C++ compiles through

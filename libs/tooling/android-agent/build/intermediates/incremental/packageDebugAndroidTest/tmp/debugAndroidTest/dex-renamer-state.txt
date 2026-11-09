@@ -1,0 +1,10 @@
+#Mon Nov 09 19:00:38 MSK 2026
+base.2=/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/12/classes.dex
+path.2=12/classes.dex
+base.1=/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/0/classes.dex
+path.1=0/classes.dex
+base.0=/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/dex/debugAndroidTest/mergeExtDexDebugAndroidTest/classes.dex
+renamed.2=classes3.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=classes.dex

@@ -71,9 +71,10 @@ pnpm check-all  # lint, format, types, layer boundaries, dead code, conventions,
   WebMCP badge in the top bar marks the demos that offer their own tools and
   links to [the page that lists them](https://frozik.github.io/portfolio/webmcp).
   Details in the [app README](./apps/portfolio/README.md#agent-tools-webmcp).
-- **Android e2e in about a minute**: on the emulator only what a phone alone can show; the
+- **Android e2e in seconds, not minutes**: on the emulator only what a phone alone can show; the
   state is seeded and read over an `adb shell` command channel — WebMCP's idea for the test
-  instead of an agent — and only the action under test goes through the UI. The whole approach in
+  instead of an agent — and a small agent on the phone answers «where is this button» in
+  milliseconds where UI tools take seconds. The whole approach in
   [one page](./libs/tooling/src/android-e2e/README.md).
 - **The landing scores 95+ on mobile Lighthouse**: prerendered at build time,
   a one-level-deep critical path, and a service worker that precaches the

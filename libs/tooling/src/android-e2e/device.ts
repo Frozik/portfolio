@@ -3,6 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { dumpViewTree } from './agent.ts';
+
 /** Where a run leaves what a failed test saw; the runner script clears it and CI uploads it. */
 const ARTIFACTS = 'e2e-artifacts';
 /** One adb command never takes this long unless the emulator is gone. */
@@ -67,7 +69,7 @@ export async function keepEvidence(name: string): Promise<void> {
     exec('adb', ['exec-out', 'screencap', '-p'], ADB_TIMEOUT_MS).then(({ stdout }) =>
       writeFile(`${base}.png`, stdout)
     ),
-    adb('exec-out', 'uiautomator', 'dump', '/dev/tty').then(xml => writeFile(`${base}.xml`, xml)),
+    dumpViewTree().then(xml => writeFile(`${base}.xml`, xml)),
     adb('logcat', '-d', '-t', '3000').then(log => writeFile(`${base}.logcat.txt`, log)),
   ]);
   const missed = saved.filter(result => result.status === 'rejected').length;

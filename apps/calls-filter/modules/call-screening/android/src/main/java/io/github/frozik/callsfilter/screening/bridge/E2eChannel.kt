@@ -10,7 +10,6 @@ import android.os.Looper
 import android.util.Base64
 import androidx.core.content.ContextCompat
 import io.github.frozik.callsfilter.screening.BuildConfig
-import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -22,7 +21,6 @@ private const val SENDER_PERMISSION = "android.permission.DUMP"
 
 /** Android gives a background broadcast a minute; an answer later than this is a hung app. */
 private const val REPLY_TIMEOUT_MS = 45_000L
-private const val LOCATE = "locate"
 private const val NO_REPLY = """{"ok":false,"error":"the app did not answer"}"""
 
 /**
@@ -46,13 +44,6 @@ internal class E2eChannel(private val deliver: (id: String, payload: String) -> 
         object : BroadcastReceiver() {
           override fun onReceive(context: Context, intent: Intent) {
             val payload = String(Base64.decode(intent.getStringExtra(PAYLOAD_EXTRA).orEmpty(), Base64.DEFAULT), Charsets.UTF_8)
-            val command = runCatching { JSONObject(payload) }.getOrNull()
-            if (command?.optString("name") == LOCATE) {
-              // Answered here, on the main thread: the views are native, JavaScript knows no positions.
-              resultCode = Activity.RESULT_OK
-              resultData = encoded(E2eScreen.locate(command.optString("id")).toString())
-              return
-            }
             val id = UUID.randomUUID().toString()
             pending[id] = goAsync()
             main.postDelayed({ answer(id, NO_REPLY) }, REPLY_TIMEOUT_MS)

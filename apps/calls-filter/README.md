@@ -219,7 +219,8 @@ after a tap. A release APK has no channel: the native side refuses to open it.
 - `e2e/screens.e2e.mts` — what only a phone shows: the map in its WebView with «Where I am», and
   Android's permission dialog. The state is seeded and checked over the channel, the phone's
   position comes from location test providers the tests move, and only the action under test goes
-  through the screen, which the test drives over `adb` itself, opened on its screen by link.
+  through the screen, which the test drives through the shared e2e agent, opened on its screen by
+  link.
 - Every other screen — editing a group, its schedule, moving a call, conflicts — is a Jest test
   with RNTL over a phone of fakes (`src/**/*.test.tsx`): milliseconds, not seconds.
 

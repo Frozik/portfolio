@@ -1,0 +1,23 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<!-- The agent's tests run in this app's process: the socket they serve needs its permission. -->
+3<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+4    package="io.github.frozik.e2eagent"
+5    android:versionCode="1"
+6    android:versionName="1" >
+7
+8    <uses-sdk
+9        android:minSdkVersion="29"
+10        android:targetSdkVersion="36" />
+11
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/main/AndroidManifest.xml:4:3-65
+12-->/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/main/AndroidManifest.xml:4:20-62
+13
+14    <application
+14-->/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/main/AndroidManifest.xml:5:3-44
+15        android:debuggable="true"
+16        android:extractNativeLibs="false"
+17        android:label="e2e agent" />
+17-->/Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/main/AndroidManifest.xml:5:16-41
+18
+19</manifest>

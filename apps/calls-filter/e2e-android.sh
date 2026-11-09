@@ -69,7 +69,14 @@ release_location() {
     adb shell cmd location providers remove-test-provider "$provider" || true
   done
 }
-trap release_location EXIT
+# shellcheck source=../../libs/tooling/scripts/android/e2e-agent.sh
+source ../../libs/tooling/scripts/android/e2e-agent.sh
+trap 'stop_e2e_agent; release_location' EXIT
+if [[ "$prebuilt" == true ]]; then
+  start_e2e_agent --prebuilt
+else
+  start_e2e_agent
+fi
 
 rm -rf "$artifacts"
 node --test --test-concurrency=1 ${only[@]+"${only[@]}"} "${suites[@]}"

@@ -1,0 +1,7 @@
+io.github.frozik.e2eagent-pngs-0 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/generated/res/pngs/debug
+io.github.frozik.e2eagent-resValues-1 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/generated/res/resValues/debug
+io.github.frozik.e2eagent-packageDebugResources-2 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+io.github.frozik.e2eagent-packageDebugResources-3 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+io.github.frozik.e2eagent-debug-4 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/merged_res/debug/mergeDebugResources
+io.github.frozik.e2eagent-debug-5 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/debug/res
+io.github.frozik.e2eagent-main-6 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/src/main/res

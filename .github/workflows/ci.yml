@@ -138,6 +138,9 @@ jobs:
         run: |
           pnpm --dir apps/vault-native run build-apk -PreactNativeArchitectures=x86_64
           ccache --show-stats
+      # The e2e agent the tests drive the screen through (libs/tooling/android-agent).
+      - if: steps.affected.outputs.run == 'true'
+        run: (cd libs/tooling/android-agent && ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon -q)
       - if: steps.affected.outputs.run == 'true'
         name: Let the emulator use KVM
         run: |
@@ -233,6 +236,9 @@ jobs:
         run: |
           pnpm --dir apps/calls-filter run build-apk -PreactNativeArchitectures=x86_64
           ccache --show-stats
+      # The e2e agent the tests drive the screen through (libs/tooling/android-agent).
+      - if: steps.affected.outputs.run == 'true'
+        run: (cd libs/tooling/android-agent && ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon -q)
       - if: steps.affected.outputs.run == 'true'
         name: Let the emulator use KVM
         run: |

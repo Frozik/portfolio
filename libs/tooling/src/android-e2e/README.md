@@ -3,7 +3,8 @@
 How the Android apps ([Calls Filter](../../../../apps/calls-filter/README.md),
 [Ciphra Vault](../../../../apps/vault-native/README.md)) run their end-to-end tests on an
 emulator fast and without hanging. Calls Filter went from about 5 minutes to about 35 s, the vault
-from 2 min to about 55 s. This folder holds what both share; each app keeps its own
+from 2 min to about 12 s. This folder holds what both share — the TypeScript side, and the agent
+the tests drive the screen through (`../../android-agent`); each app keeps its own
 `e2e-android.sh` and `e2e/*.e2e.mts`.
 
 ## Why UI tests on a phone are slow
@@ -33,8 +34,7 @@ schedule, then… — repeats all of that just to get the app into a state.
    ```
 
    «Create the group Spam with this number», «what did the service answer this number», «what
-   does the app know of this place», «where is the button `place-save`» take about 35 ms, of
-   which 20 are `adb` itself. The channel exists only in the APK built
+   does the app know of this place» take about 35 ms, of which 20 are `adb` itself. The channel exists only in the APK built
    for the tests (`BuildConfig.E2E`, set by an environment variable at build time); a release
    build refuses to open it, and only senders holding `android.permission.DUMP` — the shell and
    the system, no app — reach it. An app that must not have one, like the password vault, does
@@ -62,20 +62,35 @@ schedule, then… — repeats all of that just to get the app into a state.
    - permissions: `pm grant` / `pm revoke`;
    - the window's flags (`SECURE`): `dumpsys window windows`.
 
-7. **The test drives the screen itself, over `adb`.** `screen.ts` taps an element's middle with
-   `input tap` and types with `input text` — a whole password in a tenth of a second where Maestro
-   types a key at a time; no JVM to start per flow, no settling around every tap. Where an element
-   is comes from a locator:
-   - **an app with a channel answers natively** — `locate` walks the app's own windows
-     (`WindowInspector`, the sheets' windows too) for the view whose React Native `testID` matches
-     and returns its rectangle and whether it is enabled: **about 35 ms**;
-   - **otherwise `uiautomator dump`** — any app's window (Android's permission dialog, the vault),
-     **about 2 s** a read whatever the screen, since the tool starts anew each time.
+7. **An agent on the phone sees the screen; the test asks it.** Maestro and `uiautomator dump`
+   start anew for every look at the screen — `uiautomator` alone needs about two seconds to start
+   a VM, connect to accessibility and dump the tree, while finding an element in it takes
+   microseconds. The agent (`libs/tooling/android-agent`) is an instrumentation test that never
+   ends: started once per run, it keeps UiAutomation connected and serves on a socket the runner
+   forwards with `adb forward`. Any app's window, the system's dialogs included, through
+   accessibility, as the user sees it:
+   - `locate` — where the element with this `testID` (or another app's resource id) is, whether it
+     is wholly on screen, enabled, checked: **about 50 ms**, against 2 s for a dump;
+   - `setText` — a field's text set through accessibility: three fields in a tenth of a second,
+     no keyboard opening, so none to close; React Native sees it as typed;
+   - `dump` — the view tree for a failed test's evidence (a `uiautomator dump` of its own would
+     take UiAutomation away from the agent: Android allows one connection).
 
-   A tap waits for its element to be enabled and — with the fast locator — to stop moving (two
-   reads apart give the same place): a sheet sliding in reports where it is mid-way, and a dump
-   only hid that by being slow. Against Maestro the vault's journey went from 75 s to 52 s; with
-   the channel locating views, Calls Filter's map test went from 20 s to 4 s.
+   Taps stay `adb shell input tap` at the element's middle. Fast looks bring out what slow ones
+   hid, and each has its event to wait for, never a pause:
+   - a tap waits for its element to be enabled and still (two reads 100 ms apart agree);
+   - the effect of a tap is waited for, not assumed — a switch reported checked before the form it
+     reshapes is used;
+   - window animations are off for the run (`window_animation_scale` and its two siblings, restored
+     afterwards): Android moves a sliding sheet or a growing dialog by window transforms that
+     accessibility does not report, and a tap mid-way lands beside it — outside a permission
+     dialog it even denies the permission;
+   - Android's permission dialog ignores touches while it appears, so `tapUntilGone` taps until
+     the dialog is gone.
+
+   The agent ships in no app: it is built and installed only for the run. Against Maestro the
+   vault's journey went from 75 s to 9 s; Calls Filter's map test from 20 s to 4 s, its
+   permission test from 14 s to under 3 s.
 
 8. **Straight to the screen, nothing to scroll for.** A test opens its screen by a link
    (`openLink`) instead of walking there, a long form keeps its action pinned at the bottom,
@@ -88,11 +103,14 @@ schedule, then… — repeats all of that just to get the app into a state.
 ## What lives where
 
 - `device.ts` — `adb`, `waitFor`, `keepEvidence(name)`.
-- `screen.ts` — `screenDriver(locate)`: `tap`, `fill` (taps a field, types at once),
-  `scrollIntoView`, `waitForElement`, `waitForAbsent`; `locateByDump` as the default locator; and
-  `hideKeyboard`, `openLink`, `launch`, `launchClean`.
+- `agent.ts` — the agent's client: `locate`, `setText`, `dumpViewTree`.
+- `screen.ts` — `tap`, `tapUntilGone`, `fill`, `scrollIntoView`, `waitForElement` (with the state
+  expected of it), `waitForAbsent`, `openLink`, `launch`, `launchClean`.
+- `../../android-agent` — the agent (Java, `androidx.test.uiautomator`), built with its own Gradle
+  wrapper; `../../scripts/android/e2e-agent.sh` builds, installs, starts and stops it, and switches
+  the window animations off and back.
 - `e2e-test.ts` — `defineE2eTest(prepare)`: an app's `e2eTest(name, limit, body)`, with the hang
   guard and the evidence.
 - In an app: `e2e-android.sh [--prebuilt] [--only <pattern>]` builds (with the channel switched
-  on where there is one), installs, grants, and runs `node --test` over `e2e/*.e2e.mts`; the
-  TypeScript runs straight in Node 24.
+  on where there is one), installs, grants, starts the agent and runs `node --test` over
+  `e2e/*.e2e.mts`; the TypeScript runs straight in Node 24.

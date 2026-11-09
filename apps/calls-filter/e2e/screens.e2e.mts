@@ -2,16 +2,23 @@ import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
-import { hideKeyboard, launch, openLink } from '@frozik/tooling/src/android-e2e/screen.ts';
+import {
+  fill,
+  launch,
+  openLink,
+  tap,
+  tapUntilGone,
+  waitForAbsent,
+  waitForElement,
+} from '@frozik/tooling/src/android-e2e/screen.ts';
 
 import { control, PACKAGE } from './support/channel.mts';
 import { NEW_YORK, phoneAt } from './support/location.mts';
 import { e2eTest } from './support/phone.mts';
-import { screen } from './support/screen.mts';
 
 /** A screen test: about twenty seconds on a Mac, two or three times that on CI's emulator. */
 const SCREEN_LIMIT_MS = 240_000;
-/** A cold start takes 6–10 s on a Mac; a hung app never shows its first screen. */
+/** A cold start takes 6–10 s on a Mac; a hung app never shows its first  */
 const APP_START_MS = 60_000;
 /** The app measures a place when it is saved and again when it comes to the front. */
 const PLACE_SETTLE_MS = 30_000;
@@ -37,10 +44,9 @@ describe('the screens that only a phone can show', () => {
         group: { name: 'Work', action: 'pass' },
       });
       await openLink(`callsfilter://place?group=${id}`, PACKAGE);
-      await screen.fill('place-name', 'Office');
-      await hideKeyboard();
-      await screen.tap('place-here');
-      await screen.tap('place-save');
+      await fill('place-name', 'Office');
+      await tap('place-here');
+      await tap('place-save');
       const saved = await waitFor(
         'the place, measured in Amsterdam',
         () => placeOf('Work'),
@@ -67,12 +73,12 @@ describe('the screens that only a phone can show', () => {
       await adb('shell', 'pm', 'revoke', PACKAGE, 'android.permission.READ_CALL_LOG');
       try {
         await launch(PACKAGE);
-        await screen.waitForElement('permission-sheet', APP_START_MS);
-        await screen.waitForElement('permission-step-call-log');
-        await screen.tap('permission-allow');
-        await screen.tap('com.android.permissioncontroller:id/permission_allow_button');
-        await screen.waitForAbsent('permission-sheet');
-        await screen.waitForElement('groups-screen');
+        await waitForElement('permission-sheet', { timeoutMs: APP_START_MS });
+        await waitForElement('permission-step-call-log');
+        await tap('permission-allow');
+        await tapUntilGone('com.android.permissioncontroller:id/permission_allow_button');
+        await waitForAbsent('permission-sheet');
+        await waitForElement('groups-screen');
       } finally {
         await adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.READ_CALL_LOG');
       }
