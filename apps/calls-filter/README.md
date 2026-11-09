@@ -10,6 +10,19 @@ The screening itself is a Kotlin `CallScreeningService` in the local Expo module
 `modules/call-screening`, so a call is answered in a few milliseconds even when the app's
 JavaScript is not running.
 
+## Install
+
+1. On the phone, download the newest APK:
+   <https://github.com/Frozik/portfolio/releases/download/calls-filter-latest/calls-filter.apk>.
+   Every version with its `SHA256SUMS` is on the
+   [release page](https://github.com/Frozik/portfolio/releases/tag/calls-filter-latest); earlier
+   versions are attached to the monorepo's [releases](https://github.com/Frozik/portfolio/releases)
+   as `calls-filter-<version>.apk`.
+2. Open it; Android asks to allow installs from the browser once — allow it for this install.
+3. Optional but recommended: check the signature before opening it ([Signing](#signing)).
+4. A later release installs over the earlier one, keeping the groups: the same signing key and
+   a higher `versionCode`.
+
 ## Groups
 
 - **The user's groups** («Spam», «Delivery», «Work», «Family» — the app ships none and guesses
@@ -253,4 +266,5 @@ as on CI.
 changed Calls Filter since the last APK, it builds for phones (arm64-v8a, armeabi-v7a) without
 secrets, signs in the `calls-filter-release` environment (checking the certificate above),
 attests the build and attaches `calls-filter-<version>.apk` with `SHA256SUMS` to that release.
-`…/releases/download/calls-filter-latest/calls-filter.apk` always is the newest APK.
+The `calls-filter-latest` release always holds the newest APK, so its download link never goes
+stale.
