@@ -112,7 +112,8 @@ export class CallsFilterApp {
         currentPoint: ports.currentPoint,
         diagnostics: ports.diagnostics,
       },
-      () => this.placeRules
+      () => this.placeRules,
+      () => this.device.permissions['background-location'] === 'granted'
     );
     this.numberingCatalogue = new NumberingCatalogue(ports.numberingCatalogue, ports.diagnostics);
     this.smsReply = ports.smsReply;

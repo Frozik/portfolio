@@ -22,9 +22,11 @@ class FakeGeofences implements IGeofences {
   failing = false;
   readonly verdicts = new Map<TPlaceId, boolean | null>();
   watched: readonly IPlaceRule[] = [];
+  registrations = 0;
 
   async watch(places: readonly IPlaceRule[]) {
     this.watched = places;
+    this.registrations += 1;
     await this.settle(places);
   }
 
@@ -46,6 +48,7 @@ function setup(places: readonly IPlaceRule[]) {
   const geofences = new FakeGeofences();
   const rules = observable.box(places, { deep: false });
   const errors: string[] = [];
+  const backgroundAllowed = observable.box(true);
   const model = new PlacesModel(
     {
       geofences,
@@ -53,9 +56,10 @@ function setup(places: readonly IPlaceRule[]) {
       currentPoint: async () => null,
       diagnostics: { log: (_level, _category, event) => errors.push(event), latest: () => [] },
     },
-    () => rules.get()
+    () => rules.get(),
+    () => backgroundAllowed.get()
   );
-  return { model, geofences, rules, errors };
+  return { model, geofences, rules, errors, backgroundAllowed };
 }
 
 const settled = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -129,6 +133,17 @@ describe('PlacesModel', () => {
     await settled();
     expect(geofences.watched).toEqual([moved]);
     expect(model.atPlace(office.id)).toBe(false);
+    stop();
+  });
+
+  it('registers the geofences again once the phone allows location all the time', async () => {
+    const { model, geofences, backgroundAllowed } = setup([office]);
+    runInAction(() => backgroundAllowed.set(false));
+    const stop = model.follow();
+    await settled();
+    runInAction(() => backgroundAllowed.set(true));
+    await settled();
+    expect(geofences.registrations).toBe(2);
     stop();
   });
 });

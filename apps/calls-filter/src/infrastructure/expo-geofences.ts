@@ -60,13 +60,14 @@ export function expoGeofences(diagnostics: IDiagnosticsLog): IGeofences {
           CALL_SCREENING.setAtPlace(known, null);
         }
       }
+      // Without location all the time even asking whether geofencing runs is refused.
+      const background = await Location.getBackgroundPermissionsAsync();
       if (places.length === 0) {
-        if (await Location.hasStartedGeofencingAsync(GEOFENCE_TASK)) {
+        if (background.granted && (await Location.hasStartedGeofencingAsync(GEOFENCE_TASK))) {
           await Location.stopGeofencingAsync(GEOFENCE_TASK);
         }
         return;
       }
-      const background = await Location.getBackgroundPermissionsAsync();
       if (!background.granted) {
         diagnostics.log('warn', 'permissions', 'places-without-background-location');
         return;

@@ -24,16 +24,21 @@ export class PlacesModel {
 
   constructor(
     private readonly ports: IPlacesPorts,
-    private readonly places: () => readonly IPlaceRule[]
+    private readonly places: () => readonly IPlaceRule[],
+    /** Android keeps geofences only for an app allowed location all the time. */
+    private readonly backgroundAllowed: () => boolean
   ) {
     makeObservable(this, { states: observableRef, refresh: action });
   }
 
-  /** Re-registers the geofences whenever the set of places changes; returns the stop. */
+  /**
+   * Re-registers the geofences whenever the set of places changes, and once location is allowed
+   * all the time — a registration without it is refused; returns the stop.
+   */
   follow(): () => void {
     return reaction(
-      () => uniqBy(this.places(), fenceKey),
-      places => {
+      () => ({ places: uniqBy(this.places(), fenceKey), allowed: this.backgroundAllowed() }),
+      ({ places }) => {
         void this.measure(async () => {
           try {
             await this.ports.geofences.watch(places);
@@ -44,7 +49,9 @@ export class PlacesModel {
       },
       {
         fireImmediately: true,
-        equals: (left, right) => left.map(fenceKey).join() === right.map(fenceKey).join(),
+        equals: (left, right) =>
+          left.allowed === right.allowed &&
+          left.places.map(fenceKey).join() === right.places.map(fenceKey).join(),
       }
     );
   }
