@@ -1,7 +1,0 @@
-io.github.frozik.e2eagent.test-core-1.6.1-0 /Users/dmitry.sharov/.gradle/caches/9.3.1/transforms/717b2bde709c7a95b02d2f63e4f2d105/transformed/core-1.6.1/res
-io.github.frozik.e2eagent.test-tracing-1.1.0-1 /Users/dmitry.sharov/.gradle/caches/9.3.1/transforms/7a4185db8599ef5ee921ed8c046f85cc/transformed/tracing-1.1.0/res
-io.github.frozik.e2eagent.test-uiautomator-2.3.0-2 /Users/dmitry.sharov/.gradle/caches/9.3.1/transforms/a507a4084e713a023e02e8ab7bd97774/transformed/uiautomator-2.3.0/res
-io.github.frozik.e2eagent.test-androidTest-3 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/generated/res/resValues/androidTest/debug
-io.github.frozik.e2eagent.test-mergeDebugAndroidTestResources-4 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
-io.github.frozik.e2eagent.test-mergeDebugAndroidTestResources-5 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
-io.github.frozik.e2eagent.test-debugAndroidTest-6 /Users/dmitry.sharov/Documents/own-projects/home-projects/libs/tooling/android-agent/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources

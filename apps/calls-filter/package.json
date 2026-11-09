@@ -10,10 +10,10 @@
     "android": "expo run:android",
     "test": "jest",
     "types": "tsc --noEmit && tsc -p e2e",
-    "build-apk": "expo prebuild --platform android --no-install --clean && cd android && ./gradlew assembleRelease --no-daemon",
+    "build-apk": "../../libs/tooling/scripts/android/prebuild.sh CALLS_FILTER_SMS CALLS_FILTER_VERSION CALLS_FILTER_VERSION_CODE && cd android && ./gradlew assembleRelease --no-daemon",
     "e2e-android": "./e2e-android.sh",
     "sign-apk": "./sign-apk.sh",
-    "kotlin-check": "expo prebuild --platform android --no-install && cd android && ./gradlew :call-screening:ktlint :call-screening:detekt :call-screening:testDebugUnitTest --no-daemon"
+    "kotlin-check": "../../libs/tooling/scripts/android/prebuild.sh CALLS_FILTER_SMS CALLS_FILTER_VERSION CALLS_FILTER_VERSION_CODE && cd android && ./gradlew :call-screening:ktlint :call-screening:detekt :call-screening:testDebugUnitTest --no-daemon"
   },
   "dependencies": {
     "@bufbuild/protobuf": "catalog:",

@@ -10,7 +10,7 @@
     "android": "expo run:android",
     "test": "jest",
     "types": "tsc --noEmit && tsc -p e2e",
-    "build-apk": "expo prebuild --platform android --no-install --clean && cd android && ./gradlew assembleRelease --no-daemon",
+    "build-apk": "../../libs/tooling/scripts/android/prebuild.sh VAULT_NATIVE_VERSION VAULT_NATIVE_VERSION_CODE && cd android && ./gradlew assembleRelease --no-daemon",
     "e2e-android": "./e2e-android.sh"
   },
   "dependencies": {

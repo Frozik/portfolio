@@ -30,6 +30,9 @@ catalogs:
     '@dnd-kit/utilities':
       specifier: ^3.2.2
       version: 3.2.2
+    '@expo/fingerprint':
+      specifier: ^0.20.15
+      version: 0.20.15
     '@expo/vector-icons':
       specifier: ^15.0.2
       version: 15.1.1
@@ -1843,12 +1846,18 @@ importers:
 
   libs/tooling:
     devDependencies:
+      '@expo/fingerprint':
+        specifier: 'catalog:'
+        version: 0.20.15(supports-color@8.1.1)
       '@frozik/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@semantic-release/commit-analyzer':
         specifier: 'catalog:'
         version: 13.0.1(semantic-release@25.0.9(supports-color@8.1.1)(typescript@7.0.2))(supports-color@8.1.1)
+      '@types/lodash-es':
+        specifier: 'catalog:'
+        version: 4.17.12
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -1858,6 +1867,9 @@ importers:
       conventional-changelog-conventionalcommits:
         specifier: 'catalog:'
         version: 8.0.0
+      lodash-es:
+        specifier: 'catalog:'
+        version: 4.18.1
       semver:
         specifier: 'catalog:'
         version: 7.8.5
@@ -3367,10 +3379,6 @@ packages:
       expo: '*'
       react: '*'
       react-native: '*'
-
-  '@expo/env@2.4.3':
-    resolution: {integrity: sha512-M1NXeZCA1mkMkYOyIe7PlyRX0/jqFtMoJgyblnlq/vpCRfmueFT7RnGSQG8uEFDF5WHOFGijAQ3fogPh3/n5Ng==}
-    engines: {node: '>=20.12.0'}
 
   '@expo/env@2.4.4':
     resolution: {integrity: sha512-4hUpMaBzPaCNgxCBl3QBRlftcW+CPJ335kY7pTaBC5t3NLifWt1+lqd9fudCw7rtaATZ6s5/+OKNYuIZLzzNpg==}
@@ -13930,7 +13938,7 @@ snapshots:
       '@expo/config': 57.0.10(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-plugins': 57.0.10(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/devcert': 1.2.2(supports-color@8.1.1)
-      '@expo/env': 2.4.3(supports-color@8.1.1)
+      '@expo/env': 2.4.4(supports-color@8.1.1)
       '@expo/image-utils': 0.11.6(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/inline-modules': 0.1.8(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/json-file': 11.0.1
@@ -14185,14 +14193,6 @@ snapshots:
       react: 19.2.3
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.3)(supports-color@8.1.1)
 
-  '@expo/env@2.4.3(supports-color@8.1.1)':
-    dependencies:
-      chalk: 4.1.2
-      debug: 4.4.3(supports-color@8.1.1)
-      getenv: 2.0.0
-    transitivePeerDependencies:
-      - supports-color
-
   '@expo/env@2.4.4(supports-color@8.1.1)':
     dependencies:
       chalk: 4.1.2
@@ -14213,7 +14213,7 @@ snapshots:
 
   '@expo/fingerprint@0.20.14(supports-color@8.1.1)':
     dependencies:
-      '@expo/env': 2.4.3(supports-color@8.1.1)
+      '@expo/env': 2.5.4(supports-color@8.1.1)
       '@expo/spawn-async': 1.8.0
       arg: 5.0.2
       chalk: 4.1.2
@@ -14337,7 +14337,7 @@ snapshots:
       '@babel/core': 7.29.7(supports-color@8.1.1)
       '@babel/generator': 7.29.8
       '@expo/config': 57.0.10(supports-color@8.1.1)(typescript@7.0.2)
-      '@expo/env': 2.4.3(supports-color@8.1.1)
+      '@expo/env': 2.4.4(supports-color@8.1.1)
       '@expo/json-file': 11.0.1
       '@expo/metro': 56.0.2(supports-color@8.1.1)
       '@expo/require-utils': 57.0.6(supports-color@8.1.1)(typescript@7.0.2)
@@ -19346,7 +19346,7 @@ snapshots:
 
   expo-constants@57.0.22(expo@57.0.30)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
-      '@expo/env': 2.4.3(supports-color@8.1.1)
+      '@expo/env': 2.4.4(supports-color@8.1.1)
       expo: 57.0.30(64fd874f8995f8f35b28758454045211)
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
     transitivePeerDependencies:

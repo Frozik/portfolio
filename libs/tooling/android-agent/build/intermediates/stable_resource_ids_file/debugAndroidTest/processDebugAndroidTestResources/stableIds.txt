@@ -1,2 +1,0 @@
-io.github.frozik.e2eagent.test:style/WhiteBackgroundTheme = 0x7f010001
-io.github.frozik.e2eagent.test:style/WhiteBackgroundDialogTheme = 0x7f010000

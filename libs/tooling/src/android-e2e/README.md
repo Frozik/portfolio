@@ -54,6 +54,13 @@ schedule, then… — repeats all of that just to get the app into a state.
    that runs past it fails, and the screen, the view tree and logcat land in `e2e-artifacts/`,
    which CI uploads.
 
+   A fresh emulator's Play services restart themselves while they update, and Android takes
+   their clients down with them — an app whose map holds Play services' fonts provider among
+   them. When the app stops answering because its process is gone, `app-death.ts` reads logcat
+   since the app's start: a process it depended on dying, or memory running out, lets the test
+   start the app again — once, with the reason printed; a crash, an ANR or a forced stop fails the
+   test as before. A retry of the whole test would hide the app's own crashes too.
+
 6. **The phone's state from `adb`, not from the screen.**
    - calls: `adb emu gsm call` / `cancel`, the answer read from the service's journal;
    - position: `adb shell cmd location` test providers for `gps` and `network` (Play services
@@ -103,6 +110,7 @@ schedule, then… — repeats all of that just to get the app into a state.
 ## What lives where
 
 - `device.ts` — `adb`, `waitFor`, `keepEvidence(name)`.
+- `app-death.ts` — `whyAppDied(logcat, package)`: killed by the system, crashed, stopped.
 - `agent.ts` — the agent's client: `locate`, `setText`, `dumpViewTree`.
 - `screen.ts` — `tap`, `tapUntilGone`, `fill`, `scrollIntoView`, `waitForElement` (with the state
   expected of it), `waitForAbsent`, `openLink`, `launch`, `launchClean`.
@@ -114,3 +122,7 @@ schedule, then… — repeats all of that just to get the app into a state.
 - In an app: `e2e-android.sh [--prebuilt] [--only <pattern>]` builds (with the channel switched
   on where there is one), installs, grants, starts the agent and runs `node --test` over
   `e2e/*.e2e.mts`; the TypeScript runs straight in Node 24.
+- The APK build (`build-apk`) runs `expo prebuild --clean` only when what it makes `android/`
+  from has changed: `../../scripts/android/prebuild.sh` keeps a key — the Expo fingerprint of the
+  native modules, plugins and dependencies, plus the variables the app's config reads — in
+  `android/.prebuild-key`. Otherwise Gradle builds incrementally: about 15–35 s instead of 85 s.

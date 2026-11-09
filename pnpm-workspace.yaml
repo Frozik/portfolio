@@ -209,6 +209,7 @@ catalog:
   "ical.js": "^2.2.1"
 
   "expo": "57.0.32"
+  "@expo/fingerprint": "^0.20.15"
   "expo-router": "~57.0.30"
   "expo-localization": "~57.0.2"
   "expo-status-bar": "~57.0.1"

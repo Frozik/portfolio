@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto';
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
 import { defineE2eTest } from '@frozik/tooling/src/android-e2e/e2e-test.ts';
 
-import { appReady, control } from './channel.mts';
+import { allowSystemRestart, appReady, control } from './channel.mts';
 import { AMSTERDAM, phoneAt } from './location.mts';
 
 /** The service answers within milliseconds; a loaded CI emulator rings the call a few seconds late. */
@@ -60,6 +60,7 @@ export async function call(number: string): Promise<IScreenedCall> {
 
 /** A test on the emulator, starting with the phone in Amsterdam and the app's book reset. */
 export const e2eTest = defineE2eTest(async () => {
+  allowSystemRestart();
   await phoneAt(AMSTERDAM);
   await appReady();
   await control('reset');
