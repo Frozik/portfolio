@@ -60,7 +60,6 @@ export const StartScreen = observer(function StartScreen() {
         </Text>
       }
     >
-      <UpdateNotice watch={updates} />
       <Text accessibilityRole="header" style={[styles.heading, { color: palette.fg }]}>
         {t.deviceVaults.title}
       </Text>
@@ -87,6 +86,7 @@ export const StartScreen = observer(function StartScreen() {
           onPress={() => router.push(paths.create())}
         />
       </View>
+      <UpdateNotice watch={updates} />
       {fileOpening?.state.kind === 'opening' && <Busy label={t.phone.openFile} />}
       {fileOpening?.state.kind === 'failed' && (
         <Notice

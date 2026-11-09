@@ -4,6 +4,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { when } from 'mobx';
 import { View } from 'react-native';
 
+import { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 import { LOCAL_COPY_PATH } from '@frozik/vault-app/sync/domain/local-copy';
 import { aDevice, TEST_PASSWORD } from '@frozik/vault-app/testing/fake-device';
 
@@ -71,6 +72,26 @@ describe('the start screen', () => {
     await fireEvent.press(screen.getByTestId('open-file'));
 
     expect(await screen.findByTestId('open-file-failed')).toBeOnTheScreen();
+  });
+
+  it('shows a newer release below its actions, so a late notice never moves them under a finger', async () => {
+    const updates = new UpdateWatch(
+      {
+        read: () =>
+          Promise.resolve({
+            android: { latest: 'v2.0.0', minimum: 'v1.0.0', apkUrl: '', sha256: '' },
+          }),
+      },
+      { client: 'android', version: 'v1.4.0' }
+    );
+    await renderApp(ROUTES, { updates });
+
+    await act(() => updates.check());
+
+    const order = screen
+      .getAllByTestId(/^(create-vault|update-notice)$/)
+      .map(element => element.props.testID as string);
+    expect(order).toEqual(['create-vault', 'update-notice']);
   });
 
   it('goes to creating a vault', async () => {

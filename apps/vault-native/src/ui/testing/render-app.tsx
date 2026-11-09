@@ -3,6 +3,7 @@ import type { MockContextConfig } from 'expo-router/testing-library';
 import { renderRouter } from 'expo-router/testing-library';
 import type { ReactNode } from 'react';
 
+import type { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 import { aDevice } from '@frozik/vault-app/testing/fake-device';
 
 import { AppUnderTest } from './AppUnderTest';
@@ -19,19 +20,21 @@ export async function renderApp(
     initialUrl = '/',
     language = 'en',
     launch = null,
+    updates,
   }: {
     readonly device?: ReturnType<typeof aDevice>;
     readonly initialUrl?: string;
     readonly language?: Language;
     /** The runtime's launch, with the vault a lock in the previous one left the note for. */
     readonly launch?: { readonly locked: string | null } | null;
+    readonly updates?: UpdateWatch;
   } = {}
 ) {
   const app = device.startStore();
   const rendered = renderRouter(routes, {
     initialUrl,
     wrapper: ({ children }: { readonly children: ReactNode }) => (
-      <AppUnderTest app={app} language={language} launch={launch}>
+      <AppUnderTest app={app} language={language} launch={launch} updates={updates}>
         {children}
       </AppUnderTest>
     ),
