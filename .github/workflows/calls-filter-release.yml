@@ -90,7 +90,7 @@ jobs:
           export SOURCE_DATE_EPOCH CALLS_FILTER_VERSION CALLS_FILTER_VERSION_CODE
           # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
           pnpm --dir apps/calls-filter run build-apk -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
-          mkdir -p unsigned
+          mkdir -p unsigned sbom
           cp apps/calls-filter/android/app/build/outputs/apk/release/app-release.apk unsigned/calls-filter.apk
           ccache --show-stats
       - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
