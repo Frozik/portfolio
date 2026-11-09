@@ -78,7 +78,7 @@ jobs:
           RELEASES: ${{ github.repository }}
           SHA: ${{ needs.pinned.outputs.sha }}
         run: |
-          version="$(git describe --tags --exact-match "$SHA")"
+          version="$(git describe --tags --exact-match --match 'v*' "$SHA")"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           last="$(gh release view --repo "$RELEASES" --json tagName --jq .tagName 2>/dev/null || true)"
           if [ -z "$last" ] || pnpm exec affected-projects "$last" "$SHA" --is vault-web --is vault-extension --is vault-native; then

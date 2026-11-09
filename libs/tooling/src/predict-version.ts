@@ -80,4 +80,4 @@ if (tag !== undefined) {
   version = next === undefined ? tag : `v${next}`;
 }
 
-console.log(version ?? git('describe', '--tags', '--always', ref));
+console.log(version ?? git('describe', '--tags', '--match', TAG_GLOB, '--always', ref));

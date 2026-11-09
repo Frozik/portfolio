@@ -45,7 +45,7 @@ jobs:
         run: |
           sha="$(git rev-parse HEAD)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          if ! version="$(git describe --tags --exact-match "$sha" 2>/dev/null)"; then
+          if ! version="$(git describe --tags --exact-match --match 'v*' "$sha" 2>/dev/null)"; then
             echo "No release tag on $sha: nothing to publish."
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
