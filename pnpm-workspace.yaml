@@ -43,13 +43,23 @@ overrides:
   'expo>react-dom': 'catalog:native'
   '@expo/metro-runtime>react-dom': 'catalog:native'
   'compression@<1.8.2': ^1.8.2
+  # Expo's CLI checks dev-server manifest signatures with it; 1.4.1 fixes the four 2026-11 advisories.
+  'node-forge@<1.4.1': ^1.4.1
 
-# No release fixes these, and both live only in build tooling, never in an app: node-forge checks
-# Expo dev-server manifest signatures, braces expands Metro's own config globs.
+# No release usable here fixes these. The first two live only in build tooling, never in an app:
+# node-forge checks Expo dev-server manifest signatures, braces expands Metro's own config globs.
 auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv
     - GHSA-vfj7-8cjw-p6xm
+    # zod below 4.6.6 — every 3.x; Expo's CLI validates its own config and its servers' answers
+    # with zod 3 and breaks on zod 4. Build tooling only. Drop when @expo/cli moves to zod 4.
+    - GHSA-mrhx-c7xc-m3w5
+    # decode-uri-component up to 0.5.0, reached through query-string 7 inside expo-router; the fix
+    # (0.5.1) is ESM-only, which query-string 7 cannot require, and query-string 10 would change
+    # how expo-router reads route params. The worst case is a slow parse of a crafted link.
+    # Drop when expo-router leaves query-string 7.
+    - GHSA-qr28-fpjm-wq7f
 
 # Single source of dependency versions; workspace packages reference them with "catalog:".
 catalog:
@@ -116,7 +126,7 @@ catalog:
   "config": "^5.0.1"
   "credit-card-type": "^10.3.0"
   "dependency-cruiser": "^18.4.0"
-  "dompurify": "^3.4.16"
+  "dompurify": "^3.4.17"
   "earcut": "^3.2.3"
   "esbuild": "^0.28.2"
   "fake-indexeddb": "^6.2.5"
@@ -173,7 +183,7 @@ catalog:
   "@zxcvbn-ts/language-common": "^4.1.3"
   "@zxcvbn-ts/language-en": "^4.1.1"
   "@zxcvbn-ts/language-ru": "^4.1.0"
-  "toml": "^5.0.0"
+  "toml": "^5.0.1"
   "tsx": "^4.23.15"
   "typescript": "^7.0.2"
   "uqr": "^0.1.3"
@@ -193,17 +203,17 @@ catalog:
   "y-indexeddb": "^9.0.12"
   "y-webrtc": "^10.3.0"
   "yjs": "^13.6.33"
-  "zod": "^4.6.5"
+  "zod": "^4.6.7"
   "rrule-temporal": "^2.2.8"
   "libphonenumber-js": "^1.13.15"
   "ical.js": "^2.2.1"
 
-  "expo": "57.0.30"
-  "expo-router": "~57.0.28"
+  "expo": "57.0.32"
+  "expo-router": "~57.0.30"
   "expo-localization": "~57.0.2"
   "expo-status-bar": "~57.0.1"
   "expo-system-ui": "~57.0.4"
-  "expo-constants": "~57.0.22"
+  "expo-constants": "~57.0.23"
   "expo-linking": "~57.0.13"
   "react-native": "0.86.3"
   "react-native-safe-area-context": "~5.7.0"
@@ -212,16 +222,16 @@ catalog:
   "expo-clipboard": "~57.0.2"
   "expo-document-picker": "~57.0.3"
   "expo-haptics": "~57.0.3"
-  "expo-image-manipulator": "~57.0.21"
+  "expo-image-manipulator": "~57.0.22"
   "@formatjs/intl-pluralrules": "^6.3.15"
   "@expo/vector-icons": "^15.0.2"
   "@shopify/flash-list": "2.0.2"
   "expo-file-system": "~57.0.7"
   "expo-local-authentication": "~57.0.3"
-  "expo-network": "~57.0.2"
+  "expo-network": "~57.0.3"
   "expo-secure-store": "~57.0.4"
   "expo-screen-capture": "~57.0.4"
-  "expo-sharing": "~57.0.23"
+  "expo-sharing": "~57.0.25"
   "expo-sqlite": "~57.0.4"
   "expo-crypto": "~57.0.4"
   "expo-calendar": "~57.0.6"
