@@ -1,0 +1,19 @@
+import type { Temporal } from 'temporal-polyfill';
+
+import type { TCountryCode } from '../../../phone/domain/dialing-region';
+import type { ICompiledRuleset } from '../compiled-ruleset';
+
+/** The screening service as the app sees it: where rules go and what the phone reports. */
+export interface IScreeningRuntime {
+  publish(ruleset: ICompiledRuleset): void;
+  pausedUntil(): Temporal.Instant | null;
+  setPausedUntil(until: Temporal.Instant | null): void;
+  /** `group@setAtEpochMs` of temporary policies the service released: used up, or taken back. */
+  releasedTemporaries(): readonly string[];
+  /** Clears «where does this number go?» from the shade once the app has answered it. */
+  dismissWhereTo(): void;
+  networkCountry(): TCountryCode | null;
+  simCountry(): TCountryCode | null;
+  holdsScreeningRole(): boolean;
+  requestScreeningRole(): Promise<boolean>;
+}

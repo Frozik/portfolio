@@ -12,3 +12,10 @@ tasks:
       - 'tsconfig.json'
     options:
       runInCI: true
+
+  shellcheck:
+    command: 'shellcheck --severity=warning scripts/android/ccache-env.sh scripts/android/install-ndk.sh'
+    inputs:
+      - 'scripts/**/*.sh'
+    options:
+      runInCI: true

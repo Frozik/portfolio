@@ -9,7 +9,7 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "test": "jest",
-    "types": "tsc --noEmit",
+    "types": "tsc --noEmit && tsc -p e2e",
     "build-apk": "expo prebuild --platform android --no-install --clean && cd android && ./gradlew assembleRelease --no-daemon",
     "e2e-android": "./e2e-android.sh"
   },
@@ -58,6 +58,8 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-dynamic-import": "catalog:",
+    "@frozik/tooling": "workspace:*",
+    "@frozik/typescript-config": "workspace:*",
     "@testing-library/react-native": "catalog:",
     "@types/jest": "catalog:",
     "@types/lodash-es": "catalog:",

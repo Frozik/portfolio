@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-mergeReleaseResources-13:/values-en-rIN/values-en-rIN.xml",
+            "map": [
+                {
+                    "source": "/Users/dmitry.sharov/.gradle/caches/9.3.1/transforms/34c505b7eb3ba7963e9d7b9ec80eb5f2/transformed/core-1.8.0/res/values-en-rIN/values-en-rIN.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-release-15:/values-en-rIN/values-en-rIN.xml",
+            "map": [
+                {
+                    "source": "/Users/dmitry.sharov/.gradle/caches/9.3.1/transforms/34c505b7eb3ba7963e9d7b9ec80eb5f2/transformed/core-1.8.0/res/values-en-rIN/values-en-rIN.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    }
+                }
+            ]
+        }
+    ]
+}

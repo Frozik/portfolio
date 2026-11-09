@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-release-15:/layout-v21/notification_template_icon_group.xml",
+        "source": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-core-1.8.0-1:/layout-v21/notification_template_icon_group.xml"
+    },
+    {
+        "merged": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-release-15:/layout-v21/notification_action.xml",
+        "source": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-core-1.8.0-1:/layout-v21/notification_action.xml"
+    },
+    {
+        "merged": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-release-15:/layout-v21/notification_action_tombstone.xml",
+        "source": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-core-1.8.0-1:/layout-v21/notification_action_tombstone.xml"
+    },
+    {
+        "merged": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-release-15:/layout-v21/notification_template_custom_big.xml",
+        "source": "io.github.frozik.googleauthorization.frozik-expo-google-authorization-core-1.8.0-1:/layout-v21/notification_template_custom_big.xml"
+    }
+]

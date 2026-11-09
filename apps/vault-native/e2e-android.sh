@@ -1,20 +1,45 @@
 #!/usr/bin/env bash
-# The Maestro flows in e2e/ against the running emulator or a connected phone, as CI runs them:
-# a release APK built for that device's ABI only, installed over whatever was there.
-# --prebuilt skips the build (CI builds before it starts the emulator).
+# The e2e tests against the running emulator or a connected phone, as CI runs them: a release APK
+# built for that device's ABI only, installed over whatever was there, then `node --test` over
+# e2e/*.e2e.mts. Only what a phone alone can show is tested here — the window kept from
+# screenshots, Argon2 and the keystore for real; every screen's logic is a Jest test.
+#
+#   e2e-android.sh [--prebuilt] [--only <name pattern>]
+#
+# --prebuilt skips the build (CI builds before it starts the emulator). Each test is bounded as a
+# hang guard, not a speed budget, and a failure leaves the screen, the view tree and logcat
+# in e2e-artifacts/.
 set -euo pipefail
 
 cd "$(dirname "$0")"
 apk=android/app/build/outputs/apk/release/app-release.apk
+artifacts=e2e-artifacts
 
 if [[ "$(adb get-state 2>/dev/null)" != device ]]; then
   echo "No device: start the emulator (or connect a phone) first." >&2
   exit 1
 fi
 
-if [[ "${1:-}" != --prebuilt ]]; then
+prebuilt=false
+only=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prebuilt) prebuilt=true ;;
+    --only)
+      only=(--test-name-pattern "$2")
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+if [[ "$prebuilt" == false ]]; then
   abi="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
-  ./install-ndk.sh
+  ../../libs/tooling/scripts/android/install-ndk.sh .
   pnpm run build-apk "-PreactNativeArchitectures=$abi"
 fi
 
@@ -26,5 +51,5 @@ adb shell wm size 640x1280
 adb shell wm density 320
 trap 'adb shell wm size reset; adb shell wm density reset' EXIT
 
-maestro="$(command -v maestro || echo "$HOME/.maestro/bin/maestro")"
-"$maestro" test e2e
+rm -rf "$artifacts"
+node --test --test-concurrency=1 ${only[@]+"${only[@]}"} e2e/*.e2e.mts

@@ -497,6 +497,79 @@ module.exports = {
       from: {},
       to: { circular: true },
     },
+    {
+      name: 'calls-filter-domain-is-pure',
+      comment:
+        'A context’s domain is plain TypeScript: no framework, no library behind a port, no outer ring.',
+      severity: 'error',
+      from: { path: '^apps/calls-filter/src/contexts/[^/]+/domain/' },
+      to: {
+        path: [
+          '/node_modules/(react|react-native|mobx|mobx-react-lite|expo[a-z-]*|zod|libphonenumber-js|rrule-temporal|ical\\.js|@bufbuild/protobuf)(/|$)',
+          '^apps/calls-filter/src/(ui|app|infrastructure|texts)/',
+          '^apps/calls-filter/src/contexts/[^/]+/application/',
+          '^apps/calls-filter/modules/',
+          '^libs/proto/',
+        ],
+      },
+    },
+    {
+      name: 'calls-filter-application-uses-ports',
+      comment:
+        'Application models reach the outside world through domain ports; words belong to texts.',
+      severity: 'error',
+      from: { path: '^apps/calls-filter/src/contexts/[^/]+/application/' },
+      to: {
+        path: [
+          '^apps/calls-filter/src/(ui|app|infrastructure|texts)/',
+          '^apps/calls-filter/modules/',
+          '^libs/proto/',
+        ],
+      },
+    },
+    {
+      name: 'calls-filter-contexts-meet-in-the-shell',
+      comment:
+        'A context’s models may name another context’s models as types; only the shell uses them.',
+      severity: 'error',
+      from: {
+        path: '^apps/calls-filter/src/contexts/([^/]+)/application/',
+        pathNot: '^apps/calls-filter/src/contexts/shell/',
+      },
+      to: {
+        path: '^apps/calls-filter/src/contexts/[^/]+/application/',
+        pathNot: '^apps/calls-filter/src/contexts/$1/application/',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'calls-filter-ui-sees-no-adapters',
+      comment: 'Screens read models and texts; only the composition root builds adapters.',
+      severity: 'error',
+      from: { path: '^apps/calls-filter/src/(ui|app|texts)/' },
+      to: {
+        path: [
+          '^apps/calls-filter/src/infrastructure/',
+          '^apps/calls-filter/modules/',
+          '^libs/proto/',
+        ],
+      },
+    },
+    {
+      name: 'calls-filter-wire-at-the-edge',
+      comment: 'The native module and the generated contract are reached only by adapters.',
+      severity: 'error',
+      from: {
+        path: '^apps/calls-filter/src/',
+        pathNot: ['^apps/calls-filter/src/infrastructure/', '^apps/calls-filter/src/fixtures/'],
+      },
+      to: {
+        path: [
+          '^apps/calls-filter/modules/call-screening/src/',
+          '^libs/proto/src/gen/frozik/callsfilter/',
+        ],
+      },
+    },
   ],
   options: {
     // node_modules edges stay in the graph (the package rules above match on them) but are not followed.

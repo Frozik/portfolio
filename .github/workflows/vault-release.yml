@@ -121,8 +121,8 @@ jobs:
           moon run vault-web:build
           # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
           pnpm --dir apps/vault-extension run zip
-      - run: apps/vault-native/install-ndk.sh
-      - run: apps/vault-native/ccache-env.sh
+      - run: libs/tooling/scripts/android/install-ndk.sh apps/vault-native
+      - run: libs/tooling/scripts/android/ccache-env.sh
       # The native modules' objects, four ABIs: about half the APK's build when the C++ did not change.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

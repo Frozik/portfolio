@@ -1,0 +1,215 @@
+# Calls Filter's APK, attached to the monorepo's own GitHub Release once semantic-release has
+# tagged it (after «Deploy portfolio to GitHub Pages»).
+#
+# gate ──► build ──► sign ──► assemble ──► attest ──► publish
+#
+# The APK is built without secrets; only `sign`, behind the `calls-filter-release` environment
+# and without the monorepo's code, sees the keystore. A release that touches nothing of the app
+# since the last APK publishes nothing, so a portfolio release never shows users an «update».
+name: Calls Filter release
+
+on:
+  workflow_run:
+    workflows: ['Deploy portfolio to GitHub Pages']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: calls-filter-release
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+      version: ${{ steps.gate.outputs.version }}
+      sha: ${{ steps.gate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@261c62cb5b0f580c7be7c8cd0f023a2e96756095 # v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: gate
+        name: A release tag, and the app changed since the last APK
+        run: |
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if ! version="$(git describe --tags --exact-match "$sha" 2>/dev/null)"; then
+            echo "No release tag on $sha: nothing to publish."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if ! last="$(git rev-parse -q --verify 'refs/tags/calls-filter-latest^{commit}')"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif pnpm exec affected-projects "$last" "$sha" --is calls-filter; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Calls Filter did not change since $last."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@261c62cb5b0f580c7be7c8cd0f023a2e96756095 # v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/android-build-env
+        with:
+          app: apps/calls-filter
+          ccache-key: ccache-calls-filter-release
+      # Real phones only: an emulator's ABI belongs to CI's e2e job, not to what users install.
+      - name: Build the APK, signed later (prebuild signs it with a throwaway debug key, which `sign` replaces)
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          CALLS_FILTER_VERSION="$VERSION"
+          CALLS_FILTER_VERSION_CODE="$(node libs/tooling/src/write-android-version-code.ts "$VERSION")"
+          export SOURCE_DATE_EPOCH CALLS_FILTER_VERSION CALLS_FILTER_VERSION_CODE
+          # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
+          pnpm --dir apps/calls-filter run build-apk -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          mkdir -p unsigned
+          cp apps/calls-filter/android/app/build/outputs/apk/release/app-release.apk unsigned/calls-filter.apk
+          ccache --show-stats
+      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/calls-filter
+          format: cyclonedx-json
+          output-file: sbom/calls-filter.cdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sbom
+          path: sbom
+
+  # The keystore reaches only this job: no checkout, nothing of the monorepo runs here.
+  sign:
+    needs: [gate, build]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    environment: calls-filter-release
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      # The certificate apps/calls-filter/README.md publishes; another key fails the release.
+      CERTIFICATE_SHA256: ce8695d4c851ed0dacb5e66ec6de101efa4a35ac042630bd6602c11d9962fb67
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - name: Align, sign and verify the APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CALLS_FILTER_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.CALLS_FILTER_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CALLS_FILTER_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CALLS_FILTER_KEY_PASSWORD }}
+        run: |
+          tools="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -1)"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          mkdir -p signed
+          "$tools/zipalign" -p -f 4 unsigned/calls-filter.apk "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" \
+            --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+            --out "signed/calls-filter-$VERSION.apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$RUNNER_TEMP/release.keystore"
+          "$tools/apksigner" verify --print-certs "signed/calls-filter-$VERSION.apk" \
+            | tee "$RUNNER_TEMP/certs.txt"
+          # Every signer, whatever apksigner calls it ("Signer #1", "V3.0 Signer"), holds the published certificate.
+          digests="$(sed -n 's/^.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | sort -u)"
+          [ "$digests" = "$CERTIFICATE_SHA256" ]
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: signed-apk
+          path: signed
+
+  assemble:
+    needs: [gate, sign]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: signed-apk
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: sbom
+          path: release
+      - run: (cd release && sha256sum -- * > SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-final
+          path: release
+
+  attest:
+    needs: assemble
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-final
+          path: release
+      # Without a predicate or an SBOM, attest records SLSA build provenance.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: release/SHA256SUMS
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: release/SHA256SUMS
+          sbom-path: release/calls-filter.cdx.json
+
+  # Into the Release semantic-release created, and `calls-filter-latest`, whose one asset
+  # always is the newest APK: a download link that never goes stale.
+  publish:
+    needs: [gate, attest]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      SHA: ${{ needs.gate.outputs.sha }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-final
+          path: release
+      - name: Attach the APK to the version's Release
+        run: gh release upload "$VERSION" release/* --clobber
+      - name: Point calls-filter-latest at this APK
+        run: |
+          cp "release/calls-filter-$VERSION.apk" release/calls-filter.apk
+          gh release delete calls-filter-latest --cleanup-tag --yes 2>/dev/null || true
+          gh release create calls-filter-latest release/calls-filter.apk release/SHA256SUMS \
+            --target "$SHA" --title "Calls Filter (latest: $VERSION)" --latest=false \
+            --notes "The newest Calls Filter APK, $VERSION. Check it as apps/calls-filter/README.md shows."

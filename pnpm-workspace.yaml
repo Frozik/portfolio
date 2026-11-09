@@ -16,6 +16,16 @@ allowBuilds:
   core-js: false
   '@bufbuild/buf': false
 
+# The icon set ships .d.ts that import React types without declaring them, so pnpm hoisted
+# whichever @types/react came first — the native 19.2 one broke the web consumers.
+packageExtensions:
+  react-svg-credit-card-payment-icons:
+    peerDependencies:
+      '@types/react': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
 peerDependencyRules:
   allowedVersions:
     "vite-plugin-pwa>vite": "8"
@@ -28,6 +38,10 @@ overrides:
   'brace-expansion@<1.1.21': ^1.1.21
   'brace-expansion@>=4.0.0 <5.0.12': ^5.0.12
   'source-map-js@>=1.0.0 <1.2.2': ^1.2.2
+  # Expo's optional react-dom (DOM components) follows React Native's React, not the web apps':
+  # one react-dom gives every Expo app the same expo, so the one jest-expo mocks the expo each loads.
+  'expo>react-dom': 'catalog:native'
+  '@expo/metro-runtime>react-dom': 'catalog:native'
   'compression@<1.8.2': ^1.8.2
 
 # No release fixes these, and both live only in build tooling, never in an app: node-forge checks
@@ -180,6 +194,9 @@ catalog:
   "y-webrtc": "^10.3.0"
   "yjs": "^13.6.33"
   "zod": "^4.6.5"
+  "rrule-temporal": "^2.2.8"
+  "libphonenumber-js": "^1.13.15"
+  "ical.js": "^2.2.1"
 
   "expo": "57.0.30"
   "expo-router": "~57.0.28"
@@ -206,6 +223,15 @@ catalog:
   "expo-screen-capture": "~57.0.4"
   "expo-sharing": "~57.0.23"
   "expo-sqlite": "~57.0.4"
+  "expo-crypto": "~57.0.4"
+  "expo-calendar": "~57.0.6"
+  "expo-contacts": "~57.0.8"
+  "expo-background-task": "~57.0.22"
+  "@react-native-community/datetimepicker": "9.1.0"
+  "expo-location": "~57.0.21"
+  "react-native-webview": "13.16.1"
+  "react-native-web": "~0.21.0"
+  "expo-task-manager": "~57.0.22"
   "react-native-nitro-modules": "0.37.1"
   "react-native-quick-base64": "3.0.1"
   "react-native-quick-crypto": "1.1.8"
@@ -221,6 +247,7 @@ catalog:
 catalogs:
   native:
     "react": "19.2.3"
+    "react-dom": "19.2.3"
     "@types/react": "~19.2.10"
 minimumReleaseAgeExclude:
   - '@swc/core-darwin-arm64@1.16.2'

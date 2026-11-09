@@ -1,0 +1,115 @@
+language: typescript
+layer: application
+stack: frontend
+
+tags:
+  - application
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'index.ts'
+    - 'jest.setup.ts'
+    - 'app.config.ts'
+    - 'assets/**/*'
+    - 'metro.config.js'
+    - 'babel.config.js'
+    - 'jest.config.js'
+    - 'modules/call-screening/src/**/*'
+  native:
+    - 'modules/call-screening/android/src/**/*'
+    - 'modules/call-screening/android/build.gradle'
+    - 'modules/call-screening/android/.editorconfig'
+    - 'modules/call-screening/android/detekt.yml'
+    - 'modules/call-screening/expo-module.config.json'
+  fixtures:
+    - 'src/fixtures/**/*'
+  # The workspace libraries ship TypeScript the app compiles itself: a change there is a change here.
+  libraries:
+    - '/libs/*/src/**/*'
+    - '/libs/*/package.json'
+    - '/libs/proto/proto/**/*'
+
+# What runs on the user's machine and in CI is type-check and jest; the bundle, the APK, the Kotlin
+# tests and anything else that needs Android's toolchain run in the `calls-filter-native` CI job
+# or by hand.
+tasks:
+  type-check:
+    command: 'pnpm run types'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+      - 'tsconfig.json'
+      - 'e2e/**/*.mts'
+      - 'e2e/tsconfig.json'
+    options:
+      runInCI: true
+
+  test:
+    command: 'pnpm run test'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+    options:
+      runInCI: true
+      mutex: 'heavy-suites'
+
+  # ktlint, detekt and the service's JVM tests, in one Gradle run: prebuild is the slow part.
+  kotlin-check:
+    command: 'pnpm run kotlin-check'
+    inputs:
+      - '@group(native)'
+      - '@group(fixtures)'
+      - '/libs/proto/proto/**/*'
+    options:
+      runInCI: false
+
+  bundle-check:
+    command: 'pnpm run bundle-check'
+    inputs:
+      - '@group(sources)'
+      - '@group(libraries)'
+    outputs:
+      - 'dist'
+    options:
+      runInCI: false
+
+  # A release-shaped APK, signed with the debug key prebuild generates: what the emulator runs.
+  build-apk:
+    command: 'pnpm run build-apk'
+    inputs:
+      - '@group(sources)'
+      - '@group(native)'
+      - '@group(libraries)'
+      # The release stamped into the APK: a cached build must never carry an old one.
+      - '$CALLS_FILTER_VERSION'
+      - '$CALLS_FILTER_VERSION_CODE'
+    outputs:
+      - 'android/app/build/outputs/apk/release'
+    options:
+      runInCI: false
+
+  e2e-android:
+    command: 'pnpm run e2e-android'
+    options:
+      cache: false
+      runInCI: false
+
+  shellcheck:
+    command: 'shellcheck --severity=warning e2e-android.sh sign-apk.sh'
+    inputs:
+      - '*.sh'
+    options:
+      runInCI: true
+
+  start:
+    command: 'pnpm run start'
+    options:
+      persistent: true
+      runInCI: false
+
+  run-android:
+    command: 'pnpm run android'
+    options:
+      persistent: true
+      runInCI: false

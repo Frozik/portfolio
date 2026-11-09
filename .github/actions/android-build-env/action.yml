@@ -1,0 +1,29 @@
+name: Android build environment
+description: >
+  JDK 17, Gradle's cache, the NDK react-native asks for and ccache for the native modules —
+  what an APK build needs before `build-apk`. Runs after `pnpm install`: the NDK version is read
+  from the app's react-native.
+inputs:
+  app:
+    description: The app's directory, e.g. apps/vault-native
+    required: true
+  ccache-key:
+    description: The prefix of the ccache entry; the commit is appended
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+      with:
+        distribution: temurin
+        java-version: '17'
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+    - shell: bash
+      run: libs/tooling/scripts/android/install-ndk.sh "${{ inputs.app }}"
+    - shell: bash
+      run: libs/tooling/scripts/android/ccache-env.sh
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.ccache
+        key: ${{ inputs.ccache-key }}-${{ github.sha }}
+        restore-keys: ${{ inputs.ccache-key }}-

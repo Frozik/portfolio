@@ -27,11 +27,16 @@ const UI_TEST = /\.(spec\.ts|test\.tsx)$/;
 /** Wording is copy: it is edited and translated, so a test that finds or checks it breaks with no bug. */
 const TEXT_LOCATOR = /\b(?:get|query|find)(?:All)?ByText\(/;
 
+/** Code a generator writes (protobuf's `src/gen`): nobody edits it, so its length is not a design smell. */
+const GENERATED_DIRECTORY = 'gen';
+
 function* walk(directory: string): Generator<string> {
   for (const entry of readdirSync(directory)) {
     const path = join(directory, entry);
     if (statSync(path).isDirectory()) {
-      yield* walk(path);
+      if (entry !== GENERATED_DIRECTORY) {
+        yield* walk(path);
+      }
     } else if (SOURCE_FILE.test(entry)) {
       yield path;
     }

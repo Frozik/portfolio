@@ -31,6 +31,9 @@ tasks:
       - '@group(sources)'
       - '@group(libraries)'
       - 'tsconfig.json'
+      - 'e2e/**/*.mts'
+      - 'e2e/tsconfig.json'
+      - '/libs/tooling/src/android-e2e/**/*'
     options:
       runInCI: true
 
@@ -75,7 +78,7 @@ tasks:
       runInCI: false
 
   shellcheck:
-    command: 'shellcheck --severity=warning ccache-env.sh e2e-android.sh install-ndk.sh'
+    command: 'shellcheck --severity=warning e2e-android.sh'
     inputs:
       - '*.sh'
     options:

@@ -1,0 +1,122 @@
+buildscript {
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.9.5'
+  }
+}
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+apply plugin: 'com.google.protobuf'
+
+group = 'io.github.frozik.callsfilter'
+version = '0.1.0'
+
+def protobufVersion = '4.29.3'
+// The published language lives once, in the monorepo's proto library: TypeScript is generated
+// from it by buf, the Java-lite classes here by protoc at build time.
+def contractDirectory = file('../../../../../libs/proto/proto')
+// The scenarios TypeScript wrote: these tests must give the same answers.
+def sharedFixtures = file('../../../src/fixtures')
+
+android {
+  namespace "io.github.frozik.callsfilter.screening"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+    // The e2e command channel exists only in the APK built for the emulator's tests.
+    buildConfigField 'boolean', 'E2E', (System.getenv('CALLS_FILTER_E2E') == '1').toString()
+  }
+  buildFeatures {
+    buildConfig true
+  }
+  sourceSets {
+    main {
+      proto {
+        srcDir contractDirectory
+        include 'frozik/callsfilter/**'
+      }
+    }
+    test {
+      resources.srcDirs += sharedFixtures
+    }
+  }
+  testOptions {
+    unitTests.returnDefaultValues = false
+    unitTests.all {
+      maxHeapSize = '2g'
+    }
+  }
+}
+
+protobuf {
+  protoc {
+    artifact = "com.google.protobuf:protoc:${protobufVersion}"
+  }
+  generateProtoTasks {
+    all().each { task ->
+      task.builtins {
+        java {
+          option 'lite'
+        }
+      }
+    }
+  }
+}
+
+// The linters run as their own command-line tools, not as Gradle plugins: those are pinned to
+// the AGP and Kotlin versions Expo brings and break on each upgrade of them.
+configurations {
+  ktlint
+  detekt
+}
+
+dependencies {
+  implementation "com.google.protobuf:protobuf-javalite:${protobufVersion}"
+  implementation 'com.googlecode.libphonenumber:libphonenumber:8.13.55'
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.json:json:20240303'
+  testImplementation 'com.lemonappdev:konsist:0.17.3'
+
+  ktlint('com.pinterest.ktlint:ktlint-cli:1.8.0') {
+    attributes {
+      attribute(Bundling.BUNDLING_ATTRIBUTE, getObjects().named(Bundling, Bundling.EXTERNAL))
+    }
+  }
+  detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.23.8'
+}
+
+def kotlinSources = ['src/**/*.kt', '!src/**/build/**']
+
+tasks.register('ktlint', JavaExec) {
+  group = 'verification'
+  description = 'Checks the Kotlin sources against ktlint and .editorconfig.'
+  classpath = configurations.ktlint
+  mainClass = 'com.pinterest.ktlint.Main'
+  args kotlinSources
+}
+
+tasks.register('ktlintFormat', JavaExec) {
+  group = 'formatting'
+  description = 'Fixes what ktlint can fix by itself.'
+  classpath = configurations.ktlint
+  mainClass = 'com.pinterest.ktlint.Main'
+  jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+  args(['-F'] + kotlinSources)
+}
+
+tasks.register('detekt', JavaExec) {
+  group = 'verification'
+  description = 'Runs detekt with the rules in detekt.yml on top of its defaults.'
+  classpath = configurations.detekt
+  mainClass = 'io.gitlab.arturbosch.detekt.cli.Main'
+  args '--input', 'src/main/java,src/test/java', '--config', 'detekt.yml', '--build-upon-default-config'
+}

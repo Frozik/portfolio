@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="calls_filter_tile">Фильтр звонков</string>
+  <string name="calls_filter_tile_on">Работает</string>
+  <string name="calls_filter_tile_until">Пауза до %1$s</string>
+  <string name="calls_filter_pause_channel">Фильтр на паузе</string>
+  <string name="calls_filter_paused_until">Фильтр на паузе до %1$s</string>
+  <string name="calls_filter_paused_text">Все звонки проходят</string>
+  <string name="calls_filter_resume">Возобновить</string>
+  <string name="calls_filter_where_to">Куда этот номер?</string>
+  <string name="calls_filter_where_to_channel">После звонка</string>
+  <string name="calls_filter_where_to_other">Другая…</string>
+  <string name="calls_filter_temporary_channel">Временные правила</string>
+  <string name="calls_filter_temporary_pass">%1$s: ✅ пропускать</string>
+  <string name="calls_filter_temporary_block">%1$s: ⛔ блокировать</string>
+  <string name="calls_filter_temporary_until">до %1$s</string>
+  <string name="calls_filter_temporary_first_pass">до первого звонка, который пройдёт</string>
+  <string name="calls_filter_temporary_end_of_event">до конца встречи, %1$s</string>
+  <string name="calls_filter_take_back">Вернуть</string>
+  <string name="calls_filter_group_my_contacts">Мои контакты</string>
+  <string name="calls_filter_group_strangers">Незнакомые</string>
+  <string name="calls_filter_meeting_summary_channel">После встречи</string>
+  <string name="calls_filter_digest_channel">Отклонённые звонки, раз в час</string>
+  <string name="calls_filter_summary_text">Они во вкладке «Звонки»</string>
+  <plurals name="calls_filter_summary_named_meeting">
+    <item quantity="one">Во время «%1$s» отклонён %2$d звонок</item>
+    <item quantity="few">Во время «%1$s» отклонено %2$d звонка</item>
+    <item quantity="many">Во время «%1$s» отклонено %2$d звонков</item>
+    <item quantity="other">Во время «%1$s» отклонено %2$d звонка</item>
+  </plurals>
+  <plurals name="calls_filter_summary_meeting">
+    <item quantity="one">Во время встречи отклонён %1$d звонок</item>
+    <item quantity="few">Во время встречи отклонено %1$d звонка</item>
+    <item quantity="many">Во время встречи отклонено %1$d звонков</item>
+    <item quantity="other">Во время встречи отклонено %1$d звонка</item>
+  </plurals>
+  <plurals name="calls_filter_summary_digest">
+    <item quantity="one">За последний час отклонён %1$d звонок</item>
+    <item quantity="few">За последний час отклонено %1$d звонка</item>
+    <item quantity="many">За последний час отклонено %1$d звонков</item>
+    <item quantity="other">За последний час отклонено %1$d звонка</item>
+  </plurals>
+</resources>

@@ -39,6 +39,7 @@
     "libs/tooling/file-size-baseline.json",
     "apps/portfolio/bundle-stats.json",
     "libs/proto/src/gen/**",
+    "apps/calls-filter/src/contexts/phone/domain/numbering/gen/**",
     "libs/vault/src/data/**"
   ]
 }

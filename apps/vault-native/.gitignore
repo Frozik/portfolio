@@ -4,3 +4,7 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# What a failed e2e test saw (e2e-android.sh)
+e2e-artifacts/
+

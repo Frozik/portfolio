@@ -103,7 +103,7 @@ jobs:
       - if: steps.affected.outputs.run == 'true'
         run: pnpm --dir apps/vault-native run bundle-check
 
-  # The Android app on an emulator, through the Maestro flows. Informational until it has a
+  # The Android app on an emulator, driven over adb. Informational until it has a
   # record: an emulator on a shared runner flakes, and a red run that is no defect teaches
   # everyone to ignore CI.
   native-e2e:
@@ -129,22 +129,10 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.affected.outputs.run == 'true'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: ./.github/actions/android-build-env
         with:
-          distribution: temurin
-          java-version: '17'
-      - if: steps.affected.outputs.run == 'true'
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-      - if: steps.affected.outputs.run == 'true'
-        run: apps/vault-native/install-ndk.sh
-      - if: steps.affected.outputs.run == 'true'
-        run: apps/vault-native/ccache-env.sh
-      - if: steps.affected.outputs.run == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.ccache
-          key: ccache-android-x86_64-${{ github.sha }}
-          restore-keys: ccache-android-x86_64-
+          app: apps/vault-native
+          ccache-key: ccache-android-x86_64
       # Only the emulator's ABI: the native code of every module compiles once instead of four times.
       - if: steps.affected.outputs.run == 'true'
         run: |
@@ -157,8 +145,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - if: steps.affected.outputs.run == 'true'
-        run: curl -fsSL https://get.maestro.mobile.dev | bash
-      - if: steps.affected.outputs.run == 'true'
+        # The script bounds every wait and flow itself; this only catches the emulator itself hanging.
+        timeout-minutes: 30
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
@@ -166,6 +154,107 @@ jobs:
           target: google_apis
           # The same script `pnpm vault-android:e2e` runs locally, minus the build done above.
           script: apps/vault-native/e2e-android.sh --prebuilt
+      - if: failure() && steps.affected.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: vault-native-e2e-evidence
+          path: apps/vault-native/e2e-artifacts
+          if-no-files-found: ignore
+
+  # Calls Filter: the bundle builds, its Expo packages match the SDK, and the Kotlin screening
+  # service passes its JVM tests — the shared fixtures included, so both decision engines agree.
+  calls-filter-native:
+    name: Calls Filter bundle and service tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if pnpm exec affected-projects "$BASE" "$GITHUB_SHA" --is calls-filter; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.affected.outputs.run == 'true'
+        working-directory: apps/calls-filter
+        run: pnpm exec expo install --check
+      # Not `moon run`: these tasks are `runInCI: false`, and moon honours that here too.
+      - if: steps.affected.outputs.run == 'true'
+        run: pnpm --dir apps/calls-filter run bundle-check
+      - if: steps.affected.outputs.run == 'true'
+        uses: ./.github/actions/android-build-env
+        with:
+          app: apps/calls-filter
+          ccache-key: ccache-calls-filter-jvm
+      - if: steps.affected.outputs.run == 'true'
+        run: pnpm --dir apps/calls-filter run kotlin-check
+
+  # Calls Filter on an emulator: incoming calls simulated with `adb emu gsm call`. Informational
+  # until it has a record, like native-e2e.
+  calls-filter-e2e:
+    name: Calls Filter on an emulator
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      - run: pnpm install --frozen-lockfile
+      - id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if pnpm exec affected-projects "$BASE" "$GITHUB_SHA" --is calls-filter; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.affected.outputs.run == 'true'
+        uses: ./.github/actions/android-build-env
+        with:
+          app: apps/calls-filter
+          ccache-key: ccache-calls-filter-x86_64
+      - if: steps.affected.outputs.run == 'true'
+        # The e2e command channel exists only in this APK; the release workflow never sets it.
+        env:
+          CALLS_FILTER_E2E: '1'
+        run: |
+          pnpm --dir apps/calls-filter run build-apk -PreactNativeArchitectures=x86_64
+          ccache --show-stats
+      - if: steps.affected.outputs.run == 'true'
+        name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - if: steps.affected.outputs.run == 'true'
+        # The script bounds every wait and flow itself; this only catches the emulator itself hanging.
+        timeout-minutes: 50
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          # The same script `pnpm calls-filter-android:e2e` runs locally, minus the build done above.
+          script: apps/calls-filter/e2e-android.sh --prebuilt
+      - if: failure() && steps.affected.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: calls-filter-e2e-evidence
+          path: apps/calls-filter/e2e-artifacts
+          if-no-files-found: ignore
 
   # Blocking: a high advisory against a production dependency fails the run,
   # and with it the deploys, until the lockfile is bumped. It reads only the

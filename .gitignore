@@ -65,6 +65,9 @@ IDEA.md
 .expo
 expo-env.d.ts
 apps/vault-native/android
+apps/calls-filter/android
+apps/calls-filter/modules/call-screening/android/build
+apps/calls-filter/dist
 
 # Android signing keys never enter the repository
 *.keystore

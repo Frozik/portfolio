@@ -1,0 +1,25 @@
+{
+  "name": "@frozik/expo-google-authorization",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Google authorization on Android with the accounts already on the phone (Identity AuthorizationClient): an access token for the scopes asked, no passwords",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@frozik/cloud-storage": "workspace:*",
+    "@frozik/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@frozik/typescript-config": "workspace:*"
+  },
+  "peerDependencies": {
+    "expo": "*"
+  }
+}

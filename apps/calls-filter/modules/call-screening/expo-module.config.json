@@ -1,0 +1,8 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": [
+      "io.github.frozik.callsfilter.screening.bridge.CallScreeningModule"
+    ]
+  }
+}

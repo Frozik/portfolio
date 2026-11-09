@@ -89,6 +89,9 @@ There are no over-the-air updates: every change ships as a signed APK the user c
   password once more, because an open vault's key cannot be read out.
 - Screenshots, screen recording and the app-switcher picture are blocked (`FLAG_SECURE`);
   a setting allows them for an open vault after a confirmation, never on the unlock screens.
+  `MainActivity` sets the flag before its first frame (a config plugin in `app.config.ts`) and
+  JavaScript only lifts it for an open vault that allows it: set from JavaScript alone, it came
+  too late on a cold start and was never set at all, so every screen could be captured.
 - No WebView, no analytics, no custom URL scheme, HTTPS only. Site icons come from icon.horse or
   favicone.com, each domain once, and can be turned off in the settings.
 
@@ -130,16 +133,22 @@ moon run vault-native:bundle-check            # expo export: the Hermes bundle b
 moon run vault-native:start                   # Metro for a development build
 moon run vault-native:run-android             # a development build on a connected phone
 moon run vault-native:build-apk               # a release-shaped APK (prebuild's debug signature)
-pnpm vault-android:e2e                        # the Maestro flows in e2e/ on the running emulator / phone
+pnpm vault-android:e2e                        # the e2e tests in e2e/ on the running emulator / phone
 ```
 
 `pnpm vault-android:e2e` (`e2e-android.sh`) is the `native-e2e` CI job run locally: it builds the
-release APK for the connected device's ABI only, installs it and runs the flows on a 320x640 dp
-screen (the smallest phone, as on the CI emulator; restored afterwards); CI calls the same
-script with `--prebuilt`. It needs a booted emulator (`emulator -avd <name>`) and Maestro
-(`curl -fsSL https://get.maestro.mobile.dev | bash`). `install-ndk.sh` installs the NDK
+release APK for the connected device's ABI only, installs it and runs `node --test` over
+`e2e/*.e2e.mts` on a 320x640 dp screen (the smallest phone, as on the CI emulator; restored
+afterwards); CI calls the same script with `--prebuilt`. Only what a phone alone shows is tested
+there — the window kept from screenshots from the first frame of a cold start (read from the
+window manager over `adb`), and a vault created, locked and opened again with Argon2 and the
+keystore for real; every screen's logic is a Jest test. The test drives the screen over `adb`
+(taps by `testID`, typing at once); each test is bounded as a hang guard and a failure leaves the screen, the view
+tree and logcat in `e2e-artifacts/`, which CI uploads. The run takes about
+55 s on a Mac; the approach is described once for both Android apps in
+[`libs/tooling/src/android-e2e`](../../libs/tooling/src/android-e2e/README.md). It needs a booted emulator (`emulator -avd <name>`). `libs/tooling/scripts/android/install-ndk.sh` installs the NDK
 react-native asks for before Gradle does: Gradle's own single download sometimes arrives cut short.
-On CI and in the release, `ccache-env.sh` routes the native modules' C/C++ compiles through
+On CI and in the release, `libs/tooling/scripts/android/ccache-env.sh` routes the native modules' C/C++ compiles through
 ccache (CMake reads the launcher from the environment) and `actions/cache` keeps `~/.ccache`:
 compiling C++ was about half of the 33-minute four-ABI release build, and unchanged C++ now
 comes from the cache.
@@ -148,7 +157,7 @@ Metro serves the development build without lazy bundles (`metro.config.js`): laz
 `import()`s of a package with `.cjs` and `.mjs` side by side asked for a module the split bundle
 never defined. Release bundles never split, so development loads code the way the APK does.
 
-Only `type-check`, `test` and `shellcheck` run in `moon ci`; the bundle, the APK and the Maestro flows run in
+Only `type-check`, `test` and `shellcheck` run in `moon ci`; the bundle, the APK and the e2e tests run in
 the `native` and `native-e2e` CI jobs, which need Java and an emulator.
 
 - `src/app` — Expo Router routes, thin files over the screens; `_layout.tsx` is the root.

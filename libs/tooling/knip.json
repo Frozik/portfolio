@@ -38,10 +38,17 @@
         "e2e/**/*.ts"
       ]
     },
+    "apps/calls-filter": {
+      "entry": ["e2e/*.e2e.mts"],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "e2e/**/*.mts",
+        "modules/call-screening/src/**/*.ts"
+      ]
+    },
     "apps/vault-native": {
-      "entry": ["src/app/**/*.tsx"],
-      "project": ["src/**/*.{ts,tsx}", "*.ts"],
-      "ignoreBinaries": ["maestro"]
+      "entry": ["src/app/**/*.tsx", "e2e/*.e2e.mts"],
+      "project": ["src/**/*.{ts,tsx}", "*.ts", "e2e/**/*.mts"]
     },
     "libs/utils": {
       "entry": ["src/**/*.ts!"],
@@ -103,7 +110,7 @@
       "entry": ["src/**/*.ts!"],
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["@bufbuild/protoc-gen-es"],
-      "ignoreBinaries": ["diff"]
+      "ignoreBinaries": ["diff", "mktemp"]
     },
     "libs/vite-plugins": {
       "entry": ["src/**/*.ts!"],

@@ -306,14 +306,17 @@
         "apps/vault-extension/src/entrypoints/**",
         "**/*.d.ts",
         "apps/vault-native/app.config.ts",
-        "apps/vault-native/src/app/**"
+        "apps/vault-native/src/app/**",
+        "apps/calls-filter/app.config.ts",
+        "apps/calls-filter/src/app/**",
+        "apps/calls-filter/src/ui/**/*.dom.tsx"
       ],
       "rules": {
         "import/no-default-export": "off"
       }
     },
     {
-      "files": ["apps/vault-native/**"],
+      "files": ["apps/vault-native/**", "apps/calls-filter/**"],
       "rules": {
         "react/style-prop-object": ["warn", { "allow": ["StatusBar"] }]
       }

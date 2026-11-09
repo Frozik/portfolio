@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="calls_filter_tile">Calls Filter</string>
+  <string name="calls_filter_tile_on">On</string>
+  <string name="calls_filter_tile_until">Paused until %1$s</string>
+  <string name="calls_filter_pause_channel">Filter paused</string>
+  <string name="calls_filter_paused_until">Filter paused until %1$s</string>
+  <string name="calls_filter_paused_text">Every call rings through</string>
+  <string name="calls_filter_resume">Resume</string>
+  <string name="calls_filter_where_to">Where does this number go?</string>
+  <string name="calls_filter_where_to_channel">After a call</string>
+  <string name="calls_filter_where_to_other">Other…</string>
+  <string name="calls_filter_temporary_channel">Temporary rules</string>
+  <string name="calls_filter_temporary_pass">%1$s: ✅ let through</string>
+  <string name="calls_filter_temporary_block">%1$s: ⛔ block</string>
+  <string name="calls_filter_temporary_until">until %1$s</string>
+  <string name="calls_filter_temporary_first_pass">until the first call that rings</string>
+  <string name="calls_filter_temporary_end_of_event">until the meeting ends, %1$s</string>
+  <string name="calls_filter_take_back">Back to usual</string>
+  <string name="calls_filter_group_my_contacts">My contacts</string>
+  <string name="calls_filter_group_strangers">Strangers</string>
+  <string name="calls_filter_meeting_summary_channel">After a meeting</string>
+  <string name="calls_filter_digest_channel">Turned-away calls, hourly</string>
+  <string name="calls_filter_summary_text">See them in Calls</string>
+  <plurals name="calls_filter_summary_named_meeting">
+    <item quantity="one">During «%1$s» %2$d call was turned away</item>
+    <item quantity="other">During «%1$s» %2$d calls were turned away</item>
+  </plurals>
+  <plurals name="calls_filter_summary_meeting">
+    <item quantity="one">During the meeting %1$d call was turned away</item>
+    <item quantity="other">During the meeting %1$d calls were turned away</item>
+  </plurals>
+  <plurals name="calls_filter_summary_digest">
+    <item quantity="one">%1$d call turned away in the last hour</item>
+    <item quantity="other">%1$d calls turned away in the last hour</item>
+  </plurals>
+</resources>

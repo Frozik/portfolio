@@ -76,6 +76,16 @@ describe('checkSourceConventions', () => {
     expect(oversized).toEqual({ 'src/big.ts': MAX_LINES + 1 });
   });
 
+  it('leaves generated code alone, however long', () => {
+    mkdirSync(join(cwd, 'src', 'gen'), { recursive: true });
+    writeSource('gen/contract_pb.ts', linesOf(MAX_LINES + 1));
+
+    const { problems, oversized } = checkSourceConventions({ roots: ['src'], baseline: {}, cwd });
+
+    expect(problems).toEqual([]);
+    expect(oversized).toEqual({});
+  });
+
   it('lets a baselined file stay, flags it when it grows, and notices when it shrinks', () => {
     writeSource('big.ts', linesOf(450));
 

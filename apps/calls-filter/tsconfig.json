@@ -1,0 +1,18 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["jest", "node"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "index.ts",
+    "jest.setup.ts",
+    "app.config.ts",
+    "src",
+    "modules/call-screening/src"
+  ],
+  "exclude": ["../../libs/**/*.test.ts", "../../libs/**/*.test.tsx"]
+}

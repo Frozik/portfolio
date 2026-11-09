@@ -1,0 +1,41 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <service
+      android:name=".adapters.android.ScreeningService"
+      android:exported="true"
+      android:permission="android.permission.BIND_SCREENING_SERVICE">
+      <intent-filter>
+        <action android:name="android.telecom.CallScreeningService" />
+      </intent-filter>
+    </service>
+    <service
+      android:name=".adapters.android.PauseTileService"
+      android:exported="true"
+      android:icon="@drawable/calls_filter_shield"
+      android:label="@string/calls_filter_tile"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+        android:value="true" />
+    </service>
+    <receiver
+      android:name=".adapters.android.ResumeReceiver"
+      android:exported="false" />
+    <receiver
+      android:name=".adapters.android.TemporaryTakeBackReceiver"
+      android:exported="false" />
+    <receiver
+      android:name=".adapters.android.SummaryReceiver"
+      android:exported="false" />
+    <receiver
+      android:name=".adapters.android.CallEndedReceiver"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.PHONE_STATE" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

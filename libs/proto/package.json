@@ -14,7 +14,7 @@
   "scripts": {
     "generate": "buf generate",
     "proto-breaking": "if git cat-file -e origin/main:libs/proto/buf.yaml 2>/dev/null; then buf breaking --against '../../.git#ref=origin/main,subdir=libs/proto'; else echo 'no contract on origin/main yet: nothing to compare'; fi",
-    "proto-fresh": "rm -rf .generated-check && buf generate -o .generated-check && diff -r .generated-check/src/gen src/gen; status=$?; rm -rf .generated-check; exit $status",
+    "proto-fresh": "scratch=\"$(mktemp -d)\" && buf generate -o \"$scratch\" && diff -r \"$scratch/src/gen\" src/gen; status=$?; rm -rf \"$scratch\"; exit $status",
     "proto-lint": "buf lint",
     "types": "tsc --noEmit"
   },

@@ -1,0 +1,33 @@
+# On top of detekt's defaults; each change is a rule of this repository, not a convenience.
+
+style:
+  MaxLineLength:
+    maxLineLength: 180
+  # Guard clauses over nesting: an early return for the absent case is the house style.
+  ReturnCount:
+    active: false
+  # A named property is the named constant (Unicode ranges, for one).
+  MagicNumber:
+    ignorePropertyDeclaration: true
+
+exceptions:
+  # These are expected states turned into values on purpose: a permission not granted (null, the
+  # baked data decide), stored JSON from an older build (nothing pending), the service's time
+  # budget spent (the call rings, and diagnostics say why).
+  SwallowedException:
+    ignoredExceptionTypes:
+      - InterruptedException
+      - MalformedURLException
+      - NumberFormatException
+      - ParseException
+      - SecurityException
+      - JSONException
+      - TimeoutException
+
+complexity:
+  # A use case takes its ports through the constructor; grouping them only hides the list.
+  LongParameterList:
+    constructorThreshold: 10
+  # An exhaustive `when` over a sealed family counts one branch per kind.
+  CyclomaticComplexMethod:
+    ignoreSimpleWhenEntries: true

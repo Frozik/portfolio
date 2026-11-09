@@ -1,0 +1,1020 @@
+{
+  "screening": [
+    {
+      "name": "a number no group takes passes as a stranger",
+      "ruleset": "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",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "strangers",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a spam mask rejects",
+      "ruleset": "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",
+      "caller": {
+        "number": "74951112233",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "an exclusion takes a number out of spam, to the next group that has it",
+      "ruleset": "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",
+      "caller": {
+        "number": "74951234567",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "abroad",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a premium-rate number is spam",
+      "ruleset": "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",
+      "caller": {
+        "number": "319001234567",
+        "country": "NL",
+        "type": "premium-rate",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "an operator name puts a caller in spam",
+      "ruleset": "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",
+      "caller": {
+        "number": "31301234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": "KPN Klantenservice",
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a contact passes in my contacts",
+      "ruleset": "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",
+      "caller": {
+        "number": "31611111111",
+        "country": "NL",
+        "type": "mobile",
+        "networkName": null,
+        "contactName": "Neighbour",
+        "contactLookupKey": "lookup-Neighbour"
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "my-contacts",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "mum is in family, not in my contacts",
+      "ruleset": "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",
+      "caller": {
+        "number": "31612345678",
+        "country": "NL",
+        "type": "mobile",
+        "networkName": null,
+        "contactName": "Mum",
+        "contactLookupKey": "lookup-Mum"
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "family",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "work passes in working hours",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "work blocks during a meeting",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793712600000,
+      "localMinute": 29895270,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "work blocks on a holiday",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793786400000,
+      "localMinute": 29896500,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "work blocks on a skipped date",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1794564000000,
+      "localMinute": 29909460,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "work blocks at the weekend",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1794045600000,
+      "localMinute": 29900820,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "work blocks at six sharp",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793725200000,
+      "localMinute": 29895480,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a work colleague in the address book is still work",
+      "ruleset": "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",
+      "caller": {
+        "number": "31205551234",
+        "country": "NL",
+        "type": "mobile",
+        "networkName": null,
+        "contactName": "Colleague",
+        "contactLookupKey": "lookup-Colleague"
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "delivery waits for a repeat while its repeat switch is on",
+      "ruleset": "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",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793962800000,
+      "localMinute": 29899440,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "delivery",
+        "action": "block",
+        "verdict": "awaiting-repeat"
+      }
+    },
+    {
+      "name": "delivery passes the second call within the window",
+      "ruleset": "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",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793962800000,
+      "localMinute": 29899440,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": 1793962620000,
+      "expected": {
+        "group": "delivery",
+        "action": "block",
+        "verdict": "passed-as-repeat"
+      }
+    },
+    {
+      "name": "delivery waits again once the window is over",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKkwKBmZhbWlseRABGiUKCG1lbWJlci0xKhkKCzMxNjEyMzQ1Njc4Egpsb29rdXAtTXVtKAEyCAgCGAUiAggBQICygP6bNFIGZmFtaWx5KuACCgR3b3JrEAEaHQoIbWVtYmVyLTISEV4zMTIwNTU1XGRcZFxkXGQkMqkCCAESngIIAhABGgoI/MagDhCYy6AOGgoInNKgDhC41qAOGgoIvN2gDhDY4aAOGgoI3OigDhD47KAOGgoI/POgDhCY+KAOGgoI3JWhDhD4maEOGgoI/KChDhCYpaEOGgoInKyhDhC4sKEOGgoIvLehDhDYu6EOGgoIvOShDhDY6KEOGgoI3O+hDhD486EOGgoI/PqhDhCY/6EOGgoInIaiDhC4iqIOGgoIvJGiDhDYlaIOGgoInLOiDhC4t6IOGgoIvL6iDhDYwqIOGgoI3MmiDhD4zaIOGgoI/NSiDhCY2aIOGgoInOCiDhC45KIOGgoI/IGjDhCYhqMOIgYQnAQYuAgoAjIeCAESBAgBEAEiCG1lZXRpbmdzMgoIyNSgDhCE1aAOGAUiAggBQICygP6bNFIEd29yayp7CghkZWxpdmVyeRABGhkKCG1lbWJlci0zEg1eMzE4NSg/OlxkKSokGi4KCG1lbWJlci00GiIKHl4oPzpbXHNcU10pKnBvc3RubCg/Oltcc1xTXSkqJBABKAEyDwgBGAUiCQgDEIDY0cObNECAsoD+mzRSCGRlbGl2ZXJ5Kp0BCgRzcGFtEAEaGQoIbWVtYmVyLTUSDV43NDk1KD86XGQpKiQaDAoIbWVtYmVyLTYgAxo2CghtZW1iZXItNxoqCiZeKD86W1xzXFNdKSprbGFudGVuc2VydmljZSg/Oltcc1xTXSkqJBABIhkKCG1lbWJlci04Eg1eNzQ5NTEyMzQ1NjckKAEyCAgBGAUiAggBQICygP6bNFIEc3BhbSqrAwoGaGlkZGVuEAEaDAoIbWVtYmVyLTkgASgBMv8CCAIS9AIIARABGgoIpMKgDhCExqAOGgoIxM2gDhCk0aAOGgoI5NigDhDE3KAOGgoIhOSgDhDk56AOGgoIpO+gDhCE86AOGgoIxPqgDhCk/qAOGgoI5IWhDhDEiaEOGgoIhJGhDhDklKEOGgoIpJyhDhCEoKEOGgoIxKehDhCkq6EOGgoI5LKhDhDEtqEOGgoIhL6hDhDkwaEOGgoIpMmhDhCEzaEOGgoIxNShDhCk2KEOGgoI5N+hDhDE46EOGgoIhOuhDhDk7qEOGgoIpPahDhCE+qEOGgoIxIGiDhCkhaIOGgoI5IyiDhDEkKIOGgoIhJiiDhDkm6IOGgoIpKOiDhCEp6IOGgoIxK6iDhCksqIOGgoI5LmiDhDEvaIOGgoIhMWiDhDkyKIOGgoIpNCiDhCE1KIOGgoIxNuiDhCk36IOGgoI5OaiDhDE6qIOGgoIhPKiDhDk9aIOGgoIpP2iDhCEgaMOGgoIxIijDhCkjKMOIgYQ5AoYpAMYBSICCAFAgLKA/ps0UgZoaWRkZW4qRAoGYWJyb2FkEAEaDQoJbWVtYmVyLTEwIAIoATIYCAISDggBMgoIARIEEAEYASgBGAUiAggBQICygP6bNFIGYWJyb2FkKpIBCghjb3VyaWVycxABGiUKCW1lbWJlci0xMRoYChReY291cmllcig/Oltcc1xTXSkqJBACKAEySggCEkAIATI8CAISBAgBEAEaJgoKY29tLmdvb2dsZRISbWVAY29tcGFueS5leGFtcGxlGgRXb3JrMgoImOmgDhDy6aAOGAUiAggBQICygP6bNFIIY291cmllcnMqQwoHb3ZlcmxhcBABGhoKCW1lbWJlci0xMhINXjc0OTkoPzpcZCkqJCgBMggIARgFIgIIAUCAsoD+mzRSB292ZXJsYXAqVAoPb3ZlcmxhcC1sZW5pZW50EAEaGwoJbWVtYmVyLTEzEg5eNzQ5OTEoPzpcZCkqJCgBMggIAhgFIgIIAUCAsoD+mzRSD292ZXJsYXAtbGVuaWVudCp5CgtteS1jb250YWN0cxACIjAKE211bS1vdXQtb2YtY29udGFjdHMqGQoLMzE2MTIzNDU2NzgSCmxvb2t1cC1NdW0iJQoJbWVtYmVyLTE0GhgKFF5jb3VyaWVyKD86W1xzXFNdKSokEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793962800000,
+      "localMinute": 29899440,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": 1793962260000,
+      "expected": {
+        "group": "delivery",
+        "action": "block",
+        "verdict": "awaiting-repeat"
+      }
+    },
+    {
+      "name": "delivery blocks once its repeat switch ran out",
+      "ruleset": "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",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1794222000000,
+      "localMinute": 29903760,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "delivery",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "the filter-wide repeat switch lets blocked spam ring the second time",
+      "ruleset": "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",
+      "caller": {
+        "number": "74951112233",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": 1793698080000,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "passed-as-repeat"
+      }
+    },
+    {
+      "name": "the filter-wide repeat switch still turns the first call away",
+      "ruleset": "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",
+      "caller": {
+        "number": "74951112233",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "awaiting-repeat"
+      }
+    },
+    {
+      "name": "a temporary «let through» opens a blocking group for a while",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKmEKDGNvdXJpZXJzLW5vdxABGhoKCW1lbWJlci0xNRINXjMxODUoPzpcZCkqJCgBMggIARgFIgIIAToSCAIQARiA2NHDmzQggLCFyJo0QICygP6bNFIMY291cmllcnMtbm93KiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793962800000,
+      "localMinute": 29899440,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "couriers-now",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "the group blocks again once the temporary policy ended",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKmEKDGNvdXJpZXJzLW5vdxABGhoKCW1lbWJlci0xNRINXjMxODUoPzpcZCkqJCgBMggIARgFIgIIAToSCAIQARiA2NHDmzQggLCFyJo0QICygP6bNFIMY291cmllcnMtbm93KiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31851234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1794222000000,
+      "localMinute": 29903760,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "couriers-now",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a schedule on Helsinki's clock already passes at 8:30 in Amsterdam",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKuYCCg9oZWxzaW5raS1vZmZpY2UQARoaCgltZW1iZXItMTcSDV4zNTg5KD86XGQpKiQoATKaAggBEo8CCAIQARoKCPzGoA4QmMugDhoKCJzSoA4QuNagDhoKCLzdoA4Q2OGgDhoKCNzooA4Q+OygDhoKCPzzoA4QmPigDhoKCNyVoQ4Q+JmhDhoKCPygoQ4QmKWhDhoKCJysoQ4QuLChDhoKCLy3oQ4Q2LuhDhoKCLzkoQ4Q2OihDhoKCNzvoQ4Q+POhDhoKCPz6oQ4QmP+hDhoKCJyGog4QuIqiDhoKCLyRog4Q2JWiDhoKCJyzog4QuLeiDhoKCLy+og4Q2MKiDhoKCNzJog4Q+M2iDhoKCPzUog4QmNmiDhoKCJzgog4QuOSiDhoKCPyBow4QmIajDiIGEJwEGLgIKAI6D0V1cm9wZS9IZWxzaW5raRgFIgIIAUCAsoD+mzRSD2hlbHNpbmtpLW9mZmljZSogCgtteS1jb250YWN0cxACMggIAhgFIgIIAUCAsoD+mzQqHgoJc3RyYW5nZXJzEAMyCAgCGAUiAggBQICygP6bNDIKCgJOTBIEoNmgDjIKCgJGSRIE4O+gDkICCAE=",
+      "caller": {
+        "number": "35891234567",
+        "country": "FI",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793691000000,
+      "localMinute": 29894910,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "helsinki-office",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a schedule on Helsinki's clock already blocks at 17:30 in Amsterdam",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKuYCCg9oZWxzaW5raS1vZmZpY2UQARoaCgltZW1iZXItMTcSDV4zNTg5KD86XGQpKiQoATKaAggBEo8CCAIQARoKCPzGoA4QmMugDhoKCJzSoA4QuNagDhoKCLzdoA4Q2OGgDhoKCNzooA4Q+OygDhoKCPzzoA4QmPigDhoKCNyVoQ4Q+JmhDhoKCPygoQ4QmKWhDhoKCJysoQ4QuLChDhoKCLy3oQ4Q2LuhDhoKCLzkoQ4Q2OihDhoKCNzvoQ4Q+POhDhoKCPz6oQ4QmP+hDhoKCJyGog4QuIqiDhoKCLyRog4Q2JWiDhoKCJyzog4QuLeiDhoKCLy+og4Q2MKiDhoKCNzJog4Q+M2iDhoKCPzUog4QmNmiDhoKCJzgog4QuOSiDhoKCPyBow4QmIajDiIGEJwEGLgIKAI6D0V1cm9wZS9IZWxzaW5raRgFIgIIAUCAsoD+mzRSD2hlbHNpbmtpLW9mZmljZSogCgtteS1jb250YWN0cxACMggIAhgFIgIIAUCAsoD+mzQqHgoJc3RyYW5nZXJzEAMyCAgCGAUiAggBQICygP6bNDIKCgJOTBIEoNmgDjIKCgJGSRIE4O+gDkICCAE=",
+      "caller": {
+        "number": "35891234567",
+        "country": "FI",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793723400000,
+      "localMinute": 29895450,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "helsinki-office",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a group that acts only at the office does at the office",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKnYKDndvcmstYXQtb2ZmaWNlEAEaGgoJbWVtYmVyLTE4Eg1eMzEyMCg/OlxkKSokKAEyLQgBEiMIAkIfCgZvZmZpY2UQARk7AU2EDS9KQCEgQfFjzJ0TQCj0AxgFIgIIAUCAsoD+mzRSDndvcmstYXQtb2ZmaWNlKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {
+        "office": true
+      },
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work-at-office",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a group that acts only at the office does not elsewhere",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKnYKDndvcmstYXQtb2ZmaWNlEAEaGgoJbWVtYmVyLTE4Eg1eMzEyMCg/OlxkKSokKAEyLQgBEiMIAkIfCgZvZmZpY2UQARk7AU2EDS9KQCEgQfFjzJ0TQCj0AxgFIgIIAUCAsoD+mzRSDndvcmstYXQtb2ZmaWNlKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {
+        "office": false
+      },
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work-at-office",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a place nobody knows the state of leaves the decision to the rest",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKnYKDndvcmstYXQtb2ZmaWNlEAEaGgoJbWVtYmVyLTE4Eg1eMzEyMCg/OlxkKSokKAEyLQgBEiMIAkIfCgZvZmZpY2UQARk7AU2EDS9KQCEgQfFjzJ0TQCj0AxgFIgIIAUCAsoD+mzRSDndvcmstYXQtb2ZmaWNlKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "work-at-office",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "an operator name puts any number in delivery",
+      "ruleset": "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",
+      "caller": {
+        "number": "31107654321",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": "PostNL Bezorging",
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "delivery",
+        "action": "block",
+        "verdict": "awaiting-repeat"
+      }
+    },
+    {
+      "name": "a hidden number passes by day",
+      "ruleset": "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",
+      "caller": {
+        "number": null,
+        "country": null,
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793703600000,
+      "localMinute": 29895120,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "hidden",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a hidden number is rejected at night across midnight",
+      "ruleset": "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",
+      "caller": {
+        "number": null,
+        "country": null,
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793770200000,
+      "localMinute": 29896230,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "hidden",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a foreign number is blocked",
+      "ruleset": "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",
+      "caller": {
+        "number": "442079460000",
+        "country": "GB",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "abroad",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a foreign number passes on a holiday where the phone is",
+      "ruleset": "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",
+      "caller": {
+        "number": "442079460000",
+        "country": "GB",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793790000000,
+      "localMinute": 29896560,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "abroad",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a Finnish number is not foreign in Finland, and the holidays are Finnish",
+      "ruleset": "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",
+      "caller": {
+        "number": "358401234567",
+        "country": "FI",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "FI",
+      "instantEpochMs": 1793790000000,
+      "localMinute": 29896560,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "strangers",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a Dutch number abroad is foreign there",
+      "ruleset": "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",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "FI",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "abroad",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a courier contact is rejected only during a work event",
+      "ruleset": "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",
+      "caller": {
+        "number": "31687654321",
+        "country": "NL",
+        "type": "mobile",
+        "networkName": null,
+        "contactName": "Courier Ozon",
+        "contactLookupKey": "lookup-Courier Ozon"
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793871000000,
+      "localMinute": 29897910,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "couriers",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "a courier contact passes outside work events",
+      "ruleset": "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",
+      "caller": {
+        "number": "31687654321",
+        "country": "NL",
+        "type": "mobile",
+        "networkName": null,
+        "contactName": "Courier Ozon",
+        "contactLookupKey": "lookup-Courier Ozon"
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793876400000,
+      "localMinute": 29898000,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "couriers",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "an open conflict settles on the most lenient group",
+      "ruleset": "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",
+      "caller": {
+        "number": "74991234567",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "overlap-lenient",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "a pause lets spam through",
+      "ruleset": "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",
+      "caller": {
+        "number": "74951112233",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": true,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "paused"
+      }
+    },
+    {
+      "name": "accents and case never decide a name",
+      "ruleset": "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",
+      "caller": {
+        "number": "31301234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": "KPN KLANTENSERVİCE",
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "an empty book takes everyone as a stranger",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "74951112233",
+        "country": "RU",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "strangers",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    },
+    {
+      "name": "the weekend schedule includes holidays",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKocBCgd3ZWVrZW5kEAEaFgoJbWVtYmVyLTE2EgleKD86XGQpKiQoATJQCAISRggBEAEaCgjAt6AOEODCoA4aCgiA+6AOEMCRoQ4aCgjgyaEOEKDgoQ4aCgjAmKIOEICvog4aCgig56IOEOD9og4iAggBKAEYBSICCAFAgLKA/ps0Ugd3ZWVrZW5kKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793779200000,
+      "localMinute": 29896380,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "weekend",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "the weekend schedule passes a weekday",
+      "ruleset": "CAEQgNCfo5k0GICJow4iAk5MKocBCgd3ZWVrZW5kEAEaFgoJbWVtYmVyLTE2EgleKD86XGQpKiQoATJQCAISRggBEAEaCgjAt6AOEODCoA4aCgiA+6AOEMCRoQ4aCgjgyaEOEKDgoQ4aCgjAmKIOEICvog4aCgig56IOEOD9og4iAggBKAEYBSICCAFAgLKA/ps0Ugd3ZWVrZW5kKiAKC215LWNvbnRhY3RzEAIyCAgCGAUiAggBQICygP6bNCoeCglzdHJhbmdlcnMQAzIICAIYBSICCAFAgLKA/ps0MgoKAk5MEgSg2aAOMgoKAkZJEgTg76AOQgIIAQ==",
+      "caller": {
+        "number": "31201234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793865600000,
+      "localMinute": 29897820,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "weekend",
+        "action": "pass",
+        "verdict": "passed"
+      }
+    }
+  ],
+  "names": [
+    {
+      "raw": "Доставка",
+      "normalized": "доставка"
+    },
+    {
+      "raw": "ДОСТАВКА  Ozon",
+      "normalized": "доставка ozon"
+    },
+    {
+      "raw": "Café Été",
+      "normalized": "cafe ete"
+    },
+    {
+      "raw": "новая ёлка",
+      "normalized": "новая елка"
+    },
+    {
+      "raw": "ЙОГА",
+      "normalized": "йога"
+    },
+    {
+      "raw": "İstanbul",
+      "normalized": "istanbul"
+    },
+    {
+      "raw": "ﬁle",
+      "normalized": "file"
+    },
+    {
+      "raw": "  KPN\tKlantenservice ",
+      "normalized": "kpn klantenservice"
+    },
+    {
+      "raw": "Ölçek",
+      "normalized": "olcek"
+    },
+    {
+      "raw": "Курьер Ozon",
+      "normalized": "курьер ozon"
+    },
+    {
+      "raw": "Wide space　name",
+      "normalized": "wide space name"
+    }
+  ]
+}
