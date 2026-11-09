@@ -115,6 +115,7 @@ export const RU: ITexts = {
     whatToDo: 'Что делать',
     always: 'Всегда',
     inWindows: 'В окна',
+    whatItDoes: 'Что делает группа',
     otherwise: 'В остальное время',
     addSchedule: '+ Расписание',
     schedule: 'Расписание',
@@ -163,6 +164,7 @@ export const RU: ITexts = {
   },
   call: {
     fromOperator: 'от оператора',
+    fromDialer: 'по данным «Телефона»',
     hidden: 'Скрытый номер',
     move: 'В группу…',
     moveTitle: 'Перенести в группу',

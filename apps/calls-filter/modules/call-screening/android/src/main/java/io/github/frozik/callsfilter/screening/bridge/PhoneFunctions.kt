@@ -81,6 +81,7 @@ internal fun ModuleDefinitionBuilder.phoneFunctions(context: () -> Context) {
         "kind" to call.kind,
         "contactName" to contact?.displayName,
         "contactId" to contact?.lookupKey,
+        "cachedName" to call.cachedName,
       )
     }
   }

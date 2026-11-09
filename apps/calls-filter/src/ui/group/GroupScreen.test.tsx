@@ -1,4 +1,4 @@
-import { fireEvent, screen } from 'expo-router/testing-library';
+import { fireEvent, screen, within } from 'expo-router/testing-library';
 import { Temporal } from 'temporal-polyfill';
 
 import GroupRoute from '../../app/group/[id]';
@@ -73,12 +73,51 @@ describe('a group, edited on its own screen', () => {
     });
   });
 
+  it('lets calls through once its status, tapped, is switched to let through', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(within(screen.getByTestId('policy-sheet')).getByTestId('always-pass'));
+
+    expect(spamIn(phone)?.policy.otherwise).toBe('pass');
+  });
+
+  it('shows the group without the status sheet on the way back from the schedule it opened', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(within(screen.getByTestId('policy-sheet')).getByTestId('add-schedule'));
+
+    await screen.findByTestId('schedule-repeat');
+    await fireEvent.press(screen.getByTestId('screen-back'));
+
+    expect(await screen.findByTestId('group-status')).toBeOnTheScreen();
+    expect(screen.queryByTestId('policy-sheet')).not.toBeOnTheScreen();
+  });
+
+  it('offers a change for a while from its status', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
+
+    expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
+  });
+
   it('tells where a stranger’s number is from once the catalogue has loaded', async () => {
     const call: IJournalEntry = {
       id: 'call-ru' as TJournalEntryId,
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+79630001234',
       caller: stranger('79630001234'),
+      dialerName: null,
       outcome: {
         kind: 'screened',
         verdict: 'passed',
@@ -95,12 +134,31 @@ describe('a group, edited on its own screen', () => {
     expect(await screen.findByTestId('call-origin-call-ru')).toBeOnTheScreen();
   });
 
+  it('names a stranger as the phone’s dialer found it', async () => {
+    const call: IJournalEntry = {
+      id: 'call-bakery' as TJournalEntryId,
+      at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
+      rawNumber: '+31201234567',
+      caller: stranger('31201234567'),
+      dialerName: 'Bakkerij de Graaf',
+      outcome: { kind: 'history', type: 'missed' },
+    };
+    const phone = fakePhone({ book: bookOf([SPAM]), journal: [call] });
+    await renderApp(ROUTES, { phone, initialUrl: `/group/${STRANGERS_ID}` });
+
+    expect(await screen.findByTestId('call-dialer-name-call-bakery')).toHaveTextContent(
+      'Bakkerij de Graaf',
+      { exact: false }
+    );
+  });
+
   it('moves a stranger’s call to another group with the button on its row', async () => {
     const call: IJournalEntry = {
       id: 'call-1' as TJournalEntryId,
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+31851234567',
       caller: stranger('31851234567'),
+      dialerName: null,
       outcome: {
         kind: 'screened',
         verdict: 'passed',
@@ -118,5 +176,27 @@ describe('a group, edited on its own screen', () => {
         member.kind === 'number-mask' ? member.mask.source : member.kind
       )
     ).toEqual(['+31851234567']);
+  });
+});
+
+describe('the SMS reply among a group’s further settings', () => {
+  async function openFurtherSettings(smsReply: boolean) {
+    const phone = fakePhone({ book: bookOf([SPAM]), smsReply });
+    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
+    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
+    await fireEvent.press(screen.getByTestId('group-advanced'));
+  }
+
+  it('is offered where the app can send an SMS', async () => {
+    await openFurtherSettings(true);
+
+    expect(screen.getByTestId('auto-reply')).toBeOnTheScreen();
+  });
+
+  it('is not offered in the edition built without SMS', async () => {
+    await openFurtherSettings(false);
+
+    expect(screen.getByTestId('repeat-window-5')).toBeOnTheScreen();
+    expect(screen.queryByTestId('auto-reply')).not.toBeOnTheScreen();
   });
 });

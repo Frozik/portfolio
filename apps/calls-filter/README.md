@@ -12,16 +12,18 @@ JavaScript is not running.
 
 ## Install
 
-1. On the phone, download the newest APK:
-   <https://github.com/Frozik/portfolio/releases/download/calls-filter-latest/calls-filter.apk>.
-   Every version with its `SHA256SUMS` is on the
-   [release page](https://github.com/Frozik/portfolio/releases/tag/calls-filter-latest); earlier
-   versions are attached to the monorepo's [releases](https://github.com/Frozik/portfolio/releases)
-   as `calls-filter-<version>.apk`.
-2. Open it; Android asks to allow installs from the browser once — allow it for this install.
-3. Optional but recommended: check the signature before opening it ([Signing](#signing)).
-4. A later release installs over the earlier one, keeping the groups: the same signing key and
-   a higher `versionCode`.
+1. On the phone, open the newest APKs with their `SHA256SUMS`:
+   <https://github.com/Frozik/portfolio/releases/tag/calls-filter-latest>. Earlier versions are
+   attached to the monorepo's [releases](https://github.com/Frozik/portfolio/releases).
+2. Download one of the two editions:
+   - `calls-filter.apk` — everything, the SMS reply included;
+   - `calls-filter-no-sms.apk` — without the SMS reply, and without the SMS permission it needs.
+     In some countries Play Protect blocks a downloaded app that asks for SMS («App blocked to
+     protect your device»); this edition installs there.
+3. Open it; Android asks to allow installs from the browser once — allow it for this install.
+4. Optional but recommended: check the signature before opening it ([Signing](#signing)).
+5. A later release installs over the earlier one, keeping the groups: the same signing key and
+   a higher `versionCode`. Both editions are one app, so either installs over the other.
 
 ## Groups
 
@@ -53,7 +55,8 @@ service fails open: the more lenient group decides.
 
 ## Policies
 
-- **Let through** or **Block**.
+- **Let through** or **Block**. What a group does now is written under its name; a tap on it
+  changes the action there, for good or for a while.
 - **A repeat call rings** — a switch over a blocking rule: a second call from the same number
   within the group's window (5 minutes by default) rings. Each group has one, and one covers
   the whole filter; either is off, on for good, or on for 1, 4 or 8 hours, a day, a week or
@@ -109,6 +112,11 @@ international service — «Russia · Kirov Oblast · Beeline», «United States
 catalogue is a few megabytes of JSON, read right after the app starts rather than before it, so
 the first screen never waits for it; until then the line is simply not there.
 
+A stranger also shows the name the phone's dialer found for the number by its own caller ID
+(Google's Phone: a business, a delivery service), «Bakkerij de Graaf · by the Phone app». The
+dialer writes it into the phone's call history after the call, so it is shown and never matched:
+the service has decided long before the dialer looks the number up.
+
 ## Check a number
 
 The Calls tab's title holds «Check a number»: a number (or «hidden») and, if the operator sends
@@ -132,7 +140,7 @@ window shows as the repeat it would be.
   the most used groups; a tap moves the caller (the setting is in Settings).
 - **SMS reply** — a group may answer a turned-away **contact** with its text («In a meeting,
   will call back»), never a stranger (it would confirm the number is alive), never while
-  roaming, at most once per number every three hours.
+  roaming, at most once per number every three hours. The edition without SMS has no reply.
 
 ## Sync across phones
 
@@ -266,5 +274,7 @@ as on CI.
 changed Calls Filter since the last APK, it builds for phones (arm64-v8a, armeabi-v7a) without
 secrets, signs in the `calls-filter-release` environment (checking the certificate above),
 attests the build and attaches `calls-filter-<version>.apk` with `SHA256SUMS` to that release.
-The `calls-filter-latest` release always holds the newest APK, so its download link never goes
-stale.
+It builds two editions of one source, in parallel: `CALLS_FILTER_SMS=0` makes
+`calls-filter-no-sms-<version>.apk`, which declares no `SEND_SMS` and neither offers the SMS
+reply nor asks for it. Same package, same key: either installs over the other. The
+`calls-filter-latest` release always holds the newest pair, so its links never go stale.

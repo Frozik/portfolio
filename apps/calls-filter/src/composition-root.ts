@@ -94,6 +94,7 @@ function wireApp(): Promise<CallsFilterApp> {
           : Platform.OS,
       facts: {},
     }),
+    smsReply: Constants.expoConfig?.extra?.smsReply !== false,
   });
   // A no-op outside the APK built for the e2e tests: the native side keeps the channel shut.
   return started.then(app => {

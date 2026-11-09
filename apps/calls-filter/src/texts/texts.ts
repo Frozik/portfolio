@@ -94,6 +94,7 @@ export interface ITexts {
     readonly whatToDo: string;
     readonly always: string;
     readonly inWindows: string;
+    readonly whatItDoes: string;
     readonly otherwise: string;
     readonly addSchedule: string;
     readonly schedule: string;
@@ -126,6 +127,7 @@ export interface ITexts {
   };
   readonly call: {
     readonly fromOperator: string;
+    readonly fromDialer: string;
     readonly hidden: string;
     readonly move: string;
     readonly moveTitle: string;

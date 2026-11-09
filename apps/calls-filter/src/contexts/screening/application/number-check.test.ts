@@ -84,6 +84,7 @@ describe('checking a number: the answer the service would give now', () => {
       at: NOW.subtract({ minutes: 1 }),
       rawNumber: '+31851234567',
       caller: stranger('31851234567'),
+      dialerName: null,
       outcome: {
         kind: 'screened',
         verdict: 'awaiting-repeat',

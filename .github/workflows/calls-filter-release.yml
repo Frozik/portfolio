@@ -60,14 +60,27 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Two editions of one source: `no-sms` declares no SMS permission, since Play Protect blocks a
+  # downloaded APK that asks for one in some countries. One package and one key, so either
+  # installs over the other and keeps the groups.
   build:
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+    strategy:
+      matrix:
+        include:
+          - edition: sms
+            apk: calls-filter
+            sms: '1'
+          - edition: no-sms
+            apk: calls-filter-no-sms
+            sms: '0'
     env:
       VERSION: ${{ needs.gate.outputs.version }}
+      CALLS_FILTER_SMS: ${{ matrix.sms }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -91,9 +104,11 @@ jobs:
           # Not `moon run`: the task is `runInCI: false`, and moon honours that here too.
           pnpm --dir apps/calls-filter run build-apk -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
           mkdir -p unsigned sbom
-          cp apps/calls-filter/android/app/build/outputs/apk/release/app-release.apk unsigned/calls-filter.apk
+          cp apps/calls-filter/android/app/build/outputs/apk/release/app-release.apk "unsigned/${{ matrix.apk }}.apk"
           ccache --show-stats
-      - uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+      # Both editions ship the same dependencies: one SBOM describes them.
+      - if: matrix.edition == 'sms'
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           path: apps/calls-filter
           format: cyclonedx-json
@@ -101,9 +116,10 @@ jobs:
           upload-artifact: false
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unsigned-apk
+          name: unsigned-apk-${{ matrix.edition }}
           path: unsigned
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      - if: matrix.edition == 'sms'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: sbom
           path: sbom
@@ -121,9 +137,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: unsigned-apk
+          pattern: unsigned-apk-*
+          merge-multiple: true
           path: unsigned
-      - name: Align, sign and verify the APK
+      - name: Align, sign and verify the APKs
         env:
           KEYSTORE_BASE64: ${{ secrets.CALLS_FILTER_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.CALLS_FILTER_KEYSTORE_PASSWORD }}
@@ -133,16 +150,18 @@ jobs:
           tools="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -1)"
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           mkdir -p signed
-          "$tools/zipalign" -p -f 4 unsigned/calls-filter.apk "$RUNNER_TEMP/aligned.apk"
-          "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" \
-            --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
-            --out "signed/calls-filter-$VERSION.apk" "$RUNNER_TEMP/aligned.apk"
+          for apk in calls-filter calls-filter-no-sms; do
+            "$tools/zipalign" -p -f 4 "unsigned/$apk.apk" "$RUNNER_TEMP/aligned.apk"
+            "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" \
+              --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+              --out "signed/$apk-$VERSION.apk" "$RUNNER_TEMP/aligned.apk"
+            "$tools/apksigner" verify --print-certs "signed/$apk-$VERSION.apk" \
+              | tee "$RUNNER_TEMP/certs.txt"
+            # Every signer, whatever apksigner calls it ("Signer #1", "V3.0 Signer"), holds the published certificate.
+            digests="$(sed -n 's/^.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | sort -u)"
+            [ "$digests" = "$CERTIFICATE_SHA256" ]
+          done
           rm -f "$RUNNER_TEMP/release.keystore"
-          "$tools/apksigner" verify --print-certs "signed/calls-filter-$VERSION.apk" \
-            | tee "$RUNNER_TEMP/certs.txt"
-          # Every signer, whatever apksigner calls it ("Signer #1", "V3.0 Signer"), holds the published certificate.
-          digests="$(sed -n 's/^.*certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | sort -u)"
-          [ "$digests" = "$CERTIFICATE_SHA256" ]
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: signed-apk
@@ -187,8 +206,8 @@ jobs:
           subject-checksums: release/SHA256SUMS
           sbom-path: release/calls-filter.cdx.json
 
-  # Into the Release semantic-release created, and `calls-filter-latest`, whose one asset
-  # always is the newest APK: a download link that never goes stale.
+  # Into the Release semantic-release created, and `calls-filter-latest`, whose assets always are
+  # the newest APKs: download links that never go stale.
   publish:
     needs: [gate, attest]
     runs-on: ubuntu-24.04
@@ -206,10 +225,13 @@ jobs:
           path: release
       - name: Attach the APK to the version's Release
         run: gh release upload "$VERSION" release/* --clobber
-      - name: Point calls-filter-latest at this APK
+      - name: Point calls-filter-latest at these APKs
         run: |
-          cp "release/calls-filter-$VERSION.apk" release/calls-filter.apk
+          mkdir latest
+          cp "release/calls-filter-$VERSION.apk" latest/calls-filter.apk
+          cp "release/calls-filter-no-sms-$VERSION.apk" latest/calls-filter-no-sms.apk
+          (cd latest && sha256sum -- * > SHA256SUMS)
           gh release delete calls-filter-latest --cleanup-tag --yes 2>/dev/null || true
-          gh release create calls-filter-latest release/calls-filter.apk release/SHA256SUMS \
+          gh release create calls-filter-latest latest/* \
             --target "$SHA" --title "Calls Filter (latest: $VERSION)" --latest=false \
-            --notes "The newest Calls Filter APK, $VERSION. Check it as apps/calls-filter/README.md shows."
+            --notes "The newest Calls Filter APKs, $VERSION: calls-filter.apk with the SMS reply, calls-filter-no-sms.apk without SMS (for phones where Play Protect blocks an app that asks for SMS). Check them as apps/calls-filter/README.md shows."

@@ -81,6 +81,15 @@ const CallRow = observer(function CallRow({
               {name}
             </Text>
           ))}
+          {entry.dialerName === null ? null : (
+            <Text
+              testID={`call-dialer-name-${entry.id}`}
+              style={[styles.subtitle, { color: palette.fgDim }]}
+              numberOfLines={1}
+            >
+              {`${entry.dialerName} · ${texts.call.fromDialer}`}
+            </Text>
+          )}
           {origin === null ? null : (
             <Text
               testID={`call-origin-${entry.id}`}

@@ -90,6 +90,26 @@ test('a build below the floor says it must update; one past it is offered the ne
   await expect(page.getByTestId('update-notice')).toHaveAttribute('data-state', 'available');
 });
 
+for (const [layout, viewport] of [
+  ['a phone', { width: 390, height: 844 }],
+  ['a wide screen', { width: 1280, height: 800 }],
+] as const) {
+  test(`an offered release never moves the ways to get a vault on ${layout}: it arrives after them`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    const next = await nextMajor(page);
+    const before = await page.getByTestId('create-vault').boundingBox();
+
+    publishVersions({ latest: next, minimum: 'v0.0.1' });
+    await page.reload();
+    await expect(page.getByTestId('update-notice')).toHaveAttribute('data-state', 'available');
+
+    expect(await page.getByTestId('create-vault').boundingBox()).toEqual(before);
+  });
+}
+
 test('without a readable floor nothing is blocked', async ({ page }) => {
   writeFileSync(VERSION_MANIFEST, '<html>not a manifest</html>');
   await page.goto('/');

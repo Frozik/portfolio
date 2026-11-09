@@ -40,20 +40,26 @@ export const AdvancedPanel = observer(function AdvancedPanel({
           />
         ))}
       </Wrap>
-      <TextField
-        testID="auto-reply"
-        label={texts.group.autoReply}
-        value={reply}
-        onChange={setReply}
-        placeholder={texts.group.autoReply}
-      />
-      <Hint text={texts.group.autoReplyHint} />
-      <Button
-        testID="auto-reply-save"
-        variant="secondary"
-        label={texts.common.save}
-        onPress={() => change({ autoReply: reply.trim() === '' ? null : { text: reply.trim() } })}
-      />
+      {app.smsReply ? (
+        <>
+          <TextField
+            testID="auto-reply"
+            label={texts.group.autoReply}
+            value={reply}
+            onChange={setReply}
+            placeholder={texts.group.autoReply}
+          />
+          <Hint text={texts.group.autoReplyHint} />
+          <Button
+            testID="auto-reply-save"
+            variant="secondary"
+            label={texts.common.save}
+            onPress={() =>
+              change({ autoReply: reply.trim() === '' ? null : { text: reply.trim() } })
+            }
+          />
+        </>
+      ) : null}
       {group.kind === 'custom' ? (
         <>
           <Button

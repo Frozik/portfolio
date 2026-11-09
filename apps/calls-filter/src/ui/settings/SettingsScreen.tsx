@@ -44,7 +44,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
           subtitle={device.holdsRole ? texts.settings.roleOn : texts.settings.roleOff}
           onPress={device.holdsRole ? undefined : () => void device.requestRole()}
         />
-        {PERMISSIONS.map(permission => (
+        {PERMISSIONS.filter(permission => permission !== 'sms' || app.smsReply).map(permission => (
           <Row
             key={permission}
             testID={`settings-permission-${permission}`}

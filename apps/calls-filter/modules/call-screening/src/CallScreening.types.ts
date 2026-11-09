@@ -27,6 +27,8 @@ interface INativeSystemCall {
   readonly kind: 'incoming' | 'missed' | 'rejected' | 'blocked';
   readonly contactName: string | null;
   readonly contactId: string | null;
+  /** The name the dialer wrote into the call log: the contact's, or one its caller ID found. */
+  readonly cachedName: string | null;
 }
 
 /** A zone as Android names it in the app's language. */

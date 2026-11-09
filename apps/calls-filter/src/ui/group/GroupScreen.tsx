@@ -12,6 +12,7 @@ import { useApp } from '../AppContext';
 import { CallList } from '../calls/CallList';
 import { groupName } from '../group-name';
 import { statusText } from '../groups/group-status';
+import { TemporarySheet } from '../groups/TemporarySheet';
 import { BackButton } from '../kit/BackButton';
 import { Chip } from '../kit/Chip';
 import { Dot } from '../kit/Dot';
@@ -26,6 +27,7 @@ import { AdvancedPanel } from './AdvancedPanel';
 import { ColorSheet } from './ColorSheet';
 import { MembersPanel } from './MembersPanel';
 import { PolicyPanel } from './PolicyPanel';
+import { PolicySheet } from './PolicySheet';
 import { RenameSheet } from './RenameSheet';
 
 type TTab = 'calls' | 'rules';
@@ -40,6 +42,7 @@ export const GroupScreen = observer(function GroupScreen() {
   const [advanced, setAdvanced] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [coloring, setColoring] = useState(false);
+  const [policySheet, setPolicySheet] = useState<'policy' | 'for-a-while' | null>(null);
   const group = findGroup(app.books.book, id as TGroupId);
   if (group === null) {
     return null;
@@ -86,7 +89,23 @@ export const GroupScreen = observer(function GroupScreen() {
       {renaming && group.kind === 'custom' ? (
         <RenameSheet group={group} onClose={() => setRenaming(false)} />
       ) : null}
-      <Hint text={statusText(texts, app.statusOf(group), app.clock.timeZone(), today)} />
+      <Wrap>
+        <Chip
+          testID="group-status"
+          label={statusText(texts, app.statusOf(group), app.clock.timeZone(), today)}
+          onPress={() => setPolicySheet('policy')}
+        />
+      </Wrap>
+      {policySheet === 'policy' ? (
+        <PolicySheet
+          group={group}
+          onClose={() => setPolicySheet(null)}
+          onForAWhile={() => setPolicySheet('for-a-while')}
+        />
+      ) : null}
+      {policySheet === 'for-a-while' ? (
+        <TemporarySheet group={group} onClose={() => setPolicySheet(null)} />
+      ) : null}
       <Wrap>
         <Chip
           testID="group-tab-calls"

@@ -54,6 +54,8 @@ export class CallsFilterApp {
   readonly sync: SyncModel;
   readonly places: PlacesModel;
   readonly numberingCatalogue: NumberingCatalogue;
+  /** This build may send an SMS: the edition without SMS neither offers the reply nor asks for it. */
+  readonly smsReply: boolean;
   contactCallers: readonly ICaller[] = [];
   private readonly stops: (() => void)[] = [];
 
@@ -97,7 +99,8 @@ export class CallsFilterApp {
           group =>
             group.policy.scheduled?.calendars.some(rule => rule.source.kind === 'device') ?? false
         ),
-        usesAutoReply: this.books.book.groups.some(group => group.autoReply !== null),
+        usesAutoReply:
+          ports.smsReply && this.books.book.groups.some(group => group.autoReply !== null),
         usesPlaces: this.placeRules.length > 0,
       }),
       ports.openSettings
@@ -112,6 +115,7 @@ export class CallsFilterApp {
       () => this.placeRules
     );
     this.numberingCatalogue = new NumberingCatalogue(ports.numberingCatalogue, ports.diagnostics);
+    this.smsReply = ports.smsReply;
     this.sync = new SyncModel(
       {
         cloudOf: ports.cloudOf,

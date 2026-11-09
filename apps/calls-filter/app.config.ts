@@ -4,6 +4,9 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const ANDROID_PACKAGE = 'io.github.frozik.callsfilter';
 /** A development build installs below every release. */
 const DEVELOPMENT_VERSION_CODE = 1;
+/** `CALLS_FILTER_SMS=0` builds the edition without SMS: Play Protect blocks a downloaded APK that asks for SMS in some countries. */
+const SMS_REPLY = process.env.CALLS_FILTER_SMS !== '0';
+const SEND_SMS = 'android.permission.SEND_SMS';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -27,13 +30,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.READ_CALL_LOG',
       'android.permission.READ_PHONE_STATE',
       'android.permission.POST_NOTIFICATIONS',
-      'android.permission.SEND_SMS',
+      ...(SMS_REPLY ? [SEND_SMS] : []),
       'android.permission.ACCESS_FINE_LOCATION',
       'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.ACCESS_BACKGROUND_LOCATION',
     ],
+    blockedPermissions: SMS_REPLY ? [] : [SEND_SMS],
   },
   updates: { enabled: false },
+  extra: { ...config.extra, smsReply: SMS_REPLY },
   plugins: [
     'expo-router',
     ['expo-localization', { supportedLocales: ['en', 'ru'] }],

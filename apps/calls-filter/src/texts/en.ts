@@ -114,6 +114,7 @@ export const EN: ITexts = {
     whatToDo: 'What to do',
     always: 'Always',
     inWindows: 'In the windows',
+    whatItDoes: 'What the group does',
     otherwise: 'The rest of the time',
     addSchedule: '+ Schedule',
     schedule: 'Schedule',
@@ -160,6 +161,7 @@ export const EN: ITexts = {
   },
   call: {
     fromOperator: 'from operator',
+    fromDialer: 'by the Phone app',
     hidden: 'Hidden number',
     move: 'To group…',
     moveTitle: 'Move to a group',

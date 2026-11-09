@@ -28,5 +28,10 @@ export interface IJournalEntry {
   readonly at: Temporal.Instant;
   readonly rawNumber: string | null;
   readonly caller: ICaller;
+  /**
+   * The name the phone's dialer put on the call by its own caller ID, as the phone's history
+   * keeps it. Shown, never matched: the service decides before the dialer has looked it up.
+   */
+  readonly dialerName: string | null;
   readonly outcome: TJournalOutcome;
 }

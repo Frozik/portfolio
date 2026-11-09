@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePalette } from '../theme/AppTheme';
@@ -42,8 +42,9 @@ export function Screen({
     </>
   );
   return (
-    <View
+    <KeyboardAvoidingView
       testID={testID}
+      behavior="padding"
       style={[styles.screen, { backgroundColor: palette.bg, paddingTop: insets.top }]}
     >
       {header === undefined ? null : (
@@ -72,7 +73,7 @@ export function Screen({
           {footer}
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePalette } from '../theme/AppTheme';
@@ -30,21 +38,26 @@ export function Sheet({
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <Pressable
-        style={[styles.scrim, { backgroundColor: palette.scrim }]}
-        onPress={onClose}
-        accessibilityLabel={title}
-      />
-      <View
-        testID={testID}
-        style={[
-          styles.sheet,
-          { backgroundColor: palette.bgElevated, paddingBottom: insets.bottom + GUTTER },
-        ]}
-      >
-        <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
-        <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
-      </View>
+      {/* Edge to edge, Android no longer shrinks the window for the keyboard: the sheet rises itself. */}
+      <KeyboardAvoidingView behavior="padding" style={styles.fill}>
+        <Pressable
+          style={[styles.scrim, { backgroundColor: palette.scrim }]}
+          onPress={onClose}
+          accessibilityLabel={title}
+        />
+        <View
+          testID={testID}
+          style={[
+            styles.sheet,
+            { backgroundColor: palette.bgElevated, paddingBottom: insets.bottom + GUTTER },
+          ]}
+        >
+          <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+            {children}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -52,6 +65,7 @@ export function Sheet({
 const SHEET_MAX_HEIGHT = '85%';
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   scrim: { flex: 1 },
   sheet: {
     maxHeight: SHEET_MAX_HEIGHT,

@@ -114,9 +114,9 @@ const WideStart = observer(
         <p className="text-[12px] text-fg-faint">
           <Version version={version} />
         </p>
+        <UpdateNotice watch={updates} />
       </section>
       <section className="flex flex-col justify-center gap-6 py-16" aria-labelledby="device-vaults">
-        <UpdateNotice watch={updates} />
         <h2 id="device-vaults" className="text-[20px] font-medium text-fg">
           {vaultT.deviceVaults.title}
         </h2>
@@ -168,7 +168,6 @@ export const StartScreen = observer(
           }
         >
           <h1 className="text-[24px] font-semibold text-fg">{PRODUCT_NAME}</h1>
-          <UpdateNotice watch={updates} />
           <section className="flex flex-col gap-3" aria-labelledby="device-vaults">
             <h2 id="device-vaults" className="text-[17px] font-medium text-fg">
               {vaultT.deviceVaults.title}
@@ -181,6 +180,7 @@ export const StartScreen = observer(
           <div className="flex flex-col gap-3">
             <Ways size="lg" opening={app.fileOpening} />
           </div>
+          <UpdateNotice watch={updates} />
           {!isNil(app.fileOpening) && <OpeningFailure opening={app.fileOpening} />}
         </ScreenFrame>
       </Droppable>

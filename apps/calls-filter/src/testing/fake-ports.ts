@@ -44,6 +44,7 @@ export function fakePhone({
   contacts = [],
   icsFeeds = {},
   numberingCatalogue = [],
+  smsReply = true,
 }: {
   readonly book?: GroupBook | null;
   readonly journal?: readonly IJournalEntry[];
@@ -52,6 +53,8 @@ export function fakePhone({
   readonly icsFeeds?: Readonly<Record<string, string>>;
   /** The masks the phone's numbering catalogue holds; none by default. */
   readonly numberingCatalogue?: readonly INumberingMask[];
+  /** False for the edition built without SMS. */
+  readonly smsReply?: boolean;
 } = {}): IFakePhone {
   let storedBook = book;
   let preferences: IDevicePreferences = DEFAULT_PREFERENCES;
@@ -160,6 +163,7 @@ export function fakePhone({
       device: 'emulator',
       facts: {},
     }),
+    smsReply,
   };
   return {
     ports,

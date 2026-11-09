@@ -9,13 +9,15 @@ function entry(
   id: string,
   number: string,
   at: string,
-  outcome: IJournalEntry['outcome']
+  outcome: IJournalEntry['outcome'],
+  dialerName: string | null = null
 ): IJournalEntry {
   return {
     id: id as TJournalEntryId,
     at: Temporal.Instant.from(at),
     rawNumber: `+${number}`,
     caller: stranger(number),
+    dialerName,
     outcome,
   };
 }
@@ -53,5 +55,23 @@ describe('the journal with the phone history', () => {
       ]
     );
     expect(merged.map(item => item.id)).toEqual(['screened', 'other', 'old']);
+  });
+
+  it('keeps the name the dialer found for a screened call, which only the phone’s history has', () => {
+    const merged = mergeJournal(
+      [entry('screened', '31201234567', '2026-11-08T10:00:00Z', SCREENED)],
+      [
+        entry(
+          'history',
+          '31201234567',
+          '2026-11-08T10:00:40Z',
+          { kind: 'history', type: 'blocked' },
+          'Bakkerij de Graaf'
+        ),
+      ]
+    );
+    expect(merged.map(item => [item.id, item.dialerName])).toEqual([
+      ['screened', 'Bakkerij de Graaf'],
+    ]);
   });
 });

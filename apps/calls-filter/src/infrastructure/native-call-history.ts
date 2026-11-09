@@ -43,6 +43,7 @@ export function nativeCallHistory(
                     name: normalizeName(call.contactName),
                   },
           },
+          dialerName: call.contactId === null ? call.cachedName : null,
           outcome: { kind: 'history', type: call.kind },
         };
       });

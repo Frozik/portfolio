@@ -59,4 +59,6 @@ export interface IAppPorts {
   readonly clock: IClock;
   readonly newId: TNewId;
   readonly exportHeader: () => IExportHeader;
+  /** This build may send an SMS: the edition without SMS declares no such permission. */
+  readonly smsReply: boolean;
 }
