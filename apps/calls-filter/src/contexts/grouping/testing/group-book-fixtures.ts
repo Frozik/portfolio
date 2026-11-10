@@ -14,6 +14,8 @@ import { groupBook } from '../domain/group-book';
 import type { IMatchingEnvironment } from '../domain/matching-environment';
 import type {
   IContactMember,
+  INameMaskMember,
+  INumberMaskMember,
   TMember,
   TMemberId,
   TNameField,
@@ -34,7 +36,7 @@ export function newMemberId(): TMemberId {
   return `member-${sequence}` as TMemberId;
 }
 
-export function numberMask(source: string): TMember {
+export function numberMask(source: string): INumberMaskMember {
   const mask = parseNumberMask(source);
   assert(mask.ok, `${source} parses`);
   return {
@@ -47,7 +49,7 @@ export function numberMask(source: string): TMember {
   };
 }
 
-export function nameMask(source: string, field: TNameField = 'any'): TMember {
+export function nameMask(source: string, field: TNameField = 'any'): INameMaskMember {
   const mask = parseNameMask(source);
   assert(mask.ok, `${source} parses`);
   return {
@@ -91,7 +93,7 @@ export function custom(
     exclude: [],
     excludeMyContacts: true,
     policy: ALWAYS_BLOCK,
-    temporary: null,
+    enabled: true,
     autoReply: null,
     createdAt: NOW,
     updatedAt: NOW,
@@ -112,7 +114,7 @@ export function bookOf(
     color: 'green',
     exclude: myContactsExclude,
     policy: ALWAYS_PASS,
-    temporary: null,
+    enabled: true,
     autoReply: null,
     createdAt: NOW,
     updatedAt: NOW,
@@ -122,7 +124,7 @@ export function bookOf(
     id: STRANGERS_ID,
     color: 'slate',
     policy: ALWAYS_PASS,
-    temporary: null,
+    enabled: true,
     autoReply: null,
     createdAt: NOW,
     updatedAt: NOW,

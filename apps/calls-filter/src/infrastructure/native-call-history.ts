@@ -33,7 +33,7 @@ export function nativeCallHistory(
           caller: {
             number,
             traits: number === null ? null : numbering.traits(number),
-            networkName: null,
+            networkName: call.networkName === null ? null : normalizeName(call.networkName),
             contact:
               call.contactId === null || call.contactName === null
                 ? null
@@ -43,7 +43,10 @@ export function nativeCallHistory(
                     name: normalizeName(call.contactName),
                   },
           },
-          dialerName: call.contactId === null ? call.cachedName : null,
+          dialerName:
+            call.contactId === null && call.cachedName !== call.networkName
+              ? call.cachedName
+              : null,
           answered: call.kind === 'incoming' ? true : call.kind === 'missed' ? false : null,
           outcome: { kind: 'history', type: call.kind },
         };

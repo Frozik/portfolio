@@ -5,9 +5,9 @@ import { z } from 'zod';
 type TMigration = (data: unknown) => unknown;
 
 /**
- * How a kind of stored document grew. Each step takes the document one version up, from the
- * version it is keyed by; 0 is the document as written before documents carried a version.
- * A change of shape bumps `version` and adds the step that moves the old shape to the new.
+ * How a kind of stored document grew, from version 1. Each step takes the document one version
+ * up, from the version it is keyed by: a change of shape bumps `version` and adds the step that
+ * moves the old shape to the new.
  */
 export interface IDocumentHistory {
   readonly version: number;
@@ -21,7 +21,7 @@ export type TOpenedDocument =
   | { readonly kind: 'newer'; readonly version: number }
   | {
       readonly kind: 'unreadable';
-      readonly reason: 'not-json' | 'no-migration' | 'migration-failed';
+      readonly reason: 'not-json' | 'not-versioned' | 'no-migration' | 'migration-failed';
     };
 
 const sealed = z.object({ version: z.number().int().min(1), data: z.unknown() });
@@ -44,8 +44,10 @@ export function openDocument(text: string, history: IDocumentHistory): TOpenedDo
     return { kind: 'unreadable', reason: 'not-json' };
   }
   const envelope = sealed.safeParse(raw);
-  const from = envelope.success ? envelope.data.version : 0;
-  const data = envelope.success ? envelope.data.data : raw;
+  if (!envelope.success) {
+    return { kind: 'unreadable', reason: 'not-versioned' };
+  }
+  const { version: from, data } = envelope.data;
   if (from > history.version) {
     return { kind: 'newer', version: from };
   }
@@ -69,5 +71,5 @@ export function openDocument(text: string, history: IDocumentHistory): TOpenedDo
 
 /** The versions a history has no step from: each one a document of that version cannot pass. */
 export function gapsIn(history: IDocumentHistory): readonly number[] {
-  return range(0, history.version).filter(version => history.migrations[version] === undefined);
+  return range(1, history.version).filter(version => history.migrations[version] === undefined);
 }

@@ -10,12 +10,6 @@
   <string name="calls_filter_where_to">Куда этот номер?</string>
   <string name="calls_filter_where_to_channel">После звонка</string>
   <string name="calls_filter_where_to_other">Другая…</string>
-  <string name="calls_filter_temporary_channel">Временные правила</string>
-  <string name="calls_filter_temporary_pass">%1$s: ✅ пропускать</string>
-  <string name="calls_filter_temporary_block">%1$s: ⛔ блокировать</string>
-  <string name="calls_filter_temporary_until">до %1$s</string>
-  <string name="calls_filter_temporary_first_pass">до первого звонка, который пройдёт</string>
-  <string name="calls_filter_temporary_end_of_event">до конца встречи, %1$s</string>
   <string name="calls_filter_take_back">Вернуть</string>
   <string name="calls_filter_group_my_contacts">Мои контакты</string>
   <string name="calls_filter_group_strangers">Незнакомые</string>

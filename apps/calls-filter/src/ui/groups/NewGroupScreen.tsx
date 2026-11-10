@@ -53,8 +53,8 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
         name: name.trim(),
         color,
         policy: {
-          otherwise: action,
-          scheduled: null,
+          action,
+          conditions: null,
           repeatPass: REPEAT_OFF,
           repeatWindowMinutes: DEFAULT_REPEAT_WINDOW_MINUTES,
         },

@@ -1,13 +1,15 @@
 import { Temporal } from 'temporal-polyfill';
 
 import type { TCalendarSource } from '../../calendars/domain/calendar-source';
-import { actionNow, temporaryActionOf } from './action-now';
+import { activityNow, isActive } from './activity-now';
+import { conditionWindows } from './condition-windows';
 import { floatingMinute } from './floating-time';
-import type { ICalendarRule, IPolicy, IScheduledAction } from './policy';
+import type { IPlaceRule, TPlaceId, TPlaceRadius } from './place-rule';
+import type { ICalendarRule, IPolicy, IConditions } from './policy';
+import { ALWAYS_BLOCK } from './policy';
 import { REPEAT_OFF } from './repeat-pass';
 import type { ISchedule } from './schedule';
 import { scheduleWindows } from './schedule-windows';
-import { scheduledWindows } from './scheduled-windows';
 import type { TWindowSet } from './window-set';
 import { normalizeWindows } from './window-set';
 
@@ -48,14 +50,14 @@ const MEETINGS: ICalendarRule = {
   },
 };
 
-const WORK_SCHEDULED: IScheduledAction = {
+const WORK_CONDITIONS: IConditions = {
   schedule: WEEKDAYS,
   calendars: [HOLIDAYS, MEETINGS],
   places: [],
 };
 const WORK: IPolicy = {
-  otherwise: 'block',
-  scheduled: WORK_SCHEDULED,
+  action: 'pass',
+  conditions: WORK_CONDITIONS,
   repeatPass: REPEAT_OFF,
   repeatWindowMinutes: 5,
 };
@@ -86,72 +88,74 @@ const EVENTS: Readonly<Record<string, TWindowSet>> = {
 
 function workWindows(): TWindowSet {
   const base = scheduleWindows(WEEKDAYS, weekdaysOfWeek());
-  return scheduledWindows(WORK_SCHEDULED, base, rule =>
+  return conditionWindows(WORK_CONDITIONS, base, rule =>
     rule.source.kind === 'ics' ? (EVENTS[rule.source.id] ?? []) : []
   );
 }
 
-function workAt(text: string) {
-  return actionNow({ policy: WORK, temporary: null }, local(text), workWindows());
+function workAt(text: string, enabled = true) {
+  return activityNow({ policy: WORK, enabled }, local(text), workWindows());
 }
 
-describe('the action of «Work»: pass on weekdays 09–18 except holidays and meetings', () => {
-  it('passes in working hours', () => {
-    expect(workAt('2026-11-03T10:30')).toMatchObject({ action: 'pass', source: 'scheduled' });
+describe('«Work» in force on weekdays 09–18 except holidays and meetings', () => {
+  it('is in force in working hours', () => {
+    expect(workAt('2026-11-03T10:30').activity).toBe('conditions-hold');
   });
 
-  it('blocks during a meeting, and says when the meeting ends', () => {
+  it('is not during a meeting, and says when the meeting ends', () => {
     const during = workAt('2026-11-03T14:30');
-    expect(during).toMatchObject({ action: 'block', source: 'otherwise' });
-    expect(during.changesAt).toEqual({
-      kind: 'local',
-      at: floatingMinute(Temporal.PlainDateTime.from('2026-11-03T15:00')),
-    });
+    expect(during.activity).toBe('conditions-unmet');
+    expect(during.changesAt).toBe(floatingMinute(Temporal.PlainDateTime.from('2026-11-03T15:00')));
   });
 
-  it('blocks on a holiday all day', () => {
-    expect(workAt('2026-11-04T11:00')).toMatchObject({ action: 'block' });
+  it('is not on a holiday, at the weekend or in the evening', () => {
+    expect(workAt('2026-11-04T11:00').activity).toBe('conditions-unmet');
+    expect(workAt('2026-11-07T11:00').activity).toBe('conditions-unmet');
+    expect(workAt('2026-11-03T18:00').activity).toBe('conditions-unmet');
+    expect(workAt('2026-11-03T17:59').activity).toBe('conditions-hold');
   });
 
-  it('blocks at the weekend and in the evening', () => {
-    expect(workAt('2026-11-07T11:00')).toMatchObject({ action: 'block' });
-    expect(workAt('2026-11-03T18:00')).toMatchObject({ action: 'block' });
-    expect(workAt('2026-11-03T17:59')).toMatchObject({ action: 'pass' });
+  it('ends its working hours early for a meeting that starts inside them', () => {
+    expect(workAt('2026-11-03T10:30').changesAt).toBe(
+      floatingMinute(Temporal.PlainDateTime.from('2026-11-03T14:00'))
+    );
   });
 
-  it('lets a temporary policy win while it lasts', () => {
-    const temporary = {
-      action: 'pass' as const,
-      until: { kind: 'instant' as const, at: Temporal.Instant.from('2026-11-08T00:00:00Z') },
-      setAt: Temporal.Instant.from('2026-11-01T00:00:00Z'),
+  it('names no time while the place is not met: the clock cannot say when the phone gets there', () => {
+    const office: IPlaceRule = {
+      id: 'office' as TPlaceId,
+      name: 'Office',
+      latitude: 52.37,
+      longitude: 4.9,
+      radius: 500 as TPlaceRadius,
+      mode: 'only-at',
     };
+    const atOffice = { ...WORK, conditions: { ...WORK_CONDITIONS, places: [office] } };
     expect(
-      actionNow({ policy: WORK, temporary }, local('2026-11-07T11:00'), workWindows())
-    ).toMatchObject({
-      action: 'pass',
-      source: 'temporary',
-    });
-    expect(
-      actionNow({ policy: WORK, temporary }, local('2026-11-09T11:00'), workWindows()).source
-    ).not.toBe('temporary');
-  });
-
-  it('changes for a while to the opposite of what it does now', () => {
-    expect(temporaryActionOf(workAt('2026-11-03T17:59'))).toBe('block');
-    expect(temporaryActionOf(workAt('2026-11-03T18:00'))).toBe('pass');
-  });
-
-  it('keeps the action of a change for a while that is still running, so a new term only extends it', () => {
-    const temporary = {
-      action: 'block' as const,
-      until: { kind: 'instant' as const, at: Temporal.Instant.from('2026-11-08T00:00:00Z') },
-      setAt: Temporal.Instant.from('2026-11-01T00:00:00Z'),
-    };
-    expect(
-      temporaryActionOf(
-        actionNow({ policy: WORK, temporary }, local('2026-11-07T11:00'), workWindows())
+      activityNow(
+        { policy: atOffice, enabled: true },
+        local('2026-11-03T10:30'),
+        workWindows(),
+        () => false
       )
-    ).toBe('block');
+    ).toEqual({ activity: 'conditions-unmet', changesAt: null });
+  });
+
+  it('is never in force switched off, whatever its conditions say', () => {
+    expect(workAt('2026-11-03T10:30', false)).toEqual({ activity: 'off', changesAt: null });
+  });
+});
+
+describe('a group without conditions', () => {
+  it('is always in force, until switched off', () => {
+    const moment = local('2026-11-03T10:30');
+    expect(activityNow({ policy: ALWAYS_BLOCK, enabled: true }, moment, null).activity).toBe(
+      'always'
+    );
+    expect(isActive('always')).toBe(true);
+    expect(isActive('conditions-hold')).toBe(true);
+    expect(isActive('conditions-unmet')).toBe(false);
+    expect(isActive('off')).toBe(false);
   });
 });
 

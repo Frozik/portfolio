@@ -1,15 +1,15 @@
 import type { Temporal } from 'temporal-polyfill';
 
-import type { IPolicy, ITemporaryPolicy } from '../../policy/domain/policy';
+import type { IPolicy } from '../../policy/domain/policy';
 import type { IConflictFacts } from './conflict-detection';
 import type { TEditOutcome } from './edit-outcome';
 import { guarded, rejected } from './edit-outcome';
 import type { IAutoReply, ICustomGroup, TGroup, TGroupColor, TGroupId } from './group';
 import type { GroupBook } from './group-book';
-import { findGroup, groupBook, myContactsGroup, replaceGroup } from './group-book';
+import { findGroup, findMask, groupBook, myContactsGroup, replaceGroup } from './group-book';
 import type { TGroupChange } from './group-changes';
 import { applyChanges } from './group-changes';
-import type { TMember, TMemberId } from './member';
+import type { INameMaskMember, INumberMaskMember, TMember, TMemberId } from './member';
 import { claims } from './membership';
 import { pickedContactAsCaller } from './picked-contact';
 
@@ -31,7 +31,7 @@ export function createGroup(book: GroupBook, command: INewGroup): TEditOutcome {
     exclude: [],
     excludeMyContacts: true,
     policy: command.policy,
-    temporary: null,
+    enabled: true,
     autoReply: null,
     createdAt: command.now,
     updatedAt: command.now,
@@ -69,6 +69,7 @@ export interface IGroupSettings {
   readonly color?: TGroupColor;
   readonly policy?: IPolicy;
   readonly autoReply?: IAutoReply | null;
+  readonly enabled?: boolean;
 }
 
 export function changeGroup(
@@ -89,23 +90,6 @@ export function changeGroup(
   return {
     kind: 'applied',
     book: replaceGroup(book, changed),
-    events: [{ kind: 'group-changed', group: id }],
-  };
-}
-
-export function setTemporaryPolicy(
-  book: GroupBook,
-  id: TGroupId,
-  temporary: ITemporaryPolicy | null,
-  now: Temporal.Instant
-): TEditOutcome {
-  const group = findGroup(book, id);
-  if (group === null) {
-    return rejected('unknown-group');
-  }
-  return {
-    kind: 'applied',
-    book: replaceGroup(book, { ...group, temporary, updatedAt: now }),
     events: [{ kind: 'group-changed', group: id }],
   };
 }
@@ -195,6 +179,45 @@ export function removeMember(
   }
   const changed = applyChanges(book, changes, now);
   return { kind: 'applied', book: changed.book, events: changed.events };
+}
+
+export interface IMaskRewrite {
+  readonly group: TGroupId;
+  readonly side: 'include' | 'exclude';
+  /** The mask as it is now written; its id names the one it replaces. */
+  readonly member: INumberMaskMember | INameMaskMember;
+  readonly now: Temporal.Instant;
+  readonly facts: IConflictFacts;
+}
+
+/**
+ * A mask of the group written anew where it stands — «IP Isanshin» becoming «IP*»: its note and
+ * the exclusion it may stand for stay, and a conflict the new mask makes stops it as an addition would.
+ */
+export function replaceMask(book: GroupBook, command: IMaskRewrite): TEditOutcome {
+  const group = findGroup(book, command.group);
+  if (group === null || group.kind === 'strangers') {
+    return rejected('unknown-group');
+  }
+  const old = findMask(book, group.id, command.side, command.member.id);
+  if (old === null) {
+    return rejected('unknown-member');
+  }
+  const rewritten: TMember = {
+    ...command.member,
+    note: old.note,
+    excludedFor: old.excludedFor,
+    updatedAt: command.now,
+  };
+  const rewrite = (members: readonly TMember[]) =>
+    members.map(member => (member.id === old.id ? rewritten : member));
+  const after = replaceGroup(
+    book,
+    command.side === 'include' && group.kind === 'custom'
+      ? { ...group, include: rewrite(group.include), updatedAt: command.now }
+      : { ...group, exclude: rewrite(group.exclude), updatedAt: command.now }
+  );
+  return guarded(book, after, [{ kind: 'group-changed', group: group.id }], command.facts);
 }
 
 export function setExcludeMyContacts(

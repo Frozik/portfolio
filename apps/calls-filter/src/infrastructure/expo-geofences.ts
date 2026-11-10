@@ -6,7 +6,7 @@ import type { IDiagnosticsLog } from '../contexts/diagnostics/domain/ports/diagn
 import type { IGeofences } from '../contexts/places/domain/ports/geofences';
 import type { IPlaceRule } from '../contexts/policy/domain/place-rule';
 import { distanceMeters } from '../contexts/policy/domain/place-rule';
-import { positionNow } from './position-now';
+import { freshPosition } from './position-now';
 
 const GEOFENCE_TASK = 'calls-filter-places';
 
@@ -30,17 +30,16 @@ TaskManager.defineTask<IGeofenceEvent>(GEOFENCE_TASK, ({ data, error }) => {
   return Promise.resolve();
 });
 
-const FRESH_POSITION_MS = 120_000;
-
 /**
  * Where each place stands right now. A geofence crossing can lag minutes behind the phone, so the
- * app measures again whenever it starts or comes to the front.
+ * app measures again whenever it starts or comes to the front — from a new fix: a position the
+ * phone kept from before the crossing would only repeat the lag.
  */
 async function settleFromHere(places: readonly IPlaceRule[], diagnostics: IDiagnosticsLog) {
   if (places.length === 0 || !(await Location.getForegroundPermissionsAsync()).granted) {
     return;
   }
-  const here = await positionNow(Location.Accuracy.Balanced, FRESH_POSITION_MS);
+  const here = await freshPosition(Location.Accuracy.Balanced);
   if (here === null) {
     diagnostics.log('warn', 'background', 'places-position-unknown');
     return;

@@ -5,17 +5,16 @@ import io.github.frozik.callsfilter.screening.application.PendingSummary
 import io.github.frozik.callsfilter.screening.application.RejectionSummaries
 import io.github.frozik.callsfilter.screening.application.SummaryStore
 import io.github.frozik.callsfilter.screening.domain.Action
-import io.github.frozik.callsfilter.screening.domain.ActionNow
-import io.github.frozik.callsfilter.screening.domain.ActionSource
+import io.github.frozik.callsfilter.screening.domain.Activity
 import io.github.frozik.callsfilter.screening.domain.CalendarMode
 import io.github.frozik.callsfilter.screening.domain.CalendarRule
 import io.github.frozik.callsfilter.screening.domain.CalendarSource
+import io.github.frozik.callsfilter.screening.domain.Conditions
 import io.github.frozik.callsfilter.screening.domain.Decision
 import io.github.frozik.callsfilter.screening.domain.EventFilter
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupKind
 import io.github.frozik.callsfilter.screening.domain.Moment
-import io.github.frozik.callsfilter.screening.domain.Scheduled
 import io.github.frozik.callsfilter.screening.domain.Verdict
 import io.github.frozik.callsfilter.screening.domain.Window
 import org.junit.Assert.assertEquals
@@ -37,14 +36,14 @@ private fun group(vararg calendars: CalendarRule) = Group(
   emptyList(),
   true,
   Action.BLOCK,
-  Scheduled(Action.PASS, false, emptyList(), calendars.toList()),
+  Conditions(false, emptyList(), calendars.toList()),
   5,
-  null,
+  false,
   0L,
   "",
 )
 
-private fun rejected(group: Group) = Decision(group, emptyList(), ActionNow(Action.BLOCK, ActionSource.OTHERWISE), Verdict.REJECTED)
+private fun rejected(group: Group) = Decision(group, emptyList(), Activity.CONDITIONS_HOLD, Action.BLOCK, Verdict.REJECTED)
 
 private class SummaryWorld(private val meeting: Meeting?) {
   var minutes = 0L

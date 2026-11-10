@@ -9,7 +9,7 @@ export interface IWindow {
 /** Sorted, disjoint, non-empty windows: every operation here returns that shape. */
 export type TWindowSet = readonly IWindow[];
 
-/** A scheduled action without a schedule: always on, until its calendars narrow it. */
+/** Conditions without a schedule: always on, until their calendars narrow them. */
 /** The ends of «all the time»: not moments anything changes at. */
 const BEGINNING = Number.MIN_SAFE_INTEGER as TFloatingMinute;
 const NEVER_ENDS = Number.MAX_SAFE_INTEGER as TFloatingMinute;

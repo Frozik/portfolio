@@ -8,23 +8,29 @@ import type { IPoint } from '../contexts/policy/domain/place-rule';
  */
 const POSITION_TIMEOUT_MS = 20_000;
 
-/** The phone's position: a recent enough one it already has, else a new fix — or `null`. */
-export async function positionNow(
-  accuracy: Location.Accuracy,
-  freshEnoughMs: number
-): Promise<IPoint | null> {
-  const known = await Location.getLastKnownPositionAsync({ maxAge: freshEnoughMs });
+/** A new fix of the phone's position — or `null` when none comes in time. */
+export async function freshPosition(accuracy: Location.Accuracy): Promise<IPoint | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<null>(resolve => {
     timer = setTimeout(() => resolve(null), POSITION_TIMEOUT_MS);
   });
   try {
-    const position =
-      known ?? (await Promise.race([Location.getCurrentPositionAsync({ accuracy }), timedOut]));
+    const position = await Promise.race([Location.getCurrentPositionAsync({ accuracy }), timedOut]);
     return position === null
       ? null
       : { latitude: position.coords.latitude, longitude: position.coords.longitude };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** The phone's position: a recent enough one it already has, else a new fix — or `null`. */
+export async function positionNow(
+  accuracy: Location.Accuracy,
+  freshEnoughMs: number
+): Promise<IPoint | null> {
+  const known = await Location.getLastKnownPositionAsync({ maxAge: freshEnoughMs });
+  return known === null
+    ? freshPosition(accuracy)
+    : { latitude: known.coords.latitude, longitude: known.coords.longitude };
 }

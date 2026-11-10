@@ -6,7 +6,7 @@ import type { IJournalEntry } from '../../journal/domain/journal-entry';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
 import { normalizeName } from '../../phone/domain/name-normalization';
 import type { IPhoneNumbering } from '../../phone/domain/ports/phone-numbering';
-import type { IMoment } from '../../policy/domain/action-now';
+import type { IMoment } from '../../policy/domain/activity-now';
 import type { TPlaceFacts } from '../../policy/domain/place-rule';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
 import { decide } from '../domain/decide';

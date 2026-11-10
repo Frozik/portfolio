@@ -11,7 +11,7 @@ import {
   MY_CONTACTS_ID,
   STRANGERS_ID,
 } from '../../contexts/grouping/testing/group-book-fixtures';
-import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
+import { ALWAYS_BLOCK, ALWAYS_PASS, withConditions } from '../../contexts/policy/domain/policy';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
 import { GroupsScreen } from './GroupsScreen';
@@ -21,6 +21,32 @@ function GroupsRoute() {
 }
 
 const SPAM = custom('spam', [special('foreign')], { policy: ALWAYS_BLOCK });
+const ONLY_ON_HOLIDAYS = custom('holidays', [], {
+  policy: {
+    ...ALWAYS_BLOCK,
+    conditions: {
+      schedule: null,
+      calendars: [
+        {
+          source: {
+            kind: 'device',
+            accountType: 'com.google',
+            accountName: 'me@example.com',
+            calendarName: 'Holidays',
+          },
+          mode: 'only-during-events',
+          filter: {
+            skipDeclined: true,
+            includeAllDay: true,
+            minutesBefore: 0,
+            minutesAfter: 0,
+          },
+        },
+      ],
+      places: [],
+    },
+  },
+});
 
 describe('the groups and their rules', () => {
   it('deletes a group with the button a swipe uncovers on its row', async () => {
@@ -34,28 +60,68 @@ describe('the groups and their rules', () => {
     expect(saved === null ? null : findGroup(saved, 'spam' as TGroupId)).toBeNull();
   });
 
-  it('colours what each group does now instead of marking it with an icon', async () => {
+  it('shows what a group that never changes does by its row alone, with no status line', async () => {
     const open = custom('friends', [], { policy: ALWAYS_PASS });
     await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM, open]) }) });
 
-    expect(await screen.findByTestId('group-spam-status-block')).toBeOnTheScreen();
-    expect(screen.getByTestId('group-friends-status-pass')).toBeOnTheScreen();
-    expect(screen.getByTestId('group-spam-status-block')).not.toHaveTextContent(/⛔|✅/);
+    expect(await screen.findByTestId('group-spam-action-block')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-friends-action-pass')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-spam-status')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('group-friends-status')).not.toBeOnTheScreen();
   });
 
-  it('says until when a group does what it does now and only which action follows, each in its colour', async () => {
-    const forAnHour = custom('spam', [], {
-      policy: ALWAYS_BLOCK,
-      temporary: {
-        action: 'pass',
-        setAt: Temporal.Instant.from('2026-11-09T09:00:00Z'),
-        until: { kind: 'instant', at: Temporal.Instant.from('2026-11-09T10:00:00Z') },
-      },
+  it('says until when a group with working hours is in force, the row in the colour of what it does', async () => {
+    const work = custom('work', [], {
+      policy: withConditions(ALWAYS_PASS, {
+        schedule: {
+          zone: { kind: 'here' },
+          start: Temporal.PlainDate.from('2026-11-02'),
+          times: [
+            {
+              kind: 'range',
+              from: Temporal.PlainTime.from('09:00'),
+              to: Temporal.PlainTime.from('18:00'),
+            },
+          ],
+          repeat: {
+            frequency: 'weekly',
+            interval: 1,
+            weekdays: [1, 2, 3, 4, 5],
+            monthly: null,
+            end: { kind: 'never' },
+          },
+          exceptDates: [],
+        },
+        calendars: [],
+        places: [],
+      }),
     });
-    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([forAnHour]) }) });
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([work]) }) });
 
-    expect(await screen.findByTestId('group-spam-status-pass')).toHaveTextContent(/11:00/);
-    expect(screen.getByTestId('group-spam-status-block')).not.toHaveTextContent(/\d/);
+    expect(await screen.findByTestId('group-work-action-pass')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-work-status')).toHaveTextContent(/18:00/);
+  });
+
+  it('switches a group off from the button a left swipe uncovers, its dot turned into a ring', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp({ index: GroupsRoute }, { phone });
+
+    expect(await screen.findByTestId('group-dot-spam')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('group-switch-spam'));
+
+    expect(await screen.findByTestId('group-dot-off-spam')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-spam-title')).toHaveStyle({ opacity: 0.6 });
+    const saved = phone.saved();
+    expect(saved === null ? null : findGroup(saved, 'spam' as TGroupId)?.enabled).toBe(false);
+
+    await fireEvent.press(screen.getByTestId('group-switch-spam'));
+    expect(await screen.findByTestId('group-dot-spam')).toBeOnTheScreen();
+  });
+
+  it('lets the groups the app keeps itself be switched off too', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    expect(await screen.findByTestId(`group-switch-${STRANGERS_ID}`)).toBeOnTheScreen();
   });
 
   it('uncovers no deletion on a group the app keeps itself', async () => {
@@ -71,6 +137,26 @@ describe('the groups and their rules', () => {
     expect(await screen.findByTestId(`group-pinned-${MY_CONTACTS_ID}`)).toBeOnTheScreen();
     expect(screen.getByTestId(`group-pinned-${STRANGERS_ID}`)).toBeOnTheScreen();
     expect(screen.queryByTestId('group-pinned-spam')).not.toBeOnTheScreen();
+  });
+
+  it('marks with a funnel the groups that act only under their conditions, and only them', async () => {
+    await renderApp(
+      { index: GroupsRoute },
+      { phone: fakePhone({ book: bookOf([SPAM, ONLY_ON_HOLIDAYS]) }) }
+    );
+
+    expect(await screen.findByTestId('group-conditioned-holidays')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-conditioned-spam')).not.toBeOnTheScreen();
+  });
+
+  it('fades the name of a group none of whose conditions holds now, and only that one', async () => {
+    await renderApp(
+      { index: GroupsRoute },
+      { phone: fakePhone({ book: bookOf([SPAM, ONLY_ON_HOLIDAYS]) }) }
+    );
+
+    expect(await screen.findByTestId('group-holidays-title')).toHaveStyle({ opacity: 0.6 });
+    expect(screen.getByTestId('group-spam-title')).not.toHaveStyle({ opacity: 0.6 });
   });
 
   it('turns «a repeat call rings» on for the whole filter', async () => {
@@ -137,8 +223,7 @@ describe('the groups and their rules', () => {
     const holidaysOnly = custom('work', [], {
       policy: {
         ...ALWAYS_PASS,
-        otherwise: 'block',
-        scheduled: {
+        conditions: {
           schedule: null,
           calendars: [
             {
@@ -180,5 +265,22 @@ describe('the groups and their rules', () => {
     const saved = phone.saved();
     const spam = saved === null ? null : findGroup(saved, 'spam' as TGroupId);
     expect(spam?.kind === 'custom' ? spam.include : null).toEqual([]);
+  });
+
+  it('leaves a special mask in both groups when the user keeps the conflict as it is', async () => {
+    const delivery = custom('delivery', []);
+    const phone = fakePhone({ book: bookOf([SPAM, delivery]) });
+    await renderApp({ 'group/[id]': GroupRoute }, { phone, initialUrl: '/group/delivery' });
+    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
+    await fireEvent.press(await screen.findByTestId('special-foreign'));
+    await fireEvent.press(await screen.findByTestId('pending-keep'));
+
+    expect(screen.queryByTestId('pending-conflict')).toBeNull();
+    const saved = phone.saved();
+    const both = ['spam', 'delivery'].map(id => {
+      const group = saved === null ? null : findGroup(saved, id as TGroupId);
+      return group?.kind === 'custom' ? group.include.map(member => member.kind) : null;
+    });
+    expect(both).toEqual([['special'], ['special']]);
   });
 });

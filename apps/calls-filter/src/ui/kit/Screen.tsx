@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePalette } from '../theme/AppTheme';
-import { GAP, GUTTER, SMALL_GAP, TEXT_SIZE } from './metrics';
+import { GAP, GUTTER, IDLE_OPACITY, SMALL_GAP, TEXT_SIZE } from './metrics';
 
 /**
  * A full screen edge to edge: content clears the system bars, the background runs under them.
@@ -15,6 +15,7 @@ export function Screen({
   titleAction,
   onTitlePress,
   titleTestID,
+  titleIdle = false,
   testID,
   header,
   footer,
@@ -29,6 +30,8 @@ export function Screen({
   /** The title edits what it names: a tap, a double tap or a hold opens the editor. One line then. */
   readonly onTitlePress?: () => void;
   readonly titleTestID?: string;
+  /** What the screen shows is not in effect now: its title fades. */
+  readonly titleIdle?: boolean;
   readonly testID: string;
   readonly header?: ReactNode;
   /** Pinned under the scrolling content: the actions of a long form stay in reach. */
@@ -49,7 +52,7 @@ export function Screen({
             onPress={onTitlePress}
             onLongPress={onTitlePress}
             numberOfLines={onTitlePress === undefined ? undefined : 1}
-            style={[styles.title, { color: palette.fg }]}
+            style={[styles.title, { color: palette.fg }, titleIdle && styles.idle]}
           >
             {title}
           </Text>
@@ -115,4 +118,5 @@ const styles = StyleSheet.create({
   },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: SMALL_GAP },
   title: { flexShrink: 1, fontSize: TEXT_SIZE.title, fontWeight: '700' },
+  idle: { opacity: IDLE_OPACITY },
 });

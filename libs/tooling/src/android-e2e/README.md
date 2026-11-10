@@ -97,8 +97,9 @@ schedule, then… — repeats all of that just to get the app into a state.
    - an element found and gone before it is measured — a row just deleted — is reported absent,
      and a command that breaks answers as failed: an exception left to escape would end the agent,
      and every test after it would fail with «fetch failed»;
-   - `launch` asks `monkey` for no system keys, which it otherwise refuses to send on a device
-     without them (an emulator with no hardware keyboard).
+   - `launch` starts the app as its launcher icon does — the activity it lists for the launcher,
+     with the launcher's flags — not through `monkey`, which on some system images injects its
+     event and never starts the app.
 
    The agent ships in no app: it is built and installed only for the run. Against Maestro the
    vault's journey went from 75 s to 9 s; Calls Filter's map test from 20 s to 4 s, its

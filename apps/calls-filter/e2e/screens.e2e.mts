@@ -14,7 +14,7 @@ import {
 } from '@frozik/tooling/src/android-e2e/screen.ts';
 
 import { clearMeetings, ensureWorkCalendar, meetingNow } from './support/calendar.mts';
-import { appReady, control, PACKAGE } from './support/channel.mts';
+import { control, PACKAGE } from './support/channel.mts';
 import { hasPhysicalKeyboard, hideKeyboard, keyboardTop } from './support/keyboard.mts';
 import { NEW_YORK, phoneAt } from './support/location.mts';
 import type { IScreenedCall } from './support/phone.mts';
@@ -34,30 +34,6 @@ const SWIPE_MS = 400;
 const MEETING_MINUTES = 30;
 const NO_ON_SCREEN_KEYBOARD =
   'the phone has a physical keyboard, so no on-screen one opens (an emulator with hw.keyboard=yes)';
-const BOOK_VERSION = 2;
-const PREFERENCES_VERSION = 1;
-const CALENDARS_VERSION = 1;
-const TEAM_LINK = {
-  id: 'e2e-team',
-  label: 'Team',
-  url: 'https://calendar.example.com/team.ics',
-  body: null,
-  etag: null,
-  refreshedAt: null,
-  failedAt: null,
-};
-
-interface IStored<T> {
-  readonly version: number;
-  readonly data: T;
-}
-
-async function documentOf(key: string): Promise<string> {
-  const { text } = await control<{ readonly text: string | null }>('document', { key });
-  assert.ok(text !== null, `the app keeps no «${key}»`);
-  return text;
-}
-
 async function openGroup(name: string): Promise<{ readonly id: string }> {
   const created = await control<{ readonly id: string }>('create-group', {
     group: { name, action: 'block' },
@@ -74,9 +50,9 @@ interface IPlaceState {
 
 async function placeOf(groupName: string): Promise<IPlaceState | undefined> {
   const group = await control<{
-    readonly scheduled: { readonly places: readonly IPlaceState[] } | null;
+    readonly conditions: { readonly places: readonly IPlaceState[] } | null;
   }>('group', { groupName });
-  return group.scheduled?.places[0];
+  return group.conditions?.places[0];
 }
 
 describe('the screens that only a phone can show', () => {
@@ -101,9 +77,13 @@ describe('the screens that only a phone can show', () => {
       await phoneAt(NEW_YORK);
       await adb('shell', 'input', 'keyevent', 'KEYCODE_HOME');
       await launch(PACKAGE);
+      // A real phone keeps sending fixes; a test provider sends one per call, so keep it moving.
       await waitFor(
         'the place, measured again in New York once the app is in front',
-        () => placeOf('Work'),
+        async () => {
+          await phoneAt(NEW_YORK);
+          return placeOf('Work');
+        },
         place => place?.here === false,
         PLACE_SETTLE_MS
       );
@@ -151,6 +131,34 @@ describe('the screens that only a phone can show', () => {
       );
       await tap(`group-delete-${id}`);
       await waitForAbsent(`group-${id}`);
+    }
+  );
+
+  e2eTest(
+    'a blocking group switched off from the button a left swipe on its row uncovers lets its caller ring as a stranger',
+    SCREEN_LIMIT_MS,
+    async () => {
+      const number = freshNumber();
+      const { id } = await control<{ readonly id: string }>('create-group', {
+        group: { name: 'Spam', action: 'block', numbers: [number] },
+      });
+      await launch(PACKAGE);
+      const row = await waitForElement(`group-${id}`, { timeoutMs: APP_START_MS });
+      const y = String(Math.round((row.top + row.bottom) / 2));
+      await adb(
+        'shell',
+        'input',
+        'swipe',
+        String(row.right - SWIPE_INSET_PX),
+        y,
+        String(row.left + SWIPE_INSET_PX),
+        y,
+        String(SWIPE_MS)
+      );
+      await tap(`group-switch-${id}`);
+      await waitForElement(`group-dot-off-${id}`);
+      const answer = await call(number);
+      assert.deepEqual([answer.verdict, answer.group], ['passed', 'strangers']);
     }
   );
 
@@ -257,55 +265,6 @@ describe('the screens that only a phone can show', () => {
   );
 
   e2eTest(
-    'an update installed over an older app keeps its groups, preferences and iCal links, migrated',
-    SCREEN_LIMIT_MS,
-    async () => {
-      await control('create-group', { group: { name: 'Couriers', action: 'pass' } });
-      const book = await documentOf('group-book');
-      const preferences = await documentOf('preferences');
-      const groups = (JSON.parse(book) as IStored<{ readonly groups: readonly unknown[] }>).data
-        .groups;
-      await control('write-document', {
-        key: 'group-book',
-        text: JSON.stringify({ schema: 1, groups }),
-      });
-      await control('write-document', {
-        key: 'preferences',
-        text: JSON.stringify((JSON.parse(preferences) as IStored<unknown>).data),
-      });
-      await control('write-document', {
-        key: 'calendars',
-        text: JSON.stringify({ subscriptions: [TEAM_LINK] }),
-      });
-      await adb('shell', 'am', 'force-stop', PACKAGE);
-      await appReady();
-      const migrated = await waitFor(
-        'the documents written back at their current version',
-        async () => ({
-          book: JSON.parse(await documentOf('group-book')) as IStored<unknown>,
-          preferences: JSON.parse(await documentOf('preferences')) as IStored<unknown>,
-          calendars: JSON.parse(await documentOf('calendars')) as IStored<{
-            readonly subscriptions: readonly { readonly label: string }[];
-          }>,
-        }),
-        documents =>
-          documents.book.version === BOOK_VERSION &&
-          documents.preferences.version === PREFERENCES_VERSION &&
-          documents.calendars.version === CALENDARS_VERSION,
-        CONTROL_SETTLE_MS
-      );
-      const couriers = await control<{ readonly name: string }>('group', {
-        groupName: 'Couriers',
-      });
-      assert.equal(couriers.name, 'Couriers');
-      assert.deepEqual(
-        migrated.calendars.data.subscriptions.map(subscription => subscription.label),
-        ['Team']
-      );
-    }
-  );
-
-  e2eTest(
     'a blocking group given a calendar on its screen blocks during the events and lets calls through after',
     SCREEN_LIMIT_MS,
     async () => {
@@ -322,11 +281,11 @@ describe('the screens that only a phone can show', () => {
       await waitFor(
         'the group to use the calendar',
         () =>
-          control<{ readonly scheduled: { readonly calendars: readonly string[] } | null }>(
+          control<{ readonly conditions: { readonly calendars: readonly string[] } | null }>(
             'group',
             { groupName: 'Clients' }
           ),
-        group => (group.scheduled?.calendars.length ?? 0) > 0,
+        group => (group.conditions?.calendars.length ?? 0) > 0,
         CONTROL_SETTLE_MS
       );
       let during: IScreenedCall;

@@ -10,6 +10,13 @@ const ACTION_TONES: Readonly<Record<TAction, Readonly<Record<TScheme, string>>>>
   pass: { light: '#3d8158', dark: '#a3d9b1' },
 };
 
+/** A row's background while the action holds: the tone, barely there over the card. */
+const TINT_ALPHA = '12';
+
+export function actionTint(action: TAction, scheme: TScheme): string {
+  return `${ACTION_TONES[action][scheme]}${TINT_ALPHA}`;
+}
+
 export function actionTone(action: TAction, scheme: TScheme): string {
   return ACTION_TONES[action][scheme];
 }

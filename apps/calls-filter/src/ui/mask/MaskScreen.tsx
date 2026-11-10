@@ -5,13 +5,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
-import { addMember } from '../../contexts/grouping/domain/group-book-edits';
-import type { TNameField } from '../../contexts/grouping/domain/member';
+import { findMask } from '../../contexts/grouping/domain/group-book';
+import { addMember, replaceMask } from '../../contexts/grouping/domain/group-book-edits';
+import type { TMemberId, TNameField } from '../../contexts/grouping/domain/member';
 import type { TMaskKind } from '../../contexts/masks/application/MaskEditor';
 import { MaskEditor } from '../../contexts/masks/application/MaskEditor';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
@@ -76,37 +77,52 @@ export const MaskScreen = observer(function MaskScreen() {
     readonly side?: 'include' | 'exclude';
     readonly seed?: string;
     readonly kind?: TMaskKind;
+    /** The mask of the group to rewrite, instead of adding a new one. */
+    readonly member?: string;
   }>();
-  const [editor] = useState(
-    () =>
-      new MaskEditor(
-        {
-          environment: () => app.environment,
-          numbering: app.numbering,
-          knownCallers: () => app.facts.knownCallers,
-          newMemberId: () => app.books.context().newMemberId(),
-          now: () => app.clock.now(),
-        },
-        params.kind ?? 'number',
-        params.seed ?? ''
-      )
-  );
+  const side = params.side ?? 'include';
   const groupId =
     params.group === undefined || params.group === '' ? null : (params.group as TGroupId);
+  const [editor] = useState(() => {
+    const rewritten =
+      groupId === null || params.member === undefined
+        ? null
+        : findMask(app.books.book, groupId, side, params.member as TMemberId);
+    return new MaskEditor(
+      {
+        environment: () => app.environment,
+        numbering: app.numbering,
+        knownCallers: () => app.facts.knownCallers,
+        newMemberId: () => app.books.context().newMemberId(),
+        now: () => app.clock.now(),
+      },
+      rewritten === null
+        ? { kind: 'new', mask: params.kind ?? 'number', seed: params.seed ?? '' }
+        : { kind: 'rewrite', member: rewritten }
+    );
+  });
   const save = () => {
     const { member } = editor;
     if (member === null || groupId === null) {
       return;
     }
     const result = app.books.run((book, context) =>
-      addMember(book, {
-        group: groupId,
-        side: params.side ?? 'include',
-        member,
-        newMemberId: context.newMemberId,
-        now: context.now,
-        facts: context.facts,
-      })
+      editor.rewrites
+        ? replaceMask(book, {
+            group: groupId,
+            side,
+            member,
+            now: context.now,
+            facts: context.facts,
+          })
+        : addMember(book, {
+            group: groupId,
+            side,
+            member,
+            newMemberId: context.newMemberId,
+            now: context.now,
+            facts: context.facts,
+          })
     );
     if (result === 'applied') {
       leave();
@@ -114,7 +130,11 @@ export const MaskScreen = observer(function MaskScreen() {
   };
   const sample = editor.sampleMatches;
   return (
-    <Screen testID="mask-screen" title={texts.mask.title} header={<BackButton />}>
+    <Screen
+      testID="mask-screen"
+      title={texts.mask.title}
+      titleLeading={<BackArrow testID="screen-back" />}
+    >
       <Wrap>
         <Chip
           testID="mask-kind-number"

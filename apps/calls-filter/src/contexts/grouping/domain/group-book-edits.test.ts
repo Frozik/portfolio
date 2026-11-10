@@ -1,3 +1,5 @@
+import { assert } from '@frozik/utils/assert/assert';
+
 import { ALWAYS_BLOCK } from '../../policy/domain/policy';
 import {
   bookOf,
@@ -5,6 +7,7 @@ import {
   custom,
   factsWith,
   MY_CONTACTS_ID,
+  nameMask,
   newMemberId,
   NOW,
   numberMask,
@@ -13,7 +16,7 @@ import {
 import { detectConflicts } from './conflict-detection';
 import { resolutionsFor } from './conflict-resolutions';
 import type { TGroupId } from './group';
-import { addMember, createGroup, deleteGroup, removeMember } from './group-book-edits';
+import { addMember, createGroup, deleteGroup, removeMember, replaceMask } from './group-book-edits';
 import { applyChanges } from './group-changes';
 import { membership } from './membership';
 
@@ -158,5 +161,51 @@ describe('editing the group book', () => {
       kind: 'rejected',
       reason: 'not-a-group-of-the-user',
     });
+  });
+
+  it('rewrites a mask in place: an exact name becomes a pattern, keeping its place and its note', () => {
+    const exact = { ...nameMask('IP Isanshin'), note: 'from a call' };
+    const book = bookOf([custom('spam', [numberMask('+7 495*'), exact])]);
+    const pattern = nameMask('IP*');
+    const outcome = replaceMask(book, {
+      group: 'spam' as TGroupId,
+      side: 'include',
+      member: { ...pattern, id: exact.id },
+      now: NOW,
+      facts,
+    });
+    assert(outcome.kind === 'applied', 'the rewrite applies');
+    const [spam] = outcome.book.groups;
+    assert(spam?.kind === 'custom', 'spam is a group of the user');
+    expect(spam.include.map(member => member.kind === 'name-mask' && member.mask.source)).toEqual([
+      false,
+      'IP*',
+    ]);
+    expect(spam.include[1]?.kind === 'name-mask' && spam.include[1].note).toBe('from a call');
+  });
+
+  it('stops a rewritten mask that would make a conflict until a resolution is chosen', () => {
+    const narrow = numberMask('+7 499*');
+    const book = bookOf([custom('spam', [numberMask('+7 495*')]), custom('delivery', [narrow])]);
+    const outcome = replaceMask(book, {
+      group: 'delivery' as TGroupId,
+      side: 'include',
+      member: { ...numberMask('+7 495 1*'), id: narrow.id },
+      now: NOW,
+      facts,
+    });
+    expect(outcome.kind).toBe('needs-resolution');
+  });
+
+  it('refuses to rewrite a mask the group does not have', () => {
+    const book = bookOf([custom('spam', [])]);
+    const outcome = replaceMask(book, {
+      group: 'spam' as TGroupId,
+      side: 'include',
+      member: nameMask('IP*'),
+      now: NOW,
+      facts,
+    });
+    expect(outcome).toEqual({ kind: 'rejected', reason: 'unknown-member' });
   });
 });

@@ -3,6 +3,7 @@ import {
   Action,
   CalendarMode,
   CalendarRuleSchema,
+  ConditionsSchema,
   ContactMatchSchema,
   DeviceCalendarSchema,
   EventFilterSchema,
@@ -18,10 +19,7 @@ import {
   RepeatPassKind,
   RepeatPassSchema,
   RulesetSchema,
-  ScheduledSchema,
   SpecialMask,
-  TemporaryPolicySchema,
-  UntilKind,
   WindowSchema,
 } from '@frozik/proto/frozik/callsfilter/v1/ruleset_pb';
 import type { CalendarRule, Member, Window } from '@frozik/proto/frozik/callsfilter/v1/ruleset_pb';
@@ -163,19 +161,6 @@ function wireKind(kind: ICompiledGroup['kind']): GroupKind {
   }
 }
 
-function wireUntil(until: 'instant' | 'first-pass' | 'end-of-event'): UntilKind {
-  switch (until) {
-    case 'instant':
-      return UntilKind.INSTANT;
-    case 'first-pass':
-      return UntilKind.FIRST_PASS;
-    case 'end-of-event':
-      return UntilKind.END_OF_EVENT;
-    default:
-      return assertNever(until);
-  }
-}
-
 function wireRepeatPass(repeat: TCompiledRepeatPass) {
   switch (repeat.kind) {
     case 'off':
@@ -193,7 +178,7 @@ function wireRepeatPass(repeat: TCompiledRepeatPass) {
 }
 
 function wireGroup(group: ICompiledGroup) {
-  const { scheduled, temporary } = group;
+  const { conditions } = group;
   return create(GroupSchema, {
     id: group.id,
     kind: wireKind(group.kind),
@@ -201,19 +186,18 @@ function wireGroup(group: ICompiledGroup) {
     exclude: group.exclude.map(wireMember),
     excludeMyContacts: group.excludeMyContacts,
     policy: create(PolicySchema, {
-      otherwise: wireAction(group.otherwise),
+      action: wireAction(group.action),
       repeatWindowMinutes: group.repeatWindowMinutes,
       repeatPass: wireRepeatPass(group.repeatPass),
-      scheduled:
-        scheduled === null
+      conditions:
+        conditions === null
           ? undefined
-          : create(ScheduledSchema, {
-              action: wireAction(scheduled.action),
-              zone: scheduled.zone ?? '',
-              hasSchedule: scheduled.hasSchedule,
-              windows: wireWindows(scheduled.windows),
-              calendars: scheduled.calendars.map(wireCalendarRule),
-              places: scheduled.places.map(place =>
+          : create(ConditionsSchema, {
+              zone: conditions.zone ?? '',
+              hasSchedule: conditions.hasSchedule,
+              windows: wireWindows(conditions.windows),
+              calendars: conditions.calendars.map(wireCalendarRule),
+              places: conditions.places.map(place =>
                 create(PlaceRuleSchema, {
                   id: place.id,
                   mode: place.mode === 'only-at' ? PlaceMode.ONLY_AT : PlaceMode.EXCEPT_AT,
@@ -224,15 +208,7 @@ function wireGroup(group: ICompiledGroup) {
               ),
             }),
     }),
-    temporary:
-      temporary === null
-        ? undefined
-        : create(TemporaryPolicySchema, {
-            action: wireAction(temporary.action),
-            until: wireUntil(temporary.until),
-            untilEpochMs: BigInt(temporary.untilEpochMs),
-            setAtEpochMs: BigInt(temporary.setAtEpochMs),
-          }),
+    off: group.off,
     createdAtEpochMs: BigInt(group.createdAtEpochMs),
     autoReplyText: group.autoReplyText,
     name: group.name,

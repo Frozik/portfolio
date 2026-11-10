@@ -100,7 +100,7 @@ function wireApp(): Promise<CallsFilterApp> {
   });
   // A no-op outside the APK built for the e2e tests: the native side keeps the channel shut.
   return started.then(app => {
-    openE2eControl(app, store);
+    openE2eControl(app);
     return app;
   });
 }

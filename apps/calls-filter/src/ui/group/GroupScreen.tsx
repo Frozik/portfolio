@@ -7,12 +7,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
 import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
+import { isActive } from '../../contexts/policy/domain/activity-now';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { CallList } from '../calls/CallList';
 import { groupName } from '../group-name';
 import { statusText } from '../groups/group-status';
-import { TemporarySheet } from '../groups/TemporarySheet';
 import { BackArrow } from '../kit/BackArrow';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
@@ -45,7 +45,7 @@ export const GroupScreen = observer(function GroupScreen() {
   const [tab, setTab] = useState<TTab>('calls');
   const [renaming, setRenaming] = useState(false);
   const [coloring, setColoring] = useState(false);
-  const [policySheet, setPolicySheet] = useState<'policy' | 'for-a-while' | null>(null);
+  const [policySheet, setPolicySheet] = useState(false);
   const group = findGroup(app.books.book, id as TGroupId);
   if (group === null) {
     return null;
@@ -66,24 +66,29 @@ export const GroupScreen = observer(function GroupScreen() {
             onPress={() => setColoring(true)}
             onLongPress={() => setColoring(true)}
           >
-            <Dot color={groupColor(group.color, scheme)} />
+            <Dot
+              testID={group.enabled ? 'group-dot' : 'group-dot-off'}
+              color={groupColor(group.color, scheme)}
+              hollow={!group.enabled}
+            />
           </Pressable>
         </View>
       }
       title={groupName(texts, group)}
       onTitlePress={group.kind === 'custom' ? () => setRenaming(true) : undefined}
       titleTestID="group-rename"
+      titleIdle={!isActive(status.activity)}
       titleAction={
         <View style={styles.titleActions}>
           {group.kind === 'custom' ? null : <PinnedMark testID="group-pinned" />}
           <View style={styles.status}>
             <IndicatorButton
               testID="group-status"
-              icon={status.now.action === 'block' ? PhoneOff : PhoneIncoming}
-              tone={status.now.action === 'block' ? 'danger' : 'positive'}
+              icon={group.policy.action === 'block' ? PhoneOff : PhoneIncoming}
+              tone={group.policy.action === 'block' ? 'danger' : 'positive'}
               filled
-              label={statusText(texts, status, app.clock.timeZone(), today)}
-              onPress={() => setPolicySheet('policy')}
+              label={statusText(texts, group.policy, status, today)}
+              onPress={() => setPolicySheet(true)}
             />
           </View>
         </View>
@@ -101,16 +106,7 @@ export const GroupScreen = observer(function GroupScreen() {
       {renaming && group.kind === 'custom' ? (
         <RenameSheet group={group} onClose={() => setRenaming(false)} />
       ) : null}
-      {policySheet === 'policy' ? (
-        <PolicySheet
-          group={group}
-          onClose={() => setPolicySheet(null)}
-          onForAWhile={() => setPolicySheet('for-a-while')}
-        />
-      ) : null}
-      {policySheet === 'for-a-while' ? (
-        <TemporarySheet group={group} named={false} onClose={() => setPolicySheet(null)} />
-      ) : null}
+      {policySheet ? <PolicySheet group={group} onClose={() => setPolicySheet(false)} /> : null}
       <SegmentedControl
         segments={[
           { value: 'calls', label: texts.group.calls, testID: 'group-tab-calls' },
@@ -133,7 +129,7 @@ export const GroupScreen = observer(function GroupScreen() {
           ) : (
             <MembersPanel group={group} />
           )}
-          <PolicyPanel group={group} onForAWhile={() => setPolicySheet('for-a-while')} />
+          <PolicyPanel group={group} />
           {group.kind === 'custom' ? <DeleteGroupButton group={group} /> : null}
         </>
       )}

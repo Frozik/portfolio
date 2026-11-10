@@ -32,7 +32,7 @@ export type TScheduleZone =
   | { readonly kind: 'fixed'; readonly zone: string };
 
 /**
- * When the scheduled action applies, as Google Calendar repeats an event: one or more times
+ * When a group is in force, as Google Calendar repeats an event: one or more times
  * of day on the days a recurrence picks, on the clock of its zone.
  */
 export interface ISchedule {

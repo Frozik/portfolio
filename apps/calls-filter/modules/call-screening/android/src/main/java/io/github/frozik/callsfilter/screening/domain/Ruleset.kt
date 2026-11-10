@@ -52,8 +52,8 @@ data class EventFilter(val skipDeclined: Boolean, val includeAllDay: Boolean, va
 
 data class CalendarRule(val mode: CalendarMode, val filter: EventFilter, val source: CalendarSource, val bakedEvents: List<Window>)
 
-data class Scheduled(
-  val action: Action,
+/** When a group is in force: a schedule, calendars and places, all of which must hold. */
+data class Conditions(
   val hasSchedule: Boolean,
   val windows: List<Window>,
   val calendars: List<CalendarRule>,
@@ -64,12 +64,8 @@ data class Scheduled(
 
 enum class PlaceMode { ONLY_AT, EXCEPT_AT }
 
-/** Where the phone must (or must not) be for the scheduled action; its state comes from the geofences. */
+/** Where the phone must (or must not) be for a group to be in force; its state comes from the geofences. */
 data class PlaceRule(val id: String, val mode: PlaceMode)
-
-enum class UntilKind { INSTANT, FIRST_PASS, END_OF_EVENT }
-
-data class TemporaryPolicy(val action: Action, val until: UntilKind, val untilEpochMs: Long, val setAtEpochMs: Long)
 
 data class Group(
   val id: String,
@@ -77,10 +73,13 @@ data class Group(
   val include: List<Member>,
   val exclude: List<Member>,
   val excludeMyContacts: Boolean,
-  val otherwise: Action,
-  val scheduled: Scheduled?,
+  /** What the group does with a call it takes, while it is in force. */
+  val action: Action,
+  /** When the group is in force; `null`: always. */
+  val conditions: Conditions?,
   val repeatWindowMinutes: Int,
-  val temporary: TemporaryPolicy?,
+  /** Switched off by the user: passed over in finding a caller's group, whatever its conditions. */
+  val off: Boolean,
   val createdAtEpochMs: Long,
   val autoReplyText: String,
   val repeatPass: RepeatPass = RepeatPass.Off,

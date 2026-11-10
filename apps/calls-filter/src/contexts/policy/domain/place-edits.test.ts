@@ -14,15 +14,15 @@ const office: IPlaceRule = {
 describe('editing the places of a policy', () => {
   it('gives a group the place it is given', () => {
     const policy = withPlace(ALWAYS_BLOCK, office);
-    expect(policy.scheduled?.places).toEqual([office]);
+    expect(policy.conditions?.places).toEqual([office]);
   });
 
   it('replaces a place edited again instead of adding it twice', () => {
     const moved = { ...office, radius: 1_000 as const };
-    expect(withPlace(withPlace(ALWAYS_BLOCK, office), moved).scheduled?.places).toEqual([moved]);
+    expect(withPlace(withPlace(ALWAYS_BLOCK, office), moved).conditions?.places).toEqual([moved]);
   });
 
-  it('drops the scheduled action once its last place is gone and nothing else narrows it', () => {
-    expect(withoutPlace(withPlace(ALWAYS_BLOCK, office), office.id).scheduled).toBeNull();
+  it('drops the conditions once their last place is gone and nothing else narrows them', () => {
+    expect(withoutPlace(withPlace(ALWAYS_BLOCK, office), office.id).conditions).toBeNull();
   });
 });

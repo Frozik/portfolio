@@ -80,7 +80,7 @@ function mergeShared<T extends TGroup>(base: T | undefined, local: T, remote: T)
     ...local,
     color: pick(base?.color, local.color, remote.color, localIsNewer),
     policy: pick(base?.policy, local.policy, remote.policy, localIsNewer),
-    temporary: pick(base?.temporary, local.temporary, remote.temporary, localIsNewer),
+    enabled: pick(base?.enabled, local.enabled, remote.enabled, localIsNewer),
     autoReply: pick(base?.autoReply, local.autoReply, remote.autoReply, localIsNewer),
     updatedAt: localIsNewer ? local.updatedAt : remote.updatedAt,
   };

@@ -28,6 +28,8 @@ versioned, not the npm package:
   both until no page uses `v1`;
 - because JSON travels too, a field's name is part of the contract
   (`buf breaking` runs with `WIRE_JSON`).
+- Calls Filter's `callsfilter/v1` is the exception until its first release: no install holds a
+  ruleset yet, so it is reshaped freely and `buf.yaml` keeps it out of `buf breaking`.
 
 ## Tasks
 

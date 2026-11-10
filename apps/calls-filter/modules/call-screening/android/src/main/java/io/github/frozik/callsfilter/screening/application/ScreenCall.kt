@@ -1,13 +1,8 @@
 package io.github.frozik.callsfilter.screening.application
 
-import io.github.frozik.callsfilter.screening.domain.ActionSource
 import io.github.frozik.callsfilter.screening.domain.CalendarRule
-import io.github.frozik.callsfilter.screening.domain.Decision
 import io.github.frozik.callsfilter.screening.domain.DecisionContext
-import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.MomentFacts
-import io.github.frozik.callsfilter.screening.domain.UntilKind
-import io.github.frozik.callsfilter.screening.domain.Verdict
 import io.github.frozik.callsfilter.screening.domain.decide
 
 /** The one answer the system gets for a call. */
@@ -18,6 +13,9 @@ sealed interface ScreeningReply {
 }
 
 private const val MILLISECONDS_PER_MINUTE = 60_000L
+
+/** The journal's word for a call no group in force decided: «Strangers» not in force. */
+private const val NONE_IN_FORCE = "NONE_IN_FORCE"
 
 class ScreenCall(
   private val rulesets: RulesetSource,
@@ -54,11 +52,6 @@ class ScreenCall(
 
         override fun inEvent(rule: CalendarRule, minute: Long): Boolean = calendar.inEvent(rule, minute) ?: rule.bakedEvents.any { it.contains(minute) }
 
-        override fun temporaryReleased(group: Group): Boolean {
-          val temporary = group.temporary ?: return false
-          return runtime.temporaryReleased(group.id, temporary.setAtEpochMs)
-        }
-
         override fun atPlace(placeId: String): Boolean? = runtime.atPlace(placeId)
       }
     val paused = (runtime.pausedUntilEpochMs() ?: 0L) > moment.epochMs
@@ -68,7 +61,6 @@ class ScreenCall(
         journal.lastRejectedAt(number, moment.epochMs - longestWindow * MILLISECONDS_PER_MINUTE)
       }
     val decision = decide(ruleset, caller, moment, DecisionContext(paused, lastRejected, facts))
-    consumeFirstPass(decision)
     val record =
       CallRecord(
         epochMs = moment.epochMs,
@@ -79,7 +71,7 @@ class ScreenCall(
         contactLookupKey = caller.contact?.lookupKey,
         groupId = decision.group.id,
         verdict = decision.verdict.name,
-        actionSource = decision.action.source.name,
+        actionSource = if (decision.activity.active) decision.activity.name else NONE_IN_FORCE,
         alsoClaimedBy = decision.alsoClaimedBy.map { it.id },
       )
     journal.record(record)
@@ -88,13 +80,5 @@ class ScreenCall(
     }
     after.handle(record, decision, ruleset)
     return if (decision.letsThrough) ScreeningReply.Allow else ScreeningReply.Reject
-  }
-
-  private fun consumeFirstPass(decision: Decision) {
-    val temporary = decision.group.temporary ?: return
-    val passed = decision.verdict == Verdict.PASSED || decision.verdict == Verdict.PASSED_AS_REPEAT
-    if (temporary.until == UntilKind.FIRST_PASS && passed && decision.action.source == ActionSource.TEMPORARY) {
-      runtime.releaseTemporary(decision.group.id, temporary.setAtEpochMs)
-    }
   }
 }

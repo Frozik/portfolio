@@ -5,6 +5,7 @@ import io.github.frozik.callsfilter.screening.domain.Action
 import io.github.frozik.callsfilter.screening.domain.CalendarMode
 import io.github.frozik.callsfilter.screening.domain.CalendarRule
 import io.github.frozik.callsfilter.screening.domain.CalendarSource
+import io.github.frozik.callsfilter.screening.domain.Conditions
 import io.github.frozik.callsfilter.screening.domain.EventFilter
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupChoice
@@ -15,10 +16,7 @@ import io.github.frozik.callsfilter.screening.domain.PlaceMode
 import io.github.frozik.callsfilter.screening.domain.PlaceRule
 import io.github.frozik.callsfilter.screening.domain.RepeatPass
 import io.github.frozik.callsfilter.screening.domain.Ruleset
-import io.github.frozik.callsfilter.screening.domain.Scheduled
 import io.github.frozik.callsfilter.screening.domain.SpecialMask
-import io.github.frozik.callsfilter.screening.domain.TemporaryPolicy
-import io.github.frozik.callsfilter.screening.domain.UntilKind
 import io.github.frozik.callsfilter.screening.domain.Window
 import io.github.frozik.callsfilter.screening.wire.Action as WireAction
 import io.github.frozik.callsfilter.screening.wire.CalendarMode as WireCalendarMode
@@ -32,7 +30,6 @@ import io.github.frozik.callsfilter.screening.wire.RepeatPass as WireRepeatPass
 import io.github.frozik.callsfilter.screening.wire.RepeatPassKind as WireRepeatPassKind
 import io.github.frozik.callsfilter.screening.wire.Ruleset as WireRuleset
 import io.github.frozik.callsfilter.screening.wire.SpecialMask as WireSpecialMask
-import io.github.frozik.callsfilter.screening.wire.UntilKind as WireUntilKind
 import io.github.frozik.callsfilter.screening.wire.Window as WireWindow
 
 /** Why bytes are not a ruleset this service can run: either way the call passes (fail-open). */
@@ -141,34 +138,17 @@ object RulesetDecoder {
 
   private fun group(group: WireGroup): Group {
     val policy = group.policy
-    val scheduled =
-      if (policy.hasScheduled()) {
-        Scheduled(
-          action = action(policy.scheduled.action),
-          hasSchedule = policy.scheduled.hasSchedule,
-          zone = policy.scheduled.zone.takeIf { it.isNotEmpty() },
-          windows = policy.scheduled.windowsList.map(::window),
-          calendars = policy.scheduled.calendarsList.mapNotNull(::calendarRule),
+    val conditions =
+      if (policy.hasConditions()) {
+        Conditions(
+          hasSchedule = policy.conditions.hasSchedule,
+          zone = policy.conditions.zone.takeIf { it.isNotEmpty() },
+          windows = policy.conditions.windowsList.map(::window),
+          calendars = policy.conditions.calendarsList.mapNotNull(::calendarRule),
           places =
-          policy.scheduled.placesList.map {
+          policy.conditions.placesList.map {
             PlaceRule(it.id, if (it.mode == WirePlaceMode.PLACE_MODE_EXCEPT_AT) PlaceMode.EXCEPT_AT else PlaceMode.ONLY_AT)
           },
-        )
-      } else {
-        null
-      }
-    val temporary =
-      if (group.hasTemporary()) {
-        TemporaryPolicy(
-          action = action(group.temporary.action),
-          until =
-          when (group.temporary.until) {
-            WireUntilKind.UNTIL_KIND_FIRST_PASS -> UntilKind.FIRST_PASS
-            WireUntilKind.UNTIL_KIND_END_OF_EVENT -> UntilKind.END_OF_EVENT
-            else -> UntilKind.INSTANT
-          },
-          untilEpochMs = group.temporary.untilEpochMs,
-          setAtEpochMs = group.temporary.setAtEpochMs,
         )
       } else {
         null
@@ -179,10 +159,10 @@ object RulesetDecoder {
       include = group.includeList.mapNotNull(::member),
       exclude = group.excludeList.mapNotNull(::member),
       excludeMyContacts = group.excludeMyContacts,
-      otherwise = action(policy.otherwise),
-      scheduled = scheduled,
+      action = action(policy.action),
+      conditions = conditions,
       repeatWindowMinutes = policy.repeatWindowMinutes,
-      temporary = temporary,
+      off = group.off,
       createdAtEpochMs = group.createdAtEpochMs,
       autoReplyText = group.autoReplyText,
       repeatPass = repeatPass(policy.repeatPass),

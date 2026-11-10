@@ -166,11 +166,11 @@ export class ScheduleEditor {
 }
 
 export function withSchedule(policy: IPolicy, schedule: ISchedule | null): IPolicy {
-  const scheduled = policy.scheduled ?? {
+  const conditions = policy.conditions ?? {
     schedule: null,
     calendars: [],
     places: [],
   };
-  const next = { ...scheduled, schedule };
+  const next = { ...conditions, schedule };
   return withConditions(policy, next);
 }

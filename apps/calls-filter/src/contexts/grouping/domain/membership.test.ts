@@ -46,6 +46,11 @@ describe('the group of a caller', () => {
     expect(groupOf(book, stranger('31201234567', 'KPN Klantenservice'))).toBe('spam');
   });
 
+  it('takes a caller by a name with a dash and a colon in it, read as plain characters', () => {
+    const book = bookOf([custom('spam', [nameMask('IP Isanshin: kol-tsentr', 'network')])]);
+    expect(groupOf(book, stranger('79864563560', 'IP Isanshin: kol-tsentr'))).toBe('spam');
+  });
+
   it('keeps an exclusion stronger than the inclusion', () => {
     const book = bookOf([
       custom('spam', [numberMask('+7 495*')], { exclude: [numberMask('+7 495 123 45 67')] }),

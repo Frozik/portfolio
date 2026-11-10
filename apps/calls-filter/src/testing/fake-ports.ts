@@ -122,7 +122,6 @@ export function fakePhone({
       setRetentionDays: days => {
         retentionDays = days;
       },
-      releasedTemporaries: () => [],
       dismissWhereTo: () => {},
       networkCountry: () => NETHERLANDS,
       simCountry: () => NETHERLANDS,

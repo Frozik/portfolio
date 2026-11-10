@@ -9,7 +9,7 @@ import { useApp } from '../AppContext';
 import { CALL_GLYPHS } from '../calls/call-state';
 import { groupName } from '../group-name';
 import { statusText } from '../groups/group-status';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
 import { TEXT_SIZE } from '../kit/metrics';
@@ -52,8 +52,8 @@ const CheckResult = observer(function CheckResult({ query }: { readonly query: I
       <Hint
         text={statusText(
           texts,
+          group.policy,
           app.statusOf(group),
-          app.clock.timeZone(),
           app.clock.localNow().toPlainDate()
         )}
       />
@@ -78,7 +78,11 @@ export function CheckScreen() {
   const texts = useTexts();
   const [query, setQuery] = useState(EMPTY_QUERY);
   return (
-    <Screen testID="check-screen" title={texts.check.title} header={<BackButton />}>
+    <Screen
+      testID="check-screen"
+      title={texts.check.title}
+      titleLeading={<BackArrow testID="screen-back" />}
+    >
       {query.hidden ? null : (
         <TextField
           testID="check-number"

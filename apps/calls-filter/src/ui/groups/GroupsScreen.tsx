@@ -1,17 +1,19 @@
 import { useRouter } from 'expo-router';
-import { Pause, Plus, Repeat, Trash2 } from 'lucide-react-native';
+import { Pause, Plus, Power, PowerOff, Repeat, Trash2 } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TGroup } from '../../contexts/grouping/domain/group';
-import { deleteGroup } from '../../contexts/grouping/domain/group-book-edits';
+import { changeGroup, deleteGroup } from '../../contexts/grouping/domain/group-book-edits';
+import { isActive } from '../../contexts/policy/domain/activity-now';
 import { isRepeatPassOn } from '../../contexts/policy/domain/repeat-pass';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { momentText } from '../format';
 import { groupName } from '../group-name';
 import { Button } from '../kit/Button';
+import { ConditionsMark } from '../kit/ConditionsMark';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
 import { IconButton } from '../kit/IconButton';
@@ -26,18 +28,11 @@ import { repeatText } from '../repeat/repeat-text';
 import { RepeatSheet } from '../repeat/RepeatSheet';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
-import { statusParts } from './group-status';
-import { GroupStatus } from './GroupStatus';
+import { ActionBackdrop } from './ActionBackdrop';
 import { PauseSheet } from './PauseSheet';
-import { TemporarySheet } from './TemporarySheet';
+import { ruleLine } from './rule-line';
 
-const GroupRow = observer(function GroupRow({
-  group,
-  onLongPress,
-}: {
-  readonly group: TGroup;
-  readonly onLongPress: (group: TGroup) => void;
-}) {
+const GroupRow = observer(function GroupRow({ group }: { readonly group: TGroup }) {
   const app = useApp();
   const texts = useTexts();
   const scheme = useScheme();
@@ -45,38 +40,64 @@ const GroupRow = observer(function GroupRow({
   const palette = usePalette();
   const conflicted = app.books.conflicts.some(conflict => conflict.groups.includes(group.id));
   const today = app.clock.localNow().toPlainDate();
+  const status = app.statusOf(group);
+  const line = ruleLine(texts, status, today);
+  const { action } = group.policy;
   const row = (
     <Row
       testID={`group-${group.id}`}
       title={`${groupName(texts, group)}${conflicted ? ' ⚠' : ''}`}
+      idle={!isActive(status.activity)}
       titleTrailing={
-        group.kind === 'custom' ? undefined : <PinnedMark testID={`group-pinned-${group.id}`} />
+        <>
+          {group.policy.conditions === null ? null : (
+            <ConditionsMark testID={`group-conditioned-${group.id}`} />
+          )}
+          {group.kind === 'custom' ? null : <PinnedMark testID={`group-pinned-${group.id}`} />}
+        </>
       }
-      subtitle={
-        <GroupStatus
-          testID={`group-${group.id}-status`}
-          parts={statusParts(texts, app.statusOf(group), app.clock.timeZone(), today)}
+      subtitle={line === null ? undefined : <Text testID={`group-${group.id}-status`}>{line}</Text>}
+      separator="inset"
+      backdrop={<ActionBackdrop action={action} testID={`group-${group.id}-action-${action}`} />}
+      leading={
+        <Dot
+          testID={group.enabled ? `group-dot-${group.id}` : `group-dot-off-${group.id}`}
+          color={groupColor(group.color, scheme)}
+          hollow={!group.enabled}
         />
       }
-      leading={<Dot color={groupColor(group.color, scheme)} />}
       trailing={
         <Text style={{ color: palette.fgDim, fontSize: TEXT_SIZE.small }}>
           {texts.groups.callsToday(app.calls.countToday(group.id))}
         </Text>
       }
       onPress={() => router.push(`/group/${group.id}`)}
-      onLongPress={() => onLongPress(group)}
     />
   );
-  if (group.kind !== 'custom') {
-    return row;
-  }
   return (
     <SwipeAction
-      testID={`group-delete-${group.id}`}
-      icon={Trash2}
-      label={texts.group.deleteGroup}
-      onPress={() => app.books.run((book, context) => deleteGroup(book, group.id, context.now))}
+      start={
+        group.kind === 'custom'
+          ? {
+              icon: Trash2,
+              label: texts.group.deleteGroup,
+              tone: 'danger',
+              testID: `group-delete-${group.id}`,
+              onPress: () =>
+                app.books.run((book, context) => deleteGroup(book, group.id, context.now)),
+            }
+          : undefined
+      }
+      end={{
+        icon: group.enabled ? PowerOff : Power,
+        label: group.enabled ? texts.groups.switchOff : texts.groups.switchOn,
+        tone: group.enabled ? 'caution' : 'accent',
+        testID: `group-switch-${group.id}`,
+        onPress: () =>
+          app.books.run((book, context) =>
+            changeGroup(book, group.id, { enabled: !group.enabled }, context.now)
+          ),
+      }}
     >
       {row}
     </SwipeAction>
@@ -90,7 +111,6 @@ export const GroupsScreen = observer(function GroupsScreen() {
   const router = useRouter();
   const [pausing, setPausing] = useState(false);
   const [repeating, setRepeating] = useState(false);
-  const [temporaryFor, setTemporaryFor] = useState<TGroup | null>(null);
   const { device, books, clock } = app;
   const today = clock.localNow().toPlainDate();
   const custom = books.book.groups.filter(group => group.kind === 'custom');
@@ -165,13 +185,13 @@ export const GroupsScreen = observer(function GroupsScreen() {
       {custom.length === 0 ? null : (
         <Section>
           {custom.map(group => (
-            <GroupRow key={group.id} group={group} onLongPress={setTemporaryFor} />
+            <GroupRow key={group.id} group={group} />
           ))}
         </Section>
       )}
       <Section>
         {special.map(group => (
-          <GroupRow key={group.id} group={group} onLongPress={setTemporaryFor} />
+          <GroupRow key={group.id} group={group} />
         ))}
       </Section>
       <PauseSheet visible={pausing} onClose={() => setPausing(false)} />
@@ -183,9 +203,6 @@ export const GroupsScreen = observer(function GroupsScreen() {
           onClose={() => setRepeating(false)}
         />
       ) : null}
-      {temporaryFor === null ? null : (
-        <TemporarySheet group={temporaryFor} named onClose={() => setTemporaryFor(null)} />
-      )}
     </Screen>
   );
 });

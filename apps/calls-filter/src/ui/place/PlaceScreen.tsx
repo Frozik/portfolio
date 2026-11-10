@@ -17,7 +17,7 @@ import type {
 import { PLACE_RADII } from '../../contexts/policy/domain/place-rule';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
@@ -48,7 +48,7 @@ export const PlaceScreen = observer(function PlaceScreen() {
     readonly place?: string;
   }>();
   const group = findGroup(app.books.book, groupId as TGroupId);
-  const existing = group?.policy.scheduled?.places.find(place => place.id === placeId) ?? null;
+  const existing = group?.policy.conditions?.places.find(place => place.id === placeId) ?? null;
   const [name, setName] = useState(existing?.name ?? '');
   const [point, setPoint] = useState<IPoint | null>(existing);
   const [hereUnknown, setHereUnknown] = useState(false);
@@ -100,7 +100,7 @@ export const PlaceScreen = observer(function PlaceScreen() {
     <Screen
       testID="place-screen"
       title={texts.place.title}
-      header={<BackButton />}
+      titleLeading={<BackArrow testID="screen-back" />}
       footer={
         <>
           <Button

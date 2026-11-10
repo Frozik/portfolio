@@ -10,8 +10,6 @@ export interface IScreeningRuntime {
   setPausedUntil(until: Temporal.Instant | null): void;
   /** How many days the service keeps its journal of screened calls. */
   setRetentionDays(days: number): void;
-  /** `group@setAtEpochMs` of temporary policies the service released: used up, or taken back. */
-  releasedTemporaries(): readonly string[];
   /** Clears «where does this number go?» from the shade once the app has answered it. */
   dismissWhereTo(): void;
   networkCountry(): TCountryCode | null;

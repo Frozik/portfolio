@@ -41,7 +41,7 @@ async function addTeamCalendar() {
 
 function calendarRules(phone: IFakePhone) {
   return (
-    phone.saved()?.groups.find(group => group.id === 'work')?.policy.scheduled?.calendars ?? []
+    phone.saved()?.groups.find(group => group.id === 'work')?.policy.conditions?.calendars ?? []
   );
 }
 
@@ -61,7 +61,7 @@ describe('an iCal link added from a group’s calendars', () => {
 
     await waitFor(() =>
       expect(
-        phone.published.at(-1)?.groups.find(group => group.id === 'work')?.scheduled?.calendars[0]
+        phone.published.at(-1)?.groups.find(group => group.id === 'work')?.conditions?.calendars[0]
           ?.bakedEvents
       ).toHaveLength(1)
     );
@@ -73,7 +73,7 @@ describe('an iCal link added from a group’s calendars', () => {
     await fireEvent.press(await screen.findByTestId('calendar-ics-id-1-only'));
 
     const work = phone.saved()?.groups.find(group => group.id === 'work');
-    expect([work?.policy.otherwise, work?.policy.scheduled?.calendars.length]).toEqual(['pass', 1]);
+    expect([work?.policy.action, work?.policy.conditions?.calendars.length]).toEqual(['block', 1]);
   });
 
   it('acts during the events of a calendar, or not on it at all, as its switch says', async () => {
@@ -101,7 +101,7 @@ describe('an iCal link added from a group’s calendars', () => {
     expect(screen.getByTestId('ics-sheet')).toBeOnTheScreen();
   });
 
-  it('asks nothing of what the group does during its calendars: the opposite of the rest of the time', async () => {
+  it('asks nothing of what the group does during its calendars: that stays its own action', async () => {
     await openCalendarsOf('work');
     await addTeamCalendar();
 

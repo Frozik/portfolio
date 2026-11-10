@@ -11,25 +11,19 @@ import { Section } from '../kit/Section';
 import { PlaceStateMark } from '../place/PlaceStateMark';
 import { SettingIcons } from './SettingIcons';
 
-/** «What to do»: one action always, or one in the windows and another the rest of the time. */
-export const PolicyPanel = observer(function PolicyPanel({
-  group,
-  onForAWhile,
-}: {
-  readonly group: TGroup;
-  readonly onForAWhile: () => void;
-}) {
+/** A group's rules: its settings as icons, its places, and a warning about hidden repeats. */
+export const PolicyPanel = observer(function PolicyPanel({ group }: { readonly group: TGroup }) {
   const app = useApp();
   const texts = useTexts();
   const router = useRouter();
   const { policy } = group;
-  const { scheduled } = policy;
+  const { conditions } = policy;
   return (
     <>
-      <SettingIcons group={group} onForAWhile={onForAWhile} />
-      {(scheduled?.places.length ?? 0) === 0 ? null : (
+      <SettingIcons group={group} />
+      {(conditions?.places.length ?? 0) === 0 ? null : (
         <Section>
-          {(scheduled?.places ?? []).map(place => {
+          {(conditions?.places ?? []).map(place => {
             const here = app.places.atPlace(place.id);
             return (
               <Row

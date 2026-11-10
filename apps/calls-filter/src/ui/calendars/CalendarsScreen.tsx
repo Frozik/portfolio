@@ -12,7 +12,7 @@ import type { ICalendarRule, IEventFilter } from '../../contexts/policy/domain/p
 import { withConditions } from '../../contexts/policy/domain/policy';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
 import { IconButton } from '../kit/IconButton';
@@ -86,7 +86,7 @@ const AddIcsSheet = observer(function AddIcsSheet({
 });
 
 function rulesOf(group: TGroup): readonly ICalendarRule[] {
-  return group.policy.scheduled?.calendars ?? [];
+  return group.policy.conditions?.calendars ?? [];
 }
 
 /** The calendars of the phone and the links; with a group, the calendar rule of its policy. */
@@ -106,10 +106,10 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
       return;
     }
     const { policy } = group;
-    const scheduled = policy.scheduled ?? { schedule: null, calendars: [] };
-    const nextScheduled = { places: [], ...scheduled, calendars: next };
+    const conditions = policy.conditions ?? { schedule: null, calendars: [] };
+    const nextConditions = { places: [], ...conditions, calendars: next };
     app.books.run((book, context) =>
-      changeGroup(book, group.id, { policy: withConditions(policy, nextScheduled) }, context.now)
+      changeGroup(book, group.id, { policy: withConditions(policy, nextConditions) }, context.now)
     );
   };
   const calendarUseOf = (source: TCalendarSource): TCalendarUse =>
@@ -139,7 +139,11 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
       />
     );
   return (
-    <Screen testID="calendars-screen" title={texts.calendars.title} header={<BackButton />}>
+    <Screen
+      testID="calendars-screen"
+      title={texts.calendars.title}
+      titleLeading={<BackArrow testID="screen-back" />}
+    >
       {app.device.permissions.calendar === 'granted' ? null : (
         <Section>
           <Hint text={texts.calendars.noPermission} />

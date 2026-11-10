@@ -18,7 +18,7 @@ import { parseNumberMask } from '../../contexts/masks/domain/number-mask';
 import type { TE164Digits } from '../../contexts/phone/domain/caller';
 import type { TPlaceId } from '../../contexts/policy/domain/place-rule';
 import { isPlaceRadius } from '../../contexts/policy/domain/place-rule';
-import type { IPolicy, ITemporaryPolicy } from '../../contexts/policy/domain/policy';
+import type { IPolicy } from '../../contexts/policy/domain/policy';
 import type { ISchedule, TWeekday } from '../../contexts/policy/domain/schedule';
 import { BOOK_HISTORY } from './group-book-history';
 import { repeatPassCodec } from './repeat-pass-codec';
@@ -104,8 +104,6 @@ const calendarSource = z.discriminatedUnion('kind', [
     calendarName: z.string(),
   }),
   z.object({ kind: z.literal('ics'), id: z.string() }),
-  // Read only to drop: an older app offered the holidays of the phone's country as a calendar.
-  z.object({ kind: z.literal('holidays-here') }),
 ]);
 
 const placeRule = z.object({
@@ -121,10 +119,10 @@ const placeRule = z.object({
 });
 
 const policy = z.object({
-  otherwise: action,
+  action,
   repeatPass: repeatPassCodec,
   repeatWindowMinutes: z.number().int().min(1),
-  scheduled: z
+  conditions: z
     .object({
       schedule: schedule.nullable(),
       calendars: z.array(
@@ -139,23 +137,10 @@ const policy = z.object({
           }),
         })
       ),
-      /** Documents from before places had none. */
-      places: z.array(placeRule).default([]),
+      places: z.array(placeRule),
     })
     .nullable(),
 });
-
-const temporary = z
-  .object({
-    action,
-    setAt: instant,
-    until: z.discriminatedUnion('kind', [
-      z.object({ kind: z.literal('instant'), at: instant }),
-      z.object({ kind: z.literal('first-pass'), latest: instant }),
-      z.object({ kind: z.literal('end-of-event'), at: instant }),
-    ]),
-  })
-  .nullable();
 
 const groupCore = {
   id: z.string(),
@@ -171,7 +156,7 @@ const groupCore = {
     }),
   ]),
   policy,
-  temporary,
+  enabled: z.boolean(),
   autoReply: z.object({ text: z.string() }).nullable(),
   createdAt: instant,
   updatedAt: instant,
@@ -235,14 +220,12 @@ function membersOf(stored: readonly TStoredMember[]): readonly TMember[] {
   });
 }
 
-function sourceOf(stored: z.infer<typeof calendarSource>): TCalendarSource | null {
+function sourceOf(stored: z.infer<typeof calendarSource>): TCalendarSource {
   switch (stored.kind) {
     case 'ics':
       return { kind: 'ics', id: stored.id as TIcsId };
     case 'device':
       return stored;
-    case 'holidays-here':
-      return null;
     default:
       return assertNever(stored);
   }
@@ -251,16 +234,16 @@ function sourceOf(stored: z.infer<typeof calendarSource>): TCalendarSource | nul
 function policyOf(stored: z.infer<typeof policy>): IPolicy {
   return {
     ...stored,
-    scheduled:
-      stored.scheduled === null
+    conditions:
+      stored.conditions === null
         ? null
         : {
-            ...stored.scheduled,
-            schedule: stored.scheduled.schedule as ISchedule | null,
-            calendars: stored.scheduled.calendars.flatMap(rule => {
-              const source = sourceOf(rule.source);
-              return source === null ? [] : [{ ...rule, source }];
-            }),
+            ...stored.conditions,
+            schedule: stored.conditions.schedule as ISchedule | null,
+            calendars: stored.conditions.calendars.map(rule => ({
+              ...rule,
+              source: sourceOf(rule.source),
+            })),
           },
   };
 }
@@ -270,7 +253,7 @@ function groupOf(stored: z.infer<typeof group>): TGroup {
     id: stored.id as TGroupId,
     color: stored.color,
     policy: policyOf(stored.policy),
-    temporary: stored.temporary as ITemporaryPolicy | null,
+    enabled: stored.enabled,
     autoReply: stored.autoReply,
     createdAt: stored.createdAt,
     updatedAt: stored.updatedAt,
@@ -297,6 +280,7 @@ function groupOf(stored: z.infer<typeof group>): TGroup {
 export type TDecodeFailure =
   | { readonly kind: 'not-json' }
   | { readonly kind: 'invalid'; readonly issues: string }
+  | { readonly kind: 'not-versioned' }
   | { readonly kind: 'no-migration' }
   | { readonly kind: 'migration-failed' }
   /** Written by a newer app: left as it is. */

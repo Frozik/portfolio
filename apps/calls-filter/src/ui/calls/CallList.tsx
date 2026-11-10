@@ -15,6 +15,7 @@ import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
 import { GAP, GUTTER, SMALL_GAP, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { Section } from '../kit/Section';
+import { useWordFit, WholeWordsText } from '../kit/WholeWordsText';
 import { Wrap } from '../kit/Wrap';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
@@ -24,6 +25,9 @@ import { CallSheet } from './CallSheet';
 import { moveEntry } from './move-caller';
 import { MoveSheet } from './MoveSheet';
 import { originText } from './origin-text';
+
+/** A number shrinks rather than lose its last digits to an ellipsis. */
+const NUMBER_MIN_SCALE = 0.7;
 
 const CallRow = observer(function CallRow({
   row,
@@ -51,6 +55,9 @@ const CallRow = observer(function CallRow({
     texts,
     caller.number === null ? null : app.numberingCatalogue.detailsOf(caller.number)
   );
+  const time = texts.format.time(local.hour, local.minute);
+  const groupLabel = `${groupName(texts, group)}${row.conflictWith.length > 0 ? ' ⚠' : ''}`;
+  const groupFit = useWordFit(groupLabel);
   const names = [
     caller.contact?.displayName,
     caller.networkName === null ? undefined : `${caller.networkName} · ${texts.call.fromOperator}`,
@@ -70,7 +77,12 @@ const CallRow = observer(function CallRow({
           name={caller.contact?.displayName ?? caller.networkName ?? entry.dialerName}
         />
         <View style={styles.text}>
-          <Text style={[styles.title, { color: palette.fg }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: palette.fg }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={NUMBER_MIN_SCALE}
+          >
             {title} {texts.call.calls(row.calls)}
           </Text>
           {names.map(name => (
@@ -87,28 +99,32 @@ const CallRow = observer(function CallRow({
               {`${entry.dialerName} · ${texts.call.fromDialer}`}
             </Text>
           )}
-          {origin === null ? null : (
-            <Text
-              testID={`call-origin-${entry.id}`}
-              style={[styles.subtitle, { color: palette.fgDim }]}
-              numberOfLines={1}
-            >
-              {origin}
+          <View style={styles.when}>
+            {origin === null ? null : (
+              <Text
+                testID={`call-origin-${entry.id}`}
+                style={[styles.subtitle, styles.origin, { color: palette.fgDim }]}
+                numberOfLines={1}
+              >
+                {origin}
+              </Text>
+            )}
+            <Text style={[styles.subtitle, { color: palette.fgDim }]}>
+              {origin === null ? time : ` · ${time}`}
             </Text>
-          )}
+          </View>
           {showGroup ? (
             <View style={styles.group}>
               <Dot color={groupColor(group.color, scheme)} />
-              <Text style={[styles.subtitle, { color: palette.fgDim }]}>
-                {groupName(texts, group)}
-                {row.conflictWith.length > 0 ? ' ⚠' : ''}
-              </Text>
+              <WholeWordsText
+                fit={groupFit}
+                style={[styles.subtitle, styles.groupName, { color: palette.fgDim }]}
+              >
+                {groupLabel}
+              </WholeWordsText>
             </View>
           ) : null}
         </View>
-        <Text style={[styles.time, { color: palette.fgDim }]}>
-          {texts.format.time(local.hour, local.minute)}
-        </Text>
       </Pressable>
       {moveTargets(app.books.book, group.id, caller).length === 0 ? null : (
         <Pressable
@@ -217,8 +233,10 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 2 },
   title: { fontSize: TEXT_SIZE.body, fontWeight: '500' },
   subtitle: { fontSize: TEXT_SIZE.small },
-  time: { fontSize: TEXT_SIZE.small },
   group: { flexDirection: 'row', alignItems: 'center', gap: SMALL_GAP },
+  groupName: { flexShrink: 1 },
+  when: { flexDirection: 'row' },
+  origin: { flexShrink: 1 },
   moveButton: {
     width: TOUCH_SIZE,
     height: TOUCH_SIZE,

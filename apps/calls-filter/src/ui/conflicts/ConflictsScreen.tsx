@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { conflictKey } from '../../contexts/grouping/domain/conflict';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Hint } from '../kit/Hint';
 import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
@@ -15,7 +15,11 @@ export const ConflictsScreen = observer(function ConflictsScreen() {
   const texts = useTexts();
   const { conflicts } = app.books;
   return (
-    <Screen testID="conflicts-screen" title={texts.conflict.title} header={<BackButton />}>
+    <Screen
+      testID="conflicts-screen"
+      title={texts.conflict.title}
+      titleLeading={<BackArrow testID="screen-back" />}
+    >
       {conflicts.length === 0 ? <Hint testID="conflicts-none" text={texts.conflict.none} /> : null}
       {conflicts.map(conflict => (
         <Section key={conflictKey(conflict.groups)}>

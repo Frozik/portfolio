@@ -10,7 +10,8 @@ export type TEditRejection =
   | 'strangers-take-nobody'
   | 'nothing-to-move'
   | 'not-a-contact'
-  | 'unknown-group';
+  | 'unknown-group'
+  | 'unknown-member';
 
 /**
  * The answer of every edit: applied, or not yet because it would make a conflict (the

@@ -8,17 +8,14 @@ import type { TMember } from '../../grouping/domain/member';
 import { canonicalNumberPattern } from '../../masks/domain/number-mask-canonical';
 import { patternRegexSource } from '../../masks/domain/pattern-regex';
 import { floatingDateStart } from '../../policy/domain/floating-time';
-import type { ITemporaryPolicy } from '../../policy/domain/policy';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
 import { scheduleWindows } from '../../policy/domain/schedule-windows';
-import { windowActionOf } from '../../policy/domain/window-action';
 import type {
   ICompiledGroup,
   ICompiledRuleset,
   TCompiledRepeatPass,
   IWhereToChoice,
-  ICompiledScheduled,
-  ICompiledTemporary,
+  ICompiledConditions,
   TCompiledMember,
 } from './compiled-ruleset';
 import { RULESET_SCHEMA } from './compiled-ruleset';
@@ -63,39 +60,23 @@ function compileMembers(
   });
 }
 
-function compileScheduled(group: TGroup, inputs: IScreeningInputs): ICompiledScheduled | null {
-  const { scheduled } = group.policy;
-  if (scheduled === null) {
+function compileConditions(group: TGroup, inputs: IScreeningInputs): ICompiledConditions | null {
+  const { conditions } = group.policy;
+  if (conditions === null) {
     return null;
   }
-  const { schedule } = scheduled;
+  const { schedule } = conditions;
   return {
-    action: windowActionOf(group.policy),
     zone: schedule?.zone.kind === 'fixed' ? schedule.zone.zone : null,
     hasSchedule: schedule !== null,
     windows: schedule === null ? [] : scheduleWindows(schedule, inputs.occurrencesOf(schedule)),
-    calendars: scheduled.calendars.map(rule => ({
+    calendars: conditions.calendars.map(rule => ({
       mode: rule.mode,
       filter: rule.filter,
       source: rule.source,
       bakedEvents: inputs.eventsOf(rule),
     })),
-    places: scheduled.places,
-  };
-}
-
-function compileTemporary(temporary: ITemporaryPolicy | null): ICompiledTemporary | null {
-  if (temporary === null) {
-    return null;
-  }
-  const { until } = temporary;
-  const untilEpochMs =
-    until.kind === 'first-pass' ? until.latest.epochMilliseconds : until.at.epochMilliseconds;
-  return {
-    action: temporary.action,
-    until: until.kind,
-    untilEpochMs,
-    setAtEpochMs: temporary.setAt.epochMilliseconds,
+    places: conditions.places,
   };
 }
 
@@ -116,11 +97,11 @@ function compileGroup(
     include: group.kind === 'custom' ? compileMembers(group.include, environment) : [],
     exclude: group.kind === 'strangers' ? [] : compileMembers(group.exclude, environment),
     excludeMyContacts: group.kind === 'custom' && group.excludeMyContacts,
-    otherwise: group.policy.otherwise,
-    scheduled: compileScheduled(group, inputs),
+    action: group.policy.action,
+    conditions: compileConditions(group, inputs),
     repeatWindowMinutes: group.policy.repeatWindowMinutes,
     repeatPass: compileRepeatPass(group.policy.repeatPass),
-    temporary: compileTemporary(group.temporary),
+    off: !group.enabled,
     createdAtEpochMs: group.createdAt.epochMilliseconds,
     autoReplyText: group.autoReply?.text ?? '',
     name: group.kind === 'custom' ? group.name : '',

@@ -5,7 +5,7 @@ import { sealDocument } from './codecs/versioned-document';
 import type { IDocumentStore, IStoredDocument } from './stored-document';
 import { loadDocument, saveDocument } from './stored-document';
 
-const HISTORY: IDocumentHistory = { version: 1, migrations: { 0: data => data } };
+const HISTORY: IDocumentHistory = { version: 2, migrations: { 1: data => data } };
 const THEME: IStoredDocument<{ readonly theme: string }> = {
   key: 'preferences',
   history: HISTORY,
@@ -42,7 +42,9 @@ describe('a document of this phone, loaded', () => {
   });
 
   it('writes an older one back at the current version right away, and says so', async () => {
-    const { store, diagnostics, row, events } = phone(JSON.stringify({ theme: 'dark' }));
+    const { store, diagnostics, row, events } = phone(
+      JSON.stringify({ version: 1, data: { theme: 'dark' } })
+    );
 
     expect(await loadDocument(store, THEME, diagnostics)).toEqual({ theme: 'dark' });
     expect(row()).toBe(sealDocument(HISTORY, { theme: 'dark' }));

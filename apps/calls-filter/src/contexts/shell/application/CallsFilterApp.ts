@@ -21,9 +21,9 @@ import type { ICaller } from '../../phone/domain/caller';
 import type { IDialingRegion, TCountryCode } from '../../phone/domain/dialing-region';
 import type { IPhoneNumbering } from '../../phone/domain/ports/phone-numbering';
 import { PlacesModel } from '../../places/application/PlacesModel';
+import type { IActivityNow } from '../../policy/domain/activity-now';
+import { activityNow } from '../../policy/domain/activity-now';
 import { floatingMinute } from '../../policy/domain/floating-time';
-import type { IGroupStatus } from '../../policy/domain/group-status';
-import { groupStatus } from '../../policy/domain/group-status';
 import type { IPlaceRule, TPlaceId } from '../../policy/domain/place-rule';
 import type { IClock } from '../../policy/domain/ports/clock';
 import type { ITimeZone } from '../../policy/domain/ports/time-zones';
@@ -37,7 +37,6 @@ import { groupWindows } from '../../screening/domain/group-windows';
 import type { IScreeningInputs } from '../../screening/domain/screening-inputs';
 import { SyncModel } from '../../sync/application/SyncModel';
 import type { IAppPorts } from './app-ports';
-import { dropReleasedTemporaries } from './released-temporaries';
 
 /** When nothing says where the phone is from: a numbering plan to read national masks by. */
 const FALLBACK_COUNTRY = 'US' as TCountryCode;
@@ -98,7 +97,7 @@ export class CallsFilterApp {
       () => ({
         usesDeviceCalendars: this.books.book.groups.some(
           group =>
-            group.policy.scheduled?.calendars.some(rule => rule.source.kind === 'device') ?? false
+            group.policy.conditions?.calendars.some(rule => rule.source.kind === 'device') ?? false
         ),
         usesAutoReply:
           ports.smsReply && this.books.book.groups.some(group => group.autoReply !== null),
@@ -281,7 +280,7 @@ export class CallsFilterApp {
 
   /** Every place a group's rules look at. */
   private get placeRules(): readonly IPlaceRule[] {
-    return this.books.book.groups.flatMap(group => group.policy.scheduled?.places ?? []);
+    return this.books.book.groups.flatMap(group => group.policy.conditions?.places ?? []);
   }
 
   /** The groups the shade offers for a stranger's number after the call, as the move sheet ranks them. */
@@ -295,11 +294,11 @@ export class CallsFilterApp {
     });
   }
 
-  /** What a group does with a call right now, and what it does after that changes; re-read each minute. */
-  statusOf(group: TGroup): IGroupStatus {
+  /** Whether a group is in force right now, and when that changes; re-read each minute. */
+  statusOf(group: TGroup): IActivityNow {
     void this.minutesPassed;
     const { clock } = this.ports;
-    return groupStatus(
+    return activityNow(
       group,
       { instant: clock.now(), local: floatingMinute(clock.localNow()) },
       groupWindows(group.policy, this.inputs),
@@ -330,7 +329,6 @@ export class CallsFilterApp {
     void this.calls.refresh();
     this.diagnostics.refresh();
     void this.places.settle();
-    dropReleasedTemporaries(this.books, this.ports.runtime.releasedTemporaries());
     void this.calendars.refresh();
     void this.sync.syncNow();
     if (this.device.permissions.contacts === 'granted') {
@@ -344,7 +342,6 @@ export class CallsFilterApp {
   /** A wake-up from Android while the app is closed: re-read the calendars, the rules follow. */
   async refreshInBackground(): Promise<void> {
     this.device.refresh();
-    dropReleasedTemporaries(this.books, this.ports.runtime.releasedTemporaries());
     await this.calendars.refresh();
     await this.sync.syncNow();
   }

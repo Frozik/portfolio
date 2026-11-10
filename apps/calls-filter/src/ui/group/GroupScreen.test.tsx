@@ -12,7 +12,7 @@ import {
   stranger,
 } from '../../contexts/grouping/testing/group-book-fixtures';
 import type { IJournalEntry, TJournalEntryId } from '../../contexts/journal/domain/journal-entry';
-import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
+import { ALWAYS_BLOCK } from '../../contexts/policy/domain/policy';
 import type { IFakePhone } from '../../testing/fake-ports';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
@@ -54,7 +54,7 @@ describe('a group, edited on its own screen', () => {
     expect([spamIn(phone)?.name, spamIn(phone)?.color]).toEqual(['Spam calls', '#ff8800']);
   });
 
-  it('asks nothing on its schedule of what the group does in it: the opposite of the rest of the time', async () => {
+  it('asks nothing on its schedule of what the group does: that stays its own action', async () => {
     await renderApp(ROUTES, {
       phone: fakePhone({ book: bookOf([SPAM]) }),
       initialUrl: '/schedule?group=spam',
@@ -65,31 +65,31 @@ describe('a group, edited on its own screen', () => {
   });
 
   it('shows on its rules what the group does while its conditions hold', async () => {
-    const scheduled = custom('spam', [], {
+    const conditions = custom('spam', [], {
       policy: {
         ...ALWAYS_BLOCK,
-        scheduled: { schedule: null, calendars: [], places: [] },
+        conditions: { schedule: null, calendars: [], places: [] },
       },
     });
     await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([scheduled]) }),
+      phone: fakePhone({ book: bookOf([conditions]) }),
       initialUrl: '/group/spam',
     });
 
     await fireEvent.press(await screen.findByTestId('group-tab-rules'));
 
-    expect(screen.getByTestId('while-pass')).toBeSelected();
-    expect(screen.queryByTestId('always-pass')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('while-block')).toBeSelected();
+    expect(screen.queryByTestId('always-block')).not.toBeOnTheScreen();
   });
 
-  it('keeps blocking once given a schedule: it blocks in the schedule, and lets calls through outside', async () => {
+  it('keeps blocking once given a schedule, now only while the schedule holds', async () => {
     const phone = fakePhone({ book: bookOf([SPAM]) });
     await renderApp(ROUTES, { phone, initialUrl: '/schedule?group=spam' });
 
     await fireEvent.press(await screen.findByTestId('schedule-save'));
 
-    expect(spamIn(phone)?.policy.scheduled).not.toBeNull();
-    expect(spamIn(phone)?.policy.otherwise).toBe('pass');
+    expect(spamIn(phone)?.policy.conditions).not.toBeNull();
+    expect(spamIn(phone)?.policy.action).toBe('block');
   });
 
   it('gets a schedule: weekdays on Helsinki’s clock', async () => {
@@ -102,7 +102,7 @@ describe('a group, edited on its own screen', () => {
     await fireEvent.press(await screen.findByTestId('zone-Europe/Helsinki'));
     await fireEvent.press(screen.getByTestId('schedule-save'));
 
-    expect(spamIn(phone)?.policy.scheduled?.schedule).toMatchObject({
+    expect(spamIn(phone)?.policy.conditions?.schedule).toMatchObject({
       repeat: { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5] },
       zone: { kind: 'fixed', zone: 'Europe/Helsinki' },
     });
@@ -115,7 +115,7 @@ describe('a group, edited on its own screen', () => {
     await fireEvent.press(await screen.findByTestId('group-status'));
     await fireEvent.press(within(screen.getByTestId('policy-sheet')).getByTestId('always-pass'));
 
-    expect(spamIn(phone)?.policy.otherwise).toBe('pass');
+    expect(spamIn(phone)?.policy.action).toBe('pass');
   });
 
   it('shows the group without the status sheet on the way back from the schedule it opened', async () => {
@@ -197,125 +197,25 @@ describe('a group, edited on its own screen', () => {
     expect(sheet.getByTestId('always-block')).toHaveProp('accessibilityRole', 'tab');
   });
 
-  it('fills the icon of each setting a group has: calendars here, no schedule, nothing for a while', async () => {
-    const byHolidays = custom('spam', [], {
-      policy: {
-        ...ALWAYS_BLOCK,
-        scheduled: {
-          schedule: null,
-          calendars: [
-            {
-              source: {
-                kind: 'device',
-                accountType: 'com.google',
-                accountName: 'me@example.com',
-                calendarName: 'Holidays',
-              },
-              mode: 'only-during-events',
-              filter: {
-                skipDeclined: true,
-                includeAllDay: true,
-                minutesBefore: 0,
-                minutesAfter: 0,
-              },
-            },
-          ],
-          places: [],
-        },
-      },
-    });
+  it('draws the dot of a switched-off group as a ring', async () => {
     await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([byHolidays]) }),
+      phone: fakePhone({
+        book: bookOf([custom('spam', [], { policy: ALWAYS_BLOCK, enabled: false })]),
+      }),
       initialUrl: '/group/spam',
     });
 
-    await fireEvent.press(await screen.findByTestId('group-status'));
-
-    const sheet = within(screen.getByTestId('policy-sheet'));
-    expect(sheet.getByTestId('add-calendars')).toBeSelected();
-    expect(sheet.getByTestId('add-schedule')).not.toBeSelected();
-    expect(sheet.getByTestId('policy-for-a-while')).not.toBeSelected();
+    expect(await screen.findByTestId('group-dot-off')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-rename')).toHaveStyle({ opacity: 0.6 });
   });
 
-  it('fills the «for a while» icon while a change for a while holds', async () => {
-    const forAnHour = custom('spam', [], {
-      policy: ALWAYS_BLOCK,
-      temporary: {
-        action: 'pass',
-        until: { kind: 'instant', at: Temporal.Instant.from('2026-11-09T12:00:00Z') },
-        setAt: Temporal.Instant.from('2026-11-09T08:00:00Z'),
-      },
-    });
+  it('keeps the name of a group without conditions bright', async () => {
     await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([forAnHour]) }),
+      phone: fakePhone({ book: bookOf([custom('spam', [], { policy: ALWAYS_BLOCK })]) }),
       initialUrl: '/group/spam',
     });
 
-    await fireEvent.press(await screen.findByTestId('group-status'));
-
-    expect(
-      within(screen.getByTestId('policy-sheet')).getByTestId('policy-for-a-while')
-    ).toBeSelected();
-  });
-
-  it('offers a change for a while on its rules too', async () => {
-    await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([SPAM]) }),
-      initialUrl: '/group/spam',
-    });
-
-    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
-    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
-
-    expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
-  });
-
-  it('sets for a while the opposite of what a blocking group does now, with no switch to pick it', async () => {
-    const phone = fakePhone({ book: bookOf([SPAM]) });
-    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
-
-    await fireEvent.press(await screen.findByTestId('group-status'));
-    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
-
-    expect(screen.queryByTestId('temporary-action-pass')).not.toBeOnTheScreen();
-    await fireEvent.press(await screen.findByTestId('temporary-1h'));
-    expect(spamIn(phone)?.temporary?.action).toBe('pass');
-  });
-
-  it('sets for a while the opposite of what a group letting calls through does now', async () => {
-    const phone = fakePhone({ book: bookOf([custom('spam', [], { policy: ALWAYS_PASS })]) });
-    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
-
-    await fireEvent.press(await screen.findByTestId('group-status'));
-    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
-    await fireEvent.press(await screen.findByTestId('temporary-1h'));
-
-    expect(spamIn(phone)?.temporary?.action).toBe('block');
-  });
-
-  it('says nothing more of the group in its change for a while: it is opened inside the group', async () => {
-    await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([SPAM]) }),
-      initialUrl: '/group/spam',
-    });
-
-    await fireEvent.press(await screen.findByTestId('group-status'));
-    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
-
-    expect(await screen.findByTestId('temporary-sheet-title')).not.toHaveTextContent(SPAM.name);
-    expect(screen.queryByTestId('temporary-usually')).not.toBeOnTheScreen();
-  });
-
-  it('offers a change for a while from its status', async () => {
-    await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([SPAM]) }),
-      initialUrl: '/group/spam',
-    });
-
-    await fireEvent.press(await screen.findByTestId('group-status'));
-    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
-
-    expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
+    expect(await screen.findByTestId('group-rename')).not.toHaveStyle({ opacity: 0.6 });
   });
 
   it('shows a group the app keeps itself as pinned, with nothing to rename it by', async () => {
@@ -396,6 +296,24 @@ describe('a group, edited on its own screen', () => {
         member.kind === 'number-mask' ? member.mask.source : member.kind
       )
     ).toEqual(['+31851234567']);
+  });
+
+  it('moves a caller with the operator’s name by that name when the name under the group is tapped', async () => {
+    const call: IJournalEntry = {
+      id: 'call-2' as TJournalEntryId,
+      at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
+      rawNumber: '+79864563560',
+      caller: stranger('79864563560', 'IP Isanshin'),
+      dialerName: null,
+      answered: null,
+      outcome: { kind: 'history', type: 'rejected' },
+    };
+    const phone = fakePhone({ book: bookOf([SPAM]), journal: [call] });
+    await renderApp(ROUTES, { phone, initialUrl: `/group/${STRANGERS_ID}` });
+    await fireEvent.press(await screen.findByTestId('call-move-call-2'));
+    await fireEvent.press(await screen.findByTestId('move-to-spam-name'));
+
+    expect(spamIn(phone)?.include.map(member => member.kind)).toEqual(['name-mask']);
   });
 });
 

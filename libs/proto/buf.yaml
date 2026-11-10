@@ -8,10 +8,7 @@ breaking:
   # JSON travels on the wire, so field names are part of the contract too.
   use:
     - WIRE_JSON
-  # One commit only: the holidays and the schedule's times left the contract before any
-  # install depended on it. Remove with the next change to the contract.
-  ignore_only:
-    FIELD_NO_DELETE_UNLESS_NAME_RESERVED:
-      - proto/frozik/callsfilter/v1/ruleset.proto
-    FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED:
-      - proto/frozik/callsfilter/v1/ruleset.proto
+  # Calls Filter is not released to anyone yet: its contract is free to change, numbers and
+  # all, until the first public release. Remove this then, and keep the contract from there on.
+  ignore:
+    - proto/frozik/callsfilter/v1/ruleset.proto

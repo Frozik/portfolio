@@ -1,50 +1,49 @@
 import type { IDocumentHistory } from './versioned-document';
 import { gapsIn, openDocument, sealDocument } from './versioned-document';
 
-/** A document that grew twice: a bare name, then wrapped, then given a second field. */
+/** A document that grew twice: a name, then a second field, then the name split. */
 const HISTORY: IDocumentHistory = {
-  version: 2,
+  version: 3,
   migrations: {
-    0: data => ({ name: data }),
     1: data => ({ ...(data as object), nickname: null }),
+    2: data => {
+      const { name, ...rest } = data as { readonly name: string };
+      const [first, last] = name.split(' ');
+      return { ...rest, first, last };
+    },
   },
 };
 
 describe('a stored document read by its version', () => {
   it('reads one of the current version as it is', () => {
-    expect(openDocument(sealDocument(HISTORY, { name: 'Anna', nickname: 'A' }), HISTORY)).toEqual({
-      kind: 'current',
-      data: { name: 'Anna', nickname: 'A' },
-    });
+    const data = { first: 'Anna', last: 'Lee', nickname: 'A' };
+    expect(openDocument(sealDocument(HISTORY, data), HISTORY)).toEqual({ kind: 'current', data });
   });
 
   it('carries an older one through every step up to the current version', () => {
-    expect(openDocument(JSON.stringify({ version: 1, data: { name: 'Anna' } }), HISTORY)).toEqual({
-      kind: 'migrated',
-      from: 1,
-      data: { name: 'Anna', nickname: null },
-    });
+    expect(
+      openDocument(JSON.stringify({ version: 1, data: { name: 'Anna Lee' } }), HISTORY)
+    ).toEqual({ kind: 'migrated', from: 1, data: { first: 'Anna', last: 'Lee', nickname: null } });
   });
 
-  it('takes a document written before documents carried a version as version 0', () => {
-    expect(openDocument(JSON.stringify('Anna'), HISTORY)).toEqual({
-      kind: 'migrated',
-      from: 0,
-      data: { name: 'Anna', nickname: null },
+  it('cannot read one written without a version', () => {
+    expect(openDocument(JSON.stringify({ name: 'Anna Lee' }), HISTORY)).toEqual({
+      kind: 'unreadable',
+      reason: 'not-versioned',
     });
   });
 
   it('leaves alone one a newer app wrote, and says which version', () => {
-    expect(openDocument(JSON.stringify({ version: 3, data: {} }), HISTORY)).toEqual({
+    expect(openDocument(JSON.stringify({ version: 4, data: {} }), HISTORY)).toEqual({
       kind: 'newer',
-      version: 3,
+      version: 4,
     });
   });
 
   it('cannot read one whose history has a step missing', () => {
-    const gappy: IDocumentHistory = { version: 2, migrations: { 1: data => data } };
+    const gappy: IDocumentHistory = { version: 3, migrations: { 2: data => data } };
 
-    expect(openDocument(JSON.stringify('Anna'), gappy)).toEqual({
+    expect(openDocument(JSON.stringify({ version: 1, data: {} }), gappy)).toEqual({
       kind: 'unreadable',
       reason: 'no-migration',
     });
@@ -52,15 +51,15 @@ describe('a stored document read by its version', () => {
 
   it('cannot read one a step fails on', () => {
     const failing: IDocumentHistory = {
-      version: 1,
+      version: 2,
       migrations: {
-        0: () => {
+        1: () => {
           throw new Error('not the shape the step knows');
         },
       },
     };
 
-    expect(openDocument(JSON.stringify('Anna'), failing)).toEqual({
+    expect(openDocument(JSON.stringify({ version: 1, data: {} }), failing)).toEqual({
       kind: 'unreadable',
       reason: 'migration-failed',
     });
@@ -72,6 +71,7 @@ describe('a stored document read by its version', () => {
 
   it('finds the gaps in a history, so none ships with one', () => {
     expect(gapsIn(HISTORY)).toEqual([]);
-    expect(gapsIn({ version: 3, migrations: { 0: data => data, 2: data => data } })).toEqual([1]);
+    expect(gapsIn({ version: 1, migrations: {} })).toEqual([]);
+    expect(gapsIn({ version: 4, migrations: { 1: data => data, 3: data => data } })).toEqual([2]);
   });
 });

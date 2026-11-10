@@ -51,7 +51,8 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#0f1320' },
       // The release computes it from the tag (`android-version-code`): every release installs over the one before.
       versionCode: Number(process.env.VAULT_NATIVE_VERSION_CODE ?? DEVELOPMENT_VERSION_CODE),
-      predictiveBackGestureEnabled: true,
+      // On Android 13–15 React Native 0.86 hears back only through onBackPressed, which this flag turns off.
+      predictiveBackGestureEnabled: false,
       // The vault leaves the phone only through the user's own cloud, never through a backup.
       allowBackup: false,
     },

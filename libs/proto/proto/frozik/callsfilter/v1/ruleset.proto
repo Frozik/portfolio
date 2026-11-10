@@ -12,16 +12,16 @@ message Ruleset {
   // The contract's major version; a reader that does not know it treats the file as absent.
   uint32 schema = 1;
   int64 compiled_at_epoch_ms = 2;
-  // Schedule windows and baked events stop here; past it a scheduled action no longer applies.
+  // Schedule windows and baked events stop here; past it a group's conditions no longer hold.
   int64 horizon_end_minute = 3;
   // The SIM's country: incoming numbers are parsed as dialled from there.
   string home_country = 4;
   repeated Group groups = 5;
   // After a stranger's call rang through, the shade asks where the number goes, offering these
   // groups, most used first; empty when the user turned the question off.
-  repeated GroupChoice where_to = 7;
+  repeated GroupChoice where_to = 6;
   // The filter-wide «a repeat rings», over every group's own.
-  RepeatPass repeat_pass = 8;
+  RepeatPass repeat_pass = 7;
 }
 
 message GroupChoice {
@@ -40,9 +40,6 @@ enum Action {
   ACTION_UNSPECIFIED = 0;
   ACTION_BLOCK = 1;
   ACTION_PASS = 2;
-  // A repeat ringing became a switch over the actions (RepeatPass).
-  reserved 3;
-  reserved "ACTION_PASS_ON_REPEAT";
 }
 
 enum RepeatPassKind {
@@ -65,7 +62,8 @@ message Group {
   repeated Member exclude = 4;
   bool exclude_my_contacts = 5;
   Policy policy = 6;
-  TemporaryPolicy temporary = 7;
+  // Switched off by the user: passed over in finding a caller's group, whatever its conditions.
+  bool off = 7;
   // Ties of the fail-open rule go to the older group.
   int64 created_at_epoch_ms = 8;
   string auto_reply_text = 9;
@@ -113,23 +111,24 @@ message ContactMatch {
 }
 
 message Policy {
-  Action otherwise = 1;
-  Scheduled scheduled = 2;
+  // What the group does with a call it takes, while it is in force.
+  Action action = 1;
+  // When the group is in force; absent: always.
+  Conditions conditions = 2;
   uint32 repeat_window_minutes = 3;
   RepeatPass repeat_pass = 4;
 }
 
-message Scheduled {
-  Action action = 1;
-  // False: the scheduled action has no schedule, only calendars (or nothing: all the time).
-  bool has_schedule = 2;
-  repeated Window windows = 3;
-  repeated CalendarRule calendars = 6;
+message Conditions {
+  // False: no schedule, only calendars or places.
+  bool has_schedule = 1;
+  repeated Window windows = 2;
+  repeated CalendarRule calendars = 3;
   // The IANA zone whose clock the windows are on; empty for the phone's own clock
   // wherever it is. The service reads the call's moment on this clock.
-  string zone = 7;
+  string zone = 4;
   // Where the phone must (or must not) be; a place whose state is unknown does not count.
-  repeated PlaceRule places = 8;
+  repeated PlaceRule places = 5;
 }
 
 enum PlaceMode {
@@ -165,10 +164,10 @@ message DeviceCalendar {
 }
 
 message EventFilter {
-  bool skip_declined = 2;
-  bool include_all_day = 3;
-  uint32 minutes_before = 4;
-  uint32 minutes_after = 5;
+  bool skip_declined = 1;
+  bool include_all_day = 2;
+  uint32 minutes_before = 3;
+  uint32 minutes_after = 4;
 }
 
 message CalendarRule {
@@ -180,21 +179,5 @@ message CalendarRule {
   }
   // The events as the app last saw them, filter applied: all of an iCal feed, a month of a
   // device calendar (used when the calendar cannot be read at the moment of the call).
-  repeated Window baked_events = 6;
-}
-
-enum UntilKind {
-  UNTIL_KIND_UNSPECIFIED = 0;
-  UNTIL_KIND_INSTANT = 1;
-  UNTIL_KIND_FIRST_PASS = 2;
-  UNTIL_KIND_END_OF_EVENT = 3;
-}
-
-message TemporaryPolicy {
-  Action action = 1;
-  UntilKind until = 2;
-  int64 until_epoch_ms = 3;
-  // Set by the app when it publishes; the service compares it with its own record of
-  // «first pass already used» to know a consumed policy is no longer in force.
-  int64 set_at_epoch_ms = 4;
+  repeated Window baked_events = 5;
 }

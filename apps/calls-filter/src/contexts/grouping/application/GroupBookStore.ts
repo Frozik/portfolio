@@ -66,6 +66,7 @@ export class GroupBookStore {
       run: action,
       choose: action,
       cancelPending: action,
+      keepPending: action,
       undo: action,
       resolve: action,
       replace: action,
@@ -131,6 +132,16 @@ export class GroupBookStore {
 
   cancelPending(): void {
     this.pending = null;
+  }
+
+  /** The edit as proposed, the conflict it makes left for the screening to settle. */
+  keepPending(): void {
+    const { pending } = this;
+    if (pending === null) {
+      return;
+    }
+    this.pending = null;
+    this.commit(pending.proposed, pending.events);
   }
 
   /** An answer to a conflict already in the book, from the conflicts screen. */

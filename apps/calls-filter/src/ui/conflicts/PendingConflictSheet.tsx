@@ -27,6 +27,12 @@ export const PendingConflictSheet = observer(function PendingConflictSheet() {
         onChoose={resolution => app.books.choose(resolution)}
       />
       <Button
+        testID="pending-keep"
+        variant="secondary"
+        label={texts.conflict.keepAsIs}
+        onPress={() => app.books.keepPending()}
+      />
+      <Button
         testID="pending-cancel"
         variant="quiet"
         label={texts.common.cancel}

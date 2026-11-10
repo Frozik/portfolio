@@ -7,9 +7,10 @@ import type { GroupBook } from '../../grouping/domain/group-book';
 import type { IMatchingEnvironment } from '../../grouping/domain/matching-environment';
 import { membership } from '../../grouping/domain/membership';
 import type { ICaller } from '../../phone/domain/caller';
+import type { TAction } from '../../policy/domain/action';
 import { mostLenient } from '../../policy/domain/action';
-import type { IActionNow, IMoment } from '../../policy/domain/action-now';
-import { actionNow } from '../../policy/domain/action-now';
+import type { IMoment, TActivity } from '../../policy/domain/activity-now';
+import { activityNow, isActive } from '../../policy/domain/activity-now';
 import type { TPlaceFacts } from '../../policy/domain/place-rule';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
 import { isRepeatPassOn } from '../../policy/domain/repeat-pass';
@@ -29,18 +30,15 @@ export interface IDecisionContext {
   readonly atPlace: TPlaceFacts;
 }
 
-function actionOf(group: TGroup, moment: IMoment, context: IDecisionContext): IActionNow {
-  return actionNow(group, moment, groupWindows(group.policy, context.inputs), context.atPlace);
+function activityOf(group: TGroup, moment: IMoment, context: IDecisionContext): TActivity {
+  return activityNow(group, moment, groupWindows(group.policy, context.inputs), context.atPlace)
+    .activity;
 }
 
 /** Fail-open for a conflict still open: the most lenient group, the older one on a tie. */
-function settle(
-  groups: readonly TAssignableGroup[],
-  moment: IMoment,
-  context: IDecisionContext
-): TAssignableGroup {
-  const lenient = mostLenient(groups.map(group => actionOf(group, moment, context).action));
-  const candidates = groups.filter(group => actionOf(group, moment, context).action === lenient);
+function settle(groups: readonly TAssignableGroup[]): TAssignableGroup {
+  const lenient = mostLenient(groups.map(group => group.policy.action));
+  const candidates = groups.filter(group => group.policy.action === lenient);
   const [oldest] = [...candidates].sort(
     (left, right) => left.createdAt.epochMilliseconds - right.createdAt.epochMilliseconds
   );
@@ -63,33 +61,39 @@ function blockedVerdict(group: TGroup, moment: IMoment, context: IDecisionContex
 }
 
 function verdictOf(
-  action: IActionNow,
+  action: TAction,
   group: TGroup,
   moment: IMoment,
   context: IDecisionContext
 ): TVerdict {
-  switch (action.action) {
+  switch (action) {
     case 'pass':
       return 'passed';
     case 'block':
       return blockedVerdict(group, moment, context);
     default:
-      return assertNever(action.action);
+      return assertNever(action);
   }
 }
 
-/** The answer to a call, exactly as the screening service gives it from the published ruleset. */
+/**
+ * The answer to a call, exactly as the screening service gives it from the published ruleset:
+ * the groups not in force are passed over, and «Strangers» off lets the call ring.
+ */
 export function decide(
   book: GroupBook,
   caller: ICaller,
   moment: IMoment,
   context: IDecisionContext
 ): IDecision {
-  const found = membership(book, caller, context.environment);
-  const group = found.kind === 'one' ? found.group : settle(found.groups, moment, context);
+  const found = membership(book, caller, context.environment, group =>
+    isActive(activityOf(group, moment, context))
+  );
+  const group = found.kind === 'one' ? found.group : settle(found.groups);
   const alsoClaimedBy =
     found.kind === 'one' ? [] : found.groups.filter(other => other.id !== group.id);
-  const action = actionOf(group, moment, context);
+  const activity = activityOf(group, moment, context);
+  const action: TAction = isActive(activity) ? group.policy.action : 'pass';
   const verdict: TVerdict = context.paused ? 'paused' : verdictOf(action, group, moment, context);
-  return { group, alsoClaimedBy, action, verdict };
+  return { group, alsoClaimedBy, activity, action, verdict };
 }

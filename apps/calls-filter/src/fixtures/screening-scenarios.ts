@@ -6,7 +6,7 @@ import {
   HELSINKI_OFFICE_BOOK,
   OFFICE_ONLY_BOOK,
   SCENARIO_BOOK,
-  TEMPORARY_BOOK,
+  SWITCHED_OFF_BOOK,
   WEEKEND_BOOK,
 } from './scenario-world';
 
@@ -89,23 +89,23 @@ export const SCENARIOS: readonly IScenario[] = [
   }),
   scenario('mum is in family, not in my contacts', { caller: contactCaller('Mum', '31612345678') }),
   scenario('work passes in working hours', { caller: caller({ number: '31205551234' }) }),
-  scenario('work blocks during a meeting', {
+  scenario('work is out of force during a meeting: its caller rings as a stranger', {
     caller: caller({ number: '31205551234' }),
     local: '2026-11-03T14:30',
   }),
-  scenario('work blocks on a holiday', {
+  scenario('work is out of force on a holiday', {
     caller: caller({ number: '31205551234' }),
     local: '2026-11-04T11:00',
   }),
-  scenario('work blocks on a skipped date', {
+  scenario('work is out of force on a skipped date', {
     caller: caller({ number: '31205551234' }),
     local: '2026-11-13T11:00',
   }),
-  scenario('work blocks at the weekend', {
+  scenario('work is out of force at the weekend', {
     caller: caller({ number: '31205551234' }),
     local: '2026-11-07T11:00',
   }),
-  scenario('work blocks at six sharp', {
+  scenario('work is out of force at six sharp', {
     caller: caller({ number: '31205551234' }),
     local: '2026-11-03T18:00',
   }),
@@ -139,22 +139,20 @@ export const SCENARIOS: readonly IScenario[] = [
     caller: caller({ number: '74951112233', country: 'RU' }),
     repeatPass: { kind: 'always' },
   }),
-  scenario('a temporary «let through» opens a blocking group for a while', {
-    book: TEMPORARY_BOOK,
-    caller: caller({ number: '31851234567' }),
-    local: '2026-11-06T12:00',
+  scenario('a switched-off blocking group is passed over: its caller rings as a stranger', {
+    book: SWITCHED_OFF_BOOK,
+    caller: caller({ number: '31852234567' }),
   }),
-  scenario('the group blocks again once the temporary policy ended', {
-    book: TEMPORARY_BOOK,
+  scenario('a group switched on still takes the caller a switched-off one shares with it', {
+    book: SWITCHED_OFF_BOOK,
     caller: caller({ number: '31851234567' }),
-    local: '2026-11-09T12:00',
   }),
   scenario("a schedule on Helsinki's clock already passes at 8:30 in Amsterdam", {
     book: HELSINKI_OFFICE_BOOK,
     caller: caller({ number: '35891234567', country: 'FI' }),
     local: '2026-11-03T08:30',
   }),
-  scenario("a schedule on Helsinki's clock already blocks at 17:30 in Amsterdam", {
+  scenario("a schedule on Helsinki's clock is already over at 17:30 in Amsterdam", {
     book: HELSINKI_OFFICE_BOOK,
     caller: caller({ number: '35891234567', country: 'FI' }),
     local: '2026-11-03T17:30',
@@ -164,7 +162,7 @@ export const SCENARIOS: readonly IScenario[] = [
     caller: caller({ number: '31201234567' }),
     places: { office: true },
   }),
-  scenario('a group that acts only at the office does not elsewhere', {
+  scenario('a group in force only at the office is passed over elsewhere', {
     book: OFFICE_ONLY_BOOK,
     caller: caller({ number: '31201234567' }),
     places: { office: false },
@@ -176,7 +174,7 @@ export const SCENARIOS: readonly IScenario[] = [
   scenario('an operator name puts any number in delivery', {
     caller: caller({ number: '31107654321', networkName: 'PostNL Bezorging' }),
   }),
-  scenario('a hidden number passes by day', {
+  scenario('the night group for hidden numbers is passed over by day', {
     caller: caller({ number: null, country: null }),
     local: '2026-11-03T12:00',
   }),
@@ -187,7 +185,7 @@ export const SCENARIOS: readonly IScenario[] = [
   scenario('a foreign number is blocked', {
     caller: caller({ number: '442079460000', country: 'GB' }),
   }),
-  scenario('a foreign number passes on a day of the holiday calendar', {
+  scenario('the group for foreign numbers is passed over on a day of the holiday calendar', {
     caller: caller({ number: '442079460000', country: 'GB' }),
     local: '2026-11-04T12:00',
   }),
@@ -204,7 +202,7 @@ export const SCENARIOS: readonly IScenario[] = [
     caller: contactCaller('Courier Ozon', '31687654321'),
     local: '2026-11-05T10:30',
   }),
-  scenario('a courier contact passes outside work events', {
+  scenario('the couriers group is passed over outside work events', {
     caller: contactCaller('Courier Ozon', '31687654321'),
     local: '2026-11-05T12:00',
   }),
@@ -222,7 +220,7 @@ export const SCENARIOS: readonly IScenario[] = [
     book: EMPTY_BOOK,
     caller: caller({ number: '74951112233', country: 'RU' }),
   }),
-  scenario('the weekend schedule passes a weekday', {
+  scenario('the weekend group is passed over on a weekday', {
     book: WEEKEND_BOOK,
     local: '2026-11-05T09:00',
   }),

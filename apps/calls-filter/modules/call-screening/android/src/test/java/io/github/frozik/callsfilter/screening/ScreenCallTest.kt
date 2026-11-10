@@ -17,8 +17,6 @@ import io.github.frozik.callsfilter.screening.domain.Member
 import io.github.frozik.callsfilter.screening.domain.Moment
 import io.github.frozik.callsfilter.screening.domain.RepeatPass
 import io.github.frozik.callsfilter.screening.domain.Ruleset
-import io.github.frozik.callsfilter.screening.domain.TemporaryPolicy
-import io.github.frozik.callsfilter.screening.domain.UntilKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,16 +24,15 @@ import org.junit.Test
 private const val NOW = 1_800_000_000_000L
 private const val HOUR_MS = 3_600_000L
 
-private fun group(id: String, kind: GroupKind, include: List<Member> = emptyList(), otherwise: Action = Action.PASS, temporary: TemporaryPolicy? = null) =
-  Group(id, kind, include, emptyList(), true, otherwise, null, 5, temporary, 0L, "")
+private fun group(id: String, kind: GroupKind, include: List<Member> = emptyList(), action: Action = Action.PASS, off: Boolean = false) =
+  Group(id, kind, include, emptyList(), true, action, null, 5, off, 0L, "")
 
 private fun ruleset(vararg custom: Group) =
-  Ruleset(1, 0L, Long.MAX_VALUE, "NL", custom.toList() + group("my-contacts", GroupKind.MY_CONTACTS) + group("strangers", GroupKind.STRANGERS))
+  Ruleset(Ruleset.SCHEMA, 0L, Long.MAX_VALUE, "NL", custom.toList() + group("my-contacts", GroupKind.MY_CONTACTS) + group("strangers", GroupKind.STRANGERS))
 
 private class Harness(load: RulesetLoad) {
   val records = mutableListOf<CallRecord>()
   val logged = mutableListOf<String>()
-  val used = mutableSetOf<String>()
   var pausedUntil: Long? = null
   val screenCall =
     ScreenCall(
@@ -53,12 +50,6 @@ private class Harness(load: RulesetLoad) {
       runtime =
       object : RuntimeState {
         override fun pausedUntilEpochMs(): Long? = pausedUntil
-
-        override fun temporaryReleased(groupId: String, setAtEpochMs: Long): Boolean = "$groupId@$setAtEpochMs" in used
-
-        override fun releaseTemporary(groupId: String, setAtEpochMs: Long) {
-          used += "$groupId@$setAtEpochMs"
-        }
 
         override fun atPlace(placeId: String): Boolean? = null
       },
@@ -104,11 +95,19 @@ class ScreenCallTest {
   }
 
   @Test
-  fun aFirstPassPolicyIsUsedUpByTheCallItLetThrough() {
-    val temporary = TemporaryPolicy(Action.PASS, UntilKind.FIRST_PASS, NOW + HOUR_MS, NOW - HOUR_MS)
-    val harness = Harness(RulesetLoad.Loaded(ruleset(spam.copy(temporary = temporary))))
+  fun aSwitchedOffGroupIsPassedOverAndItsCallerRingsAsAStranger() {
+    val harness = Harness(RulesetLoad.Loaded(ruleset(spam.copy(off = true))))
     assertEquals(ScreeningReply.Allow, harness.screenCall.execute(IncomingCall("+74951234567", null)))
-    assertEquals(ScreeningReply.Reject, harness.screenCall.execute(IncomingCall("+74951234567", null)))
+    assertEquals("strangers PASSED ALWAYS", harness.records.single().let { "${it.groupId} ${it.verdict} ${it.actionSource}" })
+  }
+
+  @Test
+  fun strangersSwitchedOffLetTheCallRingAndSayNoGroupDecided() {
+    val strangersOff = group("strangers", GroupKind.STRANGERS, action = Action.BLOCK, off = true)
+    val ruleset = Ruleset(Ruleset.SCHEMA, 0L, Long.MAX_VALUE, "NL", listOf(spam, group("my-contacts", GroupKind.MY_CONTACTS), strangersOff))
+    val harness = Harness(RulesetLoad.Loaded(ruleset))
+    assertEquals(ScreeningReply.Allow, harness.screenCall.execute(IncomingCall("+31201234567", null)))
+    assertEquals("strangers PASSED NONE_IN_FORCE", harness.records.single().let { "${it.groupId} ${it.verdict} ${it.actionSource}" })
   }
 
   @Test

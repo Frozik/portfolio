@@ -51,6 +51,7 @@ export const EN: ITexts = {
     filterOn: 'Filter is on',
     pausedUntil: time => `Paused until ${time}`,
     pinned: 'A built-in group: it can be neither renamed nor deleted',
+    conditioned: 'The group acts only while its conditions hold',
     resume: 'Resume',
     pause: 'Pause',
     newGroup: 'Group',
@@ -60,25 +61,12 @@ export const EN: ITexts = {
     roleMissing: 'Calls Filter cannot screen calls yet',
     roleButton: 'Allow',
     conflicts: value => plural('en', value, { one: '⚠ # conflict', other: '⚠ # conflicts' }),
-    now: (action, until) =>
-      `${action === 'block' ? 'Block' : 'Pass'} ${until === null ? 'always' : `until ${until}`}`,
-    thenSeparator: ', ',
-    next: action => `then ${action === 'block' ? 'block' : 'pass'}`,
+    activeUntil: when => `Active until ${when}`,
+    activeFrom: when => `Active from ${when}`,
+    off: 'Switched off',
+    switchOff: 'Switch the group off',
+    switchOn: 'Switch the group on',
     callsToday: value => String(value),
-  },
-  temporary: {
-    title: action => (action === 'block' ? 'Block for a while' : 'Let through for a while'),
-    usually: (group, phrase) => `${group}. Usually: ${phrase}`,
-    what: 'For a while',
-    short: 'Temporary',
-    forHow: 'For',
-    hour: '1 hour',
-    evening: 'Until evening',
-    days: value => count(value, 'day', 'days'),
-    firstCall: 'Until the first call',
-    endOfEvent: 'Until the meeting ends',
-    backToUsual: 'Back to usual',
-    active: (action, until) => `${action} until ${until}`,
   },
   repeat: {
     title: 'A repeat call rings',
@@ -110,6 +98,8 @@ export const EN: ITexts = {
     include: 'Include',
     exclude: 'Exclude',
     addMask: 'Add a mask: number or name',
+    editMask: 'Edit the mask',
+    removeMember: 'Remove from the list',
     addNameMask: '+ Name',
     addContact: 'Add a contact',
     excludeMyContacts: 'Exclude my contacts',
@@ -121,6 +111,8 @@ export const EN: ITexts = {
     noSchedule: 'all the time',
     repeatWindow: minutes => `A repeat counts within ${count(minutes, 'minute', 'minutes')}`,
     autoReply: 'SMS reply to contacts',
+    whenActs: 'When it acts',
+    whenRejected: 'When a call is rejected',
     smsShort: 'SMS',
     autoReplyHint:
       'Sent to a contact this group rejects, at most once per meeting; never when roaming',
@@ -163,8 +155,7 @@ export const EN: ITexts = {
     hidden: 'Hidden number',
     move: 'To group…',
     moveTitle: 'Move to a group',
-    byNumber: 'By number',
-    byName: 'By name',
+    moveHow: 'Tap the number or the name under a group: that is what goes there',
     newGroup: '+ New group',
     remove: 'Remove from group',
     callBack: 'Call back',
@@ -186,6 +177,9 @@ export const EN: ITexts = {
     keepIn: group => `Keep in «${group}»`,
     keepKnownIn: group => `Only the calls in the journal — to «${group}»`,
     none: 'No conflicts: every caller is in one group',
+    count: value => plural('en', value, { one: '# conflict', other: '# conflicts' }),
+    noneShort: 'None',
+    keepAsIs: 'Leave as it is',
   },
   changes: {
     event: (event, name) => {
@@ -222,6 +216,8 @@ export const EN: ITexts = {
           return 'Only contacts go to «My contacts»';
         case 'unknown-group':
           return 'The group is gone';
+        case 'unknown-member':
+          return 'The mask is gone';
         default:
           return assertNever(reason);
       }
@@ -229,9 +225,6 @@ export const EN: ITexts = {
   },
   schedule: EN_SCHEDULE,
   phrase: {
-    always: action => `${action} always`,
-    scheduled: (action, when, otherwise) =>
-      `${action} ${when}; the rest of the time ${otherwise.toLowerCase()}`,
     allDay: 'all day',
     everyDay: 'every day',
     onWeekdays: 'on weekdays',
@@ -241,11 +234,6 @@ export const EN: ITexts = {
     monthly: 'monthly',
     yearly: 'yearly',
     once: date => `on ${date}`,
-    exceptEvents: calendars => `except during ${calendars}`,
-    onlyDuringEvents: calendars => `only during ${calendars}`,
-    allTheTime: 'all the time',
-    onlyAtPlaces: places => `only at ${places}`,
-    exceptAtPlaces: places => `except at ${places}`,
     onClockOf: city => `(${city} time)`,
     localTime: '(local time)',
   },

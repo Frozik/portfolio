@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file frozik/callsfilter/v1/ruleset.proto.
  */
 export const file_frozik_callsfilter_v1_ruleset: GenFile = /*@__PURE__*/
-  fileDesc("CiNmcm96aWsvY2FsbHNmaWx0ZXIvdjEvcnVsZXNldC5wcm90bxIVZnJvemlrLmNhbGxzZmlsdGVyLnYxIoUCCgdSdWxlc2V0Eg4KBnNjaGVtYRgBIAEoDRIcChRjb21waWxlZF9hdF9lcG9jaF9tcxgCIAEoAxIaChJob3Jpem9uX2VuZF9taW51dGUYAyABKAMSFAoMaG9tZV9jb3VudHJ5GAQgASgJEiwKBmdyb3VwcxgFIAMoCzIcLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Hcm91cBI0Cgh3aGVyZV90bxgHIAMoCzIiLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Hcm91cENob2ljZRI2CgtyZXBlYXRfcGFzcxgIIAEoCzIhLmZyb3ppay5jYWxsc2ZpbHRlci52MS5SZXBlYXRQYXNzIicKC0dyb3VwQ2hvaWNlEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkiWQoKUmVwZWF0UGFzcxIzCgRraW5kGAEgASgOMiUuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlJlcGVhdFBhc3NLaW5kEhYKDnVudGlsX2Vwb2NoX21zGAIgASgDIu4CCgVHcm91cBIKCgJpZBgBIAEoCRIuCgRraW5kGAIgASgOMiAuZnJvemlrLmNhbGxzZmlsdGVyLnYxLkdyb3VwS2luZBIuCgdpbmNsdWRlGAMgAygLMh0uZnJvemlrLmNhbGxzZmlsdGVyLnYxLk1lbWJlchIuCgdleGNsdWRlGAQgAygLMh0uZnJvemlrLmNhbGxzZmlsdGVyLnYxLk1lbWJlchIbChNleGNsdWRlX215X2NvbnRhY3RzGAUgASgIEi0KBnBvbGljeRgGIAEoCzIdLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Qb2xpY3kSOQoJdGVtcG9yYXJ5GAcgASgLMiYuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlRlbXBvcmFyeVBvbGljeRIbChNjcmVhdGVkX2F0X2Vwb2NoX21zGAggASgDEhcKD2F1dG9fcmVwbHlfdGV4dBgJIAEoCRIMCgRuYW1lGAogASgJItUBCgZNZW1iZXISCgoCaWQYASABKAkSFgoMbnVtYmVyX3JlZ2V4GAIgASgJSAASMAoEbmFtZRgDIAEoCzIgLmZyb3ppay5jYWxsc2ZpbHRlci52MS5OYW1lTWF0Y2hIABI1CgdzcGVjaWFsGAQgASgOMiIuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlNwZWNpYWxNYXNrSAASNgoHY29udGFjdBgFIAEoCzIjLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Db250YWN0TWF0Y2hIAEIGCgRraW5kIksKCU5hbWVNYXRjaBINCgVyZWdleBgBIAEoCRIvCgVmaWVsZBgCIAEoDjIgLmZyb3ppay5jYWxsc2ZpbHRlci52MS5OYW1lRmllbGQiMwoMQ29udGFjdE1hdGNoEg8KB251bWJlcnMYASADKAkSEgoKbG9va3VwX2tleRgCIAEoCSLGAQoGUG9saWN5EjAKCW90aGVyd2lzZRgBIAEoDjIdLmZyb3ppay5jYWxsc2ZpbHRlci52MS5BY3Rpb24SMwoJc2NoZWR1bGVkGAIgASgLMiAuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlNjaGVkdWxlZBIdChVyZXBlYXRfd2luZG93X21pbnV0ZXMYAyABKA0SNgoLcmVwZWF0X3Bhc3MYBCABKAsyIS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuUmVwZWF0UGFzcyL4AQoJU2NoZWR1bGVkEi0KBmFjdGlvbhgBIAEoDjIdLmZyb3ppay5jYWxsc2ZpbHRlci52MS5BY3Rpb24SFAoMaGFzX3NjaGVkdWxlGAIgASgIEi4KB3dpbmRvd3MYAyADKAsyHS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuV2luZG93EjYKCWNhbGVuZGFycxgGIAMoCzIjLmZyb3ppay5jYWxsc2ZpbHRlci52MS5DYWxlbmRhclJ1bGUSDAoEem9uZRgHIAEoCRIwCgZwbGFjZXMYCCADKAsyIC5mcm96aWsuY2FsbHNmaWx0ZXIudjEuUGxhY2VSdWxlIoMBCglQbGFjZVJ1bGUSCgoCaWQYASABKAkSLgoEbW9kZRgCIAEoDjIgLmZyb3ppay5jYWxsc2ZpbHRlci52MS5QbGFjZU1vZGUSEAoIbGF0aXR1ZGUYAyABKAESEQoJbG9uZ2l0dWRlGAQgASgBEhUKDXJhZGl1c19tZXRlcnMYBSABKA0iMAoGV2luZG93EhMKC2Zyb21fbWludXRlGAEgASgDEhEKCXRvX21pbnV0ZRgCIAEoAyJTCg5EZXZpY2VDYWxlbmRhchIUCgxhY2NvdW50X3R5cGUYASABKAkSFAoMYWNjb3VudF9uYW1lGAIgASgJEhUKDWNhbGVuZGFyX25hbWUYAyABKAkibAoLRXZlbnRGaWx0ZXISFQoNc2tpcF9kZWNsaW5lZBgCIAEoCBIXCg9pbmNsdWRlX2FsbF9kYXkYAyABKAgSFgoObWludXRlc19iZWZvcmUYBCABKA0SFQoNbWludXRlc19hZnRlchgFIAEoDSL/AQoMQ2FsZW5kYXJSdWxlEjEKBG1vZGUYASABKA4yIy5mcm96aWsuY2FsbHNmaWx0ZXIudjEuQ2FsZW5kYXJNb2RlEjIKBmZpbHRlchgCIAEoCzIiLmZyb3ppay5jYWxsc2ZpbHRlci52MS5FdmVudEZpbHRlchI3CgZkZXZpY2UYAyABKAsyJS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuRGV2aWNlQ2FsZW5kYXJIABIQCgZpY3NfaWQYBCABKAlIABIzCgxiYWtlZF9ldmVudHMYBiADKAsyHS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuV2luZG93QggKBnNvdXJjZSKiAQoPVGVtcG9yYXJ5UG9saWN5Ei0KBmFjdGlvbhgBIAEoDjIdLmZyb3ppay5jYWxsc2ZpbHRlci52MS5BY3Rpb24SLwoFdW50aWwYAiABKA4yIC5mcm96aWsuY2FsbHNmaWx0ZXIudjEuVW50aWxLaW5kEhYKDnVudGlsX2Vwb2NoX21zGAMgASgDEhcKD3NldF9hdF9lcG9jaF9tcxgEIAEoAyp0CglHcm91cEtpbmQSGgoWR1JPVVBfS0lORF9VTlNQRUNJRklFRBAAEhUKEUdST1VQX0tJTkRfQ1VTVE9NEAESGgoWR1JPVVBfS0lORF9NWV9DT05UQUNUUxACEhgKFEdST1VQX0tJTkRfU1RSQU5HRVJTEAMqYAoGQWN0aW9uEhYKEkFDVElPTl9VTlNQRUNJRklFRBAAEhAKDEFDVElPTl9CTE9DSxABEg8KC0FDVElPTl9QQVNTEAIiBAgDEAMqFUFDVElPTl9QQVNTX09OX1JFUEVBVCqFAQoOUmVwZWF0UGFzc0tpbmQSIAocUkVQRUFUX1BBU1NfS0lORF9VTlNQRUNJRklFRBAAEhgKFFJFUEVBVF9QQVNTX0tJTkRfT0ZGEAESGwoXUkVQRUFUX1BBU1NfS0lORF9BTFdBWVMQAhIaChZSRVBFQVRfUEFTU19LSU5EX1VOVElMEAMqawoJTmFtZUZpZWxkEhoKFk5BTUVfRklFTERfVU5TUEVDSUZJRUQQABIWChJOQU1FX0ZJRUxEX05FVFdPUksQARIWChJOQU1FX0ZJRUxEX0NPTlRBQ1QQAhISCg5OQU1FX0ZJRUxEX0FOWRADKrABCgtTcGVjaWFsTWFzaxIcChhTUEVDSUFMX01BU0tfVU5TUEVDSUZJRUQQABIXChNTUEVDSUFMX01BU0tfSElEREVOEAESGAoUU1BFQ0lBTF9NQVNLX0ZPUkVJR04QAhIdChlTUEVDSUFMX01BU0tfUFJFTUlVTV9SQVRFEAMSFQoRU1BFQ0lBTF9NQVNLX1ZPSVAQBBIaChZTUEVDSUFMX01BU0tfVE9MTF9GUkVFEAUqWQoJUGxhY2VNb2RlEhoKFlBMQUNFX01PREVfVU5TUEVDSUZJRUQQABIWChJQTEFDRV9NT0RFX09OTFlfQVQQARIYChRQTEFDRV9NT0RFX0VYQ0VQVF9BVBACKnQKDENhbGVuZGFyTW9kZRIdChlDQUxFTkRBUl9NT0RFX1VOU1BFQ0lGSUVEEAASHwobQ0FMRU5EQVJfTU9ERV9FWENFUFRfRVZFTlRTEAESJAogQ0FMRU5EQVJfTU9ERV9PTkxZX0RVUklOR19FVkVOVFMQAip3CglVbnRpbEtpbmQSGgoWVU5USUxfS0lORF9VTlNQRUNJRklFRBAAEhYKElVOVElMX0tJTkRfSU5TVEFOVBABEhkKFVVOVElMX0tJTkRfRklSU1RfUEFTUxACEhsKF1VOVElMX0tJTkRfRU5EX09GX0VWRU5UEANCLworaW8uZ2l0aHViLmZyb3ppay5jYWxsc2ZpbHRlci5zY3JlZW5pbmcud2lyZVABYgZwcm90bzM");
+  fileDesc("CiNmcm96aWsvY2FsbHNmaWx0ZXIvdjEvcnVsZXNldC5wcm90bxIVZnJvemlrLmNhbGxzZmlsdGVyLnYxIoUCCgdSdWxlc2V0Eg4KBnNjaGVtYRgBIAEoDRIcChRjb21waWxlZF9hdF9lcG9jaF9tcxgCIAEoAxIaChJob3Jpem9uX2VuZF9taW51dGUYAyABKAMSFAoMaG9tZV9jb3VudHJ5GAQgASgJEiwKBmdyb3VwcxgFIAMoCzIcLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Hcm91cBI0Cgh3aGVyZV90bxgGIAMoCzIiLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Hcm91cENob2ljZRI2CgtyZXBlYXRfcGFzcxgHIAEoCzIhLmZyb3ppay5jYWxsc2ZpbHRlci52MS5SZXBlYXRQYXNzIicKC0dyb3VwQ2hvaWNlEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkiWQoKUmVwZWF0UGFzcxIzCgRraW5kGAEgASgOMiUuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlJlcGVhdFBhc3NLaW5kEhYKDnVudGlsX2Vwb2NoX21zGAIgASgDIsACCgVHcm91cBIKCgJpZBgBIAEoCRIuCgRraW5kGAIgASgOMiAuZnJvemlrLmNhbGxzZmlsdGVyLnYxLkdyb3VwS2luZBIuCgdpbmNsdWRlGAMgAygLMh0uZnJvemlrLmNhbGxzZmlsdGVyLnYxLk1lbWJlchIuCgdleGNsdWRlGAQgAygLMh0uZnJvemlrLmNhbGxzZmlsdGVyLnYxLk1lbWJlchIbChNleGNsdWRlX215X2NvbnRhY3RzGAUgASgIEi0KBnBvbGljeRgGIAEoCzIdLmZyb3ppay5jYWxsc2ZpbHRlci52MS5Qb2xpY3kSCwoDb2ZmGAcgASgIEhsKE2NyZWF0ZWRfYXRfZXBvY2hfbXMYCCABKAMSFwoPYXV0b19yZXBseV90ZXh0GAkgASgJEgwKBG5hbWUYCiABKAki1QEKBk1lbWJlchIKCgJpZBgBIAEoCRIWCgxudW1iZXJfcmVnZXgYAiABKAlIABIwCgRuYW1lGAMgASgLMiAuZnJvemlrLmNhbGxzZmlsdGVyLnYxLk5hbWVNYXRjaEgAEjUKB3NwZWNpYWwYBCABKA4yIi5mcm96aWsuY2FsbHNmaWx0ZXIudjEuU3BlY2lhbE1hc2tIABI2Cgdjb250YWN0GAUgASgLMiMuZnJvemlrLmNhbGxzZmlsdGVyLnYxLkNvbnRhY3RNYXRjaEgAQgYKBGtpbmQiSwoJTmFtZU1hdGNoEg0KBXJlZ2V4GAEgASgJEi8KBWZpZWxkGAIgASgOMiAuZnJvemlrLmNhbGxzZmlsdGVyLnYxLk5hbWVGaWVsZCIzCgxDb250YWN0TWF0Y2gSDwoHbnVtYmVycxgBIAMoCRISCgpsb29rdXBfa2V5GAIgASgJIsUBCgZQb2xpY3kSLQoGYWN0aW9uGAEgASgOMh0uZnJvemlrLmNhbGxzZmlsdGVyLnYxLkFjdGlvbhI1Cgpjb25kaXRpb25zGAIgASgLMiEuZnJvemlrLmNhbGxzZmlsdGVyLnYxLkNvbmRpdGlvbnMSHQoVcmVwZWF0X3dpbmRvd19taW51dGVzGAMgASgNEjYKC3JlcGVhdF9wYXNzGAQgASgLMiEuZnJvemlrLmNhbGxzZmlsdGVyLnYxLlJlcGVhdFBhc3MiygEKCkNvbmRpdGlvbnMSFAoMaGFzX3NjaGVkdWxlGAEgASgIEi4KB3dpbmRvd3MYAiADKAsyHS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuV2luZG93EjYKCWNhbGVuZGFycxgDIAMoCzIjLmZyb3ppay5jYWxsc2ZpbHRlci52MS5DYWxlbmRhclJ1bGUSDAoEem9uZRgEIAEoCRIwCgZwbGFjZXMYBSADKAsyIC5mcm96aWsuY2FsbHNmaWx0ZXIudjEuUGxhY2VSdWxlIoMBCglQbGFjZVJ1bGUSCgoCaWQYASABKAkSLgoEbW9kZRgCIAEoDjIgLmZyb3ppay5jYWxsc2ZpbHRlci52MS5QbGFjZU1vZGUSEAoIbGF0aXR1ZGUYAyABKAESEQoJbG9uZ2l0dWRlGAQgASgBEhUKDXJhZGl1c19tZXRlcnMYBSABKA0iMAoGV2luZG93EhMKC2Zyb21fbWludXRlGAEgASgDEhEKCXRvX21pbnV0ZRgCIAEoAyJTCg5EZXZpY2VDYWxlbmRhchIUCgxhY2NvdW50X3R5cGUYASABKAkSFAoMYWNjb3VudF9uYW1lGAIgASgJEhUKDWNhbGVuZGFyX25hbWUYAyABKAkibAoLRXZlbnRGaWx0ZXISFQoNc2tpcF9kZWNsaW5lZBgBIAEoCBIXCg9pbmNsdWRlX2FsbF9kYXkYAiABKAgSFgoObWludXRlc19iZWZvcmUYAyABKA0SFQoNbWludXRlc19hZnRlchgEIAEoDSL/AQoMQ2FsZW5kYXJSdWxlEjEKBG1vZGUYASABKA4yIy5mcm96aWsuY2FsbHNmaWx0ZXIudjEuQ2FsZW5kYXJNb2RlEjIKBmZpbHRlchgCIAEoCzIiLmZyb3ppay5jYWxsc2ZpbHRlci52MS5FdmVudEZpbHRlchI3CgZkZXZpY2UYAyABKAsyJS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuRGV2aWNlQ2FsZW5kYXJIABIQCgZpY3NfaWQYBCABKAlIABIzCgxiYWtlZF9ldmVudHMYBSADKAsyHS5mcm96aWsuY2FsbHNmaWx0ZXIudjEuV2luZG93QggKBnNvdXJjZSp0CglHcm91cEtpbmQSGgoWR1JPVVBfS0lORF9VTlNQRUNJRklFRBAAEhUKEUdST1VQX0tJTkRfQ1VTVE9NEAESGgoWR1JPVVBfS0lORF9NWV9DT05UQUNUUxACEhgKFEdST1VQX0tJTkRfU1RSQU5HRVJTEAMqQwoGQWN0aW9uEhYKEkFDVElPTl9VTlNQRUNJRklFRBAAEhAKDEFDVElPTl9CTE9DSxABEg8KC0FDVElPTl9QQVNTEAIqhQEKDlJlcGVhdFBhc3NLaW5kEiAKHFJFUEVBVF9QQVNTX0tJTkRfVU5TUEVDSUZJRUQQABIYChRSRVBFQVRfUEFTU19LSU5EX09GRhABEhsKF1JFUEVBVF9QQVNTX0tJTkRfQUxXQVlTEAISGgoWUkVQRUFUX1BBU1NfS0lORF9VTlRJTBADKmsKCU5hbWVGaWVsZBIaChZOQU1FX0ZJRUxEX1VOU1BFQ0lGSUVEEAASFgoSTkFNRV9GSUVMRF9ORVRXT1JLEAESFgoSTkFNRV9GSUVMRF9DT05UQUNUEAISEgoOTkFNRV9GSUVMRF9BTlkQAyqwAQoLU3BlY2lhbE1hc2sSHAoYU1BFQ0lBTF9NQVNLX1VOU1BFQ0lGSUVEEAASFwoTU1BFQ0lBTF9NQVNLX0hJRERFThABEhgKFFNQRUNJQUxfTUFTS19GT1JFSUdOEAISHQoZU1BFQ0lBTF9NQVNLX1BSRU1JVU1fUkFURRADEhUKEVNQRUNJQUxfTUFTS19WT0lQEAQSGgoWU1BFQ0lBTF9NQVNLX1RPTExfRlJFRRAFKlkKCVBsYWNlTW9kZRIaChZQTEFDRV9NT0RFX1VOU1BFQ0lGSUVEEAASFgoSUExBQ0VfTU9ERV9PTkxZX0FUEAESGAoUUExBQ0VfTU9ERV9FWENFUFRfQVQQAip0CgxDYWxlbmRhck1vZGUSHQoZQ0FMRU5EQVJfTU9ERV9VTlNQRUNJRklFRBAAEh8KG0NBTEVOREFSX01PREVfRVhDRVBUX0VWRU5UUxABEiQKIENBTEVOREFSX01PREVfT05MWV9EVVJJTkdfRVZFTlRTEAJCLworaW8uZ2l0aHViLmZyb3ppay5jYWxsc2ZpbHRlci5zY3JlZW5pbmcud2lyZVABYgZwcm90bzM");
 
 /**
  * @generated from message frozik.callsfilter.v1.Ruleset
@@ -33,7 +33,7 @@ export type Ruleset = Message<"frozik.callsfilter.v1.Ruleset"> & {
   compiledAtEpochMs: bigint;
 
   /**
-   * Schedule windows and baked events stop here; past it a scheduled action no longer applies.
+   * Schedule windows and baked events stop here; past it a group's conditions no longer hold.
    *
    * @generated from field: int64 horizon_end_minute = 3;
    */
@@ -55,14 +55,14 @@ export type Ruleset = Message<"frozik.callsfilter.v1.Ruleset"> & {
    * After a stranger's call rang through, the shade asks where the number goes, offering these
    * groups, most used first; empty when the user turned the question off.
    *
-   * @generated from field: repeated frozik.callsfilter.v1.GroupChoice where_to = 7;
+   * @generated from field: repeated frozik.callsfilter.v1.GroupChoice where_to = 6;
    */
   whereTo: GroupChoice[];
 
   /**
    * The filter-wide «a repeat rings», over every group's own.
    *
-   * @generated from field: frozik.callsfilter.v1.RepeatPass repeat_pass = 8;
+   * @generated from field: frozik.callsfilter.v1.RepeatPass repeat_pass = 7;
    */
   repeatPass?: RepeatPass | undefined;
 };
@@ -155,9 +155,11 @@ export type Group = Message<"frozik.callsfilter.v1.Group"> & {
   policy?: Policy | undefined;
 
   /**
-   * @generated from field: frozik.callsfilter.v1.TemporaryPolicy temporary = 7;
+   * Switched off by the user: passed over in finding a caller's group, whatever its conditions.
+   *
+   * @generated from field: bool off = 7;
    */
-  temporary?: TemporaryPolicy | undefined;
+  off: boolean;
 
   /**
    * Ties of the fail-open rule go to the older group.
@@ -286,14 +288,18 @@ export const ContactMatchSchema: GenMessage<ContactMatch> = /*@__PURE__*/
  */
 export type Policy = Message<"frozik.callsfilter.v1.Policy"> & {
   /**
-   * @generated from field: frozik.callsfilter.v1.Action otherwise = 1;
+   * What the group does with a call it takes, while it is in force.
+   *
+   * @generated from field: frozik.callsfilter.v1.Action action = 1;
    */
-  otherwise: Action;
+  action: Action;
 
   /**
-   * @generated from field: frozik.callsfilter.v1.Scheduled scheduled = 2;
+   * When the group is in force; absent: always.
+   *
+   * @generated from field: frozik.callsfilter.v1.Conditions conditions = 2;
    */
-  scheduled?: Scheduled | undefined;
+  conditions?: Conditions | undefined;
 
   /**
    * @generated from field: uint32 repeat_window_minutes = 3;
@@ -314,28 +320,23 @@ export const PolicySchema: GenMessage<Policy> = /*@__PURE__*/
   messageDesc(file_frozik_callsfilter_v1_ruleset, 7);
 
 /**
- * @generated from message frozik.callsfilter.v1.Scheduled
+ * @generated from message frozik.callsfilter.v1.Conditions
  */
-export type Scheduled = Message<"frozik.callsfilter.v1.Scheduled"> & {
+export type Conditions = Message<"frozik.callsfilter.v1.Conditions"> & {
   /**
-   * @generated from field: frozik.callsfilter.v1.Action action = 1;
-   */
-  action: Action;
-
-  /**
-   * False: the scheduled action has no schedule, only calendars (or nothing: all the time).
+   * False: no schedule, only calendars or places.
    *
-   * @generated from field: bool has_schedule = 2;
+   * @generated from field: bool has_schedule = 1;
    */
   hasSchedule: boolean;
 
   /**
-   * @generated from field: repeated frozik.callsfilter.v1.Window windows = 3;
+   * @generated from field: repeated frozik.callsfilter.v1.Window windows = 2;
    */
   windows: Window[];
 
   /**
-   * @generated from field: repeated frozik.callsfilter.v1.CalendarRule calendars = 6;
+   * @generated from field: repeated frozik.callsfilter.v1.CalendarRule calendars = 3;
    */
   calendars: CalendarRule[];
 
@@ -343,23 +344,23 @@ export type Scheduled = Message<"frozik.callsfilter.v1.Scheduled"> & {
    * The IANA zone whose clock the windows are on; empty for the phone's own clock
    * wherever it is. The service reads the call's moment on this clock.
    *
-   * @generated from field: string zone = 7;
+   * @generated from field: string zone = 4;
    */
   zone: string;
 
   /**
    * Where the phone must (or must not) be; a place whose state is unknown does not count.
    *
-   * @generated from field: repeated frozik.callsfilter.v1.PlaceRule places = 8;
+   * @generated from field: repeated frozik.callsfilter.v1.PlaceRule places = 5;
    */
   places: PlaceRule[];
 };
 
 /**
- * Describes the message frozik.callsfilter.v1.Scheduled.
- * Use `create(ScheduledSchema)` to create a new message.
+ * Describes the message frozik.callsfilter.v1.Conditions.
+ * Use `create(ConditionsSchema)` to create a new message.
  */
-export const ScheduledSchema: GenMessage<Scheduled> = /*@__PURE__*/
+export const ConditionsSchema: GenMessage<Conditions> = /*@__PURE__*/
   messageDesc(file_frozik_callsfilter_v1_ruleset, 8);
 
 /**
@@ -455,22 +456,22 @@ export const DeviceCalendarSchema: GenMessage<DeviceCalendar> = /*@__PURE__*/
  */
 export type EventFilter = Message<"frozik.callsfilter.v1.EventFilter"> & {
   /**
-   * @generated from field: bool skip_declined = 2;
+   * @generated from field: bool skip_declined = 1;
    */
   skipDeclined: boolean;
 
   /**
-   * @generated from field: bool include_all_day = 3;
+   * @generated from field: bool include_all_day = 2;
    */
   includeAllDay: boolean;
 
   /**
-   * @generated from field: uint32 minutes_before = 4;
+   * @generated from field: uint32 minutes_before = 3;
    */
   minutesBefore: number;
 
   /**
-   * @generated from field: uint32 minutes_after = 5;
+   * @generated from field: uint32 minutes_after = 4;
    */
   minutesAfter: number;
 };
@@ -517,7 +518,7 @@ export type CalendarRule = Message<"frozik.callsfilter.v1.CalendarRule"> & {
    * The events as the app last saw them, filter applied: all of an iCal feed, a month of a
    * device calendar (used when the calendar cannot be read at the moment of the call).
    *
-   * @generated from field: repeated frozik.callsfilter.v1.Window baked_events = 6;
+   * @generated from field: repeated frozik.callsfilter.v1.Window baked_events = 5;
    */
   bakedEvents: Window[];
 };
@@ -528,41 +529,6 @@ export type CalendarRule = Message<"frozik.callsfilter.v1.CalendarRule"> & {
  */
 export const CalendarRuleSchema: GenMessage<CalendarRule> = /*@__PURE__*/
   messageDesc(file_frozik_callsfilter_v1_ruleset, 13);
-
-/**
- * @generated from message frozik.callsfilter.v1.TemporaryPolicy
- */
-export type TemporaryPolicy = Message<"frozik.callsfilter.v1.TemporaryPolicy"> & {
-  /**
-   * @generated from field: frozik.callsfilter.v1.Action action = 1;
-   */
-  action: Action;
-
-  /**
-   * @generated from field: frozik.callsfilter.v1.UntilKind until = 2;
-   */
-  until: UntilKind;
-
-  /**
-   * @generated from field: int64 until_epoch_ms = 3;
-   */
-  untilEpochMs: bigint;
-
-  /**
-   * Set by the app when it publishes; the service compares it with its own record of
-   * «first pass already used» to know a consumed policy is no longer in force.
-   *
-   * @generated from field: int64 set_at_epoch_ms = 4;
-   */
-  setAtEpochMs: bigint;
-};
-
-/**
- * Describes the message frozik.callsfilter.v1.TemporaryPolicy.
- * Use `create(TemporaryPolicySchema)` to create a new message.
- */
-export const TemporaryPolicySchema: GenMessage<TemporaryPolicy> = /*@__PURE__*/
-  messageDesc(file_frozik_callsfilter_v1_ruleset, 14);
 
 /**
  * @generated from enum frozik.callsfilter.v1.GroupKind
@@ -775,35 +741,4 @@ export enum CalendarMode {
  */
 export const CalendarModeSchema: GenEnum<CalendarMode> = /*@__PURE__*/
   enumDesc(file_frozik_callsfilter_v1_ruleset, 6);
-
-/**
- * @generated from enum frozik.callsfilter.v1.UntilKind
- */
-export enum UntilKind {
-  /**
-   * @generated from enum value: UNTIL_KIND_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: UNTIL_KIND_INSTANT = 1;
-   */
-  INSTANT = 1,
-
-  /**
-   * @generated from enum value: UNTIL_KIND_FIRST_PASS = 2;
-   */
-  FIRST_PASS = 2,
-
-  /**
-   * @generated from enum value: UNTIL_KIND_END_OF_EVENT = 3;
-   */
-  END_OF_EVENT = 3,
-}
-
-/**
- * Describes the enum frozik.callsfilter.v1.UntilKind.
- */
-export const UntilKindSchema: GenEnum<UntilKind> = /*@__PURE__*/
-  enumDesc(file_frozik_callsfilter_v1_ruleset, 7);
 

@@ -24,7 +24,6 @@ internal fun ModuleDefinitionBuilder.serviceFunctions(screening: () -> Screening
   Function("publishRuleset") { base64: String ->
     val runtime = screening()
     runtime.rulesets.publish(Base64.decode(base64, Base64.NO_WRAP))
-    runtime.temporaryNotices.refresh()
     runtime.summaries.deliver()
   }
 
@@ -64,8 +63,6 @@ internal fun ModuleDefinitionBuilder.serviceFunctions(screening: () -> Screening
   Function("atPlace") { placeId: String -> screening().runtimeState.atPlace(placeId) }
 
   Function("knownPlaces") { screening().runtimeState.knownPlaces().toList() }
-
-  Function("releasedTemporaries") { screening().runtimeState.releasedTemporaries().toList() }
 
   Function("networkCountry") { screening().country.current() }
 

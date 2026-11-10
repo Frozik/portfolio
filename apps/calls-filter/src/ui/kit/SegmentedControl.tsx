@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -11,12 +11,16 @@ import Animated, {
 
 import { usePalette } from '../theme/AppTheme';
 import { ICON_SIZE, RADIUS, SMALL_GAP, TEXT_SIZE, TOUCH_SIZE } from './metrics';
+import { useWordFit, WholeWordsText } from './WholeWordsText';
 
 /** Long enough to see the highlight travel, short enough never to wait for it. */
 const SLIDE_MS = 180;
 /** The highlight sits this far inside the frame, so the frame shows around it. */
 const INSET = 3;
 const COMPACT_HEIGHT = 36;
+/** A narrow phone or a large system font wraps a label onto a second line, and the bar grows. */
+const LABEL_LINES = 2;
+const LABEL_PADDING = 4;
 
 interface ISegment<TValue extends string> {
   readonly value: TValue;
@@ -44,6 +48,7 @@ export function SegmentedControl<TValue extends string>({
   readonly compact?: boolean;
 }) {
   const palette = usePalette();
+  const fit = useWordFit(segments.map(segment => segment.label).join('\n'));
   const [width, setWidth] = useState(0);
   const segmentWidth = segments.length === 0 ? 0 : (width - INSET * 2) / segments.length;
   const index = Math.max(
@@ -91,7 +96,9 @@ export function SegmentedControl<TValue extends string>({
             {segment.icon === undefined ? null : (
               <segment.icon color={selected ? palette.onAccent : palette.fgDim} size={ICON_SIZE} />
             )}
-            <Text
+            <WholeWordsText
+              fit={fit}
+              numberOfLines={LABEL_LINES}
               style={[
                 styles.label,
                 compact && styles.compactLabel,
@@ -99,7 +106,7 @@ export function SegmentedControl<TValue extends string>({
               ]}
             >
               {segment.label}
-            </Text>
+            </WholeWordsText>
           </Pressable>
         );
       })}
@@ -110,7 +117,7 @@ export function SegmentedControl<TValue extends string>({
 const styles = StyleSheet.create({
   frame: {
     flexDirection: 'row',
-    height: TOUCH_SIZE,
+    minHeight: TOUCH_SIZE,
     padding: INSET,
     borderRadius: RADIUS,
     borderWidth: StyleSheet.hairlineWidth,
@@ -128,8 +135,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SMALL_GAP,
+    paddingHorizontal: LABEL_PADDING,
   },
-  label: { fontSize: TEXT_SIZE.body, fontWeight: '600' },
-  compactFrame: { height: COMPACT_HEIGHT },
+  label: { flexShrink: 1, textAlign: 'center', fontSize: TEXT_SIZE.body, fontWeight: '600' },
+  compactFrame: { minHeight: COMPACT_HEIGHT },
   compactLabel: { fontSize: TEXT_SIZE.small },
 });

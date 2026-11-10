@@ -4,7 +4,13 @@ import android.content.ContentResolver
 import android.provider.CallLog
 
 /** An incoming call from Android's own call log: the history from before the app, and beside it. */
-data class SystemCall(val epochMs: Long, val rawNumber: String?, val cachedName: String?, val kind: String)
+data class SystemCall(val epochMs: Long, val rawNumber: String?, val cachedName: String?, val networkName: String?, val kind: String)
+
+/**
+ * The name the network sent with the call (CNAP). Android's own call log has no column for it;
+ * OnePlus and Oppo keep it in this one, beside the name the dialer writes.
+ */
+private const val NETWORK_NAME_COLUMN = "cnip_name"
 
 /** Android's call log, read only: incoming, missed, rejected and blocked calls. */
 class SystemCallLog(private val resolver: ContentResolver) {
@@ -19,7 +25,7 @@ class SystemCallLog(private val resolver: ContentResolver) {
   fun incoming(sinceEpochMs: Long, limit: Int): List<SystemCall> = try {
     resolver.query(
       CallLog.Calls.CONTENT_URI,
-      arrayOf(CallLog.Calls.DATE, CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME, CallLog.Calls.TYPE),
+      null,
       "${CallLog.Calls.DATE} >= ? AND ${CallLog.Calls.TYPE} IN (${incomingTypes.keys.joinToString(",")})",
       arrayOf(sinceEpochMs.toString()),
       "${CallLog.Calls.DATE} DESC",
@@ -31,6 +37,7 @@ class SystemCallLog(private val resolver: ContentResolver) {
               epochMs = cursor.long(CallLog.Calls.DATE),
               rawNumber = cursor.string(CallLog.Calls.NUMBER)?.takeIf { it.isNotBlank() },
               cachedName = cursor.string(CallLog.Calls.CACHED_NAME)?.takeIf { it.isNotBlank() },
+              networkName = cursor.optionalString(NETWORK_NAME_COLUMN)?.takeIf { it.isNotBlank() },
               kind = incomingTypes[cursor.int(CallLog.Calls.TYPE)] ?: "incoming",
             ),
           )

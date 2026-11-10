@@ -28,10 +28,9 @@ const settings = z.object({
   ),
 });
 
-/** Version 1 put the iCal links under a version; version 0 was the bare object. */
 export const CALENDARS_DOCUMENT: IStoredDocument<readonly IIcsSubscription[]> = {
   key: 'calendars',
-  history: { version: 1, migrations: { 0: data => data } },
+  history: { version: 1, migrations: {} },
   parse: data => {
     const parsed = settings.safeParse(data);
     return parsed.success

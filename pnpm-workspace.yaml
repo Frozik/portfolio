@@ -42,6 +42,14 @@ overrides:
   # one react-dom gives every Expo app the same expo, so the one jest-expo mocks the expo each loads.
   'expo>react-dom': 'catalog:native'
   '@expo/metro-runtime>react-dom': 'catalog:native'
+  # One copy of each native package and of React Native's tooling across the apps: optional peers
+  # otherwise resolve to the newest release, while Babel takes plugins from the hoisted copy — a
+  # worklets 0.10 plugin over the 0.13 runtime crashed the vault (SIGBUS) on its first start.
+  'react-native-reanimated': 'catalog:'
+  'react-native-worklets': 'catalog:'
+  'react-native-gesture-handler': 'catalog:'
+  'react-native-svg': 'catalog:'
+  '@react-native/metro-config': 'catalog:'
   'compression@<1.8.2': ^1.8.2
   # Expo's CLI checks dev-server manifest signatures with it; 1.4.1 fixes the four 2026-11 advisories.
   'node-forge@<1.4.1': ^1.4.1
@@ -217,6 +225,7 @@ catalog:
   "expo-constants": "~57.0.23"
   "expo-linking": "~57.0.13"
   "react-native": "0.86.3"
+  "@react-native/metro-config": "0.86.3"
   "react-native-safe-area-context": "~5.7.0"
   "react-native-screens": "~4.26.0"
   "react-native-gesture-handler": "~2.32.0"

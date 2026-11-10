@@ -2,7 +2,12 @@ import type { TResult } from '@frozik/utils/result/result';
 import { action, computed, makeObservable, observable } from 'mobx';
 
 import type { IMatchingEnvironment } from '../../grouping/domain/matching-environment';
-import type { TMember, TMemberId, TNameField } from '../../grouping/domain/member';
+import type {
+  INameMaskMember,
+  INumberMaskMember,
+  TMemberId,
+  TNameField,
+} from '../../grouping/domain/member';
 import { matchMember } from '../../grouping/domain/member-matching';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
 import { normalizeName } from '../../phone/domain/name-normalization';
@@ -19,6 +24,11 @@ import { canonicalNumberPattern } from '../domain/number-mask-canonical';
 import type { TPattern } from '../domain/pattern';
 
 export type TMaskKind = 'number' | 'name';
+
+/** Where the editor starts: a new mask (empty, or a call's number or name), or one of a group to rewrite. */
+export type TMaskStart =
+  | { readonly kind: 'new'; readonly mask: TMaskKind; readonly seed: string }
+  | { readonly kind: 'rewrite'; readonly member: INumberMaskMember | INameMaskMember };
 
 /** What the editor shows under the field: why it does not parse yet, or what it means. */
 export type TMaskState =
@@ -41,7 +51,7 @@ interface IEditorPorts {
   readonly numbering: IPhoneNumbering;
   readonly knownCallers: () => readonly ICaller[];
   readonly newMemberId: () => TMemberId;
-  readonly now: () => TMember['updatedAt'];
+  readonly now: () => INumberMaskMember['updatedAt'];
 }
 
 function isEveryone(pattern: TPattern): boolean {
@@ -53,16 +63,23 @@ function isEveryone(pattern: TPattern): boolean {
 export class MaskEditor {
   kind: TMaskKind;
   source: string;
-  field: TNameField = 'any';
+  field: TNameField;
   sample = '';
 
   constructor(
     private readonly ports: IEditorPorts,
-    kind: TMaskKind,
-    seed: string
+    private readonly start: TMaskStart
   ) {
-    this.kind = kind;
-    this.source = seed;
+    if (start.kind === 'new') {
+      this.kind = start.mask;
+      this.source = start.seed;
+      this.field = 'any';
+    } else {
+      const { member } = start;
+      this.kind = member.kind === 'number-mask' ? 'number' : 'name';
+      this.source = member.mask.source;
+      this.field = member.kind === 'name-mask' ? member.field : 'any';
+    }
     makeObservable(this, {
       kind: observable,
       source: observable,
@@ -121,14 +138,19 @@ export class MaskEditor {
     };
   }
 
-  /** The member saving would add; `null` while the mask does not hold. */
-  get member(): TMember | null {
+  /** Whether saving rewrites a mask of a group rather than adding one. */
+  get rewrites(): boolean {
+    return this.start.kind === 'rewrite';
+  }
+
+  /** The member saving would add, or the rewrite of the one it started from; `null` while the mask does not hold. */
+  get member(): INumberMaskMember | INameMaskMember | null {
     const { parsed } = this;
     if (parsed === null || !parsed.ok || this.state.kind !== 'valid') {
       return null;
     }
     const core = {
-      id: this.ports.newMemberId(),
+      id: this.start.kind === 'rewrite' ? this.start.member.id : this.ports.newMemberId(),
       updatedAt: this.ports.now(),
       excludedFor: null,
       note: '',

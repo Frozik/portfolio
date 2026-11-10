@@ -34,8 +34,7 @@ export interface ICompiledCalendarRule {
   readonly bakedEvents: TWindowSet;
 }
 
-export interface ICompiledScheduled {
-  readonly action: TAction;
+export interface ICompiledConditions {
   /** The zone whose clock `windows` are on; `null` for the phone's own. */
   readonly zone: string | null;
   readonly hasSchedule: boolean;
@@ -50,24 +49,18 @@ export type TCompiledRepeatPass =
   | { readonly kind: 'always' }
   | { readonly kind: 'until'; readonly untilEpochMs: number };
 
-export interface ICompiledTemporary {
-  readonly action: TAction;
-  readonly until: 'instant' | 'first-pass' | 'end-of-event';
-  readonly untilEpochMs: number;
-  readonly setAtEpochMs: number;
-}
-
 export interface ICompiledGroup {
   readonly id: TGroupId;
   readonly kind: 'custom' | 'my-contacts' | 'strangers';
   readonly include: readonly TCompiledMember[];
   readonly exclude: readonly TCompiledMember[];
   readonly excludeMyContacts: boolean;
-  readonly otherwise: TAction;
-  readonly scheduled: ICompiledScheduled | null;
+  readonly action: TAction;
+  readonly conditions: ICompiledConditions | null;
   readonly repeatWindowMinutes: number;
   readonly repeatPass: TCompiledRepeatPass;
-  readonly temporary: ICompiledTemporary | null;
+  /** Switched off by the user: passed over in finding a caller's group. */
+  readonly off: boolean;
   readonly createdAtEpochMs: number;
   readonly autoReplyText: string;
   /** A custom group's name, for the shade; empty for the special two. */

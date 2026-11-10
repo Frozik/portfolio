@@ -61,9 +61,9 @@ fun claims(group: Group, caller: Caller, networkCountry: String?): Boolean = whe
   GroupKind.STRANGERS -> false
 }
 
-/** The group of a caller: exactly one, or a conflict the app has to settle fail-open. */
-fun membership(ruleset: Ruleset, caller: Caller, networkCountry: String?): Membership {
-  val claimants = ruleset.groups.filter { it.kind != GroupKind.STRANGERS && claims(it, caller, networkCountry) }
+/** The group of a caller among those `inForce`: exactly one, or a conflict the app has to settle fail-open. */
+fun membership(ruleset: Ruleset, caller: Caller, networkCountry: String?, inForce: (Group) -> Boolean = { true }): Membership {
+  val claimants = ruleset.groups.filter { it.kind != GroupKind.STRANGERS && claims(it, caller, networkCountry) && inForce(it) }
   return when (claimants.size) {
     0 -> Membership.One(ruleset.groups.first { it.kind == GroupKind.STRANGERS })
     1 -> Membership.One(claimants.single())

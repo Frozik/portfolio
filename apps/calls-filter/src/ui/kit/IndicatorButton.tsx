@@ -2,10 +2,11 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { usePalette } from '../theme/AppTheme';
-import { DIMMED_OPACITY, ICON_SIZE, RADIUS, SMALL_GAP, TEXT_SIZE, TOUCH_SIZE } from './metrics';
+import { DIMMED_OPACITY, GAP, ICON_SIZE, RADIUS, TEXT_SIZE, TOUCH_SIZE } from './metrics';
 
 /** A caption shrinks this far before it would be cut: one word always reads whole. */
 const CAPTION_MIN_SCALE = 0.75;
+const CAPTIONED_HEIGHT = TOUCH_SIZE + 8;
 
 /** A state shown as an icon that acts: filled while the state holds, outlined while it does not. */
 export function IndicatorButton({
@@ -70,15 +71,14 @@ const styles = StyleSheet.create({
   },
   captioned: {
     flex: 1,
-    height: TOUCH_SIZE,
-    paddingHorizontal: SMALL_GAP,
+    height: CAPTIONED_HEIGHT,
+    paddingHorizontal: GAP,
     borderRadius: RADIUS,
     borderWidth: StyleSheet.hairlineWidth * 2,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SMALL_GAP,
+    gap: GAP,
   },
-  caption: { flexShrink: 1, fontSize: TEXT_SIZE.small, fontWeight: '600' },
+  caption: { flexShrink: 1, fontSize: TEXT_SIZE.body, fontWeight: '600' },
   dimmed: { opacity: DIMMED_OPACITY },
 });

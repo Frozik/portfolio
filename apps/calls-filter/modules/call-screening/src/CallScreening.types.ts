@@ -8,7 +8,7 @@ export interface INativeCallRecord {
   readonly contactLookupKey: string | null;
   readonly groupId: string;
   readonly verdict: 'PASSED' | 'REJECTED' | 'AWAITING_REPEAT' | 'PASSED_AS_REPEAT' | 'PAUSED';
-  readonly actionSource: 'TEMPORARY' | 'SCHEDULED' | 'OTHERWISE';
+  readonly actionSource: 'ALWAYS' | 'CONDITIONS_HOLD' | 'NONE_IN_FORCE';
   readonly alsoClaimedBy: readonly string[];
 }
 
@@ -27,8 +27,10 @@ interface INativeSystemCall {
   readonly kind: 'incoming' | 'missed' | 'rejected' | 'blocked';
   readonly contactName: string | null;
   readonly contactId: string | null;
-  /** The name the dialer wrote into the call log: the contact's, or one its caller ID found. */
+  /** The name the dialer wrote into the call log: the contact's, the network's, or its caller ID's. */
   readonly cachedName: string | null;
+  /** The name the network sent with the call, on the phones whose call log keeps it apart. */
+  readonly networkName: string | null;
 }
 
 /** A zone as Android names it in the app's language. */
@@ -55,7 +57,6 @@ export interface ICallScreeningModule {
   setRetentionDays(days: number): void;
   /** How many days the service keeps its journal, as it was last told. */
   retentionDays(): number;
-  releasedTemporaries(): readonly string[];
   setAtPlace(placeId: string, inside: boolean | null): void;
   atPlace(placeId: string): boolean | null;
   knownPlaces(): readonly string[];
@@ -74,6 +75,8 @@ export interface ICallScreeningModule {
   /** Opens the e2e build's command channel; `false` in any other build, where it does not exist. */
   openE2eControl(): boolean;
   answerE2eCommand(id: string, json: string): void;
+  /** The e2e build only: the service screens a call as if the network had sent this name. */
+  screenE2eCall(rawNumber: string, networkName: string | null): Promise<'allowed' | 'rejected'>;
   addListener(event: 'onCallScreened', listener: () => void): { remove(): void };
   addListener(
     event: 'onE2eCommand',

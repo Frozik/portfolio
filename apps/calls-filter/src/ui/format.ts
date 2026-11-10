@@ -1,37 +1,36 @@
 import type { Temporal } from 'temporal-polyfill';
 
-import type { IActionNow } from '../contexts/policy/domain/action-now';
+import type { IActivityNow } from '../contexts/policy/domain/activity-now';
 import { plainDateTimeOf } from '../contexts/policy/domain/floating-time';
 import type { TWeekday } from '../contexts/policy/domain/schedule';
 import type { ITexts } from '../texts/texts';
 
-/** A moment the way a list says it: the time today, the weekday and date later. */
+/** Past this many days ahead a weekday could mean two dates, so the date is named instead. */
+const WEEKDAY_REACH_DAYS = 6;
+
+/** A moment the way a list says it: the time today, the weekday in the coming week, else the date. */
 export function momentText(
   texts: ITexts,
   moment: Temporal.PlainDateTime,
   today: Temporal.PlainDate
 ): string {
   const time = texts.format.time(moment.hour, moment.minute);
-  if (moment.toPlainDate().equals(today)) {
+  const daysAhead = today.until(moment.toPlainDate()).days;
+  if (daysAhead === 0) {
     return time;
   }
-  return `${texts.format.weekdayShort(moment.dayOfWeek as TWeekday)} ${texts.format.dayMonth(moment.day, moment.month)}, ${time}`;
+  if (daysAhead > 0 && daysAhead <= WEEKDAY_REACH_DAYS) {
+    return `${texts.format.weekdayShort(moment.dayOfWeek as TWeekday)} ${time}`;
+  }
+  return `${texts.format.dayMonth(moment.day, moment.month)}, ${time}`;
 }
 
 export function changeText(
   texts: ITexts,
-  changesAt: IActionNow['changesAt'],
-  zone: string,
+  changesAt: IActivityNow['changesAt'],
   today: Temporal.PlainDate
 ): string | null {
-  if (changesAt === null) {
-    return null;
-  }
-  const local =
-    changesAt.kind === 'instant'
-      ? changesAt.at.toZonedDateTimeISO(zone).toPlainDateTime()
-      : plainDateTimeOf(changesAt.at);
-  return momentText(texts, local, today);
+  return changesAt === null ? null : momentText(texts, plainDateTimeOf(changesAt), today);
 }
 
 export function dayText(

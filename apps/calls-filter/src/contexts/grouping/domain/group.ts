@@ -1,7 +1,7 @@
 import type { Brand } from '@frozik/utils/types/base';
 import type { Temporal } from 'temporal-polyfill';
 
-import type { IPolicy, ITemporaryPolicy } from '../../policy/domain/policy';
+import type { IPolicy } from '../../policy/domain/policy';
 import type { TMember } from './member';
 
 export type TGroupId = Brand<string, 'GroupId'>;
@@ -43,7 +43,8 @@ interface IGroupCore {
   readonly id: TGroupId;
   readonly color: TGroupColor;
   readonly policy: IPolicy;
-  readonly temporary: ITemporaryPolicy | null;
+  /** Off, the group is passed over in finding a caller's group, whatever its conditions say. */
+  readonly enabled: boolean;
   readonly autoReply: IAutoReply | null;
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;

@@ -2,14 +2,10 @@ import { observer } from 'mobx-react-lite';
 
 import type { TGroup } from '../../contexts/grouping/domain/group';
 import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
-import { actionOf, withAction } from '../../contexts/policy/domain/policy';
 import { useApp } from '../AppContext';
 import { ActionSwitch } from './ActionSwitch';
 
-/**
- * What a group does: always, or — once it has a schedule, calendars or places — while they all
- * hold, with the opposite the rest of the time.
- */
+/** What a group does with the calls it takes: always, or — once it has conditions — while they all hold. */
 export const PolicySwitches = observer(function PolicySwitches({
   group,
 }: {
@@ -19,11 +15,11 @@ export const PolicySwitches = observer(function PolicySwitches({
   const { policy } = group;
   return (
     <ActionSwitch
-      prefix={policy.scheduled === null ? 'always' : 'while'}
-      value={actionOf(policy)}
+      prefix={policy.conditions === null ? 'always' : 'while'}
+      value={policy.action}
       onChange={action =>
         app.books.run((book, context) =>
-          changeGroup(book, group.id, { policy: withAction(policy, action) }, context.now)
+          changeGroup(book, group.id, { policy: { ...policy, action } }, context.now)
         )
       }
     />

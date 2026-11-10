@@ -52,6 +52,7 @@ export const RU: ITexts = {
     filterOn: 'Фильтр работает',
     pausedUntil: time => `На паузе до ${time}`,
     pinned: 'Встроенная группа: её нельзя переименовать или удалить',
+    conditioned: 'Группа действует, только пока выполняются её условия',
     resume: 'Продолжить',
     pause: 'Пауза',
     newGroup: 'Группа',
@@ -61,25 +62,12 @@ export const RU: ITexts = {
     roleMissing: 'Calls Filter пока не может проверять звонки',
     roleButton: 'Разрешить',
     conflicts: value => `⚠ ${count(value, 'конфликт', 'конфликта', 'конфликтов')}`,
-    now: (action, until) =>
-      `${action === 'block' ? 'Блок' : 'Пропуск'} ${until === null ? 'всегда' : `до ${until}`}`,
-    thenSeparator: ', ',
-    next: action => `потом ${action === 'block' ? 'блок' : 'пропуск'}`,
+    activeUntil: when => `Работает до ${when}`,
+    activeFrom: when => `Заработает с ${when}`,
+    off: 'Выключена',
+    switchOff: 'Выключить группу',
+    switchOn: 'Включить группу',
     callsToday: value => String(value),
-  },
-  temporary: {
-    title: action => (action === 'block' ? 'Блокировать на время' : 'Пропускать на время'),
-    usually: (group, phrase) => `${group}. Обычно: ${phrase}`,
-    what: 'На время',
-    short: 'Временно',
-    forHow: 'На',
-    hour: '1 ч',
-    evening: 'До вечера',
-    days: value => count(value, 'день', 'дня', 'дней'),
-    firstCall: 'До первого звонка',
-    endOfEvent: 'До конца встречи',
-    backToUsual: 'Вернуть как обычно',
-    active: (action, until) => `${action} до ${until}`,
   },
   repeat: {
     title: 'Повторный звонок проходит',
@@ -111,6 +99,8 @@ export const RU: ITexts = {
     include: 'Включить',
     exclude: 'Исключить',
     addMask: 'Добавить маску: номер или название',
+    editMask: 'Изменить маску',
+    removeMember: 'Убрать из списка',
     addNameMask: '+ Название',
     addContact: 'Добавить контакт',
     excludeMyContacts: 'Исключить мои контакты',
@@ -123,6 +113,8 @@ export const RU: ITexts = {
     repeatWindow: minutes =>
       `Повтор считается в течение ${count(minutes, 'минуты', 'минут', 'минут')}`,
     autoReply: 'SMS-ответ контактам',
+    whenActs: 'Когда действует',
+    whenRejected: 'Когда звонок отклонён',
     smsShort: 'SMS',
     autoReplyHint:
       'Уходит контакту, которого группа отклонила, не чаще раза за встречу; в роуминге — никогда',
@@ -166,8 +158,7 @@ export const RU: ITexts = {
     hidden: 'Скрытый номер',
     move: 'В группу…',
     moveTitle: 'Перенести в группу',
-    byNumber: 'По номеру',
-    byName: 'По названию',
+    moveHow: 'Нажмите номер или название под группой — именно оно туда и перенесётся',
     newGroup: '+ Новая группа',
     remove: 'Убрать из группы',
     callBack: 'Перезвонить',
@@ -188,6 +179,9 @@ export const RU: ITexts = {
     keepIn: group => `Оставить в «${group}»`,
     keepKnownIn: group => `Только звонки из журнала — в «${group}»`,
     none: 'Конфликтов нет: каждый звонящий в одной группе',
+    count: value => count(value, 'конфликт', 'конфликта', 'конфликтов'),
+    noneShort: 'Нет',
+    keepAsIs: 'Оставить как есть',
   },
   changes: {
     event: (event, name) => {
@@ -224,6 +218,8 @@ export const RU: ITexts = {
           return 'В «Мои контакты» — только контакты';
         case 'unknown-group':
           return 'Группы больше нет';
+        case 'unknown-member':
+          return 'Этой маски уже нет';
         default:
           return assertNever(reason);
       }
@@ -231,9 +227,6 @@ export const RU: ITexts = {
   },
   schedule: RU_SCHEDULE,
   phrase: {
-    always: action => `${action} всегда`,
-    scheduled: (action, when, otherwise) =>
-      `${action} ${when}; в остальное время ${otherwise.toLowerCase()}`,
     allDay: 'весь день',
     everyDay: 'каждый день',
     onWeekdays: 'по будням',
@@ -256,11 +249,6 @@ export const RU: ITexts = {
     monthly: 'ежемесячно',
     yearly: 'ежегодно',
     once: date => date,
-    exceptEvents: calendars => `кроме ${calendars}`,
-    onlyDuringEvents: calendars => `только во время ${calendars}`,
-    allTheTime: 'всё время',
-    onlyAtPlaces: places => `только: ${places}`,
-    exceptAtPlaces: places => `кроме: ${places}`,
     onClockOf: city => `(время: ${city})`,
     localTime: '(местное время)',
   },

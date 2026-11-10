@@ -7,8 +7,7 @@ import io.github.frozik.callsfilter.screening.application.AutoReplyLedger
 import io.github.frozik.callsfilter.screening.application.CallRecord
 import io.github.frozik.callsfilter.screening.application.SmsSender
 import io.github.frozik.callsfilter.screening.domain.Action
-import io.github.frozik.callsfilter.screening.domain.ActionNow
-import io.github.frozik.callsfilter.screening.domain.ActionSource
+import io.github.frozik.callsfilter.screening.domain.Activity
 import io.github.frozik.callsfilter.screening.domain.Decision
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupKind
@@ -21,14 +20,15 @@ private const val NOW = 1_800_000_000_000L
 private const val TEXT = "In a meeting, will call back"
 
 private fun record(verdict: Verdict = Verdict.REJECTED, contact: String? = "lookup-1", epochMs: Long = NOW) =
-  CallRecord(epochMs, "+31612345678", "31612345678", null, "Mum", contact, "work", verdict.name, "SCHEDULED", emptyList())
+  CallRecord(epochMs, "+31612345678", "31612345678", null, "Mum", contact, "work", verdict.name, "CONDITIONS_HOLD", emptyList())
 
-private val RULESET = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList())
+private val RULESET = Ruleset(Ruleset.SCHEMA, 0L, Long.MAX_VALUE, "NL", emptyList())
 
 private fun decided(record: CallRecord, text: String) = Decision(
-  Group("work", GroupKind.CUSTOM, emptyList(), emptyList(), false, Action.BLOCK, null, 5, null, 0L, text),
+  Group("work", GroupKind.CUSTOM, emptyList(), emptyList(), false, Action.BLOCK, null, 5, false, 0L, text),
   emptyList(),
-  ActionNow(Action.BLOCK, ActionSource.OTHERWISE),
+  Activity.ALWAYS,
+  Action.BLOCK,
   Verdict.valueOf(record.verdict),
 )
 

@@ -9,21 +9,24 @@ import type { TGroup } from '../../contexts/grouping/domain/group';
 import { findGroup, freshColor } from '../../contexts/grouping/domain/group-book';
 import { addMember, createGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { initialBook } from '../../contexts/grouping/domain/initial-book';
-import type { INumberMaskMember, ISpecialMember } from '../../contexts/grouping/domain/member';
+import type {
+  INameMaskMember,
+  INumberMaskMember,
+  ISpecialMember,
+} from '../../contexts/grouping/domain/member';
 import { SPECIAL_MASKS } from '../../contexts/grouping/domain/member';
 import type { IJournalEntry } from '../../contexts/journal/domain/journal-entry';
+import { parseNameMask } from '../../contexts/masks/domain/name-mask';
 import { parseNumberMask } from '../../contexts/masks/domain/number-mask';
 import type { TPlaceId } from '../../contexts/policy/domain/place-rule';
 import { isPlaceRadius } from '../../contexts/policy/domain/place-rule';
 import type { IPolicy } from '../../contexts/policy/domain/policy';
-import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
+import { ALWAYS_BLOCK, ALWAYS_PASS, withConditions } from '../../contexts/policy/domain/policy';
 import type { TRepeatPass } from '../../contexts/policy/domain/repeat-pass';
 import { REPEAT_OFF } from '../../contexts/policy/domain/repeat-pass';
-import { windowActionOf } from '../../contexts/policy/domain/window-action';
 import type { CallsFilterApp } from '../../contexts/shell/application/CallsFilterApp';
 import { LIBPHONENUMBER_NUMBERING } from '../libphonenumber-numbering';
 import { nativeCallJournal } from '../native-call-journal';
-import type { IDocumentStore } from '../stored-document';
 
 const EVENT_FILTER = {
   skipDeclined: true,
@@ -39,6 +42,8 @@ const newGroup = z.object({
   action: z.enum(['block', 'pass']),
   numbers: z.array(z.string()).default([]),
   specials: z.array(z.enum(SPECIAL_MASKS)).default([]),
+  /** Name masks over any name the call carries. */
+  names: z.array(z.string()).default([]),
   repeat: repeat.default('off'),
   /** «Let through only at this place, block elsewhere». */
   onlyAt: z
@@ -63,10 +68,9 @@ const e2eCommand = z.discriminatedUnion('name', [
   z.object({ name: z.literal('group'), groupName: z.string() }),
   z.object({ name: z.literal('set-filter-repeat'), repeat }),
   z.object({ name: z.literal('calls'), number: z.string() }),
+  /** A call the emulator's modem cannot make: one that comes with the name the network sent. */
+  z.object({ name: z.literal('screen-call'), number: z.string(), networkName: z.string() }),
   z.object({ name: z.literal('device-calendars') }),
-  z.object({ name: z.literal('document'), key: z.string() }),
-  /** Puts a document as an older app would have left it; the app reads it at its next start. */
-  z.object({ name: z.literal('write-document'), key: z.string(), text: z.string() }),
   z.object({ name: z.literal('journal-days') }),
   /** What a geofence would have said: the emulator's own location is too slow to drive a test. */
   z.object({ name: z.literal('set-at-place'), place: z.string(), inside: z.boolean().nullable() }),
@@ -84,27 +88,23 @@ function policyOf(group: TNewGroup): IPolicy {
   if (onlyAt === undefined && exceptDuring === undefined) {
     return policy;
   }
-  return {
-    ...policy,
-    otherwise: 'block',
-    scheduled: {
-      schedule: null,
-      calendars:
-        exceptDuring === undefined
-          ? []
-          : [
-              {
-                source: { kind: 'device', ...exceptDuring },
-                mode: 'except-events',
-                filter: EVENT_FILTER,
-              },
-            ],
-      places:
-        onlyAt === undefined
-          ? []
-          : [{ ...onlyAt, id: onlyAt.id as TPlaceId, mode: 'only-at' as const }],
-    },
-  };
+  return withConditions(policy, {
+    schedule: null,
+    calendars:
+      exceptDuring === undefined
+        ? []
+        : [
+            {
+              source: { kind: 'device', ...exceptDuring },
+              mode: 'except-events',
+              filter: EVENT_FILTER,
+            },
+          ],
+    places:
+      onlyAt === undefined
+        ? []
+        : [{ ...onlyAt, id: onlyAt.id as TPlaceId, mode: 'only-at' as const }],
+  });
 }
 
 function numberMember(source: string, context: IEditContext): INumberMaskMember {
@@ -114,6 +114,20 @@ function numberMember(source: string, context: IEditContext): INumberMaskMember 
     kind: 'number-mask',
     id: context.newMemberId(),
     mask: mask.value,
+    note: '',
+    updatedAt: context.now,
+    excludedFor: null,
+  };
+}
+
+function nameMember(source: string, context: IEditContext): INameMaskMember {
+  const mask = parseNameMask(source);
+  assert(mask.ok, `${source} is no name mask`);
+  return {
+    kind: 'name-mask',
+    id: context.newMemberId(),
+    mask: mask.value,
+    field: 'any',
     note: '',
     updatedAt: context.now,
     excludedFor: null,
@@ -153,17 +167,16 @@ function described(app: CallsFilterApp, group: TGroup) {
             }
           })
         : [],
-    otherwise: group.policy.otherwise,
+    action: group.policy.action,
     repeat: group.policy.repeatPass.kind,
-    scheduled:
-      group.policy.scheduled === null
+    conditions:
+      group.policy.conditions === null
         ? null
         : {
-            action: windowActionOf(group.policy),
-            repeat: group.policy.scheduled.schedule?.repeat ?? null,
-            zone: group.policy.scheduled.schedule?.zone ?? null,
-            calendars: group.policy.scheduled.calendars.map(rule => rule.source.kind),
-            places: group.policy.scheduled.places.map(place => ({
+            repeat: group.policy.conditions.schedule?.repeat ?? null,
+            zone: group.policy.conditions.schedule?.zone ?? null,
+            calendars: group.policy.conditions.calendars.map(rule => rule.source.kind),
+            places: group.policy.conditions.places.map(place => ({
               name: place.name,
               radius: place.radius,
               mode: place.mode,
@@ -212,6 +225,7 @@ function addGroup(app: CallsFilterApp, group: TNewGroup) {
     const members = [
       ...group.numbers.map(source => numberMember(source, context)),
       ...group.specials.map(special => specialMember(special, context)),
+      ...group.names.map(source => nameMember(source, context)),
     ];
     return members.reduce<TEditOutcome>(
       (outcome, member) =>
@@ -237,11 +251,7 @@ function addGroup(app: CallsFilterApp, group: TNewGroup) {
  * the service would show. Every change goes through the same edits the screens use, so the
  * ruleset the service runs is published exactly as after a tap.
  */
-export async function runE2eCommand(
-  app: CallsFilterApp,
-  documents: IDocumentStore,
-  input: unknown
-): Promise<unknown> {
+export async function runE2eCommand(app: CallsFilterApp, input: unknown): Promise<unknown> {
   const command = e2eCommand.parse(input);
   switch (command.name) {
     case 'ping':
@@ -249,6 +259,7 @@ export async function runE2eCommand(
     case 'reset':
       app.books.replace(initialBook(app.clock.now()));
       app.device.setRepeatPass(REPEAT_OFF);
+      app.dismissWhereTo();
       return { groups: app.books.book.groups.length };
     case 'create-group': {
       const created = addGroup(app, command.group);
@@ -283,13 +294,10 @@ export async function runE2eCommand(
       CALL_SCREENING.setAtPlace(command.place, command.inside);
       app.places.refresh();
       return { place: command.place, inside: command.inside };
-    case 'document':
-      return { text: await documents.read(command.key) };
-    case 'write-document':
-      await documents.write(command.key, command.text);
-      return { key: command.key };
     case 'journal-days':
       return { days: CALL_SCREENING.retentionDays() };
+    case 'screen-call':
+      return { verdict: await CALL_SCREENING.screenE2eCall(command.number, command.networkName) };
     default:
       return assertNever(command);
   }

@@ -1,16 +1,12 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import { isEqual } from 'lodash-es';
 
-import type { TCalendarSource } from '../contexts/calendars/domain/calendar-source';
-import type { IPlaceRule } from '../contexts/policy/domain/place-rule';
-import type { IPolicy } from '../contexts/policy/domain/policy';
 import type {
   ISchedule,
   TScheduleTime,
   TScheduleZone,
   TWeekday,
 } from '../contexts/policy/domain/schedule';
-import { windowActionOf } from '../contexts/policy/domain/window-action';
 import type { ITexts } from './texts';
 
 const WEEKDAYS: readonly TWeekday[] = [1, 2, 3, 4, 5];
@@ -78,55 +74,4 @@ export function scheduleText(texts: ITexts, schedule: ISchedule, clock: IClockWo
   return [daysText(texts, schedule), zone === null ? times : `${times} ${zone}`]
     .filter(part => part !== null && part !== '')
     .join(', ');
-}
-
-function placesText(
-  texts: ITexts,
-  places: readonly IPlaceRule[],
-  mode: IPlaceRule['mode']
-): string {
-  const names = places.filter(place => place.mode === mode).map(place => `«${place.name}»`);
-  if (names.length === 0) {
-    return '';
-  }
-  return mode === 'only-at'
-    ? texts.phrase.onlyAtPlaces(names.join(', '))
-    : texts.phrase.exceptAtPlaces(names.join(', '));
-}
-
-/** The policy as one sentence, the way the group screen and the list show it. */
-export function policyText(
-  texts: ITexts,
-  policy: IPolicy,
-  calendarName: (source: TCalendarSource) => string,
-  clock: IClockWords
-): string {
-  const { scheduled } = policy;
-  if (scheduled === null) {
-    return texts.phrase.always(texts.actions[policy.otherwise]);
-  }
-  const except = scheduled.calendars
-    .filter(rule => rule.mode === 'except-events')
-    .map(rule => calendarName(rule.source));
-  const only = scheduled.calendars
-    .filter(rule => rule.mode === 'only-during-events')
-    .map(rule => calendarName(rule.source));
-  const when = [
-    scheduled.schedule === null
-      ? except.length === 0 && only.length === 0 && scheduled.places.length === 0
-        ? texts.phrase.allTheTime
-        : ''
-      : scheduleText(texts, scheduled.schedule, clock),
-    except.length === 0 ? '' : texts.phrase.exceptEvents(except.join(', ')),
-    only.length === 0 ? '' : texts.phrase.onlyDuringEvents(only.join(', ')),
-    placesText(texts, scheduled.places, 'only-at'),
-    placesText(texts, scheduled.places, 'except-at'),
-  ]
-    .filter(part => part !== '')
-    .join(', ');
-  return texts.phrase.scheduled(
-    texts.actions[windowActionOf(policy)],
-    when,
-    texts.actions[policy.otherwise]
-  );
 }

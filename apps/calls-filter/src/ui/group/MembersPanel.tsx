@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Regex, UserPlus } from 'lucide-react-native';
+import { Pencil, Regex, Trash2, UserPlus } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -29,6 +29,7 @@ import { GUTTER, ICON_SIZE, SMALL_GAP } from '../kit/metrics';
 import { Row } from '../kit/Row';
 import { Section } from '../kit/Section';
 import { Sheet } from '../kit/Sheet';
+import { SwipeAction } from '../kit/SwipeAction';
 import { ToggleRow } from '../kit/ToggleRow';
 import { usePalette } from '../theme/AppTheme';
 import { memberLabel } from './member-label';
@@ -97,11 +98,19 @@ export const MembersPanel = observer(function MembersPanel({
   };
   const openMask = (side: TSide) =>
     router.push({ pathname: '/mask', params: { group: group.id, side } });
+  const removeFrom = (which: TSide, member: TMember) =>
+    app.books.run((book, context) => removeMember(book, group.id, which, member.id, context.now));
+  const editMask = (which: TSide, member: TMember) =>
+    router.push({ pathname: '/mask', params: { group: group.id, side: which, member: member.id } });
   const remove = () => {
     if (selected !== null) {
-      app.books.run((book, context) =>
-        removeMember(book, group.id, selected.side, selected.member.id, context.now)
-      );
+      removeFrom(selected.side, selected.member);
+    }
+    setSelected(null);
+  };
+  const edit = () => {
+    if (selected !== null) {
+      editMask(selected.side, selected.member);
     }
     setSelected(null);
   };
@@ -139,25 +148,46 @@ export const MembersPanel = observer(function MembersPanel({
       >
         {listed.length === 0 ? <Row title={texts.group.emptySide} /> : null}
         {listed.map(member => (
-          <Row
+          <SwipeAction
             key={member.id}
-            testID={`member-${member.id}`}
-            leading={
-              member.kind === 'contact' ? (
-                <ContactAvatar
-                  photoUri={
-                    member.lookupKey === null ? null : app.contactPhotoUri(member.lookupKey)
+            start={{
+              icon: Trash2,
+              label: texts.group.removeMember,
+              tone: 'danger',
+              testID: `member-delete-${member.id}`,
+              onPress: () => removeFrom(which, member),
+            }}
+            end={
+              isMask(member)
+                ? {
+                    icon: Pencil,
+                    label: texts.group.editMask,
+                    tone: 'accent',
+                    testID: `member-edit-${member.id}`,
+                    onPress: () => editMask(which, member),
                   }
-                  name={member.displayName}
-                />
-              ) : member.kind === 'special' ? (
-                <SpecialIcon special={member.special} />
-              ) : undefined
+                : undefined
             }
-            title={member.kind === 'contact' ? member.displayName : memberLabel(texts, member)}
-            subtitle={subtitleOf(member)}
-            onPress={() => setSelected({ side: which, member })}
-          />
+          >
+            <Row
+              testID={`member-${member.id}`}
+              leading={
+                member.kind === 'contact' ? (
+                  <ContactAvatar
+                    photoUri={
+                      member.lookupKey === null ? null : app.contactPhotoUri(member.lookupKey)
+                    }
+                    name={member.displayName}
+                  />
+                ) : member.kind === 'special' ? (
+                  <SpecialIcon special={member.special} />
+                ) : undefined
+              }
+              title={member.kind === 'contact' ? member.displayName : memberLabel(texts, member)}
+              subtitle={subtitleOf(member)}
+              onPress={() => setSelected({ side: which, member })}
+            />
+          </SwipeAction>
         ))}
       </Section>
     );
@@ -214,6 +244,14 @@ export const MembersPanel = observer(function MembersPanel({
         {selected?.member.excludedFor === null || selected === null ? null : (
           <Hint text={texts.group.excludedFor(excludedForName(selected.member.excludedFor))} />
         )}
+        {selected !== null && isMask(selected.member) ? (
+          <Button
+            testID="member-edit"
+            variant="secondary"
+            label={texts.group.editMask}
+            onPress={edit}
+          />
+        ) : null}
         <Button
           testID="member-remove"
           variant="danger"
@@ -233,6 +271,10 @@ const styles = StyleSheet.create({
     paddingVertical: SMALL_GAP * 2,
   },
 });
+
+function isMask(member: TMember): boolean {
+  return member.kind === 'number-mask' || member.kind === 'name-mask';
+}
 
 function SpecialIcon({ special }: { readonly special: TSpecialMask }) {
   const palette = usePalette();

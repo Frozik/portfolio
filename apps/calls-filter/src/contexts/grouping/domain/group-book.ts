@@ -12,6 +12,7 @@ import type {
   TColorSlot,
   TGroupId,
 } from './group';
+import type { INameMaskMember, INumberMaskMember, TMemberId } from './member';
 
 interface IGroupBookShape {
   /** The user's groups in the order they were created, then «my contacts», then «strangers». */
@@ -66,4 +67,21 @@ export function findGroup(book: GroupBook, id: TGroupId): TGroup | null {
 
 export function replaceGroup(book: GroupBook, replacement: TGroup): GroupBook {
   return groupBook(book.groups.map(group => (group.id === replacement.id ? replacement : group)));
+}
+
+/** A number or name mask of one side of a group; `null` for anything else or nothing. */
+export function findMask(
+  book: GroupBook,
+  groupId: TGroupId,
+  side: 'include' | 'exclude',
+  memberId: TMemberId
+): INumberMaskMember | INameMaskMember | null {
+  const group = findGroup(book, groupId);
+  if (group === null || group.kind === 'strangers') {
+    return null;
+  }
+  const members =
+    side === 'include' ? (group.kind === 'custom' ? group.include : []) : group.exclude;
+  const member = members.find(candidate => candidate.id === memberId);
+  return member?.kind === 'number-mask' || member?.kind === 'name-mask' ? member : null;
 }

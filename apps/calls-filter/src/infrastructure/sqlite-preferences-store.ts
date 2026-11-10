@@ -17,10 +17,9 @@ const preferences = z.object({
   repeatPass: repeatPassCodec.default(REPEAT_OFF),
 });
 
-/** Version 1 put the preferences under a version; version 0 was the bare object. */
 export const PREFERENCES_DOCUMENT: IStoredDocument<IDevicePreferences> = {
   key: 'preferences',
-  history: { version: 1, migrations: { 0: data => data } },
+  history: { version: 1, migrations: {} },
   parse: data => {
     const parsed = preferences.safeParse(data);
     return parsed.success ? parsed.data : null;

@@ -33,15 +33,19 @@ export function claims(group: TGroup, caller: ICaller, environment: IMatchingEnv
   }
 }
 
-/** The group of a caller: exactly one, or a conflict the user has to resolve. */
+/**
+ * The group of a caller: exactly one, or a conflict the user has to resolve. `inForce` passes
+ * over the groups not in force at the moment of a call; the book's own view takes them all.
+ */
 export function membership(
   book: GroupBook,
   caller: ICaller,
-  environment: IMatchingEnvironment
+  environment: IMatchingEnvironment,
+  inForce: (group: TAssignableGroup) => boolean = () => true
 ): TMembership {
   const claimants = book.groups.filter(
     (group): group is TAssignableGroup =>
-      group.kind !== 'strangers' && claims(group, caller, environment)
+      group.kind !== 'strangers' && claims(group, caller, environment) && inForce(group)
   );
   const [only, ...others] = claimants;
   if (only === undefined) {

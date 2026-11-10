@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
 import { GUTTER, TEXT_SIZE } from '../kit/metrics';
@@ -29,7 +29,11 @@ export const DiagnosticsScreen = observer(function DiagnosticsScreen() {
   }, [diagnostics]);
   const zone = app.clock.timeZone();
   return (
-    <Screen testID="diagnostics-screen" title={texts.diagnostics.title} header={<BackButton />}>
+    <Screen
+      testID="diagnostics-screen"
+      title={texts.diagnostics.title}
+      titleLeading={<BackArrow testID="screen-back" />}
+    >
       <Wrap>
         <Button
           testID="diagnostics-share"

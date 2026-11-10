@@ -9,7 +9,7 @@ export type TPlaceRadius = (typeof PLACE_RADII)[number];
 export const isPlaceRadius = (metres: number): metres is TPlaceRadius =>
   (PLACE_RADII as readonly number[]).includes(metres);
 
-/** «Only at the office» or «except at home»: where the phone is narrows the scheduled action. */
+/** «Only at the office» or «except at home»: where the phone is narrows when a group is in force. */
 export interface IPlaceRule {
   readonly id: TPlaceId;
   readonly name: string;
@@ -46,7 +46,7 @@ export type TPlaceFacts = (place: TPlaceId) => boolean | null;
 export const NOWHERE_KNOWN: TPlaceFacts = () => null;
 
 /**
- * Whether the places let the scheduled action apply. A place whose state is unknown does not
+ * Whether the places let a group be in force. A place whose state is unknown does not
  * count at all — the schedule and the calendars decide alone (the user's decision).
  */
 export function placesAllow(rules: readonly IPlaceRule[], atPlace: TPlaceFacts): boolean {

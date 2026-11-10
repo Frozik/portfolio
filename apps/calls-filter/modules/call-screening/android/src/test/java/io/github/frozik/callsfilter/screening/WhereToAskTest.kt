@@ -6,8 +6,7 @@ import io.github.frozik.callsfilter.screening.application.PendingAsk
 import io.github.frozik.callsfilter.screening.application.PendingAsks
 import io.github.frozik.callsfilter.screening.application.WhereToAsk
 import io.github.frozik.callsfilter.screening.domain.Action
-import io.github.frozik.callsfilter.screening.domain.ActionNow
-import io.github.frozik.callsfilter.screening.domain.ActionSource
+import io.github.frozik.callsfilter.screening.domain.Activity
 import io.github.frozik.callsfilter.screening.domain.Decision
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupChoice
@@ -19,17 +18,18 @@ import org.junit.Test
 
 private val CHOICES = listOf(GroupChoice("spam", "Spam"), GroupChoice("delivery", "Delivery"))
 
-private fun ruleset(whereTo: List<GroupChoice> = CHOICES) = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList(), whereTo)
+private fun ruleset(whereTo: List<GroupChoice> = CHOICES) = Ruleset(Ruleset.SCHEMA, 0L, Long.MAX_VALUE, "NL", emptyList(), whereTo)
 
 private fun decision(kind: GroupKind, verdict: Verdict) = Decision(
-  Group(kind.name, kind, emptyList(), emptyList(), false, Action.PASS, null, 5, null, 0L, ""),
+  Group(kind.name, kind, emptyList(), emptyList(), false, Action.PASS, null, 5, false, 0L, ""),
   emptyList(),
-  ActionNow(Action.PASS, ActionSource.OTHERWISE),
+  Activity.ALWAYS,
+  Action.PASS,
   verdict,
 )
 
 private fun record(number: String? = "31201234567", networkName: String? = null) =
-  CallRecord(1L, number?.let { "+$it" }, number, networkName, null, null, "strangers", "PASSED", "OTHERWISE", emptyList())
+  CallRecord(1L, number?.let { "+$it" }, number, networkName, null, null, "strangers", "PASSED", "ALWAYS", emptyList())
 
 private class Shade {
   val remembered = mutableListOf<PendingAsk>()

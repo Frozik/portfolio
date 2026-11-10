@@ -23,6 +23,25 @@ describe('the screening service on real calls', () => {
     }
   );
 
+  e2eTest(
+    'turns away a stranger by the name the network sends with the call, whatever the number',
+    SCREENING_LIMIT_MS,
+    async () => {
+      await control('create-group', {
+        group: { name: 'Call centres', action: 'block', names: ['IP*'] },
+      });
+      const named = await control<{ readonly verdict: string }>('screen-call', {
+        number: freshNumber(),
+        networkName: 'IP Isanshin: kol-tsentr',
+      });
+      const unnamed = await control<{ readonly verdict: string }>('screen-call', {
+        number: freshNumber(),
+        networkName: 'Pizza Napoli',
+      });
+      assert.deepEqual([named.verdict, unnamed.verdict], ['rejected', 'allowed']);
+    }
+  );
+
   e2eTest('turns away a number a blocking group holds', SCREENING_LIMIT_MS, async () => {
     const number = freshNumber();
     await control('create-group', { group: { name: 'Spam', action: 'block', numbers: [number] } });
@@ -46,14 +65,14 @@ describe('the screening service on real calls', () => {
   );
 
   e2eTest(
-    'lets a group for one place through only there, and decides without it when unknown',
+    'a blocking group for one place is in force only there, and while the place is unknown; elsewhere its caller rings as a stranger',
     SCREENING_LIMIT_MS,
     async () => {
       const number = freshNumber();
       await control('create-group', {
         group: {
-          name: 'Work',
-          action: 'pass',
+          name: 'Office spam',
+          action: 'block',
           numbers: [number],
           onlyAt: {
             id: 'office',
@@ -71,14 +90,14 @@ describe('the screening service on real calls', () => {
       await control('set-at-place', { place: 'office', inside: null });
       const unknown = await call(number);
       assert.deepEqual(
-        [atOffice.verdict, elsewhere.verdict, unknown.verdict],
-        ['passed', 'rejected', 'passed']
+        [atOffice, elsewhere, unknown].map(answer => `${answer.verdict} ${answer.group}`),
+        ['rejected Office spam', 'passed strangers', 'rejected Office spam']
       );
     }
   );
 
   e2eTest(
-    'turns calls away during a meeting of a phone calendar, and lets them through after',
+    'a blocking group out of force during a meeting of a phone calendar lets its caller ring then, and turns them away after',
     SCREENING_LIMIT_MS,
     async () => {
       const calendarId = await ensureWorkCalendar();
@@ -90,13 +109,16 @@ describe('the screening service on real calls', () => {
       );
       const number = freshNumber();
       await control('create-group', {
-        group: { name: 'Work', action: 'pass', numbers: [number], exceptDuring: WORK_CALENDAR },
+        group: { name: 'Spam', action: 'block', numbers: [number], exceptDuring: WORK_CALENDAR },
       });
       await meetingNow(calendarId, 'Planning', 30);
       const during = await call(number);
       await clearMeetings(calendarId);
       const after = await call(number);
-      assert.deepEqual([during.verdict, after.verdict], ['rejected', 'passed']);
+      assert.deepEqual(
+        [during, after].map(answer => `${answer.verdict} ${answer.group}`),
+        ['passed strangers', 'rejected Spam']
+      );
     }
   );
 });

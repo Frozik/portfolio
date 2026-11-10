@@ -77,7 +77,7 @@ function fixtureOf(scenario: IScenario) {
     lastRejectedAtEpochMs: lastRejectedAt?.epochMilliseconds ?? null,
     expected: {
       group: decision.group.id,
-      action: decision.action.action,
+      action: decision.action,
       verdict: decision.verdict,
     },
   };

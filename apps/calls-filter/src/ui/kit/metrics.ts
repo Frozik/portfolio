@@ -8,3 +8,5 @@ export const DOT_SIZE = 12;
 export const ICON_SIZE = 22;
 export const TEXT_SIZE = { title: 24, heading: 17, body: 16, small: 14, caption: 12 } as const;
 export const DIMMED_OPACITY = 0.6;
+/** What is not in effect now: a group waiting for its conditions. */
+export const IDLE_OPACITY = 0.6;

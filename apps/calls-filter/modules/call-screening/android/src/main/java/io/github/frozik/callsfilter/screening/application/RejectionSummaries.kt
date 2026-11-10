@@ -83,7 +83,7 @@ class RejectionSummaries(
     alarm.wakeAt(pending.minOfOrNull { it.dueEpochMs })
   }
 
-  private fun meetingOf(decision: Decision, moment: Moment): Meeting? = decision.group.scheduled?.calendars.orEmpty().firstNotNullOfOrNull { rule ->
+  private fun meetingOf(decision: Decision, moment: Moment): Meeting? = decision.group.conditions?.calendars.orEmpty().firstNotNullOfOrNull { rule ->
     when (rule.source) {
       is CalendarSource.Device -> meetings.meetingAt(rule, moment) ?: bakedMeeting(rule, moment)
       is CalendarSource.Ics -> bakedMeeting(rule, moment)

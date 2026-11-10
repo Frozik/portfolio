@@ -1,40 +1,30 @@
-import { actionOf, ALWAYS_BLOCK, ALWAYS_PASS, withAction, withConditions } from './policy';
+import type { TPlaceId, TPlaceRadius } from './place-rule';
+import { ALWAYS_BLOCK, ALWAYS_PASS, withConditions } from './policy';
 
 const NOWHERE = { schedule: null, calendars: [], places: [] };
 const AT_OFFICE = {
   ...NOWHERE,
   places: [
     {
-      id: 'office' as never,
+      id: 'office' as TPlaceId,
       name: 'Office',
       latitude: 52.37,
       longitude: 4.9,
-      radius: 500 as never,
+      radius: 500 as TPlaceRadius,
       mode: 'only-at' as const,
     },
   ],
 };
 
-describe('what a group is set to do, and its conditions', () => {
-  it('is what it does always while it has no conditions', () => {
-    expect(actionOf(ALWAYS_BLOCK)).toBe('block');
-    expect(actionOf(ALWAYS_PASS)).toBe('pass');
+describe('a group given conditions', () => {
+  it('keeps what it does, now only while they hold', () => {
+    expect(withConditions(ALWAYS_BLOCK, AT_OFFICE)).toEqual({
+      ...ALWAYS_BLOCK,
+      conditions: AT_OFFICE,
+    });
   });
 
-  it('keeps blocking while its first condition holds, and lets calls through the rest of the time', () => {
-    const atOffice = withConditions(ALWAYS_BLOCK, AT_OFFICE);
-    expect(actionOf(atOffice)).toBe('block');
-    expect(atOffice.otherwise).toBe('pass');
-  });
-
-  it('does always what it was set to once its last condition goes', () => {
-    const atOffice = withConditions(ALWAYS_PASS, AT_OFFICE);
-    expect(withConditions(atOffice, NOWHERE)).toEqual(ALWAYS_PASS);
-  });
-
-  it('sets what it does while its conditions hold, the opposite the rest of the time', () => {
-    const letThrough = withAction(withConditions(ALWAYS_BLOCK, AT_OFFICE), 'pass');
-    expect(actionOf(letThrough)).toBe('pass');
-    expect(letThrough.otherwise).toBe('block');
+  it('is in force always again once its last condition goes', () => {
+    expect(withConditions(withConditions(ALWAYS_PASS, AT_OFFICE), NOWHERE)).toEqual(ALWAYS_PASS);
   });
 });

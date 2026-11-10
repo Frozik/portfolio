@@ -6,8 +6,6 @@ import io.github.frozik.callsfilter.screening.application.AutoReply
 import io.github.frozik.callsfilter.screening.application.RejectionSummaries
 import io.github.frozik.callsfilter.screening.application.RejectionSummariesAfter
 import io.github.frozik.callsfilter.screening.application.ScreenCall
-import io.github.frozik.callsfilter.screening.application.TemporaryNotices
-import io.github.frozik.callsfilter.screening.application.TemporaryNoticesAfter
 import io.github.frozik.callsfilter.screening.application.WhereToAsk
 
 /** The module's composition root: every adapter is built here once per process, and nowhere else. */
@@ -22,7 +20,6 @@ class ScreeningRuntime private constructor(context: Context) {
   val country = TelephonyNetworkCountry(application)
   val journal = SqliteCallJournal(database) { runtimeState.retentionDays() }
   val diagnostics = SqliteDiagnostics(database) { System.currentTimeMillis() }
-  val temporaryNotices = TemporaryNotices(rulesets, runtimeState, TemporaryNotification(application), SystemMomentClock)
   private val calendarEvents = DeviceCalendarEvents(application.contentResolver)
   val summaries =
     RejectionSummaries(
@@ -52,7 +49,7 @@ class ScreeningRuntime private constructor(context: Context) {
           diagnostics,
           WhereToAsk(
             pendingAsks,
-            TemporaryNoticesAfter(temporaryNotices, RejectionSummariesAfter(summaries, AfterDecision { _, _, _ -> })),
+            RejectionSummariesAfter(summaries, AfterDecision { _, _, _ -> }),
           ),
         ),
       ),

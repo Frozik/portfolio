@@ -3,7 +3,7 @@ import { Temporal } from 'temporal-polyfill';
 
 import { fakePhone } from '../../../testing/fake-ports';
 import { bookOf, custom } from '../../grouping/testing/group-book-fixtures';
-import { ALWAYS_BLOCK } from '../../policy/domain/policy';
+import { ALWAYS_PASS, withConditions } from '../../policy/domain/policy';
 import { CallsFilterApp } from './CallsFilterApp';
 
 const REPLYING = custom('meetings', [], { autoReply: { text: 'In a meeting' } });
@@ -34,17 +34,34 @@ describe('the app asking for permissions', () => {
   });
 });
 
-describe('what a group does, as time passes', () => {
-  it('moves on by itself once the change it waited for has passed', async () => {
-    let now = Temporal.ZonedDateTime.from('2026-11-09T10:00[Europe/Amsterdam]');
+describe('whether a group is in force, as time passes', () => {
+  it('moves on by itself once its working hours end', async () => {
+    let now = Temporal.ZonedDateTime.from('2026-11-09T17:50[Europe/Amsterdam]');
     let tick = () => {};
-    const group = custom('spam', [], {
-      policy: ALWAYS_BLOCK,
-      temporary: {
-        action: 'pass',
-        setAt: now.toInstant(),
-        until: { kind: 'instant', at: now.add({ minutes: 30 }).toInstant() },
-      },
+    const group = custom('work', [], {
+      policy: withConditions(ALWAYS_PASS, {
+        schedule: {
+          zone: { kind: 'here' },
+          start: Temporal.PlainDate.from('2026-11-02'),
+          times: [
+            {
+              kind: 'range',
+              from: Temporal.PlainTime.from('09:00'),
+              to: Temporal.PlainTime.from('18:00'),
+            },
+          ],
+          repeat: {
+            frequency: 'weekly',
+            interval: 1,
+            weekdays: [1, 2, 3, 4, 5],
+            monthly: null,
+            end: { kind: 'never' },
+          },
+          exceptDates: [],
+        },
+        calendars: [],
+        places: [],
+      }),
     });
     const phone = fakePhone({ book: bookOf([group]) });
     const app = await CallsFilterApp.start({
@@ -59,17 +76,17 @@ describe('what a group does, as time passes', () => {
         return () => {};
       },
     });
-    const seen = computed(() => app.statusOf(app.books.book.groups[0] ?? group).now.action);
+    const seen = computed(() => app.statusOf(app.books.book.groups[0] ?? group).activity);
     const stop = reaction(
       () => seen.get(),
       () => {}
     );
-    expect(seen.get()).toBe('pass');
+    expect(seen.get()).toBe('conditions-hold');
 
-    now = now.add({ minutes: 31 });
+    now = now.add({ minutes: 11 });
     tick();
 
-    expect(seen.get()).toBe('block');
+    expect(seen.get()).toBe('conditions-unmet');
     stop();
     app.dispose();
   });

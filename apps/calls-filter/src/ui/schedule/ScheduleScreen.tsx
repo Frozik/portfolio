@@ -16,7 +16,7 @@ import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { useClockWords } from '../clock-words';
 import { momentText } from '../format';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
 import { IconButton } from '../kit/IconButton';
@@ -95,7 +95,7 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
   const [editor] = useState(
     () =>
       new ScheduleEditor(
-        group?.policy.scheduled?.schedule ?? null,
+        group?.policy.conditions?.schedule ?? null,
         today,
         app.device.timeZone,
         app.expander
@@ -135,11 +135,11 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
     <Screen
       testID="schedule-screen"
       title={texts.schedule.title}
-      header={<BackButton />}
+      titleLeading={<BackArrow testID="screen-back" />}
       footer={
         <>
           <Button testID="schedule-save" label={texts.common.save} onPress={() => save(false)} />
-          {group.policy.scheduled?.schedule === null || group.policy.scheduled === null ? null : (
+          {group.policy.conditions?.schedule === null || group.policy.conditions === null ? null : (
             <Button
               testID="schedule-remove"
               variant="danger"

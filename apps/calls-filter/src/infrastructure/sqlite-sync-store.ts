@@ -15,10 +15,9 @@ const stored = z.object({
   base: z.string().nullable(),
 });
 
-/** Version 1 put the sync memory under a version; version 0 was the bare object. */
 export const SYNC_DOCUMENT: IStoredDocument<ISyncMemory> = {
   key: 'sync',
-  history: { version: 1, migrations: { 0: data => data } },
+  history: { version: 1, migrations: {} },
   parse: data => {
     const parsed = stored.safeParse(data);
     if (!parsed.success) {

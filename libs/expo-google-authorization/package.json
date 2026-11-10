@@ -17,7 +17,8 @@
     "@frozik/utils": "workspace:*"
   },
   "devDependencies": {
-    "@frozik/typescript-config": "workspace:*"
+    "@frozik/typescript-config": "workspace:*",
+    "expo": "catalog:"
   },
   "peerDependencies": {
     "expo": "*"

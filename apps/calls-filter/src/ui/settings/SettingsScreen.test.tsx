@@ -1,12 +1,38 @@
 import { fireEvent, screen } from 'expo-router/testing-library';
 
 import SettingsRoute from '../../app/(tabs)/settings';
+import ConflictsRoute from '../../app/conflicts';
+import { bookOf, custom, special } from '../../contexts/grouping/testing/group-book-fixtures';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
 
 const ROUTES = { settings: SettingsRoute };
 
 describe('the settings', () => {
+  it('list the conflicts with a mark while there are some, and open them', async () => {
+    const book = bookOf([
+      custom('spam', [special('foreign')]),
+      custom('delivery', [special('foreign')]),
+    ]);
+    await renderApp(
+      { ...ROUTES, conflicts: ConflictsRoute },
+      { phone: fakePhone({ book }), initialUrl: '/settings' }
+    );
+
+    expect(await screen.findByTestId('settings-conflicts-attention')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('settings-conflicts'));
+
+    expect(await screen.findByTestId('conflicts-screen')).toBeOnTheScreen();
+    expect(screen.getByTestId('resolve-keep-in-spam')).toBeOnTheScreen();
+  });
+
+  it('list the conflicts without a mark while there are none', async () => {
+    await renderApp(ROUTES, { initialUrl: '/settings' });
+
+    expect(await screen.findByTestId('settings-conflicts')).toBeOnTheScreen();
+    expect(screen.queryByTestId('settings-conflicts-attention')).not.toBeOnTheScreen();
+  });
+
   it('list the SMS permission where the app can reply by SMS', async () => {
     await renderApp(ROUTES, { initialUrl: '/settings' });
 

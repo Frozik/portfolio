@@ -5,7 +5,11 @@ import type { IPatternElement, TPattern, TPatternSymbol } from './pattern';
 /** What `.`, `*` and `{n}` stand for: a digit in a number, any character in a name. */
 export type TPatternAlphabet = 'digits' | 'text';
 
-const REGEX_SPECIAL = /[.*+?^${}()|[\]\\/-]/g;
+/**
+ * The characters a literal escapes. Not `-`: it means something only inside `[…]`, where no literal
+ * goes, and the `u` flag refuses `\-` outside it — a name like «kol-tsentr» crashed the app.
+ */
+const REGEX_SPECIAL = /[.*+?^${}()|[\]\\/]/g;
 
 function symbolSource(symbol: TPatternSymbol, alphabet: TPatternAlphabet): string {
   switch (symbol.kind) {

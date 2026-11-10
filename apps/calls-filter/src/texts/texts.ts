@@ -35,6 +35,7 @@ export interface ITexts {
     readonly filterOn: string;
     readonly pausedUntil: (time: string) => string;
     readonly pinned: string;
+    readonly conditioned: string;
     readonly resume: string;
     readonly pause: string;
     readonly newGroup: string;
@@ -44,28 +45,12 @@ export interface ITexts {
     readonly roleMissing: string;
     readonly roleButton: string;
     readonly conflicts: (count: number) => string;
-    /** What a group does now, «Pass until Wed 18:00» or «Block always»: one coloured piece. */
-    readonly now: (action: TAction, until: string | null) => string;
-    readonly thenSeparator: string;
-    /** What follows the change, without its own end: «then block». */
-    readonly next: (action: TAction) => string;
     readonly callsToday: (count: number) => string;
-  };
-  readonly temporary: {
-    /** The sheet's heading: what the change for a while will do. */
-    readonly title: (action: TAction) => string;
-    readonly usually: (group: string, phrase: string) => string;
-    readonly what: string;
-    /** One word under the icon of a change for a while. */
-    readonly short: string;
-    readonly forHow: string;
-    readonly hour: string;
-    readonly evening: string;
-    readonly days: (count: number) => string;
-    readonly firstCall: string;
-    readonly endOfEvent: string;
-    readonly backToUsual: string;
-    readonly active: (action: string, until: string) => string;
+    readonly activeUntil: (when: string) => string;
+    readonly activeFrom: (when: string) => string;
+    readonly off: string;
+    readonly switchOff: string;
+    readonly switchOn: string;
   };
   readonly repeat: {
     readonly title: string;
@@ -96,6 +81,8 @@ export interface ITexts {
     readonly include: string;
     readonly exclude: string;
     readonly addMask: string;
+    readonly editMask: string;
+    readonly removeMember: string;
     readonly addNameMask: string;
     readonly addContact: string;
     readonly excludeMyContacts: string;
@@ -107,6 +94,8 @@ export interface ITexts {
     readonly noSchedule: string;
     readonly repeatWindow: (minutes: number) => string;
     readonly autoReply: string;
+    readonly whenActs: string;
+    readonly whenRejected: string;
     /** One word beside the SMS reply icon. */
     readonly smsShort: string;
     readonly autoReplyHint: string;
@@ -136,8 +125,7 @@ export interface ITexts {
     readonly hidden: string;
     readonly move: string;
     readonly moveTitle: string;
-    readonly byNumber: string;
-    readonly byName: string;
+    readonly moveHow: string;
     readonly newGroup: string;
     readonly remove: string;
     readonly callBack: string;
@@ -183,6 +171,9 @@ export interface ITexts {
     readonly keepIn: (group: string) => string;
     readonly keepKnownIn: (group: string) => string;
     readonly none: string;
+    readonly count: (count: number) => string;
+    readonly noneShort: string;
+    readonly keepAsIs: string;
   };
   readonly changes: {
     readonly event: (event: TGroupBookEvent, groupName: (id: string) => string) => string | null;
@@ -222,8 +213,6 @@ export interface ITexts {
     readonly remove: string;
   };
   readonly phrase: {
-    readonly always: (action: string) => string;
-    readonly scheduled: (action: string, when: string, otherwise: string) => string;
     readonly allDay: string;
     readonly everyDay: string;
     readonly onWeekdays: string;
@@ -233,12 +222,7 @@ export interface ITexts {
     readonly monthly: string;
     readonly yearly: string;
     readonly once: (date: string) => string;
-    readonly exceptEvents: (calendars: string) => string;
-    readonly onlyDuringEvents: (calendars: string) => string;
-    readonly allTheTime: string;
     readonly onClockOf: (city: string) => string;
-    readonly onlyAtPlaces: (places: string) => string;
-    readonly exceptAtPlaces: (places: string) => string;
     readonly localTime: string;
   };
   readonly calendars: {

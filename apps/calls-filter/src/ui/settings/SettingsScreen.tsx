@@ -37,6 +37,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
   const palette = usePalette();
   const router = useRouter();
   const { device } = app;
+  const { conflicts } = app.books;
   const themeLabel = (theme: TThemeChoice) =>
     theme === 'system'
       ? texts.settings.themeSystem
@@ -123,6 +124,27 @@ export const SettingsScreen = observer(function SettingsScreen() {
           testID="settings-calendars"
           title={texts.settings.calendars}
           onPress={() => router.push('/calendars')}
+        />
+        <Row
+          testID="settings-conflicts"
+          title={texts.conflict.title}
+          subtitle={
+            conflicts.length === 0
+              ? texts.conflict.noneShort
+              : texts.conflict.count(conflicts.length)
+          }
+          trailing={
+            conflicts.length === 0 ? undefined : (
+              <View
+                testID="settings-conflicts-attention"
+                accessible
+                accessibilityLabel={texts.conflict.count(conflicts.length)}
+              >
+                <TriangleAlert color={palette.caution} size={ICON_SIZE} />
+              </View>
+            )
+          }
+          onPress={() => router.push('/conflicts')}
         />
         <Row
           testID="settings-diagnostics"

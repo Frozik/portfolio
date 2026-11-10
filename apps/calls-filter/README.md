@@ -2,8 +2,10 @@
 
 Incoming calls are sorted into groups the user builds. Every call lands in exactly one group,
 and that group's policy decides whether it rings: let it through or block it — and, with
-«a repeat call rings» on, a blocked number that calls again within minutes rings. A policy can follow a schedule and the user's calendars,
-and it can be overridden for a while — «let couriers through for three days».
+«a repeat call rings» on, a blocked number that calls again within minutes rings. A group can
+be in force only on a schedule, during or outside the user's calendar events, or at a place,
+and it can be switched off; a group not in force is passed over, and its caller goes to the
+next group that takes them, or to «Strangers».
 
 Built with Expo SDK 57 (React Native 0.86, the New Architecture, Hermes) and Expo Router.
 The screening itself is a Kotlin `CallScreeningService` in the local Expo module
@@ -50,24 +52,30 @@ JavaScript is not running.
 
 Moving a call from any group writes an exact mask into the target group, plus the exclusions
 the move needs. When two groups would take the same caller, the app shows the conflict and
-offers one-tap resolutions (keep it in one group or the other). Until it is resolved the
-service fails open: the more lenient group decides.
+offers one-tap resolutions (keep it in one group or the other) or leaving it as it is: a
+conflict is no mistake, the groups' conditions may differ. Of the groups in force at the moment
+of the call, the service fails open — one that lets the call ring decides, the older one on a tie. Settings list the
+conflicts, marked while there are some, and open them on their screen.
 
 A group of the user's own is deleted by swiping its row to the right and tapping the button it
-uncovers, or by the red button at the end of its rules. «My contacts» and «Strangers» are pinned — a pin by their name says so: they can be
+uncovers, or by the red button at the end of its rules. Swiped to the left, any group's row
+uncovers a switch that turns the group off or back on: a hard stop, whatever its conditions; a
+switched-off group's dot becomes a ring. «My contacts» and «Strangers» are pinned — a pin by their name says so: they can be
 neither renamed nor deleted.
+A funnel by a group's name in the list marks a group that acts only under its conditions — a
+schedule, calendars or a place.
 
 ## Policies
 
-- **Let through** or **Block**. What a group does now is the icon at the end of its name's
-  line — red while it blocks, green while it lets through; a tap on it opens one switch for the
-  action and the group's settings as icons, each filled while the group has it: first when
-  the group acts — schedule, calendars, place and a change for a while — then a repeat call and
-  the SMS reply.
+- **Let through** or **Block**. What a group does is the icon at the end of its name's line —
+  red while it blocks, green while it lets through; a tap on it opens one switch for the action
+  and the group's settings as icons, each filled while the group has it: when the group is in
+  force — schedule, calendars, place — then what follows a rejected call: a repeat call and the
+  SMS reply.
 - **A repeat call rings** — a switch over a blocking rule: a second call from the same number
   within the group's window (5 minutes by default; 2, 5, 10 or 15, set in the same sheet as the
-  switch) rings. Each group that ever blocks has one — a group that always lets calls through
-  has nothing to ring past, so it offers none — and one covers
+  switch) rings. Each blocking group has one — a group that lets calls through has nothing to
+  ring past, so it offers none — and one covers
   the whole filter; either is off, on for good, or on for 1, 4 or 8 hours, a day, a week or
   until a date. A group that takes hidden numbers says, under the switch, that those calls stay
   blocked: a hidden number cannot show it is calling again.
@@ -81,19 +89,17 @@ neither renamed nor deleted.
   already on the phone) or of iCal links; holidays are a calendar like any other — the user's own
   holiday calendar, with whatever rule the group needs. The schedule and the
   calendars combine: «weekdays 9–18, except during meetings and the days of my holiday
-  calendar». The schedule, calendars and places say when the group acts: its one
-  switch is what it does while they all hold, and the rest of the time it does the opposite. A
-  place the phone cannot place counts as held. Adding the first condition or removing the last
-  keeps the switch where it was: a blocking group given «weekdays 9–18» blocks on weekdays 9–18.
+  calendar». The schedule, calendars and places say when the group is in force: while they all
+  hold it does what its switch says, and the rest of the time it is passed over, its callers
+  left to the other groups — a blocking group given «weekdays 9–18» blocks on weekdays 9–18 and
+  lets «Strangers» decide the rest of the time. A place the phone cannot place counts as held.
 - **Places**: only at a place or anywhere but there — «work contacts only at the office». A
   place is a point on an OpenStreetMap map (tap, drag, «Where I am» or an address search) with a
   radius of 50 m to 10 km. Android's geofences tell the filter when the phone crosses it, even
-  with the app closed; the app also measures again whenever it comes to the front, because a
+  with the app closed; the app also takes a new fix whenever it comes to the front, because a
   crossing can arrive minutes late. When the phone cannot say where it is, the place condition
   drops out and the schedule and calendars decide alone. Coordinates stay on the phone and in
   your own Drive.
-- **For a while**: the opposite of what the group does now (a running change keeps its own, so a new term extends it) for an hour, until the evening, for a number of days, until
-  the first call that rings, or until the current meeting ends; then the usual policy returns.
 - **Pause the whole filter** for 1, 2, 4 or 8 hours, a day, a week or until tomorrow — from the app, the
   Quick Settings tile or the notification it shows.
   In the app the groups' title carries it: `+` for a new group, then at the edge the filter's
@@ -121,10 +127,14 @@ screen says so and opens Android's «Add a Google account».
 Each group has a colour: one of nine theme colours (shaded for light and dark), or any colour
 from the picker — saturation and brightness on a square, hue on a strip — or typed as hex
 (`FF8800`). A tap, a double tap or a hold on the group's name renames it, on its
-dot recolours it. In the list of groups, a line says what each does now and until when, then
-only which action follows — «Pass until Wed 18:00, then block», however many changes the
-calendars hold after it. Each piece takes the calm tone of its action, pastel red or green; the
-line moves on by itself each minute.
+dot recolours it. In the list of groups, each row shows what the group does without words: a
+faint red or green tint and, at its end, a large faint no-entry or check sign. A group with
+conditions gets a line saying until when it is in force — «Active until 18:00» — or from when
+it will be — «Active from Wed 09:00»: the time alone today, the weekday within the coming week,
+the date further on. The time counts the schedule and the calendar events together — a meeting
+inside working hours ends them early; while a place is what keeps the group out, no time is
+named, since the clock cannot tell when the phone gets there. The name of a group not in force fades, in the list and on its screen; the
+rows move on by themselves each minute.
 
 ## Where a call is from
 
@@ -154,9 +164,6 @@ window shows as the repeat it would be.
 
 ## In the shade
 
-- **A temporary policy** shows a quiet notice while it lasts — «Delivery: ✅ let through until
-  Thu 18:00» — with «Back to usual»: the service stops applying it at once, and the app drops it
-  from the group (on every phone, through sync) the next time it opens.
 - **Summaries, not a notice per call** — calls turned away during a meeting are told once it is
   over («During «Planning» 2 calls were turned away»), any others in a digest at most once an
   hour. Each kind has its own notification channel, so Android can mute one alone.
@@ -195,12 +202,12 @@ only by the user, through the share sheet.
 What is stored changes shape from version to version; each kind of data has its own way through.
 
 - **The app's documents** — the group book, the preferences, the iCal links, the sync memory —
-  are stored as `{ version, data }`. Each kind has a history (`IDocumentHistory`): its current
-  version and one step per older version, a pure function from that version's JSON to the
-  next one's, like IndexedDB's upgrade with each case its own function. Reading an older document
-  runs the steps it misses and writes it back at once; one that cannot be read is cleared, and
-  the diagnostics say which and why. A document written before documents carried a version is
-  version 0. A test checks that no history has a gap, so a version never ships without its step.
+  are stored as `{ version, data }`, from version 1 — the first release. Each kind has a history
+  (`IDocumentHistory`): its current version and one step per older version, a pure function from
+  that version's JSON to the next one's, like IndexedDB's upgrade with each case its own
+  function. Reading an older document runs the steps it misses and writes it back at once; one
+  that cannot be read — or that carries no version — is cleared, and the diagnostics say which
+  and why. A test checks that no history has a gap, so a version never ships without its step.
 - **The group book in Drive** is the same document. A copy a newer app wrote is never
   overwritten or merged: sync stops and asks for the app to be updated.
 - **The ruleset** the service reads carries a schema; one of another schema is deleted, and the
@@ -285,9 +292,9 @@ after a tap. A release APK has no channel: the native side refuses to open it.
   service has answered): strangers, a blocking group, a repeat, a place, a meeting in a phone
   calendar. No screen is touched.
 - `e2e/screens.e2e.mts` — what only a phone shows: the map in its WebView with «Where I am»,
-  Android's permission dialog, a swipe that deletes a group, sheets and fields above the on-screen
+  Android's permission dialog, a swipe that deletes a group, a swipe that switches a blocking group off so its caller rings as a stranger, sheets and fields above the on-screen
   keyboard, a long title ellipsised before the status, a sheet closed on the way to the schedule,
-  the journal term reaching the service, documents of an older app migrated at start, and a
+  the journal term reaching the service, and a
   calendar picked on its screen deciding real calls. The keyboard tests skip on a phone with a
   physical keyboard (an emulator with `hw.keyboard=yes`): there no on-screen one opens. The state
   is seeded and checked over the channel, the phone's

@@ -22,7 +22,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: ANDROID_PACKAGE,
     adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#10161f' },
     versionCode: Number(process.env.CALLS_FILTER_VERSION_CODE ?? DEVELOPMENT_VERSION_CODE),
-    predictiveBackGestureEnabled: true,
+    // On Android 13–15 React Native 0.86 hears back only through onBackPressed, which this flag turns off.
+    predictiveBackGestureEnabled: false,
     allowBackup: false,
     permissions: [
       'android.permission.READ_CONTACTS',

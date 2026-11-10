@@ -25,9 +25,6 @@
       android:name=".adapters.android.ResumeReceiver"
       android:exported="false" />
     <receiver
-      android:name=".adapters.android.TemporaryTakeBackReceiver"
-      android:exported="false" />
-    <receiver
       android:name=".adapters.android.SummaryReceiver"
       android:exported="false" />
     <receiver

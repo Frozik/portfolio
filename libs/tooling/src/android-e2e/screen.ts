@@ -138,21 +138,41 @@ export async function openLink(url: string, packageName: string): Promise<void> 
   await adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', url, packageName);
 }
 
+/** What the launcher sets on the intent of an icon: a task of its own, brought back if it runs. */
+const LAUNCHER_FLAGS = '0x10200000';
+
 /**
- * Starts the app from its launcher icon. `monkey` refuses a device without physical system keys
- * (an emulator with no hardware keyboard) unless it sends none.
+ * Starts the app as its launcher icon does: the activity it lists for the launcher, with the
+ * launcher's flags. `monkey` was the shortcut, but on some system images it injects its event
+ * and never starts the app.
  */
 export async function launch(packageName: string): Promise<void> {
-  await adb(
+  const resolved = await adb(
     'shell',
-    'monkey',
-    '--pct-syskeys',
-    '0',
-    '-p',
-    packageName,
+    'cmd',
+    'package',
+    'resolve-activity',
+    '--brief',
     '-c',
     'android.intent.category.LAUNCHER',
-    '1'
+    packageName
+  );
+  const activity = resolved.trim().split('\n').at(-1)?.trim();
+  if (activity === undefined || !activity.includes('/')) {
+    throw new Error(`${packageName} lists no activity for the launcher: ${resolved.trim()}`);
+  }
+  await adb(
+    'shell',
+    'am',
+    'start',
+    '-a',
+    'android.intent.action.MAIN',
+    '-c',
+    'android.intent.category.LAUNCHER',
+    '-f',
+    LAUNCHER_FLAGS,
+    '-n',
+    activity
   );
 }
 

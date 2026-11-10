@@ -6,7 +6,6 @@ import io.github.frozik.callsfilter.screening.domain.CalendarRule
 import io.github.frozik.callsfilter.screening.domain.Caller
 import io.github.frozik.callsfilter.screening.domain.CallerContact
 import io.github.frozik.callsfilter.screening.domain.DecisionContext
-import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.Moment
 import io.github.frozik.callsfilter.screening.domain.MomentFacts
 import io.github.frozik.callsfilter.screening.domain.NameNormalizer
@@ -53,8 +52,6 @@ class SharedFixturesTest {
           override val networkCountry: String? = country
 
           override fun inEvent(rule: CalendarRule, minute: Long): Boolean = rule.bakedEvents.any { it.contains(minute) }
-
-          override fun temporaryReleased(group: Group): Boolean = false
 
           override fun atPlace(placeId: String): Boolean? = scenario.getJSONObject("places").let { if (it.has(placeId)) it.getBoolean(placeId) else null }
         }

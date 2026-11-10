@@ -49,10 +49,6 @@ interface CallJournal {
 interface RuntimeState {
   fun pausedUntilEpochMs(): Long?
 
-  fun temporaryReleased(groupId: String, setAtEpochMs: Long): Boolean
-
-  fun releaseTemporary(groupId: String, setAtEpochMs: Long)
-
   /** Whether the phone is at a place, as the app last heard from its geofence; `null` when unknown. */
   fun atPlace(placeId: String): Boolean?
 }

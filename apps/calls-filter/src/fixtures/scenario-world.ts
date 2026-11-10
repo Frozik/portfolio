@@ -147,8 +147,8 @@ const WEEKEND: ISchedule = {
 };
 
 const WORK_POLICY: IPolicy = {
-  otherwise: 'block',
-  scheduled: {
+  action: 'pass',
+  conditions: {
     schedule: WEEKDAYS_9_TO_18,
     calendars: [EXCEPT_MEETINGS, EXCEPT_HOLIDAY_CALENDAR],
     places: [],
@@ -187,16 +187,16 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
     ),
     custom('hidden', [special('hidden')], {
       policy: {
-        otherwise: 'pass',
-        scheduled: { schedule: NIGHT, calendars: [], places: [] },
+        action: 'block',
+        conditions: { schedule: NIGHT, calendars: [], places: [] },
         repeatPass: REPEAT_OFF,
         repeatWindowMinutes: 5,
       },
     }),
     custom('abroad', [special('foreign')], {
       policy: {
-        otherwise: 'pass',
-        scheduled: {
+        action: 'block',
+        conditions: {
           schedule: null,
           calendars: [EXCEPT_HOLIDAY_CALENDAR],
           places: [],
@@ -207,8 +207,8 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
     }),
     custom('couriers', [nameMask('courier*', 'contact')], {
       policy: {
-        otherwise: 'pass',
-        scheduled: {
+        action: 'block',
+        conditions: {
           schedule: null,
           calendars: [ONLY_IN_WORK_EVENTS],
           places: [],
@@ -225,22 +225,16 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
 
 export const EMPTY_BOOK: GroupBook = bookOf([]);
 
-export const TEMPORARY_BOOK: GroupBook = bookOf([
-  custom('couriers-now', [numberMask('085 *')], {
-    policy: ALWAYS_BLOCK,
-    temporary: {
-      action: 'pass',
-      until: { kind: 'instant', at: Temporal.Instant.from('2026-11-08T00:00:00Z') },
-      setAt: Temporal.Instant.from('2026-11-05T00:00:00Z'),
-    },
-  }),
+export const SWITCHED_OFF_BOOK: GroupBook = bookOf([
+  custom('couriers-off', [numberMask('085 *')], { policy: ALWAYS_BLOCK, enabled: false }),
+  custom('couriers-on', [numberMask('085 1*')], { policy: ALWAYS_BLOCK }),
 ]);
 
 export const WEEKEND_BOOK: GroupBook = bookOf([
   custom('weekend', [numberMask('*')], {
     policy: {
-      otherwise: 'pass',
-      scheduled: { schedule: WEEKEND, calendars: [], places: [] },
+      action: 'block',
+      conditions: { schedule: WEEKEND, calendars: [], places: [] },
       repeatPass: REPEAT_OFF,
       repeatWindowMinutes: 5,
     },
@@ -251,8 +245,8 @@ export const WEEKEND_BOOK: GroupBook = bookOf([
 export const HELSINKI_OFFICE_BOOK: GroupBook = bookOf([
   custom('helsinki-office', [numberMask('+358 9*')], {
     policy: {
-      otherwise: 'block',
-      scheduled: {
+      action: 'pass',
+      conditions: {
         schedule: { ...WEEKDAYS_9_TO_18, zone: { kind: 'fixed', zone: 'Europe/Helsinki' } },
         calendars: [],
         places: [],
@@ -267,8 +261,8 @@ export const HELSINKI_OFFICE_BOOK: GroupBook = bookOf([
 export const OFFICE_ONLY_BOOK: GroupBook = bookOf([
   custom('work-at-office', [numberMask('+31 20*')], {
     policy: {
-      otherwise: 'block',
-      scheduled: {
+      action: 'pass',
+      conditions: {
         schedule: null,
         calendars: [],
         places: [

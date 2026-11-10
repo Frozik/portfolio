@@ -69,9 +69,20 @@ release_location() {
     adb shell cmd location providers remove-test-provider "$provider" || true
   done
 }
+# A call that rang leaves the dialer's and the app's notices popping up over the next test's
+# screen, where they take its taps; they still post, only without the pop-up.
+heads_up="$(adb shell settings get global heads_up_notifications_enabled | tr -d '\r')"
+adb shell settings put global heads_up_notifications_enabled 0
+restore_heads_up() {
+  if [[ "$heads_up" == "null" ]]; then
+    adb shell settings delete global heads_up_notifications_enabled || true
+  else
+    adb shell settings put global heads_up_notifications_enabled "$heads_up" || true
+  fi
+}
 # shellcheck source=../../libs/tooling/scripts/android/e2e-agent.sh
 source ../../libs/tooling/scripts/android/e2e-agent.sh
-trap 'stop_e2e_agent; release_location' EXIT
+trap 'stop_e2e_agent; release_location; restore_heads_up' EXIT
 if [[ "$prebuilt" == true ]]; then
   start_e2e_agent --prebuilt
 else
