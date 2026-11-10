@@ -11,7 +11,10 @@ import { GAP, GUTTER, SMALL_GAP, TEXT_SIZE } from './metrics';
  */
 export function Screen({
   title,
+  titleLeading,
   titleAction,
+  onTitlePress,
+  titleTestID,
   testID,
   header,
   footer,
@@ -20,7 +23,12 @@ export function Screen({
 }: {
   readonly title?: string;
   /** An icon button beside the title, such as renaming what the screen shows. */
+  /** An icon before the title, such as what the screen's subject does now. */
+  readonly titleLeading?: ReactNode;
   readonly titleAction?: ReactNode;
+  /** The title edits what it names: a tap, a double tap or a hold opens the editor. One line then. */
+  readonly onTitlePress?: () => void;
+  readonly titleTestID?: string;
   readonly testID: string;
   readonly header?: ReactNode;
   /** Pinned under the scrolling content: the actions of a long form stay in reach. */
@@ -34,7 +42,17 @@ export function Screen({
     <>
       {title === undefined ? null : (
         <View style={styles.titleLine}>
-          <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
+          {titleLeading}
+          <Text
+            testID={onTitlePress === undefined ? undefined : titleTestID}
+            accessibilityRole={onTitlePress === undefined ? undefined : 'button'}
+            onPress={onTitlePress}
+            onLongPress={onTitlePress}
+            numberOfLines={onTitlePress === undefined ? undefined : 1}
+            style={[styles.title, { color: palette.fg }]}
+          >
+            {title}
+          </Text>
           {titleAction}
         </View>
       )}

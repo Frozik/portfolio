@@ -7,7 +7,7 @@ import type { ICalendarRule, IPolicy, IScheduledAction } from './policy';
 import { REPEAT_OFF } from './repeat-pass';
 import type { ISchedule } from './schedule';
 import { scheduleWindows } from './schedule-windows';
-import { scheduledWindows, withHolidays } from './scheduled-windows';
+import { scheduledWindows } from './scheduled-windows';
 import type { TWindowSet } from './window-set';
 import { normalizeWindows } from './window-set';
 
@@ -25,14 +25,12 @@ const WEEKDAYS: ISchedule = {
     end: { kind: 'never' },
   },
   exceptDates: [],
-  holidays: 'not-on-holidays',
 };
 
 const HOLIDAYS: ICalendarRule = {
   source: { kind: 'ics', id: 'holidays' } as TCalendarSource,
   mode: 'except-events',
   filter: {
-    busyOnly: false,
     skipDeclined: true,
     includeAllDay: true,
     minutesBefore: 0,
@@ -43,7 +41,6 @@ const MEETINGS: ICalendarRule = {
   source: { kind: 'ics', id: 'meetings' } as TCalendarSource,
   mode: 'except-events',
   filter: {
-    busyOnly: true,
     skipDeclined: true,
     includeAllDay: false,
     minutesBefore: 0,
@@ -90,7 +87,7 @@ const EVENTS: Readonly<Record<string, TWindowSet>> = {
 
 function workWindows(): TWindowSet {
   const base = scheduleWindows(WEEKDAYS, weekdaysOfWeek());
-  return scheduledWindows(WORK_SCHEDULED, withHolidays(WEEKDAYS, base, { dates: [] }), rule =>
+  return scheduledWindows(WORK_SCHEDULED, base, rule =>
     rule.source.kind === 'ics' ? (EVENTS[rule.source.id] ?? []) : []
   );
 }
@@ -152,30 +149,14 @@ describe('schedule windows', () => {
           to: Temporal.PlainTime.from('07:00'),
         },
       ],
-      holidays: null,
     };
     const [first] = scheduleWindows(night, [Temporal.PlainDate.from('2026-11-02')]);
     expect(first).toEqual(window('2026-11-02T23:00', '2026-11-03T07:00'));
   });
 
-  it('adds holidays to a weekend schedule when asked', () => {
-    const weekend: ISchedule = {
-      ...WEEKDAYS,
-      times: [{ kind: 'all-day' }],
-      holidays: 'also-on-holidays',
-    };
-    const base = scheduleWindows(weekend, [Temporal.PlainDate.from('2026-11-07')]);
-    const withHoliday = withHolidays(weekend, base, {
-      dates: [Temporal.PlainDate.from('2026-11-04')],
-    });
-    expect(withHoliday).toHaveLength(2);
-  });
-
   it('counts a day by the wall clock, even the one the clocks go forward on', () => {
     const day = timeless('2026-03-29');
-    const [only] = scheduleWindows({ ...WEEKDAYS, times: [{ kind: 'all-day' }], holidays: null }, [
-      day,
-    ]);
+    const [only] = scheduleWindows({ ...WEEKDAYS, times: [{ kind: 'all-day' }] }, [day]);
     expect((only?.to ?? 0) - (only?.from ?? 0)).toBe(1440);
   });
 });

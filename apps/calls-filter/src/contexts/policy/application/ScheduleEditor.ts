@@ -9,7 +9,6 @@ import type { IRecurrenceExpander } from '../domain/recurrence-expander';
 import type {
   IRecurrence,
   ISchedule,
-  THolidayRule,
   TScheduleTime,
   TScheduleZone,
   TWeekday,
@@ -42,7 +41,6 @@ export class ScheduleEditor {
   start: Temporal.PlainDate;
   times: readonly TScheduleTime[];
   repeat: IRecurrence | null;
-  holidays: THolidayRule | null;
   exceptDates: readonly Temporal.PlainDate[];
 
   constructor(
@@ -56,14 +54,12 @@ export class ScheduleEditor {
     this.times = initial?.times ?? [WORK_DAY];
     this.repeat =
       initial === null ? presetRecurrence('weekdays', this.startWeekday) : initial.repeat;
-    this.holidays = initial?.holidays ?? null;
     this.exceptDates = initial?.exceptDates ?? [];
     makeObservable<ScheduleEditor, 'startWeekday'>(this, {
       zone: observableRef,
       start: observableRef,
       times: observableRef,
       repeat: observableRef,
-      holidays: observableRef,
       exceptDates: observableRef,
       startWeekday: computed,
       preset: computed,
@@ -74,7 +70,6 @@ export class ScheduleEditor {
       setStart: action,
       setPreset: action,
       setRepeat: action,
-      setHolidays: action,
       setAllDay: action,
       setTime: action,
       addTime: action,
@@ -101,7 +96,6 @@ export class ScheduleEditor {
       times: this.times,
       repeat: this.repeat,
       exceptDates: this.exceptDates,
-      holidays: this.holidays,
     };
   }
 
@@ -140,10 +134,6 @@ export class ScheduleEditor {
       repeat.frequency === 'weekly' && repeat.weekdays.length === 0
         ? { ...repeat, weekdays: [this.startWeekday] }
         : repeat;
-  }
-
-  setHolidays(holidays: THolidayRule | null): void {
-    this.holidays = holidays;
   }
 
   setAllDay(allDay: boolean): void {

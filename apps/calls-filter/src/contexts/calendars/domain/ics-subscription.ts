@@ -1,6 +1,5 @@
 import type { Temporal } from 'temporal-polyfill';
 
-import type { TCountryCode } from '../../phone/domain/dialing-region';
 import type { TIcsId } from './calendar-source';
 
 /**
@@ -11,8 +10,6 @@ export interface IIcsSubscription {
   readonly id: TIcsId;
   readonly label: string;
   readonly url: string;
-  /** A holiday calendar of a country: then its all-day events are that country's holidays. */
-  readonly holidaysOf: TCountryCode | null;
   readonly body: string | null;
   readonly etag: string | null;
   readonly refreshedAt: Temporal.Instant | null;

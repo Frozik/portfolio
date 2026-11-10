@@ -2,7 +2,7 @@
 
 Incoming calls are sorted into groups the user builds. Every call lands in exactly one group,
 and that group's policy decides whether it rings: let it through or block it — and, with
-«a repeat call rings» on, a blocked number that calls again within minutes rings. A policy can follow a schedule, the user's calendars and holidays,
+«a repeat call rings» on, a blocked number that calls again within minutes rings. A policy can follow a schedule and the user's calendars,
 and it can be overridden for a while — «let couriers through for three days».
 
 Built with Expo SDK 57 (React Native 0.86, the New Architecture, Hermes) and Expo Router.
@@ -53,25 +53,35 @@ the move needs. When two groups would take the same caller, the app shows the co
 offers one-tap resolutions (keep it in one group or the other). Until it is resolved the
 service fails open: the more lenient group decides.
 
+A group of the user's own is deleted by swiping its row to the right and tapping the button it
+uncovers, or by the red button at the end of its rules. «My contacts» and «Strangers» are pinned — a pin by their name says so: they can be
+neither renamed nor deleted.
+
 ## Policies
 
-- **Let through** or **Block**. What a group does now is written under its name; a tap on it
-  changes the action there, for good or for a while.
+- **Let through** or **Block**. What a group does now is the icon at the end of its name's
+  line — red while it blocks, green while it lets through; a tap on it opens one switch for the
+  action and a grid of the group's settings — schedule, calendars, place, a repeat call, the SMS
+  reply and a change for a while, three to a row — each filled while the group has it.
 - **A repeat call rings** — a switch over a blocking rule: a second call from the same number
-  within the group's window (5 minutes by default) rings. Each group has one, and one covers
+  within the group's window (5 minutes by default; 2, 5, 10 or 15, set in the same sheet as the
+  switch) rings. Each group has one, and one covers
   the whole filter; either is off, on for good, or on for 1, 4 or 8 hours, a day, a week or
   until a date. A group that takes hidden numbers says, under the switch, that those calls stay
   blocked: a hidden number cannot show it is calling again.
 - **A schedule**, laid out like a Google Calendar event: times from the system's clock dial,
   a start date, the repeat menu (every day, weekdays, weekends, weekly, monthly, yearly) with
-  «Custom…» (every N days/weeks/months/years, weekdays, ending on a date or after N times),
-  holidays also or except.
+  «Custom…» (every N days/weeks/months/years, weekdays, ending on a date or after N times).
 - **Time zones as in Google Calendar**: a schedule keeps its zone (the phone's at the time, or
   any city), so «work 9–18» set in Amsterdam is 10–19 in Helsinki; «local time — wherever I am»
   follows the phone instead, so «asleep 21:00–06:00» is 21:00–06:00 in every zone.
 - **Calendars**: during or outside the events of the phone's calendars (every Google account
-  already on the phone), of iCal links, or of public holidays by country. The schedule and the
-  calendars combine: «weekdays 9–18, except during meetings and holidays».
+  already on the phone) or of iCal links; holidays are a calendar like any other — the user's own
+  holiday calendar, with whatever rule the group needs. The schedule and the
+  calendars combine: «weekdays 9–18, except during meetings and the days of my holiday
+  calendar». What the group does while they hold — block or let through — is set right beside
+  them, on the schedule, calendars and place screens; the group's own switch then says what it
+  does the rest of the time.
 - **Places**: only at a place or anywhere but there — «work contacts only at the office». A
   place is a point on an OpenStreetMap map (tap, drag, «Where I am» or an address search) with a
   radius of 50 m to 10 km. Android's geofences tell the filter when the phone crosses it, even
@@ -81,7 +91,10 @@ service fails open: the more lenient group decides.
   your own Drive.
 - **For a while**: the other action for an hour, until the evening, for a number of days, until
   the first call that rings, or until the current meeting ends; then the usual policy returns.
-- **Pause the whole filter** from the app, the Quick Settings tile or the notification it shows.
+- **Pause the whole filter** for 1, 2, 4 or 8 hours, a day, a week or until tomorrow — from the app, the
+  Quick Settings tile or the notification it shows.
+  In the app the groups' title carries it: `+` for a new group, then at the edge the filter's
+  «a repeat call rings» (filled while on) and the red pause, which turns into ▶ while paused.
 
 ## Permissions
 
@@ -95,16 +108,23 @@ to the app re-reads the phone, so a granted permission closes its sheet and the 
 ## Calendars
 
 A group's calendars are picked from every calendar on the phone — its name, and the account it
-belongs to — or from iCal links added by URL right there. With no calendars on the phone, the
+belongs to — or from iCal links added by URL right there. Under each calendar a switch says how
+the group uses it: off, during its events, or outside them; every event counts, free or busy. With no calendars on the phone, the
 screen says so and opens Android's «Add a Google account».
 
 ## Groups look
 
 Each group has a colour: one of nine theme colours (shaded for light and dark), or any colour
 from the picker — saturation and brightness on a square, hue on a strip — or typed as hex
-(`FF8800`). The pencil and palette by the group's name rename and recolour it.
+(`FF8800`). A tap, a double tap or a hold on the group's name renames it, on its
+dot recolours it.
 
 ## Where a call is from
+
+Every call in a list starts with its caller's avatar — the contact's photo, or a grey circle with
+the first letter of the name the call carries (a question mark without one) — ringed red when it was turned away, green when
+it rang and was answered, blue when it rang and nobody answered. Whether it was answered only the
+phone's own call history knows, a moment after the call; until then a call that rang is green.
 
 Every call with a number says where it is from, as far as the numbering catalogue that ships with
 the app knows: the country, the region when the range names one or two, the operator or an
@@ -158,9 +178,29 @@ on request; a cloud file the app cannot read is never overwritten without the us
 
 Everything lives on the phone: the groups in SQLite, the compiled rules in a file the service
 reads, the journal and the diagnostics in the service's own SQLite, the iCal feeds with their
-last copy. No internet is needed to screen; the map's tiles and the address search are the only
+last copy. The journal is kept for 30, 90 (by default), 180 or 365 days, as Diagnostics say; the
+service keeps its own copy of the term, since it trims the journal while the app is closed. No internet is needed to screen; the map's tiles and the address search are the only
 requests that leave for third parties (OpenStreetMap, Nominatim), and only while a place is edited. Diagnostics redact numbers and names and are shared
 only by the user, through the share sheet.
+
+## Stored data across versions
+
+What is stored changes shape from version to version; each kind of data has its own way through.
+
+- **The app's documents** — the group book, the preferences, the iCal links, the sync memory —
+  are stored as `{ version, data }`. Each kind has a history (`IDocumentHistory`): its current
+  version and one step per older version, a pure function from that version's JSON to the
+  next one's, like IndexedDB's upgrade with each case its own function. Reading an older document
+  runs the steps it misses and writes it back at once; one that cannot be read is cleared, and
+  the diagnostics say which and why. A document written before documents carried a version is
+  version 0. A test checks that no history has a gap, so a version never ships without its step.
+- **The group book in Drive** is the same document. A copy a newer app wrote is never
+  overwritten or merged: sync stops and asks for the app to be updated.
+- **The ruleset** the service reads carries a schema; one of another schema is deleted, and the
+  service lets every call through until the app — which compiles the ruleset from the book at
+  every start — publishes it again. Being derived, it needs no migration.
+- **The service's database** (the call log, the diagnostics) migrates as `SQLiteOpenHelper` does:
+  a step per version; without one, or after a downgrade, the tables start afresh — they are logs.
 
 ## How it is built
 

@@ -22,7 +22,8 @@ export function Sheet({
   children,
 }: {
   readonly visible: boolean;
-  readonly title: string;
+  /** The sheet's heading; a sheet whose contents say what it is for goes without. */
+  readonly title?: string;
   readonly onClose: () => void;
   readonly testID?: string;
   readonly children: ReactNode;
@@ -52,7 +53,14 @@ export function Sheet({
             { backgroundColor: palette.bgElevated, paddingBottom: insets.bottom + GUTTER },
           ]}
         >
-          <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
+          {title === undefined ? null : (
+            <Text
+              testID={testID === undefined ? undefined : `${testID}-title`}
+              style={[styles.title, { color: palette.fg }]}
+            >
+              {title}
+            </Text>
+          )}
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
             {children}
           </ScrollView>

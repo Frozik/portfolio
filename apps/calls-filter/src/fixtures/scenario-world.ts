@@ -14,7 +14,6 @@ import {
   pickedContact,
   special,
 } from '../contexts/grouping/testing/group-book-fixtures';
-import type { TCountryCode } from '../contexts/phone/domain/dialing-region';
 import { floatingMinute } from '../contexts/policy/domain/floating-time';
 import type { TPlaceId } from '../contexts/policy/domain/place-rule';
 import type { ICalendarRule, IPolicy } from '../contexts/policy/domain/policy';
@@ -45,9 +44,17 @@ const WORK_CALENDAR: TCalendarSource = {
   accountName: 'me@company.example',
   calendarName: 'Work',
 };
+/** A holiday calendar the user keeps on the phone: an all-day event a day. */
+const HOLIDAY_CALENDAR: TCalendarSource = {
+  kind: 'device',
+  accountType: 'com.google',
+  accountName: 'me@company.example',
+  calendarName: 'Holidays',
+};
 const EVENTS: ReadonlyMap<string, TWindowSet> = new Map([
   ['ics:meetings', normalizeWindows([at('2026-11-03T14:00', '2026-11-03T15:00')])],
   ['device:Work', normalizeWindows([at('2026-11-05T10:00', '2026-11-05T11:30')])],
+  ['device:Holidays', normalizeWindows([at('2026-11-04T00:00', '2026-11-05T00:00')])],
 ]);
 
 function sourceKey(source: TCalendarSource): string {
@@ -56,8 +63,6 @@ function sourceKey(source: TCalendarSource): string {
       return `ics:${source.id}`;
     case 'device':
       return `device:${source.calendarName}`;
-    case 'holidays-here':
-      return 'holidays-here';
     default:
       return assertNever(source);
   }
@@ -69,10 +74,6 @@ export const SCENARIO_INPUTS: IScreeningInputs = {
   horizonEnd: HORIZON_END,
   occurrencesOf: schedule =>
     RRULE_RECURRENCE_EXPANDER.occurrences(schedule, HORIZON_START, HORIZON_END),
-  holidaysByCountry: new Map<TCountryCode, readonly Temporal.PlainDate[]>([
-    ['NL' as TCountryCode, [Temporal.PlainDate.from('2026-11-04')]],
-    ['FI' as TCountryCode, [Temporal.PlainDate.from('2026-11-06')]],
-  ]),
   eventsOf: rule => EVENTS.get(sourceKey(rule.source)) ?? [],
 };
 
@@ -84,7 +85,6 @@ export function momentOf(local: string) {
 }
 
 const FILTER = {
-  busyOnly: true,
   skipDeclined: true,
   includeAllDay: false,
   minutesBefore: 0,
@@ -100,10 +100,10 @@ const ONLY_IN_WORK_EVENTS: ICalendarRule = {
   mode: 'only-during-events',
   filter: FILTER,
 };
-const EXCEPT_HOLIDAYS_HERE: ICalendarRule = {
-  source: { kind: 'holidays-here' },
+const EXCEPT_HOLIDAY_CALENDAR: ICalendarRule = {
+  source: HOLIDAY_CALENDAR,
   mode: 'except-events',
-  filter: { ...FILTER, busyOnly: false, includeAllDay: true },
+  filter: { ...FILTER, includeAllDay: true },
 };
 
 const WEEKDAYS_9_TO_18: ISchedule = {
@@ -120,7 +120,6 @@ const WEEKDAYS_9_TO_18: ISchedule = {
     end: { kind: 'never' },
   },
   exceptDates: [Temporal.PlainDate.from('2026-11-13')],
-  holidays: 'not-on-holidays',
 };
 
 const NIGHT: ISchedule = {
@@ -131,10 +130,9 @@ const NIGHT: ISchedule = {
   ],
   repeat: { frequency: 'daily', interval: 1, weekdays: [], monthly: null, end: { kind: 'never' } },
   exceptDates: [],
-  holidays: null,
 };
 
-const WEEKEND_AND_HOLIDAYS: ISchedule = {
+const WEEKEND: ISchedule = {
   zone: { kind: 'here' },
   start: HORIZON_START,
   times: [{ kind: 'all-day' }],
@@ -146,7 +144,6 @@ const WEEKEND_AND_HOLIDAYS: ISchedule = {
     end: { kind: 'never' },
   },
   exceptDates: [],
-  holidays: 'also-on-holidays',
 };
 
 const WORK_POLICY: IPolicy = {
@@ -154,7 +151,7 @@ const WORK_POLICY: IPolicy = {
   scheduled: {
     action: 'pass',
     schedule: WEEKDAYS_9_TO_18,
-    calendars: [EXCEPT_MEETINGS],
+    calendars: [EXCEPT_MEETINGS, EXCEPT_HOLIDAY_CALENDAR],
     places: [],
   },
   repeatPass: REPEAT_OFF,
@@ -203,7 +200,7 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
         scheduled: {
           action: 'block',
           schedule: null,
-          calendars: [EXCEPT_HOLIDAYS_HERE],
+          calendars: [EXCEPT_HOLIDAY_CALENDAR],
           places: [],
         },
         repeatPass: REPEAT_OFF,
@@ -246,7 +243,7 @@ export const WEEKEND_BOOK: GroupBook = bookOf([
   custom('weekend', [numberMask('*')], {
     policy: {
       otherwise: 'pass',
-      scheduled: { action: 'block', schedule: WEEKEND_AND_HOLIDAYS, calendars: [], places: [] },
+      scheduled: { action: 'block', schedule: WEEKEND, calendars: [], places: [] },
       repeatPass: REPEAT_OFF,
       repeatWindowMinutes: 5,
     },

@@ -34,6 +34,7 @@ export interface ITexts {
     readonly title: string;
     readonly filterOn: string;
     readonly pausedUntil: (time: string) => string;
+    readonly pinned: string;
     readonly resume: string;
     readonly pause: string;
     readonly newGroup: string;
@@ -48,9 +49,10 @@ export interface ITexts {
     readonly callsToday: (count: number) => string;
   };
   readonly temporary: {
-    readonly title: (group: string) => string;
     readonly usually: (phrase: string) => string;
     readonly what: string;
+    /** One word under the icon of a change for a while. */
+    readonly short: string;
     readonly forHow: string;
     readonly hour: string;
     readonly evening: string;
@@ -62,6 +64,8 @@ export interface ITexts {
   };
   readonly repeat: {
     readonly title: string;
+    /** One word beside the repeat icon. */
+    readonly short: string;
     readonly groupHint: (minutes: number) => string;
     readonly filterHint: string;
     readonly hiddenMiss: string;
@@ -74,9 +78,9 @@ export interface ITexts {
   };
   readonly pause: {
     readonly title: string;
-    readonly minutes: (count: number) => string;
     readonly hours: (count: number) => string;
-    readonly untilEvening: string;
+    readonly days: (count: number) => string;
+    readonly weeks: (count: number) => string;
     readonly untilTomorrow: string;
   };
   readonly group: {
@@ -90,20 +94,19 @@ export interface ITexts {
     readonly addNameMask: string;
     readonly addContact: string;
     readonly excludeMyContacts: string;
-    readonly excludeMyContactsHint: string;
     readonly whatToDo: string;
-    readonly always: string;
-    readonly inWindows: string;
-    readonly whatItDoes: string;
+    /** What the group does while its schedule, calendars and places hold. */
+    readonly whileMet: string;
     readonly otherwise: string;
     readonly addSchedule: string;
     readonly schedule: string;
     readonly calendars: string;
     readonly addCalendars: string;
     readonly noSchedule: string;
-    readonly advanced: string;
     readonly repeatWindow: (minutes: number) => string;
     readonly autoReply: string;
+    /** One word beside the SMS reply icon. */
+    readonly smsShort: string;
     readonly autoReplyHint: string;
     readonly name: string;
     readonly color: string;
@@ -212,10 +215,6 @@ export interface ITexts {
     readonly zoneHere: string;
     readonly zoneHereHint: string;
     readonly zoneSearch: string;
-    readonly holidays: string;
-    readonly holidaysNone: string;
-    readonly holidaysAlso: string;
-    readonly holidaysNot: string;
     readonly upcoming: string;
     readonly weekdayLetter: Readonly<Record<TWeekday, string>>;
     readonly remove: string;
@@ -234,8 +233,6 @@ export interface ITexts {
     readonly once: (date: string) => string;
     readonly exceptEvents: (calendars: string) => string;
     readonly onlyDuringEvents: (calendars: string) => string;
-    readonly holidaysAlso: string;
-    readonly holidaysNot: string;
     readonly allTheTime: string;
     readonly onClockOf: (city: string) => string;
     readonly onlyAtPlaces: (places: string) => string;
@@ -244,12 +241,12 @@ export interface ITexts {
   };
   readonly calendars: {
     readonly title: string;
-    readonly mode: string;
-    readonly except: string;
-    readonly only: string;
-    readonly holidaysHere: string;
-    /** The same, inside a sentence: «except during holidays where I am». */
-    readonly holidaysHereInSentence: string;
+    /** How a group uses a calendar: not at all, during its events, outside them. */
+    readonly useOff: string;
+    readonly useOnly: string;
+    readonly useExcept: string;
+    /** A calendar a rule names that the phone no longer has. */
+    readonly unknownCalendar: string;
     readonly noPermission: string;
     readonly grant: string;
     readonly ics: string;
@@ -257,7 +254,6 @@ export interface ITexts {
     readonly icsName: string;
     readonly icsUrl: string;
     readonly whereToGet: string;
-    readonly busyOnly: string;
     readonly skipDeclined: string;
     readonly includeAllDay: string;
     readonly upcoming: string;
@@ -267,7 +263,6 @@ export interface ITexts {
     readonly addAccount: string;
     readonly updated: (when: string) => string;
     readonly failed: string;
-    readonly holidaysByCountry: string;
   };
   readonly permissionPrompt: {
     readonly title: Readonly<Record<TPermissionStep, string>>;
@@ -281,6 +276,8 @@ export interface ITexts {
   readonly place: {
     readonly title: string;
     readonly add: string;
+    /** One word beside the place icon. */
+    readonly short: string;
     readonly name: string;
     readonly namePlaceholder: string;
     readonly onlyAt: string;
@@ -327,6 +324,7 @@ export interface ITexts {
       readonly server: string;
       readonly quota: string;
       readonly unreadable: string;
+      readonly newer: string;
     };
   };
   readonly settings: {
@@ -347,11 +345,14 @@ export interface ITexts {
     readonly calendars: string;
     readonly diagnostics: string;
     readonly askWhereTo: string;
-    readonly journalDays: (days: number) => string;
     readonly about: string;
   };
   readonly diagnostics: {
     readonly title: string;
+    /** The row that picks which entries are shown. */
+    readonly shown: string;
+    readonly journal: string;
+    readonly journalDays: (days: number) => string;
     readonly share: string;
     readonly copy: string;
     readonly copied: string;

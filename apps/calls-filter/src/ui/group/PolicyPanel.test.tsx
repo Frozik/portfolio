@@ -52,4 +52,29 @@ describe('the rules of a group', () => {
     );
     expect(await screen.findByTestId('place-state-unknown')).toBeOnTheScreen();
   });
+
+  it('fills the place icon of a group that has a place, and leaves it empty for one that has none', async () => {
+    await openRules(
+      custom('work', [], {
+        policy: {
+          ...ALWAYS_BLOCK,
+          scheduled: { action: 'pass', schedule: null, calendars: [], places: [OFFICE] },
+        },
+      })
+    );
+    expect(await screen.findByTestId('add-place')).toBeSelected();
+  });
+
+  it('adds a place to the group from the place icon', async () => {
+    const rendered = await renderApp(
+      { 'group/[id]': GroupRoute, place: () => null },
+      { phone: fakePhone({ book: bookOf([custom('spam', [])]) }), initialUrl: '/group/spam' }
+    );
+    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
+
+    expect(screen.getByTestId('add-place')).not.toBeSelected();
+    await fireEvent.press(screen.getByTestId('add-place'));
+
+    expect(rendered.getPathname()).toBe('/place');
+  });
 });

@@ -9,4 +9,6 @@ export type TSyncState =
   | { readonly kind: 'synced'; readonly at: Temporal.Instant }
   | { readonly kind: 'failed'; readonly failure: TCloudFailure; readonly since: Temporal.Instant }
   /** The cloud file is not a book this app reads: the cloud copy is left untouched. */
-  | { readonly kind: 'unreadable' };
+  | { readonly kind: 'unreadable' }
+  /** The cloud copy is a newer app's: left untouched until this app is updated. */
+  | { readonly kind: 'newer' };

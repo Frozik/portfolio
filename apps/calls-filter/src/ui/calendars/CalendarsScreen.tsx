@@ -8,14 +8,15 @@ import { sameCalendarSource } from '../../contexts/calendars/domain/calendar-sou
 import type { TGroup, TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
 import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
-import type { TCountryCode } from '../../contexts/phone/domain/dialing-region';
+import type { TAction } from '../../contexts/policy/domain/action';
 import type { ICalendarRule, IEventFilter } from '../../contexts/policy/domain/policy';
 import { narrowsNothing } from '../../contexts/policy/domain/policy';
+import { windowActionOf, withWindowAction } from '../../contexts/policy/domain/window-action';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
+import { WindowActionSwitch } from '../group/WindowActionSwitch';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
-import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
 import { IconButton } from '../kit/IconButton';
 import { Row } from '../kit/Row';
@@ -24,16 +25,15 @@ import { Section } from '../kit/Section';
 import { Sheet } from '../kit/Sheet';
 import { TextField } from '../kit/TextField';
 import { ToggleRow } from '../kit/ToggleRow';
-import { Wrap } from '../kit/Wrap';
+import type { TCalendarUse } from './CalendarModeRow';
+import { CalendarModeRow } from './CalendarModeRow';
 
 const DEFAULT_FILTER: IEventFilter = {
-  busyOnly: true,
   skipDeclined: true,
   includeAllDay: false,
   minutesBefore: 0,
   minutesAfter: 0,
 };
-const HOLIDAYS_HERE: TCalendarSource = { kind: 'holidays-here' };
 
 /** Adds an iCal link: a name, the URL, a probe before saving, and where to find the link. */
 const AddIcsSheet = observer(function AddIcsSheet({
@@ -47,18 +47,10 @@ const AddIcsSheet = observer(function AddIcsSheet({
   const texts = useTexts();
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
-  const [holidaysOf, setHolidaysOf] = useState<TCountryCode | null>(null);
   const [state, setState] = useState<'idle' | 'checking' | 'failed'>('idle');
-  const countries = [
-    ...new Set(
-      [app.device.networkCountry, app.device.simCountry].filter(
-        (country): country is TCountryCode => country !== null
-      )
-    ),
-  ];
   const add = async () => {
     setState('checking');
-    const result = await app.calendars.addSubscription(label.trim(), url.trim(), holidaysOf);
+    const result = await app.calendars.addSubscription(label.trim(), url.trim());
     if (result.kind === 'added') {
       onAdded(result.id);
       onClose();
@@ -82,23 +74,6 @@ const AddIcsSheet = observer(function AddIcsSheet({
         onChange={setUrl}
         placeholder={texts.calendars.icsUrl}
       />
-      <Wrap>
-        <Chip
-          testID="ics-holidays-none"
-          label="—"
-          selected={holidaysOf === null}
-          onPress={() => setHolidaysOf(null)}
-        />
-        {countries.map(country => (
-          <Chip
-            key={country}
-            testID={`ics-holidays-${country}`}
-            label={`${texts.schedule.holidays} ${country}`}
-            selected={holidaysOf === country}
-            onPress={() => setHolidaysOf(country)}
-          />
-        ))}
-      </Wrap>
       <Hint text={texts.calendars.whereToGet} />
       {state === 'failed' ? (
         <Hint testID="ics-failed" tone="danger" text={texts.calendars.failed} />
@@ -128,7 +103,6 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
     void app.calendars.refresh();
   }, [app]);
   const rules = group === null ? [] : rulesOf(group);
-  const mode = rules[0]?.mode ?? 'except-events';
   const filter = rules[0]?.filter ?? DEFAULT_FILTER;
   const setRules = (next: readonly ICalendarRule[]) => {
     if (group === null) {
@@ -152,61 +126,44 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
       )
     );
   };
-  const isOn = (source: TCalendarSource) =>
-    rules.some(rule => sameCalendarSource(rule.source, source));
-  const toggle = (source: TCalendarSource) =>
-    setRules(
-      isOn(source)
-        ? rules.filter(rule => !sameCalendarSource(rule.source, source))
-        : [
-            ...rules,
-            {
-              source,
-              mode,
-              filter:
-                source.kind === 'holidays-here'
-                  ? { ...filter, busyOnly: false, includeAllDay: true }
-                  : filter,
-            },
-          ]
+  const calendarUseOf = (source: TCalendarSource): TCalendarUse =>
+    rules.find(rule => sameCalendarSource(rule.source, source))?.mode ?? 'off';
+  const setCalendarUse = (source: TCalendarSource, use: TCalendarUse) => {
+    const others = rules.filter(rule => !sameCalendarSource(rule.source, source));
+    setRules(use === 'off' ? others : [...others, { source, mode: use, filter }]);
+  };
+  const setWindowAction = (action: TAction) => {
+    if (group === null) {
+      return;
+    }
+    app.books.run((book, context) =>
+      changeGroup(book, group.id, { policy: withWindowAction(group.policy, action) }, context.now)
     );
-  const setMode = (next: ICalendarRule['mode']) =>
-    setRules(rules.map(rule => ({ ...rule, mode: next })));
+  };
   const setFilter = (next: Partial<IEventFilter>) =>
     setRules(rules.map(rule => ({ ...rule, filter: { ...rule.filter, ...next } })));
-  const sourceRow = (source: TCalendarSource, title: string, subtitle?: string, testID?: string) =>
+  const sourceRow = (
+    source: TCalendarSource,
+    title: string,
+    subtitle: string | undefined,
+    testID: string
+  ) =>
     group === null ? (
-      <Row key={title} testID={testID} title={title} subtitle={subtitle} />
+      <Row key={testID} testID={testID} title={title} subtitle={subtitle} />
     ) : (
-      <ToggleRow
-        key={title}
-        testID={testID ?? `calendar-${title}`}
+      <CalendarModeRow
+        key={testID}
+        testID={testID}
         title={title}
         subtitle={subtitle}
-        value={isOn(source)}
-        onChange={() => toggle(source)}
+        value={calendarUseOf(source)}
+        onChange={use => setCalendarUse(source, use)}
       />
     );
   return (
     <Screen testID="calendars-screen" title={texts.calendars.title} header={<BackButton />}>
-      {group === null ? null : (
-        <>
-          <Hint text={texts.calendars.mode} />
-          <Wrap>
-            <Chip
-              testID="calendar-mode-except"
-              label={texts.calendars.except}
-              selected={mode === 'except-events'}
-              onPress={() => setMode('except-events')}
-            />
-            <Chip
-              testID="calendar-mode-only"
-              label={texts.calendars.only}
-              selected={mode === 'only-during-events'}
-              onPress={() => setMode('only-during-events')}
-            />
-          </Wrap>
-        </>
+      {group === null || rules.length === 0 ? null : (
+        <WindowActionSwitch value={windowActionOf(group.policy)} onChange={setWindowAction} />
       )}
       {app.device.permissions.calendar === 'granted' ? null : (
         <Section>
@@ -218,14 +175,6 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
           />
         </Section>
       )}
-      <Section>
-        {sourceRow(
-          HOLIDAYS_HERE,
-          texts.calendars.holidaysHere,
-          [...app.calendars.holidays.keys()].join(', '),
-          'calendar-holidays-here'
-        )}
-      </Section>
       {app.device.permissions.calendar === 'granted' && app.calendars.byAccount.size === 0 ? (
         <Section testID="calendars-none">
           <Row title={texts.calendars.none} subtitle={texts.calendars.noneHint} />
@@ -257,7 +206,7 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
               return sourceRow(
                 source,
                 calendar.calendarName,
-                calendar.isHolidayCalendar ? `${account} · ${texts.schedule.holidays}` : account,
+                account,
                 `calendar-device-${calendar.id}`
               );
             })
@@ -291,72 +240,16 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
         <AddIcsSheet
           onAdded={id => {
             const source: TCalendarSource = { kind: 'ics', id };
-            if (group !== null && !isOn(source)) {
-              toggle(source);
+            if (group !== null && calendarUseOf(source) === 'off') {
+              setCalendarUse(source, 'except-events');
             }
           }}
           onClose={() => setAdding(false)}
         />
       ) : null}
-      {group === null ? (
-        <>
-          <Section title={texts.calendars.holidaysByCountry}>
-            {app.calendars.deviceCalendars
-              .filter(calendar => calendar.isHolidayCalendar)
-              .map(calendar => {
-                const source: TCalendarSource = {
-                  kind: 'device',
-                  accountType: calendar.accountType,
-                  accountName: calendar.accountName,
-                  calendarName: calendar.calendarName,
-                };
-                const country =
-                  [...app.calendars.holidays].find(([, mapped]) =>
-                    sameCalendarSource(mapped, source)
-                  )?.[0] ?? null;
-                const candidates = [
-                  ...new Set(
-                    [app.device.networkCountry, app.device.simCountry].filter(
-                      (code): code is TCountryCode => code !== null
-                    )
-                  ),
-                ];
-                return (
-                  <Row
-                    key={calendar.id}
-                    title={calendar.calendarName}
-                    subtitle={country ?? '—'}
-                    trailing={
-                      <Wrap>
-                        {candidates.map(code => (
-                          <Chip
-                            key={code}
-                            label={code}
-                            selected={code === country}
-                            onPress={() =>
-                              app.calendars.setHolidayCountry(
-                                source,
-                                code === country ? null : code
-                              )
-                            }
-                          />
-                        ))}
-                      </Wrap>
-                    }
-                  />
-                );
-              })}
-          </Section>
-        </>
-      ) : (
+      {group === null ? null : (
         <>
           <Section>
-            <ToggleRow
-              testID="filter-busy"
-              title={texts.calendars.busyOnly}
-              value={filter.busyOnly}
-              onChange={busyOnly => setFilter({ busyOnly })}
-            />
             <ToggleRow
               testID="filter-declined"
               title={texts.calendars.skipDeclined}

@@ -4,13 +4,11 @@ import {
   CalendarMode,
   CalendarRuleSchema,
   ContactMatchSchema,
-  CountryHolidaysSchema,
   DeviceCalendarSchema,
   EventFilterSchema,
   GroupChoiceSchema,
   GroupKind,
   GroupSchema,
-  HolidayMode,
   MemberSchema,
   NameField,
   NameMatchSchema,
@@ -23,7 +21,6 @@ import {
   ScheduledSchema,
   SpecialMask,
   TemporaryPolicySchema,
-  TimeOfDaySchema,
   UntilKind,
   WindowSchema,
 } from '@frozik/proto/frozik/callsfilter/v1/ruleset_pb';
@@ -33,7 +30,6 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { TCalendarSource } from '../contexts/calendars/domain/calendar-source';
 import type { TNameField, TSpecialMask } from '../contexts/grouping/domain/member';
 import type { TAction } from '../contexts/policy/domain/action';
-import type { THolidayRule } from '../contexts/policy/domain/schedule';
 import type { TWindowSet } from '../contexts/policy/domain/window-set';
 import type {
   ICompiledCalendarRule,
@@ -81,19 +77,6 @@ function wireSpecial(special: TSpecialMask): SpecialMask {
       return SpecialMask.TOLL_FREE;
     default:
       return assertNever(special);
-  }
-}
-
-function wireHolidays(holidays: THolidayRule | null): HolidayMode {
-  switch (holidays) {
-    case null:
-      return HolidayMode.UNSPECIFIED;
-    case 'also-on-holidays':
-      return HolidayMode.ALSO_ON_HOLIDAYS;
-    case 'not-on-holidays':
-      return HolidayMode.NOT_ON_HOLIDAYS;
-    default:
-      return assertNever(holidays);
   }
 }
 
@@ -152,8 +135,6 @@ function wireSource(source: TCalendarSource): CalendarRule['source'] {
       };
     case 'ics':
       return { case: 'icsId', value: source.id };
-    case 'holidays-here':
-      return { case: 'holidaysHere', value: true };
     default:
       return assertNever(source);
   }
@@ -231,8 +212,6 @@ function wireGroup(group: ICompiledGroup) {
               zone: scheduled.zone ?? '',
               hasSchedule: scheduled.hasSchedule,
               windows: wireWindows(scheduled.windows),
-              times: scheduled.times.map(time => create(TimeOfDaySchema, time)),
-              holidays: wireHolidays(scheduled.holidays),
               calendars: scheduled.calendars.map(wireCalendarRule),
               places: scheduled.places.map(place =>
                 create(PlaceRuleSchema, {
@@ -270,9 +249,6 @@ export function encodeRuleset(ruleset: ICompiledRuleset): Uint8Array {
       horizonEndMinute: BigInt(ruleset.horizonEnd),
       homeCountry: ruleset.homeCountry,
       groups: ruleset.groups.map(wireGroup),
-      holidays: [...ruleset.holidays].map(([country, dayStarts]) =>
-        create(CountryHolidaysSchema, { country, dayStarts: dayStarts.map(start => BigInt(start)) })
-      ),
       whereTo: ruleset.whereTo.map(choice => create(GroupChoiceSchema, choice)),
       repeatPass: wireRepeatPass(ruleset.repeatPass),
     })

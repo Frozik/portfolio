@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
 import type { IPreferencesStore } from '../contexts/device/domain/ports/preferences-store';
+import type { IDevicePreferences } from '../contexts/device/domain/preferences';
 import { DEFAULT_PREFERENCES } from '../contexts/device/domain/preferences';
+import type { IDiagnosticsLog } from '../contexts/diagnostics/domain/ports/diagnostics-log';
 import { REPEAT_OFF } from '../contexts/policy/domain/repeat-pass';
 import { repeatPassCodec } from './codecs/repeat-pass-codec';
 import type { SqliteStore } from './sqlite-store';
-
-const PREFERENCES_KEY = 'preferences';
+import type { IStoredDocument } from './stored-document';
+import { loadDocument, saveDocument } from './stored-document';
 
 const preferences = z.object({
   theme: z.enum(['system', 'light', 'dark']),
@@ -15,18 +17,23 @@ const preferences = z.object({
   repeatPass: repeatPassCodec.default(REPEAT_OFF),
 });
 
-export function sqlitePreferencesStore(store: SqliteStore): IPreferencesStore {
+/** Version 1 put the preferences under a version; version 0 was the bare object. */
+export const PREFERENCES_DOCUMENT: IStoredDocument<IDevicePreferences> = {
+  key: 'preferences',
+  history: { version: 1, migrations: { 0: data => data } },
+  parse: data => {
+    const parsed = preferences.safeParse(data);
+    return parsed.success ? parsed.data : null;
+  },
+};
+
+export function sqlitePreferencesStore(
+  store: SqliteStore,
+  diagnostics: IDiagnosticsLog
+): IPreferencesStore {
   return {
-    async load() {
-      const text = await store.read(PREFERENCES_KEY);
-      if (text === null) {
-        return DEFAULT_PREFERENCES;
-      }
-      const parsed = preferences.safeParse(JSON.parse(text));
-      return parsed.success ? parsed.data : DEFAULT_PREFERENCES;
-    },
-    async save(value) {
-      await store.write(PREFERENCES_KEY, JSON.stringify(value));
-    },
+    load: async () =>
+      (await loadDocument(store, PREFERENCES_DOCUMENT, diagnostics)) ?? DEFAULT_PREFERENCES,
+    save: value => saveDocument(store, PREFERENCES_DOCUMENT, value),
   };
 }

@@ -1,8 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
-import { Palette, Pencil } from 'lucide-react-native';
+import { PhoneIncoming, PhoneOff } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
@@ -13,33 +13,36 @@ import { CallList } from '../calls/CallList';
 import { groupName } from '../group-name';
 import { statusText } from '../groups/group-status';
 import { TemporarySheet } from '../groups/TemporarySheet';
-import { BackButton } from '../kit/BackButton';
-import { Chip } from '../kit/Chip';
+import { BackArrow } from '../kit/BackArrow';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
-import { IconButton } from '../kit/IconButton';
-import { GAP } from '../kit/metrics';
+import { IndicatorButton } from '../kit/IndicatorButton';
+import { SMALL_GAP } from '../kit/metrics';
+import { PinnedMark } from '../kit/PinnedMark';
 import { Screen } from '../kit/Screen';
-import { Wrap } from '../kit/Wrap';
+import { SegmentedControl } from '../kit/SegmentedControl';
 import { useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
-import { AdvancedPanel } from './AdvancedPanel';
 import { ColorSheet } from './ColorSheet';
+import { DeleteGroupButton } from './DeleteGroupButton';
 import { MembersPanel } from './MembersPanel';
 import { PolicyPanel } from './PolicyPanel';
 import { PolicySheet } from './PolicySheet';
+import { PolicySwitches } from './PolicySwitches';
 import { RenameSheet } from './RenameSheet';
 
 type TTab = 'calls' | 'rules';
 
 /** A group: its calls first (the screen is for sorting them), its rules on the second tab. */
+/** The dot is small; the finger gets a wider target around it. */
+const DOT_HIT_SLOP = 12;
+
 export const GroupScreen = observer(function GroupScreen() {
   const app = useApp();
   const texts = useTexts();
   const scheme = useScheme();
   const { id } = useLocalSearchParams<{ readonly id: string }>();
   const [tab, setTab] = useState<TTab>('calls');
-  const [advanced, setAdvanced] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [coloring, setColoring] = useState(false);
   const [policySheet, setPolicySheet] = useState<'policy' | 'for-a-while' | null>(null);
@@ -48,32 +51,41 @@ export const GroupScreen = observer(function GroupScreen() {
     return null;
   }
   const today = app.clock.localNow().toPlainDate();
+  const status = app.statusOf(group);
   return (
     <Screen
       testID={`group-screen-${group.id}`}
-      header={
-        <View style={styles.header}>
-          <BackButton testID="group-back" />
-          <Dot color={groupColor(group.color, scheme)} />
+      titleLeading={
+        <View style={styles.titleLeading}>
+          <BackArrow testID="group-back" />
+          <Pressable
+            testID="group-color"
+            accessibilityRole="button"
+            accessibilityLabel={texts.group.colorChange}
+            hitSlop={DOT_HIT_SLOP}
+            onPress={() => setColoring(true)}
+            onLongPress={() => setColoring(true)}
+          >
+            <Dot color={groupColor(group.color, scheme)} />
+          </Pressable>
         </View>
       }
       title={groupName(texts, group)}
+      onTitlePress={group.kind === 'custom' ? () => setRenaming(true) : undefined}
+      titleTestID="group-rename"
       titleAction={
         <View style={styles.titleActions}>
-          {group.kind === 'custom' ? (
-            <IconButton
-              testID="group-rename"
-              icon={Pencil}
-              label={texts.group.rename}
-              onPress={() => setRenaming(true)}
+          {group.kind === 'custom' ? null : <PinnedMark testID="group-pinned" />}
+          <View style={styles.status}>
+            <IndicatorButton
+              testID="group-status"
+              icon={status.now.action === 'block' ? PhoneOff : PhoneIncoming}
+              tone={status.now.action === 'block' ? 'danger' : 'positive'}
+              filled
+              label={statusText(texts, status, app.clock.timeZone(), today)}
+              onPress={() => setPolicySheet('policy')}
             />
-          ) : null}
-          <IconButton
-            testID="group-color"
-            icon={Palette}
-            label={texts.group.colorChange}
-            onPress={() => setColoring(true)}
-          />
+          </View>
         </View>
       }
     >
@@ -89,13 +101,6 @@ export const GroupScreen = observer(function GroupScreen() {
       {renaming && group.kind === 'custom' ? (
         <RenameSheet group={group} onClose={() => setRenaming(false)} />
       ) : null}
-      <Wrap>
-        <Chip
-          testID="group-status"
-          label={statusText(texts, app.statusOf(group), app.clock.timeZone(), today)}
-          onPress={() => setPolicySheet('policy')}
-        />
-      </Wrap>
       {policySheet === 'policy' ? (
         <PolicySheet
           group={group}
@@ -104,22 +109,16 @@ export const GroupScreen = observer(function GroupScreen() {
         />
       ) : null}
       {policySheet === 'for-a-while' ? (
-        <TemporarySheet group={group} onClose={() => setPolicySheet(null)} />
+        <TemporarySheet group={group} named={false} onClose={() => setPolicySheet(null)} />
       ) : null}
-      <Wrap>
-        <Chip
-          testID="group-tab-calls"
-          label={texts.group.calls}
-          selected={tab === 'calls'}
-          onPress={() => setTab('calls')}
-        />
-        <Chip
-          testID="group-tab-rules"
-          label={texts.group.rules}
-          selected={tab === 'rules'}
-          onPress={() => setTab('rules')}
-        />
-      </Wrap>
+      <SegmentedControl
+        segments={[
+          { value: 'calls', label: texts.group.calls, testID: 'group-tab-calls' },
+          { value: 'rules', label: texts.group.rules, testID: 'group-tab-rules' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === 'calls' ? (
         <CallList
           days={app.calls.daysOf(group.id)}
@@ -128,18 +127,14 @@ export const GroupScreen = observer(function GroupScreen() {
         />
       ) : (
         <>
+          <PolicySwitches group={group} />
           {group.kind === 'strangers' ? (
             <Hint text={texts.group.strangersWho} />
           ) : (
             <MembersPanel group={group} />
           )}
-          <PolicyPanel group={group} />
-          <Chip
-            testID="group-advanced"
-            label={`${advanced ? '▾' : '▸'} ${texts.group.advanced}`}
-            onPress={() => setAdvanced(!advanced)}
-          />
-          {advanced ? <AdvancedPanel group={group} /> : null}
+          <PolicyPanel group={group} onForAWhile={() => setPolicySheet('for-a-while')} />
+          {group.kind === 'custom' ? <DeleteGroupButton group={group} /> : null}
         </>
       )}
     </Screen>
@@ -147,6 +142,8 @@ export const GroupScreen = observer(function GroupScreen() {
 });
 
 const styles = StyleSheet.create({
-  titleActions: { flexDirection: 'row' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: GAP },
+  // Never narrower than its buttons: a long name shrinks into its ellipsis instead of under them.
+  titleActions: { flexGrow: 1, flexShrink: 0, flexDirection: 'row', alignItems: 'center' },
+  status: { marginLeft: 'auto' },
+  titleLeading: { flexDirection: 'row', alignItems: 'center', gap: SMALL_GAP },
 });

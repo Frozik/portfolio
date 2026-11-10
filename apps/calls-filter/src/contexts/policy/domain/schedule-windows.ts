@@ -8,7 +8,7 @@ import type { IWindow, TWindowSet } from './window-set';
 import { normalizeWindows } from './window-set';
 
 /** The windows one time of day makes on one date; a range whose end is before its start runs past midnight. */
-export function timeWindow(date: Temporal.PlainDate, time: TScheduleTime): IWindow {
+function timeWindow(date: Temporal.PlainDate, time: TScheduleTime): IWindow {
   const dayStart = floatingDateStart(date);
   switch (time.kind) {
     case 'all-day':

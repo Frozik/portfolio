@@ -30,7 +30,7 @@ private fun group(id: String, kind: GroupKind, include: List<Member> = emptyList
   Group(id, kind, include, emptyList(), true, otherwise, null, 5, temporary, 0L, "")
 
 private fun ruleset(vararg custom: Group) =
-  Ruleset(1, 0L, Long.MAX_VALUE, "NL", custom.toList() + group("my-contacts", GroupKind.MY_CONTACTS) + group("strangers", GroupKind.STRANGERS), emptyMap())
+  Ruleset(1, 0L, Long.MAX_VALUE, "NL", custom.toList() + group("my-contacts", GroupKind.MY_CONTACTS) + group("strangers", GroupKind.STRANGERS))
 
 private class Harness(load: RulesetLoad) {
   val records = mutableListOf<CallRecord>()

@@ -85,6 +85,7 @@ describe('checking a number: the answer the service would give now', () => {
       rawNumber: '+31851234567',
       caller: stranger('31851234567'),
       dialerName: null,
+      answered: null,
       outcome: {
         kind: 'screened',
         verdict: 'awaiting-repeat',

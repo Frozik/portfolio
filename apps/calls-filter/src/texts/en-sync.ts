@@ -19,5 +19,6 @@ export const EN_SYNC: ITexts['sync'] = {
     server: 'Google Drive did not answer — will try again later',
     quota: 'Your Google Drive is full',
     unreadable: 'The cloud copy cannot be read; it was left untouched',
+    newer: 'A newer version of the app wrote the cloud copy; update the app to sync',
   },
 };

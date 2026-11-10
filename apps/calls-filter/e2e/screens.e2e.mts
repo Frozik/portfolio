@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe } from 'node:test';
+import { describe, test } from 'node:test';
 
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
 import {
@@ -83,5 +83,28 @@ describe('the screens that only a phone can show', () => {
         await adb('shell', 'pm', 'grant', PACKAGE, 'android.permission.READ_CALL_LOG');
       }
     }
+  );
+
+  test.todo(
+    'a group of the user’s own, swiped right on its row, uncovers the delete button, and a tap on it deletes the group'
+  );
+  test.todo(
+    'a sheet with a field (renaming a group) rises above the keyboard: the field and its button stay above it'
+  );
+  test.todo('a field low on a screen (a group’s SMS reply) scrolls up above the keyboard');
+  test.todo(
+    'the sheet of what a group does closes on the way to the schedule and is not there on the way back'
+  );
+  test.todo(
+    'a long group name ends in an ellipsis before the status button: the title’s right edge is left of the button’s'
+  );
+  test.todo(
+    'the screening service keeps its journal for the term chosen in Settings, not a fixed 90 days'
+  );
+  test.todo(
+    'an update installed over an older app keeps its groups, preferences and iCal links, migrated'
+  );
+  test.todo(
+    'a call during a calendar event the group lets through rings, chosen on the calendars screen'
   );
 });

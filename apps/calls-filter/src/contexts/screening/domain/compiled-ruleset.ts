@@ -6,7 +6,6 @@ import type { TAction } from '../../policy/domain/action';
 import type { TFloatingMinute } from '../../policy/domain/floating-time';
 import type { IPlaceRule } from '../../policy/domain/place-rule';
 import type { IEventFilter } from '../../policy/domain/policy';
-import type { THolidayRule } from '../../policy/domain/schedule';
 import type { TWindowSet } from '../../policy/domain/window-set';
 
 /** The published language's version: Kotlin treats a ruleset of another major as absent. */
@@ -28,12 +27,6 @@ export type TCompiledMember =
       readonly lookupKey: string;
     };
 
-export interface ICompiledTimeOfDay {
-  readonly allDay: boolean;
-  readonly fromMinuteOfDay: number;
-  readonly toMinuteOfDay: number;
-}
-
 export interface ICompiledCalendarRule {
   readonly mode: 'except-events' | 'only-during-events';
   readonly filter: IEventFilter;
@@ -43,12 +36,10 @@ export interface ICompiledCalendarRule {
 
 export interface ICompiledScheduled {
   readonly action: TAction;
-  /** The zone whose clock `windows`, `times` and holidays are on; `null` for the phone's own. */
+  /** The zone whose clock `windows` are on; `null` for the phone's own. */
   readonly zone: string | null;
   readonly hasSchedule: boolean;
   readonly windows: TWindowSet;
-  readonly times: readonly ICompiledTimeOfDay[];
-  readonly holidays: THolidayRule | null;
   readonly calendars: readonly ICompiledCalendarRule[];
   /** Places by id: the service asks its geofence state for each. */
   readonly places: readonly IPlaceRule[];
@@ -90,8 +81,6 @@ export interface ICompiledRuleset {
   readonly horizonEnd: TFloatingMinute;
   readonly homeCountry: TCountryCode;
   readonly groups: readonly ICompiledGroup[];
-  /** The floating minute each holiday day starts at, by country. */
-  readonly holidays: ReadonlyMap<TCountryCode, readonly TFloatingMinute[]>;
   /** The groups the shade offers after a stranger's call rang through; empty when the user turned it off. */
   readonly whereTo: readonly IWhereToChoice[];
   readonly repeatPass: TCompiledRepeatPass;

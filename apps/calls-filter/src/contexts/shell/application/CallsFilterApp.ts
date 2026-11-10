@@ -299,7 +299,7 @@ export class CallsFilterApp {
     return groupStatus(
       group,
       { instant: clock.now(), local: floatingMinute(clock.localNow()) },
-      groupWindows(group.policy, this.inputs, this.device.networkCountry),
+      groupWindows(group.policy, this.inputs),
       place => this.places.atPlace(place)
     );
   }

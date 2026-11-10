@@ -6,7 +6,6 @@ export type TDiagnosticsCategory =
   | 'sync'
   | 'ics'
   | 'calendar'
-  | 'holidays'
   | 'ruleset'
   | 'screening'
   | 'conflict'

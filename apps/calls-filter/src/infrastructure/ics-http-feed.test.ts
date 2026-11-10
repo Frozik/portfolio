@@ -32,9 +32,7 @@ describe('an iCal feed', () => {
     ]);
   });
 
-  it('marks a transparent event as free and an all-day one by its dates', () => {
-    const lunch = events().find(event => event.title === 'Lunch');
-    expect(lunch?.busy).toBe(false);
+  it('reads an all-day event by its dates', () => {
     const christmas = events().find(event => event.title === 'Christmas');
     expect(christmas?.allDay).toBe(true);
     expect(christmas?.startDate.toString()).toBe('2026-12-25');

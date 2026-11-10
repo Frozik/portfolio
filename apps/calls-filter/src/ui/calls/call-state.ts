@@ -44,3 +44,27 @@ export const CALL_GLYPHS: Readonly<Record<TCallState, string>> = {
   'history-missed': '↙',
   'history-blocked': '⛔',
 };
+
+/**
+ * The ring around a call's avatar: red when it was turned away, blue when it rang and nobody
+ * answered, green when it rang and was answered — or the phone has not said yet.
+ */
+export function callRing(
+  state: TCallState,
+  answered: boolean | null
+): 'positive' | 'danger' | 'accent' {
+  switch (state) {
+    case 'rejected':
+    case 'awaiting-repeat':
+    case 'history-blocked':
+      return 'danger';
+    case 'passed':
+    case 'passed-as-repeat':
+    case 'paused':
+    case 'history-answered':
+    case 'history-missed':
+      return answered === false ? 'accent' : 'positive';
+    default:
+      return assertNever(state);
+  }
+}

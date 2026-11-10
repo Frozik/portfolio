@@ -1,28 +1,18 @@
 import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
 
-import type { TCalendarSource, TIcsId } from '../contexts/calendars/domain/calendar-source';
+import type { TIcsId } from '../contexts/calendars/domain/calendar-source';
+import type { IIcsSubscription } from '../contexts/calendars/domain/ics-subscription';
 import type { ICalendarStore } from '../contexts/calendars/domain/ports/calendar-store';
-import type { TCountryCode } from '../contexts/phone/domain/dialing-region';
+import type { IDiagnosticsLog } from '../contexts/diagnostics/domain/ports/diagnostics-log';
 import type { SqliteStore } from './sqlite-store';
-
-const CALENDARS_KEY = 'calendars';
+import type { IStoredDocument } from './stored-document';
+import { loadDocument, saveDocument } from './stored-document';
 
 const instant = z
   .string()
   .nullable()
   .transform(text => (text === null ? null : Temporal.Instant.from(text)));
-
-const source = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('device'),
-    accountType: z.string(),
-    accountName: z.string(),
-    calendarName: z.string(),
-  }),
-  z.object({ kind: z.literal('ics'), id: z.string() }),
-  z.object({ kind: z.literal('holidays-here') }),
-]);
 
 const settings = z.object({
   subscriptions: z.array(
@@ -30,54 +20,44 @@ const settings = z.object({
       id: z.string(),
       label: z.string(),
       url: z.string(),
-      holidaysOf: z.string().nullable(),
       body: z.string().nullable(),
       etag: z.string().nullable(),
       refreshedAt: instant,
       failedAt: instant,
     })
   ),
-  holidays: z.array(z.tuple([z.string(), source])),
 });
 
-function sourceOf(stored: z.infer<typeof source>): TCalendarSource {
-  return stored.kind === 'ics' ? { kind: 'ics', id: stored.id as TIcsId } : stored;
-}
-
-export function sqliteCalendarStore(store: SqliteStore): ICalendarStore {
-  return {
-    async load() {
-      const text = await store.read(CALENDARS_KEY);
-      const parsed = text === null ? null : settings.safeParse(JSON.parse(text));
-      if (parsed === null || !parsed.success) {
-        return { subscriptions: [], holidays: new Map() };
-      }
-      return {
-        subscriptions: parsed.data.subscriptions.map(subscription => ({
+/** Version 1 put the iCal links under a version; version 0 was the bare object. */
+export const CALENDARS_DOCUMENT: IStoredDocument<readonly IIcsSubscription[]> = {
+  key: 'calendars',
+  history: { version: 1, migrations: { 0: data => data } },
+  parse: data => {
+    const parsed = settings.safeParse(data);
+    return parsed.success
+      ? parsed.data.subscriptions.map(subscription => ({
           ...subscription,
           id: subscription.id as TIcsId,
-          holidaysOf: subscription.holidaysOf as TCountryCode | null,
+        }))
+      : null;
+  },
+};
+
+export function sqliteCalendarStore(
+  store: SqliteStore,
+  diagnostics: IDiagnosticsLog
+): ICalendarStore {
+  return {
+    load: async () => ({
+      subscriptions: (await loadDocument(store, CALENDARS_DOCUMENT, diagnostics)) ?? [],
+    }),
+    save: value =>
+      saveDocument(store, CALENDARS_DOCUMENT, {
+        subscriptions: value.subscriptions.map(subscription => ({
+          ...subscription,
+          refreshedAt: subscription.refreshedAt?.toString() ?? null,
+          failedAt: subscription.failedAt?.toString() ?? null,
         })),
-        holidays: new Map(
-          parsed.data.holidays.map(([country, mapped]) => [
-            country as TCountryCode,
-            sourceOf(mapped),
-          ])
-        ),
-      };
-    },
-    async save(value) {
-      await store.write(
-        CALENDARS_KEY,
-        JSON.stringify({
-          subscriptions: value.subscriptions.map(subscription => ({
-            ...subscription,
-            refreshedAt: subscription.refreshedAt?.toString() ?? null,
-            failedAt: subscription.failedAt?.toString() ?? null,
-          })),
-          holidays: [...value.holidays],
-        })
-      );
-    },
+      }),
   };
 }

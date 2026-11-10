@@ -14,7 +14,6 @@ import io.github.frozik.callsfilter.screening.domain.Decision
 import io.github.frozik.callsfilter.screening.domain.EventFilter
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupKind
-import io.github.frozik.callsfilter.screening.domain.HolidayMode
 import io.github.frozik.callsfilter.screening.domain.Moment
 import io.github.frozik.callsfilter.screening.domain.Scheduled
 import io.github.frozik.callsfilter.screening.domain.Verdict
@@ -27,7 +26,7 @@ private const val START_MINUTE = 30_000_000L
 private const val MINUTE_MS = 60_000L
 private const val HOUR_MS = 3_600_000L
 
-private val FILTER = EventFilter(busyOnly = true, skipDeclined = true, includeAllDay = false, minutesBefore = 0, minutesAfter = 0)
+private val FILTER = EventFilter(skipDeclined = true, includeAllDay = false, minutesBefore = 0, minutesAfter = 0)
 private val WORK_CALENDAR = CalendarRule(CalendarMode.EXCEPT_EVENTS, FILTER, CalendarSource.Device("com.google", "me@example.com", "Work"), emptyList())
 private val ICS_MEETINGS = CalendarRule(CalendarMode.EXCEPT_EVENTS, FILTER, CalendarSource.Ics("feed"), listOf(Window(START_MINUTE + 30, START_MINUTE + 90)))
 
@@ -38,7 +37,7 @@ private fun group(vararg calendars: CalendarRule) = Group(
   emptyList(),
   true,
   Action.BLOCK,
-  Scheduled(Action.PASS, false, emptyList(), emptyList(), HolidayMode.NONE, calendars.toList()),
+  Scheduled(Action.PASS, false, emptyList(), calendars.toList()),
   5,
   null,
   0L,

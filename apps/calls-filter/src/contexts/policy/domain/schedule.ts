@@ -23,8 +23,6 @@ export interface IRecurrence {
   readonly end: TRecurrenceEnd;
 }
 
-export type THolidayRule = 'also-on-holidays' | 'not-on-holidays';
-
 /**
  * Whose clock the times are on. As in Google Calendar a schedule keeps its zone — work at 9–18
  * in Amsterdam is 10–19 in Helsinki; «here» follows the phone instead, for night silence and the like.
@@ -43,5 +41,4 @@ export interface ISchedule {
   readonly times: readonly TScheduleTime[];
   readonly repeat: IRecurrence | null;
   readonly exceptDates: readonly Temporal.PlainDate[];
-  readonly holidays: THolidayRule | null;
 }

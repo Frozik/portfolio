@@ -54,13 +54,39 @@ describe('a group, edited on its own screen', () => {
     expect([spamIn(phone)?.name, spamIn(phone)?.color]).toEqual(['Spam calls', '#ff8800']);
   });
 
-  it('gets a schedule: weekdays on Helsinki’s clock, except holidays', async () => {
+  it('saves with its schedule what the group does in it', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp(ROUTES, { phone, initialUrl: '/schedule?group=spam' });
+
+    await fireEvent.press(await screen.findByTestId('window-action-block'));
+    await fireEvent.press(screen.getByTestId('schedule-save'));
+
+    expect(spamIn(phone)?.policy.scheduled?.action).toBe('block');
+  });
+
+  it('shows on its rules only the action for the rest of the time once it has a schedule', async () => {
+    const scheduled = custom('spam', [], {
+      policy: {
+        ...ALWAYS_BLOCK,
+        scheduled: { action: 'pass', schedule: null, calendars: [], places: [] },
+      },
+    });
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([scheduled]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
+
+    expect(screen.getByTestId('otherwise-block')).toBeSelected();
+    expect(screen.queryByTestId('scheduled-pass')).not.toBeOnTheScreen();
+  });
+
+  it('gets a schedule: weekdays on Helsinki’s clock', async () => {
     const phone = fakePhone({ book: bookOf([SPAM]) });
     await renderApp(ROUTES, { phone, initialUrl: '/schedule?group=spam' });
     await fireEvent.press(await screen.findByTestId('schedule-repeat'));
     await fireEvent.press(await screen.findByTestId('repeat-weekdays'));
-    await fireEvent.press(screen.getByTestId('schedule-holidays'));
-    await fireEvent.press(await screen.findByTestId('holidays-not-on-holidays'));
     await fireEvent.press(screen.getByTestId('schedule-zone'));
     await fireEvent.changeText(await screen.findByTestId('zone-search'), 'Helsinki');
     await fireEvent.press(await screen.findByTestId('zone-Europe/Helsinki'));
@@ -69,7 +95,6 @@ describe('a group, edited on its own screen', () => {
     expect(spamIn(phone)?.policy.scheduled?.schedule).toMatchObject({
       repeat: { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5] },
       zone: { kind: 'fixed', zone: 'Europe/Helsinki' },
-      holidays: 'not-on-holidays',
     });
   });
 
@@ -99,6 +124,172 @@ describe('a group, edited on its own screen', () => {
     expect(screen.queryByTestId('policy-sheet')).not.toBeOnTheScreen();
   });
 
+  it('opens renaming on holding its name, and colouring on holding its dot', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent(await screen.findByTestId('group-rename'), 'longPress');
+    expect(await screen.findByTestId('rename-sheet')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('group-name-save'));
+
+    await fireEvent(screen.getByTestId('group-color'), 'longPress');
+    expect(await screen.findByTestId('color-sheet')).toBeOnTheScreen();
+  });
+
+  it('offers no renaming on the name of a group the app keeps itself', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: `/group/${STRANGERS_ID}`,
+    });
+
+    expect(await screen.findByTestId('group-color')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-rename')).not.toBeOnTheScreen();
+  });
+
+  it('switches between its calls and its rules, the chosen half marked', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    expect(await screen.findByTestId('group-tab-calls')).toBeSelected();
+    await fireEvent.press(screen.getByTestId('group-tab-rules'));
+
+    expect(screen.getByTestId('group-tab-rules')).toBeSelected();
+    expect(screen.getByTestId('group-tab-calls')).not.toBeSelected();
+    expect(screen.getByTestId('group-repeat')).toBeOnTheScreen();
+  });
+
+  it('goes back to the groups by the arrow on the line of its name', async () => {
+    const rendered = await renderApp(
+      { ...ROUTES, index: () => null },
+      { phone: fakePhone({ book: bookOf([SPAM]) }), initialUrl: '/group/spam' }
+    );
+
+    await fireEvent.press(await screen.findByTestId('group-back'));
+
+    expect(rendered.getPathname()).toBe('/');
+  });
+
+  it('shows in the sheet its icon opens what the group does, as the chosen half of a switch', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+
+    const sheet = within(screen.getByTestId('policy-sheet'));
+    expect(sheet.getByTestId('always-block')).toBeSelected();
+    expect(sheet.getByTestId('always-pass')).not.toBeSelected();
+    expect(sheet.getByTestId('always-block')).toHaveProp('accessibilityRole', 'tab');
+  });
+
+  it('fills the icon of each setting a group has: calendars here, no schedule, nothing for a while', async () => {
+    const byHolidays = custom('spam', [], {
+      policy: {
+        ...ALWAYS_BLOCK,
+        scheduled: {
+          action: 'pass',
+          schedule: null,
+          calendars: [
+            {
+              source: {
+                kind: 'device',
+                accountType: 'com.google',
+                accountName: 'me@example.com',
+                calendarName: 'Holidays',
+              },
+              mode: 'only-during-events',
+              filter: {
+                skipDeclined: true,
+                includeAllDay: true,
+                minutesBefore: 0,
+                minutesAfter: 0,
+              },
+            },
+          ],
+          places: [],
+        },
+      },
+    });
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([byHolidays]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+
+    const sheet = within(screen.getByTestId('policy-sheet'));
+    expect(sheet.getByTestId('add-calendars')).toBeSelected();
+    expect(sheet.getByTestId('add-schedule')).not.toBeSelected();
+    expect(sheet.getByTestId('policy-for-a-while')).not.toBeSelected();
+  });
+
+  it('fills the «for a while» icon while a change for a while holds', async () => {
+    const forAnHour = custom('spam', [], {
+      policy: ALWAYS_BLOCK,
+      temporary: {
+        action: 'pass',
+        until: { kind: 'instant', at: Temporal.Instant.from('2026-11-09T12:00:00Z') },
+        setAt: Temporal.Instant.from('2026-11-09T08:00:00Z'),
+      },
+    });
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([forAnHour]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+
+    expect(
+      within(screen.getByTestId('policy-sheet')).getByTestId('policy-for-a-while')
+    ).toBeSelected();
+  });
+
+  it('offers a change for a while on its rules too', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-tab-rules'));
+    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
+
+    expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
+  });
+
+  it('picks the action for a while by the same switch as everywhere, letting through at first', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
+
+    const pass = await screen.findByTestId('temporary-action-pass');
+    expect(pass).toHaveProp('accessibilityRole', 'tab');
+    expect(pass).toBeSelected();
+    await fireEvent.press(screen.getByTestId('temporary-action-block'));
+    expect(screen.getByTestId('temporary-action-block')).toBeSelected();
+  });
+
+  it('says nothing more of the group in its change for a while: it is opened inside the group', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/group/spam',
+    });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
+
+    expect(await screen.findByTestId('temporary-sheet-title')).not.toHaveTextContent(SPAM.name);
+    expect(screen.queryByTestId('temporary-usually')).not.toBeOnTheScreen();
+  });
+
   it('offers a change for a while from its status', async () => {
     await renderApp(ROUTES, {
       phone: fakePhone({ book: bookOf([SPAM]) }),
@@ -111,6 +302,16 @@ describe('a group, edited on its own screen', () => {
     expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
   });
 
+  it('shows a group the app keeps itself as pinned, with nothing to rename it by', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: `/group/${STRANGERS_ID}`,
+    });
+
+    expect(await screen.findByTestId('group-pinned')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-rename')).not.toBeOnTheScreen();
+  });
+
   it('tells where a stranger’s number is from once the catalogue has loaded', async () => {
     const call: IJournalEntry = {
       id: 'call-ru' as TJournalEntryId,
@@ -118,6 +319,7 @@ describe('a group, edited on its own screen', () => {
       rawNumber: '+79630001234',
       caller: stranger('79630001234'),
       dialerName: null,
+      answered: null,
       outcome: {
         kind: 'screened',
         verdict: 'passed',
@@ -141,6 +343,7 @@ describe('a group, edited on its own screen', () => {
       rawNumber: '+31201234567',
       caller: stranger('31201234567'),
       dialerName: 'Bakkerij de Graaf',
+      answered: false,
       outcome: { kind: 'history', type: 'missed' },
     };
     const phone = fakePhone({ book: bookOf([SPAM]), journal: [call] });
@@ -159,6 +362,7 @@ describe('a group, edited on its own screen', () => {
       rawNumber: '+31851234567',
       caller: stranger('31851234567'),
       dialerName: null,
+      answered: null,
       outcome: {
         kind: 'screened',
         verdict: 'passed',
@@ -179,24 +383,59 @@ describe('a group, edited on its own screen', () => {
   });
 });
 
-describe('the SMS reply among a group’s further settings', () => {
-  async function openFurtherSettings(smsReply: boolean) {
-    const phone = fakePhone({ book: bookOf([SPAM]), smsReply });
-    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
+describe('the settings of a group as icons on its rules', () => {
+  async function openRules(group: ReturnType<typeof custom>, smsReply = true) {
+    const phone = fakePhone({ book: bookOf([group]), smsReply });
+    await renderApp(ROUTES, { phone, initialUrl: `/group/${group.id}` });
     await fireEvent.press(await screen.findByTestId('group-tab-rules'));
-    await fireEvent.press(screen.getByTestId('group-advanced'));
+    return phone;
   }
 
-  it('is offered where the app can send an SMS', async () => {
-    await openFurtherSettings(true);
+  it('sets the SMS reply from its icon, which fills once the group has one', async () => {
+    const phone = await openRules(SPAM);
+    expect(screen.getByTestId('group-sms')).not.toBeSelected();
 
-    expect(screen.getByTestId('auto-reply')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('group-sms'));
+    await fireEvent.changeText(await screen.findByTestId('auto-reply'), 'In a meeting');
+    await fireEvent.press(screen.getByTestId('auto-reply-save'));
+
+    expect(spamIn(phone)?.autoReply).toEqual({ text: 'In a meeting' });
+    expect(screen.getByTestId('group-sms')).toBeSelected();
   });
 
-  it('is not offered in the edition built without SMS', async () => {
-    await openFurtherSettings(false);
+  it('offers no SMS icon in the edition built without SMS', async () => {
+    await openRules(SPAM, false);
 
-    expect(screen.getByTestId('repeat-window-5')).toBeOnTheScreen();
-    expect(screen.queryByTestId('auto-reply')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('group-repeat')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-sms')).not.toBeOnTheScreen();
+  });
+
+  it('sets how long a second call counts as a repeat in the repeat sheet, which stays open', async () => {
+    const phone = await openRules(SPAM);
+
+    await fireEvent.press(screen.getByTestId('group-repeat'));
+    await fireEvent.press(await screen.findByTestId('repeat-window-10'));
+
+    expect(spamIn(phone)?.policy.repeatWindowMinutes).toBe(10);
+    expect(screen.getByTestId('repeat-window-10')).toBeSelected();
+  });
+
+  it('deletes the group from the button at the end of its rules', async () => {
+    const phone = await openRules(SPAM);
+
+    await fireEvent.press(screen.getByTestId('group-delete'));
+
+    expect(spamIn(phone)).toBeNull();
+  });
+
+  it('fills the repeat icon while a repeat rings for the group, and opens the repeat from it', async () => {
+    await openRules(
+      custom('spam', [], { policy: { ...ALWAYS_BLOCK, repeatPass: { kind: 'always' } } })
+    );
+    expect(screen.getByTestId('group-repeat')).toBeSelected();
+
+    await fireEvent.press(screen.getByTestId('group-repeat'));
+
+    expect(await screen.findByTestId('repeat-sheet')).toBeOnTheScreen();
   });
 });

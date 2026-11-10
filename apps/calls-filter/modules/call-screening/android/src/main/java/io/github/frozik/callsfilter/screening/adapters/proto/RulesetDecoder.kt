@@ -9,7 +9,6 @@ import io.github.frozik.callsfilter.screening.domain.EventFilter
 import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupChoice
 import io.github.frozik.callsfilter.screening.domain.GroupKind
-import io.github.frozik.callsfilter.screening.domain.HolidayMode
 import io.github.frozik.callsfilter.screening.domain.Member
 import io.github.frozik.callsfilter.screening.domain.NameField
 import io.github.frozik.callsfilter.screening.domain.PlaceMode
@@ -19,7 +18,6 @@ import io.github.frozik.callsfilter.screening.domain.Ruleset
 import io.github.frozik.callsfilter.screening.domain.Scheduled
 import io.github.frozik.callsfilter.screening.domain.SpecialMask
 import io.github.frozik.callsfilter.screening.domain.TemporaryPolicy
-import io.github.frozik.callsfilter.screening.domain.TimeOfDay
 import io.github.frozik.callsfilter.screening.domain.UntilKind
 import io.github.frozik.callsfilter.screening.domain.Window
 import io.github.frozik.callsfilter.screening.wire.Action as WireAction
@@ -27,7 +25,6 @@ import io.github.frozik.callsfilter.screening.wire.CalendarMode as WireCalendarM
 import io.github.frozik.callsfilter.screening.wire.CalendarRule as WireCalendarRule
 import io.github.frozik.callsfilter.screening.wire.Group as WireGroup
 import io.github.frozik.callsfilter.screening.wire.GroupKind as WireGroupKind
-import io.github.frozik.callsfilter.screening.wire.HolidayMode as WireHolidayMode
 import io.github.frozik.callsfilter.screening.wire.Member as WireMember
 import io.github.frozik.callsfilter.screening.wire.NameField as WireNameField
 import io.github.frozik.callsfilter.screening.wire.PlaceMode as WirePlaceMode
@@ -70,7 +67,6 @@ object RulesetDecoder {
         horizonEndMinute = wire.horizonEndMinute,
         homeCountry = wire.homeCountry,
         groups = wire.groupsList.map(::group),
-        holidayDayStarts = wire.holidaysList.associate { it.country to it.dayStartsList.toList() },
         whereTo = wire.whereToList.map { GroupChoice(it.id, it.name) },
         repeatPass = repeatPass(wire.repeatPass),
       ),
@@ -128,14 +124,11 @@ object RulesetDecoder {
 
         WireCalendarRule.SourceCase.ICS_ID -> CalendarSource.Ics(rule.icsId)
 
-        WireCalendarRule.SourceCase.HOLIDAYS_HERE -> CalendarSource.HolidaysHere
-
         else -> return null
       }
     return CalendarRule(
       mode = if (rule.mode == WireCalendarMode.CALENDAR_MODE_ONLY_DURING_EVENTS) CalendarMode.ONLY_DURING_EVENTS else CalendarMode.EXCEPT_EVENTS,
       filter = EventFilter(
-        busyOnly = rule.filter.busyOnly,
         skipDeclined = rule.filter.skipDeclined,
         includeAllDay = rule.filter.includeAllDay,
         minutesBefore = rule.filter.minutesBefore,
@@ -155,13 +148,6 @@ object RulesetDecoder {
           hasSchedule = policy.scheduled.hasSchedule,
           zone = policy.scheduled.zone.takeIf { it.isNotEmpty() },
           windows = policy.scheduled.windowsList.map(::window),
-          times = policy.scheduled.timesList.map { TimeOfDay(it.allDay, it.fromMinuteOfDay, it.toMinuteOfDay) },
-          holidays =
-          when (policy.scheduled.holidays) {
-            WireHolidayMode.HOLIDAY_MODE_ALSO_ON_HOLIDAYS -> HolidayMode.ALSO_ON_HOLIDAYS
-            WireHolidayMode.HOLIDAY_MODE_NOT_ON_HOLIDAYS -> HolidayMode.NOT_ON_HOLIDAYS
-            else -> HolidayMode.NONE
-          },
           calendars = policy.scheduled.calendarsList.mapNotNull(::calendarRule),
           places =
           policy.scheduled.placesList.map {

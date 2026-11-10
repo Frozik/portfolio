@@ -14,24 +14,29 @@ import { useApp } from '../AppContext';
 import { useCalendarName } from '../calendars/use-calendar-name';
 import { useClockWords } from '../clock-words';
 import { groupName } from '../group-name';
+import { ActionSwitch } from '../group/ActionSwitch';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
 import { Sheet } from '../kit/Sheet';
 import { Wrap } from '../kit/Wrap';
 
-const ACTIONS: readonly TAction[] = ['block', 'pass'];
 const DAY_TERMS = [1, 2, 3, 5] as const;
 const EVENING_HOUR = 20;
 /** «Until the first call» never outlives a day: a forgotten one must not open the group for good. */
 const FIRST_PASS_LIMIT_HOURS = 24;
 
-/** A group's action for a while: pick the action, then one tap on the term sets it. */
+/**
+ * A group's action for a while: pick the action, then one tap on the term sets it. Opened from
+ * the list of groups it names the group and its usual policy; inside the group, both are already on screen.
+ */
 export const TemporarySheet = observer(function TemporarySheet({
   group,
+  named,
   onClose,
 }: {
   readonly group: TGroup | null;
+  readonly named: boolean;
   readonly onClose: () => void;
 }) {
   const app = useApp();
@@ -69,24 +74,17 @@ export const TemporarySheet = observer(function TemporarySheet({
   return (
     <Sheet
       visible
-      title={texts.temporary.title(groupName(texts, group))}
+      title={named ? groupName(texts, group) : texts.temporary.what}
       onClose={onClose}
       testID="temporary-sheet"
     >
-      <Hint
-        text={texts.temporary.usually(policyText(texts, group.policy, calendarName, clockWords))}
-      />
-      <Wrap>
-        {ACTIONS.map(action => (
-          <Chip
-            key={action}
-            testID={`temporary-action-${action}`}
-            label={texts.actionsShort[action]}
-            selected={chosen === action}
-            onPress={() => setChosen(action)}
-          />
-        ))}
-      </Wrap>
+      {named ? (
+        <Hint
+          testID="temporary-usually"
+          text={texts.temporary.usually(policyText(texts, group.policy, calendarName, clockWords))}
+        />
+      ) : null}
+      <ActionSwitch prefix="temporary-action" value={chosen} onChange={setChosen} />
       <Wrap>
         <Chip
           testID="temporary-1h"

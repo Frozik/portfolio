@@ -51,7 +51,10 @@ export function driveCloudCopy(storage: IStorageProvider): ICloudCopy {
       }
       const rev = read.value.stat.rev as string as TCloudRev;
       const decoded = decodeGroupBook(new TextDecoder().decode(read.value.bytes));
-      return decoded.ok ? { kind: 'found', book: decoded.value, rev } : { kind: 'unreadable', rev };
+      if (decoded.ok) {
+        return { kind: 'found', book: decoded.value.book, rev };
+      }
+      return decoded.error.kind === 'newer' ? { kind: 'newer' } : { kind: 'unreadable', rev };
     },
     async write(book, rev) {
       const bytes = new TextEncoder().encode(encodeGroupBook(book));

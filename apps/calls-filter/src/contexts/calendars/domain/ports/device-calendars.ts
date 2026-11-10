@@ -9,8 +9,6 @@ export interface IDeviceCalendar {
   readonly accountName: string;
   readonly calendarName: string;
   readonly color: string | null;
-  /** Google's public holiday calendars are owned by `…#holiday@group.v.calendar.google.com`. */
-  readonly isHolidayCalendar: boolean;
 }
 
 /** The phone's calendar provider: local, synced by Android, readable offline. */

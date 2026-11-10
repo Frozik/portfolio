@@ -1,6 +1,5 @@
 import type { Temporal } from 'temporal-polyfill';
 
-import type { TCountryCode } from '../../phone/domain/dialing-region';
 import type { ICalendarRule } from '../../policy/domain/policy';
 import type { IRecurrenceExpander } from '../../policy/domain/recurrence-expander';
 import type { ISchedule } from '../../policy/domain/schedule';
@@ -12,7 +11,6 @@ const HORIZON_DAYS = 400;
 
 /** What the calendars context supplies: holidays by country and the windows of a rule's events. */
 export interface ICalendarInputs {
-  readonly holidaysByCountry: ReadonlyMap<TCountryCode, readonly Temporal.PlainDate[]>;
   eventsOf(rule: ICalendarRule): TWindowSet;
 }
 
@@ -38,7 +36,6 @@ export function screeningInputs(
       expanded.set(schedule, occurrences);
       return occurrences;
     },
-    holidaysByCountry: calendars.holidaysByCountry,
     eventsOf: rule => calendars.eventsOf(rule),
   };
 }

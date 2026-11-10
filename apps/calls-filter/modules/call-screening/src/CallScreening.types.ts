@@ -52,6 +52,7 @@ export interface ICallScreeningModule {
   setVerboseDiagnostics(untilEpochMs: number | null): void;
   pausedUntil(): number | null;
   setPausedUntil(untilEpochMs: number | null): void;
+  setRetentionDays(days: number): void;
   releasedTemporaries(): readonly string[];
   setAtPlace(placeId: string, inside: boolean | null): void;
   atPlace(placeId: string): boolean | null;

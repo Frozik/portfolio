@@ -187,11 +187,11 @@ export const SCENARIOS: readonly IScenario[] = [
   scenario('a foreign number is blocked', {
     caller: caller({ number: '442079460000', country: 'GB' }),
   }),
-  scenario('a foreign number passes on a holiday where the phone is', {
+  scenario('a foreign number passes on a day of the holiday calendar', {
     caller: caller({ number: '442079460000', country: 'GB' }),
     local: '2026-11-04T12:00',
   }),
-  scenario('a Finnish number is not foreign in Finland, and the holidays are Finnish', {
+  scenario('a Finnish number is not foreign in Finland', {
     caller: caller({ number: '358401234567', country: 'FI' }),
     networkCountry: 'FI',
     local: '2026-11-04T12:00',
@@ -221,10 +221,6 @@ export const SCENARIOS: readonly IScenario[] = [
   scenario('an empty book takes everyone as a stranger', {
     book: EMPTY_BOOK,
     caller: caller({ number: '74951112233', country: 'RU' }),
-  }),
-  scenario('the weekend schedule includes holidays', {
-    book: WEEKEND_BOOK,
-    local: '2026-11-04T09:00',
   }),
   scenario('the weekend schedule passes a weekday', {
     book: WEEKEND_BOOK,

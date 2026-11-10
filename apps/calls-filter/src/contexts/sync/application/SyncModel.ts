@@ -160,6 +160,11 @@ export class SyncModel {
         this.setState({ kind: 'unreadable' });
         return;
       }
+      if (read.kind === 'newer') {
+        this.ports.diagnostics.log('warn', 'sync', 'cloud-copy-newer');
+        this.setState({ kind: 'newer' });
+        return;
+      }
       const merged = read.kind === 'absent' ? local : mergeBooks(this.base, local, read.book);
       if (read.kind === 'absent' || !sameValue(merged, read.book)) {
         const written = await cloud.write(merged, read.kind === 'found' ? read.rev : null);

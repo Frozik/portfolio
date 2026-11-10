@@ -43,7 +43,6 @@ class DeviceCalendarEvents(private val resolver: ContentResolver) :
         resolver,
         arrayOf(
           CalendarContract.Instances.CALENDAR_ID,
-          CalendarContract.Instances.AVAILABILITY,
           CalendarContract.Instances.SELF_ATTENDEE_STATUS,
           CalendarContract.Instances.ALL_DAY,
           CalendarContract.Instances.TITLE,
@@ -56,7 +55,6 @@ class DeviceCalendarEvents(private val resolver: ContentResolver) :
           while (cursor.moveToNext()) {
             val counts =
               cursor.long(CalendarContract.Instances.CALENDAR_ID) == calendarId &&
-                (!rule.filter.busyOnly || cursor.int(CalendarContract.Instances.AVAILABILITY) == CalendarContract.Events.AVAILABILITY_BUSY) &&
                 (!rule.filter.skipDeclined || cursor.int(CalendarContract.Instances.SELF_ATTENDEE_STATUS) != CalendarContract.Attendees.ATTENDEE_STATUS_DECLINED) &&
                 (rule.filter.includeAllDay || cursor.int(CalendarContract.Instances.ALL_DAY) == 0)
             if (counts) {

@@ -8,7 +8,6 @@ export interface ICalendarEvent {
   /** For an all-day event the dates it covers, end exclusive: the wall-clock days, wherever the phone is. */
   readonly startDate: Temporal.PlainDate;
   readonly endDate: Temporal.PlainDate;
-  readonly busy: boolean;
   readonly declined: boolean;
   readonly title: string;
 }

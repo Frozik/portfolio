@@ -70,17 +70,11 @@ function zoneText(texts: ITexts, zone: TScheduleZone, clock: IClockWords): strin
   }
 }
 
-/** A schedule as Google Calendar says it: «on weekdays, 09:00–18:00 (Helsinki time), except holidays». */
+/** A schedule as Google Calendar says it: «on weekdays, 09:00–18:00 (Helsinki time)». */
 export function scheduleText(texts: ITexts, schedule: ISchedule, clock: IClockWords): string {
-  const holidays =
-    schedule.holidays === 'also-on-holidays'
-      ? texts.phrase.holidaysAlso
-      : schedule.holidays === 'not-on-holidays'
-        ? texts.phrase.holidaysNot
-        : null;
   const zone = zoneText(texts, schedule.zone, clock);
   const times = schedule.times.map(time => timeText(texts, time)).join(', ');
-  return [daysText(texts, schedule), zone === null ? times : `${times} ${zone}`, holidays]
+  return [daysText(texts, schedule), zone === null ? times : `${times} ${zone}`]
     .filter(part => part !== null && part !== '')
     .join(', ');
 }

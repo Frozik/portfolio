@@ -30,7 +30,7 @@ private const val HOUR_MS = 3_600_000L
 private fun group(id: String, temporary: TemporaryPolicy?, otherwise: Action = Action.BLOCK) =
   Group(id, GroupKind.CUSTOM, listOf(Member.Number(Regex("^7495\\d*$"))), emptyList(), true, otherwise, null, 5, temporary, 0L, "", name = id)
 
-private fun ruleset(vararg groups: Group) = Ruleset(1, 0L, Long.MAX_VALUE, "NL", groups.toList(), emptyMap())
+private fun ruleset(vararg groups: Group) = Ruleset(1, 0L, Long.MAX_VALUE, "NL", groups.toList())
 
 private class TemporaryWorld(var ruleset: Ruleset) {
   val released = mutableSetOf<String>()

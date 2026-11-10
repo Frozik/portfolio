@@ -11,7 +11,7 @@ function days(
   to: string
 ): readonly string[] {
   return RRULE_RECURRENCE_EXPANDER.occurrences(
-    { ...schedule, zone: { kind: 'here' }, times: ALL_DAY, exceptDates: [], holidays: null },
+    { ...schedule, zone: { kind: 'here' }, times: ALL_DAY, exceptDates: [] },
     Temporal.PlainDate.from(from),
     Temporal.PlainDate.from(to)
   ).map(date => date.toString());

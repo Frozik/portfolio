@@ -17,9 +17,7 @@ export function eventWindows(
 ): TWindowSet {
   return normalizeWindows(
     events
-      .filter(
-        event => (!filter.busyOnly || event.busy) && (!filter.skipDeclined || !event.declined)
-      )
+      .filter(event => !filter.skipDeclined || !event.declined)
       .filter(event => filter.includeAllDay || !event.allDay)
       .map(event => {
         const from = event.allDay

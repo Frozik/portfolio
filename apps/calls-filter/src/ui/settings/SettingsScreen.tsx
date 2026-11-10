@@ -1,16 +1,20 @@
 import { useRouter } from 'expo-router';
+import { TriangleAlert } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
+import { View } from 'react-native';
 
 import type { TPermission } from '../../contexts/device/domain/ports/permissions';
-import type { TThemeChoice } from '../../contexts/device/domain/preferences';
+import type { TLanguageChoice, TThemeChoice } from '../../contexts/device/domain/preferences';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { Chip } from '../kit/Chip';
+import { ICON_SIZE } from '../kit/metrics';
 import { Row } from '../kit/Row';
 import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
+import { SegmentedControl } from '../kit/SegmentedControl';
+import { SelectRow } from '../kit/SelectRow';
 import { ToggleRow } from '../kit/ToggleRow';
-import { Wrap } from '../kit/Wrap';
+import { usePalette } from '../theme/AppTheme';
 import { SyncSection } from './SyncSection';
 
 const PERMISSIONS: readonly TPermission[] = [
@@ -23,10 +27,14 @@ const PERMISSIONS: readonly TPermission[] = [
 ];
 const THEMES: readonly TThemeChoice[] = ['system', 'light', 'dark'];
 
+/** The phone's language, or one the user fixed. */
+type TLanguageOption = 'system' | Extract<TLanguageChoice, { kind: 'fixed' }>['language'];
+
 /** A short list: screening and permissions, language, theme, calendars, diagnostics. */
 export const SettingsScreen = observer(function SettingsScreen() {
   const app = useApp();
   const texts = useTexts();
+  const palette = usePalette();
   const router = useRouter();
   const { device } = app;
   const themeLabel = (theme: TThemeChoice) =>
@@ -54,6 +62,17 @@ export const SettingsScreen = observer(function SettingsScreen() {
                 ? texts.settings.granted
                 : texts.settings.grant
             }
+            trailing={
+              device.permissions[permission] === 'granted' ? undefined : (
+                <View
+                  testID={`settings-permission-${permission}-attention`}
+                  accessible
+                  accessibilityLabel={texts.settings.grant}
+                >
+                  <TriangleAlert color={palette.caution} size={ICON_SIZE} />
+                </View>
+              )
+            }
             onPress={
               device.permissions[permission] === 'granted'
                 ? undefined
@@ -63,44 +82,35 @@ export const SettingsScreen = observer(function SettingsScreen() {
         ))}
       </Section>
       <SyncSection />
-      <Section title={texts.settings.language}>
-        <Wrap>
-          <Chip
-            testID="language-system"
-            label={texts.settings.languageSystem}
-            selected={device.languageChoice.kind === 'system'}
-            onPress={() => device.setLanguage({ kind: 'system' })}
-          />
-          <Chip
-            testID="language-ru"
-            label="Русский"
-            selected={
-              device.languageChoice.kind === 'fixed' && device.languageChoice.language === 'ru'
-            }
-            onPress={() => device.setLanguage({ kind: 'fixed', language: 'ru' })}
-          />
-          <Chip
-            testID="language-en"
-            label="English"
-            selected={
-              device.languageChoice.kind === 'fixed' && device.languageChoice.language === 'en'
-            }
-            onPress={() => device.setLanguage({ kind: 'fixed', language: 'en' })}
-          />
-        </Wrap>
+      <Section>
+        <SelectRow<TLanguageOption>
+          testID="settings-language"
+          title={texts.settings.language}
+          options={[
+            { value: 'system', label: texts.settings.languageSystem, testID: 'language-system' },
+            { value: 'ru', label: 'Русский', testID: 'language-ru' },
+            { value: 'en', label: 'English', testID: 'language-en' },
+          ]}
+          value={
+            device.languageChoice.kind === 'system' ? 'system' : device.languageChoice.language
+          }
+          onChange={language =>
+            device.setLanguage(
+              language === 'system' ? { kind: 'system' } : { kind: 'fixed', language }
+            )
+          }
+        />
       </Section>
       <Section title={texts.settings.theme}>
-        <Wrap>
-          {THEMES.map(theme => (
-            <Chip
-              key={theme}
-              testID={`theme-${theme}`}
-              label={themeLabel(theme)}
-              selected={device.preferences.theme === theme}
-              onPress={() => device.setTheme(theme)}
-            />
-          ))}
-        </Wrap>
+        <SegmentedControl
+          segments={THEMES.map(theme => ({
+            value: theme,
+            label: themeLabel(theme),
+            testID: `theme-${theme}`,
+          }))}
+          value={device.preferences.theme}
+          onChange={theme => device.setTheme(theme)}
+        />
       </Section>
       <Section>
         <ToggleRow
@@ -108,10 +118,6 @@ export const SettingsScreen = observer(function SettingsScreen() {
           title={texts.settings.askWhereTo}
           value={device.preferences.askWhereToAfterCall}
           onChange={ask => device.setAskWhereTo(ask)}
-        />
-        <Row
-          testID="settings-journal-days"
-          title={texts.settings.journalDays(device.preferences.journalDays)}
         />
         <Row
           testID="settings-calendars"

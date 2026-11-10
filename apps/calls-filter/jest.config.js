@@ -2,6 +2,8 @@
 module.exports = {
   preset: 'jest-expo/android',
   testMatch: ['<rootDir>/src/**/*.test.ts?(x)'],
+  // The gestures' and the animations' native halves, stood in for as their libraries prescribe.
+  setupFiles: ['react-native-gesture-handler/jestSetup'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testTimeout: 30_000,
   // The package's `react-native` entry is `.mjs`, which jest-expo does not transform.

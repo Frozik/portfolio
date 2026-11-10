@@ -7,12 +7,9 @@ import type { IMatchingEnvironment } from '../../grouping/domain/matching-enviro
 import type { TMember } from '../../grouping/domain/member';
 import { canonicalNumberPattern } from '../../masks/domain/number-mask-canonical';
 import { patternRegexSource } from '../../masks/domain/pattern-regex';
-import type { TCountryCode } from '../../phone/domain/dialing-region';
-import type { TFloatingMinute } from '../../policy/domain/floating-time';
 import { floatingDateStart } from '../../policy/domain/floating-time';
 import type { ITemporaryPolicy } from '../../policy/domain/policy';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
-import type { TScheduleTime } from '../../policy/domain/schedule';
 import { scheduleWindows } from '../../policy/domain/schedule-windows';
 import type {
   ICompiledGroup,
@@ -21,13 +18,10 @@ import type {
   IWhereToChoice,
   ICompiledScheduled,
   ICompiledTemporary,
-  ICompiledTimeOfDay,
   TCompiledMember,
 } from './compiled-ruleset';
 import { RULESET_SCHEMA } from './compiled-ruleset';
 import type { IScreeningInputs } from './screening-inputs';
-
-const MINUTES_PER_HOUR = 60;
 
 function compileMember(member: TMember, environment: IMatchingEnvironment): TCompiledMember | null {
   switch (member.kind) {
@@ -68,25 +62,6 @@ function compileMembers(
   });
 }
 
-function minuteOfDay(time: Temporal.PlainTime): number {
-  return time.hour * MINUTES_PER_HOUR + time.minute;
-}
-
-function compileTime(time: TScheduleTime): ICompiledTimeOfDay {
-  switch (time.kind) {
-    case 'all-day':
-      return { allDay: true, fromMinuteOfDay: 0, toMinuteOfDay: 0 };
-    case 'range':
-      return {
-        allDay: false,
-        fromMinuteOfDay: minuteOfDay(time.from),
-        toMinuteOfDay: minuteOfDay(time.to),
-      };
-    default:
-      return assertNever(time);
-  }
-}
-
 function compileScheduled(group: TGroup, inputs: IScreeningInputs): ICompiledScheduled | null {
   const { scheduled } = group.policy;
   if (scheduled === null) {
@@ -98,13 +73,11 @@ function compileScheduled(group: TGroup, inputs: IScreeningInputs): ICompiledSch
     zone: schedule?.zone.kind === 'fixed' ? schedule.zone.zone : null,
     hasSchedule: schedule !== null,
     windows: schedule === null ? [] : scheduleWindows(schedule, inputs.occurrencesOf(schedule)),
-    times: schedule === null ? [] : schedule.times.map(compileTime),
-    holidays: schedule?.holidays ?? null,
     calendars: scheduled.calendars.map(rule => ({
       mode: rule.mode,
       filter: rule.filter,
       source: rule.source,
-      bakedEvents: rule.source.kind === 'holidays-here' ? [] : inputs.eventsOf(rule),
+      bakedEvents: inputs.eventsOf(rule),
     })),
     places: scheduled.places,
   };
@@ -167,21 +140,12 @@ export function compileRuleset(
   book: GroupBook,
   { environment, inputs, compiledAt, whereTo, repeatPass }: IRulesetContext
 ): ICompiledRuleset {
-  const holidays = new Map(
-    [...inputs.holidaysByCountry].map(
-      ([country, dates]): [TCountryCode, readonly TFloatingMinute[]] => [
-        country,
-        dates.map(floatingDateStart),
-      ]
-    )
-  );
   return {
     schema: RULESET_SCHEMA,
     compiledAtEpochMs: compiledAt.epochMilliseconds,
     horizonEnd: floatingDateStart(inputs.horizonEnd.add({ days: 1 })),
     homeCountry: environment.home.country,
     groups: book.groups.map(group => compileGroup(group, environment, inputs)),
-    holidays,
     whereTo,
     repeatPass: compileRepeatPass(repeatPass),
   };

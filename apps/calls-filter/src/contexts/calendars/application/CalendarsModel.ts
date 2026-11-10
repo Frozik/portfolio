@@ -1,14 +1,11 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { action, computed, makeObservable, observableRef, runInAction } from 'mobx';
+import { computed, makeObservable, observableRef, runInAction } from 'mobx';
 import type { Temporal } from 'temporal-polyfill';
 
 import type { IDiagnosticsLog } from '../../diagnostics/domain/ports/diagnostics-log';
-import type { TCountryCode } from '../../phone/domain/dialing-region';
 import type { IClock } from '../../policy/domain/ports/clock';
 import type { ICalendarEvent } from '../domain/calendar-event';
 import type { TCalendarSource, TIcsId } from '../domain/calendar-source';
-import { sameCalendarSource } from '../domain/calendar-source';
-import type { THolidayMap } from '../domain/holiday-map';
 import type { IIcsSubscription } from '../domain/ics-subscription';
 import type { ICalendarStore } from '../domain/ports/calendar-store';
 import type { IDeviceCalendar, IDeviceCalendars } from '../domain/ports/device-calendars';
@@ -18,7 +15,7 @@ import type { CalendarInputsModel } from './CalendarInputsModel';
 const HOURS_PER_DAY = 24;
 /** A device calendar is read live at a call; the copy only covers a month in case it vanishes. */
 const DEVICE_COPY_DAYS = 30;
-/** iCal copies and holidays cover as far as the schedules do. */
+/** iCal copies cover as far as the schedules do. */
 const LONG_COPY_DAYS = 400;
 /** An iCal link is asked again at most this often. */
 const REFRESH_EVERY_MINUTES = 60;
@@ -44,15 +41,12 @@ interface ICalendarPorts {
 export class CalendarsModel {
   deviceCalendars: readonly IDeviceCalendar[] = [];
   subscriptions: readonly IIcsSubscription[] = [];
-  holidays: THolidayMap = new Map();
 
   constructor(private readonly ports: ICalendarPorts) {
     makeObservable(this, {
       deviceCalendars: observableRef,
       subscriptions: observableRef,
-      holidays: observableRef,
       byAccount: computed,
-      setHolidayCountry: action,
     });
   }
 
@@ -68,7 +62,6 @@ export class CalendarsModel {
     const settings = await this.ports.store.load();
     runInAction(() => {
       this.subscriptions = settings.subscriptions;
-      this.holidays = settings.holidays;
     });
   }
 
@@ -88,11 +81,7 @@ export class CalendarsModel {
     await this.copyEvents();
   }
 
-  async addSubscription(
-    label: string,
-    url: string,
-    holidaysOf: TCountryCode | null
-  ): Promise<TAddResult> {
+  async addSubscription(label: string, url: string): Promise<TAddResult> {
     const fetched = await this.ports.feed.fetch(url, null);
     if (!fetched.ok) {
       this.ports.diagnostics.log('warn', 'ics', 'add-failed', { url, reason: fetched.error.kind });
@@ -106,16 +95,12 @@ export class CalendarsModel {
       id: this.ports.newId() as TIcsId,
       label,
       url,
-      holidaysOf,
       body: fetched.value.body,
       etag: fetched.value.etag,
       refreshedAt: now,
       failedAt: null,
     };
     this.setSubscriptions([...this.subscriptions, subscription]);
-    if (holidaysOf !== null) {
-      this.setHolidayCountry({ kind: 'ics', id: subscription.id }, holidaysOf);
-    }
     await this.copyEvents();
     const upcoming = this.ports.feed
       .events(fetched.value.body, now, now.add({ hours: LONG_COPY_DAYS * HOURS_PER_DAY }))
@@ -127,18 +112,6 @@ export class CalendarsModel {
     this.setSubscriptions(this.subscriptions.filter(subscription => subscription.id !== id));
   }
 
-  setHolidayCountry(source: TCalendarSource, country: TCountryCode | null): void {
-    const next = new Map(
-      [...this.holidays].filter(([, mapped]) => !sameCalendarSource(mapped, source))
-    );
-    if (country !== null) {
-      next.set(country, source);
-    }
-    this.holidays = next;
-    void this.persist();
-    void this.copyEvents();
-  }
-
   sourceName(source: TCalendarSource): string | null {
     switch (source.kind) {
       case 'device':
@@ -147,8 +120,6 @@ export class CalendarsModel {
         return (
           this.subscriptions.find(subscription => subscription.id === source.id)?.label ?? null
         );
-      case 'holidays-here':
-        return null;
       default:
         return assertNever(source);
     }
@@ -213,29 +184,18 @@ export class CalendarsModel {
           this.subscriptions.find(subscription => subscription.id === source.id)?.body ?? null;
         return body === null ? [] : this.ports.feed.events(body, from, to);
       }
-      case 'holidays-here':
-        return [];
       default:
         return assertNever(source);
     }
   }
 
-  /** Copies the events the rules and the holidays need into the inputs the ruleset reads. */
+  /** Copies the events the rules need into the inputs the ruleset reads. */
   private async copyEvents(): Promise<void> {
     const from = this.ports.clock.now().subtract({ hours: HOURS_PER_DAY });
     for (const source of this.ports.sourcesInUse()) {
       const days = source.kind === 'device' ? DEVICE_COPY_DAYS : LONG_COPY_DAYS;
       this.ports.inputs.setEvents(source, await this.eventsOf(source, from, days));
     }
-    const holidays = new Map<TCountryCode, readonly Temporal.PlainDate[]>();
-    for (const [country, source] of this.holidays) {
-      const events = await this.eventsOf(source, from, LONG_COPY_DAYS);
-      holidays.set(
-        country,
-        events.filter(event => event.allDay).map(event => event.startDate)
-      );
-    }
-    this.ports.inputs.setHolidays(holidays);
   }
 
   private replace(subscription: IIcsSubscription): void {
@@ -254,6 +214,6 @@ export class CalendarsModel {
   }
 
   private async persist(): Promise<void> {
-    await this.ports.store.save({ subscriptions: this.subscriptions, holidays: this.holidays });
+    await this.ports.store.save({ subscriptions: this.subscriptions });
   }
 }

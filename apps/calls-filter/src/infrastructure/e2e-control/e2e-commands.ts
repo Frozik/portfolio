@@ -24,7 +24,6 @@ import { LIBPHONENUMBER_NUMBERING } from '../libphonenumber-numbering';
 import { nativeCallJournal } from '../native-call-journal';
 
 const EVENT_FILTER = {
-  busyOnly: false,
   skipDeclined: true,
   includeAllDay: false,
   minutesBefore: 0,
@@ -158,7 +157,6 @@ function described(app: CallsFilterApp, group: TGroup) {
             action: group.policy.scheduled.action,
             repeat: group.policy.scheduled.schedule?.repeat ?? null,
             zone: group.policy.scheduled.schedule?.zone ?? null,
-            holidays: group.policy.scheduled.schedule?.holidays ?? null,
             calendars: group.policy.scheduled.calendars.map(rule => rule.source.kind),
             places: group.policy.scheduled.places.map(place => ({
               name: place.name,

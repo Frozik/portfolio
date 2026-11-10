@@ -1,6 +1,5 @@
 package io.github.frozik.callsfilter.screening.adapters.android
 
-import android.content.Context
 import io.github.frozik.callsfilter.screening.adapters.proto.Decoded
 import io.github.frozik.callsfilter.screening.adapters.proto.RulesetDecoder
 import io.github.frozik.callsfilter.screening.adapters.proto.RulesetFailure
@@ -11,9 +10,13 @@ import java.io.IOException
 
 private const val RULESET_FILE = "ruleset.pb"
 
-/** The ruleset file the app writes and the service reads; replaced atomically, read again only when it changed. */
-class FileRulesetStore(context: Context) : RulesetSource {
-  private val file = File(context.filesDir, RULESET_FILE)
+/**
+ * The ruleset file the app writes and the service reads; replaced atomically, read again only
+ * when it changed. One of another schema is deleted: the app compiles the ruleset again from the
+ * group book at its next start, so there is nothing to migrate — until then every call passes.
+ */
+class FileRulesetStore(directory: File) : RulesetSource {
+  private val file = File(directory, RULESET_FILE)
   private var cached: Pair<Long, RulesetLoad>? = null
 
   @Synchronized
@@ -29,12 +32,14 @@ class FileRulesetStore(context: Context) : RulesetSource {
           is Decoded.Ok -> RulesetLoad.Loaded(decoded.ruleset)
 
           is Decoded.Failed ->
-            RulesetLoad.Failed(
-              when (val failure = decoded.failure) {
-                is RulesetFailure.Unreadable -> failure.reason
-                is RulesetFailure.UnknownSchema -> "schema ${failure.schema}"
-              },
-            )
+            when (val failure = decoded.failure) {
+              is RulesetFailure.Unreadable -> RulesetLoad.Failed(failure.reason)
+
+              is RulesetFailure.UnknownSchema -> {
+                file.delete()
+                RulesetLoad.Missing
+              }
+            }
         }
       } catch (failure: IOException) {
         RulesetLoad.Failed(failure.message ?: "unreadable file")

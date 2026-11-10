@@ -13,6 +13,7 @@ import { Wrap } from '../kit/Wrap';
 
 const HOUR_TERMS = [1, 4, 8] as const;
 const DAY_TERMS = [1, 7] as const;
+const REPEAT_WINDOWS = [2, 5, 10, 15] as const;
 
 /** «A repeat call rings»: off, for good, or for a term — one tap sets it. */
 export const RepeatSheet = observer(function RepeatSheet({
@@ -20,11 +21,14 @@ export const RepeatSheet = observer(function RepeatSheet({
   hint,
   onChange,
   onClose,
+  window,
 }: {
   readonly value: TRepeatPass;
   readonly hint: string;
   readonly onChange: (repeat: TRepeatPass) => void;
   readonly onClose: () => void;
+  /** A group's own: how many minutes after a turned-away call a second one counts as a repeat. */
+  readonly window?: { readonly minutes: number; readonly onChange: (minutes: number) => void };
 }) {
   const app = useApp();
   const texts = useTexts();
@@ -83,6 +87,22 @@ export const RepeatSheet = observer(function RepeatSheet({
           onPress={() => void chooseDate()}
         />
       </Wrap>
+      {window === undefined ? null : (
+        <>
+          <Hint text={texts.group.repeatWindow(window.minutes)} />
+          <Wrap>
+            {REPEAT_WINDOWS.map(minutes => (
+              <Chip
+                key={minutes}
+                testID={`repeat-window-${minutes}`}
+                label={String(minutes)}
+                selected={window.minutes === minutes}
+                onPress={() => window.onChange(minutes)}
+              />
+            ))}
+          </Wrap>
+        </>
+      )}
     </Sheet>
   );
 });

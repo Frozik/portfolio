@@ -53,6 +53,8 @@ internal fun ModuleDefinitionBuilder.serviceFunctions(screening: () -> Screening
     if (untilEpochMs == null) screening().pause.resume() else screening().pause.pause(untilEpochMs.toLong())
   }
 
+  Function("setRetentionDays") { days: Int -> screening().runtimeState.setRetentionDays(days) }
+
   Function("dismissWhereTo") { screening().whereToNotification.dismiss() }
 
   Function("setAtPlace") { placeId: String, inside: Boolean? -> screening().runtimeState.setAtPlace(placeId, inside) }

@@ -15,8 +15,10 @@ import type {
   TPlaceRadius,
 } from '../../contexts/policy/domain/place-rule';
 import { PLACE_RADII } from '../../contexts/policy/domain/place-rule';
+import { windowActionOf, withWindowAction } from '../../contexts/policy/domain/window-action';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
+import { WindowActionSwitch } from '../group/WindowActionSwitch';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
@@ -56,6 +58,9 @@ export const PlaceScreen = observer(function PlaceScreen() {
   const [mode, setMode] = useState<IPlaceRule['mode']>(existing?.mode ?? 'only-at');
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<readonly IFoundAddress[]>([]);
+  const [action, setAction] = useState(() =>
+    group === null ? 'pass' : windowActionOf(group.policy)
+  );
   if (group === null) {
     return null;
   }
@@ -85,7 +90,12 @@ export const PlaceScreen = observer(function PlaceScreen() {
       mode,
     };
     app.books.run((book, context) =>
-      changeGroup(book, group.id, { policy: withPlace(group.policy, rule) }, context.now)
+      changeGroup(
+        book,
+        group.id,
+        { policy: withWindowAction(withPlace(group.policy, rule), action) },
+        context.now
+      )
     );
     leave();
   };
@@ -120,6 +130,7 @@ export const PlaceScreen = observer(function PlaceScreen() {
         </>
       }
     >
+      <WindowActionSwitch value={action} onChange={setAction} />
       <TextField
         testID="place-name"
         label={texts.place.name}

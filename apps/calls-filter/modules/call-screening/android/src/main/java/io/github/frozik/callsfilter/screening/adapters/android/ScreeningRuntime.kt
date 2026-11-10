@@ -10,19 +10,17 @@ import io.github.frozik.callsfilter.screening.application.TemporaryNotices
 import io.github.frozik.callsfilter.screening.application.TemporaryNoticesAfter
 import io.github.frozik.callsfilter.screening.application.WhereToAsk
 
-private const val DEFAULT_RETENTION_DAYS = 90
-
 /** The module's composition root: every adapter is built here once per process, and nowhere else. */
 class ScreeningRuntime private constructor(context: Context) {
   private val application = context.applicationContext
   private val database = LocalDatabase.of(application)
-  val rulesets = FileRulesetStore(application)
+  val rulesets = FileRulesetStore(application.filesDir)
   val runtimeState = PreferencesRuntimeState(application)
   val pause = PauseControl(application, runtimeState)
   val pendingAsks = PreferencesPendingAsks(application) { System.currentTimeMillis() }
   val whereToNotification = WhereToNotification(application)
   val country = TelephonyNetworkCountry(application)
-  val journal = SqliteCallJournal(database) { DEFAULT_RETENTION_DAYS }
+  val journal = SqliteCallJournal(database) { runtimeState.retentionDays() }
   val diagnostics = SqliteDiagnostics(database) { System.currentTimeMillis() }
   val temporaryNotices = TemporaryNotices(rulesets, runtimeState, TemporaryNotification(application), SystemMomentClock)
   private val calendarEvents = DeviceCalendarEvents(application.contentResolver)

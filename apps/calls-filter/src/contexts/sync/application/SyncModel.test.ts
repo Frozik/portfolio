@@ -10,6 +10,7 @@ class FakeCloud implements ICloudCopy {
   book: GroupBook | null = null;
   revision = 0;
   unreadable = false;
+  newer = false;
   failure: TCloudFailure | null = null;
   /** Another phone writes right before this many of our writes land. */
   racesLeft = 0;
@@ -21,6 +22,9 @@ class FakeCloud implements ICloudCopy {
     }
     if (this.unreadable) {
       return { kind: 'unreadable' as const, rev: String(this.revision) as TCloudRev };
+    }
+    if (this.newer) {
+      return { kind: 'newer' as const };
     }
     return this.book === null
       ? { kind: 'absent' as const }
@@ -126,6 +130,16 @@ describe('keeping the group book in the cloud', () => {
     await mine.sync.load();
     await mine.sync.syncNow();
     expect(mine.sync.state.kind).toBe('unreadable');
+    expect(cloud.writes).toBe(0);
+  });
+
+  it('never writes over a cloud book a newer app wrote, and says the app needs updating', async () => {
+    const cloud = new FakeCloud();
+    cloud.newer = true;
+    const mine = phone(cloud, bookOf([custom('spam', [])]));
+    await mine.sync.load();
+    await mine.sync.syncNow();
+    expect(mine.sync.state.kind).toBe('newer');
     expect(cloud.writes).toBe(0);
   });
 

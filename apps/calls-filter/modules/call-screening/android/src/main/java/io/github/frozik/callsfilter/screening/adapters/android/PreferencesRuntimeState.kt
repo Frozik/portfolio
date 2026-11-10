@@ -7,6 +7,10 @@ private const val PREFERENCES = "calls-filter-runtime"
 private const val PAUSED_UNTIL = "paused-until"
 private const val RELEASED_TEMPORARIES = "used-first-pass"
 private const val PLACE_PREFIX = "at-place:"
+private const val RETENTION_DAYS = "retention-days"
+
+/** Until the app says otherwise: what the app's own default keeps too. */
+private const val DEFAULT_RETENTION_DAYS = 90
 
 /** The pause and the released temporary policies: facts of this phone only, owned by the service. */
 class PreferencesRuntimeState(context: Context) : RuntimeState {
@@ -23,6 +27,13 @@ class PreferencesRuntimeState(context: Context) : RuntimeState {
   override fun releaseTemporary(groupId: String, setAtEpochMs: Long) {
     val released = preferences.getStringSet(RELEASED_TEMPORARIES, emptySet()).orEmpty() + "$groupId@$setAtEpochMs"
     preferences.edit().putStringSet(RELEASED_TEMPORARIES, released).apply()
+  }
+
+  /** How many days the journal of screened calls is kept, as the app's setting says. */
+  fun retentionDays(): Int = preferences.getInt(RETENTION_DAYS, DEFAULT_RETENTION_DAYS)
+
+  fun setRetentionDays(days: Int) {
+    preferences.edit().putInt(RETENTION_DAYS, days).apply()
   }
 
   fun releasedTemporaries(): Set<String> = preferences.getStringSet(RELEASED_TEMPORARIES, emptySet()).orEmpty()

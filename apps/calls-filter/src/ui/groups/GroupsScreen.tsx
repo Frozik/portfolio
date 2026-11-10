@@ -1,9 +1,12 @@
 import { useRouter } from 'expo-router';
+import { Pause, Plus, Repeat, Trash2 } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TGroup } from '../../contexts/grouping/domain/group';
+import { deleteGroup } from '../../contexts/grouping/domain/group-book-edits';
+import { isRepeatPassOn } from '../../contexts/policy/domain/repeat-pass';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { momentText } from '../format';
@@ -11,11 +14,16 @@ import { groupName } from '../group-name';
 import { Button } from '../kit/Button';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
-import { GAP, RADIUS, TEXT_SIZE } from '../kit/metrics';
+import { IconButton } from '../kit/IconButton';
+import { IndicatorButton } from '../kit/IndicatorButton';
+import { GAP, RADIUS, SMALL_GAP, TEXT_SIZE } from '../kit/metrics';
+import { PinnedMark } from '../kit/PinnedMark';
 import { Row } from '../kit/Row';
 import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
-import { RepeatRow } from '../repeat/RepeatRow';
+import { SwipeAction } from '../kit/SwipeAction';
+import { repeatText } from '../repeat/repeat-text';
+import { RepeatSheet } from '../repeat/RepeatSheet';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
 import { statusText } from './group-status';
@@ -36,10 +44,13 @@ const GroupRow = observer(function GroupRow({
   const palette = usePalette();
   const conflicted = app.books.conflicts.some(conflict => conflict.groups.includes(group.id));
   const today = app.clock.localNow().toPlainDate();
-  return (
+  const row = (
     <Row
       testID={`group-${group.id}`}
       title={`${groupName(texts, group)}${conflicted ? ' ⚠' : ''}`}
+      titleTrailing={
+        group.kind === 'custom' ? undefined : <PinnedMark testID={`group-pinned-${group.id}`} />
+      }
       subtitle={statusText(texts, app.statusOf(group), app.clock.timeZone(), today)}
       leading={<Dot color={groupColor(group.color, scheme)} />}
       trailing={
@@ -51,6 +62,19 @@ const GroupRow = observer(function GroupRow({
       onLongPress={() => onLongPress(group)}
     />
   );
+  if (group.kind !== 'custom') {
+    return row;
+  }
+  return (
+    <SwipeAction
+      testID={`group-delete-${group.id}`}
+      icon={Trash2}
+      label={texts.group.deleteGroup}
+      onPress={() => app.books.run((book, context) => deleteGroup(book, group.id, context.now))}
+    >
+      {row}
+    </SwipeAction>
+  );
 });
 
 export const GroupsScreen = observer(function GroupsScreen() {
@@ -59,56 +83,60 @@ export const GroupsScreen = observer(function GroupsScreen() {
   const palette = usePalette();
   const router = useRouter();
   const [pausing, setPausing] = useState(false);
+  const [repeating, setRepeating] = useState(false);
   const [temporaryFor, setTemporaryFor] = useState<TGroup | null>(null);
-  const { device, books } = app;
+  const { device, books, clock } = app;
+  const today = clock.localNow().toPlainDate();
   const custom = books.book.groups.filter(group => group.kind === 'custom');
   const special = books.book.groups.filter(group => group.kind !== 'custom');
   const pausedUntil =
     device.isPaused && device.pausedUntil !== null
-      ? device.pausedUntil.toZonedDateTimeISO(app.clock.timeZone()).toPlainDateTime()
+      ? device.pausedUntil.toZonedDateTimeISO(clock.timeZone()).toPlainDateTime()
       : null;
   return (
-    <Screen testID="groups-screen" title={texts.groups.title}>
-      <View
-        testID="filter-status"
-        style={[
-          styles.status,
-          {
-            backgroundColor: pausedUntil === null ? palette.bgCard : palette.accentSoft,
-            borderColor: palette.lineSoft,
-          },
-        ]}
-      >
-        <Text style={[styles.statusText, { color: palette.fg }]}>
-          {pausedUntil === null
-            ? texts.groups.filterOn
-            : texts.groups.pausedUntil(
-                momentText(texts, pausedUntil, app.clock.localNow().toPlainDate())
-              )}
-        </Text>
-        {pausedUntil === null ? (
-          <Button
-            testID="pause-open"
-            variant="secondary"
-            label={texts.groups.pause}
-            onPress={() => setPausing(true)}
+    <Screen
+      testID="groups-screen"
+      title={texts.groups.title}
+      titleAction={
+        <View style={styles.titleActions}>
+          <IconButton
+            testID="group-create"
+            icon={Plus}
+            label={texts.groups.newGroup}
+            onPress={() => router.push('/group/new')}
           />
-        ) : (
-          <Button
-            testID="pause-resume"
-            label={texts.groups.resume}
-            onPress={() => device.resume()}
-          />
-        )}
-      </View>
-      <Section>
-        <RepeatRow
-          testID="filter-repeat"
-          value={device.preferences.repeatPass}
-          hint={texts.repeat.filterHint}
-          onChange={repeatPass => device.setRepeatPass(repeatPass)}
+          <View style={styles.indicators}>
+            <IndicatorButton
+              testID="filter-repeat"
+              icon={Repeat}
+              tone="accent"
+              filled={isRepeatPassOn(device.preferences.repeatPass, clock.now())}
+              label={`${texts.repeat.title}: ${repeatText(texts, device.preferences.repeatPass, clock.now(), clock.timeZone(), today)}`}
+              onPress={() => setRepeating(true)}
+            />
+            <IndicatorButton
+              testID={pausedUntil === null ? 'pause-open' : 'pause-resume'}
+              icon={Pause}
+              tone="danger"
+              filled={pausedUntil !== null}
+              label={
+                pausedUntil === null
+                  ? `${texts.groups.filterOn}. ${texts.groups.pause}`
+                  : texts.groups.resume
+              }
+              onPress={pausedUntil === null ? () => setPausing(true) : () => device.resume()}
+            />
+          </View>
+        </View>
+      }
+    >
+      {pausedUntil === null ? null : (
+        <Hint
+          testID="filter-paused-until"
+          tone="danger"
+          text={texts.groups.pausedUntil(momentText(texts, pausedUntil, today))}
         />
-      </Section>
+      )}
       {device.holdsRole ? null : (
         <View testID="role-missing" style={[styles.banner, { borderColor: palette.caution }]}>
           <Hint text={texts.groups.roleMissing} tone="caution" />
@@ -140,26 +168,22 @@ export const GroupsScreen = observer(function GroupsScreen() {
           <GroupRow key={group.id} group={group} onLongPress={setTemporaryFor} />
         ))}
       </Section>
-      <Button
-        testID="group-create"
-        label={`+ ${texts.groups.newGroup}`}
-        onPress={() => router.push('/group/new')}
-      />
       <PauseSheet visible={pausing} onClose={() => setPausing(false)} />
-      <TemporarySheet group={temporaryFor} onClose={() => setTemporaryFor(null)} />
+      {repeating ? (
+        <RepeatSheet
+          value={device.preferences.repeatPass}
+          hint={texts.repeat.filterHint}
+          onChange={repeatPass => device.setRepeatPass(repeatPass)}
+          onClose={() => setRepeating(false)}
+        />
+      ) : null}
+      <TemporarySheet group={temporaryFor} named onClose={() => setTemporaryFor(null)} />
     </Screen>
   );
 });
 
 const styles = StyleSheet.create({
-  status: {
-    borderRadius: RADIUS,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: GAP,
-  },
-  statusText: { flex: 1, fontSize: TEXT_SIZE.heading, fontWeight: '600' },
+  titleActions: { flexGrow: 1, flexShrink: 0, flexDirection: 'row', alignItems: 'center' },
+  indicators: { marginLeft: 'auto', flexDirection: 'row', gap: SMALL_GAP },
   banner: { borderRadius: RADIUS, borderWidth: 1, padding: 14, gap: GAP },
 });

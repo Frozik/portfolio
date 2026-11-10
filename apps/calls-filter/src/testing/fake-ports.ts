@@ -31,6 +31,8 @@ export interface IFakePhone {
   readonly saved: () => GroupBook | null;
   /** This phone's preferences as the app last saved them. */
   readonly preferences: () => IDevicePreferences;
+  /** How many days the screening service keeps its journal, as the app last told it. */
+  readonly retentionDays: () => number | null;
 }
 
 /**
@@ -60,6 +62,7 @@ export function fakePhone({
   let preferences: IDevicePreferences = DEFAULT_PREFERENCES;
   let syncMemory: ISyncMemory = { connection: null, base: null };
   let nextId = 0;
+  let retentionDays: number | null = null;
   const published: ICompiledRuleset[] = [];
   const diagnostics: IDiagnosticsEntry[] = [];
   const ports: IAppPorts = {
@@ -116,6 +119,9 @@ export function fakePhone({
       },
       pausedUntil: () => null,
       setPausedUntil: () => {},
+      setRetentionDays: days => {
+        retentionDays = days;
+      },
       releasedTemporaries: () => [],
       dismissWhereTo: () => {},
       networkCountry: () => NETHERLANDS,
@@ -171,5 +177,6 @@ export function fakePhone({
     diagnostics,
     saved: () => storedBook,
     preferences: () => preferences,
+    retentionDays: () => retentionDays,
   };
 }

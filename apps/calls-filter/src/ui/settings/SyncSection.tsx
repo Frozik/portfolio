@@ -28,6 +28,8 @@ function stateText(
       return texts.sync.state[state.failure];
     case 'unreadable':
       return texts.sync.state.unreadable;
+    case 'newer':
+      return texts.sync.state.newer;
     default:
       return assertNever(state);
   }

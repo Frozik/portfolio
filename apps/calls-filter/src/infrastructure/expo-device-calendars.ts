@@ -1,10 +1,8 @@
-import { Availability, EntityTypes, EventStatus, getCalendars, listEvents } from 'expo-calendar';
+import { EntityTypes, EventStatus, getCalendars, listEvents } from 'expo-calendar';
 import { Temporal } from 'temporal-polyfill';
 
 import type { ICalendarEvent } from '../contexts/calendars/domain/calendar-event';
 import type { IDeviceCalendars } from '../contexts/calendars/domain/ports/device-calendars';
-
-const HOLIDAY_OWNER = '#holiday@group.v.calendar.google.com';
 
 function legacyDate(instant: Temporal.Instant): Date {
   // oxlint-disable-next-line no-restricted-globals -- expo-calendar takes the event window only as Date
@@ -27,7 +25,6 @@ export function expoDeviceCalendars(zone: () => string): IDeviceCalendars {
         accountName: calendar.source.name,
         calendarName: calendar.title,
         color: calendar.color ?? null,
-        isHolidayCalendar: (calendar.ownerAccount ?? '').endsWith(HOLIDAY_OWNER),
       }));
     },
     async events(calendarId, from, to) {
@@ -47,7 +44,6 @@ export function expoDeviceCalendars(zone: () => string): IDeviceCalendars {
             endDate: event.allDay
               ? end.toZonedDateTimeISO('UTC').toPlainDate()
               : end.toZonedDateTimeISO(zone()).toPlainDate(),
-            busy: event.availability !== Availability.FREE,
             declined: false,
             title: event.title,
           };

@@ -30,12 +30,7 @@ export interface IDecisionContext {
 }
 
 function actionOf(group: TGroup, moment: IMoment, context: IDecisionContext): IActionNow {
-  return actionNow(
-    group,
-    moment,
-    groupWindows(group.policy, context.inputs, context.environment.networkCountry),
-    context.atPlace
-  );
+  return actionNow(group, moment, groupWindows(group.policy, context.inputs), context.atPlace);
 }
 
 /** Fail-open for a conflict still open: the most lenient group, the older one on a tie. */

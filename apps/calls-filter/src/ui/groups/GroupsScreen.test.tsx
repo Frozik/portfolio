@@ -3,7 +3,13 @@ import { fireEvent, screen } from 'expo-router/testing-library';
 import GroupRoute from '../../app/group/[id]';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
-import { bookOf, custom, special } from '../../contexts/grouping/testing/group-book-fixtures';
+import {
+  bookOf,
+  custom,
+  special,
+  MY_CONTACTS_ID,
+  STRANGERS_ID,
+} from '../../contexts/grouping/testing/group-book-fixtures';
 import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
@@ -16,6 +22,32 @@ function GroupsRoute() {
 const SPAM = custom('spam', [special('foreign')], { policy: ALWAYS_BLOCK });
 
 describe('the groups and their rules', () => {
+  it('deletes a group with the button a swipe uncovers on its row', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp({ index: GroupsRoute }, { phone });
+
+    await fireEvent.press(await screen.findByTestId('group-delete-spam'));
+
+    expect(screen.queryByTestId('group-spam')).not.toBeOnTheScreen();
+    const saved = phone.saved();
+    expect(saved === null ? null : findGroup(saved, 'spam' as TGroupId)).toBeNull();
+  });
+
+  it('uncovers no deletion on a group the app keeps itself', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    expect(await screen.findByTestId(`group-${STRANGERS_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`group-delete-${STRANGERS_ID}`)).not.toBeOnTheScreen();
+  });
+
+  it('marks the groups the app keeps itself as pinned, and only them', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    expect(await screen.findByTestId(`group-pinned-${MY_CONTACTS_ID}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`group-pinned-${STRANGERS_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-pinned-spam')).not.toBeOnTheScreen();
+  });
+
   it('turns «a repeat call rings» on for the whole filter', async () => {
     const phone = fakePhone({ book: bookOf([SPAM]) });
     await renderApp({ index: GroupsRoute }, { phone });
@@ -23,6 +55,57 @@ describe('the groups and their rules', () => {
     await fireEvent.press(await screen.findByTestId('repeat-always'));
     expect(screen.queryByTestId('repeat-sheet')).toBeNull();
     expect(phone.preferences().repeatPass).toEqual({ kind: 'always' });
+    expect(screen.getByTestId('filter-repeat')).toBeSelected();
+  });
+
+  it('shows «a repeat call rings» off as an empty indicator', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    expect(await screen.findByTestId('filter-repeat')).not.toBeSelected();
+  });
+
+  it('pauses the whole filter from the button by the title, red while paused, and resumes it from there', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    expect(await screen.findByTestId('pause-open')).not.toBeSelected();
+    await fireEvent.press(screen.getByTestId('pause-open'));
+    await fireEvent.press(await screen.findByTestId('pause-1h'));
+
+    expect(screen.getByTestId('filter-paused-until')).toBeOnTheScreen();
+    expect(screen.getByTestId('pause-resume')).toBeSelected();
+    await fireEvent.press(screen.getByTestId('pause-resume'));
+    expect(screen.getByTestId('pause-open')).not.toBeSelected();
+    expect(screen.queryByTestId('filter-paused-until')).not.toBeOnTheScreen();
+  });
+
+  it('offers to pause for 1, 2, 4 or 8 hours, a day, a week, or until tomorrow', async () => {
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM]) }) });
+
+    await fireEvent.press(await screen.findByTestId('pause-open'));
+
+    const terms = screen
+      .getAllByTestId(/^pause-(\d+h|day|week|tomorrow|30m|evening)$/)
+      .map(term => term.props.testID as string);
+    expect(terms).toEqual([
+      'pause-1h',
+      'pause-2h',
+      'pause-4h',
+      'pause-8h',
+      'pause-day',
+      'pause-week',
+      'pause-tomorrow',
+    ]);
+  });
+
+  it('opens a new group from the plus by the title', async () => {
+    const rendered = await renderApp(
+      { index: GroupsRoute, 'group/new': () => null },
+      { phone: fakePhone({ book: bookOf([SPAM]) }) }
+    );
+
+    await fireEvent.press(await screen.findByTestId('group-create'));
+
+    expect(rendered.getPathname()).toBe('/group/new');
   });
 
   it('shows the status of a group acting only outside holidays, whose action never changes', async () => {
@@ -35,10 +118,14 @@ describe('the groups and their rules', () => {
           schedule: null,
           calendars: [
             {
-              source: { kind: 'holidays-here' },
+              source: {
+                kind: 'device',
+                accountType: 'com.google',
+                accountName: 'me@example.com',
+                calendarName: 'Holidays',
+              },
               mode: 'except-events',
               filter: {
-                busyOnly: false,
                 skipDeclined: true,
                 includeAllDay: true,
                 minutesBefore: 0,

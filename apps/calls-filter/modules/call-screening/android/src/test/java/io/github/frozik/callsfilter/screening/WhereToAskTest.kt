@@ -19,7 +19,7 @@ import org.junit.Test
 
 private val CHOICES = listOf(GroupChoice("spam", "Spam"), GroupChoice("delivery", "Delivery"))
 
-private fun ruleset(whereTo: List<GroupChoice> = CHOICES) = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList(), emptyMap(), whereTo)
+private fun ruleset(whereTo: List<GroupChoice> = CHOICES) = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList(), whereTo)
 
 private fun decision(kind: GroupKind, verdict: Verdict) = Decision(
   Group(kind.name, kind, emptyList(), emptyList(), false, Action.PASS, null, 5, null, 0L, ""),

@@ -16,7 +16,7 @@ import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { moveEntry } from '../calls/move-caller';
 import { ColorSheet } from '../group/ColorSheet';
-import { BackButton } from '../kit/BackButton';
+import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
@@ -68,7 +68,11 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
     router.replace(`/group/${id}`);
   };
   return (
-    <Screen testID="new-group-screen" title={texts.newGroup.title} header={<BackButton />}>
+    <Screen
+      testID="new-group-screen"
+      titleLeading={<BackArrow testID="screen-back" />}
+      title={texts.newGroup.title}
+    >
       <TextField
         testID="new-group-name"
         label={texts.newGroup.name}

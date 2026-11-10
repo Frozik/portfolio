@@ -8,7 +8,6 @@ import { REPEAT_OFF } from './repeat-pass';
 import type { ISchedule } from './schedule';
 
 export interface IEventFilter {
-  readonly busyOnly: boolean;
   readonly skipDeclined: boolean;
   readonly includeAllDay: boolean;
   readonly minutesBefore: number;

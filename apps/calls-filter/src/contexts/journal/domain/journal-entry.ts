@@ -33,5 +33,10 @@ export interface IJournalEntry {
    * keeps it. Shown, never matched: the service decides before the dialer has looked it up.
    */
   readonly dialerName: string | null;
+  /**
+   * Whether a call that rang was picked up, as the phone's history says once the call is over;
+   * null while it has not said, and for a call that never rang.
+   */
+  readonly answered: boolean | null;
   readonly outcome: TJournalOutcome;
 }

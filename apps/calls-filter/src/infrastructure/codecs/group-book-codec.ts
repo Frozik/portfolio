@@ -20,10 +20,9 @@ import type { TPlaceId } from '../../contexts/policy/domain/place-rule';
 import { isPlaceRadius } from '../../contexts/policy/domain/place-rule';
 import type { IPolicy, ITemporaryPolicy } from '../../contexts/policy/domain/policy';
 import type { ISchedule, TWeekday } from '../../contexts/policy/domain/schedule';
+import { BOOK_HISTORY } from './group-book-history';
 import { repeatPassCodec } from './repeat-pass-codec';
-
-/** The stored document's version: a newer one is refused rather than half-read. */
-const DOCUMENT_SCHEMA = 1;
+import { openDocument, sealDocument } from './versioned-document';
 
 const instant = z.string().transform(text => Temporal.Instant.from(text));
 const plainDate = z.string().transform(text => Temporal.PlainDate.from(text));
@@ -95,7 +94,6 @@ const schedule = z.object({
     })
     .nullable(),
   exceptDates: z.array(plainDate),
-  holidays: z.enum(['also-on-holidays', 'not-on-holidays']).nullable(),
 });
 
 const calendarSource = z.discriminatedUnion('kind', [
@@ -106,6 +104,7 @@ const calendarSource = z.discriminatedUnion('kind', [
     calendarName: z.string(),
   }),
   z.object({ kind: z.literal('ics'), id: z.string() }),
+  // Read only to drop: an older app offered the holidays of the phone's country as a calendar.
   z.object({ kind: z.literal('holidays-here') }),
 ]);
 
@@ -134,7 +133,6 @@ const policy = z.object({
           source: calendarSource,
           mode: z.enum(['except-events', 'only-during-events']),
           filter: z.object({
-            busyOnly: z.boolean(),
             skipDeclined: z.boolean(),
             includeAllDay: z.boolean(),
             minutesBefore: z.number().int().min(0),
@@ -193,7 +191,7 @@ const group = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('strangers'), ...groupCore }),
 ]);
 
-const document = z.object({ schema: z.literal(DOCUMENT_SCHEMA), groups: z.array(group) });
+const bookData = z.object({ groups: z.array(group) });
 
 type TStoredMember = z.infer<typeof member>;
 type TEncodedMember = z.input<typeof member>;
@@ -238,8 +236,17 @@ function membersOf(stored: readonly TStoredMember[]): readonly TMember[] {
   });
 }
 
-function sourceOf(stored: z.infer<typeof calendarSource>): TCalendarSource {
-  return stored.kind === 'ics' ? { kind: 'ics', id: stored.id as TIcsId } : stored;
+function sourceOf(stored: z.infer<typeof calendarSource>): TCalendarSource | null {
+  switch (stored.kind) {
+    case 'ics':
+      return { kind: 'ics', id: stored.id as TIcsId };
+    case 'device':
+      return stored;
+    case 'holidays-here':
+      return null;
+    default:
+      return assertNever(stored);
+  }
 }
 
 function policyOf(stored: z.infer<typeof policy>): IPolicy {
@@ -251,10 +258,10 @@ function policyOf(stored: z.infer<typeof policy>): IPolicy {
         : {
             ...stored.scheduled,
             schedule: stored.scheduled.schedule as ISchedule | null,
-            calendars: stored.scheduled.calendars.map(rule => ({
-              ...rule,
-              source: sourceOf(rule.source),
-            })),
+            calendars: stored.scheduled.calendars.flatMap(rule => {
+              const source = sourceOf(rule.source);
+              return source === null ? [] : [{ ...rule, source }];
+            }),
           },
   };
 }
@@ -290,23 +297,42 @@ function groupOf(stored: z.infer<typeof group>): TGroup {
 
 export type TDecodeFailure =
   | { readonly kind: 'not-json' }
-  | { readonly kind: 'invalid'; readonly issues: string };
+  | { readonly kind: 'invalid'; readonly issues: string }
+  | { readonly kind: 'no-migration' }
+  | { readonly kind: 'migration-failed' }
+  /** Written by a newer app: left as it is. */
+  | { readonly kind: 'newer'; readonly version: number };
 
-export function decodeGroupBook(text: string): TResult<GroupBook, TDecodeFailure> {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return err({ kind: 'not-json' });
+export interface IDecodedBook {
+  readonly book: GroupBook;
+  /** The version the text was written at when it was older than this app's: write it back. */
+  readonly migratedFrom: number | null;
+}
+
+export function decodeGroupBook(text: string): TResult<IDecodedBook, TDecodeFailure> {
+  const opened = openDocument(text, BOOK_HISTORY);
+  switch (opened.kind) {
+    case 'newer':
+      return err({ kind: 'newer', version: opened.version });
+    case 'unreadable':
+      return err({ kind: opened.reason });
+    case 'current':
+    case 'migrated': {
+      const parsed = bookData.safeParse(opened.data);
+      if (!parsed.success) {
+        return err({
+          kind: 'invalid',
+          issues: parsed.error.issues.map(issue => issue.path.join('.')).join(', '),
+        });
+      }
+      return ok({
+        book: groupBook(parsed.data.groups.map(groupOf)),
+        migratedFrom: opened.kind === 'migrated' ? opened.from : null,
+      });
+    }
+    default:
+      return assertNever(opened);
   }
-  const parsed = document.safeParse(raw);
-  if (!parsed.success) {
-    return err({
-      kind: 'invalid',
-      issues: parsed.error.issues.map(issue => issue.path.join('.')).join(', '),
-    });
-  }
-  return ok(groupBook(parsed.data.groups.map(groupOf)));
 }
 
 function encodeMember(item: TMember): TEncodedMember {
@@ -339,9 +365,9 @@ function encodeMember(item: TMember): TEncodedMember {
 
 /** Temporal values become their ISO strings; everything else is already plain data. */
 export function encodeGroupBook(book: GroupBook): string {
-  return JSON.stringify(
+  return sealDocument(
+    BOOK_HISTORY,
     {
-      schema: DOCUMENT_SCHEMA,
       groups: book.groups.map(item => ({
         ...item,
         ...(item.kind === 'strangers' ? {} : { exclude: item.exclude.map(encodeMember) }),

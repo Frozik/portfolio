@@ -20,6 +20,7 @@ export const NATIVE_SCREENING_RUNTIME: IScreeningRuntime = {
     return until === null ? null : Temporal.Instant.fromEpochMilliseconds(until);
   },
   setPausedUntil: until => CALL_SCREENING.setPausedUntil(until?.epochMilliseconds ?? null),
+  setRetentionDays: days => CALL_SCREENING.setRetentionDays(days),
   releasedTemporaries: () => CALL_SCREENING.releasedTemporaries(),
   dismissWhereTo: () => CALL_SCREENING.dismissWhereTo(),
   networkCountry: () => CALL_SCREENING.networkCountry() as TCountryCode | null,

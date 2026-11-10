@@ -1,13 +1,11 @@
 import { observer } from 'mobx-react-lite';
 
 import type { TGroup } from '../../contexts/grouping/domain/group';
-import { useTexts } from '../../texts/use-texts';
-import { Chip } from '../kit/Chip';
 import { Sheet } from '../kit/Sheet';
-import { Wrap } from '../kit/Wrap';
-import { PolicyActions } from './PolicyActions';
+import { PolicySwitches } from './PolicySwitches';
+import { SettingIcons } from './SettingIcons';
 
-/** What a group does, changed from the status under its name: for good, or for a while. */
+/** What a group does, changed from the status icon on its name's line: for good, or for a while. */
 export const PolicySheet = observer(function PolicySheet({
   group,
   onClose,
@@ -17,17 +15,10 @@ export const PolicySheet = observer(function PolicySheet({
   readonly onClose: () => void;
   readonly onForAWhile: () => void;
 }) {
-  const texts = useTexts();
   return (
-    <Sheet visible title={texts.group.whatItDoes} onClose={onClose} testID="policy-sheet">
-      <PolicyActions group={group} onLeave={onClose} />
-      <Wrap>
-        <Chip
-          testID="policy-for-a-while"
-          label={`${texts.temporary.what}…`}
-          onPress={onForAWhile}
-        />
-      </Wrap>
+    <Sheet visible onClose={onClose} testID="policy-sheet">
+      <PolicySwitches group={group} />
+      <SettingIcons group={group} onLeave={onClose} onForAWhile={onForAWhile} />
     </Sheet>
   );
 });

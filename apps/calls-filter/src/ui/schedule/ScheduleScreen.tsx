@@ -11,11 +11,13 @@ import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { ScheduleEditor, withSchedule } from '../../contexts/policy/application/ScheduleEditor';
 import { plainDateTimeOf } from '../../contexts/policy/domain/floating-time';
 import type { TWeekday } from '../../contexts/policy/domain/schedule';
+import { windowActionOf, withWindowAction } from '../../contexts/policy/domain/window-action';
 import { scheduleText } from '../../texts/policy-phrase';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { useClockWords } from '../clock-words';
 import { momentText } from '../format';
+import { WindowActionSwitch } from '../group/WindowActionSwitch';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
@@ -31,12 +33,11 @@ import { useLeave } from '../kit/use-leave';
 import { usePalette } from '../theme/AppTheme';
 import { CustomRepeatSheet } from './CustomRepeatSheet';
 import { gmtOffset } from './gmt-offset';
-import { HolidaysSheet, holidaysLabel } from './HolidaysSheet';
 import { presetLabel } from './repeat-label';
 import { RepeatMenuSheet } from './RepeatMenuSheet';
 import { ZoneSheet } from './ZoneSheet';
 
-type TOpenSheet = 'repeat' | 'custom' | 'zone' | 'holidays' | null;
+type TOpenSheet = 'repeat' | 'custom' | 'zone' | null;
 
 const TimeRows = observer(function TimeRows({ editor }: { readonly editor: ScheduleEditor }) {
   const texts = useTexts();
@@ -84,7 +85,7 @@ const TimeRows = observer(function TimeRows({ editor }: { readonly editor: Sched
   );
 });
 
-/** A group's schedule, laid out like a Google Calendar event: times, start, repeat, zone, holidays. */
+/** A group's schedule, laid out like a Google Calendar event: times, start, repeat, zone. */
 export const ScheduleScreen = observer(function ScheduleScreen() {
   const app = useApp();
   const texts = useTexts();
@@ -103,6 +104,9 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
       )
   );
   const [sheet, setSheet] = useState<TOpenSheet>(null);
+  const [action, setAction] = useState(() =>
+    group === null ? 'pass' : windowActionOf(group.policy)
+  );
   if (group === null) {
     return null;
   }
@@ -111,7 +115,12 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
       changeGroup(
         book,
         group.id,
-        { policy: withSchedule(group.policy, remove ? null : editor.schedule) },
+        {
+          policy: withWindowAction(
+            withSchedule(group.policy, remove ? null : editor.schedule),
+            action
+          ),
+        },
         context.now
       )
     );
@@ -149,6 +158,7 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
         </>
       }
     >
+      <WindowActionSwitch value={action} onChange={setAction} />
       <Section>
         <ToggleRow
           testID="schedule-all-day"
@@ -198,12 +208,6 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
           subtitle={zoneLabel}
           onPress={() => setSheet('zone')}
         />
-        <Row
-          testID="schedule-holidays"
-          title={texts.schedule.holidays}
-          subtitle={holidaysLabel(texts, editor.holidays)}
-          onPress={() => setSheet('holidays')}
-        />
       </Section>
       <Hint testID="schedule-phrase" text={scheduleText(texts, editor.schedule, clockWords)} />
       <Hint
@@ -225,9 +229,6 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
         <CustomRepeatSheet editor={editor} onClose={() => setSheet(null)} />
       ) : null}
       {sheet === 'zone' ? <ZoneSheet editor={editor} onClose={() => setSheet(null)} /> : null}
-      {sheet === 'holidays' ? (
-        <HolidaysSheet editor={editor} onClose={() => setSheet(null)} />
-      ) : null}
     </Screen>
   );
 });

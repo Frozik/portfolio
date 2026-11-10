@@ -10,7 +10,8 @@ function entry(
   number: string,
   at: string,
   outcome: IJournalEntry['outcome'],
-  dialerName: string | null = null
+  dialerName: string | null = null,
+  answered: boolean | null = null
 ): IJournalEntry {
   return {
     id: id as TJournalEntryId,
@@ -18,6 +19,7 @@ function entry(
     rawNumber: `+${number}`,
     caller: stranger(number),
     dialerName,
+    answered,
     outcome,
   };
 }
@@ -73,5 +75,27 @@ describe('the journal with the phone history', () => {
     expect(merged.map(item => [item.id, item.dialerName])).toEqual([
       ['screened', 'Bakkerij de Graaf'],
     ]);
+  });
+
+  it('tells of a screened call that rang whether it was answered, which only the phone’s history knows', () => {
+    const merged = mergeJournal(
+      [
+        entry('screened', '31201234567', '2026-11-08T10:00:00Z', {
+          ...SCREENED,
+          verdict: 'passed',
+        }),
+      ],
+      [
+        entry(
+          'history',
+          '31201234567',
+          '2026-11-08T10:00:40Z',
+          { kind: 'history', type: 'missed' },
+          null,
+          false
+        ),
+      ]
+    );
+    expect(merged.map(item => [item.id, item.answered])).toEqual([['screened', false]]);
   });
 });

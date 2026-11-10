@@ -53,6 +53,7 @@ export function nativeCallJournal(numbering: IPhoneNumbering): ICallJournal {
                   },
           },
           dialerName: null,
+          answered: null,
           outcome: {
             kind: 'screened',
             verdict: verdictOf(record.verdict),

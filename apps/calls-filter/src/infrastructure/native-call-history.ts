@@ -44,6 +44,7 @@ export function nativeCallHistory(
                   },
           },
           dialerName: call.contactId === null ? call.cachedName : null,
+          answered: call.kind === 'incoming' ? true : call.kind === 'missed' ? false : null,
           outcome: { kind: 'history', type: call.kind },
         };
       });

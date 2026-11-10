@@ -19,19 +19,13 @@ function instantOf(time: ICAL.Time): Temporal.Instant {
   return Temporal.Instant.fromEpochMilliseconds(time.toUnixTime() * SECONDS_TO_MILLISECONDS);
 }
 
-function eventOf(
-  event: ICAL.Event,
-  start: ICAL.Time,
-  end: ICAL.Time,
-  busy: boolean
-): ICalendarEvent {
+function eventOf(event: ICAL.Event, start: ICAL.Time, end: ICAL.Time): ICalendarEvent {
   return {
     start: instantOf(start),
     end: instantOf(end),
     allDay: start.isDate,
     startDate: dateOf(start),
     endDate: dateOf(end),
-    busy,
     declined: false,
     title: event.summary ?? '',
   };
@@ -81,11 +75,10 @@ export const ICS_HTTP_FEED: IIcsFeed = {
     const fromSeconds = from.epochMilliseconds / SECONDS_TO_MILLISECONDS;
     const toSeconds = to.epochMilliseconds / SECONDS_TO_MILLISECONDS;
     return [...byUid.values()].flatMap(event => {
-      const busy = event.component.getFirstPropertyValue('transp') !== 'TRANSPARENT';
       if (!event.isRecurring()) {
         const inside =
           event.endDate.toUnixTime() > fromSeconds && event.startDate.toUnixTime() < toSeconds;
-        return inside ? [eventOf(event, event.startDate, event.endDate, busy)] : [];
+        return inside ? [eventOf(event, event.startDate, event.endDate)] : [];
       }
       const occurrences: ICalendarEvent[] = [];
       const iterator = event.iterator();
@@ -96,7 +89,7 @@ export const ICS_HTTP_FEED: IIcsFeed = {
         }
         const details = event.getOccurrenceDetails(next);
         if (details.endDate.toUnixTime() > fromSeconds) {
-          occurrences.push(eventOf(details.item, details.startDate, details.endDate, busy));
+          occurrences.push(eventOf(details.item, details.startDate, details.endDate));
         }
       }
       return occurrences;

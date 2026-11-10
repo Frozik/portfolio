@@ -194,7 +194,6 @@ export const MembersPanel = observer(function MembersPanel({
           <ToggleRow
             testID="exclude-my-contacts"
             title={texts.group.excludeMyContacts}
-            subtitle={texts.group.excludeMyContactsHint}
             value={group.excludeMyContacts}
             onChange={excludeMyContacts =>
               app.books.run((book, context) =>

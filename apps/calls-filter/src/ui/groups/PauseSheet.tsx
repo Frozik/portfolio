@@ -7,7 +7,9 @@ import { Chip } from '../kit/Chip';
 import { Sheet } from '../kit/Sheet';
 import { Wrap } from '../kit/Wrap';
 
-const EVENING_HOUR = 20;
+const PAUSE_HOURS = [1, 2, 4, 8] as const;
+const HOURS_PER_DAY = 24;
+const DAYS_PER_WEEK = 7;
 
 /** The whole filter off for a while: one tap on a term starts it. */
 export const PauseSheet = observer(function PauseSheet({
@@ -25,10 +27,6 @@ export const PauseSheet = observer(function PauseSheet({
     onClose();
   };
   const today = clock.localNow();
-  const evening = today.with({ hour: EVENING_HOUR, minute: 0, second: 0 });
-  const eveningInstant = (evening.hour > today.hour ? evening : evening.add({ days: 1 }))
-    .toZonedDateTime(clock.timeZone())
-    .toInstant();
   const tomorrow = today
     .toPlainDate()
     .add({ days: 1 })
@@ -37,25 +35,23 @@ export const PauseSheet = observer(function PauseSheet({
   return (
     <Sheet visible={visible} title={texts.pause.title} onClose={onClose} testID="pause-sheet">
       <Wrap>
+        {PAUSE_HOURS.map(hours => (
+          <Chip
+            key={hours}
+            testID={`pause-${hours}h`}
+            label={texts.pause.hours(hours)}
+            onPress={() => pauseUntil(clock.now().add({ hours }))}
+          />
+        ))}
         <Chip
-          testID="pause-30m"
-          label={texts.pause.minutes(30)}
-          onPress={() => pauseUntil(clock.now().add({ minutes: 30 }))}
+          testID="pause-day"
+          label={texts.pause.days(1)}
+          onPress={() => pauseUntil(clock.now().add({ hours: HOURS_PER_DAY }))}
         />
         <Chip
-          testID="pause-1h"
-          label={texts.pause.hours(1)}
-          onPress={() => pauseUntil(clock.now().add({ hours: 1 }))}
-        />
-        <Chip
-          testID="pause-2h"
-          label={texts.pause.hours(2)}
-          onPress={() => pauseUntil(clock.now().add({ hours: 2 }))}
-        />
-        <Chip
-          testID="pause-evening"
-          label={texts.pause.untilEvening}
-          onPress={() => pauseUntil(eveningInstant)}
+          testID="pause-week"
+          label={texts.pause.weeks(1)}
+          onPress={() => pauseUntil(clock.now().add({ hours: HOURS_PER_DAY * DAYS_PER_WEEK }))}
         />
         <Chip
           testID="pause-tomorrow"

@@ -40,21 +40,15 @@ data class Window(val from: Long, val to: Long) {
   fun contains(minute: Long): Boolean = minute >= from && minute < to
 }
 
-data class TimeOfDay(val allDay: Boolean, val fromMinuteOfDay: Int, val toMinuteOfDay: Int)
-
-enum class HolidayMode { NONE, ALSO_ON_HOLIDAYS, NOT_ON_HOLIDAYS }
-
 enum class CalendarMode { EXCEPT_EVENTS, ONLY_DURING_EVENTS }
 
 sealed interface CalendarSource {
   data class Device(val accountType: String, val accountName: String, val calendarName: String) : CalendarSource
 
   data class Ics(val id: String) : CalendarSource
-
-  data object HolidaysHere : CalendarSource
 }
 
-data class EventFilter(val busyOnly: Boolean, val skipDeclined: Boolean, val includeAllDay: Boolean, val minutesBefore: Int, val minutesAfter: Int)
+data class EventFilter(val skipDeclined: Boolean, val includeAllDay: Boolean, val minutesBefore: Int, val minutesAfter: Int)
 
 data class CalendarRule(val mode: CalendarMode, val filter: EventFilter, val source: CalendarSource, val bakedEvents: List<Window>)
 
@@ -62,10 +56,8 @@ data class Scheduled(
   val action: Action,
   val hasSchedule: Boolean,
   val windows: List<Window>,
-  val times: List<TimeOfDay>,
-  val holidays: HolidayMode,
   val calendars: List<CalendarRule>,
-  /** The IANA zone whose clock windows, times and holidays are on; `null` for the phone's own. */
+  /** The IANA zone whose clock the windows are on; `null` for the phone's own. */
   val zone: String? = null,
   val places: List<PlaceRule> = emptyList(),
 )
@@ -105,7 +97,6 @@ data class Ruleset(
   val horizonEndMinute: Long,
   val homeCountry: String,
   val groups: List<Group>,
-  val holidayDayStarts: Map<String, List<Long>>,
   /** The groups the shade offers after a stranger's call rang through, most used first. */
   val whereTo: List<GroupChoice> = emptyList(),
   /** The filter-wide «a repeat rings», over every group's own. */

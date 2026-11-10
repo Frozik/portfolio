@@ -7,6 +7,12 @@ import android.database.sqlite.SQLiteOpenHelper
 private const val DATABASE_NAME = "calls-filter-service.db"
 private const val DATABASE_VERSION = 1
 
+/**
+ * How the schema grew: each step takes the database one version up, from the version it is
+ * keyed by. A change of schema bumps `DATABASE_VERSION` and adds its step here.
+ */
+private val MIGRATIONS: Map<Int, (SQLiteDatabase) -> Unit> = emptyMap()
+
 /** The service's own database: the call log and the diagnostics, both written only here. */
 class LocalDatabase private constructor(context: Context) : SQLiteOpenHelper(context.applicationContext, DATABASE_NAME, null, DATABASE_VERSION) {
   override fun onCreate(database: SQLiteDatabase) {
@@ -43,7 +49,24 @@ class LocalDatabase private constructor(context: Context) : SQLiteOpenHelper(con
     )
   }
 
-  override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+  override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    val plan = migrationPlan(oldVersion, newVersion, MIGRATIONS)
+    if (plan == null) {
+      recreate(database)
+    } else {
+      plan.forEach { step -> step(database) }
+    }
+  }
+
+  /** An older app over a newer database: Android would refuse to open it, the service would stop screening. */
+  override fun onDowngrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) = recreate(database)
+
+  /** The call log and the diagnostics are logs, not the user's data: starting afresh loses no setting. */
+  private fun recreate(database: SQLiteDatabase) {
+    database.execSQL("DROP TABLE IF EXISTS calls")
+    database.execSQL("DROP TABLE IF EXISTS diagnostics")
+    onCreate(database)
+  }
 
   companion object {
     @Volatile private var instance: LocalDatabase? = null

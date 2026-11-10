@@ -23,7 +23,7 @@ private const val TEXT = "In a meeting, will call back"
 private fun record(verdict: Verdict = Verdict.REJECTED, contact: String? = "lookup-1", epochMs: Long = NOW) =
   CallRecord(epochMs, "+31612345678", "31612345678", null, "Mum", contact, "work", verdict.name, "SCHEDULED", emptyList())
 
-private val RULESET = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList(), emptyMap())
+private val RULESET = Ruleset(1, 0L, Long.MAX_VALUE, "NL", emptyList())
 
 private fun decided(record: CallRecord, text: String) = Decision(
   Group("work", GroupKind.CUSTOM, emptyList(), emptyList(), false, Action.BLOCK, null, 5, null, 0L, text),

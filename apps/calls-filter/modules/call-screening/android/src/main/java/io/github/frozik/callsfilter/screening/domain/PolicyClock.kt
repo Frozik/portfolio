@@ -5,7 +5,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 
-private const val MINUTES_PER_DAY = 1440L
 private const val SECONDS_PER_MINUTE = 60L
 private const val MILLISECONDS_PER_MINUTE = 60_000.0
 
@@ -43,43 +42,19 @@ private fun scheduleMinute(scheduled: Scheduled, moment: Moment): Long {
   return wallClock.toEpochSecond(ZoneOffset.UTC) / SECONDS_PER_MINUTE
 }
 
-private fun holidayStarts(ruleset: Ruleset, country: String?): List<Long> = if (country == null) emptyList() else ruleset.holidayDayStarts[country].orEmpty()
-
-private fun timeWindow(dayStart: Long, time: TimeOfDay): Window {
-  if (time.allDay) {
-    return Window(dayStart, dayStart + MINUTES_PER_DAY)
-  }
-  val from = dayStart + time.fromMinuteOfDay
-  val endsNextDay = time.toMinuteOfDay <= time.fromMinuteOfDay
-  val to = dayStart + (if (endsNextDay) MINUTES_PER_DAY else 0L) + time.toMinuteOfDay
-  return Window(from, to)
-}
-
-private fun inSchedule(scheduled: Scheduled, minute: Long, holidays: List<Long>, ruleset: Ruleset): Boolean {
+private fun inSchedule(scheduled: Scheduled, minute: Long, ruleset: Ruleset): Boolean {
   if (!scheduled.hasSchedule) {
     return true
   }
-  val inBase = minute < ruleset.horizonEndMinute && scheduled.windows.any { it.contains(minute) }
-  return when (scheduled.holidays) {
-    HolidayMode.NONE -> inBase
-
-    HolidayMode.NOT_ON_HOLIDAYS -> inBase && holidays.none { Window(it, it + MINUTES_PER_DAY).contains(minute) }
-
-    HolidayMode.ALSO_ON_HOLIDAYS ->
-      inBase || holidays.any { start -> scheduled.times.any { timeWindow(start, it).contains(minute) } }
-  }
+  return minute < ruleset.horizonEndMinute && scheduled.windows.any { it.contains(minute) }
 }
 
 private fun inScheduledWindows(scheduled: Scheduled, moment: Moment, ruleset: Ruleset, facts: MomentFacts): Boolean {
-  val holidays = holidayStarts(ruleset, facts.networkCountry)
-  fun inEvent(rule: CalendarRule): Boolean = when (rule.source) {
-    CalendarSource.HolidaysHere -> holidays.any { Window(it, it + MINUTES_PER_DAY).contains(moment.localMinute) }
-    else -> facts.inEvent(rule, moment.localMinute)
-  }
+  fun inEvent(rule: CalendarRule): Boolean = facts.inEvent(rule, moment.localMinute)
   val exceptRules = scheduled.calendars.filter { it.mode == CalendarMode.EXCEPT_EVENTS }
   val onlyRules = scheduled.calendars.filter { it.mode == CalendarMode.ONLY_DURING_EVENTS }
   return placesAllow(scheduled.places, facts) &&
-    inSchedule(scheduled, scheduleMinute(scheduled, moment), holidays, ruleset) &&
+    inSchedule(scheduled, scheduleMinute(scheduled, moment), ruleset) &&
     exceptRules.none { inEvent(it) } &&
     (onlyRules.isEmpty() || onlyRules.any { inEvent(it) })
 }

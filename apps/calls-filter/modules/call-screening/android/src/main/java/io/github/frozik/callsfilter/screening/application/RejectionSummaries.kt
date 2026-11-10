@@ -87,7 +87,6 @@ class RejectionSummaries(
     when (rule.source) {
       is CalendarSource.Device -> meetings.meetingAt(rule, moment) ?: bakedMeeting(rule, moment)
       is CalendarSource.Ics -> bakedMeeting(rule, moment)
-      CalendarSource.HolidaysHere -> null
     }
   }
 

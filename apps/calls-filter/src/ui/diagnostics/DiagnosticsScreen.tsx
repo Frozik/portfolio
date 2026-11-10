@@ -7,13 +7,16 @@ import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
-import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
 import { GUTTER, TEXT_SIZE } from '../kit/metrics';
 import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
+import { SelectRow } from '../kit/SelectRow';
 import { Wrap } from '../kit/Wrap';
 import { usePalette } from '../theme/AppTheme';
+
+/** How long the call log is kept: the lists show that far back, and the service keeps that much. */
+const JOURNAL_TERMS = [30, 90, 180, 365] as const;
 
 /** What the app and the service did, filtered, and the file to send to a messenger. */
 export const DiagnosticsScreen = observer(function DiagnosticsScreen() {
@@ -40,31 +43,47 @@ export const DiagnosticsScreen = observer(function DiagnosticsScreen() {
           onPress={() => void setStringAsync(diagnostics.copyText())}
         />
       </Wrap>
-      <Wrap>
-        <Chip
-          testID="diagnostics-all"
-          label={texts.diagnostics.all}
-          selected={diagnostics.filter.kind === 'all'}
-          onPress={() => diagnostics.setFilter({ kind: 'all' })}
-        />
-        <Chip
-          testID="diagnostics-errors"
-          label={texts.diagnostics.errors}
-          selected={diagnostics.filter.kind === 'errors'}
-          onPress={() => diagnostics.setFilter({ kind: 'errors' })}
-        />
-        {diagnostics.categories.map(category => (
-          <Chip
-            key={category}
-            testID={`diagnostics-category-${category}`}
-            label={category}
-            selected={
-              diagnostics.filter.kind === 'category' && diagnostics.filter.category === category
+      <Section>
+        <SelectRow
+          testID="diagnostics-filter"
+          title={texts.diagnostics.shown}
+          options={[
+            { value: 'all', label: texts.diagnostics.all, testID: 'diagnostics-all' },
+            { value: 'errors', label: texts.diagnostics.errors, testID: 'diagnostics-errors' },
+            ...diagnostics.categories.map(category => ({
+              value: `category:${category}`,
+              label: category,
+              testID: `diagnostics-category-${category}`,
+            })),
+          ]}
+          value={
+            diagnostics.filter.kind === 'category'
+              ? `category:${diagnostics.filter.category}`
+              : diagnostics.filter.kind
+          }
+          onChange={choice => {
+            if (choice === 'all' || choice === 'errors') {
+              diagnostics.setFilter({ kind: choice });
+              return;
             }
-            onPress={() => diagnostics.setFilter({ kind: 'category', category })}
-          />
-        ))}
-      </Wrap>
+            const category = diagnostics.categories.find(known => `category:${known}` === choice);
+            if (category !== undefined) {
+              diagnostics.setFilter({ kind: 'category', category });
+            }
+          }}
+        />
+        <SelectRow
+          testID="diagnostics-journal-days"
+          title={texts.diagnostics.journal}
+          options={JOURNAL_TERMS.map(days => ({
+            value: days,
+            label: texts.diagnostics.journalDays(days),
+            testID: `journal-days-${days}`,
+          }))}
+          value={app.device.preferences.journalDays}
+          onChange={days => app.device.setJournalDays(days)}
+        />
+      </Section>
       {diagnostics.shown.length === 0 ? (
         <Hint testID="diagnostics-empty" text={texts.diagnostics.empty} />
       ) : null}

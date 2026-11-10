@@ -11,7 +11,6 @@ import { useApp } from '../AppContext';
 import { dayText } from '../format';
 import { groupName } from '../group-name';
 import { Chip } from '../kit/Chip';
-import { ContactAvatar } from '../kit/ContactAvatar';
 import { Dot } from '../kit/Dot';
 import { Hint } from '../kit/Hint';
 import { GAP, GUTTER, SMALL_GAP, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
@@ -19,7 +18,8 @@ import { Section } from '../kit/Section';
 import { Wrap } from '../kit/Wrap';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
-import { CALL_GLYPHS, callState } from './call-state';
+import { callRing, callState } from './call-state';
+import { CallerAvatar } from './CallerAvatar';
 import { CallSheet } from './CallSheet';
 import { moveEntry } from './move-caller';
 import { MoveSheet } from './MoveSheet';
@@ -63,15 +63,12 @@ const CallRow = observer(function CallRow({
         onPress={() => onOpen(row)}
         style={styles.main}
       >
-        <Text testID={`call-state-${state}`} style={styles.glyph}>
-          {CALL_GLYPHS[state]}
-        </Text>
-        {caller.contact === null ? null : (
-          <ContactAvatar
-            photoUri={app.contactPhotoUri(caller.contact.lookupKey)}
-            name={caller.contact.displayName}
-          />
-        )}
+        <CallerAvatar
+          testID={`call-state-${state}`}
+          ring={callRing(state, entry.answered)}
+          photoUri={caller.contact === null ? null : app.contactPhotoUri(caller.contact.lookupKey)}
+          name={caller.contact?.displayName ?? caller.networkName ?? entry.dialerName}
+        />
         <View style={styles.text}>
           <Text style={[styles.title, { color: palette.fg }]} numberOfLines={1}>
             {title} {texts.call.calls(row.calls)}
@@ -217,7 +214,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: TOUCH_SIZE,
   },
-  glyph: { fontSize: TEXT_SIZE.heading, width: 28 },
   text: { flex: 1, gap: 2 },
   title: { fontSize: TEXT_SIZE.body, fontWeight: '500' },
   subtitle: { fontSize: TEXT_SIZE.small },

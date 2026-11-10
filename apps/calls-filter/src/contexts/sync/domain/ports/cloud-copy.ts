@@ -13,6 +13,8 @@ type TCloudRead =
   | { readonly kind: 'found'; readonly book: GroupBook; readonly rev: TCloudRev }
   /** The file is there but is not a group book this app can read: it is never overwritten blindly. */
   | { readonly kind: 'unreadable'; readonly rev: TCloudRev }
+  /** A book a newer app wrote: this one cannot merge it, and must never overwrite it. */
+  | { readonly kind: 'newer' }
   | { readonly kind: 'failed'; readonly failure: TCloudFailure };
 
 type TCloudWrite =

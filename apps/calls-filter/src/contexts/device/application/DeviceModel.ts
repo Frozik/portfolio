@@ -92,6 +92,8 @@ export class DeviceModel {
     runInAction(() => {
       this.preferences = preferences;
     });
+    // The service keeps its own copy of the term: it trims its journal while the app is closed.
+    this.runtime.setRetentionDays(preferences.journalDays);
     await this.refreshPermissions();
   }
 
@@ -114,6 +116,12 @@ export class DeviceModel {
 
   setTheme(theme: TThemeChoice): void {
     this.updatePreferences({ ...this.preferences, theme });
+  }
+
+  /** How long the call log is kept: the lists show that far back, and the service keeps that much. */
+  setJournalDays(days: number): void {
+    this.updatePreferences({ ...this.preferences, journalDays: days });
+    this.runtime.setRetentionDays(days);
   }
 
   setAskWhereTo(ask: boolean): void {

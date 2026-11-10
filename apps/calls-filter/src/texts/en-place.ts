@@ -4,6 +4,7 @@ import type { ITexts } from './texts';
 export const EN_PLACE: ITexts['place'] = {
   title: 'Location',
   add: 'Add a place',
+  short: 'Place',
   name: 'Name',
   namePlaceholder: 'Office, Home…',
   onlyAt: 'Only here',

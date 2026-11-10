@@ -17,7 +17,6 @@ message Ruleset {
   // The SIM's country: incoming numbers are parsed as dialled from there.
   string home_country = 4;
   repeated Group groups = 5;
-  repeated CountryHolidays holidays = 6;
   // After a stranger's call rang through, the shade asks where the number goes, offering these
   // groups, most used first; empty when the user turned the question off.
   repeated GroupChoice where_to = 7;
@@ -120,21 +119,13 @@ message Policy {
   RepeatPass repeat_pass = 4;
 }
 
-enum HolidayMode {
-  HOLIDAY_MODE_UNSPECIFIED = 0;
-  HOLIDAY_MODE_ALSO_ON_HOLIDAYS = 1;
-  HOLIDAY_MODE_NOT_ON_HOLIDAYS = 2;
-}
-
 message Scheduled {
   Action action = 1;
   // False: the scheduled action has no schedule, only calendars (or nothing: all the time).
   bool has_schedule = 2;
   repeated Window windows = 3;
-  repeated TimeOfDay times = 4;
-  HolidayMode holidays = 5;
   repeated CalendarRule calendars = 6;
-  // The IANA zone whose clock windows, times and holidays are on; empty for the phone's own clock
+  // The IANA zone whose clock the windows are on; empty for the phone's own clock
   // wherever it is. The service reads the call's moment on this clock.
   string zone = 7;
   // Where the phone must (or must not) be; a place whose state is unknown does not count.
@@ -161,12 +152,6 @@ message Window {
   int64 to_minute = 2;
 }
 
-message TimeOfDay {
-  bool all_day = 1;
-  uint32 from_minute_of_day = 2;
-  uint32 to_minute_of_day = 3;
-}
-
 enum CalendarMode {
   CALENDAR_MODE_UNSPECIFIED = 0;
   CALENDAR_MODE_EXCEPT_EVENTS = 1;
@@ -180,7 +165,6 @@ message DeviceCalendar {
 }
 
 message EventFilter {
-  bool busy_only = 1;
   bool skip_declined = 2;
   bool include_all_day = 3;
   uint32 minutes_before = 4;
@@ -193,7 +177,6 @@ message CalendarRule {
   oneof source {
     DeviceCalendar device = 3;
     string ics_id = 4;
-    bool holidays_here = 5;
   }
   // The events as the app last saw them, filter applied: all of an iCal feed, a month of a
   // device calendar (used when the calendar cannot be read at the moment of the call).
@@ -214,10 +197,4 @@ message TemporaryPolicy {
   // Set by the app when it publishes; the service compares it with its own record of
   // «first pass already used» to know a consumed policy is no longer in force.
   int64 set_at_epoch_ms = 4;
-}
-
-message CountryHolidays {
-  string country = 1;
-  // The floating minute each holiday day starts at.
-  repeated int64 day_starts = 2;
 }

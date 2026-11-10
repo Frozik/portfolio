@@ -18,10 +18,23 @@ export function sqliteGroupBookRepository(
       }
       const decoded = decodeGroupBook(text);
       if (!decoded.ok) {
-        diagnostics.log('error', 'app', 'book-unreadable', { reason: decoded.error.kind });
+        // Only a downgrade leaves a newer book on this phone.
+        await store.remove(BOOK_KEY);
+        diagnostics.log('error', 'app', 'document-discarded', {
+          document: BOOK_KEY,
+          reason: decoded.error.kind,
+        });
         return null;
       }
-      return decoded.value;
+      const { book, migratedFrom } = decoded.value;
+      if (migratedFrom !== null) {
+        await store.write(BOOK_KEY, encodeGroupBook(book));
+        diagnostics.log('info', 'app', 'document-migrated', {
+          document: BOOK_KEY,
+          from: String(migratedFrom),
+        });
+      }
+      return book;
     },
     async save(book: GroupBook) {
       await store.write(BOOK_KEY, encodeGroupBook(book));
