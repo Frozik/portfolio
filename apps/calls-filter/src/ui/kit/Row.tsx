@@ -19,7 +19,7 @@ export function Row({
   readonly title: string;
   /** A mark right after the title, such as a pin. */
   readonly titleTrailing?: ReactNode;
-  readonly subtitle?: string;
+  readonly subtitle?: ReactNode;
   readonly leading?: ReactNode;
   readonly trailing?: ReactNode;
   readonly onPress?: () => void;

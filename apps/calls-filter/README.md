@@ -61,11 +61,13 @@ neither renamed nor deleted.
 
 - **Let through** or **Block**. What a group does now is the icon at the end of its name's
   line — red while it blocks, green while it lets through; a tap on it opens one switch for the
-  action and a grid of the group's settings — schedule, calendars, place, a repeat call, the SMS
-  reply and a change for a while, three to a row — each filled while the group has it.
+  action and the group's settings as icons, each filled while the group has it: first when
+  the group acts — schedule, calendars, place and a change for a while — then a repeat call and
+  the SMS reply.
 - **A repeat call rings** — a switch over a blocking rule: a second call from the same number
   within the group's window (5 minutes by default; 2, 5, 10 or 15, set in the same sheet as the
-  switch) rings. Each group has one, and one covers
+  switch) rings. Each group that ever blocks has one — a group that always lets calls through
+  has nothing to ring past, so it offers none — and one covers
   the whole filter; either is off, on for good, or on for 1, 4 or 8 hours, a day, a week or
   until a date. A group that takes hidden numbers says, under the switch, that those calls stay
   blocked: a hidden number cannot show it is calling again.
@@ -79,9 +81,10 @@ neither renamed nor deleted.
   already on the phone) or of iCal links; holidays are a calendar like any other — the user's own
   holiday calendar, with whatever rule the group needs. The schedule and the
   calendars combine: «weekdays 9–18, except during meetings and the days of my holiday
-  calendar». What the group does while they hold — block or let through — is set right beside
-  them, on the schedule, calendars and place screens; the group's own switch then says what it
-  does the rest of the time.
+  calendar». The schedule, calendars and places say when the group acts: its one
+  switch is what it does while they all hold, and the rest of the time it does the opposite. A
+  place the phone cannot place counts as held. Adding the first condition or removing the last
+  keeps the switch where it was: a blocking group given «weekdays 9–18» blocks on weekdays 9–18.
 - **Places**: only at a place or anywhere but there — «work contacts only at the office». A
   place is a point on an OpenStreetMap map (tap, drag, «Where I am» or an address search) with a
   radius of 50 m to 10 km. Android's geofences tell the filter when the phone crosses it, even
@@ -89,7 +92,7 @@ neither renamed nor deleted.
   crossing can arrive minutes late. When the phone cannot say where it is, the place condition
   drops out and the schedule and calendars decide alone. Coordinates stay on the phone and in
   your own Drive.
-- **For a while**: the other action for an hour, until the evening, for a number of days, until
+- **For a while**: the opposite of what the group does now (a running change keeps its own, so a new term extends it) for an hour, until the evening, for a number of days, until
   the first call that rings, or until the current meeting ends; then the usual policy returns.
 - **Pause the whole filter** for 1, 2, 4 or 8 hours, a day, a week or until tomorrow — from the app, the
   Quick Settings tile or the notification it shows.
@@ -109,7 +112,8 @@ to the app re-reads the phone, so a granted permission closes its sheet and the 
 
 A group's calendars are picked from every calendar on the phone — its name, and the account it
 belongs to — or from iCal links added by URL right there. Under each calendar a switch says how
-the group uses it: off, during its events, or outside them; every event counts, free or busy. With no calendars on the phone, the
+the group uses it: off, during its events, or outside them — its events reach the filter the
+moment it is switched on; every event counts, free or busy. With no calendars on the phone, the
 screen says so and opens Android's «Add a Google account».
 
 ## Groups look
@@ -117,7 +121,10 @@ screen says so and opens Android's «Add a Google account».
 Each group has a colour: one of nine theme colours (shaded for light and dark), or any colour
 from the picker — saturation and brightness on a square, hue on a strip — or typed as hex
 (`FF8800`). A tap, a double tap or a hold on the group's name renames it, on its
-dot recolours it.
+dot recolours it. In the list of groups, a line says what each does now and until when, then
+only which action follows — «Pass until Wed 18:00, then block», however many changes the
+calendars hold after it. Each piece takes the calm tone of its action, pastel red or green; the
+line moves on by itself each minute.
 
 ## Where a call is from
 
@@ -277,8 +284,13 @@ after a tap. A release APK has no channel: the native side refuses to open it.
 - `e2e/screening.e2e.mts` — the service on real calls (`adb emu gsm call`, hung up the moment the
   service has answered): strangers, a blocking group, a repeat, a place, a meeting in a phone
   calendar. No screen is touched.
-- `e2e/screens.e2e.mts` — what only a phone shows: the map in its WebView with «Where I am», and
-  Android's permission dialog. The state is seeded and checked over the channel, the phone's
+- `e2e/screens.e2e.mts` — what only a phone shows: the map in its WebView with «Where I am»,
+  Android's permission dialog, a swipe that deletes a group, sheets and fields above the on-screen
+  keyboard, a long title ellipsised before the status, a sheet closed on the way to the schedule,
+  the journal term reaching the service, documents of an older app migrated at start, and a
+  calendar picked on its screen deciding real calls. The keyboard tests skip on a phone with a
+  physical keyboard (an emulator with `hw.keyboard=yes`): there no on-screen one opens. The state
+  is seeded and checked over the channel, the phone's
   position comes from location test providers the tests move, and only the action under test goes
   through the screen, which the test drives through the shared e2e agent, opened on its screen by
   link.
@@ -286,7 +298,7 @@ after a tap. A release APK has no channel: the native side refuses to open it.
   with RNTL over a phone of fakes (`src/**/*.test.tsx`): milliseconds, not seconds.
 
 Every test resets the book and calls with numbers of its own, so any test runs alone and in any
-order. The whole run takes about 35 s on a Mac. Each test is bounded as a hang guard — a minute
+order. The whole run takes about four minutes on a Mac, most of it the calls. Each test is bounded as a hang guard — a minute
 and a half for the service, four minutes for a screen — and a failure leaves the screen, the view
 tree and logcat in `e2e-artifacts/`, which CI uploads.
 

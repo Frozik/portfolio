@@ -93,7 +93,12 @@ schedule, then… — repeats all of that just to get the app into a state.
      accessibility does not report, and a tap mid-way lands beside it — outside a permission
      dialog it even denies the permission;
    - Android's permission dialog ignores touches while it appears, so `tapUntilGone` taps until
-     the dialog is gone.
+     the dialog is gone;
+   - an element found and gone before it is measured — a row just deleted — is reported absent,
+     and a command that breaks answers as failed: an exception left to escape would end the agent,
+     and every test after it would fail with «fetch failed»;
+   - `launch` asks `monkey` for no system keys, which it otherwise refuses to send on a device
+     without them (an emulator with no hardware keyboard).
 
    The agent ships in no app: it is built and installed only for the run. Against Maestro the
    vault's journey went from 75 s to 9 s; Calls Filter's map test from 20 s to 4 s, its

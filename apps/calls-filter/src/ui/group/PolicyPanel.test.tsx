@@ -4,7 +4,7 @@ import GroupRoute from '../../app/group/[id]';
 import type { ICustomGroup } from '../../contexts/grouping/domain/group';
 import { bookOf, custom, special } from '../../contexts/grouping/testing/group-book-fixtures';
 import type { IPlaceRule, TPlaceId } from '../../contexts/policy/domain/place-rule';
-import { ALWAYS_BLOCK } from '../../contexts/policy/domain/policy';
+import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
 
@@ -41,12 +41,27 @@ describe('the rules of a group', () => {
     expect(screen.queryByTestId('repeat-hidden-miss')).toBeNull();
   });
 
+  it('offers no repeat call to a group that always lets calls through: there is nothing to ring past', async () => {
+    await openRules(custom('friends', [], { policy: ALWAYS_PASS }));
+    expect(await screen.findByTestId('add-schedule')).toBeOnTheScreen();
+    expect(screen.queryByTestId('group-repeat')).not.toBeOnTheScreen();
+  });
+
+  it('offers a repeat call to a group letting calls through that blocks while its schedule holds', async () => {
+    await openRules(
+      custom('friends', [], {
+        policy: { ...ALWAYS_PASS, scheduled: { schedule: null, calendars: [], places: [OFFICE] } },
+      })
+    );
+    expect(await screen.findByTestId('group-repeat')).toBeOnTheScreen();
+  });
+
   it('marks a place whose state the phone does not know yet', async () => {
     await openRules(
       custom('work', [], {
         policy: {
           ...ALWAYS_BLOCK,
-          scheduled: { action: 'pass', schedule: null, calendars: [], places: [OFFICE] },
+          scheduled: { schedule: null, calendars: [], places: [OFFICE] },
         },
       })
     );
@@ -58,7 +73,7 @@ describe('the rules of a group', () => {
       custom('work', [], {
         policy: {
           ...ALWAYS_BLOCK,
-          scheduled: { action: 'pass', schedule: null, calendars: [], places: [OFFICE] },
+          scheduled: { schedule: null, calendars: [], places: [OFFICE] },
         },
       })
     );

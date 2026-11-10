@@ -1,11 +1,9 @@
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
 import type { Temporal } from 'temporal-polyfill';
 
 import type { TGroup } from '../../contexts/grouping/domain/group';
 import { setTemporaryPolicy } from '../../contexts/grouping/domain/group-book-edits';
-import type { TAction } from '../../contexts/policy/domain/action';
-import { isTemporaryActive } from '../../contexts/policy/domain/action-now';
+import { isTemporaryActive, temporaryActionOf } from '../../contexts/policy/domain/action-now';
 import { plainDateTimeOf } from '../../contexts/policy/domain/floating-time';
 import type { TTemporaryUntil } from '../../contexts/policy/domain/policy';
 import { policyText } from '../../texts/policy-phrase';
@@ -14,7 +12,6 @@ import { useApp } from '../AppContext';
 import { useCalendarName } from '../calendars/use-calendar-name';
 import { useClockWords } from '../clock-words';
 import { groupName } from '../group-name';
-import { ActionSwitch } from '../group/ActionSwitch';
 import { Button } from '../kit/Button';
 import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
@@ -27,8 +24,9 @@ const EVENING_HOUR = 20;
 const FIRST_PASS_LIMIT_HOURS = 24;
 
 /**
- * A group's action for a while: pick the action, then one tap on the term sets it. Opened from
- * the list of groups it names the group and its usual policy; inside the group, both are already on screen.
+ * A group's change for a while: the opposite of what it does now, set by one tap on the term.
+ * Opened from the list of groups it names the group and its usual policy; inside the group, both
+ * are already on screen.
  */
 export const TemporarySheet = observer(function TemporarySheet({
   group,
@@ -43,12 +41,13 @@ export const TemporarySheet = observer(function TemporarySheet({
   const texts = useTexts();
   const calendarName = useCalendarName();
   const clockWords = useClockWords();
-  const [chosen, setChosen] = useState<TAction>('pass');
   if (group === null) {
     return null;
   }
   const { clock } = app;
   const now = clock.now();
+  const status = app.statusOf(group);
+  const chosen = temporaryActionOf(status.now);
   const set = (until: TTemporaryUntil | null) => {
     app.books.run((book, context) =>
       setTemporaryPolicy(
@@ -66,25 +65,21 @@ export const TemporarySheet = observer(function TemporarySheet({
   const eveningInstant = (evening.hour > local.hour ? evening : evening.add({ days: 1 }))
     .toZonedDateTime(clock.timeZone())
     .toInstant();
-  const status = app.statusOf(group);
   const meetingEnd =
     status.now.source === 'scheduled' || group.policy.scheduled?.calendars.length
       ? status.now.changesAt
       : null;
   return (
-    <Sheet
-      visible
-      title={named ? groupName(texts, group) : texts.temporary.what}
-      onClose={onClose}
-      testID="temporary-sheet"
-    >
+    <Sheet visible title={texts.temporary.title(chosen)} onClose={onClose} testID="temporary-sheet">
       {named ? (
         <Hint
           testID="temporary-usually"
-          text={texts.temporary.usually(policyText(texts, group.policy, calendarName, clockWords))}
+          text={texts.temporary.usually(
+            groupName(texts, group),
+            policyText(texts, group.policy, calendarName, clockWords)
+          )}
         />
       ) : null}
-      <ActionSwitch prefix="temporary-action" value={chosen} onChange={setChosen} />
       <Wrap>
         <Chip
           testID="temporary-1h"

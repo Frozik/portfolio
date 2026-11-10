@@ -8,13 +8,10 @@ import { sameCalendarSource } from '../../contexts/calendars/domain/calendar-sou
 import type { TGroup, TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
 import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
-import type { TAction } from '../../contexts/policy/domain/action';
 import type { ICalendarRule, IEventFilter } from '../../contexts/policy/domain/policy';
-import { narrowsNothing } from '../../contexts/policy/domain/policy';
-import { windowActionOf, withWindowAction } from '../../contexts/policy/domain/window-action';
+import { withConditions } from '../../contexts/policy/domain/policy';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { WindowActionSwitch } from '../group/WindowActionSwitch';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
@@ -109,21 +106,10 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
       return;
     }
     const { policy } = group;
-    const opposite = policy.otherwise === 'block' ? 'pass' : 'block';
-    const scheduled = policy.scheduled ?? { action: opposite, schedule: null, calendars: [] };
+    const scheduled = policy.scheduled ?? { schedule: null, calendars: [] };
     const nextScheduled = { places: [], ...scheduled, calendars: next };
     app.books.run((book, context) =>
-      changeGroup(
-        book,
-        group.id,
-        {
-          policy: {
-            ...policy,
-            scheduled: narrowsNothing(nextScheduled) ? null : nextScheduled,
-          },
-        },
-        context.now
-      )
+      changeGroup(book, group.id, { policy: withConditions(policy, nextScheduled) }, context.now)
     );
   };
   const calendarUseOf = (source: TCalendarSource): TCalendarUse =>
@@ -131,14 +117,6 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
   const setCalendarUse = (source: TCalendarSource, use: TCalendarUse) => {
     const others = rules.filter(rule => !sameCalendarSource(rule.source, source));
     setRules(use === 'off' ? others : [...others, { source, mode: use, filter }]);
-  };
-  const setWindowAction = (action: TAction) => {
-    if (group === null) {
-      return;
-    }
-    app.books.run((book, context) =>
-      changeGroup(book, group.id, { policy: withWindowAction(group.policy, action) }, context.now)
-    );
   };
   const setFilter = (next: Partial<IEventFilter>) =>
     setRules(rules.map(rule => ({ ...rule, filter: { ...rule.filter, ...next } })));
@@ -162,9 +140,6 @@ export const CalendarsScreen = observer(function CalendarsScreen() {
     );
   return (
     <Screen testID="calendars-screen" title={texts.calendars.title} header={<BackButton />}>
-      {group === null || rules.length === 0 ? null : (
-        <WindowActionSwitch value={windowActionOf(group.policy)} onChange={setWindowAction} />
-      )}
       {app.device.permissions.calendar === 'granted' ? null : (
         <Section>
           <Hint text={texts.calendars.noPermission} />

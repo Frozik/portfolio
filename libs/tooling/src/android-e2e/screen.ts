@@ -138,9 +138,22 @@ export async function openLink(url: string, packageName: string): Promise<void> 
   await adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', url, packageName);
 }
 
-/** Starts the app from its launcher icon. */
+/**
+ * Starts the app from its launcher icon. `monkey` refuses a device without physical system keys
+ * (an emulator with no hardware keyboard) unless it sends none.
+ */
 export async function launch(packageName: string): Promise<void> {
-  await adb('shell', 'monkey', '-p', packageName, '-c', 'android.intent.category.LAUNCHER', '1');
+  await adb(
+    'shell',
+    'monkey',
+    '--pct-syskeys',
+    '0',
+    '-p',
+    packageName,
+    '-c',
+    'android.intent.category.LAUNCHER',
+    '1'
+  );
 }
 
 /** Wipes the app's data and starts it, as a fresh install would. */

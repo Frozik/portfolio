@@ -12,6 +12,7 @@ import type { TVerdict } from '../contexts/screening/domain/decision';
 import type { INumberingTexts } from './numbering/numbering-texts';
 
 /** Every word of the interface, one table per language with the same keys (the type checks it). */
+
 export interface ITexts {
   readonly tabs: { readonly groups: string; readonly calls: string; readonly settings: string };
   readonly common: {
@@ -28,7 +29,6 @@ export interface ITexts {
     readonly yesterday: string;
   };
   readonly actions: Readonly<Record<TAction, string>>;
-  readonly actionsShort: Readonly<Record<TAction, string>>;
   readonly verdicts: Readonly<Record<TVerdict, string>>;
   readonly groups: {
     readonly title: string;
@@ -44,12 +44,17 @@ export interface ITexts {
     readonly roleMissing: string;
     readonly roleButton: string;
     readonly conflicts: (count: number) => string;
-    readonly nowAlways: (action: string) => string;
-    readonly nowUntil: (action: string, until: string, then: string) => string;
+    /** What a group does now, «Pass until Wed 18:00» or «Block always»: one coloured piece. */
+    readonly now: (action: TAction, until: string | null) => string;
+    readonly thenSeparator: string;
+    /** What follows the change, without its own end: «then block». */
+    readonly next: (action: TAction) => string;
     readonly callsToday: (count: number) => string;
   };
   readonly temporary: {
-    readonly usually: (phrase: string) => string;
+    /** The sheet's heading: what the change for a while will do. */
+    readonly title: (action: TAction) => string;
+    readonly usually: (group: string, phrase: string) => string;
     readonly what: string;
     /** One word under the icon of a change for a while. */
     readonly short: string;
@@ -95,9 +100,6 @@ export interface ITexts {
     readonly addContact: string;
     readonly excludeMyContacts: string;
     readonly whatToDo: string;
-    /** What the group does while its schedule, calendars and places hold. */
-    readonly whileMet: string;
-    readonly otherwise: string;
     readonly addSchedule: string;
     readonly schedule: string;
     readonly calendars: string;

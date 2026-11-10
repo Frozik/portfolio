@@ -1,7 +1,7 @@
 import { Temporal } from 'temporal-polyfill';
 
 import type { TCalendarSource } from '../../calendars/domain/calendar-source';
-import { actionNow } from './action-now';
+import { actionNow, temporaryActionOf } from './action-now';
 import { floatingMinute } from './floating-time';
 import type { ICalendarRule, IPolicy, IScheduledAction } from './policy';
 import { REPEAT_OFF } from './repeat-pass';
@@ -49,7 +49,6 @@ const MEETINGS: ICalendarRule = {
 };
 
 const WORK_SCHEDULED: IScheduledAction = {
-  action: 'pass',
   schedule: WEEKDAYS,
   calendars: [HOLIDAYS, MEETINGS],
   places: [],
@@ -135,6 +134,24 @@ describe('the action of «Work»: pass on weekdays 09–18 except holidays and m
     expect(
       actionNow({ policy: WORK, temporary }, local('2026-11-09T11:00'), workWindows()).source
     ).not.toBe('temporary');
+  });
+
+  it('changes for a while to the opposite of what it does now', () => {
+    expect(temporaryActionOf(workAt('2026-11-03T17:59'))).toBe('block');
+    expect(temporaryActionOf(workAt('2026-11-03T18:00'))).toBe('pass');
+  });
+
+  it('keeps the action of a change for a while that is still running, so a new term only extends it', () => {
+    const temporary = {
+      action: 'block' as const,
+      until: { kind: 'instant' as const, at: Temporal.Instant.from('2026-11-08T00:00:00Z') },
+      setAt: Temporal.Instant.from('2026-11-01T00:00:00Z'),
+    };
+    expect(
+      temporaryActionOf(
+        actionNow({ policy: WORK, temporary }, local('2026-11-07T11:00'), workWindows())
+      )
+    ).toBe('block');
   });
 });
 

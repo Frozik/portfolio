@@ -10,6 +10,7 @@ import type {
   TScheduleZone,
   TWeekday,
 } from '../contexts/policy/domain/schedule';
+import { windowActionOf } from '../contexts/policy/domain/window-action';
 import type { ITexts } from './texts';
 
 const WEEKDAYS: readonly TWeekday[] = [1, 2, 3, 4, 5];
@@ -124,7 +125,7 @@ export function policyText(
     .filter(part => part !== '')
     .join(', ');
   return texts.phrase.scheduled(
-    texts.actions[scheduled.action],
+    texts.actions[windowActionOf(policy)],
     when,
     texts.actions[policy.otherwise]
   );

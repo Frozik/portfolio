@@ -2,6 +2,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import type { TCalendarSource } from '../../calendars/domain/calendar-source';
 import type { TAction } from './action';
+import { oppositeOf } from './action';
 import type { IPlaceRule } from './place-rule';
 import type { TRepeatPass } from './repeat-pass';
 import { REPEAT_OFF } from './repeat-pass';
@@ -22,14 +23,13 @@ export interface ICalendarRule {
 
 /** The action of the windows: a schedule (all the time when absent) narrowed by calendars and places. */
 export interface IScheduledAction {
-  readonly action: TAction;
   readonly schedule: ISchedule | null;
   readonly calendars: readonly ICalendarRule[];
   readonly places: readonly IPlaceRule[];
 }
 
 /** A scheduled action that narrows nothing — no schedule, calendar or place — is no scheduled action. */
-export function narrowsNothing(scheduled: IScheduledAction): boolean {
+function narrowsNothing(scheduled: IScheduledAction): boolean {
   return (
     scheduled.schedule === null && scheduled.calendars.length === 0 && scheduled.places.length === 0
   );
@@ -71,3 +71,32 @@ export const ALWAYS_BLOCK: IPolicy = {
   repeatPass: REPEAT_OFF,
   repeatWindowMinutes: DEFAULT_REPEAT_WINDOW_MINUTES,
 };
+
+/**
+ * Whether the group ever turns a call away: it blocks the rest of the time, or — letting calls
+ * through otherwise — while its conditions hold. Only such a group has a repeat call to ring past it.
+ */
+export function everBlocks(policy: IPolicy): boolean {
+  return policy.otherwise === 'block' || policy.scheduled !== null;
+}
+
+/**
+ * What the group is set to do: always, while it has no conditions; while its schedule, calendars
+ * and places all hold, once it has them — the opposite the rest of the time.
+ */
+export function actionOf(policy: IPolicy): TAction {
+  return policy.scheduled === null ? policy.otherwise : oppositeOf(policy.otherwise);
+}
+
+export function withAction(policy: IPolicy, action: TAction): IPolicy {
+  return { ...policy, otherwise: policy.scheduled === null ? action : oppositeOf(action) };
+}
+
+/**
+ * The group's conditions replaced, keeping what it is set to do: a blocking group given a
+ * schedule blocks in it, and one losing its last condition does always what it did in them.
+ */
+export function withConditions(policy: IPolicy, conditions: IScheduledAction | null): IPolicy {
+  const scheduled = conditions === null || narrowsNothing(conditions) ? null : conditions;
+  return withAction({ ...policy, scheduled }, actionOf(policy));
+}

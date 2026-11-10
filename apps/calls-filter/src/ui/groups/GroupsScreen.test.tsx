@@ -1,4 +1,5 @@
 import { fireEvent, screen } from 'expo-router/testing-library';
+import { Temporal } from 'temporal-polyfill';
 
 import GroupRoute from '../../app/group/[id]';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
@@ -31,6 +32,30 @@ describe('the groups and their rules', () => {
     expect(screen.queryByTestId('group-spam')).not.toBeOnTheScreen();
     const saved = phone.saved();
     expect(saved === null ? null : findGroup(saved, 'spam' as TGroupId)).toBeNull();
+  });
+
+  it('colours what each group does now instead of marking it with an icon', async () => {
+    const open = custom('friends', [], { policy: ALWAYS_PASS });
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([SPAM, open]) }) });
+
+    expect(await screen.findByTestId('group-spam-status-block')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-friends-status-pass')).toBeOnTheScreen();
+    expect(screen.getByTestId('group-spam-status-block')).not.toHaveTextContent(/⛔|✅/);
+  });
+
+  it('says until when a group does what it does now and only which action follows, each in its colour', async () => {
+    const forAnHour = custom('spam', [], {
+      policy: ALWAYS_BLOCK,
+      temporary: {
+        action: 'pass',
+        setAt: Temporal.Instant.from('2026-11-09T09:00:00Z'),
+        until: { kind: 'instant', at: Temporal.Instant.from('2026-11-09T10:00:00Z') },
+      },
+    });
+    await renderApp({ index: GroupsRoute }, { phone: fakePhone({ book: bookOf([forAnHour]) }) });
+
+    expect(await screen.findByTestId('group-spam-status-pass')).toHaveTextContent(/11:00/);
+    expect(screen.getByTestId('group-spam-status-block')).not.toHaveTextContent(/\d/);
   });
 
   it('uncovers no deletion on a group the app keeps itself', async () => {
@@ -114,7 +139,6 @@ describe('the groups and their rules', () => {
         ...ALWAYS_PASS,
         otherwise: 'block',
         scheduled: {
-          action: 'pass',
           schedule: null,
           calendars: [
             {

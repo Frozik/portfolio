@@ -149,7 +149,6 @@ const WEEKEND: ISchedule = {
 const WORK_POLICY: IPolicy = {
   otherwise: 'block',
   scheduled: {
-    action: 'pass',
     schedule: WEEKDAYS_9_TO_18,
     calendars: [EXCEPT_MEETINGS, EXCEPT_HOLIDAY_CALENDAR],
     places: [],
@@ -189,7 +188,7 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
     custom('hidden', [special('hidden')], {
       policy: {
         otherwise: 'pass',
-        scheduled: { action: 'block', schedule: NIGHT, calendars: [], places: [] },
+        scheduled: { schedule: NIGHT, calendars: [], places: [] },
         repeatPass: REPEAT_OFF,
         repeatWindowMinutes: 5,
       },
@@ -198,7 +197,6 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
       policy: {
         otherwise: 'pass',
         scheduled: {
-          action: 'block',
           schedule: null,
           calendars: [EXCEPT_HOLIDAY_CALENDAR],
           places: [],
@@ -211,7 +209,6 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
       policy: {
         otherwise: 'pass',
         scheduled: {
-          action: 'block',
           schedule: null,
           calendars: [ONLY_IN_WORK_EVENTS],
           places: [],
@@ -243,7 +240,7 @@ export const WEEKEND_BOOK: GroupBook = bookOf([
   custom('weekend', [numberMask('*')], {
     policy: {
       otherwise: 'pass',
-      scheduled: { action: 'block', schedule: WEEKEND, calendars: [], places: [] },
+      scheduled: { schedule: WEEKEND, calendars: [], places: [] },
       repeatPass: REPEAT_OFF,
       repeatWindowMinutes: 5,
     },
@@ -256,7 +253,6 @@ export const HELSINKI_OFFICE_BOOK: GroupBook = bookOf([
     policy: {
       otherwise: 'block',
       scheduled: {
-        action: 'pass',
         schedule: { ...WEEKDAYS_9_TO_18, zone: { kind: 'fixed', zone: 'Europe/Helsinki' } },
         calendars: [],
         places: [],
@@ -273,7 +269,6 @@ export const OFFICE_ONLY_BOOK: GroupBook = bookOf([
     policy: {
       otherwise: 'block',
       scheduled: {
-        action: 'pass',
         schedule: null,
         calendars: [],
         places: [

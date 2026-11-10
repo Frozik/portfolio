@@ -1,4 +1,4 @@
-import { fireEvent, screen } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import CalendarsRoute from '../../app/calendars';
 import { bookOf, custom } from '../../contexts/grouping/testing/group-book-fixtures';
@@ -54,6 +54,28 @@ describe('an iCal link added from a group’s calendars', () => {
     expect(screen.queryByTestId('ics-sheet')).toBeNull();
   });
 
+  it('hands the filter the events of a calendar the moment the group starts using it', async () => {
+    const phone = await openCalendarsOf('work');
+    await addTeamCalendar();
+    await screen.findByTestId('calendar-ics-id-1-except');
+
+    await waitFor(() =>
+      expect(
+        phone.published.at(-1)?.groups.find(group => group.id === 'work')?.scheduled?.calendars[0]
+          ?.bakedEvents
+      ).toHaveLength(1)
+    );
+  });
+
+  it('keeps a blocking group blocking during the events of the calendar it is given', async () => {
+    const phone = await openCalendarsOf('work');
+    await addTeamCalendar();
+    await fireEvent.press(await screen.findByTestId('calendar-ics-id-1-only'));
+
+    const work = phone.saved()?.groups.find(group => group.id === 'work');
+    expect([work?.policy.otherwise, work?.policy.scheduled?.calendars.length]).toEqual(['pass', 1]);
+  });
+
   it('acts during the events of a calendar, or not on it at all, as its switch says', async () => {
     const phone = await openCalendarsOf('work');
     await addTeamCalendar();
@@ -79,14 +101,11 @@ describe('an iCal link added from a group’s calendars', () => {
     expect(screen.getByTestId('ics-sheet')).toBeOnTheScreen();
   });
 
-  it('sets what the group does while its calendars agree, right where they are set', async () => {
-    const phone = await openCalendarsOf('work');
+  it('asks nothing of what the group does during its calendars: the opposite of the rest of the time', async () => {
+    await openCalendarsOf('work');
     await addTeamCalendar();
 
-    await fireEvent.press(await screen.findByTestId('window-action-pass'));
-
-    expect(phone.saved()?.groups.find(group => group.id === 'work')?.policy.scheduled?.action).toBe(
-      'pass'
-    );
+    expect(screen.queryByTestId('window-action-pass')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('window-action-block')).not.toBeOnTheScreen();
   });
 });

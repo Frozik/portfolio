@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.Configurator;
+import androidx.test.uiautomator.StaleObjectException;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 
@@ -65,9 +66,21 @@ public final class Agent {
             continue;
           }
           serving = !"stop".equals(command.optString("name"));
-          write(client, answer(command));
+          write(client, answerOrFailure(command));
         }
       }
+    }
+  }
+
+  /**
+   * One command's answer; whatever goes wrong in it is that command's failure. An exception left
+   * to escape would end `serve`, and with it every later test's agent.
+   */
+  private JSONObject answerOrFailure(JSONObject command) throws JSONException {
+    try {
+      return answer(command);
+    } catch (RuntimeException broken) {
+      return failed(command.optString("name") + " broke: " + broken);
     }
   }
 
@@ -78,7 +91,12 @@ public final class Agent {
       case "stop":
         return ok(JSONObject.NULL);
       case "locate":
-        return ok(placeOf(find(command.getString("id"))));
+        try {
+          return ok(placeOf(find(command.getString("id"))));
+        } catch (StaleObjectException vanished) {
+          // Found, then gone before it was measured: a row just deleted, a sheet just closed.
+          return ok(JSONObject.NULL);
+        }
       case "dump": {
         // The view tree as `uiautomator dump` writes it, for a failed test's evidence: a dump of
         // its own would take UiAutomation from this agent.

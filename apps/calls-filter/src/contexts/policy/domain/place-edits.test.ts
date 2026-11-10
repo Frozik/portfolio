@@ -12,9 +12,8 @@ const office: IPlaceRule = {
 };
 
 describe('editing the places of a policy', () => {
-  it('lets a blocking group through at a place it is given', () => {
+  it('gives a group the place it is given', () => {
     const policy = withPlace(ALWAYS_BLOCK, office);
-    expect(policy.scheduled?.action).toBe('pass');
     expect(policy.scheduled?.places).toEqual([office]);
   });
 

@@ -26,7 +26,8 @@ import { repeatText } from '../repeat/repeat-text';
 import { RepeatSheet } from '../repeat/RepeatSheet';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
-import { statusText } from './group-status';
+import { statusParts } from './group-status';
+import { GroupStatus } from './GroupStatus';
 import { PauseSheet } from './PauseSheet';
 import { TemporarySheet } from './TemporarySheet';
 
@@ -51,7 +52,12 @@ const GroupRow = observer(function GroupRow({
       titleTrailing={
         group.kind === 'custom' ? undefined : <PinnedMark testID={`group-pinned-${group.id}`} />
       }
-      subtitle={statusText(texts, app.statusOf(group), app.clock.timeZone(), today)}
+      subtitle={
+        <GroupStatus
+          testID={`group-${group.id}-status`}
+          parts={statusParts(texts, app.statusOf(group), app.clock.timeZone(), today)}
+        />
+      }
       leading={<Dot color={groupColor(group.color, scheme)} />}
       trailing={
         <Text style={{ color: palette.fgDim, fontSize: TEXT_SIZE.small }}>
@@ -177,7 +183,9 @@ export const GroupsScreen = observer(function GroupsScreen() {
           onClose={() => setRepeating(false)}
         />
       ) : null}
-      <TemporarySheet group={temporaryFor} named onClose={() => setTemporaryFor(null)} />
+      {temporaryFor === null ? null : (
+        <TemporarySheet group={temporaryFor} named onClose={() => setTemporaryFor(null)} />
+      )}
     </Screen>
   );
 });

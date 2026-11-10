@@ -1,14 +1,11 @@
 import type { TAction } from './action';
+import { oppositeOf } from './action';
 import type { IPolicy } from './policy';
 
-/** A group starts its schedule, calendars and places doing the other thing from what it usually does. */
+/**
+ * What a group does while its schedule, calendars and places hold: the opposite of the rest of
+ * the time, since doing the same would make them change nothing.
+ */
 export function windowActionOf(policy: IPolicy): TAction {
-  return policy.scheduled?.action ?? (policy.otherwise === 'block' ? 'pass' : 'block');
-}
-
-/** What the group does while its schedule, calendars and places hold; nothing to set without them. */
-export function withWindowAction(policy: IPolicy, action: TAction): IPolicy {
-  return policy.scheduled === null
-    ? policy
-    : { ...policy, scheduled: { ...policy.scheduled, action } };
+  return oppositeOf(policy.otherwise);
 }

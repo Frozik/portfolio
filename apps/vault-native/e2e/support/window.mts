@@ -1,4 +1,5 @@
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
+import { launch } from '@frozik/tooling/src/android-e2e/screen.ts';
 
 export const PACKAGE = 'io.github.ciphravault.vault';
 
@@ -35,7 +36,7 @@ export const isSecure = (flags: string | null) => flags !== null && /\bSECURE\b/
 export async function firstWindowFlags(): Promise<string> {
   const before = (await mainWindow())?.token ?? null;
   await adb('shell', 'am', 'force-stop', PACKAGE);
-  await adb('shell', 'monkey', '-p', PACKAGE, '-c', 'android.intent.category.LAUNCHER', '1');
+  await launch(PACKAGE);
   const started = await waitFor(
     'the app’s new window',
     mainWindow,

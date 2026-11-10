@@ -1,5 +1,6 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { computed, makeObservable, observableRef, runInAction } from 'mobx';
+import { isEqual } from 'lodash-es';
+import { computed, makeObservable, observableRef, reaction, runInAction } from 'mobx';
 import type { Temporal } from 'temporal-polyfill';
 
 import type { IDiagnosticsLog } from '../../diagnostics/domain/ports/diagnostics-log';
@@ -63,6 +64,15 @@ export class CalendarsModel {
     runInAction(() => {
       this.subscriptions = settings.subscriptions;
     });
+  }
+
+  /** Copies a calendar's events the moment a rule starts using it, not at the next refresh. */
+  follow(): () => void {
+    return reaction(
+      () => this.ports.sourcesInUse(),
+      () => void this.copyEvents(),
+      { equals: isEqual }
+    );
   }
 
   /** Re-reads the device calendars and the copies; the links are fetched only when due, or when forced. */

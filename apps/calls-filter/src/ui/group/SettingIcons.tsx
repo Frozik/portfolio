@@ -16,6 +16,7 @@ import { StyleSheet, View } from 'react-native';
 import type { TGroup } from '../../contexts/grouping/domain/group';
 import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { isTemporaryActive } from '../../contexts/policy/domain/action-now';
+import { everBlocks } from '../../contexts/policy/domain/policy';
 import { isRepeatPassOn } from '../../contexts/policy/domain/repeat-pass';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
@@ -24,11 +25,12 @@ import { SMALL_GAP } from '../kit/metrics';
 import { RepeatSheet } from '../repeat/RepeatSheet';
 import { SmsReplySheet } from './SmsReplySheet';
 
-const PER_ROW = 3;
+const PER_ROW = 4;
 
 /**
- * What a group has besides its action, as a grid of icons: each filled while the group has it,
- * each opening where it is set.
+ * What a group has besides its action, as icons: first when it acts — schedule, calendars,
+ * place, a change for a while — then the rest; each filled while the group has it, each opening
+ * where it is set. A repeat call shows only on a group that ever blocks.
  */
 export const SettingIcons = observer(function SettingIcons({
   group,
@@ -51,7 +53,7 @@ export const SettingIcons = observer(function SettingIcons({
   const { policy } = group;
   const { scheduled } = policy;
   const now = app.clock.now();
-  const icons: readonly ReactElement[] = [
+  const when: readonly ReactElement[] = [
     <IndicatorButton
       key="schedule"
       testID="add-schedule"
@@ -83,15 +85,31 @@ export const SettingIcons = observer(function SettingIcons({
       onPress={() => open('/place')}
     />,
     <IndicatorButton
-      key="repeat"
-      testID="group-repeat"
-      icon={Repeat}
+      key="temporary"
+      testID="policy-for-a-while"
+      icon={Hourglass}
       tone="accent"
-      filled={isRepeatPassOn(policy.repeatPass, now)}
-      label={texts.repeat.title}
-      caption={texts.repeat.short}
-      onPress={() => setSheet('repeat')}
+      filled={isTemporaryActive(group.temporary, now)}
+      label={texts.temporary.what}
+      caption={texts.temporary.short}
+      onPress={onForAWhile}
     />,
+  ];
+  const extras: readonly ReactElement[] = [
+    ...(everBlocks(policy)
+      ? [
+          <IndicatorButton
+            key="repeat"
+            testID="group-repeat"
+            icon={Repeat}
+            tone="accent"
+            filled={isRepeatPassOn(policy.repeatPass, now)}
+            label={texts.repeat.title}
+            caption={texts.repeat.short}
+            onPress={() => setSheet('repeat')}
+          />,
+        ]
+      : []),
     ...(app.smsReply
       ? [
           <IndicatorButton
@@ -106,28 +124,11 @@ export const SettingIcons = observer(function SettingIcons({
           />,
         ]
       : []),
-    <IndicatorButton
-      key="temporary"
-      testID="policy-for-a-while"
-      icon={Hourglass}
-      tone="accent"
-      filled={isTemporaryActive(group.temporary, now)}
-      label={texts.temporary.what}
-      caption={texts.temporary.short}
-      onPress={onForAWhile}
-    />,
   ];
   return (
     <>
-      {chunk(icons, PER_ROW).map(row => (
-        <View key={row.map(icon => icon.key).join()} style={styles.row}>
-          {row}
-          {/* An unfilled row keeps the others' widths: every icon takes a third. */}
-          {Array.from({ length: PER_ROW - row.length }, (_, slot) => (
-            <View key={`empty-${slot}`} style={styles.empty} />
-          ))}
-        </View>
-      ))}
+      <IconRows icons={when} />
+      <IconRows icons={extras} />
       {sheet === 'repeat' ? (
         <RepeatSheet
           value={policy.repeatPass}
@@ -156,6 +157,18 @@ export const SettingIcons = observer(function SettingIcons({
     </>
   );
 });
+
+/** Icons a quarter of the width each, so the rows line up under one another. */
+function IconRows({ icons }: { readonly icons: readonly ReactElement[] }) {
+  return chunk(icons, PER_ROW).map(row => (
+    <View key={row.map(icon => icon.key).join()} style={styles.row}>
+      {row}
+      {Array.from({ length: PER_ROW - row.length }, (_, slot) => (
+        <View key={`empty-${slot}`} style={styles.empty} />
+      ))}
+    </View>
+  ));
+}
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: SMALL_GAP },

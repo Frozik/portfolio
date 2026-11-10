@@ -126,7 +126,6 @@ const policy = z.object({
   repeatWindowMinutes: z.number().int().min(1),
   scheduled: z
     .object({
-      action,
       schedule: schedule.nullable(),
       calendars: z.array(
         z.object({

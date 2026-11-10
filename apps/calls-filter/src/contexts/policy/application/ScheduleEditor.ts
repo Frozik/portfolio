@@ -1,10 +1,9 @@
 import { action, computed, makeObservable, observableRef } from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 
-import type { TAction } from '../domain/action';
 import { floatingMinute } from '../domain/floating-time';
 import type { IPolicy } from '../domain/policy';
-import { narrowsNothing } from '../domain/policy';
+import { withConditions } from '../domain/policy';
 import type { IRecurrenceExpander } from '../domain/recurrence-expander';
 import type {
   IRecurrence,
@@ -166,15 +165,12 @@ export class ScheduleEditor {
   }
 }
 
-/** The scheduled action a new schedule gets: the opposite of what the group does otherwise. */
 export function withSchedule(policy: IPolicy, schedule: ISchedule | null): IPolicy {
-  const opposite: TAction = policy.otherwise === 'block' ? 'pass' : 'block';
   const scheduled = policy.scheduled ?? {
-    action: opposite,
     schedule: null,
     calendars: [],
     places: [],
   };
   const next = { ...scheduled, schedule };
-  return { ...policy, scheduled: narrowsNothing(next) ? null : next };
+  return withConditions(policy, next);
 }

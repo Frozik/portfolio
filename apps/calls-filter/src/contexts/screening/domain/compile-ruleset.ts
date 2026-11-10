@@ -11,6 +11,7 @@ import { floatingDateStart } from '../../policy/domain/floating-time';
 import type { ITemporaryPolicy } from '../../policy/domain/policy';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
 import { scheduleWindows } from '../../policy/domain/schedule-windows';
+import { windowActionOf } from '../../policy/domain/window-action';
 import type {
   ICompiledGroup,
   ICompiledRuleset,
@@ -69,7 +70,7 @@ function compileScheduled(group: TGroup, inputs: IScreeningInputs): ICompiledSch
   }
   const { schedule } = scheduled;
   return {
-    action: scheduled.action,
+    action: windowActionOf(group.policy),
     zone: schedule?.zone.kind === 'fixed' ? schedule.zone.zone : null,
     hasSchedule: schedule !== null,
     windows: schedule === null ? [] : scheduleWindows(schedule, inputs.occurrencesOf(schedule)),

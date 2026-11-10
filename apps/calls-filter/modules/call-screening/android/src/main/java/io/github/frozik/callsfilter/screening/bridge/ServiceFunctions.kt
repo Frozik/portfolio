@@ -55,6 +55,8 @@ internal fun ModuleDefinitionBuilder.serviceFunctions(screening: () -> Screening
 
   Function("setRetentionDays") { days: Int -> screening().runtimeState.setRetentionDays(days) }
 
+  Function("retentionDays") { screening().runtimeState.retentionDays() }
+
   Function("dismissWhereTo") { screening().whereToNotification.dismiss() }
 
   Function("setAtPlace") { placeId: String, inside: Boolean? -> screening().runtimeState.setAtPlace(placeId, inside) }

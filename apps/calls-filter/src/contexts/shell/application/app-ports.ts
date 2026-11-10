@@ -57,6 +57,8 @@ export interface IAppPorts {
   readonly diagnostics: IDiagnosticsLog;
   readonly share: TShareFile;
   readonly clock: IClock;
+  /** Calls `tick` once a minute until stopped: what depends on the time of day moves on with it. */
+  readonly everyMinute: (tick: () => void) => () => void;
   readonly newId: TNewId;
   readonly exportHeader: () => IExportHeader;
   /** This build may send an SMS: the edition without SMS declares no such permission. */

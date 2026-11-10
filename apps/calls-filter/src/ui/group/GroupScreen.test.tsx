@@ -12,7 +12,7 @@ import {
   stranger,
 } from '../../contexts/grouping/testing/group-book-fixtures';
 import type { IJournalEntry, TJournalEntryId } from '../../contexts/journal/domain/journal-entry';
-import { ALWAYS_BLOCK } from '../../contexts/policy/domain/policy';
+import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
 import type { IFakePhone } from '../../testing/fake-ports';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
@@ -54,21 +54,21 @@ describe('a group, edited on its own screen', () => {
     expect([spamIn(phone)?.name, spamIn(phone)?.color]).toEqual(['Spam calls', '#ff8800']);
   });
 
-  it('saves with its schedule what the group does in it', async () => {
-    const phone = fakePhone({ book: bookOf([SPAM]) });
-    await renderApp(ROUTES, { phone, initialUrl: '/schedule?group=spam' });
+  it('asks nothing on its schedule of what the group does in it: the opposite of the rest of the time', async () => {
+    await renderApp(ROUTES, {
+      phone: fakePhone({ book: bookOf([SPAM]) }),
+      initialUrl: '/schedule?group=spam',
+    });
 
-    await fireEvent.press(await screen.findByTestId('window-action-block'));
-    await fireEvent.press(screen.getByTestId('schedule-save'));
-
-    expect(spamIn(phone)?.policy.scheduled?.action).toBe('block');
+    expect(await screen.findByTestId('schedule-save')).toBeOnTheScreen();
+    expect(screen.queryByTestId('window-action-block')).not.toBeOnTheScreen();
   });
 
-  it('shows on its rules only the action for the rest of the time once it has a schedule', async () => {
+  it('shows on its rules what the group does while its conditions hold', async () => {
     const scheduled = custom('spam', [], {
       policy: {
         ...ALWAYS_BLOCK,
-        scheduled: { action: 'pass', schedule: null, calendars: [], places: [] },
+        scheduled: { schedule: null, calendars: [], places: [] },
       },
     });
     await renderApp(ROUTES, {
@@ -78,8 +78,18 @@ describe('a group, edited on its own screen', () => {
 
     await fireEvent.press(await screen.findByTestId('group-tab-rules'));
 
-    expect(screen.getByTestId('otherwise-block')).toBeSelected();
-    expect(screen.queryByTestId('scheduled-pass')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('while-pass')).toBeSelected();
+    expect(screen.queryByTestId('always-pass')).not.toBeOnTheScreen();
+  });
+
+  it('keeps blocking once given a schedule: it blocks in the schedule, and lets calls through outside', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp(ROUTES, { phone, initialUrl: '/schedule?group=spam' });
+
+    await fireEvent.press(await screen.findByTestId('schedule-save'));
+
+    expect(spamIn(phone)?.policy.scheduled).not.toBeNull();
+    expect(spamIn(phone)?.policy.otherwise).toBe('pass');
   });
 
   it('gets a schedule: weekdays on Helsinki’s clock', async () => {
@@ -192,7 +202,6 @@ describe('a group, edited on its own screen', () => {
       policy: {
         ...ALWAYS_BLOCK,
         scheduled: {
-          action: 'pass',
           schedule: null,
           calendars: [
             {
@@ -261,20 +270,27 @@ describe('a group, edited on its own screen', () => {
     expect(await screen.findByTestId('temporary-sheet')).toBeOnTheScreen();
   });
 
-  it('picks the action for a while by the same switch as everywhere, letting through at first', async () => {
-    await renderApp(ROUTES, {
-      phone: fakePhone({ book: bookOf([SPAM]) }),
-      initialUrl: '/group/spam',
-    });
+  it('sets for a while the opposite of what a blocking group does now, with no switch to pick it', async () => {
+    const phone = fakePhone({ book: bookOf([SPAM]) });
+    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
 
     await fireEvent.press(await screen.findByTestId('group-status'));
     await fireEvent.press(screen.getByTestId('policy-for-a-while'));
 
-    const pass = await screen.findByTestId('temporary-action-pass');
-    expect(pass).toHaveProp('accessibilityRole', 'tab');
-    expect(pass).toBeSelected();
-    await fireEvent.press(screen.getByTestId('temporary-action-block'));
-    expect(screen.getByTestId('temporary-action-block')).toBeSelected();
+    expect(screen.queryByTestId('temporary-action-pass')).not.toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId('temporary-1h'));
+    expect(spamIn(phone)?.temporary?.action).toBe('pass');
+  });
+
+  it('sets for a while the opposite of what a group letting calls through does now', async () => {
+    const phone = fakePhone({ book: bookOf([custom('spam', [], { policy: ALWAYS_PASS })]) });
+    await renderApp(ROUTES, { phone, initialUrl: '/group/spam' });
+
+    await fireEvent.press(await screen.findByTestId('group-status'));
+    await fireEvent.press(screen.getByTestId('policy-for-a-while'));
+    await fireEvent.press(await screen.findByTestId('temporary-1h'));
+
+    expect(spamIn(phone)?.temporary?.action).toBe('block');
   });
 
   it('says nothing more of the group in its change for a while: it is opened inside the group', async () => {

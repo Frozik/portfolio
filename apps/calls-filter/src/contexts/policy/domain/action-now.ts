@@ -2,10 +2,12 @@ import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Temporal } from 'temporal-polyfill';
 
 import type { TAction } from './action';
+import { oppositeOf } from './action';
 import type { TFloatingMinute } from './floating-time';
 import type { TPlaceFacts } from './place-rule';
 import { NOWHERE_KNOWN, placesAllow } from './place-rule';
 import type { IPolicy, ITemporaryPolicy, TTemporaryUntil } from './policy';
+import { windowActionOf } from './window-action';
 import type { TWindowSet } from './window-set';
 import { nextBoundary, windowAt } from './window-set';
 
@@ -74,5 +76,13 @@ export function actionNow(
   const changesAt = boundary === null ? null : { kind: 'local' as const, at: boundary };
   return windowAt(windows, moment.local) === null || !placesAllow(scheduled.places, atPlace)
     ? { action: group.policy.otherwise, source: 'otherwise', changesAt }
-    : { action: scheduled.action, source: 'scheduled', changesAt };
+    : { action: windowActionOf(group.policy), source: 'scheduled', changesAt };
+}
+
+/**
+ * What a change for a while does: the opposite of what the group does now; while one still
+ * runs, its own action, so a new term only extends it.
+ */
+export function temporaryActionOf(now: IActionNow): TAction {
+  return now.source === 'temporary' ? now.action : oppositeOf(now.action);
 }

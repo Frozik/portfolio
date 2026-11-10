@@ -1,6 +1,7 @@
 import type { TAppDeath } from '@frozik/tooling/src/android-e2e/app-death.ts';
 import { whyAppDied } from '@frozik/tooling/src/android-e2e/app-death.ts';
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
+import { launch } from '@frozik/tooling/src/android-e2e/screen.ts';
 
 export const PACKAGE = 'io.github.frozik.callsfilter';
 
@@ -54,7 +55,7 @@ const running = () =>
 const answers = async () => (await broadcast('ping')).data !== undefined;
 
 async function start(): Promise<void> {
-  await adb('shell', 'monkey', '-p', PACKAGE, '-c', 'android.intent.category.LAUNCHER', '1');
+  await launch(PACKAGE);
   await waitFor('the app to answer after its start', answers, ready => ready, APP_READY_MS);
 }
 

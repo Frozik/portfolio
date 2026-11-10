@@ -11,13 +11,11 @@ import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { ScheduleEditor, withSchedule } from '../../contexts/policy/application/ScheduleEditor';
 import { plainDateTimeOf } from '../../contexts/policy/domain/floating-time';
 import type { TWeekday } from '../../contexts/policy/domain/schedule';
-import { windowActionOf, withWindowAction } from '../../contexts/policy/domain/window-action';
 import { scheduleText } from '../../texts/policy-phrase';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { useClockWords } from '../clock-words';
 import { momentText } from '../format';
-import { WindowActionSwitch } from '../group/WindowActionSwitch';
 import { BackButton } from '../kit/BackButton';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
@@ -104,9 +102,6 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
       )
   );
   const [sheet, setSheet] = useState<TOpenSheet>(null);
-  const [action, setAction] = useState(() =>
-    group === null ? 'pass' : windowActionOf(group.policy)
-  );
   if (group === null) {
     return null;
   }
@@ -116,10 +111,7 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
         book,
         group.id,
         {
-          policy: withWindowAction(
-            withSchedule(group.policy, remove ? null : editor.schedule),
-            action
-          ),
+          policy: withSchedule(group.policy, remove ? null : editor.schedule),
         },
         context.now
       )
@@ -158,7 +150,6 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
         </>
       }
     >
-      <WindowActionSwitch value={action} onChange={setAction} />
       <Section>
         <ToggleRow
           testID="schedule-all-day"

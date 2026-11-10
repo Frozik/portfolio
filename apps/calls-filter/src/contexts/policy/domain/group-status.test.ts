@@ -19,7 +19,6 @@ const minute = (text: string) => floatingMinute(Temporal.PlainDateTime.from(text
 const DAYTIME_PASS: IPolicy = {
   otherwise: 'block',
   scheduled: {
-    action: 'pass',
     schedule: null,
     calendars: [],
     places: [],

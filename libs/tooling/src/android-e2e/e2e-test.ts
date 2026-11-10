@@ -1,3 +1,4 @@
+import type { TestContext } from 'node:test';
 import { test } from 'node:test';
 
 import { keepEvidence } from './device.ts';
@@ -24,11 +25,11 @@ export async function within<T>(work: Promise<T>, limitMs: number, name: string)
  * the screen, the view tree and logcat.
  */
 export function defineE2eTest(prepare: () => Promise<void>) {
-  return (name: string, limitMs: number, body: () => Promise<void>): void => {
-    test(name, { timeout: limitMs + RUNNER_GRACE_MS }, async () => {
+  return (name: string, limitMs: number, body: (context: TestContext) => Promise<void>): void => {
+    test(name, { timeout: limitMs + RUNNER_GRACE_MS }, async context => {
       try {
         await prepare();
-        await within(body(), limitMs, name);
+        await within(body(context), limitMs, name);
       } catch (error: unknown) {
         await keepEvidence(name);
         throw error;

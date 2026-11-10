@@ -53,6 +53,8 @@ export interface ICallScreeningModule {
   pausedUntil(): number | null;
   setPausedUntil(untilEpochMs: number | null): void;
   setRetentionDays(days: number): void;
+  /** How many days the service keeps its journal, as it was last told. */
+  retentionDays(): number;
   releasedTemporaries(): readonly string[];
   setAtPlace(placeId: string, inside: boolean | null): void;
   atPlace(placeId: string): boolean | null;

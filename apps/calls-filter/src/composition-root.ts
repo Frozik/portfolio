@@ -13,6 +13,7 @@ import { expoGeofences } from './infrastructure/expo-geofences';
 import { GOOGLE_DRIVE_ACCOUNT, googleDriveCloudOf } from './infrastructure/google-drive-sync';
 import { ICS_HTTP_FEED } from './infrastructure/ics-http-feed';
 import { LIBPHONENUMBER_NUMBERING } from './infrastructure/libphonenumber-numbering';
+import { everyMinute } from './infrastructure/minute-ticks';
 import { nativeCallHistory } from './infrastructure/native-call-history';
 import { nativeCallJournal } from './infrastructure/native-call-journal';
 import { NATIVE_CONTACT_VIEWER } from './infrastructure/native-contact-viewer';
@@ -84,6 +85,7 @@ function wireApp(): Promise<CallsFilterApp> {
     diagnostics: NATIVE_DIAGNOSTICS_LOG,
     share: shareSheetExport,
     clock: SYSTEM_CLOCK,
+    everyMinute,
     newId: UUID_IDS,
     exportHeader: () => ({
       appVersion: Constants.expoConfig?.version ?? 'dev',
@@ -98,7 +100,7 @@ function wireApp(): Promise<CallsFilterApp> {
   });
   // A no-op outside the APK built for the e2e tests: the native side keeps the channel shut.
   return started.then(app => {
-    openE2eControl(app);
+    openE2eControl(app, store);
     return app;
   });
 }

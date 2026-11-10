@@ -154,6 +154,7 @@ export function fakePhone({
       latest: limit => diagnostics.slice(-limit).reverse(),
     },
     share: async () => 'shared',
+    everyMinute: () => () => {},
     clock: {
       now: () => PHONE_NOW.toInstant(),
       localNow: () => PHONE_NOW.toPlainDateTime(),

@@ -19,9 +19,11 @@ import type { IPolicy } from '../../contexts/policy/domain/policy';
 import { ALWAYS_BLOCK, ALWAYS_PASS } from '../../contexts/policy/domain/policy';
 import type { TRepeatPass } from '../../contexts/policy/domain/repeat-pass';
 import { REPEAT_OFF } from '../../contexts/policy/domain/repeat-pass';
+import { windowActionOf } from '../../contexts/policy/domain/window-action';
 import type { CallsFilterApp } from '../../contexts/shell/application/CallsFilterApp';
 import { LIBPHONENUMBER_NUMBERING } from '../libphonenumber-numbering';
 import { nativeCallJournal } from '../native-call-journal';
+import type { IDocumentStore } from '../stored-document';
 
 const EVENT_FILTER = {
   skipDeclined: true,
@@ -62,6 +64,10 @@ const e2eCommand = z.discriminatedUnion('name', [
   z.object({ name: z.literal('set-filter-repeat'), repeat }),
   z.object({ name: z.literal('calls'), number: z.string() }),
   z.object({ name: z.literal('device-calendars') }),
+  z.object({ name: z.literal('document'), key: z.string() }),
+  /** Puts a document as an older app would have left it; the app reads it at its next start. */
+  z.object({ name: z.literal('write-document'), key: z.string(), text: z.string() }),
+  z.object({ name: z.literal('journal-days') }),
   /** What a geofence would have said: the emulator's own location is too slow to drive a test. */
   z.object({ name: z.literal('set-at-place'), place: z.string(), inside: z.boolean().nullable() }),
 ]);
@@ -82,7 +88,6 @@ function policyOf(group: TNewGroup): IPolicy {
     ...policy,
     otherwise: 'block',
     scheduled: {
-      action: 'pass',
       schedule: null,
       calendars:
         exceptDuring === undefined
@@ -154,7 +159,7 @@ function described(app: CallsFilterApp, group: TGroup) {
       group.policy.scheduled === null
         ? null
         : {
-            action: group.policy.scheduled.action,
+            action: windowActionOf(group.policy),
             repeat: group.policy.scheduled.schedule?.repeat ?? null,
             zone: group.policy.scheduled.schedule?.zone ?? null,
             calendars: group.policy.scheduled.calendars.map(rule => rule.source.kind),
@@ -232,7 +237,11 @@ function addGroup(app: CallsFilterApp, group: TNewGroup) {
  * the service would show. Every change goes through the same edits the screens use, so the
  * ruleset the service runs is published exactly as after a tap.
  */
-export async function runE2eCommand(app: CallsFilterApp, input: unknown): Promise<unknown> {
+export async function runE2eCommand(
+  app: CallsFilterApp,
+  documents: IDocumentStore,
+  input: unknown
+): Promise<unknown> {
   const command = e2eCommand.parse(input);
   switch (command.name) {
     case 'ping':
@@ -274,6 +283,13 @@ export async function runE2eCommand(app: CallsFilterApp, input: unknown): Promis
       CALL_SCREENING.setAtPlace(command.place, command.inside);
       app.places.refresh();
       return { place: command.place, inside: command.inside };
+    case 'document':
+      return { text: await documents.read(command.key) };
+    case 'write-document':
+      await documents.write(command.key, command.text);
+      return { key: command.key };
+    case 'journal-days':
+      return { days: CALL_SCREENING.retentionDays() };
     default:
       return assertNever(command);
   }

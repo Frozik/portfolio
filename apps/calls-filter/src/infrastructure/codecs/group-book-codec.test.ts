@@ -9,7 +9,7 @@ describe('the stored group book', () => {
   });
 
   it('is written under its version', () => {
-    expect(JSON.parse(encodeGroupBook(SCENARIO_BOOK))).toMatchObject({ version: 1 });
+    expect(JSON.parse(encodeGroupBook(SCENARIO_BOOK))).toMatchObject({ version: 2 });
   });
 
   it('reads a book written before books carried a version, and says it came from version 0', () => {
@@ -24,10 +24,31 @@ describe('the stored group book', () => {
     );
   });
 
+  it('reads a book that still kept a scheduled action, now always the opposite of the rest of the time', () => {
+    const current = JSON.parse(encodeGroupBook(SCENARIO_BOOK)) as {
+      data: { groups: { policy: { scheduled: object | null } }[] };
+    };
+    const groups = current.data.groups.map(group => ({
+      ...group,
+      policy: {
+        ...group.policy,
+        scheduled:
+          group.policy.scheduled === null ? null : { ...group.policy.scheduled, action: 'pass' },
+      },
+    }));
+
+    const read = decodeGroupBook(JSON.stringify({ version: 1, data: { groups } }));
+
+    expect(read.ok && read.value.migratedFrom).toBe(1);
+    expect(read.ok && JSON.parse(encodeGroupBook(read.value.book))).toEqual(
+      JSON.parse(encodeGroupBook(SCENARIO_BOOK))
+    );
+  });
+
   it('leaves alone a book a newer app wrote, and says so', () => {
-    expect(decodeGroupBook(JSON.stringify({ version: 2, data: { groups: [] } }))).toEqual({
+    expect(decodeGroupBook(JSON.stringify({ version: 3, data: { groups: [] } }))).toEqual({
       ok: false,
-      error: { kind: 'newer', version: 2 },
+      error: { kind: 'newer', version: 3 },
     });
   });
 

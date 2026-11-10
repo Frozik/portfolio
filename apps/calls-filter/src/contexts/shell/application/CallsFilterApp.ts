@@ -12,7 +12,6 @@ import { calendarSourcesOf } from '../../grouping/domain/calendar-sources';
 import type { IConflictFacts } from '../../grouping/domain/conflict-detection';
 import type { TGroup, TGroupId } from '../../grouping/domain/group';
 import { findGroup } from '../../grouping/domain/group-book';
-import { setTemporaryPolicy } from '../../grouping/domain/group-book-edits';
 import { initialBook } from '../../grouping/domain/initial-book';
 import type { IMatchingEnvironment } from '../../grouping/domain/matching-environment';
 import type { IPickedContact } from '../../grouping/domain/ports/contacts-directory';
@@ -38,6 +37,7 @@ import { groupWindows } from '../../screening/domain/group-windows';
 import type { IScreeningInputs } from '../../screening/domain/screening-inputs';
 import { SyncModel } from '../../sync/application/SyncModel';
 import type { IAppPorts } from './app-ports';
+import { dropReleasedTemporaries } from './released-temporaries';
 
 /** When nothing says where the phone is from: a numbering plan to read national masks by. */
 const FALLBACK_COUNTRY = 'US' as TCountryCode;
@@ -57,6 +57,7 @@ export class CallsFilterApp {
   /** This build may send an SMS: the edition without SMS neither offers the reply nor asks for it. */
   readonly smsReply: boolean;
   contactCallers: readonly ICaller[] = [];
+  private minutesPassed = 0;
   private readonly stops: (() => void)[] = [];
 
   private constructor(
@@ -133,8 +134,9 @@ export class CallsFilterApp {
       ports.clock,
       ports.exportHeader
     );
-    makeObservable<CallsFilterApp, 'home'>(this, {
+    makeObservable<CallsFilterApp, 'home' | 'minutesPassed'>(this, {
       contactCallers: observableRef,
+      minutesPassed: observableRef,
       home: computed,
       environment: computed,
       facts: computed,
@@ -293,8 +295,9 @@ export class CallsFilterApp {
     });
   }
 
-  /** What a group does with a call right now, and what it does after that changes. */
+  /** What a group does with a call right now, and what it does after that changes; re-read each minute. */
   statusOf(group: TGroup): IGroupStatus {
+    void this.minutesPassed;
     const { clock } = this.ports;
     return groupStatus(
       group,
@@ -327,7 +330,7 @@ export class CallsFilterApp {
     void this.calls.refresh();
     this.diagnostics.refresh();
     void this.places.settle();
-    this.dropReleasedTemporaries();
+    dropReleasedTemporaries(this.books, this.ports.runtime.releasedTemporaries());
     void this.calendars.refresh();
     void this.sync.syncNow();
     if (this.device.permissions.contacts === 'granted') {
@@ -341,7 +344,7 @@ export class CallsFilterApp {
   /** A wake-up from Android while the app is closed: re-read the calendars, the rules follow. */
   async refreshInBackground(): Promise<void> {
     this.device.refresh();
-    this.dropReleasedTemporaries();
+    dropReleasedTemporaries(this.books, this.ports.runtime.releasedTemporaries());
     await this.calendars.refresh();
     await this.sync.syncNow();
   }
@@ -358,6 +361,12 @@ export class CallsFilterApp {
       this.calls.follow(),
       this.sync.follow(),
       this.places.follow(),
+      this.calendars.follow(),
+      ports.everyMinute(() =>
+        runInAction(() => {
+          this.minutesPassed += 1;
+        })
+      ),
       reaction(
         () => this.books.book,
         book => {
@@ -379,19 +388,5 @@ export class CallsFilterApp {
     );
     void this.foreground();
     void this.numberingCatalogue.open();
-  }
-
-  /**
-   * A temporary policy the service released — used up by its first call, or taken back from the
-   * shade — comes off the group, on every phone.
-   */
-  private dropReleasedTemporaries(): void {
-    const released = new Set(this.ports.runtime.releasedTemporaries());
-    for (const group of this.books.book.groups) {
-      const { temporary } = group;
-      if (temporary !== null && released.has(`${group.id}@${temporary.setAt.epochMilliseconds}`)) {
-        this.books.run((book, context) => setTemporaryPolicy(book, group.id, null, context.now));
-      }
-    }
   }
 }
