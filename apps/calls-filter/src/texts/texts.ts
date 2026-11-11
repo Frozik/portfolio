@@ -77,6 +77,10 @@ export interface ITexts {
     readonly calls: string;
     readonly rules: string;
     readonly noCalls: string;
+    readonly search: string;
+    readonly searchHint: string;
+    readonly searchClear: string;
+    readonly nothingFound: string;
     readonly who: string;
     readonly include: string;
     readonly exclude: string;

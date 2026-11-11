@@ -139,6 +139,12 @@ inside working hours ends them early; while a place is what keeps the group out,
 named, since the clock cannot tell when the phone gets there. The name of a group not in force fades, in the list and on its screen; the
 rows move on by themselves each minute.
 
+A group's calls are searched from the funnel at the end of the Calls segment of the switch, lit
+while the search is on: it opens a field under the switch for a part of the number — digits in any writing, `456-35` or `+7 986` — or of
+a name (the contact's, the operator's or the dialer's, case aside). Closing the funnel, or
+going to the rules, drops the query along with the field, so no list stays filtered out of
+sight; a group without calls has no funnel.
+
 ## Where a call is from
 
 Every call in a list starts with its caller's avatar — the contact's photo, or a grey circle with

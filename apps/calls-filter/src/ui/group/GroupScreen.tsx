@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { PhoneIncoming, PhoneOff } from 'lucide-react-native';
+import { Funnel, PhoneIncoming, PhoneOff } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -10,7 +10,6 @@ import { changeGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { isActive } from '../../contexts/policy/domain/activity-now';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { CallList } from '../calls/CallList';
 import { groupName } from '../group-name';
 import { statusText } from '../groups/group-status';
 import { BackArrow } from '../kit/BackArrow';
@@ -25,6 +24,7 @@ import { useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
 import { ColorSheet } from './ColorSheet';
 import { DeleteGroupButton } from './DeleteGroupButton';
+import { GroupCalls } from './GroupCalls';
 import { MembersPanel } from './MembersPanel';
 import { PolicyPanel } from './PolicyPanel';
 import { PolicySheet } from './PolicySheet';
@@ -43,6 +43,7 @@ export const GroupScreen = observer(function GroupScreen() {
   const scheme = useScheme();
   const { id } = useLocalSearchParams<{ readonly id: string }>();
   const [tab, setTab] = useState<TTab>('calls');
+  const [query, setQuery] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [coloring, setColoring] = useState(false);
   const [policySheet, setPolicySheet] = useState(false);
@@ -52,6 +53,11 @@ export const GroupScreen = observer(function GroupScreen() {
   }
   const today = app.clock.localNow().toPlainDate();
   const status = app.statusOf(group);
+  const days = app.calls.daysOf(group.id);
+  const chooseTab = (next: TTab) => {
+    setTab(next);
+    setQuery(null);
+  };
   return (
     <Screen
       testID={`group-screen-${group.id}`}
@@ -109,17 +115,32 @@ export const GroupScreen = observer(function GroupScreen() {
       {policySheet ? <PolicySheet group={group} onClose={() => setPolicySheet(false)} /> : null}
       <SegmentedControl
         segments={[
-          { value: 'calls', label: texts.group.calls, testID: 'group-tab-calls' },
+          {
+            value: 'calls',
+            label: texts.group.calls,
+            testID: 'group-tab-calls',
+            toggle:
+              days.length === 0
+                ? undefined
+                : {
+                    icon: Funnel,
+                    label: texts.group.search,
+                    value: query !== null,
+                    onChange: open => setQuery(open ? '' : null),
+                    testID: 'group-search',
+                  },
+          },
           { value: 'rules', label: texts.group.rules, testID: 'group-tab-rules' },
         ]}
         value={tab}
-        onChange={setTab}
+        onChange={chooseTab}
       />
       {tab === 'calls' ? (
-        <CallList
-          days={app.calls.daysOf(group.id)}
+        <GroupCalls
+          days={days}
           quickMove={group.kind === 'strangers'}
-          showGroup={false}
+          query={query}
+          onQuery={setQuery}
         />
       ) : (
         <>
