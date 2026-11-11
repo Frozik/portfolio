@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@frozik/cloud-storage": "workspace:*",
-    "@frozik/utils": "workspace:*"
+    "@frozik/utils": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@frozik/typescript-config": "workspace:*",

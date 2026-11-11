@@ -6,3 +6,6 @@ export interface IVaultFile {
 
 /** The platform's file chooser for a `.pwv`; `null` when the user closed it without one. */
 export type TPickVaultFile = () => Promise<IVaultFile | null>;
+
+/** Files another app hands over ("Open with", "Share"): each one once, the one that started the app included; returns the way to stop. */
+export type TFollowIncomingFiles = (onFile: (file: IVaultFile) => void) => () => void;

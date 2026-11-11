@@ -1,21 +1,76 @@
 import { render } from '@testing-library/react-native';
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import type { AppStateStatus } from 'react-native';
+import { AppState, Linking } from 'react-native';
 
 import { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 
 import { aDevice } from '@frozik/vault-app/testing/fake-device';
 import { AppUnderTest } from '../testing/AppUnderTest';
+import { openSettingsTopic } from '../testing/settings-topic';
 import { unlockedVaultWith } from '../testing/unlocked-vault';
 import { UpdateGate } from '../UpdateGate';
 
 async function openSettings() {
   const vault = await unlockedVaultWith([]);
-  await fireEvent.press(screen.getByTestId('tab-settings'));
-  await screen.findByTestId('settings');
+  await openSettingsTopic('security');
   return vault;
 }
 
 describe('the settings of the open vault on the phone', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('lists the topics, falls into one, and comes back to the list', async () => {
+    await unlockedVaultWith([]);
+    await fireEvent.press(screen.getByTestId('tab-settings'));
+
+    await fireEvent.press(await screen.findByTestId('settings-topic-display'));
+    const display = await screen.findByTestId('settings-display');
+    const themeThere = screen.queryAllByTestId('show-recent').length;
+    await fireEvent.press(screen.getByTestId('settings-back'));
+
+    expect({
+      display: display !== null,
+      themeThere,
+      list: await screen.findByTestId('settings'),
+    }).toEqual({
+      display: true,
+      themeThere: 1,
+      list: expect.anything(),
+    });
+    expect(screen.getByTestId('tab-settings')).toBeSelected();
+  });
+
+  it('leads to the phone’s settings when no fingerprint is set up, and offers the switch on coming back', async () => {
+    const listeners: ((state: AppStateStatus) => void)[] = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener);
+      return { remove: jest.fn() };
+    });
+    const sendIntent = jest.spyOn(Linking, 'sendIntent').mockResolvedValue(undefined);
+    const vault = await unlockedVaultWith([]);
+    vault.device.biometrics.sensor('none');
+    await openSettingsTopic('security');
+
+    await fireEvent.press(await screen.findByTestId('biometric-enrol'));
+    vault.device.biometrics.sensor('strong');
+    await act(() => listeners.forEach(listener => listener('active')));
+
+    expect(await screen.findByTestId('biometric-switch-on')).toBeOnTheScreen();
+    expect(sendIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the author in About and opens the homepage from the link', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    await unlockedVaultWith([]);
+    await openSettingsTopic('about');
+
+    await fireEvent.press(screen.getByTestId('settings-homepage'));
+
+    expect(screen.getByTestId('settings-author')).toBeOnTheScreen();
+    expect(openURL).toHaveBeenCalledWith('https://frozik.github.io/portfolio/');
+  });
+
   it('allows screenshots only once the user confirmed what that means', async () => {
     const { app } = await openSettings();
 

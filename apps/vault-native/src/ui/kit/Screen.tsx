@@ -1,18 +1,21 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePalette } from '../theme/AppTheme';
 import { GAP, GUTTER, TEXT_SIZE } from './metrics';
 
 /**
- * A full screen edge to edge: the content clears the system bars, the background runs under them.
+ * A full screen edge to edge: the background runs under the system bars, the content clears them —
+ * the scrolling area itself starts below the status bar, so text scrolled up never runs under the clock.
  * Edge to edge, Android no longer shrinks the window for the keyboard, so the screen gives way itself.
  */
 export function Screen({
   title,
   testID,
   back,
+  titleBadge,
+  titleEnd,
   footer,
   children,
 }: {
@@ -20,6 +23,10 @@ export function Screen({
   readonly testID: string;
   /** The way up, above the title. */
   readonly back?: ReactNode;
+  /** Right after the title, on its line. */
+  readonly titleBadge?: ReactNode;
+  /** Held to the right edge on the title's line. */
+  readonly titleEnd?: ReactNode;
   readonly footer?: ReactNode;
   readonly children: ReactNode;
 }) {
@@ -33,15 +40,20 @@ export function Screen({
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        style={{ marginTop: insets.top }}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + GUTTER, paddingBottom: insets.bottom + GUTTER },
+          { paddingTop: GUTTER, paddingBottom: insets.bottom + GUTTER },
         ]}
       >
         {back}
-        <Text accessibilityRole="header" style={[styles.title, { color: palette.fg }]}>
-          {title}
-        </Text>
+        <View style={styles.titleLine}>
+          <Text accessibilityRole="header" style={[styles.title, { color: palette.fg }]}>
+            {title}
+          </Text>
+          {titleBadge}
+          <View style={styles.titleEnd}>{titleEnd}</View>
+        </View>
         {children}
         {footer}
       </ScrollView>
@@ -52,5 +64,7 @@ export function Screen({
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: GUTTER, gap: GAP },
-  title: { fontSize: TEXT_SIZE.title, fontWeight: '600' },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: GAP },
+  titleEnd: { marginLeft: 'auto' },
+  title: { flexShrink: 1, fontSize: TEXT_SIZE.title, fontWeight: '600' },
 });

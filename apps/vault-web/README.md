@@ -44,7 +44,7 @@ export, every setting.
   key, where the vault is kept, backups on this device and a **backup file** (the vault file
   itself, saved through the save dialog wherever the user keeps backups; it opens with the same
   password and, dropped on any device's first screen, brings this vault back), templates, import (KeePass, Bitwarden,
-  SafeInCloud, CSV, CXF) and export, removing the vault from this device, about.
+  SafeInCloud, CSV, CXF) and export (also to a SafeInCloud database `.db` under its own password, or its XML), removing the vault from this device, about.
 - **Empty and failing states** — an empty vault offers an import, a search that finds nothing
   offers the archive, a missing local copy points to the cloud.
 - **Privacy curtain** — while the app is out of sight a brand screen covers it, so the app

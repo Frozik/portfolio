@@ -6,6 +6,12 @@ import { withMainActivity } from 'expo/config-plugins';
 const ANDROID_PACKAGE = 'io.github.ciphravault.vault';
 /** A development build installs below every release. */
 const DEVELOPMENT_VERSION_CODE = 1;
+/** What a vault file or another manager's database arrives as from a file manager or a messenger. */
+const TAKEN_IN_TYPES = [
+  'application/octet-stream',
+  'application/x-sqlite3',
+  'application/vnd.sqlite3',
+];
 
 const SUPER_ON_CREATE = 'super.onCreate(null)';
 const SECURE_WINDOW =
@@ -42,6 +48,8 @@ export default ({ config }: ConfigContext): ExpoConfig =>
     name: 'Ciphra Vault',
     slug: 'ciphra-vault',
     version: process.env.VAULT_NATIVE_VERSION?.replace(/^v/, '') ?? '0.0.0',
+    // Only a release names itself one: a local build (0.0.0) would otherwise read every release as newer.
+    extra: { release: process.env.VAULT_NATIVE_VERSION ?? null },
     platforms: ['android'],
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -55,8 +63,29 @@ export default ({ config }: ConfigContext): ExpoConfig =>
       predictiveBackGestureEnabled: false,
       // The vault leaves the phone only through the user's own cloud, never through a backup.
       allowBackup: false,
+      // "Open with" and "Share" offer the app for a vault file (Android names a .pwv a plain
+      // binary) and for another manager's database, which a file manager may call SQLite.
+      intentFilters: [
+        {
+          action: 'VIEW',
+          category: ['DEFAULT'],
+          data: TAKEN_IN_TYPES.flatMap(mimeType => [
+            { scheme: 'content', mimeType },
+            { scheme: 'file', mimeType },
+          ]),
+        },
+        {
+          action: 'SEND',
+          category: ['DEFAULT'],
+          data: TAKEN_IN_TYPES.map(mimeType => ({ mimeType })),
+        },
+      ],
     },
     // No over-the-air code: every change ships as a signed APK the user can verify.
     updates: { enabled: false },
-    plugins: ['expo-router'],
+    plugins: [
+      'expo-router',
+      // The camera reads QR codes of one-time codes; nothing is recorded, so no microphone.
+      ['expo-camera', { recordAudioAndroid: false, microphonePermission: false }],
+    ],
   });

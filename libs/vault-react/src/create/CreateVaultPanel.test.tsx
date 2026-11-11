@@ -7,6 +7,7 @@ import { CreateVaultPanel } from './CreateVaultPanel';
 function aForm(): CreateVaultForm {
   return new CreateVaultForm(
     {
+      id: 'silent',
       estimate: () => Promise.resolve(null),
       dispose: () => undefined,
     },

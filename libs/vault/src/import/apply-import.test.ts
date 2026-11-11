@@ -119,15 +119,35 @@ describe('importing into a vault', () => {
     expect(document.cards.size).toBe(2);
   });
 
-  it('finds duplicates inside the file too', () => {
+  it('brings every entry of the file into an empty vault, even two for one site and login', () => {
     const twice = batch([
       account('One', 'https://example.com', 'jane', 'a'),
       account('Two', 'https://www.example.com/login', 'JANE', 'b'),
     ]);
 
     expect(run(emptyVaultDocument('Mine', anHlc(1)), twice, 'skip').result).toMatchObject({
-      added: 1,
-      skipped: 1,
+      added: 2,
+      skipped: 0,
+    });
+  });
+
+  it('pairs a file brought again with the cards it brought, each card twinned once', () => {
+    const twice = batch([
+      account('One', 'https://example.com', 'jane', 'a'),
+      account('Two', 'https://www.example.com/login', 'JANE', 'b'),
+    ]);
+    const first = run(emptyVaultDocument('Mine', anHlc(1)), twice, 'skip').document;
+    const skipped = run(first, twice, 'skip');
+    const replaced = run(first, twice, 'replace');
+
+    expect({
+      skipped: skipped.result,
+      replaced: replaced.result,
+      passwords: [...replaced.document.cards.values()].map(passwordOf).sort(),
+    }).toEqual({
+      skipped: { added: 0, replaced: 0, skipped: 2, filesDropped: 0 },
+      replaced: { added: 0, replaced: 2, skipped: 0, filesDropped: 0 },
+      passwords: ['a', 'b'],
     });
   });
 

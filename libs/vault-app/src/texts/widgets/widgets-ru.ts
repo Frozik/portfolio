@@ -192,6 +192,7 @@ export const widgetTextsRu: IWidgetTexts = {
     hipercard: 'Hipercard',
     troy: 'TROY',
     naranja: 'Naranja',
+    belkart: 'Белкарт',
     verve: 'Verve',
   },
   showToEdit: 'Показать для правки',

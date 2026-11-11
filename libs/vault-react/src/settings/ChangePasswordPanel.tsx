@@ -7,7 +7,6 @@ import { Alert } from '@frozik/components/ui/Alert';
 import { Button } from '@frozik/components/ui/Button';
 import { ChangePasswordForm } from '@frozik/vault-app/keys/application/ChangePasswordForm';
 import type { SessionKeys } from '@frozik/vault-app/keys/application/SessionKeys';
-import { MASTER_PASSWORD_MIN_LENGTH } from '@frozik/vault-app/keys/domain/master-password';
 import { changePasswordProblemText } from '@frozik/vault-app/texts/keys/keys-wording';
 import { PanelSection } from '../form/PanelSection';
 import { VaultField } from '../form/VaultField';
@@ -43,7 +42,7 @@ const Form = observer(
             />
           )}
         </VaultField>
-        <VaultField label={t.password} hint={t.passwordHint(MASTER_PASSWORD_MIN_LENGTH)}>
+        <VaultField label={t.password}>
           {describedBy => (
             <SecretEditor
               aria-label={t.password}

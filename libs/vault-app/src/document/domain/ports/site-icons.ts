@@ -4,4 +4,8 @@ type TSiteIconFetch =
   | { readonly kind: 'none' }
   | { readonly kind: 'failed' };
 
-export type TFetchSiteIcon = (domain: string, signal: AbortSignal) => Promise<TSiteIconFetch>;
+export interface ISiteIconFetcher {
+  /** How wide its search is: a site another client found without an icon is asked again by a wider one. */
+  readonly reach: number;
+  fetch(domain: string, signal: AbortSignal): Promise<TSiteIconFetch>;
+}

@@ -1,16 +1,8 @@
-import { useSyncExternalStore } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useVaultTexts } from './texts';
 import { usePalette } from './theme/AppTheme';
-
-function subscribe(changed: () => void): () => void {
-  const subscription = AppState.addEventListener('change', changed);
-  return () => subscription.remove();
-}
-
-const isAway = (): boolean =>
-  AppState.currentState === 'background' || AppState.currentState === 'inactive';
+import { useAppAway } from './useAppAway';
 
 /**
  * The app switcher keeps a picture of the last frame: while the app is away a
@@ -18,7 +10,7 @@ const isAway = (): boolean =>
  * user allowed screenshots and the system no longer blanks it.
  */
 export function PrivacyCurtain() {
-  const away = useSyncExternalStore(subscribe, isAway);
+  const away = useAppAway();
   const palette = usePalette();
   const t = useVaultTexts().phone;
   if (!away) {

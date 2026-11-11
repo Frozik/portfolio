@@ -43,7 +43,7 @@ if [[ "$prebuilt" == false ]]; then
   pnpm run build-apk "-PreactNativeArchitectures=$abi"
 fi
 
-adb install -r "$apk"
+./install-apk.sh "$apk"
 
 # The flows run on a 320x640 dp screen whatever the device: the smallest phone the app is for, and
 # what CI's emulator has by default, so a control pushed below the fold fails here as it does there.

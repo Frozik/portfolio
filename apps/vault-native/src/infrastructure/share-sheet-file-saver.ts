@@ -2,10 +2,9 @@ import type { TSaveFile } from '@frozik/vault-app/interchange/domain/ports/file-
 import { Directory, File, Paths } from 'expo-file-system';
 import { isAvailableAsync, shareAsync } from 'expo-sharing';
 
-const exportsDirectory = (): Directory => new Directory(Paths.cache, 'exports');
+import { safeFileName } from './safe-file-name';
 
-/** A vault may be named "Work/Home": a path separator or a control character never reaches the file system. */
-const UNSAFE_IN_FILE_NAME = /[/\\\p{Cc}]/gu;
+const exportsDirectory = (): Directory => new Directory(Paths.cache, 'exports');
 
 /**
  * An export is plaintext for as long as it waits for the share sheet. A lock
@@ -32,7 +31,7 @@ export const shareSheetSaveFile: TSaveFile = async ({ name, mime, bytes }) => {
   try {
     const directory = exportsDirectory();
     directory.create({ idempotent: true });
-    const file = new File(directory, name.replace(UNSAFE_IN_FILE_NAME, '-'));
+    const file = new File(directory, safeFileName(name));
     file.create({ overwrite: true });
     file.write(bytes);
     await shareAsync(file.uri, { mimeType: mime, dialogTitle: name });

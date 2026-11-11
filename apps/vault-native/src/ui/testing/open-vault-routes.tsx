@@ -8,14 +8,14 @@ import History from '../../app/[vaultId]/[section]/[cardId]/history';
 import VaultLayout from '../../app/[vaultId]/_layout';
 import Audit from '../../app/[vaultId]/audit';
 import Settings from '../../app/[vaultId]/settings';
+import SettingsTopic from '../../app/[vaultId]/settings/[topic]';
 import { CardPage } from '../card/CardPage';
 import { CardListScreen } from '../list/CardListScreen';
 import { StartScreen } from '../start/StartScreen';
 import { PageNotFound } from '../vault/PageNotFound';
 
 function AllCards() {
-  const { search } = useLocalSearchParams<{ search?: string }>();
-  return <CardListScreen section="all" searching={search === '1'} />;
+  return <CardListScreen section="all" />;
 }
 
 function Card() {
@@ -26,11 +26,7 @@ function Card() {
 function Section() {
   const { section } = useLocalSearchParams<{ section: string }>();
   const page = parseVaultPage(section);
-  return page.kind === 'section' ? (
-    <CardListScreen section={page.section} searching={false} />
-  ) : (
-    <PageNotFound />
-  );
+  return page.kind === 'section' ? <CardListScreen section={page.section} /> : <PageNotFound />;
 }
 
 /** The app's own vault routes under its start screen; index routes are named by what they render. */
@@ -42,5 +38,6 @@ export const OPEN_VAULT_ROUTES = {
   '[vaultId]/[section]/[cardId]/index': Card,
   '[vaultId]/[section]/[cardId]/history': History,
   '[vaultId]/audit': Audit,
-  '[vaultId]/settings': Settings,
+  '[vaultId]/settings/index': Settings,
+  '[vaultId]/settings/[topic]': SettingsTopic,
 };

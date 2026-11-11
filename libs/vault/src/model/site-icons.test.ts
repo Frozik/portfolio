@@ -26,13 +26,52 @@ describe('site icons', () => {
     const document = setSiteIcon(aDocument([github, chosen, without]), 'noicon.example', {
       kind: 'none',
       at: anHlc(1000),
+      reach: 1,
     });
 
-    expect(siteIconsWanted(document, 2000)).toEqual(['github.com']);
-    expect(siteIconsWanted(document, 1000 + SITE_ICON_RETRY_MS)).toEqual([
+    expect(siteIconsWanted(document, 2000, 1)).toEqual(['github.com']);
+    expect(siteIconsWanted(document, 1000 + SITE_ICON_RETRY_MS, 1)).toEqual([
       'github.com',
       'noicon.example',
     ]);
+  });
+
+  it('are wanted again at once where a wider search may find what a narrower one did not', () => {
+    const without = aCardWith([aField(URL_SPEC, ['https://noicon.example'])]);
+    const document = setSiteIcon(aDocument([without]), 'noicon.example', {
+      kind: 'none',
+      at: anHlc(1000),
+      reach: 1,
+    });
+
+    expect({
+      wider: siteIconsWanted(document, 2000, 2),
+      same: siteIconsWanted(document, 2000, 1),
+    }).toEqual({ wider: ['noicon.example'], same: [] });
+  });
+
+  it('read a "none" written before searches had a reach as the narrowest one', () => {
+    const without = setSiteIcon(aDocument(), 'github.com', {
+      kind: 'none',
+      at: anHlc(1),
+      reach: 1,
+    });
+    const entries = new Map(encodeDocument(without).map(entry => [entry.path, entry.bytes]));
+    const listed = JSON.parse(new TextDecoder().decode(entries.get('icons.json'))) as object[];
+    entries.set(
+      'icons.json',
+      new TextEncoder().encode(
+        JSON.stringify(listed.map(({ reach: _reach, ...old }: { reach?: number }) => old))
+      )
+    );
+
+    const decoded = decodeDocument(entries);
+
+    expect(decoded.ok && decoded.value.siteIcons.get('github.com')).toEqual({
+      kind: 'none',
+      at: anHlc(1),
+      reach: 1,
+    });
   });
 
   it('travel in the vault file and merge by the later stamp', () => {
@@ -41,7 +80,11 @@ describe('site icons', () => {
       png: PNG,
       at: anHlc(2),
     });
-    const without = setSiteIcon(aDocument(), 'github.com', { kind: 'none', at: anHlc(1) });
+    const without = setSiteIcon(aDocument(), 'github.com', {
+      kind: 'none',
+      at: anHlc(1),
+      reach: 2,
+    });
 
     const decoded = decodeDocument(
       new Map(encodeDocument(withIcon).map(entry => [entry.path, entry.bytes]))

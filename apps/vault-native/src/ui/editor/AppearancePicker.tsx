@@ -1,6 +1,6 @@
 import { BUILTIN_ICON_GROUPS } from '@frozik/vault/model/builtin-icons';
 import type { ICardState, TCardColor, TCardIconRef } from '@frozik/vault/model/card';
-import { CARD_COLOR_SHADES, CARD_COLORS } from '@frozik/vault/model/card-appearance';
+import { CARD_COLOR_SHADES } from '@frozik/vault/model/card-appearance';
 import { isNil } from 'lodash-es';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,15 +12,13 @@ import { Dialog } from '../kit/Dialog';
 import { GAP, RADIUS, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { useEditorTexts, useWidgetTexts } from '../texts';
 import { usePalette, useScheme } from '../theme/AppTheme';
+import { ColorSwatches } from './ColorSwatches';
 
 const GLYPH_SIZE = 22;
-const SWATCH_SIZE = 32;
-/** A swatch is drawn small but touched at full size. */
-const SWATCH_SLOP = (TOUCH_SIZE - SWATCH_SIZE) / 2;
 
 /**
- * The card's icon (automatic, or a built-in one from its group) and, for a built-in icon, the
- * colour it is drawn in: the only icon a colour reaches.
+ * The card's icon (automatic, or a built-in one from its group) and its colour: a built-in icon is
+ * drawn in it, an automatic one — a network's logo, a site's icon — sits on it.
  */
 export function AppearancePicker({
   card,
@@ -58,34 +56,7 @@ export function AppearancePicker({
           {icon.kind === 'builtin' ? t.icons[icon.name] : t.automatic}
         </Text>
       </Pressable>
-      {icon.kind === 'builtin' && (
-        <View accessibilityRole="radiogroup" accessibilityLabel={t.color} style={styles.swatches}>
-          {[null, ...CARD_COLORS].map(option => {
-            const selected = option === color;
-            return (
-              <Pressable
-                key={option ?? 'none'}
-                testID={`card-color-${option ?? 'none'}`}
-                accessibilityRole="radio"
-                accessibilityLabel={isNil(option) ? t.noColor : t.colors[option]}
-                accessibilityState={{ selected }}
-                onPress={() => onColorChange(option)}
-                hitSlop={SWATCH_SLOP}
-                style={[
-                  styles.swatch,
-                  {
-                    backgroundColor: isNil(option)
-                      ? palette.bgElevated
-                      : CARD_COLOR_SHADES[option][scheme],
-                    borderColor: selected ? palette.accent : palette.line,
-                  },
-                  selected && styles.swatchSelected,
-                ]}
-              />
-            );
-          })}
-        </View>
-      )}
+      <ColorSwatches value={color} onChange={onColorChange} testIDPrefix="card-color" />
       <Dialog open={choosing} title={t.icon} onClose={() => setChoosing(false)}>
         <Button
           testID="icon-option-auto"
@@ -146,14 +117,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS,
   },
   choiceText: { fontSize: TEXT_SIZE.body },
-  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: SWATCH_SLOP * 2 },
-  swatch: {
-    width: SWATCH_SIZE,
-    height: SWATCH_SIZE,
-    borderRadius: SWATCH_SIZE / 2,
-    borderWidth: 1,
-  },
-  swatchSelected: { borderWidth: 3 },
   group: { gap: 6, marginTop: GAP },
   groupTitle: { fontSize: TEXT_SIZE.caption },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },

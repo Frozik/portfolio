@@ -12,7 +12,7 @@ import type { TOpenGoogleDrive } from '../domain/ports/google-drive';
 import type { TProbeWebDav } from '../domain/ports/webdav-prober';
 import type { TAdoptFailure } from './cloud-adoption';
 import { adoptCloudVault } from './cloud-adoption';
-import type { TCloudStep } from './cloud-wizard';
+import type { TCloudChoice, TCloudStep } from './cloud-wizard';
 import { cloudStep } from './cloud-wizard';
 import { GoogleDriveConnectForm } from './GoogleDriveConnectForm';
 import { WebDavConnectForm } from './WebDavConnectForm';
@@ -102,6 +102,29 @@ export class CloudSetup {
       default:
         assertNever(step);
     }
+  }
+
+  /** The storage of the open form: the Drive space or the WebDAV service; `null` before a choice. */
+  get choice(): TCloudChoice | null {
+    if (!isNil(this.driveForm)) {
+      return { kind: 'drive', space: this.driveForm.space };
+    }
+    if (!isNil(this.webDavForm)) {
+      return { kind: 'webdav', presetId: this.webDavForm.preset?.id ?? null };
+    }
+    return null;
+  }
+
+  /** Opens the form of the chosen storage, set for it; the other kind's form is closed. */
+  choose(choice: TCloudChoice): void {
+    this.opening = { kind: 'idle' };
+    if (choice.kind === 'drive') {
+      this.openDriveForm();
+      this.driveForm?.setSpace(choice.space);
+      return;
+    }
+    this.openWebDavForm();
+    this.webDavForm?.setPreset(choice.presetId);
   }
 
   openWebDavForm(): void {

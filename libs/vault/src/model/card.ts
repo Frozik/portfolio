@@ -122,9 +122,16 @@ export interface ICardRevision {
 export interface IVaultCard extends ICardState {
   /** At most `MAX_CARD_HISTORY` snapshots, newest first. */
   readonly history: readonly ICardRevision[];
+  /**
+   * Stamps of versions deleted from the history, at most `MAX_FORGOTTEN_REVISIONS`, newest first:
+   * united on merge, so a device that still keeps one does not bring it back. Absent until one is.
+   */
+  readonly forgottenRevisions?: readonly IHlc[];
 }
 
 export const MAX_CARD_HISTORY = 20;
+
+export const MAX_FORGOTTEN_REVISIONS = 64;
 
 export const MAX_CARD_ANCESTORS = 32;
 

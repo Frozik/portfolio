@@ -3,12 +3,13 @@ import { ProtectedValue } from 'kdbxweb';
 import { isNil, uniq } from 'lodash-es';
 import { Temporal } from 'temporal-polyfill';
 
-import { toHex } from '../../crypto/bytes';
+import { sha256Hex } from '../../crypto/sha256';
 import type { TAssetId } from '../../model/ids';
 import { INTERNET_ACCOUNT_TEMPLATE } from '../../model/templates/internet-account';
 import { NOTE_TEMPLATE } from '../../model/templates/note';
 import type { TOtpAlgorithm } from '../../model/validation/otpauth-uri';
 import { formatOtpUri } from '../../model/validation/otpauth-uri';
+import { mimeOfFileName } from '../attachment';
 import type { IImportBatch, IImportedAsset, IImportedCard, IImportedField } from '../imported-card';
 import { keyLabel, textLabel } from '../imported-card';
 import { extraField, fill, plainCard, templateTabs } from '../template-card';
@@ -31,7 +32,6 @@ const TIME_OTP_ALGORITHMS: Readonly<Record<string, TOtpAlgorithm>> = {
 };
 const DEFAULT_DIGITS = 6;
 const DEFAULT_PERIOD = 30;
-const FALLBACK_MIME = 'application/octet-stream';
 
 function text(field: KdbxEntryField | undefined): string {
   if (isNil(field)) {
@@ -83,10 +83,6 @@ function expiryOf(entry: KdbxEntry): string | null {
     : null;
 }
 
-async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
-  return toHex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
-}
-
 async function attachments(entry: KdbxEntry, assets: IImportedAsset[]): Promise<readonly string[]> {
   const ids: string[] = [];
   for (const [name, binary] of entry.binaries) {
@@ -97,7 +93,12 @@ async function attachments(entry: KdbxEntry, assets: IImportedAsset[]): Promise<
         : new Uint8Array(value.slice(0));
     const id = `${entry.uuid.id}/${name}`;
     assets.push({
-      asset: { id: id as TAssetId, name, mime: FALLBACK_MIME, sha256: await sha256Hex(bytes) },
+      asset: {
+        id: id as TAssetId,
+        name,
+        mime: mimeOfFileName(name),
+        sha256: await sha256Hex(bytes),
+      },
       bytes,
     });
     ids.push(id);

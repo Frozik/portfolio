@@ -13,8 +13,23 @@ const UNKNOWN_TYPE = 'application/octet-stream';
  * Android's document chooser: Files, Drive, a USB stick. Each chosen file is
  * copied into the app's cache to be read, and the copy deleted at once.
  */
-export async function pickFiles(multiple: boolean): Promise<readonly IPickedFile[]> {
-  const picked = await getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple });
+export function pickFiles(multiple: boolean): Promise<readonly IPickedFile[]> {
+  return pick('*/*', multiple);
+}
+
+export async function pickOneFile(): Promise<IPickedFile | null> {
+  const [file] = await pick('*/*', false);
+  return file ?? null;
+}
+
+/** A screenshot or a photo from the phone. */
+export async function pickOneImage(): Promise<IPickedFile | null> {
+  const [image] = await pick('image/*', false);
+  return image ?? null;
+}
+
+async function pick(type: string, multiple: boolean): Promise<readonly IPickedFile[]> {
+  const picked = await getDocumentAsync({ type, copyToCacheDirectory: true, multiple });
   if (picked.canceled) {
     return [];
   }
@@ -34,9 +49,4 @@ export async function pickFiles(multiple: boolean): Promise<readonly IPickedFile
       }
     })
   );
-}
-
-export async function pickOneFile(): Promise<IPickedFile | null> {
-  const [file] = await pickFiles(false);
-  return file ?? null;
 }

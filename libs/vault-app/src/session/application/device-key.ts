@@ -42,13 +42,18 @@ async function keyFromDevice(
 /**
  * The vault opened with the key the biometrics release. A key the file no
  * longer takes (the vault's key was rotated) is as useless as an invalidated
- * one: forgotten, and the unlock says so.
+ * one: forgotten, and the unlock says so. Out of sight nothing is asked: Android
+ * shows no fingerprint prompt to a stopped activity and never answers one, which
+ * left the unlock waiting for good.
  */
 export async function openWithDevice(
   services: IVaultOpeningServices & { readonly deviceUnlock: IDeviceUnlock | null },
   vaultKey: TVaultKey,
   signal: AbortSignal
 ): Promise<TResult<IOpenedSession, TUnlockFailure> | 'cancelled'> {
+  if (services.signals.isConcealed()) {
+    return 'cancelled';
+  }
   const key = await keyFromDevice(services.deviceUnlock, vaultKey);
   if (key === 'cancelled' || !key.ok) {
     return key;

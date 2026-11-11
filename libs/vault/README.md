@@ -50,6 +50,14 @@ Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
   entry is offered only on its site (`passkeysOf(file, rpId)`). From 1.1 on a
   session keeps every skippable record it does not know (`IVaultKeys.preserved`)
   and writes it back.
+- **The vault's own cache** — `meta/` in the sealed zip, never shown (`model/vault-meta.ts`,
+  `format/meta-codec.ts`): work done once so no device redoes it. Its first section,
+  `meta/password-strength.json`, holds password strength scores by the meter that gave them
+  (`zxcvbn:<language>:<rules>`), then by the password's SHA-256 — under the vault's own sealing,
+  so it says nothing the passwords beside it do not. Devices' sections merge by union (one meter
+  gives one password one score); each write drops the hashes of passwords no card holds any more.
+  It does not raise the schema version: an older client opens the vault as before and drops the
+  cache when it saves, which costs a recount, never data; a damaged cache reads as empty.
 - **Golden files** — `fixtures/v1.0/*.pwv` freeze the format. Regenerate them
   only on purpose (`pnpm --filter @frozik/vault run generate-fixtures`) and
   review the diff. `testing/format-v1-0.ts` states what a 1.0 reader accepts
@@ -65,19 +73,26 @@ Folders: `ports/`, `crypto/`, `format/`, `codec/`, `model/`, `merge/`,
   IFSC, …) as schemes, any other code taken as typed.
 - **Merge** — `mergeDocument(local, remote)` is commutative, associative and
   idempotent (property-tested): the later card version wins and the other one
-  goes to history, tombstones win over older edits, HOTP counters only rise.
+  goes to history, tombstones win over older edits, HOTP counters only rise. A version deleted
+  from a card's history leaves its stamp in the card's optional `forgottenRevisions`; merges unite
+  those and drop the versions again, and a build that predates the field reads the card unchanged.
 - **Import and export** — every source is read into one neutral shape
   (`import/imported-card.ts`: cards with labels as translation keys or the
   source's own text), and one edit (`applyImport`) gives it ids, finds groups
   by name and settles duplicates (same registrable domain and login: skip,
-  replace keeping history, or keep both); the preview is that edit run on a
+  replace keeping history, or keep both) — only against the cards the vault had before, each
+  the twin of at most one entry, so two entries of one file for one account both come in; the preview is that edit run on a
   copy, so the two cannot disagree. Sources: the browser CSVs (Chrome/Edge,
   Firefox, Safari — told apart by their headers), SafeInCloud XML and its
   sealed `.db` (PBKDF2-SHA1 and AES-CBC through WebCrypto, then zlib — the same
-  XML inside; a check value tells a wrong password from a damaged file), Bitwarden
+  XML inside; a check value tells a wrong password from a damaged file; its "expiry" holds what was
+  typed, so a full day — a document's `10.11.2027` — becomes an expiry date and the rest a card's
+  month, `MM/YY`, `MM.YY` or `MM-YY`), Bitwarden
   JSON and CSV, another `.pwv` opened with its own password. Exports: the open
-  zip (the container plus each card's files by name) and Bitwarden-style CSV,
-  which reads back in; the sealed copy with its own password is the codec's
+  zip (the container plus each card's files by name), Bitwarden-style CSV and
+  SafeInCloud's XML (fields under their names, groups as labels, star and colour) —
+  also sealed as SafeInCloud's own `.db` (`export/safeincloud/seal-safeincloud-db.ts`,
+  sharing `format/safeincloud-db-format.ts` with the reader) — all of which read back in; the sealed copy with its own password is the codec's
   `createKeys` + `seal`. Each importer is tested on fixtures shaped like the
   real exports (`testing/import-fixtures.ts`, made-up data).
 

@@ -8,7 +8,7 @@ import { TextField } from '../kit/TextField';
 const ISO_MONTH = 'YYYY-MM';
 const ISO_DATE = 'YYYY-MM-DD';
 
-/** A value in its kind's control; masks stay off: the value is stored as typed, the validation says what is wrong. */
+/** A value in its kind's control, its name waiting inside the empty field (the row above says it too); masks stay off: the value is stored as typed, the validation says what is wrong. */
 export function SingleValueEditor({
   spec,
   label,
@@ -22,7 +22,7 @@ export function SingleValueEditor({
   readonly onChange: (value: string) => void;
   readonly testID?: string;
 }) {
-  const text = { label, value, onChangeText: onChange, testID };
+  const text = { label, labelInside: true, value, onChangeText: onChange, testID };
   switch (spec.kind) {
     case 'text':
     case 'login':

@@ -17,6 +17,7 @@ import type {
   TTemplateId,
 } from '../model/ids';
 import type { TSiteIcon } from '../model/site-icon';
+import { NARROWEST_ICON_REACH } from '../model/site-icons';
 import type {
   IAsset,
   ICardLink,
@@ -41,6 +42,7 @@ import {
   USER_TEMPLATE_SCHEMA,
   VAULT_JSON_SCHEMA,
 } from './document-schema';
+import { metaEntries, metaOf } from './meta-codec';
 
 /** The container layout. */
 const VAULT_PATH = 'vault.json';
@@ -149,7 +151,12 @@ function readCard(bytes: TBytes, expectedId: string): IVaultCard | null {
       return isNil(snapshot) ? null : { at: revision.at, snapshot };
     })
   );
-  return isNil(state) || isNil(history) ? null : { ...state, history };
+  if (isNil(state) || isNil(history)) {
+    return null;
+  }
+  return isNil(wire.forgottenRevisions)
+    ? { ...state, history }
+    : { ...state, history, forgottenRevisions: wire.forgottenRevisions };
 }
 
 interface ISortedEntries {
@@ -252,6 +259,7 @@ export function decodeDocument(
     ),
     assetBytes: sorted.assetBytes,
     siteIcons: siteIconsOf(siteIcons, sorted.iconBytes),
+    meta: metaOf(entries),
     hotpCounters: new Map(
       Object.entries(hotpCounters).map(([key, counter]) => [key as THotpCounterKey, counter])
     ),
@@ -291,9 +299,9 @@ function siteIconsOf(
   iconBytes: ReadonlyMap<string, TBytes>
 ): ReadonlyMap<string, TSiteIcon> {
   return new Map(
-    listed.flatMap(({ domain, kind, at }): [string, TSiteIcon][] => {
+    listed.flatMap(({ domain, kind, at, reach }): [string, TSiteIcon][] => {
       if (kind === 'none') {
-        return [[domain, { kind, at }]];
+        return [[domain, { kind, at, reach: reach ?? NARROWEST_ICON_REACH }]];
       }
       const png = iconBytes.get(domain);
       return isNil(png) ? [] : [[domain, { kind, png, at }]];
@@ -349,13 +357,18 @@ export function encodeDocument(document: IVaultDocument): readonly IContainerEnt
     jsonEntry(HOTP_COUNTERS_PATH, Object.fromEntries(document.hotpCounters)),
     jsonEntry(
       SITE_ICONS_PATH,
-      [...document.siteIcons].map(([domain, icon]) => ({ domain, kind: icon.kind, at: icon.at }))
+      [...document.siteIcons].map(([domain, icon]) =>
+        icon.kind === 'none'
+          ? { domain, kind: icon.kind, at: icon.at, reach: icon.reach }
+          : { domain, kind: icon.kind, at: icon.at }
+      )
     ),
     ...[...document.siteIcons].flatMap(([domain, icon]) =>
       icon.kind === 'icon'
         ? [{ path: `icons/${domain}.png`, bytes: icon.png, compress: false }]
         : []
     ),
+    ...metaEntries(document.meta),
     ...[...document.cards.values()].map(card => jsonEntry(`cards/${card.id}.json`, cardJson(card))),
     ...[...document.assetBytes].map(([id, bytes]) => ({
       path: `assets/${id}`,

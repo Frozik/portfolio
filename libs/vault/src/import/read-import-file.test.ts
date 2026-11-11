@@ -23,18 +23,18 @@ import { readImportFile } from './read-import-file';
 
 const AT = anHlc(1_800_000_000_000);
 
-function batchOf(text: string): IImportBatch {
-  const read = readImportFile(utf8(text));
+async function batchOf(text: string): Promise<IImportBatch> {
+  const read = await readImportFile(utf8(text));
   if (!read.ok || read.value.kind !== 'entries') {
     throw new Error(`not an import: ${JSON.stringify(read)}`);
   }
   return read.value.batch;
 }
 
-function imported(text: string): IVaultDocument {
+async function imported(text: string): Promise<IVaultDocument> {
   return applyImport(
     emptyVaultDocument('Imports', anHlc(1)),
-    batchOf(text),
+    await batchOf(text),
     { translate: key => key, random: createSeededRandom(1), duplicates: 'keep-both' },
     AT
   ).document;
@@ -65,9 +65,9 @@ function groupNamesOf(document: IVaultDocument, card: IVaultCard): readonly stri
 }
 
 describe('reading an export', () => {
-  it('takes Chrome and Edge passwords with quoted commas, quotes and line breaks', () => {
-    const batch = batchOf(CHROME_CSV);
-    const document = imported(CHROME_CSV);
+  it('takes Chrome and Edge passwords with quoted commas, quotes and line breaks', async () => {
+    const batch = await batchOf(CHROME_CSV);
+    const document = await imported(CHROME_CSV);
 
     expect(batch.source).toBe('chrome');
     expect(batch.warnings).toEqual([{ kind: 'row-skipped', row: 4 }]);
@@ -80,8 +80,8 @@ describe('reading an export', () => {
     expect(cardTitled(document, 'github.com').templateId).toBe('internet-account');
   });
 
-  it('names a Firefox login after its site and keeps when it was made', () => {
-    const document = imported(FIREFOX_CSV);
+  it('names a Firefox login after its site and keeps when it was made', async () => {
+    const document = await imported(FIREFOX_CSV);
     const card = cardTitled(document, 'accounts.example.org');
 
     expect(valuesOf(card)).toEqual({
@@ -92,8 +92,8 @@ describe('reading an export', () => {
     expect(card.createdAt.wallMs).toBe(1_700_000_000_000);
   });
 
-  it('brings the one-time code of a Safari password along', () => {
-    const card = cardTitled(imported(SAFARI_CSV), 'example.com (jane)');
+  it('brings the one-time code of a Safari password along', async () => {
+    const card = cardTitled(await imported(SAFARI_CSV), 'example.com (jane)');
 
     expect(valuesOf(card)).toMatchObject({
       'field.notes': 'Safari note',
@@ -101,8 +101,8 @@ describe('reading an export', () => {
     });
   });
 
-  it('maps every Bitwarden item kind onto a template, folders onto groups', () => {
-    const document = imported(BITWARDEN_JSON);
+  it('maps every Bitwarden item kind onto a template, folders onto groups', async () => {
+    const document = await imported(BITWARDEN_JSON);
     const login = cardTitled(document, 'Example login');
 
     expect(document.cards.size).toBe(5);
@@ -129,8 +129,8 @@ describe('reading an export', () => {
     expect(isNil(cardTitled(document, 'Wi-Fi at the cottage').archivedAt)).toBe(false);
   });
 
-  it('keeps Bitwarden URI matching rules, one field per rule', () => {
-    const login = cardTitled(imported(BITWARDEN_JSON), 'Example login');
+  it('keeps Bitwarden URI matching rules, one field per rule', async () => {
+    const login = cardTitled(await imported(BITWARDEN_JSON), 'Example login');
     const urls = allFields(login).filter(field => field.spec.kind === 'url');
 
     expect(urls.map(field => field.spec)).toEqual([
@@ -139,31 +139,31 @@ describe('reading an export', () => {
     ]);
   });
 
-  it('turns a bare Bitwarden TOTP secret into a one-time code URI', () => {
-    const login = cardTitled(imported(BITWARDEN_JSON), 'Example login');
+  it('turns a bare Bitwarden TOTP secret into a one-time code URI', async () => {
+    const login = cardTitled(await imported(BITWARDEN_JSON), 'Example login');
 
     expect(valuesOf(login)['field.oneTimeCode']).toMatch(
       /^otpauth:\/\/totp\/.*secret=JBSWY3DPEHPK3PXP/
     );
   });
 
-  it('reports what Bitwarden has and a vault cannot hold', () => {
-    expect(batchOf(BITWARDEN_JSON).warnings).toEqual([
+  it('reports what Bitwarden has and a vault cannot hold', async () => {
+    expect((await batchOf(BITWARDEN_JSON)).warnings).toEqual([
       { kind: 'passkey-dropped', card: 'Example login' },
       { kind: 'field-dropped', card: 'Example login', label: 'Linked username' },
       { kind: 'item-skipped', title: 'A kind from the future' },
     ]);
   });
 
-  it('refuses an encrypted Bitwarden export instead of importing nothing', () => {
-    expect(readImportFile(utf8(BITWARDEN_ENCRYPTED_JSON))).toEqual({
+  it('refuses an encrypted Bitwarden export instead of importing nothing', async () => {
+    expect(await readImportFile(utf8(BITWARDEN_ENCRYPTED_JSON))).toEqual({
       ok: false,
       error: 'encrypted-export',
     });
   });
 
-  it('reads Bitwarden CSV: several sites in a cell, custom fields as lines', () => {
-    const document = imported(BITWARDEN_CSV);
+  it('reads Bitwarden CSV: several sites in a cell, custom fields as lines', async () => {
+    const document = await imported(BITWARDEN_CSV);
     const social = cardTitled(document, 'Example social');
 
     expect(valuesOf(social)).toMatchObject({
@@ -178,8 +178,8 @@ describe('reading an export', () => {
     });
   });
 
-  it('takes SafeInCloud cards with their fields in order and under their own names', () => {
-    const document = imported(SAFEINCLOUD_XML);
+  it('takes SafeInCloud cards with their fields in order and under their own names', async () => {
+    const document = await imported(SAFEINCLOUD_XML);
     const mail = cardTitled(document, 'Example mail');
 
     expect(document.cards.size).toBe(2);
@@ -205,8 +205,8 @@ describe('reading an export', () => {
     expect(valuesOf(cardTitled(document, 'Travel card'))).toMatchObject({ Expiry: '2029-07' });
   });
 
-  it('leaves SafeInCloud templates and deleted cards behind and reports attachments', () => {
-    const batch = batchOf(SAFEINCLOUD_XML);
+  it('leaves SafeInCloud templates and deleted cards behind and reports attachments', async () => {
+    const batch = await batchOf(SAFEINCLOUD_XML);
 
     expect(batch.source).toBe('safeincloud');
     expect(batch.cards.map(card => card.title)).toEqual(['Example mail', 'Travel card']);
@@ -215,18 +215,18 @@ describe('reading an export', () => {
     ]);
   });
 
-  it('reads SafeInCloud names that collide with built-in object properties as plain values', () => {
+  it('reads SafeInCloud names that collide with built-in object properties as plain values', async () => {
     const xml = `<database><card title="Odd" color="constructor"><field name="X" type="toString">v</field></card></database>`;
-    const [card] = imported(xml).cards.values();
+    const [card] = (await imported(xml)).cards.values();
 
     expect(card?.color).toBeNull();
     expect(isNil(card) ? [] : allFields(card).map(field => field.spec.kind)).toEqual(['text']);
   });
 
-  it('tells a vault file by its magic and asks for its password', () => {
+  it('tells a vault file by its magic and asks for its password', async () => {
     const file = new Uint8Array([...utf8('PWVAULT\0'), 1, 0, 0, 0]);
 
-    expect(readImportFile(file)).toEqual({
+    expect(await readImportFile(file)).toEqual({
       ok: true,
       value: { kind: 'vault-file', vault: file, sealedBlobs: new Map() },
     });
@@ -235,16 +235,16 @@ describe('reading an export', () => {
   it('tells a SafeInCloud database by its magic and asks for its password', async () => {
     const file = await aSafeInCloudDb(SAFEINCLOUD_XML, 'secret');
 
-    expect(readImportFile(file)).toEqual({ ok: true, value: { kind: 'safeincloud-file' } });
+    expect(await readImportFile(file)).toEqual({ ok: true, value: { kind: 'safeincloud-file' } });
   });
 
-  it('says so when the file is none of the known exports', () => {
-    expect(readImportFile(utf8('a,b\n1,2\n'))).toEqual({ ok: false, error: 'unrecognized' });
-    expect(readImportFile(utf8('<html><body/></html>'))).toEqual({
+  it('says so when the file is none of the known exports', async () => {
+    expect(await readImportFile(utf8('a,b\n1,2\n'))).toEqual({ ok: false, error: 'unrecognized' });
+    expect(await readImportFile(utf8('<html><body/></html>'))).toEqual({
       ok: false,
       error: 'unrecognized',
     });
-    expect(readImportFile(new Uint8Array([0xff, 0xfe, 0x00]))).toEqual({
+    expect(await readImportFile(new Uint8Array([0xff, 0xfe, 0x00]))).toEqual({
       ok: false,
       error: 'unrecognized',
     });

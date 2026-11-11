@@ -20,7 +20,7 @@ through ports each client implements.
 | `sync/` | the local copy, the cloud replica, backups |
 | `cloud/` | the link to the user's cloud and the forms that make it |
 | `interchange/` | import and export |
-| `audit/` | weak, reused and breached passwords |
+| `audit/` | weak, reused and breached passwords; strength scores kept in the vault's own cache, so an unlock scores only new passwords |
 | `device/` | per-device settings that need no key: the vault list, the theme |
 | `release/` | update checks against the published version manifest |
 

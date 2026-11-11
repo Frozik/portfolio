@@ -33,6 +33,8 @@ tasks:
       - 'tsconfig.json'
       - 'e2e/**/*.mts'
       - 'e2e/tsconfig.json'
+      - 'dev/**/*.mts'
+      - 'dev/tsconfig.json'
       - '/libs/tooling/src/android-e2e/**/*'
     options:
       runInCI: true
@@ -77,8 +79,15 @@ tasks:
       cache: false
       runInCI: false
 
+  # The app on the emulator, open on the test vault: what to look at after a change.
+  dev-android:
+    command: 'pnpm run dev-android'
+    options:
+      cache: false
+      runInCI: false
+
   shellcheck:
-    command: 'shellcheck --severity=warning e2e-android.sh'
+    command: 'shellcheck --severity=warning e2e-android.sh dev-android.sh sign-apk.sh install-apk.sh'
     inputs:
       - '*.sh'
     options:

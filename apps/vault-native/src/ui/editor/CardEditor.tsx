@@ -1,6 +1,7 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ICardField, ICardState, ICardTab, TFieldKind } from '@frozik/vault/model/card';
 import { allFields, fieldValues } from '@frozik/vault/model/card';
-import { renameCard, setColor, setIcon } from '@frozik/vault/model/card-edits';
+import { renameCard, setColor, setIcon, setProtected } from '@frozik/vault/model/card-edits';
 import {
   moveField,
   removeField,
@@ -18,6 +19,7 @@ import type { IAsset } from '@frozik/vault/model/vault-document';
 import type { IRandom } from '@frozik/vault/ports/random';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
+import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -28,6 +30,7 @@ import {
 } from '@frozik/vault-app/document/domain/field-kind-choices';
 
 import { Button } from '../kit/Button';
+import { Checkbox } from '../kit/Checkbox';
 import { Dialog } from '../kit/Dialog';
 import { GAP, GUTTER, RADIUS, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
@@ -56,6 +59,7 @@ export const CardEditor = observer(function CardEditor({
   assets,
   readOnly,
   siteIcon,
+  onScanOtp,
   onClosed,
 }: {
   readonly draft: CardDraftModel;
@@ -65,6 +69,7 @@ export const CardEditor = observer(function CardEditor({
   readonly readOnly: boolean;
   /** The site's icon the automatic choice shows, when the vault has one. */
   readonly siteIcon: Uint8Array<ArrayBuffer> | null;
+  readonly onScanOtp: ComponentProps<typeof EditorFieldRow>['onScanOtp'];
   readonly onClosed: (saved: boolean) => void;
 }) {
   const palette = usePalette();
@@ -157,6 +162,7 @@ export const CardEditor = observer(function CardEditor({
         }
         onAttach={files => draft.attachFiles(field.id, files)}
         onDetach={assetId => draft.detachFile(field.id, assetId)}
+        onScanOtp={onScanOtp}
       />
     ));
 
@@ -181,25 +187,46 @@ export const CardEditor = observer(function CardEditor({
           onIconChange={icon => draft.change(state => setIcon(state, icon))}
           onColorChange={color => draft.change(state => setColor(state, color))}
         />
+        <Checkbox
+          testID="editor-protected"
+          label={t.protectedCard}
+          checked={card.protected}
+          onChange={value => draft.change(state => setProtected(state, value))}
+        />
         <ScrollView horizontal accessibilityRole="tablist" contentContainerStyle={styles.tabs}>
           {card.tabs.map(tab => {
             const selected = tab.id === currentTab?.id;
             return (
-              <Pressable
+              <View
                 key={tab.id}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                onPress={() => setTabId(tab.id)}
-                onLongPress={() => setDialog({ kind: 'tab', tab })}
-                style={[styles.tab, { borderColor: selected ? palette.accent : palette.line }]}
+                style={[styles.tabChip, { borderColor: selected ? palette.accent : palette.line }]}
               >
-                <Text style={{ color: selected ? palette.fg : palette.fgDim }}>
-                  {tabLabelOf(tab)}
-                </Text>
-              </Pressable>
+                <Pressable
+                  testID="editor-tab"
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  onPress={() => setTabId(tab.id)}
+                  onLongPress={() => setDialog({ kind: 'tab', tab })}
+                  style={styles.tabName}
+                >
+                  <Text style={{ color: selected ? palette.fg : palette.fgDim }}>
+                    {tabLabelOf(tab)}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  testID="editor-tab-edit"
+                  accessibilityRole="button"
+                  accessibilityLabel={t.tabs.edit(tabLabelOf(tab))}
+                  onPress={() => setDialog({ kind: 'tab', tab })}
+                  style={styles.tabEdit}
+                >
+                  <MaterialIcons name="edit" size={TAB_EDIT_ICON_SIZE} color={palette.fgDim} />
+                </Pressable>
+              </View>
             );
           })}
           <Pressable
+            testID="editor-add-tab"
             accessibilityRole="button"
             accessibilityLabel={t.tabs.add}
             onPress={addNewTab}
@@ -208,13 +235,6 @@ export const CardEditor = observer(function CardEditor({
             <Text style={{ color: palette.fgDim }}>+</Text>
           </Pressable>
         </ScrollView>
-        {!isNil(currentTab) && card.tabs.length > 1 && (
-          <Button
-            variant="secondary"
-            label={tabLabelOf(currentTab)}
-            onPress={() => setDialog({ kind: 'tab', tab: currentTab })}
-          />
-        )}
         {!isNil(currentTab) && fieldsOf(currentTab)}
         <Button
           testID="add-field"
@@ -294,10 +314,20 @@ export const CardEditor = observer(function CardEditor({
   );
 });
 
+const TAB_EDIT_ICON_SIZE = 18;
+
 const styles = StyleSheet.create({
   editor: { flex: 1 },
   content: { gap: GAP, padding: GUTTER },
   tabs: { gap: 8 },
+  tabChip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: RADIUS },
+  tabName: { minHeight: TOUCH_SIZE, paddingLeft: GAP, justifyContent: 'center' },
+  tabEdit: {
+    minWidth: TOUCH_SIZE - GAP,
+    minHeight: TOUCH_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tab: {
     minHeight: TOUCH_SIZE,
     borderWidth: 1,

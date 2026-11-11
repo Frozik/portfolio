@@ -2,11 +2,10 @@ import type { ICardState, IVaultCard } from '@frozik/vault/model/card';
 import { searchCards } from '@frozik/vault/model/card-search';
 import type { TCardSort } from '@frozik/vault/model/card-sort';
 import { sortCards } from '@frozik/vault/model/card-sort';
-import type { ICardClassification } from '@frozik/vault/model/classify-cards';
-import { classifyCards, membersOf } from '@frozik/vault/model/classify-cards';
+import type { ICardClassification, ISessionFacts } from '@frozik/vault/model/classify-cards';
+import { classifyCards, membersOf, NO_SESSION_FACTS } from '@frozik/vault/model/classify-cards';
 import type { TExpiryStatus } from '@frozik/vault/model/expiry';
 import { expiryStatus, warningDaysFor } from '@frozik/vault/model/expiry';
-import type { TCardId } from '@frozik/vault/model/ids';
 import { rotationDueOn, rotationStatus } from '@frozik/vault/model/password-age';
 import { iconDomainOf } from '@frozik/vault/model/site-icons';
 import type {
@@ -49,17 +48,17 @@ export class VaultView {
   constructor(
     private readonly document: () => IVaultDocument,
     private readonly clock: ISessionClock,
-    /** The members of "Problem passwords", from the session's audit. */
-    private readonly auditProblems: () => ReadonlySet<TCardId> = () => new Set()
+    /** The audit's findings and the cards opened lately, for the sections built on them. */
+    private readonly sessionFacts: () => ISessionFacts = () => NO_SESSION_FACTS
   ) {
     this.today = clock.today();
-    makeAutoObservable<VaultView, 'document' | 'clock' | 'auditProblems' | 'stopRefreshingToday'>(
+    makeAutoObservable<VaultView, 'document' | 'clock' | 'sessionFacts' | 'stopRefreshingToday'>(
       this,
       {
         today: observableRef,
         document: false,
         clock: false,
-        auditProblems: false,
+        sessionFacts: false,
         stopRefreshingToday: false,
       },
       { autoBind: true }
@@ -68,7 +67,7 @@ export class VaultView {
   }
 
   get classification(): ICardClassification {
-    return classifyCards(this.document(), this.today, this.auditProblems());
+    return classifyCards(this.document(), this.today, this.sessionFacts());
   }
 
   get visibleCards(): readonly IVaultCard[] {

@@ -1,9 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { IKnownVault } from '@frozik/vault/persistence/ports';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
@@ -20,6 +20,31 @@ import { usePalette } from '../theme/AppTheme';
 
 const paths = createVaultPaths('');
 const DELETE_ICON_SIZE = 22;
+const FINGERPRINT_SIZE = 18;
+
+/**
+ * Whether this phone's biometrics hold the vault's key; `false` until the phone has said. Asked
+ * again each time the list is back in sight: the fingerprint is switched on in a vault's settings,
+ * and the system's own settings may drop it, while this screen waits under the others.
+ */
+function useOpensWithFingerprint(vault: IKnownVault): boolean {
+  const { app } = useAppModel();
+  const [held, setHeld] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let current = true;
+      void app.flows.deviceUnlockOffered(vault.vaultKey).then(offered => {
+        if (current) {
+          setHeld(offered);
+        }
+      });
+      return () => {
+        current = false;
+      };
+    }, [app, vault])
+  );
+  return held;
+}
 
 function VaultRow({
   vault,
@@ -33,6 +58,7 @@ function VaultRow({
   const router = useRouter();
   const palette = usePalette();
   const t = useVaultTexts();
+  const fingerprint = useOpensWithFingerprint(vault);
   return (
     <View style={[styles.row, { borderColor: palette.line, backgroundColor: palette.bgCard }]}>
       <Pressable
@@ -41,9 +67,16 @@ function VaultRow({
         onPress={() => router.push(paths.vault(vault.vaultKey))}
         style={styles.open}
       >
-        <Text numberOfLines={1} style={[styles.name, { color: palette.fg }]}>
-          {vault.name}
-        </Text>
+        <View style={styles.title}>
+          {fingerprint && (
+            <View testID="vault-biometric" accessibilityLabel={t.deviceVaults.biometric}>
+              <MaterialIcons name="fingerprint" size={FINGERPRINT_SIZE} color={palette.accent} />
+            </View>
+          )}
+          <Text numberOfLines={1} style={[styles.name, { color: palette.fg }]}>
+            {vault.name}
+          </Text>
+        </View>
         {vault.description.length > 0 && (
           <Text numberOfLines={2} style={[styles.detail, { color: palette.fgDim }]}>
             {vault.description}
@@ -137,7 +170,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: RADIUS },
   open: { flex: 1, minHeight: TOUCH_SIZE + 8, padding: 14, gap: 2 },
   delete: { width: TOUCH_SIZE, height: TOUCH_SIZE, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: TEXT_SIZE.body, fontWeight: '500' },
+  title: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { flexShrink: 1, fontSize: TEXT_SIZE.body, fontWeight: '500' },
   detail: { fontSize: TEXT_SIZE.small },
   caption: { fontSize: TEXT_SIZE.caption },
 });

@@ -192,6 +192,7 @@ export const widgetTextsEn: IWidgetTexts = {
     hipercard: 'Hipercard',
     troy: 'TROY',
     naranja: 'Naranja',
+    belkart: 'Belkart',
     verve: 'Verve',
   },
   showToEdit: 'Show to edit',

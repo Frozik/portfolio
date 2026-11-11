@@ -1,7 +1,7 @@
 import creditCardType from 'credit-card-type';
-import { isNil } from 'lodash-es';
+import { isNil, omit } from 'lodash-es';
 
-/** The networks credit-card-type knows; logos are drawn per network. */
+/** The networks credit-card-type knows, and the national ones it leaves out; logos are drawn per network. */
 export type TCardNetwork =
   | 'visa'
   | 'mastercard'
@@ -17,7 +17,8 @@ export type TCardNetwork =
   | 'hipercard'
   | 'troy'
   | 'naranja'
-  | 'verve';
+  | 'verve'
+  | 'belkart';
 
 const NETWORKS: ReadonlySet<string> = new Set<TCardNetwork>([
   'visa',
@@ -43,14 +44,34 @@ export interface ICardNetworkInfo {
   /** Positions after which a space is shown: `4111 1111 1111 1111`. */
   readonly gaps: readonly number[];
   readonly securityCodeLength: number;
+  /** Whether its numbers end in a Luhn check digit: UnionPay issues cards without one. */
+  readonly checksLuhn: boolean;
 }
 
 function isCardNetwork(type: string): type is TCardNetwork {
   return NETWORKS.has(type);
 }
 
-/** A thin wrapper over Braintree's credit-card-type: its prefix tables, not ours. */
+const WITHOUT_LUHN: ReadonlySet<TCardNetwork> = new Set<TCardNetwork>(['unionpay']);
+
+/** National networks credit-card-type leaves out, by the prefix every card of theirs starts with. */
+const NATIONAL_NETWORKS: readonly (ICardNetworkInfo & { readonly prefix: string })[] = [
+  {
+    network: 'belkart',
+    prefix: '9112',
+    lengths: [16],
+    gaps: [4, 8, 12],
+    securityCodeLength: 3,
+    checksLuhn: true,
+  },
+];
+
+/** A thin wrapper over Braintree's credit-card-type — its prefix tables, not ours — after the national networks it leaves out. */
 export function detectCardNetwork(digits: string): ICardNetworkInfo | null {
+  const national = NATIONAL_NETWORKS.find(({ prefix }) => digits.startsWith(prefix));
+  if (!isNil(national)) {
+    return omit(national, 'prefix');
+  }
   const [best] = creditCardType(digits);
   if (isNil(best) || !isCardNetwork(best.type)) {
     return null;
@@ -60,6 +81,7 @@ export function detectCardNetwork(digits: string): ICardNetworkInfo | null {
     lengths: best.lengths,
     gaps: best.gaps,
     securityCodeLength: best.code.size,
+    checksLuhn: !WITHOUT_LUHN.has(best.type),
   };
 }
 

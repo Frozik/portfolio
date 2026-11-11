@@ -3,8 +3,12 @@ import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 
 import type { IStrengthMeter } from '../../audit/domain/ports/strength-meter';
 import type { ISessionClock } from '../../session/domain/ports/session-clock';
-import type { IPasswordStrength, TMasterPasswordProblem } from '../domain/master-password';
-import { masterPasswordProblem } from '../domain/master-password';
+import type {
+  IPasswordStrength,
+  TMasterPasswordProblem,
+  TPasswordAdvice,
+} from '../domain/master-password';
+import { isWeak, masterPasswordProblem, passwordAdvice } from '../domain/master-password';
 
 /** Typing pauses this long before the Worker is asked again. */
 export const STRENGTH_DEBOUNCE_MS = 250;
@@ -32,6 +36,11 @@ export class CreateVaultForm {
       { strength: observableRef, meter: false, clock: false, pending: false },
       { autoBind: true }
     );
+  }
+
+  /** What would make a weak password stronger; nothing once the meter calls it strong. */
+  get advice(): readonly TPasswordAdvice[] {
+    return !isNil(this.strength) && isWeak(this.strength) ? passwordAdvice(this.password) : [];
   }
 
   get problem(): TMasterPasswordProblem | 'no-name' | null {

@@ -1,4 +1,6 @@
+import type { TCardColor } from '@frozik/vault/model/card';
 import { compareStrings } from '@frozik/vault/model/compare-strings';
+import type { TGroupId } from '@frozik/vault/model/ids';
 import type { TBuiltinGroupId } from '@frozik/vault/model/smart-groups';
 import { BUILTIN_GROUP_IDS } from '@frozik/vault/model/smart-groups';
 import type { IUserGroup, IUserSmartGroup } from '@frozik/vault/model/vault-document';
@@ -9,9 +11,16 @@ import type { TVaultSection } from '../../navigation/vault-pages';
 export type TSectionEntry =
   | { readonly kind: 'builtin'; readonly section: TBuiltinGroupId; readonly count: number }
   | {
-      readonly kind: 'smart' | 'group';
-      readonly section: TVaultSection;
+      readonly kind: 'smart';
+      readonly section: TGroupId;
       readonly name: string;
+      readonly count: number;
+    }
+  | {
+      readonly kind: 'group';
+      readonly section: TGroupId;
+      readonly name: string;
+      readonly color: TCardColor | null;
       readonly count: number;
     };
 
@@ -31,7 +40,7 @@ export function sectionEntriesOf({
 }: {
   readonly countOf: (section: TVaultSection) => number;
   readonly smartGroups: readonly Pick<IUserSmartGroup, 'id' | 'name'>[];
-  readonly groups: Iterable<Pick<IUserGroup, 'id' | 'name' | 'order'>>;
+  readonly groups: Iterable<Pick<IUserGroup, 'id' | 'name' | 'color' | 'order'>>;
 }): readonly TSectionEntry[] {
   const builtin = BUILTIN_GROUP_IDS.filter(
     section => ALWAYS_SHOWN.has(section) || countOf(section) > 0
@@ -48,6 +57,7 @@ export function sectionEntriesOf({
       kind: 'group' as const,
       section: group.id,
       name: group.name,
+      color: group.color,
       count: countOf(group.id),
     }));
   return [...builtin, ...smart, ...user];

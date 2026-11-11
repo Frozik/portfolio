@@ -4,21 +4,21 @@ import { unzlibSync } from 'fflate';
 import { isNil } from 'lodash-es';
 
 import type { TBytes } from '../../crypto/bytes';
-import { bytesEqual, utf8, utf8Text } from '../../crypto/bytes';
+import { bytesEqual, utf8Text } from '../../crypto/bytes';
 import { ByteReader } from '../../format/byte-reader';
+import {
+  CHECK_ROUNDS,
+  LATIN1_PASSWORD,
+  PASSWORD_ROUNDS,
+  pbkdf2Sha1,
+  SAFEINCLOUD_MAGIC,
+  safeInCloudPasswordBytes,
+} from '../../format/safeincloud-db-format';
 import type { IImportBatch } from '../imported-card';
 import { importSafeInCloud } from './map-safeincloud';
 import { parseSafeInCloud } from './parse-safeincloud';
 
 export type TSafeInCloudDbError = 'wrong-password' | 'unreadable';
-
-/** `0x0505`, little-endian: the first two bytes of every SafeInCloud database. */
-const SAFEINCLOUD_MAGIC = [0x05, 0x05] as const;
-/** The header's flag for a password written one byte per character rather than as UTF-8. */
-const LATIN1_PASSWORD = 1;
-const KEY_BITS = 256;
-const PASSWORD_ROUNDS = 10_000;
-const CHECK_ROUNDS = 1_000;
 
 export function startsWithSafeInCloudMagic(bytes: Uint8Array): boolean {
   return SAFEINCLOUD_MAGIC.every((byte, index) => bytes[index] === byte);
@@ -59,20 +59,6 @@ function headerOf(file: TBytes): ISafeInCloudHeader | null {
   return { latin1, salt, iv, checkSalt, sealedKeys, sealedData: reader.take(reader.remaining) };
 }
 
-function passwordBytes(password: string, latin1: boolean): TBytes {
-  return latin1 ? Uint8Array.from(password, character => character.charCodeAt(0)) : utf8(password);
-}
-
-async function pbkdf2Sha1(secret: TBytes, salt: TBytes, rounds: number): Promise<TBytes> {
-  const material = await crypto.subtle.importKey('raw', secret, 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-1', salt, iterations: rounds },
-    material,
-    KEY_BITS
-  );
-  return new Uint8Array(bits);
-}
-
 /** AES-256-CBC with PKCS#7 padding; `null` when the padding does not check out. */
 async function openCbc(key: TBytes, iv: TBytes, sealed: TBytes): Promise<TBytes | null> {
   try {
@@ -88,15 +74,11 @@ async function openCbc(key: TBytes, iv: TBytes, sealed: TBytes): Promise<TBytes 
  * value; the check — PBKDF2 of the data key — tells a wrong password apart
  * from a damaged file, since CBC has no tag of its own.
  */
-async function dataKeyOf(
+async function dataKeyWith(
   header: ISafeInCloudHeader,
-  password: string
+  passwordBytes: TBytes
 ): Promise<TResult<{ readonly key: TBytes; readonly iv: TBytes }, TSafeInCloudDbError>> {
-  const passwordKey = await pbkdf2Sha1(
-    passwordBytes(password, header.latin1),
-    header.salt,
-    PASSWORD_ROUNDS
-  );
+  const passwordKey = await pbkdf2Sha1(passwordBytes, header.salt, PASSWORD_ROUNDS);
   const keys = await openCbc(passwordKey, header.iv, header.sealedKeys);
   if (isNil(keys)) {
     return err('wrong-password');
@@ -110,6 +92,20 @@ async function dataKeyOf(
   }
   const expected = await pbkdf2Sha1(key, header.checkSalt, CHECK_ROUNDS);
   return bytesEqual(expected, check) ? ok({ key, iv }) : err('wrong-password');
+}
+
+/**
+ * The header's flag says how the password became bytes, and that encoding is tried first; the
+ * other one follows, since a file whose flag says otherwise still holds the same password.
+ */
+async function dataKeyOf(
+  header: ISafeInCloudHeader,
+  password: string
+): Promise<TResult<{ readonly key: TBytes; readonly iv: TBytes }, TSafeInCloudDbError>> {
+  const flagged = await dataKeyWith(header, safeInCloudPasswordBytes(password, header.latin1));
+  return flagged.ok
+    ? flagged
+    : dataKeyWith(header, safeInCloudPasswordBytes(password, !header.latin1));
 }
 
 function inflated(bytes: TBytes): Uint8Array | null {
@@ -137,5 +133,5 @@ export async function readSafeInCloudDb(
   const xml = isNil(compressed) ? null : inflated(compressed);
   const text = isNil(xml) ? null : utf8Text(xml);
   const database = isNil(text) ? null : parseSafeInCloud(text);
-  return isNil(database) ? err('unreadable') : ok(importSafeInCloud(database));
+  return isNil(database) ? err('unreadable') : ok(await importSafeInCloud(database));
 }

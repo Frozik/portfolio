@@ -2,7 +2,7 @@ import { isEqual, isNil, omit, uniqWith } from 'lodash-es';
 
 import { canonicalJson } from './canonical-json';
 import type { ICardField, ICardRevision, ICardState, IVaultCard } from './card';
-import { allFields, MAX_CARD_ANCESTORS, MAX_CARD_HISTORY } from './card';
+import { allFields, MAX_CARD_ANCESTORS, MAX_CARD_HISTORY, MAX_FORGOTTEN_REVISIONS } from './card';
 import { compareStrings } from './compare-strings';
 import type { IHlc } from './hlc';
 import { compareHlc } from './hlc';
@@ -11,7 +11,42 @@ import { compareHlc } from './hlc';
 export const HISTORY_THROTTLE_MS = 5 * 60 * 1000;
 
 export function cardState(card: IVaultCard): ICardState {
-  return omit(card, 'history');
+  return omit(card, ['history', 'forgottenRevisions']);
+}
+
+function sameStamp(first: IHlc, second: IHlc): boolean {
+  return compareHlc(first, second) === 0;
+}
+
+/** Both sides' forgotten stamps, newest first, each once; what a merge carries on. */
+export function unitedForgotten(
+  first: readonly IHlc[] | undefined,
+  second: readonly IHlc[] | undefined
+): readonly IHlc[] {
+  return uniqWith([...(first ?? []), ...(second ?? [])], sameStamp)
+    .sort((one, other) => compareHlc(other, one))
+    .slice(0, MAX_FORGOTTEN_REVISIONS);
+}
+
+/** The history without the versions forgotten here or on another device. */
+export function withoutForgotten(
+  history: readonly ICardRevision[],
+  forgotten: readonly IHlc[]
+): readonly ICardRevision[] {
+  return history.filter(revision => !forgotten.some(stamp => sameStamp(stamp, revision.at)));
+}
+
+/**
+ * One version gone from the history for good: its stamp is remembered so a merge with a
+ * device that still keeps it drops it again. The card itself is not edited.
+ */
+export function forgetRevision(card: IVaultCard, at: IHlc): IVaultCard {
+  const forgotten = unitedForgotten(card.forgottenRevisions, [at]);
+  return {
+    ...card,
+    history: withoutForgotten(card.history, forgotten),
+    forgottenRevisions: forgotten,
+  };
 }
 
 function sensitiveValues(card: ICardState): ReadonlyMap<string, ICardField['value']> {

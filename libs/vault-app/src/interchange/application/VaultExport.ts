@@ -7,11 +7,14 @@ import { encodePassword } from '@frozik/vault/crypto/password-normalization';
 import { exportCsv } from '@frozik/vault/export/csv/export-csv';
 import type { ICxfExporter } from '@frozik/vault/export/cxf/export-cxf';
 import { exportCxf } from '@frozik/vault/export/cxf/export-cxf';
+import { exportSafeInCloud } from '@frozik/vault/export/safeincloud/export-safeincloud';
+import { sealSafeInCloudDb } from '@frozik/vault/export/safeincloud/seal-safeincloud-db';
 import { exportOpenZip } from '@frozik/vault/export/zip/export-zip';
 import { blobFileName } from '@frozik/vault/format/blob-file';
 import { packContainer } from '@frozik/vault/format/container';
 import { COPY_VAULT_PATH } from '@frozik/vault/format/export-archives';
 import type { IVaultDocument } from '@frozik/vault/model/vault-document';
+import type { IRandom } from '@frozik/vault/ports/random';
 import type { TUnlockFailure } from '@frozik/vault/session/unlock-failure';
 import { unlockFailureOf } from '@frozik/vault/session/unlock-failure';
 import { isNil } from 'lodash-es';
@@ -25,7 +28,10 @@ import type { IFileToSave, TSaveFile } from '../domain/ports/file-saver';
 import { exportBaseName } from './export-file-name';
 
 /** A sealed copy with its own password, or the vault in the open. */
-export type TExportFormat = 'pwv' | 'zip' | 'cxf' | 'csv';
+export type TExportFormat = 'pwv' | 'zip' | 'cxf' | 'csv' | 'safeincloud' | 'safeincloud-db';
+
+/** The formats sealed with a password of their own, asked twice; the rest are open and ask for the master password. */
+const OWN_PASSWORD: ReadonlySet<TExportFormat> = new Set(['pwv', 'safeincloud-db']);
 
 export type TExportStep =
   | { readonly kind: 'editing'; readonly failure: TUnlockFailure | null }
@@ -38,7 +44,8 @@ export type TExportStep =
     }
   | { readonly kind: 'saved' };
 
-export type TExportProblem = TMasterPasswordProblem | 'no-password';
+/** `no-copy-password`: a copy sealed with its own password has none yet; `no-password`: the master password, asked before an open file. */
+export type TExportProblem = TMasterPasswordProblem | 'no-copy-password';
 
 export interface IVaultExportServices {
   readonly document: () => IVaultDocument;
@@ -55,6 +62,7 @@ export interface IVaultExportServices {
   readonly readSealedBlobs: () => Promise<IReadFiles>;
   /** Who the CXF file says made it, and the vault's id as its account. */
   readonly cxfExporter: ICxfExporter;
+  readonly random: IRandom;
 }
 
 interface IPreparedFile {
@@ -69,6 +77,8 @@ const EXTENSION: Readonly<Record<TExportFormat, string>> = {
   zip: 'zip',
   cxf: 'cxf.zip',
   csv: 'csv',
+  safeincloud: 'xml',
+  'safeincloud-db': 'db',
 };
 const COPY_ARCHIVE_EXTENSION = 'pwv.zip';
 
@@ -77,6 +87,8 @@ const MIME: Readonly<Record<TExportFormat, string>> = {
   zip: 'application/zip',
   cxf: 'application/zip',
   csv: 'text/csv',
+  safeincloud: 'application/xml',
+  'safeincloud-db': 'application/octet-stream',
 };
 
 /**
@@ -102,9 +114,15 @@ export class VaultExport {
     );
   }
 
+  /** A file sealed with a new password, asked twice, rather than an open one behind the master password. */
+  get ownPassword(): boolean {
+    return OWN_PASSWORD.has(this.format);
+  }
+
   get problem(): TExportProblem | null {
-    if (this.format === 'pwv') {
-      return masterPasswordProblem({ ...this, acknowledged: true });
+    if (this.ownPassword) {
+      const problem = masterPasswordProblem({ ...this, acknowledged: true });
+      return problem === 'no-password' ? 'no-copy-password' : problem;
     }
     if (this.password === '') {
       return 'no-password';
@@ -187,6 +205,11 @@ export class VaultExport {
       const sealed = await this.sealedCopy(document, password);
       return sealed.ok ? ok(await this.withBlobs(document, sealed.value, file)) : sealed;
     }
+    if (format === 'safeincloud-db') {
+      return ok(
+        file(await sealSafeInCloudDb(exportSafeInCloud(document), password, this.services.random))
+      );
+    }
     const failure = await this.services.checkPassword(password);
     if (!isNil(failure)) {
       return err(failure);
@@ -217,6 +240,8 @@ export class VaultExport {
       }
       case 'csv':
         return ok(file(utf8(exportCsv(document))));
+      case 'safeincloud':
+        return ok(file(utf8(exportSafeInCloud(document))));
       default:
         return assertNever(format);
     }

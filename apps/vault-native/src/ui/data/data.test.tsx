@@ -2,6 +2,7 @@ import { aCardWith, aField } from '@frozik/vault/testing/builders';
 import { CHROME_CSV } from '@frozik/vault/testing/import-fixtures';
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { openSettingsTopic } from '../testing/settings-topic';
 import { unlockedVaultWith } from '../testing/unlocked-vault';
 
 const mockPicked: { file: { name: string; type: string; bytes: Uint8Array<ArrayBuffer> } | null } =
@@ -21,7 +22,7 @@ const card = (title: string, password: string) =>
     { title }
   );
 
-async function openTab(tab: 'settings' | 'audit') {
+async function openTab(tab: 'audit') {
   await fireEvent.press(screen.getByTestId(`tab-${tab}`));
   await screen.findByTestId(tab);
 }
@@ -44,7 +45,7 @@ describe('import and export on the phone', () => {
       type: 'text/csv',
       bytes: new TextEncoder().encode(CHROME_CSV),
     };
-    await openTab('settings');
+    await openSettingsTopic('data');
 
     await fireEvent.press(screen.getByTestId('import-choose'));
     await fireEvent.press(await screen.findByTestId('import-confirm'));
@@ -55,7 +56,7 @@ describe('import and export on the phone', () => {
 
   it('hands an encrypted copy with its own password to the share sheet', async () => {
     const { device } = await unlockedVaultWith([card('Bank', 'hunter2')]);
-    await openTab('settings');
+    await openSettingsTopic('data');
 
     await fireEvent.changeText(screen.getByTestId('export-password'), 'another long password');
     await fireEvent.changeText(screen.getByTestId('export-confirmation'), 'another long password');

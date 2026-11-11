@@ -64,7 +64,12 @@ export function cardNetworkOf(card: ICardState): TCardNetwork | null {
   return digits === '' ? null : (detectCardNetwork(digits)?.network ?? null);
 }
 
-/** Only a chosen built-in icon takes the card's colour; the automatic ones keep their own. */
+/** Only a chosen built-in icon is drawn in the card's colour; the automatic ones keep their own. */
 export function cardColorOf(card: ICardState): TCardColor | null {
   return card.icon.kind === 'builtin' ? card.color : null;
+}
+
+/** An automatic icon — a network's logo, a site's icon — keeps its colours and sits on the card's. */
+export function cardTileColorOf(card: ICardState): TCardColor | null {
+  return card.icon.kind === 'auto' ? card.color : null;
 }

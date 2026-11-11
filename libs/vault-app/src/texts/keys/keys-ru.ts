@@ -11,11 +11,10 @@ export const keysTranslationsRu: typeof keysTranslationsEn = {
     current: 'Текущий мастер-пароль',
     currentRecovery: 'Ключ восстановления',
     password: 'Новый мастер-пароль',
-    passwordHint: (min: number) => `Не короче ${min} символов.`,
     confirmation: 'Повторите новый пароль',
     problems: {
       'no-current': 'Введите текущий мастер-пароль.',
-      'too-short': (min: number) => `Новый пароль должен быть не короче ${min} символов.`,
+      'no-password': 'Введите новый пароль.',
       mismatch: 'Новые пароли не совпадают.',
     },
     submit: 'Сменить пароль',
@@ -52,6 +51,7 @@ export const keysTranslationsRu: typeof keysTranslationsEn = {
   unlock: {
     useRecovery: 'Забыли пароль? Открыть ключом восстановления',
     usePassword: 'Открыть мастер-паролем',
+    openWithRecovery: 'Открыть ключом восстановления',
     recoveryKey: 'Ключ восстановления',
     wrongKey: 'Этот ключ восстановления не открывает хранилище.',
   },
@@ -153,6 +153,7 @@ export const keysTranslationsRu: typeof keysTranslationsEn = {
       weak: 'Разблокировка по лицу на этом телефоне недостаточно надёжна (класс 2), чтобы открывать хранилище: добавьте отпечаток.',
       none: 'На телефоне не настроен отпечаток.',
     },
+    enrol: 'Добавить отпечаток в настройках телефона',
     password: 'Мастер-пароль',
     passwordHint: 'Нужен ещё раз: ключ открытого хранилища нельзя из него извлечь.',
     switchOn: 'Включить',

@@ -15,6 +15,7 @@ import type {
   IVaultSettings,
   TTombstoneKey,
 } from '../model/vault-document';
+import { mergeVaultMeta } from '../model/vault-meta';
 import { mergeCard } from './merge-card';
 import { compareBytes, compareVersions, mergeMaps } from './merge-order';
 
@@ -215,5 +216,6 @@ export function mergeDocument(local: IVaultDocument, remote: IVaultDocument): IV
       remote.hotpCounters,
       (_key, localCounter, remoteCounter) => either(localCounter, remoteCounter, Math.max)
     ),
+    meta: mergeVaultMeta(local.meta, remote.meta),
   };
 }

@@ -1,5 +1,5 @@
 import { NATIVE_PALETTES } from '@frozik/components/tokens/native-tokens';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { when } from 'mobx';
 import { View } from 'react-native';
@@ -8,6 +8,7 @@ import { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 import { LOCAL_COPY_PATH } from '@frozik/vault-app/sync/domain/local-copy';
 import { aDevice, TEST_PASSWORD } from '@frozik/vault-app/testing/fake-device';
 
+import { TEST_VERSION } from '../testing/AppUnderTest';
 import { renderApp } from '../testing/render-app';
 import { StartScreen } from './StartScreen';
 
@@ -15,6 +16,7 @@ const Elsewhere = () => <View testID="elsewhere" />;
 const ROUTES = {
   index: () => <StartScreen />,
   new: Elsewhere,
+  import: Elsewhere,
   open: Elsewhere,
   '[vaultId]': Elsewhere,
 };
@@ -64,34 +66,84 @@ describe('the start screen', () => {
     await waitFor(() => expect(rendered.getPathname()).toBe(`/${vaultKey}`));
   });
 
-  it('says a picked file is no vault', async () => {
+  it('asks where a picked file that is no vault of its own is imported', async () => {
     const device = aDevice();
-    device.willPick({ bytes: Uint8Array.of(1, 2, 3), name: 'notes.txt' });
-    await renderApp(ROUTES, { device });
+    device.willPick({ bytes: Uint8Array.of(1, 2, 3), name: 'export.db' });
+    const rendered = await renderApp(ROUTES, { device });
 
     await fireEvent.press(screen.getByTestId('open-file'));
 
-    expect(await screen.findByTestId('open-file-failed')).toBeOnTheScreen();
+    await waitFor(() => expect(rendered.getPathname()).toBe('/import'));
   });
 
-  it('shows a newer release below its actions, so a late notice never moves them under a finger', async () => {
-    const updates = new UpdateWatch(
-      {
-        read: () =>
-          Promise.resolve({
-            android: { latest: 'v2.0.0', minimum: 'v1.0.0', apkUrl: '', sha256: '' },
-          }),
-      },
-      { client: 'android', version: 'v1.4.0' }
-    );
+  const releasedUpTo = (latest: string) => ({
+    read: () => Promise.resolve({ android: { latest, minimum: 'v1.0.0', apkUrl: '', sha256: '' } }),
+  });
+
+  it('names the running version on the title line', async () => {
+    await renderApp(ROUTES);
+
+    expect(screen.getByTestId('app-version')).toHaveTextContent(TEST_VERSION);
+  });
+
+  it('offers a newer release on the title line', async () => {
+    const updates = new UpdateWatch(releasedUpTo('v2.0.0'), {
+      client: 'android',
+      version: 'v1.4.0',
+    });
     await renderApp(ROUTES, { updates });
 
     await act(() => updates.check());
 
-    const order = screen
-      .getAllByTestId(/^(create-vault|update-notice)$/)
-      .map(element => element.props.testID as string);
-    expect(order).toEqual(['create-vault', 'update-notice']);
+    expect(screen.getByTestId('update-link')).toBeOnTheScreen();
+  });
+
+  it('offers no release to a local build, which carries none', async () => {
+    const updates = new UpdateWatch(releasedUpTo('v2.0.0'), {
+      client: 'android',
+      version: 'dev',
+    });
+    await renderApp(ROUTES, { updates });
+
+    await act(() => updates.check());
+
+    expect(screen.queryByTestId('update-link')).toBeNull();
+  });
+
+  it('marks a vault this phone opens with a fingerprint', async () => {
+    const device = aDevice();
+    const maker = device.startStore();
+    maker.create('Family', TEST_PASSWORD);
+    await when(() => maker.session !== null);
+    await maker.session?.flows.deviceUnlockOf()?.switchOn(TEST_PASSWORD);
+    maker.lock('manual');
+    const other = device.startStore();
+    other.create('Work', TEST_PASSWORD);
+    await when(() => other.session !== null);
+    other.lock('manual');
+    const rendered = await renderApp(ROUTES, { device });
+
+    await act(() => rendered.app.registry.refresh());
+
+    expect(await screen.findByTestId('vault-biometric')).toBeOnTheScreen();
+    expect(screen.getAllByTestId('vault-row')).toHaveLength(2);
+    expect(screen.getAllByTestId('vault-biometric')).toHaveLength(1);
+  });
+
+  it('marks a vault once the fingerprint is switched on elsewhere and the list is back in sight', async () => {
+    const device = aDevice();
+    const maker = device.startStore();
+    maker.create('Family', TEST_PASSWORD);
+    await when(() => maker.session !== null);
+    const setup = maker.session?.flows.deviceUnlockOf();
+    const rendered = await renderApp({ _layout: () => <Stack />, ...ROUTES }, { device });
+    await act(() => rendered.app.registry.refresh());
+    await act(() => router.push('/new'));
+
+    await act(() => setup?.switchOn(TEST_PASSWORD));
+    await act(() => router.back());
+
+    expect(await screen.findByTestId('vault-biometric')).toBeOnTheScreen();
   });
 
   it('goes to creating a vault', async () => {
@@ -116,6 +168,7 @@ describe('the start screen', () => {
     device.theme.setSystemDark(true);
     await renderApp(ROUTES, { device });
 
+    await fireEvent.press(screen.getByTestId('start-appearance'));
     await fireEvent.press(screen.getByTestId('theme-light'));
 
     expect(device.theme.stored()).toBe('light');

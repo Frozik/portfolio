@@ -11,9 +11,17 @@ import { renderApp } from './render-app';
 /** A vault "Family" with these cards, locked, then opened with its password on the app's own screens. */
 export async function unlockedVaultWith(
   cards: readonly IVaultCard[],
-  { siteIcons }: Pick<NonNullable<Parameters<typeof aDevice>[0]>, 'siteIcons'> = {}
+  {
+    siteIcons,
+    googleDrive,
+    followIncomingFiles,
+    routes = OPEN_VAULT_ROUTES,
+  }: Pick<NonNullable<Parameters<typeof aDevice>[0]>, 'siteIcons' | 'googleDrive'> &
+    Pick<NonNullable<Parameters<typeof renderApp>[1]>, 'followIncomingFiles'> & {
+      readonly routes?: Parameters<typeof renderApp>[0];
+    } = {}
 ) {
-  const device = aDevice({ siteIcons });
+  const device = aDevice({ siteIcons, googleDrive });
   const maker = device.startStore();
   maker.create('Family', TEST_PASSWORD);
   await when(() => maker.session !== null);
@@ -25,7 +33,11 @@ export async function unlockedVaultWith(
   await when(() => session.local.state.phase.kind === 'idle');
   const { vaultKey } = session;
   maker.lock('manual');
-  const rendered = await renderApp(OPEN_VAULT_ROUTES, { device, initialUrl: `/${vaultKey}` });
+  const rendered = await renderApp(routes, {
+    device,
+    initialUrl: `/${vaultKey}`,
+    followIncomingFiles,
+  });
   await act(() => rendered.app.registry.refresh());
   await fireEvent.changeText(screen.getByTestId('unlock-password'), TEST_PASSWORD);
   await fireEvent.press(screen.getByTestId('unlock-submit'));

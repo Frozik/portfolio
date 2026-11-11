@@ -3,10 +3,6 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  MASTER_PASSWORD_MIN_LENGTH,
-  MASTER_PASSWORD_SUGGESTED_LENGTH,
-} from '@frozik/vault-app/keys/domain/master-password';
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
 import { createVaultProblemText } from '@frozik/vault-app/texts/keys/keys-wording';
 
@@ -71,10 +67,6 @@ export const CreateScreen = observer(function CreateScreen({
     setStarted(true);
     app.submitCreateForm();
   };
-  const passwordProblem =
-    form.password !== '' && form.problem === 'too-short'
-      ? createVaultProblemText(vaultTexts, 'too-short')
-      : null;
   const mismatch =
     form.confirmation !== '' && form.problem === 'mismatch'
       ? createVaultProblemText(vaultTexts, 'mismatch')
@@ -106,13 +98,7 @@ export const CreateScreen = observer(function CreateScreen({
         onChangeText={form.setPassword}
         secret
       />
-      <Text style={[styles.hint, { color: palette.fgFaint }]}>
-        {t.passwordHint(MASTER_PASSWORD_MIN_LENGTH, MASTER_PASSWORD_SUGGESTED_LENGTH)}
-      </Text>
-      {passwordProblem !== null && (
-        <Text style={[styles.hint, { color: palette.danger }]}>{passwordProblem}</Text>
-      )}
-      {!isNil(form.strength) && <StrengthBar strength={form.strength} />}
+      {!isNil(form.strength) && <StrengthBar strength={form.strength} advice={form.advice} />}
       <TextField
         testID="create-confirmation"
         label={t.confirmation}

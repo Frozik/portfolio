@@ -112,8 +112,8 @@ const HEADER = {
   ],
 };
 
-function batchOf(bytes: Uint8Array<ArrayBuffer>): IImportBatch {
-  const read = readImportFile(bytes);
+async function batchOf(bytes: Uint8Array<ArrayBuffer>): Promise<IImportBatch> {
+  const read = await readImportFile(bytes);
   assert(read.ok && read.value.kind === 'entries', 'a CXF file reads');
   return read.value.batch;
 }
@@ -143,8 +143,8 @@ describe('the Credential Exchange Format', () => {
     { path: 'documents/c2Nhbg', bytes: SCAN, compress: false },
   ]);
 
-  it('brings items in on the template their main credential names, the rest as fields', () => {
-    const document = imported(batchOf(archive));
+  it('brings items in on the template their main credential names, the rest as fields', async () => {
+    const document = imported(await batchOf(archive));
     const github = cardTitled(document, 'GitHub');
 
     expect(github?.templateId).toBe('internet-account');
@@ -170,8 +170,8 @@ describe('the Credential Exchange Format', () => {
     });
   });
 
-  it('turns collections and tags into groups, references into links, and keeps the files beside cxf.json', () => {
-    const document = imported(batchOf(archive));
+  it('turns collections and tags into groups, references into links, and keeps the files beside cxf.json', async () => {
+    const document = imported(await batchOf(archive));
     const groupNames = (card: IVaultCard | undefined) =>
       (card?.groupIds ?? []).map(id => document.groups.get(id)?.name);
 
@@ -181,15 +181,15 @@ describe('the Credential Exchange Format', () => {
     expect([...document.assetBytes.values()]).toEqual([SCAN]);
   });
 
-  it('reports passkeys and credential types it does not know', () => {
-    expect(batchOf(archive).warnings).toEqual([
+  it('reports passkeys and credential types it does not know', async () => {
+    expect((await batchOf(archive)).warnings).toEqual([
       { kind: 'passkey-dropped', card: 'GitHub' },
       { kind: 'field-dropped', card: 'GitHub', label: 'teleporter' },
     ]);
   });
 
-  it('reads the header alone as JSON, the files then reported missing', () => {
-    expect(batchOf(utf8(JSON.stringify(HEADER))).warnings).toContainEqual({
+  it('reads the header alone as JSON, the files then reported missing', async () => {
+    expect((await batchOf(utf8(JSON.stringify(HEADER)))).warnings).toContainEqual({
       kind: 'file-dropped',
       card: 'Passport',
       name: 'scan.pdf',
@@ -205,7 +205,7 @@ describe('the Credential Exchange Format', () => {
       Temporal.Instant.from('2026-10-11T00:00:00Z').epochMilliseconds
     );
 
-    const document = imported(batchOf(exported));
+    const document = imported(await batchOf(exported));
 
     const live = [...source.cards.values()].filter(card => isNil(card.trashedAt));
     expect([...document.cards.values()].map(card => card.title).sort()).toEqual(
@@ -231,7 +231,7 @@ describe('the Credential Exchange Format', () => {
   });
 
   it('leaves out a file whose bytes disagree with the hash the source declares, and says so', async () => {
-    const batch = batchOf(archive);
+    const batch = await batchOf(archive);
     const damaged = {
       ...batch,
       assets: batch.assets.map(entry => ({ ...entry, bytes: Uint8Array.of(9, 9, 9) })),
@@ -247,7 +247,7 @@ describe('the Credential Exchange Format', () => {
     });
   });
 
-  it('keeps a Wi-Fi security choice readable on a card of another template', () => {
+  it('keeps a Wi-Fi security choice readable on a card of another template', async () => {
     const header = {
       ...HEADER,
       accounts: [
@@ -273,7 +273,7 @@ describe('the Credential Exchange Format', () => {
 
     const { document } = applyImport(
       emptyVaultDocument('Imported', anHlc(1)),
-      batchOf(utf8(JSON.stringify(header))),
+      await batchOf(utf8(JSON.stringify(header))),
       { translate, random: createSeededRandom(1), duplicates: 'keep-both' },
       anHlc(2)
     );
@@ -328,7 +328,7 @@ describe('the Credential Exchange Format', () => {
       Temporal.Instant.from('2026-10-11T00:00:00Z').epochMilliseconds
     );
 
-    const [card] = imported(batchOf(exported)).cards.values();
+    const [card] = imported(await batchOf(exported)).cards.values();
 
     expect(card).toMatchObject({
       color: 'teal',

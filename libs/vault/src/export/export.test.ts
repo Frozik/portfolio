@@ -57,8 +57,8 @@ describe('exporting a vault', () => {
     expect(trashed.every(card => !names.includes(card.title))).toBe(true);
   });
 
-  it('reads its own CSV back as the same accounts', () => {
-    const read = readImportFile(utf8(exportCsv(source)));
+  it('reads its own CSV back as the same accounts', async () => {
+    const read = await readImportFile(utf8(exportCsv(source)));
     if (!read.ok || read.value.kind !== 'entries') {
       throw new Error('the export reads back');
     }
@@ -79,7 +79,7 @@ describe('exporting a vault', () => {
     );
   });
 
-  it('reads its CSV back as the same account: the email as login, a secret still masked', () => {
+  it('reads its CSV back as the same account: the email as login, a secret still masked', async () => {
     const account = aCardWith(
       [
         aField({ kind: 'url', match: 'host', useSharedCredentials: true }, [
@@ -99,7 +99,7 @@ describe('exporting a vault', () => {
       ...emptyVaultDocument('Mine', anHlc(1)),
       cards: new Map([[account.id, account]]),
     };
-    const read = readImportFile(utf8(exportCsv(document)));
+    const read = await readImportFile(utf8(exportCsv(document)));
     if (!read.ok || read.value.kind !== 'entries') {
       throw new Error('the export reads back');
     }

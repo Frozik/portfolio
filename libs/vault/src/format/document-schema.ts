@@ -118,6 +118,7 @@ export const CARD_STATE_SCHEMA = z.object({
 
 export const CARD_SCHEMA = CARD_STATE_SCHEMA.extend({
   history: z.array(z.object({ at: HLC_SCHEMA, snapshot: CARD_STATE_SCHEMA })),
+  forgottenRevisions: z.array(HLC_SCHEMA).optional(),
 });
 
 export const VAULT_JSON_SCHEMA = z.object({
@@ -170,6 +171,7 @@ export const SMART_GROUP_RULE_SCHEMA: z.ZodType<TSmartGroupRule> = z.lazy(() =>
         'no-group',
         'audit-problem',
         'possible-duplicate',
+        'recently-opened',
       ]),
     }),
     z.object({ kind: z.enum(['all', 'any']), rules: z.array(SMART_GROUP_RULE_SCHEMA) }),
@@ -236,11 +238,23 @@ export const HOTP_COUNTERS_SCHEMA = z.record(
   z.int().nonnegative()
 );
 
+/** zxcvbn's scale: 0 is guessed at once, 4 holds against an offline attack. */
+const STRONGEST_SCORE = 4;
+const STRENGTH_SCORE = z.int().min(0).max(STRONGEST_SCORE);
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/** The vault's own password strength cache: scores by meter, then by the password's SHA-256. */
+export const PASSWORD_STRENGTH_SCHEMA = z.record(
+  z.string().min(1),
+  z.record(z.string().regex(SHA256_HEX), STRENGTH_SCORE)
+);
+
 /** Which domains have an icon file beside it, and which were found without one. */
 export const SITE_ICONS_SCHEMA = z.array(
   z.object({
     domain: z.string().regex(ICON_DOMAIN),
     kind: z.enum(['icon', 'none']),
     at: HLC_SCHEMA,
+    reach: z.number().int().positive().optional(),
   })
 );

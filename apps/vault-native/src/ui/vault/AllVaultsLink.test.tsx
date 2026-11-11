@@ -28,6 +28,7 @@ describe('leaving a locked vault for the others', () => {
   it('goes from an open vault to the list of every vault', async () => {
     const { getPathname, app } = await unlockedVaultWith([]);
 
+    await fireEvent.press(screen.getByTestId('vault-switcher'));
     await fireEvent.press(screen.getByTestId('all-vaults'));
 
     await waitFor(() => expect(getPathname()).toBe('/'));

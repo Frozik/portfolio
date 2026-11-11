@@ -1,7 +1,7 @@
 import { cn } from '@frozik/components/components/cn';
 import type { TVaultKey } from '@frozik/vault/persistence/ports';
 import { isNil } from 'lodash-es';
-import { Lock, Star } from 'lucide-react';
+import { Lock, Paperclip, Star } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Link } from 'react-router-dom';
 
@@ -48,6 +48,7 @@ export const CardRow = observer(
             <span className="truncate">{card.title === '' ? t.untitled : card.title}</span>
             {card.favorite && <Star size={ICON_SIZE} aria-label={t.badges.favorite} />}
             {card.protected && <Lock size={ICON_SIZE} aria-label={t.badges.protected} />}
+            {row.hasFiles && <Paperclip size={ICON_SIZE} aria-label={t.badges.files} />}
           </span>
           <span className="flex items-center gap-2 text-[13px] text-fg-faint">
             {!isNil(row.subtitle) && <span className="truncate">{row.subtitle}</span>}

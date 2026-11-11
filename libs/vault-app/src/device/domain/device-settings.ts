@@ -1,6 +1,8 @@
 import type { Milliseconds } from '@frozik/utils/date/types';
 
 import type { IQuickUnlockSetting } from '../../keys/domain/quick-code';
+import type { TBackupInterval } from './backup-interval';
+import { DEFAULT_BACKUP_INTERVAL } from './backup-interval';
 import type { ILockTimeouts } from './lock-timeouts';
 import { DEFAULT_LOCK_TIMEOUTS } from './lock-timeouts';
 
@@ -25,6 +27,16 @@ export interface IDeviceSettings {
   readonly lastMasterAt: Milliseconds | null;
   /** A phone lets the open vault be captured (screenshots, recording, the recents picture); off until confirmed. */
   readonly allowScreenshots: boolean;
+  /** The list's strip of cards opened lately, above the cards; on unless turned off. */
+  readonly showRecent: boolean;
+  /** The list's strip of favourite cards, above the cards; on unless turned off. */
+  readonly showFavorites: boolean;
+  /** The Audit tab's count of cards that need attention; on unless turned off. */
+  readonly showAuditCount: boolean;
+  /** How many days apart this device writes the vault to its backup folder; `null` never. */
+  readonly backupEveryDays: TBackupInterval;
+  /** When this device last wrote the vault to its backup folder. */
+  readonly lastBackupAt: Milliseconds | null;
 }
 
 export const DEFAULT_DEVICE_SETTINGS: IDeviceSettings = {
@@ -36,6 +48,11 @@ export const DEFAULT_DEVICE_SETTINGS: IDeviceSettings = {
   quickUnlock: null,
   lastMasterAt: null,
   allowScreenshots: false,
+  showRecent: true,
+  showFavorites: true,
+  showAuditCount: true,
+  backupEveryDays: DEFAULT_BACKUP_INTERVAL,
+  lastBackupAt: null,
 };
 
 /** The choices the settings offer. */

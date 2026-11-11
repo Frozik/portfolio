@@ -75,23 +75,28 @@ export const dataTranslationsEn = {
       zip: 'Open archive (.zip): everything, files included',
       cxf: 'Credential Exchange Format (.cxf.zip) for other password managers',
       csv: 'CSV for other password managers (Bitwarden columns)',
+      safeincloud: 'SafeInCloud XML (.xml)',
+      'safeincloud-db': 'SafeInCloud database (.db) with its own password',
     },
     descriptions: {
       pwv: 'A separate vault with a new key: you can hand it over or keep it apart. It does not reveal your master password and does not sync with this vault.',
       zip: 'The vault’s contents as JSON with each card’s files, readable by any archiver.',
       cxf: 'The FIDO Alliance’s format: logins, cards, Wi-Fi, documents, one-time codes, groups, links and files. Not encrypted.',
       csv: 'Accounts as logins, other cards as notes with their fields. Files are left out.',
+      safeincloud:
+        'For SafeInCloud’s “Import → SafeInCloud XML”: each card with its fields under their names, groups as labels, the star and the colour. Tabs are laid end to end; files are left out. Not encrypted.',
+      'safeincloud-db':
+        'SafeInCloud opens it as its own database, sealed with the password you set here: cards with their fields, groups as labels, the star and the colour. Tabs are laid end to end; files are left out.',
     },
     exportPassword: 'Password of the copy',
-    exportPasswordHint: (min: number) =>
-      `At least ${min} characters; you will need it to open the copy.`,
+    exportPasswordHint: 'You will need it to open the copy.',
     confirmation: 'Repeat the password',
     masterPassword: 'Master password',
     masterPasswordHint: 'Asked again because the file will not be encrypted.',
     acknowledgement:
       'I understand the file is not encrypted: anyone who gets it reads every password.',
     problems: {
-      'too-short': (min: number) => `The password needs at least ${min} characters.`,
+      'no-copy-password': 'Type the password of the copy.',
       mismatch: 'The passwords differ.',
       'not-acknowledged': 'Confirm that you understand the file is not encrypted.',
       'no-password': 'Type the master password.',

@@ -1,8 +1,11 @@
 import type { IAuditReport } from '@frozik/vault/audit/audit-report';
 import { auditVault } from '@frozik/vault/audit/audit-report';
 import { auditedPasswords } from '@frozik/vault/audit/audited-passwords';
+import { utf8 } from '@frozik/vault/crypto/bytes';
+import { sha256Hex } from '@frozik/vault/crypto/sha256';
 import type { TCardId } from '@frozik/vault/model/ids';
 import type { IVaultDocument } from '@frozik/vault/model/vault-document';
+import { withStrengthScores } from '@frozik/vault/model/vault-meta';
 import { isNil } from 'lodash-es';
 import {
   computedStruct,
@@ -14,6 +17,7 @@ import {
 } from 'mobx';
 import { Temporal } from 'temporal-polyfill';
 
+import type { TTransact } from '../../document/application/transact';
 import type { ISessionClock } from '../../session/domain/ports/session-clock';
 import type { IBreachCheck, TLoadTwoFactorDirectory } from '../domain/ports/audit-sources';
 import type { IStrengthMeter } from '../domain/ports/strength-meter';
@@ -23,6 +27,8 @@ const ANSWERS_PER_BATCH = 50;
 
 export interface IVaultAuditServices {
   readonly document: () => IVaultDocument;
+  /** Writes the scores into the vault's own cache; `null` from a read-only session, which keeps them in memory. */
+  readonly transact: TTransact;
   /** The breach check is this device's choice, off until the user turns it on. */
   readonly checkLeaks: () => boolean;
   readonly meter: IStrengthMeter;
@@ -109,11 +115,52 @@ export class VaultAudit {
     this.services.meter.dispose();
   }
 
-  private estimate(passwords: readonly string[]): Promise<void> {
-    return this.ask(passwords, 'strength', this.scores, async (password, signal) => {
-      const strength = await this.services.meter.estimate(password, [], signal);
-      return strength?.score ?? null;
+  /**
+   * The vault's cache first, the meter only for what it lacks; the new scores go back into the
+   * cache in one edit, so the next unlock — on any device with this meter — counts nothing.
+   */
+  private async estimate(passwords: readonly string[]): Promise<void> {
+    const { meter, document, transact } = this.services;
+    const hashes = new Map(
+      await Promise.all(
+        passwords.map(async password => [password, await sha256Hex(utf8(password))] as const)
+      )
+    );
+    if (this.controller.signal.aborted) {
+      return;
+    }
+    const cached = document().meta.strength.get(meter.id);
+    runInAction(() => {
+      for (const [password, hash] of hashes) {
+        const score = cached?.get(hash);
+        if (!isNil(score) && !this.scores.has(password)) {
+          this.scores.set(password, score);
+        }
+      }
     });
+    const fresh = new Map<string, number>();
+    await this.ask(passwords, 'strength', this.scores, async (password, signal) => {
+      const score = (await meter.estimate(password, [], signal))?.score ?? null;
+      const hash = hashes.get(password);
+      if (!isNil(score) && !isNil(hash)) {
+        fresh.set(hash, score);
+      }
+      return score;
+    });
+    const held = new Set(hashes.values());
+    const stale = [...document().meta.strength.values()].some(section =>
+      [...section.keys()].some(hash => !held.has(hash))
+    );
+    if (this.controller.signal.aborted || (fresh.size === 0 && !stale)) {
+      return;
+    }
+    transact(current => ({
+      document: {
+        ...current,
+        meta: withStrengthScores(current.meta, meter.id, fresh, held),
+      },
+      result: undefined,
+    }));
   }
 
   private checkBreaches(passwords: readonly string[]): Promise<void> {

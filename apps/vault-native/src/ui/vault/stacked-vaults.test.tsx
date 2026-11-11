@@ -11,6 +11,7 @@ import {
 } from '@frozik/vault-app/testing/fake-device';
 
 import { OpenFromCloudScreen } from '../open/OpenFromCloudScreen';
+import { chooseCloud } from '../testing/choose-cloud';
 import { OPEN_VAULT_ROUTES } from '../testing/open-vault-routes';
 import { renderApp } from '../testing/render-app';
 
@@ -31,7 +32,7 @@ describe('a vault reached from another vault’s unlock screen', () => {
     await screen.findByTestId('unlock-password');
 
     await act(() => router.push('/open'));
-    await fireEvent.press(screen.getByTestId('choose-webdav'));
+    await chooseCloud('webdav-custom');
     await fireEvent.changeText(screen.getByTestId('webdav-address'), TEST_FOLDER);
     await fireEvent.changeText(screen.getByTestId('webdav-username'), 'me');
     await fireEvent.changeText(screen.getByTestId('webdav-password'), 'app-password');

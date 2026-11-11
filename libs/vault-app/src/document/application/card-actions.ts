@@ -1,13 +1,14 @@
-import type { ICardState } from '@frozik/vault/model/card';
+import type { ICardState, TCardColor } from '@frozik/vault/model/card';
 import { duplicateCard, editCard, putCard } from '@frozik/vault/model/card-edits';
 import type { TConcurrentResolution } from '@frozik/vault/model/card-versions';
 import { resolveConcurrentVersions } from '@frozik/vault/model/card-versions';
-import { createGroup } from '@frozik/vault/model/group-edits';
+import { createGroup, deleteGroup, updateGroup } from '@frozik/vault/model/group-edits';
 import type { IHlc } from '@frozik/vault/model/hlc';
 import type { TCardId, TGroupId } from '@frozik/vault/model/ids';
 import { linkCards, linkIdOf, unlinkCards } from '@frozik/vault/model/link-edits';
 import { purgeCard } from '@frozik/vault/model/purge-card';
-import { restoreRevision } from '@frozik/vault/model/revision-edits';
+import { forgetRevision, restoreRevision } from '@frozik/vault/model/revision-edits';
+import type { IUserGroup } from '@frozik/vault/model/vault-document';
 import type { IRandom } from '@frozik/vault/ports/random';
 import { isNil } from 'lodash-es';
 
@@ -67,6 +68,17 @@ export function restore(cardId: TCardId, revisionAt: IHlc): TDocumentEdit<undefi
   };
 }
 
+/** One version deleted from the card's history; the card as it is now stays untouched. */
+export function forget(cardId: TCardId, revisionAt: IHlc): TDocumentEdit<undefined> {
+  return document => {
+    const card = document.cards.get(cardId);
+    return {
+      document: isNil(card) ? document : putCard(document, forgetRevision(card, revisionAt)),
+      result: undefined,
+    };
+  };
+}
+
 /** "delete forever" from the trash: a tombstone, so other devices drop it too. */
 export function purge(cardId: TCardId): TDocumentEdit<undefined> {
   return (document, at) => ({ document: purgeCard(document, cardId, at), result: undefined });
@@ -87,9 +99,33 @@ export function unlink(first: TCardId, second: TCardId): TDocumentEdit<undefined
   });
 }
 
-export function newGroup(name: string, random: IRandom): TDocumentEdit<TGroupId> {
+export function newGroup(
+  name: string,
+  random: IRandom,
+  color: TCardColor | null = null
+): TDocumentEdit<TGroupId> {
   return (document, at) => {
     const created = createGroup(document, name, at, random);
-    return { document: created.document, result: created.groupId };
+    return {
+      document: isNil(color)
+        ? created.document
+        : updateGroup(created.document, created.groupId, at, { color }),
+      result: created.groupId,
+    };
   };
+}
+
+export function changeGroup(
+  groupId: TGroupId,
+  change: Partial<Pick<IUserGroup, 'name' | 'color'>>
+): TDocumentEdit<undefined> {
+  return (document, at) => ({
+    document: updateGroup(document, groupId, at, change),
+    result: undefined,
+  });
+}
+
+/** The group goes; its cards stay, in their other groups or in none. */
+export function removeGroup(groupId: TGroupId): TDocumentEdit<undefined> {
+  return (document, at) => ({ document: deleteGroup(document, groupId, at), result: undefined });
 }

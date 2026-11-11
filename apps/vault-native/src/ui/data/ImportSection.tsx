@@ -23,6 +23,8 @@ import { usePalette } from '../theme/AppTheme';
 const DUPLICATE_POLICIES: readonly TDuplicatePolicy[] = ['skip', 'replace', 'keep-both'];
 
 /** An export from another manager or another vault, read, previewed and only then added. */
+const PERCENT = 100;
+
 export const ImportSection = observer(function ImportSection({
   flow,
 }: {
@@ -111,15 +113,15 @@ export const ImportSection = observer(function ImportSection({
                 onChange={flow.setDuplicates}
               />
             )}
-            {step.importing ? (
-              <Busy label={t.importing} />
-            ) : (
-              <Button
-                testID="import-confirm"
-                label={t.confirm}
-                onPress={() => void flow.confirm()}
-              />
-            )}
+            <Button
+              testID="import-confirm"
+              label={t.confirm}
+              disabled={step.importing}
+              trailing={
+                isNil(flow.progress) ? undefined : `${Math.round(flow.progress * PERCENT)}%`
+              }
+              onPress={() => void flow.confirm()}
+            />
             <Button variant="secondary" label={t.cancel} onPress={flow.reset} />
           </>
         );

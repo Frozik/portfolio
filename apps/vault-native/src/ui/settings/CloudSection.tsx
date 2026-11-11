@@ -9,12 +9,17 @@ import { useAppModel } from '../app-model';
 import { Button } from '../kit/Button';
 import { TEXT_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
+import { CloudChoice } from '../open/CloudChoice';
+import { DriveConnect } from '../open/DriveConnect';
 import { WebDavConnect } from '../open/WebDavConnect';
 import { useCloudTexts, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
 import { useSession } from '../vault/session-context';
 
-/** Where the vault is kept besides this phone: a WebDAV folder to connect, the state, sync now, disconnect. */
+/**
+ * Where the vault is kept besides this phone: Google Drive or a WebDAV folder to connect, the
+ * state, sync now, signing in to Google again, disconnect.
+ */
 export const CloudSection = observer(function CloudSection() {
   const { app } = useAppModel();
   const session = useSession();
@@ -24,18 +29,37 @@ export const CloudSection = observer(function CloudSection() {
   const t = cloudTexts.section;
   const { cloud } = app;
   const { status, connection } = session.cloud;
-  useEffect(() => () => cloud.closeWebDavForm(), [cloud]);
+  useEffect(
+    () => () => {
+      cloud.closeDriveForm();
+      cloud.closeWebDavForm();
+    },
+    [cloud]
+  );
   if (status.kind !== 'none') {
     return (
       <>
-        {!isNil(connection) && connection.location.kind === 'webdav' && (
-          <Text style={[styles.text, { color: palette.fgDim }]}>
-            {t.webdavIn(connection.location.url, connection.location.path)}
+        {!isNil(connection) && (
+          <Text testID="cloud-location" style={[styles.text, { color: palette.fgDim }]}>
+            {connection.location.kind === 'webdav'
+              ? t.webdavIn(connection.location.url, connection.location.path)
+              : t.driveIn(
+                  cloudTexts.drive.spaces[connection.location.space].label,
+                  connection.location.path
+                )}
           </Text>
         )}
         <Text testID="cloud-section-status" style={[styles.text, { color: palette.fgDim }]}>
           {cloudStatusText({ cloud: cloudTexts, vault: vaultTexts }, status)}
         </Text>
+        {status.kind === 'sign-in-needed' && (
+          <Button
+            testID="cloud-sign-in"
+            icon="login"
+            label={cloudTexts.status.signIn}
+            onPress={() => void session.cloud.signIn()}
+          />
+        )}
         <Button
           testID="sync-now"
           variant="secondary"
@@ -56,18 +80,28 @@ export const CloudSection = observer(function CloudSection() {
   const { step } = cloud;
   return (
     <>
-      <Text style={[styles.text, { color: palette.fgDim }]}>{t.localOnly}</Text>
-      {step.kind === 'choose' && (
-        <Button
-          testID="cloud-connect"
-          variant="secondary"
-          label={cloudTexts.webdav.connect}
-          onPress={cloud.openWebDavForm}
-        />
-      )}
-      {step.kind === 'connect' && step.cloud.kind === 'webdav' && (
-        <WebDavConnect form={step.cloud.form} />
-      )}
+      <Text style={[styles.text, { color: palette.fgDim }]}>{t.localOnlyPhone}</Text>
+      <CloudChoice cloud={cloud} />
+      {step.kind === 'connect' &&
+        (step.cloud.kind === 'webdav' ? (
+          <WebDavConnect form={step.cloud.form} />
+        ) : (
+          <DriveConnect form={step.cloud.form} />
+        ))}
+      {step.kind === 'pick' &&
+        step.cloud.kind === 'drive' &&
+        step.cloud.form.check.kind === 'found' && (
+          <>
+            {step.cloud.form.check.vaults.length > 0 && (
+              <Notice tone="caution" message={t.mergesWith} />
+            )}
+            <Button
+              testID="keep-here"
+              label={t.keepHere}
+              onPress={() => void cloud.keepInDrive(session)}
+            />
+          </>
+        )}
       {step.kind === 'pick' && step.cloud.kind === 'webdav' && (
         <>
           {step.cloud.form.check.kind === 'reachable' &&

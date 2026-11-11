@@ -10,44 +10,123 @@ There are no over-the-air updates: every change ships as a signed APK the user c
 ## Screens
 
 - **First run** — the vaults this phone knows (names and descriptions only), **Open from a
-  cloud** (a WebDAV folder: Nextcloud, ownCloud, a NAS, rclone or a hosted service — a phone
-  needs no CORS), **Open a vault file** (any `.pwv` from Files, Drive or a USB stick),
-  **Create a vault** (on this phone, or in the folder the opening reached), the theme.
-- **Unlock** — the master password, the recovery key, the fingerprint (only a strong,
-  Class 3 sensor; the phone's class is shown), or a quick lock's PIN, pattern or four
+  cloud** (one list of storages — Google Drive's hidden app folder or a folder in My Drive,
+  with a Google account already on the phone; each known WebDAV service: Yandex.Disk, pCloud,
+  Koofr, Nextcloud…; another WebDAV server — the choice opens only that storage's fields;
+  a phone needs no CORS), **Open a vault file** (any `.pwv` from Files, Drive or a USB stick),
+  **Create a vault** (on this phone, or in the folder the opening reached) — three equal icon
+  buttons in a row; a vault this phone opens with the fingerprint shows one before its name; the
+  gear in the corner slides up the theme. A file
+  another app hands over — "Open with" from Files, "Share" from a messenger or the mail — is
+  taken in the same way as one picked here: a `.pwv` opens at its vault's unlock; anything else
+  (a SafeInCloud `.db`, a KeePass file, another manager's export) first asks where it goes
+  (`/import`: every vault on the phone, the open one marked, and **New vault**). A picked vault
+  opens — after its unlock when it is locked, the open one being locked first when another is
+  picked — and only that vault's import takes the file; a new vault's import opens as soon as it
+  is made. **Do not import** forgets the file. The import asks the
+  source's password (a SafeInCloud database's in either of the two encodings its header may name) (`modules/vault-files` reads the intent once, so a lock's reload does not
+  open it again; Expo Router is told to ignore the file's link). Any
+  master password will do, even one character: the strength line under it turns red for a very
+  weak one and yellow for a weak or fair one, warns that whoever gets the file and guesses the
+  password reads every password inside, and suggests what is missing — length, digits,
+  capitals, symbols.
+- **Unlock** — the master password, the recovery key (its button held to the screen's bottom, and
+  shown only when the vault's header holds a recovery slot), the fingerprint (a button beside
+  «Unlock»; only a strong,
+  Class 3 sensor; the phone's class is shown; once it holds the vault, the unlock screen asks for
+  it at once by itself, the keyboard staying down, and after a cancel its button asks again), or a quick lock's PIN, pattern or four
   characters, once. As in Bitwarden, the quick code survives Android ending the app: the key is
   kept behind it in the Keystore (read once with the master password), until a wrong code, the
   end of its lifetime, **Lock completely** or "Ask for the master password after the app
   restarts". A key rotation or a new fingerprint turns biometric unlock off and says so.
   **All vaults** leads back to the list from every unlock and waiting state; a lock (which
   restarts the JavaScript runtime) comes back to that vault's unlock, not the first screen.
-- **An open vault** — **All vaults**, the cloud's state and the lock on top (behind the quick
-  code once one is set up, as Bitwarden locks; a long press locks completely) (the list marks the
-  vault that is open); strips for a key changed on another device (the password follows it),
-  a vault opened with the recovery key, keys changed elsewhere, and the biometric offer; the bottom tabs **Vault**,
-  **Search**, **Audit** and **Settings**; sections and groups in a sheet; sort chips; the cards
+- **An open vault** — one row on top: the vault's first letter (a red dot when the cloud is in
+  trouble; pressed, a sheet of the phone's vaults with the open one marked and its cloud state —
+  picking another locks this one and goes to that one's unlock — and **All vaults**, where the
+  list marks the vault that is open), then the page's own tools or the vault's name, and the lock
+  (behind the quick code once one is set up, as Bitwarden locks; a long press locks completely); strips for a key changed on another device (the password follows it),
+  a vault opened with the recovery key, keys changed elsewhere, and the biometric offer; the bottom tabs **Vault** (on the
+  list it turns into **Sections**, ☰, and opens the sections sheet; from another tab it only comes
+  back to the list), **Audit** (with its count of cards that need attention) and **Settings**; the sheet — also behind the section's name on top — lists sections and labels in two blocks with a mark each — **Sections** (all, favourites, recent, bank cards, notes, one-time codes, no label, protected, archive, trash) and **Labels** (a label in its colour); the labels are renamed, recoloured, added and deleted under Settings → Labels, and a label swiped left in the sheet opens the same editor; on the list the top row holds
+  the section, the search and sort buttons and **+**; the search and the sort chips stay out of
+  sight until their buttons show them (below 400 dp of width one button shows both; a button
+  stays pressed while its row is shown; putting the search away drops the query, the sort stays); the cards
   opened lately and the favourites in strips above a `FlashList`, each with the web's icon (a
-  card number's network, the site's icon, the chosen Lucide icon in the card's colour, or the
-  template's). A row's ⋯ (or a long press) copies a field without opening the card, or marks
-  it (favourite, archive, trash); an empty vault offers a first card or an import.
-- **A card** — secrets masked until shown, large type, copy with a haptic tick and a snackbar
-  that counts down to the clearing, open a site, live TOTP / Steam codes and HOTP with "Next
+  card number's network logo — the web's set, `react-svg-credit-card-payment-icons/native` over
+  `react-native-svg` — or the site's icon, both on the card's colour when one is chosen; the chosen
+  Lucide icon in the card's colour; or the template's). The list reuses its rows, as `FlashList`
+  is meant to: a row given another card snaps its swipe and its slide shut instead of being built
+  again, a swipe's actions are drawn only once it starts, and rows are drawn 1000 dp ahead. A row's ⋯ (or a long press) slides the whole row left, the ⋯ with it, onto the icons
+  that lie behind its end (half a second, eased): copy what the card's kind has worth pasting —
+  an account's login, password and one-time code, a bank card's number, holder, expiry and PIN, a
+  bank account's IBAN, BIC and holder, a document's number and expiry, a server's host, login and
+  password, a Wi-Fi's name and password — star it, protect it (protection comes
+  off only in the card); the ⋯ again slides it back, one row is open at a time, and an open row does not swipe; a row swiped right uncovers the trash, swiped left the archive;
+  in the archive left takes the card out of it, right
+  to the trash; in the trash right deletes it for good, left restores it; an empty vault offers a first card or an import.
+- **A card** — one row on top: the back arrow, the icon, the title (cut with an ellipsis), its
+  marks, and Edit and History as icons; secrets masked until shown, large type, copy with a haptic tick and a snackbar
+  that counts down to the clearing, open a site, its files by name and size with two actions —
+  save into a folder picked in the system's picker (Downloads, a cloud's folder) and view: a
+  picture or a text in a sheet here, anything else in an app that opens it (a paper clip marks such
+  a card in the list), live TOTP / Steam codes (a ring empties with the time left; the code and the ring turn orange
+  from 20 seconds and red from 10) and HOTP with "Next
   code", the bank-card face, expiry and password-age banners, linked cards, protected cards
-  behind the master password, history with restore.
-- **Editing** — the icon (automatic or one of the built-in ones, by group) and its colour,
-  every field kind, a field's ⋯ to rename, move or remove it, tabs, the generator (the site's
-  password rules first), attachments, the conflict dialog when another device saved the card.
-- **Audit** — weak, reused, old and leaked passwords (the breach check is opt-in), expiring
-  cards, two-factor available.
-- **Settings** — theme, lock timeouts and the clipboard, quick unlock, biometrics,
-  screenshots, the vault's name, the master password, the recovery key with a text Emergency
-  Kit, a new key, the cloud, import (CSV, Bitwarden, SafeInCloud, CXF, KeePass, another
-  `.pwv`) and export through the share sheet, removing the vault from the phone, about.
+  behind the master password, history (one row: the back arrow and the title, cut with an ellipsis) with Restore and Delete
+  under each version.
+- **A one-time code from its QR** — two buttons under a TOTP field. The camera (`expo-camera`'s
+  ML Kit scanner over the whole screen) fills the field at the first QR with a code; a QR of
+  anything else is pointed out and the camera keeps looking. The permission is asked at first
+  use, and once refused for good the phone's settings are offered; no microphone permission is
+  declared. A screenshot is read by the same ML Kit, the picture kept in the cache only while it
+  is read. A Google Authenticator transfer of several accounts asks which one this card is for.
+- **Editing** — the icon (automatic or one of the built-in ones, by group) and its colour (a
+  built-in icon is drawn in it, an automatic one sits on it),
+  protection (also from a row's long-press menu, where taking it off asks for the master password),
+  every field kind (its name once, above the control and inside it while empty), a field's
+  actions as icons beside its name — rename, up, down, to another tab, remove — waiting behind ⋯ when the
+  name leaves them no room (the ⋯ slides the name aside onto them, like a list row's), tabs (each with a pencil that renames, moves or deletes it), the generator (the site's
+  password rules first), attachments, a one-time code from its QR through the camera or from a screenshot (above),
+  the conflict dialog when another device saved the card. An edit a lock left unsaved waits
+  in a one-line notice on the list (✎ takes it up, 🗑 throws it away), and its card opens
+  straight in the editor. A tab's dialog is one row: ‹ › to move it, Delete and Save; a tab with
+  fields asks before they go with it.
+- **Audit** — a group per finding, each with its mark, a red count and its cards (a card opens
+  from there; a password problem links to the site's change page): leaked (the breach check is
+  opt-in), weak, reused, insecure address, two-factor available, old, expired, expiring, and
+  possible duplicates.
+- **Settings** — as Android lays them out: a list of topics, each with its mark and a line of
+  what is inside, falling into a page of its own (the arrow or the system back returns):
+  **Security** — lock timeouts and the clipboard, site icons, quick unlock, biometrics (with no fingerprint on the
+  phone, a button opens Android's enrolment and the sensor is read again on coming back),
+  screenshots; **Display** — the theme and what the screens show (the list's strips of cards opened lately and favourites, the
+  Audit tab's red count of cards that need attention, hidden at zero; each on until turned off on
+  this phone); **Labels**; **This vault** — its name, the master password, the recovery key with a
+  text Emergency Kit, a new key, removing it from the phone; **Cloud** — the same list of storages, then the fields of the
+  chosen one; **Import and export** — import (CSV, Bitwarden, SafeInCloud, CXF, KeePass, another
+  `.pwv`) and export through the share sheet (`.pwv`, open zip, CXF, Bitwarden CSV, a SafeInCloud
+  database `.db` sealed with a password of its own, or SafeInCloud XML); **Backup** — copies of
+  the vault file itself (the same vault under the same password, attachments kept beside it
+  excepted) in `Android/data/io.github.ciphravault.vault/backup`, where a computer over USB
+  finds them; one is made when the vault opens once the chosen interval has passed (never, 2, 7
+  by default, 14 or 28 days), or at once with **Make a copy now**; the location field opens the
+  folder's copies, newest first, each shared through the share sheet or deleted. The folder goes
+  with the app when it is uninstalled, so a copy meant to last is shared elsewhere; **Diagnostics** — what
+  the app did (opening, unlocks and their failures, locks and why, the cloud sync's reads, writes
+  and errors, Google sign-in with Google's status code), in a database file of its own; only codes,
+  kinds and counts are written — never a vault's name, a card, an address, an account or anything
+  typed. Shown newest first through a filter (everything, only problems, or one kind), kept for 1,
+  7 (by default) or 30 days and never more than 5,000 entries, and copied as it is filtered, headed
+  by the build, Android and the phone's model; **About** — the version, the author with a link to the author’s homepage, the credits. An empty vault's
+  import button lands on Import and export.
 - **Everywhere** — every dialog closes with its X, a tap outside or back; forms give way to
   the keyboard (edge to edge, Android no longer resizes the window); a secret field can be
   shown while typing and hides itself again; back steps through the cloud wizard instead of
   leaving it; a pattern the system interrupts is dropped, never sent as the one quick try.
-- **Updates** — a note when a newer release is out; below the published security floor the
+- **Updates** — the first screen's title carries the running version in a badge and, when a newer
+  release is out, a small update button at its right edge (a local build, which names no release,
+  is never offered one); below the published security floor the
   app locks and only says where to get the new APK.
 
 ## Install
@@ -84,6 +163,12 @@ There are no over-the-air updates: every change ships as a signed APK the user c
   settings and the cards opened lately — sealed under subkeys of the vault's key) and each
   vault's local copy. `allowBackup` is off: the vault leaves the phone only through the user's
   own cloud or an export.
+- Google Drive signs in through Android's own account picker and consent screen (Identity
+  `AuthorizationClient`, the shared `libs/expo-google-authorization`, as Calls Filter does):
+  no password and no client id in the app — Google knows the app by its package and the
+  SHA-1 of its signing certificate, registered as an Android OAuth client. The account chosen
+  last (kept in `expo-secure-store`) is the one every Drive vault on the phone syncs through;
+  an expired sign-in shows «Sign in to Google» in Settings → Cloud.
 - Biometric unlock keeps the vault's key in the Android Keystore behind `BiometricPrompt`
   (`expo-secure-store` with `requireAuthentication`); turning it on asks for the master
   password once more, because an open vault's key cannot be read out.
@@ -93,7 +178,10 @@ There are no over-the-air updates: every change ships as a signed APK the user c
   JavaScript only lifts it for an open vault that allows it: set from JavaScript alone, it came
   too late on a cold start and was never set at all, so every screen could be captured.
 - No WebView, no analytics, no custom URL scheme, HTTPS only. Site icons come from icon.horse or
-  favicone.com, each domain once, and can be turned off in the settings.
+  favicone.com, else from the site's own page (its home-screen icon, then its largest one — a page
+  in a browser cannot read another site, an app can), else Google's favicon service; each domain
+  once (a site the browser's narrower search found without an icon is asked again at once), and they can be turned off in the settings. In the dark theme a site's icon sits on a light
+  tile, as sites draw their icons for a light browser tab.
 
 ### Weaker spots, said plainly
 
@@ -134,7 +222,16 @@ moon run vault-native:start                   # Metro for a development build
 moon run vault-native:run-android             # a development build on a connected phone
 moon run vault-native:build-apk               # a release-shaped APK (prebuild's debug signature)
 pnpm vault-android:e2e                        # the e2e tests in e2e/ on the running emulator / phone
+pnpm vault-android:dev                        # the app as it is now on the emulator, open on the test vault
 ```
+
+`pnpm vault-android:dev` (`dev-android.sh`, `--no-build` to reinstall the last APK) is what to
+look at after a change: the release APK for the emulator's ABI installed over the one there, then
+the test vault unlocked by the e2e agent. The vault (`dev/test-vault.mts`, master password
+`test-vault-1234`) holds ten cards of eight templates in four groups, with a one-time code, two
+protected cards and what the audit must find: a weak password, a reused one, one older than a
+year and a passport about to expire. On a phone that does not know it yet, the script seals it
+anew, pushes it to Downloads and opens it through Android's file chooser.
 
 `pnpm vault-android:e2e` (`e2e-android.sh`) is the `native-e2e` CI job run locally: it builds the
 release APK for the connected device's ABI only, installs it and runs `node --test` over
@@ -168,8 +265,8 @@ the `native` and `native-e2e` CI jobs, which need Java and an emulator.
   `runtime-reload-wipe`, `secure-store-biometric-secrets`, `share-sheet-file-saver`,
   `document-picker`, `kdbx-reader`, `native-theme-store`, `single-process`, and
   `site-icon-pictures` (a served icon made a PNG by `expo-image-manipulator`),
-  `not-on-this-phone` for what the first release does without (passkeys, Google sign-in,
-  QR scanning, image compression).
+  `google-drive-sign-in`, `ml-kit-qr-reader`, and `not-on-this-phone` for what the first
+  release does without (passkeys, image compression).
 - `src/ui` — the screens, a small kit on the brand's tokens
   (`@frozik/components/tokens/native-tokens`), contexts for the app, the open session and
   copy feedback.
@@ -191,3 +288,10 @@ Done once, by the owner, on their own machine; the key never enters the reposito
 4. Publish the certificate's SHA-256 (`keytool -list -v -keystore ciphra-vault.keystore`) in
    this README and in the organization's README — done for the current key; after the first
    release, confirm `apksigner verify --print-certs` on the published APK prints the same.
+5. For Google Drive on a local build: keep the keystore at `~/ciphra-keys/ciphra-vault.keystore` (or point
+   `$VAULT_KEYSTORE` at it; another alias in `$VAULT_KEY_ALIAS`) and put its password in the
+   Keychain: `security add-generic-password -a "$USER" -s ciphra-vault-keystore -w`. Then
+   `pnpm vault-android:dev` and `pnpm vault-android:e2e` sign the APK with it (`sign-apk.sh`),
+   so Google accepts it as the registered Android client. Without the key the APK keeps the
+   debug signature and Drive sign-in is refused. The first install after the key changes
+   uninstalls the app signed with the other one, its vaults with it (`install-apk.sh`).

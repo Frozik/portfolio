@@ -54,7 +54,9 @@ export const EditorScreen = observer(function EditorScreen({
       router.back();
     }
   };
-  if (draft.card.protected && !session.protectedGate.isOpen) {
+  // The card as it was when the edit began decides: ticking "protected" in the editor must not shut it.
+  const protectedFromStart = draft.draft.kind === 'edit' && draft.draft.base.protected;
+  if (protectedFromStart && !session.protectedGate.isOpen) {
     return (
       <View style={styles.gate}>
         <Notice message={t.card.protectedNotice} />
@@ -85,6 +87,7 @@ export const EditorScreen = observer(function EditorScreen({
         assets={session.document.assets}
         readOnly={session.readOnly}
         siteIcon={session.view.siteIconOf(draft.card)}
+        onScanOtp={session.editing.scanOtp}
         onClosed={closed}
       />
       {leaving !== null && (

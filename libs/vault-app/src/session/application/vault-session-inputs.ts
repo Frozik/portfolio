@@ -12,6 +12,7 @@ import type {
 } from '@frozik/vault/persistence/ports';
 import type { IRandom } from '@frozik/vault/ports/random';
 import type { ISyncGuard } from '@frozik/vault/sync/sync-state';
+import type { IDiagnosticsJournal } from '../../diagnostics/domain/ports/diagnostics-journal';
 import type { IClipboard } from '../../exposure/domain/ports/clipboard';
 import type { TCredential } from '../domain/lifecycle-events';
 
@@ -20,7 +21,7 @@ import type { IStrengthMeter } from '../../audit/domain/ports/strength-meter';
 import type { TConnectCloud } from '../../cloud/domain/ports/cloud';
 import type { IImageCompressor } from '../../document/domain/ports/image-compressor';
 import type { TReadQrCode } from '../../document/domain/ports/qr-reader';
-import type { TFetchSiteIcon } from '../../document/domain/ports/site-icons';
+import type { ISiteIconFetcher } from '../../document/domain/ports/site-icons';
 import type { TAcquireLeadership } from '../domain/ports/leadership';
 import type { ILockSignalSource } from '../domain/ports/lock-signal-source';
 import type { ISessionClock } from '../domain/ports/session-clock';
@@ -47,11 +48,13 @@ export interface IVaultSessionServices extends IVaultFlowServices {
   readonly compressor: IImageCompressor;
   readonly readQrCode: TReadQrCode;
   /** A site's icon from an icon service. */
-  readonly fetchSiteIcon: TFetchSiteIcon;
+  readonly fetchSiteIcon: ISiteIconFetcher;
   readonly connectCloud: TConnectCloud;
   /** The local copy as it was, before a cloud version changed it. */
   readonly snapshots: ISnapshotStore;
   readonly acquireLeadership: TAcquireLeadership;
+  /** This device's diagnostics log; `null` where the platform keeps none. */
+  readonly diagnostics: IDiagnosticsJournal | null;
   /** What the audit asks the outside world. */
   readonly auditSources: {
     readonly meter: () => IStrengthMeter;

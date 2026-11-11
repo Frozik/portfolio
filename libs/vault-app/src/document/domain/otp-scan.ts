@@ -22,7 +22,11 @@ export async function scanOtp(
   readQrCode: TReadQrCode,
   image: Parameters<TReadQrCode>[0]
 ): Promise<TOtpScan> {
-  const text = await readQrCode(image);
+  return otpOfQrText(await readQrCode(image));
+}
+
+/** What a QR's text gives a one-time-code field, the text read from a picture or a live camera. */
+export function otpOfQrText(text: string | null): TOtpScan {
   if (isNil(text)) {
     return { kind: 'none' };
   }

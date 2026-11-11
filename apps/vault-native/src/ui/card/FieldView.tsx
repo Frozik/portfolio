@@ -18,6 +18,7 @@ import { usePalette } from '../theme/AppTheme';
 import { useOpenLink } from '../useOpenLink';
 import { useCopied } from '../vault/copy-feedback';
 import { useSession } from '../vault/session-context';
+import { AttachedFiles } from './AttachedFiles';
 import { LargeType } from './LargeType';
 import { OneTimeCode } from './OneTimeCode';
 
@@ -150,11 +151,12 @@ export const FieldView = observer(function FieldView({
       {field.kind === 'one-time-code' && (
         <OneTimeCode uri={field.uri} cardId={cardId} fieldId={field.id} onCopy={copy} />
       )}
-      {field.kind === 'files' && (
-        <Text style={[styles.label, { color: palette.fgDim }]}>
-          {field.assetIds.length === 0 ? t.hidden : `${field.assetIds.length}`}
-        </Text>
-      )}
+      {field.kind === 'files' &&
+        (field.assetIds.length === 0 ? (
+          <Text style={[styles.label, { color: palette.fgDim }]}>{t.hidden}</Text>
+        ) : (
+          <AttachedFiles assetIds={field.assetIds} />
+        ))}
       {field.kind === 'values' &&
         field.values.map(value => (
           <View key={value.index}>

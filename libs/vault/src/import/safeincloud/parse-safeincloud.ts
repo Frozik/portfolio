@@ -40,8 +40,12 @@ const CARD_SCHEMA = z.looseObject({
   field: z.array(FIELD_SCHEMA).optional(),
   notes: elementText.optional(),
   label_id: z.array(elementText).optional(),
-  file: z.array(z.looseObject({ name: z.string().optional() })).optional(),
-  image: z.array(z.unknown()).optional(),
+  /** An attached file: its name, and its bytes zlib-compressed in base64. */
+  file: z
+    .array(z.looseObject({ name: z.string().optional(), text: z.string().optional() }))
+    .optional(),
+  /** An attached picture: a JPEG in base64, with no name of its own. */
+  image: z.array(elementText).optional(),
 });
 
 const DATABASE_SCHEMA = z.looseObject({

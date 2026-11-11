@@ -11,20 +11,26 @@ import type {
   TExportFormat,
   VaultExport,
 } from '@frozik/vault-app/interchange/application/VaultExport';
-import { MASTER_PASSWORD_MIN_LENGTH } from '@frozik/vault-app/keys/domain/master-password';
 import { exportProblemText } from '@frozik/vault-app/texts/interchange/data-wording';
 import { VaultField } from '../form/VaultField';
 import { dataT } from '../texts/data';
 import { LANGUAGE } from '../texts/language';
 import { vaultT } from '../texts/vault';
 
-const FORMATS: readonly TExportFormat[] = ['pwv', 'zip', 'cxf', 'csv'];
+const FORMATS: readonly TExportFormat[] = [
+  'pwv',
+  'zip',
+  'cxf',
+  'csv',
+  'safeincloud-db',
+  'safeincloud',
+];
 
 const Passwords = observer(({ flow }: { readonly flow: VaultExport }) => {
   const t = dataT.export;
   const locale = LANGUAGE;
   const prepare = (): void => void flow.prepare();
-  if (flow.format !== 'pwv') {
+  if (!flow.ownPassword) {
     return (
       <>
         <VaultField label={t.masterPassword} hint={t.masterPasswordHint}>
@@ -48,7 +54,7 @@ const Passwords = observer(({ flow }: { readonly flow: VaultExport }) => {
   }
   return (
     <>
-      <VaultField label={t.exportPassword} hint={t.exportPasswordHint(MASTER_PASSWORD_MIN_LENGTH)}>
+      <VaultField label={t.exportPassword} hint={t.exportPasswordHint}>
         {describedBy => (
           <SecretEditor
             aria-label={t.exportPassword}

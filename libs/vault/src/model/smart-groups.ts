@@ -14,6 +14,7 @@ export interface IRuleFacts {
   readonly groupIds: readonly TGroupId[];
   readonly auditProblem: boolean;
   readonly possibleDuplicate: boolean;
+  readonly recentlyOpened: boolean;
 }
 
 function hasField(card: ICardState, fieldKind: TFieldKind, value: string | undefined): boolean {
@@ -51,6 +52,8 @@ export function evaluateRule(rule: TSmartGroupRule, card: ICardState, facts: IRu
       return facts.auditProblem;
     case 'possible-duplicate':
       return facts.possibleDuplicate;
+    case 'recently-opened':
+      return facts.recentlyOpened;
     case 'all':
       return rule.rules.every(inner => evaluateRule(inner, card, facts));
     case 'any':
@@ -102,10 +105,12 @@ export function scopedRule(rule: TSmartGroupRule): TSmartGroupRule {
 export const BUILTIN_SMART_GROUPS = {
   all: ACTIVE,
   favorites: active({ kind: 'favorite' }),
+  recent: active({ kind: 'recently-opened' }),
+  'bank-cards': active({ kind: 'template', templateIds: ['bank-card' as TTemplateId] }),
+  notes: active({ kind: 'template', templateIds: ['note' as TTemplateId] }),
+  'with-otp': active({ kind: 'has-field', fieldKind: 'otp' }),
   expiring: active({ kind: 'expiry', status: 'soon' }),
   expired: active({ kind: 'expiry', status: 'expired' }),
-  'bank-cards': active({ kind: 'template', templateIds: ['bank-card' as TTemplateId] }),
-  'with-otp': active({ kind: 'has-field', fieldKind: 'otp' }),
   'no-group': active({ kind: 'no-group' }),
   problems: active({ kind: 'audit-problem' }),
   duplicates: active({ kind: 'possible-duplicate' }),

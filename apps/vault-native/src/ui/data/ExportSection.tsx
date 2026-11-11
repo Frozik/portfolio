@@ -7,7 +7,6 @@ import type {
   TExportFormat,
   VaultExport,
 } from '@frozik/vault-app/interchange/application/VaultExport';
-import { MASTER_PASSWORD_MIN_LENGTH } from '@frozik/vault-app/keys/domain/master-password';
 import { exportProblemText } from '@frozik/vault-app/texts/interchange/data-wording';
 
 import { Busy } from '../kit/Busy';
@@ -20,7 +19,14 @@ import { TextField } from '../kit/TextField';
 import { useDataTexts, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
 
-const FORMATS: readonly TExportFormat[] = ['pwv', 'zip', 'cxf', 'csv'];
+const FORMATS: readonly TExportFormat[] = [
+  'pwv',
+  'zip',
+  'cxf',
+  'csv',
+  'safeincloud-db',
+  'safeincloud',
+];
 
 /** The vault out of the app: an encrypted copy with its own password, or an open file after the master password. */
 export const ExportSection = observer(function ExportSection({
@@ -33,45 +39,42 @@ export const ExportSection = observer(function ExportSection({
   const vaultTexts = useVaultTexts();
   const t = dataTexts.export;
   const { step, problem } = flow;
-  const passwords =
-    flow.format === 'pwv' ? (
-      <>
-        <TextField
-          testID="export-password"
-          label={t.exportPassword}
-          value={flow.password}
-          onChangeText={flow.setPassword}
-          secret
-        />
-        <Text style={[styles.hint, { color: palette.fgFaint }]}>
-          {t.exportPasswordHint(MASTER_PASSWORD_MIN_LENGTH)}
-        </Text>
-        <TextField
-          testID="export-confirmation"
-          label={t.confirmation}
-          value={flow.confirmation}
-          onChangeText={flow.setConfirmation}
-          secret
-        />
-      </>
-    ) : (
-      <>
-        <TextField
-          testID="export-master"
-          label={t.masterPassword}
-          value={flow.password}
-          onChangeText={flow.setPassword}
-          secret
-        />
-        <Text style={[styles.hint, { color: palette.fgFaint }]}>{t.masterPasswordHint}</Text>
-        <Checkbox
-          testID="export-acknowledged"
-          label={t.acknowledgement}
-          checked={flow.acknowledged}
-          onChange={flow.setAcknowledged}
-        />
-      </>
-    );
+  const passwords = flow.ownPassword ? (
+    <>
+      <TextField
+        testID="export-password"
+        label={t.exportPassword}
+        value={flow.password}
+        onChangeText={flow.setPassword}
+        secret
+      />
+      <Text style={[styles.hint, { color: palette.fgFaint }]}>{t.exportPasswordHint}</Text>
+      <TextField
+        testID="export-confirmation"
+        label={t.confirmation}
+        value={flow.confirmation}
+        onChangeText={flow.setConfirmation}
+        secret
+      />
+    </>
+  ) : (
+    <>
+      <TextField
+        testID="export-master"
+        label={t.masterPassword}
+        value={flow.password}
+        onChangeText={flow.setPassword}
+        secret
+      />
+      <Text style={[styles.hint, { color: palette.fgFaint }]}>{t.masterPasswordHint}</Text>
+      <Checkbox
+        testID="export-acknowledged"
+        label={t.acknowledgement}
+        checked={flow.acknowledged}
+        onChange={flow.setAcknowledged}
+      />
+    </>
+  );
   const outcome = (() => {
     switch (step.kind) {
       case 'editing':

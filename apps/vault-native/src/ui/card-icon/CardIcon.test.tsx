@@ -1,3 +1,4 @@
+import { NATIVE_PALETTES } from '@frozik/components/tokens/native-tokens';
 import { CARD_COLOR_SHADES } from '@frozik/vault/model/card-appearance';
 import type { TTemplateId } from '@frozik/vault/model/ids';
 import { cardState } from '@frozik/vault/model/revision-edits';
@@ -61,6 +62,38 @@ describe('a card’s icon on the phone', () => {
       screen.queryAllByTestId('network-visa', HIDDEN).length,
       screen.queryAllByTestId('site-icon', HIDDEN).length,
     ]).toEqual([1, 1]);
+  });
+
+  it('puts a network’s logo on the card’s colour, keeping the logo’s own', async () => {
+    await shown(
+      <CardIcon
+        card={cardState(
+          aCardWith([aField({ kind: 'card-number' }, '5555555555554444')], { color: 'teal' })
+        )}
+        siteIcon={null}
+      />
+    );
+
+    expect(screen.getByTestId('network-mastercard', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('card-icon', HIDDEN)).toHaveStyle({
+      backgroundColor: expect.stringMatching(new RegExp(`^${CARD_COLOR_SHADES.teal.dark}`)),
+    });
+  });
+
+  it('puts a site’s icon on a light tile in the dark theme, so a dark logo stays seen', async () => {
+    await shown(<CardIcon card={cardState(aCard())} siteIcon={PNG} />);
+
+    expect(screen.getByTestId('card-icon', HIDDEN)).toHaveStyle({
+      backgroundColor: NATIVE_PALETTES.light.bgElevated,
+    });
+  });
+
+  it('tints a site’s light tile with the card’s light shade in the dark theme', async () => {
+    await shown(<CardIcon card={cardState(aCard({ color: 'teal' }))} siteIcon={PNG} />);
+
+    expect(screen.getByTestId('card-icon-tint', HIDDEN)).toHaveStyle({
+      backgroundColor: expect.stringMatching(new RegExp(`^${CARD_COLOR_SHADES.teal.light}`)),
+    });
   });
 
   it('keeps a chosen built-in icon over the site’s icon', async () => {

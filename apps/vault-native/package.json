@@ -9,21 +9,26 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "test": "jest",
-    "types": "tsc --noEmit && tsc -p e2e",
-    "build-apk": "../../libs/tooling/scripts/android/prebuild.sh VAULT_NATIVE_VERSION VAULT_NATIVE_VERSION_CODE && cd android && ./gradlew assembleRelease --no-daemon",
-    "e2e-android": "./e2e-android.sh"
+    "types": "tsc --noEmit && tsc -p e2e && tsc -p dev",
+    "build-apk": "../../libs/tooling/scripts/android/prebuild.sh VAULT_NATIVE_VERSION VAULT_NATIVE_VERSION_CODE && cd android && ./gradlew :app:cleanCreateBundleReleaseJsAndAssets assembleRelease --no-daemon",
+    "e2e-android": "./e2e-android.sh",
+    "dev-android": "./dev-android.sh",
+    "sign-apk": "./sign-apk.sh",
+    "open-test-vault": "tsx dev/open-test-vault.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "catalog:",
     "@formatjs/intl-pluralrules": "catalog:",
     "@frozik/cloud-storage": "workspace:*",
     "@frozik/components": "workspace:*",
+    "@frozik/expo-google-authorization": "workspace:*",
     "@frozik/utils": "workspace:*",
     "@frozik/vault": "workspace:*",
     "@frozik/vault-app": "workspace:*",
     "@frozik/vault-http": "workspace:*",
     "@shopify/flash-list": "catalog:",
     "expo": "catalog:",
+    "expo-camera": "catalog:",
     "expo-clipboard": "catalog:",
     "expo-constants": "catalog:",
     "expo-document-picker": "catalog:",
@@ -47,12 +52,16 @@
     "mobx-react-lite": "catalog:",
     "react": "catalog:native",
     "react-native": "catalog:",
+    "react-native-gesture-handler": "catalog:",
     "react-native-nitro-modules": "catalog:",
     "react-native-quick-base64": "catalog:",
     "react-native-quick-crypto": "catalog:",
+    "react-native-reanimated": "catalog:",
     "react-native-safe-area-context": "catalog:",
     "react-native-screens": "catalog:",
     "react-native-svg": "catalog:",
+    "react-native-worklets": "catalog:",
+    "react-svg-credit-card-payment-icons": "catalog:",
     "temporal-polyfill": "catalog:",
     "usehooks-ts": "catalog:"
   },
@@ -69,6 +78,7 @@
     "hash-wasm": "catalog:",
     "jest": "catalog:",
     "jest-expo": "catalog:",
-    "test-renderer": "catalog:"
+    "test-renderer": "catalog:",
+    "tsx": "catalog:"
   }
 }

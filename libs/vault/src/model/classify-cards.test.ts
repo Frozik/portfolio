@@ -63,6 +63,7 @@ describe('classifying cards', () => {
               groupIds: liveGroupIds(document, card.groupIds),
               auditProblem: false,
               possibleDuplicate: duplicates.has(card.id),
+              recentlyOpened: false,
             })
           );
           return JSON.stringify(membersOf(classification, group)) === JSON.stringify(expected);
@@ -92,6 +93,21 @@ describe('classifying cards', () => {
     expect(membersOf(classification, WORK)).toEqual([inWork]);
     expect(membersOf(classification, DELETED)).toEqual([]);
     expect(membersOf(classification, 'no-group')).toEqual([orphan]);
+  });
+
+  it('files notes, and the active cards this device opened lately, under their own sections', () => {
+    const note = aCardWith([], { templateId: 'note' as TTemplateId });
+    const opened = aCardWith([]);
+    const openedThenArchived = aCardWith([], { archivedAt: anHlc(2) });
+    const classification = classifyCards(aDocument([note, opened, openedThenArchived]), today, {
+      auditProblems: new Set(),
+      recentlyOpened: new Set([opened.id, openedThenArchived.id]),
+    });
+
+    expect({
+      notes: membersOf(classification, 'notes'),
+      recent: membersOf(classification, 'recent'),
+    }).toEqual({ notes: [note], recent: [opened] });
   });
 
   it('separates cards expiring soon from expired ones', () => {

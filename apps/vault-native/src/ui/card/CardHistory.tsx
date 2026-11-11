@@ -9,13 +9,13 @@ import { observer } from 'mobx-react-lite';
 import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { restore } from '@frozik/vault-app/document/application/card-actions';
+import { forget, restore } from '@frozik/vault-app/document/application/card-actions';
 import type { TVaultSection } from '@frozik/vault-app/navigation/vault-pages';
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
 import { changeKey, changeText } from '@frozik/vault-app/texts/document/change-wording';
 
-import { BackLink } from '../kit/BackLink';
 import { Button } from '../kit/Button';
+import { ICON_BUTTON_INSET, IconButton } from '../kit/IconButton';
 import { GAP, GUTTER, RADIUS, TEXT_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
 import { useEditorTexts, useVaultTexts } from '../texts';
@@ -27,7 +27,8 @@ const paths = createVaultPaths('');
 /**
  * A card's earlier versions, newest first: when each was saved and how it
  * differs from the card now — labels only, never a secret's value — and
- * "restore", which is a new edit: the replaced version joins the history.
+ * "restore", which is a new edit: the replaced version joins the history; "delete" takes a
+ * version out of the history on every device and leaves the card as it is.
  */
 export const CardHistory = observer(function CardHistory({
   section,
@@ -49,7 +50,13 @@ export const CardHistory = observer(function CardHistory({
   if (isNil(card)) {
     return (
       <View style={styles.page}>
-        <BackLink testID="history-back" label={t.back} onPress={back} />
+        <IconButton
+          testID="history-back"
+          icon="arrow-back"
+          label={t.back}
+          role="link"
+          onPress={back}
+        />
         <Notice tone="caution" message={vaultTexts.phone.cardNotFound} />
       </View>
     );
@@ -57,10 +64,22 @@ export const CardHistory = observer(function CardHistory({
   const current = cardState(card);
   return (
     <ScrollView ref={page} testID="card-history" contentContainerStyle={styles.page}>
-      <BackLink testID="history-back" label={t.back} onPress={back} />
-      <Text accessibilityRole="header" style={[styles.title, { color: palette.fg }]}>
-        {t.title(card.title === '' ? vaultTexts.list.untitled : card.title)}
-      </Text>
+      <View style={styles.header}>
+        <IconButton
+          testID="history-back"
+          icon="arrow-back"
+          label={t.back}
+          role="link"
+          onPress={back}
+        />
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={[styles.title, { color: palette.fg }]}
+        >
+          {t.title(card.title === '' ? vaultTexts.list.untitled : card.title)}
+        </Text>
+      </View>
       {restored && <Notice testID="restored" message={t.restored} />}
       {card.history.length === 0 && <Text style={{ color: palette.fgFaint }}>{t.empty}</Text>}
       {card.history.map(revision => {
@@ -86,16 +105,28 @@ export const CardHistory = observer(function CardHistory({
               </Text>
             ))}
             {!session.readOnly && (
-              <Button
-                testID="restore-revision"
-                variant="secondary"
-                label={t.restore}
-                onPress={() => {
-                  session.transact(restore(card.id, revision.at));
-                  setRestored(true);
-                  page.current?.scrollTo({ y: 0 });
-                }}
-              />
+              <View style={styles.actions}>
+                <Button
+                  testID="delete-revision"
+                  compact
+                  variant="danger"
+                  icon="delete-outline"
+                  label={t.delete}
+                  onPress={() => session.transact(forget(card.id, revision.at))}
+                />
+                <Button
+                  testID="restore-revision"
+                  compact
+                  variant="secondary"
+                  icon="restore"
+                  label={t.restoreShort}
+                  onPress={() => {
+                    session.transact(restore(card.id, revision.at));
+                    setRestored(true);
+                    page.current?.scrollTo({ y: 0 });
+                  }}
+                />
+              </View>
             )}
           </View>
         );
@@ -106,7 +137,9 @@ export const CardHistory = observer(function CardHistory({
 
 const styles = StyleSheet.create({
   page: { gap: GAP, padding: GUTTER },
-  title: { fontSize: TEXT_SIZE.heading, fontWeight: '600' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: -ICON_BUTTON_INSET },
+  title: { flexShrink: 1, fontSize: TEXT_SIZE.heading, fontWeight: '600' },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   revision: { gap: 6, borderWidth: 1, borderRadius: RADIUS, padding: GAP },
   when: { fontSize: TEXT_SIZE.small, fontWeight: '500' },
   small: { fontSize: TEXT_SIZE.caption },

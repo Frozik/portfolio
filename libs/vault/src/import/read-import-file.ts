@@ -99,9 +99,9 @@ function zipFile(bytes: TBytes): TResult<TImportFile, TImportFileError> {
   return batch.ok ? ok({ kind: 'entries', batch: batch.value }) : batch;
 }
 
-function xmlBatch(text: string): TResult<IImportBatch, TImportFileError> {
+async function xmlBatch(text: string): Promise<TResult<IImportBatch, TImportFileError>> {
   const database = parseSafeInCloud(text);
-  return isNil(database) ? err('unrecognized') : ok(importSafeInCloud(database));
+  return isNil(database) ? err('unrecognized') : ok(await importSafeInCloud(database));
 }
 
 function csvBatch(text: string): TResult<IImportBatch, TImportFileError> {
@@ -115,7 +115,9 @@ function csvBatch(text: string): TResult<IImportBatch, TImportFileError> {
  * its name: a vault, a KeePass and a SafeInCloud database by their magic, a CXF archive by the zip's, Google Authenticator's transfer by its
  * scheme, JSON and XML by the first character, the CSV dialect by its header.
  */
-export function readImportFile(bytes: TBytes): TResult<TImportFile, TImportFileError> {
+export async function readImportFile(
+  bytes: TBytes
+): Promise<TResult<TImportFile, TImportFileError>> {
   if (startsWithVaultMagic(bytes)) {
     return ok({ kind: 'vault-file', vault: bytes, sealedBlobs: new Map() });
   }
@@ -140,7 +142,7 @@ export function readImportFile(bytes: TBytes): TResult<TImportFile, TImportFileE
   const batch = start.startsWith('{')
     ? jsonBatch(text)
     : start.startsWith('<')
-      ? xmlBatch(text)
+      ? await xmlBatch(text)
       : csvBatch(text);
   return batch.ok ? ok({ kind: 'entries', batch: batch.value }) : batch;
 }

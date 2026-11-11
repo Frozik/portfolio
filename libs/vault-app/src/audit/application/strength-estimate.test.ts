@@ -35,4 +35,16 @@ describe('the in-thread strength meter', () => {
 
     expect(await estimate).toBeNull();
   });
+
+  it('lets the screen and the writes go on before each estimate, so a run of them never holds the thread', async () => {
+    const meter = createInThreadStrengthMeter('en');
+    await meter.estimate('warm up the dictionaries', [], new AbortController().signal);
+    const order: string[] = [];
+
+    setTimeout(() => order.push('the next turn of the event loop'), 0);
+    await meter.estimate('password123', [], new AbortController().signal);
+    order.push('the estimate');
+
+    expect(order).toEqual(['the next turn of the event loop', 'the estimate']);
+  });
 });

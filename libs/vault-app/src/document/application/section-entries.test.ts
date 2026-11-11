@@ -7,7 +7,7 @@ const WORK = 'work' as TGroupId;
 const HOME = 'home' as TGroupId;
 
 function group(id: TGroupId, name: string, order: number) {
-  return { id, name, order };
+  return { id, name, color: null, order };
 }
 
 describe('the sections of a list', () => {

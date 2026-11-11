@@ -7,7 +7,7 @@ import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { unlockOptionsOf } from '@frozik/vault-app/keys/application/unlock-options';
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
@@ -16,17 +16,22 @@ import { recoveryUnlockFailureText } from '@frozik/vault-app/texts/keys/keys-wor
 import { useAppModel } from '../app-model';
 import { Busy } from '../kit/Busy';
 import { Button } from '../kit/Button';
-import { TEXT_SIZE } from '../kit/metrics';
+import { GAP, TEXT_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
 import { Screen } from '../kit/Screen';
 import { TextField } from '../kit/TextField';
 import { useKeysTexts, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
+import { useAppAway } from '../useAppAway';
 import { AllVaultsLink } from '../vault/AllVaultsLink';
 
 const paths = createVaultPaths('');
 
-/** The master password's screen also offers the phone's biometrics, or the Emergency Kit's key. */
+/**
+ * The master password's screen also offers the phone's biometrics — asked for at once, by itself,
+ * when this phone holds the vault behind them, the password then a fallback — or the Emergency
+ * Kit's key.
+ */
 export const UnlockScreen = observer(function UnlockScreen({
   vault,
   unlocking,
@@ -46,7 +51,11 @@ export const UnlockScreen = observer(function UnlockScreen({
   const keysTexts = useKeysTexts();
   const t = vaultTexts.unlock;
   const { vaultKey } = vault;
-  const [biometric, setBiometric] = useState(false);
+  /** Whether this phone holds the vault behind the fingerprint; `null` until it has said. */
+  const [biometricHeld, setBiometricHeld] = useState<boolean | null>(null);
+  const biometric = biometricHeld === true;
+  /** The fingerprint is asked for once by itself; after a cancel, the button asks again. */
+  const [askedOnce, setAskedOnce] = useState(false);
   const [password, setPassword] = useState('');
   const [withRecoveryKey, setWithRecoveryKey] = useState(false);
   const [recoveryText, setRecoveryText] = useState('');
@@ -54,16 +63,39 @@ export const UnlockScreen = observer(function UnlockScreen({
   const options = unlockOptionsOf(app.lifecycle, { passkey: false, biometric });
   const passwordField = useRef<TextInput>(null);
   useEffect(() => {
-    if (!withRecoveryKey) {
+    const waitingForTheFingerprint = biometricHeld !== false && !askedOnce;
+    if (!withRecoveryKey && !waitingForTheFingerprint && !unlocking) {
       passwordField.current?.focus();
     }
-  }, [withRecoveryKey, failure]);
+  }, [withRecoveryKey, failure, biometricHeld, askedOnce, unlocking]);
+  /** A screen that came up in the background — a lock's reload — asks once the app is in sight again. */
+  const away = useAppAway();
+  useEffect(() => {
+    if (biometricHeld === true && !askedOnce && isNil(failure) && !withRecoveryKey && !away) {
+      setAskedOnce(true);
+      app.unlockWithDevice();
+    }
+  }, [app, biometricHeld, askedOnce, failure, withRecoveryKey, away]);
+
+  /** Whether this vault has a recovery key at all; the way to it is offered only then. */
+  const [recoveryOffered, setRecoveryOffered] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void app.flows.recoveryKeyOpensLocked(vaultKey).then(offered => {
+      if (current) {
+        setRecoveryOffered(offered);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [app, vaultKey]);
 
   useEffect(() => {
     let current = true;
     void app.flows.deviceUnlockOffered(vaultKey).then(offered => {
       if (current) {
-        setBiometric(offered);
+        setBiometricHeld(offered);
       }
     });
     return () => {
@@ -99,7 +131,25 @@ export const UnlockScreen = observer(function UnlockScreen({
   const recoveryShown = recoveryProblem ?? failure;
 
   return (
-    <Screen title={vault.name} testID="unlock" back={<AllVaultsLink />}>
+    <Screen
+      title={vault.name}
+      testID="unlock"
+      back={<AllVaultsLink />}
+      footer={
+        (withRecoveryKey || recoveryOffered) && (
+          <View style={styles.footer}>
+            <Button
+              testID="use-recovery-key"
+              variant="secondary"
+              label={
+                withRecoveryKey ? keysTexts.unlock.usePassword : keysTexts.unlock.openWithRecovery
+              }
+              onPress={() => setWithRecoveryKey(!withRecoveryKey)}
+            />
+          </View>
+        )
+      }
+    >
       {options?.afterFailedQuickCode === true && (
         <Notice testID="unlock-notice" tone="caution" message={keysTexts.quickScreen.failed} />
       )}
@@ -140,14 +190,6 @@ export const UnlockScreen = observer(function UnlockScreen({
         </>
       ) : (
         <>
-          {options?.credentials.includes('biometric') === true && (
-            <Button
-              testID="unlock-biometric"
-              label={keysTexts.biometric.unlock}
-              disabled={unlocking}
-              onPress={app.unlockWithDevice}
-            />
-          )}
           <TextField
             testID="unlock-password"
             inputRef={passwordField}
@@ -167,21 +209,30 @@ export const UnlockScreen = observer(function UnlockScreen({
               {t.failures[failure]}
             </Text>
           )}
-          <Button
-            testID="unlock-submit"
-            label={t.submit}
-            disabled={password === '' || unlocking}
-            onPress={submitPassword}
-          />
+          <View style={styles.submitRow}>
+            <View style={styles.submit}>
+              <Button
+                testID="unlock-submit"
+                label={t.submit}
+                disabled={password === '' || unlocking}
+                onPress={submitPassword}
+              />
+            </View>
+            {options?.credentials.includes('biometric') === true && (
+              <Button
+                testID="unlock-biometric"
+                variant="secondary"
+                iconOnly
+                icon="fingerprint"
+                label={keysTexts.biometric.unlock}
+                disabled={unlocking}
+                onPress={app.unlockWithDevice}
+              />
+            )}
+          </View>
         </>
       )}
       {unlocking && <Busy label={t.unlocking} />}
-      <Button
-        testID="use-recovery-key"
-        variant="secondary"
-        label={withRecoveryKey ? keysTexts.unlock.usePassword : keysTexts.unlock.useRecovery}
-        onPress={() => setWithRecoveryKey(!withRecoveryKey)}
-      />
       {!isNil(onUseQuick) && (
         <Button
           testID="use-quick"
@@ -196,4 +247,7 @@ export const UnlockScreen = observer(function UnlockScreen({
 
 const styles = StyleSheet.create({
   error: { fontSize: TEXT_SIZE.small },
+  submitRow: { flexDirection: 'row', gap: GAP },
+  submit: { flex: 1 },
+  footer: { marginTop: 'auto' },
 });

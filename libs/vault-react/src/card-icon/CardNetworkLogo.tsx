@@ -22,7 +22,7 @@ import { getVaultReactTranslations } from '../translations/translations';
 import styles from './card-icon.module.css';
 import controlTokens from '@frozik/components/components/control-tokens.module.css';
 
-/** The icon set draws no Troy, Naranja or Verve: those keep a word mark. */
+/** The icon set draws no Troy, Naranja, Verve or Belkart: those keep a word mark. */
 const NETWORK_LOGOS: Readonly<Record<TCardNetwork, ComponentType<SVGProps<SVGSVGElement>> | null>> =
   {
     visa: Visa,
@@ -39,6 +39,7 @@ const NETWORK_LOGOS: Readonly<Record<TCardNetwork, ComponentType<SVGProps<SVGSVG
     hipercard: Hipercard,
     troy: null,
     naranja: null,
+    belkart: null,
     verve: null,
   };
 

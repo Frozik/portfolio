@@ -63,6 +63,7 @@ describe('the vault on a phone', () => {
       await createLockAndUnlock();
       await windowSecure(true);
       await tap('tab-settings');
+      await tap('settings-topic-security');
       await scrollIntoView('allow-screenshots');
       await tap('allow-screenshots');
       await tap('confirm-screenshots');

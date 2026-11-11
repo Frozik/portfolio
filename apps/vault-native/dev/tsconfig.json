@@ -1,0 +1,10 @@
+{
+  "extends": "@frozik/typescript-config/node",
+  "include": ["**/*.mts", "../../../libs/vault/types/*.d.ts"],
+  "compilerOptions": {
+    "tsBuildInfoFile": "../node_modules/.tmp/dev.tsbuildinfo",
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  }
+}

@@ -91,6 +91,8 @@ export function createVaultApp(language: Language): VaultApp {
     demo: null,
     passkeys: WEBAUTHN_PASSKEYS,
     readQrCode,
+    diagnostics: null,
+    backupFolder: null,
     fetchSiteIcon,
     readKdbx: readKdbxInWorker,
     auditSources: {

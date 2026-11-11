@@ -1,42 +1,49 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { IVaultCard } from '@frozik/vault/model/card';
 import { CARD_SORTS } from '@frozik/vault/model/card-sort';
+import type { TCardId } from '@frozik/vault/model/ids';
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { cardRowOf } from '@frozik/vault-app/document/application/card-row';
 import type { TVaultSection } from '@frozik/vault-app/navigation/vault-pages';
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
 
 import { Button } from '../kit/Button';
+import { IconToggle } from '../kit/IconToggle';
 import { GAP, GUTTER, RADIUS, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { TextField } from '../kit/TextField';
+import type { TLabelEditing } from '../labels/LabelEditor';
+import { LabelEditor } from '../labels/LabelEditor';
+import { settingsTopicPath } from '../settings/settings-topics';
 import { useEditorTexts, useTemplateTranslator, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
 import { useSession } from '../vault/session-context';
+import { VaultBarTools } from '../vault/vault-bar';
 import { CardRow } from './CardRow';
 import { CardStrip } from './CardStrip';
+import { CardSwipe } from './CardSwipe';
 import { NewCardDialog } from './NewCardDialog';
-import { RowActions } from './RowActions';
 import { sectionLabelOf } from './section-label';
 import { SectionSheet } from './SectionSheet';
 
+/** Rows drawn beyond each edge, in dp: a fast fling finds them ready instead of blank. */
+const DRAW_AHEAD = 1000;
 const paths = createVaultPaths('');
-const CHEVRON_SIZE = 20;
+const ADD_ICON_SIZE = 24;
+/** Below this width the search and the sort share one button, so the section's name keeps room. */
+const ROOM_FOR_SEPARATE_TOOLS = 400;
 
-/** A section of the vault: its name (the sections sheet behind it), the sort, the search, the strips, the cards. */
+/** A section of the vault: its name (the sections sheet behind it, and behind the Sections tab) and tools in the vault's top row, the search, the sort, the strips, the cards. */
 export const CardListScreen = observer(function CardListScreen({
   section,
-  searching,
 }: {
   readonly section: TVaultSection;
-  /** Opened from the Search tab: the field takes the keyboard at once. */
-  readonly searching: boolean;
 }) {
   const session = useSession();
   const router = useRouter();
@@ -44,87 +51,145 @@ export const CardListScreen = observer(function CardListScreen({
   const t = useVaultTexts();
   const [sheetOpen, setSheetOpen] = useState(false);
   const search = useRef<TextInput>(null);
-  const [actionsFor, setActionsFor] = useState<IVaultCard | null>(null);
+  const [actionsOpenFor, setActionsOpenFor] = useState<TCardId | null>(null);
+  const toggleActions = (cardId: TCardId): void =>
+    setActionsOpenFor(current => (current === cardId ? null : cardId));
   const [choosingTemplate, setChoosingTemplate] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<TLabelEditing | null>(null);
   const translate = useTemplateTranslator();
   const editorTexts = useEditorTexts();
   const { view, vaultKey } = session;
+  const narrow = useWindowDimensions().width < ROOM_FOR_SEPARATE_TOOLS;
   useEffect(() => {
     view.show(section);
   }, [view, section]);
+  const [searchShown, setSearchShown] = useState(view.query !== '');
+  const [sortShown, setSortShown] = useState(false);
+  const { sections } = useLocalSearchParams<{ sections?: string }>();
   useEffect(() => {
-    if (searching) {
+    if (sections === '1') {
+      setSheetOpen(true);
+      router.setParams({ sections: undefined });
+    }
+  }, [sections, router]);
+  useEffect(() => {
+    if (searchShown) {
       search.current?.focus();
     }
-  }, [searching]);
+  }, [searchShown]);
+  const showSearch = (shown: boolean): void => {
+    setSearchShown(shown);
+    if (!shown) {
+      view.setQuery('');
+    }
+  };
   const current = view.sections.find(entry => entry.section === view.section);
   const open = (card: IVaultCard): void => router.push(paths.card(vaultKey, view.section, card.id));
   const cards = view.visibleCards;
-  const showStrips = view.section === 'all' && view.query === '';
+  const { showRecent, showFavorites } = session.deviceSettings.settings;
+  const showStrips = view.section === 'all' && view.query === '' && (showRecent || showFavorites);
   const nothingFound = view.query !== '';
 
   return (
     <View testID="card-list-screen" style={styles.screen}>
-      <View style={styles.top}>
-        <View style={styles.titleRow}>
+      <VaultBarTools>
+        <Pressable
+          testID="open-sections"
+          accessibilityRole="button"
+          onPress={() => setSheetOpen(true)}
+          style={styles.sectionButton}
+        >
+          <Text numberOfLines={1} style={[styles.section, { color: palette.fg }]}>
+            {isNil(current) ? t.sections.all : sectionLabelOf(t, current)}
+          </Text>
+        </Pressable>
+        {narrow ? (
+          <IconToggle
+            testID="toggle-tools"
+            icon="tune"
+            label={t.list.searchAndSort}
+            value={searchShown || sortShown}
+            onChange={shown => {
+              showSearch(shown);
+              setSortShown(shown);
+            }}
+          />
+        ) : (
+          <>
+            <IconToggle
+              testID="toggle-search"
+              icon="filter-alt"
+              label={t.list.search}
+              value={searchShown}
+              onChange={showSearch}
+            />
+            <IconToggle
+              testID="toggle-sort"
+              icon="sort"
+              label={t.list.sort}
+              value={sortShown}
+              onChange={setSortShown}
+            />
+          </>
+        )}
+        {!session.readOnly && (
           <Pressable
-            testID="open-sections"
+            testID="new-card"
             accessibilityRole="button"
-            onPress={() => setSheetOpen(true)}
-            style={styles.sectionButton}
+            accessibilityLabel={editorTexts.newCard}
+            accessibilityState={{ disabled: !session.editing.canStart }}
+            disabled={!session.editing.canStart}
+            onPress={() => setChoosingTemplate(true)}
+            style={[styles.newCard, !session.editing.canStart && styles.unavailable]}
           >
-            <Text style={[styles.section, { color: palette.fg }]}>
-              {isNil(current) ? t.sections.all : sectionLabelOf(t, current)}
-            </Text>
-            <MaterialIcons name="expand-more" size={CHEVRON_SIZE} color={palette.fg} />
+            <MaterialIcons name="add" size={ADD_ICON_SIZE} color={palette.accent} />
           </Pressable>
-          {!session.readOnly && (
-            <Pressable
-              testID="new-card"
-              accessibilityRole="button"
-              accessibilityLabel={editorTexts.newCard}
-              accessibilityState={{ disabled: !session.editing.canStart }}
-              disabled={!session.editing.canStart}
-              onPress={() => setChoosingTemplate(true)}
-              style={[styles.newCard, !session.editing.canStart && styles.unavailable]}
+        )}
+      </VaultBarTools>
+      {(searchShown || sortShown) && (
+        <View style={styles.top}>
+          {searchShown && (
+            <TextField
+              testID="search"
+              label={t.list.search}
+              labelInside
+              value={view.query}
+              onChangeText={view.setQuery}
+              inputRef={search}
+            />
+          )}
+          {sortShown && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.sorts}
             >
-              <MaterialIcons name="add" size={CHEVRON_SIZE + 4} color={palette.accent} />
-            </Pressable>
+              {CARD_SORTS.map(sort => {
+                const chosen = view.sort === sort;
+                return (
+                  <Pressable
+                    key={sort}
+                    testID={`sort-${sort}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: chosen }}
+                    onPress={() => view.setSort(sort)}
+                    style={[styles.chip, { borderColor: chosen ? palette.accent : palette.line }]}
+                  >
+                    <Text
+                      style={{
+                        color: chosen ? palette.fg : palette.fgDim,
+                        fontSize: TEXT_SIZE.small,
+                      }}
+                    >
+                      {t.list.sorts[sort]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           )}
         </View>
-        <TextField
-          testID="search"
-          label={t.list.search}
-          value={view.query}
-          onChangeText={view.setQuery}
-          inputRef={search}
-        />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.sorts}
-        >
-          {CARD_SORTS.map(sort => {
-            const chosen = view.sort === sort;
-            return (
-              <Pressable
-                key={sort}
-                testID={`sort-${sort}`}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: chosen }}
-                onPress={() => view.setSort(sort)}
-                style={[styles.chip, { borderColor: chosen ? palette.accent : palette.line }]}
-              >
-                <Text
-                  style={{ color: chosen ? palette.fg : palette.fgDim, fontSize: TEXT_SIZE.small }}
-                >
-                  {t.list.sorts[sort]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      )}
       {cards.length === 0 ? (
         <View testID="no-cards" style={styles.empty}>
           <Text style={{ color: palette.fgDim, fontSize: TEXT_SIZE.body }}>
@@ -149,7 +214,7 @@ export const CardListScreen = observer(function CardListScreen({
                 testID="empty-import"
                 variant="secondary"
                 label={t.list.importCards}
-                onPress={() => router.navigate(paths.settings(vaultKey))}
+                onPress={() => router.navigate(settingsTopicPath(vaultKey, 'data'))}
               />
             </>
           )}
@@ -160,33 +225,42 @@ export const CardListScreen = observer(function CardListScreen({
           accessibilityLabel={t.list.label}
           data={cards}
           keyExtractor={card => card.id}
+          drawDistance={DRAW_AHEAD}
+          extraData={actionsOpenFor}
           ListHeaderComponent={
             showStrips ? (
               <View style={styles.strips}>
-                <CardStrip
-                  testID="recent-strip"
-                  title={t.phone.recent}
-                  cards={session.recent.cards}
-                  iconOf={view.siteIconOf}
-                  onOpen={open}
-                />
-                <CardStrip
-                  testID="favorites-strip"
-                  title={t.phone.favorites}
-                  cards={view.favorites}
-                  iconOf={view.siteIconOf}
-                  onOpen={open}
-                />
+                {showRecent && (
+                  <CardStrip
+                    testID="recent-strip"
+                    title={t.phone.recent}
+                    cards={session.recent.cards}
+                    iconOf={view.siteIconOf}
+                    onOpen={open}
+                  />
+                )}
+                {showFavorites && (
+                  <CardStrip
+                    testID="favorites-strip"
+                    title={t.phone.favorites}
+                    cards={view.favorites}
+                    iconOf={view.siteIconOf}
+                    onOpen={open}
+                  />
+                )}
               </View>
             ) : null
           }
           renderItem={({ item }) => (
-            <CardRow
-              row={cardRowOf(item, view.expiryOf(item))}
-              siteIcon={view.siteIconOf(item)}
-              onOpen={() => open(item)}
-              onActions={() => setActionsFor(item)}
-            />
+            <CardSwipe card={item} still={actionsOpenFor === item.id}>
+              <CardRow
+                row={cardRowOf(item, view.expiryOf(item))}
+                siteIcon={view.siteIconOf(item)}
+                onOpen={() => open(item)}
+                actionsOpen={actionsOpenFor === item.id}
+                onActions={() => toggleActions(item.id)}
+              />
+            </CardSwipe>
           )}
         />
       )}
@@ -203,11 +277,21 @@ export const CardListScreen = observer(function CardListScreen({
           }}
         />
       )}
-      {!isNil(actionsFor) && <RowActions card={actionsFor} onClose={() => setActionsFor(null)} />}
+      {!isNil(editingLabel) && (
+        <LabelEditor editing={editingLabel} onClose={() => setEditingLabel(null)} />
+      )}
       <SectionSheet
         view={view}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
+        onEditLabel={
+          session.readOnly
+            ? undefined
+            : groupId => {
+                setSheetOpen(false);
+                setEditingLabel({ kind: 'label', groupId });
+              }
+        }
         onPick={picked => {
           setSheetOpen(false);
           router.navigate(
@@ -225,7 +309,6 @@ const styles = StyleSheet.create({
   unavailable: { opacity: UNAVAILABLE_OPACITY },
   screen: { flex: 1 },
   top: { gap: 8, paddingHorizontal: GUTTER, paddingTop: GAP, paddingBottom: 8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   newCard: {
     width: TOUCH_SIZE,
     height: TOUCH_SIZE,
@@ -234,12 +317,11 @@ const styles = StyleSheet.create({
   },
   sectionButton: {
     minHeight: TOUCH_SIZE,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    flexShrink: 1,
+    marginRight: 'auto',
   },
-  section: { fontSize: TEXT_SIZE.heading, fontWeight: '600' },
+  section: { flexShrink: 1, fontSize: TEXT_SIZE.heading, fontWeight: '600' },
   sorts: { gap: 8 },
   chip: {
     minHeight: TOUCH_SIZE,

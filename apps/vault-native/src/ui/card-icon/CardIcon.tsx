@@ -1,3 +1,4 @@
+import { NATIVE_PALETTES } from '@frozik/components/tokens/native-tokens';
 import { toBase64 } from '@frozik/vault/crypto/bytes';
 import type { ICardState } from '@frozik/vault/model/card';
 import {
@@ -5,24 +6,26 @@ import {
   CARD_COLOR_SHADES,
   cardColorOf,
   cardNetworkOf,
+  cardTileColorOf,
 } from '@frozik/vault/model/card-appearance';
 import { isNil } from 'lodash-es';
 import { memo, useMemo } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
-import { useWidgetTexts } from '../texts';
 import { usePalette, useScheme } from '../theme/AppTheme';
 import { BUILTIN_ICON_COMPONENTS } from './builtin-icon-components';
+import { CardNetworkLogo } from './CardNetworkLogo';
 
 const SIZE = 40;
 const GLYPH_SIZE = 22;
 const PICTURE_SIZE = 28;
-const NETWORK_TEXT_SIZE = 9;
+/** The card's colour behind an automatic icon, faint enough for a logo to read on it. */
+const TILE_TINT_ALPHA = '38';
 
 /**
- * A card's icon, as the web draws it: a card number's network, else the site's icon, else the
- * chosen built-in icon in the card's colour, else the template's. The phone names a network
- * rather than drawing its logo.
+ * A card's icon, as the web draws it: a card number's network logo, else the site's icon — both on
+ * the card's colour when one is chosen — else the chosen built-in icon in the card's colour, else
+ * the template's.
  */
 export const CardIcon = memo(function CardIcon({
   card,
@@ -34,7 +37,6 @@ export const CardIcon = memo(function CardIcon({
 }) {
   const palette = usePalette();
   const scheme = useScheme();
-  const networks = useWidgetTexts().networks;
   const picture = useMemo(
     () =>
       isNil(siteIcon) || card.icon.kind !== 'auto'
@@ -44,21 +46,31 @@ export const CardIcon = memo(function CardIcon({
   );
   const network = cardNetworkOf(card);
   const color = cardColorOf(card);
+  const tile = cardTileColorOf(card);
   const Glyph = BUILTIN_ICON_COMPONENTS[builtinIconOf(card)];
+  /** Sites draw their icons for a light browser tab: in the dark theme a black logo would vanish. */
+  const lightPlate = isNil(network) && !isNil(picture);
+  const tintOf = (shade: 'light' | 'dark'): string | null =>
+    isNil(tile) ? null : `${CARD_COLOR_SHADES[tile][shade]}${TILE_TINT_ALPHA}`;
+  const plateTint = lightPlate ? tintOf('light') : null;
   return (
     <View
       testID="card-icon"
       importantForAccessibility="no-hide-descendants"
-      style={[styles.tile, { backgroundColor: palette.bgElevated }]}
+      style={[
+        styles.tile,
+        {
+          backgroundColor: lightPlate
+            ? NATIVE_PALETTES.light.bgElevated
+            : (tintOf(scheme) ?? palette.bgElevated),
+        },
+      ]}
     >
+      {!isNil(plateTint) && (
+        <View testID="card-icon-tint" style={[styles.tint, { backgroundColor: plateTint }]} />
+      )}
       {!isNil(network) ? (
-        <Text
-          testID={`network-${network}`}
-          numberOfLines={1}
-          style={[styles.network, { color: palette.fg }]}
-        >
-          {networks[network]}
-        </Text>
+        <CardNetworkLogo network={network} />
       ) : !isNil(picture) ? (
         <Image testID="site-icon" source={{ uri: picture }} style={styles.picture} />
       ) : (
@@ -80,6 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tint: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: SIZE / 4 },
   picture: { width: PICTURE_SIZE, height: PICTURE_SIZE, resizeMode: 'contain' },
-  network: { fontSize: NETWORK_TEXT_SIZE, fontWeight: '700' },
 });

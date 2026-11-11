@@ -6,6 +6,8 @@ import type { IHlc } from './hlc';
 import type { TAssetId, TCardId, TFieldId, TGroupId, TLinkId, TTemplateId } from './ids';
 import type { TSiteIcon } from './site-icon';
 import type { TSmartGroupRule } from './smart-group-rule';
+import type { IVaultMeta } from './vault-meta';
+import { EMPTY_VAULT_META } from './vault-meta';
 
 export interface IUserGroup {
   readonly id: TGroupId;
@@ -111,6 +113,7 @@ export interface IVaultDocument {
   readonly siteIcons: ReadonlyMap<string, TSiteIcon>;
   /** HOTP counters, one per (card, field), only ever raised: merged by maximum. */
   readonly hotpCounters: ReadonlyMap<THotpCounterKey, number>;
+  readonly meta: IVaultMeta;
 }
 
 export const DEFAULT_EXPIRY_WARNING_DAYS = 30;
@@ -128,5 +131,6 @@ export function emptyVaultDocument(name: string, at: IHlc): IVaultDocument {
     assetBytes: new Map(),
     siteIcons: new Map(),
     hotpCounters: new Map(),
+    meta: EMPTY_VAULT_META,
   };
 }

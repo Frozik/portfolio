@@ -7,7 +7,7 @@ import { defineFieldKind, invalid, VALID, warning } from './field-kind';
 const SEPARATORS = /[\s-]/g;
 const DIGITS = /^\d+$/;
 
-/** A failed Luhn check or an unusual length warns; it never blocks. */
+/** A failed Luhn check (where the network uses one) or an unusual length warns; it never blocks. */
 export const CARD_NUMBER_FIELD = defineFieldKind({
   kind: 'card-number',
   sensitiveByDefault: true,
@@ -19,11 +19,11 @@ export const CARD_NUMBER_FIELD = defineFieldKind({
     if (!DIGITS.test(value)) {
       return invalid('digits-only');
     }
-    const lengths = detectCardNetwork(value)?.lengths;
-    if (!isNil(lengths) && !lengths.includes(value.length)) {
+    const network = detectCardNetwork(value);
+    if (!isNil(network) && !network.lengths.includes(value.length)) {
       return warning('card-length');
     }
-    return hasValidLuhnChecksum(value) ? VALID : warning('luhn');
+    return network?.checksLuhn === false || hasValidLuhnChecksum(value) ? VALID : warning('luhn');
   },
   format: groupCardNumber,
   copyValue: value => value.replace(SEPARATORS, ''),

@@ -43,6 +43,11 @@ export class VaultFileOpening {
     return isNil(file) ? null : this.adopt(file);
   }
 
+  /** The platform's chooser, the file left as it is: the caller decides whether it is a vault or an import. */
+  pick(): Promise<IVaultFile | null> {
+    return this.services.pickVaultFile();
+  }
+
   /** A file that came another way — dropped on the screen — taken in as one picked. */
   async adopt(file: IVaultFile): Promise<TVaultKey | null> {
     runInAction(() => {

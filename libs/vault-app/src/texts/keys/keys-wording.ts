@@ -7,7 +7,6 @@ import type { TKeysTexts } from './keys-texts';
 
 import type { TChangePasswordProblem } from '../../keys/application/ChangePasswordForm';
 import type { CreateVaultForm } from '../../keys/application/CreateVaultForm';
-import { MASTER_PASSWORD_MIN_LENGTH } from '../../keys/domain/master-password';
 import type { TPasskeyFailure } from '../../keys/domain/ports/passkeys';
 
 interface IKeyTexts {
@@ -23,10 +22,9 @@ export function createVaultProblemText(
   switch (problem) {
     case 'no-name':
       return problems['no-name'];
-    case 'too-short':
-      return problems['too-short'](MASTER_PASSWORD_MIN_LENGTH);
+    case 'no-password':
     case 'mismatch':
-      return problems.mismatch;
+      return problems[problem];
     case 'not-acknowledged':
       return problems['not-acknowledged'];
     default:
@@ -37,12 +35,11 @@ export function createVaultProblemText(
 export function changePasswordProblemText(t: TKeysTexts, problem: TChangePasswordProblem): string {
   const { problems } = t.changePassword;
   switch (problem) {
-    case 'too-short':
-      return problems['too-short'](MASTER_PASSWORD_MIN_LENGTH);
     case 'malformed':
     case 'checksum-mismatch':
       return t.recoveryKeyProblems[problem];
     case 'no-current':
+    case 'no-password':
     case 'mismatch':
       return problems[problem];
     default:

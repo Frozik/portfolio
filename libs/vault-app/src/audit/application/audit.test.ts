@@ -1,6 +1,10 @@
 import { assert } from '@frozik/utils/assert/assert';
+import { allFields } from '@frozik/vault/model/card';
+import { editCard } from '@frozik/vault/model/card-edits';
 import { membersOf } from '@frozik/vault/model/classify-cards';
+import { setFieldValue } from '@frozik/vault/model/field-edits';
 import { aCardWith, aField } from '@frozik/vault/testing/builders';
+import { isNil } from 'lodash-es';
 import { autorun, when } from 'mobx';
 
 import { aDevice, TEST_PASSWORD } from '../../testing/fake-device';
@@ -21,6 +25,10 @@ function account(title: string, url: string, login: string, password: string) {
 }
 
 async function vaultWith(device: ReturnType<typeof aDevice>, cards: ReturnType<typeof account>[]) {
+  return (await storeWith(device, cards)).session;
+}
+
+async function storeWith(device: ReturnType<typeof aDevice>, cards: ReturnType<typeof account>[]) {
   const store = device.startStore();
   store.create('Family', TEST_PASSWORD);
   await when(() => store.session !== null);
@@ -33,7 +41,7 @@ async function vaultWith(device: ReturnType<typeof aDevice>, cards: ReturnType<t
       ...cards.map(card => [card.id, { ...card, createdAt: at, updatedAt: at }] as const),
     ]),
   }));
-  return session;
+  return { store, session };
 }
 
 describe('the audit of an open vault', () => {
@@ -98,5 +106,48 @@ describe('the audit of an open vault', () => {
     stop();
 
     expect(runs).toBeLessThanOrEqual(BATCHES_OF_120 + 2);
+  });
+
+  it('scores each password once: the vault keeps the scores, so the next unlock asks the meter nothing', async () => {
+    const device = aDevice();
+    const weak = account('Forum', 'https://forum.example', 'jane', 'short');
+    const fine = account('Shop', 'https://shop.example', 'jane', 'a-long-password-2');
+    const { store: first, session } = await storeWith(device, [weak, fine]);
+    await when(() => session.document.meta.strength.get('fake')?.size === 2);
+    await when(() => session.local.state.phase.kind === 'idle');
+    first.lock('manual');
+    device.strengthAsked.length = 0;
+    const store = device.startStore();
+
+    store.choose(session.vaultKey);
+    store.unlock(TEST_PASSWORD);
+    await when(() => store.session?.audit.report.byCard.get(weak.id)?.includes('weak') === true);
+
+    expect(device.strengthAsked).toEqual([]);
+  });
+
+  it('scores a changed password again and forgets the score of the one it replaced', async () => {
+    const device = aDevice();
+    const fine = account('Shop', 'https://shop.example', 'jane', 'a-long-password-2');
+    const session = await vaultWith(device, [fine]);
+    await when(() => session.document.meta.strength.get('fake')?.size === 1);
+    const before = [...(session.document.meta.strength.get('fake')?.keys() ?? [])];
+    device.strengthAsked.length = 0;
+
+    session.apply((document, at) =>
+      editCard(document, fine.id, at, card => {
+        const password = allFields(card).find(field => field.spec.kind === 'password');
+        return isNil(password)
+          ? card
+          : setFieldValue(card, password.id, { cardinality: 'single', value: 'short' });
+      })
+    );
+    await when(() => session.audit.report.byCard.get(fine.id)?.includes('weak') === true);
+    await when(() => {
+      const hashes = [...(session.document.meta.strength.get('fake')?.keys() ?? [])];
+      return hashes.length === 1 && hashes[0] !== before[0];
+    });
+
+    expect(device.strengthAsked).toEqual(['short']);
   });
 });

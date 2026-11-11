@@ -6,4 +6,9 @@ import type { IHlc } from './hlc';
  */
 export type TSiteIcon =
   | { readonly kind: 'icon'; readonly png: Uint8Array<ArrayBuffer>; readonly at: IHlc }
-  | { readonly kind: 'none'; readonly at: IHlc };
+  | {
+      readonly kind: 'none';
+      readonly at: IHlc;
+      /** How wide the search was: a client that searches wider asks again at once. */
+      readonly reach: number;
+    };

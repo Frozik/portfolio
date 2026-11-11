@@ -5,8 +5,19 @@ export const cloudTranslationsRu: TextsOf<typeof cloudTranslationsEn> = {
   drive: {
     connect: 'Подключить Google Drive…',
     title: 'Google Drive',
-    notOnPhone:
-      'Google Диск на этом телефоне пока не открывается: используйте папку WebDAV или Диск в браузере.',
+    phone: {
+      intro:
+        'Выберите один из аккаунтов Google, уже добавленных на телефон: Android спросит, какой, и попросит доступ к Drive. Пароль здесь не вводится.',
+      folderHint:
+        'В «Моём диске»; вложенные — через «/», например Документы/Пароли. Имя файла — по названию хранилища. Приложение видит только папки, которые создало само: папку с таким именем, созданную вручную, оно не возьмёт — рядом появится новая.',
+      spaces: {
+        'my-drive':
+          'Файл виден в Drive, его можно сохранить или перенести. Приложение получает доступ только к файлам, которые создало само.',
+        'app-data':
+          'В Drive ничего не попадается на глаза, и приложение не видит там ничего другого. Если отозвать доступ приложения в настройках Google, хранилище удалится из Drive.',
+      },
+      unavailable: 'Вход Google не ответил. Проверьте соединение и повторите.',
+    },
     folder: 'Папка',
     folderHint:
       'В «Моём диске»; вложенные — через «/», например Документы/Пароли. Имя файла — по названию хранилища. Сайт видит только папки, которые создал сам: папку с таким именем, созданную вручную, он не возьмёт — рядом появится новая.',
@@ -39,6 +50,14 @@ export const cloudTranslationsRu: TextsOf<typeof cloudTranslationsEn> = {
         'Google не выдал доступ к Drive. Войдите снова и оставьте отмеченным разрешение на Drive.',
       refused: 'Google отказал во входе.',
     },
+  },
+  chooser: {
+    label: 'Хранилище',
+    placeholder: 'Выберите, где хранить',
+    driveAppData: 'Google Drive — скрытая папка приложения',
+    driveFolder: 'Google Drive — папка',
+    webdavService: (name: string) => `${name} — WebDAV`,
+    webdavCustom: 'Другой сервер WebDAV',
   },
   webdav: {
     connect: 'Подключить папку WebDAV…',
@@ -121,6 +140,8 @@ export const cloudTranslationsRu: TextsOf<typeof cloudTranslationsEn> = {
     title: 'Облако',
     localOnly:
       'Только этот браузер — подключите облако или сделайте экспорт, чтобы хранилище пережило это устройство.',
+    localOnlyPhone:
+      'Только этот телефон — подключите облако или сделайте экспорт, чтобы хранилище пережило телефон.',
     driveIn: (folder: string, path: string) => `Google Drive · ${folder} · ${path}`,
     webdavIn: (url: string, path: string) => `WebDAV · ${url}${path}`,
     mergesWith:

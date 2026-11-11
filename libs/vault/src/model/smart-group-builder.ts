@@ -27,6 +27,7 @@ export const CONDITION_KINDS: readonly TConditionKind[] = [
   'expiry',
   'audit-problem',
   'possible-duplicate',
+  'recently-opened',
   'protected',
   'archived',
   'trashed',
@@ -57,6 +58,7 @@ export function newCondition(
     case 'no-group':
     case 'audit-problem':
     case 'possible-duplicate':
+    case 'recently-opened':
       return { kind };
     default:
       return assertNever(kind);

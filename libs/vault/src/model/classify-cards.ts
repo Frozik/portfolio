@@ -17,6 +17,19 @@ import {
 } from './smart-groups';
 import type { IVaultDocument } from './vault-document';
 
+/** What the open session knows about cards beyond the document. */
+export interface ISessionFacts {
+  /** Cards the audit found something about; none until it has run. */
+  readonly auditProblems: ReadonlySet<TCardId>;
+  /** Cards opened lately on this device. */
+  readonly recentlyOpened: ReadonlySet<TCardId>;
+}
+
+export const NO_SESSION_FACTS: ISessionFacts = {
+  auditProblems: new Set(),
+  recentlyOpened: new Set(),
+};
+
 export interface ICardClassification {
   readonly byGroup: ReadonlyMap<TGroupSelection, readonly IVaultCard[]>;
 }
@@ -29,8 +42,7 @@ export interface ICardClassification {
 export function classifyCards(
   document: IVaultDocument,
   today: Temporal.PlainDate,
-  /** Cards the audit found something about; none until it has run. */
-  auditProblems: ReadonlySet<TCardId> = new Set()
+  session: ISessionFacts = NO_SESSION_FACTS
 ): ICardClassification {
   const duplicates = possibleDuplicates(document);
   const byGroup = new Map<TGroupSelection, IVaultCard[]>();
@@ -50,8 +62,9 @@ export function classifyCards(
     const facts = {
       expiry: expiryStatus(card, today, warningDaysFor(card, document.settings)),
       groupIds,
-      auditProblem: auditProblems.has(card.id),
+      auditProblem: session.auditProblems.has(card.id),
       possibleDuplicate: duplicates.has(card.id),
+      recentlyOpened: session.recentlyOpened.has(card.id),
     };
     for (const group of BUILTIN_GROUP_IDS) {
       if (evaluateRule(BUILTIN_SMART_GROUPS[group], card, facts)) {

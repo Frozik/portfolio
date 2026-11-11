@@ -7,6 +7,7 @@ import { toHex } from '@frozik/vault/crypto/bytes';
 import { isVaultFile } from '@frozik/vault/format/cloud-file-names';
 import type { IImportBatch } from '@frozik/vault/import/imported-card';
 import { fill, plainCard, templateTabs } from '@frozik/vault/import/template-card';
+import { NARROWEST_ICON_REACH } from '@frozik/vault/model/site-icons';
 import { INTERNET_ACCOUNT_TEMPLATE } from '@frozik/vault/model/templates/internet-account';
 import { forgetVaultOnDevice } from '@frozik/vault/session/forget-vault';
 import { createFakeKdf } from '@frozik/vault/testing/fake-kdf';
@@ -24,6 +25,7 @@ import { createQuickKeep } from '../session/application/quick-keep';
 import { VaultApp } from '../session/application/VaultApp';
 import { createWebCryptoQuickPepper } from '../session/application/webcrypto-quick-pepper';
 import type { ITabChannel, TTabMessage } from '../session/domain/ports/tab-channel';
+import { fakeAuditSources } from './fake-audit-sources';
 import { createFakeClipboard } from './fake-clipboard';
 import { createFakeDeviceUnlock } from './fake-device-unlock';
 import { createFakeKeyCustody } from './fake-key-custody';
@@ -31,12 +33,12 @@ import { createFakeLockSignals } from './fake-lock-signals';
 import { createFakeProcessWipe } from './fake-process-wipe';
 import { createFakeSessionClock } from './fake-session-clock';
 import { createFakeThemeStore } from './fake-theme-store';
+import { createMemoryBackupFolder } from './memory-backup-folder';
+import { createMemoryDiagnosticsJournal } from './memory-diagnostics-journal';
+
 // The app loads the open session's model on the first unlock; loaded here up front, a test that
 // ends right after a lock never leaves that load running past its teardown.
 import '../session/application/VaultSession';
-
-/** The fake strength meter calls a password this short weak. */
-const WEAK_LENGTH = 10;
 
 /** The device's tabs of one vault: a message posted by one reaches every other one. */
 function aTabHub(): () => ITabChannel {
@@ -146,6 +148,7 @@ export function aDevice({
   seed = 7,
   siteIcons = {},
   keepsQuickLocks = false,
+  googleDrive = 'unavailable',
 }: {
   readonly cloud?: ReturnType<typeof aCloud>;
   readonly seed?: number;
@@ -153,6 +156,8 @@ export function aDevice({
   readonly keepsQuickLocks?: boolean;
   /** What the icon service answers by domain; any other domain gets no answer, so nothing changes. */
   readonly siteIcons?: Readonly<Record<string, 'icon' | 'none'>>;
+  /** Google sign-in on the device: none, as in a browser without Google's script, or one that lets in. */
+  readonly googleDrive?: 'unavailable' | 'signs-in';
 } = {}) {
   const siteIconRequests: string[] = [];
   const random = createSeededRandom(seed);
@@ -163,6 +168,13 @@ export function aDevice({
   const localCopyOf = (vaultKey: string) => {
     const existing = localCopies.get(vaultKey) ?? createMemoryProvider({ now: writtenAt });
     localCopies.set(vaultKey, existing);
+    return existing;
+  };
+  const drives = new Map<string, ReturnType<typeof createMemoryProvider>>();
+  /** One Drive per space for the device's account, as Google keeps it between sign-ins. */
+  const driveOf = (space: string) => {
+    const existing = drives.get(space) ?? createMemoryProvider({ now: writtenAt });
+    drives.set(space, existing);
     return existing;
   };
   const processWipe = createFakeProcessWipe();
@@ -182,11 +194,15 @@ export function aDevice({
   const theme = createFakeThemeStore();
   const passkeys = aPasskeyAuthenticator(seed);
   const breached = new Set<string>();
+  /** Every password the audit's meter was asked about, in order. */
+  const strengthAsked: string[] = [];
   const saved: IFileToSave[] = [];
   const time = createFakeSessionClock();
   const signals = createFakeLockSignals();
   const openTabChannel = aTabHub();
   const clipboard = createFakeClipboard();
+  const diagnostics = createMemoryDiagnosticsJournal();
+  const backupFolder = createMemoryBackupFolder(time.clock.now);
   let picked: { readonly bytes: Uint8Array<ArrayBuffer>; readonly name: string } | null = null;
   const startStore = (tab = signals) =>
     new VaultApp({
@@ -198,6 +214,7 @@ export function aDevice({
       disposeCodec: () => undefined,
       forgetOnDevice: vaultKey => forgetVaultOnDevice(deviceStores, vaultKey),
       createStrengthMeter: () => ({
+        id: 'silent',
         estimate: () => Promise.resolve(null),
         dispose: () => undefined,
       }),
@@ -213,14 +230,22 @@ export function aDevice({
         });
       },
       pickVaultFile: () => Promise.resolve(picked),
-      openGoogleDrive: () => ({
-        auth: {
-          prepare: () => Promise.resolve(false),
-          authorize: () => Promise.resolve(err('unavailable')),
-          token: () => Promise.resolve(err({ kind: 'auth-required' })),
-          invalidate: () => undefined,
-        },
-        storage: createMemoryProvider(),
+      openGoogleDrive: space => ({
+        auth:
+          googleDrive === 'signs-in'
+            ? {
+                prepare: () => Promise.resolve(true),
+                authorize: () => Promise.resolve(ok(undefined)),
+                token: () => Promise.resolve(ok('token')),
+                invalidate: () => undefined,
+              }
+            : {
+                prepare: () => Promise.resolve(false),
+                authorize: () => Promise.resolve(err('unavailable')),
+                token: () => Promise.resolve(err({ kind: 'auth-required' })),
+                invalidate: () => undefined,
+              },
+        storage: driveOf(space),
       }),
       connectCloud: cloud.connect,
       acquireLeadership: (_vaultKey, onLeader) => {
@@ -262,32 +287,24 @@ export function aDevice({
             ? ok(keePassBatch())
             : err('wrong-password')
         ),
-      fetchSiteIcon: domain => {
-        siteIconRequests.push(domain);
-        const answer = siteIcons[domain];
-        return Promise.resolve(
-          answer === 'icon'
-            ? { kind: 'icon' as const, png: Uint8Array.of(0x89, 0x50, 0x4e, 0x47) }
-            : answer === 'none'
-              ? { kind: 'none' as const }
-              : { kind: 'failed' as const }
-        );
+      fetchSiteIcon: {
+        reach: NARROWEST_ICON_REACH,
+        fetch: domain => {
+          siteIconRequests.push(domain);
+          const answer = siteIcons[domain];
+          return Promise.resolve(
+            answer === 'icon'
+              ? { kind: 'icon' as const, png: Uint8Array.of(0x89, 0x50, 0x4e, 0x47) }
+              : answer === 'none'
+                ? { kind: 'none' as const }
+                : { kind: 'failed' as const }
+          );
+        },
       },
+      diagnostics,
+      backupFolder,
       readQrCode: image => Promise.resolve(new TextDecoder().decode(image.bytes) || null),
-      auditSources: {
-        meter: () => ({
-          estimate: password =>
-            Promise.resolve({
-              score: password.length < WEAK_LENGTH ? 1 : 4,
-              offlineCrackTime: '',
-              warning: null,
-              suggestions: [],
-            }),
-          dispose: () => undefined,
-        }),
-        breaches: { count: password => Promise.resolve(breached.has(password) ? 1 : 0) },
-        loadTwoFactorDirectory: () => Promise.resolve(new Set(['github.com'])),
-      },
+      auditSources: fakeAuditSources({ breached, strengthAsked }),
     });
   return {
     startStore,
@@ -301,9 +318,13 @@ export function aDevice({
     reloads: processWipe.wipes,
     heldKey: keyCustody.held,
     biometrics,
+    /** The device's diagnostics log; `entries()` oldest first. */
+    diagnostics,
+    backupFolder,
     theme,
     passkeys,
     breached,
+    strengthAsked,
     saved,
     localCopyOf,
     signals,

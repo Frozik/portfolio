@@ -36,8 +36,18 @@ export function iconDomainOf(card: ICardState): string | null {
   return null;
 }
 
-/** The domains whose icon the vault still lacks: of live cards showing the automatic icon, a "none" once its wait is over. */
-export function siteIconsWanted(document: IVaultDocument, nowMs: number): readonly string[] {
+/** How wide a search for icons written before searches had a reach was: the browser's. */
+export const NARROWEST_ICON_REACH = 1;
+
+/**
+ * The domains whose icon the vault still lacks: of live cards showing the automatic icon, a
+ * "none" once its wait is over, or at once for a client that searches wider than the one that wrote it.
+ */
+export function siteIconsWanted(
+  document: IVaultDocument,
+  nowMs: number,
+  reach: number
+): readonly string[] {
   const wanted = new Set<string>();
   for (const card of document.cards.values()) {
     if (card.icon.kind !== 'auto' || !isNil(card.trashedAt)) {
@@ -48,7 +58,11 @@ export function siteIconsWanted(document: IVaultDocument, nowMs: number): readon
       continue;
     }
     const known = document.siteIcons.get(domain);
-    if (isNil(known) || (known.kind === 'none' && nowMs - known.at.wallMs >= SITE_ICON_RETRY_MS)) {
+    if (
+      isNil(known) ||
+      (known.kind === 'none' &&
+        (known.reach < reach || nowMs - known.at.wallMs >= SITE_ICON_RETRY_MS))
+    ) {
       wanted.add(domain);
     }
   }

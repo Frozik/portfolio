@@ -35,6 +35,7 @@ export function TextField({
   onSubmitEditing,
   inputRef,
   editable = true,
+  labelInside = false,
 }: {
   readonly label: string;
   readonly value: string;
@@ -48,6 +49,8 @@ export function TextField({
   readonly inputRef?: Ref<TextInput>;
   /** Off while what was typed is being used: it stays in sight, and nothing new goes in. */
   readonly editable?: boolean;
+  /** Where a button above already says what the field is for: the label waits inside it instead. */
+  readonly labelInside?: boolean;
 }) {
   const palette = usePalette();
   const t = useVaultTexts().card;
@@ -61,7 +64,7 @@ export function TextField({
   }, [shown]);
   return (
     <View style={styles.field}>
-      <Text style={[styles.label, { color: palette.fgDim }]}>{label}</Text>
+      {!labelInside && <Text style={[styles.label, { color: palette.fgDim }]}>{label}</Text>}
       <View style={styles.row}>
         <TextInput
           testID={testID}
@@ -78,6 +81,7 @@ export function TextField({
           importantForAutofill={secret ? 'no' : 'auto'}
           keyboardType={KEYBOARDS[kind]}
           multiline={multiline}
+          placeholder={labelInside ? label : undefined}
           placeholderTextColor={palette.fgFaint}
           style={[
             styles.input,

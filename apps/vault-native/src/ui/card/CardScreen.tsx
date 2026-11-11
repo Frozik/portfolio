@@ -12,13 +12,12 @@ import type { TVaultSection } from '@frozik/vault-app/navigation/vault-pages';
 import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
 
 import { CardIcon } from '../card-icon/CardIcon';
-import { BackLink } from '../kit/BackLink';
 import { Button } from '../kit/Button';
+import { ICON_BUTTON_INSET, IconButton } from '../kit/IconButton';
 import { GAP, GUTTER, RADIUS, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
 import { useEditorTexts, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
-import { useOpenLink } from '../useOpenLink';
 import { useSession } from '../vault/session-context';
 import { BankCardFace } from './BankCardFace';
 import { CardBanners } from './CardBanners';
@@ -28,7 +27,7 @@ import { ProtectedGate } from './ProtectedGate';
 const paths = createVaultPaths('');
 const ICON_SIZE = 20;
 
-/** A card as read, full screen: back to its section, its marks, its fields by tab, the cards it belongs with. */
+/** A card as read, full screen: one row with the way back, its marks and its actions; its fields by tab; the cards it belongs with. */
 export const CardScreen = observer(function CardScreen({
   section,
   cardId,
@@ -39,7 +38,6 @@ export const CardScreen = observer(function CardScreen({
   const session = useSession();
   const router = useRouter();
   const palette = usePalette();
-  const openLink = useOpenLink();
   const t = useVaultTexts();
   const editorTexts = useEditorTexts();
   const [tabId, setTabId] = useState<TTabId | null>(null);
@@ -54,9 +52,11 @@ export const CardScreen = observer(function CardScreen({
   }, [session, cardId, exists]);
 
   const back = (
-    <BackLink
+    <IconButton
       testID="back-to-list"
+      icon="arrow-back"
       label={t.card.back}
+      role="link"
       onPress={() =>
         router.dismissTo(
           section === 'all'
@@ -83,10 +83,14 @@ export const CardScreen = observer(function CardScreen({
   });
   return (
     <ScrollView testID="card" contentContainerStyle={styles.page}>
-      {back}
       <View style={styles.header}>
+        {back}
         <CardIcon card={card} siteIcon={session.view.siteIconOf(card)} />
-        <Text accessibilityRole="header" style={[styles.title, { color: palette.fg }]}>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={[styles.title, { color: palette.fg }]}
+        >
           {card.title === '' ? t.list.untitled : card.title}
         </Text>
         {card.favorite && (
@@ -105,22 +109,25 @@ export const CardScreen = observer(function CardScreen({
             accessibilityLabel={t.list.badges.protected}
           />
         )}
+        <View style={styles.actions}>
+          {!session.readOnly && !shut && (
+            <IconButton
+              testID="edit-card"
+              icon="edit"
+              label={editorTexts.edit}
+              disabled={!session.editing.canStart}
+              onPress={() => session.editing.startEditing(card.id)}
+            />
+          )}
+          <IconButton
+            testID="card-history"
+            icon="history"
+            label={t.history.open}
+            role="link"
+            onPress={() => router.push(paths.history(session.vaultKey, section, card.id))}
+          />
+        </View>
       </View>
-      {!session.readOnly && !shut && (
-        <Button
-          testID="edit-card"
-          variant="secondary"
-          label={editorTexts.edit}
-          disabled={!session.editing.canStart}
-          onPress={() => session.editing.startEditing(card.id)}
-        />
-      )}
-      <Button
-        testID="card-history"
-        variant="secondary"
-        label={t.history.open}
-        onPress={() => router.push(paths.history(session.vaultKey, section, card.id))}
-      />
       <CardBanners card={card} view={session.view} />
       {reading.bankCard && <BankCardFace card={card} />}
       {shut && (
@@ -132,14 +139,6 @@ export const CardScreen = observer(function CardScreen({
             onPress={() => setOpeningGate(true)}
           />
         </>
-      )}
-      {!isNil(reading.changePasswordUrl) && (
-        <Button
-          testID="change-password"
-          variant="secondary"
-          label={t.cardExtras.changePassword}
-          onPress={() => openLink(reading.changePasswordUrl ?? '')}
-        />
       )}
       {reading.tabs.length > 1 && (
         <ScrollView
@@ -194,8 +193,9 @@ export const CardScreen = observer(function CardScreen({
 
 const styles = StyleSheet.create({
   page: { gap: GAP, padding: GUTTER },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { flexShrink: 1, fontSize: TEXT_SIZE.title, fontWeight: '600' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: -ICON_BUTTON_INSET },
+  title: { flexShrink: 1, fontSize: TEXT_SIZE.heading, fontWeight: '600' },
+  actions: { flexDirection: 'row', marginLeft: 'auto' },
   tabs: { gap: 8 },
   tab: {
     minHeight: TOUCH_SIZE,

@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { AppState, Linking, StyleSheet, Text } from 'react-native';
 
 import type { DeviceUnlockSetup } from '@frozik/vault-app/keys/application/DeviceUnlockSetup';
 
@@ -11,7 +11,18 @@ import { TextField } from '../kit/TextField';
 import { useKeysTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
 
-/** Biometric unlock of this vault on this phone: what the sensor allows, on or off. */
+const ENROL_INTENT = 'android.settings.BIOMETRIC_ENROLL';
+/** Phones before Android 11 have no enrolment screen of their own: their security settings hold it. */
+const SECURITY_INTENT = 'android.settings.SECURITY_SETTINGS';
+
+function openEnrolment(): void {
+  void Linking.sendIntent(ENROL_INTENT).catch(() => Linking.sendIntent(SECURITY_INTENT));
+}
+
+/**
+ * Biometric unlock of this vault on this phone: what the sensor allows, on or off. With no
+ * fingerprint it leads to the phone's settings, and looks at the sensor again on coming back.
+ */
 export const BiometricSection = observer(function BiometricSection({
   setup,
 }: {
@@ -22,6 +33,12 @@ export const BiometricSection = observer(function BiometricSection({
   const [password, setPassword] = useState('');
   useEffect(() => {
     void setup.check();
+    const watch = AppState.addEventListener('change', next => {
+      if (next === 'active') {
+        void setup.check();
+      }
+    });
+    return () => watch.remove();
   }, [setup]);
   const { state } = setup;
   return (
@@ -32,6 +49,15 @@ export const BiometricSection = observer(function BiometricSection({
         <Text testID="biometric-class" style={[styles.text, { color: palette.fgDim }]}>
           {t.classes[state.biometricClass]}
         </Text>
+      )}
+      {state.kind === 'unavailable' && (
+        <Button
+          testID="biometric-enrol"
+          variant="secondary"
+          icon="fingerprint"
+          label={t.enrol}
+          onPress={openEnrolment}
+        />
       )}
       {state.kind === 'on' && (
         <>
@@ -57,6 +83,7 @@ export const BiometricSection = observer(function BiometricSection({
             </Text>
           )}
           <Button
+            testID="biometric-switch-on"
             label={t.switchOn}
             disabled={password === ''}
             onPress={() => {

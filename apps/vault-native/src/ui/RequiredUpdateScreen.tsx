@@ -2,7 +2,7 @@ import { Button } from './kit/Button';
 import { Notice } from './kit/Notice';
 import { Screen } from './kit/Screen';
 import { useVaultTexts } from './texts';
-import { RELEASES_URL } from './UpdateNotice';
+import { RELEASES_URL } from './UpdateLink';
 import { useOpenLink } from './useOpenLink';
 
 const PRODUCT_NAME = 'Ciphra Vault';

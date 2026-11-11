@@ -1,4 +1,8 @@
-import { SITE_ICON_SIDE, siteIconFetcher } from '@frozik/vault-http/document/site-icon-fetcher';
+import {
+  BROWSER_ICON_SEARCH,
+  SITE_ICON_SIDE,
+  siteIconFetcher,
+} from '@frozik/vault-http/document/site-icon-fetcher';
 
 /** The picture fitted into the icon's square, as PNG: what the vault keeps whatever the site served. */
 async function onCanvas(
@@ -28,4 +32,4 @@ async function onCanvas(
   }
 }
 
-export const fetchSiteIcon = siteIconFetcher(onCanvas);
+export const fetchSiteIcon = siteIconFetcher(onCanvas, BROWSER_ICON_SEARCH);

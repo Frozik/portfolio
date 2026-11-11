@@ -51,6 +51,19 @@ describe('biometric unlock', () => {
     expect(store.lifecycle).toMatchObject({ kind: 'locked', failure: null });
   });
 
+  it('asks for no fingerprint while the app is out of sight: the system would never show that prompt, nor answer it', async () => {
+    const { device, store } = await enrolledVault();
+    device.signals.setConcealed(true);
+
+    store.unlockWithDevice();
+    await when(() => store.lifecycle.kind === 'locked');
+
+    expect({ prompts: device.biometrics.prompts(), lifecycle: store.lifecycle }).toMatchObject({
+      prompts: 0,
+      lifecycle: { kind: 'locked', failure: null },
+    });
+  });
+
   it('says why and stops offering itself once a new finger was enrolled', async () => {
     const { device, store, vaultKey } = await enrolledVault();
     device.biometrics.enrolNewFinger();

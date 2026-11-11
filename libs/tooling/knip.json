@@ -47,8 +47,8 @@
       ]
     },
     "apps/vault-native": {
-      "entry": ["src/app/**/*.tsx", "e2e/*.e2e.mts"],
-      "project": ["src/**/*.{ts,tsx}", "*.ts", "e2e/**/*.mts"]
+      "entry": ["src/app/**/*.tsx", "e2e/*.e2e.mts", "dev/open-test-vault.mts"],
+      "project": ["src/**/*.{ts,tsx}", "*.ts", "e2e/**/*.mts", "dev/**/*.mts"]
     },
     "libs/utils": {
       "entry": ["src/**/*.ts!"],

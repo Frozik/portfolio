@@ -4,7 +4,7 @@ import type { IVaultDocument } from '@frozik/vault/model/vault-document';
 import { isNil } from 'lodash-es';
 import { reaction } from 'mobx';
 
-import type { TFetchSiteIcon } from '../domain/ports/site-icons';
+import type { ISiteIconFetcher } from '../domain/ports/site-icons';
 import type { TTransact } from './transact';
 
 /**
@@ -23,7 +23,7 @@ export function startSiteIconLoader({
   readonly document: () => IVaultDocument;
   /** The device setting and a session that may write; the demo's own sites come with icons. */
   readonly enabled: () => boolean;
-  readonly fetchIcon: TFetchSiteIcon;
+  readonly fetchIcon: ISiteIconFetcher;
   readonly transact: TTransact;
   readonly now: () => number;
   readonly signal: AbortSignal;
@@ -37,12 +37,14 @@ export function startSiteIconLoader({
     running = true;
     try {
       for (;;) {
-        const [next] = siteIconsWanted(document(), now()).filter(domain => !asked.has(domain));
+        const [next] = siteIconsWanted(document(), now(), fetchIcon.reach).filter(
+          domain => !asked.has(domain)
+        );
         if (isNil(next) || !enabled() || signal.aborted) {
           return;
         }
         asked.add(next);
-        const fetched = await fetchIcon(next, signal);
+        const fetched = await fetchIcon.fetch(next, signal);
         if (fetched.kind !== 'failed' && !signal.aborted) {
           transact((current, at: IHlc) => ({
             document: setSiteIcon(
@@ -50,7 +52,7 @@ export function startSiteIconLoader({
               next,
               fetched.kind === 'icon'
                 ? { kind: 'icon', png: fetched.png, at }
-                : { kind: 'none', at }
+                : { kind: 'none', at, reach: fetchIcon.reach }
             ),
             result: undefined,
           }));
@@ -61,7 +63,7 @@ export function startSiteIconLoader({
     }
   };
   return reaction(
-    () => enabled() && siteIconsWanted(document(), now()).length > 0,
+    () => enabled() && siteIconsWanted(document(), now(), fetchIcon.reach).length > 0,
     wanted => {
       if (wanted) {
         void load();

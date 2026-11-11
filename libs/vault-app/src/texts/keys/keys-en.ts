@@ -10,11 +10,10 @@ export const keysTranslationsEn = {
     current: 'Current master password',
     currentRecovery: 'Recovery key',
     password: 'New master password',
-    passwordHint: (min: number) => `At least ${min} characters.`,
     confirmation: 'Repeat the new password',
     problems: {
       'no-current': 'Type the current master password.',
-      'too-short': (min: number) => `The new password needs at least ${min} characters.`,
+      'no-password': 'Type the new password.',
       mismatch: 'The new passwords differ.',
     },
     submit: 'Change the password',
@@ -51,6 +50,7 @@ export const keysTranslationsEn = {
   unlock: {
     useRecovery: 'Forgot the password? Use the recovery key',
     usePassword: 'Use the master password',
+    openWithRecovery: 'Open with the recovery key',
     recoveryKey: 'Recovery key',
     wrongKey: 'This recovery key does not open the vault.',
   },
@@ -152,6 +152,7 @@ export const keysTranslationsEn = {
       weak: 'This phone’s face unlock is not strong enough (Class 2) to open a vault: set up a fingerprint.',
       none: 'No fingerprint is set up on this phone.',
     },
+    enrol: 'Add a fingerprint in the phone’s settings',
     password: 'Master password',
     passwordHint: 'Asked once more: an open vault’s key cannot be read out of it.',
     switchOn: 'Turn on',

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { isNil } from 'lodash-es';
@@ -10,15 +10,18 @@ import { createVaultPaths } from '@frozik/vault-app/navigation/vault-paths';
 import { adoptFailureText } from '@frozik/vault-app/texts/cloud/cloud-wording';
 
 import { useAppModel } from '../app-model';
+import { BottomSheet } from '../kit/BottomSheet';
 import { Busy } from '../kit/Busy';
 import { Button } from '../kit/Button';
-import { GAP, TEXT_SIZE } from '../kit/metrics';
+import { IconButton } from '../kit/IconButton';
+import { GAP, GUTTER, RADIUS, TEXT_SIZE } from '../kit/metrics';
 import { Notice } from '../kit/Notice';
 import { Screen } from '../kit/Screen';
 import { ThemeChoice } from '../settings/ThemeChoice';
 import { useCloudTexts, useVaultTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
-import { UpdateNotice } from '../UpdateNotice';
+import { UpdateLink } from '../UpdateLink';
+import { useTakeInFile } from './useTakeInFile';
 import { VaultList } from './VaultList';
 
 const PRODUCT_NAME = 'Ciphra Vault';
@@ -29,15 +32,17 @@ export const StartScreen = observer(function StartScreen() {
   const { app, updates, version, takeLaunch } = useAppModel();
   const cloudTexts = useCloudTexts();
   const { fileOpening } = app;
+  const takeInFile = useTakeInFile();
   const openFile = (): void => {
-    void fileOpening?.open().then(vaultKey => {
-      if (!isNil(vaultKey)) {
-        router.push(paths.vault(vaultKey));
+    void fileOpening?.pick().then(file => {
+      if (!isNil(file)) {
+        takeInFile(file);
       }
     });
   };
   const router = useRouter();
   const palette = usePalette();
+  const [themeOpen, setThemeOpen] = useState(false);
   const known = app.registry.vaults.value;
   useEffect(() => {
     if (isNil(known)) {
@@ -54,10 +59,24 @@ export const StartScreen = observer(function StartScreen() {
     <Screen
       title={PRODUCT_NAME}
       testID="start"
-      footer={
-        <Text style={[styles.footer, { color: palette.fgFaint }]}>
-          {PRODUCT_NAME} <Text testID="app-version">{version}</Text>
+      titleBadge={
+        <Text
+          testID="app-version"
+          style={[styles.version, { color: palette.fgDim, backgroundColor: palette.bgElevated }]}
+        >
+          {version}
         </Text>
+      }
+      titleEnd={<UpdateLink watch={updates} />}
+      footer={
+        <View style={styles.footer}>
+          <IconButton
+            testID="start-appearance"
+            icon="settings"
+            label={t.appearance.label}
+            onPress={() => setThemeOpen(true)}
+          />
+        </View>
       }
     >
       <Text accessibilityRole="header" style={[styles.heading, { color: palette.fg }]}>
@@ -65,28 +84,39 @@ export const StartScreen = observer(function StartScreen() {
       </Text>
       <VaultList />
       <View style={styles.actions}>
-        <Button
-          testID="open-from-cloud"
-          label={t.phone.openFromCloud}
-          onPress={() => router.push(paths.openFromCloud())}
-        />
-        {!isNil(fileOpening) && (
+        <View style={styles.action}>
           <Button
-            testID="open-file"
+            testID="open-from-cloud"
             variant="secondary"
-            label={t.phone.openFile}
-            disabled={fileOpening.state.kind === 'opening'}
-            onPress={openFile}
+            iconOnly
+            icon="cloud-download"
+            label={t.phone.openFromCloud}
+            onPress={() => router.push(paths.openFromCloud())}
           />
+        </View>
+        {!isNil(fileOpening) && (
+          <View style={styles.action}>
+            <Button
+              testID="open-file"
+              variant="secondary"
+              iconOnly
+              icon="folder-open"
+              label={t.phone.openFile}
+              disabled={fileOpening.state.kind === 'opening'}
+              onPress={openFile}
+            />
+          </View>
         )}
-        <Button
-          testID="create-vault"
-          variant="secondary"
-          label={t.phone.create}
-          onPress={() => router.push(paths.create())}
-        />
+        <View style={styles.action}>
+          <Button
+            testID="create-vault"
+            iconOnly
+            icon="add"
+            label={t.phone.create}
+            onPress={() => router.push(paths.create())}
+          />
+        </View>
       </View>
-      <UpdateNotice watch={updates} />
       {fileOpening?.state.kind === 'opening' && <Busy label={t.phone.openFile} />}
       {fileOpening?.state.kind === 'failed' && (
         <Notice
@@ -95,13 +125,31 @@ export const StartScreen = observer(function StartScreen() {
           message={adoptFailureText(cloudTexts, fileOpening.state.failure)}
         />
       )}
-      <ThemeChoice />
+      <BottomSheet
+        testID="start-appearance-sheet"
+        open={themeOpen}
+        title={t.appearance.label}
+        onClose={() => setThemeOpen(false)}
+      >
+        <View style={styles.sheetBody}>
+          <ThemeChoice />
+        </View>
+      </BottomSheet>
     </Screen>
   );
 });
 
 const styles = StyleSheet.create({
   heading: { fontSize: TEXT_SIZE.heading, fontWeight: '500' },
-  actions: { gap: GAP },
-  footer: { fontSize: TEXT_SIZE.caption, marginTop: 'auto' },
+  actions: { flexDirection: 'row', gap: GAP },
+  action: { flex: 1 },
+  version: {
+    fontSize: TEXT_SIZE.caption,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS,
+    overflow: 'hidden',
+  },
+  sheetBody: { paddingHorizontal: GUTTER },
+  footer: { marginTop: 'auto', alignItems: 'flex-end' },
 });

@@ -20,6 +20,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     lastOpened: (when: string) => `открыто ${when}`,
     unsynced: 'есть несинхронизированные правки',
     openNow: 'открыто сейчас',
+    biometric: 'входит по отпечатку',
     delete: (name: string) => `Удалить «${name}» с этого устройства`,
     deleteTitle: (name: string) => `Удалить «${name}» с этого устройства?`,
     deleteMessage:
@@ -37,9 +38,17 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
   },
   backToVaults: 'К списку хранилищ',
   phone: {
-    tabs: { vault: 'Хранилище', search: 'Поиск', audit: 'Аудит', settings: 'Настройки' },
+    tabs: {
+      vault: 'Хранилище',
+      sections: 'Разделы',
+      search: 'Поиск',
+      audit: 'Аудит',
+      settings: 'Настройки',
+    },
     sections: 'Разделы и группы',
+    sectionBlocks: { sections: 'Разделы', labels: 'Ярлыки' },
     allVaults: 'Все хранилища',
+    vaults: 'Хранилища на этом телефоне',
     close: 'Закрыть',
     retry: 'Повторить',
     linkFailed: 'На этом телефоне нет приложения, которое откроет этот адрес.',
@@ -54,6 +63,11 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     dropFile: 'Отпустите файл хранилища (.pwv), чтобы добавить его',
     openFromCloud: 'Открыть из облака',
     create: 'Создать хранилище',
+    takeInTitle: 'Куда импортировать?',
+    takeInHint: (name: string) =>
+      `«${name}» — файл другого менеджера паролей. Выберите хранилище, куда перенести его карточки, или создайте для них новое.`,
+    takeInNew: 'Новое хранилище',
+    takeInCancel: 'Не импортировать',
     cardNotFound: 'В хранилище нет такой карточки.',
   },
   install: {
@@ -62,7 +76,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     continueAnyway: 'Всё равно продолжить в Safari',
   },
   update: {
-    availablePhone: 'Вышла новая версия приложения.',
+    getUpdate: 'Скачать обновление',
     requiredPhone:
       'Эта версия больше не может открывать хранилище. Установите новую со страницы выпусков.',
     download: 'Скачать новую версию',
@@ -95,8 +109,6 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     descriptionHint:
       'Видно в списке хранилищ на этом устройстве ещё до ввода пароля, как и название. Не пишите сюда секретов.',
     password: 'Мастер-пароль',
-    passwordHint: (minimum: number, suggested: number) =>
-      `Не меньше ${minimum} символов, лучше ${suggested} и больше. Любые символы, включая пробелы.`,
     confirmation: 'Мастер-пароль ещё раз',
     acknowledgement: 'Восстановления нет: пароль знаю только я, и без него хранилище не открыть.',
     submit: 'Создать',
@@ -104,7 +116,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     creating: 'Создаём хранилище: ключ выводится на этом устройстве…',
     problems: {
       'no-name': 'Дайте хранилищу название.',
-      'too-short': (minimum: number) => `В пароле нужно не меньше ${minimum} символов.`,
+      'no-password': 'Введите мастер-пароль.',
       mismatch: 'Пароли не совпадают.',
       'not-acknowledged': 'Отметьте флажок, когда прочтёте.',
     },
@@ -112,7 +124,14 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
       label: 'Стойкость',
       scores: ['Очень слабый', 'Слабый', 'Средний', 'Стойкий', 'Очень стойкий'],
       crackTime: (time: string) => `Офлайн-перебор займёт ${time}.`,
-      weak: 'Слабый пароль разрешён, но если его подберут, хранилище не восстановить.',
+      weak: 'Слабый пароль легко подобрать: кто получит файл хранилища и подберёт пароль, увидит все пароли из него.',
+      adviceTitle: 'Чтобы сделать надёжнее:',
+      advice: {
+        longer: 'сделайте длиннее — от 15 символов, можно из нескольких слов',
+        digits: 'добавьте цифры',
+        capitals: 'добавьте заглавные буквы',
+        symbols: 'добавьте спецсимволы или пробелы',
+      },
     },
   },
   unlock: {
@@ -136,6 +155,8 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
   sections: {
     all: 'Все',
     favorites: 'Избранное',
+    recent: 'Недавние',
+    notes: 'Заметки',
     expiring: 'Скоро истекают',
     expired: 'Истекли',
     'bank-cards': 'Банковские карты',
@@ -151,6 +172,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
   list: {
     search: 'Поиск',
     sort: 'Сортировка',
+    searchAndSort: 'Поиск и сортировка',
     sorts: {
       title: 'По названию',
       updated: 'Недавно изменённые',
@@ -168,6 +190,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
       otp: 'одноразовый код',
       protected: 'защищена',
       favorite: 'в избранном',
+      files: 'есть файлы',
       unsaved: 'не сохранено',
     },
   },
@@ -230,6 +253,8 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     differs: 'Отличается от текущей карточки:',
     same: 'Совпадает с текущей карточкой.',
     restore: 'Восстановить эту версию',
+    restoreShort: 'Восстановить',
+    delete: 'Удалить',
     restored: 'Восстановлено. Заменённая версия теперь в истории.',
   },
   cardExtras: {
@@ -295,6 +320,7 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
       expiry: 'Срок действия',
       'audit-problem': 'Аудит что-то нашёл',
       'possible-duplicate': 'Возможный дубликат',
+      'recently-opened': 'Недавно открыта на этом устройстве',
       protected: 'Защищённая',
       archived: 'В архиве',
       trashed: 'В корзине',
@@ -320,5 +346,9 @@ export const vaultTranslationsRu: TextsOf<typeof vaultTranslationsEn> = {
     notStored: 'Файл не удалось сохранить на этом устройстве, он не добавлен.',
     show: 'Показать',
     size: (kib: number) => `${kib} КиБ`,
+    save: (name: string) => `Сохранить «${name}» в папку`,
+    preview: (name: string) => `Посмотреть «${name}»`,
+    saved: (name: string) => `«${name}» сохранён.`,
+    notSaved: 'Файл не удалось сохранить.',
   },
 };

@@ -3,6 +3,7 @@ import { createRpcClient } from '@frozik/utils/worker/rpc-client';
 
 import type { Language } from '@frozik/utils/i18n/language';
 import type { IStrengthMeter } from '@frozik/vault-app/audit/domain/ports/strength-meter';
+import { strengthMeterIdOf } from '@frozik/vault-app/audit/domain/strength-meter-id';
 import type { TStrengthContract } from './strength.worker';
 
 /** A separate lazy Worker: zxcvbn and its dictionaries load only on a password screen. */
@@ -14,6 +15,7 @@ export function createStrengthMeterClient(language: Language): IStrengthMeter {
     );
 
   return {
+    id: strengthMeterIdOf(language),
     async estimate(password, userInputs, signal) {
       const current = (client ??= connect());
       const result = await current.call('estimate', { password, userInputs, language }, { signal });

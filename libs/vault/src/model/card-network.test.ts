@@ -15,6 +15,7 @@ describe('payment networks', () => {
     ['2200000000000004', 'mir'],
     ['2204123456789015', 'mir'],
     ['6362970000457013', 'elo'],
+    ['9112381011112224', 'belkart'],
   ])('recognises %s as %s, a number that also passes Luhn', (digits, network) => {
     expect(detectCardNetwork(digits)?.network).toBe(network);
     expect(hasValidLuhnChecksum(digits)).toBe(true);

@@ -8,9 +8,5 @@ import { PageNotFound } from '../../../ui/vault/PageNotFound';
 export default function Section() {
   const { section } = useLocalSearchParams<{ section: string }>();
   const page = parseVaultPage(section);
-  return page.kind === 'section' ? (
-    <CardListScreen section={page.section} searching={false} />
-  ) : (
-    <PageNotFound />
-  );
+  return page.kind === 'section' ? <CardListScreen section={page.section} /> : <PageNotFound />;
 }

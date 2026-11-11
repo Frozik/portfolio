@@ -5,6 +5,7 @@ import type { TStartPage, TVaultPage, TVaultSection } from './vault-pages';
 
 const NEW = 'new';
 const OPEN = 'open';
+const TAKE_IN = 'import';
 const SETTINGS = 'settings';
 const AUDIT = 'audit';
 const HISTORY = 'history';
@@ -32,6 +33,8 @@ export function createVaultPaths(root: string) {
     openFromCloud: (): string => `${root}/${OPEN}`,
     /** A new vault in the cloud folder the opening reached. */
     createInCloud: (): string => `${root}/${OPEN}/${NEW}`,
+    /** The choice of the vault a file handed over is imported into. */
+    takeIn: (): string => `${root}/${TAKE_IN}`,
     vault: vaultRoot,
     section: (vaultKey: TVaultKey, section: TVaultSection): string =>
       `${vaultRoot(vaultKey)}/${sectionSegment(section)}`,

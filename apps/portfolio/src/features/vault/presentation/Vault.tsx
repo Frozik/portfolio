@@ -102,6 +102,8 @@ function createStore(): VaultApp {
     demo: createDemoSeed({ random: WEB_RANDOM, clock: SYSTEM_SESSION_CLOCK }),
     passkeys: WEBAUTHN_PASSKEYS,
     readQrCode,
+    diagnostics: null,
+    backupFolder: null,
     fetchSiteIcon,
     readKdbx: readKdbxInWorker,
     auditSources: {

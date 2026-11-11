@@ -20,13 +20,15 @@ import { Screen } from '../kit/Screen';
 import { useCloudTexts } from '../texts';
 import { usePalette } from '../theme/AppTheme';
 import { useBack } from '../useBack';
+import { CloudChoice } from './CloudChoice';
+import { DriveConnect } from './DriveConnect';
 import { FoundVaults } from './FoundVaults';
 import { WebDavConnect } from './WebDavConnect';
 
 const paths = createVaultPaths('');
 
 /**
- * A second device's first screen: reach a WebDAV folder, pick the vault found
+ * A second device's first screen: reach Google Drive or a WebDAV folder, pick the vault found
  * there; it is copied to this phone and the usual unlock opens it.
  */
 export const OpenFromCloudScreen = observer(function OpenFromCloudScreen() {
@@ -66,28 +68,37 @@ export const OpenFromCloudScreen = observer(function OpenFromCloudScreen() {
     }
   };
   const openFromWebDav = (path: TStoragePath): void => void cloud.openFromWebDav(path).then(opened);
+  const openFromDrive = (path: TStoragePath): void => void cloud.openFromDrive(path).then(opened);
   const createHere = (): void => router.push(paths.createInCloud());
 
   const content = (() => {
     switch (step.kind) {
       case 'choose':
-        return (
-          <>
-            <Button
-              testID="choose-webdav"
-              variant="secondary"
-              label={cloudTexts.webdav.connect}
-              onPress={cloud.openWebDavForm}
-            />
-            <Text style={[styles.text, { color: palette.fgFaint }]}>
-              {cloudTexts.drive.notOnPhone}
-            </Text>
-          </>
-        );
+        return null;
       case 'connect':
-        return step.cloud.kind === 'webdav' ? <WebDavConnect form={step.cloud.form} /> : null;
+        return step.cloud.kind === 'webdav' ? (
+          <WebDavConnect form={step.cloud.form} />
+        ) : (
+          <DriveConnect form={step.cloud.form} />
+        );
       case 'pick':
-        return step.cloud.kind === 'webdav' && step.cloud.form.check.kind === 'reachable' ? (
+        if (step.cloud.kind === 'drive') {
+          const { check } = step.cloud.form;
+          return check.kind === 'found' ? (
+            <>
+              <Notice
+                testID="drive-found"
+                message={
+                  check.vaults.length === 0
+                    ? cloudTexts.drive.noVaults
+                    : cloudTexts.drive.vaultsFound(check.vaults.length)
+                }
+              />
+              <FoundVaults vaults={check.vaults} onOpen={openFromDrive} onCreate={createHere} />
+            </>
+          ) : null;
+        }
+        return step.cloud.form.check.kind === 'reachable' ? (
           <>
             <Notice testID="webdav-reachable" message={cloudTexts.webdav.reachable} />
             <FoundVaults
@@ -105,6 +116,7 @@ export const OpenFromCloudScreen = observer(function OpenFromCloudScreen() {
   return (
     <Screen title={cloudTexts.opening.title} testID="open-from-cloud-screen">
       <Text style={[styles.text, { color: palette.fgDim }]}>{cloudTexts.opening.introPhone}</Text>
+      <CloudChoice cloud={cloud} />
       {content}
       {cloud.opening.kind === 'opening' && <Busy label={cloudTexts.opening.title} />}
       {cloud.opening.kind === 'failed' && (

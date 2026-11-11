@@ -1,5 +1,6 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { utf8 } from '@frozik/vault/crypto/bytes';
+import { readSafeInCloudDb } from '@frozik/vault/import/safeincloud/read-safeincloud-db';
 import { vaultKeyOf } from '@frozik/vault/session/vault-key-of';
 import { CHROME_CSV, SAFEINCLOUD_XML } from '@frozik/vault/testing/import-fixtures';
 import { aSafeInCloudDb } from '@frozik/vault/testing/safeincloud-db-fixture';
@@ -42,6 +43,22 @@ describe('import and export', () => {
     expect(flow.step).toMatchObject({ kind: 'preview', preview: { duplicates: 2 } });
     await flow.confirm();
     expect(titlesOf(session)).toEqual(['Bank, personal', 'github.com']);
+  });
+
+  it('counts its progress while it imports, and shows none once it is done', async () => {
+    const { session } = await unlocked('Mine');
+    const flow = session.flows.importInto(key => key);
+    await flow.choose(utf8(CHROME_CSV));
+
+    const confirming = flow.confirm();
+    const during = flow.progress;
+    await confirming;
+
+    expect({ during, after: flow.progress, step: flow.step.kind }).toEqual({
+      during: 0,
+      after: null,
+      step: 'done',
+    });
   });
 
   it('seals a copy under its own password that another device imports as new cards', async () => {
@@ -95,6 +112,45 @@ describe('import and export', () => {
     await exporting.save();
     expect(device.saved.map(file => file.mime)).toEqual(['text/csv']);
     expect(exporting.password).toBe('');
+  });
+
+  it('seals a SafeInCloud database under its own password, which SafeInCloud’s reader opens', async () => {
+    const source = await unlocked('Family');
+    const importing = source.session.flows.importInto(key => key);
+    await importing.choose(utf8(CHROME_CSV));
+    await importing.confirm();
+    const exporting = source.session.flows.exportOf();
+    exporting.setFormat('safeincloud-db');
+
+    exporting.setPassword(EXPORT_PASSWORD);
+    exporting.setConfirmation(EXPORT_PASSWORD);
+    await exporting.prepare();
+    await exporting.save();
+    const [file] = source.device.saved;
+    assert(file !== undefined);
+    const read = await readSafeInCloudDb(file.bytes, EXPORT_PASSWORD);
+
+    expect({
+      name: file.name.endsWith('.db'),
+      titles: read.ok ? read.value.cards.map(card => card.title).sort() : [],
+    }).toEqual({ name: true, titles: [...titlesOf(source.session)].sort() });
+  });
+
+  it('saves the open SafeInCloud XML behind the master password, as an .xml file', async () => {
+    const { device, session } = await unlocked('Mine');
+    const exporting = session.flows.exportOf();
+    exporting.setFormat('safeincloud');
+    exporting.setPassword(PASSWORD);
+    exporting.setAcknowledged(true);
+
+    await exporting.prepare();
+    await exporting.save();
+
+    const [saved] = device.saved;
+    expect({ mime: saved?.mime, xml: saved?.name.endsWith('.xml') }).toEqual({
+      mime: 'application/xml',
+      xml: true,
+    });
   });
 
   it('exports CXF behind the master password that another manager, here another vault, reads back', async () => {

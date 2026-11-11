@@ -5,9 +5,11 @@ import type { TBytes } from '@frozik/vault/crypto/bytes';
 import type { TVaultKey } from '@frozik/vault/persistence/ports';
 import type { IRandom } from '@frozik/vault/ports/random';
 import { passkeySalt, passkeysOf } from '@frozik/vault/session/passkeys-of';
+import { opensWithRecoveryKey } from '@frozik/vault/session/recovery-key-of';
 import { isNil } from 'lodash-es';
 
 import type { TReadQrCode } from '../../document/domain/ports/qr-reader';
+import type { IBackupFolder } from '../../interchange/domain/ports/backup-folder';
 import type { TSaveFile } from '../../interchange/domain/ports/file-saver';
 import type { TReadKdbx } from '../../interchange/domain/ports/kdbx-reader';
 import type { IDeviceUnlock } from '../../keys/domain/ports/device-unlock';
@@ -29,6 +31,8 @@ export interface IVaultFlowServices {
   readonly readQrCode: TReadQrCode;
   readonly readKdbx: TReadKdbx;
   readonly saveFile: TSaveFile;
+  /** A folder on the device for copies of the vault file; `null` where there is none. */
+  readonly backupFolder: IBackupFolder | null;
   readonly passkeys: IPasskeys;
   readonly identity: IAppIdentity;
   readonly localCopyOf: (vaultKey: TVaultKey) => IStorageProvider;
@@ -40,6 +44,8 @@ export interface IVaultFlowServices {
 export interface IVaultFlows {
   /** The passkeys of this site a locked vault opens with, from its local copy's plaintext header. */
   passkeysOfLocked(vaultKey: TVaultKey): Promise<readonly TBytes[]>;
+  /** Whether a recovery key opens a locked vault, from its local copy's plaintext header; a vault without one here may still. */
+  recoveryKeyOpensLocked(vaultKey: TVaultKey): Promise<boolean>;
   /** Whether this browser can open a vault with a passkey, and what its authenticator is called. */
   passkeyCapabilities(): Promise<IPasskeyCapabilities>;
   /** The passkey's answer for this vault's salt; must start within the click that asked. */
@@ -70,6 +76,10 @@ export function createVaultFlows(services: IVaultFlowServices, signal: AbortSign
       return read.ok && !isNil(read.value)
         ? passkeysOf(read.value.bytes, services.passkeys.rpId())
         : [];
+    },
+    recoveryKeyOpensLocked: async vaultKey => {
+      const read = await services.localCopyOf(vaultKey).read(LOCAL_COPY_PATH, signal);
+      return !read.ok || isNil(read.value) || opensWithRecoveryKey(read.value.bytes);
     },
   };
 }

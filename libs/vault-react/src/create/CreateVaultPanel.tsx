@@ -8,10 +8,6 @@ import { observer } from 'mobx-react-lite';
 import { Button } from '@frozik/components/ui/Button';
 import { CardFrame } from '@frozik/components/ui/CardFrame';
 import type { CreateVaultForm } from '@frozik/vault-app/keys/application/CreateVaultForm';
-import {
-  MASTER_PASSWORD_MIN_LENGTH,
-  MASTER_PASSWORD_SUGGESTED_LENGTH,
-} from '@frozik/vault-app/keys/domain/master-password';
 import { createVaultProblemText } from '@frozik/vault-app/texts/keys/keys-wording';
 import { VaultField } from '../form/VaultField';
 import { LANGUAGE } from '../texts/language';
@@ -39,7 +35,6 @@ export const CreateVaultPanel = observer(
     readonly onCancel: () => void;
   }) => {
     const t = vaultT.create;
-    const passwordTouched = form.password !== '';
     const showMismatch = form.confirmation !== '' && form.problem === 'mismatch';
 
     return (
@@ -75,15 +70,7 @@ export const CreateVaultPanel = observer(
           readOnly
           hidden
         />
-        <VaultField
-          label={t.password}
-          hint={t.passwordHint(MASTER_PASSWORD_MIN_LENGTH, MASTER_PASSWORD_SUGGESTED_LENGTH)}
-          error={
-            passwordTouched && form.problem === 'too-short'
-              ? createVaultProblemText(vaultT, 'too-short')
-              : null
-          }
-        >
+        <VaultField label={t.password}>
           {describedBy => (
             <SecretEditor
               aria-label={t.password}
@@ -95,7 +82,7 @@ export const CreateVaultPanel = observer(
             />
           )}
         </VaultField>
-        {!isNil(form.strength) && <StrengthMeter strength={form.strength} />}
+        {!isNil(form.strength) && <StrengthMeter strength={form.strength} advice={form.advice} />}
         <VaultField
           label={t.confirmation}
           error={showMismatch ? createVaultProblemText(vaultT, 'mismatch') : null}

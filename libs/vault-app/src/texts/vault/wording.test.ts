@@ -6,18 +6,13 @@ import { dataTranslationsEn as data } from '../interchange/data-en';
 import { keysTranslationsEn as keys } from '../keys/keys-en';
 import { vaultTranslationsEn as vault } from './vault-en';
 
-import { MASTER_PASSWORD_MIN_LENGTH } from '../../keys/domain/master-password';
 import { adoptFailureText, cloudStatusText, webDavFailureText } from '../cloud/cloud-wording';
 import {
   exportProblemText,
   importWarningText,
   sourcePasswordTexts,
 } from '../interchange/data-wording';
-import {
-  changePasswordProblemText,
-  passkeyFailureText,
-  recoveryUnlockFailureText,
-} from '../keys/keys-wording';
+import { passkeyFailureText, recoveryUnlockFailureText } from '../keys/keys-wording';
 import { saveStatusText, snapshotSizeText } from './status-wording';
 import { storageFailureText } from './storage-failure-wording';
 
@@ -50,11 +45,10 @@ describe('the words for a state', () => {
     expect(quota).not.toBe(retrying);
   });
 
-  it('name the shortest master password allowed', () => {
-    const minimum = String(MASTER_PASSWORD_MIN_LENGTH);
-
-    expect(changePasswordProblemText(keys, 'too-short')).toContain(minimum);
-    expect(exportProblemText(data, 'too-short')).toContain(minimum);
+  it('ask for the copy’s own password apart from the master password', () => {
+    expect(exportProblemText(data, 'no-copy-password')).not.toBe(
+      exportProblemText(data, 'no-password')
+    );
   });
 
   it('give a passkey’s own failure and an unlock failure their own words', () => {

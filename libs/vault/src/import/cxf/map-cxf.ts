@@ -11,6 +11,7 @@ import { NOTE_TEMPLATE } from '../../model/templates/note';
 import { SERVER_TEMPLATE } from '../../model/templates/server';
 import type { ICardTemplate } from '../../model/templates/template';
 import { WIFI_TEMPLATE } from '../../model/templates/wifi';
+import { mimeOfFileName } from '../attachment';
 import type {
   IImportBatch,
   IImportedAsset,
@@ -27,15 +28,6 @@ import type { TCxfCollection, TCxfCredential, TCxfHeader, TCxfItem } from './cxf
 import { isKnownCredential } from './cxf-schema';
 
 const MS_PER_SECOND = 1000;
-const FALLBACK_MIME = 'application/octet-stream';
-const MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
-  pdf: 'application/pdf',
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  txt: 'text/plain',
-};
 
 /** The credential that names the card's template, in this order; a card of notes alone is a note. */
 const TEMPLATE_OF: readonly (readonly [TCxfCredential['type'], ICardTemplate])[] = [
@@ -73,11 +65,6 @@ function collectionsOf(
     collectionsOf(account, collection.subCollections ?? [], into);
   }
   return into;
-}
-
-function mimeOf(name: string): string {
-  const extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
-  return MIME_BY_EXTENSION[extension] ?? FALLBACK_MIME;
 }
 
 interface IItemRun {
@@ -123,7 +110,7 @@ function fileParts(
       asset: {
         id: credential.id as TAssetId,
         name: credential.name,
-        mime: mimeOf(credential.name),
+        mime: mimeOfFileName(credential.name),
         sha256: toHex(hash),
       },
       bytes,

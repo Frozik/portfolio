@@ -14,6 +14,7 @@ export function createFakeDeviceUnlock() {
   const kept = new Map<TVaultKey, TBytes>();
   let answer: 'yes' | 'cancel' = 'yes';
   let invalidated = false;
+  let prompts = 0;
   const secrets: IBiometricSecrets = {
     available: () => Promise.resolve(biometricClass),
     has: vaultKey => Promise.resolve(kept.has(vaultKey) && !invalidated),
@@ -26,6 +27,7 @@ export function createFakeDeviceUnlock() {
       return Promise.resolve(ok(undefined));
     },
     take: vaultKey => {
+      prompts += 1;
       const secret = kept.get(vaultKey);
       if (isNil(secret)) {
         return Promise.resolve(err('unavailable'));
@@ -48,6 +50,8 @@ export function createFakeDeviceUnlock() {
     keep: (vaultKey: TVaultKey, secret: TBytes) => {
       kept.set(vaultKey, secret.slice());
     },
+    /** How many times the fingerprint was asked for. */
+    prompts: () => prompts,
     answer: (next: 'yes' | 'cancel') => {
       answer = next;
     },
@@ -56,6 +60,10 @@ export function createFakeDeviceUnlock() {
     },
     weaken: () => {
       biometricClass = 'weak';
+    },
+    /** What the phone's settings leave the sensor as: a fingerprint added or every one removed. */
+    sensor: (next: TBiometricClass) => {
+      biometricClass = next;
     },
   };
 }

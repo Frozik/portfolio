@@ -4,13 +4,10 @@ import type { TDataTexts } from './data-texts';
 
 import type { TExportProblem } from '../../interchange/application/VaultExport';
 import type { TLockedSource } from '../../interchange/application/VaultImport';
-import { MASTER_PASSWORD_MIN_LENGTH } from '../../keys/domain/master-password';
 
 export function exportProblemText(t: TDataTexts, problem: TExportProblem): string {
   const { problems } = t.export;
-  return problem === 'too-short'
-    ? problems['too-short'](MASTER_PASSWORD_MIN_LENGTH)
-    : problems[problem];
+  return problems[problem];
 }
 
 export function importWarningText(t: TDataTexts, warning: TImportWarning): string {

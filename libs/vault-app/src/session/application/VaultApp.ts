@@ -21,6 +21,8 @@ import { CloudSetup } from '../../cloud/application/CloudSetup';
 import { VaultFileOpening } from '../../cloud/application/VaultFileOpening';
 import { AppearanceModel } from '../../device/application/AppearanceModel';
 import { VaultRegistryModel } from '../../device/application/VaultRegistryModel';
+import { noteDiagnostics } from '../../diagnostics/application/diagnostics-recorder';
+import { lifecycleDiagnostics } from '../../diagnostics/domain/lifecycle-diagnostics';
 import { CreateVaultForm } from '../../keys/application/CreateVaultForm';
 import type { TPasskeyFailure } from '../../keys/domain/ports/passkeys';
 import { createVault, openVault } from '../../sync/application/vault-opening';
@@ -101,6 +103,7 @@ export class VaultApp {
     if (this.controller.signal.aborted) {
       return;
     }
+    noteDiagnostics(this.services, lifecycleDiagnostics(event));
     const next = lifecycleStep(this.lifecycle, event);
     this.lifecycle = next.state;
     next.effects.forEach(effect => void this.run(effect));

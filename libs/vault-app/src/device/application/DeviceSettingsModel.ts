@@ -8,6 +8,7 @@ import { makeAutoObservable, observableRef, runInAction } from 'mobx';
 import { z } from 'zod';
 
 import { DEVICE_CONFIG_LABEL } from '@frozik/vault/session/device-record-labels';
+import { backupIntervalOf } from '../domain/backup-interval';
 import type { IDeviceSettings } from '../domain/device-settings';
 import { DEFAULT_DEVICE_SETTINGS } from '../domain/device-settings';
 
@@ -32,6 +33,11 @@ const DEVICE_SETTINGS_SCHEMA = z.object({
     .default(null),
   lastMasterAt: z.number().nonnegative().nullable().default(null),
   allowScreenshots: z.boolean().default(false),
+  showRecent: z.boolean().default(true),
+  showFavorites: z.boolean().default(true),
+  showAuditCount: z.boolean().default(true),
+  backupEveryDays: z.int().positive().nullable().default(DEFAULT_DEVICE_SETTINGS.backupEveryDays),
+  lastBackupAt: z.number().nonnegative().nullable().default(null),
 });
 
 /** A stored record that no longer reads as settings falls back to the defaults, never fails the session. */
@@ -49,6 +55,11 @@ export function decodeDeviceSettings(value: unknown): IDeviceSettings | null {
     quickUnlock,
     lastMasterAt,
     allowScreenshots,
+    showRecent,
+    showFavorites,
+    showAuditCount,
+    backupEveryDays,
+    lastBackupAt,
   } = parsed.data;
   return {
     lock: {
@@ -64,6 +75,11 @@ export function decodeDeviceSettings(value: unknown): IDeviceSettings | null {
       : { ...quickUnlock, lifetimeMs: quickUnlock.lifetimeMs as Milliseconds },
     lastMasterAt: isNil(lastMasterAt) ? null : (lastMasterAt as Milliseconds),
     allowScreenshots,
+    showRecent,
+    showFavorites,
+    showAuditCount,
+    backupEveryDays: backupIntervalOf(backupEveryDays),
+    lastBackupAt: isNil(lastBackupAt) ? null : (lastBackupAt as Milliseconds),
   };
 }
 

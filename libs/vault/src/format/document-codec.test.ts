@@ -3,7 +3,11 @@ import * as fc from 'fast-check';
 
 import { utf8, utf8Text } from '../crypto/bytes';
 import { allFields } from '../model/card';
+import { putCard, renameCard } from '../model/card-edits';
 import type { TCardId } from '../model/ids';
+import { commitCard, forgetRevision } from '../model/revision-edits';
+import { EMPTY_VAULT_META, withStrengthScores } from '../model/vault-meta';
+import { aCardWith, anHlc } from '../testing/builders';
 import { sampleVaultDocument } from '../testing/sample-vault';
 import { createSeededRandom } from '../testing/seeded-random';
 import type { IContainerEntry } from './container';
@@ -22,6 +26,17 @@ function json(files: ReadonlyMap<string, Uint8Array>, path: string): Record<stri
 describe('document codec', () => {
   const document = sampleVaultDocument(createSeededRandom(42));
 
+  it('reads back the versions deleted from a card’s history, so they stay gone', () => {
+    const card = aCardWith([], { title: 'Once', updatedAt: anHlc(1000), createdAt: anHlc(1000) });
+    const renamed = commitCard(card, renameCard(card, 'Twice'), anHlc(1_000_000));
+    const forgotten = forgetRevision(renamed, renamed.history[0]?.at ?? anHlc(0));
+
+    const decoded = decodeDocument(asFiles(encodeDocument(putCard(document, forgotten))));
+
+    assert(decoded.ok);
+    expect(decoded.value.cards.get(forgotten.id)).toEqual(forgotten);
+  });
+
   it('reads back exactly the document it wrote', () => {
     const decoded = decodeDocument(asFiles(encodeDocument(document)));
 
@@ -33,6 +48,34 @@ describe('document codec', () => {
     expect(decoded.value.assets).toEqual(document.assets);
     expect(decoded.value.assetBytes).toEqual(document.assetBytes);
     expect(decoded.value.settings).toEqual(document.settings);
+  });
+
+  it('keeps the vault’s own cache, and writes no file for an empty one', () => {
+    const hash = 'a'.repeat(64);
+    const cached = {
+      ...document,
+      meta: withStrengthScores(
+        EMPTY_VAULT_META,
+        'zxcvbn:ru:2',
+        new Map([[hash, 3]]),
+        new Set([hash])
+      ),
+    };
+    const decoded = decodeDocument(asFiles(encodeDocument(cached)));
+
+    assert(decoded.ok);
+    expect(decoded.value.meta).toEqual(cached.meta);
+    expect(encodeDocument(document).some(entry => entry.path.startsWith('meta/'))).toBe(false);
+  });
+
+  it('opens a vault whose cache is damaged, with the cache empty', () => {
+    const files = asFiles(encodeDocument(document));
+    files.set('meta/password-strength.json', utf8('{"zxcvbn:ru:2":{"not-a-hash":9}}'));
+
+    const decoded = decodeDocument(files);
+
+    assert(decoded.ok);
+    expect(decoded.value.meta).toEqual(EMPTY_VAULT_META);
   });
 
   it('keeps the vault description', () => {

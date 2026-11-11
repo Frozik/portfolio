@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { ChangePasswordForm } from '@frozik/vault-app/keys/application/ChangePasswordForm';
-import { MASTER_PASSWORD_MIN_LENGTH } from '@frozik/vault-app/keys/domain/master-password';
 import { changePasswordProblemText } from '@frozik/vault-app/texts/keys/keys-wording';
 
 import { Busy } from '../kit/Busy';
@@ -70,9 +69,6 @@ export const ChangePasswordSection = observer(function ChangePasswordSection() {
         onChangeText={form.setPassword}
         secret
       />
-      <Text style={[styles.hint, { color: palette.fgFaint }]}>
-        {t.passwordHint(MASTER_PASSWORD_MIN_LENGTH)}
-      </Text>
       <TextField
         testID="new-password-again"
         label={t.confirmation}

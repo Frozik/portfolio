@@ -58,11 +58,38 @@ describe('a SafeInCloud database', () => {
     });
   });
 
-  it('opens a database whose password the app wrote one byte per character', async () => {
+  it('opens a database whose password is written one byte per character, as the app writes it', async () => {
     const password = 'pässwörd';
-    const file = await aSafeInCloudDb(SAFEINCLOUD_XML, password, { latin1: true });
+    const file = await aSafeInCloudDb(SAFEINCLOUD_XML, password);
 
-    expect((await readSafeInCloudDb(file, password)).ok).toBe(true);
+    expect({ flag: file[2], opened: (await readSafeInCloudDb(file, password)).ok }).toEqual({
+      flag: 1,
+      opened: true,
+    });
+  });
+
+  it('opens a database whose password goes past Latin-1, written as UTF-8', async () => {
+    const password = 'пароль доступа';
+    const file = await aSafeInCloudDb(SAFEINCLOUD_XML, password);
+
+    expect({ flag: file[2], opened: (await readSafeInCloudDb(file, password)).ok }).toEqual({
+      flag: 0,
+      opened: true,
+    });
+  });
+
+  it('opens whatever the header says of the password: one byte per character or UTF-8', async () => {
+    const latin1 = 'pässwörd';
+    const wide = 'пароль доступа';
+    const flaggedUtf8 = await aSafeInCloudDb(SAFEINCLOUD_XML, latin1);
+    flaggedUtf8[2] = 0;
+    const flaggedLatin1 = await aSafeInCloudDb(SAFEINCLOUD_XML, wide);
+    flaggedLatin1[2] = 1;
+
+    expect({
+      latin1: (await readSafeInCloudDb(flaggedUtf8, latin1)).ok,
+      wide: (await readSafeInCloudDb(flaggedLatin1, wide)).ok,
+    }).toEqual({ latin1: true, wide: true });
   });
 
   it('reads nothing from a file cut inside its header', async () => {

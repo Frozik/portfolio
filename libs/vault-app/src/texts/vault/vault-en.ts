@@ -16,6 +16,7 @@ export const vaultTranslationsEn = {
     lastOpened: (when: string) => `opened ${when}`,
     unsynced: 'changes waiting to sync',
     openNow: 'open now',
+    biometric: 'opens with a fingerprint',
     delete: (name: string) => `Delete “${name}” from this device`,
     deleteTitle: (name: string) => `Delete “${name}” from this device?`,
     deleteMessage:
@@ -33,9 +34,17 @@ export const vaultTranslationsEn = {
   },
   backToVaults: 'Back to all vaults',
   phone: {
-    tabs: { vault: 'Vault', search: 'Search', audit: 'Audit', settings: 'Settings' },
+    tabs: {
+      vault: 'Vault',
+      sections: 'Sections',
+      search: 'Search',
+      audit: 'Audit',
+      settings: 'Settings',
+    },
     sections: 'Sections and groups',
+    sectionBlocks: { sections: 'Sections', labels: 'Labels' },
     allVaults: 'All vaults',
+    vaults: 'Vaults on this phone',
     close: 'Close',
     retry: 'Try again',
     linkFailed: 'No app on this phone opens that address.',
@@ -49,6 +58,11 @@ export const vaultTranslationsEn = {
     dropFile: 'Drop the vault file (.pwv) to add it',
     openFromCloud: 'Open from a cloud',
     create: 'Create a vault',
+    takeInTitle: 'Import where?',
+    takeInHint: (name: string) =>
+      `“${name}” comes from another password manager. Pick the vault its cards go into, or make a new one for them.`,
+    takeInNew: 'New vault',
+    takeInCancel: 'Do not import',
     cardNotFound: 'There is no such card in this vault.',
   },
   install: {
@@ -57,7 +71,7 @@ export const vaultTranslationsEn = {
     continueAnyway: 'Continue in Safari anyway',
   },
   update: {
-    availablePhone: 'A new version of the app is out.',
+    getUpdate: 'Get the update',
     requiredPhone:
       'This version may no longer open a vault. Install the new one from the release page.',
     download: 'Get the new version',
@@ -89,8 +103,6 @@ export const vaultTranslationsEn = {
     descriptionHint:
       'Shown in this device’s list of vaults before the password is typed, like the name. Keep secrets out of it.',
     password: 'Master password',
-    passwordHint: (minimum: number, suggested: number) =>
-      `At least ${minimum} characters; ${suggested} or more is better. Any characters, spaces included.`,
     confirmation: 'Repeat the master password',
     acknowledgement:
       'There is no recovery: only I know this password, and without it the vault cannot be opened.',
@@ -99,7 +111,7 @@ export const vaultTranslationsEn = {
     creating: 'Creating the vault: the key is derived on this device…',
     problems: {
       'no-name': 'Give the vault a name.',
-      'too-short': (minimum: number) => `The password needs at least ${minimum} characters.`,
+      'no-password': 'Type a master password.',
       mismatch: 'The two passwords differ.',
       'not-acknowledged': 'Tick the box once you have read it.',
     },
@@ -107,7 +119,14 @@ export const vaultTranslationsEn = {
       label: 'Strength',
       scores: ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'],
       crackTime: (time: string) => `An offline attack would take ${time}.`,
-      weak: 'A weak password is allowed, but the vault cannot be recovered if it is guessed.',
+      weak: 'A weak password is easy to guess: whoever gets the vault file and guesses it sees every password inside.',
+      adviceTitle: 'To make it stronger:',
+      advice: {
+        longer: 'make it longer — 15 characters or more, a few words will do',
+        digits: 'add digits',
+        capitals: 'add capital letters',
+        symbols: 'add symbols or spaces',
+      },
     },
   },
   unlock: {
@@ -131,6 +150,8 @@ export const vaultTranslationsEn = {
   sections: {
     all: 'All',
     favorites: 'Favorites',
+    recent: 'Recent',
+    notes: 'Notes',
     expiring: 'Expiring soon',
     expired: 'Expired',
     'bank-cards': 'Bank cards',
@@ -146,6 +167,7 @@ export const vaultTranslationsEn = {
   list: {
     search: 'Search',
     sort: 'Sort',
+    searchAndSort: 'Search and sort',
     sorts: {
       title: 'By title',
       updated: 'Recently changed',
@@ -163,6 +185,7 @@ export const vaultTranslationsEn = {
       otp: 'one-time code',
       protected: 'protected',
       favorite: 'favorite',
+      files: 'has files',
       unsaved: 'not saved',
     },
   },
@@ -225,6 +248,8 @@ export const vaultTranslationsEn = {
     differs: 'Differs from the current card:',
     same: 'Same as the current card.',
     restore: 'Restore this version',
+    restoreShort: 'Restore',
+    delete: 'Delete',
     restored: 'Restored. The version it replaced is now in the history.',
   },
   cardExtras: {
@@ -287,6 +312,7 @@ export const vaultTranslationsEn = {
       expiry: 'Expiry',
       'audit-problem': 'The audit found something',
       'possible-duplicate': 'Possible duplicate',
+      'recently-opened': 'Opened lately on this device',
       protected: 'Protected',
       archived: 'Archived',
       trashed: 'In the trash',
@@ -311,5 +337,9 @@ export const vaultTranslationsEn = {
     notStored: 'The file could not be saved on this device and was not added.',
     show: 'Show',
     size: (kib: number) => `${kib} KiB`,
+    save: (name: string) => `Save “${name}” to a folder`,
+    preview: (name: string) => `View “${name}”`,
+    saved: (name: string) => `“${name}” saved.`,
+    notSaved: 'The file could not be saved.',
   },
 };

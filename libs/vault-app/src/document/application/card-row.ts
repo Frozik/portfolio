@@ -1,5 +1,5 @@
 import type { IVaultCard } from '@frozik/vault/model/card';
-import { allFields } from '@frozik/vault/model/card';
+import { allFields, fieldValues } from '@frozik/vault/model/card';
 import { cardSubtitle } from '@frozik/vault/model/card-subtitle';
 import type { TExpiryStatus } from '@frozik/vault/model/expiry';
 
@@ -10,6 +10,8 @@ export interface ICardRow {
   /** Shown only when it calls for attention: soon or already expired. */
   readonly expiry: 'soon' | 'expired' | null;
   readonly hasOneTimeCode: boolean;
+  /** Files are attached: a paper clip after the title. */
+  readonly hasFiles: boolean;
 }
 
 export function cardRowOf(card: IVaultCard, expiry: TExpiryStatus): ICardRow {
@@ -18,5 +20,8 @@ export function cardRowOf(card: IVaultCard, expiry: TExpiryStatus): ICardRow {
     subtitle: cardSubtitle(card),
     expiry: expiry === 'soon' || expiry === 'expired' ? expiry : null,
     hasOneTimeCode: allFields(card).some(field => field.spec.kind === 'otp'),
+    hasFiles: allFields(card).some(
+      field => field.spec.kind === 'file' && fieldValues(field).length > 0
+    ),
   };
 }

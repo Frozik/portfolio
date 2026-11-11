@@ -20,6 +20,8 @@ import { VaultAudit } from '../../audit/application/VaultAudit';
 import { CloudLink } from '../../cloud/application/CloudLink';
 import { cloudLinkRecord } from '../../cloud/application/web-cloud-link-record';
 import type { DeviceSettingsModel } from '../../device/application/DeviceSettingsModel';
+import { noteDiagnostics } from '../../diagnostics/application/diagnostics-recorder';
+import { syncDiagnostics } from '../../diagnostics/domain/sync-diagnostics';
 import { CardEditing } from '../../document/application/CardEditing';
 import { startHousekeeping } from '../../document/application/housekeeping';
 import type { RecentCards } from '../../document/application/RecentCards';
@@ -102,7 +104,7 @@ export class VaultSession {
     this.view = new VaultView(
       () => this.document,
       services.clock,
-      () => this.audit.problems
+      () => ({ auditProblems: this.audit.problems, recentlyOpened: new Set(this.recent.ids) })
     );
     this.keys = new SessionKeys(opened.keys, opened.unlockedWith, {
       codec: services.codec,
@@ -153,7 +155,7 @@ export class VaultSession {
         new SyncController(
           this.replica('cloud', provider, path),
           initialSyncState(this.syncRecord.seenBy('cloud'), lastSyncedRev),
-          { onStopped: owner.onSyncStopped }
+          { onEvent: event => this.cloudEvent(event), onStopped: owner.onSyncStopped }
         ),
       keysAheadOfCloud: () => this.syncRecord.cloudBehind(this.keys.current.keyslotsEpoch),
       connect: services.connectCloud,
@@ -200,6 +202,7 @@ export class VaultSession {
       ...services.auditSources,
       meter: services.auditSources.meter(),
       document: () => this.document,
+      transact: edit => this.transact(edit),
       checkLeaks: () => this.deviceSettings.settings.checkLeaks,
       clock: services.clock,
       today: () => this.view.today,
@@ -340,7 +343,12 @@ export class VaultSession {
     this.clipboard.dispose();
   }
 
+  private cloudEvent(event: TSyncEvent): void {
+    noteDiagnostics(this.services, syncDiagnostics('cloud', event));
+  }
+
   private localEvent(event: TSyncEvent): void {
+    noteDiagnostics(this.services, syncDiagnostics('local', event));
     if (event.kind === 'write-done' && event.result.ok && event.result.value.kind === 'ok') {
       this.tabs.post({ kind: 'changed' });
     }

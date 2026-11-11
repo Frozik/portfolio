@@ -233,12 +233,13 @@ function withHotpCounters(
     : { ...document, hotpCounters: counters };
 }
 
-function existingByKey(document: IVaultDocument): Map<string, TCardId> {
-  const byKey = new Map<string, TCardId>();
+/** The vault's own cards by account, in order: each one is the twin of at most one entry. */
+function existingByKey(document: IVaultDocument): Map<string, TCardId[]> {
+  const byKey = new Map<string, TCardId[]>();
   for (const card of document.cards.values()) {
     const key = isNil(card.trashedAt) ? duplicateKeyOf(allFields(card)) : null;
-    if (!isNil(key) && !byKey.has(key)) {
-      byKey.set(key, card.id);
+    if (!isNil(key)) {
+      byKey.set(key, [...(byKey.get(key) ?? []), card.id]);
     }
   }
   return byKey;
@@ -247,7 +248,7 @@ function existingByKey(document: IVaultDocument): Map<string, TCardId> {
 /**
  * The confirmed import, as one edit of the document: every
  * entry becomes a card of this vault with new ids, groups are found or made
- * by name, and an entry the vault already has is skipped, replaces the card
+ * by name, and an entry the vault had before is skipped, replaces the card
  * (its old version goes to history) or comes in beside it.
  */
 export function applyImport(
@@ -271,7 +272,8 @@ export function applyImport(
   for (const imported of batch.cards) {
     const state = stateOf(run, imported);
     const key = duplicateKeyOf(allFields(state));
-    const twin = isNil(key) || context.duplicates === 'keep-both' ? undefined : byKey.get(key);
+    const twin =
+      isNil(key) || context.duplicates === 'keep-both' ? undefined : byKey.get(key)?.shift();
     if (!isNil(twin) && context.duplicates === 'skip') {
       outcome.skipped += 1;
       cardIds.push(twin);
@@ -287,9 +289,6 @@ export function applyImport(
     }
     const card: IVaultCard = { ...incoming, history: [] };
     run.document = withHotpCounters(putCard(run.document, card), card, imported);
-    if (!isNil(key)) {
-      byKey.set(key, card.id);
-    }
     outcome.added += 1;
     cardIds.push(card.id);
   }

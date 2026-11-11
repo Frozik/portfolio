@@ -26,7 +26,10 @@ function RoutedVault() {
 }
 
 /** A vault made on this phone and locked; the app starts over, as after the lock's reload. */
-async function lockedVault({ withBiometrics = false } = {}) {
+async function lockedVault({
+  withBiometrics = false,
+  fingerprint = 'yes',
+}: { readonly withBiometrics?: boolean; readonly fingerprint?: 'yes' | 'cancel' } = {}) {
   const device = aDevice();
   const maker = device.startStore();
   maker.create('Family', TEST_PASSWORD);
@@ -40,6 +43,7 @@ async function lockedVault({ withBiometrics = false } = {}) {
   }
   const { vaultKey } = session;
   maker.lock('manual');
+  device.biometrics.answer(fingerprint);
   const rendered = await renderApp(ROUTES, { device, initialUrl: `/${vaultKey}` });
   await act(() => rendered.app.registry.refresh());
   return { ...rendered, vaultKey };
@@ -94,12 +98,33 @@ describe('a locked vault on the phone', () => {
     expect(screen.queryByTestId('open-vault')).toBeNull();
   });
 
-  it('offers the fingerprint only once it holds the vault, and opens with it', async () => {
+  it('asks for the fingerprint by itself once it holds the vault, and opens with it', async () => {
     await lockedVault({ withBiometrics: true });
 
-    await fireEvent.press(await screen.findByTestId('unlock-biometric'));
+    await waitFor(() => expect(screen.getByTestId('open-vault')).toBeOnTheScreen());
+  });
+
+  it('waits on the password after the fingerprint is turned down, its button asking again', async () => {
+    const { app, device } = await lockedVault({ withBiometrics: true, fingerprint: 'cancel' });
+    const again = await screen.findByTestId('unlock-biometric');
+    await waitFor(() => expect(app.lifecycle.kind).toBe('locked'));
+    const openAfterCancel = screen.queryByTestId('open-vault');
+
+    device.biometrics.answer('yes');
+    await fireEvent.press(again);
 
     await waitFor(() => expect(screen.getByTestId('open-vault')).toBeOnTheScreen());
+    expect(openAfterCancel).toBeNull();
+  });
+
+  it('offers no recovery key for a vault that never made one', async () => {
+    const { app, vaultKey } = await lockedVault();
+
+    await waitFor(() => expect(screen.getByTestId('unlock-password')).toBeOnTheScreen());
+    const made = await act(() => app.flows.recoveryKeyOpensLocked(vaultKey));
+
+    expect(made).toBe(false);
+    expect(screen.queryByTestId('use-recovery-key')).toBeNull();
   });
 
   it('offers no fingerprint for a vault it does not hold', async () => {

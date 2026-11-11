@@ -3,7 +3,6 @@ import { observer } from 'mobx-react-lite';
 import type { UpdateWatch } from '@frozik/vault-app/release/application/UpdateWatch';
 
 import { Button } from './kit/Button';
-import { Notice } from './kit/Notice';
 import { useVaultTexts } from './texts';
 import { useOpenLink } from './useOpenLink';
 
@@ -11,21 +10,21 @@ import { useOpenLink } from './useOpenLink';
 export const RELEASES_URL =
   'https://github.com/ciphra-vault/ciphra-vault.github.io/releases/latest';
 
-/** A newer release: a note and the way to it, never a block. */
-export const UpdateNotice = observer(function UpdateNotice({
-  watch,
-}: {
-  readonly watch: UpdateWatch;
-}) {
+/** A newer release: one small button to its page, never a block. */
+export const UpdateLink = observer(function UpdateLink({ watch }: { readonly watch: UpdateWatch }) {
   const t = useVaultTexts().update;
   const openLink = useOpenLink();
   if (watch.verdict !== 'available') {
     return null;
   }
   return (
-    <>
-      <Notice testID="update-notice" message={t.availablePhone} />
-      <Button variant="secondary" label={t.download} onPress={() => openLink(RELEASES_URL)} />
-    </>
+    <Button
+      testID="update-link"
+      compact
+      iconOnly
+      icon="system-update"
+      label={t.getUpdate}
+      onPress={() => openLink(RELEASES_URL)}
+    />
   );
 });

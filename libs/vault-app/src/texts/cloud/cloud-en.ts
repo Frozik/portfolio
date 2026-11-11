@@ -3,8 +3,19 @@ export const cloudTranslationsEn = {
   drive: {
     connect: 'Connect Google Drive…',
     title: 'Google Drive',
-    notOnPhone:
-      'Google Drive does not open on this phone yet: use a WebDAV folder, or Drive in the browser.',
+    phone: {
+      intro:
+        'Pick one of the Google accounts already on this phone: Android asks which, and for access to Drive. No password is typed here.',
+      folderHint:
+        'In My Drive; nested folders with “/”, e.g. Documents/Passwords. The file is named after the vault. The app sees only the folders it made itself: a folder of that name made by hand is not used — a new one appears beside it.',
+      spaces: {
+        'my-drive':
+          'You see the file in Drive and can back it up or move it. The app gets access only to the files it creates.',
+        'app-data':
+          'Nothing to stumble on in Drive, and the app sees nothing else there. Removing the app’s access in Google settings deletes the vault from Drive.',
+      },
+      unavailable: 'Google sign-in did not answer. Check the connection and try again.',
+    },
     folder: 'Folder',
     folderHint:
       'In My Drive; nested folders with “/”, e.g. Documents/Passwords. The file is named after the vault. The site sees only the folders it made itself: a folder of that name made by hand is not used — a new one appears beside it.',
@@ -37,6 +48,14 @@ export const cloudTranslationsEn = {
         'Google did not grant access to Drive. Sign in again and keep the Drive permission ticked.',
       refused: 'Google refused the sign-in.',
     },
+  },
+  chooser: {
+    label: 'Storage',
+    placeholder: 'Choose where to keep the vault',
+    driveAppData: 'Google Drive — the app’s hidden folder',
+    driveFolder: 'Google Drive — a folder',
+    webdavService: (name: string) => `${name} — WebDAV`,
+    webdavCustom: 'Another WebDAV server',
   },
   webdav: {
     connect: 'Connect a WebDAV folder…',
@@ -119,6 +138,7 @@ export const cloudTranslationsEn = {
   section: {
     title: 'Cloud',
     localOnly: 'This browser only — connect a cloud or export, so the vault survives this device.',
+    localOnlyPhone: 'This phone only — connect a cloud or export, so the vault survives the phone.',
     driveIn: (folder: string, path: string) => `Google Drive · ${folder} · ${path}`,
     webdavIn: (url: string, path: string) => `WebDAV · ${url}${path}`,
     mergesWith:

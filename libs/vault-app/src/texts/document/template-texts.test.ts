@@ -28,16 +28,17 @@ function templateKeys(): readonly string[] {
 }
 
 /** The labels importers give fields beyond the templates' own. */
-function importKeys(): readonly string[] {
-  return [
+async function importKeys(): Promise<readonly string[]> {
+  const files = [
     BITWARDEN_JSON,
     BITWARDEN_CSV,
     CHROME_CSV,
     FIREFOX_CSV,
     SAFARI_CSV,
     SAFEINCLOUD_XML,
-  ].flatMap(text => {
-    const read = readImportFile(utf8(text));
+  ];
+  const reads = await Promise.all(files.map(text => readImportFile(utf8(text))));
+  return reads.flatMap(read => {
     const cards = read.ok && read.value.kind === 'entries' ? read.value.batch.cards : [];
     return cards.flatMap(card =>
       card.tabs
@@ -56,8 +57,8 @@ describe('template texts', () => {
     expect(missing).toEqual([]);
   });
 
-  it('name the fields an import adds', () => {
-    expect(importKeys().filter(key => templateTextsEn[key] === undefined)).toEqual([]);
+  it('name the fields an import adds', async () => {
+    expect((await importKeys()).filter(key => templateTextsEn[key] === undefined)).toEqual([]);
   });
 
   it('has the same keys in both languages, those of the demo vault included', () => {

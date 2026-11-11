@@ -16,5 +16,7 @@ export type TSmartGroupRule =
   | { readonly kind: 'audit-problem' }
   /** Another card signs in to the same site with the same login. */
   | { readonly kind: 'possible-duplicate' }
+  /** Opened lately on this device: each device answers for itself. */
+  | { readonly kind: 'recently-opened' }
   | { readonly kind: 'all' | 'any'; readonly rules: readonly TSmartGroupRule[] }
   | { readonly kind: 'not'; readonly rule: TSmartGroupRule };

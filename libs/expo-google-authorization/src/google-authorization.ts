@@ -6,7 +6,7 @@ import type { TAuthorization } from './GoogleAuthorizationModule';
 import { GOOGLE_AUTHORIZATION } from './GoogleAuthorizationModule';
 
 /** Google Play services' status for «no network» (CommonStatusCodes.NETWORK_ERROR). */
-const NETWORK_ERROR = 7;
+export const NETWORK_ERROR = 7;
 
 /**
  * Google authorization for some scopes with an account already on the phone. The token source

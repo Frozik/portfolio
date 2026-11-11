@@ -64,6 +64,18 @@ describe('device settings', () => {
     ]);
   });
 
+  it('reads a record saved before the display choices existed as showing everything', () => {
+    const { showRecent, showFavorites, showAuditCount, ...older } = DEFAULT_DEVICE_SETTINGS;
+
+    const decoded = decodeDeviceSettings(older);
+
+    expect([decoded?.showRecent, decoded?.showFavorites, decoded?.showAuditCount]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
   it('follows every change of the timeouts, not only the first', async () => {
     const device = aDevice();
     const store = device.startStore();

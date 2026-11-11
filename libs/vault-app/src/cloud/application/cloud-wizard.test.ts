@@ -30,6 +30,26 @@ describe('the cloud wizard', () => {
     expect(cloud.webDavForm).toBeNull();
   });
 
+  it('opens the form of a storage chosen from one list, set for it, and tells which one it is', () => {
+    const cloud = aCloud();
+
+    cloud.choose({ kind: 'drive', space: 'app-data' });
+    const drive = { choice: cloud.choice, space: cloud.driveForm?.space };
+    cloud.choose({ kind: 'webdav', presetId: 'yandex' });
+
+    expect({
+      drive,
+      webdav: cloud.choice,
+      endpoint: cloud.webDavForm?.endpoint,
+      driveClosed: cloud.driveForm,
+    }).toEqual({
+      drive: { choice: { kind: 'drive', space: 'app-data' }, space: 'app-data' },
+      webdav: { kind: 'webdav', presetId: 'yandex' },
+      endpoint: 'https://webdav.yandex.ru/',
+      driveClosed: null,
+    });
+  });
+
   it('moves on to the vaults only once the folder is reached', async () => {
     const cloud = await checkedFolder();
 

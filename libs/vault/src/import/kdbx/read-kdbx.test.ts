@@ -64,7 +64,7 @@ function fieldsOf(card: IImportedCard | undefined): Readonly<Record<string, stri
 
 describe('KeePass import', () => {
   it('is told by its signature and asks for the file’s password', async () => {
-    expect(readImportFile(await aKeePassFile())).toEqual({
+    expect(await readImportFile(await aKeePassFile())).toEqual({
       ok: true,
       value: { kind: 'kdbx-file' },
     });

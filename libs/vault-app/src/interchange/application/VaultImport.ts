@@ -89,6 +89,8 @@ export class VaultImport {
   /** A KeePass key file, when the database needs one: kept until the file opens or the import starts over. */
   keyFile: { readonly name: string; readonly bytes: Uint8Array<ArrayBuffer> } | null = null;
   duplicates: TDuplicatePolicy = 'skip';
+  /** How far the import has got, 0 to 1, while it runs; `null` otherwise. */
+  progress: number | null = null;
 
   private readonly controller = new AbortController();
 
@@ -101,9 +103,9 @@ export class VaultImport {
   }
 
   async choose(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
-    const read = readImportFile(bytes);
+    const read = await readImportFile(bytes);
     if (!read.ok) {
-      this.step = { kind: 'failed', error: read.error };
+      this.show({ kind: 'failed', error: read.error });
       return;
     }
     const locked = (source: TLockedSource): TImportStep => ({
@@ -115,14 +117,14 @@ export class VaultImport {
     switch (read.value.kind) {
       case 'vault-file': {
         const { vault, sealedBlobs } = read.value;
-        this.step = locked({ format: 'pwv', vault, sealedBlobs });
+        this.show(locked({ format: 'pwv', vault, sealedBlobs }));
         return;
       }
       case 'kdbx-file':
-        this.step = locked({ format: 'kdbx', file: bytes });
+        this.show(locked({ format: 'kdbx', file: bytes }));
         return;
       case 'safeincloud-file':
-        this.step = locked({ format: 'safeincloud', file: bytes });
+        this.show(locked({ format: 'safeincloud', file: bytes }));
         return;
       case 'entries':
         await this.showPreview(read.value.batch, this.step);
@@ -130,6 +132,10 @@ export class VaultImport {
       default:
         assertNever(read.value);
     }
+  }
+
+  private show(step: TImportStep): void {
+    this.step = step;
   }
 
   /** A picture of Google Authenticator's transfer QR: its text is read like any export. */
@@ -216,7 +222,10 @@ export class VaultImport {
     this.duplicates = duplicates;
   }
 
-  /** Files too big for the container are sealed beside it first, then one edit brings everything. */
+  /**
+   * Files too big for the container are sealed beside it first, then one edit brings everything;
+   * `progress` counts each sealed file and the edit as a share of the whole.
+   */
   async confirm(): Promise<void> {
     const { step } = this;
     if (step.kind !== 'preview' || step.importing) {
@@ -224,6 +233,7 @@ export class VaultImport {
     }
     const importing: TImportStep = { ...step, importing: true };
     this.step = importing;
+    this.progress = 0;
     let blobs: ReadonlyMap<TAssetId, IPlacedBlob> | null = null;
     try {
       blobs = await this.placeBlobs(step.batch);
@@ -247,16 +257,24 @@ export class VaultImport {
         ? { kind: 'failed', error: 'read-only' }
         : { kind: 'done', outcome };
     });
+    runInAction(() => {
+      this.progress = null;
+    });
   }
 
   private async placeBlobs(batch: IImportBatch): Promise<ReadonlyMap<TAssetId, IPlacedBlob>> {
     const placed = new Map<TAssetId, IPlacedBlob>();
-    for (const source of blobsToPlace(this.services.document(), batch)) {
+    const sources = blobsToPlace(this.services.document(), batch);
+    const steps = sources.length + 1;
+    for (const [index, source] of sources.entries()) {
       const id = newAssetId(this.services.random);
       const blobKey = await this.services.storeBlob(id, source.bytes);
       if (!isNil(blobKey)) {
         placed.set(source.asset.id, { id, blobKey });
       }
+      runInAction(() => {
+        this.progress = (index + 1) / steps;
+      });
     }
     return placed;
   }

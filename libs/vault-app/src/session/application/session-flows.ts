@@ -9,6 +9,7 @@ import type { TTransact } from '../../document/application/transact';
 import type { VaultFiles } from '../../document/application/VaultFiles';
 
 import { VaultBackupFile } from '../../interchange/application/VaultBackupFile';
+import { VaultBackupFolder } from '../../interchange/application/VaultBackupFolder';
 import { VaultExport } from '../../interchange/application/VaultExport';
 import { VaultImport } from '../../interchange/application/VaultImport';
 import { DeviceUnlockSetup } from '../../keys/application/DeviceUnlockSetup';
@@ -37,6 +38,8 @@ export interface ISessionFlows {
   importInto(translate: TTranslate): VaultImport;
   exportOf(): VaultExport;
   backupFileOf(): VaultBackupFile;
+  /** `null` where the platform keeps no backup folder. */
+  backupFolderOf(): VaultBackupFolder | null;
   recoveryKeyOf(renderKit: TRenderEmergencyKit): RecoveryKeyFlow;
   passkeysOf(): PasskeyFlow;
   quickUnlockOf(): QuickUnlockSetup;
@@ -48,6 +51,19 @@ export function createSessionFlows(
   services: IVaultFlowServices,
   session: IFlowSession
 ): ISessionFlows {
+  const vaultFile = {
+    settled: () => {
+      const { phase, context } = session.local.state;
+      return phase.kind === 'idle' && !context.pending;
+    },
+    readLocalFile: (signal: AbortSignal) =>
+      services.localCopyOf(session.vaultKey).read(LOCAL_COPY_PATH, signal),
+    saveFile: services.saveFile,
+    vaultName: () => session.document.settings.name,
+    now: services.clock.now,
+    hasBigFiles: () =>
+      [...session.document.assets.values()].some(asset => asset.storage.kind === 'blob'),
+  };
   return {
     importInto: translate =>
       new VaultImport({
@@ -71,21 +87,17 @@ export function createSessionFlows(
         readFiles: session.files.readAll,
         readSealedBlobs: session.files.readAllSealed,
         cxfExporter: { ...services.identity.exporter, accountId: session.vaultKey },
+        random: services.random,
       }),
-    backupFileOf: () =>
-      new VaultBackupFile({
-        settled: () => {
-          const { phase, context } = session.local.state;
-          return phase.kind === 'idle' && !context.pending;
-        },
-        readLocalFile: signal =>
-          services.localCopyOf(session.vaultKey).read(LOCAL_COPY_PATH, signal),
-        saveFile: services.saveFile,
-        vaultName: () => session.document.settings.name,
-        now: services.clock.now,
-        hasBigFiles: () =>
-          [...session.document.assets.values()].some(asset => asset.storage.kind === 'blob'),
-      }),
+    backupFileOf: () => new VaultBackupFile(vaultFile),
+    backupFolderOf: () =>
+      isNil(services.backupFolder)
+        ? null
+        : new VaultBackupFolder({
+            ...vaultFile,
+            folder: services.backupFolder,
+            settings: session.deviceSettings,
+          }),
     recoveryKeyOf: renderKit =>
       new RecoveryKeyFlow({
         keys: session.keys,

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { usePalette } from '../theme/AppTheme';
@@ -8,10 +9,13 @@ export function Notice({
   message,
   tone = 'info',
   testID,
+  actions,
 }: {
   readonly message: string;
   readonly tone?: 'info' | 'caution' | 'error';
   readonly testID?: string;
+  /** What can be done about it, at its end on the same line. */
+  readonly actions?: ReactNode;
 }) {
   const palette = usePalette();
   const color =
@@ -24,11 +28,18 @@ export function Notice({
       style={[styles.notice, { borderColor: color, backgroundColor: palette.bgElevated }]}
     >
       <Text style={[styles.message, { color }]}>{message}</Text>
+      {actions}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: { borderWidth: 1, borderRadius: RADIUS, padding: 12 },
-  message: { fontSize: TEXT_SIZE.small },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: RADIUS,
+    padding: 12,
+  },
+  message: { flex: 1, fontSize: TEXT_SIZE.small },
 });
