@@ -17,14 +17,31 @@ import { ToggleRow } from '../kit/ToggleRow';
 import { usePalette } from '../theme/AppTheme';
 import { SyncSection } from './SyncSection';
 
-const PERMISSIONS: readonly TPermission[] = [
-  'contacts',
-  'call-log',
-  'calendar',
-  'notifications',
-  'phone-state',
-  'sms',
+/** A permission, and those Android asks for only once it is given. */
+interface IPermissionNode {
+  readonly permission: TPermission;
+  readonly onceGranted?: readonly IPermissionNode[];
+}
+
+const PERMISSIONS: readonly IPermissionNode[] = [
+  { permission: 'contacts' },
+  { permission: 'call-log' },
+  { permission: 'calendar' },
+  { permission: 'notifications' },
+  { permission: 'phone-state' },
+  { permission: 'sms' },
+  { permission: 'location', onceGranted: [{ permission: 'background-location' }] },
 ];
+
+function askable(
+  nodes: readonly IPermissionNode[],
+  granted: (permission: TPermission) => boolean
+): readonly TPermission[] {
+  return nodes.flatMap(({ permission, onceGranted = [] }) => [
+    permission,
+    ...(granted(permission) ? askable(onceGranted, granted) : []),
+  ]);
+}
 const THEMES: readonly TThemeChoice[] = ['system', 'light', 'dark'];
 
 /** The phone's language, or one the user fixed. */
@@ -44,6 +61,19 @@ export const SettingsScreen = observer(function SettingsScreen() {
       : theme === 'light'
         ? texts.settings.themeLight
         : texts.settings.themeDark;
+  const listed = askable(
+    PERMISSIONS,
+    permission => device.permissions[permission] === 'granted'
+  ).filter(permission => permission !== 'sms' || app.smsReply);
+  /** Android's own dialog first; once Android stops showing it, the place in Settings. */
+  const grant = async (permission: TPermission) => {
+    if (device.permissions[permission] === 'denied') {
+      app.openSettings(permission === 'notifications' ? 'notifications' : 'app-permissions');
+      return;
+    }
+    await device.request(permission);
+    await app.foreground();
+  };
   return (
     <Screen testID="settings-screen" title={texts.settings.title}>
       <Section title={texts.settings.screening}>
@@ -53,7 +83,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
           subtitle={device.holdsRole ? texts.settings.roleOn : texts.settings.roleOff}
           onPress={device.holdsRole ? undefined : () => void device.requestRole()}
         />
-        {PERMISSIONS.filter(permission => permission !== 'sms' || app.smsReply).map(permission => (
+        {listed.map(permission => (
           <Row
             key={permission}
             testID={`settings-permission-${permission}`}
@@ -77,7 +107,7 @@ export const SettingsScreen = observer(function SettingsScreen() {
             onPress={
               device.permissions[permission] === 'granted'
                 ? undefined
-                : () => void device.request(permission).then(() => app.foreground())
+                : () => void grant(permission)
             }
           />
         ))}

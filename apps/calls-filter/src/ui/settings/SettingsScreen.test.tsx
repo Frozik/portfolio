@@ -86,4 +86,81 @@ describe('the settings', () => {
     expect(await screen.findByTestId('settings-permission-call-log-attention')).toBeOnTheScreen();
     expect(screen.queryByTestId('settings-permission-contacts-attention')).not.toBeOnTheScreen();
   });
+
+  it('list the location and the location all the time, which a group with a place needs', async () => {
+    await renderApp(ROUTES, { phone: fakePhone(), initialUrl: '/settings' });
+
+    expect(await screen.findByTestId('settings-permission-location')).toBeOnTheScreen();
+    expect(screen.getByTestId('settings-permission-background-location')).toBeOnTheScreen();
+  });
+
+  it('hold back the location all the time until the location itself is given, as Android asks in that order', async () => {
+    const phone = fakePhone();
+    await renderApp(ROUTES, {
+      phone: {
+        ...phone,
+        ports: {
+          ...phone.ports,
+          permissions: { state: async () => 'ask', request: async () => 'denied' },
+        },
+      },
+      initialUrl: '/settings',
+    });
+
+    expect(await screen.findByTestId('settings-permission-location')).toBeOnTheScreen();
+    expect(screen.queryByTestId('settings-permission-background-location')).not.toBeOnTheScreen();
+  });
+
+  it('ask Android again for a permission refused once, while Android still shows its dialog', async () => {
+    const phone = fakePhone();
+    const opened: string[] = [];
+    const asked: string[] = [];
+    await renderApp(ROUTES, {
+      phone: {
+        ...phone,
+        ports: {
+          ...phone.ports,
+          permissions: {
+            state: async permission => (permission === 'contacts' ? 'ask' : 'granted'),
+            request: async permission => {
+              asked.push(permission);
+              return 'ask';
+            },
+          },
+          openSettings: place => opened.push(place),
+        },
+      },
+      initialUrl: '/settings',
+    });
+
+    await fireEvent.press(await screen.findByTestId('settings-permission-contacts'));
+    await fireEvent.press(screen.getByTestId('settings-permission-contacts'));
+
+    expect([asked, opened]).toEqual([['contacts', 'contacts'], []]);
+  });
+
+  it('open the app’s page in Settings for a permission Android no longer asks for', async () => {
+    const phone = fakePhone();
+    const opened: string[] = [];
+    await renderApp(ROUTES, {
+      phone: {
+        ...phone,
+        ports: {
+          ...phone.ports,
+          permissions: {
+            state: async permission => (permission === 'background-location' ? 'ask' : 'granted'),
+            request: async () => 'denied',
+          },
+          openSettings: place => opened.push(place),
+        },
+      },
+      initialUrl: '/settings',
+    });
+
+    await fireEvent.press(await screen.findByTestId('settings-permission-background-location'));
+    expect(opened).toEqual([]);
+    await fireEvent.press(screen.getByTestId('settings-permission-background-location'));
+
+    expect(opened).toEqual(['app-permissions']);
+  });
 });

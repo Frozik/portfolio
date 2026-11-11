@@ -24,6 +24,11 @@ const PERMISSIONS: readonly TPermission[] = [
   'background-location',
 ];
 
+/** Android reports only granted or not, so a refusal it no longer asks about is kept from the request. */
+function stillRefused(known: TPermissionState, reported: TPermissionState): TPermissionState {
+  return known === 'denied' && reported === 'ask' ? 'denied' : reported;
+}
+
 /** What is true of this phone: language, theme, the pause, the screening role and the permissions. */
 export class DeviceModel {
   preferences: IDevicePreferences = DEFAULT_PREFERENCES;
@@ -180,7 +185,10 @@ export class DeviceModel {
     );
     runInAction(() => {
       this.permissions = Object.fromEntries(
-        PERMISSIONS.map((permission, index) => [permission, states[index] ?? 'ask'])
+        PERMISSIONS.map((permission, index) => [
+          permission,
+          stillRefused(this.permissions[permission], states[index] ?? 'ask'),
+        ])
       ) as Record<TPermission, TPermissionState>;
     });
   }

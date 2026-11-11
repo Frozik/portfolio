@@ -113,6 +113,9 @@ call history, the end of a call and notifications; the calendar, SMS and locatio
 once Android stops showing it, the button opens the exact place in Settings instead. Coming back
 to the app re-reads the phone, so a granted permission closes its sheet and the next one shows;
 «Later» puts one off until the next start.
+Settings lists every permission, location and location «all the time» included — the latter only
+once location itself is given, the order Android asks them in — with a mark on the ones not given: a tap asks Android, and once Android stops showing its dialog, opens the app's page in Android's
+Settings.
 
 ## Calendars
 
