@@ -51,6 +51,17 @@ describe('the group of a caller', () => {
     expect(groupOf(book, stranger('79864563560', 'IP Isanshin: kol-tsentr'))).toBe('spam');
   });
 
+  it('reads a name mask regardless of case, in either direction and in any script', () => {
+    const book = bookOf([
+      custom('latin', [nameMask('ip*', 'network')]),
+      custom('cyrillic', [nameMask('ООО РОМАШКА', 'network')]),
+    ]);
+    expect([
+      groupOf(book, stranger('79864563560', 'IP Isanshin')),
+      groupOf(book, stranger('79161234567', 'ооо Ромашка')),
+    ]).toEqual(['latin', 'cyrillic']);
+  });
+
   it('keeps an exclusion stronger than the inclusion', () => {
     const book = bookOf([
       custom('spam', [numberMask('+7 495*')], { exclude: [numberMask('+7 495 123 45 67')] }),
