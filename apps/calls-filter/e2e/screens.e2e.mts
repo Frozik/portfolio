@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe } from 'node:test';
 
+import { locate } from '@frozik/tooling/src/android-e2e/agent.ts';
 import { adb, waitFor } from '@frozik/tooling/src/android-e2e/device.ts';
 import {
   fill,
@@ -16,7 +17,7 @@ import {
 import { clearMeetings, ensureWorkCalendar, meetingNow } from './support/calendar.mts';
 import { control, PACKAGE } from './support/channel.mts';
 import { hasPhysicalKeyboard, hideKeyboard, keyboardTop } from './support/keyboard.mts';
-import { NEW_YORK, phoneAt } from './support/location.mts';
+import { AMSTERDAM, NEW_YORK, phoneAt } from './support/location.mts';
 import type { IScreenedCall } from './support/phone.mts';
 import { call, e2eTest, freshNumber } from './support/phone.mts';
 
@@ -66,10 +67,23 @@ describe('the screens that only a phone can show', () => {
       await openLink(`callsfilter://place?group=${id}`, PACKAGE);
       await fill('place-name', 'Office');
       await tap('place-here');
+      // A test provider sends one fix per call, and the app may ask after the last one: keep it coming.
+      await waitFor(
+        'a fix in Amsterdam for the place',
+        async () => {
+          await phoneAt(AMSTERDAM);
+          return locate('place-save');
+        },
+        button => button?.enabled === true,
+        PLACE_SETTLE_MS
+      );
       await tap('place-save');
       const saved = await waitFor(
         'the place, measured in Amsterdam',
-        () => placeOf('Work'),
+        async () => {
+          await phoneAt(AMSTERDAM);
+          return placeOf('Work');
+        },
         place => place?.here === true,
         PLACE_SETTLE_MS
       );
@@ -77,7 +91,6 @@ describe('the screens that only a phone can show', () => {
       await phoneAt(NEW_YORK);
       await adb('shell', 'input', 'keyevent', 'KEYCODE_HOME');
       await launch(PACKAGE);
-      // A real phone keeps sending fixes; a test provider sends one per call, so keep it moving.
       await waitFor(
         'the place, measured again in New York once the app is in front',
         async () => {

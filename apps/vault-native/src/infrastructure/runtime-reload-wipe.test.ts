@@ -1,6 +1,6 @@
 import { reloadAppAsync } from 'expo';
 
-import { RUNTIME_RELOAD_WIPE } from './runtime-reload-wipe';
+import { runtimeReloadWipe } from './runtime-reload-wipe';
 
 jest.mock('expo', () => ({ reloadAppAsync: jest.fn(() => Promise.resolve()) }));
 
@@ -15,18 +15,53 @@ jest.mock('expo-sqlite/kv-store', () => {
   };
 });
 
+const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
+
 describe('the runtime reload wipe', () => {
-  it('starts a new runtime that learns once why its vault was locked', () => {
-    RUNTIME_RELOAD_WIPE.wipe({ vaultKey: 'a1b2', reason: 'idle' });
+  beforeEach(() => jest.mocked(reloadAppAsync).mockClear());
+
+  it('starts a new runtime that learns once why its vault was locked', async () => {
+    const wipe = runtimeReloadWipe(() => Promise.resolve());
+    wipe.wipe({ vaultKey: 'a1b2', reason: 'idle' });
+    await settled();
 
     expect(reloadAppAsync).toHaveBeenCalled();
-    expect(RUNTIME_RELOAD_WIPE.takeNote('a1b2')).toBe('idle');
-    expect(RUNTIME_RELOAD_WIPE.takeNote('a1b2')).toBeNull();
+    expect(wipe.takeNote('a1b2')).toBe('idle');
+    expect(wipe.takeNote('a1b2')).toBeNull();
   });
 
   it('tells another vault nothing', () => {
-    RUNTIME_RELOAD_WIPE.wipe({ vaultKey: 'a1b2', reason: 'manual' });
+    const wipe = runtimeReloadWipe(() => Promise.resolve());
+    wipe.wipe({ vaultKey: 'a1b2', reason: 'manual' });
 
-    expect(RUNTIME_RELOAD_WIPE.takeNote('c3d4')).toBeNull();
+    expect(wipe.takeNote('c3d4')).toBeNull();
+  });
+
+  it('reloads only once the database has settled, so no write is cut in half', async () => {
+    let settleDatabase = (): void => undefined;
+    const wipe = runtimeReloadWipe(
+      () =>
+        new Promise(resolve => {
+          settleDatabase = resolve;
+        })
+    );
+    wipe.wipe({ vaultKey: 'a1b2', reason: 'manual' });
+    await settled();
+    expect(reloadAppAsync).not.toHaveBeenCalled();
+
+    settleDatabase();
+    await settled();
+
+    expect(reloadAppAsync).toHaveBeenCalled();
+  });
+
+  it('reloads even when the database cannot settle', async () => {
+    runtimeReloadWipe(() => Promise.reject(new Error('busy'))).wipe({
+      vaultKey: 'a1b2',
+      reason: 'manual',
+    });
+    await settled();
+
+    expect(reloadAppAsync).toHaveBeenCalled();
   });
 });

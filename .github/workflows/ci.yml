@@ -16,7 +16,7 @@ permissions:
 jobs:
   check:
     name: Checks (moon ci)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -78,7 +78,7 @@ jobs:
   # toolchain and a phone, and run by hand.
   native:
     name: Android app bundle
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -108,7 +108,7 @@ jobs:
   # everyone to ignore CI.
   native-e2e:
     name: Android app on an emulator
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     timeout-minutes: 60
     steps:
@@ -168,7 +168,7 @@ jobs:
   # service passes its JVM tests — the shared fixtures included, so both decision engines agree.
   calls-filter-native:
     name: Calls Filter bundle and service tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -204,7 +204,7 @@ jobs:
   # until it has a record, like native-e2e.
   calls-filter-e2e:
     name: Calls Filter on an emulator
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     timeout-minutes: 60
     steps:
@@ -267,7 +267,7 @@ jobs:
   # lockfile, so it needs pnpm but no install, and runs beside the checks.
   audit:
     name: Audit production dependencies
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -281,7 +281,7 @@ jobs:
   # the run red, so it reports without gating the deploys.
   webdav-contract:
     name: WebDAV contract (rclone)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
@@ -295,7 +295,7 @@ jobs:
 
   lighthouse:
     name: Lighthouse budgets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check
     permissions:
       contents: read
@@ -346,7 +346,7 @@ jobs:
   # deduplicates them) and it means any commit can be rolled back to.
   server-image:
     name: Server image (${{ matrix.image.name }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check
     permissions:
       contents: read

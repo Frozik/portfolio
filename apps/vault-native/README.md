@@ -187,7 +187,9 @@ There are no over-the-air updates: every change ships as a signed APK the user c
 
 - **Memory.** A lock replaces the JavaScript runtime (`reloadAppAsync`): the old heap is
   freed, not zeroed. Strings — a typed password, a copied secret — cannot be wiped in
-  JavaScript at all.
+  JavaScript at all. The reload waits for the database's queued statements first and lets no
+  new one through: SQLite's native connection outlives the runtime, and a transaction cut in
+  half left the database locked, so the next unlock failed.
 - **Biometric secret on the bridge.** `expo-secure-store` takes strings, so the key crosses
   to the Keystore as base64 once per enrolment and once per biometric unlock.
 - **Rooted phones.** A rooted or compromised phone can read the app's memory while a vault is

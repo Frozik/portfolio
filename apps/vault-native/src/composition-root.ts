@@ -45,7 +45,7 @@ import { NATIVE_THEME_STORE } from './infrastructure/native-theme-store';
 import { KEEP_IMAGES_AS_THEY_ARE, NO_PASSKEYS } from './infrastructure/not-on-this-phone';
 import { phoneBackupFolder } from './infrastructure/phone-backup-folder';
 import { pickedFolderSaveFile } from './infrastructure/picked-folder-file-saver';
-import { RUNTIME_RELOAD_WIPE } from './infrastructure/runtime-reload-wipe';
+import { runtimeReloadWipe } from './infrastructure/runtime-reload-wipe';
 import { SECURE_STORE_BIOMETRIC_SECRETS } from './infrastructure/secure-store-biometric-secrets';
 import { SECURE_STORE_QUICK_KEEP } from './infrastructure/secure-store-quick-keep';
 import { shareSheetSaveFile } from './infrastructure/share-sheet-file-saver';
@@ -84,7 +84,7 @@ export function createVaultApp(
   lock: INativeLockSignals,
   diagnostics: IDiagnosticsJournal
 ): VaultApp {
-  const driver = expoSqlDriver(openDatabaseSync(DATABASE_NAME));
+  const { driver, seal: sealDatabase } = expoSqlDriver(openDatabaseSync(DATABASE_NAME));
   const deviceStores = createSqlDeviceStores(driver, WEB_RANDOM);
   const localCopies = new Map<string, IStorageProvider>();
   const openGoogleDrive = googleDriveOpener(
@@ -124,7 +124,7 @@ export function createVaultApp(
     signals: lock.signals,
     clipboard: NATIVE_CLIPBOARD,
     openTabChannel: openLoneTabChannel,
-    wipe: RUNTIME_RELOAD_WIPE,
+    wipe: runtimeReloadWipe(sealDatabase),
     custody: createMemoryKeyCustody(WEB_RANDOM),
     pepper: createWebCryptoQuickPepper(),
     quickKeep: createQuickKeep(SECURE_STORE_QUICK_KEEP, QUICK_CRYPTO_KDF, WEB_RANDOM),

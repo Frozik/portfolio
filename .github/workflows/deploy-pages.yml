@@ -33,7 +33,7 @@ jobs:
   # version, and the build below reads it with `git describe`.
   release:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -62,7 +62,7 @@ jobs:
   # Moon's dependency graph rather than a hand-written path list.
   gate:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       deployments: read
@@ -117,7 +117,7 @@ jobs:
   build:
     needs: gate
     if: needs.gate.outputs.run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read
@@ -160,7 +160,7 @@ jobs:
           path: apps/portfolio/dist
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     environment:
       name: github-pages

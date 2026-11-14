@@ -28,10 +28,39 @@ function sqliteLikeExpo(): SQLiteDatabase {
 }
 
 describeStorageProviderContract('expo-sqlite', () =>
-  createSqlProvider({ driver: expoSqlDriver(sqliteLikeExpo()), namespace: 'vault' })
+  createSqlProvider({ driver: expoSqlDriver(sqliteLikeExpo()).driver, namespace: 'vault' })
 );
 
 describeDeviceStoresContract('expo-sqlite', () => {
-  const driver = expoSqlDriver(sqliteLikeExpo());
+  const { driver } = expoSqlDriver(sqliteLikeExpo());
   return random => createSqlDeviceStores(driver, random);
+});
+
+describe('sealing the database before a reload', () => {
+  it('lets a transaction already under way commit first', async () => {
+    const { driver, seal } = expoSqlDriver(sqliteLikeExpo());
+    await driver.run('CREATE TABLE note (text TEXT)', []);
+    let rowsSeen: readonly unknown[] = [];
+    const writing = driver.transaction(async tx => {
+      await tx.run('INSERT INTO note (text) VALUES (?)', ['kept']);
+      rowsSeen = await tx.all('SELECT text FROM note');
+    });
+
+    await seal();
+
+    await expect(writing).resolves.toBeUndefined();
+    expect(rowsSeen).toEqual([{ text: 'kept' }]);
+  });
+
+  it('keeps a later statement from the connection', async () => {
+    const database = sqliteLikeExpo();
+    const execAsync = jest.spyOn(database, 'execAsync');
+    const { driver, seal } = expoSqlDriver(database);
+    await seal();
+
+    void driver.transaction(async () => undefined);
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(execAsync).not.toHaveBeenCalled();
+  });
 });
