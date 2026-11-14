@@ -79,5 +79,12 @@
     "jest": "catalog:",
     "jest-expo": "catalog:",
     "test-renderer": "catalog:"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "expo-sqlite"
+      ]
+    }
   }
 }
