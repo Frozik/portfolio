@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { startApp, stopApp } from '../composition-root';
 import { Boot } from '../ui/Boot';
 
+export { unstable_settings } from '../ui/root-stack-settings';
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>

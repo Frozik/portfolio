@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
+import { findGroup } from '../../contexts/grouping/domain/group-book';
 import { findMask } from '../../contexts/grouping/domain/group-book';
 import { addMember, replaceMask } from '../../contexts/grouping/domain/group-book-edits';
 import type { TMemberId, TNameField } from '../../contexts/grouping/domain/member';
@@ -20,6 +21,7 @@ import { RADIUS, TEXT_SIZE } from '../kit/metrics';
 import { Screen } from '../kit/Screen';
 import { TextField } from '../kit/TextField';
 import { useLeave } from '../kit/use-leave';
+import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
 import { Wrap } from '../kit/Wrap';
 import { usePalette } from '../theme/AppTheme';
 import { NumberKeypad } from './NumberKeypad';
@@ -83,6 +85,7 @@ export const MaskScreen = observer(function MaskScreen() {
   const side = params.side ?? 'include';
   const groupId =
     params.group === undefined || params.group === '' ? null : (params.group as TGroupId);
+  useLeaveWhenGone(groupId !== null && findGroup(app.books.book, groupId) === null);
   const [editor] = useState(() => {
     const rewritten =
       groupId === null || params.member === undefined

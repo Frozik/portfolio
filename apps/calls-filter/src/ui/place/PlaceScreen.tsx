@@ -27,6 +27,7 @@ import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
 import { TextField } from '../kit/TextField';
 import { useLeave } from '../kit/use-leave';
+import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
 import { Wrap } from '../kit/Wrap';
 import PlaceMap from './PlaceMap.dom';
 
@@ -48,6 +49,7 @@ export const PlaceScreen = observer(function PlaceScreen() {
     readonly place?: string;
   }>();
   const group = findGroup(app.books.book, groupId as TGroupId);
+  useLeaveWhenGone(group === null);
   const existing = group?.policy.conditions?.places.find(place => place.id === placeId) ?? null;
   const [name, setName] = useState(existing?.name ?? '');
   const [point, setPoint] = useState<IPoint | null>(existing);

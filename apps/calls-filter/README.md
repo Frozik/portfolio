@@ -242,6 +242,9 @@ What is stored changes shape from version to version; each kind of data has its 
 - `src/ui`, `src/app`, `src/texts` — the screens, the routes, Russian and English. «As the
   system» picks the first supported language of the phone, else English; the choice is the
   Android per-app language, so the Kotlin notifications and the tile follow it too.
+  The phone's back closes what is open first — a sheet, the search of a group's calls — and only
+  then the screen; the groups lie under every screen, one a link or a notice opened included, and
+  a screen whose group is gone (deleted, or a stale link) leaves instead of standing empty.
 - `modules/call-screening/android` — the Kotlin side, hexagonal as well (`domain`,
   `application`, `adapters`, `bridge`; Konsist checks the rings, ktlint the style
   (`.editorconfig`, IntelliJ IDEA style), detekt the rest (`detekt.yml` lists what differs from

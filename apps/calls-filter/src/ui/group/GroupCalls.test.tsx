@@ -5,6 +5,7 @@ import GroupRoute from '../../app/group/[id]';
 import { STRANGERS_ID, stranger } from '../../contexts/grouping/testing/group-book-fixtures';
 import type { IJournalEntry, TJournalEntryId } from '../../contexts/journal/domain/journal-entry';
 import { fakePhone } from '../../testing/fake-ports';
+import { pressBack } from '../../testing/press-back';
 import { renderApp } from '../../testing/render-app';
 
 const ROUTES = { 'group/[id]': GroupRoute };
@@ -24,11 +25,12 @@ function call(id: string, digits: string, networkName: string | null = null): IJ
 const JOURNAL = [call('isanshin', '79864563560', 'IP Isanshin'), call('bakery', '31201234567')];
 
 async function openStrangers(journal: readonly IJournalEntry[] = JOURNAL) {
-  await renderApp(ROUTES, {
+  const rendered = await renderApp(ROUTES, {
     phone: fakePhone({ journal }),
     initialUrl: `/group/${STRANGERS_ID}`,
   });
   await screen.findByTestId('call-isanshin');
+  return rendered;
 }
 
 describe('a group’s calls, searched', () => {
@@ -40,6 +42,16 @@ describe('a group’s calls, searched', () => {
 
     expect(screen.getByTestId('group-search')).toBeChecked();
     expect(screen.getByTestId('group-search-field')).toBeOnTheScreen();
+  });
+
+  it('closes on the phone’s back, the group staying open', async () => {
+    const rendered = await openStrangers();
+    await fireEvent.press(screen.getByTestId('group-search'));
+
+    await pressBack();
+
+    expect(screen.queryByTestId('group-search-field')).not.toBeOnTheScreen();
+    expect(rendered.getPathname()).toBe(`/group/${STRANGERS_ID}`);
   });
 
   it('shows only the calls a part of the number or of a name finds', async () => {

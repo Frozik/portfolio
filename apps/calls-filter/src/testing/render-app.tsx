@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CallsFilterApp } from '../contexts/shell/application/CallsFilterApp';
 import { Boot } from '../ui/Boot';
+import { unstable_settings } from '../ui/root-stack-settings';
 import type { IFakePhone } from './fake-ports';
 import { fakePhone } from './fake-ports';
 
@@ -12,8 +13,8 @@ const PHONE_FRAME = { x: 0, y: 0, width: 412, height: 915 };
 const NO_INSETS = { top: 0, left: 0, right: 0, bottom: 0 };
 
 /**
- * The app as the root layout starts it — the real models over a phone of fakes — with the given
- * routes under Expo Router. `renderRouter` turns on fake timers for its own clock, which would
+ * The app as the root layout starts it — the real models over a phone of fakes, its stack anchored
+ * as the real one — with the given routes under Expo Router. `renderRouter` turns on fake timers for its own clock, which would
  * stall the models' async start, so real ones come back once it rendered.
  */
 export async function renderApp(
@@ -32,7 +33,10 @@ export async function renderApp(
       </SafeAreaProvider>
     );
   }
-  const rendered = renderRouter({ _layout: TestLayout, ...routes }, { initialUrl });
+  const rendered = renderRouter(
+    { _layout: { default: TestLayout, unstable_settings }, ...routes },
+    { initialUrl }
+  );
   await rendered;
   jest.useRealTimers();
   return { phone, getPathname: () => rendered.getPathname() };

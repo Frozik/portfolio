@@ -28,6 +28,7 @@ import { Screen } from '../kit/Screen';
 import { Section } from '../kit/Section';
 import { ToggleRow } from '../kit/ToggleRow';
 import { useLeave } from '../kit/use-leave';
+import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
 import { usePalette } from '../theme/AppTheme';
 import { CustomRepeatSheet } from './CustomRepeatSheet';
 import { gmtOffset } from './gmt-offset';
@@ -91,6 +92,7 @@ export const ScheduleScreen = observer(function ScheduleScreen() {
   const clockWords = useClockWords();
   const { group: groupId } = useLocalSearchParams<{ readonly group: string }>();
   const group = findGroup(app.books.book, groupId as TGroupId);
+  useLeaveWhenGone(group === null);
   const today = app.clock.localNow().toPlainDate();
   const [editor] = useState(
     () =>

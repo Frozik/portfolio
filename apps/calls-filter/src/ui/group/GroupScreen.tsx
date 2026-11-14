@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Funnel, PhoneIncoming, PhoneOff } from 'lucide-react-native';
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { TGroupId } from '../../contexts/grouping/domain/group';
@@ -20,6 +20,8 @@ import { SMALL_GAP } from '../kit/metrics';
 import { PinnedMark } from '../kit/PinnedMark';
 import { Screen } from '../kit/Screen';
 import { SegmentedControl } from '../kit/SegmentedControl';
+import { useBackCloses } from '../kit/use-back-closes';
+import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
 import { useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
 import { ColorSheet } from './ColorSheet';
@@ -47,7 +49,10 @@ export const GroupScreen = observer(function GroupScreen() {
   const [renaming, setRenaming] = useState(false);
   const [coloring, setColoring] = useState(false);
   const [policySheet, setPolicySheet] = useState(false);
+  const closeSearch = useCallback(() => setQuery(null), []);
+  useBackCloses(query !== null, closeSearch);
   const group = findGroup(app.books.book, id as TGroupId);
+  useLeaveWhenGone(group === null);
   if (group === null) {
     return null;
   }
