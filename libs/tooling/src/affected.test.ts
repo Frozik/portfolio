@@ -1,4 +1,4 @@
-import { affectedProjectIds, isLockfileChange } from './affected.ts';
+import { affectedProjectIds, everythingAffectedBy } from './affected.ts';
 
 describe('affectedProjectIds', () => {
   it('drops the root project, which every change touches', () => {
@@ -15,16 +15,29 @@ describe('affectedProjectIds', () => {
   });
 });
 
-describe('isLockfileChange', () => {
+describe('everythingAffectedBy', () => {
   it('treats a lockfile edit as touching everything', () => {
-    expect(isLockfileChange(['apps/portfolio/src/main.tsx', 'pnpm-lock.yaml'])).toBe(true);
+    expect(everythingAffectedBy(['apps/portfolio/src/main.tsx', 'pnpm-lock.yaml'])).toBe(
+      'lockfile'
+    );
   });
 
   it('treats the workspace manifest the same way', () => {
-    expect(isLockfileChange(['pnpm-workspace.yaml'])).toBe(true);
+    expect(everythingAffectedBy(['pnpm-workspace.yaml'])).toBe('lockfile');
+  });
+
+  it("runs every job when CI's runner or a shared step changes", () => {
+    expect(everythingAffectedBy(['.github/workflows/ci.yml'])).toBe('ci-environment');
+    expect(everythingAffectedBy(['.github/actions/android-build-env/action.yml'])).toBe(
+      'ci-environment'
+    );
+  });
+
+  it('leaves a release or deploy workflow to its own jobs', () => {
+    expect(everythingAffectedBy(['.github/workflows/deploy-pages.yml'])).toBeNull();
   });
 
   it('leaves ordinary source changes alone', () => {
-    expect(isLockfileChange(['apps/communication/src/main.ts'])).toBe(false);
+    expect(everythingAffectedBy(['apps/communication/src/main.ts'])).toBeNull();
   });
 });

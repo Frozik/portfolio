@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 // the portfolio, and the answer follows the real graph rather than a list
 // that silently rots.
 
-import { affectedProjectIds, isLockfileChange } from './affected.ts';
+import { affectedProjectIds, everythingAffectedBy } from './affected.ts';
 
 // moon lives in the workspace's node_modules, which is not on PATH when this
 // bin is invoked directly rather than through `pnpm exec`.
@@ -48,19 +48,24 @@ const wanted = rest.flatMap((arg, index) => (rest[index - 1] === '--is' ? [arg] 
 const head = rest[0] === undefined || rest[0] === '--is' ? 'HEAD' : rest[0];
 
 const files = changedFiles(base, head);
-// Moon attributes a lockfile change to the root project alone, but a
-// dependency bump can change what any app ships — so it counts for everything.
-const everything = isLockfileChange(files);
-const projects = everything ? undefined : affectedProjects(files);
+const everything = everythingAffectedBy(files);
+const projects = everything === null ? affectedProjects(files) : undefined;
+const EVERYTHING_REASONS = {
+  lockfile: 'a lockfile changed',
+  'ci-environment': "CI's environment changed",
+} as const;
 
 if (wanted.length === 0) {
-  console.log(everything ? '<all: lockfile changed>' : projects?.join('\n'));
+  console.log(
+    everything === null ? projects?.join('\n') : `<all: ${EVERYTHING_REASONS[everything]}>`
+  );
   process.exit(0);
 }
 
-const affected = everything || wanted.some(id => projects?.includes(id) ?? false);
-const reason = everything
-  ? 'a lockfile changed, so every project counts as affected'
-  : `affected projects: ${projects?.join(', ') || 'none'}`;
+const affected = everything !== null || wanted.some(id => projects?.includes(id) ?? false);
+const reason =
+  everything === null
+    ? `affected projects: ${projects?.join(', ') || 'none'}`
+    : `${EVERYTHING_REASONS[everything]}, so every project counts as affected`;
 console.log(`${wanted.join(' or ')}: ${affected ? 'affected' : 'not affected'} (${reason})`);
 process.exit(affected ? 0 : 1);
