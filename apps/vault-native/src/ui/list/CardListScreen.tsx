@@ -6,7 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isNil } from 'lodash-es';
 import { observer } from 'mobx-react-lite';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -18,6 +18,7 @@ import { Button } from '../kit/Button';
 import { IconToggle } from '../kit/IconToggle';
 import { GAP, GUTTER, RADIUS, TEXT_SIZE, TOUCH_SIZE } from '../kit/metrics';
 import { TextField } from '../kit/TextField';
+import { useBackCloses } from '../kit/use-back-closes';
 import type { TLabelEditing } from '../labels/LabelEditor';
 import { LabelEditor } from '../labels/LabelEditor';
 import { settingsTopicPath } from '../settings/settings-topics';
@@ -83,6 +84,14 @@ export const CardListScreen = observer(function CardListScreen({
       view.setQuery('');
     }
   };
+  const putToolsAway = useCallback(() => {
+    setSearchShown(false);
+    setSortShown(false);
+    view.setQuery('');
+  }, [view]);
+  useBackCloses(searchShown || sortShown, putToolsAway);
+  const slideRowBack = useCallback(() => setActionsOpenFor(null), []);
+  useBackCloses(actionsOpenFor !== null, slideRowBack);
   const current = view.sections.find(entry => entry.section === view.section);
   const open = (card: IVaultCard): void => router.push(paths.card(vaultKey, view.section, card.id));
   const cards = view.visibleCards;

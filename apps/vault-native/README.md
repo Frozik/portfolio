@@ -123,7 +123,8 @@ There are no over-the-air updates: every change ships as a signed APK the user c
 - **Everywhere** — every dialog closes with its X, a tap outside or back; forms give way to
   the keyboard (edge to edge, Android no longer resizes the window); a secret field can be
   shown while typing and hides itself again; back steps through the cloud wizard instead of
-  leaving it; a pattern the system interrupts is dropped, never sent as the one quick try.
+  leaving it, and on the list it first puts the search and the sort away and slides an open row
+  back; a pattern the system interrupts is dropped, never sent as the one quick try.
 - **Updates** — the first screen's title carries the running version in a badge and, when a newer
   release is out, a small update button at its right edge (a local build, which names no release,
   is never offered one); below the published security floor the
