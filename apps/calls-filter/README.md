@@ -50,7 +50,12 @@ JavaScript is not running.
 
 Moving a call from any group writes an exact mask into the target group (the contact for a
 contact), plus the exclusions the move needs; a hidden number has nothing to move by, only the
-«hidden» special mask takes it. When two groups would take the same caller, the app shows the conflict and
+«hidden» special mask takes it. A stranger whose number the numbering catalogue places in an
+operator's range can be moved with its whole pool instead: under each group the sheet offers the
+number and the pool (`+7 986…`), and the pool goes in as a number mask over the range (`+7986*`),
+noted with the operator. The groups that had the caller lose only the caller — never the pool —
+and if the pool overlaps another group's masks, the move stops at the conflict like any other.
+Call centres ring from a pool, a fresh number each time; this is what catches them. When two groups would take the same caller, the app shows the conflict and
 offers one-tap resolutions (keep it in one group or the other) or leaving it as it is: a
 conflict is no mistake, the groups' conditions may differ. Of the groups in force at the moment
 of the call, the service fails open — one that lets the call ring decides, the older one on a tie. Settings list the
@@ -155,7 +160,8 @@ Every call with a number says where it is from, as far as the numbering catalogu
 the app knows: the country, the region when the range names one or two, the operator or an
 international service — «Russia · Kirov Oblast · Beeline», «United States · New Jersey». The
 catalogue is a few megabytes of JSON, read right after the app starts rather than before it, so
-the first screen never waits for it; until then the line is simply not there.
+the first screen never waits for it; until then the line is simply not there. The digits of the
+range that names the operator — the number's pool — are coloured at the start of the number.
 
 A stranger also shows the name the phone's dialer found for the number by its own caller ID
 (Google's Phone: a business, a delivery service), «Bakkerij de Graaf · by the Phone app».

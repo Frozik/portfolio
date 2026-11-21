@@ -157,6 +157,7 @@ export const EN: ITexts = {
     fromDialer: 'by the Phone app',
     hidden: 'Hidden number',
     move: 'To group…',
+    moveHow: 'Tap the number or its pool under a group: that is what goes there',
     moveTitle: 'Move to a group',
     newGroup: '+ New group',
     remove: 'Remove from group',

@@ -4,7 +4,7 @@ import type { ICaller } from '../../phone/domain/caller';
 import type { IConflictFacts } from './conflict-detection';
 import type { TEditOutcome } from './edit-outcome';
 import { guarded, rejected } from './edit-outcome';
-import { contactMemberOf, exactNumberMember, isExactFor } from './exact-members';
+import { contactMemberOf, exactNumberMember, isExactFor, poolMember } from './exact-members';
 import type { TAssignableGroup, TGroupId } from './group';
 import type { GroupBook } from './group-book';
 import { findGroup } from './group-book';
@@ -15,8 +15,13 @@ import { claims } from './membership';
 
 export interface IMoveCommand {
   readonly caller: ICaller;
+  /**
+   * The digits of the caller's pool to move whole — every number of the range the operator holds —
+   * or `null` to move the caller alone. Other groups lose only the caller, never the pool.
+   */
+  readonly pool: string | null;
   readonly target: TGroupId;
-  /** Shown next to the exact mask: the contact's name, the operator's, or the day of the call. */
+  /** Shown next to the mask: the contact's name, the operator's, the pool's, or the day of the call. */
   readonly note: string;
   readonly newMemberId: () => TMemberId;
   readonly now: Temporal.Instant;
@@ -96,8 +101,15 @@ export function moveCaller(book: GroupBook, command: IMoveCommand): TEditOutcome
           member: member.id,
         }))
     );
-  } else if (!claims(target, command.caller, command.facts.environment)) {
-    const member = exactMemberFor(command, null);
+  } else if (command.pool !== null || !claims(target, command.caller, command.facts.environment)) {
+    const member =
+      command.pool === null
+        ? exactMemberFor(command, null)
+        : poolMember(command.pool, command.note, {
+            id: command.newMemberId(),
+            now: command.now,
+            excludedFor: null,
+          });
     if (member === null) {
       return rejected('nothing-to-move');
     }
@@ -140,7 +152,7 @@ export function removeCallerFromGroup(
   if (group === null || group.kind === 'strangers') {
     return rejected('strangers-take-nobody');
   }
-  const move: IMoveCommand = { ...command, target: command.group, note: '' };
+  const move: IMoveCommand = { ...command, pool: null, target: command.group, note: '' };
   const leftBehind = book.groups.flatMap((other): TGroupChange[] =>
     other.kind === 'strangers'
       ? []

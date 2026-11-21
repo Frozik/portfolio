@@ -30,7 +30,7 @@ describe('a mask of a group, written anew', () => {
     await fireEvent.press(await screen.findByTestId('member-edit'));
 
     expect(rendered.getPathname()).toBe('/mask');
-    expect(await screen.findByTestId('mask-source')).toHaveTextContent('+7 495 123 45 67');
+    expect(await screen.findByTestId('mask-source')).toHaveDisplayValue('+7 495 123 45 67');
   });
 
   it('replaces the exact number with a pattern in the same place, not beside it', async () => {

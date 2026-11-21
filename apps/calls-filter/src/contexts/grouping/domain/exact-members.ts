@@ -31,6 +31,20 @@ export function exactNumberMember(
   };
 }
 
+/** A whole pool of numbers, the range a catalogue says one operator holds: `+7986*` for `7986`. */
+export function poolMember(pool: string, note: string, stamp: IMemberStamp): INumberMaskMember {
+  const mask = parseNumberMask(`+${pool}*`);
+  assert(mask.ok, 'a range of digits always makes a mask');
+  return {
+    kind: 'number-mask',
+    id: stamp.id,
+    mask: mask.value,
+    note,
+    updatedAt: stamp.now,
+    excludedFor: stamp.excludedFor,
+  };
+}
+
 export function contactMemberOf(caller: ICaller, stamp: IMemberStamp): IContactMember {
   assert(caller.contact !== null, 'only a contact makes a contact member');
   return {

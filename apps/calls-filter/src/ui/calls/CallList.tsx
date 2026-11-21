@@ -24,6 +24,7 @@ import { CallerAvatar } from './CallerAvatar';
 import { CallSheet } from './CallSheet';
 import { moveEntry } from './move-caller';
 import { MoveSheet } from './MoveSheet';
+import { splitAtPool } from './number-pool-split';
 import { originText } from './origin-text';
 
 /** A number shrinks rather than lose its last digits to an ellipsis. */
@@ -50,11 +51,12 @@ const CallRow = observer(function CallRow({
   const { caller } = entry;
   const state = callState(entry.outcome);
   const local = entry.at.toZonedDateTimeISO(app.clock.timeZone());
-  const title = caller.number === null ? texts.call.hidden : app.numbering.format(caller.number);
-  const origin = originText(
-    texts,
-    caller.number === null ? null : app.numberingCatalogue.detailsOf(caller.number)
-  );
+  const details = caller.number === null ? null : app.numberingCatalogue.detailsOf(caller.number);
+  const [pool, rest] =
+    caller.number === null
+      ? ['', texts.call.hidden]
+      : splitAtPool(app.numbering.format(caller.number), details?.operatorPool ?? '');
+  const origin = originText(texts, details);
   const time = texts.format.time(local.hour, local.minute);
   const groupLabel = `${groupName(texts, group)}${row.conflictWith.length > 0 ? ' ⚠' : ''}`;
   const groupFit = useWordFit(groupLabel);
@@ -85,7 +87,12 @@ const CallRow = observer(function CallRow({
             adjustsFontSizeToFit
             minimumFontScale={NUMBER_MIN_SCALE}
           >
-            {title} {texts.call.calls(row.calls)}
+            {pool === '' ? null : (
+              <Text testID={`call-pool-${entry.id}`} style={{ color: palette.accent }}>
+                {pool}
+              </Text>
+            )}
+            {rest} {texts.call.calls(row.calls)}
           </Text>
           {names.map(name => (
             <Text key={name} style={[styles.subtitle, { color: palette.fgDim }]} numberOfLines={1}>

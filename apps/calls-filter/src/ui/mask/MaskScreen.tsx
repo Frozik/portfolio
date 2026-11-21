@@ -1,7 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
@@ -15,12 +14,11 @@ import { useApp } from '../AppContext';
 import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
 import { Hint } from '../kit/Hint';
-import { RADIUS, TEXT_SIZE } from '../kit/metrics';
 import { Screen } from '../kit/Screen';
 import { TextField } from '../kit/TextField';
 import { useLeave } from '../kit/use-leave';
 import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
-import { usePalette } from '../theme/AppTheme';
+import { MaskSourceField } from './MaskSourceField';
 import { NumberKeypad } from './NumberKeypad';
 
 const MaskState = observer(function MaskState({ editor }: { readonly editor: MaskEditor }) {
@@ -67,7 +65,6 @@ const MaskState = observer(function MaskState({ editor }: { readonly editor: Mas
 export const MaskScreen = observer(function MaskScreen() {
   const app = useApp();
   const texts = useTexts();
-  const palette = usePalette();
   const leave = useLeave();
   const params = useLocalSearchParams<{
     readonly group?: string;
@@ -132,19 +129,7 @@ export const MaskScreen = observer(function MaskScreen() {
       title={texts.mask.title}
       titleLeading={<BackArrow testID="screen-back" />}
     >
-      <View
-        testID="mask-source"
-        style={[styles.display, { borderColor: palette.line, backgroundColor: palette.bgCard }]}
-      >
-        <Text
-          style={[
-            styles.displayText,
-            { color: editor.source === '' ? palette.fgFaint : palette.fg },
-          ]}
-        >
-          {editor.source === '' ? texts.mask.placeholderNumber : editor.source}
-        </Text>
-      </View>
+      <MaskSourceField editor={editor} />
       <MaskState editor={editor} />
       <TextField
         testID="mask-sample"
@@ -169,15 +154,4 @@ export const MaskScreen = observer(function MaskScreen() {
       <NumberKeypad editor={editor} />
     </Screen>
   );
-});
-
-const styles = StyleSheet.create({
-  display: {
-    minHeight: 56,
-    borderRadius: RADIUS,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  displayText: { fontFamily: 'monospace', fontSize: TEXT_SIZE.title },
 });

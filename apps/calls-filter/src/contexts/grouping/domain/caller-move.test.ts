@@ -31,9 +31,15 @@ function groupOf(book: GroupBook, caller: ICaller): string {
   return found.kind === 'one' ? found.group.id : 'conflict';
 }
 
-function move(book: GroupBook, caller: ICaller, target: string): TEditOutcome {
+function move(
+  book: GroupBook,
+  caller: ICaller,
+  target: string,
+  pool: string | null = null
+): TEditOutcome {
   return moveCaller(book, {
     caller,
+    pool,
     target: target as TGroupId,
     note: '',
     newMemberId,
@@ -83,6 +89,23 @@ describe('moving a caller to a group', () => {
     const second = stranger('31852222222', 'PostNL');
     const moved = applied(move(bookOf([custom('delivery', [])]), first, 'delivery'));
     expect([groupOf(moved, first), groupOf(moved, second)]).toEqual(['delivery', STRANGERS_ID]);
+  });
+
+  it('moves the caller’s whole pool: another number of the operator’s range lands there too', () => {
+    const caller = stranger('79865107191');
+    const moved = applied(move(bookOf([custom('spam', [])]), caller, 'spam', '7986'));
+    expect([
+      groupOf(moved, caller),
+      groupOf(moved, stranger('79864267807')),
+      groupOf(moved, stranger('79161234567')),
+    ]).toEqual(['spam', 'spam', STRANGERS_ID]);
+  });
+
+  it('adds the pool to a group that already has the caller’s own number', () => {
+    const caller = stranger('79865107191');
+    const book = bookOf([custom('spam', [numberMask('+79865107191')])]);
+    const moved = applied(move(book, caller, 'spam', '7986'));
+    expect(groupOf(moved, stranger('79864267807'))).toBe('spam');
   });
 
   it('never moves a caller into «strangers», and only contacts into «my contacts»', () => {

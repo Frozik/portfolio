@@ -21,6 +21,7 @@ describe('what a number says about itself', () => {
       country: 'RU',
       states: ['kirov-oblast'],
       operator: 'beeline',
+      operatorPool: '7963',
       service: null,
     });
   });
@@ -30,8 +31,13 @@ describe('what a number says about itself', () => {
       country: 'RU',
       states: [],
       operator: null,
+      operatorPool: null,
       service: null,
     });
+  });
+
+  it('takes as the operator’s pool the range that names the operator, not a deeper one naming a region', () => {
+    expect(numberingDetailsOf([RUSSIA, BEELINE, KIROV])?.operatorPool).toBe('7963');
   });
 
   it('names a service that belongs to no country', () => {

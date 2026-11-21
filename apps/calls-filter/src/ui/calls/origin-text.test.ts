@@ -10,6 +10,7 @@ describe('where a call is from, in one line', () => {
         country: 'RU',
         states: ['kirov-oblast'],
         operator: 'beeline',
+        operatorPool: '7963',
         service: null,
       })
     ).toBe([countries.RU, states.RU['kirov-oblast'], operators.beeline].join(' · '));
@@ -21,15 +22,22 @@ describe('where a call is from, in one line', () => {
         country: 'RU',
         states: ['moscow', 'moscow-oblast', 'kirov-oblast'],
         operator: 'mts',
+        operatorPool: '7916',
         service: null,
       })
     ).toBe([countries.RU, operators.mts].join(' · '));
   });
 
   it('names a service that belongs to no country', () => {
-    expect(originText(EN, { country: null, states: [], operator: null, service: 'inmarsat' })).toBe(
-      services.inmarsat
-    );
+    expect(
+      originText(EN, {
+        country: null,
+        states: [],
+        operator: null,
+        operatorPool: null,
+        service: 'inmarsat',
+      })
+    ).toBe(services.inmarsat);
   });
 
   it('says nothing when nothing is known', () => {

@@ -295,6 +295,50 @@ describe('a group, edited on its own screen', () => {
       )
     ).toEqual(['+31851234567']);
   });
+
+  it('marks the start of a number that its operator’s pool covers', async () => {
+    const call: IJournalEntry = {
+      id: 'call-pool' as TJournalEntryId,
+      at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
+      rawNumber: '+79630001234',
+      caller: stranger('79630001234'),
+      answered: null,
+      outcome: { kind: 'history', type: 'missed' },
+    };
+    const phone = fakePhone({
+      book: bookOf([SPAM]),
+      journal: [call],
+      numberingCatalogue: [KIROV_BEELINE],
+    });
+    await renderApp(ROUTES, { phone, initialUrl: `/group/${STRANGERS_ID}` });
+
+    expect(await screen.findByTestId('call-pool-call-pool')).toHaveTextContent('+7 963 000');
+  });
+
+  it('moves a stranger’s whole pool to a group with the pool under it', async () => {
+    const call: IJournalEntry = {
+      id: 'call-ru' as TJournalEntryId,
+      at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
+      rawNumber: '+79630001234',
+      caller: stranger('79630001234'),
+      answered: null,
+      outcome: { kind: 'history', type: 'missed' },
+    };
+    const phone = fakePhone({
+      book: bookOf([SPAM]),
+      journal: [call],
+      numberingCatalogue: [KIROV_BEELINE],
+    });
+    await renderApp(ROUTES, { phone, initialUrl: `/group/${STRANGERS_ID}` });
+    await fireEvent.press(await screen.findByTestId('call-move-call-ru'));
+    await fireEvent.press(await screen.findByTestId('move-to-spam-pool'));
+
+    expect(
+      spamIn(phone)?.include.map(member =>
+        member.kind === 'number-mask' ? member.mask.source : member.kind
+      )
+    ).toEqual(['+7963000*']);
+  });
 });
 
 describe('the settings of a group as icons on its rules', () => {

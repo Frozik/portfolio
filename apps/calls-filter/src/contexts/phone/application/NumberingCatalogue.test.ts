@@ -27,7 +27,7 @@ describe('the numbering catalogue in the app', () => {
     await catalogue.open();
     expect([before, catalogue.detailsOf(MOBILE)]).toEqual([
       null,
-      { country: 'RU', states: [], operator: 'mts', service: null },
+      { country: 'RU', states: [], operator: 'mts', operatorPool: '7915', service: null },
     ]);
   });
 

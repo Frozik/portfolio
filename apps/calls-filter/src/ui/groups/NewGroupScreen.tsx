@@ -13,7 +13,7 @@ import { DEFAULT_REPEAT_WINDOW_MINUTES } from '../../contexts/policy/domain/poli
 import { REPEAT_OFF } from '../../contexts/policy/domain/repeat-pass';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
-import { moveEntry } from '../calls/move-caller';
+import { moveEntry, poolMoveOf } from '../calls/move-caller';
 import { ColorSheet } from '../group/ColorSheet';
 import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
@@ -36,8 +36,10 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
   const texts = useTexts();
   const scheme = useScheme();
   const router = useRouter();
-  const { entry: entryId } = useLocalSearchParams<{
+  const { entry: entryId, pool } = useLocalSearchParams<{
     readonly entry?: string;
+    /** `1`: the call's whole pool goes into the new group, not its number alone. */
+    readonly pool?: string;
   }>();
   const [name, setName] = useState('');
   const [color, setColor] = useState<TGroupColor>(() => freshColor(app.books.book));
@@ -61,7 +63,7 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
     );
     const entry = app.calls.entries.find(candidate => candidate.id === entryId);
     if (entry !== undefined) {
-      moveEntry(app, entry, id);
+      moveEntry(app, entry, id, pool === '1' ? poolMoveOf(app, texts, entry.caller) : null);
     }
     router.replace(`/group/${id}`);
   };

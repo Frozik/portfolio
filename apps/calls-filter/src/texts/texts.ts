@@ -128,6 +128,7 @@ export interface ITexts {
     readonly hidden: string;
     readonly move: string;
     readonly moveTitle: string;
+    readonly moveHow: string;
     readonly newGroup: string;
     readonly remove: string;
     readonly callBack: string;

@@ -3,8 +3,13 @@ import { isNil } from 'lodash-es';
 import type { TE164Digits } from '../caller';
 import type { INumberingMask } from './gen/numbering-codes';
 
+/** A catalogue mask is `+`, the range's digits and `*`: `+7986*`. */
+export function maskDigits(mask: string): string {
+  return mask.slice(1, -1);
+}
+
 function covers(node: INumberingMask, digits: TE164Digits): boolean {
-  return digits.startsWith(node.mask.slice(1, -1));
+  return digits.startsWith(maskDigits(node.mask));
 }
 
 /** Every mask covering a number, from its country code down to the deepest; empty when none does. */
