@@ -148,9 +148,7 @@ const CallRow = observer(function CallRow({
                 testID={`call-quick-${target.id}-${entry.id}`}
                 label={groupName(texts, target)}
                 tint={groupColor(target.color, scheme)}
-                onPress={() =>
-                  moveEntry(app, entry, target.id, caller.number === null ? 'name' : 'number')
-                }
+                onPress={() => moveEntry(app, entry, target.id)}
               />
             ))}
           </Wrap>

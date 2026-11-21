@@ -1,5 +1,4 @@
 import type { TPattern, TPatternSymbol } from './pattern';
-import type { TPatternAlphabet } from './pattern-regex';
 
 interface ITransition {
   readonly symbol: TPatternSymbol;
@@ -98,19 +97,14 @@ function literalsOf(automaton: IAutomaton): readonly string[] {
 }
 
 const DIGIT_ALPHABET = '0123456789';
-const TEXT_FILLERS = 'abcdefghijklmnopqrstuvwxyz';
 
 /**
  * The characters worth trying: every literal any automaton mentions, plus one character
  * none of them mentions (it stands for all the others, which every automaton treats alike).
  */
-function candidateCharacters(
-  automata: readonly IAutomaton[],
-  alphabet: TPatternAlphabet
-): readonly string[] {
+function candidateCharacters(automata: readonly IAutomaton[]): readonly string[] {
   const literals = new Set(automata.flatMap(literalsOf));
-  const pool = alphabet === 'digits' ? DIGIT_ALPHABET : TEXT_FILLERS;
-  const filler = [...pool].find(character => !literals.has(character));
+  const filler = [...DIGIT_ALPHABET].find(character => !literals.has(character));
   return filler === undefined ? [...literals] : [...literals, filler];
 }
 
@@ -119,7 +113,6 @@ export interface IIntersectionQuery {
   readonly required: readonly TPattern[];
   /** None of these may accept it. */
   readonly forbidden: readonly TPattern[];
-  readonly alphabet: TPatternAlphabet;
   /** The longest example worth reporting: a number has at most fifteen digits. */
   readonly maxLength: number;
 }
@@ -133,7 +126,7 @@ export function findIntersection(query: IIntersectionQuery): string | null {
   const required = query.required.map(buildAutomaton);
   const forbidden = query.forbidden.map(buildAutomaton);
   const all = [...required, ...forbidden];
-  const characters = candidateCharacters(all, query.alphabet);
+  const characters = candidateCharacters(all);
   const start = all.map(automaton => closure(automaton, [0]));
   const key = (sets: readonly TStateSet[]): string => sets.map(set => set.join(',')).join('|');
 

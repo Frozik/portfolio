@@ -4,7 +4,6 @@ import type { GroupBook } from '../../grouping/domain/group-book';
 import type { IMatchingEnvironment } from '../../grouping/domain/matching-environment';
 import type { IJournalEntry } from '../../journal/domain/journal-entry';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
-import { normalizeName } from '../../phone/domain/name-normalization';
 import type { IPhoneNumbering } from '../../phone/domain/ports/phone-numbering';
 import type { IMoment } from '../../policy/domain/activity-now';
 import type { TPlaceFacts } from '../../policy/domain/place-rule';
@@ -16,7 +15,6 @@ import type { IScreeningInputs } from '../domain/screening-inputs';
 /** A caller as the user describes one: a number (or a hidden one) and the name the operator sends. */
 export interface INumberQuery {
   readonly number: string;
-  readonly networkName: string;
   readonly hidden: boolean;
 }
 
@@ -55,10 +53,8 @@ function lastRejectedAt(journal: readonly IJournalEntry[], number: TE164Digits |
 }
 
 function callerOf(query: INumberQuery, context: INumberCheckContext): ICaller | null {
-  const trimmedName = query.networkName.trim();
-  const networkName = trimmedName === '' ? null : normalizeName(trimmedName);
   if (query.hidden) {
-    return { number: null, traits: null, networkName, contact: null, dialer: null };
+    return { number: null, traits: null, networkName: null, contact: null, dialer: null };
   }
   const number = context.numbering.parse(query.number, context.environment.home.country);
   if (number === null) {
@@ -70,7 +66,7 @@ function callerOf(query: INumberQuery, context: INumberCheckContext): ICaller | 
   return {
     number,
     traits: context.numbering.traits(number),
-    networkName,
+    networkName: null,
     contact: known?.contact ?? null,
     dialer: null,
   };

@@ -5,13 +5,11 @@ import {
   contact,
   custom,
   MY_CONTACTS_ID,
-  nameMask,
   NETHERLANDS_HOME,
   numberMask,
   pickedContact,
   special,
   stranger,
-  strangerWithDialerName,
   STRANGERS_ID,
 } from '../testing/group-book-fixtures';
 import type { GroupBook } from './group-book';
@@ -35,32 +33,9 @@ describe('the group of a caller', () => {
     expect(groupOf(book, stranger('31851234567'))).toBe('delivery');
   });
 
-  it('falls to «strangers» when no group takes the caller by number or by name', () => {
-    const book = bookOf([
-      custom('spam', [numberMask('+7 495*'), nameMask('*klantenservice*', 'network')]),
-    ]);
+  it('falls to «strangers» when no group takes the number, whatever the operator named it', () => {
+    const book = bookOf([custom('spam', [numberMask('+7 495*')])]);
     expect(groupOf(book, stranger('31201234567', 'PostNL'))).toBe(STRANGERS_ID);
-  });
-
-  it('takes a caller by the operator name as well as by the number', () => {
-    const book = bookOf([custom('spam', [nameMask('*klantenservice*', 'network')])]);
-    expect(groupOf(book, stranger('31201234567', 'KPN Klantenservice'))).toBe('spam');
-  });
-
-  it('takes a caller by a name with a dash and a colon in it, read as plain characters', () => {
-    const book = bookOf([custom('spam', [nameMask('IP Isanshin: kol-tsentr', 'network')])]);
-    expect(groupOf(book, stranger('79864563560', 'IP Isanshin: kol-tsentr'))).toBe('spam');
-  });
-
-  it('reads a name mask regardless of case, in either direction and in any script', () => {
-    const book = bookOf([
-      custom('latin', [nameMask('ip*', 'network')]),
-      custom('cyrillic', [nameMask('ООО РОМАШКА', 'network')]),
-    ]);
-    expect([
-      groupOf(book, stranger('79864563560', 'IP Isanshin')),
-      groupOf(book, stranger('79161234567', 'ооо Ромашка')),
-    ]).toEqual(['latin', 'cyrillic']);
   });
 
   it('keeps an exclusion stronger than the inclusion', () => {
@@ -93,24 +68,9 @@ describe('the group of a caller', () => {
     expect(groupOf(book, contact('Mum', '31612345678'))).toBe('family');
   });
 
-  it('treats a mask over contact names as naming those contacts', () => {
-    const book = bookOf(
-      [custom('couriers', [nameMask('courier*', 'contact')])],
-      [nameMask('courier*', 'contact')]
-    );
-    expect(groupOf(book, contact('Courier Ozon', '31612345000'))).toBe('couriers');
-  });
-
   it('sends an excluded contact nobody took to «strangers»', () => {
     const book = bookOf([], [pickedContact('Ex', '31600000000')]);
     expect(groupOf(book, contact('Ex', '31600000000'))).toBe(STRANGERS_ID);
-  });
-
-  it('takes a stranger by the name the dialer found when a mask is over the operator’s name', () => {
-    const book = bookOf([custom('call-centres', [nameMask('*kol-tsentr*', 'network')])]);
-    expect(groupOf(book, strangerWithDialerName('79864267807', 'ETST kol-tsentr'))).toBe(
-      'call-centres'
-    );
   });
 
   it('knows hidden, foreign and premium numbers without masks', () => {

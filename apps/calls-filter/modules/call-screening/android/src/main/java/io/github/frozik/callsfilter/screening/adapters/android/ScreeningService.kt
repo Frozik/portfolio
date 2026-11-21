@@ -40,12 +40,21 @@ class ScreeningService : CallScreeningService() {
     respondToCall(callDetails, responseOf(reply))
   }
 
-  /** What the system handed over about the caller's name, without the name itself. */
+  /**
+   * What the system handed over about the caller, without the name or the number. Android gives a
+   * screening app no caller name at all (only the default dialer sees it); logged so that a phone
+   * or an Android version that does pass it shows up at once.
+   */
   private fun detailsOf(details: Call.Details): Map<String, String> = buildMap {
+    put("sdk", Build.VERSION.SDK_INT.toString())
+    put("number", (details.handle != null).toString())
+    put("number-presentation", details.handlePresentation.toString())
     put("network-name", (!details.callerDisplayName.isNullOrBlank()).toString())
     put("network-name-presentation", details.callerDisplayNamePresentation.toString())
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       put("contact-name", (!details.contactDisplayName.isNullOrBlank()).toString())
+      put("verstat", details.callerNumberVerificationStatus.toString())
+      put("screened-after-ms", (System.currentTimeMillis() - details.creationTimeMillis).toString())
     }
     put("extras", details.extras?.keySet()?.sorted()?.joinToString(",").orEmpty())
     put("intent-extras", details.intentExtras?.keySet()?.sorted()?.joinToString(",").orEmpty())

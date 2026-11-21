@@ -25,7 +25,7 @@ export function WhereToAnswer() {
       );
       const target = group === undefined ? null : findGroup(app.books.book, group as TGroupId);
       if (entry !== undefined && target?.kind === 'custom') {
-        moveEntry(app, entry, target.id, entry.caller.number === null ? 'name' : 'number');
+        moveEntry(app, entry, target.id);
         router.replace({ pathname: '/group/[id]', params: { id: target.id } });
         return;
       }

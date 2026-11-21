@@ -150,7 +150,6 @@ export const EN: ITexts = {
       'toll-free':
         "Free-to-call numbers by the country's own plan — 0800 in the Netherlands, 8 800 in Russia, 1-800 in the US; often call centres",
     },
-    nameField: { network: 'operator or dialer name', contact: 'contact name', any: 'any name' },
     excludedFor: group => `moved to «${group}»`,
   },
   call: {
@@ -159,7 +158,6 @@ export const EN: ITexts = {
     hidden: 'Hidden number',
     move: 'To group…',
     moveTitle: 'Move to a group',
-    moveHow: 'Tap the number or the name under a group: that is what goes there',
     newGroup: '+ New group',
     remove: 'Remove from group',
     callBack: 'Call back',

@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import type { TMoveKey } from '../../contexts/grouping/domain/caller-move';
 import type { TGroupColor } from '../../contexts/grouping/domain/group';
 import { COLOR_SLOTS } from '../../contexts/grouping/domain/group';
 import { freshColor } from '../../contexts/grouping/domain/group-book';
@@ -37,9 +36,8 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
   const texts = useTexts();
   const scheme = useScheme();
   const router = useRouter();
-  const { entry: entryId, by } = useLocalSearchParams<{
+  const { entry: entryId } = useLocalSearchParams<{
     readonly entry?: string;
-    readonly by?: TMoveKey;
   }>();
   const [name, setName] = useState('');
   const [color, setColor] = useState<TGroupColor>(() => freshColor(app.books.book));
@@ -63,7 +61,7 @@ export const NewGroupScreen = observer(function NewGroupScreen() {
     );
     const entry = app.calls.entries.find(candidate => candidate.id === entryId);
     if (entry !== undefined) {
-      moveEntry(app, entry, id, by ?? 'number');
+      moveEntry(app, entry, id);
     }
     router.replace(`/group/${id}`);
   };

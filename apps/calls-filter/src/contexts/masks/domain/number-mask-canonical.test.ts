@@ -25,9 +25,7 @@ function canonicalRegex(source: string, region: IDialingRegion): RegExp | string
     throw new Error(`${source} did not parse`);
   }
   const canonical = canonicalNumberPattern(mask.value, region);
-  return canonical.ok
-    ? new RegExp(patternRegexSource(canonical.value, 'digits'))
-    : canonical.error.kind;
+  return canonical.ok ? new RegExp(patternRegexSource(canonical.value)) : canonical.error.kind;
 }
 
 describe('a mask in international form', () => {

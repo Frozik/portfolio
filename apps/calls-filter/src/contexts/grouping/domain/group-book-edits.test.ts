@@ -7,7 +7,6 @@ import {
   custom,
   factsWith,
   MY_CONTACTS_ID,
-  nameMask,
   newMemberId,
   NOW,
   numberMask,
@@ -163,10 +162,10 @@ describe('editing the group book', () => {
     });
   });
 
-  it('rewrites a mask in place: an exact name becomes a pattern, keeping its place and its note', () => {
-    const exact = { ...nameMask('IP Isanshin'), note: 'from a call' };
+  it('rewrites a mask in place: an exact number becomes a pattern, keeping its place and its note', () => {
+    const exact = { ...numberMask('+7 499 123 45 67'), note: 'from a call' };
     const book = bookOf([custom('spam', [numberMask('+7 495*'), exact])]);
-    const pattern = nameMask('IP*');
+    const pattern = numberMask('+7 499*');
     const outcome = replaceMask(book, {
       group: 'spam' as TGroupId,
       side: 'include',
@@ -177,11 +176,10 @@ describe('editing the group book', () => {
     assert(outcome.kind === 'applied', 'the rewrite applies');
     const [spam] = outcome.book.groups;
     assert(spam?.kind === 'custom', 'spam is a group of the user');
-    expect(spam.include.map(member => member.kind === 'name-mask' && member.mask.source)).toEqual([
-      false,
-      'IP*',
-    ]);
-    expect(spam.include[1]?.kind === 'name-mask' && spam.include[1].note).toBe('from a call');
+    expect(spam.include.map(member => member.kind === 'number-mask' && member.mask.source)).toEqual(
+      ['+7 495*', '+7 499*']
+    );
+    expect(spam.include[1]?.kind === 'number-mask' && spam.include[1].note).toBe('from a call');
   });
 
   it('stops a rewritten mask that would make a conflict until a resolution is chosen', () => {
@@ -202,7 +200,7 @@ describe('editing the group book', () => {
     const outcome = replaceMask(book, {
       group: 'spam' as TGroupId,
       side: 'include',
-      member: nameMask('IP*'),
+      member: numberMask('+7 499*'),
       now: NOW,
       facts,
     });

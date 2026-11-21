@@ -21,8 +21,6 @@ interface IScenarioCaller {
     | 'voip'
     | 'toll-free'
     | 'other';
-  readonly networkName: string | null;
-  readonly dialerName: string | null;
   readonly contactName: string | null;
   readonly contactLookupKey: string | null;
 }
@@ -48,8 +46,6 @@ function caller(partial: Partial<IScenarioCaller>): IScenarioCaller {
     number: '31201234567',
     country: 'NL',
     type: 'fixed-line',
-    networkName: null,
-    dialerName: null,
     contactName: null,
     contactLookupKey: null,
     ...partial,
@@ -82,12 +78,6 @@ export const SCENARIOS: readonly IScenario[] = [
   }),
   scenario('a premium-rate number is spam', {
     caller: caller({ number: '319001234567', type: 'premium-rate' }),
-  }),
-  scenario('an operator name puts a caller in spam', {
-    caller: caller({ number: '31301234567', networkName: 'KPN Klantenservice' }),
-  }),
-  scenario('the dialer’s name for a stranger puts the caller in spam like the operator’s', {
-    caller: caller({ number: '31301234567', dialerName: 'KPN Klantenservice' }),
   }),
   scenario('a contact passes in my contacts', {
     caller: contactCaller('Neighbour', '31611111111'),
@@ -176,9 +166,6 @@ export const SCENARIOS: readonly IScenario[] = [
     book: OFFICE_ONLY_BOOK,
     caller: caller({ number: '31201234567' }),
   }),
-  scenario('an operator name puts any number in delivery', {
-    caller: caller({ number: '31107654321', networkName: 'PostNL Bezorging' }),
-  }),
   scenario('the night group for hidden numbers is passed over by day', {
     caller: caller({ number: null, country: null }),
     local: '2026-11-03T12:00',
@@ -217,9 +204,6 @@ export const SCENARIOS: readonly IScenario[] = [
   scenario('a pause lets spam through', {
     caller: caller({ number: '74951112233', country: 'RU' }),
     paused: true,
-  }),
-  scenario('accents and case never decide a name', {
-    caller: caller({ number: '31301234567', networkName: 'KPN KLANTENSERVİCE' }),
   }),
   scenario('an empty book takes everyone as a stranger', {
     book: EMPTY_BOOK,

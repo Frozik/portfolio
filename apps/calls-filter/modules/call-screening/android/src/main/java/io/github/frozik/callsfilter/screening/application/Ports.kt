@@ -22,21 +22,6 @@ fun interface RulesetSource {
 /** What the call itself says, before the address book and the numbering plan are asked. */
 data class IncomingCall(val rawNumber: String?, val networkName: String?)
 
-/**
- * The names the phone's call log kept from a number's earlier calls. The operator's name and the
- * dialer's caller ID land there only after a call, too late for the call they came with.
- */
-data class RememberedNames(val networkName: String?, val dialerName: String?) {
-  companion object {
-    val NONE = RememberedNames(null, null)
-  }
-}
-
-fun interface NameMemory {
-  /** `number` is the caller's international digits, without the plus. */
-  fun of(number: String): RememberedNames
-}
-
 fun interface CallerResolver {
   fun resolve(call: IncomingCall, homeCountry: String): Caller
 }

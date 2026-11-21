@@ -40,11 +40,7 @@ function describeToken(token: TMaskToken): string {
 /** The mask editor's words: the mask read aloud, its errors, its tools. */
 export const RU_MASK: ITexts['mask'] = {
   title: 'Маска',
-  number: 'Номер',
-  name: 'Название',
-  field: 'Где искать',
   placeholderNumber: '+7 921 *',
-  placeholderName: '*доставка*',
   check: 'Проверить',
   matches: 'подходит',
   noMatch: 'не подходит',
@@ -92,8 +88,6 @@ export const RU_MASK: ITexts['mask'] = {
     }
   },
   startsWith: 'Начинается с',
-  contains: 'Содержит',
-  exactly: 'Точно',
   anyDigit: '. любая',
   anyRun: '* много',
   repeat: '{…}',

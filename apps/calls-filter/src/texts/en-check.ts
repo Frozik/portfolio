@@ -6,7 +6,6 @@ export const EN_CHECK: ITexts['check'] = {
   open: 'Check a number',
   number: 'Number',
   numberPlaceholder: '+31 6 12345678',
-  networkName: 'Name from the operator',
   hidden: 'Hidden number',
   hint: 'What happens if this number calls now, by the same rules the filter uses',
   noNumber: 'This is not a phone number',

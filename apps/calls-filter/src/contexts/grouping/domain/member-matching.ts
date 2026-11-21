@@ -1,5 +1,4 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
-import { isNil } from 'lodash-es';
 
 import { canonicalNumberPattern } from '../../masks/domain/number-mask-canonical';
 import { patternRegexSource } from '../../masks/domain/pattern-regex';
@@ -8,9 +7,8 @@ import type { IMatchingEnvironment } from './matching-environment';
 import type { TMember, TSpecialMask } from './member';
 
 /**
- * How a member took a caller. `explicit` means the user named this person (a picked contact,
- * a mask over contact names); `pattern` means a rule that happens to cover them, which
- * «exclude my contacts» overrides.
+ * How a member took a caller. `explicit` means the user named this person (a picked contact);
+ * `pattern` means a rule that happens to cover them, which «exclude my contacts» overrides.
  */
 export type TMatchKind = 'explicit' | 'pattern';
 
@@ -55,26 +53,8 @@ function compile(member: TMember, environment: IMatchingEnvironment): TMatcher {
       if (!canonical.ok) {
         return NEVER;
       }
-      const regex = regexOf(patternRegexSource(canonical.value, 'digits'));
+      const regex = regexOf(patternRegexSource(canonical.value));
       return caller => (caller.number !== null && regex.test(caller.number) ? 'pattern' : null);
-    }
-    case 'name-mask': {
-      const regex = regexOf(patternRegexSource(member.mask.pattern, 'text'));
-      const contactMatches = (caller: ICaller): boolean =>
-        caller.contact !== null && regex.test(caller.contact.name);
-      const networkMatches = (caller: ICaller): boolean =>
-        [caller.networkName, caller.dialer?.name].some(name => !isNil(name) && regex.test(name));
-      switch (member.field) {
-        case 'contact':
-          return caller => (contactMatches(caller) ? 'explicit' : null);
-        case 'network':
-          return caller => (networkMatches(caller) ? 'pattern' : null);
-        case 'any':
-          return caller =>
-            contactMatches(caller) ? 'explicit' : networkMatches(caller) ? 'pattern' : null;
-        default:
-          return assertNever(member.field);
-      }
     }
     case 'special':
       return specialMatcher(member.special);

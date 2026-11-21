@@ -1,7 +1,6 @@
 import { assert } from '@frozik/utils/assert/assert';
 import { Temporal } from 'temporal-polyfill';
 
-import { parseNameMask } from '../../masks/domain/name-mask';
 import { parseNumberMask } from '../../masks/domain/number-mask';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
 import type { TCountryCode } from '../../phone/domain/dialing-region';
@@ -14,11 +13,9 @@ import { groupBook } from '../domain/group-book';
 import type { IMatchingEnvironment } from '../domain/matching-environment';
 import type {
   IContactMember,
-  INameMaskMember,
   INumberMaskMember,
   TMember,
   TMemberId,
-  TNameField,
   TSpecialMask,
 } from '../domain/member';
 
@@ -43,20 +40,6 @@ export function numberMask(source: string): INumberMaskMember {
     kind: 'number-mask',
     id: newMemberId(),
     mask: mask.value,
-    note: '',
-    updatedAt: NOW,
-    excludedFor: null,
-  };
-}
-
-export function nameMask(source: string, field: TNameField = 'any'): INameMaskMember {
-  const mask = parseNameMask(source);
-  assert(mask.ok, `${source} parses`);
-  return {
-    kind: 'name-mask',
-    id: newMemberId(),
-    mask: mask.value,
-    field,
     note: '',
     updatedAt: NOW,
     excludedFor: null,

@@ -4,14 +4,13 @@ import type { TPattern } from '../../masks/domain/pattern';
 import { literalPattern } from '../../masks/domain/pattern';
 import { findIntersection } from '../../masks/domain/pattern-automaton';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
-import type { TNormalizedName } from '../../phone/domain/name-normalization';
 import type { IConflict, IConflictCause } from './conflict';
 import { conflictKey } from './conflict';
 import type { ICustomGroup, TAssignableGroup } from './group';
 import type { GroupBook } from './group-book';
 import { customGroups, myContactsGroup } from './group-book';
 import type { IMatchingEnvironment } from './matching-environment';
-import type { IContactMember, INameMaskMember, TMember, TNameField } from './member';
+import type { IContactMember, TMember } from './member';
 import { matchMember } from './member-matching';
 import { claims, membership } from './membership';
 import { pickedContactAsCaller } from './picked-contact';
@@ -23,9 +22,6 @@ export interface IConflictFacts {
   /** Callers from the call log, and every number of the address book as a caller. */
   readonly knownCallers: readonly ICaller[];
 }
-
-/** A longest name worth an example: past it the overlap is real but unreadable. */
-const MAX_NAME_EXAMPLE = 64;
 
 interface INumberSide {
   readonly member: TMember;
@@ -63,14 +59,6 @@ function excludedNumberPatterns(
   });
 }
 
-function fieldsOverlap(left: TNameField, right: TNameField): boolean {
-  return left === right || left === 'any' || right === 'any';
-}
-
-function nameMembers(members: readonly TMember[]): readonly INameMaskMember[] {
-  return members.filter((member): member is INameMaskMember => member.kind === 'name-mask');
-}
-
 function cause(group: TAssignableGroup, members: readonly TMember[]): IConflictCause {
   return { group: group.id, members };
 }
@@ -99,7 +87,6 @@ function numberConflicts(
             findIntersection({
               required: [leftPattern, rightPattern],
               forbidden,
-              alphabet: 'digits',
               maxLength: MAX_NUMBER_DIGITS,
             })
           )
@@ -110,39 +97,6 @@ function numberConflicts(
           groups: [left.id, right.id],
           example: { kind: 'number', digits: example as TE164Digits },
           causes: [cause(left, [leftSide.member]), cause(right, [rightSide.member])],
-          knownCallers: [],
-        });
-      }
-    }
-  }
-  return conflicts;
-}
-
-function nameConflicts(left: ICustomGroup, right: ICustomGroup): IConflict[] {
-  const conflicts: IConflict[] = [];
-  for (const leftMember of nameMembers(left.include)) {
-    for (const rightMember of nameMembers(right.include)) {
-      if (!fieldsOverlap(leftMember.field, rightMember.field)) {
-        continue;
-      }
-      const forbidden = [...nameMembers(left.exclude), ...nameMembers(right.exclude)]
-        .filter(
-          member =>
-            fieldsOverlap(member.field, leftMember.field) &&
-            fieldsOverlap(member.field, rightMember.field)
-        )
-        .map(member => member.mask.pattern);
-      const example = findIntersection({
-        required: [leftMember.mask.pattern, rightMember.mask.pattern],
-        forbidden,
-        alphabet: 'text',
-        maxLength: MAX_NAME_EXAMPLE,
-      });
-      if (example !== null) {
-        conflicts.push({
-          groups: [left.id, right.id],
-          example: { kind: 'name', name: example as TNormalizedName },
-          causes: [cause(left, [leftMember]), cause(right, [rightMember])],
           knownCallers: [],
         });
       }
@@ -236,8 +190,8 @@ function uniqueById(members: readonly TMember[]): readonly TMember[] {
 
 /**
  * Every place where two groups take the same caller. Masks are compared exactly through
- * their automata; what masks cannot say (names against numbers, special masks, «my
- * contacts») is checked against the callers already known.
+ * their automata; what masks cannot say (special masks, «my contacts») is checked against the
+ * callers already known.
  */
 export function detectConflicts(book: GroupBook, facts: IConflictFacts): readonly IConflict[] {
   const custom = customGroups(book);
@@ -246,7 +200,6 @@ export function detectConflicts(book: GroupBook, facts: IConflictFacts): readonl
       .slice(index + 1)
       .flatMap(right => [
         ...numberConflicts(left, right, facts.environment),
-        ...nameConflicts(left, right),
         ...specialConflicts(left, right),
       ])
   );

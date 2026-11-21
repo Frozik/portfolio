@@ -4,12 +4,7 @@ import type { ICaller } from '../../phone/domain/caller';
 import type { IConflictFacts } from './conflict-detection';
 import type { TEditOutcome } from './edit-outcome';
 import { guarded, rejected } from './edit-outcome';
-import {
-  contactMemberOf,
-  exactNetworkNameMember,
-  exactNumberMember,
-  isExactFor,
-} from './exact-members';
+import { contactMemberOf, exactNumberMember, isExactFor } from './exact-members';
 import type { TAssignableGroup, TGroupId } from './group';
 import type { GroupBook } from './group-book';
 import { findGroup } from './group-book';
@@ -18,11 +13,8 @@ import { applyChanges } from './group-changes';
 import type { TMember, TMemberId } from './member';
 import { claims } from './membership';
 
-export type TMoveKey = 'number' | 'name';
-
 export interface IMoveCommand {
   readonly caller: ICaller;
-  readonly by: TMoveKey;
   readonly target: TGroupId;
   /** Shown next to the exact mask: the contact's name, the operator's, or the day of the call. */
   readonly note: string;
@@ -34,9 +26,6 @@ export interface IMoveCommand {
 function exactMemberFor(command: IMoveCommand, excludedFor: TGroupId | null): TMember | null {
   const stamp = { id: command.newMemberId(), now: command.now, excludedFor };
   const { caller } = command;
-  if (command.by === 'name') {
-    return caller.networkName === null ? null : exactNetworkNameMember(caller.networkName, stamp);
-  }
   if (caller.contact !== null) {
     return contactMemberOf(caller, stamp);
   }
@@ -53,7 +42,7 @@ function leaveGroup(
   const removals: TGroupChange[] =
     group.kind === 'custom'
       ? group.include
-          .filter(member => isExactFor(member, command.caller, command.by))
+          .filter(member => isExactFor(member, command.caller))
           .map(member => ({ kind: 'remove-include', group: group.id, member: member.id }))
       : [];
   const afterRemovals = applyChanges(book, removals, command.now).book;
@@ -100,7 +89,7 @@ export function moveCaller(book: GroupBook, command: IMoveCommand): TEditOutcome
   if (target.kind === 'my-contacts') {
     intoTarget.push(
       ...target.exclude
-        .filter(member => isExactFor(member, command.caller, command.by))
+        .filter(member => isExactFor(member, command.caller))
         .map((member): TGroupChange => ({
           kind: 'remove-exclude',
           group: target.id,
@@ -114,7 +103,7 @@ export function moveCaller(book: GroupBook, command: IMoveCommand): TEditOutcome
     }
     intoTarget.push(
       ...target.exclude
-        .filter(exclusion => isExactFor(exclusion, command.caller, command.by))
+        .filter(exclusion => isExactFor(exclusion, command.caller))
         .map((exclusion): TGroupChange => ({
           kind: 'remove-exclude',
           group: target.id,
@@ -133,7 +122,6 @@ export function moveCaller(book: GroupBook, command: IMoveCommand): TEditOutcome
 
 export interface IRemoveCallerCommand {
   readonly caller: ICaller;
-  readonly by: TMoveKey;
   readonly group: TGroupId;
   readonly newMemberId: () => TMemberId;
   readonly now: Temporal.Instant;
@@ -158,8 +146,7 @@ export function removeCallerFromGroup(
       ? []
       : other.exclude
           .filter(
-            member =>
-              member.excludedFor === command.group && isExactFor(member, command.caller, command.by)
+            member => member.excludedFor === command.group && isExactFor(member, command.caller)
           )
           .map(member => ({ kind: 'remove-exclude', group: other.id, member: member.id }))
   );

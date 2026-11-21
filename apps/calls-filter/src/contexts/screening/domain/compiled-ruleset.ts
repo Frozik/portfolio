@@ -1,6 +1,6 @@
 import type { TCalendarSource } from '../../calendars/domain/calendar-source';
 import type { TGroupId } from '../../grouping/domain/group';
-import type { TMemberId, TNameField, TSpecialMask } from '../../grouping/domain/member';
+import type { TMemberId, TSpecialMask } from '../../grouping/domain/member';
 import type { TCountryCode } from '../../phone/domain/dialing-region';
 import type { TAction } from '../../policy/domain/action';
 import type { TFloatingMinute } from '../../policy/domain/floating-time';
@@ -13,12 +13,6 @@ export const RULESET_SCHEMA = 1;
 
 export type TCompiledMember =
   | { readonly kind: 'number'; readonly id: TMemberId; readonly regex: string }
-  | {
-      readonly kind: 'name';
-      readonly id: TMemberId;
-      readonly regex: string;
-      readonly field: TNameField;
-    }
   | { readonly kind: 'special'; readonly id: TMemberId; readonly special: TSpecialMask }
   | {
       readonly kind: 'contact';

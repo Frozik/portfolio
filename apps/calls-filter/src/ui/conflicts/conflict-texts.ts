@@ -24,8 +24,6 @@ export function exampleText(
   switch (example.kind) {
     case 'number':
       return numbering.format(example.digits);
-    case 'name':
-      return `«${example.name}»`;
     case 'special':
       return `«${texts.group.special[example.special]}»`;
     case 'caller':

@@ -3,7 +3,6 @@ package io.github.frozik.callsfilter.screening.adapters.android
 import android.content.Context
 import io.github.frozik.callsfilter.screening.application.AfterDecision
 import io.github.frozik.callsfilter.screening.application.AutoReply
-import io.github.frozik.callsfilter.screening.application.CallerLookup
 import io.github.frozik.callsfilter.screening.application.RejectionSummaries
 import io.github.frozik.callsfilter.screening.application.RejectionSummariesAfter
 import io.github.frozik.callsfilter.screening.application.ScreenCall
@@ -21,6 +20,7 @@ class ScreeningRuntime private constructor(context: Context) {
   val country = TelephonyNetworkCountry(application)
   val journal = SqliteCallJournal(database) { runtimeState.retentionDays() }
   val diagnostics = SqliteDiagnostics(database) { System.currentTimeMillis() }
+  val callLogRows = CallLogRowReport(application.contentResolver, diagnostics)
   private val calendarEvents = DeviceCalendarEvents(application.contentResolver)
   val summaries =
     RejectionSummaries(
@@ -33,7 +33,7 @@ class ScreeningRuntime private constructor(context: Context) {
   val screenCall =
     ScreenCall(
       rulesets = rulesets,
-      callers = CallerLookup(PhoneCallerResolver(application.contentResolver), SystemCallLog(application.contentResolver), diagnostics),
+      callers = PhoneCallerResolver(application.contentResolver),
       journal = journal,
       runtime = runtimeState,
       calendar = calendarEvents,

@@ -34,4 +34,9 @@ describe('where a call can move', () => {
   it('is nowhere while the user has no group of their own', () => {
     expect(moveTargets(bookOf([]), STRANGERS_ID, stranger('31201234567'))).toEqual([]);
   });
+
+  it('offers a hidden number nowhere: nothing but the «hidden» mask can name it', () => {
+    const book = bookOf([custom('spam', [])]);
+    expect(moveTargets(book, STRANGERS_ID, { ...stranger('0'), number: null })).toEqual([]);
+  });
 });

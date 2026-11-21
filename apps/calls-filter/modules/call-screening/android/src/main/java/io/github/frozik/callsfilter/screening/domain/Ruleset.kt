@@ -21,14 +21,10 @@ sealed interface RepeatPass {
 
 enum class GroupKind { CUSTOM, MY_CONTACTS, STRANGERS }
 
-enum class NameField { NETWORK, CONTACT, ANY }
-
 enum class SpecialMask { HIDDEN, FOREIGN, PREMIUM_RATE, VOIP, TOLL_FREE }
 
 sealed interface Member {
   data class Number(val regex: Regex) : Member
-
-  data class Name(val regex: Regex, val field: NameField) : Member
 
   data class Special(val mask: SpecialMask) : Member
 

@@ -295,23 +295,6 @@ describe('a group, edited on its own screen', () => {
       )
     ).toEqual(['+31851234567']);
   });
-
-  it('moves a caller with the operator’s name by that name when the name under the group is tapped', async () => {
-    const call: IJournalEntry = {
-      id: 'call-2' as TJournalEntryId,
-      at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
-      rawNumber: '+79864563560',
-      caller: stranger('79864563560', 'IP Isanshin'),
-      answered: null,
-      outcome: { kind: 'history', type: 'rejected' },
-    };
-    const phone = fakePhone({ book: bookOf([SPAM]), journal: [call] });
-    await renderApp(ROUTES, { phone, initialUrl: `/group/${STRANGERS_ID}` });
-    await fireEvent.press(await screen.findByTestId('call-move-call-2'));
-    await fireEvent.press(await screen.findByTestId('move-to-spam-name'));
-
-    expect(spamIn(phone)?.include.map(member => member.kind)).toEqual(['name-mask']);
-  });
 });
 
 describe('the settings of a group as icons on its rules', () => {

@@ -2,7 +2,7 @@ import type { Temporal } from 'temporal-polyfill';
 
 import type { ICaller } from '../../phone/domain/caller';
 import type { IConflict } from './conflict';
-import { contactMemberOf, exactNetworkNameMember, exactNumberMember } from './exact-members';
+import { contactMemberOf, exactNumberMember } from './exact-members';
 import type { TGroupId } from './group';
 import type { GroupBook } from './group-book';
 import { findGroup } from './group-book';
@@ -37,10 +37,7 @@ function exclusionOf(
   if (caller.contact !== null) {
     return contactMemberOf(caller, stamp);
   }
-  if (caller.number !== null) {
-    return exactNumberMember(caller.number, '', stamp);
-  }
-  return caller.networkName === null ? null : exactNetworkNameMember(caller.networkName, stamp);
+  return caller.number === null ? null : exactNumberMember(caller.number, '', stamp);
 }
 
 function keepIn(

@@ -8,7 +8,6 @@ import type { TMemberId } from '../contexts/grouping/domain/member';
 import {
   bookOf,
   custom,
-  nameMask,
   NETHERLANDS_HOME,
   numberMask,
   pickedContact,
@@ -162,6 +161,7 @@ function withPolicy(group: ICustomGroup, policy: IPolicy): ICustomGroup {
 }
 
 const MUM = pickedContact('Mum', '31612345678');
+const COURIER = pickedContact('Courier Ozon', '31687654321');
 
 /** The book the scenarios share: one of every kind of member and policy. */
 export const SCENARIO_BOOK: GroupBook = bookOf(
@@ -171,20 +171,16 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
       custom('work', [numberMask('+31 20 555 ....')], { excludeMyContacts: false }),
       WORK_POLICY
     ),
-    custom('delivery', [numberMask('085 *'), nameMask('*postnl*', 'network')], {
+    custom('delivery', [numberMask('085 *')], {
       policy: {
         ...ALWAYS_BLOCK,
         repeatPass: { kind: 'until', until: Temporal.Instant.from('2026-11-08T00:00:00Z') },
         repeatWindowMinutes: 5,
       },
     }),
-    custom(
-      'spam',
-      [numberMask('+7 495*'), special('premium-rate'), nameMask('*klantenservice*', 'network')],
-      {
-        exclude: [numberMask('+7 495 123 45 67')],
-      }
-    ),
+    custom('spam', [numberMask('+7 495*'), special('premium-rate')], {
+      exclude: [numberMask('+7 495 123 45 67')],
+    }),
     custom('hidden', [special('hidden')], {
       policy: {
         action: 'block',
@@ -205,7 +201,7 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
         repeatWindowMinutes: 5,
       },
     }),
-    custom('couriers', [nameMask('courier*', 'contact')], {
+    custom('couriers', [COURIER], {
       policy: {
         action: 'block',
         conditions: {
@@ -220,7 +216,10 @@ export const SCENARIO_BOOK: GroupBook = bookOf(
     custom('overlap', [numberMask('+7 499*')], { policy: ALWAYS_BLOCK }),
     custom('overlap-lenient', [numberMask('+7 499 1*')], { policy: ALWAYS_PASS }),
   ],
-  [{ ...MUM, id: 'mum-out-of-contacts' as TMemberId }, nameMask('courier*', 'contact')]
+  [
+    { ...MUM, id: 'mum-out-of-contacts' as TMemberId },
+    { ...COURIER, id: 'courier-out-of-contacts' as TMemberId },
+  ]
 );
 
 export const EMPTY_BOOK: GroupBook = bookOf([]);

@@ -23,6 +23,6 @@ describe('a mask read aloud', () => {
 
   it('gives an example the mask really takes', () => {
     const mask = pattern('+7 921 2{1,2}*.{3}5');
-    expect(new RegExp(patternRegexSource(mask, 'digits')).test(exampleOf(mask, '0'))).toBe(true);
+    expect(new RegExp(patternRegexSource(mask)).test(exampleOf(mask, '0'))).toBe(true);
   });
 });

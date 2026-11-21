@@ -1,7 +1,6 @@
 import type { Brand } from '@frozik/utils/types/base';
 import type { Temporal } from 'temporal-polyfill';
 
-import type { NameMask } from '../../masks/domain/name-mask';
 import type { NumberMask } from '../../masks/domain/number-mask';
 import type { TE164Digits } from '../../phone/domain/caller';
 import type { TGroupId } from './group';
@@ -18,9 +17,6 @@ export const SPECIAL_MASKS = [
   'voip',
   'toll-free',
 ] as const satisfies readonly TSpecialMask[];
-
-/** Which name a name mask reads: the one the operator sent, the address book's, or either. */
-export type TNameField = 'network' | 'contact' | 'any';
 
 interface IMemberCore {
   readonly id: TMemberId;
@@ -39,13 +35,6 @@ export interface INumberMaskMember extends IMemberCore {
   readonly note: string;
 }
 
-export interface INameMaskMember extends IMemberCore {
-  readonly kind: 'name-mask';
-  readonly mask: NameMask;
-  readonly field: TNameField;
-  readonly note: string;
-}
-
 export interface ISpecialMember extends IMemberCore {
   readonly kind: 'special';
   readonly special: TSpecialMask;
@@ -59,4 +48,4 @@ export interface IContactMember extends IMemberCore {
   readonly lookupKey: string | null;
 }
 
-export type TMember = INumberMaskMember | INameMaskMember | ISpecialMember | IContactMember;
+export type TMember = INumberMaskMember | ISpecialMember | IContactMember;

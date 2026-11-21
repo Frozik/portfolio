@@ -2,27 +2,17 @@ import { assert } from '@frozik/utils/assert/assert';
 import { assertNever } from '@frozik/utils/assert/assertNever';
 import type { Temporal } from 'temporal-polyfill';
 
-import { parseNameMask } from '../../masks/domain/name-mask';
 import { parseNumberMask } from '../../masks/domain/number-mask';
 import { exactText } from '../../masks/domain/pattern';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
-import type { TNormalizedName } from '../../phone/domain/name-normalization';
 import type { TGroupId } from './group';
-import type {
-  IContactMember,
-  INameMaskMember,
-  INumberMaskMember,
-  TMember,
-  TMemberId,
-} from './member';
+import type { IContactMember, INumberMaskMember, TMember, TMemberId } from './member';
 
 export interface IMemberStamp {
   readonly id: TMemberId;
   readonly now: Temporal.Instant;
   readonly excludedFor: TGroupId | null;
 }
-
-const NAME_MASK_SPECIAL = /[.*{}\\]/g;
 
 export function exactNumberMember(
   digits: TE164Digits,
@@ -36,23 +26,6 @@ export function exactNumberMember(
     id: stamp.id,
     mask: mask.value,
     note,
-    updatedAt: stamp.now,
-    excludedFor: stamp.excludedFor,
-  };
-}
-
-export function exactNetworkNameMember(
-  name: TNormalizedName,
-  stamp: IMemberStamp
-): INameMaskMember {
-  const mask = parseNameMask(name.replace(NAME_MASK_SPECIAL, '\\$&'));
-  assert(mask.ok, 'a normalized name always makes a mask');
-  return {
-    kind: 'name-mask',
-    id: stamp.id,
-    mask: mask.value,
-    field: 'network',
-    note: '',
     updatedAt: stamp.now,
     excludedFor: stamp.excludedFor,
   };
@@ -72,20 +45,10 @@ export function contactMemberOf(caller: ICaller, stamp: IMemberStamp): IContactM
 }
 
 /** What names this caller exactly — the member a move adds, and the one taking them out removes. */
-export function isExactFor(member: TMember, caller: ICaller, by: 'number' | 'name'): boolean {
+export function isExactFor(member: TMember, caller: ICaller): boolean {
   switch (member.kind) {
     case 'number-mask':
-      return (
-        by === 'number' &&
-        member.mask.international &&
-        exactText(member.mask.pattern) === caller.number
-      );
-    case 'name-mask':
-      return (
-        by === 'name' &&
-        member.field !== 'contact' &&
-        exactText(member.mask.pattern) === caller.networkName
-      );
+      return member.mask.international && exactText(member.mask.pattern) === caller.number;
     case 'contact':
       return (
         caller.contact !== null &&

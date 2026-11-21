@@ -116,7 +116,7 @@ export const MembersPanel = observer(function MembersPanel({
   };
   const subtitleOf = (member: TMember) => {
     const lines = [
-      member.kind === 'number-mask' || member.kind === 'name-mask' ? member.note : '',
+      member.kind === 'number-mask' ? member.note : '',
       member.excludedFor === null
         ? ''
         : texts.group.excludedFor(excludedForName(member.excludedFor)),
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
 });
 
 function isMask(member: TMember): boolean {
-  return member.kind === 'number-mask' || member.kind === 'name-mask';
+  return member.kind === 'number-mask';
 }
 
 function SpecialIcon({ special }: { readonly special: TSpecialMask }) {

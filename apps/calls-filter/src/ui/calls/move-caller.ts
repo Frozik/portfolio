@@ -1,6 +1,5 @@
 import type { TEditResult } from '../../contexts/grouping/application/GroupBookStore';
 import { moveCaller } from '../../contexts/grouping/domain/caller-move';
-import type { TMoveKey } from '../../contexts/grouping/domain/caller-move';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
 import type { IJournalEntry } from '../../contexts/journal/domain/journal-entry';
 import type { CallsFilterApp } from '../../contexts/shell/application/CallsFilterApp';
@@ -9,8 +8,7 @@ import type { CallsFilterApp } from '../../contexts/shell/application/CallsFilte
 export function moveEntry(
   app: CallsFilterApp,
   entry: IJournalEntry,
-  target: TGroupId,
-  by: TMoveKey
+  target: TGroupId
 ): TEditResult {
   const note =
     entry.caller.contact?.displayName ??
@@ -19,7 +17,6 @@ export function moveEntry(
   return app.books.run((book, context) =>
     moveCaller(book, {
       caller: entry.caller,
-      by,
       target,
       note,
       newMemberId: context.newMemberId,

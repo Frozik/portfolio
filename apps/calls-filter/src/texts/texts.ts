@@ -120,7 +120,6 @@ export interface ITexts {
     readonly emptySide: string;
     readonly special: Readonly<Record<TSpecialMask, string>>;
     readonly specialHint: Readonly<Record<TSpecialMask, string>>;
-    readonly nameField: Readonly<Record<'network' | 'contact' | 'any', string>>;
     readonly excludedFor: (group: string) => string;
   };
   readonly call: {
@@ -129,7 +128,6 @@ export interface ITexts {
     readonly hidden: string;
     readonly move: string;
     readonly moveTitle: string;
-    readonly moveHow: string;
     readonly newGroup: string;
     readonly remove: string;
     readonly callBack: string;
@@ -143,11 +141,7 @@ export interface ITexts {
   };
   readonly mask: {
     readonly title: string;
-    readonly number: string;
-    readonly name: string;
-    readonly field: string;
     readonly placeholderNumber: string;
-    readonly placeholderName: string;
     readonly check: string;
     readonly matches: string;
     readonly noMatch: string;
@@ -156,8 +150,6 @@ export interface ITexts {
     readonly error: (error: TMaskError) => string;
     readonly canonical: (error: TCanonicalError) => string;
     readonly startsWith: string;
-    readonly contains: string;
-    readonly exactly: string;
     readonly anyDigit: string;
     readonly anyRun: string;
     readonly repeat: string;
@@ -289,7 +281,6 @@ export interface ITexts {
     readonly open: string;
     readonly number: string;
     readonly numberPlaceholder: string;
-    readonly networkName: string;
     readonly hidden: string;
     readonly hint: string;
     readonly noNumber: string;

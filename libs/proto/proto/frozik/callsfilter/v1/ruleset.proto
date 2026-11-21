@@ -72,13 +72,6 @@ message Group {
   string name = 10;
 }
 
-enum NameField {
-  NAME_FIELD_UNSPECIFIED = 0;
-  NAME_FIELD_NETWORK = 1;
-  NAME_FIELD_CONTACT = 2;
-  NAME_FIELD_ANY = 3;
-}
-
 enum SpecialMask {
   SPECIAL_MASK_UNSPECIFIED = 0;
   SPECIAL_MASK_HIDDEN = 1;
@@ -89,20 +82,16 @@ enum SpecialMask {
 }
 
 message Member {
+  // Name masks: Android gives a screening app no caller name, so names never decide a call.
+  reserved 3;
+  reserved "name";
   string id = 1;
   oneof kind {
     // Anchored, over the E.164 digits without the plus.
     string number_regex = 2;
-    NameMatch name = 3;
     SpecialMask special = 4;
     ContactMatch contact = 5;
   }
-}
-
-message NameMatch {
-  // Anchored, over the normalized name.
-  string regex = 1;
-  NameField field = 2;
 }
 
 message ContactMatch {

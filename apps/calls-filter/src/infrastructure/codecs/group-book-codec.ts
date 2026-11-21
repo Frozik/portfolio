@@ -13,7 +13,6 @@ import { groupBook } from '../../contexts/grouping/domain/group-book';
 import { parseHexColor } from '../../contexts/grouping/domain/hex-color';
 import type { TMember, TMemberId } from '../../contexts/grouping/domain/member';
 import { SPECIAL_MASKS } from '../../contexts/grouping/domain/member';
-import { parseNameMask } from '../../contexts/masks/domain/name-mask';
 import { parseNumberMask } from '../../contexts/masks/domain/number-mask';
 import type { TE164Digits } from '../../contexts/phone/domain/caller';
 import type { TPlaceId } from '../../contexts/policy/domain/place-rule';
@@ -39,13 +38,8 @@ const weekday = z
 const memberCore = { id: z.string(), updatedAt: instant, excludedFor: z.string().nullable() };
 const member = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('number-mask'), source: z.string(), note: z.string(), ...memberCore }),
-  z.object({
-    kind: z.literal('name-mask'),
-    source: z.string(),
-    field: z.enum(['network', 'contact', 'any']),
-    note: z.string(),
-    ...memberCore,
-  }),
+  /** Masks over caller names, from before Android was found to hide names from screening apps. */
+  z.object({ kind: z.literal('name-mask') }),
   z.object({ kind: z.literal('special'), special: z.enum(SPECIAL_MASKS), ...memberCore }),
   z.object({
     kind: z.literal('contact'),
@@ -182,6 +176,9 @@ type TEncodedMember = z.input<typeof member>;
 
 /** A stored mask is its source again: the parser makes the value, never the stored bytes. */
 function memberOf(stored: TStoredMember): TMember | null {
+  if (stored.kind === 'name-mask') {
+    return null;
+  }
   const core = {
     id: stored.id as TMemberId,
     updatedAt: stored.updatedAt,
@@ -191,12 +188,6 @@ function memberOf(stored: TStoredMember): TMember | null {
     case 'number-mask': {
       const mask = parseNumberMask(stored.source);
       return mask.ok ? { kind: 'number-mask', mask: mask.value, note: stored.note, ...core } : null;
-    }
-    case 'name-mask': {
-      const mask = parseNameMask(stored.source);
-      return mask.ok
-        ? { kind: 'name-mask', mask: mask.value, field: stored.field, note: stored.note, ...core }
-        : null;
     }
     case 'special':
       return { kind: 'special', special: stored.special, ...core };
@@ -323,14 +314,6 @@ function encodeMember(item: TMember): TEncodedMember {
   switch (item.kind) {
     case 'number-mask':
       return { kind: 'number-mask', source: item.mask.source, note: item.note, ...core };
-    case 'name-mask':
-      return {
-        kind: 'name-mask',
-        source: item.mask.source,
-        field: item.field,
-        note: item.note,
-        ...core,
-      };
     case 'special':
       return { kind: 'special', special: item.special, ...core };
     case 'contact':

@@ -11,7 +11,6 @@ import io.github.frozik.callsfilter.screening.domain.Group
 import io.github.frozik.callsfilter.screening.domain.GroupChoice
 import io.github.frozik.callsfilter.screening.domain.GroupKind
 import io.github.frozik.callsfilter.screening.domain.Member
-import io.github.frozik.callsfilter.screening.domain.NameField
 import io.github.frozik.callsfilter.screening.domain.PlaceMode
 import io.github.frozik.callsfilter.screening.domain.PlaceRule
 import io.github.frozik.callsfilter.screening.domain.RepeatPass
@@ -24,7 +23,6 @@ import io.github.frozik.callsfilter.screening.wire.CalendarRule as WireCalendarR
 import io.github.frozik.callsfilter.screening.wire.Group as WireGroup
 import io.github.frozik.callsfilter.screening.wire.GroupKind as WireGroupKind
 import io.github.frozik.callsfilter.screening.wire.Member as WireMember
-import io.github.frozik.callsfilter.screening.wire.NameField as WireNameField
 import io.github.frozik.callsfilter.screening.wire.PlaceMode as WirePlaceMode
 import io.github.frozik.callsfilter.screening.wire.RepeatPass as WireRepeatPass
 import io.github.frozik.callsfilter.screening.wire.RepeatPassKind as WireRepeatPassKind
@@ -87,12 +85,6 @@ object RulesetDecoder {
     else -> GroupKind.CUSTOM
   }
 
-  private fun field(field: WireNameField): NameField = when (field) {
-    WireNameField.NAME_FIELD_NETWORK -> NameField.NETWORK
-    WireNameField.NAME_FIELD_CONTACT -> NameField.CONTACT
-    else -> NameField.ANY
-  }
-
   private fun special(mask: WireSpecialMask): SpecialMask? = when (mask) {
     WireSpecialMask.SPECIAL_MASK_HIDDEN -> SpecialMask.HIDDEN
     WireSpecialMask.SPECIAL_MASK_FOREIGN -> SpecialMask.FOREIGN
@@ -105,7 +97,6 @@ object RulesetDecoder {
   /** A member this version cannot read matches nobody: a newer app's mask never blocks by accident. */
   private fun member(member: WireMember): Member? = when (member.kindCase) {
     WireMember.KindCase.NUMBER_REGEX -> Member.Number(Regex(member.numberRegex))
-    WireMember.KindCase.NAME -> Member.Name(Regex(member.name.regex), field(member.name.field))
     WireMember.KindCase.SPECIAL -> special(member.special)?.let(Member::Special)
     WireMember.KindCase.CONTACT -> Member.Contact(member.contact.numbersList.toList(), member.contact.lookupKey)
     else -> null

@@ -1,14 +1,11 @@
 import { array, assert as check, constantFrom, property, stringMatching } from 'fast-check';
 
-import { normalizeName } from '../../phone/domain/name-normalization';
-import { parseNameMask } from './name-mask';
 import { parseNumberMask } from './number-mask';
 import type { TPattern } from './pattern';
 import { findIntersection } from './pattern-automaton';
 import { patternRegexSource } from './pattern-regex';
 
 const NUMBER_LENGTH = 15;
-const NAME_LENGTH = 64;
 
 function digits(source: string): TPattern {
   const mask = parseNumberMask(source);
@@ -18,16 +15,8 @@ function digits(source: string): TPattern {
   return mask.value.pattern;
 }
 
-function name(source: string): TPattern {
-  const mask = parseNameMask(source);
-  if (!mask.ok) {
-    throw new Error(`${source} did not parse`);
-  }
-  return mask.value.pattern;
-}
-
 function shared(required: readonly TPattern[], forbidden: readonly TPattern[] = []): string | null {
-  return findIntersection({ required, forbidden, alphabet: 'digits', maxLength: NUMBER_LENGTH });
+  return findIntersection({ required, forbidden, maxLength: NUMBER_LENGTH });
 }
 
 describe('the overlap of masks', () => {
@@ -54,24 +43,10 @@ describe('the overlap of masks', () => {
 
   it('looks no further than the longest number worth reporting', () => {
     const tenDigits = digits('.{10}');
-    expect(
-      findIntersection({ required: [tenDigits], forbidden: [], alphabet: 'digits', maxLength: 9 })
-    ).toBeNull();
-    expect(
-      findIntersection({ required: [tenDigits], forbidden: [], alphabet: 'digits', maxLength: 10 })
-    ).toHaveLength(10);
-  });
-
-  it('finds the overlap of name masks', () => {
-    const example = findIntersection({
-      required: [name('курьер*'), name('*доставка*')],
-      forbidden: [],
-      alphabet: 'text',
-      maxLength: NAME_LENGTH,
-    });
-    expect(example).not.toBeNull();
-    expect(example?.startsWith('курьер')).toBe(true);
-    expect(example?.includes('доставка')).toBe(true);
+    expect(findIntersection({ required: [tenDigits], forbidden: [], maxLength: 9 })).toBeNull();
+    expect(findIntersection({ required: [tenDigits], forbidden: [], maxLength: 10 })).toHaveLength(
+      10
+    );
   });
 
   it('finds an example every mask really accepts', () => {
@@ -83,8 +58,8 @@ describe('the overlap of masks', () => {
       property(maskSource, maskSource, (left, right) => {
         const example = shared([digits(left), digits(right)]);
         if (example !== null) {
-          expect(new RegExp(patternRegexSource(digits(left), 'digits')).test(example)).toBe(true);
-          expect(new RegExp(patternRegexSource(digits(right), 'digits')).test(example)).toBe(true);
+          expect(new RegExp(patternRegexSource(digits(left))).test(example)).toBe(true);
+          expect(new RegExp(patternRegexSource(digits(right))).test(example)).toBe(true);
         }
       })
     );
@@ -99,16 +74,12 @@ describe('the overlap of masks', () => {
     check(
       property(maskSource, maskSource, shortNumber, (left, right, number) => {
         const both =
-          new RegExp(patternRegexSource(digits(left), 'digits')).test(number) &&
-          new RegExp(patternRegexSource(digits(right), 'digits')).test(number);
+          new RegExp(patternRegexSource(digits(left))).test(number) &&
+          new RegExp(patternRegexSource(digits(right))).test(number);
         if (both) {
           expect(shared([digits(left), digits(right)])).not.toBeNull();
         }
       })
     );
-  });
-
-  it('uses the same normalized text the matcher sees', () => {
-    expect(normalizeName('КУРЬЕР Доставка')).toBe('курьер доставка');
   });
 });

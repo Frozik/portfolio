@@ -26,6 +26,24 @@ describe('the stored group book', () => {
     expect(decodeGroupBook('not json')).toEqual({ ok: false, error: { kind: 'not-json' } });
   });
 
+  it('reads a book with a mask over caller names, leaving that mask out', () => {
+    const written = JSON.parse(encodeGroupBook(SCENARIO_BOOK));
+    const custom = written.data.groups.find((group: { kind: string }) => group.kind === 'custom');
+    custom.include.push({
+      kind: 'name-mask',
+      source: '*kol-tsentr*',
+      field: 'network',
+      note: '',
+      id: 'name-1',
+      updatedAt: '2026-11-01T00:00:00Z',
+      excludedFor: null,
+    });
+    const read = decodeGroupBook(JSON.stringify(written));
+    expect(read.ok && JSON.parse(encodeGroupBook(read.value.book))).toEqual(
+      JSON.parse(encodeGroupBook(SCENARIO_BOOK))
+    );
+  });
+
   it('refuses a book written without a version', () => {
     expect(decodeGroupBook('{"groups":[]}').ok).toBe(false);
   });

@@ -17,22 +17,9 @@ private fun specialMatches(mask: SpecialMask, caller: Caller, networkCountry: St
   SpecialMask.TOLL_FREE -> caller.type == NumberType.TOLL_FREE
 }
 
-/** A contact's own name is the user's word for them; the operator's or the dialer's only happens to fit. */
-private fun nameMatch(member: Member.Name, caller: Caller): MatchKind? {
-  val byContact = member.field != NameField.NETWORK && caller.contact != null && member.regex.matches(caller.contact.name)
-  val byNetwork = member.field != NameField.CONTACT && listOfNotNull(caller.networkName, caller.dialerName).any(member.regex::matches)
-  return when {
-    byContact -> MatchKind.EXPLICIT
-    byNetwork -> MatchKind.PATTERN
-    else -> null
-  }
-}
-
 private fun match(member: Member, caller: Caller, networkCountry: String?): MatchKind? = when (member) {
   is Member.Number ->
     if (caller.number != null && member.regex.matches(caller.number)) MatchKind.PATTERN else null
-
-  is Member.Name -> nameMatch(member, caller)
 
   is Member.Special -> if (specialMatches(member.mask, caller, networkCountry)) MatchKind.PATTERN else null
 

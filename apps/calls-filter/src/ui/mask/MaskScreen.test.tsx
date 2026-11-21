@@ -4,13 +4,13 @@ import GroupRoute from '../../app/group/[id]';
 import MaskRoute from '../../app/mask';
 import type { TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
-import { bookOf, custom, nameMask } from '../../contexts/grouping/testing/group-book-fixtures';
+import { bookOf, custom, numberMask } from '../../contexts/grouping/testing/group-book-fixtures';
 import { ALWAYS_BLOCK } from '../../contexts/policy/domain/policy';
 import type { IFakePhone } from '../../testing/fake-ports';
 import { fakePhone } from '../../testing/fake-ports';
 import { renderApp } from '../../testing/render-app';
 
-const EXACT = nameMask('IP Isanshin');
+const EXACT = numberMask('+7 495 123 45 67');
 const SPAM = custom('spam', [EXACT], { policy: ALWAYS_BLOCK });
 
 function includeOf(phone: IFakePhone) {
@@ -30,10 +30,10 @@ describe('a mask of a group, written anew', () => {
     await fireEvent.press(await screen.findByTestId('member-edit'));
 
     expect(rendered.getPathname()).toBe('/mask');
-    expect(await screen.findByTestId('mask-source')).toHaveDisplayValue('IP Isanshin');
+    expect(await screen.findByTestId('mask-source')).toHaveTextContent('+7 495 123 45 67');
   });
 
-  it('replaces the exact name with a pattern in the same place, not beside it', async () => {
+  it('replaces the exact number with a pattern in the same place, not beside it', async () => {
     const phone = fakePhone({ book: bookOf([SPAM]) });
     await renderApp(
       { mask: MaskRoute },
@@ -42,14 +42,18 @@ describe('a mask of a group, written anew', () => {
         initialUrl: `/mask?group=spam&side=include&member=${EXACT.id}`,
       }
     );
-    fireEvent.changeText(await screen.findByTestId('mask-source'), 'IP*');
+    await screen.findByTestId('mask-source');
+    for (let erased = 0; erased < '123 45 67'.length; erased++) {
+      await fireEvent.press(screen.getByTestId('key-erase'));
+    }
+    await fireEvent.press(screen.getByTestId('key-*'));
     await fireEvent.press(screen.getByTestId('mask-save'));
 
     expect(
       includeOf(phone).map(member => [
         member.id,
-        member.kind === 'name-mask' ? member.mask.source : null,
+        member.kind === 'number-mask' ? member.mask.source : null,
       ])
-    ).toEqual([[EXACT.id, 'IP*']]);
+    ).toEqual([[EXACT.id, '+7 495 *']]);
   });
 });

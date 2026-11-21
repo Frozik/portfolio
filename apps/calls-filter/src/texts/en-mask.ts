@@ -38,11 +38,7 @@ function describeToken(token: TMaskToken): string {
 /** The mask editor's words: the mask read aloud, its errors, its tools. */
 export const EN_MASK: ITexts['mask'] = {
   title: 'Mask',
-  number: 'Number',
-  name: 'Name',
-  field: 'Look in',
   placeholderNumber: '+31 6 ........',
-  placeholderName: '*delivery*',
   check: 'Check',
   matches: 'matches',
   noMatch: 'does not match',
@@ -91,8 +87,6 @@ export const EN_MASK: ITexts['mask'] = {
     }
   },
   startsWith: 'Starts with',
-  contains: 'Contains',
-  exactly: 'Exactly',
   anyDigit: '. any',
   anyRun: '* many',
   repeat: '{…}',

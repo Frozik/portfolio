@@ -61,7 +61,6 @@ function contextOf(book: GroupBook, overrides: Partial<INumberCheckContext> = {}
 
 const query = (number: string, extra: Partial<INumberQuery> = {}): INumberQuery => ({
   number,
-  networkName: '',
   hidden: false,
   ...extra,
 });

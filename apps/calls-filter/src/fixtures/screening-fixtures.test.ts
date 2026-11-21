@@ -28,7 +28,7 @@ function callerOf(scenario: IScenario): ICaller {
       caller.number === null
         ? null
         : { country: caller.country as TCountryCode | null, type: caller.type as TNumberType },
-    networkName: caller.networkName === null ? null : normalizeName(caller.networkName),
+    networkName: null,
     contact:
       caller.contactName === null || caller.contactLookupKey === null
         ? null
@@ -37,10 +37,7 @@ function callerOf(scenario: IScenario): ICaller {
             displayName: caller.contactName,
             name: normalizeName(caller.contactName),
           },
-    dialer:
-      caller.dialerName === null
-        ? null
-        : { displayName: caller.dialerName, name: normalizeName(caller.dialerName) },
+    dialer: null,
   };
 }
 

@@ -26,16 +26,9 @@ function compileMember(member: TMember, environment: IMatchingEnvironment): TCom
     case 'number-mask': {
       const canonical = canonicalNumberPattern(member.mask, environment.home);
       return canonical.ok
-        ? { kind: 'number', id: member.id, regex: patternRegexSource(canonical.value, 'digits') }
+        ? { kind: 'number', id: member.id, regex: patternRegexSource(canonical.value) }
         : null;
     }
-    case 'name-mask':
-      return {
-        kind: 'name',
-        id: member.id,
-        regex: patternRegexSource(member.mask.pattern, 'text'),
-        field: member.field,
-      };
     case 'special':
       return { kind: 'special', id: member.id, special: member.special };
     case 'contact':

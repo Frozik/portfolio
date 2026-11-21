@@ -35,8 +35,6 @@ JavaScript is not running.
     and the separators `( ) -`; for example `+7 921 2{1,2}*.{3}5`. They are written as the
     user dials, and the home country's trunk prefix is understood (`06…` in the Netherlands is
     `+316…`);
-  - **name masks** — the same syntax over the name the network sends or the contact's name,
-    matched case-, accent- and space-insensitively;
   - **contacts** picked from the address book;
   - **special masks** — hidden numbers, foreign, premium-rate, VoIP, toll-free: a row of
     icons, holding one explains it. The kind of a number comes from its country's numbering
@@ -46,12 +44,13 @@ JavaScript is not running.
   «Exclude my contacts» keeps a mask from catching the people in the address book.
 - **My contacts** — every contact, with its own exclude list. A contact the user adds to
   another group leaves it by itself.
-- **Strangers** — the calls no group takes by number or by name. Nothing is added by hand: it
+- **Strangers** — the calls no group takes. Nothing is added by hand: it
   fills from the screened calls and from the phone's own call history, and every row has a
   one-tap «move to a group».
 
-Moving a call from any group writes an exact mask into the target group, plus the exclusions
-the move needs. When two groups would take the same caller, the app shows the conflict and
+Moving a call from any group writes an exact mask into the target group (the contact for a
+contact), plus the exclusions the move needs; a hidden number has nothing to move by, only the
+«hidden» special mask takes it. When two groups would take the same caller, the app shows the conflict and
 offers one-tap resolutions (keep it in one group or the other) or leaving it as it is: a
 conflict is no mistake, the groups' conditions may differ. Of the groups in force at the moment
 of the call, the service fails open — one that lets the call ring decides, the older one on a tie. Settings list the
@@ -163,19 +162,25 @@ A stranger also shows the name the phone's dialer found for the number by its ow
 
 The operator's name (CNAP) comes with the call, and the dialer shows it while the phone rings, but
 Android never hands it to a call-screening app: Telecom builds the call it screens without the
-caller's name (`ParcelableCallUtils.toParcelableCallForScreening`). Both names land in the phone's
-call history afterwards: the network's in `cnip_name` (OnePlus, Oppo) or `asserted_display_name`
-(Android 14), the dialer's in `name` or `identify_name`. So the service screens a call by the
-newest names the number's earlier calls left there, and the first call from a new number by its
-number alone. A name mask over the operator's name takes the dialer's name too, never for a
-contact. A row in the list takes the names from the history of the same call. Each screened call
-writes diagnostics lines: whether the system passed a name and how it was presented, and where each
-name came from.
+caller's name (`ParcelableCallUtils.toParcelableCallForScreening`, so since Android 10), and the
+call it hands over is never updated. A name could then only come from the number's earlier
+calls, and the callers it would catch, call centres, ring from a fresh number of a pool every
+time. So groups take callers by number, contact and special mask only, never by a name; a book
+written with name masks loses them when it is read. Both names land in the phone's call history
+after the call — the network's in `cnip_name` (OnePlus, Oppo) or `asserted_display_name`
+(Android 14), the dialer's in `name` or `identify_name` — and a row in the list shows them.
+
+Diagnostics keep the evidence of how a name comes, without the names. While a call is screened:
+what Android passed (number and its presentation, caller name and its presentation, contact name,
+the network's number verification, extras, the Android version, how long after the call appeared
+the service ran). After the call, once the phone
+has written its call-log row: which of the row's columns hold a name (every column is looked at,
+so a phone maker's own one shows up too), the number's presentation, whether the network flagged a
+business call, whether the dialer's name is the network's, and how long the row took to appear.
 
 ## Check a number
 
-The Calls tab's title holds «Check a number»: a number (or «hidden») and, if the operator sends
-one, a name — and the app answers as the service would if it called now: the group, what
+The Calls tab's title holds «Check a number»: a number (or «hidden») — and the app answers as the service would if it called now: the group, what
 happens, until when, whether it is a contact, which other groups also claim it. It runs the
 same rules the published ruleset carries, the journal included, so a second call within the
 window shows as the repeat it would be.

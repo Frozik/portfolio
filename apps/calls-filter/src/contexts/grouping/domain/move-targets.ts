@@ -2,12 +2,18 @@ import type { ICaller } from '../../phone/domain/caller';
 import type { TAssignableGroup, TGroupId } from './group';
 import type { GroupBook } from './group-book';
 
-/** The groups a call may move to: the user's own and, for a contact, «my contacts» — never where it already is. */
+/**
+ * The groups a call may move to: the user's own and, for a contact, «my contacts» — never where it
+ * already is, and nowhere for a hidden number, which nothing but the «hidden» mask can name.
+ */
 export function moveTargets(
   book: GroupBook,
   from: TGroupId,
   caller: ICaller
 ): readonly TAssignableGroup[] {
+  if (caller.number === null && caller.contact === null) {
+    return [];
+  }
   return book.groups.filter(
     (group): group is TAssignableGroup =>
       group.id !== from &&

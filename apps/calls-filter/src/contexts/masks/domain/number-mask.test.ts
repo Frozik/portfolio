@@ -6,7 +6,7 @@ function matches(source: string, digits: string): boolean {
   if (!mask.ok) {
     throw new Error(`${source} did not parse`);
   }
-  return new RegExp(patternRegexSource(mask.value.pattern, 'digits')).test(digits);
+  return new RegExp(patternRegexSource(mask.value.pattern)).test(digits);
 }
 
 function errorKinds(source: string): readonly string[] {

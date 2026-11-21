@@ -31,15 +31,9 @@ function groupOf(book: GroupBook, caller: ICaller): string {
   return found.kind === 'one' ? found.group.id : 'conflict';
 }
 
-function move(
-  book: GroupBook,
-  caller: ICaller,
-  target: string,
-  by: 'number' | 'name' = 'number'
-): TEditOutcome {
+function move(book: GroupBook, caller: ICaller, target: string): TEditOutcome {
   return moveCaller(book, {
     caller,
-    by,
     target: target as TGroupId,
     note: '',
     newMemberId,
@@ -84,11 +78,11 @@ describe('moving a caller to a group', () => {
     expect(detectConflicts(moved, factsWith([mum]))).toEqual([]);
   });
 
-  it('moves every number an operator name calls from', () => {
+  it('moves a stranger by the number alone, whatever name the operator gave it', () => {
     const first = stranger('31851111111', 'PostNL');
     const second = stranger('31852222222', 'PostNL');
-    const moved = applied(move(bookOf([custom('delivery', [])]), first, 'delivery', 'name'));
-    expect(groupOf(moved, second)).toBe('delivery');
+    const moved = applied(move(bookOf([custom('delivery', [])]), first, 'delivery'));
+    expect([groupOf(moved, first), groupOf(moved, second)]).toEqual(['delivery', STRANGERS_ID]);
   });
 
   it('never moves a caller into «strangers», and only contacts into «my contacts»', () => {
@@ -117,7 +111,6 @@ describe('removing a caller from a group', () => {
     return applied(
       removeCallerFromGroup(book, {
         caller,
-        by: 'number',
         group: group as TGroupId,
         newMemberId,
         now: NOW,

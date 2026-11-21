@@ -11,8 +11,6 @@ import {
   GroupKind,
   GroupSchema,
   MemberSchema,
-  NameField,
-  NameMatchSchema,
   PlaceMode,
   PlaceRuleSchema,
   PolicySchema,
@@ -26,7 +24,7 @@ import type { CalendarRule, Member, Window } from '@frozik/proto/frozik/callsfil
 import { assertNever } from '@frozik/utils/assert/assertNever';
 
 import type { TCalendarSource } from '../contexts/calendars/domain/calendar-source';
-import type { TNameField, TSpecialMask } from '../contexts/grouping/domain/member';
+import type { TSpecialMask } from '../contexts/grouping/domain/member';
 import type { TAction } from '../contexts/policy/domain/action';
 import type { TWindowSet } from '../contexts/policy/domain/window-set';
 import type {
@@ -45,19 +43,6 @@ function wireAction(action: TAction): Action {
       return Action.PASS;
     default:
       return assertNever(action);
-  }
-}
-
-function wireField(field: TNameField): NameField {
-  switch (field) {
-    case 'network':
-      return NameField.NETWORK;
-    case 'contact':
-      return NameField.CONTACT;
-    case 'any':
-      return NameField.ANY;
-    default:
-      return assertNever(field);
   }
 }
 
@@ -90,14 +75,6 @@ function wireMember(member: TCompiledMember): Member {
       return create(MemberSchema, {
         id: member.id,
         kind: { case: 'numberRegex', value: member.regex },
-      });
-    case 'name':
-      return create(MemberSchema, {
-        id: member.id,
-        kind: {
-          case: 'name',
-          value: create(NameMatchSchema, { regex: member.regex, field: wireField(member.field) }),
-        },
       });
     case 'special':
       return create(MemberSchema, {

@@ -9,7 +9,7 @@ import type { GroupBook } from './group-book';
 import { findGroup, findMask, groupBook, myContactsGroup, replaceGroup } from './group-book';
 import type { TGroupChange } from './group-changes';
 import { applyChanges } from './group-changes';
-import type { INameMaskMember, INumberMaskMember, TMember, TMemberId } from './member';
+import type { INumberMaskMember, TMember, TMemberId } from './member';
 import { claims } from './membership';
 import { pickedContactAsCaller } from './picked-contact';
 
@@ -185,13 +185,13 @@ export interface IMaskRewrite {
   readonly group: TGroupId;
   readonly side: 'include' | 'exclude';
   /** The mask as it is now written; its id names the one it replaces. */
-  readonly member: INumberMaskMember | INameMaskMember;
+  readonly member: INumberMaskMember;
   readonly now: Temporal.Instant;
   readonly facts: IConflictFacts;
 }
 
 /**
- * A mask of the group written anew where it stands — «IP Isanshin» becoming «IP*»: its note and
+ * A mask of the group written anew where it stands — «+7 495 123…» becoming «+7 495*»: its note and
  * the exclusion it may stand for stay, and a conflict the new mask makes stops it as an addition would.
  */
 export function replaceMask(book: GroupBook, command: IMaskRewrite): TEditOutcome {

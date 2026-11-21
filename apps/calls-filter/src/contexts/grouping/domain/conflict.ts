@@ -1,12 +1,10 @@
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
-import type { TNormalizedName } from '../../phone/domain/name-normalization';
 import type { TGroupId } from './group';
 import type { TMember, TSpecialMask } from './member';
 
-/** What two groups both take, shown to the user: a number, a name, or a real caller. */
+/** What two groups both take, shown to the user: a number, a special mask, or a real caller. */
 type TConflictExample =
   | { readonly kind: 'number'; readonly digits: TE164Digits }
-  | { readonly kind: 'name'; readonly name: TNormalizedName }
   | { readonly kind: 'special'; readonly special: TSpecialMask }
   | { readonly kind: 'caller'; readonly caller: ICaller };
 

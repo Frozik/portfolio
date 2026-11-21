@@ -8,25 +8,20 @@ import type { TGroupId } from '../../contexts/grouping/domain/group';
 import { findGroup } from '../../contexts/grouping/domain/group-book';
 import { findMask } from '../../contexts/grouping/domain/group-book';
 import { addMember, replaceMask } from '../../contexts/grouping/domain/group-book-edits';
-import type { TMemberId, TNameField } from '../../contexts/grouping/domain/member';
-import type { TMaskKind } from '../../contexts/masks/application/MaskEditor';
+import type { TMemberId } from '../../contexts/grouping/domain/member';
 import { MaskEditor } from '../../contexts/masks/application/MaskEditor';
 import { useTexts } from '../../texts/use-texts';
 import { useApp } from '../AppContext';
 import { BackArrow } from '../kit/BackArrow';
 import { Button } from '../kit/Button';
-import { Chip } from '../kit/Chip';
 import { Hint } from '../kit/Hint';
 import { RADIUS, TEXT_SIZE } from '../kit/metrics';
 import { Screen } from '../kit/Screen';
 import { TextField } from '../kit/TextField';
 import { useLeave } from '../kit/use-leave';
 import { useLeaveWhenGone } from '../kit/use-leave-when-gone';
-import { Wrap } from '../kit/Wrap';
 import { usePalette } from '../theme/AppTheme';
 import { NumberKeypad } from './NumberKeypad';
-
-const FIELDS: readonly TNameField[] = ['any', 'network', 'contact'];
 
 const MaskState = observer(function MaskState({ editor }: { readonly editor: MaskEditor }) {
   const texts = useTexts();
@@ -68,7 +63,7 @@ const MaskState = observer(function MaskState({ editor }: { readonly editor: Mas
   }
 });
 
-/** A mask of a number or a name: typed with its own keypad, explained in words, tried on a number. */
+/** A mask of a number: typed with its own keypad, explained in words, tried on a number. */
 export const MaskScreen = observer(function MaskScreen() {
   const app = useApp();
   const texts = useTexts();
@@ -78,7 +73,6 @@ export const MaskScreen = observer(function MaskScreen() {
     readonly group?: string;
     readonly side?: 'include' | 'exclude';
     readonly seed?: string;
-    readonly kind?: TMaskKind;
     /** The mask of the group to rewrite, instead of adding a new one. */
     readonly member?: string;
   }>();
@@ -100,7 +94,7 @@ export const MaskScreen = observer(function MaskScreen() {
         now: () => app.clock.now(),
       },
       rewritten === null
-        ? { kind: 'new', mask: params.kind ?? 'number', seed: params.seed ?? '' }
+        ? { kind: 'new', seed: params.seed ?? '' }
         : { kind: 'rewrite', member: rewritten }
     );
   });
@@ -138,87 +132,27 @@ export const MaskScreen = observer(function MaskScreen() {
       title={texts.mask.title}
       titleLeading={<BackArrow testID="screen-back" />}
     >
-      <Wrap>
-        <Chip
-          testID="mask-kind-number"
-          label={texts.mask.number}
-          selected={editor.kind === 'number'}
-          onPress={() => editor.setKind('number')}
-        />
-        <Chip
-          testID="mask-kind-name"
-          label={texts.mask.name}
-          selected={editor.kind === 'name'}
-          onPress={() => editor.setKind('name')}
-        />
-      </Wrap>
-      {editor.kind === 'number' ? (
-        <View
-          testID="mask-source"
-          style={[styles.display, { borderColor: palette.line, backgroundColor: palette.bgCard }]}
+      <View
+        testID="mask-source"
+        style={[styles.display, { borderColor: palette.line, backgroundColor: palette.bgCard }]}
+      >
+        <Text
+          style={[
+            styles.displayText,
+            { color: editor.source === '' ? palette.fgFaint : palette.fg },
+          ]}
         >
-          <Text
-            style={[
-              styles.displayText,
-              { color: editor.source === '' ? palette.fgFaint : palette.fg },
-            ]}
-          >
-            {editor.source === '' ? texts.mask.placeholderNumber : editor.source}
-          </Text>
-        </View>
-      ) : (
-        <TextField
-          testID="mask-source"
-          label={texts.mask.title}
-          value={editor.source}
-          onChange={value => editor.setSource(value)}
-          placeholder={texts.mask.placeholderName}
-          monospace
-        />
-      )}
+          {editor.source === '' ? texts.mask.placeholderNumber : editor.source}
+        </Text>
+      </View>
       <MaskState editor={editor} />
-      {editor.kind === 'name' ? (
-        <>
-          <Wrap>
-            <Chip
-              testID="mask-contains"
-              label={texts.mask.contains}
-              onPress={() => editor.wrap('contains')}
-            />
-            <Chip
-              testID="mask-starts"
-              label={texts.mask.startsWith}
-              onPress={() => editor.wrap('starts')}
-            />
-            <Chip
-              testID="mask-exact"
-              label={texts.mask.exactly}
-              onPress={() => editor.wrap('exact')}
-            />
-            <Chip testID="mask-any-run" label="*" onPress={() => editor.insert('*')} />
-            <Chip testID="mask-any-one" label="." onPress={() => editor.insert('.')} />
-          </Wrap>
-          <Hint text={texts.mask.field} />
-          <Wrap>
-            {FIELDS.map(field => (
-              <Chip
-                key={field}
-                testID={`mask-field-${field}`}
-                label={texts.group.nameField[field]}
-                selected={editor.field === field}
-                onPress={() => editor.setField(field)}
-              />
-            ))}
-          </Wrap>
-        </>
-      ) : null}
       <TextField
         testID="mask-sample"
         label={texts.mask.check}
         value={editor.sample}
         onChange={value => editor.setSample(value)}
         placeholder={texts.mask.check}
-        keyboard={editor.kind === 'number' ? 'phone-pad' : 'default'}
+        keyboard="phone-pad"
       />
       {sample === null ? null : (
         <Hint
@@ -232,7 +166,7 @@ export const MaskScreen = observer(function MaskScreen() {
         disabled={editor.member === null || groupId === null}
         onPress={save}
       />
-      {editor.kind === 'number' ? <NumberKeypad editor={editor} /> : null}
+      <NumberKeypad editor={editor} />
     </Screen>
   );
 });

@@ -9,14 +9,9 @@ import type { TGroup } from '../../contexts/grouping/domain/group';
 import { findGroup, freshColor } from '../../contexts/grouping/domain/group-book';
 import { addMember, createGroup } from '../../contexts/grouping/domain/group-book-edits';
 import { initialBook } from '../../contexts/grouping/domain/initial-book';
-import type {
-  INameMaskMember,
-  INumberMaskMember,
-  ISpecialMember,
-} from '../../contexts/grouping/domain/member';
+import type { INumberMaskMember, ISpecialMember } from '../../contexts/grouping/domain/member';
 import { SPECIAL_MASKS } from '../../contexts/grouping/domain/member';
 import type { IJournalEntry } from '../../contexts/journal/domain/journal-entry';
-import { parseNameMask } from '../../contexts/masks/domain/name-mask';
 import { parseNumberMask } from '../../contexts/masks/domain/number-mask';
 import type { TPlaceId } from '../../contexts/policy/domain/place-rule';
 import { isPlaceRadius } from '../../contexts/policy/domain/place-rule';
@@ -42,8 +37,6 @@ const newGroup = z.object({
   action: z.enum(['block', 'pass']),
   numbers: z.array(z.string()).default([]),
   specials: z.array(z.enum(SPECIAL_MASKS)).default([]),
-  /** Name masks over any name the call carries. */
-  names: z.array(z.string()).default([]),
   repeat: repeat.default('off'),
   /** «Let through only at this place, block elsewhere». */
   onlyAt: z
@@ -68,8 +61,6 @@ const e2eCommand = z.discriminatedUnion('name', [
   z.object({ name: z.literal('group'), groupName: z.string() }),
   z.object({ name: z.literal('set-filter-repeat'), repeat }),
   z.object({ name: z.literal('calls'), number: z.string() }),
-  /** A call the emulator's modem cannot make: one that comes with the name the network sent. */
-  z.object({ name: z.literal('screen-call'), number: z.string(), networkName: z.string() }),
   z.object({ name: z.literal('device-calendars') }),
   z.object({ name: z.literal('journal-days') }),
   /** What a geofence would have said: the emulator's own location is too slow to drive a test. */
@@ -120,20 +111,6 @@ function numberMember(source: string, context: IEditContext): INumberMaskMember 
   };
 }
 
-function nameMember(source: string, context: IEditContext): INameMaskMember {
-  const mask = parseNameMask(source);
-  assert(mask.ok, `${source} is no name mask`);
-  return {
-    kind: 'name-mask',
-    id: context.newMemberId(),
-    mask: mask.value,
-    field: 'any',
-    note: '',
-    updatedAt: context.now,
-    excludedFor: null,
-  };
-}
-
 function specialMember(special: ISpecialMember['special'], context: IEditContext): ISpecialMember {
   return {
     kind: 'special',
@@ -156,7 +133,6 @@ function described(app: CallsFilterApp, group: TGroup) {
         ? group.include.map(member => {
             switch (member.kind) {
               case 'number-mask':
-              case 'name-mask':
                 return member.mask.source;
               case 'special':
                 return `special:${member.special}`;
@@ -225,7 +201,6 @@ function addGroup(app: CallsFilterApp, group: TNewGroup) {
     const members = [
       ...group.numbers.map(source => numberMember(source, context)),
       ...group.specials.map(special => specialMember(special, context)),
-      ...group.names.map(source => nameMember(source, context)),
     ];
     return members.reduce<TEditOutcome>(
       (outcome, member) =>
@@ -296,8 +271,6 @@ export async function runE2eCommand(app: CallsFilterApp, input: unknown): Promis
       return { place: command.place, inside: command.inside };
     case 'journal-days':
       return { days: CALL_SCREENING.retentionDays() };
-    case 'screen-call':
-      return { verdict: await CALL_SCREENING.screenE2eCall(command.number, command.networkName) };
     default:
       return assertNever(command);
   }

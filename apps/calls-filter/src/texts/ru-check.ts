@@ -6,7 +6,6 @@ export const RU_CHECK: ITexts['check'] = {
   open: 'Проверить номер',
   number: 'Номер',
   numberPlaceholder: '+31 6 12345678',
-  networkName: 'Имя от оператора',
   hidden: 'Скрытый номер',
   hint: 'Что будет, если этот номер позвонит сейчас, — по тем же правилам, что у фильтра',
   noNumber: 'Это не номер телефона',

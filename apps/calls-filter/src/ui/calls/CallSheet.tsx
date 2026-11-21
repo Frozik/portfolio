@@ -43,7 +43,6 @@ export const CallSheet = observer(function CallSheet({
     app.books.run((book, context) =>
       removeCallerFromGroup(book, {
         caller,
-        by: caller.number === null ? 'name' : 'number',
         group: group.id,
         newMemberId: context.newMemberId,
         now: context.now,
@@ -59,7 +58,7 @@ export const CallSheet = observer(function CallSheet({
       params: {
         group: group.kind === 'custom' ? group.id : '',
         side: 'include',
-        seed: number ?? caller.networkName ?? '',
+        seed: number ?? '',
       },
     });
   };

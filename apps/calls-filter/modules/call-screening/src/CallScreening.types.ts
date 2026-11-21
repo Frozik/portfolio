@@ -75,8 +75,6 @@ export interface ICallScreeningModule {
   /** Opens the e2e build's command channel; `false` in any other build, where it does not exist. */
   openE2eControl(): boolean;
   answerE2eCommand(id: string, json: string): void;
-  /** The e2e build only: the service screens a call as if the network had sent this name. */
-  screenE2eCall(rawNumber: string, networkName: string | null): Promise<'allowed' | 'rejected'>;
   addListener(event: 'onCallScreened', listener: () => void): { remove(): void };
   addListener(
     event: 'onE2eCommand',

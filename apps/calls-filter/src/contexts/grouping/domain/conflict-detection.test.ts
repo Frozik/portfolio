@@ -4,7 +4,6 @@ import {
   custom,
   factsWith,
   MY_CONTACTS_ID,
-  nameMask,
   newMemberId,
   NOW,
   numberMask,
@@ -42,37 +41,6 @@ describe('conflicts between groups', () => {
       custom('delivery', [numberMask('+7 495 1*')]),
     ]);
     expect(conflictGroups(book)).toEqual([]);
-  });
-
-  it('finds name masks over the same name that overlap', () => {
-    const book = bookOf([
-      custom('a', [nameMask('courier*', 'network')]),
-      custom('b', [nameMask('*delivery*', 'network')]),
-    ]);
-    expect(conflictGroups(book)).toEqual(['a+b']);
-  });
-
-  it('does not compare a mask over operator names with one over contact names by their text alone', () => {
-    const book = bookOf([
-      custom('a', [nameMask('courier*', 'network')]),
-      custom('b', [nameMask('courier*', 'contact')]),
-    ]);
-    expect(conflictGroups(book)).toEqual([]);
-  });
-
-  it('finds a known caller whose operator name and contact name land in different groups', () => {
-    const book = bookOf(
-      [
-        custom('a', [nameMask('ozon*', 'network')], { excludeMyContacts: false }),
-        custom('b', [nameMask('courier*', 'contact')]),
-      ],
-      [nameMask('*', 'contact')]
-    );
-    const caller = {
-      ...contact('Courier Ozon', '31612345000'),
-      networkName: 'ozon dostavka' as never,
-    };
-    expect(conflictGroups(book, factsWith([caller]))).toEqual(['a+b']);
   });
 
   it('finds a picked contact still in «my contacts»', () => {

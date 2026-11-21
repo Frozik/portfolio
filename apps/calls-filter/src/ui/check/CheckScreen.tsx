@@ -21,7 +21,7 @@ import { ToggleRow } from '../kit/ToggleRow';
 import { useScheme } from '../theme/AppTheme';
 import { groupColor } from '../theme/group-colors';
 
-const EMPTY_QUERY: INumberQuery = { number: '', networkName: '', hidden: false };
+const EMPTY_QUERY: INumberQuery = { number: '', hidden: false };
 
 const CheckResult = observer(function CheckResult({ query }: { readonly query: INumberQuery }) {
   const app = useApp();
@@ -73,7 +73,7 @@ const CheckResult = observer(function CheckResult({ query }: { readonly query: I
   );
 });
 
-/** «Check a number»: a number (or a hidden one) and an operator's name, answered as a call now. */
+/** «Check a number»: a number, or a hidden one, answered as a call now. */
 export function CheckScreen() {
   const texts = useTexts();
   const [query, setQuery] = useState(EMPTY_QUERY);
@@ -93,13 +93,6 @@ export function CheckScreen() {
           onChange={number => setQuery({ ...query, number })}
         />
       )}
-      <TextField
-        testID="check-network-name"
-        label={texts.check.networkName}
-        placeholder={texts.check.networkName}
-        value={query.networkName}
-        onChange={networkName => setQuery({ ...query, networkName })}
-      />
       <Section>
         <ToggleRow
           testID="check-hidden"

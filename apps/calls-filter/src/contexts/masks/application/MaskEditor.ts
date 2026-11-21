@@ -2,33 +2,23 @@ import type { TResult } from '@frozik/utils/result/result';
 import { action, computed, makeObservable, observable } from 'mobx';
 
 import type { IMatchingEnvironment } from '../../grouping/domain/matching-environment';
-import type {
-  INameMaskMember,
-  INumberMaskMember,
-  TMemberId,
-  TNameField,
-} from '../../grouping/domain/member';
+import type { INumberMaskMember, TMemberId } from '../../grouping/domain/member';
 import { matchMember } from '../../grouping/domain/member-matching';
 import type { ICaller, TE164Digits } from '../../phone/domain/caller';
-import { normalizeName } from '../../phone/domain/name-normalization';
 import type { IPhoneNumbering } from '../../phone/domain/ports/phone-numbering';
 import type { TMaskToken } from '../domain/mask-description';
 import { describePattern, exampleOf } from '../domain/mask-description';
 import type { TMaskError } from '../domain/mask-error';
-import type { NameMask } from '../domain/name-mask';
-import { parseNameMask } from '../domain/name-mask';
 import type { NumberMask } from '../domain/number-mask';
 import { parseNumberMask } from '../domain/number-mask';
 import type { TCanonicalError } from '../domain/number-mask-canonical';
 import { canonicalNumberPattern } from '../domain/number-mask-canonical';
 import type { TPattern } from '../domain/pattern';
 
-export type TMaskKind = 'number' | 'name';
-
-/** Where the editor starts: a new mask (empty, or a call's number or name), or one of a group to rewrite. */
+/** Where the editor starts: a new mask (empty, or a call's number), or one of a group to rewrite. */
 export type TMaskStart =
-  | { readonly kind: 'new'; readonly mask: TMaskKind; readonly seed: string }
-  | { readonly kind: 'rewrite'; readonly member: INumberMaskMember | INameMaskMember };
+  | { readonly kind: 'new'; readonly seed: string }
+  | { readonly kind: 'rewrite'; readonly member: INumberMaskMember };
 
 /** What the editor shows under the field: why it does not parse yet, or what it means. */
 export type TMaskState =
@@ -44,7 +34,6 @@ export type TMaskState =
     };
 
 const NUMBER_FILLER = '0';
-const NAME_FILLER = 'a';
 
 interface IEditorPorts {
   readonly environment: () => IMatchingEnvironment;
@@ -61,50 +50,34 @@ function isEveryone(pattern: TPattern): boolean {
 
 /** The mask being typed: parsed on every keystroke, explained, and tried against a number. */
 export class MaskEditor {
-  kind: TMaskKind;
   source: string;
-  field: TNameField;
   sample = '';
 
   constructor(
     private readonly ports: IEditorPorts,
     private readonly start: TMaskStart
   ) {
-    if (start.kind === 'new') {
-      this.kind = start.mask;
-      this.source = start.seed;
-      this.field = 'any';
-    } else {
-      const { member } = start;
-      this.kind = member.kind === 'number-mask' ? 'number' : 'name';
-      this.source = member.mask.source;
-      this.field = member.kind === 'name-mask' ? member.field : 'any';
-    }
+    this.source = start.kind === 'new' ? start.seed : start.member.mask.source;
     makeObservable(this, {
-      kind: observable,
       source: observable,
-      field: observable,
       sample: observable,
       parsed: computed,
       state: computed,
       member: computed,
       sampleMatches: computed,
       matchingCalls: computed,
-      setKind: action,
       setSource: action,
-      setField: action,
       setSample: action,
       insert: action,
       erase: action,
-      wrap: action,
     });
   }
 
-  get parsed(): TResult<NumberMask | NameMask, readonly TMaskError[]> | null {
+  get parsed(): TResult<NumberMask, readonly TMaskError[]> | null {
     if (this.source.trim() === '') {
       return null;
     }
-    return this.kind === 'number' ? parseNumberMask(this.source) : parseNameMask(this.source);
+    return parseNumberMask(this.source);
   }
 
   get state(): TMaskState {
@@ -115,26 +88,17 @@ export class MaskEditor {
     if (!parsed.ok) {
       return { kind: 'invalid', errors: parsed.error };
     }
-    const international = 'international' in parsed.value ? parsed.value.international : false;
-    let pattern = parsed.value.pattern;
-    if (this.kind === 'number') {
-      const canonical = canonicalNumberPattern(
-        parsed.value as NumberMask,
-        this.ports.environment().home
-      );
-      if (!canonical.ok) {
-        return { kind: 'not-here', error: canonical.error };
-      }
-      pattern = canonical.value;
+    const canonical = canonicalNumberPattern(parsed.value, this.ports.environment().home);
+    if (!canonical.ok) {
+      return { kind: 'not-here', error: canonical.error };
     }
-    const example = exampleOf(pattern, this.kind === 'number' ? NUMBER_FILLER : NAME_FILLER);
+    const example = exampleOf(canonical.value, NUMBER_FILLER);
     return {
       kind: 'valid',
       tokens: describePattern(parsed.value.pattern),
-      international,
-      example:
-        this.kind === 'number' ? this.ports.numbering.format(example as TE164Digits) : example,
-      takesEveryone: isEveryone(pattern),
+      international: parsed.value.international,
+      example: this.ports.numbering.format(example as TE164Digits),
+      takesEveryone: isEveryone(canonical.value),
     };
   }
 
@@ -144,7 +108,7 @@ export class MaskEditor {
   }
 
   /** The member saving would add, or the rewrite of the one it started from; `null` while the mask does not hold. */
-  get member(): INumberMaskMember | INameMaskMember | null {
+  get member(): INumberMaskMember | null {
     const { parsed } = this;
     if (parsed === null || !parsed.ok || this.state.kind !== 'valid') {
       return null;
@@ -155,9 +119,7 @@ export class MaskEditor {
       excludedFor: null,
       note: '',
     };
-    return this.kind === 'number'
-      ? { kind: 'number-mask', mask: parsed.value as NumberMask, ...core }
-      : { kind: 'name-mask', mask: parsed.value as NameMask, field: this.field, ...core };
+    return { kind: 'number-mask', mask: parsed.value, ...core };
   }
 
   get sampleMatches(): boolean | null {
@@ -166,22 +128,13 @@ export class MaskEditor {
       return null;
     }
     const environment = this.ports.environment();
-    const caller: ICaller =
-      this.kind === 'number'
-        ? {
-            number: this.ports.numbering.parse(this.sample, environment.home.country),
-            traits: null,
-            networkName: null,
-            contact: null,
-            dialer: null,
-          }
-        : {
-            number: null,
-            traits: null,
-            networkName: normalizeName(this.sample),
-            contact: { lookupKey: '', displayName: this.sample, name: normalizeName(this.sample) },
-            dialer: null,
-          };
+    const caller: ICaller = {
+      number: this.ports.numbering.parse(this.sample, environment.home.country),
+      traits: null,
+      networkName: null,
+      contact: null,
+      dialer: null,
+    };
     return matchMember(member, caller, environment) !== null;
   }
 
@@ -196,16 +149,8 @@ export class MaskEditor {
       .filter(caller => matchMember(member, caller, environment) !== null).length;
   }
 
-  setKind(kind: TMaskKind): void {
-    this.kind = kind;
-  }
-
   setSource(source: string): void {
     this.source = source;
-  }
-
-  setField(field: TNameField): void {
-    this.field = field;
   }
 
   setSample(sample: string): void {
@@ -218,11 +163,5 @@ export class MaskEditor {
 
   erase(): void {
     this.source = this.source.slice(0, -1);
-  }
-
-  /** «Contains», «starts with», «exactly» for a name typed as plain words. */
-  wrap(how: 'contains' | 'starts' | 'exact'): void {
-    const bare = this.source.replace(/^\*+|\*+$/g, '');
-    this.source = how === 'contains' ? `*${bare}*` : how === 'starts' ? `${bare}*` : bare;
   }
 }

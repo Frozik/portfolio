@@ -23,25 +23,6 @@ describe('the screening service on real calls', () => {
     }
   );
 
-  e2eTest(
-    'turns away a stranger by the name the network sends with the call, whatever the number',
-    SCREENING_LIMIT_MS,
-    async () => {
-      await control('create-group', {
-        group: { name: 'Call centres', action: 'block', names: ['IP*'] },
-      });
-      const named = await control<{ readonly verdict: string }>('screen-call', {
-        number: freshNumber(),
-        networkName: 'IP Isanshin: kol-tsentr',
-      });
-      const unnamed = await control<{ readonly verdict: string }>('screen-call', {
-        number: freshNumber(),
-        networkName: 'Pizza Napoli',
-      });
-      assert.deepEqual([named.verdict, unnamed.verdict], ['rejected', 'allowed']);
-    }
-  );
-
   e2eTest('turns away a number a blocking group holds', SCREENING_LIMIT_MS, async () => {
     const number = freshNumber();
     await control('create-group', { group: { name: 'Spam', action: 'block', numbers: [number] } });

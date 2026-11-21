@@ -10,7 +10,6 @@ import io.github.frozik.callsfilter.screening.application.CallerResolver
 import io.github.frozik.callsfilter.screening.application.IncomingCall
 import io.github.frozik.callsfilter.screening.domain.Caller
 import io.github.frozik.callsfilter.screening.domain.CallerContact
-import io.github.frozik.callsfilter.screening.domain.NameNormalizer
 import io.github.frozik.callsfilter.screening.domain.NumberType
 
 private val NON_DIGITS = Regex("\\D")
@@ -24,7 +23,7 @@ class PhoneCallerResolver(private val resolver: ContentResolver) : CallerResolve
 
   override fun resolve(call: IncomingCall, homeCountry: String): Caller {
     val raw = call.rawNumber?.takeIf { it.any(Char::isDigit) }
-      ?: return Caller(null, null, null, call.networkName?.let(NameNormalizer::normalize), null)
+      ?: return Caller(null, null, null, null)
     val parsed =
       try {
         util.parse(raw, homeCountry)
@@ -36,7 +35,6 @@ class PhoneCallerResolver(private val resolver: ContentResolver) : CallerResolve
       number = digits,
       country = parsed?.let(util::getRegionCodeForNumber)?.takeIf { it != "ZZ" },
       type = parsed?.let { type(util.getNumberType(it)) },
-      networkName = call.networkName?.takeIf { it.isNotBlank() }?.let(NameNormalizer::normalize),
       contact = contactOf(raw),
     )
   }
@@ -63,8 +61,7 @@ class PhoneCallerResolver(private val resolver: ContentResolver) : CallerResolve
       if (!cursor.moveToFirst()) {
         null
       } else {
-        val displayName = cursor.getString(1).orEmpty()
-        CallerContact(cursor.getString(0).orEmpty(), NameNormalizer.normalize(displayName), displayName)
+        CallerContact(cursor.getString(0).orEmpty(), cursor.getString(1).orEmpty())
       }
     }
   } catch (denied: SecurityException) {
