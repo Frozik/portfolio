@@ -34,7 +34,7 @@ private fun group(id: String, kind: GroupKind, include: List<Member> = emptyList
 private fun ruleset(vararg custom: Group) =
   Ruleset(Ruleset.SCHEMA, 0L, Long.MAX_VALUE, "NL", custom.toList() + group("my-contacts", GroupKind.MY_CONTACTS) + group("strangers", GroupKind.STRANGERS))
 
-private class Harness(load: RulesetLoad, remembered: RememberedNames = RememberedNames.NONE, contact: CallerContact? = null) {
+private class Harness(load: RulesetLoad, contact: CallerContact? = null, remembered: () -> RememberedNames = { RememberedNames.NONE }) {
   val records = mutableListOf<CallRecord>()
   val logged = mutableListOf<String>()
   var pausedUntil: Long? = null
@@ -44,8 +44,8 @@ private class Harness(load: RulesetLoad, remembered: RememberedNames = Remembere
       callers =
       CallerLookup(
         CallerResolver { call, _ -> Caller(call.rawNumber?.removePrefix("+"), "NL", null, call.networkName, contact) },
-        { remembered },
-        { _, _, _, _ -> },
+        { remembered() },
+        { level, _, event, _ -> logged += "$level $event" },
       ),
       journal =
       object : CallJournal {
@@ -138,21 +138,21 @@ class ScreenCallTest {
 
   @Test
   fun theOperatorsNameFromTheNumbersEarlierCallDecidesWhenTheCallCameWithout() {
-    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre)), RememberedNames("OOO ETST: kol-tsentr", null))
+    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre))) { RememberedNames("OOO ETST: kol-tsentr", null) }
     assertEquals(ScreeningReply.Reject, harness.screenCall.execute(IncomingCall("+79864267807", null)))
     assertEquals("call-centre OOO ETST: kol-tsentr", harness.records.single().let { "${it.groupId} ${it.networkName}" })
   }
 
   @Test
   fun theNameTheCallCameWithOutranksTheRememberedOne() {
-    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre)), RememberedNames("OOO ETST: kol-tsentr", null))
+    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre))) { RememberedNames("OOO ETST: kol-tsentr", null) }
     assertEquals(ScreeningReply.Allow, harness.screenCall.execute(IncomingCall("+79864267807", "Bakkerij de Graaf")))
     assertEquals("Bakkerij de Graaf", harness.records.single().networkName)
   }
 
   @Test
   fun theDialersCallerIdOfAStrangerMatchesANameMask() {
-    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre)), RememberedNames(null, "ETST kol-tsentr"))
+    val harness = Harness(RulesetLoad.Loaded(ruleset(callCentre))) { RememberedNames(null, "ETST kol-tsentr") }
     assertEquals(ScreeningReply.Reject, harness.screenCall.execute(IncomingCall("+79864267807", null)))
   }
 
@@ -160,8 +160,15 @@ class ScreenCallTest {
   fun aContactIsNeverMatchedByTheNameItsNumberOnceShowedInTheDialer() {
     val contact = CallerContact("42", "anna", "Anna")
     val evenForContacts = callCentre.copy(excludeMyContacts = false)
-    val harness = Harness(RulesetLoad.Loaded(ruleset(evenForContacts)), RememberedNames(null, "ETST kol-tsentr"), contact)
+    val harness = Harness(RulesetLoad.Loaded(ruleset(evenForContacts)), contact) { RememberedNames(null, "ETST kol-tsentr") }
     harness.screenCall.execute(IncomingCall("+79864267807", null))
     assertEquals("my-contacts []", harness.records.single().let { "${it.groupId} ${it.alsoClaimedBy}" })
+  }
+
+  @Test
+  fun aCallLogThatCannotBeReadLeavesTheNamesOutButStillDecidesByTheNumber() {
+    val harness = Harness(RulesetLoad.Loaded(ruleset(spam))) { throw IllegalArgumentException("Invalid token") }
+    assertEquals(ScreeningReply.Reject, harness.screenCall.execute(IncomingCall("+74951234567", null)))
+    assertTrue("WARN call-log-unreadable" in harness.logged)
   }
 }

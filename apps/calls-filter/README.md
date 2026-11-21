@@ -159,15 +159,18 @@ catalogue is a few megabytes of JSON, read right after the app starts rather tha
 the first screen never waits for it; until then the line is simply not there.
 
 A stranger also shows the name the phone's dialer found for the number by its own caller ID
-(Google's Phone: a business, a delivery service), «Bakkerij de Graaf · by the Phone app». The
-operator's name (CNAP) often comes late in the same way: the phone gets it after the service has
-already screened the call. Both land in the phone's call history: the network's name in
-`cnip_name` (OnePlus, Oppo) or `asserted_display_name` (Android 14), the dialer's in `name` or
-`identify_name`. So the service screens a call by every name it can get: the one the call came
-with and the newest ones from the number's earlier calls in the history. A name mask over the
-operator's name takes the dialer's name too (never for a contact). Each screened call writes a
-diagnostics line saying whether the system passed a name, how it was presented and where each name
-came from. A row in the list takes the late names from the history of the same call.
+(Google's Phone: a business, a delivery service), «Bakkerij de Graaf · by the Phone app».
+
+The operator's name (CNAP) comes with the call, and the dialer shows it while the phone rings, but
+Android never hands it to a call-screening app: Telecom builds the call it screens without the
+caller's name (`ParcelableCallUtils.toParcelableCallForScreening`). Both names land in the phone's
+call history afterwards: the network's in `cnip_name` (OnePlus, Oppo) or `asserted_display_name`
+(Android 14), the dialer's in `name` or `identify_name`. So the service screens a call by the
+newest names the number's earlier calls left there, and the first call from a new number by its
+number alone. A name mask over the operator's name takes the dialer's name too, never for a
+contact. A row in the list takes the names from the history of the same call. Each screened call
+writes diagnostics lines: whether the system passed a name and how it was presented, and where each
+name came from.
 
 ## Check a number
 

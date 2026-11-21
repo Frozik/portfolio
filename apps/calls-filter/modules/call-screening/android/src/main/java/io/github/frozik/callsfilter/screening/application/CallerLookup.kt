@@ -18,9 +18,23 @@ private fun sourceOf(live: String?, remembered: String?): String = when {
  * them; the name the call itself came with outranks theirs.
  */
 class CallerLookup(private val resolver: CallerResolver, private val memory: NameMemory, private val diagnostics: Diagnostics) {
+  /** A call log a phone's maker changed must cost the names only, never the decision. */
+  private fun rememberedNames(number: String): RememberedNames = try {
+    memory.of(number)
+  } catch (refused: IllegalArgumentException) {
+    unreadable(refused)
+  } catch (broken: IllegalStateException) {
+    unreadable(broken)
+  }
+
+  private fun unreadable(failure: RuntimeException): RememberedNames {
+    diagnostics.log(Level.WARN, "screening", "call-log-unreadable", mapOf("reason" to failure.toString()))
+    return RememberedNames.NONE
+  }
+
   fun identify(call: IncomingCall, homeCountry: String): IdentifiedCall {
     val resolved = resolver.resolve(call, homeCountry)
-    val remembered = resolved.number?.let(memory::of) ?: RememberedNames.NONE
+    val remembered = resolved.number?.let(::rememberedNames) ?: RememberedNames.NONE
     val networkName = call.networkName ?: remembered.networkName
     val normalizedNetworkName = networkName?.let(NameNormalizer::normalize)
     val dialerName =

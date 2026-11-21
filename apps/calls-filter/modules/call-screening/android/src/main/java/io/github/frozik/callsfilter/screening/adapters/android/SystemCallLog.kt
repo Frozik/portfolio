@@ -2,6 +2,7 @@ package io.github.frozik.callsfilter.screening.adapters.android
 
 import android.content.ContentResolver
 import android.database.Cursor
+import android.database.sqlite.SQLiteException
 import android.provider.CallLog
 import io.github.frozik.callsfilter.screening.application.NameMemory
 import io.github.frozik.callsfilter.screening.application.RememberedNames
@@ -75,14 +76,17 @@ class SystemCallLog(private val resolver: ContentResolver) : NameMemory {
     resolver.query(
       CallLog.Calls.CONTENT_URI,
       null,
-      "PHONE_NUMBERS_EQUAL(${CallLog.Calls.NUMBER}, ?, 0)",
-      arrayOf("+$number"),
-      "${CallLog.Calls.DATE} DESC LIMIT $REMEMBERED_CALLS",
+      "${CallLog.Calls.NUMBER} = ? OR ${CallLog.Calls.CACHED_NORMALIZED_NUMBER} = ?",
+      arrayOf("+$number", "+$number"),
+      "${CallLog.Calls.DATE} DESC",
     )?.use { cursor ->
       generateSequence { if (cursor.moveToNext()) cursor.networkName().let { RememberedNames(it, cursor.dialerName(it)) } else null }
+        .take(REMEMBERED_CALLS)
         .fold(RememberedNames.NONE) { kept, call -> RememberedNames(kept.networkName ?: call.networkName, kept.dialerName ?: call.dialerName) }
     } ?: RememberedNames.NONE
   } catch (denied: SecurityException) {
     RememberedNames.NONE
+  } catch (broken: SQLiteException) {
+    throw IllegalStateException("the call log refused the query", broken)
   }
 }
