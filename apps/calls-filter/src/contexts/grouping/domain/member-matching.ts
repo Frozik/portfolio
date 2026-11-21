@@ -1,4 +1,5 @@
 import { assertNever } from '@frozik/utils/assert/assertNever';
+import { isNil } from 'lodash-es';
 
 import { canonicalNumberPattern } from '../../masks/domain/number-mask-canonical';
 import { patternRegexSource } from '../../masks/domain/pattern-regex';
@@ -62,7 +63,7 @@ function compile(member: TMember, environment: IMatchingEnvironment): TMatcher {
       const contactMatches = (caller: ICaller): boolean =>
         caller.contact !== null && regex.test(caller.contact.name);
       const networkMatches = (caller: ICaller): boolean =>
-        caller.networkName !== null && regex.test(caller.networkName);
+        [caller.networkName, caller.dialer?.name].some(name => !isNil(name) && regex.test(name));
       switch (member.field) {
         case 'contact':
           return caller => (contactMatches(caller) ? 'explicit' : null);

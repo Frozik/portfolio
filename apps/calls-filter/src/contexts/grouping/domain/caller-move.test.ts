@@ -104,7 +104,7 @@ describe('moving a caller to a group', () => {
   });
 
   it('has nothing to move for a hidden number', () => {
-    const hidden = { number: null, traits: null, networkName: null, contact: null };
+    const hidden = { number: null, traits: null, networkName: null, contact: null, dialer: null };
     expect(move(bookOf([custom('spam', [])]), hidden, 'spam')).toEqual({
       kind: 'rejected',
       reason: 'nothing-to-move',

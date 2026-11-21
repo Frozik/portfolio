@@ -10,6 +10,7 @@ import {
   custom,
   STRANGERS_ID,
   stranger,
+  strangerWithDialerName,
 } from '../../contexts/grouping/testing/group-book-fixtures';
 import type { IJournalEntry, TJournalEntryId } from '../../contexts/journal/domain/journal-entry';
 import { ALWAYS_BLOCK } from '../../contexts/policy/domain/policy';
@@ -234,7 +235,6 @@ describe('a group, edited on its own screen', () => {
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+79630001234',
       caller: stranger('79630001234'),
-      dialerName: null,
       answered: null,
       outcome: {
         kind: 'screened',
@@ -257,8 +257,7 @@ describe('a group, edited on its own screen', () => {
       id: 'call-bakery' as TJournalEntryId,
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+31201234567',
-      caller: stranger('31201234567'),
-      dialerName: 'Bakkerij de Graaf',
+      caller: strangerWithDialerName('31201234567', 'Bakkerij de Graaf'),
       answered: false,
       outcome: { kind: 'history', type: 'missed' },
     };
@@ -277,7 +276,6 @@ describe('a group, edited on its own screen', () => {
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+31851234567',
       caller: stranger('31851234567'),
-      dialerName: null,
       answered: null,
       outcome: {
         kind: 'screened',
@@ -304,7 +302,6 @@ describe('a group, edited on its own screen', () => {
       at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
       rawNumber: '+79864563560',
       caller: stranger('79864563560', 'IP Isanshin'),
-      dialerName: null,
       answered: null,
       outcome: { kind: 'history', type: 'rejected' },
     };

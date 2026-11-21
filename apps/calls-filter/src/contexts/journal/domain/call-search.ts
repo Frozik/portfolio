@@ -11,11 +11,7 @@ export function findsCall(entry: IJournalEntry, query: string): boolean {
   }
   const digits = query.replace(NOT_DIGITS, '');
   const numbers = [entry.caller.number, entry.rawNumber?.replace(NOT_DIGITS, '')];
-  const names = [
-    entry.caller.contact?.name,
-    entry.caller.networkName,
-    entry.dialerName === null ? null : normalizeName(entry.dialerName),
-  ];
+  const names = [entry.caller.contact?.name, entry.caller.networkName, entry.caller.dialer?.name];
   return (
     (digits !== '' && numbers.some(number => number?.includes(digits) === true)) ||
     names.some(known => known?.includes(name) === true)

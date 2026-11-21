@@ -1,5 +1,6 @@
 package io.github.frozik.callsfilter.screening.adapters.android
 
+import android.os.Build
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import io.github.frozik.callsfilter.screening.application.IncomingCall
@@ -20,6 +21,7 @@ class ScreeningService : CallScreeningService() {
 
   override fun onScreenCall(callDetails: Call.Details) {
     val runtime = ScreeningRuntime.of(this)
+    runtime.diagnostics.log(Level.INFO, "screening", "call-details", detailsOf(callDetails))
     val call =
       IncomingCall(
         rawNumber = callDetails.handle?.schemeSpecificPart,
@@ -36,6 +38,17 @@ class ScreeningService : CallScreeningService() {
         ScreeningReply.Allow
       }
     respondToCall(callDetails, responseOf(reply))
+  }
+
+  /** What the system handed over about the caller's name, without the name itself. */
+  private fun detailsOf(details: Call.Details): Map<String, String> = buildMap {
+    put("network-name", (!details.callerDisplayName.isNullOrBlank()).toString())
+    put("network-name-presentation", details.callerDisplayNamePresentation.toString())
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      put("contact-name", (!details.contactDisplayName.isNullOrBlank()).toString())
+    }
+    put("extras", details.extras?.keySet()?.sorted()?.joinToString(",").orEmpty())
+    put("intent-extras", details.intentExtras?.keySet()?.sorted()?.joinToString(",").orEmpty())
   }
 
   private fun responseOf(reply: ScreeningReply): CallResponse = when (reply) {

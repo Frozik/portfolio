@@ -5,8 +5,9 @@ const SAME_CALL_WINDOW_MS = 120_000;
 
 /**
  * The service's journal and the phone's history as one list: a history call the service also
- * screened is the same call, and the service's entry (it knows the verdict) wins, with the name
- * the dialer found later and whether it was answered, which only the history has.
+ * screened is the same call, and the service's entry (it knows the verdict) wins, with the names
+ * that arrived after screening (the operator's and the dialer's) and whether it was answered, which
+ * only the history has.
  */
 export function mergeJournal(
   screened: readonly IJournalEntry[],
@@ -19,7 +20,11 @@ export function mergeJournal(
     const logged = history.find(entry => sameCall(known, entry));
     return {
       ...known,
-      dialerName: known.dialerName ?? logged?.dialerName ?? null,
+      caller: {
+        ...known.caller,
+        networkName: known.caller.networkName ?? logged?.caller.networkName ?? null,
+        dialer: known.caller.dialer ?? logged?.caller.dialer ?? null,
+      },
       answered: known.answered ?? logged?.answered ?? null,
     };
   });

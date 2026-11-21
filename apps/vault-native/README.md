@@ -147,7 +147,9 @@ There are no over-the-air updates: every change ships as a signed APK the user c
 - **Provenance:** `gh attestation verify ciphra-vault-<version>.apk -R
   ciphra-vault/ciphra-vault.github.io --signer-workflow
   Frozik/portfolio/.github/workflows/vault-release.yml` — the file was built by that workflow
-  at the commit the release pins.
+  at the commit the release pins. The flag is required: the signer lives in another owner's
+  repository, so without it `gh` refuses with a misleading `verifying with issuer
+  "sigstore.dev"`.
 - **Signature:** `apksigner verify --print-certs ciphra-vault-<version>.apk` prints the
   certificate SHA-256 digest
   `b2a0b977dfc8355d16147e938fac7e1154a4ed1f040445bc34b83d4df1e10b0b` (keytool shows it as

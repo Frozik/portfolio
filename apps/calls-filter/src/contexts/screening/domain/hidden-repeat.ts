@@ -8,7 +8,13 @@ import type { ICaller } from '../../phone/domain/caller';
 import type { TRepeatPass } from '../../policy/domain/repeat-pass';
 import { isRepeatPassOn } from '../../policy/domain/repeat-pass';
 
-const HIDDEN_CALLER: ICaller = { number: null, traits: null, networkName: null, contact: null };
+const HIDDEN_CALLER: ICaller = {
+  number: null,
+  traits: null,
+  networkName: null,
+  contact: null,
+  dialer: null,
+};
 
 /**
  * Whether a group counts on «a repeat rings» while hidden numbers land in it: a hidden number

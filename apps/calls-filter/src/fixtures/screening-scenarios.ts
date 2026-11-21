@@ -22,6 +22,7 @@ interface IScenarioCaller {
     | 'toll-free'
     | 'other';
   readonly networkName: string | null;
+  readonly dialerName: string | null;
   readonly contactName: string | null;
   readonly contactLookupKey: string | null;
 }
@@ -48,6 +49,7 @@ function caller(partial: Partial<IScenarioCaller>): IScenarioCaller {
     country: 'NL',
     type: 'fixed-line',
     networkName: null,
+    dialerName: null,
     contactName: null,
     contactLookupKey: null,
     ...partial,
@@ -83,6 +85,9 @@ export const SCENARIOS: readonly IScenario[] = [
   }),
   scenario('an operator name puts a caller in spam', {
     caller: caller({ number: '31301234567', networkName: 'KPN Klantenservice' }),
+  }),
+  scenario('the dialer’s name for a stranger puts the caller in spam like the operator’s', {
+    caller: caller({ number: '31301234567', dialerName: 'KPN Klantenservice' }),
   }),
   scenario('a contact passes in my contacts', {
     caller: contactCaller('Neighbour', '31611111111'),

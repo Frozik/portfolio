@@ -11,6 +11,7 @@ import {
   pickedContact,
   special,
   stranger,
+  strangerWithDialerName,
   STRANGERS_ID,
 } from '../testing/group-book-fixtures';
 import type { GroupBook } from './group-book';
@@ -105,15 +106,22 @@ describe('the group of a caller', () => {
     expect(groupOf(book, contact('Ex', '31600000000'))).toBe(STRANGERS_ID);
   });
 
+  it('takes a stranger by the name the dialer found when a mask is over the operator’s name', () => {
+    const book = bookOf([custom('call-centres', [nameMask('*kol-tsentr*', 'network')])]);
+    expect(groupOf(book, strangerWithDialerName('79864267807', 'ETST kol-tsentr'))).toBe(
+      'call-centres'
+    );
+  });
+
   it('knows hidden, foreign and premium numbers without masks', () => {
     const book = bookOf([
       custom('hidden', [special('hidden')]),
       custom('abroad', [special('foreign')]),
       custom('paid', [special('premium-rate')]),
     ]);
-    expect(groupOf(book, { number: null, traits: null, networkName: null, contact: null })).toBe(
-      'hidden'
-    );
+    expect(
+      groupOf(book, { number: null, traits: null, networkName: null, contact: null, dialer: null })
+    ).toBe('hidden');
     expect(
       groupOf(book, {
         ...stranger('4420794600'),

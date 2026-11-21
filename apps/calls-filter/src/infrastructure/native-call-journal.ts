@@ -51,8 +51,8 @@ export function nativeCallJournal(numbering: IPhoneNumbering): ICallJournal {
                     displayName: record.contactName,
                     name: normalizeName(record.contactName),
                   },
+            dialer: null,
           },
-          dialerName: null,
           answered: null,
           outcome: {
             kind: 'screened',

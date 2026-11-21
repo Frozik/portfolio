@@ -17,10 +17,10 @@ private fun specialMatches(mask: SpecialMask, caller: Caller, networkCountry: St
   SpecialMask.TOLL_FREE -> caller.type == NumberType.TOLL_FREE
 }
 
-/** A contact's own name is the user's word for them; the operator's name only happens to fit. */
+/** A contact's own name is the user's word for them; the operator's or the dialer's only happens to fit. */
 private fun nameMatch(member: Member.Name, caller: Caller): MatchKind? {
   val byContact = member.field != NameField.NETWORK && caller.contact != null && member.regex.matches(caller.contact.name)
-  val byNetwork = member.field != NameField.CONTACT && caller.networkName != null && member.regex.matches(caller.networkName)
+  val byNetwork = member.field != NameField.CONTACT && listOfNotNull(caller.networkName, caller.dialerName).any(member.regex::matches)
   return when {
     byContact -> MatchKind.EXPLICIT
     byNetwork -> MatchKind.PATTERN

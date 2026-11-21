@@ -173,12 +173,14 @@ export class MaskEditor {
             traits: null,
             networkName: null,
             contact: null,
+            dialer: null,
           }
         : {
             number: null,
             traits: null,
             networkName: normalizeName(this.sample),
             contact: { lookupKey: '', displayName: this.sample, name: normalizeName(this.sample) },
+            dialer: null,
           };
     return matchMember(member, caller, environment) !== null;
   }

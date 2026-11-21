@@ -27,10 +27,20 @@ interface ICallerContact {
   readonly name: TNormalizedName;
 }
 
-/** Everything a call says about who is calling; `number: null` is a hidden number. */
+/** A stranger's name the dialer found by its own caller ID: as it wrote it, and normalized. */
+interface ICallerDialerName {
+  readonly displayName: string;
+  readonly name: TNormalizedName;
+}
+
+/**
+ * Everything the call, the address book and the phone's history say about who is calling;
+ * `number: null` is a hidden number. `networkName` is the operator's, `dialer` the dialer's.
+ */
 export interface ICaller {
   readonly number: TE164Digits | null;
   readonly traits: INumberTraits | null;
   readonly networkName: TNormalizedName | null;
   readonly contact: ICallerContact | null;
+  readonly dialer: ICallerDialerName | null;
 }

@@ -28,6 +28,7 @@ export function expoContactsDirectory(
               number,
               traits: numbering.traits(number),
               networkName: null,
+              dialer: null,
               contact: { lookupKey: contact.id, displayName, name: normalizeName(displayName) },
             },
           ];

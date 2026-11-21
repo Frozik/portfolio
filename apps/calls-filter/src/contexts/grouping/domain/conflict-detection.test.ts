@@ -117,7 +117,7 @@ describe('conflicts between groups', () => {
       custom('hidden', [special('hidden')]),
       custom('all', [numberMask('*'), special('hidden')]),
     ]);
-    const hidden = { number: null, traits: null, networkName: null, contact: null };
+    const hidden = { number: null, traits: null, networkName: null, contact: null, dialer: null };
     expect(conflictGroups(book, factsWith([hidden]))).toContain('hidden+all');
   });
 

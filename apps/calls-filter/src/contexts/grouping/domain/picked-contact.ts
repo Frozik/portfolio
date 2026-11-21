@@ -8,6 +8,7 @@ export function pickedContactAsCaller(member: IContactMember): ICaller {
     number: member.numbers[0] ?? null,
     traits: null,
     networkName: null,
+    dialer: null,
     contact: {
       lookupKey: member.lookupKey ?? member.id,
       displayName: member.displayName,

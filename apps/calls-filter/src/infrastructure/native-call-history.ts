@@ -42,11 +42,11 @@ export function nativeCallHistory(
                     displayName: call.contactName,
                     name: normalizeName(call.contactName),
                   },
+            dialer:
+              call.contactId === null && call.dialerName !== null
+                ? { displayName: call.dialerName, name: normalizeName(call.dialerName) }
+                : null,
           },
-          dialerName:
-            call.contactId === null && call.cachedName !== call.networkName
-              ? call.cachedName
-              : null,
           answered: call.kind === 'incoming' ? true : call.kind === 'missed' ? false : null,
           outcome: { kind: 'history', type: call.kind },
         };

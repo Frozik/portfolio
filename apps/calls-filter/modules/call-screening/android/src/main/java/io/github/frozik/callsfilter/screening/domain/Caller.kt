@@ -5,5 +5,9 @@ enum class NumberType { MOBILE, FIXED_LINE, PREMIUM_RATE, SHARED_COST, VOIP, TOL
 /** `name` is normalized for matching; `displayName` is how the address book writes it. */
 data class CallerContact(val lookupKey: String, val name: String, val displayName: String)
 
-/** Who is calling, as the call and the address book say it; `number == null` is a hidden number. */
-data class Caller(val number: String?, val country: String?, val type: NumberType?, val networkName: String?, val contact: CallerContact?)
+/**
+ * Who is calling, as the call, the address book and the phone's earlier calls say it;
+ * `number == null` is a hidden number. `networkName` is the operator's, `dialerName` the caller ID
+ * the dialer found for a stranger; both are normalized for matching.
+ */
+data class Caller(val number: String?, val country: String?, val type: NumberType?, val networkName: String?, val contact: CallerContact?, val dialerName: String? = null)

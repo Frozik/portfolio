@@ -150,7 +150,7 @@ export const EN: ITexts = {
       'toll-free':
         "Free-to-call numbers by the country's own plan — 0800 in the Netherlands, 8 800 in Russia, 1-800 in the US; often call centres",
     },
-    nameField: { network: 'operator name', contact: 'contact name', any: 'any name' },
+    nameField: { network: 'operator or dialer name', contact: 'contact name', any: 'any name' },
     excludedFor: group => `moved to «${group}»`,
   },
   call: {

@@ -74,7 +74,9 @@ const CallRow = observer(function CallRow({
           testID={`call-state-${state}`}
           ring={callRing(state, entry.answered)}
           photoUri={caller.contact === null ? null : app.contactPhotoUri(caller.contact.lookupKey)}
-          name={caller.contact?.displayName ?? caller.networkName ?? entry.dialerName}
+          name={
+            caller.contact?.displayName ?? caller.networkName ?? caller.dialer?.displayName ?? null
+          }
         />
         <View style={styles.text}>
           <Text
@@ -90,13 +92,13 @@ const CallRow = observer(function CallRow({
               {name}
             </Text>
           ))}
-          {entry.dialerName === null ? null : (
+          {caller.dialer === null ? null : (
             <Text
               testID={`call-dialer-name-${entry.id}`}
               style={[styles.subtitle, { color: palette.fgDim }]}
               numberOfLines={1}
             >
-              {`${entry.dialerName} · ${texts.call.fromDialer}`}
+              {`${caller.dialer.displayName} · ${texts.call.fromDialer}`}
             </Text>
           )}
           <View style={styles.when}>

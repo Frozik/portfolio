@@ -19,7 +19,7 @@ private const val NONE_IN_FORCE = "NONE_IN_FORCE"
 
 class ScreenCall(
   private val rulesets: RulesetSource,
-  private val callers: CallerResolver,
+  private val callers: CallerLookup,
   private val journal: CallJournal,
   private val runtime: RuntimeState,
   private val calendar: LiveCalendar,
@@ -44,7 +44,7 @@ class ScreenCall(
         }
       }
     val moment = clock.now()
-    val caller = callers.resolve(call, ruleset.homeCountry)
+    val (caller, networkName) = callers.identify(call, ruleset.homeCountry)
     val networkCountry = country.current()
     val facts =
       object : MomentFacts {
@@ -66,7 +66,7 @@ class ScreenCall(
         epochMs = moment.epochMs,
         rawNumber = call.rawNumber,
         number = caller.number,
-        networkName = call.networkName,
+        networkName = networkName,
         contactName = caller.contact?.displayName,
         contactLookupKey = caller.contact?.lookupKey,
         groupId = decision.group.id,

@@ -15,15 +15,23 @@ const STRANGER = {
   epochMs: 1_794_156_901_361,
   rawNumber: '+79864563560',
   kind: 'rejected',
-  contactName: null,
-  contactId: null,
 } as const;
 
-async function readStranger(names: {
-  readonly cachedName: string | null;
+async function readCall(names: {
   readonly networkName: string | null;
+  readonly dialerName: string | null;
+  readonly contactName?: string;
 }) {
-  systemCallLog.mockResolvedValue([{ ...STRANGER, ...names }]);
+  const contactName = names.contactName ?? null;
+  systemCallLog.mockResolvedValue([
+    {
+      ...STRANGER,
+      networkName: names.networkName,
+      dialerName: names.dialerName,
+      contactName,
+      contactId: contactName === null ? null : 'contact-1',
+    },
+  ]);
   const history = nativeCallHistory(LIBPHONENUMBER_NUMBERING, () => 'NL' as TCountryCode);
   const [entry] = await history.since(Temporal.Instant.fromEpochMilliseconds(0), 10);
   return entry;
@@ -31,18 +39,30 @@ async function readStranger(names: {
 
 describe('the phone’s call log, read as the journal', () => {
   it('takes the name the network sent as the operator’s, so a name mask finds the call', async () => {
-    const entry = await readStranger({
-      cachedName: 'IP Isanshin: kol-tsentr',
-      networkName: 'IP Isanshin: kol-tsentr',
-    });
-    expect([entry?.caller.networkName, entry?.dialerName]).toEqual([
+    const entry = await readCall({ networkName: 'IP Isanshin: kol-tsentr', dialerName: null });
+    expect([entry?.caller.networkName, entry?.caller.dialer]).toEqual([
       'ip isanshin: kol-tsentr',
       null,
     ]);
   });
 
-  it('keeps a name only the dialer found as the dialer’s, shown and never matched', async () => {
-    const entry = await readStranger({ cachedName: 'Pizza Napoli', networkName: null });
-    expect([entry?.caller.networkName, entry?.dialerName]).toEqual([null, 'Pizza Napoli']);
+  it('keeps the name the dialer found for a stranger as the dialer’s', async () => {
+    const entry = await readCall({ networkName: null, dialerName: 'Pizza Napoli' });
+    expect([entry?.caller.networkName, entry?.caller.dialer?.displayName]).toEqual([
+      null,
+      'Pizza Napoli',
+    ]);
+  });
+
+  it('gives a contact’s call no dialer name: the dialer only wrote the contact’s own', async () => {
+    const entry = await readCall({
+      networkName: null,
+      dialerName: 'Anna Petrova',
+      contactName: 'Anna Petrova',
+    });
+    expect([entry?.caller.contact?.displayName, entry?.caller.dialer]).toEqual([
+      'Anna Petrova',
+      null,
+    ]);
   });
 });

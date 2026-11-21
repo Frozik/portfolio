@@ -37,6 +37,10 @@ function callerOf(scenario: IScenario): ICaller {
             displayName: caller.contactName,
             name: normalizeName(caller.contactName),
           },
+    dialer:
+      caller.dialerName === null
+        ? null
+        : { displayName: caller.dialerName, name: normalizeName(caller.dialerName) },
   };
 }
 

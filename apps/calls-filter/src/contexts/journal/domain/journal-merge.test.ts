@@ -1,7 +1,8 @@
 import { Temporal } from 'temporal-polyfill';
 
 import type { TGroupId } from '../../grouping/domain/group';
-import { stranger } from '../../grouping/testing/group-book-fixtures';
+import { stranger, strangerWithDialerName } from '../../grouping/testing/group-book-fixtures';
+import type { ICaller } from '../../phone/domain/caller';
 import type { IJournalEntry, TJournalEntryId, TJournalOutcome } from './journal-entry';
 import { mergeJournal } from './journal-merge';
 
@@ -10,15 +11,14 @@ function entry(
   number: string,
   at: string,
   outcome: IJournalEntry['outcome'],
-  dialerName: string | null = null,
+  caller: ICaller = stranger(number),
   answered: boolean | null = null
 ): IJournalEntry {
   return {
     id: id as TJournalEntryId,
     at: Temporal.Instant.from(at),
     rawNumber: `+${number}`,
-    caller: stranger(number),
-    dialerName,
+    caller,
     answered,
     outcome,
   };
@@ -68,12 +68,29 @@ describe('the journal with the phone history', () => {
           '31201234567',
           '2026-11-08T10:00:40Z',
           { kind: 'history', type: 'blocked' },
-          'Bakkerij de Graaf'
+          strangerWithDialerName('31201234567', 'Bakkerij de Graaf')
         ),
       ]
     );
-    expect(merged.map(item => [item.id, item.dialerName])).toEqual([
+    expect(merged.map(item => [item.id, item.caller.dialer?.displayName])).toEqual([
       ['screened', 'Bakkerij de Graaf'],
+    ]);
+  });
+
+  it('names a screened call by the operator’s name the phone received after screening', () => {
+    const later = entry(
+      'history',
+      '79864267807',
+      '2026-11-21T10:00:30Z',
+      { kind: 'history', type: 'incoming' },
+      stranger('79864267807', 'OOO ETST: kol-tsentr')
+    );
+    const merged = mergeJournal(
+      [entry('screened', '79864267807', '2026-11-21T10:00:00Z', SCREENED)],
+      [later]
+    );
+    expect(merged.map(item => [item.id, item.caller.networkName])).toEqual([
+      ['screened', later.caller.networkName],
     ]);
   });
 
@@ -91,7 +108,7 @@ describe('the journal with the phone history', () => {
           '31201234567',
           '2026-11-08T10:00:40Z',
           { kind: 'history', type: 'missed' },
-          null,
+          stranger('31201234567'),
           false
         ),
       ]

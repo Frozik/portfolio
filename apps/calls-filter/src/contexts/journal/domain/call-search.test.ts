@@ -1,17 +1,20 @@
 import { Temporal } from 'temporal-polyfill';
 
-import { contact, stranger } from '../../grouping/testing/group-book-fixtures';
+import {
+  contact,
+  stranger,
+  strangerWithDialerName,
+} from '../../grouping/testing/group-book-fixtures';
 import type { ICaller } from '../../phone/domain/caller';
 import { findsCall } from './call-search';
 import type { IJournalEntry, TJournalEntryId } from './journal-entry';
 
-function call(caller: ICaller, rawNumber: string | null, dialerName: string | null = null) {
+function call(caller: ICaller, rawNumber: string | null) {
   const entry: IJournalEntry = {
     id: 'call' as TJournalEntryId,
     at: Temporal.Instant.from('2026-11-10T10:00:00Z'),
     rawNumber,
     caller,
-    dialerName,
     answered: null,
     outcome: { kind: 'history', type: 'missed' },
   };
@@ -47,7 +50,7 @@ describe('finding a call by part of its number or a name', () => {
   it('finds the contact’s name and the name the dialer found', () => {
     expect([
       findsCall(call(contact('Анна Петрова', '31611111111'), null), 'петров'),
-      findsCall(call(stranger('31622222222'), null, 'Pizza Napoli'), 'napoli'),
+      findsCall(call(strangerWithDialerName('31622222222', 'Pizza Napoli'), null), 'napoli'),
     ]).toEqual([true, true]);
   });
 

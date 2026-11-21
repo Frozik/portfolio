@@ -8,6 +8,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -31,6 +32,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -54,6 +56,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -77,6 +80,7 @@
         "country": "NL",
         "type": "premium-rate",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -100,6 +104,31 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": "KPN Klantenservice",
+        "dialerName": null,
+        "contactName": null,
+        "contactLookupKey": null
+      },
+      "networkCountry": "NL",
+      "instantEpochMs": 1793698200000,
+      "localMinute": 29895030,
+      "paused": false,
+      "places": {},
+      "lastRejectedAtEpochMs": null,
+      "expected": {
+        "group": "spam",
+        "action": "block",
+        "verdict": "rejected"
+      }
+    },
+    {
+      "name": "the dialer’s name for a stranger puts the caller in spam like the operator’s",
+      "ruleset": "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",
+      "caller": {
+        "number": "31301234567",
+        "country": "NL",
+        "type": "fixed-line",
+        "networkName": null,
+        "dialerName": "KPN Klantenservice",
         "contactName": null,
         "contactLookupKey": null
       },
@@ -123,6 +152,7 @@
         "country": "NL",
         "type": "mobile",
         "networkName": null,
+        "dialerName": null,
         "contactName": "Neighbour",
         "contactLookupKey": "lookup-Neighbour"
       },
@@ -146,6 +176,7 @@
         "country": "NL",
         "type": "mobile",
         "networkName": null,
+        "dialerName": null,
         "contactName": "Mum",
         "contactLookupKey": "lookup-Mum"
       },
@@ -169,6 +200,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -192,6 +224,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -215,6 +248,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -238,6 +272,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -261,6 +296,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -284,6 +320,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -307,6 +344,7 @@
         "country": "NL",
         "type": "mobile",
         "networkName": null,
+        "dialerName": null,
         "contactName": "Colleague",
         "contactLookupKey": "lookup-Colleague"
       },
@@ -330,6 +368,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -353,6 +392,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -376,6 +416,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -399,6 +440,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -422,6 +464,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -445,6 +488,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -468,6 +512,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -491,6 +536,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -514,6 +560,7 @@
         "country": "FI",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -537,6 +584,7 @@
         "country": "FI",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -560,6 +608,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -585,6 +634,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -610,6 +660,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -633,6 +684,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": "PostNL Bezorging",
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -656,6 +708,7 @@
         "country": null,
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -679,6 +732,7 @@
         "country": null,
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -702,6 +756,7 @@
         "country": "GB",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -725,6 +780,7 @@
         "country": "GB",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -748,6 +804,7 @@
         "country": "FI",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -771,6 +828,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -794,6 +852,7 @@
         "country": "NL",
         "type": "mobile",
         "networkName": null,
+        "dialerName": null,
         "contactName": "Courier Ozon",
         "contactLookupKey": "lookup-Courier Ozon"
       },
@@ -817,6 +876,7 @@
         "country": "NL",
         "type": "mobile",
         "networkName": null,
+        "dialerName": null,
         "contactName": "Courier Ozon",
         "contactLookupKey": "lookup-Courier Ozon"
       },
@@ -840,6 +900,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -863,6 +924,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -886,6 +948,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": "KPN KLANTENSERVİCE",
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -909,6 +972,7 @@
         "country": "RU",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },
@@ -932,6 +996,7 @@
         "country": "NL",
         "type": "fixed-line",
         "networkName": null,
+        "dialerName": null,
         "contactName": null,
         "contactLookupKey": null
       },

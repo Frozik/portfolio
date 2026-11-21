@@ -16,7 +16,6 @@ function call(id: string, digits: string, networkName: string | null = null): IJ
     at: Temporal.Instant.from('2026-11-09T08:30:00Z'),
     rawNumber: `+${digits}`,
     caller: stranger(digits, networkName),
-    dialerName: null,
     answered: null,
     outcome: { kind: 'history', type: 'missed' },
   };

@@ -27,10 +27,10 @@ interface INativeSystemCall {
   readonly kind: 'incoming' | 'missed' | 'rejected' | 'blocked';
   readonly contactName: string | null;
   readonly contactId: string | null;
-  /** The name the dialer wrote into the call log: the contact's, the network's, or its caller ID's. */
-  readonly cachedName: string | null;
-  /** The name the network sent with the call, on the phones whose call log keeps it apart. */
+  /** The name the network sent with the call or vouched for, on the phones whose call log keeps it. */
   readonly networkName: string | null;
+  /** The name the dialer wrote into the call log beside the network's: a contact's or its caller ID's. */
+  readonly dialerName: string | null;
 }
 
 /** A zone as Android names it in the app's language. */

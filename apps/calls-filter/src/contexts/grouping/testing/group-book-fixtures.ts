@@ -138,6 +138,14 @@ export function stranger(digits: string, networkName: string | null = null): ICa
     traits: { country: 'NL' as TCountryCode, type: 'mobile' },
     networkName: networkName === null ? null : normalizeName(networkName),
     contact: null,
+    dialer: null,
+  };
+}
+
+export function strangerWithDialerName(digits: string, dialerName: string): ICaller {
+  return {
+    ...stranger(digits),
+    dialer: { displayName: dialerName, name: normalizeName(dialerName) },
   };
 }
 
@@ -147,6 +155,7 @@ export function contact(displayName: string, digits: string): ICaller {
     traits: { country: 'NL' as TCountryCode, type: 'mobile' },
     networkName: null,
     contact: { lookupKey: `lookup-${displayName}`, displayName, name: normalizeName(displayName) },
+    dialer: null,
   };
 }
 

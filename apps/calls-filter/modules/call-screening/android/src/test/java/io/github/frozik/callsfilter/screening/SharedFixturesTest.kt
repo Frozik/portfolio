@@ -33,6 +33,7 @@ class SharedFixturesTest {
       type = if (number == null) null else NumberType.valueOf(json.getString("type").uppercase().replace('-', '_')),
       networkName = json.optionalString("networkName")?.let(NameNormalizer::normalize),
       contact = if (contactName != null && lookupKey != null) CallerContact(lookupKey, NameNormalizer.normalize(contactName), contactName) else null,
+      dialerName = json.optionalString("dialerName")?.let(NameNormalizer::normalize),
     )
   }
 

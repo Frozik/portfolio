@@ -58,7 +58,7 @@ function callerOf(query: INumberQuery, context: INumberCheckContext): ICaller | 
   const trimmedName = query.networkName.trim();
   const networkName = trimmedName === '' ? null : normalizeName(trimmedName);
   if (query.hidden) {
-    return { number: null, traits: null, networkName, contact: null };
+    return { number: null, traits: null, networkName, contact: null, dialer: null };
   }
   const number = context.numbering.parse(query.number, context.environment.home.country);
   if (number === null) {
@@ -72,6 +72,7 @@ function callerOf(query: INumberQuery, context: INumberCheckContext): ICaller | 
     traits: context.numbering.traits(number),
     networkName,
     contact: known?.contact ?? null,
+    dialer: null,
   };
 }
 
